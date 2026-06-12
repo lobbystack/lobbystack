@@ -28,6 +28,7 @@ import {
   localeMeta,
   type Locale,
 } from "@/lib/i18n"
+import { CookieConsentBanner } from "@/components/CookieConsentBanner"
 
 interface Props {
   seo?: PageSeo
@@ -109,40 +110,6 @@ Astro.response.headers.set("Content-Signal", CONTENT_SIGNAL)
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <Font cssVariable="--font-geist" preload />
     <Font cssVariable="--font-geist-mono" preload />
-    <script>
-      const loadPosthog = () => import("@/lib/posthog")
-      const win = window as Window & {
-        requestIdleCallback?: (
-          callback: () => void,
-          options?: { timeout: number }
-        ) => number
-      }
-
-      const interactionEvents = ["pointerdown", "keydown", "touchstart"]
-      let posthogRequested = false
-      const loadOnce = () => {
-        if (posthogRequested) return
-
-        posthogRequested = true
-        interactionEvents.forEach((eventName) => {
-          window.removeEventListener(eventName, loadOnce)
-        })
-        loadPosthog()
-      }
-
-      interactionEvents.forEach((eventName) => {
-        window.addEventListener(eventName, loadOnce, {
-          once: true,
-          passive: true,
-        })
-      })
-
-      if (typeof win.requestIdleCallback === "function") {
-        win.requestIdleCallback(loadOnce, { timeout: 8000 })
-      } else {
-        setTimeout(loadOnce, 8000)
-      }
-    </script>
 
     <Seo
       title={title}
@@ -191,6 +158,7 @@ Astro.response.headers.set("Content-Signal", CONTENT_SIGNAL)
   <body class="antialiased">
     <a href="#main-content" class="skip-link">{skipLabel}</a>
     <slot />
+    <CookieConsentBanner locale={locale} client:load />
     <script is:inline src="/webmcp.js" defer></script>
   </body>
 </html>

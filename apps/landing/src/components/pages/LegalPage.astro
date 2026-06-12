@@ -99,7 +99,7 @@ const legalCopy = {
           id: "rights",
           title: "7. Vos droits et choix",
           paragraphs: [
-            "Selon votre lieu, vous pouvez avoir le droit de demander accès, correction, suppression, portabilité, opposition ou limitation de certains traitements. Vous pouvez aussi contrôler certains cookies et communications.",
+            'Selon votre lieu, vous pouvez avoir le droit de demander accès, correction, suppression, portabilité, opposition ou limitation de certains traitements. Vous pouvez aussi contrôler certains cookies et communications. Consultez notre <a href="/fr/cookie-policy/">Politique relative aux cookies</a> pour plus de détails.',
             "Si une entreprise utilise LobbyStack pour communiquer avec vous, contactez d’abord cette entreprise pour les demandes relatives à ses propres pratiques.",
           ],
         },
@@ -295,7 +295,7 @@ const t = legalCopy.fr[kind]
             <section id={section.id}>
               <h2>{section.title}</h2>
               {section.paragraphs.map((paragraph) => (
-                <p>{paragraph}</p>
+                <p set:html={paragraph} />
               ))}
             </section>
           ))

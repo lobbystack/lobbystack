@@ -16,10 +16,13 @@ const footerCopy = {
     about: "About",
     contact: "Contact",
     privacy: "Privacy Policy",
+    cookiePolicy: "Cookie Policy",
     terms: "Terms of Service",
     rights: "All rights reserved.",
     privacyShort: "Privacy",
+    cookiePolicyShort: "Cookie Policy",
     termsShort: "Terms",
+    cookiePreferences: "Cookie preferences",
   },
   fr: {
     product: "Produit",
@@ -35,10 +38,13 @@ const footerCopy = {
     about: "À propos",
     contact: "Contact",
     privacy: "Politique de confidentialité",
+    cookiePolicy: "Politique relative aux cookies",
     terms: "Conditions d'utilisation",
     rights: "Tous droits réservés.",
     privacyShort: "Confidentialité",
+    cookiePolicyShort: "Cookies",
     termsShort: "Conditions",
+    cookiePreferences: "Préférences cookies",
   },
 } satisfies Record<Locale, Record<string, string>>
 
@@ -76,6 +82,7 @@ const footerSections = (locale: Locale) => {
         { label: copy.about, href: "/about/" },
         { label: copy.contact, href: "mailto:support@lobbystack.com" },
         { label: copy.privacy, href: "/privacy/" },
+        { label: copy.cookiePolicy, href: "/cookie-policy/" },
         { label: copy.terms, href: "/terms/" },
       ],
     },
@@ -157,12 +164,25 @@ export function Footer({ locale = "en" }: FooterProps) {
           <p>
             © {new Date().getFullYear()} LobbyStack. {copy.rights}
           </p>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap justify-center gap-6">
+            <button
+              type="button"
+              data-cookie-preferences-trigger
+              className="hover:text-foreground"
+            >
+              {copy.cookiePreferences}
+            </button>
             <a
               href={localizePath(locale, "/privacy/")}
               className="hover:text-foreground"
             >
               {copy.privacyShort}
+            </a>
+            <a
+              href={localizePath(locale, "/cookie-policy/")}
+              className="hover:text-foreground"
+            >
+              {copy.cookiePolicyShort}
             </a>
             <a
               href={localizePath(locale, "/terms/")}

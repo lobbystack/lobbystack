@@ -1,5 +1,10 @@
 import posthog from "posthog-js"
 
+import {
+  clearPostHogClientStorage,
+  hasAnalyticsConsent,
+} from "@/lib/cookie-consent"
+
 const DEFAULT_POSTHOG_HOST = "https://ts.lobbystack.com"
 const DEFAULT_POSTHOG_UI_HOST = "https://us.posthog.com"
 const SIGNUP_CTA_SELECTOR = "[data-ph-signup-cta]"
@@ -10,6 +15,8 @@ const apiHost = import.meta.env.PUBLIC_POSTHOG_HOST || DEFAULT_POSTHOG_HOST
 const uiHost = import.meta.env.PUBLIC_POSTHOG_UI_HOST || DEFAULT_POSTHOG_UI_HOST
 const canCapture =
   typeof window !== "undefined" && isEnabled && Boolean(projectKey)
+let isInitialized = false
+let isSignupCtaListenerAttached = false
 
 type LandingSignupCtaClickProperties = {
   action?: string
@@ -32,7 +39,20 @@ const getSignupCtaProperties = (
   section: element.dataset.phCaptureAttributeSection || "unknown",
 })
 
-if (canCapture && projectKey) {
+export function initializePostHog() {
+  if (!canCapture || !projectKey || !hasAnalyticsConsent()) {
+    return false
+  }
+
+  if (isInitialized) {
+    const posthogWithOptIn = posthog as typeof posthog & {
+      opt_in_capturing?: () => void
+    }
+
+    posthogWithOptIn.opt_in_capturing?.()
+    return true
+  }
+
   posthog.init(projectKey, {
     api_host: apiHost,
     ui_host: uiHost,
@@ -50,19 +70,45 @@ if (canCapture && projectKey) {
     },
   })
 
-  window.document.addEventListener("click", (event) => {
-    if (!(event.target instanceof Element)) {
-      return
+  isInitialized = true
+
+  if (!isSignupCtaListenerAttached) {
+    isSignupCtaListenerAttached = true
+    window.document.addEventListener("click", (event) => {
+      if (!(event.target instanceof Element)) {
+        return
+      }
+
+      const signupCta = event.target.closest(SIGNUP_CTA_SELECTOR)
+
+      if (!(signupCta instanceof HTMLElement)) {
+        return
+      }
+
+      captureLandingSignupCtaClick(getSignupCtaProperties(signupCta))
+    })
+  }
+
+  return true
+}
+
+export function disablePostHog() {
+  if (canCapture && isInitialized) {
+    const posthogWithOptOut = posthog as typeof posthog & {
+      opt_out_capturing?: () => void
+      stopSessionRecording?: () => void
     }
 
-    const signupCta = event.target.closest(SIGNUP_CTA_SELECTOR)
+    posthogWithOptOut.opt_out_capturing?.()
+    posthogWithOptOut.stopSessionRecording?.()
+    posthog.reset()
+  }
 
-    if (!(signupCta instanceof HTMLElement)) {
-      return
-    }
+  clearPostHogClientStorage()
+}
 
-    captureLandingSignupCtaClick(getSignupCtaProperties(signupCta))
-  })
+if (canCapture && hasAnalyticsConsent()) {
+  initializePostHog()
 }
 
 export function captureLandingSignupCtaClick({
@@ -72,7 +118,7 @@ export function captureLandingSignupCtaClick({
   plan,
   section,
 }: LandingSignupCtaClickProperties) {
-  if (!canCapture) {
+  if (!canCapture || !initializePostHog()) {
     return
   }
 

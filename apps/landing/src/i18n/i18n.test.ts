@@ -55,6 +55,7 @@ describe("landing i18n route helpers", () => {
     expect(localizeHref("fr", "/pricing/?interval=year#plans")).toBe(
       "/fr/pricing/?interval=year#plans"
     )
+    expect(localizeHref("fr", "/cookie-policy/")).toBe("/fr/cookie-policy/")
     expect(localizeHref("fr", "https://docs.lobbystack.com/introduction")).toBe(
       "https://docs.lobbystack.com/introduction"
     )
@@ -69,6 +70,11 @@ describe("landing i18n route helpers", () => {
       { hrefLang: "en", href: "https://lobbystack.com/pricing/" },
       { hrefLang: "fr", href: "https://lobbystack.com/fr/pricing/" },
       { hrefLang: "x-default", href: "https://lobbystack.com/pricing/" },
+    ])
+    expect(alternateLocaleLinks("/cookie-policy/")).toEqual([
+      { hrefLang: "en", href: "https://lobbystack.com/cookie-policy/" },
+      { hrefLang: "fr", href: "https://lobbystack.com/fr/cookie-policy/" },
+      { hrefLang: "x-default", href: "https://lobbystack.com/cookie-policy/" },
     ])
   })
 })

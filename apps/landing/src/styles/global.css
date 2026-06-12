@@ -281,6 +281,23 @@
   @apply font-semibold text-foreground;
 }
 
+.legal-copy table {
+  @apply w-full min-w-[760px] border-separate border-spacing-0 overflow-hidden rounded-xl border border-border/70 text-left text-sm;
+}
+
+.legal-copy th,
+.legal-copy td {
+  @apply border-b border-border/60 px-4 py-3 align-top;
+}
+
+.legal-copy th {
+  @apply bg-muted/50 font-semibold text-foreground;
+}
+
+.legal-copy tbody tr:last-child td {
+  @apply border-b-0;
+}
+
 .blog-copy {
   @apply text-base leading-8 text-muted-foreground md:text-lg md:leading-9;
 }

@@ -1,5 +1,6 @@
 import { WebVoiceWidget } from "@/components/web-voice/WebVoiceWidget"
 import { LobbyStackAuraVoiceDemo } from "@/components/web-voice/LobbyStackAuraVoiceDemo"
+import { hasAnalyticsConsent } from "@/lib/cookie-consent"
 
 const DEFAULT_WEB_CALL_ENDPOINT =
   "https://voice.lobbystack.com/web-call/sessions"
@@ -9,6 +10,10 @@ const DEFAULT_BUSINESS_SLUG = "lobbystack-mp35s9y1"
 const DEV_BUSINESS_SLUG = "lobbystack-qa-motd3txq"
 
 function capturePosthog(eventName: string, properties?: Record<string, unknown>) {
+  if (!hasAnalyticsConsent()) {
+    return
+  }
+
   void import("@/lib/posthog").then(({ posthog }) => {
     posthog.capture(eventName, properties)
   })
