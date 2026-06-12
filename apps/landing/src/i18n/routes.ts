@@ -34,6 +34,7 @@ export const translatedBasePaths = [
   "/blog/build-or-buy-ai-receptionist/",
   "/docs/api/",
   "/privacy/",
+  "/cookie-policy/",
   "/terms/",
   "/search/",
 ] as const

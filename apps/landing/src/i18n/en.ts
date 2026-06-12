@@ -81,6 +81,11 @@ export const en = {
       description:
         "Privacy Policy for LobbyStack, including call, SMS, consent, appointment, account, billing, analytics, and support data.",
     },
+    "/cookie-policy/": {
+      title: "Cookie Policy - LobbyStack",
+      description:
+        "Cookie Policy for LobbyStack, including necessary cookies, analytics storage, browser controls, and cookie preferences.",
+    },
     "/terms/": {
       title: "Terms of Service - LobbyStack",
       description:

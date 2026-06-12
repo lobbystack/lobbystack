@@ -39,6 +39,7 @@ const TRANSLATED_PATHS = new Set([
   "/blog/build-or-buy-ai-receptionist/",
   "/docs/api/",
   "/privacy/",
+  "/cookie-policy/",
   "/terms/",
   "/search/",
 ])
