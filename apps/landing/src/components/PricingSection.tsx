@@ -910,7 +910,7 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
       </section>
 
       {/* ── Tier cards ── */}
-      <section className="mx-auto max-w-6xl px-6 pt-8 pb-8 md:pt-10 md:pb-10 lg:pt-12 lg:pb-12">
+      <section className="mx-auto max-w-7xl px-6 pt-8 pb-8 md:pt-10 md:pb-10 lg:pt-12 lg:pb-12">
         <div className="animate-fade-up mb-8 flex justify-center delay-300">
           <div
             aria-label={copy.billingLabel}
@@ -944,11 +944,11 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
           </div>
         </div>
 
-        <div className="animate-fade-up grid gap-6 delay-300 md:grid-cols-2 lg:grid-cols-4">
+        <div className="animate-fade-up grid gap-6 delay-300 md:grid-cols-2 xl:grid-cols-4">
           {localizedTiers.map((tier) => (
             <div
               key={tier.name}
-              className={`relative flex flex-col rounded-2xl border bg-background p-8 ${
+              className={`relative flex min-w-0 flex-col rounded-2xl border bg-background p-6 ${
                 tier.highlight
                   ? "border-foreground/20 ring-1 ring-foreground/10"
                   : "border-border/60"
@@ -979,7 +979,7 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
                 href={tier.ctaHref ?? APP_SIGNUP_URL}
                 className={cn(
                   buttonVariants({ variant: tier.ctaVariant }),
-                  "mb-6 w-full rounded-full"
+                  "mb-6 h-11 w-full min-w-0 rounded-full px-4 text-[0.8125rem] sm:text-sm"
                 )}
                 data-ph-signup-cta={tier.ctaHref ? undefined : true}
                 data-ph-capture-attribute-section="pricing_plan"
@@ -991,8 +991,8 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
                 data-ph-capture-attribute-billing-interval={billingInterval}
                 data-ph-capture-attribute-label={tier.cta[billingInterval]}
               >
-                {tier.cta[billingInterval]}
-                <ArrowRight className="ml-1 size-4" />
+                <span className="min-w-0">{tier.cta[billingInterval]}</span>
+                <ArrowRight className="size-4 shrink-0" />
               </a>
 
               {/* Key highlights only */}
