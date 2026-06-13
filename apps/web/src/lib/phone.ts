@@ -9,13 +9,20 @@ import type { Labels } from "react-phone-number-input";
 import enLabels from "react-phone-number-input/locale/en";
 import frLabels from "react-phone-number-input/locale/fr";
 
-const DEFAULT_PHONE_COUNTRY: CountryCode = "US";
+const DEFAULT_PHONE_COUNTRY = "US" satisfies CountryCode;
+const SUPPORTED_ONBOARDING_PHONE_COUNTRIES = ["US", "CA", "GB"] as const;
+
+export type SupportedOnboardingPhoneCountry =
+  (typeof SUPPORTED_ONBOARDING_PHONE_COUNTRIES)[number];
 
 const PHONE_LABELS_BY_LOCALE: Record<"en" | "fr", Labels> = {
   en: enLabels,
   fr: frLabels,
 };
 const NORTH_AMERICAN_PHONE_COUNTRIES = new Set<CountryCode>(["US", "CA"]);
+const SUPPORTED_ONBOARDING_PHONE_COUNTRY_SET = new Set<string>(
+  SUPPORTED_ONBOARDING_PHONE_COUNTRIES,
+);
 
 function normalizePhoneText(value: string | null | undefined): string {
   return value?.trim() ?? "";
@@ -30,6 +37,10 @@ export function getDefaultPhoneCountry(locale?: string | null): CountryCode {
 
   if (normalized.startsWith("en-ca") || normalized.startsWith("fr-ca")) {
     return "CA";
+  }
+
+  if (normalized.startsWith("en-gb") || normalized.startsWith("en-uk")) {
+    return "GB";
   }
 
   if (normalized === "en" || normalized.startsWith("en-us")) {
@@ -135,6 +146,21 @@ export function inferPhoneCountry(
   );
 }
 
+export function isSupportedOnboardingPhoneCountry(
+  value: string | null | undefined,
+): value is SupportedOnboardingPhoneCountry {
+  const normalized = normalizePhoneText(value).toUpperCase();
+  return SUPPORTED_ONBOARDING_PHONE_COUNTRY_SET.has(normalized);
+}
+
+export function normalizeOnboardingPhoneCountry(
+  value: string | null | undefined,
+  fallback: SupportedOnboardingPhoneCountry = DEFAULT_PHONE_COUNTRY,
+): SupportedOnboardingPhoneCountry {
+  const normalized = normalizePhoneText(value).toUpperCase();
+  return isSupportedOnboardingPhoneCountry(normalized) ? normalized : fallback;
+}
+
 export type PhoneCountryOption = {
   callingCode: string;
   code: CountryCode;
@@ -152,4 +178,17 @@ export function getPhoneCountryOptions(locale?: string | null): Array<PhoneCount
       callingCode: `+${getCountryCallingCode(country)}`,
     }))
     .sort((left, right) => left.label.localeCompare(right.label));
+}
+
+export function getSupportedOnboardingPhoneCountryOptions(
+  locale?: string | null,
+): Array<PhoneCountryOption & { code: SupportedOnboardingPhoneCountry }> {
+  const optionByCode = new Map(
+    getPhoneCountryOptions(locale).map((option) => [option.code, option]),
+  );
+
+  return SUPPORTED_ONBOARDING_PHONE_COUNTRIES.flatMap((country) => {
+    const option = optionByCode.get(country);
+    return option ? [{ ...option, code: country }] : [];
+  });
 }

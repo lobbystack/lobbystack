@@ -131,4 +131,46 @@ describe("OnboardingVerifyPhonePage", () => {
         .placeholder,
     ).toBe("07123 456789");
   });
+
+  it("only offers supported onboarding regions", async () => {
+    const user = userEvent.setup();
+    render(
+      <OnboardingVerifyPhonePage
+        businessId={"business-1" as never}
+        onSignOut={() => {}}
+      />,
+    );
+
+    await user.click(screen.getByRole("combobox", { name: "verifyPhone.fields.region" }));
+
+    expect(await screen.findByText("United States")).toBeTruthy();
+    expect(screen.getByText("Canada")).toBeTruthy();
+    expect(screen.getByText("United Kingdom")).toBeTruthy();
+    expect(screen.queryByText("France")).toBeNull();
+  });
+
+  it("submits a UK number as E.164 after changing the prefix country", async () => {
+    const user = userEvent.setup();
+    render(
+      <OnboardingVerifyPhonePage
+        businessId={"business-1" as never}
+        onSignOut={() => {}}
+      />,
+    );
+
+    await user.click(screen.getByRole("combobox", { name: "verifyPhone.fields.region" }));
+    await user.click(await screen.findByText("United Kingdom"));
+    await user.type(
+      screen.getByLabelText("verifyPhone.fields.mobileNumber"),
+      "7911123456",
+    );
+    await user.click(screen.getByRole("button", { name: "verifyPhone.sendCode" }));
+
+    await waitFor(() => {
+      expect(startPhoneVerificationMock).toHaveBeenCalledWith({
+        businessId: "business-1",
+        phoneE164: "+447911123456",
+      });
+    });
+  });
 });

@@ -589,6 +589,54 @@ describe("onboarding phone-number actions", () => {
     expect(typeof result.numbers[0]?.claimToken).toBe("string");
   });
 
+  it("searches UK local inventory when GB is selected", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+447911123456",
+      countryCode: "GB",
+    });
+    const authed = t.withIdentity({ subject });
+
+    listLocalNumbersMock.mockResolvedValue([
+      {
+        phoneNumber: "+442071838750",
+        locality: "London",
+        region: "London",
+        isoCountry: "GB",
+        capabilities: { sms: true, voice: true },
+      },
+    ]);
+
+    const result = await authed.action(api.onboarding.phoneNumbers.searchAvailableNumbers, {
+      businessId,
+      mode: "suggested",
+      countryCode: "GB",
+      limit: 5,
+    });
+
+    expect(listLocalNumbersMock).toHaveBeenCalledWith({
+      countryCode: "GB",
+      args: {
+        limit: 5,
+        smsEnabled: true,
+        voiceEnabled: true,
+      },
+    });
+    expect(result.selectionContext).toEqual({
+      mode: "suggested",
+      countryCode: "GB",
+    });
+    expect(result.numbers[0]).toMatchObject({
+      e164: "+442071838750",
+      countryCode: "GB",
+      kind: "local",
+    });
+  });
+
   it("only returns inventory with both voice and SMS capabilities", async () => {
     const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);

@@ -4,6 +4,7 @@ import {
   formatPhoneNumberDisplay,
   getDefaultPhoneCountry,
   getPhonePlaceholder,
+  getSupportedOnboardingPhoneCountryOptions,
   normalizePhoneNumber,
 } from "@/lib/phone";
 
@@ -12,6 +13,7 @@ describe("phone helpers", () => {
     expect(getDefaultPhoneCountry("en-CA")).toBe("CA");
     expect(getDefaultPhoneCountry("fr-CA")).toBe("CA");
     expect(getDefaultPhoneCountry("en-US")).toBe("US");
+    expect(getDefaultPhoneCountry("en-GB")).toBe("GB");
     expect(getDefaultPhoneCountry("en")).toBe("US");
     expect(getDefaultPhoneCountry("fr")).toBe("FR");
   });
@@ -48,5 +50,11 @@ describe("phone helpers", () => {
 
   it("falls back to the raw value when parsing fails", () => {
     expect(formatPhoneNumberDisplay("not a phone", "en-US")).toBe("not a phone");
+  });
+
+  it("limits onboarding country options to supported markets", () => {
+    expect(
+      getSupportedOnboardingPhoneCountryOptions("en-US").map((option) => option.code),
+    ).toEqual(["US", "CA", "GB"]);
   });
 });

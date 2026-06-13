@@ -47,10 +47,17 @@ type CheckPhoneVerificationResult =
     };
 
 const VERIFICATION_RESEND_COOLDOWN_MS = 30_000;
+const SUPPORTED_VERIFICATION_COUNTRIES = new Set(["US", "CA", "GB"]);
 
 function normalizeLineType(lineType: string | null | undefined): string | undefined {
   const normalized = lineType?.trim().toLowerCase();
   return normalized ? normalized : undefined;
+}
+
+function assertSupportedVerificationCountry(countryCode: string): void {
+  if (!SUPPORTED_VERIFICATION_COUNTRIES.has(countryCode.trim().toUpperCase())) {
+    throw new Error("We currently support US, Canadian, and UK mobile numbers.");
+  }
 }
 
 function buildVerificationErrorMessage(error: unknown): string {
@@ -140,6 +147,7 @@ export const startPhoneVerification = action({
       if (!lookup.valid) {
         throw new Error("Enter a valid mobile number in international format.");
       }
+      assertSupportedVerificationCountry(lookup.countryCode);
 
       const lineType = normalizeLineType(lookup.lineTypeIntelligence?.type);
       if (lineType && lineType !== "mobile") {

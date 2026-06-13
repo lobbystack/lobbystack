@@ -29,8 +29,10 @@ import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useObservedAction } from "@/lib/observed-convex";
 import {
   getDefaultPhoneCountry,
-  getPhoneCountryOptions,
+  getSupportedOnboardingPhoneCountryOptions,
   inferPhoneCountry,
+  isSupportedOnboardingPhoneCountry,
+  normalizeOnboardingPhoneCountry,
 } from "@/lib/phone";
 
 type OnboardingVerifyPhonePageProps = {
@@ -48,14 +50,21 @@ export function OnboardingVerifyPhonePage({
 }: OnboardingVerifyPhonePageProps) {
   const { t, i18n } = useTranslation("onboarding");
   const locale = i18n.resolvedLanguage ?? i18n.language;
-  const defaultCountry = getDefaultPhoneCountry(locale) as Country;
+  const defaultCountry = normalizeOnboardingPhoneCountry(getDefaultPhoneCountry(locale));
   const navigate = useNavigate();
   const startPhoneVerification = useObservedAction(
     api.onboarding.phoneVerification.startPhoneVerification,
   );
-  const countryOptions = useMemo(() => getPhoneCountryOptions(locale), [locale]);
+  const countryOptions = useMemo(
+    () => getSupportedOnboardingPhoneCountryOptions(locale),
+    [locale],
+  );
   const [selectedCountry, setSelectedCountry] = useState<Country>(
-    () => (inferPhoneCountry(currentUserPhone, defaultCountry) ?? defaultCountry) as Country,
+    () =>
+      normalizeOnboardingPhoneCountry(
+        inferPhoneCountry(currentUserPhone, defaultCountry),
+        defaultCountry,
+      ) as Country,
   );
   const [phone, setPhone] = useState<string>(currentUserPhone ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -69,14 +78,14 @@ export function OnboardingVerifyPhonePage({
     if (!value) {
       return;
     }
-    setSelectedCountry(value as Country);
+    setSelectedCountry(normalizeOnboardingPhoneCountry(value, defaultCountry) as Country);
   }
 
   function handlePhoneChange(value?: string): void {
     const nextPhone = value ?? "";
     setPhone(nextPhone);
     const inferredCountry = inferPhoneCountry(nextPhone, selectedCountry);
-    if (inferredCountry) {
+    if (isSupportedOnboardingPhoneCountry(inferredCountry)) {
       setSelectedCountry(inferredCountry as Country);
     }
   }
@@ -87,7 +96,7 @@ export function OnboardingVerifyPhonePage({
     }
 
     const inferredCountry = inferPhoneCountry(rawValue, selectedCountry);
-    if (inferredCountry) {
+    if (isSupportedOnboardingPhoneCountry(inferredCountry)) {
       setSelectedCountry(inferredCountry as Country);
     }
   }

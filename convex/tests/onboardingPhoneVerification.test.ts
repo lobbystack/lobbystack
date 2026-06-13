@@ -246,6 +246,56 @@ describe("onboarding phone verification actions", () => {
     });
   });
 
+  it("allows UK mobile phone verification", async () => {
+    lookupFetchMock.mockImplementation(async ({ phoneNumber }: { phoneNumber: string }) => ({
+      phoneNumber: phoneNumber.trim(),
+      countryCode: "GB",
+      valid: true,
+      lineTypeIntelligence: {
+        type: "mobile",
+      },
+    }));
+    const t = createConvexHarness();
+    const { businessId, subject } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    const result = await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+      businessId,
+      phoneE164: "+447911123456",
+    });
+
+    expect(verificationCreateMock).toHaveBeenCalledWith({
+      to: "+447911123456",
+      channel: "sms",
+    });
+    expect(result).toMatchObject({
+      phoneE164: "+447911123456",
+      countryCode: "GB",
+    });
+  });
+
+  it("rejects unsupported verification countries", async () => {
+    lookupFetchMock.mockImplementation(async ({ phoneNumber }: { phoneNumber: string }) => ({
+      phoneNumber: phoneNumber.trim(),
+      countryCode: "FR",
+      valid: true,
+      lineTypeIntelligence: {
+        type: "mobile",
+      },
+    }));
+    const t = createConvexHarness();
+    const { businessId, subject } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    await expect(
+      authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+        businessId,
+        phoneE164: "+33612345678",
+      }),
+    ).rejects.toThrow("We currently support US, Canadian, and UK mobile numbers.");
+    expect(verificationCreateMock).not.toHaveBeenCalled();
+  });
+
   it("throttles rapid resend attempts for the same verified phone", async () => {
     const t = createConvexHarness();
     const { businessId, subject } = await seedBusinessOwner(t);
