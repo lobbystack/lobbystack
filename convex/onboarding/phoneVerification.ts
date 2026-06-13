@@ -47,7 +47,7 @@ type CheckPhoneVerificationResult =
     };
 
 const VERIFICATION_RESEND_COOLDOWN_MS = 30_000;
-const SUPPORTED_VERIFICATION_COUNTRIES = new Set(["US", "CA", "GB"]);
+const SUPPORTED_VERIFICATION_COUNTRIES = new Set(["US", "CA", "GB", "AU"]);
 
 function normalizeLineType(lineType: string | null | undefined): string | undefined {
   const normalized = lineType?.trim().toLowerCase();
@@ -56,7 +56,7 @@ function normalizeLineType(lineType: string | null | undefined): string | undefi
 
 function assertSupportedVerificationCountry(countryCode: string): void {
   if (!SUPPORTED_VERIFICATION_COUNTRIES.has(countryCode.trim().toUpperCase())) {
-    throw new Error("We currently support US, Canadian, and UK mobile numbers.");
+    throw new Error("We currently support US, Canadian, UK, and Australian mobile numbers.");
   }
 }
 

@@ -10,7 +10,7 @@ import enLabels from "react-phone-number-input/locale/en";
 import frLabels from "react-phone-number-input/locale/fr";
 
 const DEFAULT_PHONE_COUNTRY = "US" satisfies CountryCode;
-const SUPPORTED_ONBOARDING_PHONE_COUNTRIES = ["US", "CA", "GB"] as const;
+const SUPPORTED_ONBOARDING_PHONE_COUNTRIES = ["US", "CA", "GB", "AU"] as const;
 
 export type SupportedOnboardingPhoneCountry =
   (typeof SUPPORTED_ONBOARDING_PHONE_COUNTRIES)[number];
@@ -41,6 +41,10 @@ export function getDefaultPhoneCountry(locale?: string | null): CountryCode {
 
   if (normalized.startsWith("en-gb") || normalized.startsWith("en-uk")) {
     return "GB";
+  }
+
+  if (normalized.startsWith("en-au")) {
+    return "AU";
   }
 
   if (normalized === "en" || normalized.startsWith("en-us")) {
@@ -125,6 +129,8 @@ export function getPhonePlaceholder(
       return "06 12 34 56 78";
     case "GB":
       return "07123 456789";
+    case "AU":
+      return "0412 345 678";
     default:
       return "555 123 4567";
   }

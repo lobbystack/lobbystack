@@ -146,6 +146,7 @@ describe("OnboardingVerifyPhonePage", () => {
     expect(await screen.findByText("United States")).toBeTruthy();
     expect(screen.getByText("Canada")).toBeTruthy();
     expect(screen.getByText("United Kingdom")).toBeTruthy();
+    expect(screen.getByText("Australia")).toBeTruthy();
     expect(screen.queryByText("France")).toBeNull();
   });
 
@@ -170,6 +171,31 @@ describe("OnboardingVerifyPhonePage", () => {
       expect(startPhoneVerificationMock).toHaveBeenCalledWith({
         businessId: "business-1",
         phoneE164: "+447911123456",
+      });
+    });
+  });
+
+  it("submits an Australian number as E.164 after changing the prefix country", async () => {
+    const user = userEvent.setup();
+    render(
+      <OnboardingVerifyPhonePage
+        businessId={"business-1" as never}
+        onSignOut={() => {}}
+      />,
+    );
+
+    await user.click(screen.getByRole("combobox", { name: "verifyPhone.fields.region" }));
+    await user.click(await screen.findByText("Australia"));
+    await user.type(
+      screen.getByLabelText("verifyPhone.fields.mobileNumber"),
+      "0412345678",
+    );
+    await user.click(screen.getByRole("button", { name: "verifyPhone.sendCode" }));
+
+    await waitFor(() => {
+      expect(startPhoneVerificationMock).toHaveBeenCalledWith({
+        businessId: "business-1",
+        phoneE164: "+61412345678",
       });
     });
   });

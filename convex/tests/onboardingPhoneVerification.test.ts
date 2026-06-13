@@ -274,6 +274,34 @@ describe("onboarding phone verification actions", () => {
     });
   });
 
+  it("allows Australian mobile phone verification", async () => {
+    lookupFetchMock.mockImplementation(async ({ phoneNumber }: { phoneNumber: string }) => ({
+      phoneNumber: phoneNumber.trim(),
+      countryCode: "AU",
+      valid: true,
+      lineTypeIntelligence: {
+        type: "mobile",
+      },
+    }));
+    const t = createConvexHarness();
+    const { businessId, subject } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    const result = await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+      businessId,
+      phoneE164: "+61412345678",
+    });
+
+    expect(verificationCreateMock).toHaveBeenCalledWith({
+      to: "+61412345678",
+      channel: "sms",
+    });
+    expect(result).toMatchObject({
+      phoneE164: "+61412345678",
+      countryCode: "AU",
+    });
+  });
+
   it("rejects unsupported verification countries", async () => {
     lookupFetchMock.mockImplementation(async ({ phoneNumber }: { phoneNumber: string }) => ({
       phoneNumber: phoneNumber.trim(),
@@ -292,7 +320,9 @@ describe("onboarding phone verification actions", () => {
         businessId,
         phoneE164: "+33612345678",
       }),
-    ).rejects.toThrow("We currently support US, Canadian, and UK mobile numbers.");
+    ).rejects.toThrow(
+      "We currently support US, Canadian, UK, and Australian mobile numbers.",
+    );
     expect(verificationCreateMock).not.toHaveBeenCalled();
   });
 

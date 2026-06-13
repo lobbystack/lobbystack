@@ -14,6 +14,7 @@ describe("phone helpers", () => {
     expect(getDefaultPhoneCountry("fr-CA")).toBe("CA");
     expect(getDefaultPhoneCountry("en-US")).toBe("US");
     expect(getDefaultPhoneCountry("en-GB")).toBe("GB");
+    expect(getDefaultPhoneCountry("en-AU")).toBe("AU");
     expect(getDefaultPhoneCountry("en")).toBe("US");
     expect(getDefaultPhoneCountry("fr")).toBe("FR");
   });
@@ -46,6 +47,7 @@ describe("phone helpers", () => {
     expect(getPhonePlaceholder("fr-CA")).toBe("(555) 123-4567");
     expect(getPhonePlaceholder("fr-FR", { defaultCountry: "FR" })).toBe("06 12 34 56 78");
     expect(getPhonePlaceholder("en-US", { defaultCountry: "GB" })).toBe("07123 456789");
+    expect(getPhonePlaceholder("en-US", { defaultCountry: "AU" })).toBe("0412 345 678");
   });
 
   it("falls back to the raw value when parsing fails", () => {
@@ -55,6 +57,6 @@ describe("phone helpers", () => {
   it("limits onboarding country options to supported markets", () => {
     expect(
       getSupportedOnboardingPhoneCountryOptions("en-US").map((option) => option.code),
-    ).toEqual(["US", "CA", "GB"]);
+    ).toEqual(["US", "CA", "GB", "AU"]);
   });
 });

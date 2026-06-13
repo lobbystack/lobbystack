@@ -96,6 +96,7 @@ const COUNTRY_OPTIONS: Array<{
   { code: "US", label: "US", flag: "🇺🇸" },
   { code: "CA", label: "CA", flag: "🇨🇦" },
   { code: "GB", label: "UK", flag: "🇬🇧" },
+  { code: "AU", label: "AU", flag: "🇦🇺" },
 ];
 
 function formatPhoneNumber(e164: string): string {
@@ -167,14 +168,14 @@ export function OnboardingNumberPage({
   const [isSkipping, setIsSkipping] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const isSearching = searchSource !== null;
-  const areaCodeMaxLength = country === "GB" ? 5 : 3;
+  const areaCodeMaxLength = country === "GB" || country === "AU" ? 5 : 3;
   const shouldLoadInventory = primaryPhoneNumber === null && !isComplete;
 
   function handleCountryChange(value: string | null): void {
     const nextCountry = normalizeOnboardingPhoneCountry(value);
     setCountry(nextCountry);
     setAreaCode((currentAreaCode) =>
-      currentAreaCode.slice(0, nextCountry === "GB" ? 5 : 3),
+      currentAreaCode.slice(0, nextCountry === "GB" || nextCountry === "AU" ? 5 : 3),
     );
   }
 

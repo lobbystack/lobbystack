@@ -159,4 +159,42 @@ describe("OnboardingNumberPage", () => {
       });
     });
   });
+
+  it("lets users search Australian business-number inventory", async () => {
+    const user = userEvent.setup();
+    getInitialNumberSuggestionMock.mockResolvedValue({
+      market: { countryCode: "US" },
+      suggestion: null,
+      alternatives: [],
+    });
+    searchAvailableNumbersMock.mockResolvedValue({
+      market: { countryCode: "AU" },
+      selectionContext: { mode: "suggested", countryCode: "AU" },
+      numbers: [],
+    });
+
+    render(
+      <OnboardingNumberPage
+        businessId={"business-1" as never}
+        onSignOut={() => {}}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getInitialNumberSuggestionMock).toHaveBeenCalled();
+    });
+
+    await user.click(screen.getByRole("combobox", { name: "number.countryLabel" }));
+    await user.click(await screen.findByText("AU"));
+    await user.click(screen.getByRole("button", { name: "number.search" }));
+
+    await waitFor(() => {
+      expect(searchAvailableNumbersMock).toHaveBeenCalledWith({
+        businessId: "business-1",
+        mode: "suggested",
+        countryCode: "AU",
+        limit: 10,
+      });
+    });
+  });
 });

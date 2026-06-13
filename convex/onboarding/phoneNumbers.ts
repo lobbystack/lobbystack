@@ -53,7 +53,7 @@ type TwilioLookupResult = {
   valid: boolean;
 };
 
-type SupportedPhoneNumberCountryCode = "US" | "CA" | "GB";
+type SupportedPhoneNumberCountryCode = "US" | "CA" | "GB" | "AU";
 
 type PurchasedIncomingNumber = {
   sid: string;
@@ -291,7 +291,7 @@ function normalizeSupportedCountryCode(
   value: string | undefined,
 ): SupportedPhoneNumberCountryCode | null {
   const normalized = value?.trim().toUpperCase();
-  return normalized === "US" || normalized === "CA" || normalized === "GB"
+  return normalized === "US" || normalized === "CA" || normalized === "GB" || normalized === "AU"
     ? normalized
     : null;
 }
@@ -775,7 +775,9 @@ export const searchAvailableNumbers = action({
   args: {
     businessId: v.id("businesses"),
     mode: searchModeValidator,
-    countryCode: v.optional(v.union(v.literal("US"), v.literal("CA"), v.literal("GB"))),
+    countryCode: v.optional(
+      v.union(v.literal("US"), v.literal("CA"), v.literal("GB"), v.literal("AU")),
+    ),
     city: v.optional(v.string()),
     areaCode: v.optional(v.string()),
     limit: v.optional(v.number()),

@@ -637,6 +637,54 @@ describe("onboarding phone-number actions", () => {
     });
   });
 
+  it("searches Australian local inventory when AU is selected", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+61412345678",
+      countryCode: "AU",
+    });
+    const authed = t.withIdentity({ subject });
+
+    listLocalNumbersMock.mockResolvedValue([
+      {
+        phoneNumber: "+61280123456",
+        locality: "Sydney",
+        region: "NSW",
+        isoCountry: "AU",
+        capabilities: { sms: true, voice: true },
+      },
+    ]);
+
+    const result = await authed.action(api.onboarding.phoneNumbers.searchAvailableNumbers, {
+      businessId,
+      mode: "suggested",
+      countryCode: "AU",
+      limit: 5,
+    });
+
+    expect(listLocalNumbersMock).toHaveBeenCalledWith({
+      countryCode: "AU",
+      args: {
+        limit: 5,
+        smsEnabled: true,
+        voiceEnabled: true,
+      },
+    });
+    expect(result.selectionContext).toEqual({
+      mode: "suggested",
+      countryCode: "AU",
+    });
+    expect(result.numbers[0]).toMatchObject({
+      e164: "+61280123456",
+      countryCode: "AU",
+      kind: "local",
+    });
+  });
+
   it("only returns inventory with both voice and SMS capabilities", async () => {
     const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
