@@ -1,5 +1,5 @@
 import * as React from "react";
-import PhoneNumberInput, { getCountryCallingCode } from "react-phone-number-input/input";
+import PhoneNumberInput from "react-phone-number-input/input";
 import type { Country } from "react-phone-number-input/input";
 
 import { inputClassName } from "@/components/ui/input";
@@ -45,22 +45,6 @@ function exceedsNationalDigitLimit(
   const limit = getPhoneNationalDigitLimit(country, nextDigits);
 
   return limit !== undefined && nextDigits.length > limit;
-}
-
-function getPhoneInputMaxLength(
-  country: Country | undefined,
-  placeholder: string,
-): number | undefined {
-  if (!country) {
-    return undefined;
-  }
-
-  const nationalLimit = getPhoneNationalDigitLimit(country);
-  if (nationalLimit === undefined) {
-    return undefined;
-  }
-
-  return Math.max(placeholder.length, `+${getCountryCallingCode(country)}`.length + nationalLimit);
 }
 
 const PhoneNumberTextInput = React.forwardRef<HTMLInputElement, PhoneNumberTextInputProps>(
@@ -113,11 +97,6 @@ export function PhoneInput({
   const resolvedPlaceholder = props.placeholder ?? getPhonePlaceholder(locale, {
     defaultCountry: resolvedDefaultCountry,
   });
-  const maxLength =
-    props.maxLength ??
-    (limitNationalDigits
-      ? getPhoneInputMaxLength(resolvedDefaultCountry as Country, resolvedPlaceholder)
-      : undefined);
   const inputComponent = React.useMemo(() => {
     if (!limitNationalDigits) {
       return PhoneNumberTextInput;
@@ -152,7 +131,6 @@ export function PhoneInput({
         placeholder={resolvedPlaceholder}
         smartCaret={false}
         type={props.type ?? "tel"}
-        {...(maxLength !== undefined ? { maxLength } : {})}
         {...(country !== undefined ? { country } : {})}
         {...(country === undefined ? { defaultCountry: resolvedDefaultCountry as Country } : {})}
         {...(value !== undefined ? { value } : {})}

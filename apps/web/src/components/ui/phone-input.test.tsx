@@ -123,11 +123,12 @@ describe("PhoneInput", () => {
 
     render(<PhoneInputHarness country="AU" limitNationalDigits />);
 
-    await user.type(screen.getByRole("textbox", { name: "Phone" }), "04123456789");
+    const input = screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement;
+    expect(input.maxLength).toBe(-1);
 
-    expect((screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement).value).toBe(
-      "0412 345 678",
-    );
+    await user.type(input, "04123456789");
+
+    expect(input.value).toBe("0412 345 678");
     expect(screen.getByTestId("phone-value").textContent).toBe("+61412345678");
   });
 
@@ -136,11 +137,12 @@ describe("PhoneInput", () => {
 
     render(<PhoneInputHarness country="GB" limitNationalDigits />);
 
-    await user.type(screen.getByRole("textbox", { name: "Phone" }), "79111234567");
+    const input = screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement;
+    expect(input.maxLength).toBe(-1);
 
-    expect((screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement).value).toBe(
-      "7911123456",
-    );
+    await user.type(input, "79111234567");
+
+    expect(input.value).toBe("7911123456");
     expect(screen.getByTestId("phone-value").textContent).toBe("+447911123456");
   });
 
@@ -163,6 +165,8 @@ describe("PhoneInput", () => {
     render(<PhoneInputHarness country="US" limitNationalDigits />);
 
     const input = screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement;
+    expect(input.maxLength).toBe(-1);
+
     await user.type(input, "213373425399");
     expect(input.value).toBe("(213) 373-4253");
 
@@ -173,5 +177,41 @@ describe("PhoneInput", () => {
 
     expect(input.value).toBe("(213) 373-4299");
     expect(screen.getByTestId("phone-value").textContent).toBe("+12133734299");
+  });
+
+  it("allows deleting and retyping after hitting the Australian national limit", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness country="AU" limitNationalDigits />);
+
+    const input = screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement;
+    await user.type(input, "04123456789");
+    expect(input.value).toBe("0412 345 678");
+
+    await user.keyboard("[Backspace][Backspace]");
+    expect(input.value).toBe("0412 345 6");
+
+    await user.type(input, "99");
+
+    expect(input.value).toBe("0412 345 699");
+    expect(screen.getByTestId("phone-value").textContent).toBe("+61412345699");
+  });
+
+  it("allows deleting and retyping after hitting the UK national limit", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness country="GB" limitNationalDigits />);
+
+    const input = screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement;
+    await user.type(input, "071231234569");
+    expect(input.value).toBe("07123 123456");
+
+    await user.keyboard("[Backspace][Backspace]");
+    expect(input.value).toBe("07123 1234");
+
+    await user.type(input, "99");
+
+    expect(input.value).toBe("07123 123499");
+    expect(screen.getByTestId("phone-value").textContent).toBe("+447123123499");
   });
 });
