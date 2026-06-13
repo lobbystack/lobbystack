@@ -150,6 +150,7 @@ export function PhoneInput({
         onChange={(nextValue) => onChange?.(nextValue)}
         onRawValueChange={onRawValueChange}
         placeholder={resolvedPlaceholder}
+        smartCaret={false}
         type={props.type ?? "tel"}
         {...(maxLength !== undefined ? { maxLength } : {})}
         {...(country !== undefined ? { country } : {})}
