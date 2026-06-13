@@ -176,6 +176,7 @@ export function OnboardingVerifyPhonePage({
                 containerClassName="min-w-0 flex-1"
                 country={selectedCountry}
                 id="onboarding-phone"
+                limitNationalDigits
                 onChange={handlePhoneChange}
                 onRawValueChange={handleRawPhoneChange}
                 value={phone}

@@ -8,10 +8,12 @@ import { PhoneInput } from "@/components/ui/phone-input";
 function PhoneInputHarness({
   country,
   defaultCountry = "US",
+  limitNationalDigits = false,
   locale = "en-US",
 }: {
   country?: "US" | "CA" | "FR" | "GB" | "AU";
   defaultCountry?: "US" | "CA" | "FR" | "GB" | "AU";
+  limitNationalDigits?: boolean;
   locale?: string;
 }) {
   const [value, setValue] = React.useState<string | undefined>();
@@ -21,6 +23,7 @@ function PhoneInputHarness({
       <PhoneInput
         aria-label="Phone"
         defaultCountry={defaultCountry}
+        limitNationalDigits={limitNationalDigits}
         locale={locale}
         onChange={setValue}
         value={value}
@@ -100,5 +103,57 @@ describe("PhoneInput", () => {
 
     expect(input.value).not.toBe(valueBeforeBackspace);
     expect(input.value.length).toBeLessThan(valueBeforeBackspace.length);
+  });
+
+  it("limits US input to ten national digits without counting formatting", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness country="US" limitNationalDigits />);
+
+    await user.type(screen.getByRole("textbox", { name: "Phone" }), "21337342539");
+
+    expect((screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement).value).toBe(
+      "(213) 373-4253",
+    );
+    expect(screen.getByTestId("phone-value").textContent).toBe("+12133734253");
+  });
+
+  it("limits Australian input to the mobile length with the national trunk prefix", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness country="AU" limitNationalDigits />);
+
+    await user.type(screen.getByRole("textbox", { name: "Phone" }), "04123456789");
+
+    expect((screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement).value).toBe(
+      "0412 345 678",
+    );
+    expect(screen.getByTestId("phone-value").textContent).toBe("+61412345678");
+  });
+
+  it("limits UK input to ten digits when the national trunk prefix is omitted", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness country="GB" limitNationalDigits />);
+
+    await user.type(screen.getByRole("textbox", { name: "Phone" }), "79111234567");
+
+    expect((screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement).value).toBe(
+      "7911123456",
+    );
+    expect(screen.getByTestId("phone-value").textContent).toBe("+447911123456");
+  });
+
+  it("prevents pasting too many national digits", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness country="US" limitNationalDigits />);
+
+    const input = screen.getByRole("textbox", { name: "Phone" });
+    await user.click(input);
+    await user.paste("213373425399");
+
+    expect((input as HTMLInputElement).value).toBe("");
+    expect(screen.getByTestId("phone-value").textContent).toBe("");
   });
 });

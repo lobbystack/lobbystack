@@ -136,6 +136,23 @@ export function getPhonePlaceholder(
   }
 }
 
+export function getPhoneNationalDigitLimit(
+  country: CountryCode | null | undefined,
+  nationalDigits = "",
+): number | undefined {
+  switch (country) {
+    case "CA":
+    case "US":
+      return 10;
+    case "GB":
+      return nationalDigits.startsWith("0") ? 11 : 10;
+    case "AU":
+      return nationalDigits.startsWith("0") ? 10 : 9;
+    default:
+      return undefined;
+  }
+}
+
 export function inferPhoneCountry(
   value: string | null | undefined,
   defaultCountry?: CountryCode | null,

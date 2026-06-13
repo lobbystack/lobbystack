@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { PointerEventsCheckLevel } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -44,6 +44,20 @@ vi.mock("@/features/onboarding/components/OnboardingShell", () => ({
     </main>
   ),
 }));
+
+async function selectRegion(
+  user: ReturnType<typeof userEvent.setup>,
+  regionName: string,
+): Promise<void> {
+  await user.click(screen.getByRole("combobox", { name: "verifyPhone.fields.region" }));
+  const optionText = await screen.findByText(regionName);
+  const option = optionText.closest("[role='option']");
+
+  expect(option).toBeTruthy();
+  await userEvent
+    .setup({ pointerEventsCheck: PointerEventsCheckLevel.Never })
+    .click(option ?? optionText);
+}
 
 describe("OnboardingVerifyPhonePage", () => {
   beforeEach(() => {
@@ -117,11 +131,7 @@ describe("OnboardingVerifyPhonePage", () => {
       />,
     );
 
-    const regionPicker = screen.getByRole("combobox", {
-      name: "verifyPhone.fields.region",
-    });
-    await user.click(regionPicker);
-    await user.click(await screen.findByText("United Kingdom"));
+    await selectRegion(user, "United Kingdom");
 
     expect(
       container.querySelector("[data-phone-country-calling-code]")?.textContent,
@@ -159,8 +169,7 @@ describe("OnboardingVerifyPhonePage", () => {
       />,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "verifyPhone.fields.region" }));
-    await user.click(await screen.findByText("United Kingdom"));
+    await selectRegion(user, "United Kingdom");
     await user.type(
       screen.getByLabelText("verifyPhone.fields.mobileNumber"),
       "7911123456",
@@ -184,8 +193,7 @@ describe("OnboardingVerifyPhonePage", () => {
       />,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "verifyPhone.fields.region" }));
-    await user.click(await screen.findByText("Australia"));
+    await selectRegion(user, "Australia");
     await user.type(
       screen.getByLabelText("verifyPhone.fields.mobileNumber"),
       "0412345678",
@@ -209,8 +217,7 @@ describe("OnboardingVerifyPhonePage", () => {
       />,
     );
 
-    await user.click(screen.getByRole("combobox", { name: "verifyPhone.fields.region" }));
-    await user.click(await screen.findByText("Australia"));
+    await selectRegion(user, "Australia");
 
     const phoneInput = screen.getByLabelText(
       "verifyPhone.fields.mobileNumber",
@@ -222,6 +229,25 @@ describe("OnboardingVerifyPhonePage", () => {
 
     expect(phoneInput.value).not.toBe(valueBeforeBackspace);
     expect(phoneInput.value.length).toBeLessThan(valueBeforeBackspace.length);
+  });
+
+  it("limits onboarding phone input to the selected country's national length", async () => {
+    const user = userEvent.setup();
+    render(
+      <OnboardingVerifyPhonePage
+        businessId={"business-1" as never}
+        onSignOut={() => {}}
+      />,
+    );
+
+    await selectRegion(user, "Australia");
+
+    const phoneInput = screen.getByLabelText(
+      "verifyPhone.fields.mobileNumber",
+    ) as HTMLInputElement;
+    await user.type(phoneInput, "04123456789");
+
+    expect(phoneInput.value).toBe("0412 345 678");
   });
 
   it("clears stale phone input when the prefix country changes", async () => {
@@ -239,11 +265,13 @@ describe("OnboardingVerifyPhonePage", () => {
     await user.type(phoneInput, "2133734253");
     expect(phoneInput.value).not.toBe("");
 
-    await user.click(screen.getByRole("combobox", { name: "verifyPhone.fields.region" }));
-    const australiaOption = (await screen.findByText("Australia")).closest("[role='option']");
-    expect(australiaOption).toBeTruthy();
-    await user.click(australiaOption as HTMLElement);
+    await selectRegion(user, "Australia");
 
-    expect(phoneInput.value).toBe("");
+    await waitFor(() => {
+      expect(
+        (screen.getByLabelText("verifyPhone.fields.mobileNumber") as HTMLInputElement)
+          .value,
+      ).toBe("");
+    });
   });
 });

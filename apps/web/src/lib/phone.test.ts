@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatPhoneNumberDisplay,
   getDefaultPhoneCountry,
+  getPhoneNationalDigitLimit,
   getPhonePlaceholder,
   getSupportedOnboardingPhoneCountryOptions,
   normalizePhoneNumber,
@@ -52,6 +53,16 @@ describe("phone helpers", () => {
 
   it("falls back to the raw value when parsing fails", () => {
     expect(formatPhoneNumberDisplay("not a phone", "en-US")).toBe("not a phone");
+  });
+
+  it("returns national digit limits for supported onboarding countries", () => {
+    expect(getPhoneNationalDigitLimit("US", "2133734253")).toBe(10);
+    expect(getPhoneNationalDigitLimit("CA", "5145550123")).toBe(10);
+    expect(getPhoneNationalDigitLimit("GB", "07123123456")).toBe(11);
+    expect(getPhoneNationalDigitLimit("GB", "7123123456")).toBe(10);
+    expect(getPhoneNationalDigitLimit("AU", "0412345678")).toBe(10);
+    expect(getPhoneNationalDigitLimit("AU", "412345678")).toBe(9);
+    expect(getPhoneNationalDigitLimit("FR", "0612345678")).toBeUndefined();
   });
 
   it("limits onboarding country options to supported markets", () => {
