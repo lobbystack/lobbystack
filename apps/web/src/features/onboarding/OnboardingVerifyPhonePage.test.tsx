@@ -174,6 +174,10 @@ describe("OnboardingVerifyPhonePage", () => {
       screen.getByLabelText("verifyPhone.fields.mobileNumber"),
       "7911123456",
     );
+    expect(
+      (screen.getByLabelText("verifyPhone.fields.mobileNumber") as HTMLInputElement)
+        .value,
+    ).toBe("7911 123456");
     await user.click(screen.getByRole("button", { name: "verifyPhone.sendCode" }));
 
     await waitFor(() => {
@@ -198,6 +202,10 @@ describe("OnboardingVerifyPhonePage", () => {
       screen.getByLabelText("verifyPhone.fields.mobileNumber"),
       "0412345678",
     );
+    expect(
+      (screen.getByLabelText("verifyPhone.fields.mobileNumber") as HTMLInputElement)
+        .value,
+    ).toBe("0412 345 678");
     await user.click(screen.getByRole("button", { name: "verifyPhone.sendCode" }));
 
     await waitFor(() => {

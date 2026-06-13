@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  formatPhoneNationalInput,
   formatPhoneNumberDisplay,
   getDefaultPhoneCountry,
   getPhoneNationalDigitLimit,
@@ -63,6 +64,14 @@ describe("phone helpers", () => {
     expect(getPhoneNationalDigitLimit("AU", "0412345678")).toBe(10);
     expect(getPhoneNationalDigitLimit("AU", "412345678")).toBe(9);
     expect(getPhoneNationalDigitLimit("FR", "0612345678")).toBeUndefined();
+  });
+
+  it("formats supported onboarding national input as it is typed", () => {
+    expect(formatPhoneNationalInput("07123456789", "GB")).toBe("07123 456789");
+    expect(formatPhoneNationalInput("7123456789", "GB")).toBe("7123 456789");
+    expect(formatPhoneNationalInput("0412345678", "AU")).toBe("0412 345 678");
+    expect(formatPhoneNationalInput("412345678", "AU")).toBe("412 345 678");
+    expect(formatPhoneNationalInput("(213) 373-4253", "US")).toBe("(213) 373-4253");
   });
 
   it("limits onboarding country options to supported markets", () => {

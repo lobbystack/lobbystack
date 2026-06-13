@@ -142,8 +142,20 @@ describe("PhoneInput", () => {
 
     await user.type(input, "79111234567");
 
-    expect(input.value).toBe("7911123456");
+    expect(input.value).toBe("7911 123456");
     expect(screen.getByTestId("phone-value").textContent).toBe("+447911123456");
+  });
+
+  it("formats Australian input when the national trunk prefix is omitted", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness country="AU" limitNationalDigits />);
+
+    const input = screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement;
+    await user.type(input, "4123456789");
+
+    expect(input.value).toBe("412 345 678");
+    expect(screen.getByTestId("phone-value").textContent).toBe("+61412345678");
   });
 
   it("prevents pasting too many national digits", async () => {

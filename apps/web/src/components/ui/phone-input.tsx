@@ -5,6 +5,7 @@ import type { Country } from "react-phone-number-input/input";
 import { inputClassName } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
+  formatPhoneNationalInput,
   getDefaultPhoneCountry,
   getPhoneNationalDigitLimit,
   getPhonePlaceholder,
@@ -58,25 +59,32 @@ const PhoneNumberTextInput = React.forwardRef<HTMLInputElement, PhoneNumberTextI
       ...props
     },
     ref,
-  ) => (
-    <input
-      ref={ref}
-      className={cn(inputClassName, className)}
-      onChange={(event) => {
-        if (exceedsNationalDigitLimit(event.target.value, nationalDigitLimitCountry)) {
-          const previousValue = typeof value === "string" ? value : "";
-          event.currentTarget.value = previousValue;
-          event.currentTarget.setSelectionRange(previousValue.length, previousValue.length);
-          return;
-        }
+  ) => {
+    const displayValue =
+      typeof value === "string" && nationalDigitLimitCountry
+        ? formatPhoneNationalInput(value, nationalDigitLimitCountry)
+        : value;
 
-        onRawValueChange?.(event.target.value);
-        onChange?.(event);
-      }}
-      value={value}
-      {...props}
-    />
-  ),
+    return (
+      <input
+        ref={ref}
+        className={cn(inputClassName, className)}
+        onChange={(event) => {
+          if (exceedsNationalDigitLimit(event.target.value, nationalDigitLimitCountry)) {
+            const previousValue = typeof displayValue === "string" ? displayValue : "";
+            event.currentTarget.value = previousValue;
+            event.currentTarget.setSelectionRange(previousValue.length, previousValue.length);
+            return;
+          }
+
+          onRawValueChange?.(event.target.value);
+          onChange?.(event);
+        }}
+        value={displayValue}
+        {...props}
+      />
+    );
+  },
 );
 
 PhoneNumberTextInput.displayName = "PhoneNumberTextInput";

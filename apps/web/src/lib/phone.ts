@@ -28,6 +28,27 @@ function normalizePhoneText(value: string | null | undefined): string {
   return value?.trim() ?? "";
 }
 
+function formatDigitGroups(digits: string, groupSizes: Array<number>): string {
+  const groups: Array<string> = [];
+  let offset = 0;
+
+  for (const groupSize of groupSizes) {
+    const group = digits.slice(offset, offset + groupSize);
+    if (!group) {
+      break;
+    }
+
+    groups.push(group);
+    offset += groupSize;
+  }
+
+  if (offset < digits.length) {
+    groups.push(digits.slice(offset));
+  }
+
+  return groups.join(" ");
+}
+
 export function getDefaultPhoneCountry(locale?: string | null): CountryCode {
   const normalized = normalizePhoneText(locale).toLowerCase();
 
@@ -150,6 +171,34 @@ export function getPhoneNationalDigitLimit(
       return nationalDigits.startsWith("0") ? 10 : 9;
     default:
       return undefined;
+  }
+}
+
+export function formatPhoneNationalInput(
+  value: string | null | undefined,
+  country: CountryCode | null | undefined,
+): string {
+  const normalizedValue = normalizePhoneText(value);
+  if (!normalizedValue || normalizedValue.startsWith("+")) {
+    return normalizedValue;
+  }
+
+  const nationalDigits = normalizedValue.replace(/\D/g, "");
+  if (!nationalDigits) {
+    return "";
+  }
+
+  switch (country) {
+    case "AU":
+      return nationalDigits.startsWith("0")
+        ? formatDigitGroups(nationalDigits.slice(0, 10), [4, 3, 3])
+        : formatDigitGroups(nationalDigits.slice(0, 9), [3, 3, 3]);
+    case "GB":
+      return nationalDigits.startsWith("0")
+        ? formatDigitGroups(nationalDigits.slice(0, 11), [5, 6])
+        : formatDigitGroups(nationalDigits.slice(0, 10), [4, 6]);
+    default:
+      return normalizedValue;
   }
 }
 
