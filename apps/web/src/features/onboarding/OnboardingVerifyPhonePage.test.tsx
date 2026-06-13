@@ -199,4 +199,51 @@ describe("OnboardingVerifyPhonePage", () => {
       });
     });
   });
+
+  it("keeps fixed-country partial input editable", async () => {
+    const user = userEvent.setup();
+    render(
+      <OnboardingVerifyPhonePage
+        businessId={"business-1" as never}
+        onSignOut={() => {}}
+      />,
+    );
+
+    await user.click(screen.getByRole("combobox", { name: "verifyPhone.fields.region" }));
+    await user.click(await screen.findByText("Australia"));
+
+    const phoneInput = screen.getByLabelText(
+      "verifyPhone.fields.mobileNumber",
+    ) as HTMLInputElement;
+    await user.type(phoneInput, "0412345");
+    const valueBeforeBackspace = phoneInput.value;
+
+    await user.keyboard("[Backspace]");
+
+    expect(phoneInput.value).not.toBe(valueBeforeBackspace);
+    expect(phoneInput.value.length).toBeLessThan(valueBeforeBackspace.length);
+  });
+
+  it("clears stale phone input when the prefix country changes", async () => {
+    const user = userEvent.setup();
+    render(
+      <OnboardingVerifyPhonePage
+        businessId={"business-1" as never}
+        onSignOut={() => {}}
+      />,
+    );
+
+    const phoneInput = screen.getByLabelText(
+      "verifyPhone.fields.mobileNumber",
+    ) as HTMLInputElement;
+    await user.type(phoneInput, "2133734253");
+    expect(phoneInput.value).not.toBe("");
+
+    await user.click(screen.getByRole("combobox", { name: "verifyPhone.fields.region" }));
+    const australiaOption = (await screen.findByText("Australia")).closest("[role='option']");
+    expect(australiaOption).toBeTruthy();
+    await user.click(australiaOption as HTMLElement);
+
+    expect(phoneInput.value).toBe("");
+  });
 });

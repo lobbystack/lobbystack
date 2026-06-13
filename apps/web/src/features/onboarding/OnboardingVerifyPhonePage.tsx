@@ -78,16 +78,17 @@ export function OnboardingVerifyPhonePage({
     if (!value) {
       return;
     }
-    setSelectedCountry(normalizeOnboardingPhoneCountry(value, defaultCountry) as Country);
+    const nextCountry = normalizeOnboardingPhoneCountry(value, defaultCountry);
+    if (nextCountry === selectedCountry) {
+      return;
+    }
+
+    setSelectedCountry(nextCountry as Country);
+    setPhone("");
   }
 
   function handlePhoneChange(value?: string): void {
-    const nextPhone = value ?? "";
-    setPhone(nextPhone);
-    const inferredCountry = inferPhoneCountry(nextPhone, selectedCountry);
-    if (isSupportedOnboardingPhoneCountry(inferredCountry)) {
-      setSelectedCountry(inferredCountry as Country);
-    }
+    setPhone(value ?? "");
   }
 
   function handleRawPhoneChange(rawValue: string): void {
@@ -96,7 +97,10 @@ export function OnboardingVerifyPhonePage({
     }
 
     const inferredCountry = inferPhoneCountry(rawValue, selectedCountry);
-    if (isSupportedOnboardingPhoneCountry(inferredCountry)) {
+    if (
+      isSupportedOnboardingPhoneCountry(inferredCountry) &&
+      inferredCountry !== selectedCountry
+    ) {
       setSelectedCountry(inferredCountry as Country);
     }
   }

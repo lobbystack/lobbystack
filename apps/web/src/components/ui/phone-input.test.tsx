@@ -10,8 +10,8 @@ function PhoneInputHarness({
   defaultCountry = "US",
   locale = "en-US",
 }: {
-  country?: "US" | "CA" | "FR" | "GB";
-  defaultCountry?: "US" | "CA" | "FR" | "GB";
+  country?: "US" | "CA" | "FR" | "GB" | "AU";
+  defaultCountry?: "US" | "CA" | "FR" | "GB" | "AU";
   locale?: string;
 }) {
   const [value, setValue] = React.useState<string | undefined>();
@@ -85,5 +85,20 @@ describe("PhoneInput", () => {
 
     expect(input.value).toBe("(231) 23");
     expect(input.value).not.toBe("(231) 232-1");
+  });
+
+  it("allows deleting partial input with a fixed country", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness country="AU" defaultCountry="US" locale="en-US" />);
+
+    const input = screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement;
+    await user.type(input, "0412345");
+    const valueBeforeBackspace = input.value;
+
+    await user.keyboard("[Backspace]");
+
+    expect(input.value).not.toBe(valueBeforeBackspace);
+    expect(input.value.length).toBeLessThan(valueBeforeBackspace.length);
   });
 });
