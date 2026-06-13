@@ -156,4 +156,22 @@ describe("PhoneInput", () => {
     expect((input as HTMLInputElement).value).toBe("");
     expect(screen.getByTestId("phone-value").textContent).toBe("");
   });
+
+  it("allows deleting and retyping after extra digits hit the national limit", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness country="US" limitNationalDigits />);
+
+    const input = screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement;
+    await user.type(input, "213373425399");
+    expect(input.value).toBe("(213) 373-4253");
+
+    await user.keyboard("[Backspace][Backspace]");
+    expect(input.value).toBe("(213) 373-42");
+
+    await user.type(input, "99");
+
+    expect(input.value).toBe("(213) 373-4299");
+    expect(screen.getByTestId("phone-value").textContent).toBe("+12133734299");
+  });
 });

@@ -1,5 +1,5 @@
 import * as React from "react";
-import PhoneNumberInput from "react-phone-number-input/input";
+import PhoneNumberInput, { getCountryCallingCode } from "react-phone-number-input/input";
 import type { Country } from "react-phone-number-input/input";
 
 import { inputClassName } from "@/components/ui/input";
@@ -33,29 +33,34 @@ function getDigits(value: string): string {
   return value.replace(/\D/g, "");
 }
 
-function shouldPreventNationalDigitInsertion(
-  input: HTMLInputElement,
-  insertedText: string,
+function exceedsNationalDigitLimit(
+  value: string,
   country: Country | undefined,
 ): boolean {
-  if (!country || insertedText.includes("+") || input.value.trim().startsWith("+")) {
+  if (!country || value.trim().startsWith("+")) {
     return false;
   }
 
-  const insertedDigits = getDigits(insertedText);
-  if (!insertedDigits) {
-    return false;
-  }
-
-  const selectionStart = input.selectionStart ?? input.value.length;
-  const selectionEnd = input.selectionEnd ?? selectionStart;
-  const nextValue = `${input.value.slice(0, selectionStart)}${insertedText}${input.value.slice(
-    selectionEnd,
-  )}`;
-  const nextDigits = getDigits(nextValue);
+  const nextDigits = getDigits(value);
   const limit = getPhoneNationalDigitLimit(country, nextDigits);
 
   return limit !== undefined && nextDigits.length > limit;
+}
+
+function getPhoneInputMaxLength(
+  country: Country | undefined,
+  placeholder: string,
+): number | undefined {
+  if (!country) {
+    return undefined;
+  }
+
+  const nationalLimit = getPhoneNationalDigitLimit(country);
+  if (nationalLimit === undefined) {
+    return undefined;
+  }
+
+  return Math.max(placeholder.length, `+${getCountryCallingCode(country)}`.length + nationalLimit);
 }
 
 const PhoneNumberTextInput = React.forwardRef<HTMLInputElement, PhoneNumberTextInputProps>(
@@ -63,11 +68,9 @@ const PhoneNumberTextInput = React.forwardRef<HTMLInputElement, PhoneNumberTextI
     {
       className,
       nationalDigitLimitCountry,
-      onBeforeInput,
       onChange,
-      onKeyDown,
-      onPaste,
       onRawValueChange,
+      value,
       ...props
     },
     ref,
@@ -75,55 +78,18 @@ const PhoneNumberTextInput = React.forwardRef<HTMLInputElement, PhoneNumberTextI
     <input
       ref={ref}
       className={cn(inputClassName, className)}
-      onBeforeInput={(event) => {
-        const inputEvent = event.nativeEvent as InputEvent;
-        if (
-          inputEvent.data &&
-          shouldPreventNationalDigitInsertion(
-            event.currentTarget,
-            inputEvent.data,
-            nationalDigitLimitCountry,
-          )
-        ) {
-          event.preventDefault();
+      onChange={(event) => {
+        if (exceedsNationalDigitLimit(event.target.value, nationalDigitLimitCountry)) {
+          const previousValue = typeof value === "string" ? value : "";
+          event.currentTarget.value = previousValue;
+          event.currentTarget.setSelectionRange(previousValue.length, previousValue.length);
           return;
         }
 
-        onBeforeInput?.(event);
-      }}
-      onChange={(event) => {
         onRawValueChange?.(event.target.value);
         onChange?.(event);
       }}
-      onKeyDown={(event) => {
-        if (
-          event.key.length === 1 &&
-          shouldPreventNationalDigitInsertion(
-            event.currentTarget,
-            event.key,
-            nationalDigitLimitCountry,
-          )
-        ) {
-          event.preventDefault();
-          return;
-        }
-
-        onKeyDown?.(event);
-      }}
-      onPaste={(event) => {
-        if (
-          shouldPreventNationalDigitInsertion(
-            event.currentTarget,
-            event.clipboardData.getData("text"),
-            nationalDigitLimitCountry,
-          )
-        ) {
-          event.preventDefault();
-          return;
-        }
-
-        onPaste?.(event);
-      }}
+      value={value}
       {...props}
     />
   ),
@@ -147,6 +113,11 @@ export function PhoneInput({
   const resolvedPlaceholder = props.placeholder ?? getPhonePlaceholder(locale, {
     defaultCountry: resolvedDefaultCountry,
   });
+  const maxLength =
+    props.maxLength ??
+    (limitNationalDigits
+      ? getPhoneInputMaxLength(resolvedDefaultCountry as Country, resolvedPlaceholder)
+      : undefined);
   const inputComponent = React.useMemo(() => {
     if (!limitNationalDigits) {
       return PhoneNumberTextInput;
@@ -180,6 +151,7 @@ export function PhoneInput({
         onRawValueChange={onRawValueChange}
         placeholder={resolvedPlaceholder}
         type={props.type ?? "tel"}
+        {...(maxLength !== undefined ? { maxLength } : {})}
         {...(country !== undefined ? { country } : {})}
         {...(country === undefined ? { defaultCountry: resolvedDefaultCountry as Country } : {})}
         {...(value !== undefined ? { value } : {})}
