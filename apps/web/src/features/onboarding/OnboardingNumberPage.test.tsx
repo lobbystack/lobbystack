@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OnboardingNumberPage } from "./OnboardingNumberPage";
@@ -8,6 +9,7 @@ const getInitialNumberSuggestionMock = vi.fn();
 const searchAvailableNumbersMock = vi.fn();
 const claimOnboardingNumberMock = vi.fn();
 const skipOnboardingNumberMock = vi.fn();
+const tMock = vi.hoisted(() => (key: string) => key);
 let primaryPhoneNumberMock: unknown = null;
 let observedActionCall = 0;
 
@@ -32,7 +34,7 @@ vi.mock("@/lib/analytics", () => ({
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: tMock,
   }),
 }));
 
@@ -111,5 +113,87 @@ describe("OnboardingNumberPage", () => {
     expect(screen.getByText("number.selectedTitle")).toBeTruthy();
     expect(screen.getByText("(581) 555-0102")).toBeTruthy();
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it("lets users search UK business-number inventory", async () => {
+    const user = userEvent.setup();
+    getInitialNumberSuggestionMock.mockResolvedValue({
+      market: { countryCode: "US" },
+      suggestion: null,
+      alternatives: [],
+    });
+    searchAvailableNumbersMock.mockResolvedValue({
+      market: { countryCode: "GB" },
+      selectionContext: { mode: "suggested", countryCode: "GB" },
+      numbers: [],
+    });
+
+    render(
+      <OnboardingNumberPage
+        businessId={"business-1" as never}
+        onSignOut={() => {}}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getInitialNumberSuggestionMock).toHaveBeenCalled();
+    });
+
+    await user.click(screen.getByRole("combobox", { name: "number.countryLabel" }));
+    await user.click(await screen.findByText("UK"));
+
+    expect(screen.queryByLabelText("number.areaCodeLabel")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "number.search" }));
+
+    await waitFor(() => {
+      expect(searchAvailableNumbersMock).toHaveBeenCalledWith({
+        businessId: "business-1",
+        mode: "suggested",
+        countryCode: "GB",
+        limit: 10,
+      });
+    });
+  });
+
+  it("lets users search Australian business-number inventory", async () => {
+    const user = userEvent.setup();
+    getInitialNumberSuggestionMock.mockResolvedValue({
+      market: { countryCode: "US" },
+      suggestion: null,
+      alternatives: [],
+    });
+    searchAvailableNumbersMock.mockResolvedValue({
+      market: { countryCode: "AU" },
+      selectionContext: { mode: "suggested", countryCode: "AU" },
+      numbers: [],
+    });
+
+    render(
+      <OnboardingNumberPage
+        businessId={"business-1" as never}
+        onSignOut={() => {}}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getInitialNumberSuggestionMock).toHaveBeenCalled();
+    });
+
+    await user.click(screen.getByRole("combobox", { name: "number.countryLabel" }));
+    await user.click(await screen.findByText("AU"));
+
+    expect(screen.queryByLabelText("number.areaCodeLabel")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "number.search" }));
+
+    await waitFor(() => {
+      expect(searchAvailableNumbersMock).toHaveBeenCalledWith({
+        businessId: "business-1",
+        mode: "suggested",
+        countryCode: "AU",
+        limit: 10,
+      });
+    });
   });
 });

@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  formatPhoneNationalInput,
   formatPhoneNumberDisplay,
   getDefaultPhoneCountry,
+  getPhoneNationalDigits,
+  getPhoneNationalInputValue,
+  getPhoneNationalDigitLimit,
   getPhonePlaceholder,
+  getSupportedOnboardingPhoneCountryOptions,
   normalizePhoneNumber,
 } from "@/lib/phone";
 
@@ -12,6 +17,8 @@ describe("phone helpers", () => {
     expect(getDefaultPhoneCountry("en-CA")).toBe("CA");
     expect(getDefaultPhoneCountry("fr-CA")).toBe("CA");
     expect(getDefaultPhoneCountry("en-US")).toBe("US");
+    expect(getDefaultPhoneCountry("en-GB")).toBe("GB");
+    expect(getDefaultPhoneCountry("en-AU")).toBe("AU");
     expect(getDefaultPhoneCountry("en")).toBe("US");
     expect(getDefaultPhoneCountry("fr")).toBe("FR");
   });
@@ -43,9 +50,48 @@ describe("phone helpers", () => {
     expect(getPhonePlaceholder("en-US")).toBe("(555) 123-4567");
     expect(getPhonePlaceholder("fr-CA")).toBe("(555) 123-4567");
     expect(getPhonePlaceholder("fr-FR", { defaultCountry: "FR" })).toBe("06 12 34 56 78");
+    expect(getPhonePlaceholder("en-US", { defaultCountry: "GB" })).toBe("07123 456789");
+    expect(getPhonePlaceholder("en-US", { defaultCountry: "AU" })).toBe("0412 345 678");
   });
 
   it("falls back to the raw value when parsing fails", () => {
     expect(formatPhoneNumberDisplay("not a phone", "en-US")).toBe("not a phone");
+  });
+
+  it("returns national digit limits for supported onboarding countries", () => {
+    expect(getPhoneNationalDigitLimit("US", "2133734253")).toBe(10);
+    expect(getPhoneNationalDigitLimit("CA", "5145550123")).toBe(10);
+    expect(getPhoneNationalDigitLimit("GB", "07123123456")).toBe(11);
+    expect(getPhoneNationalDigitLimit("GB", "7123123456")).toBe(10);
+    expect(getPhoneNationalDigitLimit("AU", "0412345678")).toBe(10);
+    expect(getPhoneNationalDigitLimit("AU", "412345678")).toBe(9);
+    expect(getPhoneNationalDigitLimit("FR", "0612345678")).toBeUndefined();
+  });
+
+  it("removes a pasted North American calling code from national digits", () => {
+    expect(getPhoneNationalDigits("1 (213) 373-4253", "US")).toBe("2133734253");
+    expect(getPhoneNationalDigits("1 514 555 0123", "CA")).toBe("5145550123");
+    expect(getPhoneNationalDigits("0412 345 678", "AU")).toBe("0412345678");
+  });
+
+  it("formats supported onboarding national input as it is typed", () => {
+    expect(formatPhoneNationalInput("12133734253", "US")).toBe("(213) 373-4253");
+    expect(formatPhoneNationalInput("07123456789", "GB")).toBe("07123 456789");
+    expect(formatPhoneNationalInput("7123456789", "GB")).toBe("7123 456789");
+    expect(formatPhoneNationalInput("0412345678", "AU")).toBe("0412 345 678");
+    expect(formatPhoneNationalInput("412345678", "AU")).toBe("412 345 678");
+    expect(formatPhoneNationalInput("(213) 373-4253", "US")).toBe("(213) 373-4253");
+  });
+
+  it("derives national input text from E.164 values", () => {
+    expect(getPhoneNationalInputValue("+12133734253", "US")).toBe("2133734253");
+    expect(getPhoneNationalInputValue("+447911123456", "GB")).toBe("7911123456");
+    expect(getPhoneNationalInputValue("+61412345678", "AU")).toBe("412345678");
+  });
+
+  it("limits onboarding country options to supported markets", () => {
+    expect(
+      getSupportedOnboardingPhoneCountryOptions("en-US").map((option) => option.code),
+    ).toEqual(["US", "CA", "GB", "AU"]);
   });
 });

@@ -47,10 +47,17 @@ type CheckPhoneVerificationResult =
     };
 
 const VERIFICATION_RESEND_COOLDOWN_MS = 30_000;
+const SUPPORTED_VERIFICATION_COUNTRIES = new Set(["US", "CA", "GB", "AU"]);
 
 function normalizeLineType(lineType: string | null | undefined): string | undefined {
   const normalized = lineType?.trim().toLowerCase();
   return normalized ? normalized : undefined;
+}
+
+function assertSupportedVerificationCountry(countryCode: string): void {
+  if (!SUPPORTED_VERIFICATION_COUNTRIES.has(countryCode.trim().toUpperCase())) {
+    throw new Error("We currently support US, Canadian, UK, and Australian mobile numbers.");
+  }
 }
 
 function buildVerificationErrorMessage(error: unknown): string {
@@ -140,6 +147,7 @@ export const startPhoneVerification = action({
       if (!lookup.valid) {
         throw new Error("Enter a valid mobile number in international format.");
       }
+      assertSupportedVerificationCountry(lookup.countryCode);
 
       const lineType = normalizeLineType(lookup.lineTypeIntelligence?.type);
       if (lineType && lineType !== "mobile") {
@@ -226,6 +234,7 @@ export const reuseVerifiedPhoneForOnboarding = action({
     if (!latestApprovedAttempt || latestApprovedAttempt.phoneE164 !== user.phone) {
       throw new Error("Verify your mobile number before continuing.");
     }
+    assertSupportedVerificationCountry(latestApprovedAttempt.countryCode);
 
     await ctx.runMutation(internal.onboarding.phoneVerificationState.saveVerificationAttempt, {
       businessId: args.businessId,
@@ -275,6 +284,7 @@ export const resendPhoneVerification = action({
     if (!attempt) {
       throw new Error("Start verification again before requesting a new code.");
     }
+    assertSupportedVerificationCountry(attempt.countryCode);
 
     const now = Date.now();
     if (now - attempt.updatedAt < VERIFICATION_RESEND_COOLDOWN_MS) {
@@ -343,6 +353,7 @@ export const checkPhoneVerification = action({
     if (!attempt || attempt.phoneE164 !== args.phoneE164) {
       throw new Error("Start verification again before entering a code.");
     }
+    assertSupportedVerificationCountry(attempt.countryCode);
 
     if (attempt.status === "approved") {
       return {

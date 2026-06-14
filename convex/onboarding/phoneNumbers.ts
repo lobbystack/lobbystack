@@ -53,6 +53,9 @@ type TwilioLookupResult = {
   valid: boolean;
 };
 
+type SupportedPhoneNumberCountryCode = "US" | "CA" | "GB" | "AU";
+type TwilioAreaCodeSearchCountryCode = "US" | "CA";
+
 type PurchasedIncomingNumber = {
   sid: string;
   smsUrl?: string | null;
@@ -285,9 +288,20 @@ function verifyNumberClaimToken(input: {
   return payload;
 }
 
-function normalizeSupportedCountryCode(value: string | undefined): "US" | "CA" | null {
+function normalizeSupportedCountryCode(
+  value: string | undefined,
+): SupportedPhoneNumberCountryCode | null {
   const normalized = value?.trim().toUpperCase();
-  return normalized === "US" || normalized === "CA" ? normalized : null;
+  return normalized === "US" || normalized === "CA" || normalized === "GB" || normalized === "AU"
+    ? normalized
+    : null;
+}
+
+function supportsTwilioAreaCodeSearch(
+  countryCode: string,
+): countryCode is TwilioAreaCodeSearchCountryCode {
+  const normalized = countryCode.trim().toUpperCase();
+  return normalized === "US" || normalized === "CA";
 }
 
 function dedupeNumbers(numbers: Array<AvailableNumberSummary>): Array<AvailableNumberSummary> {
@@ -624,6 +638,14 @@ function buildNormalizedSelectionContext(input: {
   }
 
   if (requestedSelectionContext.mode === "area_code") {
+    if (!supportsTwilioAreaCodeSearch(countryCode)) {
+      return buildSuggestedSelectionContext({
+        countryCode,
+        confidence: fallbackContext.confidence,
+        source: fallbackContext.source,
+      });
+    }
+
     return buildAreaCodeSelectionContext({
       countryCode,
       areaCode: requestedAreaCode || "",
@@ -769,7 +791,9 @@ export const searchAvailableNumbers = action({
   args: {
     businessId: v.id("businesses"),
     mode: searchModeValidator,
-    countryCode: v.optional(v.union(v.literal("US"), v.literal("CA"))),
+    countryCode: v.optional(
+      v.union(v.literal("US"), v.literal("CA"), v.literal("GB"), v.literal("AU")),
+    ),
     city: v.optional(v.string()),
     areaCode: v.optional(v.string()),
     limit: v.optional(v.number()),
@@ -782,10 +806,15 @@ export const searchAvailableNumbers = action({
       userId,
     });
     const { market, context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
-    const searchContext: NumberSuggestionContext = {
-      ...context,
-      ...(args.countryCode ? { countryCode: args.countryCode } : {}),
-    };
+    const searchCountryCode = args.countryCode ?? context.countryCode;
+    const searchContext: NumberSuggestionContext =
+      searchCountryCode === context.countryCode
+        ? context
+        : {
+            countryCode: searchCountryCode,
+            confidence: context.confidence,
+            source: context.source,
+          };
     const limit = normalizeInventorySearchLimit(args.limit);
     const selectionContext = buildNormalizedSelectionContext({
       requestedSelectionContext: {
