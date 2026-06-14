@@ -178,6 +178,16 @@ pnpm self-hosted:verify
 
 For prerequisites, local smoke vs production go-live, helper scripts, and troubleshooting, see the [Docker Compose self-hosting guide](https://docs.lobbystack.com/self-hosting/docker-compose).
 
+### Self-Hosted Railway
+
+Deploy on Railway using a marketplace template based on the official [Convex template](https://railway.com/deploy/convex) plus LobbyStack Web and Voice Gateway services. Full wiring, variable reference, and marketplace publish steps are in [`docs/deployment/railway-template.md`](docs/deployment/railway-template.md).
+
+After the unlisted template validates successfully and is published, add:
+
+```md
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template/<TEMPLATE_CODE>?utm_medium=integration&utm_source=button&utm_campaign=lobbystack)
+```
+
 ## Contributing
 
 Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), keep Convex as the primary backend, and keep the voice gateway focused on the live call path.
