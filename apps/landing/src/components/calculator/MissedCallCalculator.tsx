@@ -113,6 +113,10 @@ function clampNumber(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
 }
 
+function getSliderValue(value: number | readonly number[]) {
+  return Array.isArray(value) ? value[0] : value
+}
+
 export function MissedCallCalculator({ locale = "en" }: { locale?: Locale }) {
   const t = copy[locale]
   const [trade, setTrade] = useState<keyof typeof TRADES>("Custom")
@@ -253,14 +257,12 @@ export function MissedCallCalculator({ locale = "en" }: { locale?: Locale }) {
                 </span>
               </div>
               <Slider
-                value={[oppRate]}
+                value={oppRate}
                 min={0}
                 max={100}
                 aria-labelledby="opportunity-rate-label"
                 onValueChange={(value) =>
-                  setOppRate(
-                    clampNumber(Array.isArray(value) ? value[0] : value, 0, 100)
-                  )
+                  setOppRate(clampNumber(getSliderValue(value), 0, 100))
                 }
               />
             </div>
@@ -275,14 +277,12 @@ export function MissedCallCalculator({ locale = "en" }: { locale?: Locale }) {
                 </span>
               </div>
               <Slider
-                value={[bookRate]}
+                value={bookRate}
                 min={0}
                 max={100}
                 aria-labelledby="booking-rate-label"
                 onValueChange={(value) =>
-                  setBookRate(
-                    clampNumber(Array.isArray(value) ? value[0] : value, 0, 100)
-                  )
+                  setBookRate(clampNumber(getSliderValue(value), 0, 100))
                 }
               />
             </div>
