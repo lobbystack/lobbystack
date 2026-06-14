@@ -234,6 +234,7 @@ export const reuseVerifiedPhoneForOnboarding = action({
     if (!latestApprovedAttempt || latestApprovedAttempt.phoneE164 !== user.phone) {
       throw new Error("Verify your mobile number before continuing.");
     }
+    assertSupportedVerificationCountry(latestApprovedAttempt.countryCode);
 
     await ctx.runMutation(internal.onboarding.phoneVerificationState.saveVerificationAttempt, {
       businessId: args.businessId,
@@ -283,6 +284,7 @@ export const resendPhoneVerification = action({
     if (!attempt) {
       throw new Error("Start verification again before requesting a new code.");
     }
+    assertSupportedVerificationCountry(attempt.countryCode);
 
     const now = Date.now();
     if (now - attempt.updatedAt < VERIFICATION_RESEND_COOLDOWN_MS) {
@@ -351,6 +353,7 @@ export const checkPhoneVerification = action({
     if (!attempt || attempt.phoneE164 !== args.phoneE164) {
       throw new Error("Start verification again before entering a code.");
     }
+    assertSupportedVerificationCountry(attempt.countryCode);
 
     if (attempt.status === "approved") {
       return {
