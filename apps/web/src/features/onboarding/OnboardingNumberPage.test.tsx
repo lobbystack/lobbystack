@@ -142,11 +142,7 @@ describe("OnboardingNumberPage", () => {
     await user.click(screen.getByRole("combobox", { name: "number.countryLabel" }));
     await user.click(await screen.findByText("UK"));
 
-    await waitFor(() => {
-      expect((screen.getByLabelText("number.areaCodeLabel") as HTMLInputElement).maxLength).toBe(
-        5,
-      );
-    });
+    expect(screen.queryByLabelText("number.areaCodeLabel")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "number.search" }));
 
@@ -186,6 +182,9 @@ describe("OnboardingNumberPage", () => {
 
     await user.click(screen.getByRole("combobox", { name: "number.countryLabel" }));
     await user.click(await screen.findByText("AU"));
+
+    expect(screen.queryByLabelText("number.areaCodeLabel")).toBeNull();
+
     await user.click(screen.getByRole("button", { name: "number.search" }));
 
     await waitFor(() => {

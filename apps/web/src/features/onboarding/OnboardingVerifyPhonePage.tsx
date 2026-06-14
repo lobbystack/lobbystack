@@ -59,14 +59,20 @@ export function OnboardingVerifyPhonePage({
     () => getSupportedOnboardingPhoneCountryOptions(locale),
     [locale],
   );
+  const initialVerifyPhone = (() => {
+    const inferredCountry = inferPhoneCountry(currentUserPhone, defaultCountry);
+    return {
+      country: normalizeOnboardingPhoneCountry(inferredCountry, defaultCountry) as Country,
+      phone:
+        currentUserPhone && isSupportedOnboardingPhoneCountry(inferredCountry)
+          ? currentUserPhone
+          : "",
+    };
+  })();
   const [selectedCountry, setSelectedCountry] = useState<Country>(
-    () =>
-      normalizeOnboardingPhoneCountry(
-        inferPhoneCountry(currentUserPhone, defaultCountry),
-        defaultCountry,
-      ) as Country,
+    initialVerifyPhone.country,
   );
-  const [phone, setPhone] = useState<string>(currentUserPhone ?? "");
+  const [phone, setPhone] = useState<string>(initialVerifyPhone.phone);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const selectedCountryOption =

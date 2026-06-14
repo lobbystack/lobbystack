@@ -25,6 +25,7 @@ import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 import {
   normalizeOnboardingPhoneCountry,
+  supportsOnboardingAreaCodeSearch,
   type SupportedOnboardingPhoneCountry,
 } from "@/lib/phone";
 
@@ -168,15 +169,15 @@ export function OnboardingNumberPage({
   const [isSkipping, setIsSkipping] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const isSearching = searchSource !== null;
-  const areaCodeMaxLength = country === "GB" || country === "AU" ? 5 : 3;
+  const supportsAreaCodeSearch = supportsOnboardingAreaCodeSearch(country);
   const shouldLoadInventory = primaryPhoneNumber === null && !isComplete;
 
   function handleCountryChange(value: string | null): void {
     const nextCountry = normalizeOnboardingPhoneCountry(value);
     setCountry(nextCountry);
-    setAreaCode((currentAreaCode) =>
-      currentAreaCode.slice(0, nextCountry === "GB" || nextCountry === "AU" ? 5 : 3),
-    );
+    if (!supportsOnboardingAreaCodeSearch(nextCountry)) {
+      setAreaCode("");
+    }
   }
 
   // Initial load: get the suggested market + a starter list of numbers.
@@ -201,8 +202,13 @@ export function OnboardingNumberPage({
         })) as InitialSuggestionResult;
         if (cancelled) return;
 
-        setCountry(normalizeOnboardingPhoneCountry(result.market.countryCode));
-        setAreaCode(result.market.areaCode ?? "");
+        const initialCountry = normalizeOnboardingPhoneCountry(result.market.countryCode);
+        setCountry(initialCountry);
+        setAreaCode(
+          supportsOnboardingAreaCodeSearch(initialCountry)
+            ? (result.market.areaCode ?? "")
+            : "",
+        );
         const initialList = [
           ...(result.suggestion ? [result.suggestion] : []),
           ...result.alternatives,
@@ -251,7 +257,7 @@ export function OnboardingNumberPage({
     setSearchSource(source);
     setError(null);
     try {
-      const trimmedAreaCode = areaCode.trim();
+      const trimmedAreaCode = supportsAreaCodeSearch ? areaCode.trim() : "";
       const limit = source === "loadMore" ? Math.min(numbers.length + 10, 20) : 10;
       const result = (await searchAvailableNumbers({
         businessId,
@@ -420,7 +426,13 @@ export function OnboardingNumberPage({
       }
     >
       <div className="flex flex-col gap-6">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[140px_1fr_160px_auto] sm:items-end">
+        <div
+          className={
+            supportsAreaCodeSearch
+              ? "grid grid-cols-1 gap-3 sm:grid-cols-[140px_1fr_160px_auto] sm:items-end"
+              : "grid grid-cols-1 gap-3 sm:grid-cols-[140px_auto] sm:items-end"
+          }
+        >
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium" htmlFor="number-country">
               {t("number.countryLabel")}
@@ -441,20 +453,24 @@ export function OnboardingNumberPage({
               </SelectContent>
             </Select>
           </div>
-          <div aria-hidden="true" className="hidden sm:block" />
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium" htmlFor="number-area-code">
-              {t("number.areaCodeLabel")}
-            </label>
-            <Input
-              id="number-area-code"
-              inputMode="numeric"
-              maxLength={areaCodeMaxLength}
-              onChange={(event) => setAreaCode(event.target.value.replace(/[^\d]/g, ""))}
-              placeholder={t("number.areaCodePlaceholder")}
-              value={areaCode}
-            />
-          </div>
+          {supportsAreaCodeSearch ? (
+            <>
+              <div aria-hidden="true" className="hidden sm:block" />
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium" htmlFor="number-area-code">
+                  {t("number.areaCodeLabel")}
+                </label>
+                <Input
+                  id="number-area-code"
+                  inputMode="numeric"
+                  maxLength={3}
+                  onChange={(event) => setAreaCode(event.target.value.replace(/[^\d]/g, ""))}
+                  placeholder={t("number.areaCodePlaceholder")}
+                  value={areaCode}
+                />
+              </div>
+            </>
+          ) : null}
           <Button
             className="h-11 w-full sm:w-auto"
             disabled={isSearching || isLoading}

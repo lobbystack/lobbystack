@@ -293,6 +293,13 @@ export function normalizeOnboardingPhoneCountry(
   return isSupportedOnboardingPhoneCountry(normalized) ? normalized : fallback;
 }
 
+export function supportsOnboardingAreaCodeSearch(
+  value: string | null | undefined,
+): value is "US" | "CA" {
+  const normalized = normalizePhoneText(value).toUpperCase();
+  return normalized === "US" || normalized === "CA";
+}
+
 export type PhoneCountryOption = {
   callingCode: string;
   code: CountryCode;

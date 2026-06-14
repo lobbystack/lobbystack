@@ -290,6 +290,25 @@ describe("OnboardingVerifyPhonePage", () => {
     expect(phoneInput.value).toBe("0412 345 678");
   });
 
+  it("clears unsupported legacy saved phones on load", () => {
+    const { container } = render(
+      <OnboardingVerifyPhonePage
+        businessId={"business-1" as never}
+        currentUserPhone="+33612345678"
+        onSignOut={() => {}}
+      />,
+    );
+
+    const phoneInput = screen.getByLabelText(
+      "verifyPhone.fields.mobileNumber",
+    ) as HTMLInputElement;
+
+    expect(
+      container.querySelector("[data-phone-country-calling-code]")?.textContent,
+    ).toBe("+1");
+    expect(phoneInput.value).toBe("");
+  });
+
   it("clears stale phone input when the prefix country changes", async () => {
     const user = userEvent.setup();
     render(
