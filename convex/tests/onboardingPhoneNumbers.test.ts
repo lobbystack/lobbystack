@@ -637,6 +637,59 @@ describe("onboarding phone-number actions", () => {
     });
   });
 
+  it("falls back to country-wide UK inventory for area-code searches", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+447911123456",
+      countryCode: "GB",
+    });
+    const authed = t.withIdentity({ subject });
+
+    listLocalNumbersMock.mockResolvedValue([
+      {
+        phoneNumber: "+442071838750",
+        locality: "London",
+        region: "London",
+        isoCountry: "GB",
+        capabilities: { sms: true, voice: true },
+      },
+    ]);
+
+    const result = await authed.action(api.onboarding.phoneNumbers.searchAvailableNumbers, {
+      businessId,
+      mode: "area_code",
+      countryCode: "GB",
+      areaCode: "020",
+      limit: 5,
+    });
+
+    expect(listLocalNumbersMock).toHaveBeenCalledWith({
+      countryCode: "GB",
+      args: {
+        limit: 5,
+        smsEnabled: true,
+        voiceEnabled: true,
+      },
+    });
+    expect(result.selectionContext).toEqual({
+      mode: "suggested",
+      countryCode: "GB",
+    });
+    expect(result.numbers[0]).toMatchObject({
+      e164: "+442071838750",
+      countryCode: "GB",
+      kind: "local",
+      selectionContext: {
+        mode: "suggested",
+        countryCode: "GB",
+      },
+    });
+  });
+
   it("searches Australian local inventory when AU is selected", async () => {
     const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
@@ -682,6 +735,56 @@ describe("onboarding phone-number actions", () => {
       e164: "+61280123456",
       countryCode: "AU",
       kind: "local",
+    });
+  });
+
+  it("does not reuse verified NANP area hints when switching to Australia", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15815550100",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    listLocalNumbersMock.mockResolvedValue([
+      {
+        phoneNumber: "+61280123456",
+        locality: "Sydney",
+        region: "NSW",
+        isoCountry: "AU",
+        capabilities: { sms: true, voice: true },
+      },
+    ]);
+
+    const result = await authed.action(api.onboarding.phoneNumbers.searchAvailableNumbers, {
+      businessId,
+      mode: "suggested",
+      countryCode: "AU",
+      limit: 5,
+    });
+
+    expect(listLocalNumbersMock).toHaveBeenCalledWith({
+      countryCode: "AU",
+      args: {
+        limit: 5,
+        smsEnabled: true,
+        voiceEnabled: true,
+      },
+    });
+    expect(result.selectionContext).toEqual({
+      mode: "suggested",
+      countryCode: "AU",
+    });
+    expect(result.numbers[0]).toMatchObject({
+      e164: "+61280123456",
+      selectionContext: {
+        mode: "suggested",
+        countryCode: "AU",
+      },
     });
   });
 
