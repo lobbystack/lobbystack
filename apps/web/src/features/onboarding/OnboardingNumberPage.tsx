@@ -23,6 +23,10 @@ import { OnboardingShell } from "@/features/onboarding/components/OnboardingShel
 import { getSafeOnboardingErrorMessage } from "@/features/onboarding/onboardingErrors";
 import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
+import {
+  normalizeOnboardingPhoneCountry,
+  type SupportedOnboardingPhoneCountry,
+} from "@/lib/phone";
 
 type OnboardingNumberPageProps = {
   businessId: Id<"businesses">;
@@ -84,9 +88,15 @@ type PrimaryPhoneNumber = {
   status: string;
 };
 
-const COUNTRY_OPTIONS: Array<{ code: string; label: string; flag: string }> = [
+const COUNTRY_OPTIONS: Array<{
+  code: SupportedOnboardingPhoneCountry;
+  label: string;
+  flag: string;
+}> = [
   { code: "US", label: "US", flag: "🇺🇸" },
   { code: "CA", label: "CA", flag: "🇨🇦" },
+  { code: "GB", label: "UK", flag: "🇬🇧" },
+  { code: "AU", label: "AU", flag: "🇦🇺" },
 ];
 
 function formatPhoneNumber(e164: string): string {
@@ -146,7 +156,7 @@ export function OnboardingNumberPage({
     businessId,
   }) as PrimaryPhoneNumber | null | undefined;
 
-  const [country, setCountry] = useState<string>("US");
+  const [country, setCountry] = useState<SupportedOnboardingPhoneCountry>("US");
   const [areaCode, setAreaCode] = useState<string>("");
   const [numbers, setNumbers] = useState<Array<AvailableNumberSummary>>([]);
   const [selectedE164, setSelectedE164] = useState<string | null>(null);
@@ -158,7 +168,16 @@ export function OnboardingNumberPage({
   const [isSkipping, setIsSkipping] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const isSearching = searchSource !== null;
+  const areaCodeMaxLength = country === "GB" || country === "AU" ? 5 : 3;
   const shouldLoadInventory = primaryPhoneNumber === null && !isComplete;
+
+  function handleCountryChange(value: string | null): void {
+    const nextCountry = normalizeOnboardingPhoneCountry(value);
+    setCountry(nextCountry);
+    setAreaCode((currentAreaCode) =>
+      currentAreaCode.slice(0, nextCountry === "GB" || nextCountry === "AU" ? 5 : 3),
+    );
+  }
 
   // Initial load: get the suggested market + a starter list of numbers.
   useEffect(() => {
@@ -182,7 +201,7 @@ export function OnboardingNumberPage({
         })) as InitialSuggestionResult;
         if (cancelled) return;
 
-        setCountry(result.market.countryCode || "US");
+        setCountry(normalizeOnboardingPhoneCountry(result.market.countryCode));
         setAreaCode(result.market.areaCode ?? "");
         const initialList = [
           ...(result.suggestion ? [result.suggestion] : []),
@@ -237,7 +256,7 @@ export function OnboardingNumberPage({
       const result = (await searchAvailableNumbers({
         businessId,
         mode: trimmedAreaCode ? "area_code" : "suggested",
-        countryCode: country === "CA" ? "CA" : "US",
+        countryCode: country,
         ...(trimmedAreaCode ? { areaCode: trimmedAreaCode } : {}),
         limit,
       })) as SearchResult;
@@ -406,7 +425,7 @@ export function OnboardingNumberPage({
             <label className="text-sm font-medium" htmlFor="number-country">
               {t("number.countryLabel")}
             </label>
-            <Select onValueChange={(value) => setCountry(value ?? "US")} value={country}>
+            <Select onValueChange={handleCountryChange} value={country}>
               <SelectTrigger id="number-country">
                 <SelectValue />
               </SelectTrigger>
@@ -430,7 +449,7 @@ export function OnboardingNumberPage({
             <Input
               id="number-area-code"
               inputMode="numeric"
-              maxLength={3}
+              maxLength={areaCodeMaxLength}
               onChange={(event) => setAreaCode(event.target.value.replace(/[^\d]/g, ""))}
               placeholder={t("number.areaCodePlaceholder")}
               value={areaCode}

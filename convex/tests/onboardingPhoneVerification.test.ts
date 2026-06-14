@@ -56,6 +56,8 @@ const convexModules = modules;
 const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
 const originalTwilioVerifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
+const UNSUPPORTED_VERIFICATION_COUNTRY_MESSAGE =
+  "We currently support US, Canadian, UK, and Australian mobile numbers.";
 
 function createConvexHarness() {
   const t = convexTest(schema, convexModules);
@@ -176,6 +178,34 @@ async function listVerificationAttempts(
   });
 }
 
+async function seedLegacyVerificationAttempt(input: {
+  t: ConvexHarness;
+  businessId: Id<"businesses">;
+  userId: Id<"users">;
+  phoneE164: string;
+  countryCode: string;
+  status?: string;
+  verificationSid?: string;
+}) {
+  const timestamp = 1_700_000_000_000;
+
+  return await input.t.run(async (ctx) => {
+    return await ctx.db.insert("onboarding_phone_verifications", {
+      businessId: input.businessId,
+      userId: input.userId,
+      phoneE164: input.phoneE164,
+      countryCode: input.countryCode,
+      verificationSid: input.verificationSid ?? "VE-legacy",
+      status: input.status ?? "pending",
+      startedAt: timestamp,
+      updatedAt: timestamp,
+      expiresAt: timestamp + 10 * 60 * 1000,
+      ...(input.status === "approved" ? { approvedAt: timestamp } : {}),
+      attemptCount: input.status === "approved" ? 1 : 0,
+    });
+  });
+}
+
 describe("onboarding phone verification actions", () => {
   beforeEach(() => {
     process.env.TWILIO_ACCOUNT_SID = "ACtestaccountsid";
@@ -244,6 +274,181 @@ describe("onboarding phone verification actions", () => {
       status: "pending",
       lineType: "mobile",
     });
+  });
+
+  it("allows UK mobile phone verification", async () => {
+    lookupFetchMock.mockImplementation(async ({ phoneNumber }: { phoneNumber: string }) => ({
+      phoneNumber: phoneNumber.trim(),
+      countryCode: "GB",
+      valid: true,
+      lineTypeIntelligence: {
+        type: "mobile",
+      },
+    }));
+    const t = createConvexHarness();
+    const { businessId, subject } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    const result = await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+      businessId,
+      phoneE164: "+447911123456",
+    });
+
+    expect(verificationCreateMock).toHaveBeenCalledWith({
+      to: "+447911123456",
+      channel: "sms",
+    });
+    expect(result).toMatchObject({
+      phoneE164: "+447911123456",
+      countryCode: "GB",
+    });
+  });
+
+  it("allows Australian mobile phone verification", async () => {
+    lookupFetchMock.mockImplementation(async ({ phoneNumber }: { phoneNumber: string }) => ({
+      phoneNumber: phoneNumber.trim(),
+      countryCode: "AU",
+      valid: true,
+      lineTypeIntelligence: {
+        type: "mobile",
+      },
+    }));
+    const t = createConvexHarness();
+    const { businessId, subject } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    const result = await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+      businessId,
+      phoneE164: "+61412345678",
+    });
+
+    expect(verificationCreateMock).toHaveBeenCalledWith({
+      to: "+61412345678",
+      channel: "sms",
+    });
+    expect(result).toMatchObject({
+      phoneE164: "+61412345678",
+      countryCode: "AU",
+    });
+  });
+
+  it("rejects unsupported verification countries", async () => {
+    lookupFetchMock.mockImplementation(async ({ phoneNumber }: { phoneNumber: string }) => ({
+      phoneNumber: phoneNumber.trim(),
+      countryCode: "FR",
+      valid: true,
+      lineTypeIntelligence: {
+        type: "mobile",
+      },
+    }));
+    const t = createConvexHarness();
+    const { businessId, subject } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    await expect(
+      authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+        businessId,
+        phoneE164: "+33612345678",
+      }),
+    ).rejects.toThrow(UNSUPPORTED_VERIFICATION_COUNTRY_MESSAGE);
+    expect(verificationCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects reused verified phones from unsupported countries", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    const priorBusinessId = await seedAdditionalBusinessForUser({
+      t,
+      userId,
+      slug: "prior-unsupported-phone-business",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(userId, {
+        phone: "+33612345678",
+        phoneVerificationTime: 1_700_000_000_000,
+      });
+    });
+    await seedLegacyVerificationAttempt({
+      t,
+      businessId: priorBusinessId,
+      userId,
+      phoneE164: "+33612345678",
+      countryCode: "FR",
+      status: "approved",
+      verificationSid: "VE-prior-unsupported-approved",
+    });
+
+    await expect(
+      authed.action(api.onboarding.phoneVerification.reuseVerifiedPhoneForOnboarding, {
+        businessId,
+      }),
+    ).rejects.toThrow(UNSUPPORTED_VERIFICATION_COUNTRY_MESSAGE);
+
+    const business = await t.query(internal.businesses.admin.getBusinessById, {
+      businessId,
+    });
+    expect(business?.onboardingStage).toBe("verify_phone");
+    await expect(listVerificationAttempts(t, businessId)).resolves.toHaveLength(0);
+  });
+
+  it("rejects resends for unsupported legacy verification attempts", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "verify_phone_code",
+      });
+    });
+    await seedLegacyVerificationAttempt({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+33612345678",
+      countryCode: "FR",
+      verificationSid: "VE-legacy-unsupported-pending",
+    });
+
+    await expect(
+      authed.action(api.onboarding.phoneVerification.resendPhoneVerification, {
+        businessId,
+      }),
+    ).rejects.toThrow(UNSUPPORTED_VERIFICATION_COUNTRY_MESSAGE);
+
+    expect(verificationCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects code checks for unsupported legacy verification attempts", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "verify_phone_code",
+      });
+    });
+    await seedLegacyVerificationAttempt({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+33612345678",
+      countryCode: "FR",
+      verificationSid: "VE-legacy-unsupported-code-check",
+    });
+
+    await expect(
+      authed.action(api.onboarding.phoneVerification.checkPhoneVerification, {
+        businessId,
+        phoneE164: "+33612345678",
+        code: "123456",
+      }),
+    ).rejects.toThrow(UNSUPPORTED_VERIFICATION_COUNTRY_MESSAGE);
+
+    expect(verificationCheckCreateMock).not.toHaveBeenCalled();
   });
 
   it("throttles rapid resend attempts for the same verified phone", async () => {

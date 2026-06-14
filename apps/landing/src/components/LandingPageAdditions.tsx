@@ -108,7 +108,7 @@ const homeSectionsCopy = {
     },
     pricing: {
       heading: "Start free. Upgrade when calls grow.",
-      body: "Try LobbyStack with starter usage, then move to predictable Pro pricing when you are ready for production call coverage.",
+      body: "Try LobbyStack with included usage, then move to Starter or Pro when you are ready for production call coverage.",
       badge: "Most Popular",
       viewDetails: "View pricing details",
       note: "No credit card required to start.",
@@ -117,13 +117,19 @@ const homeSectionsCopy = {
           name: "Free",
           price: "$0",
           description:
-            "Starter voice minutes, outbound call attempts, SMS alerts, appointment booking, summaries, and call history.",
+            "30 voice minutes, 10 alert SMS segments, 2 outbound call attempts, and all core receptionist features.",
+        },
+        {
+          name: "Starter",
+          price: "$30/mo",
+          description:
+            "150 voice minutes, 50 alert SMS segments, 20 outbound call attempts, and email support.",
         },
         {
           name: "Pro",
-          price: "$15/mo",
+          price: "$100/mo",
           description:
-            "Higher included limits, usage-based billing, and priority email support.",
+            "500 voice minutes, 200 alert SMS segments, 100 outbound call attempts, and priority email support.",
         },
         {
           name: "Enterprise",
@@ -246,7 +252,7 @@ const homeSectionsCopy = {
     pricing: {
       heading:
         "Commencez gratuitement. Passez au forfait supérieur quand les appels augmentent.",
-      body: "Essayez LobbyStack avec le volume de départ, puis passez à un forfait Pro prévisible quand vous êtes prêt à couvrir vos appels en production.",
+      body: "Essayez LobbyStack avec l’usage inclus, puis passez à Starter ou Pro quand vous êtes prêt à couvrir vos appels en production.",
       badge: "Le plus populaire",
       viewDetails: "Voir le détail des tarifs",
       note: "Aucune carte bancaire requise pour commencer.",
@@ -255,13 +261,19 @@ const homeSectionsCopy = {
           name: "Free",
           price: "$0",
           description:
-            "Minutes vocales de départ, appels sortants, alertes SMS, prise de rendez‑vous, résumés et historique d’appels.",
+            "30 minutes vocales, 10 segments SMS d’alerte, 2 appels sortants et toutes les fonctionnalités de réception.",
+        },
+        {
+          name: "Starter",
+          price: "$30/mois",
+          description:
+            "150 minutes vocales, 50 segments SMS d’alerte, 20 appels sortants et support par courriel.",
         },
         {
           name: "Pro",
-          price: "$15/mo",
+          price: "$100/mois",
           description:
-            "Limites incluses plus élevées, facturation à l’usage et support prioritaire par courriel.",
+            "500 minutes vocales, 200 segments SMS d’alerte, 100 appels sortants et support prioritaire par courriel.",
         },
         {
           name: "Enterprise",
@@ -509,9 +521,9 @@ function PricingPreviewSection({ locale = "en" }: LocalizedProps) {
           <p className="section-intro">{sectionCopy.body}</p>
         </div>
 
-        <div className="mt-16 grid gap-6 lg:grid-cols-3">
-          {sectionCopy.plans.map((plan, index) => {
-            const isPro = index === 1
+        <div className="mt-16 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+          {sectionCopy.plans.map((plan) => {
+            const isPro = plan.name === "Pro"
             return (
               <article
                 key={plan.name}

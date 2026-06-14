@@ -77,10 +77,8 @@
     "title": "Let's verify you're real",
     "description": "",
     "fields": {
-      "mobileNumber": "Mobile number"
-    },
-    "placeholders": {
-      "mobileNumber": "+1 555 123 4567"
+      "mobileNumber": "Mobile number",
+      "region": "Region"
     },
     "hint": "Use a personal mobile number that can receive SMS.",
     "sendCode": "Send code",
