@@ -49,6 +49,23 @@ function formatDigitGroups(digits: string, groupSizes: Array<number>): string {
   return groups.join(" ");
 }
 
+function formatNorthAmericanPhoneInput(digits: string): string {
+  const nationalDigits = digits.slice(0, 10);
+
+  if (nationalDigits.length <= 3) {
+    return nationalDigits.length > 0 ? `(${nationalDigits}` : "";
+  }
+
+  if (nationalDigits.length <= 6) {
+    return `(${nationalDigits.slice(0, 3)}) ${nationalDigits.slice(3)}`;
+  }
+
+  return `(${nationalDigits.slice(0, 3)}) ${nationalDigits.slice(
+    3,
+    6,
+  )}-${nationalDigits.slice(6)}`;
+}
+
 export function getDefaultPhoneCountry(locale?: string | null): CountryCode {
   const normalized = normalizePhoneText(locale).toLowerCase();
 
@@ -189,6 +206,9 @@ export function formatPhoneNationalInput(
   }
 
   switch (country) {
+    case "CA":
+    case "US":
+      return formatNorthAmericanPhoneInput(nationalDigits);
     case "AU":
       return nationalDigits.startsWith("0")
         ? formatDigitGroups(nationalDigits.slice(0, 10), [4, 3, 3])
@@ -200,6 +220,23 @@ export function formatPhoneNationalInput(
     default:
       return normalizedValue;
   }
+}
+
+export function getPhoneNationalInputValue(
+  value: string | null | undefined,
+  country: CountryCode | null | undefined,
+): string {
+  const normalizedValue = normalizePhoneText(value);
+  if (!normalizedValue) {
+    return "";
+  }
+
+  if (normalizedValue.startsWith("+")) {
+    const parsed = parsePhoneNumberFromString(normalizedValue, country ?? undefined);
+    return parsed?.nationalNumber ?? normalizedValue;
+  }
+
+  return normalizedValue;
 }
 
 export function inferPhoneCountry(

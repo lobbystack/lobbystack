@@ -188,6 +188,38 @@ describe("OnboardingVerifyPhonePage", () => {
     });
   });
 
+  it("infers the prefix country when an international phone number is pasted", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <OnboardingVerifyPhonePage
+        businessId={"business-1" as never}
+        onSignOut={() => {}}
+      />,
+    );
+
+    const phoneInput = screen.getByLabelText(
+      "verifyPhone.fields.mobileNumber",
+    ) as HTMLInputElement;
+    await user.click(phoneInput);
+    await user.paste("+447400123456");
+
+    await waitFor(() => {
+      expect(
+        container.querySelector("[data-phone-country-calling-code]")?.textContent,
+      ).toBe("+44");
+    });
+    expect(phoneInput.value).toBe("7400 123456");
+
+    await user.click(screen.getByRole("button", { name: "verifyPhone.sendCode" }));
+
+    await waitFor(() => {
+      expect(startPhoneVerificationMock).toHaveBeenCalledWith({
+        businessId: "business-1",
+        phoneE164: "+447400123456",
+      });
+    });
+  });
+
   it("submits an Australian number as E.164 after changing the prefix country", async () => {
     const user = userEvent.setup();
     render(

@@ -158,7 +158,7 @@ describe("PhoneInput", () => {
     expect(screen.getByTestId("phone-value").textContent).toBe("+61412345678");
   });
 
-  it("prevents pasting too many national digits", async () => {
+  it("clips pasted input to the selected country's national digit limit", async () => {
     const user = userEvent.setup();
 
     render(<PhoneInputHarness country="US" limitNationalDigits />);
@@ -167,8 +167,8 @@ describe("PhoneInput", () => {
     await user.click(input);
     await user.paste("213373425399");
 
-    expect((input as HTMLInputElement).value).toBe("");
-    expect(screen.getByTestId("phone-value").textContent).toBe("");
+    expect((input as HTMLInputElement).value).toBe("(213) 373-4253");
+    expect(screen.getByTestId("phone-value").textContent).toBe("+12133734253");
   });
 
   it("allows deleting and retyping after extra digits hit the national limit", async () => {
@@ -186,6 +186,23 @@ describe("PhoneInput", () => {
     expect(input.value).toBe("(213) 373-42");
 
     await user.type(input, "99");
+
+    expect(input.value).toBe("(213) 373-4299");
+    expect(screen.getByTestId("phone-value").textContent).toBe("+12133734299");
+  });
+
+  it("keeps US input editable across repeated delete and retype cycles", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness country="US" limitNationalDigits />);
+
+    const input = screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement;
+    await user.type(input, "2133734253");
+
+    for (let cycle = 0; cycle < 4; cycle += 1) {
+      await user.keyboard("[Backspace][Backspace]");
+      await user.type(input, "99");
+    }
 
     expect(input.value).toBe("(213) 373-4299");
     expect(screen.getByTestId("phone-value").textContent).toBe("+12133734299");

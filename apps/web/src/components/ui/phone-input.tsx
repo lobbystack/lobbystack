@@ -7,26 +7,27 @@ import { cn } from "@/lib/utils";
 import {
   formatPhoneNationalInput,
   getDefaultPhoneCountry,
+  getPhoneNationalInputValue,
   getPhoneNationalDigitLimit,
   getPhonePlaceholder,
+  normalizePhoneNumber,
 } from "@/lib/phone";
 
 type PhoneInputProps = Omit<
   React.ComponentProps<"input">,
   "defaultValue" | "onChange" | "value"
 > & {
-  containerClassName?: string;
-  country?: Country;
-  defaultCountry?: Country;
-  locale?: string | null;
-  limitNationalDigits?: boolean;
-  onChange?: (value?: string) => void;
-  onRawValueChange?: (value: string) => void;
+  containerClassName?: string | undefined;
+  country?: Country | undefined;
+  defaultCountry?: Country | undefined;
+  locale?: string | null | undefined;
+  limitNationalDigits?: boolean | undefined;
+  onChange?: ((value?: string) => void) | undefined;
+  onRawValueChange?: ((value: string) => void) | undefined;
   value?: string | undefined;
 };
 
 type PhoneNumberTextInputProps = React.ComponentProps<"input"> & {
-  nationalDigitLimitCountry?: Country;
   onRawValueChange?: (value: string) => void;
 };
 
@@ -34,53 +35,24 @@ function getDigits(value: string): string {
   return value.replace(/\D/g, "");
 }
 
-function exceedsNationalDigitLimit(
-  value: string,
-  country: Country | undefined,
-): boolean {
-  if (!country || value.trim().startsWith("+")) {
-    return false;
-  }
-
-  const nextDigits = getDigits(value);
-  const limit = getPhoneNationalDigitLimit(country, nextDigits);
-
-  return limit !== undefined && nextDigits.length > limit;
-}
-
 const PhoneNumberTextInput = React.forwardRef<HTMLInputElement, PhoneNumberTextInputProps>(
   (
     {
       className,
-      nationalDigitLimitCountry,
       onChange,
       onRawValueChange,
-      value,
       ...props
     },
     ref,
   ) => {
-    const displayValue =
-      typeof value === "string" && nationalDigitLimitCountry
-        ? formatPhoneNationalInput(value, nationalDigitLimitCountry)
-        : value;
-
     return (
       <input
         ref={ref}
         className={cn(inputClassName, className)}
         onChange={(event) => {
-          if (exceedsNationalDigitLimit(event.target.value, nationalDigitLimitCountry)) {
-            const previousValue = typeof displayValue === "string" ? displayValue : "";
-            event.currentTarget.value = previousValue;
-            event.currentTarget.setSelectionRange(previousValue.length, previousValue.length);
-            return;
-          }
-
           onRawValueChange?.(event.target.value);
           onChange?.(event);
         }}
-        value={displayValue}
         {...props}
       />
     );
@@ -88,6 +60,88 @@ const PhoneNumberTextInput = React.forwardRef<HTMLInputElement, PhoneNumberTextI
 );
 
 PhoneNumberTextInput.displayName = "PhoneNumberTextInput";
+
+function NationalPhoneInput({
+  className,
+  containerClassName,
+  country,
+  disabled,
+  onChange,
+  onRawValueChange,
+  value,
+  ...props
+}: PhoneInputProps & { country: Country }) {
+  const [rawValue, setRawValue] = React.useState(() =>
+    getPhoneNationalInputValue(value, country),
+  );
+  const lastCountryRef = React.useRef(country);
+  const lastEmittedValueRef = React.useRef(value ?? "");
+
+  React.useEffect(() => {
+    const normalizedPropValue = value ?? "";
+
+    if (lastCountryRef.current !== country) {
+      lastCountryRef.current = country;
+      lastEmittedValueRef.current = normalizedPropValue;
+      setRawValue(getPhoneNationalInputValue(value, country));
+      return;
+    }
+
+    if (normalizedPropValue !== lastEmittedValueRef.current) {
+      lastEmittedValueRef.current = normalizedPropValue;
+      setRawValue(getPhoneNationalInputValue(value, country));
+    }
+  }, [country, value]);
+
+  const displayValue = formatPhoneNationalInput(rawValue, country);
+
+  function emitPhoneValue(nextRawValue: string): void {
+    const nextPhoneValue =
+      normalizePhoneNumber(nextRawValue, { defaultCountry: country }) ?? "";
+    lastEmittedValueRef.current = nextPhoneValue;
+    onChange?.(nextPhoneValue || undefined);
+  }
+
+  return (
+    <div className={cn("w-full", containerClassName)}>
+      <input
+        {...props}
+        autoComplete={props.autoComplete ?? "tel"}
+        className={cn(inputClassName, className)}
+        disabled={disabled}
+        inputMode={props.inputMode ?? "tel"}
+        onChange={(event) => {
+          const nextValue = event.target.value;
+          onRawValueChange?.(nextValue);
+
+          if (nextValue.trim().startsWith("+")) {
+            const nextPhoneValue =
+              normalizePhoneNumber(nextValue, { defaultCountry: country }) ?? "";
+            const nextRawValue = getPhoneNationalInputValue(
+              nextPhoneValue || nextValue,
+              country,
+            );
+
+            lastEmittedValueRef.current = nextPhoneValue;
+            setRawValue(nextRawValue);
+            onChange?.(nextPhoneValue || undefined);
+            return;
+          }
+
+          const nextDigits = getDigits(nextValue);
+          const limit = getPhoneNationalDigitLimit(country, nextDigits);
+          const nextRawValue =
+            limit !== undefined ? nextDigits.slice(0, limit) : nextDigits;
+
+          setRawValue(nextRawValue);
+          emitPhoneValue(nextRawValue);
+        }}
+        type={props.type ?? "tel"}
+        value={displayValue}
+      />
+    </div>
+  );
+}
 
 export function PhoneInput({
   containerClassName,
@@ -105,26 +159,21 @@ export function PhoneInput({
   const resolvedPlaceholder = props.placeholder ?? getPhonePlaceholder(locale, {
     defaultCountry: resolvedDefaultCountry,
   });
-  const inputComponent = React.useMemo(() => {
-    if (!limitNationalDigits) {
-      return PhoneNumberTextInput;
-    }
 
-    const nationalDigitLimitCountry = resolvedDefaultCountry as Country;
-    const LimitedPhoneNumberTextInput = React.forwardRef<
-      HTMLInputElement,
-      PhoneNumberTextInputProps
-    >((inputProps, ref) => (
-      <PhoneNumberTextInput
-        {...inputProps}
-        ref={ref}
-        nationalDigitLimitCountry={nationalDigitLimitCountry}
+  if (limitNationalDigits) {
+    return (
+      <NationalPhoneInput
+        {...props}
+        containerClassName={containerClassName}
+        country={resolvedDefaultCountry as Country}
+        disabled={disabled}
+        onChange={onChange}
+        onRawValueChange={onRawValueChange}
+        placeholder={resolvedPlaceholder}
+        value={value}
       />
-    ));
-    LimitedPhoneNumberTextInput.displayName = "LimitedPhoneNumberTextInput";
-
-    return LimitedPhoneNumberTextInput;
-  }, [limitNationalDigits, resolvedDefaultCountry]);
+    );
+  }
 
   return (
     <div className={cn("w-full", containerClassName)}>
@@ -133,7 +182,7 @@ export function PhoneInput({
         autoComplete={props.autoComplete ?? "tel"}
         disabled={disabled}
         inputMode={props.inputMode ?? "tel"}
-        inputComponent={inputComponent}
+        inputComponent={PhoneNumberTextInput}
         onChange={(nextValue) => onChange?.(nextValue)}
         onRawValueChange={onRawValueChange}
         placeholder={resolvedPlaceholder}

@@ -4,6 +4,7 @@ import {
   formatPhoneNationalInput,
   formatPhoneNumberDisplay,
   getDefaultPhoneCountry,
+  getPhoneNationalInputValue,
   getPhoneNationalDigitLimit,
   getPhonePlaceholder,
   getSupportedOnboardingPhoneCountryOptions,
@@ -72,6 +73,12 @@ describe("phone helpers", () => {
     expect(formatPhoneNationalInput("0412345678", "AU")).toBe("0412 345 678");
     expect(formatPhoneNationalInput("412345678", "AU")).toBe("412 345 678");
     expect(formatPhoneNationalInput("(213) 373-4253", "US")).toBe("(213) 373-4253");
+  });
+
+  it("derives national input text from E.164 values", () => {
+    expect(getPhoneNationalInputValue("+12133734253", "US")).toBe("2133734253");
+    expect(getPhoneNationalInputValue("+447911123456", "GB")).toBe("7911123456");
+    expect(getPhoneNationalInputValue("+61412345678", "AU")).toBe("412345678");
   });
 
   it("limits onboarding country options to supported markets", () => {
