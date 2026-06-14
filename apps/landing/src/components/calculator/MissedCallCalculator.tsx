@@ -32,9 +32,7 @@ const copy = {
     trade: "Trade / Industry",
     selectTrade: "Select a trade",
     missedCalls: "Missed calls per week",
-    missedCallsHint: (max: number) => `Use 0 to ${max} missed calls per week.`,
     averageJobValue: "Average job value ($)",
-    averageJobValueHint: (value: string) => `Estimate up to ${value} per job.`,
     opportunityRate: "% of calls that are real jobs",
     bookingRate: "Booking rate if answered",
     monthlyRevenue: "Monthly Revenue at Risk",
@@ -61,11 +59,7 @@ const copy = {
     trade: "Métier / secteur",
     selectTrade: "Sélectionner un métier",
     missedCalls: "Appels manqués par semaine",
-    missedCallsHint: (max: number) =>
-      `Utilisez une valeur entre 0 et ${max} appels manqués par semaine.`,
     averageJobValue: "Valeur moyenne d’un travail ($)",
-    averageJobValueHint: (value: string) =>
-      `Estimez jusqu’à ${value} par travail.`,
     opportunityRate: "% d’appels qui sont de vraies occasions",
     bookingRate: "Taux de réservation quand l’appel est pris",
     monthlyRevenue: "Revenu mensuel à risque",
@@ -95,9 +89,7 @@ const copy = {
     trade: string
     selectTrade: string
     missedCalls: string
-    missedCallsHint: (max: number) => string
     averageJobValue: string
-    averageJobValueHint: (value: string) => string
     opportunityRate: string
     bookingRate: string
     monthlyRevenue: string
@@ -200,19 +192,12 @@ export function MissedCallCalculator({ locale = "en" }: { locale?: Locale }) {
                 inputMode="numeric"
                 min={0}
                 max={MAX_MISSED_CALLS_PER_WEEK}
-                aria-describedby="missed-calls-hint"
                 value={calls}
                 onChange={handleNumberChange(
                   setCalls,
                   MAX_MISSED_CALLS_PER_WEEK
                 )}
               />
-              <p
-                id="missed-calls-hint"
-                className="mt-2 text-xs text-muted-foreground"
-              >
-                {t.missedCallsHint(MAX_MISSED_CALLS_PER_WEEK)}
-              </p>
             </div>
             <div>
               <label
@@ -227,19 +212,12 @@ export function MissedCallCalculator({ locale = "en" }: { locale?: Locale }) {
                 inputMode="numeric"
                 min={0}
                 max={MAX_AVERAGE_JOB_VALUE}
-                aria-describedby="average-job-value-hint"
                 value={jobValue}
                 onChange={handleNumberChange(
                   setJobValue,
                   MAX_AVERAGE_JOB_VALUE
                 )}
               />
-              <p
-                id="average-job-value-hint"
-                className="mt-2 text-xs text-muted-foreground"
-              >
-                {t.averageJobValueHint(formatCurrency(MAX_AVERAGE_JOB_VALUE))}
-              </p>
             </div>
           </div>
 
