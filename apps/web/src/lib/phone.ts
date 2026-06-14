@@ -50,7 +50,7 @@ function formatDigitGroups(digits: string, groupSizes: Array<number>): string {
 }
 
 function formatNorthAmericanPhoneInput(digits: string): string {
-  const nationalDigits = digits.slice(0, 10);
+  const nationalDigits = stripNorthAmericanCallingCode(digits).slice(0, 10);
 
   if (nationalDigits.length <= 3) {
     return nationalDigits.length > 0 ? `(${nationalDigits}` : "";
@@ -64,6 +64,14 @@ function formatNorthAmericanPhoneInput(digits: string): string {
     3,
     6,
   )}-${nationalDigits.slice(6)}`;
+}
+
+function stripNorthAmericanCallingCode(digits: string): string {
+  if (digits.length > 10 && digits.startsWith("1")) {
+    return digits.slice(1);
+  }
+
+  return digits;
 }
 
 export function getDefaultPhoneCountry(locale?: string | null): CountryCode {
@@ -191,6 +199,21 @@ export function getPhoneNationalDigitLimit(
   }
 }
 
+export function getPhoneNationalDigits(
+  value: string | null | undefined,
+  country: CountryCode | null | undefined,
+): string {
+  const digits = normalizePhoneText(value).replace(/\D/g, "");
+
+  switch (country) {
+    case "CA":
+    case "US":
+      return stripNorthAmericanCallingCode(digits);
+    default:
+      return digits;
+  }
+}
+
 export function formatPhoneNationalInput(
   value: string | null | undefined,
   country: CountryCode | null | undefined,
@@ -200,7 +223,7 @@ export function formatPhoneNationalInput(
     return normalizedValue;
   }
 
-  const nationalDigits = normalizedValue.replace(/\D/g, "");
+  const nationalDigits = getPhoneNationalDigits(normalizedValue, country);
   if (!nationalDigits) {
     return "";
   }

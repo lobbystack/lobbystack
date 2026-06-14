@@ -4,6 +4,7 @@ import {
   formatPhoneNationalInput,
   formatPhoneNumberDisplay,
   getDefaultPhoneCountry,
+  getPhoneNationalDigits,
   getPhoneNationalInputValue,
   getPhoneNationalDigitLimit,
   getPhonePlaceholder,
@@ -67,7 +68,14 @@ describe("phone helpers", () => {
     expect(getPhoneNationalDigitLimit("FR", "0612345678")).toBeUndefined();
   });
 
+  it("removes a pasted North American calling code from national digits", () => {
+    expect(getPhoneNationalDigits("1 (213) 373-4253", "US")).toBe("2133734253");
+    expect(getPhoneNationalDigits("1 514 555 0123", "CA")).toBe("5145550123");
+    expect(getPhoneNationalDigits("0412 345 678", "AU")).toBe("0412345678");
+  });
+
   it("formats supported onboarding national input as it is typed", () => {
+    expect(formatPhoneNationalInput("12133734253", "US")).toBe("(213) 373-4253");
     expect(formatPhoneNationalInput("07123456789", "GB")).toBe("07123 456789");
     expect(formatPhoneNationalInput("7123456789", "GB")).toBe("7123 456789");
     expect(formatPhoneNationalInput("0412345678", "AU")).toBe("0412 345 678");

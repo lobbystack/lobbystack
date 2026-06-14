@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   formatPhoneNationalInput,
   getDefaultPhoneCountry,
+  getPhoneNationalDigits,
   getPhoneNationalInputValue,
   getPhoneNationalDigitLimit,
   getPhonePlaceholder,
@@ -30,10 +31,6 @@ type PhoneInputProps = Omit<
 type PhoneNumberTextInputProps = React.ComponentProps<"input"> & {
   onRawValueChange?: (value: string) => void;
 };
-
-function getDigits(value: string): string {
-  return value.replace(/\D/g, "");
-}
 
 const PhoneNumberTextInput = React.forwardRef<HTMLInputElement, PhoneNumberTextInputProps>(
   (
@@ -128,7 +125,7 @@ function NationalPhoneInput({
             return;
           }
 
-          const nextDigits = getDigits(nextValue);
+          const nextDigits = getPhoneNationalDigits(nextValue, country);
           const limit = getPhoneNationalDigitLimit(country, nextDigits);
           const nextRawValue =
             limit !== undefined ? nextDigits.slice(0, limit) : nextDigits;

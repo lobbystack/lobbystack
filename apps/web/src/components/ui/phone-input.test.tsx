@@ -171,6 +171,19 @@ describe("PhoneInput", () => {
     expect(screen.getByTestId("phone-value").textContent).toBe("+12133734253");
   });
 
+  it("accepts pasted North American numbers with a leading country code", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness country="US" limitNationalDigits />);
+
+    const input = screen.getByRole("textbox", { name: "Phone" });
+    await user.click(input);
+    await user.paste("1 (213) 373-4253");
+
+    expect((input as HTMLInputElement).value).toBe("(213) 373-4253");
+    expect(screen.getByTestId("phone-value").textContent).toBe("+12133734253");
+  });
+
   it("allows deleting and retyping after extra digits hit the national limit", async () => {
     const user = userEvent.setup();
 
