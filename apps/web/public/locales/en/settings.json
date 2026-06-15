@@ -541,28 +541,41 @@
   },
   "workspaceTeam": {
     "members": {
-      "title": "Team members",
-      "description": "People who can access this workspace in the dashboard.",
+      "title": "Members",
       "table": {
-        "name": "Name",
         "email": "Email",
         "role": "Role"
       },
-      "empty": "No team members yet.",
-      "unnamed": "Unnamed member",
-      "noEmail": "No email on file"
+      "empty": "No members yet.",
+      "noEmail": "No email on file",
+      "joinedOn": "Joined on {{date}}",
+      "invitedOn": "Invited on {{date}}",
+      "status": {
+        "pending": "Pending"
+      },
+      "actions": {
+        "moreOptions": "More options",
+        "remove": "Remove",
+        "cancelInvite": "Cancel invite"
+      },
+      "removeSuccess": "Member removed.",
+      "removeFailed": "We couldn't remove that member."
     },
     "roles": {
       "admin": "Admin",
       "viewer": "Viewer"
     },
     "invite": {
-      "action": "Invite member",
+      "action": "Invite",
       "title": "Invite a team member",
       "description": "Send an email invitation to join this workspace.",
-      "emailLabel": "Email",
+      "emailLabel": "Email address",
       "emailPlaceholder": "teammate@business.com",
-      "roleLabel": "Role",
+      "roleLabel": "Select role",
+      "roles": {
+        "adminDescription": "Invite and manage team members, update workspace settings, and billing.",
+        "viewerDescription": "View calls, contacts, and dashboard activity without making changes."
+      },
       "submit": "Send invitation",
       "sending": "Sending invitation...",
       "sent": "Invitation sent to {{email}}.",
@@ -572,15 +585,6 @@
       }
     },
     "pending": {
-      "title": "Pending invitations",
-      "description": "Invitations that haven't been accepted yet.",
-      "table": {
-        "email": "Email",
-        "role": "Role",
-        "expires": "Expires",
-        "actions": "Actions"
-      },
-      "empty": "No pending invitations.",
       "resend": "Resend",
       "revoke": "Revoke",
       "resendSuccess": "Invitation resent.",

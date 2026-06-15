@@ -697,12 +697,14 @@ function useOnboardingContext() {
 
 function OnboardingBusinessRoute() {
   const ctx = useOnboardingContext();
+  const [searchParams] = useSearchParams();
+  const isCreatingNewWorkspace = searchParams.get("create") === "true";
 
   if (ctx.isLoading) {
     return <OnboardingRouteSkeleton />;
   }
 
-  if (ctx.activeBusiness) {
+  if (ctx.activeBusiness && !isCreatingNewWorkspace) {
     const nonAdminElement = getNonAdminOnboardingElement(
       ctx.activeBusiness,
       ctx.canManageTenant,
@@ -721,7 +723,7 @@ function OnboardingBusinessRoute() {
 
   return (
     <OnboardingBusinessNamePage
-      {...(ctx.activeBusiness
+      {...(ctx.activeBusiness && !isCreatingNewWorkspace
         ? {
             businessId: ctx.activeBusiness._id,
             businessName: ctx.activeBusiness.name,

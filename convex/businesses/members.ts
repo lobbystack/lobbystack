@@ -91,6 +91,7 @@ function formatMember(user: Doc<"users"> | null, membership: Doc<"business_membe
     status: membership.status,
     name: displayNameForUser(user),
     email: user?.email ?? null,
+    joinedAt: membership._creationTime,
   };
 }
 
@@ -410,6 +411,37 @@ export const revokeInvitation = mutation({
   },
 });
 
+const WORKSPACE_OWNER_ROLES = new Set(["business_owner", "owner"]);
+
+export const removeMember = mutation({
+  args: {
+    businessId: v.id("businesses"),
+    membershipId: v.id("business_memberships"),
+  },
+  handler: async (ctx, args) => {
+    const actorMembership = await requireTenantAdminMembership(ctx, args.businessId);
+    const membership = await ctx.db.get(args.membershipId);
+    if (!membership || membership.businessId !== args.businessId) {
+      throw new Error("Member not found.");
+    }
+    if (membership.status !== "active") {
+      throw new Error("This person is not an active member.");
+    }
+    if (membership.userId === actorMembership.userId) {
+      throw new Error("You cannot remove yourself from the workspace.");
+    }
+    if (WORKSPACE_OWNER_ROLES.has(membership.role)) {
+      throw new Error("Workspace owners cannot be removed.");
+    }
+
+    await ctx.db.patch(args.membershipId, {
+      status: "removed",
+    });
+
+    return null;
+  },
+});
+
 export const sendInvitation = action({
   args: {
     businessId: v.id("businesses"),
@@ -579,11 +611,9 @@ export const acceptInvitation = mutation({
       });
     }
 
-    if (!user.activeBusinessId) {
-      await ctx.db.patch(user._id, {
-        activeBusinessId: invitation.businessId,
-      });
-    }
+    await ctx.db.patch(user._id, {
+      activeBusinessId: invitation.businessId,
+    });
 
     await ctx.db.patch(invitation._id, {
       status: "accepted",

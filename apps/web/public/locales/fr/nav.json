@@ -24,6 +24,9 @@
     "account": "Compte",
     "toggleTheme": "Changer le thème",
     "signOut": "Se déconnecter",
+    "createBusiness": "Créer une entreprise",
+    "noBusinessPhone": "Aucun numéro pour le moment",
+    "loadingPhone": "Chargement du numéro...",
     "setupGuide": {
       "title": "Premiers pas",
       "open": "Ouvrir le guide de configuration",

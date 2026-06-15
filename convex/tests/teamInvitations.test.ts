@@ -316,6 +316,62 @@ describe("team invitations", () => {
     });
   });
 
+  it("switches active workspace when an existing user accepts an invitation", async () => {
+    const t = convexTest(schema, convexModules);
+    const admin = await seedMember(t, {
+      subject: "team-invite-switch-admin",
+      email: "switch-admin@example.com",
+      role: "business_owner",
+    });
+
+    const inviteeSubject = "team-invite-switch-invitee";
+    const inviteeEmail = "switch-invitee@example.com";
+    const existingBusinessId = await t.run(async (ctx: TestContext) => {
+      const existingBusinessId = await insertBusiness(ctx, {
+        slug: "team-invite-existing-business",
+        name: "Existing Business",
+      });
+      const inviteeId = await ctx.db.insert("users", {
+        authSubject: inviteeSubject,
+        email: inviteeEmail,
+        activeBusinessId: existingBusinessId,
+      });
+      await ctx.db.insert("user_email_claims", {
+        normalizedEmail: inviteeEmail,
+        userId: inviteeId,
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId: existingBusinessId,
+        userId: inviteeId,
+        role: "business_owner",
+        status: "active",
+      });
+      return existingBusinessId;
+    });
+
+    const { token } = await createPendingInvite(t, {
+      businessId: admin.businessId,
+      invitedByUserId: admin.userId,
+      email: inviteeEmail,
+      role: "viewer",
+    });
+
+    await t.withIdentity({ subject: inviteeSubject, email: inviteeEmail }).mutation(
+      api.businesses.members.acceptInvitation,
+      { token },
+    );
+
+    const invitee = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("users")
+        .withIndex("by_auth_subject", (q) => q.eq("authSubject", inviteeSubject))
+        .unique();
+    });
+
+    expect(invitee?.activeBusinessId).toBe(admin.businessId);
+    expect(invitee?.activeBusinessId).not.toBe(existingBusinessId);
+  });
+
   it("rejects acceptance when signed-in email does not match the invitation", async () => {
     const t = convexTest(schema, convexModules);
     const admin = await seedMember(t, {
@@ -379,5 +435,37 @@ describe("team invitations", () => {
         process.env.SITE_URL = previousSiteUrl;
       }
     }
+  });
+
+  it("removes an active non-owner member", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedMember(t, {
+      subject: "team-invite-remove-admin",
+      email: "remove-admin@example.com",
+      role: "business_owner",
+    });
+
+    const viewer = await t.run(async (ctx: TestContext) => {
+      const userId = await ctx.db.insert("users", {
+        authSubject: "team-invite-remove-viewer",
+        email: "viewer@example.com",
+      });
+      const membershipId = await ctx.db.insert("business_memberships", {
+        businessId,
+        userId,
+        role: "viewer",
+        status: "active",
+      });
+      return { membershipId };
+    });
+
+    await authed.mutation(api.businesses.members.removeMember, {
+      businessId,
+      membershipId: viewer.membershipId,
+    });
+
+    const team = await authed.query(api.businesses.members.listTeam, { businessId });
+    expect(team.members).toHaveLength(1);
+    expect(team.members[0]?.email).toBe("remove-admin@example.com");
   });
 });
