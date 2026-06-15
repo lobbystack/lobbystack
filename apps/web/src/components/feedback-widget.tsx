@@ -1,7 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useLocation } from "react-router-dom";
 
-import { MessageSquareShare } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -78,7 +78,7 @@ export function FeedbackWidget({ businessId, className }: FeedbackWidgetProps) {
             />
           }
         >
-          <MessageSquareShare className="text-muted-foreground" />
+          <MessageSquare className="text-muted-foreground" />
           <span className="text-muted-foreground">{t("feedback.trigger")}</span>
         </PopoverTrigger>
         <PopoverContent
