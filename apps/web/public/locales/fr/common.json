@@ -49,5 +49,43 @@
       "sent": "Feedback envoyé.",
       "failed": "Nous n’avons pas pu enregistrer ce feedback."
     }
+  },
+  "testCall": {
+    "trigger": "Appel test",
+    "title": "Tester votre réceptionniste IA",
+    "description": "Démarrez un appel en direct dans le navigateur avec votre réceptionniste configurée.",
+    "connecting": "Connexion...",
+    "hangUp": "Raccrocher",
+    "status": {
+      "idle": "Prêt quand vous l’êtes",
+      "requesting_microphone": "Demande d’accès au microphone",
+      "connecting": "Connexion à votre réceptionniste IA",
+      "connected": "En direct avec votre réceptionniste IA",
+      "ending": "Fin de l’appel",
+      "ended": "Appel terminé",
+      "error": "Impossible de démarrer l’appel"
+    },
+    "aria": {
+      "start": "Démarrer l’appel test",
+      "connecting": "Connexion de l’appel test",
+      "waitingForMicrophone": "En attente de l’autorisation du microphone",
+      "end": "Terminer l’appel test",
+      "endMuted": "Terminer l’appel test en mode muet",
+      "ending": "Fin de l’appel test",
+      "retry": "Réessayer l’appel test"
+    },
+    "errors": {
+      "microphoneBlocked": "L’accès au microphone a été refusé.",
+      "microphoneNotFound": "Aucun microphone n’a été trouvé sur cet appareil.",
+      "microphoneInUse": "Le microphone est déjà utilisé par une autre application.",
+      "gatewayTimeout": "La passerelle vocale a mis trop de temps à répondre.",
+      "gatewayUnreachable": "La passerelle vocale est inaccessible depuis cette page.",
+      "connectionDropped": "La connexion vocale a été interrompue.",
+      "browserNoMicrophone": "Ce navigateur ne prend pas en charge les appels avec microphone.",
+      "browserNoWebRtc": "Ce navigateur ne prend pas en charge les appels vocaux en direct.",
+      "businessNotFound": "La passerelle vocale ne trouve pas cet espace de travail. Passez à un espace actif ou vérifiez que le tableau de bord et la passerelle utilisent le même déploiement Convex.",
+      "unavailable": "Votre réceptionniste IA est indisponible pour le moment.",
+      "generic": "Une erreur est survenue au démarrage de l’appel."
+    }
   }
 }

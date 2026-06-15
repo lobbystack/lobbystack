@@ -49,5 +49,43 @@
       "sent": "Feedback sent.",
       "failed": "We could not save that feedback."
     }
+  },
+  "testCall": {
+    "trigger": "Test call",
+    "title": "Test your AI receptionist",
+    "description": "Start a live browser call with your configured receptionist.",
+    "connecting": "Connecting...",
+    "hangUp": "Hang up",
+    "status": {
+      "idle": "Ready when you are",
+      "requesting_microphone": "Asking for microphone access",
+      "connecting": "Connecting to your AI receptionist",
+      "connected": "Live with your AI receptionist",
+      "ending": "Ending the call",
+      "ended": "Call ended",
+      "error": "Could not start the call"
+    },
+    "aria": {
+      "start": "Start test call",
+      "connecting": "Connecting test call",
+      "waitingForMicrophone": "Waiting for microphone permission",
+      "end": "End test call",
+      "endMuted": "End muted test call",
+      "ending": "Ending test call",
+      "retry": "Retry test call"
+    },
+    "errors": {
+      "microphoneBlocked": "Microphone access was blocked.",
+      "microphoneNotFound": "No microphone was found on this device.",
+      "microphoneInUse": "The microphone is already in use by another app.",
+      "gatewayTimeout": "The voice gateway took too long to respond.",
+      "gatewayUnreachable": "The voice gateway is not reachable from this page.",
+      "connectionDropped": "The voice connection dropped.",
+      "browserNoMicrophone": "This browser does not support microphone calls.",
+      "browserNoWebRtc": "This browser does not support live voice calls.",
+      "businessNotFound": "The voice gateway could not find this workspace. Switch to an active workspace or check that the dashboard and gateway use the same Convex deployment.",
+      "unavailable": "Your AI receptionist is unavailable right now.",
+      "generic": "Something went wrong while starting the call."
+    }
   }
 }

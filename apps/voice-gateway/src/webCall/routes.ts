@@ -1479,6 +1479,15 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       });
     } catch (error) {
       if (error instanceof RuntimeRequestError) {
+        server.log.warn(
+          {
+            err: error,
+            businessSlug,
+            origin,
+            status: error.status,
+          },
+          "Web call context lookup failed",
+        );
         return replyWithRuntimeRequestError(error, reply);
       }
       throw error;

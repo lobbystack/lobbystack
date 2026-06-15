@@ -432,6 +432,7 @@ function WorkspaceShell() {
       onSignOut={() => void handleSignOut()}
       {...(businessId ? { businessId } : {})}
       {...(activeBusiness?.name ? { businessName: activeBusiness.name } : {})}
+      {...(activeBusiness?.slug ? { businessSlug: activeBusiness.slug } : {})}
       {...(currentUser?.image ? { operatorAvatar: currentUser.image } : {})}
       {...(currentUser?.email ? { operatorEmail: currentUser.email } : {})}
       {...(
