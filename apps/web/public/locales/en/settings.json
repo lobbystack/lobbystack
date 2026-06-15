@@ -539,6 +539,56 @@
       }
     }
   },
+  "workspaceTeam": {
+    "members": {
+      "title": "Team members",
+      "description": "People who can access this workspace in the dashboard.",
+      "table": {
+        "name": "Name",
+        "email": "Email",
+        "role": "Role"
+      },
+      "empty": "No team members yet.",
+      "unnamed": "Unnamed member",
+      "noEmail": "No email on file"
+    },
+    "roles": {
+      "admin": "Admin",
+      "viewer": "Viewer"
+    },
+    "invite": {
+      "action": "Invite member",
+      "title": "Invite a team member",
+      "description": "Send an email invitation to join this workspace.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "teammate@business.com",
+      "roleLabel": "Role",
+      "submit": "Send invitation",
+      "sending": "Sending invitation...",
+      "sent": "Invitation sent to {{email}}.",
+      "errors": {
+        "invalidEmail": "Enter a valid email address.",
+        "failed": "We couldn't send that invitation. Please try again."
+      }
+    },
+    "pending": {
+      "title": "Pending invitations",
+      "description": "Invitations that haven't been accepted yet.",
+      "table": {
+        "email": "Email",
+        "role": "Role",
+        "expires": "Expires",
+        "actions": "Actions"
+      },
+      "empty": "No pending invitations.",
+      "resend": "Resend",
+      "revoke": "Revoke",
+      "resendSuccess": "Invitation resent.",
+      "resendFailed": "We couldn't resend that invitation.",
+      "revokeSuccess": "Invitation revoked.",
+      "revokeFailed": "We couldn't revoke that invitation."
+    }
+  },
   "hours": {
     "title": "Opening Hours",
     "description": "Structured hours stay authoritative over documents and help the receptionist answer availability questions reliably.",

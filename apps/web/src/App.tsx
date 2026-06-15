@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useTranslation } from "react-i18next";
@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Main } from "@/components/layout/main";
 import {
+  AcceptInvitePage,
   ConfirmEmailChangePage,
   ForgotPasswordPage,
   LoginPage,
@@ -103,13 +104,19 @@ function RequireAuth(props: { children: ReactNode }) {
 
 function PublicOnly(props: { children: ReactNode }) {
   const auth = useConvexAuth();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
 
   if (auth.isLoading) {
     return <LoadingScreen />;
   }
 
   if (auth.isAuthenticated) {
-    return <Navigate replace to="/" />;
+    const destination =
+      returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
+        ? returnTo
+        : "/";
+    return <Navigate replace to={destination} />;
   }
 
   return props.children;
@@ -1133,6 +1140,7 @@ export default function App() {
             path="/forgot-password"
           />
           <Route element={<ConfirmEmailChangePage />} path="/confirm-email-change" />
+          <Route element={<AcceptInvitePage />} path="/accept-invite" />
           <Route
             element={
               <RequireAuth>

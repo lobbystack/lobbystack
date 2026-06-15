@@ -9,7 +9,8 @@ type TransactionalTemplateName =
   | "verify_email"
   | "password_reset"
   | "operator_alert"
-  | "feedback_submission";
+  | "feedback_submission"
+  | "team_invitation";
 
 type TransactionalTemplateInput = {
   template: TransactionalTemplateName;
@@ -22,6 +23,7 @@ const DEFAULT_PASSWORD_RESET_SUBJECT = "Reset your password";
 const DEFAULT_VERIFY_EMAIL_SUBJECT = "Confirm your new email";
 const DEFAULT_OPERATOR_ALERT_SUBJECT = "LobbyStack notification";
 const DEFAULT_FEEDBACK_SUBMISSION_SUBJECT = "LobbyStack feedback";
+const DEFAULT_TEAM_INVITATION_SUBJECT = "Join your team on LobbyStack";
 
 export type TransactionalEmailConfig = {
   fromAddress: string;
@@ -69,6 +71,8 @@ export function renderTransactionalEmail(
       return renderPasswordResetEmail(input);
     case "feedback_submission":
       return renderFeedbackSubmissionEmail(input);
+    case "team_invitation":
+      return renderTeamInvitationEmail(input);
     case "operator_alert":
       return renderOperatorAlertEmail(input);
     default: {
@@ -184,6 +188,41 @@ function renderFeedbackSubmissionEmail(input: TransactionalTemplateInput): {
   const body = requireTemplateVariable(input.template, input.variables, "body");
   const subject = input.subject || DEFAULT_FEEDBACK_SUBMISSION_SUBJECT;
   return renderBodyEmail(subject, body);
+}
+
+function renderTeamInvitationEmail(input: TransactionalTemplateInput): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const acceptUrl = requireTemplateVariable(input.template, input.variables, "acceptUrl");
+  const businessName = requireTemplateVariable(input.template, input.variables, "businessName");
+  const inviterName = requireTemplateVariable(input.template, input.variables, "inviterName");
+  const roleLabel = requireTemplateVariable(input.template, input.variables, "roleLabel");
+  const expiresDays = requireTemplateVariable(input.template, input.variables, "expiresDays");
+
+  const subject = input.subject || DEFAULT_TEAM_INVITATION_SUBJECT;
+  const escapedAcceptUrl = escapeHtml(acceptUrl);
+  const escapedBusinessName = escapeHtml(businessName);
+  const escapedInviterName = escapeHtml(inviterName);
+  const escapedRoleLabel = escapeHtml(roleLabel);
+  const escapedExpiresDays = escapeHtml(expiresDays);
+
+  return {
+    subject,
+    html: [
+      `<p>${escapedInviterName} invited you to join <strong>${escapedBusinessName}</strong> on LobbyStack as a <strong>${escapedRoleLabel}</strong>.</p>`,
+      `<p><a href="${escapedAcceptUrl}">Accept invitation</a></p>`,
+      `<p>This invitation expires in ${escapedExpiresDays} days.</p>`,
+      "<p>If you were not expecting this invitation, you can safely ignore this email.</p>",
+    ].join(""),
+    text: [
+      `${inviterName} invited you to join ${businessName} on LobbyStack as a ${roleLabel}.`,
+      `Accept invitation: ${acceptUrl}`,
+      `This invitation expires in ${expiresDays} days.`,
+      "If you were not expecting this invitation, you can safely ignore this email.",
+    ].join("\n\n"),
+  };
 }
 
 function renderBodyEmail(subject: string, body: string): {

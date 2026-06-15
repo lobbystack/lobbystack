@@ -538,6 +538,56 @@
       }
     }
   },
+  "workspaceTeam": {
+    "members": {
+      "title": "Membres de l'équipe",
+      "description": "Personnes qui peuvent accéder à cet espace dans le tableau de bord.",
+      "table": {
+        "name": "Nom",
+        "email": "Courriel",
+        "role": "Rôle"
+      },
+      "empty": "Aucun membre pour le moment.",
+      "unnamed": "Membre sans nom",
+      "noEmail": "Aucun courriel enregistré"
+    },
+    "roles": {
+      "admin": "Administrateur",
+      "viewer": "Lecteur"
+    },
+    "invite": {
+      "action": "Inviter un membre",
+      "title": "Inviter un membre de l'équipe",
+      "description": "Envoyez une invitation par courriel pour rejoindre cet espace.",
+      "emailLabel": "Courriel",
+      "emailPlaceholder": "collegue@entreprise.com",
+      "roleLabel": "Rôle",
+      "submit": "Envoyer l'invitation",
+      "sending": "Envoi de l'invitation...",
+      "sent": "Invitation envoyée à {{email}}.",
+      "errors": {
+        "invalidEmail": "Entrez une adresse courriel valide.",
+        "failed": "Impossible d'envoyer cette invitation. Veuillez réessayer."
+      }
+    },
+    "pending": {
+      "title": "Invitations en attente",
+      "description": "Invitations qui n'ont pas encore été acceptées.",
+      "table": {
+        "email": "Courriel",
+        "role": "Rôle",
+        "expires": "Expire",
+        "actions": "Actions"
+      },
+      "empty": "Aucune invitation en attente.",
+      "resend": "Renvoyer",
+      "revoke": "Révoquer",
+      "resendSuccess": "Invitation renvoyée.",
+      "resendFailed": "Impossible de renvoyer cette invitation.",
+      "revokeSuccess": "Invitation révoquée.",
+      "revokeFailed": "Impossible de révoquer cette invitation."
+    }
+  },
   "hours": {
     "title": "Heures d'ouverture",
     "description": "Les heures structurées font autorité sur les documents et aident la réceptionniste à répondre correctement aux questions de disponibilité.",
