@@ -106,6 +106,24 @@ const pageCopy = {
       ],
     ],
     examples: ["Markdown negotiation", "API catalog"],
+    relatedHeading: "Related resources",
+    related: [
+      {
+        title: "Product features",
+        body: "See how LobbyStack handles call answering, booking, routing, and follow-up.",
+        href: "/features/",
+      },
+      {
+        title: "Pricing and usage",
+        body: "Review included minutes, overage rates, and plan limits before you integrate.",
+        href: "/pricing/",
+      },
+      {
+        title: "LLM context file",
+        body: "Compact product, pricing, and discovery context in llms.txt for automated clients.",
+        href: "/llms.txt",
+      },
+    ],
   },
   fr: {
     h1: "Documentation API publique",
@@ -195,6 +213,24 @@ const pageCopy = {
       ],
     ],
     examples: ["Négociation markdown", "Catalogue API"],
+    relatedHeading: "Ressources associées",
+    related: [
+      {
+        title: "Fonctionnalités produit",
+        body: "Découvrez comment LobbyStack gère la réponse, la réservation, les transferts et le suivi.",
+        href: "/fr/features/",
+      },
+      {
+        title: "Tarifs et usage",
+        body: "Consultez les minutes incluses, les dépassements et les limites avant d’intégrer.",
+        href: "/fr/pricing/",
+      },
+      {
+        title: "Fichier de contexte LLM",
+        body: "Contexte compact produit, tarifs et découverte dans llms.txt pour les clients automatisés.",
+        href: "/llms.txt",
+      },
+    ],
   },
 } satisfies Record<
   Locale,
@@ -208,6 +244,8 @@ const pageCopy = {
     tableHeaders: [string, string, string]
     rows: Array<[string, string, string]>
     examples: [string, string]
+    relatedHeading: string
+    related: Array<{ title: string; body: string; href: string }>
   }
 >
 
@@ -304,6 +342,25 @@ const t = pageCopy[locale]
               class="mt-4 overflow-x-auto rounded-md bg-muted p-4 text-xs leading-6"><code>curl {absoluteUrl("/.well-known/api-catalog")} \
   -H "Accept: application/linkset+json"</code></pre>
           </div>
+        </div>
+      </section>
+
+      <section class="mt-16">
+        <h2 class="text-2xl font-semibold">{t.relatedHeading}</h2>
+        <div class="mt-6 grid gap-6 md:grid-cols-3">
+          {
+            t.related.map((item) => (
+              <a
+                href={item.href}
+                class="rounded-lg border bg-card p-5 transition hover:border-primary/50"
+              >
+                <h3 class="text-base font-semibold">{item.title}</h3>
+                <p class="mt-2 text-sm leading-6 text-muted-foreground">
+                  {item.body}
+                </p>
+              </a>
+            ))
+          }
         </div>
       </section>
     </section>

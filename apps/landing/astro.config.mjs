@@ -9,7 +9,13 @@ import { createLogger } from "vite"
 
 const SITE_URL = "https://lobbystack.com"
 const INDEXNOW_KEY = process.env.INDEXNOW_KEY
-const NOINDEX_PATHS = new Set(["/404/", "/privacy/", "/terms/", "/search/"])
+const NOINDEX_PATHS = new Set([
+  "/404/",
+  "/cookie-policy/",
+  "/privacy/",
+  "/terms/",
+  "/search/",
+])
 const SEO_GRAPH_SOURCEMAP_WARN_RE =
   /Sourcemap for ".+@jdevalk[\\/+]astro-seo-graph.+?" points to missing source files/
 

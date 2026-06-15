@@ -91,6 +91,33 @@ export const companyPages: SeoLandingPage[] = [
           "Keep humans in control for sensitive or high-value calls",
         ],
       },
+      {
+        title: "Why we built it open source",
+        body: "Phone workflows sit on top of customer data, booking rules, and escalation policies. Teams should be able to inspect how those decisions are made instead of trusting a black box.",
+        points: [
+          "Review the codebase, deployment model, and data boundaries on GitHub",
+          "Start on LobbyStack Cloud and move to self-hosting when your team needs more control",
+          "Avoid vendor lock-in for the receptionist layer that sits in front of every caller",
+        ],
+      },
+      {
+        title: "Who LobbyStack is for",
+        body: "LobbyStack is built for owner-operators and small teams that live on inbound calls: home services, trades, clinics, salons, and local service businesses that cannot afford to miss ready-to-book callers.",
+        points: [
+          "Teams that miss calls while they are on jobs, in appointments, or closed for the day",
+          "Operators who want booking and follow-up without a phone tree or IVR builder",
+          "Businesses that need after-hours coverage without hiring another full-time receptionist",
+        ],
+      },
+      {
+        title: "How support and security work",
+        body: "LobbyStack Cloud handles hosting, monitoring, and product updates. Self-hosted customers run the same open-source stack on infrastructure they control. In both cases, you define what the receptionist can say, book, and escalate.",
+        points: [
+          "Configure allowed answers, booking rules, and transfer paths in plain language",
+          "Review call summaries, transcripts, and outcomes in one operator dashboard",
+          "Use managed cloud for speed or self-hosting when compliance and data residency require it",
+        ],
+      },
     ],
     faqs: [],
     relatedLinks: [

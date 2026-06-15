@@ -39,14 +39,69 @@ const pageCopy = {
     h1: "AI receptionist blog and product updates",
     intro:
       "Product updates and practical notes on AI phone answering, missed-call recovery, appointment scheduling, call routing, lead follow-up, and open-source receptionist infrastructure.",
+    topicsHeading: "Topics we cover",
+    topics: [
+      {
+        title: "Choosing an AI receptionist",
+        body: "How to evaluate vendors, pricing models, and setup requirements before you turn on live call handling.",
+        href: "/blog/how-to-choose-an-ai-receptionist/",
+      },
+      {
+        title: "Build vs buy",
+        body: "When it makes sense to self-host, buy hosted software, or build from scratch.",
+        href: "/blog/build-or-buy-ai-receptionist/",
+      },
+      {
+        title: "Missed-call economics",
+        body: "How much revenue walks away when calls go unanswered, and what recovery looks like in practice.",
+        href: "/blog/ai-receptionist-savings/",
+      },
+      {
+        title: "Solution guides",
+        body: "Trade-specific pages for plumbers, HVAC teams, dental offices, salons, and other call-heavy businesses.",
+        href: "/solutions/",
+      },
+    ],
   },
   fr: {
     eyebrow: "Dernières nouvelles",
     h1: "Blog et mises à jour produit sur les réceptionnistes IA",
     intro:
       "Mises à jour produit et notes pratiques sur la réponse téléphonique IA, la récupération d’appels manqués, la planification, les transferts, le suivi des prospects et l’infrastructure open source.",
+    topicsHeading: "Sujets que nous couvrons",
+    topics: [
+      {
+        title: "Choisir un réceptionniste IA",
+        body: "Comment évaluer les fournisseurs, les modèles tarifaires et la mise en place avant d’activer la gestion d’appels en production.",
+        href: "/fr/blog/how-to-choose-an-ai-receptionist/",
+      },
+      {
+        title: "Construire ou acheter",
+        body: "Quand l’auto-hébergement, l’achat d’un service hébergé ou le développement sur mesure est le bon choix.",
+        href: "/fr/blog/build-or-buy-ai-receptionist/",
+      },
+      {
+        title: "Coût des appels manqués",
+        body: "Ce que vous perdez quand personne ne répond, et ce que la récupération change concrètement.",
+        href: "/fr/blog/ai-receptionist-savings/",
+      },
+      {
+        title: "Guides par métier",
+        body: "Pages dédiées à la plomberie, au CVC, aux cabinets dentaires, aux salons et aux entreprises très sollicitées par téléphone.",
+        href: "/fr/solutions/",
+      },
+    ],
   },
-} satisfies Record<Locale, { eyebrow: string; h1: string; intro: string }>
+} satisfies Record<
+  Locale,
+  {
+    eyebrow: string
+    h1: string
+    intro: string
+    topicsHeading: string
+    topics: Array<{ title: string; body: string; href: string }>
+  }
+>
 
 const dateLocale = locale === "fr" ? "fr-FR" : "en-US"
 ---
@@ -179,6 +234,25 @@ const dateLocale = locale === "fr" ? "fr-FR" : "en-US"
         </div>
       </section>
     </div>
+
+    <section class="mx-auto max-w-7xl px-6 pb-24">
+      <h2 class="section-heading">{pageCopy[locale].topicsHeading}</h2>
+      <div class="mt-8 grid gap-6 md:grid-cols-2">
+        {
+          pageCopy[locale].topics.map((topic) => (
+            <a
+              href={topic.href}
+              class="group block rounded-2xl border border-border/50 bg-card p-6 transition-colors hover:border-primary/40"
+            >
+              <h3 class="font-heading text-xl font-medium tracking-[-0.03em] transition-colors group-hover:text-primary">
+                {topic.title}
+              </h3>
+              <p class="body-copy mt-3 text-muted-foreground">{topic.body}</p>
+            </a>
+          ))
+        }
+      </div>
+    </section>
   </main>
 
   <Footer locale={locale} />
