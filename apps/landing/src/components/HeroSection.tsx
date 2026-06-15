@@ -54,29 +54,25 @@ export function HeroSection({ children, locale = "en" }: HeroSectionProps) {
               <ArrowRight className="size-4" />
             </a>
 
-            {locale === "fr" ? (
-              <h1
-                aria-label="LobbyStack transforme les appels manqués en rendez‑vous."
-                className="animate-fade-up display-heading delay-100"
-              >
-                <span className="block">{localCopy.h1Start}</span>
-                <span className="block">
-                  les{" "}
+            <h1 className="animate-fade-up display-heading delay-100">
+              {locale === "fr" ? (
+                <>
+                  {localCopy.h1Start} les{" "}
                   <span className="underline decoration-2 underline-offset-4">
                     {localCopy.h1Emphasis}
-                  </span>
-                </span>
-                <span className="block">{localCopy.h1End}</span>
-              </h1>
-            ) : (
-              <h1 className="animate-fade-up display-heading delay-100">
-                {localCopy.h1Start}{" "}
-                <span className="underline decoration-2 underline-offset-4">
-                  {localCopy.h1Emphasis}
-                </span>{" "}
-                {localCopy.h1End}
-              </h1>
-            )}
+                  </span>{" "}
+                  {localCopy.h1End}
+                </>
+              ) : (
+                <>
+                  {localCopy.h1Start}{" "}
+                  <span className="underline decoration-2 underline-offset-4">
+                    {localCopy.h1Emphasis}
+                  </span>{" "}
+                  {localCopy.h1End}
+                </>
+              )}
+            </h1>
 
             <p className="animate-fade-up body-copy mt-6 max-w-[65ch] delay-200 md:text-lg">
               {localCopy.body}

@@ -9,23 +9,7 @@ export const translatedBasePaths = [
   "/solutions/ai-phone-answering/",
   "/solutions/ai-appointment-scheduler/",
   "/solutions/ai-receptionist-for-home-services/",
-  "/solutions/after-hours-answering-service/",
-  "/solutions/ai-receptionist-for-dental-offices/",
-  "/solutions/ai-receptionist-for-salons-and-spas/",
-  "/solutions/self-hosted-ai-receptionist/",
-  "/solutions/open-source-ai-receptionist/",
-  "/solutions/ai-receptionist-for-plumbers/",
-  "/solutions/ai-receptionist-for-hvac/",
-  "/solutions/ai-receptionist-for-electricians/",
-  "/solutions/ai-receptionist-for-garage-door-repair/",
-  "/solutions/ai-receptionist-for-appliance-repair/",
-  "/solutions/ai-receptionist-for-restoration-companies/",
-  "/solutions/ai-receptionist-for-locksmiths/",
-  "/solutions/after-hours-answering-service-for-contractors/",
-  "/compare/ai-receptionist-vs-virtual-receptionist/",
-  "/compare/ai-receptionist-vs-voicemail/",
   "/missed-call-revenue-calculator/",
-  "/about/",
   "/comparison/",
   "/blog/",
   "/blog/lobbystack-is-live/",
@@ -62,6 +46,7 @@ export const localizePath = (locale: Locale, path = "/") => {
   const basePath = stripLocaleFromPath(path)
 
   if (locale === DEFAULT_LOCALE) return basePath
+  if (!hasTranslation(basePath)) return basePath
   if (basePath === "/") return `/${locale}/`
   return `/${locale}${basePath}`
 }

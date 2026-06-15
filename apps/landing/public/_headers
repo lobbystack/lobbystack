@@ -39,6 +39,12 @@
 /terms/
   X-Robots-Tag: noindex, follow
 
+/cookie-policy/
+  X-Robots-Tag: noindex, follow
+
+/fr/cookie-policy/
+  X-Robots-Tag: noindex, follow
+
 /fr/privacy/
   X-Robots-Tag: noindex, follow
 
@@ -111,6 +117,7 @@
 
 /*
   Link: </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json", </openapi.json>; rel="service-desc"; type="application/vnd.oai.openapi+json", </docs/api/>; rel="service-doc"; type="text/html", </llms.txt>; rel="describedby"; type="text/plain", </feed.xml>; rel="alternate"; type="application/rss+xml"; title="LobbyStack RSS feed", </schemamap.xml>; rel="describedby"; type="application/xml"; title="LobbyStack schema map", </schema/page.json>; rel="describedby"; type="application/ld+json"; title="LobbyStack page schema graph", </schema/post.json>; rel="describedby"; type="application/ld+json"; title="LobbyStack blog schema graph", </.well-known/agent-skills/index.json>; rel="describedby"; type="application/json"; title="Agent skills discovery index", </.well-known/mcp/server-card.json>; rel="describedby"; type="application/json"; title="MCP server card"
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   Vary: Accept
   Content-Signal: ai-train=yes, search=yes, ai-input=yes
   No-Vary-Search: key-order, params=("utm_source" "utm_medium" "utm_campaign" "utm_content" "utm_term")

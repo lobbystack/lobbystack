@@ -11,7 +11,7 @@ type FeaturesHeroProps = {
 const featuresHeroCopy = {
   en: {
     h1Start: "AI receptionist features that actually",
-    h1Emphasis: "gets work done",
+    h1Emphasis: "get work done",
     body: "LobbyStack handles AI phone answering, appointment booking, team follow-up, call routing, quotes, and lead qualification without phone trees or workflow-builder mess.",
     workflowLabel: "Write the workflow",
     workflowText:
