@@ -2,6 +2,7 @@ import { SidebarTeamSkeleton } from "@/components/loading-skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   SidebarMenu,
+  SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
@@ -16,14 +17,15 @@ export function TeamSwitcher({ isLoading = false }: TeamSwitcherProps) {
     <SidebarMenu>
       <SidebarMenuItem>
         {isLoading ? (
-          <div className="flex h-12 items-center gap-2 px-2">
+          <div className="flex h-12 items-center gap-2 px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
             <Skeleton className="size-8 rounded-xl" />
-            <Skeleton className="h-6 w-32 max-w-full" />
+            <Skeleton className="h-6 w-32 max-w-full group-data-[collapsible=icon]:hidden" />
           </div>
         ) : (
-          <div
+          <SidebarMenuButton
             aria-label={BRAND_NAME}
-            className="flex h-14 w-full items-center gap-1.5 overflow-hidden rounded-lg px-3"
+            className="gap-1.5"
+            size="lg"
           >
             <div className="flex aspect-square size-8 items-center justify-center text-sidebar-foreground">
               <img
@@ -39,7 +41,7 @@ export function TeamSwitcher({ isLoading = false }: TeamSwitcherProps) {
                 src="/brand/logo-wordmark.svg"
               />
             </div>
-          </div>
+          </SidebarMenuButton>
         )}
       </SidebarMenuItem>
     </SidebarMenu>
