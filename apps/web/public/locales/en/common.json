@@ -51,7 +51,7 @@
     }
   },
   "testCall": {
-    "trigger": "Test call",
+    "trigger": "Test Call",
     "title": "Test your AI receptionist",
     "description": "Start a live browser call with your configured receptionist.",
     "connecting": "Connecting...",
@@ -84,6 +84,7 @@
       "browserNoMicrophone": "This browser does not support microphone calls.",
       "browserNoWebRtc": "This browser does not support live voice calls.",
       "businessNotFound": "The voice gateway could not find this workspace. Switch to an active workspace or check that the dashboard and gateway use the same Convex deployment.",
+      "rateLimited": "Too many test calls have been started. Please try again shortly.",
       "unavailable": "Your AI receptionist is unavailable right now.",
       "generic": "Something went wrong while starting the call."
     }

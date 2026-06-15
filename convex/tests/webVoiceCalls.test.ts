@@ -304,6 +304,50 @@ describe("web voice calls", () => {
     ).rejects.toThrow("web_voice_rate_limited");
   });
 
+  it("uses higher visitor limits for dashboard test calls without changing landing limits", async () => {
+    const { t, businessId } = await seedBusiness("web-voice-dashboard-test-call");
+
+    for (let index = 0; index < 10; index += 1) {
+      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://app.lobbystack.com",
+        ipHash: `dashboard-ip-hash-${index}`,
+        visitorId: "dashboard-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      });
+    }
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://lobbystack.com",
+        ipHash: "landing-ip-hash",
+        visitorId: "landing-visitor",
+        widgetId: "lobbystack-landing",
+      }),
+    ).resolves.toBeNull();
+
+    for (let index = 10; index < 30; index += 1) {
+      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://app.lobbystack.com",
+        ipHash: `dashboard-ip-hash-${index}`,
+        visitorId: "dashboard-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      });
+    }
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://app.lobbystack.com",
+        ipHash: "dashboard-ip-hash-over-limit",
+        visitorId: "dashboard-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      }),
+    ).rejects.toThrow("web_voice_rate_limited");
+  });
+
   it("stores web voice callback messages on the web voice call session", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-20T12:00:00.000Z"));

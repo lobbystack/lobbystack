@@ -1,5 +1,7 @@
 import { useCallback, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { Phone } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import type { Id } from "../../../../convex/_generated/dataModel";
@@ -26,6 +28,11 @@ type TestCallWidgetProps = {
   className?: string;
 };
 
+type WebVoiceControls = {
+  forceEndCall: () => Promise<void>;
+  startCall: () => Promise<void>;
+};
+
 export function TestCallWidget({
   businessId,
   businessSlug,
@@ -33,7 +40,7 @@ export function TestCallWidget({
 }: TestCallWidgetProps) {
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
-  const forceEndCallRef = useRef<(() => Promise<void>) | null>(null);
+  const voiceControlsRef = useRef<WebVoiceControls | null>(null);
 
   const handleEvent = useCallback(
     (eventName: TelemetryEventName, properties?: Record<string, unknown>) => {
@@ -47,9 +54,14 @@ export function TestCallWidget({
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
-      void forceEndCallRef.current?.();
+      void voiceControlsRef.current?.forceEndCall();
     }
     setOpen(nextOpen);
+  };
+
+  const handleTestCallClick = () => {
+    setOpen(true);
+    void voiceControlsRef.current?.startCall();
   };
 
   if (!businessSlug) {
@@ -60,7 +72,7 @@ export function TestCallWidget({
     <div className={cn("hidden items-center md:flex", className)}>
       <Button
         aria-label={t("testCall.trigger")}
-        onClick={() => setOpen(true)}
+        onClick={handleTestCallClick}
         size="sm"
         type="button"
         variant="outline"
@@ -71,7 +83,7 @@ export function TestCallWidget({
 
       <Dialog onOpenChange={handleOpenChange} open={open}>
         <DialogContent
-          className="border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-md"
+          className="border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-[34rem]"
           overlayClassName="bg-black/60 backdrop-blur-lg"
           showCloseButton={false}
         >
@@ -79,18 +91,46 @@ export function TestCallWidget({
             <DialogTitle>{t("testCall.title")}</DialogTitle>
             <DialogDescription>{t("testCall.description")}</DialogDescription>
           </DialogHeader>
-          {open ? (
-            <TestCallAura
-              businessSlug={businessSlug}
-              onEvent={handleEvent}
-              onRegisterForceEnd={(forceEnd) => {
-                forceEndCallRef.current = forceEnd;
-              }}
-            />
-          ) : null}
         </DialogContent>
       </Dialog>
+
+      <TestCallAuraPortal open={open}>
+        <TestCallAura
+          businessSlug={businessSlug}
+          onEvent={handleEvent}
+          onRegisterControls={(controls) => {
+            voiceControlsRef.current = controls;
+          }}
+        />
+      </TestCallAuraPortal>
     </div>
+  );
+}
+
+function TestCallAuraPortal({
+  open,
+  children,
+}: {
+  open: boolean;
+  children: ReactNode;
+}) {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      aria-hidden={!open}
+      className={cn(
+        "pointer-events-none fixed inset-0 z-[70] flex items-center justify-center transition-opacity duration-100",
+        open ? "opacity-100" : "invisible opacity-0",
+      )}
+    >
+      <div className="pointer-events-auto w-full max-w-[22rem] md:max-w-[30rem]">
+        {children}
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -100,22 +140,22 @@ type TestCallAuraProps = {
     eventName: TelemetryEventName,
     properties?: Record<string, unknown>,
   ) => void;
-  onRegisterForceEnd: (forceEnd: () => Promise<void>) => void;
+  onRegisterControls: (controls: WebVoiceControls) => void;
 };
 
 function TestCallAura({
   businessSlug,
   onEvent,
-  onRegisterForceEnd,
+  onRegisterControls,
 }: TestCallAuraProps) {
   return (
     <AuraVoiceDemo
+      auraTone="dark"
       businessSlug={businessSlug}
+      className="w-full"
       endpoint={getWebCallEndpoint()}
       onEvent={onEvent}
-      onRegisterControls={({ forceEndCall }) => {
-        onRegisterForceEnd(forceEndCall);
-      }}
+      onRegisterControls={onRegisterControls}
       widgetId={DASHBOARD_TEST_CALL_WIDGET_ID}
     />
   );

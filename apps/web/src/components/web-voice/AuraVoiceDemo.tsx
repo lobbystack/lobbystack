@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { Mic, Phone, PhoneOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -34,15 +34,62 @@ function noise1D(x: number): number {
   return a + u * (b - a);
 }
 
+type AuraTone = "light" | "dark";
+
+const WAVE_RGB: Record<AuraTone, string> = {
+  light: "0,0,0",
+  dark: "255,255,255",
+};
+
+const AURA_WAVE_STYLE = {
+  light: {
+    fillStops: [0.3, 0.8, 0.5] as const,
+    baseOpacity: { active: 0.11, idle: 0.1 },
+    layerDecay: { active: 0.014, idle: 0.012 },
+    stroke: { active: 0.07, idle: 0.06 },
+    strokePulse: { breathe: 0.025, voice: 0.025 },
+    glow: 0.05,
+    pulseBoost: 0.03,
+    voiceBoost: 0.045,
+  },
+  dark: {
+    fillStops: [0.5, 1, 0.75] as const,
+    baseOpacity: { active: 0.22, idle: 0.2 },
+    layerDecay: { active: 0.02, idle: 0.018 },
+    stroke: { active: 0.16, idle: 0.14 },
+    strokePulse: { breathe: 0.04, voice: 0.04 },
+    glow: 0.1,
+    pulseBoost: 0.045,
+    voiceBoost: 0.06,
+  },
+} satisfies Record<
+  AuraTone,
+  {
+    fillStops: readonly [number, number, number];
+    baseOpacity: { active: number; idle: number };
+    layerDecay: { active: number; idle: number };
+    stroke: { active: number; idle: number };
+    strokePulse: { breathe: number; voice: number };
+    glow: number;
+    pulseBoost: number;
+    voiceBoost: number;
+  }
+>;
+
 type AuraVoiceDemoProps = {
   businessSlug: string;
   endpoint: string;
   widgetId?: string;
+  auraTone?: AuraTone;
+  className?: string;
   onEvent?: (
     eventName: TelemetryEventName,
     properties?: Record<string, unknown>,
   ) => void;
-  onRegisterControls?: (controls: { forceEndCall: () => Promise<void> }) => void;
+  onRegisterControls?: (controls: {
+    forceEndCall: () => Promise<void>;
+    startCall: () => Promise<void>;
+  }) => void;
 };
 
 function getButtonLabelKey(
@@ -81,6 +128,8 @@ export function AuraVoiceDemo({
   businessSlug,
   endpoint,
   widgetId,
+  auraTone = "light",
+  className,
   onEvent,
   onRegisterControls,
 }: AuraVoiceDemoProps) {
@@ -103,9 +152,9 @@ export function AuraVoiceDemo({
     ...(onEvent ? { onEvent } : {}),
   });
 
-  useEffect(() => {
-    onRegisterControls?.({ forceEndCall });
-  }, [forceEndCall, onRegisterControls]);
+  useLayoutEffect(() => {
+    onRegisterControls?.({ forceEndCall, startCall });
+  }, [forceEndCall, onRegisterControls, startCall]);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -205,6 +254,9 @@ export function AuraVoiceDemo({
       }, delay);
     };
 
+    const waveRgb = WAVE_RGB[auraTone];
+    const waveStyle = AURA_WAVE_STYLE[auraTone];
+
     function draw(time: number) {
       const active = isActiveRef.current;
       const analyser = analyserRef.current;
@@ -296,9 +348,12 @@ export function AuraVoiceDemo({
 
         cx.closePath();
 
-        const baseOpacity = active ? 0.11 - layer * 0.014 : 0.1 - layer * 0.012;
+        const baseOpacity = active
+          ? waveStyle.baseOpacity.active - layer * waveStyle.layerDecay.active
+          : waveStyle.baseOpacity.idle - layer * waveStyle.layerDecay.idle;
         const opacityPulse =
-          baseOpacity + (active ? breathe * 0.03 + voiceLevel * 0.045 : 0);
+          baseOpacity +
+          (active ? breathe * waveStyle.pulseBoost + voiceLevel * waveStyle.voiceBoost : 0);
         const alpha = Math.max(0, opacityPulse);
 
         const gradient = cx.createRadialGradient(
@@ -309,18 +364,21 @@ export function AuraVoiceDemo({
           centerY,
           outerR * 1.2,
         );
-        gradient.addColorStop(0, `rgba(0,0,0,${alpha * 0.3})`);
-        gradient.addColorStop(0.4, `rgba(0,0,0,${alpha * 0.8})`);
-        gradient.addColorStop(0.7, `rgba(0,0,0,${alpha * 0.5})`);
-        gradient.addColorStop(1, "rgba(0,0,0,0)");
+        const [fillInner, fillMid, fillOuter] = waveStyle.fillStops;
+        gradient.addColorStop(0, `rgba(${waveRgb},${alpha * fillInner})`);
+        gradient.addColorStop(0.4, `rgba(${waveRgb},${alpha * fillMid})`);
+        gradient.addColorStop(0.7, `rgba(${waveRgb},${alpha * fillOuter})`);
+        gradient.addColorStop(1, `rgba(${waveRgb},0)`);
 
         cx.fillStyle = gradient;
         cx.fill();
 
         const strokeAlpha = active
-          ? 0.07 + breathe * 0.025 + voiceLevel * 0.025
-          : 0.06;
-        cx.strokeStyle = `rgba(0,0,0,${strokeAlpha})`;
+          ? waveStyle.stroke.active +
+            breathe * waveStyle.strokePulse.breathe +
+            voiceLevel * waveStyle.strokePulse.voice
+          : waveStyle.stroke.idle;
+        cx.strokeStyle = `rgba(${waveRgb},${strokeAlpha})`;
         cx.lineWidth = 1;
         cx.stroke();
       }
@@ -337,11 +395,11 @@ export function AuraVoiceDemo({
         glowRadius * 2,
       );
       const glowAlpha = active
-        ? 0.05 + Math.sin(t * 2.5) * 0.018 + voiceLevel * 0.045
-        : 0.05;
-      glowGrad.addColorStop(0, `rgba(0,0,0,${glowAlpha})`);
-      glowGrad.addColorStop(0.5, `rgba(0,0,0,${glowAlpha * 0.5})`);
-      glowGrad.addColorStop(1, "rgba(0,0,0,0)");
+        ? waveStyle.glow + Math.sin(t * 2.5) * 0.02 + voiceLevel * waveStyle.voiceBoost
+        : waveStyle.glow;
+      glowGrad.addColorStop(0, `rgba(${waveRgb},${glowAlpha})`);
+      glowGrad.addColorStop(0.5, `rgba(${waveRgb},${glowAlpha * 0.5})`);
+      glowGrad.addColorStop(1, `rgba(${waveRgb},0)`);
       cx.fillStyle = glowGrad;
       cx.fillRect(0, 0, width, height);
 
@@ -361,16 +419,21 @@ export function AuraVoiceDemo({
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
     };
-  }, []);
+  }, [auraTone]);
 
   return (
-    <div className="mx-auto flex w-full min-w-0 flex-col items-center text-center">
+    <div
+      className={cn(
+        "mx-auto flex w-full min-w-0 flex-col items-center text-center",
+        className,
+      )}
+    >
       <audio ref={remoteAudioRef} autoPlay playsInline />
 
       <div
         ref={wrapRef}
         className={cn(
-          "relative flex aspect-square w-full max-w-sm items-center justify-center",
+          "relative flex aspect-square w-full items-center justify-center",
           isBusy && "cursor-wait",
         )}
       >
@@ -383,6 +446,7 @@ export function AuraVoiceDemo({
         <div
           className={cn(
             "voice-aura-outer-ring pointer-events-none absolute rounded-full",
+            auraTone === "dark" && "hidden",
             "transition-opacity duration-700",
             isActive
               ? "voice-aura-outer-ring-active opacity-100"
@@ -409,8 +473,13 @@ export function AuraVoiceDemo({
         >
           <div className="voice-aura-button-highlight absolute inset-px rounded-full" />
 
-          {isActive ? (
-            <span className="absolute inset-[-20px] animate-pulse rounded-full border border-foreground/15" />
+          {isActive && auraTone !== "dark" ? (
+            <span
+              className={cn(
+                "absolute inset-[-20px] animate-pulse rounded-full border",
+                "border-foreground/15",
+              )}
+            />
           ) : null}
 
           {isActive ? (
@@ -457,7 +526,14 @@ export function AuraVoiceDemo({
       </div>
 
       {errorKey ? (
-        <p className="mt-4 max-w-sm text-sm text-destructive">{statusMessage}</p>
+        <p
+          className={cn(
+            "mt-4 max-w-sm text-sm",
+            auraTone === "dark" ? "text-red-300" : "text-destructive",
+          )}
+        >
+          {statusMessage}
+        </p>
       ) : null}
     </div>
   );

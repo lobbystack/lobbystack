@@ -106,6 +106,7 @@ type WebCallRecordingTarget = {
 };
 
 export const WEB_VOICE_RATE_LIMIT_ERROR = "web_voice_rate_limited";
+const DASHBOARD_TEST_CALL_WIDGET_ID = "lobbystack-dashboard-test-call";
 
 type WebVoiceStartLimiterName =
   | "webVoiceStartGlobalPerMinute"
@@ -115,7 +116,14 @@ type WebVoiceStartLimiterName =
   | "webVoiceStartPerIpPerHour"
   | "webVoiceStartPerIpPerDay"
   | "webVoiceStartPerVisitorPerHour"
-  | "webVoiceStartPerVisitorPerDay";
+  | "webVoiceStartPerVisitorPerDay"
+  | "dashboardWebVoiceStartPerBusinessPerHour"
+  | "dashboardWebVoiceStartPerBusinessPerDay"
+  | "dashboardWebVoiceStartPerOriginPerTenMinutes"
+  | "dashboardWebVoiceStartPerIpPerHour"
+  | "dashboardWebVoiceStartPerIpPerDay"
+  | "dashboardWebVoiceStartPerVisitorPerHour"
+  | "dashboardWebVoiceStartPerVisitorPerDay";
 
 type WebVoiceStartLimit = {
   limiterName: WebVoiceStartLimiterName;
@@ -187,19 +195,29 @@ function buildWebVoiceStartLimits(input: {
     ...(input.widgetId !== undefined ? { widgetId: input.widgetId } : {}),
   };
   const limits: Array<WebVoiceStartLimit> = [];
+  const isDashboardTestCall =
+    input.widgetId === DASHBOARD_TEST_CALL_WIDGET_ID;
 
   if (input.ipHash !== undefined) {
     limits.push(
       {
-        limiterName: "webVoiceStartPerIpPerHour",
+        limiterName: isDashboardTestCall
+          ? "dashboardWebVoiceStartPerIpPerHour"
+          : "webVoiceStartPerIpPerHour",
         key: `${businessKey}:ip:${input.ipHash}`,
-        reason: "rate_limit_ip_hour",
+        reason: isDashboardTestCall
+          ? "dashboard_rate_limit_ip_hour"
+          : "rate_limit_ip_hour",
         ...logContext,
       },
       {
-        limiterName: "webVoiceStartPerIpPerDay",
+        limiterName: isDashboardTestCall
+          ? "dashboardWebVoiceStartPerIpPerDay"
+          : "webVoiceStartPerIpPerDay",
         key: `${businessKey}:ip:${input.ipHash}`,
-        reason: "rate_limit_ip_day",
+        reason: isDashboardTestCall
+          ? "dashboard_rate_limit_ip_day"
+          : "rate_limit_ip_day",
         ...logContext,
       },
     );
@@ -208,15 +226,23 @@ function buildWebVoiceStartLimits(input: {
   if (input.visitorId !== undefined) {
     limits.push(
       {
-        limiterName: "webVoiceStartPerVisitorPerHour",
+        limiterName: isDashboardTestCall
+          ? "dashboardWebVoiceStartPerVisitorPerHour"
+          : "webVoiceStartPerVisitorPerHour",
         key: `${businessKey}:visitor:${input.visitorId}`,
-        reason: "rate_limit_visitor_hour",
+        reason: isDashboardTestCall
+          ? "dashboard_rate_limit_visitor_hour"
+          : "rate_limit_visitor_hour",
         ...logContext,
       },
       {
-        limiterName: "webVoiceStartPerVisitorPerDay",
+        limiterName: isDashboardTestCall
+          ? "dashboardWebVoiceStartPerVisitorPerDay"
+          : "webVoiceStartPerVisitorPerDay",
         key: `${businessKey}:visitor:${input.visitorId}`,
-        reason: "rate_limit_visitor_day",
+        reason: isDashboardTestCall
+          ? "dashboard_rate_limit_visitor_day"
+          : "rate_limit_visitor_day",
         ...logContext,
       },
     );
@@ -224,21 +250,33 @@ function buildWebVoiceStartLimits(input: {
 
   limits.push(
     {
-      limiterName: "webVoiceStartPerOriginPerTenMinutes",
+      limiterName: isDashboardTestCall
+        ? "dashboardWebVoiceStartPerOriginPerTenMinutes"
+        : "webVoiceStartPerOriginPerTenMinutes",
       key: input.origin,
-      reason: "rate_limit_origin",
+      reason: isDashboardTestCall
+        ? "dashboard_rate_limit_origin"
+        : "rate_limit_origin",
       ...logContext,
     },
     {
-      limiterName: "webVoiceStartPerBusinessPerHour",
+      limiterName: isDashboardTestCall
+        ? "dashboardWebVoiceStartPerBusinessPerHour"
+        : "webVoiceStartPerBusinessPerHour",
       key: businessKey,
-      reason: "rate_limit_business_hour",
+      reason: isDashboardTestCall
+        ? "dashboard_rate_limit_business_hour"
+        : "rate_limit_business_hour",
       ...logContext,
     },
     {
-      limiterName: "webVoiceStartPerBusinessPerDay",
+      limiterName: isDashboardTestCall
+        ? "dashboardWebVoiceStartPerBusinessPerDay"
+        : "webVoiceStartPerBusinessPerDay",
       key: businessKey,
-      reason: "rate_limit_business_day",
+      reason: isDashboardTestCall
+        ? "dashboard_rate_limit_business_day"
+        : "rate_limit_business_day",
       ...logContext,
     },
     {

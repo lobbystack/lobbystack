@@ -46,6 +46,7 @@ export type WebVoiceErrorKey =
   | "browserNoMicrophone"
   | "browserNoWebRtc"
   | "businessNotFound"
+  | "rateLimited"
   | "unavailable"
   | "generic";
 
@@ -77,6 +78,12 @@ export function getWebVoiceErrorKey(error: unknown): WebVoiceErrorKey {
     }
     if (error.message === "Not found") {
       return "businessNotFound";
+    }
+    if (
+      error.message === "web_voice_rate_limited" ||
+      error.message === "Too many web voice starts. Please try again shortly."
+    ) {
+      return "rateLimited";
     }
     if (error.message === "The AI receptionist is unavailable right now.") {
       return "unavailable";
@@ -496,14 +503,18 @@ export function useWebVoiceCall({
       if (!response.ok) {
         const detail = await response
           .json()
-          .then((body: unknown) =>
-            typeof body === "object" &&
-            body !== null &&
-            "error" in body &&
-            typeof body.error === "string"
-              ? body.error
-              : null,
-          )
+          .then((body: unknown) => {
+            if (typeof body !== "object" || body === null) {
+              return null;
+            }
+            if ("code" in body && typeof body.code === "string") {
+              return body.code;
+            }
+            if ("error" in body && typeof body.error === "string") {
+              return body.error;
+            }
+            return null;
+          })
           .catch(() => null);
         throw new Error(
           detail ?? "The AI receptionist is unavailable right now.",

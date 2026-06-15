@@ -544,6 +544,7 @@ describe("web call routes", () => {
 
     expect(response.statusCode).toBe(429);
     expect(response.json()).toEqual({
+      code: "web_voice_rate_limited",
       error: "Too many web voice starts. Please try again shortly.",
     });
     expect(fetchWebVoiceContextMock).toHaveBeenCalledWith(
@@ -585,6 +586,7 @@ describe("web call routes", () => {
 
     expect(response.statusCode).toBe(402);
     expect(response.json()).toEqual({
+      code: "voice_limit_reached",
       error: "Voice quota reached for this billing period.",
     });
     expect(fetchMock).not.toHaveBeenCalled();

@@ -690,9 +690,12 @@ function hashAbuseKey(
 function replyWithRuntimeRequestError(
   error: RuntimeRequestError,
   reply: FastifyReply,
-): { error: string } {
+): { code?: string; error: string } {
   reply.code(error.status);
-  return { error: error.message };
+  return {
+    ...(error.code !== undefined ? { code: error.code } : {}),
+    error: error.message,
+  };
 }
 
 async function hangupOpenAiRealtimeCall(

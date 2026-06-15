@@ -4,8 +4,24 @@ import { describe, expect, it, vi } from "vitest";
 
 import { TestCallWidget } from "./test-call-widget";
 
+const startCall = vi.fn();
+
 vi.mock("@/components/web-voice/AuraVoiceDemo", () => ({
-  AuraVoiceDemo: () => <div data-testid="aura-voice-demo" />,
+  AuraVoiceDemo: ({
+    onRegisterControls,
+  }: {
+    onRegisterControls?: (controls: {
+      forceEndCall: () => Promise<void>;
+      startCall: () => Promise<void>;
+    }) => void;
+  }) => {
+    onRegisterControls?.({
+      forceEndCall: vi.fn(),
+      startCall,
+    });
+
+    return <div data-testid="aura-voice-demo" />;
+  },
 }));
 
 vi.mock("@/lib/analytics", () => ({
@@ -16,7 +32,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const translations: Record<string, string> = {
-        "testCall.trigger": "Test call",
+        "testCall.trigger": "Test Call",
         "testCall.title": "Test your AI receptionist",
         "testCall.description":
           "Start a live browser call with your configured receptionist.",
@@ -44,10 +60,12 @@ describe("TestCallWidget", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Test call" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Test Call" })).toBeTruthy();
   });
 
-  it("opens the test call dialog when the trigger is clicked", async () => {
+  it("opens the test call dialog and starts the call when the trigger is clicked", async () => {
+    startCall.mockClear();
+
     render(
       <TestCallWidget
         businessId={"business-1" as never}
@@ -60,5 +78,6 @@ describe("TestCallWidget", () => {
 
     expect(screen.getByTestId("aura-voice-demo")).toBeTruthy();
     expect(screen.getByText("Test your AI receptionist")).toBeTruthy();
+    expect(startCall).toHaveBeenCalledTimes(1);
   });
 });

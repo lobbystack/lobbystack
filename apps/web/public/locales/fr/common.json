@@ -84,6 +84,7 @@
       "browserNoMicrophone": "Ce navigateur ne prend pas en charge les appels avec microphone.",
       "browserNoWebRtc": "Ce navigateur ne prend pas en charge les appels vocaux en direct.",
       "businessNotFound": "La passerelle vocale ne trouve pas cet espace de travail. Passez à un espace actif ou vérifiez que le tableau de bord et la passerelle utilisent le même déploiement Convex.",
+      "rateLimited": "Trop d’appels test ont été lancés. Veuillez réessayer bientôt.",
       "unavailable": "Votre réceptionniste IA est indisponible pour le moment.",
       "generic": "Une erreur est survenue au démarrage de l’appel."
     }
