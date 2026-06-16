@@ -170,6 +170,11 @@ export function useWebVoiceCall({
   const sessionIdRef = useRef<string | null>(null);
   const recordingRef = useRef<WebVoiceRecordingState | null>(null);
   const connectedRef = useRef(false);
+  const startCallAttemptRef = useRef(0);
+
+  const invalidatePendingStart = () => {
+    startCallAttemptRef.current += 1;
+  };
 
   const emit = (
     eventName: TelemetryEventName,
@@ -201,6 +206,7 @@ export function useWebVoiceCall({
 
   const cleanup = (options: { resetState?: boolean } = {}) => {
     const resetState = options.resetState ?? true;
+    invalidatePendingStart();
     stopRecordingWithoutUpload();
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
     localStreamRef.current = null;
@@ -343,11 +349,13 @@ export function useWebVoiceCall({
   };
 
   const endRemoteSession = async (
-    options: { uploadRecording?: boolean } = {},
+    options: { uploadRecording?: boolean; sessionId?: string } = {},
   ) => {
     const shouldUploadRecording = options.uploadRecording ?? true;
-    const sessionId = sessionIdRef.current;
-    sessionIdRef.current = null;
+    const sessionId = options.sessionId ?? sessionIdRef.current;
+    if (options.sessionId === undefined || sessionIdRef.current === options.sessionId) {
+      sessionIdRef.current = null;
+    }
     if (!sessionId) {
       stopRecordingWithoutUpload();
       return;
@@ -384,6 +392,7 @@ export function useWebVoiceCall({
     if (status !== "connected" && status !== "connecting") {
       return;
     }
+    invalidatePendingStart();
     setStatus("ending");
     await endRemoteSession();
     cleanup();
@@ -404,6 +413,7 @@ export function useWebVoiceCall({
       return;
     }
 
+    invalidatePendingStart();
     setStatus("ending");
     await endRemoteSession({ uploadRecording: connectedRef.current });
     cleanup();
@@ -416,6 +426,27 @@ export function useWebVoiceCall({
     if (isBusy || isCallActive) {
       return;
     }
+
+    const attemptId = ++startCallAttemptRef.current;
+    let localStream: MediaStream | null = null;
+    let peerConnection: RTCPeerConnection | null = null;
+
+    const stopAttemptResources = () => {
+      if (localStream) {
+        localStream.getTracks().forEach((track) => track.stop());
+        if (localStreamRef.current === localStream) {
+          localStreamRef.current = null;
+        }
+        localStream = null;
+      }
+      if (peerConnection) {
+        peerConnection.close();
+        if (peerConnectionRef.current === peerConnection) {
+          peerConnectionRef.current = null;
+        }
+        peerConnection = null;
+      }
+    };
 
     setErrorKey(null);
     connectedRef.current = false;
@@ -431,7 +462,7 @@ export function useWebVoiceCall({
         throw new Error("This browser does not support live voice calls.");
       }
 
-      const localStream = await navigator.mediaDevices.getUserMedia({
+      localStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
@@ -439,16 +470,23 @@ export function useWebVoiceCall({
         },
       });
       localStreamRef.current = localStream;
+      const stream = localStream;
+      if (!stream) {
+        throw new Error("This browser does not support microphone calls.");
+      }
+      if (attemptId !== startCallAttemptRef.current) {
+        stopAttemptResources();
+        return;
+      }
       setStatus("connecting");
       const visitorId = getVisitorId();
 
-      const peerConnection = new RTCPeerConnection();
-      peerConnectionRef.current = peerConnection;
-      localStream
-        .getAudioTracks()
-        .forEach((track) => peerConnection.addTrack(track, localStream));
+      const connection = new RTCPeerConnection();
+      peerConnection = connection;
+      peerConnectionRef.current = connection;
+      stream.getAudioTracks().forEach((track) => connection.addTrack(track, stream));
 
-      peerConnection.ontrack = (event) => {
+      connection.ontrack = (event) => {
         const [stream] = event.streams;
         if (remoteAudioRef.current && stream) {
           remoteStreamRef.current = stream;
@@ -459,8 +497,8 @@ export function useWebVoiceCall({
         }
       };
 
-      peerConnection.onconnectionstatechange = () => {
-        if (peerConnection.connectionState === "connected") {
+      connection.onconnectionstatechange = () => {
+        if (connection.connectionState === "connected") {
           connectedRef.current = true;
           if (localStreamRef.current) {
             startRecording(localStreamRef.current);
@@ -469,13 +507,13 @@ export function useWebVoiceCall({
           emit("web.voice.test_call_connected");
         }
         if (
-          peerConnection.connectionState === "failed" ||
-          peerConnection.connectionState === "disconnected"
+          connection.connectionState === "failed" ||
+          connection.connectionState === "disconnected"
         ) {
           setStatus("error");
           setErrorKey("connectionDropped");
           emit("web.voice.test_call_error", {
-            connectionState: peerConnection.connectionState,
+            connectionState: connection.connectionState,
           });
           void endRemoteSession({
             uploadRecording: connectedRef.current,
@@ -483,10 +521,15 @@ export function useWebVoiceCall({
         }
       };
 
-      const offer = await peerConnection.createOffer({
+      const offer = await connection.createOffer({
         offerToReceiveAudio: true,
       });
-      await peerConnection.setLocalDescription(offer);
+      await connection.setLocalDescription(offer);
+
+      if (attemptId !== startCallAttemptRef.current) {
+        stopAttemptResources();
+        return;
+      }
 
       const response = await fetchWithTimeout(endpoint, {
         method: "POST",
@@ -525,12 +568,24 @@ export function useWebVoiceCall({
         sessionId: string;
         sdp: string;
       };
+      if (attemptId !== startCallAttemptRef.current) {
+        stopAttemptResources();
+        await endRemoteSession({
+          uploadRecording: false,
+          sessionId: payload.sessionId,
+        });
+        return;
+      }
       sessionIdRef.current = payload.sessionId;
-      await peerConnection.setRemoteDescription({
+      await connection.setRemoteDescription({
         type: "answer",
         sdp: payload.sdp,
       });
     } catch (error) {
+      if (attemptId !== startCallAttemptRef.current) {
+        stopAttemptResources();
+        return;
+      }
       await endRemoteSession({ uploadRecording: false });
       cleanup();
       setStatus("error");
