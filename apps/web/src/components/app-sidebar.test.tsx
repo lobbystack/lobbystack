@@ -186,13 +186,12 @@ describe("AppSidebar", () => {
     ]);
   });
 
-  it("hides Integrations from viewers", () => {
+  it("keeps Integrations visible for viewers", () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <SidebarProvider>
           <AppSidebar
             businessName="LobbyStack"
-            canManageTenant={false}
             onSignOut={() => {}}
             operatorEmail="operator@example.com"
           />
@@ -203,7 +202,9 @@ describe("AppSidebar", () => {
     expect(screen.getByRole("link", { name: "Analytics" }).getAttribute("href")).toBe(
       "/analytics",
     );
-    expect(screen.queryByRole("link", { name: "Integrations" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Integrations" }).getAttribute("href")).toBe(
+      "/integrations",
+    );
     expect(screen.getByRole("link", { name: "Settings" }).getAttribute("href")).toBe(
       "/settings/usage",
     );

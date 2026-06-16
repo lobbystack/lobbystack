@@ -34,7 +34,6 @@ import { SetupGuideCard } from "@/components/setup-guide-card";
 type AppSidebarProps = {
   businessId?: Id<"businesses">;
   businessName?: string;
-  canManageTenant?: boolean;
   onUpgradeToPro?: () => void;
   onSignOut: () => void;
   operatorAvatar?: string;
@@ -84,7 +83,6 @@ const AnimatedCallsIcon = createAnimatedSidebarIcon(PhoneAnimatedIcon);
 export function AppSidebar({
   businessName,
   businessId,
-  canManageTenant = true,
   onUpgradeToPro,
   onSignOut,
   operatorAvatar,
@@ -147,15 +145,11 @@ export function AppSidebar({
           title: t("nav:sidebar.other"),
           items: [
             { title: t("nav:items.analytics"), url: "/analytics", icon: AnimatedAnalyticsIcon },
-            ...(canManageTenant
-              ? [
-                  {
-                    title: t("settings:sections.integrations"),
-                    url: "/integrations",
-                    icon: AnimatedIntegrationsIcon,
-                  },
-                ]
-              : []),
+            {
+              title: t("settings:sections.integrations"),
+              url: "/integrations",
+              icon: AnimatedIntegrationsIcon,
+            },
             {
               title: t("nav:items.settings"),
               activeMatchPrefix: "/settings",
@@ -166,7 +160,7 @@ export function AppSidebar({
         },
       ],
     }),
-    [businessName, canManageTenant, operatorAvatar, operatorEmail, operatorName, t],
+    [businessName, operatorAvatar, operatorEmail, operatorName, t],
   );
 
   React.useEffect(() => {

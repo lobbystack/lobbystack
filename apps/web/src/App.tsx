@@ -433,7 +433,6 @@ function WorkspaceShell() {
       {...(businessId ? { businessId } : {})}
       {...(activeBusiness?.name ? { businessName: activeBusiness.name } : {})}
       {...(activeBusiness?.slug ? { businessSlug: activeBusiness.slug } : {})}
-      canManageTenant={canManageTenant}
       {...(currentUser?.image ? { operatorAvatar: currentUser.image } : {})}
       {...(currentUser?.email ? { operatorEmail: currentUser.email } : {})}
       {...(
@@ -549,7 +548,7 @@ function WorkspaceShell() {
             </Route>
             <Route
               element={
-                businessId && canManageTenant ? (
+                businessId ? (
                   <IntegrationsPage
                     businessId={businessId}
                     canManageTenant={canManageTenant}

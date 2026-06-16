@@ -218,7 +218,7 @@ export function IntegrationsPage({
     api.integrations.calendar.listCalendarConnections,
     canManageTenant ? { businessId } : "skip",
   );
-  const isLoadingConnections = connections === undefined;
+  const isLoadingConnections = canManageTenant && connections === undefined;
   const connectGoogle = useObservedAction(api.integrations.calendar.connectGoogle, {
     reportFailures: false,
   });
@@ -379,11 +379,17 @@ export function IntegrationsPage({
   ]);
 
   function openGoogleSheet(): void {
+    if (!canManageTenant) {
+      return;
+    }
     setSelectedCalendarId(selectedConnectionCalendarId);
     setGoogleSheetOpen(true);
   }
 
   async function handleConnectGoogle(): Promise<void> {
+    if (!canManageTenant) {
+      return;
+    }
     setIsConnecting(true);
 
     try {
@@ -413,6 +419,9 @@ export function IntegrationsPage({
   }
 
   async function handleDisconnectGoogle(): Promise<void> {
+    if (!canManageTenant) {
+      return;
+    }
     setIsDisconnecting(true);
 
     try {
@@ -435,6 +444,9 @@ export function IntegrationsPage({
   }
 
   async function handleSaveCalendar(): Promise<void> {
+    if (!canManageTenant) {
+      return;
+    }
     if (selectedConnection?.status !== "connected") {
       toast.error("Reconnect Google Calendar before choosing a calendar.");
       return;
@@ -467,6 +479,9 @@ export function IntegrationsPage({
   }
 
   async function handleRefreshCalendars(): Promise<void> {
+    if (!canManageTenant) {
+      return;
+    }
     if (selectedConnection?.status !== "connected") {
       return;
     }
@@ -497,14 +512,6 @@ export function IntegrationsPage({
     }
   }
 
-  if (!canManageTenant) {
-    return (
-      <div className="flex flex-col gap-6">
-        <PageHeader title={t("sections.integrations")} />
-      </div>
-    );
-  }
-
   return (
     <>
       <div className="flex flex-col gap-6">
@@ -531,7 +538,7 @@ export function IntegrationsPage({
                         ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300"
                         : undefined
                     }
-                    disabled={isConnecting}
+                    disabled={!canManageTenant || isConnecting}
                     onClick={() =>
                       googleConnected && !googleNeedsReconnect
                         ? openGoogleSheet()
@@ -630,9 +637,9 @@ export function IntegrationsPage({
                 </a>
               </p>
 
-              <Button
-                className="w-full sm:w-auto"
-                disabled={isConnecting}
+                <Button
+                  className="w-full sm:w-auto"
+                disabled={!canManageTenant || isConnecting}
                 onClick={() => void handleConnectGoogle()}
                 type="button"
               >
