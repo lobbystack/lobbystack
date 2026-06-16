@@ -28,6 +28,10 @@ vi.mock("@/lib/analytics", () => ({
   captureAnalyticsEvent: vi.fn(),
 }));
 
+vi.mock("@/lib/observed-convex", () => ({
+  useObservedMutation: () => vi.fn(async () => ({ proof: "dashboard-proof" })),
+}));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => {

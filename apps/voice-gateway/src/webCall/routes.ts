@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { buildVoiceSystemPrompt } from "@lobbystack/ai";
 import { WEB_CALL_STALE_GRACE_MS } from "@lobbystack/shared";
@@ -22,6 +22,7 @@ import { createWebRealtimeToolDefinitions } from "../realtime/toolDefinitions";
 
 type WebCallSessionRequest = {
   businessSlug: string;
+  dashboardTestCallProof?: string;
   widgetId?: string;
   sdp: string;
   pageUrl?: string;
@@ -128,6 +129,8 @@ const WEB_FINAL_MESSAGE_HANGUP_FALLBACK_MS = 8_000;
 const WEB_FINAL_MESSAGE_MIN_PLAYBACK_GRACE_MS = 1_500;
 const WEB_FINAL_MESSAGE_MAX_PLAYBACK_GRACE_MS = 8_000;
 const WEB_FINAL_MESSAGE_METADATA_PURPOSE = "web_final_message";
+const DASHBOARD_TEST_CALL_WIDGET_ID = "lobbystack-dashboard-test-call";
+const DASHBOARD_TEST_CALL_PROOF_PREFIX = "dashboard-test-call";
 export function resetWebCallRouteStateForTests(): void {
   for (const session of activeWebCalls.values()) {
     clearWebOpeningGreetingTimer(session);
@@ -179,6 +182,10 @@ function parseWebCallSessionRequest(
   const rawPageUrl = getStringProperty(input, "pageUrl");
   const rawVisitorId = getStringProperty(input, "visitorId");
   const rawWidgetId = getStringProperty(input, "widgetId");
+  const rawDashboardTestCallProof = getStringProperty(
+    input,
+    "dashboardTestCallProof",
+  );
 
   if (rawBusinessSlug === null) {
     return { ok: false, message: "Invalid business slug." };
@@ -186,7 +193,12 @@ function parseWebCallSessionRequest(
   if (rawSdp === null) {
     return { ok: false, message: "Invalid SDP offer." };
   }
-  if (rawPageUrl === null || rawVisitorId === null || rawWidgetId === null) {
+  if (
+    rawPageUrl === null ||
+    rawVisitorId === null ||
+    rawWidgetId === null ||
+    rawDashboardTestCallProof === null
+  ) {
     return { ok: false, message: "Invalid web call request." };
   }
 
@@ -203,12 +215,14 @@ function parseWebCallSessionRequest(
   const pageUrl = rawPageUrl?.trim();
   const visitorId = rawVisitorId?.trim();
   const widgetId = rawWidgetId?.trim();
+  const dashboardTestCallProof = rawDashboardTestCallProof?.trim();
 
   return {
     ok: true,
     data: {
       businessSlug,
       sdp,
+      ...(dashboardTestCallProof ? { dashboardTestCallProof } : {}),
       ...(pageUrl ? { pageUrl } : {}),
       ...(visitorId ? { visitorId } : {}),
       ...(widgetId ? { widgetId } : {}),
@@ -223,6 +237,46 @@ function isLocalhostOrigin(origin: string): boolean {
   } catch {
     return false;
   }
+}
+
+function verifyDashboardTestCallProof(input: {
+  businessSlug: string;
+  proof?: string | undefined;
+  token?: string | undefined;
+}): boolean {
+  const token = input.token?.trim();
+  if (!token || !input.proof) {
+    return false;
+  }
+
+  const parts = input.proof.split("|");
+  if (parts.length !== 5) {
+    return false;
+  }
+
+  const [prefix, businessSlug, rawExpiresAt, nonce, signature] = parts;
+  if (
+    prefix !== DASHBOARD_TEST_CALL_PROOF_PREFIX ||
+    businessSlug !== input.businessSlug ||
+    !nonce ||
+    !signature
+  ) {
+    return false;
+  }
+
+  const expiresAt = Number(rawExpiresAt);
+  if (!Number.isFinite(expiresAt) || expiresAt < Date.now()) {
+    return false;
+  }
+
+  const payload = parts.slice(0, 4).join("|");
+  const expected = createHmac("sha256", token).update(payload).digest("hex");
+  const providedBuffer = Buffer.from(signature, "hex");
+  const expectedBuffer = Buffer.from(expected, "hex");
+  return (
+    providedBuffer.length === expectedBuffer.length &&
+    timingSafeEqual(providedBuffer, expectedBuffer)
+  );
 }
 
 function isAllowedOrigin(
@@ -1470,11 +1524,23 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
     const widgetId = normalizeOptionalAbuseKey(body.widgetId);
     const visitorId = normalizeOptionalAbuseKey(body.visitorId);
     const ipHash = hashAbuseKey(server, getClientIp(request));
+    const dashboardTestCallToken =
+      widgetId === DASHBOARD_TEST_CALL_WIDGET_ID &&
+      verifyDashboardTestCallProof({
+        businessSlug,
+        proof: body.dashboardTestCallProof,
+        token: server.runtimeConfig.DASHBOARD_TEST_CALL_TOKEN,
+      })
+        ? server.runtimeConfig.DASHBOARD_TEST_CALL_TOKEN?.trim()
+        : undefined;
     let context: Awaited<ReturnType<typeof fetchWebVoiceContext>>;
     try {
       context = await fetchWebVoiceContext({
         businessSlug,
         origin: origin!,
+        ...(dashboardTestCallToken !== undefined
+          ? { dashboardTestCallToken }
+          : {}),
         ...(ipHash !== undefined ? { ipHash } : {}),
         ...(visitorId !== undefined ? { visitorId } : {}),
         ...(widgetId !== undefined ? { widgetId } : {}),

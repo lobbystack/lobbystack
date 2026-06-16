@@ -15,6 +15,7 @@ type UseWebVoiceCallOptions = {
   businessSlug: string;
   endpoint: string;
   widgetId?: string;
+  getStartPayload?: () => Promise<Record<string, string>>;
   onEvent?: (
     eventName: TelemetryEventName,
     properties?: Record<string, unknown>,
@@ -156,6 +157,7 @@ async function fetchWithTimeout(
 export function useWebVoiceCall({
   businessSlug,
   endpoint,
+  getStartPayload,
   widgetId,
   onEvent,
 }: UseWebVoiceCallOptions) {
@@ -538,6 +540,7 @@ export function useWebVoiceCall({
           businessSlug,
           widgetId,
           visitorId,
+          ...(getStartPayload ? await getStartPayload() : {}),
           sdp: offer.sdp,
           pageUrl: window.location.href,
         }),

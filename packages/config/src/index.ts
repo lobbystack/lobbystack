@@ -93,6 +93,7 @@ const clientEnvSchema = z.object({
   VITE_POSTHOG_HOST: z.string().min(1).optional(),
   VITE_POSTHOG_UI_HOST: z.string().url().optional(),
   VITE_TURNSTILE_SITE_KEY: z.string().optional(),
+  VITE_WEB_CALL_ENDPOINT: z.string().url().optional(),
 });
 
 const voiceGatewayEnvSchema = z.object({
@@ -125,6 +126,7 @@ const voiceGatewayEnvSchema = z.object({
     .positive()
     .max(MAX_WEB_CALL_MAX_DURATION_MS)
     .default(DEFAULT_WEB_CALL_MAX_DURATION_MS),
+  DASHBOARD_TEST_CALL_TOKEN: z.string().optional(),
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   POSTHOG_KEY: z.string().optional(),

@@ -584,6 +584,9 @@ export const acceptInvitation = mutation({
       .unique();
 
     if (existingMembership?.status === "active") {
+      await ctx.db.patch(user._id, {
+        activeBusinessId: invitation.businessId,
+      });
       await ctx.db.patch(invitation._id, {
         status: "accepted",
         acceptedAt: Date.now(),

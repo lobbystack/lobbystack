@@ -82,6 +82,7 @@ type AuraVoiceDemoProps = {
   widgetId?: string;
   auraTone?: AuraTone;
   className?: string;
+  getStartPayload?: () => Promise<Record<string, string>>;
   onEvent?: (
     eventName: TelemetryEventName,
     properties?: Record<string, unknown>,
@@ -128,6 +129,7 @@ function getErrorLabelKey(errorKey: WebVoiceErrorKey): string {
 export function AuraVoiceDemo({
   businessSlug,
   endpoint,
+  getStartPayload,
   widgetId,
   auraTone = "light",
   className,
@@ -150,6 +152,7 @@ export function AuraVoiceDemo({
   } = useWebVoiceCall({
     businessSlug,
     endpoint,
+    ...(getStartPayload ? { getStartPayload } : {}),
     ...(widgetId ? { widgetId } : {}),
     ...(onEvent ? { onEvent } : {}),
   });

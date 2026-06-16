@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import type { Id } from "../../../../convex/_generated/dataModel";
 import type { TelemetryEventName } from "@lobbystack/telemetry";
+import { api } from "../../../../convex/_generated/api";
 import { AuraVoiceDemo } from "@/components/web-voice/AuraVoiceDemo";
 import {
   DASHBOARD_TEST_CALL_WIDGET_ID,
@@ -20,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { captureAnalyticsEvent } from "@/lib/analytics";
+import { useObservedMutation } from "@/lib/observed-convex";
 import { cn } from "@/lib/utils";
 
 type TestCallWidgetProps = {
@@ -96,6 +98,7 @@ export function TestCallWidget({
 
       <TestCallAuraPortal open={open}>
         <TestCallAura
+          businessId={businessId}
           businessSlug={businessSlug}
           onCallEnded={() => setOpen(false)}
           onEvent={handleEvent}
@@ -136,6 +139,7 @@ function TestCallAuraPortal({
 }
 
 type TestCallAuraProps = {
+  businessId?: Id<"businesses"> | undefined;
   businessSlug: string;
   onCallEnded: () => void;
   onEvent: (
@@ -146,17 +150,30 @@ type TestCallAuraProps = {
 };
 
 function TestCallAura({
+  businessId,
   businessSlug,
   onCallEnded,
   onEvent,
   onRegisterControls,
 }: TestCallAuraProps) {
+  const createDashboardTestCallProof = useObservedMutation(
+    api.voice.runtime.createDashboardTestCallProof,
+  );
+  const getStartPayload = useCallback(async () => {
+    if (!businessId) {
+      return {};
+    }
+    const { proof } = await createDashboardTestCallProof({ businessId });
+    return proof ? { dashboardTestCallProof: proof } : {};
+  }, [businessId, createDashboardTestCallProof]);
+
   return (
     <AuraVoiceDemo
       auraTone="dark"
       businessSlug={businessSlug}
       className="w-full"
       endpoint={getWebCallEndpoint()}
+      getStartPayload={getStartPayload}
       onCallEnded={onCallEnded}
       onEvent={onEvent}
       onRegisterControls={onRegisterControls}

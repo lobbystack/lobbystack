@@ -2,7 +2,7 @@ import { register as registerRateLimiter } from "@convex-dev/rate-limiter/test";
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { internal } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 import { webVoiceAbuseRateLimiter } from "../lib/components";
 import schema from "../schema";
 import { modules } from "../test.setup";
@@ -463,6 +463,57 @@ describe("web voice calls", () => {
         widgetId: "lobbystack-dashboard-test-call",
       }),
     ).resolves.toBeNull();
+  });
+
+  it("creates signed dashboard test call proofs for active members", async () => {
+    process.env.DASHBOARD_TEST_CALL_TOKEN = "dashboard-token";
+    const { t, businessId } = await seedBusiness("web-voice-dashboard-proof");
+    await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        authSubject: "dashboard-proof-user",
+        email: "dashboard-proof@example.com",
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId,
+        userId,
+        role: "business_admin",
+        status: "active",
+      });
+    });
+
+    const result = await t
+      .withIdentity({
+        subject: "dashboard-proof-user",
+        email: "dashboard-proof@example.com",
+      })
+      .mutation(api.voice.runtime.createDashboardTestCallProof, { businessId });
+
+    expect(result.proof).toContain("dashboard-test-call|web-voice-dashboard-proof|");
+  });
+
+  it("returns null dashboard test call proofs when the shared token is not configured", async () => {
+    const { t, businessId } = await seedBusiness("web-voice-dashboard-proof-unset");
+    await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        authSubject: "dashboard-proof-unset-user",
+        email: "dashboard-proof-unset@example.com",
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId,
+        userId,
+        role: "business_admin",
+        status: "active",
+      });
+    });
+
+    const result = await t
+      .withIdentity({
+        subject: "dashboard-proof-unset-user",
+        email: "dashboard-proof-unset@example.com",
+      })
+      .mutation(api.voice.runtime.createDashboardTestCallProof, { businessId });
+
+    expect(result.proof).toBeNull();
   });
 
   it("stores web voice callback messages on the web voice call session", async () => {

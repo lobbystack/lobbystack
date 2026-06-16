@@ -107,6 +107,8 @@ type WebCallRecordingTarget = {
 
 export const WEB_VOICE_RATE_LIMIT_ERROR = "web_voice_rate_limited";
 const DASHBOARD_TEST_CALL_WIDGET_ID = "lobbystack-dashboard-test-call";
+const DASHBOARD_TEST_CALL_PROOF_TTL_MS = 2 * 60 * 1000;
+const DASHBOARD_TEST_CALL_PROOF_PREFIX = "dashboard-test-call";
 
 function getDashboardOrigin(): string | null {
   const appBaseUrl = process.env.APP_BASE_URL;
@@ -131,6 +133,43 @@ function hasVerifiedDashboardTestCallToken(input: {
 }): boolean {
   const expectedToken = getDashboardTestCallToken();
   return expectedToken !== null && input.dashboardTestCallToken === expectedToken;
+}
+
+function bytesToHex(bytes: ArrayBuffer): string {
+  return [...new Uint8Array(bytes)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function signDashboardTestCallProof(input: {
+  businessSlug: string;
+  expiresAt: number;
+  nonce: string;
+}): Promise<string | null> {
+  const token = getDashboardTestCallToken();
+  if (token === null) {
+    return null;
+  }
+
+  const payload = [
+    DASHBOARD_TEST_CALL_PROOF_PREFIX,
+    input.businessSlug,
+    String(input.expiresAt),
+    input.nonce,
+  ].join("|");
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(token),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(payload),
+  );
+  return `${payload}|${bytesToHex(signature)}`;
 }
 
 type WebVoiceStartLimiterName =
@@ -2322,6 +2361,27 @@ export const bookAppointmentForVoice = internalAction({
       serviceId: service._id,
       serviceName: localizedServiceName,
     };
+  },
+});
+
+export const createDashboardTestCallProof = mutation({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx: MutationCtx, args): Promise<{ proof: string | null }> => {
+    await requireMembership(ctx, args.businessId);
+    const business = await ctx.db.get(args.businessId);
+    if (!business) {
+      throw new Error("Business not found.");
+    }
+
+    const expiresAt = Date.now() + DASHBOARD_TEST_CALL_PROOF_TTL_MS;
+    const proof = await signDashboardTestCallProof({
+      businessSlug: business.slug,
+      expiresAt,
+      nonce: crypto.randomUUID(),
+    });
+    return { proof };
   },
 });
 

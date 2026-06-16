@@ -349,17 +349,98 @@ describe("team invitations", () => {
       return existingBusinessId;
     });
 
-    const { token } = await createPendingInvite(t, {
-      businessId: admin.businessId,
-      invitedByUserId: admin.userId,
-      email: inviteeEmail,
-      role: "viewer",
+    const token = generateTeamInvitationToken();
+    const tokenHash = await hashTeamInvitationToken(token);
+    await t.run(async (ctx: TestContext) => {
+      await ctx.db.insert("business_invitations", {
+        businessId: admin.businessId,
+        email: inviteeEmail,
+        role: "viewer",
+        status: "pending",
+        tokenHash,
+        expirationTime: Date.now() + TEAM_INVITATION_MAX_AGE_SECONDS * 1000,
+        invitedByUserId: admin.userId,
+      });
     });
 
     await t.withIdentity({ subject: inviteeSubject, email: inviteeEmail }).mutation(
       api.businesses.members.acceptInvitation,
       { token },
     );
+
+    const invitee = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("users")
+        .withIndex("by_auth_subject", (q) => q.eq("authSubject", inviteeSubject))
+        .unique();
+    });
+
+    expect(invitee?.activeBusinessId).toBe(admin.businessId);
+    expect(invitee?.activeBusinessId).not.toBe(existingBusinessId);
+  });
+
+  it("switches active workspace when an already-active member accepts an invitation", async () => {
+    const t = convexTest(schema, convexModules);
+    const admin = await seedMember(t, {
+      subject: "team-invite-active-admin",
+      email: "active-admin@example.com",
+      role: "business_owner",
+    });
+
+    const inviteeSubject = "team-invite-active-invitee";
+    const inviteeEmail = "active-invitee@example.com";
+    const existingBusinessId = await t.run(async (ctx: TestContext) => {
+      const existingBusinessId = await insertBusiness(ctx, {
+        slug: "team-invite-active-existing-business",
+        name: "Existing Business",
+      });
+      const inviteeId = await ctx.db.insert("users", {
+        authSubject: inviteeSubject,
+        email: inviteeEmail,
+        activeBusinessId: existingBusinessId,
+      });
+      await ctx.db.insert("user_email_claims", {
+        normalizedEmail: inviteeEmail,
+        userId: inviteeId,
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId: existingBusinessId,
+        userId: inviteeId,
+        role: "business_owner",
+        status: "active",
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId: admin.businessId,
+        userId: inviteeId,
+        role: "viewer",
+        status: "active",
+      });
+      return existingBusinessId;
+    });
+
+    const token = generateTeamInvitationToken();
+    const tokenHash = await hashTeamInvitationToken(token);
+    await t.run(async (ctx: TestContext) => {
+      await ctx.db.insert("business_invitations", {
+        businessId: admin.businessId,
+        email: inviteeEmail,
+        role: "viewer",
+        status: "pending",
+        tokenHash,
+        expirationTime: Date.now() + TEAM_INVITATION_MAX_AGE_SECONDS * 1000,
+        invitedByUserId: admin.userId,
+      });
+    });
+
+    const result = await t.withIdentity({ subject: inviteeSubject, email: inviteeEmail }).mutation(
+      api.businesses.members.acceptInvitation,
+      { token },
+    );
+
+    expect(result).toEqual({
+      businessId: admin.businessId,
+      alreadyMember: true,
+    });
 
     const invitee = await t.run(async (ctx: TestContext) => {
       return await ctx.db
