@@ -1,4 +1,10 @@
 import { PageHeader } from "@/components/page-header";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemMedia,
+} from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { TableCard } from "@/components/ui/table";
@@ -223,13 +229,18 @@ export function DetailPageSkeleton({ cards = 3 }: { cards?: number }) {
 
 export function SidebarTeamSkeleton() {
   return (
-    <div className="flex items-center gap-3 rounded-xl px-2 py-2">
-      <Skeleton className="size-8 rounded-full" />
-      <div className="flex flex-1 flex-col gap-2">
-        <Skeleton className="h-4 w-24" />
+    <Item className="pointer-events-none gap-2 px-3 py-2" size="xs" variant="outline">
+      <ItemMedia variant="icon">
+        <Skeleton className="size-4 rounded-full" />
+      </ItemMedia>
+      <ItemContent className="gap-0.5">
+        <Skeleton className="h-3 w-24" />
         <Skeleton className="h-3 w-16" />
-      </div>
-    </div>
+      </ItemContent>
+      <ItemActions>
+        <Skeleton className="size-4 rounded-full" />
+      </ItemActions>
+    </Item>
   );
 }
 

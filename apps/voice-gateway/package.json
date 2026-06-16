@@ -14,13 +14,14 @@
     "@types/ws": "^8.18.1"
   },
   "dependencies": {
+    "@fastify/formbody": "^8.0.2",
+    "@fastify/rate-limit": "^11.0.0",
+    "@fastify/websocket": "^11.2.0",
     "@lobbystack/ai": "workspace:*",
     "@lobbystack/config": "workspace:*",
     "@lobbystack/providers": "workspace:*",
     "@lobbystack/shared": "workspace:*",
     "@lobbystack/telemetry": "workspace:*",
-    "@fastify/formbody": "^8.0.2",
-    "@fastify/websocket": "^11.2.0",
     "@opentelemetry/api-logs": "^0.216.0",
     "@opentelemetry/exporter-logs-otlp-http": "^0.216.0",
     "@opentelemetry/resources": "^2.7.1",

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useTranslation } from "react-i18next";
@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Main } from "@/components/layout/main";
 import {
+  AcceptInvitePage,
   ConfirmEmailChangePage,
   ForgotPasswordPage,
   LoginPage,
@@ -103,13 +104,19 @@ function RequireAuth(props: { children: ReactNode }) {
 
 function PublicOnly(props: { children: ReactNode }) {
   const auth = useConvexAuth();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
 
   if (auth.isLoading) {
     return <LoadingScreen />;
   }
 
   if (auth.isAuthenticated) {
-    return <Navigate replace to="/" />;
+    const destination =
+      returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
+        ? returnTo
+        : "/";
+    return <Navigate replace to={destination} />;
   }
 
   return props.children;
@@ -425,6 +432,7 @@ function WorkspaceShell() {
       onSignOut={() => void handleSignOut()}
       {...(businessId ? { businessId } : {})}
       {...(activeBusiness?.name ? { businessName: activeBusiness.name } : {})}
+      {...(activeBusiness?.slug ? { businessSlug: activeBusiness.slug } : {})}
       {...(currentUser?.image ? { operatorAvatar: currentUser.image } : {})}
       {...(currentUser?.email ? { operatorEmail: currentUser.email } : {})}
       {...(
@@ -541,7 +549,10 @@ function WorkspaceShell() {
             <Route
               element={
                 businessId ? (
-                  <IntegrationsPage businessId={businessId} />
+                  <IntegrationsPage
+                    businessId={businessId}
+                    canManageTenant={canManageTenant}
+                  />
                 ) : (
                   <Navigate replace to="/" />
                 )
@@ -690,12 +701,16 @@ function useOnboardingContext() {
 
 function OnboardingBusinessRoute() {
   const ctx = useOnboardingContext();
+  const [searchParams] = useSearchParams();
+  const isCreatingNewWorkspace = searchParams.get("create") === "true";
+  const [createdBusinessId, setCreatedBusinessId] =
+    useState<Id<"businesses"> | null>(null);
 
   if (ctx.isLoading) {
     return <OnboardingRouteSkeleton />;
   }
 
-  if (ctx.activeBusiness) {
+  if (ctx.activeBusiness && !isCreatingNewWorkspace) {
     const nonAdminElement = getNonAdminOnboardingElement(
       ctx.activeBusiness,
       ctx.canManageTenant,
@@ -712,17 +727,24 @@ function OnboardingBusinessRoute() {
     }
   }
 
+  const activeBusinessForForm =
+    ctx.activeBusiness &&
+    (!isCreatingNewWorkspace || ctx.activeBusiness._id === createdBusinessId)
+      ? ctx.activeBusiness
+      : null;
+
   return (
     <OnboardingBusinessNamePage
-      {...(ctx.activeBusiness
+      {...(activeBusinessForForm
         ? {
-            businessId: ctx.activeBusiness._id,
-            businessName: ctx.activeBusiness.name,
+            businessId: activeBusinessForForm._id,
+            businessName: activeBusinessForForm.name,
             progressNavigableUntil: onboardingNavigableStep(
-              ctx.activeBusiness.onboardingStage,
+              activeBusinessForForm.onboardingStage,
             ),
           }
         : {})}
+      {...(isCreatingNewWorkspace ? { onBusinessCreated: setCreatedBusinessId } : {})}
       onSignOut={ctx.onSignOut}
     />
   );
@@ -1133,6 +1155,7 @@ export default function App() {
             path="/forgot-password"
           />
           <Route element={<ConfirmEmailChangePage />} path="/confirm-email-change" />
+          <Route element={<AcceptInvitePage />} path="/accept-invite" />
           <Route
             element={
               <RequireAuth>

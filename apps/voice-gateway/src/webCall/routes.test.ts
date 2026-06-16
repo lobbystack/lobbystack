@@ -1,3 +1,5 @@
+import { createHmac } from "node:crypto";
+
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 
 const {
@@ -121,6 +123,22 @@ import {
   resetWebCallRouteStateForTests,
 } from "./routes";
 
+function createDashboardTestCallProof(input: {
+  businessSlug: string;
+  expiresAt?: number;
+  nonce?: string;
+  token: string;
+}): string {
+  const payload = [
+    "dashboard-test-call",
+    input.businessSlug,
+    String(input.expiresAt ?? Date.now() + 60_000),
+    input.nonce ?? "nonce",
+  ].join("|");
+  const signature = createHmac("sha256", input.token).update(payload).digest("hex");
+  return `${payload}|${signature}`;
+}
+
 describe("createWebRealtimeTurnDetectionConfig", () => {
   it("can disable auto responses and interruptions during the opening greeting", () => {
     expect(
@@ -171,6 +189,7 @@ describe("web call routes", () => {
     delete process.env.VOICE_GATEWAY_TRUST_PROXY;
     delete process.env.WEB_CALL_ALLOWED_ORIGINS;
     delete process.env.WEB_CALL_MAX_DURATION_MS;
+    delete process.env.DASHBOARD_TEST_CALL_TOKEN;
   });
 
   it("rejects untrusted origins before starting a web call", async () => {
@@ -365,6 +384,41 @@ describe("web call routes", () => {
     expect(response.statusCode).toBe(200);
   });
 
+  it("applies a gateway rate limit before runtime requests", async () => {
+    const server = createServer();
+
+    for (let index = 0; index < 100; index += 1) {
+      const response = await server.inject({
+        method: "POST",
+        url: "/web-call/sessions",
+        headers: {
+          origin: "https://lobbystack.com",
+          "content-type": "application/json",
+        },
+        payload: {
+          businessSlug: "lobbystack",
+        },
+      });
+      expect(response.statusCode).toBe(400);
+    }
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+      },
+    });
+
+    expect(response.statusCode).toBe(429);
+    expect(fetchWebVoiceContextMock).not.toHaveBeenCalled();
+    expect(startWebVoiceCallMock).not.toHaveBeenCalled();
+  });
+
   it("connects the web sideband websocket to the returned OpenAI call ID", async () => {
     fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
     startWebVoiceCallMock.mockResolvedValueOnce({
@@ -544,6 +598,7 @@ describe("web call routes", () => {
 
     expect(response.statusCode).toBe(429);
     expect(response.json()).toEqual({
+      code: "web_voice_rate_limited",
       error: "Too many web voice starts. Please try again shortly.",
     });
     expect(fetchWebVoiceContextMock).toHaveBeenCalledWith(
@@ -585,10 +640,110 @@ describe("web call routes", () => {
 
     expect(response.statusCode).toBe(402);
     expect(response.json()).toEqual({
+      code: "voice_limit_reached",
       error: "Voice quota reached for this billing period.",
     });
     expect(fetchMock).not.toHaveBeenCalled();
     expect(startWebVoiceCallMock).not.toHaveBeenCalled();
+  });
+
+  it("does not forward dashboard test call tokens from public widget starts", async () => {
+    process.env.WEB_CALL_ALLOWED_ORIGINS = "https://app.lobbystack.com";
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://app.lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+        visitorId: "visitor-123",
+        widgetId: "lobbystack-dashboard-test-call",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(fetchWebVoiceContextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        businessSlug: "lobbystack",
+        origin: "https://app.lobbystack.com",
+        visitorId: "visitor-123",
+        widgetId: "lobbystack-dashboard-test-call",
+      }),
+    );
+    expect(fetchWebVoiceContextMock.mock.calls[0]?.[0]).not.toHaveProperty(
+      "dashboardTestCallToken",
+    );
+  });
+
+  it("injects dashboard test call tokens for signed dashboard widget starts", async () => {
+    process.env.WEB_CALL_ALLOWED_ORIGINS = "https://app.lobbystack.com";
+    process.env.DASHBOARD_TEST_CALL_TOKEN = "dashboard-token";
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://app.lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        dashboardTestCallProof: createDashboardTestCallProof({
+          businessSlug: "lobbystack",
+          token: "dashboard-token",
+        }),
+        sdp: "v=0",
+        visitorId: "visitor-123",
+        widgetId: "lobbystack-dashboard-test-call",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(fetchWebVoiceContextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        businessSlug: "lobbystack",
+        dashboardTestCallToken: "dashboard-token",
+        origin: "https://app.lobbystack.com",
+        visitorId: "visitor-123",
+        widgetId: "lobbystack-dashboard-test-call",
+      }),
+    );
   });
 
   it("does not trust spoofed forwarded IP headers by default", async () => {

@@ -19,6 +19,7 @@ Use the repository's `.env.example` as the source of truth for local development
 | `CONVEX_SITE_URL` | Server/runtime, web build | Convex HTTP actions URL. Also exposed to the React dashboard by Vite. |
 | `VOICE_GATEWAY_BASE_URL` | Convex, voice gateway | Public HTTPS URL for the voice gateway. |
 | `INTERNAL_SERVICE_TOKEN` | Convex, voice gateway | Shared secret for internal HTTP calls between the voice gateway and Convex. |
+| `DASHBOARD_TEST_CALL_TOKEN` | Convex, voice gateway | Optional shared token for elevated dashboard test-call rate limits from verified internal paths. Do not expose this through public widget requests. |
 | `SESSION_ENCRYPTION_KEY` | Convex | Required for encrypted Google Calendar token storage. |
 | `DEPLOYMENT_MODE` | Convex, voice gateway | Deployment mode label used by runtime and telemetry. |
 
@@ -89,13 +90,14 @@ Optional overrides for `pnpm self-hosted:verify` when using non-default ports:
 | `VITE_APP_NAME` | Display name; defaults to LobbyStack in `.env.example`. |
 | `VITE_DEPLOYMENT_MODE` | Client-side deployment mode label. |
 | `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST`, `VITE_POSTHOG_UI_HOST` | Optional web analytics settings. |
+| `VITE_WEB_CALL_ENDPOINT` | Required for self-hosting. Set this to your voice gateway session endpoint, for example `${VOICE_GATEWAY_BASE_URL}/web-call/sessions`. |
 
 ## Voice gateway
 
 | Variable | Notes |
 | --- | --- |
 | `PORT` | Port the voice gateway listens on. Defaults to `3001`. |
-| `WEB_CALL_ALLOWED_ORIGINS` | Comma-separated browser origins allowed to start in-dashboard web calls. Must include the exact web URL operators use. |
+| `WEB_CALL_ALLOWED_ORIGINS` | Comma-separated browser origins allowed to start in-dashboard web calls. Must include the exact web URL operators use, such as `https://app.lobbystack.com` for the dashboard. |
 | `OPENAI_API_KEY` | Required for live OpenAI Realtime voice calls. |
 | `OPENAI_REALTIME_MODEL` | Defaults to `gpt-realtime`. |
 | `OPENAI_REALTIME_VOICE` | Defaults to `marin`. |

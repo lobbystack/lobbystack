@@ -41,6 +41,10 @@ export const WEB_EVENT_NAMES = [
   "web.integration.calendar_connect_failed",
   "web.integration.calendar_disconnect_completed",
   "web.voice.follow_up_completed",
+  "web.voice.test_call_started",
+  "web.voice.test_call_connected",
+  "web.voice.test_call_ended",
+  "web.voice.test_call_error",
 ] as const;
 
 export const VOICE_EVENT_NAMES = [
@@ -372,6 +376,10 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "callId",
     "inboxItemId",
   ],
+  "web.voice.test_call_started": ["businessId", "deploymentMode"],
+  "web.voice.test_call_connected": ["businessId", "deploymentMode"],
+  "web.voice.test_call_ended": ["businessId", "deploymentMode"],
+  "web.voice.test_call_error": ["businessId", "deploymentMode"],
   "voice.call_started": [
     "businessId",
     "deploymentMode",

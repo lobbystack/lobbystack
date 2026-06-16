@@ -1,11 +1,15 @@
 import { register as registerRateLimiter } from "@convex-dev/rate-limiter/test";
 import { convexTest } from "convex-test";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { internal } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 import { webVoiceAbuseRateLimiter } from "../lib/components";
 import schema from "../schema";
 import { modules } from "../test.setup";
+
+const originalAppBaseUrl = process.env.APP_BASE_URL;
+const originalDashboardTestCallToken = process.env.DASHBOARD_TEST_CALL_TOKEN;
+const originalDeploymentMode = process.env.DEPLOYMENT_MODE;
 
 async function seedBusiness(slug = "lobbystack") {
   const t = convexTest(schema, modules);
@@ -26,8 +30,29 @@ async function seedBusiness(slug = "lobbystack") {
 }
 
 describe("web voice calls", () => {
+  beforeEach(() => {
+    process.env.APP_BASE_URL = "https://app.lobbystack.com";
+    process.env.DEPLOYMENT_MODE = "development";
+    delete process.env.DASHBOARD_TEST_CALL_TOKEN;
+  });
+
   afterEach(() => {
     vi.useRealTimers();
+    if (originalAppBaseUrl === undefined) {
+      delete process.env.APP_BASE_URL;
+    } else {
+      process.env.APP_BASE_URL = originalAppBaseUrl;
+    }
+    if (originalDashboardTestCallToken === undefined) {
+      delete process.env.DASHBOARD_TEST_CALL_TOKEN;
+    } else {
+      process.env.DASHBOARD_TEST_CALL_TOKEN = originalDashboardTestCallToken;
+    }
+    if (originalDeploymentMode === undefined) {
+      delete process.env.DEPLOYMENT_MODE;
+    } else {
+      process.env.DEPLOYMENT_MODE = originalDeploymentMode;
+    }
   });
 
   it("starts provider-neutral web calls without a contact or Twilio SID", async () => {
@@ -302,6 +327,193 @@ describe("web voice calls", () => {
         widgetId: "lobbystack-landing",
       }),
     ).rejects.toThrow("web_voice_rate_limited");
+  });
+
+  it("does not grant dashboard limits to spoofed widget IDs from the landing origin", async () => {
+    const { t, businessId } = await seedBusiness("web-voice-dashboard-test-call");
+
+    for (let index = 0; index < 5; index += 1) {
+      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://lobbystack.com",
+        ipHash: `landing-ip-hash-${index}`,
+        visitorId: "landing-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      });
+    }
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://lobbystack.com",
+        ipHash: "landing-ip-hash-over-limit",
+        visitorId: "landing-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      }),
+    ).rejects.toThrow("web_voice_rate_limited");
+  });
+
+  it("keeps dashboard-origin widget starts on public limits without a verified token", async () => {
+    process.env.DASHBOARD_TEST_CALL_TOKEN = "dashboard-token";
+    const { t, businessId } = await seedBusiness("web-voice-dashboard-unverified");
+
+    for (let index = 0; index < 5; index += 1) {
+      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://app.lobbystack.com",
+        ipHash: `dashboard-ip-hash-${index}`,
+        visitorId: "dashboard-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      });
+    }
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://app.lobbystack.com",
+        ipHash: "dashboard-ip-hash-over-limit",
+        visitorId: "dashboard-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      }),
+    ).rejects.toThrow("web_voice_rate_limited");
+  });
+
+  it("uses higher visitor limits for verified dashboard test calls from the dashboard origin", async () => {
+    process.env.DASHBOARD_TEST_CALL_TOKEN = "dashboard-token";
+    const { t, businessId } = await seedBusiness("web-voice-dashboard-test-call");
+
+    for (let index = 0; index < 10; index += 1) {
+      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        dashboardTestCallToken: "dashboard-token",
+        origin: "https://app.lobbystack.com",
+        ipHash: `dashboard-ip-hash-${index}`,
+        visitorId: "dashboard-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      });
+    }
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://lobbystack.com",
+        ipHash: "landing-ip-hash",
+        visitorId: "landing-visitor",
+        widgetId: "lobbystack-landing",
+      }),
+    ).resolves.toBeNull();
+
+    for (let index = 10; index < 30; index += 1) {
+      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        dashboardTestCallToken: "dashboard-token",
+        origin: "https://app.lobbystack.com",
+        ipHash: `dashboard-ip-hash-${index}`,
+        visitorId: "dashboard-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      });
+    }
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        dashboardTestCallToken: "dashboard-token",
+        origin: "https://app.lobbystack.com",
+        ipHash: "dashboard-ip-hash-over-limit",
+        visitorId: "dashboard-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      }),
+    ).rejects.toThrow("web_voice_rate_limited");
+  });
+
+  it("does not grant dashboard limits for invalid dashboard test call tokens", async () => {
+    process.env.DEPLOYMENT_MODE = "cloud";
+    process.env.DASHBOARD_TEST_CALL_TOKEN = "dashboard-token";
+    const { t, businessId } = await seedBusiness("web-voice-dashboard-token");
+
+    for (let index = 0; index < 5; index += 1) {
+      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        dashboardTestCallToken: "wrong-token",
+        origin: "https://app.lobbystack.com",
+        ipHash: `dashboard-ip-hash-${index}`,
+        visitorId: "dashboard-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      });
+    }
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        dashboardTestCallToken: "wrong-token",
+        origin: "https://app.lobbystack.com",
+        ipHash: "dashboard-ip-hash-over-limit",
+        visitorId: "dashboard-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      }),
+    ).rejects.toThrow("web_voice_rate_limited");
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        dashboardTestCallToken: "dashboard-token",
+        origin: "https://app.lobbystack.com",
+        ipHash: "dashboard-ip-hash",
+        visitorId: "dashboard-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it("creates signed dashboard test call proofs for active members", async () => {
+    process.env.DASHBOARD_TEST_CALL_TOKEN = "dashboard-token";
+    const { t, businessId } = await seedBusiness("web-voice-dashboard-proof");
+    await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        authSubject: "dashboard-proof-user",
+        email: "dashboard-proof@example.com",
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId,
+        userId,
+        role: "business_admin",
+        status: "active",
+      });
+    });
+
+    const result = await t
+      .withIdentity({
+        subject: "dashboard-proof-user",
+        email: "dashboard-proof@example.com",
+      })
+      .mutation(api.voice.runtime.createDashboardTestCallProof, { businessId });
+
+    expect(result.proof).toContain("dashboard-test-call|web-voice-dashboard-proof|");
+  });
+
+  it("returns null dashboard test call proofs when the shared token is not configured", async () => {
+    const { t, businessId } = await seedBusiness("web-voice-dashboard-proof-unset");
+    await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        authSubject: "dashboard-proof-unset-user",
+        email: "dashboard-proof-unset@example.com",
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId,
+        userId,
+        role: "business_admin",
+        status: "active",
+      });
+    });
+
+    const result = await t
+      .withIdentity({
+        subject: "dashboard-proof-unset-user",
+        email: "dashboard-proof-unset@example.com",
+      })
+      .mutation(api.voice.runtime.createDashboardTestCallProof, { businessId });
+
+    expect(result.proof).toBeNull();
   });
 
   it("stores web voice callback messages on the web voice call session", async () => {

@@ -1,13 +1,12 @@
 import { SidebarTeamSkeleton } from "@/components/loading-skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import type { Team } from "@/components/layout/sidebar-types";
 
 type TeamSwitcherProps = {
-  teams: Team[];
   isLoading?: boolean;
 };
 
@@ -18,12 +17,15 @@ export function TeamSwitcher({ isLoading = false }: TeamSwitcherProps) {
     <SidebarMenu>
       <SidebarMenuItem>
         {isLoading ? (
-          <SidebarTeamSkeleton />
+          <div className="flex h-12 items-center gap-2 px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+            <Skeleton className="size-8 rounded-xl" />
+            <Skeleton className="h-6 w-32 max-w-full group-data-[collapsible=icon]:hidden" />
+          </div>
         ) : (
           <SidebarMenuButton
             aria-label={BRAND_NAME}
+            className="gap-1.5"
             size="lg"
-            className="gap-1.5 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
             <div className="flex aspect-square size-8 items-center justify-center text-sidebar-foreground">
               <img

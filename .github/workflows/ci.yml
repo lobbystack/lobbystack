@@ -26,4 +26,5 @@ jobs:
         run: |
           INSTANCE_SECRET=deadbeefdeadbeefdeadbeefdeadbeef \
           INTERNAL_SERVICE_TOKEN=ci-self-hosted-token \
+          VITE_WEB_CALL_ENDPOINT=http://127.0.0.1:3001/web-call/sessions \
           docker compose -f docker-compose.self-hosted.yml config --quiet
