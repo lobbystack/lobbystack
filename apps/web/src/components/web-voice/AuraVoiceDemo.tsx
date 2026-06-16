@@ -90,6 +90,7 @@ type AuraVoiceDemoProps = {
     forceEndCall: () => Promise<void>;
     startCall: () => Promise<void>;
   }) => void;
+  onCallEnded?: () => void;
 };
 
 function getButtonLabelKey(
@@ -132,6 +133,7 @@ export function AuraVoiceDemo({
   className,
   onEvent,
   onRegisterControls,
+  onCallEnded,
 }: AuraVoiceDemoProps) {
   const { t } = useTranslation("common");
   const {
@@ -166,6 +168,9 @@ export function AuraVoiceDemo({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const audioDataRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const audioLevelRef = useRef(0);
+  const animTimeRef = useRef(0);
+  const lastFrameTimeRef = useRef<number | undefined>(undefined);
+  const wasCallActiveRef = useRef(false);
 
   const isListening = status === "connected" || status === "connecting";
   const isActive = isListening;
@@ -176,6 +181,16 @@ export function AuraVoiceDemo({
   useEffect(() => {
     isActiveRef.current = isActive;
   }, [isActive]);
+
+  useEffect(() => {
+    if (
+      wasCallActiveRef.current &&
+      (status === "ending" || status === "ended")
+    ) {
+      onCallEnded?.();
+    }
+    wasCallActiveRef.current = isCallActive;
+  }, [isCallActive, onCallEnded, status]);
 
   useEffect(() => {
     if (!remoteStream) {
@@ -250,6 +265,7 @@ export function AuraVoiceDemo({
       }
 
       idleTimerRef.current = window.setTimeout(() => {
+        lastFrameTimeRef.current = undefined;
         rafRef.current = requestAnimationFrame(draw);
       }, delay);
     };
@@ -311,7 +327,14 @@ export function AuraVoiceDemo({
       cx.clearRect(0, 0, width, height);
       cx.globalCompositeOperation = "lighter";
 
-      const t = time * 0.001;
+      const rawDt =
+        lastFrameTimeRef.current === undefined
+          ? 0
+          : (time - lastFrameTimeRef.current) * 0.001;
+      lastFrameTimeRef.current = time;
+      const dt = Math.min(rawDt, 1 / 30);
+      animTimeRef.current += dt;
+      const t = animTimeRef.current;
       const pulseSpeed = active ? 1.1 + voiceLevel * 0.9 : 0.7;
       const layers = active ? 5 : 4;
 

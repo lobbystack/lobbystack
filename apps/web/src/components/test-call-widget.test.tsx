@@ -74,7 +74,7 @@ describe("TestCallWidget", () => {
     );
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Test call" }));
+    await user.click(screen.getByRole("button", { name: "Test Call" }));
 
     expect(screen.getByTestId("aura-voice-demo")).toBeTruthy();
     expect(screen.getByText("Test your AI receptionist")).toBeTruthy();

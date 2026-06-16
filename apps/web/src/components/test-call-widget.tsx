@@ -97,6 +97,7 @@ export function TestCallWidget({
       <TestCallAuraPortal open={open}>
         <TestCallAura
           businessSlug={businessSlug}
+          onCallEnded={() => setOpen(false)}
           onEvent={handleEvent}
           onRegisterControls={(controls) => {
             voiceControlsRef.current = controls;
@@ -136,6 +137,7 @@ function TestCallAuraPortal({
 
 type TestCallAuraProps = {
   businessSlug: string;
+  onCallEnded: () => void;
   onEvent: (
     eventName: TelemetryEventName,
     properties?: Record<string, unknown>,
@@ -145,6 +147,7 @@ type TestCallAuraProps = {
 
 function TestCallAura({
   businessSlug,
+  onCallEnded,
   onEvent,
   onRegisterControls,
 }: TestCallAuraProps) {
@@ -154,6 +157,7 @@ function TestCallAura({
       businessSlug={businessSlug}
       className="w-full"
       endpoint={getWebCallEndpoint()}
+      onCallEnded={onCallEnded}
       onEvent={onEvent}
       onRegisterControls={onRegisterControls}
       widgetId={DASHBOARD_TEST_CALL_WIDGET_ID}
