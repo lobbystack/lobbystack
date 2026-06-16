@@ -18,10 +18,23 @@ export function generateTeamInvitationToken(
   length: number = TEAM_INVITATION_TOKEN_LENGTH,
 ): string {
   const alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-  const bytes = new Uint8Array(length);
-  crypto.getRandomValues(bytes);
+  const alphabetSize = alphabet.length;
+  // Reject bytes that would introduce modulo bias (256 % 62 = 6).
+  const rejectThreshold = Math.floor(256 / alphabetSize) * alphabetSize;
+  const result: string[] = [];
+  const buffer = new Uint8Array(length);
 
-  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("");
+  while (result.length < length) {
+    crypto.getRandomValues(buffer);
+    for (let i = 0; i < buffer.length && result.length < length; i++) {
+      const byte = buffer[i]!;
+      if (byte < rejectThreshold) {
+        result.push(alphabet.charAt(byte % alphabetSize));
+      }
+    }
+  }
+
+  return result.join("");
 }
 
 export async function hashTeamInvitationToken(token: string): Promise<string> {

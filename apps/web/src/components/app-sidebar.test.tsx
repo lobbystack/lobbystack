@@ -35,10 +35,16 @@ vi.mock("next-themes", () => ({
 
 vi.mock("convex/react", () => ({
   useQuery: () => setupGuideQueryState.progress,
+  useMutation: () => vi.fn(),
+}));
+
+vi.mock("@/components/layout/workspace-switcher", () => ({
+  WorkspaceSwitcher: () => <div data-testid="workspace-switcher" />,
 }));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
+    i18n: { resolvedLanguage: "en", language: "en" },
     t: (key: string, options?: Record<string, number>) => {
       const translations: Record<string, string> = {
         "nav:sidebar.general": "General",

@@ -32,15 +32,7 @@ async function findUserIdByNormalizedEmail(
     .query("user_email_claims")
     .withIndex("by_normalized_email", (q) => q.eq("normalizedEmail", normalizedEmail))
     .unique();
-  if (emailClaim) {
-    return emailClaim.userId;
-  }
-
-  const users = await ctx.db
-    .query("users")
-    .withIndex("email", (q) => q.eq("email", normalizedEmail))
-    .take(5);
-  return users[0]?._id ?? null;
+  return emailClaim?.userId ?? null;
 }
 
 async function getActiveMembershipForUser(
@@ -102,7 +94,7 @@ function formatInvitation(invitation: Doc<"business_invitations">) {
     role: invitation.role,
     status: invitation.status,
     expirationTime: invitation.expirationTime,
-    invitedAt: invitation._creationTime,
+    invitedAt: invitation.invitedAt ?? invitation._creationTime,
   };
 }
 
@@ -312,12 +304,15 @@ export const upsertPendingInvitation = internalMutation({
       args.businessId,
       normalizedEmail,
     );
+    const now = Date.now();
+
     if (existingPending) {
       await ctx.db.patch(existingPending._id, {
         role: args.role,
         tokenHash: args.tokenHash,
         expirationTime: args.expirationTime,
         invitedByUserId: args.invitedByUserId,
+        invitedAt: now,
         revokedAt: undefined,
         acceptedAt: undefined,
         acceptedByUserId: undefined,
@@ -337,6 +332,7 @@ export const upsertPendingInvitation = internalMutation({
         tokenHash: args.tokenHash,
         expirationTime: args.expirationTime,
         invitedByUserId: args.invitedByUserId,
+        invitedAt: now,
         revokedAt: undefined,
         acceptedAt: undefined,
         acceptedByUserId: undefined,
@@ -353,6 +349,7 @@ export const upsertPendingInvitation = internalMutation({
       tokenHash: args.tokenHash,
       expirationTime: args.expirationTime,
       invitedByUserId: args.invitedByUserId,
+      invitedAt: now,
     });
 
     return { invitationId };
@@ -380,6 +377,7 @@ export const refreshInvitationToken = internalMutation({
       tokenHash: args.tokenHash,
       expirationTime: args.expirationTime,
       invitedByUserId: args.invitedByUserId,
+      invitedAt: Date.now(),
     });
 
     return null;

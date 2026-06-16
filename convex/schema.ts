@@ -239,6 +239,7 @@ export default defineSchema({
     tokenHash: v.string(),
     expirationTime: v.number(),
     invitedByUserId: v.id("users"),
+    invitedAt: v.optional(v.number()),
     acceptedByUserId: v.optional(v.id("users")),
     acceptedAt: v.optional(v.number()),
     revokedAt: v.optional(v.number()),

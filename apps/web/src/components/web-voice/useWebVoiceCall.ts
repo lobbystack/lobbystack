@@ -392,15 +392,15 @@ export function useWebVoiceCall({
   };
 
   const forceEndCall = async () => {
-    if (
-      status === "idle" ||
-      status === "ended" ||
-      status === "error" ||
-      status === "ending"
-    ) {
+    if (status === "idle" || status === "ended" || status === "error") {
       cleanup();
       setStatus("idle");
       setErrorKey(null);
+      return;
+    }
+
+    if (status === "ending") {
+      // endCall is already tearing the call down; avoid duplicate telemetry.
       return;
     }
 

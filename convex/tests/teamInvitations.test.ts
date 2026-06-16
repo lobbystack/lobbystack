@@ -437,6 +437,69 @@ describe("team invitations", () => {
     }
   });
 
+  it("updates invitedAt when re-sending an invitation", async () => {
+    const previousSiteUrl = process.env.SITE_URL;
+    process.env.SITE_URL = "https://app.example.com";
+
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedMember(t, {
+      subject: "team-invite-resend-admin",
+      email: "resend-admin@example.com",
+      role: "business_owner",
+    });
+
+    try {
+      await authed.action(api.businesses.members.sendInvitation, {
+        businessId,
+        email: "resend-member@example.com",
+        role: "viewer",
+      });
+
+      const firstInvitation = await t.run(async (ctx: TestContext) => {
+        const rows = await ctx.db
+          .query("business_invitations")
+          .withIndex("by_business_id_and_email", (q) =>
+            q.eq("businessId", businessId).eq("email", "resend-member@example.com"),
+          )
+          .collect();
+        return rows[0];
+      });
+      expect(firstInvitation?.invitedAt).toBeGreaterThan(0);
+
+      await t.run(async (ctx: TestContext) => {
+        await ctx.db.patch(firstInvitation!._id, {
+          invitedAt: 1,
+        });
+      });
+
+      await authed.action(api.businesses.members.sendInvitation, {
+        businessId,
+        email: "resend-member@example.com",
+        role: "business_admin",
+      });
+
+      const secondInvitation = await t.run(async (ctx: TestContext) => {
+        const rows = await ctx.db
+          .query("business_invitations")
+          .withIndex("by_business_id_and_email", (q) =>
+            q.eq("businessId", businessId).eq("email", "resend-member@example.com"),
+          )
+          .collect();
+        return rows[0];
+      });
+
+      expect(secondInvitation?.role).toBe("business_admin");
+      expect(secondInvitation?.invitedAt).toBeGreaterThan(1);
+      expect(secondInvitation?._creationTime).toBe(firstInvitation?._creationTime);
+    } finally {
+      if (previousSiteUrl === undefined) {
+        delete process.env.SITE_URL;
+      } else {
+        process.env.SITE_URL = previousSiteUrl;
+      }
+    }
+  });
+
   it("removes an active non-owner member", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, authed } = await seedMember(t, {
