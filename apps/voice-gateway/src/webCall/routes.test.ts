@@ -171,7 +171,6 @@ describe("web call routes", () => {
     delete process.env.VOICE_GATEWAY_TRUST_PROXY;
     delete process.env.WEB_CALL_ALLOWED_ORIGINS;
     delete process.env.WEB_CALL_MAX_DURATION_MS;
-    delete process.env.DASHBOARD_TEST_CALL_TOKEN;
   });
 
   it("rejects untrusted origins before starting a web call", async () => {
@@ -594,9 +593,8 @@ describe("web call routes", () => {
     expect(startWebVoiceCallMock).not.toHaveBeenCalled();
   });
 
-  it("forwards the configured dashboard test call token for dashboard widget starts", async () => {
+  it("does not forward dashboard test call tokens from public widget starts", async () => {
     process.env.WEB_CALL_ALLOWED_ORIGINS = "https://app.lobbystack.com";
-    process.env.DASHBOARD_TEST_CALL_TOKEN = "dashboard-token";
     fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
     startWebVoiceCallMock.mockResolvedValueOnce({
       businessId: "business_123",
@@ -633,11 +631,13 @@ describe("web call routes", () => {
     expect(fetchWebVoiceContextMock).toHaveBeenCalledWith(
       expect.objectContaining({
         businessSlug: "lobbystack",
-        dashboardTestCallToken: "dashboard-token",
         origin: "https://app.lobbystack.com",
         visitorId: "visitor-123",
         widgetId: "lobbystack-dashboard-test-call",
       }),
+    );
+    expect(fetchWebVoiceContextMock.mock.calls[0]?.[0]).not.toHaveProperty(
+      "dashboardTestCallToken",
     );
   });
 

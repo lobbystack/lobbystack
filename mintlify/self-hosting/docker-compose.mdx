@@ -53,7 +53,7 @@ Edit `.env.self-hosted` before starting containers.
 | `CONVEX_SITE_URL` | `http://127.0.0.1:3211` |
 | `CONVEX_CLOUD_ORIGIN`, `CONVEX_SITE_ORIGIN` | Match the Convex URLs above |
 | `WEB_CALL_ALLOWED_ORIGINS` | `http://127.0.0.1:8080` (must match the browser web URL) |
-| `DASHBOARD_TEST_CALL_TOKEN` | Optional for localhost smoke; set the same value in Convex and the voice gateway before production dashboard test calls. |
+| `DASHBOARD_TEST_CALL_TOKEN` | Optional Convex token for elevated dashboard test-call limits from verified internal paths; localhost smoke tests do not require it. |
 | `APP_HOSTNAME`, `VOICE_HOSTNAME`, `CONVEX_HOSTNAME`, `CONVEX_SITE_HOSTNAME` | `localhost` for each (prevents Caddy from requesting certificates for `*.example.com` during smoke) |
 
 Provider credentials (Twilio, OpenAI, and others) are not required for the smoke test. Configure them before production traffic; see [Additional steps](#additional-steps).

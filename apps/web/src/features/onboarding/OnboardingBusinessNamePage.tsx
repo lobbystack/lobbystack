@@ -22,6 +22,7 @@ import { useObservedMutation } from "@/lib/observed-convex";
 type OnboardingBusinessNamePageProps = {
   businessId?: Id<"businesses">;
   businessName?: string;
+  onBusinessCreated?: (businessId: Id<"businesses">) => void;
   onSignOut: () => void;
   progressNavigableUntil?: number;
 };
@@ -45,6 +46,7 @@ function resolveTimezone(): string {
 export function OnboardingBusinessNamePage({
   businessId,
   businessName,
+  onBusinessCreated,
   onSignOut,
   progressNavigableUntil,
 }: OnboardingBusinessNamePageProps) {
@@ -90,6 +92,7 @@ export function OnboardingBusinessNamePage({
           timezone: resolveTimezone(),
           businessType: "general",
         });
+        onBusinessCreated?.(result.businessId);
         setBootstrappedBusinessId(result.businessId);
       }
       captureAnalyticsEvent("web.onboarding.business_name_submitted");

@@ -126,35 +126,11 @@ function getDashboardTestCallToken(): string | null {
   return token ? token : null;
 }
 
-function isDevelopmentMode(): boolean {
-  return (process.env.DEPLOYMENT_MODE ?? "development") === "development";
-}
-
-function assertDashboardTestCallAuthorized(input: {
+function hasVerifiedDashboardTestCallToken(input: {
   dashboardTestCallToken?: string;
-  origin: string;
-  widgetId?: string;
-}): void {
-  if (input.widgetId !== DASHBOARD_TEST_CALL_WIDGET_ID) {
-    return;
-  }
-
-  const dashboardOrigin = getDashboardOrigin();
-  if (dashboardOrigin === null || input.origin !== dashboardOrigin) {
-    return;
-  }
-
+}): boolean {
   const expectedToken = getDashboardTestCallToken();
-  if (!expectedToken) {
-    if (isDevelopmentMode()) {
-      return;
-    }
-    throw new Error("Dashboard test call token is required for dashboard widget ID.");
-  }
-
-  if (input.dashboardTestCallToken !== expectedToken) {
-    throw new Error("Dashboard test call token is invalid.");
-  }
+  return expectedToken !== null && input.dashboardTestCallToken === expectedToken;
 }
 
 type WebVoiceStartLimiterName =
@@ -232,6 +208,7 @@ async function consumeWebVoiceStartLimit(
 
 function buildWebVoiceStartLimits(input: {
   businessId: Id<"businesses">;
+  dashboardTestCallToken?: string;
   origin: string;
   ipHash?: string;
   visitorId?: string;
@@ -248,7 +225,8 @@ function buildWebVoiceStartLimits(input: {
   const isDashboardTestCall =
     input.widgetId === DASHBOARD_TEST_CALL_WIDGET_ID &&
     dashboardOrigin !== null &&
-    input.origin === dashboardOrigin;
+    input.origin === dashboardOrigin &&
+    hasVerifiedDashboardTestCallToken(input);
 
   if (input.ipHash !== undefined) {
     limits.push(
@@ -815,8 +793,6 @@ export const assertWebVoiceStartAllowed = internalMutation({
     widgetId: v.optional(v.string()),
   },
   handler: async (ctx: MutationCtx, args): Promise<null> => {
-    assertDashboardTestCallAuthorized(args);
-
     const limits = buildWebVoiceStartLimits(args);
 
     await assertWebVoiceStartLimitsAvailable(ctx, limits);

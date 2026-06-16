@@ -700,6 +700,8 @@ function OnboardingBusinessRoute() {
   const ctx = useOnboardingContext();
   const [searchParams] = useSearchParams();
   const isCreatingNewWorkspace = searchParams.get("create") === "true";
+  const [createdBusinessId, setCreatedBusinessId] =
+    useState<Id<"businesses"> | null>(null);
 
   if (ctx.isLoading) {
     return <OnboardingRouteSkeleton />;
@@ -722,17 +724,24 @@ function OnboardingBusinessRoute() {
     }
   }
 
+  const activeBusinessForForm =
+    ctx.activeBusiness &&
+    (!isCreatingNewWorkspace || ctx.activeBusiness._id === createdBusinessId)
+      ? ctx.activeBusiness
+      : null;
+
   return (
     <OnboardingBusinessNamePage
-      {...(ctx.activeBusiness && !isCreatingNewWorkspace
+      {...(activeBusinessForForm
         ? {
-            businessId: ctx.activeBusiness._id,
-            businessName: ctx.activeBusiness.name,
+            businessId: activeBusinessForForm._id,
+            businessName: activeBusinessForForm.name,
             progressNavigableUntil: onboardingNavigableStep(
-              ctx.activeBusiness.onboardingStage,
+              activeBusinessForForm.onboardingStage,
             ),
           }
         : {})}
+      {...(isCreatingNewWorkspace ? { onBusinessCreated: setCreatedBusinessId } : {})}
       onSignOut={ctx.onSignOut}
     />
   );
