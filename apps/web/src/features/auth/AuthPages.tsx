@@ -5,6 +5,7 @@ import { useConvexAuth, useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 
 import { api } from "../../../../../convex/_generated/api";
 import { ForgotPasswordForm } from "@/components/forgot-password-form";
@@ -483,12 +484,7 @@ export function AcceptInvitePage() {
   const acceptInvitation = useObservedMutation(api.businesses.members.acceptInvitation);
   const [searchParams] = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [acceptedPreview, setAcceptedPreview] = useState<{
-    businessName: string;
-    email: string;
-  } | null>(null);
 
   const token = searchParams.get("token")?.trim() ?? "";
   const hasToken = token.length > 0;
@@ -511,9 +507,7 @@ export function AcceptInvitePage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setStatusMessage(null);
     setErrorMessage(null);
-    setAcceptedPreview(null);
 
     if (!hasToken) {
       setErrorMessage(t("acceptInvite.invalidLink"));
@@ -529,29 +523,20 @@ export function AcceptInvitePage() {
 
     try {
       await acceptInvitation({ token });
-      setAcceptedPreview({
-        businessName: preview?.businessName ?? t("acceptInvite.workspaceFallback"),
-        email: preview?.email ?? "",
-      });
-      setStatusMessage(
+      toast.success(
         t("acceptInvite.success", {
           businessName: preview?.businessName ?? t("acceptInvite.workspaceFallback"),
         }),
       );
-      window.setTimeout(() => {
-        navigate("/settings/team", { replace: true });
-      }, 1200);
+      navigate("/settings/team", { replace: true });
     } catch {
       setErrorMessage(t("acceptInvite.failed"));
-    } finally {
       setIsSubmitting(false);
     }
   }
 
   let description = t("acceptInvite.invalidLink");
-  if (acceptedPreview) {
-    description = t("acceptInvite.subtitle", acceptedPreview);
-  } else if (isPreviewLoading) {
+  if (isPreviewLoading) {
     description = t("acceptInvite.loading");
   } else if (preview && preview.expired) {
     description = t("acceptInvite.expired");
@@ -572,9 +557,6 @@ export function AcceptInvitePage() {
       width="sm"
     >
       <div className="flex flex-col gap-6">
-        {statusMessage ? (
-          <p className="text-center text-sm text-muted-foreground">{statusMessage}</p>
-        ) : null}
         {errorMessage ? (
           <p className="text-center text-sm text-destructive">{errorMessage}</p>
         ) : null}
@@ -586,12 +568,13 @@ export function AcceptInvitePage() {
               disabled={
                 !isInvitationValid ||
                 isSubmitting ||
-                isPreviewLoading ||
-                statusMessage !== null
+                isPreviewLoading
               }
+              loading={isSubmitting}
+              loadingLabel={t("acceptInvite.submitting")}
               type="submit"
             >
-              {isSubmitting ? t("acceptInvite.submitting") : t("acceptInvite.submit")}
+              {t("acceptInvite.submit")}
             </Button>
           </form>
         ) : (

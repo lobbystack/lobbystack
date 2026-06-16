@@ -1,4 +1,4 @@
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,6 +8,7 @@ import { AcceptInvitePage, ForgotPasswordPage, LoginPage, SignupPage } from "./A
 const {
   acceptInvitationMock,
   signInMock,
+  toastSuccessMock,
   turnstileExecuteMock,
   turnstileTokenMock,
   useConvexAuthMock,
@@ -15,6 +16,7 @@ const {
 } = vi.hoisted(() => ({
   acceptInvitationMock: vi.fn(),
   signInMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
   turnstileExecuteMock: vi.fn(),
   turnstileTokenMock: vi.fn(() => "turnstile-token" as string | null),
   useConvexAuthMock: vi.fn(),
@@ -35,6 +37,12 @@ vi.mock("convex/react", () => ({
 vi.mock("@/lib/observed-convex", () => ({
   useObservedAction: () => vi.fn(),
   useObservedMutation: () => acceptInvitationMock,
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: toastSuccessMock,
+  },
 }));
 
 vi.mock("react-i18next", () => ({
@@ -81,11 +89,12 @@ afterEach(() => {
 describe("AcceptInvitePage", () => {
   beforeEach(() => {
     acceptInvitationMock.mockReset();
+    toastSuccessMock.mockReset();
     useConvexAuthMock.mockReset();
     useQueryMock.mockReset();
   });
 
-  it("does not flash invalid link copy after a successful acceptance", async () => {
+  it("shows a success toast instead of inline success copy after acceptance", async () => {
     let previewState: {
       businessName: string | null;
       email: string;
@@ -112,17 +121,22 @@ describe("AcceptInvitePage", () => {
 
     render(
       <MemoryRouter initialEntries={["/accept-invite?token=invite-token"]}>
-        <AcceptInvitePage />
+        <Routes>
+          <Route element={<AcceptInvitePage />} path="/accept-invite" />
+          <Route element={<div>team settings route</div>} path="/settings/team" />
+        </Routes>
       </MemoryRouter>,
     );
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "acceptInvite.submit" }));
 
-    expect(await screen.findByText("acceptInvite.success")).toBeTruthy();
     await waitFor(() => {
-      expect(screen.queryByText("acceptInvite.invalidLink")).toBeNull();
+      expect(toastSuccessMock).toHaveBeenCalledWith("acceptInvite.success");
     });
+    expect(screen.queryByText("acceptInvite.success")).toBeNull();
+    expect(await screen.findByText("team settings route")).toBeTruthy();
+    expect(screen.queryByText("acceptInvite.invalidLink")).toBeNull();
   });
 });
 
