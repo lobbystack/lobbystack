@@ -36,6 +36,10 @@ describe("transactional email provider", () => {
     expect(email.html).toContain("Accept invitation");
     expect(email.html).toContain("border-radius:9999px");
     expect(email.html).toContain("This invitation expires in 7 days");
+    expect(email.html).toContain('<meta name="color-scheme" content="light"');
+    expect(email.html).toContain('<meta name="supported-color-schemes" content="light"');
+    expect(email.html).toContain('color-scheme: light');
+    expect(email.html).toContain('scale(0.100000,-0.100000)');
     expect(email.text).toContain("Raphaël Morency invited you to join Maple Clinic on LobbyStack as a Viewer.");
     expect(email.text).toContain("Accept invitation: https://app.example.com/accept-invite?token=abc123");
   });
