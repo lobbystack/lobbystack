@@ -1551,8 +1551,8 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       if (error instanceof RuntimeRequestError) {
         server.log.warn(
           {
-            err: error,
             businessSlug,
+            code: error.code,
             origin,
             status: error.status,
           },
