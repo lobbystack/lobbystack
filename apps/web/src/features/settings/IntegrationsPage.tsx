@@ -40,6 +40,7 @@ import { captureAnalyticsEvent, captureAnalyticsException } from "@/lib/analytic
 
 type IntegrationsPageProps = {
   businessId: Id<"businesses">;
+  canManageTenant?: boolean;
 };
 
 type GoogleCalendarOption = {
@@ -206,13 +207,17 @@ function InlineConfirmDeleteButton({
   );
 }
 
-export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
+export function IntegrationsPage({
+  businessId,
+  canManageTenant = true,
+}: IntegrationsPageProps) {
   const { i18n, t } = useTranslation("settings");
   const [searchParams, setSearchParams] = useSearchParams();
   const handledCallbackRef = useRef<string | null>(null);
-  const connections = useQuery(api.integrations.calendar.listCalendarConnections, {
-    businessId,
-  });
+  const connections = useQuery(
+    api.integrations.calendar.listCalendarConnections,
+    canManageTenant ? { businessId } : "skip",
+  );
   const isLoadingConnections = connections === undefined;
   const connectGoogle = useObservedAction(api.integrations.calendar.connectGoogle, {
     reportFailures: false,
@@ -260,7 +265,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   const [googleSheetOpen, setGoogleSheetOpen] = useState(false);
 
   useEffect(() => {
-    if (searchParams.get("setup") !== "calendar") {
+    if (!canManageTenant || searchParams.get("setup") !== "calendar") {
       return;
     }
 
@@ -269,7 +274,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete("setup");
     setSearchParams(nextParams, { replace: true });
-  }, [searchParams, selectedConnectionCalendarId, setSearchParams]);
+  }, [canManageTenant, searchParams, selectedConnectionCalendarId, setSearchParams]);
 
   useEffect(() => {
     const calendar = searchParams.get("calendar");
@@ -277,7 +282,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     const message = searchParams.get("message");
     const callbackKey = `${calendar ?? ""}:${status ?? ""}:${message ?? ""}`;
 
-    if (calendar !== "google" || !status) {
+    if (!canManageTenant || calendar !== "google" || !status) {
       return;
     }
 
@@ -305,10 +310,10 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     nextParams.delete("status");
     nextParams.delete("message");
     setSearchParams(nextParams, { replace: true });
-  }, [businessId, searchParams, setSearchParams, t]);
+  }, [businessId, canManageTenant, searchParams, setSearchParams, t]);
 
   useEffect(() => {
-    if (!googleSheetOpen) {
+    if (!canManageTenant || !googleSheetOpen) {
       return;
     }
 
@@ -364,6 +369,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     };
   }, [
     businessId,
+    canManageTenant,
     googleCalendarListFailedMessage,
     googleSheetOpen,
     listGoogleCalendars,
@@ -489,6 +495,14 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     } finally {
       setIsLoadingCalendars(false);
     }
+  }
+
+  if (!canManageTenant) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title={t("sections.integrations")} />
+      </div>
+    );
   }
 
   return (

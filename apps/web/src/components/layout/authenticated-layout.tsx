@@ -25,6 +25,7 @@ type AuthenticatedLayoutProps = {
   businessId?: Id<"businesses">;
   businessName?: string;
   businessSlug?: string;
+  canManageTenant?: boolean;
   children: ReactNode;
   onSignOut: () => void;
   operatorAvatar?: string;
@@ -52,6 +53,7 @@ export function AuthenticatedLayout({
   businessId,
   businessName,
   businessSlug,
+  canManageTenant = true,
   children,
   onSignOut,
   operatorAvatar,
@@ -115,6 +117,7 @@ export function AuthenticatedLayout({
       }
     >
       <AppSidebar
+        canManageTenant={canManageTenant}
         isLoading={isLoading}
         onSignOut={onSignOut}
         {...(businessId && billingStatus

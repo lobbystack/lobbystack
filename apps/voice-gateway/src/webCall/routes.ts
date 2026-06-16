@@ -258,8 +258,10 @@ function verifyDashboardTestCallProof(input: {
   if (
     prefix !== DASHBOARD_TEST_CALL_PROOF_PREFIX ||
     businessSlug !== input.businessSlug ||
+    rawExpiresAt === undefined ||
     !nonce ||
-    !signature
+    signature === undefined ||
+    !/^[0-9a-f]{64}$/i.test(signature)
   ) {
     return false;
   }

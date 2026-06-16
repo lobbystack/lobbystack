@@ -5,8 +5,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { IntegrationsPage } from "./IntegrationsPage";
 
+const useQueryMock = vi.fn((_query: unknown, _args: unknown) => []);
+
 vi.mock("convex/react", () => ({
-  useQuery: () => [],
+  useQuery: (query: unknown, args: unknown) => useQueryMock(query, args),
 }));
 
 vi.mock("@/lib/observed-convex", () => ({
@@ -77,6 +79,19 @@ function LocationProbe() {
 }
 
 describe("IntegrationsPage setup links", () => {
+  it("does not subscribe to admin-only calendar connections for viewers", () => {
+    render(
+      <MemoryRouter initialEntries={["/integrations"]}>
+        <IntegrationsPage
+          businessId={"business-1" as any}
+          canManageTenant={false}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(useQueryMock).toHaveBeenCalledWith(expect.anything(), "skip");
+  });
+
   it("opens the calendar dialog from the setup param and consumes it", async () => {
     render(
       <MemoryRouter initialEntries={["/integrations?setup=calendar"]}>
