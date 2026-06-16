@@ -72,6 +72,11 @@ export const fr = {
       description:
         "Lisez les mises à jour produit et les guides pratiques sur les réceptionnistes IA, la réponse téléphonique, la prise de rendez‑vous et l’automatisation des appels.",
     },
+    "/changelog/": {
+      title: "Journal des changements LobbyStack",
+      description:
+        "Suivez les mises à jour produit, améliorations, intégrations et nouveautés de LobbyStack, la plateforme de réceptionniste IA open source.",
+    },
     "/docs/api/": {
       title: "Documentation API publique LobbyStack",
       description:

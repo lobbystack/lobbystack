@@ -42,6 +42,13 @@ export const publicPages: PublicPage[] = [
     markdown: "/blog.md",
   },
   {
+    path: "/changelog/",
+    title: "LobbyStack Changelog",
+    description:
+      "Follow LobbyStack product updates, new AI receptionist features, integrations, and improvements for small businesses.",
+    markdown: "/changelog.md",
+  },
+  {
     path: "/docs/api/",
     title: "LobbyStack Public API Documentation",
     description:

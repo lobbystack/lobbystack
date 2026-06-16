@@ -10,6 +10,7 @@ import {
   DoorOpen,
   ExternalLink,
   Hammer,
+  History,
   Home,
   KeyRound,
   Menu,
@@ -58,6 +59,7 @@ const labels = {
     login: "Log in",
     tryFree: "Try for free",
     blog: "Blog",
+    changelog: "Changelog",
     helpCenter: "Help Center",
     comparison: "Comparison",
     calculator: "Missed call calculator",
@@ -70,6 +72,7 @@ const labels = {
     login: "Connexion",
     tryFree: "Essayer gratuitement",
     blog: "Blog",
+    changelog: "Journal des changements",
     helpCenter: "Centre d'aide",
     comparison: "Comparaison",
     calculator: "Calculateur d'appels manqués",
@@ -120,6 +123,7 @@ const solutionLabelMap = {
 const resourceLinks = (locale: Locale) =>
   [
     { label: labels[locale].blog, href: "/blog/", icon: Newspaper },
+    { label: labels[locale].changelog, href: "/changelog/", icon: History },
     {
       label: labels[locale].helpCenter,
       href: "https://docs.lobbystack.com/introduction",
@@ -327,8 +331,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                         key={`${column.title || "column"}-${columnIndex}`}
                         className={cn(
                           "min-w-0",
-                          column.highlighted &&
-                            "rounded-lg bg-muted/45 p-2"
+                          column.highlighted && "rounded-lg bg-muted/45 p-2"
                         )}
                       >
                         <p
@@ -470,8 +473,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                           key={`${column.title || "column"}-${columnIndex}`}
                           className={cn(
                             "flex flex-col gap-1",
-                            column.highlighted &&
-                              "rounded-lg bg-muted/45 p-2"
+                            column.highlighted && "rounded-lg bg-muted/45 p-2"
                           )}
                         >
                           <p

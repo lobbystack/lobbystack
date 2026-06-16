@@ -16,6 +16,7 @@ const TRANSLATED_PATHS = new Set([
   "/solutions/ai-receptionist-for-home-services/",
   "/missed-call-revenue-calculator/",
   "/comparison/",
+  "/changelog/",
   "/blog/",
   "/blog/lobbystack-is-live/",
   "/blog/ai-receptionist-savings/",
