@@ -485,6 +485,10 @@ export function AcceptInvitePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [acceptedPreview, setAcceptedPreview] = useState<{
+    businessName: string;
+    email: string;
+  } | null>(null);
 
   const token = searchParams.get("token")?.trim() ?? "";
   const hasToken = token.length > 0;
@@ -509,6 +513,7 @@ export function AcceptInvitePage() {
     event.preventDefault();
     setStatusMessage(null);
     setErrorMessage(null);
+    setAcceptedPreview(null);
 
     if (!hasToken) {
       setErrorMessage(t("acceptInvite.invalidLink"));
@@ -524,6 +529,10 @@ export function AcceptInvitePage() {
 
     try {
       await acceptInvitation({ token });
+      setAcceptedPreview({
+        businessName: preview?.businessName ?? t("acceptInvite.workspaceFallback"),
+        email: preview?.email ?? "",
+      });
       setStatusMessage(
         t("acceptInvite.success", {
           businessName: preview?.businessName ?? t("acceptInvite.workspaceFallback"),
@@ -540,7 +549,9 @@ export function AcceptInvitePage() {
   }
 
   let description = t("acceptInvite.invalidLink");
-  if (isPreviewLoading) {
+  if (acceptedPreview) {
+    description = t("acceptInvite.subtitle", acceptedPreview);
+  } else if (isPreviewLoading) {
     description = t("acceptInvite.loading");
   } else if (preview && preview.expired) {
     description = t("acceptInvite.expired");

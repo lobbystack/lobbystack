@@ -3,18 +3,38 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ForgotPasswordPage, LoginPage, SignupPage } from "./AuthPages";
+import { AcceptInvitePage, ForgotPasswordPage, LoginPage, SignupPage } from "./AuthPages";
 
-const { signInMock, turnstileExecuteMock, turnstileTokenMock } = vi.hoisted(() => ({
+const {
+  acceptInvitationMock,
+  signInMock,
+  turnstileExecuteMock,
+  turnstileTokenMock,
+  useConvexAuthMock,
+  useQueryMock,
+} = vi.hoisted(() => ({
+  acceptInvitationMock: vi.fn(),
   signInMock: vi.fn(),
   turnstileExecuteMock: vi.fn(),
   turnstileTokenMock: vi.fn(() => "turnstile-token" as string | null),
+  useConvexAuthMock: vi.fn(),
+  useQueryMock: vi.fn(),
 }));
 
 vi.mock("@convex-dev/auth/react", () => ({
   useAuthActions: () => ({
     signIn: signInMock,
   }),
+}));
+
+vi.mock("convex/react", () => ({
+  useConvexAuth: () => useConvexAuthMock(),
+  useQuery: (...args: Array<unknown>) => useQueryMock(...args),
+}));
+
+vi.mock("@/lib/observed-convex", () => ({
+  useObservedAction: () => vi.fn(),
+  useObservedMutation: () => acceptInvitationMock,
 }));
 
 vi.mock("react-i18next", () => ({
@@ -56,6 +76,54 @@ vi.mock("@/components/turnstile", async () => {
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllEnvs();
+});
+
+describe("AcceptInvitePage", () => {
+  beforeEach(() => {
+    acceptInvitationMock.mockReset();
+    useConvexAuthMock.mockReset();
+    useQueryMock.mockReset();
+  });
+
+  it("does not flash invalid link copy after a successful acceptance", async () => {
+    let previewState: {
+      businessName: string | null;
+      email: string;
+      expired: boolean;
+      role: string;
+      status: string;
+    } = {
+      businessName: "Acme Clinic",
+      email: "invitee@example.com",
+      expired: false,
+      role: "viewer",
+      status: "pending",
+    };
+    useConvexAuthMock.mockReturnValue({ isAuthenticated: true, isLoading: false });
+    useQueryMock.mockImplementation(() => previewState);
+    acceptInvitationMock.mockImplementation(async () => {
+      previewState = {
+        ...previewState,
+        businessName: null,
+        status: "accepted",
+      };
+      return { alreadyMember: false, businessId: "business_123" };
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/accept-invite?token=invite-token"]}>
+        <AcceptInvitePage />
+      </MemoryRouter>,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "acceptInvite.submit" }));
+
+    expect(await screen.findByText("acceptInvite.success")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.queryByText("acceptInvite.invalidLink")).toBeNull();
+    });
+  });
 });
 
 describe("LoginPage", () => {
