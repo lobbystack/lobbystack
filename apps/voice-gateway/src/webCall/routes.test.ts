@@ -384,6 +384,41 @@ describe("web call routes", () => {
     expect(response.statusCode).toBe(200);
   });
 
+  it("applies a gateway rate limit before runtime requests", async () => {
+    const server = createServer();
+
+    for (let index = 0; index < 100; index += 1) {
+      const response = await server.inject({
+        method: "POST",
+        url: "/web-call/sessions",
+        headers: {
+          origin: "https://lobbystack.com",
+          "content-type": "application/json",
+        },
+        payload: {
+          businessSlug: "lobbystack",
+        },
+      });
+      expect(response.statusCode).toBe(400);
+    }
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+      },
+    });
+
+    expect(response.statusCode).toBe(429);
+    expect(fetchWebVoiceContextMock).not.toHaveBeenCalled();
+    expect(startWebVoiceCallMock).not.toHaveBeenCalled();
+  });
+
   it("connects the web sideband websocket to the returned OpenAI call ID", async () => {
     fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
     startWebVoiceCallMock.mockResolvedValueOnce({

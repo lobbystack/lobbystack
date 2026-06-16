@@ -129,6 +129,8 @@ const WEB_FINAL_MESSAGE_HANGUP_FALLBACK_MS = 8_000;
 const WEB_FINAL_MESSAGE_MIN_PLAYBACK_GRACE_MS = 1_500;
 const WEB_FINAL_MESSAGE_MAX_PLAYBACK_GRACE_MS = 8_000;
 const WEB_FINAL_MESSAGE_METADATA_PURPOSE = "web_final_message";
+const WEB_CALL_SESSION_START_RATE_LIMIT_MAX = 100;
+const WEB_CALL_SESSION_START_RATE_LIMIT_WINDOW = "1 minute";
 const DASHBOARD_TEST_CALL_WIDGET_ID = "lobbystack-dashboard-test-call";
 const DASHBOARD_TEST_CALL_PROOF_PREFIX = "dashboard-test-call";
 export function resetWebCallRouteStateForTests(): void {
@@ -1501,153 +1503,164 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
     handleCorsPreflight,
   );
 
-  server.post("/web-call/sessions", async (request, reply) => {
-    const origin = getRequestOrigin(request);
-    if (!isAllowedOrigin(server, origin)) {
-      reply.code(403);
-      return "Forbidden";
-    }
-    addCorsHeaders(reply, origin!);
-
-    if (!server.runtimeConfig.OPENAI_API_KEY) {
-      reply.code(503);
-      return { error: "Web voice is not configured." };
-    }
-
-    const parsedBody = parseWebCallSessionRequest(request.body ?? {});
-    if (!parsedBody.ok) {
-      reply.code(400);
-      return { error: parsedBody.message };
-    }
-    const body = parsedBody.data;
-    const businessSlug = body.businessSlug;
-
-    const gatewaySessionId = crypto.randomUUID();
-    const widgetId = normalizeOptionalAbuseKey(body.widgetId);
-    const visitorId = normalizeOptionalAbuseKey(body.visitorId);
-    const ipHash = hashAbuseKey(server, getClientIp(request));
-    const dashboardTestCallToken =
-      widgetId === DASHBOARD_TEST_CALL_WIDGET_ID &&
-      verifyDashboardTestCallProof({
-        businessSlug,
-        proof: body.dashboardTestCallProof,
-        token: server.runtimeConfig.DASHBOARD_TEST_CALL_TOKEN,
-      })
-        ? server.runtimeConfig.DASHBOARD_TEST_CALL_TOKEN?.trim()
-        : undefined;
-    let context: Awaited<ReturnType<typeof fetchWebVoiceContext>>;
-    try {
-      context = await fetchWebVoiceContext({
-        businessSlug,
-        origin: origin!,
-        ...(dashboardTestCallToken !== undefined
-          ? { dashboardTestCallToken }
-          : {}),
-        ...(ipHash !== undefined ? { ipHash } : {}),
-        ...(visitorId !== undefined ? { visitorId } : {}),
-        ...(widgetId !== undefined ? { widgetId } : {}),
-      });
-    } catch (error) {
-      if (error instanceof RuntimeRequestError) {
-        server.log.warn(
-          {
-            businessSlug,
-            code: error.code,
-            origin,
-            status: error.status,
-          },
-          "Web call context lookup failed",
-        );
-        return replyWithRuntimeRequestError(error, reply);
+  server.post(
+    "/web-call/sessions",
+    {
+      config: {
+        rateLimit: {
+          max: WEB_CALL_SESSION_START_RATE_LIMIT_MAX,
+          timeWindow: WEB_CALL_SESSION_START_RATE_LIMIT_WINDOW,
+        },
+      },
+    },
+    async (request, reply) => {
+      const origin = getRequestOrigin(request);
+      if (!isAllowedOrigin(server, origin)) {
+        reply.code(403);
+        return "Forbidden";
       }
-      throw error;
-    }
-    let exchange: Awaited<ReturnType<typeof exchangeWebRtcOffer>>;
-    try {
-      exchange = await exchangeWebRtcOffer({
-        apiKey: server.runtimeConfig.OPENAI_API_KEY,
-        model: server.runtimeConfig.OPENAI_REALTIME_MODEL,
-        sdp: body.sdp,
-      });
-    } catch (error) {
-      if (error instanceof OpenAiWebRtcSetupError) {
-        server.log.error(
-          {
-            err: error,
-            status: error.status,
-            responseBody: error.responseBody.slice(0, 1_000),
-            businessSlug,
-          },
-          "OpenAI Realtime WebRTC setup failed for web call",
-        );
-      }
-      throw error;
-    }
-    const providerCallId = exchange.providerCallId.startsWith("webcall_")
-      ? `webcall_${gatewaySessionId}`
-      : exchange.providerCallId;
+      addCorsHeaders(reply, origin!);
 
-    const startedAt = new Date().toISOString();
-    let call: Awaited<ReturnType<typeof startWebVoiceCall>>;
-    try {
-      call = await startWebVoiceCall({
-        businessSlug,
-        providerCallId,
+      if (!server.runtimeConfig.OPENAI_API_KEY) {
+        reply.code(503);
+        return { error: "Web voice is not configured." };
+      }
+
+      const parsedBody = parseWebCallSessionRequest(request.body ?? {});
+      if (!parsedBody.ok) {
+        reply.code(400);
+        return { error: parsedBody.message };
+      }
+      const body = parsedBody.data;
+      const businessSlug = body.businessSlug;
+
+      const gatewaySessionId = crypto.randomUUID();
+      const widgetId = normalizeOptionalAbuseKey(body.widgetId);
+      const visitorId = normalizeOptionalAbuseKey(body.visitorId);
+      const ipHash = hashAbuseKey(server, getClientIp(request));
+      const dashboardTestCallToken =
+        widgetId === DASHBOARD_TEST_CALL_WIDGET_ID &&
+        verifyDashboardTestCallProof({
+          businessSlug,
+          proof: body.dashboardTestCallProof,
+          token: server.runtimeConfig.DASHBOARD_TEST_CALL_TOKEN,
+        })
+          ? server.runtimeConfig.DASHBOARD_TEST_CALL_TOKEN?.trim()
+          : undefined;
+      let context: Awaited<ReturnType<typeof fetchWebVoiceContext>>;
+      try {
+        context = await fetchWebVoiceContext({
+          businessSlug,
+          origin: origin!,
+          ...(dashboardTestCallToken !== undefined
+            ? { dashboardTestCallToken }
+            : {}),
+          ...(ipHash !== undefined ? { ipHash } : {}),
+          ...(visitorId !== undefined ? { visitorId } : {}),
+          ...(widgetId !== undefined ? { widgetId } : {}),
+        });
+      } catch (error) {
+        if (error instanceof RuntimeRequestError) {
+          server.log.warn(
+            {
+              businessSlug,
+              code: error.code,
+              origin,
+              status: error.status,
+            },
+            "Web call context lookup failed",
+          );
+          return replyWithRuntimeRequestError(error, reply);
+        }
+        throw error;
+      }
+      let exchange: Awaited<ReturnType<typeof exchangeWebRtcOffer>>;
+      try {
+        exchange = await exchangeWebRtcOffer({
+          apiKey: server.runtimeConfig.OPENAI_API_KEY,
+          model: server.runtimeConfig.OPENAI_REALTIME_MODEL,
+          sdp: body.sdp,
+        });
+      } catch (error) {
+        if (error instanceof OpenAiWebRtcSetupError) {
+          server.log.error(
+            {
+              err: error,
+              status: error.status,
+              responseBody: error.responseBody.slice(0, 1_000),
+              businessSlug,
+            },
+            "OpenAI Realtime WebRTC setup failed for web call",
+          );
+        }
+        throw error;
+      }
+      const providerCallId = exchange.providerCallId.startsWith("webcall_")
+        ? `webcall_${gatewaySessionId}`
+        : exchange.providerCallId;
+
+      const startedAt = new Date().toISOString();
+      let call: Awaited<ReturnType<typeof startWebVoiceCall>>;
+      try {
+        call = await startWebVoiceCall({
+          businessSlug,
+          providerCallId,
+          gatewaySessionId,
+          ...(body.pageUrl !== undefined ? { originUrl: body.pageUrl } : {}),
+          ...(typeof request.headers["user-agent"] === "string"
+            ? { userAgent: request.headers["user-agent"] }
+            : {}),
+          ...(widgetId !== undefined ? { widgetId } : {}),
+          maxDurationMs: server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
+          startedAt,
+        });
+      } catch (error) {
+        await hangupOpenAiRealtimeProviderCall(server, {
+          providerCallId,
+          reason: "convex_start_failed",
+        });
+        if (error instanceof RuntimeRequestError) {
+          return replyWithRuntimeRequestError(error, reply);
+        }
+        throw error;
+      }
+
+      const session: ActiveWebCall = {
         gatewaySessionId,
-        ...(body.pageUrl !== undefined ? { originUrl: body.pageUrl } : {}),
-        ...(typeof request.headers["user-agent"] === "string"
-          ? { userAgent: request.headers["user-agent"] }
-          : {}),
-        ...(widgetId !== undefined ? { widgetId } : {}),
-        maxDurationMs: server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
-        startedAt,
-      });
-    } catch (error) {
-      await hangupOpenAiRealtimeProviderCall(server, {
+        businessSlug,
+        businessId: call.businessId,
+        callId: call.callId,
+        conversationId: call.conversationId,
         providerCallId,
-        reason: "convex_start_failed",
+        startedAtMs: Date.parse(startedAt),
+        handledToolCallIds: new Set(),
+        sidebandSocket: null,
+        maxDurationTimer: null,
+        finalized: false,
+        openingGreetingActive: true,
+        openingGreetingTurnDetectionTimer: null,
+        seenTranscriptKeys: new Set(),
+        transcriptSequence: 1,
+        pendingAssistantTranscriptFlushTimer: null,
+        pendingAssistantTranscripts: [],
+        pendingEndCall: null,
+        pendingEndCallFallbackTimer: null,
+      };
+      const sidebandSocket = createSidebandSocket({
+        server,
+        session,
+        snapshot: context.snapshot,
       });
-      if (error instanceof RuntimeRequestError) {
-        return replyWithRuntimeRequestError(error, reply);
-      }
-      throw error;
-    }
+      session.sidebandSocket = sidebandSocket;
+      activeWebCalls.set(gatewaySessionId, session);
+      scheduleWebMaxDurationTimer(server, session);
 
-    const session: ActiveWebCall = {
-      gatewaySessionId,
-      businessSlug,
-      businessId: call.businessId,
-      callId: call.callId,
-      conversationId: call.conversationId,
-      providerCallId,
-      startedAtMs: Date.parse(startedAt),
-      handledToolCallIds: new Set(),
-      sidebandSocket: null,
-      maxDurationTimer: null,
-      finalized: false,
-      openingGreetingActive: true,
-      openingGreetingTurnDetectionTimer: null,
-      seenTranscriptKeys: new Set(),
-      transcriptSequence: 1,
-      pendingAssistantTranscriptFlushTimer: null,
-      pendingAssistantTranscripts: [],
-      pendingEndCall: null,
-      pendingEndCallFallbackTimer: null,
-    };
-    const sidebandSocket = createSidebandSocket({
-      server,
-      session,
-      snapshot: context.snapshot,
-    });
-    session.sidebandSocket = sidebandSocket;
-    activeWebCalls.set(gatewaySessionId, session);
-    scheduleWebMaxDurationTimer(server, session);
-
-    return {
-      sessionId: gatewaySessionId,
-      sdp: exchange.answerSdp,
-    };
-  });
+      return {
+        sessionId: gatewaySessionId,
+        sdp: exchange.answerSdp,
+      };
+    },
+  );
 
   server.post<{
     Params: { sessionId: string };
