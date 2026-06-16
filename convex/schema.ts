@@ -231,6 +231,24 @@ export default defineSchema({
     .index("by_business_id", ["businessId"])
     .index("by_business_id_and_role", ["businessId", "role"]),
 
+  business_invitations: defineTable({
+    businessId: v.id("businesses"),
+    email: v.string(),
+    role: v.string(),
+    status: v.string(),
+    tokenHash: v.string(),
+    expirationTime: v.number(),
+    invitedByUserId: v.id("users"),
+    invitedAt: v.optional(v.number()),
+    acceptedByUserId: v.optional(v.id("users")),
+    acceptedAt: v.optional(v.number()),
+    revokedAt: v.optional(v.number()),
+  })
+    .index("by_business_id", ["businessId"])
+    .index("by_business_id_and_status", ["businessId", "status"])
+    .index("by_business_id_and_email", ["businessId", "email"])
+    .index("by_token_hash", ["tokenHash"]),
+
   feedback_submissions: defineTable({
     userId: v.id("users"),
     userEmail: v.optional(v.string()),

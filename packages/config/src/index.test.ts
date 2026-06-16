@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { loadVoiceGatewayEnv } from "./index";
+import { loadClientEnv, loadVoiceGatewayEnv } from "./index";
 
 const baseVoiceGatewayEnv = {
   VOICE_GATEWAY_BASE_URL: "https://voice.example.com",
@@ -80,5 +80,28 @@ describe("loadVoiceGatewayEnv", () => {
 
     expect(env.POSTHOG_KEY).toBeUndefined();
     expect(env.POSTHOG_HOST).toBeUndefined();
+  });
+
+  it("loads the optional dashboard test call token for server-side proof checks", () => {
+    const env = loadVoiceGatewayEnv({
+      ...baseVoiceGatewayEnv,
+      DASHBOARD_TEST_CALL_TOKEN: "dashboard-token",
+    });
+
+    expect(env.DASHBOARD_TEST_CALL_TOKEN).toBe("dashboard-token");
+  });
+});
+
+describe("loadClientEnv", () => {
+  it("loads the optional web call endpoint", () => {
+    const env = loadClientEnv({
+      CONVEX_URL: "https://example.convex.cloud",
+      CONVEX_SITE_URL: "https://example.convex.site",
+      VITE_WEB_CALL_ENDPOINT: "https://voice.example.com/web-call/sessions",
+    });
+
+    expect(env.VITE_WEB_CALL_ENDPOINT).toBe(
+      "https://voice.example.com/web-call/sessions",
+    );
   });
 });

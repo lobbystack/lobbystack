@@ -6,13 +6,13 @@ import { NavGroup } from "@/components/layout/nav-group";
 import { NavUser } from "@/components/layout/nav-user";
 import type { SidebarData } from "@/components/layout/sidebar-types";
 import { TeamSwitcher } from "@/components/layout/team-switcher";
+import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import { BookTextIcon } from "@/components/ui/book-text";
 import { BlocksIcon } from "@/components/ui/blocks";
 import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasing";
 import { ClipboardCheckIcon } from "@/components/ui/clipboard-check";
 import { HomeIcon } from "@/components/ui/home";
-import { IdCardIcon } from "@/components/ui/id-card";
 import { MessageSquareMoreIcon } from "@/components/ui/message-square-more";
 import { PhoneAnimatedIcon } from "@/components/ui/phone-animated";
 import { SettingsIcon } from "@/components/ui/settings";
@@ -78,7 +78,6 @@ const AnimatedKnowledgeIcon = createAnimatedSidebarIcon(BookTextIcon);
 const AnimatedServicesIcon = createAnimatedSidebarIcon(BlocksIcon);
 const AnimatedRulesIcon = createAnimatedSidebarIcon(WorkflowIcon);
 const AnimatedSettingsIcon = createAnimatedSidebarIcon(SettingsIcon);
-const AnimatedTeamLogo = createAnimatedSidebarIcon(IdCardIcon);
 const AnimatedCallsIcon = createAnimatedSidebarIcon(PhoneAnimatedIcon);
 
 export function AppSidebar({
@@ -104,12 +103,7 @@ export function AppSidebar({
         email: operatorEmail ?? "",
         ...(operatorAvatar ? { avatar: operatorAvatar } : {}),
       },
-      teams: [
-        {
-          name: businessName ?? "",
-          logo: AnimatedTeamLogo,
-        },
-      ],
+      teams: [],
       navGroups: [
         {
           title: t("nav:sidebar.general"),
@@ -180,8 +174,13 @@ export function AppSidebar({
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" {...props}>
-      <SidebarHeader>
-        <TeamSwitcher isLoading={isLoading} teams={sidebarData.teams} />
+      <SidebarHeader className="gap-1">
+        <TeamSwitcher isLoading={isLoading} />
+        <WorkspaceSwitcher
+          isLoading={isLoading}
+          {...(businessId ? { activeBusinessId: businessId } : {})}
+          {...(businessName ? { businessName } : {})}
+        />
       </SidebarHeader>
       <SidebarContent>
         {sidebarData.navGroups.map((group) => (

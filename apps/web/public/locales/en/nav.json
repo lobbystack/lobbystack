@@ -24,6 +24,9 @@
     "account": "Account",
     "toggleTheme": "Toggle theme",
     "signOut": "Sign out",
+    "createBusiness": "Create Business",
+    "noBusinessPhone": "No phone number yet",
+    "loadingPhone": "Loading phone number...",
     "setupGuide": {
       "title": "Getting started",
       "open": "Open setup guide",

@@ -43,6 +43,7 @@ const voiceContextSchema = z.object({
 
 const voiceContextBySlugSchema = z.object({
   businessSlug: z.string().min(1),
+  dashboardTestCallToken: z.string().min(1).optional(),
   origin: z.string().min(1).optional(),
   ipHash: z.string().min(1).optional(),
   visitorId: z.string().min(1).optional(),
@@ -770,6 +771,9 @@ http.route({
       try {
         await ctx.runMutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
           businessId: business._id,
+          ...(body.data.dashboardTestCallToken !== undefined
+            ? { dashboardTestCallToken: body.data.dashboardTestCallToken }
+            : {}),
           origin: body.data.origin,
           ...(body.data.ipHash !== undefined ? { ipHash: body.data.ipHash } : {}),
           ...(body.data.visitorId !== undefined ? { visitorId: body.data.visitorId } : {}),

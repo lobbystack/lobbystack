@@ -95,6 +95,8 @@ export function LobbyStackAuraVoiceDemo({
   const analyserRef = useRef<AnalyserNode | null>(null)
   const audioDataRef = useRef<Uint8Array<ArrayBuffer> | null>(null)
   const audioLevelRef = useRef(0)
+  const animTimeRef = useRef(0)
+  const lastFrameTimeRef = useRef<number | undefined>(undefined)
 
   const isListening = status === "connected" || status === "connecting"
   const isActive = isListening
@@ -173,6 +175,7 @@ export function LobbyStackAuraVoiceDemo({
       }
 
       idleTimerRef.current = window.setTimeout(() => {
+        lastFrameTimeRef.current = undefined
         rafRef.current = requestAnimationFrame(draw)
       }, delay)
     }
@@ -231,7 +234,14 @@ export function LobbyStackAuraVoiceDemo({
       cx.clearRect(0, 0, width, height)
       cx.globalCompositeOperation = "lighter"
 
-      const t = time * 0.001
+      const rawDt =
+        lastFrameTimeRef.current === undefined
+          ? 0
+          : (time - lastFrameTimeRef.current) * 0.001
+      lastFrameTimeRef.current = time
+      const dt = Math.min(rawDt, 1 / 30)
+      animTimeRef.current += dt
+      const t = animTimeRef.current
       const pulseSpeed = active ? 1.1 + voiceLevel * 0.9 : 0.7
 
       // Number of aura layers
@@ -361,9 +371,7 @@ export function LobbyStackAuraVoiceDemo({
           className={cn(
             "voice-aura-outer-ring pointer-events-none absolute rounded-full",
             "transition-opacity duration-700",
-            isActive
-              ? "voice-aura-outer-ring-active opacity-100"
-              : "opacity-30"
+            isActive ? "voice-aura-outer-ring-active opacity-100" : "opacity-30"
           )}
         />
 

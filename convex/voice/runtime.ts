@@ -106,6 +106,71 @@ type WebCallRecordingTarget = {
 };
 
 export const WEB_VOICE_RATE_LIMIT_ERROR = "web_voice_rate_limited";
+const DASHBOARD_TEST_CALL_WIDGET_ID = "lobbystack-dashboard-test-call";
+const DASHBOARD_TEST_CALL_PROOF_TTL_MS = 2 * 60 * 1000;
+const DASHBOARD_TEST_CALL_PROOF_PREFIX = "dashboard-test-call";
+
+function getDashboardOrigin(): string | null {
+  const appBaseUrl = process.env.APP_BASE_URL;
+  if (!appBaseUrl) {
+    return null;
+  }
+
+  try {
+    return new URL(appBaseUrl).origin;
+  } catch {
+    return null;
+  }
+}
+
+function getDashboardTestCallToken(): string | null {
+  const token = process.env.DASHBOARD_TEST_CALL_TOKEN?.trim();
+  return token ? token : null;
+}
+
+function hasVerifiedDashboardTestCallToken(input: {
+  dashboardTestCallToken?: string;
+}): boolean {
+  const expectedToken = getDashboardTestCallToken();
+  return expectedToken !== null && input.dashboardTestCallToken === expectedToken;
+}
+
+function bytesToHex(bytes: ArrayBuffer): string {
+  return [...new Uint8Array(bytes)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function signDashboardTestCallProof(input: {
+  businessSlug: string;
+  expiresAt: number;
+  nonce: string;
+}): Promise<string | null> {
+  const token = getDashboardTestCallToken();
+  if (token === null) {
+    return null;
+  }
+
+  const payload = [
+    DASHBOARD_TEST_CALL_PROOF_PREFIX,
+    input.businessSlug,
+    String(input.expiresAt),
+    input.nonce,
+  ].join("|");
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(token),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(payload),
+  );
+  return `${payload}|${bytesToHex(signature)}`;
+}
 
 type WebVoiceStartLimiterName =
   | "webVoiceStartGlobalPerMinute"
@@ -115,7 +180,14 @@ type WebVoiceStartLimiterName =
   | "webVoiceStartPerIpPerHour"
   | "webVoiceStartPerIpPerDay"
   | "webVoiceStartPerVisitorPerHour"
-  | "webVoiceStartPerVisitorPerDay";
+  | "webVoiceStartPerVisitorPerDay"
+  | "dashboardWebVoiceStartPerBusinessPerHour"
+  | "dashboardWebVoiceStartPerBusinessPerDay"
+  | "dashboardWebVoiceStartPerOriginPerTenMinutes"
+  | "dashboardWebVoiceStartPerIpPerHour"
+  | "dashboardWebVoiceStartPerIpPerDay"
+  | "dashboardWebVoiceStartPerVisitorPerHour"
+  | "dashboardWebVoiceStartPerVisitorPerDay";
 
 type WebVoiceStartLimit = {
   limiterName: WebVoiceStartLimiterName;
@@ -175,31 +247,46 @@ async function consumeWebVoiceStartLimit(
 
 function buildWebVoiceStartLimits(input: {
   businessId: Id<"businesses">;
+  dashboardTestCallToken?: string;
   origin: string;
   ipHash?: string;
   visitorId?: string;
   widgetId?: string;
 }): Array<WebVoiceStartLimit> {
   const businessKey = String(input.businessId);
+  const dashboardOrigin = getDashboardOrigin();
   const logContext = {
     businessId: input.businessId,
     origin: input.origin,
     ...(input.widgetId !== undefined ? { widgetId: input.widgetId } : {}),
   };
   const limits: Array<WebVoiceStartLimit> = [];
+  const isDashboardTestCall =
+    input.widgetId === DASHBOARD_TEST_CALL_WIDGET_ID &&
+    dashboardOrigin !== null &&
+    input.origin === dashboardOrigin &&
+    hasVerifiedDashboardTestCallToken(input);
 
   if (input.ipHash !== undefined) {
     limits.push(
       {
-        limiterName: "webVoiceStartPerIpPerHour",
+        limiterName: isDashboardTestCall
+          ? "dashboardWebVoiceStartPerIpPerHour"
+          : "webVoiceStartPerIpPerHour",
         key: `${businessKey}:ip:${input.ipHash}`,
-        reason: "rate_limit_ip_hour",
+        reason: isDashboardTestCall
+          ? "dashboard_rate_limit_ip_hour"
+          : "rate_limit_ip_hour",
         ...logContext,
       },
       {
-        limiterName: "webVoiceStartPerIpPerDay",
+        limiterName: isDashboardTestCall
+          ? "dashboardWebVoiceStartPerIpPerDay"
+          : "webVoiceStartPerIpPerDay",
         key: `${businessKey}:ip:${input.ipHash}`,
-        reason: "rate_limit_ip_day",
+        reason: isDashboardTestCall
+          ? "dashboard_rate_limit_ip_day"
+          : "rate_limit_ip_day",
         ...logContext,
       },
     );
@@ -208,15 +295,23 @@ function buildWebVoiceStartLimits(input: {
   if (input.visitorId !== undefined) {
     limits.push(
       {
-        limiterName: "webVoiceStartPerVisitorPerHour",
+        limiterName: isDashboardTestCall
+          ? "dashboardWebVoiceStartPerVisitorPerHour"
+          : "webVoiceStartPerVisitorPerHour",
         key: `${businessKey}:visitor:${input.visitorId}`,
-        reason: "rate_limit_visitor_hour",
+        reason: isDashboardTestCall
+          ? "dashboard_rate_limit_visitor_hour"
+          : "rate_limit_visitor_hour",
         ...logContext,
       },
       {
-        limiterName: "webVoiceStartPerVisitorPerDay",
+        limiterName: isDashboardTestCall
+          ? "dashboardWebVoiceStartPerVisitorPerDay"
+          : "webVoiceStartPerVisitorPerDay",
         key: `${businessKey}:visitor:${input.visitorId}`,
-        reason: "rate_limit_visitor_day",
+        reason: isDashboardTestCall
+          ? "dashboard_rate_limit_visitor_day"
+          : "rate_limit_visitor_day",
         ...logContext,
       },
     );
@@ -224,21 +319,33 @@ function buildWebVoiceStartLimits(input: {
 
   limits.push(
     {
-      limiterName: "webVoiceStartPerOriginPerTenMinutes",
+      limiterName: isDashboardTestCall
+        ? "dashboardWebVoiceStartPerOriginPerTenMinutes"
+        : "webVoiceStartPerOriginPerTenMinutes",
       key: input.origin,
-      reason: "rate_limit_origin",
+      reason: isDashboardTestCall
+        ? "dashboard_rate_limit_origin"
+        : "rate_limit_origin",
       ...logContext,
     },
     {
-      limiterName: "webVoiceStartPerBusinessPerHour",
+      limiterName: isDashboardTestCall
+        ? "dashboardWebVoiceStartPerBusinessPerHour"
+        : "webVoiceStartPerBusinessPerHour",
       key: businessKey,
-      reason: "rate_limit_business_hour",
+      reason: isDashboardTestCall
+        ? "dashboard_rate_limit_business_hour"
+        : "rate_limit_business_hour",
       ...logContext,
     },
     {
-      limiterName: "webVoiceStartPerBusinessPerDay",
+      limiterName: isDashboardTestCall
+        ? "dashboardWebVoiceStartPerBusinessPerDay"
+        : "webVoiceStartPerBusinessPerDay",
       key: businessKey,
-      reason: "rate_limit_business_day",
+      reason: isDashboardTestCall
+        ? "dashboard_rate_limit_business_day"
+        : "rate_limit_business_day",
       ...logContext,
     },
     {
@@ -718,6 +825,7 @@ export const getActiveBusinessBySlug = internalQuery({
 export const assertWebVoiceStartAllowed = internalMutation({
   args: {
     businessId: v.id("businesses"),
+    dashboardTestCallToken: v.optional(v.string()),
     origin: v.string(),
     ipHash: v.optional(v.string()),
     visitorId: v.optional(v.string()),
@@ -2253,6 +2361,27 @@ export const bookAppointmentForVoice = internalAction({
       serviceId: service._id,
       serviceName: localizedServiceName,
     };
+  },
+});
+
+export const createDashboardTestCallProof = mutation({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx: MutationCtx, args): Promise<{ proof: string | null }> => {
+    await requireMembership(ctx, args.businessId);
+    const business = await ctx.db.get(args.businessId);
+    if (!business) {
+      throw new Error("Business not found.");
+    }
+
+    const expiresAt = Date.now() + DASHBOARD_TEST_CALL_PROOF_TTL_MS;
+    const proof = await signDashboardTestCallProof({
+      businessSlug: business.slug,
+      expiresAt,
+      nonce: crypto.randomUUID(),
+    });
+    return { proof };
   },
 });
 

@@ -1,4 +1,5 @@
 import fastifyFormbody from "@fastify/formbody";
+import fastifyRateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
 import { WebSocketServer } from "ws";
 
@@ -30,6 +31,9 @@ export function createServer(): ReturnType<typeof Fastify> {
   server.decorate("runtimeConfig", env);
 
   server.register(fastifyFormbody);
+  server.register(fastifyRateLimit, {
+    global: false,
+  });
   server.addHook("onError", async (request, _reply, error) => {
     capturePostHogException(error, {
       properties: {
@@ -132,8 +136,13 @@ export function createServer(): ReturnType<typeof Fastify> {
     };
   });
 
-  registerVoiceRoutes(server);
-  registerWebCallRoutes(server);
+  server.after((error) => {
+    if (error) {
+      throw error;
+    }
+    registerVoiceRoutes(server);
+    registerWebCallRoutes(server);
+  });
   return server;
 }
 

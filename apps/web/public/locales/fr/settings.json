@@ -538,6 +538,60 @@
       }
     }
   },
+  "workspaceTeam": {
+    "members": {
+      "title": "Membres",
+      "table": {
+        "email": "Courriel",
+        "role": "Rôle"
+      },
+      "empty": "Aucun membre pour le moment.",
+      "noEmail": "Aucun courriel enregistré",
+      "joinedOn": "A rejoint le {{date}}",
+      "invitedOn": "Invité le {{date}}",
+      "status": {
+        "pending": "En attente"
+      },
+      "actions": {
+        "moreOptions": "Plus d'options",
+        "remove": "Retirer",
+        "cancelInvite": "Annuler l'invitation"
+      },
+      "removeSuccess": "Membre retiré.",
+      "removeFailed": "Impossible de retirer ce membre."
+    },
+    "roles": {
+      "admin": "Administrateur",
+      "viewer": "Lecteur"
+    },
+    "invite": {
+      "action": "Inviter",
+      "title": "Inviter un membre de l'équipe",
+      "description": "Envoyez une invitation par courriel pour rejoindre cet espace.",
+      "emailLabel": "Adresse courriel",
+      "emailPlaceholder": "collegue@entreprise.com",
+      "roleLabel": "Sélectionner le rôle",
+      "roles": {
+        "adminDescription": "Inviter et gérer les membres, modifier les paramètres de l'espace et la facturation.",
+        "viewerDescription": "Consulter les appels, les contacts et l'activité du tableau de bord sans effectuer de modifications."
+      },
+      "submit": "Envoyer l'invitation",
+      "sending": "Envoi de l'invitation...",
+      "sent": "Invitation envoyée à {{email}}.",
+      "errors": {
+        "invalidEmail": "Entrez une adresse courriel valide.",
+        "failed": "Impossible d'envoyer cette invitation. Veuillez réessayer."
+      }
+    },
+    "pending": {
+      "resend": "Renvoyer",
+      "revoke": "Révoquer",
+      "resendSuccess": "Invitation renvoyée.",
+      "resendFailed": "Impossible de renvoyer cette invitation.",
+      "revokeSuccess": "Invitation révoquée.",
+      "revokeFailed": "Impossible de révoquer cette invitation."
+    }
+  },
   "hours": {
     "title": "Heures d'ouverture",
     "description": "Les heures structurées font autorité sur les documents et aident la réceptionniste à répondre correctement aux questions de disponibilité.",

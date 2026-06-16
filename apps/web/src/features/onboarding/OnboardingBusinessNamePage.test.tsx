@@ -57,9 +57,13 @@ describe("OnboardingBusinessNamePage", () => {
 
   it("continues after the bootstrapped business appears in route state", async () => {
     bootstrapBusinessMock.mockResolvedValue({ businessId: "business-1" });
+    const onBusinessCreated = vi.fn();
 
     const { rerender } = render(
-      <OnboardingBusinessNamePage onSignOut={() => {}} />,
+      <OnboardingBusinessNamePage
+        onBusinessCreated={onBusinessCreated}
+        onSignOut={() => {}}
+      />,
     );
 
     const user = userEvent.setup();
@@ -72,11 +76,13 @@ describe("OnboardingBusinessNamePage", () => {
       );
     });
     expect(navigateMock).not.toHaveBeenCalled();
+    expect(onBusinessCreated).toHaveBeenCalledWith("business-1");
 
     rerender(
       <OnboardingBusinessNamePage
         businessId={"business-1" as never}
         businessName="Acme"
+        onBusinessCreated={onBusinessCreated}
         onSignOut={() => {}}
       />,
     );

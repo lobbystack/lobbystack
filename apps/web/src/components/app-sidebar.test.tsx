@@ -35,10 +35,16 @@ vi.mock("next-themes", () => ({
 
 vi.mock("convex/react", () => ({
   useQuery: () => setupGuideQueryState.progress,
+  useMutation: () => vi.fn(),
+}));
+
+vi.mock("@/components/layout/workspace-switcher", () => ({
+  WorkspaceSwitcher: () => <div data-testid="workspace-switcher" />,
 }));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
+    i18n: { resolvedLanguage: "en", language: "en" },
     t: (key: string, options?: Record<string, number>) => {
       const translations: Record<string, string> = {
         "nav:sidebar.general": "General",
@@ -178,6 +184,30 @@ describe("AppSidebar", () => {
       "/integrations",
       "/settings/usage",
     ]);
+  });
+
+  it("keeps Integrations visible for viewers", () => {
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <SidebarProvider>
+          <AppSidebar
+            businessName="LobbyStack"
+            onSignOut={() => {}}
+            operatorEmail="operator@example.com"
+          />
+        </SidebarProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("link", { name: "Analytics" }).getAttribute("href")).toBe(
+      "/analytics",
+    );
+    expect(screen.getByRole("link", { name: "Integrations" }).getAttribute("href")).toBe(
+      "/integrations",
+    );
+    expect(screen.getByRole("link", { name: "Settings" }).getAttribute("href")).toBe(
+      "/settings/usage",
+    );
   });
 
   it("uses product branding instead of the tenant name in the sidebar header", () => {

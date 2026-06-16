@@ -164,4 +164,39 @@ export const webVoiceAbuseRateLimiter = new RateLimiter(components.rateLimiter, 
     rate: 10,
     period: DAY,
   },
+  dashboardWebVoiceStartPerBusinessPerHour: {
+    kind: "fixed window",
+    rate: 120,
+    period: HOUR,
+  },
+  dashboardWebVoiceStartPerBusinessPerDay: {
+    kind: "fixed window",
+    rate: 600,
+    period: DAY,
+  },
+  dashboardWebVoiceStartPerOriginPerTenMinutes: {
+    kind: "fixed window",
+    rate: 120,
+    period: 10 * MINUTE,
+  },
+  dashboardWebVoiceStartPerIpPerHour: {
+    kind: "fixed window",
+    rate: 30,
+    period: HOUR,
+  },
+  dashboardWebVoiceStartPerIpPerDay: {
+    kind: "fixed window",
+    rate: 100,
+    period: DAY,
+  },
+  dashboardWebVoiceStartPerVisitorPerHour: {
+    kind: "fixed window",
+    rate: 30,
+    period: HOUR,
+  },
+  dashboardWebVoiceStartPerVisitorPerDay: {
+    kind: "fixed window",
+    rate: 100,
+    period: DAY,
+  },
 });

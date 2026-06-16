@@ -207,6 +207,7 @@ export async function startVoiceCall(input: {
 
 export async function fetchWebVoiceContext(input: {
   businessSlug: string;
+  dashboardTestCallToken?: string;
   origin?: string;
   ipHash?: string;
   visitorId?: string;
