@@ -8,6 +8,8 @@ import schema from "../schema";
 import { modules } from "../test.setup";
 
 const originalAppBaseUrl = process.env.APP_BASE_URL;
+const originalDashboardTestCallToken = process.env.DASHBOARD_TEST_CALL_TOKEN;
+const originalDeploymentMode = process.env.DEPLOYMENT_MODE;
 
 async function seedBusiness(slug = "lobbystack") {
   const t = convexTest(schema, modules);
@@ -30,6 +32,8 @@ async function seedBusiness(slug = "lobbystack") {
 describe("web voice calls", () => {
   beforeEach(() => {
     process.env.APP_BASE_URL = "https://app.lobbystack.com";
+    process.env.DEPLOYMENT_MODE = "development";
+    delete process.env.DASHBOARD_TEST_CALL_TOKEN;
   });
 
   afterEach(() => {
@@ -38,6 +42,16 @@ describe("web voice calls", () => {
       delete process.env.APP_BASE_URL;
     } else {
       process.env.APP_BASE_URL = originalAppBaseUrl;
+    }
+    if (originalDashboardTestCallToken === undefined) {
+      delete process.env.DASHBOARD_TEST_CALL_TOKEN;
+    } else {
+      process.env.DASHBOARD_TEST_CALL_TOKEN = originalDashboardTestCallToken;
+    }
+    if (originalDeploymentMode === undefined) {
+      delete process.env.DEPLOYMENT_MODE;
+    } else {
+      process.env.DEPLOYMENT_MODE = originalDeploymentMode;
     }
   });
 
@@ -381,6 +395,33 @@ describe("web voice calls", () => {
         widgetId: "lobbystack-dashboard-test-call",
       }),
     ).rejects.toThrow("web_voice_rate_limited");
+  });
+
+  it("requires a dashboard test call token outside development", async () => {
+    process.env.DEPLOYMENT_MODE = "cloud";
+    process.env.DASHBOARD_TEST_CALL_TOKEN = "dashboard-token";
+    const { t, businessId } = await seedBusiness("web-voice-dashboard-token");
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://app.lobbystack.com",
+        ipHash: "dashboard-ip-hash",
+        visitorId: "dashboard-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      }),
+    ).rejects.toThrow("Dashboard test call token is invalid.");
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        dashboardTestCallToken: "dashboard-token",
+        origin: "https://app.lobbystack.com",
+        ipHash: "dashboard-ip-hash",
+        visitorId: "dashboard-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      }),
+    ).resolves.toBeNull();
   });
 
   it("stores web voice callback messages on the web voice call session", async () => {

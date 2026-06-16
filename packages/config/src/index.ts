@@ -119,6 +119,7 @@ const voiceGatewayEnvSchema = z.object({
   WEB_CALL_ALLOWED_ORIGINS: z
     .string()
     .default("https://lobbystack.com,https://www.lobbystack.com"),
+  DASHBOARD_TEST_CALL_TOKEN: z.string().optional(),
   WEB_CALL_MAX_DURATION_MS: z.coerce
     .number()
     .int()

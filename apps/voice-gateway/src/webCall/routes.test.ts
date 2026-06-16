@@ -171,6 +171,7 @@ describe("web call routes", () => {
     delete process.env.VOICE_GATEWAY_TRUST_PROXY;
     delete process.env.WEB_CALL_ALLOWED_ORIGINS;
     delete process.env.WEB_CALL_MAX_DURATION_MS;
+    delete process.env.DASHBOARD_TEST_CALL_TOKEN;
   });
 
   it("rejects untrusted origins before starting a web call", async () => {
@@ -591,6 +592,53 @@ describe("web call routes", () => {
     });
     expect(fetchMock).not.toHaveBeenCalled();
     expect(startWebVoiceCallMock).not.toHaveBeenCalled();
+  });
+
+  it("forwards the configured dashboard test call token for dashboard widget starts", async () => {
+    process.env.WEB_CALL_ALLOWED_ORIGINS = "https://app.lobbystack.com";
+    process.env.DASHBOARD_TEST_CALL_TOKEN = "dashboard-token";
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://app.lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+        visitorId: "visitor-123",
+        widgetId: "lobbystack-dashboard-test-call",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(fetchWebVoiceContextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        businessSlug: "lobbystack",
+        dashboardTestCallToken: "dashboard-token",
+        origin: "https://app.lobbystack.com",
+        visitorId: "visitor-123",
+        widgetId: "lobbystack-dashboard-test-call",
+      }),
+    );
   });
 
   it("does not trust spoofed forwarded IP headers by default", async () => {

@@ -121,6 +121,42 @@ function getDashboardOrigin(): string | null {
   }
 }
 
+function getDashboardTestCallToken(): string | null {
+  const token = process.env.DASHBOARD_TEST_CALL_TOKEN?.trim();
+  return token ? token : null;
+}
+
+function isDevelopmentMode(): boolean {
+  return (process.env.DEPLOYMENT_MODE ?? "development") === "development";
+}
+
+function assertDashboardTestCallAuthorized(input: {
+  dashboardTestCallToken?: string;
+  origin: string;
+  widgetId?: string;
+}): void {
+  if (input.widgetId !== DASHBOARD_TEST_CALL_WIDGET_ID) {
+    return;
+  }
+
+  const dashboardOrigin = getDashboardOrigin();
+  if (dashboardOrigin === null || input.origin !== dashboardOrigin) {
+    return;
+  }
+
+  const expectedToken = getDashboardTestCallToken();
+  if (!expectedToken) {
+    if (isDevelopmentMode()) {
+      return;
+    }
+    throw new Error("Dashboard test call token is required for dashboard widget ID.");
+  }
+
+  if (input.dashboardTestCallToken !== expectedToken) {
+    throw new Error("Dashboard test call token is invalid.");
+  }
+}
+
 type WebVoiceStartLimiterName =
   | "webVoiceStartGlobalPerMinute"
   | "webVoiceStartPerBusinessPerHour"
@@ -772,12 +808,15 @@ export const getActiveBusinessBySlug = internalQuery({
 export const assertWebVoiceStartAllowed = internalMutation({
   args: {
     businessId: v.id("businesses"),
+    dashboardTestCallToken: v.optional(v.string()),
     origin: v.string(),
     ipHash: v.optional(v.string()),
     visitorId: v.optional(v.string()),
     widgetId: v.optional(v.string()),
   },
   handler: async (ctx: MutationCtx, args): Promise<null> => {
+    assertDashboardTestCallAuthorized(args);
+
     const limits = buildWebVoiceStartLimits(args);
 
     await assertWebVoiceStartLimitsAvailable(ctx, limits);

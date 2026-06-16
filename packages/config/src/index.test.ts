@@ -74,11 +74,22 @@ describe("loadVoiceGatewayEnv", () => {
   it("treats empty optional telemetry env vars as unset", () => {
     const env = loadVoiceGatewayEnv({
       ...baseVoiceGatewayEnv,
+      DASHBOARD_TEST_CALL_TOKEN: "",
       POSTHOG_KEY: "",
       POSTHOG_HOST: "",
     });
 
+    expect(env.DASHBOARD_TEST_CALL_TOKEN).toBeUndefined();
     expect(env.POSTHOG_KEY).toBeUndefined();
     expect(env.POSTHOG_HOST).toBeUndefined();
+  });
+
+  it("loads the dashboard test call token when configured", () => {
+    const env = loadVoiceGatewayEnv({
+      ...baseVoiceGatewayEnv,
+      DASHBOARD_TEST_CALL_TOKEN: "dashboard-token",
+    });
+
+    expect(env.DASHBOARD_TEST_CALL_TOKEN).toBe("dashboard-token");
   });
 });

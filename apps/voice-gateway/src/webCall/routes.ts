@@ -128,6 +128,7 @@ const WEB_FINAL_MESSAGE_HANGUP_FALLBACK_MS = 8_000;
 const WEB_FINAL_MESSAGE_MIN_PLAYBACK_GRACE_MS = 1_500;
 const WEB_FINAL_MESSAGE_MAX_PLAYBACK_GRACE_MS = 8_000;
 const WEB_FINAL_MESSAGE_METADATA_PURPOSE = "web_final_message";
+const DASHBOARD_TEST_CALL_WIDGET_ID = "lobbystack-dashboard-test-call";
 
 export function resetWebCallRouteStateForTests(): void {
   for (const session of activeWebCalls.values()) {
@@ -1476,6 +1477,10 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       context = await fetchWebVoiceContext({
         businessSlug,
         origin: origin!,
+        ...(widgetId === DASHBOARD_TEST_CALL_WIDGET_ID &&
+        server.runtimeConfig.DASHBOARD_TEST_CALL_TOKEN
+          ? { dashboardTestCallToken: server.runtimeConfig.DASHBOARD_TEST_CALL_TOKEN }
+          : {}),
         ...(ipHash !== undefined ? { ipHash } : {}),
         ...(visitorId !== undefined ? { visitorId } : {}),
         ...(widgetId !== undefined ? { widgetId } : {}),
