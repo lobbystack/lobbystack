@@ -12,6 +12,7 @@ export const translatedBasePaths = [
   "/missed-call-revenue-calculator/",
   "/comparison/",
   "/blog/",
+  "/changelog/",
   "/blog/lobbystack-is-live/",
   "/blog/ai-receptionist-savings/",
   "/blog/how-to-choose-an-ai-receptionist/",

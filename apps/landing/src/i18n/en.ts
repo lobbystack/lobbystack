@@ -71,6 +71,11 @@ export const en = {
       description:
         "Read LobbyStack product updates and practical guides about AI receptionists, phone answering, appointment booking, and small-business call automation.",
     },
+    "/changelog/": {
+      title: "LobbyStack Changelog | Product Updates",
+      description:
+        "Follow LobbyStack product updates, improvements, integrations, and shipped changes for the open-source AI receptionist platform.",
+    },
     "/docs/api/": {
       title: "LobbyStack Public API Documentation",
       description:

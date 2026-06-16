@@ -1,0 +1,160 @@
+---
+import { render } from "astro:content"
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import {
+  changelogAnchorId,
+  getChangelogEntries,
+  type ChangelogEntry,
+} from "@/lib/changelog"
+import { breadcrumbJsonLd, organizationJsonLd, webSiteJsonLd } from "@/lib/seo"
+import {
+  assertLocale,
+  getCopy,
+  getRouteSeo,
+  localizePath,
+  type Locale,
+} from "@/i18n"
+
+interface Props {
+  locale?: Locale
+}
+
+const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
+const copy = getCopy(locale)
+const routeSeo = getRouteSeo({ locale, path: "/changelog/" })
+const canonicalPath = localizePath(locale, "/changelog/")
+const entries = await getChangelogEntries(locale)
+const renderedEntries = await Promise.all(
+  entries.map(async (entry: ChangelogEntry) => {
+    const { Content } = await render(entry)
+    return { entry, Content }
+  })
+)
+
+const pageCopy = {
+  en: {
+    h1: "What's new with LobbyStack?",
+    intro:
+      "Product updates, integrations, and improvements from the LobbyStack team.",
+    breadcrumb: "Changelog",
+  },
+  fr: {
+    h1: "Quoi de neuf avec LobbyStack?",
+    intro:
+      "Mises à jour produit, intégrations et améliorations de l'équipe LobbyStack.",
+    breadcrumb: "Journal des changements",
+  },
+} satisfies Record<
+  Locale,
+  {
+    h1: string
+    intro: string
+    breadcrumb: string
+  }
+>
+
+const dateLocale = locale === "fr" ? "fr-CA" : "en-US"
+---
+
+<Layout
+  seo={{
+    title: routeSeo?.title,
+    description: routeSeo?.description,
+    canonicalPath,
+    locale,
+    jsonLd: [
+      organizationJsonLd({ locale }),
+      webSiteJsonLd({ locale }),
+      breadcrumbJsonLd([
+        { name: copy.common.home, path: localizePath(locale, "/") },
+        { name: pageCopy[locale].breadcrumb, path: canonicalPath },
+      ]),
+    ],
+  }}
+>
+  <Navbar locale={locale} />
+
+  <main id="main-content" class="min-h-screen bg-background text-foreground">
+    <header class="bg-muted/20 px-6 py-24 text-center md:py-32">
+      <div class="mx-auto max-w-7xl">
+        <h1 class="display-heading mx-auto max-w-[15ch]">
+          {pageCopy[locale].h1}
+        </h1>
+        <p class="body-copy mx-auto mt-6 max-w-[60ch] md:text-lg">
+          {pageCopy[locale].intro}
+        </p>
+      </div>
+    </header>
+
+    <section class="mx-auto max-w-7xl px-6 py-24 md:py-32">
+      <div class="space-y-20 md:space-y-24">
+        {
+          renderedEntries.map(({ entry, Content }, index) => {
+            const anchorId = changelogAnchorId(entry)
+            const isLast = index === renderedEntries.length - 1
+            const formattedDate = entry.data.pubDate.toLocaleDateString(
+              dateLocale,
+              {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+                timeZone: "UTC",
+              }
+            )
+
+            return (
+              <article
+                id={anchorId}
+                class="grid scroll-mt-24 gap-6 md:grid-cols-[12rem_4rem_minmax(0,1fr)] md:gap-8 lg:grid-cols-[14rem_4rem_minmax(0,1fr)]"
+              >
+                <div class="md:pt-1 md:text-right">
+                  <a
+                    href={`#${anchorId}`}
+                    class="inline-flex rounded-xl bg-muted px-4 py-2 font-mono text-xs font-medium tracking-[0.08em] text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  >
+                    <time datetime={entry.data.pubDate.toISOString()}>
+                      {formattedDate}
+                    </time>
+                  </a>
+                </div>
+
+                <div
+                  class="relative hidden justify-center md:flex"
+                  aria-hidden="true"
+                >
+                  <div
+                    class={`absolute top-0 bottom-0 w-px bg-border ${isLast ? "h-8" : ""}`}
+                  />
+                  <div class="relative z-10 size-8 rounded-full border border-border bg-background shadow-sm" />
+                </div>
+
+                <div class="min-w-0 pb-2 md:pb-16">
+                  <div class="mb-6 flex flex-wrap items-center gap-3">
+                    {entry.data.category && (
+                      <span class="rounded-md border border-border/70 px-2.5 py-1 font-mono text-[0.6875rem] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                        {entry.data.category}
+                      </span>
+                    )}
+                  </div>
+                  <h2 class="font-heading text-3xl leading-tight font-semibold tracking-tight text-foreground md:text-4xl">
+                    {entry.data.title}
+                  </h2>
+                  <p class="mt-4 max-w-3xl text-base leading-7 text-muted-foreground md:text-lg md:leading-8">
+                    {entry.data.description}
+                  </p>
+                  <div class="changelog-copy mt-8 max-w-none">
+                    <Content />
+                  </div>
+                </div>
+              </article>
+            )
+          })
+        }
+      </div>
+    </section>
+  </main>
+
+  <Footer locale={locale} />
+</Layout>
