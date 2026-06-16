@@ -11,6 +11,35 @@ describe("transactional email provider", () => {
     vi.unstubAllEnvs();
   });
 
+  it("renders the team invitation template with a branded layout", async () => {
+    const { renderTransactionalEmail } = await import("./email");
+
+    const email = renderTransactionalEmail({
+      template: "team_invitation",
+      to: "new-member@example.com",
+      subject: "Join Maple Clinic on LobbyStack",
+      variables: {
+        acceptUrl: "https://app.example.com/accept-invite?token=abc123",
+        businessName: "Maple Clinic",
+        inviterName: "Raphaël Morency",
+        roleLabel: "Viewer",
+        expiresDays: "7",
+      },
+    });
+
+    expect(email.subject).toBe("Join Maple Clinic on LobbyStack");
+    expect(email.html).toContain("Join the Maple Clinic team on LobbyStack");
+    expect(email.html).toContain("Raphaël Morency");
+    expect(email.html).toContain("Maple Clinic");
+    expect(email.html).toContain("Viewer");
+    expect(email.html).toContain('href="https://app.example.com/accept-invite?token=abc123"');
+    expect(email.html).toContain("Accept invitation");
+    expect(email.html).toContain("border-radius:9999px");
+    expect(email.html).toContain("This invitation expires in 7 days");
+    expect(email.text).toContain("Raphaël Morency invited you to join Maple Clinic on LobbyStack as a Viewer.");
+    expect(email.text).toContain("Accept invitation: https://app.example.com/accept-invite?token=abc123");
+  });
+
   it("renders the password reset template with the requested variables", async () => {
     const { renderTransactionalEmail } = await import("./email");
 

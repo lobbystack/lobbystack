@@ -208,14 +208,33 @@ function renderTeamInvitationEmail(input: TransactionalTemplateInput): {
   const escapedRoleLabel = escapeHtml(roleLabel);
   const escapedExpiresDays = escapeHtml(expiresDays);
 
+  const headline = `Join the ${escapedBusinessName} team on LobbyStack`;
+  const bodyHtml = [
+    "You have been invited by ",
+    `<strong>${escapedInviterName}</strong>`,
+    " to join the ",
+    `<strong>${escapedBusinessName}</strong>`,
+    " team on LobbyStack as a ",
+    `<strong>${escapedRoleLabel}</strong>`,
+    ". To accept the invite, please click the button below.",
+  ].join("");
+  const footerHtml = `This invitation expires in ${escapedExpiresDays} days. If you were not expecting this invitation, you can safely ignore this email.`;
+
+  const html = renderEmailLayout({
+    previewText: subject,
+    content: [
+      `<h1 style="margin:0 0 24px;font-size:28px;font-weight:600;line-height:1.25;color:#0B0B0D;text-align:center;">${headline}</h1>`,
+      `<p style="margin:0 0 32px;font-size:16px;line-height:1.6;color:#3D3D3D;text-align:center;">${bodyHtml}</p>`,
+      `<p style="margin:0 0 48px;text-align:center;">`,
+      `<a href="${escapedAcceptUrl}" style="display:inline-block;padding:14px 28px;background-color:#0B0B0D;color:#ffffff;font-size:15px;font-weight:500;text-decoration:none;border-radius:9999px;">Accept invitation</a>`,
+      `</p>`,
+      `<p style="margin:0;font-size:14px;line-height:1.5;color:#6B7280;text-align:center;">${footerHtml}</p>`,
+    ].join(""),
+  });
+
   return {
     subject,
-    html: [
-      `<p>${escapedInviterName} invited you to join <strong>${escapedBusinessName}</strong> on LobbyStack as a <strong>${escapedRoleLabel}</strong>.</p>`,
-      `<p><a href="${escapedAcceptUrl}">Accept invitation</a></p>`,
-      `<p>This invitation expires in ${escapedExpiresDays} days.</p>`,
-      "<p>If you were not expecting this invitation, you can safely ignore this email.</p>",
-    ].join(""),
+    html,
     text: [
       `${inviterName} invited you to join ${businessName} on LobbyStack as a ${roleLabel}.`,
       `Accept invitation: ${acceptUrl}`,
@@ -223,6 +242,51 @@ function renderTeamInvitationEmail(input: TransactionalTemplateInput): {
       "If you were not expecting this invitation, you can safely ignore this email.",
     ].join("\n\n"),
   };
+}
+
+function renderEmailLayout({
+  previewText,
+  content,
+}: {
+  previewText: string;
+  content: string;
+}): string {
+  const escapedPreviewText = escapeHtml(previewText);
+  const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 218 231" fill="none"><path fill="#0B0B0D" d="M968 2280 c-42 -16 -195 -79 -340 -141 -144 -62 -317 -133 -383 -159 -90 -36 -130 -58 -162 -88 -85 -82 -78 2 -81 -976 -3 -968 -6 -916 63 -916 19 0 54 9 77 20 24 10 147 62 273 114 338 138 342 140 365 178 20 32 20 48 20 763 0 702 1 731 19 761 12 19 34 37 54 43 33 11 54 4 398 -133 267 -107 370 -152 387 -171 26 -31 23 42 25 -725 l2 -673 c0 -50 8 -86 19 -86 11 -12 31 -21 47 -21 24 0 296 106 358 140 11 5 30 27 43 47 l23 38 l0 654 l0 836 -27 46 c-48 81 -77 98 -404 233 -170 71 -371 155 -447 187 -165 71 -208 75 -329 29z"/></svg>`;
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${escapedPreviewText}</title>
+    <style>
+      @media only screen and (max-width: 620px) {
+        .email-container { width: 100% !important; padding: 24px 16px !important; }
+      }
+    </style>
+  </head>
+  <body style="margin:0;padding:0;background-color:#F3F4F6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" border="0" cellspacing="0" cellpadding="0" width="100%">
+      <tr>
+        <td align="center" style="padding:48px 16px;">
+          <table role="presentation" class="email-container" border="0" cellspacing="0" cellpadding="0" width="600" style="width:600px;max-width:600px;background-color:#FFFFFF;border-radius:24px;padding:48px;">
+            <tr>
+              <td align="center" style="padding-bottom:32px;">
+                ${logoSvg}
+              </td>
+            </tr>
+            <tr>
+              <td>
+                ${content}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
 }
 
 function renderBodyEmail(subject: string, body: string): {
