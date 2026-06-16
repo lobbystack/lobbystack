@@ -108,6 +108,19 @@ type WebCallRecordingTarget = {
 export const WEB_VOICE_RATE_LIMIT_ERROR = "web_voice_rate_limited";
 const DASHBOARD_TEST_CALL_WIDGET_ID = "lobbystack-dashboard-test-call";
 
+function getDashboardOrigin(): string | null {
+  const appBaseUrl = process.env.APP_BASE_URL;
+  if (!appBaseUrl) {
+    return null;
+  }
+
+  try {
+    return new URL(appBaseUrl).origin;
+  } catch {
+    return null;
+  }
+}
+
 type WebVoiceStartLimiterName =
   | "webVoiceStartGlobalPerMinute"
   | "webVoiceStartPerBusinessPerHour"
@@ -189,6 +202,7 @@ function buildWebVoiceStartLimits(input: {
   widgetId?: string;
 }): Array<WebVoiceStartLimit> {
   const businessKey = String(input.businessId);
+  const dashboardOrigin = getDashboardOrigin();
   const logContext = {
     businessId: input.businessId,
     origin: input.origin,
@@ -196,7 +210,9 @@ function buildWebVoiceStartLimits(input: {
   };
   const limits: Array<WebVoiceStartLimit> = [];
   const isDashboardTestCall =
-    input.widgetId === DASHBOARD_TEST_CALL_WIDGET_ID;
+    input.widgetId === DASHBOARD_TEST_CALL_WIDGET_ID &&
+    dashboardOrigin !== null &&
+    input.origin === dashboardOrigin;
 
   if (input.ipHash !== undefined) {
     limits.push(

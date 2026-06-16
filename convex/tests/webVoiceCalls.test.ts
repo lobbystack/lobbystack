@@ -1,11 +1,13 @@
 import { register as registerRateLimiter } from "@convex-dev/rate-limiter/test";
 import { convexTest } from "convex-test";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { internal } from "../_generated/api";
 import { webVoiceAbuseRateLimiter } from "../lib/components";
 import schema from "../schema";
 import { modules } from "../test.setup";
+
+const originalAppBaseUrl = process.env.APP_BASE_URL;
 
 async function seedBusiness(slug = "lobbystack") {
   const t = convexTest(schema, modules);
@@ -26,8 +28,17 @@ async function seedBusiness(slug = "lobbystack") {
 }
 
 describe("web voice calls", () => {
+  beforeEach(() => {
+    process.env.APP_BASE_URL = "https://app.lobbystack.com";
+  });
+
   afterEach(() => {
     vi.useRealTimers();
+    if (originalAppBaseUrl === undefined) {
+      delete process.env.APP_BASE_URL;
+    } else {
+      process.env.APP_BASE_URL = originalAppBaseUrl;
+    }
   });
 
   it("starts provider-neutral web calls without a contact or Twilio SID", async () => {
@@ -304,7 +315,31 @@ describe("web voice calls", () => {
     ).rejects.toThrow("web_voice_rate_limited");
   });
 
-  it("uses higher visitor limits for dashboard test calls without changing landing limits", async () => {
+  it("does not grant dashboard limits to spoofed widget IDs from the landing origin", async () => {
+    const { t, businessId } = await seedBusiness("web-voice-dashboard-test-call");
+
+    for (let index = 0; index < 5; index += 1) {
+      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://lobbystack.com",
+        ipHash: `landing-ip-hash-${index}`,
+        visitorId: "landing-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      });
+    }
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://lobbystack.com",
+        ipHash: "landing-ip-hash-over-limit",
+        visitorId: "landing-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      }),
+    ).rejects.toThrow("web_voice_rate_limited");
+  });
+
+  it("uses higher visitor limits for dashboard test calls from the dashboard origin", async () => {
     const { t, businessId } = await seedBusiness("web-voice-dashboard-test-call");
 
     for (let index = 0; index < 10; index += 1) {
