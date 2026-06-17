@@ -126,8 +126,10 @@ export async function releaseTwilioIncomingPhoneNumber(
   }
 
   await incomingPhoneNumber.update({
-    emergencyAddressSid: "",
     emergencyStatus: "Inactive",
+  });
+  await incomingPhoneNumber.update({
+    emergencyAddressSid: "",
   });
   await incomingPhoneNumber.remove();
 }

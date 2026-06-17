@@ -28,9 +28,11 @@ describe("settings phone number replacement", () => {
 
     await releaseTwilioIncomingPhoneNumber(incomingPhoneNumber);
 
-    expect(incomingPhoneNumber.update).toHaveBeenCalledWith({
-      emergencyAddressSid: "",
+    expect(incomingPhoneNumber.update).toHaveBeenNthCalledWith(1, {
       emergencyStatus: "Inactive",
+    });
+    expect(incomingPhoneNumber.update).toHaveBeenNthCalledWith(2, {
+      emergencyAddressSid: "",
     });
     expect(incomingPhoneNumber.remove).toHaveBeenCalledTimes(2);
   });
