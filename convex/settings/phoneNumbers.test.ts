@@ -5,6 +5,11 @@ import { releaseTwilioIncomingPhoneNumber } from "./phoneNumbers";
 describe("settings phone number replacement", () => {
   it("releases a Twilio incoming phone number normally", async () => {
     const incomingPhoneNumber = {
+      fetch: vi.fn(async () => ({
+        emergencyAddressSid: null,
+        emergencyAddressStatus: "unregistered",
+        emergencyStatus: "Inactive",
+      })),
       remove: vi.fn(async () => undefined),
       update: vi.fn(async () => undefined),
     };
@@ -17,6 +22,11 @@ describe("settings phone number replacement", () => {
 
   it("removes emergency address configuration before retrying release", async () => {
     const incomingPhoneNumber = {
+      fetch: vi.fn(async () => ({
+        emergencyAddressSid: null,
+        emergencyAddressStatus: "unregistered",
+        emergencyStatus: "Inactive",
+      })),
       remove: vi
         .fn()
         .mockRejectedValueOnce(
@@ -39,6 +49,11 @@ describe("settings phone number replacement", () => {
 
   it("does not retry release for unrelated Twilio errors", async () => {
     const incomingPhoneNumber = {
+      fetch: vi.fn(async () => ({
+        emergencyAddressSid: "AD123",
+        emergencyAddressStatus: "registered",
+        emergencyStatus: "Active",
+      })),
       remove: vi.fn(async () => {
         throw new Error("Twilio request failed.");
       }),

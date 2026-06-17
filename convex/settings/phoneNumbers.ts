@@ -45,6 +45,11 @@ type PurchasedIncomingNumber = {
 };
 
 type TwilioIncomingPhoneNumberResource = {
+  fetch: () => Promise<{
+    emergencyAddressSid?: string | null;
+    emergencyAddressStatus?: string | null;
+    emergencyStatus?: string | null;
+  }>;
   remove: () => Promise<unknown>;
   update: (params: {
     emergencyAddressSid?: string;
@@ -113,6 +118,19 @@ function isEmergencyAddressReleaseError(error: unknown): boolean {
   );
 }
 
+async function waitForTwilioEmergencyUpdate(
+  incomingPhoneNumber: TwilioIncomingPhoneNumberResource,
+  isReady: (phoneNumber: Awaited<ReturnType<TwilioIncomingPhoneNumberResource["fetch"]>>) => boolean,
+): Promise<void> {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const phoneNumber = await incomingPhoneNumber.fetch();
+    if (isReady(phoneNumber)) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  }
+}
+
 export async function releaseTwilioIncomingPhoneNumber(
   incomingPhoneNumber: TwilioIncomingPhoneNumberResource,
 ): Promise<void> {
@@ -128,9 +146,21 @@ export async function releaseTwilioIncomingPhoneNumber(
   await incomingPhoneNumber.update({
     emergencyStatus: "Inactive",
   });
+  await waitForTwilioEmergencyUpdate(
+    incomingPhoneNumber,
+    (phoneNumber) =>
+      phoneNumber.emergencyStatus !== "Active" &&
+      phoneNumber.emergencyAddressStatus !== "pending-unregistration",
+  );
   await incomingPhoneNumber.update({
     emergencyAddressSid: "",
   });
+  await waitForTwilioEmergencyUpdate(
+    incomingPhoneNumber,
+    (phoneNumber) =>
+      !phoneNumber.emergencyAddressSid ||
+      phoneNumber.emergencyAddressStatus === "unregistered",
+  );
   await incomingPhoneNumber.remove();
 }
 
