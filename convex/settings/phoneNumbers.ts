@@ -44,6 +44,14 @@ type PurchasedIncomingNumber = {
   voiceUrl?: string | null;
 };
 
+type TwilioIncomingPhoneNumberResource = {
+  remove: () => Promise<unknown>;
+  update: (params: {
+    emergencyAddressSid?: string;
+    emergencyStatus?: "Active" | "Inactive";
+  }) => Promise<unknown>;
+};
+
 type ReplacementClaimResult =
   | { status: "claimed"; phoneNumberId: Id<"phone_numbers">; e164: string }
   | { status: "unavailable"; message: string; alternatives: Array<AvailableNumberSummary> }
@@ -91,6 +99,37 @@ function getPurchaseFailureMessage(error: unknown): string | null {
   }
 
   return error.message;
+}
+
+function isEmergencyAddressReleaseError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("emergency address") &&
+    (message.includes("remove") || message.includes("delete") || message.includes("release"))
+  );
+}
+
+export async function releaseTwilioIncomingPhoneNumber(
+  incomingPhoneNumber: TwilioIncomingPhoneNumberResource,
+): Promise<void> {
+  try {
+    await incomingPhoneNumber.remove();
+    return;
+  } catch (error) {
+    if (!isEmergencyAddressReleaseError(error)) {
+      throw error;
+    }
+  }
+
+  await incomingPhoneNumber.update({
+    emergencyAddressSid: "",
+    emergencyStatus: "Inactive",
+  });
+  await incomingPhoneNumber.remove();
 }
 
 async function assertPhoneNumberSettingsAccess(
@@ -344,7 +383,9 @@ export const claimReplacementNumber = action({
       oldNumberMarkedInactive = true;
 
       if (currentPhoneNumber.twilioPhoneSid) {
-        await client.incomingPhoneNumbers(currentPhoneNumber.twilioPhoneSid).remove();
+        await releaseTwilioIncomingPhoneNumber(
+          client.incomingPhoneNumbers(currentPhoneNumber.twilioPhoneSid),
+        );
       }
       await ctx.runMutation(internal.businesses.admin.markPhoneNumberReplacementUsed, {
         businessId: args.businessId,
@@ -391,7 +432,7 @@ export const claimReplacementNumber = action({
       if (purchased) {
         const client = getTwilioClient();
         try {
-          await client.incomingPhoneNumbers(purchased.sid).remove();
+          await releaseTwilioIncomingPhoneNumber(client.incomingPhoneNumbers(purchased.sid));
         } catch (releaseError) {
           cleanupError =
             releaseError instanceof Error

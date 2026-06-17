@@ -1,0 +1,51 @@
+import { describe, expect, it, vi } from "vitest";
+
+import { releaseTwilioIncomingPhoneNumber } from "./phoneNumbers";
+
+describe("settings phone number replacement", () => {
+  it("releases a Twilio incoming phone number normally", async () => {
+    const incomingPhoneNumber = {
+      remove: vi.fn(async () => undefined),
+      update: vi.fn(async () => undefined),
+    };
+
+    await releaseTwilioIncomingPhoneNumber(incomingPhoneNumber);
+
+    expect(incomingPhoneNumber.remove).toHaveBeenCalledTimes(1);
+    expect(incomingPhoneNumber.update).not.toHaveBeenCalled();
+  });
+
+  it("removes emergency address configuration before retrying release", async () => {
+    const incomingPhoneNumber = {
+      remove: vi
+        .fn()
+        .mockRejectedValueOnce(
+          new Error("Please remove the emergency address on this number before performing this action."),
+        )
+        .mockResolvedValueOnce(undefined),
+      update: vi.fn(async () => undefined),
+    };
+
+    await releaseTwilioIncomingPhoneNumber(incomingPhoneNumber);
+
+    expect(incomingPhoneNumber.update).toHaveBeenCalledWith({
+      emergencyAddressSid: "",
+      emergencyStatus: "Inactive",
+    });
+    expect(incomingPhoneNumber.remove).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry release for unrelated Twilio errors", async () => {
+    const incomingPhoneNumber = {
+      remove: vi.fn(async () => {
+        throw new Error("Twilio request failed.");
+      }),
+      update: vi.fn(async () => undefined),
+    };
+
+    await expect(releaseTwilioIncomingPhoneNumber(incomingPhoneNumber)).rejects.toThrow(
+      "Twilio request failed.",
+    );
+    expect(incomingPhoneNumber.update).not.toHaveBeenCalled();
+  });
+});
