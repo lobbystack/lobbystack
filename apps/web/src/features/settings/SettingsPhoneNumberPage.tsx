@@ -111,72 +111,79 @@ export function SettingsPhoneNumberPage({
             </ItemContent>
             {canManageTenant ? (
               <ItemActions>
-                <Dialog onOpenChange={setIsDialogOpen} open={isDialogOpen}>
-                  <DialogTrigger
-                    render={
-                      <Button
-                        disabled={
-                          primaryPhoneNumber === undefined ||
-                          primaryPhoneNumber === null ||
-                          hasUsedPhoneNumberChange
-                        }
-                        size="sm"
-                        variant="outline"
-                      />
-                    }
+                {hasUsedPhoneNumberChange ? (
+                  <Button
+                    nativeButton={false}
+                    render={<a href="mailto:support@lobbystack.com" />}
+                    size="sm"
+                    variant="outline"
                   >
-                    {t("phoneNumber.actions.requestChange")}
-                  </DialogTrigger>
-                  <DialogContent className="max-w-3xl">
-                    <DialogHeader>
-                      <DialogTitle>{t("phoneNumber.dialog.title")}</DialogTitle>
-                      <DialogDescription>
-                        {t("phoneNumber.dialog.description")}
-                      </DialogDescription>
-                    </DialogHeader>
-                    {isDialogOpen ? (
-                      <PhoneNumberChooser
-                        businessId={businessId}
-                        claimNumber={claimReplacementNumber as (args: {
-                          businessId: Id<"businesses">;
-                          e164: string;
-                          selectionContext: AvailableNumberSummary["selectionContext"];
-                          claimToken: string;
-                        }) => Promise<ClaimResult>}
-                        getErrorMessage={getSettingsPhoneNumberErrorMessage}
-                        getInitialNumberSuggestion={
-                          getInitialReplacementNumberSuggestion as (args: {
+                    {t("phoneNumber.actions.contactUs")}
+                  </Button>
+                ) : (
+                  <Dialog onOpenChange={setIsDialogOpen} open={isDialogOpen}>
+                    <DialogTrigger
+                      render={
+                        <Button
+                          disabled={primaryPhoneNumber === undefined || primaryPhoneNumber === null}
+                          size="sm"
+                          variant="outline"
+                        />
+                      }
+                    >
+                      {t("phoneNumber.actions.requestChange")}
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl">
+                      <DialogHeader>
+                        <DialogTitle>{t("phoneNumber.dialog.title")}</DialogTitle>
+                        <DialogDescription>
+                          {t("phoneNumber.dialog.description")}
+                        </DialogDescription>
+                      </DialogHeader>
+                      {isDialogOpen ? (
+                        <PhoneNumberChooser
+                          businessId={businessId}
+                          claimNumber={claimReplacementNumber as (args: {
                             businessId: Id<"businesses">;
-                          }) => Promise<InitialSuggestionResult>
-                        }
-                        labels={{
-                          countryLabel: t("phoneNumber.picker.countryLabel"),
-                          areaCodeLabel: t("phoneNumber.picker.areaCodeLabel"),
-                          areaCodePlaceholder: t("phoneNumber.picker.areaCodePlaceholder"),
-                          search: t("phoneNumber.picker.search"),
-                          phoneNumberHeader: t("phoneNumber.picker.phoneNumberHeader"),
-                          select: t("phoneNumber.picker.select"),
-                          loadMore: t("phoneNumber.picker.loadMore"),
-                          empty: t("phoneNumber.picker.empty"),
-                          loadFailed: t("phoneNumber.picker.loadFailed"),
-                          searchFailed: t("phoneNumber.picker.searchFailed"),
-                          claimFailed: t("phoneNumber.picker.claimFailed"),
-                          unavailable: t("phoneNumber.picker.unavailable"),
-                        }}
-                        onClaimed={handleClaimed}
-                        searchAvailableNumbers={
-                          searchReplacementNumbers as (args: {
-                            businessId: Id<"businesses">;
-                            mode: "suggested" | "area_code";
-                            countryCode: AvailableNumberSummary["countryCode"];
-                            areaCode?: string;
-                            limit: number;
-                          }) => Promise<SearchResult>
-                        }
-                      />
-                    ) : null}
-                  </DialogContent>
-                </Dialog>
+                            e164: string;
+                            selectionContext: AvailableNumberSummary["selectionContext"];
+                            claimToken: string;
+                          }) => Promise<ClaimResult>}
+                          getErrorMessage={getSettingsPhoneNumberErrorMessage}
+                          getInitialNumberSuggestion={
+                            getInitialReplacementNumberSuggestion as (args: {
+                              businessId: Id<"businesses">;
+                            }) => Promise<InitialSuggestionResult>
+                          }
+                          labels={{
+                            countryLabel: t("phoneNumber.picker.countryLabel"),
+                            areaCodeLabel: t("phoneNumber.picker.areaCodeLabel"),
+                            areaCodePlaceholder: t("phoneNumber.picker.areaCodePlaceholder"),
+                            search: t("phoneNumber.picker.search"),
+                            phoneNumberHeader: t("phoneNumber.picker.phoneNumberHeader"),
+                            select: t("phoneNumber.picker.select"),
+                            loadMore: t("phoneNumber.picker.loadMore"),
+                            empty: t("phoneNumber.picker.empty"),
+                            loadFailed: t("phoneNumber.picker.loadFailed"),
+                            searchFailed: t("phoneNumber.picker.searchFailed"),
+                            claimFailed: t("phoneNumber.picker.claimFailed"),
+                            unavailable: t("phoneNumber.picker.unavailable"),
+                          }}
+                          onClaimed={handleClaimed}
+                          searchAvailableNumbers={
+                            searchReplacementNumbers as (args: {
+                              businessId: Id<"businesses">;
+                              mode: "suggested" | "area_code";
+                              countryCode: AvailableNumberSummary["countryCode"];
+                              areaCode?: string;
+                              limit: number;
+                            }) => Promise<SearchResult>
+                          }
+                        />
+                      ) : null}
+                    </DialogContent>
+                  </Dialog>
+                )}
               </ItemActions>
             ) : null}
           </Item>

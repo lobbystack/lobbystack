@@ -355,7 +355,8 @@
       "empty": "No phone number is assigned yet."
     },
     "actions": {
-      "requestChange": "Request change"
+      "requestChange": "Request change",
+      "contactUs": "Contact us"
     },
     "dialog": {
       "title": "Choose a new phone number",

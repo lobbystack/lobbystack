@@ -48,6 +48,7 @@ vi.mock("react-i18next", () => ({
           "This is the number callers use to reach your AI receptionist.",
         "phoneNumber.current.empty": "No phone number is assigned yet.",
         "phoneNumber.actions.requestChange": "Request change",
+        "phoneNumber.actions.contactUs": "Contact us",
         "phoneNumber.dialog.title": "Choose a new phone number",
         "phoneNumber.dialog.description": "You can change your phone number once.",
         "phoneNumber.picker.countryLabel": "Country",
@@ -221,12 +222,12 @@ describe("SettingsPhoneNumberPage", () => {
     expect(screen.getByRole("button", { name: "Request change" })).toBeTruthy();
   });
 
-  it("disables the request-change action after the one allowed change is used", () => {
+  it("shows a support contact action after the one allowed change is used", () => {
     renderPage(true, { phoneNumberReplacementUsedAt: "2026-06-17T21:00:00.000Z" });
 
-    expect(screen.getByRole("button", { name: "Request change" })).toHaveProperty(
-      "disabled",
-      true,
+    expect(screen.queryByRole("button", { name: "Request change" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Contact us" }).getAttribute("href")).toBe(
+      "mailto:support@lobbystack.com",
     );
   });
 
