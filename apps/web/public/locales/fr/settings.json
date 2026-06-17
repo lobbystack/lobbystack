@@ -11,6 +11,7 @@
   },
   "sections": {
     "business": "Équipe",
+    "phoneNumber": "Numéro de téléphone",
     "appearance": "Préférences",
     "integrations": "Intégrations",
     "billing": "Forfait",
@@ -345,6 +346,37 @@
         "order": "Commande",
         "refund": "Remboursement"
       }
+    }
+  },
+  "phoneNumber": {
+    "current": {
+      "label": "Numéro de téléphone actuel",
+      "description": "C'est le numéro que les appelants utilisent pour joindre votre réceptionniste IA.",
+      "empty": "Aucun numéro de téléphone n'est encore attribué."
+    },
+    "actions": {
+      "requestChange": "Demander un changement"
+    },
+    "dialog": {
+      "title": "Choisir un nouveau numéro",
+      "description": "Sélectionnez le numéro de remplacement que les appelants utiliseront pour joindre votre réceptionniste IA."
+    },
+    "picker": {
+      "countryLabel": "Pays",
+      "areaCodeLabel": "Indicatif régional",
+      "areaCodePlaceholder": "Indicatif",
+      "search": "Rechercher",
+      "phoneNumberHeader": "Numéro de téléphone",
+      "select": "Sélectionner",
+      "loadMore": "Charger plus",
+      "empty": "Aucun numéro ne correspond à cette recherche.",
+      "loadFailed": "Impossible de charger les numéros pour le moment.",
+      "searchFailed": "Impossible de rechercher des numéros pour le moment.",
+      "claimFailed": "Impossible de remplacer le numéro de téléphone. Veuillez réessayer.",
+      "unavailable": "Ce numéro vient d'être pris. Choisissez-en un autre dans la liste actualisée."
+    },
+    "toast": {
+      "changed": "Numéro de téléphone modifié."
     }
   },
   "appearance": {

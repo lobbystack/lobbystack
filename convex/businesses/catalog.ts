@@ -419,6 +419,28 @@ export const getPrimaryPhoneNumber = query({
   },
 });
 
+export const getPrimaryPhoneNumberInternal = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args): Promise<Doc<"phone_numbers"> | null> => {
+    const phoneNumbers = await ctx.db
+      .query("phone_numbers")
+      .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+      .collect();
+    const activeVoicePhoneNumber =
+      phoneNumbers.find(
+        (phoneNumber) => phoneNumber.status === "active" && phoneNumber.voiceEnabled,
+      ) ?? null;
+
+    return (
+      activeVoicePhoneNumber ??
+      phoneNumbers.find((phoneNumber) => phoneNumber.status === "active") ??
+      null
+    );
+  },
+});
+
 export const getAgentBasicSettings = query({
   args: {
     businessId: v.id("businesses"),

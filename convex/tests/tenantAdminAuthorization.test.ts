@@ -394,4 +394,32 @@ describe("tenant admin authorization", () => {
     expect(persisted.snippetB).toMatchObject({ title: "Snippet B", active: true });
     expect(persisted.documentB).toMatchObject({ title: "Document B", active: true });
   });
+
+  it("blocks non-admin members from loading replacement phone number suggestions", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedMember(t, {
+      subject: "tenant-phone-viewer",
+      role: "viewer",
+    });
+
+    await expect(
+      authed.action(api.settings.phoneNumbers.getInitialReplacementNumberSuggestion, {
+        businessId,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("fails replacement phone number suggestions when the business has no current number", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedMember(t, {
+      subject: "tenant-phone-admin",
+      role: "business_admin",
+    });
+
+    await expect(
+      authed.action(api.settings.phoneNumbers.getInitialReplacementNumberSuggestion, {
+        businessId,
+      }),
+    ).rejects.toThrow("Add a phone number before changing it.");
+  });
 });
