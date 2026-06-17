@@ -105,12 +105,20 @@ type PhoneNumberWebhookSyncInput = {
 
 type CredentialsWriterCtx = Pick<MutationCtx, "db">;
 
+function isRoutablePhoneNumberStatus(status: string): boolean {
+  return status === "active" || status === "retiring";
+}
+
 function shouldSyncSmsWebhook(input: PhoneNumberWebhookSyncInput): boolean {
-  return Boolean(input.twilioPhoneSid && input.smsEnabled && input.status === "active");
+  return Boolean(
+    input.twilioPhoneSid && input.smsEnabled && isRoutablePhoneNumberStatus(input.status),
+  );
 }
 
 function shouldSyncVoiceWebhook(input: PhoneNumberWebhookSyncInput): boolean {
-  return Boolean(input.twilioPhoneSid && input.voiceEnabled && input.status === "active");
+  return Boolean(
+    input.twilioPhoneSid && input.voiceEnabled && isRoutablePhoneNumberStatus(input.status),
+  );
 }
 
 function buildPhoneNumberWithWebhookState(
@@ -292,7 +300,7 @@ export const resolveBusinessByPhoneNumber = internalQuery({
       .withIndex("by_e164", (q) => q.eq("e164", args.e164))
       .collect();
     const eligibleMatches = matches.filter((phoneNumber) => {
-      if (phoneNumber.status !== "active") {
+      if (!isRoutablePhoneNumberStatus(phoneNumber.status)) {
         return false;
       }
 
@@ -303,7 +311,7 @@ export const resolveBusinessByPhoneNumber = internalQuery({
 
     if (eligibleMatches.length > 1) {
       throw new Error(
-        `Multiple active ${args.channel} routes are configured for ${args.e164}.`,
+        `Multiple routable ${args.channel} routes are configured for ${args.e164}.`,
       );
     }
 
@@ -1258,6 +1266,7 @@ export const clearPhoneNumberTwilioSidIfMatches = internalMutation({
 
     await ctx.db.patch(args.phoneNumberId, {
       twilioPhoneSid: undefined,
+      status: "inactive",
     });
     await scheduleSnapshotRefresh(ctx, phoneNumber.businessId);
     return { cleared: true };

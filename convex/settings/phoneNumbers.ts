@@ -170,13 +170,13 @@ export async function releaseTwilioIncomingPhoneNumber(
   await incomingPhoneNumber.remove();
 }
 
-export function shouldReleaseInactiveTwilioPhoneNumber(
+export function shouldReleaseRetiringTwilioPhoneNumber(
   phoneNumber:
     | Pick<Doc<"phone_numbers">, "status" | "twilioPhoneSid">
     | null,
   twilioPhoneSid: string,
 ): boolean {
-  return phoneNumber?.status === "inactive" && phoneNumber.twilioPhoneSid === twilioPhoneSid;
+  return phoneNumber?.status === "retiring" && phoneNumber.twilioPhoneSid === twilioPhoneSid;
 }
 
 async function assertPhoneNumberSettingsAccess(
@@ -337,7 +337,7 @@ export const releaseInactiveTwilioPhoneNumber = internalAction({
     const phoneNumber = await ctx.runQuery(internal.businesses.catalog.getPhoneNumberById, {
       phoneNumberId: args.phoneNumberId,
     });
-    if (!shouldReleaseInactiveTwilioPhoneNumber(phoneNumber, args.twilioPhoneSid)) {
+    if (!shouldReleaseRetiringTwilioPhoneNumber(phoneNumber, args.twilioPhoneSid)) {
       return { released: false, skipped: true };
     }
 
@@ -393,7 +393,7 @@ export const claimReplacementNumber = action({
 
     let purchased: PurchasedIncomingNumber | null = null;
     let savedPhoneNumberId: Id<"phone_numbers"> | null = null;
-    let oldNumberMarkedInactive = false;
+    let oldNumberMarkedRetiring = false;
     let replacementReserved = false;
     const claimE164 = normalizeClaimE164(args.e164);
     if (!claimE164 || claimE164 === currentPhoneNumber.e164) {
@@ -467,9 +467,9 @@ export const claimReplacementNumber = action({
         twilioPhoneSid: currentPhoneNumber.twilioPhoneSid ?? null,
         voiceEnabled: currentPhoneNumber.voiceEnabled,
         smsEnabled: currentPhoneNumber.smsEnabled,
-        status: "inactive",
+        status: "retiring",
       });
-      oldNumberMarkedInactive = true;
+      oldNumberMarkedRetiring = true;
 
       if (currentPhoneNumber.twilioPhoneSid) {
         await ctx.scheduler.runAfter(
@@ -493,7 +493,7 @@ export const claimReplacementNumber = action({
       };
     } catch (error) {
       let cleanupError: Error | null = null;
-      if (oldNumberMarkedInactive) {
+      if (oldNumberMarkedRetiring) {
         try {
           await ctx.runMutation(internal.businesses.catalog.upsertPhoneNumberInternal, {
             businessId: args.businessId,

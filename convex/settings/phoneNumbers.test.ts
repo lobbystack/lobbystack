@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   releaseTwilioIncomingPhoneNumber,
-  shouldReleaseInactiveTwilioPhoneNumber,
+  shouldReleaseRetiringTwilioPhoneNumber,
 } from "./phoneNumbers";
 
 describe("settings phone number replacement", () => {
@@ -69,25 +69,25 @@ describe("settings phone number replacement", () => {
     expect(incomingPhoneNumber.update).not.toHaveBeenCalled();
   });
 
-  it("only releases the expected inactive Twilio phone number", () => {
+  it("only releases the expected retiring Twilio phone number", () => {
     expect(
-      shouldReleaseInactiveTwilioPhoneNumber(
-        { status: "inactive", twilioPhoneSid: "PN_old" },
+      shouldReleaseRetiringTwilioPhoneNumber(
+        { status: "retiring", twilioPhoneSid: "PN_old" },
         "PN_old",
       ),
     ).toBe(true);
     expect(
-      shouldReleaseInactiveTwilioPhoneNumber(
+      shouldReleaseRetiringTwilioPhoneNumber(
         { status: "active", twilioPhoneSid: "PN_old" },
         "PN_old",
       ),
     ).toBe(false);
     expect(
-      shouldReleaseInactiveTwilioPhoneNumber(
+      shouldReleaseRetiringTwilioPhoneNumber(
         { status: "inactive", twilioPhoneSid: "PN_new" },
         "PN_old",
       ),
     ).toBe(false);
-    expect(shouldReleaseInactiveTwilioPhoneNumber(null, "PN_old")).toBe(false);
+    expect(shouldReleaseRetiringTwilioPhoneNumber(null, "PN_old")).toBe(false);
   });
 });

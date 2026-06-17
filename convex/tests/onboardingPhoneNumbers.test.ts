@@ -394,7 +394,7 @@ describe("onboarding phone-number actions", () => {
         twilioPhoneSid: "PN-inactive",
         voiceEnabled: true,
         smsEnabled: true,
-        status: "inactive",
+        status: "retiring",
       });
       await ctx.db.insert("phone_numbers", {
         businessId,
@@ -414,6 +414,48 @@ describe("onboarding phone-number actions", () => {
       e164: "+15815550123",
       voiceEnabled: true,
       smsEnabled: true,
+      status: "active",
+    });
+  });
+
+  it("keeps retiring phone numbers routable without making them primary", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+15815550100",
+        twilioPhoneSid: "PN-retiring",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "retiring",
+      });
+      await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+15815550123",
+        twilioPhoneSid: "PN-active",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+      });
+    });
+
+    const route = await t.query(internal.businesses.catalog.resolveBusinessByPhoneNumber, {
+      e164: "+15815550100",
+      channel: "voice",
+    });
+    const primary = await authed.query(api.businesses.catalog.getPrimaryPhoneNumber, {
+      businessId,
+    });
+
+    expect(route).toMatchObject({
+      e164: "+15815550100",
+      status: "retiring",
+    });
+    expect(primary).toMatchObject({
+      e164: "+15815550123",
       status: "active",
     });
   });
