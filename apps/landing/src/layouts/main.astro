@@ -40,6 +40,7 @@ const title = seo?.title ?? DEFAULT_TITLE
 const description = seo?.description ?? DEFAULT_DESCRIPTION
 const pageType = seo?.type ?? "website"
 const pagePath = seo?.canonicalPath ?? Astro.url.pathname
+const indexingPagePath = pagePath.replace(/^\/fr(?=\/|$)/, "") || "/"
 const canonicalPath = seo?.noindex ? undefined : pagePath
 const locale = (seo?.locale ??
   Astro.currentLocale ??
@@ -66,7 +67,9 @@ const graphItems = [
     image: pageImage,
     locale,
     type:
-      pagePath === "/blog/" || pagePath === "/solutions/"
+      indexingPagePath === "/blog/" ||
+      indexingPagePath === "/changelog/" ||
+      indexingPagePath === "/solutions/"
         ? "CollectionPage"
         : "WebPage",
   }),
