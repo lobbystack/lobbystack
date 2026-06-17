@@ -1245,6 +1245,25 @@ export const deletePhoneNumberInternal = internalMutation({
   },
 });
 
+export const clearPhoneNumberTwilioSidIfMatches = internalMutation({
+  args: {
+    phoneNumberId: v.id("phone_numbers"),
+    twilioPhoneSid: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const phoneNumber = await ctx.db.get(args.phoneNumberId);
+    if (!phoneNumber || phoneNumber.twilioPhoneSid !== args.twilioPhoneSid) {
+      return { cleared: false };
+    }
+
+    await ctx.db.patch(args.phoneNumberId, {
+      twilioPhoneSid: undefined,
+    });
+    await scheduleSnapshotRefresh(ctx, phoneNumber.businessId);
+    return { cleared: true };
+  },
+});
+
 export const upsertPhoneNumberInternal = internalMutation({
   args: phoneNumberSaveArgs,
   handler: async (ctx, args) => {

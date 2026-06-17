@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { releaseTwilioIncomingPhoneNumber } from "./phoneNumbers";
+import {
+  releaseTwilioIncomingPhoneNumber,
+  shouldReleaseInactiveTwilioPhoneNumber,
+} from "./phoneNumbers";
 
 describe("settings phone number replacement", () => {
   it("releases a Twilio incoming phone number normally", async () => {
@@ -64,5 +67,27 @@ describe("settings phone number replacement", () => {
       "Twilio request failed.",
     );
     expect(incomingPhoneNumber.update).not.toHaveBeenCalled();
+  });
+
+  it("only releases the expected inactive Twilio phone number", () => {
+    expect(
+      shouldReleaseInactiveTwilioPhoneNumber(
+        { status: "inactive", twilioPhoneSid: "PN_old" },
+        "PN_old",
+      ),
+    ).toBe(true);
+    expect(
+      shouldReleaseInactiveTwilioPhoneNumber(
+        { status: "active", twilioPhoneSid: "PN_old" },
+        "PN_old",
+      ),
+    ).toBe(false);
+    expect(
+      shouldReleaseInactiveTwilioPhoneNumber(
+        { status: "inactive", twilioPhoneSid: "PN_new" },
+        "PN_old",
+      ),
+    ).toBe(false);
+    expect(shouldReleaseInactiveTwilioPhoneNumber(null, "PN_old")).toBe(false);
   });
 });

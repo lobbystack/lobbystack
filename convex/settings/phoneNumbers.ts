@@ -30,7 +30,10 @@ import {
   buildTwilioVoiceInboundWebhookUrl,
   buildTwilioVoiceStatusCallbackUrl,
 } from "../lib/twilioUrls";
-import { observedAction as action } from "../telemetry/observedFunctions";
+import {
+  observedAction as action,
+  observedInternalAction as internalAction,
+} from "../telemetry/observedFunctions";
 
 type TwilioLookupResult = {
   countryCode: string;
@@ -64,6 +67,9 @@ type ReplacementClaimResult =
 
 const PHONE_NUMBER_CHANGE_USED_MESSAGE =
   "This business has already used its phone number change.";
+const OLD_PHONE_NUMBER_RELEASE_DELAY_MS = 30 * 24 * 60 * 60 * 1000;
+const OLD_PHONE_NUMBER_RELEASE_RETRY_DELAY_MS = 24 * 60 * 60 * 1000;
+const OLD_PHONE_NUMBER_RELEASE_MAX_ATTEMPTS = 3;
 
 function isLikelyNumberUnavailableError(error: unknown): boolean {
   if (!(error instanceof Error)) {
@@ -162,6 +168,15 @@ export async function releaseTwilioIncomingPhoneNumber(
       phoneNumber.emergencyAddressStatus === "unregistered",
   );
   await incomingPhoneNumber.remove();
+}
+
+export function shouldReleaseInactiveTwilioPhoneNumber(
+  phoneNumber:
+    | Pick<Doc<"phone_numbers">, "status" | "twilioPhoneSid">
+    | null,
+  twilioPhoneSid: string,
+): boolean {
+  return phoneNumber?.status === "inactive" && phoneNumber.twilioPhoneSid === twilioPhoneSid;
 }
 
 async function assertPhoneNumberSettingsAccess(
@@ -312,6 +327,48 @@ export const searchReplacementNumbers = action({
   },
 });
 
+export const releaseInactiveTwilioPhoneNumber = internalAction({
+  args: {
+    phoneNumberId: v.id("phone_numbers"),
+    twilioPhoneSid: v.string(),
+    attempt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const phoneNumber = await ctx.runQuery(internal.businesses.catalog.getPhoneNumberById, {
+      phoneNumberId: args.phoneNumberId,
+    });
+    if (!shouldReleaseInactiveTwilioPhoneNumber(phoneNumber, args.twilioPhoneSid)) {
+      return { released: false, skipped: true };
+    }
+
+    try {
+      const client = getTwilioClient();
+      await releaseTwilioIncomingPhoneNumber(client.incomingPhoneNumbers(args.twilioPhoneSid));
+      await ctx.runMutation(internal.businesses.catalog.clearPhoneNumberTwilioSidIfMatches, {
+        phoneNumberId: args.phoneNumberId,
+        twilioPhoneSid: args.twilioPhoneSid,
+      });
+      return { released: true, skipped: false };
+    } catch (error) {
+      const attempt = Math.max(0, args.attempt ?? 0);
+      if (attempt < OLD_PHONE_NUMBER_RELEASE_MAX_ATTEMPTS) {
+        await ctx.scheduler.runAfter(
+          OLD_PHONE_NUMBER_RELEASE_RETRY_DELAY_MS,
+          internal.settings.phoneNumbers.releaseInactiveTwilioPhoneNumber,
+          {
+            phoneNumberId: args.phoneNumberId,
+            twilioPhoneSid: args.twilioPhoneSid,
+            attempt: attempt + 1,
+          },
+        );
+        return { released: false, skipped: false, retryScheduled: true };
+      }
+
+      throw error;
+    }
+  },
+});
+
 export const claimReplacementNumber = action({
   args: {
     businessId: v.id("businesses"),
@@ -407,7 +464,7 @@ export const claimReplacementNumber = action({
         businessId: args.businessId,
         phoneNumberId: currentPhoneNumber._id,
         e164: currentPhoneNumber.e164,
-        twilioPhoneSid: null,
+        twilioPhoneSid: currentPhoneNumber.twilioPhoneSid ?? null,
         voiceEnabled: currentPhoneNumber.voiceEnabled,
         smsEnabled: currentPhoneNumber.smsEnabled,
         status: "inactive",
@@ -415,8 +472,13 @@ export const claimReplacementNumber = action({
       oldNumberMarkedInactive = true;
 
       if (currentPhoneNumber.twilioPhoneSid) {
-        await releaseTwilioIncomingPhoneNumber(
-          client.incomingPhoneNumbers(currentPhoneNumber.twilioPhoneSid),
+        await ctx.scheduler.runAfter(
+          OLD_PHONE_NUMBER_RELEASE_DELAY_MS,
+          internal.settings.phoneNumbers.releaseInactiveTwilioPhoneNumber,
+          {
+            phoneNumberId: currentPhoneNumber._id,
+            twilioPhoneSid: currentPhoneNumber.twilioPhoneSid,
+          },
         );
       }
       await ctx.runMutation(internal.businesses.admin.markPhoneNumberReplacementUsed, {
