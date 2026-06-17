@@ -23,10 +23,6 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { useObservedMutation } from "@/lib/observed-convex";
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
@@ -62,8 +58,6 @@ type NotificationPreferencesState = {
   emailEnabled: boolean;
   smsEnabled: boolean;
   eventPreferences: NotificationEventPreferences;
-  dailySummaryEnabled: boolean;
-  dailySummarySendTime: string;
   smsConsentGranted: boolean;
   smsConsentDisclosureVersion: string;
   smsConsentDisclosureText: string;
@@ -88,8 +82,6 @@ function toPreferenceState(input: NotificationPreferencesState): NotificationPre
     emailEnabled: input.emailEnabled,
     smsEnabled: input.smsEnabled,
     eventPreferences: input.eventPreferences,
-    dailySummaryEnabled: input.dailySummaryEnabled,
-    dailySummarySendTime: input.dailySummarySendTime,
     smsConsentGranted: input.smsConsentGranted,
     smsConsentDisclosureVersion: input.smsConsentDisclosureVersion,
     smsConsentDisclosureText: input.smsConsentDisclosureText,
@@ -231,26 +223,6 @@ export function SettingsNotificationsPage({
           [channel]: checked,
         },
       },
-    });
-  }
-
-  function handleDailySummaryChange(checked: boolean): void {
-    if (!draft) {
-      return;
-    }
-    persistPreferences({
-      ...draft,
-      dailySummaryEnabled: checked,
-    });
-  }
-
-  function handleSendTimeChange(sendTime: string): void {
-    if (!draft) {
-      return;
-    }
-    persistPreferences({
-      ...draft,
-      dailySummarySendTime: sendTime,
     });
   }
 
@@ -423,59 +395,6 @@ export function SettingsNotificationsPage({
               {renderConfigHeader()}
               <TableBody>{renderConfigRows(systemIssueEvents)}</TableBody>
             </Table>
-          </Surface>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <div>
-            <h3 className="text-sm font-medium text-foreground">
-              {t("settings:notifications.digest.title")}
-            </h3>
-          </div>
-          <Surface className="flex flex-col">
-            <Item
-              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
-              variant="default"
-            >
-              <ItemContent>
-                <ItemTitle>{t("settings:notifications.digest.dailySummary.title")}</ItemTitle>
-                <ItemDescription>
-                  {t("settings:notifications.digest.dailySummary.description")}
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <Switch
-                  aria-label={t("settings:notifications.digest.dailySummary.title")}
-                  checked={draft.dailySummaryEnabled}
-                  onCheckedChange={handleDailySummaryChange}
-                />
-              </ItemActions>
-            </Item>
-
-            <Item
-              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
-              variant="default"
-            >
-              <ItemContent>
-                <ItemTitle>{t("settings:notifications.digest.sendTime.title")}</ItemTitle>
-                <ItemDescription>
-                  {t("settings:notifications.digest.sendTime.description")}
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <NativeSelect
-                  aria-label={t("settings:notifications.digest.sendTime.title")}
-                  className="w-full sm:w-28"
-                  onChange={(event) => handleSendTimeChange(event.target.value)}
-                  value={draft.dailySummarySendTime}
-                >
-                  <NativeSelectOption value="08:00">8:00 AM</NativeSelectOption>
-                  <NativeSelectOption value="09:00">9:00 AM</NativeSelectOption>
-                  <NativeSelectOption value="17:00">5:00 PM</NativeSelectOption>
-                  <NativeSelectOption value="18:00">6:00 PM</NativeSelectOption>
-                </NativeSelect>
-              </ItemActions>
-            </Item>
           </Surface>
         </div>
       </div>

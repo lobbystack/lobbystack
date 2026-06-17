@@ -721,7 +721,7 @@
       "title": "Canaux",
       "email": {
         "title": "Courriel",
-        "description": "Recevez les alertes et les résumés quotidiens par courriel."
+        "description": "Recevez les alertes par courriel."
       },
       "sms": {
         "title": "SMS",
@@ -762,17 +762,6 @@
     },
     "systemIssues": {
       "title": "Problèmes système"
-    },
-    "digest": {
-      "title": "Résumé",
-      "dailySummary": {
-        "title": "Résumé quotidien",
-        "description": "Recevez un seul courriel quotidien résumant l'activité des appels et les nouveaux messages."
-      },
-      "sendTime": {
-        "title": "Heure d'envoi",
-        "description": "L'heure à laquelle votre résumé quotidien sera envoyé."
-      }
     },
     "smsConsent": {
       "title": "Activer les alertes SMS",

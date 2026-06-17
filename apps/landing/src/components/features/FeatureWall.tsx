@@ -22,7 +22,6 @@ import {
   FileText,
   ScrollText,
   Mail,
-  BarChart3,
   BookOpen,
   Layers,
   CircleSlash,
@@ -203,13 +202,6 @@ const mediumCards: FeatureCard[] = [
     description:
       "Send booking updates, quote requests, urgent alerts, missed-transfer summaries, and high-value lead notices to the right person.",
     icon: Mail,
-    size: "medium",
-  },
-  {
-    title: "Daily recap",
-    description:
-      "Send a daily summary of bookings, quote requests, missed calls, spam blocked, and follow-ups.",
-    icon: BarChart3,
     size: "medium",
   },
   {
@@ -449,13 +441,6 @@ const mediumCardsFr: FeatureCard[] = [
     description:
       "Envoyez rendez‑vous, demandes de devis, alertes urgentes, transferts manqués et prospects importants à la bonne personne.",
     icon: Mail,
-    size: "medium",
-  },
-  {
-    title: "Récapitulatif quotidien",
-    description:
-      "Recevez chaque jour un résumé des rendez‑vous, demandes de devis, appels manqués, appels filtrés et suivis.",
-    icon: BarChart3,
     size: "medium",
   },
   {

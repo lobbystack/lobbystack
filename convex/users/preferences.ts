@@ -9,10 +9,8 @@ import { internalQuery, query } from "../_generated/server";
 import { ensureCurrentUser, requireCurrentUser, requireMembership } from "../lib/auth";
 import { dashboardAbuseRateLimiter } from "../lib/components";
 import {
-  DEFAULT_DAILY_SUMMARY_SEND_TIME,
   buildDefaultOperatorNotificationEventPreferences,
   hasEnabledSmsEventPreference,
-  normalizeDailySummarySendTime,
   operatorNotificationChannelValidator,
   operatorNotificationEventPreferencesValidator,
   type OperatorNotificationChannel,
@@ -33,8 +31,6 @@ type NotificationPreferencesPayload = {
   emailEnabled: boolean;
   smsEnabled: boolean;
   eventPreferences: OperatorNotificationEventPreferences;
-  dailySummaryEnabled: boolean;
-  dailySummarySendTime: string;
   email: string | null;
   phone: string | null;
   phoneVerified: boolean;
@@ -114,9 +110,6 @@ function resolveNotificationPreferencesPayload(input: {
           transferFailed: { ...eventPreferences.transferFailed, sms: false },
           aiReplyFailed: { ...eventPreferences.aiReplyFailed, sms: false },
         },
-    dailySummaryEnabled: input.preferences?.dailySummaryEnabled ?? true,
-    dailySummarySendTime:
-      input.preferences?.dailySummarySendTime ?? DEFAULT_DAILY_SUMMARY_SEND_TIME,
     email: input.user.email ?? null,
     phone: input.user.phone ?? null,
     phoneVerified,
@@ -244,9 +237,9 @@ export const updateNotificationPreferences = mutation({
     emailEnabled: v.boolean(),
     smsEnabled: v.boolean(),
     eventPreferences: operatorNotificationEventPreferencesValidator,
-    dailySummaryEnabled: v.boolean(),
-    dailySummarySendTime: v.string(),
     smsConsentAccepted: v.optional(v.boolean()),
+    dailySummaryEnabled: v.optional(v.boolean()),
+    dailySummarySendTime: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<NotificationPreferencesPayload> => {
     const user = await ensureCurrentUser(ctx);
@@ -259,9 +252,6 @@ export const updateNotificationPreferences = mutation({
       user,
       alertSmsSenderConfigured: isAlertSmsSenderConfigured(smsPolicy),
     });
-    const dailySummarySendTime = normalizeDailySummarySendTime(
-      args.dailySummarySendTime,
-    );
 
     const existing = await ctx.db
       .query("operator_notification_preferences")
@@ -308,8 +298,6 @@ export const updateNotificationPreferences = mutation({
       emailEnabled: args.emailEnabled,
       smsEnabled: args.smsEnabled,
       eventPreferences: args.eventPreferences,
-      dailySummaryEnabled: args.dailySummaryEnabled,
-      dailySummarySendTime,
       ...consentGrantPatch,
       ...consentRevokePatch,
       updatedAt: now,
