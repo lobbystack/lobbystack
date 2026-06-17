@@ -9,4 +9,4 @@ category: "Product"
 
 Open **Settings → Phone Number** and select **Request change**. LobbyStack shows available numbers by country and area code, then switches the business to the number you select.
 
-Each business gets one self-serve phone number change. After LobbyStack activates the new number, it releases the previous number.
+Each business gets one self-serve phone number change. After LobbyStack activates the new number, the previous number stays active for 30 days.
