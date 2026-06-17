@@ -722,7 +722,7 @@
       "title": "Channels",
       "email": {
         "title": "Email",
-        "description": "Receive alerts and daily summaries by email."
+        "description": "Receive alerts by email."
       },
       "sms": {
         "title": "SMS",
@@ -763,17 +763,6 @@
     },
     "systemIssues": {
       "title": "System issues"
-    },
-    "digest": {
-      "title": "Digest",
-      "dailySummary": {
-        "title": "Daily summary",
-        "description": "Receive a single daily email summarizing call activity and new messages."
-      },
-      "sendTime": {
-        "title": "Send time",
-        "description": "The time of day your daily summary will be sent."
-      }
     },
     "smsConsent": {
       "title": "Enable SMS alerts",
