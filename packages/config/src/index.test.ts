@@ -36,7 +36,10 @@ describe("loadVoiceGatewayEnv", () => {
     });
 
     expect(env.WEB_CALL_ALLOWED_ORIGINS).toBe(
-      "https://lobbystack.com,https://www.lobbystack.com",
+      "https://app.lobbystack.com,https://lobbystack.com,https://www.lobbystack.com",
+    );
+    expect(env.WEB_CALL_ALLOWED_ORIGINS).toContain(
+      "https://app.lobbystack.com",
     );
     expect(env.WEB_CALL_ALLOWED_ORIGINS).toContain("https://lobbystack.com");
     expect(env.WEB_CALL_ALLOWED_ORIGINS).toContain(
