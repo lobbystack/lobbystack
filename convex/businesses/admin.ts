@@ -32,6 +32,7 @@ const businessDeploymentModes = new Set([
   "self_hosted_standard",
   "development",
 ]);
+const PHONE_NUMBER_REPLACEMENT_RESERVATION_MAX_AGE_MS = 15 * 60 * 1000;
 
 function normalizeBootstrapBusinessName(name: string): string {
   return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
@@ -268,6 +269,78 @@ export const releaseOnboardingNumberClaim = internalMutation({
     }
 
     return "phone_number";
+  },
+});
+
+export const reservePhoneNumberReplacement = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    const business = await ctx.db.get(args.businessId);
+    if (!business) {
+      throw new Error("Business not found.");
+    }
+
+    if (business.phoneNumberReplacementUsedAt) {
+      throw new Error("This business has already used its phone number change.");
+    }
+
+    const reservedAt = business.phoneNumberReplacementReservedAt
+      ? Date.parse(business.phoneNumberReplacementReservedAt)
+      : Number.NaN;
+    if (
+      Number.isFinite(reservedAt) &&
+      Date.now() - reservedAt < PHONE_NUMBER_REPLACEMENT_RESERVATION_MAX_AGE_MS
+    ) {
+      throw new Error("A phone number change is already in progress.");
+    }
+
+    const now = new Date().toISOString();
+    await ctx.db.patch(args.businessId, {
+      phoneNumberReplacementReservedAt: now,
+    });
+    return now;
+  },
+});
+
+export const markPhoneNumberReplacementUsed = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    const business = await ctx.db.get(args.businessId);
+    if (!business) {
+      throw new Error("Business not found.");
+    }
+
+    if (business.phoneNumberReplacementUsedAt) {
+      return business.phoneNumberReplacementUsedAt;
+    }
+
+    const now = new Date().toISOString();
+    await ctx.db.patch(args.businessId, {
+      phoneNumberReplacementReservedAt: undefined,
+      phoneNumberReplacementUsedAt: now,
+    });
+    return now;
+  },
+});
+
+export const releasePhoneNumberReplacementReservation = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    const business = await ctx.db.get(args.businessId);
+    if (!business || business.phoneNumberReplacementUsedAt) {
+      return null;
+    }
+
+    await ctx.db.patch(args.businessId, {
+      phoneNumberReplacementReservedAt: undefined,
+    });
+    return null;
   },
 });
 

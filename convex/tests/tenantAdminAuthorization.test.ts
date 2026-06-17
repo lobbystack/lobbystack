@@ -422,4 +422,30 @@ describe("tenant admin authorization", () => {
       }),
     ).rejects.toThrow("Add a phone number before changing it.");
   });
+
+  it("blocks replacement phone number suggestions after the one allowed change is used", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedMember(t, {
+      subject: "tenant-phone-change-used",
+      role: "business_admin",
+    });
+    await t.run(async (ctx: TestContext) => {
+      await ctx.db.patch(businessId, {
+        phoneNumberReplacementUsedAt: "2026-06-17T21:00:00.000Z",
+      });
+      await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14165550123",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+      });
+    });
+
+    await expect(
+      authed.action(api.settings.phoneNumbers.getInitialReplacementNumberSuggestion, {
+        businessId,
+      }),
+    ).rejects.toThrow("This business has already used its phone number change.");
+  });
 });

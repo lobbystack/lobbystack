@@ -49,6 +49,9 @@ type ReplacementClaimResult =
   | { status: "unavailable"; message: string; alternatives: Array<AvailableNumberSummary> }
   | { status: "failed"; message: string };
 
+const PHONE_NUMBER_CHANGE_USED_MESSAGE =
+  "This business has already used its phone number change.";
+
 function isLikelyNumberUnavailableError(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false;
@@ -145,12 +148,28 @@ async function resolveCurrentNumberSuggestionContext(
   };
 }
 
+async function assertPhoneNumberReplacementAvailable(
+  ctx: ActionCtx,
+  businessId: Id<"businesses">,
+): Promise<void> {
+  const business = await ctx.runQuery(internal.businesses.admin.getBusinessById, {
+    businessId,
+  });
+  if (!business) {
+    throw new Error("Business not found.");
+  }
+  if (business.phoneNumberReplacementUsedAt) {
+    throw new Error(PHONE_NUMBER_CHANGE_USED_MESSAGE);
+  }
+}
+
 export const getInitialReplacementNumberSuggestion = action({
   args: {
     businessId: v.id("businesses"),
   },
   handler: async (ctx, args) => {
     const { userId } = await assertPhoneNumberSettingsAccess(ctx, args.businessId);
+    await assertPhoneNumberReplacementAvailable(ctx, args.businessId);
     const { market, context, currentPhoneNumber } = await resolveCurrentNumberSuggestionContext(
       ctx,
       args.businessId,
@@ -181,6 +200,7 @@ export const searchReplacementNumbers = action({
   },
   handler: async (ctx, args) => {
     const { userId } = await assertPhoneNumberSettingsAccess(ctx, args.businessId);
+    await assertPhoneNumberReplacementAvailable(ctx, args.businessId);
     const { market, context, currentPhoneNumber } = await resolveCurrentNumberSuggestionContext(
       ctx,
       args.businessId,
@@ -246,6 +266,7 @@ export const claimReplacementNumber = action({
     let purchased: PurchasedIncomingNumber | null = null;
     let savedPhoneNumberId: Id<"phone_numbers"> | null = null;
     let oldNumberMarkedInactive = false;
+    let replacementReserved = false;
     const claimE164 = normalizeClaimE164(args.e164);
     if (!claimE164 || claimE164 === currentPhoneNumber.e164) {
       return {
@@ -262,6 +283,10 @@ export const claimReplacementNumber = action({
         claimE164,
         selectionContext: args.selectionContext,
       });
+      await ctx.runMutation(internal.businesses.admin.reservePhoneNumberReplacement, {
+        businessId: args.businessId,
+      });
+      replacementReserved = true;
 
       const smsWebhookUrl = buildTwilioSmsInboundWebhookUrl();
       const voiceWebhookUrl = buildTwilioVoiceInboundWebhookUrl();
@@ -321,6 +346,10 @@ export const claimReplacementNumber = action({
       if (currentPhoneNumber.twilioPhoneSid) {
         await client.incomingPhoneNumbers(currentPhoneNumber.twilioPhoneSid).remove();
       }
+      await ctx.runMutation(internal.businesses.admin.markPhoneNumberReplacementUsed, {
+        businessId: args.businessId,
+      });
+      replacementReserved = false;
 
       return {
         status: "claimed",
@@ -368,6 +397,18 @@ export const claimReplacementNumber = action({
             releaseError instanceof Error
               ? releaseError
               : new Error("Automatic cleanup of the purchased Twilio number failed.");
+        }
+      }
+      if (replacementReserved) {
+        try {
+          await ctx.runMutation(internal.businesses.admin.releasePhoneNumberReplacementReservation, {
+            businessId: args.businessId,
+          });
+        } catch (releaseReservationError) {
+          cleanupError =
+            releaseReservationError instanceof Error
+              ? releaseReservationError
+              : new Error("Automatic release of the phone number change reservation failed.");
         }
       }
 

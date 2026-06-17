@@ -74,6 +74,7 @@ type ActiveBusiness = {
   slug: string;
   onboardingStage?: string;
   websiteUrl?: string;
+  phoneNumberReplacementUsedAt?: string;
 };
 
 type ActiveBusinessEntry = {
@@ -609,6 +610,9 @@ function WorkspaceShell() {
                     <SettingsPhoneNumberPage
                       businessId={businessId}
                       canManageTenant={canManageTenant}
+                      {...(activeBusiness?.phoneNumberReplacementUsedAt
+                        ? { phoneNumberReplacementUsedAt: activeBusiness.phoneNumberReplacementUsedAt }
+                        : {})}
                     />
                   ) : (
                     <Navigate replace to="/settings" />

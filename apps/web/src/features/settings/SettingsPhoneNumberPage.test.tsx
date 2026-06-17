@@ -49,8 +49,7 @@ vi.mock("react-i18next", () => ({
         "phoneNumber.current.empty": "No phone number is assigned yet.",
         "phoneNumber.actions.requestChange": "Request change",
         "phoneNumber.dialog.title": "Choose a new phone number",
-        "phoneNumber.dialog.description":
-          "Select the replacement number callers will use to reach your AI receptionist.",
+        "phoneNumber.dialog.description": "You can change your phone number once.",
         "phoneNumber.picker.countryLabel": "Country",
         "phoneNumber.picker.areaCodeLabel": "Area code",
         "phoneNumber.picker.areaCodePlaceholder": "Area code",
@@ -161,11 +160,15 @@ const refreshedNumber = {
   claimToken: "claim_token_125",
 };
 
-function renderPage(canManageTenant = true) {
+function renderPage(
+  canManageTenant = true,
+  props: Partial<React.ComponentProps<typeof SettingsPhoneNumberPage>> = {},
+) {
   return render(
     <SettingsPhoneNumberPage
       businessId={businessId}
       canManageTenant={canManageTenant}
+      {...props}
     />,
   );
 }
@@ -218,6 +221,15 @@ describe("SettingsPhoneNumberPage", () => {
     expect(screen.getByRole("button", { name: "Request change" })).toBeTruthy();
   });
 
+  it("disables the request-change action after the one allowed change is used", () => {
+    renderPage(true, { phoneNumberReplacementUsedAt: "2026-06-17T21:00:00.000Z" });
+
+    expect(screen.getByRole("button", { name: "Request change" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  });
+
   it("hides the request-change action from non-admin members", () => {
     renderPage(false);
 
@@ -232,6 +244,7 @@ describe("SettingsPhoneNumberPage", () => {
     await user.click(screen.getByRole("button", { name: "Request change" }));
 
     expect(await screen.findByRole("heading", { name: "Choose a new phone number" })).toBeTruthy();
+    expect(await screen.findByText("You can change your phone number once.")).toBeTruthy();
     expect(await screen.findByText("(416) 555-0124")).toBeTruthy();
   });
 

@@ -359,7 +359,7 @@
     },
     "dialog": {
       "title": "Choisir un nouveau numéro",
-      "description": "Sélectionnez le numéro de remplacement que les appelants utiliseront pour joindre votre réceptionniste IA."
+      "description": "Vous pouvez changer votre numéro de téléphone une seule fois."
     },
     "picker": {
       "countryLabel": "Pays",

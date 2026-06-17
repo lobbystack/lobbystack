@@ -359,7 +359,7 @@
     },
     "dialog": {
       "title": "Choose a new phone number",
-      "description": "Select the replacement number callers will use to reach your AI receptionist."
+      "description": "You can change your phone number once."
     },
     "picker": {
       "countryLabel": "Country",

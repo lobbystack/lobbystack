@@ -1,7 +1,6 @@
 import { useState } from "react";
 
 import { useQuery } from "convex/react";
-import { Phone } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -22,7 +21,6 @@ import {
   ItemContent,
   ItemDescription,
   ItemGroup,
-  ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,6 +37,7 @@ import { useObservedAction } from "@/lib/observed-convex";
 type SettingsPhoneNumberPageProps = {
   businessId: Id<"businesses">;
   canManageTenant: boolean;
+  phoneNumberReplacementUsedAt?: string;
 };
 
 type PrimaryPhoneNumber = {
@@ -64,6 +63,7 @@ function getSettingsPhoneNumberErrorMessage(error: unknown, fallback: string): s
 export function SettingsPhoneNumberPage({
   businessId,
   canManageTenant,
+  phoneNumberReplacementUsedAt,
 }: SettingsPhoneNumberPageProps) {
   const { i18n, t } = useTranslation("settings");
   const primaryPhoneNumber = useQuery(api.businesses.catalog.getPrimaryPhoneNumber, {
@@ -83,6 +83,7 @@ export function SettingsPhoneNumberPage({
   const displayPhoneNumber = primaryPhoneNumber
     ? formatPhoneNumberDisplay(primaryPhoneNumber.e164, i18n.language)
     : null;
+  const hasUsedPhoneNumberChange = Boolean(phoneNumberReplacementUsedAt);
 
   function handleClaimed(result: Extract<ClaimResult, { status: "claimed" }>): void {
     toast.success(t("phoneNumber.toast.changed"));
@@ -95,9 +96,6 @@ export function SettingsPhoneNumberPage({
       <div className="w-full">
         <ItemGroup spacing="section">
           <Item variant="outline">
-            <ItemMedia variant="icon">
-              <Phone aria-hidden="true" />
-            </ItemMedia>
             <ItemContent>
               <ItemTitle>{t("phoneNumber.current.label")}</ItemTitle>
               <ItemDescription>{t("phoneNumber.current.description")}</ItemDescription>
@@ -117,7 +115,11 @@ export function SettingsPhoneNumberPage({
                   <DialogTrigger
                     render={
                       <Button
-                        disabled={primaryPhoneNumber === undefined || primaryPhoneNumber === null}
+                        disabled={
+                          primaryPhoneNumber === undefined ||
+                          primaryPhoneNumber === null ||
+                          hasUsedPhoneNumberChange
+                        }
                         size="sm"
                         variant="outline"
                       />
