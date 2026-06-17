@@ -64,7 +64,8 @@ vi.mock("react-i18next", () => ({
           "We couldn't replace the phone number. Please try again.",
         "phoneNumber.picker.unavailable":
           "That number was just taken. Pick another one from the refreshed list.",
-        "phoneNumber.toast.changed": "Phone number changed.",
+        "phoneNumber.toast.changed":
+          "Phone number changed. Your previous number will stay active for 30 days.",
       };
 
       return translations[key] ?? key;
@@ -281,6 +282,8 @@ describe("SettingsPhoneNumberPage", () => {
         claimToken: suggestedNumber.claimToken,
       });
     });
-    expect(toastSuccessMock).toHaveBeenCalledWith("Phone number changed.");
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "Phone number changed. Your previous number will stay active for 30 days.",
+    );
   });
 });

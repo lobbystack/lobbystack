@@ -376,7 +376,7 @@
       "unavailable": "That number was just taken. Pick another one from the refreshed list."
     },
     "toast": {
-      "changed": "Phone number changed."
+      "changed": "Phone number changed. Your previous number will stay active for 30 days."
     }
   },
   "appearance": {
