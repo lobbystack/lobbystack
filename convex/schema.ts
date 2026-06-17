@@ -219,6 +219,8 @@ export default defineSchema({
     businessType: v.string(),
     deploymentMode: v.string(),
     status: v.string(),
+    phoneNumberReplacementReservedAt: v.optional(v.string()),
+    phoneNumberReplacementUsedAt: v.optional(v.string()),
   }).index("by_slug", ["slug"]),
 
   business_memberships: defineTable({

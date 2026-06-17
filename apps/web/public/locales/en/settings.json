@@ -11,6 +11,7 @@
   },
   "sections": {
     "business": "Team",
+    "phoneNumber": "Phone Number",
     "appearance": "Preferences",
     "integrations": "Integrations",
     "billing": "Plan",
@@ -345,6 +346,37 @@
         "order": "Order",
         "refund": "Refund"
       }
+    }
+  },
+  "phoneNumber": {
+    "current": {
+      "label": "Current phone number",
+      "description": "This is the number callers use to reach your AI receptionist.",
+      "empty": "No phone number is assigned yet."
+    },
+    "actions": {
+      "requestChange": "Request change"
+    },
+    "dialog": {
+      "title": "Choose a new phone number",
+      "description": "You can change your phone number once."
+    },
+    "picker": {
+      "countryLabel": "Country",
+      "areaCodeLabel": "Area code",
+      "areaCodePlaceholder": "Area code",
+      "search": "Search",
+      "phoneNumberHeader": "Phone number",
+      "select": "Select",
+      "loadMore": "Load more",
+      "empty": "No numbers matched that search.",
+      "loadFailed": "We couldn't load numbers right now.",
+      "searchFailed": "We couldn't search numbers right now.",
+      "claimFailed": "We couldn't replace the phone number. Please try again.",
+      "unavailable": "That number was just taken. Pick another one from the refreshed list."
+    },
+    "toast": {
+      "changed": "Phone number changed. Your previous number will stay active for 30 days."
     }
   },
   "appearance": {

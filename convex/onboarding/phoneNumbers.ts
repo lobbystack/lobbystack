@@ -147,7 +147,7 @@ function formatDisplayPhoneNumber(e164: string): string {
   return e164;
 }
 
-function normalizeClaimE164(e164: string): string | null {
+export function normalizeClaimE164(e164: string): string | null {
   const trimmed = e164.trim();
   return /^\+\d{8,15}$/.test(trimmed) ? trimmed : null;
 }
@@ -262,7 +262,7 @@ function selectionContextsMatch(
   );
 }
 
-function verifyNumberClaimToken(input: {
+export function verifyNumberClaimToken(input: {
   token: string;
   businessId: Id<"businesses">;
   userId: Id<"users">;
@@ -288,7 +288,7 @@ function verifyNumberClaimToken(input: {
   return payload;
 }
 
-function normalizeSupportedCountryCode(
+export function normalizeSupportedCountryCode(
   value: string | undefined,
 ): SupportedPhoneNumberCountryCode | null {
   const normalized = value?.trim().toUpperCase();
@@ -440,7 +440,7 @@ async function listTollFreeNumbers(input: {
   });
 }
 
-async function getSuggestedNumbers(
+export async function getSuggestedNumbers(
   context: NumberSuggestionContext,
   limit: number,
 ): Promise<Array<AvailableNumberSummary>> {
@@ -525,7 +525,7 @@ async function getSuggestedNumbers(
   return dedupeNumbers(collected).slice(0, limit);
 }
 
-async function getNumbersForSelectionContext(
+export async function getNumbersForSelectionContext(
   selectionContext: NumberSelectionContext,
   fallbackContext: NumberSuggestionContext,
   limit: number,
@@ -593,7 +593,7 @@ async function getNumbersForSelectionContext(
     .filter((number): number is AvailableNumberSummary => number !== null);
 }
 
-function withClaimTokens(
+export function withClaimTokens(
   numbers: Array<AvailableNumberSummary>,
   input: {
     businessId: Id<"businesses">;
@@ -610,7 +610,7 @@ function withClaimTokens(
   }));
 }
 
-function buildNormalizedSelectionContext(input: {
+export function buildNormalizedSelectionContext(input: {
   requestedSelectionContext: NumberSelectionContext;
   fallbackContext: NumberSuggestionContext;
 }): NumberSelectionContext {

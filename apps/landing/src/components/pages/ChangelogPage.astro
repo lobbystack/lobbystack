@@ -5,10 +5,16 @@ import { Navbar } from "@/components/Navbar"
 import { Footer } from "@/components/Footer"
 import {
   changelogAnchorId,
+  changelogPath,
   getChangelogEntries,
   type ChangelogEntry,
 } from "@/lib/changelog"
-import { breadcrumbJsonLd, organizationJsonLd, webSiteJsonLd } from "@/lib/seo"
+import {
+  absoluteUrl,
+  breadcrumbJsonLd,
+  organizationJsonLd,
+  webSiteJsonLd,
+} from "@/lib/seo"
 import {
   assertLocale,
   getCopy,
@@ -35,15 +41,15 @@ const renderedEntries = await Promise.all(
 
 const pageCopy = {
   en: {
-    h1: "What's new with LobbyStack?",
+    h1: "LobbyStack changelog: AI receptionist product updates",
     intro:
-      "Product updates, integrations, and improvements from the LobbyStack team.",
+      "Follow new AI receptionist features, dashboard improvements, integrations, and shipped changes from the LobbyStack team.",
     breadcrumb: "Changelog",
   },
   fr: {
-    h1: "Quoi de neuf avec LobbyStack?",
+    h1: "Journal LobbyStack: mises à jour du réceptionniste IA",
     intro:
-      "Mises à jour produit, intégrations et améliorations de l'équipe LobbyStack.",
+      "Suivez les nouveautés du réceptionniste IA, les améliorations du tableau de bord, les intégrations et les changements publiés par l'équipe LobbyStack.",
     breadcrumb: "Journal des changements",
   },
 } satisfies Record<
@@ -56,6 +62,40 @@ const pageCopy = {
 >
 
 const dateLocale = locale === "fr" ? "fr-CA" : "en-US"
+const changelogItemListJsonLd = {
+  "@type": "ItemList",
+  "@id": `${absoluteUrl(canonicalPath)}#updates`,
+  name: pageCopy[locale].h1,
+  description: pageCopy[locale].intro,
+  inLanguage: locale,
+  isPartOf: {
+    "@id": `${absoluteUrl(canonicalPath)}#webpage`,
+  },
+  itemListElement: entries.map((entry, index) => {
+    const anchorId = changelogAnchorId(entry)
+    const itemUrl = absoluteUrl(changelogPath(locale, anchorId))
+
+    return {
+      "@type": "ListItem",
+      position: index + 1,
+      url: itemUrl,
+      item: {
+        "@type": "CreativeWork",
+        "@id": `${absoluteUrl(canonicalPath)}#update-${anchorId}`,
+        name: entry.data.title,
+        headline: entry.data.title,
+        description: entry.data.description,
+        url: itemUrl,
+        datePublished: entry.data.pubDate.toISOString(),
+        inLanguage: locale,
+        ...(entry.data.category ? { genre: entry.data.category } : {}),
+        publisher: {
+          "@id": absoluteUrl("/#organization"),
+        },
+      },
+    }
+  }),
+}
 ---
 
 <Layout
@@ -71,6 +111,7 @@ const dateLocale = locale === "fr" ? "fr-CA" : "en-US"
         { name: copy.common.home, path: localizePath(locale, "/") },
         { name: pageCopy[locale].breadcrumb, path: canonicalPath },
       ]),
+      changelogItemListJsonLd,
     ],
   }}
 >

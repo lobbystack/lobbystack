@@ -105,12 +105,20 @@ type PhoneNumberWebhookSyncInput = {
 
 type CredentialsWriterCtx = Pick<MutationCtx, "db">;
 
+function isRoutablePhoneNumberStatus(status: string): boolean {
+  return status === "active" || status === "retiring";
+}
+
 function shouldSyncSmsWebhook(input: PhoneNumberWebhookSyncInput): boolean {
-  return Boolean(input.twilioPhoneSid && input.smsEnabled && input.status === "active");
+  return Boolean(
+    input.twilioPhoneSid && input.smsEnabled && isRoutablePhoneNumberStatus(input.status),
+  );
 }
 
 function shouldSyncVoiceWebhook(input: PhoneNumberWebhookSyncInput): boolean {
-  return Boolean(input.twilioPhoneSid && input.voiceEnabled && input.status === "active");
+  return Boolean(
+    input.twilioPhoneSid && input.voiceEnabled && isRoutablePhoneNumberStatus(input.status),
+  );
 }
 
 function buildPhoneNumberWithWebhookState(
@@ -292,7 +300,7 @@ export const resolveBusinessByPhoneNumber = internalQuery({
       .withIndex("by_e164", (q) => q.eq("e164", args.e164))
       .collect();
     const eligibleMatches = matches.filter((phoneNumber) => {
-      if (phoneNumber.status !== "active") {
+      if (!isRoutablePhoneNumberStatus(phoneNumber.status)) {
         return false;
       }
 
@@ -303,7 +311,7 @@ export const resolveBusinessByPhoneNumber = internalQuery({
 
     if (eligibleMatches.length > 1) {
       throw new Error(
-        `Multiple active ${args.channel} routes are configured for ${args.e164}.`,
+        `Multiple routable ${args.channel} routes are configured for ${args.e164}.`,
       );
     }
 
@@ -416,6 +424,28 @@ export const getPrimaryPhoneNumber = query({
           status: activePhoneNumber.status,
         }
       : null;
+  },
+});
+
+export const getPrimaryPhoneNumberInternal = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args): Promise<Doc<"phone_numbers"> | null> => {
+    const phoneNumbers = await ctx.db
+      .query("phone_numbers")
+      .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+      .collect();
+    const activeVoicePhoneNumber =
+      phoneNumbers.find(
+        (phoneNumber) => phoneNumber.status === "active" && phoneNumber.voiceEnabled,
+      ) ?? null;
+
+    return (
+      activeVoicePhoneNumber ??
+      phoneNumbers.find((phoneNumber) => phoneNumber.status === "active") ??
+      null
+    );
   },
 });
 
@@ -1220,6 +1250,26 @@ export const deletePhoneNumberInternal = internalMutation({
     await ctx.db.delete(args.phoneNumberId);
     await scheduleSnapshotRefresh(ctx, phoneNumber.businessId);
     return args.phoneNumberId;
+  },
+});
+
+export const clearPhoneNumberTwilioSidIfMatches = internalMutation({
+  args: {
+    phoneNumberId: v.id("phone_numbers"),
+    twilioPhoneSid: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const phoneNumber = await ctx.db.get(args.phoneNumberId);
+    if (!phoneNumber || phoneNumber.twilioPhoneSid !== args.twilioPhoneSid) {
+      return { cleared: false };
+    }
+
+    await ctx.db.patch(args.phoneNumberId, {
+      twilioPhoneSid: undefined,
+      status: "inactive",
+    });
+    await scheduleSnapshotRefresh(ctx, phoneNumber.businessId);
+    return { cleared: true };
   },
 });
 

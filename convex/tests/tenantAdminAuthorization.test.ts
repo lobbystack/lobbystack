@@ -394,4 +394,58 @@ describe("tenant admin authorization", () => {
     expect(persisted.snippetB).toMatchObject({ title: "Snippet B", active: true });
     expect(persisted.documentB).toMatchObject({ title: "Document B", active: true });
   });
+
+  it("blocks non-admin members from loading replacement phone number suggestions", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedMember(t, {
+      subject: "tenant-phone-viewer",
+      role: "viewer",
+    });
+
+    await expect(
+      authed.action(api.settings.phoneNumbers.getInitialReplacementNumberSuggestion, {
+        businessId,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("fails replacement phone number suggestions when the business has no current number", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedMember(t, {
+      subject: "tenant-phone-admin",
+      role: "business_admin",
+    });
+
+    await expect(
+      authed.action(api.settings.phoneNumbers.getInitialReplacementNumberSuggestion, {
+        businessId,
+      }),
+    ).rejects.toThrow("Add a phone number before changing it.");
+  });
+
+  it("blocks replacement phone number suggestions after the one allowed change is used", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedMember(t, {
+      subject: "tenant-phone-change-used",
+      role: "business_admin",
+    });
+    await t.run(async (ctx: TestContext) => {
+      await ctx.db.patch(businessId, {
+        phoneNumberReplacementUsedAt: "2026-06-17T21:00:00.000Z",
+      });
+      await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14165550123",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+      });
+    });
+
+    await expect(
+      authed.action(api.settings.phoneNumbers.getInitialReplacementNumberSuggestion, {
+        businessId,
+      }),
+    ).rejects.toThrow("This business has already used its phone number change.");
+  });
 });

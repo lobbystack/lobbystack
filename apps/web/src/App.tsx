@@ -40,6 +40,7 @@ import { SettingsLayout } from "@/features/settings/SettingsLayout";
 import { SettingsAppearancePage } from "@/features/settings/SettingsAppearancePage";
 import { IntegrationsPage } from "@/features/settings/IntegrationsPage";
 import { SettingsBusinessPage } from "@/features/settings/SettingsBusinessPage";
+import { SettingsPhoneNumberPage } from "@/features/settings/SettingsPhoneNumberPage";
 import {
   SettingsBillingCompliancePage,
   SettingsBillingPage,
@@ -73,6 +74,7 @@ type ActiveBusiness = {
   slug: string;
   onboardingStage?: string;
   websiteUrl?: string;
+  phoneNumberReplacementUsedAt?: string;
 };
 
 type ActiveBusinessEntry = {
@@ -601,6 +603,22 @@ function WorkspaceShell() {
                   )
                 }
                 path="appearance"
+              />
+              <Route
+                element={
+                  businessId ? (
+                    <SettingsPhoneNumberPage
+                      businessId={businessId}
+                      canManageTenant={canManageTenant}
+                      {...(activeBusiness?.phoneNumberReplacementUsedAt
+                        ? { phoneNumberReplacementUsedAt: activeBusiness.phoneNumberReplacementUsedAt }
+                        : {})}
+                    />
+                  ) : (
+                    <Navigate replace to="/settings" />
+                  )
+                }
+                path="phone-number"
               />
               <Route
                 element={
