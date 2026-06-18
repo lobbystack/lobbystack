@@ -1,7 +1,7 @@
 ---
 title: "AI Receptionist Workflows Without Flowcharts"
 description: "AI receptionist workflows break when call behavior lives across prompts, webhooks, and branches. Use plain-language policy plus trusted tools instead."
-pubDate: 2026-06-19T09:00:00-04:00
+pubDate: 2026-06-18T09:00:00-04:00
 author: "LobbyStack Team"
 category: "Guides"
 featured: false

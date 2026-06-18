@@ -1,7 +1,7 @@
 ---
 title: "Des workflows IA sans flowcharts"
 description: "Les workflows de réceptionniste IA cassent quand le comportement vit dans des prompts, webhooks et branches. Utilisez une politique claire et des outils fiables."
-pubDate: 2026-06-19T09:00:00-04:00
+pubDate: 2026-06-18T09:00:00-04:00
 author: "Équipe LobbyStack"
 category: "Guides"
 featured: false
@@ -154,7 +154,7 @@ Vous pouvez encore utiliser n8n, Zapier, Make ou des webhooks maison quand un cl
 
 ## Où LobbyStack s'insère
 
-[LobbyStack](/blog/open-source-ai-receptionist-stack/) est une plateforme open source de réceptionniste IA. Elle fournit la couche produit de réception : appels, réservations, transcriptions, enregistrements, SMS, rappels, tâches, demandes de devis, transferts, revue dans un tableau de bord, usage et surfaces de facturation.
+[LobbyStack](/fr/blog/open-source-ai-receptionist-stack/) est une plateforme open source de réceptionniste IA. Elle fournit la couche produit de réception : appels, réservations, transcriptions, enregistrements, SMS, rappels, tâches, demandes de devis, transferts, revue dans un tableau de bord, usage et surfaces de facturation.
 
 Vous pouvez utiliser le cloud hébergé quand la vitesse compte, ou [l'auto-héberger avec Docker](/solutions/self-hosted-ai-receptionist/) quand vous voulez placer la pile sur votre infrastructure ou les serveurs d'un client.
 
