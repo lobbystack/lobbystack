@@ -5,7 +5,7 @@ pubDate: 2026-06-18T10:00:00-04:00
 author: "LobbyStack Team"
 category: "Guides"
 featured: false
-coverImage: "/illustrations/capabilities-network.webp"
+coverImage: "/illustrations/open-source-ai-receptionist-stack-hero.webp"
 locale: "en"
 canonicalSlug: "open-source-ai-receptionist-stack"
 ---
