@@ -108,9 +108,11 @@ const pageCopy = {
     id="main-content"
     class="min-h-screen bg-background pb-24 text-foreground"
   >
-    <div class="mx-auto max-w-7xl px-6 pt-24">
-      <div class="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-24">
-        <div class="lg:col-span-8">
+    <div class="mx-auto max-w-6xl px-6 pt-24">
+      <div
+        class="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,760px)_minmax(220px,260px)] lg:justify-center lg:gap-16"
+      >
+        <div class="min-w-0 lg:max-w-[760px]">
           <header class="mb-10">
             <h1 class="display-heading mb-6 text-foreground">
               {entry.data.title}
@@ -160,7 +162,7 @@ const pageCopy = {
           </div>
         </div>
 
-        <div class="space-y-12 lg:col-span-4">
+        <div class="space-y-12 lg:max-w-[260px]">
           <div>
             <h3
               class="mb-6 font-heading text-lg font-medium tracking-[-0.03em] text-foreground"
