@@ -3,7 +3,7 @@ title: "Open-Source AI Receptionist Stack"
 description: "LobbyStack is an open-source AI receptionist stack for calls, booking, transcripts, dashboards, billing, self-hosting, and client deployments."
 pubDate: 2026-06-18T10:00:00-04:00
 author: "LobbyStack Team"
-category: "Product updates"
+category: "Guides"
 featured: false
 coverImage: "/illustrations/capabilities-network.webp"
 locale: "en"
