@@ -299,7 +299,7 @@
 }
 
 .blog-copy {
-  @apply text-base leading-8 text-muted-foreground md:text-lg md:leading-9;
+  @apply text-base leading-8 text-foreground md:text-lg md:leading-9;
 }
 
 .display-heading,
@@ -380,7 +380,7 @@
 }
 
 .blog-copy td {
-  @apply border-t border-border/70 text-muted-foreground;
+  @apply border-t border-border/70 text-foreground;
 }
 
 .blog-copy th + th,

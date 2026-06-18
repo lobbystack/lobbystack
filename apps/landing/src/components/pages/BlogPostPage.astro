@@ -5,7 +5,7 @@ import { Footer } from "@/components/Footer"
 import { FeaturesCtaSection } from "@/components/features/FeaturesCtaSection"
 import { render } from "astro:content"
 import type { BlogEntry } from "@/lib/blog"
-import { blogCanonicalSlug, blogPath, getBlogPosts } from "@/lib/blog"
+import { blogPath } from "@/lib/blog"
 import {
   blogJsonLd,
   blogPostingJsonLd,
@@ -18,7 +18,6 @@ import {
 import {
   assertLocale,
   getCopy,
-  localizeHref,
   localizePath,
   type Locale,
 } from "@/i18n"
@@ -34,10 +33,6 @@ const locale = assertLocale(
 )
 const copy = getCopy(locale)
 const { Content } = await render(entry)
-const allPosts = await getBlogPosts(locale)
-const latestPosts = allPosts
-  .filter((p) => blogCanonicalSlug(p) !== blogCanonicalSlug(entry))
-  .slice(0, 3)
 
 const canonicalPath = blogPath(entry, locale)
 const publishedTime = entry.data.pubDate.toISOString()
@@ -46,17 +41,11 @@ const dateLocale = locale === "fr" ? "fr-FR" : "en-US"
 const pageCopy = {
   en: {
     titleSuffix: "LobbyStack Blog",
-    comparePricing: "Compare LobbyStack pricing",
-    setup: "See how setup works",
-    helpCenter: "Read the help center",
   },
   fr: {
     titleSuffix: "Blog Réceptionniste IA",
-    comparePricing: "Comparer les tarifs LobbyStack",
-    setup: "Voir comment fonctionne la configuration",
-    helpCenter: "Lire le centre d'aide",
   },
-} satisfies Record<Locale, Record<string, string>>
+} satisfies Record<Locale, { titleSuffix: string }>
 ---
 
 <Layout
@@ -108,126 +97,53 @@ const pageCopy = {
     id="main-content"
     class="min-h-screen bg-background pb-24 text-foreground"
   >
-    <div class="mx-auto max-w-7xl px-6 pt-24">
-      <div class="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-24">
-        <div class="lg:col-span-8">
-          <header class="mb-10">
-            <h1 class="display-heading mb-6 text-foreground">
-              {entry.data.title}
-            </h1>
+    <div class="mx-auto max-w-[760px] px-6 pt-24">
+      <header class="mb-10">
+        <h1 class="display-heading mb-6 text-foreground">
+          {entry.data.title}
+        </h1>
 
-            <div class="flex items-center gap-4">
-              {
-                entry.data.category && (
-                  <span class="rounded-md border border-border/60 px-2.5 py-1 font-mono text-[0.6875rem] text-muted-foreground">
-                    {entry.data.category}
-                  </span>
-                )
-              }
-              <time
-                class="text-xs font-medium text-muted-foreground"
-                datetime={entry.data.pubDate.toISOString()}
-              >
-                {
-                  entry.data.pubDate.toLocaleDateString(dateLocale, {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })
-                }
-              </time>
-            </div>
-          </header>
-
+        <div class="flex items-center gap-4">
           {
-            entry.data.coverImage && (
-              <div class="mb-12 aspect-[16/9] overflow-hidden rounded-2xl border border-border/30 bg-muted shadow-sm md:aspect-[2/1]">
-                <img
-                  src={entry.data.coverImage}
-                  alt={entry.data.title}
-                  width="1672"
-                  height="941"
-                  class="h-full w-full object-cover"
-                  decoding="async"
-                  fetchpriority="high"
-                />
-              </div>
+            entry.data.category && (
+              <span class="rounded-md border border-border/60 px-2.5 py-1 font-mono text-[0.6875rem] text-muted-foreground">
+                {entry.data.category}
+              </span>
             )
           }
-
-          <div class="blog-copy max-w-none">
-            <Content />
-          </div>
+          <time
+            class="text-xs font-medium text-muted-foreground"
+            datetime={entry.data.pubDate.toISOString()}
+          >
+            {
+              entry.data.pubDate.toLocaleDateString(dateLocale, {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })
+            }
+          </time>
         </div>
+      </header>
 
-        <div class="space-y-12 lg:col-span-4">
-          <div>
-            <h3
-              class="mb-6 font-heading text-lg font-medium tracking-[-0.03em] text-foreground"
-            >
-              {copy.common.productResources}
-            </h3>
-            <div class="flex flex-col gap-3 text-sm">
-              <a
-                class="rounded-xl border border-border/50 bg-card px-4 py-3 text-foreground transition-colors hover:bg-muted/40"
-                href={localizeHref(locale, "/pricing/")}
-                data-ph-capture-attribute-section="blog_sidebar"
-                data-ph-capture-attribute-action="view_pricing"
-                data-ph-capture-attribute-destination="/pricing/"
-              >
-                {pageCopy[locale].comparePricing}
-              </a>
-              <a
-                class="rounded-xl border border-border/50 bg-card px-4 py-3 text-foreground transition-colors hover:bg-muted/40"
-                href={localizeHref(locale, "/#how-it-works")}
-              >
-                {pageCopy[locale].setup}
-              </a>
-              <a
-                class="rounded-xl border border-border/50 bg-card px-4 py-3 text-foreground transition-colors hover:bg-muted/40"
-                href="https://docs.lobbystack.com/introduction"
-                target="_blank"
-                rel="noopener noreferrer"
-                data-ph-capture-attribute-section="blog_sidebar"
-                data-ph-capture-attribute-action="view_help_center"
-                data-ph-capture-attribute-destination="https://docs.lobbystack.com/introduction"
-              >
-                {pageCopy[locale].helpCenter}
-              </a>
-            </div>
+      {
+        entry.data.coverImage && (
+          <div class="mb-12 aspect-[16/9] overflow-hidden rounded-2xl border border-border/30 bg-muted shadow-sm md:aspect-[2/1]">
+            <img
+              src={entry.data.coverImage}
+              alt={entry.data.title}
+              width="1672"
+              height="941"
+              class="h-full w-full object-cover"
+              decoding="async"
+              fetchpriority="high"
+            />
           </div>
+        )
+      }
 
-          {
-            latestPosts.length > 0 && (
-              <div>
-                <h3 class="mb-6 font-heading text-lg font-semibold text-foreground">
-                  {copy.common.latestBlogPosts}
-                </h3>
-                <div class="flex flex-col gap-4">
-                  {latestPosts.map((post) => (
-                    <a href={blogPath(post, locale)} class="group block">
-                      <div class="rounded-2xl border border-border/50 bg-card p-5">
-                        <time
-                          class="mb-2 block text-[11px] font-medium text-muted-foreground"
-                          datetime={post.data.pubDate.toISOString()}
-                        >
-                          {post.data.pubDate.toLocaleDateString(dateLocale, {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </time>
-                        <h4 class="font-heading text-sm leading-tight font-medium transition-colors group-hover:text-primary">
-                          {post.data.title}
-                        </h4>
-                      </div>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )
-          }
-        </div>
+      <div class="blog-copy max-w-none">
+        <Content />
       </div>
     </div>
   </article>
