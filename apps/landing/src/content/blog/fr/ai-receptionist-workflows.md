@@ -142,17 +142,15 @@ la raison du transfert et indique quand l'équipe répondra.
 
 L'entreprise obtient un transfert plus fiable parce que l'IA suit une politique, la couche vocale exécute le transfert et le backend enregistre le résultat.
 
-## Les outils de workflow gardent leur place
+## LobbyStack remplace la chaîne de workflow de réception
 
-n8n, Zapier, Make et les webhooks maison restent utiles. Utilisez-les autour de la réception :
+Les outils de workflow peuvent gérer des automatisations métier hors appel. Ils font de mauvais réceptionnistes en direct.
 
-- envoyer un courriel après un appel réservé ;
-- pousser un prospect qualifié dans un CRM ;
-- alerter un canal d'équipe ;
-- lancer une séquence après appel ;
-- synchroniser les données vers le reporting.
+Si votre réceptionniste IA dépend d'une chaîne de branches pour décider quoi dire, quand réserver, quand transférer, comment récupérer après un échec d'outil et comment enregistrer le résultat de l'appel, vous demandez à un outil de workflow de se comporter comme un produit téléphonique.
 
-Le comportement en direct demande une propriété plus serrée. Le produit doit connaître l'état de l'appel, les résultats d'outils, le contexte de transcription, la raison du transfert et le résultat final. Si ces pièces vivent dans des branches de workflow séparées, l'opérateur maintient un diagramme au lieu d'améliorer la réception.
+LobbyStack remplace cette couche. Il possède le comportement en direct, l'état de l'appel, les résultats d'outils, le contexte de transcription, la raison du transfert et le résultat final.
+
+Vous pouvez encore utiliser n8n, Zapier, Make ou des webhooks maison quand un client a des systèmes en aval que LobbyStack n'intègre pas encore. Gardez-les hors de l'appel en direct. Le réceptionniste IA doit pouvoir décider de la prochaine action responsable pendant l'appel, puis enregistrer un résultat clair auquel l'équipe peut se fier.
 
 ## Où LobbyStack s'insère
 

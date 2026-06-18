@@ -78,7 +78,7 @@ That split matters. The prompt should explain policy. The tool should change sta
 
 For example, a plain-language booking policy can tell the AI what information to collect, what it may say, and what to do when no slot works. The availability and booking tools still decide which times exist and whether the appointment gets created.
 
-That gives the business a cleaner surface to review. A clinic owner, med spa manager, or home service operator can read a paragraph and tell you whether the rule matches how the front desk should behave. They should not need to audit ten workflow branches to approve a phone policy.
+That gives the business a cleaner surface to review. A clinic owner, med spa manager, or home service operator can read a paragraph and tell you whether the rule matches how the front desk should behave. They can approve a phone policy without auditing ten workflow branches.
 
 ## Four call paths that show the difference
 
@@ -142,17 +142,15 @@ tell the caller when the team will respond.
 
 The business gets a safer handoff because the AI has a policy, the voice layer executes the transfer, and the backend records the outcome.
 
-## Workflow tools still belong in the stack
+## LobbyStack replaces the receptionist workflow chain
 
-n8n, Zapier, Make, and custom webhooks still help. Use them for the work around the receptionist:
+Workflow tools can handle business automations outside the call. They make a poor live receptionist.
 
-- send a follow-up email after a booked call
-- push a qualified lead into a CRM
-- alert a team channel
-- start a post-call nurture sequence
-- sync data into reporting
+If your AI receptionist depends on a chain of branches to decide what to say, when to book, when to transfer, how to recover from a failed tool call, and how to record the call outcome, you are asking a workflow builder to behave like a phone product.
 
-Live call behavior needs tighter ownership. The product should know call state, tool results, transcript context, handoff reason, and final outcome. If those pieces live across disconnected workflow branches, the operator ends up maintaining a diagram instead of improving the receptionist.
+LobbyStack replaces that layer. It owns the live call behavior, call state, tool results, transcript context, handoff reason, and final outcome.
+
+You may still use n8n, Zapier, Make, or custom webhooks when a client has downstream systems LobbyStack does not integrate with yet. Keep them outside the live call. The AI receptionist should be able to decide the next responsible action during the call, then record a clean outcome staff can trust.
 
 ## Where LobbyStack fits
 
