@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { api } from "../../../../../convex/_generated/api";
@@ -66,6 +67,7 @@ export function SettingsPhoneNumberPage({
   phoneNumberReplacementUsedAt,
 }: SettingsPhoneNumberPageProps) {
   const { i18n, t } = useTranslation("settings");
+  const navigate = useNavigate();
   const primaryPhoneNumber = useQuery(api.businesses.catalog.getPrimaryPhoneNumber, {
     businessId,
   }) as PrimaryPhoneNumber | null | undefined;
@@ -90,6 +92,11 @@ export function SettingsPhoneNumberPage({
     toast.success(t(hasPhoneNumber ? "phoneNumber.toast.changed" : "phoneNumber.toast.added"));
     setIsDialogOpen(false);
     void result;
+  }
+
+  function handleVerifyPhoneRequired(): void {
+    setIsDialogOpen(false);
+    navigate("/onboarding/verify-phone");
   }
 
   return (
@@ -178,6 +185,7 @@ export function SettingsPhoneNumberPage({
                           unavailable: t("phoneNumber.picker.unavailable"),
                         }}
                         onClaimed={handleClaimed}
+                        onVerifyPhoneRequired={handleVerifyPhoneRequired}
                         searchAvailableNumbers={
                           searchReplacementNumbers as (args: {
                             businessId: Id<"businesses">;

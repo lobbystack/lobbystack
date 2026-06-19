@@ -215,6 +215,13 @@ function isPhoneVerificationStage(stage: string | undefined): boolean {
   return stage === "verify_phone" || stage === "verify_phone_code";
 }
 
+function canUseCompletedBusinessPhoneVerification(input: {
+  onboardingStage: string | undefined;
+  phoneVerificationTime: number | undefined;
+}): boolean {
+  return input.onboardingStage === "completed" && input.phoneVerificationTime === undefined;
+}
+
 function WorkspaceSetupPendingPage(props: { businessName?: string }) {
   const { t } = useTranslation("onboarding");
 
@@ -944,7 +951,15 @@ function OnboardingVerifyPhoneRoute() {
     return nonAdminElement;
   }
 
-  if (!isPhoneVerificationStage(ctx.activeBusiness.onboardingStage)) {
+  const canUseSettingsVerification = canUseCompletedBusinessPhoneVerification({
+    onboardingStage: ctx.activeBusiness.onboardingStage,
+    phoneVerificationTime: ctx.currentUser?.phoneVerificationTime,
+  });
+
+  if (
+    !isPhoneVerificationStage(ctx.activeBusiness.onboardingStage) &&
+    !canUseSettingsVerification
+  ) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 
@@ -986,7 +1001,15 @@ function OnboardingVerifyPhoneCodeRoute() {
     return nonAdminElement;
   }
 
-  if (!isPhoneVerificationStage(ctx.activeBusiness.onboardingStage)) {
+  const canUseSettingsVerification = canUseCompletedBusinessPhoneVerification({
+    onboardingStage: ctx.activeBusiness.onboardingStage,
+    phoneVerificationTime: ctx.currentUser?.phoneVerificationTime,
+  });
+
+  if (
+    !isPhoneVerificationStage(ctx.activeBusiness.onboardingStage) &&
+    !canUseSettingsVerification
+  ) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 

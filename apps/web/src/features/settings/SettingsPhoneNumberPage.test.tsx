@@ -11,6 +11,7 @@ import { SettingsPhoneNumberPage } from "./SettingsPhoneNumberPage";
 const {
   claimReplacementNumberMock,
   getInitialReplacementNumberSuggestionMock,
+  navigateMock,
   searchReplacementNumbersMock,
   toastSuccessMock,
   useObservedActionMock,
@@ -18,6 +19,7 @@ const {
 } = vi.hoisted(() => ({
   claimReplacementNumberMock: vi.fn(),
   getInitialReplacementNumberSuggestionMock: vi.fn(),
+  navigateMock: vi.fn(),
   searchReplacementNumbersMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   useObservedActionMock: vi.fn(),
@@ -76,6 +78,10 @@ vi.mock("react-i18next", () => ({
       return translations[key] ?? key;
     },
   }),
+}));
+
+vi.mock("react-router-dom", () => ({
+  useNavigate: () => navigateMock,
 }));
 
 vi.mock("@/components/ui/dialog", async () => {
@@ -183,6 +189,7 @@ describe("SettingsPhoneNumberPage", () => {
   beforeEach(() => {
     claimReplacementNumberMock.mockReset();
     getInitialReplacementNumberSuggestionMock.mockReset();
+    navigateMock.mockReset();
     searchReplacementNumbersMock.mockReset();
     toastSuccessMock.mockReset();
     useObservedActionMock.mockReset();
@@ -279,6 +286,21 @@ describe("SettingsPhoneNumberPage", () => {
       await screen.findByText("Pick a number callers can use to reach your AI receptionist."),
     ).toBeTruthy();
     expect(await screen.findByText("(416) 555-0124")).toBeTruthy();
+  });
+
+  it("routes first-number users to phone verification when their mobile is unverified", async () => {
+    const user = userEvent.setup();
+    useQueryMock.mockReturnValue(null);
+    getInitialReplacementNumberSuggestionMock.mockRejectedValueOnce(
+      new Error("Verify your mobile number before choosing a business number."),
+    );
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: "Get number" }));
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith("/onboarding/verify-phone");
+    });
   });
 
   it("refreshes alternatives when a selected number becomes unavailable", async () => {
