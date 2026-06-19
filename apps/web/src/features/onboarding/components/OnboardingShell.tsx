@@ -48,6 +48,29 @@ const onboardingStepRoutes: Record<number, string> = {
   10: "/onboarding/attribution",
 };
 
+function getOnboardingStepRoutes({
+  current,
+  navigableUntil,
+}: {
+  current: number;
+  navigableUntil?: number | undefined;
+}): Record<number, string> {
+  const maxNavigableStep = navigableUntil ?? current;
+
+  return Object.fromEntries(
+    Object.entries(onboardingStepRoutes).filter(([step]) => {
+      const stepNumber = Number(step);
+      const isPastPhoneVerification = current > 7;
+      const isPhoneVerificationStep = stepNumber === 6 || stepNumber === 7;
+
+      return (
+        stepNumber <= maxNavigableStep &&
+        (!isPastPhoneVerification || !isPhoneVerificationStep)
+      );
+    }),
+  );
+}
+
 /**
  * Shared layout for every redesigned auth + onboarding screen.
  *
@@ -111,11 +134,7 @@ export function OnboardingShell({
         {progress ? (
           <OnboardingProgress
             current={progress.current}
-            routes={Object.fromEntries(
-              Object.entries(onboardingStepRoutes).filter(
-                ([step]) => Number(step) <= (progress.navigableUntil ?? progress.current),
-              ),
-            )}
+            routes={getOnboardingStepRoutes(progress)}
             total={progress.total}
           />
         ) : null}
