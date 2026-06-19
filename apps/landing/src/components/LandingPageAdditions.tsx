@@ -117,25 +117,25 @@ const homeSectionsCopy = {
           name: "Free",
           price: "$0",
           description:
-            "Includes 30 voice minutes, 10 alert SMS segments, 2 outbound call attempts, and all features.",
+            "30 voice minutes, 10 alert SMS segments, 2 outbound call attempts, and all features.",
         },
         {
           name: "Starter",
           price: "$30/mo",
           description:
-            "Includes 150 voice minutes, 50 alert SMS segments, 20 outbound call attempts, and email support.",
+            "150 voice minutes, 50 alert SMS segments, 20 outbound call attempts, and email support.",
         },
         {
           name: "Pro",
           price: "$100/mo",
           description:
-            "Includes 500 voice minutes, 200 alert SMS segments, 100 outbound call attempts, and priority email support.",
+            "500 voice minutes, 200 alert SMS segments, 100 outbound call attempts, and priority email support.",
         },
         {
           name: "Enterprise",
           price: "Custom",
           description:
-            "Includes higher volume, multiple numbers, multi-location routing, custom fallback rules, and self-hosting implementation support.",
+            "Higher volume, multiple numbers, multi-location routing, custom fallback rules, and self-hosting implementation support.",
         },
       ],
     },
@@ -261,25 +261,25 @@ const homeSectionsCopy = {
           name: "Free",
           price: "$0",
           description:
-            "Inclut 30 minutes vocales, 10 segments SMS d’alerte, 2 appels sortants et toutes les fonctionnalités.",
+            "30 minutes vocales, 10 segments SMS d’alerte, 2 appels sortants et toutes les fonctionnalités.",
         },
         {
           name: "Starter",
           price: "$30/mois",
           description:
-            "Inclut 150 minutes vocales, 50 segments SMS d’alerte, 20 appels sortants et support par courriel.",
+            "150 minutes vocales, 50 segments SMS d’alerte, 20 appels sortants et support par courriel.",
         },
         {
           name: "Pro",
           price: "$100/mois",
           description:
-            "Inclut 500 minutes vocales, 200 segments SMS d’alerte, 100 appels sortants et support prioritaire par courriel.",
+            "500 minutes vocales, 200 segments SMS d’alerte, 100 appels sortants et support prioritaire par courriel.",
         },
         {
           name: "Enterprise",
           price: "Sur mesure",
           description:
-            "Inclut volume supérieur, plusieurs numéros, routage multi-sites, règles de secours personnalisées et accompagnement pour l’auto-hébergement.",
+            "Volume supérieur, plusieurs numéros, routage multi-sites, règles de secours personnalisées et accompagnement pour l’auto-hébergement.",
         },
       ],
     },
