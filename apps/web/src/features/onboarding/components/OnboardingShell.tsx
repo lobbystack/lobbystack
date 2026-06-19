@@ -65,8 +65,15 @@ function getOnboardingStepRoutes({
   );
 }
 
-function getHiddenOnboardingSteps({ current }: { current: number }): number[] {
-  return current > 7 ? [6, 7] : [];
+function getHiddenOnboardingSteps({
+  current,
+  navigableUntil,
+}: {
+  current: number;
+  navigableUntil?: number | undefined;
+}): number[] {
+  const maxNavigableStep = navigableUntil ?? current;
+  return maxNavigableStep > 7 ? [6, 7] : [];
 }
 
 /**
