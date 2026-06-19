@@ -1479,6 +1479,49 @@ describe("onboarding phone-number actions", () => {
     expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
   });
 
+  it("rejects stale onboarding claims after a number exists in a later stage", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15815550100",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "plan",
+      });
+      await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550122",
+        twilioPhoneSid: "PN-existing-onboarding-number",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+      });
+    });
+
+    const result = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
+
+    expect(result).toEqual({
+      status: "failed",
+      message: "Phone-number onboarding has already been completed for this business.",
+    });
+    expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
+    expect(
+      (await t.query(internal.businesses.admin.getBusinessById, { businessId }))
+        ?.onboardingStage,
+    ).toBe("plan");
+    expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(1);
+  });
+
   it("rejects a second claim while another claim is already in progress", async () => {
     const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);

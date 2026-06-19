@@ -253,6 +253,20 @@ export const beginOnboardingNumberClaim = internalMutation({
       throw new Error("Phone-number onboarding has already been completed for this business.");
     }
 
+    if (ONBOARDING_STAGE_INDEX[stage] > ONBOARDING_STAGE_INDEX.phone_number) {
+      const existingPhoneNumbers = await ctx.db
+        .query("phone_numbers")
+        .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+        .collect();
+      const existingPrimaryPhoneNumber = existingPhoneNumbers.find(
+        (phoneNumber) => phoneNumber.status === "active",
+      );
+
+      if (existingPrimaryPhoneNumber) {
+        throw new Error("Phone-number onboarding has already been completed for this business.");
+      }
+    }
+
     await ctx.db.patch(args.businessId, {
       onboardingStage: "phone_number_claiming",
     });
