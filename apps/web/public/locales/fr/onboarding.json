@@ -128,8 +128,6 @@
     "unavailable": "Ce numéro vient d'être pris. Choisissez-en un autre.",
     "selectedTitle": "Le numéro de votre IA",
     "selectedNumberLabel": "Numéro sélectionné",
-    "skippedTitle": "Aucun numéro ajouté",
-    "skippedDescription": "Vous pourrez en ajouter un après l'intégration.",
     "continue": "Continuer"
   },
   "plan": {

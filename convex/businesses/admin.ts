@@ -23,7 +23,11 @@ import {
   DEFAULT_RECEPTIONIST_TRANSFER_MODE,
 } from "../lib/receptionistProfileDefaults";
 import { DEFAULT_APPOINTMENT_CHANGE_POLICY } from "../lib/appointmentChangePolicy";
-import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
+import {
+  ONBOARDING_STAGE_INDEX,
+  normalizeOnboardingStage,
+  type OnboardingStage,
+} from "../lib/onboardingStage";
 
 import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 
@@ -230,17 +234,22 @@ export const beginOnboardingNumberClaim = internalMutation({
   args: {
     businessId: v.id("businesses"),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ restoreStage: OnboardingStage }> => {
     const business = await ctx.db.get(args.businessId);
     if (!business) {
       throw new Error("Business not found.");
     }
 
-    if (business.onboardingStage === "phone_number_claiming") {
+    const stage = normalizeOnboardingStage(business.onboardingStage);
+
+    if (stage === "phone_number_claiming") {
       throw new Error("A phone-number claim is already in progress for this business.");
     }
 
-    if (business.onboardingStage !== "phone_number") {
+    if (
+      ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.phone_number ||
+      stage === "completed"
+    ) {
       throw new Error("Phone-number onboarding has already been completed for this business.");
     }
 
@@ -248,27 +257,31 @@ export const beginOnboardingNumberClaim = internalMutation({
       onboardingStage: "phone_number_claiming",
     });
 
-    return "phone_number_claiming";
+    return { restoreStage: stage };
   },
 });
 
 export const releaseOnboardingNumberClaim = internalMutation({
   args: {
     businessId: v.id("businesses"),
+    restoreStage: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<OnboardingStage> => {
     const business = await ctx.db.get(args.businessId);
     if (!business) {
       throw new Error("Business not found.");
     }
 
+    const restoreStage = args.restoreStage
+      ? normalizeOnboardingStage(args.restoreStage)
+      : "phone_number";
     if (business.onboardingStage === "phone_number_claiming") {
       await ctx.db.patch(args.businessId, {
-        onboardingStage: "phone_number",
+        onboardingStage: restoreStage,
       });
     }
 
-    return "phone_number";
+    return restoreStage;
   },
 });
 

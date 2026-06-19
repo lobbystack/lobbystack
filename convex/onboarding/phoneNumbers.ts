@@ -681,7 +681,7 @@ async function assertOnboardingAccess(
   });
 }
 
-async function requireBusinessInPhoneNumberStage(
+async function requireBusinessCanUsePhoneNumberPicker(
   ctx: ActionCtx,
   businessId: Id<"businesses">,
 ): Promise<void> {
@@ -692,7 +692,11 @@ async function requireBusinessInPhoneNumberStage(
     throw new Error("Business not found.");
   }
   const stage = normalizeOnboardingStage(business.onboardingStage);
-  if (stage !== "phone_number") {
+  if (
+    ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.phone_number ||
+    stage === "phone_number_claiming" ||
+    stage === "completed"
+  ) {
     throw new Error("Phone-number onboarding is no longer available for this business.");
   }
 }
@@ -768,7 +772,7 @@ export const getInitialNumberSuggestion = action({
   },
   handler: async (ctx, args) => {
     const { userId } = await assertOnboardingAccess(ctx, args.businessId);
-    await requireBusinessInPhoneNumberStage(ctx, args.businessId);
+    await requireBusinessCanUsePhoneNumberPicker(ctx, args.businessId);
     await assertInitialSuggestionAllowed(ctx, {
       businessId: args.businessId,
       userId,
@@ -800,7 +804,7 @@ export const searchAvailableNumbers = action({
   },
   handler: async (ctx, args) => {
     const { userId } = await assertOnboardingAccess(ctx, args.businessId);
-    await requireBusinessInPhoneNumberStage(ctx, args.businessId);
+    await requireBusinessCanUsePhoneNumberPicker(ctx, args.businessId);
     await assertInventorySearchAllowed(ctx, {
       businessId: args.businessId,
       userId,
@@ -854,6 +858,7 @@ export const claimOnboardingNumber = action({
     let savedPhoneNumberId: Id<"phone_numbers"> | null = null;
     let claimEventId: Id<"onboarding_number_claim_events"> | null = null;
     let claimLocked = false;
+    let restoreStage: "phone_number" | "plan" | "attribution" = "phone_number";
     const claimE164 = normalizeClaimE164(args.e164);
     if (!claimE164) {
       return {
@@ -864,9 +869,16 @@ export const claimOnboardingNumber = action({
     const unavailableE164s = new Set<string>();
 
     try {
-      await ctx.runMutation(internal.businesses.admin.beginOnboardingNumberClaim, {
+      const claimLock = await ctx.runMutation(internal.businesses.admin.beginOnboardingNumberClaim, {
         businessId: args.businessId,
       });
+      if (
+        claimLock.restoreStage === "phone_number" ||
+        claimLock.restoreStage === "plan" ||
+        claimLock.restoreStage === "attribution"
+      ) {
+        restoreStage = claimLock.restoreStage;
+      }
       claimLocked = true;
 
       await assertClaimAttemptAllowed(ctx, {
@@ -942,7 +954,7 @@ export const claimOnboardingNumber = action({
       // followed by plan + attribution before onboarding completes.
       await ctx.runMutation(internal.businesses.admin.advanceOnboardingStage, {
         businessId: args.businessId,
-        onboardingStage: "plan",
+        onboardingStage: restoreStage === "attribution" ? "attribution" : "plan",
       });
       recordSuccessfulPurchaseLog({
         businessId: args.businessId,
@@ -985,6 +997,7 @@ export const claimOnboardingNumber = action({
         try {
           await ctx.runMutation(internal.businesses.admin.releaseOnboardingNumberClaim, {
             businessId: args.businessId,
+            restoreStage,
           });
         } catch (releaseClaimError) {
           cleanupError =

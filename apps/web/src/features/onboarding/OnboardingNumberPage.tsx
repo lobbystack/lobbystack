@@ -72,7 +72,7 @@ export function OnboardingNumberPage({
   const [hasCompletedClaim, setHasCompletedClaim] = useState(false);
   const [isSkipping, setIsSkipping] = useState(false);
   const [skipError, setSkipError] = useState<string | null>(null);
-  const shouldLoadInventory = primaryPhoneNumber === null && !isComplete;
+  const shouldLoadInventory = primaryPhoneNumber === null;
 
   useEffect(() => {
     if (!isComplete && primaryPhoneNumber) {
@@ -163,30 +163,32 @@ export function OnboardingNumberPage({
       );
     }
 
-    const selectedNumber = primaryPhoneNumber ? formatPhoneNumber(primaryPhoneNumber.e164) : null;
+    if (primaryPhoneNumber) {
+      const selectedNumber = formatPhoneNumber(primaryPhoneNumber.e164);
 
-    return (
-      <OnboardingShell
-        onSignOut={onSignOut}
-        progress={{ current: 8, navigableUntil: progressNavigableUntil, total: 10 }}
-        title={selectedNumber ? t("number.selectedTitle") : t("number.title")}
-        width="md"
-      >
-        <Surface className="flex flex-col gap-5 p-6 text-center">
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium text-muted-foreground">
-              {selectedNumber ? t("number.selectedNumberLabel") : t("number.skippedTitle")}
-            </p>
-            <p className="text-2xl font-semibold text-foreground">
-              {selectedNumber ?? t("number.skippedDescription")}
-            </p>
-          </div>
-          <Button onClick={() => navigate("/onboarding/plan")} type="button">
-            {t("number.continue")}
-          </Button>
-        </Surface>
-      </OnboardingShell>
-    );
+      return (
+        <OnboardingShell
+          onSignOut={onSignOut}
+          progress={{ current: 8, navigableUntil: progressNavigableUntil, total: 10 }}
+          title={t("number.selectedTitle")}
+          width="md"
+        >
+          <Surface className="flex flex-col gap-5 p-6 text-center">
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium text-muted-foreground">
+                {t("number.selectedNumberLabel")}
+              </p>
+              <p className="text-2xl font-semibold text-foreground">
+                {selectedNumber}
+              </p>
+            </div>
+            <Button onClick={() => navigate("/onboarding/plan")} type="button">
+              {t("number.continue")}
+            </Button>
+          </Surface>
+        </OnboardingShell>
+      );
+    }
   }
 
   return (

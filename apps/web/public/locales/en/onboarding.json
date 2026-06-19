@@ -128,8 +128,6 @@
     "unavailable": "That number was just taken. Pick another one from the refreshed list.",
     "selectedTitle": "Your AI's phone number",
     "selectedNumberLabel": "Selected number",
-    "skippedTitle": "No phone number added",
-    "skippedDescription": "You can add one after onboarding.",
     "continue": "Continue"
   },
   "plan": {

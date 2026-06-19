@@ -118,6 +118,31 @@ describe("OnboardingNumberPage", () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
+  it("shows the picker when the user goes back after skipping the number step", async () => {
+    getInitialNumberSuggestionMock.mockResolvedValue({
+      market: { countryCode: "US" },
+      suggestion: null,
+      alternatives: [],
+    });
+
+    render(
+      <OnboardingNumberPage
+        businessId={"business-1" as never}
+        isComplete
+        onSignOut={() => {}}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getInitialNumberSuggestionMock).toHaveBeenCalledWith({
+        businessId: "business-1",
+      });
+    });
+    expect(screen.queryByText("number.skippedTitle")).toBeNull();
+    expect(screen.queryByText("number.skippedDescription")).toBeNull();
+    expect(screen.getByRole("button", { name: "number.skipLater" })).toBeTruthy();
+  });
+
   it("lets users search UK business-number inventory", async () => {
     const user = userEvent.setup();
     getInitialNumberSuggestionMock.mockResolvedValue({
