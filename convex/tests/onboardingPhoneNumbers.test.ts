@@ -1313,6 +1313,51 @@ describe("onboarding phone-number actions", () => {
     });
   });
 
+  it("rejects first settings phone number suggestions before onboarding is completed", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15815550100",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await expect(
+      authed.action(api.settings.phoneNumbers.getInitialReplacementNumberSuggestion, {
+        businessId,
+      }),
+    ).rejects.toThrow("Finish onboarding before adding a phone number in settings.");
+    expect(listLocalNumbersMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a first settings phone number claim before onboarding is completed", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15815550100",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    const result = await authed.action(
+      api.settings.phoneNumbers.claimReplacementNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
+
+    expect(result).toEqual({
+      status: "failed",
+      message: "Finish onboarding before adding a phone number in settings.",
+    });
+    expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
+    expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(0);
+  });
+
   it("blocks a settings first-number claim while another settings claim is reserved", async () => {
     const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);

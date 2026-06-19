@@ -415,6 +415,11 @@ describe("tenant admin authorization", () => {
       subject: "tenant-phone-admin",
       role: "business_admin",
     });
+    await t.run(async (ctx: TestContext) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "completed",
+      });
+    });
 
     await expect(
       authed.action(api.settings.phoneNumbers.getInitialReplacementNumberSuggestion, {

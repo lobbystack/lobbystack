@@ -25,6 +25,7 @@ import {
   type NumberSuggestionContext,
   type VerifiedPhoneMarket,
 } from "../lib/onboardingPhoneNumbers";
+import { normalizeOnboardingStage } from "../lib/onboardingStage";
 import { getTwilioClient } from "../lib/node/twilioClient";
 import {
   buildTwilioSmsInboundWebhookUrl,
@@ -68,6 +69,8 @@ type ReplacementClaimResult =
 
 const PHONE_NUMBER_CHANGE_USED_MESSAGE =
   "This business has already used its phone number change.";
+const FIRST_PHONE_NUMBER_SETTINGS_REQUIRES_COMPLETED_ONBOARDING_MESSAGE =
+  "Finish onboarding before adding a phone number in settings.";
 const OLD_PHONE_NUMBER_RELEASE_DELAY_MS = 30 * 24 * 60 * 60 * 1000;
 const OLD_PHONE_NUMBER_RELEASE_RETRY_DELAY_MS = 24 * 60 * 60 * 1000;
 const OLD_PHONE_NUMBER_RELEASE_MAX_ATTEMPTS = 3;
@@ -251,6 +254,8 @@ async function resolveSettingsNumberSuggestionContext(
     },
   );
 
+  await assertFirstSettingsPhoneNumberAvailable(ctx, businessId, currentPhoneNumber);
+
   if (!currentPhoneNumber) {
     return {
       ...(await resolveVerifiedSuggestionContext(ctx, businessId, userId)),
@@ -278,6 +283,26 @@ async function assertPhoneNumberReplacementAvailable(
   }
   if (business.phoneNumberReplacementUsedAt) {
     throw new Error(PHONE_NUMBER_CHANGE_USED_MESSAGE);
+  }
+}
+
+async function assertFirstSettingsPhoneNumberAvailable(
+  ctx: ActionCtx,
+  businessId: Id<"businesses">,
+  currentPhoneNumber: Doc<"phone_numbers"> | null,
+): Promise<void> {
+  if (currentPhoneNumber) {
+    return;
+  }
+
+  const business = await ctx.runQuery(internal.businesses.admin.getBusinessById, {
+    businessId,
+  });
+  if (!business) {
+    throw new Error("Business not found.");
+  }
+  if (normalizeOnboardingStage(business.onboardingStage) !== "completed") {
+    throw new Error(FIRST_PHONE_NUMBER_SETTINGS_REQUIRES_COMPLETED_ONBOARDING_MESSAGE);
   }
 }
 
@@ -432,6 +457,11 @@ export const claimReplacementNumber = action({
     }
 
     try {
+      await assertFirstSettingsPhoneNumberAvailable(
+        ctx,
+        args.businessId,
+        currentPhoneNumber,
+      );
       verifyNumberClaimToken({
         token: args.claimToken,
         businessId: args.businessId,
