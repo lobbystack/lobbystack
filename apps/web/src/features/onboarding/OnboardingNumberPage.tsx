@@ -24,7 +24,8 @@ import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 type OnboardingNumberPageProps = {
   businessId: Id<"businesses">;
   onSignOut: () => void;
-  isComplete?: boolean;
+  hasReachedPlan?: boolean;
+  isOnboardingComplete?: boolean;
   progressNavigableUntil?: number;
 };
 
@@ -49,7 +50,8 @@ function formatPhoneNumber(e164: string): string {
 export function OnboardingNumberPage({
   businessId,
   onSignOut,
-  isComplete = false,
+  hasReachedPlan = false,
+  isOnboardingComplete = false,
   progressNavigableUntil,
 }: OnboardingNumberPageProps) {
   const { t } = useTranslation("onboarding");
@@ -82,16 +84,16 @@ export function OnboardingNumberPage({
   const [isSkipping, setIsSkipping] = useState(false);
   const [skipError, setSkipError] = useState<string | null>(null);
   const shouldLoadInventory = primaryPhoneNumber === null;
-  const useSettingsNumberPicker = isComplete && primaryPhoneNumber === null;
+  const useSettingsNumberPicker = isOnboardingComplete && primaryPhoneNumber === null;
 
   useEffect(() => {
-    if (!isComplete && primaryPhoneNumber) {
+    if (!hasReachedPlan && primaryPhoneNumber) {
       navigate("/onboarding/plan", {
         replace: true,
         state: { justClaimedPhoneNumber: true },
       });
     }
-  }, [isComplete, navigate, primaryPhoneNumber]);
+  }, [hasReachedPlan, navigate, primaryPhoneNumber]);
 
   async function handleSkip(): Promise<void> {
     if (isSkipping) return;
@@ -147,7 +149,7 @@ export function OnboardingNumberPage({
     void navigate("/onboarding/verify-phone");
   }, [navigate]);
 
-  if (hasCompletedClaim || (primaryPhoneNumber && !isComplete)) {
+  if (hasCompletedClaim || (primaryPhoneNumber && !hasReachedPlan)) {
     return (
       <OnboardingShell
         onSignOut={onSignOut}
@@ -162,7 +164,7 @@ export function OnboardingNumberPage({
     );
   }
 
-  if (isComplete) {
+  if (hasReachedPlan) {
     if (primaryPhoneNumber === undefined) {
       return (
         <OnboardingShell

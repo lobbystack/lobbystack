@@ -117,7 +117,7 @@ describe("OnboardingNumberPage", () => {
     render(
       <OnboardingNumberPage
         businessId={"business-1" as never}
-        isComplete
+        hasReachedPlan
         onSignOut={() => {}}
       />,
     );
@@ -137,7 +137,8 @@ describe("OnboardingNumberPage", () => {
     render(
       <OnboardingNumberPage
         businessId={"business-1" as never}
-        isComplete
+        hasReachedPlan
+        isOnboardingComplete
         onSignOut={() => {}}
       />,
     );
@@ -151,6 +152,30 @@ describe("OnboardingNumberPage", () => {
     expect(screen.queryByText("number.skippedTitle")).toBeNull();
     expect(screen.queryByText("number.skippedDescription")).toBeNull();
     expect(screen.queryByRole("button", { name: "number.skipLater" })).toBeNull();
+  });
+
+  it("keeps skipped users on the onboarding picker before onboarding is complete", async () => {
+    getInitialNumberSuggestionMock.mockResolvedValue({
+      market: { countryCode: "US" },
+      suggestion: null,
+      alternatives: [],
+    });
+
+    render(
+      <OnboardingNumberPage
+        businessId={"business-1" as never}
+        hasReachedPlan
+        onSignOut={() => {}}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getInitialNumberSuggestionMock).toHaveBeenCalledWith({
+        businessId: "business-1",
+      });
+    });
+    expect(getInitialReplacementNumberSuggestionMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "number.skipLater" })).toBeTruthy();
   });
 
   it("lets users search UK business-number inventory", async () => {
