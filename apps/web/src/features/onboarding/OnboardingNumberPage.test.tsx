@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -45,14 +45,17 @@ vi.mock("react-router-dom", () => ({
 vi.mock("@/features/onboarding/components/OnboardingShell", () => ({
   OnboardingShell: ({
     children,
+    footer,
     title,
   }: {
     children: React.ReactNode;
+    footer?: React.ReactNode;
     title: string;
   }) => (
     <main>
       <h1>{title}</h1>
       {children}
+      {footer}
     </main>
   ),
 }));
@@ -195,5 +198,54 @@ describe("OnboardingNumberPage", () => {
         limit: 10,
       });
     });
+  });
+
+  it("does not reload initial inventory when skipping advances onboarding", async () => {
+    const user = userEvent.setup();
+    let resolveSkip: ((value: { status: "skipped" }) => void) | undefined;
+    getInitialNumberSuggestionMock.mockResolvedValue({
+      market: { countryCode: "US" },
+      suggestion: {
+        e164: "+14155550100",
+        formatted: "(415) 555-0100",
+        countryCode: "US",
+        kind: "local",
+        selectionContext: { mode: "suggested", countryCode: "US" },
+        claimToken: "claim-token",
+      },
+      alternatives: [],
+    });
+    skipOnboardingNumberMock.mockImplementation(
+      () =>
+        new Promise<{ status: "skipped" }>((resolve) => {
+          resolveSkip = resolve;
+        }),
+    );
+
+    render(
+      <OnboardingNumberPage
+        businessId={"business-1" as never}
+        onSignOut={() => {}}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getInitialNumberSuggestionMock).toHaveBeenCalledTimes(1);
+    });
+
+    await user.click(screen.getByRole("button", { name: "number.skipLater" }));
+
+    expect(skipOnboardingNumberMock).toHaveBeenCalledWith({ businessId: "business-1" });
+    expect(screen.getByRole("button", { name: "number.skipping" })).toBeTruthy();
+    expect(getInitialNumberSuggestionMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveSkip?.({ status: "skipped" });
+    });
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith("/onboarding/plan");
+    });
+    expect(getInitialNumberSuggestionMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -67,11 +67,16 @@ The web app initializes PostHog in `apps/web/src/main.tsx` with:
 - `capture_pageview: "history_change"` for SPA Web Analytics support
 - `capture_pageleave: "if_capture_pageview"` for Web Analytics lifecycle coverage
 - browser exception autocapture for unhandled errors and unhandled rejections
-- session replay enabled with masked inputs and block selectors
+- session replay enabled with masked inputs and block selectors, plus faster
+  request flushing so replay chunks are less likely to be lost during auth and
+  onboarding redirects
 - `api_host = https://ts.lobbystack.com` when using the managed reverse proxy
 - `ui_host = https://us.posthog.com` so replay and insight links still resolve to PostHog Cloud
 
 Page views are tracked manually from route changes in `apps/web/src/App.tsx`.
+Successful login and signup capture their auth success events without resetting
+the PostHog identity first; identity reset is reserved for sign-out so onboarding
+replay sessions are not split by the auth handoff.
 Operator actions are captured from feature entry points such as auth, onboarding, calendar setup, knowledge uploads, and follow-up completion.
 
 This means the app emits both:

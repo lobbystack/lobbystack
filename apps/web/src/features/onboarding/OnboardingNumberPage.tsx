@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
@@ -89,6 +89,7 @@ export function OnboardingNumberPage({
     setSkipError(null);
     try {
       await skipOnboardingNumber({ businessId });
+      navigate("/onboarding/plan");
     } catch (skipError) {
       setSkipError(getSafeOnboardingErrorMessage(skipError, t, "number.skipFailed"));
     } finally {
@@ -120,6 +121,16 @@ export function OnboardingNumberPage({
       state: { justClaimedPhoneNumber: true },
     });
   }
+
+  const getNumberChooserErrorMessage = useCallback(
+    (error: unknown, fallback: string) =>
+      getSafeOnboardingErrorMessage(error, t, fallback),
+    [t],
+  );
+
+  const handleVerifyPhoneRequired = useCallback(() => {
+    void navigate("/onboarding/verify-phone");
+  }, [navigate]);
 
   if (hasCompletedClaim || (primaryPhoneNumber && !isComplete)) {
     return (
@@ -211,9 +222,7 @@ export function OnboardingNumberPage({
             selectionContext: AvailableNumberSummary["selectionContext"];
             claimToken: string;
           }) => Promise<ClaimResult>}
-          getErrorMessage={(error, fallback) =>
-            getSafeOnboardingErrorMessage(error, t, fallback)
-          }
+          getErrorMessage={getNumberChooserErrorMessage}
           getInitialNumberSuggestion={
             getInitialNumberSuggestion as (args: {
               businessId: Id<"businesses">;
@@ -236,7 +245,7 @@ export function OnboardingNumberPage({
           onClaimCompleted={handleClaimCompleted}
           onClaimed={handleClaimed}
           onClaimStarted={handleClaimStarted}
-          onVerifyPhoneRequired={() => void navigate("/onboarding/verify-phone")}
+          onVerifyPhoneRequired={handleVerifyPhoneRequired}
           searchAvailableNumbers={
             searchAvailableNumbers as (args: {
               businessId: Id<"businesses">;

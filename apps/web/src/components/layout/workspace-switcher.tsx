@@ -101,9 +101,11 @@ export function WorkspaceSwitcher({
               <Building2 />
             </ItemMedia>
             <ItemContent className="min-w-0 gap-0.5">
-              <ItemTitle className="font-medium leading-tight">{displayName}</ItemTitle>
+              <ItemTitle className="ph-mask font-medium leading-tight">
+                {displayName}
+              </ItemTitle>
               {phoneDisplay ? (
-                <ItemDescription className="text-xs tabular-nums">
+                <ItemDescription className="ph-mask text-xs tabular-nums">
                   {phoneDisplay}
                 </ItemDescription>
               ) : (
@@ -133,7 +135,7 @@ export function WorkspaceSwitcher({
                   onClick={() => void handleSelectBusiness(entry.business._id)}
                 >
                   {isActive ? <Check className="size-4" /> : <span className="size-4" />}
-                  <span className="truncate">{entry.business.name}</span>
+                  <span className="ph-mask truncate">{entry.business.name}</span>
                 </DropdownMenuItem>
               );
             })}
