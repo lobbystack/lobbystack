@@ -13,7 +13,7 @@ import { LoginForm } from "@/components/login-form";
 import { SignupForm } from "@/components/signup-form";
 import { Button } from "@/components/ui/button";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
-import { captureAnalyticsEvent, resetAnalyticsIdentity } from "@/lib/analytics";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 import { isValidEmailAddress, meetsSignupPasswordRequirements } from "@/lib/auth-validation";
 import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 
@@ -22,7 +22,6 @@ type AuthErrorFlow = "signIn" | "signUp" | "resetRequest" | "resetVerification";
 const DEV_TURNSTILE_SITE_KEY = "0x4AAAAAADKUjCqHD6BIFbWo";
 
 function capturePublicAuthEvent(name: "web.auth.login_succeeded" | "web.auth.signup_succeeded") {
-  resetAnalyticsIdentity();
   captureAnalyticsEvent(name);
 }
 

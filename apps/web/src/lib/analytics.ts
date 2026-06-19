@@ -36,6 +36,7 @@ function resolvePostHogHost(rawHost?: string): string | undefined {
 
 const POSTHOG_HOST = resolvePostHogHost(import.meta.env.VITE_POSTHOG_HOST);
 const POSTHOG_UI_HOST = import.meta.env.VITE_POSTHOG_UI_HOST ?? "https://us.posthog.com";
+const POSTHOG_REQUEST_FLUSH_INTERVAL_MS = 1_000;
 const SENSITIVE_URL_PARAMS = new Set(["customer_session_token"]);
 const REDACTED_VALUE = "[redacted]";
 
@@ -131,6 +132,9 @@ export function initializeAnalytics(): void {
     capture_pageleave: "if_capture_pageview",
     capture_exceptions: true,
     disable_session_recording: false,
+    request_queue_config: {
+      flush_interval_ms: POSTHOG_REQUEST_FLUSH_INTERVAL_MS,
+    },
     before_send: (event) => {
       if (!event) {
         return event;
@@ -159,6 +163,7 @@ export function initializeAnalytics(): void {
       maskAllInputs: true,
       maskTextSelector: ".ph-mask, [data-ph-mask-text]",
       blockSelector: ".ph-no-capture, [data-ph-no-capture]",
+      compress_events: true,
     },
   });
 

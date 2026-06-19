@@ -12,6 +12,7 @@ import {
   getSuggestedNumbers,
   normalizeClaimE164,
   normalizeSupportedCountryCode,
+  resolveVerifiedSuggestionContext,
   verifyNumberClaimToken,
   withClaimTokens,
 } from "../onboarding/phoneNumbers";
@@ -24,6 +25,7 @@ import {
   type NumberSuggestionContext,
   type VerifiedPhoneMarket,
 } from "../lib/onboardingPhoneNumbers";
+import { normalizeOnboardingStage } from "../lib/onboardingStage";
 import { getTwilioClient } from "../lib/node/twilioClient";
 import {
   buildTwilioSmsInboundWebhookUrl,
@@ -67,6 +69,8 @@ type ReplacementClaimResult =
 
 const PHONE_NUMBER_CHANGE_USED_MESSAGE =
   "This business has already used its phone number change.";
+const FIRST_PHONE_NUMBER_SETTINGS_REQUIRES_COMPLETED_ONBOARDING_MESSAGE =
+  "Finish onboarding before adding a phone number in settings.";
 const OLD_PHONE_NUMBER_RELEASE_DELAY_MS = 30 * 24 * 60 * 60 * 1000;
 const OLD_PHONE_NUMBER_RELEASE_RETRY_DELAY_MS = 24 * 60 * 60 * 1000;
 const OLD_PHONE_NUMBER_RELEASE_MAX_ATTEMPTS = 3;
@@ -234,6 +238,39 @@ async function resolveCurrentNumberSuggestionContext(
   };
 }
 
+async function resolveSettingsNumberSuggestionContext(
+  ctx: ActionCtx,
+  businessId: Id<"businesses">,
+  userId: Id<"users">,
+): Promise<{
+  currentPhoneNumber: Doc<"phone_numbers"> | null;
+  market: VerifiedPhoneMarket;
+  context: NumberSuggestionContext;
+}> {
+  const currentPhoneNumber = await ctx.runQuery(
+    internal.businesses.catalog.getPrimaryPhoneNumberInternal,
+    {
+      businessId,
+    },
+  );
+
+  await assertFirstSettingsPhoneNumberAvailable(ctx, businessId, currentPhoneNumber);
+
+  if (!currentPhoneNumber) {
+    return {
+      ...(await resolveVerifiedSuggestionContext(ctx, businessId, userId)),
+      currentPhoneNumber: null,
+    };
+  }
+
+  const { market, context } = await resolveCurrentNumberSuggestionContext(ctx, businessId);
+  return {
+    currentPhoneNumber,
+    market,
+    context,
+  };
+}
+
 async function assertPhoneNumberReplacementAvailable(
   ctx: ActionCtx,
   businessId: Id<"businesses">,
@@ -249,6 +286,26 @@ async function assertPhoneNumberReplacementAvailable(
   }
 }
 
+async function assertFirstSettingsPhoneNumberAvailable(
+  ctx: ActionCtx,
+  businessId: Id<"businesses">,
+  currentPhoneNumber: Doc<"phone_numbers"> | null,
+): Promise<void> {
+  if (currentPhoneNumber) {
+    return;
+  }
+
+  const business = await ctx.runQuery(internal.businesses.admin.getBusinessById, {
+    businessId,
+  });
+  if (!business) {
+    throw new Error("Business not found.");
+  }
+  if (normalizeOnboardingStage(business.onboardingStage) !== "completed") {
+    throw new Error(FIRST_PHONE_NUMBER_SETTINGS_REQUIRES_COMPLETED_ONBOARDING_MESSAGE);
+  }
+}
+
 export const getInitialReplacementNumberSuggestion = action({
   args: {
     businessId: v.id("businesses"),
@@ -256,14 +313,15 @@ export const getInitialReplacementNumberSuggestion = action({
   handler: async (ctx, args) => {
     const { userId } = await assertPhoneNumberSettingsAccess(ctx, args.businessId);
     await assertPhoneNumberReplacementAvailable(ctx, args.businessId);
-    const { market, context, currentPhoneNumber } = await resolveCurrentNumberSuggestionContext(
+    const { market, context, currentPhoneNumber } = await resolveSettingsNumberSuggestionContext(
       ctx,
       args.businessId,
+      userId,
     );
     const suggestions = withClaimTokens(await getSuggestedNumbers(context, 10), {
       businessId: args.businessId,
       userId,
-    }).filter((number) => number.e164 !== currentPhoneNumber.e164);
+    }).filter((number) => number.e164 !== currentPhoneNumber?.e164);
 
     return {
       market,
@@ -287,9 +345,10 @@ export const searchReplacementNumbers = action({
   handler: async (ctx, args) => {
     const { userId } = await assertPhoneNumberSettingsAccess(ctx, args.businessId);
     await assertPhoneNumberReplacementAvailable(ctx, args.businessId);
-    const { market, context, currentPhoneNumber } = await resolveCurrentNumberSuggestionContext(
+    const { market, context, currentPhoneNumber } = await resolveSettingsNumberSuggestionContext(
       ctx,
       args.businessId,
+      userId,
     );
     const searchCountryCode = args.countryCode ?? context.countryCode;
     const searchContext: NumberSuggestionContext =
@@ -317,7 +376,7 @@ export const searchReplacementNumbers = action({
         businessId: args.businessId,
         userId,
       },
-    ).filter((number) => number.e164 !== currentPhoneNumber.e164);
+    ).filter((number) => number.e164 !== currentPhoneNumber?.e164);
 
     return {
       market,
@@ -378,25 +437,19 @@ export const claimReplacementNumber = action({
   },
   handler: async (ctx, args): Promise<ReplacementClaimResult> => {
     const { userId } = await assertPhoneNumberSettingsAccess(ctx, args.businessId);
-    const currentPhoneNumber = await ctx.runQuery(
+    let currentPhoneNumber = await ctx.runQuery(
       internal.businesses.catalog.getPrimaryPhoneNumberInternal,
       {
         businessId: args.businessId,
       },
     );
-    if (!currentPhoneNumber) {
-      return {
-        status: "failed",
-        message: "Add a phone number before changing it.",
-      };
-    }
-
     let purchased: PurchasedIncomingNumber | null = null;
     let savedPhoneNumberId: Id<"phone_numbers"> | null = null;
+    let retiringPhoneNumber: Doc<"phone_numbers"> | null = null;
     let oldNumberMarkedRetiring = false;
     let replacementReserved = false;
     const claimE164 = normalizeClaimE164(args.e164);
-    if (!claimE164 || claimE164 === currentPhoneNumber.e164) {
+    if (!claimE164 || claimE164 === currentPhoneNumber?.e164) {
       return {
         status: "failed",
         message: "Invalid phone number.",
@@ -404,6 +457,11 @@ export const claimReplacementNumber = action({
     }
 
     try {
+      await assertFirstSettingsPhoneNumberAvailable(
+        ctx,
+        args.businessId,
+        currentPhoneNumber,
+      );
       verifyNumberClaimToken({
         token: args.claimToken,
         businessId: args.businessId,
@@ -411,10 +469,20 @@ export const claimReplacementNumber = action({
         claimE164,
         selectionContext: args.selectionContext,
       });
-      await ctx.runMutation(internal.businesses.admin.reservePhoneNumberReplacement, {
+      const reservation: {
+        reservedAt: string;
+        primaryPhoneNumber: Doc<"phone_numbers"> | null;
+      } = await ctx.runMutation(internal.businesses.admin.reservePhoneNumberReplacement, {
         businessId: args.businessId,
       });
       replacementReserved = true;
+      if (!currentPhoneNumber && reservation.primaryPhoneNumber) {
+        throw new Error("This business already has a phone number.");
+      }
+      currentPhoneNumber = reservation.primaryPhoneNumber ?? currentPhoneNumber;
+      if (currentPhoneNumber && claimE164 === currentPhoneNumber.e164) {
+        throw new Error("Invalid phone number.");
+      }
 
       const smsWebhookUrl = buildTwilioSmsInboundWebhookUrl();
       const voiceWebhookUrl = buildTwilioVoiceInboundWebhookUrl();
@@ -460,31 +528,39 @@ export const claimReplacementNumber = action({
         smsWebhookLastSyncedAt: now,
       });
 
-      await ctx.runMutation(internal.businesses.catalog.upsertPhoneNumberInternal, {
-        businessId: args.businessId,
-        phoneNumberId: currentPhoneNumber._id,
-        e164: currentPhoneNumber.e164,
-        twilioPhoneSid: currentPhoneNumber.twilioPhoneSid ?? null,
-        voiceEnabled: currentPhoneNumber.voiceEnabled,
-        smsEnabled: currentPhoneNumber.smsEnabled,
-        status: "retiring",
-      });
-      oldNumberMarkedRetiring = true;
+      if (currentPhoneNumber) {
+        await ctx.runMutation(internal.businesses.catalog.upsertPhoneNumberInternal, {
+          businessId: args.businessId,
+          phoneNumberId: currentPhoneNumber._id,
+          e164: currentPhoneNumber.e164,
+          twilioPhoneSid: currentPhoneNumber.twilioPhoneSid ?? null,
+          voiceEnabled: currentPhoneNumber.voiceEnabled,
+          smsEnabled: currentPhoneNumber.smsEnabled,
+          status: "retiring",
+        });
+        oldNumberMarkedRetiring = true;
+        retiringPhoneNumber = currentPhoneNumber;
 
-      if (currentPhoneNumber.twilioPhoneSid) {
-        await ctx.scheduler.runAfter(
-          OLD_PHONE_NUMBER_RELEASE_DELAY_MS,
-          internal.settings.phoneNumbers.releaseInactiveTwilioPhoneNumber,
-          {
-            phoneNumberId: currentPhoneNumber._id,
-            twilioPhoneSid: currentPhoneNumber.twilioPhoneSid,
-          },
-        );
+        if (currentPhoneNumber.twilioPhoneSid) {
+          await ctx.scheduler.runAfter(
+            OLD_PHONE_NUMBER_RELEASE_DELAY_MS,
+            internal.settings.phoneNumbers.releaseInactiveTwilioPhoneNumber,
+            {
+              phoneNumberId: currentPhoneNumber._id,
+              twilioPhoneSid: currentPhoneNumber.twilioPhoneSid,
+            },
+          );
+        }
+        await ctx.runMutation(internal.businesses.admin.markPhoneNumberReplacementUsed, {
+          businessId: args.businessId,
+        });
+        replacementReserved = false;
+      } else {
+        await ctx.runMutation(internal.businesses.admin.releasePhoneNumberReplacementReservation, {
+          businessId: args.businessId,
+        });
+        replacementReserved = false;
       }
-      await ctx.runMutation(internal.businesses.admin.markPhoneNumberReplacementUsed, {
-        businessId: args.businessId,
-      });
-      replacementReserved = false;
 
       return {
         status: "claimed",
@@ -494,21 +570,25 @@ export const claimReplacementNumber = action({
     } catch (error) {
       let cleanupError: Error | null = null;
       if (oldNumberMarkedRetiring) {
-        try {
-          await ctx.runMutation(internal.businesses.catalog.upsertPhoneNumberInternal, {
-            businessId: args.businessId,
-            phoneNumberId: currentPhoneNumber._id,
-            e164: currentPhoneNumber.e164,
-            twilioPhoneSid: currentPhoneNumber.twilioPhoneSid ?? null,
-            voiceEnabled: currentPhoneNumber.voiceEnabled,
-            smsEnabled: currentPhoneNumber.smsEnabled,
-            status: currentPhoneNumber.status,
-          });
-        } catch (rollbackError) {
-          cleanupError =
-            rollbackError instanceof Error
-              ? rollbackError
-              : new Error("Automatic rollback of the previous phone number failed.");
+        if (retiringPhoneNumber) {
+          try {
+            await ctx.runMutation(internal.businesses.catalog.upsertPhoneNumberInternal, {
+              businessId: args.businessId,
+              phoneNumberId: retiringPhoneNumber._id,
+              e164: retiringPhoneNumber.e164,
+              twilioPhoneSid: retiringPhoneNumber.twilioPhoneSid ?? null,
+              voiceEnabled: retiringPhoneNumber.voiceEnabled,
+              smsEnabled: retiringPhoneNumber.smsEnabled,
+              status: retiringPhoneNumber.status,
+            });
+          } catch (rollbackError) {
+            cleanupError =
+              rollbackError instanceof Error
+                ? rollbackError
+                : new Error("Automatic rollback of the previous phone number failed.");
+          }
+        } else {
+          cleanupError = new Error("Automatic rollback of the previous phone number failed.");
         }
       }
       if (savedPhoneNumberId) {
@@ -550,7 +630,11 @@ export const claimReplacementNumber = action({
       if (!purchased && isLikelyNumberUnavailableError(error)) {
         let alternatives: Array<AvailableNumberSummary> = [];
         try {
-          const { context } = await resolveCurrentNumberSuggestionContext(ctx, args.businessId);
+          const { context } = await resolveSettingsNumberSuggestionContext(
+            ctx,
+            args.businessId,
+            userId,
+          );
           const countryCode =
             normalizeSupportedCountryCode(args.selectionContext.countryCode) ??
             context.countryCode;
@@ -566,7 +650,7 @@ export const claimReplacementNumber = action({
             (
               await getNumbersForSelectionContext(selectionContext, searchContext, 10)
             ).filter(
-              (number) => number.e164 !== claimE164 && number.e164 !== currentPhoneNumber.e164,
+              (number) => number.e164 !== claimE164 && number.e164 !== currentPhoneNumber?.e164,
             ),
             {
               businessId: args.businessId,

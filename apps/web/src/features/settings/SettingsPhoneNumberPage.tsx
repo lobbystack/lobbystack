@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { api } from "../../../../../convex/_generated/api";
@@ -66,6 +67,7 @@ export function SettingsPhoneNumberPage({
   phoneNumberReplacementUsedAt,
 }: SettingsPhoneNumberPageProps) {
   const { i18n, t } = useTranslation("settings");
+  const navigate = useNavigate();
   const primaryPhoneNumber = useQuery(api.businesses.catalog.getPrimaryPhoneNumber, {
     businessId,
   }) as PrimaryPhoneNumber | null | undefined;
@@ -83,12 +85,18 @@ export function SettingsPhoneNumberPage({
   const displayPhoneNumber = primaryPhoneNumber
     ? formatPhoneNumberDisplay(primaryPhoneNumber.e164, i18n.language)
     : null;
+  const hasPhoneNumber = Boolean(primaryPhoneNumber);
   const hasUsedPhoneNumberChange = Boolean(phoneNumberReplacementUsedAt);
 
   function handleClaimed(result: Extract<ClaimResult, { status: "claimed" }>): void {
-    toast.success(t("phoneNumber.toast.changed"));
+    toast.success(t(hasPhoneNumber ? "phoneNumber.toast.changed" : "phoneNumber.toast.added"));
     setIsDialogOpen(false);
     void result;
+  }
+
+  function handleVerifyPhoneRequired(): void {
+    setIsDialogOpen(false);
+    navigate("/onboarding/verify-phone");
   }
 
   return (
@@ -117,21 +125,34 @@ export function SettingsPhoneNumberPage({
                       <Button
                         disabled={
                           primaryPhoneNumber === undefined ||
-                          primaryPhoneNumber === null ||
-                          hasUsedPhoneNumberChange
+                          (hasPhoneNumber && hasUsedPhoneNumberChange)
                         }
                         size="sm"
                         variant="outline"
                       />
                     }
                   >
-                    {t("phoneNumber.actions.requestChange")}
+                    {t(
+                      hasPhoneNumber
+                        ? "phoneNumber.actions.requestChange"
+                        : "phoneNumber.actions.getNumber",
+                    )}
                   </DialogTrigger>
                   <DialogContent className="max-w-3xl">
                     <DialogHeader>
-                      <DialogTitle>{t("phoneNumber.dialog.title")}</DialogTitle>
+                      <DialogTitle>
+                        {t(
+                          hasPhoneNumber
+                            ? "phoneNumber.dialog.title"
+                            : "phoneNumber.dialog.getNumberTitle",
+                        )}
+                      </DialogTitle>
                       <DialogDescription>
-                        {t("phoneNumber.dialog.description")}
+                        {t(
+                          hasPhoneNumber
+                            ? "phoneNumber.dialog.description"
+                            : "phoneNumber.dialog.getNumberDescription",
+                        )}
                       </DialogDescription>
                     </DialogHeader>
                     {isDialogOpen ? (
@@ -164,6 +185,7 @@ export function SettingsPhoneNumberPage({
                           unavailable: t("phoneNumber.picker.unavailable"),
                         }}
                         onClaimed={handleClaimed}
+                        onVerifyPhoneRequired={handleVerifyPhoneRequired}
                         searchAvailableNumbers={
                           searchReplacementNumbers as (args: {
                             businessId: Id<"businesses">;

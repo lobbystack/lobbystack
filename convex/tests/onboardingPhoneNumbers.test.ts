@@ -586,6 +586,31 @@ describe("onboarding phone-number actions", () => {
     ).toBeNull();
   });
 
+  it("allows suggestions after the user skipped ahead to plan", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15815550100",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "plan",
+      });
+    });
+
+    const result = await authed.action(api.onboarding.phoneNumbers.getInitialNumberSuggestion, {
+      businessId,
+    });
+
+    expect(result.suggestion?.e164).toBe("+14185550123");
+  });
+
   it("searches toll-free inventory in the inferred country", async () => {
     const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
@@ -1186,6 +1211,221 @@ describe("onboarding phone-number actions", () => {
     });
   });
 
+  it("claims a selected number after the user skipped ahead to attribution", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15815550100",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "attribution",
+      });
+    });
+
+    createIncomingPhoneNumberMock.mockResolvedValueOnce({
+      sid: "PN-claim-after-skip",
+      smsUrl: "https://example.convex.site/twilio/sms/inbound",
+      voiceUrl: "https://voice.example.com/twilio/voice/inbound",
+    });
+
+    const result = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
+
+    expect(result).toMatchObject({
+      status: "claimed",
+      e164: "+14185550123",
+    });
+    expect(
+      (await t.query(internal.businesses.admin.getBusinessById, { businessId }))
+        ?.onboardingStage,
+    ).toBe("attribution");
+
+    const phoneNumbers = await listBusinessPhoneNumbers(t, businessId);
+    expect(phoneNumbers).toHaveLength(1);
+    expect(phoneNumbers[0]?.twilioPhoneSid).toBe("PN-claim-after-skip");
+  });
+
+  it("claims a first settings phone number when onboarding was skipped", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15815550100",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "completed",
+      });
+    });
+
+    const suggestion = await authed.action(
+      api.settings.phoneNumbers.getInitialReplacementNumberSuggestion,
+      {
+        businessId,
+      },
+    );
+    expect(suggestion.suggestion?.e164).toBe("+14185550123");
+
+    createIncomingPhoneNumberMock.mockResolvedValueOnce({
+      sid: "PN-settings-first-number",
+      smsUrl: "https://example.convex.site/twilio/sms/inbound",
+      voiceUrl: "https://voice.example.com/twilio/voice/inbound",
+    });
+
+    const result = await authed.action(
+      api.settings.phoneNumbers.claimReplacementNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
+
+    expect(result).toMatchObject({
+      status: "claimed",
+      e164: "+14185550123",
+    });
+    expect(
+      (await t.query(internal.businesses.admin.getBusinessById, { businessId }))
+        ?.phoneNumberReplacementUsedAt,
+    ).toBeUndefined();
+    expect(
+      (await t.query(internal.businesses.admin.getBusinessById, { businessId }))
+        ?.phoneNumberReplacementReservedAt,
+    ).toBeUndefined();
+
+    const phoneNumbers = await listBusinessPhoneNumbers(t, businessId);
+    expect(phoneNumbers).toHaveLength(1);
+    expect(phoneNumbers[0]).toMatchObject({
+      e164: "+14185550123",
+      twilioPhoneSid: "PN-settings-first-number",
+      status: "active",
+    });
+  });
+
+  it("rejects first settings phone number suggestions before onboarding is completed", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15815550100",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await expect(
+      authed.action(api.settings.phoneNumbers.getInitialReplacementNumberSuggestion, {
+        businessId,
+      }),
+    ).rejects.toThrow("Finish onboarding before adding a phone number in settings.");
+    expect(listLocalNumbersMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a first settings phone number claim before onboarding is completed", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15815550100",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    const result = await authed.action(
+      api.settings.phoneNumbers.claimReplacementNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
+
+    expect(result).toEqual({
+      status: "failed",
+      message: "Finish onboarding before adding a phone number in settings.",
+    });
+    expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
+    expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(0);
+  });
+
+  it("blocks a settings first-number claim while another settings claim is reserved", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15815550100",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "completed",
+        phoneNumberReplacementReservedAt: new Date().toISOString(),
+      });
+    });
+
+    const result = await authed.action(
+      api.settings.phoneNumbers.claimReplacementNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
+
+    expect(result).toEqual({
+      status: "failed",
+      message: "A phone number change is already in progress.",
+    });
+    expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
+    expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(0);
+  });
+
+  it("returns the active number observed under the settings claim reservation", async () => {
+    const t = createConvexHarness();
+    const { businessId, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15815550100",
+      countryCode: "CA",
+    });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "completed",
+      });
+      await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550122",
+        twilioPhoneSid: "PN-existing-settings-number",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+      });
+    });
+
+    const reservation = await t.mutation(
+      internal.businesses.admin.reservePhoneNumberReplacement,
+      {
+        businessId,
+      },
+    );
+
+    expect(reservation.primaryPhoneNumber?.e164).toBe("+14185550122");
+    expect(reservation.reservedAt).toEqual(expect.any(String));
+  });
+
   it("attempts to purchase a selected number even if a refreshed inventory page omits it", async () => {
     const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
@@ -1318,6 +1558,49 @@ describe("onboarding phone-number actions", () => {
       message: "Phone-number onboarding has already been completed for this business.",
     });
     expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects stale onboarding claims after a number exists in a later stage", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15815550100",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "plan",
+      });
+      await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550122",
+        twilioPhoneSid: "PN-existing-onboarding-number",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+      });
+    });
+
+    const result = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
+
+    expect(result).toEqual({
+      status: "failed",
+      message: "Phone-number onboarding has already been completed for this business.",
+    });
+    expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
+    expect(
+      (await t.query(internal.businesses.admin.getBusinessById, { businessId }))
+        ?.onboardingStage,
+    ).toBe("plan");
+    expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(1);
   });
 
   it("rejects a second claim while another claim is already in progress", async () => {

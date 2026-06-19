@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
@@ -24,7 +24,9 @@ import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 type OnboardingNumberPageProps = {
   businessId: Id<"businesses">;
   onSignOut: () => void;
-  isComplete?: boolean;
+  hasReachedPlan?: boolean;
+  hasReachedAttribution?: boolean;
+  isOnboardingComplete?: boolean;
   progressNavigableUntil?: number;
 };
 
@@ -49,7 +51,9 @@ function formatPhoneNumber(e164: string): string {
 export function OnboardingNumberPage({
   businessId,
   onSignOut,
-  isComplete = false,
+  hasReachedPlan = false,
+  hasReachedAttribution = false,
+  isOnboardingComplete = false,
   progressNavigableUntil,
 }: OnboardingNumberPageProps) {
   const { t } = useTranslation("onboarding");
@@ -63,6 +67,15 @@ export function OnboardingNumberPage({
   const claimOnboardingNumber = useObservedAction(
     api.onboarding.phoneNumbers.claimOnboardingNumber,
   );
+  const getInitialReplacementNumberSuggestion = useObservedAction(
+    api.settings.phoneNumbers.getInitialReplacementNumberSuggestion,
+  );
+  const searchReplacementNumbers = useObservedAction(
+    api.settings.phoneNumbers.searchReplacementNumbers,
+  );
+  const claimReplacementNumber = useObservedAction(
+    api.settings.phoneNumbers.claimReplacementNumber,
+  );
   const skipOnboardingNumber = useObservedMutation(
     api.onboarding.phoneNumbersSkip.skipOnboardingNumber,
   );
@@ -72,16 +85,17 @@ export function OnboardingNumberPage({
   const [hasCompletedClaim, setHasCompletedClaim] = useState(false);
   const [isSkipping, setIsSkipping] = useState(false);
   const [skipError, setSkipError] = useState<string | null>(null);
-  const shouldLoadInventory = primaryPhoneNumber === null && !isComplete;
+  const shouldLoadInventory = primaryPhoneNumber === null;
+  const useSettingsNumberPicker = isOnboardingComplete && primaryPhoneNumber === null;
 
   useEffect(() => {
-    if (!isComplete && primaryPhoneNumber) {
+    if (!hasReachedPlan && primaryPhoneNumber) {
       navigate("/onboarding/plan", {
         replace: true,
         state: { justClaimedPhoneNumber: true },
       });
     }
-  }, [isComplete, navigate, primaryPhoneNumber]);
+  }, [hasReachedPlan, navigate, primaryPhoneNumber]);
 
   async function handleSkip(): Promise<void> {
     if (isSkipping) return;
@@ -89,6 +103,7 @@ export function OnboardingNumberPage({
     setSkipError(null);
     try {
       await skipOnboardingNumber({ businessId });
+      navigate("/onboarding/plan");
     } catch (skipError) {
       setSkipError(getSafeOnboardingErrorMessage(skipError, t, "number.skipFailed"));
     } finally {
@@ -116,12 +131,34 @@ export function OnboardingNumberPage({
 
   function handleClaimed(): void {
     setHasCompletedClaim(true);
+    if (useSettingsNumberPicker) {
+      navigate("/settings/phone-number", { replace: true });
+      return;
+    }
+
+    if (hasReachedAttribution) {
+      navigate("/onboarding/attribution", {
+        state: { justClaimedPhoneNumber: true },
+      });
+      return;
+    }
+
     navigate("/onboarding/plan", {
       state: { justClaimedPhoneNumber: true },
     });
   }
 
-  if (hasCompletedClaim || (primaryPhoneNumber && !isComplete)) {
+  const getNumberChooserErrorMessage = useCallback(
+    (error: unknown, fallback: string) =>
+      getSafeOnboardingErrorMessage(error, t, fallback),
+    [t],
+  );
+
+  const handleVerifyPhoneRequired = useCallback(() => {
+    void navigate("/onboarding/verify-phone");
+  }, [navigate]);
+
+  if (hasCompletedClaim || (primaryPhoneNumber && !hasReachedPlan)) {
     return (
       <OnboardingShell
         onSignOut={onSignOut}
@@ -136,7 +173,7 @@ export function OnboardingNumberPage({
     );
   }
 
-  if (isComplete) {
+  if (hasReachedPlan) {
     if (primaryPhoneNumber === undefined) {
       return (
         <OnboardingShell
@@ -152,30 +189,32 @@ export function OnboardingNumberPage({
       );
     }
 
-    const selectedNumber = primaryPhoneNumber ? formatPhoneNumber(primaryPhoneNumber.e164) : null;
+    if (primaryPhoneNumber) {
+      const selectedNumber = formatPhoneNumber(primaryPhoneNumber.e164);
 
-    return (
-      <OnboardingShell
-        onSignOut={onSignOut}
-        progress={{ current: 8, navigableUntil: progressNavigableUntil, total: 10 }}
-        title={selectedNumber ? t("number.selectedTitle") : t("number.title")}
-        width="md"
-      >
-        <Surface className="flex flex-col gap-5 p-6 text-center">
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium text-muted-foreground">
-              {selectedNumber ? t("number.selectedNumberLabel") : t("number.skippedTitle")}
-            </p>
-            <p className="text-2xl font-semibold text-foreground">
-              {selectedNumber ?? t("number.skippedDescription")}
-            </p>
-          </div>
-          <Button onClick={() => navigate("/onboarding/plan")} type="button">
-            {t("number.continue")}
-          </Button>
-        </Surface>
-      </OnboardingShell>
-    );
+      return (
+        <OnboardingShell
+          onSignOut={onSignOut}
+          progress={{ current: 8, navigableUntil: progressNavigableUntil, total: 10 }}
+          title={t("number.selectedTitle")}
+          width="md"
+        >
+          <Surface className="flex flex-col gap-5 p-6 text-center">
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium text-muted-foreground">
+                {t("number.selectedNumberLabel")}
+              </p>
+              <p className="text-2xl font-semibold text-foreground">
+                {selectedNumber}
+              </p>
+            </div>
+            <Button onClick={() => navigate("/onboarding/plan")} type="button">
+              {t("number.continue")}
+            </Button>
+          </Surface>
+        </OnboardingShell>
+      );
+    }
   }
 
   return (
@@ -185,17 +224,19 @@ export function OnboardingNumberPage({
       title={t("number.title")}
       width="lg"
       footer={
-        <div className="flex flex-col items-center gap-3">
-          <button
-            className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50"
-            disabled={isSkipping}
-            onClick={() => void handleSkip()}
-            type="button"
-          >
-            {isSkipping ? t("number.skipping") : t("number.skipLater")}
-          </button>
-          {skipError ? <p className="text-sm text-destructive">{skipError}</p> : null}
-        </div>
+        useSettingsNumberPicker ? null : (
+          <div className="flex flex-col items-center gap-3">
+            <button
+              className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50"
+              disabled={isSkipping}
+              onClick={() => void handleSkip()}
+              type="button"
+            >
+              {isSkipping ? t("number.skipping") : t("number.skipLater")}
+            </button>
+            {skipError ? <p className="text-sm text-destructive">{skipError}</p> : null}
+          </div>
+        )
       }
     >
       {primaryPhoneNumber === undefined || !shouldLoadInventory ? (
@@ -205,17 +246,19 @@ export function OnboardingNumberPage({
       ) : (
         <PhoneNumberChooser
           businessId={businessId}
-          claimNumber={claimOnboardingNumber as (args: {
-            businessId: Id<"businesses">;
-            e164: string;
-            selectionContext: AvailableNumberSummary["selectionContext"];
-            claimToken: string;
-          }) => Promise<ClaimResult>}
-          getErrorMessage={(error, fallback) =>
-            getSafeOnboardingErrorMessage(error, t, fallback)
+          claimNumber={
+            (useSettingsNumberPicker ? claimReplacementNumber : claimOnboardingNumber) as (args: {
+              businessId: Id<"businesses">;
+              e164: string;
+              selectionContext: AvailableNumberSummary["selectionContext"];
+              claimToken: string;
+            }) => Promise<ClaimResult>
           }
+          getErrorMessage={getNumberChooserErrorMessage}
           getInitialNumberSuggestion={
-            getInitialNumberSuggestion as (args: {
+            (useSettingsNumberPicker
+              ? getInitialReplacementNumberSuggestion
+              : getInitialNumberSuggestion) as (args: {
               businessId: Id<"businesses">;
             }) => Promise<InitialSuggestionResult>
           }
@@ -236,9 +279,9 @@ export function OnboardingNumberPage({
           onClaimCompleted={handleClaimCompleted}
           onClaimed={handleClaimed}
           onClaimStarted={handleClaimStarted}
-          onVerifyPhoneRequired={() => void navigate("/onboarding/verify-phone")}
+          onVerifyPhoneRequired={handleVerifyPhoneRequired}
           searchAvailableNumbers={
-            searchAvailableNumbers as (args: {
+            (useSettingsNumberPicker ? searchReplacementNumbers : searchAvailableNumbers) as (args: {
               businessId: Id<"businesses">;
               mode: "suggested" | "area_code";
               countryCode: AvailableNumberSummary["countryCode"];

@@ -128,18 +128,21 @@
     "unavailable": "That number was just taken. Pick another one from the refreshed list.",
     "selectedTitle": "Your AI's phone number",
     "selectedNumberLabel": "Selected number",
-    "skippedTitle": "No phone number added",
-    "skippedDescription": "You can add one after onboarding.",
     "continue": "Continue"
   },
   "plan": {
     "title": "Choose your plan",
-    "description": "You can upgrade or change later.",
     "popular": "Popular",
     "enterpriseSubject": "Enterprise plan",
     "compareTitle": "Compare plans in detail",
     "compareDescription": "Every plan gets all core features. Starter and Pro add higher usage with monthly resets and pay-as-you-go overages.",
     "featureHeader": "Feature",
+    "billingInterval": {
+      "label": "Billing interval",
+      "monthly": "Monthly",
+      "annual": "Annual",
+      "save": "Save 20%"
+    },
     "tiers": {
       "free_cloud": {
         "name": "Free",
@@ -156,9 +159,15 @@
       },
       "starter": {
         "name": "Starter",
-        "price": "$30",
+        "price": {
+          "monthly": "$30",
+          "annual": "$24"
+        },
         "period": "/mo",
-        "description": "$24/mo effective when billed annually. Includes 150 voice minutes that reset monthly.",
+        "description": {
+          "monthly": "Billed monthly. Includes 150 voice minutes that reset monthly.",
+          "annual": "Billed annually. Includes 150 voice minutes that reset monthly."
+        },
         "cta": {
           "monthly": "Start monthly",
           "annual": "Start annual"
@@ -172,9 +181,15 @@
       },
       "pro": {
         "name": "Pro",
-        "price": "$100",
+        "price": {
+          "monthly": "$100",
+          "annual": "$80"
+        },
         "period": "/mo",
-        "description": "$80/mo effective when billed annually. More included usage for growing call volume.",
+        "description": {
+          "monthly": "Billed monthly. More included usage for growing call volume.",
+          "annual": "Billed annually. More included usage for growing call volume."
+        },
         "cta": {
           "monthly": "Go Pro monthly",
           "annual": "Go Pro annual"

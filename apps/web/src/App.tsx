@@ -215,6 +215,13 @@ function isPhoneVerificationStage(stage: string | undefined): boolean {
   return stage === "verify_phone" || stage === "verify_phone_code";
 }
 
+function canUseCompletedBusinessPhoneVerification(input: {
+  onboardingStage: string | undefined;
+  phoneVerificationTime: number | undefined;
+}): boolean {
+  return input.onboardingStage === "completed" && input.phoneVerificationTime === undefined;
+}
+
 function WorkspaceSetupPendingPage(props: { businessName?: string }) {
   const { t } = useTranslation("onboarding");
 
@@ -944,7 +951,15 @@ function OnboardingVerifyPhoneRoute() {
     return nonAdminElement;
   }
 
-  if (!isPhoneVerificationStage(ctx.activeBusiness.onboardingStage)) {
+  const canUseSettingsVerification = canUseCompletedBusinessPhoneVerification({
+    onboardingStage: ctx.activeBusiness.onboardingStage,
+    phoneVerificationTime: ctx.currentUser?.phoneVerificationTime,
+  });
+
+  if (
+    !isPhoneVerificationStage(ctx.activeBusiness.onboardingStage) &&
+    !canUseSettingsVerification
+  ) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 
@@ -986,20 +1001,28 @@ function OnboardingVerifyPhoneCodeRoute() {
     return nonAdminElement;
   }
 
-  if (!isPhoneVerificationStage(ctx.activeBusiness.onboardingStage)) {
-    return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
-  }
+  const canUseSettingsVerification = canUseCompletedBusinessPhoneVerification({
+    onboardingStage: ctx.activeBusiness.onboardingStage,
+    phoneVerificationTime: ctx.currentUser?.phoneVerificationTime,
+  });
 
   if (latestAttempt === undefined) {
     return <OnboardingRouteSkeleton />;
   }
 
-  if (!latestAttempt) {
-    return <Navigate replace to="/onboarding/verify-phone" />;
+  if (latestAttempt?.status === "approved") {
+    return <Navigate replace to="/onboarding/number" />;
   }
 
-  if (latestAttempt.status === "approved") {
-    return <Navigate replace to="/onboarding/number" />;
+  if (
+    !isPhoneVerificationStage(ctx.activeBusiness.onboardingStage) &&
+    !canUseSettingsVerification
+  ) {
+    return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
+  }
+
+  if (!latestAttempt) {
+    return <Navigate replace to="/onboarding/verify-phone" />;
   }
 
   return (
@@ -1057,7 +1080,12 @@ function OnboardingNumberRoute() {
   return (
     <OnboardingNumberPage
       businessId={ctx.activeBusiness._id}
-      isComplete={canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "plan")}
+      hasReachedPlan={canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "plan")}
+      hasReachedAttribution={canVisitOnboardingStage(
+        ctx.activeBusiness.onboardingStage,
+        "attribution",
+      )}
+      isOnboardingComplete={ctx.activeBusiness.onboardingStage === "completed"}
       onSignOut={ctx.onSignOut}
       progressNavigableUntil={Math.max(
         onboardingNavigableStep(ctx.activeBusiness.onboardingStage),

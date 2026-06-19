@@ -712,7 +712,39 @@ describe("onboarding phone verification actions", () => {
     expect(verificationCreateMock).not.toHaveBeenCalled();
   });
 
-  it("blocks code approval after the phone verification window", async () => {
+  it("allows completed unverified owners to start phone verification from settings", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "completed",
+      });
+    });
+
+    const result = await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+      businessId,
+      phoneE164: "+15815550100",
+    });
+
+    expect(result).toEqual({
+      status: "pending",
+      phoneE164: "+15815550100",
+      countryCode: "CA",
+    });
+    expect(verificationCreateMock).toHaveBeenCalledWith({
+      to: "+15815550100",
+      channel: "sms",
+    });
+
+    const business = await t.query(internal.businesses.admin.getBusinessById, {
+      businessId,
+    });
+    expect(business?.onboardingStage).toBe("completed");
+  });
+
+  it("allows completed unverified owners to approve phone verification from settings", async () => {
     const t = createConvexHarness();
     const { businessId, subject } = await seedBusinessOwner(t);
     const authed = t.withIdentity({ subject });
@@ -728,19 +760,55 @@ describe("onboarding phone verification actions", () => {
       });
     });
 
-    await expect(
-      authed.action(api.onboarding.phoneVerification.checkPhoneVerification, {
-        businessId,
-        phoneE164: "+15815550100",
-        code: "123456",
-      }),
-    ).rejects.toThrow("Phone verification is no longer available for this business.");
+    const result = await authed.action(api.onboarding.phoneVerification.checkPhoneVerification, {
+      businessId,
+      phoneE164: "+15815550100",
+      code: "123456",
+    });
+
+    expect(result).toEqual({
+      status: "approved",
+      phoneE164: "+15815550100",
+    });
 
     const business = await t.query(internal.businesses.admin.getBusinessById, {
       businessId,
     });
     expect(business?.onboardingStage).toBe("completed");
-    expect(verificationCheckCreateMock).not.toHaveBeenCalled();
+    expect(verificationCheckCreateMock).toHaveBeenCalledWith({
+      verificationSid: "VE123",
+      code: "123456",
+    });
+
+    const currentUser = await authed.query(api.users.current, {});
+    expect(currentUser?.phone).toBe("+15815550100");
+    expect(currentUser?.phoneVerificationTime).toEqual(expect.any(Number));
+  });
+
+  it("rejects completed phone verification starts for already verified owners", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "completed",
+      });
+      await ctx.db.patch(userId, {
+        phone: "+15815550100",
+        phoneVerificationTime: 1_700_000_000_000,
+      });
+    });
+
+    await expect(
+      authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+        businessId,
+        phoneE164: "+15815550100",
+      }),
+    ).rejects.toThrow("Phone verification is no longer available for this business.");
+
+    expect(lookupFetchMock).not.toHaveBeenCalled();
+    expect(verificationCreateMock).not.toHaveBeenCalled();
   });
 
   it("lets already verified owners skip repeat verification for a new business", async () => {
