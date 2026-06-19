@@ -3,7 +3,7 @@ import {
 import { observedMutation as mutation } from "../telemetry/observedFunctions";
 import { internalQuery, query } from "../_generated/server";
 import { internal } from "../_generated/api";
-import type { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import { ensureCurrentUser, getCurrentUser, requireMembership } from "../lib/auth";
 import { ensureDefaultStaffForBusiness } from "../lib/defaultStaff";
 import { assertBootstrapAllowed } from "../onboarding/abuse";
@@ -303,7 +303,13 @@ export const reservePhoneNumberReplacement = internalMutation({
   args: {
     businessId: v.id("businesses"),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    reservedAt: string;
+    primaryPhoneNumber: Doc<"phone_numbers"> | null;
+  }> => {
     const business = await ctx.db.get(args.businessId);
     if (!business) {
       throw new Error("Business not found.");
@@ -327,7 +333,20 @@ export const reservePhoneNumberReplacement = internalMutation({
     await ctx.db.patch(args.businessId, {
       phoneNumberReplacementReservedAt: now,
     });
-    return now;
+    const phoneNumbers = await ctx.db
+      .query("phone_numbers")
+      .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+      .collect();
+    const activeVoicePhoneNumber =
+      phoneNumbers.find(
+        (phoneNumber) => phoneNumber.status === "active" && phoneNumber.voiceEnabled,
+      ) ?? null;
+    const primaryPhoneNumber =
+      activeVoicePhoneNumber ??
+      phoneNumbers.find((phoneNumber) => phoneNumber.status === "active") ??
+      null;
+
+    return { reservedAt: now, primaryPhoneNumber };
   },
 });
 

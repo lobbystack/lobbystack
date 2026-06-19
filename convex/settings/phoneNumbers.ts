@@ -412,7 +412,7 @@ export const claimReplacementNumber = action({
   },
   handler: async (ctx, args): Promise<ReplacementClaimResult> => {
     const { userId } = await assertPhoneNumberSettingsAccess(ctx, args.businessId);
-    const currentPhoneNumber = await ctx.runQuery(
+    let currentPhoneNumber = await ctx.runQuery(
       internal.businesses.catalog.getPrimaryPhoneNumberInternal,
       {
         businessId: args.businessId,
@@ -439,10 +439,20 @@ export const claimReplacementNumber = action({
         claimE164,
         selectionContext: args.selectionContext,
       });
-      await ctx.runMutation(internal.businesses.admin.reservePhoneNumberReplacement, {
+      const reservation: {
+        reservedAt: string;
+        primaryPhoneNumber: Doc<"phone_numbers"> | null;
+      } = await ctx.runMutation(internal.businesses.admin.reservePhoneNumberReplacement, {
         businessId: args.businessId,
       });
       replacementReserved = true;
+      if (!currentPhoneNumber && reservation.primaryPhoneNumber) {
+        throw new Error("This business already has a phone number.");
+      }
+      currentPhoneNumber = reservation.primaryPhoneNumber ?? currentPhoneNumber;
+      if (currentPhoneNumber && claimE164 === currentPhoneNumber.e164) {
+        throw new Error("Invalid phone number.");
+      }
 
       const smsWebhookUrl = buildTwilioSmsInboundWebhookUrl();
       const voiceWebhookUrl = buildTwilioVoiceInboundWebhookUrl();

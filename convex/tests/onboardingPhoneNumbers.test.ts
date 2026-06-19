@@ -1345,6 +1345,42 @@ describe("onboarding phone-number actions", () => {
     expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(0);
   });
 
+  it("returns the active number observed under the settings claim reservation", async () => {
+    const t = createConvexHarness();
+    const { businessId, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15815550100",
+      countryCode: "CA",
+    });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "completed",
+      });
+      await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550122",
+        twilioPhoneSid: "PN-existing-settings-number",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+      });
+    });
+
+    const reservation = await t.mutation(
+      internal.businesses.admin.reservePhoneNumberReplacement,
+      {
+        businessId,
+      },
+    );
+
+    expect(reservation.primaryPhoneNumber?.e164).toBe("+14185550122");
+    expect(reservation.reservedAt).toEqual(expect.any(String));
+  });
+
   it("attempts to purchase a selected number even if a refreshed inventory page omits it", async () => {
     const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
