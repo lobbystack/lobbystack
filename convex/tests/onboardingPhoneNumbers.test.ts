@@ -1299,6 +1299,10 @@ describe("onboarding phone-number actions", () => {
       (await t.query(internal.businesses.admin.getBusinessById, { businessId }))
         ?.phoneNumberReplacementUsedAt,
     ).toBeUndefined();
+    expect(
+      (await t.query(internal.businesses.admin.getBusinessById, { businessId }))
+        ?.phoneNumberReplacementReservedAt,
+    ).toBeUndefined();
 
     const phoneNumbers = await listBusinessPhoneNumbers(t, businessId);
     expect(phoneNumbers).toHaveLength(1);
@@ -1307,6 +1311,38 @@ describe("onboarding phone-number actions", () => {
       twilioPhoneSid: "PN-settings-first-number",
       status: "active",
     });
+  });
+
+  it("blocks a settings first-number claim while another settings claim is reserved", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15815550100",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "completed",
+        phoneNumberReplacementReservedAt: new Date().toISOString(),
+      });
+    });
+
+    const result = await authed.action(
+      api.settings.phoneNumbers.claimReplacementNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
+
+    expect(result).toEqual({
+      status: "failed",
+      message: "A phone number change is already in progress.",
+    });
+    expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
+    expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(0);
   });
 
   it("attempts to purchase a selected number even if a refreshed inventory page omits it", async () => {

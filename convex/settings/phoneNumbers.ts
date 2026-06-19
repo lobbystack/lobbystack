@@ -439,12 +439,10 @@ export const claimReplacementNumber = action({
         claimE164,
         selectionContext: args.selectionContext,
       });
-      if (currentPhoneNumber) {
-        await ctx.runMutation(internal.businesses.admin.reservePhoneNumberReplacement, {
-          businessId: args.businessId,
-        });
-        replacementReserved = true;
-      }
+      await ctx.runMutation(internal.businesses.admin.reservePhoneNumberReplacement, {
+        businessId: args.businessId,
+      });
+      replacementReserved = true;
 
       const smsWebhookUrl = buildTwilioSmsInboundWebhookUrl();
       const voiceWebhookUrl = buildTwilioVoiceInboundWebhookUrl();
@@ -514,6 +512,11 @@ export const claimReplacementNumber = action({
           );
         }
         await ctx.runMutation(internal.businesses.admin.markPhoneNumberReplacementUsed, {
+          businessId: args.businessId,
+        });
+        replacementReserved = false;
+      } else {
+        await ctx.runMutation(internal.businesses.admin.releasePhoneNumberReplacementReservation, {
           businessId: args.businessId,
         });
         replacementReserved = false;
