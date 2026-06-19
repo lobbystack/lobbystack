@@ -1006,6 +1006,14 @@ function OnboardingVerifyPhoneCodeRoute() {
     phoneVerificationTime: ctx.currentUser?.phoneVerificationTime,
   });
 
+  if (latestAttempt === undefined) {
+    return <OnboardingRouteSkeleton />;
+  }
+
+  if (latestAttempt?.status === "approved") {
+    return <Navigate replace to="/onboarding/number" />;
+  }
+
   if (
     !isPhoneVerificationStage(ctx.activeBusiness.onboardingStage) &&
     !canUseSettingsVerification
@@ -1013,16 +1021,8 @@ function OnboardingVerifyPhoneCodeRoute() {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 
-  if (latestAttempt === undefined) {
-    return <OnboardingRouteSkeleton />;
-  }
-
   if (!latestAttempt) {
     return <Navigate replace to="/onboarding/verify-phone" />;
-  }
-
-  if (latestAttempt.status === "approved") {
-    return <Navigate replace to="/onboarding/number" />;
   }
 
   return (
