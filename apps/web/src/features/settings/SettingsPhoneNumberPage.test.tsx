@@ -46,10 +46,14 @@ vi.mock("react-i18next", () => ({
         "phoneNumber.current.label": "Current phone number",
         "phoneNumber.current.description":
           "This is the number callers use to reach your AI receptionist.",
-        "phoneNumber.current.empty": "No phone number is assigned yet.",
+        "phoneNumber.current.empty": "You don't have a number yet.",
         "phoneNumber.actions.requestChange": "Request change",
+        "phoneNumber.actions.getNumber": "Get number",
         "phoneNumber.dialog.title": "Choose a new phone number",
         "phoneNumber.dialog.description": "You can change your phone number once.",
+        "phoneNumber.dialog.getNumberTitle": "Choose a phone number",
+        "phoneNumber.dialog.getNumberDescription":
+          "Pick a number callers can use to reach your AI receptionist.",
         "phoneNumber.picker.countryLabel": "Country",
         "phoneNumber.picker.areaCodeLabel": "Area code",
         "phoneNumber.picker.areaCodePlaceholder": "Area code",
@@ -66,6 +70,7 @@ vi.mock("react-i18next", () => ({
           "That number was just taken. Pick another one from the refreshed list.",
         "phoneNumber.toast.changed":
           "Phone number changed. Your previous number will stay active for 30 days.",
+        "phoneNumber.toast.added": "Phone number added.",
       };
 
       return translations[key] ?? key;
@@ -231,6 +236,19 @@ describe("SettingsPhoneNumberPage", () => {
     );
   });
 
+  it("shows a get-number action when no phone number is assigned", () => {
+    useQueryMock.mockReturnValue(null);
+
+    renderPage();
+
+    expect(screen.getByText("You don't have a number yet.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Get number" })).toHaveProperty(
+      "disabled",
+      false,
+    );
+    expect(screen.queryByRole("button", { name: "Request change" })).toBeNull();
+  });
+
   it("hides the request-change action from non-admin members", () => {
     renderPage(false);
 
@@ -246,6 +264,20 @@ describe("SettingsPhoneNumberPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Choose a new phone number" })).toBeTruthy();
     expect(await screen.findByText("You can change your phone number once.")).toBeTruthy();
+    expect(await screen.findByText("(416) 555-0124")).toBeTruthy();
+  });
+
+  it("opens the phone number chooser from the get-number action", async () => {
+    const user = userEvent.setup();
+    useQueryMock.mockReturnValue(null);
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: "Get number" }));
+
+    expect(await screen.findByRole("heading", { name: "Choose a phone number" })).toBeTruthy();
+    expect(
+      await screen.findByText("Pick a number callers can use to reach your AI receptionist."),
+    ).toBeTruthy();
     expect(await screen.findByText("(416) 555-0124")).toBeTruthy();
   });
 
@@ -285,5 +317,24 @@ describe("SettingsPhoneNumberPage", () => {
     expect(toastSuccessMock).toHaveBeenCalledWith(
       "Phone number changed. Your previous number will stay active for 30 days.",
     );
+  });
+
+  it("claims a first phone number and shows an added toast", async () => {
+    const user = userEvent.setup();
+    useQueryMock.mockReturnValue(null);
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: "Get number" }));
+    await user.click(await screen.findByRole("button", { name: "Select" }));
+
+    await waitFor(() => {
+      expect(claimReplacementNumberMock).toHaveBeenCalledWith({
+        businessId,
+        e164: suggestedNumber.e164,
+        selectionContext: suggestedNumber.selectionContext,
+        claimToken: suggestedNumber.claimToken,
+      });
+    });
+    expect(toastSuccessMock).toHaveBeenCalledWith("Phone number added.");
   });
 });

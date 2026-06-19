@@ -352,14 +352,17 @@
     "current": {
       "label": "Numéro de téléphone actuel",
       "description": "C'est le numéro que les appelants utilisent pour joindre votre réceptionniste IA.",
-      "empty": "Aucun numéro de téléphone n'est encore attribué."
+      "empty": "Vous n'avez pas encore de numéro."
     },
     "actions": {
-      "requestChange": "Demander un changement"
+      "requestChange": "Demander un changement",
+      "getNumber": "Obtenir un numéro"
     },
     "dialog": {
       "title": "Choisir un nouveau numéro",
-      "description": "Vous pouvez changer votre numéro de téléphone une seule fois."
+      "description": "Vous pouvez changer votre numéro de téléphone une seule fois.",
+      "getNumberTitle": "Choisir un numéro",
+      "getNumberDescription": "Choisissez un numéro que les appelants peuvent utiliser pour joindre votre réceptionniste IA."
     },
     "picker": {
       "countryLabel": "Pays",
@@ -376,7 +379,8 @@
       "unavailable": "Ce numéro vient d'être pris. Choisissez-en un autre dans la liste actualisée."
     },
     "toast": {
-      "changed": "Numéro de téléphone modifié."
+      "changed": "Numéro de téléphone modifié.",
+      "added": "Numéro de téléphone ajouté."
     }
   },
   "appearance": {

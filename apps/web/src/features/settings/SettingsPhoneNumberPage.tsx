@@ -83,10 +83,11 @@ export function SettingsPhoneNumberPage({
   const displayPhoneNumber = primaryPhoneNumber
     ? formatPhoneNumberDisplay(primaryPhoneNumber.e164, i18n.language)
     : null;
+  const hasPhoneNumber = Boolean(primaryPhoneNumber);
   const hasUsedPhoneNumberChange = Boolean(phoneNumberReplacementUsedAt);
 
   function handleClaimed(result: Extract<ClaimResult, { status: "claimed" }>): void {
-    toast.success(t("phoneNumber.toast.changed"));
+    toast.success(t(hasPhoneNumber ? "phoneNumber.toast.changed" : "phoneNumber.toast.added"));
     setIsDialogOpen(false);
     void result;
   }
@@ -117,21 +118,34 @@ export function SettingsPhoneNumberPage({
                       <Button
                         disabled={
                           primaryPhoneNumber === undefined ||
-                          primaryPhoneNumber === null ||
-                          hasUsedPhoneNumberChange
+                          (hasPhoneNumber && hasUsedPhoneNumberChange)
                         }
                         size="sm"
                         variant="outline"
                       />
                     }
                   >
-                    {t("phoneNumber.actions.requestChange")}
+                    {t(
+                      hasPhoneNumber
+                        ? "phoneNumber.actions.requestChange"
+                        : "phoneNumber.actions.getNumber",
+                    )}
                   </DialogTrigger>
                   <DialogContent className="max-w-3xl">
                     <DialogHeader>
-                      <DialogTitle>{t("phoneNumber.dialog.title")}</DialogTitle>
+                      <DialogTitle>
+                        {t(
+                          hasPhoneNumber
+                            ? "phoneNumber.dialog.title"
+                            : "phoneNumber.dialog.getNumberTitle",
+                        )}
+                      </DialogTitle>
                       <DialogDescription>
-                        {t("phoneNumber.dialog.description")}
+                        {t(
+                          hasPhoneNumber
+                            ? "phoneNumber.dialog.description"
+                            : "phoneNumber.dialog.getNumberDescription",
+                        )}
                       </DialogDescription>
                     </DialogHeader>
                     {isDialogOpen ? (

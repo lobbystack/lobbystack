@@ -701,7 +701,7 @@ async function requireBusinessCanUsePhoneNumberPicker(
   }
 }
 
-async function resolveVerifiedSuggestionContext(
+export async function resolveVerifiedSuggestionContext(
   ctx: ActionCtx,
   businessId: Id<"businesses">,
   userId: Id<"users">,

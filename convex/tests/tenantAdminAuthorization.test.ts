@@ -409,7 +409,7 @@ describe("tenant admin authorization", () => {
     ).rejects.toThrow();
   });
 
-  it("fails replacement phone number suggestions when the business has no current number", async () => {
+  it("requires a verified mobile phone before loading first phone number suggestions", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, authed } = await seedMember(t, {
       subject: "tenant-phone-admin",
@@ -420,7 +420,7 @@ describe("tenant admin authorization", () => {
       authed.action(api.settings.phoneNumbers.getInitialReplacementNumberSuggestion, {
         businessId,
       }),
-    ).rejects.toThrow("Add a phone number before changing it.");
+    ).rejects.toThrow("Verify your mobile number before choosing a business number.");
   });
 
   it("blocks replacement phone number suggestions after the one allowed change is used", async () => {

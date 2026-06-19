@@ -352,14 +352,17 @@
     "current": {
       "label": "Current phone number",
       "description": "This is the number callers use to reach your AI receptionist.",
-      "empty": "No phone number is assigned yet."
+      "empty": "You don't have a number yet."
     },
     "actions": {
-      "requestChange": "Request change"
+      "requestChange": "Request change",
+      "getNumber": "Get number"
     },
     "dialog": {
       "title": "Choose a new phone number",
-      "description": "You can change your phone number once."
+      "description": "You can change your phone number once.",
+      "getNumberTitle": "Choose a phone number",
+      "getNumberDescription": "Pick a number callers can use to reach your AI receptionist."
     },
     "picker": {
       "countryLabel": "Country",
@@ -376,7 +379,8 @@
       "unavailable": "That number was just taken. Pick another one from the refreshed list."
     },
     "toast": {
-      "changed": "Phone number changed. Your previous number will stay active for 30 days."
+      "changed": "Phone number changed. Your previous number will stay active for 30 days.",
+      "added": "Phone number added."
     }
   },
   "appearance": {

@@ -1254,6 +1254,61 @@ describe("onboarding phone-number actions", () => {
     expect(phoneNumbers[0]?.twilioPhoneSid).toBe("PN-claim-after-skip");
   });
 
+  it("claims a first settings phone number when onboarding was skipped", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15815550100",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "completed",
+      });
+    });
+
+    const suggestion = await authed.action(
+      api.settings.phoneNumbers.getInitialReplacementNumberSuggestion,
+      {
+        businessId,
+      },
+    );
+    expect(suggestion.suggestion?.e164).toBe("+14185550123");
+
+    createIncomingPhoneNumberMock.mockResolvedValueOnce({
+      sid: "PN-settings-first-number",
+      smsUrl: "https://example.convex.site/twilio/sms/inbound",
+      voiceUrl: "https://voice.example.com/twilio/voice/inbound",
+    });
+
+    const result = await authed.action(
+      api.settings.phoneNumbers.claimReplacementNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
+
+    expect(result).toMatchObject({
+      status: "claimed",
+      e164: "+14185550123",
+    });
+    expect(
+      (await t.query(internal.businesses.admin.getBusinessById, { businessId }))
+        ?.phoneNumberReplacementUsedAt,
+    ).toBeUndefined();
+
+    const phoneNumbers = await listBusinessPhoneNumbers(t, businessId);
+    expect(phoneNumbers).toHaveLength(1);
+    expect(phoneNumbers[0]).toMatchObject({
+      e164: "+14185550123",
+      twilioPhoneSid: "PN-settings-first-number",
+      status: "active",
+    });
+  });
+
   it("attempts to purchase a selected number even if a refreshed inventory page omits it", async () => {
     const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
