@@ -60,15 +60,13 @@ function getOnboardingStepRoutes({
   return Object.fromEntries(
     Object.entries(onboardingStepRoutes).filter(([step]) => {
       const stepNumber = Number(step);
-      const isPastPhoneVerification = current > 7;
-      const isPhoneVerificationStep = stepNumber === 6 || stepNumber === 7;
-
-      return (
-        stepNumber <= maxNavigableStep &&
-        (!isPastPhoneVerification || !isPhoneVerificationStep)
-      );
+      return stepNumber <= maxNavigableStep;
     }),
   );
+}
+
+function getHiddenOnboardingSteps({ current }: { current: number }): number[] {
+  return current > 7 ? [6, 7] : [];
 }
 
 /**
@@ -134,6 +132,7 @@ export function OnboardingShell({
         {progress ? (
           <OnboardingProgress
             current={progress.current}
+            hiddenSteps={getHiddenOnboardingSteps(progress)}
             routes={getOnboardingStepRoutes(progress)}
             total={progress.total}
           />
