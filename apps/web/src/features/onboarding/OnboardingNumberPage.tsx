@@ -63,6 +63,15 @@ export function OnboardingNumberPage({
   const claimOnboardingNumber = useObservedAction(
     api.onboarding.phoneNumbers.claimOnboardingNumber,
   );
+  const getInitialReplacementNumberSuggestion = useObservedAction(
+    api.settings.phoneNumbers.getInitialReplacementNumberSuggestion,
+  );
+  const searchReplacementNumbers = useObservedAction(
+    api.settings.phoneNumbers.searchReplacementNumbers,
+  );
+  const claimReplacementNumber = useObservedAction(
+    api.settings.phoneNumbers.claimReplacementNumber,
+  );
   const skipOnboardingNumber = useObservedMutation(
     api.onboarding.phoneNumbersSkip.skipOnboardingNumber,
   );
@@ -73,6 +82,7 @@ export function OnboardingNumberPage({
   const [isSkipping, setIsSkipping] = useState(false);
   const [skipError, setSkipError] = useState<string | null>(null);
   const shouldLoadInventory = primaryPhoneNumber === null;
+  const useSettingsNumberPicker = isComplete && primaryPhoneNumber === null;
 
   useEffect(() => {
     if (!isComplete && primaryPhoneNumber) {
@@ -117,6 +127,11 @@ export function OnboardingNumberPage({
 
   function handleClaimed(): void {
     setHasCompletedClaim(true);
+    if (useSettingsNumberPicker) {
+      navigate("/settings/phone-number", { replace: true });
+      return;
+    }
+
     navigate("/onboarding/plan", {
       state: { justClaimedPhoneNumber: true },
     });
@@ -198,17 +213,19 @@ export function OnboardingNumberPage({
       title={t("number.title")}
       width="lg"
       footer={
-        <div className="flex flex-col items-center gap-3">
-          <button
-            className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50"
-            disabled={isSkipping}
-            onClick={() => void handleSkip()}
-            type="button"
-          >
-            {isSkipping ? t("number.skipping") : t("number.skipLater")}
-          </button>
-          {skipError ? <p className="text-sm text-destructive">{skipError}</p> : null}
-        </div>
+        useSettingsNumberPicker ? null : (
+          <div className="flex flex-col items-center gap-3">
+            <button
+              className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50"
+              disabled={isSkipping}
+              onClick={() => void handleSkip()}
+              type="button"
+            >
+              {isSkipping ? t("number.skipping") : t("number.skipLater")}
+            </button>
+            {skipError ? <p className="text-sm text-destructive">{skipError}</p> : null}
+          </div>
+        )
       }
     >
       {primaryPhoneNumber === undefined || !shouldLoadInventory ? (
@@ -218,15 +235,19 @@ export function OnboardingNumberPage({
       ) : (
         <PhoneNumberChooser
           businessId={businessId}
-          claimNumber={claimOnboardingNumber as (args: {
-            businessId: Id<"businesses">;
-            e164: string;
-            selectionContext: AvailableNumberSummary["selectionContext"];
-            claimToken: string;
-          }) => Promise<ClaimResult>}
+          claimNumber={
+            (useSettingsNumberPicker ? claimReplacementNumber : claimOnboardingNumber) as (args: {
+              businessId: Id<"businesses">;
+              e164: string;
+              selectionContext: AvailableNumberSummary["selectionContext"];
+              claimToken: string;
+            }) => Promise<ClaimResult>
+          }
           getErrorMessage={getNumberChooserErrorMessage}
           getInitialNumberSuggestion={
-            getInitialNumberSuggestion as (args: {
+            (useSettingsNumberPicker
+              ? getInitialReplacementNumberSuggestion
+              : getInitialNumberSuggestion) as (args: {
               businessId: Id<"businesses">;
             }) => Promise<InitialSuggestionResult>
           }
@@ -249,7 +270,7 @@ export function OnboardingNumberPage({
           onClaimStarted={handleClaimStarted}
           onVerifyPhoneRequired={handleVerifyPhoneRequired}
           searchAvailableNumbers={
-            searchAvailableNumbers as (args: {
+            (useSettingsNumberPicker ? searchReplacementNumbers : searchAvailableNumbers) as (args: {
               businessId: Id<"businesses">;
               mode: "suggested" | "area_code";
               countryCode: AvailableNumberSummary["countryCode"];

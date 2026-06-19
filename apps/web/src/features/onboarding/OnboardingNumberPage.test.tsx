@@ -8,6 +8,9 @@ const navigateMock = vi.fn();
 const getInitialNumberSuggestionMock = vi.fn();
 const searchAvailableNumbersMock = vi.fn();
 const claimOnboardingNumberMock = vi.fn();
+const getInitialReplacementNumberSuggestionMock = vi.fn();
+const searchReplacementNumbersMock = vi.fn();
+const claimReplacementNumberMock = vi.fn();
 const skipOnboardingNumberMock = vi.fn();
 const tMock = vi.hoisted(() => (key: string) => key);
 let primaryPhoneNumberMock: unknown = null;
@@ -20,10 +23,13 @@ vi.mock("convex/react", () => ({
 vi.mock("@/lib/observed-convex", () => ({
   useObservedAction: () => {
     observedActionCall += 1;
-    const actionIndex = (observedActionCall - 1) % 3;
+    const actionIndex = (observedActionCall - 1) % 6;
     if (actionIndex === 0) return getInitialNumberSuggestionMock;
     if (actionIndex === 1) return searchAvailableNumbersMock;
-    return claimOnboardingNumberMock;
+    if (actionIndex === 2) return claimOnboardingNumberMock;
+    if (actionIndex === 3) return getInitialReplacementNumberSuggestionMock;
+    if (actionIndex === 4) return searchReplacementNumbersMock;
+    return claimReplacementNumberMock;
   },
   useObservedMutation: () => skipOnboardingNumberMock,
 }));
@@ -66,6 +72,9 @@ describe("OnboardingNumberPage", () => {
     getInitialNumberSuggestionMock.mockReset();
     searchAvailableNumbersMock.mockReset();
     claimOnboardingNumberMock.mockReset();
+    getInitialReplacementNumberSuggestionMock.mockReset();
+    searchReplacementNumbersMock.mockReset();
+    claimReplacementNumberMock.mockReset();
     skipOnboardingNumberMock.mockReset();
     primaryPhoneNumberMock = null;
     observedActionCall = 0;
@@ -118,8 +127,8 @@ describe("OnboardingNumberPage", () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
-  it("shows the picker when the user goes back after skipping the number step", async () => {
-    getInitialNumberSuggestionMock.mockResolvedValue({
+  it("uses the settings picker when a completed skipped-number user goes back", async () => {
+    getInitialReplacementNumberSuggestionMock.mockResolvedValue({
       market: { countryCode: "US" },
       suggestion: null,
       alternatives: [],
@@ -134,13 +143,14 @@ describe("OnboardingNumberPage", () => {
     );
 
     await waitFor(() => {
-      expect(getInitialNumberSuggestionMock).toHaveBeenCalledWith({
+      expect(getInitialReplacementNumberSuggestionMock).toHaveBeenCalledWith({
         businessId: "business-1",
       });
     });
+    expect(getInitialNumberSuggestionMock).not.toHaveBeenCalled();
     expect(screen.queryByText("number.skippedTitle")).toBeNull();
     expect(screen.queryByText("number.skippedDescription")).toBeNull();
-    expect(screen.getByRole("button", { name: "number.skipLater" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "number.skipLater" })).toBeNull();
   });
 
   it("lets users search UK business-number inventory", async () => {
