@@ -134,12 +134,17 @@
   },
   "plan": {
     "title": "Choisissez votre forfait",
-    "description": "Vous pouvez changer à tout moment.",
     "popular": "Populaire",
     "enterpriseSubject": "Forfait Entreprise",
     "compareTitle": "Comparer les forfaits en détail",
     "compareDescription": "Tous les forfaits incluent les fonctionnalités de base. Starter et Pro ajoutent plus d'utilisation avec réinitialisation mensuelle et dépassements à l'usage.",
     "featureHeader": "Fonctionnalité",
+    "billingInterval": {
+      "label": "Intervalle de facturation",
+      "monthly": "Mensuel",
+      "annual": "Annuel",
+      "save": "Économisez 20 %"
+    },
     "tiers": {
       "free_cloud": {
         "name": "Gratuit",
@@ -156,9 +161,15 @@
       },
       "starter": {
         "name": "Starter",
-        "price": "30 $",
+        "price": {
+          "monthly": "30 $",
+          "annual": "24 $"
+        },
         "period": "/mois",
-        "description": "24 $/mois effectif avec facturation annuelle. Inclut 150 minutes vocales réinitialisées chaque mois.",
+        "description": {
+          "monthly": "Facturé mensuellement. Inclut 150 minutes vocales réinitialisées chaque mois.",
+          "annual": "Facturé annuellement. Inclut 150 minutes vocales réinitialisées chaque mois."
+        },
         "cta": {
           "monthly": "Starter mensuel",
           "annual": "Starter annuel"
@@ -172,9 +183,15 @@
       },
       "pro": {
         "name": "Pro",
-        "price": "100 $",
+        "price": {
+          "monthly": "100 $",
+          "annual": "80 $"
+        },
         "period": "/mois",
-        "description": "80 $/mois effectif avec facturation annuelle. Plus d'utilisation incluse pour un volume d'appels croissant.",
+        "description": {
+          "monthly": "Facturé mensuellement. Plus d'utilisation incluse pour un volume d'appels croissant.",
+          "annual": "Facturé annuellement. Plus d'utilisation incluse pour un volume d'appels croissant."
+        },
         "cta": {
           "monthly": "Pro mensuel",
           "annual": "Pro annuel"

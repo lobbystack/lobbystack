@@ -175,10 +175,30 @@ describe("OnboardingPlanPage", () => {
     });
   });
 
-  it("marks Pro checkout starts as onboarding checkouts", async () => {
+  it("starts Pro checkout with the default annual billing interval", async () => {
     const user = userEvent.setup();
     renderPlanPage();
 
+    expect(screen.queryByRole("button", { name: /plan\.tiers\.pro\.cta\.monthly/ })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /plan\.tiers\.pro\.cta\.annual/ }));
+
+    await waitFor(() => {
+      expect(startCheckoutMock).toHaveBeenCalledWith({
+        businessId: "business_123",
+        target: "pro",
+        billingInterval: "annual",
+        source: "onboarding",
+      });
+    });
+    expect(locationAssignMock).toHaveBeenCalledWith("https://polar.sh/checkout/pro");
+  });
+
+  it("starts Pro checkout with monthly billing after switching the shared picker", async () => {
+    const user = userEvent.setup();
+    renderPlanPage();
+
+    await user.click(screen.getByRole("tab", { name: /plan\.billingInterval\.monthly/ }));
     await user.click(screen.getByRole("button", { name: /plan\.tiers\.pro\.cta\.monthly/ }));
 
     await waitFor(() => {
