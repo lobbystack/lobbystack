@@ -178,6 +178,45 @@ describe("OnboardingNumberPage", () => {
     expect(screen.getByRole("button", { name: "number.skipLater" })).toBeTruthy();
   });
 
+  it("returns attribution-stage users to attribution after claiming a number", async () => {
+    const user = userEvent.setup();
+    getInitialNumberSuggestionMock.mockResolvedValue({
+      market: { countryCode: "US" },
+      suggestion: {
+        e164: "+14155550100",
+        display: "(415) 555-0100",
+        countryCode: "US",
+        kind: "local",
+        capabilities: { sms: true, voice: true },
+        selectionContext: { mode: "suggested", countryCode: "US" },
+        claimToken: "claim-token",
+      },
+      alternatives: [],
+    });
+    claimOnboardingNumberMock.mockResolvedValue({
+      status: "claimed",
+      phoneNumberId: "phone-1",
+      e164: "+14155550100",
+    });
+
+    render(
+      <OnboardingNumberPage
+        businessId={"business-1" as never}
+        hasReachedAttribution
+        hasReachedPlan
+        onSignOut={() => {}}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "number.select" }));
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith("/onboarding/attribution", {
+        state: { justClaimedPhoneNumber: true },
+      });
+    });
+  });
+
   it("lets users search UK business-number inventory", async () => {
     const user = userEvent.setup();
     getInitialNumberSuggestionMock.mockResolvedValue({

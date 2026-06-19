@@ -25,6 +25,7 @@ type OnboardingNumberPageProps = {
   businessId: Id<"businesses">;
   onSignOut: () => void;
   hasReachedPlan?: boolean;
+  hasReachedAttribution?: boolean;
   isOnboardingComplete?: boolean;
   progressNavigableUntil?: number;
 };
@@ -51,6 +52,7 @@ export function OnboardingNumberPage({
   businessId,
   onSignOut,
   hasReachedPlan = false,
+  hasReachedAttribution = false,
   isOnboardingComplete = false,
   progressNavigableUntil,
 }: OnboardingNumberPageProps) {
@@ -131,6 +133,13 @@ export function OnboardingNumberPage({
     setHasCompletedClaim(true);
     if (useSettingsNumberPicker) {
       navigate("/settings/phone-number", { replace: true });
+      return;
+    }
+
+    if (hasReachedAttribution) {
+      navigate("/onboarding/attribution", {
+        state: { justClaimedPhoneNumber: true },
+      });
       return;
     }
 

@@ -118,6 +118,17 @@ const COUNTRY_OPTIONS: Array<{
   { code: "AU", label: "AU", flag: "🇦🇺" },
 ];
 
+function isVerifyPhoneRequiredError(error: unknown): boolean {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "";
+
+  return message.includes("Verify your mobile number before choosing a business number.");
+}
+
 function getNumberLocationLabel(number: AvailableNumberSummary): string | null {
   const parts = [number.locality, number.region].filter(
     (part): part is string => Boolean(part && part.trim().length > 0),
@@ -198,11 +209,7 @@ export function PhoneNumberChooser({
         setHasMore(initialList.length >= 10);
       } catch (loadError) {
         if (cancelled) return;
-        const rawMessage = loadError instanceof Error ? loadError.message : "";
-        if (
-          rawMessage === "Verify your mobile number before choosing a business number." &&
-          onVerifyPhoneRequired
-        ) {
+        if (onVerifyPhoneRequired && isVerifyPhoneRequiredError(loadError)) {
           onVerifyPhoneRequired();
           return;
         }

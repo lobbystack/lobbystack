@@ -1081,6 +1081,10 @@ function OnboardingNumberRoute() {
     <OnboardingNumberPage
       businessId={ctx.activeBusiness._id}
       hasReachedPlan={canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "plan")}
+      hasReachedAttribution={canVisitOnboardingStage(
+        ctx.activeBusiness.onboardingStage,
+        "attribution",
+      )}
       isOnboardingComplete={ctx.activeBusiness.onboardingStage === "completed"}
       onSignOut={ctx.onSignOut}
       progressNavigableUntil={Math.max(

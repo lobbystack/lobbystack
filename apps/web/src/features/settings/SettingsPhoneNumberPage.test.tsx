@@ -292,7 +292,9 @@ describe("SettingsPhoneNumberPage", () => {
     const user = userEvent.setup();
     useQueryMock.mockReturnValue(null);
     getInitialReplacementNumberSuggestionMock.mockRejectedValueOnce(
-      new Error("Verify your mobile number before choosing a business number."),
+      new Error(
+        "[CONVEX A(settings/phoneNumbers:getInitialReplacementNumberSuggestion)] Uncaught Error: Verify your mobile number before choosing a business number.",
+      ),
     );
     renderPage();
 
