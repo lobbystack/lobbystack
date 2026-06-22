@@ -34,7 +34,7 @@ describe("createRealtimeTurnDetectionConfig", () => {
       }),
     ).toEqual({
       type: "server_vad",
-      threshold: 0.65,
+      threshold: 0.8,
       prefix_padding_ms: 300,
       silence_duration_ms: 700,
       create_response: false,
@@ -46,7 +46,7 @@ describe("createRealtimeTurnDetectionConfig", () => {
   it("defaults to normal caller turn handling after the greeting", () => {
     expect(createRealtimeTurnDetectionConfig(30_000)).toEqual({
       type: "server_vad",
-      threshold: 0.65,
+      threshold: 0.8,
       prefix_padding_ms: 300,
       silence_duration_ms: 700,
       create_response: true,
@@ -67,7 +67,7 @@ describe("createRealtimeTurnDetectionConfig", () => {
   it("omits idle timeout while an app-managed call hold is active", () => {
     expect(createRealtimeHoldTurnDetectionConfig()).toEqual({
       type: "server_vad",
-      threshold: 0.65,
+      threshold: 0.8,
       prefix_padding_ms: 300,
       silence_duration_ms: 700,
       create_response: true,
@@ -96,7 +96,7 @@ describe("createRealtimeTurnDetectionConfig", () => {
             input: {
               turn_detection: {
                 type: "server_vad",
-                threshold: 0.65,
+                threshold: 0.8,
                 prefix_padding_ms: 300,
                 silence_duration_ms: 700,
                 create_response: true,
