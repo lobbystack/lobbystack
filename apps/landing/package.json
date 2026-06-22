@@ -50,7 +50,7 @@
     "shadcn": "^4.7.0",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.57.1",
-    "vite": "7.3.2",
+    "vite": "7.3.5",
     "vitest": "^4.1.2"
   }
 }
