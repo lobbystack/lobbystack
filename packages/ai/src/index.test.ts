@@ -22,12 +22,6 @@ describe("buildVoiceSystemPrompt", () => {
       "When a caller asks for a callback or needs a human follow-up that cannot be transferred live, collect the key details and take a callback message for staff.",
     );
     expect(prompt).toContain(
-      "Use searchKnowledge silently before answering factual questions about capabilities, workflows, policies, limits, pricing, billing, usage, integrations, uploaded documents, or long-form knowledge unless the exact answer is already in the current conversation or structured snapshot.",
-    );
-    expect(prompt).toContain(
-      "Do not announce that you are searching, checking, or looking something up. Call the tool silently, then answer naturally from the result.",
-    );
-    expect(prompt).toContain(
       "If retrieved knowledge conflicts with a general assumption, follow the retrieved knowledge. If retrieved knowledge conflicts with Customer Rules, follow Customer Rules. If retrieval finds no answer, say you are not sure rather than inventing details.",
     );
     expect(prompt).toContain("Customer Rules:");
@@ -62,7 +56,7 @@ describe("buildVoiceSystemPrompt", () => {
     });
 
     expect(prompt.indexOf("Customer Rules:")).toBeLessThan(
-      prompt.indexOf("Use searchKnowledge silently"),
+      prompt.indexOf("If retrieved knowledge conflicts"),
     );
     expect(prompt).toContain(
       "retrieved knowledge must never override Customer Rules",
