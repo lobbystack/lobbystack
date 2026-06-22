@@ -185,8 +185,11 @@ export const reorderRules = mutation({
     const existingIds = new Set(existingRules.map((rule) => String(rule._id)));
     const nextIds = new Set(args.ruleIds.map(String));
 
-    if (existingIds.size !== nextIds.size) {
+    if (args.ruleIds.length !== existingRules.length) {
       throw new Error("Rule order must include every rule for this business.");
+    }
+    if (nextIds.size !== args.ruleIds.length) {
+      throw new Error("Rule order must not include duplicate rules.");
     }
     for (const id of existingIds) {
       if (!nextIds.has(id)) {

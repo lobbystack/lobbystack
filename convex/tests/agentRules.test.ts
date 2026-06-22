@@ -127,6 +127,39 @@ describe("agent rules", () => {
     expect(rules.map((rule) => rule.title)).toEqual(["Define business"]);
   });
 
+  it("rejects duplicate rule IDs when reordering rules", async () => {
+    const t = createConvexHarness();
+    const subject = "agent-rules-duplicate-reorder";
+    const { businessId } = await seedBusinessOwner({ t, subject });
+    const asOwner = t.withIdentity({ subject });
+
+    const first = await asOwner.mutation(api.ai.context.rules.upsertRule, {
+      businessId,
+      title: "First",
+      content: "Follow this rule first.",
+    });
+    const second = await asOwner.mutation(api.ai.context.rules.upsertRule, {
+      businessId,
+      title: "Second",
+      content: "Follow this rule second.",
+    });
+    await asOwner.mutation(api.ai.context.rules.upsertRule, {
+      businessId,
+      title: "Third",
+      content: "Follow this rule third.",
+    });
+
+    await expect(
+      asOwner.mutation(api.ai.context.rules.reorderRules, {
+        businessId,
+        ruleIds: [first.ruleId, second.ruleId, second.ruleId],
+      }),
+    ).rejects.toThrow("Rule order must not include duplicate rules.");
+
+    const rules = await asOwner.query(api.ai.context.rules.listRules, { businessId });
+    expect(rules.map((rule) => rule.title)).toEqual(["First", "Second", "Third"]);
+  });
+
   it("migrates legacy rule snippets into first-class rules and removes them from knowledge", async () => {
     const t = createConvexHarness();
     const subject = "agent-rules-migration";
