@@ -252,7 +252,7 @@ function isTransferQuotaError(error: unknown): boolean {
 const TRANSFER_QUOTA_REACHED_MESSAGE =
   "This business has reached its transfer limit for this billing period. Please try again later.";
 const IMPLICIT_TERMINAL_HANGUP_RETRY_DELAYS_MS = [250, 1_000, 2_500];
-const REALTIME_VAD_THRESHOLD = 0.65;
+const REALTIME_VAD_THRESHOLD = 0.8;
 const REALTIME_VAD_PREFIX_PADDING_MS = 300;
 const REALTIME_VAD_SILENCE_DURATION_MS = 700;
 const REALTIME_IDLE_TIMEOUT_MIN_MS = 5_000;
