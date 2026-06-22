@@ -7,7 +7,6 @@ import { webVoiceAbuseRateLimiter } from "../lib/components";
 import schema from "../schema";
 import { modules } from "../test.setup";
 
-const originalAppBaseUrl = process.env.APP_BASE_URL;
 const originalDashboardTestCallToken = process.env.DASHBOARD_TEST_CALL_TOKEN;
 const originalDeploymentMode = process.env.DEPLOYMENT_MODE;
 
@@ -31,18 +30,12 @@ async function seedBusiness(slug = "lobbystack") {
 
 describe("web voice calls", () => {
   beforeEach(() => {
-    process.env.APP_BASE_URL = "https://app.lobbystack.com";
     process.env.DEPLOYMENT_MODE = "development";
     delete process.env.DASHBOARD_TEST_CALL_TOKEN;
   });
 
   afterEach(() => {
     vi.useRealTimers();
-    if (originalAppBaseUrl === undefined) {
-      delete process.env.APP_BASE_URL;
-    } else {
-      process.env.APP_BASE_URL = originalAppBaseUrl;
-    }
     if (originalDashboardTestCallToken === undefined) {
       delete process.env.DASHBOARD_TEST_CALL_TOKEN;
     } else {
@@ -424,6 +417,22 @@ describe("web voice calls", () => {
         widgetId: "lobbystack-dashboard-test-call",
       }),
     ).rejects.toThrow("web_voice_rate_limited");
+  });
+
+  it("uses dashboard test-call limits for verified local dashboard calls", async () => {
+    process.env.DASHBOARD_TEST_CALL_TOKEN = "dashboard-token";
+    const { t, businessId } = await seedBusiness("web-voice-local-dashboard-test-call");
+
+    for (let index = 0; index < 6; index += 1) {
+      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        dashboardTestCallToken: "dashboard-token",
+        origin: "http://localhost:5173",
+        ipHash: `local-dashboard-ip-hash-${index}`,
+        visitorId: "local-dashboard-visitor",
+        widgetId: "lobbystack-dashboard-test-call",
+      });
+    }
   });
 
   it("does not grant dashboard limits for invalid dashboard test call tokens", async () => {
