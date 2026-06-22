@@ -59,6 +59,14 @@ fly secrets set -a <your-app-name> \
   TWILIO_AUTH_TOKEN=<your-twilio-auth-token>
 ```
 
+If the gateway will serve web calls from local dev, set the allowed browser
+origins to include the dashboard and landing dev ports:
+
+```bash
+fly secrets set -a <your-app-name> \
+  WEB_CALL_ALLOWED_ORIGINS=https://app.lobbystack.com,https://lobbystack.com,https://www.lobbystack.com,http://localhost:5173,http://127.0.0.1:5173,http://localhost:4321,http://127.0.0.1:4321
+```
+
 5. Deploy:
 
 ```bash
@@ -90,6 +98,7 @@ POST https://<your-app-name>.fly.dev/twilio/voice/inbound
 ## Notes
 
 - `DEPLOYMENT_MODE=development` is intentional for the first validation pass. It keeps the current development-only fallbacks while we finish provider validation.
+- The web-call CORS allowlist must include the exact browser origin, including port. Local dashboard runs on `http://localhost:5173` by default, while local landing runs on `http://localhost:4321`.
 - `VOICE_GATEWAY_TRUST_PROXY=true` trusts only loopback/link-local/private proxy ranges for client IP derivation. Use an explicit comma-separated CIDR list if your ingress proxy uses public source ranges.
 - If PostHog does not auto-price your configured `OPENAI_REALTIME_MODEL`, set the optional `OPENAI_REALTIME_*_TOKEN_PRICE_USD` secrets so the gateway can emit `$ai_total_cost_usd` from token usage.
 - For voice calls, prefer the explicit text/audio token price secrets over the legacy generic input/output ones so the gateway can price Realtime audio and text buckets accurately.
