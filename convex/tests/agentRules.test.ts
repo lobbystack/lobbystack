@@ -3,6 +3,11 @@ import { describe, expect, it } from "vitest";
 
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
+import {
+  MAX_AGENT_RULE_CONTENT_CHARS,
+  MAX_AGENT_RULE_TITLE_CHARS,
+  MAX_AGENT_RULES_PER_SNAPSHOT,
+} from "../lib/snapshot";
 import schema from "../schema";
 import { modules } from "../test.setup";
 
@@ -160,6 +165,52 @@ describe("agent rules", () => {
     expect(rules.map((rule) => rule.title)).toEqual(["First", "Second", "Third"]);
   });
 
+  it("enforces rule count and content limits through the Rules API", async () => {
+    const t = createConvexHarness();
+    const subject = "agent-rules-limits";
+    const { businessId } = await seedBusinessOwner({ t, subject });
+    const asOwner = t.withIdentity({ subject });
+
+    await expect(
+      asOwner.mutation(api.ai.context.rules.upsertRule, {
+        businessId,
+        title: "x".repeat(MAX_AGENT_RULE_TITLE_CHARS + 1),
+        content: "Follow this rule.",
+      }),
+    ).rejects.toThrow(`Rule titles must be ${MAX_AGENT_RULE_TITLE_CHARS} characters or fewer.`);
+    await expect(
+      asOwner.mutation(api.ai.context.rules.upsertRule, {
+        businessId,
+        title: "Long content",
+        content: "x".repeat(MAX_AGENT_RULE_CONTENT_CHARS + 1),
+      }),
+    ).rejects.toThrow(
+      `Rule content must be ${MAX_AGENT_RULE_CONTENT_CHARS} characters or fewer.`,
+    );
+
+    await t.run(async (ctx) => {
+      for (let index = 0; index < MAX_AGENT_RULES_PER_SNAPSHOT; index += 1) {
+        await ctx.db.insert("agent_rules", {
+          businessId,
+          title: `Rule ${index + 1}`,
+          content: `Instruction ${index + 1}`,
+          active: true,
+          order: (index + 1) * 1000,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    });
+
+    await expect(
+      asOwner.mutation(api.ai.context.rules.upsertRule, {
+        businessId,
+        title: "One too many",
+        content: "This rule would exceed the configured rule limit.",
+      }),
+    ).rejects.toThrow(`Businesses can have up to ${MAX_AGENT_RULES_PER_SNAPSHOT} rules.`);
+  });
+
   it("migrates legacy rule snippets into first-class rules and removes them from knowledge", async () => {
     const t = createConvexHarness();
     const subject = "agent-rules-migration";
@@ -260,6 +311,45 @@ describe("agent rules", () => {
       "Legacy fallback rule",
     ]);
     expect(snapshot?.knowledgeSnippets).toEqual([]);
+  });
+
+  it("bounds rule payloads before storing business context snapshots", async () => {
+    const t = createConvexHarness();
+    const subject = "agent-rules-snapshot-cap";
+    const { businessId } = await seedBusinessOwner({ t, subject });
+
+    await t.run(async (ctx) => {
+      for (let index = 0; index < MAX_AGENT_RULES_PER_SNAPSHOT + 5; index += 1) {
+        await ctx.db.insert("agent_rules", {
+          businessId,
+          title: `${index.toString().padStart(2, "0")} ${"T".repeat(
+            MAX_AGENT_RULE_TITLE_CHARS + 20,
+          )}`,
+          content: `${index.toString().padStart(2, "0")} ${"C".repeat(
+            MAX_AGENT_RULE_CONTENT_CHARS + 20,
+          )}`,
+          active: true,
+          order: (index + 1) * 1000,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    });
+
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+    const snapshot = await t.query(internal.ai.context.snapshots.getByBusinessId, {
+      businessId,
+    });
+
+    expect(snapshot?.rules).toHaveLength(MAX_AGENT_RULES_PER_SNAPSHOT);
+    expect(snapshot?.rules?.at(0)?.title.startsWith("00 ")).toBe(true);
+    expect(snapshot?.rules?.at(-1)?.title.startsWith("49 ")).toBe(true);
+    expect(snapshot?.rules?.every((rule) => rule.title.length <= MAX_AGENT_RULE_TITLE_CHARS)).toBe(
+      true,
+    );
+    expect(
+      snapshot?.rules?.every((rule) => rule.content.length <= MAX_AGENT_RULE_CONTENT_CHARS),
+    ).toBe(true);
   });
 
   it("does not treat rules as stale knowledge entries", async () => {

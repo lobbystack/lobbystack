@@ -18,6 +18,11 @@ import { requireMembership, requireTenantAdminMembership } from "../../lib/auth"
 import { resolveKnowledgeSection } from "../../lib/knowledgeSections";
 import { rag } from "../../lib/components";
 import { scheduleSnapshotRefresh } from "../../businesses/admin";
+import {
+  MAX_AGENT_RULE_CONTENT_CHARS,
+  MAX_AGENT_RULE_TITLE_CHARS,
+  MAX_AGENT_RULES_PER_SNAPSHOT,
+} from "../../lib/snapshot";
 
 type BusinessIdArgs = { businessId: Id<"businesses"> };
 type UpsertRuleArgs = {
@@ -54,16 +59,13 @@ function assertNonEmptyRuleText(input: { title: string; content: string }): void
   }
 }
 
-async function getNextRuleOrder(
-  ctx: QueryCtx | MutationCtx,
-  businessId: Id<"businesses">,
-): Promise<number> {
-  const existing = await ctx.db
-    .query("agent_rules")
-    .withIndex("by_business_id_and_order", (q) => q.eq("businessId", businessId))
-    .order("desc")
-    .take(1);
-  return (existing[0]?.order ?? 0) + RULE_ORDER_STEP;
+function assertRuleTextLimits(input: { title: string; content: string }): void {
+  if (input.title.trim().length > MAX_AGENT_RULE_TITLE_CHARS) {
+    throw new Error(`Rule titles must be ${MAX_AGENT_RULE_TITLE_CHARS} characters or fewer.`);
+  }
+  if (input.content.trim().length > MAX_AGENT_RULE_CONTENT_CHARS) {
+    throw new Error(`Rule content must be ${MAX_AGENT_RULE_CONTENT_CHARS} characters or fewer.`);
+  }
 }
 
 async function getBusinessRules(
@@ -101,6 +103,7 @@ export const upsertRule = mutation({
   handler: async (ctx: MutationCtx, args: UpsertRuleArgs) => {
     await requireTenantAdminMembership(ctx, args.businessId);
     assertNonEmptyRuleText(args);
+    assertRuleTextLimits(args);
 
     const now = new Date().toISOString();
     if (args.ruleId) {
@@ -120,12 +123,17 @@ export const upsertRule = mutation({
       return { ruleId: args.ruleId };
     }
 
+    const existingRules = await getBusinessRules(ctx, args.businessId);
+    if (existingRules.length >= MAX_AGENT_RULES_PER_SNAPSHOT) {
+      throw new Error(`Businesses can have up to ${MAX_AGENT_RULES_PER_SNAPSHOT} rules.`);
+    }
+
     const ruleId = await ctx.db.insert("agent_rules", {
       businessId: args.businessId,
       title: args.title.trim(),
       content: args.content.trim(),
       active: args.active ?? true,
-      order: args.order ?? (await getNextRuleOrder(ctx, args.businessId)),
+      order: args.order ?? ((existingRules.at(-1)?.order ?? 0) + RULE_ORDER_STEP),
       createdAt: now,
       updatedAt: now,
     });

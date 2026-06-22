@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { buildBusinessContextSnapshot } from "./snapshot";
+import {
+  buildBusinessContextSnapshot,
+  MAX_AGENT_RULE_CONTENT_CHARS,
+  MAX_AGENT_RULE_TITLE_CHARS,
+  MAX_AGENT_RULES_PER_SNAPSHOT,
+} from "./snapshot";
 
 describe("buildBusinessContextSnapshot", () => {
   it("includes the knowledge digest, prioritized snippets, and contact channels", () => {
@@ -40,5 +45,41 @@ describe("buildBusinessContextSnapshot", () => {
     ]);
     expect(snapshot.rules?.map((rule) => rule.id)).toEqual(["rule-1", "rule-2"]);
     expect(snapshot.contactChannels.phoneNumber).toBe("+14165550000");
+  });
+
+  it("caps rule count and text stored in snapshots", () => {
+    const snapshot = buildBusinessContextSnapshot({
+      businessId: "biz-1",
+      version: "v1",
+      generatedAt: "2026-03-08T12:00:00.000Z",
+      displayName: "Maple Family Clinic",
+      timezone: "America/Toronto",
+      defaultLocale: "en",
+      businessType: "clinic",
+      greeting: "Hello",
+      tone: "warm",
+      bookingPolicy: "Only confirm after booking.",
+      summary: "General clinic",
+      hours: [],
+      closures: [],
+      services: [],
+      rules: Array.from({ length: MAX_AGENT_RULES_PER_SNAPSHOT + 1 }, (_, index) => ({
+        id: `rule-${index}`,
+        title: `${index} ${"T".repeat(MAX_AGENT_RULE_TITLE_CHARS + 20)}`,
+        content: `${index} ${"C".repeat(MAX_AGENT_RULE_CONTENT_CHARS + 20)}`,
+        order: index,
+      })),
+      snippets: [],
+      transferPolicy: { mode: "never" },
+    });
+
+    expect(snapshot.rules).toHaveLength(MAX_AGENT_RULES_PER_SNAPSHOT);
+    expect(snapshot.rules?.at(-1)?.id).toBe(`rule-${MAX_AGENT_RULES_PER_SNAPSHOT - 1}`);
+    expect(snapshot.rules?.every((rule) => rule.title.length <= MAX_AGENT_RULE_TITLE_CHARS)).toBe(
+      true,
+    );
+    expect(
+      snapshot.rules?.every((rule) => rule.content.length <= MAX_AGENT_RULE_CONTENT_CHARS),
+    ).toBe(true);
   });
 });
