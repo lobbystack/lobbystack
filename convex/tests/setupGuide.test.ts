@@ -92,14 +92,15 @@ async function addActiveService(t: ConvexHarness, businessId: Id<"businesses">) 
 
 async function addActiveRule(t: ConvexHarness, businessId: Id<"businesses">) {
   await t.run(async (ctx) => {
-    await ctx.db.insert("knowledge_snippets", {
+    const now = new Date().toISOString();
+    await ctx.db.insert("agent_rules", {
       businessId,
-      section: "rules",
       title: "Escalations",
       content: "Transfer urgent billing questions.",
-      tags: [],
-      priority: 75,
       active: true,
+      order: 1000,
+      createdAt: now,
+      updatedAt: now,
     });
   });
 }

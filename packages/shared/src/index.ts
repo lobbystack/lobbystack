@@ -85,6 +85,13 @@ export type KnowledgeSnippet = {
   priority: number;
 };
 
+export type AgentRuleSummary = {
+  id: string;
+  title: string;
+  content: string;
+  order: number;
+};
+
 export type BusinessContextSnapshot = {
   businessId: string;
   version: string;
@@ -105,6 +112,7 @@ export type BusinessContextSnapshot = {
   hours: Array<HoursWindow>;
   closures: Array<ClosureWindow>;
   services: Array<ServiceSummary>;
+  rules?: Array<AgentRuleSummary>;
   knowledgeSnippets?: Array<KnowledgeSnippet>;
   contactChannels: {
     phoneNumber?: string;
@@ -188,6 +196,14 @@ export const demoSnapshot: BusinessContextSnapshot = {
   services: [
     { id: "svc-checkup", name: "General Checkup", durationMinutes: 30 },
     { id: "svc-vaccine", name: "Vaccination Visit", durationMinutes: 15 },
+  ],
+  rules: [
+    {
+      id: "rule-1",
+      title: "Urgent escalation",
+      content: "Transfer urgent medical issues before answering administrative questions.",
+      order: 1000,
+    },
   ],
   knowledgeSnippets: [
     {

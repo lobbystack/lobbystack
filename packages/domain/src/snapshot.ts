@@ -1,5 +1,6 @@
 import type {
   BusinessContextSnapshot,
+  AgentRuleSummary,
   ClosureWindow,
   HoursWindow,
   KnowledgeSnippet,
@@ -25,6 +26,7 @@ type SnapshotBuilderInput = {
   hours: Array<HoursWindow>;
   closures: Array<ClosureWindow>;
   services: Array<ServiceSummary>;
+  rules?: Array<AgentRuleSummary>;
   snippets: Array<KnowledgeSnippet>;
   knowledgeDigest?: string;
   transferPolicy: TransferPolicy;
@@ -66,6 +68,9 @@ export function buildBusinessContextSnapshot(
     hours: input.hours,
     closures: input.closures,
     services: input.services,
+    rules: (input.rules ?? [])
+      .slice()
+      .sort((left, right) => left.order - right.order),
     knowledgeSnippets: input.snippets
       .slice()
       .sort((left, right) => right.priority - left.priority)

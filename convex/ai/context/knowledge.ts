@@ -401,7 +401,7 @@ async function indexKnowledgeSnippetById(
     snippetId,
   });
 
-  if (!snippet || !snippet.active) {
+  if (!snippet || !snippet.active || resolveKnowledgeSection(snippet.section) === "rules") {
     return null;
   }
 
@@ -1109,6 +1109,9 @@ export const upsertKnowledgeSnippet = mutation({
   },
   handler: async (ctx: MutationCtx, args: UpsertKnowledgeSnippetArgs) => {
     await requireTenantAdminMembership(ctx, args.businessId);
+    if (args.section === "rules") {
+      throw new Error("Rules must be managed through the Rules API.");
+    }
 
     const snippetId =
       args.snippetId ??
@@ -1166,6 +1169,10 @@ export const createKnowledgeDocument = mutation({
   },
   handler: async (ctx: MutationCtx, args: CreateKnowledgeDocumentArgs) => {
     await requireTenantAdminMembership(ctx, args.businessId);
+    if (args.section === "rules") {
+      throw new Error("Rules must be managed through the Rules API.");
+    }
+
     const documentId = await ctx.db.insert("knowledge_documents", {
       businessId: args.businessId,
       ...(args.section !== undefined ? { section: args.section } : {}),
@@ -1226,6 +1233,9 @@ export const finalizeKnowledgeDocumentUpload = action({
     args: FinalizeKnowledgeDocumentUploadArgs,
   ): Promise<{ documentId: Id<"knowledge_documents"> }> => {
     await requireKnowledgeAccess(ctx, args.businessId);
+    if (args.section === "rules") {
+      throw new Error("Rules must be managed through the Rules API.");
+    }
 
     const metadata: UploadedKnowledgeDocumentMetadata = await ctx.runQuery(
       internal.ai.context.knowledge.getUploadedKnowledgeDocumentMetadata,
@@ -1300,15 +1310,26 @@ export const listKnowledge = query({
         .collect(),
     ]);
 
+    const knowledgeDocuments = documents.filter(
+      (document) => resolveKnowledgeSection(document.section) !== "rules",
+    );
+    const knowledgeSnippets = snippets.filter(
+      (snippet) => resolveKnowledgeSection(snippet.section) !== "rules",
+    );
+
     if (args.section === undefined) {
-      return { documents, snippets };
+      return { documents: knowledgeDocuments, snippets: knowledgeSnippets };
+    }
+
+    if (args.section === "rules") {
+      return { documents: [], snippets: [] };
     }
 
     return {
-      documents: documents.filter(
+      documents: knowledgeDocuments.filter(
         (document) => resolveKnowledgeSection(document.section) === args.section,
       ),
-      snippets: snippets.filter(
+      snippets: knowledgeSnippets.filter(
         (snippet) => resolveKnowledgeSection(snippet.section) === args.section,
       ),
     };
@@ -1531,6 +1552,7 @@ export const getKnowledgeEntriesNeedingReindex = internalQuery({
         .filter(
           (snippet) =>
             snippet.active &&
+            resolveKnowledgeSection(snippet.section) !== "rules" &&
             (!snippet.indexedEntryId || snippet.indexVersion !== KNOWLEDGE_INDEX_VERSION),
         )
         .map((snippet) => snippet._id),

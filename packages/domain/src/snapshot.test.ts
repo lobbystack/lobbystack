@@ -20,6 +20,10 @@ describe("buildBusinessContextSnapshot", () => {
       hours: [{ dayOfWeek: 1, openMinutes: 540, closeMinutes: 1020 }],
       closures: [],
       services: [{ id: "svc-1", name: "Checkup", durationMinutes: 30 }],
+      rules: [
+        { id: "rule-2", title: "Second", content: "Ask for call volume.", order: 2000 },
+        { id: "rule-1", title: "First", content: "Ask business type.", order: 1000 },
+      ],
       snippets: [
         { id: "snippet-1", title: "Parking", content: "Rear lot", tags: [], priority: 2 },
         { id: "snippet-2", title: "Masks", content: "Optional", tags: [], priority: 10 },
@@ -34,6 +38,7 @@ describe("buildBusinessContextSnapshot", () => {
       "snippet-2",
       "snippet-1",
     ]);
+    expect(snapshot.rules?.map((rule) => rule.id)).toEqual(["rule-1", "rule-2"]);
     expect(snapshot.contactChannels.phoneNumber).toBe("+14165550000");
   });
 });

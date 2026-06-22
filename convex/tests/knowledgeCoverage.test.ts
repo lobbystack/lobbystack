@@ -1568,7 +1568,7 @@ describe("Knowledge coverage", () => {
 
     expect(services.snippets.map((snippet) => snippet.title)).toEqual(["Consultation"]);
     expect(services.documents.map((document) => document.title)).toEqual(["Service Brochure"]);
-    expect(rules.snippets.map((snippet) => snippet.title)).toEqual(["Escalation Rule"]);
+    expect(rules.snippets).toHaveLength(0);
     expect(rules.documents).toHaveLength(0);
     expect(knowledge.snippets.map((snippet) => snippet.title)).toEqual(["Hours"]);
     expect(knowledge.documents).toHaveLength(0);

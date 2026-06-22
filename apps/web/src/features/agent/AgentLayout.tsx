@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import type { ReactNode } from "react";
 
 import { PageHeader } from "@/components/page-header";
-import { AddKnowledgeSheet } from "./AddKnowledgeSheet";
+import { AgentRuleDialog } from "./AgentRuleDialog";
 import { KnowledgeActionsMenu } from "./KnowledgeActionsMenu";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { getAgentSectionFromPathname } from "./sections";
@@ -84,11 +84,10 @@ export function AgentLayout({ businessId, canManageTenant }: AgentLayoutProps) {
               <Plus data-icon="inline-start" />
               {t("sections.rules.addKnowledge")}
             </Button>
-            <AddKnowledgeSheet
+            <AgentRuleDialog
               businessId={businessId}
               onOpenChange={setIsRuleDialogOpen}
               open={isRuleDialogOpen}
-              section="rules"
             />
           </>
         ) : null}

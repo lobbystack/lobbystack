@@ -82,14 +82,23 @@ async function hasActiveRule(
   ctx: QueryCtx,
   businessId: Id<"businesses">,
 ): Promise<boolean> {
-  const snippets = await ctx.db
-    .query("knowledge_snippets")
-    .withIndex("by_business_id_and_active", (q) =>
-      q.eq("businessId", businessId).eq("active", true),
-    )
-    .collect();
+  const [rules, snippets] = await Promise.all([
+    ctx.db
+      .query("agent_rules")
+      .withIndex("by_business_id_and_order", (q) => q.eq("businessId", businessId))
+      .collect(),
+    ctx.db
+      .query("knowledge_snippets")
+      .withIndex("by_business_id_and_active", (q) =>
+        q.eq("businessId", businessId).eq("active", true),
+      )
+      .collect(),
+  ]);
 
-  return snippets.some((snippet) => resolveKnowledgeSection(snippet.section) === "rules");
+  return (
+    rules.some((rule) => rule.active) ||
+    snippets.some((snippet) => resolveKnowledgeSection(snippet.section) === "rules")
+  );
 }
 
 export const getProgress = query({

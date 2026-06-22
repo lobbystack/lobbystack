@@ -80,6 +80,13 @@ const setupGuideStepIdValidator = v.union(
   v.literal("rules"),
 );
 
+const agentRuleSummaryValidator = v.object({
+  id: v.string(),
+  title: v.string(),
+  content: v.string(),
+  order: v.number(),
+});
+
 const conversationSessionSummaryKindValidator = v.union(
   v.literal("booked"),
   v.literal("booking_in_progress"),
@@ -520,6 +527,18 @@ export default defineSchema({
     error: v.optional(v.string()),
   }).index("by_business_id_and_active", ["businessId", "active"]),
 
+  agent_rules: defineTable({
+    businessId: v.id("businesses"),
+    title: v.string(),
+    content: v.string(),
+    active: v.boolean(),
+    order: v.number(),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_business_id", ["businessId"])
+    .index("by_business_id_and_order", ["businessId", "order"]),
+
   business_context_snapshots: defineTable({
     businessId: v.id("businesses"),
     version: v.string(),
@@ -543,6 +562,7 @@ export default defineSchema({
     hours: v.array(hoursWindowValidator),
     closures: v.array(closureWindowValidator),
     services: v.array(serviceSummaryValidator),
+    rules: v.optional(v.array(agentRuleSummaryValidator)),
     knowledgeSnippets: v.optional(v.array(snippetValidator)),
     contactChannels: v.object({
       phoneNumber: v.optional(v.string()),
