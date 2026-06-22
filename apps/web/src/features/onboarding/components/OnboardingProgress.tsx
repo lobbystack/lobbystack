@@ -6,6 +6,7 @@ type OnboardingProgressProps = {
   current: number;
   total: number;
   className?: string;
+  hiddenSteps?: number[];
   routes?: Record<number, string>;
 };
 
@@ -19,9 +20,13 @@ export function OnboardingProgress({
   current,
   total,
   className,
+  hiddenSteps = [],
   routes = {},
 }: OnboardingProgressProps) {
-  const dots = Array.from({ length: total }, (_, index) => index + 1);
+  const hiddenStepSet = new Set(hiddenSteps);
+  const dots = Array.from({ length: total }, (_, index) => index + 1).filter(
+    (step) => !hiddenStepSet.has(step),
+  );
 
   return (
     <nav aria-label={`Onboarding progress: step ${current} of ${total}`} className={className}>

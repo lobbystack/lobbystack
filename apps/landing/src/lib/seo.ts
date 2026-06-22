@@ -273,6 +273,7 @@ export const softwareApplicationJsonLd = (
     "@id": absoluteUrl("/#organization"),
   },
   sameAs: BRAND_SAME_AS,
+  codeRepository: "https://github.com/lobbystack/lobbystack",
   softwareHelp: {
     "@type": "CreativeWork",
     url: "https://docs.lobbystack.com",

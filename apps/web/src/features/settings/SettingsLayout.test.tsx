@@ -16,6 +16,7 @@ vi.mock("react-i18next", () => ({
         "sections.usage": "Usage",
         "sections.billing": "Plan",
         "sections.business": "Team",
+        "sections.phoneNumber": "Phone Number",
         "sections.appearance": "Preferences",
         "sections.notifications": "Notifications",
       };
@@ -34,6 +35,7 @@ function renderSettingsShell(initialEntry: string) {
           <Route element={<div>Usage content</div>} path="usage" />
           <Route element={<div>Plan content</div>} path="plan" />
           <Route element={<div>Team content</div>} path="team" />
+          <Route element={<div>Phone number content</div>} path="phone-number" />
           <Route element={<div>Appearance content</div>} path="appearance" />
           <Route element={<div>Notifications content</div>} path="notifications" />
         </Route>
@@ -69,6 +71,9 @@ describe("SettingsLayout", () => {
     expect(screen.getByRole("link", { name: "Team" }).getAttribute("href")).toBe(
       "/settings/team",
     );
+    expect(screen.getByRole("link", { name: "Phone Number" }).getAttribute("href")).toBe(
+      "/settings/phone-number",
+    );
     expect(
       screen.getByRole("link", { name: "Preferences" }).getAttribute("href"),
     ).toBe(
@@ -84,6 +89,22 @@ describe("SettingsLayout", () => {
     ).toBe(
       "page",
     );
+    expect(
+      Boolean(
+        screen
+          .getByRole("link", { name: "Team" })
+          .compareDocumentPosition(screen.getByRole("link", { name: "Phone Number" })) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ),
+    ).toBe(true);
+    expect(
+      Boolean(
+        screen
+          .getByRole("link", { name: "Phone Number" })
+          .compareDocumentPosition(screen.getByRole("link", { name: "Preferences" })) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ),
+    ).toBe(true);
     expect(screen.getByRole("navigation", { name: "Settings" }).className).not.toContain("-mt-2");
     expect(screen.queryByRole("link", { name: "Integrations" })).toBeNull();
   });

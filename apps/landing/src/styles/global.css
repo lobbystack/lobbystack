@@ -299,7 +299,7 @@
 }
 
 .blog-copy {
-  @apply text-base leading-8 text-muted-foreground md:text-lg md:leading-9;
+  @apply text-base leading-8 text-foreground md:text-lg md:leading-9;
 }
 
 .display-heading,
@@ -380,7 +380,7 @@
 }
 
 .blog-copy td {
-  @apply border-t border-border/70 text-muted-foreground;
+  @apply border-t border-border/70 text-foreground;
 }
 
 .blog-copy th + th,
@@ -408,6 +408,62 @@
 }
 
 .blog-copy hr {
+  @apply my-12 border-border;
+}
+
+.changelog-copy {
+  @apply text-base leading-8 text-foreground md:text-lg md:leading-9;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+.changelog-copy > * + * {
+  @apply mt-6;
+}
+
+.changelog-copy h2 {
+  @apply mt-12 font-heading text-2xl leading-tight font-semibold tracking-tight text-foreground md:text-3xl;
+}
+
+.changelog-copy h3 {
+  @apply mt-10 font-heading text-xl leading-tight font-semibold tracking-tight text-foreground md:text-2xl;
+}
+
+.changelog-copy p {
+  @apply max-w-3xl;
+}
+
+.changelog-copy a {
+  @apply font-medium text-foreground underline underline-offset-4 transition-colors hover:text-primary;
+}
+
+.changelog-copy strong {
+  @apply font-semibold text-foreground;
+}
+
+.changelog-copy ul,
+.changelog-copy ol {
+  @apply max-w-3xl space-y-3 pl-6;
+}
+
+.changelog-copy ul {
+  @apply list-disc;
+}
+
+.changelog-copy ol {
+  @apply list-decimal;
+}
+
+.changelog-copy li {
+  @apply pl-1;
+}
+
+.changelog-copy blockquote {
+  @apply max-w-3xl rounded-2xl border border-border/70 bg-muted/30 px-6 py-5 text-xl leading-9 font-medium text-foreground italic;
+}
+
+.changelog-copy hr {
   @apply my-12 border-border;
 }
 

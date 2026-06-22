@@ -3,7 +3,7 @@ import {
 import { observedMutation as mutation } from "../telemetry/observedFunctions";
 import { internalQuery, query } from "../_generated/server";
 import { internal } from "../_generated/api";
-import type { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import { ensureCurrentUser, getCurrentUser, requireMembership } from "../lib/auth";
 import { ensureDefaultStaffForBusiness } from "../lib/defaultStaff";
 import { assertBootstrapAllowed } from "../onboarding/abuse";
@@ -23,7 +23,11 @@ import {
   DEFAULT_RECEPTIONIST_TRANSFER_MODE,
 } from "../lib/receptionistProfileDefaults";
 import { DEFAULT_APPOINTMENT_CHANGE_POLICY } from "../lib/appointmentChangePolicy";
-import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
+import {
+  ONBOARDING_STAGE_INDEX,
+  normalizeOnboardingStage,
+  type OnboardingStage,
+} from "../lib/onboardingStage";
 
 import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 
@@ -32,6 +36,7 @@ const businessDeploymentModes = new Set([
   "self_hosted_standard",
   "development",
 ]);
+const PHONE_NUMBER_REPLACEMENT_RESERVATION_MAX_AGE_MS = 15 * 60 * 1000;
 
 function normalizeBootstrapBusinessName(name: string): string {
   return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
@@ -229,29 +234,123 @@ export const beginOnboardingNumberClaim = internalMutation({
   args: {
     businessId: v.id("businesses"),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ restoreStage: OnboardingStage }> => {
     const business = await ctx.db.get(args.businessId);
     if (!business) {
       throw new Error("Business not found.");
     }
 
-    if (business.onboardingStage === "phone_number_claiming") {
+    const stage = normalizeOnboardingStage(business.onboardingStage);
+
+    if (stage === "phone_number_claiming") {
       throw new Error("A phone-number claim is already in progress for this business.");
     }
 
-    if (business.onboardingStage !== "phone_number") {
+    if (
+      ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.phone_number ||
+      stage === "completed"
+    ) {
       throw new Error("Phone-number onboarding has already been completed for this business.");
+    }
+
+    if (ONBOARDING_STAGE_INDEX[stage] > ONBOARDING_STAGE_INDEX.phone_number) {
+      const existingPhoneNumbers = await ctx.db
+        .query("phone_numbers")
+        .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+        .collect();
+      const existingPrimaryPhoneNumber = existingPhoneNumbers.find(
+        (phoneNumber) => phoneNumber.status === "active",
+      );
+
+      if (existingPrimaryPhoneNumber) {
+        throw new Error("Phone-number onboarding has already been completed for this business.");
+      }
     }
 
     await ctx.db.patch(args.businessId, {
       onboardingStage: "phone_number_claiming",
     });
 
-    return "phone_number_claiming";
+    return { restoreStage: stage };
   },
 });
 
 export const releaseOnboardingNumberClaim = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    restoreStage: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<OnboardingStage> => {
+    const business = await ctx.db.get(args.businessId);
+    if (!business) {
+      throw new Error("Business not found.");
+    }
+
+    const restoreStage = args.restoreStage
+      ? normalizeOnboardingStage(args.restoreStage)
+      : "phone_number";
+    if (business.onboardingStage === "phone_number_claiming") {
+      await ctx.db.patch(args.businessId, {
+        onboardingStage: restoreStage,
+      });
+    }
+
+    return restoreStage;
+  },
+});
+
+export const reservePhoneNumberReplacement = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    reservedAt: string;
+    primaryPhoneNumber: Doc<"phone_numbers"> | null;
+  }> => {
+    const business = await ctx.db.get(args.businessId);
+    if (!business) {
+      throw new Error("Business not found.");
+    }
+
+    if (business.phoneNumberReplacementUsedAt) {
+      throw new Error("This business has already used its phone number change.");
+    }
+
+    const reservedAt = business.phoneNumberReplacementReservedAt
+      ? Date.parse(business.phoneNumberReplacementReservedAt)
+      : Number.NaN;
+    if (
+      Number.isFinite(reservedAt) &&
+      Date.now() - reservedAt < PHONE_NUMBER_REPLACEMENT_RESERVATION_MAX_AGE_MS
+    ) {
+      throw new Error("A phone number change is already in progress.");
+    }
+
+    const now = new Date().toISOString();
+    await ctx.db.patch(args.businessId, {
+      phoneNumberReplacementReservedAt: now,
+    });
+    const phoneNumbers = await ctx.db
+      .query("phone_numbers")
+      .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+      .collect();
+    const activeVoicePhoneNumber =
+      phoneNumbers.find(
+        (phoneNumber) => phoneNumber.status === "active" && phoneNumber.voiceEnabled,
+      ) ?? null;
+    const primaryPhoneNumber =
+      activeVoicePhoneNumber ??
+      phoneNumbers.find((phoneNumber) => phoneNumber.status === "active") ??
+      null;
+
+    return { reservedAt: now, primaryPhoneNumber };
+  },
+});
+
+export const markPhoneNumberReplacementUsed = internalMutation({
   args: {
     businessId: v.id("businesses"),
   },
@@ -261,13 +360,33 @@ export const releaseOnboardingNumberClaim = internalMutation({
       throw new Error("Business not found.");
     }
 
-    if (business.onboardingStage === "phone_number_claiming") {
-      await ctx.db.patch(args.businessId, {
-        onboardingStage: "phone_number",
-      });
+    if (business.phoneNumberReplacementUsedAt) {
+      return business.phoneNumberReplacementUsedAt;
     }
 
-    return "phone_number";
+    const now = new Date().toISOString();
+    await ctx.db.patch(args.businessId, {
+      phoneNumberReplacementReservedAt: undefined,
+      phoneNumberReplacementUsedAt: now,
+    });
+    return now;
+  },
+});
+
+export const releasePhoneNumberReplacementReservation = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    const business = await ctx.db.get(args.businessId);
+    if (!business || business.phoneNumberReplacementUsedAt) {
+      return null;
+    }
+
+    await ctx.db.patch(args.businessId, {
+      phoneNumberReplacementReservedAt: undefined,
+    });
+    return null;
   },
 });
 

@@ -413,6 +413,8 @@ export function OnboardingPlanPage({
   const selectOnboardingPlan = useObservedMutation(api.onboarding.plan.selectOnboardingPlan);
 
   const [submittingPlan, setSubmittingPlan] = useState<PlanSlug | null>(null);
+  const [selectedBillingInterval, setSelectedBillingInterval] =
+    useState<BillingInterval>("annual");
   const [error, setError] = useState<string | null>(null);
   const checkoutRefreshKeyRef = useRef<string | null>(null);
   const checkoutStatus = searchParams.get("checkout");
@@ -438,6 +440,21 @@ export function OnboardingPlanPage({
     }
     return status?.availableCheckoutIntervals[plan] ?? allBillingIntervals;
   };
+
+  const availableBillingIntervals = allBillingIntervals.filter((billingInterval) =>
+    (["starter", "pro"] as const).some((plan) =>
+      getCheckoutIntervalsForPlan(plan).includes(billingInterval),
+    ),
+  );
+
+  useEffect(() => {
+    if (
+      availableBillingIntervals.length > 0 &&
+      !availableBillingIntervals.includes(selectedBillingInterval)
+    ) {
+      setSelectedBillingInterval(availableBillingIntervals[0] ?? "monthly");
+    }
+  }, [availableBillingIntervals, selectedBillingInterval]);
 
   useEffect(() => {
     if (checkoutStatus !== "success") {
@@ -540,13 +557,53 @@ export function OnboardingPlanPage({
 
   return (
     <OnboardingShell
-      description={t("plan.description")}
       onSignOut={onSignOut}
       progress={{ current: 9, navigableUntil: progressNavigableUntil, total: 10 }}
       title={t("plan.title")}
       width="wide"
     >
       <div className="flex flex-col gap-12">
+        <div className="flex justify-center">
+          <div
+            aria-label={t("plan.billingInterval.label")}
+            className="inline-flex rounded-full border border-border bg-input/30 p-1"
+            role="tablist"
+          >
+            {allBillingIntervals.map((billingInterval) => {
+              const isSelected = selectedBillingInterval === billingInterval;
+              const isUnavailable =
+                availableBillingIntervals.length > 0 &&
+                !availableBillingIntervals.includes(billingInterval);
+
+              return (
+                <Button
+                  aria-selected={isSelected}
+                  className={cn(
+                    "h-9 rounded-full px-4",
+                    isSelected
+                      ? "bg-background text-foreground shadow-sm hover:bg-background"
+                      : "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                  disabled={isUnavailable || Boolean(submittingPlan)}
+                  key={billingInterval}
+                  onClick={() => setSelectedBillingInterval(billingInterval)}
+                  role="tab"
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {t(`plan.billingInterval.${billingInterval}`)}
+                  {billingInterval === "annual" ? (
+                    <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                      {t("plan.billingInterval.save")}
+                    </span>
+                  ) : null}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="grid gap-6 lg:grid-cols-4">
           {tierConfigs.map((tier) => {
             const isSubmitting = submittingPlan === tier.slug;
@@ -554,6 +611,14 @@ export function OnboardingPlanPage({
             const period = t(`plan.tiers.${tier.slug}.period`);
             const isPaidPlan = tier.slug === "starter" || tier.slug === "pro";
             const checkoutIntervals = getCheckoutIntervalsForPlan(tier.slug);
+            const isSelectedCheckoutIntervalAvailable =
+              !isPaidPlan || checkoutIntervals.includes(selectedBillingInterval);
+            const displayedPrice = isPaidPlan
+              ? t(`plan.tiers.${tier.slug}.price.${selectedBillingInterval}`)
+              : t(`plan.tiers.${tier.slug}.price`);
+            const displayedDescription = isPaidPlan
+              ? t(`plan.tiers.${tier.slug}.description.${selectedBillingInterval}`)
+              : t(`plan.tiers.${tier.slug}.description`);
 
             return (
               <section
@@ -577,40 +642,40 @@ export function OnboardingPlanPage({
                   </h3>
                   <div className="mt-3 flex items-baseline gap-1">
                     <span className="font-heading text-4xl font-semibold tracking-tighter">
-                      {t(`plan.tiers.${tier.slug}.price`)}
+                      {displayedPrice}
                     </span>
                     {period ? (
                       <span className="text-sm text-muted-foreground">{period}</span>
                     ) : null}
                   </div>
                   <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                    {t(`plan.tiers.${tier.slug}.description`)}
+                    {displayedDescription}
                   </p>
                 </div>
 
                 <div className="mb-6 flex flex-col gap-2">
                   {isPaidPlan ? (
-                    checkoutIntervals.map((billingInterval) => (
-                      <Button
-                        className="w-full rounded-full"
-                        disabled={Boolean(submittingPlan) || isUnavailable}
-                        key={billingInterval}
-                        onClick={() => void handlePlanAction(tier.slug, billingInterval)}
-                        type="button"
-                        variant={
-                          billingInterval === "annual" ? tier.ctaVariant : "outline"
-                        }
-                      >
-                        {isSubmitting ? (
-                          <LoaderCircle className="size-4 animate-spin" />
-                        ) : (
-                          <>
-                            {t(`plan.tiers.${tier.slug}.cta.${billingInterval}`)}
-                            <ArrowRight className="ml-1 size-4" />
-                          </>
-                        )}
-                      </Button>
-                    ))
+                    <Button
+                      className="w-full rounded-full"
+                      disabled={
+                        Boolean(submittingPlan) ||
+                        isUnavailable ||
+                        !isSelectedCheckoutIntervalAvailable
+                      }
+                      onClick={() =>
+                        void handlePlanAction(tier.slug, selectedBillingInterval)}
+                      type="button"
+                      variant={tier.ctaVariant}
+                    >
+                      {isSubmitting ? (
+                        <LoaderCircle className="size-4 animate-spin" />
+                      ) : (
+                        <>
+                          {t(`plan.tiers.${tier.slug}.cta.${selectedBillingInterval}`)}
+                          <ArrowRight className="ml-1 size-4" />
+                        </>
+                      )}
+                    </Button>
                   ) : (
                     <Button
                       className="w-full rounded-full"

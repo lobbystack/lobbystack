@@ -54,8 +54,6 @@ export type OperatorNotificationEventPreferences = Record<
   Record<OperatorNotificationChannel, boolean>
 >;
 
-export const DEFAULT_DAILY_SUMMARY_SEND_TIME = "08:00";
-
 export function buildDefaultOperatorNotificationEventPreferences():
   OperatorNotificationEventPreferences {
   return {
@@ -66,14 +64,6 @@ export function buildDefaultOperatorNotificationEventPreferences():
     transferFailed: { email: true, sms: false },
     aiReplyFailed: { email: true, sms: false },
   };
-}
-
-export function normalizeDailySummarySendTime(value: string): string {
-  const normalized = value.trim();
-  if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(normalized)) {
-    throw new Error("Daily summary send time must use HH:mm format.");
-  }
-  return normalized;
 }
 
 export function hasEnabledSmsEventPreference(

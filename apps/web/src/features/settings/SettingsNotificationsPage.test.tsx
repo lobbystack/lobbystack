@@ -49,8 +49,6 @@ function buildPreferences(overrides: Record<string, unknown> = {}) {
       transferFailed: { email: true, sms: false },
       aiReplyFailed: { email: true, sms: false },
     },
-    dailySummaryEnabled: true,
-    dailySummarySendTime: "08:00",
     email: "operator@example.com",
     phone: "+15145550123",
     phoneVerified: true,
@@ -99,7 +97,7 @@ describe("SettingsNotificationsPage", () => {
     expect(screen.queryByText("settings:notifications.sources.browser.title")).toBeNull();
   });
 
-  it("persists channel toggles and digest send time changes", async () => {
+  it("persists channel toggles", async () => {
     const user = userEvent.setup();
     renderNotificationsPage();
 
@@ -114,20 +112,6 @@ describe("SettingsNotificationsPage", () => {
         expect.objectContaining({
           businessId,
           emailEnabled: false,
-        }),
-      );
-    });
-
-    await user.selectOptions(
-      screen.getByLabelText("settings:notifications.digest.sendTime.title"),
-      "17:00",
-    );
-
-    await waitFor(() => {
-      expect(updateNotificationPreferencesMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          businessId,
-          dailySummarySendTime: "17:00",
         }),
       );
     });

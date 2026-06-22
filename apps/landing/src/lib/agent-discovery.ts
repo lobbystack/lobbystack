@@ -37,6 +37,7 @@ export const markdownAlternatePath = (pathname: string) => {
     "/pricing/",
     "/missed-call-revenue-calculator/",
     "/blog/",
+    "/changelog/",
     "/docs/api/",
   ])
 
@@ -51,6 +52,7 @@ export const markdownAlternatePath = (pathname: string) => {
     "/missed-call-revenue-calculator/":
       "/missed-call-revenue-calculator/index.md",
     "/blog/": "/blog.md",
+    "/changelog/": "/changelog.md",
     "/docs/api/": "/docs/api.md",
   }
 

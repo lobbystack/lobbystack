@@ -219,6 +219,8 @@ export default defineSchema({
     businessType: v.string(),
     deploymentMode: v.string(),
     status: v.string(),
+    phoneNumberReplacementReservedAt: v.optional(v.string()),
+    phoneNumberReplacementUsedAt: v.optional(v.string()),
   }).index("by_slug", ["slug"]),
 
   business_memberships: defineTable({
@@ -973,8 +975,8 @@ export default defineSchema({
     emailEnabled: v.boolean(),
     smsEnabled: v.boolean(),
     eventPreferences: operatorNotificationEventPreferencesValidator,
-    dailySummaryEnabled: v.boolean(),
-    dailySummarySendTime: v.string(),
+    dailySummaryEnabled: v.optional(v.boolean()),
+    dailySummarySendTime: v.optional(v.string()),
     smsConsentGrantedAt: v.optional(v.string()),
     smsConsentRevokedAt: v.optional(v.string()),
     smsConsentSource: v.optional(v.string()),
@@ -982,11 +984,7 @@ export default defineSchema({
     updatedAt: v.string(),
   })
     .index("by_business_id_and_user_id", ["businessId", "userId"])
-    .index("by_user_id_and_business_id", ["userId", "businessId"])
-    .index("by_daily_summary_enabled_and_daily_summary_send_time", [
-      "dailySummaryEnabled",
-      "dailySummarySendTime",
-    ]),
+    .index("by_user_id_and_business_id", ["userId", "businessId"]),
 
   operator_notification_deliveries: defineTable({
     businessId: v.id("businesses"),
@@ -1021,12 +1019,6 @@ export default defineSchema({
       "businessId",
       "eventKind",
       "eventKey",
-    ])
-    .index("by_business_id_and_event_kind_and_channel_and_digest_for_date", [
-      "businessId",
-      "eventKind",
-      "channel",
-      "digestForDate",
     ])
     .index("by_content_retention_status_and_content_expires_at", [
       "contentRetentionStatus",

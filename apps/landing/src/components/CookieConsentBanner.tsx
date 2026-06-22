@@ -53,8 +53,9 @@ export function CookieConsentBanner({
 
   useEffect(() => {
     const storedConsent = readCookieConsent()
-
-    setIsVisible(!storedConsent)
+    const visibilityTimer = storedConsent
+      ? undefined
+      : window.setTimeout(() => setIsVisible(true), 0)
 
     if (storedConsent?.analytics) {
       void initializePostHog()
@@ -73,7 +74,12 @@ export function CookieConsentBanner({
     }
 
     document.addEventListener("click", handlePreferencesClick)
-    return () => document.removeEventListener("click", handlePreferencesClick)
+    return () => {
+      if (visibilityTimer !== undefined) {
+        window.clearTimeout(visibilityTimer)
+      }
+      document.removeEventListener("click", handlePreferencesClick)
+    }
   }, [])
 
   const rejectNonEssential = () => {

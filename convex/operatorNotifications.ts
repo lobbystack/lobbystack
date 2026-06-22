@@ -1,5 +1,3 @@
-import {
-  DateTime } from "luxon";
 import { observedInternalAction as internalAction, observedInternalMutation as internalMutation } from "./telemetry/observedFunctions";
 import { v } from "convex/values";
 
@@ -13,12 +11,12 @@ import {
 } from "./_generated/server";
 import { sendTransactionalEmail } from "./lib/providers/email";
 import {
-  DEFAULT_DAILY_SUMMARY_SEND_TIME,
   buildDefaultOperatorNotificationEventPreferences,
   operatorNotificationChannelValidator,
   operatorNotificationEventKindValidator,
   type OperatorNotificationChannel,
   type OperatorNotificationEventKey,
+  type OperatorNotificationEventKind,
   type OperatorNotificationEventPreferences,
 } from "./lib/operatorNotificationPreferences";
 import {
@@ -36,8 +34,6 @@ type EffectivePreferences = {
   smsEnabled: boolean;
   smsConsentGranted: boolean;
   eventPreferences: OperatorNotificationEventPreferences;
-  dailySummaryEnabled: boolean;
-  dailySummarySendTime: string;
 };
 
 type NotificationRecipient = {
@@ -47,24 +43,6 @@ type NotificationRecipient = {
   emailEnabled: boolean;
   smsEnabled: boolean;
   eventPreferences: OperatorNotificationEventPreferences;
-};
-
-type DigestTarget = {
-  businessId: Id<"businesses">;
-  businessName: string;
-  timezone: string;
-  userId: Id<"users">;
-  email: string;
-  dailySummarySendTime: string;
-  isActiveBusinessForUser: boolean;
-};
-
-type DigestSummary = {
-  callsHandled: number;
-  appointmentsBooked: number;
-  voiceMessagesCaptured: number;
-  pausedSmsRepliesWaiting: number;
-  systemIssuesOpened: number;
 };
 
 function buildTwilioSmsStatusCallbackUrl(): string {
@@ -90,9 +68,6 @@ function getEffectivePreferences(
     ),
     eventPreferences:
       preferences?.eventPreferences ?? buildDefaultOperatorNotificationEventPreferences(),
-    dailySummaryEnabled: preferences?.dailySummaryEnabled ?? true,
-    dailySummarySendTime:
-      preferences?.dailySummarySendTime ?? DEFAULT_DAILY_SUMMARY_SEND_TIME,
   };
 }
 
@@ -160,70 +135,15 @@ function estimateSmsSegments(body: string): number {
 }
 
 function getSensitiveDeliveryContentExpiresAt(
-  eventKind: "dailyDigest" | "test" | OperatorNotificationEventKey,
+  eventKind: OperatorNotificationEventKind,
 ): string | undefined {
   return eventKind === "voiceMessage" || eventKind === "pausedSms"
     ? getMessageContentExpiresAt()
     : undefined;
 }
 
-function parseSendTime(sendTime: string): { hour: number; minute: number } {
-  const [hourRaw, minuteRaw] = sendTime.split(":");
-  const hour = Number(hourRaw);
-  const minute = Number(minuteRaw);
-  if (
-    !Number.isInteger(hour) ||
-    !Number.isInteger(minute) ||
-    hour < 0 ||
-    hour > 23 ||
-    minute < 0 ||
-    minute > 59
-  ) {
-    return { hour: 8, minute: 0 };
-  }
-  return { hour, minute };
-}
-
-function sendTimeSortValue(sendTime: string): number {
-  const { hour, minute } = parseSendTime(sendTime);
-  return hour * 60 + minute;
-}
-
-function normalizeDigestEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
-
-function hashDigestRecipientEmail(email: string): string {
-  let hash = 0x811c9dc5;
-  for (const char of normalizeDigestEmail(email)) {
-    hash ^= char.charCodeAt(0);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0");
-}
-
-function shouldPreferDigestTarget(candidate: DigestTarget, existing: DigestTarget): boolean {
-  if (candidate.isActiveBusinessForUser !== existing.isActiveBusinessForUser) {
-    return candidate.isActiveBusinessForUser;
-  }
-  return (
-    sendTimeSortValue(candidate.dailySummarySendTime) <
-    sendTimeSortValue(existing.dailySummarySendTime)
-  );
-}
-
 function deliveryErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function mergeDocsById<T extends { _id: string }>(collections: Array<Array<T>>): Array<T> {
-  const byId = new Map<string, T>();
-  for (const collection of collections) {
-    for (const doc of collection) {
-      byId.set(doc._id, doc);
-    }
-  }
-  return Array.from(byId.values());
 }
 
 function hasAlertSmsSender(input: {
@@ -376,24 +296,6 @@ export const getDirectRecipient = internalQuery({
   },
 });
 
-export const hasDeliveryForEvent = internalQuery({
-  args: {
-    userId: v.id("users"),
-    channel: operatorNotificationChannelValidator,
-    eventKey: v.string(),
-  },
-  handler: async (ctx, args): Promise<boolean> => {
-    const delivery = await ctx.db
-      .query("operator_notification_deliveries")
-      .withIndex("by_user_id_and_channel_and_event_key", (q) =>
-        q.eq("userId", args.userId).eq("channel", args.channel).eq("eventKey", args.eventKey),
-      )
-      .unique();
-
-    return delivery !== null;
-  },
-});
-
 export const reserveDelivery = internalMutation({
   args: {
     businessId: v.id("businesses"),
@@ -404,8 +306,6 @@ export const reserveDelivery = internalMutation({
     subject: v.string(),
     body: v.string(),
     scheduledFor: v.optional(v.string()),
-    digestForDate: v.optional(v.string()),
-    recipientEmail: v.optional(v.string()),
     contentExpiresAt: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -419,42 +319,6 @@ export const reserveDelivery = internalMutation({
       return { deliveryId: existing._id, created: false };
     }
 
-    if (args.eventKind === "dailyDigest") {
-      if (args.digestForDate) {
-        const existingDigestDeliveries = await ctx.db
-          .query("operator_notification_deliveries")
-          .withIndex(
-            "by_business_id_and_event_kind_and_channel_and_digest_for_date",
-            (q) =>
-              q
-                .eq("businessId", args.businessId)
-                .eq("eventKind", "dailyDigest")
-                .eq("channel", args.channel)
-                .eq("digestForDate", args.digestForDate),
-          )
-          .collect();
-        const existingDigest = existingDigestDeliveries.find(
-          (delivery) => delivery.eventKey === args.eventKey,
-        );
-        if (existingDigest) {
-          return { deliveryId: existingDigest._id, created: false };
-        }
-
-        if (args.channel === "email" && args.recipientEmail) {
-          const recipientEmail = normalizeDigestEmail(args.recipientEmail);
-          for (const delivery of existingDigestDeliveries) {
-            const existingRecipient = await ctx.db.get(delivery.userId);
-            if (
-              existingRecipient?.email &&
-              normalizeDigestEmail(existingRecipient.email) === recipientEmail
-            ) {
-              return { deliveryId: delivery._id, created: false };
-            }
-          }
-        }
-      }
-    }
-
     const deliveryId = await ctx.db.insert("operator_notification_deliveries", {
       businessId: args.businessId,
       userId: args.userId,
@@ -465,7 +329,6 @@ export const reserveDelivery = internalMutation({
       subject: args.subject,
       body: args.body,
       ...(args.scheduledFor !== undefined ? { scheduledFor: args.scheduledFor } : {}),
-      ...(args.digestForDate !== undefined ? { digestForDate: args.digestForDate } : {}),
       ...(args.contentExpiresAt !== undefined
         ? {
             contentRetentionStatus: "active" as const,
@@ -710,12 +573,11 @@ async function deliverChannel(
     userId: Id<"users">;
     channel: OperatorNotificationChannel;
     to: string;
-    eventKind: "dailyDigest" | "test" | OperatorNotificationEventKey;
+    eventKind: OperatorNotificationEventKind;
     eventKey: string;
     subject: string;
     body: string;
     scheduledFor?: string;
-    digestForDate?: string;
     contentExpiresAt?: string;
   },
 ): Promise<{ attempted: boolean; sent: boolean; error?: string }> {
@@ -729,12 +591,8 @@ async function deliverChannel(
       subject: input.subject,
       body: input.body,
       ...(input.scheduledFor !== undefined ? { scheduledFor: input.scheduledFor } : {}),
-      ...(input.digestForDate !== undefined ? { digestForDate: input.digestForDate } : {}),
       ...(input.contentExpiresAt !== undefined
         ? { contentExpiresAt: input.contentExpiresAt }
-        : {}),
-      ...(input.eventKind === "dailyDigest" && input.channel === "email"
-        ? { recipientEmail: input.to }
         : {}),
     });
 
@@ -854,7 +712,6 @@ export const dispatchDirectNotification = internalAction({
     eventKey: v.string(),
     subject: v.string(),
     body: v.string(),
-    digestForDate: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<{ sent: boolean; error?: string }> => {
     const recipient: NotificationRecipient | null = await ctx.runQuery(
@@ -887,7 +744,6 @@ export const dispatchDirectNotification = internalAction({
       eventKey: args.eventKey,
       subject: args.subject,
       body: args.body,
-      ...(args.digestForDate !== undefined ? { digestForDate: args.digestForDate } : {}),
     });
 
     return {
@@ -897,321 +753,3 @@ export const dispatchDirectNotification = internalAction({
   },
 });
 
-export const listDailyDigestTargets = internalQuery({
-  args: {},
-  handler: async (ctx): Promise<Array<DigestTarget>> => {
-    const businesses = await ctx.db.query("businesses").collect();
-    const targetsByRecipient = new Map<string, DigestTarget>();
-
-    for (const business of businesses) {
-      const memberships = await ctx.db
-        .query("business_memberships")
-        .withIndex("by_business_id", (q) => q.eq("businessId", business._id))
-        .collect();
-      for (const membership of memberships) {
-        if (membership.status !== "active") {
-          continue;
-        }
-
-        const user = await ctx.db.get(membership.userId);
-        if (!user?.email) {
-          continue;
-        }
-
-        const preferences = await ctx.db
-          .query("operator_notification_preferences")
-          .withIndex("by_business_id_and_user_id", (q) =>
-            q.eq("businessId", business._id).eq("userId", user._id),
-          )
-          .unique();
-        const effective = getEffectivePreferences(preferences);
-        if (!effective.dailySummaryEnabled || !effective.emailEnabled) {
-          continue;
-        }
-
-        const target = {
-          businessId: business._id,
-          businessName: business.name,
-          timezone: business.timezone,
-          userId: user._id,
-          email: user.email,
-          dailySummarySendTime: effective.dailySummarySendTime,
-          isActiveBusinessForUser: user.activeBusinessId === business._id,
-        };
-        const recipientKey = [
-          normalizeDigestEmail(user.email),
-          String(business._id),
-        ].join(":");
-        const existing = targetsByRecipient.get(recipientKey);
-        if (!existing || shouldPreferDigestTarget(target, existing)) {
-          targetsByRecipient.set(recipientKey, target);
-        }
-      }
-    }
-
-    return Array.from(targetsByRecipient.values());
-  },
-});
-
-export const getDailyDigestSummary = internalQuery({
-  args: {
-    businessId: v.id("businesses"),
-    startIso: v.string(),
-    endIso: v.string(),
-  },
-  handler: async (ctx, args): Promise<DigestSummary> => {
-    const startMs = Date.parse(args.startIso);
-    const endMs = Date.parse(args.endIso);
-    const [
-      calls,
-      appointments,
-      voiceItems,
-      calendarIssues,
-      messagesCreatedInWindow,
-      messagesUpdatedInWindow,
-      notificationsScheduledInWindow,
-      notificationsUpdatedInWindow,
-      notificationsCreatedInWindow,
-    ] =
-      await Promise.all([
-        ctx.db
-          .query("calls")
-          .withIndex("by_business_id_and_started_at", (q) =>
-            q.eq("businessId", args.businessId).gte("startedAt", args.startIso).lt("startedAt", args.endIso),
-          )
-          .collect(),
-        ctx.db
-          .query("appointments")
-          .withIndex("by_business_id", (q) =>
-            q
-              .eq("businessId", args.businessId)
-              .gte("_creationTime", startMs)
-              .lt("_creationTime", endMs),
-          )
-          .collect(),
-        ctx.db
-          .query("inbox_items")
-          .withIndex("by_business_id_and_kind", (q) =>
-            q
-              .eq("businessId", args.businessId)
-              .eq("kind", "voice_message")
-              .gte("_creationTime", startMs)
-              .lt("_creationTime", endMs),
-          )
-          .collect(),
-        ctx.db
-          .query("inbox_items")
-          .withIndex("by_business_id_and_kind", (q) =>
-            q
-              .eq("businessId", args.businessId)
-              .eq("kind", "calendar_sync_issue")
-              .gte("_creationTime", startMs)
-              .lt("_creationTime", endMs),
-          )
-          .collect(),
-        ctx.db
-          .query("messages")
-          .withIndex("by_business_id", (q) =>
-            q
-              .eq("businessId", args.businessId)
-              .gte("_creationTime", startMs)
-              .lt("_creationTime", endMs),
-          )
-          .collect(),
-        ctx.db
-          .query("messages")
-          .withIndex("by_business_id_and_provider_updated_at", (q) =>
-            q
-              .eq("businessId", args.businessId)
-              .gte("providerUpdatedAt", args.startIso)
-              .lt("providerUpdatedAt", args.endIso),
-          )
-          .collect(),
-        ctx.db
-          .query("notifications")
-          .withIndex("by_business_id_and_scheduled_for", (q) =>
-            q
-              .eq("businessId", args.businessId)
-              .gte("scheduledFor", args.startIso)
-              .lt("scheduledFor", args.endIso),
-          )
-          .collect(),
-        ctx.db
-          .query("notifications")
-          .withIndex("by_business_id_and_provider_updated_at", (q) =>
-            q
-              .eq("businessId", args.businessId)
-              .gte("providerUpdatedAt", args.startIso)
-              .lt("providerUpdatedAt", args.endIso),
-          )
-          .collect(),
-        ctx.db
-          .query("notifications")
-          .withIndex("by_business_id", (q) =>
-            q
-              .eq("businessId", args.businessId)
-              .gte("_creationTime", startMs)
-              .lt("_creationTime", endMs),
-          )
-          .collect(),
-      ]);
-
-    const messages = mergeDocsById([messagesCreatedInWindow, messagesUpdatedInWindow]);
-    const notifications = mergeDocsById([
-      notificationsScheduledInWindow,
-      notificationsUpdatedInWindow,
-      notificationsCreatedInWindow,
-    ]);
-    const inWindowMs = (value: number) => value >= startMs && value < endMs;
-    const inWindowIso = (value: string | undefined) =>
-      value !== undefined && inWindowMs(Date.parse(value));
-    const pausedSmsMessages = messages.filter(
-      (message) =>
-        message.direction === "inbound" &&
-        message.channel === "sms" &&
-        inWindowMs(message._creationTime),
-    );
-    let pausedSmsRepliesWaiting = 0;
-    for (const message of pausedSmsMessages) {
-      const conversation = await ctx.db.get(message.conversationId);
-      if (conversation?.automationState === "human_handoff") {
-        pausedSmsRepliesWaiting += 1;
-      }
-    }
-
-    const failedAiMessages = messages.filter(
-      (message) =>
-        message.aiGenerated &&
-        message.channel === "sms" &&
-        (message.status === "failed" || message.status === "undelivered") &&
-        (inWindowIso(message.providerUpdatedAt) || inWindowMs(message._creationTime)),
-    ).length;
-    const failedCustomerNotifications = notifications.filter(
-      (notification) =>
-        (notification.status === "failed" || notification.status === "undelivered") &&
-        (inWindowIso(notification.providerUpdatedAt) ||
-          inWindowIso(notification.scheduledFor) ||
-          inWindowMs(notification._creationTime)),
-    ).length;
-    const failedTransfers = calls.filter(
-      (call) =>
-        call.transferState === "failed" &&
-        (inWindowIso(call.endedAt) || inWindowIso(call.startedAt) || inWindowMs(call._creationTime)),
-    ).length;
-
-    return {
-      callsHandled: calls.filter((call) => call.status !== "in_progress" && call.status !== "open").length,
-      appointmentsBooked: appointments.filter((appointment) =>
-        inWindowMs(appointment._creationTime),
-      ).length,
-      voiceMessagesCaptured: voiceItems.filter((item) => inWindowMs(item._creationTime)).length,
-      pausedSmsRepliesWaiting,
-      systemIssuesOpened:
-        calendarIssues.filter((item) => inWindowMs(item._creationTime)).length +
-        failedAiMessages +
-        failedCustomerNotifications +
-        failedTransfers,
-    };
-  },
-});
-
-function buildDigestBody(input: {
-  businessName: string;
-  localDate: string;
-  summary: DigestSummary;
-}): string {
-  return [
-    `Daily summary for ${input.businessName}`,
-    `Date: ${input.localDate}`,
-    "",
-    `Calls handled: ${input.summary.callsHandled}`,
-    `Appointments booked: ${input.summary.appointmentsBooked}`,
-    `Voice messages captured: ${input.summary.voiceMessagesCaptured}`,
-    `Paused SMS replies waiting: ${input.summary.pausedSmsRepliesWaiting}`,
-    `System issues opened: ${input.summary.systemIssuesOpened}`,
-  ].join("\n");
-}
-
-export const dispatchDueDailyDigests = internalAction({
-  args: {},
-  handler: async (ctx): Promise<{ attempted: number; sent: number }> => {
-    const targets: Array<DigestTarget> = await ctx.runQuery(
-      internal.operatorNotifications.listDailyDigestTargets,
-      {},
-    );
-    const now = DateTime.utc();
-    let attempted = 0;
-    let sent = 0;
-    const summaryCache = new Map<string, DigestSummary>();
-
-    for (const target of targets) {
-      const localNow = now.setZone(target.timezone);
-      if (!localNow.isValid) {
-        continue;
-      }
-
-      const { hour, minute } = parseSendTime(target.dailySummarySendTime);
-      const sendAt = localNow.startOf("day").set({ hour, minute });
-      if (localNow < sendAt) {
-        continue;
-      }
-
-      const digestDay = localNow.minus({ days: 1 }).startOf("day");
-      const digestForDate = digestDay.toISODate();
-      if (!digestForDate) {
-        continue;
-      }
-      const startIso = digestDay.toUTC().toISO();
-      const endIso = digestDay.plus({ days: 1 }).toUTC().toISO();
-      if (!startIso || !endIso) {
-        continue;
-      }
-
-      const eventKey = [
-        "dailyDigest",
-        String(target.businessId),
-        hashDigestRecipientEmail(target.email),
-        digestForDate,
-      ].join(":");
-      const alreadyReserved: boolean = await ctx.runQuery(
-        internal.operatorNotifications.hasDeliveryForEvent,
-        { userId: target.userId, channel: "email", eventKey },
-      );
-      if (alreadyReserved) {
-        continue;
-      }
-
-      const summaryCacheKey = `${String(target.businessId)}:${startIso}:${endIso}`;
-      let summary = summaryCache.get(summaryCacheKey);
-      if (!summary) {
-        summary = await ctx.runQuery(internal.operatorNotifications.getDailyDigestSummary, {
-          businessId: target.businessId,
-          startIso,
-          endIso,
-        });
-        summaryCache.set(summaryCacheKey, summary);
-      }
-      const subject = `Daily summary for ${target.businessName}`;
-      const body = buildDigestBody({
-        businessName: target.businessName,
-        localDate: digestForDate,
-        summary,
-      });
-      const result = await deliverChannel(ctx, {
-        businessId: target.businessId,
-        userId: target.userId,
-        channel: "email",
-        to: target.email,
-        eventKind: "dailyDigest",
-        eventKey,
-        subject,
-        body,
-        digestForDate,
-      });
-      attempted += result.attempted ? 1 : 0;
-      sent += result.sent ? 1 : 0;
-    }
-
-    return { attempted, sent };
-  },
-});

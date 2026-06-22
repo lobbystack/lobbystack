@@ -30,6 +30,14 @@ describe("analytics", () => {
 
     initializeAnalytics();
 
+    const config = posthogMock.init.mock.calls[0]?.[1];
+    expect(config.request_queue_config).toEqual({ flush_interval_ms: 1000 });
+    expect(config.session_recording).toMatchObject({
+      compress_events: true,
+      maskAllInputs: true,
+    });
+    expect(config.__preview_eager_load_replay).toBeUndefined();
+    expect(config.session_recording.full_snapshot_interval_millis).toBeUndefined();
     expect(posthogMock.startSessionRecording).toHaveBeenCalledTimes(1);
     expect(posthogMock.startSessionRecording).toHaveBeenCalledWith();
   });

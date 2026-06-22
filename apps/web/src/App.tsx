@@ -40,6 +40,7 @@ import { SettingsLayout } from "@/features/settings/SettingsLayout";
 import { SettingsAppearancePage } from "@/features/settings/SettingsAppearancePage";
 import { IntegrationsPage } from "@/features/settings/IntegrationsPage";
 import { SettingsBusinessPage } from "@/features/settings/SettingsBusinessPage";
+import { SettingsPhoneNumberPage } from "@/features/settings/SettingsPhoneNumberPage";
 import {
   SettingsBillingCompliancePage,
   SettingsBillingPage,
@@ -73,6 +74,7 @@ type ActiveBusiness = {
   slug: string;
   onboardingStage?: string;
   websiteUrl?: string;
+  phoneNumberReplacementUsedAt?: string;
 };
 
 type ActiveBusinessEntry = {
@@ -211,6 +213,13 @@ function isPhoneNumberClaimBridgeStage(stage: string | undefined): boolean {
 
 function isPhoneVerificationStage(stage: string | undefined): boolean {
   return stage === "verify_phone" || stage === "verify_phone_code";
+}
+
+function canUseCompletedBusinessPhoneVerification(input: {
+  onboardingStage: string | undefined;
+  phoneVerificationTime: number | undefined;
+}): boolean {
+  return input.onboardingStage === "completed" && input.phoneVerificationTime === undefined;
 }
 
 function WorkspaceSetupPendingPage(props: { businessName?: string }) {
@@ -605,6 +614,22 @@ function WorkspaceShell() {
               <Route
                 element={
                   businessId ? (
+                    <SettingsPhoneNumberPage
+                      businessId={businessId}
+                      canManageTenant={canManageTenant}
+                      {...(activeBusiness?.phoneNumberReplacementUsedAt
+                        ? { phoneNumberReplacementUsedAt: activeBusiness.phoneNumberReplacementUsedAt }
+                        : {})}
+                    />
+                  ) : (
+                    <Navigate replace to="/settings" />
+                  )
+                }
+                path="phone-number"
+              />
+              <Route
+                element={
+                  businessId ? (
                     <SettingsBillingPage businessId={businessId} />
                   ) : (
                     <Navigate replace to="/settings" />
@@ -926,7 +951,15 @@ function OnboardingVerifyPhoneRoute() {
     return nonAdminElement;
   }
 
-  if (!isPhoneVerificationStage(ctx.activeBusiness.onboardingStage)) {
+  const canUseSettingsVerification = canUseCompletedBusinessPhoneVerification({
+    onboardingStage: ctx.activeBusiness.onboardingStage,
+    phoneVerificationTime: ctx.currentUser?.phoneVerificationTime,
+  });
+
+  if (
+    !isPhoneVerificationStage(ctx.activeBusiness.onboardingStage) &&
+    !canUseSettingsVerification
+  ) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 
@@ -968,20 +1001,28 @@ function OnboardingVerifyPhoneCodeRoute() {
     return nonAdminElement;
   }
 
-  if (!isPhoneVerificationStage(ctx.activeBusiness.onboardingStage)) {
-    return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
-  }
+  const canUseSettingsVerification = canUseCompletedBusinessPhoneVerification({
+    onboardingStage: ctx.activeBusiness.onboardingStage,
+    phoneVerificationTime: ctx.currentUser?.phoneVerificationTime,
+  });
 
   if (latestAttempt === undefined) {
     return <OnboardingRouteSkeleton />;
   }
 
-  if (!latestAttempt) {
-    return <Navigate replace to="/onboarding/verify-phone" />;
+  if (latestAttempt?.status === "approved") {
+    return <Navigate replace to="/onboarding/number" />;
   }
 
-  if (latestAttempt.status === "approved") {
-    return <Navigate replace to="/onboarding/number" />;
+  if (
+    !isPhoneVerificationStage(ctx.activeBusiness.onboardingStage) &&
+    !canUseSettingsVerification
+  ) {
+    return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
+  }
+
+  if (!latestAttempt) {
+    return <Navigate replace to="/onboarding/verify-phone" />;
   }
 
   return (
@@ -1039,7 +1080,12 @@ function OnboardingNumberRoute() {
   return (
     <OnboardingNumberPage
       businessId={ctx.activeBusiness._id}
-      isComplete={canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "plan")}
+      hasReachedPlan={canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "plan")}
+      hasReachedAttribution={canVisitOnboardingStage(
+        ctx.activeBusiness.onboardingStage,
+        "attribution",
+      )}
+      isOnboardingComplete={ctx.activeBusiness.onboardingStage === "completed"}
       onSignOut={ctx.onSignOut}
       progressNavigableUntil={Math.max(
         onboardingNavigableStep(ctx.activeBusiness.onboardingStage),

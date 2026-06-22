@@ -11,6 +11,7 @@
   },
   "sections": {
     "business": "Team",
+    "phoneNumber": "Phone Number",
     "appearance": "Preferences",
     "integrations": "Integrations",
     "billing": "Plan",
@@ -345,6 +346,41 @@
         "order": "Order",
         "refund": "Refund"
       }
+    }
+  },
+  "phoneNumber": {
+    "current": {
+      "label": "Current phone number",
+      "description": "This is the number callers use to reach your AI receptionist.",
+      "empty": "You don't have a number yet."
+    },
+    "actions": {
+      "requestChange": "Request change",
+      "getNumber": "Get number"
+    },
+    "dialog": {
+      "title": "Choose a new phone number",
+      "description": "You can change your phone number once.",
+      "getNumberTitle": "Choose a phone number",
+      "getNumberDescription": "Pick a number callers can use to reach your AI receptionist."
+    },
+    "picker": {
+      "countryLabel": "Country",
+      "areaCodeLabel": "Area code",
+      "areaCodePlaceholder": "Area code",
+      "search": "Search",
+      "phoneNumberHeader": "Phone number",
+      "select": "Select",
+      "loadMore": "Load more",
+      "empty": "No numbers matched that search.",
+      "loadFailed": "We couldn't load numbers right now.",
+      "searchFailed": "We couldn't search numbers right now.",
+      "claimFailed": "We couldn't replace the phone number. Please try again.",
+      "unavailable": "That number was just taken. Pick another one from the refreshed list."
+    },
+    "toast": {
+      "changed": "Phone number changed. Your previous number will stay active for 30 days.",
+      "added": "Phone number added."
     }
   },
   "appearance": {
@@ -722,7 +758,7 @@
       "title": "Channels",
       "email": {
         "title": "Email",
-        "description": "Receive alerts and daily summaries by email."
+        "description": "Receive alerts by email."
       },
       "sms": {
         "title": "SMS",
@@ -763,17 +799,6 @@
     },
     "systemIssues": {
       "title": "System issues"
-    },
-    "digest": {
-      "title": "Digest",
-      "dailySummary": {
-        "title": "Daily summary",
-        "description": "Receive a single daily email summarizing call activity and new messages."
-      },
-      "sendTime": {
-        "title": "Send time",
-        "description": "The time of day your daily summary will be sent."
-      }
     },
     "smsConsent": {
       "title": "Enable SMS alerts",

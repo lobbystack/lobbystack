@@ -104,9 +104,10 @@ async function requireBusinessScopedAuthenticatedUser(
   return user;
 }
 
-async function requireBusinessInPhoneVerificationStage(
+async function requireBusinessCanUsePhoneVerification(
   ctx: ActionCtx,
   businessId: Id<"businesses">,
+  user: Doc<"users">,
 ): Promise<void> {
   const business = await ctx.runQuery(internal.businesses.admin.getBusinessById, {
     businessId,
@@ -115,7 +116,11 @@ async function requireBusinessInPhoneVerificationStage(
     throw new Error("Business not found.");
   }
   const stage = normalizeOnboardingStage(business.onboardingStage);
-  if (stage !== "verify_phone" && stage !== "verify_phone_code") {
+  if (
+    stage !== "verify_phone" &&
+    stage !== "verify_phone_code" &&
+    !(stage === "completed" && !user.phoneVerificationTime)
+  ) {
     throw new Error("Phone verification is no longer available for this business.");
   }
 }
@@ -127,8 +132,8 @@ export const startPhoneVerification = action({
   },
   handler: async (ctx, args): Promise<StartPhoneVerificationResult> => {
     await assertOnboardingAccess(ctx, args.businessId);
-    await requireBusinessInPhoneVerificationStage(ctx, args.businessId);
     const user = await requireBusinessScopedAuthenticatedUser(ctx, args.businessId);
+    await requireBusinessCanUsePhoneVerification(ctx, args.businessId, user);
     await assertVerificationSendAllowed(ctx, {
       businessId: args.businessId,
       userId: user._id,
@@ -217,8 +222,8 @@ export const reuseVerifiedPhoneForOnboarding = action({
   },
   handler: async (ctx, args): Promise<{ status: "approved"; phoneE164: string }> => {
     await assertOnboardingAccess(ctx, args.businessId);
-    await requireBusinessInPhoneVerificationStage(ctx, args.businessId);
     const user = await requireBusinessScopedAuthenticatedUser(ctx, args.businessId);
+    await requireBusinessCanUsePhoneVerification(ctx, args.businessId, user);
 
     if (!user.phone || !user.phoneVerificationTime) {
       throw new Error("Verify your mobile number before continuing.");
@@ -271,8 +276,8 @@ export const resendPhoneVerification = action({
   },
   handler: async (ctx, args): Promise<StartPhoneVerificationResult> => {
     await assertOnboardingAccess(ctx, args.businessId);
-    await requireBusinessInPhoneVerificationStage(ctx, args.businessId);
     const user = await requireBusinessScopedAuthenticatedUser(ctx, args.businessId);
+    await requireBusinessCanUsePhoneVerification(ctx, args.businessId, user);
     const attempt: Doc<"onboarding_phone_verifications"> | null = await ctx.runQuery(
       internal.onboarding.phoneVerificationState.getLatestVerificationAttempt,
       {
@@ -340,8 +345,8 @@ export const checkPhoneVerification = action({
   },
   handler: async (ctx, args): Promise<CheckPhoneVerificationResult> => {
     await assertOnboardingAccess(ctx, args.businessId);
-    await requireBusinessInPhoneVerificationStage(ctx, args.businessId);
     const user = await requireBusinessScopedAuthenticatedUser(ctx, args.businessId);
+    await requireBusinessCanUsePhoneVerification(ctx, args.businessId, user);
     const attempt: Doc<"onboarding_phone_verifications"> | null = await ctx.runQuery(
       internal.onboarding.phoneVerificationState.getLatestVerificationAttempt,
       {

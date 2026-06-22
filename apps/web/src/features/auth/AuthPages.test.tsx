@@ -7,6 +7,8 @@ import { AcceptInvitePage, ForgotPasswordPage, LoginPage, SignupPage } from "./A
 
 const {
   acceptInvitationMock,
+  captureAnalyticsEventMock,
+  resetAnalyticsIdentityMock,
   signInMock,
   toastSuccessMock,
   turnstileExecuteMock,
@@ -15,6 +17,8 @@ const {
   useQueryMock,
 } = vi.hoisted(() => ({
   acceptInvitationMock: vi.fn(),
+  captureAnalyticsEventMock: vi.fn(),
+  resetAnalyticsIdentityMock: vi.fn(),
   signInMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   turnstileExecuteMock: vi.fn(),
@@ -37,6 +41,11 @@ vi.mock("convex/react", () => ({
 vi.mock("@/lib/observed-convex", () => ({
   useObservedAction: () => vi.fn(),
   useObservedMutation: () => acceptInvitationMock,
+}));
+
+vi.mock("@/lib/analytics", () => ({
+  captureAnalyticsEvent: captureAnalyticsEventMock,
+  resetAnalyticsIdentity: resetAnalyticsIdentityMock,
 }));
 
 vi.mock("sonner", () => ({
@@ -142,6 +151,8 @@ describe("AcceptInvitePage", () => {
 
 describe("LoginPage", () => {
   beforeEach(() => {
+    captureAnalyticsEventMock.mockReset();
+    resetAnalyticsIdentityMock.mockReset();
     signInMock.mockReset();
     turnstileExecuteMock.mockReset();
     turnstileTokenMock.mockReset();
@@ -209,10 +220,30 @@ describe("LoginPage", () => {
 
     expect(formData.get("email")).toBe("OWNER@Example.COM");
   });
+
+  it("captures login success without rotating the PostHog session", async () => {
+    signInMock.mockResolvedValue({});
+
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>,
+    );
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("login.email"), "owner@example.com");
+    await user.type(screen.getByLabelText("login.password"), "CurrentPass123!");
+    await user.click(screen.getByRole("button", { name: "login.submit" }));
+
+    expect(captureAnalyticsEventMock).toHaveBeenCalledWith("web.auth.login_succeeded");
+    expect(resetAnalyticsIdentityMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("ForgotPasswordPage", () => {
   beforeEach(() => {
+    captureAnalyticsEventMock.mockReset();
+    resetAnalyticsIdentityMock.mockReset();
     signInMock.mockReset();
     turnstileExecuteMock.mockReset();
     turnstileTokenMock.mockReset();
@@ -510,6 +541,25 @@ describe("SignupPage", () => {
     const [, formData] = signInMock.mock.calls[0] as [string, FormData];
 
     expect(formData.get("email")).toBe("OWNER@Example.COM");
+  });
+
+  it("captures signup success without rotating the PostHog session", async () => {
+    vi.stubEnv("VITE_TURNSTILE_SITE_KEY", "site-key");
+    signInMock.mockResolvedValueOnce({});
+
+    render(
+      <MemoryRouter>
+        <SignupPage />
+      </MemoryRouter>,
+    );
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("signup.email"), "owner@example.com");
+    await user.type(screen.getByLabelText("signup.password"), "abcde1!f");
+    await user.click(screen.getByRole("button", { name: "signup.submit" }));
+
+    expect(captureAnalyticsEventMock).toHaveBeenCalledWith("web.auth.signup_succeeded");
+    expect(resetAnalyticsIdentityMock).not.toHaveBeenCalled();
   });
 
   it("renders Turnstile as soon as the signup page loads", async () => {
