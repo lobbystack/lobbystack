@@ -9,8 +9,8 @@ primary_region = "iad"
 [env]
   PORT = "3001"
   VOICE_GATEWAY_TRUST_PROXY = "true"
-  # Dev Fly gateway is also used by the local landing app when no public endpoint override is set.
-  WEB_CALL_ALLOWED_ORIGINS = "https://lobbystack.com,https://www.lobbystack.com,http://localhost:4321,http://127.0.0.1:4321"
+  # Dev Fly gateway is also used by local dashboard and landing dev servers.
+  WEB_CALL_ALLOWED_ORIGINS = "https://app.lobbystack.com,https://lobbystack.com,https://www.lobbystack.com,http://localhost:5173,http://127.0.0.1:5173,http://localhost:4321,http://127.0.0.1:4321"
 
 [http_service]
   internal_port = 3001

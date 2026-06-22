@@ -1,5 +1,6 @@
 import type {
   BusinessContextSnapshot,
+  AgentRuleSummary,
   ClosureWindow,
   HoursWindow,
   KnowledgeSnippet,
@@ -25,6 +26,7 @@ type SnapshotBuilderInput = {
   hours: Array<HoursWindow>;
   closures: Array<ClosureWindow>;
   services: Array<ServiceSummary>;
+  rules?: Array<AgentRuleSummary>;
   snippets: Array<KnowledgeSnippet>;
   knowledgeDigest?: string;
   transferPolicy: TransferPolicy;
@@ -32,6 +34,10 @@ type SnapshotBuilderInput = {
   smsNumber?: string;
   email?: string;
 };
+
+export const MAX_AGENT_RULES_PER_SNAPSHOT = 50;
+export const MAX_AGENT_RULE_TITLE_CHARS = 160;
+export const MAX_AGENT_RULE_CONTENT_CHARS = 4000;
 
 export function buildBusinessContextSnapshot(
   input: SnapshotBuilderInput,
@@ -66,6 +72,15 @@ export function buildBusinessContextSnapshot(
     hours: input.hours,
     closures: input.closures,
     services: input.services,
+    rules: (input.rules ?? [])
+      .slice()
+      .sort((left, right) => left.order - right.order)
+      .slice(0, MAX_AGENT_RULES_PER_SNAPSHOT)
+      .map((rule) => ({
+        ...rule,
+        title: rule.title.slice(0, MAX_AGENT_RULE_TITLE_CHARS),
+        content: rule.content.slice(0, MAX_AGENT_RULE_CONTENT_CHARS),
+      })),
     knowledgeSnippets: input.snippets
       .slice()
       .sort((left, right) => right.priority - left.priority)

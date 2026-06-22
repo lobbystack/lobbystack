@@ -16,8 +16,8 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("./AddKnowledgeSheet", () => ({
-  AddKnowledgeSheet: ({ open }: { open?: boolean }) =>
+vi.mock("./AgentRuleDialog", () => ({
+  AgentRuleDialog: ({ open }: { open?: boolean }) =>
     open ? <div>rule-dialog-open</div> : null,
 }));
 

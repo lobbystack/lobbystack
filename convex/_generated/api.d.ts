@@ -11,6 +11,7 @@
 import type * as ai_agents_runtime from "../ai/agents/runtime.js";
 import type * as ai_context_knowledge from "../ai/context/knowledge.js";
 import type * as ai_context_knowledgeUploads from "../ai/context/knowledgeUploads.js";
+import type * as ai_context_rules from "../ai/context/rules.js";
 import type * as ai_context_snapshots from "../ai/context/snapshots.js";
 import type * as ai_context_websiteIngestion from "../ai/context/websiteIngestion.js";
 import type * as ai_context_websiteIngestionActions from "../ai/context/websiteIngestionActions.js";
@@ -128,6 +129,7 @@ declare const fullApi: ApiFromModules<{
   "ai/agents/runtime": typeof ai_agents_runtime;
   "ai/context/knowledge": typeof ai_context_knowledge;
   "ai/context/knowledgeUploads": typeof ai_context_knowledgeUploads;
+  "ai/context/rules": typeof ai_context_rules;
   "ai/context/snapshots": typeof ai_context_snapshots;
   "ai/context/websiteIngestion": typeof ai_context_websiteIngestion;
   "ai/context/websiteIngestionActions": typeof ai_context_websiteIngestionActions;

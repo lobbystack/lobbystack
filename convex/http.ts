@@ -18,6 +18,10 @@ registerBillingRoutes(http);
 
 type ParseResult<T> = { ok: true; data: T } | { ok: false; response: Response };
 
+function isErrorMessage(error: unknown, code: string): boolean {
+  return error instanceof Error && error.message.includes(code);
+}
+
 const twilioSmsInboundSchema = z.object({
   From: z.string().min(1),
   To: z.string().min(1),
@@ -780,10 +784,7 @@ http.route({
           ...(body.data.widgetId !== undefined ? { widgetId: body.data.widgetId } : {}),
         });
       } catch (error) {
-        if (
-          error instanceof Error &&
-          error.message === "web_voice_rate_limited"
-        ) {
+        if (isErrorMessage(error, "web_voice_rate_limited")) {
           return Response.json(
             {
               code: "web_voice_rate_limited",

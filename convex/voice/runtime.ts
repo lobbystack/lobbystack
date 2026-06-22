@@ -110,19 +110,6 @@ const DASHBOARD_TEST_CALL_WIDGET_ID = "lobbystack-dashboard-test-call";
 const DASHBOARD_TEST_CALL_PROOF_TTL_MS = 2 * 60 * 1000;
 const DASHBOARD_TEST_CALL_PROOF_PREFIX = "dashboard-test-call";
 
-function getDashboardOrigin(): string | null {
-  const appBaseUrl = process.env.APP_BASE_URL;
-  if (!appBaseUrl) {
-    return null;
-  }
-
-  try {
-    return new URL(appBaseUrl).origin;
-  } catch {
-    return null;
-  }
-}
-
 function getDashboardTestCallToken(): string | null {
   const token = process.env.DASHBOARD_TEST_CALL_TOKEN?.trim();
   return token ? token : null;
@@ -254,7 +241,6 @@ function buildWebVoiceStartLimits(input: {
   widgetId?: string;
 }): Array<WebVoiceStartLimit> {
   const businessKey = String(input.businessId);
-  const dashboardOrigin = getDashboardOrigin();
   const logContext = {
     businessId: input.businessId,
     origin: input.origin,
@@ -263,8 +249,6 @@ function buildWebVoiceStartLimits(input: {
   const limits: Array<WebVoiceStartLimit> = [];
   const isDashboardTestCall =
     input.widgetId === DASHBOARD_TEST_CALL_WIDGET_ID &&
-    dashboardOrigin !== null &&
-    input.origin === dashboardOrigin &&
     hasVerifiedDashboardTestCallToken(input);
 
   if (input.ipHash !== undefined) {

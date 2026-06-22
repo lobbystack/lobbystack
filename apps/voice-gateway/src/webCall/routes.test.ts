@@ -456,7 +456,7 @@ describe("web call routes", () => {
     );
   });
 
-  it("instructs the web sideband to retrieve product facts silently before answering", async () => {
+  it("instructs the web sideband to retrieve product facts before answering", async () => {
     fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
     startWebVoiceCallMock.mockResolvedValueOnce({
       businessId: "business_123",
@@ -509,7 +509,7 @@ describe("web call routes", () => {
       "feature, workflow, policy, limitation, pricing, usage, billing, integration",
     );
     expect(sessionUpdate.session?.instructions).toContain(
-      "Do not tell the visitor you are searching, checking, or looking something up.",
+      "call searchKnowledge before answering",
     );
     expect(searchKnowledge?.description).toContain(
       "capabilities, workflows, policies, limits, pricing, billing, usage, integrations",

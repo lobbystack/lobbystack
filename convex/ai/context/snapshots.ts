@@ -184,7 +184,17 @@ export const refreshSnapshot = internalMutation({
       throw new Error("Business not found.");
     }
 
-    const [profile, hours, closures, services, phoneNumbers, snippets, documents, existing] =
+    const [
+      profile,
+      hours,
+      closures,
+      services,
+      phoneNumbers,
+      snippets,
+      rules,
+      documents,
+      existing,
+    ] =
       await Promise.all([
         ctx.db
           .query("receptionist_profiles")
@@ -215,6 +225,10 @@ export const refreshSnapshot = internalMutation({
           .withIndex("by_business_id_and_active", (q) =>
             q.eq("businessId", args.businessId).eq("active", true),
           )
+          .collect(),
+        ctx.db
+          .query("agent_rules")
+          .withIndex("by_business_id_and_order", (q) => q.eq("businessId", args.businessId))
           .collect(),
         ctx.db
           .query("knowledge_documents")
@@ -282,13 +296,37 @@ export const refreshSnapshot = internalMutation({
           durationMinutes: row.durationMinutes,
           ...(row.description !== undefined ? { description: row.description } : {}),
         })),
-      snippets: snippets.map((row) => ({
-        id: String(row._id),
-        title: row.title,
-        content: row.content,
-        tags: row.tags,
-        priority: row.priority,
-      })),
+      rules: [
+        ...rules
+          .filter((row) => row.active)
+          .map((row) => ({
+            id: String(row._id),
+            title: row.title,
+            content: row.content,
+            order: row.order,
+          })),
+        ...snippets
+          .filter((row) => row.section === "rules")
+          .sort(
+            (left, right) =>
+              right.priority - left.priority || left._creationTime - right._creationTime,
+          )
+          .map((row, index) => ({
+            id: String(row._id),
+            title: row.title,
+            content: row.content,
+            order: Number.MAX_SAFE_INTEGER - snippets.length + index,
+          })),
+      ],
+      snippets: snippets
+        .filter((row) => row.section !== "rules")
+        .map((row) => ({
+          id: String(row._id),
+          title: row.title,
+          content: row.content,
+          tags: row.tags,
+          priority: row.priority,
+        })),
       transferPolicy: {
         mode: profile.transferMode as SnapshotBuilderInput["transferPolicy"]["mode"],
         ...(profile.transferNumber !== undefined

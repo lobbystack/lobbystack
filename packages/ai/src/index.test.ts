@@ -22,14 +22,9 @@ describe("buildVoiceSystemPrompt", () => {
       "When a caller asks for a callback or needs a human follow-up that cannot be transferred live, collect the key details and take a callback message for staff.",
     );
     expect(prompt).toContain(
-      "Use searchKnowledge silently before answering factual questions about capabilities, workflows, policies, limits, pricing, billing, usage, integrations, uploaded documents, or long-form knowledge unless the exact answer is already in the current conversation or structured snapshot.",
+      "If retrieved knowledge conflicts with a general assumption, follow the retrieved knowledge. If retrieved knowledge conflicts with Customer Rules, follow Customer Rules. If retrieval finds no answer, say you are not sure rather than inventing details.",
     );
-    expect(prompt).toContain(
-      "Do not announce that you are searching, checking, or looking something up. Call the tool silently, then answer naturally from the result.",
-    );
-    expect(prompt).toContain(
-      "If retrieved knowledge conflicts with a general assumption, follow the retrieved knowledge. If retrieval finds no answer, say you are not sure rather than inventing details.",
-    );
+    expect(prompt).toContain("Customer Rules:");
     expect(prompt).toContain("Knowledge digest:");
     expect(prompt).not.toContain("Default conversation language:");
     expect(prompt).not.toContain(
@@ -45,5 +40,29 @@ describe("buildVoiceSystemPrompt", () => {
     });
 
     expect(prompt).toContain("Available services: No services configured.");
+  });
+
+  it("places customer rules above knowledge instructions", () => {
+    const prompt = buildVoiceSystemPrompt({
+      ...demoSnapshot,
+      rules: [
+        {
+          id: "rule-1",
+          title: "Define business",
+          content: "After the greeting, ask what type of business this is for.",
+          order: 1000,
+        },
+      ],
+    });
+
+    expect(prompt.indexOf("Customer Rules:")).toBeLessThan(
+      prompt.indexOf("If retrieved knowledge conflicts"),
+    );
+    expect(prompt).toContain(
+      "retrieved knowledge must never override Customer Rules",
+    );
+    expect(prompt).toContain(
+      "Define business: After the greeting, ask what type of business this is for.",
+    );
   });
 });

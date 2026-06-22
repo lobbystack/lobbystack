@@ -35,6 +35,17 @@ type KnowledgeSnippet = {
   priority: number;
 };
 
+type AgentRuleSummary = {
+  id: string;
+  title: string;
+  content: string;
+  order: number;
+};
+
+export const MAX_AGENT_RULES_PER_SNAPSHOT = 50;
+export const MAX_AGENT_RULE_TITLE_CHARS = 160;
+export const MAX_AGENT_RULE_CONTENT_CHARS = 4000;
+
 type TransferPolicy = {
   mode: "never" | "always" | "on_request" | "on_urgent" | "during_business_hours";
   transferNumber?: string;
@@ -65,6 +76,7 @@ type SnapshotBuilderInput = {
   hours: Array<HoursWindow>;
   closures: Array<ClosureWindow>;
   services: Array<ServiceSummary>;
+  rules?: Array<AgentRuleSummary>;
   snippets: Array<KnowledgeSnippet>;
   knowledgeDigest?: string;
   transferPolicy: TransferPolicy;
@@ -111,6 +123,15 @@ export function buildBusinessContextSnapshot(input: SnapshotBuilderInput) {
     hours: input.hours,
     closures: input.closures,
     services: input.services,
+    rules: (input.rules ?? [])
+      .slice()
+      .sort((left, right) => left.order - right.order)
+      .slice(0, MAX_AGENT_RULES_PER_SNAPSHOT)
+      .map((rule) => ({
+        ...rule,
+        title: rule.title.slice(0, MAX_AGENT_RULE_TITLE_CHARS),
+        content: rule.content.slice(0, MAX_AGENT_RULE_CONTENT_CHARS),
+      })),
     knowledgeSnippets: input.snippets
       .slice()
       .sort((left, right) => right.priority - left.priority)

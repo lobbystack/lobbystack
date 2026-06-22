@@ -37,7 +37,7 @@ export function createWebRealtimeToolDefinitions() {
       type: "function",
       name: "searchKnowledge",
       description:
-        "Search indexed business knowledge and uploaded documents for a specific factual question. Use silently before answering questions about capabilities, workflows, policies, limits, pricing, billing, usage, integrations, product features, documents, FAQs, or plan rules.",
+        "Search indexed business knowledge and uploaded documents for a specific factual question. Use before answering questions about capabilities, workflows, policies, limits, pricing, billing, usage, integrations, product features, documents, FAQs, or plan rules.",
       parameters: {
         type: "object",
         properties: {
