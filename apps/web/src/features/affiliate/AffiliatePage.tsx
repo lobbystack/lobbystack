@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -229,9 +228,6 @@ export function AffiliatePage() {
             <Card>
               <CardHeader>
                 <CardTitle>{t("referral.title")}</CardTitle>
-                <CardAction>
-                  <Badge variant="secondary">{t("referral.active")}</Badge>
-                </CardAction>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2 sm:flex-row">
