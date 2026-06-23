@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   Field,
-  FieldDescription,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -193,7 +192,6 @@ export function AffiliatePage() {
                 type="email"
                 value={paypalEmail}
               />
-              <FieldDescription>{t("settings.paypalDescription")}</FieldDescription>
             </Field>
           </FieldGroup>
           <DialogFooter>
@@ -210,9 +208,6 @@ export function AffiliatePage() {
     <div className="flex flex-1 flex-col gap-6">
       <div className="flex flex-col gap-2">
         <PageHeader actions={settingsDialog} title={t("title")} />
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          {t("description")}
-        </p>
       </div>
 
       {!profile ? (
@@ -234,7 +229,6 @@ export function AffiliatePage() {
             <Card>
               <CardHeader>
                 <CardTitle>{t("referral.title")}</CardTitle>
-                <CardDescription>{t("referral.description")}</CardDescription>
                 <CardAction>
                   <Badge variant="secondary">{t("referral.active")}</Badge>
                 </CardAction>
@@ -256,7 +250,6 @@ export function AffiliatePage() {
             <Card>
               <CardHeader>
                 <CardTitle>{t("terms.title")}</CardTitle>
-                <CardDescription>{t("terms.description")}</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
                 <div className="flex items-center justify-between gap-4">
