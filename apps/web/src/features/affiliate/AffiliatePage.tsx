@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
-import { CopyIcon, ExternalLinkIcon, GiftIcon, SettingsIcon } from "lucide-react";
+import { CopyIcon, ExternalLinkIcon, GiftIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -15,15 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   Field,
   FieldGroup,
@@ -167,46 +158,10 @@ export function AffiliatePage() {
     }
   }
 
-  const settingsDialog = profile ? (
-    <Dialog>
-      <DialogTrigger render={<Button variant="outline" />}>
-        <SettingsIcon data-icon="inline-start" />
-        {t("settings.open")}
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("settings.title")}</DialogTitle>
-          <DialogDescription>{t("settings.description")}</DialogDescription>
-        </DialogHeader>
-        <form className="flex flex-col gap-6" onSubmit={handlePaypalSave}>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="paypal-email">
-                {t("settings.paypalEmail")}
-              </FieldLabel>
-              <Input
-                id="paypal-email"
-                onChange={(event) => setPaypalEmail(event.target.value)}
-                placeholder={profile.paypalEmail ?? t("settings.paypalPlaceholder")}
-                type="email"
-                value={paypalEmail}
-              />
-            </Field>
-          </FieldGroup>
-          <DialogFooter>
-            <Button disabled={isSavingPaypal} type="submit">
-              {isSavingPaypal ? t("settings.saving") : t("settings.save")}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  ) : null;
-
   return (
     <div className="flex flex-1 flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <PageHeader actions={settingsDialog} title={t("title")} />
+        <PageHeader title={t("title")} />
       </div>
 
       {!profile ? (
@@ -237,6 +192,27 @@ export function AffiliatePage() {
                     {t("referral.copy")}
                   </Button>
                 </div>
+                <form className="flex flex-col gap-3" onSubmit={handlePaypalSave}>
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="paypal-email">
+                        {t("settings.paypalEmail")}
+                      </FieldLabel>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <Input
+                          id="paypal-email"
+                          onChange={(event) => setPaypalEmail(event.target.value)}
+                          placeholder={profile.paypalEmail ?? t("settings.paypalPlaceholder")}
+                          type="email"
+                          value={paypalEmail}
+                        />
+                        <Button disabled={isSavingPaypal} type="submit">
+                          {isSavingPaypal ? t("settings.saving") : t("settings.save")}
+                        </Button>
+                      </div>
+                    </Field>
+                  </FieldGroup>
+                </form>
                 <p className="text-sm text-muted-foreground">
                   {t("referral.code", { code: profile.referralCode })}
                 </p>
