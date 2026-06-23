@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { api } from "../../../../../convex/_generated/api";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -88,7 +89,7 @@ function StatCard(props: {
 
 function LoadingAffiliatePage() {
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-8">
+    <div className="flex flex-1 flex-col gap-6">
       <Skeleton className="h-10 w-64" />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.8fr)]">
         <Skeleton className="h-64" />
@@ -168,55 +169,50 @@ export function AffiliatePage() {
     }
   }
 
+  const settingsDialog = profile ? (
+    <Dialog>
+      <DialogTrigger render={<Button variant="outline" />}>
+        <SettingsIcon data-icon="inline-start" />
+        {t("settings.open")}
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("settings.title")}</DialogTitle>
+          <DialogDescription>{t("settings.description")}</DialogDescription>
+        </DialogHeader>
+        <form className="flex flex-col gap-6" onSubmit={handlePaypalSave}>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="paypal-email">
+                {t("settings.paypalEmail")}
+              </FieldLabel>
+              <Input
+                id="paypal-email"
+                onChange={(event) => setPaypalEmail(event.target.value)}
+                placeholder={profile.paypalEmail ?? t("settings.paypalPlaceholder")}
+                type="email"
+                value={paypalEmail}
+              />
+              <FieldDescription>{t("settings.paypalDescription")}</FieldDescription>
+            </Field>
+          </FieldGroup>
+          <DialogFooter>
+            <Button disabled={isSavingPaypal} type="submit">
+              {isSavingPaypal ? t("settings.saving") : t("settings.save")}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  ) : null;
+
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-8">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <GiftIcon />
-            {t("eyebrow")}
-          </div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            {t("description")}
-          </p>
-        </div>
-        {profile ? (
-          <Dialog>
-            <DialogTrigger render={<Button variant="outline" />}>
-              <SettingsIcon data-icon="inline-start" />
-              {t("settings.open")}
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{t("settings.title")}</DialogTitle>
-                <DialogDescription>{t("settings.description")}</DialogDescription>
-              </DialogHeader>
-              <form className="flex flex-col gap-6" onSubmit={handlePaypalSave}>
-                <FieldGroup>
-                  <Field>
-                    <FieldLabel htmlFor="paypal-email">
-                      {t("settings.paypalEmail")}
-                    </FieldLabel>
-                    <Input
-                      id="paypal-email"
-                      onChange={(event) => setPaypalEmail(event.target.value)}
-                      placeholder={profile.paypalEmail ?? t("settings.paypalPlaceholder")}
-                      type="email"
-                      value={paypalEmail}
-                    />
-                    <FieldDescription>{t("settings.paypalDescription")}</FieldDescription>
-                  </Field>
-                </FieldGroup>
-                <DialogFooter>
-                  <Button disabled={isSavingPaypal} type="submit">
-                    {isSavingPaypal ? t("settings.saving") : t("settings.save")}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        ) : null}
+    <div className="flex flex-1 flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        <PageHeader actions={settingsDialog} title={t("title")} />
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+          {t("description")}
+        </p>
       </div>
 
       {!profile ? (
