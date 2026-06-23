@@ -187,7 +187,11 @@ export function AffiliatePage() {
               <CardContent className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Input readOnly value={referralUrl} />
-                  <Button onClick={() => void handleCopy()} type="button">
+                  <Button
+                    className="w-full sm:w-36"
+                    onClick={() => void handleCopy()}
+                    type="button"
+                  >
                     <CopyIcon data-icon="inline-start" />
                     {t("referral.copy")}
                   </Button>
@@ -206,8 +210,12 @@ export function AffiliatePage() {
                           type="email"
                           value={paypalEmail}
                         />
-                        <Button disabled={isSavingPaypal} type="submit">
-                          {isSavingPaypal ? t("settings.saving") : t("settings.save")}
+                        <Button
+                          className="w-full sm:w-36"
+                          disabled={isSavingPaypal}
+                          type="submit"
+                        >
+                          {t("settings.save")}
                         </Button>
                       </div>
                     </Field>
