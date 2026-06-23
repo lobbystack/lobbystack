@@ -89,7 +89,7 @@ export const affiliateResources = {
       paypalEmail: "PayPal email",
       paypalPlaceholder: "name@example.com",
       paypalDescription: "Only PayPal payouts are supported in v1.",
-      save: "Save PayPal email",
+      save: "Save",
       saving: "Saving...",
     },
     statuses: {
@@ -221,7 +221,7 @@ export const affiliateResources = {
       paypalEmail: "Courriel PayPal",
       paypalPlaceholder: "nom@example.com",
       paypalDescription: "Seuls les paiements PayPal sont pris en charge en v1.",
-      save: "Enregistrer le courriel PayPal",
+      save: "Enregistrer",
       saving: "Enregistrement...",
     },
     statuses: {

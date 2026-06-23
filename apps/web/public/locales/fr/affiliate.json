@@ -83,7 +83,7 @@
     "paypalEmail": "Courriel PayPal",
     "paypalPlaceholder": "nom@example.com",
     "paypalDescription": "Seuls les paiements PayPal sont pris en charge en v1.",
-    "save": "Enregistrer le courriel PayPal",
+    "save": "Enregistrer",
     "saving": "Enregistrement..."
   },
   "statuses": {

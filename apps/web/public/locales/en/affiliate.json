@@ -83,7 +83,7 @@
     "paypalEmail": "PayPal email",
     "paypalPlaceholder": "name@example.com",
     "paypalDescription": "Only PayPal payouts are supported in v1.",
-    "save": "Save PayPal email",
+    "save": "Save",
     "saving": "Saving..."
   },
   "statuses": {
