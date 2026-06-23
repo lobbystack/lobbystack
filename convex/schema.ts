@@ -1269,4 +1269,103 @@ export default defineSchema({
   })
     .index("by_kind_and_source_id", ["kind", "sourceId"])
     .index("by_business_id_and_occurred_at", ["businessId", "occurredAt"]),
+
+  affiliate_profiles: defineTable({
+    userId: v.id("users"),
+    referralCode: v.string(),
+    status: v.string(),
+    paypalEmail: v.optional(v.string()),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_user_id", ["userId"])
+    .index("by_referral_code", ["referralCode"]),
+
+  affiliate_clicks: defineTable({
+    affiliateProfileId: v.id("affiliate_profiles"),
+    referralCode: v.string(),
+    visitorId: v.optional(v.string()),
+    sourceUrl: v.optional(v.string()),
+    clickedAt: v.string(),
+  })
+    .index("by_affiliate_profile_id_and_clicked_at", [
+      "affiliateProfileId",
+      "clickedAt",
+    ])
+    .index("by_referral_code_and_clicked_at", ["referralCode", "clickedAt"]),
+
+  affiliate_attributions: defineTable({
+    affiliateProfileId: v.id("affiliate_profiles"),
+    businessId: v.id("businesses"),
+    referredUserId: v.id("users"),
+    referralCode: v.string(),
+    source: v.string(),
+    attributedAt: v.string(),
+  })
+    .index("by_business_id", ["businessId"])
+    .index("by_affiliate_profile_id_and_attributed_at", [
+      "affiliateProfileId",
+      "attributedAt",
+    ]),
+
+  affiliate_commissions: defineTable({
+    affiliateProfileId: v.id("affiliate_profiles"),
+    referredBusinessId: v.id("businesses"),
+    sourceKey: v.string(),
+    billingTransactionId: v.id("billing_transactions"),
+    amountCents: v.number(),
+    commissionCents: v.number(),
+    currency: v.string(),
+    status: v.string(),
+    occurredAt: v.string(),
+    clearsAt: v.string(),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+    payoutItemId: v.optional(v.id("affiliate_payout_items")),
+    voidedAt: v.optional(v.string()),
+    voidReason: v.optional(v.string()),
+    paidAt: v.optional(v.string()),
+  })
+    .index("by_source_key", ["sourceKey"])
+    .index("by_affiliate_profile_id_and_status", [
+      "affiliateProfileId",
+      "status",
+    ])
+    .index("by_status_and_clears_at", ["status", "clearsAt"])
+    .index("by_billing_transaction_id", ["billingTransactionId"]),
+
+  affiliate_payout_runs: defineTable({
+    periodKey: v.string(),
+    status: v.string(),
+    totalCents: v.number(),
+    currency: v.string(),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+    note: v.optional(v.string()),
+  })
+    .index("by_period_key", ["periodKey"])
+    .index("by_status_and_created_at", ["status", "createdAt"]),
+
+  affiliate_payout_items: defineTable({
+    payoutRunId: v.id("affiliate_payout_runs"),
+    affiliateProfileId: v.id("affiliate_profiles"),
+    amountCents: v.number(),
+    currency: v.string(),
+    status: v.string(),
+    paypalEmail: v.string(),
+    affiliateEmail: v.optional(v.string()),
+    affiliateName: v.optional(v.string()),
+    commissionIds: v.array(v.id("affiliate_commissions")),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+    paidAt: v.optional(v.string()),
+    externalReference: v.optional(v.string()),
+    note: v.optional(v.string()),
+  })
+    .index("by_payout_run_id", ["payoutRunId"])
+    .index("by_affiliate_profile_id_and_created_at", [
+      "affiliateProfileId",
+      "createdAt",
+    ])
+    .index("by_status_and_created_at", ["status", "createdAt"]),
 });

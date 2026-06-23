@@ -1,6 +1,8 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { GiftIcon } from "lucide-react";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
 import type {
@@ -13,7 +15,13 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { FeedbackWidget } from "@/components/feedback-widget";
 import { TestCallWidget } from "@/components/test-call-widget";
 import { SiteHeader } from "@/components/site-header";
+import { Button } from "@/components/ui/button";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useObservedAction } from "@/lib/observed-convex";
 import {
   UpgradePlanDialog,
@@ -61,7 +69,7 @@ export function AuthenticatedLayout({
   showSetupGuide = false,
   isLoading = false,
 }: AuthenticatedLayoutProps) {
-  const { t } = useTranslation("settings");
+  const { t } = useTranslation(["settings", "nav"]);
   const defaultOpen = getSidebarDefaultOpen();
   const startCheckout = useObservedAction(api.billing.startCheckout);
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
@@ -164,6 +172,22 @@ export function AuthenticatedLayout({
         {!isLoading ? (
           <div className="pointer-events-none absolute top-4 inset-x-0 z-40 hidden md:block">
             <div className="mx-auto flex w-full max-w-7xl items-center justify-end gap-3 px-6">
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      aria-label={t("nav:items.affiliate")}
+                      className="pointer-events-auto"
+                      render={<Link to="/affiliate" />}
+                      size="icon"
+                      variant="outline"
+                    />
+                  }
+                >
+                  <GiftIcon />
+                </TooltipTrigger>
+                <TooltipContent>{t("nav:items.affiliate")}</TooltipContent>
+              </Tooltip>
               <TestCallWidget
                 className="pointer-events-auto"
                 {...(businessId ? { businessId } : {})}

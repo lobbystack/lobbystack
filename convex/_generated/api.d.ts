@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as affiliates from "../affiliates.js";
 import type * as ai_agents_runtime from "../ai/agents/runtime.js";
 import type * as ai_context_knowledge from "../ai/context/knowledge.js";
 import type * as ai_context_knowledgeUploads from "../ai/context/knowledgeUploads.js";
@@ -126,6 +127,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  affiliates: typeof affiliates;
   "ai/agents/runtime": typeof ai_agents_runtime;
   "ai/context/knowledge": typeof ai_context_knowledge;
   "ai/context/knowledgeUploads": typeof ai_context_knowledgeUploads;

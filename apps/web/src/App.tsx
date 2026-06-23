@@ -12,7 +12,7 @@ import {
   OnboardingRouteSkeleton,
   WorkspaceRouteSkeleton,
 } from "@/components/app-route-skeletons";
-import { useObservedAction } from "@/lib/observed-convex";
+import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 import { AuthenticatedLayout } from "@/components/layout/authenticated-layout";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -30,6 +30,7 @@ import { AgentBasicSettingsPage } from "@/features/agent/AgentBasicSettingsPage"
 import { AgentKnowledgePage } from "@/features/agent/AgentKnowledgePage";
 import { AgentRulesPage } from "@/features/agent/AgentRulesPage";
 import { AgentServicesPage } from "@/features/agent/AgentServicesPage";
+import { AffiliatePage } from "@/features/affiliate/AffiliatePage";
 import { CallDetailPage } from "@/features/calls/CallDetailPage";
 import { CallsPage } from "@/features/calls/CallsPage";
 import { ContactsPage } from "@/features/contacts/ContactsPage";
@@ -85,9 +86,73 @@ type ActiveBusinessEntry = {
 };
 
 const TENANT_ADMIN_ROLES = new Set(["business_owner", "business_admin", "owner"]);
+const AFFILIATE_REFERRAL_STORAGE_KEY = "lobbystack.affiliate.referralCode";
+const AFFILIATE_VISITOR_STORAGE_KEY = "lobbystack.affiliate.visitorId";
 
 function hasTenantAdminAccess(role: string | undefined): boolean {
   return role !== undefined && TENANT_ADMIN_ROLES.has(role);
+}
+
+function normalizeClientReferralCode(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32);
+}
+
+function getAffiliateVisitorId(): string {
+  const existing = window.localStorage.getItem(AFFILIATE_VISITOR_STORAGE_KEY);
+  if (existing) {
+    return existing;
+  }
+  const next =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  window.localStorage.setItem(AFFILIATE_VISITOR_STORAGE_KEY, next);
+  return next;
+}
+
+function useAffiliateReferralCapture(businessId?: Id<"businesses">) {
+  const location = useLocation();
+  const recordClick = useObservedMutation(api.affiliates.recordClick, {
+    reportFailures: false,
+  });
+  const bindAttribution = useObservedMutation(api.affiliates.bindAttribution, {
+    reportFailures: false,
+  });
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const referralCode = normalizeClientReferralCode(searchParams.get("via") ?? "");
+    if (!referralCode) {
+      return;
+    }
+
+    window.localStorage.setItem(AFFILIATE_REFERRAL_STORAGE_KEY, referralCode);
+    void recordClick({
+      referralCode,
+      visitorId: getAffiliateVisitorId(),
+      sourceUrl: window.location.href,
+    });
+  }, [location.search, recordClick]);
+
+  useEffect(() => {
+    if (!businessId) {
+      return;
+    }
+    const referralCode = window.localStorage.getItem(AFFILIATE_REFERRAL_STORAGE_KEY);
+    if (!referralCode) {
+      return;
+    }
+    void bindAttribution({ businessId, referralCode }).then((result) => {
+      if (result.bound || result.reason === "self_referral" || result.reason === "already_attributed") {
+        window.localStorage.removeItem(AFFILIATE_REFERRAL_STORAGE_KEY);
+      }
+    });
+  }, [bindAttribution, businessId]);
 }
 
 function RequireAuth(props: { children: ReactNode }) {
@@ -347,6 +412,7 @@ function WorkspaceShell() {
     onboardingTarget === "/onboarding/plan" &&
     location.pathname === "/settings/plan" &&
     new URLSearchParams(location.search).get("checkout") === "success";
+  useAffiliateReferralCapture(businessId);
 
   async function handleSignOut(): Promise<void> {
     resetAnalyticsIdentity();
@@ -578,6 +644,7 @@ function WorkspaceShell() {
               }
               path="/setup-guide"
             />
+            <Route element={<AffiliatePage />} path="/affiliate" />
             <Route element={<ContactsPage {...(businessId ? { businessId } : {})} />} path="/contacts" />
             <Route
               element={<ContactDetailPage {...(businessId ? { businessId } : {})} />}

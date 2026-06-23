@@ -1,0 +1,122 @@
+{
+  "eyebrow": "Programme d'affiliation",
+  "title": "Programme d'affiliation",
+  "description": "Partagez LobbyStack avec des opérateurs et agences. Nous suivons les parrainages, commissions et paiements PayPal manuels mensuels ici.",
+  "inactive": {
+    "title": "Commencez à gagner avec LobbyStack",
+    "description": "Activez votre profil affilié pour obtenir un lien de parrainage et suivre clics, inscriptions, conversions et revenus.",
+    "action": "Activer le profil affilié",
+    "activating": "Activation..."
+  },
+  "referral": {
+    "title": "Lien de parrainage",
+    "description": "Partagez ce lien partout où vous recommandez LobbyStack.",
+    "active": "Actif",
+    "copy": "Copier le lien",
+    "code": "Code de parrainage : {{code}}"
+  },
+  "terms": {
+    "title": "Récompenses",
+    "description": "Paiements PayPal manuels après la période de retenue.",
+    "commission": "Commission",
+    "hold": "Période de retenue",
+    "minimum": "Paiement minimum",
+    "days": "{{count}} jours",
+    "link": "Voir les conditions d'utilisation"
+  },
+  "stats": {
+    "clicks": "Clics",
+    "clicksDescription": "Visites de parrainage suivies.",
+    "referrals": "Parrainages",
+    "referralsDescription": "Entreprises attribuées à votre lien.",
+    "conversions": "Conversions",
+    "conversionsDescription": "Transactions payées avec commission.",
+    "pending": "En attente",
+    "pendingDescription": "En attente de la retenue de 30 jours.",
+    "eligible": "Admissible",
+    "eligibleReady": "Prêt pour le prochain lot de paiement.",
+    "eligibleWaiting": "Compte vers le minimum de 100 $.",
+    "paid": "Payé",
+    "paidDescription": "Marqué payé après paiement PayPal manuel."
+  },
+  "tabs": {
+    "quickstart": "Démarrage",
+    "earnings": "Revenus",
+    "payouts": "Paiements",
+    "faq": "FAQ"
+  },
+  "quickstart": {
+    "share": {
+      "title": "Partagez votre lien",
+      "description": "Utilisez votre lien LobbyStack dans vos publications, infolettres, sites web et recommandations directes."
+    },
+    "resources": {
+      "title": "Utilisez des affirmations exactes",
+      "description": "Décrivez LobbyStack honnêtement et indiquez que vous pouvez gagner une commission."
+    },
+    "receive": {
+      "title": "Recevez vos revenus",
+      "description": "Les soldes admissibles de 100 $ ou plus sont revus chaque mois et payés manuellement via PayPal."
+    }
+  },
+  "earnings": {
+    "date": "Date",
+    "sale": "Vente",
+    "commission": "Commission",
+    "clears": "Disponible",
+    "status": "Statut",
+    "empty": "Aucune commission pour le moment."
+  },
+  "payouts": {
+    "date": "Date",
+    "amount": "Montant",
+    "paypal": "PayPal",
+    "status": "Statut",
+    "reference": "Référence",
+    "empty": "Aucun paiement pour le moment.",
+    "noReference": "Pas encore payé"
+  },
+  "settings": {
+    "open": "Réglages",
+    "title": "Réglages affilié",
+    "description": "Ajoutez le courriel PayPal où les paiements manuels doivent être envoyés.",
+    "paypalEmail": "Courriel PayPal",
+    "paypalPlaceholder": "nom@example.com",
+    "paypalDescription": "Seuls les paiements PayPal sont pris en charge en v1.",
+    "save": "Enregistrer le courriel PayPal",
+    "saving": "Enregistrement..."
+  },
+  "statuses": {
+    "pending": "En attente",
+    "paid": "Payé",
+    "voided": "Annulé",
+    "draft": "Brouillon",
+    "ready": "Prêt",
+    "skipped": "Ignoré"
+  },
+  "faq": {
+    "when": {
+      "question": "Quand les commissions deviennent-elles payables ?",
+      "answer": "Les commissions deviennent admissibles 30 jours après le paiement du client parrainé."
+    },
+    "minimum": {
+      "question": "Quel est le paiement minimum ?",
+      "answer": "Les commissions impayées admissibles doivent atteindre 100 $ avant d'être incluses dans un lot mensuel."
+    },
+    "method": {
+      "question": "Comment les paiements sont-ils envoyés ?",
+      "answer": "LobbyStack paie les affiliés manuellement via PayPal avec le courriel PayPal enregistré."
+    },
+    "refunds": {
+      "question": "Que se passe-t-il après un remboursement ?",
+      "answer": "Les commissions impayées peuvent être annulées si le paiement sous-jacent est remboursé ou contesté."
+    }
+  },
+  "toast": {
+    "activated": "Profil affilié activé.",
+    "activateFailed": "Impossible d'activer le profil affilié.",
+    "copied": "Lien de parrainage copié.",
+    "paypalSaved": "Courriel PayPal enregistré.",
+    "paypalFailed": "Impossible d'enregistrer le courriel PayPal."
+  }
+}

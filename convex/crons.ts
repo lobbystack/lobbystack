@@ -35,5 +35,11 @@ crons.interval(
   internal.privacy.retention.runMvpRetentionCleanup,
   {},
 );
+crons.cron(
+  "generate monthly affiliate payout run",
+  "0 13 1 * *",
+  internal.affiliates.generateMonthlyPayoutRun,
+  {},
+);
 
 export default crons;

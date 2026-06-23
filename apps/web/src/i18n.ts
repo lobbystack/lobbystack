@@ -8,6 +8,7 @@ import {
   LOCALE_STORAGE_KEY,
   SUPPORTED_LOCALES,
 } from "@/lib/locale";
+import { affiliateResources } from "@/locales/affiliate";
 
 void i18n
   .use(HttpBackend)
@@ -16,6 +17,8 @@ void i18n
   .init({
     supportedLngs: SUPPORTED_LOCALES,
     fallbackLng: DEFAULT_LOCALE,
+    load: "languageOnly",
+    partialBundledLanguages: true,
     defaultNS: "common",
     ns: [
       "common",
@@ -30,7 +33,16 @@ void i18n
       "messages",
       "contacts",
       "agent",
+      "affiliate",
     ],
+    resources: {
+      en: {
+        affiliate: affiliateResources.en,
+      },
+      fr: {
+        affiliate: affiliateResources.fr,
+      },
+    },
     interpolation: {
       escapeValue: false,
     },
@@ -41,6 +53,9 @@ void i18n
       order: ["querystring", "localStorage", "navigator"],
       lookupLocalStorage: LOCALE_STORAGE_KEY,
       caches: ["localStorage"],
+    },
+    react: {
+      useSuspense: false,
     },
     returnNull: false,
   });
