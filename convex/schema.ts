@@ -1327,6 +1327,7 @@ export default defineSchema({
     commissionCents: v.number(),
     currency: v.string(),
     status: v.string(),
+    payoutState: v.string(),
     occurredAt: v.string(),
     clearsAt: v.string(),
     createdAt: v.string(),
@@ -1346,11 +1347,21 @@ export default defineSchema({
       "status",
       "clearsAt",
     ])
+    .index("by_affiliate_profile_id_and_status_and_payout_state", [
+      "affiliateProfileId",
+      "status",
+      "payoutState",
+    ])
     .index("by_affiliate_profile_id_and_occurred_at", [
       "affiliateProfileId",
       "occurredAt",
     ])
     .index("by_status_and_clears_at", ["status", "clearsAt"])
+    .index("by_status_and_payout_state_and_clears_at", [
+      "status",
+      "payoutState",
+      "clearsAt",
+    ])
     .index("by_billing_transaction_id", ["billingTransactionId"]),
 
   affiliate_payout_runs: defineTable({
@@ -1385,6 +1396,10 @@ export default defineSchema({
     .index("by_affiliate_profile_id_and_created_at", [
       "affiliateProfileId",
       "createdAt",
+    ])
+    .index("by_payout_run_id_and_affiliate_profile_id", [
+      "payoutRunId",
+      "affiliateProfileId",
     ])
     .index("by_status_and_created_at", ["status", "createdAt"]),
 });
