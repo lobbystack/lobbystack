@@ -79,8 +79,8 @@ export function TestCallWidget({
         type="button"
         variant="outline"
       >
-        <Phone className="text-muted-foreground" />
-        <span className="text-muted-foreground">{t("testCall.trigger")}</span>
+        <Phone className="text-sidebar-foreground" />
+        <span className="text-sidebar-foreground">{t("testCall.trigger")}</span>
       </Button>
 
       <Dialog onOpenChange={handleOpenChange} open={open}>

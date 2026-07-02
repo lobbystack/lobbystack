@@ -169,30 +169,35 @@ export function AuthenticatedLayout({
         )}
       >
         <SiteHeader fixed />
+        <div className="hidden h-16 shrink-0 border-b md:block" />
         {!isLoading ? (
           <div className="pointer-events-none absolute top-4 inset-x-0 z-40 hidden md:block">
-            <div className="mx-auto flex w-full max-w-7xl items-center justify-end gap-3 px-6">
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      aria-label={t("nav:items.affiliate")}
-                      className="pointer-events-auto"
-                      render={<Link to="/affiliate" />}
-                      size="icon"
-                      variant="outline"
-                    />
-                  }
-                >
-                  <GiftIcon />
-                </TooltipTrigger>
-                <TooltipContent>{t("nav:items.affiliate")}</TooltipContent>
-              </Tooltip>
+            <div className="mx-auto flex w-full max-w-7xl items-center justify-end gap-0.5 px-6">
               <TestCallWidget
                 className="pointer-events-auto"
                 {...(businessId ? { businessId } : {})}
                 {...(businessSlug ? { businessSlug } : {})}
               />
+              <span
+                aria-hidden="true"
+                className="ml-3 mr-1.5 h-4 w-px bg-border"
+              />
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      aria-label={t("nav:items.affiliate")}
+                      className="pointer-events-auto text-sidebar-foreground hover:bg-transparent hover:text-sidebar-accent-foreground"
+                      render={<Link to="/affiliate" />}
+                      size="icon-xs"
+                      variant="ghost"
+                    />
+                  }
+                >
+                  <GiftIcon className="size-[18px] -translate-x-px" strokeWidth={1.75} />
+                </TooltipTrigger>
+                <TooltipContent>{t("nav:items.affiliate")}</TooltipContent>
+              </Tooltip>
               <FeedbackWidget
                 className="pointer-events-auto"
                 {...(businessId ? { businessId } : {})}

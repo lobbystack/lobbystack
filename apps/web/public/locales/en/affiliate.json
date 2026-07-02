@@ -22,7 +22,10 @@
     "hold": "Holding period",
     "minimum": "Minimum payout",
     "days": "{{count}} days",
-    "link": "View Terms of Service"
+    "link": "View Terms of Service",
+    "reward": "Earn {{rate}} per sale for {{duration}}",
+    "oneYear": "1 year",
+    "months": "{{count}} months"
   },
   "stats": {
     "clicks": "Clicks",
@@ -37,7 +40,7 @@
     "eligibleReady": "Ready for the next payout run.",
     "eligibleWaiting": "Counts toward the $100 minimum.",
     "paid": "Paid",
-    "paidDescription": "Marked paid after manual PayPal payout."
+    "paidDescription": "Marked paid after payout."
   },
   "tabs": {
     "quickstart": "Quickstart",
@@ -48,7 +51,7 @@
   "quickstart": {
     "share": {
       "title": "Share your link",
-      "description": "Use your LobbyStack referral link in posts, newsletters, websites, and direct recommendations."
+      "description": "Use your referral link in posts, newsletters, websites, and direct recommendations."
     },
     "resources": {
       "title": "Use accurate claims",
@@ -56,7 +59,7 @@
     },
     "receive": {
       "title": "Receive earnings",
-      "description": "Eligible balances of $100 or more are reviewed monthly and paid manually through PayPal."
+      "description": "Eligible balances of $100 or more are reviewed monthly and paid through PayPal."
     }
   },
   "earnings": {
@@ -78,11 +81,14 @@
   },
   "settings": {
     "open": "Settings",
-    "title": "Affiliate settings",
-    "description": "Add the PayPal email where manual payouts should be sent.",
+    "title": "PayPal email",
+    "description": "Email address used for payouts.",
     "paypalEmail": "PayPal email",
-    "paypalPlaceholder": "name@example.com",
-    "paypalDescription": "Only PayPal payouts are supported in v1.",
+    "paypalPlaceholder": "New PayPal email",
+    "currentEmail": "{{email}}",
+    "noEmail": "No PayPal email saved.",
+    "change": "Change",
+    "dialogTitle": "Change PayPal email",
     "save": "Save",
     "saving": "Saving..."
   },

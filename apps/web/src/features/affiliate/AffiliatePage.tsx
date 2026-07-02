@@ -1,6 +1,10 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
-import { CopyIcon, ExternalLinkIcon, GiftIcon } from "lucide-react";
+import {
+  CopyIcon,
+  ExternalLinkIcon,
+  GiftIcon,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -16,11 +20,28 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   Field,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -80,10 +101,7 @@ function LoadingAffiliatePage() {
   return (
     <div className="flex flex-1 flex-col gap-6">
       <Skeleton className="h-10 w-64" />
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.8fr)]">
-        <Skeleton className="h-64" />
-        <Skeleton className="h-64" />
-      </div>
+      <Skeleton className="h-40" />
       <div className="grid gap-4 md:grid-cols-3">
         <Skeleton className="h-32" />
         <Skeleton className="h-32" />
@@ -101,12 +119,19 @@ export function AffiliatePage() {
   const activate = useObservedMutation(api.affiliates.activate);
   const updatePaypalEmail = useObservedMutation(api.affiliates.updatePaypalEmail);
   const [paypalEmail, setPaypalEmail] = useState("");
+  const [paypalStatus, setPaypalStatus] = useState<string | null>(null);
+  const [paypalError, setPaypalError] = useState<string | null>(null);
   const [isActivating, setIsActivating] = useState(false);
   const [isSavingPaypal, setIsSavingPaypal] = useState(false);
+  const [isPaypalDialogOpen, setIsPaypalDialogOpen] = useState(false);
 
   const currency = summary?.terms.currency ?? "usd";
   const profile = summary?.profile ?? null;
   const referralUrl = summary?.referralUrl ?? "";
+  const commissionDuration =
+    summary?.terms.commissionMonths === 12
+      ? t("terms.oneYear")
+      : t("terms.months", { count: summary?.terms.commissionMonths ?? 0 });
 
   const readyToPay = useMemo(() => {
     if (!summary) {
@@ -146,12 +171,17 @@ export function AffiliatePage() {
 
   async function handlePaypalSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setPaypalStatus(null);
+    setPaypalError(null);
     setIsSavingPaypal(true);
     try {
       await updatePaypalEmail({ paypalEmail });
       toast.success(t("toast.paypalSaved"));
       setPaypalEmail("");
+      setPaypalStatus(t("toast.paypalSaved"));
+      setIsPaypalDialogOpen(false);
     } catch {
+      setPaypalError(t("toast.paypalFailed"));
       toast.error(t("toast.paypalFailed"));
     } finally {
       setIsSavingPaypal(false);
@@ -179,94 +209,65 @@ export function AffiliatePage() {
         </Card>
       ) : (
         <>
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.8fr)]">
-            <Card>
-              <CardHeader>
+          <Card>
+            <CardContent className="flex flex-col gap-8">
+              <div className="flex flex-col gap-4">
                 <CardTitle>{t("referral.title")}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Input readOnly value={referralUrl} />
-                  <Button
-                    className="w-full sm:w-36"
-                    onClick={() => void handleCopy()}
-                    type="button"
-                  >
+                  <Button onClick={() => void handleCopy()} type="button">
                     <CopyIcon data-icon="inline-start" />
                     {t("referral.copy")}
                   </Button>
                 </div>
-                <form className="flex flex-col gap-3" onSubmit={handlePaypalSave}>
-                  <FieldGroup>
-                    <Field>
-                      <FieldLabel htmlFor="paypal-email">
-                        {t("settings.paypalEmail")}
-                      </FieldLabel>
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <Input
-                          id="paypal-email"
-                          onChange={(event) => setPaypalEmail(event.target.value)}
-                          placeholder={profile.paypalEmail ?? t("settings.paypalPlaceholder")}
-                          type="email"
-                          value={paypalEmail}
-                        />
-                        <Button
-                          className="w-full sm:w-36"
-                          disabled={isSavingPaypal}
-                          type="submit"
-                        >
-                          {t("settings.save")}
-                        </Button>
-                      </div>
-                    </Field>
-                  </FieldGroup>
-                </form>
-                <p className="text-sm text-muted-foreground">
-                  {t("referral.code", { code: profile.referralCode })}
-                </p>
-              </CardContent>
-            </Card>
+              </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("terms.title")}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">{t("terms.commission")}</span>
-                  <span className="font-medium">
-                    {Math.round(summary.terms.commissionRate * 100)}%
-                  </span>
+                  <CardTitle>{t("terms.title")}</CardTitle>
+                  <a
+                    className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                    href="/terms/#affiliate-program"
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    {t("terms.link")}
+                    <ExternalLinkIcon aria-hidden="true" className="size-4" />
+                  </a>
                 </div>
-                <Separator />
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">{t("terms.hold")}</span>
-                  <span className="font-medium">
-                    {t("terms.days", { count: summary.terms.holdDays })}
-                  </span>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <GiftIcon aria-hidden="true" className="size-4 shrink-0" />
+                    <p className="text-base font-medium text-foreground">
+                      {t("terms.reward", {
+                        rate: `${Math.round(summary.terms.commissionRate * 100)}%`,
+                        duration: commissionDuration,
+                      })}
+                    </p>
+                  </div>
+                  <Separator />
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                    <span>
+                      <span className="font-medium text-foreground">
+                        {formatCurrency({
+                          amountCents: summary.terms.minimumPayoutCents,
+                          currency,
+                        })}
+                      </span>{" "}
+                      <span className="lowercase">{t("terms.minimum")}</span>
+                    </span>
+                    <span aria-hidden="true">/</span>
+                    <span>
+                      <span className="font-medium text-foreground">
+                        {t("terms.days", { count: summary.terms.holdDays })}
+                      </span>{" "}
+                      <span className="lowercase">{t("terms.hold")}</span>
+                    </span>
+                  </div>
                 </div>
-                <Separator />
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">{t("terms.minimum")}</span>
-                  <span className="font-medium">
-                    {formatCurrency({
-                      amountCents: summary.terms.minimumPayoutCents,
-                      currency,
-                    })}
-                  </span>
-                </div>
-                <a
-                  className="inline-flex items-center gap-2 text-sm font-medium text-foreground underline-offset-4 hover:underline"
-                  href="/terms/#affiliate-program"
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  {t("terms.link")}
-                  <ExternalLinkIcon />
-                </a>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
 
           <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
             <StatCard
@@ -309,6 +310,7 @@ export function AffiliatePage() {
               <TabsTrigger value="earnings">{t("tabs.earnings")}</TabsTrigger>
               <TabsTrigger value="payouts">{t("tabs.payouts")}</TabsTrigger>
               <TabsTrigger value="faq">{t("tabs.faq")}</TabsTrigger>
+              <TabsTrigger value="settings">{t("settings.open")}</TabsTrigger>
             </TabsList>
             <TabsContent className="pt-4" value="quickstart">
               <div className="grid gap-4 md:grid-cols-3">
@@ -422,6 +424,67 @@ export function AffiliatePage() {
                   </Card>
                 ))}
               </div>
+            </TabsContent>
+            <TabsContent className="pt-4" value="settings">
+              <ItemGroup spacing="section">
+                <Item variant="outline">
+                  <ItemContent>
+                    <ItemTitle>{t("settings.title")}</ItemTitle>
+                    <ItemDescription>{t("settings.description")}</ItemDescription>
+                    <p className="text-[15px] leading-6 text-foreground">
+                      {profile.paypalEmail
+                        ? t("settings.currentEmail", { email: profile.paypalEmail })
+                        : t("settings.noEmail")}
+                    </p>
+                    {paypalStatus ? <ItemDescription>{paypalStatus}</ItemDescription> : null}
+                  </ItemContent>
+                  <ItemActions>
+                    <Dialog
+                      onOpenChange={(open) => {
+                        setIsPaypalDialogOpen(open);
+                        if (open) {
+                          setPaypalEmail(profile.paypalEmail ?? "");
+                          setPaypalError(null);
+                        }
+                      }}
+                      open={isPaypalDialogOpen}
+                    >
+                      <DialogTrigger render={<Button size="sm" variant="outline" />}>
+                        {t("settings.change")}
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>{t("settings.dialogTitle")}</DialogTitle>
+                        </DialogHeader>
+
+                        <form className="flex flex-col gap-4" onSubmit={handlePaypalSave}>
+                          <FieldGroup>
+                            <Field>
+                              <FieldLabel htmlFor="paypal-email">
+                                {t("settings.paypalEmail")}
+                              </FieldLabel>
+                              <Input
+                                id="paypal-email"
+                                autoComplete="email"
+                                onChange={(event) => setPaypalEmail(event.target.value)}
+                                placeholder={t("settings.paypalPlaceholder")}
+                                type="email"
+                                value={paypalEmail}
+                              />
+                            </Field>
+                          </FieldGroup>
+                          {paypalError ? <FieldError>{paypalError}</FieldError> : null}
+                          <DialogFooter>
+                            <Button disabled={isSavingPaypal} type="submit">
+                              {isSavingPaypal ? t("settings.saving") : t("settings.save")}
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </ItemActions>
+                </Item>
+              </ItemGroup>
             </TabsContent>
           </Tabs>
         </>

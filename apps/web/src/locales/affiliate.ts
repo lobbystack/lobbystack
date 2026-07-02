@@ -26,6 +26,9 @@ export const affiliateResources = {
       minimum: "Minimum payout",
       days: "{{count}} days",
       link: "View Terms of Service",
+      reward: "Earn {{rate}} per sale for {{duration}}",
+      oneYear: "1 year",
+      months: "{{count}} months",
     },
     stats: {
       clicks: "Clicks",
@@ -40,7 +43,7 @@ export const affiliateResources = {
       eligibleReady: "Ready for the next payout run.",
       eligibleWaiting: "Counts toward the $100 minimum.",
       paid: "Paid",
-      paidDescription: "Marked paid after manual PayPal payout.",
+      paidDescription: "Marked paid after payout.",
     },
     tabs: {
       quickstart: "Quickstart",
@@ -52,7 +55,7 @@ export const affiliateResources = {
       share: {
         title: "Share your link",
         description:
-          "Use your LobbyStack referral link in posts, newsletters, websites, and direct recommendations.",
+          "Use your referral link in posts, newsletters, websites, and direct recommendations.",
       },
       resources: {
         title: "Use accurate claims",
@@ -62,7 +65,7 @@ export const affiliateResources = {
       receive: {
         title: "Receive earnings",
         description:
-          "Eligible balances of $100 or more are reviewed monthly and paid manually through PayPal.",
+          "Eligible balances of $100 or more are reviewed monthly and paid through PayPal.",
       },
     },
     earnings: {
@@ -84,11 +87,14 @@ export const affiliateResources = {
     },
     settings: {
       open: "Settings",
-      title: "Affiliate settings",
-      description: "Add the PayPal email where manual payouts should be sent.",
+      title: "PayPal email",
+      description: "Email address used for payouts.",
       paypalEmail: "PayPal email",
-      paypalPlaceholder: "name@example.com",
-      paypalDescription: "Only PayPal payouts are supported in v1.",
+      paypalPlaceholder: "New PayPal email",
+      currentEmail: "{{email}}",
+      noEmail: "No PayPal email saved.",
+      change: "Change",
+      dialogTitle: "Change PayPal email",
       save: "Save",
       saving: "Saving...",
     },
@@ -157,6 +163,9 @@ export const affiliateResources = {
       minimum: "Paiement minimum",
       days: "{{count}} jours",
       link: "Voir les conditions d'utilisation",
+      reward: "Gagnez {{rate}} par vente pendant {{duration}}",
+      oneYear: "1 an",
+      months: "{{count}} mois",
     },
     stats: {
       clicks: "Clics",
@@ -215,12 +224,14 @@ export const affiliateResources = {
     },
     settings: {
       open: "Reglages",
-      title: "Reglages affilie",
-      description:
-        "Ajoutez le courriel PayPal ou les paiements manuels doivent etre envoyes.",
+      title: "Courriel PayPal",
+      description: "Courriel utilise pour les paiements d'affiliation.",
       paypalEmail: "Courriel PayPal",
-      paypalPlaceholder: "nom@example.com",
-      paypalDescription: "Seuls les paiements PayPal sont pris en charge en v1.",
+      paypalPlaceholder: "Nouveau courriel PayPal",
+      currentEmail: "{{email}}",
+      noEmail: "Aucun courriel PayPal enregistre.",
+      change: "Modifier",
+      dialogTitle: "Modifier le courriel PayPal",
       save: "Enregistrer",
       saving: "Enregistrement...",
     },

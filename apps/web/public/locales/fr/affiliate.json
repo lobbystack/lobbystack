@@ -22,7 +22,10 @@
     "hold": "Période de retenue",
     "minimum": "Paiement minimum",
     "days": "{{count}} jours",
-    "link": "Voir les conditions d'utilisation"
+    "link": "Voir les conditions d'utilisation",
+    "reward": "Gagnez {{rate}} par vente pendant {{duration}}",
+    "oneYear": "1 an",
+    "months": "{{count}} mois"
   },
   "stats": {
     "clicks": "Clics",
@@ -78,11 +81,14 @@
   },
   "settings": {
     "open": "Réglages",
-    "title": "Réglages affilié",
-    "description": "Ajoutez le courriel PayPal où les paiements manuels doivent être envoyés.",
+    "title": "Courriel PayPal",
+    "description": "Courriel utilisé pour les paiements d'affiliation.",
     "paypalEmail": "Courriel PayPal",
-    "paypalPlaceholder": "nom@example.com",
-    "paypalDescription": "Seuls les paiements PayPal sont pris en charge en v1.",
+    "paypalPlaceholder": "Nouveau courriel PayPal",
+    "currentEmail": "{{email}}",
+    "noEmail": "Aucun courriel PayPal enregistré.",
+    "change": "Modifier",
+    "dialogTitle": "Modifier le courriel PayPal",
     "save": "Enregistrer",
     "saving": "Enregistrement..."
   },
