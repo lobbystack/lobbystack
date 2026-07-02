@@ -148,11 +148,21 @@ function useAffiliateReferralCapture(businessId?: Id<"businesses">) {
       return;
     }
     void bindAttribution({ businessId, referralCode }).then((result) => {
-      if (result.bound || result.reason === "self_referral" || result.reason === "already_attributed") {
+      if (
+        result.bound ||
+        result.reason === "self_referral" ||
+        result.reason === "already_attributed" ||
+        result.reason === "ineligible_business"
+      ) {
         window.localStorage.removeItem(AFFILIATE_REFERRAL_STORAGE_KEY);
       }
-    });
+    }).catch(() => {});
   }, [bindAttribution, businessId]);
+}
+
+function AffiliateReferralCapture() {
+  useAffiliateReferralCapture();
+  return null;
 }
 
 function RequireAuth(props: { children: ReactNode }) {
@@ -1242,6 +1252,7 @@ export default function App() {
   return (
     <TooltipProvider>
       <BrowserRouter>
+        <AffiliateReferralCapture />
         <Routes>
           <Route
             element={

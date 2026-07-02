@@ -6,7 +6,7 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from "./_generated/server";
-import { requireCurrentUser, requireMembership } from "./lib/auth";
+import { requireCurrentUser, requireTenantAdminMembership } from "./lib/auth";
 import {
   observedInternalMutation,
   observedMutation,
@@ -148,7 +148,7 @@ export const getDashboardSummary = query({
       };
     }
 
-    const [clicks, attributions, commissions, payoutItems] = await Promise.all([
+    const [clicks, attributions, commissions] = await Promise.all([
       ctx.db
         .query("affiliate_clicks")
         .withIndex("by_affiliate_profile_id_and_clicked_at", (q) =>
@@ -164,12 +164,6 @@ export const getDashboardSummary = query({
       ctx.db
         .query("affiliate_commissions")
         .withIndex("by_affiliate_profile_id_and_status", (q) =>
-          q.eq("affiliateProfileId", profile._id),
-        )
-        .collect(),
-      ctx.db
-        .query("affiliate_payout_items")
-        .withIndex("by_affiliate_profile_id_and_created_at", (q) =>
           q.eq("affiliateProfileId", profile._id),
         )
         .collect(),
@@ -213,11 +207,7 @@ export const getDashboardSummary = query({
           .length,
         pendingCents,
         eligibleCents,
-        paidCents:
-          paidCents +
-          payoutItems
-            .filter((item) => item.status === "paid")
-            .reduce((total, item) => total + item.amountCents, 0),
+        paidCents,
       },
     };
   },
@@ -353,11 +343,15 @@ export const bindAttribution = observedMutation({
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx);
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
     const referralCode = normalizeReferralCode(args.referralCode);
     const profile = await getProfileByReferralCode(ctx, referralCode);
     if (!profile || profile.status !== "active") {
       return { bound: false, reason: "not_found" };
+    }
+    const business = await ctx.db.get(args.businessId);
+    if (!business || business.onboardingStage === "completed") {
+      return { bound: false, reason: "ineligible_business" };
     }
     if (profile.userId === user._id) {
       return { bound: false, reason: "self_referral" };
@@ -403,8 +397,38 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
         .withIndex("by_source_key", (q) => q.eq("sourceKey", sourceKey))
         .unique();
       if (existing && existing.status !== "paid") {
+        if (existing.payoutItemId) {
+          const payoutItem = await ctx.db.get(existing.payoutItemId);
+          if (payoutItem && payoutItem.status !== "paid") {
+            const nextCommissionIds = payoutItem.commissionIds.filter(
+              (commissionId) => commissionId !== existing._id,
+            );
+            const nextAmountCents = Math.max(
+              0,
+              payoutItem.amountCents - existing.commissionCents,
+            );
+            await ctx.db.patch(payoutItem._id, {
+              amountCents: nextAmountCents,
+              commissionIds: nextCommissionIds,
+              status: nextCommissionIds.length === 0 ? "voided" : payoutItem.status,
+              updatedAt: timestamp,
+            });
+
+            const payoutRun = await ctx.db.get(payoutItem.payoutRunId);
+            if (payoutRun && payoutRun.status !== "paid") {
+              await ctx.db.patch(payoutRun._id, {
+                totalCents: Math.max(
+                  0,
+                  payoutRun.totalCents - existing.commissionCents,
+                ),
+                updatedAt: timestamp,
+              });
+            }
+          }
+        }
         await ctx.db.patch(existing._id, {
           status: "voided",
+          payoutItemId: undefined,
           voidedAt: timestamp,
           voidReason: "refund",
           updatedAt: timestamp,
