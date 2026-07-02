@@ -319,4 +319,103 @@ describe("affiliate program", () => {
     expect(result.payoutItem?.status).toBe("voided");
     expect(result.payoutRun?.totalCents).toBe(0);
   });
+
+  it("does not resurrect a voided commission after a late paid order webhook", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-05-20T12:00:00.000Z"));
+    const t = createConvexHarness();
+
+    const seeded = await t.run(async (ctx) => {
+      const affiliateUserId = await seedUser(ctx, "late-order-affiliate");
+      const profileId = await ctx.db.insert("affiliate_profiles", {
+        userId: affiliateUserId,
+        referralCode: "late-order-affiliate",
+        status: "active",
+        paypalEmail: "affiliate@example.com",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-04-01T00:00:00.000Z",
+      });
+      const referredUserId = await seedUser(ctx, "late-order-referred-owner");
+      const referredBusinessId = await seedBusiness(ctx, {
+        ownerId: referredUserId,
+        slug: "late-order-referred",
+      });
+      await ctx.db.insert("affiliate_attributions", {
+        affiliateProfileId: profileId,
+        businessId: referredBusinessId,
+        referredUserId,
+        referralCode: "late-order-affiliate",
+        source: "via",
+        attributedAt: "2026-04-01T00:00:00.000Z",
+      });
+      const billingTransactionId = await ctx.db.insert("billing_transactions", {
+        businessId: referredBusinessId,
+        kind: "order",
+        sourceId: "order-late-replay",
+        status: "paid",
+        amountCents: 50_000,
+        currency: "usd",
+        orderId: "order-late-replay",
+        occurredAt: "2026-04-01T00:00:00.000Z",
+        lastSyncedAt: "2026-04-01T00:00:00.000Z",
+      });
+      return {
+        billingTransactionId,
+        profileId,
+        referredBusinessId,
+      };
+    });
+
+    await t.mutation(internal.affiliates.createCommissionForBillingTransaction, {
+      billingTransactionId: seeded.billingTransactionId,
+      businessId: seeded.referredBusinessId,
+      kind: "order",
+      sourceId: "order-late-replay",
+      status: "paid",
+      amountCents: 50_000,
+      currency: "usd",
+      orderId: "order-late-replay",
+      occurredAt: "2026-04-01T00:00:00.000Z",
+    });
+    await t.mutation(internal.affiliates.createCommissionForBillingTransaction, {
+      billingTransactionId: seeded.billingTransactionId,
+      businessId: seeded.referredBusinessId,
+      kind: "refund",
+      sourceId: "refund-late-replay",
+      status: "succeeded",
+      amountCents: 50_000,
+      currency: "usd",
+      orderId: "order-late-replay",
+      occurredAt: "2026-05-20T12:00:00.000Z",
+    });
+    await t.mutation(internal.affiliates.createCommissionForBillingTransaction, {
+      billingTransactionId: seeded.billingTransactionId,
+      businessId: seeded.referredBusinessId,
+      kind: "order",
+      sourceId: "order-late-replay",
+      status: "paid",
+      amountCents: 50_000,
+      currency: "usd",
+      orderId: "order-late-replay",
+      occurredAt: "2026-04-01T00:00:00.000Z",
+    });
+
+    const result = await t.run(async (ctx) => {
+      const commission = await ctx.db
+        .query("affiliate_commissions")
+        .withIndex("by_source_key", (q) => q.eq("sourceKey", "order:order-late-replay"))
+        .unique();
+      const stats = await ctx.db
+        .query("affiliate_profile_stats")
+        .withIndex("by_affiliate_profile_id", (q) =>
+          q.eq("affiliateProfileId", seeded.profileId),
+        )
+        .unique();
+      return { commission, stats };
+    });
+
+    expect(result.commission?.status).toBe("voided");
+    expect(result.stats?.conversionCount).toBe(0);
+    expect(result.stats?.pendingCommissionCents).toBe(0);
+  });
 });

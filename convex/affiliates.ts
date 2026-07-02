@@ -596,7 +596,7 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
     };
 
     if (existing) {
-      if (existing.status === "paid") {
+      if (existing.status === "paid" || existing.status === "voided") {
         return null;
       }
       await ctx.db.patch(existing._id, patch);
