@@ -23,7 +23,7 @@ const MAX_REFERRAL_CODE_LENGTH = 32;
 const DASHBOARD_ELIGIBLE_PENDING_LIMIT = 1_000;
 const PAYOUT_RUN_COMMISSION_LIMIT = 250;
 const PAYOUT_RUN_ITEM_LIMIT = 250;
-const DEFERRED_PAYOUT_REOPEN_LIMIT = 1_000;
+const DEFERRED_PAYOUT_REOPEN_LIMIT = 250;
 
 const PAID_ORDER_STATUSES = new Set(["paid", "completed", "succeeded"]);
 
@@ -426,11 +426,29 @@ export const updatePaypalEmail = observedMutation({
       paypalEmail,
       updatedAt,
     });
+    await ctx.scheduler.runAfter(
+      0,
+      internal.affiliates.reopenDeferredCommissionsForProfile,
+      {
+        affiliateProfileId: profile._id,
+        updatedAt,
+      },
+    );
+    return null;
+  },
+});
+
+export const reopenDeferredCommissionsForProfile = observedInternalMutation({
+  args: {
+    affiliateProfileId: v.id("affiliate_profiles"),
+    updatedAt: v.string(),
+  },
+  handler: async (ctx, args) => {
     const deferredCommissions = await ctx.db
       .query("affiliate_commissions")
       .withIndex("by_affiliate_profile_id_and_status_and_payout_state", (q) =>
         q
-          .eq("affiliateProfileId", profile._id)
+          .eq("affiliateProfileId", args.affiliateProfileId)
           .eq("status", "pending")
           .eq("payoutState", "deferred"),
       )
@@ -438,8 +456,15 @@ export const updatePaypalEmail = observedMutation({
     for (const commission of deferredCommissions) {
       await ctx.db.patch(commission._id, {
         payoutState: "unassigned",
-        updatedAt,
+        updatedAt: args.updatedAt,
       });
+    }
+    if (deferredCommissions.length === DEFERRED_PAYOUT_REOPEN_LIMIT) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.affiliates.reopenDeferredCommissionsForProfile,
+        args,
+      );
     }
     return null;
   },
@@ -534,17 +559,13 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
         if (existing.payoutItemId) {
           const payoutItem = await ctx.db.get(existing.payoutItemId);
           if (payoutItem && payoutItem.status !== "paid") {
-            const nextCommissionIds = payoutItem.commissionIds.filter(
-              (commissionId) => commissionId !== existing._id,
-            );
             const nextAmountCents = Math.max(
               0,
               payoutItem.amountCents - existing.commissionCents,
             );
             await ctx.db.patch(payoutItem._id, {
               amountCents: nextAmountCents,
-              commissionIds: nextCommissionIds,
-              status: nextCommissionIds.length === 0 ? "voided" : payoutItem.status,
+              status: nextAmountCents === 0 ? "voided" : payoutItem.status,
               updatedAt: timestamp,
             });
 
@@ -646,26 +667,63 @@ async function releaseBelowMinimumDraftPayoutItems(
   ctx: MutationCtx,
   payoutRunId: Id<"affiliate_payout_runs">,
   updatedAt: string,
-): Promise<void> {
+): Promise<boolean> {
   const draftItems = await ctx.db
     .query("affiliate_payout_items")
-    .withIndex("by_payout_run_id", (q) => q.eq("payoutRunId", payoutRunId))
+    .withIndex("by_payout_run_id_and_status", (q) =>
+      q.eq("payoutRunId", payoutRunId).eq("status", "draft"),
+    )
     .take(PAYOUT_RUN_ITEM_LIMIT);
 
   for (const item of draftItems) {
-    if (item.status !== "draft" || item.amountCents >= MIN_PAYOUT_CENTS) {
+    if (item.amountCents >= MIN_PAYOUT_CENTS) {
       continue;
     }
-    for (const commissionId of item.commissionIds) {
-      await ctx.db.patch(commissionId, {
+    const assignedCommissions = await ctx.db
+      .query("affiliate_commissions")
+      .withIndex("by_payout_item_id_and_payout_state", (q) =>
+        q.eq("payoutItemId", item._id).eq("payoutState", "assigned"),
+      )
+      .take(PAYOUT_RUN_COMMISSION_LIMIT + 1);
+    for (const commission of assignedCommissions.slice(
+      0,
+      PAYOUT_RUN_COMMISSION_LIMIT,
+    )) {
+      await ctx.db.patch(commission._id, {
         payoutItemId: undefined,
         payoutState: "unassigned",
         updatedAt,
       });
     }
+    if (assignedCommissions.length > PAYOUT_RUN_COMMISSION_LIMIT) {
+      return true;
+    }
     await ctx.db.delete(item._id);
   }
+  return draftItems.length === PAYOUT_RUN_ITEM_LIMIT;
 }
+
+export const releaseBelowMinimumDraftPayoutItemsForRun = observedInternalMutation({
+  args: {
+    payoutRunId: v.id("affiliate_payout_runs"),
+    updatedAt: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const needsMoreCleanup = await releaseBelowMinimumDraftPayoutItems(
+      ctx,
+      args.payoutRunId,
+      args.updatedAt,
+    );
+    if (needsMoreCleanup) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.affiliates.releaseBelowMinimumDraftPayoutItemsForRun,
+        args,
+      );
+    }
+    return null;
+  },
+});
 
 export const generateMonthlyPayoutRun = observedInternalMutation({
   args: {
@@ -707,7 +765,21 @@ export const generateMonthlyPayoutRun = observedInternalMutation({
       )
       .take(PAYOUT_RUN_COMMISSION_LIMIT);
     if (eligibleCommissions.length === 0) {
-      await releaseBelowMinimumDraftPayoutItems(ctx, payoutRunId, createdAt);
+      const needsMoreCleanup = await releaseBelowMinimumDraftPayoutItems(
+        ctx,
+        payoutRunId,
+        createdAt,
+      );
+      if (needsMoreCleanup) {
+        await ctx.scheduler.runAfter(
+          0,
+          internal.affiliates.releaseBelowMinimumDraftPayoutItemsForRun,
+          {
+            payoutRunId,
+            updatedAt: createdAt,
+          },
+        );
+      }
       return payoutRunId;
     }
     const commissions = eligibleCommissions;
@@ -761,7 +833,6 @@ export const generateMonthlyPayoutRun = observedInternalMutation({
           q.eq("payoutRunId", payoutRunId).eq("affiliateProfileId", group.profile._id),
         )
         .unique();
-      const commissionIds = group.commissions.map((commission) => commission._id);
       const previousAmountCents = existingItem?.amountCents ?? 0;
       const nextAmountCents = previousAmountCents + group.amountCents;
       const previousReadyCents =
@@ -781,7 +852,6 @@ export const generateMonthlyPayoutRun = observedInternalMutation({
           ...(group.user?.displayName ?? group.user?.name
             ? { affiliateName: group.user?.displayName ?? group.user?.name }
             : {}),
-          commissionIds: [],
           createdAt,
           updatedAt: createdAt,
         });
@@ -790,7 +860,6 @@ export const generateMonthlyPayoutRun = observedInternalMutation({
         amountCents: nextAmountCents,
         status: nextStatus,
         paypalEmail: group.profile.paypalEmail!,
-        commissionIds: [...(existingItem?.commissionIds ?? []), ...commissionIds],
         updatedAt: createdAt,
       });
 
@@ -821,7 +890,21 @@ export const generateMonthlyPayoutRun = observedInternalMutation({
         payoutRunId,
       });
     } else {
-      await releaseBelowMinimumDraftPayoutItems(ctx, payoutRunId, createdAt);
+      const needsMoreCleanup = await releaseBelowMinimumDraftPayoutItems(
+        ctx,
+        payoutRunId,
+        createdAt,
+      );
+      if (needsMoreCleanup) {
+        await ctx.scheduler.runAfter(
+          0,
+          internal.affiliates.releaseBelowMinimumDraftPayoutItemsForRun,
+          {
+            payoutRunId,
+            updatedAt: createdAt,
+          },
+        );
+      }
     }
 
     return payoutRunId;
@@ -860,7 +943,6 @@ export const getPayoutRunPacket = internalQuery({
         amountCents: item.amountCents,
         currency: item.currency,
         status: item.status,
-        commissionIds: item.commissionIds,
         externalReference: item.externalReference ?? null,
         paidAt: item.paidAt ?? null,
       })),
@@ -890,24 +972,34 @@ export const markPayoutItemPaid = observedInternalMutation({
       ...(args.note ? { note: args.note } : {}),
     });
 
-    for (const commissionId of payoutItem.commissionIds) {
-      const commission = await ctx.db.get(commissionId);
-      if (commission && commission.status !== "voided") {
-        await ctx.db.patch(commissionId, {
-          status: "paid",
-          paidAt,
-          payoutItemId: payoutItem._id,
-          payoutState: "paid",
-          updatedAt: paidAt,
-        });
-        if (commission.status !== "paid") {
-          await adjustStatsForProfile(ctx, commission.affiliateProfileId, {
-            pendingCommissionCents:
-              commission.status === "pending" ? -commission.commissionCents : 0,
-            paidCommissionCents: commission.commissionCents,
-          });
-        }
+    const assignedCommissions = await ctx.db
+      .query("affiliate_commissions")
+      .withIndex("by_payout_item_id_and_payout_state", (q) =>
+        q.eq("payoutItemId", payoutItem._id).eq("payoutState", "assigned"),
+      )
+      .take(PAYOUT_RUN_COMMISSION_LIMIT);
+    for (const commission of assignedCommissions) {
+      if (commission.status === "voided") {
+        continue;
       }
+      await ctx.db.patch(commission._id, {
+        status: "paid",
+        paidAt,
+        payoutItemId: payoutItem._id,
+        payoutState: "paid",
+        updatedAt: paidAt,
+      });
+      if (commission.status !== "paid") {
+        await adjustStatsForProfile(ctx, commission.affiliateProfileId, {
+          pendingCommissionCents:
+            commission.status === "pending" ? -commission.commissionCents : 0,
+          paidCommissionCents: commission.commissionCents,
+        });
+      }
+    }
+    if (assignedCommissions.length === PAYOUT_RUN_COMMISSION_LIMIT) {
+      await ctx.scheduler.runAfter(0, internal.affiliates.markPayoutItemPaid, args);
+      return null;
     }
 
     const siblingItems = await ctx.db

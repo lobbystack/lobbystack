@@ -1362,6 +1362,10 @@ export default defineSchema({
       "payoutState",
       "clearsAt",
     ])
+    .index("by_payout_item_id_and_payout_state", [
+      "payoutItemId",
+      "payoutState",
+    ])
     .index("by_billing_transaction_id", ["billingTransactionId"]),
 
   affiliate_payout_runs: defineTable({
@@ -1385,7 +1389,6 @@ export default defineSchema({
     paypalEmail: v.string(),
     affiliateEmail: v.optional(v.string()),
     affiliateName: v.optional(v.string()),
-    commissionIds: v.array(v.id("affiliate_commissions")),
     createdAt: v.string(),
     updatedAt: v.string(),
     paidAt: v.optional(v.string()),
@@ -1401,5 +1404,6 @@ export default defineSchema({
       "payoutRunId",
       "affiliateProfileId",
     ])
+    .index("by_payout_run_id_and_status", ["payoutRunId", "status"])
     .index("by_status_and_created_at", ["status", "createdAt"]),
 });
