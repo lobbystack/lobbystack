@@ -771,6 +771,8 @@ function useOnboardingContext() {
   const canManageTenant = hasTenantAdminAccess(activeBusinessEntry?.membership.role);
   const businessId = activeBusiness?._id;
 
+  useAffiliateReferralCapture(businessId);
+
   useEffect(() => {
     if (businesses === undefined || currentUser === undefined) {
       return;

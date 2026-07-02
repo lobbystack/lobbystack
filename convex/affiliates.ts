@@ -20,6 +20,7 @@ const DEFAULT_CURRENCY = "usd";
 const APP_SIGNUP_URL = "https://app.lobbystack.com/signup";
 const MAX_REFERRAL_CODE_LENGTH = 32;
 const DASHBOARD_ELIGIBLE_PENDING_LIMIT = 1_000;
+const PAYOUT_RUN_COMMISSION_LIMIT = 1_000;
 
 const PAID_ORDER_STATUSES = new Set(["paid", "completed", "succeeded"]);
 
@@ -636,12 +637,18 @@ export const generateMonthlyPayoutRun = observedInternalMutation({
       return existingRun._id;
     }
 
-    const commissions = await ctx.db
+    const eligibleCommissions = await ctx.db
       .query("affiliate_commissions")
       .withIndex("by_status_and_clears_at", (q) =>
         q.eq("status", "pending").lte("clearsAt", createdAt),
       )
-      .collect();
+      .take(PAYOUT_RUN_COMMISSION_LIMIT + 1);
+    if (eligibleCommissions.length > PAYOUT_RUN_COMMISSION_LIMIT) {
+      throw new Error(
+        `Too many eligible affiliate commissions for one payout run; process fewer than ${PAYOUT_RUN_COMMISSION_LIMIT + 1} at a time.`,
+      );
+    }
+    const commissions = eligibleCommissions;
 
     const byAffiliate = new Map<Id<"affiliate_profiles">, Doc<"affiliate_commissions">[]>();
     for (const commission of commissions) {
