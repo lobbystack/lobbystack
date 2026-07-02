@@ -52,3 +52,14 @@ onlyBuiltDependencies:
 patchedDependencies:
   "@mintlify/previewing@4.0.1096": patches/@mintlify__previewing@4.0.1096.patch
   "front-matter@4.0.2": patches/front-matter@4.0.2.patch
+
+allowBuilds:
+  '@posthog/cli': set this to true or false
+  core-js: set this to true or false
+  esbuild: set this to true or false
+  keytar: set this to true or false
+  msw: set this to true or false
+  protobufjs: set this to true or false
+  puppeteer: set this to true or false
+  sharp: set this to true or false
+  tesseract.js: set this to true or false
