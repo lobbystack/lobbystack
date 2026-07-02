@@ -1281,6 +1281,16 @@ export default defineSchema({
     .index("by_user_id", ["userId"])
     .index("by_referral_code", ["referralCode"]),
 
+  affiliate_profile_stats: defineTable({
+    affiliateProfileId: v.id("affiliate_profiles"),
+    clickCount: v.number(),
+    referralCount: v.number(),
+    conversionCount: v.number(),
+    pendingCommissionCents: v.number(),
+    paidCommissionCents: v.number(),
+    updatedAt: v.string(),
+  }).index("by_affiliate_profile_id", ["affiliateProfileId"]),
+
   affiliate_clicks: defineTable({
     affiliateProfileId: v.id("affiliate_profiles"),
     referralCode: v.string(),
@@ -1330,6 +1340,15 @@ export default defineSchema({
     .index("by_affiliate_profile_id_and_status", [
       "affiliateProfileId",
       "status",
+    ])
+    .index("by_affiliate_profile_id_and_status_and_clears_at", [
+      "affiliateProfileId",
+      "status",
+      "clearsAt",
+    ])
+    .index("by_affiliate_profile_id_and_occurred_at", [
+      "affiliateProfileId",
+      "occurredAt",
     ])
     .index("by_status_and_clears_at", ["status", "clearsAt"])
     .index("by_billing_transaction_id", ["billingTransactionId"]),

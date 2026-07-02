@@ -163,6 +163,61 @@ describe("affiliate program", () => {
     expect(summary.stats.paidCents).toBe(2_000);
   });
 
+  it("returns an app signup referral URL so the web app captures attribution", async () => {
+    const t = createConvexHarness();
+
+    await t.run(async (ctx) => {
+      const affiliateUserId = await seedUser(ctx, "signup-link-affiliate");
+      await ctx.db.insert("affiliate_profiles", {
+        userId: affiliateUserId,
+        referralCode: "partner-code",
+        status: "active",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-04-01T00:00:00.000Z",
+      });
+    });
+
+    const summary = await t
+      .withIdentity({ subject: "signup-link-affiliate" })
+      .query(api.affiliates.getDashboardSummary, {});
+
+    expect(summary.referralUrl).toBe("https://app.lobbystack.com/signup?via=partner-code");
+  });
+
+  it("keeps generated collision suffixes inside the normalized referral code", async () => {
+    const t = createConvexHarness();
+    const base = "a".repeat(32);
+
+    await t.run(async (ctx) => {
+      const existingUserId = await seedUser(ctx, "existing-long-code");
+      await ctx.db.insert("affiliate_profiles", {
+        userId: existingUserId,
+        referralCode: base,
+        status: "active",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-04-01T00:00:00.000Z",
+      });
+      await ctx.db.insert("users", {
+        authSubject: "new-long-code",
+        email: "new-long-code@example.com",
+        displayName: base,
+      });
+    });
+
+    await t
+      .withIdentity({ subject: "new-long-code" })
+      .mutation(api.affiliates.activate, {});
+
+    const summary = await t
+      .withIdentity({ subject: "new-long-code" })
+      .query(api.affiliates.getDashboardSummary, {});
+
+    expect(summary.profile?.referralCode).toBe(`${"a".repeat(30)}-2`);
+    expect(summary.referralUrl).toBe(
+      `https://app.lobbystack.com/signup?via=${"a".repeat(30)}-2`,
+    );
+  });
+
   it("removes refunded commissions from unpaid payout items and runs", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-05-20T12:00:00.000Z"));

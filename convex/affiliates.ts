@@ -17,6 +17,9 @@ const COMMISSION_MONTHS = 12;
 const HOLD_DAYS = 30;
 const MIN_PAYOUT_CENTS = 10_000;
 const DEFAULT_CURRENCY = "usd";
+const APP_SIGNUP_URL = "https://app.lobbystack.com/signup";
+const MAX_REFERRAL_CODE_LENGTH = 32;
+const DASHBOARD_ELIGIBLE_PENDING_LIMIT = 1_000;
 
 const PAID_ORDER_STATUSES = new Set(["paid", "completed", "succeeded"]);
 
@@ -50,7 +53,7 @@ function normalizeReferralCode(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 32);
+    .slice(0, MAX_REFERRAL_CODE_LENGTH);
 }
 
 function referralCodeBaseForUser(user: Doc<"users">): string {
@@ -60,6 +63,15 @@ function referralCodeBaseForUser(user: Doc<"users">): string {
     user.email?.split("@")[0] ??
     `user-${String(user._id).slice(-8)}`;
   return normalizeReferralCode(preferred) || `user-${String(user._id).slice(-8)}`;
+}
+
+function referralCodeCandidate(base: string, index: number): string {
+  if (index === 0) {
+    return base;
+  }
+  const suffix = `-${index + 1}`;
+  const prefix = base.slice(0, MAX_REFERRAL_CODE_LENGTH - suffix.length).replace(/-+$/g, "");
+  return normalizeReferralCode(`${prefix}${suffix}`);
 }
 
 async function getProfileForUser(
@@ -88,13 +100,15 @@ async function generateReferralCode(
 ): Promise<string> {
   const base = referralCodeBaseForUser(user);
   for (let index = 0; index < 25; index += 1) {
-    const candidate = index === 0 ? base : `${base}-${index + 1}`;
+    const candidate = referralCodeCandidate(base, index);
     const existing = await getProfileByReferralCode(ctx, candidate);
     if (!existing) {
       return candidate;
     }
   }
-  return `${base}-${String(user._id).slice(-8)}`;
+  const suffix = `-${String(user._id).slice(-8)}`;
+  const prefix = base.slice(0, MAX_REFERRAL_CODE_LENGTH - suffix.length).replace(/-+$/g, "");
+  return normalizeReferralCode(`${prefix}${suffix}`);
 }
 
 function normalizeEmail(email: string): string {
@@ -119,6 +133,147 @@ async function getAttributionForBusiness(
     .query("affiliate_attributions")
     .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
     .unique();
+}
+
+async function getStatsForProfile(
+  ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">,
+  affiliateProfileId: Id<"affiliate_profiles">,
+): Promise<Doc<"affiliate_profile_stats"> | null> {
+  return await ctx.db
+    .query("affiliate_profile_stats")
+    .withIndex("by_affiliate_profile_id", (q) =>
+      q.eq("affiliateProfileId", affiliateProfileId),
+    )
+    .unique();
+}
+
+async function ensureStatsForProfile(
+  ctx: Pick<MutationCtx, "db">,
+  affiliateProfileId: Id<"affiliate_profiles">,
+): Promise<Doc<"affiliate_profile_stats">> {
+  const existing = await getStatsForProfile(ctx, affiliateProfileId);
+  if (existing) {
+    return existing;
+  }
+  const updatedAt = nowIso();
+  const statsId = await ctx.db.insert("affiliate_profile_stats", {
+    affiliateProfileId,
+    clickCount: 0,
+    referralCount: 0,
+    conversionCount: 0,
+    pendingCommissionCents: 0,
+    paidCommissionCents: 0,
+    updatedAt,
+  });
+  const created = await ctx.db.get(statsId);
+  if (!created) {
+    throw new Error("Affiliate stats were not created.");
+  }
+  return created;
+}
+
+async function adjustStatsForProfile(
+  ctx: Pick<MutationCtx, "db">,
+  affiliateProfileId: Id<"affiliate_profiles">,
+  delta: {
+    clickCount?: number;
+    referralCount?: number;
+    conversionCount?: number;
+    pendingCommissionCents?: number;
+    paidCommissionCents?: number;
+  },
+): Promise<void> {
+  const stats = await ensureStatsForProfile(ctx, affiliateProfileId);
+  await ctx.db.patch(stats._id, {
+    clickCount: Math.max(0, stats.clickCount + (delta.clickCount ?? 0)),
+    referralCount: Math.max(0, stats.referralCount + (delta.referralCount ?? 0)),
+    conversionCount: Math.max(0, stats.conversionCount + (delta.conversionCount ?? 0)),
+    pendingCommissionCents: Math.max(
+      0,
+      stats.pendingCommissionCents + (delta.pendingCommissionCents ?? 0),
+    ),
+    paidCommissionCents: Math.max(
+      0,
+      stats.paidCommissionCents + (delta.paidCommissionCents ?? 0),
+    ),
+    updatedAt: nowIso(),
+  });
+}
+
+async function getDashboardStats(
+  ctx: QueryCtx,
+  profile: Doc<"affiliate_profiles">,
+) {
+  const stats = await getStatsForProfile(ctx, profile._id);
+  if (!stats) {
+    const [clicks, attributions, commissions] = await Promise.all([
+      ctx.db
+        .query("affiliate_clicks")
+        .withIndex("by_affiliate_profile_id_and_clicked_at", (q) =>
+          q.eq("affiliateProfileId", profile._id),
+        )
+        .take(DASHBOARD_ELIGIBLE_PENDING_LIMIT),
+      ctx.db
+        .query("affiliate_attributions")
+        .withIndex("by_affiliate_profile_id_and_attributed_at", (q) =>
+          q.eq("affiliateProfileId", profile._id),
+        )
+        .take(DASHBOARD_ELIGIBLE_PENDING_LIMIT),
+      ctx.db
+        .query("affiliate_commissions")
+        .withIndex("by_affiliate_profile_id_and_status", (q) =>
+          q.eq("affiliateProfileId", profile._id),
+        )
+        .take(DASHBOARD_ELIGIBLE_PENDING_LIMIT),
+    ]);
+
+    const now = nowIso();
+    let pendingCents = 0;
+    let eligibleCents = 0;
+    let paidCents = 0;
+    for (const commission of commissions) {
+      if (commission.status === "paid") {
+        paidCents += commission.commissionCents;
+      } else if (commission.status === "pending") {
+        if (commission.clearsAt <= now) {
+          eligibleCents += commission.commissionCents;
+        } else {
+          pendingCents += commission.commissionCents;
+        }
+      }
+    }
+
+    return {
+      clicks: clicks.length,
+      referrals: attributions.length,
+      conversions: commissions.filter((commission) => commission.status !== "voided")
+        .length,
+      pendingCents,
+      eligibleCents,
+      paidCents,
+    };
+  }
+
+  const eligibleCommissions = await ctx.db
+    .query("affiliate_commissions")
+    .withIndex("by_affiliate_profile_id_and_status_and_clears_at", (q) =>
+      q
+        .eq("affiliateProfileId", profile._id)
+        .eq("status", "pending")
+        .lte("clearsAt", nowIso()),
+    )
+    .take(DASHBOARD_ELIGIBLE_PENDING_LIMIT);
+  const eligibleCents = eligibleCommissions
+    .reduce((total, commission) => total + commission.commissionCents, 0);
+
+  return {
+    clicks: stats.clickCount,
+    referrals: stats.referralCount,
+    conversions: stats.conversionCount,
+    pendingCents: Math.max(0, stats.pendingCommissionCents - eligibleCents),
+    eligibleCents,
+    paidCents: stats.paidCommissionCents,
+  };
 }
 
 export const getDashboardSummary = query({
@@ -148,42 +303,7 @@ export const getDashboardSummary = query({
       };
     }
 
-    const [clicks, attributions, commissions] = await Promise.all([
-      ctx.db
-        .query("affiliate_clicks")
-        .withIndex("by_affiliate_profile_id_and_clicked_at", (q) =>
-          q.eq("affiliateProfileId", profile._id),
-        )
-        .collect(),
-      ctx.db
-        .query("affiliate_attributions")
-        .withIndex("by_affiliate_profile_id_and_attributed_at", (q) =>
-          q.eq("affiliateProfileId", profile._id),
-        )
-        .collect(),
-      ctx.db
-        .query("affiliate_commissions")
-        .withIndex("by_affiliate_profile_id_and_status", (q) =>
-          q.eq("affiliateProfileId", profile._id),
-        )
-        .collect(),
-    ]);
-
-    const now = nowIso();
-    let pendingCents = 0;
-    let eligibleCents = 0;
-    let paidCents = 0;
-    for (const commission of commissions) {
-      if (commission.status === "paid") {
-        paidCents += commission.commissionCents;
-      } else if (commission.status === "pending") {
-        if (commission.clearsAt <= now) {
-          eligibleCents += commission.commissionCents;
-        } else {
-          pendingCents += commission.commissionCents;
-        }
-      }
-    }
+    const stats = await getDashboardStats(ctx, profile);
 
     return {
       profile: {
@@ -192,7 +312,7 @@ export const getDashboardSummary = query({
         paypalEmail: profile.paypalEmail ?? null,
         createdAt: profile.createdAt,
       },
-      referralUrl: `https://www.lobbystack.com/?via=${encodeURIComponent(profile.referralCode)}`,
+      referralUrl: `${APP_SIGNUP_URL}?via=${encodeURIComponent(profile.referralCode)}`,
       terms: {
         commissionRate: COMMISSION_RATE,
         commissionMonths: COMMISSION_MONTHS,
@@ -200,15 +320,7 @@ export const getDashboardSummary = query({
         minimumPayoutCents: MIN_PAYOUT_CENTS,
         currency: DEFAULT_CURRENCY,
       },
-      stats: {
-        clicks: clicks.length,
-        referrals: attributions.length,
-        conversions: commissions.filter((commission) => commission.status !== "voided")
-          .length,
-        pendingCents,
-        eligibleCents,
-        paidCents,
-      },
+      stats,
     };
   },
 });
@@ -223,14 +335,13 @@ export const listCommissions = query({
     }
     const commissions = await ctx.db
       .query("affiliate_commissions")
-      .withIndex("by_affiliate_profile_id_and_status", (q) =>
+      .withIndex("by_affiliate_profile_id_and_occurred_at", (q) =>
         q.eq("affiliateProfileId", profile._id),
       )
-      .collect();
+      .order("desc")
+      .take(100);
 
     return commissions
-      .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
-      .slice(0, 100)
       .map((commission) => ({
         id: commission._id,
         amountCents: commission.amountCents,
@@ -256,11 +367,10 @@ export const listPayouts = query({
       .withIndex("by_affiliate_profile_id_and_created_at", (q) =>
         q.eq("affiliateProfileId", profile._id),
       )
-      .collect();
+      .order("desc")
+      .take(50);
 
     return items
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .slice(0, 50)
       .map((item) => ({
         id: item._id,
         amountCents: item.amountCents,
@@ -283,13 +393,15 @@ export const activate = observedMutation({
       return existing._id;
     }
     const createdAt = nowIso();
-    return await ctx.db.insert("affiliate_profiles", {
+    const profileId = await ctx.db.insert("affiliate_profiles", {
       userId: user._id,
       referralCode: await generateReferralCode(ctx, user),
       status: "active",
       createdAt,
       updatedAt: createdAt,
     });
+    await ensureStatsForProfile(ctx, profileId);
+    return profileId;
   },
 });
 
@@ -332,6 +444,7 @@ export const recordClick = observedMutation({
       ...(args.sourceUrl ? { sourceUrl: args.sourceUrl.slice(0, 500) } : {}),
       clickedAt: nowIso(),
     });
+    await adjustStatsForProfile(ctx, profile._id, { clickCount: 1 });
     return null;
   },
 });
@@ -368,6 +481,7 @@ export const bindAttribution = observedMutation({
       source: "via",
       attributedAt: nowIso(),
     });
+    await adjustStatsForProfile(ctx, profile._id, { referralCount: 1 });
     return { bound: true, reason: "bound" };
   },
 });
@@ -433,6 +547,12 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
           voidReason: "refund",
           updatedAt: timestamp,
         });
+        if (existing.status === "pending") {
+          await adjustStatsForProfile(ctx, existing.affiliateProfileId, {
+            conversionCount: -1,
+            pendingCommissionCents: -existing.commissionCents,
+          });
+        }
       }
       return null;
     }
@@ -480,12 +600,21 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
         return null;
       }
       await ctx.db.patch(existing._id, patch);
+      await adjustStatsForProfile(ctx, attribution.affiliateProfileId, {
+        conversionCount: existing.status === "pending" ? 0 : 1,
+        pendingCommissionCents:
+          commissionCents - (existing.status === "pending" ? existing.commissionCents : 0),
+      });
       return null;
     }
 
     await ctx.db.insert("affiliate_commissions", {
       ...patch,
       createdAt: timestamp,
+    });
+    await adjustStatsForProfile(ctx, attribution.affiliateProfileId, {
+      conversionCount: 1,
+      pendingCommissionCents: commissionCents,
     });
     return null;
   },
@@ -661,6 +790,13 @@ export const markPayoutItemPaid = observedInternalMutation({
           payoutItemId: payoutItem._id,
           updatedAt: paidAt,
         });
+        if (commission.status !== "paid") {
+          await adjustStatsForProfile(ctx, commission.affiliateProfileId, {
+            pendingCommissionCents:
+              commission.status === "pending" ? -commission.commissionCents : 0,
+            paidCommissionCents: commission.commissionCents,
+          });
+        }
       }
     }
 
