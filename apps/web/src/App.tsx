@@ -115,12 +115,9 @@ function getAffiliateVisitorId(): string {
   return next;
 }
 
-function useAffiliateReferralCapture(businessId?: Id<"businesses">) {
+function useAffiliateReferralClickCapture() {
   const location = useLocation();
   const recordClick = useObservedMutation(api.affiliates.recordClick, {
-    reportFailures: false,
-  });
-  const bindAttribution = useObservedMutation(api.affiliates.bindAttribution, {
     reportFailures: false,
   });
 
@@ -138,7 +135,12 @@ function useAffiliateReferralCapture(businessId?: Id<"businesses">) {
       sourceUrl: window.location.href,
     });
   }, [location.search, recordClick]);
+}
 
+function useAffiliateAttributionBinding(businessId?: Id<"businesses">) {
+  const bindAttribution = useObservedMutation(api.affiliates.bindAttribution, {
+    reportFailures: false,
+  });
   useEffect(() => {
     if (!businessId) {
       return;
@@ -161,7 +163,7 @@ function useAffiliateReferralCapture(businessId?: Id<"businesses">) {
 }
 
 function AffiliateReferralCapture() {
-  useAffiliateReferralCapture();
+  useAffiliateReferralClickCapture();
   return null;
 }
 
@@ -422,7 +424,7 @@ function WorkspaceShell() {
     onboardingTarget === "/onboarding/plan" &&
     location.pathname === "/settings/plan" &&
     new URLSearchParams(location.search).get("checkout") === "success";
-  useAffiliateReferralCapture(businessId);
+  useAffiliateAttributionBinding(businessId);
 
   async function handleSignOut(): Promise<void> {
     resetAnalyticsIdentity();
@@ -771,7 +773,7 @@ function useOnboardingContext() {
   const canManageTenant = hasTenantAdminAccess(activeBusinessEntry?.membership.role);
   const businessId = activeBusiness?._id;
 
-  useAffiliateReferralCapture(businessId);
+  useAffiliateAttributionBinding(businessId);
 
   useEffect(() => {
     if (businesses === undefined || currentUser === undefined) {

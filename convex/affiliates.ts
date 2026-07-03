@@ -632,7 +632,6 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
       commissionCents,
       currency: args.currency.toLowerCase(),
       status: "pending",
-      payoutState: "unassigned",
       occurredAt: args.occurredAt,
       clearsAt: addDaysIso(args.occurredAt, HOLD_DAYS),
       updatedAt: timestamp,
@@ -642,7 +641,42 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
       if (existing.status === "paid" || existing.status === "voided") {
         return null;
       }
-      await ctx.db.patch(existing._id, patch);
+      const nextPayoutState = existing.payoutState;
+      const amountDeltaCents = commissionCents - existing.commissionCents;
+      if (existing.payoutItemId && amountDeltaCents !== 0) {
+        const payoutItem = await ctx.db.get(existing.payoutItemId);
+        if (payoutItem && payoutItem.status !== "paid") {
+          const previousReadyCents =
+            payoutItem.status === "ready" ? payoutItem.amountCents : 0;
+          const nextAmountCents = Math.max(
+            0,
+            payoutItem.amountCents + amountDeltaCents,
+          );
+          const nextStatus = nextAmountCents >= MIN_PAYOUT_CENTS ? "ready" : "draft";
+          const nextReadyCents = nextStatus === "ready" ? nextAmountCents : 0;
+          await ctx.db.patch(payoutItem._id, {
+            amountCents: nextAmountCents,
+            status: nextStatus,
+            updatedAt: timestamp,
+          });
+
+          const totalDeltaCents = nextReadyCents - previousReadyCents;
+          if (totalDeltaCents !== 0) {
+            const payoutRun = await ctx.db.get(payoutItem.payoutRunId);
+            if (payoutRun && payoutRun.status !== "paid") {
+              await ctx.db.patch(payoutRun._id, {
+                totalCents: Math.max(0, payoutRun.totalCents + totalDeltaCents),
+                updatedAt: timestamp,
+              });
+            }
+          }
+        }
+      }
+      await ctx.db.patch(existing._id, {
+        ...patch,
+        payoutState: nextPayoutState,
+        ...(existing.payoutItemId ? { payoutItemId: existing.payoutItemId } : {}),
+      });
       await adjustStatsForProfile(ctx, attribution.affiliateProfileId, {
         conversionCount: existing.status === "pending" ? 0 : 1,
         pendingCommissionCents:
@@ -653,6 +687,7 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
 
     await ctx.db.insert("affiliate_commissions", {
       ...patch,
+      payoutState: "unassigned",
       createdAt: timestamp,
     });
     await adjustStatsForProfile(ctx, attribution.affiliateProfileId, {
@@ -926,7 +961,8 @@ export const getPayoutRunPacket = internalQuery({
     const items = await ctx.db
       .query("affiliate_payout_items")
       .withIndex("by_payout_run_id", (q) => q.eq("payoutRunId", run._id))
-      .collect();
+      .take(PAYOUT_RUN_ITEM_LIMIT + 1);
+    const packetItems = items.slice(0, PAYOUT_RUN_ITEM_LIMIT);
 
     return {
       periodKey: run.periodKey,
@@ -934,7 +970,8 @@ export const getPayoutRunPacket = internalQuery({
       totalCents: run.totalCents,
       currency: run.currency,
       createdAt: run.createdAt,
-      items: items.map((item) => ({
+      hasMoreItems: items.length > PAYOUT_RUN_ITEM_LIMIT,
+      items: packetItems.map((item) => ({
         payoutItemId: item._id,
         affiliateProfileId: item.affiliateProfileId,
         affiliateName: item.affiliateName ?? null,
@@ -1002,11 +1039,19 @@ export const markPayoutItemPaid = observedInternalMutation({
       return null;
     }
 
-    const siblingItems = await ctx.db
+    const readySiblingItems = await ctx.db
       .query("affiliate_payout_items")
-      .withIndex("by_payout_run_id", (q) => q.eq("payoutRunId", payoutItem.payoutRunId))
-      .collect();
-    if (siblingItems.length > 0 && siblingItems.every((item) => item._id === payoutItem._id || item.status === "paid")) {
+      .withIndex("by_payout_run_id_and_status", (q) =>
+        q.eq("payoutRunId", payoutItem.payoutRunId).eq("status", "ready"),
+      )
+      .take(1);
+    const draftSiblingItems = await ctx.db
+      .query("affiliate_payout_items")
+      .withIndex("by_payout_run_id_and_status", (q) =>
+        q.eq("payoutRunId", payoutItem.payoutRunId).eq("status", "draft"),
+      )
+      .take(1);
+    if (readySiblingItems.length === 0 && draftSiblingItems.length === 0) {
       await ctx.db.patch(payoutItem.payoutRunId, {
         status: "paid",
         updatedAt: paidAt,

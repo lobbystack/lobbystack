@@ -508,6 +508,123 @@ describe("affiliate program", () => {
     expect(result.payoutRun?.totalCents).toBe(502_000);
   });
 
+  it("preserves assigned payout state when a paid order webhook is replayed", async () => {
+    const t = createConvexHarness();
+
+    const seeded = await t.run(async (ctx) => {
+      const affiliateUserId = await seedUser(ctx, "assigned-replay-affiliate");
+      const profileId = await ctx.db.insert("affiliate_profiles", {
+        userId: affiliateUserId,
+        referralCode: "assigned-replay-affiliate",
+        status: "active",
+        paypalEmail: "affiliate@example.com",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-04-01T00:00:00.000Z",
+      });
+      const referredUserId = await seedUser(ctx, "assigned-replay-referred-owner");
+      const referredBusinessId = await seedBusiness(ctx, {
+        ownerId: referredUserId,
+        slug: "assigned-replay-referred",
+      });
+      await ctx.db.insert("affiliate_attributions", {
+        affiliateProfileId: profileId,
+        businessId: referredBusinessId,
+        referredUserId,
+        referralCode: "assigned-replay-affiliate",
+        source: "via",
+        attributedAt: "2026-04-01T00:00:00.000Z",
+      });
+      const billingTransactionId = await ctx.db.insert("billing_transactions", {
+        businessId: referredBusinessId,
+        kind: "order",
+        sourceId: "order-assigned-replay",
+        status: "paid",
+        amountCents: 50_000,
+        currency: "usd",
+        orderId: "order-assigned-replay",
+        occurredAt: "2026-04-01T00:00:00.000Z",
+        lastSyncedAt: "2026-04-01T00:00:00.000Z",
+      });
+      const payoutRunId = await ctx.db.insert("affiliate_payout_runs", {
+        periodKey: "2026-05",
+        status: "draft",
+        totalCents: 10_000,
+        currency: "usd",
+        createdAt: "2026-05-01T13:00:00.000Z",
+        updatedAt: "2026-05-01T13:00:00.000Z",
+      });
+      const payoutItemId = await ctx.db.insert("affiliate_payout_items", {
+        payoutRunId,
+        affiliateProfileId: profileId,
+        amountCents: 10_000,
+        currency: "usd",
+        status: "ready",
+        paypalEmail: "affiliate@example.com",
+        createdAt: "2026-05-01T13:00:00.000Z",
+        updatedAt: "2026-05-01T13:00:00.000Z",
+      });
+      const commissionId = await ctx.db.insert("affiliate_commissions", {
+        affiliateProfileId: profileId,
+        referredBusinessId,
+        sourceKey: "order:order-assigned-replay",
+        billingTransactionId,
+        amountCents: 50_000,
+        commissionCents: 10_000,
+        currency: "usd",
+        status: "pending",
+        payoutState: "assigned",
+        payoutItemId,
+        occurredAt: "2026-04-01T00:00:00.000Z",
+        clearsAt: "2026-05-01T00:00:00.000Z",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-05-01T13:00:00.000Z",
+      });
+      await ctx.db.insert("affiliate_profile_stats", {
+        affiliateProfileId: profileId,
+        clickCount: 0,
+        referralCount: 1,
+        conversionCount: 1,
+        pendingCommissionCents: 10_000,
+        paidCommissionCents: 0,
+        updatedAt: "2026-05-01T13:00:00.000Z",
+      });
+      return {
+        billingTransactionId,
+        commissionId,
+        payoutItemId,
+        payoutRunId,
+        referredBusinessId,
+      };
+    });
+
+    await t.mutation(internal.affiliates.createCommissionForBillingTransaction, {
+      billingTransactionId: seeded.billingTransactionId,
+      businessId: seeded.referredBusinessId,
+      kind: "order",
+      sourceId: "order-assigned-replay",
+      status: "paid",
+      amountCents: 60_000,
+      currency: "usd",
+      orderId: "order-assigned-replay",
+      occurredAt: "2026-04-01T00:00:00.000Z",
+    });
+
+    const result = await t.run(async (ctx) => {
+      return {
+        commission: await ctx.db.get(seeded.commissionId),
+        payoutItem: await ctx.db.get(seeded.payoutItemId),
+        payoutRun: await ctx.db.get(seeded.payoutRunId),
+      };
+    });
+
+    expect(result.commission?.payoutState).toBe("assigned");
+    expect(result.commission?.payoutItemId).toBe(seeded.payoutItemId);
+    expect(result.commission?.commissionCents).toBe(12_000);
+    expect(result.payoutItem?.amountCents).toBe(12_000);
+    expect(result.payoutItem?.status).toBe("ready");
+    expect(result.payoutRun?.totalCents).toBe(12_000);
+  });
+
   it("leaves below-minimum commissions unassigned for a future payout run", async () => {
     const t = createConvexHarness();
 
