@@ -26,6 +26,12 @@ const PAYOUT_RUN_ITEM_LIMIT = 250;
 const DEFERRED_PAYOUT_REOPEN_LIMIT = 250;
 
 const PAID_ORDER_STATUSES = new Set(["paid", "completed", "succeeded"]);
+const VOID_ORDER_STATUSES = new Set([
+  "canceled",
+  "cancelled",
+  "refunded",
+  "reversed",
+]);
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -546,56 +552,68 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
   handler: async (ctx, args) => {
     const timestamp = nowIso();
 
-    if (args.kind === "refund") {
-      if (!args.orderId) {
-        return null;
-      }
-      const sourceKey = `order:${args.orderId}`;
+    async function voidCommissionForSourceKey(
+      sourceKey: string,
+      reason: string,
+    ): Promise<void> {
       const existing = await ctx.db
         .query("affiliate_commissions")
         .withIndex("by_source_key", (q) => q.eq("sourceKey", sourceKey))
         .unique();
-      if (existing && existing.status !== "paid") {
-        if (existing.payoutItemId) {
-          const payoutItem = await ctx.db.get(existing.payoutItemId);
-          if (payoutItem && payoutItem.status !== "paid") {
-            const nextAmountCents = Math.max(
-              0,
-              payoutItem.amountCents - existing.commissionCents,
-            );
-            await ctx.db.patch(payoutItem._id, {
-              amountCents: nextAmountCents,
-              status: nextAmountCents === 0 ? "voided" : payoutItem.status,
+      if (!existing || existing.status === "paid" || existing.status === "voided") {
+        return;
+      }
+      if (existing.payoutItemId) {
+        const payoutItem = await ctx.db.get(existing.payoutItemId);
+        if (payoutItem && payoutItem.status !== "paid") {
+          const nextAmountCents = Math.max(
+            0,
+            payoutItem.amountCents - existing.commissionCents,
+          );
+          await ctx.db.patch(payoutItem._id, {
+            amountCents: nextAmountCents,
+            status: nextAmountCents === 0 ? "voided" : payoutItem.status,
+            updatedAt: timestamp,
+          });
+
+          const payoutRun = await ctx.db.get(payoutItem.payoutRunId);
+          if (payoutRun && payoutRun.status !== "paid") {
+            await ctx.db.patch(payoutRun._id, {
+              totalCents: Math.max(
+                0,
+                payoutRun.totalCents - existing.commissionCents,
+              ),
               updatedAt: timestamp,
             });
-
-            const payoutRun = await ctx.db.get(payoutItem.payoutRunId);
-            if (payoutRun && payoutRun.status !== "paid") {
-              await ctx.db.patch(payoutRun._id, {
-                totalCents: Math.max(
-                  0,
-                  payoutRun.totalCents - existing.commissionCents,
-                ),
-                updatedAt: timestamp,
-              });
-            }
           }
         }
-        await ctx.db.patch(existing._id, {
-          status: "voided",
-          payoutItemId: undefined,
-          payoutState: "voided",
-          voidedAt: timestamp,
-          voidReason: "refund",
-          updatedAt: timestamp,
-        });
-        if (existing.status === "pending") {
-          await adjustStatsForProfile(ctx, existing.affiliateProfileId, {
-            conversionCount: -1,
-            pendingCommissionCents: -existing.commissionCents,
-          });
-        }
       }
+      await ctx.db.patch(existing._id, {
+        status: "voided",
+        payoutItemId: undefined,
+        payoutState: "voided",
+        voidedAt: timestamp,
+        voidReason: reason,
+        updatedAt: timestamp,
+      });
+      if (existing.status === "pending") {
+        await adjustStatsForProfile(ctx, existing.affiliateProfileId, {
+          conversionCount: -1,
+          pendingCommissionCents: -existing.commissionCents,
+        });
+      }
+    }
+
+    if (args.kind === "refund") {
+      if (!args.orderId) {
+        return null;
+      }
+      await voidCommissionForSourceKey(`order:${args.orderId}`, "refund");
+      return null;
+    }
+
+    if (args.kind === "order" && VOID_ORDER_STATUSES.has(args.status.toLowerCase())) {
+      await voidCommissionForSourceKey(`order:${args.sourceId}`, args.status.toLowerCase());
       return null;
     }
 
@@ -821,7 +839,18 @@ export const generateMonthlyPayoutRun = observedInternalMutation({
 
     const byAffiliate = new Map<Id<"affiliate_profiles">, Doc<"affiliate_commissions">[]>();
     for (const commission of commissions) {
-      if (commission.currency !== DEFAULT_CURRENCY || commission.payoutItemId) {
+      if (commission.currency !== DEFAULT_CURRENCY) {
+        await ctx.db.patch(commission._id, {
+          payoutState: "deferred",
+          updatedAt: createdAt,
+        });
+        continue;
+      }
+      if (commission.payoutItemId) {
+        await ctx.db.patch(commission._id, {
+          payoutState: "assigned",
+          updatedAt: createdAt,
+        });
         continue;
       }
       const profile = await ctx.db.get(commission.affiliateProfileId);
