@@ -319,6 +319,227 @@ describe("affiliate program", () => {
     expect(result.payoutRun?.totalCents).toBe(0);
   });
 
+  it("keeps commissions pending while refund webhooks are not successful", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-05-20T12:00:00.000Z"));
+    const t = createConvexHarness();
+
+    const seeded = await t.run(async (ctx) => {
+      const affiliateUserId = await seedUser(ctx, "pending-refund-affiliate");
+      const profileId = await ctx.db.insert("affiliate_profiles", {
+        userId: affiliateUserId,
+        referralCode: "pending-refund-affiliate",
+        status: "active",
+        paypalEmail: "affiliate@example.com",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-04-01T00:00:00.000Z",
+      });
+      const referredUserId = await seedUser(ctx, "pending-refund-owner");
+      const referredBusinessId = await seedBusiness(ctx, {
+        ownerId: referredUserId,
+        slug: "pending-refund",
+      });
+      await ctx.db.insert("affiliate_attributions", {
+        affiliateProfileId: profileId,
+        businessId: referredBusinessId,
+        referredUserId,
+        referralCode: "pending-refund-affiliate",
+        source: "via",
+        attributedAt: "2026-04-01T00:00:00.000Z",
+      });
+      const billingTransactionId = await ctx.db.insert("billing_transactions", {
+        businessId: referredBusinessId,
+        kind: "order",
+        sourceId: "order-pending-refund",
+        status: "paid",
+        amountCents: 50_000,
+        currency: "usd",
+        orderId: "order-pending-refund",
+        occurredAt: "2026-04-01T00:00:00.000Z",
+        lastSyncedAt: "2026-04-01T00:00:00.000Z",
+      });
+      return {
+        billingTransactionId,
+        profileId,
+        referredBusinessId,
+      };
+    });
+
+    await t.mutation(internal.affiliates.createCommissionForBillingTransaction, {
+      billingTransactionId: seeded.billingTransactionId,
+      businessId: seeded.referredBusinessId,
+      kind: "order",
+      sourceId: "order-pending-refund",
+      status: "paid",
+      amountCents: 50_000,
+      currency: "usd",
+      orderId: "order-pending-refund",
+      occurredAt: "2026-04-01T00:00:00.000Z",
+    });
+    await t.mutation(internal.affiliates.createCommissionForBillingTransaction, {
+      billingTransactionId: seeded.billingTransactionId,
+      businessId: seeded.referredBusinessId,
+      kind: "refund",
+      sourceId: "refund-pending",
+      status: "pending",
+      amountCents: 50_000,
+      currency: "usd",
+      orderId: "order-pending-refund",
+      occurredAt: "2026-05-20T12:00:00.000Z",
+    });
+
+    const result = await t.run(async (ctx) => {
+      const commission = await ctx.db
+        .query("affiliate_commissions")
+        .withIndex("by_source_key", (q) => q.eq("sourceKey", "order:order-pending-refund"))
+        .unique();
+      const stats = await ctx.db
+        .query("affiliate_profile_stats")
+        .withIndex("by_affiliate_profile_id", (q) =>
+          q.eq("affiliateProfileId", seeded.profileId),
+        )
+        .unique();
+      return { commission, stats };
+    });
+
+    expect(result.commission?.status).toBe("pending");
+    expect(result.commission?.payoutState).toBe("unassigned");
+    expect(result.stats?.conversionCount).toBe(1);
+    expect(result.stats?.pendingCommissionCents).toBe(10_000);
+  });
+
+  it("downgrades ready payout items when refunds drop them below the payout minimum", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-05-20T12:00:00.000Z"));
+    const t = createConvexHarness();
+
+    const seeded = await t.run(async (ctx) => {
+      const affiliateUserId = await seedUser(ctx, "below-min-refund-affiliate");
+      const profileId = await ctx.db.insert("affiliate_profiles", {
+        userId: affiliateUserId,
+        referralCode: "below-min-refund-affiliate",
+        status: "active",
+        paypalEmail: "affiliate@example.com",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-04-01T00:00:00.000Z",
+      });
+      const referredUserId = await seedUser(ctx, "below-min-refund-owner");
+      const referredBusinessId = await seedBusiness(ctx, {
+        ownerId: referredUserId,
+        slug: "below-min-refund",
+      });
+      const firstBillingTransactionId = await ctx.db.insert("billing_transactions", {
+        businessId: referredBusinessId,
+        kind: "order",
+        sourceId: "order-refund-drops-item",
+        status: "paid",
+        amountCents: 20_000,
+        currency: "usd",
+        orderId: "order-refund-drops-item",
+        occurredAt: "2026-04-01T00:00:00.000Z",
+        lastSyncedAt: "2026-04-01T00:00:00.000Z",
+      });
+      const secondBillingTransactionId = await ctx.db.insert("billing_transactions", {
+        businessId: referredBusinessId,
+        kind: "order",
+        sourceId: "order-keeps-item-draft",
+        status: "paid",
+        amountCents: 40_000,
+        currency: "usd",
+        orderId: "order-keeps-item-draft",
+        occurredAt: "2026-04-01T00:00:00.000Z",
+        lastSyncedAt: "2026-04-01T00:00:00.000Z",
+      });
+      const payoutRunId = await ctx.db.insert("affiliate_payout_runs", {
+        periodKey: "2026-05",
+        status: "draft",
+        totalCents: 12_000,
+        currency: "usd",
+        createdAt: "2026-05-01T13:00:00.000Z",
+        updatedAt: "2026-05-01T13:00:00.000Z",
+      });
+      const payoutItemId = await ctx.db.insert("affiliate_payout_items", {
+        payoutRunId,
+        affiliateProfileId: profileId,
+        amountCents: 12_000,
+        currency: "usd",
+        status: "ready",
+        paypalEmail: "affiliate@example.com",
+        createdAt: "2026-05-01T13:00:00.000Z",
+        updatedAt: "2026-05-01T13:00:00.000Z",
+      });
+      const firstCommissionId = await ctx.db.insert("affiliate_commissions", {
+        affiliateProfileId: profileId,
+        referredBusinessId,
+        sourceKey: "order:order-refund-drops-item",
+        billingTransactionId: firstBillingTransactionId,
+        amountCents: 20_000,
+        commissionCents: 4_000,
+        currency: "usd",
+        status: "pending",
+        payoutState: "assigned",
+        payoutItemId,
+        occurredAt: "2026-04-01T00:00:00.000Z",
+        clearsAt: "2026-05-01T00:00:00.000Z",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-05-01T13:00:00.000Z",
+      });
+      const secondCommissionId = await ctx.db.insert("affiliate_commissions", {
+        affiliateProfileId: profileId,
+        referredBusinessId,
+        sourceKey: "order:order-keeps-item-draft",
+        billingTransactionId: secondBillingTransactionId,
+        amountCents: 40_000,
+        commissionCents: 8_000,
+        currency: "usd",
+        status: "pending",
+        payoutState: "assigned",
+        payoutItemId,
+        occurredAt: "2026-04-01T00:00:00.000Z",
+        clearsAt: "2026-05-01T00:00:00.000Z",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-05-01T13:00:00.000Z",
+      });
+      return {
+        firstBillingTransactionId,
+        firstCommissionId,
+        payoutItemId,
+        payoutRunId,
+        referredBusinessId,
+        secondCommissionId,
+      };
+    });
+
+    await t.mutation(internal.affiliates.createCommissionForBillingTransaction, {
+      billingTransactionId: seeded.firstBillingTransactionId,
+      businessId: seeded.referredBusinessId,
+      kind: "refund",
+      sourceId: "refund-drops-ready-item",
+      status: "succeeded",
+      amountCents: 20_000,
+      currency: "usd",
+      orderId: "order-refund-drops-item",
+      occurredAt: "2026-05-20T12:00:00.000Z",
+    });
+
+    const result = await t.run(async (ctx) => {
+      return {
+        firstCommission: await ctx.db.get(seeded.firstCommissionId),
+        payoutItem: await ctx.db.get(seeded.payoutItemId),
+        payoutRun: await ctx.db.get(seeded.payoutRunId),
+        secondCommission: await ctx.db.get(seeded.secondCommissionId),
+      };
+    });
+
+    expect(result.firstCommission?.status).toBe("voided");
+    expect(result.firstCommission?.payoutItemId).toBeUndefined();
+    expect(result.secondCommission?.status).toBe("pending");
+    expect(result.secondCommission?.payoutItemId).toBe(seeded.payoutItemId);
+    expect(result.payoutItem?.amountCents).toBe(8_000);
+    expect(result.payoutItem?.status).toBe("draft");
+    expect(result.payoutRun?.totalCents).toBe(0);
+  });
+
   it("does not resurrect a voided commission after a late paid order webhook", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-05-20T12:00:00.000Z"));

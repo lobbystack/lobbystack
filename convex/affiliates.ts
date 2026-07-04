@@ -32,6 +32,7 @@ const VOID_ORDER_STATUSES = new Set([
   "refunded",
   "reversed",
 ]);
+const VOID_REFUND_STATUSES = new Set(["succeeded"]);
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -566,25 +567,34 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
       if (existing.payoutItemId) {
         const payoutItem = await ctx.db.get(existing.payoutItemId);
         if (payoutItem && payoutItem.status !== "paid") {
+          const previousReadyCents =
+            payoutItem.status === "ready" ? payoutItem.amountCents : 0;
           const nextAmountCents = Math.max(
             0,
             payoutItem.amountCents - existing.commissionCents,
           );
+          const nextStatus =
+            nextAmountCents === 0
+              ? "voided"
+              : nextAmountCents >= MIN_PAYOUT_CENTS
+                ? "ready"
+                : "draft";
+          const nextReadyCents = nextStatus === "ready" ? nextAmountCents : 0;
           await ctx.db.patch(payoutItem._id, {
             amountCents: nextAmountCents,
-            status: nextAmountCents === 0 ? "voided" : payoutItem.status,
+            status: nextStatus,
             updatedAt: timestamp,
           });
 
-          const payoutRun = await ctx.db.get(payoutItem.payoutRunId);
-          if (payoutRun && payoutRun.status !== "paid") {
-            await ctx.db.patch(payoutRun._id, {
-              totalCents: Math.max(
-                0,
-                payoutRun.totalCents - existing.commissionCents,
-              ),
-              updatedAt: timestamp,
-            });
+          const totalDeltaCents = nextReadyCents - previousReadyCents;
+          if (totalDeltaCents !== 0) {
+            const payoutRun = await ctx.db.get(payoutItem.payoutRunId);
+            if (payoutRun && payoutRun.status !== "paid") {
+              await ctx.db.patch(payoutRun._id, {
+                totalCents: Math.max(0, payoutRun.totalCents + totalDeltaCents),
+                updatedAt: timestamp,
+              });
+            }
           }
         }
       }
@@ -606,6 +616,9 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
 
     if (args.kind === "refund") {
       if (!args.orderId) {
+        return null;
+      }
+      if (!VOID_REFUND_STATUSES.has(args.status.toLowerCase())) {
         return null;
       }
       await voidCommissionForSourceKey(`order:${args.orderId}`, "refund");
