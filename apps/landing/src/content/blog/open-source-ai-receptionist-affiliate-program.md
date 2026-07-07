@@ -5,6 +5,7 @@ pubDate: 2026-07-07T13:00:00-04:00
 author: "LobbyStack Team"
 category: "Company"
 featured: false
+coverImage: "/illustrations/open-source-ai-receptionist-affiliate-program-hero.webp"
 locale: "en"
 canonicalSlug: "open-source-ai-receptionist-affiliate-program"
 ---
