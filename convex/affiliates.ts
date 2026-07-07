@@ -136,6 +136,48 @@ function centsForCommission(amountCents: number): number {
   return Math.max(0, Math.floor(amountCents * COMMISSION_RATE));
 }
 
+async function adjustUnpaidPayoutItemAmount(
+  ctx: Pick<MutationCtx, "db">,
+  payoutItemId: Id<"affiliate_payout_items">,
+  amountDeltaCents: number,
+  updatedAt: string,
+  zeroStatus: "draft" | "voided",
+): Promise<void> {
+  if (amountDeltaCents === 0) {
+    return;
+  }
+  const payoutItem = await ctx.db.get(payoutItemId);
+  if (!payoutItem || payoutItem.status === "paid") {
+    return;
+  }
+  const previousReadyCents = payoutItem.status === "ready" ? payoutItem.amountCents : 0;
+  const nextAmountCents = Math.max(0, payoutItem.amountCents + amountDeltaCents);
+  const nextStatus =
+    nextAmountCents === 0
+      ? zeroStatus
+      : nextAmountCents >= MIN_PAYOUT_CENTS
+        ? "ready"
+        : "draft";
+  const nextReadyCents = nextStatus === "ready" ? nextAmountCents : 0;
+  await ctx.db.patch(payoutItem._id, {
+    amountCents: nextAmountCents,
+    status: nextStatus,
+    updatedAt,
+  });
+
+  const totalDeltaCents = nextReadyCents - previousReadyCents;
+  if (totalDeltaCents === 0) {
+    return;
+  }
+  const payoutRun = await ctx.db.get(payoutItem.payoutRunId);
+  if (payoutRun && payoutRun.status !== "paid") {
+    await ctx.db.patch(payoutRun._id, {
+      totalCents: Math.max(0, payoutRun.totalCents + totalDeltaCents),
+      updatedAt,
+    });
+  }
+}
+
 async function getAttributionForBusiness(
   ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">,
   businessId: Id<"businesses">,
@@ -559,7 +601,7 @@ export const bindAttribution = observedMutation({
       return { bound: false, reason: "not_found" };
     }
     const business = await ctx.db.get(args.businessId);
-    if (!business || business.onboardingStage === "completed") {
+    if (!business || business.onboardingStage !== "attribution") {
       return { bound: false, reason: "ineligible_business" };
     }
     if (profile.userId === user._id) {
@@ -619,38 +661,13 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
         return;
       }
       if (existing.payoutItemId) {
-        const payoutItem = await ctx.db.get(existing.payoutItemId);
-        if (payoutItem && payoutItem.status !== "paid") {
-          const previousReadyCents =
-            payoutItem.status === "ready" ? payoutItem.amountCents : 0;
-          const nextAmountCents = Math.max(
-            0,
-            payoutItem.amountCents - existing.commissionCents,
-          );
-          const nextStatus =
-            nextAmountCents === 0
-              ? "voided"
-              : nextAmountCents >= MIN_PAYOUT_CENTS
-                ? "ready"
-                : "draft";
-          const nextReadyCents = nextStatus === "ready" ? nextAmountCents : 0;
-          await ctx.db.patch(payoutItem._id, {
-            amountCents: nextAmountCents,
-            status: nextStatus,
-            updatedAt: timestamp,
-          });
-
-          const totalDeltaCents = nextReadyCents - previousReadyCents;
-          if (totalDeltaCents !== 0) {
-            const payoutRun = await ctx.db.get(payoutItem.payoutRunId);
-            if (payoutRun && payoutRun.status !== "paid") {
-              await ctx.db.patch(payoutRun._id, {
-                totalCents: Math.max(0, payoutRun.totalCents + totalDeltaCents),
-                updatedAt: timestamp,
-              });
-            }
-          }
-        }
+        await adjustUnpaidPayoutItemAmount(
+          ctx,
+          existing.payoutItemId,
+          -existing.commissionCents,
+          timestamp,
+          "voided",
+        );
       }
       await ctx.db.patch(existing._id, {
         status: "voided",
@@ -668,6 +685,80 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
       }
     }
 
+    async function reduceCommissionForSourceKey(sourceKey: string): Promise<void> {
+      const refundSourceKey = `refund:${args.sourceId}`;
+      const existingRefund = await getVoidedSourceBySourceKey(ctx, refundSourceKey);
+      if (existingRefund) {
+        return;
+      }
+      await recordVoidedSource(ctx, {
+        sourceKey: refundSourceKey,
+        businessId: args.businessId,
+        billingTransactionId: args.billingTransactionId,
+        amountCents: args.amountCents,
+        currency: args.currency,
+        status: args.status,
+        reason: "refund",
+        voidedAt: timestamp,
+      });
+      await recordVoidedSource(ctx, {
+        sourceKey,
+        businessId: args.businessId,
+        billingTransactionId: args.billingTransactionId,
+        amountCents: args.amountCents,
+        currency: args.currency,
+        status: args.status,
+        reason: "refund",
+        voidedAt: timestamp,
+      });
+
+      const existing = await ctx.db
+        .query("affiliate_commissions")
+        .withIndex("by_source_key", (q) => q.eq("sourceKey", sourceKey))
+        .unique();
+      if (!existing) {
+        return;
+      }
+      if (existing.status === "paid" || existing.status === "voided") {
+        return;
+      }
+
+      const commissionReductionCents = Math.min(
+        existing.commissionCents,
+        centsForCommission(args.amountCents),
+      );
+      if (commissionReductionCents <= 0) {
+        return;
+      }
+      if (commissionReductionCents >= existing.commissionCents) {
+        await voidCommissionForSourceKey(sourceKey, "refund");
+        return;
+      }
+
+      const nextCommissionCents = existing.commissionCents - commissionReductionCents;
+      const nextAmountCents = Math.max(0, existing.amountCents - args.amountCents);
+      if (existing.payoutItemId) {
+        await adjustUnpaidPayoutItemAmount(
+          ctx,
+          existing.payoutItemId,
+          -commissionReductionCents,
+          timestamp,
+          "voided",
+        );
+      }
+      await ctx.db.patch(existing._id, {
+        amountCents: nextAmountCents,
+        commissionCents: nextCommissionCents,
+        updatedAt: timestamp,
+      });
+      if (existing.status === "pending") {
+        await adjustStatsForProfile(ctx, existing.affiliateProfileId, {
+          conversionCount: 0,
+          pendingCommissionCents: -commissionReductionCents,
+        });
+      }
+    }
+
     if (args.kind === "refund") {
       if (!args.orderId) {
         return null;
@@ -675,7 +766,7 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
       if (!VOID_REFUND_STATUSES.has(args.status.toLowerCase())) {
         return null;
       }
-      await voidCommissionForSourceKey(`order:${args.orderId}`, "refund");
+      await reduceCommissionForSourceKey(`order:${args.orderId}`);
       return null;
     }
 
@@ -733,33 +824,13 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
       const nextPayoutState = existing.payoutState;
       const amountDeltaCents = commissionCents - existing.commissionCents;
       if (existing.payoutItemId && amountDeltaCents !== 0) {
-        const payoutItem = await ctx.db.get(existing.payoutItemId);
-        if (payoutItem && payoutItem.status !== "paid") {
-          const previousReadyCents =
-            payoutItem.status === "ready" ? payoutItem.amountCents : 0;
-          const nextAmountCents = Math.max(
-            0,
-            payoutItem.amountCents + amountDeltaCents,
-          );
-          const nextStatus = nextAmountCents >= MIN_PAYOUT_CENTS ? "ready" : "draft";
-          const nextReadyCents = nextStatus === "ready" ? nextAmountCents : 0;
-          await ctx.db.patch(payoutItem._id, {
-            amountCents: nextAmountCents,
-            status: nextStatus,
-            updatedAt: timestamp,
-          });
-
-          const totalDeltaCents = nextReadyCents - previousReadyCents;
-          if (totalDeltaCents !== 0) {
-            const payoutRun = await ctx.db.get(payoutItem.payoutRunId);
-            if (payoutRun && payoutRun.status !== "paid") {
-              await ctx.db.patch(payoutRun._id, {
-                totalCents: Math.max(0, payoutRun.totalCents + totalDeltaCents),
-                updatedAt: timestamp,
-              });
-            }
-          }
-        }
+        await adjustUnpaidPayoutItemAmount(
+          ctx,
+          existing.payoutItemId,
+          amountDeltaCents,
+          timestamp,
+          "draft",
+        );
       }
       await ctx.db.patch(existing._id, {
         ...patch,

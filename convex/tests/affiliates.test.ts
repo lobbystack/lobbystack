@@ -26,6 +26,7 @@ async function seedBusiness(
   input: {
     ownerId: Id<"users">;
     slug: string;
+    omitOnboardingStage?: boolean;
     onboardingStage?: string;
   },
 ) {
@@ -34,7 +35,9 @@ async function seedBusiness(
     name: `${input.slug} Business`,
     timezone: "America/Toronto",
     defaultLocale: "en",
-    onboardingStage: input.onboardingStage ?? "attribution",
+    ...(input.omitOnboardingStage
+      ? {}
+      : { onboardingStage: input.onboardingStage ?? "attribution" }),
     businessType: "clinic",
     deploymentMode: "manual",
     status: "active",
@@ -89,6 +92,45 @@ describe("affiliate program", () => {
         },
       ),
     ).rejects.toThrow("Tenant admin access required.");
+  });
+
+  it("does not bind referrals to legacy businesses without an onboarding stage", async () => {
+    const t = createConvexHarness();
+
+    const { businessId } = await t.run(async (ctx) => {
+      const affiliateUserId = await seedUser(ctx, "legacy-affiliate-owner");
+      const referredUserId = await seedUser(ctx, "legacy-referred-owner");
+      const businessId = await seedBusiness(ctx, {
+        ownerId: referredUserId,
+        slug: "legacy-active-business",
+        omitOnboardingStage: true,
+      });
+      await ctx.db.insert("affiliate_profiles", {
+        userId: affiliateUserId,
+        referralCode: "legacy-partner",
+        status: "active",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-04-01T00:00:00.000Z",
+      });
+      return { businessId };
+    });
+
+    const result = await t
+      .withIdentity({ subject: "legacy-referred-owner" })
+      .mutation(api.affiliates.bindAttribution, {
+        businessId,
+        referralCode: "legacy-partner",
+      });
+
+    const attribution = await t.run(async (ctx) => {
+      return await ctx.db
+        .query("affiliate_attributions")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+
+    expect(result).toEqual({ bound: false, reason: "ineligible_business" });
+    expect(attribution).toBeNull();
   });
 
   it("does not double count paid payout items in dashboard totals", async () => {
@@ -317,6 +359,164 @@ describe("affiliate program", () => {
     expect(result.payoutItem?.amountCents).toBe(0);
     expect(result.payoutItem?.status).toBe("voided");
     expect(result.payoutRun?.totalCents).toBe(0);
+  });
+
+  it("reduces unpaid commissions and payout totals for partial refunds", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-05-20T12:00:00.000Z"));
+    const t = createConvexHarness();
+
+    const seeded = await t.run(async (ctx) => {
+      const affiliateUserId = await seedUser(ctx, "partial-refund-affiliate");
+      const profileId = await ctx.db.insert("affiliate_profiles", {
+        userId: affiliateUserId,
+        referralCode: "partial-refund-affiliate",
+        status: "active",
+        paypalEmail: "affiliate@example.com",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-04-01T00:00:00.000Z",
+      });
+      await ctx.db.insert("affiliate_profile_stats", {
+        affiliateProfileId: profileId,
+        clickCount: 0,
+        referralCount: 1,
+        conversionCount: 1,
+        pendingCommissionCents: 20_000,
+        paidCommissionCents: 0,
+        updatedAt: "2026-05-01T13:00:00.000Z",
+      });
+      const referredUserId = await seedUser(ctx, "partial-refund-owner");
+      const referredBusinessId = await seedBusiness(ctx, {
+        ownerId: referredUserId,
+        slug: "partial-refund",
+      });
+      const billingTransactionId = await ctx.db.insert("billing_transactions", {
+        businessId: referredBusinessId,
+        kind: "order",
+        sourceId: "order-partial-refund",
+        status: "paid",
+        amountCents: 100_000,
+        currency: "usd",
+        orderId: "order-partial-refund",
+        occurredAt: "2026-04-01T00:00:00.000Z",
+        lastSyncedAt: "2026-04-01T00:00:00.000Z",
+      });
+      const payoutRunId = await ctx.db.insert("affiliate_payout_runs", {
+        periodKey: "2026-05",
+        status: "draft",
+        totalCents: 20_000,
+        currency: "usd",
+        createdAt: "2026-05-01T13:00:00.000Z",
+        updatedAt: "2026-05-01T13:00:00.000Z",
+      });
+      const payoutItemId = await ctx.db.insert("affiliate_payout_items", {
+        payoutRunId,
+        affiliateProfileId: profileId,
+        amountCents: 20_000,
+        currency: "usd",
+        status: "ready",
+        paypalEmail: "affiliate@example.com",
+        createdAt: "2026-05-01T13:00:00.000Z",
+        updatedAt: "2026-05-01T13:00:00.000Z",
+      });
+      const commissionId = await ctx.db.insert("affiliate_commissions", {
+        affiliateProfileId: profileId,
+        referredBusinessId,
+        sourceKey: "order:order-partial-refund",
+        billingTransactionId,
+        amountCents: 100_000,
+        commissionCents: 20_000,
+        currency: "usd",
+        status: "pending",
+        payoutState: "assigned",
+        payoutItemId,
+        occurredAt: "2026-04-01T00:00:00.000Z",
+        clearsAt: "2026-05-01T00:00:00.000Z",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-05-01T13:00:00.000Z",
+      });
+      const refundBillingTransactionId = await ctx.db.insert("billing_transactions", {
+        businessId: referredBusinessId,
+        kind: "refund",
+        sourceId: "refund-partial",
+        status: "succeeded",
+        amountCents: 10_000,
+        currency: "usd",
+        orderId: "order-partial-refund",
+        occurredAt: "2026-05-20T12:00:00.000Z",
+        lastSyncedAt: "2026-05-20T12:00:00.000Z",
+      });
+      return {
+        billingTransactionId,
+        commissionId,
+        payoutItemId,
+        payoutRunId,
+        profileId,
+        referredBusinessId,
+        refundBillingTransactionId,
+      };
+    });
+
+    await t.mutation(internal.affiliates.createCommissionForBillingTransaction, {
+      billingTransactionId: seeded.refundBillingTransactionId,
+      businessId: seeded.referredBusinessId,
+      kind: "refund",
+      sourceId: "refund-partial",
+      status: "succeeded",
+      amountCents: 10_000,
+      currency: "usd",
+      orderId: "order-partial-refund",
+      occurredAt: "2026-05-20T12:00:00.000Z",
+    });
+    await t.mutation(internal.affiliates.createCommissionForBillingTransaction, {
+      billingTransactionId: seeded.billingTransactionId,
+      businessId: seeded.referredBusinessId,
+      kind: "order",
+      sourceId: "order-partial-refund",
+      status: "paid",
+      amountCents: 100_000,
+      currency: "usd",
+      orderId: "order-partial-refund",
+      occurredAt: "2026-04-01T00:00:00.000Z",
+    });
+
+    const result = await t.run(async (ctx) => {
+      const refundSource = await ctx.db
+        .query("affiliate_voided_sources")
+        .withIndex("by_source_key", (q) => q.eq("sourceKey", "refund:refund-partial"))
+        .unique();
+      const orderSource = await ctx.db
+        .query("affiliate_voided_sources")
+        .withIndex("by_source_key", (q) => q.eq("sourceKey", "order:order-partial-refund"))
+        .unique();
+      const stats = await ctx.db
+        .query("affiliate_profile_stats")
+        .withIndex("by_affiliate_profile_id", (q) =>
+          q.eq("affiliateProfileId", seeded.profileId),
+        )
+        .unique();
+      return {
+        commission: await ctx.db.get(seeded.commissionId),
+        orderSource,
+        payoutItem: await ctx.db.get(seeded.payoutItemId),
+        payoutRun: await ctx.db.get(seeded.payoutRunId),
+        refundSource,
+        stats,
+      };
+    });
+
+    expect(result.commission?.status).toBe("pending");
+    expect(result.commission?.amountCents).toBe(90_000);
+    expect(result.commission?.commissionCents).toBe(18_000);
+    expect(result.commission?.payoutItemId).toBe(seeded.payoutItemId);
+    expect(result.payoutItem?.amountCents).toBe(18_000);
+    expect(result.payoutItem?.status).toBe("ready");
+    expect(result.payoutRun?.totalCents).toBe(18_000);
+    expect(result.stats?.conversionCount).toBe(1);
+    expect(result.stats?.pendingCommissionCents).toBe(18_000);
+    expect(result.refundSource?.amountCents).toBe(10_000);
+    expect(result.orderSource?.amountCents).toBe(10_000);
+    expect(result.orderSource?.reason).toBe("refund");
   });
 
   it("keeps commissions pending while refund webhooks are not successful", async () => {

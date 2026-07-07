@@ -37,8 +37,12 @@ overrides:
   yaml: 2.9.0
 
 patchedDependencies:
-  '@mintlify/previewing@4.0.1096': 8d5f5a9791563cf6b3cda9df22ec0b0682f0b0d1c699df07770078d1c200515b
-  front-matter@4.0.2: 875eedd0a0f84b8e68a48071b66cf2185194c2ba72ef7bdf6218573e5b87e378
+  '@mintlify/previewing@4.0.1096':
+    hash: 8d5f5a9791563cf6b3cda9df22ec0b0682f0b0d1c699df07770078d1c200515b
+    path: patches/@mintlify__previewing@4.0.1096.patch
+  front-matter@4.0.2:
+    hash: 875eedd0a0f84b8e68a48071b66cf2185194c2ba72ef7bdf6218573e5b87e378
+    path: patches/front-matter@4.0.2.patch
 
 importers:
 

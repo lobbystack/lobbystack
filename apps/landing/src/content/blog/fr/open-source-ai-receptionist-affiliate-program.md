@@ -7,7 +7,7 @@ category: "Mises à jour produit"
 featured: false
 coverImage: "/illustrations/open-source-ai-receptionist-affiliate-program-hero.webp"
 locale: "fr"
-canonicalSlug: "open-source-ai-receptionist-affiliate-program"
+canonicalSlug: "ai-receptionist-affiliate-program"
 ---
 
 Si vous cherchez un **programme d'affiliation pour réceptionniste IA** qui mérite une recommandation, partez de l'acheteur. Un opérateur local veut répondre aux appels, prendre des rendez-vous, gérer les SMS et comprendre pourquoi il peut confier de vrais clients à une automatisation. LobbyStack vous donne cet argument.
