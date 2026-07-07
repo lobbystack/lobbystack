@@ -94,7 +94,8 @@
           "integrations/sms",
           "settings/overview",
           "billing/plans",
-          "billing/usage"
+          "billing/usage",
+          "billing/affiliate-program"
         ]
       },
       {
