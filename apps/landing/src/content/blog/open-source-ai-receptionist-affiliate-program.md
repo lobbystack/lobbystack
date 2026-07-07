@@ -1,19 +1,19 @@
 ---
 title: "AI Receptionist Affiliate Program"
-metaDescription: "Earn 20% for one year by referring LobbyStack, the open-source AI receptionist for calls, SMS, appointments, and self-hosted deployments."
-slug: "open-source-ai-receptionist-affiliate-program"
-date: "2026-07-07"
+description: "Earn 20% for one year by referring LobbyStack, the open-source AI receptionist for calls, SMS, appointments, and self-hosted deployments."
+pubDate: 2026-07-07T13:00:00-04:00
 author: "LobbyStack Team"
-primaryKeyword: "AI receptionist affiliate program"
+category: "Company"
+featured: false
+locale: "en"
+canonicalSlug: "open-source-ai-receptionist-affiliate-program"
 ---
 
-# AI Receptionist Affiliate Program
-
-Many affiliate links ask you to recommend a closed product and hope the landing page does the selling. An AI receptionist affiliate program needs more substance than that, because buyers want to know who answers their calls, how booking works, where the data goes, and whether the system can fit their business.
+Many affiliate links ask you to recommend a closed product and hope the landing page does the selling. An **AI receptionist affiliate program** needs more substance than that, because buyers want to know who answers their calls, how booking works, where the data goes, and whether the system can fit their business.
 
 LobbyStack now has an affiliate program for people who help operators choose better software: agencies, consultants, reviewers, creators, and technical partners serving small businesses that depend on phone calls.
 
-## The Program In Plain English
+## The program in plain English
 
 LobbyStack affiliates earn 20% commission on qualifying payments from referred customers for the first 12 months after attribution.
 
@@ -32,7 +32,7 @@ Refunds, disputes, cancellations, and invalid payments can void unpaid commissio
 
 The affiliate dashboard lives inside LobbyStack. Activate your profile, save your PayPal email, copy your referral link, and share it with operators who need calls answered, appointments booked, and a product they can inspect.
 
-## How It Compares With Other Programs
+## How it compares with other programs
 
 Affiliate programs in SaaS split into a few patterns. Some pay a fixed bounty. Some pay revenue share for a year. Some pay lifetime recurring commission. AI tools tend to advertise bigger numbers because the category is crowded and companies want creators to bring distribution.
 
@@ -54,7 +54,7 @@ Upfirst and My AI Front Desk advertise more aggressive upside. HubSpot and n8n a
 
 LobbyStack fits a different referral. You can recommend the hosted product to a local operator who wants calls answered this week. You can also point a technical buyer to the codebase, the self-hosting path, and the provider model. That gives your recommendation more proof than a product tour.
 
-## Why Open Source Changes The Pitch
+## Why open source changes the pitch
 
 Closed AI receptionist tools ask buyers to trust a black box with calls, appointment requests, customer details, and escalation rules. That can work for many businesses. It can also stall a deal when a buyer asks technical questions.
 
@@ -70,7 +70,7 @@ That combination matters in phone automation. A chatbot can bury mistakes in a t
 
 If you recommend LobbyStack, you can talk about the operational details buyers care about: call routing, SMS, booking, human handoff, transcripts, recordings, usage, billing, and provider control.
 
-## Who Should Promote LobbyStack
+## Who should promote LobbyStack
 
 The best LobbyStack affiliates speak to people who feel the cost of missed calls.
 
@@ -86,11 +86,11 @@ LobbyStack is easiest to explain when the buyer has a real phone problem. A miss
 
 Those problems convert better than vague AI curiosity.
 
-## What To Say When You Recommend It
+## What to say when you recommend it
 
 Good affiliate content helps the reader decide whether the product fits. Weak affiliate content hides the tradeoffs and pushes the link too early.
 
-Use the program when you can make a specific case:
+Use the program when you can make a specific case.
 
 ### For local businesses
 
@@ -108,7 +108,7 @@ LobbyStack is open source and self-hostable. Buyers can use the hosted product o
 
 Compare LobbyStack against closed AI receptionist tools on control, inspection, and deployment options. Some competitors publish higher commission rates. LobbyStack gives you a sharper story for buyers who care about trust and ownership.
 
-## Content Ideas Affiliates Can Use
+## Content ideas affiliates can use
 
 If you write, record, or consult, start with buyer problems instead of program terms.
 
@@ -124,7 +124,7 @@ Useful angles:
 
 Each piece can lead to a LobbyStack referral without forcing the product into the opening paragraph. Show the problem, compare the options, then explain why LobbyStack fits when the buyer wants calls, SMS, booking, and control in one product.
 
-## Why Use LobbyStack Instead Of A Generic AI Tool
+## Why use LobbyStack instead of a generic AI tool
 
 Generic AI tools can talk. A receptionist has to act.
 
@@ -140,7 +140,7 @@ LobbyStack handles the parts around the conversation:
 
 That gives affiliates a stronger buyer story. You can recommend a product that handles the work after "hello," not a demo that stops when the caller needs a booking, quote, transfer, or callback.
 
-## Why The Commission Still Works
+## Why the commission still works
 
 A 20% first-year commission sits at the practical end of the SaaS range. It matches Cal.com and AI Phone 360 on headline rate, trails HubSpot and n8n, and comes in below more aggressive AI receptionist programs.
 
@@ -150,7 +150,7 @@ LobbyStack referrals can have high intent. The buyer knows the pain: missed call
 
 You need a product you can stand behind.
 
-## Join The Program
+## Join the program
 
 If you recommend tools to small businesses, agencies, or operators, the LobbyStack affiliate program gives you a concrete way to earn from that trust.
 
