@@ -8,6 +8,8 @@ import {
   LOCALE_STORAGE_KEY,
   SUPPORTED_LOCALES,
 } from "@/lib/locale";
+import enAffiliate from "@/i18n-resources/en/affiliate.json";
+import frAffiliate from "@/i18n-resources/fr/affiliate.json";
 
 export const i18nReady = i18n
   .use(HttpBackend)
@@ -33,6 +35,15 @@ export const i18nReady = i18n
       "agent",
       "affiliate",
     ],
+    partialBundledLanguages: true,
+    resources: {
+      en: {
+        affiliate: enAffiliate,
+      },
+      fr: {
+        affiliate: frAffiliate,
+      },
+    },
     interpolation: {
       escapeValue: false,
     },
