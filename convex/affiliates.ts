@@ -8,6 +8,7 @@ import {
   type QueryCtx,
 } from "./_generated/server";
 import { requireCurrentUser, requireTenantAdminMembership } from "./lib/auth";
+import { isKnownOnboardingStage, ONBOARDING_STAGE_INDEX } from "./lib/onboardingStage";
 import {
   observedInternalMutation,
   observedMutation,
@@ -24,6 +25,7 @@ const DASHBOARD_ELIGIBLE_PENDING_LIMIT = 1_000;
 const PAYOUT_RUN_COMMISSION_LIMIT = 250;
 const PAYOUT_RUN_ITEM_LIMIT = 250;
 const DEFERRED_PAYOUT_REOPEN_LIMIT = 250;
+const ATTRIBUTION_BACKFILL_TRANSACTION_LIMIT = 50;
 
 const PAID_ORDER_STATUSES = new Set(["paid", "completed", "succeeded"]);
 const VOID_ORDER_STATUSES = new Set([
@@ -186,6 +188,41 @@ async function getAttributionForBusiness(
     .query("affiliate_attributions")
     .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
     .unique();
+}
+
+async function scheduleCommissionBackfillForBusiness(
+  ctx: MutationCtx,
+  businessId: Id<"businesses">,
+): Promise<void> {
+  const transactions = await ctx.db
+    .query("billing_transactions")
+    .withIndex("by_business_id_and_occurred_at", (q) => q.eq("businessId", businessId))
+    .order("desc")
+    .take(ATTRIBUTION_BACKFILL_TRANSACTION_LIMIT);
+
+  for (const transaction of transactions) {
+    if (
+      transaction.kind !== "order" ||
+      !PAID_ORDER_STATUSES.has(transaction.status.toLowerCase())
+    ) {
+      continue;
+    }
+    await ctx.scheduler.runAfter(
+      0,
+      internal.affiliates.createCommissionForBillingTransaction,
+      {
+        billingTransactionId: transaction._id,
+        businessId: transaction.businessId,
+        kind: transaction.kind,
+        sourceId: transaction.sourceId,
+        status: transaction.status,
+        amountCents: transaction.amountCents,
+        currency: transaction.currency,
+        ...(transaction.orderId ? { orderId: transaction.orderId } : {}),
+        occurredAt: transaction.occurredAt,
+      },
+    );
+  }
 }
 
 async function getVoidedSourceBySourceKey(
@@ -601,7 +638,16 @@ export const bindAttribution = observedMutation({
       return { bound: false, reason: "not_found" };
     }
     const business = await ctx.db.get(args.businessId);
-    if (!business || business.onboardingStage !== "attribution") {
+    if (!business || !isKnownOnboardingStage(business.onboardingStage)) {
+      return { bound: false, reason: "ineligible_business" };
+    }
+    if (
+      ONBOARDING_STAGE_INDEX[business.onboardingStage] <
+      ONBOARDING_STAGE_INDEX.attribution
+    ) {
+      return { bound: false, reason: "pending_onboarding" };
+    }
+    if (business.onboardingStage !== "attribution") {
       return { bound: false, reason: "ineligible_business" };
     }
     if (profile.userId === user._id) {
@@ -620,6 +666,7 @@ export const bindAttribution = observedMutation({
       attributedAt: nowIso(),
     });
     await adjustStatsForProfile(ctx, profile._id, { referralCount: 1 });
+    await scheduleCommissionBackfillForBusiness(ctx, args.businessId);
     return { bound: true, reason: "bound" };
   },
 });

@@ -24,7 +24,7 @@ const TRANSLATED_PATHS = new Set([
   "/blog/build-or-buy-ai-receptionist/",
   "/blog/open-source-ai-receptionist-stack/",
   "/blog/ai-receptionist-workflows/",
-  "/blog/open-source-ai-receptionist-affiliate-program/",
+  "/blog/ai-receptionist-affiliate-program/",
   "/docs/api/",
   "/privacy/",
   "/cookie-policy/",

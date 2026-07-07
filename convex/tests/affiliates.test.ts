@@ -133,6 +133,94 @@ describe("affiliate program", () => {
     expect(attribution).toBeNull();
   });
 
+  it("keeps referral codes retryable before the attribution onboarding stage", async () => {
+    const t = createConvexHarness();
+
+    const { businessId } = await t.run(async (ctx) => {
+      const affiliateUserId = await seedUser(ctx, "early-affiliate-owner");
+      const referredUserId = await seedUser(ctx, "early-referred-owner");
+      const businessId = await seedBusiness(ctx, {
+        ownerId: referredUserId,
+        slug: "early-onboarding-business",
+        onboardingStage: "plan",
+      });
+      await ctx.db.insert("affiliate_profiles", {
+        userId: affiliateUserId,
+        referralCode: "early-partner",
+        status: "active",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-04-01T00:00:00.000Z",
+      });
+      return { businessId };
+    });
+
+    const result = await t
+      .withIdentity({ subject: "early-referred-owner" })
+      .mutation(api.affiliates.bindAttribution, {
+        businessId,
+        referralCode: "early-partner",
+      });
+
+    const attribution = await t.run(async (ctx) => {
+      return await ctx.db
+        .query("affiliate_attributions")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+
+    expect(result).toEqual({ bound: false, reason: "pending_onboarding" });
+    expect(attribution).toBeNull();
+  });
+
+  it("schedules paid order commission backfill when attribution binds late", async () => {
+    const t = createConvexHarness();
+
+    const { businessId } = await t.run(async (ctx) => {
+      const affiliateUserId = await seedUser(ctx, "late-attribution-affiliate");
+      const referredUserId = await seedUser(ctx, "late-attribution-owner");
+      const businessId = await seedBusiness(ctx, {
+        ownerId: referredUserId,
+        slug: "late-attribution-business",
+        onboardingStage: "attribution",
+      });
+      await ctx.db.insert("affiliate_profiles", {
+        userId: affiliateUserId,
+        referralCode: "late-attribution-partner",
+        status: "active",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-04-01T00:00:00.000Z",
+      });
+      await ctx.db.insert("billing_transactions", {
+        businessId,
+        kind: "order",
+        sourceId: "order-before-attribution",
+        status: "paid",
+        amountCents: 50_000,
+        currency: "usd",
+        orderId: "order-before-attribution",
+        occurredAt: "2026-04-10T00:00:00.000Z",
+        lastSyncedAt: "2026-04-10T00:00:00.000Z",
+      });
+      return { businessId };
+    });
+
+    const result = await t
+      .withIdentity({ subject: "late-attribution-owner" })
+      .mutation(api.affiliates.bindAttribution, {
+        businessId,
+        referralCode: "late-attribution-partner",
+      });
+
+    const scheduled = await t.run(async (ctx) => {
+      return await ctx.db.system.query("_scheduled_functions").collect();
+    });
+
+    expect(result).toEqual({ bound: true, reason: "bound" });
+    expect(scheduled.map((job) => job.name)).toContain(
+      "affiliates:createCommissionForBillingTransaction",
+    );
+  });
+
   it("does not double count paid payout items in dashboard totals", async () => {
     const t = createConvexHarness();
 
