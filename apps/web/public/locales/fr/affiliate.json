@@ -2,12 +2,6 @@
   "eyebrow": "Programme d'affiliation",
   "title": "Programme d'affiliation",
   "description": "Partagez LobbyStack avec des opérateurs et agences. Nous suivons les parrainages, commissions et paiements PayPal mensuels ici.",
-  "inactive": {
-    "title": "Commencez à gagner avec LobbyStack",
-    "description": "Activez votre profil affilié pour obtenir un lien de parrainage et suivre clics, inscriptions, conversions et revenus.",
-    "action": "Activer le profil affilié",
-    "activating": "Activation..."
-  },
   "referral": {
     "title": "Lien de parrainage",
     "description": "Partagez ce lien partout où vous recommandez LobbyStack.",
@@ -119,8 +113,7 @@
     }
   },
   "toast": {
-    "activated": "Profil affilié activé.",
-    "activateFailed": "Impossible d'activer le profil affilié.",
+    "profileFailed": "Impossible de préparer votre tableau de bord d'affiliation.",
     "copied": "Lien de parrainage copié.",
     "paypalSaved": "Courriel PayPal enregistré.",
     "paypalFailed": "Impossible d'enregistrer le courriel PayPal."

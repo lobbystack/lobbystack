@@ -2,12 +2,6 @@
   "eyebrow": "Affiliate program",
   "title": "Affiliate program",
   "description": "Share LobbyStack with operators and agencies. We track referrals, commissions, and monthly PayPal payouts from here.",
-  "inactive": {
-    "title": "Start earning with LobbyStack",
-    "description": "Activate your affiliate profile to get a referral link and track clicks, signups, conversions, and earnings.",
-    "action": "Activate affiliate profile",
-    "activating": "Activating..."
-  },
   "referral": {
     "title": "Referral link",
     "description": "Share this link anywhere you recommend LobbyStack.",
@@ -119,8 +113,7 @@
     }
   },
   "toast": {
-    "activated": "Affiliate profile activated.",
-    "activateFailed": "Could not activate affiliate profile.",
+    "profileFailed": "Could not prepare your affiliate dashboard.",
     "copied": "Referral link copied.",
     "paypalSaved": "PayPal email saved.",
     "paypalFailed": "Could not save PayPal email."

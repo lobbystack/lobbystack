@@ -547,7 +547,7 @@ export const updatePaypalEmail = observedMutation({
     const user = await requireCurrentUser(ctx);
     const profile = await getProfileForUser(ctx, user._id);
     if (!profile) {
-      throw new Error("Activate your affiliate profile first.");
+      throw new Error("Affiliate profile is not ready yet.");
     }
     const paypalEmail = normalizeEmail(args.paypalEmail);
     assertLooksLikeEmail(paypalEmail);
