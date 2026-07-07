@@ -133,6 +133,11 @@ type CheckoutSnapshot = {
   proSubscriptionId: string | null;
 };
 
+type CheckoutReferralDiscount = {
+  referralCode: string;
+  discountId: string;
+};
+
 type PolarClient = ReturnType<typeof createPolarClient>;
 type PolarCheckout = Awaited<ReturnType<PolarClient["checkouts"]["get"]>>;
 type PolarCustomer = Awaited<ReturnType<PolarClient["customers"]["create"]>>;
@@ -469,6 +474,10 @@ function getBillingSiteUrl(): URL {
   }
 
   return new URL(rawSiteUrl);
+}
+
+function getReferralDiscountId(): string | null {
+  return process.env.POLAR_REFERRAL_DISCOUNT_ID?.trim() || null;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -2119,6 +2128,7 @@ export const startCheckout = action({
     target: v.union(v.literal("starter"), v.literal("pro"), v.literal("ai_sms")),
     billingInterval: v.optional(v.union(v.literal("monthly"), v.literal("annual"))),
     source: v.optional(v.union(v.literal("settings"), v.literal("onboarding"))),
+    referralCode: v.optional(v.string()),
   },
   returns: v.object({
     url: v.string(),
@@ -2206,6 +2216,29 @@ export const startCheckout = action({
       args.target === "ai_sms"
         ? snapshot.billingInterval ?? "monthly"
         : billingInterval;
+    let referralDiscount: CheckoutReferralDiscount | null = null;
+    if (isHostedCheckoutTarget(args.target) && args.referralCode) {
+      const eligibility: {
+        referralCode: string;
+        affiliateProfileId: Id<"affiliate_profiles">;
+      } | null = await ctx.runQuery(
+        internal.affiliates.resolveCheckoutReferralDiscount,
+        {
+          businessId: args.businessId,
+          referralCode: args.referralCode,
+        },
+      );
+      if (eligibility) {
+        const discountId = getReferralDiscountId();
+        if (!discountId) {
+          throw new Error("POLAR_REFERRAL_DISCOUNT_ID is required for referred checkout.");
+        }
+        referralDiscount = {
+          referralCode: eligibility.referralCode,
+          discountId,
+        };
+      }
+    }
     const checkout = await createPolarClient().checkouts.create({
       customerId: customer.id,
       ...(checkoutContext.billingContactEmail
@@ -2218,6 +2251,9 @@ export const startCheckout = action({
         target: args.target,
         billingInterval,
       }),
+      ...(referralDiscount
+        ? { discountId: referralDiscount.discountId, allowDiscountCodes: false }
+        : {}),
       successUrl: new URL(
         `${checkoutReturnPath}?${checkoutSearchParams.toString()}`,
         siteUrl,
@@ -2232,6 +2268,12 @@ export const startCheckout = action({
         billingKey: checkoutContext.billingKey,
         businessId: String(args.businessId),
         checkoutTarget: args.target,
+        ...(referralDiscount
+          ? {
+              referralCode: referralDiscount.referralCode,
+              referralDiscountPercent: 5,
+            }
+          : {}),
         ...(checkoutPlan ? { checkoutPlan } : {}),
         ...(isHostedCheckoutTarget(args.target) || args.target === "ai_sms"
           ? { billingInterval: checkoutBillingInterval }

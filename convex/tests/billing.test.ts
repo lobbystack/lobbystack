@@ -117,6 +117,7 @@ const originalProProductId = process.env.POLAR_PRO_PRODUCT_ID;
 const originalAiSmsAddonProductId = process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID;
 const originalProAiSmsProductId = process.env.POLAR_PRO_AI_SMS_PRODUCT_ID;
 const originalAiSmsSetupProductId = process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID;
+const originalReferralDiscountId = process.env.POLAR_REFERRAL_DISCOUNT_ID;
 const originalPolarOrganizationToken = process.env.POLAR_ORGANIZATION_TOKEN;
 const originalSiteUrl = process.env.SITE_URL;
 
@@ -214,6 +215,12 @@ afterEach(() => {
     process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID = originalAiSmsSetupProductId;
   }
 
+  if (originalReferralDiscountId === undefined) {
+    delete process.env.POLAR_REFERRAL_DISCOUNT_ID;
+  } else {
+    process.env.POLAR_REFERRAL_DISCOUNT_ID = originalReferralDiscountId;
+  }
+
   if (originalPolarOrganizationToken === undefined) {
     delete process.env.POLAR_ORGANIZATION_TOKEN;
   } else {
@@ -236,6 +243,7 @@ async function seedWorkspace(
     subject: string;
     deploymentMode: "cloud" | "manual";
     role?: "business_owner" | "business_admin" | "scheduler" | "viewer";
+    onboardingStage?: string;
   },
 ) {
   const seeded = await t.run(async (ctx: TestContext) => {
@@ -247,6 +255,7 @@ async function seedWorkspace(
       defaultLocale: "en",
       deploymentMode: input.deploymentMode,
       status: "active",
+      ...(input.onboardingStage ? { onboardingStage: input.onboardingStage } : {}),
     });
     const userId: Id<"users"> = await ctx.db.insert("users", {
       authSubject: input.subject,
@@ -2505,6 +2514,131 @@ describe("billing", () => {
         businessId,
       }),
     ).rejects.toThrow("A paid subscription is required before opening the customer portal.");
+  });
+
+  it("applies the configured referral discount for eligible referred checkout", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-referred-checkout",
+      deploymentMode: "cloud",
+      onboardingStage: "plan",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
+    process.env.POLAR_REFERRAL_DISCOUNT_ID = "discount_referral_5";
+    process.env.SITE_URL = "https://app.example.com";
+
+    await t.run(async (ctx: TestContext) => {
+      const affiliateUserId = await ctx.db.insert("users", {
+        authSubject: "affiliate-referrer",
+        email: "affiliate@example.com",
+        displayName: "Affiliate Partner",
+      });
+      await ctx.db.insert("affiliate_profiles", {
+        userId: affiliateUserId,
+        referralCode: "partner-code",
+        status: "active",
+        createdAt: "2026-04-15T12:00:00.000Z",
+        updatedAt: "2026-04-15T12:00:00.000Z",
+      });
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "free_cloud",
+        polarCustomerId: "cus_referred",
+      });
+    });
+
+    polarCheckoutsCreateMock.mockResolvedValueOnce({
+      id: "checkout_referred",
+      url: "https://polar.sh/checkout/referred",
+    });
+
+    const result = await authed.action(api.billing.startCheckout, {
+      businessId,
+      target: "pro",
+      referralCode: "Partner Code",
+      source: "onboarding",
+    });
+
+    expect(result.url).toBe("https://polar.sh/checkout/referred");
+    expect(polarCheckoutsCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customerId: "cus_referred",
+        products: ["prod_pro"],
+        discountId: "discount_referral_5",
+        allowDiscountCodes: false,
+        metadata: expect.objectContaining({
+          businessId: String(businessId),
+          checkoutTarget: "pro",
+          referralCode: "partner-code",
+          referralDiscountPercent: 5,
+        }),
+      }),
+    );
+  });
+
+  it("applies the referral discount for attributed free customers who upgrade later", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId, userId } = await seedWorkspace(t, {
+      subject: "billing-attributed-upgrade",
+      deploymentMode: "cloud",
+      onboardingStage: "completed",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
+    process.env.POLAR_REFERRAL_DISCOUNT_ID = "discount_referral_5";
+    process.env.SITE_URL = "https://app.example.com";
+
+    await t.run(async (ctx: TestContext) => {
+      const affiliateUserId = await ctx.db.insert("users", {
+        authSubject: "affiliate-existing-referrer",
+        email: "existing-affiliate@example.com",
+        displayName: "Existing Affiliate",
+      });
+      const affiliateProfileId = await ctx.db.insert("affiliate_profiles", {
+        userId: affiliateUserId,
+        referralCode: "existing-partner",
+        status: "active",
+        createdAt: "2026-04-15T12:00:00.000Z",
+        updatedAt: "2026-04-15T12:00:00.000Z",
+      });
+      await ctx.db.insert("affiliate_attributions", {
+        affiliateProfileId,
+        businessId,
+        referredUserId: userId,
+        referralCode: "existing-partner",
+        source: "via",
+        attributedAt: "2026-04-15T12:00:00.000Z",
+      });
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "free_cloud",
+        polarCustomerId: "cus_attributed_upgrade",
+      });
+    });
+
+    polarCheckoutsCreateMock.mockResolvedValueOnce({
+      id: "checkout_attributed_upgrade",
+      url: "https://polar.sh/checkout/attributed-upgrade",
+    });
+
+    await authed.action(api.billing.startCheckout, {
+      businessId,
+      target: "pro",
+      referralCode: "existing-partner",
+    });
+
+    expect(polarCheckoutsCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        discountId: "discount_referral_5",
+        metadata: expect.objectContaining({
+          referralCode: "existing-partner",
+          referralDiscountPercent: 5,
+        }),
+      }),
+    );
   });
 
   it("updates the existing Starter subscription when upgrading to Pro", async () => {

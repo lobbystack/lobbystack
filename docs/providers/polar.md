@@ -118,6 +118,7 @@ Set these values in Convex and local development when billing is enabled:
 - `POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID`
 - `POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID`
 - `POLAR_AI_SMS_SETUP_PRODUCT_ID`
+- `POLAR_REFERRAL_DISCOUNT_ID`
 - `SITE_URL`
 
 `POLAR_AI_SMS_ADDON_PRODUCT_ID` is optional and only exists to recognize legacy
@@ -126,6 +127,10 @@ enablement uses `POLAR_AI_SMS_SETUP_PRODUCT_ID` for checkout and
 the matching `{plan, interval} + AI SMS` product for the existing paid
 subscription update. `POLAR_PRO_AI_SMS_PRODUCT_ID` is still accepted as a legacy
 fallback for `POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID`.
+
+Create a 5% Polar discount for referred customers and set its ID as
+`POLAR_REFERRAL_DISCOUNT_ID`. LobbyStack applies this discount server-side only
+when an eligible referred business starts a hosted plan checkout.
 
 For hosted Alert SMS, also configure:
 

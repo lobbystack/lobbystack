@@ -12,6 +12,7 @@ import { FieldError } from "@/components/ui/field";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
 import { getSafeOnboardingErrorMessage } from "@/features/onboarding/onboardingErrors";
 import { captureAnalyticsEvent } from "@/lib/analytics";
+import { getStoredAffiliateReferralCode } from "@/lib/affiliate-referral";
 import {
   CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM,
   clearStoredCheckoutSessionToken,
@@ -526,6 +527,7 @@ export function OnboardingPlanPage({
       }
 
       if (plan === "starter" || plan === "pro") {
+        const referralCode = getStoredAffiliateReferralCode();
         captureAnalyticsEvent("web.onboarding.plan_checkout_started", {
           businessId: String(businessId),
           plan,
@@ -536,6 +538,7 @@ export function OnboardingPlanPage({
           target: plan,
           billingInterval,
           source: "onboarding",
+          ...(referralCode ? { referralCode } : {}),
         });
         if (result.url) {
           window.location.assign(result.url);

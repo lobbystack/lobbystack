@@ -671,6 +671,58 @@ export const bindAttribution = observedMutation({
   },
 });
 
+export const resolveCheckoutReferralDiscount = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+    referralCode: v.string(),
+  },
+  returns: v.union(
+    v.null(),
+    v.object({
+      referralCode: v.string(),
+      affiliateProfileId: v.id("affiliate_profiles"),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    await requireTenantAdminMembership(ctx, args.businessId);
+
+    const referralCode = normalizeReferralCode(args.referralCode);
+    if (!referralCode) {
+      return null;
+    }
+
+    const profile = await getProfileByReferralCode(ctx, referralCode);
+    if (!profile || profile.status !== "active" || profile.userId === user._id) {
+      return null;
+    }
+
+    const existing = await getAttributionForBusiness(ctx, args.businessId);
+    if (existing) {
+      return existing.referralCode === referralCode
+        ? {
+            referralCode,
+            affiliateProfileId: profile._id,
+          }
+        : null;
+    }
+
+    const business = await ctx.db.get(args.businessId);
+    if (!business || !isKnownOnboardingStage(business.onboardingStage)) {
+      return null;
+    }
+
+    if (ONBOARDING_STAGE_INDEX[business.onboardingStage] > ONBOARDING_STAGE_INDEX.attribution) {
+      return null;
+    }
+
+    return {
+      referralCode,
+      affiliateProfileId: profile._id,
+    };
+  },
+});
+
 export const createCommissionForBillingTransaction = observedInternalMutation({
   args: {
     billingTransactionId: v.id("billing_transactions"),

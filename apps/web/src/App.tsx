@@ -66,6 +66,13 @@ import {
   resetAnalyticsIdentity,
   trackPageView,
 } from "@/lib/analytics";
+import {
+  clearAffiliateReferralCode,
+  getAffiliateVisitorId,
+  getStoredAffiliateReferralCode,
+  normalizeClientReferralCode,
+  storeAffiliateReferralCode,
+} from "@/lib/affiliate-referral";
 import { useResetAuthScopedClientStateOnSignOut } from "@/lib/auth-scoped-client-state";
 import { AI_SMS_DASHBOARD_ENABLED } from "@/lib/release-flags";
 
@@ -86,33 +93,8 @@ type ActiveBusinessEntry = {
 };
 
 const TENANT_ADMIN_ROLES = new Set(["business_owner", "business_admin", "owner"]);
-const AFFILIATE_REFERRAL_STORAGE_KEY = "lobbystack.affiliate.referralCode";
-const AFFILIATE_VISITOR_STORAGE_KEY = "lobbystack.affiliate.visitorId";
-
 function hasTenantAdminAccess(role: string | undefined): boolean {
   return role !== undefined && TENANT_ADMIN_ROLES.has(role);
-}
-
-function normalizeClientReferralCode(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 32);
-}
-
-function getAffiliateVisitorId(): string {
-  const existing = window.localStorage.getItem(AFFILIATE_VISITOR_STORAGE_KEY);
-  if (existing) {
-    return existing;
-  }
-  const next =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  window.localStorage.setItem(AFFILIATE_VISITOR_STORAGE_KEY, next);
-  return next;
 }
 
 function useAffiliateReferralClickCapture() {
@@ -128,7 +110,7 @@ function useAffiliateReferralClickCapture() {
       return;
     }
 
-    window.localStorage.setItem(AFFILIATE_REFERRAL_STORAGE_KEY, referralCode);
+    storeAffiliateReferralCode(referralCode);
     void recordClick({
       referralCode,
       visitorId: getAffiliateVisitorId(),
@@ -145,7 +127,7 @@ function useAffiliateAttributionBinding(businessId?: Id<"businesses">) {
     if (!businessId) {
       return;
     }
-    const referralCode = window.localStorage.getItem(AFFILIATE_REFERRAL_STORAGE_KEY);
+    const referralCode = getStoredAffiliateReferralCode();
     if (!referralCode) {
       return;
     }
@@ -156,7 +138,7 @@ function useAffiliateAttributionBinding(businessId?: Id<"businesses">) {
         result.reason === "already_attributed" ||
         result.reason === "ineligible_business"
       ) {
-        window.localStorage.removeItem(AFFILIATE_REFERRAL_STORAGE_KEY);
+        clearAffiliateReferralCode();
       }
     }).catch(() => {});
   }, [bindAttribution, businessId]);
