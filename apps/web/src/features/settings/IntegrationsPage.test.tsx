@@ -91,7 +91,7 @@ describe("IntegrationsPage setup links", () => {
 
     expect(useQueryMock).toHaveBeenCalledWith(expect.anything(), "skip");
     expect(screen.getByText("integrations.cards.google.title")).toBeTruthy();
-    expect(screen.getByText("integrations.cards.microsoft.title")).toBeTruthy();
+    expect(screen.queryByText("integrations.cards.microsoft.title")).toBeNull();
   });
 
   it("opens the calendar dialog from the setup param and consumes it", async () => {

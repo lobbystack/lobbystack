@@ -83,22 +83,6 @@ function GoogleCalendarLogo() {
   );
 }
 
-function MicrosoftCalendarLogo() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="size-7"
-      viewBox="0 0 13 14"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M13 4.69375v5.239c0 .115-.04.212-.119.288-.079.077-.176.115-.29.115H8.317v-3.4795l.8.6145c.051.0425.1145.063.1895.063.074 0 .1385-.0205.1945-.0635L13 4.69375Zm-4.6825-1.0105h4.2735c.1055 0 .1965.0315.2715.096.075.064.117.15.124.255l-3.6845 2.938-.9845-.7745V3.68325Zm-.6155-2.251v11.1355L1 11.40975v-8.7875l6.703-1.19Zm-2.0245 5.59-.018 0c-.0075.5585-.1575 1.0245-.4425 1.3985-.2855.373-.645.5675-1.0725.585-.4135-.0215-.765-.218-1.0505-.588-.285-.372-.435-0.837-.4425-1.3955.0075-.566.15-1.036.435-1.407.2855-.3705.638-.5655 1.05-.582.428.0165.788.212 1.0655.582.283.371.4295.8405.4395 1.407Zm-1.56-1.241-.0135.0195c-.2175.0155-.3985.1355-.5405.3605-.15.2245-.2175.5175-.2175.87 0 .352.0675.645.2175.877.15.232.3295.345.5475.345.218 0 .3975-.12.548-.352.143-.232.2175-.525.2175-.8855 0-.3535-.075-.6455-.2175-.876-.1445-.2305-.326-.3485-.5415-.3585Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
 function formatTimestamp(timestamp: string | undefined, locale: string): string | null {
   if (!timestamp) {
     return null;
@@ -248,9 +232,6 @@ export function IntegrationsPage({
   const googleHasConnection = googleConnections.length > 0;
   const googleConnected = googleConnections.some((connection) => connection.status === "connected");
   const googleNeedsReconnect = googleHasConnection && !googleConnected;
-  const microsoftConnected = (connections ?? []).some(
-    (connection) => connection.provider === "microsoft",
-  );
   const selectedConnectionId = selectedConnection?._id ?? null;
   const selectedConnectionStatus = selectedConnection?.status ?? null;
   const selectedConnectionCalendarId = selectedConnection?.selectedCalendarId ?? "";
@@ -561,39 +542,6 @@ export function IntegrationsPage({
               <h2 className="type-section-title text-lg">{t("integrations.cards.google.title")}</h2>
               <p className="type-body-muted line-clamp-2">
                 {t("integrations.cards.google.description")}
-              </p>
-            </div>
-          </li>
-
-          <li className={`${surfaceClassName} p-4`}>
-            <div className="mb-8 flex items-center justify-between gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center text-foreground">
-                <MicrosoftCalendarLogo />
-              </div>
-              {isLoadingConnections ? (
-                <Skeleton className="h-9 w-24 rounded-md" />
-              ) : (
-                <Button
-                  className={
-                    microsoftConnected
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300"
-                      : undefined
-                  }
-                  disabled
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  {microsoftConnected
-                    ? t("integrations.actions.connected")
-                    : t("integrations.actions.connect")}
-                </Button>
-              )}
-            </div>
-            <div className="flex flex-col gap-1">
-              <h2 className="type-section-title text-lg">{t("integrations.cards.microsoft.title")}</h2>
-              <p className="type-body-muted line-clamp-2">
-                {t("integrations.cards.microsoft.description")}
               </p>
             </div>
           </li>

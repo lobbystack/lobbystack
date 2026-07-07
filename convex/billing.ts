@@ -1981,11 +1981,25 @@ export const upsertTransactionFromWebhook = internalMutation({
       lastSyncedAt: args.lastSyncedAt,
     };
 
+    const billingTransactionId = existing
+      ? existing._id
+      : await ctx.db.insert("billing_transactions", patch);
+
     if (existing) {
       await ctx.db.patch(existing._id, patch);
-    } else {
-      await ctx.db.insert("billing_transactions", patch);
     }
+
+    await ctx.runMutation(internal.affiliates.createCommissionForBillingTransaction, {
+      billingTransactionId,
+      businessId: args.businessId,
+      kind: args.kind,
+      sourceId: args.sourceId,
+      status: args.status,
+      amountCents: args.amountCents,
+      currency: args.currency,
+      ...(args.orderId ? { orderId: args.orderId } : {}),
+      occurredAt: args.occurredAt,
+    });
 
     if (args.aiSmsSetupOrderId) {
       const account = await getBillingAccount(ctx, args.businessId);

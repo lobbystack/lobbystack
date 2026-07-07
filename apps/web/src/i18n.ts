@@ -16,6 +16,7 @@ void i18n
   .init({
     supportedLngs: SUPPORTED_LOCALES,
     fallbackLng: DEFAULT_LOCALE,
+    load: "languageOnly",
     defaultNS: "common",
     ns: [
       "common",
@@ -30,6 +31,7 @@ void i18n
       "messages",
       "contacts",
       "agent",
+      "affiliate",
     ],
     interpolation: {
       escapeValue: false,
@@ -41,6 +43,9 @@ void i18n
       order: ["querystring", "localStorage", "navigator"],
       lookupLocalStorage: LOCALE_STORAGE_KEY,
       caches: ["localStorage"],
+    },
+    react: {
+      useSuspense: false,
     },
     returnNull: false,
   });

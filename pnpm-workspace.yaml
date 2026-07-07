@@ -47,8 +47,24 @@ supportedArchitectures:
     - glibc
 
 onlyBuiltDependencies:
+  - core-js
+  - esbuild
+  - msw
+  - protobufjs
   - sharp
+  - tesseract.js
 
 patchedDependencies:
   "@mintlify/previewing@4.0.1096": patches/@mintlify__previewing@4.0.1096.patch
   "front-matter@4.0.2": patches/front-matter@4.0.2.patch
+
+allowBuilds:
+  '@posthog/cli': false
+  core-js: true
+  esbuild: true
+  keytar: false
+  msw: true
+  protobufjs: true
+  puppeteer: false
+  sharp: true
+  tesseract.js: true
