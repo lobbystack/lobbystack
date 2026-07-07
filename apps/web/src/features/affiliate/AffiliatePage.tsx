@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import {
   CopyIcon,
   ExternalLinkIcon,
   GiftIcon,
 } from "lucide-react";
-import type { TOptions } from "i18next";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -62,38 +61,6 @@ type CurrencyInput = {
   currency: string;
 };
 
-type AffiliateTranslate = (key: string, options?: TOptions) => string;
-
-function useAffiliateTranslation(): {
-  ready: boolean;
-  t: AffiliateTranslate;
-} {
-  const { i18n } = useTranslation();
-  const [loadTick, setLoadTick] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    void i18n.loadNamespaces("affiliate").then(() => {
-      if (!cancelled) {
-        setLoadTick((tick) => tick + 1);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [i18n, i18n.resolvedLanguage, i18n.language]);
-
-  const ready =
-    i18n.hasLoadedNamespace("affiliate") &&
-    i18n.exists("title", { ns: "affiliate" });
-  const t = useMemo<AffiliateTranslate>(
-    () => (key, options) => i18n.t(key, { ...options, ns: "affiliate" }),
-    [i18n, i18n.resolvedLanguage, i18n.language, loadTick],
-  );
-
-  return { ready, t };
-}
-
 function formatCurrency(input: CurrencyInput): string {
   return new Intl.NumberFormat(undefined, {
     style: "currency",
@@ -145,7 +112,7 @@ function LoadingAffiliatePage() {
 }
 
 export function AffiliatePage() {
-  const { ready, t } = useAffiliateTranslation();
+  const { ready, t } = useTranslation("affiliate", { useSuspense: false });
   const summary = useQuery(api.affiliates.getDashboardSummary, {});
   const commissions = useQuery(api.affiliates.listCommissions, {});
   const payouts = useQuery(api.affiliates.listPayouts, {});

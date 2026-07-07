@@ -9,7 +9,7 @@ import {
   SUPPORTED_LOCALES,
 } from "@/lib/locale";
 
-void i18n
+export const i18nReady = i18n
   .use(HttpBackend)
   .use(LanguageDetector)
   .use(initReactI18next)

@@ -4,7 +4,7 @@ import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 
 import App from "./App";
-import "./i18n";
+import { i18nReady } from "./i18n";
 import "./styles/index.css";
 import { AppearanceProvider } from "@/components/appearance-provider";
 import { LocaleProvider } from "@/components/locale-provider";
@@ -48,13 +48,16 @@ const root = ReactDOM.createRoot(document.getElementById("root")!, {
   onUncaughtError: onUncaughtReactError,
 });
 
-if (!convexUrl) {
-  root.render(
-    <React.StrictMode>
-      <MissingConvexConfig />
-    </React.StrictMode>,
-  );
-} else {
+function renderApp() {
+  if (!convexUrl) {
+    root.render(
+      <React.StrictMode>
+        <MissingConvexConfig />
+      </React.StrictMode>,
+    );
+    return;
+  }
+
   const convex = new ConvexReactClient(convexUrl);
   root.render(
     <React.StrictMode>
@@ -73,3 +76,7 @@ if (!convexUrl) {
     </React.StrictMode>,
   );
 }
+
+void i18nReady.catch((error) => {
+  console.error("Failed to initialize translations.", error);
+}).finally(renderApp);
