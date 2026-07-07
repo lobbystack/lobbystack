@@ -1318,6 +1318,18 @@ export default defineSchema({
       "attributedAt",
     ]),
 
+  affiliate_voided_sources: defineTable({
+    sourceKey: v.string(),
+    businessId: v.id("businesses"),
+    billingTransactionId: v.id("billing_transactions"),
+    amountCents: v.number(),
+    currency: v.string(),
+    status: v.string(),
+    reason: v.string(),
+    voidedAt: v.string(),
+    updatedAt: v.string(),
+  }).index("by_source_key", ["sourceKey"]),
+
   affiliate_commissions: defineTable({
     affiliateProfileId: v.id("affiliate_profiles"),
     referredBusinessId: v.id("businesses"),

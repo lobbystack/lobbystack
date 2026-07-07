@@ -8,7 +8,6 @@ import {
   LOCALE_STORAGE_KEY,
   SUPPORTED_LOCALES,
 } from "@/lib/locale";
-import { affiliateResources } from "@/locales/affiliate";
 
 void i18n
   .use(HttpBackend)
@@ -18,7 +17,6 @@ void i18n
     supportedLngs: SUPPORTED_LOCALES,
     fallbackLng: DEFAULT_LOCALE,
     load: "languageOnly",
-    partialBundledLanguages: true,
     defaultNS: "common",
     ns: [
       "common",
@@ -35,14 +33,6 @@ void i18n
       "agent",
       "affiliate",
     ],
-    resources: {
-      en: {
-        affiliate: affiliateResources.en,
-      },
-      fr: {
-        affiliate: affiliateResources.fr,
-      },
-    },
     interpolation: {
       escapeValue: false,
     },

@@ -408,6 +408,110 @@ describe("affiliate program", () => {
     expect(result.stats?.pendingCommissionCents).toBe(10_000);
   });
 
+  it("does not create commissions when successful refunds arrive before paid order webhooks", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-05-20T12:00:00.000Z"));
+    const t = createConvexHarness();
+
+    const seeded = await t.run(async (ctx) => {
+      const affiliateUserId = await seedUser(ctx, "refund-first-affiliate");
+      const profileId = await ctx.db.insert("affiliate_profiles", {
+        userId: affiliateUserId,
+        referralCode: "refund-first-affiliate",
+        status: "active",
+        paypalEmail: "affiliate@example.com",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-04-01T00:00:00.000Z",
+      });
+      const referredUserId = await seedUser(ctx, "refund-first-owner");
+      const referredBusinessId = await seedBusiness(ctx, {
+        ownerId: referredUserId,
+        slug: "refund-first",
+      });
+      await ctx.db.insert("affiliate_attributions", {
+        affiliateProfileId: profileId,
+        businessId: referredBusinessId,
+        referredUserId,
+        referralCode: "refund-first-affiliate",
+        source: "via",
+        attributedAt: "2026-04-01T00:00:00.000Z",
+      });
+      const orderBillingTransactionId = await ctx.db.insert("billing_transactions", {
+        businessId: referredBusinessId,
+        kind: "order",
+        sourceId: "order-refund-first",
+        status: "paid",
+        amountCents: 50_000,
+        currency: "usd",
+        orderId: "order-refund-first",
+        occurredAt: "2026-04-01T00:00:00.000Z",
+        lastSyncedAt: "2026-04-01T00:00:00.000Z",
+      });
+      const refundBillingTransactionId = await ctx.db.insert("billing_transactions", {
+        businessId: referredBusinessId,
+        kind: "refund",
+        sourceId: "refund-before-order",
+        status: "succeeded",
+        amountCents: 50_000,
+        currency: "usd",
+        orderId: "order-refund-first",
+        occurredAt: "2026-05-20T12:00:00.000Z",
+        lastSyncedAt: "2026-05-20T12:00:00.000Z",
+      });
+      return {
+        orderBillingTransactionId,
+        profileId,
+        referredBusinessId,
+        refundBillingTransactionId,
+      };
+    });
+
+    await t.mutation(internal.affiliates.createCommissionForBillingTransaction, {
+      billingTransactionId: seeded.refundBillingTransactionId,
+      businessId: seeded.referredBusinessId,
+      kind: "refund",
+      sourceId: "refund-before-order",
+      status: "succeeded",
+      amountCents: 50_000,
+      currency: "usd",
+      orderId: "order-refund-first",
+      occurredAt: "2026-05-20T12:00:00.000Z",
+    });
+    await t.mutation(internal.affiliates.createCommissionForBillingTransaction, {
+      billingTransactionId: seeded.orderBillingTransactionId,
+      businessId: seeded.referredBusinessId,
+      kind: "order",
+      sourceId: "order-refund-first",
+      status: "paid",
+      amountCents: 50_000,
+      currency: "usd",
+      orderId: "order-refund-first",
+      occurredAt: "2026-04-01T00:00:00.000Z",
+    });
+
+    const result = await t.run(async (ctx) => {
+      const commission = await ctx.db
+        .query("affiliate_commissions")
+        .withIndex("by_source_key", (q) => q.eq("sourceKey", "order:order-refund-first"))
+        .unique();
+      const stats = await ctx.db
+        .query("affiliate_profile_stats")
+        .withIndex("by_affiliate_profile_id", (q) =>
+          q.eq("affiliateProfileId", seeded.profileId),
+        )
+        .unique();
+      const voidedSource = await ctx.db
+        .query("affiliate_voided_sources")
+        .withIndex("by_source_key", (q) => q.eq("sourceKey", "order:order-refund-first"))
+        .unique();
+      return { commission, stats, voidedSource };
+    });
+
+    expect(result.commission).toBeNull();
+    expect(result.stats).toBeNull();
+    expect(result.voidedSource?.reason).toBe("refund");
+  });
+
   it("downgrades ready payout items when refunds drop them below the payout minimum", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-05-20T12:00:00.000Z"));

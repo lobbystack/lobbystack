@@ -146,6 +146,50 @@ async function getAttributionForBusiness(
     .unique();
 }
 
+async function getVoidedSourceBySourceKey(
+  ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">,
+  sourceKey: string,
+): Promise<Doc<"affiliate_voided_sources"> | null> {
+  return await ctx.db
+    .query("affiliate_voided_sources")
+    .withIndex("by_source_key", (q) => q.eq("sourceKey", sourceKey))
+    .unique();
+}
+
+async function recordVoidedSource(
+  ctx: Pick<MutationCtx, "db">,
+  input: {
+    sourceKey: string;
+    businessId: Id<"businesses">;
+    billingTransactionId: Id<"billing_transactions">;
+    amountCents: number;
+    currency: string;
+    status: string;
+    reason: string;
+    voidedAt: string;
+  },
+): Promise<void> {
+  const existing = await getVoidedSourceBySourceKey(ctx, input.sourceKey);
+  const patch = {
+    businessId: input.businessId,
+    billingTransactionId: input.billingTransactionId,
+    amountCents: input.amountCents,
+    currency: input.currency.toLowerCase(),
+    status: input.status,
+    reason: input.reason,
+    voidedAt: input.voidedAt,
+    updatedAt: input.voidedAt,
+  };
+  if (existing) {
+    await ctx.db.patch(existing._id, patch);
+    return;
+  }
+  await ctx.db.insert("affiliate_voided_sources", {
+    sourceKey: input.sourceKey,
+    ...patch,
+  });
+}
+
 async function getStatsForProfile(
   ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">,
   affiliateProfileId: Id<"affiliate_profiles">,
@@ -557,6 +601,16 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
       sourceKey: string,
       reason: string,
     ): Promise<void> {
+      await recordVoidedSource(ctx, {
+        sourceKey,
+        businessId: args.businessId,
+        billingTransactionId: args.billingTransactionId,
+        amountCents: args.amountCents,
+        currency: args.currency,
+        status: args.status,
+        reason,
+        voidedAt: timestamp,
+      });
       const existing = await ctx.db
         .query("affiliate_commissions")
         .withIndex("by_source_key", (q) => q.eq("sourceKey", sourceKey))
@@ -649,6 +703,10 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
     }
 
     const sourceKey = `order:${args.sourceId}`;
+    const voidedSource = await getVoidedSourceBySourceKey(ctx, sourceKey);
+    if (voidedSource) {
+      return null;
+    }
     const existing = await ctx.db
       .query("affiliate_commissions")
       .withIndex("by_source_key", (q) => q.eq("sourceKey", sourceKey))
