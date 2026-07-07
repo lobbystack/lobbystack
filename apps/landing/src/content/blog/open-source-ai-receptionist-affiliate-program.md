@@ -3,7 +3,7 @@ title: "AI Receptionist Affiliate Program"
 description: "Earn 20% for one year by referring LobbyStack, the open-source AI receptionist for calls, SMS, appointments, and self-hosted deployments."
 pubDate: 2026-07-07T13:00:00-04:00
 author: "LobbyStack Team"
-category: "Company"
+category: "Product updates"
 featured: false
 coverImage: "/illustrations/open-source-ai-receptionist-affiliate-program-hero.webp"
 locale: "en"
@@ -35,15 +35,12 @@ The affiliate dashboard lives inside LobbyStack. Activate your profile, save you
 
 ## How it compares with other programs
 
-Affiliate programs in SaaS split into a few patterns. Some pay a fixed bounty. Some pay revenue share for a year. Some pay lifetime recurring commission. AI tools tend to advertise bigger numbers because the category is crowded and companies want creators to bring distribution.
+Affiliate programs in AI receptionist, phone answering, and voice AI split into a few patterns. Some pay a fixed bounty. Some pay revenue share for a year. Some pay lifetime recurring commission. AI tools tend to advertise bigger numbers because the category is crowded and companies want creators to bring distribution.
 
 Public terms change, so treat this as a market snapshot from July 7, 2026.
 
 | Program | Public affiliate terms | Useful comparison |
 | --- | --- | --- |
-| HubSpot | 30% recurring for up to one year, 180-day cookie window, $10 withdrawal minimum | Mature SaaS benchmark with a higher rate and lower payout threshold |
-| Cal.com | 20% for 12 months, with 20% off for referred customers | Open-source scheduling SaaS benchmark close to LobbyStack's rate and duration |
-| n8n | 30% on n8n Cloud referrals for 12 months, EUR 100 minimum, PayPal payouts | Self-hostable SaaS benchmark with a higher rate and similar threshold |
 | Rosie | 20% recurring commission, 50% off first month for referred customers | AI answering service benchmark with a matching headline rate |
 | AI Phone 360 | 20% recurring, 30-day cookie, monthly payouts after a threshold | Direct category comparison with similar economics |
 | Upfirst | 25% lifetime commission plus a $50 bonus after a customer stays active | More aggressive AI receptionist offer |
@@ -51,7 +48,7 @@ Public terms change, so treat this as a market snapshot from July 7, 2026.
 | Retell AI | 15% for paid referrals | Voice-agent infrastructure benchmark, lower headline rate |
 | Smith.ai | Referral affiliate model with promo codes and recurring monthly discounts | Mature receptionist partner program, less public cash-commission detail |
 
-Upfirst and My AI Front Desk advertise more aggressive upside. HubSpot and n8n also beat LobbyStack on rate.
+Upfirst and My AI Front Desk advertise more aggressive upside. Rosie and AI Phone 360 sit closest to LobbyStack on the headline rate, while Retell AI is lower.
 
 LobbyStack fits a different referral. You can recommend the hosted product to a local operator who wants calls answered this week. You can also point a technical buyer to the codebase, the self-hosting path, and the provider model. That gives your recommendation more proof than a product tour.
 
@@ -143,7 +140,7 @@ That gives affiliates a stronger buyer story. You can recommend a product that h
 
 ## Why the commission still works
 
-A 20% first-year commission sits at the practical end of the SaaS range. It matches Cal.com and AI Phone 360 on headline rate, trails HubSpot and n8n, and comes in below more aggressive AI receptionist programs.
+A 20% first-year commission sits in the practical range for AI receptionist and voice AI programs. It matches Rosie and AI Phone 360 on headline rate, sits above Retell AI, and comes in below more aggressive AI receptionist offers from Upfirst and My AI Front Desk.
 
 That tradeoff can still work for the right partner.
 
@@ -165,9 +162,6 @@ Open the affiliate page in your LobbyStack dashboard, activate your profile, add
 
 ## Sources
 
-- [HubSpot Affiliate Program](https://www.hubspot.com/partners/affiliates)
-- [Cal.com Affiliate Program](https://cal.com/affiliate-program)
-- [n8n Cloud Affiliate Partner Program](https://n8n.io/affiliates/)
 - [Rosie Affiliate Program](https://heyrosie.com/ai-answering-service-affiliate-program)
 - [AI Phone 360 Affiliates](https://www.aiphone360.com/affiliates)
 - [Upfirst Affiliate Partner Program](https://upfirst.ai/affiliate-program)

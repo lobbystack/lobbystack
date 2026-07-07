@@ -3,7 +3,7 @@ title: "Programme d'affiliation réceptionniste IA"
 description: "Gagnez 20 % pendant un an en recommandant LobbyStack, le réceptionniste IA open source pour appels, SMS, rendez-vous et déploiements auto-hébergés."
 pubDate: 2026-07-07T13:00:00-04:00
 author: "Équipe LobbyStack"
-category: "Entreprise"
+category: "Mises à jour produit"
 featured: false
 coverImage: "/illustrations/open-source-ai-receptionist-affiliate-program-hero.webp"
 locale: "fr"
@@ -35,15 +35,12 @@ Le tableau de bord affilié vit dans LobbyStack. Activez votre profil, ajoutez v
 
 ## Comparaison avec d'autres programmes
 
-Les programmes d'affiliation SaaS suivent quelques modèles. Certains paient une prime fixe. D'autres versent une part du revenu pendant un an. Certains promettent une commission récurrente à vie. Les outils IA affichent souvent de plus gros chiffres parce que la catégorie est saturée et que les entreprises veulent attirer les créateurs.
+Les programmes d'affiliation de réceptionnistes IA, de réponse téléphonique et d'IA vocale suivent quelques modèles. Certains paient une prime fixe. D'autres versent une part du revenu pendant un an. Certains promettent une commission récurrente à vie. Les outils IA affichent souvent de plus gros chiffres parce que la catégorie est saturée et que les entreprises veulent attirer les créateurs.
 
 Les conditions publiques changent. Ce tableau reflète le marché observé le 7 juillet 2026.
 
 | Programme | Conditions publiques | Comparaison utile |
 | --- | --- | --- |
-| HubSpot | 30 % récurrent jusqu'à un an, cookie de 180 jours, retrait minimum de 10 USD | Référence SaaS mature avec un taux plus élevé et un seuil plus bas |
-| Cal.com | 20 % pendant 12 mois, avec 20 % de rabais pour les clients recommandés | Référence SaaS open source proche de LobbyStack sur le taux et la durée |
-| n8n | 30 % sur les références n8n Cloud pendant 12 mois, minimum de 100 EUR, paiements PayPal | Référence SaaS auto-hébergeable avec un taux plus élevé et un seuil comparable |
 | Rosie | 20 % récurrent, 50 % de rabais le premier mois pour les clients recommandés | Service de réponse IA avec un taux de base similaire |
 | AI Phone 360 | 20 % récurrent, cookie de 30 jours, paiements mensuels après un seuil | Comparaison directe dans la catégorie, avec une économie proche |
 | Upfirst | 25 % à vie plus un bonus de 50 $ après activité client | Offre plus agressive dans les réceptionnistes IA |
@@ -51,7 +48,7 @@ Les conditions publiques changent. Ce tableau reflète le marché observé le 7 
 | Retell AI | 15 % pour les références payantes | Infrastructure d'agent vocal avec un taux public plus bas |
 | Smith.ai | Modèle de référence avec codes promo et rabais mensuels récurrents | Programme partenaire mature, avec moins de détail public sur la commission en argent |
 
-Upfirst et My AI Front Desk affichent plus d'avantages financiers. HubSpot et n8n dépassent aussi LobbyStack sur le taux.
+Upfirst et My AI Front Desk affichent plus d'avantages financiers. Rosie et AI Phone 360 sont les plus proches de LobbyStack sur le taux public, tandis que Retell AI est plus bas.
 
 LobbyStack correspond à une autre recommandation. Vous pouvez recommander le produit hébergé à un opérateur local qui veut répondre aux appels cette semaine. Vous pouvez aussi orienter un acheteur technique vers le code, l'auto-hébergement et le modèle de fournisseurs. Votre recommandation repose alors sur plus qu'une démo produit.
 
@@ -143,7 +140,7 @@ Cela donne aux affiliés un meilleur argument. Vous recommandez un produit qui f
 
 ## Pourquoi la commission reste intéressante
 
-Une commission de 20 % la première année se situe dans la partie pratique de la fourchette SaaS. Elle rejoint Cal.com et AI Phone 360 sur le taux public, se place sous HubSpot et n8n, et reste sous les programmes de réceptionnistes IA les plus agressifs.
+Une commission de 20 % la première année se situe dans la partie pratique de la fourchette des programmes de réceptionnistes IA et d'IA vocale. Elle rejoint Rosie et AI Phone 360 sur le taux public, dépasse Retell AI, et reste sous les offres plus agressives d'Upfirst et My AI Front Desk.
 
 Ce compromis peut fonctionner pour le bon partenaire.
 
@@ -165,9 +162,6 @@ Ouvrez la page affiliation dans votre tableau de bord LobbyStack, activez votre 
 
 ## Sources
 
-- [Programme d'affiliation HubSpot](https://www.hubspot.com/partners/affiliates)
-- [Programme d'affiliation Cal.com](https://cal.com/affiliate-program)
-- [Programme partenaire n8n Cloud](https://n8n.io/affiliates/)
 - [Programme d'affiliation Rosie](https://heyrosie.com/ai-answering-service-affiliate-program)
 - [Affiliés AI Phone 360](https://www.aiphone360.com/affiliates)
 - [Programme partenaire affilié Upfirst](https://upfirst.ai/affiliate-program)
