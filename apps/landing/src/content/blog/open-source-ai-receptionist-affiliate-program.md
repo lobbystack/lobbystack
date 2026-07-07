@@ -3,7 +3,7 @@ title: "Earn 20% With the LobbyStack Affiliate Program"
 description: "Compare AI receptionist affiliate programs and see why agencies, consultants, creators, and local business experts can earn recurring revenue with LobbyStack."
 pubDate: 2026-07-07T09:00:00-04:00
 author: "LobbyStack Team"
-category: "Partner Program"
+category: "Product updates"
 featured: false
 coverImage: "/illustrations/open-source-ai-receptionist-affiliate-program-hero.webp"
 locale: "en"
