@@ -1,7 +1,7 @@
 {
   "eyebrow": "Programme d'affiliation",
   "title": "Programme d'affiliation",
-  "description": "Partagez LobbyStack avec des opérateurs et agences. Nous suivons les parrainages, commissions et paiements PayPal manuels mensuels ici.",
+  "description": "Partagez LobbyStack avec des opérateurs et agences. Nous suivons les parrainages, commissions et paiements PayPal mensuels ici.",
   "inactive": {
     "title": "Commencez à gagner avec LobbyStack",
     "description": "Activez votre profil affilié pour obtenir un lien de parrainage et suivre clics, inscriptions, conversions et revenus.",
@@ -17,7 +17,7 @@
   },
   "terms": {
     "title": "Récompenses",
-    "description": "Paiements PayPal manuels après la période de retenue.",
+    "description": "Paiements PayPal après la période de retenue.",
     "commission": "Commission",
     "hold": "Période de retenue",
     "minimum": "Paiement minimum",
@@ -40,7 +40,7 @@
     "eligibleReady": "Prêt pour le prochain lot de paiement.",
     "eligibleWaiting": "Compte vers le minimum de 100 $.",
     "paid": "Payé",
-    "paidDescription": "Marqué payé après paiement PayPal manuel."
+    "paidDescription": "Marqué payé après paiement PayPal."
   },
   "tabs": {
     "quickstart": "Démarrage",
@@ -59,7 +59,7 @@
     },
     "receive": {
       "title": "Recevez vos revenus",
-      "description": "Les soldes admissibles de 100 $ ou plus sont revus chaque mois et payés manuellement via PayPal."
+      "description": "Les soldes admissibles de 100 $ ou plus sont revus chaque mois et payés via PayPal."
     }
   },
   "earnings": {
@@ -111,7 +111,7 @@
     },
     "method": {
       "question": "Comment les paiements sont-ils envoyés ?",
-      "answer": "LobbyStack paie les affiliés manuellement via PayPal avec le courriel PayPal enregistré."
+      "answer": "LobbyStack paie les affiliés via PayPal avec le courriel PayPal enregistré."
     },
     "refunds": {
       "question": "Que se passe-t-il après un remboursement ?",

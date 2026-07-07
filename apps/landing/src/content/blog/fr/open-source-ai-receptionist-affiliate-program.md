@@ -26,7 +26,7 @@ Les conditions principales :
 | Durée | 12 premiers mois après attribution |
 | Période de retenue | 30 jours |
 | Paiement minimum | 100 USD en commissions admissibles impayées |
-| Méthode de paiement | Paiement PayPal manuel |
+| Méthode de paiement | Paypal |
 | Tableau de bord | Lien de parrainage, clics, inscriptions, conversions, revenus, paiements, courriel PayPal |
 
 Les remboursements, litiges, annulations et paiements invalides peuvent annuler les commissions impayées. Cette règle protège le programme contre le trafic de faible qualité et garde les paiements liés à de vrais clients.

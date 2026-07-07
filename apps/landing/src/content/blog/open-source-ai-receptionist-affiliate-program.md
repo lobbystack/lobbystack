@@ -26,7 +26,7 @@ The core terms:
 | Duration | First 12 months after attribution |
 | Holding period | 30 days |
 | Minimum payout | USD $100 in eligible unpaid commissions |
-| Payout method | Manual PayPal payout |
+| Payout method | Paypal |
 | Dashboard | Referral link, clicks, signups, conversions, earnings, payouts, PayPal email |
 
 Refunds, disputes, cancellations, and invalid payments can void unpaid commissions. That protects the program from low-quality traffic and keeps payouts tied to real customers.

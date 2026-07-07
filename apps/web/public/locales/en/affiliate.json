@@ -1,7 +1,7 @@
 {
   "eyebrow": "Affiliate program",
   "title": "Affiliate program",
-  "description": "Share LobbyStack with operators and agencies. We track referrals, commissions, and monthly manual PayPal payouts from here.",
+  "description": "Share LobbyStack with operators and agencies. We track referrals, commissions, and monthly PayPal payouts from here.",
   "inactive": {
     "title": "Start earning with LobbyStack",
     "description": "Activate your affiliate profile to get a referral link and track clicks, signups, conversions, and earnings.",
@@ -17,7 +17,7 @@
   },
   "terms": {
     "title": "Rewards",
-    "description": "Manual PayPal payouts after the holding period clears.",
+    "description": "PayPal payouts after the holding period clears.",
     "commission": "Commission",
     "hold": "Holding period",
     "minimum": "Minimum payout",
@@ -111,7 +111,7 @@
     },
     "method": {
       "question": "How are payouts sent?",
-      "answer": "LobbyStack pays affiliates manually through PayPal using the PayPal email saved in settings."
+      "answer": "LobbyStack pays affiliates through PayPal using the PayPal email saved in settings."
     },
     "refunds": {
       "question": "What happens after a refund?",
