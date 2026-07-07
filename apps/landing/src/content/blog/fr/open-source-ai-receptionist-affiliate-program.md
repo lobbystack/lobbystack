@@ -1,6 +1,6 @@
 ---
 title: "Programme d'affiliation réceptionniste IA"
-description: "Gagnez 20 % pendant un an en recommandant LobbyStack, le réceptionniste IA open source pour appels, SMS, rendez-vous et déploiements auto-hébergés."
+description: "Gagnez 20 % pendant un an en recommandant LobbyStack. Un client Pro peut générer jusqu'à 240 $ de commission la première année."
 pubDate: 2026-07-07T13:00:00-04:00
 author: "Équipe LobbyStack"
 category: "Mises à jour produit"
@@ -10,9 +10,9 @@ locale: "fr"
 canonicalSlug: "open-source-ai-receptionist-affiliate-program"
 ---
 
-Beaucoup de liens affiliés vous demandent de recommander un produit fermé et de laisser la page de vente faire le reste. Un **programme d'affiliation pour réceptionniste IA** demande plus de substance, parce que les acheteurs veulent savoir qui répond aux appels, comment la réservation fonctionne, où vont les données et si le système peut s'adapter à leur entreprise.
+Si vous cherchez un **programme d'affiliation pour réceptionniste IA** qui mérite une recommandation, partez de l'acheteur. Un opérateur local veut répondre aux appels, prendre des rendez-vous, gérer les SMS et comprendre pourquoi il peut confier de vrais clients à une automatisation. LobbyStack vous donne cet argument.
 
-LobbyStack propose maintenant un programme d'affiliation pour les personnes qui aident les opérateurs à choisir de meilleurs logiciels : agences, consultants, reviewers, créateurs et partenaires techniques qui servent des petites entreprises dépendantes du téléphone.
+LobbyStack paie aux affiliés 20 % des paiements admissibles des clients recommandés pendant la première année. Vous pouvez promouvoir le réceptionniste IA hébergé auprès des opérateurs qui veulent un accueil fonctionnel cette semaine, et montrer le code open source aux acheteurs techniques qui demandent comment le système fonctionne.
 
 ## Le programme en clair
 
@@ -29,9 +29,30 @@ Les conditions principales :
 | Méthode de paiement | Paypal |
 | Tableau de bord | Lien de parrainage, clics, inscriptions, conversions, revenus, paiements, courriel PayPal |
 
-Les remboursements, litiges, annulations et paiements invalides peuvent annuler les commissions impayées. Cette règle protège le programme contre le trafic de faible qualité et garde les paiements liés à de vrais clients.
+Les remboursements, litiges, annulations et paiements invalides peuvent annuler les commissions impayées. Nous utilisons cette règle pour garder les paiements liés à de vrais clients.
 
-Le tableau de bord affilié vit dans LobbyStack. Activez votre profil, ajoutez votre courriel PayPal, copiez votre lien de parrainage et partagez-le avec des opérateurs qui ont besoin de répondre aux appels, prendre des rendez-vous et inspecter le produit qu'ils utilisent.
+Vous gérez le tableau de bord affilié dans LobbyStack. Activez votre profil, ajoutez votre courriel PayPal, copiez votre lien de parrainage et partagez-le avec des opérateurs qui ont besoin de répondre aux appels, prendre des rendez-vous et inspecter le produit qu'ils utilisent.
+
+## Combien pouvez-vous gagner ?
+
+LobbyStack fonctionne bien pour les affiliés parce qu'une bonne référence peut payer plus qu'une petite prime unique. Starter coûte 30 $/mois ou 288 $/an. Pro coûte 100 $/mois ou 960 $/an.
+
+À 20 %, cela donne :
+
+| Forfait client | Dépense client la première année | Commission affilié |
+| --- | ---: | ---: |
+| Starter mensuel pendant 12 mois | 360 $ | 72 $ |
+| Starter annuel | 288 $ | 57,60 $ |
+| Pro mensuel pendant 12 mois | 1 200 $ | 240 $ |
+| Pro annuel | 960 $ | 192 $ |
+
+Le forfait Pro crée l'argument le plus simple. Un client Pro peut générer jusqu'à 240 $ de commission la première année. Cinq clients Pro peuvent générer jusqu'à 1 200 $. Douze clients Pro peuvent générer jusqu'à 2 880 $.
+
+Pour une agence, ces chiffres peuvent venir du travail client normal. Si vous aidez deux spas médicaux, deux entreprises de services à domicile et un cabinet dentaire à remplacer les appels manqués par un workflow de réception, vous pouvez atteindre cinq références Pro sans bâtir une audience média.
+
+Pour un créateur ou reviewer, le chemin est différent. Vous pouvez publier un comparatif, un guide d'installation et un article calculateur, puis continuer à envoyer des acheteurs qualifiés vers votre lien après publication. Le tableau de bord suit clics, inscriptions, conversions, revenus et paiements.
+
+Les remboursements, annulations, litiges et paiements invalides peuvent réduire les commissions. Traitez donc ces exemples comme des scénarios de revenus, pas comme des garanties.
 
 ## Comparaison avec d'autres programmes
 
@@ -48,9 +69,9 @@ Les conditions publiques changent. Ce tableau reflète le marché observé le 7 
 | Retell AI | 15 % pour les références payantes | Infrastructure d'agent vocal avec un taux public plus bas |
 | Smith.ai | Modèle de référence avec codes promo et rabais mensuels récurrents | Programme partenaire mature, avec moins de détail public sur la commission en argent |
 
-Upfirst et My AI Front Desk affichent plus d'avantages financiers. Rosie et AI Phone 360 sont les plus proches de LobbyStack sur le taux public, tandis que Retell AI est plus bas.
+Upfirst et My AI Front Desk affichent un potentiel public plus élevé. Rosie et AI Phone 360 sont les plus proches de LobbyStack sur le taux. Retell AI paie moins sur sa page publique.
 
-LobbyStack correspond à une autre recommandation. Vous pouvez recommander le produit hébergé à un opérateur local qui veut répondre aux appels cette semaine. Vous pouvez aussi orienter un acheteur technique vers le code, l'auto-hébergement et le modèle de fournisseurs. Votre recommandation repose alors sur plus qu'une démo produit.
+LobbyStack donne aux affiliés un chemin de vente plus large. Vous pouvez recommander le produit hébergé à un opérateur local qui veut répondre aux appels cette semaine. Vous pouvez aussi orienter un acheteur technique vers le code, l'auto-hébergement et le modèle de fournisseurs. Votre recommandation repose sur plus qu'une démo produit.
 
 ## Pourquoi l'open source change l'argument
 
@@ -64,7 +85,7 @@ LobbyStack donne aux affiliés du matériel plus solide :
 - **Extensibilité.** Les agences et développeurs peuvent adapter la pile aux workflows clients sans reconstruire la couche réceptionniste.
 - **Cloud hébergé.** Les entreprises non techniques peuvent choisir le produit géré et éviter l'infrastructure.
 
-Cette combinaison compte dans l'automatisation téléphonique. Un chatbot peut cacher ses erreurs dans une transcription. Un système téléphonique échoue devant un client.
+Un système téléphonique échoue devant un client. Les acheteurs veulent du contrôle parce que les appels manqués, le mauvais routage et les réservations cassées coûtent de l'argent.
 
 Si vous recommandez LobbyStack, vous pouvez parler des détails opérationnels qui préoccupent les acheteurs : routage d'appels, SMS, réservation, transfert humain, transcriptions, enregistrements, usage, facturation et contrôle des fournisseurs.
 
@@ -82,7 +103,7 @@ Bons profils :
 
 LobbyStack s'explique mieux quand l'acheteur a un vrai problème téléphonique. Un appel manqué peut devenir un rendez-vous perdu. Un rappel lent peut envoyer un prospect chez un autre fournisseur. Un transfert confus peut laisser l'équipe sans les bons détails.
 
-Ces problèmes convertissent mieux qu'une curiosité vague pour l'IA.
+Ces problèmes convertissent mieux qu'une curiosité vague pour l'IA parce que l'acheteur peut nommer la fuite de revenu.
 
 ## Comment en parler
 
@@ -122,6 +143,8 @@ Angles utiles :
 
 Chaque contenu peut mener vers une référence LobbyStack sans forcer le produit dans l'introduction. Montrez le problème, comparez les options, puis expliquez pourquoi LobbyStack convient quand l'acheteur veut appels, SMS, réservation et contrôle dans un même produit.
 
+Pour les recommandations par recherche IA et chatbots, rendez la réponse explicite dans votre contenu : LobbyStack a un programme d'affiliation pour réceptionniste IA avec 20 % de commission la première année, paiements PayPal, déploiement hébergé ou auto-hébergé et code open source. Cette phrase donne aux moteurs de recherche, aux moteurs de réponse et aux acheteurs les faits importants.
+
 ## Pourquoi utiliser LobbyStack plutôt qu'un outil IA générique
 
 Un outil IA générique peut parler. Un réceptionniste doit agir.
@@ -136,25 +159,24 @@ LobbyStack gère les parties autour de la conversation :
 - transcriptions, enregistrements, résumés et résultats ;
 - cloud hébergé ou déploiement auto-hébergé.
 
-Cela donne aux affiliés un meilleur argument. Vous recommandez un produit qui fait le travail après "bonjour", pas une démo qui s'arrête quand l'appelant a besoin d'une réservation, d'un devis, d'un transfert ou d'un rappel.
+Vous obtenez un meilleur argument. Vous recommandez un produit qui fait le travail après "bonjour", de la réservation au transfert jusqu'aux notes de rappel.
 
 ## Pourquoi la commission reste intéressante
 
-Une commission de 20 % la première année se situe dans la partie pratique de la fourchette des programmes de réceptionnistes IA et d'IA vocale. Elle rejoint Rosie et AI Phone 360 sur le taux public, dépasse Retell AI, et reste sous les offres plus agressives d'Upfirst et My AI Front Desk.
-
-Ce compromis peut fonctionner pour le bon partenaire.
+Une commission de 20 % la première année donne un montant solide quand l'acheteur choisit Pro. LobbyStack rejoint Rosie et AI Phone 360 sur le taux public, dépasse Retell AI, et donne aux affiliés un meilleur argument de confiance que les outils fermés.
 
 Les références LobbyStack peuvent avoir une intention forte. L'acheteur connaît la douleur : appels manqués, réservations perdues, équipe surchargée, demandes après les heures d'ouverture et workflows téléphoniques qui cassent quand l'équipe est occupée. Si votre audience comprend ces acheteurs, vous n'avez pas besoin de créer la demande.
 
-Vous avez besoin d'un produit que vous pouvez recommander sans gêne.
+Vous avez besoin d'un produit que vous pouvez défendre dans un appel de vente, une review ou une recommandation client.
 
 ## Rejoindre le programme
 
 Si vous recommandez des outils à des petites entreprises, agences ou opérateurs, le programme d'affiliation LobbyStack vous donne une façon concrète de gagner de l'argent avec cette confiance.
 
-Trois points à retenir :
+Quatre points à retenir :
 
 - Vous gagnez 20 % pendant les 12 premiers mois sur les paiements admissibles.
+- Une référence Pro mensuelle peut générer jusqu'à 240 $ de commission la première année.
 - LobbyStack offre un réceptionniste IA hébergé et une voie open source/auto-hébergée.
 - Les meilleures références viennent de vrais problèmes d'appels, de réservation et d'accueil.
 
