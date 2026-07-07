@@ -128,9 +128,11 @@ the matching `{plan, interval} + AI SMS` product for the existing paid
 subscription update. `POLAR_PRO_AI_SMS_PRODUCT_ID` is still accepted as a legacy
 fallback for `POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID`.
 
-Create a 5% Polar discount for referred customers and set its ID as
-`POLAR_REFERRAL_DISCOUNT_ID`. LobbyStack applies this discount server-side only
-when an eligible referred business starts a hosted plan checkout.
+Create a 5% percentage discount in Polar for referred customers and set its ID as
+`POLAR_REFERRAL_DISCOUNT_ID`. LobbyStack applies this discount server-side when
+an eligible referred business starts a hosted plan checkout. Referral discounts
+are not entered by the customer as coupon codes; the checkout receives the
+configured Polar discount automatically from the stored referral attribution.
 
 For hosted Alert SMS, also configure:
 

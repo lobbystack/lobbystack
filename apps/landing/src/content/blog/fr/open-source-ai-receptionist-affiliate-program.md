@@ -16,7 +16,7 @@ LobbyStack paie aux affiliés 20 % des paiements admissibles des clients recomma
 
 ## Le programme en clair
 
-Les affiliés LobbyStack gagnent 20 % de commission sur les paiements admissibles des clients recommandés pendant les 12 premiers mois après l'attribution.
+Les affiliés LobbyStack gagnent 20 % de commission sur les paiements admissibles des clients recommandés pendant les 12 premiers mois après l'attribution. Les clients recommandés obtiennent aussi **5 % de rabais** lorsqu'ils commencent un forfait hébergé admissible LobbyStack avec votre lien de parrainage.
 
 Les conditions principales :
 
@@ -31,7 +31,7 @@ Les conditions principales :
 
 Les remboursements, litiges, annulations et paiements invalides peuvent annuler les commissions impayées. Nous utilisons cette règle pour garder les paiements liés à de vrais clients.
 
-Vous gérez le tableau de bord affilié dans LobbyStack. Activez votre profil, ajoutez votre courriel PayPal, copiez votre lien de parrainage et partagez-le avec des opérateurs qui ont besoin de répondre aux appels, prendre des rendez-vous et inspecter le produit qu'ils utilisent.
+Vous gérez le tableau de bord affilié dans LobbyStack. Ajoutez votre courriel PayPal, copiez votre lien de parrainage et partagez-le avec des opérateurs qui ont besoin de répondre aux appels, prendre des rendez-vous et inspecter le produit qu'ils utilisent.
 
 ## Combien pouvez-vous gagner ?
 
@@ -180,7 +180,7 @@ Quatre points à retenir :
 - LobbyStack offre un réceptionniste IA hébergé et une voie open source/auto-hébergée.
 - Les meilleures références viennent de vrais problèmes d'appels, de réservation et d'accueil.
 
-Ouvrez la page affiliation dans votre tableau de bord LobbyStack, activez votre profil, ajoutez votre courriel PayPal et partagez votre lien avec des opérateurs qui ont besoin d'un meilleur accueil.
+Ouvrez la page affiliation dans votre tableau de bord LobbyStack, ajoutez votre courriel PayPal et partagez votre lien avec des opérateurs qui ont besoin d'un meilleur accueil.
 
 ## Sources
 
