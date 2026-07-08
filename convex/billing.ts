@@ -949,7 +949,7 @@ function getUsageEventBillableUpdate(args: {
   const deltaBillableQuantity = nextBillableTotal - currentBillableTotal;
 
   return {
-    billableQuantity: Math.max(0, previousBillableQuantity + deltaBillableQuantity),
+    billableQuantity: previousBillableQuantity + deltaBillableQuantity,
     currentPeriodDeltaBillableQuantity: deltaBillableQuantity,
   };
 }
