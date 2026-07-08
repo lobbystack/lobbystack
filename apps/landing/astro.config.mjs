@@ -6,9 +6,12 @@ import pagefind from "astro-pagefind"
 import tailwindcss from "@tailwindcss/vite"
 import { defineConfig, fontProviders } from "astro/config"
 import { createLogger } from "vite"
+import { translatedBasePaths } from "./src/i18n/translated-base-paths.ts"
 
 const SITE_URL = "https://lobbystack.com"
 const INDEXNOW_KEY = process.env.INDEXNOW_KEY
+const DEFAULT_LOCALE = "en"
+const translatedPathSet = new Set(translatedBasePaths)
 const NOINDEX_PATHS = new Set([
   "/404/",
   "/cookie-policy/",
@@ -93,6 +96,41 @@ const lastmodForUrl = (url) => {
   if (!source) return new Date().toISOString()
 
   return (gitLastmod(source) ?? new Date()).toISOString()
+}
+
+const stripLocaleFromPath = (pathname) => {
+  const normalized = normalizePath(pathname)
+  const [, maybeLocale, ...rest] = normalized.split("/")
+
+  if (maybeLocale === "fr") {
+    const stripped = `/${rest.join("/")}`
+    return normalizePath(stripped === "/" ? "/" : stripped)
+  }
+
+  return normalized
+}
+
+const localizePath = (locale, path = "/") => {
+  const basePath = stripLocaleFromPath(path)
+
+  if (locale === DEFAULT_LOCALE) return basePath
+  if (!translatedPathSet.has(basePath)) return basePath
+  if (basePath === "/") return "/fr/"
+  return `/fr${basePath}`
+}
+
+const sitemapAlternateLinks = (url) => {
+  const basePath = stripLocaleFromPath(new URL(url).pathname)
+  if (!translatedPathSet.has(basePath)) return undefined
+
+  return [
+    { lang: "en", url: new URL(localizePath("en", basePath), SITE_URL).toString() },
+    { lang: "fr", url: new URL(localizePath("fr", basePath), SITE_URL).toString() },
+    {
+      lang: "x-default",
+      url: new URL(localizePath(DEFAULT_LOCALE, basePath), SITE_URL).toString(),
+    },
+  ]
 }
 
 // https://astro.build/config
@@ -197,6 +235,8 @@ export default defineConfig({
       },
       serialize(item) {
         item.lastmod = lastmodForUrl(item.url)
+        const links = sitemapAlternateLinks(item.url)
+        if (links) item.links = links
         return item
       },
       chunks: {

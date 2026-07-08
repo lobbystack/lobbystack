@@ -43,9 +43,12 @@ const pageCopy = {
     titleSuffix: "LobbyStack Blog",
   },
   fr: {
-    titleSuffix: "Blog Réceptionniste IA",
+    titleSuffix: "Blog LobbyStack",
   },
 } satisfies Record<Locale, { titleSuffix: string }>
+
+const coverImageWidth = 1672
+const coverImageHeight = 941
 ---
 
 <Layout
@@ -56,6 +59,8 @@ const pageCopy = {
     locale,
     image: entry.data.coverImage,
     imageAlt: entry.data.title,
+    imageWidth: entry.data.coverImage ? coverImageWidth : undefined,
+    imageHeight: entry.data.coverImage ? coverImageHeight : undefined,
     type: "article",
     publishedTime,
     modifiedTime: publishedTime,
@@ -68,8 +73,8 @@ const pageCopy = {
         path: canonicalPath,
         image: entry.data.coverImage,
         alt: entry.data.title,
-        width: 1672,
-        height: 941,
+        width: coverImageWidth,
+        height: coverImageHeight,
       }),
       blogPostingJsonLd({
         title: entry.data.title,

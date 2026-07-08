@@ -226,7 +226,7 @@ Si personne dans l'entreprise ne sait quoi faire avec un client fâché, une que
 
 Si votre flux est courant et que vous devez répondre aux appels maintenant, essayez une solution hébergée.
 
-Si votre flux est inhabituel, réglementé ou assez important pour être possédé, regardez sérieusement l'open source avant de repartir de zéro.
+Si votre flux est inhabituel, réglementé ou assez important pour être possédé, regardez sérieusement l'open source avant de repartir de zéro. Pour une vue d'ensemble des options auto-hébergées, consultez le comparatif des [meilleurs services open source de réponse IA](/fr/blog/best-open-source-ai-phone-answering-services/).
 
 Pour commencer concrètement, consultez [les fonctionnalités de LobbyStack](/fr/features/), comparez [les tarifs](/fr/pricing/), puis regardez les options [réceptionniste IA open source](/solutions/open-source-ai-receptionist/) et [réceptionniste IA auto-hébergé](/solutions/self-hosted-ai-receptionist/). Si vous êtes encore au stade de l'évaluation des fournisseurs, ce guide sur [comment choisir un réceptionniste IA](/fr/blog/how-to-choose-an-ai-receptionist/) vous aidera à tester les produits avec de vrais scénarios d'appel.
 
