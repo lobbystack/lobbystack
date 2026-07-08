@@ -1252,7 +1252,12 @@ export default defineSchema({
   })
     .index("by_business_id_and_source_key", ["businessId", "sourceKey"])
     .index("by_sync_status_and_recorded_at", ["syncStatus", "recordedAt"])
-    .index("by_business_id_and_period_key", ["businessId", "periodKey"]),
+    .index("by_business_id_and_period_key", ["businessId", "periodKey"])
+    .index("by_business_id_and_period_key_and_usage_kind", [
+      "businessId",
+      "periodKey",
+      "usageKind",
+    ]),
 
   billing_transactions: defineTable({
     businessId: v.id("businesses"),

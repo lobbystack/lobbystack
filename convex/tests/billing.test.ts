@@ -2282,6 +2282,69 @@ describe("billing", () => {
     });
   });
 
+  it("resets stale annual billable quantities when an event is re-recorded on a monthly plan", async () => {
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-monthly-rerecord-clears-annual-billable",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+        billingInterval: "annual",
+        polarCustomerId: "cus_rerecord_interval",
+      });
+    });
+
+    const firstUsage = await t.mutation(internal.billing.recordAlertSmsUsage, {
+      businessId,
+      sourceKey: "alert_sms:rerecord:first",
+      quantity: 55,
+      recordedAt: "2026-04-12T15:00:00.000Z",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!account) {
+        throw new Error("Missing seeded billing account.");
+      }
+      await ctx.db.patch(account._id, {
+        billingInterval: "monthly",
+      });
+    });
+
+    const updatedUsage = await t.mutation(internal.billing.recordAlertSmsUsage, {
+      businessId,
+      sourceKey: "alert_sms:rerecord:first",
+      quantity: 55,
+      recordedAt: "2026-04-12T15:00:00.000Z",
+    });
+    const payload = await t.query(internal.billing.getUsageSyncPayload, {
+      usageEventId: updatedUsage.usageEventId,
+    });
+    const usageEvent = await t.run(async (ctx: TestContext) => {
+      return await ctx.db.get(firstUsage.usageEventId);
+    });
+
+    expect(updatedUsage.usageEventId).toBe(firstUsage.usageEventId);
+    expect(usageEvent).toMatchObject({
+      billingIntervalAtRecordTime: "monthly",
+      billableQuantity: 55,
+    });
+    expect(payload).toMatchObject({
+      quantity: 55,
+      billableQuantity: 55,
+      polarQuantity: 55,
+    });
+  });
+
   it("moves an updated usage event into the new billing month", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId } = await seedWorkspace(t, {
@@ -2737,7 +2800,6 @@ describe("billing", () => {
     await authed.action(api.billing.startCheckout, {
       businessId,
       target: "pro",
-      referralCode: "existing-partner",
     });
 
     expect(polarCheckoutsCreateMock).toHaveBeenCalledWith(

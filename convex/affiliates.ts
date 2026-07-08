@@ -674,7 +674,7 @@ export const bindAttribution = observedMutation({
 export const resolveCheckoutReferralDiscount = internalQuery({
   args: {
     businessId: v.id("businesses"),
-    referralCode: v.string(),
+    referralCode: v.optional(v.string()),
   },
   returns: v.union(
     v.null(),
@@ -687,7 +687,23 @@ export const resolveCheckoutReferralDiscount = internalQuery({
     const user = await requireCurrentUser(ctx);
     await requireTenantAdminMembership(ctx, args.businessId);
 
-    const referralCode = normalizeReferralCode(args.referralCode);
+    const existing = await getAttributionForBusiness(ctx, args.businessId);
+    if (existing) {
+      const referralCode = normalizeReferralCode(args.referralCode ?? existing.referralCode);
+      if (!referralCode || existing.referralCode !== referralCode) {
+        return null;
+      }
+      const profile = await getProfileByReferralCode(ctx, referralCode);
+      if (!profile || profile.status !== "active" || profile.userId === user._id) {
+        return null;
+      }
+      return {
+        referralCode,
+        affiliateProfileId: profile._id,
+      };
+    }
+
+    const referralCode = normalizeReferralCode(args.referralCode ?? "");
     if (!referralCode) {
       return null;
     }
@@ -695,16 +711,6 @@ export const resolveCheckoutReferralDiscount = internalQuery({
     const profile = await getProfileByReferralCode(ctx, referralCode);
     if (!profile || profile.status !== "active" || profile.userId === user._id) {
       return null;
-    }
-
-    const existing = await getAttributionForBusiness(ctx, args.businessId);
-    if (existing) {
-      return existing.referralCode === referralCode
-        ? {
-            referralCode,
-            affiliateProfileId: profile._id,
-          }
-        : null;
     }
 
     const business = await ctx.db.get(args.businessId);

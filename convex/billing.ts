@@ -821,6 +821,34 @@ function shouldUseMonthlyBillableUsage(input: {
   return input.usageKind !== "ai_sms_segments";
 }
 
+function shouldRecomputeMonthlyBillableUsage(input: {
+  usageKind: BillingUsageKind;
+  currentPlan: BillingPlanSlug;
+  currentBillingInterval: BillingInterval | null;
+  existingUsageEvent?: Doc<"billing_usage_events"> | null;
+}): boolean {
+  if (
+    shouldUseMonthlyBillableUsage({
+      plan: input.currentPlan,
+      billingInterval: input.currentBillingInterval,
+      usageKind: input.usageKind,
+    })
+  ) {
+    return true;
+  }
+
+  const existingUsageEvent = input.existingUsageEvent ?? null;
+  if (!existingUsageEvent) {
+    return false;
+  }
+
+  return shouldUseMonthlyBillableUsage({
+    plan: existingUsageEvent.planAtRecordTime ?? "free_cloud",
+    billingInterval: existingUsageEvent.billingIntervalAtRecordTime ?? null,
+    usageKind: existingUsageEvent.usageKind,
+  });
+}
+
 async function recomputeMonthlyBillableUsageForPeriod(
   ctx: MutationCtx,
   args: {
@@ -832,12 +860,14 @@ async function recomputeMonthlyBillableUsageForPeriod(
   const events = (
     await ctx.db
       .query("billing_usage_events")
-      .withIndex("by_business_id_and_period_key", (q) =>
-        q.eq("businessId", args.businessId).eq("periodKey", args.periodKey),
+      .withIndex("by_business_id_and_period_key_and_usage_kind", (q) =>
+        q
+          .eq("businessId", args.businessId)
+          .eq("periodKey", args.periodKey)
+          .eq("usageKind", args.usageKind),
       )
       .collect()
   )
-    .filter((event) => event.usageKind === args.usageKind)
     .sort((left, right) => {
       const recordedOrder = left.recordedAt.localeCompare(right.recordedAt);
       return recordedOrder !== 0 ? recordedOrder : left._creationTime - right._creationTime;
@@ -914,6 +944,12 @@ async function upsertUsageEventInTx(
   const existingPeriodKey = existingUsageEvent?.periodKey ?? null;
   const periodChanged =
     existingPeriodKey !== null && existingPeriodKey !== snapshot.periodKey;
+  const shouldRecomputeBillableUsage = shouldRecomputeMonthlyBillableUsage({
+    usageKind: args.usageKind,
+    currentPlan: snapshot.plan,
+    currentBillingInterval: billingInterval,
+    existingUsageEvent,
+  });
 
   if (periodChanged && existingUsageEvent) {
     const previousUsageMonth = await getBillingUsageMonth(ctx, {
@@ -980,21 +1016,24 @@ async function upsertUsageEventInTx(
       planAtRecordTime: snapshot.plan,
       ...(billingInterval ? { billingIntervalAtRecordTime: billingInterval } : {}),
       activeAddonsAtRecordTime: snapshot.activeAddons,
+      billableQuantity: args.quantity,
       recordedAt: args.recordedAt,
       syncStatus: syncNeeded ? "pending" : "skipped",
     });
 
-    await recomputeMonthlyBillableUsageForPeriod(ctx, {
-      businessId: args.businessId,
-      periodKey: existingUsageEvent.periodKey,
-      usageKind: args.usageKind,
-    });
-    if (periodChanged) {
+    if (shouldRecomputeBillableUsage) {
       await recomputeMonthlyBillableUsageForPeriod(ctx, {
         businessId: args.businessId,
-        periodKey: snapshot.periodKey,
+        periodKey: existingUsageEvent.periodKey,
         usageKind: args.usageKind,
       });
+      if (periodChanged) {
+        await recomputeMonthlyBillableUsageForPeriod(ctx, {
+          businessId: args.businessId,
+          periodKey: snapshot.periodKey,
+          usageKind: args.usageKind,
+        });
+      }
     }
 
     return {
@@ -1014,15 +1053,18 @@ async function upsertUsageEventInTx(
     planAtRecordTime: snapshot.plan,
     ...(billingInterval ? { billingIntervalAtRecordTime: billingInterval } : {}),
     activeAddonsAtRecordTime: snapshot.activeAddons,
+    billableQuantity: args.quantity,
     recordedAt: args.recordedAt,
     syncStatus: syncNeeded ? "pending" : "skipped",
   });
 
-  await recomputeMonthlyBillableUsageForPeriod(ctx, {
-    businessId: args.businessId,
-    periodKey: snapshot.periodKey,
-    usageKind: args.usageKind,
-  });
+  if (shouldRecomputeBillableUsage) {
+    await recomputeMonthlyBillableUsageForPeriod(ctx, {
+      businessId: args.businessId,
+      periodKey: snapshot.periodKey,
+      usageKind: args.usageKind,
+    });
+  }
 
   return {
     usageEventId,
@@ -2332,7 +2374,7 @@ export const startCheckout = action({
         ? snapshot.billingInterval ?? "monthly"
         : billingInterval;
     let referralDiscount: CheckoutReferralDiscount | null = null;
-    if (isHostedCheckoutTarget(args.target) && args.referralCode) {
+    if (isHostedCheckoutTarget(args.target)) {
       const eligibility: {
         referralCode: string;
         affiliateProfileId: Id<"affiliate_profiles">;
@@ -2340,7 +2382,7 @@ export const startCheckout = action({
         internal.affiliates.resolveCheckoutReferralDiscount,
         {
           businessId: args.businessId,
-          referralCode: args.referralCode,
+          ...(args.referralCode ? { referralCode: args.referralCode } : {}),
         },
       );
       if (eligibility) {
