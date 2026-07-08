@@ -16,12 +16,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm --filter landing build
+      - name: Start landing preview server
+        run: |
+          npx --yes serve apps/landing/dist -l 4173 &
+          for _ in $(seq 1 30); do
+            curl -sf http://127.0.0.1:4173/ > /dev/null && exit 0
+            sleep 1
+          done
+          echo "Landing preview server failed to start"
+          exit 1
       - uses: lycheeverse/lychee-action@v2
         with:
           args: >-
             --verbose
             --no-progress
-            --base-url https://lobbystack.com
+            --base-url http://127.0.0.1:4173
+            --remap '^https://lobbystack\.com(.*) http://127.0.0.1:4173$1'
             --exclude '^https://app\.lobbystack\.com/'
             --exclude '^https://voice\.lobbystack\.com/web-call/'
             --exclude '^https://voice-dev\.lobbystack\.com/web-call/'

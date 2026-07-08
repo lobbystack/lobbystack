@@ -18,7 +18,7 @@ Most of those callers do not wait. They call the next business.
 
 That is why [AI receptionists](/features/) are becoming an easy product to recommend. The problem is obvious, the value is easy to understand, and the customer does not need to replace their whole business system to get started.
 
-The LobbyStack Affiliate Program gives you a simple way to earn recurring revenue by helping businesses answer more calls, capture more leads, and book more appointments.
+The [LobbyStack Affiliate Program](/affiliate-program/) gives you a simple way to earn recurring revenue by helping businesses answer more calls, capture more leads, and book more appointments.
 
 ## What is the LobbyStack Affiliate Program?
 
@@ -450,4 +450,4 @@ LobbyStack makes that possible with an open-source AI receptionist built for rea
 
 If you already reach business owners, agencies, consultants, operators, or local service providers, the LobbyStack Affiliate Program gives you a simple way to turn those relationships into recurring revenue.
 
-Join the LobbyStack Affiliate Program and start earning 20% commission for 12 months on every customer you refer.
+[Join the LobbyStack Affiliate Program](/affiliate-program/) and start earning 20% commission for 12 months on every customer you refer.

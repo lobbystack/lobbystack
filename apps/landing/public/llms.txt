@@ -12,9 +12,11 @@ The product combines AI voice, appointment scheduling, business knowledge, and h
 - [Features](https://lobbystack.com/features/): Detailed feature page covering workflows, booking, quoting, follow-up, transfers, dashboard, and included capabilities.
 - [Help Center](https://docs.lobbystack.com/introduction): Primary setup, support, and product documentation resource for configuring and using LobbyStack.
 - [Pricing](https://lobbystack.com/pricing/): Free, Starter, Pro, and Enterprise pricing for AI receptionist coverage, voice minutes, annual billing, SMS alerts, knowledge base, and support.
+- [Affiliate Program](https://lobbystack.com/affiliate-program/): Refer businesses to hosted LobbyStack plans and earn 20% of their payments for 12 months. Referrals save 5% at signup.
 - [Missed Call Revenue Calculator](https://lobbystack.com/missed-call-revenue-calculator/): Interactive calculator for estimating revenue at risk from unanswered contractor calls.
 - [Features markdown](https://lobbystack.com/features.md): AI-readable markdown summary of LobbyStack features.
 - [Pricing markdown](https://lobbystack.com/pricing.md): AI-readable markdown summary of plans, included limits, plan features, and overage rates.
+- [Affiliate program markdown](https://lobbystack.com/affiliate-program.md): AI-readable markdown summary of the LobbyStack Affiliate Program terms and onboarding.
 - [Blog](https://lobbystack.com/blog/): Product updates, research, resources and articles about AI agents, and business knowledge systems.
 - [Sitemap](https://lobbystack.com/sitemap-index.xml): Canonical sitemap for search engines and crawlers.
 - [Schema map](https://lobbystack.com/schemamap.xml): Structured-data endpoint map for agents.

@@ -12,7 +12,7 @@ canonicalSlug: "ai-receptionist-affiliate-program"
 
 Si vous cherchez un **programme d'affiliation pour réceptionniste IA** qui mérite une recommandation, partez de l'acheteur. Un opérateur local veut répondre aux appels, prendre des rendez-vous, gérer les SMS et comprendre pourquoi il peut confier de vrais clients à une automatisation. LobbyStack vous donne cet argument.
 
-LobbyStack paie aux affiliés 20 % des paiements admissibles des clients recommandés pendant la première année. Vous pouvez promouvoir le réceptionniste IA hébergé auprès des opérateurs qui veulent un accueil fonctionnel cette semaine, et montrer le code open source aux acheteurs techniques qui demandent comment le système fonctionne.
+LobbyStack paie aux affiliés 20 % des paiements admissibles des clients recommandés pendant la première année. Consultez le [programme d'affiliation LobbyStack](/fr/affiliate-program/) pour les conditions, les paiements et la mise en route. Vous pouvez promouvoir le réceptionniste IA hébergé auprès des opérateurs qui veulent un accueil fonctionnel cette semaine, et montrer le code open source aux acheteurs techniques qui demandent comment le système fonctionne.
 
 ## Le programme en clair
 
@@ -180,7 +180,7 @@ Quatre points à retenir :
 - LobbyStack offre un réceptionniste IA hébergé et une voie open source/auto-hébergée.
 - Les meilleures références viennent de vrais problèmes d'appels, de réservation et d'accueil.
 
-Ouvrez la page affiliation dans votre tableau de bord LobbyStack, ajoutez votre courriel PayPal et partagez votre lien avec des opérateurs qui ont besoin d'un meilleur accueil.
+[Rejoignez le programme d'affiliation LobbyStack](/fr/affiliate-program/), ajoutez votre courriel PayPal dans votre tableau de bord et partagez votre lien avec des opérateurs qui ont besoin d'un meilleur accueil.
 
 ## Sources
 

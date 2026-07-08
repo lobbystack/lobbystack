@@ -1,0 +1,65 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { AffiliateProgramFaqSection } from "@/components/affiliate/AffiliateProgramFaqSection"
+import { AffiliateProgramSections } from "@/components/affiliate/AffiliateProgramSections"
+import { CtaSection } from "@/components/CtaSection"
+import { Footer } from "@/components/Footer"
+import { getAffiliateProgramFaqs } from "@/lib/affiliate-program-faqs"
+import {
+  breadcrumbJsonLd,
+  faqPageJsonLd,
+  organizationJsonLd,
+  softwareApplicationJsonLd,
+  webSiteJsonLd,
+} from "@/lib/seo"
+import { assertLocale, getCopy, getRouteSeo, localizePath, type Locale } from "@/i18n"
+
+interface Props {
+  locale?: Locale
+}
+
+const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
+const copy = getCopy(locale)
+const canonicalPath = localizePath(locale, "/affiliate-program/")
+const seo = getRouteSeo({ locale, path: "/affiliate-program/" })
+const pageTitle =
+  locale === "fr" ? "Programme d'affiliation" : "Affiliate Program"
+const affiliateOgImage =
+  "/illustrations/open-source-ai-receptionist-affiliate-program-hero.webp"
+---
+
+<Layout
+  seo={{
+    ...seo,
+    canonicalPath,
+    locale,
+    image: affiliateOgImage,
+    imageAlt:
+      locale === "fr"
+        ? "Programme d'affiliation LobbyStack"
+        : "LobbyStack Affiliate Program",
+    jsonLd: [
+      organizationJsonLd({ locale }),
+      webSiteJsonLd({ locale }),
+      softwareApplicationJsonLd({ locale }),
+      breadcrumbJsonLd([
+        { name: copy.common.home, path: localizePath(locale, "/") },
+        { name: pageTitle, path: canonicalPath },
+      ]),
+      faqPageJsonLd({
+        path: canonicalPath,
+        faqs: getAffiliateProgramFaqs(locale),
+        locale,
+      }),
+    ],
+  }}
+>
+  <Navbar locale={locale} />
+  <main id="main-content">
+    <AffiliateProgramSections client:load locale={locale} />
+    <AffiliateProgramFaqSection locale={locale} />
+    <CtaSection locale={locale} />
+  </main>
+  <Footer locale={locale} />
+</Layout>

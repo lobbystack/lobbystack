@@ -12,6 +12,7 @@ const footerCopy = {
     comparison: "Comparison",
     blog: "Blog",
     calculator: "Missed Call Calculator",
+    affiliateProgram: "Affiliate Program",
     company: "Company",
     about: "About",
     contact: "Contact",
@@ -34,6 +35,7 @@ const footerCopy = {
     comparison: "Comparaison",
     blog: "Blog",
     calculator: "Calculateur d'appels manqués",
+    affiliateProgram: "Programme d'affiliation",
     company: "Entreprise",
     about: "À propos",
     contact: "Contact",
@@ -72,6 +74,10 @@ const footerSections = (locale: Locale) => {
         {
           label: copy.calculator,
           href: "/missed-call-revenue-calculator/",
+        },
+        {
+          label: copy.affiliateProgram,
+          href: "/affiliate-program/",
         },
         { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
       ],

@@ -9,6 +9,7 @@ import {
   ChevronDown,
   DoorOpen,
   ExternalLink,
+  Gift,
   Hammer,
   History,
   Home,
@@ -63,6 +64,7 @@ const labels = {
     helpCenter: "Help Center",
     comparison: "Comparison",
     calculator: "Missed call calculator",
+    affiliateProgram: "Affiliate Program",
   },
   fr: {
     solutions: "Solutions",
@@ -76,6 +78,7 @@ const labels = {
     helpCenter: "Centre d'aide",
     comparison: "Comparaison",
     calculator: "Calculateur d'appels manqués",
+    affiliateProgram: "Programme d'affiliation",
   },
 } satisfies Record<Locale, Record<string, string>>
 
@@ -139,6 +142,11 @@ const resourceLinks = (locale: Locale) =>
       label: labels[locale].calculator,
       href: "/missed-call-revenue-calculator/",
       icon: Calculator,
+    },
+    {
+      label: labels[locale].affiliateProgram,
+      href: "/affiliate-program/",
+      icon: Gift,
     },
   ] satisfies NavChildLink[]
 
