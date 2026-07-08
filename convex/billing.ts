@@ -954,6 +954,80 @@ function getUsageEventBillableUpdate(args: {
   };
 }
 
+async function getUsageEventSyncBillableQuantity(
+  ctx: QueryCtx,
+  args: {
+    usageEvent: Doc<"billing_usage_events">;
+    account: Doc<"billing_accounts">;
+  },
+): Promise<number> {
+  if (args.usageEvent.billableQuantity !== undefined) {
+    return args.usageEvent.billableQuantity;
+  }
+
+  const accountPlan = args.account.currentPlan ?? "free_cloud";
+  const plan = args.usageEvent.planAtRecordTime ?? accountPlan;
+  const billingInterval =
+    args.usageEvent.billingIntervalAtRecordTime ?? args.account.billingInterval ?? null;
+  if (
+    !shouldTrackMonthlyBillableUsage({
+      plan,
+      billingInterval,
+      usageKind: args.usageEvent.usageKind,
+    })
+  ) {
+    return args.usageEvent.quantity;
+  }
+
+  const usageEvents = (
+    await ctx.db
+      .query("billing_usage_events")
+      .withIndex("by_business_id_and_period_key", (q) =>
+        q
+          .eq("businessId", args.usageEvent.businessId)
+          .eq("periodKey", args.usageEvent.periodKey),
+      )
+      .collect()
+  )
+    .filter((event) => event.usageKind === args.usageEvent.usageKind)
+    .sort((left, right) => {
+      const recordedOrder = left.recordedAt.localeCompare(right.recordedAt);
+      return recordedOrder !== 0 ? recordedOrder : left._creationTime - right._creationTime;
+    });
+
+  let runningQuantity = 0;
+  for (const event of usageEvents) {
+    const eventPlan = event.planAtRecordTime ?? accountPlan;
+    const eventBillingInterval =
+      event.billingIntervalAtRecordTime ?? args.account.billingInterval ?? null;
+    if (
+      !shouldTrackMonthlyBillableUsage({
+        plan: eventPlan,
+        billingInterval: eventBillingInterval,
+        usageKind: event.usageKind,
+      })
+    ) {
+      continue;
+    }
+
+    const includedQuantity = getIncludedQuantityForKind(eventPlan, event.usageKind);
+    if (includedQuantity === null) {
+      continue;
+    }
+
+    const previousBillableTotal = Math.max(0, runningQuantity - includedQuantity);
+    runningQuantity += event.quantity;
+    const nextBillableTotal = Math.max(0, runningQuantity - includedQuantity);
+    const billableQuantity = nextBillableTotal - previousBillableTotal;
+
+    if (event._id === args.usageEvent._id) {
+      return billableQuantity;
+    }
+  }
+
+  return args.usageEvent.quantity;
+}
+
 async function upsertUsageEventInTx(
   ctx: MutationCtx,
   args: {
@@ -2883,7 +2957,10 @@ export const getUsageSyncPayload = internalQuery({
       return null;
     }
 
-    const billableQuantity = usageEvent.billableQuantity ?? usageEvent.quantity;
+    const billableQuantity = await getUsageEventSyncBillableQuantity(ctx, {
+      usageEvent,
+      account,
+    });
     const meteredUsage = getPolarMeteredUsagePayload(
       usageEvent.usageKind,
       billableQuantity,

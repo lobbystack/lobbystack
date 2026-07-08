@@ -2248,6 +2248,68 @@ describe("billing", () => {
     });
   });
 
+  it("derives annual billable payloads for legacy pending usage events", async () => {
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-annual-legacy-pending-usage",
+      deploymentMode: "cloud",
+    });
+
+    const { firstUsageEventId, secondUsageEventId } = await t.run(
+      async (ctx: TestContext) => {
+        await seedBillingAccount(ctx, {
+          businessId,
+          currentPlan: "starter",
+          billingInterval: "annual",
+          polarCustomerId: "cus_annual_legacy_pending_usage",
+        });
+        const firstUsageEventId = await ctx.db.insert("billing_usage_events", {
+          businessId,
+          periodKey: "2026-04",
+          sourceKey: "alert_sms:legacy:first",
+          usageKind: "alert_sms_segments",
+          quantity: 40,
+          planAtRecordTime: "starter",
+          recordedAt: "2026-04-12T15:00:00.000Z",
+          syncStatus: "pending",
+        });
+        const secondUsageEventId = await ctx.db.insert("billing_usage_events", {
+          businessId,
+          periodKey: "2026-04",
+          sourceKey: "alert_sms:legacy:second",
+          usageKind: "alert_sms_segments",
+          quantity: 15,
+          planAtRecordTime: "starter",
+          recordedAt: "2026-04-12T15:05:00.000Z",
+          syncStatus: "pending",
+        });
+        return { firstUsageEventId, secondUsageEventId };
+      },
+    );
+
+    const [firstPayload, secondPayload] = await Promise.all([
+      t.query(internal.billing.getUsageSyncPayload, {
+        usageEventId: firstUsageEventId,
+      }),
+      t.query(internal.billing.getUsageSyncPayload, {
+        usageEventId: secondUsageEventId,
+      }),
+    ]);
+
+    expect(firstPayload).toMatchObject({
+      quantity: 40,
+      billableQuantity: 0,
+      polarQuantity: 0,
+    });
+    expect(secondPayload).toMatchObject({
+      quantity: 15,
+      billableQuantity: 5,
+      polarQuantity: 5,
+    });
+  });
+
   it("records negative annual billable adjustments when usage corrections reduce overage", async () => {
     process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
 
