@@ -225,6 +225,27 @@ async function scheduleCommissionBackfillForBusiness(
   }
 }
 
+async function createAttributionForBusiness(
+  ctx: MutationCtx,
+  args: {
+    affiliateProfileId: Id<"affiliate_profiles">;
+    businessId: Id<"businesses">;
+    referredUserId: Id<"users">;
+    referralCode: string;
+  },
+): Promise<void> {
+  await ctx.db.insert("affiliate_attributions", {
+    affiliateProfileId: args.affiliateProfileId,
+    businessId: args.businessId,
+    referredUserId: args.referredUserId,
+    referralCode: args.referralCode,
+    source: "via",
+    attributedAt: nowIso(),
+  });
+  await adjustStatsForProfile(ctx, args.affiliateProfileId, { referralCount: 1 });
+  await scheduleCommissionBackfillForBusiness(ctx, args.businessId);
+}
+
 async function getVoidedSourceBySourceKey(
   ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">,
   sourceKey: string,
@@ -657,21 +678,17 @@ export const bindAttribution = observedMutation({
     if (existing) {
       return { bound: false, reason: "already_attributed" };
     }
-    await ctx.db.insert("affiliate_attributions", {
+    await createAttributionForBusiness(ctx, {
       affiliateProfileId: profile._id,
       businessId: args.businessId,
       referredUserId: user._id,
       referralCode,
-      source: "via",
-      attributedAt: nowIso(),
     });
-    await adjustStatsForProfile(ctx, profile._id, { referralCount: 1 });
-    await scheduleCommissionBackfillForBusiness(ctx, args.businessId);
     return { bound: true, reason: "bound" };
   },
 });
 
-export const resolveCheckoutReferralDiscount = internalQuery({
+export const resolveCheckoutReferralDiscount = observedInternalMutation({
   args: {
     businessId: v.id("businesses"),
     referralCode: v.optional(v.string()),
@@ -689,10 +706,7 @@ export const resolveCheckoutReferralDiscount = internalQuery({
 
     const existing = await getAttributionForBusiness(ctx, args.businessId);
     if (existing) {
-      const referralCode = normalizeReferralCode(args.referralCode ?? existing.referralCode);
-      if (!referralCode || existing.referralCode !== referralCode) {
-        return null;
-      }
+      const referralCode = existing.referralCode;
       const profile = await getProfileByReferralCode(ctx, referralCode);
       if (!profile || profile.status !== "active" || profile.userId === user._id) {
         return null;
@@ -721,6 +735,13 @@ export const resolveCheckoutReferralDiscount = internalQuery({
     if (ONBOARDING_STAGE_INDEX[business.onboardingStage] > ONBOARDING_STAGE_INDEX.attribution) {
       return null;
     }
+
+    await createAttributionForBusiness(ctx, {
+      affiliateProfileId: profile._id,
+      businessId: args.businessId,
+      referredUserId: user._id,
+      referralCode,
+    });
 
     return {
       referralCode,

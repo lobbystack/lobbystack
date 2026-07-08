@@ -2226,6 +2226,7 @@ describe("billing", () => {
     expect(state.usageMonth).toMatchObject({
       alertSmsSegmentsUsed: 55,
       alertSmsSegmentsIncluded: 50,
+      alertSmsSegmentsBillableUsed: 5,
     });
     expect(state.firstEvent).toMatchObject({
       billingIntervalAtRecordTime: "annual",
@@ -2329,14 +2330,25 @@ describe("billing", () => {
     const payload = await t.query(internal.billing.getUsageSyncPayload, {
       usageEventId: updatedUsage.usageEventId,
     });
-    const usageEvent = await t.run(async (ctx: TestContext) => {
-      return await ctx.db.get(firstUsage.usageEventId);
+    const { usageEvent, usageMonth } = await t.run(async (ctx: TestContext) => {
+      const usageEvent = await ctx.db.get(firstUsage.usageEventId);
+      const usageMonth = await ctx.db
+        .query("billing_usage_months")
+        .withIndex("by_business_id_and_period_key", (q) =>
+          q.eq("businessId", businessId).eq("periodKey", "2026-04"),
+        )
+        .unique();
+      return { usageEvent, usageMonth };
     });
 
     expect(updatedUsage.usageEventId).toBe(firstUsage.usageEventId);
     expect(usageEvent).toMatchObject({
       billingIntervalAtRecordTime: "monthly",
       billableQuantity: 55,
+    });
+    expect(usageMonth).toMatchObject({
+      alertSmsSegmentsUsed: 55,
+      alertSmsSegmentsBillableUsed: 0,
     });
     expect(payload).toMatchObject({
       quantity: 55,
@@ -2749,6 +2761,16 @@ describe("billing", () => {
         }),
       }),
     );
+    const attribution = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("affiliate_attributions")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(attribution).toMatchObject({
+      businessId,
+      referralCode: "partner-code",
+    });
   });
 
   it("applies the referral discount for attributed free customers who upgrade later", async () => {
@@ -2800,6 +2822,7 @@ describe("billing", () => {
     await authed.action(api.billing.startCheckout, {
       businessId,
       target: "pro",
+      referralCode: "stale-later-click",
     });
 
     expect(polarCheckoutsCreateMock).toHaveBeenCalledWith(

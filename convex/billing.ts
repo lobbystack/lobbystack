@@ -546,6 +546,25 @@ function getUsageQuantityField(
   }
 }
 
+function getUsageBillableQuantityField(
+  usageKind: BillingUsageKind,
+):
+  | "voiceSecondsBillableUsed"
+  | "alertSmsSegmentsBillableUsed"
+  | "outboundCallAttemptsBillableUsed"
+  | null {
+  switch (usageKind) {
+    case "voice_seconds":
+      return "voiceSecondsBillableUsed";
+    case "alert_sms_segments":
+      return "alertSmsSegmentsBillableUsed";
+    case "outbound_call_attempts":
+      return "outboundCallAttemptsBillableUsed";
+    case "ai_sms_segments":
+      return null;
+  }
+}
+
 function getBillableVoiceUsageSeconds(durationSeconds: number): number {
   const normalizedDurationSeconds = Math.max(0, durationSeconds);
   return normalizedDurationSeconds < MIN_BILLABLE_VOICE_DURATION_SECONDS
@@ -740,6 +759,7 @@ function buildUsageMonthPatch(args: {
   usage: Doc<"billing_usage_months"> | null;
   usageKind: BillingUsageKind;
   deltaQuantity: number;
+  deltaBillableQuantity?: number;
   recordedAt: string;
 }) {
   const entitlements = getPlanEntitlements(args.plan);
@@ -747,6 +767,10 @@ function buildUsageMonthPatch(args: {
   const currentAlertSmsSegments = args.usage?.alertSmsSegmentsUsed ?? 0;
   const currentOutboundCallAttempts = args.usage?.outboundCallAttemptsUsed ?? 0;
   const currentAiSmsSegments = args.usage?.aiSmsSegmentsUsed ?? 0;
+  const currentVoiceSecondsBillable = args.usage?.voiceSecondsBillableUsed ?? 0;
+  const currentAlertSmsSegmentsBillable = args.usage?.alertSmsSegmentsBillableUsed ?? 0;
+  const currentOutboundCallAttemptsBillable =
+    args.usage?.outboundCallAttemptsBillableUsed ?? 0;
 
   const nextVoiceSeconds =
     currentVoiceSeconds + (args.usageKind === "voice_seconds" ? args.deltaQuantity : 0);
@@ -758,6 +782,19 @@ function buildUsageMonthPatch(args: {
     (args.usageKind === "outbound_call_attempts" ? args.deltaQuantity : 0);
   const nextAiSmsSegments =
     currentAiSmsSegments + (args.usageKind === "ai_sms_segments" ? args.deltaQuantity : 0);
+  const nextVoiceSecondsBillable =
+    currentVoiceSecondsBillable +
+    (args.usageKind === "voice_seconds" ? (args.deltaBillableQuantity ?? 0) : 0);
+  const nextAlertSmsSegmentsBillable =
+    currentAlertSmsSegmentsBillable +
+    (args.usageKind === "alert_sms_segments"
+      ? (args.deltaBillableQuantity ?? 0)
+      : 0);
+  const nextOutboundCallAttemptsBillable =
+    currentOutboundCallAttemptsBillable +
+    (args.usageKind === "outbound_call_attempts"
+      ? (args.deltaBillableQuantity ?? 0)
+      : 0);
 
   return {
     planAtSnapshot: args.plan,
@@ -765,6 +802,9 @@ function buildUsageMonthPatch(args: {
     alertSmsSegmentsUsed: Math.max(0, nextAlertSmsSegments),
     outboundCallAttemptsUsed: Math.max(0, nextOutboundCallAttempts),
     aiSmsSegmentsUsed: Math.max(0, nextAiSmsSegments),
+    voiceSecondsBillableUsed: Math.max(0, nextVoiceSecondsBillable),
+    alertSmsSegmentsBillableUsed: Math.max(0, nextAlertSmsSegmentsBillable),
+    outboundCallAttemptsBillableUsed: Math.max(0, nextOutboundCallAttemptsBillable),
     ...(entitlements.voiceSecondsIncluded !== null
       ? { voiceSecondsIncluded: entitlements.voiceSecondsIncluded }
       : {}),
@@ -821,95 +861,97 @@ function shouldUseMonthlyBillableUsage(input: {
   return input.usageKind !== "ai_sms_segments";
 }
 
-function shouldRecomputeMonthlyBillableUsage(input: {
+function shouldTrackMonthlyBillableUsage(input: {
+  plan: BillingPlanSlug;
+  billingInterval: BillingInterval | null;
   usageKind: BillingUsageKind;
-  currentPlan: BillingPlanSlug;
-  currentBillingInterval: BillingInterval | null;
-  existingUsageEvent?: Doc<"billing_usage_events"> | null;
 }): boolean {
-  if (
-    shouldUseMonthlyBillableUsage({
-      plan: input.currentPlan,
-      billingInterval: input.currentBillingInterval,
-      usageKind: input.usageKind,
-    })
-  ) {
-    return true;
-  }
-
-  const existingUsageEvent = input.existingUsageEvent ?? null;
-  if (!existingUsageEvent) {
-    return false;
-  }
-
-  return shouldUseMonthlyBillableUsage({
-    plan: existingUsageEvent.planAtRecordTime ?? "free_cloud",
-    billingInterval: existingUsageEvent.billingIntervalAtRecordTime ?? null,
-    usageKind: existingUsageEvent.usageKind,
-  });
+  return (
+    shouldUseMonthlyBillableUsage(input) &&
+    getUsageBillableQuantityField(input.usageKind) !== null &&
+    getIncludedQuantityForKind(input.plan, input.usageKind) !== null
+  );
 }
 
-async function recomputeMonthlyBillableUsageForPeriod(
-  ctx: MutationCtx,
-  args: {
-    businessId: Id<"businesses">;
-    periodKey: string;
-    usageKind: BillingUsageKind;
-  },
-): Promise<void> {
-  const events = (
-    await ctx.db
-      .query("billing_usage_events")
-      .withIndex("by_business_id_and_period_key_and_usage_kind", (q) =>
-        q
-          .eq("businessId", args.businessId)
-          .eq("periodKey", args.periodKey)
-          .eq("usageKind", args.usageKind),
-      )
-      .collect()
-  )
-    .sort((left, right) => {
-      const recordedOrder = left.recordedAt.localeCompare(right.recordedAt);
-      return recordedOrder !== 0 ? recordedOrder : left._creationTime - right._creationTime;
-    });
-
-  let runningQuantity = 0;
-  for (const event of events) {
-    const plan = event.planAtRecordTime ?? "free_cloud";
-    const billingInterval = event.billingIntervalAtRecordTime ?? null;
-    let billableQuantity = event.quantity;
-
-    if (
-      shouldUseMonthlyBillableUsage({
-        plan,
-        billingInterval,
-        usageKind: event.usageKind,
-      })
-    ) {
-      const includedQuantity = getIncludedQuantityForKind(plan, event.usageKind);
-      if (includedQuantity !== null) {
-        const previousBillableTotal = Math.max(0, runningQuantity - includedQuantity);
-        const nextRunningQuantity = runningQuantity + event.quantity;
-        const nextBillableTotal = Math.max(0, nextRunningQuantity - includedQuantity);
-        billableQuantity = Math.max(0, nextBillableTotal - previousBillableTotal);
-      }
-    }
-
-    runningQuantity += event.quantity;
-
-    if (event.billableQuantity !== billableQuantity) {
-      await ctx.db.patch(event._id, {
-        billableQuantity,
-        syncStatus: shouldSyncUsageEvent({
-          plan,
-          activeAddons: getNormalizedAddons(event.activeAddonsAtRecordTime),
-          usageKind: event.usageKind,
-        })
-          ? "pending"
-          : "skipped",
-      });
-    }
+function getStoredMonthlyBillableQuantity(
+  usageEvent: Doc<"billing_usage_events"> | null,
+): number {
+  if (!usageEvent) {
+    return 0;
   }
+  if (
+    !shouldTrackMonthlyBillableUsage({
+      plan: usageEvent.planAtRecordTime ?? "free_cloud",
+      billingInterval: usageEvent.billingIntervalAtRecordTime ?? null,
+      usageKind: usageEvent.usageKind,
+    })
+  ) {
+    return 0;
+  }
+  return Math.max(0, usageEvent.billableQuantity ?? 0);
+}
+
+function getUsageEventBillableUpdate(args: {
+  plan: BillingPlanSlug;
+  billingInterval: BillingInterval | null;
+  usage: Doc<"billing_usage_months"> | null;
+  usageKind: BillingUsageKind;
+  quantity: number;
+  existingUsageEvent: Doc<"billing_usage_events"> | null;
+  periodChanged: boolean;
+}): {
+  billableQuantity: number;
+  currentPeriodDeltaBillableQuantity: number;
+} {
+  const previousBillableQuantity =
+    !args.periodChanged ? getStoredMonthlyBillableQuantity(args.existingUsageEvent) : 0;
+
+  if (
+    !shouldTrackMonthlyBillableUsage({
+      plan: args.plan,
+      billingInterval: args.billingInterval,
+      usageKind: args.usageKind,
+    })
+  ) {
+    return {
+      billableQuantity: args.quantity,
+      currentPeriodDeltaBillableQuantity: -previousBillableQuantity,
+    };
+  }
+
+  const includedQuantity = getIncludedQuantityForKind(args.plan, args.usageKind);
+  const usageField = getUsageQuantityField(args.usageKind);
+  const billableField = getUsageBillableQuantityField(args.usageKind);
+  if (includedQuantity === null) {
+    return {
+      billableQuantity: args.quantity,
+      currentPeriodDeltaBillableQuantity: -previousBillableQuantity,
+    };
+  }
+
+  const existingQuantityInCurrentPeriod =
+    !args.periodChanged && args.existingUsageEvent
+      ? args.existingUsageEvent.quantity
+      : 0;
+  const usedBeforeEvent = Math.max(
+    0,
+    (args.usage?.[usageField] ?? 0) - existingQuantityInCurrentPeriod,
+  );
+  const currentUsed = args.usage?.[usageField] ?? 0;
+  const currentBillableTotal =
+    billableField && args.usage?.[billableField] !== undefined
+      ? Math.max(0, args.usage[billableField] ?? 0)
+      : Math.max(0, currentUsed - includedQuantity);
+  const nextBillableTotal = Math.max(
+    0,
+    usedBeforeEvent + args.quantity - includedQuantity,
+  );
+  const deltaBillableQuantity = nextBillableTotal - currentBillableTotal;
+
+  return {
+    billableQuantity: Math.max(0, previousBillableQuantity + deltaBillableQuantity),
+    currentPeriodDeltaBillableQuantity: deltaBillableQuantity,
+  };
 }
 
 async function upsertUsageEventInTx(
@@ -944,11 +986,23 @@ async function upsertUsageEventInTx(
   const existingPeriodKey = existingUsageEvent?.periodKey ?? null;
   const periodChanged =
     existingPeriodKey !== null && existingPeriodKey !== snapshot.periodKey;
-  const shouldRecomputeBillableUsage = shouldRecomputeMonthlyBillableUsage({
+  const {
+    billableQuantity,
+    currentPeriodDeltaBillableQuantity,
+  } = getUsageEventBillableUpdate({
+    plan: snapshot.plan,
+    billingInterval,
+    usage: snapshot.usage,
     usageKind: args.usageKind,
-    currentPlan: snapshot.plan,
-    currentBillingInterval: billingInterval,
     existingUsageEvent,
+    periodChanged,
+    quantity: args.quantity,
+  });
+  const previousBillableQuantity = getStoredMonthlyBillableQuantity(existingUsageEvent);
+  const tracksMonthlyBillableUsage = shouldTrackMonthlyBillableUsage({
+    plan: snapshot.plan,
+    billingInterval,
+    usageKind: args.usageKind,
   });
 
   if (periodChanged && existingUsageEvent) {
@@ -963,8 +1017,9 @@ async function upsertUsageEventInTx(
           existingUsageEvent.planAtRecordTime ??
           snapshot.plan,
         usage: previousUsageMonth,
-        usageKind: args.usageKind,
+        usageKind: existingUsageEvent.usageKind,
         deltaQuantity: -existingUsageEvent.quantity,
+        deltaBillableQuantity: -previousBillableQuantity,
         recordedAt: existingUsageEvent.recordedAt,
       });
       await ctx.db.patch(previousUsageMonth._id, previousMonthPatch);
@@ -977,6 +1032,7 @@ async function upsertUsageEventInTx(
       usage: null,
       usageKind: args.usageKind,
       deltaQuantity: args.quantity,
+      deltaBillableQuantity: tracksMonthlyBillableUsage ? billableQuantity : 0,
       recordedAt: args.recordedAt,
     });
 
@@ -991,15 +1047,17 @@ async function upsertUsageEventInTx(
       usage: snapshot.usage,
       usageKind: args.usageKind,
       deltaQuantity: args.quantity,
+      deltaBillableQuantity: tracksMonthlyBillableUsage ? billableQuantity : 0,
       recordedAt: args.recordedAt,
     });
     await ctx.db.patch(snapshot.usage._id, monthPatch);
-  } else if (deltaQuantity !== 0) {
+  } else if (deltaQuantity !== 0 || currentPeriodDeltaBillableQuantity !== 0) {
     const monthPatch = buildUsageMonthPatch({
       plan: snapshot.plan,
       usage: snapshot.usage,
       usageKind: args.usageKind,
       deltaQuantity,
+      deltaBillableQuantity: currentPeriodDeltaBillableQuantity,
       recordedAt: args.recordedAt,
     });
     await ctx.db.patch(snapshot.usage._id, monthPatch);
@@ -1016,25 +1074,10 @@ async function upsertUsageEventInTx(
       planAtRecordTime: snapshot.plan,
       ...(billingInterval ? { billingIntervalAtRecordTime: billingInterval } : {}),
       activeAddonsAtRecordTime: snapshot.activeAddons,
-      billableQuantity: args.quantity,
+      billableQuantity,
       recordedAt: args.recordedAt,
       syncStatus: syncNeeded ? "pending" : "skipped",
     });
-
-    if (shouldRecomputeBillableUsage) {
-      await recomputeMonthlyBillableUsageForPeriod(ctx, {
-        businessId: args.businessId,
-        periodKey: existingUsageEvent.periodKey,
-        usageKind: args.usageKind,
-      });
-      if (periodChanged) {
-        await recomputeMonthlyBillableUsageForPeriod(ctx, {
-          businessId: args.businessId,
-          periodKey: snapshot.periodKey,
-          usageKind: args.usageKind,
-        });
-      }
-    }
 
     return {
       usageEventId: existingUsageEvent._id,
@@ -1053,18 +1096,10 @@ async function upsertUsageEventInTx(
     planAtRecordTime: snapshot.plan,
     ...(billingInterval ? { billingIntervalAtRecordTime: billingInterval } : {}),
     activeAddonsAtRecordTime: snapshot.activeAddons,
-    billableQuantity: args.quantity,
+    billableQuantity,
     recordedAt: args.recordedAt,
     syncStatus: syncNeeded ? "pending" : "skipped",
   });
-
-  if (shouldRecomputeBillableUsage) {
-    await recomputeMonthlyBillableUsageForPeriod(ctx, {
-      businessId: args.businessId,
-      periodKey: snapshot.periodKey,
-      usageKind: args.usageKind,
-    });
-  }
 
   return {
     usageEventId,
@@ -2378,7 +2413,7 @@ export const startCheckout = action({
       const eligibility: {
         referralCode: string;
         affiliateProfileId: Id<"affiliate_profiles">;
-      } | null = await ctx.runQuery(
+      } | null = await ctx.runMutation(
         internal.affiliates.resolveCheckoutReferralDiscount,
         {
           businessId: args.businessId,
