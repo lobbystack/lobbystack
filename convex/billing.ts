@@ -888,7 +888,7 @@ function getStoredMonthlyBillableQuantity(
   ) {
     return 0;
   }
-  return Math.max(0, usageEvent.billableQuantity ?? 0);
+  return usageEvent.billableQuantity ?? 0;
 }
 
 function getUsageEventBillableUpdate(args: {

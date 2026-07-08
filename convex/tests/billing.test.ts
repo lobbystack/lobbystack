@@ -2327,6 +2327,43 @@ describe("billing", () => {
       billableQuantity: 10,
       polarQuantity: 10,
     });
+
+    await t.mutation(internal.billing.recordAlertSmsUsage, {
+      businessId,
+      sourceKey: "alert_sms:annual:correction:first",
+      quantity: 45,
+      recordedAt: "2026-04-12T15:15:00.000Z",
+    });
+
+    const [correctedFirstPayload, correctedState] = await Promise.all([
+      t.query(internal.billing.getUsageSyncPayload, {
+        usageEventId: firstUsage.usageEventId,
+      }),
+      t.run(async (ctx: TestContext) => {
+        const usageMonth = await ctx.db
+          .query("billing_usage_months")
+          .withIndex("by_business_id_and_period_key", (q) =>
+            q.eq("businessId", businessId).eq("periodKey", "2026-04"),
+          )
+          .unique();
+        const firstEvent = await ctx.db.get(firstUsage.usageEventId);
+        return { firstEvent, usageMonth };
+      }),
+    ]);
+
+    expect(correctedState.usageMonth).toMatchObject({
+      alertSmsSegmentsUsed: 55,
+      alertSmsSegmentsBillableUsed: 5,
+    });
+    expect(correctedState.firstEvent).toMatchObject({
+      quantity: 45,
+      billableQuantity: -5,
+    });
+    expect(correctedFirstPayload).toMatchObject({
+      quantity: 45,
+      billableQuantity: -5,
+      polarQuantity: -5,
+    });
   });
 
   it("keeps syncing full usage to Polar for monthly hosted plans", async () => {
