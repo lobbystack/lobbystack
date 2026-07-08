@@ -228,7 +228,7 @@ If your workflow is common and you need calls answered now, buy or try a hosted 
 
 If your workflow is unusual, regulated, or important enough to own, look hard at open source before building from nothing. For a landscape view of self-hosted options, see the [best open-source AI phone answering services](/blog/best-open-source-ai-phone-answering-services/) comparison.
 
-If you want a practical place to start, review [LobbyStack's features](/features/), compare [LobbyStack pricing](/pricing/), and look at the [open-source AI receptionist](/solutions/open-source-ai-receptionist/) and [self-hosted AI receptionist](/solutions/self-hosted-ai-receptionist/) options. If you are still early in vendor evaluation, this companion guide on [how to choose an AI receptionist](/blog/how-to-choose-an-ai-receptionist/) can help you test products with real call scenarios.
+If you want a practical place to start, review [LobbyStack's features](/features/), compare [LobbyStack pricing](/pricing/), and look at the [open-source AI receptionist](/solutions/open-source-ai-receptionist/) and [self-hosted AI receptionist](/solutions/self-hosted-ai-receptionist/) options. If you are still early in vendor evaluation, this companion guide on [how to choose an AI receptionist](/blog/how-to-choose-an-ai-receptionist/) can help you test products with real call scenarios. If you are tempted to wire n8n or Zapier into live calls, read [AI receptionist workflows without flowcharts](/blog/ai-receptionist-workflows/) first.
 
 The short version:
 

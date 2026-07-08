@@ -113,7 +113,7 @@ L'open source lève le mystère des licences. Il ne supprime pas :
 - **La réflexion conformité.** Enregistrements, transcriptions et données clients exigent encore des règles de conservation et d'accès.
 - **Les factures fournisseurs.** Les minutes Twilio, l'usage OpenAI et les API calendrier apparaissent encore sur les factures, sauf si vous passez entièrement en local.
 
-Si vous hésitez entre construire, acheter et auto-héberger, croisez cette liste avec [comment choisir un réceptionniste IA](/blog/how-to-choose-an-ai-receptionist/) et [construire ou acheter un réceptionniste IA](/blog/build-or-buy-ai-receptionist/).
+Si vous hésitez entre construire, acheter et auto-héberger, croisez cette liste avec [comment choisir un réceptionniste IA](/fr/blog/how-to-choose-an-ai-receptionist/) et [construire ou acheter un réceptionniste IA](/fr/blog/build-or-buy-ai-receptionist/).
 
 ## Prochaines étapes concrètes
 
@@ -132,4 +132,4 @@ Le meilleur **service open source de réponse téléphonique IA** pour vous est 
 - Besoin d'un agent vocal Realtime léger sur LiveKit → **AIReceptionist**
 - Besoin d'un accueil pour services à domicile → **Hearthline**
 
-Si vous voulez inspecter une pile complète avant de transférer votre ligne principale, commencez par le [dépôt GitHub LobbyStack](https://github.com/lobbystack/lobbystack) ou la [vue d'ensemble de la pile open source](/blog/open-source-ai-receptionist-stack/).
+Si vous voulez inspecter une pile complète avant de transférer votre ligne principale, commencez par le [dépôt GitHub LobbyStack](https://github.com/lobbystack/lobbystack) ou la [vue d'ensemble de la pile open source](/fr/blog/open-source-ai-receptionist-stack/).

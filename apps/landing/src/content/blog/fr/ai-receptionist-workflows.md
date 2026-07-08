@@ -165,3 +165,5 @@ Les équipes doivent encore tester les appels, relire les transcriptions et ajus
 La différence tient dans l'endroit où vous mettez la complexité. Vous devriez passer votre temps à améliorer la politique de réception, pas à suivre la même règle dans des prompts, branches webhook, contraintes calendrier et modèles d'alerte.
 
 Commencez avec [LobbyStack Cloud](https://lobbystack.com/) si vous voulez tester le produit. Utilisez la [documentation d'auto-hébergement](https://docs.lobbystack.com/self-hosting/overview) si vous voulez le faire tourner vous-même. Le code est public sur [GitHub](https://github.com/lobbystack/lobbystack).
+
+Si vous hésitez entre construire, acheter et brancher des outils de workflow sur les appels, lisez [créer ou acheter son réceptionniste IA](/fr/blog/build-or-buy-ai-receptionist/) et [comment choisir un réceptionniste IA](/fr/blog/how-to-choose-an-ai-receptionist/).

@@ -124,7 +124,7 @@ It is not a way to avoid operations. Phone systems still need testing. AI behavi
 
 It is a way to skip months of product plumbing before you can focus on the business workflow.
 
-If you are comparing open-source phone answering options first, see the guide to the [best open-source AI phone answering services](/blog/best-open-source-ai-phone-answering-services/).
+If you are comparing open-source phone answering options first, see the guide to the [best open-source AI phone answering services](/blog/best-open-source-ai-phone-answering-services/). Agencies deploying for clients may also want the [LobbyStack affiliate program](/blog/ai-receptionist-affiliate-program/). For workflow design, see [AI receptionist workflows without flowcharts](/blog/ai-receptionist-workflows/).
 
 ## Try it or self-host it
 

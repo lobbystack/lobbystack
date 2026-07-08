@@ -165,3 +165,5 @@ Teams still need to test calls, review transcripts, and tune the business policy
 The difference is where the complexity lives. You should spend your time improving the front-desk policy, not chasing the same rule through prompts, webhook branches, calendar constraints, and alert templates.
 
 Start with [LobbyStack Cloud](https://lobbystack.com/) if you want to test the product. Use the [self-hosting docs](https://docs.lobbystack.com/self-hosting/overview) if you want to run it yourself. The code is public on [GitHub](https://github.com/lobbystack/lobbystack).
+
+If you are deciding between building, buying, and wiring workflow tools into calls, read [should you build or buy an AI receptionist](/blog/build-or-buy-ai-receptionist/) and [how to choose an AI receptionist](/blog/how-to-choose-an-ai-receptionist/).
