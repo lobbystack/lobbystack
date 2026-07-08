@@ -20,6 +20,7 @@ export const translatedBasePaths = [
   "/blog/open-source-ai-receptionist-stack/",
   "/blog/ai-receptionist-workflows/",
   "/blog/ai-receptionist-affiliate-program/",
+  "/affiliate-program/",
   "/docs/api/",
   "/privacy/",
   "/cookie-policy/",

@@ -101,6 +101,11 @@ export const en = {
       description:
         "Search LobbyStack pages, blog posts, product resources, pricing details, and public agent-discovery documentation.",
     },
+    "/affiliate-program/": {
+      title: "LobbyStack Affiliate Program | Earn 20% Commission",
+      description:
+        "Join the LobbyStack Affiliate Program. Earn 20% commission for 12 months, give referred businesses 5% off, and get paid through PayPal.",
+    },
     "/404/": {
       title: "Page not found - LobbyStack",
       description:

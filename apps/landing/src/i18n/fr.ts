@@ -102,6 +102,11 @@ export const fr = {
       description:
         "Recherchez dans les pages LobbyStack, les articles, les ressources produit, les tarifs et la documentation publique.",
     },
+    "/affiliate-program/": {
+      title: "Programme d'affiliation LobbyStack | Gagnez 20 % de commission",
+      description:
+        "Rejoignez le programme d'affiliation LobbyStack. Gagnez 20 % de commission pendant 12 mois, offrez 5 % de réduction aux entreprises parrainées et recevez vos paiements via PayPal.",
+    },
     "/404/": {
       title: "Page introuvable - LobbyStack",
       description:
