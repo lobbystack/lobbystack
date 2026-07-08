@@ -15,8 +15,10 @@ const homeSectionsCopy = {
           "LobbyStack answers when your team cannot, captures what the caller needs, and helps them book or request a callback.",
         cta: "See how it works",
         href: "#how-it-works",
-        image: "/illustrations/missed-calls-v4.webp",
-        alt: "Missed calls organized into a LobbyStack call capture flow",
+        image: "/illustrations/missed-calls-booked-work.webp",
+        alt: "Incoming call answered and appointment confirmed for Tuesday at 3:00 PM",
+        imageAspectClass: "aspect-[9/4]",
+        imageScaleClass: "h-[155%] w-[155%]",
       },
       {
         title: "Send the right calls to your team",
@@ -24,8 +26,10 @@ const homeSectionsCopy = {
           "LobbyStack can answer routine calls, take a message, or route urgent conversations to your team with the caller's details and reason attached.",
         cta: "Set routing rules",
         href: "#control",
-        image: "/illustrations/calls-need-person.webp",
-        alt: "LobbyStack call summary with routing details and appointment context",
+        image: "/illustrations/call-routing-team.webp",
+        alt: "Incoming call summary routed to the right team member with customer context",
+        imageAspectClass: "aspect-[9/4]",
+        imageScaleClass: "h-full w-full object-cover object-[50%_44%]",
       },
     ],
     connected: {
@@ -189,8 +193,10 @@ const homeSectionsCopy = {
           "LobbyStack répond quand votre équipe ne peut pas décrocher, comprend le besoin de l’appelant et l’aide à réserver ou à demander un rappel.",
         cta: "Voir le fonctionnement",
         href: "#how-it-works",
-        image: "/illustrations/missed-calls-v4.webp",
-        alt: "Appels manqués organisés dans un parcours de prise en charge LobbyStack",
+        image: "/illustrations/missed-calls-booked-work.webp",
+        alt: "Appel entrant répondu et rendez‑vous confirmé pour mardi à 15 h",
+        imageAspectClass: "aspect-[9/4]",
+        imageScaleClass: "h-[155%] w-[155%]",
       },
       {
         title: "Envoyez les bons appels à la bonne personne",
@@ -198,8 +204,10 @@ const homeSectionsCopy = {
           "LobbyStack traite les appels courants, prend un message ou transfère les conversations urgentes avec les détails et le motif de l’appel.",
         cta: "Définir les règles",
         href: "#control",
-        image: "/illustrations/calls-need-person.webp",
-        alt: "Résumé d’appel LobbyStack avec transfert et contexte de rendez‑vous",
+        image: "/illustrations/call-routing-team.webp",
+        alt: "Résumé d’appel entrant routé vers la bonne personne avec le contexte client",
+        imageAspectClass: "aspect-[9/4]",
+        imageScaleClass: "h-full w-full object-cover object-[50%_44%]",
       },
     ],
     connected: {
@@ -375,13 +383,22 @@ export function ProductExtensionSection({ locale = "en" }: LocalizedProps) {
               key={card.title}
               className="overflow-hidden rounded-[1.35rem] border border-border/70 bg-background"
             >
-              <div className="h-[300px] overflow-hidden border-b border-border/70 bg-muted md:h-[360px]">
+              <div
+                className={`relative overflow-hidden bg-[#F4F4F2] ${card.imageAspectClass ?? "aspect-[9/4]"} ${card.imageContainerClass ?? ""}`}
+              >
                 <img
                   src={card.image}
                   alt={card.alt}
                   width={1200}
                   height={800}
-                  className="h-full w-full object-cover"
+                  className={
+                    card.imageContainerClass
+                      ? (card.imageScaleClass ??
+                        "h-[84%] w-full object-contain object-center")
+                      : card.imageScaleClass?.includes("object-cover")
+                        ? card.imageScaleClass
+                        : `absolute left-1/2 top-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 object-contain ${card.imageScaleClass ?? "h-[155%] w-[155%]"}`
+                  }
                   loading="lazy"
                   decoding="async"
                 />
