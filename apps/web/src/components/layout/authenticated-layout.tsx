@@ -22,6 +22,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { getStoredAffiliateReferralCode } from "@/lib/affiliate-referral";
 import { useObservedAction } from "@/lib/observed-convex";
 import {
   UpgradePlanDialog,
@@ -103,7 +104,13 @@ export function AuthenticatedLayout({
     setLoading("checkout");
     setLoadingCheckoutPlan(target);
     try {
-      const result = await startCheckout({ businessId, target, billingInterval });
+      const referralCode = getStoredAffiliateReferralCode();
+      const result = await startCheckout({
+        businessId,
+        target,
+        billingInterval,
+        ...(referralCode ? { referralCode } : {}),
+      });
       window.location.assign(result.url);
     } catch {
       toast.error(t("billing.toast.checkoutFailed"));

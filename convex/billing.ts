@@ -133,6 +133,11 @@ type CheckoutSnapshot = {
   proSubscriptionId: string | null;
 };
 
+type CheckoutReferralDiscount = {
+  referralCode: string;
+  discountId: string;
+};
+
 type PolarClient = ReturnType<typeof createPolarClient>;
 type PolarCheckout = Awaited<ReturnType<PolarClient["checkouts"]["get"]>>;
 type PolarCustomer = Awaited<ReturnType<PolarClient["customers"]["create"]>>;
@@ -349,6 +354,7 @@ type UsageSyncPayload = {
   billingKey: string;
   usageKind: BillingUsageKind;
   quantity: number;
+  billableQuantity: number;
   polarEventName: string;
   polarQuantity: number;
   sourceKey: string;
@@ -471,6 +477,10 @@ function getBillingSiteUrl(): URL {
   return new URL(rawSiteUrl);
 }
 
+function getReferralDiscountId(): string | null {
+  return process.env.POLAR_REFERRAL_DISCOUNT_ID?.trim() || null;
+}
+
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown billing error.";
 }
@@ -533,6 +543,25 @@ function getUsageQuantityField(
       return "outboundCallAttemptsUsed";
     case "ai_sms_segments":
       return "aiSmsSegmentsUsed";
+  }
+}
+
+function getUsageBillableQuantityField(
+  usageKind: BillingUsageKind,
+):
+  | "voiceSecondsBillableUsed"
+  | "alertSmsSegmentsBillableUsed"
+  | "outboundCallAttemptsBillableUsed"
+  | null {
+  switch (usageKind) {
+    case "voice_seconds":
+      return "voiceSecondsBillableUsed";
+    case "alert_sms_segments":
+      return "alertSmsSegmentsBillableUsed";
+    case "outbound_call_attempts":
+      return "outboundCallAttemptsBillableUsed";
+    case "ai_sms_segments":
+      return null;
   }
 }
 
@@ -730,6 +759,7 @@ function buildUsageMonthPatch(args: {
   usage: Doc<"billing_usage_months"> | null;
   usageKind: BillingUsageKind;
   deltaQuantity: number;
+  deltaBillableQuantity?: number;
   recordedAt: string;
 }) {
   const entitlements = getPlanEntitlements(args.plan);
@@ -737,6 +767,10 @@ function buildUsageMonthPatch(args: {
   const currentAlertSmsSegments = args.usage?.alertSmsSegmentsUsed ?? 0;
   const currentOutboundCallAttempts = args.usage?.outboundCallAttemptsUsed ?? 0;
   const currentAiSmsSegments = args.usage?.aiSmsSegmentsUsed ?? 0;
+  const currentVoiceSecondsBillable = args.usage?.voiceSecondsBillableUsed ?? 0;
+  const currentAlertSmsSegmentsBillable = args.usage?.alertSmsSegmentsBillableUsed ?? 0;
+  const currentOutboundCallAttemptsBillable =
+    args.usage?.outboundCallAttemptsBillableUsed ?? 0;
 
   const nextVoiceSeconds =
     currentVoiceSeconds + (args.usageKind === "voice_seconds" ? args.deltaQuantity : 0);
@@ -748,6 +782,19 @@ function buildUsageMonthPatch(args: {
     (args.usageKind === "outbound_call_attempts" ? args.deltaQuantity : 0);
   const nextAiSmsSegments =
     currentAiSmsSegments + (args.usageKind === "ai_sms_segments" ? args.deltaQuantity : 0);
+  const nextVoiceSecondsBillable =
+    currentVoiceSecondsBillable +
+    (args.usageKind === "voice_seconds" ? (args.deltaBillableQuantity ?? 0) : 0);
+  const nextAlertSmsSegmentsBillable =
+    currentAlertSmsSegmentsBillable +
+    (args.usageKind === "alert_sms_segments"
+      ? (args.deltaBillableQuantity ?? 0)
+      : 0);
+  const nextOutboundCallAttemptsBillable =
+    currentOutboundCallAttemptsBillable +
+    (args.usageKind === "outbound_call_attempts"
+      ? (args.deltaBillableQuantity ?? 0)
+      : 0);
 
   return {
     planAtSnapshot: args.plan,
@@ -755,6 +802,9 @@ function buildUsageMonthPatch(args: {
     alertSmsSegmentsUsed: Math.max(0, nextAlertSmsSegments),
     outboundCallAttemptsUsed: Math.max(0, nextOutboundCallAttempts),
     aiSmsSegmentsUsed: Math.max(0, nextAiSmsSegments),
+    voiceSecondsBillableUsed: Math.max(0, nextVoiceSecondsBillable),
+    alertSmsSegmentsBillableUsed: Math.max(0, nextAlertSmsSegmentsBillable),
+    outboundCallAttemptsBillableUsed: Math.max(0, nextOutboundCallAttemptsBillable),
     ...(entitlements.voiceSecondsIncluded !== null
       ? { voiceSecondsIncluded: entitlements.voiceSecondsIncluded }
       : {}),
@@ -780,6 +830,204 @@ function buildUsageMonthPatch(args: {
   };
 }
 
+function getIncludedQuantityForKind(
+  plan: BillingPlanSlug,
+  usageKind: BillingUsageKind,
+): number | null {
+  const entitlements = getPlanEntitlements(plan);
+  switch (usageKind) {
+    case "voice_seconds":
+      return entitlements.voiceSecondsIncluded;
+    case "alert_sms_segments":
+      return entitlements.alertSmsSegmentsIncluded;
+    case "outbound_call_attempts":
+      return entitlements.outboundCallAttemptsIncluded;
+    case "ai_sms_segments":
+      return null;
+  }
+}
+
+function shouldUseMonthlyBillableUsage(input: {
+  plan: BillingPlanSlug;
+  billingInterval: BillingInterval | null;
+  usageKind: BillingUsageKind;
+}): boolean {
+  if (input.billingInterval !== "annual") {
+    return false;
+  }
+  if (input.plan !== "starter" && input.plan !== "pro") {
+    return false;
+  }
+  return input.usageKind !== "ai_sms_segments";
+}
+
+function shouldTrackMonthlyBillableUsage(input: {
+  plan: BillingPlanSlug;
+  billingInterval: BillingInterval | null;
+  usageKind: BillingUsageKind;
+}): boolean {
+  return (
+    shouldUseMonthlyBillableUsage(input) &&
+    getUsageBillableQuantityField(input.usageKind) !== null &&
+    getIncludedQuantityForKind(input.plan, input.usageKind) !== null
+  );
+}
+
+function getStoredMonthlyBillableQuantity(
+  usageEvent: Doc<"billing_usage_events"> | null,
+): number {
+  if (!usageEvent) {
+    return 0;
+  }
+  if (
+    !shouldTrackMonthlyBillableUsage({
+      plan: usageEvent.planAtRecordTime ?? "free_cloud",
+      billingInterval: usageEvent.billingIntervalAtRecordTime ?? null,
+      usageKind: usageEvent.usageKind,
+    })
+  ) {
+    return 0;
+  }
+  return usageEvent.billableQuantity ?? 0;
+}
+
+function getUsageEventBillableUpdate(args: {
+  plan: BillingPlanSlug;
+  billingInterval: BillingInterval | null;
+  usage: Doc<"billing_usage_months"> | null;
+  usageKind: BillingUsageKind;
+  quantity: number;
+  existingUsageEvent: Doc<"billing_usage_events"> | null;
+  periodChanged: boolean;
+}): {
+  billableQuantity: number;
+  currentPeriodDeltaBillableQuantity: number;
+} {
+  const previousBillableQuantity =
+    !args.periodChanged ? getStoredMonthlyBillableQuantity(args.existingUsageEvent) : 0;
+
+  if (
+    !shouldTrackMonthlyBillableUsage({
+      plan: args.plan,
+      billingInterval: args.billingInterval,
+      usageKind: args.usageKind,
+    })
+  ) {
+    return {
+      billableQuantity: args.quantity,
+      currentPeriodDeltaBillableQuantity: -previousBillableQuantity,
+    };
+  }
+
+  const includedQuantity = getIncludedQuantityForKind(args.plan, args.usageKind);
+  const usageField = getUsageQuantityField(args.usageKind);
+  const billableField = getUsageBillableQuantityField(args.usageKind);
+  if (includedQuantity === null) {
+    return {
+      billableQuantity: args.quantity,
+      currentPeriodDeltaBillableQuantity: -previousBillableQuantity,
+    };
+  }
+
+  const existingQuantityInCurrentPeriod =
+    !args.periodChanged && args.existingUsageEvent
+      ? args.existingUsageEvent.quantity
+      : 0;
+  const usedBeforeEvent = Math.max(
+    0,
+    (args.usage?.[usageField] ?? 0) - existingQuantityInCurrentPeriod,
+  );
+  const currentUsed = args.usage?.[usageField] ?? 0;
+  const currentBillableTotal =
+    billableField && args.usage?.[billableField] !== undefined
+      ? Math.max(0, args.usage[billableField] ?? 0)
+      : Math.max(0, currentUsed - includedQuantity);
+  const nextBillableTotal = Math.max(
+    0,
+    usedBeforeEvent + args.quantity - includedQuantity,
+  );
+  const deltaBillableQuantity = nextBillableTotal - currentBillableTotal;
+
+  return {
+    billableQuantity: previousBillableQuantity + deltaBillableQuantity,
+    currentPeriodDeltaBillableQuantity: deltaBillableQuantity,
+  };
+}
+
+async function getUsageEventSyncBillableQuantity(
+  ctx: QueryCtx,
+  args: {
+    usageEvent: Doc<"billing_usage_events">;
+    account: Doc<"billing_accounts">;
+  },
+): Promise<number> {
+  if (args.usageEvent.billableQuantity !== undefined) {
+    return args.usageEvent.billableQuantity;
+  }
+
+  const accountPlan = args.account.currentPlan ?? "free_cloud";
+  const plan = args.usageEvent.planAtRecordTime ?? accountPlan;
+  const billingInterval =
+    args.usageEvent.billingIntervalAtRecordTime ?? args.account.billingInterval ?? null;
+  if (
+    !shouldTrackMonthlyBillableUsage({
+      plan,
+      billingInterval,
+      usageKind: args.usageEvent.usageKind,
+    })
+  ) {
+    return args.usageEvent.quantity;
+  }
+
+  const usageEvents = (
+    await ctx.db
+      .query("billing_usage_events")
+      .withIndex("by_business_id_and_period_key", (q) =>
+        q
+          .eq("businessId", args.usageEvent.businessId)
+          .eq("periodKey", args.usageEvent.periodKey),
+      )
+      .collect()
+  )
+    .filter((event) => event.usageKind === args.usageEvent.usageKind)
+    .sort((left, right) => {
+      const recordedOrder = left.recordedAt.localeCompare(right.recordedAt);
+      return recordedOrder !== 0 ? recordedOrder : left._creationTime - right._creationTime;
+    });
+
+  let runningQuantity = 0;
+  for (const event of usageEvents) {
+    const eventPlan = event.planAtRecordTime ?? accountPlan;
+    const eventBillingInterval =
+      event.billingIntervalAtRecordTime ?? args.account.billingInterval ?? null;
+    if (
+      !shouldTrackMonthlyBillableUsage({
+        plan: eventPlan,
+        billingInterval: eventBillingInterval,
+        usageKind: event.usageKind,
+      })
+    ) {
+      continue;
+    }
+
+    const includedQuantity = getIncludedQuantityForKind(eventPlan, event.usageKind);
+    if (includedQuantity === null) {
+      continue;
+    }
+
+    const previousBillableTotal = Math.max(0, runningQuantity - includedQuantity);
+    runningQuantity += event.quantity;
+    const nextBillableTotal = Math.max(0, runningQuantity - includedQuantity);
+    const billableQuantity = nextBillableTotal - previousBillableTotal;
+
+    if (event._id === args.usageEvent._id) {
+      return billableQuantity;
+    }
+  }
+
+  return args.usageEvent.quantity;
+}
+
 async function upsertUsageEventInTx(
   ctx: MutationCtx,
   args: {
@@ -794,6 +1042,7 @@ async function upsertUsageEventInTx(
     businessId: args.businessId,
     at: args.recordedAt,
   });
+  const billingInterval = snapshot.account?.billingInterval ?? null;
   const syncNeeded = shouldSyncUsageEvent({
     plan: snapshot.plan,
     activeAddons: snapshot.activeAddons,
@@ -811,6 +1060,24 @@ async function upsertUsageEventInTx(
   const existingPeriodKey = existingUsageEvent?.periodKey ?? null;
   const periodChanged =
     existingPeriodKey !== null && existingPeriodKey !== snapshot.periodKey;
+  const {
+    billableQuantity,
+    currentPeriodDeltaBillableQuantity,
+  } = getUsageEventBillableUpdate({
+    plan: snapshot.plan,
+    billingInterval,
+    usage: snapshot.usage,
+    usageKind: args.usageKind,
+    existingUsageEvent,
+    periodChanged,
+    quantity: args.quantity,
+  });
+  const previousBillableQuantity = getStoredMonthlyBillableQuantity(existingUsageEvent);
+  const tracksMonthlyBillableUsage = shouldTrackMonthlyBillableUsage({
+    plan: snapshot.plan,
+    billingInterval,
+    usageKind: args.usageKind,
+  });
 
   if (periodChanged && existingUsageEvent) {
     const previousUsageMonth = await getBillingUsageMonth(ctx, {
@@ -824,8 +1091,9 @@ async function upsertUsageEventInTx(
           existingUsageEvent.planAtRecordTime ??
           snapshot.plan,
         usage: previousUsageMonth,
-        usageKind: args.usageKind,
+        usageKind: existingUsageEvent.usageKind,
         deltaQuantity: -existingUsageEvent.quantity,
+        deltaBillableQuantity: -previousBillableQuantity,
         recordedAt: existingUsageEvent.recordedAt,
       });
       await ctx.db.patch(previousUsageMonth._id, previousMonthPatch);
@@ -838,6 +1106,7 @@ async function upsertUsageEventInTx(
       usage: null,
       usageKind: args.usageKind,
       deltaQuantity: args.quantity,
+      deltaBillableQuantity: tracksMonthlyBillableUsage ? billableQuantity : 0,
       recordedAt: args.recordedAt,
     });
 
@@ -852,15 +1121,17 @@ async function upsertUsageEventInTx(
       usage: snapshot.usage,
       usageKind: args.usageKind,
       deltaQuantity: args.quantity,
+      deltaBillableQuantity: tracksMonthlyBillableUsage ? billableQuantity : 0,
       recordedAt: args.recordedAt,
     });
     await ctx.db.patch(snapshot.usage._id, monthPatch);
-  } else if (deltaQuantity !== 0) {
+  } else if (deltaQuantity !== 0 || currentPeriodDeltaBillableQuantity !== 0) {
     const monthPatch = buildUsageMonthPatch({
       plan: snapshot.plan,
       usage: snapshot.usage,
       usageKind: args.usageKind,
       deltaQuantity,
+      deltaBillableQuantity: currentPeriodDeltaBillableQuantity,
       recordedAt: args.recordedAt,
     });
     await ctx.db.patch(snapshot.usage._id, monthPatch);
@@ -875,7 +1146,9 @@ async function upsertUsageEventInTx(
       periodKey: snapshot.periodKey,
       quantity: args.quantity,
       planAtRecordTime: snapshot.plan,
+      ...(billingInterval ? { billingIntervalAtRecordTime: billingInterval } : {}),
       activeAddonsAtRecordTime: snapshot.activeAddons,
+      billableQuantity,
       recordedAt: args.recordedAt,
       syncStatus: syncNeeded ? "pending" : "skipped",
     });
@@ -895,7 +1168,9 @@ async function upsertUsageEventInTx(
     usageKind: args.usageKind,
     quantity: args.quantity,
     planAtRecordTime: snapshot.plan,
+    ...(billingInterval ? { billingIntervalAtRecordTime: billingInterval } : {}),
     activeAddonsAtRecordTime: snapshot.activeAddons,
+    billableQuantity,
     recordedAt: args.recordedAt,
     syncStatus: syncNeeded ? "pending" : "skipped",
   });
@@ -2119,6 +2394,7 @@ export const startCheckout = action({
     target: v.union(v.literal("starter"), v.literal("pro"), v.literal("ai_sms")),
     billingInterval: v.optional(v.union(v.literal("monthly"), v.literal("annual"))),
     source: v.optional(v.union(v.literal("settings"), v.literal("onboarding"))),
+    referralCode: v.optional(v.string()),
   },
   returns: v.object({
     url: v.string(),
@@ -2206,6 +2482,29 @@ export const startCheckout = action({
       args.target === "ai_sms"
         ? snapshot.billingInterval ?? "monthly"
         : billingInterval;
+    let referralDiscount: CheckoutReferralDiscount | null = null;
+    if (isHostedCheckoutTarget(args.target)) {
+      const eligibility: {
+        referralCode: string;
+        affiliateProfileId: Id<"affiliate_profiles">;
+      } | null = await ctx.runMutation(
+        internal.affiliates.resolveCheckoutReferralDiscount,
+        {
+          businessId: args.businessId,
+          ...(args.referralCode ? { referralCode: args.referralCode } : {}),
+        },
+      );
+      if (eligibility) {
+        const discountId = getReferralDiscountId();
+        if (!discountId) {
+          throw new Error("POLAR_REFERRAL_DISCOUNT_ID is required for referred checkout.");
+        }
+        referralDiscount = {
+          referralCode: eligibility.referralCode,
+          discountId,
+        };
+      }
+    }
     const checkout = await createPolarClient().checkouts.create({
       customerId: customer.id,
       ...(checkoutContext.billingContactEmail
@@ -2218,6 +2517,9 @@ export const startCheckout = action({
         target: args.target,
         billingInterval,
       }),
+      ...(referralDiscount
+        ? { discountId: referralDiscount.discountId, allowDiscountCodes: false }
+        : {}),
       successUrl: new URL(
         `${checkoutReturnPath}?${checkoutSearchParams.toString()}`,
         siteUrl,
@@ -2232,6 +2534,12 @@ export const startCheckout = action({
         billingKey: checkoutContext.billingKey,
         businessId: String(args.businessId),
         checkoutTarget: args.target,
+        ...(referralDiscount
+          ? {
+              referralCode: referralDiscount.referralCode,
+              referralDiscountPercent: 5,
+            }
+          : {}),
         ...(checkoutPlan ? { checkoutPlan } : {}),
         ...(isHostedCheckoutTarget(args.target) || args.target === "ai_sms"
           ? { billingInterval: checkoutBillingInterval }
@@ -2620,6 +2928,7 @@ export const getUsageSyncPayload = internalQuery({
       billingKey: v.string(),
       usageKind: v.string(),
       quantity: v.number(),
+      billableQuantity: v.number(),
       polarEventName: v.string(),
       polarQuantity: v.number(),
       sourceKey: v.string(),
@@ -2648,9 +2957,13 @@ export const getUsageSyncPayload = internalQuery({
       return null;
     }
 
+    const billableQuantity = await getUsageEventSyncBillableQuantity(ctx, {
+      usageEvent,
+      account,
+    });
     const meteredUsage = getPolarMeteredUsagePayload(
       usageEvent.usageKind,
-      usageEvent.quantity,
+      billableQuantity,
     );
 
     return {
@@ -2658,6 +2971,7 @@ export const getUsageSyncPayload = internalQuery({
       billingKey: account.billingKey,
       usageKind: usageEvent.usageKind,
       quantity: usageEvent.quantity,
+      billableQuantity,
       polarEventName: meteredUsage.eventName,
       polarQuantity: meteredUsage.quantity,
       sourceKey: usageEvent.sourceKey,

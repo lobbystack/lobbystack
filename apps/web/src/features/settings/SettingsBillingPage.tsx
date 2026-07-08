@@ -11,6 +11,7 @@ import {
   Lock,
   RefreshCw,
 } from "lucide-react";
+import { getStoredAffiliateReferralCode } from "@/lib/affiliate-referral";
 import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 
 import { api } from "../../../../../convex/_generated/api";
@@ -729,7 +730,13 @@ function PlanSection({
     setLoading("checkout");
     setLoadingCheckoutPlan(target);
     try {
-      const result = await startCheckout({ businessId, target, billingInterval });
+      const referralCode = getStoredAffiliateReferralCode();
+      const result = await startCheckout({
+        businessId,
+        target,
+        billingInterval,
+        ...(referralCode ? { referralCode } : {}),
+      });
       window.location.assign(result.url);
     } catch {
       toast.error(t("billing.toast.checkoutFailed"));
@@ -1234,10 +1241,12 @@ function AddonsSection({
 
     setLoading("pro");
     try {
+      const referralCode = getStoredAffiliateReferralCode();
       const result = await startCheckout({
         businessId,
         target: "pro",
         billingInterval: "monthly",
+        ...(referralCode ? { referralCode } : {}),
       });
       window.location.assign(result.url);
     } catch {

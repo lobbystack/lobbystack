@@ -97,6 +97,13 @@ The app sends these usage events to Polar:
 - `billing.outbound_call_attempts`
 - `billing.ai_sms_segments`
 
+Monthly hosted products use Polar meter-credit benefits for the included usage
+pool. Annual hosted products should not grant annual meter-credit benefits for
+voice minutes, Alert SMS segments, or outbound call attempts. LobbyStack tracks
+included usage by calendar month and sends only monthly overage quantities to
+Polar for annual hosted subscriptions, preserving monthly usage resets while the
+base subscription renews yearly.
+
 `Alert SMS` and `AI SMS` are intentionally separate:
 
 - `Alert SMS` is sent from Noncia's shared platform sender
@@ -118,6 +125,7 @@ Set these values in Convex and local development when billing is enabled:
 - `POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID`
 - `POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID`
 - `POLAR_AI_SMS_SETUP_PRODUCT_ID`
+- `POLAR_REFERRAL_DISCOUNT_ID`
 - `SITE_URL`
 
 `POLAR_AI_SMS_ADDON_PRODUCT_ID` is optional and only exists to recognize legacy
@@ -126,6 +134,12 @@ enablement uses `POLAR_AI_SMS_SETUP_PRODUCT_ID` for checkout and
 the matching `{plan, interval} + AI SMS` product for the existing paid
 subscription update. `POLAR_PRO_AI_SMS_PRODUCT_ID` is still accepted as a legacy
 fallback for `POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID`.
+
+Create a 5% percentage discount in Polar for referred customers and set its ID as
+`POLAR_REFERRAL_DISCOUNT_ID`. LobbyStack applies this discount server-side when
+an eligible referred business starts a hosted plan checkout. Referral discounts
+are not entered by the customer as coupon codes; the checkout receives the
+configured Polar discount automatically from the stored referral attribution.
 
 For hosted Alert SMS, also configure:
 

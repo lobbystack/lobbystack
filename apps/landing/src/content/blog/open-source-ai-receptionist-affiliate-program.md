@@ -22,7 +22,7 @@ The LobbyStack Affiliate Program gives you a simple way to earn recurring revenu
 
 ## What is the LobbyStack Affiliate Program?
 
-The LobbyStack Affiliate Program pays you **20% commission for the first 12 months** when a customer signs up through your referral.
+The LobbyStack Affiliate Program pays you **20% commission for the first 12 months** when a customer signs up through your referral. Referred customers also get **5% off** when they start an eligible hosted LobbyStack plan through your referral link.
 
 You share LobbyStack with businesses that need better phone coverage. When they become a paying customer, you earn a recurring commission while they stay subscribed during their first year.
 
@@ -411,6 +411,10 @@ The LobbyStack Affiliate Program lets you earn commission by referring paying cu
 ### How much can I earn?
 
 Your earnings depend on the number of customers you refer, the plans they choose, and how long they stay subscribed. For example, one $100/month customer can generate $20/month for you, or $240 over 12 months if they stay subscribed for the full year.
+
+### Do referred customers get a discount?
+
+Yes. Referred customers get 5% off when they start an eligible hosted LobbyStack plan through your referral link. That makes the recommendation easier: your customer saves money, and you earn 20% commission for the first 12 months if they become a paying customer.
 
 ### Is LobbyStack open source?
 
