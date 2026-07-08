@@ -354,6 +354,7 @@ type UsageSyncPayload = {
   billingKey: string;
   usageKind: BillingUsageKind;
   quantity: number;
+  billableQuantity: number;
   polarEventName: string;
   polarQuantity: number;
   sourceKey: string;
@@ -789,6 +790,98 @@ function buildUsageMonthPatch(args: {
   };
 }
 
+function getIncludedQuantityForKind(
+  plan: BillingPlanSlug,
+  usageKind: BillingUsageKind,
+): number | null {
+  const entitlements = getPlanEntitlements(plan);
+  switch (usageKind) {
+    case "voice_seconds":
+      return entitlements.voiceSecondsIncluded;
+    case "alert_sms_segments":
+      return entitlements.alertSmsSegmentsIncluded;
+    case "outbound_call_attempts":
+      return entitlements.outboundCallAttemptsIncluded;
+    case "ai_sms_segments":
+      return null;
+  }
+}
+
+function shouldUseMonthlyBillableUsage(input: {
+  plan: BillingPlanSlug;
+  billingInterval: BillingInterval | null;
+  usageKind: BillingUsageKind;
+}): boolean {
+  if (input.billingInterval !== "annual") {
+    return false;
+  }
+  if (input.plan !== "starter" && input.plan !== "pro") {
+    return false;
+  }
+  return input.usageKind !== "ai_sms_segments";
+}
+
+async function recomputeMonthlyBillableUsageForPeriod(
+  ctx: MutationCtx,
+  args: {
+    businessId: Id<"businesses">;
+    periodKey: string;
+    usageKind: BillingUsageKind;
+  },
+): Promise<void> {
+  const events = (
+    await ctx.db
+      .query("billing_usage_events")
+      .withIndex("by_business_id_and_period_key", (q) =>
+        q.eq("businessId", args.businessId).eq("periodKey", args.periodKey),
+      )
+      .collect()
+  )
+    .filter((event) => event.usageKind === args.usageKind)
+    .sort((left, right) => {
+      const recordedOrder = left.recordedAt.localeCompare(right.recordedAt);
+      return recordedOrder !== 0 ? recordedOrder : left._creationTime - right._creationTime;
+    });
+
+  let runningQuantity = 0;
+  for (const event of events) {
+    const plan = event.planAtRecordTime ?? "free_cloud";
+    const billingInterval = event.billingIntervalAtRecordTime ?? null;
+    let billableQuantity = event.quantity;
+
+    if (
+      shouldUseMonthlyBillableUsage({
+        plan,
+        billingInterval,
+        usageKind: event.usageKind,
+      })
+    ) {
+      const includedQuantity = getIncludedQuantityForKind(plan, event.usageKind);
+      if (includedQuantity !== null) {
+        const previousBillableTotal = Math.max(0, runningQuantity - includedQuantity);
+        const nextRunningQuantity = runningQuantity + event.quantity;
+        const nextBillableTotal = Math.max(0, nextRunningQuantity - includedQuantity);
+        billableQuantity = Math.max(0, nextBillableTotal - previousBillableTotal);
+      }
+    }
+
+    runningQuantity += event.quantity;
+
+    if (event.billableQuantity !== billableQuantity) {
+      await ctx.db.patch(event._id, {
+        billableQuantity,
+        syncStatus: shouldSyncUsageEvent({
+          plan,
+          activeAddons: getNormalizedAddons(event.activeAddonsAtRecordTime),
+          usageKind: event.usageKind,
+        })
+          ? "pending"
+          : "skipped",
+      });
+    }
+  }
+}
+
 async function upsertUsageEventInTx(
   ctx: MutationCtx,
   args: {
@@ -803,6 +896,7 @@ async function upsertUsageEventInTx(
     businessId: args.businessId,
     at: args.recordedAt,
   });
+  const billingInterval = snapshot.account?.billingInterval ?? null;
   const syncNeeded = shouldSyncUsageEvent({
     plan: snapshot.plan,
     activeAddons: snapshot.activeAddons,
@@ -884,10 +978,24 @@ async function upsertUsageEventInTx(
       periodKey: snapshot.periodKey,
       quantity: args.quantity,
       planAtRecordTime: snapshot.plan,
+      ...(billingInterval ? { billingIntervalAtRecordTime: billingInterval } : {}),
       activeAddonsAtRecordTime: snapshot.activeAddons,
       recordedAt: args.recordedAt,
       syncStatus: syncNeeded ? "pending" : "skipped",
     });
+
+    await recomputeMonthlyBillableUsageForPeriod(ctx, {
+      businessId: args.businessId,
+      periodKey: existingUsageEvent.periodKey,
+      usageKind: args.usageKind,
+    });
+    if (periodChanged) {
+      await recomputeMonthlyBillableUsageForPeriod(ctx, {
+        businessId: args.businessId,
+        periodKey: snapshot.periodKey,
+        usageKind: args.usageKind,
+      });
+    }
 
     return {
       usageEventId: existingUsageEvent._id,
@@ -904,9 +1012,16 @@ async function upsertUsageEventInTx(
     usageKind: args.usageKind,
     quantity: args.quantity,
     planAtRecordTime: snapshot.plan,
+    ...(billingInterval ? { billingIntervalAtRecordTime: billingInterval } : {}),
     activeAddonsAtRecordTime: snapshot.activeAddons,
     recordedAt: args.recordedAt,
     syncStatus: syncNeeded ? "pending" : "skipped",
+  });
+
+  await recomputeMonthlyBillableUsageForPeriod(ctx, {
+    businessId: args.businessId,
+    periodKey: snapshot.periodKey,
+    usageKind: args.usageKind,
   });
 
   return {
@@ -2662,6 +2777,7 @@ export const getUsageSyncPayload = internalQuery({
       billingKey: v.string(),
       usageKind: v.string(),
       quantity: v.number(),
+      billableQuantity: v.number(),
       polarEventName: v.string(),
       polarQuantity: v.number(),
       sourceKey: v.string(),
@@ -2690,9 +2806,10 @@ export const getUsageSyncPayload = internalQuery({
       return null;
     }
 
+    const billableQuantity = usageEvent.billableQuantity ?? usageEvent.quantity;
     const meteredUsage = getPolarMeteredUsagePayload(
       usageEvent.usageKind,
-      usageEvent.quantity,
+      billableQuantity,
     );
 
     return {
@@ -2700,6 +2817,7 @@ export const getUsageSyncPayload = internalQuery({
       billingKey: account.billingKey,
       usageKind: usageEvent.usageKind,
       quantity: usageEvent.quantity,
+      billableQuantity,
       polarEventName: meteredUsage.eventName,
       polarQuantity: meteredUsage.quantity,
       sourceKey: usageEvent.sourceKey,

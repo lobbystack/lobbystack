@@ -97,6 +97,13 @@ The app sends these usage events to Polar:
 - `billing.outbound_call_attempts`
 - `billing.ai_sms_segments`
 
+Monthly hosted products use Polar meter-credit benefits for the included usage
+pool. Annual hosted products should not grant annual meter-credit benefits for
+voice minutes, Alert SMS segments, or outbound call attempts. LobbyStack tracks
+included usage by calendar month and sends only monthly overage quantities to
+Polar for annual hosted subscriptions, preserving monthly usage resets while the
+base subscription renews yearly.
+
 `Alert SMS` and `AI SMS` are intentionally separate:
 
 - `Alert SMS` is sent from Noncia's shared platform sender

@@ -2172,6 +2172,116 @@ describe("billing", () => {
     });
   });
 
+  it("syncs only monthly overage usage to Polar for annual hosted plans", async () => {
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-annual-monthly-overage",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+        billingInterval: "annual",
+        polarCustomerId: "cus_annual_monthly_usage",
+      });
+    });
+
+    const firstUsage = await t.mutation(internal.billing.recordAlertSmsUsage, {
+      businessId,
+      sourceKey: "alert_sms:annual:first",
+      quantity: 40,
+      recordedAt: "2026-04-12T15:00:00.000Z",
+    });
+    const secondUsage = await t.mutation(internal.billing.recordAlertSmsUsage, {
+      businessId,
+      sourceKey: "alert_sms:annual:second",
+      quantity: 15,
+      recordedAt: "2026-04-12T15:05:00.000Z",
+    });
+
+    const [firstPayload, secondPayload, state] = await Promise.all([
+      t.query(internal.billing.getUsageSyncPayload, {
+        usageEventId: firstUsage.usageEventId,
+      }),
+      t.query(internal.billing.getUsageSyncPayload, {
+        usageEventId: secondUsage.usageEventId,
+      }),
+      t.run(async (ctx: TestContext) => {
+        const usageMonth = await ctx.db
+          .query("billing_usage_months")
+          .withIndex("by_business_id_and_period_key", (q) =>
+            q.eq("businessId", businessId).eq("periodKey", "2026-04"),
+          )
+          .unique();
+        const firstEvent = await ctx.db.get(firstUsage.usageEventId);
+        const secondEvent = await ctx.db.get(secondUsage.usageEventId);
+        return { firstEvent, secondEvent, usageMonth };
+      }),
+    ]);
+
+    expect(state.usageMonth).toMatchObject({
+      alertSmsSegmentsUsed: 55,
+      alertSmsSegmentsIncluded: 50,
+    });
+    expect(state.firstEvent).toMatchObject({
+      billingIntervalAtRecordTime: "annual",
+      billableQuantity: 0,
+    });
+    expect(state.secondEvent).toMatchObject({
+      billingIntervalAtRecordTime: "annual",
+      billableQuantity: 5,
+    });
+    expect(firstPayload).toMatchObject({
+      quantity: 40,
+      billableQuantity: 0,
+      polarQuantity: 0,
+    });
+    expect(secondPayload).toMatchObject({
+      quantity: 15,
+      billableQuantity: 5,
+      polarQuantity: 5,
+    });
+  });
+
+  it("keeps syncing full usage to Polar for monthly hosted plans", async () => {
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-monthly-credit-offset",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+        billingInterval: "monthly",
+        polarCustomerId: "cus_monthly_usage",
+      });
+    });
+
+    const usage = await t.mutation(internal.billing.recordAlertSmsUsage, {
+      businessId,
+      sourceKey: "alert_sms:monthly:first",
+      quantity: 15,
+      recordedAt: "2026-04-12T15:00:00.000Z",
+    });
+    const payload = await t.query(internal.billing.getUsageSyncPayload, {
+      usageEventId: usage.usageEventId,
+    });
+
+    expect(payload).toMatchObject({
+      quantity: 15,
+      billableQuantity: 15,
+      polarQuantity: 15,
+    });
+  });
+
   it("moves an updated usage event into the new billing month", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId } = await seedWorkspace(t, {
