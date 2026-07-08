@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { localizeHref, type Locale } from "@/i18n"
-import { APP_AFFILIATE_URL } from "@/lib/app-links"
+import { APP_AFFILIATE_SIGNUP_URL } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
 import {
   ArrowRight,
@@ -59,8 +59,8 @@ const copy = {
         heading: "How it works",
         steps: [
           <>
-            Log in and open <strong>Affiliate Program</strong> in your dashboard
-            sidebar (Manage → Affiliate Program).
+            Log in and open <strong>Affiliate Program</strong> from the gift icon
+            in the top-right header.
           </>,
           <>
             Add your <strong>PayPal email</strong> in affiliate settings for
@@ -164,8 +164,8 @@ const copy = {
         heading: "Comment ça marche",
         steps: [
           <>
-            Connectez-vous et ouvrez <strong>Programme d'affiliation</strong> dans
-            la barre latérale (Gérer → Programme d'affiliation).
+            Connectez-vous et ouvrez <strong>Programme d'affiliation</strong> via
+            l'icône cadeau en haut à droite.
           </>,
           <>
             Ajoutez votre <strong>adresse e-mail PayPal</strong> dans les
@@ -318,7 +318,7 @@ export function AffiliateProgramHero({
 
           <div className="mt-8">
             <a
-              href={APP_AFFILIATE_URL}
+              href={APP_AFFILIATE_SIGNUP_URL}
               className={cn(
                 buttonVariants({ size: "lg" }),
                 "h-11 rounded-full px-7 text-sm"
