@@ -128,13 +128,13 @@ const pageCopy = {
 
       {
         entry.data.coverImage && (
-          <div class="mb-12 aspect-[16/9] overflow-hidden rounded-2xl border border-border/30 bg-muted shadow-sm md:aspect-[2/1]">
+          <div class="mb-12 aspect-[16/9] overflow-hidden rounded-2xl border border-border/30 bg-muted shadow-sm">
             <img
               src={entry.data.coverImage}
               alt={entry.data.title}
               width="1672"
               height="941"
-              class="h-full w-full object-cover"
+              class="h-full w-full object-contain"
               decoding="async"
               fetchpriority="high"
             />
