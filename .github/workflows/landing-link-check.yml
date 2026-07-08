@@ -40,7 +40,7 @@ jobs:
             --verbose
             --no-progress
             --base-url http://127.0.0.1:4173
-            --remap https://lobbystack.com http://127.0.0.1:4173
+            --remap '^https://lobbystack\.com(.*) http://127.0.0.1:4173$1'
             --exclude '^https://app\.lobbystack\.com/'
             --exclude '^https://voice\.lobbystack\.com/web-call/'
             --exclude '^https://voice-dev\.lobbystack\.com/web-call/'
