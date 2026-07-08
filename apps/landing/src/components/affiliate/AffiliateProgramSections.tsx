@@ -28,7 +28,7 @@ const copy = {
       headingAccent: "LobbyStack",
       headingSuffix: "affiliate",
       subhead:
-        "Earn 20% recurring commission for 12 months when you refer businesses that need better phone coverage. Referred customers get 5% off eligible hosted plans when they sign up through your link.",
+        "Refer businesses to LobbyStack hosted plans and earn 20% of their payments for 12 months. Referrals save 5% when they sign up through your link.",
       cta: "Join the program",
     },
     benefits: {
@@ -37,19 +37,19 @@ const copy = {
         {
           title: "20% for 12 months",
           description:
-            "Earn 20% on qualifying subscription payments during each referred customer's first year. Your commission recurs monthly while they stay subscribed.",
+            "You earn 20% on each hosted plan payment during the customer's first year. The commission repeats monthly while they stay subscribed.",
           icon: TrendingUp,
         },
         {
           title: "5% off for referrals",
           description:
-            "Businesses that start through your link get 5% off eligible hosted LobbyStack plans — an easier sell for price-conscious owners.",
+            "Referrals get 5% off hosted LobbyStack plans at signup.",
           icon: Gift,
         },
         {
           title: "Simple payouts",
           description:
-            "Commissions become eligible after a 30-day holding period. Balances of $100 or more are reviewed monthly and paid through PayPal.",
+            "We hold commissions for 30 days. Balances of $100 or more get paid monthly through PayPal.",
           icon: Wallet,
         },
       ],
@@ -67,7 +67,7 @@ const copy = {
             payouts.
           </>,
           "Share your referral link in newsletters, websites, videos, and direct recommendations.",
-          "Track clicks, attributed referrals, pending commissions, and payouts from your dashboard.",
+          "Watch clicks, referrals, pending commissions, and payouts in your dashboard.",
         ],
       },
       whoShouldApply: {
@@ -96,14 +96,14 @@ const copy = {
       heading: "Guidelines",
       items: [
         {
-          title: "Keep it authentic",
+          title: "Keep it honest",
           description:
-            "Describe LobbyStack accurately. Recommend it for real missed-call, after-hours, booking, and routing problems — not as a magic fix for every business.",
+            "Describe LobbyStack accurately. Recommend it for missed calls, after-hours coverage, booking, and routing problems you have actually seen.",
         },
         {
           title: "Disclose compensation",
           description:
-            "Tell your audience when you may earn commission for referrals, in line with applicable advertising and endorsement rules.",
+            "Tell your audience when you earn commission from a referral.",
         },
         {
           title: "No paid search on our trademarks",
@@ -113,15 +113,13 @@ const copy = {
         {
           title: "No spam or abuse",
           description:
-            "Avoid fake reviews, misleading claims, self-referrals, coupon abuse, artificial traffic, or impersonating LobbyStack.",
+            "No fake reviews, misleading claims, self-referrals, coupon abuse, fake traffic, or pretending to be LobbyStack.",
         },
         {
           title: "Termination rights",
-          descriptionPrefix:
-            "Attribution, holding periods, refunds, and payout rules are defined in our",
+          descriptionPrefix: "Attribution, holds, refunds, and payout rules are in our",
           termsLabel: "Terms of Service",
-          descriptionSuffix:
-            "LobbyStack may update or pause the program at any time.",
+          descriptionSuffix: "LobbyStack can change or pause the program at any time.",
         },
       ],
       footerPrefix: "Questions? Email",
@@ -135,7 +133,7 @@ const copy = {
       headingAccent: "LobbyStack",
       headingSuffix: "",
       subhead:
-        "Gagnez 20 % de commission récurrente pendant 12 mois lorsque vous recommandez LobbyStack à des entreprises qui ont besoin d'une meilleure couverture téléphonique. Les clients parrainés bénéficient de 5 % de réduction sur les forfaits hébergés éligibles via votre lien.",
+        "Parrainez des entreprises vers les forfaits hébergés LobbyStack et touchez 20 % de leurs paiements pendant 12 mois. Les parrainages obtiennent 5 % de rabais lorsqu'ils s'inscrivent via votre lien.",
       cta: "Rejoindre le programme",
     },
     benefits: {
@@ -144,19 +142,19 @@ const copy = {
         {
           title: "20 % pendant 12 mois",
           description:
-            "Gagnez 20 % sur les paiements d'abonnement éligibles pendant la première année de chaque client parrainé. Votre commission se renouvelle chaque mois tant qu'il reste abonné.",
+            "Vous touchez 20 % sur chaque paiement de forfait hébergé pendant la première année du client. La commission se renouvelle chaque mois tant qu'il reste abonné.",
           icon: TrendingUp,
         },
         {
-          title: "5 % de réduction pour les parrainages",
+          title: "5 % de rabais pour les parrainages",
           description:
-            "Les entreprises qui s'inscrivent via votre lien obtiennent 5 % de réduction sur les forfaits hébergés LobbyStack éligibles — plus facile à recommander aux propriétaires sensibles au prix.",
+            "Les parrainages obtiennent 5 % de rabais sur les forfaits hébergés LobbyStack à l'inscription.",
           icon: Gift,
         },
         {
           title: "Paiements simples",
           description:
-            "Les commissions deviennent éligibles après une période de retenue de 30 jours. Les soldes de 100 $ ou plus sont examinés chaque mois et payés via PayPal.",
+            "Nous retenons chaque commission 30 jours. Les soldes de 100 $ ou plus sont payés chaque mois via PayPal.",
           icon: Wallet,
         },
       ],
@@ -174,7 +172,7 @@ const copy = {
             paramètres d'affiliation pour les paiements.
           </>,
           "Partagez votre lien de parrainage dans vos newsletters, sites web, vidéos et recommandations directes.",
-          "Suivez les clics, les parrainages attribués, les commissions en attente et les paiements depuis votre tableau de bord.",
+          "Suivez les clics, les parrainages, les commissions en attente et les paiements dans votre tableau de bord.",
         ],
       },
       whoShouldApply: {
@@ -204,14 +202,14 @@ const copy = {
       heading: "Directives",
       items: [
         {
-          title: "Restez authentique",
+          title: "Restez honnête",
           description:
-            "Décrivez LobbyStack avec précision. Recommandez-le pour de vrais problèmes d'appels manqués, de couverture hors horaires, de réservation et de routage — pas comme une solution miracle pour toutes les entreprises.",
+            "Décrivez LobbyStack avec précision. Recommandez-le pour les appels manqués, la couverture hors horaires, la réservation et le routage que vous avez vus sur le terrain.",
         },
         {
           title: "Divulguez votre rémunération",
           description:
-            "Informez votre audience lorsque vous pouvez percevoir une commission pour vos recommandations, conformément aux règles publicitaires et d'endossement applicables.",
+            "Dites à votre audience quand vous touchez une commission sur un parrainage.",
         },
         {
           title: "Pas de recherche payante sur nos marques",
@@ -221,15 +219,13 @@ const copy = {
         {
           title: "Pas de spam ni d'abus",
           description:
-            "Évitez les faux avis, les allégations trompeuses, l'auto-parrainage, l'abus de coupons, le trafic artificiel ou l'usurpation de l'identité de LobbyStack.",
+            "Pas de faux avis, d'allégations trompeuses, d'auto-parrainage, d'abus de coupons, de trafic artificiel ni d'usurpation de LobbyStack.",
         },
         {
           title: "Droit de résiliation",
-          descriptionPrefix:
-            "L'attribution, les périodes de retenue, les remboursements et les règles de paiement sont définis dans nos",
+          descriptionPrefix: "L'attribution, les retenues, les remboursements et les règles de paiement sont dans nos",
           termsLabel: "Conditions d'utilisation",
-          descriptionSuffix:
-            "LobbyStack peut modifier ou suspendre le programme à tout moment.",
+          descriptionSuffix: "LobbyStack peut modifier ou suspendre le programme à tout moment.",
         },
       ],
       footerPrefix: "Des questions ? Écrivez à",

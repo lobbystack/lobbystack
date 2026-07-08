@@ -42,6 +42,8 @@ const sourceForUrl = (url) => {
   if (pathname === "/features/") return "src/pages/features.astro"
   if (pathname === "/solutions/") return "src/pages/solutions/index.astro"
   if (pathname === "/pricing/") return "src/pages/pricing.astro"
+  if (pathname === "/affiliate-program/")
+    return "src/pages/affiliate-program.astro"
   if (pathname === "/blog/") return "src/pages/blog/index.astro"
   if (pathname === "/changelog/") return "src/pages/changelog.astro"
   if (pathname === "/docs/api/") return "src/pages/docs/api.astro"

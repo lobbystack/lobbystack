@@ -35,6 +35,7 @@ export const markdownAlternatePath = (pathname: string) => {
     "/",
     "/features/",
     "/pricing/",
+    "/affiliate-program/",
     "/missed-call-revenue-calculator/",
     "/blog/",
     "/changelog/",
@@ -49,6 +50,7 @@ export const markdownAlternatePath = (pathname: string) => {
     "/": "/index.md",
     "/features/": "/features.md",
     "/pricing/": "/pricing.md",
+    "/affiliate-program/": "/affiliate-program.md",
     "/missed-call-revenue-calculator/":
       "/missed-call-revenue-calculator/index.md",
     "/blog/": "/blog.md",
@@ -131,6 +133,11 @@ export const apiCatalog = {
           href: absoluteUrl("/pricing.md"),
           type: "text/markdown",
           title: "LobbyStack pricing markdown summary",
+        },
+        {
+          href: absoluteUrl("/affiliate-program.md"),
+          type: "text/markdown",
+          title: "LobbyStack affiliate program markdown summary",
         },
         {
           href: absoluteUrl("/missed-call-revenue-calculator/index.md"),
@@ -353,6 +360,23 @@ export const openApiDocument = {
         },
       },
     },
+    "/affiliate-program.md": {
+      get: {
+        summary: "Get the affiliate program markdown summary",
+        operationId: "getAffiliateProgramMarkdown",
+        responses: {
+          "200": {
+            description:
+              "Markdown summary of the LobbyStack Affiliate Program terms, payouts, and onboarding.",
+            content: {
+              "text/markdown": {
+                schema: { type: "string" },
+              },
+            },
+          },
+        },
+      },
+    },
     "/missed-call-revenue-calculator/index.md": {
       get: {
         summary: "Get the missed call revenue calculator markdown",
@@ -473,6 +497,11 @@ export const mcpServerCard = {
         mimeType: "text/markdown",
       },
       {
+        uri: absoluteUrl("/affiliate-program.md"),
+        name: "LobbyStack affiliate program markdown summary",
+        mimeType: "text/markdown",
+      },
+      {
         uri: absoluteUrl("/openapi.json"),
         name: "LobbyStack public OpenAPI description",
         mimeType: "application/vnd.oai.openapi+json",
@@ -500,6 +529,7 @@ Use this skill when an agent needs a concise, machine-readable orientation to Lo
 - LLM context: ${absoluteUrl("/llms.txt")}
 - Features markdown: ${absoluteUrl("/features.md")}
 - Pricing markdown: ${absoluteUrl("/pricing.md")}
+- Affiliate program markdown: ${absoluteUrl("/affiliate-program.md")}
 - Calculator markdown: ${absoluteUrl("/missed-call-revenue-calculator/index.md")}
 - GitHub repository: https://github.com/lobbystack/lobbystack
 
@@ -507,7 +537,7 @@ Use this skill when an agent needs a concise, machine-readable orientation to Lo
 
 1. Start with ${absoluteUrl("/llms.txt")} for a compact product overview.
 2. Use ${absoluteUrl("/.well-known/api-catalog")} to discover public machine-readable resources.
-3. Use ${absoluteUrl("/features.md")} and ${absoluteUrl("/pricing.md")} for clean markdown summaries of the public site.
+3. Use ${absoluteUrl("/features.md")}, ${absoluteUrl("/pricing.md")}, and ${absoluteUrl("/affiliate-program.md")} for clean markdown summaries of the public site.
 4. Use https://docs.lobbystack.com/introduction for product setup and self-hosting documentation.
 5. Use ${absoluteUrl("/pricing/")} for canonical pricing details and ${absoluteUrl("/features/")} for canonical capability descriptions.
 `
@@ -551,9 +581,11 @@ ${DEFAULT_DESCRIPTION}
 
 - Features: ${absoluteUrl("/features/")}
 - Pricing: ${absoluteUrl("/pricing/")}
+- Affiliate program: ${absoluteUrl("/affiliate-program/")}
 - Calculator: ${absoluteUrl("/missed-call-revenue-calculator/")}
 - Features markdown: ${absoluteUrl("/features.md")}
 - Pricing markdown: ${absoluteUrl("/pricing.md")}
+- Affiliate program markdown: ${absoluteUrl("/affiliate-program.md")}
 - Calculator markdown: ${absoluteUrl("/missed-call-revenue-calculator/index.md")}
 - Documentation: https://docs.lobbystack.com/introduction
 - API catalog: ${absoluteUrl("/.well-known/api-catalog")}
@@ -647,6 +679,84 @@ No. LobbyStack excludes spam calls from usage, so wrong numbers, robocalls, and 
 
 No. Calls under 10 seconds are excluded from usage and do not count against included voice minutes or paid-plan overages.
 `
+
+export const affiliateProgramMarkdown = (locale: "en" | "fr") => {
+  if (locale === "fr") {
+    return `---
+title: Programme d'affiliation LobbyStack | 20 % de commission
+description: Résumé public du programme d'affiliation LobbyStack.
+url: ${absoluteUrl("/fr/affiliate-program/")}
+---
+
+# Programme d'affiliation LobbyStack
+
+Parrainez des clients payants vers les forfaits hébergés LobbyStack et touchez une commission.
+
+## Conditions du programme
+
+| Terme | LobbyStack |
+| --- | --- |
+| Commission | 20 % |
+| Durée | 12 premiers mois après attribution |
+| Délai de retenue | 30 jours |
+| Paiement minimum | 100 $ US |
+| Mode de paiement | PayPal |
+
+Les entreprises parrainées obtiennent 5 % de rabais sur les forfaits hébergés LobbyStack lorsqu'elles s'inscrivent via votre lien.
+
+## Ce qui paie une commission
+
+Vous touchez une commission uniquement sur les paiements de forfaits hébergés LobbyStack. L'auto-hébergement sans abonnement payant ne paie pas de commission.
+
+## Comment commencer
+
+1. Connectez-vous et ouvrez la page affiliation dans votre tableau de bord.
+2. Ajoutez votre courriel PayPal.
+3. Partagez votre lien avec des entreprises qui ont besoin d'un meilleur accueil téléphonique.
+
+## Bon profil pour le programme
+
+Agences, consultants, créateurs et opérateurs qui recommandent des outils aux PME, services à domicile, cliniques et salons.
+`
+  }
+
+  return `---
+title: LobbyStack Affiliate Program | Earn 20% Commission
+description: Public summary of the LobbyStack Affiliate Program.
+url: ${absoluteUrl("/affiliate-program/")}
+---
+
+# LobbyStack Affiliate Program
+
+Refer paying customers to hosted LobbyStack plans and earn commission.
+
+## Program terms
+
+| Term | LobbyStack |
+| --- | --- |
+| Commission | 20% |
+| Duration | First 12 months after attribution |
+| Holding period | 30 days |
+| Minimum payout | USD $100 |
+| Payout method | PayPal |
+
+Referred businesses get 5% off hosted LobbyStack plans when they sign up through your link.
+
+## What pays commission
+
+You earn commission on hosted LobbyStack plan payments only. Self-hosting without a paid LobbyStack subscription does not pay commission.
+
+## How to get started
+
+1. Sign in and open the affiliate page in your dashboard.
+2. Add your PayPal email.
+3. Share your link with businesses that need better phone coverage and appointment booking.
+
+## Who should apply
+
+Agencies, consultants, creators, and operators who recommend tools to small businesses, home services, clinics, and salons.
+`
+}
 
 export const calculatorMarkdown = `---
 title: Missed Call Revenue Calculator for Contractors - LobbyStack
