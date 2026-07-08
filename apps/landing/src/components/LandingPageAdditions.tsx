@@ -4,6 +4,10 @@ import { ArrowRight, Check, History, Pencil } from "lucide-react"
 
 const homeSectionsCopy = {
   en: {
+    extension: {
+      heading: "Turn missed calls into booked work",
+      body: "LobbyStack captures what callers need, books appointments when they are ready, and routes urgent calls with context.",
+    },
     extensionCards: [
       {
         title: "Turn unanswered calls into booked work",
@@ -33,6 +37,8 @@ const homeSectionsCopy = {
     quality: {
       heading: "AI receptionist for teams who care about response quality",
       body: "Cover the phone without giving up the details, judgment, and follow through that customers notice.",
+      learnMoreLabel: "Explore AI phone answering",
+      learnMoreHref: "/solutions/ai-phone-answering/",
       toolCards: [
         {
           title: "A receptionist that picks up when you need it to",
@@ -63,6 +69,8 @@ const homeSectionsCopy = {
     workflow: {
       heading: "Launch your AI receptionist in minutes",
       body: "Set up the receptionist once, then refine how it answers, books, routes, and summarizes as your business grows.",
+      guideLabel: "Read the buyer guide",
+      guideHref: "/blog/how-to-choose-an-ai-receptionist/",
       steps: [
         {
           title: "Connect your phone",
@@ -143,9 +151,37 @@ const homeSectionsCopy = {
       heading: "Proudly open-source, self-hosted",
       body: "Host LobbyStack on your own server. Own your customer data and stay fully compliant with regulatory standards.",
       cta: "View on GitHub",
+      solutionCta: "Open-source receptionist",
+      selfHostedCta: "Self-hosting overview",
+    },
+    resources: {
+      heading: "Learn more about AI receptionists",
+      body: "Guides, calculators, and comparisons to help you evaluate call coverage before you go live.",
+      links: [
+        {
+          label: "How to choose an AI receptionist",
+          href: "/blog/how-to-choose-an-ai-receptionist/",
+        },
+        {
+          label: "Missed call revenue calculator",
+          href: "/missed-call-revenue-calculator/",
+        },
+        {
+          label: "AI receptionist comparison",
+          href: "/comparison/",
+        },
+        {
+          label: "Open-source receptionist stack",
+          href: "/blog/open-source-ai-receptionist-stack/",
+        },
+      ],
     },
   },
   fr: {
+    extension: {
+      heading: "Transformez les appels manqués en rendez‑vous",
+      body: "LobbyStack comprend le besoin de l'appelant, réserve quand la personne est prête et transfère les urgences avec le bon contexte.",
+    },
     extensionCards: [
       {
         title: "Transformez les appels sans réponse en rendez‑vous",
@@ -176,6 +212,8 @@ const homeSectionsCopy = {
       heading:
         "Un réceptionniste IA pour les équipes qui tiennent à la qualité des réponses",
       body: "Couvrez le téléphone sans perdre les détails, le jugement et le suivi que vos clients remarquent.",
+      learnMoreLabel: "Découvrir la réponse téléphonique IA",
+      learnMoreHref: "/solutions/ai-phone-answering/",
       toolCards: [
         {
           title: "Une réceptionniste qui décroche quand vous en avez besoin",
@@ -206,6 +244,8 @@ const homeSectionsCopy = {
     workflow: {
       heading: "Lancez votre réceptionniste IA en quelques minutes",
       body: "Configurez-la une première fois, puis ajustez ses réponses, ses rendez‑vous, ses transferts et ses résumés au fil de votre croissance.",
+      guideLabel: "Lire le guide d'achat",
+      guideHref: "/blog/how-to-choose-an-ai-receptionist/",
       steps: [
         {
           title: "Connectez votre téléphone",
@@ -284,9 +324,33 @@ const homeSectionsCopy = {
       ],
     },
     openSource: {
-      heading: "Open source, prêt pour l’auto-hébergement",
+      heading: "Open source, prêt pour l'auto-hébergement",
       body: "Hébergez LobbyStack sur votre propre serveur. Gardez la maîtrise de vos données client et de vos exigences de conformité.",
       cta: "Voir sur GitHub",
+      solutionCta: "Réceptionniste IA open source",
+      selfHostedCta: "Aperçu de l'auto-hébergement",
+    },
+    resources: {
+      heading: "En savoir plus sur les réceptionnistes IA",
+      body: "Guides, calculateurs et comparatifs pour évaluer la couverture téléphonique avant la mise en production.",
+      links: [
+        {
+          label: "Comment choisir un réceptionniste IA",
+          href: "/blog/how-to-choose-an-ai-receptionist/",
+        },
+        {
+          label: "Calculateur d'appels manqués",
+          href: "/missed-call-revenue-calculator/",
+        },
+        {
+          label: "Comparaison de réceptionnistes IA",
+          href: "/comparison/",
+        },
+        {
+          label: "Pile open source pour réceptionniste IA",
+          href: "/blog/open-source-ai-receptionist-stack/",
+        },
+      ],
     },
   },
 }
@@ -301,6 +365,10 @@ export function ProductExtensionSection({ locale = "en" }: LocalizedProps) {
   return (
     <section className="px-0 pt-0 pb-12 md:pb-16 lg:pb-20" id="missed-calls">
       <div className="mx-auto max-w-7xl px-6">
+        <div className="mb-10 max-w-3xl">
+          <h2 className="section-heading">{sectionCopy.extension.heading}</h2>
+          <p className="section-intro mt-4">{sectionCopy.extension.body}</p>
+        </div>
         <div className="grid gap-6 lg:grid-cols-2">
           {sectionCopy.extensionCards.map((card) => (
             <article
@@ -390,6 +458,15 @@ function QualityToolsSection({ locale = "en" }: LocalizedProps) {
         <div className="max-w-3xl">
           <h2 className="section-heading">{sectionCopy.heading}</h2>
           <p className="section-intro">{sectionCopy.body}</p>
+          <p className="mt-4">
+            <a
+              href={localizeHref(locale, sectionCopy.learnMoreHref)}
+              className="text-sm font-medium text-foreground underline decoration-1 underline-offset-4 transition-colors hover:text-foreground/80"
+            >
+              {sectionCopy.learnMoreLabel}
+              <ArrowRight className="ml-1 inline size-3.5" />
+            </a>
+          </p>
         </div>
 
         <div className="mt-16 flex flex-col gap-16 md:gap-24">
@@ -435,6 +512,15 @@ function WorkflowSection({ locale = "en" }: LocalizedProps) {
         <div className="max-w-3xl">
           <h2 className="section-heading">{sectionCopy.heading}</h2>
           <p className="section-intro">{sectionCopy.body}</p>
+          <p className="mt-4">
+            <a
+              href={localizeHref(locale, sectionCopy.guideHref)}
+              className="text-sm font-medium text-foreground underline decoration-1 underline-offset-4 transition-colors hover:text-foreground/80"
+            >
+              {sectionCopy.guideLabel}
+              <ArrowRight className="ml-1 inline size-3.5" />
+            </a>
+          </p>
         </div>
 
         <div className="mt-14 grid grid-cols-1 border-y border-border/70 md:grid-cols-2 lg:grid-cols-4">
@@ -585,7 +671,7 @@ function OpenSourceSection({ locale = "en" }: LocalizedProps) {
           <p className="section-intro mx-auto">{sectionCopy.body}</p>
         </div>
 
-        <div className="mt-10 flex justify-center">
+        <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:flex-wrap">
           <a
             href="https://github.com/lobbystack/lobbystack"
             target="_blank"
@@ -598,7 +684,55 @@ function OpenSourceSection({ locale = "en" }: LocalizedProps) {
             {sectionCopy.cta}
             <ArrowRight className="size-4" />
           </a>
+          <a
+            href={localizeHref(locale, "/solutions/open-source-ai-receptionist/")}
+            data-ph-capture-attribute-section="open_source"
+            data-ph-capture-attribute-action="view_open_source_solution"
+            data-ph-capture-attribute-destination="/solutions/open-source-ai-receptionist/"
+            className="inline-flex h-11 items-center justify-center gap-3 rounded-full border border-border/70 bg-background px-6 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            {sectionCopy.solutionCta}
+            <ArrowRight className="size-4" />
+          </a>
+          <a
+            href={localizeHref(locale, "/solutions/self-hosted-ai-receptionist/")}
+            data-ph-capture-attribute-section="open_source"
+            data-ph-capture-attribute-action="view_self_hosted_solution"
+            data-ph-capture-attribute-destination="/solutions/self-hosted-ai-receptionist/"
+            className="inline-flex h-11 items-center justify-center gap-3 rounded-full border border-border/70 bg-background px-6 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            {sectionCopy.selfHostedCta}
+            <ArrowRight className="size-4" />
+          </a>
         </div>
+      </div>
+    </section>
+  )
+}
+
+function HomeResourcesSection({ locale = "en" }: LocalizedProps) {
+  const sectionCopy = homeSectionsCopy[locale].resources
+
+  return (
+    <section className="section-spacing border-t border-border/70" id="resources">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="max-w-3xl">
+          <h2 className="section-heading">{sectionCopy.heading}</h2>
+          <p className="section-intro">{sectionCopy.body}</p>
+        </div>
+        <ul className="mt-10 grid gap-4 md:grid-cols-2">
+          {sectionCopy.links.map((link) => (
+            <li key={link.href}>
+              <a
+                href={localizeHref(locale, link.href)}
+                className="flex items-center justify-between rounded-[1.35rem] border border-border/70 bg-background px-6 py-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                {link.label}
+                <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+              </a>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   )
@@ -613,6 +747,7 @@ export function LandingPageAdditions({ locale = "en" }: LocalizedProps) {
       <ControlOwnershipSection locale={locale} />
       <PricingPreviewSection locale={locale} />
       <OpenSourceSection locale={locale} />
+      <HomeResourcesSection locale={locale} />
     </>
   )
 }

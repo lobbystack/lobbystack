@@ -2,12 +2,14 @@ export const SITE_URL = "https://lobbystack.com"
 
 export const SITE_NAME = "LobbyStack"
 
-export const DEFAULT_TITLE = "LobbyStack | Open-Source AI Receptionist"
+export const DEFAULT_TITLE = "Open-Source AI Receptionist Software | LobbyStack"
 
 export const DEFAULT_DESCRIPTION =
   "LobbyStack is the open-source AI receptionist that answers calls, qualifies leads, books appointments, and routes urgent requests 24/7."
 
 export const DEFAULT_OG_IMAGE = "/og/index.jpg"
+
+export const HOMEPAGE_OG_IMAGE = "/og/lobbystack-og.webp"
 
 export const OG_IMAGE_WIDTH = 1200
 
@@ -254,7 +256,7 @@ export const softwareApplicationJsonLd = (
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   url: absoluteUrl("/"),
-  image: absoluteUrl(DEFAULT_OG_IMAGE),
+  image: absoluteUrl(HOMEPAGE_OG_IMAGE),
   description: DEFAULT_DESCRIPTION,
   inLanguage: localeLanguage(options.locale),
   isAccessibleForFree: true,
@@ -326,7 +328,7 @@ export const productJsonLd = (options: LocaleInput = {}): JsonLd => ({
   name: SITE_NAME,
   alternateName: BRAND_ALIASES,
   url: absoluteUrl("/"),
-  image: absoluteUrl(DEFAULT_OG_IMAGE),
+  image: absoluteUrl(HOMEPAGE_OG_IMAGE),
   description: DEFAULT_DESCRIPTION,
   inLanguage: localeLanguage(options.locale),
   category: "AI receptionist software",
