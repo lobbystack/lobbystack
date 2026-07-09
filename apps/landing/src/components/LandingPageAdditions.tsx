@@ -50,7 +50,9 @@ const homeSectionsCopy = {
             "Let LobbyStack answer every call, or only step in when your team is busy, after hours, or unable to pick up.",
           cta: "Answering",
           image: "/illustrations/call-capture.webp",
-          alt: "LobbyStack call capture interface illustration",
+          alt: "Incoming call routing to team members or LobbyStack when the team is unavailable",
+          imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
+          imageClassName: "h-full w-full object-cover object-center",
         },
         {
           title: "Appointments booked without the back-and-forth",
@@ -229,7 +231,9 @@ const homeSectionsCopy = {
             "Laissez LobbyStack répondre à chaque appel, ou seulement prendre le relais quand votre équipe est occupée, fermée ou indisponible.",
           cta: "Réponse",
           image: "/illustrations/call-capture.webp",
-          alt: "Illustration de prise d’appel LobbyStack",
+          alt: "Routage d’appel entrant vers l’équipe ou LobbyStack quand l’équipe est indisponible",
+          imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
+          imageClassName: "h-full w-full object-cover object-center",
         },
         {
           title: "Des rendez‑vous pris sans allers-retours",
@@ -494,13 +498,15 @@ function QualityToolsSection({ locale = "en" }: LocalizedProps) {
                 index % 2 === 1 ? "md:flex-row-reverse" : "md:flex-row"
               }`}
             >
-              <div className="w-full flex-1 overflow-hidden rounded-[1.35rem] border border-border/70 bg-muted">
+              <div
+                className={`w-full flex-1 overflow-hidden rounded-[1.35rem] border border-border/70 ${card.imageContainerClass ?? "bg-muted"}`}
+              >
                 <img
                   src={card.image}
                   alt={card.alt}
                   width={1200}
                   height={800}
-                  className="h-auto w-full object-cover"
+                  className={card.imageClassName ?? "h-auto w-full object-cover"}
                   loading="lazy"
                   decoding="async"
                 />
