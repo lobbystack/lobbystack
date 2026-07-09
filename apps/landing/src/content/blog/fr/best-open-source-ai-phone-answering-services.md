@@ -1,5 +1,5 @@
 ---
-title: "Meilleurs services open source de réponse téléphonique IA"
+title: "Services open source de réponse IA"
 description: "Comparez les services open source de réponse téléphonique IA en auto-hébergement : agents Asterisk, piles LiveKit et plateformes complètes de réceptionniste."
 pubDate: 2026-07-08T10:00:00-04:00
 author: "Équipe LobbyStack"
@@ -12,7 +12,7 @@ canonicalSlug: "best-open-source-ai-phone-answering-services"
 
 La plupart des entreprises qui cherchent un **service open source de réponse téléphonique IA** ne veulent pas un projet de week-end. Elles veulent moins d'appels manqués, des réservations mieux gérées et une pile qu'elles peuvent inspecter, héberger et modifier sans attendre la feuille de route d'un fournisseur.
 
-Le côté open source de ce marché se divise en deux camps. Certains projets vous donnent un agent vocal à brancher sur Asterisk ou LiveKit. D'autres se rapprochent d'un produit de réceptionniste : transcriptions, tableaux de bord, réservations, notifications et règles métier. Choisir le mauvais camp est l'erreur la plus fréquente. Vous téléchargez un dépôt vocal, obtenez une démo correcte, puis vous réalisez qu'il vous manque encore les calendriers, les journaux d'appels, la relecture par l'équipe et la logique d'escalade avant de confier une vraie ligne.
+Le côté open source de ce marché se divise en deux camps. Certains projets vous donnent un agent vocal à brancher sur Asterisk ou LiveKit. D'autres se rapprochent d'un réceptionniste virtuel open source : transcriptions, tableaux de bord, réservations, notifications et règles métier. Choisir le mauvais camp est l'erreur la plus fréquente. Vous téléchargez un dépôt vocal, obtenez une démo correcte, puis vous réalisez qu'il vous manque encore les calendriers, les journaux d'appels, la relecture par l'équipe et la logique d'escalade avant de confier une vraie ligne.
 
 Ce guide compare les options open source les plus solides à la mi-2026, avec des critères simples pour faire correspondre un projet à votre téléphonie et à l'appétit de votre équipe pour l'exploitation.
 
@@ -40,7 +40,7 @@ Faites un vrai test d'appel pour chaque finaliste : demande de réservation, que
 **Licence :** AGPL-3.0  
 **Idéal pour :** Les entreprises de services et les agences qui veulent appels, réservations, transcriptions, tableaux de bord, facturation et auto-hébergement sans assembler dix dépôts
 
-[LobbyStack](https://lobbystack.com/) est l'option de cette liste la plus proche d'un produit complet de **réceptionniste IA**. Il couvre les appels entrants, les réservations et modifications, les transcriptions et résumés, le contexte métier et les FAQ, les SMS, le transfert humain, les tableaux de bord, le suivi d'usage et les déploiements type client. Vous pouvez utiliser le cloud hébergé ou [l'auto-héberger avec Docker](/solutions/self-hosted-ai-receptionist/).
+[LobbyStack](https://lobbystack.com/) est l'option de cette liste la plus proche d'un produit complet de **réceptionniste IA**. Il couvre les appels entrants, les réservations et modifications, les transcriptions et résumés, le contexte métier et les FAQ, les SMS, le transfert humain, les tableaux de bord, le suivi d'usage et les déploiements type client. Vous pouvez utiliser le cloud hébergé, l'employer comme [réceptionniste IA open source](/solutions/open-source-ai-receptionist/) ou [l'auto-héberger avec Docker](/solutions/self-hosted-ai-receptionist/).
 
 Le compromis, c'est l'ampleur. Vous obtenez une vraie couche opérationnelle autour de l'appel, mais vous apportez encore les comptes fournisseurs (Twilio, OpenAI, calendrier, courriel et services associés) et vous gérez le déploiement si vous auto-hébergez. C'est le coût honnête pour éviter le verrouillage SaaS tout en gardant la profondeur produit.
 
@@ -113,7 +113,7 @@ L'open source lève le mystère des licences. Il ne supprime pas :
 - **La réflexion conformité.** Enregistrements, transcriptions et données clients exigent encore des règles de conservation et d'accès.
 - **Les factures fournisseurs.** Les minutes Twilio, l'usage OpenAI et les API calendrier apparaissent encore sur les factures, sauf si vous passez entièrement en local.
 
-Si vous hésitez entre construire, acheter et auto-héberger, croisez cette liste avec [comment choisir un réceptionniste IA](/blog/how-to-choose-an-ai-receptionist/) et [construire ou acheter un réceptionniste IA](/blog/build-or-buy-ai-receptionist/).
+Si vous hésitez entre construire, acheter et auto-héberger, croisez cette liste avec [comment choisir un réceptionniste IA](/fr/blog/how-to-choose-an-ai-receptionist/) et [construire ou acheter un réceptionniste IA](/fr/blog/build-or-buy-ai-receptionist/).
 
 ## Prochaines étapes concrètes
 
@@ -132,4 +132,4 @@ Le meilleur **service open source de réponse téléphonique IA** pour vous est 
 - Besoin d'un agent vocal Realtime léger sur LiveKit → **AIReceptionist**
 - Besoin d'un accueil pour services à domicile → **Hearthline**
 
-Si vous voulez inspecter une pile complète avant de transférer votre ligne principale, commencez par le [dépôt GitHub LobbyStack](https://github.com/lobbystack/lobbystack) ou la [vue d'ensemble de la pile open source](/blog/open-source-ai-receptionist-stack/).
+Si vous voulez inspecter une pile complète avant de transférer votre ligne principale, commencez par le [dépôt GitHub LobbyStack](https://github.com/lobbystack/lobbystack) ou la [vue d'ensemble de la pile open source](/fr/blog/open-source-ai-receptionist-stack/).

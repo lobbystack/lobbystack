@@ -23,6 +23,7 @@ const TRANSLATED_PATHS = new Set([
   "/blog/how-to-choose-an-ai-receptionist/",
   "/blog/build-or-buy-ai-receptionist/",
   "/blog/open-source-ai-receptionist-stack/",
+  "/blog/best-open-source-ai-phone-answering-services/",
   "/blog/ai-receptionist-workflows/",
   "/blog/ai-receptionist-affiliate-program/",
   "/affiliate-program/",

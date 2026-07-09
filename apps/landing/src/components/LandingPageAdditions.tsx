@@ -4,6 +4,10 @@ import { ArrowRight, Check, History, Pencil } from "lucide-react"
 
 const homeSectionsCopy = {
   en: {
+    extension: {
+      heading: "Turn missed calls into booked work",
+      body: "LobbyStack captures what callers need, books appointments when they are ready, and routes urgent calls with context.",
+    },
     extensionCards: [
       {
         title: "Turn unanswered calls into booked work",
@@ -11,8 +15,10 @@ const homeSectionsCopy = {
           "LobbyStack answers when your team cannot, captures what the caller needs, and helps them book or request a callback.",
         cta: "See how it works",
         href: "#how-it-works",
-        image: "/illustrations/missed-calls-v4.webp",
-        alt: "Missed calls organized into a LobbyStack call capture flow",
+        image: "/illustrations/missed-calls-booked-work.webp",
+        alt: "Incoming call answered and appointment confirmed for Tuesday at 3:00 PM",
+        imageAspectClass: "aspect-[9/4]",
+        imageScaleClass: "h-[155%] w-[155%]",
       },
       {
         title: "Send the right calls to your team",
@@ -20,8 +26,10 @@ const homeSectionsCopy = {
           "LobbyStack can answer routine calls, take a message, or route urgent conversations to your team with the caller's details and reason attached.",
         cta: "Set routing rules",
         href: "#control",
-        image: "/illustrations/calls-need-person.webp",
-        alt: "LobbyStack call summary with routing details and appointment context",
+        image: "/illustrations/call-routing-team.webp",
+        alt: "Incoming call summary routed to the right team member with customer context",
+        imageAspectClass: "aspect-[9/4]",
+        imageScaleClass: "h-full w-full object-cover object-[50%_44%]",
       },
     ],
     connected: {
@@ -33,6 +41,8 @@ const homeSectionsCopy = {
     quality: {
       heading: "AI receptionist for teams who care about response quality",
       body: "Cover the phone without giving up the details, judgment, and follow through that customers notice.",
+      learnMoreLabel: "Explore AI phone answering",
+      learnMoreHref: "/solutions/ai-phone-answering/",
       toolCards: [
         {
           title: "A receptionist that picks up when you need it to",
@@ -40,7 +50,11 @@ const homeSectionsCopy = {
             "Let LobbyStack answer every call, or only step in when your team is busy, after hours, or unable to pick up.",
           cta: "Answering",
           image: "/illustrations/call-capture.webp",
-          alt: "LobbyStack call capture interface illustration",
+          alt: "Incoming call routing to team members or LobbyStack when the team is unavailable",
+          imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
+          imageClassName: "h-full w-full object-cover object-center",
+          imageWidth: 2048,
+          imageHeight: 2048,
         },
         {
           title: "Appointments booked without the back-and-forth",
@@ -48,7 +62,11 @@ const homeSectionsCopy = {
             "Offer available times, confirm appointments, and send follow-up details without manual back-and-forth.",
           cta: "Booking",
           image: "/illustrations/booking-flow.webp",
-          alt: "LobbyStack appointment booking flow illustration",
+          alt: "LobbyStack offering available appointment times and confirming a booking with caller confirmation",
+          imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
+          imageClassName: "h-full w-full object-cover object-center",
+          imageWidth: 2048,
+          imageHeight: 2048,
         },
         {
           title: "Human handoff when a call needs it",
@@ -56,13 +74,19 @@ const homeSectionsCopy = {
             "Route urgent or unusual calls to a human with the caller's reason, contact details, and conversation context attached.",
           cta: "Handoff",
           image: "/illustrations/human-handoff.webp",
-          alt: "LobbyStack handoff from an incoming call to a team member",
+          alt: "Urgent caller message transferred to a team member with reason and context attached",
+          imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
+          imageClassName: "h-full w-full object-cover object-center",
+          imageWidth: 2048,
+          imageHeight: 2048,
         },
       ],
     },
     workflow: {
       heading: "Launch your AI receptionist in minutes",
       body: "Set up the receptionist once, then refine how it answers, books, routes, and summarizes as your business grows.",
+      guideLabel: "Read the buyer guide",
+      guideHref: "/blog/how-to-choose-an-ai-receptionist/",
       steps: [
         {
           title: "Connect your phone",
@@ -143,9 +167,37 @@ const homeSectionsCopy = {
       heading: "Proudly open-source, self-hosted",
       body: "Host LobbyStack on your own server. Own your customer data and stay fully compliant with regulatory standards.",
       cta: "View on GitHub",
+      solutionCta: "Open-source receptionist",
+      selfHostedCta: "Self-hosting overview",
+    },
+    resources: {
+      heading: "Learn more about AI receptionists",
+      body: "Guides, calculators, and comparisons to help you evaluate call coverage before you go live.",
+      links: [
+        {
+          label: "How to choose an AI receptionist",
+          href: "/blog/how-to-choose-an-ai-receptionist/",
+        },
+        {
+          label: "Missed call revenue calculator",
+          href: "/missed-call-revenue-calculator/",
+        },
+        {
+          label: "AI receptionist comparison",
+          href: "/comparison/",
+        },
+        {
+          label: "Open-source receptionist stack",
+          href: "/blog/open-source-ai-receptionist-stack/",
+        },
+      ],
     },
   },
   fr: {
+    extension: {
+      heading: "Transformez les appels manqués en rendez‑vous",
+      body: "LobbyStack comprend le besoin de l'appelant, réserve quand la personne est prête et transfère les urgences avec le bon contexte.",
+    },
     extensionCards: [
       {
         title: "Transformez les appels sans réponse en rendez‑vous",
@@ -153,8 +205,10 @@ const homeSectionsCopy = {
           "LobbyStack répond quand votre équipe ne peut pas décrocher, comprend le besoin de l’appelant et l’aide à réserver ou à demander un rappel.",
         cta: "Voir le fonctionnement",
         href: "#how-it-works",
-        image: "/illustrations/missed-calls-v4.webp",
-        alt: "Appels manqués organisés dans un parcours de prise en charge LobbyStack",
+        image: "/illustrations/missed-calls-booked-work.webp",
+        alt: "Appel entrant répondu et rendez‑vous confirmé pour mardi à 15 h",
+        imageAspectClass: "aspect-[9/4]",
+        imageScaleClass: "h-[155%] w-[155%]",
       },
       {
         title: "Envoyez les bons appels à la bonne personne",
@@ -162,8 +216,10 @@ const homeSectionsCopy = {
           "LobbyStack traite les appels courants, prend un message ou transfère les conversations urgentes avec les détails et le motif de l’appel.",
         cta: "Définir les règles",
         href: "#control",
-        image: "/illustrations/calls-need-person.webp",
-        alt: "Résumé d’appel LobbyStack avec transfert et contexte de rendez‑vous",
+        image: "/illustrations/call-routing-team.webp",
+        alt: "Résumé d’appel entrant routé vers la bonne personne avec le contexte client",
+        imageAspectClass: "aspect-[9/4]",
+        imageScaleClass: "h-full w-full object-cover object-[50%_44%]",
       },
     ],
     connected: {
@@ -176,6 +232,8 @@ const homeSectionsCopy = {
       heading:
         "Un réceptionniste IA pour les équipes qui tiennent à la qualité des réponses",
       body: "Couvrez le téléphone sans perdre les détails, le jugement et le suivi que vos clients remarquent.",
+      learnMoreLabel: "Découvrir la réponse téléphonique IA",
+      learnMoreHref: "/solutions/ai-phone-answering/",
       toolCards: [
         {
           title: "Une réceptionniste qui décroche quand vous en avez besoin",
@@ -183,7 +241,11 @@ const homeSectionsCopy = {
             "Laissez LobbyStack répondre à chaque appel, ou seulement prendre le relais quand votre équipe est occupée, fermée ou indisponible.",
           cta: "Réponse",
           image: "/illustrations/call-capture.webp",
-          alt: "Illustration de prise d’appel LobbyStack",
+          alt: "Routage d’appel entrant vers l’équipe ou LobbyStack quand l’équipe est indisponible",
+          imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
+          imageClassName: "h-full w-full object-cover object-center",
+          imageWidth: 2048,
+          imageHeight: 2048,
         },
         {
           title: "Des rendez‑vous pris sans allers-retours",
@@ -191,7 +253,11 @@ const homeSectionsCopy = {
             "Proposez des créneaux disponibles, confirmez les rendez‑vous et envoyez les informations de suivi sans échanges manuels.",
           cta: "Réservation",
           image: "/illustrations/booking-flow.webp",
-          alt: "Illustration de la prise de rendez‑vous LobbyStack",
+          alt: "LobbyStack propose des créneaux disponibles et confirme un rendez‑vous avec envoi de confirmation à l’appelant",
+          imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
+          imageClassName: "h-full w-full object-cover object-center",
+          imageWidth: 2048,
+          imageHeight: 2048,
         },
         {
           title: "Transfert humain quand l’appel l’exige",
@@ -199,13 +265,19 @@ const homeSectionsCopy = {
             "Transférez les appels urgents ou inhabituels vers une personne avec le motif, les coordonnées et le contexte de la conversation.",
           cta: "Transfert",
           image: "/illustrations/human-handoff.webp",
-          alt: "Transfert LobbyStack d’un appel entrant vers un membre de l’équipe",
+          alt: "Message urgent d’un appelant transféré à un membre de l’équipe avec le motif et le contexte",
+          imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
+          imageClassName: "h-full w-full object-cover object-center",
+          imageWidth: 2048,
+          imageHeight: 2048,
         },
       ],
     },
     workflow: {
       heading: "Lancez votre réceptionniste IA en quelques minutes",
       body: "Configurez-la une première fois, puis ajustez ses réponses, ses rendez‑vous, ses transferts et ses résumés au fil de votre croissance.",
+      guideLabel: "Lire le guide d'achat",
+      guideHref: "/blog/how-to-choose-an-ai-receptionist/",
       steps: [
         {
           title: "Connectez votre téléphone",
@@ -284,9 +356,33 @@ const homeSectionsCopy = {
       ],
     },
     openSource: {
-      heading: "Open source, prêt pour l’auto-hébergement",
+      heading: "Open source, prêt pour l'auto-hébergement",
       body: "Hébergez LobbyStack sur votre propre serveur. Gardez la maîtrise de vos données client et de vos exigences de conformité.",
       cta: "Voir sur GitHub",
+      solutionCta: "Réceptionniste IA open source",
+      selfHostedCta: "Aperçu de l'auto-hébergement",
+    },
+    resources: {
+      heading: "En savoir plus sur les réceptionnistes IA",
+      body: "Guides, calculateurs et comparatifs pour évaluer la couverture téléphonique avant la mise en production.",
+      links: [
+        {
+          label: "Comment choisir un réceptionniste IA",
+          href: "/blog/how-to-choose-an-ai-receptionist/",
+        },
+        {
+          label: "Calculateur d'appels manqués",
+          href: "/missed-call-revenue-calculator/",
+        },
+        {
+          label: "Comparaison de réceptionnistes IA",
+          href: "/comparison/",
+        },
+        {
+          label: "Pile open source pour réceptionniste IA",
+          href: "/blog/open-source-ai-receptionist-stack/",
+        },
+      ],
     },
   },
 }
@@ -301,19 +397,32 @@ export function ProductExtensionSection({ locale = "en" }: LocalizedProps) {
   return (
     <section className="px-0 pt-0 pb-12 md:pb-16 lg:pb-20" id="missed-calls">
       <div className="mx-auto max-w-7xl px-6">
+        <div className="mb-10 max-w-3xl">
+          <h2 className="section-heading">{sectionCopy.extension.heading}</h2>
+          <p className="section-intro mt-4">{sectionCopy.extension.body}</p>
+        </div>
         <div className="grid gap-6 lg:grid-cols-2">
           {sectionCopy.extensionCards.map((card) => (
             <article
               key={card.title}
               className="overflow-hidden rounded-[1.35rem] border border-border/70 bg-background"
             >
-              <div className="h-[300px] overflow-hidden border-b border-border/70 bg-muted md:h-[360px]">
+              <div
+                className={`relative overflow-hidden bg-[#F4F4F2] ${card.imageAspectClass ?? "aspect-[9/4]"} ${card.imageContainerClass ?? ""}`}
+              >
                 <img
                   src={card.image}
                   alt={card.alt}
                   width={1200}
                   height={800}
-                  className="h-full w-full object-cover"
+                  className={
+                    card.imageContainerClass
+                      ? (card.imageScaleClass ??
+                        "h-[84%] w-full object-contain object-center")
+                      : card.imageScaleClass?.includes("object-cover")
+                        ? card.imageScaleClass
+                        : `absolute left-1/2 top-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 object-contain ${card.imageScaleClass ?? "h-[155%] w-[155%]"}`
+                  }
                   loading="lazy"
                   decoding="async"
                 />
@@ -347,13 +456,13 @@ function ConnectedReceptionistSection({ locale = "en" }: LocalizedProps) {
     <section className="section-spacing" id="how-it-works">
       <div className="mx-auto max-w-7xl px-6">
         <div className="grid overflow-hidden rounded-[1.35rem] border border-border/70 bg-background lg:grid-cols-[1.18fr_0.82fr]">
-          <div className="min-h-[360px] overflow-hidden border-b border-border/70 bg-muted md:min-h-[460px] lg:border-r lg:border-b-0">
+          <div className="min-h-[360px] overflow-hidden border-b border-border/70 bg-[#F4F4F2] md:min-h-[460px] lg:border-r lg:border-b-0">
             <img
               src="/illustrations/business-knowledge.webp"
               alt={sectionCopy.imageAlt}
-              width={1200}
-              height={800}
-              className="h-full w-full object-cover"
+              width={1536}
+              height={1024}
+              className="h-full w-full min-h-[360px] object-cover object-center md:min-h-[460px]"
               loading="lazy"
               decoding="async"
             />
@@ -390,6 +499,15 @@ function QualityToolsSection({ locale = "en" }: LocalizedProps) {
         <div className="max-w-3xl">
           <h2 className="section-heading">{sectionCopy.heading}</h2>
           <p className="section-intro">{sectionCopy.body}</p>
+          <p className="mt-4">
+            <a
+              href={localizeHref(locale, sectionCopy.learnMoreHref)}
+              className="text-sm font-medium text-foreground underline decoration-1 underline-offset-4 transition-colors hover:text-foreground/80"
+            >
+              {sectionCopy.learnMoreLabel}
+              <ArrowRight className="ml-1 inline size-3.5" />
+            </a>
+          </p>
         </div>
 
         <div className="mt-16 flex flex-col gap-16 md:gap-24">
@@ -400,13 +518,15 @@ function QualityToolsSection({ locale = "en" }: LocalizedProps) {
                 index % 2 === 1 ? "md:flex-row-reverse" : "md:flex-row"
               }`}
             >
-              <div className="w-full flex-1 overflow-hidden rounded-[1.35rem] border border-border/70 bg-muted">
+              <div
+                className={`w-full flex-1 overflow-hidden rounded-[1.35rem] border border-border/70 ${card.imageContainerClass ?? "bg-muted"}`}
+              >
                 <img
                   src={card.image}
                   alt={card.alt}
-                  width={1200}
-                  height={800}
-                  className="h-auto w-full object-cover"
+                  width={card.imageWidth ?? 1200}
+                  height={card.imageHeight ?? 800}
+                  className={card.imageClassName ?? "h-auto w-full object-cover"}
                   loading="lazy"
                   decoding="async"
                 />
@@ -435,6 +555,15 @@ function WorkflowSection({ locale = "en" }: LocalizedProps) {
         <div className="max-w-3xl">
           <h2 className="section-heading">{sectionCopy.heading}</h2>
           <p className="section-intro">{sectionCopy.body}</p>
+          <p className="mt-4">
+            <a
+              href={localizeHref(locale, sectionCopy.guideHref)}
+              className="text-sm font-medium text-foreground underline decoration-1 underline-offset-4 transition-colors hover:text-foreground/80"
+            >
+              {sectionCopy.guideLabel}
+              <ArrowRight className="ml-1 inline size-3.5" />
+            </a>
+          </p>
         </div>
 
         <div className="mt-14 grid grid-cols-1 border-y border-border/70 md:grid-cols-2 lg:grid-cols-4">
@@ -475,8 +604,8 @@ function ControlOwnershipSection({ locale = "en" }: LocalizedProps) {
           <img
             src="/screenshots/dashboard.webp"
             alt={sectionCopy.imageAlt}
-            width={1600}
-            height={1000}
+            width={3020}
+            height={1898}
             className="w-full"
             loading="lazy"
             decoding="async"
@@ -585,7 +714,7 @@ function OpenSourceSection({ locale = "en" }: LocalizedProps) {
           <p className="section-intro mx-auto">{sectionCopy.body}</p>
         </div>
 
-        <div className="mt-10 flex justify-center">
+        <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:flex-wrap">
           <a
             href="https://github.com/lobbystack/lobbystack"
             target="_blank"
@@ -598,7 +727,55 @@ function OpenSourceSection({ locale = "en" }: LocalizedProps) {
             {sectionCopy.cta}
             <ArrowRight className="size-4" />
           </a>
+          <a
+            href={localizeHref(locale, "/solutions/open-source-ai-receptionist/")}
+            data-ph-capture-attribute-section="open_source"
+            data-ph-capture-attribute-action="view_open_source_solution"
+            data-ph-capture-attribute-destination="/solutions/open-source-ai-receptionist/"
+            className="inline-flex h-11 items-center justify-center gap-3 rounded-full border border-border/70 bg-background px-6 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            {sectionCopy.solutionCta}
+            <ArrowRight className="size-4" />
+          </a>
+          <a
+            href={localizeHref(locale, "/solutions/self-hosted-ai-receptionist/")}
+            data-ph-capture-attribute-section="open_source"
+            data-ph-capture-attribute-action="view_self_hosted_solution"
+            data-ph-capture-attribute-destination="/solutions/self-hosted-ai-receptionist/"
+            className="inline-flex h-11 items-center justify-center gap-3 rounded-full border border-border/70 bg-background px-6 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            {sectionCopy.selfHostedCta}
+            <ArrowRight className="size-4" />
+          </a>
         </div>
+      </div>
+    </section>
+  )
+}
+
+function HomeResourcesSection({ locale = "en" }: LocalizedProps) {
+  const sectionCopy = homeSectionsCopy[locale].resources
+
+  return (
+    <section className="section-spacing border-t border-border/70" id="resources">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="max-w-3xl">
+          <h2 className="section-heading">{sectionCopy.heading}</h2>
+          <p className="section-intro">{sectionCopy.body}</p>
+        </div>
+        <ul className="mt-10 grid gap-4 md:grid-cols-2">
+          {sectionCopy.links.map((link) => (
+            <li key={link.href}>
+              <a
+                href={localizeHref(locale, link.href)}
+                className="flex items-center justify-between rounded-[1.35rem] border border-border/70 bg-background px-6 py-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                {link.label}
+                <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+              </a>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   )
@@ -613,6 +790,7 @@ export function LandingPageAdditions({ locale = "en" }: LocalizedProps) {
       <ControlOwnershipSection locale={locale} />
       <PricingPreviewSection locale={locale} />
       <OpenSourceSection locale={locale} />
+      <HomeResourcesSection locale={locale} />
     </>
   )
 }

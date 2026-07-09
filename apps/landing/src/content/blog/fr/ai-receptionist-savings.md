@@ -217,3 +217,9 @@ Additionnez les revenus que vous pensez récupérer grâce aux appels manqués e
 ### Un réceptionniste IA récupère-t-il tous les appels manqués ?
 
 Non. Certains appelants ne sont pas prêts à réserver, ne sont pas qualifiés, sont hors de votre zone de service ou ne correspondent pas à votre entreprise. L'objectif est de récupérer une part réaliste des bons appels en répondant plus vite, en recueillant les bons détails et en rendant la prochaine étape facile.
+
+## En bref
+
+Pour beaucoup de petites entreprises, un réceptionniste IA peut faire économiser de quelques dizaines à plusieurs centaines ou milliers de dollars par mois, entre temps administratif et revenus protégés. Les entreprises qui voient le retour le plus net ont souvent des appels à forte valeur, des équipes occupées et un vrai trou de suivi.
+
+Le meilleur moyen de trouver votre chiffre est de passer vos appels dans le [calculateur d'appels manqués](/fr/missed-call-revenue-calculator/), de comparer le résultat aux [tarifs](/fr/pricing/) et de décider si le prochain appel manqué mérite d'être couvert. Pour l'évaluation des fournisseurs, croisez cela avec [comment choisir un réceptionniste IA](/fr/blog/how-to-choose-an-ai-receptionist/) et [créer ou acheter son réceptionniste IA](/fr/blog/build-or-buy-ai-receptionist/).

@@ -234,4 +234,4 @@ Some will, especially if the call feels evasive or trapped. Most care more about
 
 For many small businesses, an AI receptionist can save anywhere from a few dozen dollars a month in admin time to hundreds or thousands in protected revenue. The businesses that see the clearest return usually have valuable calls, busy staff, and a real follow-up gap.
 
-The best way to find your number is to run your calls through the [missed call revenue calculator](/missed-call-revenue-calculator/), compare the result to the [pricing](/pricing/), and decide whether the next missed call is worth covering.
+The best way to find your number is to run your calls through the [missed call revenue calculator](/missed-call-revenue-calculator/), compare the result to the [pricing](/pricing/), and decide whether the next missed call is worth covering. For vendor evaluation, pair this with [how to choose an AI receptionist](/blog/how-to-choose-an-ai-receptionist/) and [build or buy an AI receptionist](/blog/build-or-buy-ai-receptionist/).

@@ -12,7 +12,7 @@ canonicalSlug: "best-open-source-ai-phone-answering-services"
 
 Most businesses searching for an **open source AI phone answering service** are not looking for a weekend hackathon project. They want fewer missed calls, cleaner booking handoffs, and a stack they can inspect, host, and change without waiting on a vendor roadmap.
 
-The open-source side of this market splits into two camps. Some projects give you a voice agent you wire into Asterisk or LiveKit. Others ship closer to a receptionist product: transcripts, dashboards, booking, notifications, and business rules. Picking the wrong camp is the usual mistake. You download a voice repo, get a decent demo, then realize you still need calendars, call logs, staff review, and escalation logic before anyone trusts it with a real phone line.
+The open-source side of this market splits into two camps. Some projects give you a voice agent you wire into Asterisk or LiveKit. Others ship closer to an open-source virtual receptionist: transcripts, dashboards, booking, notifications, and business rules. Picking the wrong camp is the usual mistake. You download a voice repo, get a decent demo, then realize you still need calendars, call logs, staff review, and escalation logic before anyone trusts it with a real phone line.
 
 This guide compares the strongest open-source options as of mid-2026, with plain criteria so you can match a project to your phone setup and your team's appetite for ops work.
 
@@ -40,7 +40,7 @@ Run a real call test for each finalist: booking request, pricing question, angry
 **License:** AGPL-3.0  
 **Best for:** Service businesses and agencies that want calls, booking, transcripts, dashboards, billing, and self-hosting without assembling ten repos
 
-[LobbyStack](https://lobbystack.com/) is the option on this list closest to a complete **AI receptionist** product. It covers inbound calls, appointment booking and changes, transcripts and summaries, business context and FAQs, SMS, human handoff, staff dashboards, usage tracking, and client-style deployments. You can run the hosted cloud or [self-host with Docker](/solutions/self-hosted-ai-receptionist/).
+[LobbyStack](https://lobbystack.com/) is the option on this list closest to a complete **AI receptionist** product. It covers inbound calls, appointment booking and changes, transcripts and summaries, business context and FAQs, SMS, human handoff, staff dashboards, usage tracking, and client-style deployments. You can run the hosted cloud, use it as an [open-source AI receptionist](/solutions/open-source-ai-receptionist/), or [self-host with Docker](/solutions/self-hosted-ai-receptionist/).
 
 The tradeoff is scope. You get a real operating layer around the call, but you still bring provider accounts (Twilio, OpenAI, calendar, email, and related services) and own the deployment if you self-host. That is the honest cost of skipping SaaS lock-in while keeping product depth.
 

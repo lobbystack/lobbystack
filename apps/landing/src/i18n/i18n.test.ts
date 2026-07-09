@@ -76,6 +76,20 @@ describe("landing i18n route helpers", () => {
       { hrefLang: "fr", href: "https://lobbystack.com/fr/cookie-policy/" },
       { hrefLang: "x-default", href: "https://lobbystack.com/cookie-policy/" },
     ])
+    expect(alternateLocaleLinks("/blog/best-open-source-ai-phone-answering-services/")).toEqual([
+      {
+        hrefLang: "en",
+        href: "https://lobbystack.com/blog/best-open-source-ai-phone-answering-services/",
+      },
+      {
+        hrefLang: "fr",
+        href: "https://lobbystack.com/fr/blog/best-open-source-ai-phone-answering-services/",
+      },
+      {
+        hrefLang: "x-default",
+        href: "https://lobbystack.com/blog/best-open-source-ai-phone-answering-services/",
+      },
+    ])
   })
 })
 

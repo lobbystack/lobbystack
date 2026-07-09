@@ -1,32 +1,8 @@
 import { absoluteUrl, normalizedPath } from "@/lib/seo"
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config"
+import { translatedBasePaths } from "@/i18n/translated-base-paths"
 
-export const translatedBasePaths = [
-  "/",
-  "/features/",
-  "/pricing/",
-  "/solutions/",
-  "/solutions/ai-phone-answering/",
-  "/solutions/ai-appointment-scheduler/",
-  "/solutions/ai-receptionist-for-home-services/",
-  "/missed-call-revenue-calculator/",
-  "/comparison/",
-  "/blog/",
-  "/changelog/",
-  "/blog/lobbystack-is-live/",
-  "/blog/ai-receptionist-savings/",
-  "/blog/how-to-choose-an-ai-receptionist/",
-  "/blog/build-or-buy-ai-receptionist/",
-  "/blog/open-source-ai-receptionist-stack/",
-  "/blog/ai-receptionist-workflows/",
-  "/blog/ai-receptionist-affiliate-program/",
-  "/affiliate-program/",
-  "/docs/api/",
-  "/privacy/",
-  "/cookie-policy/",
-  "/terms/",
-  "/search/",
-] as const
+export { translatedBasePaths }
 
 export const translatedPathSet = new Set<string>(translatedBasePaths)
 
