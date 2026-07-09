@@ -432,13 +432,13 @@ function ConnectedReceptionistSection({ locale = "en" }: LocalizedProps) {
     <section className="section-spacing" id="how-it-works">
       <div className="mx-auto max-w-7xl px-6">
         <div className="grid overflow-hidden rounded-[1.35rem] border border-border/70 bg-background lg:grid-cols-[1.18fr_0.82fr]">
-          <div className="min-h-[360px] overflow-hidden border-b border-border/70 bg-muted md:min-h-[460px] lg:border-r lg:border-b-0">
+          <div className="min-h-[360px] overflow-hidden border-b border-border/70 bg-[#F4F4F2] md:min-h-[460px] lg:border-r lg:border-b-0">
             <img
               src="/illustrations/business-knowledge.webp"
               alt={sectionCopy.imageAlt}
-              width={1200}
-              height={800}
-              className="h-full w-full object-cover"
+              width={1536}
+              height={1024}
+              className="h-full w-full min-h-[360px] object-cover object-center md:min-h-[460px]"
               loading="lazy"
               decoding="async"
             />
