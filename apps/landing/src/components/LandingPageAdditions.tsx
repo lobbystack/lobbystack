@@ -604,8 +604,8 @@ function ControlOwnershipSection({ locale = "en" }: LocalizedProps) {
           <img
             src="/screenshots/dashboard.webp"
             alt={sectionCopy.imageAlt}
-            width={1600}
-            height={1000}
+            width={3020}
+            height={1898}
             className="w-full"
             loading="lazy"
             decoding="async"
