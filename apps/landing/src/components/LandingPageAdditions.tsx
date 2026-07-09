@@ -408,7 +408,7 @@ export function ProductExtensionSection({ locale = "en" }: LocalizedProps) {
               className="overflow-hidden rounded-[1.35rem] border border-border/70 bg-background"
             >
               <div
-                className={`relative overflow-hidden bg-[#F4F4F2] ${card.imageAspectClass ?? "aspect-[9/4]"} ${card.imageContainerClass ?? ""}`}
+                className={`relative overflow-hidden bg-[#F4F4F2] ${card.imageAspectClass ?? "aspect-[9/4]"}`}
               >
                 <img
                   src={card.image}
@@ -416,12 +416,9 @@ export function ProductExtensionSection({ locale = "en" }: LocalizedProps) {
                   width={1200}
                   height={800}
                   className={
-                    card.imageContainerClass
-                      ? (card.imageScaleClass ??
-                        "h-[84%] w-full object-contain object-center")
-                      : card.imageScaleClass?.includes("object-cover")
-                        ? card.imageScaleClass
-                        : `absolute left-1/2 top-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 object-contain ${card.imageScaleClass ?? "h-[155%] w-[155%]"}`
+                    card.imageScaleClass?.includes("object-cover")
+                      ? card.imageScaleClass
+                      : `absolute left-1/2 top-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 object-contain ${card.imageScaleClass ?? "h-[155%] w-[155%]"}`
                   }
                   loading="lazy"
                   decoding="async"
