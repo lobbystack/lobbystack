@@ -112,6 +112,8 @@ Ce n'est pas une façon d'éviter l'exploitation. Les systèmes téléphoniques 
 
 C'est une façon d'éviter des mois de plomberie produit avant de pouvoir travailler sur le vrai workflow métier.
 
+Si vous comparez d'abord les options open source du marché, consultez le guide des [meilleurs services open source de réponse IA](/fr/blog/best-open-source-ai-phone-answering-services/). Les agences qui déploient pour des clients peuvent aussi consulter le [programme d'affiliation LobbyStack](/fr/blog/ai-receptionist-affiliate-program/). Pour la conception des workflows, voir [des workflows IA sans flowcharts](/fr/blog/ai-receptionist-workflows/).
+
 ## Tester ou auto-héberger
 
 Commencez avec [LobbyStack Cloud](https://lobbystack.com/) si vous voulez tester le produit rapidement.

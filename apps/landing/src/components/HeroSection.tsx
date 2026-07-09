@@ -17,14 +17,14 @@ const heroCopy = {
     h1Start: "LobbyStack turns",
     h1Emphasis: "missed calls",
     h1End: "into booked work.",
-    body: "LobbyStack answers calls, qualifies leads, and books appointments 24/7. Use it for every inbound call, or just the ones you miss when your team is busy.",
+    body: "LobbyStack is an open-source AI receptionist that answers calls, qualifies leads, and books appointments 24/7. Use it for every inbound call, or just the ones you miss when your team is busy.",
   },
   fr: {
     github: "Soutenez-nous sur GitHub",
     h1Start: "LobbyStack transforme",
     h1Emphasis: "appels manqués",
     h1End: "en rendez‑vous.",
-    body: "LobbyStack répond au téléphone, qualifie les demandes et planifie des rendez‑vous 24/7. Activez-le pour tous vos appels ou seulement quand votre équipe est occupée.",
+    body: "LobbyStack est un réceptionniste IA open source qui répond au téléphone, qualifie les demandes et planifie des rendez‑vous 24/7. Activez-le pour tous vos appels ou seulement quand votre équipe est occupée.",
   },
 } satisfies Record<Locale, Record<string, string>>
 

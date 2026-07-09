@@ -23,7 +23,7 @@ export const fr = {
   },
   routes: {
     "/": {
-      title: "LobbyStack | Réceptionniste IA open source",
+      title: "Réceptionniste IA open source | LobbyStack",
       description:
         "LobbyStack est le réceptionniste IA open source qui répond aux appels, qualifie les demandes, planifie des rendez‑vous et transfère les urgences 24/7.",
     },

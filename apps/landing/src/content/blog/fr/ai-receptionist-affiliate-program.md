@@ -182,6 +182,8 @@ Quatre points à retenir :
 
 [Rejoignez le programme d'affiliation LobbyStack](/fr/affiliate-program/), ajoutez votre courriel PayPal dans votre tableau de bord et partagez votre lien avec des opérateurs qui ont besoin d'un meilleur accueil.
 
+Pour comprendre le produit avant de le recommander, consultez la [vue d'ensemble de la pile open source](/fr/blog/open-source-ai-receptionist-stack/) et [comment choisir un réceptionniste IA](/fr/blog/how-to-choose-an-ai-receptionist/).
+
 ## Sources
 
 - [Programme d'affiliation Rosie](https://heyrosie.com/ai-answering-service-affiliate-program)

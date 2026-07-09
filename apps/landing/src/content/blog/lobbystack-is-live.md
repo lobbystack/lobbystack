@@ -4,7 +4,7 @@ description: "LobbyStack is now live: an open-source AI receptionist that answer
 pubDate: 2026-05-13T12:00:00-04:00
 author: "LobbyStack Team"
 category: "Product updates"
-featured: true
+featured: false
 coverImage: "/illustrations/lobbystack-is-live-hero.webp"
 locale: "en"
 canonicalSlug: "lobbystack-is-live"
@@ -104,3 +104,5 @@ We are live now, and this is still the beginning. The product will keep getting 
 **Answer the call. Understand the customer. Take the next useful step. Keep the business in control.**
 
 If missed calls are costing you good work, [try LobbyStack for free](https://app.lobbystack.com/signup) and let the next caller reach someone, even when your team is busy.
+
+For a deeper look at the product stack, read the [open-source AI receptionist stack overview](/blog/open-source-ai-receptionist-stack/). If you are evaluating vendors, start with [how to choose an AI receptionist](/blog/how-to-choose-an-ai-receptionist/) or [how much an AI receptionist can save](/blog/ai-receptionist-savings/).

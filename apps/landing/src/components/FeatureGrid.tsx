@@ -133,15 +133,17 @@ export function FeatureGrid({ locale = "en" }: FeatureGridProps) {
 
           {/* ── Center: illustration ── */}
           <div className="flex items-center justify-center">
-            <img
-              src="/illustrations/capabilities-network.webp"
-              alt={copy.imageAlt}
-              width={1360}
-              height={1020}
-              className="w-full max-w-[680px]"
-              loading="lazy"
-              decoding="async"
-            />
+            <div className="w-full max-w-[480px] overflow-hidden rounded-[1.35rem] bg-[#F4F4F2]">
+              <img
+                src="/illustrations/capabilities-receptionist.webp"
+                alt={copy.imageAlt}
+                width={1024}
+                height={1024}
+                className="aspect-square w-full"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
           </div>
 
           {/* ── Right column: features 3 & 4 ── */}
