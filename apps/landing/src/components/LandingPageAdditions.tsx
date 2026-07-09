@@ -53,6 +53,8 @@ const homeSectionsCopy = {
           alt: "Incoming call routing to team members or LobbyStack when the team is unavailable",
           imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
           imageClassName: "h-full w-full object-cover object-center",
+          imageWidth: 2048,
+          imageHeight: 2048,
         },
         {
           title: "Appointments booked without the back-and-forth",
@@ -234,6 +236,8 @@ const homeSectionsCopy = {
           alt: "Routage d’appel entrant vers l’équipe ou LobbyStack quand l’équipe est indisponible",
           imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
           imageClassName: "h-full w-full object-cover object-center",
+          imageWidth: 2048,
+          imageHeight: 2048,
         },
         {
           title: "Des rendez‑vous pris sans allers-retours",
@@ -504,8 +508,8 @@ function QualityToolsSection({ locale = "en" }: LocalizedProps) {
                 <img
                   src={card.image}
                   alt={card.alt}
-                  width={1200}
-                  height={800}
+                  width={card.imageWidth ?? 1200}
+                  height={card.imageHeight ?? 800}
                   className={card.imageClassName ?? "h-auto w-full object-cover"}
                   loading="lazy"
                   decoding="async"
