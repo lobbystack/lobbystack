@@ -118,7 +118,7 @@ export function canProvisionDedicatedBusinessNumber(input: {
     return false;
   }
   if (input.isReplacement) {
-    return true;
+    return input.provisionedDedicatedNumberCount <= limit;
   }
   return input.provisionedDedicatedNumberCount < limit;
 }

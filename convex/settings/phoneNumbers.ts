@@ -547,6 +547,7 @@ export const claimReplacementNumber = action({
           voiceEnabled: true,
           smsEnabled: true,
           status: "active",
+          ...(currentPhoneNumber ? { isReplacement: true } : {}),
         },
       );
       savedPhoneNumberId = saved.phoneNumberId;

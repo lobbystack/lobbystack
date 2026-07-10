@@ -121,7 +121,7 @@ export const releaseFreePlanPhoneNumber = internalAction({
     reason?: "plan_includes_number" | "not_due";
     retryScheduled?: boolean;
   }> => {
-    const phoneNumber: {
+    let phoneNumber: {
       businessId: Id<"businesses">;
       twilioPhoneSid?: string;
       reclaimScheduledAt?: number;
@@ -137,14 +137,26 @@ export const releaseFreePlanPhoneNumber = internalAction({
       return { released: false, skipped: true };
     }
 
-    const snapshot = await ctx.runQuery(internal.billing.getBillingSnapshotInternal, {
-      businessId: args.businessId,
+    const cancellationResult: {
+      skippedReason?: "plan_does_not_include_number";
+    } = await ctx.runMutation(
+      internal.settings.phoneNumberReclaim.cancelDedicatedNumberReclaimsIfEntitled,
+      { businessId: args.businessId },
+    );
+    phoneNumber = await ctx.runQuery(internal.businesses.catalog.getPhoneNumberById, {
+      phoneNumberId: args.phoneNumberId,
     });
-    if (planIncludesDedicatedBusinessNumber(snapshot.plan)) {
-      await ctx.runMutation(
-        internal.settings.phoneNumberReclaim.cancelDedicatedNumberReclaimsIfEntitled,
-        { businessId: args.businessId },
-      );
+    if (
+      !phoneNumber ||
+      phoneNumber.businessId !== args.businessId ||
+      phoneNumber.twilioPhoneSid !== args.twilioPhoneSid
+    ) {
+      return { released: false, skipped: true };
+    }
+    if (
+      phoneNumber.reclaimScheduledAt === undefined &&
+      cancellationResult.skippedReason === undefined
+    ) {
       return { released: false, skipped: true, reason: "plan_includes_number" };
     }
 

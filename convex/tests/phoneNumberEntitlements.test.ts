@@ -132,6 +132,13 @@ describe("dedicated number entitlements", () => {
         isReplacement: true,
       }),
     ).toBe(true);
+    expect(
+      canProvisionDedicatedBusinessNumber({
+        plan: "starter",
+        provisionedDedicatedNumberCount: 2,
+        isReplacement: true,
+      }),
+    ).toBe(false);
     expect(planIncludesDedicatedBusinessNumber("free_cloud")).toBe(false);
     expect(planIncludesDedicatedBusinessNumber("pro")).toBe(true);
   });
@@ -177,6 +184,38 @@ describe("dedicated number entitlements", () => {
     await expect(
       t.query(internal.billing.assertBusinessCanProvisionPhoneNumberInternal, {
         businessId,
+      }),
+    ).rejects.toThrow(DEDICATED_NUMBER_REQUIRES_PAID_PLAN_MESSAGE);
+  });
+
+  it("enforces the provider-number limit inside the persistence mutation", async () => {
+    const t = convexTest(schema, modules);
+    const subject = "atomic-number-limit";
+    const { businessId } = await seedCloudBusiness({
+      t,
+      subject,
+      currentPlan: "starter",
+      onboardingStage: "completed",
+    });
+    await t.run(async (ctx) => {
+      await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550440",
+        twilioPhoneSid: "PN-atomic-existing",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+      });
+    });
+
+    await expect(
+      t.mutation(internal.businesses.catalog.upsertPhoneNumberInternal, {
+        businessId,
+        e164: "+14185550441",
+        twilioPhoneSid: "PN-atomic-extra",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
       }),
     ).rejects.toThrow(DEDICATED_NUMBER_REQUIRES_PAID_PLAN_MESSAGE);
   });
@@ -431,6 +470,135 @@ describe("dedicated number entitlements", () => {
     expect(phoneNumber?.status).toBe("active");
     expect(phoneNumber?.twilioPhoneSid).toBe("PN-paid-keep");
     expect(phoneNumber?.reclaimScheduledAt).toBeUndefined();
+  });
+
+  it("retains only the included number and releases excess scheduled numbers", async () => {
+    const t = convexTest(schema, modules);
+    const subject = "paid-quota-reclaim";
+    const { businessId } = await seedCloudBusiness({
+      t,
+      subject,
+      currentPlan: "starter",
+      onboardingStage: "completed",
+    });
+    const reclaimScheduledAt = Date.now() - 1_000;
+    const { activePhoneNumberId, retiringPhoneNumberId } = await t.run(async (ctx) => {
+      const activePhoneNumberId = await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550770",
+        twilioPhoneSid: "PN-paid-quota-active",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+        reclaimScheduledAt,
+        reclaimReason: "downgrade",
+      });
+      const retiringPhoneNumberId = await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550771",
+        twilioPhoneSid: "PN-paid-quota-retiring",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "retiring",
+        reclaimScheduledAt,
+        reclaimReason: "downgrade",
+      });
+      return { activePhoneNumberId, retiringPhoneNumberId };
+    });
+
+    const cancelled = await t.action(
+      internal.settings.phoneNumberReclaimActions.cancelDedicatedNumberReclaim,
+      { businessId },
+    );
+    expect(cancelled).toMatchObject({ cleared: 1, restored: 0 });
+
+    const afterCancellation = await t.run(async (ctx) => ({
+      active: await ctx.db.get(activePhoneNumberId),
+      retiring: await ctx.db.get(retiringPhoneNumberId),
+    }));
+    expect(afterCancellation.active?.reclaimScheduledAt).toBeUndefined();
+    expect(afterCancellation.active?.twilioPhoneSid).toBe("PN-paid-quota-active");
+    expect(afterCancellation.retiring).toMatchObject({
+      status: "retiring",
+      reclaimScheduledAt,
+      twilioPhoneSid: "PN-paid-quota-retiring",
+    });
+
+    const released = await t.action(
+      internal.settings.phoneNumberReclaimActions.releaseFreePlanPhoneNumber,
+      {
+        phoneNumberId: retiringPhoneNumberId,
+        twilioPhoneSid: "PN-paid-quota-retiring",
+        businessId,
+      },
+    );
+    expect(released).toMatchObject({ released: true, skipped: false });
+    const afterRelease = await t.run(async (ctx) => ({
+      active: await ctx.db.get(activePhoneNumberId),
+      retiring: await ctx.db.get(retiringPhoneNumberId),
+    }));
+    expect(afterRelease.active?.twilioPhoneSid).toBe("PN-paid-quota-active");
+    expect(afterRelease.retiring?.twilioPhoneSid).toBeUndefined();
+  });
+
+  it("clears stale replacement state when reclaim releases the last provider number", async () => {
+    const t = convexTest(schema, modules);
+    const subject = "reclaim-reset-replacement";
+    const { businessId } = await seedCloudBusiness({
+      t,
+      subject,
+      currentPlan: "free_cloud",
+      onboardingStage: "completed",
+    });
+    const phoneNumberId = await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        phoneNumberReplacementReservedAt: "2026-07-01T12:00:00.000Z",
+        phoneNumberReplacementUsedAt: "2026-06-01T12:00:00.000Z",
+      });
+      return await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550772",
+        twilioPhoneSid: "PN-reclaim-reset-replacement",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+        reclaimScheduledAt: Date.now() - 1_000,
+        reclaimReason: "free_plan",
+      });
+    });
+
+    const released = await t.action(
+      internal.settings.phoneNumberReclaimActions.releaseFreePlanPhoneNumber,
+      {
+        phoneNumberId,
+        twilioPhoneSid: "PN-reclaim-reset-replacement",
+        businessId,
+      },
+    );
+    expect(released).toMatchObject({ released: true, skipped: false });
+
+    await t.run(async (ctx) => {
+      const business = await ctx.db.get(businessId);
+      expect(business?.phoneNumberReplacementReservedAt).toBeUndefined();
+      expect(business?.phoneNumberReplacementUsedAt).toBeUndefined();
+
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!account) {
+        throw new Error("Missing billing account");
+      }
+      await ctx.db.patch(account._id, {
+        currentPlan: "starter",
+        subscriptionState: "active",
+        billingInterval: "monthly",
+      });
+    });
+
+    await expect(
+      t.mutation(internal.businesses.admin.reservePhoneNumberReplacement, { businessId }),
+    ).resolves.toMatchObject({ primaryPhoneNumber: null });
   });
 
   it("keeps failed releases active and rechecks the plan before retrying", async () => {

@@ -51,6 +51,7 @@ import {
   normalizeLocalizedServiceNames,
 } from "../lib/serviceNames";
 import { normalizeAppointmentChangePolicy } from "../lib/appointmentChangePolicy";
+import { assertBusinessCanProvisionPhoneNumber } from "../lib/billing";
 import {
   buildTwilioSmsInboundWebhookUrl,
   buildTwilioVoiceInboundWebhookUrl,
@@ -72,6 +73,10 @@ const phoneNumberSaveArgs = {
   voiceEnabled: v.boolean(),
   smsEnabled: v.boolean(),
   status: v.string(),
+} as const;
+const phoneNumberUpsertArgs = {
+  ...phoneNumberSaveArgs,
+  isReplacement: v.optional(v.boolean()),
 } as const;
 
 type PhoneNumberSaveArgs = {
@@ -1272,6 +1277,19 @@ export const clearPhoneNumberTwilioSidIfMatches = internalMutation({
       reclaimScheduledAt: undefined,
       reclaimReason: undefined,
     });
+    const remainingPhoneNumbers = await ctx.db
+      .query("phone_numbers")
+      .withIndex("by_business_id", (q) => q.eq("businessId", phoneNumber.businessId))
+      .collect();
+    if (!remainingPhoneNumbers.some((row) => Boolean(row.twilioPhoneSid))) {
+      const business = await ctx.db.get(phoneNumber.businessId);
+      if (business?.phoneNumberReplacementUsedAt || business?.phoneNumberReplacementReservedAt) {
+        await ctx.db.patch(phoneNumber.businessId, {
+          phoneNumberReplacementReservedAt: undefined,
+          phoneNumberReplacementUsedAt: undefined,
+        });
+      }
+    }
     await scheduleSnapshotRefresh(ctx, phoneNumber.businessId);
     return { cleared: true };
   },
@@ -1364,8 +1382,26 @@ export const listDuePhoneNumberReclaimsPage = internalQuery({
 });
 
 export const upsertPhoneNumberInternal = internalMutation({
-  args: phoneNumberSaveArgs,
+  args: phoneNumberUpsertArgs,
   handler: async (ctx, args) => {
+    const entitlementExistingPhoneNumber = args.phoneNumberId
+      ? await ctx.db.get(args.phoneNumberId)
+      : null;
+    const entitlementNextTwilioPhoneSid =
+      args.twilioPhoneSid === null
+        ? undefined
+        : args.twilioPhoneSid !== undefined
+          ? args.twilioPhoneSid
+          : entitlementExistingPhoneNumber?.twilioPhoneSid;
+    if (
+      entitlementNextTwilioPhoneSid &&
+      entitlementNextTwilioPhoneSid !== entitlementExistingPhoneNumber?.twilioPhoneSid
+    ) {
+      await assertBusinessCanProvisionPhoneNumber(ctx, args.businessId, {
+        ...(args.isReplacement ? { isReplacement: true } : {}),
+      });
+    }
+
     const conflictingPhoneNumber = await ctx.db
       .query("phone_numbers")
       .withIndex("by_e164", (q) => q.eq("e164", args.e164))

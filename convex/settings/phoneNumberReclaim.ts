@@ -1,17 +1,34 @@
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
-import type { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import { internalQuery } from "../_generated/server";
 import { scheduleSnapshotRefresh } from "../businesses/admin";
 import {
   getBillingSnapshot,
+  getPlanEntitlements,
   planIncludesDedicatedBusinessNumber,
 } from "../lib/billing";
 import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 
 export const OLD_PHONE_NUMBER_RELEASE_DELAY_MS = 30 * 24 * 60 * 60 * 1000;
 const FREE_PLAN_RECLAIM_BACKFILL_BATCH_SIZE = 50;
+
+function phoneNumberRetentionPriority(phoneNumber: Doc<"phone_numbers">): number {
+  if (phoneNumber.status === "active" && phoneNumber.voiceEnabled) {
+    return 0;
+  }
+  if (phoneNumber.status === "active") {
+    return 1;
+  }
+  if (phoneNumber.status === "retiring" && phoneNumber.voiceEnabled) {
+    return 2;
+  }
+  if (phoneNumber.status === "retiring") {
+    return 3;
+  }
+  return 4;
+}
 
 export const backfillFreePlanPhoneNumberReclaimsPage = internalMutation({
   args: {
@@ -131,6 +148,22 @@ export const cancelDedicatedNumberReclaimsIfEntitled = internalMutation({
       .query("phone_numbers")
       .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
       .collect();
+    const includedNumberLimit = getPlanEntitlements(snapshot.plan).includedBusinessNumbers;
+    const provisionedPhoneNumbers = phoneNumbers
+      .filter((phoneNumber) => Boolean(phoneNumber.twilioPhoneSid))
+      .sort((left, right) => {
+        const priorityDifference =
+          phoneNumberRetentionPriority(left) - phoneNumberRetentionPriority(right);
+        return priorityDifference !== 0
+          ? priorityDifference
+          : left._creationTime - right._creationTime;
+      });
+    const retainedPhoneNumberIds = new Set(
+      (includedNumberLimit === null
+        ? provisionedPhoneNumbers
+        : provisionedPhoneNumbers.slice(0, Math.max(0, includedNumberLimit))
+      ).map((phoneNumber) => phoneNumber._id),
+    );
     let cleared = 0;
     let restored = 0;
 
@@ -139,6 +172,9 @@ export const cancelDedicatedNumberReclaimsIfEntitled = internalMutation({
         phoneNumber.reclaimScheduledAt === undefined &&
         phoneNumber.reclaimReason === undefined
       ) {
+        continue;
+      }
+      if (phoneNumber.twilioPhoneSid && !retainedPhoneNumberIds.has(phoneNumber._id)) {
         continue;
       }
 
