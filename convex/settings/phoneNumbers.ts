@@ -393,6 +393,29 @@ export const searchReplacementNumbers = action({
   },
 });
 
+export const releaseTwilioPhoneNumberForReclaim = internalAction({
+  args: {
+    phoneNumberId: v.id("phone_numbers"),
+    twilioPhoneSid: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const phoneNumber = await ctx.runQuery(internal.businesses.catalog.getPhoneNumberById, {
+      phoneNumberId: args.phoneNumberId,
+    });
+    if (!phoneNumber || phoneNumber.twilioPhoneSid !== args.twilioPhoneSid) {
+      return { released: false, skipped: true };
+    }
+
+    const client = getTwilioClient();
+    await releaseTwilioIncomingPhoneNumber(client.incomingPhoneNumbers(args.twilioPhoneSid));
+    await ctx.runMutation(internal.businesses.catalog.clearPhoneNumberTwilioSidIfMatches, {
+      phoneNumberId: args.phoneNumberId,
+      twilioPhoneSid: args.twilioPhoneSid,
+    });
+    return { released: true, skipped: false };
+  },
+});
+
 export const releaseInactiveTwilioPhoneNumber = internalAction({
   args: {
     phoneNumberId: v.id("phone_numbers"),

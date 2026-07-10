@@ -110,25 +110,25 @@ describe("dedicated number entitlements", () => {
     expect(
       canProvisionDedicatedBusinessNumber({
         plan: "free_cloud",
-        activeDedicatedNumberCount: 0,
+        provisionedDedicatedNumberCount: 0,
       }),
     ).toBe(false);
     expect(
       canProvisionDedicatedBusinessNumber({
         plan: "starter",
-        activeDedicatedNumberCount: 0,
+        provisionedDedicatedNumberCount: 0,
       }),
     ).toBe(true);
     expect(
       canProvisionDedicatedBusinessNumber({
         plan: "starter",
-        activeDedicatedNumberCount: 1,
+        provisionedDedicatedNumberCount: 1,
       }),
     ).toBe(false);
     expect(
       canProvisionDedicatedBusinessNumber({
         plan: "starter",
-        activeDedicatedNumberCount: 1,
+        provisionedDedicatedNumberCount: 1,
         isReplacement: true,
       }),
     ).toBe(true);
@@ -149,6 +149,33 @@ describe("dedicated number entitlements", () => {
 
     await expect(
       authed.action(api.onboarding.phoneNumbers.getInitialNumberSuggestion, {
+        businessId,
+      }),
+    ).rejects.toThrow(DEDICATED_NUMBER_REQUIRES_PAID_PLAN_MESSAGE);
+  });
+
+  it("counts inactive provider-owned numbers against the plan limit", async () => {
+    const t = convexTest(schema, modules);
+    const subject = "inactive-number-limit";
+    const { businessId } = await seedCloudBusiness({
+      t,
+      subject,
+      currentPlan: "starter",
+      onboardingStage: "completed",
+    });
+    await t.run(async (ctx) => {
+      await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550444",
+        twilioPhoneSid: "PN-inactive-owned",
+        voiceEnabled: false,
+        smsEnabled: false,
+        status: "inactive",
+      });
+    });
+
+    await expect(
+      t.query(internal.billing.assertBusinessCanProvisionPhoneNumberInternal, {
         businessId,
       }),
     ).rejects.toThrow(DEDICATED_NUMBER_REQUIRES_PAID_PLAN_MESSAGE);
@@ -303,7 +330,7 @@ describe("dedicated number entitlements", () => {
         twilioPhoneSid: "PN-paid-keep",
         voiceEnabled: true,
         smsEnabled: true,
-        status: "active",
+        status: "retiring",
         reclaimScheduledAt: Date.now() - 1_000,
         reclaimReason: "downgrade",
       });
@@ -327,5 +354,166 @@ describe("dedicated number entitlements", () => {
     expect(phoneNumber?.status).toBe("active");
     expect(phoneNumber?.twilioPhoneSid).toBe("PN-paid-keep");
     expect(phoneNumber?.reclaimScheduledAt).toBeUndefined();
+  });
+
+  it("keeps failed releases active and rechecks the plan before retrying", async () => {
+    const t = convexTest(schema, modules);
+    const subject = "reclaim-retry-upgrade";
+    const { businessId } = await seedCloudBusiness({
+      t,
+      subject,
+      currentPlan: "free_cloud",
+      onboardingStage: "completed",
+    });
+    const phoneNumberId = await t.run(async (ctx) => {
+      return await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550555",
+        twilioPhoneSid: "PN-retry-upgrade",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+        reclaimScheduledAt: Date.now() - 1_000,
+        reclaimReason: "downgrade",
+      });
+    });
+    removeIncomingPhoneNumberMock.mockRejectedValueOnce(
+      new Error("Temporary Twilio release failure"),
+    );
+
+    const failedAttempt = await t.action(
+      internal.settings.phoneNumberReclaimActions.releaseFreePlanPhoneNumber,
+      {
+        phoneNumberId,
+        twilioPhoneSid: "PN-retry-upgrade",
+        businessId,
+      },
+    );
+    expect(failedAttempt).toMatchObject({
+      released: false,
+      skipped: false,
+      retryScheduled: true,
+    });
+    const phoneAfterFailure = await t.run(async (ctx) => await ctx.db.get(phoneNumberId));
+    expect(phoneAfterFailure?.status).toBe("active");
+
+    await t.run(async (ctx) => {
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!account) {
+        throw new Error("Missing billing account");
+      }
+      await ctx.db.patch(account._id, {
+        currentPlan: "starter",
+        subscriptionState: "active",
+        billingInterval: "monthly",
+      });
+    });
+
+    const paidRetry = await t.action(
+      internal.settings.phoneNumberReclaimActions.releaseFreePlanPhoneNumber,
+      {
+        phoneNumberId,
+        twilioPhoneSid: "PN-retry-upgrade",
+        businessId,
+        attempt: 1,
+      },
+    );
+    expect(paidRetry).toMatchObject({
+      released: false,
+      skipped: true,
+      reason: "plan_includes_number",
+    });
+    expect(removeIncomingPhoneNumberMock).toHaveBeenCalledTimes(1);
+
+    const phoneAfterUpgrade = await t.run(async (ctx) => await ctx.db.get(phoneNumberId));
+    expect(phoneAfterUpgrade?.status).toBe("active");
+    expect(phoneAfterUpgrade?.twilioPhoneSid).toBe("PN-retry-upgrade");
+    expect(phoneAfterUpgrade?.reclaimScheduledAt).toBeUndefined();
+  });
+
+  it("leaves exhausted failed releases discoverable by the due-reclaim scan", async () => {
+    const t = convexTest(schema, modules);
+    const subject = "reclaim-retry-exhausted";
+    const { businessId } = await seedCloudBusiness({
+      t,
+      subject,
+      currentPlan: "free_cloud",
+      onboardingStage: "completed",
+    });
+    const phoneNumberId = await t.run(async (ctx) => {
+      return await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550333",
+        twilioPhoneSid: "PN-retry-exhausted",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+        reclaimScheduledAt: Date.now() - 1_000,
+        reclaimReason: "free_plan",
+      });
+    });
+    removeIncomingPhoneNumberMock.mockRejectedValue(
+      new Error("Persistent Twilio release failure"),
+    );
+
+    await expect(
+      t.action(internal.settings.phoneNumberReclaimActions.releaseFreePlanPhoneNumber, {
+        phoneNumberId,
+        twilioPhoneSid: "PN-retry-exhausted",
+        businessId,
+        attempt: 3,
+      }),
+    ).rejects.toThrow("Persistent Twilio release failure");
+
+    const duePage = await t.query(
+      internal.businesses.catalog.listDuePhoneNumberReclaimsPage,
+      {
+        now: Date.now(),
+        cursor: null,
+        numItems: 50,
+      },
+    );
+    expect(duePage.page.map((phoneNumber) => phoneNumber._id)).toContain(phoneNumberId);
+    const phoneNumber = await t.run(async (ctx) => await ctx.db.get(phoneNumberId));
+    expect(phoneNumber?.status).toBe("active");
+  });
+
+  it("does not let a stale cancellation clear a free-plan reclaim", async () => {
+    const t = convexTest(schema, modules);
+    const subject = "stale-reclaim-cancel";
+    const { businessId } = await seedCloudBusiness({
+      t,
+      subject,
+      currentPlan: "free_cloud",
+      onboardingStage: "completed",
+    });
+    const reclaimScheduledAt = Date.now() + OLD_PHONE_NUMBER_RELEASE_DELAY_MS;
+    const phoneNumberId = await t.run(async (ctx) => {
+      return await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550222",
+        twilioPhoneSid: "PN-stale-cancel",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+        reclaimScheduledAt,
+        reclaimReason: "downgrade",
+      });
+    });
+
+    const result = await t.action(
+      internal.settings.phoneNumberReclaimActions.cancelDedicatedNumberReclaim,
+      { businessId },
+    );
+    expect(result).toMatchObject({
+      cleared: 0,
+      skippedReason: "plan_does_not_include_number",
+    });
+    const phoneNumber = await t.run(async (ctx) => await ctx.db.get(phoneNumberId));
+    expect(phoneNumber?.reclaimScheduledAt).toBe(reclaimScheduledAt);
+    expect(phoneNumber?.reclaimReason).toBe("downgrade");
   });
 });

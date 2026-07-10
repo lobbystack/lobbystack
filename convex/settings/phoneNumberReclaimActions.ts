@@ -12,6 +12,9 @@ import { OLD_PHONE_NUMBER_RELEASE_DELAY_MS } from "./phoneNumberReclaim";
 
 type ReclaimReason = "free_plan" | "downgrade";
 
+const PHONE_NUMBER_RECLAIM_RETRY_DELAY_MS = 24 * 60 * 60 * 1000;
+const PHONE_NUMBER_RECLAIM_MAX_ATTEMPTS = 3;
+
 export const scheduleDedicatedNumberReclaim = internalAction({
   args: {
     businessId: v.id("businesses"),
@@ -87,22 +90,18 @@ export const cancelDedicatedNumberReclaim = internalAction({
   args: {
     businessId: v.id("businesses"),
   },
-  handler: async (ctx, args) => {
-    const activeNumbers = await ctx.runQuery(
-      internal.businesses.catalog.listActivePhoneNumbersForBusinessInternal,
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    cleared: number;
+    restored: number;
+    skippedReason?: "plan_does_not_include_number";
+  }> => {
+    return await ctx.runMutation(
+      internal.settings.phoneNumberReclaim.cancelDedicatedNumberReclaimsIfEntitled,
       { businessId: args.businessId },
     );
-    let cleared = 0;
-    for (const phoneNumber of activeNumbers) {
-      const result = await ctx.runMutation(
-        internal.businesses.catalog.clearPhoneNumberReclaimSchedule,
-        { phoneNumberId: phoneNumber._id },
-      );
-      if (result.cleared) {
-        cleared += 1;
-      }
-    }
-    return { cleared };
   },
 });
 
@@ -111,6 +110,7 @@ export const releaseFreePlanPhoneNumber = internalAction({
     phoneNumberId: v.id("phone_numbers"),
     twilioPhoneSid: v.string(),
     businessId: v.id("businesses"),
+    attempt: v.optional(v.number()),
   },
   handler: async (
     ctx,
@@ -141,9 +141,10 @@ export const releaseFreePlanPhoneNumber = internalAction({
       businessId: args.businessId,
     });
     if (planIncludesDedicatedBusinessNumber(snapshot.plan)) {
-      await ctx.runMutation(internal.businesses.catalog.clearPhoneNumberReclaimSchedule, {
-        phoneNumberId: args.phoneNumberId,
-      });
+      await ctx.runMutation(
+        internal.settings.phoneNumberReclaim.cancelDedicatedNumberReclaimsIfEntitled,
+        { businessId: args.businessId },
+      );
       return { released: false, skipped: true, reason: "plan_includes_number" };
     }
 
@@ -154,22 +155,36 @@ export const releaseFreePlanPhoneNumber = internalAction({
       return { released: false, skipped: true, reason: "not_due" };
     }
 
-    if (phoneNumber.status === "active") {
-      await ctx.runMutation(internal.businesses.catalog.markPhoneNumberRetiringForReclaim, {
-        phoneNumberId: args.phoneNumberId,
-        twilioPhoneSid: args.twilioPhoneSid,
-      });
-    }
+    try {
+      const releaseResult: {
+        released: boolean;
+        skipped: boolean;
+      } = await ctx.runAction(
+        internal.settings.phoneNumbers.releaseTwilioPhoneNumberForReclaim,
+        {
+          phoneNumberId: args.phoneNumberId,
+          twilioPhoneSid: args.twilioPhoneSid,
+        },
+      );
+      return releaseResult;
+    } catch (error) {
+      const attempt = Math.max(0, args.attempt ?? 0);
+      if (attempt < PHONE_NUMBER_RECLAIM_MAX_ATTEMPTS) {
+        await ctx.scheduler.runAfter(
+          PHONE_NUMBER_RECLAIM_RETRY_DELAY_MS,
+          internal.settings.phoneNumberReclaimActions.releaseFreePlanPhoneNumber,
+          {
+            phoneNumberId: args.phoneNumberId,
+            twilioPhoneSid: args.twilioPhoneSid,
+            businessId: args.businessId,
+            attempt: attempt + 1,
+          },
+        );
+        return { released: false, skipped: false, retryScheduled: true };
+      }
 
-    const releaseResult: {
-      released: boolean;
-      skipped: boolean;
-      retryScheduled?: boolean;
-    } = await ctx.runAction(internal.settings.phoneNumbers.releaseInactiveTwilioPhoneNumber, {
-      phoneNumberId: args.phoneNumberId,
-      twilioPhoneSid: args.twilioPhoneSid,
-    });
-    return releaseResult;
+      throw error;
+    }
   },
 });
 

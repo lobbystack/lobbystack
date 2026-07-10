@@ -106,7 +106,7 @@ export const DEDICATED_NUMBER_REQUIRES_PAID_PLAN_MESSAGE =
 
 export function canProvisionDedicatedBusinessNumber(input: {
   plan: BillingPlanSlug;
-  activeDedicatedNumberCount: number;
+  provisionedDedicatedNumberCount: number;
   /** When replacing an existing number, allow staying at the included limit. */
   isReplacement?: boolean;
 }): boolean {
@@ -120,7 +120,7 @@ export function canProvisionDedicatedBusinessNumber(input: {
   if (input.isReplacement) {
     return true;
   }
-  return input.activeDedicatedNumberCount < limit;
+  return input.provisionedDedicatedNumberCount < limit;
 }
 
 export function planIncludesDedicatedBusinessNumber(plan: BillingPlanSlug): boolean {
@@ -128,7 +128,7 @@ export function planIncludesDedicatedBusinessNumber(plan: BillingPlanSlug): bool
   return limit === null || limit > 0;
 }
 
-export async function countActiveDedicatedBusinessNumbers(
+export async function countProvisionedDedicatedBusinessNumbers(
   ctx: Reader,
   businessId: Id<"businesses">,
 ): Promise<number> {
@@ -136,7 +136,7 @@ export async function countActiveDedicatedBusinessNumbers(
     .query("phone_numbers")
     .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
     .collect();
-  return phoneNumbers.filter((phoneNumber) => phoneNumber.status === "active").length;
+  return phoneNumbers.filter((phoneNumber) => Boolean(phoneNumber.twilioPhoneSid)).length;
 }
 
 export async function assertBusinessCanProvisionPhoneNumber(
@@ -145,14 +145,14 @@ export async function assertBusinessCanProvisionPhoneNumber(
   options?: { isReplacement?: boolean },
 ): Promise<void> {
   const snapshot = await getBillingSnapshot(ctx, { businessId });
-  const activeDedicatedNumberCount = await countActiveDedicatedBusinessNumbers(
+  const provisionedDedicatedNumberCount = await countProvisionedDedicatedBusinessNumbers(
     ctx,
     businessId,
   );
   if (
     !canProvisionDedicatedBusinessNumber({
       plan: snapshot.plan,
-      activeDedicatedNumberCount,
+      provisionedDedicatedNumberCount,
       ...(options?.isReplacement ? { isReplacement: true } : {}),
     })
   ) {

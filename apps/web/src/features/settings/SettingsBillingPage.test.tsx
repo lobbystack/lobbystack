@@ -120,6 +120,7 @@ function buildStatus(overrides: Partial<BillingStatus> = {}): BillingStatus {
     billingContactEmail: null,
     billingContactName: null,
     includedBusinessNumbers: 0,
+    phoneNumberReclaimScheduledAt: null,
     hasBillingManagementAccess: true,
     hasCustomerPortalAccess: false,
     hasCheckoutAccess: true,

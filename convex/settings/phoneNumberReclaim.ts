@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { internalQuery } from "../_generated/server";
+import { scheduleSnapshotRefresh } from "../businesses/admin";
 import {
   getBillingSnapshot,
   planIncludesDedicatedBusinessNumber,
@@ -110,5 +111,55 @@ export const listReclaimWarningRecipients = internalQuery({
     }
 
     return [...emails];
+  },
+});
+
+export const cancelDedicatedNumberReclaimsIfEntitled = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    const snapshot = await getBillingSnapshot(ctx, { businessId: args.businessId });
+    if (!planIncludesDedicatedBusinessNumber(snapshot.plan)) {
+      return {
+        cleared: 0,
+        restored: 0,
+        skippedReason: "plan_does_not_include_number" as const,
+      };
+    }
+
+    const phoneNumbers = await ctx.db
+      .query("phone_numbers")
+      .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+      .collect();
+    let cleared = 0;
+    let restored = 0;
+
+    for (const phoneNumber of phoneNumbers) {
+      if (
+        phoneNumber.reclaimScheduledAt === undefined &&
+        phoneNumber.reclaimReason === undefined
+      ) {
+        continue;
+      }
+
+      const restoreActive =
+        phoneNumber.status === "retiring" && Boolean(phoneNumber.twilioPhoneSid);
+      await ctx.db.patch(phoneNumber._id, {
+        reclaimScheduledAt: undefined,
+        reclaimReason: undefined,
+        ...(restoreActive ? { status: "active" } : {}),
+      });
+      cleared += 1;
+      if (restoreActive) {
+        restored += 1;
+      }
+    }
+
+    if (restored > 0) {
+      await scheduleSnapshotRefresh(ctx, args.businessId);
+    }
+
+    return { cleared, restored };
   },
 });

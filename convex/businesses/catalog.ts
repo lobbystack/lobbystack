@@ -1320,53 +1320,6 @@ export const markPhoneNumberReclaimScheduled = internalMutation({
   },
 });
 
-export const clearPhoneNumberReclaimSchedule = internalMutation({
-  args: {
-    phoneNumberId: v.id("phone_numbers"),
-  },
-  handler: async (ctx, args) => {
-    const phoneNumber = await ctx.db.get(args.phoneNumberId);
-    if (!phoneNumber) {
-      return { cleared: false };
-    }
-    if (
-      phoneNumber.reclaimScheduledAt === undefined &&
-      phoneNumber.reclaimReason === undefined
-    ) {
-      return { cleared: false };
-    }
-
-    await ctx.db.patch(args.phoneNumberId, {
-      reclaimScheduledAt: undefined,
-      reclaimReason: undefined,
-    });
-    return { cleared: true };
-  },
-});
-
-export const markPhoneNumberRetiringForReclaim = internalMutation({
-  args: {
-    phoneNumberId: v.id("phone_numbers"),
-    twilioPhoneSid: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const phoneNumber = await ctx.db.get(args.phoneNumberId);
-    if (
-      !phoneNumber ||
-      phoneNumber.twilioPhoneSid !== args.twilioPhoneSid ||
-      phoneNumber.status !== "active"
-    ) {
-      return { marked: false };
-    }
-
-    await ctx.db.patch(args.phoneNumberId, {
-      status: "retiring",
-    });
-    await scheduleSnapshotRefresh(ctx, phoneNumber.businessId);
-    return { marked: true };
-  },
-});
-
 export const listActivePhoneNumbersForBusinessInternal = internalQuery({
   args: {
     businessId: v.id("businesses"),
@@ -1404,7 +1357,6 @@ export const listDuePhoneNumberReclaimsPage = internalQuery({
       ...page,
       page: page.page.filter(
         (phoneNumber) =>
-          phoneNumber.status === "active" &&
           Boolean(phoneNumber.twilioPhoneSid) &&
           phoneNumber.reclaimScheduledAt !== undefined &&
           phoneNumber.reclaimScheduledAt <= args.now,
@@ -1753,6 +1705,42 @@ export const savePhoneNumber = action({
       authSubject: identity.subject,
       ...(authUserId ? { authUserId: String(authUserId) } : {}),
     });
+
+    const existingPhoneNumber = args.phoneNumberId
+      ? await ctx.runQuery(internal.businesses.catalog.getPhoneNumberById, {
+          phoneNumberId: args.phoneNumberId,
+        })
+      : null;
+    const existingPhoneNumberForBusiness =
+      existingPhoneNumber?.businessId === args.businessId ? existingPhoneNumber : null;
+    const snapshot = await ctx.runQuery(internal.billing.getBillingSnapshotInternal, {
+      businessId: args.businessId,
+    });
+    const isHostedPlan = snapshot.plan !== "self_host";
+    const existingTwilioPhoneSid = existingPhoneNumberForBusiness?.twilioPhoneSid;
+    const requestedTwilioPhoneSid =
+      args.twilioPhoneSid === null ? undefined : args.twilioPhoneSid;
+    const nextTwilioPhoneSid =
+      args.twilioPhoneSid !== undefined
+        ? requestedTwilioPhoneSid
+        : existingTwilioPhoneSid;
+
+    if (
+      isHostedPlan &&
+      existingTwilioPhoneSid &&
+      (nextTwilioPhoneSid !== existingTwilioPhoneSid ||
+        args.status !== existingPhoneNumberForBusiness.status)
+    ) {
+      throw new Error(
+        "Hosted phone number lifecycle changes must use the dedicated number workflow.",
+      );
+    }
+
+    if (nextTwilioPhoneSid && nextTwilioPhoneSid !== existingTwilioPhoneSid) {
+      await ctx.runQuery(internal.billing.assertBusinessCanProvisionPhoneNumberInternal, {
+        businessId: args.businessId,
+      });
+    }
 
     const result = await ctx.runMutation(internal.businesses.catalog.upsertPhoneNumberInternal, args);
     const persistedPhoneNumber = await ctx.runQuery(internal.businesses.catalog.getPhoneNumberById, {
