@@ -59,6 +59,11 @@ import { OnboardingVerifyPhoneCodePage } from "@/features/onboarding/OnboardingV
 import { OnboardingVerifyPhonePage } from "@/features/onboarding/OnboardingVerifyPhonePage";
 import { OnboardingWebsitePage } from "@/features/onboarding/OnboardingWebsitePage";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
+import {
+  canVisitOnboardingStage,
+  getPhoneVerificationApprovedRedirect,
+  onboardingNavigableStep,
+} from "@/features/onboarding/onboardingNavigation";
 import { SetupGuidePage } from "@/features/setup/SetupGuidePage";
 import {
   captureAnalyticsEvent,
@@ -227,34 +232,6 @@ function onboardingRouteForStage(stage: string | undefined): string | null {
     default:
       return null;
   }
-}
-
-const onboardingStageSteps: Record<string, number> = {
-  create_business: 2,
-  website: 3,
-  knowledge: 4,
-  greeting: 5,
-  verify_phone: 6,
-  verify_phone_code: 7,
-  plan: 8,
-  phone_number: 9,
-  phone_number_claiming: 9,
-  attribution: 10,
-  completed: 11,
-};
-
-function canVisitOnboardingStage(
-  currentStage: string | undefined,
-  targetStage: string,
-): boolean {
-  const currentStep = currentStage ? onboardingStageSteps[currentStage] : undefined;
-  const targetStep = onboardingStageSteps[targetStage];
-
-  return currentStep !== undefined && targetStep !== undefined && targetStep <= currentStep;
-}
-
-function onboardingNavigableStep(stage: string | undefined): number {
-  return stage ? (onboardingStageSteps[stage] ?? 1) : 1;
 }
 
 function hasJustClaimedPhoneNumberState(state: unknown): boolean {
@@ -1069,13 +1046,16 @@ function OnboardingVerifyPhoneCodeRoute() {
     onboardingStage: ctx.activeBusiness.onboardingStage,
     phoneVerificationTime: ctx.currentUser?.phoneVerificationTime,
   });
+  const approvedRedirectTo = getPhoneVerificationApprovedRedirect(
+    ctx.activeBusiness.onboardingStage,
+  );
 
   if (latestAttempt === undefined) {
     return <OnboardingRouteSkeleton />;
   }
 
   if (latestAttempt?.status === "approved") {
-    return <Navigate replace to="/onboarding/plan" />;
+    return <Navigate replace to={approvedRedirectTo} />;
   }
 
   if (
@@ -1091,6 +1071,7 @@ function OnboardingVerifyPhoneCodeRoute() {
 
   return (
     <OnboardingVerifyPhoneCodePage
+      approvedRedirectTo={approvedRedirectTo}
       businessId={ctx.activeBusiness._id}
       onSignOut={ctx.onSignOut}
       phoneE164={latestAttempt.phoneE164}
@@ -1101,10 +1082,6 @@ function OnboardingVerifyPhoneCodeRoute() {
 
 function OnboardingNumberRoute() {
   const ctx = useOnboardingContext();
-  const latestAttempt = useQuery(
-    api.onboarding.phoneVerificationLookup.getLatestPhoneVerificationAttempt,
-    ctx.activeBusiness ? { businessId: ctx.activeBusiness._id } : "skip",
-  );
 
   if (ctx.isLoading) {
     return <OnboardingRouteSkeleton />;
@@ -1127,17 +1104,8 @@ function OnboardingNumberRoute() {
     ctx.activeBusiness.onboardingStage,
     "phone_number",
   );
-  const canVerifyPhoneCode = canVisitOnboardingStage(
-    ctx.activeBusiness.onboardingStage,
-    "verify_phone_code",
-  );
-  const hasApprovedVerification = latestAttempt?.status === "approved";
 
-  if (!canVisitNumber && canVerifyPhoneCode && latestAttempt === undefined) {
-    return <OnboardingRouteSkeleton />;
-  }
-
-  if (!canVisitNumber && !hasApprovedVerification) {
+  if (!canVisitNumber) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 
@@ -1150,10 +1118,7 @@ function OnboardingNumberRoute() {
       )}
       isOnboardingComplete={ctx.activeBusiness.onboardingStage === "completed"}
       onSignOut={ctx.onSignOut}
-      progressNavigableUntil={Math.max(
-        onboardingNavigableStep(ctx.activeBusiness.onboardingStage),
-        hasApprovedVerification ? 8 : 1,
-      )}
+      progressNavigableUntil={onboardingNavigableStep(ctx.activeBusiness.onboardingStage)}
     />
   );
 }

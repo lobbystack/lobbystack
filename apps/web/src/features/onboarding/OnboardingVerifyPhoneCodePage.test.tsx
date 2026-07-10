@@ -139,4 +139,29 @@ describe("OnboardingVerifyPhoneCodePage", () => {
       });
     });
   });
+
+  it("returns completed businesses to number selection after verification", async () => {
+    checkPhoneVerificationMock.mockResolvedValueOnce({
+      status: "approved",
+      phoneE164: "+14165550123",
+    });
+
+    render(
+      <OnboardingVerifyPhoneCodePage
+        approvedRedirectTo="/onboarding/number"
+        businessId={"business-1" as never}
+        onSignOut={() => {}}
+        phoneE164="+14165550123"
+      />,
+    );
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("code"), "123456");
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith("/onboarding/number", {
+        replace: true,
+      });
+    });
+  });
 });
