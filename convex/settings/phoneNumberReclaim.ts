@@ -48,7 +48,6 @@ export const backfillFreePlanPhoneNumberReclaimsPage = internalMutation({
         .collect();
       const hasReclaimable = phoneNumbers.some(
         (phoneNumber) =>
-          phoneNumber.status === "active" &&
           Boolean(phoneNumber.twilioPhoneSid) &&
           phoneNumber.reclaimScheduledAt === undefined,
       );

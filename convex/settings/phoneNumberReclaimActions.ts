@@ -30,19 +30,19 @@ export const scheduleDedicatedNumberReclaim = internalAction({
       return { scheduled: 0, skippedReason: "plan_includes_number" as const };
     }
 
-    const activeNumbers = await ctx.runQuery(
-      internal.businesses.catalog.listActivePhoneNumbersForBusinessInternal,
+    const provisionedNumbers = await ctx.runQuery(
+      internal.businesses.catalog.listProvisionedPhoneNumbersForBusinessInternal,
       { businessId: args.businessId },
     );
-    if (activeNumbers.length === 0) {
-      return { scheduled: 0, skippedReason: "no_active_number" as const };
+    if (provisionedNumbers.length === 0) {
+      return { scheduled: 0, skippedReason: "no_provider_owned_number" as const };
     }
 
     const delayMs = Math.max(0, args.delayMs ?? OLD_PHONE_NUMBER_RELEASE_DELAY_MS);
     const reclaimScheduledAt = Date.now() + delayMs;
     let scheduled = 0;
 
-    for (const phoneNumber of activeNumbers) {
+    for (const phoneNumber of provisionedNumbers) {
       if (!phoneNumber.twilioPhoneSid) {
         continue;
       }

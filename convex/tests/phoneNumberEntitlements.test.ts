@@ -181,6 +181,83 @@ describe("dedicated number entitlements", () => {
     ).rejects.toThrow(DEDICATED_NUMBER_REQUIRES_PAID_PLAN_MESSAGE);
   });
 
+  it("schedules reclaim for inactive provider-owned numbers", async () => {
+    const t = convexTest(schema, modules);
+    const subject = "inactive-number-reclaim";
+    const { businessId } = await seedCloudBusiness({
+      t,
+      subject,
+      currentPlan: "free_cloud",
+      onboardingStage: "completed",
+    });
+    const phoneNumberId = await t.run(async (ctx) => {
+      return await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550445",
+        twilioPhoneSid: "PN-inactive-reclaim",
+        voiceEnabled: false,
+        smsEnabled: false,
+        status: "inactive",
+      });
+    });
+
+    const result = await t.action(
+      internal.settings.phoneNumberReclaimActions.scheduleDedicatedNumberReclaim,
+      {
+        businessId,
+        reason: "free_plan",
+        delayMs: OLD_PHONE_NUMBER_RELEASE_DELAY_MS,
+        sendWarningEmail: false,
+      },
+    );
+
+    expect(result.scheduled).toBe(1);
+    const phoneNumber = await t.run(async (ctx) => await ctx.db.get(phoneNumberId));
+    expect(phoneNumber).toMatchObject({
+      status: "inactive",
+      reclaimReason: "free_plan",
+      reclaimScheduledAt: expect.any(Number),
+    });
+  });
+
+  it("includes inactive provider-owned numbers in the free-plan reclaim backfill", async () => {
+    const t = convexTest(schema, modules);
+    const subject = "inactive-number-backfill";
+    const { businessId } = await seedCloudBusiness({
+      t,
+      subject,
+      currentPlan: "free_cloud",
+      onboardingStage: "completed",
+    });
+    await t.run(async (ctx) => {
+      await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550446",
+        twilioPhoneSid: "PN-inactive-backfill",
+        voiceEnabled: false,
+        smsEnabled: false,
+        status: "inactive",
+      });
+    });
+
+    const result = await t.mutation(
+      internal.settings.phoneNumberReclaim.backfillFreePlanPhoneNumberReclaimsPage,
+      {
+        cursor: null,
+        numItems: 10,
+        delayMs: OLD_PHONE_NUMBER_RELEASE_DELAY_MS,
+      },
+    );
+
+    expect(result.scheduledBusinesses).toBe(1);
+    const scheduledJobs = await t.run(async (ctx) => {
+      return await ctx.db.system.query("_scheduled_functions").collect();
+    });
+    expect(scheduledJobs.map((job) => job.name)).toContain(
+      "settings/phoneNumberReclaimActions:scheduleDedicatedNumberReclaim",
+    );
+  });
+
   it("schedules reclaim for free-plan numbers and cancels on upgrade", async () => {
     const t = convexTest(schema, modules);
     const subject = "reclaim-owner";

@@ -1285,7 +1285,7 @@ export const markPhoneNumberReclaimScheduled = internalMutation({
   },
   handler: async (ctx, args) => {
     const phoneNumber = await ctx.db.get(args.phoneNumberId);
-    if (!phoneNumber || phoneNumber.status !== "active" || !phoneNumber.twilioPhoneSid) {
+    if (!phoneNumber?.twilioPhoneSid) {
       return {
         scheduled: false as const,
         alreadyScheduled: false as const,
@@ -1320,7 +1320,7 @@ export const markPhoneNumberReclaimScheduled = internalMutation({
   },
 });
 
-export const listActivePhoneNumbersForBusinessInternal = internalQuery({
+export const listProvisionedPhoneNumbersForBusinessInternal = internalQuery({
   args: {
     businessId: v.id("businesses"),
   },
@@ -1329,9 +1329,7 @@ export const listActivePhoneNumbersForBusinessInternal = internalQuery({
       .query("phone_numbers")
       .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
       .collect();
-    return phoneNumbers.filter(
-      (phoneNumber) => phoneNumber.status === "active" && Boolean(phoneNumber.twilioPhoneSid),
-    );
+    return phoneNumbers.filter((phoneNumber) => Boolean(phoneNumber.twilioPhoneSid));
   },
 });
 
