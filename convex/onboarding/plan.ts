@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 
+import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { requireTenantAdminMembership } from "../lib/auth";
@@ -58,6 +59,18 @@ export const selectOnboardingPlan = mutation({
       await ctx.db.patch(args.businessId, {
         onboardingStage: "attribution",
       });
+    }
+
+    if (args.plan === "free_cloud") {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.settings.phoneNumberReclaimActions.scheduleDedicatedNumberReclaim,
+        {
+          businessId: args.businessId,
+          reason: "free_plan",
+          sendWarningEmail: true,
+        },
+      );
     }
 
     return { status: "selected" };

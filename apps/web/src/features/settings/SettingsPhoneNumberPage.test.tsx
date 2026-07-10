@@ -6,6 +6,7 @@ import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import type { BillingStatus } from "../../../../../packages/shared/src/billing";
 import { SettingsPhoneNumberPage } from "./SettingsPhoneNumberPage";
 
 const {
@@ -168,6 +169,11 @@ const currentPhoneNumber = {
   status: "active",
 };
 
+const paidBillingStatus = {
+  includedBusinessNumbers: 1,
+  phoneNumberReclaimScheduledAt: null,
+} as BillingStatus;
+
 const suggestedNumber = {
   e164: "+14165550124",
   display: "(416) 555-0124",
@@ -193,6 +199,7 @@ function renderPage(
 ) {
   return render(
     <SettingsPhoneNumberPage
+      billingStatus={paidBillingStatus}
       businessId={businessId}
       canManageTenant={canManageTenant}
       {...props}
@@ -269,6 +276,19 @@ describe("SettingsPhoneNumberPage", () => {
       false,
     );
     expect(screen.queryByRole("button", { name: "Request change" })).toBeNull();
+  });
+
+  it("keeps number claiming disabled while billing status is loading", async () => {
+    const user = userEvent.setup();
+    useQueryMock.mockReturnValue(null);
+
+    renderPage(true, { billingStatus: null });
+
+    const getNumberButton = screen.getByRole("button", { name: "Get number" });
+    expect(getNumberButton).toHaveProperty("disabled", true);
+    await user.click(getNumberButton);
+    expect(screen.queryByRole("heading", { name: "Choose a phone number" })).toBeNull();
+    expect(getInitialReplacementNumberSuggestionMock).not.toHaveBeenCalled();
   });
 
   it("hides the request-change action from non-admin members", () => {

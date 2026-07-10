@@ -100,9 +100,9 @@ export function SettingsPhoneNumberPage({
     : null;
   const hasPhoneNumber = Boolean(primaryPhoneNumber);
   const hasUsedPhoneNumberChange = Boolean(phoneNumberReplacementUsedAt);
-  const includedBusinessNumbers = billingStatus?.includedBusinessNumbers ?? null;
   const canClaimDedicatedNumber =
-    includedBusinessNumbers === null || (includedBusinessNumbers ?? 0) > 0;
+    billingStatus != null &&
+    (billingStatus.includedBusinessNumbers === null || billingStatus.includedBusinessNumbers > 0);
   const reclaimScheduledAt =
     primaryPhoneNumber?.reclaimScheduledAt ??
     billingStatus?.phoneNumberReclaimScheduledAt ??
