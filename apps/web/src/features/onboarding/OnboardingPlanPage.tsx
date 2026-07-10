@@ -492,6 +492,7 @@ export function OnboardingPlanPage({
         nextSearchParams.delete("billing_interval");
         nextSearchParams.delete(CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM);
         setSearchParams(nextSearchParams, { replace: true });
+        navigate("/onboarding/number", { replace: true });
       })
       .catch(() => {
         checkoutRefreshKeyRef.current = null;
@@ -502,6 +503,7 @@ export function OnboardingPlanPage({
     checkoutTarget,
     billingInterval,
     hasCheckoutSessionTokenParam,
+    navigate,
     refreshCheckoutStatus,
     searchParams,
     setSearchParams,
@@ -561,7 +563,7 @@ export function OnboardingPlanPage({
   return (
     <OnboardingShell
       onSignOut={onSignOut}
-      progress={{ current: 9, navigableUntil: progressNavigableUntil, total: 10 }}
+      progress={{ current: 8, navigableUntil: progressNavigableUntil, total: 10 }}
       title={t("plan.title")}
       width="wide"
     >

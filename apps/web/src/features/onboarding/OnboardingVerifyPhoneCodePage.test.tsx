@@ -134,7 +134,7 @@ describe("OnboardingVerifyPhoneCodePage", () => {
     await user.type(screen.getByLabelText("code"), "123456");
 
     await waitFor(() => {
-      expect(navigateMock).toHaveBeenCalledWith("/onboarding/number", {
+      expect(navigateMock).toHaveBeenCalledWith("/onboarding/plan", {
         replace: true,
       });
     });

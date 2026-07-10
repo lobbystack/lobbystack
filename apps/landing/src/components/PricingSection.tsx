@@ -60,7 +60,7 @@ const tiers: Tier[] = [
     highlights: [
       "30 voice minutes included",
       "All features",
-      "1 dedicated business number",
+      "Dedicated number after upgrade",
       "Community support",
     ],
   },
@@ -166,7 +166,7 @@ const tiersFr: Tier[] = [
     highlights: [
       "30 minutes vocales incluses",
       "Toutes les fonctionnalités",
-      "1 numéro professionnel dédié",
+      "Numéro dédié après mise à niveau",
       "Support communautaire",
     ],
   },

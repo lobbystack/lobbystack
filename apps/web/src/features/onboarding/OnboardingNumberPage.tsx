@@ -24,7 +24,6 @@ import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 type OnboardingNumberPageProps = {
   businessId: Id<"businesses">;
   onSignOut: () => void;
-  hasReachedPlan?: boolean;
   hasReachedAttribution?: boolean;
   isOnboardingComplete?: boolean;
   progressNavigableUntil?: number;
@@ -51,7 +50,6 @@ function formatPhoneNumber(e164: string): string {
 export function OnboardingNumberPage({
   businessId,
   onSignOut,
-  hasReachedPlan = false,
   hasReachedAttribution = false,
   isOnboardingComplete = false,
   progressNavigableUntil,
@@ -89,13 +87,13 @@ export function OnboardingNumberPage({
   const useSettingsNumberPicker = isOnboardingComplete && primaryPhoneNumber === null;
 
   useEffect(() => {
-    if (!hasReachedPlan && primaryPhoneNumber) {
-      navigate("/onboarding/plan", {
+    if (!hasReachedAttribution && primaryPhoneNumber && !useSettingsNumberPicker) {
+      navigate("/onboarding/attribution", {
         replace: true,
         state: { justClaimedPhoneNumber: true },
       });
     }
-  }, [hasReachedPlan, navigate, primaryPhoneNumber]);
+  }, [hasReachedAttribution, navigate, primaryPhoneNumber, useSettingsNumberPicker]);
 
   async function handleSkip(): Promise<void> {
     if (isSkipping) return;
@@ -103,7 +101,7 @@ export function OnboardingNumberPage({
     setSkipError(null);
     try {
       await skipOnboardingNumber({ businessId });
-      navigate("/onboarding/plan");
+      navigate("/onboarding/attribution");
     } catch (skipError) {
       setSkipError(getSafeOnboardingErrorMessage(skipError, t, "number.skipFailed"));
     } finally {
@@ -136,14 +134,7 @@ export function OnboardingNumberPage({
       return;
     }
 
-    if (hasReachedAttribution) {
-      navigate("/onboarding/attribution", {
-        state: { justClaimedPhoneNumber: true },
-      });
-      return;
-    }
-
-    navigate("/onboarding/plan", {
+    navigate("/onboarding/attribution", {
       state: { justClaimedPhoneNumber: true },
     });
   }
@@ -158,11 +149,11 @@ export function OnboardingNumberPage({
     void navigate("/onboarding/verify-phone");
   }, [navigate]);
 
-  if (hasCompletedClaim || (primaryPhoneNumber && !hasReachedPlan)) {
+  if (hasCompletedClaim || (primaryPhoneNumber && !hasReachedAttribution)) {
     return (
       <OnboardingShell
         onSignOut={onSignOut}
-        progress={{ current: 8, navigableUntil: progressNavigableUntil, total: 10 }}
+        progress={{ current: 9, navigableUntil: progressNavigableUntil, total: 10 }}
         title={t("number.title")}
         width="md"
       >
@@ -173,12 +164,12 @@ export function OnboardingNumberPage({
     );
   }
 
-  if (hasReachedPlan) {
+  if (hasReachedAttribution) {
     if (primaryPhoneNumber === undefined) {
       return (
         <OnboardingShell
           onSignOut={onSignOut}
-          progress={{ current: 8, navigableUntil: progressNavigableUntil, total: 10 }}
+          progress={{ current: 9, navigableUntil: progressNavigableUntil, total: 10 }}
           title={t("number.title")}
           width="md"
         >
@@ -195,7 +186,7 @@ export function OnboardingNumberPage({
       return (
         <OnboardingShell
           onSignOut={onSignOut}
-          progress={{ current: 8, navigableUntil: progressNavigableUntil, total: 10 }}
+          progress={{ current: 9, navigableUntil: progressNavigableUntil, total: 10 }}
           title={t("number.selectedTitle")}
           width="md"
         >
@@ -208,7 +199,7 @@ export function OnboardingNumberPage({
                 {selectedNumber}
               </p>
             </div>
-            <Button onClick={() => navigate("/onboarding/plan")} type="button">
+            <Button onClick={() => navigate("/onboarding/attribution")} type="button">
               {t("number.continue")}
             </Button>
           </Surface>
@@ -220,7 +211,7 @@ export function OnboardingNumberPage({
   return (
     <OnboardingShell
       onSignOut={onSignOut}
-      progress={{ current: 8, navigableUntil: progressNavigableUntil, total: 10 }}
+      progress={{ current: 9, navigableUntil: progressNavigableUntil, total: 10 }}
       title={t("number.title")}
       width="lg"
       footer={

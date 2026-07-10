@@ -331,6 +331,10 @@ export default defineSchema({
     voiceEnabled: v.boolean(),
     smsEnabled: v.boolean(),
     status: v.string(),
+    reclaimScheduledAt: v.optional(v.number()),
+    reclaimReason: v.optional(
+      v.union(v.literal("free_plan"), v.literal("downgrade")),
+    ),
     voiceWebhookStatus: v.optional(v.string()),
     voiceWebhookTargetUrl: v.optional(v.string()),
     voiceWebhookLastSyncedAt: v.optional(v.string()),
@@ -342,7 +346,8 @@ export default defineSchema({
   })
     .index("by_e164", ["e164"])
     .index("by_twilio_phone_sid", ["twilioPhoneSid"])
-    .index("by_business_id", ["businessId"]),
+    .index("by_business_id", ["businessId"])
+    .index("by_reclaim_scheduled_at", ["reclaimScheduledAt"]),
 
   platform_sms_senders: defineTable({
     role: v.literal("platform_alert"),

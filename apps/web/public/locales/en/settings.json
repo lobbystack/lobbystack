@@ -116,7 +116,7 @@
           "highlights": {
             "voiceMinutes": "30 voice minutes included",
             "allFeatures": "All features",
-            "bookingContacts": "1 dedicated business number",
+            "bookingContacts": "Dedicated number after upgrade",
             "support": "Community support"
           }
         },
@@ -353,6 +353,16 @@
       "label": "Current phone number",
       "description": "This is the number callers use to reach your AI receptionist.",
       "empty": "You don't have a number yet."
+    },
+    "reclaim": {
+      "title": "This number will be released on {{date}}",
+      "description": "Free plans do not include a dedicated business number. Upgrade to Starter or Pro before then to keep {{number}}.",
+      "upgradeCta": "Upgrade to keep this number"
+    },
+    "requiresPaidPlan": {
+      "title": "Dedicated numbers are on paid plans",
+      "description": "Upgrade to Starter or Pro to claim a local business number callers can dial.",
+      "upgradeCta": "View plans"
     },
     "actions": {
       "requestChange": "Request change",

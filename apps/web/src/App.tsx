@@ -236,9 +236,9 @@ const onboardingStageSteps: Record<string, number> = {
   greeting: 5,
   verify_phone: 6,
   verify_phone_code: 7,
-  phone_number: 8,
-  phone_number_claiming: 8,
-  plan: 9,
+  plan: 8,
+  phone_number: 9,
+  phone_number_claiming: 9,
   attribution: 10,
   completed: 11,
 };
@@ -403,7 +403,7 @@ function WorkspaceShell() {
     !isBootstrapLoading &&
     activeBusiness &&
     canManageTenant &&
-    onboardingTarget === "/onboarding/plan" &&
+    Boolean(onboardingTarget) &&
     location.pathname === "/settings/plan" &&
     new URLSearchParams(location.search).get("checkout") === "success";
   useAffiliateAttributionBinding(businessId);
@@ -483,11 +483,11 @@ function WorkspaceShell() {
       );
     }
 
-    const isNumberClaimPlanBridge =
-      location.pathname === "/onboarding/plan" &&
+    const isNumberClaimAttributionBridge =
+      location.pathname === "/onboarding/attribution" &&
       hasJustClaimedPhoneNumberState(location.state) &&
       isPhoneNumberClaimBridgeStage(activeBusiness.onboardingStage);
-    if (location.pathname !== onboardingTarget && !isNumberClaimPlanBridge) {
+    if (location.pathname !== onboardingTarget && !isNumberClaimAttributionBridge) {
       return <Navigate replace to={onboardingTarget} />;
     }
   }
@@ -678,6 +678,7 @@ function WorkspaceShell() {
                     <SettingsPhoneNumberPage
                       businessId={businessId}
                       canManageTenant={canManageTenant}
+                      {...(billingStatus ? { billingStatus } : {})}
                       {...(activeBusiness?.phoneNumberReplacementUsedAt
                         ? { phoneNumberReplacementUsedAt: activeBusiness.phoneNumberReplacementUsedAt }
                         : {})}
@@ -974,7 +975,7 @@ function OnboardingVerifyPhoneRoute() {
     })
       .then(() => {
         if (!cancelled) {
-          navigate("/onboarding/number", { replace: true });
+          navigate("/onboarding/plan", { replace: true });
         }
       })
       .catch(() => {
@@ -1074,7 +1075,7 @@ function OnboardingVerifyPhoneCodeRoute() {
   }
 
   if (latestAttempt?.status === "approved") {
-    return <Navigate replace to="/onboarding/number" />;
+    return <Navigate replace to="/onboarding/plan" />;
   }
 
   if (
@@ -1143,7 +1144,6 @@ function OnboardingNumberRoute() {
   return (
     <OnboardingNumberPage
       businessId={ctx.activeBusiness._id}
-      hasReachedPlan={canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "plan")}
       hasReachedAttribution={canVisitOnboardingStage(
         ctx.activeBusiness.onboardingStage,
         "attribution",
@@ -1160,7 +1160,6 @@ function OnboardingNumberRoute() {
 
 function OnboardingPlanRoute() {
   const ctx = useOnboardingContext();
-  const location = useLocation();
 
   if (ctx.isLoading) {
     return <OnboardingRouteSkeleton />;
@@ -1179,14 +1178,7 @@ function OnboardingPlanRoute() {
     return nonAdminElement;
   }
 
-  const canUseNumberClaimBridge =
-    hasJustClaimedPhoneNumberState(location.state) &&
-    isPhoneNumberClaimBridgeStage(ctx.activeBusiness.onboardingStage);
-
-  if (
-    !canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "plan") &&
-    !canUseNumberClaimBridge
-  ) {
+  if (!canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "plan")) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 

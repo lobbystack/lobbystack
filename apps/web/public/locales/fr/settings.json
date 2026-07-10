@@ -116,7 +116,7 @@
           "highlights": {
             "voiceMinutes": "30 minutes vocales incluses",
             "allFeatures": "Toutes les fonctionnalités",
-            "bookingContacts": "1 numéro d'entreprise dédié",
+            "bookingContacts": "Numéro dédié après mise à niveau",
             "support": "Soutien communautaire"
           }
         },
@@ -354,6 +354,16 @@
       "description": "C'est le numéro que les appelants utilisent pour joindre votre réceptionniste IA.",
       "empty": "Vous n'avez pas encore de numéro."
     },
+    "reclaim": {
+      "title": "Ce numéro sera libéré le {{date}}",
+      "description": "Les forfaits gratuits n'incluent pas de numéro d'entreprise dédié. Passez à Starter ou Pro avant cette date pour conserver {{number}}.",
+      "upgradeCta": "Mettre à niveau pour conserver ce numéro"
+    },
+    "requiresPaidPlan": {
+      "title": "Les numéros dédiés sont réservés aux forfaits payants",
+      "description": "Passez à Starter ou Pro pour obtenir un numéro local que les appelants peuvent composer.",
+      "upgradeCta": "Voir les forfaits"
+    },
     "actions": {
       "requestChange": "Demander un changement",
       "getNumber": "Obtenir un numéro"
@@ -379,7 +389,7 @@
       "unavailable": "Ce numéro vient d'être pris. Choisissez-en un autre dans la liste actualisée."
     },
     "toast": {
-      "changed": "Numéro de téléphone modifié.",
+      "changed": "Numéro de téléphone modifié. Votre ancien numéro restera actif pendant 30 jours.",
       "added": "Numéro de téléphone ajouté."
     }
   },

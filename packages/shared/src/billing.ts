@@ -50,10 +50,16 @@ export const billingErrorCodes = {
   alertSmsLimitReached: "alert_sms_limit_reached",
   outboundCallAttemptLimitReached: "outbound_call_attempt_limit_reached",
   aiSmsNotEnabled: "ai_sms_not_enabled",
+  dedicatedNumberRequiresPaidPlan: "dedicated_number_requires_paid_plan",
 } as const;
 
 export type BillingErrorCode =
   (typeof billingErrorCodes)[keyof typeof billingErrorCodes];
+
+export type UsageBillingErrorCode = Exclude<
+  BillingErrorCode,
+  typeof billingErrorCodes.dedicatedNumberRequiresPaidPlan
+>;
 
 export const billingMeterEventNames = {
   voiceMinutes: "billing.voice_minutes",
@@ -297,6 +303,7 @@ export type BillingStatus = {
   billingContactEmail: string | null;
   billingContactName: string | null;
   includedBusinessNumbers: number | null;
+  phoneNumberReclaimScheduledAt: number | null;
   hasBillingManagementAccess: boolean;
   hasCustomerPortalAccess: boolean;
   hasCheckoutAccess: boolean;

@@ -422,6 +422,8 @@ export const getPrimaryPhoneNumber = query({
           voiceEnabled: activePhoneNumber.voiceEnabled,
           smsEnabled: activePhoneNumber.smsEnabled,
           status: activePhoneNumber.status,
+          reclaimScheduledAt: activePhoneNumber.reclaimScheduledAt ?? null,
+          reclaimReason: activePhoneNumber.reclaimReason ?? null,
         }
       : null;
   },
@@ -1267,9 +1269,147 @@ export const clearPhoneNumberTwilioSidIfMatches = internalMutation({
     await ctx.db.patch(args.phoneNumberId, {
       twilioPhoneSid: undefined,
       status: "inactive",
+      reclaimScheduledAt: undefined,
+      reclaimReason: undefined,
     });
     await scheduleSnapshotRefresh(ctx, phoneNumber.businessId);
     return { cleared: true };
+  },
+});
+
+export const markPhoneNumberReclaimScheduled = internalMutation({
+  args: {
+    phoneNumberId: v.id("phone_numbers"),
+    reclaimScheduledAt: v.number(),
+    reclaimReason: v.union(v.literal("free_plan"), v.literal("downgrade")),
+  },
+  handler: async (ctx, args) => {
+    const phoneNumber = await ctx.db.get(args.phoneNumberId);
+    if (!phoneNumber || phoneNumber.status !== "active" || !phoneNumber.twilioPhoneSid) {
+      return {
+        scheduled: false as const,
+        alreadyScheduled: false as const,
+      };
+    }
+    if (
+      phoneNumber.reclaimScheduledAt !== undefined &&
+      phoneNumber.reclaimScheduledAt <= args.reclaimScheduledAt
+    ) {
+      return {
+        scheduled: false as const,
+        alreadyScheduled: true as const,
+        reclaimScheduledAt: phoneNumber.reclaimScheduledAt,
+        twilioPhoneSid: phoneNumber.twilioPhoneSid,
+        e164: phoneNumber.e164,
+        businessId: phoneNumber.businessId,
+      };
+    }
+
+    await ctx.db.patch(args.phoneNumberId, {
+      reclaimScheduledAt: args.reclaimScheduledAt,
+      reclaimReason: args.reclaimReason,
+    });
+    return {
+      scheduled: true as const,
+      alreadyScheduled: false as const,
+      reclaimScheduledAt: args.reclaimScheduledAt,
+      twilioPhoneSid: phoneNumber.twilioPhoneSid,
+      e164: phoneNumber.e164,
+      businessId: phoneNumber.businessId,
+    };
+  },
+});
+
+export const clearPhoneNumberReclaimSchedule = internalMutation({
+  args: {
+    phoneNumberId: v.id("phone_numbers"),
+  },
+  handler: async (ctx, args) => {
+    const phoneNumber = await ctx.db.get(args.phoneNumberId);
+    if (!phoneNumber) {
+      return { cleared: false };
+    }
+    if (
+      phoneNumber.reclaimScheduledAt === undefined &&
+      phoneNumber.reclaimReason === undefined
+    ) {
+      return { cleared: false };
+    }
+
+    await ctx.db.patch(args.phoneNumberId, {
+      reclaimScheduledAt: undefined,
+      reclaimReason: undefined,
+    });
+    return { cleared: true };
+  },
+});
+
+export const markPhoneNumberRetiringForReclaim = internalMutation({
+  args: {
+    phoneNumberId: v.id("phone_numbers"),
+    twilioPhoneSid: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const phoneNumber = await ctx.db.get(args.phoneNumberId);
+    if (
+      !phoneNumber ||
+      phoneNumber.twilioPhoneSid !== args.twilioPhoneSid ||
+      phoneNumber.status !== "active"
+    ) {
+      return { marked: false };
+    }
+
+    await ctx.db.patch(args.phoneNumberId, {
+      status: "retiring",
+    });
+    await scheduleSnapshotRefresh(ctx, phoneNumber.businessId);
+    return { marked: true };
+  },
+});
+
+export const listActivePhoneNumbersForBusinessInternal = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args): Promise<Array<Doc<"phone_numbers">>> => {
+    const phoneNumbers = await ctx.db
+      .query("phone_numbers")
+      .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+      .collect();
+    return phoneNumbers.filter(
+      (phoneNumber) => phoneNumber.status === "active" && Boolean(phoneNumber.twilioPhoneSid),
+    );
+  },
+});
+
+export const listDuePhoneNumberReclaimsPage = internalQuery({
+  args: {
+    now: v.number(),
+    cursor: v.union(v.string(), v.null()),
+    numItems: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const numItems = Math.max(1, Math.min(100, Math.floor(args.numItems ?? 50)));
+    const page = await ctx.db
+      .query("phone_numbers")
+      .withIndex("by_reclaim_scheduled_at", (q) =>
+        q.gte("reclaimScheduledAt", 0).lte("reclaimScheduledAt", args.now),
+      )
+      .paginate({
+        cursor: args.cursor,
+        numItems,
+      });
+
+    return {
+      ...page,
+      page: page.page.filter(
+        (phoneNumber) =>
+          phoneNumber.status === "active" &&
+          Boolean(phoneNumber.twilioPhoneSid) &&
+          phoneNumber.reclaimScheduledAt !== undefined &&
+          phoneNumber.reclaimScheduledAt <= args.now,
+      ),
+    };
   },
 });
 
@@ -1308,6 +1448,12 @@ export const upsertPhoneNumberInternal = internalMutation({
           voiceEnabled: args.voiceEnabled,
           smsEnabled: args.smsEnabled,
           status: args.status,
+          ...(existingPhoneNumber.reclaimScheduledAt !== undefined
+            ? { reclaimScheduledAt: existingPhoneNumber.reclaimScheduledAt }
+            : {}),
+          ...(existingPhoneNumber.reclaimReason !== undefined
+            ? { reclaimReason: existingPhoneNumber.reclaimReason }
+            : {}),
         },
         buildPhoneNumberWebhookPendingState({
           twilioPhoneSid: nextTwilioPhoneSid,

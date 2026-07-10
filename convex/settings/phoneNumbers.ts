@@ -284,6 +284,10 @@ async function assertPhoneNumberReplacementAvailable(
   if (business.phoneNumberReplacementUsedAt) {
     throw new Error(PHONE_NUMBER_CHANGE_USED_MESSAGE);
   }
+  await ctx.runQuery(internal.billing.assertBusinessCanProvisionPhoneNumberInternal, {
+    businessId,
+    isReplacement: true,
+  });
 }
 
 async function assertFirstSettingsPhoneNumberAvailable(
@@ -304,6 +308,9 @@ async function assertFirstSettingsPhoneNumberAvailable(
   if (normalizeOnboardingStage(business.onboardingStage) !== "completed") {
     throw new Error(FIRST_PHONE_NUMBER_SETTINGS_REQUIRES_COMPLETED_ONBOARDING_MESSAGE);
   }
+  await ctx.runQuery(internal.billing.assertBusinessCanProvisionPhoneNumberInternal, {
+    businessId,
+  });
 }
 
 export const getInitialReplacementNumberSuggestion = action({
@@ -443,6 +450,10 @@ export const claimReplacementNumber = action({
         businessId: args.businessId,
       },
     );
+    await ctx.runQuery(internal.billing.assertBusinessCanProvisionPhoneNumberInternal, {
+      businessId: args.businessId,
+      ...(currentPhoneNumber ? { isReplacement: true } : {}),
+    });
     let purchased: PurchasedIncomingNumber | null = null;
     let savedPhoneNumberId: Id<"phone_numbers"> | null = null;
     let retiringPhoneNumber: Doc<"phone_numbers"> | null = null;
@@ -542,8 +553,8 @@ export const claimReplacementNumber = action({
         retiringPhoneNumber = currentPhoneNumber;
 
         if (currentPhoneNumber.twilioPhoneSid) {
-          await ctx.scheduler.runAfter(
-            OLD_PHONE_NUMBER_RELEASE_DELAY_MS,
+          await ctx.scheduler.runAt(
+            Date.now() + OLD_PHONE_NUMBER_RELEASE_DELAY_MS,
             internal.settings.phoneNumbers.releaseInactiveTwilioPhoneNumber,
             {
               phoneNumberId: currentPhoneNumber._id,

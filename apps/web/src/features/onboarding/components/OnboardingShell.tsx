@@ -43,8 +43,8 @@ const onboardingStepRoutes: Record<number, string> = {
   5: "/onboarding/greeting",
   6: "/onboarding/verify-phone",
   7: "/onboarding/verify-phone/code",
-  8: "/onboarding/number",
-  9: "/onboarding/plan",
+  8: "/onboarding/plan",
+  9: "/onboarding/number",
   10: "/onboarding/attribution",
 };
 

@@ -101,6 +101,65 @@ export function getPlanEntitlements(plan: BillingPlanSlug) {
   };
 }
 
+export const DEDICATED_NUMBER_REQUIRES_PAID_PLAN_MESSAGE =
+  "Upgrade to a paid plan to claim a dedicated business number.";
+
+export function canProvisionDedicatedBusinessNumber(input: {
+  plan: BillingPlanSlug;
+  activeDedicatedNumberCount: number;
+  /** When replacing an existing number, allow staying at the included limit. */
+  isReplacement?: boolean;
+}): boolean {
+  const limit = getPlanEntitlements(input.plan).includedBusinessNumbers;
+  if (limit === null) {
+    return true;
+  }
+  if (limit <= 0) {
+    return false;
+  }
+  if (input.isReplacement) {
+    return true;
+  }
+  return input.activeDedicatedNumberCount < limit;
+}
+
+export function planIncludesDedicatedBusinessNumber(plan: BillingPlanSlug): boolean {
+  const limit = getPlanEntitlements(plan).includedBusinessNumbers;
+  return limit === null || limit > 0;
+}
+
+export async function countActiveDedicatedBusinessNumbers(
+  ctx: Reader,
+  businessId: Id<"businesses">,
+): Promise<number> {
+  const phoneNumbers = await ctx.db
+    .query("phone_numbers")
+    .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+    .collect();
+  return phoneNumbers.filter((phoneNumber) => phoneNumber.status === "active").length;
+}
+
+export async function assertBusinessCanProvisionPhoneNumber(
+  ctx: Reader,
+  businessId: Id<"businesses">,
+  options?: { isReplacement?: boolean },
+): Promise<void> {
+  const snapshot = await getBillingSnapshot(ctx, { businessId });
+  const activeDedicatedNumberCount = await countActiveDedicatedBusinessNumbers(
+    ctx,
+    businessId,
+  );
+  if (
+    !canProvisionDedicatedBusinessNumber({
+      plan: snapshot.plan,
+      activeDedicatedNumberCount,
+      ...(options?.isReplacement ? { isReplacement: true } : {}),
+    })
+  ) {
+    throw new Error(DEDICATED_NUMBER_REQUIRES_PAID_PLAN_MESSAGE);
+  }
+}
+
 export function getKnowledgeStorageLimitBytes(
   plan: BillingPlanSlug,
 ): number | null {

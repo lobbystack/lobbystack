@@ -120,7 +120,7 @@ describe("extended onboarding stage flow", () => {
     expect(profile?.greeting).toBe("Thanks for calling Bar George. How can I help?");
   });
 
-  it("allows skipping business-number selection into plan selection", async () => {
+  it("allows skipping business-number selection into attribution", async () => {
     const t = createConvexHarness();
     const subject = "number-skip-owner";
     const { businessId } = await seedBusinessOwner({
@@ -135,7 +135,7 @@ describe("extended onboarding stage flow", () => {
         businessId,
       }),
     ).resolves.toEqual({ status: "skipped" });
-    expect(await getBusinessStage(t, businessId)).toBe("plan");
+    expect(await getBusinessStage(t, businessId)).toBe("attribution");
   });
 
   it("selects the free plan and advances to attribution", async () => {

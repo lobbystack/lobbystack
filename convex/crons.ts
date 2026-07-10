@@ -35,6 +35,12 @@ crons.interval(
   internal.privacy.retention.runMvpRetentionCleanup,
   {},
 );
+crons.interval(
+  "release due free-plan phone numbers",
+  { hours: 24 },
+  internal.settings.phoneNumberReclaimActions.runDuePhoneNumberReclaims,
+  {},
+);
 crons.cron(
   "generate monthly affiliate payout run",
   "0 13 1 * *",

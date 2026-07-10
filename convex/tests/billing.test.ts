@@ -442,6 +442,7 @@ describe("billing", () => {
       overagesBillable: false,
       monthlyChargeCents: 0,
       includedBusinessNumbers: 0,
+      phoneNumberReclaimScheduledAt: null,
       availableCheckoutPlans: ["pro"],
       availableCheckoutIntervals: {
         starter: [],
@@ -481,6 +482,7 @@ describe("billing", () => {
       hasCheckoutAccess: false,
       canPurchaseAiSmsAddon: false,
       includedBusinessNumbers: null,
+      phoneNumberReclaimScheduledAt: null,
     });
     expect(status.usage).toMatchObject({
       voiceSecondsIncluded: null,
@@ -3622,6 +3624,108 @@ describe("billing", () => {
     expect(status.billingInterval).toBeNull();
     expect(status.monthlyChargeCents).toBe(0);
     expect(status.billingPeriodChargeCents).toBe(0);
+  });
+
+  it("schedules dedicated-number reclaim on paid-to-free and cancels on upgrade", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-phone-reclaim-webhook",
+      deploymentMode: "cloud",
+      onboardingStage: "completed",
+    });
+
+    process.env.POLAR_PRO_MONTHLY_PRODUCT_ID = "prod_pro_monthly";
+    process.env.SITE_URL = "https://example.com";
+
+    const phoneNumberId = await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        billingInterval: "monthly",
+        polarCustomerId: "cus_reclaim",
+        proSubscriptionId: "sub_reclaim_pro",
+        proSubscriptionProductId: "prod_pro_monthly",
+      });
+      return await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550666",
+        twilioPhoneSid: "PN-webhook-reclaim",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+      });
+    });
+
+    await t.mutation(internal.billing.syncSubscriptionFromWebhook, {
+      businessId,
+      billingKey: getBillingKey(businessId),
+      polarCustomerId: "cus_reclaim",
+      polarCustomerExternalId: getBillingKey(businessId),
+      billingContactEmail: "owner@example.com",
+      billingContactName: "Billing Owner",
+      subscriptionId: "sub_reclaim_pro",
+      subscriptionProductId: "prod_pro_monthly",
+      subscriptionPriceId: "price_pro_monthly",
+      subscriptionState: "canceled",
+      currentPeriodStart: "2026-03-15T00:00:00.000Z",
+      currentPeriodEnd: "2026-04-15T00:00:00.000Z",
+      cancelAtPeriodEnd: false,
+      lastWebhookEventType: "subscription.canceled",
+      lastSyncedAt: "2026-04-15T12:00:00.000Z",
+    });
+
+    const scheduledAfterDowngrade = await t.run(async (ctx: TestContext) => {
+      return await ctx.db.system.query("_scheduled_functions").collect();
+    });
+    expect(
+      scheduledAfterDowngrade.map((job) => job.name),
+    ).toContain("settings/phoneNumberReclaimActions:scheduleDedicatedNumberReclaim");
+
+    await t.action(internal.settings.phoneNumberReclaimActions.scheduleDedicatedNumberReclaim, {
+      businessId,
+      reason: "downgrade",
+      sendWarningEmail: false,
+    });
+
+    const phoneAfterDowngrade = await t.run(async (ctx: TestContext) => await ctx.db.get(phoneNumberId));
+    expect(phoneAfterDowngrade?.status).toBe("active");
+    expect(phoneAfterDowngrade?.reclaimReason).toBe("downgrade");
+    expect(phoneAfterDowngrade?.reclaimScheduledAt).toEqual(expect.any(Number));
+
+    await t.mutation(internal.billing.syncSubscriptionFromWebhook, {
+      businessId,
+      billingKey: getBillingKey(businessId),
+      polarCustomerId: "cus_reclaim",
+      polarCustomerExternalId: getBillingKey(businessId),
+      billingContactEmail: "owner@example.com",
+      billingContactName: "Billing Owner",
+      subscriptionId: "sub_reclaim_pro",
+      subscriptionProductId: "prod_pro_monthly",
+      subscriptionPriceId: "price_pro_monthly",
+      subscriptionState: "active",
+      currentPeriodStart: "2026-04-15T00:00:00.000Z",
+      currentPeriodEnd: "2026-05-15T00:00:00.000Z",
+      cancelAtPeriodEnd: false,
+      lastWebhookEventType: "subscription.active",
+      lastSyncedAt: "2026-04-16T12:00:00.000Z",
+    });
+
+    const scheduledAfterUpgrade = await t.run(async (ctx: TestContext) => {
+      return await ctx.db.system.query("_scheduled_functions").collect();
+    });
+    expect(
+      scheduledAfterUpgrade.map((job) => job.name),
+    ).toContain("settings/phoneNumberReclaimActions:cancelDedicatedNumberReclaim");
+
+    await t.action(internal.settings.phoneNumberReclaimActions.cancelDedicatedNumberReclaim, {
+      businessId,
+    });
+
+    const phoneAfterUpgrade = await t.run(async (ctx: TestContext) => await ctx.db.get(phoneNumberId));
+    expect(phoneAfterUpgrade?.status).toBe("active");
+    expect(phoneAfterUpgrade?.reclaimScheduledAt).toBeUndefined();
+    expect(phoneAfterUpgrade?.reclaimReason).toBeUndefined();
   });
 
   it("does not sync an unscoped customer-session token into a fresh workspace", async () => {

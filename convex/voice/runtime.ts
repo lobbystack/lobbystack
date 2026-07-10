@@ -3,7 +3,7 @@ import {
   isTerminalTwilioCallStatus,
   } from "../lib/voiceCallStatus";
 import { observedInternalMutation as internalMutation, observedMutation as mutation } from "../telemetry/observedFunctions";
-import type { BillingErrorCode } from "../../packages/shared/src/billing";
+import type { UsageBillingErrorCode } from "../../packages/shared/src/billing";
 import { billingErrorCodes } from "../../packages/shared/src/billing";
 import {
   DEFAULT_WEB_CALL_MAX_DURATION_MS,
@@ -834,7 +834,7 @@ export const assertWebVoiceBillingCanStart = internalQuery({
   handler: async (ctx: QueryCtx, args): Promise<null> => {
     const voicePolicy: {
       allowed: boolean;
-      errorCode: BillingErrorCode | null;
+      errorCode: UsageBillingErrorCode | null;
     } = await ctx.runQuery(internal.billing.assertVoiceCanStart, {
       businessId: args.businessId,
     });
@@ -963,7 +963,7 @@ export const startCall = internalMutation({
 
     const voicePolicy: {
       allowed: boolean;
-      errorCode: BillingErrorCode | null;
+      errorCode: UsageBillingErrorCode | null;
     } = await ctx.runQuery(internal.billing.assertVoiceCanStart, {
       businessId: args.businessId,
     });
@@ -1177,7 +1177,7 @@ export const startWebCall = internalMutation({
 
     const voicePolicy: {
       allowed: boolean;
-      errorCode: BillingErrorCode | null;
+      errorCode: UsageBillingErrorCode | null;
     } = await ctx.runQuery(internal.billing.assertVoiceCanStart, {
       businessId: business._id,
     });
@@ -1492,7 +1492,7 @@ export const prepareTransferForVoice = internalMutation({
   handler: async (
     ctx: MutationCtx,
     args: PrepareTransferForVoiceArgs,
-  ): Promise<{ allowed: boolean; errorCode: BillingErrorCode | null }> => {
+  ): Promise<{ allowed: boolean; errorCode: UsageBillingErrorCode | null }> => {
     const call =
       args.callId !== undefined
         ? await ctx.db.get(args.callId)
@@ -1519,7 +1519,7 @@ export const prepareTransferForVoice = internalMutation({
 
     return {
       allowed: reservation.allowed,
-      errorCode: reservation.errorCode,
+      errorCode: reservation.errorCode as UsageBillingErrorCode | null,
     };
   },
 });
