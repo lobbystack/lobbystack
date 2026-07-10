@@ -152,7 +152,6 @@
         "cta": "Start free",
         "highlights": {
           "voiceMinutes": "30 voice minutes included",
-          "phoneNumber": "Dedicated number after upgrade",
           "bookingContacts": "All features",
           "support": "Community support"
         }
@@ -174,7 +173,8 @@
         },
         "highlights": {
           "voiceMinutes": "150 voice minutes included\nThen $0.20/min",
-          "phoneNumber": "50 alert SMS segments",
+          "dedicatedNumber": "1 dedicated business number",
+          "alertSms": "50 alert SMS segments",
           "knowledgeStorage": "2 GB knowledge base",
           "support": "Email support"
         }
@@ -196,6 +196,7 @@
         },
         "highlights": {
           "voiceMinutes": "500 voice minutes included\nThen $0.18/min",
+          "dedicatedNumber": "1 dedicated business number",
           "aiSms": "Two-way AI SMS add-on",
           "knowledgeStorage": "10 GB knowledge base",
           "support": "Priority email support"
@@ -297,7 +298,6 @@
             "pro": "10 GB"
           },
           "phoneNumbers": {
-            "free": "Add after upgrade",
             "starter": "1 dedicated",
             "pro": "1 dedicated"
           }

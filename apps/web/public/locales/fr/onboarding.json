@@ -152,7 +152,6 @@
         "cta": "Commencer gratuitement",
         "highlights": {
           "voiceMinutes": "30 minutes vocales incluses",
-          "phoneNumber": "Numéro dédié après mise à niveau",
           "bookingContacts": "Toutes les fonctionnalités",
           "support": "Support communautaire"
         }
@@ -174,7 +173,8 @@
         },
         "highlights": {
           "voiceMinutes": "150 minutes vocales incluses\nPuis 0,20 $/min",
-          "phoneNumber": "50 segments SMS d'alerte",
+          "dedicatedNumber": "1 numéro d'entreprise dédié",
+          "alertSms": "50 segments SMS d'alerte",
           "knowledgeStorage": "2 Go de connaissances",
           "support": "Support par email"
         }
@@ -196,6 +196,7 @@
         },
         "highlights": {
           "voiceMinutes": "500 minutes vocales incluses\nPuis 0,18 $/min",
+          "dedicatedNumber": "1 numéro d'entreprise dédié",
           "aiSms": "Module SMS IA bidirectionnel",
           "knowledgeStorage": "10 Go de connaissances",
           "support": "Support prioritaire par email"
@@ -297,7 +298,6 @@
             "pro": "10 Go"
           },
           "phoneNumbers": {
-            "free": "Ajout après mise à niveau",
             "starter": "1 dédié",
             "pro": "1 dédié"
           }

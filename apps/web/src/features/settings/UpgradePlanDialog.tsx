@@ -36,7 +36,7 @@ const upgradePlanCards: UpgradePlanCard[] = [
       annual: "$0",
     },
     period: "",
-    highlights: ["voiceMinutes", "allFeatures", "bookingContacts", "support"],
+    highlights: ["voiceMinutes", "allFeatures", "support"],
   },
   {
     slug: "starter",
@@ -45,7 +45,7 @@ const upgradePlanCards: UpgradePlanCard[] = [
       annual: "$24",
     },
     period: "/mo",
-    highlights: ["voiceMinutes", "phoneNumber", "knowledgeBase", "support"],
+    highlights: ["voiceMinutes", "dedicatedNumber", "phoneNumber", "knowledgeBase", "support"],
   },
   {
     slug: "pro",
@@ -54,7 +54,7 @@ const upgradePlanCards: UpgradePlanCard[] = [
       annual: "$80",
     },
     period: "/mo",
-    highlights: ["voiceMinutes", "alertSms", "knowledgeBase", "support"],
+    highlights: ["voiceMinutes", "dedicatedNumber", "alertSms", "knowledgeBase", "support"],
     highlighted: true,
   },
   {

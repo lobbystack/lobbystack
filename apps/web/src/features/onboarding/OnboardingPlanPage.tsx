@@ -77,19 +77,19 @@ const tierConfigs: TierConfig[] = [
     slug: "free_cloud",
     ctaVariant: "outline",
     highlight: false,
-    highlightKeys: ["voiceMinutes", "phoneNumber", "bookingContacts", "support"],
+    highlightKeys: ["voiceMinutes", "bookingContacts", "support"],
   },
   {
     slug: "starter",
     ctaVariant: "outline",
     highlight: false,
-    highlightKeys: ["voiceMinutes", "phoneNumber", "knowledgeStorage", "support"],
+    highlightKeys: ["voiceMinutes", "dedicatedNumber", "alertSms", "knowledgeStorage", "support"],
   },
   {
     slug: "pro",
     ctaVariant: "default",
     highlight: true,
-    highlightKeys: ["voiceMinutes", "aiSms", "knowledgeStorage", "support"],
+    highlightKeys: ["voiceMinutes", "dedicatedNumber", "aiSms", "knowledgeStorage", "support"],
   },
   {
     slug: "enterprise",
@@ -133,7 +133,7 @@ const comparisonGroups: ComparisonGroup[] = [
       },
       {
         key: "phoneNumbers",
-        free: { key: "usage.phoneNumbers.free" },
+        free: false,
         starter: { key: "usage.phoneNumbers.starter" },
         pro: { key: "usage.phoneNumbers.pro" },
         enterprise: { key: "common.multiple" },

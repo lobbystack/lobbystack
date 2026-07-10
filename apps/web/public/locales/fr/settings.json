@@ -116,7 +116,6 @@
           "highlights": {
             "voiceMinutes": "30 minutes vocales incluses",
             "allFeatures": "Toutes les fonctionnalités",
-            "bookingContacts": "Numéro dédié après mise à niveau",
             "support": "Soutien communautaire"
           }
         },
@@ -128,6 +127,7 @@
           },
           "highlights": {
             "voiceMinutes": "150 minutes vocales incluses\nPuis 0,20 $/min",
+            "dedicatedNumber": "1 numéro d'entreprise dédié",
             "phoneNumber": "50 segments SMS d'alerte",
             "knowledgeBase": "Base de connaissances de 2 Go",
             "overages": "Dépassements vocaux à 0,20 $/min",
@@ -142,6 +142,7 @@
           },
           "highlights": {
             "voiceMinutes": "500 minutes vocales incluses\nPuis 0,18 $/min",
+            "dedicatedNumber": "1 numéro d'entreprise dédié",
             "alertSms": "200 segments SMS d'alerte",
             "knowledgeBase": "Base de connaissances de 10 Go",
             "support": "Soutien prioritaire par courriel"
