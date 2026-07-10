@@ -175,7 +175,6 @@
           "voiceMinutes": "150 voice minutes included\nThen $0.20/min",
           "dedicatedNumber": "1 dedicated business number",
           "alertSms": "50 alert SMS segments",
-          "knowledgeStorage": "2 GB knowledge base",
           "support": "Email support"
         }
       },
@@ -197,8 +196,7 @@
         "highlights": {
           "voiceMinutes": "500 voice minutes included\nThen $0.18/min",
           "dedicatedNumber": "1 dedicated business number",
-          "aiSms": "Two-way AI SMS add-on",
-          "knowledgeStorage": "10 GB knowledge base",
+          "alertSms": "200 alert SMS segments",
           "support": "Priority email support"
         }
       },
@@ -293,9 +291,9 @@
             "proThen": "then $0.02/segment"
           },
           "knowledgeStorage": {
-            "free": "100 MB",
-            "starter": "2 GB",
-            "pro": "10 GB"
+            "free": "25 MB",
+            "starter": "100 MB",
+            "pro": "500 MB"
           },
           "phoneNumbers": {
             "starter": "1 dedicated",

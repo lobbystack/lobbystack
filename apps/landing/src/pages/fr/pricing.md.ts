@@ -16,9 +16,9 @@ LobbyStack propose Free, Starter, Pro et Enterprise. Les forfaits évoluent surt
 
 | Forfait | Prix | Usage inclus |
 | --- | ---: | --- |
-| Free | 0 $/mois | 30 minutes vocales, 2 tentatives d'appels sortants, 10 segments SMS d'alerte, 100 Mo de base de connaissances |
-| Starter | 30 $/mois ou 288 $/an | 150 minutes vocales, 20 appels sortants, 50 segments SMS d'alerte, 2 Go de base de connaissances |
-| Pro | 100 $/mois ou 960 $/an | 500 minutes vocales, 100 appels sortants, 200 segments SMS d'alerte, 10 Go de base de connaissances |
+| Free | 0 $/mois | 30 minutes vocales, 2 tentatives d'appels sortants, 10 segments SMS d'alerte, 25 Mo de base de connaissances |
+| Starter | 30 $/mois ou 288 $/an | 150 minutes vocales, 20 appels sortants, 50 segments SMS d'alerte, 100 Mo de base de connaissances |
+| Pro | 100 $/mois ou 960 $/an | 500 minutes vocales, 100 appels sortants, 200 segments SMS d'alerte, 500 Mo de base de connaissances |
 | Enterprise | Sur mesure | Volume personnalisé, plusieurs numéros, routage multi-sites, règles avancées et support d’auto-hébergement |
 
 ## Dépassements

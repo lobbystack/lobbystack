@@ -129,7 +129,6 @@
             "voiceMinutes": "150 voice minutes included\nThen $0.20/min",
             "dedicatedNumber": "1 dedicated business number",
             "phoneNumber": "50 alert SMS segments",
-            "knowledgeBase": "2 GB knowledge base",
             "overages": "$0.20/min voice overages",
             "support": "Email support"
           }
@@ -144,7 +143,6 @@
             "voiceMinutes": "500 voice minutes included\nThen $0.18/min",
             "dedicatedNumber": "1 dedicated business number",
             "alertSms": "200 alert SMS segments",
-            "knowledgeBase": "10 GB knowledge base",
             "support": "Priority email support"
           }
         },

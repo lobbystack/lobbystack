@@ -83,13 +83,13 @@ const tierConfigs: TierConfig[] = [
     slug: "starter",
     ctaVariant: "outline",
     highlight: false,
-    highlightKeys: ["voiceMinutes", "dedicatedNumber", "alertSms", "knowledgeStorage", "support"],
+    highlightKeys: ["voiceMinutes", "dedicatedNumber", "alertSms", "support"],
   },
   {
     slug: "pro",
     ctaVariant: "default",
     highlight: true,
-    highlightKeys: ["voiceMinutes", "dedicatedNumber", "aiSms", "knowledgeStorage", "support"],
+    highlightKeys: ["voiceMinutes", "dedicatedNumber", "alertSms", "support"],
   },
   {
     slug: "enterprise",

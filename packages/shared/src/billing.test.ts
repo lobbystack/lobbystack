@@ -10,9 +10,9 @@ import {
 describe("knowledge storage limits", () => {
   it("matches the configured plan allowances", () => {
     expect(getKnowledgeStorageLimitBytes("self_host")).toBeNull();
-    expect(getKnowledgeStorageLimitBytes("free_cloud")).toBe(100 * 1024 * 1024);
-    expect(getKnowledgeStorageLimitBytes("starter")).toBe(2 * 1024 * 1024 * 1024);
-    expect(getKnowledgeStorageLimitBytes("pro")).toBe(10 * 1024 * 1024 * 1024);
+    expect(getKnowledgeStorageLimitBytes("free_cloud")).toBe(25 * 1024 * 1024);
+    expect(getKnowledgeStorageLimitBytes("starter")).toBe(100 * 1024 * 1024);
+    expect(getKnowledgeStorageLimitBytes("pro")).toBe(500 * 1024 * 1024);
     expect(getKnowledgeStorageLimitBytes("enterprise")).toBeNull();
   });
 });

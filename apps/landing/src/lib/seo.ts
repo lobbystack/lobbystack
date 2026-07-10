@@ -295,7 +295,7 @@ export const softwareApplicationJsonLd = (
       price: "0",
       priceCurrency: "USD",
       description:
-        "Free includes 30 voice minutes, 2 outbound call attempts, 10 alert SMS segments, and 100 MB knowledge base.",
+        "Free includes 30 voice minutes, 2 outbound call attempts, 10 alert SMS segments, and 25 MB knowledge base.",
       url: absoluteUrl("/pricing/"),
       availability: "https://schema.org/InStock",
     },
@@ -305,7 +305,7 @@ export const softwareApplicationJsonLd = (
       price: "30",
       priceCurrency: "USD",
       description:
-        "Starter includes 150 voice minutes, 20 outbound call attempts, 50 alert SMS segments, and 2 GB knowledge base.",
+        "Starter includes 150 voice minutes, 20 outbound call attempts, 50 alert SMS segments, and 100 MB knowledge base.",
       url: absoluteUrl("/pricing/"),
       availability: "https://schema.org/InStock",
     },
@@ -315,7 +315,7 @@ export const softwareApplicationJsonLd = (
       price: "100",
       priceCurrency: "USD",
       description:
-        "Pro includes 500 voice minutes, 100 outbound call attempts, 200 alert SMS segments, and 10 GB knowledge base.",
+        "Pro includes 500 voice minutes, 100 outbound call attempts, 200 alert SMS segments, and 500 MB knowledge base.",
       url: absoluteUrl("/pricing/"),
       availability: "https://schema.org/InStock",
     },

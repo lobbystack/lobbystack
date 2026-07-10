@@ -129,7 +129,6 @@
             "voiceMinutes": "150 minutes vocales incluses\nPuis 0,20 $/min",
             "dedicatedNumber": "1 numéro d'entreprise dédié",
             "phoneNumber": "50 segments SMS d'alerte",
-            "knowledgeBase": "Base de connaissances de 2 Go",
             "overages": "Dépassements vocaux à 0,20 $/min",
             "support": "Soutien par courriel"
           }
@@ -144,7 +143,6 @@
             "voiceMinutes": "500 minutes vocales incluses\nPuis 0,18 $/min",
             "dedicatedNumber": "1 numéro d'entreprise dédié",
             "alertSms": "200 segments SMS d'alerte",
-            "knowledgeBase": "Base de connaissances de 10 Go",
             "support": "Soutien prioritaire par courriel"
           }
         },

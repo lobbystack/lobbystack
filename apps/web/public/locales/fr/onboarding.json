@@ -175,7 +175,6 @@
           "voiceMinutes": "150 minutes vocales incluses\nPuis 0,20 $/min",
           "dedicatedNumber": "1 numéro d'entreprise dédié",
           "alertSms": "50 segments SMS d'alerte",
-          "knowledgeStorage": "2 Go de connaissances",
           "support": "Support par email"
         }
       },
@@ -197,8 +196,7 @@
         "highlights": {
           "voiceMinutes": "500 minutes vocales incluses\nPuis 0,18 $/min",
           "dedicatedNumber": "1 numéro d'entreprise dédié",
-          "aiSms": "Module SMS IA bidirectionnel",
-          "knowledgeStorage": "10 Go de connaissances",
+          "alertSms": "200 segments SMS d'alerte",
           "support": "Support prioritaire par email"
         }
       },
@@ -293,9 +291,9 @@
             "proThen": "puis 0,02 $/segment"
           },
           "knowledgeStorage": {
-            "free": "100 Mo",
-            "starter": "2 Go",
-            "pro": "10 Go"
+            "free": "25 Mo",
+            "starter": "100 Mo",
+            "pro": "500 Mo"
           },
           "phoneNumbers": {
             "starter": "1 dédié",
