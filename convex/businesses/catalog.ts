@@ -1508,6 +1508,12 @@ export const recordPhoneNumberWebhookSync = internalMutation({
         voiceEnabled: phoneNumber.voiceEnabled,
         smsEnabled: phoneNumber.smsEnabled,
         status: phoneNumber.status,
+        ...(phoneNumber.reclaimScheduledAt !== undefined
+          ? { reclaimScheduledAt: phoneNumber.reclaimScheduledAt }
+          : {}),
+        ...(phoneNumber.reclaimReason !== undefined
+          ? { reclaimReason: phoneNumber.reclaimReason }
+          : {}),
       },
       {
         voiceWebhookStatus: args.voiceWebhookStatus,

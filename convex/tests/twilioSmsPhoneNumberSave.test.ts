@@ -508,6 +508,49 @@ describe("Twilio SMS phone-number save flow", () => {
     });
   });
 
+  it("preserves scheduled reclaim metadata when recording webhook sync", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedBusinessOwner(t);
+    const reclaimScheduledAt = Date.now() - 1_000;
+    const phoneNumberId = await t.run(async (ctx) => {
+      return await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14165550142",
+        twilioPhoneSid: "PN-reclaim-webhook-sync",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+        reclaimScheduledAt,
+        reclaimReason: "free_plan",
+      });
+    });
+
+    await t.mutation(internal.businesses.catalog.recordPhoneNumberWebhookSync, {
+      phoneNumberId,
+      voiceWebhookStatus: "synced",
+      voiceWebhookTargetUrl: "https://voice.example.com/twilio/voice/inbound",
+      smsWebhookStatus: "synced",
+      smsWebhookTargetUrl: "https://example.convex.site/twilio/sms/inbound",
+    });
+
+    const phoneNumber = await t.run(async (ctx) => await ctx.db.get(phoneNumberId));
+    expect(phoneNumber).toMatchObject({
+      reclaimScheduledAt,
+      reclaimReason: "free_plan",
+      voiceWebhookStatus: "synced",
+      smsWebhookStatus: "synced",
+    });
+    const dueReclaims = await t.query(
+      internal.businesses.catalog.listDuePhoneNumberReclaimsPage,
+      {
+        now: Date.now(),
+        cursor: null,
+        numItems: 10,
+      },
+    );
+    expect(dueReclaims.page.map((entry) => entry._id)).toContain(phoneNumberId);
+  });
+
   it("rejects phone-number updates for inactive memberships", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, subject } = await seedBusinessOwner(t, {
