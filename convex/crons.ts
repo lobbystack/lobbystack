@@ -36,9 +36,9 @@ crons.interval(
   {},
 );
 crons.interval(
-  "release due free-plan phone numbers",
+  "reconcile and release free-plan phone numbers",
   { hours: 24 },
-  internal.settings.phoneNumberReclaimActions.runDuePhoneNumberReclaims,
+  internal.settings.phoneNumberReclaimActions.runPhoneNumberReclaimMaintenance,
   {},
 );
 crons.cron(

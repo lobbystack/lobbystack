@@ -297,6 +297,69 @@ describe("dedicated number entitlements", () => {
     );
   });
 
+  it("reconciles legacy free-plan numbers before scanning due reclaims", async () => {
+    const t = convexTest(schema, modules);
+    const legacyPhoneNumberId = await t.run(async (ctx) => {
+      const businessId = await ctx.db.insert("businesses", {
+        slug: "legacy-reclaim-maintenance",
+        name: "Legacy Reclaim Maintenance",
+        timezone: "America/Toronto",
+        defaultLocale: "en",
+        onboardingStage: "completed",
+        businessType: "clinic",
+        deploymentMode: "cloud",
+        status: "active",
+      });
+      return await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550447",
+        twilioPhoneSid: "PN-legacy-maintenance",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+      });
+    });
+    const { businessId: dueBusinessId } = await seedCloudBusiness({
+      t,
+      subject: "due-reclaim-maintenance",
+      currentPlan: "free_cloud",
+      onboardingStage: "completed",
+    });
+    const duePhoneNumberId = await t.run(async (ctx) => {
+      return await ctx.db.insert("phone_numbers", {
+        businessId: dueBusinessId,
+        e164: "+14185550448",
+        twilioPhoneSid: "PN-due-maintenance",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+        reclaimScheduledAt: Date.now() - 1_000,
+        reclaimReason: "free_plan",
+      });
+    });
+
+    const result = await t.action(
+      internal.settings.phoneNumberReclaimActions.runPhoneNumberReclaimMaintenance,
+      {},
+    );
+
+    expect(result).toEqual({
+      scheduledBusinesses: 1,
+      scanned: 1,
+      released: 1,
+    });
+    const state = await t.run(async (ctx) => ({
+      due: await ctx.db.get(duePhoneNumberId),
+      legacy: await ctx.db.get(legacyPhoneNumberId),
+      scheduledJobs: await ctx.db.system.query("_scheduled_functions").collect(),
+    }));
+    expect(state.due?.twilioPhoneSid).toBeUndefined();
+    expect(state.legacy?.twilioPhoneSid).toBe("PN-legacy-maintenance");
+    expect(state.scheduledJobs.map((job) => job.name)).toContain(
+      "settings/phoneNumberReclaimActions:scheduleDedicatedNumberReclaim",
+    );
+  });
+
   it("schedules reclaim for free-plan numbers and cancels on upgrade", async () => {
     const t = convexTest(schema, modules);
     const subject = "reclaim-owner";

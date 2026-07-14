@@ -200,58 +200,94 @@ export const releaseFreePlanPhoneNumber = internalAction({
   },
 });
 
+async function runDuePhoneNumberReclaimsImpl(
+  ctx: ActionCtx,
+): Promise<{ scanned: number; released: number }> {
+  const now = Date.now();
+  let cursor: string | null = null;
+  let isDone = false;
+  let released = 0;
+  let scanned = 0;
+
+  while (!isDone) {
+    const page: {
+      page: Array<{
+        _id: Id<"phone_numbers">;
+        businessId: Id<"businesses">;
+        twilioPhoneSid?: string;
+      }>;
+      continueCursor: string;
+      isDone: boolean;
+    } = await ctx.runQuery(internal.businesses.catalog.listDuePhoneNumberReclaimsPage, {
+      now,
+      cursor,
+      numItems: 50,
+    });
+    scanned += page.page.length;
+
+    for (const phoneNumber of page.page) {
+      if (!phoneNumber.twilioPhoneSid) {
+        continue;
+      }
+      const result: {
+        released: boolean;
+        skipped: boolean;
+        reason?: "plan_includes_number" | "not_due";
+        retryScheduled?: boolean;
+      } = await ctx.runAction(
+        internal.settings.phoneNumberReclaimActions.releaseFreePlanPhoneNumber,
+        {
+          phoneNumberId: phoneNumber._id,
+          twilioPhoneSid: phoneNumber.twilioPhoneSid,
+          businessId: phoneNumber.businessId,
+        },
+      );
+      if (result.released) {
+        released += 1;
+      }
+    }
+
+    cursor = page.continueCursor;
+    isDone = page.isDone;
+  }
+
+  return { scanned, released };
+}
+
+async function startFreePlanPhoneNumberReclaimBackfillImpl(
+  ctx: ActionCtx,
+  args: { delayMs?: number },
+): Promise<{ scheduledBusinesses: number; delayMs: number }> {
+  let cursor: string | null = null;
+  let isDone = false;
+  let scheduledBusinesses = 0;
+  const delayMs = args.delayMs ?? OLD_PHONE_NUMBER_RELEASE_DELAY_MS;
+
+  while (!isDone) {
+    const page: {
+      continueCursor: string;
+      isDone: boolean;
+      scheduledBusinesses: number;
+      delayMs: number;
+    } = await ctx.runMutation(
+      internal.settings.phoneNumberReclaim.backfillFreePlanPhoneNumberReclaimsPage,
+      {
+        cursor,
+        delayMs,
+      },
+    );
+    scheduledBusinesses += page.scheduledBusinesses;
+    cursor = page.continueCursor;
+    isDone = page.isDone;
+  }
+
+  return { scheduledBusinesses, delayMs };
+}
+
 export const runDuePhoneNumberReclaims = internalAction({
   args: {},
   handler: async (ctx): Promise<{ scanned: number; released: number }> => {
-    const now = Date.now();
-    let cursor: string | null = null;
-    let isDone = false;
-    let released = 0;
-    let scanned = 0;
-
-    while (!isDone) {
-      const page: {
-        page: Array<{
-          _id: Id<"phone_numbers">;
-          businessId: Id<"businesses">;
-          twilioPhoneSid?: string;
-        }>;
-        continueCursor: string;
-        isDone: boolean;
-      } = await ctx.runQuery(internal.businesses.catalog.listDuePhoneNumberReclaimsPage, {
-        now,
-        cursor,
-        numItems: 50,
-      });
-      scanned += page.page.length;
-
-      for (const phoneNumber of page.page) {
-        if (!phoneNumber.twilioPhoneSid) {
-          continue;
-        }
-        const result: {
-          released: boolean;
-          skipped: boolean;
-          reason?: "plan_includes_number" | "not_due";
-          retryScheduled?: boolean;
-        } = await ctx.runAction(
-          internal.settings.phoneNumberReclaimActions.releaseFreePlanPhoneNumber,
-          {
-            phoneNumberId: phoneNumber._id,
-            twilioPhoneSid: phoneNumber.twilioPhoneSid,
-            businessId: phoneNumber.businessId,
-          },
-        );
-        if (result.released) {
-          released += 1;
-        }
-      }
-
-      cursor = page.continueCursor;
-      isDone = page.isDone;
-    }
-
-    return { scanned, released };
+    return await runDuePhoneNumberReclaimsImpl(ctx);
   },
 });
 
@@ -263,30 +299,26 @@ export const startFreePlanPhoneNumberReclaimBackfill = internalAction({
     ctx,
     args,
   ): Promise<{ scheduledBusinesses: number; delayMs: number }> => {
-    let cursor: string | null = null;
-    let isDone = false;
-    let scheduledBusinesses = 0;
-    const delayMs = args.delayMs ?? OLD_PHONE_NUMBER_RELEASE_DELAY_MS;
+    return await startFreePlanPhoneNumberReclaimBackfillImpl(ctx, args);
+  },
+});
 
-    while (!isDone) {
-      const page: {
-        continueCursor: string;
-        isDone: boolean;
-        scheduledBusinesses: number;
-        delayMs: number;
-      } = await ctx.runMutation(
-        internal.settings.phoneNumberReclaim.backfillFreePlanPhoneNumberReclaimsPage,
-        {
-          cursor,
-          delayMs,
-        },
-      );
-      scheduledBusinesses += page.scheduledBusinesses;
-      cursor = page.continueCursor;
-      isDone = page.isDone;
-    }
-
-    return { scheduledBusinesses, delayMs };
+export const runPhoneNumberReclaimMaintenance = internalAction({
+  args: {},
+  handler: async (
+    ctx,
+  ): Promise<{
+    scheduledBusinesses: number;
+    scanned: number;
+    released: number;
+  }> => {
+    const backfill = await startFreePlanPhoneNumberReclaimBackfillImpl(ctx, {});
+    const due = await runDuePhoneNumberReclaimsImpl(ctx);
+    return {
+      scheduledBusinesses: backfill.scheduledBusinesses,
+      scanned: due.scanned,
+      released: due.released,
+    };
   },
 });
 
