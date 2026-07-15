@@ -3569,62 +3569,210 @@ describe("billing", () => {
     expect(account?.proSubscriptionProductId).toBe("prod_pro_monthly");
   });
 
-  it("clears the billing interval when the current paid subscription becomes inactive", async () => {
+  it("preserves current paid entitlements while the subscription is past due", async () => {
     const t = convexTest(schema, convexModules);
     registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
     const { authed, businessId } = await seedWorkspace(t, {
-      subject: "billing-current-inactive-subscription-webhook",
+      subject: "billing-current-past-due-subscription-webhook",
       deploymentMode: "cloud",
+      onboardingStage: "completed",
     });
 
-    process.env.POLAR_PRO_ANNUAL_PRODUCT_ID = "prod_pro_annual";
+    process.env.POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID = "prod_pro_annual_ai_sms";
 
-    await t.run(async (ctx: TestContext) => {
+    const phoneNumberId = await t.run(async (ctx: TestContext) => {
       await seedBillingAccount(ctx, {
         businessId,
         currentPlan: "pro",
+        activeAddons: ["ai_sms"],
         billingInterval: "annual",
-        polarCustomerId: "cus_expected",
+        polarCustomerId: "cus_past_due",
         proSubscriptionId: "sub_current_pro",
-        proSubscriptionProductId: "prod_pro_annual",
+        proSubscriptionProductId: "prod_pro_annual_ai_sms",
+      });
+      return await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550667",
+        twilioPhoneSid: "PN-past-due-grace",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
       });
     });
 
     await t.mutation(internal.billing.syncSubscriptionFromWebhook, {
       businessId,
       billingKey: getBillingKey(businessId),
-      polarCustomerId: "cus_expected",
+      polarCustomerId: "cus_past_due",
       polarCustomerExternalId: getBillingKey(businessId),
       billingContactEmail: "owner@example.com",
       billingContactName: "Billing Owner",
       subscriptionId: "sub_current_pro",
-      subscriptionProductId: "prod_pro_annual",
-      subscriptionPriceId: "price_pro_annual",
-      subscriptionState: "canceled",
-      currentPeriodStart: "2026-03-15T00:00:00.000Z",
-      currentPeriodEnd: "2026-04-15T00:00:00.000Z",
+      subscriptionProductId: "prod_pro_annual_ai_sms",
+      subscriptionPriceId: "price_pro_annual_ai_sms",
+      subscriptionState: "past_due",
+      currentPeriodStart: "2026-04-15T00:00:00.000Z",
+      currentPeriodEnd: "2026-05-15T00:00:00.000Z",
       cancelAtPeriodEnd: false,
-      lastWebhookEventType: "subscription.canceled",
+      lastWebhookEventType: "subscription.past_due",
       lastSyncedAt: "2026-04-15T12:00:00.000Z",
     });
 
-    const account = await t.run(async (ctx: TestContext) => {
+    const pastDueState = await t.run(async (ctx: TestContext) => {
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      const phoneNumber = await ctx.db.get(phoneNumberId);
+      const scheduledFunctions = await ctx.db.system.query("_scheduled_functions").collect();
+      return { account, phoneNumber, scheduledFunctions };
+    });
+    expect(pastDueState.account?.currentPlan).toBe("pro");
+    expect(pastDueState.account?.billingInterval).toBe("annual");
+    expect(pastDueState.account?.activeAddons).toEqual(["ai_sms"]);
+    expect(pastDueState.account?.subscriptionState).toBe("past_due");
+    expect(pastDueState.phoneNumber?.status).toBe("active");
+    expect(pastDueState.phoneNumber?.reclaimScheduledAt).toBeUndefined();
+    expect(
+      pastDueState.scheduledFunctions.map((job) => job.name),
+    ).not.toContain("settings/phoneNumberReclaimActions:scheduleDedicatedNumberReclaim");
+
+    const status = await authed.query(api.billing.getStatus, { businessId });
+    expect(status.plan).toBe("pro");
+    expect(status.subscriptionState).toBe("past_due");
+    expect(status.activeAddons).toEqual(["ai_sms"]);
+
+    await t.mutation(internal.billing.syncSubscriptionFromWebhook, {
+      businessId,
+      billingKey: getBillingKey(businessId),
+      polarCustomerId: "cus_past_due",
+      polarCustomerExternalId: getBillingKey(businessId),
+      billingContactEmail: "owner@example.com",
+      billingContactName: "Billing Owner",
+      subscriptionId: "sub_current_pro",
+      subscriptionProductId: "prod_pro_annual_ai_sms",
+      subscriptionPriceId: "price_pro_annual_ai_sms",
+      subscriptionState: "active",
+      currentPeriodStart: "2026-04-15T00:00:00.000Z",
+      currentPeriodEnd: "2026-05-15T00:00:00.000Z",
+      cancelAtPeriodEnd: false,
+      lastWebhookEventType: "subscription.active",
+      lastSyncedAt: "2026-04-16T12:00:00.000Z",
+    });
+
+    const recoveredAccount = await t.run(async (ctx: TestContext) => {
       return await ctx.db
         .query("billing_accounts")
         .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
         .unique();
     });
+    expect(recoveredAccount?.currentPlan).toBe("pro");
+    expect(recoveredAccount?.subscriptionState).toBe("active");
+    expect(recoveredAccount?.activeAddons).toEqual(["ai_sms"]);
+  });
 
-    expect(account?.currentPlan).toBe("free_cloud");
-    expect(account?.billingInterval).toBeUndefined();
-    expect(account?.subscriptionState).toBe("canceled");
+  it("does not grant paid entitlements to an unknown past-due subscription", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-unknown-past-due-subscription-webhook",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_PRO_MONTHLY_PRODUCT_ID = "prod_pro_monthly";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "free_cloud",
+        polarCustomerId: "cus_unknown_past_due",
+      });
+    });
+
+    await t.mutation(internal.billing.syncSubscriptionFromWebhook, {
+      businessId,
+      billingKey: getBillingKey(businessId),
+      polarCustomerId: "cus_unknown_past_due",
+      polarCustomerExternalId: getBillingKey(businessId),
+      billingContactEmail: "owner@example.com",
+      billingContactName: "Billing Owner",
+      subscriptionId: "sub_unknown_past_due",
+      subscriptionProductId: "prod_pro_monthly",
+      subscriptionPriceId: "price_pro_monthly",
+      subscriptionState: "past_due",
+      currentPeriodStart: "2026-04-15T00:00:00.000Z",
+      currentPeriodEnd: "2026-05-15T00:00:00.000Z",
+      cancelAtPeriodEnd: false,
+      lastWebhookEventType: "subscription.past_due",
+      lastSyncedAt: "2026-04-15T12:00:00.000Z",
+    });
 
     const status = await authed.query(api.billing.getStatus, { businessId });
     expect(status.plan).toBe("free_cloud");
     expect(status.billingInterval).toBeNull();
-    expect(status.monthlyChargeCents).toBe(0);
-    expect(status.billingPeriodChargeCents).toBe(0);
+    expect(status.activeAddons).toEqual([]);
+    expect(status.subscriptionState).toBe("past_due");
   });
+
+  it.each(["canceled", "revoked"] as const)(
+    "removes paid entitlements when the current subscription becomes %s",
+    async (terminalStatus) => {
+      const t = convexTest(schema, convexModules);
+      registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+      const { authed, businessId } = await seedWorkspace(t, {
+        subject: "billing-current-inactive-subscription-webhook",
+        deploymentMode: "cloud",
+      });
+
+      process.env.POLAR_PRO_ANNUAL_PRODUCT_ID = "prod_pro_annual";
+
+      await t.run(async (ctx: TestContext) => {
+        await seedBillingAccount(ctx, {
+          businessId,
+          currentPlan: "pro",
+          billingInterval: "annual",
+          polarCustomerId: "cus_expected",
+          proSubscriptionId: "sub_current_pro",
+          proSubscriptionProductId: "prod_pro_annual",
+        });
+      });
+
+      await t.mutation(internal.billing.syncSubscriptionFromWebhook, {
+        businessId,
+        billingKey: getBillingKey(businessId),
+        polarCustomerId: "cus_expected",
+        polarCustomerExternalId: getBillingKey(businessId),
+        billingContactEmail: "owner@example.com",
+        billingContactName: "Billing Owner",
+        subscriptionId: "sub_current_pro",
+        subscriptionProductId: "prod_pro_annual",
+        subscriptionPriceId: "price_pro_annual",
+        subscriptionState: terminalStatus,
+        currentPeriodStart: "2026-03-15T00:00:00.000Z",
+        currentPeriodEnd: "2026-04-15T00:00:00.000Z",
+        cancelAtPeriodEnd: false,
+        lastWebhookEventType: `subscription.${terminalStatus}`,
+        lastSyncedAt: "2026-04-15T12:00:00.000Z",
+      });
+
+      const account = await t.run(async (ctx: TestContext) => {
+        return await ctx.db
+          .query("billing_accounts")
+          .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+          .unique();
+      });
+
+      expect(account?.currentPlan).toBe("free_cloud");
+      expect(account?.billingInterval).toBeUndefined();
+      expect(account?.subscriptionState).toBe(terminalStatus);
+
+      const status = await authed.query(api.billing.getStatus, { businessId });
+      expect(status.plan).toBe("free_cloud");
+      expect(status.billingInterval).toBeNull();
+      expect(status.monthlyChargeCents).toBe(0);
+      expect(status.billingPeriodChargeCents).toBe(0);
+    },
+  );
 
   it("schedules dedicated-number reclaim on paid-to-free and cancels on upgrade", async () => {
     const t = convexTest(schema, convexModules);

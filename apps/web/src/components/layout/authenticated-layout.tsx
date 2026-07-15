@@ -2,7 +2,7 @@ import { useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { GiftIcon } from "lucide-react";
+import { CircleAlert, GiftIcon } from "lucide-react";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
 import type {
@@ -73,6 +73,7 @@ export function AuthenticatedLayout({
   const { t } = useTranslation(["settings", "nav"]);
   const defaultOpen = getSidebarDefaultOpen();
   const startCheckout = useObservedAction(api.billing.startCheckout);
+  const openPortal = useObservedAction(api.billing.openPortal);
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [upgradeBillingInterval, setUpgradeBillingInterval] =
     useState<BillingInterval>("annual");
@@ -119,6 +120,27 @@ export function AuthenticatedLayout({
       setLoadingCheckoutPlan(null);
     }
   }
+
+  async function handleManageSubscription() {
+    if (!businessId) {
+      return;
+    }
+
+    setLoading("portal");
+    try {
+      const result = await openPortal({ businessId });
+      window.location.assign(result.url);
+    } catch {
+      toast.error(t("billing.toast.portalFailed"));
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  const showPastDueBanner =
+    businessId !== undefined &&
+    billingStatus?.subscriptionState === "past_due" &&
+    billingStatus.hasBillingManagementAccess;
 
   return (
     <SidebarProvider
@@ -209,6 +231,40 @@ export function AuthenticatedLayout({
                 className="pointer-events-auto"
                 {...(businessId ? { businessId } : {})}
               />
+            </div>
+          </div>
+        ) : null}
+        {showPastDueBanner ? (
+          <div
+            aria-live="polite"
+            className="border-b border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-100"
+            role="alert"
+          >
+            <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-start gap-3">
+                <CircleAlert
+                  aria-hidden="true"
+                  className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">
+                    {t("billing.pastDueBanner.title")}
+                  </p>
+                  <p className="text-sm text-amber-900/80 dark:text-amber-100/80">
+                    {t("billing.pastDueBanner.description")}
+                  </p>
+                </div>
+              </div>
+              <Button
+                className="w-full border-amber-500/40 bg-background/80 text-foreground hover:bg-background sm:w-auto"
+                loading={loading === "portal"}
+                loadingLabel={t("billing.pastDueBanner.openingPortal")}
+                onClick={() => void handleManageSubscription()}
+                size="sm"
+                variant="outline"
+              >
+                {t("billing.pastDueBanner.action")}
+              </Button>
             </div>
           </div>
         ) : null}

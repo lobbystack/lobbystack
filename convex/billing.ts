@@ -2126,40 +2126,70 @@ export const syncSubscriptionFromWebhook = internalMutation({
     const isLegacyAiSmsProduct =
       args.subscriptionProductId === process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
     const subscriptionActive = isActiveSubscriptionStatus(args.subscriptionState);
+    const subscriptionTerminal =
+      args.subscriptionState === "canceled" || args.subscriptionState === "revoked";
+    const preservesCurrentHostedSubscriptionDuringGrace =
+      isHostedPaidPlanProduct &&
+      !subscriptionActive &&
+      !subscriptionTerminal &&
+      existingAccount?.proSubscriptionId === args.subscriptionId &&
+      existingPlan !== "free_cloud";
+    const preservesLegacyAiSmsDuringGrace =
+      isLegacyAiSmsProduct &&
+      !subscriptionActive &&
+      !subscriptionTerminal &&
+      existingAccount?.aiSmsSubscriptionId === args.subscriptionId &&
+      existingAddons.includes("ai_sms");
+    const hostedSubscriptionEntitled =
+      subscriptionActive || preservesCurrentHostedSubscriptionDuringGrace;
     const inactiveHostedSubscriptionIsStale =
       isHostedPaidPlanProduct &&
       !subscriptionActive &&
       existingAccount?.proSubscriptionId !== undefined &&
       existingAccount.proSubscriptionId !== args.subscriptionId;
+    const inactiveLegacyAiSmsSubscriptionIsStale =
+      isLegacyAiSmsProduct &&
+      !subscriptionActive &&
+      existingAccount?.aiSmsSubscriptionId !== undefined &&
+      existingAccount.aiSmsSubscriptionId !== args.subscriptionId;
 
-    if (inactiveHostedSubscriptionIsStale) {
+    if (inactiveHostedSubscriptionIsStale || inactiveLegacyAiSmsSubscriptionIsStale) {
       return null;
     }
 
     const nextPlan: BillingPlanSlug =
       isHostedPaidPlanProduct && subscriptionActive
         ? planProduct.plan
-        : isHostedPaidPlanProduct && existingPlan !== "enterprise"
-          ? "free_cloud"
-          : existingPlan;
+        : preservesCurrentHostedSubscriptionDuringGrace
+          ? existingPlan
+          : isHostedPaidPlanProduct && existingPlan !== "enterprise"
+            ? "free_cloud"
+            : existingPlan;
     const shouldRemoveAiSmsFromUpdatedProSubscription =
       isBaseHostedPlanProduct &&
+      !preservesCurrentHostedSubscriptionDuringGrace &&
       existingAccount?.proSubscriptionId === args.subscriptionId &&
       existingAccount.proSubscriptionProductId !== undefined &&
       isHostedAiSmsPlanProductId(existingAccount.proSubscriptionProductId);
     const nextActiveAddons =
-      isAiSmsPlanProduct || isLegacyAiSmsProduct
-        ? mergeActiveAddon(existingAddons, "ai_sms", subscriptionActive)
-        : shouldRemoveAiSmsFromUpdatedProSubscription
-          ? mergeActiveAddon(existingAddons, "ai_sms", false)
-          : existingAddons;
+      isAiSmsPlanProduct
+        ? mergeActiveAddon(existingAddons, "ai_sms", hostedSubscriptionEntitled)
+        : isLegacyAiSmsProduct
+          ? mergeActiveAddon(
+              existingAddons,
+              "ai_sms",
+              subscriptionActive || preservesLegacyAiSmsDuringGrace,
+            )
+          : shouldRemoveAiSmsFromUpdatedProSubscription
+            ? mergeActiveAddon(existingAddons, "ai_sms", false)
+            : existingAddons;
 
     const patch = {
       businessId: args.businessId,
       billingKey: args.billingKey,
       currentPlan: nextPlan === "self_host" ? "free_cloud" : nextPlan,
       activeAddons: nextActiveAddons,
-      ...(isHostedPaidPlanProduct && subscriptionActive
+      ...(isHostedPaidPlanProduct && hostedSubscriptionEntitled
         ? { billingInterval: planProduct.billingInterval }
         : {}),
       polarCustomerId: args.polarCustomerId,
@@ -2187,7 +2217,7 @@ export const syncSubscriptionFromWebhook = internalMutation({
 
     if (existingAccount) {
       await ctx.db.patch(existingAccount._id, patch);
-      if (isHostedPaidPlanProduct && !subscriptionActive) {
+      if (isHostedPaidPlanProduct && !hostedSubscriptionEntitled) {
         await ctx.db.patch(existingAccount._id, {
           billingInterval: undefined,
         });
