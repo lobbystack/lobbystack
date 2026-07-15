@@ -49,7 +49,7 @@ vi.mock("@/lib/observed-convex", () => ({
 }));
 
 vi.mock("@/components/app-sidebar", () => ({
-  AppSidebar: () => null,
+  AppSidebar: () => <aside>Sidebar</aside>,
 }));
 
 vi.mock("@/components/feedback-widget", () => ({
@@ -65,7 +65,9 @@ vi.mock("@/components/site-header", () => ({
 }));
 
 vi.mock("@/components/ui/sidebar", () => ({
-  SidebarProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  SidebarProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="authenticated-shell">{children}</div>
+  ),
   SidebarInset: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
 }));
 
@@ -161,9 +163,12 @@ describe("AuthenticatedLayout past-due banner", () => {
   it("shows a global warning to billing managers while the subscription is past due", () => {
     renderLayout(buildStatus());
 
-    expect(screen.getByRole("alert")).toBeTruthy();
+    const alert = screen.getByRole("alert");
+
+    expect(alert).toBeTruthy();
     expect(screen.getByText("Payment unsuccessful")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Update payment method" })).toBeTruthy();
+    expect(alert.nextElementSibling).toBe(screen.getByTestId("authenticated-shell"));
   });
 
   it("hides the warning from members without billing access", () => {

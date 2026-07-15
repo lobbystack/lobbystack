@@ -143,15 +143,52 @@ export function AuthenticatedLayout({
     billingStatus.hasBillingManagementAccess;
 
   return (
-    <SidebarProvider
-      defaultOpen={defaultOpen}
-      style={
-        {
-          "--sidebar-width": "16rem",
-        } as CSSProperties
-      }
-    >
+    <div className="flex min-h-svh w-full flex-col bg-background">
+      {showPastDueBanner ? (
+        <div
+          aria-live="polite"
+          className="relative z-60 w-full shrink-0 border-b border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-100"
+          role="alert"
+        >
+          <div className="flex w-full flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:px-6">
+            <div className="flex min-w-0 items-start gap-3">
+              <CircleAlert
+                aria-hidden="true"
+                className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400"
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-medium">
+                  {t("billing.pastDueBanner.title")}
+                </p>
+                <p className="text-sm text-amber-900/80 dark:text-amber-100/80">
+                  {t("billing.pastDueBanner.description")}
+                </p>
+              </div>
+            </div>
+            <Button
+              className="w-full shrink-0 border-amber-500/40 bg-background/80 text-foreground hover:bg-background sm:w-auto"
+              loading={loading === "portal"}
+              loadingLabel={t("billing.pastDueBanner.openingPortal")}
+              onClick={() => void handleManageSubscription()}
+              size="sm"
+              variant="outline"
+            >
+              {t("billing.pastDueBanner.action")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+      <SidebarProvider
+        className="relative min-h-0 flex-1"
+        defaultOpen={defaultOpen}
+        style={
+          {
+            "--sidebar-width": "16rem",
+          } as CSSProperties
+        }
+      >
       <AppSidebar
+        className="absolute inset-y-0 h-full"
         isLoading={isLoading}
         onSignOut={onSignOut}
         {...(businessId && billingStatus
@@ -193,8 +230,8 @@ export function AuthenticatedLayout({
       <SidebarInset
         className={cn(
           "@container/content",
-          "has-data-[layout=fixed]:h-svh",
-          "peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]",
+          "has-data-[layout=fixed]:h-full",
+          "peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100%-(var(--spacing)*4))]",
         )}
       >
         <SiteHeader fixed />
@@ -234,42 +271,9 @@ export function AuthenticatedLayout({
             </div>
           </div>
         ) : null}
-        {showPastDueBanner ? (
-          <div
-            aria-live="polite"
-            className="border-b border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-100"
-            role="alert"
-          >
-            <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-start gap-3">
-                <CircleAlert
-                  aria-hidden="true"
-                  className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400"
-                />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">
-                    {t("billing.pastDueBanner.title")}
-                  </p>
-                  <p className="text-sm text-amber-900/80 dark:text-amber-100/80">
-                    {t("billing.pastDueBanner.description")}
-                  </p>
-                </div>
-              </div>
-              <Button
-                className="w-full border-amber-500/40 bg-background/80 text-foreground hover:bg-background sm:w-auto"
-                loading={loading === "portal"}
-                loadingLabel={t("billing.pastDueBanner.openingPortal")}
-                onClick={() => void handleManageSubscription()}
-                size="sm"
-                variant="outline"
-              >
-                {t("billing.pastDueBanner.action")}
-              </Button>
-            </div>
-          </div>
-        ) : null}
         {children}
       </SidebarInset>
-    </SidebarProvider>
+      </SidebarProvider>
+    </div>
   );
 }
