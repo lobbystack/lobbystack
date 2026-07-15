@@ -16,6 +16,7 @@ async function seedBusinessOwner(input: {
   t: ConvexHarness;
   onboardingStage: string;
   subject: string;
+  deploymentMode?: "cloud" | "manual";
 }) {
   return await input.t.run(async (ctx) => {
     const businessId = await ctx.db.insert("businesses", {
@@ -25,7 +26,7 @@ async function seedBusinessOwner(input: {
       defaultLocale: "en",
       onboardingStage: input.onboardingStage,
       businessType: "clinic",
-      deploymentMode: "manual",
+      deploymentMode: input.deploymentMode ?? "manual",
       status: "active",
     });
     const userId = await ctx.db.insert("users", {
@@ -120,7 +121,7 @@ describe("extended onboarding stage flow", () => {
     expect(profile?.greeting).toBe("Thanks for calling Bar George. How can I help?");
   });
 
-  it("allows skipping business-number selection into plan selection", async () => {
+  it("allows skipping business-number selection into attribution", async () => {
     const t = createConvexHarness();
     const subject = "number-skip-owner";
     const { businessId } = await seedBusinessOwner({
@@ -135,7 +136,7 @@ describe("extended onboarding stage flow", () => {
         businessId,
       }),
     ).resolves.toEqual({ status: "skipped" });
-    expect(await getBusinessStage(t, businessId)).toBe("plan");
+    expect(await getBusinessStage(t, businessId)).toBe("attribution");
   });
 
   it("selects the free plan and advances to attribution", async () => {
@@ -155,6 +156,42 @@ describe("extended onboarding stage flow", () => {
       }),
     ).resolves.toEqual({ status: "selected" });
     expect(await getBusinessStage(t, businessId)).toBe("attribution");
+  });
+
+  it("schedules dedicated-number reclaim when selecting the free cloud plan", async () => {
+    const t = createConvexHarness();
+    const subject = "free-plan-number-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "plan",
+      subject,
+      deploymentMode: "cloud",
+    });
+    await t.run(async (ctx) => {
+      await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14165550123",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+        twilioPhoneSid: "PN_onboarding_free_plan",
+      });
+    });
+    const authed = t.withIdentity({ subject });
+
+    await expect(
+      authed.mutation(api.onboarding.plan.selectOnboardingPlan, {
+        businessId,
+        plan: "free_cloud",
+      }),
+    ).resolves.toEqual({ status: "selected" });
+
+    const scheduledJobs = await t.run(async (ctx) => {
+      return await ctx.db.system.query("_scheduled_functions").collect();
+    });
+    expect(scheduledJobs.map((job) => job.name)).toContain(
+      "settings/phoneNumberReclaimActions:scheduleDedicatedNumberReclaim",
+    );
   });
 
   it("stores attribution and completes onboarding", async () => {

@@ -116,7 +116,6 @@
           "highlights": {
             "voiceMinutes": "30 voice minutes included",
             "allFeatures": "All features",
-            "bookingContacts": "1 dedicated business number",
             "support": "Community support"
           }
         },
@@ -128,8 +127,8 @@
           },
           "highlights": {
             "voiceMinutes": "150 voice minutes included\nThen $0.20/min",
+            "dedicatedNumber": "1 dedicated business number",
             "phoneNumber": "50 alert SMS segments",
-            "knowledgeBase": "2 GB knowledge base",
             "overages": "$0.20/min voice overages",
             "support": "Email support"
           }
@@ -142,8 +141,8 @@
           },
           "highlights": {
             "voiceMinutes": "500 voice minutes included\nThen $0.18/min",
+            "dedicatedNumber": "1 dedicated business number",
             "alertSms": "200 alert SMS segments",
-            "knowledgeBase": "10 GB knowledge base",
             "support": "Priority email support"
           }
         },
@@ -353,6 +352,16 @@
       "label": "Current phone number",
       "description": "This is the number callers use to reach your AI receptionist.",
       "empty": "You don't have a number yet."
+    },
+    "reclaim": {
+      "title": "This number will be released on {{date}}",
+      "description": "Free plans do not include a dedicated business number. Upgrade to Starter or Pro before then to keep {{number}}.",
+      "upgradeCta": "Upgrade to keep this number"
+    },
+    "requiresPaidPlan": {
+      "title": "Dedicated numbers are on paid plans",
+      "description": "Upgrade to Starter or Pro to claim a local business number callers can dial.",
+      "upgradeCta": "View plans"
     },
     "actions": {
       "requestChange": "Request change",

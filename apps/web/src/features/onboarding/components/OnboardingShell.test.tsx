@@ -31,10 +31,10 @@ describe("OnboardingShell", () => {
     expect(screen.queryByLabelText("Onboarding step 7")).toBeNull();
     expect(
       screen.getByRole("link", { name: "Go to onboarding step 8" }).getAttribute("href"),
-    ).toBe("/onboarding/number");
+    ).toBe("/onboarding/plan");
     expect(
       screen.getByRole("link", { name: "Go to onboarding step 9" }).getAttribute("href"),
-    ).toBe("/onboarding/plan");
+    ).toBe("/onboarding/number");
   });
 
   it("keeps phone verification dots removed when revisiting earlier steps", () => {

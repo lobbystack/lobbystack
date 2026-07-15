@@ -50,10 +50,16 @@ export const billingErrorCodes = {
   alertSmsLimitReached: "alert_sms_limit_reached",
   outboundCallAttemptLimitReached: "outbound_call_attempt_limit_reached",
   aiSmsNotEnabled: "ai_sms_not_enabled",
+  dedicatedNumberRequiresPaidPlan: "dedicated_number_requires_paid_plan",
 } as const;
 
 export type BillingErrorCode =
   (typeof billingErrorCodes)[keyof typeof billingErrorCodes];
+
+export type UsageBillingErrorCode = Exclude<
+  BillingErrorCode,
+  typeof billingErrorCodes.dedicatedNumberRequiresPaidPlan
+>;
 
 export const billingMeterEventNames = {
   voiceMinutes: "billing.voice_minutes",
@@ -83,7 +89,7 @@ export const billingPlanCatalog = {
     monthlyChargeCents: 0,
     annualChargeCents: null,
     annualEffectiveMonthlyChargeCents: null,
-    knowledgeStorageBytes: 100 * 1024 * 1024,
+    knowledgeStorageBytes: 25 * 1024 * 1024,
     voiceSecondsIncluded: 1_800,
     alertSmsSegmentsIncluded: 10,
     outboundCallAttemptsIncluded: 2,
@@ -98,7 +104,7 @@ export const billingPlanCatalog = {
     monthlyChargeCents: 3_000,
     annualChargeCents: 28_800,
     annualEffectiveMonthlyChargeCents: 2_400,
-    knowledgeStorageBytes: 2 * 1024 * 1024 * 1024,
+    knowledgeStorageBytes: 100 * 1024 * 1024,
     voiceSecondsIncluded: 9_000,
     alertSmsSegmentsIncluded: 50,
     outboundCallAttemptsIncluded: 20,
@@ -113,7 +119,7 @@ export const billingPlanCatalog = {
     monthlyChargeCents: 10_000,
     annualChargeCents: 96_000,
     annualEffectiveMonthlyChargeCents: 8_000,
-    knowledgeStorageBytes: 10 * 1024 * 1024 * 1024,
+    knowledgeStorageBytes: 500 * 1024 * 1024,
     voiceSecondsIncluded: 30_000,
     alertSmsSegmentsIncluded: 200,
     outboundCallAttemptsIncluded: 100,
@@ -297,6 +303,7 @@ export type BillingStatus = {
   billingContactEmail: string | null;
   billingContactName: string | null;
   includedBusinessNumbers: number | null;
+  phoneNumberReclaimScheduledAt: number | null;
   hasBillingManagementAccess: boolean;
   hasCustomerPortalAccess: boolean;
   hasCheckoutAccess: boolean;

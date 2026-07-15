@@ -80,7 +80,7 @@ describe("OnboardingNumberPage", () => {
     observedActionCall = 0;
   });
 
-  it("moves forward to plan when a fresh number claim appears before route state catches up", async () => {
+  it("moves forward to attribution when a fresh number claim appears before route state catches up", async () => {
     primaryPhoneNumberMock = {
       _id: "phone-1",
       e164: "+15815550102",
@@ -97,7 +97,7 @@ describe("OnboardingNumberPage", () => {
     );
 
     await waitFor(() => {
-      expect(navigateMock).toHaveBeenCalledWith("/onboarding/plan", {
+      expect(navigateMock).toHaveBeenCalledWith("/onboarding/attribution", {
         replace: true,
         state: { justClaimedPhoneNumber: true },
       });
@@ -105,7 +105,7 @@ describe("OnboardingNumberPage", () => {
     expect(screen.queryByText("number.selectedTitle")).toBeNull();
   });
 
-  it("shows the selected-number review when the user goes back after reaching plan", () => {
+  it("shows the selected-number review when the user goes back after reaching attribution", () => {
     primaryPhoneNumberMock = {
       _id: "phone-1",
       e164: "+15815550102",
@@ -117,7 +117,7 @@ describe("OnboardingNumberPage", () => {
     render(
       <OnboardingNumberPage
         businessId={"business-1" as never}
-        hasReachedPlan
+        hasReachedAttribution
         onSignOut={() => {}}
       />,
     );
@@ -137,7 +137,7 @@ describe("OnboardingNumberPage", () => {
     render(
       <OnboardingNumberPage
         businessId={"business-1" as never}
-        hasReachedPlan
+        hasReachedAttribution
         isOnboardingComplete
         onSignOut={() => {}}
       />,
@@ -164,7 +164,6 @@ describe("OnboardingNumberPage", () => {
     render(
       <OnboardingNumberPage
         businessId={"business-1" as never}
-        hasReachedPlan
         onSignOut={() => {}}
       />,
     );
@@ -203,7 +202,6 @@ describe("OnboardingNumberPage", () => {
       <OnboardingNumberPage
         businessId={"business-1" as never}
         hasReachedAttribution
-        hasReachedPlan
         onSignOut={() => {}}
       />,
     );
@@ -343,7 +341,7 @@ describe("OnboardingNumberPage", () => {
     });
 
     await waitFor(() => {
-      expect(navigateMock).toHaveBeenCalledWith("/onboarding/plan");
+      expect(navigateMock).toHaveBeenCalledWith("/onboarding/attribution");
     });
     expect(getInitialNumberSuggestionMock).toHaveBeenCalledTimes(1);
   });

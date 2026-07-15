@@ -6,6 +6,7 @@ import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import type { BillingStatus } from "../../../../../packages/shared/src/billing";
 import { SettingsPhoneNumberPage } from "./SettingsPhoneNumberPage";
 
 const {
@@ -43,7 +44,7 @@ vi.mock("sonner", () => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     i18n: { language: "en" },
-    t: (key: string) => {
+    t: (key: string, options?: Record<string, unknown>) => {
       const translations: Record<string, string> = {
         "phoneNumber.current.label": "Current phone number",
         "phoneNumber.current.description":
@@ -73,7 +74,22 @@ vi.mock("react-i18next", () => ({
         "phoneNumber.toast.changed":
           "Phone number changed. Your previous number will stay active for 30 days.",
         "phoneNumber.toast.added": "Phone number added.",
+        "phoneNumber.reclaim.title": "This number will be released on {{date}}",
+        "phoneNumber.reclaim.description":
+          "Free plans do not include a dedicated business number. Upgrade to Starter or Pro before then to keep {{number}}.",
+        "phoneNumber.reclaim.upgradeCta": "Upgrade to keep this number",
+        "phoneNumber.requiresPaidPlan.title": "Dedicated numbers are on paid plans",
+        "phoneNumber.requiresPaidPlan.description":
+          "Upgrade to Starter or Pro to claim a local business number callers can dial.",
+        "phoneNumber.requiresPaidPlan.upgradeCta": "View plans",
       };
+
+      if (key === "phoneNumber.reclaim.title") {
+        return `This number will be released on ${String(options?.date ?? "{{date}}")}`;
+      }
+      if (key === "phoneNumber.reclaim.description") {
+        return `Free plans do not include a dedicated business number. Upgrade to Starter or Pro before then to keep ${String(options?.number ?? "{{number}}")}.`;
+      }
 
       return translations[key] ?? key;
     },
@@ -153,6 +169,11 @@ const currentPhoneNumber = {
   status: "active",
 };
 
+const paidBillingStatus = {
+  includedBusinessNumbers: 1,
+  phoneNumberReclaimScheduledAt: null,
+} as BillingStatus;
+
 const suggestedNumber = {
   e164: "+14165550124",
   display: "(416) 555-0124",
@@ -178,6 +199,7 @@ function renderPage(
 ) {
   return render(
     <SettingsPhoneNumberPage
+      billingStatus={paidBillingStatus}
       businessId={businessId}
       canManageTenant={canManageTenant}
       {...props}
@@ -254,6 +276,19 @@ describe("SettingsPhoneNumberPage", () => {
       false,
     );
     expect(screen.queryByRole("button", { name: "Request change" })).toBeNull();
+  });
+
+  it("keeps number claiming disabled while billing status is loading", async () => {
+    const user = userEvent.setup();
+    useQueryMock.mockReturnValue(null);
+
+    renderPage(true, { billingStatus: null });
+
+    const getNumberButton = screen.getByRole("button", { name: "Get number" });
+    expect(getNumberButton).toHaveProperty("disabled", true);
+    await user.click(getNumberButton);
+    expect(screen.queryByRole("heading", { name: "Choose a phone number" })).toBeNull();
+    expect(getInitialReplacementNumberSuggestionMock).not.toHaveBeenCalled();
   });
 
   it("hides the request-change action from non-admin members", () => {
@@ -360,5 +395,52 @@ describe("SettingsPhoneNumberPage", () => {
       });
     });
     expect(toastSuccessMock).toHaveBeenCalledWith("Phone number added.");
+  });
+
+  it("shows a reclaim banner with upgrade CTA when release is scheduled", () => {
+    const reclaimScheduledAt = new Date(2026, 7, 8).getTime();
+    useQueryMock.mockReturnValue({
+      ...currentPhoneNumber,
+      reclaimScheduledAt,
+      reclaimReason: "free_plan",
+    });
+
+    renderPage(true, {
+      billingStatus: {
+        includedBusinessNumbers: 0,
+        phoneNumberReclaimScheduledAt: reclaimScheduledAt,
+      } as never,
+    });
+
+    expect(
+      screen.getByText("This number will be released on August 8, 2026"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Free plans do not include a dedicated business number. Upgrade to Starter or Pro before then to keep (416) 555-0123.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Upgrade to keep this number" })).toBeTruthy();
+  });
+
+  it("shows a paid-plan upgrade message in the current number card on free", () => {
+    useQueryMock.mockReturnValue(null);
+
+    renderPage(true, {
+      billingStatus: {
+        includedBusinessNumbers: 0,
+        phoneNumberReclaimScheduledAt: null,
+      } as never,
+    });
+
+    expect(
+      screen.getByText(
+        "Upgrade to Starter or Pro to claim a local business number callers can dial.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText("Dedicated numbers are on paid plans")).toBeNull();
+    expect(screen.queryByText("You don't have a number yet.")).toBeNull();
+    expect(screen.getByRole("button", { name: "View plans" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Get number" })).toBeNull();
   });
 });

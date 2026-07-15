@@ -22,12 +22,12 @@ export const ONBOARDING_STAGES = [
   "verify_phone",
   // Step 7 – enter OTP.
   "verify_phone_code",
-  // Step 8 – pick a business phone number.
+  // Step 8 – choose plan (free / starter / pro / enterprise).
+  "plan",
+  // Step 9 – pick a business phone number (paid plans only).
   "phone_number",
   // Transient state while we provision a Twilio number.
   "phone_number_claiming",
-  // Step 9 – choose plan (free / pro / enterprise).
-  "plan",
   // Step 10 – attribution survey ("how did you hear about us").
   "attribution",
   // All done.

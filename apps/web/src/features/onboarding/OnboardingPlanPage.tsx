@@ -77,19 +77,19 @@ const tierConfigs: TierConfig[] = [
     slug: "free_cloud",
     ctaVariant: "outline",
     highlight: false,
-    highlightKeys: ["voiceMinutes", "phoneNumber", "bookingContacts", "support"],
+    highlightKeys: ["voiceMinutes", "bookingContacts", "support"],
   },
   {
     slug: "starter",
     ctaVariant: "outline",
     highlight: false,
-    highlightKeys: ["voiceMinutes", "phoneNumber", "knowledgeStorage", "support"],
+    highlightKeys: ["voiceMinutes", "dedicatedNumber", "alertSms", "support"],
   },
   {
     slug: "pro",
     ctaVariant: "default",
     highlight: true,
-    highlightKeys: ["voiceMinutes", "aiSms", "knowledgeStorage", "support"],
+    highlightKeys: ["voiceMinutes", "dedicatedNumber", "alertSms", "support"],
   },
   {
     slug: "enterprise",
@@ -133,7 +133,7 @@ const comparisonGroups: ComparisonGroup[] = [
       },
       {
         key: "phoneNumbers",
-        free: { key: "usage.phoneNumbers.free" },
+        free: false,
         starter: { key: "usage.phoneNumbers.starter" },
         pro: { key: "usage.phoneNumbers.pro" },
         enterprise: { key: "common.multiple" },
@@ -492,6 +492,7 @@ export function OnboardingPlanPage({
         nextSearchParams.delete("billing_interval");
         nextSearchParams.delete(CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM);
         setSearchParams(nextSearchParams, { replace: true });
+        navigate("/onboarding/number", { replace: true });
       })
       .catch(() => {
         checkoutRefreshKeyRef.current = null;
@@ -502,6 +503,7 @@ export function OnboardingPlanPage({
     checkoutTarget,
     billingInterval,
     hasCheckoutSessionTokenParam,
+    navigate,
     refreshCheckoutStatus,
     searchParams,
     setSearchParams,
@@ -561,7 +563,7 @@ export function OnboardingPlanPage({
   return (
     <OnboardingShell
       onSignOut={onSignOut}
-      progress={{ current: 9, navigableUntil: progressNavigableUntil, total: 10 }}
+      progress={{ current: 8, navigableUntil: progressNavigableUntil, total: 10 }}
       title={t("plan.title")}
       width="wide"
     >

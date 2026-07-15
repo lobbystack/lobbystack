@@ -62,7 +62,11 @@ type ConvexHarness = TestConvex<typeof schema>;
 
 async function seedBusinessOwner(
   t: ConvexHarness,
-  input?: { membershipStatus?: "active" | "inactive" },
+  input?: {
+    membershipStatus?: "active" | "inactive";
+    deploymentMode?: "cloud" | "manual";
+    currentPlan?: "free_cloud" | "starter";
+  },
 ) {
   const subject = "phone-number-owner";
 
@@ -73,7 +77,7 @@ async function seedBusinessOwner(
       timezone: "America/Toronto",
       businessType: "clinic",
       defaultLocale: "en",
-      deploymentMode: "manual",
+      deploymentMode: input?.deploymentMode ?? "manual",
       status: "active",
     });
     const userId = await ctx.db.insert("users", {
@@ -85,6 +89,19 @@ async function seedBusinessOwner(
       role: "business_owner",
       status: input?.membershipStatus ?? "active",
     });
+    if (input?.currentPlan) {
+      await ctx.db.insert("billing_accounts", {
+        businessId,
+        billingKey: `business:${String(businessId)}`,
+        currentPlan: input.currentPlan,
+        activeAddons: [],
+        subscriptionState: input.currentPlan === "starter" ? "active" : "inactive",
+        ...(input.currentPlan === "starter"
+          ? { billingInterval: "monthly" as const }
+          : {}),
+        lastSyncedAt: "2026-07-09T12:00:00.000Z",
+      });
+    }
 
     return { businessId };
   });
@@ -163,6 +180,67 @@ describe("Twilio SMS phone-number save flow", () => {
       smsWebhookStatus: "synced",
       smsWebhookTargetUrl: "https://example.convex.site/twilio/sms/inbound",
     });
+  });
+
+  it("rejects attaching a provider number to a hosted free-plan business", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject } = await seedBusinessOwner(t, {
+      deploymentMode: "cloud",
+      currentPlan: "free_cloud",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await expect(
+      authed.action(api.businesses.catalog.savePhoneNumber, {
+        businessId,
+        e164: "+14165550140",
+        twilioPhoneSid: "PN-free-plan-bypass",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+      }),
+    ).rejects.toThrow("Upgrade to a paid plan");
+  });
+
+  it("rejects direct lifecycle changes for hosted provider numbers", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject } = await seedBusinessOwner(t, {
+      deploymentMode: "cloud",
+      currentPlan: "starter",
+    });
+    const authed = t.withIdentity({ subject });
+    const created = await authed.action(api.businesses.catalog.savePhoneNumber, {
+      businessId,
+      e164: "+14165550141",
+      twilioPhoneSid: "PN-hosted-lifecycle",
+      voiceEnabled: true,
+      smsEnabled: true,
+      status: "active",
+    });
+
+    await expect(
+      authed.action(api.businesses.catalog.savePhoneNumber, {
+        businessId,
+        phoneNumberId: created.phoneNumberId as Id<"phone_numbers">,
+        e164: "+14165550141",
+        twilioPhoneSid: "PN-hosted-lifecycle",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "inactive",
+      }),
+    ).rejects.toThrow("dedicated number workflow");
+
+    await expect(
+      authed.action(api.businesses.catalog.savePhoneNumber, {
+        businessId,
+        phoneNumberId: created.phoneNumberId as Id<"phone_numbers">,
+        e164: "+14165550141",
+        twilioPhoneSid: null,
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+      }),
+    ).rejects.toThrow("dedicated number workflow");
   });
 
   it("clears provider webhooks when a Twilio-backed number becomes ineligible for sync", async () => {
@@ -428,6 +506,49 @@ describe("Twilio SMS phone-number save flow", () => {
       voiceWebhookStatus: "synced",
       smsWebhookStatus: "synced",
     });
+  });
+
+  it("preserves scheduled reclaim metadata when recording webhook sync", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedBusinessOwner(t);
+    const reclaimScheduledAt = Date.now() - 1_000;
+    const phoneNumberId = await t.run(async (ctx) => {
+      return await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14165550142",
+        twilioPhoneSid: "PN-reclaim-webhook-sync",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+        reclaimScheduledAt,
+        reclaimReason: "free_plan",
+      });
+    });
+
+    await t.mutation(internal.businesses.catalog.recordPhoneNumberWebhookSync, {
+      phoneNumberId,
+      voiceWebhookStatus: "synced",
+      voiceWebhookTargetUrl: "https://voice.example.com/twilio/voice/inbound",
+      smsWebhookStatus: "synced",
+      smsWebhookTargetUrl: "https://example.convex.site/twilio/sms/inbound",
+    });
+
+    const phoneNumber = await t.run(async (ctx) => await ctx.db.get(phoneNumberId));
+    expect(phoneNumber).toMatchObject({
+      reclaimScheduledAt,
+      reclaimReason: "free_plan",
+      voiceWebhookStatus: "synced",
+      smsWebhookStatus: "synced",
+    });
+    const dueReclaims = await t.query(
+      internal.businesses.catalog.listDuePhoneNumberReclaimsPage,
+      {
+        now: Date.now(),
+        cursor: null,
+        numItems: 10,
+      },
+    );
+    expect(dueReclaims.page.map((entry) => entry._id)).toContain(phoneNumberId);
   });
 
   it("rejects phone-number updates for inactive memberships", async () => {

@@ -127,9 +127,9 @@ export const markVerificationApproved = internalMutation({
 
     const business = await ctx.db.get(args.businessId);
     const stage = normalizeOnboardingStage(business?.onboardingStage);
-    if (ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.phone_number) {
+    if (ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.plan) {
       await ctx.db.patch(args.businessId, {
-        onboardingStage: "phone_number",
+        onboardingStage: "plan",
       });
     }
   },

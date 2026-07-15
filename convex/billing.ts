@@ -8,11 +8,11 @@ import { v } from "convex/values";
 
 import type {
   BillingAddonSlug,
-  BillingErrorCode,
   BillingInterval,
   BillingPlanSlug,
   BillingStatus,
   BillingTransactionKind,
+  UsageBillingErrorCode,
   BillingTransactionSummary,
   BillingUsageKind,
   HostedCheckoutPlanIntervals,
@@ -64,9 +64,11 @@ import {
   getNormalizedAddons,
   getPlanEntitlements,
   getPlanForBusiness,
+  assertBusinessCanProvisionPhoneNumber,
   isAiSmsAddonCheckoutConfiguredForPlan,
   isHostedAiSmsPlanProductId,
   isAiSmsEnabled,
+  planIncludesDedicatedBusinessNumber,
 } from "./lib/billing";
 import {
   hasBillingManagementAccess,
@@ -370,7 +372,7 @@ type UpsertUsageResult = {
 
 type UsageReservationResult = {
   allowed: boolean;
-  errorCode: BillingErrorCode | null;
+  errorCode: UsageBillingErrorCode | null;
   usageEventId?: Id<"billing_usage_events">;
   syncNeeded?: boolean;
 };
@@ -392,7 +394,7 @@ type SmsCapabilityPolicy = {
   fromPhoneNumber?: string;
   twilioMessagingServiceSid?: string;
   complianceStatus?: SmsComplianceStatus;
-  errorCode: BillingErrorCode | null;
+  errorCode: UsageBillingErrorCode | null;
 };
 
 type UsageSyncTelemetryEventName =
@@ -674,6 +676,7 @@ function buildBillingStatus(input: {
   availableCheckoutIntervals: HostedCheckoutPlanIntervals;
   aiSmsAddonCheckoutConfigured: boolean;
   knowledgeStorageUsageBytes: number;
+  phoneNumberReclaimScheduledAt: number | null;
 }): BillingStatus {
   const usage = getBillingUsageSnapshotData({
     plan: input.plan,
@@ -712,6 +715,7 @@ function buildBillingStatus(input: {
     billingContactEmail: input.hasBillingManagementAccess ? input.contact.email : null,
     billingContactName: input.hasBillingManagementAccess ? input.contact.name : null,
     includedBusinessNumbers: billingPlanCatalog[input.plan].includedBusinessNumbers,
+    phoneNumberReclaimScheduledAt: input.phoneNumberReclaimScheduledAt,
     hasBillingManagementAccess: input.hasBillingManagementAccess,
     hasCustomerPortalAccess:
       input.hasBillingManagementAccess && input.hasCustomerPortalAccess,
@@ -2194,8 +2198,30 @@ export const syncSubscriptionFromWebhook = internalMutation({
 
     if (business?.onboardingStage === "plan" && isHostedPaidPlanProduct && subscriptionActive) {
       await ctx.db.patch(args.businessId, {
-        onboardingStage: "attribution",
+        onboardingStage: "phone_number",
       });
+    }
+
+    const previousPlanIncludedNumber = planIncludesDedicatedBusinessNumber(existingPlan);
+    const nextPlanIncludesNumber = planIncludesDedicatedBusinessNumber(nextPlan);
+    if (previousPlanIncludedNumber && !nextPlanIncludesNumber) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.settings.phoneNumberReclaimActions.scheduleDedicatedNumberReclaim,
+        {
+          businessId: args.businessId,
+          reason: "downgrade",
+          sendWarningEmail: true,
+        },
+      );
+    } else if (!previousPlanIncludedNumber && nextPlanIncludesNumber) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.settings.phoneNumberReclaimActions.cancelDedicatedNumberReclaim,
+        {
+          businessId: args.businessId,
+        },
+      );
     }
 
     const existingComponentCustomer = await ctx.runQuery(
@@ -2691,6 +2717,37 @@ export const getCustomerPortalAccess = internalQuery({
   },
 });
 
+export const getBillingSnapshotInternal = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    const snapshot = await getBillingSnapshot(ctx, {
+      businessId: args.businessId,
+    });
+    return {
+      plan: snapshot.plan,
+      periodKey: snapshot.periodKey,
+      activeAddons: snapshot.activeAddons,
+      billingInterval: snapshot.account?.billingInterval ?? null,
+      billingContactEmail: snapshot.account?.billingContactEmail ?? null,
+    };
+  },
+});
+
+export const assertBusinessCanProvisionPhoneNumberInternal = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+    isReplacement: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    await assertBusinessCanProvisionPhoneNumber(ctx, args.businessId, {
+      ...(args.isReplacement ? { isReplacement: true } : {}),
+    });
+    return { allowed: true as const };
+  },
+});
+
 export const getSnapshotForCheckout = internalQuery({
   args: {
     businessId: v.id("businesses"),
@@ -2813,6 +2870,15 @@ export const getStatus = query({
     const availableCheckoutIntervals = siteUrlConfigured
       ? getConfiguredCheckoutIntervals()
       : { starter: [], pro: [] };
+    const primaryPhoneNumbers = await ctx.db
+      .query("phone_numbers")
+      .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+      .collect();
+    const reclaimScheduledAt =
+      primaryPhoneNumbers
+        .filter((phoneNumber) => phoneNumber.status === "active")
+        .map((phoneNumber) => phoneNumber.reclaimScheduledAt)
+        .find((value): value is number => typeof value === "number") ?? null;
 
     return buildBillingStatus({
       billingKey: getBillingKey(args.businessId),
@@ -2845,6 +2911,7 @@ export const getStatus = query({
           billingInterval: snapshot.account?.billingInterval ?? null,
         }),
       knowledgeStorageUsageBytes,
+      phoneNumberReclaimScheduledAt: reclaimScheduledAt,
     });
   },
 });

@@ -698,11 +698,17 @@ function PlanSection({
       label: t("billing.currentPlan.includedStorageLabel"),
       value:
         planConfig.knowledgeStorageBytes !== null
-          ? Math.round(
-              (planConfig.knowledgeStorageBytes / (1024 * 1024 * 1024)) * 10,
-            ) / 10
+          ? planConfig.knowledgeStorageBytes >= 1024 * 1024 * 1024
+            ? Math.round(
+                (planConfig.knowledgeStorageBytes / (1024 * 1024 * 1024)) * 10,
+              ) / 10
+            : Math.round(planConfig.knowledgeStorageBytes / (1024 * 1024))
           : null,
-      unit: "GB",
+      unit:
+        planConfig.knowledgeStorageBytes !== null &&
+        planConfig.knowledgeStorageBytes >= 1024 * 1024 * 1024
+          ? "GB"
+          : "MB",
       fallbackText: t("billing.currentPlan.includedStorageUnlimited"),
     }),
   ];

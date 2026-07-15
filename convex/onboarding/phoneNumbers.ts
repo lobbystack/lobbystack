@@ -699,6 +699,9 @@ async function requireBusinessCanUsePhoneNumberPicker(
   ) {
     throw new Error("Phone-number onboarding is no longer available for this business.");
   }
+  await ctx.runQuery(internal.billing.assertBusinessCanProvisionPhoneNumberInternal, {
+    businessId,
+  });
 }
 
 export async function resolveVerifiedSuggestionContext(
@@ -881,6 +884,9 @@ export const claimOnboardingNumber = action({
       }
       claimLocked = true;
 
+      await ctx.runQuery(internal.billing.assertBusinessCanProvisionPhoneNumberInternal, {
+        businessId: args.businessId,
+      });
       await assertClaimAttemptAllowed(ctx, {
         businessId: args.businessId,
         userId,
@@ -950,11 +956,10 @@ export const claimOnboardingNumber = action({
         twilioPhoneSid: purchased.sid,
         purchasedAt: Date.now(),
       });
-      // Advance to the plan-selection step. Phone provisioning is now
-      // followed by plan + attribution before onboarding completes.
+      // Paid users claim after plan selection; advance to attribution next.
       await ctx.runMutation(internal.businesses.admin.advanceOnboardingStage, {
         businessId: args.businessId,
-        onboardingStage: restoreStage === "attribution" ? "attribution" : "plan",
+        onboardingStage: "attribution",
       });
       recordSuccessfulPurchaseLog({
         businessId: args.businessId,

@@ -586,7 +586,7 @@ describe("onboarding phone-number actions", () => {
     ).toBeNull();
   });
 
-  it("allows suggestions after the user skipped ahead to plan", async () => {
+  it("allows suggestions after the user skipped ahead to attribution", async () => {
     const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
@@ -600,7 +600,7 @@ describe("onboarding phone-number actions", () => {
 
     await t.run(async (ctx) => {
       await ctx.db.patch(businessId, {
-        onboardingStage: "plan",
+        onboardingStage: "attribution",
       });
     });
 
@@ -1197,7 +1197,7 @@ describe("onboarding phone-number actions", () => {
     const business = await t.query(internal.businesses.admin.getBusinessById, {
       businessId,
     });
-    expect(business?.onboardingStage).toBe("plan");
+    expect(business?.onboardingStage).toBe("attribution");
 
     const phoneNumbers = await listBusinessPhoneNumbers(t, businessId);
     expect(phoneNumbers).toHaveLength(1);
@@ -1574,7 +1574,7 @@ describe("onboarding phone-number actions", () => {
 
     await t.run(async (ctx) => {
       await ctx.db.patch(businessId, {
-        onboardingStage: "plan",
+        onboardingStage: "attribution",
       });
       await ctx.db.insert("phone_numbers", {
         businessId,
@@ -1599,7 +1599,7 @@ describe("onboarding phone-number actions", () => {
     expect(
       (await t.query(internal.businesses.admin.getBusinessById, { businessId }))
         ?.onboardingStage,
-    ).toBe("plan");
+    ).toBe("attribution");
     expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(1);
   });
 

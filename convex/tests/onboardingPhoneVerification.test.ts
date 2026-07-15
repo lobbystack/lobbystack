@@ -626,7 +626,7 @@ describe("onboarding phone verification actions", () => {
     const business = await t.query(internal.businesses.admin.getBusinessById, {
       businessId,
     });
-    expect(business?.onboardingStage).toBe("phone_number");
+    expect(business?.onboardingStage).toBe("plan");
 
     const currentUser = await authed.query(api.users.current, {});
     expect(currentUser?.phone).toBe("+15815550100");
@@ -693,7 +693,7 @@ describe("onboarding phone verification actions", () => {
 
     await t.run(async (ctx) => {
       await ctx.db.patch(businessId, {
-        onboardingStage: "phone_number",
+        onboardingStage: "plan",
       });
     });
 
@@ -707,7 +707,7 @@ describe("onboarding phone verification actions", () => {
     const business = await t.query(internal.businesses.admin.getBusinessById, {
       businessId,
     });
-    expect(business?.onboardingStage).toBe("phone_number");
+    expect(business?.onboardingStage).toBe("plan");
     expect(lookupFetchMock).not.toHaveBeenCalled();
     expect(verificationCreateMock).not.toHaveBeenCalled();
   });
@@ -860,7 +860,7 @@ describe("onboarding phone verification actions", () => {
     const business = await t.query(internal.businesses.admin.getBusinessById, {
       businessId,
     });
-    expect(business?.onboardingStage).toBe("phone_number");
+    expect(business?.onboardingStage).toBe("plan");
 
     const attempt = await t.query(internal.onboarding.phoneVerificationState.getLatestVerificationAttempt, {
       businessId,

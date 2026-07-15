@@ -260,7 +260,7 @@ export const reuseVerifiedPhoneForOnboarding = action({
     // phone on file from a previous onboarding session.
     await ctx.runMutation(internal.businesses.admin.advanceOnboardingStage, {
       businessId: args.businessId,
-      onboardingStage: "phone_number",
+      onboardingStage: "plan",
     });
 
     return {

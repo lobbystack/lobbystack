@@ -14,6 +14,7 @@ import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useObservedAction } from "@/lib/observed-convex";
 
 type OnboardingVerifyPhoneCodePageProps = {
+  approvedRedirectTo?: "/onboarding/number" | "/onboarding/plan";
   businessId: Id<"businesses">;
   phoneE164: string;
   onSignOut: () => void;
@@ -30,6 +31,7 @@ function maskPhone(phone: string): string {
 }
 
 export function OnboardingVerifyPhoneCodePage({
+  approvedRedirectTo = "/onboarding/plan",
   businessId,
   phoneE164,
   onSignOut,
@@ -69,7 +71,7 @@ export function OnboardingVerifyPhoneCodePage({
         captureAnalyticsEvent("web.onboarding.verify_phone_completed", {
           businessId: String(businessId),
         });
-        navigate("/onboarding/number", { replace: true });
+        navigate(approvedRedirectTo, { replace: true });
       } else {
         setError(getSafeOnboardingErrorMessage(result.message, t, "verifyPhoneCode.failed"));
       }

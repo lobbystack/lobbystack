@@ -51,6 +51,7 @@ import {
   normalizeLocalizedServiceNames,
 } from "../lib/serviceNames";
 import { normalizeAppointmentChangePolicy } from "../lib/appointmentChangePolicy";
+import { assertBusinessCanProvisionPhoneNumber } from "../lib/billing";
 import {
   buildTwilioSmsInboundWebhookUrl,
   buildTwilioVoiceInboundWebhookUrl,
@@ -72,6 +73,10 @@ const phoneNumberSaveArgs = {
   voiceEnabled: v.boolean(),
   smsEnabled: v.boolean(),
   status: v.string(),
+} as const;
+const phoneNumberUpsertArgs = {
+  ...phoneNumberSaveArgs,
+  isReplacement: v.optional(v.boolean()),
 } as const;
 
 type PhoneNumberSaveArgs = {
@@ -422,6 +427,8 @@ export const getPrimaryPhoneNumber = query({
           voiceEnabled: activePhoneNumber.voiceEnabled,
           smsEnabled: activePhoneNumber.smsEnabled,
           status: activePhoneNumber.status,
+          reclaimScheduledAt: activePhoneNumber.reclaimScheduledAt ?? null,
+          reclaimReason: activePhoneNumber.reclaimReason ?? null,
         }
       : null;
   },
@@ -1267,15 +1274,134 @@ export const clearPhoneNumberTwilioSidIfMatches = internalMutation({
     await ctx.db.patch(args.phoneNumberId, {
       twilioPhoneSid: undefined,
       status: "inactive",
+      reclaimScheduledAt: undefined,
+      reclaimReason: undefined,
     });
+    const remainingPhoneNumbers = await ctx.db
+      .query("phone_numbers")
+      .withIndex("by_business_id", (q) => q.eq("businessId", phoneNumber.businessId))
+      .collect();
+    if (!remainingPhoneNumbers.some((row) => Boolean(row.twilioPhoneSid))) {
+      const business = await ctx.db.get(phoneNumber.businessId);
+      if (business?.phoneNumberReplacementUsedAt || business?.phoneNumberReplacementReservedAt) {
+        await ctx.db.patch(phoneNumber.businessId, {
+          phoneNumberReplacementReservedAt: undefined,
+          phoneNumberReplacementUsedAt: undefined,
+        });
+      }
+    }
     await scheduleSnapshotRefresh(ctx, phoneNumber.businessId);
     return { cleared: true };
   },
 });
 
-export const upsertPhoneNumberInternal = internalMutation({
-  args: phoneNumberSaveArgs,
+export const markPhoneNumberReclaimScheduled = internalMutation({
+  args: {
+    phoneNumberId: v.id("phone_numbers"),
+    reclaimScheduledAt: v.number(),
+    reclaimReason: v.union(v.literal("free_plan"), v.literal("downgrade")),
+  },
   handler: async (ctx, args) => {
+    const phoneNumber = await ctx.db.get(args.phoneNumberId);
+    if (!phoneNumber?.twilioPhoneSid) {
+      return {
+        scheduled: false as const,
+        alreadyScheduled: false as const,
+      };
+    }
+    if (
+      phoneNumber.reclaimScheduledAt !== undefined &&
+      phoneNumber.reclaimScheduledAt <= args.reclaimScheduledAt
+    ) {
+      return {
+        scheduled: false as const,
+        alreadyScheduled: true as const,
+        reclaimScheduledAt: phoneNumber.reclaimScheduledAt,
+        twilioPhoneSid: phoneNumber.twilioPhoneSid,
+        e164: phoneNumber.e164,
+        businessId: phoneNumber.businessId,
+      };
+    }
+
+    await ctx.db.patch(args.phoneNumberId, {
+      reclaimScheduledAt: args.reclaimScheduledAt,
+      reclaimReason: args.reclaimReason,
+    });
+    return {
+      scheduled: true as const,
+      alreadyScheduled: false as const,
+      reclaimScheduledAt: args.reclaimScheduledAt,
+      twilioPhoneSid: phoneNumber.twilioPhoneSid,
+      e164: phoneNumber.e164,
+      businessId: phoneNumber.businessId,
+    };
+  },
+});
+
+export const listProvisionedPhoneNumbersForBusinessInternal = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args): Promise<Array<Doc<"phone_numbers">>> => {
+    const phoneNumbers = await ctx.db
+      .query("phone_numbers")
+      .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+      .collect();
+    return phoneNumbers.filter((phoneNumber) => Boolean(phoneNumber.twilioPhoneSid));
+  },
+});
+
+export const listDuePhoneNumberReclaimsPage = internalQuery({
+  args: {
+    now: v.number(),
+    cursor: v.union(v.string(), v.null()),
+    numItems: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const numItems = Math.max(1, Math.min(100, Math.floor(args.numItems ?? 50)));
+    const page = await ctx.db
+      .query("phone_numbers")
+      .withIndex("by_reclaim_scheduled_at", (q) =>
+        q.gte("reclaimScheduledAt", 0).lte("reclaimScheduledAt", args.now),
+      )
+      .paginate({
+        cursor: args.cursor,
+        numItems,
+      });
+
+    return {
+      ...page,
+      page: page.page.filter(
+        (phoneNumber) =>
+          Boolean(phoneNumber.twilioPhoneSid) &&
+          phoneNumber.reclaimScheduledAt !== undefined &&
+          phoneNumber.reclaimScheduledAt <= args.now,
+      ),
+    };
+  },
+});
+
+export const upsertPhoneNumberInternal = internalMutation({
+  args: phoneNumberUpsertArgs,
+  handler: async (ctx, args) => {
+    const entitlementExistingPhoneNumber = args.phoneNumberId
+      ? await ctx.db.get(args.phoneNumberId)
+      : null;
+    const entitlementNextTwilioPhoneSid =
+      args.twilioPhoneSid === null
+        ? undefined
+        : args.twilioPhoneSid !== undefined
+          ? args.twilioPhoneSid
+          : entitlementExistingPhoneNumber?.twilioPhoneSid;
+    if (
+      entitlementNextTwilioPhoneSid &&
+      entitlementNextTwilioPhoneSid !== entitlementExistingPhoneNumber?.twilioPhoneSid
+    ) {
+      await assertBusinessCanProvisionPhoneNumber(ctx, args.businessId, {
+        ...(args.isReplacement ? { isReplacement: true } : {}),
+      });
+    }
+
     const conflictingPhoneNumber = await ctx.db
       .query("phone_numbers")
       .withIndex("by_e164", (q) => q.eq("e164", args.e164))
@@ -1308,6 +1434,12 @@ export const upsertPhoneNumberInternal = internalMutation({
           voiceEnabled: args.voiceEnabled,
           smsEnabled: args.smsEnabled,
           status: args.status,
+          ...(existingPhoneNumber.reclaimScheduledAt !== undefined
+            ? { reclaimScheduledAt: existingPhoneNumber.reclaimScheduledAt }
+            : {}),
+          ...(existingPhoneNumber.reclaimReason !== undefined
+            ? { reclaimReason: existingPhoneNumber.reclaimReason }
+            : {}),
         },
         buildPhoneNumberWebhookPendingState({
           twilioPhoneSid: nextTwilioPhoneSid,
@@ -1410,6 +1542,12 @@ export const recordPhoneNumberWebhookSync = internalMutation({
         voiceEnabled: phoneNumber.voiceEnabled,
         smsEnabled: phoneNumber.smsEnabled,
         status: phoneNumber.status,
+        ...(phoneNumber.reclaimScheduledAt !== undefined
+          ? { reclaimScheduledAt: phoneNumber.reclaimScheduledAt }
+          : {}),
+        ...(phoneNumber.reclaimReason !== undefined
+          ? { reclaimReason: phoneNumber.reclaimReason }
+          : {}),
       },
       {
         voiceWebhookStatus: args.voiceWebhookStatus,
@@ -1607,6 +1745,42 @@ export const savePhoneNumber = action({
       authSubject: identity.subject,
       ...(authUserId ? { authUserId: String(authUserId) } : {}),
     });
+
+    const existingPhoneNumber = args.phoneNumberId
+      ? await ctx.runQuery(internal.businesses.catalog.getPhoneNumberById, {
+          phoneNumberId: args.phoneNumberId,
+        })
+      : null;
+    const existingPhoneNumberForBusiness =
+      existingPhoneNumber?.businessId === args.businessId ? existingPhoneNumber : null;
+    const snapshot = await ctx.runQuery(internal.billing.getBillingSnapshotInternal, {
+      businessId: args.businessId,
+    });
+    const isHostedPlan = snapshot.plan !== "self_host";
+    const existingTwilioPhoneSid = existingPhoneNumberForBusiness?.twilioPhoneSid;
+    const requestedTwilioPhoneSid =
+      args.twilioPhoneSid === null ? undefined : args.twilioPhoneSid;
+    const nextTwilioPhoneSid =
+      args.twilioPhoneSid !== undefined
+        ? requestedTwilioPhoneSid
+        : existingTwilioPhoneSid;
+
+    if (
+      isHostedPlan &&
+      existingTwilioPhoneSid &&
+      (nextTwilioPhoneSid !== existingTwilioPhoneSid ||
+        args.status !== existingPhoneNumberForBusiness.status)
+    ) {
+      throw new Error(
+        "Hosted phone number lifecycle changes must use the dedicated number workflow.",
+      );
+    }
+
+    if (nextTwilioPhoneSid && nextTwilioPhoneSid !== existingTwilioPhoneSid) {
+      await ctx.runQuery(internal.billing.assertBusinessCanProvisionPhoneNumberInternal, {
+        businessId: args.businessId,
+      });
+    }
 
     const result = await ctx.runMutation(internal.businesses.catalog.upsertPhoneNumberInternal, args);
     const persistedPhoneNumber = await ctx.runQuery(internal.businesses.catalog.getPhoneNumberById, {

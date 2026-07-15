@@ -126,7 +126,7 @@ describe("OnboardingPlanPage", () => {
       });
     });
     await waitFor(() => {
-      expect(screen.getByTestId("current-location").textContent).toBe("/onboarding/plan");
+      expect(screen.getByTestId("current-location").textContent).toBe("/onboarding/number");
     });
   });
 

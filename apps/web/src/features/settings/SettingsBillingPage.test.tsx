@@ -120,6 +120,7 @@ function buildStatus(overrides: Partial<BillingStatus> = {}): BillingStatus {
     billingContactEmail: null,
     billingContactName: null,
     includedBusinessNumbers: 0,
+    phoneNumberReclaimScheduledAt: null,
     hasBillingManagementAccess: true,
     hasCustomerPortalAccess: false,
     hasCheckoutAccess: true,
@@ -874,7 +875,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     expect(screen.getByText("500 billing.currentPlan.includedVoiceLabel")).toBeTruthy();
     expect(screen.getByText("100 billing.currentPlan.includedOutboundLabel")).toBeTruthy();
     expect(screen.getByText("200 billing.currentPlan.includedSmsLabel")).toBeTruthy();
-    expect(screen.getByText("10 GB billing.currentPlan.includedStorageLabel")).toBeTruthy();
+    expect(screen.getByText("500 MB billing.currentPlan.includedStorageLabel")).toBeTruthy();
     expect(screen.getByRole("button", { name: "billing.actions.manageSubscription" })).toBeTruthy();
   });
 
