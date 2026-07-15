@@ -143,7 +143,7 @@ export function AuthenticatedLayout({
     billingStatus.hasBillingManagementAccess;
 
   return (
-    <div className="flex min-h-svh w-full flex-col bg-background">
+    <div className="flex h-svh w-full flex-col overflow-hidden bg-background">
       {showPastDueBanner ? (
         <div
           aria-live="polite"
@@ -179,7 +179,7 @@ export function AuthenticatedLayout({
         </div>
       ) : null}
       <SidebarProvider
-        className="relative min-h-0 flex-1"
+        className="relative min-h-0 flex-1 overflow-hidden"
         defaultOpen={defaultOpen}
         style={
           {
@@ -229,7 +229,7 @@ export function AuthenticatedLayout({
       ) : null}
       <SidebarInset
         className={cn(
-          "@container/content",
+          "@container/content min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain",
           "has-data-[layout=fixed]:h-full",
           "peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100%-(var(--spacing)*4))]",
         )}

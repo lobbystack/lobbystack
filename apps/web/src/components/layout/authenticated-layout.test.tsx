@@ -65,10 +65,24 @@ vi.mock("@/components/site-header", () => ({
 }));
 
 vi.mock("@/components/ui/sidebar", () => ({
-  SidebarProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="authenticated-shell">{children}</div>
+  SidebarProvider: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) => (
+    <div className={className} data-testid="authenticated-shell">
+      {children}
+    </div>
   ),
-  SidebarInset: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
+  SidebarInset: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) => <main className={className}>{children}</main>,
 }));
 
 vi.mock("@/features/settings/UpgradePlanDialog", () => ({
@@ -169,6 +183,12 @@ describe("AuthenticatedLayout past-due banner", () => {
     expect(screen.getByText("Payment unsuccessful")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Update payment method" })).toBeTruthy();
     expect(alert.nextElementSibling).toBe(screen.getByTestId("authenticated-shell"));
+    expect(alert.parentElement?.className).toContain("h-svh");
+    expect(alert.parentElement?.className).toContain("overflow-hidden");
+    expect(screen.getByTestId("authenticated-shell").className).toContain(
+      "overflow-hidden",
+    );
+    expect(screen.getByRole("main").className).toContain("overflow-y-auto");
   });
 
   it("hides the warning from members without billing access", () => {
