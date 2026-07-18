@@ -14,7 +14,7 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from "../../_generated/server";
-import { api, internal } from "../../_generated/api";
+import { internal } from "../../_generated/api";
 import type { Doc, Id } from "../../_generated/dataModel";
 import {
   requireIdentity,
@@ -1153,7 +1153,7 @@ export const upsertKnowledgeSnippet = mutation({
   },
 });
 
-export const createKnowledgeDocument = mutation({
+export const createKnowledgeDocument = internalMutation({
   args: {
     businessId: v.id("businesses"),
     section: v.optional(knowledgeSectionValidator),
@@ -1279,7 +1279,7 @@ export const finalizeKnowledgeDocumentUpload = action({
     const fallbackTitle = normalizedFileName.replace(/\.[^.]+$/u, "").trim();
     const documentTitle = args.title.trim() || fallbackTitle || "Uploaded document";
 
-    return await ctx.runMutation(api.ai.context.knowledge.createKnowledgeDocument, {
+    return await ctx.runMutation(internal.ai.context.knowledge.createKnowledgeDocument, {
       businessId: args.businessId,
       ...(args.section !== undefined ? { section: args.section } : {}),
       sourceType: "upload",
