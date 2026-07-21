@@ -222,6 +222,12 @@ describe("AuthenticatedLayout past-due banner", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  it("hides the warning when a past-due subscription has no grace entitlements", () => {
+    renderLayout(buildStatus({ plan: "free_cloud" }));
+
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("opens the customer portal from the warning", async () => {
     openPortalMock.mockResolvedValue({ url: "https://example.com/customer-portal" });
     const user = userEvent.setup();

@@ -148,6 +148,7 @@ export function AuthenticatedLayout({
   const showPastDueBanner =
     businessId !== undefined &&
     billingStatus?.subscriptionState === "past_due" &&
+    (billingStatus.plan === "starter" || billingStatus.plan === "pro") &&
     billingStatus.hasBillingManagementAccess;
 
   useLayoutEffect(() => {
