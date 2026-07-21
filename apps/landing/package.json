@@ -22,7 +22,7 @@
     "@jdevalk/astro-seo-graph": "^2.0.0",
     "@jdevalk/seo-graph-core": "^0.6.2",
     "@tailwindcss/vite": "^4.2.4",
-    "astro": "^6.4.6",
+    "astro": "^7.1.0",
     "astro-pagefind": "^2.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
