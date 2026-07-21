@@ -150,6 +150,8 @@ export function AuthenticatedLayout({
     billingStatus?.subscriptionState === "past_due" &&
     (billingStatus.plan === "starter" || billingStatus.plan === "pro") &&
     billingStatus.hasBillingManagementAccess;
+  const showPastDuePortalAction =
+    showPastDueBanner && billingStatus?.hasCustomerPortalAccess === true;
 
   useLayoutEffect(() => {
     const contentScroll = contentScrollRef.current;
@@ -182,16 +184,18 @@ export function AuthenticatedLayout({
                 </p>
               </div>
             </div>
-            <Button
-              className="w-full shrink-0 border-amber-500/40 bg-background/80 text-foreground hover:bg-background sm:w-auto"
-              loading={loading === "portal"}
-              loadingLabel={t("billing.pastDueBanner.openingPortal")}
-              onClick={() => void handleManageSubscription()}
-              size="sm"
-              variant="outline"
-            >
-              {t("billing.pastDueBanner.action")}
-            </Button>
+            {showPastDuePortalAction ? (
+              <Button
+                className="w-full shrink-0 border-amber-500/40 bg-background/80 text-foreground hover:bg-background sm:w-auto"
+                loading={loading === "portal"}
+                loadingLabel={t("billing.pastDueBanner.openingPortal")}
+                onClick={() => void handleManageSubscription()}
+                size="sm"
+                variant="outline"
+              >
+                {t("billing.pastDueBanner.action")}
+              </Button>
+            ) : null}
           </div>
         </div>
       ) : null}

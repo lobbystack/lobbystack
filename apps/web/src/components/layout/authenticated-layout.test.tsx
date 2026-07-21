@@ -228,6 +228,16 @@ describe("AuthenticatedLayout past-due banner", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  it("keeps the warning but hides the portal action when portal access is unavailable", () => {
+    renderLayout(buildStatus({ hasCustomerPortalAccess: false }));
+
+    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(screen.getByText("Payment unsuccessful")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Update payment method" }),
+    ).toBeNull();
+  });
+
   it("opens the customer portal from the warning", async () => {
     openPortalMock.mockResolvedValue({ url: "https://example.com/customer-portal" });
     const user = userEvent.setup();
