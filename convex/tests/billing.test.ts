@@ -3785,6 +3785,16 @@ describe("billing", () => {
       subscriptionState: "unpaid",
       webhookEventType: "subscription.revoked",
     },
+    {
+      lifecycle: "incomplete",
+      subscriptionState: "incomplete",
+      webhookEventType: "subscription.updated",
+    },
+    {
+      lifecycle: "incomplete-expired",
+      subscriptionState: "incomplete_expired",
+      webhookEventType: "subscription.updated",
+    },
   ] as const)(
     "removes paid entitlements when the current subscription is $lifecycle",
     async ({ subscriptionState, webhookEventType }) => {

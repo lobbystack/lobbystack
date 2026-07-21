@@ -2126,21 +2126,17 @@ export const syncSubscriptionFromWebhook = internalMutation({
     const isLegacyAiSmsProduct =
       args.subscriptionProductId === process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
     const subscriptionActive = isActiveSubscriptionStatus(args.subscriptionState);
-    const subscriptionTerminal =
-      args.subscriptionState === "canceled" ||
-      args.subscriptionState === "unpaid" ||
-      args.subscriptionState === "revoked" ||
-      args.lastWebhookEventType === "subscription.revoked";
+    const subscriptionInPaymentGrace =
+      args.subscriptionState === "past_due" &&
+      args.lastWebhookEventType !== "subscription.revoked";
     const preservesCurrentHostedSubscriptionDuringGrace =
       isHostedPaidPlanProduct &&
-      !subscriptionActive &&
-      !subscriptionTerminal &&
+      subscriptionInPaymentGrace &&
       existingAccount?.proSubscriptionId === args.subscriptionId &&
       existingPlan !== "free_cloud";
     const preservesLegacyAiSmsDuringGrace =
       isLegacyAiSmsProduct &&
-      !subscriptionActive &&
-      !subscriptionTerminal &&
+      subscriptionInPaymentGrace &&
       existingAccount?.aiSmsSubscriptionId === args.subscriptionId &&
       existingAddons.includes("ai_sms");
     const hostedSubscriptionEntitled =
