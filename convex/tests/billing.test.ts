@@ -3671,6 +3671,66 @@ describe("billing", () => {
     expect(recoveredAccount?.activeAddons).toEqual(["ai_sms"]);
   });
 
+  it("preserves prior entitlements when an in-place upgrade becomes past due", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-past-due-in-place-upgrade",
+      deploymentMode: "cloud",
+      onboardingStage: "completed",
+    });
+
+    process.env.POLAR_STARTER_MONTHLY_PRODUCT_ID = "prod_starter_monthly";
+    process.env.POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID = "prod_pro_annual_ai_sms";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+        activeAddons: [],
+        billingInterval: "monthly",
+        polarCustomerId: "cus_failed_upgrade",
+        proSubscriptionId: "sub_in_place_upgrade",
+        proSubscriptionProductId: "prod_starter_monthly",
+      });
+    });
+
+    await t.mutation(internal.billing.syncSubscriptionFromWebhook, {
+      businessId,
+      billingKey: getBillingKey(businessId),
+      polarCustomerId: "cus_failed_upgrade",
+      polarCustomerExternalId: getBillingKey(businessId),
+      billingContactEmail: "owner@example.com",
+      billingContactName: "Billing Owner",
+      subscriptionId: "sub_in_place_upgrade",
+      subscriptionProductId: "prod_pro_annual_ai_sms",
+      subscriptionPriceId: "price_pro_annual_ai_sms",
+      subscriptionState: "past_due",
+      currentPeriodStart: "2026-04-15T00:00:00.000Z",
+      currentPeriodEnd: "2027-04-15T00:00:00.000Z",
+      cancelAtPeriodEnd: false,
+      lastWebhookEventType: "subscription.past_due",
+      lastSyncedAt: "2026-04-15T12:00:00.000Z",
+    });
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.currentPlan).toBe("starter");
+    expect(account?.billingInterval).toBe("monthly");
+    expect(account?.activeAddons).toEqual([]);
+    expect(account?.subscriptionState).toBe("past_due");
+
+    const status = await authed.query(api.billing.getStatus, { businessId });
+    expect(status.plan).toBe("starter");
+    expect(status.billingInterval).toBe("monthly");
+    expect(status.activeAddons).toEqual([]);
+    expect(status.aiSmsEnabled).toBe(false);
+  });
+
   it("does not grant paid entitlements to an unknown past-due subscription", async () => {
     const t = convexTest(schema, convexModules);
     registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);

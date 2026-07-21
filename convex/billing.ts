@@ -2172,24 +2172,26 @@ export const syncSubscriptionFromWebhook = internalMutation({
       existingAccount.proSubscriptionProductId !== undefined &&
       isHostedAiSmsPlanProductId(existingAccount.proSubscriptionProductId);
     const nextActiveAddons =
-      isAiSmsPlanProduct
-        ? mergeActiveAddon(existingAddons, "ai_sms", hostedSubscriptionEntitled)
-        : isLegacyAiSmsProduct
-          ? mergeActiveAddon(
-              existingAddons,
-              "ai_sms",
-              subscriptionActive || preservesLegacyAiSmsDuringGrace,
-            )
-          : shouldRemoveAiSmsFromUpdatedProSubscription
-            ? mergeActiveAddon(existingAddons, "ai_sms", false)
-            : existingAddons;
+      preservesCurrentHostedSubscriptionDuringGrace
+        ? existingAddons
+        : isAiSmsPlanProduct
+          ? mergeActiveAddon(existingAddons, "ai_sms", subscriptionActive)
+          : isLegacyAiSmsProduct
+            ? mergeActiveAddon(
+                existingAddons,
+                "ai_sms",
+                subscriptionActive || preservesLegacyAiSmsDuringGrace,
+              )
+            : shouldRemoveAiSmsFromUpdatedProSubscription
+              ? mergeActiveAddon(existingAddons, "ai_sms", false)
+              : existingAddons;
 
     const patch = {
       businessId: args.businessId,
       billingKey: args.billingKey,
       currentPlan: nextPlan === "self_host" ? "free_cloud" : nextPlan,
       activeAddons: nextActiveAddons,
-      ...(isHostedPaidPlanProduct && hostedSubscriptionEntitled
+      ...(isHostedPaidPlanProduct && subscriptionActive
         ? { billingInterval: planProduct.billingInterval }
         : {}),
       polarCustomerId: args.polarCustomerId,
