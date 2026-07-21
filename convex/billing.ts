@@ -2127,7 +2127,10 @@ export const syncSubscriptionFromWebhook = internalMutation({
       args.subscriptionProductId === process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
     const subscriptionActive = isActiveSubscriptionStatus(args.subscriptionState);
     const subscriptionTerminal =
-      args.subscriptionState === "canceled" || args.subscriptionState === "revoked";
+      args.subscriptionState === "canceled" ||
+      args.subscriptionState === "unpaid" ||
+      args.subscriptionState === "revoked" ||
+      args.lastWebhookEventType === "subscription.revoked";
     const preservesCurrentHostedSubscriptionDuringGrace =
       isHostedPaidPlanProduct &&
       !subscriptionActive &&

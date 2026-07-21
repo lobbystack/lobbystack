@@ -3774,9 +3774,20 @@ describe("billing", () => {
     expect(status.subscriptionState).toBe("past_due");
   });
 
-  it.each(["canceled", "revoked"] as const)(
-    "removes paid entitlements when the current subscription becomes %s",
-    async (terminalStatus) => {
+  it.each([
+    {
+      lifecycle: "canceled",
+      subscriptionState: "canceled",
+      webhookEventType: "subscription.canceled",
+    },
+    {
+      lifecycle: "revoked",
+      subscriptionState: "unpaid",
+      webhookEventType: "subscription.revoked",
+    },
+  ] as const)(
+    "removes paid entitlements when the current subscription is $lifecycle",
+    async ({ subscriptionState, webhookEventType }) => {
       const t = convexTest(schema, convexModules);
       registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
       const { authed, businessId } = await seedWorkspace(t, {
@@ -3807,11 +3818,11 @@ describe("billing", () => {
         subscriptionId: "sub_current_pro",
         subscriptionProductId: "prod_pro_annual",
         subscriptionPriceId: "price_pro_annual",
-        subscriptionState: terminalStatus,
+        subscriptionState,
         currentPeriodStart: "2026-03-15T00:00:00.000Z",
         currentPeriodEnd: "2026-04-15T00:00:00.000Z",
         cancelAtPeriodEnd: false,
-        lastWebhookEventType: `subscription.${terminalStatus}`,
+        lastWebhookEventType: webhookEventType,
         lastSyncedAt: "2026-04-15T12:00:00.000Z",
       });
 
@@ -3824,7 +3835,7 @@ describe("billing", () => {
 
       expect(account?.currentPlan).toBe("free_cloud");
       expect(account?.billingInterval).toBeUndefined();
-      expect(account?.subscriptionState).toBe(terminalStatus);
+      expect(account?.subscriptionState).toBe(subscriptionState);
 
       const status = await authed.query(api.billing.getStatus, { businessId });
       expect(status.plan).toBe("free_cloud");

@@ -251,7 +251,7 @@ export function AuthenticatedLayout({
           "peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100%-(var(--spacing)*4))]",
         )}
       >
-        <SiteHeader fixed />
+        <SiteHeader fixed scrollContainerRef={contentScrollRef} />
         <div className="hidden h-16 shrink-0 border-b md:block" />
         {!isLoading ? (
           <div className="pointer-events-none absolute top-4 inset-x-0 z-40 hidden md:block">
