@@ -288,6 +288,7 @@ async function seedBillingAccount(
     polarCustomerId?: string;
     proSubscriptionId?: string;
     proSubscriptionProductId?: string;
+    proSubscriptionPriceId?: string;
   },
 ): Promise<void> {
   await ctx.db.insert("billing_accounts", {
@@ -306,6 +307,9 @@ async function seedBillingAccount(
     ...(input.proSubscriptionId ? { proSubscriptionId: input.proSubscriptionId } : {}),
     ...(input.proSubscriptionProductId
       ? { proSubscriptionProductId: input.proSubscriptionProductId }
+      : {}),
+    ...(input.proSubscriptionPriceId
+      ? { proSubscriptionPriceId: input.proSubscriptionPriceId }
       : {}),
     lastSyncedAt: "2026-04-12T12:00:00.000Z",
   });
@@ -3728,6 +3732,83 @@ describe("billing", () => {
     expect(status.plan).toBe("starter");
     expect(status.billingInterval).toBe("monthly");
     expect(status.activeAddons).toEqual([]);
+    expect(status.aiSmsEnabled).toBe(false);
+  });
+
+  it("removes bundled AI SMS when a past-due base-product change recovers", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-past-due-ai-sms-removal",
+      deploymentMode: "cloud",
+      onboardingStage: "completed",
+    });
+
+    process.env.POLAR_PRO_MONTHLY_PRODUCT_ID = "prod_pro_monthly";
+    process.env.POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID = "prod_pro_monthly_ai_sms";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        activeAddons: ["ai_sms"],
+        billingInterval: "monthly",
+        polarCustomerId: "cus_ai_sms_removal",
+        proSubscriptionId: "sub_ai_sms_removal",
+        proSubscriptionProductId: "prod_pro_monthly_ai_sms",
+        proSubscriptionPriceId: "price_pro_monthly_ai_sms",
+      });
+    });
+
+    const syncSubscription = async (subscriptionState: "past_due" | "active") => {
+      await t.mutation(internal.billing.syncSubscriptionFromWebhook, {
+        businessId,
+        billingKey: getBillingKey(businessId),
+        polarCustomerId: "cus_ai_sms_removal",
+        polarCustomerExternalId: getBillingKey(businessId),
+        billingContactEmail: "owner@example.com",
+        billingContactName: "Billing Owner",
+        subscriptionId: "sub_ai_sms_removal",
+        subscriptionProductId: "prod_pro_monthly",
+        subscriptionPriceId: "price_pro_monthly",
+        subscriptionState,
+        currentPeriodStart: "2026-04-15T00:00:00.000Z",
+        currentPeriodEnd: "2026-05-15T00:00:00.000Z",
+        cancelAtPeriodEnd: false,
+        lastWebhookEventType: `subscription.${subscriptionState}`,
+        lastSyncedAt:
+          subscriptionState === "past_due"
+            ? "2026-04-15T12:00:00.000Z"
+            : "2026-04-16T12:00:00.000Z",
+      });
+    };
+
+    await syncSubscription("past_due");
+
+    const graceAccount = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(graceAccount?.activeAddons).toEqual(["ai_sms"]);
+    expect(graceAccount?.proSubscriptionProductId).toBe("prod_pro_monthly_ai_sms");
+    expect(graceAccount?.proSubscriptionPriceId).toBe("price_pro_monthly_ai_sms");
+
+    await syncSubscription("active");
+
+    const recoveredAccount = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(recoveredAccount?.subscriptionState).toBe("active");
+    expect(recoveredAccount?.activeAddons).toEqual([]);
+    expect(recoveredAccount?.proSubscriptionProductId).toBe("prod_pro_monthly");
+    expect(recoveredAccount?.proSubscriptionPriceId).toBe("price_pro_monthly");
+
+    const status = await authed.query(api.billing.getStatus, { businessId });
     expect(status.aiSmsEnabled).toBe(false);
   });
 

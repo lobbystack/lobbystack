@@ -2199,8 +2199,12 @@ export const syncSubscriptionFromWebhook = internalMutation({
       ...(args.billingContactName ? { billingContactName: args.billingContactName } : {}),
       ...(isHostedPaidPlanProduct ? { subscriptionState: args.subscriptionState } : {}),
       ...(isHostedPaidPlanProduct ? { proSubscriptionId: args.subscriptionId } : {}),
-      ...(isHostedPaidPlanProduct ? { proSubscriptionProductId: args.subscriptionProductId } : {}),
-      ...(isHostedPaidPlanProduct && args.subscriptionPriceId
+      ...(isHostedPaidPlanProduct && !preservesCurrentHostedSubscriptionDuringGrace
+        ? { proSubscriptionProductId: args.subscriptionProductId }
+        : {}),
+      ...(isHostedPaidPlanProduct &&
+        !preservesCurrentHostedSubscriptionDuringGrace &&
+        args.subscriptionPriceId
         ? { proSubscriptionPriceId: args.subscriptionPriceId }
         : {}),
       ...(isLegacyAiSmsProduct ? { aiSmsSubscriptionId: args.subscriptionId } : {}),
