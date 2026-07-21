@@ -1,6 +1,8 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { getFunctionName } from "convex/server";
+import type { ReactNode, Ref } from "react";
+import { MemoryRouter, useNavigate } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -79,10 +81,16 @@ vi.mock("@/components/ui/sidebar", () => ({
   SidebarInset: ({
     children,
     className,
+    ref,
   }: {
     children: React.ReactNode;
     className?: string;
-  }) => <main className={className}>{children}</main>,
+    ref?: Ref<HTMLElement>;
+  }) => (
+    <main ref={ref} className={className}>
+      {children}
+    </main>
+  ),
 }));
 
 vi.mock("@/features/settings/UpgradePlanDialog", () => ({
@@ -141,17 +149,28 @@ function buildStatus(overrides: Partial<BillingStatus> = {}): BillingStatus {
   };
 }
 
-function renderLayout(status: BillingStatus) {
+function renderLayout(
+  status: BillingStatus,
+  children: ReactNode = <div>Dashboard content</div>,
+) {
   return render(
-    <AuthenticatedLayout
-      billingStatus={status}
-      businessId={businessId}
-      isLoading
-      onSignOut={() => undefined}
-    >
-      <div>Dashboard content</div>
-    </AuthenticatedLayout>,
+    <MemoryRouter initialEntries={["/analytics"]}>
+      <AuthenticatedLayout
+        billingStatus={status}
+        businessId={businessId}
+        isLoading
+        onSignOut={() => undefined}
+      >
+        {children}
+      </AuthenticatedLayout>
+    </MemoryRouter>,
   );
+}
+
+function RouteChangeControl() {
+  const navigate = useNavigate();
+
+  return <button onClick={() => navigate("/calls")}>Go to calls</button>;
 }
 
 describe("AuthenticatedLayout past-due banner", () => {
@@ -214,5 +233,19 @@ describe("AuthenticatedLayout past-due banner", () => {
     await waitFor(() => {
       expect(locationAssignMock).toHaveBeenCalledWith("https://example.com/customer-portal");
     });
+  });
+
+  it("resets the content scroll position after route navigation", async () => {
+    const user = userEvent.setup();
+    renderLayout(buildStatus(), <RouteChangeControl />);
+
+    const content = screen.getByRole("main");
+    content.scrollTop = 640;
+    content.scrollLeft = 120;
+
+    await user.click(screen.getByRole("button", { name: "Go to calls" }));
+
+    expect(content.scrollTop).toBe(0);
+    expect(content.scrollLeft).toBe(0);
   });
 });

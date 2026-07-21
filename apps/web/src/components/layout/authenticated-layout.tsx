@@ -1,6 +1,12 @@
-import { useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { CircleAlert, GiftIcon } from "lucide-react";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -71,6 +77,8 @@ export function AuthenticatedLayout({
   isLoading = false,
 }: AuthenticatedLayoutProps) {
   const { t } = useTranslation(["settings", "nav"]);
+  const location = useLocation();
+  const contentScrollRef = useRef<HTMLElement>(null);
   const defaultOpen = getSidebarDefaultOpen();
   const startCheckout = useObservedAction(api.billing.startCheckout);
   const openPortal = useObservedAction(api.billing.openPortal);
@@ -141,6 +149,14 @@ export function AuthenticatedLayout({
     businessId !== undefined &&
     billingStatus?.subscriptionState === "past_due" &&
     billingStatus.hasBillingManagementAccess;
+
+  useLayoutEffect(() => {
+    const contentScroll = contentScrollRef.current;
+    if (!contentScroll) return;
+
+    contentScroll.scrollTop = 0;
+    contentScroll.scrollLeft = 0;
+  }, [location.pathname, location.search]);
 
   return (
     <div className="flex h-svh w-full flex-col overflow-hidden bg-background">
@@ -228,6 +244,7 @@ export function AuthenticatedLayout({
         />
       ) : null}
       <SidebarInset
+        ref={contentScrollRef}
         className={cn(
           "@container/content min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain",
           "has-data-[layout=fixed]:h-full",
