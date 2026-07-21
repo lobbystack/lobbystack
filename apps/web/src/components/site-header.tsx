@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import { PanelLeftIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 type SiteHeaderProps = React.HTMLAttributes<HTMLElement> & {
   fixed?: boolean;
   className?: string;
+  scrollContainerRef?: RefObject<HTMLElement | null>;
   links?: Array<{
     title: string;
     href: string;
@@ -19,19 +20,31 @@ export function SiteHeader({
   className,
   fixed,
   links = [],
+  scrollContainerRef,
   ...props
 }: SiteHeaderProps) {
   const { toggleSidebar } = useSidebar();
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
+    const scrollContainer = scrollContainerRef?.current;
     const onScroll = () => {
-      setOffset(document.body.scrollTop || document.documentElement.scrollTop);
+      setOffset(
+        scrollContainer
+          ? scrollContainer.scrollTop
+          : document.body.scrollTop || document.documentElement.scrollTop,
+      );
     };
+
+    onScroll();
+    if (scrollContainer) {
+      scrollContainer.addEventListener("scroll", onScroll, { passive: true });
+      return () => scrollContainer.removeEventListener("scroll", onScroll);
+    }
 
     document.addEventListener("scroll", onScroll, { passive: true });
     return () => document.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [scrollContainerRef]);
 
   return (
     <header

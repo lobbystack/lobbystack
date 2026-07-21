@@ -1,8 +1,14 @@
-import { useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
-import { GiftIcon } from "lucide-react";
+import { CircleAlert, GiftIcon } from "lucide-react";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
 import type {
@@ -71,8 +77,11 @@ export function AuthenticatedLayout({
   isLoading = false,
 }: AuthenticatedLayoutProps) {
   const { t } = useTranslation(["settings", "nav"]);
+  const location = useLocation();
+  const contentScrollRef = useRef<HTMLElement>(null);
   const defaultOpen = getSidebarDefaultOpen();
   const startCheckout = useObservedAction(api.billing.startCheckout);
+  const openPortal = useObservedAction(api.billing.openPortal);
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [upgradeBillingInterval, setUpgradeBillingInterval] =
     useState<BillingInterval>("annual");
@@ -120,16 +129,87 @@ export function AuthenticatedLayout({
     }
   }
 
+  async function handleManageSubscription() {
+    if (!businessId) {
+      return;
+    }
+
+    setLoading("portal");
+    try {
+      const result = await openPortal({ businessId });
+      window.location.assign(result.url);
+    } catch {
+      toast.error(t("billing.toast.portalFailed"));
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  const showPastDueBanner =
+    businessId !== undefined &&
+    billingStatus?.subscriptionState === "past_due" &&
+    (billingStatus.plan === "starter" || billingStatus.plan === "pro") &&
+    billingStatus.hasBillingManagementAccess;
+  const showPastDuePortalAction =
+    showPastDueBanner && billingStatus?.hasCustomerPortalAccess === true;
+
+  useLayoutEffect(() => {
+    const contentScroll = contentScrollRef.current;
+    if (!contentScroll) return;
+
+    contentScroll.scrollTop = 0;
+    contentScroll.scrollLeft = 0;
+  }, [location.pathname, location.search]);
+
   return (
-    <SidebarProvider
-      defaultOpen={defaultOpen}
-      style={
-        {
-          "--sidebar-width": "16rem",
-        } as CSSProperties
-      }
-    >
+    <div className="flex h-svh w-full flex-col overflow-hidden bg-background">
+      {showPastDueBanner ? (
+        <div
+          aria-live="polite"
+          className="relative z-60 w-full shrink-0 border-b border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-100"
+          role="alert"
+        >
+          <div className="flex w-full flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:px-6">
+            <div className="flex min-w-0 items-start gap-3">
+              <CircleAlert
+                aria-hidden="true"
+                className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400"
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-medium">
+                  {t("billing.pastDueBanner.title")}
+                </p>
+                <p className="text-sm text-amber-900/80 dark:text-amber-100/80">
+                  {t("billing.pastDueBanner.description")}
+                </p>
+              </div>
+            </div>
+            {showPastDuePortalAction ? (
+              <Button
+                className="w-full shrink-0 border-amber-500/40 bg-background/80 text-foreground hover:bg-background sm:w-auto"
+                loading={loading === "portal"}
+                loadingLabel={t("billing.pastDueBanner.openingPortal")}
+                onClick={() => void handleManageSubscription()}
+                size="sm"
+                variant="outline"
+              >
+                {t("billing.pastDueBanner.action")}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+      <SidebarProvider
+        className="relative min-h-0 flex-1 overflow-hidden"
+        defaultOpen={defaultOpen}
+        style={
+          {
+            "--sidebar-width": "16rem",
+          } as CSSProperties
+        }
+      >
       <AppSidebar
+        className="absolute inset-y-0 h-full"
         isLoading={isLoading}
         onSignOut={onSignOut}
         {...(businessId && billingStatus
@@ -169,13 +249,14 @@ export function AuthenticatedLayout({
         />
       ) : null}
       <SidebarInset
+        ref={contentScrollRef}
         className={cn(
-          "@container/content",
-          "has-data-[layout=fixed]:h-svh",
-          "peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]",
+          "@container/content min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain",
+          "has-data-[layout=fixed]:h-full",
+          "peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100%-(var(--spacing)*4))]",
         )}
       >
-        <SiteHeader fixed />
+        <SiteHeader fixed scrollContainerRef={contentScrollRef} />
         <div className="hidden h-16 shrink-0 border-b md:block" />
         {!isLoading ? (
           <div className="pointer-events-none absolute top-4 inset-x-0 z-40 hidden md:block">
@@ -214,6 +295,7 @@ export function AuthenticatedLayout({
         ) : null}
         {children}
       </SidebarInset>
-    </SidebarProvider>
+      </SidebarProvider>
+    </div>
   );
 }

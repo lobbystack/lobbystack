@@ -24,6 +24,12 @@
       "checkoutFailed": "Unable to open checkout.",
       "portalFailed": "Unable to open the customer portal."
     },
+    "pastDueBanner": {
+      "title": "Payment unsuccessful",
+      "description": "Your service remains active during the payment grace period. Update your payment method to avoid an interruption.",
+      "action": "Update payment method",
+      "openingPortal": "Opening billing..."
+    },
     "planLabels": {
       "selfHost": "Self-host",
       "freeCloud": "Free",

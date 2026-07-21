@@ -24,6 +24,12 @@
       "checkoutFailed": "Impossible d'ouvrir le paiement.",
       "portalFailed": "Impossible d'ouvrir le portail client."
     },
+    "pastDueBanner": {
+      "title": "Échec du paiement",
+      "description": "Votre service reste actif pendant le délai de grâce. Mettez à jour votre mode de paiement pour éviter une interruption.",
+      "action": "Mettre à jour le paiement",
+      "openingPortal": "Ouverture de la facturation..."
+    },
     "planLabels": {
       "selfHost": "Auto-hébergé",
       "freeCloud": "Gratuit",

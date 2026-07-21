@@ -2126,33 +2126,64 @@ export const syncSubscriptionFromWebhook = internalMutation({
     const isLegacyAiSmsProduct =
       args.subscriptionProductId === process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
     const subscriptionActive = isActiveSubscriptionStatus(args.subscriptionState);
+    const subscriptionInPaymentGrace =
+      args.subscriptionState === "past_due" &&
+      args.lastWebhookEventType !== "subscription.revoked";
+    const preservesCurrentHostedSubscriptionDuringGrace =
+      isHostedPaidPlanProduct &&
+      subscriptionInPaymentGrace &&
+      existingAccount?.proSubscriptionId === args.subscriptionId &&
+      existingPlan !== "free_cloud";
+    const preservesLegacyAiSmsDuringGrace =
+      isLegacyAiSmsProduct &&
+      subscriptionInPaymentGrace &&
+      existingAccount?.aiSmsSubscriptionId === args.subscriptionId &&
+      existingAddons.includes("ai_sms");
+    const hostedSubscriptionEntitled =
+      subscriptionActive || preservesCurrentHostedSubscriptionDuringGrace;
     const inactiveHostedSubscriptionIsStale =
       isHostedPaidPlanProduct &&
       !subscriptionActive &&
       existingAccount?.proSubscriptionId !== undefined &&
       existingAccount.proSubscriptionId !== args.subscriptionId;
+    const inactiveLegacyAiSmsSubscriptionIsStale =
+      isLegacyAiSmsProduct &&
+      !subscriptionActive &&
+      existingAccount?.aiSmsSubscriptionId !== undefined &&
+      existingAccount.aiSmsSubscriptionId !== args.subscriptionId;
 
-    if (inactiveHostedSubscriptionIsStale) {
+    if (inactiveHostedSubscriptionIsStale || inactiveLegacyAiSmsSubscriptionIsStale) {
       return null;
     }
 
     const nextPlan: BillingPlanSlug =
       isHostedPaidPlanProduct && subscriptionActive
         ? planProduct.plan
-        : isHostedPaidPlanProduct && existingPlan !== "enterprise"
-          ? "free_cloud"
-          : existingPlan;
+        : preservesCurrentHostedSubscriptionDuringGrace
+          ? existingPlan
+          : isHostedPaidPlanProduct && existingPlan !== "enterprise"
+            ? "free_cloud"
+            : existingPlan;
     const shouldRemoveAiSmsFromUpdatedProSubscription =
       isBaseHostedPlanProduct &&
+      !preservesCurrentHostedSubscriptionDuringGrace &&
       existingAccount?.proSubscriptionId === args.subscriptionId &&
       existingAccount.proSubscriptionProductId !== undefined &&
       isHostedAiSmsPlanProductId(existingAccount.proSubscriptionProductId);
     const nextActiveAddons =
-      isAiSmsPlanProduct || isLegacyAiSmsProduct
-        ? mergeActiveAddon(existingAddons, "ai_sms", subscriptionActive)
-        : shouldRemoveAiSmsFromUpdatedProSubscription
-          ? mergeActiveAddon(existingAddons, "ai_sms", false)
-          : existingAddons;
+      preservesCurrentHostedSubscriptionDuringGrace
+        ? existingAddons
+        : isAiSmsPlanProduct
+          ? mergeActiveAddon(existingAddons, "ai_sms", subscriptionActive)
+          : isLegacyAiSmsProduct
+            ? mergeActiveAddon(
+                existingAddons,
+                "ai_sms",
+                subscriptionActive || preservesLegacyAiSmsDuringGrace,
+              )
+            : shouldRemoveAiSmsFromUpdatedProSubscription
+              ? mergeActiveAddon(existingAddons, "ai_sms", false)
+              : existingAddons;
 
     const patch = {
       businessId: args.businessId,
@@ -2168,8 +2199,12 @@ export const syncSubscriptionFromWebhook = internalMutation({
       ...(args.billingContactName ? { billingContactName: args.billingContactName } : {}),
       ...(isHostedPaidPlanProduct ? { subscriptionState: args.subscriptionState } : {}),
       ...(isHostedPaidPlanProduct ? { proSubscriptionId: args.subscriptionId } : {}),
-      ...(isHostedPaidPlanProduct ? { proSubscriptionProductId: args.subscriptionProductId } : {}),
-      ...(isHostedPaidPlanProduct && args.subscriptionPriceId
+      ...(isHostedPaidPlanProduct && !preservesCurrentHostedSubscriptionDuringGrace
+        ? { proSubscriptionProductId: args.subscriptionProductId }
+        : {}),
+      ...(isHostedPaidPlanProduct &&
+        !preservesCurrentHostedSubscriptionDuringGrace &&
+        args.subscriptionPriceId
         ? { proSubscriptionPriceId: args.subscriptionPriceId }
         : {}),
       ...(isLegacyAiSmsProduct ? { aiSmsSubscriptionId: args.subscriptionId } : {}),
@@ -2187,7 +2222,7 @@ export const syncSubscriptionFromWebhook = internalMutation({
 
     if (existingAccount) {
       await ctx.db.patch(existingAccount._id, patch);
-      if (isHostedPaidPlanProduct && !subscriptionActive) {
+      if (isHostedPaidPlanProduct && !hostedSubscriptionEntitled) {
         await ctx.db.patch(existingAccount._id, {
           billingInterval: undefined,
         });
