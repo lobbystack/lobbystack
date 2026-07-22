@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -44,9 +44,20 @@ export function OnboardingWebsitePage({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSkipping, setIsSkipping] = useState(false);
+  const [isAwaitingStageSync, setIsAwaitingStageSync] = useState(false);
 
   const isWorking = isSubmitting || isSkipping;
   const trimmed = websiteUrl.trim();
+
+  useEffect(() => {
+    if (
+      !isAwaitingStageSync ||
+      (progressNavigableUntil !== undefined && progressNavigableUntil < 4)
+    ) {
+      return;
+    }
+    navigate("/onboarding/knowledge");
+  }, [isAwaitingStageSync, navigate, progressNavigableUntil]);
 
   async function handleSubmit(): Promise<void> {
     if (!trimmed || isWorking) {
@@ -60,12 +71,11 @@ export function OnboardingWebsitePage({
       captureAnalyticsEvent("web.onboarding.website_submitted", {
         businessId: String(businessId),
       });
-      navigate("/onboarding/knowledge");
+      setIsAwaitingStageSync(true);
     } catch (submissionError) {
       setError(
         getSafeOnboardingErrorMessage(submissionError, t, "website.submitFailed"),
       );
-    } finally {
       setIsSubmitting(false);
     }
   }
@@ -82,10 +92,9 @@ export function OnboardingWebsitePage({
       captureAnalyticsEvent("web.onboarding.website_skipped", {
         businessId: String(businessId),
       });
-      navigate("/onboarding/knowledge");
+      setIsAwaitingStageSync(true);
     } catch (skipError) {
       setError(getSafeOnboardingErrorMessage(skipError, t, "website.skipFailed"));
-    } finally {
       setIsSkipping(false);
     }
   }
