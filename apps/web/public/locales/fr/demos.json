@@ -1,0 +1,51 @@
+{
+  "loading": {
+    "title": "Chargement de la démo",
+    "description": "Préparation de votre démo de réceptionniste..."
+  },
+  "active": {
+    "eyebrow": "Démo LobbyStack",
+    "title": "Démo préparée pour {{businessName}}",
+    "knowledgeNotice": "Cette réceptionniste a été préparée à partir du site web public de {{businessName}}, elle peut donc déjà répondre aux questions courantes.",
+    "startHint": "Appuyez sur le bouton pour démarrer un appel vocal en direct.",
+    "promptsTitle": "Essayez de demander",
+    "intakeNotice": "Ceci est une démo de prise de renseignements. La réceptionniste peut demander des coordonnées fictives pour montrer comment elle prend un message. Aucun vrai rendez-vous n'est réservé.",
+    "claimCta": "Réclamer cette réceptionniste",
+    "poweredBy": "Propulsé par LobbyStack"
+  },
+  "states": {
+    "invalid": {
+      "title": "Ce lien de démo n'est pas valide",
+      "description": "Le lien est peut-être mal saisi ou la démo n'a jamais été créée. Demandez un nouveau lien pour réessayer."
+    },
+    "preparing": {
+      "title": "Votre démo est en cours de préparation",
+      "titleWithBusiness": "La démo pour {{businessName}} est en cours de préparation",
+      "description": "Nous apprenons encore à partir du site web. Cela prend habituellement quelques minutes, revenez sous peu."
+    },
+    "expired": {
+      "title": "Cette démo a expiré",
+      "titleWithBusiness": "La démo pour {{businessName}} a expiré",
+      "description": "Les liens de démo sont disponibles pour une durée limitée. Contactez-nous pour en obtenir un nouveau."
+    },
+    "revoked": {
+      "title": "Cette démo n'est plus disponible",
+      "titleWithBusiness": "La démo pour {{businessName}} n'est plus disponible",
+      "description": "Ce lien de démo a été désactivé."
+    },
+    "claimed": {
+      "title": "Cette démo a déjà été réclamée",
+      "titleWithBusiness": "La démo pour {{businessName}} a déjà été réclamée",
+      "description": "Cette réceptionniste appartient désormais à un compte LobbyStack."
+    }
+  },
+  "claim": {
+    "loadingTitle": "Configuration de votre espace de travail",
+    "loadingDescription": "Réclamation de votre réceptionniste et préparation de votre espace de travail...",
+    "errorTitle": "Nous n'avons pas pu réclamer cette démo",
+    "errorDescription": "Une erreur s'est produite lors de la réclamation de cette démo. Veuillez réessayer.",
+    "unavailableTitle": "Ce lien de démo est indisponible",
+    "unavailableDescription": "Le lien de démo est manquant ou n'est plus valide.",
+    "retry": "Réessayer"
+  }
+}

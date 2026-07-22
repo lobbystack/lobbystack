@@ -1,7 +1,9 @@
-export function createWebRealtimeToolDefinitions() {
-  return [
+export function createWebRealtimeToolDefinitions(options?: {
+  sessionMode?: "prospect_demo";
+}) {
+  const tools = [
     {
-      type: "function",
+      type: "function" as const,
       name: "waitForUser",
       description:
         "Use when the latest audio is silence, background noise, echo of the assistant's own audio, hold music, TV audio, side conversation, or speech not addressed to the assistant. This keeps listening without a spoken reply.",
@@ -12,7 +14,7 @@ export function createWebRealtimeToolDefinitions() {
       },
     },
     {
-      type: "function",
+      type: "function" as const,
       name: "getBusinessHours",
       description:
         "Get the authoritative business hours and closure information.",
@@ -23,7 +25,7 @@ export function createWebRealtimeToolDefinitions() {
       },
     },
     {
-      type: "function",
+      type: "function" as const,
       name: "getBusinessServices",
       description:
         "List the structured services configured for this business, including duration and short descriptions when available.",
@@ -34,7 +36,7 @@ export function createWebRealtimeToolDefinitions() {
       },
     },
     {
-      type: "function",
+      type: "function" as const,
       name: "searchKnowledge",
       description:
         "Search indexed business knowledge and uploaded documents for a specific factual question. Use before answering questions about capabilities, workflows, policies, limits, pricing, billing, usage, integrations, product features, documents, FAQs, or plan rules.",
@@ -48,7 +50,7 @@ export function createWebRealtimeToolDefinitions() {
       },
     },
     {
-      type: "function",
+      type: "function" as const,
       name: "findAvailability",
       description:
         "Find candidate appointment slots for a service on a specific local date, optionally near a preferred hour.",
@@ -71,7 +73,7 @@ export function createWebRealtimeToolDefinitions() {
       },
     },
     {
-      type: "function",
+      type: "function" as const,
       name: "checkAvailability",
       description:
         "Check appointment availability for a named service at an exact ISO datetime before promising a slot.",
@@ -88,7 +90,7 @@ export function createWebRealtimeToolDefinitions() {
       },
     },
     {
-      type: "function",
+      type: "function" as const,
       name: "bookAppointment",
       description:
         "Book an appointment only after availability is confirmed. Collect the caller's phone number first and pass it as contactPhone.",
@@ -117,7 +119,7 @@ export function createWebRealtimeToolDefinitions() {
       },
     },
     {
-      type: "function",
+      type: "function" as const,
       name: "takeMessage",
       description:
         "Create a follow-up message for the operator after collecting the caller's message and callback details.",
@@ -135,7 +137,7 @@ export function createWebRealtimeToolDefinitions() {
       },
     },
     {
-      type: "function",
+      type: "function" as const,
       name: "endCall",
       description:
         "End the web voice session after a clear closing cue, abuse, spam, or silence timeout.",
@@ -154,4 +156,18 @@ export function createWebRealtimeToolDefinitions() {
       },
     },
   ];
+
+  if (options?.sessionMode === "prospect_demo") {
+    const allowed = new Set([
+      "waitForUser",
+      "getBusinessHours",
+      "getBusinessServices",
+      "searchKnowledge",
+      "takeMessage",
+      "endCall",
+    ]);
+    return tools.filter((tool) => allowed.has(tool.name));
+  }
+
+  return tools;
 }

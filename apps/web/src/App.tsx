@@ -25,6 +25,8 @@ import {
   SignupPage,
 } from "@/features/auth/AuthPages";
 import { AnalyticsPage } from "@/features/analytics/AnalyticsPage";
+import { ClaimDemoPage } from "@/features/demos/ClaimDemoPage";
+import { ProspectDemoPage } from "@/features/demos/ProspectDemoPage";
 import { AgentLayout } from "@/features/agent/AgentLayout";
 import { AgentBasicSettingsPage } from "@/features/agent/AgentBasicSettingsPage";
 import { AgentKnowledgePage } from "@/features/agent/AgentKnowledgePage";
@@ -866,6 +868,12 @@ function OnboardingKnowledgeRoute() {
 
 function OnboardingGreetingRoute() {
   const ctx = useOnboardingContext();
+  const greetingPrefill = useQuery(
+    api.onboarding.greeting.getOnboardingGreetingPrefill,
+    ctx.activeBusiness && ctx.canManageTenant
+      ? { businessId: ctx.activeBusiness._id }
+      : "skip",
+  );
 
   if (ctx.isLoading) {
     return <OnboardingRouteSkeleton />;
@@ -892,6 +900,9 @@ function OnboardingGreetingRoute() {
     <OnboardingGreetingPage
       businessId={ctx.activeBusiness._id}
       businessName={ctx.activeBusiness.name}
+      {...(greetingPrefill?.greeting
+        ? { initialGreeting: greetingPrefill.greeting }
+        : {})}
       onSignOut={ctx.onSignOut}
       progressNavigableUntil={onboardingNavigableStep(ctx.activeBusiness.onboardingStage)}
     />
@@ -1202,6 +1213,15 @@ export default function App() {
           />
           <Route element={<ConfirmEmailChangePage />} path="/confirm-email-change" />
           <Route element={<AcceptInvitePage />} path="/accept-invite" />
+          <Route element={<ProspectDemoPage />} path="/demo/:token" />
+          <Route
+            element={
+              <RequireAuth>
+                <ClaimDemoPage />
+              </RequireAuth>
+            }
+            path="/claim-demo"
+          />
           <Route
             element={
               <RequireAuth>

@@ -45,6 +45,13 @@ export const WEB_EVENT_NAMES = [
   "web.voice.test_call_connected",
   "web.voice.test_call_ended",
   "web.voice.test_call_error",
+  "web.prospect_demo.viewed",
+  "web.prospect_demo.call_started",
+  "web.prospect_demo.call_completed",
+  "web.prospect_demo.call_error",
+  "web.prospect_demo.signup_clicked",
+  "web.prospect_demo.claim_succeeded",
+  "web.prospect_demo.claim_failed",
 ] as const;
 
 export const VOICE_EVENT_NAMES = [
@@ -274,7 +281,9 @@ export type TelemetryRequirementKey =
   | "toolName"
   | "backlogBucket"
   | "monthKey"
-  | "plan";
+  | "plan"
+  | "prospectDemoId"
+  | "campaignId";
 
 export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.auth.login_succeeded": ["deploymentMode", "pathname"],
@@ -380,6 +389,13 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.voice.test_call_connected": ["businessId", "deploymentMode"],
   "web.voice.test_call_ended": ["businessId", "deploymentMode"],
   "web.voice.test_call_error": ["businessId", "deploymentMode"],
+  "web.prospect_demo.viewed": ["deploymentMode", "prospectDemoId"],
+  "web.prospect_demo.call_started": ["deploymentMode", "prospectDemoId"],
+  "web.prospect_demo.call_completed": ["deploymentMode", "prospectDemoId"],
+  "web.prospect_demo.call_error": ["deploymentMode", "prospectDemoId"],
+  "web.prospect_demo.signup_clicked": ["deploymentMode", "prospectDemoId"],
+  "web.prospect_demo.claim_succeeded": ["deploymentMode", "prospectDemoId"],
+  "web.prospect_demo.claim_failed": ["deploymentMode", "prospectDemoId"],
   "voice.call_started": [
     "businessId",
     "deploymentMode",

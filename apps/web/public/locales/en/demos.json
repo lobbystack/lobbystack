@@ -1,0 +1,51 @@
+{
+  "loading": {
+    "title": "Loading demo",
+    "description": "Getting your receptionist demo ready..."
+  },
+  "active": {
+    "eyebrow": "LobbyStack demo",
+    "title": "Demo prepared for {{businessName}}",
+    "knowledgeNotice": "This receptionist was prepared from {{businessName}}'s public website, so it can already answer common questions.",
+    "startHint": "Tap the button to start a live voice call.",
+    "promptsTitle": "Try asking",
+    "intakeNotice": "This is an intake demo. The receptionist may ask for sample contact details to show how it takes a message. No real appointment is booked.",
+    "claimCta": "Claim this receptionist",
+    "poweredBy": "Powered by LobbyStack"
+  },
+  "states": {
+    "invalid": {
+      "title": "This demo link isn't valid",
+      "description": "The link may be mistyped or the demo was never created. Ask for a fresh link to try again."
+    },
+    "preparing": {
+      "title": "Your demo is being prepared",
+      "titleWithBusiness": "The demo for {{businessName}} is being prepared",
+      "description": "We're still learning from the website. This usually takes a few minutes, so check back shortly."
+    },
+    "expired": {
+      "title": "This demo has expired",
+      "titleWithBusiness": "The demo for {{businessName}} has expired",
+      "description": "Demo links are available for a limited time. Reach out to get a new one."
+    },
+    "revoked": {
+      "title": "This demo is no longer available",
+      "titleWithBusiness": "The demo for {{businessName}} is no longer available",
+      "description": "This demo link has been turned off."
+    },
+    "claimed": {
+      "title": "This demo has already been claimed",
+      "titleWithBusiness": "The demo for {{businessName}} has already been claimed",
+      "description": "This receptionist is now owned by a LobbyStack account."
+    }
+  },
+  "claim": {
+    "loadingTitle": "Setting up your workspace",
+    "loadingDescription": "Claiming your receptionist and getting your workspace ready...",
+    "errorTitle": "We couldn't claim this demo",
+    "errorDescription": "Something went wrong while claiming this demo. Please try again.",
+    "unavailableTitle": "This demo link is unavailable",
+    "unavailableDescription": "The demo link is missing or no longer valid.",
+    "retry": "Try again"
+  }
+}

@@ -27,6 +27,7 @@ type WebCallSessionRequest = {
   sdp: string;
   pageUrl?: string;
   visitorId?: string;
+  prospectDemoToken?: string;
 };
 
 type OpenAiRealtimeMessage = {
@@ -96,6 +97,8 @@ type ActiveWebCall = {
   }>;
   pendingEndCall: EndCallRequest | null;
   pendingEndCallFallbackTimer: ReturnType<typeof setTimeout> | null;
+  sessionMode?: "prospect_demo";
+  prospectDemoToken?: string;
 };
 
 type CompletedWebCall = {
@@ -133,6 +136,15 @@ const WEB_CALL_SESSION_START_RATE_LIMIT_MAX = 100;
 const WEB_CALL_SESSION_START_RATE_LIMIT_WINDOW = "1 minute";
 const DASHBOARD_TEST_CALL_WIDGET_ID = "lobbystack-dashboard-test-call";
 const DASHBOARD_TEST_CALL_PROOF_PREFIX = "dashboard-test-call";
+const PROSPECT_DEMO_WIDGET_ID = "lobbystack-prospect-demo";
+const PROSPECT_DEMO_INTAKE_TOOL_NAMES = new Set([
+  "waitForUser",
+  "getBusinessHours",
+  "getBusinessServices",
+  "searchKnowledge",
+  "takeMessage",
+  "endCall",
+]);
 export function resetWebCallRouteStateForTests(): void {
   for (const session of activeWebCalls.values()) {
     clearWebOpeningGreetingTimer(session);
@@ -188,6 +200,7 @@ function parseWebCallSessionRequest(
     input,
     "dashboardTestCallProof",
   );
+  const rawProspectDemoToken = getStringProperty(input, "prospectDemoToken");
 
   if (rawBusinessSlug === null) {
     return { ok: false, message: "Invalid business slug." };
@@ -199,7 +212,8 @@ function parseWebCallSessionRequest(
     rawPageUrl === null ||
     rawVisitorId === null ||
     rawWidgetId === null ||
-    rawDashboardTestCallProof === null
+    rawDashboardTestCallProof === null ||
+    rawProspectDemoToken === null
   ) {
     return { ok: false, message: "Invalid web call request." };
   }
@@ -218,6 +232,7 @@ function parseWebCallSessionRequest(
   const visitorId = rawVisitorId?.trim();
   const widgetId = rawWidgetId?.trim();
   const dashboardTestCallProof = rawDashboardTestCallProof?.trim();
+  const prospectDemoToken = rawProspectDemoToken?.trim();
 
   return {
     ok: true,
@@ -228,6 +243,7 @@ function parseWebCallSessionRequest(
       ...(pageUrl ? { pageUrl } : {}),
       ...(visitorId ? { visitorId } : {}),
       ...(widgetId ? { widgetId } : {}),
+      ...(prospectDemoToken ? { prospectDemoToken } : {}),
     },
   };
 }
@@ -1103,7 +1119,14 @@ function createSidebandSocket(input: {
           "For LobbyStack feature, workflow, policy, limitation, pricing, usage, billing, integration, plan, and documentation questions, call searchKnowledge before answering unless the exact answer is already present in the current conversation or structured snapshot.",
           "Use the configured greeting only once at the start of the session. Never repeat it after the opening greeting, even after interruptions, silence, or filler speech.",
           "If the latest audio is silence, background noise, echo of your own previous audio, hold music, TV audio, side conversation, or speech not addressed to you, call waitForUser and do not speak.",
-          "Ask for a phone number before booking an appointment, taking a callback message, or discussing existing appointments.",
+          ...(input.session.sessionMode === "prospect_demo"
+            ? [
+                "This is a LobbyStack prospect demo. Answer from public business knowledge and collect a sample service or quote request with takeMessage.",
+                "Do not book appointments, check or promise availability, transfer calls, or promise outbound SMS or email.",
+              ]
+            : [
+                "Ask for a phone number before booking an appointment, taking a callback message, or discussing existing appointments.",
+              ]),
           "Do not attempt phone transfer from the website widget.",
           "End the session with endCall when the visitor is clearly finished, abusive, spammy, or repeatedly silent.",
         ].join("\n\n"),
@@ -1123,7 +1146,11 @@ function createSidebandSocket(input: {
             voice: input.server.runtimeConfig.OPENAI_REALTIME_VOICE,
           },
         },
-        tools: createWebRealtimeToolDefinitions(),
+        tools: createWebRealtimeToolDefinitions(
+          input.session.sessionMode === "prospect_demo"
+            ? { sessionMode: "prospect_demo" }
+            : undefined,
+        ),
         tool_choice: "auto",
       },
     });
@@ -1399,10 +1426,33 @@ async function handleToolCall(
   }
   session.handledToolCallIds.add(toolCall.callId);
 
+  if (
+    session.sessionMode === "prospect_demo" &&
+    !PROSPECT_DEMO_INTAKE_TOOL_NAMES.has(toolCall.name)
+  ) {
+    postRealtimeEvent(socket, {
+      type: "conversation.item.create",
+      item: {
+        type: "function_call_output",
+        call_id: toolCall.callId,
+        output: JSON.stringify({
+          ok: false,
+          error:
+            "This demo can answer questions and collect a sample request, but cannot book, transfer, or send messages.",
+        }),
+      },
+    });
+    postRealtimeEvent(socket, { type: "response.create" });
+    return;
+  }
+
   let executed: Awaited<ReturnType<typeof executeVoiceTool>>;
   try {
     const context = await fetchWebVoiceContext({
       businessSlug: session.businessSlug,
+      ...(session.prospectDemoToken !== undefined
+        ? { prospectDemoToken: session.prospectDemoToken }
+        : {}),
     });
     executed = await executeVoiceTool({
       toolName: toolCall.name,
@@ -1557,6 +1607,9 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
           ...(ipHash !== undefined ? { ipHash } : {}),
           ...(visitorId !== undefined ? { visitorId } : {}),
           ...(widgetId !== undefined ? { widgetId } : {}),
+          ...(body.prospectDemoToken !== undefined
+            ? { prospectDemoToken: body.prospectDemoToken }
+            : {}),
         });
       } catch (error) {
         if (error instanceof RuntimeRequestError) {
@@ -1612,6 +1665,9 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
           ...(widgetId !== undefined ? { widgetId } : {}),
           maxDurationMs: server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
           startedAt,
+          ...(body.prospectDemoToken !== undefined
+            ? { prospectDemoToken: body.prospectDemoToken }
+            : {}),
         });
       } catch (error) {
         await hangupOpenAiRealtimeProviderCall(server, {
@@ -1644,6 +1700,12 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         pendingAssistantTranscripts: [],
         pendingEndCall: null,
         pendingEndCallFallbackTimer: null,
+        ...(context.sessionMode === "prospect_demo"
+          ? { sessionMode: "prospect_demo" as const }
+          : {}),
+        ...(body.prospectDemoToken !== undefined
+          ? { prospectDemoToken: body.prospectDemoToken }
+          : {}),
       };
       const sidebandSocket = createSidebandSocket({
         server,

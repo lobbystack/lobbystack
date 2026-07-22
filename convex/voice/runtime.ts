@@ -36,6 +36,11 @@ import { buildCallRecordingDownloadUrl } from "../lib/messageAttachmentUrls";
 import { ATTACHMENT_DOWNLOAD_TOKEN_TTL_MS } from "../lib/messageAttachments";
 import { getServiceNameCandidates } from "../lib/serviceNames";
 import { webVoiceAbuseRateLimiter } from "../lib/components";
+import {
+  isProspectDemoSessionPurpose,
+  PROSPECT_DEMO_SESSION_PURPOSE,
+  PROSPECT_DEMO_WIDGET_ID,
+} from "../lib/prospectDemo";
 import { normalizeRuntimeLocale, type RuntimeLocale } from "../lib/runtimeLocale";
 import {
   CONTACT_BLOCKED_CALL_DISPOSITION,
@@ -90,6 +95,7 @@ type StartWebCallArgs = {
   widgetId?: string;
   maxDurationMs?: number;
   startedAt: string;
+  prospectDemoToken?: string;
 };
 type StartWebCallResult = {
   businessId: Id<"businesses">;
@@ -174,7 +180,8 @@ type WebVoiceStartLimiterName =
   | "dashboardWebVoiceStartPerIpPerHour"
   | "dashboardWebVoiceStartPerIpPerDay"
   | "dashboardWebVoiceStartPerVisitorPerHour"
-  | "dashboardWebVoiceStartPerVisitorPerDay";
+  | "dashboardWebVoiceStartPerVisitorPerDay"
+  | "prospectDemoWebVoiceStartPerVisitor";
 
 type WebVoiceStartLimit = {
   limiterName: WebVoiceStartLimiterName;
@@ -239,6 +246,7 @@ function buildWebVoiceStartLimits(input: {
   ipHash?: string;
   visitorId?: string;
   widgetId?: string;
+  prospectDemoId?: Id<"prospect_demos">;
 }): Array<WebVoiceStartLimit> {
   const businessKey = String(input.businessId);
   const logContext = {
@@ -250,6 +258,25 @@ function buildWebVoiceStartLimits(input: {
   const isDashboardTestCall =
     input.widgetId === DASHBOARD_TEST_CALL_WIDGET_ID &&
     hasVerifiedDashboardTestCallToken(input);
+  const isProspectDemoCall =
+    input.prospectDemoId !== undefined &&
+    input.widgetId === PROSPECT_DEMO_WIDGET_ID;
+
+  if (isProspectDemoCall && input.visitorId !== undefined) {
+    limits.push({
+      limiterName: "prospectDemoWebVoiceStartPerVisitor",
+      key: `${String(input.prospectDemoId)}:visitor:${input.visitorId}`,
+      reason: "prospect_demo_rate_limit_visitor",
+      ...logContext,
+    });
+    limits.push({
+      limiterName: "webVoiceStartGlobalPerMinute",
+      key: "global",
+      reason: "rate_limit_global",
+      ...logContext,
+    });
+    return limits;
+  }
 
   if (input.ipHash !== undefined) {
     limits.push(
@@ -814,6 +841,7 @@ export const assertWebVoiceStartAllowed = internalMutation({
     ipHash: v.optional(v.string()),
     visitorId: v.optional(v.string()),
     widgetId: v.optional(v.string()),
+    prospectDemoId: v.optional(v.id("prospect_demos")),
   },
   handler: async (ctx: MutationCtx, args): Promise<null> => {
     const limits = buildWebVoiceStartLimits(args);
@@ -1142,6 +1170,7 @@ export const startWebCall = internalMutation({
     widgetId: v.optional(v.string()),
     maxDurationMs: v.optional(v.number()),
     startedAt: v.string(),
+    prospectDemoToken: v.optional(v.string()),
   },
   handler: async (
     ctx: MutationCtx,
@@ -1151,6 +1180,23 @@ export const startWebCall = internalMutation({
 
     if (!business) {
       throw new Error("Web voice business not found.");
+    }
+
+    let prospectDemoId: Id<"prospect_demos"> | undefined;
+    let sessionPurpose: string | undefined;
+    if (args.prospectDemoToken) {
+      const demoValidation = await ctx.runQuery(
+        internal.demos.validateProspectDemoForWebVoice,
+        {
+          token: args.prospectDemoToken,
+          businessSlug: args.businessSlug,
+        },
+      );
+      if (!demoValidation.ok) {
+        throw new Error("Prospect demo is not available.");
+      }
+      prospectDemoId = demoValidation.demoId;
+      sessionPurpose = PROSPECT_DEMO_SESSION_PURPOSE;
     }
 
     const existingCall: Doc<"calls"> | null = await ctx.db
@@ -1175,14 +1221,17 @@ export const startWebCall = internalMutation({
       throw new Error("Web voice provider call belongs to a different business.");
     }
 
-    const voicePolicy: {
-      allowed: boolean;
-      errorCode: UsageBillingErrorCode | null;
-    } = await ctx.runQuery(internal.billing.assertVoiceCanStart, {
-      businessId: business._id,
-    });
-    if (!voicePolicy.allowed) {
-      throw new Error(voicePolicy.errorCode ?? billingErrorCodes.voiceLimitReached);
+    const skipBilling = isProspectDemoSessionPurpose(sessionPurpose);
+    if (!skipBilling) {
+      const voicePolicy: {
+        allowed: boolean;
+        errorCode: UsageBillingErrorCode | null;
+      } = await ctx.runQuery(internal.billing.assertVoiceCanStart, {
+        businessId: business._id,
+      });
+      if (!voicePolicy.allowed) {
+        throw new Error(voicePolicy.errorCode ?? billingErrorCodes.voiceLimitReached);
+      }
     }
 
     const conversationId = await ctx.db.insert("conversations", {
@@ -1205,6 +1254,8 @@ export const startWebCall = internalMutation({
         ...(args.gatewaySessionId !== undefined
           ? { gatewaySessionId: args.gatewaySessionId }
           : {}),
+        ...(sessionPurpose !== undefined ? { sessionPurpose } : {}),
+        ...(prospectDemoId !== undefined ? { prospectDemoId } : {}),
         webCallMaxDurationMs: getWebCallMaxDurationMs(args.maxDurationMs),
         status: "in_progress",
         startedAt: args.startedAt,
@@ -1220,30 +1271,34 @@ export const startWebCall = internalMutation({
         ...(args.gatewaySessionId !== undefined
           ? { gatewaySessionId: args.gatewaySessionId }
           : {}),
+        ...(sessionPurpose !== undefined ? { sessionPurpose } : {}),
+        ...(prospectDemoId !== undefined ? { prospectDemoId } : {}),
         webCallMaxDurationMs: getWebCallMaxDurationMs(args.maxDurationMs),
       });
     }
 
-    const reservation = await ctx.runMutation(internal.billing.reserveVoiceUsageAtCallStart, {
-      businessId: business._id,
-      callId,
-      recordedAt: args.startedAt,
-    });
-    if (!reservation.allowed) {
-      await ctx.db.patch(callId, {
-        status: "completed",
-        endedAt: args.startedAt,
-        disposition: reservation.errorCode ?? billingErrorCodes.voiceLimitReached,
+    if (!skipBilling) {
+      const reservation = await ctx.runMutation(internal.billing.reserveVoiceUsageAtCallStart, {
+        businessId: business._id,
+        callId,
+        recordedAt: args.startedAt,
       });
-      await ctx.db.patch(conversationId, {
-        status: "closed",
-      });
-      throw new Error(reservation.errorCode ?? billingErrorCodes.voiceLimitReached);
-    }
-    if (reservation.syncNeeded && reservation.usageEventId) {
-      await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
-        usageEventId: reservation.usageEventId,
-      });
+      if (!reservation.allowed) {
+        await ctx.db.patch(callId, {
+          status: "completed",
+          endedAt: args.startedAt,
+          disposition: reservation.errorCode ?? billingErrorCodes.voiceLimitReached,
+        });
+        await ctx.db.patch(conversationId, {
+          status: "closed",
+        });
+        throw new Error(reservation.errorCode ?? billingErrorCodes.voiceLimitReached);
+      }
+      if (reservation.syncNeeded && reservation.usageEventId) {
+        await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+          usageEventId: reservation.usageEventId,
+        });
+      }
     }
 
     await ensureVoiceSessionForCall(ctx, {
@@ -1280,6 +1335,10 @@ export const startWebCall = internalMutation({
           webCallMaxDurationMs: getWebCallMaxDurationMs(args.maxDurationMs),
           originUrl: args.originUrl,
           widgetId: args.widgetId,
+          ...(sessionPurpose !== undefined ? { sessionPurpose } : {}),
+          ...(prospectDemoId !== undefined
+            ? { prospectDemoId: String(prospectDemoId) }
+            : {}),
         },
       }),
     );
@@ -1340,7 +1399,10 @@ export const expireStaleWebCall = internalMutation({
       endedAt: endedAtMs,
     });
 
-    if (call.providerCallDurationSeconds === undefined) {
+    if (
+      call.providerCallDurationSeconds === undefined &&
+      !isProspectDemoSessionPurpose(call.sessionPurpose)
+    ) {
       const usageResult = await ctx.runMutation(internal.billing.recordVoiceUsage, {
         businessId: call.businessId,
         callId: call._id,
@@ -1641,13 +1703,16 @@ export const takeMessageForVoice = internalMutation({
       });
     }
 
-    await ctx.scheduler.runAfter(0, internal.operatorNotifications.dispatchEvent, {
-      businessId: args.businessId,
-      eventKind: "voiceMessage",
-      eventKey: `voiceMessage:${String(inboxItemId)}`,
-      subject: title,
-      body,
-    });
+    const call = await ctx.db.get(args.callId);
+    if (!isProspectDemoSessionPurpose(call?.sessionPurpose)) {
+      await ctx.scheduler.runAfter(0, internal.operatorNotifications.dispatchEvent, {
+        businessId: args.businessId,
+        eventKind: "voiceMessage",
+        eventKey: `voiceMessage:${String(inboxItemId)}`,
+        subject: title,
+        body,
+      });
+    }
 
     return { inboxItemId };
   },
@@ -1770,7 +1835,8 @@ export const completeCall = internalMutation({
 
     if (
       args.providerDurationSeconds !== undefined &&
-      call.providerCallDurationSeconds === undefined
+      call.providerCallDurationSeconds === undefined &&
+      !isProspectDemoSessionPurpose(call.sessionPurpose)
     ) {
       const usageResult = await ctx.runMutation(internal.billing.recordVoiceUsage, {
         businessId: call.businessId,
@@ -1801,6 +1867,12 @@ export const completeCall = internalMutation({
           status: args.status,
           disposition,
           ...(call.transport !== undefined ? { transport: call.transport } : {}),
+          ...(call.sessionPurpose !== undefined
+            ? { sessionPurpose: call.sessionPurpose }
+            : {}),
+          ...(call.prospectDemoId !== undefined
+            ? { prospectDemoId: String(call.prospectDemoId) }
+            : {}),
         },
       }),
     );

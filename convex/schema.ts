@@ -832,6 +832,8 @@ export default defineSchema({
     widgetId: v.optional(v.string()),
     gatewaySessionId: v.optional(v.string()),
     webCallMaxDurationMs: v.optional(v.number()),
+    sessionPurpose: v.optional(v.string()),
+    prospectDemoId: v.optional(v.id("prospect_demos")),
     status: v.string(),
     transferState: v.optional(v.string()),
     disposition: v.optional(v.string()),
@@ -1428,4 +1430,32 @@ export default defineSchema({
     ])
     .index("by_payout_run_id_and_status", ["payoutRunId", "status"])
     .index("by_status_and_created_at", ["status", "createdAt"]),
+
+  prospect_demos: defineTable({
+    businessId: v.id("businesses"),
+    tokenHash: v.string(),
+    status: v.union(
+      v.literal("preparing"),
+      v.literal("active"),
+      v.literal("claimed"),
+      v.literal("revoked"),
+    ),
+    locale: runtimeLocaleValidator,
+    suggestedPrompts: v.array(v.string()),
+    recipientEmail: v.optional(v.string()),
+    recipientName: v.optional(v.string()),
+    campaignId: v.optional(v.string()),
+    websiteUrl: v.string(),
+    businessName: v.string(),
+    operatorUserId: v.id("users"),
+    websiteIngestionJobId: v.optional(v.id("website_ingestion_jobs")),
+    expiresAt: v.number(),
+    publishedAt: v.optional(v.number()),
+    claimedAt: v.optional(v.number()),
+    claimedByUserId: v.optional(v.id("users")),
+    createdAt: v.number(),
+  })
+    .index("by_token_hash", ["tokenHash"])
+    .index("by_business_id", ["businessId"])
+    .index("by_status_and_expires_at", ["status", "expiresAt"]),
 });
