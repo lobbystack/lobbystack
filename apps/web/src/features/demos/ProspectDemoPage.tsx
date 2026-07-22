@@ -216,11 +216,11 @@ function ProspectDemoActive({
       <div className="mt-10 grid w-full min-w-0 items-center gap-10 md:gap-12 xl:grid-cols-2 xl:gap-16">
         <div className="flex w-full min-w-0 flex-col text-left">
           {prompts.length > 0 ? (
-            <div className="w-full max-w-md">
+            <div className="w-full max-w-lg">
               <h2 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
                 {t("active.promptsTitle")}
               </h2>
-              <ul className="mt-3 list-disc space-y-3 pl-5 text-base leading-6 text-foreground">
+              <ul className="mt-4 list-disc space-y-4 pl-5 text-lg leading-7 text-foreground md:text-xl md:leading-8">
                 {prompts.map((prompt) => (
                   <li key={prompt}>{prompt}</li>
                 ))}
@@ -247,7 +247,7 @@ function ProspectDemoActive({
         </div>
 
         <div className="flex w-full min-w-0 justify-center xl:justify-end">
-          <div className="flex w-full max-w-[22rem] flex-col items-center md:max-w-[30rem]">
+          <div className="flex w-full max-w-[22rem] flex-col items-center md:max-w-[30rem] xl:max-w-none">
             <AuraVoiceDemo
               auraTone="light"
               businessSlug={businessSlug}

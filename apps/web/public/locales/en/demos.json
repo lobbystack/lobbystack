@@ -4,7 +4,7 @@
     "description": "Getting your receptionist demo ready..."
   },
   "active": {
-    "title": "Demo prepared for {{businessName}}",
+    "title": "Demo for {{businessName}}",
     "startHint": "Tap the button to start a live voice call.",
     "promptsTitle": "Try asking:",
     "intakeNotice": "This is a limited demo. Live calls work, but booking and other full receptionist features aren't enabled.",
