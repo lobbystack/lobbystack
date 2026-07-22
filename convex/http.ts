@@ -774,27 +774,34 @@ http.route({
       return new Response("Not found", { status: 404 });
     }
 
+    const demoAccess = await ctx.runQuery(
+      internal.demos.resolveProspectDemoWebVoiceAccess,
+      {
+        businessId: business._id,
+        businessSlug: body.data.businessSlug,
+        ...(body.data.prospectDemoToken !== undefined
+          ? { prospectDemoToken: body.data.prospectDemoToken }
+          : {}),
+        ...(body.data.dashboardTestCallToken !== undefined
+          ? { dashboardTestCallToken: body.data.dashboardTestCallToken }
+          : {}),
+      },
+    );
+    if (!demoAccess.allowed) {
+      return Response.json(
+        {
+          code: "prospect_demo_unavailable",
+          message: "Prospect demo is not available.",
+          reason: demoAccess.reason,
+        },
+        { status: 403 },
+      );
+    }
+
     let prospectDemoId: string | undefined;
     let sessionMode: "prospect_demo" | undefined;
-    if (body.data.prospectDemoToken) {
-      const demoValidation = await ctx.runQuery(
-        internal.demos.validateProspectDemoForWebVoice,
-        {
-          token: body.data.prospectDemoToken,
-          businessSlug: body.data.businessSlug,
-        },
-      );
-      if (!demoValidation.ok) {
-        return Response.json(
-          {
-            code: "prospect_demo_unavailable",
-            message: "Prospect demo is not available.",
-            reason: demoValidation.reason,
-          },
-          { status: 403 },
-        );
-      }
-      prospectDemoId = demoValidation.demoId;
+    if (demoAccess.mode === "prospect_demo") {
+      prospectDemoId = demoAccess.demoId;
       sessionMode = "prospect_demo";
     }
 

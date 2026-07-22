@@ -269,6 +269,61 @@ describe("website onboarding and ingestion", () => {
     expect(jobs[0]?._id).toBe(first.websiteIngestionJobId);
   });
 
+  it("starts a fresh website ingestion job when resubmitting after a completed import", async () => {
+    const t = createConvexHarness();
+    const subject = "website-resubmit-completed-job-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+    const authed = t.withIdentity({ subject });
+
+    const completedJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com/faq",
+        provider: "firecrawl",
+        status: "completed",
+        workflowId: "workflow-completed",
+        crawlMode: "firecrawl",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 3,
+        indexedCount: 3,
+        errorCount: 0,
+        completedAt: new Date().toISOString(),
+      });
+    });
+
+    const result = await authed.action(api.ai.context.websiteIngestion.submitWebsiteIngestion, {
+      businessId,
+      websiteUrl: "https://example.com/faq?utm_source=resubmit#bottom",
+    });
+
+    expect(result.websiteIngestionJobId).not.toBe(completedJobId);
+    expect(workflowStartMock).toHaveBeenCalledTimes(1);
+    expect(workflowStartMock).toHaveBeenCalledWith(
+      expect.anything(),
+      internal.ai.workflows.runtime.importWebsiteKnowledgeWorkflow,
+      {
+        websiteIngestionJobId: result.websiteIngestionJobId,
+      },
+    );
+
+    const jobs = await listWebsiteIngestionJobs(t, businessId);
+    expect(jobs).toHaveLength(2);
+    expect(jobs.find((job) => job._id === completedJobId)?.status).toBe("completed");
+    expect(jobs.find((job) => job._id === result.websiteIngestionJobId)).toMatchObject({
+      businessId,
+      websiteUrl: "https://example.com/faq",
+      provider: "firecrawl",
+      status: "queued",
+      workflowId: "workflow-test-id",
+    });
+  });
+
   it("allows deleting a failed website ingestion job with no imported documents", async () => {
     const t = createConvexHarness();
     const subject = "website-delete-failed-job-owner";

@@ -314,6 +314,61 @@ describe("prospect demos", () => {
     expect(validation).toEqual({ ok: false, reason: "invalid" });
   });
 
+  it("rejects web voice context access without a prospect demo token", async () => {
+    const { t, businessId } = await seedProspectDemoFixture();
+
+    const access = await t.query(internal.demos.resolveProspectDemoWebVoiceAccess, {
+      businessId,
+      businessSlug: "prospect-acme",
+    });
+    expect(access).toEqual({
+      allowed: false,
+      reason: "token_required",
+    });
+  });
+
+  it("rejects web voice starts without a prospect demo token", async () => {
+    const { t } = await seedProspectDemoFixture();
+
+    await expect(
+      t.mutation(internal.voice.runtime.startWebCall, {
+        businessSlug: "prospect-acme",
+        providerCallId: "call_prospect_demo_no_token",
+        gatewaySessionId: "gateway-prospect-no-token",
+        startedAt: "2026-07-21T18:00:00.000Z",
+      }),
+    ).rejects.toThrow(/prospect demo is not available/i);
+  });
+
+  it("allows web voice starts without a token after a prospect demo is claimed", async () => {
+    const { t, token, businessId } = await seedProspectDemoFixture();
+
+    const claimant = t.withIdentity({ subject: "prospect-claimant" });
+    await claimant.mutation(api.demos.claimProspectDemo, { token });
+
+    const access = await t.query(internal.demos.resolveProspectDemoWebVoiceAccess, {
+      businessId,
+      businessSlug: "prospect-acme",
+    });
+    expect(access).toEqual({
+      allowed: true,
+      mode: "normal",
+    });
+
+    const result = await t.mutation(internal.voice.runtime.startWebCall, {
+      businessSlug: "prospect-acme",
+      providerCallId: "call_claimed_demo_1",
+      gatewaySessionId: "gateway-claimed-1",
+      startedAt: "2026-07-21T18:00:00.000Z",
+    });
+
+    await t.run(async (ctx) => {
+      const call = await ctx.db.get(result.callId);
+      expect(call?.sessionPurpose).toBeUndefined();
+      expect(call?.prospectDemoId).toBeUndefined();
+    });
+  });
+
   it("limits prospect demo starts to five per visitor", async () => {
     const { t, demoId, businessId } = await seedProspectDemoFixture();
 

@@ -696,3 +696,67 @@ export const validateProspectDemoForWebVoice = internalQuery({
     };
   },
 });
+
+function isVerifiedDashboardTestCallToken(token: string | undefined): boolean {
+  const expectedToken = process.env.DASHBOARD_TEST_CALL_TOKEN?.trim();
+  return (
+    expectedToken !== undefined &&
+    expectedToken.length > 0 &&
+    token === expectedToken
+  );
+}
+
+export const resolveProspectDemoWebVoiceAccess = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+    businessSlug: v.string(),
+    prospectDemoToken: v.optional(v.string()),
+    dashboardTestCallToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const demo = await ctx.db
+      .query("prospect_demos")
+      .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+      .unique();
+    const isProspectDemoTenant = demo !== null && demo.status !== "claimed";
+
+    if (args.prospectDemoToken) {
+      const tokenHash = await hashProspectDemoToken(args.prospectDemoToken.trim());
+      const tokenDemo = await ctx.db
+        .query("prospect_demos")
+        .withIndex("by_token_hash", (q) => q.eq("tokenHash", tokenHash))
+        .unique();
+      if (!tokenDemo) {
+        return { allowed: false as const, reason: "invalid" as const };
+      }
+      const state = resolveProspectDemoPublicState(tokenDemo);
+      if (state !== "active") {
+        return { allowed: false as const, reason: state };
+      }
+      const business = await ctx.db.get(tokenDemo.businessId);
+      if (!business || business.status !== "active") {
+        return { allowed: false as const, reason: "invalid" as const };
+      }
+      if (business.slug !== args.businessSlug.trim()) {
+        return { allowed: false as const, reason: "mismatch" as const };
+      }
+      if (business._id !== args.businessId) {
+        return { allowed: false as const, reason: "mismatch" as const };
+      }
+      return {
+        allowed: true as const,
+        mode: "prospect_demo" as const,
+        demoId: tokenDemo._id,
+      };
+    }
+
+    if (isProspectDemoTenant) {
+      if (isVerifiedDashboardTestCallToken(args.dashboardTestCallToken)) {
+        return { allowed: true as const, mode: "normal" as const };
+      }
+      return { allowed: false as const, reason: "token_required" as const };
+    }
+
+    return { allowed: true as const, mode: "normal" as const };
+  },
+});

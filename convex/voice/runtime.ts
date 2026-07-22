@@ -1199,20 +1199,24 @@ export const startWebCall = internalMutation({
       throw new Error("Web voice business not found.");
     }
 
+    const demoAccess = await ctx.runQuery(
+      internal.demos.resolveProspectDemoWebVoiceAccess,
+      {
+        businessId: business._id,
+        businessSlug: args.businessSlug,
+        ...(args.prospectDemoToken !== undefined
+          ? { prospectDemoToken: args.prospectDemoToken }
+          : {}),
+      },
+    );
+    if (!demoAccess.allowed) {
+      throw new Error("Prospect demo is not available.");
+    }
+
     let prospectDemoId: Id<"prospect_demos"> | undefined;
     let sessionPurpose: string | undefined;
-    if (args.prospectDemoToken) {
-      const demoValidation = await ctx.runQuery(
-        internal.demos.validateProspectDemoForWebVoice,
-        {
-          token: args.prospectDemoToken,
-          businessSlug: args.businessSlug,
-        },
-      );
-      if (!demoValidation.ok) {
-        throw new Error("Prospect demo is not available.");
-      }
-      prospectDemoId = demoValidation.demoId;
+    if (demoAccess.mode === "prospect_demo") {
+      prospectDemoId = demoAccess.demoId;
       sessionPurpose = PROSPECT_DEMO_SESSION_PURPOSE;
     }
 

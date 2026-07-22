@@ -153,20 +153,6 @@ async function startOrReuseWebsiteIngestion(
     };
   }
 
-  const existingCompletedJob = existingJobs.find((job) => job.status === "completed");
-  if (existingCompletedJob) {
-    await ctx.db.patch(
-      args.businessId,
-      await buildWebsiteBusinessPatch(ctx, args),
-    );
-
-    return {
-      status: "submitted",
-      websiteUrl: args.websiteUrl,
-      websiteIngestionJobId: existingCompletedJob._id,
-    };
-  }
-
   const websiteIngestionJobId = await ctx.db.insert("website_ingestion_jobs", {
     businessId: args.businessId,
     websiteUrl: args.websiteUrl,
