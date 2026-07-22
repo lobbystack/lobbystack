@@ -34,6 +34,7 @@ export const i18nReady = i18n
       "contacts",
       "agent",
       "affiliate",
+      "demos",
     ],
     partialBundledLanguages: true,
     resources: {

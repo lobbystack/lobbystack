@@ -29,6 +29,8 @@ type StartCallResponse = {
 type WebVoiceContextResponse = {
   businessId: string;
   snapshot: BusinessContextSnapshot;
+  sessionMode?: "prospect_demo";
+  prospectDemoId?: string;
 };
 
 type StartWebCallResponse = {
@@ -212,6 +214,7 @@ export async function fetchWebVoiceContext(input: {
   ipHash?: string;
   visitorId?: string;
   widgetId?: string;
+  prospectDemoToken?: string;
 }): Promise<WebVoiceContextResponse> {
   return await postJson<WebVoiceContextResponse>("/voice/context/by-slug", input);
 }
@@ -220,11 +223,15 @@ export async function startWebVoiceCall(input: {
   businessSlug: string;
   providerCallId: string;
   gatewaySessionId?: string;
+  ipHash?: string;
   originUrl?: string;
   userAgent?: string;
+  visitorId?: string;
   widgetId?: string;
   maxDurationMs?: number;
   startedAt: string;
+  prospectDemoToken?: string;
+  dashboardTestCallToken?: string;
 }): Promise<StartWebCallResponse> {
   return await postJson<StartWebCallResponse>("/voice/call/start-web", input);
 }

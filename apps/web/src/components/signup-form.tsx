@@ -29,6 +29,7 @@ type SignupFormProps = {
   isSubmitting: boolean;
   isSubmitDisabled?: boolean;
   errorMessage: string | null;
+  signInHref?: string;
   turnstileResetKey?: number;
   turnstileSiteKey?: string;
   onEmailChange: (value: string) => void;
@@ -45,6 +46,7 @@ export function SignupForm({
   isSubmitting,
   isSubmitDisabled = false,
   errorMessage,
+  signInHref = "/login",
   turnstileResetKey = 0,
   turnstileSiteKey,
   onEmailChange,
@@ -163,7 +165,10 @@ export function SignupForm({
 
       <p className="text-center text-sm text-muted-foreground">
         {t("signup.haveAccount")}{" "}
-        <Link className="font-medium text-foreground underline-offset-4 hover:underline" to="/login">
+        <Link
+          className="font-medium text-foreground underline-offset-4 hover:underline"
+          to={signInHref}
+        >
           {t("signup.signIn")}
         </Link>
       </p>

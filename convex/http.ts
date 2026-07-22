@@ -52,6 +52,7 @@ const voiceContextBySlugSchema = z.object({
   ipHash: z.string().min(1).optional(),
   visitorId: z.string().min(1).optional(),
   widgetId: z.string().min(1).optional(),
+  prospectDemoToken: z.string().min(1).optional(),
 });
 
 const webCallRecordingTargetSchema = z.object({
@@ -71,11 +72,15 @@ const startWebCallSchema = z.object({
   businessSlug: z.string().min(1),
   providerCallId: z.string().min(1),
   gatewaySessionId: z.string().min(1).optional(),
+  ipHash: z.string().min(1).optional(),
   originUrl: z.string().min(1).optional(),
   userAgent: z.string().min(1).optional(),
+  visitorId: z.string().min(1).optional(),
   widgetId: z.string().min(1).optional(),
   maxDurationMs: z.number().positive().max(MAX_WEB_CALL_MAX_DURATION_MS).optional(),
   startedAt: z.string().min(1),
+  prospectDemoToken: z.string().min(1).optional(),
+  dashboardTestCallToken: z.string().min(1).optional(),
 });
 
 const appendTranscriptSchema = z.object({
@@ -264,6 +269,7 @@ type IdFieldMap = {
   contacts: "contacts";
   conversations: "conversations";
   appointment_change_verifications: "appointment_change_verifications";
+  prospect_demos: "prospect_demos";
   staff: "staff";
 };
 
@@ -771,6 +777,37 @@ http.route({
       return new Response("Not found", { status: 404 });
     }
 
+    const demoAccess = await ctx.runQuery(
+      internal.demos.resolveProspectDemoWebVoiceAccess,
+      {
+        businessId: business._id,
+        businessSlug: body.data.businessSlug,
+        ...(body.data.prospectDemoToken !== undefined
+          ? { prospectDemoToken: body.data.prospectDemoToken }
+          : {}),
+        ...(body.data.dashboardTestCallToken !== undefined
+          ? { dashboardTestCallToken: body.data.dashboardTestCallToken }
+          : {}),
+      },
+    );
+    if (!demoAccess.allowed) {
+      return Response.json(
+        {
+          code: "prospect_demo_unavailable",
+          message: "Prospect demo is not available.",
+          reason: demoAccess.reason,
+        },
+        { status: 403 },
+      );
+    }
+
+    let prospectDemoId: string | undefined;
+    let sessionMode: "prospect_demo" | undefined;
+    if (demoAccess.mode === "prospect_demo") {
+      prospectDemoId = demoAccess.demoId;
+      sessionMode = "prospect_demo";
+    }
+
     if (body.data.origin !== undefined) {
       try {
         await ctx.runMutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
@@ -782,6 +819,9 @@ http.route({
           ...(body.data.ipHash !== undefined ? { ipHash: body.data.ipHash } : {}),
           ...(body.data.visitorId !== undefined ? { visitorId: body.data.visitorId } : {}),
           ...(body.data.widgetId !== undefined ? { widgetId: body.data.widgetId } : {}),
+          ...(prospectDemoId !== undefined
+            ? { prospectDemoId: asId("prospect_demos", prospectDemoId) }
+            : {}),
         });
       } catch (error) {
         if (isErrorMessage(error, "web_voice_rate_limited")) {
@@ -797,24 +837,26 @@ http.route({
       }
     }
 
-    try {
-      await ctx.runQuery(internal.voice.runtime.assertWebVoiceBillingCanStart, {
-        businessId: business._id,
-      });
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message === billingErrorCodes.voiceLimitReached
-      ) {
-        return Response.json(
-          {
-            code: billingErrorCodes.voiceLimitReached,
-            message: "Voice quota reached for this billing period.",
-          },
-          { status: 402 },
-        );
+    if (sessionMode !== "prospect_demo") {
+      try {
+        await ctx.runQuery(internal.voice.runtime.assertWebVoiceBillingCanStart, {
+          businessId: business._id,
+        });
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message === billingErrorCodes.voiceLimitReached
+        ) {
+          return Response.json(
+            {
+              code: billingErrorCodes.voiceLimitReached,
+              message: "Voice quota reached for this billing period.",
+            },
+            { status: 402 },
+          );
+        }
+        throw error;
       }
-      throw error;
     }
 
     const snapshot = await ctx.runQuery(internal.ai.context.snapshots.getByBusinessId, {
@@ -828,6 +870,8 @@ http.route({
     return Response.json({
       businessId: business._id,
       snapshot,
+      ...(sessionMode !== undefined ? { sessionMode } : {}),
+      ...(prospectDemoId !== undefined ? { prospectDemoId } : {}),
     });
   }),
 });
@@ -926,13 +970,23 @@ http.route({
         ...(body.data.gatewaySessionId !== undefined
           ? { gatewaySessionId: body.data.gatewaySessionId }
           : {}),
+        ...(body.data.ipHash !== undefined ? { ipHash: body.data.ipHash } : {}),
         ...(body.data.originUrl !== undefined ? { originUrl: body.data.originUrl } : {}),
         ...(body.data.userAgent !== undefined ? { userAgent: body.data.userAgent } : {}),
+        ...(body.data.visitorId !== undefined
+          ? { visitorId: body.data.visitorId }
+          : {}),
         ...(body.data.widgetId !== undefined ? { widgetId: body.data.widgetId } : {}),
         ...(body.data.maxDurationMs !== undefined
           ? { maxDurationMs: body.data.maxDurationMs }
           : {}),
         startedAt: body.data.startedAt,
+        ...(body.data.prospectDemoToken !== undefined
+          ? { prospectDemoToken: body.data.prospectDemoToken }
+          : {}),
+        ...(body.data.dashboardTestCallToken !== undefined
+          ? { dashboardTestCallToken: body.data.dashboardTestCallToken }
+          : {}),
       });
     } catch (error) {
       if (
@@ -945,6 +999,15 @@ http.route({
             message: "Voice quota reached for this billing period.",
           },
           { status: 402 },
+        );
+      }
+      if (isErrorMessage(error, "web_voice_rate_limited")) {
+        return Response.json(
+          {
+            code: "web_voice_rate_limited",
+            message: "Too many web voice starts. Please try again shortly.",
+          },
+          { status: 429 },
         );
       }
       throw error;

@@ -1,0 +1,373 @@
+import { useCallback, useEffect } from "react";
+import { LoaderCircle } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { useQuery } from "convex/react";
+import { useTranslation } from "react-i18next";
+import { useTheme } from "next-themes";
+
+import type { TelemetryEventName } from "@lobbystack/telemetry";
+import { api } from "../../../../../convex/_generated/api";
+import { AuraVoiceDemo } from "@/components/web-voice/AuraVoiceDemo";
+import { LandingNavbar } from "@/components/marketing/landing-navbar";
+import {
+  getWebCallEndpoint,
+  PROSPECT_DEMO_WIDGET_ID,
+} from "@/components/web-voice/config";
+import { buttonVariants } from "@/components/ui/button";
+import { captureAnalyticsEvent } from "@/lib/analytics";
+import {
+  getStoredProspectDemoToken,
+  storeProspectDemoToken,
+} from "@/lib/prospect-demo-token";
+import { normalizeLocale } from "@/lib/locale";
+import type { MarketingLocale } from "@/lib/marketing-site-url";
+import { cn } from "@/lib/utils";
+
+const CALL_EVENT_MAP: Partial<Record<TelemetryEventName, TelemetryEventName>> = {
+  "web.voice.test_call_started": "web.prospect_demo.call_started",
+  "web.voice.test_call_ended": "web.prospect_demo.call_completed",
+  "web.voice.test_call_error": "web.prospect_demo.call_error",
+};
+
+type ProspectDemoPreview = NonNullable<
+  ReturnType<typeof useQuery<typeof api.demos.previewProspectDemo>>
+>;
+
+type ActiveProspectDemo = Extract<ProspectDemoPreview, { state: "active" }>;
+
+function useNoIndexMeta(): void {
+  useEffect(() => {
+    const meta = document.createElement("meta");
+    meta.setAttribute("name", "robots");
+    meta.setAttribute("content", "noindex, nofollow");
+    document.head.appendChild(meta);
+    return () => {
+      meta.remove();
+    };
+  }, []);
+}
+
+function useForceLightTheme(): void {
+  const { setTheme } = useTheme();
+
+  useEffect(() => {
+    const previousTheme = localStorage.getItem("theme");
+    setTheme("light");
+
+    return () => {
+      setTheme(
+        previousTheme === "light" ||
+          previousTheme === "dark" ||
+          previousTheme === "system"
+          ? previousTheme
+          : "system",
+      );
+    };
+  }, [setTheme]);
+}
+
+/**
+ * Resolve demo UI copy in the demo's locale without calling i18n.changeLanguage.
+ * Mutating the global language fights LocaleProvider for authenticated users and
+ * can infinite-loop via languageChanged → setState.
+ */
+function useDemoTranslation(demoLocale: string | undefined) {
+  const { i18n } = useTranslation("demos");
+  const locale =
+    normalizeLocale(demoLocale) ??
+    normalizeLocale(i18n.resolvedLanguage ?? i18n.language) ??
+    "en";
+
+  useEffect(() => {
+    void i18n.loadLanguages(locale);
+  }, [i18n, locale]);
+
+  return i18n.getFixedT(locale, "demos");
+}
+
+function resolveMarketingLocale(
+  demoLocale: string | undefined,
+  language: string,
+): MarketingLocale {
+  const candidate = demoLocale?.trim().toLowerCase() ?? language.trim().toLowerCase();
+  if (candidate === "fr" || candidate.startsWith("fr-")) {
+    return "fr";
+  }
+  return "en";
+}
+
+function DemoShell({
+  children,
+  wide = false,
+  footer,
+  marketingLocale = "en",
+}: {
+  children: React.ReactNode;
+  wide?: boolean;
+  footer?: string;
+  marketingLocale?: MarketingLocale;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex min-h-svh flex-col bg-background text-foreground",
+        // Only lock to the viewport on desktop two-column layout.
+        "xl:h-svh xl:overflow-hidden",
+      )}
+    >
+      <LandingNavbar locale={marketingLocale} />
+      <div
+        className={cn(
+          "flex flex-1 flex-col items-center px-6 pt-12 pb-8",
+          "xl:min-h-0 xl:overflow-hidden xl:pt-10 xl:pb-6",
+        )}
+      >
+        <div
+          className={cn(
+            "flex w-full flex-1 flex-col items-center",
+            wide ? "max-w-7xl" : "max-w-xl justify-center",
+            "xl:min-h-0",
+          )}
+        >
+          {children}
+          {footer ? (
+            <p className="mt-auto hidden shrink-0 pt-4 text-center text-sm text-muted-foreground xl:block">
+              {footer}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DemoStateCard({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="w-full rounded-xl border bg-muted/30 p-6 text-center">
+      <h1 className="text-xl font-semibold tracking-tight text-foreground">
+        {title}
+      </h1>
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+function ProspectDemoLoading({
+  marketingLocale,
+  demoLocale,
+}: {
+  marketingLocale: MarketingLocale;
+  demoLocale?: string | undefined;
+}) {
+  const t = useDemoTranslation(demoLocale);
+
+  return (
+    <DemoShell marketingLocale={marketingLocale}>
+      <div
+        aria-busy="true"
+        className="flex flex-col items-center gap-3 text-center"
+        role="status"
+      >
+        <LoaderCircle className="size-6 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">{t("loading.label")}</p>
+      </div>
+    </DemoShell>
+  );
+}
+
+function ProspectDemoInactive({
+  state,
+  businessName,
+  marketingLocale,
+  demoLocale,
+}: {
+  state: "invalid" | "preparing" | "expired" | "revoked" | "claimed";
+  businessName?: string | undefined;
+  marketingLocale: MarketingLocale;
+  demoLocale?: string | undefined;
+}) {
+  const t = useDemoTranslation(demoLocale);
+  const safeName = businessName?.trim();
+  const title =
+    state !== "invalid" && safeName
+      ? t(`states.${state}.titleWithBusiness`, { businessName: safeName })
+      : t(`states.${state}.title`);
+
+  return (
+    <DemoShell marketingLocale={marketingLocale}>
+      <DemoStateCard title={title} description={t(`states.${state}.description`)} />
+    </DemoShell>
+  );
+}
+
+function ProspectDemoActive({
+  demo,
+  token,
+}: {
+  demo: ActiveProspectDemo;
+  token: string;
+}) {
+  const t = useDemoTranslation(demo.locale);
+  const { demoId, campaignId, businessSlug, suggestedPrompts, signupPath } = demo;
+
+  useEffect(() => {
+    captureAnalyticsEvent("web.prospect_demo.viewed", {
+      prospectDemoId: String(demoId),
+      campaignId,
+    });
+  }, [campaignId, demoId]);
+
+  const handleEvent = useCallback(
+    (eventName: TelemetryEventName) => {
+      const mapped = CALL_EVENT_MAP[eventName];
+      if (!mapped) {
+        return;
+      }
+      captureAnalyticsEvent(mapped, {
+        prospectDemoId: String(demoId),
+        campaignId,
+      });
+    },
+    [campaignId, demoId],
+  );
+
+  const getStartPayload = useCallback(
+    async () => ({ prospectDemoToken: token }),
+    [token],
+  );
+
+  const handleSignupClick = useCallback(() => {
+    captureAnalyticsEvent("web.prospect_demo.signup_clicked", {
+      prospectDemoId: String(demoId),
+      campaignId,
+    });
+  }, [campaignId, demoId]);
+
+  const prompts: string[] = suggestedPrompts.slice(0, 3);
+
+  return (
+    <DemoShell wide footer={t("active.startHint")} marketingLocale={demo.locale}>
+      <div className="flex w-full flex-col items-center pt-4 text-center">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+          {t("active.title", { businessName: demo.businessName })}
+        </h1>
+      </div>
+
+      <div className="mt-4 grid w-full min-w-0 flex-1 items-center gap-8 md:gap-12 xl:min-h-0 xl:grid-cols-2 xl:gap-16">
+        <div className="order-1 flex w-full min-w-0 justify-center xl:order-2 xl:justify-end">
+          <div className="flex w-full max-w-[22rem] flex-col items-center md:max-w-[30rem] lg:max-w-[min(30rem,calc(100svh-18rem))] xl:max-w-[min(100%,calc(100svh-18rem))]">
+            <AuraVoiceDemo
+              auraTone="light"
+              businessSlug={businessSlug}
+              className="w-full"
+              endpoint={getWebCallEndpoint()}
+              getStartPayload={getStartPayload}
+              onEvent={handleEvent}
+              widgetId={PROSPECT_DEMO_WIDGET_ID}
+            />
+            <p className="mt-4 text-center text-sm text-muted-foreground xl:hidden">
+              {t("active.startHint")}
+            </p>
+          </div>
+        </div>
+
+        <div className="order-2 flex w-full min-w-0 max-w-lg flex-col justify-self-center text-left xl:order-1 xl:max-w-none xl:justify-self-stretch">
+          {prompts.length > 0 ? (
+            <div className="w-full">
+              <h2 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
+                {t("active.promptsTitle")}
+              </h2>
+              <ul className="mt-4 list-disc space-y-4 pl-5 text-lg leading-7 text-foreground md:text-xl md:leading-8">
+                {prompts.map((prompt) => (
+                  <li key={prompt}>{prompt}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          <p
+            className={cn(
+              "max-w-md text-xs leading-5 text-muted-foreground",
+              "text-center xl:text-left",
+              "mx-auto xl:mx-0",
+              prompts.length > 0 ? "mt-8" : "mt-0",
+            )}
+          >
+            {t("active.intakeNotice")}
+          </p>
+
+          <Link
+            className={cn(
+              buttonVariants(),
+              "mx-auto mt-8 h-11 w-full max-w-sm xl:mx-0",
+            )}
+            onClick={handleSignupClick}
+            to={signupPath}
+          >
+            {t("active.claimCta")}
+          </Link>
+        </div>
+      </div>
+    </DemoShell>
+  );
+}
+
+export function ProspectDemoPage() {
+  useNoIndexMeta();
+  useForceLightTheme();
+  const { i18n } = useTranslation();
+  const { token: pathToken } = useParams<{ token: string }>();
+  const token = pathToken?.trim() || getStoredProspectDemoToken() || undefined;
+  useEffect(() => {
+    if (token) {
+      storeProspectDemoToken(token);
+    }
+  }, [token]);
+  const preview = useQuery(
+    api.demos.previewProspectDemo,
+    token ? { token } : "skip",
+  );
+  const demoLocale =
+    preview && "locale" in preview ? preview.locale : undefined;
+  const marketingLocale = resolveMarketingLocale(demoLocale, i18n.language);
+
+  if (!token) {
+    return (
+      <ProspectDemoInactive
+        demoLocale={demoLocale}
+        marketingLocale={marketingLocale}
+        state="invalid"
+      />
+    );
+  }
+
+  if (preview === undefined) {
+    return (
+      <ProspectDemoLoading
+        demoLocale={demoLocale}
+        marketingLocale={marketingLocale}
+      />
+    );
+  }
+
+  if (preview.state === "active") {
+    return <ProspectDemoActive demo={preview} token={token} />;
+  }
+
+  return (
+    <ProspectDemoInactive
+      demoLocale={demoLocale}
+      marketingLocale={marketingLocale}
+      state={preview.state}
+      {...("businessName" in preview && preview.businessName
+        ? { businessName: preview.businessName }
+        : {})}
+    />
+  );
+}

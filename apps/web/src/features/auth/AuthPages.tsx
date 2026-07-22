@@ -14,6 +14,7 @@ import { SignupForm } from "@/components/signup-form";
 import { Button } from "@/components/ui/button";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
 import { captureAnalyticsEvent } from "@/lib/analytics";
+import { buildAuthPathWithReturnTo } from "@/lib/auth-return-to";
 import { isValidEmailAddress, meetsSignupPasswordRequirements } from "@/lib/auth-validation";
 import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 
@@ -86,10 +87,15 @@ function isResetRequestLookupError(error: unknown): boolean {
 export function LoginPage() {
   const { t } = useTranslation("auth");
   const { signIn } = useAuthActions();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const signUpHref = buildAuthPathWithReturnTo(
+    "/signup",
+    searchParams.get("returnTo"),
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -140,6 +146,7 @@ export function LoginPage() {
         onPasswordChange={setPassword}
         onSubmit={handleSubmit}
         password={password}
+        signUpHref={signUpHref}
       />
     </OnboardingShell>
   );
@@ -148,6 +155,7 @@ export function LoginPage() {
 export function SignupPage() {
   const { t } = useTranslation("auth");
   const { signIn } = useAuthActions();
+  const [searchParams] = useSearchParams();
   const configuredTurnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim();
   const turnstileSiteKey =
     configuredTurnstileSiteKey || (import.meta.env.DEV ? DEV_TURNSTILE_SITE_KEY : undefined);
@@ -159,6 +167,10 @@ export function SignupPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const pendingTurnstileSubmitRef = useRef(false);
   const isSignupReady = isValidEmailAddress(email) && meetsSignupPasswordRequirements(password);
+  const signInHref = buildAuthPathWithReturnTo(
+    "/login",
+    searchParams.get("returnTo"),
+  );
 
   const handleTurnstileError = useCallback(() => {
     pendingTurnstileSubmitRef.current = false;
@@ -288,6 +300,7 @@ export function SignupPage() {
         onTurnstileError={handleTurnstileError}
         onTurnstileTokenChange={handleTurnstileTokenChange}
         password={password}
+        signInHref={signInHref}
         turnstileResetKey={turnstileResetKey}
         turnstileSiteKey={turnstileSiteKey || undefined}
       />
@@ -433,42 +446,44 @@ export function ConfirmEmailChangePage() {
     : t("confirmEmailChange.invalidLink");
 
   return (
-    <OnboardingShell
-      description={description}
-      progress={null}
-      title={t("confirmEmailChange.title")}
-      width="sm"
-    >
-      <div className="flex flex-col gap-6">
-        {statusMessage ? (
-          <p className="text-center text-sm text-muted-foreground">{statusMessage}</p>
-        ) : null}
-        {errorMessage ? (
-          <p className="text-center text-sm text-destructive">{errorMessage}</p>
-        ) : null}
+    <div data-ph-no-capture>
+      <OnboardingShell
+        description={description}
+        progress={null}
+        title={t("confirmEmailChange.title")}
+        width="sm"
+      >
+        <div className="flex flex-col gap-6">
+          {statusMessage ? (
+            <p className="text-center text-sm text-muted-foreground">{statusMessage}</p>
+          ) : null}
+          {errorMessage ? (
+            <p className="text-center text-sm text-destructive">{errorMessage}</p>
+          ) : null}
 
-        <form className="flex flex-col" onSubmit={handleSubmit}>
-          <Button
-            className="h-11 w-full"
-            disabled={!hasConfirmationParams || isSubmitting || statusMessage !== null}
-            type="submit"
-          >
-            {isSubmitting
-              ? t("confirmEmailChange.submitting")
-              : t("confirmEmailChange.submit")}
-          </Button>
-        </form>
+          <form className="flex flex-col" onSubmit={handleSubmit}>
+            <Button
+              className="h-11 w-full"
+              disabled={!hasConfirmationParams || isSubmitting || statusMessage !== null}
+              type="submit"
+            >
+              {isSubmitting
+                ? t("confirmEmailChange.submitting")
+                : t("confirmEmailChange.submit")}
+            </Button>
+          </form>
 
-        <p className="text-center text-sm">
-          <Link
-            className="font-medium text-foreground underline-offset-4 hover:underline"
-            to={returnHref}
-          >
-            {returnLabel}
-          </Link>
-        </p>
-      </div>
-    </OnboardingShell>
+          <p className="text-center text-sm">
+            <Link
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+              to={returnHref}
+            >
+              {returnLabel}
+            </Link>
+          </p>
+        </div>
+      </OnboardingShell>
+    </div>
   );
 }
 
@@ -549,66 +564,68 @@ export function AcceptInvitePage() {
   }
 
   return (
-    <OnboardingShell
-      description={description}
-      progress={null}
-      title={t("acceptInvite.title")}
-      width="sm"
-    >
-      <div className="flex flex-col gap-6">
-        {errorMessage ? (
-          <p className="text-center text-sm text-destructive">{errorMessage}</p>
-        ) : null}
+    <div data-ph-no-capture>
+      <OnboardingShell
+        description={description}
+        progress={null}
+        title={t("acceptInvite.title")}
+        width="sm"
+      >
+        <div className="flex flex-col gap-6">
+          {errorMessage ? (
+            <p className="text-center text-sm text-destructive">{errorMessage}</p>
+          ) : null}
 
-        {auth.isAuthenticated ? (
-          <form className="flex flex-col" onSubmit={handleSubmit}>
-            <Button
-              className="h-11 w-full"
-              disabled={
-                !isInvitationValid ||
-                isSubmitting ||
-                isPreviewLoading
-              }
-              loading={isSubmitting}
-              loadingLabel={t("acceptInvite.submitting")}
-              type="submit"
-            >
-              {t("acceptInvite.submit")}
-            </Button>
-          </form>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <Button
-              className="h-11 w-full"
-              disabled={!isInvitationValid || isPreviewLoading}
-              render={<Link to={loginHref} />}
-              type="button"
-            >
-              {t("acceptInvite.signIn")}
-            </Button>
-            <Button
-              className="h-11 w-full"
-              disabled={!isInvitationValid || isPreviewLoading}
-              render={<Link to={signupHref} />}
-              type="button"
-              variant="outline"
-            >
-              {t("acceptInvite.createAccount")}
-            </Button>
-          </div>
-        )}
+          {auth.isAuthenticated ? (
+            <form className="flex flex-col" onSubmit={handleSubmit}>
+              <Button
+                className="h-11 w-full"
+                disabled={
+                  !isInvitationValid ||
+                  isSubmitting ||
+                  isPreviewLoading
+                }
+                loading={isSubmitting}
+                loadingLabel={t("acceptInvite.submitting")}
+                type="submit"
+              >
+                {t("acceptInvite.submit")}
+              </Button>
+            </form>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <Button
+                className="h-11 w-full"
+                disabled={!isInvitationValid || isPreviewLoading}
+                render={<Link to={loginHref} />}
+                type="button"
+              >
+                {t("acceptInvite.signIn")}
+              </Button>
+              <Button
+                className="h-11 w-full"
+                disabled={!isInvitationValid || isPreviewLoading}
+                render={<Link to={signupHref} />}
+                type="button"
+                variant="outline"
+              >
+                {t("acceptInvite.createAccount")}
+              </Button>
+            </div>
+          )}
 
-        <p className="text-center text-sm">
-          <Link
-            className="font-medium text-foreground underline-offset-4 hover:underline"
-            to={auth.isAuthenticated ? "/settings/team" : "/login"}
-          >
-            {auth.isAuthenticated
-              ? t("acceptInvite.backToSettings")
-              : t("acceptInvite.backToLogin")}
-          </Link>
-        </p>
-      </div>
-    </OnboardingShell>
+          <p className="text-center text-sm">
+            <Link
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+              to={auth.isAuthenticated ? "/settings/team" : "/login"}
+            >
+              {auth.isAuthenticated
+                ? t("acceptInvite.backToSettings")
+                : t("acceptInvite.backToLogin")}
+            </Link>
+          </p>
+        </div>
+      </OnboardingShell>
+    </div>
   );
 }

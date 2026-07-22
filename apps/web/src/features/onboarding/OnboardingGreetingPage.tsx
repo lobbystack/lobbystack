@@ -17,6 +17,7 @@ import { useObservedMutation } from "@/lib/observed-convex";
 type OnboardingGreetingPageProps = {
   businessId: Id<"businesses">;
   businessName?: string;
+  initialGreeting?: string;
   onSignOut: () => void;
   progressNavigableUntil?: number;
 };
@@ -32,6 +33,7 @@ function buildDefaultGreeting(name: string | undefined): string {
 export function OnboardingGreetingPage({
   businessId,
   businessName,
+  initialGreeting,
   onSignOut,
   progressNavigableUntil,
 }: OnboardingGreetingPageProps) {
@@ -40,18 +42,28 @@ export function OnboardingGreetingPage({
   const submitOnboardingGreeting = useObservedMutation(
     api.onboarding.greeting.submitOnboardingGreeting,
   );
-  const [greeting, setGreeting] = useState(() => buildDefaultGreeting(businessName));
+  const [greeting, setGreeting] = useState(
+    () => initialGreeting?.trim() || buildDefaultGreeting(businessName),
+  );
   const [hasUserEdited, setHasUserEdited] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // If the businessName arrives later (Convex query resolves after mount), update
-  // the prefilled greeting unless the user already started typing.
+  // Prefer a persisted greeting (e.g. from a claimed prospect demo) when it
+  // resolves after mount, then fall back to the default built from the
+  // business name — unless the user already started typing.
   useEffect(() => {
-    if (!hasUserEdited && businessName) {
+    if (hasUserEdited) {
+      return;
+    }
+    if (initialGreeting && initialGreeting.trim()) {
+      setGreeting(initialGreeting.trim());
+      return;
+    }
+    if (businessName) {
       setGreeting(buildDefaultGreeting(businessName));
     }
-  }, [businessName, hasUserEdited]);
+  }, [businessName, hasUserEdited, initialGreeting]);
 
   const trimmed = greeting.trim();
 

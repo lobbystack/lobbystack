@@ -1,4 +1,5 @@
 import type { Id } from "../_generated/dataModel";
+import { redactSensitiveUrlValue } from "../../packages/telemetry/src/index";
 
 export type TelemetryScalar = string | number | boolean | null;
 export type TelemetryValue =
@@ -129,7 +130,10 @@ function redactValue(value: TelemetryValue | undefined): TelemetryValue | undefi
   if (value === undefined || value === null) {
     return value;
   }
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+  if (typeof value === "string") {
+    return redactSensitiveUrlValue(value);
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
     return value;
   }
   if (Array.isArray(value)) {

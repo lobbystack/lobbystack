@@ -255,6 +255,36 @@ describe("telemetry redaction", () => {
     expect(redacted.$exception_message).toBe("[redacted]");
   });
 
+  it("redacts bearer tokens embedded in telemetry URL values", () => {
+    const redacted = redactTelemetryProperties({
+      originUrl: "https://app.lobbystack.com/demo/acme-secret-token?source=campaign",
+      fragmentUrl:
+        "https://app.lobbystack.com/demo#prospect_demo_token=acme-secret-token",
+      confirmationUrl:
+        "https://app.lobbystack.com/confirm-email-change?token=secret&email=person%40example.com",
+      signupUrl:
+        "https://app.lobbystack.com/signup?returnTo=%2Fclaim-demo%3Ftoken%3Dacme-secret-token",
+      errorDetail:
+        "Request failed while loading https://app.lobbystack.com/demo/acme-secret-token",
+      statusDetail: "Invalid token",
+    });
+
+    expect(redacted.originUrl).toBe(
+      "https://app.lobbystack.com/demo/[redacted]?source=campaign",
+    );
+    expect(redacted.fragmentUrl).toBe("https://app.lobbystack.com/demo");
+    expect(redacted.confirmationUrl).toBe(
+      "https://app.lobbystack.com/confirm-email-change",
+    );
+    expect(redacted.signupUrl).toBe(
+      "https://app.lobbystack.com/signup?returnTo=%2Fclaim-demo",
+    );
+    expect(redacted.errorDetail).toBe(
+      "Request failed while loading https://app.lobbystack.com/demo/[redacted]",
+    );
+    expect(redacted.statusDetail).toBe("Invalid token");
+  });
+
   it("builds metadata-only AI generation properties without message content", () => {
     const properties = buildPostHogAiGenerationProperties({
       traceId: "trace-1",

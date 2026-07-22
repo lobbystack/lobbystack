@@ -110,6 +110,92 @@ async function buildWebsiteBusinessPatch(
   return patch;
 }
 
+async function startOrReuseWebsiteIngestion(
+  ctx: MutationCtx,
+  args: SubmitWebsiteIngestionArgs,
+): Promise<SubmitWebsiteIngestionResult> {
+  const existingJobs = await ctx.db
+    .query("website_ingestion_jobs")
+    .withIndex("by_business_id_and_website_url", (q) =>
+      q.eq("businessId", args.businessId).eq("websiteUrl", args.websiteUrl),
+    )
+    .collect();
+  const existingActiveJob = existingJobs.find((job) =>
+    ACTIVE_WEBSITE_INGESTION_STATUSES.includes(
+      job.status as (typeof ACTIVE_WEBSITE_INGESTION_STATUSES)[number],
+    ),
+  );
+
+  if (existingActiveJob) {
+    if (!existingActiveJob.workflowId) {
+      const workflowId = await workflowManager.start(
+        ctx,
+        internal.ai.workflows.runtime.importWebsiteKnowledgeWorkflow,
+        {
+          websiteIngestionJobId: existingActiveJob._id,
+        },
+      );
+
+      await ctx.db.patch(existingActiveJob._id, {
+        workflowId,
+      });
+    }
+
+    await ctx.db.patch(
+      args.businessId,
+      await buildWebsiteBusinessPatch(ctx, args),
+    );
+
+    return {
+      status: "submitted",
+      websiteUrl: args.websiteUrl,
+      websiteIngestionJobId: existingActiveJob._id,
+    };
+  }
+
+  const websiteIngestionJobId = await ctx.db.insert("website_ingestion_jobs", {
+    businessId: args.businessId,
+    websiteUrl: args.websiteUrl,
+    provider: WEBSITE_INGESTION_PROVIDER,
+    status: "queued",
+    crawlMode: WEBSITE_CRAWL_FIRECRAWL_MODE,
+    fallbackTriggered: false,
+    pageLimit: WEBSITE_CRAWL_PAGE_LIMIT,
+    depth: WEBSITE_CRAWL_DEPTH,
+    importedCount: 0,
+    indexedCount: 0,
+    errorCount: 0,
+  });
+
+  try {
+    const workflowId = await workflowManager.start(
+      ctx,
+      internal.ai.workflows.runtime.importWebsiteKnowledgeWorkflow,
+      {
+        websiteIngestionJobId,
+      },
+    );
+
+    await ctx.db.patch(websiteIngestionJobId, {
+      workflowId,
+    });
+
+    await ctx.db.patch(
+      args.businessId,
+      await buildWebsiteBusinessPatch(ctx, args),
+    );
+  } catch (error) {
+    await ctx.db.delete(websiteIngestionJobId);
+    throw error;
+  }
+
+  return {
+    status: "submitted",
+    websiteUrl: args.websiteUrl,
+    websiteIngestionJobId,
+  };
+}
+
 async function cancelWorkflowIfRunning(ctx: MutationCtx, workflowId: string): Promise<void> {
   try {
     await workflowManager.cancel(ctx, workflowId as WorkflowId);
@@ -225,87 +311,27 @@ export const submitWebsiteIngestionAfterPreflight = internalMutation({
     args: SubmitWebsiteIngestionArgs,
   ): Promise<SubmitWebsiteIngestionResult> => {
     await requireTenantAdminMembership(ctx, args.businessId);
+    return await startOrReuseWebsiteIngestion(ctx, args);
+  },
+});
 
-    const existingJobs = await ctx.db
-      .query("website_ingestion_jobs")
-      .withIndex("by_business_id_and_website_url", (q) =>
-        q.eq("businessId", args.businessId).eq("websiteUrl", args.websiteUrl),
-      )
-      .collect();
-    const existingActiveJob = existingJobs.find((job) =>
-      ACTIVE_WEBSITE_INGESTION_STATUSES.includes(
-        job.status as (typeof ACTIVE_WEBSITE_INGESTION_STATUSES)[number],
-      ),
-    );
-
-    if (existingActiveJob) {
-      if (!existingActiveJob.workflowId) {
-        const workflowId = await workflowManager.start(
-          ctx,
-          internal.ai.workflows.runtime.importWebsiteKnowledgeWorkflow,
-          {
-            websiteIngestionJobId: existingActiveJob._id,
-          },
-        );
-
-        await ctx.db.patch(existingActiveJob._id, {
-          workflowId,
-        });
-      }
-
-      await ctx.db.patch(
-        args.businessId,
-        await buildWebsiteBusinessPatch(ctx, args),
-      );
-
-      return {
-        status: "submitted",
-        websiteUrl: args.websiteUrl,
-        websiteIngestionJobId: existingActiveJob._id,
-      };
+export const submitWebsiteIngestionForSystem = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    websiteUrl: v.string(),
+    nextOnboardingStage: v.optional(
+      v.union(v.literal("knowledge"), v.literal("phone_number")),
+    ),
+  },
+  handler: async (
+    ctx: MutationCtx,
+    args: SubmitWebsiteIngestionArgs,
+  ): Promise<SubmitWebsiteIngestionResult> => {
+    const business = await ctx.db.get(args.businessId);
+    if (!business) {
+      throw new Error("Business not found.");
     }
-
-    const websiteIngestionJobId = await ctx.db.insert("website_ingestion_jobs", {
-      businessId: args.businessId,
-      websiteUrl: args.websiteUrl,
-      provider: WEBSITE_INGESTION_PROVIDER,
-      status: "queued",
-      crawlMode: WEBSITE_CRAWL_FIRECRAWL_MODE,
-      fallbackTriggered: false,
-      pageLimit: WEBSITE_CRAWL_PAGE_LIMIT,
-      depth: WEBSITE_CRAWL_DEPTH,
-      importedCount: 0,
-      indexedCount: 0,
-      errorCount: 0,
-    });
-
-    try {
-      const workflowId = await workflowManager.start(
-        ctx,
-        internal.ai.workflows.runtime.importWebsiteKnowledgeWorkflow,
-        {
-          websiteIngestionJobId,
-        },
-      );
-
-      await ctx.db.patch(websiteIngestionJobId, {
-        workflowId,
-      });
-
-      await ctx.db.patch(
-        args.businessId,
-        await buildWebsiteBusinessPatch(ctx, args),
-      );
-    } catch (error) {
-      await ctx.db.delete(websiteIngestionJobId);
-      throw error;
-    }
-
-    return {
-      status: "submitted",
-      websiteUrl: args.websiteUrl,
-      websiteIngestionJobId,
-    };
+    return await startOrReuseWebsiteIngestion(ctx, args);
   },
 });
 
