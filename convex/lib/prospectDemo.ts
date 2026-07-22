@@ -1,4 +1,5 @@
-export const PROSPECT_DEMO_TOKEN_LENGTH = 32;
+export const PROSPECT_DEMO_TOKEN_OPAQUE_LENGTH = 8;
+export const PROSPECT_DEMO_TOKEN_SLUG_MAX_LENGTH = 48;
 export const PROSPECT_DEMO_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 export const PROSPECT_DEMO_WIDGET_ID = "lobbystack-prospect-demo";
 export const PROSPECT_DEMO_SESSION_PURPOSE = "prospect_demo";
@@ -23,8 +24,8 @@ export const PROSPECT_DEMO_STATUSES = [
 
 export type ProspectDemoStatus = (typeof PROSPECT_DEMO_STATUSES)[number];
 
-export function generateProspectDemoToken(
-  length: number = PROSPECT_DEMO_TOKEN_LENGTH,
+function generateOpaqueTokenSegment(
+  length: number = PROSPECT_DEMO_TOKEN_OPAQUE_LENGTH,
 ): string {
   const alphabet =
     "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -46,6 +47,18 @@ export function generateProspectDemoToken(
   return result.join("");
 }
 
+/**
+ * Builds a hybrid public demo token: `{business-slug}-{opaque}`.
+ * The slug is human-readable; the opaque suffix keeps the link unguessable.
+ */
+export function generateProspectDemoToken(businessName: string): string {
+  const slugified = slugifyProspectDemoName(businessName)
+    .slice(0, PROSPECT_DEMO_TOKEN_SLUG_MAX_LENGTH)
+    .replace(/-+$/g, "");
+  const slug = slugified.length > 0 ? slugified : "demo";
+  return `${slug}-${generateOpaqueTokenSegment()}`;
+}
+
 export async function hashProspectDemoToken(token: string): Promise<string> {
   const encoded = new TextEncoder().encode(token);
   const hash = await crypto.subtle.digest("SHA-256", encoded);
@@ -57,6 +70,8 @@ export async function hashProspectDemoToken(token: string): Promise<string> {
 export function slugifyProspectDemoName(value: string): string {
   return value
     .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");

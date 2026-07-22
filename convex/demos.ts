@@ -196,7 +196,7 @@ export const createProspectDemoRecord = internalMutation({
       { businessId },
     );
 
-    const token = generateProspectDemoToken();
+    const token = generateProspectDemoToken(name);
     const tokenHash = await hashProspectDemoToken(token);
     const now = Date.now();
     const demoId = await ctx.db.insert("prospect_demos", {
@@ -384,6 +384,29 @@ export const setProspectDemoPrompts = internalMutation({
       .slice(0, PROSPECT_DEMO_MAX_SUGGESTED_PROMPTS);
     await ctx.db.patch(demo._id, { suggestedPrompts });
     return { suggestedPrompts };
+  },
+});
+
+export const rotateProspectDemoToken = internalMutation({
+  args: {
+    demoId: v.id("prospect_demos"),
+  },
+  handler: async (ctx, args) => {
+    const demo = await requireProspectDemo(ctx, args.demoId);
+    if (demo.status === "claimed" || demo.status === "revoked") {
+      throw new Error("Cannot rotate token for a closed prospect demo.");
+    }
+
+    const token = generateProspectDemoToken(demo.businessName);
+    const tokenHash = await hashProspectDemoToken(token);
+    await ctx.db.patch(demo._id, { tokenHash });
+
+    return {
+      demoId: demo._id,
+      token,
+      demoUrl: buildProspectDemoPublicUrl(token),
+      claimSignupUrl: buildProspectDemoSignupUrl(token),
+    };
   },
 });
 

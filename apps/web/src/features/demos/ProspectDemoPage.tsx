@@ -87,26 +87,27 @@ function DemoShell({
     <div
       className={cn(
         "flex min-h-svh flex-col bg-background text-foreground",
-        "lg:h-svh lg:overflow-hidden",
+        // Only lock to the viewport on desktop two-column layout.
+        "xl:h-svh xl:overflow-hidden",
       )}
     >
       <LandingNavbar locale={marketingLocale} />
       <div
         className={cn(
           "flex flex-1 flex-col items-center px-6 pt-12 pb-8",
-          "lg:min-h-0 lg:overflow-hidden lg:pt-10 lg:pb-6",
+          "xl:min-h-0 xl:overflow-hidden xl:pt-10 xl:pb-6",
         )}
       >
         <div
           className={cn(
             "flex w-full flex-1 flex-col items-center",
             wide ? "max-w-7xl" : "max-w-xl",
-            "lg:min-h-0",
+            "xl:min-h-0",
           )}
         >
           {children}
           {footer ? (
-            <p className="mt-auto shrink-0 pt-6 text-center text-sm text-muted-foreground lg:pt-4">
+            <p className="mt-auto hidden shrink-0 pt-4 text-center text-sm text-muted-foreground xl:block">
               {footer}
             </p>
           ) : null}
@@ -226,10 +227,24 @@ function ProspectDemoActive({
         </h1>
       </div>
 
-      <div className="mt-8 grid w-full min-w-0 flex-1 items-center gap-8 md:gap-12 lg:min-h-0 xl:grid-cols-2 xl:gap-16">
-        <div className="flex w-full min-w-0 flex-col text-left">
+      <div className="mt-8 grid w-full min-w-0 flex-1 items-center gap-8 md:gap-12 xl:min-h-0 xl:grid-cols-2 xl:gap-16">
+        <div className="order-1 flex w-full min-w-0 justify-center xl:order-2 xl:justify-end">
+          <div className="flex w-full max-w-[22rem] flex-col items-center md:max-w-[30rem] lg:max-w-[min(30rem,calc(100svh-18rem))] xl:max-w-[min(100%,calc(100svh-18rem))]">
+            <AuraVoiceDemo
+              auraTone="light"
+              businessSlug={businessSlug}
+              className="w-full"
+              endpoint={getWebCallEndpoint()}
+              getStartPayload={getStartPayload}
+              onEvent={handleEvent}
+              widgetId={PROSPECT_DEMO_WIDGET_ID}
+            />
+          </div>
+        </div>
+
+        <div className="order-2 flex w-full min-w-0 max-w-lg flex-col justify-self-center text-left xl:order-1 xl:max-w-none xl:justify-self-stretch">
           {prompts.length > 0 ? (
-            <div className="w-full max-w-lg">
+            <div className="w-full">
               <h2 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
                 {t("active.promptsTitle")}
               </h2>
@@ -244,6 +259,8 @@ function ProspectDemoActive({
           <p
             className={cn(
               "max-w-md text-xs leading-5 text-muted-foreground",
+              "text-center xl:text-left",
+              "mx-auto xl:mx-0",
               prompts.length > 0 ? "mt-8" : "mt-0",
             )}
           >
@@ -251,26 +268,19 @@ function ProspectDemoActive({
           </p>
 
           <Link
-            className={cn(buttonVariants(), "mt-8 h-11 w-full max-w-sm")}
+            className={cn(
+              buttonVariants(),
+              "mx-auto mt-8 h-11 w-full max-w-sm xl:mx-0",
+            )}
             onClick={handleSignupClick}
             to={signupPath}
           >
             {t("active.claimCta")}
           </Link>
-        </div>
 
-        <div className="flex w-full min-w-0 justify-center xl:justify-end">
-          <div className="flex w-full max-w-[22rem] flex-col items-center md:max-w-[30rem] lg:max-w-[min(30rem,calc(100svh-18rem))] xl:max-w-[min(100%,calc(100svh-18rem))]">
-            <AuraVoiceDemo
-              auraTone="light"
-              businessSlug={businessSlug}
-              className="w-full"
-              endpoint={getWebCallEndpoint()}
-              getStartPayload={getStartPayload}
-              onEvent={handleEvent}
-              widgetId={PROSPECT_DEMO_WIDGET_ID}
-            />
-          </div>
+          <p className="mt-4 text-center text-sm text-muted-foreground xl:hidden">
+            {t("active.startHint")}
+          </p>
         </div>
       </div>
     </DemoShell>

@@ -26,7 +26,7 @@ async function seedProspectDemoFixture(input?: {
   const t = convexTest(schema, modules);
   registerRateLimiter(t as unknown as Parameters<typeof registerRateLimiter>[0]);
 
-  const token = generateProspectDemoToken();
+  const token = generateProspectDemoToken("Acme Demo");
   const tokenHash = await hashProspectDemoToken(token);
   const now = Date.now();
 
@@ -307,7 +307,7 @@ describe("prospect demos", () => {
     const validation = await t.query(
       internal.demos.validateProspectDemoForWebVoice,
       {
-        token: generateProspectDemoToken(),
+        token: generateProspectDemoToken("Other Business"),
         businessSlug: "prospect-acme",
       },
     );
