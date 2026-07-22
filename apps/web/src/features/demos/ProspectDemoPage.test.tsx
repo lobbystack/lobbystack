@@ -36,13 +36,22 @@ vi.mock("next-themes", () => ({
   }),
 }));
 
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string, opts?: Record<string, unknown>) =>
-      opts?.businessName ? `${key}::${String(opts.businessName)}` : key,
-    i18n: { language: "en", changeLanguage: vi.fn() },
-  }),
-}));
+vi.mock("react-i18next", () => {
+  const t = (key: string, opts?: Record<string, unknown>) =>
+    opts?.businessName ? `${key}::${String(opts.businessName)}` : key;
+
+  return {
+    useTranslation: () => ({
+      t,
+      i18n: {
+        language: "en",
+        resolvedLanguage: "en",
+        getFixedT: () => t,
+        loadLanguages: vi.fn(() => Promise.resolve()),
+      },
+    }),
+  };
+});
 
 function renderDemoPage(token = "tok_123") {
   return render(

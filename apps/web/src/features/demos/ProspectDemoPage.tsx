@@ -62,27 +62,23 @@ function useForceLightTheme(): void {
   }, [setTheme]);
 }
 
-/** Lock UI copy to the demo locale while this page is open; restore on leave. */
-function useForceDemoLocale(demoLocale: string | undefined): void {
-  const { i18n } = useTranslation();
+/**
+ * Resolve demo UI copy in the demo's locale without calling i18n.changeLanguage.
+ * Mutating the global language fights LocaleProvider for authenticated users and
+ * can infinite-loop via languageChanged → setState.
+ */
+function useDemoTranslation(demoLocale: string | undefined) {
+  const { i18n } = useTranslation("demos");
+  const locale =
+    normalizeLocale(demoLocale) ??
+    normalizeLocale(i18n.resolvedLanguage ?? i18n.language) ??
+    "en";
 
   useEffect(() => {
-    const target = normalizeLocale(demoLocale);
-    if (!target) {
-      return;
-    }
+    void i18n.loadLanguages(locale);
+  }, [i18n, locale]);
 
-    const previous = i18n.language;
-    if (normalizeLocale(previous) === target) {
-      return;
-    }
-
-    void i18n.changeLanguage(target);
-
-    return () => {
-      void i18n.changeLanguage(previous);
-    };
-  }, [demoLocale, i18n]);
+  return i18n.getFixedT(locale, "demos");
 }
 
 function resolveMarketingLocale(
@@ -160,10 +156,12 @@ function DemoStateCard({
 
 function ProspectDemoLoading({
   marketingLocale,
+  demoLocale,
 }: {
   marketingLocale: MarketingLocale;
+  demoLocale?: string;
 }) {
-  const { t } = useTranslation("demos");
+  const t = useDemoTranslation(demoLocale);
 
   return (
     <DemoShell marketingLocale={marketingLocale}>
@@ -179,12 +177,14 @@ function ProspectDemoInactive({
   state,
   businessName,
   marketingLocale,
+  demoLocale,
 }: {
   state: "invalid" | "preparing" | "expired" | "revoked" | "claimed";
   businessName?: string;
   marketingLocale: MarketingLocale;
+  demoLocale?: string;
 }) {
-  const { t } = useTranslation("demos");
+  const t = useDemoTranslation(demoLocale);
   const safeName = businessName?.trim();
   const title =
     state !== "invalid" && safeName
@@ -205,7 +205,7 @@ function ProspectDemoActive({
   demo: ActiveProspectDemo;
   token: string;
 }) {
-  const { t } = useTranslation("demos");
+  const t = useDemoTranslation(demo.locale);
   const { demoId, campaignId, businessSlug, suggestedPrompts, signupPath } = demo;
 
   useEffect(() => {
@@ -321,15 +321,25 @@ export function ProspectDemoPage() {
   );
   const demoLocale =
     preview && "locale" in preview ? preview.locale : undefined;
-  useForceDemoLocale(demoLocale);
   const marketingLocale = resolveMarketingLocale(demoLocale, i18n.language);
 
   if (!token) {
-    return <ProspectDemoInactive marketingLocale={marketingLocale} state="invalid" />;
+    return (
+      <ProspectDemoInactive
+        demoLocale={demoLocale}
+        marketingLocale={marketingLocale}
+        state="invalid"
+      />
+    );
   }
 
   if (preview === undefined) {
-    return <ProspectDemoLoading marketingLocale={marketingLocale} />;
+    return (
+      <ProspectDemoLoading
+        demoLocale={demoLocale}
+        marketingLocale={marketingLocale}
+      />
+    );
   }
 
   if (preview.state === "active") {
@@ -338,6 +348,7 @@ export function ProspectDemoPage() {
 
   return (
     <ProspectDemoInactive
+      demoLocale={demoLocale}
       marketingLocale={marketingLocale}
       state={preview.state}
       {...("businessName" in preview && preview.businessName
