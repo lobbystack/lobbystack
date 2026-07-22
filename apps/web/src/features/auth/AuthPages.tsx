@@ -14,6 +14,7 @@ import { SignupForm } from "@/components/signup-form";
 import { Button } from "@/components/ui/button";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
 import { captureAnalyticsEvent } from "@/lib/analytics";
+import { buildAuthPathWithReturnTo } from "@/lib/auth-return-to";
 import { isValidEmailAddress, meetsSignupPasswordRequirements } from "@/lib/auth-validation";
 import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 
@@ -86,10 +87,15 @@ function isResetRequestLookupError(error: unknown): boolean {
 export function LoginPage() {
   const { t } = useTranslation("auth");
   const { signIn } = useAuthActions();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const signUpHref = buildAuthPathWithReturnTo(
+    "/signup",
+    searchParams.get("returnTo"),
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -140,6 +146,7 @@ export function LoginPage() {
         onPasswordChange={setPassword}
         onSubmit={handleSubmit}
         password={password}
+        signUpHref={signUpHref}
       />
     </OnboardingShell>
   );
@@ -148,6 +155,7 @@ export function LoginPage() {
 export function SignupPage() {
   const { t } = useTranslation("auth");
   const { signIn } = useAuthActions();
+  const [searchParams] = useSearchParams();
   const configuredTurnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim();
   const turnstileSiteKey =
     configuredTurnstileSiteKey || (import.meta.env.DEV ? DEV_TURNSTILE_SITE_KEY : undefined);
@@ -159,6 +167,10 @@ export function SignupPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const pendingTurnstileSubmitRef = useRef(false);
   const isSignupReady = isValidEmailAddress(email) && meetsSignupPasswordRequirements(password);
+  const signInHref = buildAuthPathWithReturnTo(
+    "/login",
+    searchParams.get("returnTo"),
+  );
 
   const handleTurnstileError = useCallback(() => {
     pendingTurnstileSubmitRef.current = false;
@@ -288,6 +300,7 @@ export function SignupPage() {
         onTurnstileError={handleTurnstileError}
         onTurnstileTokenChange={handleTurnstileTokenChange}
         password={password}
+        signInHref={signInHref}
         turnstileResetKey={turnstileResetKey}
         turnstileSiteKey={turnstileSiteKey || undefined}
       />

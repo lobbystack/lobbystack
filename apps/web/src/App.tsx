@@ -13,6 +13,10 @@ import {
   WorkspaceRouteSkeleton,
 } from "@/components/app-route-skeletons";
 import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
+import {
+  buildAuthPathWithReturnTo,
+  getSafeReturnTo,
+} from "@/lib/auth-return-to";
 import { AuthenticatedLayout } from "@/components/layout/authenticated-layout";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -160,13 +164,17 @@ function AffiliateReferralCapture() {
 
 function RequireAuth(props: { children: ReactNode }) {
   const auth = useConvexAuth();
+  const location = useLocation();
 
   if (auth.isLoading) {
     return <LoadingScreen />;
   }
 
   if (!auth.isAuthenticated) {
-    return <Navigate replace to="/login" />;
+    const returnTo = `${location.pathname}${location.search}${location.hash}`;
+    return (
+      <Navigate replace to={buildAuthPathWithReturnTo("/login", returnTo)} />
+    );
   }
 
   return props.children;
@@ -175,18 +183,14 @@ function RequireAuth(props: { children: ReactNode }) {
 function PublicOnly(props: { children: ReactNode }) {
   const auth = useConvexAuth();
   const [searchParams] = useSearchParams();
-  const returnTo = searchParams.get("returnTo");
+  const returnTo = getSafeReturnTo(searchParams.get("returnTo"));
 
   if (auth.isLoading) {
     return <LoadingScreen />;
   }
 
   if (auth.isAuthenticated) {
-    const destination =
-      returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
-        ? returnTo
-        : "/";
-    return <Navigate replace to={destination} />;
+    return <Navigate replace to={returnTo ?? "/"} />;
   }
 
   return props.children;
