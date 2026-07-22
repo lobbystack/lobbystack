@@ -84,20 +84,33 @@ function DemoShell({
   marketingLocale?: MarketingLocale;
 }) {
   return (
-    <div className="flex min-h-svh flex-col bg-background text-foreground">
+    <div
+      className={cn(
+        "flex min-h-svh flex-col bg-background text-foreground",
+        "lg:h-svh lg:overflow-hidden",
+      )}
+    >
       <LandingNavbar locale={marketingLocale} />
-      <div className="flex flex-1 flex-col items-center justify-center px-6 py-16">
+      <div
+        className={cn(
+          "flex flex-1 flex-col items-center px-6 pt-12 pb-8",
+          "lg:min-h-0 lg:overflow-hidden lg:pt-10 lg:pb-6",
+        )}
+      >
         <div
           className={cn(
-            "flex w-full flex-col items-center",
+            "flex w-full flex-1 flex-col items-center",
             wide ? "max-w-7xl" : "max-w-xl",
+            "lg:min-h-0",
           )}
         >
           {children}
+          {footer ? (
+            <p className="mt-auto shrink-0 pt-6 text-center text-sm text-muted-foreground lg:pt-4">
+              {footer}
+            </p>
+          ) : null}
         </div>
-        {footer ? (
-          <p className="mt-16 text-sm text-muted-foreground">{footer}</p>
-        ) : null}
       </div>
     </div>
   );
@@ -213,7 +226,7 @@ function ProspectDemoActive({
         </h1>
       </div>
 
-      <div className="mt-10 grid w-full min-w-0 items-center gap-10 md:gap-12 xl:grid-cols-2 xl:gap-16">
+      <div className="mt-8 grid w-full min-w-0 flex-1 items-center gap-8 md:gap-12 lg:min-h-0 xl:grid-cols-2 xl:gap-16">
         <div className="flex w-full min-w-0 flex-col text-left">
           {prompts.length > 0 ? (
             <div className="w-full max-w-lg">
@@ -247,7 +260,7 @@ function ProspectDemoActive({
         </div>
 
         <div className="flex w-full min-w-0 justify-center xl:justify-end">
-          <div className="flex w-full max-w-[22rem] flex-col items-center md:max-w-[30rem] xl:max-w-none">
+          <div className="flex w-full max-w-[22rem] flex-col items-center md:max-w-[30rem] lg:max-w-[min(30rem,calc(100svh-18rem))] xl:max-w-[min(100%,calc(100svh-18rem))]">
             <AuraVoiceDemo
               auraTone="light"
               businessSlug={businessSlug}
