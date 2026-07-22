@@ -15,6 +15,7 @@ import {
 } from "@/components/web-voice/config";
 import { buttonVariants } from "@/components/ui/button";
 import { captureAnalyticsEvent } from "@/lib/analytics";
+import { normalizeLocale } from "@/lib/locale";
 import type { MarketingLocale } from "@/lib/marketing-site-url";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +60,29 @@ function useForceLightTheme(): void {
       );
     };
   }, [setTheme]);
+}
+
+/** Lock UI copy to the demo locale while this page is open; restore on leave. */
+function useForceDemoLocale(demoLocale: string | undefined): void {
+  const { i18n } = useTranslation();
+
+  useEffect(() => {
+    const target = normalizeLocale(demoLocale);
+    if (!target) {
+      return;
+    }
+
+    const previous = i18n.language;
+    if (normalizeLocale(previous) === target) {
+      return;
+    }
+
+    void i18n.changeLanguage(target);
+
+    return () => {
+      void i18n.changeLanguage(previous);
+    };
+  }, [demoLocale, i18n]);
 }
 
 function resolveMarketingLocale(
@@ -295,10 +319,10 @@ export function ProspectDemoPage() {
     api.demos.previewProspectDemo,
     token ? { token } : "skip",
   );
-  const marketingLocale = resolveMarketingLocale(
-    preview && "locale" in preview ? preview.locale : undefined,
-    i18n.language,
-  );
+  const demoLocale =
+    preview && "locale" in preview ? preview.locale : undefined;
+  useForceDemoLocale(demoLocale);
+  const marketingLocale = resolveMarketingLocale(demoLocale, i18n.language);
 
   if (!token) {
     return <ProspectDemoInactive marketingLocale={marketingLocale} state="invalid" />;

@@ -40,7 +40,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) =>
       opts?.businessName ? `${key}::${String(opts.businessName)}` : key,
-    i18n: { language: "en" },
+    i18n: { language: "en", changeLanguage: vi.fn() },
   }),
 }));
 

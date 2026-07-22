@@ -539,6 +539,7 @@ export const previewProspectDemo = query({
       return {
         state,
         businessName: demo.businessName,
+        locale: demo.locale,
         expiresAt: demo.expiresAt,
       };
     }
