@@ -76,7 +76,8 @@ describe("ProspectDemoPage", () => {
   it("renders the loading state while the preview query resolves", () => {
     useQueryMock.mockReturnValue(undefined);
     renderDemoPage();
-    expect(screen.getByText("loading.description")).toBeTruthy();
+    expect(screen.getByRole("status")).toBeTruthy();
+    expect(screen.getByText("loading.label")).toBeTruthy();
   });
 
   it("renders the invalid state", () => {

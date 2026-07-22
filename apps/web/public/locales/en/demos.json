@@ -1,7 +1,6 @@
 {
   "loading": {
-    "title": "Loading demo",
-    "description": "Getting your receptionist demo ready..."
+    "label": "Loading..."
   },
   "active": {
     "title": "Demo for {{businessName}}",

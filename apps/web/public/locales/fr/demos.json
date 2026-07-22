@@ -1,7 +1,6 @@
 {
   "loading": {
-    "title": "Chargement de la démo",
-    "description": "Préparation de votre démo de réceptionniste..."
+    "label": "Chargement..."
   },
   "active": {
     "title": "Démo pour {{businessName}}",

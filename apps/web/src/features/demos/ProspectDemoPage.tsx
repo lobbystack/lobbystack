@@ -121,7 +121,7 @@ function DemoShell({
         <div
           className={cn(
             "flex w-full flex-1 flex-col items-center",
-            wide ? "max-w-7xl" : "max-w-xl",
+            wide ? "max-w-7xl" : "max-w-xl justify-center",
             "xl:min-h-0",
           )}
         >
@@ -165,9 +165,13 @@ function ProspectDemoLoading({
 
   return (
     <DemoShell marketingLocale={marketingLocale}>
-      <div className="flex flex-col items-center gap-3 text-center">
+      <div
+        aria-busy="true"
+        className="flex flex-col items-center gap-3 text-center"
+        role="status"
+      >
         <LoaderCircle className="size-6 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">{t("loading.description")}</p>
+        <p className="text-sm text-muted-foreground">{t("loading.label")}</p>
       </div>
     </DemoShell>
   );
