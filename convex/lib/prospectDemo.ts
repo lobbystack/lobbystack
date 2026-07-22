@@ -83,11 +83,14 @@ export function buildProspectDemoPublicUrl(token: string): string {
     throw new Error("SITE_URL is required to build prospect demo links.");
   }
 
-  return new URL(`/demo/${token}`, siteUrl).toString();
+  const url = new URL("/demo", siteUrl);
+  url.hash = new URLSearchParams({ prospect_demo_token: token }).toString();
+  return url.toString();
 }
 
 export function buildProspectDemoClaimPath(token: string): string {
-  return `/claim-demo?token=${encodeURIComponent(token)}`;
+  const hash = new URLSearchParams({ prospect_demo_token: token }).toString();
+  return `/claim-demo#${hash}`;
 }
 
 export function buildProspectDemoSignupUrl(token: string): string {
@@ -96,9 +99,9 @@ export function buildProspectDemoSignupUrl(token: string): string {
     throw new Error("SITE_URL is required to build prospect demo signup links.");
   }
 
-  const returnTo = buildProspectDemoClaimPath(token);
   const url = new URL("/signup", siteUrl);
-  url.searchParams.set("returnTo", returnTo);
+  url.searchParams.set("returnTo", "/claim-demo");
+  url.hash = new URLSearchParams({ prospect_demo_token: token }).toString();
   return url.toString();
 }
 

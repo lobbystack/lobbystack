@@ -8,6 +8,10 @@ import { api } from "../../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useObservedMutation } from "@/lib/observed-convex";
+import {
+  clearStoredProspectDemoToken,
+  getStoredProspectDemoToken,
+} from "@/lib/prospect-demo-token";
 
 type ClaimStatus = "claiming" | "unavailable" | "error";
 
@@ -37,7 +41,8 @@ export function ClaimDemoPage() {
   const { t } = useTranslation("demos");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get("token")?.trim() ?? "";
+  const token =
+    searchParams.get("token")?.trim() || getStoredProspectDemoToken() || "";
   const claimProspectDemo = useObservedMutation(api.demos.claimProspectDemo);
   const preview = useQuery(
     api.demos.previewProspectDemo,
@@ -85,6 +90,7 @@ export function ClaimDemoPage() {
           prospectDemoId,
           ...(campaignId !== null ? { campaignId } : {}),
         });
+        clearStoredProspectDemoToken();
         navigate("/onboarding/business", { replace: true });
       })
       .catch((error: unknown) => {

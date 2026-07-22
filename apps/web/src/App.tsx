@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useTranslation } from "react-i18next";
+import { redactSensitiveUrlValue } from "@lobbystack/telemetry";
 
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -77,6 +78,7 @@ import {
   captureAnalyticsEvent,
   identifyOperator,
   resetAnalyticsIdentity,
+  syncAnalyticsSessionRecording,
   trackPageView,
 } from "@/lib/analytics";
 import {
@@ -127,7 +129,7 @@ function useAffiliateReferralClickCapture() {
     void recordClick({
       referralCode,
       visitorId: getAffiliateVisitorId(),
-      sourceUrl: window.location.href,
+      sourceUrl: redactSensitiveUrlValue(window.location.href),
     });
   }, [location.search, recordClick]);
 }
@@ -159,6 +161,14 @@ function useAffiliateAttributionBinding(businessId?: Id<"businesses">) {
 
 function AffiliateReferralCapture() {
   useAffiliateReferralClickCapture();
+  return null;
+}
+
+function AnalyticsPrivacySync() {
+  const location = useLocation();
+  useLayoutEffect(() => {
+    syncAnalyticsSessionRecording(location.pathname);
+  }, [location.pathname]);
   return null;
 }
 
@@ -1189,6 +1199,7 @@ export default function App() {
   return (
     <TooltipProvider>
       <BrowserRouter>
+        <AnalyticsPrivacySync />
         <AffiliateReferralCapture />
         <Routes>
           <Route
@@ -1218,6 +1229,7 @@ export default function App() {
           <Route element={<ConfirmEmailChangePage />} path="/confirm-email-change" />
           <Route element={<AcceptInvitePage />} path="/accept-invite" />
           <Route element={<ProspectDemoPage />} path="/demo/:token" />
+          <Route element={<ProspectDemoPage />} path="/demo" />
           <Route
             element={
               <RequireAuth>

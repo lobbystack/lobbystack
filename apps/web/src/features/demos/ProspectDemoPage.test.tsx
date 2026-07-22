@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProspectDemoPage } from "./ProspectDemoPage";
+import { clearStoredProspectDemoToken } from "@/lib/prospect-demo-token";
 
 const { useQueryMock, captureAnalyticsEventMock } = vi.hoisted(() => ({
   useQueryMock: vi.fn(),
@@ -65,6 +66,7 @@ function renderDemoPage(token = "tok_123") {
 
 describe("ProspectDemoPage", () => {
   beforeEach(() => {
+    clearStoredProspectDemoToken();
     useQueryMock.mockReset();
     captureAnalyticsEventMock.mockReset();
   });
@@ -108,7 +110,7 @@ describe("ProspectDemoPage", () => {
       suggestedPrompts: ["What are your hours?", "Do you take walk-ins?"],
       websiteUrl: "https://acme.example",
       expiresAt: Date.now() + 1000,
-      signupPath: "/signup?returnTo=%2Fclaim-demo%3Ftoken%3Dtok_123",
+      signupPath: "/signup?returnTo=%2Fclaim-demo",
       campaignId: "spring",
     });
 

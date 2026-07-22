@@ -441,7 +441,7 @@ export const publishProspectDemo = internalMutation({
   args: {
     demoId: v.id("prospect_demos"),
     suggestedPrompts: v.optional(v.array(v.string())),
-    rawToken: v.string(),
+    tokenHash: v.string(),
   },
   handler: async (ctx, args) => {
     const demo = await requireProspectDemo(ctx, args.demoId);
@@ -455,8 +455,7 @@ export const publishProspectDemo = internalMutation({
       throw new Error("Prospect demo expired.");
     }
 
-    const tokenHash = await hashProspectDemoToken(args.rawToken);
-    if (tokenHash !== demo.tokenHash) {
+    if (args.tokenHash !== demo.tokenHash) {
       throw new Error("Prospect demo token mismatch.");
     }
 
@@ -509,8 +508,6 @@ export const publishProspectDemo = internalMutation({
     return {
       demoId: refreshed._id,
       status: "active" as const,
-      demoUrl: buildProspectDemoPublicUrl(args.rawToken),
-      claimSignupUrl: buildProspectDemoSignupUrl(args.rawToken),
       expiresAt: refreshed.expiresAt,
     };
   },
@@ -587,7 +584,7 @@ export const previewProspectDemo = query({
       suggestedPrompts: demo.suggestedPrompts,
       websiteUrl: demo.websiteUrl,
       expiresAt: demo.expiresAt,
-      signupPath: `/signup?returnTo=${encodeURIComponent(`/claim-demo?token=${token}`)}`,
+      signupPath: `/signup?returnTo=${encodeURIComponent("/claim-demo")}`,
       campaignId: demo.campaignId ?? null,
     };
   },

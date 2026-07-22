@@ -12,6 +12,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { initializeAnalytics } from "@/lib/analytics";
 import { scrubCheckoutSessionTokenFromLocation } from "@/lib/checkout-session-token";
+import { scrubProspectDemoTokenFromLocation } from "@/lib/prospect-demo-token";
 import {
   AppErrorBoundary,
   onCaughtReactError,
@@ -40,6 +41,7 @@ function MissingConvexConfig() {
 const convexUrl = import.meta.env.CONVEX_URL ?? import.meta.env.VITE_CONVEX_URL;
 
 scrubCheckoutSessionTokenFromLocation();
+scrubProspectDemoTokenFromLocation();
 initializeAnalytics();
 
 const root = ReactDOM.createRoot(document.getElementById("root")!, {

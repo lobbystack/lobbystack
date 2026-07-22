@@ -5,6 +5,10 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ClaimDemoPage } from "./ClaimDemoPage";
+import {
+  clearStoredProspectDemoToken,
+  storeProspectDemoToken,
+} from "@/lib/prospect-demo-token";
 
 const {
   useQueryMock,
@@ -66,6 +70,7 @@ function renderStrictClaimPage(token = "tok_123") {
 
 describe("ClaimDemoPage", () => {
   beforeEach(() => {
+    clearStoredProspectDemoToken();
     useQueryMock.mockReset();
     claimProspectDemoMock.mockReset();
     captureAnalyticsEventMock.mockReset();
@@ -151,6 +156,27 @@ describe("ClaimDemoPage", () => {
     );
     expect(navigateMock).toHaveBeenCalledWith("/onboarding/business", {
       replace: true,
+    });
+  });
+
+  it("claims with a token recovered from scrubbed location storage", async () => {
+    storeProspectDemoToken("stored-token");
+    useQueryMock.mockReturnValue({
+      state: "active",
+      demoId: "demo_1",
+      campaignId: null,
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/claim-demo"]}>
+        <ClaimDemoPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(claimProspectDemoMock).toHaveBeenCalledWith({
+        token: "stored-token",
+      });
     });
   });
 

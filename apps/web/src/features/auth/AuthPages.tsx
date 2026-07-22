@@ -446,42 +446,44 @@ export function ConfirmEmailChangePage() {
     : t("confirmEmailChange.invalidLink");
 
   return (
-    <OnboardingShell
-      description={description}
-      progress={null}
-      title={t("confirmEmailChange.title")}
-      width="sm"
-    >
-      <div className="flex flex-col gap-6">
-        {statusMessage ? (
-          <p className="text-center text-sm text-muted-foreground">{statusMessage}</p>
-        ) : null}
-        {errorMessage ? (
-          <p className="text-center text-sm text-destructive">{errorMessage}</p>
-        ) : null}
+    <div data-ph-no-capture>
+      <OnboardingShell
+        description={description}
+        progress={null}
+        title={t("confirmEmailChange.title")}
+        width="sm"
+      >
+        <div className="flex flex-col gap-6">
+          {statusMessage ? (
+            <p className="text-center text-sm text-muted-foreground">{statusMessage}</p>
+          ) : null}
+          {errorMessage ? (
+            <p className="text-center text-sm text-destructive">{errorMessage}</p>
+          ) : null}
 
-        <form className="flex flex-col" onSubmit={handleSubmit}>
-          <Button
-            className="h-11 w-full"
-            disabled={!hasConfirmationParams || isSubmitting || statusMessage !== null}
-            type="submit"
-          >
-            {isSubmitting
-              ? t("confirmEmailChange.submitting")
-              : t("confirmEmailChange.submit")}
-          </Button>
-        </form>
+          <form className="flex flex-col" onSubmit={handleSubmit}>
+            <Button
+              className="h-11 w-full"
+              disabled={!hasConfirmationParams || isSubmitting || statusMessage !== null}
+              type="submit"
+            >
+              {isSubmitting
+                ? t("confirmEmailChange.submitting")
+                : t("confirmEmailChange.submit")}
+            </Button>
+          </form>
 
-        <p className="text-center text-sm">
-          <Link
-            className="font-medium text-foreground underline-offset-4 hover:underline"
-            to={returnHref}
-          >
-            {returnLabel}
-          </Link>
-        </p>
-      </div>
-    </OnboardingShell>
+          <p className="text-center text-sm">
+            <Link
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+              to={returnHref}
+            >
+              {returnLabel}
+            </Link>
+          </p>
+        </div>
+      </OnboardingShell>
+    </div>
   );
 }
 
@@ -562,66 +564,68 @@ export function AcceptInvitePage() {
   }
 
   return (
-    <OnboardingShell
-      description={description}
-      progress={null}
-      title={t("acceptInvite.title")}
-      width="sm"
-    >
-      <div className="flex flex-col gap-6">
-        {errorMessage ? (
-          <p className="text-center text-sm text-destructive">{errorMessage}</p>
-        ) : null}
+    <div data-ph-no-capture>
+      <OnboardingShell
+        description={description}
+        progress={null}
+        title={t("acceptInvite.title")}
+        width="sm"
+      >
+        <div className="flex flex-col gap-6">
+          {errorMessage ? (
+            <p className="text-center text-sm text-destructive">{errorMessage}</p>
+          ) : null}
 
-        {auth.isAuthenticated ? (
-          <form className="flex flex-col" onSubmit={handleSubmit}>
-            <Button
-              className="h-11 w-full"
-              disabled={
-                !isInvitationValid ||
-                isSubmitting ||
-                isPreviewLoading
-              }
-              loading={isSubmitting}
-              loadingLabel={t("acceptInvite.submitting")}
-              type="submit"
-            >
-              {t("acceptInvite.submit")}
-            </Button>
-          </form>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <Button
-              className="h-11 w-full"
-              disabled={!isInvitationValid || isPreviewLoading}
-              render={<Link to={loginHref} />}
-              type="button"
-            >
-              {t("acceptInvite.signIn")}
-            </Button>
-            <Button
-              className="h-11 w-full"
-              disabled={!isInvitationValid || isPreviewLoading}
-              render={<Link to={signupHref} />}
-              type="button"
-              variant="outline"
-            >
-              {t("acceptInvite.createAccount")}
-            </Button>
-          </div>
-        )}
+          {auth.isAuthenticated ? (
+            <form className="flex flex-col" onSubmit={handleSubmit}>
+              <Button
+                className="h-11 w-full"
+                disabled={
+                  !isInvitationValid ||
+                  isSubmitting ||
+                  isPreviewLoading
+                }
+                loading={isSubmitting}
+                loadingLabel={t("acceptInvite.submitting")}
+                type="submit"
+              >
+                {t("acceptInvite.submit")}
+              </Button>
+            </form>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <Button
+                className="h-11 w-full"
+                disabled={!isInvitationValid || isPreviewLoading}
+                render={<Link to={loginHref} />}
+                type="button"
+              >
+                {t("acceptInvite.signIn")}
+              </Button>
+              <Button
+                className="h-11 w-full"
+                disabled={!isInvitationValid || isPreviewLoading}
+                render={<Link to={signupHref} />}
+                type="button"
+                variant="outline"
+              >
+                {t("acceptInvite.createAccount")}
+              </Button>
+            </div>
+          )}
 
-        <p className="text-center text-sm">
-          <Link
-            className="font-medium text-foreground underline-offset-4 hover:underline"
-            to={auth.isAuthenticated ? "/settings/team" : "/login"}
-          >
-            {auth.isAuthenticated
-              ? t("acceptInvite.backToSettings")
-              : t("acceptInvite.backToLogin")}
-          </Link>
-        </p>
-      </div>
-    </OnboardingShell>
+          <p className="text-center text-sm">
+            <Link
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+              to={auth.isAuthenticated ? "/settings/team" : "/login"}
+            >
+              {auth.isAuthenticated
+                ? t("acceptInvite.backToSettings")
+                : t("acceptInvite.backToLogin")}
+            </Link>
+          </p>
+        </div>
+      </OnboardingShell>
+    </div>
   );
 }

@@ -15,6 +15,10 @@ import {
 } from "@/components/web-voice/config";
 import { buttonVariants } from "@/components/ui/button";
 import { captureAnalyticsEvent } from "@/lib/analytics";
+import {
+  getStoredProspectDemoToken,
+  storeProspectDemoToken,
+} from "@/lib/prospect-demo-token";
 import { normalizeLocale } from "@/lib/locale";
 import type { MarketingLocale } from "@/lib/marketing-site-url";
 import { cn } from "@/lib/utils";
@@ -318,7 +322,13 @@ export function ProspectDemoPage() {
   useNoIndexMeta();
   useForceLightTheme();
   const { i18n } = useTranslation();
-  const { token } = useParams<{ token: string }>();
+  const { token: pathToken } = useParams<{ token: string }>();
+  const token = pathToken?.trim() || getStoredProspectDemoToken() || undefined;
+  useEffect(() => {
+    if (token) {
+      storeProspectDemoToken(token);
+    }
+  }, [token]);
   const preview = useQuery(
     api.demos.previewProspectDemo,
     token ? { token } : "skip",

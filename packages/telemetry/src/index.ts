@@ -736,7 +736,12 @@ const SAFE_KEY_PATTERNS = [
   "workflowname",
 ];
 
-const SENSITIVE_URL_PARAMS = new Set(["customer_session_token", "token"]);
+const SENSITIVE_URL_PARAMS = new Set([
+  "customer_session_token",
+  "email",
+  "token",
+]);
+const SENSITIVE_URL_FRAGMENT_PARAMS = new Set(["prospect_demo_token"]);
 const NESTED_URL_PARAMS = new Set(["returnTo"]);
 const DEMO_PATH_TOKEN_PATTERN = /^(\/demo\/)[^/]+/i;
 const REDACTED_VALUE = "[redacted]";
@@ -803,17 +808,49 @@ function hasUrlParam(value: string, params: Set<string>): boolean {
   return [...params].some((param) => new RegExp(`[?&]${param}=`).test(value));
 }
 
-function redactSensitiveUrlValue(value: string): string {
+export function redactSensitiveUrlValue(value: string): string {
+  let embeddedRedacted = value.replace(
+    /(\/demo\/)[a-z0-9-]+/gi,
+    `$1${REDACTED_VALUE}`,
+  );
+  for (const param of SENSITIVE_URL_PARAMS) {
+    embeddedRedacted = embeddedRedacted.replace(
+      new RegExp(`([?&])${param}=[^&#\\s]*`, "g"),
+      `$1${param}=${REDACTED_VALUE}`,
+    );
+  }
+  for (const param of SENSITIVE_URL_FRAGMENT_PARAMS) {
+    embeddedRedacted = embeddedRedacted.replace(
+      new RegExp(`([#&])${param}=[^&\\s]*`, "g"),
+      `$1${param}=${REDACTED_VALUE}`,
+    );
+  }
   const hasSensitiveParam = hasUrlParam(value, SENSITIVE_URL_PARAMS);
+  const hasSensitiveFragmentParam = hasUrlParam(
+    value.replace("#", "?"),
+    SENSITIVE_URL_FRAGMENT_PARAMS,
+  );
   const hasDemoPathToken = /\/demo\/[^/?#]+/i.test(value);
   const hasNestedUrlParam = hasUrlParam(value, NESTED_URL_PARAMS);
-  if (!hasSensitiveParam && !hasDemoPathToken && !hasNestedUrlParam) {
+  if (
+    !hasSensitiveParam &&
+    !hasSensitiveFragmentParam &&
+    !hasDemoPathToken &&
+    !hasNestedUrlParam
+  ) {
     return value;
   }
 
+  const absolute = /^[a-z][a-z\d+\-.]*:/i.test(embeddedRedacted);
+  if (!absolute && !embeddedRedacted.startsWith("/")) {
+    return embeddedRedacted;
+  }
+
   try {
-    const absolute = /^[a-z][a-z\d+\-.]*:/i.test(value);
-    const url = new URL(value, absolute ? undefined : "https://lobbystack.local");
+    const url = new URL(
+      embeddedRedacted,
+      absolute ? undefined : "https://lobbystack.local",
+    );
     if (DEMO_PATH_TOKEN_PATTERN.test(url.pathname)) {
       url.pathname = url.pathname.replace(
         DEMO_PATH_TOKEN_PATTERN,
@@ -829,19 +866,15 @@ function redactSensitiveUrlValue(value: string): string {
         url.searchParams.set(param, redactSensitiveUrlValue(nested));
       }
     }
+    const hashParams = new URLSearchParams(url.hash.slice(1));
+    for (const param of SENSITIVE_URL_FRAGMENT_PARAMS) {
+      hashParams.delete(param);
+    }
+    const hash = hashParams.toString();
+    url.hash = hash ? `#${hash}` : "";
     return absolute ? url.toString() : `${url.pathname}${url.search}${url.hash}`;
   } catch {
-    let redacted = value.replace(
-      /(\/demo\/)[^/?#\s]+/i,
-      `$1${REDACTED_VALUE}`,
-    );
-    for (const param of SENSITIVE_URL_PARAMS) {
-      redacted = redacted.replace(
-        new RegExp(`([?&])${param}=[^&#\\s]*`, "g"),
-        `$1${param}=${REDACTED_VALUE}`,
-      );
-    }
-    return redacted;
+    return embeddedRedacted;
   }
 }
 

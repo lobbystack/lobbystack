@@ -4,6 +4,7 @@ import {
   buildAlertableExceptionTelemetryProperties,
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForOperator,
+  redactSensitiveUrlValue,
   redactTelemetryProperties,
   validateTelemetryEvent,
   type TelemetryProperties,
@@ -37,15 +38,27 @@ function resolvePostHogHost(rawHost?: string): string | undefined {
 const POSTHOG_HOST = resolvePostHogHost(import.meta.env.VITE_POSTHOG_HOST);
 const POSTHOG_UI_HOST = import.meta.env.VITE_POSTHOG_UI_HOST ?? "https://us.posthog.com";
 const POSTHOG_REQUEST_FLUSH_INTERVAL_MS = 1_000;
-const SENSITIVE_URL_PARAMS = new Set(["customer_session_token", "token"]);
-const NESTED_URL_PARAMS = new Set(["returnTo"]);
-const DEMO_PATH_TOKEN_PATTERN = /^(\/demo\/)[^/]+/i;
+const SENSITIVE_URL_PARAMS = new Set([
+  "customer_session_token",
+  "email",
+  "token",
+]);
 const REDACTED_VALUE = "[redacted]";
 
 let hasInitialized = false;
 let lastPageEventKey: string | null = null;
 let identifiedUserId: string | null = null;
 let identifiedBusinessId: string | null = null;
+
+function isSensitiveReplayPath(pathname: string): boolean {
+  return (
+    pathname === "/demo" ||
+    pathname.startsWith("/demo/") ||
+    pathname === "/claim-demo" ||
+    pathname === "/confirm-email-change" ||
+    pathname === "/accept-invite"
+  );
+}
 
 const PAGE_EVENT_BY_PATH = new Map<string, TelemetryEventName>([
   ["/", "web.page.home_viewed"],
@@ -59,63 +72,23 @@ export function isAnalyticsEnabled(): boolean {
   return Boolean(POSTHOG_KEY && POSTHOG_HOST);
 }
 
-function isAbsoluteUrl(value: string): boolean {
-  return /^[a-z][a-z\d+\-.]*:/i.test(value);
-}
-
-function hasUrlParam(value: string, params: Set<string>): boolean {
-  return [...params].some((param) =>
-    new RegExp(`[?&]${param}=`).test(value),
-  );
-}
-
-function redactSensitiveUrlParams(value: string): string {
-  const hasSensitiveParam = hasUrlParam(value, SENSITIVE_URL_PARAMS);
-  const hasDemoPathToken = /\/demo\/[^/?#]+/i.test(value);
-  const hasNestedUrlParam = hasUrlParam(value, NESTED_URL_PARAMS);
-  if (!hasSensitiveParam && !hasDemoPathToken && !hasNestedUrlParam) {
-    return value;
-  }
-
-  try {
-    const absolute = isAbsoluteUrl(value);
-    const url = new URL(value, absolute ? undefined : "https://lobbystack.local");
-    if (DEMO_PATH_TOKEN_PATTERN.test(url.pathname)) {
-      url.pathname = url.pathname.replace(
-        DEMO_PATH_TOKEN_PATTERN,
-        `$1${REDACTED_VALUE}`,
-      );
-    }
-    for (const param of SENSITIVE_URL_PARAMS) {
-      url.searchParams.delete(param);
-    }
-    for (const param of NESTED_URL_PARAMS) {
-      const nested = url.searchParams.get(param);
-      if (nested) {
-        url.searchParams.set(param, redactSensitiveUrlParams(nested));
-      }
-    }
-    return absolute ? url.toString() : `${url.pathname}${url.search}${url.hash}`;
-  } catch {
-    let redacted = value.replace(DEMO_PATH_TOKEN_PATTERN, `$1${REDACTED_VALUE}`);
-    for (const param of SENSITIVE_URL_PARAMS) {
-      redacted = redacted.replace(
-        new RegExp(`([?&])${param}=[^&#]*`, "g"),
-        `$1${param}=${REDACTED_VALUE}`,
-      );
-    }
-    return redacted;
-  }
-}
-
 function redactSensitiveAnalyticsValue(value: unknown): unknown {
   if (typeof value === "string") {
-    return redactSensitiveUrlParams(value);
+    return redactSensitiveUrlValue(value);
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) =>
-      typeof item === "string" ? redactSensitiveUrlParams(item) : item,
+    return value.map(redactSensitiveAnalyticsValue);
+  }
+
+  if (typeof value === "object" && value !== null) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nestedValue]) => [
+        key,
+        SENSITIVE_URL_PARAMS.has(key)
+          ? REDACTED_VALUE
+          : redactSensitiveAnalyticsValue(nestedValue),
+      ]),
     );
   }
 
@@ -146,6 +119,9 @@ export function initializeAnalytics(): void {
 
   const posthogHost = POSTHOG_HOST!;
 
+  const disableSessionRecording =
+    typeof window !== "undefined" && isSensitiveReplayPath(window.location.pathname);
+
   posthog.init(POSTHOG_KEY!, {
     api_host: posthogHost,
     ...(POSTHOG_UI_HOST ? { ui_host: POSTHOG_UI_HOST } : {}),
@@ -154,7 +130,7 @@ export function initializeAnalytics(): void {
     capture_pageview: "history_change",
     capture_pageleave: "if_capture_pageview",
     capture_exceptions: true,
-    disable_session_recording: false,
+    disable_session_recording: disableSessionRecording,
     request_queue_config: {
       flush_interval_ms: POSTHOG_REQUEST_FLUSH_INTERVAL_MS,
     },
@@ -187,6 +163,16 @@ export function initializeAnalytics(): void {
       maskTextSelector: ".ph-mask, [data-ph-mask-text]",
       blockSelector: ".ph-no-capture, [data-ph-no-capture]",
       compress_events: true,
+      maskCapturedNetworkRequestFn: (request) => {
+        if (request.name) {
+          request.name = redactSensitiveUrlValue(request.name);
+        }
+        delete request.requestBody;
+        delete request.responseBody;
+        delete request.requestHeaders;
+        delete request.responseHeaders;
+        return request;
+      },
     },
   });
 
@@ -198,7 +184,18 @@ export function initializeAnalytics(): void {
     capture_console_errors: false,
   });
 
-  if (!posthog.sessionRecordingStarted()) {
+  if (!disableSessionRecording && !posthog.sessionRecordingStarted()) {
+    posthog.startSessionRecording();
+  }
+}
+
+export function syncAnalyticsSessionRecording(pathname: string): void {
+  if (!isAnalyticsEnabled() || !hasInitialized) {
+    return;
+  }
+  if (isSensitiveReplayPath(pathname)) {
+    posthog.stopSessionRecording();
+  } else if (!posthog.sessionRecordingStarted()) {
     posthog.startSessionRecording();
   }
 }

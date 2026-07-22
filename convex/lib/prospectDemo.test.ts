@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildProspectDemoClaimPath,
+  buildProspectDemoPublicUrl,
+  buildProspectDemoSignupUrl,
   generateProspectDemoToken,
   hashProspectDemoToken,
   isProspectDemoExpired,
@@ -46,6 +49,20 @@ describe("prospectDemo helpers", () => {
     const second = await hashProspectDemoToken("abc123");
     expect(first).toBe(second);
     expect(first).toHaveLength(64);
+  });
+
+  it("keeps bearer tokens in URL fragments", () => {
+    process.env.SITE_URL = "https://app.lobbystack.com";
+
+    expect(buildProspectDemoPublicUrl("acme-secret")).toBe(
+      "https://app.lobbystack.com/demo#prospect_demo_token=acme-secret",
+    );
+    expect(buildProspectDemoClaimPath("acme-secret")).toBe(
+      "/claim-demo#prospect_demo_token=acme-secret",
+    );
+    expect(buildProspectDemoSignupUrl("acme-secret")).toBe(
+      "https://app.lobbystack.com/signup?returnTo=%2Fclaim-demo#prospect_demo_token=acme-secret",
+    );
   });
 
   it("resolves public states including expiry", () => {

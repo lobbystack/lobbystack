@@ -1,4 +1,13 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import {
+  chmodSync,
+  mkdirSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { join } from "node:path";
 
 type Command = "create" | "status" | "publish" | "revoke" | "set-prompts";
 
@@ -7,7 +16,7 @@ function printUsage(): void {
   pnpm prospect-demo:create --name "Acme" --url https://acme.example [--recipient email] [--recipient-name Name] [--locale fr-CA] [--campaign id] [--greeting "..."] [--service "Oil change"] [--prompt "Ask about hours"] [--prompt "Ask for a quote"] [--timezone America/Toronto]
   pnpm prospect-demo:status <demoId>
   pnpm prospect-demo:set-prompts <demoId> --prompt "..." --prompt "..."
-  pnpm prospect-demo:publish <demoId> --token <rawTokenFromCreate>
+  pnpm prospect-demo:publish <demoId> [--token-file path]
   pnpm prospect-demo:revoke <demoId>
 
 Required env (via .env.local / Convex):
@@ -100,12 +109,30 @@ function handleCreate(argv: string[]): void {
   if (services.length > 0) args.services = services;
   if (prompts.length > 0) args.suggestedPrompts = prompts;
 
+  const secretDirectory = join(process.cwd(), ".prospect-demos");
+  mkdirSync(secretDirectory, { recursive: true, mode: 0o700 });
+  chmodSync(secretDirectory, 0o700);
+  const writeProbe = join(secretDirectory, `.write-test-${process.pid}`);
+  writeFileSync(writeProbe, "", { mode: 0o600 });
+  unlinkSync(writeProbe);
+
   const result = runConvex("internal.demos.createProspectDemo", args);
-  console.log(JSON.stringify(result, null, 2));
-  console.log("");
-  console.log(
-    "Save the token from this output. Publish requires --token with the same value.",
-  );
+  if (typeof result !== "object" || result === null || !("demoId" in result)) {
+    throw new Error("Prospect demo creation returned an invalid result.");
+  }
+  const demoId = String(result.demoId);
+  const secretFile = join(secretDirectory, `${demoId}.json`);
+  writeFileSync(secretFile, `${JSON.stringify(result, null, 2)}\n`, { mode: 0o600 });
+  chmodSync(secretFile, 0o600);
+
+  const {
+    token: _token,
+    tokenHash: _tokenHash,
+    demoUrl: _demoUrl,
+    claimSignupUrl: _claimSignupUrl,
+    ...safeResult
+  } = result as Record<string, unknown>;
+  console.log(JSON.stringify({ ...safeResult, secretFile }, null, 2));
 }
 
 function handleStatus(argv: string[]): void {
@@ -129,14 +156,39 @@ function handleSetPrompts(argv: string[]): void {
 
 function handlePublish(argv: string[]): void {
   const demoId = requirePositional(argv, "demoId");
-  const rawToken = parseOptionalFlag(argv, "--token");
+  const tokenFile =
+    parseOptionalFlag(argv, "--token-file") ??
+    join(process.cwd(), ".prospect-demos", `${demoId}.json`);
+  let rawToken = process.env.PROSPECT_DEMO_TOKEN?.trim();
+  let tokenHash: string | undefined;
   if (!rawToken) {
-    throw new Error("--token is required (from create output).");
+    try {
+      const stored = readFileSync(tokenFile, "utf8").trim();
+      try {
+        const parsed = JSON.parse(stored) as {
+          token?: unknown;
+          tokenHash?: unknown;
+        };
+        rawToken = typeof parsed.token === "string" ? parsed.token.trim() : undefined;
+        tokenHash =
+          typeof parsed.tokenHash === "string" ? parsed.tokenHash.trim() : undefined;
+      } catch {
+        rawToken = stored;
+      }
+    } catch {}
+  }
+  if (!tokenHash && rawToken) {
+    tokenHash = createHash("sha256").update(rawToken).digest("hex");
+  }
+  if (!tokenHash) {
+    throw new Error(
+      `Prospect demo token not found. Set PROSPECT_DEMO_TOKEN or provide --token-file (expected ${tokenFile}).`,
+    );
   }
   const prompts = parseFlagValues(argv, "--prompt");
   const args: Record<string, unknown> = {
     demoId,
-    rawToken,
+    tokenHash,
   };
   if (prompts.length > 0) {
     args.suggestedPrompts = prompts;

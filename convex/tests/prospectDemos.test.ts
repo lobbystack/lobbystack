@@ -214,12 +214,9 @@ describe("prospect demos", () => {
 
     const published = await t.mutation(internal.demos.publishProspectDemo, {
       demoId,
-      rawToken: token,
+      tokenHash: await hashProspectDemoToken(token),
     });
-    expect(published).toMatchObject({
-      status: "active",
-      demoUrl: `https://app.lobbystack.com/demo/${token}`,
-    });
+    expect(published).toMatchObject({ status: "active" });
 
     await t.mutation(internal.demos.revokeProspectDemo, { demoId });
     await expect(
