@@ -39,13 +39,28 @@ function useNoIndexMeta(): void {
   }, []);
 }
 
-function DemoShell({ children }: { children: React.ReactNode }) {
-  const { t } = useTranslation("demos");
-
+function DemoShell({
+  children,
+  wide = false,
+  footer,
+}: {
+  children: React.ReactNode;
+  wide?: boolean;
+  footer?: string;
+}) {
   return (
     <div className="flex min-h-svh flex-col items-center justify-center bg-background px-6 py-16 text-foreground">
-      <div className="flex w-full max-w-xl flex-col items-center">{children}</div>
-      <p className="mt-16 text-xs text-muted-foreground">{t("active.poweredBy")}</p>
+      <div
+        className={cn(
+          "flex w-full flex-col items-center",
+          wide ? "max-w-7xl" : "max-w-xl",
+        )}
+      >
+        {children}
+      </div>
+      {footer ? (
+        <p className="mt-16 text-sm text-muted-foreground">{footer}</p>
+      ) : null}
     </div>
   );
 }
@@ -147,56 +162,67 @@ function ProspectDemoActive({
   const prompts: string[] = suggestedPrompts.slice(0, 2);
 
   return (
-    <DemoShell>
+    <DemoShell wide footer={t("active.startHint")}>
       <div className="flex w-full flex-col items-center text-center">
         <p className="text-sm font-medium text-muted-foreground">
           {t("active.eyebrow")}
         </p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
           {t("active.title", { businessName: demo.businessName })}
         </h1>
+      </div>
 
-        <AuraVoiceDemo
-          auraTone="dark"
-          businessSlug={businessSlug}
-          className="mt-8 w-full max-w-[22rem] md:max-w-[30rem]"
-          endpoint={getWebCallEndpoint()}
-          getStartPayload={getStartPayload}
-          onEvent={handleEvent}
-          widgetId={PROSPECT_DEMO_WIDGET_ID}
-        />
+      <div className="mt-10 grid w-full min-w-0 items-center gap-10 md:gap-12 xl:grid-cols-2 xl:gap-16">
+        <div className="flex w-full min-w-0 flex-col text-left">
+          {prompts.length > 0 ? (
+            <div className="w-full">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {t("active.promptsTitle")}
+              </p>
+              <ul className="mt-3 flex flex-col gap-3">
+                {prompts.map((prompt) => (
+                  <li
+                    key={prompt}
+                    className="rounded-xl border bg-muted/30 px-4 py-3 text-sm text-foreground"
+                  >
+                    {prompt}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
-        <p className="mt-4 text-sm text-muted-foreground">{t("active.startHint")}</p>
+          <p
+            className={cn(
+              "max-w-md text-xs leading-5 text-muted-foreground",
+              prompts.length > 0 ? "mt-8" : "mt-0",
+            )}
+          >
+            {t("active.intakeNotice")}
+          </p>
 
-        {prompts.length > 0 ? (
-          <div className="mt-8 w-full">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {t("active.promptsTitle")}
-            </p>
-            <ul className="mt-3 flex flex-col gap-3">
-              {prompts.map((prompt) => (
-                <li
-                  key={prompt}
-                  className="rounded-xl border bg-muted/30 px-4 py-3 text-sm text-foreground"
-                >
-                  {prompt}
-                </li>
-              ))}
-            </ul>
+          <Link
+            className={cn(buttonVariants(), "mt-8 h-11 w-full max-w-sm")}
+            onClick={handleSignupClick}
+            to={signupPath}
+          >
+            {t("active.claimCta")}
+          </Link>
+        </div>
+
+        <div className="flex w-full min-w-0 justify-center xl:justify-end">
+          <div className="flex w-full max-w-[22rem] flex-col items-center md:max-w-[30rem]">
+            <AuraVoiceDemo
+              auraTone="dark"
+              businessSlug={businessSlug}
+              className="w-full"
+              endpoint={getWebCallEndpoint()}
+              getStartPayload={getStartPayload}
+              onEvent={handleEvent}
+              widgetId={PROSPECT_DEMO_WIDGET_ID}
+            />
           </div>
-        ) : null}
-
-        <p className="mt-8 max-w-md text-xs leading-5 text-muted-foreground">
-          {t("active.intakeNotice")}
-        </p>
-
-        <Link
-          className={cn(buttonVariants(), "mt-8 h-11 w-full max-w-sm")}
-          onClick={handleSignupClick}
-          to={signupPath}
-        >
-          {t("active.claimCta")}
-        </Link>
+        </div>
       </div>
     </DemoShell>
   );

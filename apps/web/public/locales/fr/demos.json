@@ -9,8 +9,7 @@
     "startHint": "Appuyez sur le bouton pour démarrer un appel vocal en direct.",
     "promptsTitle": "Essayez de demander",
     "intakeNotice": "Ceci est une démo à capacités limitées. Les appels en direct fonctionnent, mais la prise de rendez-vous et les autres fonctionnalités complètes ne sont pas activées.",
-    "claimCta": "Réclamer cette réceptionniste",
-    "poweredBy": "Propulsé par LobbyStack"
+    "claimCta": "Réclamer cette réceptionniste"
   },
   "states": {
     "invalid": {
