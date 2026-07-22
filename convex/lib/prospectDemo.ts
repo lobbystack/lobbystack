@@ -134,11 +134,11 @@ export function resolveProspectDemoPublicState(input: {
   if (input.status === "revoked") {
     return "revoked";
   }
-  if (input.status === "preparing") {
-    return "preparing";
-  }
   if (isProspectDemoExpired(input)) {
     return "expired";
+  }
+  if (input.status === "preparing") {
+    return "preparing";
   }
   return "active";
 }

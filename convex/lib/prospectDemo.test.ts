@@ -61,6 +61,12 @@ describe("prospectDemo helpers", () => {
         expiresAt: Date.now() - 10_000,
       }),
     ).toBe("expired");
+    expect(
+      resolveProspectDemoPublicState({
+        status: "preparing",
+        expiresAt: Date.now() - 10_000,
+      }),
+    ).toBe("expired");
     expect(isProspectDemoExpired({ status: "claimed", expiresAt: 0 })).toBe(
       false,
     );

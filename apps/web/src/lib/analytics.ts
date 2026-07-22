@@ -63,14 +63,16 @@ function isAbsoluteUrl(value: string): boolean {
   return /^[a-z][a-z\d+\-.]*:/i.test(value);
 }
 
+function hasUrlParam(value: string, params: Set<string>): boolean {
+  return [...params].some((param) =>
+    new RegExp(`[?&]${param}=`).test(value),
+  );
+}
+
 function redactSensitiveUrlParams(value: string): string {
-  const hasSensitiveParam = [...SENSITIVE_URL_PARAMS].some((param) =>
-    value.includes(param),
-  );
+  const hasSensitiveParam = hasUrlParam(value, SENSITIVE_URL_PARAMS);
   const hasDemoPathToken = /\/demo\/[^/?#]+/i.test(value);
-  const hasNestedUrlParam = [...NESTED_URL_PARAMS].some((param) =>
-    value.includes(param),
-  );
+  const hasNestedUrlParam = hasUrlParam(value, NESTED_URL_PARAMS);
   if (!hasSensitiveParam && !hasDemoPathToken && !hasNestedUrlParam) {
     return value;
   }

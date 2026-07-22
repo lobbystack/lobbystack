@@ -69,6 +69,30 @@ describe("analytics", () => {
     expect(event.properties.customer_session_token).toBe("[redacted]");
   });
 
+  it("preserves non-URL strings that mention sensitive parameter names", async () => {
+    vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
+    vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");
+    posthogMock.sessionRecordingStarted.mockReturnValue(true);
+
+    const { initializeAnalytics } = await import("./analytics");
+
+    initializeAnalytics();
+    const config = posthogMock.init.mock.calls[0]?.[1];
+    const event = config.before_send({
+      uuid: "event-error",
+      event: "$exception",
+      properties: {
+        message: "Invalid token",
+        detail: "Unable to returnTo the previous screen",
+      },
+    });
+
+    expect(event.properties.message).toBe("Invalid token");
+    expect(event.properties.detail).toBe(
+      "Unable to returnTo the previous screen",
+    );
+  });
+
   it("redacts prospect demo path tokens and claim token query params", async () => {
     vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
     vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");
