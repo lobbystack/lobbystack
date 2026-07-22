@@ -748,6 +748,8 @@ describe("web call routes", () => {
       expect.objectContaining({
         businessSlug: "lobbystack",
         dashboardTestCallToken: "dashboard-token",
+        ipHash: expect.any(String),
+        visitorId: "visitor-123",
         widgetId: "lobbystack-dashboard-test-call",
       }),
     );

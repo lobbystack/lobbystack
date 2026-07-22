@@ -1661,10 +1661,12 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
           businessSlug,
           providerCallId,
           gatewaySessionId,
+          ...(ipHash !== undefined ? { ipHash } : {}),
           ...(body.pageUrl !== undefined ? { originUrl: body.pageUrl } : {}),
           ...(typeof request.headers["user-agent"] === "string"
             ? { userAgent: request.headers["user-agent"] }
             : {}),
+          ...(visitorId !== undefined ? { visitorId } : {}),
           ...(widgetId !== undefined ? { widgetId } : {}),
           maxDurationMs: server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
           startedAt,

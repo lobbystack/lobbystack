@@ -47,13 +47,13 @@ export function ClaimDemoPage() {
     token ? "claiming" : "unavailable",
   );
   const [attempt, setAttempt] = useState(0);
-  const hasAttemptedRef = useRef(false);
+  const claimAttemptRef = useRef<{
+    token: string;
+    promise: Promise<unknown>;
+  } | null>(null);
 
   useEffect(() => {
     if (!token || preview === undefined) {
-      return;
-    }
-    if (hasAttemptedRef.current) {
       return;
     }
     // Active demos claim normally. Claimed demos still call the mutation so the
@@ -65,12 +65,18 @@ export function ClaimDemoPage() {
       return;
     }
 
-    hasAttemptedRef.current = true;
     const prospectDemoId = String(preview.demoId);
     const campaignId = preview.campaignId;
+    if (claimAttemptRef.current?.token !== token) {
+      claimAttemptRef.current = {
+        token,
+        promise: claimProspectDemo({ token }),
+      };
+    }
+    const claimPromise = claimAttemptRef.current.promise;
 
     let cancelled = false;
-    void claimProspectDemo({ token })
+    void claimPromise
       .then(() => {
         if (cancelled) {
           return;
@@ -123,7 +129,7 @@ export function ClaimDemoPage() {
         <Button
           className="h-11 w-full"
           onClick={() => {
-            hasAttemptedRef.current = false;
+            claimAttemptRef.current = null;
             setStatus("claiming");
             setAttempt((value) => value + 1);
           }}

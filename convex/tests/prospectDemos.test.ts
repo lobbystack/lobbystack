@@ -325,6 +325,7 @@ describe("prospect demos", () => {
       businessSlug: "prospect-acme",
       providerCallId: "call_prospect_demo_1",
       gatewaySessionId: "gateway-prospect-1",
+      visitorId: "visitor-prospect-1",
       widgetId: PROSPECT_DEMO_WIDGET_ID,
       prospectDemoToken: token,
       startedAt: "2026-07-21T18:00:00.000Z",
@@ -427,7 +428,7 @@ describe("prospect demos", () => {
   });
 
   it("limits prospect demo starts to five per visitor", async () => {
-    const { t, demoId, businessId } = await seedProspectDemoFixture();
+    const { t, token, demoId, businessId } = await seedProspectDemoFixture();
 
     for (let i = 0; i < 5; i++) {
       await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
@@ -437,83 +438,96 @@ describe("prospect demos", () => {
         widgetId: PROSPECT_DEMO_WIDGET_ID,
         prospectDemoId: demoId,
       });
+      await t.mutation(internal.voice.runtime.startWebCall, {
+        businessSlug: "prospect-acme",
+        providerCallId: `call_prospect_visitor_${i}`,
+        prospectDemoToken: token,
+        startedAt: "2026-07-21T18:00:00.000Z",
+        visitorId: "visitor-demo-1",
+      });
     }
 
     await expect(
-      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
-        businessId,
-        origin: "https://app.lobbystack.com",
+      t.mutation(internal.voice.runtime.startWebCall, {
+        businessSlug: "prospect-acme",
+        providerCallId: "call_prospect_visitor_blocked",
+        prospectDemoToken: token,
+        startedAt: "2026-07-21T18:00:00.000Z",
         visitorId: "visitor-demo-1",
-        widgetId: PROSPECT_DEMO_WIDGET_ID,
-        prospectDemoId: demoId,
       }),
     ).rejects.toThrow("web_voice_rate_limited");
   });
 
   it("enforces the prospect demo quota even when widgetId is missing", async () => {
-    const { t, demoId, businessId } = await seedProspectDemoFixture();
+    const { t, token } = await seedProspectDemoFixture();
 
     for (let i = 0; i < 5; i++) {
-      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
-        businessId,
-        origin: "https://app.lobbystack.com",
+      await t.mutation(internal.voice.runtime.startWebCall, {
+        businessSlug: "prospect-acme",
+        providerCallId: `call_prospect_no_widget_${i}`,
+        prospectDemoToken: token,
+        startedAt: "2026-07-21T18:00:00.000Z",
         visitorId: "visitor-no-widget",
-        prospectDemoId: demoId,
       });
     }
 
     await expect(
-      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
-        businessId,
-        origin: "https://app.lobbystack.com",
+      t.mutation(internal.voice.runtime.startWebCall, {
+        businessSlug: "prospect-acme",
+        providerCallId: "call_prospect_no_widget_blocked",
+        prospectDemoToken: token,
+        startedAt: "2026-07-21T18:00:00.000Z",
         visitorId: "visitor-no-widget",
-        prospectDemoId: demoId,
       }),
     ).rejects.toThrow("web_voice_rate_limited");
   });
 
   it("falls back to IP identity for prospect demo quota when visitorId is missing", async () => {
-    const { t, demoId, businessId } = await seedProspectDemoFixture();
+    const { t, token } = await seedProspectDemoFixture();
 
     for (let i = 0; i < 5; i++) {
-      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
-        businessId,
-        origin: "https://app.lobbystack.com",
+      await t.mutation(internal.voice.runtime.startWebCall, {
+        businessSlug: "prospect-acme",
+        providerCallId: `call_prospect_ip_${i}`,
         ipHash: "demo-ip-hash",
-        prospectDemoId: demoId,
+        prospectDemoToken: token,
+        startedAt: "2026-07-21T18:00:00.000Z",
       });
     }
 
     await expect(
-      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
-        businessId,
-        origin: "https://app.lobbystack.com",
+      t.mutation(internal.voice.runtime.startWebCall, {
+        businessSlug: "prospect-acme",
+        providerCallId: "call_prospect_ip_blocked",
         ipHash: "demo-ip-hash",
-        prospectDemoId: demoId,
+        prospectDemoToken: token,
+        startedAt: "2026-07-21T18:00:00.000Z",
       }),
     ).rejects.toThrow("web_voice_rate_limited");
   });
 
   it("enforces the IP prospect demo quota even when visitorId changes", async () => {
-    const { t, demoId, businessId } = await seedProspectDemoFixture();
+    const { t, token } = await seedProspectDemoFixture();
 
     for (let i = 0; i < 5; i++) {
-      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
-        businessId,
-        origin: "https://app.lobbystack.com",
+      await t.mutation(internal.voice.runtime.startWebCall, {
+        businessSlug: "prospect-acme",
+        providerCallId: `call_prospect_rotating_${i}`,
         visitorId: `visitor-rotating-${i}`,
         ipHash: "shared-demo-ip",
-        prospectDemoId: demoId,
+        prospectDemoToken: token,
+        startedAt: "2026-07-21T18:00:00.000Z",
       });
     }
 
     await expect(
-      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
-        businessId,
-        origin: "https://app.lobbystack.com",
+      t.mutation(internal.voice.runtime.startWebCall, {
+        businessSlug: "prospect-acme",
+        providerCallId: "call_prospect_rotating_blocked",
         visitorId: "visitor-rotating-new",
         ipHash: "shared-demo-ip",
-        prospectDemoId: demoId,
+        prospectDemoToken: token,
+        startedAt: "2026-07-21T18:00:00.000Z",
       }),
     ).rejects.toThrow("web_voice_rate_limited");
   });

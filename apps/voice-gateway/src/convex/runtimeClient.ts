@@ -223,8 +223,10 @@ export async function startWebVoiceCall(input: {
   businessSlug: string;
   providerCallId: string;
   gatewaySessionId?: string;
+  ipHash?: string;
   originUrl?: string;
   userAgent?: string;
+  visitorId?: string;
   widgetId?: string;
   maxDurationMs?: number;
   startedAt: string;

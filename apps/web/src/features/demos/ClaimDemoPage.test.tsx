@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -50,6 +51,16 @@ function renderClaimPage(token = "tok_123") {
     <MemoryRouter initialEntries={[`/claim-demo?token=${token}`]}>
       <ClaimDemoPage />
     </MemoryRouter>,
+  );
+}
+
+function renderStrictClaimPage(token = "tok_123") {
+  return render(
+    <StrictMode>
+      <MemoryRouter initialEntries={[`/claim-demo?token=${token}`]}>
+        <ClaimDemoPage />
+      </MemoryRouter>
+    </StrictMode>,
   );
 }
 
@@ -141,6 +152,23 @@ describe("ClaimDemoPage", () => {
     expect(navigateMock).toHaveBeenCalledWith("/onboarding/business", {
       replace: true,
     });
+  });
+
+  it("completes one claim attempt under StrictMode", async () => {
+    useQueryMock.mockReturnValue({
+      state: "active",
+      demoId: "demo_1",
+      campaignId: null,
+    });
+
+    renderStrictClaimPage();
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith("/onboarding/business", {
+        replace: true,
+      });
+    });
+    expect(claimProspectDemoMock).toHaveBeenCalledTimes(1);
   });
 
   it("does not claim while the preview is preparing", () => {

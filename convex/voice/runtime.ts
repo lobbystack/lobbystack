@@ -89,8 +89,10 @@ type StartWebCallArgs = {
   businessSlug: string;
   providerCallId: string;
   gatewaySessionId?: string;
+  ipHash?: string;
   originUrl?: string;
   userAgent?: string;
+  visitorId?: string;
   widgetId?: string;
   maxDurationMs?: number;
   startedAt: string;
@@ -259,42 +261,7 @@ function buildWebVoiceStartLimits(input: {
     input.widgetId === DASHBOARD_TEST_CALL_WIDGET_ID &&
     hasVerifiedDashboardTestCallToken(input);
 
-  // Prospect demo quota is keyed off a validated demo id (from the token), not
-  // client-supplied widgetId. Apply visitor and IP buckets together when both
-  // are present so clearing localStorage cannot reset the 5-call demo cap.
   if (input.prospectDemoId !== undefined) {
-    const demoKey = String(input.prospectDemoId);
-    let hasIdentity = false;
-
-    if (input.visitorId !== undefined) {
-      hasIdentity = true;
-      limits.push({
-        limiterName: "prospectDemoWebVoiceStartPerVisitor",
-        key: `${demoKey}:visitor:${input.visitorId}`,
-        reason: "prospect_demo_rate_limit_visitor",
-        ...logContext,
-      });
-    }
-
-    if (input.ipHash !== undefined) {
-      hasIdentity = true;
-      limits.push({
-        limiterName: "prospectDemoWebVoiceStartPerVisitor",
-        key: `${demoKey}:ip:${input.ipHash}`,
-        reason: "prospect_demo_rate_limit_ip",
-        ...logContext,
-      });
-    }
-
-    if (!hasIdentity) {
-      logWebVoiceRateLimitBlocked({
-        limiter: "prospectDemoWebVoiceStartPerVisitor",
-        reason: "prospect_demo_rate_limit_missing_identity",
-        ...logContext,
-      });
-      throw new Error(WEB_VOICE_RATE_LIMIT_ERROR);
-    }
-
     limits.push({
       limiterName: "webVoiceStartGlobalPerMinute",
       key: "global",
@@ -392,6 +359,52 @@ function buildWebVoiceStartLimits(input: {
       ...logContext,
     },
   );
+
+  return limits;
+}
+
+function buildProspectDemoStartLimits(input: {
+  businessId: Id<"businesses">;
+  ipHash?: string;
+  origin?: string;
+  prospectDemoId: Id<"prospect_demos">;
+  visitorId?: string;
+  widgetId?: string;
+}): Array<WebVoiceStartLimit> {
+  const demoKey = String(input.prospectDemoId);
+  const logContext = {
+    businessId: input.businessId,
+    ...(input.origin !== undefined ? { origin: input.origin } : {}),
+    ...(input.widgetId !== undefined ? { widgetId: input.widgetId } : {}),
+  };
+  const limits: Array<WebVoiceStartLimit> = [];
+
+  if (input.visitorId !== undefined) {
+    limits.push({
+      limiterName: "prospectDemoWebVoiceStartPerVisitor",
+      key: `${demoKey}:visitor:${input.visitorId}`,
+      reason: "prospect_demo_rate_limit_visitor",
+      ...logContext,
+    });
+  }
+
+  if (input.ipHash !== undefined) {
+    limits.push({
+      limiterName: "prospectDemoWebVoiceStartPerVisitor",
+      key: `${demoKey}:ip:${input.ipHash}`,
+      reason: "prospect_demo_rate_limit_ip",
+      ...logContext,
+    });
+  }
+
+  if (limits.length === 0) {
+    logWebVoiceRateLimitBlocked({
+      limiter: "prospectDemoWebVoiceStartPerVisitor",
+      reason: "prospect_demo_rate_limit_missing_identity",
+      ...logContext,
+    });
+    throw new Error(WEB_VOICE_RATE_LIMIT_ERROR);
+  }
 
   return limits;
 }
@@ -872,6 +885,20 @@ export const assertWebVoiceStartAllowed = internalMutation({
   handler: async (ctx: MutationCtx, args): Promise<null> => {
     const limits = buildWebVoiceStartLimits(args);
 
+    if (args.prospectDemoId !== undefined) {
+      // Provider setup happens after this preflight, so only check the durable quota here.
+      await assertWebVoiceStartLimitsAvailable(
+        ctx,
+        buildProspectDemoStartLimits({
+          businessId: args.businessId,
+          ...(args.ipHash !== undefined ? { ipHash: args.ipHash } : {}),
+          origin: args.origin,
+          prospectDemoId: args.prospectDemoId,
+          ...(args.visitorId !== undefined ? { visitorId: args.visitorId } : {}),
+          ...(args.widgetId !== undefined ? { widgetId: args.widgetId } : {}),
+        }),
+      );
+    }
     await assertWebVoiceStartLimitsAvailable(ctx, limits);
     for (const limit of limits) {
       await consumeWebVoiceStartLimit(ctx, limit);
@@ -1191,8 +1218,10 @@ export const startWebCall = internalMutation({
     businessSlug: v.string(),
     providerCallId: v.string(),
     gatewaySessionId: v.optional(v.string()),
+    ipHash: v.optional(v.string()),
     originUrl: v.optional(v.string()),
     userAgent: v.optional(v.string()),
+    visitorId: v.optional(v.string()),
     widgetId: v.optional(v.string()),
     maxDurationMs: v.optional(v.number()),
     startedAt: v.string(),
@@ -1253,6 +1282,21 @@ export const startWebCall = internalMutation({
 
     if (existingCall && existingCall.businessId !== business._id) {
       throw new Error("Web voice provider call belongs to a different business.");
+    }
+
+    if (prospectDemoId !== undefined) {
+      // This mutation runs after provider setup and rolls quota usage back if call creation fails.
+      const prospectDemoLimits = buildProspectDemoStartLimits({
+        businessId: business._id,
+        ...(args.ipHash !== undefined ? { ipHash: args.ipHash } : {}),
+        prospectDemoId,
+        ...(args.visitorId !== undefined ? { visitorId: args.visitorId } : {}),
+        ...(args.widgetId !== undefined ? { widgetId: args.widgetId } : {}),
+      });
+      await assertWebVoiceStartLimitsAvailable(ctx, prospectDemoLimits);
+      for (const limit of prospectDemoLimits) {
+        await consumeWebVoiceStartLimit(ctx, limit);
+      }
     }
 
     const skipBilling = isProspectDemoSessionPurpose(sessionPurpose);

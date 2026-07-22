@@ -72,8 +72,10 @@ const startWebCallSchema = z.object({
   businessSlug: z.string().min(1),
   providerCallId: z.string().min(1),
   gatewaySessionId: z.string().min(1).optional(),
+  ipHash: z.string().min(1).optional(),
   originUrl: z.string().min(1).optional(),
   userAgent: z.string().min(1).optional(),
+  visitorId: z.string().min(1).optional(),
   widgetId: z.string().min(1).optional(),
   maxDurationMs: z.number().positive().max(MAX_WEB_CALL_MAX_DURATION_MS).optional(),
   startedAt: z.string().min(1),
@@ -968,8 +970,12 @@ http.route({
         ...(body.data.gatewaySessionId !== undefined
           ? { gatewaySessionId: body.data.gatewaySessionId }
           : {}),
+        ...(body.data.ipHash !== undefined ? { ipHash: body.data.ipHash } : {}),
         ...(body.data.originUrl !== undefined ? { originUrl: body.data.originUrl } : {}),
         ...(body.data.userAgent !== undefined ? { userAgent: body.data.userAgent } : {}),
+        ...(body.data.visitorId !== undefined
+          ? { visitorId: body.data.visitorId }
+          : {}),
         ...(body.data.widgetId !== undefined ? { widgetId: body.data.widgetId } : {}),
         ...(body.data.maxDurationMs !== undefined
           ? { maxDurationMs: body.data.maxDurationMs }
@@ -993,6 +999,15 @@ http.route({
             message: "Voice quota reached for this billing period.",
           },
           { status: 402 },
+        );
+      }
+      if (isErrorMessage(error, "web_voice_rate_limited")) {
+        return Response.json(
+          {
+            code: "web_voice_rate_limited",
+            message: "Too many web voice starts. Please try again shortly.",
+          },
+          { status: 429 },
         );
       }
       throw error;
