@@ -221,13 +221,13 @@ function ProspectDemoActive({
 
   return (
     <DemoShell wide footer={t("active.startHint")} marketingLocale={demo.locale}>
-      <div className="flex w-full flex-col items-center text-center">
+      <div className="flex w-full flex-col items-center pt-4 text-center">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
           {t("active.title", { businessName: demo.businessName })}
         </h1>
       </div>
 
-      <div className="mt-8 grid w-full min-w-0 flex-1 items-center gap-8 md:gap-12 xl:min-h-0 xl:grid-cols-2 xl:gap-16">
+      <div className="mt-4 grid w-full min-w-0 flex-1 items-center gap-8 md:gap-12 xl:min-h-0 xl:grid-cols-2 xl:gap-16">
         <div className="order-1 flex w-full min-w-0 justify-center xl:order-2 xl:justify-end">
           <div className="flex w-full max-w-[22rem] flex-col items-center md:max-w-[30rem] lg:max-w-[min(30rem,calc(100svh-18rem))] xl:max-w-[min(100%,calc(100svh-18rem))]">
             <AuraVoiceDemo
@@ -239,6 +239,9 @@ function ProspectDemoActive({
               onEvent={handleEvent}
               widgetId={PROSPECT_DEMO_WIDGET_ID}
             />
+            <p className="mt-4 text-center text-sm text-muted-foreground xl:hidden">
+              {t("active.startHint")}
+            </p>
           </div>
         </div>
 
@@ -277,10 +280,6 @@ function ProspectDemoActive({
           >
             {t("active.claimCta")}
           </Link>
-
-          <p className="mt-4 text-center text-sm text-muted-foreground xl:hidden">
-            {t("active.startHint")}
-          </p>
         </div>
       </div>
     </DemoShell>
