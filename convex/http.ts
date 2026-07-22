@@ -78,6 +78,7 @@ const startWebCallSchema = z.object({
   maxDurationMs: z.number().positive().max(MAX_WEB_CALL_MAX_DURATION_MS).optional(),
   startedAt: z.string().min(1),
   prospectDemoToken: z.string().min(1).optional(),
+  dashboardTestCallToken: z.string().min(1).optional(),
 });
 
 const appendTranscriptSchema = z.object({
@@ -976,6 +977,9 @@ http.route({
         startedAt: body.data.startedAt,
         ...(body.data.prospectDemoToken !== undefined
           ? { prospectDemoToken: body.data.prospectDemoToken }
+          : {}),
+        ...(body.data.dashboardTestCallToken !== undefined
+          ? { dashboardTestCallToken: body.data.dashboardTestCallToken }
           : {}),
       });
     } catch (error) {

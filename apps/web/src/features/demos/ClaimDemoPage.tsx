@@ -56,12 +56,16 @@ export function ClaimDemoPage() {
     if (hasAttemptedRef.current) {
       return;
     }
-    hasAttemptedRef.current = true;
+    if (preview.state !== "active") {
+      if (preview.state !== "preparing") {
+        setStatus("unavailable");
+      }
+      return;
+    }
 
-    const prospectDemoId =
-      preview.state === "active" ? String(preview.demoId) : undefined;
-    const campaignId =
-      preview.state === "active" ? preview.campaignId : undefined;
+    hasAttemptedRef.current = true;
+    const prospectDemoId = String(preview.demoId);
+    const campaignId = preview.campaignId;
 
     let cancelled = false;
     void claimProspectDemo({ token })

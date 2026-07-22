@@ -17,6 +17,7 @@ const OPERATOR_EMAIL = "prospect-demo-operator@example.com";
 const originalOperatorEmail = process.env.PROSPECT_DEMO_OPERATOR_EMAIL;
 const originalSiteUrl = process.env.SITE_URL;
 const originalDeploymentMode = process.env.DEPLOYMENT_MODE;
+const originalDashboardTestCallToken = process.env.DASHBOARD_TEST_CALL_TOKEN;
 
 async function seedProspectDemoFixture(input?: {
   status?: "preparing" | "active" | "claimed" | "revoked";
@@ -167,6 +168,11 @@ describe("prospect demos", () => {
       delete process.env.DEPLOYMENT_MODE;
     } else {
       process.env.DEPLOYMENT_MODE = originalDeploymentMode;
+    }
+    if (originalDashboardTestCallToken === undefined) {
+      delete process.env.DASHBOARD_TEST_CALL_TOKEN;
+    } else {
+      process.env.DASHBOARD_TEST_CALL_TOKEN = originalDashboardTestCallToken;
     }
   });
 
@@ -338,6 +344,30 @@ describe("prospect demos", () => {
         startedAt: "2026-07-21T18:00:00.000Z",
       }),
     ).rejects.toThrow(/prospect demo is not available/i);
+  });
+
+  it("starts unclaimed prospect demo web calls with a verified dashboard test call token", async () => {
+    process.env.DASHBOARD_TEST_CALL_TOKEN = "dashboard-token";
+    const { t, businessId } = await seedProspectDemoFixture();
+
+    const result = await t.mutation(internal.voice.runtime.startWebCall, {
+      businessSlug: "prospect-acme",
+      providerCallId: "call_dashboard_test_demo_1",
+      gatewaySessionId: "gateway-dashboard-test-1",
+      widgetId: "lobbystack-dashboard-test-call",
+      dashboardTestCallToken: "dashboard-token",
+      startedAt: "2026-07-21T18:00:00.000Z",
+    });
+
+    await t.run(async (ctx) => {
+      const call = await ctx.db.get(result.callId);
+      expect(call).toMatchObject({
+        businessId,
+        widgetId: "lobbystack-dashboard-test-call",
+      });
+      expect(call?.sessionPurpose).toBeUndefined();
+      expect(call?.prospectDemoId).toBeUndefined();
+    });
   });
 
   it("allows web voice starts without a token after a prospect demo is claimed", async () => {

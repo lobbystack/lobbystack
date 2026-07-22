@@ -229,6 +229,7 @@ export async function startWebVoiceCall(input: {
   maxDurationMs?: number;
   startedAt: string;
   prospectDemoToken?: string;
+  dashboardTestCallToken?: string;
 }): Promise<StartWebCallResponse> {
   return await postJson<StartWebCallResponse>("/voice/call/start-web", input);
 }

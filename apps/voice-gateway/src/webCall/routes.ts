@@ -99,6 +99,7 @@ type ActiveWebCall = {
   pendingEndCallFallbackTimer: ReturnType<typeof setTimeout> | null;
   sessionMode?: "prospect_demo";
   prospectDemoToken?: string;
+  dashboardTestCallToken?: string;
 };
 
 type CompletedWebCall = {
@@ -1453,6 +1454,9 @@ async function handleToolCall(
       ...(session.prospectDemoToken !== undefined
         ? { prospectDemoToken: session.prospectDemoToken }
         : {}),
+      ...(session.dashboardTestCallToken !== undefined
+        ? { dashboardTestCallToken: session.dashboardTestCallToken }
+        : {}),
     });
     executed = await executeVoiceTool({
       toolName: toolCall.name,
@@ -1668,6 +1672,9 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
           ...(body.prospectDemoToken !== undefined
             ? { prospectDemoToken: body.prospectDemoToken }
             : {}),
+          ...(dashboardTestCallToken !== undefined
+            ? { dashboardTestCallToken }
+            : {}),
         });
       } catch (error) {
         await hangupOpenAiRealtimeProviderCall(server, {
@@ -1705,6 +1712,9 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
           : {}),
         ...(body.prospectDemoToken !== undefined
           ? { prospectDemoToken: body.prospectDemoToken }
+          : {}),
+        ...(dashboardTestCallToken !== undefined
+          ? { dashboardTestCallToken }
           : {}),
       };
       const sidebandSocket = createSidebandSocket({

@@ -744,6 +744,82 @@ describe("web call routes", () => {
         widgetId: "lobbystack-dashboard-test-call",
       }),
     );
+    expect(startWebVoiceCallMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        businessSlug: "lobbystack",
+        dashboardTestCallToken: "dashboard-token",
+        widgetId: "lobbystack-dashboard-test-call",
+      }),
+    );
+  });
+
+  it("forwards dashboard test call tokens during tool context fetches", async () => {
+    process.env.WEB_CALL_ALLOWED_ORIGINS = "https://app.lobbystack.com";
+    process.env.DASHBOARD_TEST_CALL_TOKEN = "dashboard-token";
+    fetchWebVoiceContextMock
+      .mockResolvedValueOnce({ snapshot: demoSnapshot })
+      .mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    takeVoiceMessageMock.mockResolvedValueOnce({ inboxItemId: "inbox_123" });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const createResponse = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://app.lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        dashboardTestCallProof: createDashboardTestCallProof({
+          businessSlug: "lobbystack",
+          token: "dashboard-token",
+        }),
+        sdp: "v=0",
+        visitorId: "visitor-123",
+        widgetId: "lobbystack-dashboard-test-call",
+      },
+    });
+
+    expect(createResponse.statusCode).toBe(200);
+    webSocketInstances[0]?.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({
+          type: "response.function_call_arguments.done",
+          name: "takeMessage",
+          call_id: "tool-call-1",
+          arguments: JSON.stringify({
+            callbackPhone: "+14165550123",
+            message: "Please call me tomorrow.",
+          }),
+        }),
+      ),
+    );
+
+    await vi.waitFor(() => {
+      expect(fetchWebVoiceContextMock).toHaveBeenCalledTimes(2);
+    });
+    expect(fetchWebVoiceContextMock.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        businessSlug: "lobbystack",
+        dashboardTestCallToken: "dashboard-token",
+      }),
+    );
   });
 
   it("does not trust spoofed forwarded IP headers by default", async () => {

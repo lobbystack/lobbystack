@@ -95,6 +95,7 @@ type StartWebCallArgs = {
   maxDurationMs?: number;
   startedAt: string;
   prospectDemoToken?: string;
+  dashboardTestCallToken?: string;
 };
 type StartWebCallResult = {
   businessId: Id<"businesses">;
@@ -1188,6 +1189,7 @@ export const startWebCall = internalMutation({
     maxDurationMs: v.optional(v.number()),
     startedAt: v.string(),
     prospectDemoToken: v.optional(v.string()),
+    dashboardTestCallToken: v.optional(v.string()),
   },
   handler: async (
     ctx: MutationCtx,
@@ -1206,6 +1208,9 @@ export const startWebCall = internalMutation({
         businessSlug: args.businessSlug,
         ...(args.prospectDemoToken !== undefined
           ? { prospectDemoToken: args.prospectDemoToken }
+          : {}),
+        ...(args.dashboardTestCallToken !== undefined
+          ? { dashboardTestCallToken: args.dashboardTestCallToken }
           : {}),
       },
     );
