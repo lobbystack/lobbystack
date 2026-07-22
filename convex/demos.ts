@@ -565,9 +565,11 @@ export const previewProspectDemo = query({
     if (state !== "active") {
       return {
         state,
+        demoId: demo._id,
         businessName: demo.businessName,
         locale: demo.locale,
         expiresAt: demo.expiresAt,
+        campaignId: demo.campaignId ?? null,
       };
     }
 
@@ -585,7 +587,6 @@ export const previewProspectDemo = query({
       suggestedPrompts: demo.suggestedPrompts,
       websiteUrl: demo.websiteUrl,
       expiresAt: demo.expiresAt,
-      claimPath: `/claim-demo?token=${encodeURIComponent(token)}`,
       signupPath: `/signup?returnTo=${encodeURIComponent(`/claim-demo?token=${token}`)}`,
       campaignId: demo.campaignId ?? null,
     };
@@ -686,40 +687,6 @@ export const claimProspectDemo = mutation({
     return {
       status: "claimed" as const,
       businessId: demo.businessId,
-    };
-  },
-});
-
-export const validateProspectDemoForWebVoice = internalQuery({
-  args: {
-    token: v.string(),
-    businessSlug: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const tokenHash = await hashProspectDemoToken(args.token.trim());
-    const demo = await ctx.db
-      .query("prospect_demos")
-      .withIndex("by_token_hash", (q) => q.eq("tokenHash", tokenHash))
-      .unique();
-    if (!demo) {
-      return { ok: false as const, reason: "invalid" as const };
-    }
-    const state = resolveProspectDemoPublicState(demo);
-    if (state !== "active") {
-      return { ok: false as const, reason: state };
-    }
-    const business = await ctx.db.get(demo.businessId);
-    if (!business || business.status !== "active") {
-      return { ok: false as const, reason: "invalid" as const };
-    }
-    if (business.slug !== args.businessSlug.trim()) {
-      return { ok: false as const, reason: "mismatch" as const };
-    }
-    return {
-      ok: true as const,
-      demoId: demo._id,
-      businessId: business._id,
-      campaignId: demo.campaignId ?? null,
     };
   },
 });

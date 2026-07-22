@@ -78,8 +78,10 @@ describe("ClaimDemoPage", () => {
   it("claims already-claimed demos so the original claimant can re-enter", async () => {
     useQueryMock.mockReturnValue({
       state: "claimed",
+      demoId: "demo_1",
       businessName: "Acme Dental",
       expiresAt: Date.now() + 1000,
+      campaignId: "spring",
     });
     claimProspectDemoMock.mockResolvedValueOnce({
       status: "already_claimed",
@@ -93,7 +95,7 @@ describe("ClaimDemoPage", () => {
     });
     expect(captureAnalyticsEventMock).toHaveBeenCalledWith(
       "web.prospect_demo.claim_succeeded",
-      {},
+      { prospectDemoId: "demo_1", campaignId: "spring" },
     );
     expect(navigateMock).toHaveBeenCalledWith("/onboarding/business", {
       replace: true,
@@ -103,8 +105,10 @@ describe("ClaimDemoPage", () => {
   it("shows unavailable when a claimed demo belongs to someone else", async () => {
     useQueryMock.mockReturnValue({
       state: "claimed",
+      demoId: "demo_1",
       businessName: "Acme Dental",
       expiresAt: Date.now() + 1000,
+      campaignId: null,
     });
     claimProspectDemoMock.mockRejectedValueOnce(
       new Error("This prospect demo has already been claimed."),

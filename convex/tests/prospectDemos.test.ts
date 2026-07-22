@@ -347,18 +347,6 @@ describe("prospect demos", () => {
     });
   });
 
-  it("rejects mismatched prospect demo tokens for web voice", async () => {
-    const { t } = await seedProspectDemoFixture();
-    const validation = await t.query(
-      internal.demos.validateProspectDemoForWebVoice,
-      {
-        token: generateProspectDemoToken("Other Business"),
-        businessSlug: "prospect-acme",
-      },
-    );
-    expect(validation).toEqual({ ok: false, reason: "invalid" });
-  });
-
   it("rejects web voice context access without a prospect demo token", async () => {
     const { t, businessId } = await seedProspectDemoFixture();
 

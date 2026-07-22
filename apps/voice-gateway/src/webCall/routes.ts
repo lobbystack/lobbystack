@@ -137,7 +137,6 @@ const WEB_CALL_SESSION_START_RATE_LIMIT_MAX = 100;
 const WEB_CALL_SESSION_START_RATE_LIMIT_WINDOW = "1 minute";
 const DASHBOARD_TEST_CALL_WIDGET_ID = "lobbystack-dashboard-test-call";
 const DASHBOARD_TEST_CALL_PROOF_PREFIX = "dashboard-test-call";
-const PROSPECT_DEMO_WIDGET_ID = "lobbystack-prospect-demo";
 const PROSPECT_DEMO_INTAKE_TOOL_NAMES = new Set([
   "waitForUser",
   "getBusinessHours",

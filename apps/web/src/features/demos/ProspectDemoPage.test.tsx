@@ -108,7 +108,6 @@ describe("ProspectDemoPage", () => {
       suggestedPrompts: ["What are your hours?", "Do you take walk-ins?"],
       websiteUrl: "https://acme.example",
       expiresAt: Date.now() + 1000,
-      claimPath: "/claim-demo?token=tok_123",
       signupPath: "/signup?returnTo=%2Fclaim-demo%3Ftoken%3Dtok_123",
       campaignId: "spring",
     });

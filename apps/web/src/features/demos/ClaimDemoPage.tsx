@@ -66,10 +66,8 @@ export function ClaimDemoPage() {
     }
 
     hasAttemptedRef.current = true;
-    const prospectDemoId =
-      preview.state === "active" ? String(preview.demoId) : undefined;
-    const campaignId =
-      preview.state === "active" ? preview.campaignId : undefined;
+    const prospectDemoId = String(preview.demoId);
+    const campaignId = preview.campaignId;
 
     let cancelled = false;
     void claimProspectDemo({ token })
@@ -78,10 +76,8 @@ export function ClaimDemoPage() {
           return;
         }
         captureAnalyticsEvent("web.prospect_demo.claim_succeeded", {
-          ...(prospectDemoId ? { prospectDemoId } : {}),
-          ...(campaignId !== undefined && campaignId !== null
-            ? { campaignId }
-            : {}),
+          prospectDemoId,
+          ...(campaignId !== null ? { campaignId } : {}),
         });
         navigate("/onboarding/business", { replace: true });
       })
@@ -90,10 +86,8 @@ export function ClaimDemoPage() {
           return;
         }
         captureAnalyticsEvent("web.prospect_demo.claim_failed", {
-          ...(prospectDemoId ? { prospectDemoId } : {}),
-          ...(campaignId !== undefined && campaignId !== null
-            ? { campaignId }
-            : {}),
+          prospectDemoId,
+          ...(campaignId !== null ? { campaignId } : {}),
         });
         const message = error instanceof Error ? error.message : "";
         if (
