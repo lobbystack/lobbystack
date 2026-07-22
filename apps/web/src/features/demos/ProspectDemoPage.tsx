@@ -160,9 +160,9 @@ function ProspectDemoActive({
         </p>
 
         <AuraVoiceDemo
-          auraTone="light"
+          auraTone="dark"
           businessSlug={businessSlug}
-          className="mt-8 max-w-sm"
+          className="mt-8 w-full max-w-[22rem] md:max-w-[30rem]"
           endpoint={getWebCallEndpoint()}
           getStartPayload={getStartPayload}
           onEvent={handleEvent}
