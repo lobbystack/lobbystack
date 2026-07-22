@@ -6,10 +6,9 @@
   "active": {
     "eyebrow": "Démo LobbyStack",
     "title": "Démo préparée pour {{businessName}}",
-    "knowledgeNotice": "Cette réceptionniste a été préparée à partir du site web public de {{businessName}}, elle peut donc déjà répondre aux questions courantes.",
     "startHint": "Appuyez sur le bouton pour démarrer un appel vocal en direct.",
     "promptsTitle": "Essayez de demander",
-    "intakeNotice": "Ceci est une démo de prise de renseignements. La réceptionniste peut demander des coordonnées fictives pour montrer comment elle prend un message. Aucun vrai rendez-vous n'est réservé.",
+    "intakeNotice": "Ceci est une démo à capacités limitées. Les appels en direct fonctionnent, mais la prise de rendez-vous et les autres fonctionnalités complètes ne sont pas activées.",
     "claimCta": "Réclamer cette réceptionniste",
     "poweredBy": "Propulsé par LobbyStack"
   },

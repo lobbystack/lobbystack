@@ -6,10 +6,9 @@
   "active": {
     "eyebrow": "LobbyStack demo",
     "title": "Demo prepared for {{businessName}}",
-    "knowledgeNotice": "This receptionist was prepared from {{businessName}}'s public website, so it can already answer common questions.",
     "startHint": "Tap the button to start a live voice call.",
     "promptsTitle": "Try asking",
-    "intakeNotice": "This is an intake demo. The receptionist may ask for sample contact details to show how it takes a message. No real appointment is booked.",
+    "intakeNotice": "This is a limited demo. Live calls work, but booking and other full receptionist features aren't enabled.",
     "claimCta": "Claim this receptionist",
     "poweredBy": "Powered by LobbyStack"
   },

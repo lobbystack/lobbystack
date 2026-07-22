@@ -155,9 +155,6 @@ function ProspectDemoActive({
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
           {t("active.title", { businessName: demo.businessName })}
         </h1>
-        <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
-          {t("active.knowledgeNotice", { businessName: demo.businessName })}
-        </p>
 
         <AuraVoiceDemo
           auraTone="dark"
