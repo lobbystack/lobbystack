@@ -193,6 +193,57 @@ describe("website onboarding and ingestion", () => {
     });
   });
 
+  it("reuses a completed same-url import during onboarding", async () => {
+    const t = createConvexHarness();
+    const subject = "website-onboarding-completed-job-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "website",
+      subject,
+    });
+    const authed = t.withIdentity({ subject });
+
+    const completedJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com/clinic",
+        provider: "firecrawl",
+        status: "completed",
+        workflowId: "workflow-completed",
+        crawlMode: "firecrawl",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 3,
+        indexedCount: 3,
+        errorCount: 0,
+        completedAt: new Date().toISOString(),
+      });
+    });
+
+    const result = await authed.action(api.onboarding.websites.submitOnboardingWebsite, {
+      businessId,
+      websiteUrl: "example.com/clinic/?utm_source=claim#team",
+    });
+
+    expect(result).toMatchObject({
+      status: "submitted",
+      websiteUrl: "https://example.com/clinic",
+      websiteIngestionJobId: completedJobId,
+    });
+    expect(workflowStartMock).not.toHaveBeenCalled();
+
+    const business = await t.query(internal.businesses.admin.getBusinessById, {
+      businessId,
+    });
+    expect(business?.websiteUrl).toBe("https://example.com/clinic");
+    expect(business?.onboardingStage).toBe("knowledge");
+
+    const jobs = await listWebsiteIngestionJobs(t, businessId);
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]?._id).toBe(completedJobId);
+  });
+
   it("starts a website ingestion job from the knowledge dashboard without changing onboarding", async () => {
     const t = createConvexHarness();
     const subject = "website-dashboard-owner";

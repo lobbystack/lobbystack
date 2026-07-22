@@ -80,6 +80,32 @@ export const submitOnboardingWebsiteAfterPreflight = internalMutation({
   ): Promise<SubmitOnboardingWebsiteResult> => {
     await requireBusinessAtOrPastWebsiteStage(ctx, args.businessId);
 
+    const completedJob = (
+      await ctx.db
+        .query("website_ingestion_jobs")
+        .withIndex("by_business_id_and_website_url", (q) =>
+          q.eq("businessId", args.businessId).eq("websiteUrl", args.websiteUrl),
+        )
+        .order("desc")
+        .collect()
+    ).find((job) => job.status === "completed");
+
+    if (completedJob) {
+      const business = await ctx.db.get(args.businessId);
+      const stage = normalizeOnboardingStage(business?.onboardingStage);
+      await ctx.db.patch(args.businessId, {
+        websiteUrl: args.websiteUrl,
+        ...(ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.knowledge
+          ? { onboardingStage: "knowledge" as const }
+          : {}),
+      });
+      return {
+        status: "submitted",
+        websiteUrl: args.websiteUrl,
+        websiteIngestionJobId: completedJob._id,
+      };
+    }
+
     return await ctx.runMutation(
       internal.ai.context.websiteIngestion.submitWebsiteIngestionAfterPreflight,
       {
