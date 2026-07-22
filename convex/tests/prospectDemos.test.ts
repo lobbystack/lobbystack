@@ -301,6 +301,23 @@ describe("prospect demos", () => {
     });
   });
 
+  it("advances claimed demos to website after confirming the business name", async () => {
+    const { t, token, businessId } = await seedProspectDemoFixture();
+    const claimant = t.withIdentity({ subject: "prospect-claimant" });
+
+    await claimant.mutation(api.demos.claimProspectDemo, { token });
+    await claimant.mutation(api.businesses.catalog.updateBusinessName, {
+      businessId,
+      name: "Acme Claimed",
+    });
+
+    await t.run(async (ctx) => {
+      const business = await ctx.db.get(businessId);
+      expect(business?.name).toBe("Acme Claimed");
+      expect(business?.onboardingStage).toBe("website");
+    });
+  });
+
   it("starts prospect demo web calls without billing reservation", async () => {
     const { t, token, demoId, businessId } = await seedProspectDemoFixture();
 
