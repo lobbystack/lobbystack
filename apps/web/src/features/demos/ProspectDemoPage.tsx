@@ -159,7 +159,7 @@ function ProspectDemoActive({
     });
   }, [campaignId, demoId]);
 
-  const prompts: string[] = suggestedPrompts.slice(0, 2);
+  const prompts: string[] = suggestedPrompts.slice(0, 3);
 
   return (
     <DemoShell wide footer={t("active.startHint")}>
@@ -175,7 +175,7 @@ function ProspectDemoActive({
       <div className="mt-10 grid w-full min-w-0 items-center gap-10 md:gap-12 xl:grid-cols-2 xl:gap-16">
         <div className="flex w-full min-w-0 flex-col text-left">
           {prompts.length > 0 ? (
-            <div className="w-full">
+            <div className="w-full max-w-md">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {t("active.promptsTitle")}
               </p>

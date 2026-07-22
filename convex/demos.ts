@@ -26,6 +26,7 @@ import {
   hashProspectDemoToken,
   normalizeProspectDemoLocale,
   PROSPECT_DEMO_MAX_AGE_MS,
+  PROSPECT_DEMO_MAX_SUGGESTED_PROMPTS,
   resolveProspectDemoPublicState,
   slugifyProspectDemoName,
 } from "./lib/prospectDemo";
@@ -129,7 +130,7 @@ export const createProspectDemoRecord = internalMutation({
     const suggestedPrompts = (args.suggestedPrompts ?? [])
       .map((prompt) => prompt.trim())
       .filter(Boolean)
-      .slice(0, 2);
+      .slice(0, PROSPECT_DEMO_MAX_SUGGESTED_PROMPTS);
 
     const businessId = await ctx.db.insert("businesses", {
       slug,
@@ -380,7 +381,7 @@ export const setProspectDemoPrompts = internalMutation({
     const suggestedPrompts = args.suggestedPrompts
       .map((prompt) => prompt.trim())
       .filter(Boolean)
-      .slice(0, 2);
+      .slice(0, PROSPECT_DEMO_MAX_SUGGESTED_PROMPTS);
     await ctx.db.patch(demo._id, { suggestedPrompts });
     return { suggestedPrompts };
   },
@@ -413,7 +414,7 @@ export const publishProspectDemo = internalMutation({
       const suggestedPrompts = args.suggestedPrompts
         .map((prompt) => prompt.trim())
         .filter(Boolean)
-        .slice(0, 2);
+        .slice(0, PROSPECT_DEMO_MAX_SUGGESTED_PROMPTS);
       await ctx.db.patch(demo._id, { suggestedPrompts });
     }
 

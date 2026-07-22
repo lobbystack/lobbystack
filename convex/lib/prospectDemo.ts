@@ -3,6 +3,7 @@ export const PROSPECT_DEMO_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 export const PROSPECT_DEMO_WIDGET_ID = "lobbystack-prospect-demo";
 export const PROSPECT_DEMO_SESSION_PURPOSE = "prospect_demo";
 export const PROSPECT_DEMO_CALLS_PER_VISITOR = 5;
+export const PROSPECT_DEMO_MAX_SUGGESTED_PROMPTS = 3;
 
 export const PROSPECT_DEMO_INTAKE_TOOL_NAMES = new Set([
   "waitForUser",
