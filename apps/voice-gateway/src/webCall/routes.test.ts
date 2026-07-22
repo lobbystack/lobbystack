@@ -456,6 +456,55 @@ describe("web call routes", () => {
     );
   });
 
+  it("does not forward prospect demo bearer URLs to call storage", async () => {
+    fetchWebVoiceContextMock.mockResolvedValueOnce({
+      snapshot: demoSnapshot,
+      sessionMode: "prospect_demo",
+      prospectDemoId: "demo_123",
+    });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "prospect-acme",
+        pageUrl: "https://app.lobbystack.com/demo/acme-secret-token",
+        prospectDemoToken: "acme-secret-token",
+        sdp: "v=0",
+        visitorId: "visitor-123",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(startWebVoiceCallMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prospectDemoToken: "acme-secret-token",
+      }),
+    );
+    expect(startWebVoiceCallMock.mock.calls[0]?.[0]).not.toHaveProperty(
+      "originUrl",
+    );
+  });
+
   it("instructs the web sideband to retrieve product facts before answering", async () => {
     fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
     startWebVoiceCallMock.mockResolvedValueOnce({

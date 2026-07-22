@@ -1662,7 +1662,9 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
           providerCallId,
           gatewaySessionId,
           ...(ipHash !== undefined ? { ipHash } : {}),
-          ...(body.pageUrl !== undefined ? { originUrl: body.pageUrl } : {}),
+          ...(body.pageUrl !== undefined && body.prospectDemoToken === undefined
+            ? { originUrl: body.pageUrl }
+            : {}),
           ...(typeof request.headers["user-agent"] === "string"
             ? { userAgent: request.headers["user-agent"] }
             : {}),

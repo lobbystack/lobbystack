@@ -736,6 +736,11 @@ const SAFE_KEY_PATTERNS = [
   "workflowname",
 ];
 
+const SENSITIVE_URL_PARAMS = new Set(["customer_session_token", "token"]);
+const NESTED_URL_PARAMS = new Set(["returnTo"]);
+const DEMO_PATH_TOKEN_PATTERN = /^(\/demo\/)[^/]+/i;
+const REDACTED_VALUE = "[redacted]";
+
 const EXPECTED_CONVEX_FAILURE_MESSAGE_SNIPPETS = [
   "a billing contact email is required",
   "already exists",
@@ -794,13 +799,59 @@ function maskString(value: string): string {
   return "[redacted]";
 }
 
+function hasUrlParam(value: string, params: Set<string>): boolean {
+  return [...params].some((param) => new RegExp(`[?&]${param}=`).test(value));
+}
+
+function redactSensitiveUrlValue(value: string): string {
+  const hasSensitiveParam = hasUrlParam(value, SENSITIVE_URL_PARAMS);
+  const hasDemoPathToken = /\/demo\/[^/?#]+/i.test(value);
+  const hasNestedUrlParam = hasUrlParam(value, NESTED_URL_PARAMS);
+  if (!hasSensitiveParam && !hasDemoPathToken && !hasNestedUrlParam) {
+    return value;
+  }
+
+  try {
+    const absolute = /^[a-z][a-z\d+\-.]*:/i.test(value);
+    const url = new URL(value, absolute ? undefined : "https://lobbystack.local");
+    if (DEMO_PATH_TOKEN_PATTERN.test(url.pathname)) {
+      url.pathname = url.pathname.replace(
+        DEMO_PATH_TOKEN_PATTERN,
+        `$1${REDACTED_VALUE}`,
+      );
+    }
+    for (const param of SENSITIVE_URL_PARAMS) {
+      url.searchParams.delete(param);
+    }
+    for (const param of NESTED_URL_PARAMS) {
+      const nested = url.searchParams.get(param);
+      if (nested) {
+        url.searchParams.set(param, redactSensitiveUrlValue(nested));
+      }
+    }
+    return absolute ? url.toString() : `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    let redacted = value.replace(
+      /(\/demo\/)[^/?#\s]+/i,
+      `$1${REDACTED_VALUE}`,
+    );
+    for (const param of SENSITIVE_URL_PARAMS) {
+      redacted = redacted.replace(
+        new RegExp(`([?&])${param}=[^&#\\s]*`, "g"),
+        `$1${param}=${REDACTED_VALUE}`,
+      );
+    }
+    return redacted;
+  }
+}
+
 function redactValue(value: TelemetryValue | undefined): TelemetryValue | undefined {
   if (value === undefined || value === null) {
     return value;
   }
 
   if (typeof value === "string") {
-    return value;
+    return redactSensitiveUrlValue(value);
   }
 
   if (typeof value === "number" || typeof value === "boolean") {

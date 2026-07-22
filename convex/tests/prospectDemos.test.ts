@@ -325,6 +325,7 @@ describe("prospect demos", () => {
       businessSlug: "prospect-acme",
       providerCallId: "call_prospect_demo_1",
       gatewaySessionId: "gateway-prospect-1",
+      originUrl: "https://app.lobbystack.com/demo/acme-secret-token",
       visitorId: "visitor-prospect-1",
       widgetId: PROSPECT_DEMO_WIDGET_ID,
       prospectDemoToken: token,
@@ -340,6 +341,7 @@ describe("prospect demos", () => {
         prospectDemoId: demoId,
         widgetId: PROSPECT_DEMO_WIDGET_ID,
       });
+      expect(call?.originUrl).toBeUndefined();
       expect(
         usageEvents.filter((event) =>
           event.sourceKey.includes(String(result.callId)),

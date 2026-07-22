@@ -255,6 +255,23 @@ describe("telemetry redaction", () => {
     expect(redacted.$exception_message).toBe("[redacted]");
   });
 
+  it("redacts bearer tokens embedded in telemetry URL values", () => {
+    const redacted = redactTelemetryProperties({
+      originUrl: "https://app.lobbystack.com/demo/acme-secret-token?source=campaign",
+      signupUrl:
+        "https://app.lobbystack.com/signup?returnTo=%2Fclaim-demo%3Ftoken%3Dacme-secret-token",
+      statusDetail: "Invalid token",
+    });
+
+    expect(redacted.originUrl).toBe(
+      "https://app.lobbystack.com/demo/[redacted]?source=campaign",
+    );
+    expect(redacted.signupUrl).toBe(
+      "https://app.lobbystack.com/signup?returnTo=%2Fclaim-demo",
+    );
+    expect(redacted.statusDetail).toBe("Invalid token");
+  });
+
   it("builds metadata-only AI generation properties without message content", () => {
     const properties = buildPostHogAiGenerationProperties({
       traceId: "trace-1",

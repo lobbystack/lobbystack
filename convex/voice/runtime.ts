@@ -1299,6 +1299,8 @@ export const startWebCall = internalMutation({
       }
     }
 
+    const originUrl =
+      args.prospectDemoToken === undefined ? args.originUrl : undefined;
     const skipBilling = isProspectDemoSessionPurpose(sessionPurpose);
     if (!skipBilling) {
       const voicePolicy: {
@@ -1326,7 +1328,7 @@ export const startWebCall = internalMutation({
         provider: "openai",
         providerCallId: args.providerCallId,
         transport: "webrtc",
-        ...(args.originUrl !== undefined ? { originUrl: args.originUrl } : {}),
+        ...(originUrl !== undefined ? { originUrl } : {}),
         ...(args.userAgent !== undefined ? { userAgent: args.userAgent } : {}),
         ...(args.widgetId !== undefined ? { widgetId: args.widgetId } : {}),
         ...(args.gatewaySessionId !== undefined
@@ -1343,7 +1345,7 @@ export const startWebCall = internalMutation({
       await ctx.db.patch(existingCall._id, {
         conversationId,
         status: "in_progress",
-        ...(args.originUrl !== undefined ? { originUrl: args.originUrl } : {}),
+        ...(originUrl !== undefined ? { originUrl } : {}),
         ...(args.userAgent !== undefined ? { userAgent: args.userAgent } : {}),
         ...(args.widgetId !== undefined ? { widgetId: args.widgetId } : {}),
         ...(args.gatewaySessionId !== undefined
@@ -1411,7 +1413,7 @@ export const startWebCall = internalMutation({
           transport: "webrtc",
           gatewaySessionId: args.gatewaySessionId,
           webCallMaxDurationMs: getWebCallMaxDurationMs(args.maxDurationMs),
-          originUrl: args.originUrl,
+          originUrl,
           widgetId: args.widgetId,
           ...(sessionPurpose !== undefined ? { sessionPurpose } : {}),
           ...(prospectDemoId !== undefined
