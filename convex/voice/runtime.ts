@@ -39,7 +39,6 @@ import { webVoiceAbuseRateLimiter } from "../lib/components";
 import {
   isProspectDemoSessionPurpose,
   PROSPECT_DEMO_SESSION_PURPOSE,
-  PROSPECT_DEMO_WIDGET_ID,
 } from "../lib/prospectDemo";
 import { normalizeRuntimeLocale, type RuntimeLocale } from "../lib/runtimeLocale";
 import {
@@ -258,15 +257,33 @@ function buildWebVoiceStartLimits(input: {
   const isDashboardTestCall =
     input.widgetId === DASHBOARD_TEST_CALL_WIDGET_ID &&
     hasVerifiedDashboardTestCallToken(input);
-  const isProspectDemoCall =
-    input.prospectDemoId !== undefined &&
-    input.widgetId === PROSPECT_DEMO_WIDGET_ID;
 
-  if (isProspectDemoCall && input.visitorId !== undefined) {
+  // Prospect demo quota is keyed off a validated demo id (from the token), not
+  // client-supplied widgetId. Fall back to IP when visitorId is unavailable
+  // (e.g. localStorage blocked) so callers cannot skip the 5-call demo cap.
+  if (input.prospectDemoId !== undefined) {
+    const identityKey =
+      input.visitorId !== undefined
+        ? `visitor:${input.visitorId}`
+        : input.ipHash !== undefined
+          ? `ip:${input.ipHash}`
+          : null;
+    if (identityKey === null) {
+      logWebVoiceRateLimitBlocked({
+        limiter: "prospectDemoWebVoiceStartPerVisitor",
+        reason: "prospect_demo_rate_limit_missing_identity",
+        ...logContext,
+      });
+      throw new Error(WEB_VOICE_RATE_LIMIT_ERROR);
+    }
+
     limits.push({
       limiterName: "prospectDemoWebVoiceStartPerVisitor",
-      key: `${String(input.prospectDemoId)}:visitor:${input.visitorId}`,
-      reason: "prospect_demo_rate_limit_visitor",
+      key: `${String(input.prospectDemoId)}:${identityKey}`,
+      reason:
+        identityKey.startsWith("visitor:")
+          ? "prospect_demo_rate_limit_visitor"
+          : "prospect_demo_rate_limit_ip",
       ...logContext,
     });
     limits.push({

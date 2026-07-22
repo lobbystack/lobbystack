@@ -337,4 +337,60 @@ describe("prospect demos", () => {
       }),
     ).rejects.toThrow("web_voice_rate_limited");
   });
+
+  it("enforces the prospect demo quota even when widgetId is missing", async () => {
+    const { t, demoId, businessId } = await seedProspectDemoFixture();
+
+    for (let i = 0; i < 5; i++) {
+      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://app.lobbystack.com",
+        visitorId: "visitor-no-widget",
+        prospectDemoId: demoId,
+      });
+    }
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://app.lobbystack.com",
+        visitorId: "visitor-no-widget",
+        prospectDemoId: demoId,
+      }),
+    ).rejects.toThrow("web_voice_rate_limited");
+  });
+
+  it("falls back to IP identity for prospect demo quota when visitorId is missing", async () => {
+    const { t, demoId, businessId } = await seedProspectDemoFixture();
+
+    for (let i = 0; i < 5; i++) {
+      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://app.lobbystack.com",
+        ipHash: "demo-ip-hash",
+        prospectDemoId: demoId,
+      });
+    }
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://app.lobbystack.com",
+        ipHash: "demo-ip-hash",
+        prospectDemoId: demoId,
+      }),
+    ).rejects.toThrow("web_voice_rate_limited");
+  });
+
+  it("rejects prospect demo starts with no visitor or IP identity", async () => {
+    const { t, demoId, businessId } = await seedProspectDemoFixture();
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://app.lobbystack.com",
+        prospectDemoId: demoId,
+      }),
+    ).rejects.toThrow("web_voice_rate_limited");
+  });
 });
