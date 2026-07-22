@@ -26,10 +26,21 @@ vi.mock("@/components/web-voice/AuraVoiceDemo", () => ({
   AuraVoiceDemo: () => <div data-testid="aura-voice-demo" />,
 }));
 
+vi.mock("@/components/marketing/landing-navbar", () => ({
+  LandingNavbar: () => <div data-testid="landing-navbar" />,
+}));
+
+vi.mock("next-themes", () => ({
+  useTheme: () => ({
+    setTheme: vi.fn(),
+  }),
+}));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) =>
       opts?.businessName ? `${key}::${String(opts.businessName)}` : key,
+    i18n: { language: "en" },
   }),
 }));
 

@@ -3,16 +3,19 @@ import { LoaderCircle } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
+import { useTheme } from "next-themes";
 
 import type { TelemetryEventName } from "@lobbystack/telemetry";
 import { api } from "../../../../../convex/_generated/api";
 import { AuraVoiceDemo } from "@/components/web-voice/AuraVoiceDemo";
+import { LandingNavbar } from "@/components/marketing/landing-navbar";
 import {
   getWebCallEndpoint,
   PROSPECT_DEMO_WIDGET_ID,
 } from "@/components/web-voice/config";
 import { buttonVariants } from "@/components/ui/button";
 import { captureAnalyticsEvent } from "@/lib/analytics";
+import type { MarketingLocale } from "@/lib/marketing-site-url";
 import { cn } from "@/lib/utils";
 
 const CALL_EVENT_MAP: Partial<Record<TelemetryEventName, TelemetryEventName>> = {
@@ -39,28 +42,63 @@ function useNoIndexMeta(): void {
   }, []);
 }
 
+function useForceLightTheme(): void {
+  const { setTheme } = useTheme();
+
+  useEffect(() => {
+    const previousTheme = localStorage.getItem("theme");
+    setTheme("light");
+
+    return () => {
+      setTheme(
+        previousTheme === "light" ||
+          previousTheme === "dark" ||
+          previousTheme === "system"
+          ? previousTheme
+          : "system",
+      );
+    };
+  }, [setTheme]);
+}
+
+function resolveMarketingLocale(
+  demoLocale: string | undefined,
+  language: string,
+): MarketingLocale {
+  const candidate = demoLocale?.trim().toLowerCase() ?? language.trim().toLowerCase();
+  if (candidate === "fr" || candidate.startsWith("fr-")) {
+    return "fr";
+  }
+  return "en";
+}
+
 function DemoShell({
   children,
   wide = false,
   footer,
+  marketingLocale = "en",
 }: {
   children: React.ReactNode;
   wide?: boolean;
   footer?: string;
+  marketingLocale?: MarketingLocale;
 }) {
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center bg-background px-6 py-16 text-foreground">
-      <div
-        className={cn(
-          "flex w-full flex-col items-center",
-          wide ? "max-w-7xl" : "max-w-xl",
-        )}
-      >
-        {children}
+    <div className="flex min-h-svh flex-col bg-background text-foreground">
+      <LandingNavbar locale={marketingLocale} />
+      <div className="flex flex-1 flex-col items-center justify-center px-6 py-16">
+        <div
+          className={cn(
+            "flex w-full flex-col items-center",
+            wide ? "max-w-7xl" : "max-w-xl",
+          )}
+        >
+          {children}
+        </div>
+        {footer ? (
+          <p className="mt-16 text-sm text-muted-foreground">{footer}</p>
+        ) : null}
       </div>
-      {footer ? (
-        <p className="mt-16 text-sm text-muted-foreground">{footer}</p>
-      ) : null}
     </div>
   );
 }
@@ -82,11 +120,15 @@ function DemoStateCard({
   );
 }
 
-function ProspectDemoLoading() {
+function ProspectDemoLoading({
+  marketingLocale,
+}: {
+  marketingLocale: MarketingLocale;
+}) {
   const { t } = useTranslation("demos");
 
   return (
-    <DemoShell>
+    <DemoShell marketingLocale={marketingLocale}>
       <div className="flex flex-col items-center gap-3 text-center">
         <LoaderCircle className="size-6 animate-spin text-muted-foreground" />
         <p className="text-sm text-muted-foreground">{t("loading.description")}</p>
@@ -98,9 +140,11 @@ function ProspectDemoLoading() {
 function ProspectDemoInactive({
   state,
   businessName,
+  marketingLocale,
 }: {
   state: "invalid" | "preparing" | "expired" | "revoked" | "claimed";
   businessName?: string;
+  marketingLocale: MarketingLocale;
 }) {
   const { t } = useTranslation("demos");
   const safeName = businessName?.trim();
@@ -110,7 +154,7 @@ function ProspectDemoInactive({
       : t(`states.${state}.title`);
 
   return (
-    <DemoShell>
+    <DemoShell marketingLocale={marketingLocale}>
       <DemoStateCard title={title} description={t(`states.${state}.description`)} />
     </DemoShell>
   );
@@ -162,7 +206,7 @@ function ProspectDemoActive({
   const prompts: string[] = suggestedPrompts.slice(0, 3);
 
   return (
-    <DemoShell wide footer={t("active.startHint")}>
+    <DemoShell wide footer={t("active.startHint")} marketingLocale={demo.locale}>
       <div className="flex w-full flex-col items-center text-center">
         <p className="text-sm font-medium text-muted-foreground">
           {t("active.eyebrow")}
@@ -213,7 +257,7 @@ function ProspectDemoActive({
         <div className="flex w-full min-w-0 justify-center xl:justify-end">
           <div className="flex w-full max-w-[22rem] flex-col items-center md:max-w-[30rem]">
             <AuraVoiceDemo
-              auraTone="dark"
+              auraTone="light"
               businessSlug={businessSlug}
               className="w-full"
               endpoint={getWebCallEndpoint()}
@@ -230,18 +274,24 @@ function ProspectDemoActive({
 
 export function ProspectDemoPage() {
   useNoIndexMeta();
+  useForceLightTheme();
+  const { i18n } = useTranslation();
   const { token } = useParams<{ token: string }>();
   const preview = useQuery(
     api.demos.previewProspectDemo,
     token ? { token } : "skip",
   );
+  const marketingLocale = resolveMarketingLocale(
+    preview && "locale" in preview ? preview.locale : undefined,
+    i18n.language,
+  );
 
   if (!token) {
-    return <ProspectDemoInactive state="invalid" />;
+    return <ProspectDemoInactive marketingLocale={marketingLocale} state="invalid" />;
   }
 
   if (preview === undefined) {
-    return <ProspectDemoLoading />;
+    return <ProspectDemoLoading marketingLocale={marketingLocale} />;
   }
 
   if (preview.state === "active") {
@@ -250,6 +300,7 @@ export function ProspectDemoPage() {
 
   return (
     <ProspectDemoInactive
+      marketingLocale={marketingLocale}
       state={preview.state}
       {...("businessName" in preview && preview.businessName
         ? { businessName: preview.businessName }
