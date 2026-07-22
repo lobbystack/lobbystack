@@ -250,6 +250,21 @@ export const attachWebsiteIngestionJob = internalMutation({
   },
 });
 
+export const abandonFailedProspectDemoCreate = internalMutation({
+  args: {
+    demoId: v.id("prospect_demos"),
+  },
+  handler: async (ctx, args) => {
+    const demo = await requireProspectDemo(ctx, args.demoId);
+    if (demo.status === "claimed") {
+      return { demoId: demo._id, status: demo.status };
+    }
+    await ctx.db.patch(demo._id, { status: "revoked" });
+    await ctx.db.patch(demo.businessId, { status: "inactive" });
+    return { demoId: demo._id, status: "revoked" as const };
+  },
+});
+
 export const createProspectDemo = internalAction({
   args: {
     name: v.string(),
@@ -276,47 +291,59 @@ export const createProspectDemo = internalAction({
     demoUrl: string;
     claimSignupUrl: string;
   }> => {
+    // Validate the crawl target before committing tenant/demo records so a bad
+    // URL does not leave an orphaned unpublishable workspace behind.
+    const websiteUrl: string = await ctx.runAction(
+      internal.ai.context.websiteIngestionActions.preflightWebsiteCrawlTarget,
+      { websiteUrl: args.websiteUrl.trim() },
+    );
+
     const created: {
       demoId: Id<"prospect_demos">;
       businessId: Id<"businesses">;
       slug: string;
       token: string;
       tokenHash: string;
-    } = await ctx.runMutation(internal.demos.createProspectDemoRecord, args);
-
-    const websiteUrl: string = await ctx.runAction(
-      internal.ai.context.websiteIngestionActions.preflightWebsiteCrawlTarget,
-      { websiteUrl: args.websiteUrl.trim() },
-    );
-
-    const ingestion: {
-      status: "submitted";
-      websiteUrl: string;
-      websiteIngestionJobId: Id<"website_ingestion_jobs">;
-    } = await ctx.runMutation(
-      internal.ai.context.websiteIngestion.submitWebsiteIngestionForSystem,
-      {
-        businessId: created.businessId,
-        websiteUrl,
-      },
-    );
-
-    await ctx.runMutation(internal.demos.attachWebsiteIngestionJob, {
-      demoId: created.demoId,
-      websiteIngestionJobId: ingestion.websiteIngestionJobId,
+    } = await ctx.runMutation(internal.demos.createProspectDemoRecord, {
+      ...args,
       websiteUrl,
     });
 
-    return {
-      demoId: created.demoId,
-      businessId: created.businessId,
-      slug: created.slug,
-      token: created.token,
-      status: "preparing" as const,
-      websiteIngestionJobId: ingestion.websiteIngestionJobId,
-      demoUrl: buildProspectDemoPublicUrl(created.token),
-      claimSignupUrl: buildProspectDemoSignupUrl(created.token),
-    };
+    try {
+      const ingestion: {
+        status: "submitted";
+        websiteUrl: string;
+        websiteIngestionJobId: Id<"website_ingestion_jobs">;
+      } = await ctx.runMutation(
+        internal.ai.context.websiteIngestion.submitWebsiteIngestionForSystem,
+        {
+          businessId: created.businessId,
+          websiteUrl,
+        },
+      );
+
+      await ctx.runMutation(internal.demos.attachWebsiteIngestionJob, {
+        demoId: created.demoId,
+        websiteIngestionJobId: ingestion.websiteIngestionJobId,
+        websiteUrl,
+      });
+
+      return {
+        demoId: created.demoId,
+        businessId: created.businessId,
+        slug: created.slug,
+        token: created.token,
+        status: "preparing" as const,
+        websiteIngestionJobId: ingestion.websiteIngestionJobId,
+        demoUrl: buildProspectDemoPublicUrl(created.token),
+        claimSignupUrl: buildProspectDemoSignupUrl(created.token),
+      };
+    } catch (error) {
+      await ctx.runMutation(internal.demos.abandonFailedProspectDemoCreate, {
+        demoId: created.demoId,
+      });
+      throw error;
+    }
   },
 });
 

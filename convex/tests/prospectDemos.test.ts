@@ -227,6 +227,28 @@ describe("prospect demos", () => {
     ).resolves.toMatchObject({ state: "revoked" });
   });
 
+  it("abandons a failed create by revoking the demo and inactivating the business", async () => {
+    const { t, demoId, businessId } = await seedProspectDemoFixture({
+      status: "preparing",
+    });
+
+    const abandoned = await t.mutation(
+      internal.demos.abandonFailedProspectDemoCreate,
+      { demoId },
+    );
+    expect(abandoned).toMatchObject({
+      demoId,
+      status: "revoked",
+    });
+
+    await t.run(async (ctx) => {
+      const demo = await ctx.db.get(demoId);
+      const business = await ctx.db.get(businessId);
+      expect(demo?.status).toBe("revoked");
+      expect(business?.status).toBe("inactive");
+    });
+  });
+
   it("claims idempotently for the same user and rejects competitors", async () => {
     const { t, token, demoId, businessId, operatorUserId } =
       await seedProspectDemoFixture();
