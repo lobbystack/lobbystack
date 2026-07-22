@@ -208,10 +208,7 @@ function ProspectDemoActive({
   return (
     <DemoShell wide footer={t("active.startHint")} marketingLocale={demo.locale}>
       <div className="flex w-full flex-col items-center text-center">
-        <p className="text-sm font-medium text-muted-foreground">
-          {t("active.eyebrow")}
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
           {t("active.title", { businessName: demo.businessName })}
         </h1>
       </div>
@@ -220,17 +217,12 @@ function ProspectDemoActive({
         <div className="flex w-full min-w-0 flex-col text-left">
           {prompts.length > 0 ? (
             <div className="w-full max-w-md">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <h2 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
                 {t("active.promptsTitle")}
-              </p>
-              <ul className="mt-3 flex flex-col gap-3">
+              </h2>
+              <ul className="mt-3 list-disc space-y-3 pl-5 text-base leading-6 text-foreground">
                 {prompts.map((prompt) => (
-                  <li
-                    key={prompt}
-                    className="rounded-xl border bg-muted/30 px-4 py-3 text-sm text-foreground"
-                  >
-                    {prompt}
-                  </li>
+                  <li key={prompt}>{prompt}</li>
                 ))}
               </ul>
             </div>

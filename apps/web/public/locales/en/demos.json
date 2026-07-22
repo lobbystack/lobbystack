@@ -4,10 +4,9 @@
     "description": "Getting your receptionist demo ready..."
   },
   "active": {
-    "eyebrow": "LobbyStack demo",
     "title": "Demo prepared for {{businessName}}",
     "startHint": "Tap the button to start a live voice call.",
-    "promptsTitle": "Try asking",
+    "promptsTitle": "Try asking:",
     "intakeNotice": "This is a limited demo. Live calls work, but booking and other full receptionist features aren't enabled.",
     "claimCta": "Claim this receptionist"
   },
