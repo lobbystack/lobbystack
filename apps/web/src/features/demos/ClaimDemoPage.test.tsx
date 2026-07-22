@@ -75,6 +75,49 @@ describe("ClaimDemoPage", () => {
     expect(claimProspectDemoMock).not.toHaveBeenCalled();
   });
 
+  it("claims already-claimed demos so the original claimant can re-enter", async () => {
+    useQueryMock.mockReturnValue({
+      state: "claimed",
+      businessName: "Acme Dental",
+      expiresAt: Date.now() + 1000,
+    });
+    claimProspectDemoMock.mockResolvedValueOnce({
+      status: "already_claimed",
+      businessId: "biz_1",
+    });
+
+    renderClaimPage();
+
+    await waitFor(() => {
+      expect(claimProspectDemoMock).toHaveBeenCalledWith({ token: "tok_123" });
+    });
+    expect(captureAnalyticsEventMock).toHaveBeenCalledWith(
+      "web.prospect_demo.claim_succeeded",
+      {},
+    );
+    expect(navigateMock).toHaveBeenCalledWith("/onboarding/business", {
+      replace: true,
+    });
+  });
+
+  it("shows unavailable when a claimed demo belongs to someone else", async () => {
+    useQueryMock.mockReturnValue({
+      state: "claimed",
+      businessName: "Acme Dental",
+      expiresAt: Date.now() + 1000,
+    });
+    claimProspectDemoMock.mockRejectedValueOnce(
+      new Error("This prospect demo has already been claimed."),
+    );
+
+    renderClaimPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("claim.unavailableTitle")).toBeTruthy();
+    });
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
   it("waits for an active preview before claiming", async () => {
     useQueryMock.mockReturnValue({
       state: "active",

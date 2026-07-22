@@ -56,7 +56,9 @@ export function ClaimDemoPage() {
     if (hasAttemptedRef.current) {
       return;
     }
-    if (preview.state !== "active") {
+    // Active demos claim normally. Claimed demos still call the mutation so the
+    // original claimant can take the idempotent already_claimed path.
+    if (preview.state !== "active" && preview.state !== "claimed") {
       if (preview.state !== "preparing") {
         setStatus("unavailable");
       }
@@ -64,8 +66,10 @@ export function ClaimDemoPage() {
     }
 
     hasAttemptedRef.current = true;
-    const prospectDemoId = String(preview.demoId);
-    const campaignId = preview.campaignId;
+    const prospectDemoId =
+      preview.state === "active" ? String(preview.demoId) : undefined;
+    const campaignId =
+      preview.state === "active" ? preview.campaignId : undefined;
 
     let cancelled = false;
     void claimProspectDemo({ token })
@@ -75,18 +79,30 @@ export function ClaimDemoPage() {
         }
         captureAnalyticsEvent("web.prospect_demo.claim_succeeded", {
           ...(prospectDemoId ? { prospectDemoId } : {}),
-          ...(campaignId !== undefined ? { campaignId } : {}),
+          ...(campaignId !== undefined && campaignId !== null
+            ? { campaignId }
+            : {}),
         });
         navigate("/onboarding/business", { replace: true });
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (cancelled) {
           return;
         }
         captureAnalyticsEvent("web.prospect_demo.claim_failed", {
           ...(prospectDemoId ? { prospectDemoId } : {}),
-          ...(campaignId !== undefined ? { campaignId } : {}),
+          ...(campaignId !== undefined && campaignId !== null
+            ? { campaignId }
+            : {}),
         });
+        const message = error instanceof Error ? error.message : "";
+        if (
+          preview.state === "claimed" ||
+          message.includes("already been claimed")
+        ) {
+          setStatus("unavailable");
+          return;
+        }
         setStatus("error");
       });
 

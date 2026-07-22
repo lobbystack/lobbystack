@@ -467,6 +467,30 @@ describe("prospect demos", () => {
     ).rejects.toThrow("web_voice_rate_limited");
   });
 
+  it("enforces the IP prospect demo quota even when visitorId changes", async () => {
+    const { t, demoId, businessId } = await seedProspectDemoFixture();
+
+    for (let i = 0; i < 5; i++) {
+      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://app.lobbystack.com",
+        visitorId: `visitor-rotating-${i}`,
+        ipHash: "shared-demo-ip",
+        prospectDemoId: demoId,
+      });
+    }
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://app.lobbystack.com",
+        visitorId: "visitor-rotating-new",
+        ipHash: "shared-demo-ip",
+        prospectDemoId: demoId,
+      }),
+    ).rejects.toThrow("web_voice_rate_limited");
+  });
+
   it("rejects prospect demo starts with no visitor or IP identity", async () => {
     const { t, demoId, businessId } = await seedProspectDemoFixture();
 

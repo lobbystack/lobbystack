@@ -68,4 +68,56 @@ describe("analytics", () => {
     );
     expect(event.properties.customer_session_token).toBe("[redacted]");
   });
+
+  it("redacts prospect demo path tokens and claim token query params", async () => {
+    vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
+    vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");
+    posthogMock.sessionRecordingStarted.mockReturnValue(true);
+
+    const { initializeAnalytics } = await import("./analytics");
+
+    initializeAnalytics();
+
+    const config = posthogMock.init.mock.calls[0]?.[1];
+    const demoEvent = config.before_send({
+      uuid: "event-demo",
+      event: "$pageview",
+      properties: {
+        $current_url: "https://app.lobbystack.com/demo/acme-dental-Ab12Cd34",
+        $pathname: "/demo/acme-dental-Ab12Cd34",
+      },
+    });
+    expect(demoEvent.properties.$current_url).toBe(
+      "https://app.lobbystack.com/demo/[redacted]",
+    );
+    expect(demoEvent.properties.$pathname).toBe("/demo/[redacted]");
+
+    const claimEvent = config.before_send({
+      uuid: "event-claim",
+      event: "$pageview",
+      properties: {
+        $current_url:
+          "https://app.lobbystack.com/claim-demo?token=acme-dental-Ab12Cd34",
+        $pathname: "/claim-demo",
+        token: "acme-dental-Ab12Cd34",
+      },
+    });
+    expect(claimEvent.properties.$current_url).toBe(
+      "https://app.lobbystack.com/claim-demo",
+    );
+    expect(claimEvent.properties.token).toBe("[redacted]");
+
+    const signupEvent = config.before_send({
+      uuid: "event-signup",
+      event: "$pageview",
+      properties: {
+        $current_url:
+          "https://app.lobbystack.com/signup?returnTo=%2Fclaim-demo%3Ftoken%3Dacme-dental-Ab12Cd34",
+        $pathname: "/signup",
+      },
+    });
+    expect(signupEvent.properties.$current_url).toBe(
+      "https://app.lobbystack.com/signup?returnTo=%2Fclaim-demo",
+    );
+  });
 });

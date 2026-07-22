@@ -159,7 +159,7 @@ function ProspectDemoLoading({
   demoLocale,
 }: {
   marketingLocale: MarketingLocale;
-  demoLocale?: string;
+  demoLocale?: string | undefined;
 }) {
   const t = useDemoTranslation(demoLocale);
 
@@ -184,9 +184,9 @@ function ProspectDemoInactive({
   demoLocale,
 }: {
   state: "invalid" | "preparing" | "expired" | "revoked" | "claimed";
-  businessName?: string;
+  businessName?: string | undefined;
   marketingLocale: MarketingLocale;
-  demoLocale?: string;
+  demoLocale?: string | undefined;
 }) {
   const t = useDemoTranslation(demoLocale);
   const safeName = businessName?.trim();

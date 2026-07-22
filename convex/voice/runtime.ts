@@ -260,16 +260,33 @@ function buildWebVoiceStartLimits(input: {
     hasVerifiedDashboardTestCallToken(input);
 
   // Prospect demo quota is keyed off a validated demo id (from the token), not
-  // client-supplied widgetId. Fall back to IP when visitorId is unavailable
-  // (e.g. localStorage blocked) so callers cannot skip the 5-call demo cap.
+  // client-supplied widgetId. Apply visitor and IP buckets together when both
+  // are present so clearing localStorage cannot reset the 5-call demo cap.
   if (input.prospectDemoId !== undefined) {
-    const identityKey =
-      input.visitorId !== undefined
-        ? `visitor:${input.visitorId}`
-        : input.ipHash !== undefined
-          ? `ip:${input.ipHash}`
-          : null;
-    if (identityKey === null) {
+    const demoKey = String(input.prospectDemoId);
+    let hasIdentity = false;
+
+    if (input.visitorId !== undefined) {
+      hasIdentity = true;
+      limits.push({
+        limiterName: "prospectDemoWebVoiceStartPerVisitor",
+        key: `${demoKey}:visitor:${input.visitorId}`,
+        reason: "prospect_demo_rate_limit_visitor",
+        ...logContext,
+      });
+    }
+
+    if (input.ipHash !== undefined) {
+      hasIdentity = true;
+      limits.push({
+        limiterName: "prospectDemoWebVoiceStartPerVisitor",
+        key: `${demoKey}:ip:${input.ipHash}`,
+        reason: "prospect_demo_rate_limit_ip",
+        ...logContext,
+      });
+    }
+
+    if (!hasIdentity) {
       logWebVoiceRateLimitBlocked({
         limiter: "prospectDemoWebVoiceStartPerVisitor",
         reason: "prospect_demo_rate_limit_missing_identity",
@@ -278,15 +295,6 @@ function buildWebVoiceStartLimits(input: {
       throw new Error(WEB_VOICE_RATE_LIMIT_ERROR);
     }
 
-    limits.push({
-      limiterName: "prospectDemoWebVoiceStartPerVisitor",
-      key: `${String(input.prospectDemoId)}:${identityKey}`,
-      reason:
-        identityKey.startsWith("visitor:")
-          ? "prospect_demo_rate_limit_visitor"
-          : "prospect_demo_rate_limit_ip",
-      ...logContext,
-    });
     limits.push({
       limiterName: "webVoiceStartGlobalPerMinute",
       key: "global",

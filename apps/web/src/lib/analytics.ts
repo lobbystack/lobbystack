@@ -37,7 +37,9 @@ function resolvePostHogHost(rawHost?: string): string | undefined {
 const POSTHOG_HOST = resolvePostHogHost(import.meta.env.VITE_POSTHOG_HOST);
 const POSTHOG_UI_HOST = import.meta.env.VITE_POSTHOG_UI_HOST ?? "https://us.posthog.com";
 const POSTHOG_REQUEST_FLUSH_INTERVAL_MS = 1_000;
-const SENSITIVE_URL_PARAMS = new Set(["customer_session_token"]);
+const SENSITIVE_URL_PARAMS = new Set(["customer_session_token", "token"]);
+const NESTED_URL_PARAMS = new Set(["returnTo"]);
+const DEMO_PATH_TOKEN_PATTERN = /^(\/demo\/)[^/]+/i;
 const REDACTED_VALUE = "[redacted]";
 
 let hasInitialized = false;
@@ -62,19 +64,38 @@ function isAbsoluteUrl(value: string): boolean {
 }
 
 function redactSensitiveUrlParams(value: string): string {
-  if (![...SENSITIVE_URL_PARAMS].some((param) => value.includes(param))) {
+  const hasSensitiveParam = [...SENSITIVE_URL_PARAMS].some((param) =>
+    value.includes(param),
+  );
+  const hasDemoPathToken = /\/demo\/[^/?#]+/i.test(value);
+  const hasNestedUrlParam = [...NESTED_URL_PARAMS].some((param) =>
+    value.includes(param),
+  );
+  if (!hasSensitiveParam && !hasDemoPathToken && !hasNestedUrlParam) {
     return value;
   }
 
   try {
     const absolute = isAbsoluteUrl(value);
     const url = new URL(value, absolute ? undefined : "https://lobbystack.local");
+    if (DEMO_PATH_TOKEN_PATTERN.test(url.pathname)) {
+      url.pathname = url.pathname.replace(
+        DEMO_PATH_TOKEN_PATTERN,
+        `$1${REDACTED_VALUE}`,
+      );
+    }
     for (const param of SENSITIVE_URL_PARAMS) {
       url.searchParams.delete(param);
     }
+    for (const param of NESTED_URL_PARAMS) {
+      const nested = url.searchParams.get(param);
+      if (nested) {
+        url.searchParams.set(param, redactSensitiveUrlParams(nested));
+      }
+    }
     return absolute ? url.toString() : `${url.pathname}${url.search}${url.hash}`;
   } catch {
-    let redacted = value;
+    let redacted = value.replace(DEMO_PATH_TOKEN_PATTERN, `$1${REDACTED_VALUE}`);
     for (const param of SENSITIVE_URL_PARAMS) {
       redacted = redacted.replace(
         new RegExp(`([?&])${param}=[^&#]*`, "g"),
