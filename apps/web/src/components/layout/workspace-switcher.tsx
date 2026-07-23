@@ -101,7 +101,7 @@ export function WorkspaceSwitcher({
               <Building2 />
             </ItemMedia>
             <ItemContent className="min-w-0 gap-0.5">
-              <ItemTitle className="ph-mask font-medium leading-tight">
+              <ItemTitle className="ph-mask line-clamp-2 w-full text-left font-medium leading-tight">
                 {displayName}
               </ItemTitle>
               {phoneDisplay ? (
