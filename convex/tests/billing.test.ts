@@ -14,6 +14,8 @@ const {
   polarMembersCreateMock,
   polarMembersListMock,
   polarMembersUpdateMock,
+  polarOrdersGetMock,
+  polarOrdersInvoiceMock,
   polarSubscriptionsGetMock,
   polarSubscriptionsListMock,
   polarSubscriptionsUpdateMock,
@@ -29,6 +31,8 @@ const {
   polarMembersCreateMock: vi.fn(),
   polarMembersListMock: vi.fn(),
   polarMembersUpdateMock: vi.fn(),
+  polarOrdersGetMock: vi.fn(),
+  polarOrdersInvoiceMock: vi.fn(),
   polarSubscriptionsGetMock: vi.fn(),
   polarSubscriptionsListMock: vi.fn(),
   polarSubscriptionsUpdateMock: vi.fn(),
@@ -71,7 +75,8 @@ vi.mock("@polar-sh/sdk", () => ({
         updateMember: polarMembersUpdateMock,
       },
       orders: {
-        invoice: vi.fn(),
+        get: polarOrdersGetMock,
+        invoice: polarOrdersInvoiceMock,
       },
       subscriptions: {
         get: polarSubscriptionsGetMock,
@@ -4628,6 +4633,104 @@ describe("billing", () => {
     );
     expect(polarMembersCreateMock).not.toHaveBeenCalled();
     expect(polarCustomerSessionsCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("reconciles missing Polar orders through the persisted customer link without duplicates", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-order-reconciliation",
+      deploymentMode: "cloud",
+    });
+    const polarCustomerId = "cus_order_reconciliation";
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+        polarCustomerId,
+      });
+    });
+
+    const juneOrder = {
+      id: "ord_june_paid",
+      createdAt: new Date("2026-06-12T02:24:40.765Z"),
+      status: "paid",
+      totalAmount: 3000,
+      currency: "usd",
+      description: "LobbyStack Starter Monthly",
+      isInvoiceGenerated: false,
+      customerId: polarCustomerId,
+      productId: "prod_starter_monthly",
+      subscriptionId: "sub_starter",
+      metadata: {},
+      customer: { externalId: null },
+    };
+    polarOrdersGetMock.mockResolvedValue(juneOrder);
+
+    await t.action(internal.billing.reconcilePolarOrder, { orderId: juneOrder.id });
+    await t.action(internal.billing.reconcilePolarOrder, { orderId: juneOrder.id });
+
+    const julyOrder = {
+      ...juneOrder,
+      id: "ord_july_pending",
+      createdAt: new Date("2026-07-12T02:24:40.935Z"),
+      status: "pending",
+    };
+    polarOrdersGetMock.mockResolvedValueOnce(julyOrder);
+    await t.action(internal.billing.reconcilePolarOrder, { orderId: julyOrder.id });
+
+    const status = await authed.query(api.billing.getStatus, { businessId });
+    expect(status.recentTransactions).toMatchObject([
+      {
+        sourceId: julyOrder.id,
+        status: "pending",
+        amountCents: 3000,
+        occurredAt: julyOrder.createdAt.toISOString(),
+      },
+      {
+        sourceId: juneOrder.id,
+        status: "paid",
+        amountCents: 3000,
+        occurredAt: juneOrder.createdAt.toISOString(),
+      },
+    ]);
+
+    const transactions = await t.run(async (ctx: TestContext) =>
+      ctx.db.query("billing_transactions").collect(),
+    );
+    expect(transactions).toHaveLength(2);
+    expect(polarOrdersGetMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("rejects reconciliation when the Polar customer is not linked to a business", async () => {
+    const t = convexTest(schema, convexModules);
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    polarOrdersGetMock.mockResolvedValueOnce({
+      id: "ord_unlinked",
+      createdAt: new Date("2026-06-12T02:24:40.765Z"),
+      status: "paid",
+      totalAmount: 3000,
+      currency: "usd",
+      description: "LobbyStack Starter Monthly",
+      isInvoiceGenerated: false,
+      customerId: "cus_unlinked",
+      productId: "prod_starter_monthly",
+      subscriptionId: "sub_unlinked",
+      metadata: {},
+      customer: { externalId: null },
+    });
+
+    await expect(
+      t.action(internal.billing.reconcilePolarOrder, { orderId: "ord_unlinked" }),
+    ).rejects.toThrow(
+      "Polar customer cus_unlinked is not linked to a LobbyStack billing account.",
+    );
+
+    const transactions = await t.run(async (ctx: TestContext) =>
+      ctx.db.query("billing_transactions").collect(),
+    );
+    expect(transactions).toEqual([]);
   });
 
   it("requires admin access for billing checkout and portal actions", async () => {

@@ -144,6 +144,7 @@ type PolarClient = ReturnType<typeof createPolarClient>;
 type PolarCheckout = Awaited<ReturnType<PolarClient["checkouts"]["get"]>>;
 type PolarCustomer = Awaited<ReturnType<PolarClient["customers"]["create"]>>;
 type PolarMember = Awaited<ReturnType<PolarClient["members"]["createMember"]>>;
+type PolarOrder = Awaited<ReturnType<PolarClient["orders"]["get"]>>;
 type PolarSubscription = Awaited<ReturnType<PolarClient["subscriptions"]["get"]>>;
 
 type PolarBillingSubscription = {
@@ -1954,22 +1955,54 @@ async function syncOrderTransactionFromWebhookEvent(
     }
   >,
 ): Promise<void> {
-  const businessId =
-    parseBusinessIdFromBillingKey(event.data.customer.externalId ?? null) ??
-    (typeof event.data.metadata.businessId === "string"
-      ? (event.data.metadata.businessId as Id<"businesses">)
-      : null);
+  const businessId = await syncPolarOrderTransaction(ctx, {
+    order: event.data,
+    lastSyncedAt: event.timestamp.toISOString(),
+  });
   if (!businessId) {
+    console.warn(
+      `[billing] Skipped Polar order ${event.data.id}: customer ${event.data.customerId} is not linked to a business.`,
+    );
     return;
   }
+
   const isAiSmsSetupOrder = shouldRecordAiSmsOrderAsSetupFee({
     orderProductIds: event.data.productId ? [event.data.productId] : [],
   });
+  if (event.type === "order.paid" && isAiSmsSetupOrder) {
+    await updateProSubscriptionForAiSmsSetupPayment(ctx, {
+      businessId,
+    });
+  }
+}
 
+async function syncPolarOrderTransaction(
+  ctx: Pick<ActionCtx, "runMutation">,
+  input: {
+    order: PolarOrder;
+    lastSyncedAt: string;
+  },
+): Promise<Id<"businesses"> | null> {
+  const order = input.order;
+  let businessId =
+    parseBusinessIdFromBillingKey(order.customer.externalId ?? null) ??
+    (typeof order.metadata.businessId === "string"
+      ? (order.metadata.businessId as Id<"businesses">)
+      : null);
+  businessId ??= await ctx.runMutation(internal.billing.findBusinessIdForCustomerMutation, {
+    polarCustomerId: order.customerId,
+  });
+  if (!businessId) {
+    return null;
+  }
+
+  const isAiSmsSetupOrder = shouldRecordAiSmsOrderAsSetupFee({
+    orderProductIds: order.productId ? [order.productId] : [],
+  });
   let invoiceUrl: string | undefined;
-  if (event.data.isInvoiceGenerated) {
+  if (order.isInvoiceGenerated) {
     try {
-      const invoice = await createPolarClient().orders.invoice({ id: event.data.id });
+      const invoice = await createPolarClient().orders.invoice({ id: order.id });
       invoiceUrl = invoice.url;
     } catch {
       invoiceUrl = undefined;
@@ -1979,26 +2012,60 @@ async function syncOrderTransactionFromWebhookEvent(
   await ctx.runMutation(internal.billing.upsertTransactionFromWebhook, {
     businessId,
     kind: "order",
-    sourceId: event.data.id,
-    status: event.data.status,
-    amountCents: event.data.totalAmount,
-    currency: event.data.currency,
-    description: event.data.description,
+    sourceId: order.id,
+    status: order.status,
+    amountCents: order.totalAmount,
+    currency: order.currency,
+    description: order.description,
     ...(invoiceUrl ? { invoiceUrl } : {}),
-    ...(event.data.subscriptionId ? { subscriptionId: event.data.subscriptionId } : {}),
-    ...(event.data.customerId ? { polarCustomerId: event.data.customerId } : {}),
-    orderId: event.data.id,
-    ...(isAiSmsSetupOrder ? { aiSmsSetupOrderId: event.data.id } : {}),
-    occurredAt: event.data.createdAt.toISOString(),
-    lastSyncedAt: event.timestamp.toISOString(),
+    ...(order.subscriptionId ? { subscriptionId: order.subscriptionId } : {}),
+    polarCustomerId: order.customerId,
+    orderId: order.id,
+    ...(isAiSmsSetupOrder ? { aiSmsSetupOrderId: order.id } : {}),
+    occurredAt: order.createdAt.toISOString(),
+    lastSyncedAt: input.lastSyncedAt,
   });
 
-  if (event.type === "order.paid" && isAiSmsSetupOrder) {
-    await updateProSubscriptionForAiSmsSetupPayment(ctx, {
-      businessId,
-    });
-  }
+  return businessId;
 }
+
+export const reconcilePolarOrder = internalAction({
+  args: {
+    orderId: v.string(),
+  },
+  returns: v.object({
+    businessId: v.id("businesses"),
+    orderId: v.string(),
+    status: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const order = await createPolarClient().orders.get({ id: args.orderId });
+    const businessId = await syncPolarOrderTransaction(ctx, {
+      order,
+      lastSyncedAt: new Date().toISOString(),
+    });
+    if (!businessId) {
+      throw new Error(
+        `Polar customer ${order.customerId} is not linked to a LobbyStack billing account.`,
+      );
+    }
+
+    const isAiSmsSetupOrder = shouldRecordAiSmsOrderAsSetupFee({
+      orderProductIds: order.productId ? [order.productId] : [],
+    });
+    if (order.status === "paid" && isAiSmsSetupOrder) {
+      await updateProSubscriptionForAiSmsSetupPayment(ctx, {
+        businessId,
+      });
+    }
+
+    return {
+      businessId,
+      orderId: order.id,
+      status: order.status,
+    };
+  },
+});
 
 async function syncRefundTransactionFromWebhookEvent(
   ctx: Pick<MutationCtx, "runMutation">,
