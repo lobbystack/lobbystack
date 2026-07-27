@@ -22,6 +22,27 @@ export default {
       });
     }
 
-    return env.ASSETS.fetch(request);
+    const response = await env.ASSETS.fetch(request);
+    const returnTo = url.searchParams.get("returnTo") ?? "";
+    const hasSensitiveQuery =
+      url.searchParams.has("token") ||
+      url.searchParams.has("customer_session_token") ||
+      /[?&]token=/i.test(returnTo);
+    if (
+      hasSensitiveQuery ||
+      url.pathname === "/demo" ||
+      url.pathname.startsWith("/demo/") ||
+      url.pathname === "/claim-demo" ||
+      url.pathname === "/confirm-email-change" ||
+      url.pathname === "/accept-invite" ||
+      url.pathname === "/login" ||
+      url.pathname === "/signup"
+    ) {
+      const protectedResponse = new Response(response.body, response);
+      protectedResponse.headers.set("Cache-Control", "no-store");
+      protectedResponse.headers.set("Referrer-Policy", "no-referrer");
+      return protectedResponse;
+    }
+    return response;
   },
 };

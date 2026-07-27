@@ -22,6 +22,7 @@ type LoginFormProps = {
   password: string;
   isSubmitting: boolean;
   errorMessage: string | null;
+  signUpHref?: string;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -33,6 +34,7 @@ export function LoginForm({
   password,
   isSubmitting,
   errorMessage,
+  signUpHref = "/signup",
   onEmailChange,
   onPasswordChange,
   onSubmit,
@@ -117,7 +119,10 @@ export function LoginForm({
 
       <p className="text-center text-sm text-muted-foreground">
         {t("login.noAccount")}{" "}
-        <Link className="font-medium text-foreground underline-offset-4 hover:underline" to="/signup">
+        <Link
+          className="font-medium text-foreground underline-offset-4 hover:underline"
+          to={signUpHref}
+        >
           {t("login.createOne")}
         </Link>
       </p>

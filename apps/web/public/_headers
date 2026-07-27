@@ -2,8 +2,26 @@
   X-Robots-Tag: noindex, nofollow, noarchive, nosnippet
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
-  Referrer-Policy: strict-origin-when-cross-origin
+  Referrer-Policy: no-referrer
   Permissions-Policy: camera=(), microphone=(), geolocation=()
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
+
+/demo*
+  Cache-Control: no-store
+
+/claim-demo
+  Cache-Control: no-store
+
+/confirm-email-change
+  Cache-Control: no-store
+
+/accept-invite
+  Cache-Control: no-store
+
+/login
+  Cache-Control: no-store
+
+/signup
+  Cache-Control: no-store

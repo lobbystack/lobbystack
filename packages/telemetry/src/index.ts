@@ -45,6 +45,13 @@ export const WEB_EVENT_NAMES = [
   "web.voice.test_call_connected",
   "web.voice.test_call_ended",
   "web.voice.test_call_error",
+  "web.prospect_demo.viewed",
+  "web.prospect_demo.call_started",
+  "web.prospect_demo.call_completed",
+  "web.prospect_demo.call_error",
+  "web.prospect_demo.signup_clicked",
+  "web.prospect_demo.claim_succeeded",
+  "web.prospect_demo.claim_failed",
 ] as const;
 
 export const VOICE_EVENT_NAMES = [
@@ -274,7 +281,9 @@ export type TelemetryRequirementKey =
   | "toolName"
   | "backlogBucket"
   | "monthKey"
-  | "plan";
+  | "plan"
+  | "prospectDemoId"
+  | "campaignId";
 
 export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.auth.login_succeeded": ["deploymentMode", "pathname"],
@@ -380,6 +389,13 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.voice.test_call_connected": ["businessId", "deploymentMode"],
   "web.voice.test_call_ended": ["businessId", "deploymentMode"],
   "web.voice.test_call_error": ["businessId", "deploymentMode"],
+  "web.prospect_demo.viewed": ["deploymentMode", "prospectDemoId"],
+  "web.prospect_demo.call_started": ["deploymentMode", "prospectDemoId"],
+  "web.prospect_demo.call_completed": ["deploymentMode", "prospectDemoId"],
+  "web.prospect_demo.call_error": ["deploymentMode", "prospectDemoId"],
+  "web.prospect_demo.signup_clicked": ["deploymentMode", "prospectDemoId"],
+  "web.prospect_demo.claim_succeeded": ["deploymentMode", "prospectDemoId"],
+  "web.prospect_demo.claim_failed": ["deploymentMode", "prospectDemoId"],
   "voice.call_started": [
     "businessId",
     "deploymentMode",
@@ -720,6 +736,16 @@ const SAFE_KEY_PATTERNS = [
   "workflowname",
 ];
 
+const SENSITIVE_URL_PARAMS = new Set([
+  "customer_session_token",
+  "email",
+  "token",
+]);
+const SENSITIVE_URL_FRAGMENT_PARAMS = new Set(["prospect_demo_token"]);
+const NESTED_URL_PARAMS = new Set(["returnTo"]);
+const DEMO_PATH_TOKEN_PATTERN = /^(\/demo\/)[^/]+/i;
+const REDACTED_VALUE = "[redacted]";
+
 const EXPECTED_CONVEX_FAILURE_MESSAGE_SNIPPETS = [
   "a billing contact email is required",
   "already exists",
@@ -778,13 +804,87 @@ function maskString(value: string): string {
   return "[redacted]";
 }
 
+function hasUrlParam(value: string, params: Set<string>): boolean {
+  return [...params].some((param) => new RegExp(`[?&]${param}=`).test(value));
+}
+
+export function redactSensitiveUrlValue(value: string): string {
+  let embeddedRedacted = value.replace(
+    /(\/demo\/)[a-z0-9-]+/gi,
+    `$1${REDACTED_VALUE}`,
+  );
+  for (const param of SENSITIVE_URL_PARAMS) {
+    embeddedRedacted = embeddedRedacted.replace(
+      new RegExp(`([?&])${param}=[^&#\\s]*`, "g"),
+      `$1${param}=${REDACTED_VALUE}`,
+    );
+  }
+  for (const param of SENSITIVE_URL_FRAGMENT_PARAMS) {
+    embeddedRedacted = embeddedRedacted.replace(
+      new RegExp(`([#&])${param}=[^&\\s]*`, "g"),
+      `$1${param}=${REDACTED_VALUE}`,
+    );
+  }
+  const hasSensitiveParam = hasUrlParam(value, SENSITIVE_URL_PARAMS);
+  const hasSensitiveFragmentParam = hasUrlParam(
+    value.replace("#", "?"),
+    SENSITIVE_URL_FRAGMENT_PARAMS,
+  );
+  const hasDemoPathToken = /\/demo\/[^/?#]+/i.test(value);
+  const hasNestedUrlParam = hasUrlParam(value, NESTED_URL_PARAMS);
+  if (
+    !hasSensitiveParam &&
+    !hasSensitiveFragmentParam &&
+    !hasDemoPathToken &&
+    !hasNestedUrlParam
+  ) {
+    return value;
+  }
+
+  const absolute = /^[a-z][a-z\d+\-.]*:/i.test(embeddedRedacted);
+  if (!absolute && !embeddedRedacted.startsWith("/")) {
+    return embeddedRedacted;
+  }
+
+  try {
+    const url = new URL(
+      embeddedRedacted,
+      absolute ? undefined : "https://lobbystack.local",
+    );
+    if (DEMO_PATH_TOKEN_PATTERN.test(url.pathname)) {
+      url.pathname = url.pathname.replace(
+        DEMO_PATH_TOKEN_PATTERN,
+        `$1${REDACTED_VALUE}`,
+      );
+    }
+    for (const param of SENSITIVE_URL_PARAMS) {
+      url.searchParams.delete(param);
+    }
+    for (const param of NESTED_URL_PARAMS) {
+      const nested = url.searchParams.get(param);
+      if (nested) {
+        url.searchParams.set(param, redactSensitiveUrlValue(nested));
+      }
+    }
+    const hashParams = new URLSearchParams(url.hash.slice(1));
+    for (const param of SENSITIVE_URL_FRAGMENT_PARAMS) {
+      hashParams.delete(param);
+    }
+    const hash = hashParams.toString();
+    url.hash = hash ? `#${hash}` : "";
+    return absolute ? url.toString() : `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return embeddedRedacted;
+  }
+}
+
 function redactValue(value: TelemetryValue | undefined): TelemetryValue | undefined {
   if (value === undefined || value === null) {
     return value;
   }
 
   if (typeof value === "string") {
-    return value;
+    return redactSensitiveUrlValue(value);
   }
 
   if (typeof value === "number" || typeof value === "boolean") {

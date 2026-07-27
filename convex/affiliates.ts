@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { redactSensitiveUrlValue } from "../packages/telemetry/src/index";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
@@ -637,7 +638,9 @@ export const recordClick = observedMutation({
       affiliateProfileId: profile._id,
       referralCode,
       ...(args.visitorId ? { visitorId: args.visitorId } : {}),
-      ...(args.sourceUrl ? { sourceUrl: args.sourceUrl.slice(0, 500) } : {}),
+      ...(args.sourceUrl
+        ? { sourceUrl: redactSensitiveUrlValue(args.sourceUrl).slice(0, 500) }
+        : {}),
       clickedAt: nowIso(),
     });
     await adjustStatsForProfile(ctx, profile._id, { clickCount: 1 });

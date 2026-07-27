@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useTranslation } from "react-i18next";
+import { redactSensitiveUrlValue } from "@lobbystack/telemetry";
 
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -13,6 +14,10 @@ import {
   WorkspaceRouteSkeleton,
 } from "@/components/app-route-skeletons";
 import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
+import {
+  buildAuthPathWithReturnTo,
+  getSafeReturnTo,
+} from "@/lib/auth-return-to";
 import { AuthenticatedLayout } from "@/components/layout/authenticated-layout";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -25,6 +30,8 @@ import {
   SignupPage,
 } from "@/features/auth/AuthPages";
 import { AnalyticsPage } from "@/features/analytics/AnalyticsPage";
+import { ClaimDemoPage } from "@/features/demos/ClaimDemoPage";
+import { ProspectDemoPage } from "@/features/demos/ProspectDemoPage";
 import { AgentLayout } from "@/features/agent/AgentLayout";
 import { AgentBasicSettingsPage } from "@/features/agent/AgentBasicSettingsPage";
 import { AgentKnowledgePage } from "@/features/agent/AgentKnowledgePage";
@@ -71,6 +78,7 @@ import {
   captureAnalyticsEvent,
   identifyOperator,
   resetAnalyticsIdentity,
+  syncAnalyticsSessionRecording,
   trackPageView,
 } from "@/lib/analytics";
 import {
@@ -121,7 +129,7 @@ function useAffiliateReferralClickCapture() {
     void recordClick({
       referralCode,
       visitorId: getAffiliateVisitorId(),
-      sourceUrl: window.location.href,
+      sourceUrl: redactSensitiveUrlValue(window.location.href),
     });
   }, [location.search, recordClick]);
 }
@@ -156,15 +164,27 @@ function AffiliateReferralCapture() {
   return null;
 }
 
+function AnalyticsPrivacySync() {
+  const location = useLocation();
+  useLayoutEffect(() => {
+    syncAnalyticsSessionRecording(location.pathname);
+  }, [location.pathname]);
+  return null;
+}
+
 function RequireAuth(props: { children: ReactNode }) {
   const auth = useConvexAuth();
+  const location = useLocation();
 
   if (auth.isLoading) {
     return <LoadingScreen />;
   }
 
   if (!auth.isAuthenticated) {
-    return <Navigate replace to="/login" />;
+    const returnTo = `${location.pathname}${location.search}${location.hash}`;
+    return (
+      <Navigate replace to={buildAuthPathWithReturnTo("/login", returnTo)} />
+    );
   }
 
   return props.children;
@@ -173,18 +193,14 @@ function RequireAuth(props: { children: ReactNode }) {
 function PublicOnly(props: { children: ReactNode }) {
   const auth = useConvexAuth();
   const [searchParams] = useSearchParams();
-  const returnTo = searchParams.get("returnTo");
+  const returnTo = getSafeReturnTo(searchParams.get("returnTo"));
 
   if (auth.isLoading) {
     return <LoadingScreen />;
   }
 
   if (auth.isAuthenticated) {
-    const destination =
-      returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
-        ? returnTo
-        : "/";
-    return <Navigate replace to={destination} />;
+    return <Navigate replace to={returnTo ?? "/"} />;
   }
 
   return props.children;
@@ -866,6 +882,12 @@ function OnboardingKnowledgeRoute() {
 
 function OnboardingGreetingRoute() {
   const ctx = useOnboardingContext();
+  const greetingPrefill = useQuery(
+    api.onboarding.greeting.getOnboardingGreetingPrefill,
+    ctx.activeBusiness && ctx.canManageTenant
+      ? { businessId: ctx.activeBusiness._id }
+      : "skip",
+  );
 
   if (ctx.isLoading) {
     return <OnboardingRouteSkeleton />;
@@ -892,6 +914,9 @@ function OnboardingGreetingRoute() {
     <OnboardingGreetingPage
       businessId={ctx.activeBusiness._id}
       businessName={ctx.activeBusiness.name}
+      {...(greetingPrefill?.greeting
+        ? { initialGreeting: greetingPrefill.greeting }
+        : {})}
       onSignOut={ctx.onSignOut}
       progressNavigableUntil={onboardingNavigableStep(ctx.activeBusiness.onboardingStage)}
     />
@@ -1174,6 +1199,7 @@ export default function App() {
   return (
     <TooltipProvider>
       <BrowserRouter>
+        <AnalyticsPrivacySync />
         <AffiliateReferralCapture />
         <Routes>
           <Route
@@ -1202,6 +1228,16 @@ export default function App() {
           />
           <Route element={<ConfirmEmailChangePage />} path="/confirm-email-change" />
           <Route element={<AcceptInvitePage />} path="/accept-invite" />
+          <Route element={<ProspectDemoPage />} path="/demo/:token" />
+          <Route element={<ProspectDemoPage />} path="/demo" />
+          <Route
+            element={
+              <RequireAuth>
+                <ClaimDemoPage />
+              </RequireAuth>
+            }
+            path="/claim-demo"
+          />
           <Route
             element={
               <RequireAuth>

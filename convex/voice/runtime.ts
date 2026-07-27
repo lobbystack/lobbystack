@@ -36,6 +36,10 @@ import { buildCallRecordingDownloadUrl } from "../lib/messageAttachmentUrls";
 import { ATTACHMENT_DOWNLOAD_TOKEN_TTL_MS } from "../lib/messageAttachments";
 import { getServiceNameCandidates } from "../lib/serviceNames";
 import { webVoiceAbuseRateLimiter } from "../lib/components";
+import {
+  isProspectDemoSessionPurpose,
+  PROSPECT_DEMO_SESSION_PURPOSE,
+} from "../lib/prospectDemo";
 import { normalizeRuntimeLocale, type RuntimeLocale } from "../lib/runtimeLocale";
 import {
   CONTACT_BLOCKED_CALL_DISPOSITION,
@@ -85,11 +89,15 @@ type StartWebCallArgs = {
   businessSlug: string;
   providerCallId: string;
   gatewaySessionId?: string;
+  ipHash?: string;
   originUrl?: string;
   userAgent?: string;
+  visitorId?: string;
   widgetId?: string;
   maxDurationMs?: number;
   startedAt: string;
+  prospectDemoToken?: string;
+  dashboardTestCallToken?: string;
 };
 type StartWebCallResult = {
   businessId: Id<"businesses">;
@@ -174,7 +182,8 @@ type WebVoiceStartLimiterName =
   | "dashboardWebVoiceStartPerIpPerHour"
   | "dashboardWebVoiceStartPerIpPerDay"
   | "dashboardWebVoiceStartPerVisitorPerHour"
-  | "dashboardWebVoiceStartPerVisitorPerDay";
+  | "dashboardWebVoiceStartPerVisitorPerDay"
+  | "prospectDemoWebVoiceStartPerVisitor";
 
 type WebVoiceStartLimit = {
   limiterName: WebVoiceStartLimiterName;
@@ -239,6 +248,7 @@ function buildWebVoiceStartLimits(input: {
   ipHash?: string;
   visitorId?: string;
   widgetId?: string;
+  prospectDemoId?: Id<"prospect_demos">;
 }): Array<WebVoiceStartLimit> {
   const businessKey = String(input.businessId);
   const logContext = {
@@ -250,6 +260,16 @@ function buildWebVoiceStartLimits(input: {
   const isDashboardTestCall =
     input.widgetId === DASHBOARD_TEST_CALL_WIDGET_ID &&
     hasVerifiedDashboardTestCallToken(input);
+
+  if (input.prospectDemoId !== undefined) {
+    limits.push({
+      limiterName: "webVoiceStartGlobalPerMinute",
+      key: "global",
+      reason: "rate_limit_global",
+      ...logContext,
+    });
+    return limits;
+  }
 
   if (input.ipHash !== undefined) {
     limits.push(
@@ -339,6 +359,52 @@ function buildWebVoiceStartLimits(input: {
       ...logContext,
     },
   );
+
+  return limits;
+}
+
+function buildProspectDemoStartLimits(input: {
+  businessId: Id<"businesses">;
+  ipHash?: string;
+  origin?: string;
+  prospectDemoId: Id<"prospect_demos">;
+  visitorId?: string;
+  widgetId?: string;
+}): Array<WebVoiceStartLimit> {
+  const demoKey = String(input.prospectDemoId);
+  const logContext = {
+    businessId: input.businessId,
+    ...(input.origin !== undefined ? { origin: input.origin } : {}),
+    ...(input.widgetId !== undefined ? { widgetId: input.widgetId } : {}),
+  };
+  const limits: Array<WebVoiceStartLimit> = [];
+
+  if (input.visitorId !== undefined) {
+    limits.push({
+      limiterName: "prospectDemoWebVoiceStartPerVisitor",
+      key: `${demoKey}:visitor:${input.visitorId}`,
+      reason: "prospect_demo_rate_limit_visitor",
+      ...logContext,
+    });
+  }
+
+  if (input.ipHash !== undefined) {
+    limits.push({
+      limiterName: "prospectDemoWebVoiceStartPerVisitor",
+      key: `${demoKey}:ip:${input.ipHash}`,
+      reason: "prospect_demo_rate_limit_ip",
+      ...logContext,
+    });
+  }
+
+  if (limits.length === 0) {
+    logWebVoiceRateLimitBlocked({
+      limiter: "prospectDemoWebVoiceStartPerVisitor",
+      reason: "prospect_demo_rate_limit_missing_identity",
+      ...logContext,
+    });
+    throw new Error(WEB_VOICE_RATE_LIMIT_ERROR);
+  }
 
   return limits;
 }
@@ -814,10 +880,25 @@ export const assertWebVoiceStartAllowed = internalMutation({
     ipHash: v.optional(v.string()),
     visitorId: v.optional(v.string()),
     widgetId: v.optional(v.string()),
+    prospectDemoId: v.optional(v.id("prospect_demos")),
   },
   handler: async (ctx: MutationCtx, args): Promise<null> => {
     const limits = buildWebVoiceStartLimits(args);
 
+    if (args.prospectDemoId !== undefined) {
+      // Provider setup happens after this preflight, so only check the durable quota here.
+      await assertWebVoiceStartLimitsAvailable(
+        ctx,
+        buildProspectDemoStartLimits({
+          businessId: args.businessId,
+          ...(args.ipHash !== undefined ? { ipHash: args.ipHash } : {}),
+          origin: args.origin,
+          prospectDemoId: args.prospectDemoId,
+          ...(args.visitorId !== undefined ? { visitorId: args.visitorId } : {}),
+          ...(args.widgetId !== undefined ? { widgetId: args.widgetId } : {}),
+        }),
+      );
+    }
     await assertWebVoiceStartLimitsAvailable(ctx, limits);
     for (const limit of limits) {
       await consumeWebVoiceStartLimit(ctx, limit);
@@ -1137,11 +1218,15 @@ export const startWebCall = internalMutation({
     businessSlug: v.string(),
     providerCallId: v.string(),
     gatewaySessionId: v.optional(v.string()),
+    ipHash: v.optional(v.string()),
     originUrl: v.optional(v.string()),
     userAgent: v.optional(v.string()),
+    visitorId: v.optional(v.string()),
     widgetId: v.optional(v.string()),
     maxDurationMs: v.optional(v.number()),
     startedAt: v.string(),
+    prospectDemoToken: v.optional(v.string()),
+    dashboardTestCallToken: v.optional(v.string()),
   },
   handler: async (
     ctx: MutationCtx,
@@ -1151,6 +1236,30 @@ export const startWebCall = internalMutation({
 
     if (!business) {
       throw new Error("Web voice business not found.");
+    }
+
+    const demoAccess = await ctx.runQuery(
+      internal.demos.resolveProspectDemoWebVoiceAccess,
+      {
+        businessId: business._id,
+        businessSlug: args.businessSlug,
+        ...(args.prospectDemoToken !== undefined
+          ? { prospectDemoToken: args.prospectDemoToken }
+          : {}),
+        ...(args.dashboardTestCallToken !== undefined
+          ? { dashboardTestCallToken: args.dashboardTestCallToken }
+          : {}),
+      },
+    );
+    if (!demoAccess.allowed) {
+      throw new Error("Prospect demo is not available.");
+    }
+
+    let prospectDemoId: Id<"prospect_demos"> | undefined;
+    let sessionPurpose: string | undefined;
+    if (demoAccess.mode === "prospect_demo") {
+      prospectDemoId = demoAccess.demoId;
+      sessionPurpose = PROSPECT_DEMO_SESSION_PURPOSE;
     }
 
     const existingCall: Doc<"calls"> | null = await ctx.db
@@ -1175,14 +1284,34 @@ export const startWebCall = internalMutation({
       throw new Error("Web voice provider call belongs to a different business.");
     }
 
-    const voicePolicy: {
-      allowed: boolean;
-      errorCode: UsageBillingErrorCode | null;
-    } = await ctx.runQuery(internal.billing.assertVoiceCanStart, {
-      businessId: business._id,
-    });
-    if (!voicePolicy.allowed) {
-      throw new Error(voicePolicy.errorCode ?? billingErrorCodes.voiceLimitReached);
+    if (prospectDemoId !== undefined) {
+      // This mutation runs after provider setup and rolls quota usage back if call creation fails.
+      const prospectDemoLimits = buildProspectDemoStartLimits({
+        businessId: business._id,
+        ...(args.ipHash !== undefined ? { ipHash: args.ipHash } : {}),
+        prospectDemoId,
+        ...(args.visitorId !== undefined ? { visitorId: args.visitorId } : {}),
+        ...(args.widgetId !== undefined ? { widgetId: args.widgetId } : {}),
+      });
+      await assertWebVoiceStartLimitsAvailable(ctx, prospectDemoLimits);
+      for (const limit of prospectDemoLimits) {
+        await consumeWebVoiceStartLimit(ctx, limit);
+      }
+    }
+
+    const originUrl =
+      args.prospectDemoToken === undefined ? args.originUrl : undefined;
+    const skipBilling = isProspectDemoSessionPurpose(sessionPurpose);
+    if (!skipBilling) {
+      const voicePolicy: {
+        allowed: boolean;
+        errorCode: UsageBillingErrorCode | null;
+      } = await ctx.runQuery(internal.billing.assertVoiceCanStart, {
+        businessId: business._id,
+      });
+      if (!voicePolicy.allowed) {
+        throw new Error(voicePolicy.errorCode ?? billingErrorCodes.voiceLimitReached);
+      }
     }
 
     const conversationId = await ctx.db.insert("conversations", {
@@ -1199,12 +1328,14 @@ export const startWebCall = internalMutation({
         provider: "openai",
         providerCallId: args.providerCallId,
         transport: "webrtc",
-        ...(args.originUrl !== undefined ? { originUrl: args.originUrl } : {}),
+        ...(originUrl !== undefined ? { originUrl } : {}),
         ...(args.userAgent !== undefined ? { userAgent: args.userAgent } : {}),
         ...(args.widgetId !== undefined ? { widgetId: args.widgetId } : {}),
         ...(args.gatewaySessionId !== undefined
           ? { gatewaySessionId: args.gatewaySessionId }
           : {}),
+        ...(sessionPurpose !== undefined ? { sessionPurpose } : {}),
+        ...(prospectDemoId !== undefined ? { prospectDemoId } : {}),
         webCallMaxDurationMs: getWebCallMaxDurationMs(args.maxDurationMs),
         status: "in_progress",
         startedAt: args.startedAt,
@@ -1214,36 +1345,40 @@ export const startWebCall = internalMutation({
       await ctx.db.patch(existingCall._id, {
         conversationId,
         status: "in_progress",
-        ...(args.originUrl !== undefined ? { originUrl: args.originUrl } : {}),
+        ...(originUrl !== undefined ? { originUrl } : {}),
         ...(args.userAgent !== undefined ? { userAgent: args.userAgent } : {}),
         ...(args.widgetId !== undefined ? { widgetId: args.widgetId } : {}),
         ...(args.gatewaySessionId !== undefined
           ? { gatewaySessionId: args.gatewaySessionId }
           : {}),
+        ...(sessionPurpose !== undefined ? { sessionPurpose } : {}),
+        ...(prospectDemoId !== undefined ? { prospectDemoId } : {}),
         webCallMaxDurationMs: getWebCallMaxDurationMs(args.maxDurationMs),
       });
     }
 
-    const reservation = await ctx.runMutation(internal.billing.reserveVoiceUsageAtCallStart, {
-      businessId: business._id,
-      callId,
-      recordedAt: args.startedAt,
-    });
-    if (!reservation.allowed) {
-      await ctx.db.patch(callId, {
-        status: "completed",
-        endedAt: args.startedAt,
-        disposition: reservation.errorCode ?? billingErrorCodes.voiceLimitReached,
+    if (!skipBilling) {
+      const reservation = await ctx.runMutation(internal.billing.reserveVoiceUsageAtCallStart, {
+        businessId: business._id,
+        callId,
+        recordedAt: args.startedAt,
       });
-      await ctx.db.patch(conversationId, {
-        status: "closed",
-      });
-      throw new Error(reservation.errorCode ?? billingErrorCodes.voiceLimitReached);
-    }
-    if (reservation.syncNeeded && reservation.usageEventId) {
-      await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
-        usageEventId: reservation.usageEventId,
-      });
+      if (!reservation.allowed) {
+        await ctx.db.patch(callId, {
+          status: "completed",
+          endedAt: args.startedAt,
+          disposition: reservation.errorCode ?? billingErrorCodes.voiceLimitReached,
+        });
+        await ctx.db.patch(conversationId, {
+          status: "closed",
+        });
+        throw new Error(reservation.errorCode ?? billingErrorCodes.voiceLimitReached);
+      }
+      if (reservation.syncNeeded && reservation.usageEventId) {
+        await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+          usageEventId: reservation.usageEventId,
+        });
+      }
     }
 
     await ensureVoiceSessionForCall(ctx, {
@@ -1278,8 +1413,12 @@ export const startWebCall = internalMutation({
           transport: "webrtc",
           gatewaySessionId: args.gatewaySessionId,
           webCallMaxDurationMs: getWebCallMaxDurationMs(args.maxDurationMs),
-          originUrl: args.originUrl,
+          originUrl,
           widgetId: args.widgetId,
+          ...(sessionPurpose !== undefined ? { sessionPurpose } : {}),
+          ...(prospectDemoId !== undefined
+            ? { prospectDemoId: String(prospectDemoId) }
+            : {}),
         },
       }),
     );
@@ -1340,7 +1479,10 @@ export const expireStaleWebCall = internalMutation({
       endedAt: endedAtMs,
     });
 
-    if (call.providerCallDurationSeconds === undefined) {
+    if (
+      call.providerCallDurationSeconds === undefined &&
+      !isProspectDemoSessionPurpose(call.sessionPurpose)
+    ) {
       const usageResult = await ctx.runMutation(internal.billing.recordVoiceUsage, {
         businessId: call.businessId,
         callId: call._id,
@@ -1641,13 +1783,16 @@ export const takeMessageForVoice = internalMutation({
       });
     }
 
-    await ctx.scheduler.runAfter(0, internal.operatorNotifications.dispatchEvent, {
-      businessId: args.businessId,
-      eventKind: "voiceMessage",
-      eventKey: `voiceMessage:${String(inboxItemId)}`,
-      subject: title,
-      body,
-    });
+    const call = await ctx.db.get(args.callId);
+    if (!isProspectDemoSessionPurpose(call?.sessionPurpose)) {
+      await ctx.scheduler.runAfter(0, internal.operatorNotifications.dispatchEvent, {
+        businessId: args.businessId,
+        eventKind: "voiceMessage",
+        eventKey: `voiceMessage:${String(inboxItemId)}`,
+        subject: title,
+        body,
+      });
+    }
 
     return { inboxItemId };
   },
@@ -1770,7 +1915,8 @@ export const completeCall = internalMutation({
 
     if (
       args.providerDurationSeconds !== undefined &&
-      call.providerCallDurationSeconds === undefined
+      call.providerCallDurationSeconds === undefined &&
+      !isProspectDemoSessionPurpose(call.sessionPurpose)
     ) {
       const usageResult = await ctx.runMutation(internal.billing.recordVoiceUsage, {
         businessId: call.businessId,
@@ -1801,6 +1947,12 @@ export const completeCall = internalMutation({
           status: args.status,
           disposition,
           ...(call.transport !== undefined ? { transport: call.transport } : {}),
+          ...(call.sessionPurpose !== undefined
+            ? { sessionPurpose: call.sessionPurpose }
+            : {}),
+          ...(call.prospectDemoId !== undefined
+            ? { prospectDemoId: String(call.prospectDemoId) }
+            : {}),
         },
       }),
     );

@@ -56,6 +56,33 @@ describe("affiliate program", () => {
     vi.useRealTimers();
   });
 
+  it("redacts prospect demo tokens from affiliate source URLs", async () => {
+    const t = createConvexHarness();
+    await t.run(async (ctx) => {
+      const affiliateUserId = await seedUser(ctx, "source-url-affiliate");
+      await ctx.db.insert("affiliate_profiles", {
+        userId: affiliateUserId,
+        referralCode: "source-url-partner",
+        status: "active",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-04-01T00:00:00.000Z",
+      });
+    });
+
+    await t.mutation(api.affiliates.recordClick, {
+      referralCode: "source-url-partner",
+      sourceUrl:
+        "https://app.lobbystack.com/demo?via=source-url-partner#prospect_demo_token=acme-secret",
+    });
+
+    const click = await t.run(async (ctx) =>
+      await ctx.db.query("affiliate_clicks").first(),
+    );
+    expect(click?.sourceUrl).toBe(
+      "https://app.lobbystack.com/demo?via=source-url-partner",
+    );
+  });
+
   it("requires tenant admin access to bind a referral to a business", async () => {
     const t = createConvexHarness();
 

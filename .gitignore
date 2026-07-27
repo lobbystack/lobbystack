@@ -16,6 +16,7 @@ node_modules
 .env.local.self-hosted-lock
 .tmp/
 .firecrawl/
+.prospect-demos/
 apps/web/dist
 apps/landing/.astro
 apps/landing/.wrangler

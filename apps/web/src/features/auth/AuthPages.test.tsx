@@ -201,6 +201,22 @@ describe("LoginPage", () => {
     expect(screen.getByText("shell.privacy")).toBeTruthy();
   });
 
+  it("preserves returnTo when switching from login to signup", () => {
+    render(
+      <MemoryRouter
+        initialEntries={[
+          "/login?returnTo=%2Fclaim-demo%3Ftoken%3Dtok_123",
+        ]}
+      >
+        <LoginPage />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByRole("link", { name: "login.createOne" }).getAttribute("href"),
+    ).toBe("/signup?returnTo=%2Fclaim-demo%3Ftoken%3Dtok_123");
+  });
+
   it("submits the raw email for login", async () => {
     signInMock.mockResolvedValue({});
 
@@ -420,6 +436,22 @@ describe("SignupPage", () => {
     );
     expect(screen.queryByText("shell.terms")).toBeNull();
     expect(screen.queryByText("shell.privacy")).toBeNull();
+  });
+
+  it("preserves returnTo when switching from signup to login", () => {
+    render(
+      <MemoryRouter
+        initialEntries={[
+          "/signup?returnTo=%2Fclaim-demo%3Ftoken%3Dtok_123",
+        ]}
+      >
+        <SignupPage />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByRole("link", { name: "signup.signIn" }).getAttribute("href"),
+    ).toBe("/login?returnTo=%2Fclaim-demo%3Ftoken%3Dtok_123");
   });
 
   it("shows password criteria only after the password field is focused", async () => {

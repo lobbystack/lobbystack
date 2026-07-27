@@ -34,6 +34,7 @@ import type * as dashboard_contacts from "../dashboard/contacts.js";
 import type * as dashboard_messages from "../dashboard/messages.js";
 import type * as dashboard_outcomes from "../dashboard/outcomes.js";
 import type * as dashboard_overview from "../dashboard/overview.js";
+import type * as demos from "../demos.js";
 import type * as feedback from "../feedback.js";
 import type * as http from "../http.js";
 import type * as integrations_calendar from "../integrations/calendar.js";
@@ -73,6 +74,7 @@ import type * as lib_operatorNotificationPreferences from "../lib/operatorNotifi
 import type * as lib_passwordPolicy from "../lib/passwordPolicy.js";
 import type * as lib_passwordReset from "../lib/passwordReset.js";
 import type * as lib_passwordWithTurnstile from "../lib/passwordWithTurnstile.js";
+import type * as lib_prospectDemo from "../lib/prospectDemo.js";
 import type * as lib_providers_email from "../lib/providers/email.js";
 import type * as lib_providers_embeddings from "../lib/providers/embeddings.js";
 import type * as lib_providers_nonRealtimeText from "../lib/providers/nonRealtimeText.js";
@@ -155,6 +157,7 @@ declare const fullApi: ApiFromModules<{
   "dashboard/messages": typeof dashboard_messages;
   "dashboard/outcomes": typeof dashboard_outcomes;
   "dashboard/overview": typeof dashboard_overview;
+  demos: typeof demos;
   feedback: typeof feedback;
   http: typeof http;
   "integrations/calendar": typeof integrations_calendar;
@@ -194,6 +197,7 @@ declare const fullApi: ApiFromModules<{
   "lib/passwordPolicy": typeof lib_passwordPolicy;
   "lib/passwordReset": typeof lib_passwordReset;
   "lib/passwordWithTurnstile": typeof lib_passwordWithTurnstile;
+  "lib/prospectDemo": typeof lib_prospectDemo;
   "lib/providers/email": typeof lib_providers_email;
   "lib/providers/embeddings": typeof lib_providers_embeddings;
   "lib/providers/nonRealtimeText": typeof lib_providers_nonRealtimeText;

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
+import { query } from "../_generated/server";
 import { scheduleSnapshotRefresh } from "../businesses/admin";
 import { requireTenantAdminMembership } from "../lib/auth";
 import { DEFAULT_APPOINTMENT_CHANGE_POLICY } from "../lib/appointmentChangePolicy";
@@ -83,5 +84,20 @@ export const submitOnboardingGreeting = mutation({
     await scheduleSnapshotRefresh(ctx, args.businessId);
 
     return { status: "submitted" };
+  },
+});
+
+export const getOnboardingGreetingPrefill = query({
+  args: { businessId: v.id("businesses") },
+  handler: async (
+    ctx,
+    args: { businessId: Id<"businesses"> },
+  ): Promise<{ greeting: string | null }> => {
+    await requireTenantAdminMembership(ctx, args.businessId);
+    const profile = await ctx.db
+      .query("receptionist_profiles")
+      .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+      .unique();
+    return { greeting: profile?.greeting ?? null };
   },
 });

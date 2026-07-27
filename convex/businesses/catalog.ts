@@ -52,6 +52,7 @@ import {
 } from "../lib/serviceNames";
 import { normalizeAppointmentChangePolicy } from "../lib/appointmentChangePolicy";
 import { assertBusinessCanProvisionPhoneNumber } from "../lib/billing";
+import { normalizeOnboardingStage } from "../lib/onboardingStage";
 import {
   buildTwilioSmsInboundWebhookUrl,
   buildTwilioVoiceInboundWebhookUrl,
@@ -504,7 +505,20 @@ export const updateBusinessName = mutation({
       throw new Error("Business name is required.");
     }
 
-    await ctx.db.patch(args.businessId, { name });
+    const business = await ctx.db.get(args.businessId);
+    if (!business) {
+      throw new Error("Business not found.");
+    }
+
+    // Completing the business-name step must unlock /onboarding/website.
+    // Bootstrap creates tenants already at "website"; claimed prospect demos
+    // start at "create_business" and use this mutation instead.
+    const patch: { name: string; onboardingStage?: "website" } = { name };
+    if (normalizeOnboardingStage(business.onboardingStage) === "create_business") {
+      patch.onboardingStage = "website";
+    }
+
+    await ctx.db.patch(args.businessId, patch);
     await scheduleSnapshotRefresh(ctx, args.businessId);
     return { name };
   },

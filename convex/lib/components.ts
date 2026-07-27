@@ -199,4 +199,9 @@ export const webVoiceAbuseRateLimiter = new RateLimiter(components.rateLimiter, 
     rate: 100,
     period: DAY,
   },
+  prospectDemoWebVoiceStartPerVisitor: {
+    kind: "fixed window",
+    rate: 5,
+    period: 30 * DAY,
+  },
 });
