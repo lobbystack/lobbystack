@@ -4,7 +4,7 @@ import { observedInternalMutation as internalMutation, observedMutation as mutat
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
-import type { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import { type ActionCtx, type MutationCtx } from "../_generated/server";
 import { requireTenantAdminMembership } from "../lib/auth";
 import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
@@ -19,6 +19,54 @@ type SubmitOnboardingWebsiteResult = {
   websiteUrl: string;
   websiteIngestionJobId: Id<"website_ingestion_jobs">;
 };
+
+const MAX_REUSABLE_WEBSITE_JOBS_TO_CHECK = 10;
+const MAX_REUSABLE_WEBSITE_DOCUMENTS_TO_CHECK = 100;
+
+function isUsableWebsiteKnowledgeDocument(
+  document: Doc<"knowledge_documents">,
+): boolean {
+  return (
+    document.active !== false &&
+    document.status === "indexed" &&
+    Boolean(document.textContent?.trim())
+  );
+}
+
+async function findReusableCompletedWebsiteIngestionJob(
+  ctx: MutationCtx,
+  args: {
+    businessId: Id<"businesses">;
+    websiteUrl: string;
+  },
+): Promise<Doc<"website_ingestion_jobs"> | null> {
+  const recentJobs = await ctx.db
+    .query("website_ingestion_jobs")
+    .withIndex("by_business_id_and_website_url", (q) =>
+      q.eq("businessId", args.businessId).eq("websiteUrl", args.websiteUrl),
+    )
+    .order("desc")
+    .take(MAX_REUSABLE_WEBSITE_JOBS_TO_CHECK);
+
+  for (const job of recentJobs) {
+    if (job.status !== "completed") {
+      continue;
+    }
+
+    const documents = await ctx.db
+      .query("knowledge_documents")
+      .withIndex("by_website_ingestion_job_id", (q) =>
+        q.eq("websiteIngestionJobId", job._id),
+      )
+      .take(MAX_REUSABLE_WEBSITE_DOCUMENTS_TO_CHECK);
+
+    if (documents.some(isUsableWebsiteKnowledgeDocument)) {
+      return job;
+    }
+  }
+
+  return null;
+}
 
 async function requireBusinessAtOrPastWebsiteStage(
   ctx: MutationCtx,
@@ -81,15 +129,10 @@ export const submitOnboardingWebsiteAfterPreflight = internalMutation({
     await requireTenantAdminMembership(ctx, args.businessId);
     await requireBusinessAtOrPastWebsiteStage(ctx, args.businessId);
 
-    const completedJob = (
-      await ctx.db
-        .query("website_ingestion_jobs")
-        .withIndex("by_business_id_and_website_url", (q) =>
-          q.eq("businessId", args.businessId).eq("websiteUrl", args.websiteUrl),
-        )
-        .order("desc")
-        .collect()
-    ).find((job) => job.status === "completed");
+    const completedJob = await findReusableCompletedWebsiteIngestionJob(ctx, {
+      businessId: args.businessId,
+      websiteUrl: args.websiteUrl,
+    });
 
     if (completedJob) {
       const business = await ctx.db.get(args.businessId);

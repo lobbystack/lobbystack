@@ -204,7 +204,7 @@ describe("website onboarding and ingestion", () => {
     const authed = t.withIdentity({ subject });
 
     const completedJobId = await t.run(async (ctx) => {
-      return await ctx.db.insert("website_ingestion_jobs", {
+      const websiteIngestionJobId = await ctx.db.insert("website_ingestion_jobs", {
         businessId,
         websiteUrl: "https://example.com/clinic",
         provider: "firecrawl",
@@ -219,6 +219,19 @@ describe("website onboarding and ingestion", () => {
         errorCount: 0,
         completedAt: new Date().toISOString(),
       });
+      await ctx.db.insert("knowledge_documents", {
+        businessId,
+        active: true,
+        sourceType: "website",
+        title: "Clinic",
+        sourceUrl: "https://example.com/clinic",
+        websiteIngestionJobId,
+        textContent: "Clinic services and opening hours.",
+        status: "indexed",
+        tags: [],
+        importance: 5,
+      });
+      return websiteIngestionJobId;
     });
 
     const result = await authed.action(api.onboarding.websites.submitOnboardingWebsite, {
@@ -242,6 +255,87 @@ describe("website onboarding and ingestion", () => {
     const jobs = await listWebsiteIngestionJobs(t, businessId);
     expect(jobs).toHaveLength(1);
     expect(jobs[0]?._id).toBe(completedJobId);
+  });
+
+  it("starts a fresh import after all documents from a completed job are deleted", async () => {
+    const t = createConvexHarness();
+    const subject = "website-onboarding-deleted-documents-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "website",
+      subject,
+    });
+    const authed = t.withIdentity({ subject });
+
+    const { completedJobId, documentId } = await t.run(async (ctx) => {
+      await ctx.db.insert("receptionist_profiles", {
+        businessId,
+        greeting: "Hello",
+        tone: "professional",
+        summary: "Helpful receptionist",
+        bookingPolicy: "Book available appointments.",
+        transferMode: "disabled",
+      });
+      const websiteIngestionJobId = await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com/clinic",
+        provider: "firecrawl",
+        status: "completed",
+        workflowId: "workflow-completed",
+        crawlMode: "firecrawl",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 1,
+        indexedCount: 1,
+        errorCount: 0,
+        completedAt: new Date().toISOString(),
+      });
+      const knowledgeDocumentId = await ctx.db.insert("knowledge_documents", {
+        businessId,
+        active: true,
+        sourceType: "website",
+        title: "Clinic",
+        sourceUrl: "https://example.com/clinic",
+        websiteIngestionJobId,
+        textContent: "Clinic services and opening hours.",
+        status: "indexed",
+        tags: [],
+        importance: 5,
+      });
+      return {
+        completedJobId: websiteIngestionJobId,
+        documentId: knowledgeDocumentId,
+      };
+    });
+
+    await authed.action(api.ai.context.knowledge.deleteKnowledgeEntry, {
+      businessId,
+      documentId,
+    });
+
+    const result = await authed.action(api.onboarding.websites.submitOnboardingWebsite, {
+      businessId,
+      websiteUrl: "example.com/clinic",
+    });
+
+    expect(result.websiteIngestionJobId).not.toBe(completedJobId);
+    expect(workflowStartMock).toHaveBeenCalledTimes(1);
+
+    const state = await t.run(async (ctx) => {
+      return {
+        deletedDocument: await ctx.db.get(documentId),
+        completedJob: await ctx.db.get(completedJobId),
+        newJob: await ctx.db.get(result.websiteIngestionJobId),
+      };
+    });
+    expect(state.deletedDocument).toBeNull();
+    expect(state.completedJob?.status).toBe("completed");
+    expect(state.newJob).toMatchObject({
+      businessId,
+      websiteUrl: "https://example.com/clinic",
+      status: "queued",
+    });
   });
 
   it("rejects a completed-job shortcut after the tenant admin loses access", async () => {
