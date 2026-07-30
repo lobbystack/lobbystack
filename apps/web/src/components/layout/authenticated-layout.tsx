@@ -34,6 +34,7 @@ import {
   UpgradePlanDialog,
   type HostedUpgradePlan,
 } from "@/features/settings/UpgradePlanDialog";
+import { UpgradePlanDialogProvider } from "@/features/settings/UpgradePlanDialogContext";
 
 type AuthenticatedLayoutProps = {
   billingStatus?: BillingStatus;
@@ -248,53 +249,55 @@ export function AuthenticatedLayout({
           t={t}
         />
       ) : null}
-      <SidebarInset
-        ref={contentScrollRef}
-        className={cn(
-          "@container/content min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain",
-          "has-data-[layout=fixed]:h-full",
-          "peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100%-(var(--spacing)*4))]",
-        )}
-      >
-        <SiteHeader fixed scrollContainerRef={contentScrollRef} />
-        <div className="hidden h-16 shrink-0 border-b md:block" />
-        {!isLoading ? (
-          <div className="pointer-events-none absolute top-4 inset-x-0 z-40 hidden md:block">
-            <div className="mx-auto flex w-full max-w-7xl items-center justify-end gap-0.5 px-6">
-              <TestCallWidget
-                className="pointer-events-auto"
-                {...(businessId ? { businessId } : {})}
-                {...(businessSlug ? { businessSlug } : {})}
-              />
-              <span
-                aria-hidden="true"
-                className="ml-3 mr-1.5 h-4 w-px bg-border"
-              />
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      aria-label={t("nav:items.affiliate")}
-                      className="pointer-events-auto text-sidebar-foreground hover:bg-transparent hover:text-sidebar-accent-foreground"
-                      render={<Link to="/affiliate" />}
-                      size="icon-xs"
-                      variant="ghost"
-                    />
-                  }
-                >
-                  <GiftIcon className="size-[18px] -translate-x-px" strokeWidth={1.75} />
-                </TooltipTrigger>
-                <TooltipContent>{t("nav:items.affiliate")}</TooltipContent>
-              </Tooltip>
-              <FeedbackWidget
-                className="pointer-events-auto"
-                {...(businessId ? { businessId } : {})}
-              />
+      <UpgradePlanDialogProvider onOpen={() => setUpgradeDialogOpen(true)}>
+        <SidebarInset
+          ref={contentScrollRef}
+          className={cn(
+            "@container/content min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain",
+            "has-data-[layout=fixed]:h-full",
+            "peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100%-(var(--spacing)*4))]",
+          )}
+        >
+          <SiteHeader fixed scrollContainerRef={contentScrollRef} />
+          <div className="hidden h-16 shrink-0 border-b md:block" />
+          {!isLoading ? (
+            <div className="pointer-events-none absolute top-4 inset-x-0 z-40 hidden md:block">
+              <div className="mx-auto flex w-full max-w-7xl items-center justify-end gap-0.5 px-6">
+                <TestCallWidget
+                  className="pointer-events-auto"
+                  {...(businessId ? { businessId } : {})}
+                  {...(businessSlug ? { businessSlug } : {})}
+                />
+                <span
+                  aria-hidden="true"
+                  className="ml-3 mr-1.5 h-4 w-px bg-border"
+                />
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        aria-label={t("nav:items.affiliate")}
+                        className="pointer-events-auto text-sidebar-foreground hover:bg-transparent hover:text-sidebar-accent-foreground"
+                        render={<Link to="/affiliate" />}
+                        size="icon-xs"
+                        variant="ghost"
+                      />
+                    }
+                  >
+                    <GiftIcon className="size-[18px] -translate-x-px" strokeWidth={1.75} />
+                  </TooltipTrigger>
+                  <TooltipContent>{t("nav:items.affiliate")}</TooltipContent>
+                </Tooltip>
+                <FeedbackWidget
+                  className="pointer-events-auto"
+                  {...(businessId ? { businessId } : {})}
+                />
+              </div>
             </div>
-          </div>
-        ) : null}
-        {children}
-      </SidebarInset>
+          ) : null}
+          {children}
+        </SidebarInset>
+      </UpgradePlanDialogProvider>
       </SidebarProvider>
     </div>
   );

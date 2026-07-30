@@ -14,6 +14,8 @@ const {
   polarMembersCreateMock,
   polarMembersListMock,
   polarMembersUpdateMock,
+  polarOrdersGetMock,
+  polarOrdersInvoiceMock,
   polarSubscriptionsGetMock,
   polarSubscriptionsListMock,
   polarSubscriptionsUpdateMock,
@@ -29,6 +31,8 @@ const {
   polarMembersCreateMock: vi.fn(),
   polarMembersListMock: vi.fn(),
   polarMembersUpdateMock: vi.fn(),
+  polarOrdersGetMock: vi.fn(),
+  polarOrdersInvoiceMock: vi.fn(),
   polarSubscriptionsGetMock: vi.fn(),
   polarSubscriptionsListMock: vi.fn(),
   polarSubscriptionsUpdateMock: vi.fn(),
@@ -71,7 +75,8 @@ vi.mock("@polar-sh/sdk", () => ({
         updateMember: polarMembersUpdateMock,
       },
       orders: {
-        invoice: vi.fn(),
+        get: polarOrdersGetMock,
+        invoice: polarOrdersInvoiceMock,
       },
       subscriptions: {
         get: polarSubscriptionsGetMock,
@@ -4628,6 +4633,266 @@ describe("billing", () => {
     );
     expect(polarMembersCreateMock).not.toHaveBeenCalled();
     expect(polarCustomerSessionsCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("reconciles missing Polar orders through the persisted customer link without duplicates", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-order-reconciliation",
+      deploymentMode: "cloud",
+    });
+    const polarCustomerId = "cus_order_reconciliation";
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+        polarCustomerId,
+      });
+    });
+
+    const juneOrder = {
+      id: "ord_june_paid",
+      createdAt: new Date("2026-06-12T02:24:40.765Z"),
+      status: "paid",
+      totalAmount: 3000,
+      currency: "usd",
+      description: "LobbyStack Starter Monthly",
+      isInvoiceGenerated: false,
+      customerId: polarCustomerId,
+      productId: "prod_starter_monthly",
+      subscriptionId: "sub_starter",
+      metadata: {},
+      customer: { externalId: null },
+    };
+    polarOrdersGetMock.mockResolvedValue(juneOrder);
+
+    await t.action(internal.billing.reconcilePolarOrder, { orderId: juneOrder.id });
+    await t.action(internal.billing.reconcilePolarOrder, { orderId: juneOrder.id });
+
+    const julyOrder = {
+      ...juneOrder,
+      id: "ord_july_pending",
+      createdAt: new Date("2026-07-12T02:24:40.935Z"),
+      status: "pending",
+    };
+    polarOrdersGetMock.mockResolvedValueOnce(julyOrder);
+    await t.action(internal.billing.reconcilePolarOrder, { orderId: julyOrder.id });
+
+    const status = await authed.query(api.billing.getStatus, { businessId });
+    expect(status.recentTransactions).toMatchObject([
+      {
+        sourceId: julyOrder.id,
+        status: "pending",
+        amountCents: 3000,
+        occurredAt: julyOrder.createdAt.toISOString(),
+      },
+      {
+        sourceId: juneOrder.id,
+        status: "paid",
+        amountCents: 3000,
+        occurredAt: juneOrder.createdAt.toISOString(),
+      },
+    ]);
+
+    const transactions = await t.run(async (ctx: TestContext) =>
+      ctx.db.query("billing_transactions").collect(),
+    );
+    expect(transactions).toHaveLength(2);
+    expect(polarOrdersGetMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("repairs a historical paid AI SMS setup order without replaying the purchase", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-ai-sms-order-reconciliation",
+      deploymentMode: "cloud",
+    });
+    const polarCustomerId = "cus_ai_sms_order_reconciliation";
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID = "prod_ai_sms_setup";
+    process.env.POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID = "prod_pro_monthly_ai_sms";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        activeAddons: [],
+        billingInterval: "monthly",
+        polarCustomerId,
+        proSubscriptionId: "sub_pro",
+        proSubscriptionProductId: "prod_pro_monthly",
+      });
+    });
+
+    const historicalOrder = {
+      id: "ord_historical_ai_sms_setup",
+      createdAt: new Date("2026-03-12T02:24:40.765Z"),
+      status: "paid",
+      totalAmount: 9900,
+      currency: "usd",
+      description: "LobbyStack AI SMS setup",
+      isInvoiceGenerated: false,
+      customerId: polarCustomerId,
+      productId: "prod_ai_sms_setup",
+      subscriptionId: null,
+      metadata: {},
+      customer: { externalId: null },
+    };
+    polarOrdersGetMock.mockResolvedValueOnce(historicalOrder);
+
+    await t.action(internal.billing.reconcilePolarOrder, {
+      orderId: historicalOrder.id,
+    });
+
+    expect(polarSubscriptionsUpdateMock).not.toHaveBeenCalled();
+
+    const state = await t.run(async (ctx: TestContext) => {
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      const transaction = await ctx.db
+        .query("billing_transactions")
+        .withIndex("by_kind_and_source_id", (q) =>
+          q.eq("kind", "order").eq("sourceId", historicalOrder.id),
+        )
+        .unique();
+      return { account, transaction };
+    });
+
+    expect(state.account?.activeAddons).toEqual([]);
+    expect(state.account?.proSubscriptionProductId).toBe("prod_pro_monthly");
+    expect(state.account?.aiSmsSetupOrderId).toBe(historicalOrder.id);
+    expect(state.transaction).toMatchObject({
+      businessId,
+      kind: "order",
+      sourceId: historicalOrder.id,
+      status: "paid",
+      amountCents: 9900,
+    });
+  });
+
+  it("repairs a paid order from before affiliate attribution without creating a commission", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, userId } = await seedWorkspace(t, {
+      subject: "billing-pre-attribution-order-reconciliation",
+      deploymentMode: "cloud",
+    });
+    const polarCustomerId = "cus_pre_attribution_reconciliation";
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+
+    const affiliateProfileId = await t.run(async (ctx: TestContext) => {
+      const affiliateUserId = await ctx.db.insert("users", {
+        authSubject: "pre-attribution-affiliate",
+        email: "pre-attribution-affiliate@example.com",
+      });
+      const profileId = await ctx.db.insert("affiliate_profiles", {
+        userId: affiliateUserId,
+        referralCode: "pre-attribution-affiliate",
+        status: "active",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-04-01T00:00:00.000Z",
+      });
+      await ctx.db.insert("affiliate_attributions", {
+        affiliateProfileId: profileId,
+        businessId,
+        referredUserId: userId,
+        referralCode: "pre-attribution-affiliate",
+        source: "via",
+        attributedAt: "2026-04-01T00:00:00.000Z",
+      });
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        polarCustomerId,
+      });
+      return profileId;
+    });
+
+    const historicalOrder = {
+      id: "ord_before_affiliate_attribution",
+      createdAt: new Date("2026-03-15T12:00:00.000Z"),
+      status: "paid",
+      totalAmount: 5000,
+      currency: "usd",
+      description: "LobbyStack Pro Monthly",
+      isInvoiceGenerated: false,
+      customerId: polarCustomerId,
+      productId: "prod_pro_monthly",
+      subscriptionId: "sub_pro",
+      metadata: {},
+      customer: { externalId: null },
+    };
+    polarOrdersGetMock.mockResolvedValueOnce(historicalOrder);
+
+    await t.action(internal.billing.reconcilePolarOrder, {
+      orderId: historicalOrder.id,
+    });
+
+    const state = await t.run(async (ctx: TestContext) => {
+      const transaction = await ctx.db
+        .query("billing_transactions")
+        .withIndex("by_kind_and_source_id", (q) =>
+          q.eq("kind", "order").eq("sourceId", historicalOrder.id),
+        )
+        .unique();
+      const commission = await ctx.db
+        .query("affiliate_commissions")
+        .withIndex("by_source_key", (q) =>
+          q.eq("sourceKey", `order:${historicalOrder.id}`),
+        )
+        .unique();
+      const stats = await ctx.db
+        .query("affiliate_profile_stats")
+        .withIndex("by_affiliate_profile_id", (q) =>
+          q.eq("affiliateProfileId", affiliateProfileId),
+        )
+        .unique();
+      return { transaction, commission, stats };
+    });
+
+    expect(state.transaction).toMatchObject({
+      businessId,
+      sourceId: historicalOrder.id,
+      status: "paid",
+      occurredAt: historicalOrder.createdAt.toISOString(),
+    });
+    expect(state.commission).toBeNull();
+    expect(state.stats).toBeNull();
+  });
+
+  it("rejects reconciliation when the Polar customer is not linked to a business", async () => {
+    const t = convexTest(schema, convexModules);
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    polarOrdersGetMock.mockResolvedValueOnce({
+      id: "ord_unlinked",
+      createdAt: new Date("2026-06-12T02:24:40.765Z"),
+      status: "paid",
+      totalAmount: 3000,
+      currency: "usd",
+      description: "LobbyStack Starter Monthly",
+      isInvoiceGenerated: false,
+      customerId: "cus_unlinked",
+      productId: "prod_starter_monthly",
+      subscriptionId: "sub_unlinked",
+      metadata: {},
+      customer: { externalId: null },
+    });
+
+    await expect(
+      t.action(internal.billing.reconcilePolarOrder, { orderId: "ord_unlinked" }),
+    ).rejects.toThrow(
+      "Polar customer cus_unlinked is not linked to a LobbyStack billing account.",
+    );
+
+    const transactions = await t.run(async (ctx: TestContext) =>
+      ctx.db.query("billing_transactions").collect(),
+    );
+    expect(transactions).toEqual([]);
   });
 
   it("requires admin access for billing checkout and portal actions", async () => {

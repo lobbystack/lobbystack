@@ -609,7 +609,7 @@ export function OnboardingPlanPage({
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           {tierConfigs.map((tier) => {
             const isSubmitting = submittingPlan === tier.slug;
             const isUnavailable = !isPlanAvailable(tier.slug);

@@ -8,11 +8,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import type { BillingStatus } from "../../../../../packages/shared/src/billing";
 import { SettingsPhoneNumberPage } from "./SettingsPhoneNumberPage";
+import { UpgradePlanDialogProvider } from "./UpgradePlanDialogContext";
 
 const {
   claimReplacementNumberMock,
   getInitialReplacementNumberSuggestionMock,
   navigateMock,
+  openUpgradePlanDialogMock,
   searchReplacementNumbersMock,
   toastSuccessMock,
   useObservedActionMock,
@@ -21,6 +23,7 @@ const {
   claimReplacementNumberMock: vi.fn(),
   getInitialReplacementNumberSuggestionMock: vi.fn(),
   navigateMock: vi.fn(),
+  openUpgradePlanDialogMock: vi.fn(),
   searchReplacementNumbersMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   useObservedActionMock: vi.fn(),
@@ -198,12 +201,14 @@ function renderPage(
   props: Partial<React.ComponentProps<typeof SettingsPhoneNumberPage>> = {},
 ) {
   return render(
-    <SettingsPhoneNumberPage
-      billingStatus={paidBillingStatus}
-      businessId={businessId}
-      canManageTenant={canManageTenant}
-      {...props}
-    />,
+    <UpgradePlanDialogProvider onOpen={openUpgradePlanDialogMock}>
+      <SettingsPhoneNumberPage
+        billingStatus={paidBillingStatus}
+        businessId={businessId}
+        canManageTenant={canManageTenant}
+        {...props}
+      />
+    </UpgradePlanDialogProvider>,
   );
 }
 
@@ -212,6 +217,7 @@ describe("SettingsPhoneNumberPage", () => {
     claimReplacementNumberMock.mockReset();
     getInitialReplacementNumberSuggestionMock.mockReset();
     navigateMock.mockReset();
+    openUpgradePlanDialogMock.mockReset();
     searchReplacementNumbersMock.mockReset();
     toastSuccessMock.mockReset();
     useObservedActionMock.mockReset();
@@ -442,5 +448,21 @@ describe("SettingsPhoneNumberPage", () => {
     expect(screen.queryByText("You don't have a number yet.")).toBeNull();
     expect(screen.getByRole("button", { name: "View plans" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Get number" })).toBeNull();
+  });
+
+  it("opens the upgrade dialog from View plans", async () => {
+    const user = userEvent.setup();
+    useQueryMock.mockReturnValue(null);
+    renderPage(true, {
+      billingStatus: {
+        includedBusinessNumbers: 0,
+        phoneNumberReclaimScheduledAt: null,
+      } as never,
+    });
+
+    await user.click(screen.getByRole("button", { name: "View plans" }));
+
+    expect(openUpgradePlanDialogMock).toHaveBeenCalledTimes(1);
+    expect(navigateMock).not.toHaveBeenCalledWith("/settings/plan");
   });
 });

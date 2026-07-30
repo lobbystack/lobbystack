@@ -33,7 +33,7 @@ const widthMap: Record<NonNullable<OnboardingShellProps["width"]>, string> = {
   md: "max-w-md",
   lg: "max-w-lg",
   xl: "max-w-xl",
-  wide: "max-w-5xl",
+  wide: "max-w-7xl",
 };
 
 const onboardingStepRoutes: Record<number, string> = {
