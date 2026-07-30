@@ -134,9 +134,9 @@ export function FeaturesHero({ locale = "en" }: FeaturesHeroProps) {
                 </p>
               </div>
               <div className="flex-1 space-y-3">
-                <h4 className="text-sm font-medium text-foreground">
+                <h2 className="text-sm font-medium text-foreground">
                   {copy.quoteTitle}
-                </h4>
+                </h2>
                 <ul className="space-y-1.5 text-[13px] text-muted-foreground">
                   <li className="flex items-center gap-2">
                     <span className="size-1 rounded-full bg-foreground/30" />
@@ -173,9 +173,9 @@ export function FeaturesHero({ locale = "en" }: FeaturesHeroProps) {
                 </p>
               </div>
               <div className="flex-1 space-y-3">
-                <h4 className="text-sm font-medium text-foreground">
+                <h2 className="text-sm font-medium text-foreground">
                   {copy.callbackBooked}
-                </h4>
+                </h2>
                 <p className="text-lg font-medium tracking-tight text-foreground">
                   {copy.callbackTime}
                 </p>

@@ -5,7 +5,11 @@ import { Footer } from "@/components/Footer"
 import { FeaturesCtaSection } from "@/components/features/FeaturesCtaSection"
 import { render } from "astro:content"
 import type { BlogEntry } from "@/lib/blog"
-import { blogPath } from "@/lib/blog"
+import {
+  blogCanonicalSlug,
+  blogPath,
+  getBlogPosts,
+} from "@/lib/blog"
 import {
   blogJsonLd,
   blogPostingJsonLd,
@@ -15,7 +19,13 @@ import {
   plainTextFromMarkdown,
   webSiteJsonLd,
 } from "@/lib/seo"
-import { assertLocale, getCopy, localizePath, type Locale } from "@/i18n"
+import {
+  assertLocale,
+  getCopy,
+  localizeHref,
+  localizePath,
+  type Locale,
+} from "@/i18n"
 
 interface Props {
   entry: BlogEntry
@@ -41,12 +51,27 @@ const pageCopy = {
   en: {
     titleSuffix: "LobbyStack Blog",
     updated: "Updated",
+    by: "By",
+    related: "Related reading",
+    product: "Continue with LobbyStack",
   },
   fr: {
     titleSuffix: "Blog LobbyStack",
     updated: "Mis à jour",
+    by: "Par",
+    related: "À lire aussi",
+    product: "Continuer avec LobbyStack",
   },
-} satisfies Record<Locale, { titleSuffix: string; updated: string }>
+} satisfies Record<
+  Locale,
+  {
+    titleSuffix: string
+    updated: string
+    by: string
+    related: string
+    product: string
+  }
+>
 const displayedDate = (
   entry.data.updatedDate ?? entry.data.pubDate
 ).toLocaleDateString(dateLocale, {
@@ -60,6 +85,73 @@ const displayedDateLabel = entry.data.updatedDate
 
 const coverImageWidth = 1672
 const coverImageHeight = 941
+const allPosts = await getBlogPosts(locale)
+const relatedPosts = allPosts
+  .filter(
+    (candidate) =>
+      blogCanonicalSlug(candidate) !== blogCanonicalSlug(entry) &&
+      candidate.data.category === entry.data.category
+  )
+  .slice(0, 3)
+const fallbackRelatedPosts = allPosts
+  .filter(
+    (candidate) =>
+      blogCanonicalSlug(candidate) !== blogCanonicalSlug(entry) &&
+      !relatedPosts.some(
+        (related) =>
+          blogCanonicalSlug(related) === blogCanonicalSlug(candidate)
+      )
+  )
+  .slice(0, 3 - relatedPosts.length)
+const displayedRelatedPosts = [...relatedPosts, ...fallbackRelatedPosts]
+const slug = blogCanonicalSlug(entry)
+const productResources = slug.includes("open-source")
+  ? [
+      {
+        label:
+          locale === "fr"
+            ? "Réceptionniste IA open source"
+            : "Open-source AI receptionist",
+        href: "/solutions/open-source-ai-receptionist/",
+      },
+      {
+        label:
+          locale === "fr"
+            ? "Déploiement auto-hébergé"
+            : "Self-hosted deployment",
+        href: "/solutions/self-hosted-ai-receptionist/",
+      },
+    ]
+  : slug.includes("savings")
+    ? [
+        {
+          label:
+            locale === "fr"
+              ? "Calculateur d’appels manqués"
+              : "Missed-call revenue calculator",
+          href: "/missed-call-revenue-calculator/",
+        },
+        {
+          label:
+            locale === "fr"
+              ? "Réponse téléphonique IA"
+              : "AI phone answering",
+          href: "/solutions/ai-phone-answering/",
+        },
+      ]
+    : [
+        {
+          label:
+            locale === "fr"
+              ? "Réponse téléphonique IA"
+              : "AI phone answering",
+          href: "/solutions/ai-phone-answering/",
+        },
+        {
+          label: locale === "fr" ? "Tarifs" : "Pricing",
+          href: "/pricing/",
+        },
+      ]
 ---
 
 <Layout
@@ -135,6 +227,9 @@ const coverImageHeight = 941
           >
             {displayedDateLabel}
           </time>
+          <span class="text-xs font-medium text-muted-foreground">
+            {pageCopy[locale].by} {entry.data.author}
+          </span>
         </div>
       </header>
 
@@ -157,6 +252,38 @@ const coverImageHeight = 941
       <div class="blog-copy max-w-none">
         <Content />
       </div>
+
+      <aside class="mt-16 border-t border-border/50 pt-10">
+        <h2 class="text-2xl font-semibold">{pageCopy[locale].related}</h2>
+        <div class="mt-6 grid gap-4 sm:grid-cols-3">
+          {
+            displayedRelatedPosts.map((post) => (
+              <a
+                href={blogPath(post, locale)}
+                class="rounded-xl border border-border/60 p-4 text-sm font-medium transition-colors hover:border-primary/50"
+              >
+                {post.data.title}
+              </a>
+            ))
+          }
+        </div>
+
+        <h2 class="mt-10 text-xl font-semibold">
+          {pageCopy[locale].product}
+        </h2>
+        <div class="mt-4 flex flex-wrap gap-3">
+          {
+            productResources.map((resource) => (
+              <a
+                href={localizeHref(locale, resource.href)}
+                class="rounded-full border border-border/60 px-4 py-2 text-sm font-medium transition-colors hover:border-primary/50"
+              >
+                {resource.label}
+              </a>
+            ))
+          }
+        </div>
+      </aside>
     </div>
   </article>
 

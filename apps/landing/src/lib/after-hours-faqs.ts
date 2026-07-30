@@ -39,7 +39,7 @@ export const afterHoursFaqs: FaqItem[] = [
   {
     question: "Is it cheaper than a human answering service?",
     answer:
-      "Yes. Human answering services charge per call, per minute, or monthly retainers that scale with volume. LobbyStack handles unlimited concurrent calls on a flat usage-based plan. Most businesses save significantly while covering more hours.",
+      "The total depends on call volume, handling time, setup, and the amount of human service included. Compare LobbyStack's published voice-minute pricing with each answering service's per-call, per-minute, staffing, and overage charges.",
   },
   {
     question: "Can I review what happened on after-hours calls?",

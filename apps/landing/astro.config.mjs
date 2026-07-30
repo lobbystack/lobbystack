@@ -1,12 +1,12 @@
 import react from "@astrojs/react"
 import sitemap from "@astrojs/sitemap"
-import { gitLastmod } from "@jdevalk/astro-seo-graph"
 import seoGraph from "@jdevalk/astro-seo-graph/integration"
 import pagefind from "astro-pagefind"
 import tailwindcss from "@tailwindcss/vite"
 import { defineConfig, fontProviders } from "astro/config"
 import { createLogger } from "vite"
 import { translatedBasePaths } from "./src/i18n/translated-base-paths.ts"
+import { stableLastmodForUrl } from "./src/lib/sitemap.ts"
 
 const SITE_URL = "https://lobbystack.com"
 const INDEXNOW_KEY = process.env.INDEXNOW_KEY
@@ -36,50 +36,6 @@ viteLogger.warnOnce = (message, options) => {
   warnOnce(message, options)
 }
 
-const sourceForUrl = (url) => {
-  const originalPathname = new URL(url).pathname
-  const isFrench = originalPathname.startsWith("/fr/")
-  const pathname = originalPathname.replace(/^\/fr(?=\/|$)/, "") || "/"
-
-  if (pathname === "/") return "src/pages/index.astro"
-  if (pathname === "/features/") return "src/pages/features.astro"
-  if (pathname === "/solutions/") return "src/pages/solutions/index.astro"
-  if (pathname === "/pricing/") return "src/pages/pricing.astro"
-  if (pathname === "/affiliate-program/")
-    return "src/pages/affiliate-program.astro"
-  if (pathname === "/blog/") return "src/pages/blog/index.astro"
-  if (pathname === "/changelog/") return "src/pages/changelog.astro"
-  if (pathname === "/docs/api/") return "src/pages/docs/api.astro"
-  if (pathname === "/missed-call-revenue-calculator/")
-    return "src/pages/missed-call-revenue-calculator/index.astro"
-  if (pathname === "/about/") return "src/pages/about.astro"
-  if (pathname.startsWith("/blog/")) {
-    const slug = pathname.replace(/^\/blog\/|\/$/g, "")
-    return isFrench
-      ? `src/content/blog/fr/${slug}.md`
-      : `src/content/blog/${slug}.md`
-  }
-
-  const solutionSources = {
-    "/solutions/ai-phone-answering/":
-      "src/pages/solutions/ai-phone-answering/index.astro",
-    "/solutions/ai-appointment-scheduler/":
-      "src/pages/solutions/ai-appointment-scheduler/index.astro",
-    "/solutions/ai-receptionist-for-home-services/":
-      "src/pages/solutions/ai-receptionist-for-home-services/index.astro",
-    "/solutions/after-hours-answering-service/": "src/lib/seo-landing-pages.ts",
-    "/solutions/ai-receptionist-for-dental-offices/":
-      "src/lib/seo-landing-pages.ts",
-    "/solutions/ai-receptionist-for-salons-and-spas/":
-      "src/lib/seo-landing-pages.ts",
-    "/solutions/self-hosted-ai-receptionist/": "src/lib/seo-landing-pages.ts",
-  }
-
-  if (solutionSources[pathname]) return solutionSources[pathname]
-
-  return undefined
-}
-
 const normalizePath = (pathname) => {
   if (!pathname || pathname === "/") return "/"
   return pathname.endsWith("/") ? pathname : `${pathname}/`
@@ -89,13 +45,6 @@ const indexingPath = (pathname) =>
   normalizePath(normalizePath(pathname).replace(/^\/fr(?=\/|$)/, "") || "/")
 
 const isNoindexPath = (pathname) => NOINDEX_PATHS.has(indexingPath(pathname))
-
-const lastmodForUrl = (url) => {
-  const source = sourceForUrl(url)
-  if (!source) return new Date().toISOString()
-
-  return (gitLastmod(source) ?? new Date()).toISOString()
-}
 
 const stripLocaleFromPath = (pathname) => {
   const normalized = normalizePath(pathname)
@@ -239,7 +188,8 @@ export default defineConfig({
         return !isNoindexPath(pathname)
       },
       serialize(item) {
-        item.lastmod = lastmodForUrl(item.url)
+        const lastmod = stableLastmodForUrl(item.url)
+        if (lastmod) item.lastmod = lastmod
         const links = sitemapAlternateLinks(item.url)
         if (links) item.links = links
         return item

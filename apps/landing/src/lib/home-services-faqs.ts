@@ -44,7 +44,7 @@ export const homeServicesFaqs: FaqItem[] = [
   {
     question: "Is this better than a human answering service?",
     answer:
-      "It depends. A human service can be helpful, but costs rise with volume and coverage hours. LobbyStack answers unlimited concurrent calls, books appointments directly into your calendar, and costs a fraction of a full-time operator.",
+      "It depends on the calls and service level you need. Compare booking accuracy, escalation quality, coverage hours, setup, staffing, per-call or per-minute pricing, and overages using your real call volume.",
   },
   {
     question: "How much does it cost for a home services business?",

@@ -15,6 +15,14 @@ import {
   translatedBasePaths,
   type Locale,
 } from "@/i18n"
+import {
+  seoLandingPageByPath,
+  seoLandingPages,
+} from "@/lib/seo-landing-pages"
+import {
+  fullyLocalizedFrenchSeoPaths,
+  localizedSeoLandingPages,
+} from "@/lib/localized-seo-landing-pages"
 
 const pathFromHere = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 
@@ -125,6 +133,33 @@ describe("landing translated route registry", () => {
 })
 
 describe("landing translated content coverage", () => {
+  it("has complete French content for every generated SEO landing page", () => {
+    const frenchPages = localizedSeoLandingPages("fr")
+
+    expect(frenchPages).toHaveLength(seoLandingPages.length)
+
+    for (const frenchPage of frenchPages) {
+      const englishPage = seoLandingPageByPath(frenchPage.path)
+
+      expect(fullyLocalizedFrenchSeoPaths.has(frenchPage.path)).toBe(true)
+      expect(englishPage).toBeDefined()
+      expect(frenchPage.title).not.toBe(englishPage?.title)
+      expect(frenchPage.description).not.toBe(englishPage?.description)
+      expect(frenchPage.h1).not.toBe(englishPage?.h1)
+      expect(frenchPage.intro).not.toBe(englishPage?.intro)
+      expect(frenchPage.imageAlt).not.toBe(englishPage?.imageAlt)
+      expect(frenchPage.proofPoints).toHaveLength(3)
+      expect(frenchPage.sections.length).toBeGreaterThanOrEqual(3)
+      expect(frenchPage.relatedLinks.length).toBeGreaterThanOrEqual(3)
+
+      for (const section of frenchPage.sections) {
+        expect(section.title).toBeTruthy()
+        expect(section.body).toBeTruthy()
+        expect(section.points.length).toBeGreaterThanOrEqual(3)
+      }
+    }
+  })
+
   it("has a French blog post for every English canonical blog slug", () => {
     const englishSlugs = canonicalSlugsIn(pathFromHere("../content/blog"))
     const frenchSlugs = canonicalSlugsIn(pathFromHere("../content/blog/fr"))

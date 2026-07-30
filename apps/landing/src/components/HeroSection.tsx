@@ -17,7 +17,7 @@ const heroCopy = {
     h1Start: "LobbyStack turns",
     h1Emphasis: "missed calls",
     h1End: "into booked work.",
-    body: "LobbyStack is an open-source AI receptionist that answers calls, qualifies leads, and books appointments 24/7. Use it for every inbound call, or just the ones you miss when your team is busy.",
+    body: "LobbyStack is open-source AI receptionist software for small businesses. It answers phone calls, qualifies leads, and books appointments 24/7. Use it for every inbound call, or only when your team is busy.",
   },
   fr: {
     github: "Soutenez-nous sur GitHub",

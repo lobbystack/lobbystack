@@ -48,12 +48,6 @@ export type SeoLandingPage = {
   ctaPrimaryHref?: string
   ctaSecondaryLabel?: string
   ctaSecondaryHref?: string
-  testimonial?: {
-    quote: string
-    author: string
-    role: string
-    trustBadge?: string
-  }
 }
 
 export const companyPages: SeoLandingPage[] = [
@@ -90,7 +84,7 @@ export const companyPages: SeoLandingPage[] = [
         title: "Why we built it open source",
         body: "Phone workflows sit on top of customer data, booking rules, and escalation policies. Teams should be able to inspect how those decisions are made instead of trusting a black box.",
         points: [
-          "Review the codebase, deployment model, and data boundaries on GitHub",
+          "Review the AGPL-3.0-only codebase, deployment model, and data boundaries on GitHub",
           "Start on LobbyStack Cloud and move to self-hosting when your team needs more control",
           "Avoid vendor lock-in for the receptionist layer that sits in front of every caller",
         ],
@@ -110,14 +104,14 @@ export const companyPages: SeoLandingPage[] = [
         points: [
           "Configure allowed answers, booking rules, and transfer paths in plain language",
           "Review call summaries, transcripts, and outcomes in one operator dashboard",
-          "Use managed cloud for speed or self-hosting when compliance and data residency require it",
+          "Use public documentation or contact support@lobbystack.com when you need implementation help",
         ],
       },
     ],
     faqs: [],
     relatedLinks: [
       { label: "Features", href: "/features/" },
-      { label: "Pricing", href: "/pricing/" },
+      { label: "Public documentation", href: "/docs/api/" },
       { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
     ],
   },
@@ -205,12 +199,6 @@ export const solutionPages: SeoLandingPage[] = [
       "LobbyStack answers after-hours calls, books emergency appointments, and routes urgent requests so you wake up to scheduled work instead of missed opportunities.",
     ctaPrimaryLabel: "Try for free",
     ctaSecondaryLabel: "View pricing",
-    testimonial: {
-      quote:
-        "We used to lose at least two emergency calls a week to voicemail. Now LobbyStack books them while we sleep. Our revenue is up 30%.",
-      author: "Mike Chen",
-      role: "Owner, Apex Plumbing",
-    },
   },
   {
     group: "solution",
@@ -296,13 +284,6 @@ export const solutionPages: SeoLandingPage[] = [
       "LobbyStack answers new-patient inquiries, books appointments, and handles routine questions so your front desk can focus on the person in front of them.",
     ctaPrimaryLabel: "Try for free",
     ctaSecondaryLabel: "View pricing",
-    testimonial: {
-      quote:
-        "Our front desk used to juggle three phones during morning rush. Now LobbyStack handles overflow and new-patient booking. The team is calmer and our no-show rate dropped.",
-      author: "Dr. Sarah Jenkins",
-      role: "Bright Smile Dental",
-      trustBadge: "Self-hosting available for HIPAA workflows",
-    },
   },
   {
     group: "solution",
@@ -384,12 +365,6 @@ export const solutionPages: SeoLandingPage[] = [
       "LobbyStack answers booking calls, handles reschedules, and answers service questions so your stylists never have to pause a treatment to pick up the phone.",
     ctaPrimaryLabel: "Try for free",
     ctaSecondaryLabel: "View pricing",
-    testimonial: {
-      quote:
-        "We were losing 5-6 bookings a day because stylists couldn't answer while coloring. Now LobbyStack books them automatically. Our books are full two weeks out.",
-      author: "Amara Okafor",
-      role: "Owner, The Color Room",
-    },
   },
   {
     group: "solution",
@@ -401,7 +376,7 @@ export const solutionPages: SeoLandingPage[] = [
     eyebrow: "Self-hosted",
     h1: "Self-hosted AI receptionist for infrastructure you control",
     intro:
-      "LobbyStack is open source and self-hosted ready for teams that need data control, custom deployment, white-labeling, or regulated workflows.",
+      "LobbyStack is published under AGPL-3.0-only and includes a self-hosted path for teams that need to control deployment, provider accounts, access, and data retention.",
     image: "/illustrations/trust-controls.webp",
     imageAlt:
       "LobbyStack controls for a self-hosted AI receptionist deployment",
@@ -412,30 +387,30 @@ export const solutionPages: SeoLandingPage[] = [
     ],
     sections: [
       {
-        title: "Absolute data sovereignty and privacy control",
-        body: "For businesses in regulated industries or agencies handling proprietary client workflows, data privacy is non-negotiable. Self-hosting with LobbyStack means call recordings, transcripts, and customer details never leave your secure database.",
+        title: "Control where application data is stored",
+        body: "Self-hosting lets your team choose where recordings, transcripts, configurations, and customer details are stored. External telephony or model providers may still process data according to the accounts and services you configure.",
         points: [
-          "Supports deployments designed around GDPR, HIPAA, and data residency requirements",
-          "Complete, private ownership of call transcripts and audio recordings",
-          "Supports secure deployment on private clouds or on-premise hardware",
+          "Define access, retention, backup, and deletion policies in your environment",
+          "Choose the infrastructure and provider accounts used by the deployment",
+          "Review your own regulatory obligations before processing production calls",
         ],
       },
       {
-        title: "Own your prompts, models, and trunks",
-        body: "Don't get locked into rigid platform constraints. Configure your own SIP trunks, select which LLMs process each call, and iterate your prompt routing rules without limit or developer gates.",
+        title: "Own your prompts, provider accounts, and call rules",
+        body: "Configure the telephony and AI services supported by the repository, then adapt greeting scripts, intake questions, and routing rules in code or configuration.",
         points: [
-          "Connect Twilio, Telnyx, or private SIP trunks directly",
-          "Choose your models: GPT-4, Claude, or local private Llama models",
-          "Tweak greeting scripts, intake rules, and escalation paths instantly",
+          "Use supported telephony integrations with accounts you control",
+          "Configure supported AI providers without surrendering deployment access",
+          "Review and change greeting, intake, booking, and escalation behavior",
         ],
       },
       {
-        title: "Eliminate expensive vendor per-minute markups",
-        body: "Traditional AI answering platforms charge heavy per-minute markups that scale unsustainably as your business grows. Self-hosting removes middleman fees, letting you pay raw carrier and API costs directly.",
+        title: "Understand the operating costs directly",
+        body: "A self-hosted deployment replaces a managed software bill with infrastructure, carrier, model, monitoring, backup, and engineering costs that your team can measure and control.",
         points: [
-          "Saves up to 80% on long-term high-volume voice minutes",
-          "Perfect for agency resellers managing multi-tenant client setups",
-          "Unlocks unlimited scale without monthly platform retainer fees",
+          "Model carrier, model, storage, and infrastructure usage separately",
+          "Account for engineering, security, updates, and incident response",
+          "Compare total ownership cost with the managed cloud before choosing",
         ],
       },
       {
@@ -466,18 +441,11 @@ export const solutionPages: SeoLandingPage[] = [
     ],
     ctaHeading: "Deploy LobbyStack on your own infrastructure",
     ctaBody:
-      "Get the open-source AI receptionist running on your servers with full control over data, models, and integrations. No vendor lock-in. No per-minute markups.",
+      "Review the AGPL-3.0-only repository and deployment documentation, then evaluate the infrastructure, provider, security, and support responsibilities.",
     ctaPrimaryLabel: "Read deployment docs",
     ctaPrimaryHref: "/docs/api/",
     ctaSecondaryLabel: "View on GitHub",
     ctaSecondaryHref: "https://github.com/lobbystack/lobbystack",
-    testimonial: {
-      quote:
-        "We needed a receptionist that stayed inside our VPC. LobbyStack self-hosted in under an hour. The code is clean, the docs are solid, and we own every byte of call data.",
-      author: "David Chen",
-      role: "Platform Engineer, SecureHealth",
-      trustBadge: "Private deployment",
-    },
   },
 
   // ── Trade-specific solution pages ──────────────────────────────
@@ -488,7 +456,7 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/ai-receptionist-for-plumbers/",
     title: "AI Receptionist for Plumbers | LobbyStack",
     description:
-      "LobbyStack is an AI receptionist for plumbers that answers emergency calls, books service appointments, and routes after-hours bursts and backups to your on-call technician.",
+      "LobbyStack answers plumbing calls, qualifies urgent leaks and backups, books service visits, and routes after-hours emergencies to your on-call plumber.",
     eyebrow: "Plumbers",
     h1: "AI receptionist for plumbers that captures every emergency call",
     intro:
@@ -575,7 +543,7 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/ai-receptionist-for-hvac/",
     title: "AI Receptionist for HVAC Companies | LobbyStack",
     description:
-      "LobbyStack is an AI receptionist for HVAC companies that answers emergency no-heat and no-AC calls, books maintenance appointments, and routes urgent calls to your on-call technician.",
+      "LobbyStack answers HVAC calls, collects system details, books maintenance visits, and routes urgent no-heat or no-AC requests to your on-call technician.",
     eyebrow: "HVAC",
     h1: "AI receptionist for HVAC companies that captures every service call",
     intro:
@@ -651,7 +619,7 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/ai-receptionist-for-electricians/",
     title: "AI Receptionist for Electricians | LobbyStack",
     description:
-      "LobbyStack is an AI receptionist for electricians that answers emergency calls, books service appointments, and routes sparking and outage emergencies to your on-call technician.",
+      "LobbyStack answers electrical calls, gathers issue and location details, books service visits, and routes sparking or outage emergencies to your on-call electrician.",
     eyebrow: "Electricians",
     h1: "AI receptionist for electricians that captures every service call",
     intro:
@@ -719,7 +687,7 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/ai-receptionist-for-garage-door-repair/",
     title: "AI Receptionist for Garage Door Repair | LobbyStack",
     description:
-      "LobbyStack is an AI receptionist for garage door repair companies that answers emergency calls, books service appointments, and routes stuck-door emergencies to your on-call technician.",
+      "LobbyStack answers garage-door calls, gathers equipment details, books repairs, and routes urgent stuck-door or broken-spring requests to your technician.",
     eyebrow: "Garage door repair",
     h1: "AI receptionist for garage door repair that captures every call",
     intro:
@@ -787,7 +755,7 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/ai-receptionist-for-appliance-repair/",
     title: "AI Receptionist for Appliance Repair | LobbyStack",
     description:
-      "LobbyStack is an AI receptionist for appliance repair companies that answers emergency calls, books service appointments, and collects brand and model details before dispatching.",
+      "LobbyStack answers appliance-repair calls, collects appliance, brand, model, and symptom details, then books an appropriate service visit.",
     eyebrow: "Appliance repair",
     h1: "AI receptionist for appliance repair that captures every call",
     intro:
@@ -855,7 +823,7 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/ai-receptionist-for-restoration-companies/",
     title: "AI Receptionist for Restoration Companies | LobbyStack",
     description:
-      "LobbyStack is an AI receptionist for restoration companies that answers emergency water and fire damage calls, books estimates, and routes urgent mitigation requests to your on-call team.",
+      "LobbyStack qualifies water, fire, and mold damage calls, books restoration estimates, and routes urgent mitigation requests to your on-call team.",
     eyebrow: "Restoration",
     h1: "AI receptionist for restoration companies that captures every emergency",
     intro:
@@ -993,7 +961,7 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/after-hours-answering-service-for-contractors/",
     title: "After-Hours Answering Service for Contractors | LobbyStack",
     description:
-      "LobbyStack is an after-hours answering service for contractors that screens emergency calls, books next-day appointments, and routes urgent jobs to your on-call staff when your team is off the clock.",
+      "LobbyStack answers contractor calls after hours, screens emergencies, books next-day visits, and routes urgent jobs to your on-call staff with context.",
     eyebrow: "Contractor after-hours",
     h1: "After-hours answering service for contractors that captures emergency jobs",
     intro:
@@ -1105,10 +1073,10 @@ export const solutionPages: SeoLandingPage[] = [
       },
       {
         title: "Deploy on infrastructure you control",
-        body: "Self-hosting with LobbyStack means call recordings, transcripts, and customer details never leave your infrastructure. Connect your own SIP trunks, choose your own models, and set your own retention policies.",
+        body: "Self-hosting places application storage, access, logs, and retention under your control. Configured telephony and AI providers may still process call data under their own terms.",
         points: [
           "Run in containers on your preferred cloud or private environment",
-          "Choose GPT-4, Claude, or local private Llama models",
+          "Configure the telephony and AI providers supported by the repository",
           "Own update timing, access policies, logs, and retention windows",
         ],
       },

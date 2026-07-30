@@ -14,6 +14,19 @@ const TRANSLATED_PATHS = new Set([
   "/solutions/ai-phone-answering/",
   "/solutions/ai-appointment-scheduler/",
   "/solutions/ai-receptionist-for-home-services/",
+  "/solutions/after-hours-answering-service/",
+  "/solutions/ai-receptionist-for-dental-offices/",
+  "/solutions/ai-receptionist-for-salons-and-spas/",
+  "/solutions/self-hosted-ai-receptionist/",
+  "/solutions/ai-receptionist-for-plumbers/",
+  "/solutions/ai-receptionist-for-hvac/",
+  "/solutions/ai-receptionist-for-electricians/",
+  "/solutions/ai-receptionist-for-garage-door-repair/",
+  "/solutions/ai-receptionist-for-appliance-repair/",
+  "/solutions/ai-receptionist-for-restoration-companies/",
+  "/solutions/ai-receptionist-for-locksmiths/",
+  "/solutions/after-hours-answering-service-for-contractors/",
+  "/solutions/open-source-ai-receptionist/",
   "/missed-call-revenue-calculator/",
   "/changelog/",
   "/blog/",
@@ -40,6 +53,7 @@ const TRANSLATED_PATHS = new Set([
   "/blog/ai-receptionist-workflows/",
   "/blog/ai-receptionist-affiliate-program/",
   "/affiliate-program/",
+  "/about/",
   "/docs/api/",
   "/privacy/",
   "/cookie-policy/",
@@ -68,6 +82,11 @@ const normalizePath = (pathname) => {
 }
 
 const hasFileExtension = (pathname) => /\.[a-z0-9]+$/i.test(pathname)
+
+const isSearchInfrastructurePath = (pathname) =>
+  pathname === "/robots.txt" ||
+  pathname === "/sitemap-index.xml" ||
+  /^\/sitemap-[a-z0-9-]+\.xml$/i.test(pathname)
 
 const isCrawler = (request) => {
   const userAgent = request.headers.get("User-Agent")?.toLowerCase() || ""
@@ -103,6 +122,7 @@ const preferredLocale = (request) => {
 const shouldRedirectToFrench = (request, url) => {
   if (request.method !== "GET" && request.method !== "HEAD") return false
   if (isCrawler(request)) return false
+  if (isSearchInfrastructurePath(url.pathname)) return false
   if (url.pathname.startsWith("/fr/")) return false
   if (url.pathname === "/fr") return false
   if (url.pathname.startsWith("/.well-known/")) return false
