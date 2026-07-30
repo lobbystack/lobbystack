@@ -28,7 +28,7 @@ const routeSeo = getRouteSeo({ locale, path: basePath })
 const legalCopy = {
   fr: {
     privacy: {
-      updated: "Dernière mise à jour : 11 mai 2026",
+      updated: "Dernière mise à jour : 30 juillet 2026",
       h1: "Politique de confidentialité",
       intro:
         "Cette Politique explique comment Lobbystack Inc. collecte, utilise, divulgue et protège les renseignements personnels lorsque vous visitez notre site, utilisez LobbyStack Cloud, communiquez par appels ou SMS alimentés par LobbyStack, contactez le support ou interagissez avec nos services.",
@@ -39,6 +39,8 @@ const legalCopy = {
         ["collect", "Informations"],
         ["sms", "Consentement SMS"],
         ["use", "Utilisation"],
+        ["ai", "Traitement par l’IA"],
+        ["google-oauth-calendar", "Google Agenda"],
         ["share", "Partage"],
         ["retention", "Conservation"],
         ["rights", "Droits"],
@@ -81,8 +83,28 @@ const legalCopy = {
           ],
         },
         {
+          id: "ai",
+          title: "5. IA et traitement automatisé",
+          paragraphs: [
+            "LobbyStack peut transmettre des instructions, du contexte d’entreprise, l’audio des appels, des transcriptions, du contenu SMS, des consignes client et des données de flux de travail connexes à des fournisseurs de modèles ou d’infrastructure d’IA afin de produire des réponses, résumés, classifications, décisions de routage ou autres résultats automatisés.",
+            "La version hébergée de LobbyStack utilise actuellement OpenAI Realtime pour les conversations vocales en direct et Google Gemini pour la génération de texte non réalisée en temps réel et les incorporations vectorielles. Les résultats de l’IA peuvent être inexacts ou incomplets; les clients professionnels doivent configurer une supervision humaine et des procédures de repli appropriées.",
+          ],
+        },
+        {
+          id: "google-oauth-calendar",
+          title: "5.1 Google OAuth et intégration à Google Agenda",
+          paragraphs: [
+            "Lorsque vous connectez votre compte Google dans LobbyStack, par exemple dans Paramètres → Intégrations, nous utilisons Google OAuth pour accéder à votre compte et gérer la planification dans le calendrier Google que vous sélectionnez.",
+            "Nous utilisons les portées <strong>openid</strong> et <strong>email</strong> pour identifier votre compte connecté, <strong>calendar.calendarlist.readonly</strong> pour afficher les calendriers auxquels vous êtes abonné afin que vous puissiez choisir le calendrier de réservation, et <strong>calendar.events</strong> pour lire les événements afin de calculer les disponibilités ainsi que pour créer, modifier et supprimer les rendez-vous réservés, reportés ou annulés.",
+            "<strong>Données Google auxquelles nous accédons.</strong> Nous accédons aux renseignements liés à votre compte Google, comme votre identifiant et votre adresse courriel lorsqu’ils sont disponibles, ainsi qu’aux données d’événements nécessaires pour calculer les périodes occupées et synchroniser les réservations.",
+            "<strong>Stockage et protection.</strong> Nous stockons dans notre système principal les jetons OAuth nécessaires à la synchronisation et aux réservations. Ces jetons sont chiffrés au repos. Lorsque vous déconnectez Google Agenda, nous supprimons la connexion enregistrée et les événements de rendez-vous que nous avons créés dans le cadre du processus de déconnexion.",
+            "<strong>Traitement par l’IA.</strong> Lorsqu’un réceptionniste IA traite une demande de planification, nous pouvons fournir à OpenAI ou à Google Gemini le minimum de contexte dérivé nécessaire, par exemple la disponibilité d’une plage horaire et le résultat d’une réservation. Nous ne transmettons pas aux fournisseurs d’IA les titres ou descriptions bruts des événements Google Agenda et nous n’utilisons pas les données utilisateur Google pour entraîner ou améliorer des modèles généraux d’IA ou d’apprentissage automatique.",
+            "<strong>Restrictions.</strong> Nous utilisons les données utilisateur Google uniquement pour fournir et améliorer l’intégration à Google Agenda. Nous ne vendons pas ces données et ne les utilisons pas pour la publicité ciblée ou personnalisée.",
+          ],
+        },
+        {
           id: "share",
-          title: "5. Comment nous divulguons les informations",
+          title: "6. Comment nous divulguons les informations",
           paragraphs: [
             "Nous divulguons les informations seulement lorsque nécessaire, notamment à des fournisseurs de téléphonie, SMS, transporteurs, numéros, modèles IA, traitement vocal, hébergement, base de données, stockage, infrastructure, surveillance, sécurité, paiement, facturation, support, communication, analytique et intégrations connectées.",
             "Nous pouvons aussi divulguer des informations à des conseillers professionnels, auditeurs, assureurs et autorités légales ou réglementaires lorsque requis.",
@@ -90,7 +112,7 @@ const legalCopy = {
         },
         {
           id: "retention",
-          title: "6. Conservation et sécurité",
+          title: "7. Conservation et sécurité",
           paragraphs: [
             "Nous conservons les informations aussi longtemps que nécessaire pour fournir les services, respecter nos obligations, résoudre les litiges, appliquer les accords, maintenir la sécurité et répondre aux exigences légales.",
             "Nous utilisons des mesures techniques, administratives et organisationnelles raisonnables pour protéger les informations, notamment contrôle d’accès, journalisation, chiffrement lorsque approprié et restrictions internes.",
@@ -98,7 +120,7 @@ const legalCopy = {
         },
         {
           id: "rights",
-          title: "7. Vos droits et choix",
+          title: "8. Vos droits et choix",
           paragraphs: [
             'Selon votre lieu, vous pouvez avoir le droit de demander accès, correction, suppression, portabilité, opposition ou limitation de certains traitements. Vous pouvez aussi contrôler certains cookies et communications. Consultez notre <a href="/fr/cookie-policy/">Politique relative aux cookies</a> pour plus de détails.',
             "Si une entreprise utilise LobbyStack pour communiquer avec vous, contactez d’abord cette entreprise pour les demandes relatives à ses propres pratiques.",
@@ -106,7 +128,7 @@ const legalCopy = {
         },
         {
           id: "contact",
-          title: "8. Nous contacter",
+          title: "9. Nous contacter",
           paragraphs: [
             "Pour toute question sur cette Politique ou nos pratiques de confidentialité, contactez support@lobbystack.com.",
           ],
