@@ -9,7 +9,6 @@ const footerCopy = {
     pricing: "Pricing",
     resources: "Resources",
     helpCenter: "Help Center",
-    comparison: "Comparison",
     blog: "Blog",
     calculator: "Missed Call Calculator",
     affiliateProgram: "Affiliate Program",
@@ -32,7 +31,6 @@ const footerCopy = {
     pricing: "Tarifs",
     resources: "Ressources",
     helpCenter: "Centre d'aide",
-    comparison: "Comparaison",
     blog: "Blog",
     calculator: "Calculateur d'appels manqués",
     affiliateProgram: "Programme d'affiliation",
@@ -69,7 +67,6 @@ const footerSections = (locale: Locale) => {
           label: copy.helpCenter,
           href: "https://docs.lobbystack.com/introduction",
         },
-        { label: copy.comparison, href: "/comparison/" },
         { label: copy.blog, href: "/blog/" },
         {
           label: copy.calculator,

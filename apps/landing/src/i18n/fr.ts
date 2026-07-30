@@ -62,11 +62,6 @@ export const fr = {
       description:
         "Estimez le revenu hebdomadaire, mensuel et annuel à risque lorsque votre entreprise manque des appels prêts à réserver.",
     },
-    "/comparison/": {
-      title: "Guide comparatif des réceptionnistes IA",
-      description:
-        "Comparez le réceptionniste IA LobbyStack à la messagerie vocale, aux réceptionnistes virtuelles et à d’autres options de réponse téléphonique.",
-    },
     "/blog/": {
       title: "Blog et mises à jour produit LobbyStack",
       description:

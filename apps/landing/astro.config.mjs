@@ -52,7 +52,6 @@ const sourceForUrl = (url) => {
   if (pathname === "/docs/api/") return "src/pages/docs/api.astro"
   if (pathname === "/missed-call-revenue-calculator/")
     return "src/pages/missed-call-revenue-calculator/index.astro"
-  if (pathname === "/comparison/") return "src/pages/comparison.astro"
   if (pathname === "/about/") return "src/pages/about.astro"
   if (pathname.startsWith("/blog/")) {
     const slug = pathname.replace(/^\/blog\/|\/$/g, "")
@@ -124,8 +123,14 @@ const sitemapAlternateLinks = (url) => {
   if (!translatedPathSet.has(basePath)) return undefined
 
   return [
-    { lang: "en", url: new URL(localizePath("en", basePath), SITE_URL).toString() },
-    { lang: "fr", url: new URL(localizePath("fr", basePath), SITE_URL).toString() },
+    {
+      lang: "en",
+      url: new URL(localizePath("en", basePath), SITE_URL).toString(),
+    },
+    {
+      lang: "fr",
+      url: new URL(localizePath("fr", basePath), SITE_URL).toString(),
+    },
     {
       lang: "x-default",
       url: new URL(localizePath(DEFAULT_LOCALE, basePath), SITE_URL).toString(),

@@ -17,6 +17,9 @@ export const GET = createSchemaEndpoint({
   mapper: (post) => {
     const path = `/blog/${blogCanonicalSlug(post)}/`
     const publishedTime = post.data.pubDate.toISOString()
+    const modifiedTime = (
+      post.data.updatedDate ?? post.data.pubDate
+    ).toISOString()
 
     return [
       organizationJsonLd(),
@@ -25,12 +28,13 @@ export const GET = createSchemaEndpoint({
       imageObjectJsonLd({
         path,
         image: post.data.coverImage,
-        alt: post.data.title,
+        alt: post.data.coverImageAlt ?? post.data.title,
         width: 1672,
         height: 941,
       }),
       webPageJsonLd({
-        title: `${post.data.title} - AI Receptionist Blog`,
+        title:
+          post.data.seoTitle ?? `${post.data.title} - AI Receptionist Blog`,
         description: post.data.description,
         path,
         image: post.data.coverImage,
@@ -42,7 +46,7 @@ export const GET = createSchemaEndpoint({
         image: post.data.coverImage,
         author: post.data.author,
         publishedTime,
-        modifiedTime: publishedTime,
+        modifiedTime,
         category: post.data.category,
         articleBody: plainTextFromMarkdown(post.body),
       }),

@@ -1,6 +1,14 @@
 /features /features/ 301
 /pricing /pricing/ 301
 /blog /blog/ 301
+/comparison /blog/ 301
+/comparison/ /blog/ 301
+/fr/comparison /fr/blog/ 301
+/fr/comparison/ /fr/blog/ 301
+/compare/ai-receptionist-vs-virtual-receptionist /blog/ai-receptionist-vs-virtual-receptionist/ 301
+/compare/ai-receptionist-vs-virtual-receptionist/ /blog/ai-receptionist-vs-virtual-receptionist/ 301
+/compare/ai-receptionist-vs-voicemail /blog/ai-receptionist-vs-voicemail/ 301
+/compare/ai-receptionist-vs-voicemail/ /blog/ai-receptionist-vs-voicemail/ 301
 /blog/close-the-product-knowledge-loop/ /blog/ 301
 /blog/do-ai-coding-agents-read-docs/ /blog/ 301
 /blog/fintech-documentation-scales/ /blog/ 301

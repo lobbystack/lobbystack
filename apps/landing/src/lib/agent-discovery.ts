@@ -43,10 +43,6 @@ export const markdownAlternatePath = (pathname: string) => {
   ])
 
   const alternates: Record<string, string> = {
-    "/compare/ai-receptionist-vs-virtual-receptionist/":
-      "/compare/ai-receptionist-vs-virtual-receptionist.md",
-    "/compare/ai-receptionist-vs-voicemail/":
-      "/compare/ai-receptionist-vs-voicemail.md",
     "/": "/index.md",
     "/features/": "/features.md",
     "/pricing/": "/pricing.md",
@@ -70,8 +66,7 @@ export const markdownAlternatePath = (pathname: string) => {
   const seoLandingPage = seoLandingPageByPath(basePath)
   if (
     seoLandingPage?.group === "company" ||
-    seoLandingPage?.group === "solution" ||
-    seoLandingPage?.group === "comparison"
+    seoLandingPage?.group === "solution"
   )
     return `${localePrefix}${basePath.slice(0, -1)}.md`
   if (basePath.startsWith("/blog/"))
