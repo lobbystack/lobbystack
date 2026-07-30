@@ -14,12 +14,7 @@ import {
 } from "@/lib/trade-faqs"
 import { contractorAfterHoursFaqs } from "@/lib/contractor-after-hours-faqs"
 import { openSourceReceptionistFaqs } from "@/lib/open-source-receptionist-faqs"
-import {
-  vsVirtualReceptionistFaqs,
-  vsVoicemailFaqs,
-} from "@/lib/comparison-faqs"
-
-export type SeoLandingPageGroup = "company" | "solution" | "comparison"
+export type SeoLandingPageGroup = "company" | "solution"
 
 export type SeoLandingPage = {
   group: SeoLandingPageGroup
@@ -544,7 +539,8 @@ export const solutionPages: SeoLandingPage[] = [
         ],
       },
       {
-        title: "Start your morning with organized leads instead of chaotic voicemails",
+        title:
+          "Start your morning with organized leads instead of chaotic voicemails",
         body: "LobbyStack filters out robocalls, sales pitches, and spam. Real prospects get a professional interaction and a structured summary waiting in your dashboard when you start the day.",
         points: [
           "Automatically screens out telemarketers and spam",
@@ -556,8 +552,14 @@ export const solutionPages: SeoLandingPage[] = [
     faqs: plumberFaqs,
     faqHeading: "Questions about AI receptionists for plumbers",
     relatedLinks: [
-      { label: "Home services", href: "/solutions/ai-receptionist-for-home-services/" },
-      { label: "After-hours answering", href: "/solutions/after-hours-answering-service/" },
+      {
+        label: "Home services",
+        href: "/solutions/ai-receptionist-for-home-services/",
+      },
+      {
+        label: "After-hours answering",
+        href: "/solutions/after-hours-answering-service/",
+      },
       { label: "Pricing", href: "/pricing/" },
     ],
     ctaHeading: "Stop losing emergency plumbing calls to voicemail",
@@ -626,8 +628,14 @@ export const solutionPages: SeoLandingPage[] = [
     faqs: hvacFaqs,
     faqHeading: "Questions about AI receptionists for HVAC companies",
     relatedLinks: [
-      { label: "Home services", href: "/solutions/ai-receptionist-for-home-services/" },
-      { label: "After-hours answering", href: "/solutions/after-hours-answering-service/" },
+      {
+        label: "Home services",
+        href: "/solutions/ai-receptionist-for-home-services/",
+      },
+      {
+        label: "After-hours answering",
+        href: "/solutions/after-hours-answering-service/",
+      },
       { label: "Pricing", href: "/pricing/" },
     ],
     ctaHeading: "Stop losing HVAC service calls to voicemail",
@@ -649,7 +657,8 @@ export const solutionPages: SeoLandingPage[] = [
     intro:
       "LobbyStack answers electrical calls while you are running wire, on a panel change, or off the clock. It collects issue details, books appointments, and routes emergencies with full context.",
     image: "/illustrations/missed-calls.webp",
-    imageAlt: "LobbyStack answering an electrical service call and booking a visit",
+    imageAlt:
+      "LobbyStack answering an electrical service call and booking a visit",
     proofPoints: [
       "Answers emergency and routine electrical calls 24/7",
       "Collects issue type, location, panel age, and safety status",
@@ -687,8 +696,14 @@ export const solutionPages: SeoLandingPage[] = [
     faqs: electricianFaqs,
     faqHeading: "Questions about AI receptionists for electricians",
     relatedLinks: [
-      { label: "Home services", href: "/solutions/ai-receptionist-for-home-services/" },
-      { label: "After-hours answering", href: "/solutions/after-hours-answering-service/" },
+      {
+        label: "Home services",
+        href: "/solutions/ai-receptionist-for-home-services/",
+      },
+      {
+        label: "After-hours answering",
+        href: "/solutions/after-hours-answering-service/",
+      },
       { label: "Pricing", href: "/pricing/" },
     ],
     ctaHeading: "Stop losing electrical service calls to voicemail",
@@ -710,7 +725,8 @@ export const solutionPages: SeoLandingPage[] = [
     intro:
       "LobbyStack answers garage door calls while you are replacing springs, installing openers, or off the clock. It collects issue details, books appointments, and routes emergencies with full context.",
     image: "/illustrations/missed-calls.webp",
-    imageAlt: "LobbyStack answering a garage door repair call and booking a visit",
+    imageAlt:
+      "LobbyStack answering a garage door repair call and booking a visit",
     proofPoints: [
       "Answers emergency and routine garage door calls 24/7",
       "Collects door type, opener brand, and issue symptoms",
@@ -748,8 +764,14 @@ export const solutionPages: SeoLandingPage[] = [
     faqs: garageDoorFaqs,
     faqHeading: "Questions about AI receptionists for garage door repair",
     relatedLinks: [
-      { label: "Home services", href: "/solutions/ai-receptionist-for-home-services/" },
-      { label: "After-hours answering", href: "/solutions/after-hours-answering-service/" },
+      {
+        label: "Home services",
+        href: "/solutions/ai-receptionist-for-home-services/",
+      },
+      {
+        label: "After-hours answering",
+        href: "/solutions/after-hours-answering-service/",
+      },
       { label: "Pricing", href: "/pricing/" },
     ],
     ctaHeading: "Stop losing garage door repair calls to voicemail",
@@ -771,7 +793,8 @@ export const solutionPages: SeoLandingPage[] = [
     intro:
       "LobbyStack answers appliance repair calls while you are diagnosing a dishwasher or replacing a compressor. It collects brand and model details, books appointments, and routes emergencies with full context.",
     image: "/illustrations/missed-calls.webp",
-    imageAlt: "LobbyStack answering an appliance repair call and booking a visit",
+    imageAlt:
+      "LobbyStack answering an appliance repair call and booking a visit",
     proofPoints: [
       "Answers emergency and routine appliance calls 24/7",
       "Collects appliance type, brand, model number, and symptoms",
@@ -809,8 +832,14 @@ export const solutionPages: SeoLandingPage[] = [
     faqs: applianceRepairFaqs,
     faqHeading: "Questions about AI receptionists for appliance repair",
     relatedLinks: [
-      { label: "Home services", href: "/solutions/ai-receptionist-for-home-services/" },
-      { label: "After-hours answering", href: "/solutions/after-hours-answering-service/" },
+      {
+        label: "Home services",
+        href: "/solutions/ai-receptionist-for-home-services/",
+      },
+      {
+        label: "After-hours answering",
+        href: "/solutions/after-hours-answering-service/",
+      },
       { label: "Pricing", href: "/pricing/" },
     ],
     ctaHeading: "Stop losing appliance repair calls to voicemail",
@@ -832,7 +861,8 @@ export const solutionPages: SeoLandingPage[] = [
     intro:
       "LobbyStack answers restoration calls while your crew is on site or off the clock. It collects damage details, books estimates, and routes emergencies with full context.",
     image: "/illustrations/calls-need-person.webp",
-    imageAlt: "LobbyStack answering a restoration emergency call and routing it",
+    imageAlt:
+      "LobbyStack answering a restoration emergency call and routing it",
     proofPoints: [
       "Answers emergency water and fire damage calls 24/7",
       "Collects damage type, affected area, water source, and insurance status",
@@ -870,8 +900,14 @@ export const solutionPages: SeoLandingPage[] = [
     faqs: restorationFaqs,
     faqHeading: "Questions about AI receptionists for restoration companies",
     relatedLinks: [
-      { label: "Home services", href: "/solutions/ai-receptionist-for-home-services/" },
-      { label: "After-hours answering", href: "/solutions/after-hours-answering-service/" },
+      {
+        label: "Home services",
+        href: "/solutions/ai-receptionist-for-home-services/",
+      },
+      {
+        label: "After-hours answering",
+        href: "/solutions/after-hours-answering-service/",
+      },
       { label: "Pricing", href: "/pricing/" },
     ],
     ctaHeading: "Stop losing restoration emergency calls to voicemail",
@@ -893,7 +929,8 @@ export const solutionPages: SeoLandingPage[] = [
     intro:
       "LobbyStack answers locksmith calls while you are on a rekey job, installing hardware, or off the clock. It collects lockout details, books appointments, and routes emergencies with full context.",
     image: "/illustrations/missed-calls.webp",
-    imageAlt: "LobbyStack answering a locksmith call and booking a service visit",
+    imageAlt:
+      "LobbyStack answering a locksmith call and booking a service visit",
     proofPoints: [
       "Answers emergency lockout and routine calls 24/7",
       "Collects lockout type, location, and vehicle or property details",
@@ -931,8 +968,14 @@ export const solutionPages: SeoLandingPage[] = [
     faqs: locksmithFaqs,
     faqHeading: "Questions about AI receptionists for locksmiths",
     relatedLinks: [
-      { label: "Home services", href: "/solutions/ai-receptionist-for-home-services/" },
-      { label: "After-hours answering", href: "/solutions/after-hours-answering-service/" },
+      {
+        label: "Home services",
+        href: "/solutions/ai-receptionist-for-home-services/",
+      },
+      {
+        label: "After-hours answering",
+        href: "/solutions/after-hours-answering-service/",
+      },
       { label: "Pricing", href: "/pricing/" },
     ],
     ctaHeading: "Stop losing lockout calls to voicemail",
@@ -1004,7 +1047,10 @@ export const solutionPages: SeoLandingPage[] = [
     faqs: contractorAfterHoursFaqs,
     faqHeading: "Questions about after-hours answering for contractors",
     relatedLinks: [
-      { label: "After-hours answering", href: "/solutions/after-hours-answering-service/" },
+      {
+        label: "After-hours answering",
+        href: "/solutions/after-hours-answering-service/",
+      },
       { label: "Plumbers", href: "/solutions/ai-receptionist-for-plumbers/" },
       { label: "HVAC", href: "/solutions/ai-receptionist-for-hvac/" },
       { label: "Pricing", href: "/pricing/" },
@@ -1030,7 +1076,8 @@ export const solutionPages: SeoLandingPage[] = [
     intro:
       "LobbyStack is open source so your team can inspect how calls are handled, modify prompts and routing, and deploy on infrastructure you control. No black-box call logic. No vendor lock-in.",
     image: "/illustrations/trust-controls.webp",
-    imageAlt: "LobbyStack open-source AI receptionist code and deployment controls",
+    imageAlt:
+      "LobbyStack open-source AI receptionist code and deployment controls",
     proofPoints: [
       "Source code publicly available for audit and modification",
       "Customize prompts, intake rules, escalation, and integrations",
@@ -1047,7 +1094,8 @@ export const solutionPages: SeoLandingPage[] = [
         ],
       },
       {
-        title: "Modify prompts, rules, and integrations without a vendor roadmap",
+        title:
+          "Modify prompts, rules, and integrations without a vendor roadmap",
         body: "When your call workflow changes, you should not have to file a support ticket and wait. Because the code is open source, you can modify greeting scripts, intake questions, booking logic, escalation paths, and downstream integrations directly.",
         points: [
           "Change prompts and call flows on your schedule",
@@ -1077,180 +1125,22 @@ export const solutionPages: SeoLandingPage[] = [
     faqs: openSourceReceptionistFaqs,
     faqHeading: "Questions about open-source AI receptionists",
     relatedLinks: [
-      { label: "Self-hosted deployment", href: "/solutions/self-hosted-ai-receptionist/" },
+      {
+        label: "Self-hosted deployment",
+        href: "/solutions/self-hosted-ai-receptionist/",
+      },
       { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
       { label: "API docs", href: "/docs/api/" },
       { label: "Pricing", href: "/pricing/" },
     ],
-    ctaHeading: "Inspect, customize, and deploy an AI receptionist you can verify",
+    ctaHeading:
+      "Inspect, customize, and deploy an AI receptionist you can verify",
     ctaBody:
       "LobbyStack is open source so you can audit the call logic, modify the workflow, and deploy on your own infrastructure. No black box. No vendor lock-in.",
     ctaPrimaryLabel: "View on GitHub",
     ctaPrimaryHref: "https://github.com/lobbystack/lobbystack",
     ctaSecondaryLabel: "Read deployment docs",
     ctaSecondaryHref: "/docs/api/",
-  },
-
-  // ── Comparison pages ────────────────────────────────────────────
-
-  {
-    group: "comparison",
-    slug: "ai-receptionist-vs-virtual-receptionist",
-    path: "/compare/ai-receptionist-vs-virtual-receptionist/",
-    title: "AI Receptionist vs Virtual Receptionist | LobbyStack",
-    description:
-      "An in-depth, side-by-side comparison of AI receptionists vs human virtual receptionist services. Analyze differences in cost, concurrency, booking capabilities, warm transfers, and caller experience.",
-    eyebrow: "Comparison",
-    h1: "AI receptionist vs virtual receptionist: which fits your business?",
-    intro:
-      "When your phone rings, every unanswered call is a lost booking. Both an AI receptionist and a traditional virtual receptionist service aim to solve this problem by providing a live response. However, they rely on completely different operational models, cost structures, and technologies. Understanding the fundamental trade-offs between human virtual answering services and modern conversational AI is critical to choosing the approach that secures the highest booking rates at the lowest operating cost.",
-    image: "/illustrations/value-network.webp",
-    imageAlt: "Comparison of AI receptionist and virtual receptionist call handling",
-    proofPoints: [
-      "AI handles unlimited concurrent calls; human services handle one at a time",
-      "AI charges a predictable flat monthly rate; humans charge by the active minute",
-      "AI answers instantly 24/7; human services often require hold times during spikes",
-    ],
-    sections: [
-      {
-        title: "How they answer calls: concurrency vs. single-agent limits",
-        body: "The most significant operational difference between conversational AI and human answering services is concurrency. Traditional virtual receptionists are remote human agents working in a call center, typically reading from a rigid, pre-scripted workflow. If three customers call your business simultaneously, two must wait on hold or get routed to secondary operators who may not know your business well. A modern AI receptionist like LobbyStack is powered by high-performance conversational models that answer unlimited calls at the exact same moment. Every single caller gets an immediate, responsive, and personalized conversation with zero wait times, hold music, or busy signals.",
-        points: [
-          "AI: Infinite concurrency handles massive call spikes with zero performance degradation",
-          "Human: Limited to a single caller per agent, introducing hold times during busy hours",
-          "Knowledge: AI has instant, perfect access to your entire business database and policies",
-        ],
-      },
-      {
-        title: "Cost comparison: flat monthly rates vs. unpredictable per-minute billing",
-        body: "Traditional virtual receptionist services often charge on a per-minute basis or require tiered monthly commitments that rise with usage. This model can make your monthly expenses highly volatile and penalize your business for growth. If a caller takes five minutes to explain a simple issue, or if telemarketers and spam robocalls slip through, you may be billed for every second. LobbyStack operates on a highly predictable subscription model with generous voice minutes included. Furthermore, LobbyStack includes intelligent spam filters that block automated robocalls and telemarketers before they ever pick up, ensuring your active minutes are spent primarily on genuine, high-value customer leads.",
-        points: [
-          "AI: Predictable budgeting with flat monthly subscriptions and low, transparent overages",
-          "Human: High per-minute fees that penalize long inquiries, wrong numbers, and spam calls",
-          "Filter: Built-in screening blocks robocalls automatically to preserve your minute limits",
-        ],
-      },
-      {
-        title: "When to choose an AI receptionist: speed, consistency, and booking",
-        body: "An AI receptionist is the optimal choice for businesses where the majority of incoming calls follow a predictable pattern. If your callers are primarily asking about your services, requesting pricing, confirming your operating hours, or trying to book an appointment, LobbyStack excels. Because the AI is integrated directly with your scheduling software (like Google Calendar, Outlook, or booking CRMs), it can instantly offer available slots, enforce your business policies (such as booking buffers and travel times), and complete appointments on the spot. For local service operators, home contractors, spas, and clinics, this immediate resolution converts ready-to-buy leads faster than a human operator taking a manual callback message.",
-        points: [
-          "High Volume: Your business receives dozens of routine inquiries and scheduling requests daily",
-          "Immediate Booking: Callers are calendar-scheduled and texted confirmations within 2 minutes",
-          "Always On: Seamless 24/7/365 coverage for nights, weekends, holidays, and busy lunch hours",
-        ],
-      },
-      {
-        title: "When to choose a virtual receptionist: high-touch nuance and manual judgment",
-        body: "A human virtual receptionist may be preferred if your business handles highly sensitive, emotionally charged, or non-standard calls that require deep empathy and flexible human judgment. For example, a specialized medical practice handling complex clinical intake, a family law firm dealing with emotional client crises, or a boutique consultancy where every conversation is highly bespoke will benefit from a trained human voice. However, these services require continuous script updates, are subject to call-center staff turnover, and cannot immediately book complex scheduling slots without substantial training overhead and back-and-forth communication.",
-        points: [
-          "Empathy: Non-standard calls that demand deep emotional support and personalized warmth",
-          "Bespoke: Callers expect specialized, non-routine consultations rather than standard scheduling",
-          "Empathy First: Ideal for clinical counseling, specialized legal consults, or high-end concierge services",
-        ],
-      },
-      {
-        title: "A middle path: how LobbyStack combines AI with human handoff",
-        body: "LobbyStack believes you should not have to compromise between the cost-efficiency of AI and the safety of human oversight. Our platform is built around 'warm transfers' and smart escalation rules. The AI receptionist handles routine inquiries, captures lead details, and processes standard calendar bookings. However, if a caller presents an emergency (like a burst pipe for a plumber or an acute dental issue), asks a highly specific question, or asks to speak with a manager, LobbyStack instantly routes the call to your team. Along with the live call transfer, you receive an automated summary and a real-time transcript, ensuring you step in only when human expertise is highly valuable.",
-        points: [
-          "Warm Handoff: Routine calls are automated, while high-stakes opportunities are sent to your phone",
-          "Live Context: Your team receives a text/email summary with the transcript before picking up",
-          "Optimal ROI: Drastically reduces front-desk burnout while capturing every high-value opportunity",
-        ],
-      },
-    ],
-    faqs: vsVirtualReceptionistFaqs,
-    faqHeading: "Questions about AI receptionists vs virtual receptionists",
-    relatedLinks: [
-      { label: "AI phone answering", href: "/solutions/ai-phone-answering/" },
-      { label: "AI receptionist vs voicemail", href: "/compare/ai-receptionist-vs-voicemail/" },
-      { label: "Pricing", href: "/pricing/" },
-    ],
-    ctaHeading: "Get the efficiency of AI with safe human handoff",
-    ctaBody:
-      "LobbyStack handles routine call volume, answers FAQs, and schedules appointments 24/7, while routing urgent escalations to your team with live summaries.",
-    ctaPrimaryLabel: "Try for free",
-    ctaSecondaryLabel: "View pricing",
-  },
-
-  {
-    group: "comparison",
-    slug: "ai-receptionist-vs-voicemail",
-    path: "/compare/ai-receptionist-vs-voicemail/",
-    title: "AI Receptionist vs Voicemail | LobbyStack",
-    description:
-      "Compare modern AI receptionists vs traditional business voicemail. Learn how voicemail causes caller drop-offs and lost bookings, and how AI recovers missed revenue.",
-    eyebrow: "Comparison",
-    h1: "AI receptionist vs voicemail: which captures more revenue?",
-    intro:
-      "Traditional business voicemail is a passive 'record-and-wait' system. When a caller reaches an answering machine, they are asked to wait, hang up, and hope for a callback. An AI receptionist, on the other hand, is an active conversational partner that answers instantly, resolves queries, and books appointments on the spot. For local service companies, retail clinics, and appointment-based businesses, the difference between voicemail and AI is the difference between losing a hot lead to a competitor and securing a confirmed customer.",
-    image: "/illustrations/missed-calls.webp",
-    imageAlt: "Comparison of AI receptionist and voicemail call handling",
-    proofPoints: [
-      "AI holds the call and books the lead; voicemail asks the caller to wait",
-      "AI answers instantly on the first ring; voicemail forces callers through long rings",
-      "AI qualifies leads and screens emergencies; voicemail collects unstructured audio",
-    ],
-    sections: [
-      {
-        title: "Caller experience: immediate active resolution vs. passive record-and-wait",
-        body: "The core difference between these two systems lies in consumer psychology and direct engagement. When a customer reaches a traditional voicemail box, they hear a generic, static greeting and are forced to leave an unstructured message. They receive no feedback, no confirmation of when you will return their call, and no immediate support. An AI receptionist like LobbyStack welcomes the caller with a natural, professional voice, answers their specific questions about your services, gathers their intake details (like zip code, issue severity, and contact info), and calendars their appointment. The entire interaction is structured, immediate, and leaves the caller with a booked slot and an instant SMS confirmation.",
-        points: [
-          "AI: Greets on the first ring, answers questions, qualifies urgency, and schedules in real time",
-          "Voicemail: Forces the caller through long rings and leaves them waiting indefinitely for a response",
-          "Engagement: Callers receive immediate, satisfying resolution rather than a dead-end message box",
-        ],
-      },
-      {
-        title: "The hang-up problem: how voicemail leaks ready-to-book leads",
-        body: "In today's fast-paced, digital-first marketplace, convenience is the ultimate competitive advantage. Many ready-to-book callers who reach a business's voicemail will hang up without leaving a message, especially when the need is urgent or they found you through local search. Instead of waiting, they press the back button on Google or Apple Maps and click the very next listing. If your business depends on organic local search, local services ads (LSAs), or pay-per-click advertising, sending calls to voicemail means you may be paying to generate leads for your direct competitors. An AI receptionist acts as a safety net, capturing and scheduling these high-intent buyers before they can navigate away.",
-        points: [
-          "Drop-off: Many ready-to-buy leads hang up when routed to voicemail",
-          "Competitors: Callers who reach voicemail will call the next local business in search results",
-          "Retention: Keeping callers on the line secures their commitment and stops the search process",
-        ],
-      },
-      {
-        title: "When voicemail is adequate: low-stakes calls and pre-existing relationships",
-        body: "Voicemail remains a perfectly adequate, cost-effective tool for low-stakes or internal communications where immediate response times do not impact revenue. If your incoming calls are primarily from known vendors, colleagues, existing business partners, or internal staff, speed is rarely a critical factor. These callers have established relationships with your team and are highly likely to leave a detailed message and patiently await your response. However, if your phone line is your primary engine for new customer acquisition and lead capture, relying on voicemail is a massive, ongoing drain on your bottom line.",
-        points: [
-          "Low Urgency: Ideal for non-revenue-generating calls, vendor relations, and internal team coordination",
-          "Established: Known clients who have deep trust and are comfortable waiting for a callback",
-          "Constraint: Safe when business growth is not dependent on capturing new phone inquiries",
-        ],
-      },
-      {
-        title: "The financial ROI: calculating how AI receptionists pay for themselves",
-        body: "While traditional voicemail is virtually free, its hidden opportunity cost can be high. If your average job or booking value is $300, and your voicemail causes just three callers a month to hang up and book a competitor, your business is losing $900 in monthly revenue. By replacing voicemail with LobbyStack, those missed calls can become booked appointments. LobbyStack's free tier handles initial testing at zero cost, and premium plans can be covered by a single saved job.",
-        points: [
-          "Lost Revenue: Voicemail drop-offs represent thousands of dollars in lost annual earnings",
-          "Immediate ROI: Converting even one additional lead per month covers the platform's cost for months",
-          "Efficiency: Drastically lowers your average cost-per-acquisition (CPA) on marketing campaigns",
-        ],
-      },
-      {
-        title: "Pragmatic transition: using AI overflow and after-hours scheduling",
-        body: "Migrating from traditional voicemail to a conversational AI receptionist does not have to be an all-or-nothing decision. You do not need to replace your entire phone system overnight. Many businesses start by deploying LobbyStack as an after-hours answering service or an overflow handler during the day. If your team is in a meeting, driving to a job site, or helping an in-person customer, the call silently rolls over to LobbyStack after two rings. The AI handles the booking or qualifies the lead, and your team receives a structured summary, allowing you to focus on your work without missing a single dollar.",
-        points: [
-          "After-Hours: Capture valuable evening and weekend leads while your office is closed",
-          "Overflow: AI steps in only when your lines are busy or rings go unanswered for too long",
-          "Paced Growth: Test the conversational flow and scheduling success on our free plan first",
-        ],
-      },
-    ],
-    faqs: vsVoicemailFaqs,
-    faqHeading: "Questions about AI receptionists vs voicemail",
-    relatedLinks: [
-      { label: "AI receptionist vs virtual receptionist", href: "/compare/ai-receptionist-vs-virtual-receptionist/" },
-      { label: "After-hours answering", href: "/solutions/after-hours-answering-service/" },
-      { label: "Missed-call calculator", href: "/missed-call-revenue-calculator/" },
-      { label: "Pricing", href: "/pricing/" },
-    ],
-    ctaHeading: "Stop sending high-intent buyers to voicemail",
-    ctaBody:
-      "LobbyStack greets callers, answers their specific questions, qualifies lead status, and books them directly to your calendar 24/7.",
-    ctaPrimaryLabel: "Try for free",
-    ctaSecondaryLabel: "Calculate missed revenue",
-    ctaSecondaryHref: "/missed-call-revenue-calculator/",
   },
 ]
 

@@ -35,7 +35,7 @@ import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd } from "@/lib/seo"
     <section class="border-b border-border/60">
       <div class="mx-auto max-w-4xl px-6 py-16 md:py-20">
         <p class="text-sm font-medium text-muted-foreground">
-          Last updated: May 11, 2026
+          Last updated: July 30, 2026
         </p>
         <h1 class="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
           Privacy Policy
@@ -230,6 +230,9 @@ import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd } from "@/lib/seo"
             decisions, or other automated outputs. AI outputs can be inaccurate
             or incomplete, and business customers are responsible for
             configuring appropriate human review and fallback procedures.
+            Hosted LobbyStack currently uses OpenAI Realtime for live voice
+            conversations and Google Gemini for non-realtime text generation
+            and embeddings.
           </p>
         </section>
 
@@ -247,9 +250,17 @@ import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd } from "@/lib/seo"
           </p>
           <ul>
             <li>
-              Read calendar availability by accessing events on your selected
-              calendar (scope: <strong>calendar.readonly</strong> /
-              <strong> calendar.events</strong>).
+              Identify your connected Google account using the
+              <strong> openid</strong> and <strong>email</strong> scopes.
+            </li>
+            <li>
+              List the Google calendars you are subscribed to so you can select
+              the calendar LobbyStack should use (scope:
+              <strong>calendar.calendarlist.readonly</strong>).
+            </li>
+            <li>
+              Read events on your selected calendar to calculate availability
+              (scope: <strong>calendar.events</strong>).
             </li>
             <li>
               Create, update, and delete appointment events on your selected
@@ -287,6 +298,16 @@ import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd } from "@/lib/seo"
             requested integration features. We also share data with our hosting,
             database, and security providers as needed to operate the service,
             as described elsewhere in this Privacy Policy.
+          </p>
+
+          <p>
+            <strong>AI processing.</strong> When an AI receptionist handles a
+            scheduling request, we may provide OpenAI or Google Gemini with the
+            minimum derived scheduling context needed to complete that request,
+            such as whether a requested time is available and whether a booking
+            action succeeded. We do not send raw Google Calendar event titles or
+            descriptions to AI providers, and we do not use Google user data to
+            train or improve generalized AI or machine-learning models.
           </p>
 
           <p>

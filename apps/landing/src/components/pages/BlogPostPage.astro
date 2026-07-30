@@ -15,12 +15,7 @@ import {
   plainTextFromMarkdown,
   webSiteJsonLd,
 } from "@/lib/seo"
-import {
-  assertLocale,
-  getCopy,
-  localizePath,
-  type Locale,
-} from "@/i18n"
+import { assertLocale, getCopy, localizePath, type Locale } from "@/i18n"
 
 interface Props {
   entry: BlogEntry
@@ -36,16 +31,32 @@ const { Content } = await render(entry)
 
 const canonicalPath = blogPath(entry, locale)
 const publishedTime = entry.data.pubDate.toISOString()
+const modifiedTime = (
+  entry.data.updatedDate ?? entry.data.pubDate
+).toISOString()
+const coverImageAlt = entry.data.coverImageAlt ?? entry.data.title
 const articleBody = plainTextFromMarkdown(entry.body)
 const dateLocale = locale === "fr" ? "fr-FR" : "en-US"
 const pageCopy = {
   en: {
     titleSuffix: "LobbyStack Blog",
+    updated: "Updated",
   },
   fr: {
     titleSuffix: "Blog LobbyStack",
+    updated: "Mis à jour",
   },
-} satisfies Record<Locale, { titleSuffix: string }>
+} satisfies Record<Locale, { titleSuffix: string; updated: string }>
+const displayedDate = (
+  entry.data.updatedDate ?? entry.data.pubDate
+).toLocaleDateString(dateLocale, {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+})
+const displayedDateLabel = entry.data.updatedDate
+  ? `${pageCopy[locale].updated} ${displayedDate}`
+  : displayedDate
 
 const coverImageWidth = 1672
 const coverImageHeight = 941
@@ -53,17 +64,19 @@ const coverImageHeight = 941
 
 <Layout
   seo={{
-    title: `${entry.data.title} - ${pageCopy[locale].titleSuffix}`,
+    title:
+      entry.data.seoTitle ??
+      `${entry.data.title} - ${pageCopy[locale].titleSuffix}`,
     description: entry.data.description,
     canonicalPath,
     locale,
     image: entry.data.coverImage,
-    imageAlt: entry.data.title,
+    imageAlt: coverImageAlt,
     imageWidth: entry.data.coverImage ? coverImageWidth : undefined,
     imageHeight: entry.data.coverImage ? coverImageHeight : undefined,
     type: "article",
     publishedTime,
-    modifiedTime: publishedTime,
+    modifiedTime,
     author: entry.data.author,
     jsonLd: [
       organizationJsonLd({ locale }),
@@ -72,7 +85,7 @@ const coverImageHeight = 941
       imageObjectJsonLd({
         path: canonicalPath,
         image: entry.data.coverImage,
-        alt: entry.data.title,
+        alt: coverImageAlt,
         width: coverImageWidth,
         height: coverImageHeight,
       }),
@@ -83,7 +96,7 @@ const coverImageHeight = 941
         image: entry.data.coverImage,
         author: entry.data.author,
         publishedTime,
-        modifiedTime: publishedTime,
+        modifiedTime,
         articleBody,
         category: entry.data.category,
         locale,
@@ -118,15 +131,9 @@ const coverImageHeight = 941
           }
           <time
             class="text-xs font-medium text-muted-foreground"
-            datetime={entry.data.pubDate.toISOString()}
+            datetime={modifiedTime}
           >
-            {
-              entry.data.pubDate.toLocaleDateString(dateLocale, {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })
-            }
+            {displayedDateLabel}
           </time>
         </div>
       </header>
@@ -136,10 +143,10 @@ const coverImageHeight = 941
           <div class="mb-12 aspect-[16/9] overflow-hidden rounded-2xl border border-border/30 bg-muted shadow-sm">
             <img
               src={entry.data.coverImage}
-              alt={entry.data.title}
+              alt={coverImageAlt}
               width="1672"
               height="941"
-              class="h-full w-full object-contain"
+              class="h-full w-full object-cover"
               decoding="async"
               fetchpriority="high"
             />

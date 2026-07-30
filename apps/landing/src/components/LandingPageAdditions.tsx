@@ -184,7 +184,7 @@ const homeSectionsCopy = {
         },
         {
           label: "AI receptionist comparison",
-          href: "/comparison/",
+          href: "/blog/ai-receptionist-vs-virtual-receptionist/",
         },
         {
           label: "Open-source receptionist stack",
@@ -376,7 +376,7 @@ const homeSectionsCopy = {
         },
         {
           label: "Comparaison de réceptionnistes IA",
-          href: "/comparison/",
+          href: "/blog/ai-receptionist-vs-virtual-receptionist/",
         },
         {
           label: "Pile open source pour réceptionniste IA",
@@ -418,7 +418,7 @@ export function ProductExtensionSection({ locale = "en" }: LocalizedProps) {
                   className={
                     card.imageScaleClass?.includes("object-cover")
                       ? card.imageScaleClass
-                      : `absolute left-1/2 top-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 object-contain ${card.imageScaleClass ?? "h-[155%] w-[155%]"}`
+                      : `absolute top-1/2 left-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 object-contain ${card.imageScaleClass ?? "h-[155%] w-[155%]"}`
                   }
                   loading="lazy"
                   decoding="async"
@@ -459,7 +459,7 @@ function ConnectedReceptionistSection({ locale = "en" }: LocalizedProps) {
               alt={sectionCopy.imageAlt}
               width={1536}
               height={1024}
-              className="h-full w-full min-h-[360px] object-cover object-center md:min-h-[460px]"
+              className="h-full min-h-[360px] w-full object-cover object-center md:min-h-[460px]"
               loading="lazy"
               decoding="async"
             />
@@ -523,7 +523,9 @@ function QualityToolsSection({ locale = "en" }: LocalizedProps) {
                   alt={card.alt}
                   width={card.imageWidth ?? 1200}
                   height={card.imageHeight ?? 800}
-                  className={card.imageClassName ?? "h-auto w-full object-cover"}
+                  className={
+                    card.imageClassName ?? "h-auto w-full object-cover"
+                  }
                   loading="lazy"
                   decoding="async"
                 />
@@ -725,7 +727,10 @@ function OpenSourceSection({ locale = "en" }: LocalizedProps) {
             <ArrowRight className="size-4" />
           </a>
           <a
-            href={localizeHref(locale, "/solutions/open-source-ai-receptionist/")}
+            href={localizeHref(
+              locale,
+              "/solutions/open-source-ai-receptionist/"
+            )}
             data-ph-capture-attribute-section="open_source"
             data-ph-capture-attribute-action="view_open_source_solution"
             data-ph-capture-attribute-destination="/solutions/open-source-ai-receptionist/"
@@ -735,7 +740,10 @@ function OpenSourceSection({ locale = "en" }: LocalizedProps) {
             <ArrowRight className="size-4" />
           </a>
           <a
-            href={localizeHref(locale, "/solutions/self-hosted-ai-receptionist/")}
+            href={localizeHref(
+              locale,
+              "/solutions/self-hosted-ai-receptionist/"
+            )}
             data-ph-capture-attribute-section="open_source"
             data-ph-capture-attribute-action="view_self_hosted_solution"
             data-ph-capture-attribute-destination="/solutions/self-hosted-ai-receptionist/"
@@ -754,7 +762,10 @@ function HomeResourcesSection({ locale = "en" }: LocalizedProps) {
   const sectionCopy = homeSectionsCopy[locale].resources
 
   return (
-    <section className="section-spacing border-t border-border/70" id="resources">
+    <section
+      className="section-spacing border-t border-border/70"
+      id="resources"
+    >
       <div className="mx-auto max-w-7xl px-6">
         <div className="max-w-3xl">
           <h2 className="section-heading">{sectionCopy.heading}</h2>

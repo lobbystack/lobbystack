@@ -262,9 +262,9 @@ People search before they buy.
 
 You can create pages or videos comparing:
 
-* [AI receptionist vs voicemail](/compare/ai-receptionist-vs-voicemail/)
+* [AI receptionist vs voicemail](/blog/ai-receptionist-vs-voicemail/)
 * AI receptionist vs answering service
-* [AI receptionist vs virtual receptionist](/compare/ai-receptionist-vs-virtual-receptionist/)
+* [AI receptionist vs virtual receptionist](/blog/ai-receptionist-vs-virtual-receptionist/)
 * best AI receptionist for small businesses
 * best AI receptionist for home services
 * best open-source AI receptionist

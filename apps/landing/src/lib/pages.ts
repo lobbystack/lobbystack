@@ -62,7 +62,7 @@ export const publicPages: PublicPage[] = [
       "Estimate weekly, monthly, and annual revenue at risk from missed contractor calls and see how much a 24/7 AI receptionist could recover.",
     markdown: "/missed-call-revenue-calculator/index.md",
   },
-  // Add all SEO landing pages (company, solution, comparison) from the data file
+  // Add all SEO landing pages (company and solution) from the data file
   ...seoLandingPages.map((page) => ({
     path: page.path,
     title: page.title,

@@ -61,11 +61,6 @@ export const en = {
       description:
         "Estimate weekly, monthly, and annual revenue at risk from missed contractor calls. Calculate how much you could recover with a 24/7 receptionist.",
     },
-    "/comparison/": {
-      title: "AI Receptionist Comparison Guide",
-      description:
-        "Compare LobbyStack AI receptionist against voicemail, virtual receptionists, and more. Understand which call answering approach works best for your business.",
-    },
     "/blog/": {
       title: "AI Receptionist Blog and Product Updates",
       description:

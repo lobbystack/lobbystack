@@ -137,7 +137,7 @@ const resourceLinks = (locale: MarketingLocale) =>
     },
     {
       label: labels[locale].comparison,
-      href: "/comparison/",
+      href: "/blog/ai-receptionist-vs-virtual-receptionist/",
       icon: Scale,
     },
     {
