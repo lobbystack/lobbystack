@@ -4775,6 +4775,96 @@ describe("billing", () => {
     });
   });
 
+  it("repairs a paid order from before affiliate attribution without creating a commission", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, userId } = await seedWorkspace(t, {
+      subject: "billing-pre-attribution-order-reconciliation",
+      deploymentMode: "cloud",
+    });
+    const polarCustomerId = "cus_pre_attribution_reconciliation";
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+
+    const affiliateProfileId = await t.run(async (ctx: TestContext) => {
+      const affiliateUserId = await ctx.db.insert("users", {
+        authSubject: "pre-attribution-affiliate",
+        email: "pre-attribution-affiliate@example.com",
+      });
+      const profileId = await ctx.db.insert("affiliate_profiles", {
+        userId: affiliateUserId,
+        referralCode: "pre-attribution-affiliate",
+        status: "active",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        updatedAt: "2026-04-01T00:00:00.000Z",
+      });
+      await ctx.db.insert("affiliate_attributions", {
+        affiliateProfileId: profileId,
+        businessId,
+        referredUserId: userId,
+        referralCode: "pre-attribution-affiliate",
+        source: "via",
+        attributedAt: "2026-04-01T00:00:00.000Z",
+      });
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        polarCustomerId,
+      });
+      return profileId;
+    });
+
+    const historicalOrder = {
+      id: "ord_before_affiliate_attribution",
+      createdAt: new Date("2026-03-15T12:00:00.000Z"),
+      status: "paid",
+      totalAmount: 5000,
+      currency: "usd",
+      description: "LobbyStack Pro Monthly",
+      isInvoiceGenerated: false,
+      customerId: polarCustomerId,
+      productId: "prod_pro_monthly",
+      subscriptionId: "sub_pro",
+      metadata: {},
+      customer: { externalId: null },
+    };
+    polarOrdersGetMock.mockResolvedValueOnce(historicalOrder);
+
+    await t.action(internal.billing.reconcilePolarOrder, {
+      orderId: historicalOrder.id,
+    });
+
+    const state = await t.run(async (ctx: TestContext) => {
+      const transaction = await ctx.db
+        .query("billing_transactions")
+        .withIndex("by_kind_and_source_id", (q) =>
+          q.eq("kind", "order").eq("sourceId", historicalOrder.id),
+        )
+        .unique();
+      const commission = await ctx.db
+        .query("affiliate_commissions")
+        .withIndex("by_source_key", (q) =>
+          q.eq("sourceKey", `order:${historicalOrder.id}`),
+        )
+        .unique();
+      const stats = await ctx.db
+        .query("affiliate_profile_stats")
+        .withIndex("by_affiliate_profile_id", (q) =>
+          q.eq("affiliateProfileId", affiliateProfileId),
+        )
+        .unique();
+      return { transaction, commission, stats };
+    });
+
+    expect(state.transaction).toMatchObject({
+      businessId,
+      sourceId: historicalOrder.id,
+      status: "paid",
+      occurredAt: historicalOrder.createdAt.toISOString(),
+    });
+    expect(state.commission).toBeNull();
+    expect(state.stats).toBeNull();
+  });
+
   it("rejects reconciliation when the Polar customer is not linked to a business", async () => {
     const t = convexTest(schema, convexModules);
     process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
