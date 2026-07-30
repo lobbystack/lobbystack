@@ -913,6 +913,10 @@ export const createCommissionForBillingTransaction = observedInternalMutation({
       return null;
     }
 
+    if (args.occurredAt < attribution.attributedAt) {
+      return null;
+    }
+
     if (args.occurredAt > addMonthsIso(attribution.attributedAt, COMMISSION_MONTHS)) {
       return null;
     }

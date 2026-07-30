@@ -88,4 +88,22 @@ describe("WorkspaceSwitcher", () => {
     const menuName = await screen.findByRole("menuitem", { name: /Acme Clinic/i });
     expect(menuName.querySelector("span.truncate")?.className).toContain("ph-mask");
   });
+
+  it("left-aligns long active business names across two lines", () => {
+    render(
+      <MemoryRouter>
+        <SidebarProvider>
+          <WorkspaceSwitcher
+            activeBusinessId={"business-1" as never}
+            businessName="Plomberie Urgence Montréal (PUM)"
+          />
+        </SidebarProvider>
+      </MemoryRouter>,
+    );
+
+    const activeName = screen.getByText("Plomberie Urgence Montréal (PUM)");
+    expect(activeName.className).toContain("w-full");
+    expect(activeName.className).toContain("text-left");
+    expect(activeName.className).toContain("line-clamp-2");
+  });
 });

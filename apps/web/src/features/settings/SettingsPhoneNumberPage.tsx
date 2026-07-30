@@ -33,6 +33,7 @@ import {
   type InitialSuggestionResult,
   type SearchResult,
 } from "@/features/onboarding/components/PhoneNumberChooser";
+import { useOpenUpgradePlanDialog } from "@/features/settings/UpgradePlanDialogContext";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { useObservedAction } from "@/lib/observed-convex";
 
@@ -81,6 +82,7 @@ export function SettingsPhoneNumberPage({
 }: SettingsPhoneNumberPageProps) {
   const { i18n, t } = useTranslation("settings");
   const navigate = useNavigate();
+  const openUpgradePlanDialog = useOpenUpgradePlanDialog();
   const primaryPhoneNumber = useQuery(api.businesses.catalog.getPrimaryPhoneNumber, {
     businessId,
   }) as PrimaryPhoneNumber | null | undefined;
@@ -139,7 +141,7 @@ export function SettingsPhoneNumberPage({
             {canManageTenant ? (
               <Button
                 className="mt-3"
-                onClick={() => navigate("/settings/plan")}
+                onClick={openUpgradePlanDialog}
                 size="sm"
                 variant="outline"
               >
@@ -169,7 +171,7 @@ export function SettingsPhoneNumberPage({
             {canManageTenant ? (
               <ItemActions>
                 {showPaidPlanRequired ? (
-                  <Button onClick={() => navigate("/settings/plan")} size="sm" variant="outline">
+                  <Button onClick={openUpgradePlanDialog} size="sm" variant="outline">
                     {t("phoneNumber.requiresPaidPlan.upgradeCta")}
                   </Button>
                 ) : (

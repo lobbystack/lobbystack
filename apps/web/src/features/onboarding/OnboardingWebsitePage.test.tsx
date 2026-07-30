@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -56,6 +56,39 @@ describe("OnboardingWebsitePage", () => {
       businessId: "business-1",
       websiteUrl: "example.com",
     });
+  });
+
+  it("waits for the onboarding stage subscription before navigating", async () => {
+    submitOnboardingWebsiteMock.mockResolvedValue({
+      status: "submitted",
+      websiteUrl: "https://example.com",
+      websiteIngestionJobId: "job_123",
+    });
+
+    const props = {
+      businessId: "business-1" as never,
+      onSignOut: () => {},
+      progressNavigableUntil: 3,
+      websiteUrl: "https://example.com",
+    };
+    const { rerender } = render(<OnboardingWebsitePage {...props} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "website.continue" }));
+    await waitFor(() => expect(submitOnboardingWebsiteMock).toHaveBeenCalledTimes(1));
+
+    expect(navigateMock).not.toHaveBeenCalled();
+    expect(
+      (screen.getByRole("button", {
+        name: "website.submitting",
+      }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+
+    rerender(<OnboardingWebsitePage {...props} progressNavigableUntil={4} />);
+
+    await waitFor(() =>
+      expect(navigateMock).toHaveBeenCalledWith("/onboarding/knowledge"),
+    );
   });
 
   it("prefills an existing website URL when revisiting the step", () => {

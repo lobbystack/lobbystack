@@ -183,6 +183,20 @@ Webhook handling expectations:
 - webhook updates are the source of truth for hosted plan, add-on, and transaction state
 - do not introduce separate manual renewal loops or invoice polling to drive subscription state
 
+### Recover a missing order
+
+If Polar contains an order that is absent from `billing_transactions`, reconcile that specific
+order from the authoritative Polar API:
+
+```bash
+pnpm convex run --prod billing:reconcilePolarOrder '{"orderId":"<polar-order-id>"}'
+```
+
+The action resolves the tenant from the Polar customer link and upserts by order ID, so rerunning
+the same command is safe and does not create a duplicate transaction. Do not supply or manually
+override a business ID. After reconciliation, confirm the order appears in Settings > Plan and
+that its amount, status, and original occurrence date match Polar.
+
 ## Metered usage operations
 
 Polar metered usage is driven by rows in the `billing_usage_events` table.
