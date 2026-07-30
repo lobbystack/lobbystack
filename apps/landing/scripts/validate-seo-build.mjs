@@ -1,5 +1,9 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs"
 import { dirname, join, relative } from "node:path"
+import {
+  decodeHtmlEntities,
+  resolveHttpUrl,
+} from "./seo-validation-utils.mjs"
 
 const dist = new URL("../dist/", import.meta.url)
 const siteOrigin = "https://lobbystack.com"
@@ -11,16 +15,10 @@ const walk = (dir) =>
     return entry.isDirectory() ? walk(path) : [path]
   })
 
-const decode = (value = "") =>
-  value
-    .replaceAll("&amp;", "&")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&#39;", "'")
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-
 const attr = (tag, name) =>
-  decode(tag.match(new RegExp(`\\b${name}=["']([^"']*)["']`, "i"))?.[1])
+  decodeHtmlEntities(
+    tag.match(new RegExp(`\\b${name}=["']([^"']*)["']`, "i"))?.[1]
+  )
 
 const pathForHtml = (file) => {
   const path = relative(dist.pathname, dirname(file)).replaceAll("\\", "/")
@@ -41,7 +39,7 @@ if (!existsSync(sitemapIndexPath)) {
 
 const sitemapIndex = readFileSync(sitemapIndexPath, "utf8")
 const childUrls = [...sitemapIndex.matchAll(/<loc>([^<]+)<\/loc>/g)].map(
-  (match) => decode(match[1])
+  (match) => decodeHtmlEntities(match[1])
 )
 if (childUrls.length === 0) errors.push("Sitemap index has no child sitemaps")
 
@@ -61,7 +59,7 @@ for (const childUrl of childUrls) {
   if (blocks.length === 0) errors.push(`${childName} has no URLs`)
 
   for (const block of blocks) {
-    const loc = decode(block.match(/<loc>([^<]+)<\/loc>/)?.[1])
+    const loc = decodeHtmlEntities(block.match(/<loc>([^<]+)<\/loc>/)?.[1])
     const lastmod = block.match(/<lastmod>([^<]+)<\/lastmod>/)?.[1]
     const alternates = [...block.matchAll(/<xhtml:link\b[^>]*>/g)].map(
       (match) => ({
@@ -104,7 +102,9 @@ for (const entry of sitemapEntries) {
     errors.push(`Noindex URL appears in sitemap: ${entry.loc}`)
   }
 
-  const title = decode(html.match(/<title>([\s\S]*?)<\/title>/i)?.[1]).trim()
+  const title = decodeHtmlEntities(
+    html.match(/<title>([\s\S]*?)<\/title>/i)?.[1]
+  ).trim()
   const descriptionTag = html.match(
     /<meta\b[^>]*name=["']description["'][^>]*>/i
   )?.[0]
@@ -192,22 +192,11 @@ for (const entry of sitemapEntries) {
   }
 
   for (const anchor of html.matchAll(/<a\b[^>]*href=["']([^"']+)["']/gi)) {
-    const href = decode(anchor[1])
-    if (
-      href.startsWith("#") ||
-      href.startsWith("mailto:") ||
-      href.startsWith("tel:") ||
-      href.startsWith("javascript:")
-    ) {
-      continue
-    }
+    const href = decodeHtmlEntities(anchor[1])
+    if (href.startsWith("#")) continue
 
-    let target
-    try {
-      target = new URL(href, entry.loc)
-    } catch {
-      continue
-    }
+    const target = resolveHttpUrl(href, entry.loc)
+    if (!target) continue
     if (target.origin !== siteOrigin) continue
 
     const pathname = target.pathname.endsWith("/")
