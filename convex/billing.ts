@@ -2050,15 +2050,6 @@ export const reconcilePolarOrder = internalAction({
       );
     }
 
-    const isAiSmsSetupOrder = shouldRecordAiSmsOrderAsSetupFee({
-      orderProductIds: order.productId ? [order.productId] : [],
-    });
-    if (order.status === "paid" && isAiSmsSetupOrder) {
-      await updateProSubscriptionForAiSmsSetupPayment(ctx, {
-        businessId,
-      });
-    }
-
     return {
       businessId,
       orderId: order.id,

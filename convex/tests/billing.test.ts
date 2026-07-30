@@ -4703,6 +4703,78 @@ describe("billing", () => {
     expect(polarOrdersGetMock).toHaveBeenCalledTimes(3);
   });
 
+  it("repairs a historical paid AI SMS setup order without replaying the purchase", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-ai-sms-order-reconciliation",
+      deploymentMode: "cloud",
+    });
+    const polarCustomerId = "cus_ai_sms_order_reconciliation";
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID = "prod_ai_sms_setup";
+    process.env.POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID = "prod_pro_monthly_ai_sms";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        activeAddons: [],
+        billingInterval: "monthly",
+        polarCustomerId,
+        proSubscriptionId: "sub_pro",
+        proSubscriptionProductId: "prod_pro_monthly",
+      });
+    });
+
+    const historicalOrder = {
+      id: "ord_historical_ai_sms_setup",
+      createdAt: new Date("2026-03-12T02:24:40.765Z"),
+      status: "paid",
+      totalAmount: 9900,
+      currency: "usd",
+      description: "LobbyStack AI SMS setup",
+      isInvoiceGenerated: false,
+      customerId: polarCustomerId,
+      productId: "prod_ai_sms_setup",
+      subscriptionId: null,
+      metadata: {},
+      customer: { externalId: null },
+    };
+    polarOrdersGetMock.mockResolvedValueOnce(historicalOrder);
+
+    await t.action(internal.billing.reconcilePolarOrder, {
+      orderId: historicalOrder.id,
+    });
+
+    expect(polarSubscriptionsUpdateMock).not.toHaveBeenCalled();
+
+    const state = await t.run(async (ctx: TestContext) => {
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      const transaction = await ctx.db
+        .query("billing_transactions")
+        .withIndex("by_kind_and_source_id", (q) =>
+          q.eq("kind", "order").eq("sourceId", historicalOrder.id),
+        )
+        .unique();
+      return { account, transaction };
+    });
+
+    expect(state.account?.activeAddons).toEqual([]);
+    expect(state.account?.proSubscriptionProductId).toBe("prod_pro_monthly");
+    expect(state.account?.aiSmsSetupOrderId).toBe(historicalOrder.id);
+    expect(state.transaction).toMatchObject({
+      businessId,
+      kind: "order",
+      sourceId: historicalOrder.id,
+      status: "paid",
+      amountCents: 9900,
+    });
+  });
+
   it("rejects reconciliation when the Polar customer is not linked to a business", async () => {
     const t = convexTest(schema, convexModules);
     process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";

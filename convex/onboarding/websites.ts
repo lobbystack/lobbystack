@@ -78,6 +78,7 @@ export const submitOnboardingWebsiteAfterPreflight = internalMutation({
     ctx,
     args,
   ): Promise<SubmitOnboardingWebsiteResult> => {
+    await requireTenantAdminMembership(ctx, args.businessId);
     await requireBusinessAtOrPastWebsiteStage(ctx, args.businessId);
 
     const completedJob = (

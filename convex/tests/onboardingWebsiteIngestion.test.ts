@@ -244,6 +244,62 @@ describe("website onboarding and ingestion", () => {
     expect(jobs[0]?._id).toBe(completedJobId);
   });
 
+  it("rejects a completed-job shortcut after the tenant admin loses access", async () => {
+    const t = createConvexHarness();
+    const subject = "website-onboarding-revoked-owner";
+    const { businessId, userId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "website",
+      subject,
+    });
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com/clinic",
+        provider: "firecrawl",
+        status: "completed",
+        workflowId: "workflow-completed",
+        crawlMode: "firecrawl",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 3,
+        indexedCount: 3,
+        errorCount: 0,
+        completedAt: new Date().toISOString(),
+      });
+      const membership = await ctx.db
+        .query("business_memberships")
+        .withIndex("by_user_id_and_business_id", (q) =>
+          q.eq("userId", userId).eq("businessId", businessId),
+        )
+        .unique();
+      if (!membership) {
+        throw new Error("Expected seeded business membership.");
+      }
+      await ctx.db.patch(membership._id, { status: "revoked" });
+    });
+
+    await expect(
+      authed.mutation(
+        internal.onboarding.websites.submitOnboardingWebsiteAfterPreflight,
+        {
+          businessId,
+          websiteUrl: "https://example.com/clinic",
+        },
+      ),
+    ).rejects.toThrow("You do not have access to this business.");
+
+    const business = await t.query(internal.businesses.admin.getBusinessById, {
+      businessId,
+    });
+    expect(business?.websiteUrl).toBeUndefined();
+    expect(business?.onboardingStage).toBe("website");
+    expect(workflowStartMock).not.toHaveBeenCalled();
+  });
+
   it("starts a website ingestion job from the knowledge dashboard without changing onboarding", async () => {
     const t = createConvexHarness();
     const subject = "website-dashboard-owner";
