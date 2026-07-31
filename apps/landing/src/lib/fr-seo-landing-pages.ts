@@ -199,6 +199,9 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       { label: "Documentation publique", href: "/docs/api/" },
       { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
     ],
+    ctaHeading: "Répondez à chaque appel sans surcharger votre équipe",
+    ctaBody:
+      "Essayez LobbyStack avec les minutes vocales incluses, puis configurez les réponses, les réservations et les transferts selon votre entreprise.",
   }),
 
   "/solutions/after-hours-answering-service/": frenchPage(

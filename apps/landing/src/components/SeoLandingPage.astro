@@ -110,7 +110,10 @@ const reassurance =
             )}
           >
             <a
-              href={APP_SIGNUP_URL}
+              href={localizeHref(
+                locale,
+                page.ctaPrimaryHref ?? APP_SIGNUP_URL
+              )}
               class={cn(
                 buttonVariants({ size: "lg" }),
                 "h-11 w-full max-w-80 rounded-full px-16 text-sm font-medium md:w-auto md:max-w-none"
@@ -120,7 +123,10 @@ const reassurance =
               <ArrowRight className="ml-1 size-4" />
             </a>
             <a
-              href={localizeHref(locale, "/pricing/")}
+              href={localizeHref(
+                locale,
+                page.ctaSecondaryHref ?? "/pricing/"
+              )}
               class="inline-flex h-11 w-full max-w-80 items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted md:w-auto md:max-w-none"
             >
               {page.ctaSecondaryLabel ?? copy.common.seePricing}

@@ -151,6 +151,8 @@ describe("landing translated content coverage", () => {
       expect(frenchPage.proofPoints).toHaveLength(3)
       expect(frenchPage.sections.length).toBeGreaterThanOrEqual(3)
       expect(frenchPage.relatedLinks.length).toBeGreaterThanOrEqual(3)
+      expect(frenchPage.ctaHeading).toBeTruthy()
+      expect(frenchPage.ctaBody).toBeTruthy()
 
       for (const section of frenchPage.sections) {
         expect(section.title).toBeTruthy()
