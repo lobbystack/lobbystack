@@ -1,5 +1,6 @@
 import type { Locale } from "@/i18n/config"
 import type { FaqItem } from "@/lib/seo"
+import { restoredFrenchSeoPages } from "@/lib/fr-seo-landing-pages"
 import {
   seoLandingPageByPath,
   seoLandingPages,
@@ -31,7 +32,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     path: "/solutions/ai-phone-answering/",
     title: "Réponse téléphonique IA pour petites entreprises",
     description:
-      "Répondez aux appels entrants, collectez les détails, prenez des rendez‑vous et transférez les demandes urgentes avec LobbyStack.",
+      "LobbyStack répond aux appels 24/7, qualifie les demandes, recueille les coordonnées, planifie les rendez-vous et transfère les urgences selon vos règles.",
     eyebrow: "Réponse téléphonique IA",
     h1: "Une réponse téléphonique IA qui décroche quand votre équipe ne peut pas.",
     intro:
@@ -82,7 +83,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     path: "/solutions/ai-appointment-scheduler/",
     title: "Planificateur de rendez‑vous IA pour petites entreprises",
     description:
-      "LobbyStack planifie les rendez‑vous depuis les appels, collecte les détails, envoie les confirmations et transfère les demandes urgentes.",
+      "LobbyStack planifie les rendez-vous pendant les appels, vérifie les disponibilités, recueille les détails, confirme la réservation et traite les exceptions.",
     eyebrow: "Planification de rendez‑vous IA",
     h1: "Un planificateur IA qui réserve pendant que le client est encore prêt.",
     intro:
@@ -132,7 +133,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     path: "/solutions/ai-receptionist-for-home-services/",
     title: "Réceptionniste IA pour services à domicile | LobbyStack",
     description:
-      "LobbyStack répond aux appels pour CVC, plomberie, électricité, toiture, paysagement et autres services pendant que vos équipes travaillent.",
+      "LobbyStack répond et qualifie les appels de CVC, plomberie, électricité, toiture et autres services pendant que les équipes travaillent sur le terrain.",
     eyebrow: "Services à domicile",
     h1: "Un réceptionniste IA pour les équipes de services à domicile.",
     intro:
@@ -182,7 +183,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
 }
 
 export const fullyLocalizedFrenchSeoPaths = new Set(
-  Object.keys(bespokeSolutionPagesFr)
+  [...Object.keys(bespokeSolutionPagesFr), ...Object.keys(restoredFrenchSeoPages)]
 )
 
 export const isFrenchSeoPageFullyLocalized = (path: string) =>
@@ -194,7 +195,7 @@ export const getLocalizedSeoLandingPage = (
 ): SeoLandingPage | undefined => {
   if (locale === "fr") {
     if (!isFrenchSeoPageFullyLocalized(path)) return undefined
-    return bespokeSolutionPagesFr[path]
+    return bespokeSolutionPagesFr[path] ?? restoredFrenchSeoPages[path]
   }
 
   return seoLandingPageByPath(path)

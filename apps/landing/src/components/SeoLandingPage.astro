@@ -110,7 +110,10 @@ const reassurance =
             )}
           >
             <a
-              href={APP_SIGNUP_URL}
+              href={localizeHref(
+                locale,
+                page.ctaPrimaryHref ?? APP_SIGNUP_URL
+              )}
               class={cn(
                 buttonVariants({ size: "lg" }),
                 "h-11 w-full max-w-80 rounded-full px-16 text-sm font-medium md:w-auto md:max-w-none"
@@ -120,7 +123,10 @@ const reassurance =
               <ArrowRight className="ml-1 size-4" />
             </a>
             <a
-              href={localizeHref(locale, "/pricing/")}
+              href={localizeHref(
+                locale,
+                page.ctaSecondaryHref ?? "/pricing/"
+              )}
               class="inline-flex h-11 w-full max-w-80 items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted md:w-auto md:max-w-none"
             >
               {page.ctaSecondaryLabel ?? copy.common.seePricing}
@@ -183,6 +189,31 @@ const reassurance =
           ))
         }
       </div>
+
+      {
+        isTradePage && (
+          <figure class="mx-auto mb-16 max-w-5xl overflow-hidden rounded-2xl border border-border/60 bg-muted shadow-sm">
+            <img
+              src="/screenshots/calls.webp"
+              alt={
+                locale === "fr"
+                  ? "Historique réel des appels LobbyStack avec résultats, durées et détails de suivi"
+                  : "Real LobbyStack call history showing outcomes, durations, and follow-up details"
+              }
+              width="1024"
+              height="1024"
+              class="h-auto w-full"
+              loading="lazy"
+              decoding="async"
+            />
+            <figcaption class="border-t border-border/50 px-5 py-4 text-sm text-muted-foreground">
+              {locale === "fr"
+                ? "Chaque appel qualifié reste visible dans le tableau de bord pour que l’équipe puisse vérifier le résultat et la prochaine étape."
+                : "Every qualified call remains visible in the dashboard so the team can verify the outcome and next step."}
+            </figcaption>
+          </figure>
+        )
+      }
     </section>
 
     <!-- Alternating Solution Tour Sections -->
@@ -231,32 +262,6 @@ const reassurance =
         }
       </div>
     </section>
-
-    <!-- Testimonial Section -->
-    {
-      page.testimonial && (
-        <section class="relative mx-auto max-w-3xl px-6 py-20 before:absolute before:top-0 before:left-1/2 before:h-px before:w-screen before:-translate-x-1/2 before:bg-border/40 md:py-24">
-          <blockquote class="text-center">
-            <p class="text-lg leading-relaxed font-medium text-foreground md:text-xl">
-              &ldquo;{page.testimonial.quote}&rdquo;
-            </p>
-            <footer class="mt-6 flex flex-col items-center gap-1">
-              <cite class="text-sm font-semibold text-foreground not-italic">
-                {page.testimonial.author}
-              </cite>
-              <span class="text-xs text-muted-foreground">
-                {page.testimonial.role}
-              </span>
-              {page.testimonial.trustBadge && (
-                <span class="mt-2 rounded-full bg-muted px-3 py-1 text-[10px] font-medium text-muted-foreground">
-                  {page.testimonial.trustBadge}
-                </span>
-              )}
-            </footer>
-          </blockquote>
-        </section>
-      )
-    }
 
     <!-- FAQ Section -->
     {

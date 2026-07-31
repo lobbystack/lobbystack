@@ -23,14 +23,14 @@ export const fr = {
   },
   routes: {
     "/": {
-      title: "Réceptionniste IA open source | LobbyStack",
+      title: "LobbyStack | Réceptionniste IA open source",
       description:
         "LobbyStack est le réceptionniste IA open source qui répond aux appels, qualifie les demandes, planifie des rendez‑vous et transfère les urgences 24/7.",
     },
     "/features/": {
       title: "Fonctionnalités de réceptionniste IA",
       description:
-        "Découvrez les fonctionnalités LobbyStack pour répondre au téléphone, qualifier les demandes, prendre des rendez‑vous, envoyer des SMS, transférer les urgences et produire des résumés.",
+        "Découvrez comment LobbyStack répond aux appels, qualifie les demandes, planifie les rendez-vous, envoie des SMS et transfère les urgences.",
     },
     "/pricing/": {
       title: "Tarifs de réceptionniste IA pour petites entreprises",
@@ -45,17 +45,17 @@ export const fr = {
     "/solutions/ai-phone-answering/": {
       title: "Réponse téléphonique IA pour petites entreprises",
       description:
-        "Répondez aux appels entrants, collectez les détails, prenez des rendez‑vous et transférez les demandes urgentes avec LobbyStack.",
+        "Répondez aux appels 24/7 avec LobbyStack, recueillez les détails, planifiez les rendez-vous et transférez les demandes urgentes à la bonne personne.",
     },
     "/solutions/ai-appointment-scheduler/": {
       title: "Planificateur de rendez‑vous IA pour petites entreprises",
       description:
-        "LobbyStack planifie les rendez‑vous depuis les appels, collecte les détails, envoie les confirmations et transfère les demandes urgentes.",
+        "Planifiez des rendez-vous pendant les appels avec LobbyStack, vérifiez les disponibilités, recueillez les détails et envoyez les confirmations.",
     },
     "/solutions/ai-receptionist-for-home-services/": {
       title: "Réceptionniste IA pour services à domicile | LobbyStack",
       description:
-        "LobbyStack répond aux appels pour CVC, plomberie, électricité, toiture, paysagement et autres services pendant que vos équipes travaillent.",
+        "LobbyStack répond aux appels de CVC, plomberie, électricité, toiture et autres services pendant que vos équipes travaillent sur le terrain.",
     },
     "/missed-call-revenue-calculator/": {
       title: "Calculateur de revenu perdu par appels manqués | LobbyStack",
@@ -70,12 +70,12 @@ export const fr = {
     "/changelog/": {
       title: "Journal LobbyStack du réceptionniste IA",
       description:
-        "Suivez les mises à jour du réceptionniste IA LobbyStack, les améliorations du tableau de bord, les intégrations et les changements publiés.",
+        "Suivez les versions LobbyStack : réception téléphonique IA, tableau de bord, réservation, intégrations de téléphonie et nouveaux flux de travail.",
     },
     "/docs/api/": {
       title: "Documentation API publique LobbyStack",
       description:
-        "Ressources de découverte lisibles par machine pour les agents et intégrateurs qui visitent LobbyStack.",
+        "Explorez les endpoints publics LobbyStack, les métadonnées OpenAPI, le statut, les graphes JSON-LD, le flux RSS et les ressources Markdown.",
     },
     "/privacy/": {
       title: "Politique de confidentialité - LobbyStack",
@@ -100,7 +100,7 @@ export const fr = {
     "/affiliate-program/": {
       title: "Programme d'affiliation LobbyStack | 20 % de commission",
       description:
-        "Parrainez des entreprises vers les forfaits hébergés LobbyStack et touchez 20 % de leurs paiements pendant 12 mois. Rabais de 5 % à l'inscription. Paiements PayPal mensuels après 30 jours de retenue.",
+        "Recommandez les forfaits LobbyStack : recevez 20 % pendant 12 mois, offrez 5 % de réduction et obtenez des paiements PayPal mensuels.",
     },
     "/404/": {
       title: "Page introuvable - LobbyStack",

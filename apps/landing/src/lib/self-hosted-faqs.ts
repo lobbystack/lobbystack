@@ -9,7 +9,7 @@ export const selfHostedFaqs: FaqItem[] = [
   {
     question: "Is LobbyStack open source?",
     answer:
-      "Yes. LobbyStack is open source under a permissive license. You can view the source code, fork it, modify it, and deploy it on your own infrastructure. The repository is available on GitHub.",
+      "Yes. LobbyStack is published under the GNU AGPL-3.0-only license. You can inspect, fork, modify, and deploy the source code under that license. Review the LICENSE file in the GitHub repository before distributing a modified service.",
   },
   {
     question: "What are the self-hosting requirements?",
@@ -19,27 +19,27 @@ export const selfHostedFaqs: FaqItem[] = [
   {
     question: "Can I use my own LLM or API key?",
     answer:
-      "Yes. Self-hosted LobbyStack can be configured with your own API keys for OpenAI, Anthropic, or other compatible providers. You control which model is used, the temperature, and the prompt behavior.",
+      "Self-hosted deployments use the provider credentials supported by the current LobbyStack repository and deployment documentation. Review the repository before deployment for the current model and telephony integrations rather than assuming every provider is interchangeable.",
   },
   {
     question: "Is self-hosting suitable for agencies and resellers?",
     answer:
-      "Yes. Agencies can deploy LobbyStack for multiple clients from a single instance or separate instances per client. The open-source license allows modification and white-labeling for your own brand.",
+      "Agencies can evaluate separate or multi-tenant deployments for client work. Because LobbyStack uses the AGPL-3.0-only license, review its source-disclosure obligations before modifying or reselling the service, and seek legal advice for your use case.",
   },
   {
     question: "How do updates work for self-hosted deployments?",
     answer:
-      "You pull updates from the GitHub repository and redeploy. We tag stable releases and provide changelog notes. Enterprise customers can opt for managed update support and priority patches.",
+      "You pull changes from the GitHub repository, review the changelog and migration notes, and redeploy through your own release process. Pin the version you have tested instead of automatically deploying every upstream change.",
   },
   {
     question: "What about data privacy and compliance?",
     answer:
-      "Self-hosting means your call data, transcripts, and customer information never leave your infrastructure. This is ideal for healthcare, legal, financial, and other regulated industries that need data residency and access control.",
+      "Self-hosting gives you control over LobbyStack's application deployment and stored business data. Calls can still be processed by configured telephony, AI, hosting, and integration providers, so review each provider's data handling and complete your own privacy and compliance assessment.",
   },
   {
     question: "Do you offer support for self-hosted installations?",
     answer:
-      "Community support is available through GitHub issues and discussions. Enterprise plans include dedicated support, implementation guidance, and custom deployment assistance for complex environments.",
+      "Start with the repository documentation and public GitHub issue tracker. For questions that do not belong in a public issue, contact the LobbyStack team through the support address listed on the site.",
   },
   {
     question: "Can I customize the voice, prompts, and behavior?",
@@ -49,6 +49,6 @@ export const selfHostedFaqs: FaqItem[] = [
   {
     question: "How does self-hosted pricing work?",
     answer:
-      "The open-source software is free. You pay only for your infrastructure, telephony provider usage, and LLM API costs. Enterprise support plans are available for teams that need professional guidance and SLA-backed assistance.",
+      "The AGPL-3.0-only source code has no separate software license fee. You remain responsible for infrastructure plus any telephony, AI, storage, monitoring, and integration-provider charges used by your deployment.",
   },
 ]

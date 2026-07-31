@@ -22,9 +22,9 @@ export const en = {
   },
   routes: {
     "/": {
-      title: "Open-Source AI Receptionist Software | LobbyStack",
+      title: "LobbyStack | Open-Source AI Receptionist Software",
       description:
-        "LobbyStack is the open-source AI receptionist that answers calls, qualifies leads, books appointments, and routes urgent requests 24/7.",
+        "LobbyStack is open-source AI receptionist software for small businesses, with 24/7 phone answering, lead qualification, appointment booking, and call routing.",
     },
     "/features/": {
       title: "AI Receptionist Features for Calls, SMS, and Booking",
@@ -39,22 +39,22 @@ export const en = {
     "/solutions/": {
       title: "AI Receptionist Solutions | LobbyStack",
       description:
-        "Explore LobbyStack AI receptionist solutions for phone answering, appointment scheduling, after-hours coverage, home services, dental offices, salons, and self-hosted deployments.",
+        "Find a LobbyStack AI receptionist for phone answering, booking, after-hours coverage, home services, dental offices, salons, or self-hosting.",
     },
     "/solutions/ai-phone-answering/": {
       title: "AI Phone Answering Service for Small Businesses | LobbyStack",
       description:
-        "LobbyStack answers business calls 24/7, books appointments, captures caller details, and routes urgent calls to your team.",
+        "Answer business calls 24/7 with LobbyStack. Qualify callers, capture details, book appointments, and route urgent requests to the right person.",
     },
     "/solutions/ai-appointment-scheduler/": {
       title: "AI Appointment Scheduler for Small Businesses | LobbyStack",
       description:
-        "LobbyStack schedules appointments from phone calls, captures caller details, sends confirmations, and routes urgent requests to your team.",
+        "Schedule appointments during phone calls with LobbyStack. Check availability, capture caller details, confirm bookings, and route exceptional requests.",
     },
     "/solutions/ai-receptionist-for-home-services/": {
       title: "AI Receptionist for Home Services | LobbyStack",
       description:
-        "LobbyStack answers calls for HVAC, plumbing, electrical, roofing, landscaping, and other home services teams while crews are on the job.",
+        "LobbyStack answers and qualifies calls for HVAC, plumbing, electrical, roofing, landscaping, and other home-service teams while crews are working.",
     },
     "/missed-call-revenue-calculator/": {
       title: "Missed Call Revenue Calculator | LobbyStack",
@@ -69,12 +69,12 @@ export const en = {
     "/changelog/": {
       title: "LobbyStack AI Receptionist Changelog",
       description:
-        "Follow LobbyStack AI receptionist product updates, dashboard improvements, integrations, and shipped changes.",
+        "Follow LobbyStack releases, including AI receptionist improvements, dashboard changes, booking and telephony integrations, and newly shipped workflows.",
     },
     "/docs/api/": {
       title: "LobbyStack Public API Documentation",
       description:
-        "Machine-readable discovery resources for agents and integrators visiting LobbyStack.",
+        "Explore LobbyStack public discovery endpoints, OpenAPI metadata, service status, JSON-LD graphs, RSS, Markdown resources, and integration documentation.",
     },
     "/privacy/": {
       title: "Privacy Policy - LobbyStack",

@@ -31,6 +31,16 @@ const pageCopy = {
     intro:
       "LobbyStack exposes a small public discovery surface so agents can find documentation, status, OpenAPI metadata, skills, and machine-readable usage preferences without scraping the site.",
     note: "These public discovery endpoints do not require authentication. OAuth metadata will be published on the app host when protected APIs expose real authorization endpoints.",
+    audienceHeading: "Who this discovery surface is for",
+    audienceBody:
+      "These endpoints help developers, search engines, AI agents, feed readers, and integration tools identify LobbyStack's public documentation and machine-readable product resources. They are discovery interfaces, not an authenticated control plane for customer calls or accounts.",
+    behaviorHeading: "Access and response behavior",
+    behaviorItems: [
+      "Public discovery endpoints accept unauthenticated GET or HEAD requests.",
+      "The status endpoint reports public service health; it does not expose tenant or operational data.",
+      "Protected application APIs are documented separately and require the authentication method published by the application host.",
+      "The homepage supports Accept: text/markdown negotiation; other published Markdown representations are available at the .md endpoints listed below.",
+    ],
     cards: [
       {
         title: "API catalog",
@@ -105,7 +115,7 @@ const pageCopy = {
         "MCP server card.",
       ],
     ],
-    examples: ["Markdown negotiation", "API catalog"],
+    examples: ["Homepage Markdown negotiation", "API catalog"],
     relatedHeading: "Related resources",
     related: [
       {
@@ -123,6 +133,11 @@ const pageCopy = {
         body: "Compact product, pricing, and discovery context in llms.txt for automated clients.",
         href: "/llms.txt",
       },
+      {
+        title: "Full product documentation",
+        body: "Read setup, deployment, telephony, booking, and operator guidance in the LobbyStack documentation.",
+        href: "https://docs.lobbystack.com/introduction",
+      },
     ],
   },
   fr: {
@@ -130,6 +145,16 @@ const pageCopy = {
     intro:
       "LobbyStack expose une petite surface de découverte publique afin que les agents trouvent la documentation, le statut, les métadonnées OpenAPI, les skills et les préférences lisibles par machine sans scraper le site.",
     note: "Ces endpoints publics ne demandent pas d’authentification. Les métadonnées OAuth seront publiées sur l’hôte applicatif lorsque les API protégées exposeront de vrais endpoints d’autorisation.",
+    audienceHeading: "À qui s’adresse cette surface de découverte",
+    audienceBody:
+      "Ces endpoints aident les développeurs, moteurs de recherche, agents IA, lecteurs de flux et outils d’intégration à trouver la documentation publique et les ressources lisibles par machine de LobbyStack. Ils ne constituent pas un plan de contrôle authentifié pour les comptes ou appels clients.",
+    behaviorHeading: "Accès et comportement des réponses",
+    behaviorItems: [
+      "Les endpoints publics de découverte acceptent les requêtes GET ou HEAD sans authentification.",
+      "L’endpoint de statut indique la santé publique du service sans exposer de données opérationnelles ou de locataire.",
+      "Les API applicatives protégées sont documentées séparément et utilisent la méthode d’authentification publiée par l’hôte applicatif.",
+      "La page d’accueil prend en charge la négociation Accept: text/markdown; les autres représentations Markdown publiées sont disponibles aux endpoints .md indiqués ci-dessous.",
+    ],
     cards: [
       {
         title: "Catalogue API",
@@ -212,7 +237,7 @@ const pageCopy = {
         "Carte serveur MCP.",
       ],
     ],
-    examples: ["Négociation markdown", "Catalogue API"],
+    examples: ["Négociation Markdown de l’accueil", "Catalogue API"],
     relatedHeading: "Ressources associées",
     related: [
       {
@@ -230,6 +255,11 @@ const pageCopy = {
         body: "Contexte compact produit, tarifs et découverte dans llms.txt pour les clients automatisés.",
         href: "/llms.txt",
       },
+      {
+        title: "Documentation produit complète",
+        body: "Consultez les guides de configuration, déploiement, téléphonie, réservation et exploitation de LobbyStack.",
+        href: "https://docs.lobbystack.com/introduction",
+      },
     ],
   },
 } satisfies Record<
@@ -238,6 +268,10 @@ const pageCopy = {
     h1: string
     intro: string
     note: string
+    audienceHeading: string
+    audienceBody: string
+    behaviorHeading: string
+    behaviorItems: string[]
     cards: Array<{ title: string; body: string; href: string }>
     endpoints: string
     requestExamples: string
@@ -299,6 +333,21 @@ const t = pageCopy[locale]
         }
       </div>
 
+      <section class="mt-16 grid gap-8 md:grid-cols-2">
+        <div>
+          <h2 class="text-2xl font-semibold">{t.audienceHeading}</h2>
+          <p class="mt-4 leading-7 text-muted-foreground">
+            {t.audienceBody}
+          </p>
+        </div>
+        <div>
+          <h2 class="text-2xl font-semibold">{t.behaviorHeading}</h2>
+          <ul class="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
+            {t.behaviorItems.map((item) => <li>• {item}</li>)}
+          </ul>
+        </div>
+      </section>
+
       <section class="mt-16">
         <h2 class="text-2xl font-semibold">{t.endpoints}</h2>
         <div class="mt-6 overflow-x-auto rounded-lg border">
@@ -347,7 +396,7 @@ const t = pageCopy[locale]
 
       <section class="mt-16">
         <h2 class="text-2xl font-semibold">{t.relatedHeading}</h2>
-        <div class="mt-6 grid gap-6 md:grid-cols-3">
+        <div class="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {
             t.related.map((item) => (
               <a

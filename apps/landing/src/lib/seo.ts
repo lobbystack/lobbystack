@@ -2,10 +2,10 @@ export const SITE_URL = "https://lobbystack.com"
 
 export const SITE_NAME = "LobbyStack"
 
-export const DEFAULT_TITLE = "Open-Source AI Receptionist Software | LobbyStack"
+export const DEFAULT_TITLE = "LobbyStack | Open-Source AI Receptionist Software"
 
 export const DEFAULT_DESCRIPTION =
-  "LobbyStack is the open-source AI receptionist that answers calls, qualifies leads, books appointments, and routes urgent requests 24/7."
+  "LobbyStack is open-source AI receptionist software for small businesses, with 24/7 phone answering, lead qualification, appointment booking, and call routing."
 
 export const DEFAULT_OG_IMAGE = "/og/index.jpg"
 
@@ -27,6 +27,8 @@ const BRAND_ALIASES = [
 const BRAND_SAME_AS = [
   "https://github.com/lobbystack",
   "https://github.com/lobbystack/lobbystack",
+  "https://www.capterra.com/p/10046185/LobbyStack/",
+  "https://sourceforge.net/software/product/LobbyStack/",
 ]
 
 export type JsonLd = Record<string, unknown>

@@ -954,9 +954,9 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
             >
               {/* Tier header */}
               <div className="mb-6">
-                <h3 className="font-heading text-lg font-medium tracking-[-0.03em]">
+                <h2 className="font-heading text-lg font-medium tracking-[-0.03em]">
                   {tier.name}
-                </h3>
+                </h2>
                 <div className="mt-3 flex items-baseline gap-1">
                   <span className="font-heading text-4xl font-medium tracking-[-0.05em] tabular-nums">
                     {tier.price[billingInterval]}
