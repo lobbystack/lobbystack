@@ -179,6 +179,18 @@ const wantsMarkdown = (request) =>
     ?.split(",")
     .some((part) => part.trim().toLowerCase().startsWith("text/markdown"))
 
+const getHomepageMarkdownPath = (pathname) => {
+  if (pathname === "/" || pathname === "/index.html") {
+    return "/index.md"
+  }
+
+  if (pathname === "/fr/" || pathname === "/fr/index.html") {
+    return "/fr/index.md"
+  }
+
+  return null
+}
+
 const getAllowedPostHogProxyOrigin = (request) => {
   const origin = request.headers.get("Origin")
 
@@ -307,6 +319,7 @@ const proxyPostHogRequest = async (context, url) => {
 
 export async function onRequest(context) {
   const url = new URL(context.request.url)
+  const homepageMarkdownPath = getHomepageMarkdownPath(url.pathname)
 
   if (isWwwHost(url)) {
     return redirectToCanonicalHost(url)
@@ -322,10 +335,10 @@ export async function onRequest(context) {
 
   if (
     context.request.method === "GET" &&
-    (url.pathname === "/" || url.pathname === "/index.html") &&
+    homepageMarkdownPath &&
     wantsMarkdown(context.request)
   ) {
-    const markdownUrl = new URL("/index.md", url)
+    const markdownUrl = new URL(homepageMarkdownPath, url)
     const assetResponse = await context.env.ASSETS.fetch(
       new Request(markdownUrl, context.request)
     )
