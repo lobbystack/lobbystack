@@ -325,9 +325,25 @@
     },
     "spendingCap": {
       "title": "Monthly spending cap",
-      "description": "Set a maximum overage spend per billing period. When reached, usage beyond the included pool will be blocked.",
-      "comingSoon": "Coming soon",
-      "placeholder": "e.g. $25.00"
+      "description": "Limit plan overages for voice, SMS alerts, and outbound calls during each monthly billing period.",
+      "placeholder": "25.00",
+      "amountLabel": "Overage cap (USD)",
+      "noCap": "No spending cap is set",
+      "currentSpend": "Current overage spend",
+      "spendOfCap": "{{spend}} of {{cap}}",
+      "remaining": "{{amount}} remaining before new overage usage is paused.",
+      "reached": "Cap reached — new usage beyond included allowances is paused.",
+      "activeCallNotice": "AI SMS is not included. Active voice calls are allowed to finish and may take the final charge above this amount.",
+      "adminOnly": "Only workspace owners and admins can change this cap.",
+      "save": "Save cap",
+      "saving": "Saving...",
+      "remove": "Remove cap",
+      "removing": "Removing...",
+      "saved": "Monthly overage cap saved.",
+      "removed": "Monthly overage cap removed.",
+      "invalidAmount": "Enter a non-negative USD amount with no more than two decimal places.",
+      "saveFailed": "Unable to save the monthly overage cap.",
+      "removeFailed": "Unable to remove the monthly overage cap."
     },
     "transactions": {
       "title": "Transaction history",

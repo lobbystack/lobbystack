@@ -87,11 +87,147 @@ import {
   enqueuePostHogProviderExceptionBestEffort,
 } from "./telemetry/posthog";
 
-import { observedAction as action } from "./telemetry/observedFunctions";
+import {
+  observedAction as action,
+  observedMutation as mutation,
+} from "./telemetry/observedFunctions";
+
 type BillingContact = {
   email: string | null;
   name: string | null;
 };
+
+type OverageUsageQuantities = Pick<
+  Doc<"billing_usage_months">,
+  "voiceSecondsUsed" | "alertSmsSegmentsUsed" | "outboundCallAttemptsUsed"
+>;
+
+function getOverageSpendingCapCents(input: {
+  plan: BillingPlanSlug;
+  account: Doc<"billing_accounts"> | null;
+}): number | null {
+  if (input.plan !== "starter" && input.plan !== "pro") {
+    return null;
+  }
+  return input.account?.overageSpendingCapCents ?? null;
+}
+
+function getPlanOverageSpendCents(input: {
+  plan: BillingPlanSlug;
+  usage: Partial<OverageUsageQuantities> | null;
+}): number {
+  const plan = billingPlanCatalog[input.plan];
+  if (!plan.overagesBillable) {
+    return 0;
+  }
+
+  const voiceSecondsOver =
+    plan.voiceSecondsIncluded === null
+      ? 0
+      : Math.max(0, (input.usage?.voiceSecondsUsed ?? 0) - plan.voiceSecondsIncluded);
+  const alertSmsSegmentsOver =
+    plan.alertSmsSegmentsIncluded === null
+      ? 0
+      : Math.max(
+          0,
+          (input.usage?.alertSmsSegmentsUsed ?? 0) - plan.alertSmsSegmentsIncluded,
+        );
+  const outboundCallAttemptsOver =
+    plan.outboundCallAttemptsIncluded === null
+      ? 0
+      : Math.max(
+          0,
+          (input.usage?.outboundCallAttemptsUsed ?? 0) -
+            plan.outboundCallAttemptsIncluded,
+        );
+
+  const rawCents =
+    (voiceSecondsOver * (plan.voiceOverageRatePerMinuteCents ?? 0)) / 60 +
+    alertSmsSegmentsOver * (plan.alertSmsOverageRatePerSegmentCents ?? 0) +
+    outboundCallAttemptsOver * (plan.outboundCallAttemptOverageRateCents ?? 0);
+
+  return Math.max(0, Math.ceil(Math.max(0, rawCents) - 1e-9));
+}
+
+function getUsageSnapshotWithOverageCap(input: {
+  plan: BillingPlanSlug;
+  periodKey: string;
+  usage: Doc<"billing_usage_months"> | null;
+  account: Doc<"billing_accounts"> | null;
+}) {
+  const usage = getBillingUsageSnapshotData({
+    plan: input.plan,
+    periodKey: input.periodKey,
+    usage: input.usage,
+  });
+  const capCents = getOverageSpendingCapCents(input);
+  if (capCents === null) {
+    return usage;
+  }
+
+  const capReached =
+    getPlanOverageSpendCents({ plan: input.plan, usage }) >= capCents;
+  if (!capReached) {
+    return usage;
+  }
+
+  return {
+    ...usage,
+    voiceBlocked:
+      usage.voiceBlocked ||
+      (usage.voiceSecondsRemaining !== null && usage.voiceSecondsRemaining <= 0),
+    alertSmsBlocked:
+      usage.alertSmsBlocked ||
+      (usage.alertSmsSegmentsRemaining !== null && usage.alertSmsSegmentsRemaining <= 0),
+    outboundCallAttemptsBlocked:
+      usage.outboundCallAttemptsBlocked ||
+      (usage.outboundCallAttemptsRemaining !== null &&
+        usage.outboundCallAttemptsRemaining <= 0),
+  };
+}
+
+function wouldUsageExceedOverageCap(input: {
+  plan: BillingPlanSlug;
+  account: Doc<"billing_accounts"> | null;
+  usage: Doc<"billing_usage_months"> | null;
+  usageKind: Exclude<BillingUsageKind, "ai_sms_segments">;
+  quantity: number;
+}): boolean {
+  const capCents = getOverageSpendingCapCents(input);
+  if (capCents === null) {
+    return false;
+  }
+
+  const projectedUsage: Partial<OverageUsageQuantities> = {
+    voiceSecondsUsed: input.usage?.voiceSecondsUsed ?? 0,
+    alertSmsSegmentsUsed: input.usage?.alertSmsSegmentsUsed ?? 0,
+    outboundCallAttemptsUsed: input.usage?.outboundCallAttemptsUsed ?? 0,
+  };
+  switch (input.usageKind) {
+    case "voice_seconds":
+      projectedUsage.voiceSecondsUsed =
+        (projectedUsage.voiceSecondsUsed ?? 0) + input.quantity;
+      break;
+    case "alert_sms_segments":
+      projectedUsage.alertSmsSegmentsUsed =
+        (projectedUsage.alertSmsSegmentsUsed ?? 0) + input.quantity;
+      break;
+    case "outbound_call_attempts":
+      projectedUsage.outboundCallAttemptsUsed =
+        (projectedUsage.outboundCallAttemptsUsed ?? 0) + input.quantity;
+      break;
+  }
+
+  const currentSpendCents = getPlanOverageSpendCents({
+    plan: input.plan,
+    usage: input.usage,
+  });
+  const projectedSpendCents = getPlanOverageSpendCents({
+    plan: input.plan,
+    usage: projectedUsage,
+  });
+  return projectedSpendCents > capCents && projectedSpendCents > currentSpendCents;
+}
 
 function getAlertSmsUsageSourceKey(input: {
   notificationId?: Id<"notifications">;
@@ -669,6 +805,7 @@ function buildBillingStatus(input: {
   subscriptionState: string;
   contact: BillingContact;
   usage: Doc<"billing_usage_months"> | null;
+  account: Doc<"billing_accounts"> | null;
   periodKey: string;
   recentTransactions: Array<BillingTransactionSummary>;
   hasBillingManagementAccess: boolean;
@@ -679,10 +816,19 @@ function buildBillingStatus(input: {
   knowledgeStorageUsageBytes: number;
   phoneNumberReclaimScheduledAt: number | null;
 }): BillingStatus {
-  const usage = getBillingUsageSnapshotData({
+  const usage = getUsageSnapshotWithOverageCap({
     plan: input.plan,
     periodKey: input.periodKey,
     usage: input.usage,
+    account: input.account,
+  });
+  const overageSpendingCapCents = getOverageSpendingCapCents({
+    plan: input.plan,
+    account: input.account,
+  });
+  const overageSpendCents = getPlanOverageSpendCents({
+    plan: input.plan,
+    usage,
   });
   const knowledgeStorageBytesIncluded = getKnowledgeStorageLimitBytes(input.plan);
   const aiSmsAddonEligible = canPurchaseAiSmsAddon({
@@ -704,6 +850,10 @@ function buildBillingStatus(input: {
     }),
     aiSmsReady: input.aiSmsReady,
     overagesBillable: billingPlanCatalog[input.plan].overagesBillable,
+    overageSpendingCapCents,
+    overageSpendCents,
+    overageSpendingCapReached:
+      overageSpendingCapCents !== null && overageSpendCents >= overageSpendingCapCents,
     monthlyChargeCents: getBillingMonthlyChargeCents({
       plan: input.plan,
       billingInterval: input.billingInterval,
@@ -2982,6 +3132,7 @@ export const getStatus = query({
       subscriptionState: snapshot.account?.subscriptionState ?? "inactive",
       contact,
       usage: snapshot.usage,
+      account: snapshot.account,
       periodKey: snapshot.periodKey,
       recentTransactions: recentTransactions.map((transaction) => ({
         kind: transaction.kind as BillingTransactionKind,
@@ -3006,6 +3157,44 @@ export const getStatus = query({
       knowledgeStorageUsageBytes,
       phoneNumberReclaimScheduledAt: reclaimScheduledAt,
     });
+  },
+});
+
+export const setOverageSpendingCap = mutation({
+  args: {
+    businessId: v.id("businesses"),
+    capCents: v.union(v.number(), v.null()),
+  },
+  returns: v.object({
+    overageSpendingCapCents: v.union(v.number(), v.null()),
+  }),
+  handler: async (ctx, args) => {
+    const membership = await requireMembership(ctx, args.businessId);
+    requireBillingManagementAccess(membership.role);
+    const snapshot = await getBillingSnapshot(ctx, {
+      businessId: args.businessId,
+    });
+
+    if (snapshot.plan !== "starter" && snapshot.plan !== "pro") {
+      throw new Error("Overage spending caps are available on Starter and Pro plans.");
+    }
+    if (!snapshot.account) {
+      throw new Error("A billing account is required to set an overage spending cap.");
+    }
+    if (
+      args.capCents !== null &&
+      (!Number.isSafeInteger(args.capCents) || args.capCents < 0)
+    ) {
+      throw new Error("Overage spending cap must be a non-negative whole number of cents.");
+    }
+
+    await ctx.db.patch(snapshot.account._id, {
+      overageSpendingCapCents: args.capCents ?? undefined,
+    });
+
+    return {
+      overageSpendingCapCents: args.capCents,
+    };
   },
 });
 
@@ -3445,10 +3634,11 @@ export const reserveVoiceUsageAtCallStart = internalMutation({
       businessId: args.businessId,
       at: args.recordedAt,
     });
-    const usage = getBillingUsageSnapshotData({
+    const usage = getUsageSnapshotWithOverageCap({
       plan: snapshot.plan,
       periodKey: snapshot.periodKey,
       usage: snapshot.usage,
+      account: snapshot.account,
     });
 
     if (usage.voiceBlocked) {
@@ -3533,10 +3723,11 @@ export const reserveAlertSmsUsage = internalMutation({
       businessId: args.businessId,
       at: args.recordedAt,
     });
-    const usage = getBillingUsageSnapshotData({
+    const usage = getUsageSnapshotWithOverageCap({
       plan: snapshot.plan,
       periodKey: snapshot.periodKey,
       usage: snapshot.usage,
+      account: snapshot.account,
     });
     const normalizedSegments = Math.max(1, Math.trunc(args.estimatedSegments));
     const overagesBillable = billingPlanCatalog[snapshot.plan].overagesBillable;
@@ -3551,6 +3742,20 @@ export const reserveAlertSmsUsage = internalMutation({
       !overagesBillable &&
       usage.alertSmsSegmentsRemaining !== null &&
       normalizedSegments > usage.alertSmsSegmentsRemaining
+    ) {
+      return {
+        allowed: false,
+        errorCode: billingErrorCodes.alertSmsLimitReached,
+      };
+    }
+    if (
+      wouldUsageExceedOverageCap({
+        plan: snapshot.plan,
+        account: snapshot.account,
+        usage: snapshot.usage,
+        usageKind: "alert_sms_segments",
+        quantity: normalizedSegments,
+      })
     ) {
       return {
         allowed: false,
@@ -3614,10 +3819,11 @@ export const reserveOutboundCallAttemptUsage = internalMutation({
       businessId: args.businessId,
       at: args.recordedAt,
     });
-    const usage = getBillingUsageSnapshotData({
+    const usage = getUsageSnapshotWithOverageCap({
       plan: snapshot.plan,
       periodKey: snapshot.periodKey,
       usage: snapshot.usage,
+      account: snapshot.account,
     });
     const overagesBillable = billingPlanCatalog[snapshot.plan].overagesBillable;
 
@@ -3631,6 +3837,20 @@ export const reserveOutboundCallAttemptUsage = internalMutation({
       !overagesBillable &&
       usage.outboundCallAttemptsRemaining !== null &&
       usage.outboundCallAttemptsRemaining < 1
+    ) {
+      return {
+        allowed: false,
+        errorCode: billingErrorCodes.outboundCallAttemptLimitReached,
+      };
+    }
+    if (
+      wouldUsageExceedOverageCap({
+        plan: snapshot.plan,
+        account: snapshot.account,
+        usage: snapshot.usage,
+        usageKind: "outbound_call_attempts",
+        quantity: 1,
+      })
     ) {
       return {
         allowed: false,
@@ -3740,10 +3960,11 @@ export const getSmsCapabilityPolicy = internalQuery({
         .withIndex("by_role", (q) => q.eq("role", "platform_alert"))
         .unique(),
     ]);
-    const usage = getBillingUsageSnapshotData({
+    const usage = getUsageSnapshotWithOverageCap({
       plan: snapshot.plan,
       periodKey: snapshot.periodKey,
       usage: snapshot.usage,
+      account: snapshot.account,
     });
     const aiSmsCommerciallyEnabled = isAiSmsEnabled({
       plan: snapshot.plan,
@@ -3881,10 +4102,11 @@ export const assertVoiceCanStart = internalQuery({
     const snapshot = await getBillingSnapshot(ctx, {
       businessId: args.businessId,
     });
-    const usage = getBillingUsageSnapshotData({
+    const usage = getUsageSnapshotWithOverageCap({
       plan: snapshot.plan,
       periodKey: snapshot.periodKey,
       usage: snapshot.usage,
+      account: snapshot.account,
     });
 
     return {
@@ -3912,10 +4134,11 @@ export const assertOutboundCallAttemptCanStart = internalQuery({
     const snapshot = await getBillingSnapshot(ctx, {
       businessId: args.businessId,
     });
-    const usage = getBillingUsageSnapshotData({
+    const usage = getUsageSnapshotWithOverageCap({
       plan: snapshot.plan,
       periodKey: snapshot.periodKey,
       usage: snapshot.usage,
+      account: snapshot.account,
     });
 
     return {

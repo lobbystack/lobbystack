@@ -325,9 +325,25 @@
     },
     "spendingCap": {
       "title": "Plafond mensuel de dépenses",
-      "description": "Définissez un maximum de dépenses de dépassement par période de facturation. Une fois atteint, l'utilisation au-delà du volume inclus sera bloquée.",
-      "comingSoon": "Bientôt disponible",
-      "placeholder": "ex. 25,00 $"
+      "description": "Limitez les dépassements du forfait pour les appels vocaux, les alertes SMS et les appels sortants pendant chaque période mensuelle.",
+      "placeholder": "25,00",
+      "amountLabel": "Plafond de dépassement (USD)",
+      "noCap": "Aucun plafond de dépenses défini",
+      "currentSpend": "Dépenses de dépassement actuelles",
+      "spendOfCap": "{{spend}} sur {{cap}}",
+      "remaining": "Il reste {{amount}} avant la suspension des nouveaux dépassements.",
+      "reached": "Plafond atteint — la nouvelle utilisation au-delà des volumes inclus est suspendue.",
+      "activeCallNotice": "Les SMS IA ne sont pas inclus. Les appels vocaux en cours peuvent se terminer et porter les frais finaux au-delà de ce montant.",
+      "adminOnly": "Seuls les propriétaires et les administrateurs de l’espace peuvent modifier ce plafond.",
+      "save": "Enregistrer",
+      "saving": "Enregistrement...",
+      "remove": "Supprimer le plafond",
+      "removing": "Suppression...",
+      "saved": "Plafond mensuel de dépassement enregistré.",
+      "removed": "Plafond mensuel de dépassement supprimé.",
+      "invalidAmount": "Saisissez un montant USD positif ou nul avec au plus deux décimales.",
+      "saveFailed": "Impossible d’enregistrer le plafond mensuel de dépassement.",
+      "removeFailed": "Impossible de supprimer le plafond mensuel de dépassement."
     },
     "transactions": {
       "title": "Historique des transactions",

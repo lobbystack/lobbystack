@@ -1216,6 +1216,7 @@ export default defineSchema({
     currentPeriodStart: v.optional(v.string()),
     currentPeriodEnd: v.optional(v.string()),
     cancelAtPeriodEnd: v.optional(v.boolean()),
+    overageSpendingCapCents: v.optional(v.number()),
     checkoutId: v.optional(v.string()),
     lastWebhookEventType: v.optional(v.string()),
     lastSyncedAt: v.string(),

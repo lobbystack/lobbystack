@@ -294,6 +294,7 @@ async function seedBillingAccount(
     proSubscriptionId?: string;
     proSubscriptionProductId?: string;
     proSubscriptionPriceId?: string;
+    overageSpendingCapCents?: number;
   },
 ): Promise<void> {
   await ctx.db.insert("billing_accounts", {
@@ -315,6 +316,9 @@ async function seedBillingAccount(
       : {}),
     ...(input.proSubscriptionPriceId
       ? { proSubscriptionPriceId: input.proSubscriptionPriceId }
+      : {}),
+    ...(input.overageSpendingCapCents !== undefined
+      ? { overageSpendingCapCents: input.overageSpendingCapCents }
       : {}),
     lastSyncedAt: "2026-04-12T12:00:00.000Z",
   });
@@ -2005,6 +2009,243 @@ describe("billing", () => {
       allowed: true,
       errorCode: null,
     });
+  });
+
+  it("lets billing admins set, update, and remove Starter and Pro overage caps", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-overage-cap-settings",
+      deploymentMode: "cloud",
+    });
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+      });
+    });
+
+    await expect(
+      authed.mutation(api.billing.setOverageSpendingCap, {
+        businessId,
+        capCents: 0,
+      }),
+    ).resolves.toEqual({ overageSpendingCapCents: 0 });
+    expect(await authed.query(api.billing.getStatus, { businessId })).toMatchObject({
+      overageSpendingCapCents: 0,
+      overageSpendCents: 0,
+      overageSpendingCapReached: true,
+    });
+
+    await expect(
+      authed.mutation(api.billing.setOverageSpendingCap, {
+        businessId,
+        capCents: 2_500,
+      }),
+    ).resolves.toEqual({ overageSpendingCapCents: 2_500 });
+    vi.setSystemTime(new Date("2026-05-01T12:00:00.000Z"));
+    expect(await authed.query(api.billing.getStatus, { businessId })).toMatchObject({
+      overageSpendingCapCents: 2_500,
+      overageSpendCents: 0,
+      overageSpendingCapReached: false,
+      usage: { periodKey: "2026-05" },
+    });
+    await expect(
+      authed.mutation(api.billing.setOverageSpendingCap, {
+        businessId,
+        capCents: null,
+      }),
+    ).resolves.toEqual({ overageSpendingCapCents: null });
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.overageSpendingCapCents).toBeUndefined();
+  });
+
+  it("rejects invalid, unauthorized, and ineligible overage cap changes", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-overage-cap-viewer",
+      deploymentMode: "cloud",
+      role: "viewer",
+    });
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+      });
+    });
+
+    await expect(
+      authed.mutation(api.billing.setOverageSpendingCap, {
+        businessId,
+        capCents: 100,
+      }),
+    ).rejects.toThrow("Billing management requires admin access.");
+
+    const { authed: freeAuthed, businessId: freeBusinessId } = await seedWorkspace(t, {
+      subject: "billing-overage-cap-free",
+      deploymentMode: "cloud",
+    });
+    await expect(
+      freeAuthed.mutation(api.billing.setOverageSpendingCap, {
+        businessId: freeBusinessId,
+        capCents: 100,
+      }),
+    ).rejects.toThrow("available on Starter and Pro plans");
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId: freeBusinessId,
+        currentPlan: "starter",
+      });
+    });
+    await expect(
+      freeAuthed.mutation(api.billing.setOverageSpendingCap, {
+        businessId: freeBusinessId,
+        capCents: 1.5,
+      }),
+    ).rejects.toThrow("non-negative whole number of cents");
+  });
+
+  it("enforces one shared plan-overage cap while preserving included and AI SMS usage", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-shared-overage-cap",
+      deploymentMode: "cloud",
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        activeAddons: ["ai_sms"],
+        billingInterval: "annual",
+        overageSpendingCapCents: 2,
+      });
+      return await seedUsageAnchors(ctx, { businessId });
+    });
+
+    await t.mutation(internal.billing.recordAlertSmsUsage, {
+      businessId,
+      notificationId: anchors.notificationId,
+      quantity: 200,
+      recordedAt: "2026-04-12T15:00:00.000Z",
+    });
+    const exactCap = await t.mutation(internal.billing.reserveAlertSmsUsage, {
+      businessId,
+      sourceKey: "alert_sms:cap-exact",
+      estimatedSegments: 1,
+      recordedAt: "2026-04-12T15:01:00.000Z",
+    });
+    const aboveCap = await t.mutation(internal.billing.reserveAlertSmsUsage, {
+      businessId,
+      sourceKey: "alert_sms:cap-over",
+      estimatedSegments: 1,
+      recordedAt: "2026-04-12T15:02:00.000Z",
+    });
+    const includedOutbound = await t.mutation(
+      internal.billing.reserveOutboundCallAttemptUsage,
+      {
+        businessId,
+        callId: anchors.callId,
+        recordedAt: "2026-04-12T15:03:00.000Z",
+      },
+    );
+    await t.mutation(internal.billing.recordAiSmsUsage, {
+      businessId,
+      messageId: anchors.messageId,
+      quantity: 25,
+      recordedAt: "2026-04-12T15:04:00.000Z",
+    });
+
+    const status = await authed.query(api.billing.getStatus, { businessId });
+    const voicePolicy = await t.query(internal.billing.assertVoiceCanStart, {
+      businessId,
+    });
+    const rejectedEvent = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_source_key", (q) =>
+          q.eq("businessId", businessId).eq("sourceKey", "alert_sms:cap-over"),
+        )
+        .unique();
+    });
+
+    expect(exactCap).toMatchObject({ allowed: true, errorCode: null });
+    expect(aboveCap).toEqual({
+      allowed: false,
+      errorCode: "alert_sms_limit_reached",
+    });
+    expect(includedOutbound).toMatchObject({ allowed: true, errorCode: null });
+    expect(rejectedEvent).toBeNull();
+    expect(status).toMatchObject({
+      overageSpendingCapCents: 2,
+      overageSpendCents: 2,
+      overageSpendingCapReached: true,
+      usage: {
+        alertSmsSegmentsUsed: 201,
+        aiSmsSegmentsUsed: 25,
+        alertSmsBlocked: true,
+        voiceBlocked: false,
+        outboundCallAttemptsBlocked: false,
+      },
+    });
+    expect(voicePolicy).toEqual({ allowed: true, errorCode: null });
+  });
+
+  it("allows an active voice call to cross the cap and blocks the next overage call", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-voice-overage-cap",
+      deploymentMode: "cloud",
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        overageSpendingCapCents: 18,
+      });
+      return await seedUsageAnchors(ctx, { businessId });
+    });
+
+    await t.mutation(internal.billing.recordVoiceUsage, {
+      businessId,
+      callId: anchors.callId,
+      quantity: 30_000,
+      recordedAt: "2026-04-12T15:00:00.000Z",
+    });
+    expect(
+      await t.query(internal.billing.assertVoiceCanStart, { businessId }),
+    ).toEqual({ allowed: true, errorCode: null });
+
+    await t.mutation(internal.billing.recordVoiceUsage, {
+      businessId,
+      callId: anchors.callId,
+      quantity: 30_120,
+      recordedAt: "2026-04-12T15:02:00.000Z",
+    });
+
+    expect(await authed.query(api.billing.getStatus, { businessId })).toMatchObject({
+      overageSpendingCapCents: 18,
+      overageSpendCents: 36,
+      overageSpendingCapReached: true,
+      usage: { voiceBlocked: true },
+    });
+    expect(
+      await t.query(internal.billing.assertVoiceCanStart, { businessId }),
+    ).toEqual({
+      allowed: false,
+      errorCode: "voice_limit_reached",
+    });
+    expect(
+      await t.mutation(internal.billing.reserveOutboundCallAttemptUsage, {
+        businessId,
+        callId: anchors.callId,
+        recordedAt: "2026-04-12T15:03:00.000Z",
+      }),
+    ).toMatchObject({ allowed: true, errorCode: null });
   });
 
   it("allows Pro alert SMS reservations after included segments are exhausted", async () => {
