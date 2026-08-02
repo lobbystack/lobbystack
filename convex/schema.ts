@@ -1255,6 +1255,7 @@ export default defineSchema({
     billingIntervalAtRecordTime: v.optional(billingIntervalValidator),
     activeAddonsAtRecordTime: v.optional(v.array(billingAddonSlugValidator)),
     billableQuantity: v.optional(v.number()),
+    overageRecordedAt: v.optional(v.string()),
     recordedAt: v.string(),
     syncStatus: v.string(),
     syncAttemptedAt: v.optional(v.string()),
