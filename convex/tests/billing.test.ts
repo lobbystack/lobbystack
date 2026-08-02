@@ -2420,7 +2420,7 @@ describe("billing", () => {
     });
   });
 
-  it("allows an active voice call to cross the cap and blocks the next overage call", async () => {
+  it("reserves paid voice cap exposure before admitting another concurrent call", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId } = await seedWorkspace(t, {
       subject: "billing-voice-overage-cap",
@@ -2432,7 +2432,20 @@ describe("billing", () => {
         currentPlan: "pro",
         overageSpendingCapCents: 18,
       });
-      return await seedUsageAnchors(ctx, { businessId });
+      const seeded = await seedUsageAnchors(ctx, { businessId });
+      const firstActiveCallId = await ctx.db.insert("calls", {
+        businessId,
+        twilioCallSid: "CA-billing-cap-active-1",
+        status: "in_progress",
+        startedAt: "2026-04-12T15:01:00.000Z",
+      });
+      const secondActiveCallId = await ctx.db.insert("calls", {
+        businessId,
+        twilioCallSid: "CA-billing-cap-active-2",
+        status: "in_progress",
+        startedAt: "2026-04-12T15:01:01.000Z",
+      });
+      return { ...seeded, firstActiveCallId, secondActiveCallId };
     });
 
     await t.mutation(internal.billing.recordVoiceUsage, {
@@ -2445,12 +2458,48 @@ describe("billing", () => {
       await t.query(internal.billing.assertVoiceCanStart, { businessId }),
     ).toEqual({ allowed: true, errorCode: null });
 
-    await t.mutation(internal.billing.recordVoiceUsage, {
+    const firstReservation = await t.mutation(
+      internal.billing.reserveVoiceUsageAtCallStart,
+      {
+        businessId,
+        callId: anchors.firstActiveCallId,
+        recordedAt: "2026-04-12T15:01:00.000Z",
+      },
+    );
+    expect(firstReservation).toMatchObject({
+      allowed: true,
+      errorCode: null,
+      syncNeeded: false,
+    });
+    const reservationEvent = await t.run(async (ctx: TestContext) => {
+      if (!firstReservation.usageEventId) {
+        throw new Error("Expected the paid voice start to reserve cap exposure.");
+      }
+      return await ctx.db.get(firstReservation.usageEventId);
+    });
+    expect(reservationEvent).toMatchObject({
+      quantity: 60,
+      syncStatus: "skipped",
+    });
+
+    expect(
+      await t.mutation(internal.billing.reserveVoiceUsageAtCallStart, {
+        businessId,
+        callId: anchors.secondActiveCallId,
+        recordedAt: "2026-04-12T15:01:01.000Z",
+      }),
+    ).toEqual({
+      allowed: false,
+      errorCode: "voice_limit_reached",
+    });
+
+    const completedUsage = await t.mutation(internal.billing.recordVoiceUsage, {
       businessId,
-      callId: anchors.callId,
-      quantity: 30_120,
+      callId: anchors.firstActiveCallId,
+      quantity: 120,
       recordedAt: "2026-04-12T15:02:00.000Z",
     });
+    expect(completedUsage).toMatchObject({ syncNeeded: true });
 
     expect(await authed.query(api.billing.getStatus, { businessId })).toMatchObject({
       overageSpendingCapCents: 18,
@@ -2471,6 +2520,50 @@ describe("billing", () => {
         recordedAt: "2026-04-12T15:03:00.000Z",
       }),
     ).toMatchObject({ allowed: true, errorCode: null });
+  });
+
+  it("fails closed when a capped billing period exceeds the bounded replay window", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-overage-replay-overflow",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        overageSpendingCapCents: 18,
+      });
+      await ctx.db.insert("billing_usage_months", {
+        businessId,
+        periodKey: "2026-04",
+        planAtSnapshot: "pro",
+        voiceSecondsUsed: 30_000,
+        voiceSecondsIncluded: 30_000,
+        voiceBlocked: false,
+        lastRecordedAt: "2026-04-12T15:00:00.000Z",
+      });
+      for (let index = 0; index < 2_049; index += 1) {
+        await ctx.db.insert("billing_usage_events", {
+          businessId,
+          periodKey: "2026-04",
+          sourceKey: `voice:replay-overflow-${index}`,
+          usageKind: "voice_seconds",
+          quantity: 0,
+          planAtRecordTime: "pro",
+          recordedAt: "2026-04-12T15:00:00.000Z",
+          syncStatus: "skipped",
+        });
+      }
+    });
+
+    expect(
+      await t.query(internal.billing.assertVoiceCanStart, { businessId }),
+    ).toEqual({
+      allowed: false,
+      errorCode: "voice_limit_reached",
+    });
   });
 
   it("allows Pro alert SMS reservations after included segments are exhausted", async () => {

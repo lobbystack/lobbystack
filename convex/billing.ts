@@ -104,6 +104,9 @@ type OverageUsageQuantities = Pick<
 
 type OverageUsageKind = Exclude<BillingUsageKind, "ai_sms_segments">;
 
+const OVERAGE_EVENT_REPLAY_LIMIT = 2_048;
+const VOICE_CAP_RESERVATION_OVERAGE_SECONDS = 30 * 60;
+
 function getOverageSpendingCapCents(input: {
   plan: BillingPlanSlug;
   account: Doc<"billing_accounts"> | null;
@@ -226,6 +229,7 @@ async function getAccruedOverageRawSpendCents(
     businessId: Id<"businesses">;
     periodKey: string;
     fallbackPlan: BillingPlanSlug;
+    overflowSpendFloorCents: number | null;
   },
 ): Promise<number> {
   if (!billingPlanCatalog[input.fallbackPlan].overagesBillable) {
@@ -237,12 +241,21 @@ async function getAccruedOverageRawSpendCents(
     .withIndex("by_business_id_and_period_key", (q) =>
       q.eq("businessId", input.businessId).eq("periodKey", input.periodKey),
     )
-    .collect();
+    .take(OVERAGE_EVENT_REPLAY_LIMIT + 1);
 
-  return getAccruedOverageRawSpendCentsFromEvents({
-    events,
+  const replayEvents = events.slice(0, OVERAGE_EVENT_REPLAY_LIMIT);
+  const rawSpendCents = getAccruedOverageRawSpendCentsFromEvents({
+    events: replayEvents,
     fallbackPlan: input.fallbackPlan,
   });
+
+  if (events.length > OVERAGE_EVENT_REPLAY_LIMIT) {
+    return input.overflowSpendFloorCents === null
+      ? rawSpendCents
+      : Math.max(rawSpendCents, input.overflowSpendFloorCents);
+  }
+
+  return rawSpendCents;
 }
 
 async function getAccruedOverageRawSpendCentsForCap(
@@ -261,6 +274,7 @@ async function getAccruedOverageRawSpendCentsForCap(
     businessId: input.businessId,
     periodKey: input.periodKey,
     fallbackPlan: input.plan,
+    overflowSpendFloorCents: getOverageSpendingCapCents(input),
   });
 }
 
@@ -1473,6 +1487,41 @@ function reserveVoiceSecondsForStart(args: {
   }
 
   return args.usage.voiceSecondsRemaining;
+}
+
+function getVoiceCapReservationQuantity(input: {
+  plan: BillingPlanSlug;
+  account: Doc<"billing_accounts"> | null;
+  usage: ReturnType<typeof getBillingUsageSnapshotData>;
+  accruedOverageRawSpendCents: number;
+}): number | null {
+  const capCents = getOverageSpendingCapCents(input);
+  const includedSeconds = billingPlanCatalog[input.plan].voiceSecondsIncluded;
+  const rateCentsPerSecond = getPlanUsageKindRateCents({
+    plan: input.plan,
+    usageKind: "voice_seconds",
+  });
+  if (capCents === null || includedSeconds === null || rateCentsPerSecond <= 0) {
+    return null;
+  }
+
+  const includedSecondsRemaining = Math.max(
+    0,
+    includedSeconds - input.usage.voiceSecondsUsed,
+  );
+  const rawSpendRemainingCents = Math.max(
+    0,
+    capCents - input.accruedOverageRawSpendCents,
+  );
+  const overageSecondsToCap = Math.floor(
+    (rawSpendRemainingCents + 1e-9) / rateCentsPerSecond,
+  );
+  const overageSecondsToReserve = Math.min(
+    VOICE_CAP_RESERVATION_OVERAGE_SECONDS,
+    overageSecondsToCap,
+  );
+
+  return includedSecondsRemaining + overageSecondsToReserve;
 }
 
 function getPlatformAlertSmsSenderFromEnv(): string | null {
@@ -3185,6 +3234,10 @@ export const getStatus = query({
         businessId: args.businessId,
         periodKey: snapshot.periodKey,
         fallbackPlan: snapshot.plan,
+        overflowSpendFloorCents: getOverageSpendingCapCents({
+          plan: snapshot.plan,
+          account: snapshot.account,
+        }),
       }),
     );
     const aiSmsEnabled = isAiSmsEnabled({
@@ -3789,10 +3842,17 @@ export const reserveVoiceUsageAtCallStart = internalMutation({
       };
     }
 
-    const reserveQuantity = reserveVoiceSecondsForStart({
+    const includedUsageReservation = reserveVoiceSecondsForStart({
       plan: snapshot.plan,
       usage,
     });
+    const capExposureReservation = getVoiceCapReservationQuantity({
+      plan: snapshot.plan,
+      account: snapshot.account,
+      usage,
+      accruedOverageRawSpendCents,
+    });
+    const reserveQuantity = includedUsageReservation ?? capExposureReservation;
     if (reserveQuantity === null) {
       return {
         allowed: true,
@@ -3814,11 +3874,19 @@ export const reserveVoiceUsageAtCallStart = internalMutation({
       recordedAt: args.recordedAt,
     });
 
+    const isProvisionalPaidReservation =
+      includedUsageReservation === null && capExposureReservation !== null;
+    if (isProvisionalPaidReservation) {
+      await ctx.db.patch(usageResult.usageEventId, {
+        syncStatus: "skipped",
+      });
+    }
+
     return {
       allowed: true,
       errorCode: null,
       usageEventId: usageResult.usageEventId,
-      syncNeeded: usageResult.syncNeeded,
+      syncNeeded: isProvisionalPaidReservation ? false : usageResult.syncNeeded,
     };
   },
 });
