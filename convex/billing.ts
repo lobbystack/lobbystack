@@ -105,7 +105,6 @@ type OverageUsageQuantities = Pick<
 type OverageUsageKind = Exclude<BillingUsageKind, "ai_sms_segments">;
 
 const OVERAGE_EVENT_REPLAY_LIMIT = 2_048;
-const VOICE_CAP_RESERVATION_OVERAGE_SECONDS = 30 * 60;
 
 function getOverageSpendingCapCents(input: {
   plan: BillingPlanSlug;
@@ -1516,12 +1515,7 @@ function getVoiceCapReservationQuantity(input: {
   const overageSecondsToCap = Math.floor(
     (rawSpendRemainingCents + 1e-9) / rateCentsPerSecond,
   );
-  const overageSecondsToReserve = Math.min(
-    VOICE_CAP_RESERVATION_OVERAGE_SECONDS,
-    overageSecondsToCap,
-  );
-
-  return includedSecondsRemaining + overageSecondsToReserve;
+  return includedSecondsRemaining + overageSecondsToCap;
 }
 
 function getPlatformAlertSmsSenderFromEnv(): string | null {
