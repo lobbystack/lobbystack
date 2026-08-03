@@ -171,29 +171,6 @@ function getPlanUsageKindRateCents(input: {
   }
 }
 
-function getUsageSnapshotOverageRawSpendCents(input: {
-  plan: BillingPlanSlug;
-  usage: Partial<OverageUsageQuantities> | null;
-}): number {
-  return (
-    getPlanUsageKindOverageRawSpendCents({
-      plan: input.plan,
-      usageKind: "voice_seconds",
-      quantity: getUsageQuantityForKind(input.usage, "voice_seconds"),
-    }) +
-    getPlanUsageKindOverageRawSpendCents({
-      plan: input.plan,
-      usageKind: "alert_sms_segments",
-      quantity: getUsageQuantityForKind(input.usage, "alert_sms_segments"),
-    }) +
-    getPlanUsageKindOverageRawSpendCents({
-      plan: input.plan,
-      usageKind: "outbound_call_attempts",
-      quantity: getUsageQuantityForKind(input.usage, "outbound_call_attempts"),
-    })
-  );
-}
-
 function getAccruedOverageRawSpendCentsFromEvents(input: {
   events: Array<Doc<"billing_usage_events">>;
   fallbackPlan: BillingPlanSlug;
@@ -260,10 +237,11 @@ async function getAccruedOverageRawSpendCents(
 
   const events = await ctx.db
     .query("billing_usage_events")
-    .withIndex("by_business_id_and_period_key", (q) =>
+    .withIndex("by_business_id_and_period_key_and_usage_kind", (q) =>
       q
         .eq("businessId", input.businessId)
-        .eq("periodKey", input.periodKey),
+        .eq("periodKey", input.periodKey)
+        .gt("usageKind", "ai_sms_segments"),
     )
     .take(OVERAGE_EVENT_REPLAY_LIMIT + 1);
 
@@ -274,29 +252,6 @@ async function getAccruedOverageRawSpendCents(
   });
 
   if (events.length > OVERAGE_EVENT_REPLAY_LIMIT) {
-    // The usage-kind index is staged and cannot be queried yet. When excluded
-    // AI SMS rows make replay ambiguous, use the bounded monthly usage aggregate
-    // so later capped usage still reaches the cap without scanning the ledger.
-    if (events.some((event) => event.usageKind === "ai_sms_segments")) {
-      const usage = await getBillingUsageMonth(ctx, {
-        businessId: input.businessId,
-        periodKey: input.periodKey,
-      });
-      const fallbackRawSpendCents = Math.max(
-        rawSpendCents,
-        getUsageSnapshotOverageRawSpendCents({
-          plan: input.fallbackPlan,
-          usage,
-        }),
-      );
-      if (
-        input.overflowSpendFloorCents !== null &&
-        fallbackRawSpendCents > 0
-      ) {
-        return Math.max(fallbackRawSpendCents, input.overflowSpendFloorCents);
-      }
-      return fallbackRawSpendCents;
-    }
     return input.overflowSpendFloorCents === null
       ? rawSpendCents
       : Math.max(rawSpendCents, input.overflowSpendFloorCents);

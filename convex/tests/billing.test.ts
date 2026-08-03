@@ -2566,7 +2566,7 @@ describe("billing", () => {
     });
   });
 
-  it("uses monthly capped usage after AI replay overflow", async () => {
+  it("excludes AI SMS events from the capped overage replay window", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId } = await seedWorkspace(t, {
       subject: "billing-ai-sms-replay-overflow",
@@ -2625,19 +2625,6 @@ describe("billing", () => {
         recordedAt: "2026-04-12T15:01:00.000Z",
         syncStatus: "skipped",
       });
-      const usage = await ctx.db
-        .query("billing_usage_months")
-        .withIndex("by_business_id_and_period_key", (q) =>
-          q.eq("businessId", businessId).eq("periodKey", "2026-04"),
-        )
-        .unique();
-      if (!usage) {
-        throw new Error("Expected billing usage month to exist.");
-      }
-      await ctx.db.patch(usage._id, {
-        voiceSecondsUsed: 66_000,
-        lastRecordedAt: "2026-04-12T15:01:00.000Z",
-      });
     });
 
     expect(
@@ -2648,7 +2635,73 @@ describe("billing", () => {
     });
     await expect(
       authed.query(api.billing.getStatus, { businessId }),
-    ).resolves.toMatchObject({ overageSpendCents: 10_800 });
+    ).resolves.toMatchObject({ overageSpendCents: 1_800 });
+  });
+
+  it("preserves historical plan pricing after AI replay overflow", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-ai-sms-overflow-plan-upgrade",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+        activeAddons: ["ai_sms"],
+        billingInterval: "monthly",
+        overageSpendingCapCents: 41,
+      });
+      await ctx.db.insert("billing_usage_months", {
+        businessId,
+        periodKey: "2026-04",
+        planAtSnapshot: "starter",
+        voiceSecondsUsed: 9_060,
+        voiceSecondsIncluded: 9_000,
+        voiceBlocked: false,
+        lastRecordedAt: "2026-04-12T15:01:00.000Z",
+      });
+      for (let index = 0; index < 2_049; index += 1) {
+        await ctx.db.insert("billing_usage_events", {
+          businessId,
+          periodKey: "2026-04",
+          sourceKey: `ai_sms:plan-upgrade-overflow-${index}`,
+          usageKind: "ai_sms_segments",
+          quantity: 1,
+          planAtRecordTime: "starter",
+          activeAddonsAtRecordTime: ["ai_sms"],
+          recordedAt: "2026-04-12T15:00:00.000Z",
+          syncStatus: "skipped",
+        });
+      }
+      await ctx.db.insert("billing_usage_events", {
+        businessId,
+        periodKey: "2026-04",
+        sourceKey: "voice:starter-overage-before-pro-upgrade",
+        usageKind: "voice_seconds",
+        quantity: 9_060,
+        planAtRecordTime: "starter",
+        recordedAt: "2026-04-12T15:01:00.000Z",
+        syncStatus: "skipped",
+      });
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!account) {
+        throw new Error("Expected billing account to exist.");
+      }
+      await ctx.db.patch(account._id, { currentPlan: "pro" });
+    });
+
+    await expect(
+      authed.query(api.billing.getStatus, { businessId }),
+    ).resolves.toMatchObject({
+      plan: "pro",
+      overageSpendCents: 20,
+      overageSpendingCapReached: false,
+    });
   });
 
   it("allows Pro alert SMS reservations after included segments are exhausted", async () => {
