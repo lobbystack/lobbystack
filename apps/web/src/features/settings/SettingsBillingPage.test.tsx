@@ -14,9 +14,11 @@ import {
   SettingsBillingCompliancePage,
   SettingsBillingPage,
   SettingsBillingUsagePage,
+  parseCapInputToCents,
 } from "./SettingsBillingPage";
 
 const {
+  billingLocaleMock,
   locationAssignMock,
   openPortalMock,
   refreshCheckoutStatusMock,
@@ -31,6 +33,7 @@ const {
   useActionMock,
   useMutationMock,
 } = vi.hoisted(() => ({
+  billingLocaleMock: { value: "en" },
   locationAssignMock: vi.fn(),
   openPortalMock: vi.fn(),
   refreshCheckoutStatusMock: vi.fn(),
@@ -61,8 +64,8 @@ vi.mock("convex/react", () => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     i18n: {
-      resolvedLanguage: "en",
-      language: "en",
+      resolvedLanguage: billingLocaleMock.value,
+      language: billingLocaleMock.value,
     },
     t: (key: string, options?: Record<string, unknown>) => {
       if (
@@ -396,6 +399,7 @@ function renderBillingCompliancePage(input: {
 
 describe("SettingsBillingPage AI SMS add-on", () => {
   beforeEach(() => {
+    billingLocaleMock.value = "en";
     startCheckoutMock.mockReset();
     openPortalMock.mockReset();
     refreshCheckoutStatusMock.mockReset();
@@ -905,8 +909,19 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     expect(screen.queryByText("billing.spendingCap.title")).toBeNull();
   });
 
+  it("does not interpret English grouping as a decimal separator", () => {
+    expect(parseCapInputToCents("1,000", "en")).toBeNull();
+    expect(parseCapInputToCents("1000.00", "en")).toBe(100_000);
+  });
+
+  it("accepts the French decimal separator while rejecting grouping", () => {
+    expect(parseCapInputToCents("40,50", "fr")).toBe(4_050);
+    expect(parseCapInputToCents("1\u202f000,00", "fr")).toBeNull();
+  });
+
   it("saves and removes a localized monthly overage cap", async () => {
     const user = userEvent.setup();
+    billingLocaleMock.value = "fr";
     setOverageSpendingCapMock.mockResolvedValue({
       overageSpendingCapCents: 4_050,
     });
@@ -920,7 +935,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     });
 
     const input = screen.getByLabelText("billing.spendingCap.amountLabel");
-    expect((input as HTMLInputElement).value).toBe("25.00");
+    expect((input as HTMLInputElement).value).toBe("25,00");
     await user.clear(input);
     await user.type(input, "40,50");
     await user.click(screen.getByRole("button", { name: "billing.spendingCap.save" }));

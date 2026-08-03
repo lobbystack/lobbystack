@@ -386,8 +386,41 @@ function formatCapInput(cents: number | null, locale: BillingLocale): string {
   return (cents / 100).toFixed(2).replace(".", decimalSeparator);
 }
 
-function parseCapInputToCents(value: string): number | null {
-  const normalized = value.trim().replace(",", ".");
+export function parseCapInputToCents(
+  value: string,
+  locale: BillingLocale,
+): number | null {
+  const input = value.trim();
+  if (input.length === 0) {
+    return null;
+  }
+
+  const numberParts = new Intl.NumberFormat(locale).formatToParts(1000.1);
+  const decimalSeparator =
+    numberParts.find((part) => part.type === "decimal")?.value ?? ".";
+  const groupingSeparator = numberParts.find(
+    (part) => part.type === "group",
+  )?.value;
+
+  // Grouping is intentionally rejected rather than inferred. This keeps an
+  // English value such as "1,000" from being interpreted as "1.00" while
+  // still allowing the active locale's decimal separator.
+  if (groupingSeparator && input.includes(groupingSeparator)) {
+    return null;
+  }
+
+  let normalized = input;
+  if (decimalSeparator === ".") {
+    if (input.includes(",")) {
+      return null;
+    }
+  } else {
+    if (input.includes(".")) {
+      return null;
+    }
+    normalized = input.replace(decimalSeparator, ".");
+  }
+
   if (!/^\d+(?:\.\d{0,2})?$/.test(normalized)) {
     return null;
   }
@@ -2316,7 +2349,7 @@ function SpendingCapSection({
         : Math.min(100, (spendCents / capCents) * 100);
 
   async function saveCap() {
-    const capCents = parseCapInputToCents(capInput);
+    const capCents = parseCapInputToCents(capInput, locale);
     if (capCents === null) {
       toast.error(t("billing.spendingCap.invalidAmount"));
       return;
