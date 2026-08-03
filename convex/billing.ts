@@ -237,8 +237,11 @@ async function getAccruedOverageRawSpendCents(
 
   const events = await ctx.db
     .query("billing_usage_events")
-    .withIndex("by_business_id_and_period_key", (q) =>
-      q.eq("businessId", input.businessId).eq("periodKey", input.periodKey),
+    .withIndex("by_business_id_and_period_key_and_usage_kind", (q) =>
+      q
+        .eq("businessId", input.businessId)
+        .eq("periodKey", input.periodKey)
+        .gt("usageKind", "ai_sms_segments"),
     )
     .take(OVERAGE_EVENT_REPLAY_LIMIT + 1);
 

@@ -2566,6 +2566,52 @@ describe("billing", () => {
     });
   });
 
+  it("excludes AI SMS events from the capped overage replay window", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-ai-sms-replay-overflow",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        activeAddons: ["ai_sms"],
+        overageSpendingCapCents: 18,
+      });
+      await ctx.db.insert("billing_usage_months", {
+        businessId,
+        periodKey: "2026-04",
+        planAtSnapshot: "pro",
+        voiceSecondsUsed: 30_000,
+        voiceSecondsIncluded: 30_000,
+        voiceBlocked: false,
+        lastRecordedAt: "2026-04-12T15:00:00.000Z",
+      });
+      for (let index = 0; index < 2_049; index += 1) {
+        await ctx.db.insert("billing_usage_events", {
+          businessId,
+          periodKey: "2026-04",
+          sourceKey: `ai_sms:replay-overflow-${index}`,
+          usageKind: "ai_sms_segments",
+          quantity: 1,
+          planAtRecordTime: "pro",
+          activeAddonsAtRecordTime: ["ai_sms"],
+          recordedAt: "2026-04-12T15:00:00.000Z",
+          syncStatus: "skipped",
+        });
+      }
+    });
+
+    expect(
+      await t.query(internal.billing.assertVoiceCanStart, { businessId }),
+    ).toEqual({
+      allowed: true,
+      errorCode: null,
+    });
+  });
+
   it("allows Pro alert SMS reservations after included segments are exhausted", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId } = await seedWorkspace(t, {
