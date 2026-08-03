@@ -237,15 +237,11 @@ async function getAccruedOverageRawSpendCents(
 
   const events = await ctx.db
     .query("billing_usage_events")
-    // Keep this on the existing index while the usage-kind index is staged for
-    // its production backfill. Filtering before take preserves AI SMS replay
-    // correctness without querying an index that is not enabled yet.
     .withIndex("by_business_id_and_period_key", (q) =>
       q
         .eq("businessId", input.businessId)
         .eq("periodKey", input.periodKey),
     )
-    .filter((q) => q.neq(q.field("usageKind"), "ai_sms_segments"))
     .take(OVERAGE_EVENT_REPLAY_LIMIT + 1);
 
   const replayEvents = events.slice(0, OVERAGE_EVENT_REPLAY_LIMIT);
@@ -255,6 +251,12 @@ async function getAccruedOverageRawSpendCents(
   });
 
   if (events.length > OVERAGE_EVENT_REPLAY_LIMIT) {
+    // The usage-kind index is staged and cannot be queried yet. If excluded AI
+    // SMS rows make this bounded fallback ambiguous, defer cap enforcement for
+    // the period instead of scanning past Convex's transaction read limit.
+    if (events.some((event) => event.usageKind === "ai_sms_segments")) {
+      return 0;
+    }
     return input.overflowSpendFloorCents === null
       ? rawSpendCents
       : Math.max(rawSpendCents, input.overflowSpendFloorCents);

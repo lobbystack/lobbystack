@@ -2566,7 +2566,7 @@ describe("billing", () => {
     });
   });
 
-  it("excludes AI SMS events from the capped overage replay window", async () => {
+  it("defers ambiguous capped replay while the usage-kind index is staged", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId } = await seedWorkspace(t, {
       subject: "billing-ai-sms-replay-overflow",
@@ -2630,12 +2630,12 @@ describe("billing", () => {
     expect(
       await t.query(internal.billing.assertVoiceCanStart, { businessId }),
     ).toEqual({
-      allowed: false,
-      errorCode: "voice_limit_reached",
+      allowed: true,
+      errorCode: null,
     });
     await expect(
       authed.query(api.billing.getStatus, { businessId }),
-    ).resolves.toMatchObject({ overageSpendCents: 1_800 });
+    ).resolves.toMatchObject({ overageSpendCents: 0 });
   });
 
   it("allows Pro alert SMS reservations after included segments are exhausted", async () => {
