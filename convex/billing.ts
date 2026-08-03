@@ -171,6 +171,29 @@ function getPlanUsageKindRateCents(input: {
   }
 }
 
+function getUsageSnapshotOverageRawSpendCents(input: {
+  plan: BillingPlanSlug;
+  usage: Partial<OverageUsageQuantities> | null;
+}): number {
+  return (
+    getPlanUsageKindOverageRawSpendCents({
+      plan: input.plan,
+      usageKind: "voice_seconds",
+      quantity: getUsageQuantityForKind(input.usage, "voice_seconds"),
+    }) +
+    getPlanUsageKindOverageRawSpendCents({
+      plan: input.plan,
+      usageKind: "alert_sms_segments",
+      quantity: getUsageQuantityForKind(input.usage, "alert_sms_segments"),
+    }) +
+    getPlanUsageKindOverageRawSpendCents({
+      plan: input.plan,
+      usageKind: "outbound_call_attempts",
+      quantity: getUsageQuantityForKind(input.usage, "outbound_call_attempts"),
+    })
+  );
+}
+
 function getAccruedOverageRawSpendCentsFromEvents(input: {
   events: Array<Doc<"billing_usage_events">>;
   fallbackPlan: BillingPlanSlug;
@@ -251,11 +274,28 @@ async function getAccruedOverageRawSpendCents(
   });
 
   if (events.length > OVERAGE_EVENT_REPLAY_LIMIT) {
-    // The usage-kind index is staged and cannot be queried yet. If excluded AI
-    // SMS rows make this bounded fallback ambiguous, defer cap enforcement for
-    // the period instead of scanning past Convex's transaction read limit.
+    // The usage-kind index is staged and cannot be queried yet. When excluded
+    // AI SMS rows make replay ambiguous, use the bounded monthly usage aggregate
+    // so later capped usage still reaches the cap without scanning the ledger.
     if (events.some((event) => event.usageKind === "ai_sms_segments")) {
-      return 0;
+      const usage = await getBillingUsageMonth(ctx, {
+        businessId: input.businessId,
+        periodKey: input.periodKey,
+      });
+      const fallbackRawSpendCents = Math.max(
+        rawSpendCents,
+        getUsageSnapshotOverageRawSpendCents({
+          plan: input.fallbackPlan,
+          usage,
+        }),
+      );
+      if (
+        input.overflowSpendFloorCents !== null &&
+        fallbackRawSpendCents > 0
+      ) {
+        return Math.max(fallbackRawSpendCents, input.overflowSpendFloorCents);
+      }
+      return fallbackRawSpendCents;
     }
     return input.overflowSpendFloorCents === null
       ? rawSpendCents

@@ -2566,7 +2566,7 @@ describe("billing", () => {
     });
   });
 
-  it("defers ambiguous capped replay while the usage-kind index is staged", async () => {
+  it("uses monthly capped usage after AI replay overflow", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId } = await seedWorkspace(t, {
       subject: "billing-ai-sms-replay-overflow",
@@ -2625,17 +2625,30 @@ describe("billing", () => {
         recordedAt: "2026-04-12T15:01:00.000Z",
         syncStatus: "skipped",
       });
+      const usage = await ctx.db
+        .query("billing_usage_months")
+        .withIndex("by_business_id_and_period_key", (q) =>
+          q.eq("businessId", businessId).eq("periodKey", "2026-04"),
+        )
+        .unique();
+      if (!usage) {
+        throw new Error("Expected billing usage month to exist.");
+      }
+      await ctx.db.patch(usage._id, {
+        voiceSecondsUsed: 66_000,
+        lastRecordedAt: "2026-04-12T15:01:00.000Z",
+      });
     });
 
     expect(
       await t.query(internal.billing.assertVoiceCanStart, { businessId }),
     ).toEqual({
-      allowed: true,
-      errorCode: null,
+      allowed: false,
+      errorCode: "voice_limit_reached",
     });
     await expect(
       authed.query(api.billing.getStatus, { businessId }),
-    ).resolves.toMatchObject({ overageSpendCents: 0 });
+    ).resolves.toMatchObject({ overageSpendCents: 10_800 });
   });
 
   it("allows Pro alert SMS reservations after included segments are exhausted", async () => {
