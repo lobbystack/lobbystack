@@ -298,6 +298,10 @@ export type BillingStatus = {
   aiSmsEnabled: boolean;
   aiSmsReady: boolean;
   overagesBillable: boolean;
+  overageSpendingCapCents: number | null;
+  overageSpendCents: number;
+  overageSpendCentsComplete: boolean;
+  overageSpendingCapReached: boolean;
   monthlyChargeCents: number | null;
   billingPeriodChargeCents: number | null;
   billingContactEmail: string | null;

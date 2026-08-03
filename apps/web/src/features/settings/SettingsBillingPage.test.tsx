@@ -14,15 +14,18 @@ import {
   SettingsBillingCompliancePage,
   SettingsBillingPage,
   SettingsBillingUsagePage,
+  parseCapInputToCents,
 } from "./SettingsBillingPage";
 
 const {
+  billingLocaleMock,
   locationAssignMock,
   openPortalMock,
   refreshCheckoutStatusMock,
   refreshStatusMock,
   resumeRegistrationMock,
   saveComplianceFormMock,
+  setOverageSpendingCapMock,
   startCheckoutMock,
   startRegistrationMock,
   toastErrorMock,
@@ -30,12 +33,14 @@ const {
   useActionMock,
   useMutationMock,
 } = vi.hoisted(() => ({
+  billingLocaleMock: { value: "en" },
   locationAssignMock: vi.fn(),
   openPortalMock: vi.fn(),
   refreshCheckoutStatusMock: vi.fn(),
   refreshStatusMock: vi.fn(),
   resumeRegistrationMock: vi.fn(),
   saveComplianceFormMock: vi.fn(),
+  setOverageSpendingCapMock: vi.fn(),
   startCheckoutMock: vi.fn(),
   startRegistrationMock: vi.fn(),
   toastErrorMock: vi.fn(),
@@ -59,8 +64,8 @@ vi.mock("convex/react", () => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     i18n: {
-      resolvedLanguage: "en",
-      language: "en",
+      resolvedLanguage: billingLocaleMock.value,
+      language: billingLocaleMock.value,
     },
     t: (key: string, options?: Record<string, unknown>) => {
       if (
@@ -115,6 +120,10 @@ function buildStatus(overrides: Partial<BillingStatus> = {}): BillingStatus {
     aiSmsEnabled: false,
     aiSmsReady: false,
     overagesBillable: false,
+    overageSpendingCapCents: null,
+    overageSpendCents: 0,
+    overageSpendCentsComplete: true,
+    overageSpendingCapReached: false,
     monthlyChargeCents: 0,
     billingPeriodChargeCents: 0,
     billingContactEmail: null,
@@ -391,10 +400,12 @@ function renderBillingCompliancePage(input: {
 
 describe("SettingsBillingPage AI SMS add-on", () => {
   beforeEach(() => {
+    billingLocaleMock.value = "en";
     startCheckoutMock.mockReset();
     openPortalMock.mockReset();
     refreshCheckoutStatusMock.mockReset();
     saveComplianceFormMock.mockReset();
+    setOverageSpendingCapMock.mockReset();
     startRegistrationMock.mockReset();
     resumeRegistrationMock.mockReset();
     refreshStatusMock.mockReset();
@@ -448,8 +459,12 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     });
 
     useMutationMock.mockImplementation((reference: unknown) => {
-      if (getFunctionName(reference as never) === "smsCompliance:saveComplianceForm") {
+      const functionName = getFunctionName(reference as never);
+      if (functionName === "smsCompliance:saveComplianceForm") {
         return saveComplianceFormMock;
+      }
+      if (functionName === "billing:setOverageSpendingCap") {
+        return setOverageSpendingCapMock;
       }
 
       throw new Error(`Unexpected mutation reference in SettingsBillingPage test.`);
@@ -877,6 +892,113 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     expect(screen.getByText("200 billing.currentPlan.includedSmsLabel")).toBeTruthy();
     expect(screen.getByText("500 MB billing.currentPlan.includedStorageLabel")).toBeTruthy();
     expect(screen.getByRole("button", { name: "billing.actions.manageSubscription" })).toBeTruthy();
+  });
+
+  it("shows the overage cap controls for Starter and Pro only", () => {
+    const { unmount } = renderBillingPage({
+      status: buildStatus({
+        plan: "starter",
+        overagesBillable: true,
+      }),
+    });
+
+    expect(screen.getByText("billing.spendingCap.title")).toBeTruthy();
+    expect(screen.getByLabelText("billing.spendingCap.amountLabel")).toBeTruthy();
+
+    unmount();
+    renderBillingPage({ status: buildStatus({ plan: "enterprise" }) });
+    expect(screen.queryByText("billing.spendingCap.title")).toBeNull();
+  });
+
+  it("labels an overflowed overage spend as a lower bound", () => {
+    renderBillingPage({
+      status: buildStatus({
+        plan: "pro",
+        overagesBillable: true,
+        overageSpendingCapCents: 1_000,
+        overageSpendCents: 500,
+        overageSpendCentsComplete: false,
+      }),
+    });
+
+    expect(screen.getByText("billing.spendingCap.spendAtLeastOfCap")).toBeTruthy();
+    expect(screen.queryByText("billing.spendingCap.spendOfCap")).toBeNull();
+  });
+
+  it("does not interpret English grouping as a decimal separator", () => {
+    expect(parseCapInputToCents("1,000", "en")).toBeNull();
+    expect(parseCapInputToCents("1000.00", "en")).toBe(100_000);
+  });
+
+  it("accepts the French decimal separator while rejecting grouping", () => {
+    expect(parseCapInputToCents("40,50", "fr")).toBe(4_050);
+    expect(parseCapInputToCents("1\u202f000,00", "fr")).toBeNull();
+  });
+
+  it("saves and removes a localized monthly overage cap", async () => {
+    const user = userEvent.setup();
+    billingLocaleMock.value = "fr";
+    setOverageSpendingCapMock.mockResolvedValue({
+      overageSpendingCapCents: 4_050,
+    });
+    renderBillingPage({
+      status: buildStatus({
+        plan: "pro",
+        overagesBillable: true,
+        overageSpendingCapCents: 2_500,
+        overageSpendCents: 500,
+      }),
+    });
+
+    const input = screen.getByLabelText("billing.spendingCap.amountLabel");
+    expect((input as HTMLInputElement).value).toBe("25,00");
+    await user.clear(input);
+    await user.type(input, "40,50");
+    await user.click(screen.getByRole("button", { name: "billing.spendingCap.save" }));
+
+    expect(setOverageSpendingCapMock).toHaveBeenCalledWith({
+      businessId,
+      capCents: 4_050,
+    });
+    expect(toastSuccessMock).toHaveBeenCalledWith("billing.spendingCap.saved");
+
+    setOverageSpendingCapMock.mockResolvedValue({
+      overageSpendingCapCents: null,
+    });
+    await user.click(screen.getByRole("button", { name: "billing.spendingCap.remove" }));
+    expect(setOverageSpendingCapMock).toHaveBeenLastCalledWith({
+      businessId,
+      capCents: null,
+    });
+    expect(toastSuccessMock).toHaveBeenCalledWith("billing.spendingCap.removed");
+  });
+
+  it("rejects malformed cap amounts and keeps controls read-only for members", async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderBillingPage({
+      status: buildStatus({
+        plan: "starter",
+        overagesBillable: true,
+      }),
+    });
+
+    const input = screen.getByLabelText("billing.spendingCap.amountLabel");
+    await user.type(input, "12.345");
+    await user.click(screen.getByRole("button", { name: "billing.spendingCap.save" }));
+    expect(setOverageSpendingCapMock).not.toHaveBeenCalled();
+    expect(toastErrorMock).toHaveBeenCalledWith("billing.spendingCap.invalidAmount");
+
+    unmount();
+    renderBillingPage({
+      status: buildStatus({
+        plan: "starter",
+        overagesBillable: true,
+        hasBillingManagementAccess: false,
+        overageSpendingCapCents: 1_000,
+      }),
+    });
+    expect(screen.queryByLabelText("billing.spendingCap.amountLabel")).toBeNull();
+    expect(screen.getByText("billing.spendingCap.adminOnly")).toBeTruthy();
   });
 
   it("hides portal access for free workspaces without a subscription", () => {

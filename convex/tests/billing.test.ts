@@ -294,6 +294,7 @@ async function seedBillingAccount(
     proSubscriptionId?: string;
     proSubscriptionProductId?: string;
     proSubscriptionPriceId?: string;
+    overageSpendingCapCents?: number;
   },
 ): Promise<void> {
   await ctx.db.insert("billing_accounts", {
@@ -315,6 +316,9 @@ async function seedBillingAccount(
       : {}),
     ...(input.proSubscriptionPriceId
       ? { proSubscriptionPriceId: input.proSubscriptionPriceId }
+      : {}),
+    ...(input.overageSpendingCapCents !== undefined
+      ? { overageSpendingCapCents: input.overageSpendingCapCents }
       : {}),
     lastSyncedAt: "2026-04-12T12:00:00.000Z",
   });
@@ -2007,6 +2011,744 @@ describe("billing", () => {
     });
   });
 
+  it("lets billing admins set, update, and remove Starter and Pro overage caps", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-overage-cap-settings",
+      deploymentMode: "cloud",
+    });
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+      });
+    });
+
+    await expect(
+      authed.mutation(api.billing.setOverageSpendingCap, {
+        businessId,
+        capCents: 0,
+      }),
+    ).resolves.toEqual({ overageSpendingCapCents: 0 });
+    expect(await authed.query(api.billing.getStatus, { businessId })).toMatchObject({
+      overageSpendingCapCents: 0,
+      overageSpendCents: 0,
+      overageSpendingCapReached: true,
+    });
+
+    await expect(
+      authed.mutation(api.billing.setOverageSpendingCap, {
+        businessId,
+        capCents: 2_500,
+      }),
+    ).resolves.toEqual({ overageSpendingCapCents: 2_500 });
+    vi.setSystemTime(new Date("2026-05-01T12:00:00.000Z"));
+    expect(await authed.query(api.billing.getStatus, { businessId })).toMatchObject({
+      overageSpendingCapCents: 2_500,
+      overageSpendCents: 0,
+      overageSpendingCapReached: false,
+      usage: { periodKey: "2026-05" },
+    });
+    await expect(
+      authed.mutation(api.billing.setOverageSpendingCap, {
+        businessId,
+        capCents: null,
+      }),
+    ).resolves.toEqual({ overageSpendingCapCents: null });
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.overageSpendingCapCents).toBeUndefined();
+  });
+
+  it("rejects invalid, unauthorized, and ineligible overage cap changes", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-overage-cap-viewer",
+      deploymentMode: "cloud",
+      role: "viewer",
+    });
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+      });
+    });
+
+    await expect(
+      authed.mutation(api.billing.setOverageSpendingCap, {
+        businessId,
+        capCents: 100,
+      }),
+    ).rejects.toThrow("Billing management requires admin access.");
+
+    const { authed: freeAuthed, businessId: freeBusinessId } = await seedWorkspace(t, {
+      subject: "billing-overage-cap-free",
+      deploymentMode: "cloud",
+    });
+    await expect(
+      freeAuthed.mutation(api.billing.setOverageSpendingCap, {
+        businessId: freeBusinessId,
+        capCents: 100,
+      }),
+    ).rejects.toThrow("available on Starter and Pro plans");
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId: freeBusinessId,
+        currentPlan: "starter",
+      });
+    });
+    await expect(
+      freeAuthed.mutation(api.billing.setOverageSpendingCap, {
+        businessId: freeBusinessId,
+        capCents: 1.5,
+      }),
+    ).rejects.toThrow("non-negative whole number of cents");
+  });
+
+  it("enforces one shared plan-overage cap while preserving included and AI SMS usage", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-shared-overage-cap",
+      deploymentMode: "cloud",
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        activeAddons: ["ai_sms"],
+        billingInterval: "annual",
+        overageSpendingCapCents: 2,
+      });
+      return await seedUsageAnchors(ctx, { businessId });
+    });
+
+    await t.mutation(internal.billing.recordAlertSmsUsage, {
+      businessId,
+      notificationId: anchors.notificationId,
+      quantity: 200,
+      recordedAt: "2026-04-12T15:00:00.000Z",
+    });
+    const exactCap = await t.mutation(internal.billing.reserveAlertSmsUsage, {
+      businessId,
+      sourceKey: "alert_sms:cap-exact",
+      estimatedSegments: 1,
+      recordedAt: "2026-04-12T15:01:00.000Z",
+    });
+    const aboveCap = await t.mutation(internal.billing.reserveAlertSmsUsage, {
+      businessId,
+      sourceKey: "alert_sms:cap-over",
+      estimatedSegments: 1,
+      recordedAt: "2026-04-12T15:02:00.000Z",
+    });
+    const includedOutbound = await t.mutation(
+      internal.billing.reserveOutboundCallAttemptUsage,
+      {
+        businessId,
+        callId: anchors.callId,
+        recordedAt: "2026-04-12T15:03:00.000Z",
+      },
+    );
+    await t.mutation(internal.billing.recordAiSmsUsage, {
+      businessId,
+      messageId: anchors.messageId,
+      quantity: 25,
+      recordedAt: "2026-04-12T15:04:00.000Z",
+    });
+
+    const status = await authed.query(api.billing.getStatus, { businessId });
+    const voicePolicy = await t.query(internal.billing.assertVoiceCanStart, {
+      businessId,
+    });
+    const rejectedEvent = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_source_key", (q) =>
+          q.eq("businessId", businessId).eq("sourceKey", "alert_sms:cap-over"),
+        )
+        .unique();
+    });
+
+    expect(exactCap).toMatchObject({ allowed: true, errorCode: null });
+    expect(aboveCap).toEqual({
+      allowed: false,
+      errorCode: "alert_sms_limit_reached",
+    });
+    expect(includedOutbound).toMatchObject({ allowed: true, errorCode: null });
+    expect(rejectedEvent).toBeNull();
+    expect(status).toMatchObject({
+      overageSpendingCapCents: 2,
+      overageSpendCents: 2,
+      overageSpendingCapReached: true,
+      usage: {
+        alertSmsSegmentsUsed: 201,
+        aiSmsSegmentsUsed: 25,
+        alertSmsBlocked: true,
+        voiceBlocked: false,
+        outboundCallAttemptsBlocked: false,
+      },
+    });
+    expect(voicePolicy).toEqual({ allowed: true, errorCode: null });
+  });
+
+  it("preserves corrected Starter spend and cap projections after upgrading to Pro", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-overage-cap-plan-upgrade",
+      deploymentMode: "cloud",
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+        billingInterval: "monthly",
+        overageSpendingCapCents: 41,
+      });
+      return await seedUsageAnchors(ctx, { businessId });
+    });
+
+    await t.mutation(internal.billing.recordVoiceUsage, {
+      businessId,
+      callId: anchors.callId,
+      quantity: 9_060,
+      recordedAt: "2026-04-12T15:00:00.000Z",
+    });
+    expect(await authed.query(api.billing.getStatus, { businessId })).toMatchObject({
+      plan: "starter",
+      overageSpendCents: 20,
+      overageSpendingCapReached: false,
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!account) {
+        throw new Error("Expected billing account to exist.");
+      }
+      await ctx.db.patch(account._id, { currentPlan: "pro" });
+    });
+    await t.mutation(internal.billing.recordVoiceUsage, {
+      businessId,
+      callId: anchors.callId,
+      quantity: 9_120,
+      recordedAt: "2026-04-12T15:00:30.000Z",
+    });
+    await t.mutation(internal.billing.recordAlertSmsUsage, {
+      businessId,
+      notificationId: anchors.notificationId,
+      quantity: 200,
+      recordedAt: "2026-04-12T15:01:00.000Z",
+    });
+
+    expect(await authed.query(api.billing.getStatus, { businessId })).toMatchObject({
+      plan: "pro",
+      overageSpendingCapCents: 41,
+      overageSpendCents: 40,
+      overageSpendingCapReached: false,
+      usage: {
+        voiceSecondsUsed: 9_120,
+        alertSmsSegmentsUsed: 200,
+      },
+    });
+    await expect(
+      t.mutation(internal.billing.reserveAlertSmsUsage, {
+        businessId,
+        sourceKey: "alert_sms:after-pro-upgrade",
+        estimatedSegments: 1,
+        recordedAt: "2026-04-12T15:02:00.000Z",
+      }),
+    ).resolves.toEqual({
+      allowed: false,
+      errorCode: "alert_sms_limit_reached",
+    });
+
+    const usageEvents = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_period_key", (q) =>
+          q.eq("businessId", businessId).eq("periodKey", "2026-04"),
+        )
+        .collect();
+    });
+    expect(usageEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          usageKind: "voice_seconds",
+          planAtRecordTime: "starter",
+          billingIntervalAtRecordTime: "monthly",
+          billableQuantity: 9_120,
+        }),
+        expect.objectContaining({
+          usageKind: "alert_sms_segments",
+          planAtRecordTime: "pro",
+          billableQuantity: 200,
+        }),
+      ]),
+    );
+    expect(
+      usageEvents.find((event) => event.sourceKey === "alert_sms:after-pro-upgrade"),
+    ).toBeUndefined();
+  });
+
+  it("replays later Pro overage after correcting an earlier Starter event", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-overage-plan-upgrade-earlier-correction",
+      deploymentMode: "cloud",
+    });
+    const { starterCallId, proCallId } = await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+        billingInterval: "monthly",
+      });
+      const starterAnchors = await seedUsageAnchors(ctx, { businessId });
+      const proAnchors = await seedUsageAnchors(ctx, { businessId });
+      return {
+        starterCallId: starterAnchors.callId,
+        proCallId: proAnchors.callId,
+      };
+    });
+
+    await t.mutation(internal.billing.recordVoiceUsage, {
+      businessId,
+      callId: starterCallId,
+      quantity: 8_000,
+      recordedAt: "2026-04-12T15:00:00.000Z",
+    });
+    await t.run(async (ctx: TestContext) => {
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!account) {
+        throw new Error("Expected billing account to exist.");
+      }
+      await ctx.db.patch(account._id, { currentPlan: "pro" });
+    });
+    await t.mutation(internal.billing.recordVoiceUsage, {
+      businessId,
+      callId: proCallId,
+      quantity: 22_000,
+      recordedAt: "2026-04-12T15:01:00.000Z",
+    });
+    await t.mutation(internal.billing.recordVoiceUsage, {
+      businessId,
+      callId: starterCallId,
+      quantity: 9_000,
+      recordedAt: "2026-04-12T15:02:00.000Z",
+    });
+
+    expect(await authed.query(api.billing.getStatus, { businessId })).toMatchObject({
+      plan: "pro",
+      overageSpendCents: 300,
+      usage: { voiceSecondsUsed: 31_000 },
+    });
+    const starterEvent = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_source_key", (q) =>
+          q
+            .eq("businessId", businessId)
+            .eq("sourceKey", `voice:${String(starterCallId)}`),
+        )
+        .unique();
+    });
+    expect(starterEvent).toMatchObject({
+      quantity: 9_000,
+      planAtRecordTime: "starter",
+      overageRecordedAt: "2026-04-12T15:00:00.000Z",
+      recordedAt: "2026-04-12T15:02:00.000Z",
+      billableQuantity: 9_000,
+    });
+  });
+
+  it("projects annual Pro marginal spend without subtracting Starter billable usage", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-annual-overage-plan-upgrade-projection",
+      deploymentMode: "cloud",
+    });
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+        billingInterval: "annual",
+        overageSpendingCapCents: 30,
+      });
+    });
+
+    await t.mutation(internal.billing.recordAlertSmsUsage, {
+      businessId,
+      sourceKey: "alert_sms:annual-starter-overage",
+      quantity: 60,
+      recordedAt: "2026-04-12T15:00:00.000Z",
+    });
+    await t.run(async (ctx: TestContext) => {
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!account) {
+        throw new Error("Expected billing account to exist.");
+      }
+      await ctx.db.patch(account._id, { currentPlan: "pro" });
+    });
+
+    expect(await authed.query(api.billing.getStatus, { businessId })).toMatchObject({
+      plan: "pro",
+      billingInterval: "annual",
+      overageSpendCents: 20,
+      overageSpendingCapReached: false,
+    });
+    await expect(
+      t.mutation(internal.billing.reserveAlertSmsUsage, {
+        businessId,
+        sourceKey: "alert_sms:annual-pro-projection",
+        estimatedSegments: 150,
+        recordedAt: "2026-04-12T15:01:00.000Z",
+      }),
+    ).resolves.toEqual({
+      allowed: false,
+      errorCode: "alert_sms_limit_reached",
+    });
+  });
+
+  it("reserves paid voice cap exposure before admitting another concurrent call", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-voice-overage-cap",
+      deploymentMode: "cloud",
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        overageSpendingCapCents: 18,
+      });
+      const seeded = await seedUsageAnchors(ctx, { businessId });
+      const firstActiveCallId = await ctx.db.insert("calls", {
+        businessId,
+        twilioCallSid: "CA-billing-cap-active-1",
+        status: "in_progress",
+        startedAt: "2026-04-12T15:01:00.000Z",
+      });
+      const secondActiveCallId = await ctx.db.insert("calls", {
+        businessId,
+        twilioCallSid: "CA-billing-cap-active-2",
+        status: "in_progress",
+        startedAt: "2026-04-12T15:01:01.000Z",
+      });
+      return { ...seeded, firstActiveCallId, secondActiveCallId };
+    });
+
+    await t.mutation(internal.billing.recordVoiceUsage, {
+      businessId,
+      callId: anchors.callId,
+      quantity: 30_000,
+      recordedAt: "2026-04-12T15:00:00.000Z",
+    });
+    expect(
+      await t.query(internal.billing.assertVoiceCanStart, { businessId }),
+    ).toEqual({ allowed: true, errorCode: null });
+
+    const firstReservation = await t.mutation(
+      internal.billing.reserveVoiceUsageAtCallStart,
+      {
+        businessId,
+        callId: anchors.firstActiveCallId,
+        recordedAt: "2026-04-12T15:01:00.000Z",
+      },
+    );
+    expect(firstReservation).toMatchObject({
+      allowed: true,
+      errorCode: null,
+      syncNeeded: false,
+    });
+    const reservationEvent = await t.run(async (ctx: TestContext) => {
+      if (!firstReservation.usageEventId) {
+        throw new Error("Expected the paid voice start to reserve cap exposure.");
+      }
+      return await ctx.db.get(firstReservation.usageEventId);
+    });
+    expect(reservationEvent).toMatchObject({
+      quantity: 60,
+      syncStatus: "skipped",
+    });
+
+    expect(
+      await t.mutation(internal.billing.reserveVoiceUsageAtCallStart, {
+        businessId,
+        callId: anchors.secondActiveCallId,
+        recordedAt: "2026-04-12T15:01:01.000Z",
+      }),
+    ).toEqual({
+      allowed: false,
+      errorCode: "voice_limit_reached",
+    });
+
+    const completedUsage = await t.mutation(internal.billing.recordVoiceUsage, {
+      businessId,
+      callId: anchors.firstActiveCallId,
+      quantity: 120,
+      recordedAt: "2026-04-12T15:02:00.000Z",
+    });
+    expect(completedUsage).toMatchObject({ syncNeeded: true });
+
+    expect(await authed.query(api.billing.getStatus, { businessId })).toMatchObject({
+      overageSpendingCapCents: 18,
+      overageSpendCents: 36,
+      overageSpendingCapReached: true,
+      usage: { voiceBlocked: true },
+    });
+    expect(
+      await t.query(internal.billing.assertVoiceCanStart, { businessId }),
+    ).toEqual({
+      allowed: false,
+      errorCode: "voice_limit_reached",
+    });
+    expect(
+      await t.mutation(internal.billing.reserveOutboundCallAttemptUsage, {
+        businessId,
+        callId: anchors.callId,
+        recordedAt: "2026-04-12T15:03:00.000Z",
+      }),
+    ).toMatchObject({ allowed: true, errorCode: null });
+  });
+
+  it("fails closed when a capped billing period exceeds the bounded replay window", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-overage-replay-overflow",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        overageSpendingCapCents: 18,
+      });
+      await ctx.db.insert("billing_usage_months", {
+        businessId,
+        periodKey: "2026-04",
+        planAtSnapshot: "pro",
+        voiceSecondsUsed: 30_000,
+        voiceSecondsIncluded: 30_000,
+        voiceBlocked: false,
+        lastRecordedAt: "2026-04-12T15:00:00.000Z",
+      });
+      for (let index = 0; index < 2_049; index += 1) {
+        await ctx.db.insert("billing_usage_events", {
+          businessId,
+          periodKey: "2026-04",
+          sourceKey: `voice:replay-overflow-${index}`,
+          usageKind: "voice_seconds",
+          quantity: 0,
+          planAtRecordTime: "pro",
+          recordedAt: "2026-04-12T15:00:00.000Z",
+          syncStatus: "skipped",
+        });
+      }
+    });
+
+    expect(
+      await t.query(internal.billing.assertVoiceCanStart, { businessId }),
+    ).toEqual({
+      allowed: false,
+      errorCode: "voice_limit_reached",
+    });
+  });
+
+  it("marks uncapped overage spend as incomplete after replay overflow", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-uncapped-overage-replay-overflow",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+      });
+      for (let index = 0; index < 2_048; index += 1) {
+        await ctx.db.insert("billing_usage_events", {
+          businessId,
+          periodKey: "2026-04",
+          sourceKey: `voice:uncapped-replay-overflow-${index}`,
+          usageKind: "voice_seconds",
+          quantity: 0,
+          planAtRecordTime: "pro",
+          recordedAt: "2026-04-12T15:00:00.000Z",
+          syncStatus: "skipped",
+        });
+      }
+      await ctx.db.insert("billing_usage_events", {
+        businessId,
+        periodKey: "2026-04",
+        sourceKey: "voice:uncapped-replay-overflow-charge",
+        usageKind: "voice_seconds",
+        quantity: 36_000,
+        planAtRecordTime: "pro",
+        recordedAt: "2026-04-12T15:01:00.000Z",
+        syncStatus: "skipped",
+      });
+    });
+
+    await expect(
+      authed.query(api.billing.getStatus, { businessId }),
+    ).resolves.toMatchObject({
+      overageSpendingCapCents: null,
+      overageSpendCents: 0,
+      overageSpendCentsComplete: false,
+    });
+  });
+
+  it("excludes AI SMS events from the capped overage replay window", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-ai-sms-replay-overflow",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        activeAddons: ["ai_sms"],
+        overageSpendingCapCents: 18,
+      });
+      await ctx.db.insert("billing_usage_months", {
+        businessId,
+        periodKey: "2026-04",
+        planAtSnapshot: "pro",
+        voiceSecondsUsed: 30_000,
+        voiceSecondsIncluded: 30_000,
+        voiceBlocked: false,
+        lastRecordedAt: "2026-04-12T15:00:00.000Z",
+      });
+      for (let index = 0; index < 2_049; index += 1) {
+        await ctx.db.insert("billing_usage_events", {
+          businessId,
+          periodKey: "2026-04",
+          sourceKey: `ai_sms:replay-overflow-${index}`,
+          usageKind: "ai_sms_segments",
+          quantity: 1,
+          planAtRecordTime: "pro",
+          activeAddonsAtRecordTime: ["ai_sms"],
+          recordedAt: "2026-04-12T15:00:00.000Z",
+          syncStatus: "skipped",
+        });
+      }
+    });
+
+    expect(
+      await t.query(internal.billing.assertVoiceCanStart, { businessId }),
+    ).toEqual({
+      allowed: true,
+      errorCode: null,
+    });
+    await expect(
+      authed.query(api.billing.getStatus, { businessId }),
+    ).resolves.toMatchObject({ overageSpendCents: 0 });
+
+    await t.run(async (ctx: TestContext) => {
+      await ctx.db.insert("billing_usage_events", {
+        businessId,
+        periodKey: "2026-04",
+        sourceKey: "voice:replay-overflow-after-ai-sms",
+        usageKind: "voice_seconds",
+        quantity: 36_000,
+        planAtRecordTime: "pro",
+        recordedAt: "2026-04-12T15:01:00.000Z",
+        syncStatus: "skipped",
+      });
+    });
+
+    expect(
+      await t.query(internal.billing.assertVoiceCanStart, { businessId }),
+    ).toEqual({
+      allowed: false,
+      errorCode: "voice_limit_reached",
+    });
+    await expect(
+      authed.query(api.billing.getStatus, { businessId }),
+    ).resolves.toMatchObject({ overageSpendCents: 1_800 });
+  });
+
+  it("preserves historical plan pricing after AI replay overflow", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-ai-sms-overflow-plan-upgrade",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+        activeAddons: ["ai_sms"],
+        billingInterval: "monthly",
+        overageSpendingCapCents: 41,
+      });
+      await ctx.db.insert("billing_usage_months", {
+        businessId,
+        periodKey: "2026-04",
+        planAtSnapshot: "starter",
+        voiceSecondsUsed: 9_060,
+        voiceSecondsIncluded: 9_000,
+        voiceBlocked: false,
+        lastRecordedAt: "2026-04-12T15:01:00.000Z",
+      });
+      for (let index = 0; index < 2_049; index += 1) {
+        await ctx.db.insert("billing_usage_events", {
+          businessId,
+          periodKey: "2026-04",
+          sourceKey: `ai_sms:plan-upgrade-overflow-${index}`,
+          usageKind: "ai_sms_segments",
+          quantity: 1,
+          planAtRecordTime: "starter",
+          activeAddonsAtRecordTime: ["ai_sms"],
+          recordedAt: "2026-04-12T15:00:00.000Z",
+          syncStatus: "skipped",
+        });
+      }
+      await ctx.db.insert("billing_usage_events", {
+        businessId,
+        periodKey: "2026-04",
+        sourceKey: "voice:starter-overage-before-pro-upgrade",
+        usageKind: "voice_seconds",
+        quantity: 9_060,
+        planAtRecordTime: "starter",
+        recordedAt: "2026-04-12T15:01:00.000Z",
+        syncStatus: "skipped",
+      });
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!account) {
+        throw new Error("Expected billing account to exist.");
+      }
+      await ctx.db.patch(account._id, { currentPlan: "pro" });
+    });
+
+    await expect(
+      authed.query(api.billing.getStatus, { businessId }),
+    ).resolves.toMatchObject({
+      plan: "pro",
+      overageSpendCents: 20,
+      overageSpendingCapReached: false,
+    });
+  });
+
   it("allows Pro alert SMS reservations after included segments are exhausted", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId } = await seedWorkspace(t, {
@@ -2259,6 +3001,75 @@ describe("billing", () => {
     });
   });
 
+  it("prices same-period annual corrections with the event's recorded plan", async () => {
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-annual-correction-after-plan-upgrade",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+        billingInterval: "annual",
+        polarCustomerId: "cus_annual_correction_after_plan_upgrade",
+        overageSpendingCapCents: 100,
+      });
+    });
+
+    const usage = await t.mutation(internal.billing.recordAlertSmsUsage, {
+      businessId,
+      sourceKey: "alert_sms:annual:starter-before-pro-upgrade",
+      quantity: 60,
+      recordedAt: "2026-04-12T15:00:00.000Z",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!account) {
+        throw new Error("Missing seeded billing account.");
+      }
+      await ctx.db.patch(account._id, { currentPlan: "pro" });
+    });
+
+    await t.mutation(internal.billing.recordAlertSmsUsage, {
+      businessId,
+      sourceKey: "alert_sms:annual:starter-before-pro-upgrade",
+      quantity: 61,
+      recordedAt: "2026-04-12T15:05:00.000Z",
+    });
+
+    const [payload, status, usageEvent] = await Promise.all([
+      t.query(internal.billing.getUsageSyncPayload, {
+        usageEventId: usage.usageEventId,
+      }),
+      authed.query(api.billing.getStatus, { businessId }),
+      t.run(async (ctx: TestContext) => await ctx.db.get(usage.usageEventId)),
+    ]);
+
+    expect(usageEvent).toMatchObject({
+      quantity: 61,
+      planAtRecordTime: "starter",
+      billingIntervalAtRecordTime: "annual",
+      billableQuantity: 11,
+    });
+    expect(payload).toMatchObject({
+      quantity: 61,
+      billableQuantity: 11,
+      polarQuantity: 11,
+    });
+    expect(status).toMatchObject({
+      plan: "pro",
+      overageSpendCents: 22,
+    });
+  });
+
   it("derives annual billable payloads for legacy pending usage events", async () => {
     process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
 
@@ -2474,7 +3285,7 @@ describe("billing", () => {
     });
   });
 
-  it("resets stale annual billable quantities when an event is re-recorded on a monthly plan", async () => {
+  it("preserves annual billable quantities for same-period corrections after an interval change", async () => {
     process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
 
     const t = convexTest(schema, convexModules);
@@ -2534,17 +3345,17 @@ describe("billing", () => {
 
     expect(updatedUsage.usageEventId).toBe(firstUsage.usageEventId);
     expect(usageEvent).toMatchObject({
-      billingIntervalAtRecordTime: "monthly",
-      billableQuantity: 55,
+      billingIntervalAtRecordTime: "annual",
+      billableQuantity: 5,
     });
     expect(usageMonth).toMatchObject({
       alertSmsSegmentsUsed: 55,
-      alertSmsSegmentsBillableUsed: 0,
+      alertSmsSegmentsBillableUsed: 5,
     });
     expect(payload).toMatchObject({
       quantity: 55,
-      billableQuantity: 55,
-      polarQuantity: 55,
+      billableQuantity: 5,
+      polarQuantity: 5,
     });
   });
 

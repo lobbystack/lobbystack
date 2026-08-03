@@ -1216,6 +1216,7 @@ export default defineSchema({
     currentPeriodStart: v.optional(v.string()),
     currentPeriodEnd: v.optional(v.string()),
     cancelAtPeriodEnd: v.optional(v.boolean()),
+    overageSpendingCapCents: v.optional(v.number()),
     checkoutId: v.optional(v.string()),
     lastWebhookEventType: v.optional(v.string()),
     lastSyncedAt: v.string(),
@@ -1254,6 +1255,7 @@ export default defineSchema({
     billingIntervalAtRecordTime: v.optional(billingIntervalValidator),
     activeAddonsAtRecordTime: v.optional(v.array(billingAddonSlugValidator)),
     billableQuantity: v.optional(v.number()),
+    overageRecordedAt: v.optional(v.string()),
     recordedAt: v.string(),
     syncStatus: v.string(),
     syncAttemptedAt: v.optional(v.string()),
@@ -1263,10 +1265,11 @@ export default defineSchema({
     .index("by_business_id_and_source_key", ["businessId", "sourceKey"])
     .index("by_sync_status_and_recorded_at", ["syncStatus", "recordedAt"])
     .index("by_business_id_and_period_key", ["businessId", "periodKey"])
-    .index("by_business_id_and_period_key_and_usage_kind", {
-      fields: ["businessId", "periodKey", "usageKind"],
-      staged: true,
-    }),
+    .index("by_business_id_and_period_key_and_usage_kind", [
+      "businessId",
+      "periodKey",
+      "usageKind",
+    ]),
 
   billing_transactions: defineTable({
     businessId: v.id("businesses"),
