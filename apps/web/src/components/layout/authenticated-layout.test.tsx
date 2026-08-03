@@ -111,6 +111,7 @@ function buildStatus(overrides: Partial<BillingStatus> = {}): BillingStatus {
     overagesBillable: true,
     overageSpendingCapCents: null,
     overageSpendCents: 0,
+    overageSpendCentsComplete: true,
     overageSpendingCapReached: false,
     monthlyChargeCents: 3_000,
     billingPeriodChargeCents: 3_000,

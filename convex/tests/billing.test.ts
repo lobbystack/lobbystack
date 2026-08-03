@@ -2566,6 +2566,51 @@ describe("billing", () => {
     });
   });
 
+  it("marks uncapped overage spend as incomplete after replay overflow", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-uncapped-overage-replay-overflow",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+      });
+      for (let index = 0; index < 2_048; index += 1) {
+        await ctx.db.insert("billing_usage_events", {
+          businessId,
+          periodKey: "2026-04",
+          sourceKey: `voice:uncapped-replay-overflow-${index}`,
+          usageKind: "voice_seconds",
+          quantity: 0,
+          planAtRecordTime: "pro",
+          recordedAt: "2026-04-12T15:00:00.000Z",
+          syncStatus: "skipped",
+        });
+      }
+      await ctx.db.insert("billing_usage_events", {
+        businessId,
+        periodKey: "2026-04",
+        sourceKey: "voice:uncapped-replay-overflow-charge",
+        usageKind: "voice_seconds",
+        quantity: 36_000,
+        planAtRecordTime: "pro",
+        recordedAt: "2026-04-12T15:01:00.000Z",
+        syncStatus: "skipped",
+      });
+    });
+
+    await expect(
+      authed.query(api.billing.getStatus, { businessId }),
+    ).resolves.toMatchObject({
+      overageSpendingCapCents: null,
+      overageSpendCents: 0,
+      overageSpendCentsComplete: false,
+    });
+  });
+
   it("excludes AI SMS events from the capped overage replay window", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId } = await seedWorkspace(t, {

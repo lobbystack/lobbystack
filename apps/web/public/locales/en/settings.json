@@ -331,6 +331,7 @@
       "noCap": "No spending cap is set",
       "currentSpend": "Current overage spend",
       "spendOfCap": "{{spend}} of {{cap}}",
+      "spendAtLeastOfCap": "At least {{spend}} of {{cap}}",
       "remaining": "{{amount}} remaining before new overage usage is paused.",
       "reached": "Cap reached — new usage beyond included allowances is paused.",
       "activeCallNotice": "AI SMS is not included. Active voice calls are allowed to finish and may take the final charge above this amount.",

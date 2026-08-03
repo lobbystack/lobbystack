@@ -2395,10 +2395,15 @@ function SpendingCapSection({
               </span>
               {capCents !== null && (
                 <span className="tabular-nums text-muted-foreground">
-                  {t("billing.spendingCap.spendOfCap", {
-                    spend: formatCents(spendCents, locale),
-                    cap: formatCents(capCents, locale),
-                  })}
+                  {t(
+                    status.overageSpendCentsComplete
+                      ? "billing.spendingCap.spendOfCap"
+                      : "billing.spendingCap.spendAtLeastOfCap",
+                    {
+                      spend: formatCents(spendCents, locale),
+                      cap: formatCents(capCents, locale),
+                    },
+                  )}
                 </span>
               )}
             </div>

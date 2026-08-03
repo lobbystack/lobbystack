@@ -331,6 +331,7 @@
       "noCap": "Aucun plafond de dépenses défini",
       "currentSpend": "Dépenses de dépassement actuelles",
       "spendOfCap": "{{spend}} sur {{cap}}",
+      "spendAtLeastOfCap": "Au moins {{spend}} sur {{cap}}",
       "remaining": "Il reste {{amount}} avant la suspension des nouveaux dépassements.",
       "reached": "Plafond atteint — la nouvelle utilisation au-delà des volumes inclus est suspendue.",
       "activeCallNotice": "Les SMS IA ne sont pas inclus. Les appels vocaux en cours peuvent se terminer et porter les frais finaux au-delà de ce montant.",

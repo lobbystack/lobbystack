@@ -122,6 +122,7 @@ function buildStatus(overrides: Partial<BillingStatus> = {}): BillingStatus {
     overagesBillable: false,
     overageSpendingCapCents: null,
     overageSpendCents: 0,
+    overageSpendCentsComplete: true,
     overageSpendingCapReached: false,
     monthlyChargeCents: 0,
     billingPeriodChargeCents: 0,
@@ -907,6 +908,21 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     unmount();
     renderBillingPage({ status: buildStatus({ plan: "enterprise" }) });
     expect(screen.queryByText("billing.spendingCap.title")).toBeNull();
+  });
+
+  it("labels an overflowed overage spend as a lower bound", () => {
+    renderBillingPage({
+      status: buildStatus({
+        plan: "pro",
+        overagesBillable: true,
+        overageSpendingCapCents: 1_000,
+        overageSpendCents: 500,
+        overageSpendCentsComplete: false,
+      }),
+    });
+
+    expect(screen.getByText("billing.spendingCap.spendAtLeastOfCap")).toBeTruthy();
+    expect(screen.queryByText("billing.spendingCap.spendOfCap")).toBeNull();
   });
 
   it("does not interpret English grouping as a decimal separator", () => {

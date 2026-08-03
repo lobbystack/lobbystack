@@ -230,9 +230,9 @@ async function getAccruedOverageRawSpendCents(
     fallbackPlan: BillingPlanSlug;
     overflowSpendFloorCents: number | null;
   },
-): Promise<number> {
+): Promise<{ rawSpendCents: number; complete: boolean }> {
   if (!billingPlanCatalog[input.fallbackPlan].overagesBillable) {
-    return 0;
+    return { rawSpendCents: 0, complete: true };
   }
 
   const events = await ctx.db
@@ -252,12 +252,16 @@ async function getAccruedOverageRawSpendCents(
   });
 
   if (events.length > OVERAGE_EVENT_REPLAY_LIMIT) {
-    return input.overflowSpendFloorCents === null
-      ? rawSpendCents
-      : Math.max(rawSpendCents, input.overflowSpendFloorCents);
+    return {
+      rawSpendCents:
+        input.overflowSpendFloorCents === null
+          ? rawSpendCents
+          : Math.max(rawSpendCents, input.overflowSpendFloorCents),
+      complete: false,
+    };
   }
 
-  return rawSpendCents;
+  return { rawSpendCents, complete: true };
 }
 
 async function getAccruedOverageRawSpendCentsForCap(
@@ -272,12 +276,13 @@ async function getAccruedOverageRawSpendCentsForCap(
   if (getOverageSpendingCapCents(input) === null) {
     return 0;
   }
-  return await getAccruedOverageRawSpendCents(ctx, {
+  const result = await getAccruedOverageRawSpendCents(ctx, {
     businessId: input.businessId,
     periodKey: input.periodKey,
     fallbackPlan: input.plan,
     overflowSpendFloorCents: getOverageSpendingCapCents(input),
   });
+  return result.rawSpendCents;
 }
 
 function getUsageSnapshotWithOverageCap(input: {
@@ -929,6 +934,7 @@ function buildBillingStatus(input: {
   usage: Doc<"billing_usage_months"> | null;
   account: Doc<"billing_accounts"> | null;
   overageSpendCents: number;
+  overageSpendCentsComplete: boolean;
   periodKey: string;
   recentTransactions: Array<BillingTransactionSummary>;
   hasBillingManagementAccess: boolean;
@@ -973,6 +979,7 @@ function buildBillingStatus(input: {
     overagesBillable: billingPlanCatalog[input.plan].overagesBillable,
     overageSpendingCapCents,
     overageSpendCents,
+    overageSpendCentsComplete: input.overageSpendCentsComplete,
     overageSpendingCapReached:
       overageSpendingCapCents !== null && overageSpendCents >= overageSpendingCapCents,
     monthlyChargeCents: getBillingMonthlyChargeCents({
@@ -3226,16 +3233,17 @@ export const getStatus = query({
     const snapshot = await getBillingSnapshot(ctx, {
       businessId: args.businessId,
     });
-    const overageSpendCents = roundOverageSpendCents(
-      await getAccruedOverageRawSpendCents(ctx, {
-        businessId: args.businessId,
-        periodKey: snapshot.periodKey,
-        fallbackPlan: snapshot.plan,
-        overflowSpendFloorCents: getOverageSpendingCapCents({
-          plan: snapshot.plan,
-          account: snapshot.account,
-        }),
+    const accruedOverageSpend = await getAccruedOverageRawSpendCents(ctx, {
+      businessId: args.businessId,
+      periodKey: snapshot.periodKey,
+      fallbackPlan: snapshot.plan,
+      overflowSpendFloorCents: getOverageSpendingCapCents({
+        plan: snapshot.plan,
+        account: snapshot.account,
       }),
+    });
+    const overageSpendCents = roundOverageSpendCents(
+      accruedOverageSpend.rawSpendCents,
     );
     const aiSmsEnabled = isAiSmsEnabled({
       plan: snapshot.plan,
@@ -3316,6 +3324,7 @@ export const getStatus = query({
       usage: snapshot.usage,
       account: snapshot.account,
       overageSpendCents,
+      overageSpendCentsComplete: accruedOverageSpend.complete,
       periodKey: snapshot.periodKey,
       recentTransactions: recentTransactions.map((transaction) => ({
         kind: transaction.kind as BillingTransactionKind,

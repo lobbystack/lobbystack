@@ -300,6 +300,7 @@ export type BillingStatus = {
   overagesBillable: boolean;
   overageSpendingCapCents: number | null;
   overageSpendCents: number;
+  overageSpendCentsComplete: boolean;
   overageSpendingCapReached: boolean;
   monthlyChargeCents: number | null;
   billingPeriodChargeCents: number | null;
