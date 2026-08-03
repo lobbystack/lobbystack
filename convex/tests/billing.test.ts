@@ -2956,6 +2956,75 @@ describe("billing", () => {
     });
   });
 
+  it("prices same-period annual corrections with the event's recorded plan", async () => {
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-annual-correction-after-plan-upgrade",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+        billingInterval: "annual",
+        polarCustomerId: "cus_annual_correction_after_plan_upgrade",
+        overageSpendingCapCents: 100,
+      });
+    });
+
+    const usage = await t.mutation(internal.billing.recordAlertSmsUsage, {
+      businessId,
+      sourceKey: "alert_sms:annual:starter-before-pro-upgrade",
+      quantity: 60,
+      recordedAt: "2026-04-12T15:00:00.000Z",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!account) {
+        throw new Error("Missing seeded billing account.");
+      }
+      await ctx.db.patch(account._id, { currentPlan: "pro" });
+    });
+
+    await t.mutation(internal.billing.recordAlertSmsUsage, {
+      businessId,
+      sourceKey: "alert_sms:annual:starter-before-pro-upgrade",
+      quantity: 61,
+      recordedAt: "2026-04-12T15:05:00.000Z",
+    });
+
+    const [payload, status, usageEvent] = await Promise.all([
+      t.query(internal.billing.getUsageSyncPayload, {
+        usageEventId: usage.usageEventId,
+      }),
+      authed.query(api.billing.getStatus, { businessId }),
+      t.run(async (ctx: TestContext) => await ctx.db.get(usage.usageEventId)),
+    ]);
+
+    expect(usageEvent).toMatchObject({
+      quantity: 61,
+      planAtRecordTime: "starter",
+      billingIntervalAtRecordTime: "annual",
+      billableQuantity: 11,
+    });
+    expect(payload).toMatchObject({
+      quantity: 61,
+      billableQuantity: 11,
+      polarQuantity: 11,
+    });
+    expect(status).toMatchObject({
+      plan: "pro",
+      overageSpendCents: 22,
+    });
+  });
+
   it("derives annual billable payloads for legacy pending usage events", async () => {
     process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
 
@@ -3171,7 +3240,7 @@ describe("billing", () => {
     });
   });
 
-  it("resets stale annual billable quantities when an event is re-recorded on a monthly plan", async () => {
+  it("preserves annual billable quantities for same-period corrections after an interval change", async () => {
     process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
 
     const t = convexTest(schema, convexModules);
@@ -3232,16 +3301,16 @@ describe("billing", () => {
     expect(updatedUsage.usageEventId).toBe(firstUsage.usageEventId);
     expect(usageEvent).toMatchObject({
       billingIntervalAtRecordTime: "annual",
-      billableQuantity: 55,
+      billableQuantity: 5,
     });
     expect(usageMonth).toMatchObject({
       alertSmsSegmentsUsed: 55,
-      alertSmsSegmentsBillableUsed: 0,
+      alertSmsSegmentsBillableUsed: 5,
     });
     expect(payload).toMatchObject({
       quantity: 55,
-      billableQuantity: 55,
-      polarQuantity: 55,
+      billableQuantity: 5,
+      polarQuantity: 5,
     });
   });
 

@@ -1356,8 +1356,8 @@ async function upsertUsageEventInTx(
     billableQuantity,
     currentPeriodDeltaBillableQuantity,
   } = getUsageEventBillableUpdate({
-    plan: snapshot.plan,
-    billingInterval,
+    plan: recordPlan,
+    billingInterval: recordBillingInterval,
     usage: snapshot.usage,
     usageKind: args.usageKind,
     existingUsageEvent,
