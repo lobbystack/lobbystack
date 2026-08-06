@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { Id } from "../_generated/dataModel";
+
 import {
   emitServiceHealthCheckEvents,
   enqueuePostHogExceptionBestEffort,
@@ -156,6 +158,199 @@ describe("PostHog provider exception telemetry", () => {
         },
       },
     ]);
+    expect(payload.properties.$exception_list[0].value).not.toContain(
+      "14165550123",
+    );
+  });
+
+  it("synthesizes a safe exception for generic errors without surfacing the raw message", async () => {
+    type SerializedPostHogEvent = {
+      eventName: string;
+      distinctId: string;
+      payloadJson: string;
+    };
+    const runMutation = vi.fn(
+      async (_reference: unknown, _serialized: SerializedPostHogEvent) => null,
+    );
+    const ctx = { runMutation } as unknown as Parameters<
+      typeof enqueuePostHogExceptionBestEffort
+    >[0];
+
+    await enqueuePostHogExceptionBestEffort(ctx, {
+      error: new Error("Google token refresh failed: {invalid_grant}"),
+      service: "convex",
+      operation: "convex_internal_action",
+      distinctId: "system:convex:telemetry",
+    });
+
+    const serialized = runMutation.mock.calls[0]?.[1];
+    const payload = JSON.parse(serialized.payloadJson);
+    expect(payload.properties.$exception_type).toBe("ApplicationError");
+    expect(payload.properties.$exception_list).toMatchObject([
+      {
+        type: "ApplicationError",
+        value: "convex convex_internal_action failed (ApplicationError)",
+      },
+    ]);
+    expect(payload.properties.$exception_list[0].value).not.toContain(
+      "invalid_grant",
+    );
+  });
+
+  it("does not surface raw error content for generic errors", async () => {
+    type SerializedPostHogEvent = {
+      eventName: string;
+      distinctId: string;
+      payloadJson: string;
+    };
+    const runMutation = vi.fn(
+      async (_reference: unknown, _serialized: SerializedPostHogEvent) => null,
+    );
+    const ctx = { runMutation } as unknown as Parameters<
+      typeof enqueuePostHogExceptionBestEffort
+    >[0];
+
+    await enqueuePostHogExceptionBestEffort(ctx, {
+      error: new Error(
+        "Could not email john.doe@example.com: " + "x".repeat(700),
+      ),
+      service: "convex",
+      operation: "convex_internal_action",
+      distinctId: "system:convex:telemetry",
+    });
+
+    const serialized = runMutation.mock.calls[0]?.[1];
+    const payload = JSON.parse(serialized.payloadJson);
+    const value = payload.properties.$exception_list[0].value;
+    expect(value).toBe("convex convex_internal_action failed (ApplicationError)");
+    expect(value).not.toContain("john.doe@example.com");
+    expect(value.length).toBeLessThanOrEqual(500);
+  });
+
+  it("does not leak PII into exception types for generic errors", async () => {
+    type SerializedPostHogEvent = {
+      eventName: string;
+      distinctId: string;
+      payloadJson: string;
+    };
+    const runMutation = vi.fn(
+      async (_reference: unknown, _serialized: SerializedPostHogEvent) => null,
+    );
+    const ctx = { runMutation } as unknown as Parameters<
+      typeof enqueuePostHogExceptionBestEffort
+    >[0];
+
+    await enqueuePostHogExceptionBestEffort(ctx, {
+      error: new Error("john.doe@example.com"),
+      service: "convex",
+      operation: "convex_internal_action",
+      distinctId: "system:convex:telemetry",
+    });
+
+    const serialized = runMutation.mock.calls[0]?.[1];
+    const payload = JSON.parse(serialized.payloadJson);
+    expect(payload.properties.$exception_type).toBe("ApplicationError");
+    expect(payload.properties.$exception_type).not.toMatch(
+      /john|doe|example/i,
+    );
+    expect(payload.properties.$exception_list[0].type).toBe("ApplicationError");
+  });
+
+  it("does not surface phone numbers from generic error messages", async () => {
+    type SerializedPostHogEvent = {
+      eventName: string;
+      distinctId: string;
+      payloadJson: string;
+    };
+    const runMutation = vi.fn(
+      async (_reference: unknown, _serialized: SerializedPostHogEvent) => null,
+    );
+    const ctx = { runMutation } as unknown as Parameters<
+      typeof enqueuePostHogExceptionBestEffort
+    >[0];
+
+    await enqueuePostHogExceptionBestEffort(ctx, {
+      error: new Error(
+        "The phone number +442071838750 is already mapped, retry +33 1 42 68 53 00",
+      ),
+      service: "convex",
+      operation: "convex_internal_action",
+      distinctId: "system:convex:telemetry",
+    });
+
+    const serialized = runMutation.mock.calls[0]?.[1];
+    const payload = JSON.parse(serialized.payloadJson);
+    const value = payload.properties.$exception_list[0].value;
+    expect(value).toBe("convex convex_internal_action failed (ApplicationError)");
+    expect(value).not.toMatch(/\+|\d{4,}/);
+    expect(payload.properties.$exception_type).toBe("ApplicationError");
+  });
+
+  it("does not leak user-controlled filenames from generic error messages", async () => {
+    type SerializedPostHogEvent = {
+      eventName: string;
+      distinctId: string;
+      payloadJson: string;
+    };
+    const runMutation = vi.fn(
+      async (_reference: unknown, _serialized: SerializedPostHogEvent) => null,
+    );
+    const ctx = { runMutation } as unknown as Parameters<
+      typeof enqueuePostHogExceptionBestEffort
+    >[0];
+
+    await enqueuePostHogExceptionBestEffort(ctx, {
+      error: new Error(
+        'Attachment "Medical Records John Doe.pdf" is no longer available.',
+      ),
+      service: "convex",
+      operation: "convex_internal_action",
+      distinctId: "system:convex:telemetry",
+    });
+
+    const serialized = runMutation.mock.calls[0]?.[1];
+    const payload = JSON.parse(serialized.payloadJson);
+    expect(payload.properties.$exception_type).toBe("ApplicationError");
+    const value = payload.properties.$exception_list[0].value;
+    expect(value).not.toContain("John Doe");
+    expect(value).not.toContain("Medical Records");
+    expect(value).toBe("convex convex_internal_action failed (ApplicationError)");
+  });
+
+  it("attaches businessId and groupKey to enqueued exceptions", async () => {
+    type SerializedPostHogEvent = {
+      eventName: string;
+      distinctId: string;
+      payloadJson: string;
+    };
+    const runMutation = vi.fn(
+      async (_reference: unknown, _serialized: SerializedPostHogEvent) => null,
+    );
+    const ctx = { runMutation } as unknown as Parameters<
+      typeof enqueuePostHogExceptionBestEffort
+    >[0];
+    const businessId = "m97bdjb606gbv9ks89a1eamg218a3egz" as Id<"businesses">;
+
+    await enqueuePostHogExceptionBestEffort(ctx, {
+      error: new Error("sync failed"),
+      service: "convex",
+      operation: "convex_internal_action",
+      distinctId: "system:convex:telemetry",
+      businessId,
+      groupKey: `business:${businessId}`,
+    });
+
+    const serialized = runMutation.mock.calls[0]?.[1];
+    expect(serialized).toMatchObject({
+      eventName: "$exception",
+      businessId,
+      groupKey: `business:${businessId}`,
+    });
+    const payload = JSON.parse(serialized.payloadJson);
+    expect(payload.businessId).toBe(businessId);
+    expect(payload.properties.$exception_list[0].value).toBe(
+      "convex convex_internal_action failed (ApplicationError)",
+    );
   });
 
   it("emits service health success and failure events", async () => {

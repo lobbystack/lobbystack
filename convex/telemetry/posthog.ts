@@ -287,7 +287,7 @@ function getSafeExceptionProperties(
 }
 
 function getErrorExceptionType(error: unknown): string {
-  if (error instanceof Error && error.name) {
+  if (error instanceof Error && error.name && error.name !== "Error") {
     return error.name;
   }
   return "ApplicationError";
@@ -587,8 +587,7 @@ export async function enqueuePostHogExceptionBestEffort(
 ): Promise<void> {
   const exceptionType = input.exceptionType ?? getErrorExceptionType(input.error);
   const exceptionMessage =
-    input.exceptionMessage ??
-    `${input.service} ${input.operation} failed (${exceptionType})`;
+    input.exceptionMessage ?? `${input.service} ${input.operation} failed (${exceptionType})`;
 
   await enqueuePostHogEventBestEffort(ctx, {
     eventName: "$exception",

@@ -644,6 +644,18 @@ export const syncBusyTimeForConnection = internalAction({
     connectionId: v.id("calendar_connections"),
     fullSync: v.optional(v.boolean()),
   },
+  observability: {
+    businessId: async (ctx, args): Promise<string | undefined> => {
+      const connection = (await (ctx as ActionCtx).runQuery(
+        internal.integrations.calendar.getCalendarConnectionById,
+        {
+          connectionId: (args as { connectionId: Id<"calendar_connections"> })
+            .connectionId,
+        },
+      )) as Doc<"calendar_connections"> | null;
+      return connection?.businessId;
+    },
+  },
   handler: async (
     ctx,
     args,

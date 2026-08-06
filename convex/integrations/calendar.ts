@@ -1662,6 +1662,9 @@ export const runBusinessCalendarReconciliation = internalAction({
   args: {
     businessId: v.id("businesses"),
   },
+  observability: {
+    businessId: (_ctx, args) => (args as { businessId: string }).businessId,
+  },
   handler: async (ctx, args): Promise<CalendarReconciliationResult> => {
     const nowIso = new Date().toISOString();
     const nowMs = Date.parse(nowIso);

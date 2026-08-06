@@ -6,7 +6,19 @@ import {
   mutation,
 } from "../_generated/server";
 import type { ActionCtx, MutationCtx } from "../_generated/server";
-import { isExpectedConvexFailure } from "../../packages/telemetry/src/index";
+import type { Id } from "../_generated/dataModel";
+import type {
+  ArgsArrayForOptionalValidator,
+  ArgsArrayToObject,
+  DefaultArgsForOptionalValidator,
+  RegisteredAction,
+  ReturnValueForOptionalValidator,
+} from "convex/server";
+import type { PropertyValidators, Validator } from "convex/values";
+import {
+  getPostHogBusinessGroupKey,
+  isExpectedConvexFailure,
+} from "../../packages/telemetry/src/index";
 
 import {
   enqueuePostHogExceptionBestEffort,
@@ -18,6 +30,12 @@ type ObservabilityOptions = {
   service?: string;
   alertable?: boolean;
   expected?: boolean;
+  businessId?:
+    | string
+    | ((ctx: ConvexRunnerCtx, args: unknown) => string | undefined | Promise<string | undefined>);
+  groupKey?:
+    | string
+    | ((ctx: ConvexRunnerCtx, args: unknown) => string | undefined | Promise<string | undefined>);
 };
 
 type ObservableDefinition = {
@@ -46,13 +64,45 @@ function withoutObservabilityOption<T>(definition: T): T {
   return rest as T;
 }
 
+async function resolveObservabilityContext(
+  value:
+    | string
+    | ((ctx: ConvexRunnerCtx, args: unknown) => string | undefined | Promise<string | undefined>)
+    | undefined,
+  ctx: ConvexRunnerCtx,
+  args: unknown,
+): Promise<string | undefined> {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value === "function") {
+    try {
+      return await value(ctx, args);
+    } catch {
+      return undefined;
+    }
+  }
+  return value;
+}
+
 async function reportConvexHandlerFailure(input: {
   ctx: ConvexRunnerCtx;
   error: unknown;
+  args?: unknown;
   kind: "action" | "http_action" | "internal_action" | "mutation" | "internal_mutation";
   options: ObservabilityOptions;
 }): Promise<void> {
   const expected = input.options.expected ?? isExpectedConvexFailure(input.error);
+  const [businessId, groupKey] = await Promise.all([
+    resolveObservabilityContext(input.options.businessId, input.ctx, input.args),
+    resolveObservabilityContext(input.options.groupKey, input.ctx, input.args),
+  ]);
+  const resolvedBusinessId = businessId as Id<"businesses"> | undefined;
+  const resolvedGroupKey =
+    groupKey ??
+    (resolvedBusinessId !== undefined
+      ? getPostHogBusinessGroupKey(resolvedBusinessId)
+      : undefined);
   await enqueuePostHogExceptionBestEffort(input.ctx, {
     error: input.error,
     service: input.options.service ?? DEFAULT_SERVICE,
@@ -60,6 +110,10 @@ async function reportConvexHandlerFailure(input: {
     distinctId: getPostHogDistinctIdForConvexSystem(),
     alertable: input.options.alertable ?? !expected,
     expected,
+    ...(resolvedBusinessId !== undefined
+      ? { businessId: resolvedBusinessId }
+      : {}),
+    ...(resolvedGroupKey !== undefined ? { groupKey: resolvedGroupKey } : {}),
     properties: {
       convexFunctionType: input.kind,
     },
@@ -92,6 +146,7 @@ function observeConfigHandler<T extends ObservableDefinition>(
         await reportConvexHandlerFailure({
           ctx,
           error,
+          args,
           kind,
           options,
         });
@@ -119,24 +174,81 @@ function observeHttpHandler<T extends (ctx: ActionCtx, request: Request) => unkn
   }) as T;
 }
 
-export const observedAction = ((definition: Parameters<typeof action>[0]) =>
+export type ObservableActionDefinition<
+  ArgsValidator extends
+    | PropertyValidators
+    | Validator<any, "required", any>
+    | void,
+  ReturnsValidator extends
+    | PropertyValidators
+    | Validator<any, "required", any>
+    | void,
+  ReturnValue extends ReturnValueForOptionalValidator<ReturnsValidator> = any,
+  OneOrZeroArgs extends
+    ArgsArrayForOptionalValidator<ArgsValidator> = DefaultArgsForOptionalValidator<ArgsValidator>,
+> = {
+  args?: ArgsValidator;
+  returns?: ReturnsValidator;
+  observability?: ObservabilityOptions;
+  handler: (ctx: ActionCtx, ...args: OneOrZeroArgs) => ReturnValue;
+};
+
+export const observedAction = <
+  ArgsValidator extends
+    | PropertyValidators
+    | Validator<any, "required", any>
+    | void,
+  ReturnsValidator extends
+    | PropertyValidators
+    | Validator<any, "required", any>
+    | void,
+  ReturnValue extends ReturnValueForOptionalValidator<ReturnsValidator> = any,
+  OneOrZeroArgs extends
+    ArgsArrayForOptionalValidator<ArgsValidator> = DefaultArgsForOptionalValidator<ArgsValidator>,
+>(
+  definition: ObservableActionDefinition<
+    ArgsValidator,
+    ReturnsValidator,
+    ReturnValue,
+    OneOrZeroArgs
+  >,
+): RegisteredAction<"public", ArgsArrayToObject<OneOrZeroArgs>, ReturnValue> =>
   action(
     observeConfigHandler(definition as ObservableDefinition, "action") as Parameters<
       typeof action
     >[0],
-  )) as typeof action;
+  );
 
-export const observedInternalAction = ((
-  definition: Parameters<typeof internalAction>[0],
-) =>
+export const observedInternalAction = <
+  ArgsValidator extends
+    | PropertyValidators
+    | Validator<any, "required", any>
+    | void,
+  ReturnsValidator extends
+    | PropertyValidators
+    | Validator<any, "required", any>
+    | void,
+  ReturnValue extends ReturnValueForOptionalValidator<ReturnsValidator> = any,
+  OneOrZeroArgs extends
+    ArgsArrayForOptionalValidator<ArgsValidator> = DefaultArgsForOptionalValidator<ArgsValidator>,
+>(
+  definition: ObservableActionDefinition<
+    ArgsValidator,
+    ReturnsValidator,
+    ReturnValue,
+    OneOrZeroArgs
+  >,
+): RegisteredAction<"internal", ArgsArrayToObject<OneOrZeroArgs>, ReturnValue> =>
   internalAction(
     observeConfigHandler(
       definition as ObservableDefinition,
       "internal_action",
     ) as Parameters<typeof internalAction>[0],
-  )) as typeof internalAction;
+  );
 
-export const observedMutation = ((definition: Parameters<typeof mutation>[0]) =>
+export const observedMutation = ((
+  definition: Parameters<typeof mutation>[0],
+) =>
   mutation(
     observeConfigHandler(definition as ObservableDefinition, "mutation", {
       reportFailures: false,
