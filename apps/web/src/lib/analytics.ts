@@ -101,13 +101,6 @@ function isBusinessTelemetryPending(businessId?: string): boolean {
 function isEventForOptedOutBusiness(event: {
   properties?: Record<string, unknown>;
 }): boolean {
-  if (
-    activeBusinessId &&
-    (isBusinessOptedOut(activeBusinessId) ||
-      isBusinessTelemetryPending(activeBusinessId))
-  ) {
-    return true;
-  }
   const groups = event.properties?.$groups;
   const groupKey =
     typeof groups === "object" &&
@@ -115,10 +108,18 @@ function isEventForOptedOutBusiness(event: {
     typeof (groups as Record<string, unknown>).business === "string"
       ? (groups as Record<string, string>).business
       : undefined;
+
+  if (groupKey) {
+    return (
+      optedOutBusinessGroupKeys.has(groupKey) ||
+      pendingTelemetryBusinessGroupKeys.has(groupKey)
+    );
+  }
+
   return Boolean(
-    groupKey &&
-      (optedOutBusinessGroupKeys.has(groupKey) ||
-        pendingTelemetryBusinessGroupKeys.has(groupKey)),
+    activeBusinessId &&
+      (isBusinessOptedOut(activeBusinessId) ||
+        isBusinessTelemetryPending(activeBusinessId)),
   );
 }
 

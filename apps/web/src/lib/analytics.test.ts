@@ -401,4 +401,70 @@ describe("analytics", () => {
       }),
     ).not.toBeNull();
   });
+
+  it("identifies the operator and registers the business group once telemetry resolution clears the pending state", async () => {
+    vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
+    vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");
+    posthogMock.sessionRecordingStarted.mockReturnValue(false);
+
+    const {
+      initializeAnalytics,
+      identifyOperator,
+      markBusinessTelemetryPending,
+      setBusinessTelemetryEnabled,
+    } = await import("./analytics");
+
+    initializeAnalytics();
+    markBusinessTelemetryPending("business_resolve");
+    identifyOperator({
+      userId: "user_resolve",
+      businessId: "business_resolve",
+      deploymentMode: "test",
+    });
+    expect(posthogMock.identify).not.toHaveBeenCalled();
+    expect(posthogMock.group).not.toHaveBeenCalled();
+
+    setBusinessTelemetryEnabled("business_resolve", true);
+    identifyOperator({
+      userId: "user_resolve",
+      businessId: "business_resolve",
+      deploymentMode: "test",
+    });
+    expect(posthogMock.identify).toHaveBeenCalledTimes(1);
+    expect(posthogMock.group).toHaveBeenCalledWith(
+      "business",
+      "business:business_resolve",
+      expect.anything(),
+    );
+  });
+
+  it("keeps events attributed to an enabled business when the active business opted out", async () => {
+    vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
+    vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");
+    posthogMock.sessionRecordingStarted.mockReturnValue(true);
+
+    const { initializeAnalytics, identifyOperator, setBusinessTelemetryEnabled } =
+      await import("./analytics");
+
+    setBusinessTelemetryEnabled("business_opted", false);
+    initializeAnalytics();
+    identifyOperator({
+      userId: "user_opted",
+      businessId: "business_opted",
+      deploymentMode: "test",
+    });
+
+    const config = posthogMock.init.mock.calls[0]?.[1];
+    expect(
+      config.before_send({
+        uuid: "event-enabled",
+        event: "$pageview",
+        properties: {
+          $groups: { business: "business:business_enabled" },
+          $current_url: "https://app.lobbystack.com/calls",
+          $pathname: "/calls",
+        },
+      }),
+    ).not.toBeNull();
+  });
 });

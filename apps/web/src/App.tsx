@@ -392,6 +392,19 @@ function WorkspaceShell() {
   }
 
   useEffect(() => {
+    if (!businessId) {
+      return;
+    }
+
+    if (telemetry?.telemetryEnabled === undefined) {
+      markBusinessTelemetryPending(String(businessId));
+      return;
+    }
+
+    setBusinessTelemetryEnabled(String(businessId), telemetry.telemetryEnabled);
+  }, [businessId, telemetry?.telemetryEnabled]);
+
+  useEffect(() => {
     if (isBootstrapLoading) {
       return;
     }
@@ -410,19 +423,6 @@ function WorkspaceShell() {
       deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
     });
   }, [businessId, currentUser?._id, isBootstrapLoading, telemetry?.telemetryEnabled]);
-
-  useEffect(() => {
-    if (!businessId) {
-      return;
-    }
-
-    if (telemetry?.telemetryEnabled === undefined) {
-      markBusinessTelemetryPending(String(businessId));
-      return;
-    }
-
-    setBusinessTelemetryEnabled(String(businessId), telemetry.telemetryEnabled);
-  }, [businessId, telemetry?.telemetryEnabled]);
 
   useEffect(() => {
     if (isBootstrapLoading) {
