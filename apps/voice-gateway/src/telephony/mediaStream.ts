@@ -28,6 +28,7 @@ import {
   recordSnapshotCacheHit,
   recordSnapshotCacheMiss,
   recordTwilioInvalidSignature,
+  setBusinessTelemetryEnabled,
 } from "../observability/posthog";
 import {
   buildSafeProviderFailureMessage,
@@ -3426,6 +3427,10 @@ export async function handleMediaStreamConnection(
       }
       snapshot = await fetchSnapshotForPhoneNumber(session.to);
       server.snapshotCache.set(snapshot.businessId, snapshot);
+      setBusinessTelemetryEnabled(
+        snapshot.businessId,
+        snapshot.telemetryEnabled ?? true,
+      );
       session.businessId = snapshot.businessId;
     } else {
       recordSnapshotCacheHit({

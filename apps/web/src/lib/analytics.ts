@@ -116,10 +116,12 @@ function isEventForOptedOutBusiness(event: {
     );
   }
 
+  if (pendingTelemetryBusinessIds.size > 0) {
+    return true;
+  }
+
   return Boolean(
-    activeBusinessId &&
-      (isBusinessOptedOut(activeBusinessId) ||
-        isBusinessTelemetryPending(activeBusinessId)),
+    activeBusinessId && isBusinessOptedOut(activeBusinessId),
   );
 }
 

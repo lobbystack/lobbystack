@@ -402,6 +402,41 @@ describe("analytics", () => {
     ).not.toBeNull();
   });
 
+  it("drops group-less events while telemetry for the business is unresolved", async () => {
+    vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
+    vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");
+    posthogMock.sessionRecordingStarted.mockReturnValue(true);
+
+    const { initializeAnalytics, markBusinessTelemetryPending } = await import(
+      "./analytics"
+    );
+
+    initializeAnalytics();
+    markBusinessTelemetryPending("business_unresolved");
+
+    const config = posthogMock.init.mock.calls[0]?.[1];
+    expect(
+      config.before_send({
+        uuid: "event-pending-groupless",
+        event: "$pageview",
+        properties: {
+          $current_url: "https://app.lobbystack.com/calls",
+          $pathname: "/calls",
+        },
+      }),
+    ).toBeNull();
+    expect(
+      config.before_send({
+        uuid: "event-pending-exception",
+        event: "$exception",
+        properties: {
+          $pathname: "/calls",
+          message: "boom",
+        },
+      }),
+    ).toBeNull();
+  });
+
   it("identifies the operator and registers the business group once telemetry resolution clears the pending state", async () => {
     vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
     vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");
