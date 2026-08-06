@@ -52,11 +52,32 @@ let identifiedBusinessId: string | null = null;
 let activeBusinessId: string | null = null;
 const optedOutBusinessIds = new Set<string>();
 const optedOutBusinessGroupKeys = new Set<string>();
+const pendingTelemetryBusinessIds = new Set<string>();
+const pendingTelemetryBusinessGroupKeys = new Set<string>();
+
+/**
+ * Marks a business's telemetry state as unresolved. While a business is
+ * pending, no events or session recording for it are emitted: the app knows
+ * which business is active before the telemetry preference query resolves,
+ * so boot-time gating no longer depends on that round trip.
+ */
+export function markBusinessTelemetryPending(businessId: string): void {
+  pendingTelemetryBusinessIds.add(businessId);
+  pendingTelemetryBusinessGroupKeys.add(getPostHogBusinessGroupKey(businessId));
+  if (hasInitialized) {
+    // The caller knows the active business before its telemetry preference
+    // resolves; stop recording until then so no replay segment leaks for an
+    // opted-out business on first load.
+    posthog.stopSessionRecording();
+  }
+}
 
 export function setBusinessTelemetryEnabled(
   businessId: string,
   telemetryEnabled: boolean,
 ): void {
+  pendingTelemetryBusinessIds.delete(businessId);
+  pendingTelemetryBusinessGroupKeys.delete(getPostHogBusinessGroupKey(businessId));
   if (telemetryEnabled) {
     optedOutBusinessIds.delete(businessId);
     optedOutBusinessGroupKeys.delete(getPostHogBusinessGroupKey(businessId));
@@ -73,10 +94,18 @@ function isBusinessOptedOut(businessId?: string): boolean {
   return Boolean(businessId && optedOutBusinessIds.has(businessId));
 }
 
+function isBusinessTelemetryPending(businessId?: string): boolean {
+  return Boolean(businessId && pendingTelemetryBusinessIds.has(businessId));
+}
+
 function isEventForOptedOutBusiness(event: {
   properties?: Record<string, unknown>;
 }): boolean {
-  if (activeBusinessId && isBusinessOptedOut(activeBusinessId)) {
+  if (
+    activeBusinessId &&
+    (isBusinessOptedOut(activeBusinessId) ||
+      isBusinessTelemetryPending(activeBusinessId))
+  ) {
     return true;
   }
   const groups = event.properties?.$groups;
@@ -86,14 +115,22 @@ function isEventForOptedOutBusiness(event: {
     typeof (groups as Record<string, unknown>).business === "string"
       ? (groups as Record<string, string>).business
       : undefined;
-  return Boolean(groupKey && optedOutBusinessGroupKeys.has(groupKey));
+  return Boolean(
+    groupKey &&
+      (optedOutBusinessGroupKeys.has(groupKey) ||
+        pendingTelemetryBusinessGroupKeys.has(groupKey)),
+  );
 }
 
 function syncSessionRecordingForActiveBusiness(): void {
   if (!hasInitialized) {
     return;
   }
-  if (activeBusinessId && isBusinessOptedOut(activeBusinessId)) {
+  if (
+    activeBusinessId &&
+    (isBusinessOptedOut(activeBusinessId) ||
+      isBusinessTelemetryPending(activeBusinessId))
+  ) {
     posthog.stopSessionRecording();
   } else if (
     !posthog.sessionRecordingStarted() &&
@@ -251,7 +288,9 @@ export function syncAnalyticsSessionRecording(pathname: string): void {
   }
   if (
     isSensitiveReplayPath(pathname) ||
-    (activeBusinessId !== null && isBusinessOptedOut(activeBusinessId))
+    (activeBusinessId !== null &&
+      (isBusinessOptedOut(activeBusinessId) ||
+        isBusinessTelemetryPending(activeBusinessId)))
   ) {
     posthog.stopSessionRecording();
   } else if (!posthog.sessionRecordingStarted()) {
@@ -370,7 +409,10 @@ export function identifyOperator(args: IdentifyOperatorArgs): void {
 
   activeBusinessId = args.businessId ?? null;
 
-  if (isBusinessOptedOut(args.businessId)) {
+  if (
+    isBusinessOptedOut(args.businessId) ||
+    isBusinessTelemetryPending(args.businessId)
+  ) {
     if (hasInitialized) {
       posthog.stopSessionRecording();
     }
@@ -429,7 +471,8 @@ export function captureAnalyticsEvent(
 
   if (
     typeof properties?.businessId === "string" &&
-    isBusinessOptedOut(properties.businessId)
+    (isBusinessOptedOut(properties.businessId) ||
+      isBusinessTelemetryPending(properties.businessId))
   ) {
     return;
   }
@@ -500,7 +543,8 @@ export function captureAnalyticsException(
 
   if (
     typeof properties?.businessId === "string" &&
-    isBusinessOptedOut(properties.businessId)
+    (isBusinessOptedOut(properties.businessId) ||
+      isBusinessTelemetryPending(properties.businessId))
   ) {
     return;
   }

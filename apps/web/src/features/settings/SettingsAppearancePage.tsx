@@ -47,7 +47,9 @@ export function SettingsAppearancePage({
       properties: { businessId: String(businessId) },
     },
   );
-  const [telemetryEnabled, setTelemetryEnabledState] = useState(true);
+  const [telemetryEnabled, setTelemetryEnabledState] = useState<boolean | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
     if (telemetry?.telemetryEnabled !== undefined) {
@@ -145,8 +147,8 @@ export function SettingsAppearancePage({
             <ItemActions className="w-full sm:w-auto">
               <Switch
                 aria-label={t("appearance.telemetry.label")}
-                checked={telemetryEnabled}
-                disabled={!canManageTenant}
+                checked={telemetryEnabled ?? false}
+                disabled={!canManageTenant || telemetryEnabled === undefined}
                 onCheckedChange={(checked) => void handleTelemetryToggle(checked)}
               />
             </ItemActions>

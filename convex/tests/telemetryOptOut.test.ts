@@ -1,7 +1,7 @@
 import { convexTest } from "convex-test";
 import { describe, expect, it, vi } from "vitest";
 
-import { api } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import schema from "../schema";
 import { modules } from "../test.setup";
@@ -266,6 +266,82 @@ describe("Business telemetry opt-out settings", () => {
       });
 
       expect(outboxRows).toHaveLength(1);
+    });
+  });
+
+  it("drops previously-enqueued outbox rows when the business opts out before flush", async () => {
+    await withPostHogExportEnabled(async () => {
+      const { t, businessId, authed } = await seedBusinessMember(
+        "telemetry-outbox-late-optout",
+        "business_owner",
+      );
+
+      await t.run(async (ctx) => {
+        await enqueuePostHogOutboxRecord(
+          ctx,
+          serializePostHogEvent({
+            eventName: "business.snapshot_refreshed",
+            businessId,
+            distinctId: `system:business:${String(businessId)}`,
+            groupKey: `business:${String(businessId)}`,
+            properties: {},
+          }),
+        );
+      });
+
+      await authed.mutation(api.settings.telemetryOptOut.setTelemetryEnabled, {
+        businessId,
+        telemetryEnabled: false,
+      });
+
+      await t.mutation(internal.telemetry.posthog.claimDueEvents, { limit: 10 });
+
+      const outboxRows = await t.run(async (ctx) => {
+        return await ctx.db
+          .query("telemetry_outbox")
+          .withIndex("by_business_id_and_status", (q) =>
+            q.eq("businessId", businessId),
+          )
+          .collect();
+      });
+
+      expect(outboxRows).toHaveLength(0);
+    });
+  });
+
+  it("still claims outbox rows for businesses with telemetry enabled", async () => {
+    await withPostHogExportEnabled(async () => {
+      const { t, businessId } = await seedBusinessMember(
+        "telemetry-outbox-claim-enabled",
+        "business_owner",
+      );
+
+      await t.run(async (ctx) => {
+        await enqueuePostHogOutboxRecord(
+          ctx,
+          serializePostHogEvent({
+            eventName: "business.snapshot_refreshed",
+            businessId,
+            distinctId: `system:business:${String(businessId)}`,
+            groupKey: `business:${String(businessId)}`,
+            properties: {},
+          }),
+        );
+      });
+
+      await t.mutation(internal.telemetry.posthog.claimDueEvents, { limit: 10 });
+
+      const outboxRows = await t.run(async (ctx) => {
+        return await ctx.db
+          .query("telemetry_outbox")
+          .withIndex("by_business_id_and_status", (q) =>
+            q.eq("businessId", businessId),
+          )
+          .collect();
+      });
+
+      expect(outboxRows).toHaveLength(1);
+      expect(outboxRows[0].status).toBe("processing");
     });
   });
 });

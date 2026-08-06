@@ -77,6 +77,7 @@ import { SetupGuidePage } from "@/features/setup/SetupGuidePage";
 import {
   captureAnalyticsEvent,
   identifyOperator,
+  markBusinessTelemetryPending,
   resetAnalyticsIdentity,
   setBusinessTelemetryEnabled,
   syncAnalyticsSessionRecording,
@@ -399,17 +400,28 @@ function WorkspaceShell() {
       return;
     }
 
+    if (businessId && telemetry?.telemetryEnabled === undefined) {
+      return;
+    }
+
     identifyOperator({
       userId: String(currentUser._id),
       ...(businessId ? { businessId: String(businessId) } : {}),
       deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
     });
-  }, [businessId, currentUser?._id, isBootstrapLoading]);
+  }, [businessId, currentUser?._id, isBootstrapLoading, telemetry?.telemetryEnabled]);
 
   useEffect(() => {
-    if (businessId && telemetry?.telemetryEnabled !== undefined) {
-      setBusinessTelemetryEnabled(String(businessId), telemetry.telemetryEnabled);
+    if (!businessId) {
+      return;
     }
+
+    if (telemetry?.telemetryEnabled === undefined) {
+      markBusinessTelemetryPending(String(businessId));
+      return;
+    }
+
+    setBusinessTelemetryEnabled(String(businessId), telemetry.telemetryEnabled);
   }, [businessId, telemetry?.telemetryEnabled]);
 
   useEffect(() => {
@@ -421,11 +433,24 @@ function WorkspaceShell() {
       return;
     }
 
+    if (telemetry?.telemetryEnabled === undefined) {
+      return;
+    }
+
     trackPageView(location.pathname, businessId ? String(businessId) : undefined);
-  }, [businessId, isBootstrapLoading, location.pathname]);
+  }, [
+    businessId,
+    isBootstrapLoading,
+    location.pathname,
+    telemetry?.telemetryEnabled,
+  ]);
 
   useEffect(() => {
     if (isBootstrapLoading) {
+      return;
+    }
+
+    if (telemetry?.telemetryEnabled === undefined) {
       return;
     }
 
@@ -441,7 +466,7 @@ function WorkspaceShell() {
       businessId: nextBusinessId,
       previousBusinessId,
     });
-  }, [businessId, isBootstrapLoading]);
+  }, [businessId, isBootstrapLoading, telemetry?.telemetryEnabled]);
 
   // No business yet → user just signed up. Send them to the very first
   // onboarding step so they can name their business.

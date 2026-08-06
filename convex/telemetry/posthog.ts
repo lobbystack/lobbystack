@@ -672,6 +672,13 @@ export const claimDueEvents = internalMutation({
         if (row.destination !== TELEMETRY_DESTINATION) {
           continue;
         }
+        if (row.businessId !== undefined) {
+          const business = await ctx.db.get(row.businessId);
+          if (business?.telemetryEnabled === false) {
+            await ctx.db.delete(row._id);
+            continue;
+          }
+        }
         await ctx.db.patch(row._id, {
           status: CLAIMED_STATUS,
           availableAt: leaseUntilIso,

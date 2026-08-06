@@ -334,4 +334,71 @@ describe("analytics", () => {
       }),
     ).toBeNull();
   });
+
+  it("holds events and session recording while telemetry is pending, then applies the resolved preference", async () => {
+    vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
+    vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");
+    posthogMock.sessionRecordingStarted.mockReturnValue(false);
+
+    const {
+      initializeAnalytics,
+      captureAnalyticsEvent,
+      identifyOperator,
+      markBusinessTelemetryPending,
+      setBusinessTelemetryEnabled,
+    } = await import("./analytics");
+
+    initializeAnalytics();
+    expect(posthogMock.startSessionRecording).toHaveBeenCalledTimes(1);
+    posthogMock.sessionRecordingStarted.mockReturnValue(true);
+
+    markBusinessTelemetryPending("business_race");
+    expect(posthogMock.stopSessionRecording).toHaveBeenCalled();
+
+    identifyOperator({
+      userId: "user_race",
+      businessId: "business_race",
+      deploymentMode: "test",
+    });
+    expect(posthogMock.identify).not.toHaveBeenCalled();
+    expect(posthogMock.group).not.toHaveBeenCalled();
+
+    captureAnalyticsEvent("web.page.home_viewed", {
+      businessId: "business_race",
+    });
+    expect(posthogMock.capture).not.toHaveBeenCalled();
+
+    const config = posthogMock.init.mock.calls[0]?.[1];
+    expect(
+      config.before_send({
+        uuid: "event-pending",
+        event: "$pageview",
+        properties: {
+          $groups: { business: "business:business_race" },
+          $current_url: "https://app.lobbystack.com/",
+          $pathname: "/",
+        },
+      }),
+    ).toBeNull();
+
+    posthogMock.sessionRecordingStarted.mockReturnValue(false);
+    setBusinessTelemetryEnabled("business_race", true);
+
+    expect(posthogMock.startSessionRecording).toHaveBeenCalledTimes(2);
+    captureAnalyticsEvent("web.page.home_viewed", {
+      businessId: "business_race",
+    });
+    expect(posthogMock.capture).toHaveBeenCalledTimes(1);
+    expect(
+      config.before_send({
+        uuid: "event-resolved",
+        event: "$pageview",
+        properties: {
+          $groups: { business: "business:business_race" },
+          $current_url: "https://app.lobbystack.com/",
+          $pathname: "/",
+        },
+      }),
+    ).not.toBeNull();
+  });
 });

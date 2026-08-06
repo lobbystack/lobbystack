@@ -639,7 +639,11 @@ export function capturePostHogException(
     properties?: TelemetryProperties;
   },
 ): void {
-  if (isBusinessOptedOut(input?.businessId)) {
+  const businessId = resolveOperationalBusinessId({
+    ...(input?.businessId ? { businessId: input.businessId } : {}),
+    ...(input?.properties ? { properties: input.properties } : {}),
+  });
+  if (isBusinessOptedOut(businessId)) {
     return;
   }
 
@@ -681,18 +685,16 @@ export function capturePostHogException(
     }),
   };
 
-  if (input?.businessId) {
+  if (businessId) {
     additionalProperties.$groups = {
-      business: getPostHogBusinessGroupKey(input.businessId),
+      business: getPostHogBusinessGroupKey(businessId),
     };
   }
 
   activeClient.captureException(
     error,
     input?.distinctId ??
-      (input?.businessId
-        ? getPostHogDistinctIdForBusinessSystem(input.businessId)
-        : undefined),
+      (businessId ? getPostHogDistinctIdForBusinessSystem(businessId) : undefined),
     additionalProperties,
   );
 }
