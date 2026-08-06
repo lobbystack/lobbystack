@@ -15,7 +15,10 @@ import {
   startWebVoiceCall,
   uploadVoiceRecording,
 } from "../convex/runtimeClient";
-import { capturePostHogException } from "../observability/posthog";
+import {
+  capturePostHogException,
+  setBusinessTelemetryEnabled,
+} from "../observability/posthog";
 import type { EndCallRequest } from "../realtime/callControl";
 import { executeVoiceTool } from "../realtime/toolExecutor";
 import { createWebRealtimeToolDefinitions } from "../realtime/toolDefinitions";
@@ -1629,6 +1632,10 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         }
         throw error;
       }
+      setBusinessTelemetryEnabled(
+        context.businessId,
+        context.snapshot.telemetryEnabled ?? true,
+      );
       let exchange: Awaited<ReturnType<typeof exchangeWebRtcOffer>>;
       try {
         exchange = await exchangeWebRtcOffer({

@@ -338,6 +338,9 @@ export const refreshSnapshot = internalMutation({
       ),
       ...(primaryPhone?.e164 !== undefined ? { phoneNumber: primaryPhone.e164 } : {}),
       ...(primarySms?.e164 !== undefined ? { smsNumber: primarySms.e164 } : {}),
+      ...(business.telemetryEnabled !== undefined
+        ? { telemetryEnabled: business.telemetryEnabled }
+        : {}),
     });
     const { businessId: _unusedBusinessId, ...snapshot } = snapshotPayload;
 

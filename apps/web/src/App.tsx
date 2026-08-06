@@ -78,6 +78,7 @@ import {
   captureAnalyticsEvent,
   identifyOperator,
   resetAnalyticsIdentity,
+  setBusinessTelemetryEnabled,
   syncAnalyticsSessionRecording,
   trackPageView,
 } from "@/lib/analytics";
@@ -349,6 +350,10 @@ function WorkspaceShell() {
     api.billing.getStatus,
     businessId ? { businessId } : "skip",
   );
+  const telemetry = useQuery(
+    api.settings.telemetryOptOut.getTelemetryEnabled,
+    businessId ? { businessId } : "skip",
+  );
   const isBootstrapLoading = businesses === undefined || currentUser === undefined;
   const isOnboardingBillingPlanLoading = Boolean(
     activeBusiness &&
@@ -400,6 +405,12 @@ function WorkspaceShell() {
       deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
     });
   }, [businessId, currentUser?._id, isBootstrapLoading]);
+
+  useEffect(() => {
+    if (businessId && telemetry?.telemetryEnabled !== undefined) {
+      setBusinessTelemetryEnabled(String(businessId), telemetry.telemetryEnabled);
+    }
+  }, [businessId, telemetry?.telemetryEnabled]);
 
   useEffect(() => {
     if (isBootstrapLoading) {

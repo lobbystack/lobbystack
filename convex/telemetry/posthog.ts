@@ -494,6 +494,13 @@ export async function enqueuePostHogOutboxRecord(
     return null;
   }
 
+  if (input.businessId !== undefined) {
+    const business = await ctx.db.get(input.businessId);
+    if (business?.telemetryEnabled === false) {
+      return null;
+    }
+  }
+
   const outboxId = await ctx.db.insert("telemetry_outbox", {
     destination: TELEMETRY_DESTINATION,
     status: "pending",

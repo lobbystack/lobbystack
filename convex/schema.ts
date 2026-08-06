@@ -228,6 +228,7 @@ export default defineSchema({
     status: v.string(),
     phoneNumberReplacementReservedAt: v.optional(v.string()),
     phoneNumberReplacementUsedAt: v.optional(v.string()),
+    telemetryEnabled: v.optional(v.boolean()),
   }).index("by_slug", ["slug"]),
 
   business_memberships: defineTable({

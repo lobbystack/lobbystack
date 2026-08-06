@@ -49,6 +49,22 @@ let hasInitialized = false;
 let lastPageEventKey: string | null = null;
 let identifiedUserId: string | null = null;
 let identifiedBusinessId: string | null = null;
+const optedOutBusinessIds = new Set<string>();
+
+export function setBusinessTelemetryEnabled(
+  businessId: string,
+  telemetryEnabled: boolean,
+): void {
+  if (telemetryEnabled) {
+    optedOutBusinessIds.delete(businessId);
+  } else {
+    optedOutBusinessIds.add(businessId);
+  }
+}
+
+function isBusinessOptedOut(businessId?: string): boolean {
+  return Boolean(businessId && optedOutBusinessIds.has(businessId));
+}
 
 function isSensitiveReplayPath(pathname: string): boolean {
   return (
@@ -309,6 +325,10 @@ export function identifyOperator(args: IdentifyOperatorArgs): void {
     return;
   }
 
+  if (isBusinessOptedOut(args.businessId)) {
+    return;
+  }
+
   const distinctId = getPostHogDistinctIdForOperator(args.userId);
   if (identifiedUserId !== distinctId) {
     posthog.identify(distinctId, {
@@ -355,6 +375,13 @@ export function captureAnalyticsEvent(
   properties?: TelemetryProperties,
 ): void {
   if (!isAnalyticsEnabled()) {
+    return;
+  }
+
+  if (
+    typeof properties?.businessId === "string" &&
+    isBusinessOptedOut(properties.businessId)
+  ) {
     return;
   }
 
@@ -419,6 +446,13 @@ export function captureAnalyticsException(
   properties?: TelemetryProperties,
 ): void {
   if (!isAnalyticsEnabled()) {
+    return;
+  }
+
+  if (
+    typeof properties?.businessId === "string" &&
+    isBusinessOptedOut(properties.businessId)
+  ) {
     return;
   }
 

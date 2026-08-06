@@ -46,6 +46,22 @@ let loggerProvider: LoggerProvider | null = null;
 let operationalLogger: Logger | null = null;
 let runtimeEnv: VoiceGatewayEnv | null | undefined;
 let fatalHandlersInstalled = false;
+const optedOutBusinessIds = new Set<string>();
+
+export function setBusinessTelemetryEnabled(
+  businessId: string,
+  telemetryEnabled: boolean,
+): void {
+  if (telemetryEnabled) {
+    optedOutBusinessIds.delete(businessId);
+  } else {
+    optedOutBusinessIds.add(businessId);
+  }
+}
+
+function isBusinessOptedOut(businessId?: string): boolean {
+  return Boolean(businessId && optedOutBusinessIds.has(businessId));
+}
 
 const VOICE_GATEWAY_DISTINCT_ID = "system:voice-gateway";
 const SLOW_TURN_THRESHOLD_MS = 2_500;
@@ -165,6 +181,10 @@ function capture(
     properties: Record<string, unknown>;
   },
 ): void {
+  if (isBusinessOptedOut(input.businessId)) {
+    return;
+  }
+
   const activeClient = getClient();
   if (!activeClient) {
     return;
@@ -325,6 +345,10 @@ export function emitOperationalLog(input: {
   properties?: TelemetryProperties;
   businessId?: string;
 }): void {
+  if (isBusinessOptedOut(input.businessId)) {
+    return;
+  }
+
   const logger = getOperationalLogger();
   if (!logger) {
     return;
@@ -593,6 +617,10 @@ export function capturePostHogException(
     properties?: TelemetryProperties;
   },
 ): void {
+  if (isBusinessOptedOut(input?.businessId)) {
+    return;
+  }
+
   const activeClient = getClient();
   if (!activeClient) {
     return;
