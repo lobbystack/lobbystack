@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { Id } from "../_generated/dataModel";
+
 import {
   emitServiceHealthCheckEvents,
   enqueuePostHogExceptionBestEffort,
@@ -148,7 +150,7 @@ describe("PostHog provider exception telemetry", () => {
     expect(payload.properties.$exception_list).toMatchObject([
       {
         type: "DatabaseUnavailableError",
-        value: "convex dashboard.contacts.save failed (DatabaseUnavailableError)",
+        value: "database exploded with phone ***0123",
         mechanism: {
           handled: true,
           synthetic: false,
@@ -156,6 +158,101 @@ describe("PostHog provider exception telemetry", () => {
         },
       },
     ]);
+  });
+
+  it("derives exception type and message from a generic Error", async () => {
+    type SerializedPostHogEvent = {
+      eventName: string;
+      distinctId: string;
+      payloadJson: string;
+    };
+    const runMutation = vi.fn(
+      async (_reference: unknown, _serialized: SerializedPostHogEvent) => null,
+    );
+    const ctx = { runMutation } as unknown as Parameters<
+      typeof enqueuePostHogExceptionBestEffort
+    >[0];
+
+    await enqueuePostHogExceptionBestEffort(ctx, {
+      error: new Error("Google token refresh failed: {invalid_grant}"),
+      service: "convex",
+      operation: "convex_internal_action",
+      distinctId: "system:convex:telemetry",
+    });
+
+    const serialized = runMutation.mock.calls[0]?.[1];
+    const payload = JSON.parse(serialized.payloadJson);
+    expect(payload.properties.$exception_type).toBe("GoogleTokenRefreshFailed");
+    expect(payload.properties.$exception_list).toMatchObject([
+      {
+        type: "GoogleTokenRefreshFailed",
+        value: "Google token refresh failed: {invalid_grant}",
+      },
+    ]);
+  });
+
+  it("redacts emails and long messages from exception values", async () => {
+    type SerializedPostHogEvent = {
+      eventName: string;
+      distinctId: string;
+      payloadJson: string;
+    };
+    const runMutation = vi.fn(
+      async (_reference: unknown, _serialized: SerializedPostHogEvent) => null,
+    );
+    const ctx = { runMutation } as unknown as Parameters<
+      typeof enqueuePostHogExceptionBestEffort
+    >[0];
+
+    await enqueuePostHogExceptionBestEffort(ctx, {
+      error: new Error(
+        "Could not email john.doe@example.com: " + "x".repeat(700),
+      ),
+      service: "convex",
+      operation: "convex_internal_action",
+      distinctId: "system:convex:telemetry",
+    });
+
+    const serialized = runMutation.mock.calls[0]?.[1];
+    const payload = JSON.parse(serialized.payloadJson);
+    const value = payload.properties.$exception_list[0].value;
+    expect(value).toContain("[redacted]");
+    expect(value).not.toContain("john.doe@example.com");
+    expect(value.length).toBeLessThanOrEqual(500);
+  });
+
+  it("attaches businessId and groupKey to enqueued exceptions", async () => {
+    type SerializedPostHogEvent = {
+      eventName: string;
+      distinctId: string;
+      payloadJson: string;
+    };
+    const runMutation = vi.fn(
+      async (_reference: unknown, _serialized: SerializedPostHogEvent) => null,
+    );
+    const ctx = { runMutation } as unknown as Parameters<
+      typeof enqueuePostHogExceptionBestEffort
+    >[0];
+    const businessId = "m97bdjb606gbv9ks89a1eamg218a3egz" as Id<"businesses">;
+
+    await enqueuePostHogExceptionBestEffort(ctx, {
+      error: new Error("sync failed"),
+      service: "convex",
+      operation: "convex_internal_action",
+      distinctId: "system:convex:telemetry",
+      businessId,
+      groupKey: `business:${businessId}`,
+    });
+
+    const serialized = runMutation.mock.calls[0]?.[1];
+    expect(serialized).toMatchObject({
+      eventName: "$exception",
+      businessId,
+      groupKey: `business:${businessId}`,
+    });
+    const payload = JSON.parse(serialized.payloadJson);
+    expect(payload.businessId).toBe(businessId);
+    expect(payload.properties.$exception_list[0].value).toBe("sync failed");
   });
 
   it("emits service health success and failure events", async () => {
