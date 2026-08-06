@@ -26,10 +26,12 @@ import type { SupportedLocale, TimeFormatPreference } from "@/lib/locale";
 
 type SettingsAppearancePageProps = {
   businessId: Id<"businesses">;
+  canManageTenant: boolean;
 };
 
 export function SettingsAppearancePage({
   businessId,
+  canManageTenant,
 }: SettingsAppearancePageProps) {
   const { t } = useTranslation(["settings", "common"]);
   const { locale, setLocale } = useLocalePreference();
@@ -54,6 +56,9 @@ export function SettingsAppearancePage({
   }, [telemetry?.telemetryEnabled]);
 
   async function handleTelemetryToggle(next: boolean): Promise<void> {
+    if (!canManageTenant) {
+      return;
+    }
     setTelemetryEnabledState(next);
     setBusinessTelemetryEnabled(String(businessId), next);
     try {
@@ -141,6 +146,7 @@ export function SettingsAppearancePage({
               <Switch
                 aria-label={t("appearance.telemetry.label")}
                 checked={telemetryEnabled}
+                disabled={!canManageTenant}
                 onCheckedChange={(checked) => void handleTelemetryToggle(checked)}
               />
             </ItemActions>

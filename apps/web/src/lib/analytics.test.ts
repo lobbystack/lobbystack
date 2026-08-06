@@ -6,6 +6,11 @@ const posthogMock = vi.hoisted(() => ({
   sessionRecordingStarted: vi.fn(),
   startSessionRecording: vi.fn(),
   stopSessionRecording: vi.fn(),
+  identify: vi.fn(),
+  group: vi.fn(),
+  capture: vi.fn(),
+  reset: vi.fn(),
+  people: { set: vi.fn() },
 }));
 
 vi.mock("posthog-js", () => ({
@@ -21,6 +26,11 @@ describe("analytics", () => {
     posthogMock.sessionRecordingStarted.mockReset();
     posthogMock.startSessionRecording.mockReset();
     posthogMock.stopSessionRecording.mockReset();
+    posthogMock.identify.mockReset();
+    posthogMock.group.mockReset();
+    posthogMock.capture.mockReset();
+    posthogMock.reset.mockReset();
+    posthogMock.people.set.mockReset();
   });
 
   it("stops session replay on prospect demo routes", async () => {
@@ -201,5 +211,127 @@ describe("analytics", () => {
     expect(signupEvent.properties.$current_url).toBe(
       "https://app.lobbystack.com/signup?returnTo=%2Fclaim-demo",
     );
+  });
+
+  it("drops every event in before_send when the active business opted out", async () => {
+    vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
+    vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");
+    posthogMock.sessionRecordingStarted.mockReturnValue(true);
+
+    const { initializeAnalytics, identifyOperator, setBusinessTelemetryEnabled } =
+      await import("./analytics");
+
+    setBusinessTelemetryEnabled("business_123", false);
+    initializeAnalytics();
+    identifyOperator({
+      userId: "user_123",
+      businessId: "business_123",
+      deploymentMode: "test",
+    });
+
+    const config = posthogMock.init.mock.calls[0]?.[1];
+    expect(
+      config.before_send({
+        uuid: "event-opted-out",
+        event: "$pageview",
+        properties: {
+          $current_url: "https://app.lobbystack.com/",
+          $pathname: "/",
+        },
+      }),
+    ).toBeNull();
+
+    expect(
+      config.before_send({
+        uuid: "event-pop",
+        event: "$exception",
+        properties: {
+          $pathname: "/",
+          message: "boom",
+        },
+      }),
+    ).toBeNull();
+  });
+
+  it("keeps sending business-scoped events after the business opts back in", async () => {
+    vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
+    vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");
+    posthogMock.sessionRecordingStarted.mockReturnValue(true);
+
+    const { initializeAnalytics, identifyOperator, setBusinessTelemetryEnabled } =
+      await import("./analytics");
+
+    setBusinessTelemetryEnabled("business_456", false);
+    setBusinessTelemetryEnabled("business_456", true);
+    initializeAnalytics();
+    identifyOperator({
+      userId: "user_456",
+      businessId: "business_456",
+      deploymentMode: "test",
+    });
+
+    const config = posthogMock.init.mock.calls[0]?.[1];
+    const event = config.before_send({
+      uuid: "event-back",
+      event: "$pageview",
+      properties: {
+        $current_url: "https://app.lobbystack.com/calls",
+        $pathname: "/calls",
+      },
+    });
+
+    expect(event).not.toBeNull();
+  });
+
+  it("stops session recording for an opted-out business and resumes after enabling", async () => {
+    vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
+    vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");
+    posthogMock.sessionRecordingStarted.mockReturnValue(false);
+
+    const {
+      initializeAnalytics,
+      identifyOperator,
+      setBusinessTelemetryEnabled,
+    } = await import("./analytics");
+
+    initializeAnalytics();
+    posthogMock.sessionRecordingStarted.mockReturnValue(true);
+
+    identifyOperator({
+      userId: "user_789",
+      businessId: "business_789",
+      deploymentMode: "test",
+    });
+    setBusinessTelemetryEnabled("business_789", false);
+    expect(posthogMock.stopSessionRecording).toHaveBeenCalledTimes(1);
+
+    setBusinessTelemetryEnabled("business_789", true);
+    expect(posthogMock.startSessionRecording).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops events attributed to an opted-out business via $groups", async () => {
+    vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
+    vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");
+    posthogMock.sessionRecordingStarted.mockReturnValue(true);
+
+    const { initializeAnalytics, setBusinessTelemetryEnabled } = await import(
+      "./analytics"
+    );
+
+    setBusinessTelemetryEnabled("business_abc", false);
+    initializeAnalytics();
+
+    const config = posthogMock.init.mock.calls[0]?.[1];
+    expect(
+      config.before_send({
+        uuid: "event-opted-out",
+        event: "$pageview",
+        properties: {
+          $groups: { business: "business:business_abc" },
+          $current_url: "https://app.lobbystack.com/",
+          $pathname: "/",
+        },
+      }),
+    ).toBeNull();
   });
 });

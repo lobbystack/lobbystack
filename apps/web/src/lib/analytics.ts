@@ -49,7 +49,9 @@ let hasInitialized = false;
 let lastPageEventKey: string | null = null;
 let identifiedUserId: string | null = null;
 let identifiedBusinessId: string | null = null;
+let activeBusinessId: string | null = null;
 const optedOutBusinessIds = new Set<string>();
+const optedOutBusinessGroupKeys = new Set<string>();
 
 export function setBusinessTelemetryEnabled(
   businessId: string,
@@ -57,13 +59,48 @@ export function setBusinessTelemetryEnabled(
 ): void {
   if (telemetryEnabled) {
     optedOutBusinessIds.delete(businessId);
+    optedOutBusinessGroupKeys.delete(getPostHogBusinessGroupKey(businessId));
   } else {
     optedOutBusinessIds.add(businessId);
+    optedOutBusinessGroupKeys.add(getPostHogBusinessGroupKey(businessId));
+  }
+  if (hasInitialized) {
+    syncSessionRecordingForActiveBusiness();
   }
 }
 
 function isBusinessOptedOut(businessId?: string): boolean {
   return Boolean(businessId && optedOutBusinessIds.has(businessId));
+}
+
+function isEventForOptedOutBusiness(event: {
+  properties?: Record<string, unknown>;
+}): boolean {
+  if (activeBusinessId && isBusinessOptedOut(activeBusinessId)) {
+    return true;
+  }
+  const groups = event.properties?.$groups;
+  const groupKey =
+    typeof groups === "object" &&
+    groups !== null &&
+    typeof (groups as Record<string, unknown>).business === "string"
+      ? (groups as Record<string, string>).business
+      : undefined;
+  return Boolean(groupKey && optedOutBusinessGroupKeys.has(groupKey));
+}
+
+function syncSessionRecordingForActiveBusiness(): void {
+  if (!hasInitialized) {
+    return;
+  }
+  if (activeBusinessId && isBusinessOptedOut(activeBusinessId)) {
+    posthog.stopSessionRecording();
+  } else if (
+    !posthog.sessionRecordingStarted() &&
+    !isSensitiveReplayPath(window.location.pathname)
+  ) {
+    posthog.startSessionRecording();
+  }
 }
 
 function isSensitiveReplayPath(pathname: string): boolean {
@@ -154,6 +191,9 @@ export function initializeAnalytics(): void {
       if (!event) {
         return event;
       }
+      if (isEventForOptedOutBusiness(event)) {
+        return null;
+      }
       const nextEvent = {
         ...event,
         properties: redactSensitiveAnalyticsProperties(event.properties) ?? event.properties,
@@ -209,7 +249,10 @@ export function syncAnalyticsSessionRecording(pathname: string): void {
   if (!isAnalyticsEnabled() || !hasInitialized) {
     return;
   }
-  if (isSensitiveReplayPath(pathname)) {
+  if (
+    isSensitiveReplayPath(pathname) ||
+    (activeBusinessId !== null && isBusinessOptedOut(activeBusinessId))
+  ) {
     posthog.stopSessionRecording();
   } else if (!posthog.sessionRecordingStarted()) {
     posthog.startSessionRecording();
@@ -325,7 +368,12 @@ export function identifyOperator(args: IdentifyOperatorArgs): void {
     return;
   }
 
+  activeBusinessId = args.businessId ?? null;
+
   if (isBusinessOptedOut(args.businessId)) {
+    if (hasInitialized) {
+      posthog.stopSessionRecording();
+    }
     return;
   }
 
@@ -354,6 +402,7 @@ export function resetAnalyticsIdentity(): void {
   lastPageEventKey = null;
   identifiedUserId = null;
   identifiedBusinessId = null;
+  activeBusinessId = null;
 
   if (!isAnalyticsEnabled()) {
     return;

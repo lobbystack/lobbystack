@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { api } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
@@ -9,6 +9,21 @@ import {
   enqueuePostHogOutboxRecord,
   serializePostHogEvent,
 } from "../telemetry/posthog";
+
+const { scheduleSnapshotRefreshMock } = vi.hoisted(() => ({
+  scheduleSnapshotRefreshMock: vi.fn(),
+}));
+
+vi.mock("../businesses/admin.ts", async () => {
+  const actual = await vi.importActual<typeof import("../businesses/admin")>(
+    "../businesses/admin.ts",
+  );
+
+  return {
+    ...actual,
+    scheduleSnapshotRefresh: scheduleSnapshotRefreshMock,
+  };
+});
 
 async function seedBusinessMember(subject: string, role: string) {
   const t = convexTest(schema, modules);
@@ -160,6 +175,27 @@ describe("Business telemetry opt-out settings", () => {
         telemetryEnabled: false,
       }),
     ).rejects.toThrow();
+  });
+
+  it("schedules a snapshot refresh so voice telemetry stops promptly", async () => {
+    scheduleSnapshotRefreshMock.mockReset();
+    scheduleSnapshotRefreshMock.mockResolvedValue(null);
+
+    const { t, businessId, authed } = await seedBusinessMember(
+      "telemetry-refresh-owner",
+      "business_owner",
+    );
+
+    await authed.mutation(api.settings.telemetryOptOut.setTelemetryEnabled, {
+      businessId,
+      telemetryEnabled: false,
+    });
+
+    expect(scheduleSnapshotRefreshMock).toHaveBeenCalledTimes(1);
+    expect(scheduleSnapshotRefreshMock).toHaveBeenCalledWith(
+      expect.anything(),
+      businessId,
+    );
   });
 
   it("drops business-scoped events from the outbox when telemetry is disabled", async () => {

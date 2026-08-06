@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 
 import { query } from "../_generated/server";
+import { scheduleSnapshotRefresh } from "../businesses/admin";
 import { requireMembership, requireTenantAdminAccess } from "../lib/auth";
 import { observedMutation as mutation } from "../telemetry/observedFunctions";
 
@@ -34,6 +35,7 @@ export const setTelemetryEnabled = mutation({
     await ctx.db.patch(args.businessId, {
       telemetryEnabled: args.telemetryEnabled,
     });
+    await scheduleSnapshotRefresh(ctx, args.businessId);
     return {
       telemetryEnabled: args.telemetryEnabled,
     };

@@ -648,7 +648,10 @@ function WorkspaceShell() {
               <Route
                 element={
                   businessId ? (
-                    <SettingsAppearancePage businessId={businessId} />
+                    <SettingsAppearancePage
+                      businessId={businessId}
+                      canManageTenant={canManageTenant}
+                    />
                   ) : (
                     <Navigate replace to="/settings" />
                   )

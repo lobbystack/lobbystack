@@ -299,6 +299,23 @@ function coerceLogAttributes(
   return attributes;
 }
 
+function resolveOperationalBusinessId(input: {
+  businessId?: string;
+  properties?: TelemetryProperties;
+}): string | undefined {
+  if (input.businessId) {
+    return input.businessId;
+  }
+  if (typeof input.properties?.businessId === "string") {
+    return input.properties.businessId;
+  }
+  const rawBusinessId = input.properties?.["lobbystack.business_id"];
+  if (typeof rawBusinessId === "string") {
+    return rawBusinessId;
+  }
+  return undefined;
+}
+
 function captureOperationalEvent(input: {
   event: string;
   properties?: TelemetryProperties;
@@ -315,9 +332,10 @@ function captureOperationalEvent(input: {
     deploymentMode: env.DEPLOYMENT_MODE,
     runtime: "voice-gateway",
   });
-  const businessId =
-    input.businessId ??
-    (typeof properties.businessId === "string" ? properties.businessId : undefined);
+  const businessId = resolveOperationalBusinessId({
+    ...(input.businessId ? { businessId: input.businessId } : {}),
+    ...(input.properties ? { properties: input.properties } : {}),
+  });
 
   capture(input.event, {
     distinctId:
@@ -345,7 +363,11 @@ export function emitOperationalLog(input: {
   properties?: TelemetryProperties;
   businessId?: string;
 }): void {
-  if (isBusinessOptedOut(input.businessId)) {
+  const businessId = resolveOperationalBusinessId({
+    ...(input.businessId ? { businessId: input.businessId } : {}),
+    ...(input.properties ? { properties: input.properties } : {}),
+  });
+  if (isBusinessOptedOut(businessId)) {
     return;
   }
 
@@ -361,7 +383,7 @@ export function emitOperationalLog(input: {
 
   const attributes = coerceLogAttributes({
     ...input.properties,
-    ...(input.businessId ? { businessId: input.businessId } : {}),
+    ...(businessId ? { businessId } : {}),
     deploymentMode: env.DEPLOYMENT_MODE,
     runtime: "voice-gateway",
   });
