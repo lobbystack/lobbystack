@@ -330,7 +330,7 @@
       "noCap": "Aucun plafond de dépenses défini",
       "currentSpend": "Dépenses de dépassement actuelles",
       "spendOfCap": "{{spend}} sur {{cap}}",
-      "spendAtLeastOfCap": "{{spend}} sur {{cap}}",
+      "spendAtLeastOfCap": "Au moins {{spend}} sur {{cap}}",
       "reached": "Plafond atteint — la nouvelle utilisation au-delà des volumes inclus est suspendue.",
       "adminOnly": "Seuls les propriétaires et les administrateurs de l’espace peuvent modifier ce plafond.",
       "save": "Enregistrer",

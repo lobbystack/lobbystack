@@ -330,7 +330,7 @@
       "noCap": "No spending cap is set",
       "currentSpend": "Current overage spend",
       "spendOfCap": "{{spend}} of {{cap}}",
-      "spendAtLeastOfCap": "{{spend}} of {{cap}}",
+      "spendAtLeastOfCap": "At least {{spend}} of {{cap}}",
       "reached": "Cap reached — new usage beyond included allowances is paused.",
       "adminOnly": "Only workspace owners and admins can change this cap.",
       "save": "Save",
