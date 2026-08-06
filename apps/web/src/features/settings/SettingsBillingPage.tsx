@@ -2339,8 +2339,6 @@ function SpendingCapSection({
 
   const capCents = status.overageSpendingCapCents;
   const spendCents = status.overageSpendCents;
-  const remainingCents =
-    capCents === null ? null : Math.max(0, capCents - spendCents);
   const progressPercent =
     capCents === null
       ? 0
@@ -2380,10 +2378,7 @@ function SpendingCapSection({
   }
 
   return (
-    <BillingSection
-      title={t("billing.spendingCap.title")}
-      description={t("billing.spendingCap.description")}
-    >
+    <BillingSection title={t("billing.spendingCap.title")}>
       <BorderedItem>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
@@ -2419,19 +2414,11 @@ function SpendingCapSection({
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
-                <span
-                  className={`text-sm leading-6 ${
-                    status.overageSpendingCapReached
-                      ? "text-destructive"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  {status.overageSpendingCapReached
-                    ? t("billing.spendingCap.reached")
-                    : t("billing.spendingCap.remaining", {
-                        amount: formatCents(remainingCents ?? 0, locale),
-                      })}
-                </span>
+                {status.overageSpendingCapReached && (
+                  <span className="text-sm leading-6 text-destructive">
+                    {t("billing.spendingCap.reached")}
+                  </span>
+                )}
               </>
             )}
           </div>
@@ -2464,8 +2451,12 @@ function SpendingCapSection({
                   disabled={saving !== null || capInput.trim().length === 0}
                 >
                   {saving === "save"
-                    ? t("billing.spendingCap.saving")
-                    : t("billing.spendingCap.save")}
+                    ? capCents !== null
+                      ? t("billing.spendingCap.updating")
+                      : t("billing.spendingCap.saving")
+                    : capCents !== null
+                      ? t("billing.spendingCap.update")
+                      : t("billing.spendingCap.save")}
                 </Button>
                 {capCents !== null && (
                   <Button
@@ -2486,10 +2477,6 @@ function SpendingCapSection({
               {t("billing.spendingCap.adminOnly")}
             </p>
           )}
-
-          <p className="text-sm leading-6 text-muted-foreground">
-            {t("billing.spendingCap.activeCallNotice")}
-          </p>
         </div>
       </BorderedItem>
     </BillingSection>
@@ -2716,10 +2703,7 @@ function SpendingCapSectionSkeleton({
   t: BillingTranslation;
 }) {
   return (
-    <BillingSection
-      title={t("billing.spendingCap.title")}
-      description={t("billing.spendingCap.description")}
-    >
+    <BillingSection title={t("billing.spendingCap.title")}>
       <BorderedItem>
         <div className="flex flex-col gap-6">
           <Skeleton className="h-12 w-full rounded-xl" />

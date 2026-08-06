@@ -954,7 +954,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     expect((input as HTMLInputElement).value).toBe("25,00");
     await user.clear(input);
     await user.type(input, "40,50");
-    await user.click(screen.getByRole("button", { name: "billing.spendingCap.save" }));
+    await user.click(screen.getByRole("button", { name: "billing.spendingCap.update" }));
 
     expect(setOverageSpendingCapMock).toHaveBeenCalledWith({
       businessId,
