@@ -467,9 +467,9 @@ export function setAnalyticsPersonProperties(properties: TelemetryProperties): v
 export function captureAnalyticsEvent(
   name: TelemetryEventName,
   properties?: TelemetryProperties,
-): void {
+): boolean {
   if (!isAnalyticsEnabled()) {
-    return;
+    return false;
   }
 
   if (
@@ -477,7 +477,7 @@ export function captureAnalyticsEvent(
     (isBusinessOptedOut(properties.businessId) ||
       isBusinessTelemetryPending(properties.businessId))
   ) {
-    return;
+    return false;
   }
 
   const nextProperties: TelemetryProperties = {
@@ -534,6 +534,7 @@ export function captureAnalyticsEvent(
   posthog.capture(name, coerceProperties(nextProperties), {
     send_instantly: true,
   });
+  return true;
 }
 
 export function captureAnalyticsException(
@@ -615,9 +616,11 @@ export function trackPageView(pathname: string, businessId?: string): void {
     return;
   }
 
-  captureAnalyticsEvent(eventName, {
+  const captured = captureAnalyticsEvent(eventName, {
     businessId,
     pathname,
   });
-  lastPageEventKey = eventKey;
+  if (captured) {
+    lastPageEventKey = eventKey;
+  }
 }

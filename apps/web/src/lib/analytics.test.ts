@@ -437,6 +437,25 @@ describe("analytics", () => {
     ).toBeNull();
   });
 
+  it("does not consume the pageview dedupe slot while the business is opted out", async () => {
+    vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
+    vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");
+    posthogMock.sessionRecordingStarted.mockReturnValue(true);
+
+    const { initializeAnalytics, setBusinessTelemetryEnabled, trackPageView } =
+      await import("./analytics");
+
+    initializeAnalytics();
+    setBusinessTelemetryEnabled("business_pageview", false);
+
+    trackPageView("/calls", "business_pageview");
+    expect(posthogMock.capture).not.toHaveBeenCalled();
+
+    setBusinessTelemetryEnabled("business_pageview", true);
+    trackPageView("/calls", "business_pageview");
+    expect(posthogMock.capture).toHaveBeenCalledTimes(1);
+  });
+
   it("identifies the operator and registers the business group once telemetry resolution clears the pending state", async () => {
     vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
     vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");

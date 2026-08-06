@@ -338,6 +338,52 @@ function getNonAdminOnboardingElement(
   );
 }
 
+/**
+ * Syncs the analytics module's telemetry state for the active business and
+ * identifies the operator once identity + telemetry preference are known.
+ * The pending mark runs in a layout effect so it happens before paint, and
+ * before the identify effect on the resolution commit, so session recording
+ * and identity linking never observe an unresolved preference.
+ */
+function useTelemetryGatedIdentity(
+  userId?: Id<"users">,
+  businessId?: Id<"businesses">,
+) {
+  const telemetry = useQuery(
+    api.settings.telemetryOptOut.getTelemetryEnabled,
+    businessId ? { businessId } : "skip",
+  );
+
+  useLayoutEffect(() => {
+    if (!businessId) {
+      return;
+    }
+
+    if (telemetry?.telemetryEnabled === undefined) {
+      markBusinessTelemetryPending(String(businessId));
+      return;
+    }
+
+    setBusinessTelemetryEnabled(String(businessId), telemetry.telemetryEnabled);
+  }, [businessId, telemetry?.telemetryEnabled]);
+
+  useEffect(() => {
+    if (!userId) {
+      return;
+    }
+
+    if (businessId && telemetry?.telemetryEnabled === undefined) {
+      return;
+    }
+
+    identifyOperator({
+      userId: String(userId),
+      ...(businessId ? { businessId: String(businessId) } : {}),
+      deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
+    });
+  }, [businessId, telemetry?.telemetryEnabled, userId]);
+}
+
 function WorkspaceShell() {
   const { signOut } = useAuthActions();
   const location = useLocation();
@@ -385,44 +431,12 @@ function WorkspaceShell() {
     location.pathname === "/settings/plan" &&
     new URLSearchParams(location.search).get("checkout") === "success";
   useAffiliateAttributionBinding(businessId);
+  useTelemetryGatedIdentity(currentUser?._id, businessId);
 
   async function handleSignOut(): Promise<void> {
     resetAnalyticsIdentity();
     await signOut();
   }
-
-  useEffect(() => {
-    if (!businessId) {
-      return;
-    }
-
-    if (telemetry?.telemetryEnabled === undefined) {
-      markBusinessTelemetryPending(String(businessId));
-      return;
-    }
-
-    setBusinessTelemetryEnabled(String(businessId), telemetry.telemetryEnabled);
-  }, [businessId, telemetry?.telemetryEnabled]);
-
-  useEffect(() => {
-    if (isBootstrapLoading) {
-      return;
-    }
-
-    if (!currentUser?._id) {
-      return;
-    }
-
-    if (businessId && telemetry?.telemetryEnabled === undefined) {
-      return;
-    }
-
-    identifyOperator({
-      userId: String(currentUser._id),
-      ...(businessId ? { businessId: String(businessId) } : {}),
-      deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
-    });
-  }, [businessId, currentUser?._id, isBootstrapLoading, telemetry?.telemetryEnabled]);
 
   useEffect(() => {
     if (isBootstrapLoading) {
@@ -768,20 +782,7 @@ function useOnboardingContext() {
   const businessId = activeBusiness?._id;
 
   useAffiliateAttributionBinding(businessId);
-
-  useEffect(() => {
-    if (businesses === undefined || currentUser === undefined) {
-      return;
-    }
-    if (!currentUser?._id || !businessId) {
-      return;
-    }
-    identifyOperator({
-      userId: String(currentUser._id),
-      businessId: String(businessId),
-      deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
-    });
-  }, [businessId, currentUser?._id, businesses, currentUser]);
+  useTelemetryGatedIdentity(currentUser?._id, businessId);
 
   async function handleSignOut(): Promise<void> {
     resetAnalyticsIdentity();
