@@ -150,7 +150,7 @@ describe("PostHog provider exception telemetry", () => {
     expect(payload.properties.$exception_list).toMatchObject([
       {
         type: "DatabaseUnavailableError",
-        value: "database exploded with phone ***0123",
+        value: "convex dashboard.contacts.save failed (DatabaseUnavailableError)",
         mechanism: {
           handled: true,
           synthetic: false,
@@ -158,9 +158,12 @@ describe("PostHog provider exception telemetry", () => {
         },
       },
     ]);
+    expect(payload.properties.$exception_list[0].value).not.toContain(
+      "14165550123",
+    );
   });
 
-  it("derives exception type and message from a generic Error", async () => {
+  it("synthesizes a safe exception for generic errors without surfacing the raw message", async () => {
     type SerializedPostHogEvent = {
       eventName: string;
       distinctId: string;
@@ -182,16 +185,19 @@ describe("PostHog provider exception telemetry", () => {
 
     const serialized = runMutation.mock.calls[0]?.[1];
     const payload = JSON.parse(serialized.payloadJson);
-    expect(payload.properties.$exception_type).toBe("GoogleTokenRefreshFailed");
+    expect(payload.properties.$exception_type).toBe("ApplicationError");
     expect(payload.properties.$exception_list).toMatchObject([
       {
-        type: "GoogleTokenRefreshFailed",
-        value: "Google token refresh failed: {invalid_grant}",
+        type: "ApplicationError",
+        value: "convex convex_internal_action failed (ApplicationError)",
       },
     ]);
+    expect(payload.properties.$exception_list[0].value).not.toContain(
+      "invalid_grant",
+    );
   });
 
-  it("redacts emails and long messages from exception values", async () => {
+  it("does not surface raw error content for generic errors", async () => {
     type SerializedPostHogEvent = {
       eventName: string;
       distinctId: string;
@@ -216,12 +222,12 @@ describe("PostHog provider exception telemetry", () => {
     const serialized = runMutation.mock.calls[0]?.[1];
     const payload = JSON.parse(serialized.payloadJson);
     const value = payload.properties.$exception_list[0].value;
-    expect(value).toContain("[redacted]");
+    expect(value).toBe("convex convex_internal_action failed (ApplicationError)");
     expect(value).not.toContain("john.doe@example.com");
     expect(value.length).toBeLessThanOrEqual(500);
   });
 
-  it("does not derive exception types from PII in messages", async () => {
+  it("does not leak PII into exception types for generic errors", async () => {
     type SerializedPostHogEvent = {
       eventName: string;
       distinctId: string;
@@ -243,14 +249,14 @@ describe("PostHog provider exception telemetry", () => {
 
     const serialized = runMutation.mock.calls[0]?.[1];
     const payload = JSON.parse(serialized.payloadJson);
-    expect(payload.properties.$exception_type).toBe("Redacted");
+    expect(payload.properties.$exception_type).toBe("ApplicationError");
     expect(payload.properties.$exception_type).not.toMatch(
       /john|doe|example/i,
     );
-    expect(payload.properties.$exception_list[0].type).toBe("Redacted");
+    expect(payload.properties.$exception_list[0].type).toBe("ApplicationError");
   });
 
-  it("redacts international phone numbers from exception values", async () => {
+  it("does not surface phone numbers from generic error messages", async () => {
     type SerializedPostHogEvent = {
       eventName: string;
       distinctId: string;
@@ -275,11 +281,40 @@ describe("PostHog provider exception telemetry", () => {
     const serialized = runMutation.mock.calls[0]?.[1];
     const payload = JSON.parse(serialized.payloadJson);
     const value = payload.properties.$exception_list[0].value;
-    expect(value).toContain("***8750");
-    expect(value).toContain("***5300");
-    expect(value).not.toContain("442071838750");
-    expect(value).not.toContain("33142685300");
-    expect(payload.properties.$exception_type).not.toMatch(/\+/);
+    expect(value).toBe("convex convex_internal_action failed (ApplicationError)");
+    expect(value).not.toMatch(/\+|\d{4,}/);
+    expect(payload.properties.$exception_type).toBe("ApplicationError");
+  });
+
+  it("does not leak user-controlled filenames from generic error messages", async () => {
+    type SerializedPostHogEvent = {
+      eventName: string;
+      distinctId: string;
+      payloadJson: string;
+    };
+    const runMutation = vi.fn(
+      async (_reference: unknown, _serialized: SerializedPostHogEvent) => null,
+    );
+    const ctx = { runMutation } as unknown as Parameters<
+      typeof enqueuePostHogExceptionBestEffort
+    >[0];
+
+    await enqueuePostHogExceptionBestEffort(ctx, {
+      error: new Error(
+        'Attachment "Medical Records John Doe.pdf" is no longer available.',
+      ),
+      service: "convex",
+      operation: "convex_internal_action",
+      distinctId: "system:convex:telemetry",
+    });
+
+    const serialized = runMutation.mock.calls[0]?.[1];
+    const payload = JSON.parse(serialized.payloadJson);
+    expect(payload.properties.$exception_type).toBe("ApplicationError");
+    const value = payload.properties.$exception_list[0].value;
+    expect(value).not.toContain("John Doe");
+    expect(value).not.toContain("Medical Records");
+    expect(value).toBe("convex convex_internal_action failed (ApplicationError)");
   });
 
   it("attaches businessId and groupKey to enqueued exceptions", async () => {
@@ -313,7 +348,9 @@ describe("PostHog provider exception telemetry", () => {
     });
     const payload = JSON.parse(serialized.payloadJson);
     expect(payload.businessId).toBe(businessId);
-    expect(payload.properties.$exception_list[0].value).toBe("sync failed");
+    expect(payload.properties.$exception_list[0].value).toBe(
+      "convex convex_internal_action failed (ApplicationError)",
+    );
   });
 
   it("emits service health success and failure events", async () => {

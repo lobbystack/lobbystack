@@ -12,7 +12,6 @@ import {
   getProviderErrorExceptionType,
   isTelemetryEventName,
   type ProviderErrorKind,
-  redactSensitiveUrlValue,
   validateTelemetryEvent,
 } from "../../packages/telemetry/src/index";
 
@@ -287,80 +286,11 @@ function getSafeExceptionProperties(
   return safeProperties;
 }
 
-const MAX_EXCEPTION_MESSAGE_LENGTH = 500;
-
-const EXCEPTION_MESSAGE_EMAIL_PATTERN = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
-
-const EXCEPTION_MESSAGE_PHONE_PATTERN =
-  /(?<!\d)(?:\+?\d{1,3}[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/g;
-
-const EXCEPTION_MESSAGE_E164_PATTERN = /(?<!\d)\+(?:\d[\s.-]?){6,14}\d(?!\d)/g;
-
-function maskExceptionMessagePhone(match: string): string {
-  const digits = match.replace(/\D/g, "");
-  return `***${digits.slice(-4)}`;
-}
-
-function redactExceptionMessage(value: string): string {
-  const urlRedacted = redactSensitiveUrlValue(value);
-  const emailRedacted = urlRedacted.replace(
-    EXCEPTION_MESSAGE_EMAIL_PATTERN,
-    "[redacted]",
-  );
-  const phoneRedacted = emailRedacted.replace(
-    EXCEPTION_MESSAGE_PHONE_PATTERN,
-    maskExceptionMessagePhone,
-  );
-  return phoneRedacted.replace(
-    EXCEPTION_MESSAGE_E164_PATTERN,
-    maskExceptionMessagePhone,
-  );
-}
-
-function normalizeExceptionMessage(value: string): string {
-  const collapsed = value.replace(/\s+/g, " ").trim();
-  const redacted = redactExceptionMessage(collapsed);
-  return redacted.length > MAX_EXCEPTION_MESSAGE_LENGTH
-    ? `${redacted.slice(0, MAX_EXCEPTION_MESSAGE_LENGTH - 3)}...`
-    : redacted;
-}
-
-function getErrorExceptionMessage(error: unknown): string | undefined {
-  if (error instanceof Error) {
-    const message = error.message.trim();
-    return message ? normalizeExceptionMessage(message) : undefined;
-  }
-  if (typeof error === "string") {
-    const message = error.trim();
-    return message ? normalizeExceptionMessage(message) : undefined;
-  }
-  return undefined;
-}
-
-function deriveExceptionTypeFromMessage(message: string): string {
-  const colonIndex = message.indexOf(":");
-  const leading = (colonIndex >= 0 ? message.slice(0, colonIndex) : message)
-    .trim()
-    .replace(/[^a-zA-Z0-9]+/g, " ");
-  const words = leading.split(" ").filter(Boolean).slice(0, 4);
-  if (words.length === 0) {
-    return "ApplicationError";
-  }
-  const derived = words
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join("");
-  return derived.length > 60 ? "ApplicationError" : derived;
-}
-
 function getErrorExceptionType(error: unknown): string {
   if (error instanceof Error && error.name && error.name !== "Error") {
     return error.name;
   }
-  const message = getErrorExceptionMessage(error);
-  if (message) {
-    return deriveExceptionTypeFromMessage(message);
-  }
-  return error instanceof Error && error.name ? error.name : "ApplicationError";
+  return "ApplicationError";
 }
 
 function buildGenericExceptionList(input: {
@@ -657,9 +587,7 @@ export async function enqueuePostHogExceptionBestEffort(
 ): Promise<void> {
   const exceptionType = input.exceptionType ?? getErrorExceptionType(input.error);
   const exceptionMessage =
-    input.exceptionMessage ??
-    getErrorExceptionMessage(input.error) ??
-    `${input.service} ${input.operation} failed (${exceptionType})`;
+    input.exceptionMessage ?? `${input.service} ${input.operation} failed (${exceptionType})`;
 
   await enqueuePostHogEventBestEffort(ctx, {
     eventName: "$exception",
