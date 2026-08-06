@@ -292,7 +292,9 @@ const MAX_EXCEPTION_MESSAGE_LENGTH = 500;
 const EXCEPTION_MESSAGE_EMAIL_PATTERN = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 
 const EXCEPTION_MESSAGE_PHONE_PATTERN =
-  /(?<![\d])(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/g;
+  /(?<!\d)(?:\+?\d{1,3}[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/g;
+
+const EXCEPTION_MESSAGE_E164_PATTERN = /(?<!\d)\+(?:\d[\s.-]?){6,14}\d(?!\d)/g;
 
 function maskExceptionMessagePhone(match: string): string {
   const digits = match.replace(/\D/g, "");
@@ -305,8 +307,12 @@ function redactExceptionMessage(value: string): string {
     EXCEPTION_MESSAGE_EMAIL_PATTERN,
     "[redacted]",
   );
-  return emailRedacted.replace(
+  const phoneRedacted = emailRedacted.replace(
     EXCEPTION_MESSAGE_PHONE_PATTERN,
+    maskExceptionMessagePhone,
+  );
+  return phoneRedacted.replace(
+    EXCEPTION_MESSAGE_E164_PATTERN,
     maskExceptionMessagePhone,
   );
 }
@@ -350,12 +356,7 @@ function getErrorExceptionType(error: unknown): string {
   if (error instanceof Error && error.name && error.name !== "Error") {
     return error.name;
   }
-  const message =
-    error instanceof Error
-      ? error.message
-      : typeof error === "string"
-        ? error
-        : undefined;
+  const message = getErrorExceptionMessage(error);
   if (message) {
     return deriveExceptionTypeFromMessage(message);
   }

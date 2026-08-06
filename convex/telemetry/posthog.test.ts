@@ -221,6 +221,67 @@ describe("PostHog provider exception telemetry", () => {
     expect(value.length).toBeLessThanOrEqual(500);
   });
 
+  it("does not derive exception types from PII in messages", async () => {
+    type SerializedPostHogEvent = {
+      eventName: string;
+      distinctId: string;
+      payloadJson: string;
+    };
+    const runMutation = vi.fn(
+      async (_reference: unknown, _serialized: SerializedPostHogEvent) => null,
+    );
+    const ctx = { runMutation } as unknown as Parameters<
+      typeof enqueuePostHogExceptionBestEffort
+    >[0];
+
+    await enqueuePostHogExceptionBestEffort(ctx, {
+      error: new Error("john.doe@example.com"),
+      service: "convex",
+      operation: "convex_internal_action",
+      distinctId: "system:convex:telemetry",
+    });
+
+    const serialized = runMutation.mock.calls[0]?.[1];
+    const payload = JSON.parse(serialized.payloadJson);
+    expect(payload.properties.$exception_type).toBe("Redacted");
+    expect(payload.properties.$exception_type).not.toMatch(
+      /john|doe|example/i,
+    );
+    expect(payload.properties.$exception_list[0].type).toBe("Redacted");
+  });
+
+  it("redacts international phone numbers from exception values", async () => {
+    type SerializedPostHogEvent = {
+      eventName: string;
+      distinctId: string;
+      payloadJson: string;
+    };
+    const runMutation = vi.fn(
+      async (_reference: unknown, _serialized: SerializedPostHogEvent) => null,
+    );
+    const ctx = { runMutation } as unknown as Parameters<
+      typeof enqueuePostHogExceptionBestEffort
+    >[0];
+
+    await enqueuePostHogExceptionBestEffort(ctx, {
+      error: new Error(
+        "The phone number +442071838750 is already mapped, retry +33 1 42 68 53 00",
+      ),
+      service: "convex",
+      operation: "convex_internal_action",
+      distinctId: "system:convex:telemetry",
+    });
+
+    const serialized = runMutation.mock.calls[0]?.[1];
+    const payload = JSON.parse(serialized.payloadJson);
+    const value = payload.properties.$exception_list[0].value;
+    expect(value).toContain("***8750");
+    expect(value).toContain("***5300");
+    expect(value).not.toContain("442071838750");
+    expect(value).not.toContain("33142685300");
+    expect(payload.properties.$exception_type).not.toMatch(/\+/);
+  });
+
   it("attaches businessId and groupKey to enqueued exceptions", async () => {
     type SerializedPostHogEvent = {
       eventName: string;
