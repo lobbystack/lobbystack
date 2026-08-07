@@ -568,4 +568,33 @@ describe("analytics", () => {
     });
     expect(posthogMock.capture).toHaveBeenCalledOnce();
   });
+
+  it("clears pending telemetry state when resetting analytics identity", async () => {
+    vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
+    vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");
+    posthogMock.sessionRecordingStarted.mockReturnValue(false);
+
+    const {
+      enableAnalyticsCapture,
+      initializeAnalytics,
+      markBusinessTelemetryPending,
+      resetAnalyticsIdentity,
+    } = await import("./analytics");
+
+    initializeAnalytics({ deferCapture: true });
+    markBusinessTelemetryPending("business_stale_pending");
+    resetAnalyticsIdentity();
+    enableAnalyticsCapture();
+
+    const config = posthogMock.init.mock.calls[0]?.[1];
+    expect(
+      config.before_send({
+        uuid: "event-after-reset",
+        event: "$pageview",
+        properties: {
+          $pathname: "/calls",
+        },
+      }),
+    ).not.toBeNull();
+  });
 });

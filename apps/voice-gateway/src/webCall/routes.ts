@@ -1632,6 +1632,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         }
         throw error;
       }
+      request.businessId = context.businessId;
       setBusinessTelemetryEnabled(
         context.businessId,
         context.snapshot.telemetryEnabled ?? true,

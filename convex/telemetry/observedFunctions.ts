@@ -85,6 +85,15 @@ async function resolveObservabilityContext(
   return value;
 }
 
+function inferBusinessIdFromArgs(args: unknown): string | undefined {
+  if (!args || typeof args !== "object" || Array.isArray(args)) {
+    return undefined;
+  }
+
+  const businessId = (args as { businessId?: unknown }).businessId;
+  return typeof businessId === "string" ? businessId : undefined;
+}
+
 async function reportConvexHandlerFailure(input: {
   ctx: ConvexRunnerCtx;
   error: unknown;
@@ -93,10 +102,11 @@ async function reportConvexHandlerFailure(input: {
   options: ObservabilityOptions;
 }): Promise<void> {
   const expected = input.options.expected ?? isExpectedConvexFailure(input.error);
-  const [businessId, groupKey] = await Promise.all([
+  const [configuredBusinessId, groupKey] = await Promise.all([
     resolveObservabilityContext(input.options.businessId, input.ctx, input.args),
     resolveObservabilityContext(input.options.groupKey, input.ctx, input.args),
   ]);
+  const businessId = configuredBusinessId ?? inferBusinessIdFromArgs(input.args);
   const resolvedBusinessId = businessId as Id<"businesses"> | undefined;
   const resolvedGroupKey =
     groupKey ??

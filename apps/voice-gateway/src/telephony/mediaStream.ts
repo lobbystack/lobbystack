@@ -3419,9 +3419,6 @@ export async function handleMediaStreamConnection(
     let snapshot =
       session.businessId !== null ? server.snapshotCache.get(session.businessId) : null;
     if (!snapshot) {
-      recordSnapshotCacheMiss({
-        ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
-      });
       if (!session.to) {
         throw new Error("Twilio stream start did not include the called phone number.");
       }
@@ -3432,6 +3429,9 @@ export async function handleMediaStreamConnection(
         snapshot.telemetryEnabled ?? true,
       );
       session.businessId = snapshot.businessId;
+      recordSnapshotCacheMiss({
+        "lobbystack.business_id": snapshot.businessId,
+      });
     } else {
       recordSnapshotCacheHit({
         "lobbystack.business_id": snapshot.businessId,

@@ -120,12 +120,10 @@ function isEventForOptedOutBusiness(event: {
     );
   }
 
-  if (pendingTelemetryBusinessIds.size > 0) {
-    return true;
-  }
-
   return Boolean(
-    activeBusinessId && isBusinessOptedOut(activeBusinessId),
+    activeBusinessId &&
+      (isBusinessOptedOut(activeBusinessId) ||
+        isBusinessTelemetryPending(activeBusinessId)),
   );
 }
 
@@ -506,6 +504,8 @@ export function resetAnalyticsIdentity(): void {
   identifiedUserId = null;
   identifiedBusinessId = null;
   activeBusinessId = null;
+  pendingTelemetryBusinessIds.clear();
+  pendingTelemetryBusinessGroupKeys.clear();
 
   if (!isAnalyticsEnabled()) {
     return;
