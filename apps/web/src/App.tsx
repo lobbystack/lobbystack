@@ -399,6 +399,13 @@ function useTelemetryGatedIdentity(
   }, [businessId, telemetry?.telemetryEnabled, userId]);
 }
 
+function ClaimDemoRoute() {
+  const currentUser = useQuery(api.users.current, {});
+  useTelemetryGatedIdentity(currentUser?._id, currentUser?.activeBusinessId);
+
+  return <ClaimDemoPage />;
+}
+
 function WorkspaceShell() {
   const { signOut } = useAuthActions();
   const location = useLocation();
@@ -1288,7 +1295,7 @@ export default function App() {
           <Route
             element={
               <RequireAuth>
-                <ClaimDemoPage />
+                <ClaimDemoRoute />
               </RequireAuth>
             }
             path="/claim-demo"

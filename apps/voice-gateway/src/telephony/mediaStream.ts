@@ -100,6 +100,17 @@ type TwilioMediaMessage = {
   };
 };
 
+export function shouldUseCachedSnapshot(
+  cachedSnapshot: Pick<BusinessContextSnapshot, "version"> | null,
+  streamSnapshotVersion?: string,
+): boolean {
+  return (
+    cachedSnapshot !== null &&
+    (streamSnapshotVersion === undefined ||
+      cachedSnapshot.version === streamSnapshotVersion)
+  );
+}
+
 type OpenAiRealtimeMessage = {
   type: string;
   event_id?: string;
@@ -3416,19 +3427,29 @@ export async function handleMediaStreamConnection(
     session.startedAtIso = new Date().toISOString();
     session.startedAtMs = Date.now();
 
-    let snapshot =
+    const cachedSnapshot =
       session.businessId !== null ? server.snapshotCache.get(session.businessId) : null;
+    let snapshot = shouldUseCachedSnapshot(
+      cachedSnapshot,
+      customParameters.snapshotVersion,
+    )
+      ? cachedSnapshot
+      : null;
+    const cacheHit = snapshot !== null;
     if (!snapshot) {
       if (!session.to) {
         throw new Error("Twilio stream start did not include the called phone number.");
       }
       snapshot = await fetchSnapshotForPhoneNumber(session.to);
       server.snapshotCache.set(snapshot.businessId, snapshot);
-      setBusinessTelemetryEnabled(
-        snapshot.businessId,
-        snapshot.telemetryEnabled ?? true,
-      );
-      session.businessId = snapshot.businessId;
+    }
+
+    session.businessId = snapshot.businessId;
+    setBusinessTelemetryEnabled(
+      snapshot.businessId,
+      snapshot.telemetryEnabled ?? true,
+    );
+    if (!cacheHit) {
       recordSnapshotCacheMiss({
         "lobbystack.business_id": snapshot.businessId,
       });

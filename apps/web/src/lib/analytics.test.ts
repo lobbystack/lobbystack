@@ -569,6 +569,30 @@ describe("analytics", () => {
     expect(posthogMock.capture).toHaveBeenCalledOnce();
   });
 
+  it("re-enables deferred capture for an authenticated operator without a business", async () => {
+    vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
+    vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");
+    posthogMock.sessionRecordingStarted.mockReturnValue(false);
+
+    const {
+      captureAnalyticsEvent,
+      identifyOperator,
+      initializeAnalytics,
+    } = await import("./analytics");
+
+    initializeAnalytics({ deferCapture: true });
+    posthogMock.capture.mockClear();
+
+    identifyOperator({
+      userId: "user_without_business",
+      deploymentMode: "test",
+    });
+
+    posthogMock.capture.mockClear();
+    expect(captureAnalyticsEvent("web.page.home_viewed")).toBe(true);
+    expect(posthogMock.capture).toHaveBeenCalledOnce();
+  });
+
   it("clears pending telemetry state when resetting analytics identity", async () => {
     vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
     vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");

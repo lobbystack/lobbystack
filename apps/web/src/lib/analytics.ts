@@ -472,6 +472,10 @@ export function identifyOperator(args: IdentifyOperatorArgs): void {
     return;
   }
 
+  if (!args.businessId && !analyticsCaptureEnabled) {
+    enableAnalyticsCapture();
+  }
+
   if (!hasInitialized || !analyticsCaptureEnabled) {
     return;
   }

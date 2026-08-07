@@ -22,8 +22,28 @@ import {
   shouldRecoverFromOpenAiRealtimeServerError,
   shouldSkipImplicitEndCallAudioDone,
   shouldSkipImplicitEndCallResponseDone,
+  shouldUseCachedSnapshot,
   shouldUseAssistantFinalMessageForToolEndCall,
 } from "./mediaStream";
+
+describe("shouldUseCachedSnapshot", () => {
+  it("accepts a cached snapshot when the stream version matches", () => {
+    expect(shouldUseCachedSnapshot({ version: "snapshot-v1" }, "snapshot-v1")).toBe(
+      true,
+    );
+  });
+
+  it("rejects a cached snapshot when the stream has a newer version", () => {
+    expect(shouldUseCachedSnapshot({ version: "snapshot-v1" }, "snapshot-v2")).toBe(
+      false,
+    );
+  });
+
+  it("keeps supporting streams without a snapshot version", () => {
+    expect(shouldUseCachedSnapshot({ version: "snapshot-v1" })).toBe(true);
+    expect(shouldUseCachedSnapshot(null)).toBe(false);
+  });
+});
 
 describe("createRealtimeTurnDetectionConfig", () => {
   it("can disable auto responses and interruptions during the opening greeting", () => {
