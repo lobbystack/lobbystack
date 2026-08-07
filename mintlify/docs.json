@@ -103,6 +103,7 @@
         "pages": [
           "self-hosting/overview",
           "self-hosting/docker-compose",
+          "self-hosting/railway",
           "self-hosting/environment-variables",
           "self-hosting/providers"
         ]
