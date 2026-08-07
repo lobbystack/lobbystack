@@ -13,7 +13,10 @@ import {
   reconcileVoiceCallStatus,
   updateVoiceTransferState,
 } from "../convex/runtimeClient";
-import { capturePostHogException } from "../observability/posthog";
+import {
+  capturePostHogException,
+  setBusinessTelemetryEnabled,
+} from "../observability/posthog";
 import {
   isTerminalTwilioCallStatus,
   normalizeTwilioCallStatusPayload,
@@ -135,6 +138,10 @@ export function registerVoiceRoutes(server: FastifyInstance): void {
     const snapshot = await fetchSnapshotForPhoneNumber(calledNumber);
 
     server.snapshotCache.set(snapshot.businessId, snapshot);
+    setBusinessTelemetryEnabled(
+      snapshot.businessId,
+      snapshot.telemetryEnabled ?? true,
+    );
     const initializationState = await initializeInboundCallRecord(
       server,
       payload,

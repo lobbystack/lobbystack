@@ -30,3 +30,5 @@ CLAUDE.md
 PLAN.md
 security_best_practices_report.md
 mintlify/.atlas-analysis.json
+
+apps/web/vite.tailscale.config.ts

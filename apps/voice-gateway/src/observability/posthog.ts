@@ -46,6 +46,22 @@ let loggerProvider: LoggerProvider | null = null;
 let operationalLogger: Logger | null = null;
 let runtimeEnv: VoiceGatewayEnv | null | undefined;
 let fatalHandlersInstalled = false;
+const optedOutBusinessIds = new Set<string>();
+
+export function setBusinessTelemetryEnabled(
+  businessId: string,
+  telemetryEnabled: boolean,
+): void {
+  if (telemetryEnabled) {
+    optedOutBusinessIds.delete(businessId);
+  } else {
+    optedOutBusinessIds.add(businessId);
+  }
+}
+
+function isBusinessOptedOut(businessId?: string): boolean {
+  return Boolean(businessId && optedOutBusinessIds.has(businessId));
+}
 
 const VOICE_GATEWAY_DISTINCT_ID = "system:voice-gateway";
 const SLOW_TURN_THRESHOLD_MS = 2_500;
@@ -165,6 +181,14 @@ function capture(
     properties: Record<string, unknown>;
   },
 ): void {
+  const businessId = resolveOperationalBusinessId({
+    ...(input.businessId ? { businessId: input.businessId } : {}),
+    properties: input.properties as TelemetryProperties,
+  });
+  if (isBusinessOptedOut(businessId)) {
+    return;
+  }
+
   const activeClient = getClient();
   if (!activeClient) {
     return;
@@ -279,6 +303,23 @@ function coerceLogAttributes(
   return attributes;
 }
 
+function resolveOperationalBusinessId(input: {
+  businessId?: string;
+  properties?: TelemetryProperties;
+}): string | undefined {
+  if (input.businessId) {
+    return input.businessId;
+  }
+  if (typeof input.properties?.businessId === "string") {
+    return input.properties.businessId;
+  }
+  const rawBusinessId = input.properties?.["lobbystack.business_id"];
+  if (typeof rawBusinessId === "string") {
+    return rawBusinessId;
+  }
+  return undefined;
+}
+
 function captureOperationalEvent(input: {
   event: string;
   properties?: TelemetryProperties;
@@ -295,9 +336,10 @@ function captureOperationalEvent(input: {
     deploymentMode: env.DEPLOYMENT_MODE,
     runtime: "voice-gateway",
   });
-  const businessId =
-    input.businessId ??
-    (typeof properties.businessId === "string" ? properties.businessId : undefined);
+  const businessId = resolveOperationalBusinessId({
+    ...(input.businessId ? { businessId: input.businessId } : {}),
+    ...(input.properties ? { properties: input.properties } : {}),
+  });
 
   capture(input.event, {
     distinctId:
@@ -325,6 +367,14 @@ export function emitOperationalLog(input: {
   properties?: TelemetryProperties;
   businessId?: string;
 }): void {
+  const businessId = resolveOperationalBusinessId({
+    ...(input.businessId ? { businessId: input.businessId } : {}),
+    ...(input.properties ? { properties: input.properties } : {}),
+  });
+  if (isBusinessOptedOut(businessId)) {
+    return;
+  }
+
   const logger = getOperationalLogger();
   if (!logger) {
     return;
@@ -337,7 +387,7 @@ export function emitOperationalLog(input: {
 
   const attributes = coerceLogAttributes({
     ...input.properties,
-    ...(input.businessId ? { businessId: input.businessId } : {}),
+    ...(businessId ? { businessId } : {}),
     deploymentMode: env.DEPLOYMENT_MODE,
     runtime: "voice-gateway",
   });
@@ -593,6 +643,14 @@ export function capturePostHogException(
     properties?: TelemetryProperties;
   },
 ): void {
+  const businessId = resolveOperationalBusinessId({
+    ...(input?.businessId ? { businessId: input.businessId } : {}),
+    ...(input?.properties ? { properties: input.properties } : {}),
+  });
+  if (isBusinessOptedOut(businessId)) {
+    return;
+  }
+
   const activeClient = getClient();
   if (!activeClient) {
     return;
@@ -631,18 +689,16 @@ export function capturePostHogException(
     }),
   };
 
-  if (input?.businessId) {
+  if (businessId) {
     additionalProperties.$groups = {
-      business: getPostHogBusinessGroupKey(input.businessId),
+      business: getPostHogBusinessGroupKey(businessId),
     };
   }
 
   activeClient.captureException(
     error,
     input?.distinctId ??
-      (input?.businessId
-        ? getPostHogDistinctIdForBusinessSystem(input.businessId)
-        : undefined),
+      (businessId ? getPostHogDistinctIdForBusinessSystem(businessId) : undefined),
     additionalProperties,
   );
 }

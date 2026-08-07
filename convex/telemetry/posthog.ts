@@ -494,6 +494,13 @@ export async function enqueuePostHogOutboxRecord(
     return null;
   }
 
+  if (input.businessId !== undefined) {
+    const business = await ctx.db.get(input.businessId);
+    if (business?.telemetryEnabled === false) {
+      return null;
+    }
+  }
+
   const outboxId = await ctx.db.insert("telemetry_outbox", {
     destination: TELEMETRY_DESTINATION,
     status: "pending",
@@ -664,6 +671,13 @@ export const claimDueEvents = internalMutation({
       for (const row of rows) {
         if (row.destination !== TELEMETRY_DESTINATION) {
           continue;
+        }
+        if (row.businessId !== undefined) {
+          const business = await ctx.db.get(row.businessId);
+          if (business?.telemetryEnabled === false) {
+            await ctx.db.delete(row._id);
+            continue;
+          }
         }
         await ctx.db.patch(row._id, {
           status: CLAIMED_STATUS,

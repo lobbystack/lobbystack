@@ -114,6 +114,7 @@ import type * as services_localizedNames from "../services/localizedNames.js";
 import type * as settings_phoneNumberReclaim from "../settings/phoneNumberReclaim.js";
 import type * as settings_phoneNumberReclaimActions from "../settings/phoneNumberReclaimActions.js";
 import type * as settings_phoneNumbers from "../settings/phoneNumbers.js";
+import type * as settings_telemetryOptOut from "../settings/telemetryOptOut.js";
 import type * as smsCompliance from "../smsCompliance.js";
 import type * as telemetry_ai from "../telemetry/ai.js";
 import type * as telemetry_observedFunctions from "../telemetry/observedFunctions.js";
@@ -237,6 +238,7 @@ declare const fullApi: ApiFromModules<{
   "settings/phoneNumberReclaim": typeof settings_phoneNumberReclaim;
   "settings/phoneNumberReclaimActions": typeof settings_phoneNumberReclaimActions;
   "settings/phoneNumbers": typeof settings_phoneNumbers;
+  "settings/telemetryOptOut": typeof settings_telemetryOptOut;
   smsCompliance: typeof smsCompliance;
   "telemetry/ai": typeof telemetry_ai;
   "telemetry/observedFunctions": typeof telemetry_observedFunctions;

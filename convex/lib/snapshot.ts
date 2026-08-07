@@ -84,6 +84,7 @@ type SnapshotBuilderInput = {
   phoneNumber?: string;
   smsNumber?: string;
   email?: string;
+  telemetryEnabled?: boolean;
 };
 
 /**
@@ -141,5 +142,8 @@ export function buildBusinessContextSnapshot(input: SnapshotBuilderInput) {
       ...(input.smsNumber ? { smsNumber: input.smsNumber } : {}),
       ...(input.email ? { email: input.email } : {}),
     },
+    ...(input.telemetryEnabled !== undefined
+      ? { telemetryEnabled: input.telemetryEnabled }
+      : {}),
   };
 }
