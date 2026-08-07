@@ -46,6 +46,8 @@ const SENSITIVE_URL_PARAMS = new Set([
 const REDACTED_VALUE = "[redacted]";
 
 let hasInitialized = false;
+let analyticsCaptureEnabled = false;
+let analyticsCaptureDeferred = false;
 let lastPageEventKey: string | null = null;
 let identifiedUserId: string | null = null;
 let identifiedBusinessId: string | null = null;
@@ -62,31 +64,29 @@ const pendingTelemetryBusinessGroupKeys = new Set<string>();
  * so boot-time gating no longer depends on that round trip.
  */
 export function markBusinessTelemetryPending(businessId: string): void {
+  activeBusinessId = businessId;
   pendingTelemetryBusinessIds.add(businessId);
   pendingTelemetryBusinessGroupKeys.add(getPostHogBusinessGroupKey(businessId));
-  if (hasInitialized) {
-    // The caller knows the active business before its telemetry preference
-    // resolves; stop recording until then so no replay segment leaks for an
-    // opted-out business on first load.
-    posthog.stopSessionRecording();
-  }
+  // The caller knows the active business before its telemetry preference
+  // resolves; stop every capture path until the preference is known.
+  disableAnalyticsCapture();
 }
 
 export function setBusinessTelemetryEnabled(
   businessId: string,
   telemetryEnabled: boolean,
 ): void {
+  activeBusinessId = businessId;
   pendingTelemetryBusinessIds.delete(businessId);
   pendingTelemetryBusinessGroupKeys.delete(getPostHogBusinessGroupKey(businessId));
   if (telemetryEnabled) {
     optedOutBusinessIds.delete(businessId);
     optedOutBusinessGroupKeys.delete(getPostHogBusinessGroupKey(businessId));
+    enableAnalyticsCapture();
   } else {
     optedOutBusinessIds.add(businessId);
     optedOutBusinessGroupKeys.add(getPostHogBusinessGroupKey(businessId));
-  }
-  if (hasInitialized) {
-    syncSessionRecordingForActiveBusiness();
+    disableAnalyticsCapture();
   }
 }
 
@@ -101,6 +101,10 @@ function isBusinessTelemetryPending(businessId?: string): boolean {
 function isEventForOptedOutBusiness(event: {
   properties?: Record<string, unknown>;
 }): boolean {
+  if (!analyticsCaptureEnabled) {
+    return true;
+  }
+
   const groups = event.properties?.$groups;
   const groupKey =
     typeof groups === "object" &&
@@ -126,7 +130,7 @@ function isEventForOptedOutBusiness(event: {
 }
 
 function syncSessionRecordingForActiveBusiness(): void {
-  if (!hasInitialized) {
+  if (!hasInitialized || !analyticsCaptureEnabled) {
     return;
   }
   if (
@@ -205,15 +209,17 @@ function redactSensitiveAnalyticsProperties<T extends Record<string, unknown>>(
   return nextProperties as T;
 }
 
-export function initializeAnalytics(): void {
+export function initializeAnalytics(options?: { deferCapture?: boolean }): void {
   if (!isAnalyticsEnabled() || hasInitialized) {
+    if (!options?.deferCapture && hasInitialized) {
+      enableAnalyticsCapture();
+    }
     return;
   }
 
   const posthogHost = POSTHOG_HOST!;
-
-  const disableSessionRecording =
-    typeof window !== "undefined" && isSensitiveReplayPath(window.location.pathname);
+  analyticsCaptureEnabled = false;
+  analyticsCaptureDeferred = options?.deferCapture === true;
 
   posthog.init(POSTHOG_KEY!, {
     api_host: posthogHost,
@@ -222,8 +228,8 @@ export function initializeAnalytics(): void {
     autocapture: false,
     capture_pageview: "history_change",
     capture_pageleave: "if_capture_pageview",
-    capture_exceptions: true,
-    disable_session_recording: disableSessionRecording,
+    capture_exceptions: false,
+    disable_session_recording: true,
     request_queue_config: {
       flush_interval_ms: POSTHOG_REQUEST_FLUSH_INTERVAL_MS,
     },
@@ -274,19 +280,67 @@ export function initializeAnalytics(): void {
 
   hasInitialized = true;
 
+  if (!options?.deferCapture) {
+    enableAnalyticsCapture();
+  }
+}
+
+export function enableAnalyticsCapture(): void {
+  if (!isAnalyticsEnabled() || !hasInitialized) {
+    return;
+  }
+
+  if (
+    activeBusinessId &&
+    (isBusinessOptedOut(activeBusinessId) ||
+      isBusinessTelemetryPending(activeBusinessId))
+  ) {
+    return;
+  }
+
+  if (analyticsCaptureEnabled) {
+    syncSessionRecordingForActiveBusiness();
+    return;
+  }
+
+  const captureInitialPageview = analyticsCaptureDeferred;
+  analyticsCaptureDeferred = false;
+  analyticsCaptureEnabled = true;
+  posthog.set_config({
+    capture_exceptions: true,
+    disable_session_recording:
+      typeof window !== "undefined" && isSensitiveReplayPath(window.location.pathname),
+  });
   posthog.startExceptionAutocapture({
     capture_unhandled_errors: true,
     capture_unhandled_rejections: true,
     capture_console_errors: false,
   });
+  syncSessionRecordingForActiveBusiness();
 
-  if (!disableSessionRecording && !posthog.sessionRecordingStarted()) {
-    posthog.startSessionRecording();
+  if (captureInitialPageview && typeof window !== "undefined") {
+    posthog.capture("$pageview", {
+      $pathname: window.location.pathname,
+    });
   }
 }
 
+export function disableAnalyticsCapture(): void {
+  analyticsCaptureEnabled = false;
+  if (!hasInitialized) {
+    return;
+  }
+
+  posthog.stopExceptionAutocapture();
+  posthog.stopSessionRecording();
+  posthog.set_config({
+    capture_exceptions: false,
+    disable_session_recording: true,
+  });
+}
+
 export function syncAnalyticsSessionRecording(pathname: string): void {
-  if (!isAnalyticsEnabled() || !hasInitialized) {
+  if (!isAnalyticsEnabled() || !hasInitialized || !analyticsCaptureEnabled) {
     return;
   }
   if (
@@ -416,9 +470,11 @@ export function identifyOperator(args: IdentifyOperatorArgs): void {
     isBusinessOptedOut(args.businessId) ||
     isBusinessTelemetryPending(args.businessId)
   ) {
-    if (hasInitialized) {
-      posthog.stopSessionRecording();
-    }
+    disableAnalyticsCapture();
+    return;
+  }
+
+  if (!hasInitialized || !analyticsCaptureEnabled) {
     return;
   }
 
@@ -441,6 +497,8 @@ export function identifyOperator(args: IdentifyOperatorArgs): void {
       identifiedBusinessId = groupKey;
     }
   }
+
+  syncSessionRecordingForActiveBusiness();
 }
 
 export function resetAnalyticsIdentity(): void {
@@ -457,7 +515,7 @@ export function resetAnalyticsIdentity(): void {
 }
 
 export function setAnalyticsPersonProperties(properties: TelemetryProperties): void {
-  if (!isAnalyticsEnabled()) {
+  if (!isAnalyticsEnabled() || !hasInitialized || !analyticsCaptureEnabled) {
     return;
   }
 
@@ -468,7 +526,7 @@ export function captureAnalyticsEvent(
   name: TelemetryEventName,
   properties?: TelemetryProperties,
 ): boolean {
-  if (!isAnalyticsEnabled()) {
+  if (!isAnalyticsEnabled() || !hasInitialized || !analyticsCaptureEnabled) {
     return false;
   }
 
@@ -541,7 +599,7 @@ export function captureAnalyticsException(
   error: unknown,
   properties?: TelemetryProperties,
 ): void {
-  if (!isAnalyticsEnabled()) {
+  if (!isAnalyticsEnabled() || !hasInitialized || !analyticsCaptureEnabled) {
     return;
   }
 

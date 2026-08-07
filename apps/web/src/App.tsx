@@ -76,6 +76,8 @@ import {
 import { SetupGuidePage } from "@/features/setup/SetupGuidePage";
 import {
   captureAnalyticsEvent,
+  disableAnalyticsCapture,
+  enableAnalyticsCapture,
   identifyOperator,
   markBusinessTelemetryPending,
   resetAnalyticsIdentity,
@@ -168,6 +170,19 @@ function AffiliateReferralCapture() {
 
 function AnalyticsPrivacySync() {
   const location = useLocation();
+  const auth = useConvexAuth();
+  useLayoutEffect(() => {
+    if (auth.isLoading) {
+      return;
+    }
+
+    if (auth.isAuthenticated) {
+      disableAnalyticsCapture();
+    } else {
+      enableAnalyticsCapture();
+    }
+  }, [auth.isAuthenticated, auth.isLoading]);
+
   useLayoutEffect(() => {
     syncAnalyticsSessionRecording(location.pathname);
   }, [location.pathname]);

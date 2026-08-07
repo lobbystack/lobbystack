@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const posthogMock = vi.hoisted(() => ({
   init: vi.fn(),
   startExceptionAutocapture: vi.fn(),
+  stopExceptionAutocapture: vi.fn(),
+  set_config: vi.fn(),
   sessionRecordingStarted: vi.fn(),
   startSessionRecording: vi.fn(),
   stopSessionRecording: vi.fn(),
@@ -23,6 +25,8 @@ describe("analytics", () => {
     vi.unstubAllEnvs();
     posthogMock.init.mockReset();
     posthogMock.startExceptionAutocapture.mockReset();
+    posthogMock.stopExceptionAutocapture.mockReset();
+    posthogMock.set_config.mockReset();
     posthogMock.sessionRecordingStarted.mockReset();
     posthogMock.startSessionRecording.mockReset();
     posthogMock.stopSessionRecording.mockReset();
@@ -349,6 +353,7 @@ describe("analytics", () => {
     } = await import("./analytics");
 
     initializeAnalytics();
+    posthogMock.capture.mockClear();
     expect(posthogMock.startSessionRecording).toHaveBeenCalledTimes(1);
     posthogMock.sessionRecordingStarted.mockReturnValue(true);
 
@@ -446,6 +451,7 @@ describe("analytics", () => {
       await import("./analytics");
 
     initializeAnalytics();
+    posthogMock.capture.mockClear();
     setBusinessTelemetryEnabled("business_pageview", false);
 
     trackPageView("/calls", "business_pageview");
@@ -502,9 +508,16 @@ describe("analytics", () => {
 
     setBusinessTelemetryEnabled("business_opted", false);
     initializeAnalytics();
+    posthogMock.capture.mockClear();
     identifyOperator({
       userId: "user_opted",
       businessId: "business_opted",
+      deploymentMode: "test",
+    });
+    setBusinessTelemetryEnabled("business_enabled", true);
+    identifyOperator({
+      userId: "user_opted",
+      businessId: "business_enabled",
       deploymentMode: "test",
     });
 
@@ -520,5 +533,39 @@ describe("analytics", () => {
         },
       }),
     ).not.toBeNull();
+  });
+
+  it("blocks automatic capture until deferred analytics initialization is enabled", async () => {
+    vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
+    vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");
+    posthogMock.sessionRecordingStarted.mockReturnValue(false);
+
+    const {
+      captureAnalyticsEvent,
+      enableAnalyticsCapture,
+      initializeAnalytics,
+    } = await import("./analytics");
+
+    initializeAnalytics({ deferCapture: true });
+    const config = posthogMock.init.mock.calls[0]?.[1];
+    expect(
+      config.before_send({
+        uuid: "event-before-consent",
+        event: "$pageview",
+        properties: {
+          $pathname: "/calls",
+        },
+      }),
+    ).toBeNull();
+    expect(posthogMock.startSessionRecording).not.toHaveBeenCalled();
+
+    enableAnalyticsCapture();
+    expect(posthogMock.startSessionRecording).toHaveBeenCalledTimes(1);
+
+    posthogMock.capture.mockClear();
+    captureAnalyticsEvent("web.page.calls_viewed", {
+      pathname: "/calls",
+    });
+    expect(posthogMock.capture).toHaveBeenCalledOnce();
   });
 });

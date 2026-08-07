@@ -181,7 +181,11 @@ function capture(
     properties: Record<string, unknown>;
   },
 ): void {
-  if (isBusinessOptedOut(input.businessId)) {
+  const businessId = resolveOperationalBusinessId({
+    ...(input.businessId ? { businessId: input.businessId } : {}),
+    properties: input.properties as TelemetryProperties,
+  });
+  if (isBusinessOptedOut(businessId)) {
     return;
   }
 

@@ -50,6 +50,7 @@ export function SettingsAppearancePage({
   const [telemetryEnabled, setTelemetryEnabledState] = useState<boolean | undefined>(
     undefined,
   );
+  const [isTelemetrySaving, setIsTelemetrySaving] = useState(false);
 
   useEffect(() => {
     if (telemetry?.telemetryEnabled !== undefined) {
@@ -61,14 +62,26 @@ export function SettingsAppearancePage({
     if (!canManageTenant) {
       return;
     }
-    setTelemetryEnabledState(next);
-    setBusinessTelemetryEnabled(String(businessId), next);
+    const previous = telemetryEnabled;
+    if (previous === undefined || previous === next || isTelemetrySaving) {
+      return;
+    }
+
+    setIsTelemetrySaving(true);
+    if (!next) {
+      setTelemetryEnabledState(false);
+      setBusinessTelemetryEnabled(String(businessId), false);
+    }
     try {
       await setTelemetryEnabled({ businessId, telemetryEnabled: next });
+      setTelemetryEnabledState(next);
+      setBusinessTelemetryEnabled(String(businessId), next);
     } catch {
-      setTelemetryEnabledState(!next);
-      setBusinessTelemetryEnabled(String(businessId), !next);
+      setTelemetryEnabledState(previous);
+      setBusinessTelemetryEnabled(String(businessId), previous);
       toast.error(t("settings:appearance.telemetry.saveFailed"));
+    } finally {
+      setIsTelemetrySaving(false);
     }
   }
 
@@ -148,7 +161,11 @@ export function SettingsAppearancePage({
               <Switch
                 aria-label={t("appearance.telemetry.label")}
                 checked={telemetryEnabled ?? false}
-                disabled={!canManageTenant || telemetryEnabled === undefined}
+                disabled={
+                  !canManageTenant ||
+                  telemetryEnabled === undefined ||
+                  isTelemetrySaving
+                }
                 onCheckedChange={(checked) => void handleTelemetryToggle(checked)}
               />
             </ItemActions>

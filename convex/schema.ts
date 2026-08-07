@@ -547,6 +547,7 @@ export default defineSchema({
 
   business_context_snapshots: defineTable({
     businessId: v.id("businesses"),
+    telemetryEnabled: v.optional(v.boolean()),
     version: v.string(),
     generatedAt: v.string(),
     displayName: v.string(),
