@@ -1,0 +1,5 @@
+:80 {
+  @voice path /twilio/* /media-stream /web-call/*
+  reverse_proxy @voice voice-gateway:3001
+  reverse_proxy admin:3000
+}
