@@ -33,14 +33,16 @@ import { pools, schema } from "@lobbystack/db";
 
 import { requireBusinessAccess, requireSession } from "@/lib/authorization";
 
-const authDb = drizzle(pools.auth(), { schema });
+function getAuthDb() {
+  return drizzle(pools.auth(), { schema });
+}
 
 type RpcHandler = (args: Record<string, unknown>) => Promise<unknown>;
 
 const handlers: Record<string, RpcHandler> = {
   "users.current": async () => {
     const session = await requireSession();
-    const [user] = await authDb
+    const [user] = await getAuthDb()
       .select()
       .from(users)
       .where(eq(users.id, session.userId))

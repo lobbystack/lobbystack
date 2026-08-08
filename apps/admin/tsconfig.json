@@ -3,33 +3,76 @@
   "compilerOptions": {
     "baseUrl": ".",
     "jsx": "preserve",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "noEmit": true,
-    "plugins": [{ "name": "next" }],
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
     "paths": {
-      "@/*": ["./src/*"],
-      "convex/_generated/api": ["./src/lib/convex-compat/api.ts"],
-      "convex/_generated/dataModel": ["./src/lib/convex-compat/dataModel.ts"],
-      "convex/react": ["./src/lib/convex-compat/react.tsx"],
-      "convex/server": ["./src/lib/convex-compat/server.ts"],
-      "react-router-dom": ["./src/lib/react-router-compat.tsx"],
-      "@convex-dev/auth/react": ["./src/lib/convex-compat/auth-react.tsx"],
-      "@lobbystack/config": ["../../packages/config/src"],
-      "@lobbystack/contracts": ["../../packages/contracts/src"],
-      "@lobbystack/db": ["../../packages/db/src"],
-      "@lobbystack/domain": ["../../packages/domain/src"],
-      "@lobbystack/domain/server": ["../../packages/domain/src/server"],
-      "@lobbystack/providers": ["../../packages/providers/src"],
-      "@lobbystack/shared": ["../../packages/shared/src"],
-      "@lobbystack/telemetry": ["../../packages/telemetry/src"],
-      "@lobbystack/telemetry/node": ["../../packages/telemetry/src/node.ts"],
-      "@lobbystack/telemetry/browser": ["../../packages/telemetry/src/browser.ts"]
+      "@/*": [
+        "./src/*"
+      ],
+      "convex/_generated/api": [
+        "./src/lib/convex-compat/api.ts"
+      ],
+      "convex/_generated/dataModel": [
+        "./src/lib/convex-compat/dataModel.ts"
+      ],
+      "convex/react": [
+        "./src/lib/convex-compat/react.tsx"
+      ],
+      "convex/server": [
+        "./src/lib/convex-compat/server.ts"
+      ],
+      "react-router-dom": [
+        "./src/lib/react-router-compat.tsx"
+      ],
+      "@convex-dev/auth/react": [
+        "./src/lib/convex-compat/auth-react.tsx"
+      ],
+      "@lobbystack/config": [
+        "../../packages/config/src"
+      ],
+      "@lobbystack/contracts": [
+        "../../packages/contracts/src"
+      ],
+      "@lobbystack/db": [
+        "../../packages/db/src"
+      ],
+      "@lobbystack/domain": [
+        "../../packages/domain/src"
+      ],
+      "@lobbystack/domain/server": [
+        "../../packages/domain/src/server"
+      ],
+      "@lobbystack/providers": [
+        "../../packages/providers/src"
+      ],
+      "@lobbystack/shared": [
+        "../../packages/shared/src"
+      ],
+      "@lobbystack/telemetry": [
+        "../../packages/telemetry/src"
+      ],
+      "@lobbystack/telemetry/node": [
+        "../../packages/telemetry/src/node.ts"
+      ],
+      "@lobbystack/telemetry/browser": [
+        "../../packages/telemetry/src/browser.ts"
+      ]
     },
     "exactOptionalPropertyTypes": false,
     "allowJs": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "incremental": true
   },
   "include": [
     "next-env.d.ts",
@@ -37,5 +80,10 @@
     "**/*.tsx",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "**/*.test.ts", "**/*.test.tsx", "e2e"]
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "e2e"
+  ]
 }

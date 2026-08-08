@@ -20,12 +20,28 @@ const ROLE_ENV_KEYS: Record<DbRole, string[]> = {
 
 const poolCache = new Map<DbRole, Pool>();
 
+const BUILD_PLACEHOLDER_URL =
+  "postgresql://build:build@127.0.0.1:5432/build?connect_timeout=1";
+
+function isBuildPhaseWithoutDatabase(): boolean {
+  if (process.env.NEXT_PHASE !== "phase-production-build") {
+    return false;
+  }
+
+  const allKeys = [...new Set(Object.values(ROLE_ENV_KEYS).flat())];
+  return allKeys.every((key) => !process.env[key]);
+}
+
 export function getConnectionString(role: DbRole): string {
   for (const key of ROLE_ENV_KEYS[role]) {
     const value = process.env[key];
     if (value) {
       return value;
     }
+  }
+
+  if (isBuildPhaseWithoutDatabase()) {
+    return BUILD_PLACEHOLDER_URL;
   }
 
   throw new Error(
