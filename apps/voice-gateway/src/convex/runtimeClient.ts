@@ -153,7 +153,8 @@ type SearchVoiceKnowledgeResponse = Array<{
 }>;
 
 function getRuntimeBaseUrl(): string {
-  return loadVoiceGatewayEnv(process.env).CONVEX_SITE_URL;
+  const env = loadVoiceGatewayEnv(process.env);
+  return env.BACKEND_INTERNAL_URL ?? env.CONVEX_SITE_URL;
 }
 
 function getRuntimeHeaders(): HeadersInit {

@@ -10,9 +10,10 @@ export async function fetchSnapshotForPhoneNumber(
   phoneNumber: string,
 ): Promise<BusinessContextSnapshot> {
   const env = loadVoiceGatewayEnv(process.env);
+  const baseUrl = env.BACKEND_INTERNAL_URL ?? env.CONVEX_SITE_URL;
 
   try {
-    const response = await fetch(`${env.CONVEX_SITE_URL}/voice/context`, {
+    const response = await fetch(`${baseUrl}/voice/context`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

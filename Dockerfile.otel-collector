@@ -1,0 +1,15 @@
+FROM otel/opentelemetry-collector-contrib:0.145.0 AS collector
+
+FROM debian:bookworm-slim
+
+COPY --from=collector /otelcol-contrib /otelcol-contrib
+COPY docker/otel-collector/entrypoint.sh /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends wget ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+EXPOSE 4317 4318 8889 13133
+
+ENTRYPOINT ["/entrypoint.sh"]

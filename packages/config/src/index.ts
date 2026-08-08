@@ -103,6 +103,7 @@ const voiceGatewayEnvSchema = z.object({
   VOICE_GATEWAY_TRUST_PROXY: trustProxyEnvSchema,
   VOICE_GATEWAY_BASE_URL: z.string().url(),
   CONVEX_SITE_URL: z.string().url(),
+  BACKEND_INTERNAL_URL: z.string().url().optional(),
   INTERNAL_SERVICE_TOKEN: z.string().min(1),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_REALTIME_MODEL: z.string().default("gpt-realtime"),

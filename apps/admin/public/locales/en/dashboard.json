@@ -1,0 +1,217 @@
+{
+  "headers": {
+    "dashboardTitle": "Dashboard",
+    "dashboardDescription": "Track operational readiness for calls, messages, and booking."
+  },
+  "analyticsPage": {
+    "title": "Analytics",
+    "description": "Review engagement trends across calls, messages, and booking activity."
+  },
+  "delta": {
+    "flat": "No change from last month",
+    "up": "+{{value}}% from last month",
+    "down": "-{{value}}% from last month",
+    "durationUp": "+{{value}} from last month",
+    "durationDown": "-{{value}} from last month"
+  },
+  "home": {
+    "title": "Home",
+    "download": "Download",
+    "liveCalls": "Live",
+    "tabs": {
+      "overview": "Overview",
+      "analytics": "Analytics",
+      "reports": "Reports",
+      "notifications": "Notifications"
+    },
+    "analytics": {
+      "chart": {
+        "title": "Engagement Overview",
+        "description": "Weekly calls and messages across your receptionist workspace."
+      },
+      "cards": {
+        "calls": "Number of calls",
+        "messages": "Number of messages",
+        "appointments": "Appointments Booked",
+        "agentResponseTime": "Agent Response Time"
+      },
+      "controls": {
+        "dateRange": "Date range",
+        "granularity": "Aggregation interval",
+        "more": "More options",
+        "presetRange": "Preset time frame",
+        "granularities": {
+          "hourly": "Hourly",
+          "daily": "Daily",
+          "weekly": "Weekly",
+          "monthly": "Monthly",
+          "yearly": "Yearly"
+        },
+        "presets": {
+          "today": "Today",
+          "yesterday": "Yesterday",
+          "thisWeek": "This Week",
+          "thisMonth": "This Month",
+          "lastMonth": "Last Month",
+          "last30": "Last 30 Days",
+          "last3Months": "Last 3 Months",
+          "thisYear": "This Year",
+          "lastYear": "Last Year",
+          "allTime": "All Time",
+          "custom": "Custom Range"
+        }
+      },
+      "metrics": {
+        "flat": "No change vs previous period",
+        "percentUp": "+{{value}}% vs previous period",
+        "percentDown": "-{{value}}% vs previous period",
+        "durationUp": "+{{value}} vs previous period",
+        "durationDown": "-{{value}} vs previous period"
+      },
+      "outcomes": {
+        "title": "Call Outcomes",
+        "description": "How this week's call volume resolved.",
+        "labels": {
+          "completed": "Completed",
+          "transferred": "Transferred",
+          "live": "Live",
+          "missed": "Missed"
+        }
+      },
+      "channels": {
+        "title": "Channels",
+        "description": "How conversations reached your receptionist this week.",
+        "labels": {
+          "voice": "Voice",
+          "sms": "SMS",
+          "other": "Other"
+        }
+      }
+    },
+    "metrics": {
+      "loading": "Loading monthly comparison...",
+      "calls": {
+        "title": "Calls"
+      },
+      "messages": {
+        "title": "Messages"
+      },
+      "appointments": {
+        "title": "Appointments"
+      },
+      "averageDuration": {
+        "title": "Average duration"
+      },
+      "contacts": {
+        "title": "Contacts"
+      }
+    },
+    "chart": {
+      "title": "Calls per month",
+      "description": "Monthly call volume using your Convex call records."
+    },
+    "recentCalls": {
+      "title": "Recent Calls",
+      "description": "{{count}} recent calls in the latest activity feed.",
+      "unknownCaller": "Unknown caller",
+      "durationValue": "{{value}} sec"
+    },
+    "actionRequired": {
+      "title": "Action required",
+      "description": "Customer follow-up tasks that still need a human.",
+      "titleWithContact": "{{message}} for {{name}}",
+      "urgent": "Urgent",
+      "emptyTitle": "No action required",
+      "emptyDescription": "Things that require manuel action will appear here.",
+      "fields": {
+        "callback": "Callback",
+        "callbackWindow": "Preferred callback"
+      },
+      "kinds": {
+        "voice_message": "Callback",
+        "human_handoff": "Handoff",
+        "other": "Open"
+      }
+    },
+    "upcoming": {
+      "title": "Upcoming",
+      "description": "The next appointments on the calendar.",
+      "unknownContact": "Unknown contact",
+      "unknownService": "Unknown service",
+      "emptyTitle": "No upcoming appointments",
+      "emptyDescription": "Future bookings will appear here as soon as they are created.",
+      "status": {
+        "booked": "Booked",
+        "confirmed": "Confirmed"
+      },
+      "source": {
+        "voice": "Voice",
+        "sms": "SMS",
+        "dashboard": "Dashboard"
+      }
+    }
+  },
+  "setup": {
+    "title": "Create your first business",
+    "description": "This bootstraps the tenant, receptionist profile, and the first snapshot used by voice.",
+    "businessName": "Business name",
+    "slug": "Slug",
+    "timezone": "Timezone",
+    "businessType": "Business type",
+    "placeholders": {
+      "businessName": "Maple Family Clinic",
+      "slug": "maple-family-clinic"
+    },
+    "businessTypes": {
+      "clinic": "Clinic",
+      "repair_shop": "Repair shop",
+      "salon": "Salon",
+      "service_company": "Service company",
+      "other": "Other"
+    },
+    "selectBusinessType": "Select business type",
+    "create": "Create business",
+    "creating": "Creating...",
+    "created": "Business created. The receptionist snapshot is refreshing now.",
+    "failed": "Failed to create business."
+  },
+  "cards": {
+    "calls": {
+      "title": "Calls handled",
+      "footer": "Latest inbound activity available in the inbox."
+    },
+    "services": {
+      "title": "Services configured",
+      "footer": "These feed both the receptionist and the booking engine."
+    },
+    "hours": {
+      "title": "Open days set",
+      "footer": "Structured hours stay authoritative over documents."
+    },
+    "knowledge": {
+      "title": "Knowledge items",
+      "footer": "Knowledge and documents strengthen preview and SMS responses."
+    },
+    "snapshot": "Snapshot {{version}}"
+  },
+  "quickActions": {
+    "title": "Quick actions",
+    "description": "Keep {{businessName}} ready for calls, SMS, and booking workflows.",
+    "configureProfile": "Configure receptionist profile",
+    "addKnowledge": "Add knowledge and documents",
+    "reviewInbox": "Review call inbox",
+    "readiness": "Setup readiness",
+    "servicesConfigured": "{{count}} services configured",
+    "daysConfigured": "{{count}} days with operating hours",
+    "knowledgeItems": "{{count}} knowledge items indexed",
+    "phoneNumbers": "{{count}} phone numbers mapped",
+    "currentGreeting": "Current greeting"
+  },
+  "nextSteps": {
+    "title": "What to do next",
+    "description": "Tighten the live receptionist behavior before you route real traffic.",
+    "hours": "Set hours and services so booking can suggest real times.",
+    "transfer": "Add transfer rules and a fallback number before handing off urgent calls.",
+    "snapshot": "Refresh your snapshot after major policy changes so voice picks them up quickly."
+  }
+}

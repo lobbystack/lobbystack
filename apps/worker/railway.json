@@ -1,0 +1,13 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "pnpm --filter @lobbystack/worker... build"
+  },
+  "deploy": {
+    "startCommand": "pnpm --filter @lobbystack/worker start",
+    "healthcheckPath": "/health/ready",
+    "healthcheckPort": 8081,
+    "restartPolicyType": "ON_FAILURE"
+  }
+}

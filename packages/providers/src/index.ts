@@ -1,10 +1,28 @@
-import type { BusinessContextSnapshot, SmsConversationInput } from "@lobbystack/shared";
+import type { BusinessContextSnapshot } from "@lobbystack/shared";
 
 export type OutboundSmsMessage = {
   to: string;
   from: string;
   body: string;
   businessId: string;
+  statusCallbackUrl?: string;
+};
+
+export type InboundSmsWebhook = {
+  from: string;
+  to: string;
+  body: string;
+  providerMessageId?: string;
+  optOutType?: string;
+};
+
+export type SmsProviderMessage = {
+  providerMessageId: string;
+  providerStatus: string;
+  providerPrice?: number;
+  providerPriceUnit?: string;
+  providerNumSegments?: number;
+  providerUpdatedAt?: string;
 };
 
 export interface TelephonyProvider {
@@ -18,9 +36,10 @@ export interface TelephonyProvider {
 }
 
 export interface SmsProvider {
-  validateWebhook(signature: string | null, url: string, body: string): boolean;
-  sendMessage(input: OutboundSmsMessage): Promise<{ providerMessageId: string }>;
-  normalizeInboundWebhook(body: Record<string, string>): SmsConversationInput;
+  validateWebhook(signature: string | null, url: string, body: string): Promise<boolean>;
+  sendMessage(input: OutboundSmsMessage): Promise<{ providerMessageId: string; providerStatus: string }>;
+  normalizeInboundWebhook(body: Record<string, string>): InboundSmsWebhook;
+  fetchMessage(providerMessageId: string): Promise<SmsProviderMessage>;
 }
 
 export interface RealtimeVoiceProvider {
@@ -106,3 +125,13 @@ export interface DurableExecutionRuntime {
     args: TArgs,
   ): Promise<void>;
 }
+
+export * from "./email/smtp";
+export * from "./storage/s3";
+export * from "./twilio/twilioSmsProvider";
+export * from "./twilio/twilioVoiceProvider";
+export * from "./twilio/twilioVerifyProvider";
+export * from "./polar/polarBillingProvider";
+export * from "./google/googleCalendarProvider";
+export * from "./google/geminiEmbeddingProvider";
+export * from "./crypto/secretBox";

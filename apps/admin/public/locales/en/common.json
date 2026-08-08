@@ -1,0 +1,92 @@
+{
+  "appName": "LobbyStack",
+  "loading": {
+    "title": "Loading...",
+    "description": "Syncing your workspace and receptionist settings."
+  },
+  "language": {
+    "label": "Language",
+    "ariaLabel": "Select dashboard language",
+    "english": "English",
+    "french": "Français"
+  },
+  "badges": {
+    "live": "Live",
+    "configured": "Configured",
+    "active": "Active",
+    "inactive": "Inactive",
+    "voice": "Voice",
+    "sms": "SMS"
+  },
+  "labels": {
+    "customer": "Customer",
+    "receptionist": "Receptionist",
+    "prompt": "Prompt"
+  },
+  "aiPhoneNumber": {
+    "copy": "Copy AI phone number",
+    "copied": "AI phone number copied"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "description": "Reload the dashboard and try again. The error has been reported.",
+    "reload": "Reload"
+  },
+  "feedback": {
+    "trigger": "Feedback",
+    "title": "Send feedback",
+    "description": "Tell us what would make this dashboard better.",
+    "label": "Feedback message",
+    "placeholder": "Have an idea to improve LobbyStack? Tell the team.",
+    "characterCount": "{{count}} / {{max}} characters",
+    "helpText": "Need help?",
+    "helpCenter": "Help Center",
+    "contactLink": "Contact us",
+    "helpTextSeparator": "or",
+    "docsLink": "see docs.",
+    "submit": "Send",
+    "toast": {
+      "sent": "Feedback sent.",
+      "failed": "We could not save that feedback."
+    }
+  },
+  "testCall": {
+    "trigger": "Test Call",
+    "title": "Test your AI receptionist",
+    "description": "Start a live browser call with your configured receptionist.",
+    "connecting": "Connecting...",
+    "hangUp": "Hang up",
+    "status": {
+      "idle": "Ready when you are",
+      "requesting_microphone": "Asking for microphone access",
+      "connecting": "Connecting to your AI receptionist",
+      "connected": "Live with your AI receptionist",
+      "ending": "Ending the call",
+      "ended": "Call ended",
+      "error": "Could not start the call"
+    },
+    "aria": {
+      "start": "Start test call",
+      "connecting": "Connecting test call",
+      "waitingForMicrophone": "Waiting for microphone permission",
+      "end": "End test call",
+      "endMuted": "End muted test call",
+      "ending": "Ending test call",
+      "retry": "Retry test call"
+    },
+    "errors": {
+      "microphoneBlocked": "Microphone access was blocked.",
+      "microphoneNotFound": "No microphone was found on this device.",
+      "microphoneInUse": "The microphone is already in use by another app.",
+      "gatewayTimeout": "The voice gateway took too long to respond.",
+      "gatewayUnreachable": "The voice gateway is not reachable from this page.",
+      "connectionDropped": "The voice connection dropped.",
+      "browserNoMicrophone": "This browser does not support microphone calls.",
+      "browserNoWebRtc": "This browser does not support live voice calls.",
+      "businessNotFound": "The voice gateway could not find this workspace. Switch to an active workspace or check that the dashboard and gateway use the same Convex deployment.",
+      "rateLimited": "Too many test calls have been started. Please try again shortly.",
+      "unavailable": "Your AI receptionist is unavailable right now.",
+      "generic": "Something went wrong while starting the call."
+    }
+  }
+}

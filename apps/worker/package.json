@@ -1,0 +1,36 @@
+{
+  "name": "@lobbystack/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@lobbystack/contracts": "workspace:*",
+    "@lobbystack/db": "workspace:*",
+    "@lobbystack/domain": "workspace:*",
+    "@lobbystack/jobs": "workspace:*",
+    "@lobbystack/providers": "workspace:*",
+    "@lobbystack/shared": "workspace:*",
+    "@lobbystack/telemetry": "workspace:*",
+    "@opentelemetry/api": "^1.9.1",
+    "bullmq": "^5.58.5",
+    "dotenv": "^17.3.1",
+    "drizzle-orm": "^0.44.2",
+    "ioredis": "^5.6.1",
+    "pg": "^8.16.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.15.4",
+    "tsx": "^4.21.0",
+    "typescript": "^5.8.2",
+    "vitest": "^4.1.2"
+  }
+}

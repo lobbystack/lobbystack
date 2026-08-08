@@ -3,19 +3,34 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "./dist/domain/src/index.js",
-  "types": "./dist/domain/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/domain/src/index.d.ts",
+      "default": "./dist/domain/src/index.js"
+    },
+    "./server": {
+      "types": "./dist/domain/src/server/index.d.ts",
+      "default": "./dist/domain/src/server/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
+    "@lobbystack/contracts": "workspace:*",
+    "@lobbystack/db": "workspace:*",
+    "@lobbystack/jobs": "workspace:*",
     "@lobbystack/shared": "workspace:*",
-    "luxon": "^3.7.2"
+    "drizzle-orm": "^0.44.2",
+    "luxon": "^3.7.2",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/luxon": "^3.7.1"
+    "@types/luxon": "^3.7.1",
+    "@types/pg": "^8.15.4",
+    "vitest": "^3.2.4"
   }
 }
