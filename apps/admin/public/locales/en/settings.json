@@ -1,0 +1,841 @@
+{
+  "header": {
+    "title": "Settings",
+    "description": "Manage your account details and sign-in credentials."
+  },
+  "layout": {
+    "businessDescription": "Manage your account details and sign-in credentials.",
+    "integrationsDescription": "Connect your favorite tools and applications.",
+    "billingDescription": "Review your hosted plan, add-ons, and recent activity.",
+    "usageDescription": "Track hosted usage, plan limits, and reset timing for this billing period."
+  },
+  "sections": {
+    "business": "Team",
+    "phoneNumber": "Phone Number",
+    "appearance": "Preferences",
+    "integrations": "Integrations",
+    "billing": "Plan",
+    "usage": "Usage",
+    "notifications": "Notifications"
+  },
+  "billing": {
+    "toast": {
+      "checkoutSuccess": "Checkout completed successfully.",
+      "checkoutFailed": "Unable to open checkout.",
+      "portalFailed": "Unable to open the customer portal."
+    },
+    "pastDueBanner": {
+      "title": "Payment unsuccessful",
+      "description": "Your service remains active during the payment grace period. Update your payment method to avoid an interruption.",
+      "action": "Update payment method",
+      "openingPortal": "Opening billing..."
+    },
+    "planLabels": {
+      "selfHost": "Self-host",
+      "freeCloud": "Free",
+      "freeCloudCard": "Free Plan",
+      "starter": "Starter",
+      "starterCard": "Starter Plan",
+      "pro": "Pro",
+      "proCard": "Pro Plan",
+      "enterprise": "Enterprise",
+      "enterpriseCard": "Enterprise Plan"
+    },
+    "subscriptionStates": {
+      "active": "Active",
+      "trialing": "Trial",
+      "past_due": "Past due",
+      "canceled": "Canceled",
+      "revoked": "Revoked",
+      "inactive": "Inactive"
+    },
+    "actions": {
+      "upgradeToPro": "Upgrade to Pro",
+      "starter": {
+        "monthly": "Starter monthly",
+        "annual": "Starter annual"
+      },
+      "pro": {
+        "monthly": "Upgrade to Pro",
+        "annual": "Upgrade to Pro"
+      },
+      "unlockAiSms": "Unlock AI SMS",
+      "manageBilling": "Manage billing",
+      "manageSubscription": "Manage subscription",
+      "openingCheckout": "Opening checkout...",
+      "openingPortal": "Opening portal...",
+      "viewInvoice": "View invoice"
+    },
+    "currentPlan": {
+      "title": "Your plan",
+      "description": "Hosted billing applies only to cloud workspaces. Self-host keeps the full product with your own providers.",
+      "planLabel": "Current plan",
+      "monthlyChargeValue": "{{amount}}/mo",
+      "freeLabel": "Free",
+      "customPricing": "Custom pricing and usage arrangement.",
+      "includedNumberTitle": "Included business numbers",
+      "includedNumberValue": "{{count}} included",
+      "customIncludedNumbers": "Custom by agreement",
+      "billingContactTitle": "Billing contact",
+      "billingContactMissing": "No billing contact on file yet.",
+      "subscriptionStateTitle": "Subscription",
+      "billingPeriod": "Current period resets {{resetAt}}",
+      "selfHostNotice": "Self-hosted workspaces use your own providers. No usage limits or billing apply.",
+      "enterpriseNotice": "Usage and limits are governed by your enterprise agreement.",
+      "proNotice": "Included usage resets monthly. Additional usage is billed at the overage rate.",
+      "monthlySuffix": "/ month",
+      "annualEffectiveSuffix": "/ month, billed annually",
+      "paygMonthlySuffix": "+ pay-as-you-go usage",
+      "includedTitle": "What's included:",
+      "includedStorageLabel": "storage",
+      "includedVoiceLabel": "voice minutes",
+      "includedSmsLabel": "SMS alerts",
+      "includedOutboundLabel": "outbound calls",
+      "includedStorageUnlimited": "Unlimited storage",
+      "includedVoiceUnlimited": "Unlimited voice minutes",
+      "includedSmsUnlimited": "Unlimited SMS alerts",
+      "includedOutboundUnlimited": "Unlimited outbound calls"
+    },
+    "upgradeDialog": {
+      "title": "Upgrade plan",
+      "description": "Choose the plan that works best for your team.",
+      "enterpriseSubject": "Enterprise plan",
+      "billingIntervalLabel": "Billing interval",
+      "annualDiscount": "Save 20%",
+      "billingIntervals": {
+        "monthly": "Monthly",
+        "annual": "Annual"
+      },
+      "actions": {
+        "currentPlan": "Current plan",
+        "starter": "Start Starter",
+        "pro": "Upgrade to Pro",
+        "enterprise": "Contact us"
+      },
+      "plans": {
+        "free_cloud": {
+          "name": "Free",
+          "description": {
+            "monthly": "Per month, billed monthly",
+            "annual": "Per month, billed annually"
+          },
+          "highlights": {
+            "voiceMinutes": "30 voice minutes included",
+            "allFeatures": "All features",
+            "support": "Community support"
+          }
+        },
+        "starter": {
+          "name": "Starter",
+          "description": {
+            "monthly": "Per month, billed monthly",
+            "annual": "Per month, billed annually"
+          },
+          "highlights": {
+            "voiceMinutes": "150 voice minutes included\nThen $0.20/min",
+            "dedicatedNumber": "1 dedicated business number",
+            "phoneNumber": "50 alert SMS segments",
+            "overages": "$0.20/min voice overages",
+            "support": "Email support"
+          }
+        },
+        "pro": {
+          "name": "Pro",
+          "description": {
+            "monthly": "Per month, billed monthly",
+            "annual": "Per month, billed annually"
+          },
+          "highlights": {
+            "voiceMinutes": "500 voice minutes included\nThen $0.18/min",
+            "dedicatedNumber": "1 dedicated business number",
+            "alertSms": "200 alert SMS segments",
+            "support": "Priority email support"
+          }
+        },
+        "enterprise": {
+          "name": "Enterprise",
+          "description": {
+            "monthly": "For higher volume",
+            "annual": "For higher volume"
+          },
+          "highlights": {
+            "phoneNumbers": "Multiple dedicated numbers",
+            "routing": "Multi-location routing",
+            "fallbackRules": "Custom fallback rules",
+            "support": "Dedicated implementation support"
+          }
+        }
+      }
+    },
+    "usage": {
+      "title": "Included usage",
+      "description": "Resets on {{resetAt}}.",
+      "paygTitle": "Pay-as-you-go usage",
+      "paygDescription": "Additional billable usage in this period. Resets on {{resetAt}}.",
+      "knowledgeTitle": "Knowledge base",
+      "voiceTitle": "Voice minutes",
+      "voiceValue": "{{minutes}} minutes used",
+      "voiceRemaining": "{{minutes}} minutes remaining",
+      "alertSmsTitle": "SMS alerts",
+      "alertSmsValue": "{{formattedCount}} segments used",
+      "alertSmsRemaining": "{{formattedCount}} segments remaining",
+      "outboundAttemptsTitle": "Outbound calls",
+      "outboundAttemptsValue": "{{formattedCount}} attempts used",
+      "outboundAttemptsRemaining": "{{formattedCount}} attempts remaining",
+      "aiSmsTitle": "AI SMS",
+      "aiSmsValue": "{{formattedCount}} segments used",
+      "aiSmsMetered": "Metered usage — billed per segment.",
+      "aiSmsLocked": "Activate the AI SMS add-on to unlock.",
+      "overageEnabled": "Additional usage is billed as overage.",
+      "included": "Included",
+      "overage": "Overage",
+      "used": "used",
+      "remaining": "remaining",
+      "of": "of",
+      "meteredSuffix": "(metered)",
+      "unlimited": "Unlimited",
+      "blocked": "Limit reached",
+      "blockedDescription": "Limit reached — usage paused until next period.",
+      "overageCount": "{{count}} over limit",
+      "overageCost": "≈ {{amount}} in overages",
+      "noOverages": "No overages — usage hard-capped at the included pool.",
+      "overIncludedSummary": "{{count}} {{unit}} over included · <amount>≈ {{amount}}</amount> in overages",
+      "units": {
+        "voice": "min",
+        "outboundAttempts": "attempts",
+        "segments": "segments"
+      }
+    },
+    "catalog": {
+      "title": "Hosted offers",
+      "description": "Hosted workspaces use the shared sender for alerts until AI SMS registration is approved. After approval, both alerts and AI SMS move onto the business number while billing stays split by usage type.",
+      "selfHostDescription": "Free forever. Full product, bring your own AI keys, Twilio account, numbers, and compliance setup.",
+      "freeCloudDescription": "$0 per month. Includes 30 voice minutes with a hard monthly cap.",
+      "freeCloudLimits": "Includes {{voiceMinutes}} voice minutes, {{alertSmsSegments}} Alert SMS segments, and {{outboundAttempts}} outbound call attempts per month.",
+      "starterDescription": "$30/month or $288/year. Includes 150 voice minutes per month and one business number.",
+      "starterOverages": "Starter overages: $0.20 per extra voice minute, $0.02 per extra Alert SMS segment, and $0.02 per extra outbound call attempt.",
+      "proDescription": "$100/month or $960/year. Includes 500 voice minutes per month and one business number.",
+      "proOverages": "Pro overages: $0.18 per extra voice minute, {{alertSmsRate}} per extra Alert SMS segment, and {{outboundAttemptRate}} per extra outbound call attempt.",
+      "aiSmsAddon": "AI SMS add-on: {{monthly}} per month + {{setup}} one-time setup. AI SMS usage is billed at {{usage}} per segment."
+    },
+    "addon": {
+      "title": "Add-ons",
+      "aiSmsName": "AI SMS",
+      "aiSmsDescription": "Allows your agent to send and reply to SMS autonomously after 10DLC approval.",
+      "enable": "Enable",
+      "register": "Register",
+      "aiSmsActiveBadge": "Active",
+      "aiSmsSetupRequiredBadge": "Setup required",
+      "aiSmsPricing": "{{monthly}}/mo + {{perSegment}}/segment",
+      "aiSmsSetup": "One-time setup fee: {{amount}}",
+      "aiSmsRequiresProPrefix": "Available on",
+      "aiSmsRequiresProLink": "Pro plan",
+      "aiSmsFeatures": {
+        "smsQueries": "Allows multiple receptionists to handle SMS queries using your business numbers",
+        "staffAlerts": "Seamlessly hands over alerts to staff while preserving conversational context",
+        "compliance": "Requires 10DLC brand and campaign registration for A2P compliance"
+      },
+      "associatedFees": "Associated fees",
+      "carrierSetupFees": "Carrier review & setup fees",
+      "oneTimeFeeValue": "{{amount}} one-time",
+      "monthlyFee": "Monthly subscription fee",
+      "messagingRate": "Messaging rate",
+      "perSegmentFeeValue": "{{amount}}/segment"
+    },
+    "compliance": {
+      "title": "AI SMS compliance",
+      "description": "Register your business for A2P 10DLC so hosted alerts and AI replies can use the approved business number.",
+      "cardTitle": "10DLC registration",
+      "routingSummary": "Current sender routing: {{senderMode}}.",
+      "approvedNumber": "Approved business number: {{phoneNumber}}",
+      "senderMode": {
+        "platformPhone": "alerts stay on the shared hosted sender",
+        "businessPhone": "messages send from the business number directly",
+        "businessMessagingService": "alerts and AI SMS send through the approved business Messaging Service"
+      },
+      "status": {
+        "setupRequired": "Setup required",
+        "awaitingVerification": "Awaiting verification",
+        "underReview": "Under review",
+        "approved": "Approved",
+        "failed": "Failed",
+        "suspended": "Suspended"
+      },
+      "actions": {
+        "backToBilling": "Plan",
+        "save": "Save draft",
+        "saving": "Saving...",
+        "submit": "Submit registration",
+        "resume": "Resume registration",
+        "refresh": "Refresh status",
+        "working": "Updating..."
+      },
+      "toast": {
+        "saved": "Saved SMS compliance draft.",
+        "saveFailed": "Unable to save the SMS compliance draft.",
+        "submitted": "Updated SMS compliance registration.",
+        "submitFailed": "Unable to update the SMS compliance registration."
+      },
+      "companyTypes": {
+        "private": "Private",
+        "nonProfit": "Non-profit",
+        "government": "Government",
+        "public": "Public"
+      },
+      "trafficTier": {
+        "lowVolume": "Low volume (recommended)",
+        "mixed": "Mixed / higher volume"
+      },
+      "fields": {
+        "approvedPhoneNumber": "Business number to register",
+        "businessName": "Legal business name",
+        "websiteUrl": "Website URL",
+        "businessType": "Business type",
+        "businessIndustry": "Business industry",
+        "businessRegistrationIdentifier": "Tax ID type",
+        "businessRegistrationNumber": "Tax ID number",
+        "companyType": "Company type",
+        "stockExchange": "Stock exchange",
+        "stockTicker": "Stock ticker",
+        "brandContactEmail": "Brand contact email (required for public companies)",
+        "representativeFirstName": "Authorized representative first name",
+        "representativeLastName": "Authorized representative last name",
+        "representativeBusinessTitle": "Authorized representative title",
+        "representativeJobPosition": "Authorized representative role",
+        "representativePhoneNumber": "Authorized representative phone",
+        "representativeEmail": "Authorized representative email",
+        "addressCustomerName": "Mailing name",
+        "addressStreet": "Street address",
+        "addressStreetSecondary": "Address line 2",
+        "addressCity": "City",
+        "addressRegion": "State / province",
+        "addressPostalCode": "Postal code",
+        "addressIsoCountry": "Country code",
+        "trafficTier": "Traffic profile",
+        "campaignDescription": "Campaign description",
+        "messageFlow": "Opt-in flow",
+        "sampleMessageOne": "Sample message 1",
+        "sampleMessageTwo": "Sample message 2",
+        "optInMessage": "Opt-in confirmation message",
+        "optOutMessage": "Opt-out message",
+        "helpMessage": "Help message",
+        "hasEmbeddedLinks": "Messages include links",
+        "hasEmbeddedPhone": "Messages include phone numbers"
+      }
+    },
+    "spendingCap": {
+      "title": "Monthly spending cap",
+      "placeholder": "25.00",
+      "amountLabel": "Overage cap (USD)",
+      "noCap": "No spending cap is set",
+      "currentSpend": "Current overage spend",
+      "spendOfCap": "{{spend}} of {{cap}}",
+      "spendAtLeastOfCap": "At least {{spend}} of {{cap}}",
+      "reached": "Cap reached — new usage beyond included allowances is paused.",
+      "adminOnly": "Only workspace owners and admins can change this cap.",
+      "save": "Save",
+      "saving": "Saving...",
+      "update": "Update",
+      "updating": "Updating...",
+      "remove": "Remove cap",
+      "removing": "Removing...",
+      "saved": "Monthly overage cap saved.",
+      "removed": "Monthly overage cap removed.",
+      "invalidAmount": "Enter a non-negative USD amount with no more than two decimal places.",
+      "saveFailed": "Unable to save the monthly overage cap.",
+      "removeFailed": "Unable to remove the monthly overage cap."
+    },
+    "transactions": {
+      "title": "Transaction history",
+      "description": "Orders, refunds, and setup fees synced from Polar.",
+      "empty": "No transactions yet.",
+      "columns": {
+        "date": "Date",
+        "description": "Description",
+        "amount": "Amount",
+        "status": "Status",
+        "invoice": "Invoice"
+      },
+      "invoice": "Invoice",
+      "statusLabels": {
+        "paid": "Paid",
+        "pending": "Pending",
+        "refunded": "Refunded",
+        "partially_refunded": "Partial refund"
+      },
+      "kindLabels": {
+        "order": "Order",
+        "refund": "Refund"
+      }
+    }
+  },
+  "phoneNumber": {
+    "current": {
+      "label": "Current phone number",
+      "description": "This is the number callers use to reach your AI receptionist.",
+      "empty": "You don't have a number yet."
+    },
+    "reclaim": {
+      "title": "This number will be released on {{date}}",
+      "description": "Free plans do not include a dedicated business number. Upgrade to Starter or Pro before then to keep {{number}}.",
+      "upgradeCta": "Upgrade to keep this number"
+    },
+    "requiresPaidPlan": {
+      "title": "Dedicated numbers are on paid plans",
+      "description": "Upgrade to Starter or Pro to claim a local business number callers can dial.",
+      "upgradeCta": "View plans"
+    },
+    "actions": {
+      "requestChange": "Request change",
+      "getNumber": "Get number"
+    },
+    "dialog": {
+      "title": "Choose a new phone number",
+      "description": "You can change your phone number once.",
+      "getNumberTitle": "Choose a phone number",
+      "getNumberDescription": "Pick a number callers can use to reach your AI receptionist."
+    },
+    "picker": {
+      "countryLabel": "Country",
+      "areaCodeLabel": "Area code",
+      "areaCodePlaceholder": "Area code",
+      "search": "Search",
+      "phoneNumberHeader": "Phone number",
+      "select": "Select",
+      "loadMore": "Load more",
+      "empty": "No numbers matched that search.",
+      "loadFailed": "We couldn't load numbers right now.",
+      "searchFailed": "We couldn't search numbers right now.",
+      "claimFailed": "We couldn't replace the phone number. Please try again.",
+      "unavailable": "That number was just taken. Pick another one from the refreshed list."
+    },
+    "toast": {
+      "changed": "Phone number changed. Your previous number will stay active for 30 days.",
+      "added": "Phone number added."
+    }
+  },
+  "appearance": {
+    "title": "Preferences",
+    "description": "Set your dashboard language, time format, and theme.",
+    "save": "Update preferences",
+    "saved": "Appearance preferences updated.",
+    "language": {
+      "label": "Dashboard language",
+      "description": "Choose the language used in the dashboard."
+    },
+    "timeFormat": {
+      "label": "Time format",
+      "description": "Choose between 24-hour time or AM/PM.",
+      "twentyFourHour": "24-hour",
+      "ampm": "AM/PM"
+    },
+    "theme": {
+      "label": "Theme",
+      "description": "Choose your preferred visual theme.",
+      "light": "Light",
+      "lightDescription": "Bright surfaces with soft contrast for daytime work.",
+      "dark": "Dark",
+      "darkDescription": "Dimmed surfaces that keep late sessions easier on the eyes."
+    }
+  },
+  "integrations": {
+    "actions": {
+      "connect": "Connect",
+      "connected": "Connected",
+      "settings": "Open integration settings"
+    },
+    "providers": {
+      "google": "Sync bookings with Google Calendar.",
+      "microsoft": "Connect Outlook and Exchange calendars."
+    },
+    "google": {
+      "sheetTitle": "Google Calendar",
+      "sheetDescription": "Connect a Google Calendar and choose which calendar receives bookings.",
+      "connectionSectionTitle": "Connection",
+      "connectionSectionDescription": "Connect or reconnect the Google account that should receive bookings.",
+      "privacyNoticeText": "Connecting Google Calendar lets LobbyStack read your calendar availability and create, update, or delete appointment events on the calendar you select.",
+      "privacyPolicyLinkText": "Privacy Policy",
+      "calendarSectionTitle": "Calendar settings",
+      "calendarSectionDescription": "Choose the calendar to sync and review the latest sync state.",
+      "staffLabel": "Team member",
+      "selectStaff": "Choose a team member",
+      "chooseStaffFirst": "Choose the team member whose Google Calendar you want to connect.",
+      "connect": "Connect Google",
+      "connecting": "Redirecting...",
+      "reconnect": "Reconnect Google",
+      "disconnect": "Disconnect",
+      "disconnecting": "Disconnecting...",
+      "disconnectedSuccess": "Google Calendar disconnected.",
+      "disconnectFailed": "Unable to disconnect Google Calendar.",
+      "disconnectConfirmTitle": "Disconnect Google Calendar?",
+      "disconnectConfirmDescription": "This will remove the current Google Calendar connection for bookings.",
+      "disconnectConfirm": "Confirm?",
+      "disconnectConfirmAction": "Disconnect Google Calendar",
+      "disconnectCancel": "Cancel",
+      "connectedSuccess": "Google Calendar connected successfully.",
+      "connectFailed": "Unable to complete the Google Calendar connection.",
+      "connectedAccount": "Connected account",
+      "connectedAccountUnavailable": "Connected account unavailable",
+      "selectedCalendar": "Selected calendar",
+      "noCalendarSelected": "No calendar selected yet.",
+      "calendarLabel": "Google calendar",
+      "selectCalendar": "Choose a calendar",
+      "chooseCalendarFirst": "Choose a Google calendar before saving.",
+      "loadingCalendars": "Loading calendars...",
+      "refreshCalendars": "Refresh",
+      "saveCalendar": "Save calendar",
+      "savingCalendar": "Saving...",
+      "calendarSaved": "Saved Google calendar selection.",
+      "calendarSaveFailed": "Unable to save the selected Google calendar.",
+      "calendarListFailed": "Unable to load Google calendars.",
+      "mappedConnections": "Mapped Google connections",
+      "mappedConnectionsDescription": "Each Google connection belongs to one bookable team member.",
+      "unknownStaff": "Unknown team member",
+      "noConnections": "No Google Calendar connections exist yet.",
+      "notConnectedForStaff": "This team member does not have a connected Google Calendar yet.",
+      "notConnectedDescription": "Connect Google Calendar to start syncing bookings.",
+      "noStaff": "Add a bookable team member before connecting Google Calendar.",
+      "primaryCalendarLabel": "{{summary}} (Primary)",
+      "lastSync": "Last sync",
+      "neverSynced": "No successful sync yet.",
+      "lastSyncState": "Last sync state",
+      "lastSyncOk": "Healthy",
+      "syncHealthy": "Sync healthy",
+      "syncNeedsAttention": "Needs attention"
+    },
+    "cards": {
+      "google": {
+        "title": "Google Calendar",
+        "description": "Sync bookings with a Google Calendar."
+      },
+      "microsoft": {
+        "title": "Microsoft Calendar",
+        "description": "Connect Outlook and Exchange calendars."
+      }
+    },
+    "status": {
+      "connected": "Connected",
+      "reconnectRequired": "Reconnect required",
+      "notConnected": "Not connected yet"
+    },
+    "summary": {
+      "title": "Calendar sync summary",
+      "description": "A quick view of how the integration layer is performing.",
+      "connectedCalendars": "Connected calendars",
+      "openIssues": "Open sync issues",
+      "syncedAppointments": "Synced appointments"
+    }
+  },
+  "profile": {
+    "title": "Receptionist Profile",
+    "description": "Define the voice, tone, booking policy, and transfer rules that shape your receptionist.",
+    "greeting": "Greeting",
+    "tone": "Tone",
+    "defaultCustomerLanguage": "Default customer language",
+    "businessSummary": "Business summary",
+    "bookingPolicy": "Booking policy",
+    "transferMode": "Transfer mode",
+    "transferNumber": "Transfer number",
+    "voiceInstructions": "Voice instructions",
+    "smsInstructions": "SMS instructions",
+    "selectDefaultLanguage": "Select a default language",
+    "selectTransferMode": "Select transfer mode",
+    "transferModes": {
+      "never": "Never",
+      "always": "Always",
+      "on_request": "On request",
+      "on_urgent": "On urgent issues",
+      "during_business_hours": "During business hours"
+    },
+    "save": "Save profile",
+    "saving": "Saving...",
+    "saved": "Saved receptionist profile.",
+    "placeholders": {
+      "transferNumber": "+1 555 123 4567"
+    }
+  },
+  "account": {
+    "title": "Account",
+    "actions": {
+      "change": "Change"
+    },
+    "businessName": {
+      "label": "Business name",
+      "description": "This is the name shown across the dashboard and customer-facing business details.",
+      "placeholder": "Maple Family Clinic",
+      "save": "Save",
+      "saving": "Saving...",
+      "saved": "Changes saved"
+    },
+    "changeEmail": {
+      "label": "Change email",
+      "description": "Email address you use to log in.",
+      "newEmailPlaceholder": "New email",
+      "currentPasswordPlaceholder": "Current password",
+      "save": "Send confirmation link",
+      "title": "Email",
+      "currentPasswordLabel": "Current password",
+      "currentEmail": "{{email}}",
+      "confirmationSent": "We sent a confirmation link to {{email}}.",
+      "errors": {
+        "invalidPassword": "Current password is incorrect.",
+        "alreadyExists": "An account with that email already exists.",
+        "unchanged": "Enter a different email address.",
+        "noEmail": "No email is configured for this account yet.",
+        "missingSiteUrl": "Email confirmation isn't configured yet. Set SITE_URL on the Convex deployment and try again.",
+        "required": "Enter a new email address.",
+        "failed": "We couldn't send a confirmation link. Please try again."
+      }
+    },
+    "changePassword": {
+      "title": "Password",
+      "label": "Change password",
+      "description": "Password you use to log in.",
+      "dialogDescription": "Enter your current password and a new password.",
+      "currentPasswordLabel": "Current password",
+      "currentPasswordPlaceholder": "Current password",
+      "newPasswordLabel": "New password",
+      "newPasswordPlaceholder": "New password",
+      "confirmPasswordLabel": "Confirm new password",
+      "confirmPasswordPlaceholder": "Confirm new password",
+      "save": "Save",
+      "saved": "Password updated.",
+      "errors": {
+        "mismatch": "New passwords do not match.",
+        "failed": "Unable to update password."
+      }
+    }
+  },
+  "workspaceTeam": {
+    "members": {
+      "title": "Members",
+      "table": {
+        "email": "Email",
+        "role": "Role"
+      },
+      "empty": "No members yet.",
+      "noEmail": "No email on file",
+      "joinedOn": "Joined on {{date}}",
+      "invitedOn": "Invited on {{date}}",
+      "status": {
+        "pending": "Pending"
+      },
+      "actions": {
+        "moreOptions": "More options",
+        "remove": "Remove",
+        "cancelInvite": "Cancel invite"
+      },
+      "removeSuccess": "Member removed.",
+      "removeFailed": "We couldn't remove that member."
+    },
+    "roles": {
+      "admin": "Admin",
+      "viewer": "Viewer"
+    },
+    "invite": {
+      "action": "Invite",
+      "title": "Invite a team member",
+      "description": "Send an email invitation to join this workspace.",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "teammate@business.com",
+      "roleLabel": "Select role",
+      "roles": {
+        "adminDescription": "Invite and manage team members, update workspace settings, and billing.",
+        "viewerDescription": "View calls, contacts, and dashboard activity without making changes."
+      },
+      "submit": "Send invitation",
+      "sending": "Sending invitation...",
+      "sent": "Invitation sent to {{email}}.",
+      "errors": {
+        "invalidEmail": "Enter a valid email address.",
+        "failed": "We couldn't send that invitation. Please try again."
+      }
+    },
+    "pending": {
+      "resend": "Resend",
+      "revoke": "Revoke",
+      "resendSuccess": "Invitation resent.",
+      "resendFailed": "We couldn't resend that invitation.",
+      "revokeSuccess": "Invitation revoked.",
+      "revokeFailed": "We couldn't revoke that invitation."
+    }
+  },
+  "hours": {
+    "title": "Opening Hours",
+    "description": "Structured hours stay authoritative over documents and help the receptionist answer availability questions reliably.",
+    "save": "Save hours",
+    "saving": "Saving...",
+    "leaveBlank": "Leave a day blank to mark it closed.",
+    "saved": "Saved business hours.",
+    "saveFailed": "Failed to save business hours.",
+    "invalidHours": "Invalid hours for {{day}}."
+  },
+  "services": {
+    "title": "Services",
+    "description": "Service definitions power both booking logic and the receptionist snapshot callers hear.",
+    "serviceName": "Service name",
+    "englishLabel": "English label",
+    "frenchLabel": "French label",
+    "slug": "Slug",
+    "durationMinutes": "Duration (minutes)",
+    "descriptionLabel": "Description",
+    "placeholders": {
+      "serviceName": "Initial Consultation",
+      "englishLabel": "Initial Consultation",
+      "frenchLabel": "Consultation initiale",
+      "description": "A 30 minute first appointment."
+    },
+    "save": "Add service",
+    "update": "Update service",
+    "cancelEdit": "Cancel",
+    "edit": "Edit service",
+    "saving": "Saving...",
+    "saved": "Saved service.",
+    "noDescription": "No description yet.",
+    "empty": "No services configured yet."
+  },
+  "phoneRouting": {
+    "title": "Phone Number Routing",
+    "description": "Map Twilio numbers to this business so live calls and SMS load the correct receptionist snapshot.",
+    "managedNumber": "Managed number",
+    "selectNumber": "Select a number",
+    "addNewNumber": "Add new number",
+    "e164Number": "E.164 number",
+    "twilioPhoneSid": "Twilio Phone SID",
+    "status": "Status",
+    "selectStatus": "Select status",
+    "statuses": {
+      "active": "Active",
+      "provisioning": "Provisioning",
+      "inactive": "Inactive"
+    },
+    "voiceEnabled": "Voice enabled",
+    "smsEnabled": "SMS enabled",
+    "save": "Save routing",
+    "saveNew": "Add number",
+    "saving": "Saving...",
+    "saved": "Saved phone number routing.",
+    "added": "Added phone number routing.",
+    "saveFailed": "Failed to save phone number routing.",
+    "currentMappings": "Current mappings",
+    "noSid": "No Twilio Phone SID saved yet.",
+    "empty": "No Twilio numbers are mapped yet. Add the live number you configured in Twilio using exact E.164 format."
+  },
+  "team": {
+    "title": "Bookable Team",
+    "description": "Booking only works for services that have at least one active team member assigned.",
+    "member": "Team member",
+    "selectMember": "Select a team member",
+    "addNewMember": "Add new team member",
+    "name": "Name",
+    "timezone": "Timezone",
+    "transferNumber": "Transfer number",
+    "placeholders": {
+      "name": "Jordan Lee",
+      "timezone": "America/Toronto",
+      "transferNumber": "+15145550123"
+    },
+    "activeForBooking": "Active for booking",
+    "save": "Save team member",
+    "saveNew": "Add team member",
+    "saving": "Saving...",
+    "saved": "Saved team member.",
+    "added": "Added team member.",
+    "saveFailed": "Failed to save team member.",
+    "serviceAssignments": "Service assignments",
+    "assignmentDescription": "Choose which services each team member can book over phone or SMS.",
+    "emptyStaff": "Add at least one team member before assigning services.",
+    "emptyServices": "Add services first, then come back here to make them bookable.",
+    "saveAssignments": "Save service assignments",
+    "savingAssignments": "Saving...",
+    "savedAssignments": "Saved service assignments.",
+    "saveAssignmentsFailed": "Failed to save service assignments.",
+    "assignedServices": "{{count}} services"
+  },
+  "snapshot": {
+    "title": "Receptionist Snapshot",
+    "description": "The voice gateway pulls this business context once when a live call begins.",
+    "business": "Business",
+    "timezone": "Timezone",
+    "transferPolicy": "Transfer policy",
+    "services": "Services in snapshot",
+    "knowledgeDigest": "Knowledge digest",
+      "emptyDigest": "No generated digest yet. Add knowledge or documents to enrich the receptionist."
+  },
+  "nextSteps": {
+    "title": "What to do next",
+    "description": "Tighten the live receptionist behavior before you route real traffic.",
+    "hours": "Set hours, services, and bookable team assignments so booking can suggest real times.",
+    "transfer": "Add transfer rules and a fallback number before handing off urgent calls.",
+    "snapshot": "Refresh your snapshot after major policy changes so voice picks them up quickly."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Choose which events trigger an alert to your phone or email.",
+    "actions": {
+      "testEmail": "Test email",
+      "testSms": "Test SMS",
+      "testing": "Sending..."
+    },
+    "toast": {
+      "saveFailed": "Notification preferences were not saved.",
+      "smsUnavailable": "Verify a phone number before enabling SMS notifications.",
+      "smsSenderUnavailable": "Configure an alert SMS sender before enabling SMS notifications.",
+      "testEmailSent": "Test email sent.",
+      "testSmsSent": "Test SMS sent.",
+      "testFailed": "Unable to send the test notification."
+    },
+    "sources": {
+      "title": "Channels",
+      "email": {
+        "title": "Email",
+        "description": "Receive alerts by email."
+      },
+      "sms": {
+        "title": "SMS",
+        "description": "Receive urgent alerts on your verified phone.",
+        "unverifiedDescription": "Add and verify a phone number on your account before enabling SMS alerts.",
+        "senderMissingDescription": "SMS alerts are unavailable until an alert SMS sender is configured for this workspace."
+      }
+    },
+    "communication": {
+      "title": "Communication",
+      "eventColumn": "Event"
+    },
+    "events": {
+      "voiceMessage": {
+        "title": "Voice message captured",
+        "description": "When the AI takes a callback or follow-up message during a call."
+      },
+      "pausedSms": {
+        "title": "New message in paused SMS conversation",
+        "description": "When SMS automation is manually paused and the customer sends another message."
+      },
+      "smsFailed": {
+        "title": "Customer SMS notification failed",
+        "description": "When an appointment confirmation or reminder SMS fails or is undelivered."
+      },
+      "calendarSync": {
+        "title": "Calendar sync issue",
+        "description": "When an appointment cannot sync to the calendar and needs attention."
+      },
+      "transferFailed": {
+        "title": "Live call transfer failed",
+        "description": "When the AI tried to transfer a caller to a human, but the transfer did not complete."
+      },
+      "aiReplyFailed": {
+        "title": "SMS AI reply failed",
+        "description": "When the system fails to generate or send an AI SMS reply."
+      }
+    },
+    "systemIssues": {
+      "title": "System issues"
+    },
+    "smsConsent": {
+      "title": "Enable SMS alerts",
+      "description": "Confirm that you want LobbyStack to send workspace alerts to your verified phone number.",
+      "cancel": "Cancel",
+      "accept": "I agree, enable SMS"
+    }
+  }
+}

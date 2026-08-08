@@ -1,0 +1,61 @@
+{
+  "items": {
+    "home": "Accueil",
+    "calls": "Appels",
+    "messages": "Messages",
+    "agent": "Agent",
+    "contacts": "Contacts",
+    "analytics": "Analytique",
+    "affiliate": "Programme d'affiliation",
+    "settings": "Réglages"
+  },
+  "search": {
+    "placeholder": "Rechercher dans l'espace..."
+  },
+  "sidebar": {
+    "businessSlugFallback": "Tableau de bord",
+    "general": "Général",
+    "agent": "Agent",
+    "other": "Gestion",
+    "workspace": "Espace",
+    "openSettings": "Ouvrir les réglages",
+    "signedIn": "Connecté",
+    "workspaceReady": "Espace prêt",
+    "upgradeToPro": "Passer à Pro",
+    "account": "Compte",
+    "toggleTheme": "Changer le thème",
+    "signOut": "Se déconnecter",
+    "createBusiness": "Créer une entreprise",
+    "noBusinessPhone": "Aucun numéro pour le moment",
+    "loadingPhone": "Chargement du numéro...",
+    "setupGuide": {
+      "title": "Premiers pas",
+      "open": "Ouvrir le guide de configuration",
+      "skip": "Ignorer le tutoriel",
+      "skipStep": "Ignorer",
+      "progress": "{{completed}} / {{total}} complétés",
+      "description": "{{completed}} étape(s) sur {{total}} complétée(s).",
+      "steps": {
+        "website": "Ajouter votre site web",
+        "sources": "Ajouter plus de sources",
+        "calendar": "Connecter votre calendrier",
+        "services": "Ajouter vos services",
+        "rules": "Définir les règles"
+      },
+      "stepDescriptions": {
+        "website": "Importez votre site public pour que votre réceptionniste apprenne les bases.",
+        "sources": "Téléversez un document avec vos politiques, FAQ, tarifs ou autres détails utiles.",
+        "calendar": "Connectez un calendrier pour garder les disponibilités à jour.",
+        "services": "Ajoutez les services que les clients peuvent demander et réserver.",
+        "rules": "Définissez les consignes que votre réceptionniste doit suivre pendant les appels et messages."
+      },
+      "stepActions": {
+        "website": "Ajouter le site",
+        "sources": "Téléverser un document",
+        "calendar": "Connecter le calendrier",
+        "services": "Ajouter un service",
+        "rules": "Ajouter une règle"
+      }
+    }
+  }
+}

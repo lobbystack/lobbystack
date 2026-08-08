@@ -1,0 +1,31 @@
+{
+  "header": {
+    "title": "Connaissances",
+    "description": "Gérez les connaissances, les documents et les conversations d'aperçu."
+  },
+  "manager": {
+    "title": "Base de connaissances",
+    "description": "Ajoutez des connaissances et des documents que la réceptionniste peut utiliser dans l'aperçu, les SMS et l'actualisation de l'instantané vocal.",
+    "items": "{{count}} éléments",
+    "manualDocument": "Document manuel",
+    "placeholders": {
+      "documentTitle": "Politiques de la clinique",
+      "documentBody": "Les patients doivent arriver 10 minutes à l'avance. Apportez une pièce d'identité avec photo et vos renseignements d'assurance, s'il y a lieu."
+    },
+    "documentTagsPlaceholder": "politique,accueil",
+    "saveDocument": "Ajouter le document",
+    "savingDocument": "Mise en file du document...",
+    "currentDocuments": "Documents actuels",
+    "queuedDocument": "Document mis en file pour indexation.",
+    "noDocuments": "Aucun document pour le moment."
+  },
+  "preview": {
+    "title": "Aperçu de la réceptionniste",
+    "description": "Testez la même couche de contexte d'entreprise utilisée pour les SMS et les flux IA asynchrones avant de la mettre devant les appelants.",
+    "promptPlaceholder": "À quelle heure êtes-vous ouverts demain?",
+    "generate": "Lancer l'aperçu",
+    "generating": "Génération...",
+    "emptyResponse": "Les réponses d'aperçu apparaîtront ici après avoir lancé la réceptionniste.",
+    "disabled": "Connectez-vous et créez une entreprise pour lancer le vrai flux d'aperçu."
+  }
+}

@@ -1,0 +1,218 @@
+{
+  "headers": {
+    "dashboardTitle": "Tableau de bord",
+    "dashboardDescription": "Suivez l'état de préparation pour les appels, les messages et la prise de rendez-vous."
+  },
+  "analyticsPage": {
+    "title": "Analytique",
+    "description": "Consultez les tendances d'engagement pour les appels, les messages et l'activite de reservation."
+  },
+  "delta": {
+    "flat": "Aucun changement depuis le mois dernier",
+    "up": "+{{value}} % depuis le mois dernier",
+    "down": "-{{value}} % depuis le mois dernier",
+    "durationUp": "+{{value}} depuis le mois dernier",
+    "durationDown": "-{{value}} depuis le mois dernier"
+  },
+  "home": {
+    "title": "Accueil",
+    "download": "Télécharger",
+    "liveCalls": "En direct",
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "analytics": "Analytique",
+      "reports": "Rapports",
+      "notifications": "Notifications"
+    },
+    "analytics": {
+      "chart": {
+        "title": "Vue d'ensemble de l'activite",
+        "description": "Appels et messages de la semaine dans votre espace reception."
+      },
+      "cards": {
+        "calls": "Nombre d'appels",
+        "messages": "Nombre de messages",
+        "appointments": "Rendez-vous reserves",
+        "agentResponseTime": "Temps de reponse agent"
+      },
+      "controls": {
+        "dateRange": "Plage de dates",
+        "granularity": "Intervalle d'agregation",
+        "more": "Plus d'options",
+        "presetRange": "Periode predeterminee",
+        "granularities": {
+          "hourly": "Horaire",
+          "daily": "Quotidien",
+          "weekly": "Hebdomadaire",
+          "monthly": "Mensuel",
+          "yearly": "Annuel"
+        },
+        "presets": {
+          "today": "Aujourd'hui",
+          "yesterday": "Hier",
+          "thisWeek": "Cette semaine",
+          "thisMonth": "Ce mois-ci",
+          "lastMonth": "Mois dernier",
+          "last30": "30 derniers jours",
+          "last3Months": "3 derniers mois",
+          "thisYear": "Cette annee",
+          "lastYear": "Annee derniere",
+          "allTime": "Depuis le debut",
+          "custom": "Plage personnalisee"
+        }
+      },
+      "metrics": {
+        "flat": "Aucun changement vs periode precedente",
+        "percentUp": "+{{value}}% vs periode precedente",
+        "percentDown": "-{{value}}% vs periode precedente",
+        "durationUp": "+{{value}} vs periode precedente",
+        "durationDown": "-{{value}} vs periode precedente"
+      },
+      "outcomes": {
+        "title": "Resultats des appels",
+        "description": "Comment le volume d'appels de cette semaine s'est termine.",
+        "labels": {
+          "completed": "Termines",
+          "transferred": "Transferes",
+          "live": "En direct",
+          "missed": "Manques"
+        }
+      },
+      "channels": {
+        "title": "Canaux",
+        "description": "Comment les conversations ont atteint votre reception cette semaine.",
+        "labels": {
+          "voice": "Voix",
+          "sms": "SMS",
+          "other": "Autre"
+        }
+      }
+    },
+    "metrics": {
+      "loading": "Chargement de la comparaison mensuelle...",
+      "calls": {
+        "title": "Appels"
+      },
+      "messages": {
+        "title": "Messages"
+      },
+      "appointments": {
+        "title": "Rendez-vous"
+      },
+      "averageDuration": {
+        "title": "Duree moyenne"
+      },
+      "contacts": {
+        "title": "Contacts"
+      }
+    },
+    "chart": {
+      "title": "Appels par mois",
+      "description": "Volume mensuel d'appels à partir de vos enregistrements Convex."
+    },
+    "recentCalls": {
+      "title": "Appels récents",
+      "description": "{{count}} appels récents dans le flux d'activité.",
+      "unknownCaller": "Appelant inconnu",
+      "durationValue": "{{value}} sec"
+    },
+    "actionRequired": {
+      "title": "Action requise",
+      "description": "Tâches de suivi client qui nécessitent encore une intervention humaine.",
+      "titleWithContact": "{{message}} pour {{name}}",
+      "urgent": "Urgent",
+      "emptyTitle": "Aucune tâche de suivi ouverte",
+      "emptyDescription": "Les nouvelles demandes de rappel et les relais humains apparaîtront ici.",
+      "fields": {
+        "callback": "Rappel",
+        "callbackWindow": "Rappel préféré"
+      },
+      "kinds": {
+        "voice_message": "Rappel",
+        "human_handoff": "Transfert",
+        "other": "Ouvert"
+      }
+    },
+    "upcoming": {
+      "title": "À venir",
+      "description": "Les prochains rendez-vous au calendrier.",
+      "unknownContact": "Contact inconnu",
+      "unknownService": "Service inconnu",
+      "withStaff": "avec {{name}}",
+      "emptyTitle": "Aucun rendez-vous à venir",
+      "emptyDescription": "Les futures réservations apparaîtront ici dès leur création.",
+      "status": {
+        "booked": "Réservé",
+        "confirmed": "Confirmé"
+      },
+      "source": {
+        "voice": "Voix",
+        "sms": "SMS",
+        "dashboard": "Tableau de bord"
+      }
+    }
+  },
+  "setup": {
+    "title": "Créer votre première entreprise",
+    "description": "Cela initialise le locataire, le profil de la réceptionniste et le premier instantané utilisé par la voix.",
+    "businessName": "Nom de l'entreprise",
+    "slug": "Slug",
+    "timezone": "Fuseau horaire",
+    "businessType": "Type d'entreprise",
+    "placeholders": {
+      "businessName": "Clinique familiale Maple",
+      "slug": "clinique-familiale-maple"
+    },
+    "businessTypes": {
+      "clinic": "Clinique",
+      "repair_shop": "Atelier de réparation",
+      "salon": "Salon",
+      "service_company": "Entreprise de services",
+      "other": "Autre"
+    },
+    "selectBusinessType": "Choisir un type d'entreprise",
+    "create": "Créer l'entreprise",
+    "creating": "Création...",
+    "created": "Entreprise créée. L'instantané de la réceptionniste se met à jour.",
+    "failed": "Impossible de créer l'entreprise."
+  },
+  "cards": {
+    "calls": {
+      "title": "Appels traités",
+      "footer": "La dernière activité entrante est disponible dans la boîte de réception."
+    },
+    "services": {
+      "title": "Services configurés",
+      "footer": "Ils alimentent à la fois la réceptionniste et le moteur de réservation."
+    },
+    "hours": {
+      "title": "Jours d'ouverture définis",
+      "footer": "Les heures structurées font autorité sur les documents."
+    },
+    "knowledge": {
+      "title": "Éléments de connaissance",
+      "footer": "Les connaissances et documents renforcent les réponses d'aperçu et par SMS."
+    },
+    "snapshot": "Instantané {{version}}"
+  },
+  "quickActions": {
+    "title": "Actions rapides",
+    "description": "Gardez {{businessName}} prêt pour les appels, les SMS et les flux de réservation.",
+    "configureProfile": "Configurer le profil de la réceptionniste",
+    "addKnowledge": "Ajouter des connaissances et des documents",
+    "reviewInbox": "Consulter la boîte d'appels",
+    "readiness": "État de préparation",
+    "servicesConfigured": "{{count}} services configurés",
+    "daysConfigured": "{{count}} jours avec heures d'ouverture",
+    "knowledgeItems": "{{count}} éléments de connaissance indexés",
+    "phoneNumbers": "{{count}} numéros de téléphone associés",
+    "currentGreeting": "Salutation actuelle"
+  },
+  "nextSteps": {
+    "title": "Prochaines étapes",
+    "description": "Ajustez le comportement de la réceptionniste avant d'acheminer du trafic réel.",
+    "hours": "Définissez les heures, les services et les affectations d'équipe afin que la réservation puisse proposer de vrais créneaux.",
+    "transfer": "Ajoutez des règles de transfert et un numéro de secours avant de transférer les appels urgents.",
+    "snapshot": "Actualisez l'instantané après des changements de politique importants pour que la voix les prenne rapidement en compte."
+  }
+}

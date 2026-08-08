@@ -3,8 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "./dist/domain/src/index.js",
-  "types": "./dist/domain/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/domain/src/index.d.ts",
+      "default": "./dist/domain/src/index.js"
+    },
+    "./server": {
+      "types": "./dist/domain/src/server/index.d.ts",
+      "default": "./dist/domain/src/server/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",

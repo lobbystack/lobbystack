@@ -1,0 +1,173 @@
+{
+  "page": {
+    "title": "Appels",
+    "description": "Consultez les appels récents et écoutez l'audio enregistré.",
+    "emptyPreview": "Pas encore de transcription.",
+    "selectCall": "Sélectionnez un appel pour afficher la transcription.",
+    "yesterday": "Hier",
+    "unknownShort": "IN"
+  },
+  "filters": {
+    "searchPlaceholder": "Rechercher des appels...",
+    "status": "Statut",
+    "allStatuses": "Tous"
+  },
+  "table": {
+    "caller": "Appelant",
+    "number": "Numéro",
+    "purpose": "Objet",
+    "time": "Heure",
+    "play": "Lecture",
+    "startedAt": "Début",
+    "status": "Statut",
+    "disposition": "Résultat",
+    "transcript": "Transcription",
+    "audio": "Audio",
+    "unknownCaller": "Appelant inconnu",
+    "noNumber": "Aucun numéro",
+    "noDisposition": "Non défini",
+    "empty": "Aucun appel ne correspond aux filtres."
+  },
+  "actions": {
+    "viewTranscript": "Voir la transcription",
+    "pendingTranscript": "Ouvrir la transcription",
+    "listen": "Écouter",
+    "download": "Télécharger l'audio",
+    "copy": "Copier",
+    "play": "Lecture",
+    "pause": "Pause",
+    "audioPending": "Enregistrement en attente",
+    "audioUnavailable": "Aucun enregistrement"
+  },
+  "followUp": {
+    "title": "Tâche de suivi",
+    "titleWithContact": "{{message}} pour {{name}}",
+    "createdAt": "Créé {{time}}",
+    "markDone": "Marquer comme fait",
+    "markingDone": "Mise à jour...",
+    "urgent": "Urgent",
+    "callUnavailable": "L'appel d'origine n'est plus disponible, mais cette tâche de rappel est encore ouverte.",
+    "completeFailed": "Impossible de marquer la tâche de rappel comme terminée.",
+    "kind": {
+      "callback": "Rappel"
+    },
+    "fields": {
+      "callback": "Rappel",
+      "callbackWindow": "Rappel préféré"
+    }
+  },
+  "pagination": {
+    "rowsPerPage": "Lignes par page",
+    "pageOf": "Page {{page}} sur {{total}}",
+    "firstPage": "Aller a la premiere page",
+    "previousPage": "Aller a la page precedente",
+    "nextPage": "Aller a la page suivante",
+    "lastPage": "Aller a la derniere page",
+    "goToPage": "Aller a la page {{page}}"
+  },
+  "panel": {
+    "title": "Appels récents",
+    "description": "Consultez les appels capturés, ouvrez les transcriptions et téléchargez l'audio enregistré.",
+    "captured": "{{count}} capturés",
+    "transcriptReady": "Transcription prête",
+    "transcriptPending": "Transcription en attente",
+    "audioReady": "Audio prêt",
+    "recordingPending": "Enregistrement en attente",
+    "viewTranscript": "Voir la transcription",
+    "downloadAudio": "Télécharger l'audio",
+    "noCalls": "Aucun appel n'a encore été capturé.",
+    "noBusinessTitle": "Appels récents",
+    "noBusinessDescription": "Créez une entreprise pour consulter les enregistrements et les transcriptions."
+  },
+  "transcript": {
+    "title": "Transcription de l'appel",
+    "description": "Consultez les tours enregistrés de l'appel du {{date}}.",
+    "emptyDescription": "Sélectionnez un appel pour voir la conversation enregistrée.",
+    "descriptionWithDate": "Consultez les tours enregistrés du client et de l'assistant du {{date}}.",
+    "descriptionEmpty": "Sélectionnez un appel pour consulter la conversation enregistrée.",
+    "noSegments": "Aucun segment de transcription n'est encore disponible pour cet appel."
+  },
+  "outcome": {
+    "label": "Résumé",
+    "booked": "L'appelant a réservé {{serviceName}} pour le {{startsAt}}.",
+    "scheduling": "L'appelant a commencé la prise de rendez-vous, mais aucun rendez-vous n'a été confirmé.",
+    "schedulingWithService": "L'appelant a discuté de la planification de {{serviceName}}, mais aucun rendez-vous n'a été confirmé.",
+    "schedulingWithServiceAndTime": "L'appelant a discuté de la planification de {{serviceName}} pour le {{startsAt}}, mais aucun rendez-vous n'a été confirmé.",
+    "messageTaken": "L'appelant a laissé un message pour suivi.",
+    "contactBlocked": "L'appel a été bloqué avant que l'assistant réponde.",
+    "abuse": "L'IA a mis fin à cet appel pour comportement abusif.",
+    "spam": "L'IA a mis fin à cet appel comme appel indésirable.",
+    "voicemail": "L'appel s'est terminé par une boîte vocale ou une prise de message.",
+    "busy": "L'appel s'est terminé parce que la ligne était occupée.",
+    "noAnswer": "L'appel s'est terminé sans réponse.",
+    "canceled": "L'appel a été annulé avant qu'un résultat final ne soit capturé.",
+    "completed": "L'appel s'est terminé, mais aucun résultat de réservation n'a été capturé.",
+    "technicalIssue": "L'appel s'est terminé à cause d'un problème technique avant qu'un résultat final ne soit capturé.",
+    "transferCompleted": "L'appel a été transféré avec succès.",
+    "transferBusy": "Un transfert a été tenté, mais la ligne de destination était occupée.",
+    "transferFailed": "Un transfert a été tenté, mais il n'a pas abouti.",
+    "none": "L'appelant a posé des questions, mais aucun résultat final n'a encore été capturé.",
+    "genericService": "un rendez-vous",
+    "unspecifiedTime": "une heure non précisée"
+  },
+  "detail": {
+    "backToList": "Appels",
+    "callLabel": "Appel",
+    "unknownCaller": "Appelant inconnu",
+    "noNumber": "Aucun numéro",
+    "metadata": {
+      "from": "De",
+      "duration": "Durée",
+      "started": "Début",
+      "id": "ID"
+    },
+    "status": {
+      "in_progress": "En cours",
+      "completed": "Terminé",
+      "failed": "Échoué",
+      "unknown": "Inconnu"
+    },
+    "events": {
+      "title": "Événements d'appel",
+      "received": "Reçu",
+      "connected": "Connecté",
+      "transferred": "Transféré",
+      "blocked": "Bloqué",
+      "completed": "Terminé",
+      "failed": "Échoué"
+    },
+    "tabs": {
+      "transcript": "Transcription",
+      "recording": "Enregistrement",
+      "details": "Détails"
+    },
+    "transcript": {
+      "caller": "Appelant",
+      "assistant": "Assistant",
+      "empty": "Aucun segment de transcription n'est encore disponible pour cet appel."
+    },
+    "recording": {
+      "unavailable": "Aucun enregistrement n'est disponible pour cet appel.",
+      "pending": "L'enregistrement est encore en cours de traitement."
+    },
+    "blocking": {
+      "badge": "Bloqué",
+      "blockedAtInline": "Bloqué le {{time}}"
+    },
+    "details": {
+      "outcomeTitle": "Résultat",
+      "followUpTitle": "Tâche de suivi",
+      "callInfoTitle": "Informations sur l'appel",
+      "twilioCallSid": "SID de l'appel Twilio",
+      "gatewaySession": "Session passerelle",
+      "disposition": "Disposition",
+      "providerStatus": "Statut du fournisseur",
+      "noDisposition": "Aucune",
+      "noFollowUp": "Aucune tâche de suivi pour cet appel.",
+      "markDone": "Marquer comme fait",
+      "markingDone": "Mise à jour…"
+    },
+    "notFound": "Appel introuvable.",
+    "notFoundDescription": "Cet appel n'existe pas ou vous n'y avez pas accès."
+  }
+}

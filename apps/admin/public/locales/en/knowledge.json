@@ -1,0 +1,31 @@
+{
+  "header": {
+    "title": "Knowledge",
+    "description": "Manage knowledge, documents, and preview conversations."
+  },
+  "manager": {
+    "title": "Knowledge Base",
+    "description": "Add knowledge and documents the receptionist can use across preview, SMS, and the voice snapshot refresh.",
+    "items": "{{count}} items",
+    "manualDocument": "Manual document",
+    "placeholders": {
+      "documentTitle": "Clinic Policies",
+      "documentBody": "Patients should arrive 10 minutes early. Bring photo ID and insurance information when applicable."
+    },
+    "documentTagsPlaceholder": "policy,intake",
+    "saveDocument": "Add document",
+    "savingDocument": "Queue document...",
+    "currentDocuments": "Current documents",
+    "queuedDocument": "Queued document for indexing.",
+    "noDocuments": "No documents yet."
+  },
+  "preview": {
+    "title": "Preview Receptionist",
+    "description": "Test the same business context layer used for SMS and async AI flows before you put it in front of callers.",
+    "promptPlaceholder": "What time are you open tomorrow?",
+    "generate": "Run Preview",
+    "generating": "Generating...",
+    "emptyResponse": "Preview responses will appear here after you run the receptionist.",
+    "disabled": "Sign in and create a business to run the real preview flow."
+  }
+}
