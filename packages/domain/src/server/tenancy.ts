@@ -4,6 +4,7 @@ import {
   businessSettings,
   invitations,
   memberships,
+  setRlsContext,
 } from "@lobbystack/db";
 import type { CreateBusinessRequest, UpdateBusinessSettingsRequest } from "@lobbystack/contracts";
 import { and, eq, isNull } from "drizzle-orm";
@@ -78,7 +79,7 @@ export async function createBusiness(input: {
 }): Promise<string> {
   return withDomainTransaction(
     { userId: input.userId, actorType: "user", pool: input.pool ?? getAppPool() },
-    async (db) => {
+    async (db, client) => {
       const [business] = await db
         .insert(businesses)
         .values({
@@ -93,6 +94,12 @@ export async function createBusiness(input: {
       if (!business) {
         throw new Error("Business creation did not return an id");
       }
+
+      await setRlsContext(client, {
+        businessId: business.id,
+        userId: input.userId,
+        actorType: "user",
+      });
 
       await db.insert(memberships).values({
         businessId: business.id,

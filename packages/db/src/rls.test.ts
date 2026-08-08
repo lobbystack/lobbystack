@@ -10,18 +10,25 @@ const hasDatabase =
 
 describe("RLS context helpers", () => {
   it("exposes connection string resolution for app role", () => {
-    const previous = process.env.DATABASE_URL;
+    const previousUrl = process.env.DATABASE_URL;
+    const previousAppUrl = process.env.DATABASE_URL_APP;
     process.env.DATABASE_URL = "postgres://app:secret@localhost:5432/lobbystack";
+    delete process.env.DATABASE_URL_APP;
 
     try {
       expect(getConnectionString("app")).toBe(
         "postgres://app:secret@localhost:5432/lobbystack",
       );
     } finally {
-      if (previous === undefined) {
+      if (previousUrl === undefined) {
         delete process.env.DATABASE_URL;
       } else {
-        process.env.DATABASE_URL = previous;
+        process.env.DATABASE_URL = previousUrl;
+      }
+      if (previousAppUrl === undefined) {
+        delete process.env.DATABASE_URL_APP;
+      } else {
+        process.env.DATABASE_URL_APP = previousAppUrl;
       }
     }
   });
@@ -34,16 +41,17 @@ describe("RLS context helpers", () => {
 
       const businessA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
       const businessB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+      const userA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab";
 
       await withBusinessTransaction(
         pool,
-        { businessId: businessA, userId: "user-a", actorType: "user" },
+        { businessId: businessA, userId: userA, actorType: "user" },
         async (client) => {
           await client.query(
-            `INSERT INTO app.businesses (id, slug, name)
-             VALUES ($1, 'tenant-a', 'Tenant A')
+            `INSERT INTO app.businesses (id, slug, name, owner_user_id)
+             VALUES ($1, 'tenant-a', 'Tenant A', $2)
              ON CONFLICT (id) DO NOTHING`,
-            [businessA],
+            [businessA, userA],
           );
 
           const context = await currentRlsContext(client);

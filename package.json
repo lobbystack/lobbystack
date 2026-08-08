@@ -57,6 +57,7 @@
     "db:seed": "pnpm --filter @lobbystack/db db:seed",
     "db:reset:test": "pnpm --filter @lobbystack/db db:reset:test",
     "db:verify-rls": "pnpm --filter @lobbystack/db db:verify-rls",
+    "cert:replacement": "tsx scripts/replacement-certification.ts",
     "posthog:sourcemaps": "pnpm --filter @lobbystack/web posthog:sourcemaps",
     "dev:onboarding:website": "tsx scripts/prepare-onboarding-website.ts",
     "prospect-demo": "tsx scripts/prospect-demo.ts",

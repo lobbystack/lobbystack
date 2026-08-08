@@ -15,8 +15,12 @@ export const users = authSchema.table(
   "users",
   {
     id: id(),
-    authSubject: text("auth_subject"),
+    name: text("name"),
     email: text("email"),
+    emailVerified: boolean("email_verified").notNull().default(false),
+    image: text("image"),
+    role: text("role").notNull().default("user"),
+    authSubject: text("auth_subject"),
     emailVerifiedAt: timestamp("email_verified_at", {
       withTimezone: true,
       mode: "date",
@@ -48,10 +52,21 @@ export const accounts = authSchema.table(
   {
     id: id(),
     userId: text("user_id").notNull(),
-    provider: text("provider").notNull(),
-    providerAccountId: text("provider_account_id").notNull(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    password: text("password"),
+    provider: text("provider"),
+    providerAccountId: text("provider_account_id"),
     accessToken: text("access_token"),
     refreshToken: text("refresh_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
     expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }),
     tokenType: text("token_type"),
     scope: text("scope"),
@@ -73,7 +88,8 @@ export const sessions = authSchema.table(
   {
     id: id(),
     userId: text("user_id").notNull(),
-    sessionToken: text("session_token").notNull(),
+    token: text("token").notNull(),
+    sessionToken: text("session_token"),
     expiresAt: timestamp("expires_at", {
       withTimezone: true,
       mode: "date",
@@ -84,6 +100,7 @@ export const sessions = authSchema.table(
     ...timestamps(),
   },
   (table) => [
+    uniqueIndex("sessions_token_idx").on(table.token),
     uniqueIndex("sessions_session_token_idx").on(table.sessionToken),
     index("sessions_user_id_idx").on(table.userId),
   ],
@@ -94,7 +111,8 @@ export const verificationTokens = authSchema.table(
   {
     id: id(),
     identifier: text("identifier").notNull(),
-    token: text("token").notNull(),
+    value: text("value").notNull(),
+    token: text("token"),
     expiresAt: timestamp("expires_at", {
       withTimezone: true,
       mode: "date",

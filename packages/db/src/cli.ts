@@ -17,11 +17,45 @@ async function runSqlFiles(files: string[]): Promise<void> {
   const client = await pool.connect();
 
   try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS app.schema_migrations (
+        id text PRIMARY KEY,
+        applied_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+
     for (const file of files) {
-      const sql = await readFile(path.join(migrationsDir, file), "utf8");
+      const applied = await client.query<{ id: string }>(
+        `SELECT id FROM app.schema_migrations WHERE id = $1`,
+        [file],
+      );
+      if (applied.rows.length > 0) {
+        console.log(`Skipping ${file} (already applied)`);
+        continue;
+      }
+
+      const raw = await readFile(path.join(migrationsDir, file), "utf8");
+      const statements = raw
+        .split(/--> statement-breakpoint/)
+        .map((part) => part.trim())
+        .filter((part) => part.length > 0 && !part.startsWith("-- Schemas created"));
+
       console.log(`Applying ${file}...`);
-      await client.query(sql);
-      console.log(`Applied ${file}`);
+      await client.query("BEGIN");
+      try {
+        for (const statement of statements) {
+          await client.query(statement);
+        }
+        await client.query(
+          `INSERT INTO app.schema_migrations (id) VALUES ($1)`,
+          [file],
+        );
+        await client.query("COMMIT");
+        console.log(`Applied ${file}`);
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
     }
   } finally {
     client.release();
