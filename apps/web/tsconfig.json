@@ -10,7 +10,10 @@
       "@lobbystack/domain": ["../../packages/domain/src"],
       "@lobbystack/providers": ["../../packages/providers/src"],
       "@lobbystack/shared": ["../../packages/shared/src"],
-      "@lobbystack/telemetry": ["../../packages/telemetry/src"]
+      "@lobbystack/telemetry": ["../../packages/telemetry/src"],
+      "@lobbystack/telemetry/node": ["../../packages/telemetry/src/node.ts"],
+      "@lobbystack/telemetry/browser": ["../../packages/telemetry/src/browser.ts"],
+      "@lobbystack/telemetry/testing": ["../../packages/telemetry/src/testing.ts"]
     },
     "types": ["vite/client", "react", "react-dom"],
     "noEmit": true

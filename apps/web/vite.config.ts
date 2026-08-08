@@ -19,6 +19,18 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@lobbystack/shared": path.resolve(__dirname, "../../packages/shared/src/index.ts"),
+      "@lobbystack/telemetry/node": path.resolve(
+        __dirname,
+        "../../packages/telemetry/src/node.ts",
+      ),
+      "@lobbystack/telemetry/browser": path.resolve(
+        __dirname,
+        "../../packages/telemetry/src/browser.ts",
+      ),
+      "@lobbystack/telemetry/testing": path.resolve(
+        __dirname,
+        "../../packages/telemetry/src/testing.ts",
+      ),
       "@lobbystack/telemetry": path.resolve(
         __dirname,
         "../../packages/telemetry/src/index.ts",
