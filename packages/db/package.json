@@ -1,0 +1,52 @@
+{
+  "name": "@lobbystack/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    },
+    "./schema": {
+      "types": "./dist/schema/index.d.ts",
+      "default": "./dist/schema/index.js"
+    },
+    "./rls/context": {
+      "types": "./dist/rls/context.d.ts",
+      "default": "./dist/rls/context.js"
+    },
+    "./outbox": {
+      "types": "./dist/outbox.d.ts",
+      "default": "./dist/outbox.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "db:generate": "tsx src/cli.ts generate",
+    "db:migrate": "tsx src/cli.ts migrate",
+    "db:check": "tsx src/cli.ts check",
+    "db:seed": "tsx src/cli.ts seed",
+    "db:reset:test": "tsx src/cli.ts reset:test",
+    "db:verify-rls": "tsx src/cli.ts verify-rls"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.44.2",
+    "pg": "^8.16.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.4",
+    "drizzle-kit": "^0.31.4",
+    "tsx": "^4.20.3"
+  }
+}
