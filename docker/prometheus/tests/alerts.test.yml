@@ -1,0 +1,58 @@
+rule_files:
+  - ../rules/alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'up{job="otel-collector"}'
+        values: '0 0 0 0'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ReplacementCollectorUnavailable
+        exp_alerts:
+          - exp_labels:
+              job: otel-collector
+              severity: critical
+            exp_annotations:
+              summary: Replacement telemetry collector is unavailable
+              runbook: docs/operations/alerts.md#replacementcollectorunavailable
+
+  - interval: 1m
+    input_series:
+      - series: lobbystack_outbox_dead_lettered_total
+        values: '0 0 1 1'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ReplacementOutboxDeadLettered
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+            exp_annotations:
+              summary: Replacement outbox message reached its terminal retry limit
+              runbook: docs/operations/alerts.md#replacementoutboxdeadlettered
+
+  - interval: 1m
+    input_series:
+      - series: lobbystack_worker_jobs_failed_total
+        values: '0 1 2 3 3'
+      - series: lobbystack_outbox_poll_failures_total
+        values: '0 1 2 3 3'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: ReplacementWorkerJobFailures
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+            exp_annotations:
+              summary: Replacement worker is repeatedly failing jobs
+              runbook: docs/operations/alerts.md#replacementworkerjobfailures
+      - eval_time: 4m
+        alertname: ReplacementOutboxDispatcherUnavailable
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+            exp_annotations:
+              summary: Replacement outbox dispatcher cannot poll PostgreSQL
+              runbook: docs/operations/alerts.md#replacementoutboxdispatcherunavailable

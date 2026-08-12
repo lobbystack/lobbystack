@@ -1,3 +1,5 @@
+import { signedBackendBinaryHeaders, signedBackendHeaders } from "../backend/request";
+import { withSpan } from "@lobbystack/telemetry/node";
 import { loadVoiceGatewayEnv } from "@lobbystack/config";
 
 import {
@@ -37,6 +39,7 @@ type StartWebCallResponse = {
   businessId: string;
   callId: string;
   conversationId: string;
+  webCallMaxDurationMs?: number;
 };
 
 type WebCallRecordingTargetResponse = {
@@ -100,7 +103,7 @@ type AppointmentChangeLookupResponse = {
 type AppointmentChangeVerifyResponse =
   | {
       ok: true;
-      verified: true;
+      verified: boolean;
       requiresOtp: boolean;
       verificationId: string;
       appointmentId: string;
@@ -153,15 +156,13 @@ type SearchVoiceKnowledgeResponse = Array<{
 }>;
 
 function getRuntimeBaseUrl(): string {
-  return loadVoiceGatewayEnv(process.env).CONVEX_SITE_URL;
+  const env = loadVoiceGatewayEnv(process.env);
+  return env.BACKEND_INTERNAL_URL ?? env.CONVEX_SITE_URL!;
 }
 
-function getRuntimeHeaders(): HeadersInit {
+function getRuntimeHeaders(body: string): HeadersInit {
   const env = loadVoiceGatewayEnv(process.env);
-  return {
-    "Content-Type": "application/json",
-    "x-internal-service-token": env.INTERNAL_SERVICE_TOKEN,
-  };
+  return signedBackendHeaders({ serviceId: process.env.VOICE_GATEWAY_SERVICE_ID ?? "lobbystack-voice-gateway", secret: env.INTERNAL_SERVICE_SECRET ?? env.INTERNAL_SERVICE_TOKEN, body });
 }
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {
@@ -188,12 +189,15 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
 }
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(`${getRuntimeBaseUrl()}${path}`, {
-    method: "POST",
-    headers: getRuntimeHeaders(),
-    body: JSON.stringify(body),
+  return await withSpan("voice.backend.request", { attributes: { "http.request.method": "POST", "url.path": path } }, async () => {
+    const serialized = JSON.stringify(body);
+    const response = await fetch(`${getRuntimeBaseUrl()}${path}`, {
+      method: "POST",
+      headers: getRuntimeHeaders(serialized),
+      body: serialized,
+    });
+    return await parseJsonResponse<T>(response);
   });
-  return await parseJsonResponse<T>(response);
 }
 
 export async function startVoiceCall(input: {
@@ -215,12 +219,14 @@ export async function fetchWebVoiceContext(input: {
   visitorId?: string;
   widgetId?: string;
   prospectDemoToken?: string;
+  maxDurationMs?: number;
 }): Promise<WebVoiceContextResponse> {
   return await postJson<WebVoiceContextResponse>("/voice/context/by-slug", input);
 }
 
 export async function startWebVoiceCall(input: {
   businessSlug: string;
+  origin: string;
   providerCallId: string;
   gatewaySessionId?: string;
   ipHash?: string;
@@ -350,28 +356,26 @@ export async function uploadVoiceRecording(input: {
   contentType?: string;
 }): Promise<void> {
   const env = loadVoiceGatewayEnv(process.env);
-  const url = new URL("/voice/call/recording", env.CONVEX_SITE_URL);
+  const url = new URL("/voice/call/recording", env.BACKEND_INTERNAL_URL ?? env.CONVEX_SITE_URL!);
   url.searchParams.set("callId", input.callId);
   url.searchParams.set("durationMs", String(input.durationMs));
   const bytes = Uint8Array.from(input.audio);
-  const arrayBuffer = bytes.buffer as ArrayBuffer;
   const contentType = input.contentType ?? "audio/wav";
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": contentType,
-      "x-internal-service-token": env.INTERNAL_SERVICE_TOKEN,
-    },
-    body: new Blob([arrayBuffer], { type: contentType }),
-  });
-
-  if (!response.ok) {
-    recordRecordingUploadFailure({
-      "lobbystack.call_id": input.callId,
+  await withSpan("voice.backend.recording", { attributes: { "http.request.method": "POST", "url.path": url.pathname } }, async () => {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: signedBackendBinaryHeaders({ serviceId: process.env.VOICE_GATEWAY_SERVICE_ID ?? "lobbystack-voice-gateway", secret: env.INTERNAL_SERVICE_SECRET ?? env.INTERNAL_SERVICE_TOKEN, body: bytes, contentType }),
+      body: bytes,
     });
-    throw new Error(await response.text());
-  }
+
+    if (!response.ok) {
+      recordRecordingUploadFailure({
+        "lobbystack.call_id": input.callId,
+      });
+      throw new Error(await response.text());
+    }
+  });
 }
 
 export async function findVoiceAvailability(input: {

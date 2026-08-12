@@ -1,0 +1,50 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+  attributes/redact:
+    actions:
+      - key: db.statement
+        action: delete
+      - key: http.request.body
+        action: delete
+      - key: http.url
+        action: delete
+      - key: http.target
+        action: delete
+      - key: url.full
+        action: delete
+      - key: url.path
+        action: delete
+      - key: url.query
+        action: delete
+      - key: messaging.message.body
+        action: delete
+      - key: lobbystack.transcript
+        action: delete
+      - key: lobbystack.prompt
+        action: delete
+
+exporters:
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [attributes/redact, batch]
+      exporters: [debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    logs:
+      receivers: [otlp]
+      processors: [attributes/redact, batch]
+      exporters: [debug]

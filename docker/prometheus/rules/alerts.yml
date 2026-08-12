@@ -1,0 +1,35 @@
+groups:
+  - name: replacement-critical
+    rules:
+      - alert: ReplacementCollectorUnavailable
+        expr: up{job="otel-collector"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Replacement telemetry collector is unavailable
+          runbook: docs/operations/alerts.md#replacementcollectorunavailable
+
+      - alert: ReplacementOutboxDeadLettered
+        expr: increase(lobbystack_outbox_dead_lettered_total[5m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: Replacement outbox message reached its terminal retry limit
+          runbook: docs/operations/alerts.md#replacementoutboxdeadlettered
+
+      - alert: ReplacementWorkerJobFailures
+        expr: increase(lobbystack_worker_jobs_failed_total[10m]) >= 3
+        labels:
+          severity: critical
+        annotations:
+          summary: Replacement worker is repeatedly failing jobs
+          runbook: docs/operations/alerts.md#replacementworkerjobfailures
+
+      - alert: ReplacementOutboxDispatcherUnavailable
+        expr: increase(lobbystack_outbox_poll_failures_total[5m]) >= 3
+        labels:
+          severity: critical
+        annotations:
+          summary: Replacement outbox dispatcher cannot poll PostgreSQL
+          runbook: docs/operations/alerts.md#replacementoutboxdispatcherunavailable

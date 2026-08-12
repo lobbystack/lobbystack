@@ -1,0 +1,15 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "/Dockerfile.worker",
+    "watchPatterns": ["apps/worker/**", "packages/**", "Dockerfile.worker", "package.json", "pnpm-workspace.yaml", "pnpm-lock.yaml", "tsconfig.base.json"]
+  },
+  "deploy": {
+    "preDeployCommand": ["node", "node_modules/@lobbystack/db/dist/cli.js", "migrate"],
+    "healthcheckPath": "/health/ready",
+    "healthcheckTimeout": 300,
+    "restartPolicyType": "ON_FAILURE",
+    "drainingSeconds": 30
+  }
+}

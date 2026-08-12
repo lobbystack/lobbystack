@@ -1,0 +1,126 @@
+import { NextResponse } from "next/server";
+
+import { createDatabaseClient, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { requireBusinessMembership, type AuthorizationError } from "@lobbystack/domain";
+
+import { getSession, type Session } from "./auth";
+import { claimInternalRequestNonce, verifyInternalRequest } from "./internal-auth";
+
+let appDatabase: ReturnType<typeof createDatabaseClient> | undefined;
+let workerDatabase: ReturnType<typeof createDatabaseClient> | undefined;
+let dispatcherDatabase: ReturnType<typeof createDatabaseClient> | undefined;
+
+export function getAppDatabase() {
+  if (!appDatabase) {
+    appDatabase = createDatabaseClient("lobbystack_app");
+  }
+  return appDatabase;
+}
+
+export function getWorkerDatabase() {
+  if (!workerDatabase) {
+    workerDatabase = createDatabaseClient("lobbystack_worker");
+  }
+  return workerDatabase;
+}
+
+export function getDispatcherDatabase() {
+  if (!dispatcherDatabase) {
+    dispatcherDatabase = createDatabaseClient("lobbystack_dispatcher");
+  }
+  return dispatcherDatabase;
+}
+
+export function jsonError(message: string, status = 400, code?: string): NextResponse {
+  return NextResponse.json({ error: message, ...(code ? { code } : {}) }, { status });
+}
+
+export async function readJson(request: Request): Promise<unknown> {
+  try {
+    return await request.json();
+  } catch {
+    throw jsonError("Invalid JSON body.", 400, "invalid_json");
+  }
+}
+
+export async function requireApiSession(request: Request): Promise<NonNullable<Session>> {
+  try {
+    const session = await getSession(request.headers);
+    if (!session) {
+      throw jsonError("Authentication required.", 401, "unauthorized");
+    }
+    return session;
+  } catch (error) {
+    if (error instanceof Response) {
+      throw error;
+    }
+    throw jsonError("Authentication service unavailable.", 503, "auth_unavailable");
+  }
+}
+
+export async function requireProspectDemoOperator(request: Request): Promise<NonNullable<Session>> {
+  const session = await requireApiSession(request);
+  const operatorEmail = process.env.PROSPECT_DEMO_OPERATOR_EMAIL?.trim().toLowerCase();
+  if (!operatorEmail) throw jsonError("Prospect demo operations are not configured.", 503, "demo_operator_unconfigured");
+  if (session.user.email?.trim().toLowerCase() !== operatorEmail) throw jsonError("Prospect demo operator access is required.", 403, "forbidden");
+  return session;
+}
+
+export function businessIdFromRequest(request: Request): string | null {
+  return new URL(request.url).searchParams.get("businessId") ?? request.headers.get("x-business-id");
+}
+
+export async function requireInternalService(request: Request, body: string | Uint8Array): Promise<void> {
+  const token = process.env.INTERNAL_SERVICE_TOKEN;
+  if (process.env.NODE_ENV !== "production" && token && request.headers.get("x-internal-service-token") === token) {
+    return;
+  }
+  const serviceId = request.headers.get("x-service-id") ?? "unknown";
+  const nonce = request.headers.get("x-service-nonce");
+  const valid = verifyInternalRequest({
+    serviceId,
+    timestamp: request.headers.get("x-service-timestamp"),
+    nonce,
+    bodyHash: request.headers.get("x-body-sha256"),
+    signature: request.headers.get("x-service-signature"),
+    body,
+  });
+  if (!valid) {
+    throw jsonError("Unauthorized internal request.", 401, "internal_unauthorized");
+  }
+  const claim = await claimInternalRequestNonce({ serviceId, nonce: nonce!, maxAgeMs: 30_000 });
+  if (claim === "replayed") {
+    throw jsonError("The internal request has already been used.", 401, "internal_replay");
+  }
+  if (claim === "unavailable") {
+    throw jsonError("Internal request replay protection is unavailable.", 503, "internal_replay_unavailable");
+  }
+}
+
+export async function withOperatorTransaction<T>(
+  request: Request,
+  callback: (input: { session: NonNullable<Session>; businessId: string; tx: DatabaseTransaction }) => Promise<T>,
+  options: { minimumRole?: "viewer" | "scheduler" | "business_admin" | "business_owner" } = {},
+): Promise<T> {
+  const session = await requireApiSession(request);
+  const businessId = businessIdFromRequest(request);
+  if (!businessId) {
+    throw jsonError("A businessId is required.", 400, "business_required");
+  }
+  return await withBusinessTransaction(getAppDatabase().db, { userId: session.user.id, businessId, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, { userId: session.user.id, businessId, ...(options.minimumRole ? { minimumRole: options.minimumRole } : {}) });
+    return await callback({ session, businessId, tx });
+  });
+}
+
+export function asApiResponse(error: unknown): NextResponse {
+  if (error instanceof NextResponse) {
+    return error;
+  }
+  if (error instanceof Response) {
+    return NextResponse.json({ error: "Request failed." }, { status: error.status });
+  }
+  const status = typeof error === "object" && error !== null && "status" in error && typeof error.status === "number" ? error.status : 500;
+  const message = status >= 500 ? "Request failed." : error instanceof Error ? error.message : "Request failed.";
+  return jsonError(message, status);
+}

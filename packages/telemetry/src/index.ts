@@ -1,3 +1,5 @@
+import { maskString, redactOtelAttributes, redactSignedStorageUrls, shouldRedactKey } from "./redaction";
+
 export type DeploymentMode =
   | "cloud"
   | "self_hosted_standard"
@@ -85,6 +87,8 @@ export const KNOWLEDGE_EVENT_NAMES = [
   "knowledge.search_executed",
 ] as const;
 
+export const AI_EVENT_NAMES = ["$ai_generation"] as const;
+
 export const INTEGRATION_EVENT_NAMES = [
   "integration.calendar_connected",
   "integration.calendar_sync_failed",
@@ -125,6 +129,7 @@ export const TELEMETRY_EVENT_NAMES = [
   ...SMS_EVENT_NAMES,
   ...APPOINTMENT_EVENT_NAMES,
   ...KNOWLEDGE_EVENT_NAMES,
+  ...AI_EVENT_NAMES,
   ...INTEGRATION_EVENT_NAMES,
   ...WORKFLOW_EVENT_NAMES,
   ...OPERATIONS_EVENT_NAMES,
@@ -517,6 +522,7 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   ],
   "knowledge.document_indexed": ["businessId", "deploymentMode"],
   "knowledge.search_executed": ["businessId", "deploymentMode"],
+  "$ai_generation": [],
   "integration.calendar_connected": [
     "businessId",
     "deploymentMode",
@@ -639,103 +645,6 @@ export type TelemetryFacade = {
   ): Promise<void>;
 };
 
-const EXACT_REDACTION_KEYS = new Set([
-  "$ai_input",
-  "$ai_output",
-  "$ai_output_choices",
-  "body",
-  "content",
-  "message",
-  "messages",
-  "name",
-  "phone",
-  "prompt",
-  "prompts",
-  "recordingUrl",
-  "recording_url",
-  "smsBody",
-  "sms_body",
-  "text",
-  "toolArguments",
-  "tool_arguments",
-  "toolOutput",
-  "tool_output",
-  "toolResult",
-  "tool_result",
-  "transcript",
-  "utterance",
-  "utterances",
-  "aiinput",
-  "aioutput",
-  "aioutputchoices",
-  "assistantmessage",
-  "assistantresponse",
-  "tooloutput",
-  "toolresult",
-  "usermessage",
-]);
-
-const PARTIAL_REDACTION_KEYWORDS = [
-  "address",
-  "body",
-  "caller",
-  "contact",
-  "customer",
-  "email",
-  "message",
-  "name",
-  "note",
-  "outputchoice",
-  "phone",
-  "prompt",
-  "recording",
-  "sms",
-  "text",
-  "tool_output",
-  "token",
-  "toolarg",
-  "tool_input",
-  "transcript",
-  "utterance",
-  "assistant",
-];
-
-const SAFE_KEY_PATTERNS = [
-  "cachedtokens",
-  "cachedinputtokens",
-  "charcount",
-  "completiontokens",
-  "costusd",
-  "dimension",
-  "embeddingtokens",
-  "entrycount",
-  "filename",
-  "inputcharcount",
-  "inputtokens",
-  "messagelinkkey",
-  "messagecount",
-  "outputtokens",
-  "outputcharcount",
-  "prompttokens",
-  "reasoningtokens",
-  "spanname",
-  "timetofirsttoken",
-  "tokencount",
-  "totaltokens",
-  "traceid",
-  "ttft",
-  "toolname",
-  "providername",
-  "modelname",
-  "exceptiontype",
-  "httpstatuscode",
-  "providererrorcode",
-  "providererrorkind",
-  "providererrorstatus",
-  "sessionid",
-  "workflowname",
-];
-
 const SENSITIVE_URL_PARAMS = new Set([
   "customer_session_token",
   "email",
@@ -776,39 +685,13 @@ const EXPECTED_CONVEX_FAILURE_MESSAGE_SNIPPETS = [
   "verify your mobile number before choosing",
 ];
 
-function normalizeKey(key: string): string {
-  return key.replace(/[^a-z0-9]/gi, "").toLowerCase();
-}
-
-function shouldRedactKey(key: string): boolean {
-  const normalizedKey = normalizeKey(key);
-  if (SAFE_KEY_PATTERNS.some((pattern) => normalizedKey.includes(pattern))) {
-    return false;
-  }
-  if (EXACT_REDACTION_KEYS.has(key) || EXACT_REDACTION_KEYS.has(normalizedKey)) {
-    return true;
-  }
-  return PARTIAL_REDACTION_KEYWORDS.some((keyword) =>
-    normalizedKey.includes(keyword),
-  );
-}
-
-function maskString(value: string): string {
-  const digits = value.replace(/\D/g, "");
-  if (digits.length >= 4) {
-    return `***${digits.slice(-4)}`;
-  }
-  if (value.length > 8) {
-    return `${value.slice(0, 2)}***${value.slice(-2)}`;
-  }
-  return "[redacted]";
-}
-
 function hasUrlParam(value: string, params: Set<string>): boolean {
   return [...params].some((param) => new RegExp(`[?&]${param}=`).test(value));
 }
 
 export function redactSensitiveUrlValue(value: string): string {
+  const storageRedacted = redactSignedStorageUrls(value);
+  if (storageRedacted !== value) return storageRedacted;
   let embeddedRedacted = value.replace(
     /(\/demo\/)[a-z0-9-]+/gi,
     `$1${REDACTED_VALUE}`,
@@ -1379,34 +1262,7 @@ export function buildPostHogAiSpanProperties(
   });
 }
 
-export function redactOtelAttributes(
-  attributes: Record<string, string | number | boolean | undefined>,
-): Record<string, string | number | boolean | undefined> {
-  const sanitized: Record<string, string | number | boolean | undefined> = {};
-
-  for (const [key, value] of Object.entries(attributes)) {
-    if (value === undefined) {
-      continue;
-    }
-
-    if (shouldRedactKey(key)) {
-      sanitized[key] =
-        typeof value === "string" && key.toLowerCase().includes("phone")
-          ? maskString(value)
-          : "[redacted]";
-      continue;
-    }
-
-    if (typeof value === "string" && key.toLowerCase().includes("phone")) {
-      sanitized[key] = maskString(value);
-      continue;
-    }
-
-    sanitized[key] = value;
-  }
-
-  return sanitized;
-}
+export { redactOtelAttributes };
 
 export function bucketLatencyMs(latencyMs: number): string {
   if (latencyMs < 500) {

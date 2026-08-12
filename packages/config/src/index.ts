@@ -102,8 +102,10 @@ const voiceGatewayEnvSchema = z.object({
   PORT: z.coerce.number().default(3001),
   VOICE_GATEWAY_TRUST_PROXY: trustProxyEnvSchema,
   VOICE_GATEWAY_BASE_URL: z.string().url(),
-  CONVEX_SITE_URL: z.string().url(),
+  BACKEND_INTERNAL_URL: z.string().url().optional(),
+  CONVEX_SITE_URL: z.string().url().optional(),
   INTERNAL_SERVICE_TOKEN: z.string().min(1),
+  INTERNAL_SERVICE_SECRET: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_REALTIME_MODEL: z.string().default("gpt-realtime"),
   OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
@@ -135,6 +137,9 @@ const voiceGatewayEnvSchema = z.object({
   POSTHOG_HOST: z.string().url().optional(),
   POSTHOG_PRIVACY_MODE: booleanEnvSchema,
 }).superRefine((env, ctx) => {
+  if (!env.BACKEND_INTERNAL_URL && !env.CONVEX_SITE_URL) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "BACKEND_INTERNAL_URL or CONVEX_SITE_URL is required.", path: ["BACKEND_INTERNAL_URL"] });
+  }
   if (env.NODE_ENV === "production" && env.DEPLOYMENT_MODE === "development") {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

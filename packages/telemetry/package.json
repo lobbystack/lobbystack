@@ -5,11 +5,47 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js",
+      "require": "./dist/node.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/api-logs": "^0.216.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.216.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.216.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.216.0",
+    "@opentelemetry/instrumentation-http": "^0.216.0",
+    "@opentelemetry/instrumentation-undici": "^0.31.0",
+    "@opentelemetry/resources": "^2.7.1",
+    "@opentelemetry/sdk-metrics": "^2.7.0",
+    "@opentelemetry/sdk-logs": "^0.216.0",
+    "@opentelemetry/sdk-node": "^0.216.0",
+    "@opentelemetry/semantic-conventions": "^1.38.0"
+  },
+  "devDependencies": {
+    "@opentelemetry/sdk-trace-base": "^2.7.0",
+    "vitest": "^4.1.2"
+  }
 }

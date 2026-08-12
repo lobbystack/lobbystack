@@ -1,0 +1,34 @@
+FROM node:22-bookworm-slim AS build
+
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+
+RUN corepack enable
+WORKDIR /app
+COPY . .
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @lobbystack/worker... build
+RUN for package in config contracts db domain jobs providers shared telemetry; do \
+      if [ -d "packages/$package/dist/$package/src" ]; then \
+        cp -R "packages/$package/dist/$package/src/." "packages/$package/dist/"; \
+      fi; \
+    done
+RUN pnpm deploy --filter @lobbystack/worker --prod --legacy /prod/worker
+
+FROM node:22-bookworm-slim AS runtime
+
+ARG SERVICE_VERSION=development
+ENV NODE_ENV=production
+ENV SERVICE_VERSION=$SERVICE_VERSION
+LABEL org.opencontainers.image.revision=$SERVICE_VERSION
+WORKDIR /app
+
+RUN groupadd --system --gid 1001 lobbystack && \
+    useradd --system --uid 1001 --gid lobbystack lobbystack && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+COPY --from=build --chown=lobbystack:lobbystack /prod/worker/ ./
+
+USER lobbystack
+EXPOSE 3002
+HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=12 CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3002)+'/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+CMD ["node_modules/.bin/tsx", "dist/apps/worker/src/index.js"]

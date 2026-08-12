@@ -1,0 +1,33 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "baseUrl": ".",
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@lobbystack/ai": ["../../packages/ai/src"],
+      "@lobbystack/config": ["../../packages/config/src"],
+      "@lobbystack/contracts": ["../../packages/contracts/src"],
+      "@lobbystack/db": ["../../packages/db/src"],
+      "@lobbystack/domain": ["../../packages/domain/src"],
+      "@lobbystack/providers": ["../../packages/providers/src"],
+      "@lobbystack/shared": ["../../packages/shared/src"],
+      "@lobbystack/telemetry": ["../../packages/telemetry/src"],
+      "@lobbystack/telemetry/*": ["../../packages/telemetry/src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

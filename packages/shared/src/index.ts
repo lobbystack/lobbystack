@@ -242,6 +242,7 @@ export {
 } from "./twilioSecurity";
 export type { TwilioSignatureInput } from "./twilioSecurity";
 export {
+  isTerminalTwilioMessageStatus,
   mapTwilioStatusToMessageStatus,
   mapTwilioStatusToNotificationStatus,
   normalizeTwilioMessageStatus,

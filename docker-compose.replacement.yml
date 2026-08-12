@@ -1,0 +1,350 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lobbystack
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      LOBBYSTACK_MIGRATOR_PASSWORD: ${LOBBYSTACK_MIGRATOR_PASSWORD:-migrator}
+      LOBBYSTACK_AUTH_PASSWORD: ${LOBBYSTACK_AUTH_PASSWORD:-auth}
+      LOBBYSTACK_APP_PASSWORD: ${LOBBYSTACK_APP_PASSWORD:-app}
+      LOBBYSTACK_WORKER_PASSWORD: ${LOBBYSTACK_WORKER_PASSWORD:-worker}
+      LOBBYSTACK_DISPATCHER_PASSWORD: ${LOBBYSTACK_DISPATCHER_PASSWORD:-dispatcher}
+      LOBBYSTACK_READONLY_PASSWORD: ${LOBBYSTACK_READONLY_PASSWORD:-readonly}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-15433}:5432"
+    volumes:
+      - replacement_postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init/roles.sh:/docker-entrypoint-initdb.d/10-roles.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lobbystack"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-16380}:6379"
+    volumes:
+      - replacement_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-minioadminminio}
+    ports:
+      - "127.0.0.1:${MINIO_API_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - replacement_minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command: >-
+      "mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
+      mc mb --ignore-existing local/$${S3_BUCKET:-lobbystack}"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-minioadminminio}
+      S3_BUCKET: ${S3_BUCKET:-lobbystack}
+
+  migrator:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrator
+      args:
+        SERVICE_VERSION: ${SERVICE_VERSION:-development}
+        NEXT_PUBLIC_WEB_CALL_ENDPOINT: ${NEXT_PUBLIC_WEB_CALL_ENDPOINT:-}
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/lobbystack
+      OTEL_SERVICE_NAME: lobbystack-migrator
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+    depends_on:
+      postgres:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+
+  otel-collector:
+    build:
+      context: .
+      dockerfile: Dockerfile.otel-collector
+      args:
+        SERVICE_VERSION: ${SERVICE_VERSION:-development}
+    restart: unless-stopped
+    environment:
+      POSTHOG_OTLP_TRACES_ENDPOINT: ${POSTHOG_OTLP_TRACES_ENDPOINT:-https://us.i.posthog.com/i/v1/traces}
+      POSTHOG_OTLP_METRICS_ENDPOINT: ${POSTHOG_OTLP_METRICS_ENDPOINT:-https://us.i.posthog.com/i/v1/metrics}
+      POSTHOG_OTLP_LOGS_ENDPOINT: ${POSTHOG_OTLP_LOGS_ENDPOINT:-https://us.i.posthog.com/i/v1/logs}
+      POSTHOG_OTLP_AUTHORIZATION: ${POSTHOG_OTLP_AUTHORIZATION:-}
+      OTEL_TRACE_SAMPLING_PERCENTAGE: ${OTEL_TRACE_SAMPLING_PERCENTAGE:-100}
+    ports:
+      - "127.0.0.1:${OTEL_GRPC_PORT:-4317}:4317"
+      - "127.0.0.1:${OTEL_HTTP_PORT:-4318}:4318"
+      - "127.0.0.1:${OTEL_HEALTH_PORT:-13133}:13133"
+      - "127.0.0.1:${OTEL_PROMETHEUS_PORT:-9464}:9464"
+
+  otel-certifier:
+    build:
+      context: .
+      dockerfile: Dockerfile.otel-collector
+    profiles: [certification]
+    command: ["--config=/etc/otelcol-contrib/certification.yaml"]
+    volumes:
+      - ./docker/otel-collector/certification.yaml:/etc/otelcol-contrib/certification.yaml:ro
+    ports:
+      - "127.0.0.1:${OTEL_CERTIFICATION_PORT:-14318}:4318"
+
+  admin:
+    build:
+      context: .
+      dockerfile: Dockerfile.admin
+      args:
+        SERVICE_VERSION: ${SERVICE_VERSION:-development}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost}
+      NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY:-}
+      NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-https://us.i.posthog.com}
+      PROSPECT_DEMO_OPERATOR_EMAIL: ${PROSPECT_DEMO_OPERATOR_EMAIL:-}
+      DATABASE_URL: ${LOBBYSTACK_APP_DATABASE_URL:-postgres://lobbystack_app:app@postgres:5432/lobbystack}
+      LOBBYSTACK_APP_DATABASE_URL: ${LOBBYSTACK_APP_DATABASE_URL:-postgres://lobbystack_app:app@postgres:5432/lobbystack}
+      LOBBYSTACK_AUTH_DATABASE_URL: ${LOBBYSTACK_AUTH_DATABASE_URL:-postgres://lobbystack_auth:auth@postgres:5432/lobbystack}
+      LOBBYSTACK_WORKER_DATABASE_URL: ${LOBBYSTACK_WORKER_DATABASE_URL:-postgres://lobbystack_worker:worker@postgres:5432/lobbystack}
+      LOBBYSTACK_DISPATCHER_DATABASE_URL: ${LOBBYSTACK_DISPATCHER_DATABASE_URL:-postgres://lobbystack_dispatcher:dispatcher@postgres:5432/lobbystack}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-change-me-before-production}
+      REQUIRE_EMAIL_VERIFICATION: ${REQUIRE_EMAIL_VERIFICATION:-false}
+      SEND_VERIFICATION_EMAIL_ON_SIGNUP: ${SEND_VERIFICATION_EMAIL_ON_SIGNUP:-false}
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-change-me-before-production}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-local-internal-token}
+      INTERNAL_SERVICE_ID: lobbystack-voice-gateway
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-change-me-before-production}
+      OTP_HASH_SECRET: ${OTP_HASH_SECRET:-change-me-before-production}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_VERIFY_SERVICE_SID: ${TWILIO_VERIFY_SERVICE_SID:-}
+      NUMBER_CLAIM_TOKEN_SECRET: ${NUMBER_CLAIM_TOKEN_SECRET:-}
+      TWILIO_SMS_WEBHOOK_URL: ${TWILIO_SMS_WEBHOOK_URL:-}
+      TWILIO_STATUS_CALLBACK_URL: ${TWILIO_STATUS_CALLBACK_URL:-}
+      POLAR_WEBHOOK_SECRET: ${POLAR_WEBHOOK_SECRET:-}
+      RESEND_WEBHOOK_SECRET: ${RESEND_WEBHOOK_SECRET:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost/api/calendar/google/callback}
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: ${S3_BUCKET:-lobbystack}
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-minioadmin}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-minioadminminio}
+      S3_FORCE_PATH_STYLE: "true"
+      OTEL_SERVICE_NAME: lobbystack-admin
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      otel-collector:
+        condition: service_started
+    ports:
+      - "127.0.0.1:${ADMIN_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 12
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+      args:
+        SERVICE_VERSION: ${SERVICE_VERSION:-development}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost}
+      DATABASE_URL: ${LOBBYSTACK_WORKER_DATABASE_URL:-postgres://lobbystack_worker:worker@postgres:5432/lobbystack}
+      LOBBYSTACK_WORKER_DATABASE_URL: ${LOBBYSTACK_WORKER_DATABASE_URL:-postgres://lobbystack_worker:worker@postgres:5432/lobbystack}
+      LOBBYSTACK_DISPATCHER_DATABASE_URL: ${LOBBYSTACK_DISPATCHER_DATABASE_URL:-postgres://lobbystack_dispatcher:dispatcher@postgres:5432/lobbystack}
+      REDIS_URL: redis://redis:6379
+      REDIS_PREFIX: lobbystack
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      EMAIL_FROM: ${EMAIL_FROM:-LobbyStack <no-reply@localhost>}
+      EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-}
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: ${S3_BUCKET:-lobbystack}
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-minioadmin}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-minioadminminio}
+      S3_FORCE_PATH_STYLE: "true"
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GOOGLE_GENERATIVE_AI_API_KEY: ${GOOGLE_GENERATIVE_AI_API_KEY:-}
+      GEMINI_TEXT_MODEL: ${GEMINI_TEXT_MODEL:-gemini-2.0-flash}
+      GEMINI_EMBEDDING_MODEL: ${GEMINI_EMBEDDING_MODEL:-gemini-embedding-001}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_VERIFY_SERVICE_SID: ${TWILIO_VERIFY_SERVICE_SID:-}
+      TWILIO_STATUS_CALLBACK_URL: ${TWILIO_STATUS_CALLBACK_URL:-}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-change-me-before-production}
+      OTP_HASH_SECRET: ${OTP_HASH_SECRET:-change-me-before-production}
+      OTEL_SERVICE_NAME: lobbystack-worker
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
+      FIRECRAWL_BASE_URL: ${FIRECRAWL_BASE_URL:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost/api/calendar/google/callback}
+      POLAR_ACCESS_TOKEN: ${POLAR_ACCESS_TOKEN:-}
+      POLAR_ORGANIZATION_ID: ${POLAR_ORGANIZATION_ID:-}
+      POLAR_USAGE_METER_ID: ${POLAR_USAGE_METER_ID:-}
+      POLAR_API_BASE_URL: ${POLAR_API_BASE_URL:-}
+      POLAR_STARTER_MONTHLY_PRODUCT_ID: ${POLAR_STARTER_MONTHLY_PRODUCT_ID:-}
+      POLAR_STARTER_ANNUAL_PRODUCT_ID: ${POLAR_STARTER_ANNUAL_PRODUCT_ID:-}
+      POLAR_PRO_MONTHLY_PRODUCT_ID: ${POLAR_PRO_MONTHLY_PRODUCT_ID:-}
+      POLAR_PRO_ANNUAL_PRODUCT_ID: ${POLAR_PRO_ANNUAL_PRODUCT_ID:-}
+      POLAR_STARTER_MONTHLY_AI_SMS_PRODUCT_ID: ${POLAR_STARTER_MONTHLY_AI_SMS_PRODUCT_ID:-}
+      POLAR_STARTER_ANNUAL_AI_SMS_PRODUCT_ID: ${POLAR_STARTER_ANNUAL_AI_SMS_PRODUCT_ID:-}
+      POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID: ${POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID:-}
+      POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID: ${POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID:-}
+      POLAR_AI_SMS_SETUP_PRODUCT_ID: ${POLAR_AI_SMS_SETUP_PRODUCT_ID:-}
+      POLAR_AI_SMS_ADDON_PRODUCT_ID: ${POLAR_AI_SMS_ADDON_PRODUCT_ID:-}
+      POSTHOG_API_KEY: ${POSTHOG_API_KEY:-}
+      POSTHOG_HOST: ${POSTHOG_HOST:-https://us.i.posthog.com}
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    ports:
+      - "127.0.0.1:${WORKER_PORT:-3002}:3002"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 12
+
+  voice-gateway:
+    build:
+      context: .
+      dockerfile: docker/voice-gateway/Dockerfile
+      args:
+        SERVICE_VERSION: ${SERVICE_VERSION:-development}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DEPLOYMENT_MODE: ${REPLACEMENT_DEPLOYMENT_MODE:-self_hosted_standard}
+      PORT: 3001
+      VOICE_GATEWAY_BASE_URL: ${VOICE_GATEWAY_BASE_URL:-http://localhost:3001}
+      BACKEND_INTERNAL_URL: http://admin:3000
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-local-internal-token}
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-change-me-before-production}
+      VOICE_GATEWAY_SERVICE_ID: lobbystack-voice-gateway
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      OTEL_SERVICE_NAME: lobbystack-voice-gateway
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+    depends_on:
+      admin:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    ports:
+      - "127.0.0.1:${VOICE_GATEWAY_PORT:-3001}:3001"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 12
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      APP_HOSTNAME: ${APP_HOSTNAME:-localhost}
+      VOICE_HOSTNAME: ${VOICE_HOSTNAME:-voice.localhost}
+    volumes:
+      - ./docker/caddy/replacement.Caddyfile:/etc/caddy/Caddyfile:ro
+      - replacement_caddy_data:/data
+      - replacement_caddy_config:/config
+    depends_on:
+      admin:
+        condition: service_healthy
+      voice-gateway:
+        condition: service_healthy
+    ports:
+      - "${HTTP_BIND_ADDRESS:-127.0.0.1}:${HTTP_PORT:-80}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider --header='Host: '$${APP_HOSTNAME:-localhost} http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 12
+
+  mailpit:
+    image: axllent/mailpit:latest
+    profiles: [development]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    profiles: [observability]
+    restart: unless-stopped
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus"]
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/prometheus/rules:/etc/prometheus/rules:ro
+      - replacement_prometheus_data:/prometheus
+    depends_on:
+      otel-collector:
+        condition: service_started
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+
+volumes:
+  replacement_postgres_data:
+  replacement_redis_data:
+  replacement_minio_data:
+  replacement_caddy_data:
+  replacement_caddy_config:
+  replacement_prometheus_data:

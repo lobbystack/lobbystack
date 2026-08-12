@@ -1,0 +1,33 @@
+{
+  "name": "@lobbystack/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@lobbystack/config": "workspace:*",
+    "@lobbystack/contracts": "workspace:*",
+    "@lobbystack/db": "workspace:*",
+    "@lobbystack/domain": "workspace:*",
+    "@lobbystack/jobs": "workspace:*",
+    "@lobbystack/providers": "workspace:*",
+    "@lobbystack/telemetry": "workspace:*",
+    "bullmq": "^5.71.0",
+    "drizzle-orm": "^0.44.7",
+    "ioredis": "^5.8.2",
+    "mammoth": "^1.12.0",
+    "pdf-parse": "2.4.5",
+    "tesseract.js": "^7.0.0",
+    "tsx": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "vitest": "^4.1.2"
+  }
+}

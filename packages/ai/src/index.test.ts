@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { demoSnapshot } from "@lobbystack/shared";
 
-import { buildVoiceSystemPrompt } from "./index";
+import { buildSmsSystemPrompt, buildVoiceSystemPrompt } from "./index";
 
 describe("buildVoiceSystemPrompt", () => {
   it("does not anchor voice calls to the business default locale", () => {
@@ -64,5 +64,17 @@ describe("buildVoiceSystemPrompt", () => {
     expect(prompt).toContain(
       "Define business: After the greeting, ask what type of business this is for.",
     );
+  });
+});
+
+describe("buildSmsSystemPrompt", () => {
+  it("includes the snapshot rules and structured business facts", () => {
+    const prompt = buildSmsSystemPrompt(demoSnapshot);
+
+    expect(prompt).toContain("Customer Rules:");
+    expect(prompt).toContain("Urgent escalation:");
+    expect(prompt).toContain("Business summary:");
+    expect(prompt).toContain("Booking policy:");
+    expect(prompt).toContain("Knowledge digest:");
   });
 });

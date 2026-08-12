@@ -285,6 +285,21 @@ describe("telemetry redaction", () => {
     expect(redacted.statusDetail).toBe("Invalid token");
   });
 
+  it("redacts signed storage URLs, object keys, and customer filenames", () => {
+    const marker = "private-customer-file.pdf";
+    const signedUrl = `https://storage.example.test/business/uploads/${marker}?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=credential-marker&X-Amz-Signature=signature-marker`;
+    const redacted = redactTelemetryProperties({ fileName: marker, objectKey: `business/uploads/${marker}`, storageKey: marker, uploadUrl: signedUrl, errorDetail: `Upload failed for ${signedUrl}` });
+
+    expect(redacted.fileName).toBe("[redacted]");
+    expect(redacted.objectKey).toBe("[redacted]");
+    expect(redacted.storageKey).toBe("[redacted]");
+    expect(redacted.uploadUrl).toBe("[redacted-signed-url]");
+    expect(redacted.errorDetail).toBe("Upload failed for [redacted-signed-url]");
+    expect(JSON.stringify(redacted)).not.toContain(marker);
+    expect(JSON.stringify(redacted)).not.toContain("credential-marker");
+    expect(JSON.stringify(redacted)).not.toContain("signature-marker");
+  });
+
   it("builds metadata-only AI generation properties without message content", () => {
     const properties = buildPostHogAiGenerationProperties({
       traceId: "trace-1",
@@ -411,12 +426,18 @@ describe("telemetry redaction", () => {
       "lobbystack.customer_phone": "+14165550000",
       "lobbystack.customer_name": "Jane Doe",
       "lobbystack.tool_name": "bookAppointment",
+      "storage.object_key": "business/private-file.pdf",
+      "storage.file_name": "private-file.pdf",
+      "url.full": "https://storage.example.test/private-file.pdf?X-Amz-Signature=secret",
       "http.status_code": 200,
     });
 
     expect(attributes["lobbystack.customer_phone"]).toBe("***0000");
     expect(attributes["lobbystack.customer_name"]).toBe("[redacted]");
     expect(attributes["lobbystack.tool_name"]).toBe("bookAppointment");
+    expect(attributes["storage.object_key"]).toBe("[redacted]");
+    expect(attributes["storage.file_name"]).toBe("[redacted]");
+    expect(attributes["url.full"]).toBe("[redacted-signed-url]");
     expect(attributes["http.status_code"]).toBe(200);
   });
 

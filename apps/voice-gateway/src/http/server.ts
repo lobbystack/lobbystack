@@ -2,9 +2,11 @@ import fastifyFormbody from "@fastify/formbody";
 import fastifyRateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
 import { WebSocketServer } from "ws";
+import { context, SpanKind, SpanStatusCode, trace, type Span } from "@opentelemetry/api";
 
 import { loadVoiceGatewayEnv } from "@lobbystack/config";
 import type { BusinessContextSnapshot } from "@lobbystack/shared";
+import { extractTraceContext, getTracer, recordException } from "@lobbystack/telemetry/node";
 
 import { handleMediaStreamConnection } from "../telephony/mediaStream";
 import { registerVoiceRoutes } from "../telephony/routes";
@@ -26,6 +28,7 @@ export function createServer(): ReturnType<typeof Fastify> {
   });
 
   const cache = createSnapshotCache();
+  const requestSpans = new WeakMap<object, Span>();
 
   server.decorate("snapshotCache", cache);
   server.decorate("runtimeConfig", env);
@@ -34,7 +37,29 @@ export function createServer(): ReturnType<typeof Fastify> {
   server.register(fastifyRateLimit, {
     global: false,
   });
+  server.addHook("onRequest", (request, _reply, done) => {
+    const parent = extractTraceContext(Object.fromEntries(Object.entries(request.headers).flatMap(([key, value]) => typeof value === "string" ? [[key, value]] : Array.isArray(value) && value[0] ? [[key, value[0]]] : [])));
+    const span = getTracer("lobbystack-voice-gateway").startSpan(`http.${request.method.toLowerCase()}`, {
+      kind: SpanKind.SERVER,
+      attributes: {
+        "http.request.method": request.method,
+        "url.path": request.url.split("?")[0] ?? "/",
+      },
+    }, parent);
+    requestSpans.set(request, span);
+    context.with(trace.setSpan(parent, span), done);
+  });
+  server.addHook("onResponse", async (request, reply) => {
+    const span = requestSpans.get(request);
+    if (!span) return;
+    span.setAttribute("http.response.status_code", reply.statusCode);
+    if (reply.statusCode >= 500) span.setStatus({ code: SpanStatusCode.ERROR });
+    span.end();
+    requestSpans.delete(request);
+  });
   server.addHook("onError", async (request, _reply, error) => {
+    const span = requestSpans.get(request);
+    if (span) recordException(error, { "http.request.method": request.method, "url.path": request.url.split("?")[0] ?? "/" }, span);
     capturePostHogException(error, {
       properties: {
         operation: "fastify_request",
@@ -96,9 +121,10 @@ export function createServer(): ReturnType<typeof Fastify> {
     });
   });
 
-  server.get("/health", async () => {
-    return { ok: true };
-  });
+  const healthResponse = async () => ({ ok: true, service: "lobbystack-voice-gateway" });
+  server.get("/health", healthResponse);
+  server.get("/health/live", healthResponse);
+  server.get("/health/ready", healthResponse);
 
   server.get("/health/convex", async (request, reply) => {
     const peerAddress = request.socket.remoteAddress;
@@ -118,7 +144,7 @@ export function createServer(): ReturnType<typeof Fastify> {
     }
 
     const result = await probeConvexSiteReachability({
-      convexSiteUrl: env.CONVEX_SITE_URL,
+      convexSiteUrl: env.BACKEND_INTERNAL_URL ?? env.CONVEX_SITE_URL!,
       internalServiceToken: env.INTERNAL_SERVICE_TOKEN,
     });
 

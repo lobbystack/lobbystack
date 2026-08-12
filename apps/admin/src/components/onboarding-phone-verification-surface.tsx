@@ -1,0 +1,37 @@
+"use client";
+
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { CheckCircle2, MessageSquareText, Phone } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+import { Button } from "./ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { PageSurface } from "./page-surface";
+
+type Business = { businessId: string; name: string; active: boolean };
+type Attempt = { id: string; phoneE164: string; countryCode: string; status: string; expiresAt: string; attemptCount: number };
+async function requestJson<T>(url: string, init?: RequestInit): Promise<T> { const response = await fetch(url, { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } }); if (!response.ok) throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Request failed."); return await response.json() as T; }
+
+function useActiveBusiness() {
+  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
+  return { businesses, business: businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0] };
+}
+
+export function OnboardingPhoneVerificationSurface() {
+  const router = useRouter(); const { businesses, business } = useActiveBusiness(); const [phoneNumber, setPhoneNumber] = useState(""); const [error, setError] = useState<string | null>(null);
+  const start = useMutation({ mutationFn: () => requestJson<{ attemptId: string }>(`/api/onboarding/phone-verification/start?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ phoneNumber }) }), onSuccess: () => router.push("/onboarding/verify-phone/code") });
+  const reuse = useMutation({ mutationFn: () => requestJson(`/api/onboarding/phone-verification/reuse?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST" }), onSuccess: () => router.push("/onboarding/plan") });
+  async function submit(event: React.FormEvent) { event.preventDefault(); setError(null); try { await start.mutateAsync(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to send a code."); } }
+  return <PageSurface eyebrow="Step 5 of 8" title="Verify your phone" description="Verify a mobile number in Canada, the United States, the United Kingdom, or Australia."><div className="grid gap-6 lg:grid-cols-[1fr_20rem]"><Card><CardHeader><CardTitle className="flex items-center gap-2"><Phone className="size-5 text-teal-700" />Mobile number</CardTitle><CardDescription>We use Twilio Verify and never store the one-time code.</CardDescription></CardHeader><CardContent><form className="space-y-4" onSubmit={(event) => void submit(event)}><label className="block space-y-2 text-sm font-medium text-slate-700">Phone number<input type="tel" autoComplete="tel" required placeholder="+1 416 555 0100" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} className="min-h-11 w-full rounded-xl border border-slate-200 px-4 font-normal" /></label>{error ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}<Button disabled={!business || businesses.isLoading || start.isPending} type="submit"><MessageSquareText className="size-4" />{start.isPending ? "Preparing..." : "Send verification code"}</Button></form></CardContent></Card><Card><CardHeader><CardTitle>Already verified?</CardTitle><CardDescription>Reuse a phone previously verified on another workspace.</CardDescription></CardHeader><CardContent><Button variant="outline" disabled={!business || reuse.isPending} onClick={() => reuse.mutate()}><CheckCircle2 className="size-4" />Reuse verified phone</Button>{reuse.isError ? <p className="mt-3 text-sm text-red-600">{reuse.error.message}</p> : null}</CardContent></Card></div></PageSurface>;
+}
+
+export function OnboardingPhoneVerificationCodeSurface() {
+  const router = useRouter(); const { business } = useActiveBusiness(); const [code, setCode] = useState(""); const [error, setError] = useState<string | null>(null);
+  const attempt = useQuery({ queryKey: ["phone-verification", business?.businessId], queryFn: () => requestJson<{ attempt: Attempt | null }>(`/api/onboarding/phone-verification?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business), refetchInterval: (query) => ["queued", "processing"].includes(query.state.data?.attempt?.status ?? "") ? 1000 : false });
+  const check = useMutation({ mutationFn: () => requestJson<{ approved: boolean; status: string }>(`/api/onboarding/phone-verification/check?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ attemptId: attempt.data!.attempt!.id, code }) }), onSuccess: (result) => { if (result.approved) router.push("/onboarding/plan"); else setError("That code was not approved. Check it and try again."); } });
+  const resend = useMutation({ mutationFn: () => requestJson(`/api/onboarding/phone-verification/resend?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST" }), onSuccess: () => void attempt.refetch() });
+  const current = attempt.data?.attempt; const waiting = current?.status === "queued" || current?.status === "processing";
+  async function submit(event: React.FormEvent) { event.preventDefault(); setError(null); try { await check.mutateAsync(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to verify this code."); } }
+  return <PageSurface eyebrow="Step 6 of 8" title="Enter verification code" description={current ? `A code was requested for ${current.phoneE164}.` : "Recovering your latest verification attempt."}><Card className="max-w-xl"><CardHeader><CardTitle>One-time code</CardTitle><CardDescription>{waiting ? "The worker is requesting your code from Twilio..." : current?.status === "pending" ? "Enter the code from the SMS message." : "This attempt needs attention."}</CardDescription></CardHeader><CardContent>{attempt.isLoading || waiting ? <p className="py-8 text-center text-sm text-slate-500">Preparing verification...</p> : null}{!attempt.isLoading && !current ? <div className="space-y-4"><p className="text-sm text-slate-600">No verification attempt was found.</p><Button onClick={() => router.push("/onboarding/verify-phone")}>Start verification</Button></div> : null}{current && !waiting ? <form className="space-y-4" onSubmit={(event) => void submit(event)}><input aria-label="Verification code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{4,10}" required value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 10))} className="min-h-14 w-full rounded-xl border border-slate-200 px-4 text-center text-2xl tracking-[0.3em]" />{error ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}<div className="flex flex-wrap gap-3"><Button type="submit" disabled={check.isPending || current.status !== "pending"}>{check.isPending ? "Checking..." : "Verify phone"}</Button><Button type="button" variant="outline" disabled={resend.isPending} onClick={() => resend.mutate()}>{resend.isPending ? "Resending..." : "Resend code"}</Button></div>{resend.isError ? <p className="text-sm text-red-600">{resend.error.message}</p> : null}</form> : null}</CardContent></Card></PageSurface>;
+}

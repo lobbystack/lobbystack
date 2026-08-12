@@ -10,6 +10,8 @@ export default defineConfig({
     environment: "edge-runtime",
     include: ["**/*.test.ts"],
     exclude: ["dist/**", "**/dist/**", "node_modules/**"],
+    maxWorkers: 4,
     setupFiles: ["./vitest.setup.ts"],
+    testTimeout: 10_000,
   },
 });

@@ -12,6 +12,18 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@lobbystack/shared": "workspace:*"
+    "@ai-sdk/google": "^3.0.43",
+    "@aws-sdk/client-s3": "^3.1017.0",
+    "@aws-sdk/s3-request-presigner": "^3.1017.0",
+    "@lobbystack/contracts": "workspace:*",
+    "@lobbystack/shared": "workspace:*",
+    "@lobbystack/telemetry": "workspace:*",
+    "nodemailer": "^7.0.6",
+    "ai": "^6.0.116",
+    "standardwebhooks": "^1.0.0",
+    "twilio": "^5.12.2"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^7.0.4"
   }
 }

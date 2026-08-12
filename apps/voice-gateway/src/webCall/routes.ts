@@ -82,6 +82,7 @@ type ActiveWebCall = {
   conversationId: string;
   providerCallId: string;
   startedAtMs: number;
+  maxDurationMs: number;
   handledToolCallIds: Set<string>;
   sidebandSocket: WebSocket | null;
   maxDurationTimer: ReturnType<typeof setTimeout> | null;
@@ -817,6 +818,10 @@ async function hangupOpenAiRealtimeProviderCall(
       },
     );
 
+    if (!response) {
+      return;
+    }
+
     if (!response.ok) {
       const body = await response.text().catch(() => "");
       server.log.warn(
@@ -943,7 +948,7 @@ function scheduleWebMaxDurationTimer(
         );
       },
     );
-  }, server.runtimeConfig.WEB_CALL_MAX_DURATION_MS);
+  }, session.maxDurationMs);
 }
 
 function parseProviderCallId(
@@ -1613,6 +1618,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
           ...(body.prospectDemoToken !== undefined
             ? { prospectDemoToken: body.prospectDemoToken }
             : {}),
+          maxDurationMs: server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
         });
       } catch (error) {
         if (error instanceof RuntimeRequestError) {
@@ -1659,6 +1665,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       try {
         call = await startWebVoiceCall({
           businessSlug,
+          origin: origin!,
           providerCallId,
           gatewaySessionId,
           ...(ipHash !== undefined ? { ipHash } : {}),
@@ -1698,6 +1705,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         conversationId: call.conversationId,
         providerCallId,
         startedAtMs: Date.parse(startedAt),
+        maxDurationMs: call.webCallMaxDurationMs ?? server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
         handledToolCallIds: new Set(),
         sidebandSocket: null,
         maxDurationTimer: null,

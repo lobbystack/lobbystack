@@ -12,7 +12,13 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@lobbystack/ai": "workspace:*",
+    "@lobbystack/contracts": "workspace:*",
+    "@lobbystack/db": "workspace:*",
+    "@lobbystack/jobs": "workspace:*",
     "@lobbystack/shared": "workspace:*",
+    "@lobbystack/telemetry": "workspace:*",
+    "drizzle-orm": "^0.44.7",
     "luxon": "^3.7.2"
   },
   "devDependencies": {

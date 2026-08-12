@@ -1,0 +1,14 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "/Dockerfile.voice-gateway",
+    "watchPatterns": ["apps/voice-gateway/**", "packages/ai/**", "packages/config/**", "packages/contracts/**", "packages/providers/**", "packages/shared/**", "packages/telemetry/**", "Dockerfile.voice-gateway", "package.json", "pnpm-workspace.yaml", "pnpm-lock.yaml", "tsconfig.base.json"]
+  },
+  "deploy": {
+    "healthcheckPath": "/health/ready",
+    "healthcheckTimeout": 300,
+    "restartPolicyType": "ON_FAILURE",
+    "drainingSeconds": 30
+  }
+}

@@ -1,0 +1,32 @@
+FROM node:22-bookworm-slim AS build
+
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+
+RUN corepack enable
+WORKDIR /app
+COPY . .
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @lobbystack/db... build
+RUN for package in contracts db telemetry; do \
+      if [ -d "packages/$package/dist/$package/src" ]; then \
+        cp -R "packages/$package/dist/$package/src/." "packages/$package/dist/"; \
+      fi; \
+    done
+RUN pnpm deploy --filter @lobbystack/db --prod --legacy /prod/migrator
+
+FROM node:22-bookworm-slim AS runtime
+
+ARG SERVICE_VERSION=development
+ENV NODE_ENV=production
+ENV SERVICE_VERSION=$SERVICE_VERSION
+LABEL org.opencontainers.image.revision=$SERVICE_VERSION
+WORKDIR /app
+
+RUN groupadd --system --gid 1001 lobbystack && \
+    useradd --system --uid 1001 --gid lobbystack lobbystack && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+COPY --from=build --chown=lobbystack:lobbystack /prod/migrator/ ./
+
+USER lobbystack
+CMD ["node_modules/.bin/tsx", "dist/cli.js", "migrate"]

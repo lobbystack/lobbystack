@@ -1,0 +1,52 @@
+{
+  "name": "@lobbystack/admin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "NODE_ENV=production next build",
+    "start": "next start",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@lobbystack/ai": "workspace:*",
+    "@lobbystack/config": "workspace:*",
+    "@lobbystack/contracts": "workspace:*",
+    "@lobbystack/db": "workspace:*",
+    "@lobbystack/domain": "workspace:*",
+    "@lobbystack/providers": "workspace:*",
+    "@lobbystack/shared": "workspace:*",
+    "@lobbystack/telemetry": "workspace:*",
+    "@tanstack/react-query": "^5.75.0",
+    "better-auth": "^1.4.18",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.44.7",
+    "lucide-react": "^0.577.0",
+    "lucia": "^3.2.2",
+    "ioredis": "^5.8.2",
+    "luxon": "^3.7.2",
+    "next": "^15.5.7",
+    "posthog-js": "^1.372.5",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.5.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.10",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.2"
+  }
+}
