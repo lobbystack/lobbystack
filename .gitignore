@@ -25,6 +25,8 @@ apps/landing/.wrangler
 apps/landing/dist
 **/.next/
 *.tsbuildinfo
+test-results/
+playwright-report/
 references/shadcn-admin
 .agents/
 .claude/
