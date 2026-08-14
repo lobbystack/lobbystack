@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { captureExceptionMock, postHogConstructorMock, shutdownMock } = vi.hoisted(() => ({
+const {
+  captureExceptionMock,
+  captureMock,
+  postHogConstructorMock,
+  shutdownMock,
+} = vi.hoisted(() => ({
   captureExceptionMock: vi.fn(),
+  captureMock: vi.fn(),
   postHogConstructorMock: vi.fn(),
   shutdownMock: vi.fn(),
 }));
@@ -10,7 +16,7 @@ vi.mock("posthog-node", () => ({
   PostHog: vi.fn().mockImplementation(function PostHog(...args: unknown[]) {
     postHogConstructorMock(...args);
     return {
-      capture: vi.fn(),
+      capture: captureMock,
       captureException: captureExceptionMock,
       shutdown: shutdownMock,
     };
@@ -32,6 +38,7 @@ describe("voice-gateway PostHog provider exception telemetry", () => {
   beforeEach(() => {
     vi.resetModules();
     captureExceptionMock.mockClear();
+    captureMock.mockClear();
     postHogConstructorMock.mockClear();
     shutdownMock.mockClear();
 
@@ -150,5 +157,24 @@ describe("voice-gateway PostHog provider exception telemetry", () => {
         enableExceptionAutocapture: false,
       }),
     );
+  });
+
+  it("applies opt-out to operational events using the legacy business attribute", async () => {
+    const {
+      recordMediaStreamDisconnect,
+      setBusinessTelemetryEnabled,
+    } = await import("./posthog");
+
+    setBusinessTelemetryEnabled("business_123", false);
+    recordMediaStreamDisconnect({
+      "lobbystack.business_id": "business_123",
+    });
+    expect(captureMock).not.toHaveBeenCalled();
+
+    setBusinessTelemetryEnabled("business_123", true);
+    recordMediaStreamDisconnect({
+      "lobbystack.business_id": "business_123",
+    });
+    expect(captureMock).toHaveBeenCalledOnce();
   });
 });

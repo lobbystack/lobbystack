@@ -436,6 +436,11 @@
       "lightDescription": "Des surfaces lumineuses au contraste doux pour le travail de jour.",
       "dark": "Sombre",
       "darkDescription": "Des surfaces tamisées plus confortables pour les sessions tardives."
+    },
+    "telemetry": {
+      "label": "Partager les données de télémétrie",
+      "description": "Aidez-nous à améliorer LobbyStack en partageant des données d'utilisation et d'erreurs anonymisées.",
+      "saveFailed": "Impossible de mettre à jour la préférence de télémétrie."
     }
   },
   "integrations": {

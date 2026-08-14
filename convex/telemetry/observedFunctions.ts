@@ -85,6 +85,23 @@ async function resolveObservabilityContext(
   return value;
 }
 
+function inferBusinessIdFromArgs(args: unknown): string | undefined {
+  if (!args || typeof args !== "object" || Array.isArray(args)) {
+    return undefined;
+  }
+
+  const businessId = (args as { businessId?: unknown }).businessId;
+  return typeof businessId === "string" ? businessId : undefined;
+}
+
+async function readHttpRequestBody(request: Request): Promise<unknown> {
+  try {
+    return await request.json();
+  } catch {
+    return undefined;
+  }
+}
+
 async function reportConvexHandlerFailure(input: {
   ctx: ConvexRunnerCtx;
   error: unknown;
@@ -93,10 +110,11 @@ async function reportConvexHandlerFailure(input: {
   options: ObservabilityOptions;
 }): Promise<void> {
   const expected = input.options.expected ?? isExpectedConvexFailure(input.error);
-  const [businessId, groupKey] = await Promise.all([
+  const [configuredBusinessId, groupKey] = await Promise.all([
     resolveObservabilityContext(input.options.businessId, input.ctx, input.args),
     resolveObservabilityContext(input.options.groupKey, input.ctx, input.args),
   ]);
+  const businessId = configuredBusinessId ?? inferBusinessIdFromArgs(input.args);
   const resolvedBusinessId = businessId as Id<"businesses"> | undefined;
   const resolvedGroupKey =
     groupKey ??
@@ -160,12 +178,15 @@ function observeHttpHandler<T extends (ctx: ActionCtx, request: Request) => unkn
   handler: T,
 ): T {
   return (async (ctx: ActionCtx, request: Request) => {
+    const requestForObservability = request.clone();
     try {
       return await handler(ctx, request);
     } catch (error) {
+      const args = await readHttpRequestBody(requestForObservability);
       await reportConvexHandlerFailure({
         ctx,
         error,
+        args,
         kind: "http_action",
         options: {},
       });

@@ -45,6 +45,10 @@ const voiceContextSchema = z.object({
   channel: z.enum(["voice", "sms"]).optional(),
 });
 
+const voiceTelemetrySchema = z.object({
+  businessId: z.string().min(1),
+});
+
 const voiceContextBySlugSchema = z.object({
   businessSlug: z.string().min(1),
   dashboardTestCallToken: z.string().min(1).optional(),
@@ -751,6 +755,33 @@ http.route({
     return Response.json({
       businessId: phoneNumber.businessId,
       snapshot,
+    });
+  }),
+});
+
+http.route({
+  path: "/voice/telemetry",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const unauthorized = requireServiceToken(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
+    const body = await parseJsonBody(request, voiceTelemetrySchema);
+    if (!body.ok) {
+      return body.response;
+    }
+
+    const business = await ctx.runQuery(internal.businesses.admin.getBusinessById, {
+      businessId: asId("businesses", body.data.businessId),
+    });
+    if (!business) {
+      return new Response("Not found", { status: 404 });
+    }
+
+    return Response.json({
+      telemetryEnabled: business.telemetryEnabled ?? true,
     });
   }),
 });

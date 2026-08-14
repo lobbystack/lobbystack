@@ -119,6 +119,7 @@ export type BusinessContextSnapshot = {
     smsNumber?: string;
     email?: string;
   };
+  telemetryEnabled?: boolean;
 };
 
 export type AvailabilitySlot = {

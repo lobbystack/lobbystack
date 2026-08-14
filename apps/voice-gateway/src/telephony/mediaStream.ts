@@ -19,7 +19,10 @@ import {
   updateVoiceTransferState,
   uploadVoiceRecording,
 } from "../convex/runtimeClient";
-import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
+import {
+  fetchBusinessTelemetryEnabled,
+  fetchSnapshotForPhoneNumber,
+} from "../context/fetchSnapshot";
 import {
   recordMediaStreamDisconnect,
   recordAiDirectedCallEnd,
@@ -28,6 +31,7 @@ import {
   recordSnapshotCacheHit,
   recordSnapshotCacheMiss,
   recordTwilioInvalidSignature,
+  setBusinessTelemetryEnabled,
 } from "../observability/posthog";
 import {
   buildSafeProviderFailureMessage,
@@ -98,6 +102,17 @@ type TwilioMediaMessage = {
     name?: string;
   };
 };
+
+export function shouldUseCachedSnapshot(
+  cachedSnapshot: Pick<BusinessContextSnapshot, "version"> | null,
+  streamSnapshotVersion?: string,
+): boolean {
+  return (
+    cachedSnapshot !== null &&
+    (streamSnapshotVersion === undefined ||
+      cachedSnapshot.version === streamSnapshotVersion)
+  );
+}
 
 type OpenAiRealtimeMessage = {
   type: string;
@@ -3415,18 +3430,54 @@ export async function handleMediaStreamConnection(
     session.startedAtIso = new Date().toISOString();
     session.startedAtMs = Date.now();
 
-    let snapshot =
+    const cachedSnapshot =
       session.businessId !== null ? server.snapshotCache.get(session.businessId) : null;
+    let snapshot = shouldUseCachedSnapshot(
+      cachedSnapshot,
+      customParameters.snapshotVersion,
+    )
+      ? cachedSnapshot
+      : null;
+    const cacheHit = snapshot !== null;
     if (!snapshot) {
-      recordSnapshotCacheMiss({
-        ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
-      });
       if (!session.to) {
         throw new Error("Twilio stream start did not include the called phone number.");
       }
       snapshot = await fetchSnapshotForPhoneNumber(session.to);
       server.snapshotCache.set(snapshot.businessId, snapshot);
-      session.businessId = snapshot.businessId;
+    } else {
+      let telemetryEnabled = snapshot.telemetryEnabled ?? true;
+      try {
+        telemetryEnabled = await fetchBusinessTelemetryEnabled(snapshot.businessId);
+      } catch (error) {
+        // Do not emit tenant telemetry when the authoritative preference cannot be read.
+        telemetryEnabled = false;
+        server.log.warn(
+          {
+            err: error,
+            businessId: snapshot.businessId,
+          },
+          "Failed to verify business telemetry preference",
+        );
+      }
+      if (snapshot.telemetryEnabled !== telemetryEnabled) {
+        snapshot = {
+          ...snapshot,
+          telemetryEnabled,
+        };
+        server.snapshotCache.set(snapshot.businessId, snapshot);
+      }
+    }
+
+    session.businessId = snapshot.businessId;
+    setBusinessTelemetryEnabled(
+      snapshot.businessId,
+      snapshot.telemetryEnabled ?? true,
+    );
+    if (!cacheHit) {
+      recordSnapshotCacheMiss({
+        "lobbystack.business_id": snapshot.businessId,
+      });
     } else {
       recordSnapshotCacheHit({
         "lobbystack.business_id": snapshot.businessId,

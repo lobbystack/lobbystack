@@ -76,8 +76,12 @@ import {
 import { SetupGuidePage } from "@/features/setup/SetupGuidePage";
 import {
   captureAnalyticsEvent,
+  disableAnalyticsCapture,
+  enableAnalyticsCapture,
   identifyOperator,
+  markBusinessTelemetryPending,
   resetAnalyticsIdentity,
+  setBusinessTelemetryEnabled,
   syncAnalyticsSessionRecording,
   trackPageView,
 } from "@/lib/analytics";
@@ -166,6 +170,19 @@ function AffiliateReferralCapture() {
 
 function AnalyticsPrivacySync() {
   const location = useLocation();
+  const auth = useConvexAuth();
+  useLayoutEffect(() => {
+    if (auth.isLoading) {
+      return;
+    }
+
+    if (auth.isAuthenticated) {
+      disableAnalyticsCapture();
+    } else {
+      enableAnalyticsCapture();
+    }
+  }, [auth.isAuthenticated, auth.isLoading]);
+
   useLayoutEffect(() => {
     syncAnalyticsSessionRecording(location.pathname);
   }, [location.pathname]);
@@ -336,6 +353,59 @@ function getNonAdminOnboardingElement(
   );
 }
 
+/**
+ * Syncs the analytics module's telemetry state for the active business and
+ * identifies the operator once identity + telemetry preference are known.
+ * The pending mark runs in a layout effect so it happens before paint, and
+ * before the identify effect on the resolution commit, so session recording
+ * and identity linking never observe an unresolved preference.
+ */
+function useTelemetryGatedIdentity(
+  userId?: Id<"users">,
+  businessId?: Id<"businesses">,
+) {
+  const telemetry = useQuery(
+    api.settings.telemetryOptOut.getTelemetryEnabled,
+    businessId ? { businessId } : "skip",
+  );
+
+  useLayoutEffect(() => {
+    if (!businessId) {
+      return;
+    }
+
+    if (telemetry?.telemetryEnabled === undefined) {
+      markBusinessTelemetryPending(String(businessId));
+      return;
+    }
+
+    setBusinessTelemetryEnabled(String(businessId), telemetry.telemetryEnabled);
+  }, [businessId, telemetry?.telemetryEnabled]);
+
+  useEffect(() => {
+    if (!userId) {
+      return;
+    }
+
+    if (businessId && telemetry?.telemetryEnabled === undefined) {
+      return;
+    }
+
+    identifyOperator({
+      userId: String(userId),
+      ...(businessId ? { businessId: String(businessId) } : {}),
+      deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
+    });
+  }, [businessId, telemetry?.telemetryEnabled, userId]);
+}
+
+function ClaimDemoRoute() {
+  const currentUser = useQuery(api.users.current, {});
+  useTelemetryGatedIdentity(currentUser?._id, currentUser?.activeBusinessId);
+
+  return <ClaimDemoPage />;
+}
+
 function WorkspaceShell() {
   const { signOut } = useAuthActions();
   const location = useLocation();
@@ -347,6 +417,10 @@ function WorkspaceShell() {
   const businessId = activeBusiness?._id;
   const billingStatus = useQuery(
     api.billing.getStatus,
+    businessId ? { businessId } : "skip",
+  );
+  const telemetry = useQuery(
+    api.settings.telemetryOptOut.getTelemetryEnabled,
     businessId ? { businessId } : "skip",
   );
   const isBootstrapLoading = businesses === undefined || currentUser === undefined;
@@ -379,6 +453,7 @@ function WorkspaceShell() {
     location.pathname === "/settings/plan" &&
     new URLSearchParams(location.search).get("checkout") === "success";
   useAffiliateAttributionBinding(businessId);
+  useTelemetryGatedIdentity(currentUser?._id, businessId);
 
   async function handleSignOut(): Promise<void> {
     resetAnalyticsIdentity();
@@ -390,31 +465,28 @@ function WorkspaceShell() {
       return;
     }
 
-    if (!currentUser?._id) {
-      return;
-    }
-
-    identifyOperator({
-      userId: String(currentUser._id),
-      ...(businessId ? { businessId: String(businessId) } : {}),
-      deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
-    });
-  }, [businessId, currentUser?._id, isBootstrapLoading]);
-
-  useEffect(() => {
-    if (isBootstrapLoading) {
-      return;
-    }
-
     if (!businessId) {
       return;
     }
 
+    if (telemetry?.telemetryEnabled === undefined) {
+      return;
+    }
+
     trackPageView(location.pathname, businessId ? String(businessId) : undefined);
-  }, [businessId, isBootstrapLoading, location.pathname]);
+  }, [
+    businessId,
+    isBootstrapLoading,
+    location.pathname,
+    telemetry?.telemetryEnabled,
+  ]);
 
   useEffect(() => {
     if (isBootstrapLoading) {
+      return;
+    }
+
+    if (telemetry?.telemetryEnabled === undefined) {
       return;
     }
 
@@ -430,7 +502,7 @@ function WorkspaceShell() {
       businessId: nextBusinessId,
       previousBusinessId,
     });
-  }, [businessId, isBootstrapLoading]);
+  }, [businessId, isBootstrapLoading, telemetry?.telemetryEnabled]);
 
   // No business yet → user just signed up. Send them to the very first
   // onboarding step so they can name their business.
@@ -637,7 +709,10 @@ function WorkspaceShell() {
               <Route
                 element={
                   businessId ? (
-                    <SettingsAppearancePage businessId={businessId} />
+                    <SettingsAppearancePage
+                      businessId={businessId}
+                      canManageTenant={canManageTenant}
+                    />
                   ) : (
                     <Navigate replace to="/settings" />
                   )
@@ -729,20 +804,7 @@ function useOnboardingContext() {
   const businessId = activeBusiness?._id;
 
   useAffiliateAttributionBinding(businessId);
-
-  useEffect(() => {
-    if (businesses === undefined || currentUser === undefined) {
-      return;
-    }
-    if (!currentUser?._id || !businessId) {
-      return;
-    }
-    identifyOperator({
-      userId: String(currentUser._id),
-      businessId: String(businessId),
-      deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
-    });
-  }, [businessId, currentUser?._id, businesses, currentUser]);
+  useTelemetryGatedIdentity(currentUser?._id, businessId);
 
   async function handleSignOut(): Promise<void> {
     resetAnalyticsIdentity();
@@ -1233,7 +1295,7 @@ export default function App() {
           <Route
             element={
               <RequireAuth>
-                <ClaimDemoPage />
+                <ClaimDemoRoute />
               </RequireAuth>
             }
             path="/claim-demo"

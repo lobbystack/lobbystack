@@ -42,7 +42,7 @@ const convexUrl = import.meta.env.CONVEX_URL ?? import.meta.env.VITE_CONVEX_URL;
 
 scrubCheckoutSessionTokenFromLocation();
 scrubProspectDemoTokenFromLocation();
-initializeAnalytics();
+initializeAnalytics({ deferCapture: true });
 
 const root = ReactDOM.createRoot(document.getElementById("root")!, {
   onCaughtError: onCaughtReactError,

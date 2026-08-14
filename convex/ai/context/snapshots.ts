@@ -80,10 +80,23 @@ export const getByBusinessId = internalQuery({
     businessId: v.id("businesses"),
   },
   handler: async (ctx: QueryCtx, args: BusinessIdArgs) => {
-    return await ctx.db
-      .query("business_context_snapshots")
-      .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
-      .unique();
+    const [snapshot, business] = await Promise.all([
+      ctx.db
+        .query("business_context_snapshots")
+        .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+        .unique(),
+      ctx.db.get(args.businessId),
+    ]);
+
+    if (!snapshot) {
+      return null;
+    }
+
+    return {
+      ...snapshot,
+      telemetryEnabled:
+        business?.telemetryEnabled ?? snapshot.telemetryEnabled ?? true,
+    };
   },
 });
 
@@ -338,6 +351,9 @@ export const refreshSnapshot = internalMutation({
       ),
       ...(primaryPhone?.e164 !== undefined ? { phoneNumber: primaryPhone.e164 } : {}),
       ...(primarySms?.e164 !== undefined ? { smsNumber: primarySms.e164 } : {}),
+      ...(business.telemetryEnabled !== undefined
+        ? { telemetryEnabled: business.telemetryEnabled }
+        : {}),
     });
     const { businessId: _unusedBusinessId, ...snapshot } = snapshotPayload;
 

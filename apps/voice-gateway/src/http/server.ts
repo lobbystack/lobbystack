@@ -29,6 +29,7 @@ export function createServer(): ReturnType<typeof Fastify> {
 
   server.decorate("snapshotCache", cache);
   server.decorate("runtimeConfig", env);
+  server.decorateRequest("businessId", null);
 
   server.register(fastifyFormbody);
   server.register(fastifyRateLimit, {
@@ -36,6 +37,7 @@ export function createServer(): ReturnType<typeof Fastify> {
   });
   server.addHook("onError", async (request, _reply, error) => {
     capturePostHogException(error, {
+      ...(request.businessId ? { businessId: request.businessId } : {}),
       properties: {
         operation: "fastify_request",
         method: request.method,
@@ -147,6 +149,10 @@ export function createServer(): ReturnType<typeof Fastify> {
 }
 
 declare module "fastify" {
+  interface FastifyRequest {
+    businessId: string | null;
+  }
+
   interface FastifyInstance {
     snapshotCache: {
       get: (businessId: string) => BusinessContextSnapshot | null;

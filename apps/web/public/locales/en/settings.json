@@ -436,6 +436,11 @@
       "lightDescription": "Bright surfaces with soft contrast for daytime work.",
       "dark": "Dark",
       "darkDescription": "Dimmed surfaces that keep late sessions easier on the eyes."
+    },
+    "telemetry": {
+      "label": "Share telemetry data",
+      "description": "Help us improve LobbyStack by sharing anonymized usage and error data.",
+      "saveFailed": "Unable to update telemetry preference."
     }
   },
   "integrations": {
