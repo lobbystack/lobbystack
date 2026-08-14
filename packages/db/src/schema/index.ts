@@ -344,11 +344,30 @@ export const contacts = pgTable(
     timezone: varchar("timezone", { length: 80 }),
     preferredLocale: varchar("preferred_locale", { length: 8 }),
     smsConsentStatus: varchar("sms_consent_status", { length: 32 }),
+    smsConsentUpdatedAt: timestamp("sms_consent_updated_at", { withTimezone: true }),
+    smsConsentSource: varchar("sms_consent_source", { length: 64 }),
     operatorBlockedAt: timestamp("operator_blocked_at", { withTimezone: true }),
     ...legacyId,
     ...timestamps,
   },
   (table) => [uniqueIndex("contacts_business_phone_unique").on(table.businessId, table.phone), index("contacts_business_email_idx").on(table.businessId, table.email)],
+);
+
+export const smsConsentEvents = pgTable(
+  "sms_consent_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
+    phone: varchar("phone", { length: 32 }).notNull(),
+    recipientType: varchar("recipient_type", { length: 16 }).default("contact").notNull(),
+    action: varchar("action", { length: 32 }).notNull(),
+    source: varchar("source", { length: 160 }).notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).defaultNow().notNull(),
+    ...legacyId,
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("sms_consent_events_legacy_convex_id_unique").on(table.legacyConvexId), index("sms_consent_events_business_idx").on(table.businessId, table.occurredAt), index("sms_consent_events_phone_idx").on(table.phone, table.occurredAt)],
 );
 
 export const conversations = pgTable(
@@ -444,6 +463,7 @@ export const calls = pgTable(
     prospectDemoId: uuid("prospect_demo_id").references(() => prospectDemos.id, { onDelete: "set null" }),
     webCallMaxDurationMs: integer("web_call_max_duration_ms"),
     status: varchar("status", { length: 32 }).default("started").notNull(),
+    billingExcluded: boolean("billing_excluded").default(false).notNull(),
     transferState: varchar("transfer_state", { length: 32 }),
     disposition: varchar("disposition", { length: 120 }),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
@@ -691,9 +711,14 @@ export const notifications = pgTable(
     scheduledFor: timestamp("scheduled_for", { withTimezone: true }).notNull(),
     status: varchar("status", { length: 32 }).default("pending").notNull(),
     providerMessageId: text("provider_message_id"),
+    providerPrice: doublePrecision("provider_price"),
+    providerPriceUnit: varchar("provider_price_unit", { length: 16 }),
+    providerCostUsd: doublePrecision("provider_cost_usd"),
+    providerNumSegments: integer("provider_num_segments"),
+    ...legacyId,
     ...timestamps,
   },
-  (table) => [uniqueIndex("notifications_event_unique").on(table.businessId, table.kind, table.relatedId), index("notifications_status_schedule_idx").on(table.status, table.scheduledFor)],
+  (table) => [uniqueIndex("notifications_event_unique").on(table.businessId, table.kind, table.relatedId), uniqueIndex("notifications_legacy_convex_id_unique").on(table.legacyConvexId), index("notifications_status_schedule_idx").on(table.status, table.scheduledFor)],
 );
 
 export const operatorNotificationPreferences = pgTable(
@@ -729,9 +754,9 @@ export const operatorNotificationDeliveries = pgTable(
     destination: text("destination").notNull(),
     sender: text("sender"), subject: text("subject").notNull(), body: text("body").notNull(), providerMessageId: text("provider_message_id"),
     scheduledFor: timestamp("scheduled_for", { withTimezone: true }).defaultNow().notNull(), sentAt: timestamp("sent_at", { withTimezone: true }),
-    contentExpiresAt: timestamp("content_expires_at", { withTimezone: true }).notNull(), lastError: text("last_error"), ...timestamps,
+    contentExpiresAt: timestamp("content_expires_at", { withTimezone: true }).notNull(), lastError: text("last_error"), providerPrice: doublePrecision("provider_price"), providerPriceUnit: varchar("provider_price_unit", { length: 16 }), providerCostUsd: doublePrecision("provider_cost_usd"), providerNumSegments: integer("provider_num_segments"), ...legacyId, ...timestamps,
   },
-  (table) => [uniqueIndex("operator_notification_deliveries_event_channel_unique").on(table.eventKey, table.userId, table.channel), index("operator_notification_deliveries_status_schedule_idx").on(table.status, table.scheduledFor), index("operator_notification_deliveries_business_user_idx").on(table.businessId, table.userId)],
+  (table) => [uniqueIndex("operator_notification_deliveries_event_channel_unique").on(table.eventKey, table.userId, table.channel), uniqueIndex("operator_notification_deliveries_legacy_convex_id_unique").on(table.legacyConvexId), index("operator_notification_deliveries_status_schedule_idx").on(table.status, table.scheduledFor), index("operator_notification_deliveries_business_user_idx").on(table.businessId, table.userId)],
 );
 
 export const billingAccounts = pgTable(
@@ -744,12 +769,15 @@ export const billingAccounts = pgTable(
     customerId: text("customer_id"),
     subscriptionId: text("subscription_id"),
     plan: varchar("plan", { length: 64 }),
+    billingInterval: varchar("billing_interval", { length: 16 }),
     subscriptionState: varchar("subscription_state", { length: 32 }),
     currentPeriodStart: timestamp("current_period_start", { withTimezone: true }),
     currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+    overageSpendingCapCents: integer("overage_spending_cap_cents"),
+    ...legacyId,
     ...timestamps,
   },
-  (table) => [uniqueIndex("billing_accounts_business_unique").on(table.businessId), uniqueIndex("billing_accounts_billing_key_unique").on(table.billingKey), index("billing_accounts_customer_idx").on(table.customerId)],
+  (table) => [uniqueIndex("billing_accounts_business_unique").on(table.businessId), uniqueIndex("billing_accounts_billing_key_unique").on(table.billingKey), uniqueIndex("billing_accounts_legacy_convex_id_unique").on(table.legacyConvexId), index("billing_accounts_customer_idx").on(table.customerId)],
 );
 
 export const billingCheckoutRequests = pgTable(
@@ -800,10 +828,35 @@ export const billingUsageEvents = pgTable(
     sourceKey: varchar("source_key", { length: 255 }).notNull(),
     usageKind: varchar("usage_kind", { length: 64 }).notNull(),
     quantity: doublePrecision("quantity").notNull(),
+    billableQuantity: doublePrecision("billable_quantity"),
+    planAtRecordTime: varchar("plan_at_record_time", { length: 32 }),
+    billingIntervalAtRecordTime: varchar("billing_interval_at_record_time", { length: 16 }),
+    isFinal: boolean("is_final").default(true).notNull(),
+    ...legacyId,
     syncStatus: varchar("sync_status", { length: 32 }).default("pending").notNull(),
     ...timestamps,
   },
   (table) => [uniqueIndex("billing_usage_source_unique").on(table.businessId, table.sourceKey), index("billing_usage_status_idx").on(table.syncStatus, table.createdAt)],
+);
+
+export const billingUsageMonths = pgTable(
+  "billing_usage_months",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    periodKey: varchar("period_key", { length: 16 }).notNull(),
+    planAtSnapshot: varchar("plan_at_snapshot", { length: 32 }),
+    voiceSecondsUsed: doublePrecision("voice_seconds_used").default(0).notNull(),
+    alertSmsSegmentsUsed: doublePrecision("alert_sms_segments_used").default(0).notNull(),
+    outboundCallAttemptsUsed: doublePrecision("outbound_call_attempts_used").default(0).notNull(),
+    voiceBlocked: boolean("voice_blocked").default(false).notNull(),
+    alertSmsBlocked: boolean("alert_sms_blocked").default(false).notNull(),
+    outboundCallAttemptsBlocked: boolean("outbound_call_attempts_blocked").default(false).notNull(),
+    overageSpendCents: integer("overage_spend_cents").default(0).notNull(),
+    lastRecordedAt: timestamp("last_recorded_at", { withTimezone: true }).defaultNow().notNull(),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("billing_usage_months_business_period_unique").on(table.businessId, table.periodKey), index("billing_usage_months_business_idx").on(table.businessId, table.lastRecordedAt)],
 );
 
 export const complianceRecords = pgTable(
@@ -818,6 +871,30 @@ export const complianceRecords = pgTable(
     ...timestamps,
   },
   (table) => [uniqueIndex("compliance_records_business_kind_unique").on(table.businessId, table.kind)],
+);
+
+export const feedbackSubmissions = pgTable(
+  "feedback_submissions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    userEmail: text("user_email"),
+    userName: text("user_name"),
+    businessId: uuid("business_id").references(() => businesses.id, { onDelete: "set null" }),
+    businessName: text("business_name"),
+    message: text("message").notNull(),
+    pagePath: text("page_path"),
+    userAgent: text("user_agent"),
+    emailStatus: varchar("email_status", { length: 32 }).default("pending_email").notNull(),
+    recipientEmail: text("recipient_email"),
+    providerMessageId: text("provider_message_id"),
+    emailError: text("email_error"),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }).defaultNow().notNull(),
+    emailedAt: timestamp("emailed_at", { withTimezone: true }),
+    ...legacyId,
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("feedback_submissions_legacy_convex_id_unique").on(table.legacyConvexId), index("feedback_submissions_business_submitted_idx").on(table.businessId, table.submittedAt), index("feedback_submissions_user_submitted_idx").on(table.userId, table.submittedAt), index("feedback_submissions_status_submitted_idx").on(table.emailStatus, table.submittedAt)],
 );
 
 export const affiliateProfiles = pgTable(
@@ -962,9 +1039,10 @@ export const auditLogs = pgTable(
     entityType: varchar("entity_type", { length: 120 }).notNull(),
     entityId: uuid("entity_id"),
     payload: jsonb("payload").$type<Record<string, unknown>>(),
+    ...legacyId,
     ...timestamps,
   },
-  (table) => [index("audit_logs_business_created_idx").on(table.businessId, table.createdAt), index("audit_logs_entity_idx").on(table.entityType, table.entityId)],
+  (table) => [uniqueIndex("audit_logs_legacy_convex_id_unique").on(table.legacyConvexId), index("audit_logs_business_created_idx").on(table.businessId, table.createdAt), index("audit_logs_entity_idx").on(table.entityType, table.entityId)],
 );
 
 export const idempotencyKeys = pgTable(
@@ -1042,6 +1120,63 @@ export const productEvents = pgTable(
   (table) => [index("product_events_pending_idx").on(table.sentAt, table.occurredAt), index("product_events_business_idx").on(table.businessId, table.occurredAt)],
 );
 
+export const unitEconomicsEvents = pgTable(
+  "unit_economics_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    monthKey: varchar("month_key", { length: 16 }).notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    eventKey: varchar("event_key", { length: 255 }).notNull(),
+    eventKind: varchar("event_kind", { length: 64 }).notNull(),
+    channel: varchar("channel", { length: 32 }).notNull(),
+    costUsd: doublePrecision("cost_usd").notNull(),
+    quantity: doublePrecision("quantity"),
+    quantityUnit: varchar("quantity_unit", { length: 32 }),
+    provider: varchar("provider", { length: 64 }),
+    model: varchar("model", { length: 160 }),
+    operation: varchar("operation", { length: 160 }),
+    callId: uuid("call_id").references(() => calls.id, { onDelete: "set null" }),
+    conversationId: uuid("conversation_id").references(() => conversations.id, { onDelete: "set null" }),
+    messageId: uuid("message_id").references(() => messages.id, { onDelete: "set null" }),
+    notificationId: uuid("notification_id").references(() => notifications.id, { onDelete: "set null" }),
+    operatorNotificationDeliveryId: uuid("operator_notification_delivery_id").references(() => operatorNotificationDeliveries.id, { onDelete: "set null" }),
+    ...legacyId,
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("unit_economics_events_business_event_key_unique").on(table.businessId, table.eventKey), uniqueIndex("unit_economics_events_legacy_convex_id_unique").on(table.legacyConvexId), index("unit_economics_events_business_month_idx").on(table.businessId, table.monthKey, table.occurredAt), index("unit_economics_events_kind_idx").on(table.businessId, table.eventKind, table.occurredAt)],
+);
+
+export const unitEconomicsRollups = pgTable(
+  "unit_economics_rollups",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    monthKey: varchar("month_key", { length: 16 }).notNull(),
+    totalCostUsd: doublePrecision("total_cost_usd").default(0).notNull(),
+    providerCostUsd: doublePrecision("provider_cost_usd").default(0).notNull(),
+    aiCostUsd: doublePrecision("ai_cost_usd").default(0).notNull(),
+    infraCostUsd: doublePrecision("infra_cost_usd").default(0).notNull(),
+    voiceCostUsd: doublePrecision("voice_cost_usd").default(0).notNull(),
+    smsCostUsd: doublePrecision("sms_cost_usd").default(0).notNull(),
+    alertSmsCostUsd: doublePrecision("alert_sms_cost_usd").default(0).notNull(),
+    voiceCallCount: integer("voice_call_count").default(0).notNull(),
+    voiceMinutes: doublePrecision("voice_minutes").default(0).notNull(),
+    outboundSmsCount: integer("outbound_sms_count").default(0).notNull(),
+    smsThreadCount: integer("sms_thread_count").default(0).notNull(),
+    activeUserCount: integer("active_user_count").default(0).notNull(),
+    costPerVoiceCallUsd: doublePrecision("cost_per_voice_call_usd").default(0).notNull(),
+    costPerVoiceMinuteUsd: doublePrecision("cost_per_voice_minute_usd").default(0).notNull(),
+    costPerOutboundSmsUsd: doublePrecision("cost_per_outbound_sms_usd").default(0).notNull(),
+    costPerSmsThreadUsd: doublePrecision("cost_per_sms_thread_usd").default(0).notNull(),
+    costPerActiveUserUsd: doublePrecision("cost_per_active_user_usd").default(0).notNull(),
+    costPerBusinessUsd: doublePrecision("cost_per_business_usd").default(0).notNull(),
+    recomputedAt: timestamp("recomputed_at", { withTimezone: true }).defaultNow().notNull(),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("unit_economics_rollups_business_month_unique").on(table.businessId, table.monthKey), index("unit_economics_rollups_month_idx").on(table.monthKey)],
+);
+
 export const allTenantTables = [
   businesses,
   businessMemberships,
@@ -1057,6 +1192,7 @@ export const allTenantTables = [
   onboardingNumberClaimEvents,
   receptionistProfiles,
   contacts,
+  smsConsentEvents,
   conversations,
   conversationSessions,
   messages,
@@ -1080,7 +1216,9 @@ export const allTenantTables = [
   billingCheckoutRequests,
   billingTransactions,
   billingUsageEvents,
+  billingUsageMonths,
   complianceRecords,
+  feedbackSubmissions,
   affiliateAttributions,
   affiliateVoidedSources,
   affiliateCommissions,
@@ -1089,6 +1227,8 @@ export const allTenantTables = [
   providerEvents,
   outboxMessages,
   productEvents,
+  unitEconomicsEvents,
+  unitEconomicsRollups,
 ] as const;
 
 export const schema = {
@@ -1110,6 +1250,7 @@ export const schema = {
   onboardingNumberClaimEvents,
   receptionistProfiles,
   contacts,
+  smsConsentEvents,
   conversations,
   conversationSessions,
   messages,
@@ -1133,7 +1274,9 @@ export const schema = {
   billingCheckoutRequests,
   billingTransactions,
   billingUsageEvents,
+  billingUsageMonths,
   complianceRecords,
+  feedbackSubmissions,
   affiliateProfiles,
   affiliateAttributions,
   affiliateProfileStats,
@@ -1147,6 +1290,8 @@ export const schema = {
   providerEvents,
   outboxMessages,
   productEvents,
+  unitEconomicsEvents,
+  unitEconomicsRollups,
 };
 
 export type Schema = typeof schema;

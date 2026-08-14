@@ -1,6 +1,6 @@
 import { businesses, createDatabaseClient, databaseHealthCheck, withDispatcherTransaction } from "@lobbystack/db";
 import { createQueue, createRedisConnection, createWorkerOptions, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
-import { FirecrawlProvider, GeminiEmbeddingProvider, GeminiTextProvider, GoogleCalendarProvider, PolarBillingProvider, S3StorageProvider, SmtpEmailProvider, TwilioProvider } from "@lobbystack/providers";
+import { FirecrawlProvider, GeminiEmbeddingProvider, GoogleCalendarProvider, PolarBillingProvider, S3StorageProvider, SmtpEmailProvider, TwilioProvider } from "@lobbystack/providers";
 import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withSpan } from "@lobbystack/telemetry/node";
 import { Worker } from "bullmq";
 
@@ -30,18 +30,6 @@ function createEmailProvider(): SmtpEmailProvider | undefined {
     from: process.env.EMAIL_FROM ?? "LobbyStack <no-reply@localhost>",
     ...(process.env.EMAIL_REPLY_TO ? { replyTo: process.env.EMAIL_REPLY_TO } : {}),
   });
-}
-
-function createTextProvider(): GeminiTextProvider | undefined {
-  const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-  const inputCostPerMillionTokens = optionalNumber("GEMINI_TEXT_INPUT_COST_PER_MILLION_TOKENS");
-  const outputCostPerMillionTokens = optionalNumber("GEMINI_TEXT_OUTPUT_COST_PER_MILLION_TOKENS");
-  return apiKey ? new GeminiTextProvider({
-    apiKey,
-    ...(process.env.GEMINI_TEXT_MODEL ? { model: process.env.GEMINI_TEXT_MODEL } : {}),
-    ...(inputCostPerMillionTokens !== undefined ? { inputCostPerMillionTokens } : {}),
-    ...(outputCostPerMillionTokens !== undefined ? { outputCostPerMillionTokens } : {}),
-  }) : undefined;
 }
 
 function createEmbeddingProvider(): GeminiEmbeddingProvider | undefined {
@@ -120,7 +108,6 @@ async function main(): Promise<void> {
   const state = { ready: false, redis: false, database: false, activeJobs: 0 };
   const health = startHealthServer(Number(process.env.PORT ?? 3002), state);
   const email = createEmailProvider();
-  const textAi = createTextProvider();
   const embeddings = createEmbeddingProvider();
   const twilio = createTwilioProvider();
   const storage = createStorageProvider();
@@ -131,7 +118,7 @@ async function main(): Promise<void> {
   if (storage) {
     await storage.ensureBucket();
   }
-  const dependencies: WorkerDependencies = { domain: { db: database.db, ...(embeddings ? { embeddings } : {}) }, realtime, ...(calendar ? { calendar } : {}), ...(crawler ? { crawler } : {}), ...(productAnalytics ? { productAnalytics } : {}), ...(email ? { email } : {}), ...(textAi ? { textAi } : {}), ...(embeddings ? { embeddings } : {}), ...(twilio ? { twilio } : {}), ...(storage ? { storage } : {}), ...(polar ? { polar } : {}) };
+  const dependencies: WorkerDependencies = { domain: { db: database.db, ...(embeddings ? { embeddings } : {}) }, realtime, ...(calendar ? { calendar } : {}), ...(crawler ? { crawler } : {}), ...(productAnalytics ? { productAnalytics } : {}), ...(email ? { email } : {}), ...(embeddings ? { embeddings } : {}), ...(twilio ? { twilio } : {}), ...(storage ? { storage } : {}), ...(polar ? { polar } : {}) };
   const workers = jobQueues.map((queueName) => {
     const queue = queues.get(queueName);
     if (!queue) {

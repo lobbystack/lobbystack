@@ -8,7 +8,7 @@ import { createDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
 
-const targets = ["starter", "pro", "ai_sms"] as const;
+const targets = ["starter", "pro"] as const;
 const intervals = ["monthly", "annual"] as const;
 
 export async function GET(request: Request) {

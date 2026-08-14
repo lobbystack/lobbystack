@@ -92,6 +92,9 @@ export const twilioSmsStatusSchema = z.object({
   SmsSid: z.string().min(1).max(255).optional(),
   MessageStatus: z.string().min(1).max(64),
   ErrorCode: z.string().max(64).optional(),
+  Price: z.string().max(64).optional(),
+  PriceUnit: z.string().max(16).optional(),
+  NumSegments: z.coerce.number().int().nonnegative().optional(),
   RawDlrDoneDate: z.string().max(128).optional(),
 }).refine((value) => Boolean(value.MessageSid ?? value.SmsSid), { message: "A Twilio message SID is required.", path: ["MessageSid"] });
 
@@ -252,12 +255,12 @@ export const jobTypes = [
   "email.send",
   "email.reconcileDelivery",
   "sms.send",
-  "sms.processInbound",
   "appointment.sendChangeOtp",
   "sms.syncPrice",
   "call.syncPrice",
   "billing.syncUsage",
   "billing.reconcile",
+  "billing.refreshUnitEconomics",
   "billing.createCheckout",
   "calendar.syncAppointment",
   "calendar.reconcileBusiness",

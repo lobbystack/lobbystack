@@ -14,7 +14,9 @@ CREATE POLICY operator_notification_deliveries_tenant_isolation ON public.operat
 GRANT SELECT ON public.operator_notification_deliveries TO lobbystack_app, lobbystack_readonly;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.operator_notification_deliveries TO lobbystack_worker;
 
-CREATE OR REPLACE FUNCTION app.resolve_operator_notification_recipients(target_business_id uuid)
+DROP FUNCTION IF EXISTS app.resolve_operator_notification_recipients(uuid);
+
+CREATE FUNCTION app.resolve_operator_notification_recipients(target_business_id uuid)
 RETURNS TABLE(user_id uuid, email text, phone text, event_preferences jsonb, email_enabled boolean, sms_enabled boolean)
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, app, pg_catalog
 AS $$

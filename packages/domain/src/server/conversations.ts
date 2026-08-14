@@ -100,16 +100,6 @@ export async function appendMessage(
         payload: { messageId: message.id },
       });
     }
-    if (input.direction === "inbound" && input.channel === "sms") {
-      await enqueueOutbox(tx, {
-        topic: "sms.processInbound",
-        businessId: input.businessId,
-        aggregateType: "message",
-        aggregateId: message.id,
-        dedupeKey: `message:${message.id}:process-inbound`,
-        payload: { messageId: message.id, conversationId: input.conversationId },
-      });
-    }
     if (input.operatorAlert) await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKey: `${input.operatorAlert.eventKind}:${message.id}`, ...input.operatorAlert });
     return message.id;
   });

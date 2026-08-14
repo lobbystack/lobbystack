@@ -3,9 +3,10 @@ import Redis from "ioredis";
 import { and, eq, lte, ne } from "drizzle-orm";
 
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
+import { getPolarMeteredUsagePayload, type BillingUsageKind } from "@lobbystack/shared";
 import { appointments, calendarConnections, calls, contacts, enqueueOutbox, knowledgeDocuments, messages, notifications, phoneNumbers, services, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
-import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimPhoneVerificationSend, claimSmsDelivery, deleteCallRecording, deleteExpiredObjectsForBusiness, deleteTranscriptForRetention, expireProspectDemos, finalizeConversationSession, generateAffiliatePayoutRun, generateAndQueueSmsReply, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, markNotificationSkipped, markPhoneVerificationSendFailed, markPhoneVerificationSent, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, type DurableAiUsage } from "@lobbystack/domain";
-import { claimOperatorNotificationDelivery, loadOperatorNotificationDelivery, markOperatorNotificationSent, queueDailyOperatorSummaries, releaseOperatorNotificationDelivery } from "@lobbystack/domain";
+import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimPhoneVerificationSend, claimSmsDelivery, deleteCallRecording, deleteExpiredObjectsForBusiness, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, generateAffiliatePayoutRun, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, markNotificationSkipped, markPhoneVerificationSendFailed, markPhoneVerificationSent, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, type DurableAiUsage } from "@lobbystack/domain";
+import { claimOperatorNotificationDelivery, correctAlertSmsUsage, estimateSmsSegments, loadOperatorNotificationDelivery, markFeedbackEmailFailed, markFeedbackEmailSent, markOperatorNotificationSent, markOperatorNotificationSkipped, queueDailyOperatorSummaries, refreshUnitEconomicsMonth, releaseOperatorNotificationDelivery, reserveAlertSmsUsage } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
 import { getTwilioProviderErrorCode, SecretBox } from "@lobbystack/providers";
 import type { DomainContext } from "@lobbystack/domain";
@@ -27,7 +28,6 @@ export type WorkerDependencies = {
   email?: Pick<SmtpEmailProvider, "sendTemplate">;
   twilio?: Pick<TwilioProvider, "sendSms"> & Partial<Pick<TwilioProvider, "getMessagePricing" | "getCallPricing" | "releasePhoneNumber" | "verifyPhone" | "findOwnedPhoneNumber" | "purchasePhoneNumber">>;
   polar?: { recordUsage(input: { meterId: string; externalCustomerId: string; quantity: number; timestamp: string; idempotencyKey: string }): Promise<void>; createCheckout?(input: { productId: string; customerEmail: string; externalCustomerId: string; successUrl: string; idempotencyKey?: string }): Promise<{ checkoutUrl: string; checkoutId: string }> };
-  textAi?: { generateReply(input: { instructions: string; prompt: string; context?: string }): Promise<{ text: string }> };
   embeddings?: { embed(values: string[], onUsage?: (usage: DurableAiUsage) => Promise<void> | void): Promise<number[][]> };
   crawler?: { crawl(input: { url: string; limit?: number }): Promise<Array<{ url: string; title?: string; markdown?: string }>> };
   calendar?: { getBusyBlocks(input: { accessToken: string; calendarId: string; startsAt: string; endsAt: string }): Promise<Array<{ startsAt: string; endsAt: string }>>; upsertEvent(input: { accessToken: string; calendarId: string; eventId?: string; clientEventId?: string; title: string; startsAt: string; endsAt: string; description?: string }): Promise<{ externalEventId: string }> };
@@ -42,6 +42,17 @@ function businessIdOrThrow(job: JobEnvelope): string {
     throw new Error(`Job ${job.type} requires a business context.`);
   }
   return job.businessId;
+}
+
+function polarMeterIdForUsageKind(usageKind: BillingUsageKind): string | undefined {
+  const variable = usageKind === "voice_seconds"
+    ? "POLAR_VOICE_USAGE_METER_ID"
+    : usageKind === "alert_sms_segments"
+      ? "POLAR_ALERT_SMS_USAGE_METER_ID"
+      : usageKind === "outbound_call_attempts"
+        ? "POLAR_OUTBOUND_ATTEMPTS_USAGE_METER_ID"
+        : undefined;
+  return (variable ? process.env[variable] : undefined) ?? process.env.POLAR_USAGE_METER_ID;
 }
 
 function twilioStatusCallback(input: { messageId?: string; notificationId?: string; operatorDeliveryId?: string }): string | undefined {
@@ -220,19 +231,26 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
         return { status: "skipped" };
       }
       {
-        const template = job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "invitation" || job.payload.template === "operator_alert"
+        const template = job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission"
           ? job.payload.template
           : "operator_alert";
         const variables = typeof job.payload.variables === "object" && job.payload.variables !== null
           ? Object.fromEntries(Object.entries(job.payload.variables).map(([key, value]) => [key, String(value)]))
           : { message: String(job.payload.message ?? ""), url: String(job.payload.url ?? "") };
-        await dependencies.email.sendTemplate({
-          template,
-          to: String(job.payload.to ?? job.payload.email ?? ""),
-          subject: String(job.payload.subject ?? "LobbyStack notification"),
-          variables,
-          idempotencyKey: job.idempotencyKey,
-        });
+        const feedbackSubmissionId = typeof job.payload.feedbackSubmissionId === "string" ? job.payload.feedbackSubmissionId : undefined;
+        try {
+          const sent = await dependencies.email.sendTemplate({
+            template,
+            to: String(job.payload.to ?? job.payload.email ?? ""),
+            subject: String(job.payload.subject ?? "LobbyStack notification"),
+            variables,
+            idempotencyKey: job.idempotencyKey,
+          });
+          if (feedbackSubmissionId) await markFeedbackEmailSent(dependencies.domain, { feedbackSubmissionId, ...(businessId ? { businessId } : {}), providerMessageId: sent.messageId });
+        } catch (error) {
+          if (feedbackSubmissionId) await markFeedbackEmailFailed(dependencies.domain, { feedbackSubmissionId, ...(businessId ? { businessId } : {}), error: error instanceof Error ? error.message : String(error) }).catch(() => undefined);
+          throw error;
+        }
       }
       return { status: "completed" };
     case "email.reconcileDelivery": {
@@ -263,9 +281,6 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
           throw error;
         }
       }
-    case "sms.processInbound":
-      if (!dependencies.textAi) return { status: "skipped", entityId: String(job.payload.messageId ?? "") };
-      return { status: "completed", ...(await generateAndQueueSmsReply(dependencies.domain, { businessId: businessIdOrThrow(job), messageId: String(job.payload.messageId) }, dependencies.textAi).then((messageId) => messageId ? { entityId: messageId } : {})) };
     case "appointment.sendChangeOtp": {
       const businessId = businessIdOrThrow(job);
       const verificationId = String(job.payload.verificationId ?? "");
@@ -294,7 +309,14 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
       if (!dependencies.twilio?.getMessagePricing || !providerMessageId || !isTerminalSmsStatus(providerStatus)) return { status: "skipped", entityId: providerMessageId };
       const pricing = await dependencies.twilio.getMessagePricing({ providerMessageId });
       if (pricing.providerCostUsd === undefined || pricing.providerNumSegments === undefined) throw new Error(`Twilio SMS pricing is incomplete for ${providerMessageId}.`);
-      const recorded = await recordSmsProviderPricing(dependencies.domain, { businessId: businessIdOrThrow(job), providerMessageId, ...pricing });
+      const businessId = businessIdOrThrow(job);
+      const notificationId = typeof job.payload.notificationId === "string" ? job.payload.notificationId : undefined;
+      const operatorDeliveryId = typeof job.payload.operatorDeliveryId === "string" ? job.payload.operatorDeliveryId : undefined;
+      const recorded = notificationId
+        ? await updateNotificationDeliveryStatus(dependencies.domain, { businessId, notificationId, providerMessageId, providerStatus, ...pricing })
+        : operatorDeliveryId
+          ? await updateOperatorNotificationDeliveryStatus(dependencies.domain, { businessId, deliveryId: operatorDeliveryId, providerMessageId, providerStatus, ...pricing })
+          : await recordSmsProviderPricing(dependencies.domain, { businessId, providerMessageId, ...pricing });
       return { status: recorded ? "completed" : "skipped", entityId: providerMessageId };
     }
     case "call.syncPrice": {
@@ -307,7 +329,7 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
       return { status: recorded ? "completed" : "skipped", entityId: providerCallId };
     }
     case "billing.syncUsage": {
-      if (!dependencies.polar || !process.env.POLAR_USAGE_METER_ID) {
+      if (!dependencies.polar) {
         return { status: "skipped", entityId: String(job.payload.usageEventId ?? "") };
       }
       const usageEventId = String(job.payload.usageEventId ?? "");
@@ -315,10 +337,16 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
       const event = await loadBillingUsageEvent(dependencies.domain, { businessId: businessIdOrThrow(job), usageEventId });
       if (!event) return { status: "skipped", entityId: usageEventId };
       if (event.syncStatus === "synced") return { status: "completed", entityId: event.id };
+      const knownUsageKinds: BillingUsageKind[] = ["voice_seconds", "alert_sms_segments", "outbound_call_attempts"];
+      const usageKind = knownUsageKinds.includes(event.usageKind as BillingUsageKind) ? event.usageKind as BillingUsageKind : undefined;
+      const meterId = usageKind ? polarMeterIdForUsageKind(usageKind) : process.env.POLAR_USAGE_METER_ID;
+      if (!meterId) return { status: "skipped", entityId: event.id };
+      const quantity = event.billingIntervalAtRecordTime === "annual" && event.billableQuantity !== null ? event.billableQuantity : event.quantity;
+      const metered = usageKind ? getPolarMeteredUsagePayload(usageKind, quantity) : { quantity };
       await dependencies.polar.recordUsage({
-        meterId: process.env.POLAR_USAGE_METER_ID,
+        meterId,
         externalCustomerId: event.customerId ?? event.billingKey,
-        quantity: event.quantity,
+        quantity: metered.quantity,
         timestamp: event.createdAt.toISOString(),
         idempotencyKey: `billing-usage:${event.id}`,
       });
@@ -330,6 +358,12 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
       if (!providerEventId) return { status: "skipped" };
       const reconciled = await reconcileBillingProviderEvent(dependencies.domain, { businessId: businessIdOrThrow(job), providerEventId });
       return { status: reconciled ? "completed" : "skipped", entityId: providerEventId };
+    }
+    case "billing.refreshUnitEconomics": {
+      const businessId = businessIdOrThrow(job);
+      const monthKey = typeof job.payload.monthKey === "string" ? job.payload.monthKey : undefined;
+      const rollupId = await refreshUnitEconomicsMonth(dependencies.domain, { businessId, ...(monthKey ? { monthKey } : {}) });
+      return { status: "completed", entityId: rollupId };
     }
     case "billing.createCheckout": {
       const businessId = businessIdOrThrow(job);
@@ -363,19 +397,33 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
         const businessId = businessIdOrThrow(job);
         if (!await claimOperatorNotificationDelivery(dependencies.domain, { businessId, deliveryId: operatorDeliveryId })) return { status: "skipped", entityId: operatorDeliveryId };
         const delivery = await loadOperatorNotificationDelivery(dependencies.domain, { businessId, deliveryId: operatorDeliveryId });
-        if (!delivery) return { status: "skipped", entityId: operatorDeliveryId };
+        if (!delivery) {
+          await markOperatorNotificationSkipped(dependencies.domain, { businessId, deliveryId: operatorDeliveryId, error: "SMS consent or destination changed before delivery." });
+          return { status: "skipped", entityId: operatorDeliveryId };
+        }
         try {
           let providerMessageId: string;
+          let usageEventId: string | undefined;
           if (delivery.channel === "sms") {
             if (!dependencies.twilio || !delivery.sender) throw new Error("Operator SMS delivery is not configured.");
+            if (dependencies.domain.db) {
+              const reservation = await reserveAlertSmsUsage(dependencies.domain, { businessId, sourceKey: `alert_sms:operator_notification:${delivery.id}`, estimatedSegments: estimateSmsSegments(delivery.body) });
+              if (!reservation.allowed) {
+                await markOperatorNotificationSkipped(dependencies.domain, { businessId, deliveryId: delivery.id, error: reservation.errorCode ?? "Alert SMS quota reached." });
+                return { status: "skipped", entityId: delivery.id };
+              }
+              usageEventId = reservation.usageEventId;
+            }
             providerMessageId = (await dependencies.twilio.sendSms({ to: delivery.destination, from: delivery.sender, body: delivery.body, ...twilioStatusCallbackOption({ operatorDeliveryId: delivery.id }) })).providerMessageId;
           } else {
             if (!dependencies.email) throw new Error("Operator email delivery is not configured.");
             providerMessageId = (await dependencies.email.sendTemplate({ template: "operator_alert", to: delivery.destination, subject: delivery.subject, variables: { message: delivery.body }, idempotencyKey: `operator-notification:${delivery.id}` })).messageId;
           }
           await markOperatorNotificationSent(dependencies.domain, { businessId, deliveryId: delivery.id, providerMessageId });
+          if (usageEventId) await enqueueBillingUsageSync(dependencies.domain, { businessId, usageEventId });
           return { status: "completed", entityId: delivery.id };
         } catch (error) {
+          if (delivery.channel === "sms" && dependencies.domain.db) await correctAlertSmsUsage(dependencies.domain, { businessId, sourceKey: `alert_sms:operator_notification:${delivery.id}`, segments: 0 }).catch(() => undefined);
           await releaseOperatorNotificationDelivery(dependencies.domain, { businessId, deliveryId: delivery.id, error: "Provider delivery failed." });
           throw error;
         }
@@ -399,10 +447,19 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
       const delivery = resolution.delivery;
       try {
         let providerMessageId: string;
+        let usageEventId: string | undefined;
         if (delivery.channel === "sms") {
           if (!dependencies.twilio || !delivery.from) {
             await markNotificationSkipped(dependencies.domain, { businessId, notificationId: delivery.notificationId });
             return { status: "skipped", entityId: delivery.notificationId };
+          }
+          if (dependencies.domain.db) {
+            const reservation = await reserveAlertSmsUsage(dependencies.domain, { businessId, sourceKey: `alert_sms:notification:${delivery.notificationId}`, estimatedSegments: estimateSmsSegments(delivery.body) });
+            if (!reservation.allowed) {
+              await markNotificationSkipped(dependencies.domain, { businessId, notificationId: delivery.notificationId });
+              return { status: "skipped", entityId: delivery.notificationId };
+            }
+            usageEventId = reservation.usageEventId;
           }
           const sent = await dependencies.twilio.sendSms({ to: delivery.to, from: delivery.from, body: delivery.body, ...twilioStatusCallbackOption({ notificationId: delivery.notificationId }) });
           providerMessageId = sent.providerMessageId;
@@ -415,8 +472,10 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
           providerMessageId = sent.messageId;
         }
         await markNotificationSent(dependencies.domain, { businessId: delivery.businessId, notificationId: delivery.notificationId, providerMessageId });
+        if (usageEventId) await enqueueBillingUsageSync(dependencies.domain, { businessId, usageEventId });
         return { status: "completed", entityId: delivery.notificationId };
       } catch (error) {
+        if (delivery.channel === "sms" && dependencies.domain.db) await correctAlertSmsUsage(dependencies.domain, { businessId, sourceKey: `alert_sms:notification:${delivery.notificationId}`, segments: 0 }).catch(() => undefined);
         await releaseNotificationDelivery(dependencies.domain, { businessId, notificationId: delivery.notificationId });
         throw error;
       }
@@ -632,9 +691,9 @@ async function indexKnowledgeText(
   return indexed;
 }
 
-function polarCheckoutProductId(target: "starter" | "pro" | "ai_sms", billingInterval: "monthly" | "annual"): string {
-  const key = target === "ai_sms" ? "POLAR_AI_SMS_SETUP_PRODUCT_ID" : `POLAR_${target.toUpperCase()}_${billingInterval.toUpperCase()}_PRODUCT_ID`;
-  const productId = process.env[key] ?? (target === "ai_sms" ? process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID : target === "pro" && billingInterval === "monthly" ? process.env.POLAR_PRO_PRODUCT_ID : undefined);
+function polarCheckoutProductId(target: "starter" | "pro", billingInterval: "monthly" | "annual"): string {
+  const key = `POLAR_${target.toUpperCase()}_${billingInterval.toUpperCase()}_PRODUCT_ID`;
+  const productId = process.env[key] ?? (target === "pro" && billingInterval === "monthly" ? process.env.POLAR_PRO_PRODUCT_ID : undefined);
   if (!productId) throw new Error(`${key} is required for checkout.`);
   return productId;
 }

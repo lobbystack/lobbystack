@@ -82,6 +82,10 @@ const serverEnvSchema = z.object({
   LANGFUSE_HOST: z.string().url().optional(),
   UNIT_ECONOMICS_MONTHLY_CONVEX_COST_USD: z.coerce.number().optional(),
   UNIT_ECONOMICS_MONTHLY_FLY_COST_USD: z.coerce.number().optional(),
+  UNIT_ECONOMICS_MONTHLY_DATABASE_COST_USD: z.coerce.number().optional(),
+  UNIT_ECONOMICS_MONTHLY_HOSTING_COST_USD: z.coerce.number().optional(),
+  UNIT_ECONOMICS_MONTHLY_STORAGE_COST_USD: z.coerce.number().optional(),
+  TWILIO_VOICE_ESTIMATED_COST_PER_MINUTE_USD: z.coerce.number().optional(),
 });
 
 const clientEnvSchema = z.object({

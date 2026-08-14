@@ -4,7 +4,7 @@ Run certification against an isolated Compose or Railway staging environment and
 
 ## Automated Gates
 
-Run `pnpm typecheck`, `pnpm lint`, `pnpm build`, `pnpm test`, `pnpm replacement:drift`, `pnpm replacement:security`, `pnpm replacement:recovery`, `pnpm replacement:performance`, `pnpm replacement:auth`, `pnpm replacement:email-send`, `pnpm replacement:notifications`, `pnpm replacement:phone-onboarding`, `pnpm replacement:smoke`, `pnpm replacement:internal`, `pnpm replacement:storage`, `pnpm replacement:realtime`, `pnpm replacement:webhooks`, `pnpm replacement:telemetry`, `pnpm replacement:privacy`, and `VERIFY_RLS_BEHAVIOR=true pnpm db:verify-rls`. Run the authenticated Playwright suite and Prometheus rule tests from CI.
+Run `pnpm typecheck`, `pnpm lint`, `pnpm build`, `pnpm test`, two consecutive `pnpm db:migrate` runs, `pnpm replacement:parity`, `pnpm replacement:drift`, `pnpm replacement:security`, `pnpm replacement:recovery`, `pnpm replacement:performance`, `pnpm replacement:auth`, `pnpm replacement:email-send`, `pnpm replacement:sms-consent`, `pnpm replacement:feedback`, `pnpm replacement:appointment-audits`, `pnpm replacement:unit-economics`, `pnpm replacement:notifications`, `pnpm replacement:billing`, `pnpm replacement:import-check`, `pnpm replacement:phone-onboarding`, `pnpm replacement:smoke`, `pnpm replacement:internal`, `pnpm replacement:storage`, `pnpm replacement:realtime`, `pnpm replacement:webhooks`, `pnpm replacement:telemetry`, `pnpm replacement:privacy`, and `VERIFY_RLS_BEHAVIOR=true pnpm db:verify-rls`. Run the authenticated Playwright suite and Prometheus rule tests from CI.
 
 ## Recovery and Operations
 
@@ -14,6 +14,17 @@ Verify Redis, worker, collector, admin, and voice-gateway restarts. Perform Post
 
 Using staging credentials, verify signup and SMTP, Google OAuth and reconciliation, Twilio voice booking and cancellation, recordings, inbound and outbound SMS status, Polar billing, knowledge extraction and embeddings, and PostHog traces, logs, metrics, product opt-out, and replay exclusions.
 
+AI-generated SMS, AI-SMS add-on billing, and Twilio A2P registration are excluded. Before production alert or reminder SMS, retain evidence that the configured sender is independently compliant for the target countries and traffic type.
+
+## Migration And Cutover Rehearsal
+
+1. Restore an encrypted production snapshot into a disposable environment with no production provider credentials.
+2. Export the curated Convex tables and run `pnpm replacement:import -- --input=<export.json>` twice.
+3. Run `pnpm replacement:reconciliation -- --source=<export.json>` and retain the JSON output. Any row-count, relationship, aggregate, or sampled-record discrepancy blocks cutover.
+4. Run all automated gates and provider scenarios against staging.
+5. Take a pre-cutover backup, perform the staging traffic switch, verify required workflows no longer call Convex, then execute the documented restore procedure to prove rollback.
+6. Repeat the cutover after rollback and attach import, reconciliation, provider, performance, and rollback logs to the release record.
+
 ## Exit Gate
 
-Certification passes only when RLS and pool-context isolation pass, telemetry contains no customer content, realtime p95 is below 500 ms, ordinary API p95 is below 500 ms excluding providers, voice context p95 is below 300 ms, webhook durable response p95 is below one second, outbox dispatch p95 is below two seconds, restore succeeds, critical alerts are tested, and no critical defects remain.
+Certification passes only when RLS and pool-context isolation pass, telemetry contains no customer content, realtime p95 is below 500 ms, ordinary API p95 is below 500 ms excluding providers, voice context p95 is below 300 ms, webhook durable response p95 is below one second, outbox dispatch p95 is below two seconds, restore succeeds, critical alerts are tested, migration reconciliation has no unexplained differences, staging rollback succeeds, required workflows have no Convex dependency, compliant SMS sender evidence is attached, and no critical defects remain.

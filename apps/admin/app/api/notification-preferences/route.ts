@@ -30,7 +30,7 @@ export async function PUT(request: Request) {
     const dailySummaryEnabled = body.dailySummaryEnabled === true;
     const dailySummarySendTime = typeof body.dailySummarySendTime === "string" && body.dailySummarySendTime ? body.dailySummarySendTime : null;
     if (dailySummaryEnabled && (!dailySummarySendTime || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(dailySummarySendTime))) return NextResponse.json({ error: "A valid daily summary time is required." }, { status: 400 });
-    await setNotificationPreferences(createDomainContext(), { userId: session.user.id, businessId, emailEnabled: body.emailEnabled, smsEnabled: body.smsEnabled, eventPreferences, dailySummaryEnabled, dailySummarySendTime });
+    await setNotificationPreferences(createDomainContext(), { userId: session.user.id, businessId, emailEnabled: body.emailEnabled, smsEnabled: body.smsEnabled, eventPreferences, dailySummaryEnabled, dailySummarySendTime, ...(typeof body.smsConsent === "boolean" ? { smsConsent: body.smsConsent } : {}) });
     return NextResponse.json({ ok: true });
   } catch (error) { return asApiResponse(error); }
 }

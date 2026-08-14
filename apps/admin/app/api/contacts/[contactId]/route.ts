@@ -2,7 +2,9 @@ import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { appointments, calls, contacts, conversations, messages, services, staff } from "@lobbystack/db";
-import { asApiResponse, withOperatorTransaction } from "@/lib/api-helpers";
+import { setContactSmsManualBlock } from "@lobbystack/domain";
+import { asApiResponse, businessIdFromRequest, readJson, requireApiSession, withOperatorTransaction } from "@/lib/api-helpers";
+import { createDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,22 @@ export async function GET(request: Request, context: { params: Promise<{ contact
       const recentAppointments = await tx.select({ id: appointments.id, startsAt: appointments.startsAt, endsAt: appointments.endsAt, timezone: appointments.timezone, status: appointments.status, serviceName: services.name, staffName: staff.name }).from(appointments).innerJoin(services, and(eq(services.id, appointments.serviceId), eq(services.businessId, businessId))).innerJoin(staff, and(eq(staff.id, appointments.staffId), eq(staff.businessId, businessId))).where(and(eq(appointments.businessId, businessId), eq(appointments.contactId, contactId))).orderBy(desc(appointments.startsAt)).limit(25);
       return { contact, calls: recentCalls, messages: recentMessages, appointments: recentAppointments };
     }));
+  } catch (error) {
+    return asApiResponse(error);
+  }
+}
+
+export async function PATCH(request: Request, context: { params: Promise<{ contactId: string }> }) {
+  try {
+    const session = await requireApiSession(request);
+    const businessId = businessIdFromRequest(request);
+    if (!businessId) return NextResponse.json({ error: "A businessId is required." }, { status: 400 });
+    const body = await readJson(request);
+    const blocked = typeof body === "object" && body !== null ? (body as { smsBlocked?: unknown }).smsBlocked : undefined;
+    if (typeof blocked !== "boolean") return NextResponse.json({ error: "smsBlocked must be a boolean." }, { status: 400 });
+    const { contactId } = await context.params;
+    const updated = await setContactSmsManualBlock(createDomainContext(), { userId: session.user.id, businessId, contactId, blocked });
+    return updated ? NextResponse.json({ contactId, smsBlocked: blocked }) : NextResponse.json({ error: "Contact not found." }, { status: 404 });
   } catch (error) {
     return asApiResponse(error);
   }

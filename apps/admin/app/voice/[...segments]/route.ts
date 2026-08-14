@@ -13,7 +13,7 @@ import {
 import {
   appendMessage,
   bookAppointment,
-  consumeAppointmentChangeVerification,
+  cancelAppointmentForCaller,
   createAppointmentChangeVerification,
   findAvailability,
   getOrCreateConversation,
@@ -22,6 +22,7 @@ import {
   recordUsage,
   recordAiGenerationEvent,
   rescheduleAppointmentForCaller,
+  reserveOutboundCallAttempt,
   searchKnowledge,
   setTransferState,
   startCall,
@@ -121,6 +122,7 @@ async function handleVoiceTool(path: string, body: Body) {
       timezone,
       contactPhone: requiredString(body, "contactPhone"),
       sourceChannel: stringValue(body, "channel") ?? "voice",
+      ...(booleanValue(body, "smsConsentGranted") ? { smsConsentGranted: true } : {}),
       ...(contactName !== undefined ? { contactName } : {}),
       ...(preferredStaffId !== undefined ? { preferredStaffId } : {}),
     });
@@ -157,13 +159,8 @@ async function handleVoiceTool(path: string, body: Body) {
     const appointmentId = requiredString(body, "appointmentId");
     const callerPhone = requiredString(body, "callerPhone");
     const verificationId = stringValue(body, "verificationId");
-    if (!verificationId || !await consumeAppointmentChangeVerification(context, { businessId, verificationId, appointmentId, callerPhone, action: "cancel" })) return { ok: false, action: "cancel", reason: "The appointment change verification is required." };
-    const result = await withBusinessTransaction(context.db, { businessId, actorType: "worker" }, async (tx) => {
-      const row = (await tx.select({ id: appointments.id, contactId: appointments.contactId, serviceId: appointments.serviceId, startsAt: appointments.startsAt, endsAt: appointments.endsAt }).from(appointments).innerJoin(contacts, eq(appointments.contactId, contacts.id)).where(and(eq(appointments.id, appointmentId), eq(appointments.businessId, businessId), eq(contacts.phone, callerPhone))).limit(1))[0];
-      if (!row) return null;
-      await tx.update(appointments).set({ status: "canceled", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(eq(appointments.id, appointmentId));
-      return row;
-    });
+    if (!verificationId) return { ok: false, action: "cancel", reason: "The appointment change verification is required." };
+    const result = await cancelAppointmentForCaller(context, { businessId, verificationId, appointmentId, callerPhone });
     if (!result) return { ok: false, action: "cancel", reason: "The appointment could not be verified." };
     return { ok: true, action: "cancel", appointmentId, serviceId: result.serviceId, startsAt: result.startsAt.toISOString(), endsAt: result.endsAt.toISOString(), status: "canceled", calendarSyncState: "pending" };
   }
@@ -173,8 +170,8 @@ async function handleVoiceTool(path: string, body: Body) {
     const appointmentId = requiredString(body, "appointmentId");
     const callerPhone = requiredString(body, "callerPhone");
     const verificationId = stringValue(body, "verificationId");
-    if (!verificationId || !await consumeAppointmentChangeVerification(context, { businessId, verificationId, appointmentId, callerPhone, action: "reschedule" })) return { ok: false, action: "reschedule", reason: "The appointment change verification is required." };
-    const result = await rescheduleAppointmentForCaller(context, { businessId, appointmentId, callerPhone, startsAt: requiredString(body, "startsAt") });
+    if (!verificationId) return { ok: false, action: "reschedule", reason: "The appointment change verification is required." };
+    const result = await rescheduleAppointmentForCaller(context, { businessId, appointmentId, callerPhone, startsAt: requiredString(body, "startsAt"), verificationId });
     if (!result) return { ok: false, action: "reschedule", reason: "The appointment could not be verified." };
     return { ok: true, action: "reschedule", appointmentId, serviceId: result.serviceId, startsAt: result.startsAt.toISOString(), endsAt: result.endsAt.toISOString(), status: "confirmed", calendarSyncState: "pending" };
   }
@@ -273,6 +270,10 @@ export async function POST(request: Request, context: { params: Promise<{ segmen
       const callId = requiredString(body, "callId");
       const businessId = await resolveBusinessByCallId(callId);
       if (!businessId) return new Response("Call not found", { status: 404 });
+      if (path === "call/prepare-transfer") {
+        const reservation = await reserveOutboundCallAttempt(domain, { businessId, sourceKey: `outbound_call:${callId}` });
+        if (!reservation.allowed) return NextResponse.json({ code: reservation.errorCode ?? "outbound_call_attempt_limit_reached", message: "Outbound transfer limit reached." }, { status: 402 });
+      }
       await setTransferState(domain, { businessId, callId, transferState: path === "call/transfer-state" ? requiredString(body, "transferState") : path.endsWith("prepare-transfer") ? "preparing" : "released" });
       return NextResponse.json({ ok: true });
     }

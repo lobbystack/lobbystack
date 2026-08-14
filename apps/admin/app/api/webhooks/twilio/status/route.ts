@@ -17,6 +17,9 @@ export async function POST(request: Request) {
     const valid = await validateTwilioSignature({ authToken: process.env.TWILIO_AUTH_TOKEN, signatureHeader: request.headers.get("x-twilio-signature"), url: process.env.TWILIO_STATUS_CALLBACK_URL ?? request.url, params });
     if (!valid) return new NextResponse("Unauthorized", { status: 401 });
     const body = twilioSmsStatusSchema.parse(params);
+    const providerPrice = body.Price !== undefined && Number.isFinite(Number(body.Price)) ? Number(body.Price) : undefined;
+    const providerPriceUnit = body.PriceUnit?.trim().toLowerCase() || undefined;
+    const providerCostUsd = providerPrice !== undefined && providerPriceUnit === "usd" ? Math.abs(providerPrice) : undefined;
     const providerMessageId = body.MessageSid ?? body.SmsSid;
     if (!providerMessageId) return NextResponse.json({ ok: true });
     const messageId = new URL(request.url).searchParams.get("messageId");
@@ -36,8 +39,8 @@ export async function POST(request: Request) {
     if (!businessId) return NextResponse.json({ ok: true });
     const workerContext = createWorkerDomainContext();
     if (messageId && /^[0-9a-f-]{36}$/i.test(messageId)) await updateSmsDeliveryStatus(workerContext, { businessId, providerMessageId, providerStatus: body.MessageStatus, messageId });
-    else if (notificationId && /^[0-9a-f-]{36}$/i.test(notificationId)) await updateNotificationDeliveryStatus(workerContext, { businessId, notificationId, providerMessageId, providerStatus: body.MessageStatus });
-    else if (operatorDeliveryId && /^[0-9a-f-]{36}$/i.test(operatorDeliveryId)) await updateOperatorNotificationDeliveryStatus(workerContext, { businessId, deliveryId: operatorDeliveryId, providerMessageId, providerStatus: body.MessageStatus });
+    else if (notificationId && /^[0-9a-f-]{36}$/i.test(notificationId)) await updateNotificationDeliveryStatus(workerContext, { businessId, notificationId, providerMessageId, providerStatus: body.MessageStatus, ...(providerPrice !== undefined ? { providerPrice } : {}), ...(providerPriceUnit ? { providerPriceUnit } : {}), ...(providerCostUsd !== undefined ? { providerCostUsd } : {}), ...(body.NumSegments !== undefined ? { providerNumSegments: body.NumSegments } : {}) });
+    else if (operatorDeliveryId && /^[0-9a-f-]{36}$/i.test(operatorDeliveryId)) await updateOperatorNotificationDeliveryStatus(workerContext, { businessId, deliveryId: operatorDeliveryId, providerMessageId, providerStatus: body.MessageStatus, ...(providerPrice !== undefined ? { providerPrice } : {}), ...(providerPriceUnit ? { providerPriceUnit } : {}), ...(providerCostUsd !== undefined ? { providerCostUsd } : {}), ...(body.NumSegments !== undefined ? { providerNumSegments: body.NumSegments } : {}) });
     else await updateSmsDeliveryStatus(workerContext, { businessId, providerMessageId, providerStatus: body.MessageStatus });
     return NextResponse.json({ ok: true });
   } catch {

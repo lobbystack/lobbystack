@@ -48,8 +48,13 @@ Run these checks against the healthy Compose stack:
 - `pnpm replacement:performance` measures concurrent admin, worker, and voice readiness paths against the plan’s 500 ms API and 300 ms voice-context local p95 targets.
 - `pnpm replacement:auth` proves a legacy Lucia Scrypt password is accepted at Better Auth sign-in, rehashed to the tagged replacement format, persisted on both the credential account and user, and still works on a repeated sign-in.
 - `pnpm replacement:email-send` drives the worker `email.send` handler through a live SMTP conversation with an in-process sink, verifying transactional delivery, a stable privacy-safe Message-ID across retries, and no secret leakage.
+- `pnpm replacement:sms-consent` proves contact and operator consent, duplicate webhook idempotency, manual-block preservation, dispatch-time rechecks, cross-tenant denial, and immutable consent history. AI-generated SMS is not part of the replacement backend.
+- `pnpm replacement:parity` enforces the scoped non-UI capability manifest. Required capabilities must name implementation, test, and certification evidence; excluded AI SMS and Twilio A2P patterns are rejected from replacement backend sources.
 - `pnpm replacement:privacy` proves message scrubbing, selective transcript expiry, attachment cleanup, and recording deletion through the transactional outbox and live worker.
-- `pnpm replacement:notifications` proves operator preference persistence, cross-tenant denial, durable outbox-backed delivery, duplicate event safety, production-source delivery for voice messages, paused SMS, failed SMS, calendar sync failures, transfer failures, and AI reply failures, plus idempotent timezone-aware daily summaries.
+- `pnpm replacement:notifications` proves operator preference persistence, cross-tenant denial, durable outbox-backed delivery, duplicate event safety, production-source delivery for voice messages, customer SMS, failed SMS, calendar sync failures, and transfer failures, plus idempotent timezone-aware daily summaries.
+- `pnpm replacement:billing` verifies multi-kind usage, retries, annual accounting, plan snapshots, concurrent reservations, authorization, cap removal, completeness, and shared Starter/Pro overage caps.
+- `pnpm replacement:feedback`, `pnpm replacement:appointment-audits`, and `pnpm replacement:unit-economics` certify the remaining restored backend capabilities.
+- `pnpm replacement:import-check` imports a representative legacy bundle twice and requires row-count, relationship, aggregate-total, and sample reconciliation to pass.
 - `pnpm replacement:phone-onboarding` proves durable verification, signed number offers, idempotent onboarding and replacement claims, purchase-before-retirement replacement, the 30-day retirement window, provider-SID-safe reclaim, cooldown enforcement, approval, and verified-phone reuse.
 - `VERIFY_RLS_BEHAVIOR=true pnpm db:verify-rls` verifies forced RLS, tenant isolation, and database actor-role spoofing protection.
 
@@ -69,6 +74,10 @@ Railway should run separate `admin`, `worker`, `voice-gateway`, `postgres`, `red
 
 Build runtime images with `SERVICE_VERSION` set to the deployed Git SHA. Keep staging at `OTEL_TRACE_SAMPLING_PERCENTAGE=100`. In production, use a lower baseline percentage; failed traces, traces slower than 500 ms, and voice-gateway traces are retained by the collector independently of that baseline.
 
-Production migration, data import, traffic cutover, DNS changes, and Convex shutdown are intentionally outside this stack.
+Production traffic cutover, DNS changes, and Convex shutdown remain operator-controlled actions. Import and reconciliation tooling is included but must first be run against a disposable restored production snapshot and rollback-tested staging environment.
+
+The replacement stack implements non-AI usage metering for voice seconds, alert/reminder SMS segments, and outbound transfer attempts, including shared overage caps for Starter and Pro. Dashboard feedback delivery and appointment-change audit events are persisted through PostgreSQL and the transactional outbox. Run `pnpm replacement:import -- --input=<convex-export.json>` for an idempotent import and `pnpm replacement:reconciliation -- --source=<convex-export.json>` for the required report.
+
+Configure separate Polar meter IDs with `POLAR_VOICE_USAGE_METER_ID`, `POLAR_ALERT_SMS_USAGE_METER_ID`, and `POLAR_OUTBOUND_ATTEMPTS_USAGE_METER_ID`. `POLAR_USAGE_METER_ID` remains a fallback for existing deployments.
 
 Use `docs/deployment/railway.md` for Railway service configuration, `docs/operations/backup-restore.md` for recovery, `docs/operations/alerts.md` for critical alert response, and `docs/validation/certification-runbook.md` for the staging exit gate.

@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 
 import { businessMemberships, businesses, calendarConnections, calls, contacts, conversations, createDatabaseClient, messages, operatorNotificationDeliveries, outboxMessages, users, withBusinessTransaction } from "@lobbystack/db";
-import { appendMessage, claimOperatorNotificationDelivery, claimSmsDelivery, defaultOperatorNotificationEventPreferences, generateAndQueueSmsReply, getNotificationPreferences, loadOperatorNotificationDelivery, markCalendarConnectionSync, markOperatorNotificationSent, markSmsSent, queueDailyOperatorSummaries, queueOperatorAlert, receiveInboundSms, setNotificationPreferences, setTransferState, updateSmsDeliveryStatus } from "@lobbystack/domain";
+import { appendMessage, claimOperatorNotificationDelivery, claimSmsDelivery, defaultOperatorNotificationEventPreferences, getNotificationPreferences, loadOperatorNotificationDelivery, markCalendarConnectionSync, markOperatorNotificationSent, markSmsSent, queueDailyOperatorSummaries, queueOperatorAlert, receiveInboundSms, setNotificationPreferences, setTransferState, updateSmsDeliveryStatus } from "@lobbystack/domain";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -51,7 +51,7 @@ async function main(): Promise<void> {
     events.calendarSync.email = true;
     await setNotificationPreferences({ db: app.db }, { userId: ownerId, businessId, emailEnabled: true, smsEnabled: false, eventPreferences: events, dailySummaryEnabled: true, dailySummarySendTime: "09:30" });
     const fixtures = await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async (tx) => {
-      const contact = (await tx.insert(contacts).values({ businessId, phone: "+14165550101" }).returning({ id: contacts.id }))[0]!;
+      const contact = (await tx.insert(contacts).values({ businessId, phone: "+14165550101", smsConsentStatus: "subscribed" }).returning({ id: contacts.id }))[0]!;
       const conversation = (await tx.insert(conversations).values({ businessId, contactId: contact.id, channel: "sms", status: "open", automationState: "human_handoff" }).returning({ id: conversations.id }))[0]!;
       const outbound = (await tx.insert(messages).values({ businessId, conversationId: conversation.id, direction: "outbound", channel: "sms", body: "Certification message", providerMessageId: `SM-${randomUUID()}`, status: "sent" }).returning({ id: messages.id, providerMessageId: messages.providerMessageId }))[0]!;
       const staleOutbound = (await tx.insert(messages).values({ businessId, conversationId: conversation.id, direction: "outbound", channel: "sms", body: "Stale lease certification", status: "sending", updatedAt: new Date(Date.now() - 11 * 60_000) }).returning({ id: messages.id }))[0]!;
@@ -70,12 +70,8 @@ async function main(): Promise<void> {
     assert(callbackFirstState?.status === "delivered" && callbackFirstState.providerMessageId === "SM-callback-first", "Callback-first SMS status was regressed by the send response.");
     await markCalendarConnectionSync({ db: worker.db }, { businessId, connectionId: fixtures.calendarId, error: "Certification failure" });
     await setTransferState({ db: worker.db }, { businessId, callId: fixtures.callId, transferState: "failed" });
-    await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async (tx) => { await tx.update(conversations).set({ automationState: "ai_active" }).where(and(eq(conversations.id, fixtures.conversationId), eq(conversations.businessId, businessId))); });
-    let aiFailurePropagated = false;
-    try { await generateAndQueueSmsReply({ db: worker.db }, { businessId, messageId: paused.messageId }, { generateReply: async () => { throw new Error("Certification AI failure"); } }); } catch { aiFailurePropagated = true; }
-    assert(aiFailurePropagated, "AI reply generation failure did not propagate for retry.");
     const sourceDeliveries = await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async (tx) => await tx.select({ eventKind: operatorNotificationDeliveries.eventKind, eventKey: operatorNotificationDeliveries.eventKey }).from(operatorNotificationDeliveries).where(eq(operatorNotificationDeliveries.businessId, businessId)));
-    for (const eventKind of ["voiceMessage", "pausedSms", "smsFailed", "calendarSync", "transferFailed", "aiReplyFailed"]) assert(sourceDeliveries.some((delivery) => delivery.eventKind === eventKind), `${eventKind} source did not create an operator delivery.`);
+    for (const eventKind of ["voiceMessage", "pausedSms", "smsFailed", "calendarSync", "transferFailed"]) assert(sourceDeliveries.some((delivery) => delivery.eventKind === eventKind), `${eventKind} source did not create an operator delivery.`);
     assert(sourceDeliveries.every((delivery) => !delivery.eventKey.includes("Certification message") && !delivery.eventKey.includes("Paused SMS certification")), "Operator event keys contained customer content.");
     const summaryNow = new Date(Date.now() + 24 * 60 * 60_000);
     summaryNow.setUTCHours(9, 30, 0, 0);

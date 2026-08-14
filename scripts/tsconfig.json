@@ -1,0 +1,18 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": [
+    "./replacement-appointment-audit-check.ts",
+    "./replacement-billing-check.ts",
+    "./replacement-feedback-check.ts",
+    "./replacement-import-check.ts",
+    "./replacement-import.ts",
+    "./replacement-parity-check.ts",
+    "./replacement-reconciliation.ts",
+    "./replacement-sms-consent-check.ts",
+    "./replacement-unit-economics-check.ts"
+  ]
+}

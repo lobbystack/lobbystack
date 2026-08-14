@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   validate:
@@ -53,14 +54,26 @@ jobs:
       - name: Initialize replacement runtime roles
         run: PGPASSWORD=lobbystack PGHOST=127.0.0.1 PGPORT=5432 POSTGRES_USER=postgres POSTGRES_DB=lobbystack bash docker/postgres/init/roles.sh
       - run: pnpm db:migrate
+      - name: Verify migration rerun safety
+        run: pnpm db:migrate
       - run: pnpm db:check
       - run: pnpm db:verify-rls
       - run: pnpm db:seed
       - run: pnpm replacement:inventory
+      - run: pnpm replacement:parity
       - run: pnpm replacement:drift
       - run: pnpm replacement:security
       - run: pnpm replacement:recovery
       - run: pnpm replacement:notifications
+      - run: pnpm replacement:billing
+      - run: pnpm replacement:auth
+      - run: pnpm replacement:email-send
+      - run: pnpm replacement:sms-consent
+      - run: pnpm replacement:feedback
+      - run: pnpm replacement:appointment-audits
+      - run: pnpm replacement:unit-economics
+      - run: pnpm replacement:import-check
+      - run: pnpm replacement:reconciliation
       - run: pnpm replacement:phone-onboarding
       - run: pnpm --filter @lobbystack/contracts typecheck
       - run: pnpm --filter @lobbystack/jobs typecheck
@@ -170,3 +183,52 @@ jobs:
           docker run --rm --entrypoint promtool -v "$PWD/docker/prometheus:/etc/prometheus:ro" prom/prometheus:v3.2.1 check config /etc/prometheus/prometheus.yml
           docker run --rm --entrypoint promtool -v "$PWD/docker/prometheus:/etc/prometheus:ro" prom/prometheus:v3.2.1 test rules /etc/prometheus/tests/alerts.test.yml
       - run: docker compose --env-file .env.replacement.example -f docker-compose.replacement.yml config --quiet
+
+  staging-provider-certification:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: replacement-staging
+    env:
+      ADMIN_BASE_URL: ${{ secrets.REPLACEMENT_ADMIN_BASE_URL }}
+      WORKER_BASE_URL: ${{ secrets.REPLACEMENT_WORKER_BASE_URL }}
+      VOICE_BASE_URL: ${{ secrets.REPLACEMENT_VOICE_BASE_URL }}
+      DATABASE_URL: ${{ secrets.REPLACEMENT_DATABASE_URL }}
+      REPLACEMENT_MIGRATOR_DATABASE_URL: ${{ secrets.REPLACEMENT_DATABASE_URL }}
+      REPLACEMENT_APP_DATABASE_URL: ${{ secrets.REPLACEMENT_APP_DATABASE_URL }}
+      REDIS_URL: ${{ secrets.REPLACEMENT_REDIS_URL }}
+      REPLACEMENT_REDIS_HOST: ${{ secrets.REPLACEMENT_REDIS_HOST }}
+      REDIS_PORT: ${{ secrets.REPLACEMENT_REDIS_PORT }}
+      REPLACEMENT_S3_ENDPOINT: ${{ secrets.REPLACEMENT_S3_ENDPOINT }}
+      S3_BUCKET: ${{ secrets.REPLACEMENT_S3_BUCKET }}
+      S3_ACCESS_KEY_ID: ${{ secrets.REPLACEMENT_S3_ACCESS_KEY_ID }}
+      S3_SECRET_ACCESS_KEY: ${{ secrets.REPLACEMENT_S3_SECRET_ACCESS_KEY }}
+      POLAR_WEBHOOK_SECRET: ${{ secrets.REPLACEMENT_POLAR_WEBHOOK_SECRET }}
+      TWILIO_AUTH_TOKEN: ${{ secrets.REPLACEMENT_TWILIO_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run staging certification
+        run: |
+          mkdir -p certification-results
+          pnpm replacement:performance 2>&1 | tee certification-results/performance.log
+          pnpm replacement:storage 2>&1 | tee certification-results/storage.log
+          pnpm replacement:realtime 2>&1 | tee certification-results/realtime.log
+          pnpm replacement:webhooks 2>&1 | tee certification-results/webhooks.log
+          pnpm replacement:privacy 2>&1 | tee certification-results/privacy.log
+          pnpm replacement:smoke 2>&1 | tee certification-results/smoke.log
+          pnpm replacement:internal 2>&1 | tee certification-results/internal.log
+      - name: Retain certification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: replacement-staging-certification-${{ github.sha }}
+          path: certification-results
+          retention-days: 90

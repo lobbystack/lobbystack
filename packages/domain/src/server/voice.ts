@@ -1,11 +1,13 @@
 import { and, eq, sql } from "drizzle-orm";
 
-import { calls, contacts, conversations, conversationSessions, enqueueOutbox, messages, transcripts, withBusinessTransaction } from "@lobbystack/db";
+import { calls, contacts, conversations, conversationSessions, enqueueOutbox, transcripts, withBusinessTransaction } from "@lobbystack/db";
 import { isTerminalTwilioCallStatus } from "@lobbystack/shared";
 
 import type { DomainContext } from "./context";
 import { queueOperatorAlertInTransaction } from "./notifications";
-import { finalizeWebVoiceUsageInTransaction, normalizeWebCallMaxDurationMs, reserveWebVoiceUsageInTransaction } from "./billing";
+import { applyNonAiUsageInTransaction, finalizeWebVoiceUsageInTransaction, normalizeWebCallMaxDurationMs, reserveWebVoiceUsageInTransaction } from "./billing";
+import { enqueueUsageSyncInTransaction } from "./usage";
+import { recordUnitEconomicsEventInTransaction } from "./unitEconomics";
 
 export async function startCall(
   context: DomainContext,
@@ -56,6 +58,7 @@ export async function startCall(
       ...(input.sessionPurpose !== undefined ? { sessionPurpose: input.sessionPurpose } : {}),
       ...(input.prospectDemoId !== undefined ? { prospectDemoId: input.prospectDemoId } : {}),
       ...(input.transport === "web_voice" ? { webCallMaxDurationMs: normalizeWebCallMaxDurationMs(input.maxDurationMs) } : {}),
+      ...(input.billable === false ? { billingExcluded: true } : {}),
       ...(blocked ? { status: "blocked", disposition: "blocked_contact" } : {}),
       ...(input.gatewaySessionId !== undefined ? { gatewaySessionId: input.gatewaySessionId } : {}),
       startedAt: new Date(input.startedAt ?? Date.now()),
@@ -64,16 +67,26 @@ export async function startCall(
       throw new Error("Call could not be persisted.");
     }
     let webCallMaxDurationMs = input.transport === "web_voice" ? normalizeWebCallMaxDurationMs(input.maxDurationMs) : undefined;
-    if (input.transport === "web_voice" && input.billable !== false) {
-      const allowance = await reserveWebVoiceUsageInTransaction(tx, { businessId: input.businessId, callId, ...(input.maxDurationMs !== undefined ? { maxDurationMs: input.maxDurationMs } : {}) });
-      if (!allowance.allowed) {
-        const error = new Error(allowance.errorCode ?? "voice_limit_reached") as Error & { status: number; code: string };
-        error.status = 402;
-        error.code = allowance.errorCode ?? "voice_limit_reached";
-        throw error;
+    if (input.billable !== false) {
+      if (input.transport === "web_voice") {
+        const allowance = await reserveWebVoiceUsageInTransaction(tx, { businessId: input.businessId, callId, ...(input.maxDurationMs !== undefined ? { maxDurationMs: input.maxDurationMs } : {}) });
+        if (!allowance.allowed) {
+          const error = new Error(allowance.errorCode ?? "voice_limit_reached") as Error & { status: number; code: string };
+          error.status = 402;
+          error.code = allowance.errorCode ?? "voice_limit_reached";
+          throw error;
+        }
+        webCallMaxDurationMs = allowance.maxDurationMs;
+        await tx.update(calls).set({ webCallMaxDurationMs, updatedAt: new Date() }).where(and(eq(calls.id, callId), eq(calls.businessId, input.businessId)));
+      } else {
+        const allowance = await applyNonAiUsageInTransaction(tx, { operation: "reserve", businessId: input.businessId, usageKind: "voice_seconds", sourceKey: `voice:${callId}` });
+        if (!allowance.allowed) {
+          const error = new Error(allowance.errorCode ?? "voice_limit_reached") as Error & { status: number; code: string };
+          error.status = 402;
+          error.code = allowance.errorCode ?? "voice_limit_reached";
+          throw error;
+        }
       }
-      webCallMaxDurationMs = allowance.maxDurationMs;
-      await tx.update(calls).set({ webCallMaxDurationMs, updatedAt: new Date() }).where(and(eq(calls.id, callId), eq(calls.businessId, input.businessId)));
     }
     await tx.insert(conversationSessions).values({
       businessId: input.businessId,
@@ -146,13 +159,19 @@ export async function completeCall(
       ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}),
       revision: sql`${calls.revision} + 1`,
       updatedAt: new Date(),
-    }).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId))).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, startedAt: calls.startedAt });
+    }).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId))).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, startedAt: calls.startedAt, billingExcluded: calls.billingExcluded });
     if (!call) {
       return;
     }
-    if (call.transport === "web_voice") {
+    if (call.billingExcluded) {
+      // Prospect demos and other explicitly non-billable calls never create usage.
+    } else if (call.transport === "web_voice") {
       const durationSeconds = input.providerDurationSeconds ?? Math.max(0, (new Date(input.endedAt).getTime() - call.startedAt.getTime()) / 1_000);
       await finalizeWebVoiceUsageInTransaction(tx, { businessId: input.businessId, callId: call.id, durationSeconds });
+    } else {
+      const durationSeconds = input.providerDurationSeconds ?? Math.max(0, (new Date(input.endedAt).getTime() - call.startedAt.getTime()) / 1_000);
+      const usageEventId = await applyNonAiUsageInTransaction(tx, { operation: "correct", businessId: input.businessId, sourceKey: `voice:${call.id}`, usageKind: "voice_seconds", quantity: durationSeconds });
+      await enqueueUsageSyncInTransaction(tx, { businessId: input.businessId, usageEventId });
     }
     await enqueueOutbox(tx, {
       topic: "realtime.publish",
@@ -198,12 +217,16 @@ export async function reconcileCallStatus(
   input: { businessId: string; providerCallId: string; status: string; providerDurationSeconds?: number; providerUpdatedAt: string },
 ): Promise<{ ignored: boolean; callId?: string }> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const [call] = await tx.update(calls).set({ status: input.status, ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}), updatedAt: new Date(input.providerUpdatedAt), revision: sql`${calls.revision} + 1` }).where(and(eq(calls.businessId, input.businessId), eq(calls.providerCallId, input.providerCallId))).returning({ id: calls.id, revision: calls.revision });
+    const [call] = await tx.update(calls).set({ status: input.status, ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}), updatedAt: new Date(input.providerUpdatedAt), revision: sql`${calls.revision} + 1` }).where(and(eq(calls.businessId, input.businessId), eq(calls.providerCallId, input.providerCallId))).returning({ id: calls.id, revision: calls.revision, providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt });
     if (!call) {
       return { ignored: true };
     }
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "call", aggregateId: call.id, dedupeKey: `call:${call.id}:provider-status:${call.revision}`, payload: { type: "call.updated", entityId: call.id, revision: call.revision } });
     if (isTerminalTwilioCallStatus(input.status)) {
+      const estimatedRate = Number(process.env.TWILIO_VOICE_ESTIMATED_COST_PER_MINUTE_USD ?? "0");
+      if (Number.isFinite(estimatedRate) && estimatedRate > 0 && call.providerDurationSeconds !== null) {
+        await recordUnitEconomicsEventInTransaction(tx, { businessId: input.businessId, eventKey: `voice_provider:${call.id}`, eventKind: "voice_provider", channel: "voice", costUsd: call.providerDurationSeconds / 60 * estimatedRate, occurredAt: call.startedAt, quantity: call.providerDurationSeconds, quantityUnit: "second", provider: "twilio_estimate", callId: call.id });
+      }
       await enqueueOutbox(tx, { topic: "call.syncPrice", businessId: input.businessId, aggregateType: "call", aggregateId: call.id, dedupeKey: `call:${call.id}:price:${input.status.trim().toLowerCase()}`, payload: { providerCallId: input.providerCallId, providerCallStatus: input.status } });
     }
     return { ignored: false, callId: call.id };
@@ -222,8 +245,9 @@ export async function recordCallProviderPricing(
       ...(input.providerCostUsd !== undefined ? { providerCostUsd: input.providerCostUsd } : {}),
       revision: sql`${calls.revision} + 1`,
       updatedAt: new Date(),
-    }).where(and(eq(calls.businessId, input.businessId), eq(calls.providerCallId, input.providerCallId))).returning({ id: calls.id, revision: calls.revision });
+    }).where(and(eq(calls.businessId, input.businessId), eq(calls.providerCallId, input.providerCallId))).returning({ id: calls.id, revision: calls.revision, providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt });
     if (!call) return false;
+    if (input.providerCostUsd !== undefined) await recordUnitEconomicsEventInTransaction(tx, { businessId: input.businessId, eventKey: `voice_provider:${call.id}`, eventKind: "voice_provider", channel: "voice", costUsd: input.providerCostUsd, occurredAt: call.startedAt, ...(call.providerDurationSeconds !== null ? { quantity: call.providerDurationSeconds } : {}), quantityUnit: "second", provider: "twilio", callId: call.id });
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "call", aggregateId: call.id, dedupeKey: `call:${call.id}:pricing:${call.revision}`, payload: { type: "call.updated", entityId: call.id, revision: call.revision } });
     return true;
   });

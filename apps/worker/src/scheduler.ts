@@ -11,6 +11,7 @@ export async function configureSchedulers(
     { queue: "maintenance", name: "phone-number-reclaim", type: "phoneNumber.reclaim", every: 60 * 60_000 },
     { queue: "maintenance", name: "operator-daily-summary", type: "notification.dailySummary", every: 60_000 },
     { queue: "maintenance", name: "telemetry-flush", type: "telemetry.flush", every: 60_000 },
+    { queue: "maintenance", name: "unit-economics-rollup", type: "billing.refreshUnitEconomics", every: 60 * 60_000 },
   ];
   const payoutQueue = queues.get("maintenance");
   if (payoutQueue) {

@@ -6,6 +6,7 @@ import { businesses, productEvents, withBusinessTransaction } from "@lobbystack/
 
 import { buildPostHogAiGenerationProperties, redactTelemetryProperties, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 import type { DomainContext } from "./context";
+import { recordUnitEconomicsEvent } from "./unitEconomics";
 
 export async function recordProductEvent(
   context: DomainContext,
@@ -47,13 +48,14 @@ export async function recordAiGenerationEvent(
     traceId?: string | undefined;
   },
 ): Promise<string | null> {
-  return await recordProductEvent(context, {
+  const traceId = input.traceId ?? randomUUID();
+  const eventId = await recordProductEvent(context, {
     name: "$ai_generation",
     distinctId: input.businessId,
     businessId: input.businessId,
     actorType: "worker",
     properties: buildPostHogAiGenerationProperties({
-      traceId: input.traceId ?? randomUUID(),
+      traceId,
       provider: input.provider,
       model: input.model,
       latencyMs: input.latencyMs,
@@ -71,6 +73,25 @@ export async function recordAiGenerationEvent(
       properties: { operation: input.operation },
     }),
   });
+  if (input.totalCostUsd !== undefined && Number.isFinite(input.totalCostUsd) && input.totalCostUsd >= 0 && !input.operation.startsWith("sms.")) {
+    const channel = input.operation.startsWith("sms.") ? "sms" : input.operation.startsWith("voice.") ? "voice" : "dashboard";
+    await recordUnitEconomicsEvent(context, {
+      businessId: input.businessId,
+      eventKey: `ai_generation:${traceId}`,
+      eventKind: `${channel}_ai`,
+      channel,
+      costUsd: input.totalCostUsd,
+      quantity: 1,
+      quantityUnit: "generation",
+      provider: input.provider,
+      model: input.model,
+      operation: input.operation,
+      ...(input.callId !== undefined ? { callId: input.callId } : {}),
+      ...(input.conversationId !== undefined ? { conversationId: input.conversationId } : {}),
+      ...(input.messageId !== undefined ? { messageId: input.messageId } : {}),
+    });
+  }
+  return eventId;
 }
 
 export async function loadPendingProductEvents(

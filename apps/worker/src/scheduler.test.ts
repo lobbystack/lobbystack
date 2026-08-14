@@ -15,9 +15,9 @@ describe("worker schedulers", () => {
 
     await configureSchedulers(queues as never, ["business-a", "business-b"]);
 
-    expect(upsertJobScheduler).toHaveBeenCalledTimes(14);
+    expect(upsertJobScheduler).toHaveBeenCalledTimes(16);
     const tenantCalls = upsertJobScheduler.mock.calls.filter((call) => call[2].data.businessId !== null);
-    expect(tenantCalls).toHaveLength(12);
+    expect(tenantCalls).toHaveLength(14);
     for (const call of tenantCalls) {
       expect(call[2].data.businessId).toMatch(/^business-[ab]$/);
       expect(call[2].data.businessId).not.toBeNull();

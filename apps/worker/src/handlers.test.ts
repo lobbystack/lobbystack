@@ -268,7 +268,10 @@ describe("worker handlers", () => {
     vi.mocked(loadBillingUsageEvent).mockResolvedValue({
       id: String(job.payload.usageEventId),
       businessId: job.businessId!,
+      usageKind: "alert_sms_segments",
       quantity: 2,
+      billableQuantity: null,
+      billingIntervalAtRecordTime: null,
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       syncStatus: "pending",
       billingKey: "business-key",

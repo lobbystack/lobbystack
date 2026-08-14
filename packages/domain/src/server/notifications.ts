@@ -1,11 +1,14 @@
 import { and, eq, gte, inArray, lte, lt, or, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
-import { mapTwilioStatusToNotificationStatus, shouldApplyNotificationStatusTransition } from "@lobbystack/shared";
+import { isTerminalTwilioMessageStatus, mapTwilioStatusToNotificationStatus, shouldApplyNotificationStatusTransition } from "@lobbystack/shared";
 
-import { appointments, businesses, contacts, enqueueOutbox, notifications, operatorNotificationDeliveries, operatorNotificationPreferences, phoneNumbers, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, businesses, contacts, enqueueOutbox, notifications, operatorNotificationDeliveries, operatorNotificationPreferences, phoneNumbers, services, smsConsentEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
+import { enqueueUsageSyncInTransaction } from "./usage";
+import { applyNonAiUsageInTransaction } from "./billing";
+import { recordUnitEconomicsEventInTransaction } from "./unitEconomics";
 
 export async function scheduleNotification(
   context: DomainContext,
@@ -128,6 +131,7 @@ export async function resolveNotificationDelivery(
       contactEmail: contacts.email,
       contactLocale: contacts.preferredLocale,
       smsConsentStatus: contacts.smsConsentStatus,
+      operatorBlockedAt: contacts.operatorBlockedAt,
       senderPhone: phoneNumbers.e164,
     })
       .from(notifications)
@@ -152,7 +156,7 @@ export async function resolveNotificationDelivery(
     if (row.channel !== "sms" && row.channel !== "email") {
       return { kind: "skipped", notificationId: row.notificationId };
     }
-    if (row.channel === "sms" && (row.smsConsentStatus !== "subscribed" || !row.senderPhone || !row.contactPhone)) {
+    if (row.channel === "sms" && (row.smsConsentStatus !== "subscribed" || row.operatorBlockedAt !== null || !row.senderPhone || !row.contactPhone)) {
       return { kind: "skipped", notificationId: row.notificationId };
     }
     if (row.channel === "email" && !row.contactEmail) {
@@ -194,13 +198,21 @@ export async function markNotificationSent(
   });
 }
 
-export async function updateNotificationDeliveryStatus(context: DomainContext, input: { businessId: string; notificationId: string; providerMessageId: string; providerStatus: string }): Promise<boolean> {
+export async function updateNotificationDeliveryStatus(context: DomainContext, input: { businessId: string; notificationId: string; providerMessageId: string; providerStatus: string; providerPrice?: number; providerPriceUnit?: string; providerCostUsd?: number; providerNumSegments?: number }): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const current = (await tx.select({ status: notifications.status, providerMessageId: notifications.providerMessageId }).from(notifications).where(and(eq(notifications.id, input.notificationId), eq(notifications.businessId, input.businessId))).limit(1))[0];
+    const current = (await tx.select({ status: notifications.status, providerMessageId: notifications.providerMessageId, channel: notifications.channel, createdAt: notifications.createdAt }).from(notifications).where(and(eq(notifications.id, input.notificationId), eq(notifications.businessId, input.businessId))).limit(1))[0];
     if (!current) return false;
     const nextStatus = mapTwilioStatusToNotificationStatus(input.providerStatus);
-    if (!shouldApplyNotificationStatusTransition(current.status, nextStatus)) return false;
-    await tx.update(notifications).set({ ...(current.providerMessageId ? {} : { providerMessageId: input.providerMessageId }), status: nextStatus, updatedAt: new Date() }).where(and(eq(notifications.id, input.notificationId), eq(notifications.businessId, input.businessId)));
+    const applyStatus = shouldApplyNotificationStatusTransition(current.status, nextStatus);
+    const hasProviderPricing = input.providerPrice !== undefined || input.providerPriceUnit !== undefined || input.providerCostUsd !== undefined || input.providerNumSegments !== undefined;
+    if (!applyStatus && !hasProviderPricing) return false;
+    await tx.update(notifications).set({ ...(current.providerMessageId ? {} : { providerMessageId: input.providerMessageId }), ...(input.providerPrice !== undefined ? { providerPrice: input.providerPrice } : {}), ...(input.providerPriceUnit !== undefined ? { providerPriceUnit: input.providerPriceUnit } : {}), ...(input.providerCostUsd !== undefined ? { providerCostUsd: input.providerCostUsd } : {}), ...(input.providerNumSegments !== undefined ? { providerNumSegments: input.providerNumSegments } : {}), ...(applyStatus ? { status: nextStatus } : {}), updatedAt: new Date() }).where(and(eq(notifications.id, input.notificationId), eq(notifications.businessId, input.businessId)));
+    if (current.channel === "sms" && input.providerNumSegments !== undefined) {
+      const usageEventId = await applyNonAiUsageInTransaction(tx, { operation: "correct", businessId: input.businessId, sourceKey: `alert_sms:notification:${input.notificationId}`, usageKind: "alert_sms_segments", quantity: input.providerNumSegments, recordedAt: new Date() });
+      await enqueueUsageSyncInTransaction(tx, { businessId: input.businessId, usageEventId });
+    }
+    if (current.channel === "sms" && isTerminalTwilioMessageStatus(input.providerStatus) && (input.providerCostUsd === undefined || input.providerNumSegments === undefined)) await enqueueOutbox(tx, { topic: "sms.syncPrice", businessId: input.businessId, aggregateType: "notification", aggregateId: input.notificationId, dedupeKey: `notification:${input.notificationId}:price:${input.providerStatus.trim().toLowerCase()}`, payload: { notificationId: input.notificationId, providerMessageId: input.providerMessageId, providerStatus: input.providerStatus } });
+    if (input.providerCostUsd !== undefined) await recordUnitEconomicsEventInTransaction(tx, { businessId: input.businessId, eventKey: `notification_provider:${input.notificationId}`, eventKind: "notification_provider", channel: current.channel, costUsd: input.providerCostUsd, occurredAt: current.createdAt, ...(input.providerNumSegments !== undefined ? { quantity: input.providerNumSegments, quantityUnit: "segment" } : {}), provider: "twilio", notificationId: input.notificationId });
     return true;
   });
 }
@@ -237,7 +249,7 @@ export async function releaseNotificationDelivery(
 
 export async function setNotificationPreferences(
   context: DomainContext,
-  input: { userId: string; businessId: string; emailEnabled: boolean; smsEnabled: boolean; eventPreferences: OperatorNotificationEventPreferences; dailySummaryEnabled?: boolean; dailySummarySendTime?: string | null },
+  input: { userId: string; businessId: string; emailEnabled: boolean; smsEnabled: boolean; eventPreferences: OperatorNotificationEventPreferences; dailySummaryEnabled?: boolean; dailySummarySendTime?: string | null; smsConsent?: boolean },
 ): Promise<void> {
   assertDailySummaryTime(input.dailySummarySendTime);
   if (input.dailySummaryEnabled && !input.dailySummarySendTime) {
@@ -245,6 +257,10 @@ export async function setNotificationPreferences(
   }
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
+    const currentUser = (await tx.select({ phone: users.phone }).from(users).where(eq(users.id, input.userId)).limit(1))[0];
+    const previous = (await tx.select({ smsConsentGrantedAt: operatorNotificationPreferences.smsConsentGrantedAt, smsConsentRevokedAt: operatorNotificationPreferences.smsConsentRevokedAt }).from(operatorNotificationPreferences).where(and(eq(operatorNotificationPreferences.businessId, input.businessId), eq(operatorNotificationPreferences.userId, input.userId))).limit(1))[0];
+    const consentChanged = input.smsConsent !== undefined && Boolean(input.smsConsent) !== Boolean(previous?.smsConsentGrantedAt && (!previous.smsConsentRevokedAt || previous.smsConsentGrantedAt > previous.smsConsentRevokedAt));
+    const consentNow = input.smsConsent === true ? new Date() : input.smsConsent === false ? new Date() : undefined;
     await tx.insert(operatorNotificationPreferences).values({
       businessId: input.businessId,
       userId: input.userId,
@@ -253,10 +269,14 @@ export async function setNotificationPreferences(
       eventPreferences: input.eventPreferences,
       dailySummaryEnabled: input.dailySummaryEnabled ?? false,
       dailySummarySendTime: input.dailySummarySendTime ?? null,
+      ...(input.smsConsent === true ? { smsConsentGrantedAt: consentNow } : {}),
+      ...(input.smsConsent === false ? { smsConsentRevokedAt: consentNow } : {}),
+      ...(input.smsConsent !== undefined ? { smsConsentSource: "operator_settings" } : {}),
     }).onConflictDoUpdate({
       target: [operatorNotificationPreferences.businessId, operatorNotificationPreferences.userId],
-      set: { emailEnabled: input.emailEnabled, smsEnabled: input.smsEnabled, eventPreferences: input.eventPreferences, dailySummaryEnabled: input.dailySummaryEnabled ?? false, dailySummarySendTime: input.dailySummarySendTime ?? null, updatedAt: new Date() },
+      set: { emailEnabled: input.emailEnabled, smsEnabled: input.smsEnabled, eventPreferences: input.eventPreferences, dailySummaryEnabled: input.dailySummaryEnabled ?? false, dailySummarySendTime: input.dailySummarySendTime ?? null, ...(input.smsConsent === true ? { smsConsentGrantedAt: consentNow, smsConsentRevokedAt: null } : {}), ...(input.smsConsent === false ? { smsConsentRevokedAt: consentNow } : {}), ...(input.smsConsent !== undefined ? { smsConsentSource: "operator_settings" } : {}), updatedAt: new Date() },
     });
+    if (consentChanged && consentNow && currentUser?.phone) await tx.insert(smsConsentEvents).values({ businessId: input.businessId, phone: currentUser.phone, recipientType: "operator", action: input.smsConsent ? "operator_alert_consent_granted" : "operator_alert_consent_revoked", source: "operator_settings" });
   });
 }
 
@@ -295,11 +315,11 @@ function buildDailySummary(input: { businessName: string; date: string; counts: 
   };
 }
 
-export async function getNotificationPreferences(context: DomainContext, input: { userId: string; businessId: string }): Promise<{ emailEnabled: boolean; smsEnabled: boolean; eventPreferences: OperatorNotificationEventPreferences; dailySummaryEnabled: boolean; dailySummarySendTime: string | null }> {
+export async function getNotificationPreferences(context: DomainContext, input: { userId: string; businessId: string }): Promise<{ emailEnabled: boolean; smsEnabled: boolean; smsConsent: boolean; eventPreferences: OperatorNotificationEventPreferences; dailySummaryEnabled: boolean; dailySummarySendTime: string | null }> {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
     const row = (await tx.select().from(operatorNotificationPreferences).where(and(eq(operatorNotificationPreferences.businessId, input.businessId), eq(operatorNotificationPreferences.userId, input.userId))).limit(1))[0];
-    return row ? { emailEnabled: row.emailEnabled, smsEnabled: row.smsEnabled, eventPreferences: { ...defaultOperatorNotificationEventPreferences(), ...row.eventPreferences } as OperatorNotificationEventPreferences, dailySummaryEnabled: row.dailySummaryEnabled, dailySummarySendTime: row.dailySummarySendTime } : { emailEnabled: true, smsEnabled: false, eventPreferences: defaultOperatorNotificationEventPreferences(), dailySummaryEnabled: false, dailySummarySendTime: null };
+    return row ? { emailEnabled: row.emailEnabled, smsEnabled: row.smsEnabled, smsConsent: Boolean(row.smsConsentGrantedAt && (!row.smsConsentRevokedAt || row.smsConsentGrantedAt > row.smsConsentRevokedAt)), eventPreferences: { ...defaultOperatorNotificationEventPreferences(), ...row.eventPreferences } as OperatorNotificationEventPreferences, dailySummaryEnabled: row.dailySummaryEnabled, dailySummarySendTime: row.dailySummarySendTime } : { emailEnabled: true, smsEnabled: false, smsConsent: false, eventPreferences: defaultOperatorNotificationEventPreferences(), dailySummaryEnabled: false, dailySummarySendTime: null };
   });
 }
 
@@ -374,7 +394,7 @@ export async function queueOperatorAlert(context: DomainContext, input: { busine
 
 export async function queueOperatorAlertInTransaction(tx: DatabaseTransaction, input: { businessId: string; eventKind: OperatorNotificationEventKey; eventKey: string; subject: string; body: string }): Promise<string[]> {
   type Recipient = { userId: string; email: string; phone: string | null; preferences: OperatorNotificationEventPreferences | null; emailEnabled: boolean; smsEnabled: boolean; smsConsentGrantedAt: Date | null; smsConsentRevokedAt: Date | null };
-  const result = await tx.execute(sql`SELECT user_id AS "userId", email, phone, event_preferences AS preferences, email_enabled AS "emailEnabled", sms_enabled AS "smsEnabled" FROM app.resolve_operator_notification_recipients(${input.businessId}::uuid)`);
+  const result = await tx.execute(sql`SELECT user_id AS "userId", email, phone, event_preferences AS preferences, email_enabled AS "emailEnabled", sms_enabled AS "smsEnabled", sms_consent_granted_at AS "smsConsentGrantedAt", sms_consent_revoked_at AS "smsConsentRevokedAt" FROM app.resolve_operator_notification_recipients(${input.businessId}::uuid)`);
   const recipients = result.rows as Recipient[];
   const sender = (await tx.select({ e164: phoneNumbers.e164 }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), eq(phoneNumbers.smsEnabled, true))).limit(1))[0]?.e164;
   const deliveryIds: string[] = [];
@@ -397,20 +417,44 @@ export async function claimOperatorNotificationDelivery(context: DomainContext, 
 }
 
 export async function loadOperatorNotificationDelivery(context: DomainContext, input: { businessId: string; deliveryId: string }) {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => (await tx.select().from(operatorNotificationDeliveries).where(and(eq(operatorNotificationDeliveries.id, input.deliveryId), eq(operatorNotificationDeliveries.businessId, input.businessId), eq(operatorNotificationDeliveries.status, "processing"))).limit(1))[0] ?? null);
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const delivery = (await tx.select({ id: operatorNotificationDeliveries.id, businessId: operatorNotificationDeliveries.businessId, userId: operatorNotificationDeliveries.userId, eventKind: operatorNotificationDeliveries.eventKind, eventKey: operatorNotificationDeliveries.eventKey, channel: operatorNotificationDeliveries.channel, status: operatorNotificationDeliveries.status, destination: operatorNotificationDeliveries.destination, sender: operatorNotificationDeliveries.sender, subject: operatorNotificationDeliveries.subject, body: operatorNotificationDeliveries.body, providerMessageId: operatorNotificationDeliveries.providerMessageId, scheduledFor: operatorNotificationDeliveries.scheduledFor, sentAt: operatorNotificationDeliveries.sentAt, contentExpiresAt: operatorNotificationDeliveries.contentExpiresAt, lastError: operatorNotificationDeliveries.lastError, createdAt: operatorNotificationDeliveries.createdAt, updatedAt: operatorNotificationDeliveries.updatedAt })
+      .from(operatorNotificationDeliveries).where(and(eq(operatorNotificationDeliveries.id, input.deliveryId), eq(operatorNotificationDeliveries.businessId, input.businessId), eq(operatorNotificationDeliveries.status, "processing"))).limit(1))[0];
+    if (!delivery) return null;
+    if (delivery.channel === "sms") {
+      type Recipient = { userId: string; phone: string | null; smsEnabled: boolean; smsConsentGrantedAt: Date | null; smsConsentRevokedAt: Date | null };
+      const result = await tx.execute(sql`SELECT user_id AS "userId", phone, sms_enabled AS "smsEnabled", sms_consent_granted_at AS "smsConsentGrantedAt", sms_consent_revoked_at AS "smsConsentRevokedAt" FROM app.resolve_operator_notification_recipients(${input.businessId}::uuid)`);
+      const recipient = (result.rows as Recipient[]).find((row) => row.userId === delivery.userId);
+      const consent = Boolean(recipient?.smsConsentGrantedAt && (!recipient.smsConsentRevokedAt || recipient.smsConsentGrantedAt > recipient.smsConsentRevokedAt));
+      if (!recipient?.smsEnabled || !consent || !recipient.phone || recipient.phone !== delivery.destination || !delivery.sender) return null;
+    }
+    return delivery;
+  });
 }
 
 export async function markOperatorNotificationSent(context: DomainContext, input: { businessId: string; deliveryId: string; providerMessageId: string }): Promise<void> {
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => { await tx.update(operatorNotificationDeliveries).set({ status: "sent", providerMessageId: input.providerMessageId, sentAt: new Date(), updatedAt: new Date() }).where(and(eq(operatorNotificationDeliveries.id, input.deliveryId), eq(operatorNotificationDeliveries.businessId, input.businessId), eq(operatorNotificationDeliveries.status, "processing"))); });
 }
 
-export async function updateOperatorNotificationDeliveryStatus(context: DomainContext, input: { businessId: string; deliveryId: string; providerMessageId: string; providerStatus: string }): Promise<boolean> {
+export async function markOperatorNotificationSkipped(context: DomainContext, input: { businessId: string; deliveryId: string; error?: string }): Promise<void> {
+  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => { await tx.update(operatorNotificationDeliveries).set({ status: "skipped", lastError: input.error ?? null, updatedAt: new Date() }).where(and(eq(operatorNotificationDeliveries.id, input.deliveryId), eq(operatorNotificationDeliveries.businessId, input.businessId), eq(operatorNotificationDeliveries.status, "processing"))); });
+}
+
+export async function updateOperatorNotificationDeliveryStatus(context: DomainContext, input: { businessId: string; deliveryId: string; providerMessageId: string; providerStatus: string; providerPrice?: number; providerPriceUnit?: string; providerCostUsd?: number; providerNumSegments?: number }): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const current = (await tx.select({ status: operatorNotificationDeliveries.status, providerMessageId: operatorNotificationDeliveries.providerMessageId }).from(operatorNotificationDeliveries).where(and(eq(operatorNotificationDeliveries.id, input.deliveryId), eq(operatorNotificationDeliveries.businessId, input.businessId))).limit(1))[0];
+    const current = (await tx.select({ status: operatorNotificationDeliveries.status, providerMessageId: operatorNotificationDeliveries.providerMessageId, channel: operatorNotificationDeliveries.channel, createdAt: operatorNotificationDeliveries.createdAt }).from(operatorNotificationDeliveries).where(and(eq(operatorNotificationDeliveries.id, input.deliveryId), eq(operatorNotificationDeliveries.businessId, input.businessId))).limit(1))[0];
     if (!current) return false;
     const nextStatus = mapTwilioStatusToNotificationStatus(input.providerStatus);
-    if (!shouldApplyNotificationStatusTransition(current.status, nextStatus)) return false;
-    await tx.update(operatorNotificationDeliveries).set({ ...(current.providerMessageId ? {} : { providerMessageId: input.providerMessageId }), status: nextStatus, ...(nextStatus === "delivered" ? { sentAt: new Date() } : {}), lastError: nextStatus === "failed" ? "Twilio delivery failed." : null, updatedAt: new Date() }).where(and(eq(operatorNotificationDeliveries.id, input.deliveryId), eq(operatorNotificationDeliveries.businessId, input.businessId)));
+    const applyStatus = shouldApplyNotificationStatusTransition(current.status, nextStatus);
+    const hasProviderPricing = input.providerPrice !== undefined || input.providerPriceUnit !== undefined || input.providerCostUsd !== undefined || input.providerNumSegments !== undefined;
+    if (!applyStatus && !hasProviderPricing) return false;
+    await tx.update(operatorNotificationDeliveries).set({ ...(current.providerMessageId ? {} : { providerMessageId: input.providerMessageId }), ...(input.providerPrice !== undefined ? { providerPrice: input.providerPrice } : {}), ...(input.providerPriceUnit !== undefined ? { providerPriceUnit: input.providerPriceUnit } : {}), ...(input.providerCostUsd !== undefined ? { providerCostUsd: input.providerCostUsd } : {}), ...(input.providerNumSegments !== undefined ? { providerNumSegments: input.providerNumSegments } : {}), ...(applyStatus ? { status: nextStatus, ...(nextStatus === "delivered" ? { sentAt: new Date() } : {}), lastError: nextStatus === "failed" ? "Twilio delivery failed." : null } : {}), updatedAt: new Date() }).where(and(eq(operatorNotificationDeliveries.id, input.deliveryId), eq(operatorNotificationDeliveries.businessId, input.businessId)));
+    if (current.channel === "sms" && input.providerNumSegments !== undefined) {
+      const usageEventId = await applyNonAiUsageInTransaction(tx, { operation: "correct", businessId: input.businessId, sourceKey: `alert_sms:operator_notification:${input.deliveryId}`, usageKind: "alert_sms_segments", quantity: input.providerNumSegments, recordedAt: new Date() });
+      await enqueueUsageSyncInTransaction(tx, { businessId: input.businessId, usageEventId });
+    }
+    if (current.channel === "sms" && isTerminalTwilioMessageStatus(input.providerStatus) && (input.providerCostUsd === undefined || input.providerNumSegments === undefined)) await enqueueOutbox(tx, { topic: "sms.syncPrice", businessId: input.businessId, aggregateType: "operator_notification_delivery", aggregateId: input.deliveryId, dedupeKey: `operator-notification:${input.deliveryId}:price:${input.providerStatus.trim().toLowerCase()}`, payload: { operatorDeliveryId: input.deliveryId, providerMessageId: input.providerMessageId, providerStatus: input.providerStatus } });
+    if (input.providerCostUsd !== undefined) await recordUnitEconomicsEventInTransaction(tx, { businessId: input.businessId, eventKey: `operator_notification_provider:${input.deliveryId}`, eventKind: "operator_notification_provider", channel: current.channel, costUsd: input.providerCostUsd, occurredAt: current.createdAt, ...(input.providerNumSegments !== undefined ? { quantity: input.providerNumSegments, quantityUnit: "segment" } : {}), provider: "twilio", operatorNotificationDeliveryId: input.deliveryId });
     return true;
   });
 }

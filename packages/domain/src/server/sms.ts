@@ -1,17 +1,46 @@
-import { and, eq, inArray, lt, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 
-import { buildSmsSystemPrompt } from "@lobbystack/ai";
-import { contacts, conversationSessions, conversations, enqueueOutbox, messages, phoneNumbers, providerEvents, receptionistProfiles, withBusinessTransaction, type Database } from "@lobbystack/db";
+import { contacts, conversationSessions, conversations, enqueueOutbox, messages, phoneNumbers, providerEvents, smsConsentEvents, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { isTerminalTwilioMessageStatus, mapTwilioStatusToMessageStatus, normalizeTwilioMessageStatus, shouldApplyMessageStatusTransition } from "@lobbystack/shared";
 
-import { loadLatestBusinessSnapshot, searchKnowledge } from "./knowledge";
 import type { DomainContext } from "./context";
-import { queueOperatorAlert, queueOperatorAlertInTransaction } from "./notifications";
-import { recordAiGenerationEvent, type DurableAiUsage } from "./productEvents";
+import { queueOperatorAlertInTransaction } from "./notifications";
+import { recordUnitEconomicsEventInTransaction } from "./unitEconomics";
+import { requireBusinessMembership } from "../authz";
 
-export type SmsReplyProvider = {
-  generateReply(input: { instructions: string; prompt: string; context?: string }): Promise<{ text: string; usage?: DurableAiUsage }>;
-};
+const SMS_STOP_KEYWORDS = new Set(["STOP", "STOPALL", "UNSUBSCRIBE", "END", "QUIT", "CANCEL"]);
+const SMS_START_KEYWORDS = new Set(["START", "UNSTOP", "SUBSCRIBE"]);
+const SMS_HELP_KEYWORDS = new Set(["HELP"]);
+const SMS_HELP_REPLY = "LobbyStack: For help, contact hello@lobbystack.com or visit https://lobbystack.com. Reply STOP to opt out.";
+const SMS_START_REPLY = "LobbyStack: You are subscribed again. Reply HELP for help or STOP to opt out.";
+
+export type SmsConsentUpdate = { status: "subscribed" | "opted_out"; source: string };
+export type SmsKeywordReply = { body: string; kind: "help" | "start" };
+
+export function normalizeSmsKeyword(value: string): string {
+  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+export function classifySmsConsentUpdate(input: { body: string; optOutType?: string }): SmsConsentUpdate | null {
+  const normalizedOptOutType = input.optOutType?.trim().toUpperCase();
+  if (normalizedOptOutType) {
+    if (SMS_STOP_KEYWORDS.has(normalizedOptOutType)) return { status: "opted_out", source: `twilio_opt_out:${normalizedOptOutType}` };
+    if (SMS_START_KEYWORDS.has(normalizedOptOutType)) return { status: "subscribed", source: `twilio_opt_out:${normalizedOptOutType}` };
+  }
+  const normalizedBody = normalizeSmsKeyword(input.body ?? "");
+  if (SMS_STOP_KEYWORDS.has(normalizedBody)) return { status: "opted_out", source: `keyword:${normalizedBody}` };
+  if (SMS_START_KEYWORDS.has(normalizedBody)) return { status: "subscribed", source: `keyword:${normalizedBody}` };
+  return null;
+}
+
+export function classifySmsKeywordReply(input: { body: string; optOutType?: string }): SmsKeywordReply | null {
+  const normalizedOptOutType = input.optOutType?.trim().toUpperCase();
+  const normalizedBody = normalizeSmsKeyword(input.body ?? "");
+  const keyword = normalizedOptOutType || normalizedBody;
+  if (SMS_HELP_KEYWORDS.has(keyword)) return { body: SMS_HELP_REPLY, kind: "help" };
+  if (SMS_START_KEYWORDS.has(keyword)) return { body: SMS_START_REPLY, kind: "start" };
+  return null;
+}
 
 export async function receiveInboundSms(
   context: DomainContext,
@@ -27,7 +56,8 @@ export async function receiveInboundSms(
     }).onConflictDoNothing({ target: [providerEvents.provider, providerEvents.providerEventId] }).returning({ id: providerEvents.id });
     if (!providerEvent) return { duplicate: true };
 
-    const contact = (await tx.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.from))).limit(1))[0] ?? (await tx.insert(contacts).values({ businessId: input.businessId, phone: input.from }).returning({ id: contacts.id }))[0];
+    const existingContact = (await tx.select({ id: contacts.id, smsConsentStatus: contacts.smsConsentStatus, operatorBlockedAt: contacts.operatorBlockedAt }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.from))).limit(1))[0];
+    const contact = existingContact ?? (await tx.insert(contacts).values({ businessId: input.businessId, phone: input.from }).returning({ id: contacts.id, smsConsentStatus: contacts.smsConsentStatus, operatorBlockedAt: contacts.operatorBlockedAt }))[0];
     if (!contact) throw new Error("Inbound SMS contact could not be created.");
     const conversation = (await tx.select({ id: conversations.id, automationState: conversations.automationState }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.contactId, contact.id), eq(conversations.channel, "sms"), eq(conversations.status, "open"))).orderBy(sql`${conversations.updatedAt} desc`).limit(1))[0] ?? (await tx.insert(conversations).values({ businessId: input.businessId, contactId: contact.id, channel: "sms", status: "open", automationState: "ai_active" }).returning({ id: conversations.id, automationState: conversations.automationState }))[0];
     if (!conversation) throw new Error("Inbound SMS conversation could not be created.");
@@ -42,71 +72,25 @@ export async function receiveInboundSms(
     }
     await tx.update(conversations).set({ updatedAt: new Date() }).where(and(eq(conversations.id, conversation.id), eq(conversations.businessId, input.businessId)));
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "message", aggregateId: message.id, dedupeKey: `message:${message.id}:created`, payload: { type: "message.upserted", entityId: message.id, conversationId: conversation.id } });
-    await enqueueOutbox(tx, { topic: "sms.processInbound", businessId: input.businessId, aggregateType: "message", aggregateId: message.id, dedupeKey: `message:${message.id}:process-inbound`, payload: { messageId: message.id, conversationId: conversation.id } });
-    if (conversation.automationState !== "ai_active") await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "pausedSms", eventKey: `pausedSms:${message.id}`, subject: "New message needs a reply", body: "A customer replied while AI responses are paused. Open the inbox to respond." });
+    const optOutType = typeof input.payload?.OptOutType === "string" && input.payload.OptOutType ? input.payload.OptOutType : undefined;
+    const consentUpdate = classifySmsConsentUpdate({ body: input.body, ...(optOutType !== undefined ? { optOutType } : {}) });
+    const keywordReply = classifySmsKeywordReply({ body: input.body, ...(optOutType !== undefined ? { optOutType } : {}) });
+    if (consentUpdate) {
+      const now = new Date();
+      await tx.update(contacts).set({ smsConsentStatus: consentUpdate.status, smsConsentSource: consentUpdate.source, smsConsentUpdatedAt: now, updatedAt: now }).where(and(eq(contacts.id, contact.id), eq(contacts.businessId, input.businessId)));
+      await tx.insert(smsConsentEvents).values({ businessId: input.businessId, contactId: contact.id, phone: input.from, recipientType: "contact", action: consentUpdate.status === "opted_out" ? "opted_out" : "resubscribed", source: consentUpdate.source });
+    }
+    const optedOut = Boolean(contact.operatorBlockedAt) || consentUpdate?.status === "opted_out" || (contact.smsConsentStatus === "opted_out" && !consentUpdate);
+    if (keywordReply && !optedOut) {
+      const [replyMessage] = await tx.insert(messages).values({ businessId: input.businessId, conversationId: conversation.id, conversationSessionId: session.id, direction: "outbound", channel: "sms", body: keywordReply.body, aiGenerated: false, status: "queued", providerStatus: "compliance_reply" }).returning({ id: messages.id });
+      if (replyMessage) {
+        await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "message", aggregateId: replyMessage.id, dedupeKey: `message:${replyMessage.id}:created`, payload: { type: "message.upserted", entityId: replyMessage.id, conversationId: conversation.id } });
+        await enqueueOutbox(tx, { topic: "sms.send", businessId: input.businessId, aggregateType: "message", aggregateId: replyMessage.id, dedupeKey: `message:${replyMessage.id}:send`, payload: { messageId: replyMessage.id } });
+      }
+    }
+    if (!optedOut && keywordReply === null) await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "pausedSms", eventKey: `pausedSms:${message.id}`, subject: "New message needs a reply", body: "A customer sent a message. Open the inbox to respond." });
     await tx.update(providerEvents).set({ status: "processed", updatedAt: new Date() }).where(eq(providerEvents.id, providerEvent.id));
     return { messageId: message.id, duplicate: false };
-  });
-}
-
-export async function generateAndQueueSmsReply(
-  context: DomainContext,
-  input: { businessId: string; messageId: string },
-  provider: SmsReplyProvider,
-): Promise<string | null> {
-  const [state, snapshot] = await Promise.all([
-    readInboundMessage(context.db, input),
-    loadLatestBusinessSnapshot(context, { businessId: input.businessId }),
-  ]);
-  if (!state || state.automationState !== "ai_active") return null;
-  const knowledge = await searchKnowledge(context, { businessId: input.businessId, query: state.body, limit: 4 });
-  let reply: Awaited<ReturnType<SmsReplyProvider["generateReply"]>>;
-  try {
-    reply = await provider.generateReply({
-      instructions: snapshot
-        ? buildSmsSystemPrompt(snapshot)
-        : state.smsInstructions ?? "Reply briefly and helpfully. Never invent availability or prices.",
-      prompt: state.body,
-      ...(knowledge.length > 0 ? { context: knowledge.map((item) => `${item.title}: ${item.content}`).join("\n\n") } : {}),
-    });
-  } catch (error) {
-    await queueOperatorAlert(context, { businessId: input.businessId, eventKind: "aiReplyFailed", eventKey: `aiReplyFailed:${input.messageId}`, subject: "AI reply could not be generated", body: "An inbound message needs attention because the AI reply failed. Open the inbox to respond." });
-    throw error;
-  }
-  const messageId = await import("./conversations").then(async ({ appendMessage }) => await appendMessage(context, {
-    businessId: input.businessId,
-    conversationId: state.conversationId,
-    body: reply.text.trim().slice(0, 10_000),
-    direction: "outbound",
-    channel: "sms",
-    aiGenerated: true,
-  }));
-  if (reply.usage) {
-    await recordAiGenerationEvent(context, {
-      ...reply.usage,
-      businessId: input.businessId,
-      operation: "sms.reply",
-      conversationId: state.conversationId,
-      messageId,
-    }).catch(() => undefined);
-  }
-  return messageId;
-}
-
-async function readInboundMessage(db: Database, input: { businessId: string; messageId: string }): Promise<{
-  body: string;
-  conversationId: string;
-  automationState: string;
-  smsInstructions: string | null;
-} | null> {
-  return await withBusinessTransaction(db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const row = (await tx.select({ body: messages.body, conversationId: messages.conversationId, automationState: conversations.automationState, smsInstructions: receptionistProfiles.smsInstructions })
-      .from(messages)
-      .innerJoin(conversations, and(eq(conversations.id, messages.conversationId), eq(conversations.businessId, input.businessId)))
-      .leftJoin(receptionistProfiles, eq(receptionistProfiles.businessId, input.businessId))
-      .where(and(eq(messages.id, input.messageId), eq(messages.businessId, input.businessId), eq(messages.direction, "inbound"), eq(messages.channel, "sms")))
-      .limit(1))[0];
-    return row ?? null;
   });
 }
 
@@ -134,9 +118,26 @@ export async function loadSmsDeliveryTarget(db: Database, input: { businessId: s
       .innerJoin(conversations, and(eq(conversations.id, messages.conversationId), eq(conversations.businessId, input.businessId)))
       .innerJoin(contacts, and(eq(contacts.id, conversations.contactId), eq(contacts.businessId, input.businessId)))
       .innerJoin(phoneNumbers, and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), eq(phoneNumbers.smsEnabled, true)))
-      .where(and(eq(messages.id, input.messageId), eq(messages.businessId, input.businessId), eq(messages.direction, "outbound"), eq(messages.channel, "sms"), inArray(messages.status, ["queued", "sending"])))
+      .where(and(eq(messages.id, input.messageId), eq(messages.businessId, input.businessId), eq(messages.direction, "outbound"), eq(messages.channel, "sms"), isNull(contacts.operatorBlockedAt), or(eq(contacts.smsConsentStatus, "subscribed"), eq(messages.providerStatus, "compliance_reply")), inArray(messages.status, ["queued", "sending"])))
       .limit(1))[0];
     return row ?? null;
+  });
+}
+
+export async function setContactSmsManualBlock(
+  context: DomainContext,
+  input: { userId: string; businessId: string; contactId: string; blocked: boolean },
+): Promise<boolean> {
+  return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, input);
+    const now = new Date();
+    const [contact] = await tx.update(contacts)
+      .set({ operatorBlockedAt: input.blocked ? now : null, updatedAt: now })
+      .where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId)))
+      .returning({ id: contacts.id, phone: contacts.phone });
+    if (!contact) return false;
+    await tx.insert(smsConsentEvents).values({ businessId: input.businessId, contactId: contact.id, phone: contact.phone, recipientType: "contact", action: input.blocked ? "manual_blocked" : "manual_unblocked", source: `operator:${input.userId}` });
+    return true;
   });
 }
 
@@ -221,8 +222,11 @@ export async function recordSmsProviderPricing(
       ...(input.providerNumSegments !== undefined ? { providerNumSegments: input.providerNumSegments } : {}),
       revision: sql`${messages.revision} + 1`,
       updatedAt: new Date(),
-    }).where(and(eq(messages.businessId, input.businessId), eq(messages.providerMessageId, input.providerMessageId))).returning({ id: messages.id, revision: messages.revision });
+    }).where(and(eq(messages.businessId, input.businessId), eq(messages.providerMessageId, input.providerMessageId))).returning({ id: messages.id, revision: messages.revision, aiGenerated: messages.aiGenerated, conversationId: messages.conversationId, createdAt: messages.createdAt });
     if (!message) return false;
+    if (input.providerCostUsd !== undefined && !message.aiGenerated) {
+      await recordUnitEconomicsEventInTransaction(tx, { businessId: input.businessId, eventKey: `sms_provider:${message.id}`, eventKind: "sms_provider", channel: "sms", costUsd: input.providerCostUsd, occurredAt: message.createdAt, ...(input.providerNumSegments !== undefined ? { quantity: input.providerNumSegments, quantityUnit: "segment" } : {}), provider: "twilio", messageId: message.id, conversationId: message.conversationId });
+    }
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "message", aggregateId: message.id, dedupeKey: `message:${message.id}:pricing:${message.revision}`, payload: { type: "message.deliveryUpdated", entityId: message.id, revision: message.revision } });
     return true;
   });

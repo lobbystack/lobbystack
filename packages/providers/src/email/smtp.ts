@@ -26,7 +26,7 @@ export class SmtpEmailProvider {
     this.transporter = transporter;
   }
 
-  async sendTemplate(input: { template: "verify_email" | "password_reset" | "invitation" | "operator_alert"; to: string; subject: string; variables: Record<string, string>; idempotencyKey?: string }): Promise<{ messageId: string }> {
+  async sendTemplate(input: { template: "verify_email" | "password_reset" | "invitation" | "operator_alert" | "feedback_submission"; to: string; subject: string; variables: Record<string, string>; idempotencyKey?: string }): Promise<{ messageId: string }> {
     const body = templateBody(input.template, input.variables);
     const result = await this.transporter.sendMail({
       from: this.config.from,
@@ -40,7 +40,7 @@ export class SmtpEmailProvider {
   }
 }
 
-function templateBody(template: "verify_email" | "password_reset" | "invitation" | "operator_alert", variables: Record<string, string>): string {
+function templateBody(template: "verify_email" | "password_reset" | "invitation" | "operator_alert" | "feedback_submission", variables: Record<string, string>): string {
   switch (template) {
     case "verify_email":
       return `Verify your LobbyStack email address using this link: ${variables.url ?? ""}`;
@@ -50,5 +50,7 @@ function templateBody(template: "verify_email" | "password_reset" | "invitation"
       return `You have been invited to join LobbyStack. Accept the invitation here: ${variables.url ?? ""}`;
     case "operator_alert":
       return variables.message ?? "LobbyStack operator notification";
+    case "feedback_submission":
+      return variables.body ?? "LobbyStack dashboard feedback";
   }
 }

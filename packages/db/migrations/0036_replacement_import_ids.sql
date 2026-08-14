@@ -1,0 +1,22 @@
+ALTER TABLE public.billing_accounts ADD COLUMN IF NOT EXISTS legacy_convex_id text;
+ALTER TABLE public.sms_consent_events ADD COLUMN IF NOT EXISTS legacy_convex_id text;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS legacy_convex_id text;
+ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS legacy_convex_id text;
+ALTER TABLE public.unit_economics_events ADD COLUMN IF NOT EXISTS legacy_convex_id text;
+ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS legacy_convex_id text;
+ALTER TABLE public.operator_notification_deliveries ADD COLUMN IF NOT EXISTS legacy_convex_id text;
+
+DROP INDEX IF EXISTS public.billing_accounts_legacy_convex_id_unique;
+DROP INDEX IF EXISTS public.sms_consent_events_legacy_convex_id_unique;
+DROP INDEX IF EXISTS public.feedback_submissions_legacy_convex_id_unique;
+DROP INDEX IF EXISTS public.audit_logs_legacy_convex_id_unique;
+DROP INDEX IF EXISTS public.unit_economics_events_legacy_convex_id_unique;
+DROP INDEX IF EXISTS public.notifications_legacy_convex_id_unique;
+DROP INDEX IF EXISTS public.operator_notification_deliveries_legacy_convex_id_unique;
+CREATE UNIQUE INDEX billing_accounts_legacy_convex_id_unique ON public.billing_accounts(legacy_convex_id);
+CREATE UNIQUE INDEX sms_consent_events_legacy_convex_id_unique ON public.sms_consent_events(legacy_convex_id);
+CREATE UNIQUE INDEX feedback_submissions_legacy_convex_id_unique ON public.feedback_submissions(legacy_convex_id);
+CREATE UNIQUE INDEX audit_logs_legacy_convex_id_unique ON public.audit_logs(legacy_convex_id);
+CREATE UNIQUE INDEX unit_economics_events_legacy_convex_id_unique ON public.unit_economics_events(legacy_convex_id);
+CREATE UNIQUE INDEX notifications_legacy_convex_id_unique ON public.notifications(legacy_convex_id);
+CREATE UNIQUE INDEX operator_notification_deliveries_legacy_convex_id_unique ON public.operator_notification_deliveries(legacy_convex_id);

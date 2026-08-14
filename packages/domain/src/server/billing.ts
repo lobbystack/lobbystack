@@ -1,14 +1,24 @@
 import { and, eq, lt, or, sql } from "drizzle-orm";
 
-import { billingAccounts, billingCheckoutRequests, billingTransactions, billingUsageEvents, businesses, enqueueOutbox, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, billingCheckoutRequests, billingTransactions, billingUsageEvents, enqueueOutbox, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { billingErrorCodes, billingPlanCatalog, billingPlanSlugs, type BillingPlanSlug } from "@lobbystack/shared";
 
 import type { DomainContext } from "./context";
 import { recordAffiliateCommissionInTransaction } from "./affiliates";
 import { requireBusinessAdmin } from "../authz";
+import { correctUsageInTransaction, enqueueUsageSyncInTransaction, getUsageStatusInTransaction, reserveUsageInTransaction, type NonAiBillingUsageKind, type UsageReservationResult } from "./usage";
 
-export type BillingCheckoutTarget = "starter" | "pro" | "ai_sms";
+export type BillingCheckoutTarget = "starter" | "pro";
 export type BillingInterval = "monthly" | "annual";
+
+export function applyNonAiUsageInTransaction(tx: DatabaseTransaction, input: { operation: "reserve"; businessId: string; usageKind: NonAiBillingUsageKind; sourceKey: string; quantity?: number; recordedAt?: Date }): Promise<UsageReservationResult>;
+export function applyNonAiUsageInTransaction(tx: DatabaseTransaction, input: { operation: "correct"; businessId: string; usageKind: NonAiBillingUsageKind; sourceKey: string; quantity: number; recordedAt?: Date }): Promise<string>;
+export async function applyNonAiUsageInTransaction(tx: DatabaseTransaction, input: { operation: "reserve" | "correct"; businessId: string; usageKind: NonAiBillingUsageKind; sourceKey: string; quantity?: number; recordedAt?: Date }): Promise<UsageReservationResult | string> {
+  const values = { businessId: input.businessId, usageKind: input.usageKind, sourceKey: input.sourceKey, ...(input.quantity !== undefined ? { quantity: input.quantity } : {}), ...(input.recordedAt ? { recordedAt: input.recordedAt } : {}) };
+  return input.operation === "reserve"
+    ? await reserveUsageInTransaction(tx, values)
+    : await correctUsageInTransaction(tx, { ...values, quantity: input.quantity ?? 0 });
+}
 
 const defaultWebCallMaxDurationMs = 5 * 60 * 1_000;
 const maximumWebCallMaxDurationMs = 30 * 60 * 1_000;
@@ -58,26 +68,27 @@ async function loadWebVoiceBillingAllowance(
   tx: DatabaseTransaction,
   input: { businessId: string; maxDurationMs?: number },
 ): Promise<WebVoiceBillingAllowance> {
-  const [business, account] = await Promise.all([
-    tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).then((rows) => rows[0]),
-    tx.select({ plan: billingAccounts.plan, subscriptionState: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1).then((rows) => rows[0]),
-  ]);
-  const periodKey = new Date().toISOString().slice(0, 7);
-  const result = await tx.select({ total: sql<number>`coalesce(sum(${billingUsageEvents.quantity}), 0)` })
-    .from(billingUsageEvents)
-    .where(and(
-      eq(billingUsageEvents.businessId, input.businessId),
-      eq(billingUsageEvents.periodKey, periodKey),
-      eq(billingUsageEvents.usageKind, "voice_seconds"),
-    ));
-  const used = Number(result[0]?.total ?? 0);
-  return calculateWebVoiceBillingAllowance({
-    deploymentMode: business?.deploymentMode ?? "cloud",
-    accountPlan: account?.plan ?? null,
-    subscriptionState: account?.subscriptionState ?? null,
-    voiceSecondsUsed: used,
-    ...(input.maxDurationMs !== undefined ? { maxDurationMs: input.maxDurationMs } : {}),
-  });
+  const status = await getUsageStatusInTransaction(tx, { businessId: input.businessId });
+  const requested = normalizeWebCallMaxDurationMs(input.maxDurationMs);
+  const entitlement = billingPlanCatalog[status.plan];
+  const includedRemaining = status.voiceSecondsIncluded === null
+    ? Number.POSITIVE_INFINITY
+    : Math.max(0, status.voiceSecondsIncluded - status.voiceSecondsUsed);
+  const overageRemaining = !entitlement.overagesBillable || status.overageSpendingCapCents === null
+    ? entitlement.overagesBillable ? Number.POSITIVE_INFINITY : 0
+    : (() => {
+      const ratePerSecond = (entitlement.voiceOverageRatePerMinuteCents ?? 0) / 60;
+      return ratePerSecond > 0
+        ? Math.floor((Math.max(0, status.overageSpendingCapCents - status.overageSpendCents) + 1e-9) / ratePerSecond)
+        : 0;
+    })();
+  const remaining = Math.min(requested / 1_000, includedRemaining + overageRemaining) * 1_000;
+  return {
+    allowed: !status.voiceBlocked && remaining >= 1,
+    errorCode: status.voiceBlocked || remaining < 1 ? billingErrorCodes.voiceLimitReached : null,
+    maxDurationMs: Math.min(requested, Math.floor(remaining)),
+    plan: status.plan,
+  };
 }
 
 export async function getWebVoiceBillingAllowance(
@@ -91,18 +102,12 @@ export async function reserveWebVoiceUsageInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; callId: string; maxDurationMs?: number },
 ): Promise<WebVoiceBillingAllowance> {
-  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'web-voice-billing:' + input.businessId}, 0))`);
   const allowance = await loadWebVoiceBillingAllowance(tx, input);
-  if (!allowance.allowed || allowance.plan === "self_host") return allowance;
-  const syncStatus = billingPlanCatalog[allowance.plan].overagesBillable && allowance.plan !== "enterprise" ? "reserved_sync" : "reserved_skip";
-  await tx.insert(billingUsageEvents).values({
-    businessId: input.businessId,
-    periodKey: new Date().toISOString().slice(0, 7),
-    sourceKey: `voice:${input.callId}`,
-    usageKind: "voice_seconds",
-    quantity: allowance.maxDurationMs / 1_000,
-    syncStatus,
-  }).onConflictDoNothing({ target: [billingUsageEvents.businessId, billingUsageEvents.sourceKey] });
+  if (!allowance.allowed) return allowance;
+  const reservation = await applyNonAiUsageInTransaction(tx, { operation: "reserve", businessId: input.businessId, usageKind: "voice_seconds", sourceKey: `voice:${input.callId}`, quantity: allowance.maxDurationMs / 1_000 });
+  if (!reservation.allowed) {
+    return { allowed: false, errorCode: billingErrorCodes.voiceLimitReached, maxDurationMs: 0, plan: allowance.plan };
+  }
   return allowance;
 }
 
@@ -110,23 +115,10 @@ export async function finalizeWebVoiceUsageInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; callId: string; durationSeconds: number },
 ): Promise<void> {
-  const event = (await tx.select({ id: billingUsageEvents.id, syncStatus: billingUsageEvents.syncStatus })
-    .from(billingUsageEvents)
-    .where(and(eq(billingUsageEvents.businessId, input.businessId), eq(billingUsageEvents.sourceKey, `voice:${input.callId}`)))
-    .limit(1))[0];
-  if (!event || !event.syncStatus.startsWith("reserved_")) return;
-  const syncStatus = event.syncStatus === "reserved_sync" ? "pending" : "skipped";
-  await tx.update(billingUsageEvents).set({ quantity: Math.max(0, input.durationSeconds), syncStatus, updatedAt: new Date() }).where(eq(billingUsageEvents.id, event.id));
-  if (syncStatus === "pending") {
-    await enqueueOutbox(tx, {
-      topic: "billing.syncUsage",
-      businessId: input.businessId,
-      aggregateType: "billing_usage_event",
-      aggregateId: event.id,
-      dedupeKey: `billing-usage:${event.id}:sync`,
-      payload: { usageEventId: event.id },
-    });
-  }
+  const existing = (await tx.select({ id: billingUsageEvents.id }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, input.businessId), eq(billingUsageEvents.sourceKey, `voice:${input.callId}`))).limit(1))[0];
+  if (!existing) return;
+  const usageEventId = await applyNonAiUsageInTransaction(tx, { operation: "correct", businessId: input.businessId, sourceKey: `voice:${input.callId}`, usageKind: "voice_seconds", quantity: input.durationSeconds });
+  await enqueueUsageSyncInTransaction(tx, { businessId: input.businessId, usageEventId });
 }
 
 export async function createBillingCheckoutRequest(
@@ -240,7 +232,7 @@ export async function markBillingCheckoutFailed(
 }
 
 function isBillingCheckoutTarget(value: string): value is BillingCheckoutTarget {
-  return value === "starter" || value === "pro" || value === "ai_sms";
+  return value === "starter" || value === "pro";
 }
 
 function isBillingInterval(value: string): value is BillingInterval {
@@ -288,13 +280,75 @@ export async function recordUsage(
   });
 }
 
+export async function getBillingUsageStatus(
+  context: DomainContext,
+  input: { businessId: string; periodKey?: string },
+) {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await getUsageStatusInTransaction(tx, input));
+}
+
+export async function setOverageSpendingCap(
+  context: DomainContext,
+  input: { userId: string; businessId: string; capCents: number | null },
+): Promise<{ overageSpendingCapCents: number | null; overageSpendCents: number; overageSpendingCapReached: boolean }> {
+  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    if (input.capCents !== null && (!Number.isSafeInteger(input.capCents) || input.capCents < 0)) {
+      throw new Error("Overage spending cap must be a non-negative whole number of cents.");
+    }
+    const current = await getUsageStatusInTransaction(tx, { businessId: input.businessId });
+    if (current.plan !== "starter" && current.plan !== "pro") {
+      throw new Error("Overage spending caps are available on Starter and Pro plans.");
+    }
+    const rows = await tx.update(billingAccounts)
+      .set({ overageSpendingCapCents: input.capCents, updatedAt: new Date() })
+      .where(eq(billingAccounts.businessId, input.businessId))
+      .returning({ id: billingAccounts.id });
+    if (!rows[0]) throw new Error("A billing account is required to set an overage spending cap.");
+    const status = await getUsageStatusInTransaction(tx, { businessId: input.businessId });
+    return { overageSpendingCapCents: input.capCents, overageSpendCents: status.overageSpendCents, overageSpendingCapReached: status.overageSpendingCapReached };
+  });
+}
+
+export async function reserveAlertSmsUsage(
+  context: DomainContext,
+  input: { businessId: string; sourceKey: string; estimatedSegments: number; recordedAt?: Date },
+): Promise<Awaited<ReturnType<typeof reserveUsageInTransaction>>> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await applyNonAiUsageInTransaction(tx, { operation: "reserve", businessId: input.businessId, usageKind: "alert_sms_segments", sourceKey: input.sourceKey, quantity: Math.max(1, Math.trunc(input.estimatedSegments)), ...(input.recordedAt ? { recordedAt: input.recordedAt } : {}) }));
+}
+
+export async function correctAlertSmsUsage(
+  context: DomainContext,
+  input: { businessId: string; sourceKey: string; segments: number; recordedAt?: Date },
+): Promise<string> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await applyNonAiUsageInTransaction(tx, { operation: "correct", businessId: input.businessId, sourceKey: input.sourceKey, usageKind: "alert_sms_segments", quantity: Math.max(0, Math.trunc(input.segments)), ...(input.recordedAt ? { recordedAt: input.recordedAt } : {}) }));
+}
+
+export async function reserveOutboundCallAttempt(
+  context: DomainContext,
+  input: { businessId: string; sourceKey: string; recordedAt?: Date },
+): Promise<Awaited<ReturnType<typeof reserveUsageInTransaction>>> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const reservation = await applyNonAiUsageInTransaction(tx, { operation: "reserve", businessId: input.businessId, usageKind: "outbound_call_attempts", sourceKey: input.sourceKey, quantity: 1, ...(input.recordedAt ? { recordedAt: input.recordedAt } : {}) });
+    if (reservation.allowed && reservation.usageEventId) await enqueueUsageSyncInTransaction(tx, { businessId: input.businessId, usageEventId: reservation.usageEventId });
+    return reservation;
+  });
+}
+
+export async function enqueueBillingUsageSync(context: DomainContext, input: { businessId: string; usageEventId: string }): Promise<void> {
+  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await enqueueUsageSyncInTransaction(tx, input));
+}
+
 export async function loadBillingUsageEvent(
   context: DomainContext,
   input: { businessId: string; usageEventId: string },
 ): Promise<{
   id: string;
   businessId: string;
+  usageKind: string;
   quantity: number;
+  billableQuantity: number | null;
+  billingIntervalAtRecordTime: string | null;
   createdAt: Date;
   syncStatus: string;
   billingKey: string;
@@ -304,7 +358,10 @@ export async function loadBillingUsageEvent(
     const row = (await tx.select({
       id: billingUsageEvents.id,
       businessId: billingUsageEvents.businessId,
+      usageKind: billingUsageEvents.usageKind,
       quantity: billingUsageEvents.quantity,
+      billableQuantity: billingUsageEvents.billableQuantity,
+      billingIntervalAtRecordTime: billingUsageEvents.billingIntervalAtRecordTime,
       createdAt: billingUsageEvents.createdAt,
       syncStatus: billingUsageEvents.syncStatus,
       billingKey: billingAccounts.billingKey,
@@ -396,6 +453,7 @@ export async function reconcileBillingProviderEvent(
       const customerId = stringField(transactionPayload, "customerId", "externalCustomerId") ?? stringField(payload, "customerId", "externalCustomerId") ?? stringField(customer, "id", "externalId") ?? existing?.customerId;
       const subscriptionId = stringField(transactionPayload, "subscriptionId", "subscription_id") ?? stringField(payload, "subscriptionId", "subscription_id") ?? stringField(subscription, "id") ?? existing?.subscriptionId;
       const plan = stringField(transactionPayload, "plan") ?? stringField(payload, "plan") ?? stringField(product, "name", "slug");
+      const billingInterval = stringField(transactionPayload, "billingInterval", "billing_interval", "interval") ?? stringField(payload, "billingInterval", "billing_interval", "interval") ?? stringField(subscription, "billingInterval", "billing_interval", "interval");
       const subscriptionState = stringField(transactionPayload, "subscriptionState", "status") ?? stringField(payload, "subscriptionState", "status") ?? (event.eventType.startsWith("subscription.") ? event.eventType.slice("subscription.".length) : undefined);
       const currentPeriodStart = dateField(transactionPayload, "currentPeriodStart", "current_period_start") ?? dateField(payload, "currentPeriodStart", "current_period_start") ?? dateField(subscription, "currentPeriodStart", "current_period_start");
       const currentPeriodEnd = dateField(transactionPayload, "currentPeriodEnd", "current_period_end") ?? dateField(payload, "currentPeriodEnd", "current_period_end") ?? dateField(subscription, "currentPeriodEnd", "current_period_end");
@@ -405,6 +463,7 @@ export async function reconcileBillingProviderEvent(
         ...(customerId ? { customerId } : {}),
         ...(subscriptionId ? { subscriptionId } : {}),
         ...(plan ? { plan } : {}),
+        ...(billingInterval ? { billingInterval } : {}),
         ...(subscriptionState ? { subscriptionState } : {}),
         ...(currentPeriodStart ? { currentPeriodStart } : {}),
         ...(currentPeriodEnd ? { currentPeriodEnd } : {}),
@@ -415,6 +474,7 @@ export async function reconcileBillingProviderEvent(
           ...(customerId ? { customerId } : {}),
           ...(subscriptionId ? { subscriptionId } : {}),
           ...(plan ? { plan } : {}),
+          ...(billingInterval ? { billingInterval } : {}),
           ...(subscriptionState ? { subscriptionState } : {}),
           ...(currentPeriodStart ? { currentPeriodStart } : {}),
           ...(currentPeriodEnd ? { currentPeriodEnd } : {}),

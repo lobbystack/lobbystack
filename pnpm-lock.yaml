@@ -148,6 +148,9 @@ importers:
       convex-test:
         specifier: ^0.0.53
         version: 0.0.53(convex@1.41.0(react@19.2.4))
+      drizzle-orm:
+        specifier: ^0.44.7
+        version: 0.44.7(@opentelemetry/api@1.9.1)(@types/pg@8.21.0)(kysely@0.29.4)(pg@8.23.0)
       lucia:
         specifier: ^3.2.2
         version: 3.2.2
