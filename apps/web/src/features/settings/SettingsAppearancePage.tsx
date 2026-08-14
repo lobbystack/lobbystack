@@ -1,5 +1,5 @@
 import { useQuery } from "convex/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -21,7 +21,7 @@ import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
 import { useLocalePreference } from "@/components/locale-provider";
 import { useObservedMutation } from "@/lib/observed-convex";
-import { setBusinessTelemetryEnabled } from "@/lib/analytics";
+import { updateBusinessTelemetryPreference } from "@/lib/analytics";
 import type { SupportedLocale, TimeFormatPreference } from "@/lib/locale";
 
 type SettingsAppearancePageProps = {
@@ -51,12 +51,16 @@ export function SettingsAppearancePage({
     undefined,
   );
   const [isTelemetrySaving, setIsTelemetrySaving] = useState(false);
+  const currentBusinessIdRef = useRef(businessId);
+  currentBusinessIdRef.current = businessId;
 
   useEffect(() => {
-    if (telemetry?.telemetryEnabled !== undefined) {
-      setTelemetryEnabledState(telemetry.telemetryEnabled);
-    }
-  }, [telemetry?.telemetryEnabled]);
+    setTelemetryEnabledState(telemetry?.telemetryEnabled);
+  }, [businessId, telemetry?.telemetryEnabled]);
+
+  useEffect(() => {
+    setIsTelemetrySaving(false);
+  }, [businessId]);
 
   async function handleTelemetryToggle(next: boolean): Promise<void> {
     if (!canManageTenant) {
@@ -67,21 +71,31 @@ export function SettingsAppearancePage({
       return;
     }
 
+    const requestBusinessId = businessId;
     setIsTelemetrySaving(true);
     if (!next) {
       setTelemetryEnabledState(false);
-      setBusinessTelemetryEnabled(String(businessId), false);
+      updateBusinessTelemetryPreference(String(requestBusinessId), false);
     }
     try {
-      await setTelemetryEnabled({ businessId, telemetryEnabled: next });
-      setTelemetryEnabledState(next);
-      setBusinessTelemetryEnabled(String(businessId), next);
+      await setTelemetryEnabled({
+        businessId: requestBusinessId,
+        telemetryEnabled: next,
+      });
+      updateBusinessTelemetryPreference(String(requestBusinessId), next);
+      if (currentBusinessIdRef.current === requestBusinessId) {
+        setTelemetryEnabledState(next);
+      }
     } catch {
-      setTelemetryEnabledState(previous);
-      setBusinessTelemetryEnabled(String(businessId), previous);
-      toast.error(t("settings:appearance.telemetry.saveFailed"));
+      updateBusinessTelemetryPreference(String(requestBusinessId), previous);
+      if (currentBusinessIdRef.current === requestBusinessId) {
+        setTelemetryEnabledState(previous);
+        toast.error(t("settings:appearance.telemetry.saveFailed"));
+      }
     } finally {
-      setIsTelemetrySaving(false);
+      if (currentBusinessIdRef.current === requestBusinessId) {
+        setIsTelemetrySaving(false);
+      }
     }
   }
 

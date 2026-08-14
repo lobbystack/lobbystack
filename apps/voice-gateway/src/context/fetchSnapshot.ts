@@ -6,6 +6,10 @@ type VoiceContextResponse = {
   snapshot: BusinessContextSnapshot;
 };
 
+type VoiceTelemetryResponse = {
+  telemetryEnabled: boolean;
+};
+
 export async function fetchSnapshotForPhoneNumber(
   phoneNumber: string,
 ): Promise<BusinessContextSnapshot> {
@@ -34,4 +38,25 @@ export async function fetchSnapshotForPhoneNumber(
     }
     throw error;
   }
+}
+
+export async function fetchBusinessTelemetryEnabled(
+  businessId: string,
+): Promise<boolean> {
+  const env = loadVoiceGatewayEnv(process.env);
+  const response = await fetch(`${env.CONVEX_SITE_URL}/voice/telemetry`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-internal-service-token": env.INTERNAL_SERVICE_TOKEN,
+    },
+    body: JSON.stringify({ businessId }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Convex voice telemetry lookup failed with ${response.status}.`);
+  }
+
+  const payload = (await response.json()) as VoiceTelemetryResponse;
+  return payload.telemetryEnabled;
 }

@@ -94,6 +94,14 @@ function inferBusinessIdFromArgs(args: unknown): string | undefined {
   return typeof businessId === "string" ? businessId : undefined;
 }
 
+async function readHttpRequestBody(request: Request): Promise<unknown> {
+  try {
+    return await request.json();
+  } catch {
+    return undefined;
+  }
+}
+
 async function reportConvexHandlerFailure(input: {
   ctx: ConvexRunnerCtx;
   error: unknown;
@@ -170,12 +178,15 @@ function observeHttpHandler<T extends (ctx: ActionCtx, request: Request) => unkn
   handler: T,
 ): T {
   return (async (ctx: ActionCtx, request: Request) => {
+    const requestForObservability = request.clone();
     try {
       return await handler(ctx, request);
     } catch (error) {
+      const args = await readHttpRequestBody(requestForObservability);
       await reportConvexHandlerFailure({
         ctx,
         error,
+        args,
         kind: "http_action",
         options: {},
       });

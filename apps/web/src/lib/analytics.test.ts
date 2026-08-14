@@ -313,6 +313,38 @@ describe("analytics", () => {
     expect(posthogMock.startSessionRecording).toHaveBeenCalledTimes(1);
   });
 
+  it("does not reactivate capture when an inactive business preference resolves", async () => {
+    vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
+    vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");
+    posthogMock.sessionRecordingStarted.mockReturnValue(false);
+
+    const {
+      initializeAnalytics,
+      setBusinessTelemetryEnabled,
+      updateBusinessTelemetryPreference,
+    } = await import("./analytics");
+
+    setBusinessTelemetryEnabled("business_a", false);
+    initializeAnalytics();
+    setBusinessTelemetryEnabled("business_b", false);
+    posthogMock.startSessionRecording.mockClear();
+
+    updateBusinessTelemetryPreference("business_a", true);
+
+    expect(posthogMock.startSessionRecording).not.toHaveBeenCalled();
+    const config = posthogMock.init.mock.calls[0]?.[1];
+    expect(
+      config.before_send({
+        uuid: "event-business-b",
+        event: "$pageview",
+        properties: {
+          $current_url: "https://app.lobbystack.com/settings/appearance",
+          $pathname: "/settings/appearance",
+        },
+      }),
+    ).toBeNull();
+  });
+
   it("drops events attributed to an opted-out business via $groups", async () => {
     vi.stubEnv("VITE_POSTHOG_KEY", "phc_test");
     vi.stubEnv("VITE_POSTHOG_HOST", "https://us.i.posthog.com");

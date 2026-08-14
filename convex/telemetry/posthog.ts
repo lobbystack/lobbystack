@@ -16,7 +16,7 @@ import {
 } from "../../packages/telemetry/src/index";
 
 import { internal } from "../_generated/api";
-import type { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import {
   type ActionCtx,
   internalAction,
@@ -110,6 +110,11 @@ type FlushResult = {
   delivered: number;
   retried: number;
   skipped: boolean;
+};
+
+type ClaimDueEventsResult = {
+  events: Doc<"telemetry_outbox">[];
+  discarded: number;
 };
 
 type OutboxHealthSnapshot = {
@@ -657,7 +662,7 @@ export const claimDueEvents = internalMutation({
     const limit = Math.max(1, Math.min(args.limit ?? MAX_BATCH_SIZE, MAX_BATCH_SIZE));
     const claimRowsForStatus = async (status: string, remaining: number) => {
       if (remaining <= 0) {
-        return [];
+        return { events: [], discarded: 0 };
       }
 
       const rows = await ctx.db
@@ -665,17 +670,17 @@ export const claimDueEvents = internalMutation({
         .withIndex("by_status_and_available_at", (q) =>
           q.eq("status", status).lte("availableAt", nowIso),
         )
+        .filter((q) => q.eq(q.field("destination"), TELEMETRY_DESTINATION))
         .take(remaining);
 
       const claimedRows = [];
+      let discarded = 0;
       for (const row of rows) {
-        if (row.destination !== TELEMETRY_DESTINATION) {
-          continue;
-        }
         if (row.businessId !== undefined) {
           const business = await ctx.db.get(row.businessId);
           if (business?.telemetryEnabled === false) {
             await ctx.db.delete(row._id);
+            discarded += 1;
             continue;
           }
         }
@@ -685,16 +690,19 @@ export const claimDueEvents = internalMutation({
         });
         claimedRows.push(row);
       }
-      return claimedRows;
+      return { events: claimedRows, discarded };
     };
 
-    const claimedPendingRows = await claimRowsForStatus("pending", limit);
-    const claimedExpiredRows = await claimRowsForStatus(
+    const claimedPending = await claimRowsForStatus("pending", limit);
+    const claimedExpired = await claimRowsForStatus(
       CLAIMED_STATUS,
-      limit - claimedPendingRows.length,
+      limit - claimedPending.events.length,
     );
 
-    return [...claimedPendingRows, ...claimedExpiredRows];
+    return {
+      events: [...claimedPending.events, ...claimedExpired.events],
+      discarded: claimedPending.discarded + claimedExpired.discarded,
+    };
   },
 });
 
@@ -707,6 +715,33 @@ export const markEventDelivered = internalMutation({
       status: "delivered",
     });
     return null;
+  },
+});
+
+export const prepareEventForDelivery = internalMutation({
+  args: {
+    outboxId: v.id("telemetry_outbox"),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get(args.outboxId);
+    if (
+      !row ||
+      row.destination !== TELEMETRY_DESTINATION ||
+      row.status !== CLAIMED_STATUS
+    ) {
+      return false;
+    }
+
+    if (row.businessId !== undefined) {
+      const business = await ctx.db.get(row.businessId);
+      if (business?.telemetryEnabled === false) {
+        await ctx.db.delete(row._id);
+        return false;
+      }
+    }
+
+    return true;
   },
 });
 
@@ -897,14 +932,24 @@ export const flushDueEvents = internalAction({
       };
     }
 
-    const dueEvents = await ctx.runMutation(internal.telemetry.posthog.claimDueEvents, {
-      limit: MAX_BATCH_SIZE,
-    });
+    const claimResult: ClaimDueEventsResult = await ctx.runMutation(
+      internal.telemetry.posthog.claimDueEvents,
+      { limit: MAX_BATCH_SIZE },
+    );
+    const dueEvents = claimResult.events;
 
     let delivered = 0;
     let retried = 0;
 
     for (const event of dueEvents) {
+      const canDeliver = await ctx.runMutation(
+        internal.telemetry.posthog.prepareEventForDelivery,
+        { outboxId: event._id },
+      );
+      if (!canDeliver) {
+        continue;
+      }
+
       try {
         const payload = JSON.parse(event.payloadJson) as {
           occurredAt?: string;
@@ -979,7 +1024,7 @@ export const flushDueEvents = internalAction({
       }
     }
 
-    if (dueEvents.length === MAX_BATCH_SIZE) {
+    if (dueEvents.length === MAX_BATCH_SIZE || claimResult.discarded > 0) {
       await ctx.scheduler.runAfter(0, internal.telemetry.posthog.flushDueEvents, {});
     }
 

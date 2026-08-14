@@ -19,7 +19,10 @@ import {
   updateVoiceTransferState,
   uploadVoiceRecording,
 } from "../convex/runtimeClient";
-import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
+import {
+  fetchBusinessTelemetryEnabled,
+  fetchSnapshotForPhoneNumber,
+} from "../context/fetchSnapshot";
 import {
   recordMediaStreamDisconnect,
   recordAiDirectedCallEnd,
@@ -3442,6 +3445,28 @@ export async function handleMediaStreamConnection(
       }
       snapshot = await fetchSnapshotForPhoneNumber(session.to);
       server.snapshotCache.set(snapshot.businessId, snapshot);
+    } else {
+      let telemetryEnabled = snapshot.telemetryEnabled ?? true;
+      try {
+        telemetryEnabled = await fetchBusinessTelemetryEnabled(snapshot.businessId);
+      } catch (error) {
+        // Do not emit tenant telemetry when the authoritative preference cannot be read.
+        telemetryEnabled = false;
+        server.log.warn(
+          {
+            err: error,
+            businessId: snapshot.businessId,
+          },
+          "Failed to verify business telemetry preference",
+        );
+      }
+      if (snapshot.telemetryEnabled !== telemetryEnabled) {
+        snapshot = {
+          ...snapshot,
+          telemetryEnabled,
+        };
+        server.snapshotCache.set(snapshot.businessId, snapshot);
+      }
     }
 
     session.businessId = snapshot.businessId;

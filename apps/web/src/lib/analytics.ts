@@ -77,15 +77,30 @@ export function setBusinessTelemetryEnabled(
   telemetryEnabled: boolean,
 ): void {
   activeBusinessId = businessId;
+  updateBusinessTelemetryPreference(businessId, telemetryEnabled);
+}
+
+export function updateBusinessTelemetryPreference(
+  businessId: string,
+  telemetryEnabled: boolean,
+): void {
   pendingTelemetryBusinessIds.delete(businessId);
   pendingTelemetryBusinessGroupKeys.delete(getPostHogBusinessGroupKey(businessId));
   if (telemetryEnabled) {
     optedOutBusinessIds.delete(businessId);
     optedOutBusinessGroupKeys.delete(getPostHogBusinessGroupKey(businessId));
-    enableAnalyticsCapture();
   } else {
     optedOutBusinessIds.add(businessId);
     optedOutBusinessGroupKeys.add(getPostHogBusinessGroupKey(businessId));
+  }
+
+  if (activeBusinessId !== businessId) {
+    return;
+  }
+
+  if (telemetryEnabled) {
+    enableAnalyticsCapture();
+  } else {
     disableAnalyticsCapture();
   }
 }

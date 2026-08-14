@@ -35,6 +35,15 @@ export const setTelemetryEnabled = mutation({
     await ctx.db.patch(args.businessId, {
       telemetryEnabled: args.telemetryEnabled,
     });
+    const snapshot = await ctx.db
+      .query("business_context_snapshots")
+      .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+      .unique();
+    if (snapshot) {
+      await ctx.db.patch(snapshot._id, {
+        telemetryEnabled: args.telemetryEnabled,
+      });
+    }
     await scheduleSnapshotRefresh(ctx, args.businessId);
     return {
       telemetryEnabled: args.telemetryEnabled,
