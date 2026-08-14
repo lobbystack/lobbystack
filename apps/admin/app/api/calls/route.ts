@@ -1,7 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { calls } from "@lobbystack/db";
+import { calls, contacts } from "@lobbystack/db";
 import { startCall } from "@lobbystack/domain";
 import { asApiResponse, readJson, withOperatorTransaction } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
@@ -10,7 +10,19 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    return NextResponse.json(await withOperatorTransaction(request, async ({ businessId, tx }) => ({ calls: await tx.select().from(calls).where(eq(calls.businessId, businessId)).orderBy(desc(calls.startedAt)).limit(50) })));
+    return NextResponse.json(await withOperatorTransaction(request, async ({ businessId, tx }) => ({
+      calls: await tx.select({
+        id: calls.id,
+        providerCallId: calls.providerCallId,
+        status: calls.status,
+        disposition: calls.disposition,
+        startedAt: calls.startedAt,
+        endedAt: calls.endedAt,
+        providerDurationSeconds: calls.providerDurationSeconds,
+        contactName: contacts.name,
+        contactPhone: contacts.phone,
+      }).from(calls).leftJoin(contacts, eq(calls.contactId, contacts.id)).where(eq(calls.businessId, businessId)).orderBy(desc(calls.startedAt)).limit(50),
+    })));
   } catch (error) { return asApiResponse(error); }
 }
 

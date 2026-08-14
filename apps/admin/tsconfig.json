@@ -16,7 +16,10 @@
     "incremental": true,
     "plugins": [{ "name": "next" }],
     "paths": {
+      "@/components/*": ["../web/src/components/*", "./src/components/*"],
+      "@/hooks/*": ["../web/src/hooks/*", "./src/hooks/*"],
       "@/*": ["./src/*"],
+      "@web/*": ["../web/src/*"],
       "@lobbystack/ai": ["../../packages/ai/src"],
       "@lobbystack/config": ["../../packages/config/src"],
       "@lobbystack/contracts": ["../../packages/contracts/src"],

@@ -1,25 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
-import { RefreshCw, Users } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { PageSurface } from "./page-surface";
+import { PageHeader } from "@web/components/page-header";
+import { TableCardSkeleton } from "@web/components/loading-skeletons";
+import { Badge } from "@web/components/ui/badge";
+import { Input } from "@web/components/ui/input";
+import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@web/components/ui/table";
+import { formatDateTime } from "@/lib/locale";
 
-type Business = { businessId: string; name: string; slug: string; role: string; active: boolean };
-type Contact = {
-  id: string;
-  name: string | null;
-  phone: string;
-  email: string | null;
-  smsConsentStatus: string | null;
-  operatorBlockedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
+type Business = { businessId: string; active: boolean };
+type Contact = { id: string; name: string | null; phone: string; email: string | null; smsConsentStatus: string | null; operatorBlockedAt: string | null; createdAt: string; updatedAt: string };
 
 async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(url, { credentials: "include" });
@@ -27,48 +22,36 @@ async function getJson<T>(url: string): Promise<T> {
   return await response.json() as T;
 }
 
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
-}
-
 export function LiveContactsSurface() {
+  const { i18n, t } = useTranslation("contacts");
   const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => getJson<{ businesses: Business[] }>("/api/businesses") });
   const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
-  const contacts = useQuery({
-    queryKey: ["contacts", business?.businessId],
-    queryFn: () => getJson<{ contacts: Contact[] }>(`/api/contacts?businessId=${encodeURIComponent(business!.businessId)}`),
-    enabled: Boolean(business?.businessId),
-  });
+  const contacts = useQuery({ queryKey: ["contacts", business?.businessId], queryFn: () => getJson<{ contacts: Contact[] }>("/api/contacts"), enabled: Boolean(business) });
 
   useEffect(() => {
-    if (!business?.businessId) return;
-    const source = new EventSource(`/api/realtime?businessId=${encodeURIComponent(business.businessId)}`);
+    if (!business) return;
+    const source = new EventSource("/api/realtime");
     const refresh = () => void queryClient.invalidateQueries({ queryKey: ["contacts", business.businessId] });
-    source.addEventListener("open", refresh);
     for (const event of ["call.completed", "message.upserted", "conversation.updated"]) source.addEventListener(event, refresh);
-    return () => {
-      source.removeEventListener("open", refresh);
-      for (const event of ["call.completed", "message.upserted", "conversation.updated"]) source.removeEventListener(event, refresh);
-      source.close();
-    };
-  }, [business?.businessId, queryClient]);
+    return () => source.close();
+  }, [business, queryClient]);
 
-  const rows = contacts.data?.contacts ?? [];
-  return <PageSurface title="Contacts" description="Keep customer details, conversation history, and consent in one place.">
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4">
-        <div>
-          <CardTitle className="flex items-center gap-2"><Users className="size-5 text-teal-600" />Workspace contacts</CardTitle>
-          <CardDescription>{business ? `${business.name} · ${rows.length} contacts loaded` : "Choose a workspace to view contacts."}</CardDescription>
-        </div>
-        <Button variant="ghost" onClick={() => void contacts.refetch()} disabled={contacts.isFetching}><RefreshCw className="size-4" />Refresh</Button>
-      </CardHeader>
-      <CardContent>
-        {businesses.isLoading || contacts.isLoading ? <p className="py-12 text-center text-sm text-slate-500">Loading contacts...</p> : null}
-        {businesses.isError || contacts.isError ? <p className="py-12 text-center text-sm text-red-600">Contacts are unavailable.</p> : null}
-        {!businesses.isLoading && !contacts.isLoading && !businesses.isError && !contacts.isError ? <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead><tr className="border-b border-slate-100 text-xs uppercase tracking-[0.12em] text-slate-400"><th className="px-3 py-3 font-semibold">Name</th><th className="px-3 py-3 font-semibold">Phone</th><th className="px-3 py-3 font-semibold">Email</th><th className="px-3 py-3 font-semibold">SMS consent</th><th className="px-3 py-3 font-semibold">Status</th><th className="px-3 py-3 font-semibold">Updated</th></tr></thead><tbody>{rows.length > 0 ? rows.map((contact) => <tr className="border-b border-slate-50 last:border-0" key={contact.id}><td className="px-3 py-4 font-medium text-slate-800"><Link className="hover:text-teal-700 hover:underline" href={`/contacts/${contact.id}`}>{contact.name ?? "Unknown contact"}</Link></td><td className="px-3 py-4 text-slate-600">{contact.phone}</td><td className="px-3 py-4 text-slate-600">{contact.email ?? "-"}</td><td className="px-3 py-4 capitalize text-slate-600">{contact.smsConsentStatus ?? "unknown"}</td><td className="px-3 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${contact.operatorBlockedAt ? "bg-red-50 text-red-700" : "bg-teal-50 text-teal-700"}`}>{contact.operatorBlockedAt ? "Blocked" : "Active"}</span></td><td className="px-3 py-4 text-slate-600">{formatDate(contact.updatedAt ?? contact.createdAt)}</td></tr>) : <tr><td className="px-3 py-12 text-center text-slate-500" colSpan={6}>No contacts yet.</td></tr>}</tbody></table></div> : null}
-      </CardContent>
-    </Card>
-  </PageSurface>;
+  const rows = useMemo(() => (contacts.data?.contacts ?? []).filter((contact) => [contact.name, contact.phone, contact.email].filter(Boolean).join(" ").toLowerCase().includes(search.trim().toLowerCase())), [contacts.data, search]);
+
+  return (
+    <div className="flex flex-1 flex-col gap-6">
+      <PageHeader title={t("page.title")} />
+      <div className="relative max-w-sm"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-10" onChange={(event) => setSearch(event.target.value)} placeholder={t("page.searchPlaceholder")} value={search} /></div>
+      {businesses.isLoading || contacts.isLoading ? <TableCardSkeleton columns={5} /> : (
+        <TableCard>
+          <Table className="min-w-[50rem]">
+            <TableHeader><TableRow><TableHead>{t("table.contact")}</TableHead><TableHead>{t("detail.metadata.phone")}</TableHead><TableHead>{t("detail.metadata.email")}</TableHead><TableHead>{t("table.activity")}</TableHead><TableHead className="text-right">{t("table.lastInteraction")}</TableHead></TableRow></TableHeader>
+            <TableBody>{rows.length ? rows.map((contact) => <TableRow key={contact.id}><TableCell className="font-medium"><Link className="hover:underline" href={`/contacts/${contact.id}`}>{contact.name ?? t("table.unknownContact")}</Link></TableCell><TableCell>{contact.phone}</TableCell><TableCell>{contact.email ?? "-"}</TableCell><TableCell><Badge variant={contact.operatorBlockedAt ? "destructive" : "secondary"}>{contact.operatorBlockedAt ? t("detail.blocking.badge") : t("detail.blocking.active")}</Badge></TableCell><TableCell className="text-right">{formatDateTime(contact.updatedAt ?? contact.createdAt, i18n.language, { dateStyle: "medium" })}</TableCell></TableRow>) : <TableRow><TableCell className="h-32 text-center text-muted-foreground" colSpan={5}>{t("table.empty")}</TableCell></TableRow>}</TableBody>
+          </Table>
+        </TableCard>
+      )}
+    </div>
+  );
 }

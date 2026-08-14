@@ -3,22 +3,18 @@
 import Link from "next/link";
 import Script from "next/script";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
+import { TriangleAlert } from "lucide-react";
 
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { ReplacementOnboardingShell } from "@/components/replacement-onboarding-shell";
+import { Button } from "@web/components/ui/button";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@web/components/ui/field";
+import { Input } from "@web/components/ui/input";
 
 declare global {
   interface Window {
     turnstile?: {
-      render(
-        element: HTMLElement,
-        options: {
-          sitekey: string;
-          callback(token: string): void;
-          "expired-callback"(): void;
-          "error-callback"(): void;
-        },
-      ): string;
+      render(element: HTMLElement, options: { sitekey: string; callback(token: string): void; "expired-callback"(): void; "error-callback"(): void }): string;
       reset(widgetId?: string): void;
     };
   }
@@ -27,9 +23,9 @@ declare global {
 const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 export function AuthCard({ mode }: { mode: "login" | "signup" }) {
+  const { t } = useTranslation("auth");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -37,9 +33,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   const widgetIdRef = useRef<string | null>(null);
 
   function renderTurnstile() {
-    if (mode !== "signup" || !turnstileSiteKey || !turnstileRef.current || !window.turnstile || widgetIdRef.current) {
-      return;
-    }
+    if (mode !== "signup" || !turnstileSiteKey || !turnstileRef.current || !window.turnstile || widgetIdRef.current) return;
     widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
       sitekey: turnstileSiteKey,
       callback: setTurnstileToken,
@@ -49,64 +43,48 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   }
 
   useEffect(() => () => {
-    if (widgetIdRef.current && window.turnstile) {
-      window.turnstile.reset(widgetIdRef.current);
-    }
+    if (widgetIdRef.current && window.turnstile) window.turnstile.reset(widgetIdRef.current);
   }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     if (mode === "signup" && turnstileSiteKey && !turnstileToken) {
-      setError("Complete the verification challenge before signing up.");
+      setError(t("errors.turnstileFailed"));
       return;
     }
     setLoading(true);
     try {
-      const body = mode === "login"
-        ? { email, password }
-        : { name, email, password, ...(turnstileToken ? { turnstileToken } : {}) };
-      const response = await fetch(`/api/auth/${mode === "login" ? "sign-in/email" : "sign-up/email"}`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!response.ok) {
-        throw new Error("The credentials could not be verified.");
-      }
+      const body = mode === "login" ? { email, password } : { name: email.split("@")[0] || email, email, password, ...(turnstileToken ? { turnstileToken } : {}) };
+      const response = await fetch(`/api/auth/${mode === "login" ? "sign-in/email" : "sign-up/email"}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      if (!response.ok) throw new Error(mode === "login" ? t("errors.incorrectCredentials") : t("errors.signupFailed"));
       window.location.assign("/");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to continue.");
+      setError(cause instanceof Error ? cause.message : t("errors.signupFailed"));
     } finally {
       setLoading(false);
     }
   }
 
-  return <>
-    {mode === "signup" && turnstileSiteKey ? <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" onLoad={renderTurnstile} /> : null}
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-4 text-center">
-          <span className="mx-auto grid size-12 place-items-center rounded-xl bg-slate-950 text-xl font-semibold text-white">L</span>
-          <div>
-            <CardTitle className="text-2xl">{mode === "login" ? "Welcome back" : "Create your workspace"}</CardTitle>
-            <CardDescription className="mt-2">{mode === "login" ? "Sign in to manage your AI receptionist." : "Set up your LobbyStack workspace in a few minutes."}</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={submit}>
-            {mode === "signup" ? <label className="block space-y-2 text-sm font-medium text-slate-700">Name<input className="mt-1 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-100" value={name} onChange={(event) => setName(event.target.value)} required /></label> : null}
-            <label className="block space-y-2 text-sm font-medium text-slate-700">Email<input className="mt-1 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-100" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
-            <label className="block space-y-2 text-sm font-medium text-slate-700">Password<input className="mt-1 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-100" minLength={8} type="password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
-            {mode === "signup" && turnstileSiteKey ? <div ref={turnstileRef} aria-label="Security verification" /> : null}
-            {error ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-            <Button className="w-full" disabled={loading} type="submit">{loading ? "Please wait..." : mode === "login" ? "Sign in" : "Create account"}</Button>
-          </form>
-          <p className="mt-6 text-center text-sm text-slate-500">
-            {mode === "login" ? <><Link className="font-medium text-slate-900 underline" href="/signup">Create an account</Link> · <Link className="font-medium text-slate-900 underline" href="/forgot-password">Forgot password?</Link></> : <Link className="font-medium text-slate-900 underline" href="/login">Already have an account?</Link>}
-          </p>
-        </CardContent>
-      </Card>
-    </main>
-  </>;
+  const login = mode === "login";
+  return (
+    <>
+      {!login && turnstileSiteKey ? <Script onLoad={renderTurnstile} src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" /> : null}
+      <ReplacementOnboardingShell progress={null} title={login ? t("login.title") : t("signup.title")} width="sm">
+        <form onSubmit={submit}>
+          <FieldGroup className="gap-4">
+            <Field><FieldLabel htmlFor="auth-email">{login ? t("login.email") : t("signup.email")}</FieldLabel><Input autoComplete="email" className="h-11" id="auth-email" onChange={(event) => setEmail(event.target.value)} placeholder={login ? t("login.emailPlaceholder") : t("signup.emailPlaceholder")} required type="email" value={email} /></Field>
+            <Field>
+              <div className="flex items-center justify-between gap-3"><FieldLabel htmlFor="auth-password">{login ? t("login.password") : t("signup.password")}</FieldLabel>{login ? <Link className="text-xs font-medium text-muted-foreground hover:text-foreground" href="/forgot-password">{t("login.forgotPassword")}</Link> : null}</div>
+              <Input autoComplete={login ? "current-password" : "new-password"} className="h-11" id="auth-password" minLength={8} onChange={(event) => setPassword(event.target.value)} placeholder={login ? t("login.passwordPlaceholder") : t("signup.passwordPlaceholder")} required type="password" value={password} />
+            </Field>
+            {!login && turnstileSiteKey ? <div aria-label="Security verification" ref={turnstileRef} /> : null}
+            {error ? <FieldError className="flex items-center gap-2 font-medium"><TriangleAlert className="size-4 shrink-0" aria-hidden="true" /><span>{error}</span></FieldError> : null}
+            <Button className="mt-2 h-11 w-full" loading={loading} loadingLabel={login ? t("login.submitting") : t("signup.submitting")} type="submit">{login ? t("login.submit") : t("signup.submit")}</Button>
+          </FieldGroup>
+        </form>
+        <p className="mt-6 text-center text-sm text-muted-foreground">{login ? t("login.noAccount") : t("signup.haveAccount")} <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={login ? "/signup" : "/login"}>{login ? t("login.createOne") : t("signup.signIn")}</Link></p>
+      </ReplacementOnboardingShell>
+    </>
+  );
 }

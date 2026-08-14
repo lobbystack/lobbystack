@@ -20,6 +20,7 @@ node_modules
 .firecrawl/
 .prospect-demos/
 apps/web/dist
+apps/admin/public/
 apps/landing/.astro
 apps/landing/.wrangler
 apps/landing/dist

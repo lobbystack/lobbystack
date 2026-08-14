@@ -1,25 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
-import { MessageSquare, RefreshCw } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { ArrowLeft, SearchIcon, Send } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { PageSurface } from "./page-surface";
+import { PageHeader } from "@web/components/page-header";
+import { Avatar, AvatarFallback } from "@web/components/ui/avatar";
+import { Button } from "@web/components/ui/button";
+import { Input } from "@web/components/ui/input";
+import { Separator } from "@web/components/ui/separator";
+import { cn } from "@/lib/utils";
+import { formatDateTime } from "@/lib/locale";
 
-type Business = { businessId: string; name: string; slug: string; role: string; active: boolean };
-type Message = {
-  id: string;
-  conversationId: string;
-  contactName: string | null;
-  contactPhone: string | null;
-  body: string;
-  channel: string;
-  direction: string;
-  status: string;
-  createdAt: string;
-};
+type Business = { businessId: string; active: boolean };
+type Message = { id: string; conversationId: string; contactName: string | null; contactPhone: string | null; body: string; channel: string; direction: string; status: string; createdAt: string };
 
 async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(url, { credentials: "include" });
@@ -27,48 +22,63 @@ async function getJson<T>(url: string): Promise<T> {
   return await response.json() as T;
 }
 
-function formatTime(value: string): string {
-  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
+function initials(name: string | null, fallback: string): string {
+  if (!name) return fallback.slice(0, 2).toUpperCase();
+  return name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
 }
 
 export function LiveMessagesSurface() {
+  const { i18n, t } = useTranslation("messages");
   const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => getJson<{ businesses: Business[] }>("/api/businesses") });
   const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
-  const messages = useQuery({
-    queryKey: ["messages", business?.businessId],
-    queryFn: () => getJson<{ messages: Message[] }>(`/api/messages?businessId=${encodeURIComponent(business!.businessId)}`),
-    enabled: Boolean(business?.businessId),
+  const messages = useQuery({ queryKey: ["messages", business?.businessId], queryFn: () => getJson<{ messages: Message[] }>("/api/messages"), enabled: Boolean(business) });
+  const send = useMutation({
+    mutationFn: async () => {
+      if (!business || !selectedId) return;
+      const response = await fetch(`/api/messages?businessId=${encodeURIComponent(business.businessId)}`, { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ conversationId: selectedId, body: draft.trim(), channel: "sms" }) });
+      if (!response.ok) throw new Error(t("page.sendFailed"));
+    },
+    onSuccess: async () => { setDraft(""); await queryClient.invalidateQueries({ queryKey: ["messages", business?.businessId] }); },
   });
 
   useEffect(() => {
-    if (!business?.businessId) return;
-    const source = new EventSource(`/api/realtime?businessId=${encodeURIComponent(business.businessId)}`);
+    if (!business) return;
+    const source = new EventSource("/api/realtime");
     const refresh = () => void queryClient.invalidateQueries({ queryKey: ["messages", business.businessId] });
-    source.addEventListener("open", refresh);
     for (const event of ["message.upserted", "message.deliveryUpdated", "conversation.updated"]) source.addEventListener(event, refresh);
-    return () => {
-      source.removeEventListener("open", refresh);
-      for (const event of ["message.upserted", "message.deliveryUpdated", "conversation.updated"]) source.removeEventListener(event, refresh);
-      source.close();
-    };
-  }, [business?.businessId, queryClient]);
+    return () => source.close();
+  }, [business, queryClient]);
 
-  const rows = messages.data?.messages ?? [];
-  return <PageSurface title="Messages" description="Manage SMS conversations and follow up with customers.">
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4">
-        <div>
-          <CardTitle className="flex items-center gap-2"><MessageSquare className="size-5 text-teal-600" />Message activity</CardTitle>
-          <CardDescription>{business ? `${business.name} · ${rows.length} recent messages` : "Choose a workspace to view messages."}</CardDescription>
+  const conversations = useMemo(() => {
+    const grouped = new Map<string, Message[]>();
+    for (const message of messages.data?.messages ?? []) grouped.set(message.conversationId, [...(grouped.get(message.conversationId) ?? []), message]);
+    return [...grouped.entries()].map(([id, items]) => ({ id, messages: items.sort((a, b) => a.createdAt.localeCompare(b.createdAt)), latest: items[0]! })).filter((conversation) => [conversation.latest.contactName, conversation.latest.contactPhone, conversation.latest.body].filter(Boolean).join(" ").toLowerCase().includes(search.trim().toLowerCase()));
+  }, [messages.data, search]);
+  const selected = conversations.find((conversation) => conversation.id === selectedId) ?? null;
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (draft.trim()) send.mutate();
+  }
+
+  return (
+    <section className="flex h-full min-w-0 gap-6">
+      <div className={cn("flex min-w-0 w-full flex-col gap-3 sm:w-56 lg:w-72 2xl:w-80", selected && "hidden sm:flex")}>
+        <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-background px-4 py-2 sm:static sm:z-auto sm:mx-0 sm:p-0">
+          <PageHeader className="py-0" title={t("page.title")} />
+          <div className="relative"><SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label={t("page.searchPlaceholder")} className="pl-10" onChange={(event) => setSearch(event.target.value)} placeholder={t("page.searchPlaceholder")} value={search} /></div>
         </div>
-        <Button variant="ghost" onClick={() => void messages.refetch()} disabled={messages.isFetching}><RefreshCw className="size-4" />Refresh</Button>
-      </CardHeader>
-      <CardContent>
-        {businesses.isLoading || messages.isLoading ? <p className="py-12 text-center text-sm text-slate-500">Loading messages...</p> : null}
-        {businesses.isError || messages.isError ? <p className="py-12 text-center text-sm text-red-600">Messages are unavailable.</p> : null}
-        {!businesses.isLoading && !messages.isLoading && !businesses.isError && !messages.isError ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead><tr className="border-b border-slate-100 text-xs uppercase tracking-[0.12em] text-slate-400"><th className="px-3 py-3 font-semibold">Contact</th><th className="px-3 py-3 font-semibold">Message</th><th className="px-3 py-3 font-semibold">Channel</th><th className="px-3 py-3 font-semibold">Direction</th><th className="px-3 py-3 font-semibold">Status</th><th className="px-3 py-3 font-semibold">Updated</th></tr></thead><tbody>{rows.length > 0 ? rows.map((message) => <tr className="border-b border-slate-50 last:border-0" key={message.id}><td className="px-3 py-4"><p className="font-medium text-slate-800">{message.contactName ?? "Unknown contact"}</p><p className="text-xs text-slate-500">{message.contactPhone ?? message.conversationId}</p></td><td className="max-w-[360px] px-3 py-4 text-slate-600"><span className="line-clamp-2">{message.body}</span></td><td className="px-3 py-4 capitalize text-slate-600">{message.channel}</td><td className="px-3 py-4 capitalize text-slate-600">{message.direction}</td><td className="px-3 py-4"><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium capitalize text-slate-700">{message.status}</span></td><td className="px-3 py-4 text-slate-600">{formatTime(message.createdAt)}</td></tr>) : <tr><td className="px-3 py-12 text-center text-slate-500" colSpan={6}>No messages yet.</td></tr>}</tbody></table></div> : null}
-      </CardContent>
-    </Card>
-  </PageSurface>;
+        <div className="-mx-3 no-scrollbar h-full overflow-y-auto p-3">
+          {conversations.map((conversation) => <div key={conversation.id}><button className={cn("group flex w-full rounded-md px-2 py-2 text-start text-sm hover:bg-accent hover:text-accent-foreground", selectedId === conversation.id && "bg-muted")} onClick={() => setSelectedId(conversation.id)} type="button"><div className="flex w-full gap-2"><Avatar><AvatarFallback>{initials(conversation.latest.contactName, conversation.latest.contactPhone ?? t("page.unknownShort"))}</AvatarFallback></Avatar><div className="min-w-0 flex-1"><div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2"><span className="truncate font-semibold">{conversation.latest.contactName ?? conversation.latest.contactPhone ?? t("page.unknownCaller")}</span><span className="text-[11px] text-muted-foreground">{formatDateTime(conversation.latest.createdAt, i18n.language, { hour: "numeric", minute: "2-digit" })}</span></div><span className="line-clamp-2 text-muted-foreground">{conversation.latest.body || t("page.emptyPreview")}</span></div></div></button><Separator className="my-1" /></div>)}
+        </div>
+      </div>
+      <div className={cn("hidden min-w-0 w-full flex-1 flex-col border bg-background sm:flex sm:rounded-md", selected && "flex")}>
+        {selected ? <><div className="flex items-center gap-3 border-b p-4"><Button className="sm:hidden" onClick={() => setSelectedId(null)} size="icon-sm" variant="ghost"><ArrowLeft /></Button><Avatar><AvatarFallback>{initials(selected.latest.contactName, selected.latest.contactPhone ?? t("page.unknownShort"))}</AvatarFallback></Avatar><div className="min-w-0"><p className="truncate font-semibold">{selected.latest.contactName ?? t("page.unknownCaller")}</p><p className="truncate text-sm text-muted-foreground">{selected.latest.contactPhone ?? t("page.noChannel")}</p></div></div><div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">{selected.messages.map((message) => <div className={cn("flex", message.direction === "outbound" ? "justify-end" : "justify-start")} key={message.id}><div className={cn("max-w-[80%] rounded-2xl px-4 py-3 text-sm", message.direction === "outbound" ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-muted text-foreground")}><p className="whitespace-pre-wrap">{message.body}</p><p className="mt-1 text-[11px] opacity-70">{formatDateTime(message.createdAt, i18n.language, { hour: "numeric", minute: "2-digit" })}</p></div></div>)}</div><form className="flex gap-2 border-t p-4" onSubmit={submit}><Input className="h-11" onChange={(event) => setDraft(event.target.value)} placeholder={t("page.composerPlaceholderSms")} value={draft} /><Button aria-label={t("page.send")} disabled={!draft.trim()} loading={send.isPending} size="icon-lg" type="submit"><Send /></Button></form></> : <div className="m-auto p-8 text-center text-sm text-muted-foreground">{t("page.selectConversation")}</div>}
+      </div>
+    </section>
+  );
 }

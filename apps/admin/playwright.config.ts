@@ -40,7 +40,7 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "mkdir -p .next/standalone/apps/admin/.next && cp -R .next/static .next/standalone/apps/admin/.next/static && node .next/standalone/apps/admin/server.js",
+    command: "mkdir -p .next/standalone/apps/admin/.next && cp -R .next/static .next/standalone/apps/admin/.next/static && cp -R public .next/standalone/apps/admin/public && node .next/standalone/apps/admin/server.js",
     url: `${baseURL}/login`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

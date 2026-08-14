@@ -27,6 +27,7 @@ RUN groupadd --system --gid 1001 lobbystack && \
     rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=build --chown=lobbystack:lobbystack /app/apps/admin/.next/standalone ./
 COPY --from=build --chown=lobbystack:lobbystack /app/apps/admin/.next/static ./apps/admin/.next/static
+COPY --from=build --chown=lobbystack:lobbystack /app/apps/admin/public ./apps/admin/public
 
 USER lobbystack
 EXPOSE 3000

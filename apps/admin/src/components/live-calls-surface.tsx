@@ -1,23 +1,19 @@
 "use client";
 
-import { useEffect } from "react";
-import { RefreshCw, Radio } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { PageSurface } from "./page-surface";
+import { PageHeader } from "@web/components/page-header";
+import { TableCardSkeleton } from "@web/components/loading-skeletons";
+import { Input } from "@web/components/ui/input";
+import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@web/components/ui/table";
+import { formatDateTime } from "@/lib/locale";
 
-type Business = { businessId: string; name: string; slug: string; role: string; active: boolean };
-type Call = {
-  id: string;
-  providerCallId: string;
-  status: string;
-  disposition: string | null;
-  startedAt: string;
-  endedAt: string | null;
-  providerDurationSeconds: number | null;
-};
+type Business = { businessId: string; active: boolean };
+type Call = { id: string; providerCallId: string; status: string; disposition: string | null; startedAt: string; providerDurationSeconds: number | null; contactName: string | null; contactPhone: string | null };
 
 async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(url, { credentials: "include" });
@@ -25,55 +21,41 @@ async function getJson<T>(url: string): Promise<T> {
   return await response.json() as T;
 }
 
-function formatTime(value: string): string {
-  return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date(value));
-}
-
 function formatDuration(seconds: number | null): string {
-  if (seconds === null || !Number.isFinite(seconds)) return "-";
-  const minutes = Math.floor(seconds / 60);
-  return `${minutes}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+  if (seconds === null) return "-";
+  return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 }
 
 export function LiveCallsSurface() {
+  const { i18n, t } = useTranslation("calls");
   const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => getJson<{ businesses: Business[] }>("/api/businesses") });
   const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
-  const calls = useQuery({
-    queryKey: ["calls", business?.businessId],
-    queryFn: () => getJson<{ calls: Call[] }>(`/api/calls?businessId=${encodeURIComponent(business!.businessId)}`),
-    enabled: Boolean(business?.businessId),
-  });
+  const calls = useQuery({ queryKey: ["calls", business?.businessId], queryFn: () => getJson<{ calls: Call[] }>("/api/calls"), enabled: Boolean(business) });
 
   useEffect(() => {
-    if (!business?.businessId) return;
-    const source = new EventSource(`/api/realtime?businessId=${encodeURIComponent(business.businessId)}`);
+    if (!business) return;
+    const source = new EventSource("/api/realtime");
     const refresh = () => void queryClient.invalidateQueries({ queryKey: ["calls", business.businessId] });
-    const events = ["call.started", "call.updated", "call.completed", "transcript.upserted", "recording.available"];
-    source.addEventListener("open", refresh);
-    for (const event of events) source.addEventListener(event, refresh);
-    return () => {
-      source.removeEventListener("open", refresh);
-      for (const event of events) source.removeEventListener(event, refresh);
-      source.close();
-    };
-  }, [business?.businessId, queryClient]);
+    for (const event of ["call.started", "call.updated", "call.completed", "recording.available"]) source.addEventListener(event, refresh);
+    return () => source.close();
+  }, [business, queryClient]);
 
-  const rows = calls.data?.calls ?? [];
-  return <PageSurface title="Calls" description="Review conversations, outcomes, recordings, and transcripts.">
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4">
-        <div>
-          <CardTitle className="flex items-center gap-2"><Radio className="size-5 text-teal-600" />Live call activity</CardTitle>
-          <CardDescription>{business ? `${business.name} · updates arrive through authenticated SSE` : "Choose a workspace to view calls."}</CardDescription>
-        </div>
-        <Button variant="ghost" onClick={() => void calls.refetch()} disabled={calls.isFetching}><RefreshCw className="size-4" />Refresh</Button>
-      </CardHeader>
-      <CardContent>
-        {businesses.isLoading || calls.isLoading ? <p className="py-12 text-center text-sm text-slate-500">Loading calls...</p> : null}
-        {businesses.isError || calls.isError ? <p className="py-12 text-center text-sm text-red-600">Live call data is unavailable.</p> : null}
-        {!businesses.isLoading && !calls.isLoading && !businesses.isError && !calls.isError ? <div className="overflow-x-auto"><table className="w-full min-w-[640px] text-left text-sm"><thead><tr className="border-b border-slate-100 text-xs uppercase tracking-[0.12em] text-slate-400"><th className="px-3 py-3 font-semibold">Call</th><th className="px-3 py-3 font-semibold">Time</th><th className="px-3 py-3 font-semibold">Outcome</th><th className="px-3 py-3 font-semibold">Duration</th><th className="px-3 py-3 font-semibold">Status</th></tr></thead><tbody>{rows.length > 0 ? rows.map((call) => <tr className="border-b border-slate-50 last:border-0" key={call.id}><td className="px-3 py-4 font-medium text-slate-800">{call.providerCallId}</td><td className="px-3 py-4 text-slate-600">{formatTime(call.startedAt)}</td><td className="px-3 py-4 text-slate-600">{call.disposition ?? "-"}</td><td className="px-3 py-4 text-slate-600">{formatDuration(call.providerDurationSeconds)}</td><td className="px-3 py-4"><span className="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-medium capitalize text-teal-700">{call.status}</span></td></tr>) : <tr><td className="px-3 py-12 text-center text-slate-500" colSpan={5}>No calls yet.</td></tr>}</tbody></table></div> : null}
-      </CardContent>
-    </Card>
-  </PageSurface>;
+  const rows = useMemo(() => (calls.data?.calls ?? []).filter((call) => [call.contactName, call.contactPhone, call.disposition, call.providerCallId].filter(Boolean).join(" ").toLowerCase().includes(search.trim().toLowerCase())), [calls.data, search]);
+
+  return (
+    <div className="flex flex-1 flex-col gap-6">
+      <PageHeader actions={<div className="inline-flex shrink-0 items-center gap-2"><span className="text-base font-semibold leading-none">{(calls.data?.calls.filter((call) => call.status === "started").length ?? 0).toLocaleString(i18n.language)}</span><span className="relative flex size-2.5 shrink-0"><span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500/45" /><span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" /></span></div>} title={t("page.title")} />
+      <div className="relative max-w-sm"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-10" onChange={(event) => setSearch(event.target.value)} placeholder={t("filters.searchPlaceholder")} value={search} /></div>
+      {businesses.isLoading || calls.isLoading ? <TableCardSkeleton columns={5} /> : (
+        <TableCard>
+          <Table className="min-w-[56rem]">
+            <TableHeader><TableRow><TableHead>{t("table.caller")}</TableHead><TableHead>{t("table.number")}</TableHead><TableHead className="min-w-80">{t("table.purpose")}</TableHead><TableHead className="text-right">{t("table.time")}</TableHead><TableHead className="text-right">{t("table.status")}</TableHead></TableRow></TableHeader>
+            <TableBody>{rows.length ? rows.map((call) => <TableRow key={call.id}><TableCell className="font-medium"><Link href={`/calls/${call.id}`}>{call.contactName ?? t("table.unknownCaller")}</Link></TableCell><TableCell>{call.contactPhone ?? t("table.noNumber")}</TableCell><TableCell className="type-body-muted">{call.disposition ?? call.status}</TableCell><TableCell className="text-right">{formatDateTime(call.startedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" })}</TableCell><TableCell className="text-right">{formatDuration(call.providerDurationSeconds)}</TableCell></TableRow>) : <TableRow><TableCell className="h-32 text-center text-muted-foreground" colSpan={5}>{t("table.empty")}</TableCell></TableRow>}</TableBody>
+          </Table>
+        </TableCard>
+      )}
+    </div>
+  );
 }

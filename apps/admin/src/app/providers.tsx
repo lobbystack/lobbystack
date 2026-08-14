@@ -5,6 +5,12 @@ import posthog from "posthog-js";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
+import { LocaleProvider } from "@/components/replacement-locale-provider";
+import { AppearanceProvider } from "@web/components/appearance-provider";
+import { ThemeProvider } from "@web/components/theme-provider";
+import { Toaster } from "@web/components/ui/sonner";
+import { i18nReady } from "@/i18n";
+
 function ProductAnalytics() {
   const pathname = usePathname();
   useEffect(() => {
@@ -25,5 +31,25 @@ function ProductAnalytics() {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 10_000, refetchOnWindowFocus: false } } }));
-  return <QueryClientProvider client={queryClient}><ProductAnalytics />{children}</QueryClientProvider>;
+  const [translationsReady, setTranslationsReady] = useState(false);
+
+  useEffect(() => {
+    void i18nReady.finally(() => setTranslationsReady(true));
+  }, []);
+
+  if (!translationsReady) return null;
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <AppearanceProvider>
+          <LocaleProvider>
+            <ProductAnalytics />
+            {children}
+            <Toaster richColors />
+          </LocaleProvider>
+        </AppearanceProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
 }

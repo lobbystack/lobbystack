@@ -1,42 +1,41 @@
-@import "tailwindcss";
+@import "../../web/src/styles/index.css";
+@source "../../web/src";
 
-:root {
-  --background: #f8fafc;
-  --foreground: #172033;
-  --muted: #64748b;
-  --border: #e5e7eb;
-  --surface: #ffffff;
-  --surface-muted: #f1f5f9;
-  --accent: #0f766e;
-  --accent-foreground: #ffffff;
-  --ring: #99f6e4;
+/* Replacement surfaces still being moved onto semantic classes inherit the
+   original neutral shadcn palette during the transition. */
+.text-slate-950,
+.text-slate-900,
+.text-slate-800,
+.text-slate-700,
+.text-teal-800,
+.text-teal-700,
+.text-teal-600 {
+  color: var(--foreground) !important;
 }
 
-* {
-  box-sizing: border-box;
+.text-slate-600,
+.text-slate-500,
+.text-slate-400 {
+  color: var(--muted-foreground) !important;
 }
 
-html {
-  background: var(--background);
+.bg-white,
+.bg-slate-950,
+.bg-slate-900 {
+  background-color: var(--card) !important;
 }
 
-body {
-  min-height: 100vh;
-  margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Geist, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  text-rendering: optimizeLegibility;
+.bg-slate-50,
+.bg-slate-100,
+.bg-teal-50,
+.bg-teal-100 {
+  background-color: var(--muted) !important;
 }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
-
-::selection {
-  background: #ccfbf1;
-  color: #134e4a;
+.border-slate-50,
+.border-slate-100,
+.border-slate-200,
+.border-slate-300,
+.border-teal-100 {
+  border-color: var(--border) !important;
 }
