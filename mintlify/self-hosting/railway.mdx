@@ -1,0 +1,49 @@
+---
+title: "Railway deployment"
+description: "Deploy self-hosted LobbyStack on Railway using the official Convex template plus Web and Voice Gateway services."
+---
+
+## Overview
+
+The Railway template deploys:
+
+- **Postgres**, **Convex Backend**, and **Convex Dashboard** from the official [Convex template](https://railway.com/deploy/convex)
+- **Web** — LobbyStack operator dashboard
+- **Voice Gateway** — Twilio and OpenAI Realtime runtime
+
+See the full runbook in the repository: [Railway template guide](https://github.com/lobbystack/lobbystack/blob/main/docs/deployment/railway-template.md).
+
+## Quick start
+
+1. Deploy the LobbyStack Railway template.
+2. Enable **TCP proxy** on **Convex Backend** port **3211**.
+3. Copy the **Admin key** from Convex Backend deploy logs → set `CONVEX_SELF_HOSTED_ADMIN_KEY` → restart backend.
+4. From a local clone, run `pnpm self-hosted:convex:env` and `pnpm self-hosted:convex:deploy`.
+5. Redeploy **Web** and configure Twilio / OpenAI credentials.
+
+For template maintainers: create the first template as unlisted, validate it in a fresh Railway project, and publish only after the health checks and Convex deploy flow pass. A live demo project is optional and not required for the first marketplace version.
+
+## Service ports
+
+| Service | Port |
+|---------|------|
+| Convex Backend (API) | 3210 |
+| Convex Backend (HTTP actions) | 3211 (TCP proxy) |
+| Convex Dashboard | 8080 |
+| Web | 8080 |
+| Voice Gateway | 3001 |
+
+## Template service settings
+
+Configure the LobbyStack app services directly in the Railway template composer:
+
+| Service | Dockerfile | Start command | Healthcheck |
+|---------|------------|---------------|-------------|
+| Web | `Dockerfile.web` | `nginx -g 'daemon off;'` | `/healthz` |
+| Voice Gateway | `Dockerfile.voice-gateway` | `./node_modules/.bin/tsx src/index.ts` | `/health` |
+
+## Related
+
+- [Docker Compose deployment](/self-hosting/docker-compose)
+- [Environment variables](/self-hosting/environment-variables)
+- [Provider setup](/self-hosting/providers)
