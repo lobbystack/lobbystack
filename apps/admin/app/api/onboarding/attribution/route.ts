@@ -13,7 +13,8 @@ export async function POST(request: Request) {
     if (!businessId) return NextResponse.json({ error: "A businessId is required." }, { status: 400 });
     const body = await readJson(request);
     const source = typeof body === "object" && body !== null && !Array.isArray(body) && typeof (body as { source?: unknown }).source === "string" ? (body as { source: string }).source : null;
-    await submitOnboardingAttribution(createDomainContext(), { userId: session.user.id, businessId, source });
+    const referralCode = typeof body === "object" && body !== null && !Array.isArray(body) && typeof (body as { referralCode?: unknown }).referralCode === "string" ? (body as { referralCode: string }).referralCode : null;
+    await submitOnboardingAttribution(createDomainContext(), { userId: session.user.id, businessId, source, referralCode });
     return NextResponse.json({ ok: true, stage: "complete" });
   } catch (error) {
     return asApiResponse(error);

@@ -15,6 +15,10 @@ const PAID_ORDER_STATUSES = new Set(["paid", "completed", "succeeded"]);
 const VOID_ORDER_STATUSES = new Set(["canceled", "cancelled", "refunded", "reversed"]);
 const VOID_REFUND_STATUSES = new Set(["succeeded"]);
 
+export function normalizeAffiliateReferralCode(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
+}
+
 function centsForCommission(amountCents: number): number {
   return Math.max(0, Math.floor(amountCents * COMMISSION_RATE));
 }
@@ -50,7 +54,8 @@ export async function attributeBusiness(
   input: { businessId: string; referredUserId: string; referralCode: string; source: string },
 ): Promise<string | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "system" }, async (tx) => {
-    const profile = (await tx.select({ id: affiliateProfiles.id, referralCode: affiliateProfiles.referralCode }).from(affiliateProfiles).where(eq(affiliateProfiles.referralCode, input.referralCode)).limit(1))[0];
+    const referralCode = normalizeAffiliateReferralCode(input.referralCode);
+    const profile = (await tx.select({ id: affiliateProfiles.id, referralCode: affiliateProfiles.referralCode }).from(affiliateProfiles).where(eq(affiliateProfiles.referralCode, referralCode)).limit(1))[0];
     if (!profile) return null;
     const [attribution] = await tx.insert(affiliateAttributions).values({ affiliateProfileId: profile.id, businessId: input.businessId, referredUserId: input.referredUserId, referralCode: profile.referralCode, source: input.source, attributedAt: new Date() }).onConflictDoNothing().returning({ id: affiliateAttributions.id });
     if (!attribution) return null;
@@ -65,9 +70,10 @@ export async function recordAffiliateClick(
   input: { referralCode: string; visitorId?: string; sourceUrl?: string },
 ): Promise<boolean> {
   return await withBusinessTransaction(context.db, { actorType: "system" }, async (tx) => {
-    const profile = (await tx.select({ id: affiliateProfiles.id, status: affiliateProfiles.status }).from(affiliateProfiles).where(eq(affiliateProfiles.referralCode, input.referralCode)).limit(1))[0];
+    const referralCode = normalizeAffiliateReferralCode(input.referralCode);
+    const profile = (await tx.select({ id: affiliateProfiles.id, status: affiliateProfiles.status }).from(affiliateProfiles).where(eq(affiliateProfiles.referralCode, referralCode)).limit(1))[0];
     if (!profile || profile.status !== "active") return false;
-    await tx.insert(affiliateClicks).values({ affiliateProfileId: profile.id, referralCode: input.referralCode, ...(input.visitorId ? { visitorId: input.visitorId } : {}), ...(input.sourceUrl ? { sourceUrl: input.sourceUrl.slice(0, 500) } : {}) });
+    await tx.insert(affiliateClicks).values({ affiliateProfileId: profile.id, referralCode, ...(input.visitorId ? { visitorId: input.visitorId } : {}), ...(input.sourceUrl ? { sourceUrl: input.sourceUrl.slice(0, 500) } : {}) });
     await tx.insert(affiliateProfileStats).values({ affiliateProfileId: profile.id, clickCount: 1 }).onConflictDoUpdate({ target: affiliateProfileStats.affiliateProfileId, set: { clickCount: sql`${affiliateProfileStats.clickCount} + 1`, updatedAt: new Date() } });
     return true;
   });

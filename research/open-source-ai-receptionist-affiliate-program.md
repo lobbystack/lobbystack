@@ -22,7 +22,7 @@ Purpose: source notes for a LobbyStack blog post about the new affiliate program
 | Minimum payout | USD $100 | `MIN_PAYOUT_CENTS = 10_000`; Terms page and affiliate FAQ say $100. |
 | Payout method | Manual PayPal | Affiliate UI copy and Terms page say manual PayPal payouts using the PayPal email in the affiliate dashboard. |
 | Payout cadence | Monthly review/run implied | UI copy says eligible balances of $100 or more are reviewed monthly; the domain package provides monthly payout-run generation. |
-| Attribution | Referral links/codes | The current dashboard generates `?ref=` signup links. The retired frontend captured `?via=` referral codes in local storage and bound them during onboarding. No explicit public cookie-window term found. |
+| Attribution | Referral links/codes | The dashboard generates `?ref=` signup links; the app also accepts existing `?via=` links, stores the code locally, records the click, and binds it when onboarding completes. No explicit public cookie-window term found. |
 | Refunds/chargebacks | Unpaid commissions may be voided/reversed | Terms and affiliate FAQ both mention refunds/disputes voiding or reversing unpaid commissions. |
 
 Local source files inspected:

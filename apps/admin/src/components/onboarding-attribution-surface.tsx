@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { PageSurface } from "./page-surface";
+import { clearAffiliateReferralCode, getStoredAffiliateReferralCode } from "@/lib/affiliate-referral";
 
 type Business = { businessId: string; active: boolean };
 
@@ -25,8 +26,8 @@ export function OnboardingAttributionSurface() {
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
   const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
   const finish = useMutation({
-    mutationFn: () => requestJson(`/api/onboarding/attribution?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ source: source || null }) }),
-    onSuccess: () => { router.push("/"); router.refresh(); },
+    mutationFn: () => requestJson(`/api/onboarding/attribution?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ source: source || null, referralCode: getStoredAffiliateReferralCode() }) }),
+    onSuccess: () => { clearAffiliateReferralCode(); router.push("/"); router.refresh(); },
   });
   async function submit(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); setError(null); try { await finish.mutateAsync(); } catch (cause) { setError(cause instanceof Error ? cause.message : t("attribution.failed")); } }
 

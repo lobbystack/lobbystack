@@ -10,6 +10,7 @@ import { ReplacementOnboardingShell } from "@/components/replacement-onboarding-
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { captureAffiliateReferralFromUrl, getAffiliateVisitorId } from "@/lib/affiliate-referral";
 
 declare global {
   interface Window {
@@ -45,6 +46,17 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   useEffect(() => () => {
     if (widgetIdRef.current && window.turnstile) window.turnstile.reset(widgetIdRef.current);
   }, []);
+
+  useEffect(() => {
+    if (mode !== "signup") return;
+    const referralCode = captureAffiliateReferralFromUrl(new URL(window.location.href));
+    if (!referralCode) return;
+    void fetch("/api/affiliate/click", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ referralCode, visitorId: getAffiliateVisitorId(), sourceUrl: `${window.location.origin}${window.location.pathname}` }),
+    });
+  }, [mode]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
