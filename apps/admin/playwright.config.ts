@@ -6,8 +6,8 @@ import { fileURLToPath } from "node:url";
 function replacementEnvironment(): Record<string, string> {
   if (process.env.CI) return {};
   const root = resolve(fileURLToPath(new URL(".", import.meta.url)), "../..");
-  const localPath = resolve(root, ".env.replacement");
-  const path = existsSync(localPath) ? localPath : resolve(root, ".env.replacement.example");
+  const localPath = resolve(root, ".env");
+  const path = existsSync(localPath) ? localPath : resolve(root, ".env.example");
   return Object.fromEntries(readFileSync(path, "utf8").split(/\r?\n/).flatMap((line) => {
     const separator = line.indexOf("=");
     return separator > 0 && !line.startsWith("#") ? [[line.slice(0, separator), line.slice(separator + 1)]] : [];

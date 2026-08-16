@@ -12,7 +12,7 @@ Keep the collector private. Admin, worker, and voice gateway send OTLP to its pr
 - Storage: Railway bucket references for `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and `S3_BUCKET`; set `S3_FORCE_PATH_STYLE=false`.
 - Telemetry: `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector.railway.internal:4318`, `SERVICE_VERSION` set to the release SHA, and PostHog OTLP endpoints and authorization on the collector only.
 
-Provider credentials belong only on the services that use them. Follow `.env.replacement.example` for the complete variable names without copying development placeholder values.
+Provider credentials belong only on the services that use them. Follow `.env.example` for the complete variable names without copying development placeholder values.
 
 ## Deployment Order
 

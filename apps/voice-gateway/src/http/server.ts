@@ -11,7 +11,7 @@ import { extractTraceContext, getTracer, recordException } from "@lobbystack/tel
 import { handleMediaStreamConnection } from "../telephony/mediaStream";
 import { registerVoiceRoutes } from "../telephony/routes";
 import { registerWebCallRoutes } from "../webCall/routes";
-import { probeConvexSiteReachability } from "../health/convexReachability";
+import { probeBackendReachability } from "../health/backendReachability";
 import { isPrivateNetworkAddress } from "../health/internalRequest";
 import { validateMediaStreamSignature } from "../telephony/twilioRequest";
 import {
@@ -126,7 +126,7 @@ export function createServer(): ReturnType<typeof Fastify> {
   server.get("/health/live", healthResponse);
   server.get("/health/ready", healthResponse);
 
-  server.get("/health/convex", async (request, reply) => {
+  server.get("/health/backend", async (request, reply) => {
     const peerAddress = request.socket.remoteAddress;
     if (!isPrivateNetworkAddress(peerAddress ?? request.ip)) {
       return reply.status(404).send({ ok: false });
@@ -143,8 +143,8 @@ export function createServer(): ReturnType<typeof Fastify> {
       return reply.status(404).send({ ok: false });
     }
 
-    const result = await probeConvexSiteReachability({
-      convexSiteUrl: env.BACKEND_INTERNAL_URL ?? env.CONVEX_SITE_URL!,
+    const result = await probeBackendReachability({
+      backendUrl: env.BACKEND_INTERNAL_URL,
       internalServiceToken: env.INTERNAL_SERVICE_TOKEN,
     });
 

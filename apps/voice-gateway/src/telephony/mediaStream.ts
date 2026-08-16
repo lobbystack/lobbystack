@@ -18,7 +18,7 @@ import {
   systemBlockContactForVoiceCall,
   updateVoiceTransferState,
   uploadVoiceRecording,
-} from "../convex/runtimeClient";
+} from "../backend/runtimeClient";
 import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
 import {
   recordMediaStreamDisconnect,

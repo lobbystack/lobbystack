@@ -2,11 +2,11 @@
 
 import { useTranslation } from "react-i18next";
 
-import { useAppearancePreference } from "@web/components/appearance-provider";
+import { useAppearancePreference } from "@/components/appearance-provider";
 import { useLocalePreference } from "@/components/replacement-locale-provider";
-import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@web/components/ui/item";
-import { NativeSelect, NativeSelectOption } from "@web/components/ui/native-select";
-import { Surface } from "@web/components/ui/surface";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Surface } from "@/components/ui/surface";
 import type { SupportedLocale, TimeFormatPreference } from "@/lib/locale";
 
 export default function AppearancePage() {

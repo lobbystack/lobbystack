@@ -91,7 +91,7 @@ async function main(): Promise<void> {
 
     const restartProject = process.env.RECOVERY_COMPOSE_PROJECT;
     if (restartProject) {
-      const composeFile = process.env.RECOVERY_COMPOSE_FILE ?? `${root}docker-compose.replacement.yml`;
+      const composeFile = process.env.RECOVERY_COMPOSE_FILE ?? `${root}docker-compose.yml`;
       const restart = spawnSync("docker", ["compose", "--project-name", restartProject, "-f", composeFile, "restart", "redis"], { cwd: root, encoding: "utf8" });
       if (restart.status !== 0) throw new Error(restart.stderr || "Redis restart failed.");
       await waitForRedis(reconnectedProbe);

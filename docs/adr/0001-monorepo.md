@@ -6,7 +6,7 @@ Accepted
 
 ## Decision
 
-Use one pnpm monorepo with apps, shared packages, and a root Convex backend.
+Use one pnpm monorepo with application runtimes, shared packages, database migrations, and operational tooling.
 
 ## Rationale
 

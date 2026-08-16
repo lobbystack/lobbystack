@@ -6,15 +6,15 @@ if [[ -z "${REPLACEMENT_COMPOSE_PROJECT:-}" ]]; then
   echo "REPLACEMENT_COMPOSE_PROJECT is required; refusing to target an ambient Compose project." >&2
   exit 1
 fi
-ENV_FILE="${REPLACEMENT_ENV_FILE:-$ROOT_DIR/.env.replacement}"
+ENV_FILE="${REPLACEMENT_ENV_FILE:-$ROOT_DIR/.env}"
 if [[ ! -f "$ENV_FILE" ]]; then
-  ENV_FILE="$ROOT_DIR/.env.replacement.example"
+  ENV_FILE="$ROOT_DIR/.env.example"
 fi
 
 BACKUP_DIR="${1:-$ROOT_DIR/.replacement-backups/$(date -u +%Y%m%dT%H%M%SZ)}"
 mkdir -p "$BACKUP_DIR/minio"
 BACKUP_DIR="$(cd "$BACKUP_DIR" && pwd)"
-COMPOSE=(docker compose --project-name "$REPLACEMENT_COMPOSE_PROJECT" --env-file "$ENV_FILE" -f "$ROOT_DIR/docker-compose.replacement.yml")
+COMPOSE=(docker compose --project-name "$REPLACEMENT_COMPOSE_PROJECT" --env-file "$ENV_FILE" -f "$ROOT_DIR/docker-compose.yml")
 RUNNING_WRITERS=()
 
 while IFS= read -r service; do

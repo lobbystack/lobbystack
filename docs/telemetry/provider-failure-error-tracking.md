@@ -33,6 +33,6 @@ Firecrawl availability failures should appear with:
 
 The code also keeps existing operational events such as `ops.voice.openai_realtime_error` for product analytics. Those events include provider classification metadata, but alerting should be based on Error Tracking exceptions.
 
-Do not spend Product Analytics alert slots on provider failures when they already emit alertable `$exception` events. Reserve those slots for absence checks, especially missing Convex heartbeats, because Error Tracking cannot notify on an event that never arrived.
+Do not spend Product Analytics alert slots on provider failures when they already emit alertable `$exception` events. Reserve those slots for absence checks, especially missing worker or voice-gateway heartbeats, because Error Tracking cannot notify on an event that never arrived.
 
 Do not add paid or destructive synthetic provider probes by default. Provider availability is detected from real app traffic, while app and voice liveness are covered by `ops.service.health_check`, `ops.convex.heartbeat`, and `ops.voice.heartbeat`.

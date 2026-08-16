@@ -6,12 +6,12 @@ import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { PageHeader } from "@web/components/page-header";
-import { TableCardSkeleton } from "@web/components/loading-skeletons";
-import { Input } from "@web/components/ui/input";
-import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@web/components/ui/table";
+import { PageHeader } from "@/components/page-header";
+import { TableCardSkeleton } from "@/components/loading-skeletons";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDateTime } from "@/lib/locale";
-import { Button } from "@web/components/ui/button";
+import { Button } from "@/components/ui/button";
 
 type Business = { businessId: string; active: boolean };
 type Call = { id: string; providerCallId: string; status: string; disposition: string | null; startedAt: string; providerDurationSeconds: number | null; contactName: string | null; contactPhone: string | null; recordingState: "available" | "pending" | "expired" | "missing"; transcriptPreview: string | null };

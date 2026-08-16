@@ -48,7 +48,7 @@ for (const path of [
   "Dockerfile.worker",
   "Dockerfile.voice-gateway",
   "Dockerfile.otel-collector",
-  "docker-compose.replacement.yml",
+  "docker-compose.yml",
   "docker/otel-collector/config.yaml",
   "docker/otel-collector/railway.json",
   "docker/prometheus/prometheus.yml",
@@ -98,12 +98,6 @@ if (telemetryIndex.includes('export * from "./node"') || telemetryIndex.includes
 if (!adminNextConfig.includes('"@lobbystack/telemetry/node"')) {
   errors.push("admin Next.js config does not externalize Node telemetry");
 }
-for (const file of listFiles("apps/web").filter((file) => /\.(ts|tsx)$/.test(file))) {
-  if (readText(file).includes("@lobbystack/telemetry/node")) {
-    errors.push(`browser source imports Node telemetry: ${file}`);
-  }
-}
-
 const contracts = readText("packages/contracts/src/index.ts");
 const jobs = readText("packages/jobs/src/index.ts");
 const handlers = readText("apps/worker/src/handlers.ts");
@@ -127,10 +121,14 @@ const replacementTenantTables = extractAll(allTenantBlock, /\b([a-zA-Z0-9_]+),/g
   .map((variable) => schemaTablesByVariable.get(variable))
   .filter((table): table is string => table !== undefined);
 const rlsTenantBlock = rls.match(/tenant_tables text\[\] := ARRAY\[(.*?)]/s)?.[1] ?? "";
-const explicitRlsTables = listFiles("packages/db/migrations")
+const migrationSources = listFiles("packages/db/migrations")
   .filter((file) => file.endsWith(".sql"))
-  .flatMap((file) => extractAll(readText(file), /ALTER TABLE\s+(?:public\.)?([a-zA-Z0-9_]+)\s+ENABLE ROW LEVEL SECURITY/gi));
-const rlsTenantTables = [...new Set([...extractAll(rlsTenantBlock, /'([^']+)'/g), ...explicitRlsTables.filter((table) => replacementTenantTables.includes(table))])];
+  .map(readText);
+const explicitRlsTables = migrationSources.flatMap((source) => extractAll(source, /ALTER TABLE\s+(?:public\.)?([a-zA-Z0-9_]+)\s+ENABLE ROW LEVEL SECURITY/gi));
+const dynamicRlsTables = migrationSources.flatMap((source) => source.includes("ENABLE ROW LEVEL SECURITY")
+  ? extractAll(source, /FOREACH\s+\w+\s+IN ARRAY ARRAY\[(.*?)]\s+LOOP/gs).flatMap((block) => extractAll(block, /'([^']+)'/g))
+  : []);
+const rlsTenantTables = [...new Set([...extractAll(rlsTenantBlock, /'([^']+)'/g), ...explicitRlsTables, ...dynamicRlsTables].filter((table) => replacementTenantTables.includes(table)))];
 for (const table of sortedDifference(replacementTenantTables, rlsTenantTables)) {
   errors.push(`tenant table is missing from RLS migration: ${table}`);
 }
@@ -141,7 +139,7 @@ if (!rls.includes("ALTER TABLE public.affiliate_profiles ENABLE ROW LEVEL SECURI
   errors.push("affiliate_profiles is missing its dedicated RLS policy");
 }
 
-const compose = readText("docker-compose.replacement.yml");
+const compose = readText("docker-compose.yml");
 for (const endpoint of ["https://us.i.posthog.com/i/v1/traces", "https://us.i.posthog.com/i/v1/metrics", "https://us.i.posthog.com/i/v1/logs"]) {
   if (!compose.includes(endpoint)) {
     errors.push(`OTel collector is missing the PostHog signal endpoint: ${endpoint}`);

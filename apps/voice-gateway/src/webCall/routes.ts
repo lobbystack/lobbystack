@@ -14,7 +14,7 @@ import {
   RuntimeRequestError,
   startWebVoiceCall,
   uploadVoiceRecording,
-} from "../convex/runtimeClient";
+} from "../backend/runtimeClient";
 import { capturePostHogException } from "../observability/posthog";
 import type { EndCallRequest } from "../realtime/callControl";
 import { executeVoiceTool } from "../realtime/toolExecutor";
@@ -1689,7 +1689,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       } catch (error) {
         await hangupOpenAiRealtimeProviderCall(server, {
           providerCallId,
-          reason: "convex_start_failed",
+          reason: "backend_start_failed",
         });
         if (error instanceof RuntimeRequestError) {
           return replyWithRuntimeRequestError(error, reply);

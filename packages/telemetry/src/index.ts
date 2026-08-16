@@ -655,7 +655,7 @@ const NESTED_URL_PARAMS = new Set(["returnTo"]);
 const DEMO_PATH_TOKEN_PATTERN = /^(\/demo\/)[^/]+/i;
 const REDACTED_VALUE = "[redacted]";
 
-const EXPECTED_CONVEX_FAILURE_MESSAGE_SNIPPETS = [
+const EXPECTED_APPLICATION_FAILURE_MESSAGE_SNIPPETS = [
   "a billing contact email is required",
   "already exists",
   "already on your account",
@@ -858,13 +858,13 @@ function getErrorSearchText(error: unknown): string {
   return "";
 }
 
-export function isExpectedConvexFailure(error: unknown): boolean {
+export function isExpectedApplicationFailure(error: unknown): boolean {
   const searchText = getErrorSearchText(error);
   if (!searchText) {
     return false;
   }
 
-  return EXPECTED_CONVEX_FAILURE_MESSAGE_SNIPPETS.some((snippet) =>
+  return EXPECTED_APPLICATION_FAILURE_MESSAGE_SNIPPETS.some((snippet) =>
     searchText.includes(snippet),
   );
 }

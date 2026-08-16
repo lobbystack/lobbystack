@@ -1,22 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const probeConvexSiteReachabilityMock = vi.hoisted(() => vi.fn());
+const probeBackendReachabilityMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../health/convexReachability", () => ({
-  probeConvexSiteReachability: probeConvexSiteReachabilityMock,
+vi.mock("../health/backendReachability", () => ({
+  probeBackendReachability: probeBackendReachabilityMock,
 }));
 
 import { createServer } from "./server";
 
-describe("/health/convex", () => {
+describe("/health/backend", () => {
   beforeEach(() => {
     process.env.DEPLOYMENT_MODE = "self_hosted_standard";
     process.env.NODE_ENV = "production";
     process.env.VOICE_GATEWAY_BASE_URL = "http://127.0.0.1:3001";
-    delete process.env.BACKEND_INTERNAL_URL;
-    process.env.CONVEX_SITE_URL = "http://convex-backend:3211";
+    process.env.BACKEND_INTERNAL_URL = "http://admin:3000";
     process.env.INTERNAL_SERVICE_TOKEN = "test-service-token";
-    probeConvexSiteReachabilityMock.mockResolvedValue({ ok: true, status: 404 });
+    probeBackendReachabilityMock.mockResolvedValue({ ok: true, status: 404 });
   });
 
   afterEach(() => {
@@ -25,7 +24,6 @@ describe("/health/convex", () => {
     delete process.env.DEPLOYMENT_MODE;
     delete process.env.VOICE_GATEWAY_BASE_URL;
     delete process.env.BACKEND_INTERNAL_URL;
-    delete process.env.CONVEX_SITE_URL;
     delete process.env.INTERNAL_SERVICE_TOKEN;
   });
 
@@ -34,7 +32,7 @@ describe("/health/convex", () => {
 
     const response = await server.inject({
       method: "GET",
-      url: "/health/convex",
+      url: "/health/backend",
       headers: {
         "x-internal-service-token": "test-service-token",
       },
@@ -42,8 +40,8 @@ describe("/health/convex", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ ok: true, status: 404 });
-    expect(probeConvexSiteReachabilityMock).toHaveBeenCalledWith({
-      convexSiteUrl: "http://convex-backend:3211",
+    expect(probeBackendReachabilityMock).toHaveBeenCalledWith({
+      backendUrl: "http://admin:3000",
       internalServiceToken: "test-service-token",
     });
   });
@@ -53,7 +51,7 @@ describe("/health/convex", () => {
 
     const response = await server.inject({
       method: "GET",
-      url: "/health/convex",
+      url: "/health/backend",
       remoteAddress: "203.0.113.10",
       headers: {
         "x-internal-service-token": "test-service-token",
@@ -62,7 +60,7 @@ describe("/health/convex", () => {
 
     expect(response.statusCode).toBe(404);
     expect(response.json()).toEqual({ ok: false });
-    expect(probeConvexSiteReachabilityMock).not.toHaveBeenCalled();
+    expect(probeBackendReachabilityMock).not.toHaveBeenCalled();
   });
 
   it("hides the route when the token is missing", async () => {
@@ -70,16 +68,16 @@ describe("/health/convex", () => {
 
     const response = await server.inject({
       method: "GET",
-      url: "/health/convex",
+      url: "/health/backend",
     });
 
     expect(response.statusCode).toBe(404);
     expect(response.json()).toEqual({ ok: false });
-    expect(probeConvexSiteReachabilityMock).not.toHaveBeenCalled();
+    expect(probeBackendReachabilityMock).not.toHaveBeenCalled();
   });
 
-  it("returns 503 without exposing the configured Convex site URL", async () => {
-    probeConvexSiteReachabilityMock.mockResolvedValueOnce({
+  it("returns 503 without exposing the configured backend URL", async () => {
+    probeBackendReachabilityMock.mockResolvedValueOnce({
       ok: false,
       error: "internal_service_token_mismatch",
       status: 401,
@@ -88,7 +86,7 @@ describe("/health/convex", () => {
     const server = createServer();
     const response = await server.inject({
       method: "GET",
-      url: "/health/convex",
+      url: "/health/backend",
       headers: {
         "x-internal-service-token": "test-service-token",
       },
@@ -100,6 +98,6 @@ describe("/health/convex", () => {
       error: "internal_service_token_mismatch",
       status: 401,
     });
-    expect(JSON.stringify(response.json())).not.toContain("convex-backend");
+    expect(JSON.stringify(response.json())).not.toContain("admin:3000");
   });
 });

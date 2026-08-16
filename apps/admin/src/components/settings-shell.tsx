@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
 import { NestedPageSurfaceProvider } from "@/components/page-surface";
-import { PageHeader } from "@web/components/page-header";
+import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
 
 export function SettingsShell({ children }: { children: React.ReactNode }) {

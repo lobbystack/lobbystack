@@ -6,7 +6,7 @@ import { useState } from "react";
 import { selectActiveBusiness } from "@/lib/active-business";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Input } from "@web/components/ui/input";
+import { Input } from "@/components/ui/input";
 import { PageSurface } from "./page-surface";
 
 type Business = { businessId: string; name: string; active: boolean; role: string };

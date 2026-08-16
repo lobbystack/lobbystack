@@ -6,9 +6,9 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import { LocaleProvider } from "@/components/replacement-locale-provider";
-import { AppearanceProvider } from "@web/components/appearance-provider";
-import { ThemeProvider } from "@web/components/theme-provider";
-import { Toaster } from "@web/components/ui/sonner";
+import { AppearanceProvider } from "@/components/appearance-provider";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 import { i18nReady } from "@/i18n";
 
 function ProductAnalytics() {

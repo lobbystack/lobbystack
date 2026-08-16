@@ -35,79 +35,13 @@ const trustProxyEnvSchema = z
       .filter(Boolean);
   });
 
-const serverEnvSchema = z.object({
-  NODE_ENV: z.string().default("development"),
-  DEPLOYMENT_MODE: deploymentModeSchema.default("development"),
-  APP_BASE_URL: z.string().url(),
-  VOICE_GATEWAY_BASE_URL: z.string().url(),
-  CONVEX_URL: z.string().url(),
-  CONVEX_SITE_URL: z.string().url(),
-  INTERNAL_SERVICE_TOKEN: z.string().min(1),
-  SESSION_ENCRYPTION_KEY: z.string().min(1),
-  OPENAI_API_KEY: z.string().optional(),
-  OPENAI_REALTIME_MODEL: z.string().default("gpt-realtime"),
-  OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
-  GEMINI_TEXT_MODEL: z.string().default("gemini-3.1-flash-lite"),
-  GEMINI_EMBEDDING_MODEL: z.string().default("gemini-embedding-001"),
-  TWILIO_ACCOUNT_SID: z.string().optional(),
-  TWILIO_AUTH_TOKEN: z.string().optional(),
-  TWILIO_API_KEY: z.string().optional(),
-  TWILIO_API_SECRET: z.string().optional(),
-  TWILIO_MESSAGING_SERVICE_SID: z.string().optional(),
-  GOOGLE_CLIENT_ID: z.string().optional(),
-  GOOGLE_CLIENT_SECRET: z.string().optional(),
-  GOOGLE_REDIRECT_URI: z.string().url().optional(),
-  MICROSOFT_CLIENT_ID: z.string().optional(),
-  MICROSOFT_CLIENT_SECRET: z.string().optional(),
-  MICROSOFT_TENANT_ID: z.string().default("common"),
-  MICROSOFT_REDIRECT_URI: z.string().url().optional(),
-  RESEND_API_KEY: z.string().optional(),
-  EMAIL_FROM_ADDRESS: z.string().email(),
-  FEEDBACK_TO_EMAIL: z.string().email().optional(),
-  POSTHOG_KEY: z.string().optional(),
-  POSTHOG_HOST: z.string().url().optional(),
-  POSTHOG_PRIVACY_MODE: booleanEnvSchema,
-  TURNSTILE_SECRET_KEY: z.string().optional(),
-  LANGFUSE_PUBLIC_KEY: z.string().optional(),
-  LANGFUSE_SECRET_KEY: z.string().optional(),
-  LANGFUSE_HOST: z.string().url().optional(),
-  UNIT_ECONOMICS_MONTHLY_CONVEX_COST_USD: z.coerce.number().optional(),
-  UNIT_ECONOMICS_MONTHLY_FLY_COST_USD: z.coerce.number().optional(),
-  UNIT_ECONOMICS_MONTHLY_DATABASE_COST_USD: z.coerce.number().optional(),
-  UNIT_ECONOMICS_MONTHLY_HOSTING_COST_USD: z.coerce.number().optional(),
-  UNIT_ECONOMICS_MONTHLY_STORAGE_COST_USD: z.coerce.number().optional(),
-  TWILIO_VOICE_ESTIMATED_COST_PER_MINUTE_USD: z.coerce.number().optional(),
-});
-
-const clientEnvSchema = z.object({
-  CONVEX_URL: z.string().url(),
-  CONVEX_SITE_URL: z.string().url(),
-  VITE_APP_NAME: z.string().default("LobbyStack"),
-  VITE_DEPLOYMENT_MODE: deploymentModeSchema.default("development"),
-  VITE_POSTHOG_KEY: z.string().optional(),
-  VITE_POSTHOG_HOST: z.string().min(1).optional(),
-  VITE_POSTHOG_UI_HOST: z.string().url().optional(),
-  VITE_TURNSTILE_SITE_KEY: z.string().optional(),
-  VITE_WEB_CALL_ENDPOINT: z.string().url().optional(),
-});
-
 const voiceGatewayEnvSchema = z.object({
   NODE_ENV: z.string().default("development"),
   DEPLOYMENT_MODE: deploymentModeSchema.default("development"),
   PORT: z.coerce.number().default(3001),
   VOICE_GATEWAY_TRUST_PROXY: trustProxyEnvSchema,
   VOICE_GATEWAY_BASE_URL: z.string().url(),
-  BACKEND_INTERNAL_URL: z.string().url().optional(),
-  CONVEX_SITE_URL: z.string().url().optional(),
+  BACKEND_INTERNAL_URL: z.string().url(),
   INTERNAL_SERVICE_TOKEN: z.string().min(1),
   INTERNAL_SERVICE_SECRET: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().optional(),
@@ -141,9 +75,6 @@ const voiceGatewayEnvSchema = z.object({
   POSTHOG_HOST: z.string().url().optional(),
   POSTHOG_PRIVACY_MODE: booleanEnvSchema,
 }).superRefine((env, ctx) => {
-  if (!env.BACKEND_INTERNAL_URL && !env.CONVEX_SITE_URL) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "BACKEND_INTERNAL_URL or CONVEX_SITE_URL is required.", path: ["BACKEND_INTERNAL_URL"] });
-  }
   if (env.NODE_ENV === "production" && env.DEPLOYMENT_MODE === "development") {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -153,8 +84,6 @@ const voiceGatewayEnvSchema = z.object({
   }
 });
 
-export type ServerEnv = z.infer<typeof serverEnvSchema>;
-export type ClientEnv = z.infer<typeof clientEnvSchema>;
 export type VoiceGatewayEnv = z.infer<typeof voiceGatewayEnvSchema>;
 
 function normalizeEnvSource(
@@ -165,14 +94,6 @@ function normalizeEnvSource(
     normalized[key] = value?.trim() === "" ? undefined : value;
   }
   return normalized;
-}
-
-export function loadServerEnv(source: Record<string, string | undefined>): ServerEnv {
-  return serverEnvSchema.parse(normalizeEnvSource(source));
-}
-
-export function loadClientEnv(source: Record<string, string | undefined>): ClientEnv {
-  return clientEnvSchema.parse(normalizeEnvSource(source));
 }
 
 export function loadVoiceGatewayEnv(

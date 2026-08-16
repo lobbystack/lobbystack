@@ -1,5 +1,4 @@
-@import "../../web/src/styles/index.css";
-@source "../../web/src";
+@import "./theme.css";
 
 /* Replacement surfaces still being moved onto semantic classes inherit the
    original neutral shadcn palette during the transition. */

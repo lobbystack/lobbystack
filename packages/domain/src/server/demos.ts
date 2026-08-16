@@ -117,6 +117,20 @@ export async function listProspectDemos(context: DomainContext, operatorUserId: 
   return await Promise.all(rows.rows.map(({ demo_id }) => getProspectDemoStatus(context, { operatorUserId, demoId: demo_id })));
 }
 
+export async function setProspectDemoPrompts(context: DomainContext, input: { operatorUserId: string; demoId: string; suggestedPrompts: string[] }): Promise<string[]> {
+  const prompts = cleanPrompts(input.suggestedPrompts);
+  if (prompts.length < 2) throw new Error("Two suggested prompts are required.");
+  const businessId = await resolveOperatorDemoBusiness(context, input);
+  return await withBusinessTransaction(context.db, { userId: input.operatorUserId, businessId, actorType: "system" }, async (tx) => {
+    const [demo] = await tx.update(prospectDemos)
+      .set({ suggestedPrompts: prompts, updatedAt: new Date() })
+      .where(and(eq(prospectDemos.id, input.demoId), eq(prospectDemos.operatorUserId, input.operatorUserId)))
+      .returning({ suggestedPrompts: prospectDemos.suggestedPrompts });
+    if (!demo) throw new Error("Prospect demo not found.");
+    return demo.suggestedPrompts;
+  });
+}
+
 export async function publishProspectDemo(context: DomainContext, input: { operatorUserId: string; demoId: string; token: string; suggestedPrompts?: string[] }): Promise<{ status: "active"; expiresAt: Date }> {
   const businessId = await resolveOperatorDemoBusiness(context, input);
   return await withBusinessTransaction(context.db, { userId: input.operatorUserId, businessId, actorType: "system" }, async (tx) => {

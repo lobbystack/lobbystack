@@ -40,12 +40,10 @@ function roundUnitCost(total: number, denominator: number): number {
 }
 
 function configuredMonthlyInfraCostUsd(): number {
-  const convexCost = Number(process.env.UNIT_ECONOMICS_MONTHLY_CONVEX_COST_USD ?? "0");
-  const flyCost = Number(process.env.UNIT_ECONOMICS_MONTHLY_FLY_COST_USD ?? "0");
   const databaseCost = Number(process.env.UNIT_ECONOMICS_MONTHLY_DATABASE_COST_USD ?? "0");
   const hostingCost = Number(process.env.UNIT_ECONOMICS_MONTHLY_HOSTING_COST_USD ?? "0");
   const storageCost = Number(process.env.UNIT_ECONOMICS_MONTHLY_STORAGE_COST_USD ?? "0");
-  return roundUsd([convexCost, flyCost, databaseCost, hostingCost, storageCost].reduce((sum, value) => sum + (Number.isFinite(value) ? Math.max(0, value) : 0), 0));
+  return roundUsd([databaseCost, hostingCost, storageCost].reduce((sum, value) => sum + (Number.isFinite(value) ? Math.max(0, value) : 0), 0));
 }
 
 export async function recordUnitEconomicsEventInTransaction(tx: DatabaseTransaction, input: UnitEconomicsEventInput): Promise<string> {

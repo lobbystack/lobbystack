@@ -12,7 +12,7 @@ import {
   startVoiceCall,
   reconcileVoiceCallStatus,
   updateVoiceTransferState,
-} from "../convex/runtimeClient";
+} from "../backend/runtimeClient";
 import { capturePostHogException } from "../observability/posthog";
 import {
   isTerminalTwilioCallStatus,

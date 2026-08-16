@@ -186,7 +186,7 @@ jobs:
         run: |
           docker run --rm --entrypoint promtool -v "$PWD/docker/prometheus:/etc/prometheus:ro" prom/prometheus:v3.2.1 check config /etc/prometheus/prometheus.yml
           docker run --rm --entrypoint promtool -v "$PWD/docker/prometheus:/etc/prometheus:ro" prom/prometheus:v3.2.1 test rules /etc/prometheus/tests/alerts.test.yml
-      - run: docker compose --env-file .env.replacement.example -f docker-compose.replacement.yml config --quiet
+      - run: docker compose --env-file .env.example -f docker-compose.yml config --quiet
 
   staging-provider-certification:
     if: github.event_name == 'workflow_dispatch'

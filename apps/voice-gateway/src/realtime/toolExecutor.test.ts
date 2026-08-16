@@ -26,7 +26,7 @@ const {
   verifyVoiceAppointmentForChangeMock: vi.fn(),
 }));
 
-vi.mock("../convex/runtimeClient", () => ({
+vi.mock("../backend/runtimeClient", () => ({
   bookVoiceAppointment: bookVoiceAppointmentMock,
   cancelVoiceAppointment: cancelVoiceAppointmentMock,
   checkVoiceAvailability: vi.fn(),

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { loadClientEnv, loadVoiceGatewayEnv } from "./index";
+import { loadVoiceGatewayEnv } from "./index";
 
 const baseVoiceGatewayEnv = {
   VOICE_GATEWAY_BASE_URL: "https://voice.example.com",
-  CONVEX_SITE_URL: "https://example.convex.site",
+  BACKEND_INTERNAL_URL: "https://admin.example.com",
   INTERNAL_SERVICE_TOKEN: "test-token",
 };
 
@@ -65,7 +65,7 @@ describe("loadVoiceGatewayEnv", () => {
     ).toEqual(["10.0.0.0/8", "192.168.0.0/16"]);
   });
 
-  it("rejects web call max durations above the Convex stale timeout window", () => {
+  it("rejects web call max durations above the stale timeout window", () => {
     expect(() =>
       loadVoiceGatewayEnv({
         ...baseVoiceGatewayEnv,
@@ -92,19 +92,5 @@ describe("loadVoiceGatewayEnv", () => {
     });
 
     expect(env.DASHBOARD_TEST_CALL_TOKEN).toBe("dashboard-token");
-  });
-});
-
-describe("loadClientEnv", () => {
-  it("loads the optional web call endpoint", () => {
-    const env = loadClientEnv({
-      CONVEX_URL: "https://example.convex.cloud",
-      CONVEX_SITE_URL: "https://example.convex.site",
-      VITE_WEB_CALL_ENDPOINT: "https://voice.example.com/web-call/sessions",
-    });
-
-    expect(env.VITE_WEB_CALL_ENDPOINT).toBe(
-      "https://voice.example.com/web-call/sessions",
-    );
   });
 });

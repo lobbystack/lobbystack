@@ -18,7 +18,7 @@ import {
   updateVoiceTransferState,
   verifyVoiceAppointmentChangeOtp,
   verifyVoiceAppointmentForChange,
-} from "../convex/runtimeClient";
+} from "../backend/runtimeClient";
 import {
   MAX_CUMULATIVE_HOLD_SECONDS,
   MAX_SINGLE_HOLD_SECONDS,

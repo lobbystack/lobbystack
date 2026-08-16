@@ -16,7 +16,7 @@ export async function fetchSnapshotForPhoneNumber(
 
   try {
     const serialized = JSON.stringify({ phoneNumber, channel: "voice" });
-    const response = await withSpan("voice.backend.context", { attributes: { "http.request.method": "POST", "url.path": "/voice/context" } }, async () => await fetch(`${env.BACKEND_INTERNAL_URL ?? env.CONVEX_SITE_URL!}/voice/context`, {
+    const response = await withSpan("voice.backend.context", { attributes: { "http.request.method": "POST", "url.path": "/voice/context" } }, async () => await fetch(`${env.BACKEND_INTERNAL_URL}/voice/context`, {
       method: "POST",
       headers: signedBackendHeaders({ serviceId: process.env.VOICE_GATEWAY_SERVICE_ID ?? "lobbystack-voice-gateway", secret: env.INTERNAL_SERVICE_SECRET ?? env.INTERNAL_SERVICE_TOKEN, body: serialized }),
       body: serialized,

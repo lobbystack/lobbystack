@@ -62,9 +62,9 @@ async function runCertification(): Promise<void> {
     "--project-name",
     process.env.TELEMETRY_CERTIFICATION_PROJECT ?? "lobbystack-telemetry-certification",
     "--env-file",
-    `${root}.env.replacement.example`,
+    `${root}.env.example`,
     "-f",
-    `${root}docker-compose.replacement.yml`,
+    `${root}docker-compose.yml`,
     "--profile",
     "certification",
   ];

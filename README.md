@@ -23,7 +23,7 @@ LobbyStack gives teams a modern AI front desk that can be hosted in the cloud or
 [![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-111111.svg)](./LICENSE)
 [![Open source](https://img.shields.io/badge/open%20source-yes-22c55e.svg)](https://github.com/morencyr/LobbyStack)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg)](https://www.typescriptlang.org/)
-[![Convex](https://img.shields.io/badge/backend-Convex-0b0b0d.svg)](https://convex.dev)
+[![PostgreSQL](https://img.shields.io/badge/backend-PostgreSQL-336791.svg)](https://www.postgresql.org/)
 [![Self-hostable](https://img.shields.io/badge/deploy-self--hostable-7c3aed.svg)](https://docs.lobbystack.com/self-hosting/overview)
 
 </div>
@@ -99,14 +99,14 @@ LobbyStack can be adapted for many local business workflows:
 | SMS | Text conversations and booking outcomes connected to the same customer history. |
 | Dashboard | Calls, messages, contacts, appointments, recordings, transcripts, follow-ups, and analytics together. |
 | Usage and billing | Hosted plans, voice usage, alert SMS, outbound call attempts, storage, and metered add-ons. |
-| Bring your own API keys | Self-hosted deployments can use your own Convex, Twilio, OpenAI, calendar, email, analytics, and billing provider credentials. |
+| Bring your own API keys | Self-hosted deployments can use your own Twilio, OpenAI, calendar, email, analytics, and billing provider credentials. |
 
 ## Built With
 
 | Layer | Main components |
 | --- | --- |
-| App | React, Vite, Tailwind CSS, shadcn/ui |
-| Backend | Convex |
+| App | Next.js, React, Tailwind CSS, shadcn/ui |
+| Backend | PostgreSQL, Drizzle ORM, Redis, BullMQ |
 | Voice gateway | Fastify, Twilio, OpenAI Realtime |
 
 ## Hosted And Open Source
@@ -115,20 +115,20 @@ LobbyStack is open source with a hosted cloud service.
 
 Use **LobbyStack Cloud** when you want the product managed for you. You still control the receptionist behavior, knowledge, services, rules, numbers, integrations, and team workflow from the app.
 
-Self-host when your team wants to run the stack on your own infrastructure, bring your own API keys, and use your own Convex, Twilio, OpenAI, calendar, analytics, billing, and email provider accounts.
+Self-host when your team wants to run the stack on your own infrastructure, bring your own API keys, and use your own PostgreSQL, Twilio, OpenAI, calendar, analytics, billing, and email provider accounts.
 
 Full product control in the hosted app. Infrastructure ownership when you self-host. Same open-source core either way.
 
 ## Built For Developers Too
 
-LobbyStack is a TypeScript monorepo with Convex as the source of truth and a narrow voice gateway for the live call path.
+LobbyStack is a TypeScript monorepo with PostgreSQL as the durable source of truth and a narrow voice gateway for the live call path.
 
 ```text
 apps/
-  web/             React + Vite dashboard for staff
+  admin/           Next.js dashboard and HTTP API
+  worker/          asynchronous jobs and outbox dispatch
   voice-gateway/   Twilio Voice, Media Streams, and OpenAI Realtime bridge
-convex/            backend, auth, business state, booking, knowledge, workflows
-packages/          shared domain, providers, telemetry, config, and test helpers
+packages/          database, domain, jobs, providers, telemetry, and shared contracts
 mintlify/          public documentation source
 docs/              architecture notes, ADRs, provider docs, and validation notes
 ```
@@ -152,9 +152,9 @@ The full hosted walkthrough lives in the [quick start guide](https://docs.lobbys
 ```bash
 cp .env.example .env
 pnpm install
-pnpm convex dev
+docker compose up -d postgres redis minio minio-init
+pnpm db:migrate
 pnpm dev
-pnpm seed:demo
 ```
 
 Mock providers are part of the default development path, so contributors can exercise flows without live Twilio, OpenAI, calendar, or email credentials. Provider setup notes live in the [docs](https://docs.lobbystack.com/self-hosting/providers).
@@ -165,23 +165,16 @@ Mock providers are part of the default development path, so contributors can exe
 git clone https://github.com/lobbystack/lobbystack.git
 cd lobbystack
 pnpm install
-cp .env.self-hosted.example .env.self-hosted
-pnpm self-hosted:secrets -- --write .env.self-hosted
-# Edit .env.self-hosted for localhost smoke first; see the docs guide.
-docker compose -f docker-compose.self-hosted.yml --env-file .env.self-hosted up -d convex-backend convex-dashboard
-docker compose -f docker-compose.self-hosted.yml --env-file .env.self-hosted exec convex-backend ./generate_admin_key.sh
-# Paste the generated key into CONVEX_SELF_HOSTED_ADMIN_KEY before continuing.
-pnpm self-hosted:convex:env
-pnpm self-hosted:convex:deploy
-docker compose -f docker-compose.self-hosted.yml --env-file .env.self-hosted up -d --build
-pnpm self-hosted:verify
+cp .env.example .env
+# Replace every placeholder before exposing the stack.
+docker compose --env-file .env up -d --build
 ```
 
 For prerequisites, local smoke vs production go-live, helper scripts, and troubleshooting, see the [Docker Compose self-hosting guide](https://docs.lobbystack.com/self-hosting/docker-compose).
 
 ## Contributing
 
-Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), keep Convex as the primary backend, and keep the voice gateway focused on the live call path.
+Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), keep durable business logic in the domain/database layers, and keep the voice gateway focused on the live call path.
 
 Before opening a PR, run:
 

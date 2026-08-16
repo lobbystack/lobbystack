@@ -7,14 +7,14 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserRound } from "lucide-react";
 
-import { Avatar, AvatarFallback } from "@web/components/ui/avatar";
-import { Badge } from "@web/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@web/components/ui/card";
-import { PageHeader } from "@web/components/page-header";
-import { MetricCardGridSkeleton } from "@web/components/loading-skeletons";
-import { Item, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemMedia, ItemTitle } from "@web/components/ui/item";
-import { Separator } from "@web/components/ui/separator";
-import { Surface } from "@web/components/ui/surface";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
+import { MetricCardGridSkeleton } from "@/components/loading-skeletons";
+import { Item, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
+import { Separator } from "@/components/ui/separator";
+import { Surface } from "@/components/ui/surface";
 import { formatDateTime } from "@/lib/locale";
 
 type DashboardSummary = {

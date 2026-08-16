@@ -1,14 +1,14 @@
 # Replacement Platform
 
-The replacement stack is intentionally separate from the existing Convex deployment. It provides a Next.js admin/backend, PostgreSQL with RLS, Redis/BullMQ, MinIO-compatible storage, the existing voice gateway, and an OpenTelemetry collector.
+The canonical stack provides a Next.js admin/backend, PostgreSQL with RLS, Redis/BullMQ, MinIO-compatible storage, the voice gateway, and an OpenTelemetry collector. Convex remains relevant only as the production migration source until cutover and rollback are complete.
 
 ## Local Stack
 
-1. Copy `.env.replacement.example` to `.env.replacement` and replace every development secret before exposing the stack.
-2. Start the stack with `docker compose --env-file .env.replacement -f docker-compose.replacement.yml up --build`.
+1. Copy `.env.example` to `.env` and replace every development secret before exposing the stack.
+2. Start the stack with `docker compose --env-file .env -f docker-compose.yml up --build`.
 3. Open `http://localhost:13000` for the admin application, or `http://localhost` when using Caddy.
 4. Open `http://localhost:9001` for the MinIO console.
-5. Use `docker compose --env-file .env.replacement -f docker-compose.replacement.yml --profile development up mailpit` for local email inspection.
+5. Use `docker compose --env-file .env -f docker-compose.yml --profile development up mailpit` for local email inspection.
 
 Keep each `LOBBYSTACK_*_DATABASE_URL` password synchronized with its matching `LOBBYSTACK_*_PASSWORD` value. The Postgres init script creates the least-privilege runtime roles from those variables.
 

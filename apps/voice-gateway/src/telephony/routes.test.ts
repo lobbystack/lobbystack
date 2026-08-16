@@ -38,7 +38,7 @@ vi.mock("../context/fetchSnapshot", () => ({
   fetchSnapshotForPhoneNumber: fetchSnapshotForPhoneNumberMock,
 }));
 
-vi.mock("../convex/runtimeClient", () => ({
+vi.mock("../backend/runtimeClient", () => ({
   RuntimeRequestError: runtimeRequestErrorClass,
   bookVoiceAppointment: vi.fn(),
   cancelVoiceAppointment: vi.fn(),
@@ -100,7 +100,7 @@ describe("voice routes", () => {
   beforeEach(() => {
     process.env.DEPLOYMENT_MODE = "development";
     process.env.VOICE_GATEWAY_BASE_URL = "https://voice.example.com";
-    process.env.CONVEX_SITE_URL = "https://convex.example.com";
+    process.env.BACKEND_INTERNAL_URL = "https://admin.example.com";
     process.env.INTERNAL_SERVICE_TOKEN = "test-service-token";
     process.env.TWILIO_AUTH_TOKEN = "twilio-auth-token";
 

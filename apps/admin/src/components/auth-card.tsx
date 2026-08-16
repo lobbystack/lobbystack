@@ -7,9 +7,9 @@ import { useTranslation } from "react-i18next";
 import { TriangleAlert } from "lucide-react";
 
 import { ReplacementOnboardingShell } from "@/components/replacement-onboarding-shell";
-import { Button } from "@web/components/ui/button";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@web/components/ui/field";
-import { Input } from "@web/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
 declare global {
   interface Window {

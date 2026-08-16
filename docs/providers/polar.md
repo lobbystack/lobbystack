@@ -111,10 +111,11 @@ base subscription renews yearly.
 
 ## Environment variables
 
-Set these values in Convex and local development when billing is enabled:
+Set these backend environment values when billing is enabled:
 
-- `POLAR_SERVER`
-- `POLAR_ORGANIZATION_TOKEN`
+- `POLAR_ACCESS_TOKEN`
+- `POLAR_ORGANIZATION_ID`
+- `POLAR_API_BASE_URL`
 - `POLAR_WEBHOOK_SECRET`
 - `POLAR_STARTER_MONTHLY_PRODUCT_ID`
 - `POLAR_STARTER_ANNUAL_PRODUCT_ID`
@@ -126,7 +127,7 @@ Set these values in Convex and local development when billing is enabled:
 - `POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID`
 - `POLAR_AI_SMS_SETUP_PRODUCT_ID`
 - `POLAR_REFERRAL_DISCOUNT_ID`
-- `SITE_URL`
+- `APP_BASE_URL`
 
 `POLAR_AI_SMS_ADDON_PRODUCT_ID` is optional and only exists to recognize legacy
 separate AI SMS subscriptions from the older add-on subscription flow. New AI SMS
@@ -149,7 +150,7 @@ For hosted Alert SMS, also configure:
 
 Treat these as backend-only secrets:
 
-- `POLAR_ORGANIZATION_TOKEN`
+- `POLAR_ACCESS_TOKEN`
 - `POLAR_WEBHOOK_SECRET`
 
 Do not expose them to the web app, mobile clients, third-party scripts, or browser-visible env vars.
@@ -171,31 +172,21 @@ This repo does not assume Stripe-style restricted API keys exist in Polar. Until
 
 ## Webhook routing
 
-Polar routes are registered from [convex/http.ts](/convex/http.ts) through [convex/billing.ts](/convex/billing.ts).
+Configure Polar to send events to the Next.js API endpoint:
 
-Use the Convex HTTP endpoint:
-
-- `/polar/events`
+- `/api/webhooks/polar`
 
 Webhook handling expectations:
 
-- signature verification is enforced by `@convex-dev/polar` before app handlers run
+- signature verification is enforced before application handlers run
 - webhook updates are the source of truth for hosted plan, add-on, and transaction state
 - do not introduce separate manual renewal loops or invoice polling to drive subscription state
 
 ### Recover a missing order
 
-If Polar contains an order that is absent from `billing_transactions`, reconcile that specific
-order from the authoritative Polar API:
-
-```bash
-pnpm convex run --prod billing:reconcilePolarOrder '{"orderId":"<polar-order-id>"}'
-```
-
-The action resolves the tenant from the Polar customer link and upserts by order ID, so rerunning
-the same command is safe and does not create a duplicate transaction. Do not supply or manually
-override a business ID. After reconciliation, confirm the order appears in Settings > Plan and
-that its amount, status, and original occurrence date match Polar.
+If Polar contains an order that is absent from `billing_transactions`, replay the signed webhook
+from Polar after correcting the underlying configuration. The handler resolves the tenant from
+the customer link and uses provider IDs for idempotency. Do not insert billing rows manually.
 
 ## Metered usage operations
 
@@ -208,7 +199,7 @@ Important fields:
 - `syncedAt`
 - `syncError`
 
-Expected retry behavior for `internal.billing.syncUsageEventToPolar`:
+Expected retry behavior for the `billing.syncUsage` worker job:
 
 - immediate first attempt from the triggering workflow
 - best-effort retries after `30s`, `2m`, `10m`, and `30m`
@@ -217,7 +208,7 @@ Operational guidance:
 
 - treat repeated `syncStatus = "failed"` rows as an alertable billing issue
 - check `syncError` first for token, customer-link, or transient Polar API failures
-- after fixing the underlying issue, manually re-run `internal.billing.syncUsageEventToPolar` for the affected usage event IDs
+- after fixing the underlying issue, requeue `billing.syncUsage` for the affected usage event IDs
 - do not backfill usage by minting ad hoc Polar events outside this table unless you also reconcile local billing records deliberately
 
 ## Validation
@@ -226,7 +217,7 @@ Before go-live, confirm:
 
 - checkout creation works only from backend actions and only for billing admins
 - customer portal sessions are created server-side and only for billing admins
-- `/polar/events` rejects missing or invalid webhook signatures
+- `/api/webhooks/polar` rejects missing or invalid webhook signatures
 - metered usage failures are visible through `billing_usage_events.syncStatus`
 
 ## Notes

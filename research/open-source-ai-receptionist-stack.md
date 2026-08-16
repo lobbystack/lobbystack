@@ -42,13 +42,13 @@ Use the contrast carefully: not “Retell/Vapi/n8n/Zapier are bad,” but “ass
 4. **How the voice runtime works**
    - Twilio Voice and Media Streams connect to a narrow Node voice gateway.
    - OpenAI Realtime powers the live speech-to-speech conversation.
-   - Convex remains the source of truth for business state, booking, knowledge, workflows, transcripts, recordings, and settings.
+   - PostgreSQL remains the source of truth for business state, booking, knowledge, workflows, transcripts, recordings, and settings.
    - The gateway loads a business context snapshot once per call and calls backend tools only for authoritative actions.
 
 5. **Hosted cloud, self-hosting, and BYO keys**
    - LobbyStack Cloud is for teams that want the product managed.
-   - Docker Compose self-hosting runs Convex backend/dashboard, web dashboard, voice gateway, and Caddy on one host.
-   - Self-hosted deployments bring their own Convex, Twilio, OpenAI, calendar, email, analytics, and billing/provider accounts.
+   - Docker Compose self-hosting runs PostgreSQL, Redis, object storage, the Next.js dashboard/API, worker, voice gateway, and Caddy on one host.
+   - Self-hosted deployments bring their own infrastructure plus Twilio, OpenAI, calendar, email, analytics, and billing/provider accounts.
    - Agencies or client-infrastructure deployments can run on the business or client’s own environment.
 
 6. **When to use LobbyStack instead of rebuilding**
@@ -63,13 +63,13 @@ Use the contrast carefully: not “Retell/Vapi/n8n/Zapier are bad,” but “ass
 
 3. **The live call path uses OpenAI Realtime deliberately.** Voice docs describe a speech-to-speech Realtime API path for low latency, natural turn-taking, and consistent voice quality, with non-realtime work kept behind backend workflows.
 
-4. **Business context is snapshot-based, not per-turn backend chatter.** Architecture docs say Convex stores structured business configuration and knowledge, compiles a `business_context_snapshot`, and the voice gateway fetches it once at call start.
+4. **Business context is snapshot-based, not per-turn backend chatter.** Architecture docs say PostgreSQL stores structured business configuration and knowledge, compiles a `business_context_snapshot`, and the voice gateway fetches it once at call start.
 
 5. **Tools turn plain-language behavior into safe actions.** Local voice tools include business hours, services, knowledge search, availability lookup, booking, appointment change verification/OTP, cancellation, rescheduling, transfer, hold, end call, and message/callback capture.
 
 6. **Booking is treated as authoritative, not improvised.** The shared snapshot policy says never promise a booking until the booking tool confirms success, matching the positioning that LobbyStack is for outcomes, not just conversation.
 
-7. **Self-hosting is documented as a real deployment model.** The Docker Compose guide includes Convex open-source backend, Convex dashboard, web dashboard, voice gateway, Caddy, public HTTPS, Twilio webhooks, provider keys, verification, and a production checklist.
+7. **Self-hosting is documented as a real deployment model.** The Docker Compose guide includes PostgreSQL, Redis, object storage, the Next.js dashboard/API, worker, voice gateway, Caddy, public HTTPS, Twilio webhooks, provider keys, verification, and a production checklist.
 
 8. **Hosted and self-hosted are the same open-source core with different ownership.** README says hosted cloud is for managed product operation, while self-hosting is for teams that want their own infrastructure and API keys. The useful phrase: “Full product control in the hosted app. Infrastructure ownership when you self-host.”
 

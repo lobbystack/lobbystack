@@ -3,10 +3,10 @@
 import { createContext, useContext } from "react";
 import { Plus } from "lucide-react";
 
-import { PageHeader } from "@web/components/page-header";
-import { Button } from "@web/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@web/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@web/components/ui/table";
+import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export type PageSurfaceProps = {
   eyebrow?: string;

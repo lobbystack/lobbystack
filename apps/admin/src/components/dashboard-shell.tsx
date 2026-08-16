@@ -20,10 +20,10 @@ import {
 import { Check, ChevronsUpDown, Contrast, LogOut, Plus, UserRound } from "lucide-react";
 import { useTheme } from "next-themes";
 
-import { TeamSwitcher } from "@web/components/layout/team-switcher";
-import { Main } from "@web/components/layout/main";
-import { SiteHeader } from "@web/components/site-header";
-import { Avatar, AvatarFallback } from "@web/components/ui/avatar";
+import { TeamSwitcher } from "@/components/layout/team-switcher";
+import { Main } from "@/components/layout/main";
+import { SiteHeader } from "@/components/site-header";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,7 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@web/components/ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu";
 import {
   Item,
   ItemActions,
@@ -39,7 +39,7 @@ import {
   ItemDescription,
   ItemMedia,
   ItemTitle,
-} from "@web/components/ui/item";
+} from "@/components/ui/item";
 import {
   Sidebar,
   SidebarContent,
@@ -54,9 +54,9 @@ import {
   SidebarProvider,
   SidebarRail,
   useSidebar,
-} from "@web/components/ui/sidebar";
+} from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { formatPhoneNumberDisplay } from "@web/lib/phone";
+import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { DashboardUtilityBar } from "./dashboard-utility-bar";
 
 type Business = {

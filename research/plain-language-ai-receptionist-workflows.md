@@ -121,9 +121,9 @@ Use these as factual anchors in the post or internal brief:
   - Source: https://smith.ai/pricing/ai-receptionist
 - LobbyStack local source anchors:
   - `README.md`: open-source AI receptionist for calls, SMS, appointments, hosted cloud or self-hosted infrastructure.
-  - `docs/voice/runtime.md`: narrow voice gateway for live call handling; Convex owns tenant data, booking, knowledge, and durable workflows; the gateway loads a business snapshot once and calls Convex for authoritative operations.
+  - `docs/voice/runtime.md`: narrow voice gateway for live call handling; PostgreSQL-backed domain services own tenant data, booking, knowledge, and durable workflows; the gateway loads a business snapshot once and calls the backend for authoritative operations.
   - `apps/landing/src/components/features/FeatureWall.tsx`: "Build workflows with words, not flowcharts" and "Your business is not a flowchart."
-  - `convex/http.ts`: voice tools include finding/checking availability, booking, lookup/verify appointment changes, OTP for appointment changes, cancel/reschedule appointment, search knowledge, and take message.
+  - `apps/admin/app/voice/[...segments]/route.ts`: voice tools include finding/checking availability, booking, lookup/verify appointment changes, OTP for appointment changes, cancel/reschedule appointment, search knowledge, and take message.
 
 ## Why Workflow Chains Get Brittle
 
@@ -309,7 +309,7 @@ take a callback message.
 LobbyStack product angle:
 
 - The receptionist can talk naturally while tools check availability and book through the backend.
-- The post can cite LobbyStack's local architecture: the voice gateway handles the live call, while Convex owns booking state and authoritative operations.
+- The post can cite LobbyStack's local architecture: the voice gateway handles the live call, while PostgreSQL-backed domain services own booking state and authoritative operations.
 
 ### Quotes
 
@@ -406,7 +406,7 @@ caller when the team will respond.
 
 LobbyStack product angle:
 
-- The voice gateway owns transfer execution; Convex stores durable state and call outcomes.
+- The voice gateway owns transfer execution; PostgreSQL stores durable state and call outcomes.
 - The post should emphasize "safe handoff with context" instead of "AI handles everything."
 
 ## Positioning for LobbyStack
@@ -596,4 +596,3 @@ The blog post should make readers feel this:
 LobbyStack can own that category phrase:
 
 `Build workflows with words, not flowcharts.`
-

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Mic, Phone, PhoneOff } from "lucide-react";
-import { useWebVoiceCall, type WebVoiceErrorKey } from "@web/components/web-voice/useWebVoiceCall";
+import { useWebVoiceCall, type WebVoiceErrorKey } from "@/components/web-voice/useWebVoiceCall";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "./ui/button";

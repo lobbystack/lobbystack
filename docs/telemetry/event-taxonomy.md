@@ -2,7 +2,7 @@
 
 ## Ownership
 
-- `apps/web` emits operator intent and workflow events
+- `apps/admin` emits operator intent and workflow events
 - `convex` emits authoritative business outcome events
 - `apps/voice-gateway` emits runtime observability and AI trace events
 

@@ -10,4 +10,4 @@ Compile business personalization into a call-start snapshot fetched once by the 
 
 ## Rationale
 
-This avoids per-turn backend round trips during calls while preserving a single source of truth in Convex.
+This avoids per-turn backend round trips during calls while preserving PostgreSQL as the durable source of truth.

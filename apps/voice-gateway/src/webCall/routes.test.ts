@@ -92,7 +92,7 @@ vi.mock("ws", () => {
   return { default: MockWebSocket, WebSocketServer: MockWebSocketServer };
 });
 
-vi.mock("../convex/runtimeClient", () => ({
+vi.mock("../backend/runtimeClient", () => ({
   appendVoiceTranscript: appendVoiceTranscriptMock,
   completeVoiceCall: completeVoiceCallMock,
   fetchWebCallRecordingTarget: fetchWebCallRecordingTargetMock,
@@ -172,7 +172,7 @@ describe("web call routes", () => {
   beforeEach(() => {
     process.env.DEPLOYMENT_MODE = "development";
     process.env.VOICE_GATEWAY_BASE_URL = "https://voice.example.com";
-    process.env.CONVEX_SITE_URL = "https://convex.example.com";
+    process.env.BACKEND_INTERNAL_URL = "https://admin.example.com";
     process.env.INTERNAL_SERVICE_TOKEN = "test-service-token";
     process.env.TWILIO_AUTH_TOKEN = "twilio-auth-token";
     process.env.OPENAI_API_KEY = "test-openai-key";
@@ -265,7 +265,7 @@ describe("web call routes", () => {
     );
   });
 
-  it("returns Convex lookup failures for unknown public widget business slugs", async () => {
+  it("returns backend lookup failures for unknown public widget business slugs", async () => {
     fetchWebVoiceContextMock.mockRejectedValueOnce(
       new runtimeRequestErrorClass({
         message: "Not found",
@@ -619,7 +619,7 @@ describe("web call routes", () => {
     });
   });
 
-  it("returns durable Convex rate limits before starting an OpenAI web call", async () => {
+  it("returns durable backend rate limits before starting an OpenAI web call", async () => {
     fetchWebVoiceContextMock.mockRejectedValueOnce(
       new runtimeRequestErrorClass({
         message: "Too many web voice starts. Please try again shortly.",
@@ -1478,7 +1478,7 @@ describe("web call routes", () => {
     );
   });
 
-  it("resolves recording uploads through Convex when the gateway session is not local", async () => {
+  it("resolves recording uploads through the backend when the gateway session is not local", async () => {
     const endedAtMs = Date.now();
     fetchWebCallRecordingTargetMock.mockResolvedValueOnce({
       callId: "call_durable_123",

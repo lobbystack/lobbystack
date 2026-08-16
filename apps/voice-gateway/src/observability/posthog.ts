@@ -238,9 +238,6 @@ function normalizeOperationalAttributes(
       case "lobbystack.tool_name":
         normalized.toolName = String(value);
         break;
-      case "lobbystack.convex_path":
-        normalized.convexPath = String(value);
-        break;
       case "http.status_code":
         normalized.httpStatusCode = Number(value);
         break;

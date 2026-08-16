@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const namespaces = ["common", "auth", "nav", "dashboard", "onboarding", "settings", "knowledge", "inbox", "calls", "messages", "contacts", "agent", "affiliate", "demos", "admin"];
-const root = resolve(process.cwd(), "apps/web/public/locales");
+const root = resolve(process.cwd(), "apps/admin/public/locales");
 
 function leafKeys(value: unknown, prefix = ""): string[] {
   if (!value || typeof value !== "object" || Array.isArray(value)) return prefix ? [prefix] : [];

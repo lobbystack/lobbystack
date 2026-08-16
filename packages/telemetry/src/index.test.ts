@@ -15,7 +15,7 @@ import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
   getPostHogDistinctIdForOperator,
-  isExpectedConvexFailure,
+  isExpectedApplicationFailure,
   redactAiTraceProperties,
   redactTelemetryProperties,
   redactOtelAttributes,
@@ -186,25 +186,25 @@ describe("telemetry redaction", () => {
   });
 
   it("classifies handled Convex rejections as expected", () => {
-    expect(isExpectedConvexFailure(new Error("InvalidSecret"))).toBe(true);
+    expect(isExpectedApplicationFailure(new Error("InvalidSecret"))).toBe(true);
     expect(
-      isExpectedConvexFailure(
+      isExpectedApplicationFailure(
         new Error("This email is already on your account."),
       ),
     ).toBe(true);
     expect(
-      isExpectedConvexFailure(
+      isExpectedApplicationFailure(
         new Error(
           "That verification code is invalid or expired. Try requesting a new one.",
         ),
       ),
     ).toBe(true);
     expect(
-      isExpectedConvexFailure(
+      isExpectedApplicationFailure(
         new Error("Invalid or expired email confirmation link."),
       ),
     ).toBe(true);
-    expect(isExpectedConvexFailure(new Error("database exploded"))).toBe(false);
+    expect(isExpectedApplicationFailure(new Error("database exploded"))).toBe(false);
   });
 
   it("only includes provider on alertable exceptions when provided", () => {

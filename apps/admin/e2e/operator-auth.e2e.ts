@@ -25,9 +25,9 @@ async function cleanupFixtures(): Promise<void> {
     const cleanup = spawnSync("docker", [
       "compose",
       "--env-file",
-      `${root}/.env.replacement.example`,
+      `${root}/.env.example`,
       "-f",
-      `${root}/docker-compose.replacement.yml`,
+      `${root}/docker-compose.yml`,
       "exec",
       "-T",
       "postgres",

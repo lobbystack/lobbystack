@@ -1,37 +1,33 @@
-# Resend Auth Email Setup
+# Transactional Email Setup
 
-This repo sends auth email through the official `@convex-dev/resend` Convex component.
-The current auth flows are password reset and email-change confirmation.
+LobbyStack sends authentication and operational email through the worker's SMTP provider. The current flows include verification, password reset, email changes, notifications, and feedback delivery.
 
 ## Required Environment
 
-Set these variables before testing auth email:
-
-- `DEPLOYMENT_MODE`
-- `RESEND_API_KEY`
-- `EMAIL_FROM_ADDRESS`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_SECURE`
+- `SMTP_USERNAME`
+- `SMTP_PASSWORD`
+- `EMAIL_FROM`
+- `EMAIL_REPLY_TO` when replies should go elsewhere
+- `APP_BASE_URL` for links in email
 - `FEEDBACK_TO_EMAIL` for dashboard feedback delivery
-- `SITE_URL`
 
-Development keeps the Resend component in test mode when `DEPLOYMENT_MODE=development`.
-Convex Auth uses `SITE_URL` internally for password reset and email confirmation links. Set it on the Convex deployment to your web app origin, for example `http://localhost:5173` in local development.
+For local development, start Mailpit with `docker compose --env-file .env --profile development up -d mailpit` and point SMTP at port `1025`.
 
-## Local Verification
+## Verification
 
-1. Start or refresh Convex codegen with `pnpm convex dev`.
-2. Run the web app with `pnpm dev`.
-3. Open `/forgot-password` in the dashboard.
-4. Submit a Resend test inbox such as `delivered@resend.dev` or a labeled variant like `delivered+ope55@resend.dev`.
-5. Confirm the reset code email is accepted in Resend test mode.
-6. Complete the reset flow with the emailed code and a new password.
-7. Confirm the updated password can sign in successfully.
-8. Open Settings, request an email change for an existing password account, and submit a Resend test inbox such as `delivered+email-change@resend.dev`.
-9. Open the confirmation email in Resend, click the confirmation link, and finish the confirmation screen.
-10. Confirm the updated email can sign in successfully.
+1. Start PostgreSQL, Redis, admin, worker, and the SMTP provider.
+2. Open `/forgot-password` and request a reset.
+3. Confirm the worker consumes the email outbox job.
+4. Open the message and complete the reset flow.
+5. Repeat with signup verification and email change.
+6. Submit dashboard feedback and confirm asynchronous delivery to `FEEDBACK_TO_EMAIL`.
 
 ## Production Notes
 
-- Real delivery requires `DEPLOYMENT_MODE` to be something other than `development`.
-- The configured `EMAIL_FROM_ADDRESS` must be a sender that your Resend account can use.
-- Dashboard feedback submissions are stored in Convex first, then delivered to `FEEDBACK_TO_EMAIL` asynchronously.
-- Signup verification and other transactional templates are still reserved for follow-up work.
+- Use a verified sender domain with SPF and DKIM.
+- Keep SMTP credentials on admin/worker server runtimes only.
+- Monitor outbox retries and dead-letter jobs.
+- Store feedback before attempting delivery so provider outages do not lose submissions.

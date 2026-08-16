@@ -25,7 +25,7 @@ async function sourceFiles(directory: string): Promise<string[]> {
 async function main(): Promise<void> {
   const root = fileURLToPath(new URL("..", import.meta.url));
   const adminFiles = await sourceFiles(join(root, "apps/admin"));
-  const browserFiles = [...await sourceFiles(join(root, "apps/web/src"))];
+  const browserFiles: string[] = [];
   for (const path of adminFiles) {
     const source = await readFile(path, "utf8");
     assert(!source.includes("@lobbystack/worker") && !source.includes("apps/worker/src"), `Admin imports worker implementation: ${relative(root, path)}`);

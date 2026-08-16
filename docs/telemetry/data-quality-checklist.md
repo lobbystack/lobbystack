@@ -24,7 +24,7 @@ Use this checklist whenever a new product or domain event is added, renamed, or 
 
 ## Runtime ownership checks
 
-- confirm `apps/web` owns operator-intent events only
+- confirm `apps/admin` client components own operator-intent events only
 - confirm `convex` owns business outcome events
 - confirm `apps/voice-gateway` owns runtime observability and AI trace events
 - avoid duplicate emission unless analytics specifically needs two perspectives
@@ -44,7 +44,7 @@ Use this checklist whenever a new product or domain event is added, renamed, or 
 
 ## Outbox checks
 
-- for Convex events, verify rows land in `telemetry_outbox`
+- for durable backend events, verify rows land in the PostgreSQL outbox
 - confirm successful rows move to `delivered`
 - confirm failure rows increment `attemptCount`
 - confirm backlog monitoring still reflects the new event volume

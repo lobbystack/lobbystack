@@ -2,7 +2,7 @@
 
 Prometheus evaluates the replacement platform rules in `docker/prometheus/rules/alerts.yml`. Route these alerts through the environment's managed Alertmanager or equivalent paging integration; the local Compose profile intentionally only evaluates and displays alerts.
 
-Run `docker compose --env-file .env.replacement -f docker-compose.replacement.yml --profile observability up -d prometheus` and inspect `http://localhost:9090/alerts`. CI validates the configuration and executes `promtool test rules` against deterministic fixtures.
+Run `docker compose --env-file .env -f docker-compose.yml --profile observability up -d prometheus` and inspect `http://localhost:9090/alerts`. CI validates the configuration and executes `promtool test rules` against deterministic fixtures.
 
 ## ReplacementCollectorUnavailable
 

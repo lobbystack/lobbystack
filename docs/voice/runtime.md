@@ -1,117 +1,36 @@
-# Voice Runtime Model
+# Voice Runtime
 
-## Boundary
+`apps/voice-gateway` is a narrow public runtime for Twilio Voice, Media Streams, and OpenAI Realtime. Durable business state remains in PostgreSQL behind the admin backend.
 
-`apps/voice-gateway` is a narrow runtime dedicated to live call handling.
+## Responsibilities
 
-It is responsible for:
+The gateway owns:
 
-- Twilio Voice ingress
-- loading a business snapshot once per call
-- caching the snapshot for the active call
-- Media Streams / Realtime session orchestration
-- transfer execution
-- buffering transcript segments and call audio for durable persistence
+- Twilio webhook and media-stream validation
+- bidirectional audio transport
+- OpenAI Realtime session lifecycle
+- interruption, transfer, and playback control
+- short-lived snapshot caching
+- signed requests to authoritative backend operations
 
-It is not responsible for:
+The gateway does not own authentication, tenant state, booking records, contacts, messages, knowledge ingestion, billing, or long-running workflows.
 
-- tenant data ownership
-- booking source of truth
-- knowledge authoring
-- calendar integrations
-- durable business workflows
+## Call Flow
 
-Those remain in Convex.
+1. Twilio sends an authenticated voice webhook.
+2. The gateway resolves the called number through `BACKEND_INTERNAL_URL` and fetches a business context snapshot.
+3. It creates the call record through a signed backend request.
+4. It starts one OpenAI Realtime session with the snapshot and available tool definitions.
+5. Common replies use the in-memory snapshot. Booking, message capture, transfer state, and other authoritative actions call the backend.
+6. On completion, transcripts, recording metadata, usage, and final call state are persisted through signed requests. Binary recordings are uploaded to S3-compatible storage through the backend.
 
-## Architecture Choice
+## Failure Behavior
 
-For the receptionist itself, the live call path is intentionally **speech-to-speech** with the Realtime API.
+- Production never falls back to demo business data.
+- Development can use `demoSnapshot` when backend context lookup fails.
+- Backend connectivity is available to private callers at `/health/backend` with `INTERNAL_SERVICE_TOKEN`.
+- Twilio signatures and web-call origin/rate policies are validated before sessions begin.
 
-That is the right default for this product because we care about:
+## Security
 
-- low latency on phone calls
-- natural turn-taking
-- consistent voice quality from greeting through conversation
-
-We still use a **chained** pattern for specialized work, but only behind tools and backend workflows. For example:
-
-- Convex-backed booking checks and mutations
-- Gemini-backed non-realtime text tasks
-- future policy validation or specialist sub-agents
-
-The live phone loop should not be rebuilt as a full chained STT -> text agent -> TTS pipeline unless there is a very strong product reason.
-
-## Low-Latency Rule
-
-The gateway does not ask Convex for every conversational turn.
-
-Instead:
-
-1. Twilio hits the inbound voice route.
-2. The gateway resolves the business snapshot from Convex using the called number.
-3. The snapshot is cached in memory for the call.
-4. The live session answers from that cached context.
-5. Convex is called only for authoritative operations such as:
-   - checking availability
-   - booking
-   - transfer decisions
-   - saving a taken message
-   - persisting transcripts and recordings
-
-## Twilio Runtime Notes
-
-- The inbound voice webhook returns TwiML with `<Connect><Stream>`.
-- Stream metadata is passed with Twilio custom `<Parameter>` tags, not WebSocket query strings.
-- The gateway validates Twilio signatures on both the inbound webhook and the Media Stream websocket handshake when `TWILIO_AUTH_TOKEN` is configured.
-- The gateway exposes three distinct Twilio callback paths:
-  - `POST /twilio/voice/stream-status` for Media Stream lifecycle diagnostics
-  - `POST /twilio/voice/transfer-action` for `<Dial>` child-leg transfer outcomes
-  - `POST /twilio/voice/call-status` for authoritative parent call progress and final call reconciliation
-- Parent call status callbacks should be treated as provider truth for generic terminal outcomes, but they must not overwrite more specific dispositions the gateway already knows, such as transfer results or provider-outage recoveries.
-
-## Realtime Session Notes
-
-- The OpenAI Realtime websocket is opened only after the Twilio `start` event arrives.
-- The gateway waits for Twilio stream metadata, resolves the cached business snapshot, initializes the call record in Convex, then starts the Realtime session.
-- The initial greeting is generated inside the same Realtime session as the rest of the call, so the greeting and conversation share one consistent voice.
-- Audio received before OpenAI is ready is buffered in memory and flushed once the session is configured.
-- OpenAI is used only for this live audio path. Non-realtime text and embeddings stay on Gemini inside Convex.
-- Transcript persistence should stay narrow and final-event based:
-  - caller turns from `conversation.item.input_audio_transcription.completed`
-  - assistant turns from `response.output_audio_transcript.done`
-- Avoid persisting assistant transcript text from multiple overlapping final events, or duplicate transcript rows will appear.
-
-## Failure Mode
-
-In development, the gateway can fall back to a seeded demo snapshot if the Convex lookup fails.
-
-In cloud and self-hosted modes, a failed snapshot lookup should fail fast instead of silently running with stale tenant data.
-
-## Recording And Transcript Support
-
-The gateway captures both sides of the live media stream it already sees:
-
-- inbound caller audio from Twilio Media Streams
-- outbound assistant audio sent back to Twilio
-
-At call completion it renders those legs into a stereo WAV recording and uploads it to Convex storage. The app stores:
-
-- a signed download URL via Convex storage
-- byte size and duration metadata
-- final transcript segments for both caller and assistant
-
-The admin dashboard can then list recent calls, download audio, and inspect stored transcripts.
-
-## Provider Validation Checklist
-
-For a real `OPE-19` validation pass:
-
-1. Expose the voice gateway on public HTTPS/WSS.
-2. Configure a Twilio voice webhook to `POST /twilio/voice/inbound`.
-3. Confirm the inbound webhook and websocket handshake pass Twilio signature validation.
-4. Place a real inbound call and verify:
-   - Twilio connects the media stream
-   - OpenAI Realtime returns audio
-   - interruption and turn-taking feel normal
-   - transcripts persist in Convex
-   - the recording downloads from the dashboard
+Use `INTERNAL_SERVICE_SECRET` for HMAC-signed requests. Keep `BACKEND_INTERNAL_URL` private where the hosting platform supports private networking. Do not expose provider credentials to browser code.

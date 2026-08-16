@@ -5,11 +5,11 @@ import { ArrowLeft, SearchIcon, Send } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { PageHeader } from "@web/components/page-header";
-import { Avatar, AvatarFallback } from "@web/components/ui/avatar";
-import { Button } from "@web/components/ui/button";
-import { Input } from "@web/components/ui/input";
-import { Separator } from "@web/components/ui/separator";
+import { PageHeader } from "@/components/page-header";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/locale";
 

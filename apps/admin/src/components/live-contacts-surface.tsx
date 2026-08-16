@@ -6,12 +6,12 @@ import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { PageHeader } from "@web/components/page-header";
-import { TableCardSkeleton } from "@web/components/loading-skeletons";
-import { Badge } from "@web/components/ui/badge";
-import { Button } from "@web/components/ui/button";
-import { Input } from "@web/components/ui/input";
-import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@web/components/ui/table";
+import { PageHeader } from "@/components/page-header";
+import { TableCardSkeleton } from "@/components/loading-skeletons";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDateTime } from "@/lib/locale";
 import { selectActiveBusiness } from "@/lib/active-business";
 

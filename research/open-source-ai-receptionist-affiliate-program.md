@@ -16,22 +16,21 @@ Purpose: source notes for a LobbyStack blog post about the new affiliate program
 
 | Term | Current LobbyStack value | Source notes |
 | --- | --- | --- |
-| Commission | 20% | `COMMISSION_RATE = 0.2` in `convex/affiliates.ts`; Terms page says 20%. |
+| Commission | 20% | `COMMISSION_RATE = 0.2` in `packages/domain/src/server/affiliates.ts`; Terms page says 20%. |
 | Commission duration | First 12 months after attribution | `COMMISSION_MONTHS = 12`; Terms page says first 12 months. |
 | Hold period | 30 days | `HOLD_DAYS = 30`; Terms page says commissions become eligible only after the referred customer's payment clears a 30-day hold. |
 | Minimum payout | USD $100 | `MIN_PAYOUT_CENTS = 10_000`; Terms page and affiliate FAQ say $100. |
 | Payout method | Manual PayPal | Affiliate UI copy and Terms page say manual PayPal payouts using the PayPal email in the affiliate dashboard. |
-| Payout cadence | Monthly review/run implied | UI copy says eligible balances of $100 or more are reviewed monthly; Convex has a monthly affiliate payout cron. |
-| Attribution | Referral links/codes; `?via=` captured in local storage and bound to a business | `apps/web/src/App.tsx` stores `lobbystack.affiliate.referralCode` from the `via` query param. No explicit public cookie-window term found. |
+| Payout cadence | Monthly review/run implied | UI copy says eligible balances of $100 or more are reviewed monthly; the domain package provides monthly payout-run generation. |
+| Attribution | Referral links/codes | The current dashboard generates `?ref=` signup links. The retired frontend captured `?via=` referral codes in local storage and bound them during onboarding. No explicit public cookie-window term found. |
 | Refunds/chargebacks | Unpaid commissions may be voided/reversed | Terms and affiliate FAQ both mention refunds/disputes voiding or reversing unpaid commissions. |
 
 Local source files inspected:
 
-- `convex/affiliates.ts`
-- `convex/crons.ts`
+- `packages/domain/src/server/affiliates.ts`
 - `apps/landing/src/pages/terms.astro`
-- `apps/web/public/locales/en/affiliate.json`
-- `apps/web/src/App.tsx`
+- `apps/admin/public/locales/en/affiliate.json`
+- `apps/admin/app/api/affiliate/route.ts`
 - `README.md`
 - `research/open-source-ai-receptionist-stack.md`
 
@@ -40,8 +39,8 @@ Local source files inspected:
 - README headline: "The open-source AI receptionist for calls, texts, and appointments." It explicitly names My AI Front Desk, Upfirst, Goodcall, and Phonely as alternatives.
 - Core product promise: answers phone calls, responds to SMS, books appointments, handles reschedules/cancellations, and transfers to a human.
 - Open-source angle: inspect the code, self-host, extend, and keep control of data.
-- Hosted plus self-hosted: LobbyStack Cloud is managed; self-hosting lets teams run their own infrastructure and use their own Convex, Twilio, OpenAI, calendar, analytics, billing, and email accounts.
-- Agency/developer angle: TypeScript monorepo, Convex as source of truth, narrow Node voice gateway for Twilio Voice, Media Streams, and OpenAI Realtime.
+- Hosted plus self-hosted: LobbyStack Cloud is managed; self-hosting lets teams run their own infrastructure and use their own PostgreSQL, Twilio, OpenAI, calendar, analytics, billing, and email accounts.
+- Agency/developer angle: TypeScript monorepo, PostgreSQL as source of truth, Next.js dashboard/API, and a narrow Node voice gateway for Twilio Voice, Media Streams, and OpenAI Realtime.
 - Existing research note says LobbyStack should be framed as the open-source product layer around realtime voice, Twilio wiring, scheduling, transcripts, billing, alerts, monitoring, and operator dashboards.
 
 ## Competitive Affiliate Landscape
@@ -128,4 +127,3 @@ LobbyStack is not the highest-commission option in the niche. Upfirst, My AI Fro
 - [n8n Cloud Affiliate Partner Program](https://n8n.io/affiliates/), accessed July 7, 2026. No visible publication date found. Key terms: 30% on n8n Cloud referrals for 12 months, PayPal payouts monthly, EUR 100 minimum.
 - [Supabase Partners](https://supabase.com/partners), accessed July 7, 2026. No visible publication date found. Key note: partner ecosystem page found; no simple public affiliate commission rate found in inspected source.
 - [Jasper Affiliate Agreement](https://www.jasper.ai/legal/affiliates), accessed July 7, 2026. No visible publication date found in scraped page. Key terms: commission for first 12 months, 14-day affiliate lead purchase window, $25 minimum, payment through PayPal/Wise/similar processors, 30% increased commission after 100 leads and 100 customers in rolling 12 months.
-

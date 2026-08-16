@@ -18,7 +18,7 @@ vi.mock("posthog-node", () => ({
 }));
 
 const ENV_KEYS = [
-  "CONVEX_SITE_URL",
+  "BACKEND_INTERNAL_URL",
   "DEPLOYMENT_MODE",
   "INTERNAL_SERVICE_TOKEN",
   "POSTHOG_HOST",
@@ -39,7 +39,7 @@ describe("voice-gateway PostHog provider exception telemetry", () => {
       originalEnv.set(key, process.env[key]);
     }
 
-    process.env.CONVEX_SITE_URL = "https://convex.example.com";
+    process.env.BACKEND_INTERNAL_URL = "https://admin.example.com";
     process.env.DEPLOYMENT_MODE = "cloud";
     process.env.INTERNAL_SERVICE_TOKEN = "test-service-token";
     process.env.POSTHOG_HOST = "https://us.i.posthog.com";
