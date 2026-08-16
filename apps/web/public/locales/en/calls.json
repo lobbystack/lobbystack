@@ -45,6 +45,9 @@
     "createdAt": "Created {{time}}",
     "markDone": "Mark done",
     "markingDone": "Marking done...",
+    "kind": {
+      "callback": "Callback"
+    },
     "urgent": "Urgent",
     "callUnavailable": "The original call is unavailable, but this callback task is still open.",
     "completeFailed": "Couldn't mark the callback task done.",

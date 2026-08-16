@@ -381,7 +381,7 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
           productId: polarCheckoutProductId(request.target, request.billingInterval),
           customerEmail: request.customerEmail,
           externalCustomerId: request.externalCustomerId,
-          successUrl: `${process.env.APP_BASE_URL ?? "http://localhost:3000"}/settings/plan?checkout=success&requestId=${encodeURIComponent(requestId)}`,
+           successUrl: `${process.env.APP_BASE_URL ?? "http://localhost:3000"}/${request.onboardingStage === "complete" ? "settings/plan" : "onboarding/plan"}?checkout=success&requestId=${encodeURIComponent(requestId)}`,
           idempotencyKey: `billing-checkout:${requestId}`,
         });
         await markBillingCheckoutCreated(dependencies.domain, { businessId, requestId, ...checkout });

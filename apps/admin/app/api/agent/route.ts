@@ -70,12 +70,18 @@ export async function PATCH(request: Request) {
         throw new Error("A profile object is required.");
       }
       const patch = readProfilePatch(body as Record<string, unknown>);
+      const locale = (body as Record<string, unknown>).locale;
+      if (locale !== undefined && locale !== "en" && locale !== "fr") throw new Error("locale is invalid.");
       if (Object.keys(patch).length === 0) {
         throw new Error("At least one profile field is required.");
       }
 
       const business = (await tx.select({ name: businesses.name }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
       if (!business) throw new Error("Business not found.");
+
+      if (locale !== undefined) {
+        await tx.update(businesses).set({ defaultLocale: locale, updatedAt: new Date() }).where(eq(businesses.id, businessId));
+      }
 
       const [profile] = await tx.insert(receptionistProfiles).values({
         businessId,

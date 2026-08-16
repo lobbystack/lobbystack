@@ -1,5 +1,3 @@
-import { LivePlanSurface } from "@/components/live-plan-surface";
+import { redirect } from "next/navigation";
 
-export default function SettingsBillingCompliancePage() {
-  return <LivePlanSurface />;
-}
+export default function SettingsBillingCompliancePage() { redirect("/settings/plan"); }

@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     const body = await readJson(request);
     if (typeof body !== "object" || body === null || !("capCents" in body)) return NextResponse.json({ error: "capCents is required." }, { status: 400 });
     const capCents = (body as { capCents?: unknown }).capCents;
-    if (capCents !== null && typeof capCents !== "number") return NextResponse.json({ error: "capCents must be a number or null." }, { status: 400 });
+    if (capCents !== null && (typeof capCents !== "number" || !Number.isSafeInteger(capCents) || capCents < 0)) return NextResponse.json({ error: "capCents must be a non-negative whole number of cents or null." }, { status: 400 });
     return NextResponse.json(await setOverageSpendingCap(createDomainContext(), { userId: session.user.id, businessId, capCents: capCents as number | null }));
   } catch (error) {
     return asApiResponse(error);

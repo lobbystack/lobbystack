@@ -124,6 +124,7 @@ export const businesses = pgTable(
     status: varchar("status", { length: 32 }).default("active").notNull(),
     websiteUrl: text("website_url"),
     onboardingStage: varchar("onboarding_stage", { length: 64 }).default("create_business").notNull(),
+    onboardingAttribution: varchar("onboarding_attribution", { length: 120 }),
     phoneNumberReplacementReservedAt: timestamp("phone_number_replacement_reserved_at", { withTimezone: true }),
     phoneNumberReplacementUsedAt: timestamp("phone_number_replacement_used_at", { withTimezone: true }),
     telemetryEnabled: boolean("telemetry_enabled").default(true).notNull(),

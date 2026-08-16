@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 
 import { agentRules, enqueueOutbox, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
@@ -20,7 +20,7 @@ export async function createAgentRule(
 ): Promise<string> {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const [last] = await tx.select({ sortOrder: agentRules.sortOrder }).from(agentRules).where(eq(agentRules.businessId, input.businessId)).orderBy(asc(agentRules.sortOrder)).limit(1);
+    const [last] = await tx.select({ sortOrder: agentRules.sortOrder }).from(agentRules).where(eq(agentRules.businessId, input.businessId)).orderBy(desc(agentRules.sortOrder)).limit(1);
     const [rule] = await tx.insert(agentRules).values({ businessId: input.businessId, title: input.title.trim(), content: input.content.trim(), active: input.active ?? true, sortOrder: (last?.sortOrder ?? -1) + 1 }).returning({ id: agentRules.id });
     if (!rule) throw new Error("Agent rule could not be created.");
     await publishRulesChanged(tx, input.businessId, rule.id, `agent-rule:${rule.id}:created`);

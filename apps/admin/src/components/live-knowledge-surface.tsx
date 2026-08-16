@@ -3,15 +3,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { selectActiveBusiness } from "@/lib/active-business";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { PageSurface } from "./page-surface";
 
-type Business = { businessId: string; name: string };
-type Document = { id: string; title: string; sourceType: string; sourceUrl: string | null; status: string; processingProgress: number; updatedAt: string };
+type Business = { businessId: string; name: string; active: boolean; role: string };
+type Document = { id: string; title: string; sourceType: string; sourceUrl: string | null; storageObjectId: string | null; status: string; processingProgress: number; updatedAt: string };
+type Snippet = { id: string; title: string; content: string; active: boolean; priority: number };
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
+  const requestInit: RequestInit = { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } };
+  if (init?.body !== undefined) requestInit.body = init.body;
+  const response = await fetch(url, requestInit);
   if (!response.ok) throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Request failed.");
   return await response.json() as T;
 }
@@ -20,47 +24,47 @@ function formatDate(value: string): string {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
+async function checksum(file: File): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+  return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join("");
+}
+
 export function LiveKnowledgeSurface() {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
+  const [snippetTitle, setSnippetTitle] = useState("");
+  const [snippetContent, setSnippetContent] = useState("");
+  const [editingSnippet, setEditingSnippet] = useState<Snippet | null>(null);
   const [error, setError] = useState<string | null>(null);
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = businesses.data?.businesses[0];
+  const business = selectActiveBusiness(businesses.data?.businesses);
+  const canMutate = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   const documents = useQuery({ queryKey: ["knowledge", business?.businessId], queryFn: () => requestJson<{ documents: Document[] }>(`/api/knowledge?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
-  const addWebsite = useMutation({
-    mutationFn: () => requestJson<{ documentId: string }>("/api/knowledge", { method: "POST", body: JSON.stringify({ businessId: business!.businessId, title, sourceType: "website", sourceUrl }) }),
-    onSuccess: async () => {
-      setTitle("");
-      setSourceUrl("");
-      await queryClient.invalidateQueries({ queryKey: ["knowledge", business?.businessId] });
-    },
-  });
+  const snippets = useQuery({ queryKey: ["knowledge-snippets", business?.businessId], queryFn: () => requestJson<{ snippets: Snippet[] }>(`/api/knowledge/snippets?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
+  const invalidate = async () => { await queryClient.invalidateQueries({ queryKey: ["knowledge", business?.businessId] }); await queryClient.invalidateQueries({ queryKey: ["knowledge-snippets", business?.businessId] }); };
+  const addWebsite = useMutation({ mutationFn: () => requestJson<{ documentId: string }>(`/api/knowledge?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ businessId: business!.businessId, title, sourceType: "website", sourceUrl }) }), onSuccess: async () => { setTitle(""); setSourceUrl(""); await invalidate(); } });
+  const addSnippet = useMutation({ mutationFn: () => requestJson<{ snippetId: string }>(`/api/knowledge/snippets?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ title: snippetTitle, content: snippetContent }) }), onSuccess: async () => { setSnippetTitle(""); setSnippetContent(""); await invalidate(); } });
+  const updateSnippet = useMutation({ mutationFn: (input: { snippetId: string; title?: string; content?: string; active?: boolean }) => requestJson(`/api/knowledge/snippets/${encodeURIComponent(input.snippetId)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify(input) }), onSuccess: async () => { setEditingSnippet(null); await invalidate(); } });
+  const deleteSnippet = useMutation({ mutationFn: (snippetId: string) => requestJson(`/api/knowledge/snippets/${encodeURIComponent(snippetId)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "DELETE" }), onSuccess: invalidate });
+  const documentAction = useMutation({ mutationFn: async (input: { documentId: string; method: "PATCH" | "DELETE"; action?: string }) => { const init: RequestInit = { method: input.method }; if (input.method === "PATCH") init.body = JSON.stringify({ action: input.action }); return await requestJson(`/api/knowledge/${encodeURIComponent(input.documentId)}?businessId=${encodeURIComponent(business!.businessId)}`, init); }, onSuccess: invalidate });
+  const upload = useMutation({ mutationFn: async (file: File) => { const fileChecksum = await checksum(file); const created = await requestJson<{ objectId: string; url: string; headers?: Record<string, string> }>("/api/uploads", { method: "POST", body: JSON.stringify({ businessId: business!.businessId, purpose: "knowledge", fileName: file.name, contentType: file.type, length: file.size, checksum: fileChecksum }) }); const uploadResponse = await fetch(created.url, { method: "PUT", ...(created.headers ? { headers: created.headers } : {}), body: file }); if (!uploadResponse.ok) throw new Error("The file upload failed."); await requestJson("/api/uploads", { method: "PUT", body: JSON.stringify({ businessId: business!.businessId, objectId: created.objectId, length: file.size, contentType: file.type, checksum: fileChecksum }) }); }, onSuccess: invalidate });
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    try {
-      await addWebsite.mutateAsync();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to add website.");
-    }
-  }
+  async function submit(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); setError(null); try { await addWebsite.mutateAsync(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to add website."); } }
+  async function uploadFile(event: React.ChangeEvent<HTMLInputElement>) { const file = event.target.files?.[0]; if (!file) return; setError(null); try { await upload.mutateAsync(file); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to upload document."); } event.target.value = ""; }
+  async function downloadDocument(document: Document) { if (!document.storageObjectId || !business) return; const result = await requestJson<{ url: string }>(`/api/uploads?businessId=${encodeURIComponent(business.businessId)}&objectId=${encodeURIComponent(document.storageObjectId)}`); window.open(result.url, "_blank", "noopener,noreferrer"); }
 
   if (businesses.isLoading) return <p className="text-sm text-slate-500">Loading workspace...</p>;
-  if (businesses.isError || documents.isError) return <p className="text-sm text-red-600">Knowledge sources are unavailable.</p>;
+  if (businesses.isError || documents.isError || snippets.isError) return <p className="text-sm text-red-600">Knowledge sources are unavailable.</p>;
   if (!business) return <p className="text-sm text-slate-500">Create a workspace before adding knowledge.</p>;
 
-  return <PageSurface eyebrow={business.name} title="Knowledge" description="Manage tenant-scoped documents and website sources used by receptionist retrieval.">
+  return <PageSurface eyebrow={business.name} title="Knowledge" description="Manage tenant-scoped documents, website sources, and explicit answers used by receptionist retrieval.">
     <div className="space-y-6">
-      <Card>
-        <CardHeader><CardTitle>Add a website source</CardTitle><CardDescription>The worker crawls the site, chunks the content, and indexes it for this workspace.</CardDescription></CardHeader>
-        <CardContent><form className="grid gap-4 md:grid-cols-[1fr_1.4fr_auto] md:items-end" onSubmit={submit}><label className="space-y-2 text-sm font-medium text-slate-700">Title<input className="min-h-11 w-full rounded-xl border border-slate-200 px-3 font-normal" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Help center" required /></label><label className="space-y-2 text-sm font-medium text-slate-700">Website URL<input className="min-h-11 w-full rounded-xl border border-slate-200 px-3 font-normal" type="url" value={sourceUrl} onChange={(event) => setSourceUrl(event.target.value)} placeholder="https://example.com" required /></label><Button type="submit" disabled={addWebsite.isPending}>{addWebsite.isPending ? "Adding..." : "Add source"}</Button></form>{error ? <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}</CardContent>
-      </Card>
-      <Card>
-        <CardHeader><CardTitle>Sources</CardTitle><CardDescription>{documents.isLoading ? "Loading sources..." : `${documents.data?.documents.length ?? 0} source${documents.data?.documents.length === 1 ? "" : "s"} in this workspace.`}</CardDescription></CardHeader>
-        <CardContent><div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead><tr className="border-b border-slate-100 text-xs uppercase tracking-[0.12em] text-slate-400"><th className="px-3 py-3 font-semibold">Source</th><th className="px-3 py-3 font-semibold">Type</th><th className="px-3 py-3 font-semibold">Progress</th><th className="px-3 py-3 font-semibold">Updated</th></tr></thead><tbody>{documents.data?.documents.map((document) => <tr className="border-b border-slate-50 last:border-0" key={document.id}><td className="px-3 py-4"><p className="font-medium text-slate-800">{document.title}</p><p className="max-w-[360px] truncate text-xs text-slate-500">{document.sourceUrl ?? "Uploaded document"}</p></td><td className="px-3 py-4 capitalize text-slate-600">{document.sourceType}</td><td className="px-3 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${document.status === "indexed" ? "bg-teal-50 text-teal-700" : "bg-amber-50 text-amber-700"}`}>{document.status === "processing" ? `${document.processingProgress}%` : document.status}</span></td><td className="px-3 py-4 text-slate-600">{formatDate(document.updatedAt)}</td></tr>)}{!documents.isLoading && !documents.data?.documents.length ? <tr><td className="px-3 py-12 text-center text-slate-500" colSpan={4}>No knowledge sources yet.</td></tr> : null}</tbody></table></div></CardContent>
-      </Card>
+      {!canMutate ? <p className="rounded-xl bg-muted p-3 text-sm text-muted-foreground">Viewer access is read-only.</p> : null}
+      <div className="grid gap-6 xl:grid-cols-2"><Card><CardHeader><CardTitle>Add a website source</CardTitle><CardDescription>The worker crawls the site and reports ingestion progress here.</CardDescription></CardHeader><CardContent><form className="grid gap-4" onSubmit={submit}><label className="space-y-2 text-sm font-medium">Title<input className="min-h-11 w-full rounded-xl border px-3 font-normal" disabled={!canMutate} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Help center" required /></label><label className="space-y-2 text-sm font-medium">Website URL<input className="min-h-11 w-full rounded-xl border px-3 font-normal" disabled={!canMutate} type="url" value={sourceUrl} onChange={(event) => setSourceUrl(event.target.value)} placeholder="https://example.com" required /></label><Button disabled={!canMutate || addWebsite.isPending} type="submit">{addWebsite.isPending ? "Adding..." : "Add source"}</Button></form></CardContent></Card><Card><CardHeader><CardTitle>Upload a document</CardTitle><CardDescription>PDF, text, and office files are checksum-validated before extraction.</CardDescription></CardHeader><CardContent><label className="flex min-h-28 cursor-pointer items-center justify-center rounded-xl border border-dashed p-5 text-center text-sm text-muted-foreground"><input className="sr-only" disabled={!canMutate || upload.isPending} onChange={(event) => void uploadFile(event)} type="file" accept="application/pdf,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />{upload.isPending ? "Uploading and finalizing..." : "Choose a document to upload"}</label></CardContent></Card></div>
+      {error ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700" role="alert">{error}</p> : null}
+      <Card><CardHeader><CardTitle>{editingSnippet ? "Edit snippet" : "Add a snippet"}</CardTitle><CardDescription>Save a short, explicit answer that should be available without a website crawl.</CardDescription></CardHeader><CardContent><form className="space-y-4" onSubmit={(event) => { event.preventDefault(); if (editingSnippet) updateSnippet.mutate({ snippetId: editingSnippet.id, title: snippetTitle, content: snippetContent }); else addSnippet.mutate(); }}><input aria-label="Snippet title" className="min-h-11 w-full rounded-xl border px-3" disabled={!canMutate} value={snippetTitle} onChange={(event) => setSnippetTitle(event.target.value)} placeholder="Cancellation policy" required /><textarea aria-label="Snippet content" className="min-h-24 w-full rounded-xl border p-3" disabled={!canMutate} value={snippetContent} onChange={(event) => setSnippetContent(event.target.value)} placeholder="Appointments can be canceled up to 24 hours before the start time." required /><div className="flex gap-2"><Button disabled={!canMutate || addSnippet.isPending || updateSnippet.isPending} type="submit">{editingSnippet ? "Update snippet" : "Save snippet"}</Button>{editingSnippet ? <Button type="button" variant="ghost" onClick={() => { setEditingSnippet(null); setSnippetTitle(""); setSnippetContent(""); }}>Cancel</Button> : null}</div></form><div className="mt-6 space-y-3">{snippets.data?.snippets.map((snippet) => <article className="rounded-xl border p-4" key={snippet.id}><div className="flex items-center justify-between gap-3"><h3 className="font-medium">{snippet.title}</h3><span className="rounded-full bg-teal-50 px-2.5 py-1 text-xs text-teal-700">{snippet.active ? "Active" : "Paused"}</span></div><p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{snippet.content}</p><div className="mt-3 flex flex-wrap gap-2"><Button disabled={!canMutate} onClick={() => { setEditingSnippet(snippet); setSnippetTitle(snippet.title); setSnippetContent(snippet.content); }} size="sm" variant="outline">Edit</Button><Button disabled={!canMutate || updateSnippet.isPending} onClick={() => updateSnippet.mutate({ snippetId: snippet.id, active: !snippet.active })} size="sm" variant="ghost">{snippet.active ? "Disable" : "Enable"}</Button><Button disabled={!canMutate || deleteSnippet.isPending} onClick={() => { if (window.confirm("Delete this snippet?")) deleteSnippet.mutate(snippet.id); }} size="sm" variant="ghost">Delete</Button></div></article>)}</div></CardContent></Card>
+      <Card><CardHeader><CardTitle>Sources</CardTitle><CardDescription>{documents.isLoading ? "Loading sources..." : `${documents.data?.documents.length ?? 0} source${documents.data?.documents.length === 1 ? "" : "s"} in this workspace.`}</CardDescription></CardHeader><CardContent><div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead><tr className="border-b text-xs uppercase tracking-[0.12em] text-muted-foreground"><th className="px-3 py-3 font-semibold">Source</th><th className="px-3 py-3 font-semibold">Type</th><th className="px-3 py-3 font-semibold">Progress</th><th className="px-3 py-3 font-semibold">Updated</th><th className="px-3 py-3 font-semibold">Actions</th></tr></thead><tbody>{documents.data?.documents.map((document) => <tr className="border-b align-top last:border-0" key={document.id}><td className="px-3 py-4"><p className="font-medium">{document.title}</p><p className="max-w-[360px] truncate text-xs text-muted-foreground">{document.sourceUrl ?? "Uploaded document"}</p></td><td className="px-3 py-4 capitalize text-muted-foreground">{document.sourceType}</td><td className="px-3 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${document.status === "indexed" ? "bg-teal-50 text-teal-700" : "bg-amber-50 text-amber-700"}`}>{document.status === "processing" ? `${document.processingProgress}%` : document.status}</span></td><td className="px-3 py-4 text-muted-foreground">{formatDate(document.updatedAt)}</td><td className="px-3 py-4"><div className="flex flex-wrap gap-2">{document.storageObjectId && document.status === "indexed" ? <Button disabled={documents.isFetching} onClick={() => void downloadDocument(document)} size="sm" variant="outline">Download</Button> : null}{["error", "cancelled"].includes(document.status) ? <Button disabled={!canMutate || documentAction.isPending} onClick={() => documentAction.mutate({ documentId: document.id, method: "PATCH", action: "retry" })} size="sm" variant="outline">Retry</Button> : null}{document.status === "processing" ? <Button disabled={!canMutate || documentAction.isPending} onClick={() => documentAction.mutate({ documentId: document.id, method: "PATCH", action: "cancel" })} size="sm" variant="ghost">Cancel</Button> : null}<Button disabled={!canMutate || documentAction.isPending} onClick={() => { if (window.confirm("Delete this knowledge source?")) documentAction.mutate({ documentId: document.id, method: "DELETE" }); }} size="sm" variant="ghost">Delete</Button></div></td></tr>)}</tbody></table></div></CardContent></Card>
     </div>
   </PageSurface>;
 }

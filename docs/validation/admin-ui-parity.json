@@ -1,0 +1,74 @@
+{
+  "capabilities": [
+    {
+      "id": "onboarding.lifecycle",
+      "status": "required",
+      "routes": ["/onboarding/business", "/onboarding/website", "/onboarding/knowledge", "/onboarding/greeting", "/onboarding/verify-phone", "/onboarding/verify-phone/code", "/onboarding/plan", "/onboarding/number", "/onboarding/attribution"],
+      "actions": ["create workspace", "capture website", "review knowledge", "configure greeting and locale", "verify phone", "select or skip number", "submit attribution", "resume after refresh"],
+      "roles": { "owner": "mutate", "admin": "mutate", "scheduler": "read", "viewer": "read" },
+      "implementation": ["apps/admin/src/lib/onboarding-route.ts", "apps/admin/src/components/onboarding-website-surface.tsx", "apps/admin/src/components/onboarding-knowledge-surface.tsx", "apps/admin/src/components/onboarding-greeting-surface.tsx", "apps/admin/src/components/onboarding-attribution-surface.tsx", "apps/admin/app/api/onboarding/stage/route.ts", "apps/admin/app/api/onboarding/attribution/route.ts", "packages/domain/src/server/onboarding.ts"],
+       "acceptanceTests": ["apps/admin/e2e/operator-auth.e2e.ts", "apps/admin/e2e/onboarding-flow.e2e.ts", "scripts/replacement-phone-onboarding-check.ts"]
+    },
+    {
+      "id": "calls.detail_and_recordings",
+      "status": "required",
+      "routes": ["/calls", "/calls/[callId]"],
+      "actions": ["search calls", "paginate calls", "open transcript", "view outcome", "view recording state", "download signed recording"],
+      "roles": { "owner": "mutate", "admin": "mutate", "scheduler": "read", "viewer": "read" },
+      "implementation": ["apps/admin/app/api/calls/route.ts", "apps/admin/app/api/calls/[callId]/route.ts", "apps/admin/app/api/calls/[callId]/recording/route.ts", "apps/admin/src/components/live-call-detail-surface.tsx", "packages/domain/src/server/voice.ts", "packages/domain/src/server/storage.ts"],
+       "acceptanceTests": ["apps/admin/e2e/operator-auth.e2e.ts", "scripts/replacement-call-detail-check.ts", "scripts/replacement-storage-check.ts"]
+    },
+    {
+      "id": "management.crud",
+      "status": "required",
+      "routes": ["/agent/knowledge", "/agent/services", "/agent/rules", "/contacts", "/settings/team"],
+      "actions": ["create", "edit", "enable or disable", "delete", "search", "paginate", "reorder rules", "manage members"],
+      "roles": { "owner": "mutate", "admin": "mutate", "scheduler": "limited", "viewer": "read" },
+      "implementation": ["apps/admin/app/api/knowledge/route.ts", "apps/admin/app/api/catalog/route.ts", "apps/admin/app/api/rules/route.ts", "apps/admin/app/api/contacts/route.ts", "apps/admin/app/api/team/route.ts", "packages/domain/src/server/knowledge.ts", "packages/domain/src/server/catalog.ts", "packages/domain/src/server/rules.ts", "packages/domain/src/server/tenancy.ts"],
+       "acceptanceTests": ["apps/admin/e2e/operator-auth.e2e.ts", "scripts/replacement-role-authorization-check.ts"]
+    },
+    {
+      "id": "integrations.google_calendar",
+      "status": "required",
+      "routes": ["/integrations"],
+       "actions": ["connect", "discover calendars", "select calendar", "assign staff", "refresh", "disconnect"],
+      "roles": { "owner": "mutate", "admin": "mutate", "scheduler": "read", "viewer": "read" },
+      "implementation": ["apps/admin/app/api/integrations/route.ts", "apps/admin/app/api/calendar/google/start/route.ts", "apps/admin/app/api/calendar/google/callback/route.ts", "packages/domain/src/server/calendar.ts", "apps/admin/src/lib/google-calendar-oauth.ts"],
+      "acceptanceTests": ["apps/admin/src/lib/google-calendar-oauth.test.ts"]
+    },
+    {
+      "id": "analytics_and_billing.ux",
+      "status": "required",
+      "routes": ["/analytics", "/settings/usage", "/settings/plan"],
+      "actions": ["choose date range", "view metrics", "view usage", "change billing interval", "open invoices", "edit overage cap"],
+      "roles": { "owner": "mutate", "admin": "mutate", "scheduler": "read", "viewer": "read" },
+      "implementation": ["apps/admin/app/api/analytics/route.ts", "apps/admin/app/api/billing/route.ts", "apps/admin/src/components/live-analytics-surface.tsx", "apps/admin/src/components/live-plan-surface.tsx", "packages/domain/src/server/billing.ts", "packages/domain/src/server/unitEconomics.ts"],
+      "acceptanceTests": ["scripts/replacement-billing-check.ts", "scripts/replacement-unit-economics-check.ts"]
+    },
+    {
+      "id": "dashboard.utilities",
+      "status": "required",
+      "routes": ["/", "/setup-guide", "/affiliate", "/agent"],
+      "actions": ["test call", "send feedback", "open setup guide", "open affiliate", "redirect agent entry point"],
+      "roles": { "owner": "mutate", "admin": "mutate", "scheduler": "limited", "viewer": "read" },
+      "implementation": ["apps/admin/src/components/dashboard-shell.tsx", "apps/admin/app/api/feedback/route.ts", "apps/admin/app/(dashboard)/agent/page.tsx", "apps/admin/src/components/live-setup-guide-surface.tsx", "apps/admin/src/components/live-affiliate-surface.tsx"],
+      "acceptanceTests": ["apps/admin/src/lib/feedback-rate-limit.test.ts"]
+    },
+    {
+      "id": "demo.path_token",
+      "status": "replaced",
+      "implementation": ["apps/admin/src/components/demo-token-compatibility-route.tsx", "apps/admin/src/components/demo-surface.tsx", "apps/admin/src/components/claim-demo-surface.tsx"],
+      "acceptanceTests": ["scripts/replacement-demo-check.ts"]
+    },
+    {
+      "id": "billing.ai_sms",
+      "status": "excluded",
+      "reason": "AI-generated SMS and AI-SMS add-on billing or metering are intentionally excluded."
+    },
+    {
+      "id": "compliance.twilio_a2p",
+      "status": "excluded",
+      "reason": "Twilio A2P registration is intentionally excluded."
+    }
+  ]
+}

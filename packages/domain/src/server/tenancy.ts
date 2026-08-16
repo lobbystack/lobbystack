@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { businessInvitations, businessMemberships, businesses, users } from "@lobbystack/db";
@@ -45,6 +45,7 @@ export async function createBusiness(
       timezone: input.timezone,
       businessType: input.businessType,
       deploymentMode: input.deploymentMode ?? "cloud",
+      onboardingStage: "website",
     }).returning({ id: businesses.id });
     if (!business) {
       throw new Error("Business could not be created.");
@@ -78,9 +79,24 @@ export async function listUserBusinesses(
   const result = await withBusinessTransaction(db, { userId, actorType: "operator" }, async (tx) => {
     const [user] = await tx.select({ activeBusinessId: users.activeBusinessId }).from(users).where(eq(users.id, userId)).limit(1);
     const rows = await tx.execute(sql`select business_id, name, slug, role from app.list_user_businesses(${userId})`);
-    return { activeBusinessId: user?.activeBusinessId ?? null, rows: rows.rows };
+    const ids = rows.rows.map((row) => String(row.business_id));
+    const details = ids.length ? await tx.select({ id: businesses.id, timezone: businesses.timezone, businessType: businesses.businessType, defaultLocale: businesses.defaultLocale, websiteUrl: businesses.websiteUrl }).from(businesses).where(inArray(businesses.id, ids)) : [];
+    return { activeBusinessId: user?.activeBusinessId ?? null, rows: rows.rows, details };
   });
-  return result.rows.map((row) => ({ businessId: String(row.business_id), name: String(row.name), slug: String(row.slug), role: String(row.role), active: String(row.business_id) === result.activeBusinessId }));
+  return result.rows.map((row) => { const detail = result.details.find((item) => item.id === String(row.business_id)); return { businessId: String(row.business_id), name: String(row.name), slug: String(row.slug), role: String(row.role), active: String(row.business_id) === result.activeBusinessId, ...(detail ? { timezone: detail.timezone, businessType: detail.businessType, defaultLocale: detail.defaultLocale, websiteUrl: detail.websiteUrl } : {}) }; });
+}
+
+export async function updateBusiness(
+  context: DomainContext,
+  input: { userId: string; businessId: string; name?: string; timezone?: string; businessType?: string; defaultLocale?: string; websiteUrl?: string | null },
+): Promise<void> {
+  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    const values = { ...(input.name !== undefined ? { name: input.name.trim() } : {}), ...(input.timezone !== undefined ? { timezone: input.timezone.trim() } : {}), ...(input.businessType !== undefined ? { businessType: input.businessType.trim() } : {}), ...(input.defaultLocale !== undefined ? { defaultLocale: input.defaultLocale.trim() } : {}), ...(input.websiteUrl !== undefined ? { websiteUrl: input.websiteUrl } : {}), updatedAt: new Date() };
+    if (Object.keys(values).length === 1) throw new Error("At least one business field is required.");
+    const [business] = await tx.update(businesses).set(values).where(eq(businesses.id, input.businessId)).returning({ id: businesses.id });
+    if (!business) throw new Error("Business not found.");
+  });
 }
 
 export async function switchWorkspace(
@@ -165,5 +181,48 @@ export async function acceptInvitation(
     });
     await tx.update(businessInvitations).set({ status: "accepted", acceptedByUserId: input.userId, acceptedAt: new Date(), updatedAt: new Date() }).where(eq(businessInvitations.id, invitation.id));
     return { businessId: invitation.businessId, role: invitation.role };
+  });
+}
+
+export async function updateMemberRole(
+  context: DomainContext,
+  input: { userId: string; businessId: string; membershipId: string; role: Exclude<BusinessRole, "business_owner"> },
+): Promise<void> {
+  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    const membership = (await tx.select({ userId: businessMemberships.userId, role: businessMemberships.role }).from(businessMemberships).where(and(eq(businessMemberships.id, input.membershipId), eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active"))).limit(1))[0];
+    if (!membership) throw new Error("Membership not found.");
+    if (membership.role === "business_owner") {
+      const owners = await tx.select({ id: businessMemberships.id }).from(businessMemberships).where(and(eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.role, "business_owner"), eq(businessMemberships.status, "active")));
+      if (owners.length <= 1) throw new Error("The final owner cannot be changed.");
+    }
+    await tx.update(businessMemberships).set({ role: input.role, updatedAt: new Date() }).where(and(eq(businessMemberships.id, input.membershipId), eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active")));
+  });
+}
+
+export async function removeMember(
+  context: DomainContext,
+  input: { userId: string; businessId: string; membershipId: string },
+): Promise<void> {
+  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    const membership = (await tx.select({ role: businessMemberships.role }).from(businessMemberships).where(and(eq(businessMemberships.id, input.membershipId), eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active"))).limit(1))[0];
+    if (!membership) throw new Error("Membership not found.");
+    if (membership.role === "business_owner") {
+      const owners = await tx.select({ id: businessMemberships.id }).from(businessMemberships).where(and(eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.role, "business_owner"), eq(businessMemberships.status, "active")));
+      if (owners.length <= 1) throw new Error("The final owner cannot be removed.");
+    }
+    await tx.update(businessMemberships).set({ status: "removed", updatedAt: new Date() }).where(and(eq(businessMemberships.id, input.membershipId), eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active")));
+  });
+}
+
+export async function revokeInvitation(
+  context: DomainContext,
+  input: { userId: string; businessId: string; invitationId: string },
+): Promise<void> {
+  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    const changed = await tx.update(businessInvitations).set({ status: "revoked", updatedAt: new Date() }).where(and(eq(businessInvitations.id, input.invitationId), eq(businessInvitations.businessId, input.businessId), eq(businessInvitations.status, "pending"))).returning({ id: businessInvitations.id });
+    if (!changed.length) throw new Error("Invitation not found or already resolved.");
   });
 }

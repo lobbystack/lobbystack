@@ -6,7 +6,7 @@ import { isTerminalTwilioMessageStatus, mapTwilioStatusToMessageStatus, normaliz
 import type { DomainContext } from "./context";
 import { queueOperatorAlertInTransaction } from "./notifications";
 import { recordUnitEconomicsEventInTransaction } from "./unitEconomics";
-import { requireBusinessMembership } from "../authz";
+import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 
 const SMS_STOP_KEYWORDS = new Set(["STOP", "STOPALL", "UNSUBSCRIBE", "END", "QUIT", "CANCEL"]);
 const SMS_START_KEYWORDS = new Set(["START", "UNSTOP", "SUBSCRIBE"]);
@@ -129,7 +129,7 @@ export async function setContactSmsManualBlock(
   input: { userId: string; businessId: string; contactId: string; blocked: boolean },
 ): Promise<boolean> {
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
-    await requireBusinessMembership(tx, input);
+     await requireBusinessAdmin(tx, input);
     const now = new Date();
     const [contact] = await tx.update(contacts)
       .set({ operatorBlockedAt: input.blocked ? now : null, updatedAt: now })

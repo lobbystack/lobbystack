@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 
-import { appointments, calendarBusyBlocks, calendarConnections, enqueueOutbox, withBusinessTransaction } from "@lobbystack/db";
+import { appointments, calendarBusyBlocks, calendarConnections, enqueueOutbox, staff, withBusinessTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
@@ -120,7 +120,86 @@ export async function disconnectCalendar(
   input: { userId: string; businessId: string; connectionId: string },
 ): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
-    await requireBusinessMembership(tx, input);
+    await requireBusinessAdmin(tx, input);
     await tx.update(calendarConnections).set({ status: "disconnected", encryptedAccessToken: null, encryptedRefreshToken: null, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId)));
   });
+}
+
+export async function listCalendarConnections(
+  context: DomainContext,
+  input: { userId: string; businessId: string },
+): Promise<Array<{ id: string; provider: string; externalAccountId: string; staffId: string | null; selectedCalendarId: string | null; status: string; lastSyncError: string | null; updatedAt: Date }>> {
+  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, input);
+    return await tx.select({ id: calendarConnections.id, provider: calendarConnections.provider, externalAccountId: calendarConnections.externalAccountId, staffId: calendarConnections.staffId, selectedCalendarId: calendarConnections.selectedCalendarId, status: calendarConnections.status, lastSyncError: calendarConnections.lastSyncError, updatedAt: calendarConnections.updatedAt }).from(calendarConnections).where(and(eq(calendarConnections.businessId, input.businessId), eq(calendarConnections.status, "connected")));
+  });
+}
+
+export async function listCalendarStaff(
+  context: DomainContext,
+  input: { userId: string; businessId: string },
+): Promise<Array<{ id: string; name: string }>> {
+  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, input);
+    return await tx.select({ id: staff.id, name: staff.name }).from(staff).where(and(eq(staff.businessId, input.businessId), eq(staff.active, true))).orderBy(staff.name);
+  });
+}
+
+export async function assignCalendarStaff(
+  context: DomainContext,
+  input: { userId: string; businessId: string; connectionId: string; staffId: string | null },
+): Promise<void> {
+  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    if (input.staffId) {
+      const member = (await tx.select({ id: staff.id }).from(staff).where(and(eq(staff.id, input.staffId), eq(staff.businessId, input.businessId), eq(staff.active, true))).limit(1))[0];
+      if (!member) throw new Error("Staff member not found.");
+    }
+    const changed = await tx.update(calendarConnections).set({ staffId: input.staffId, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId))).returning({ id: calendarConnections.id });
+    if (!changed.length) throw new Error("Calendar connection not found.");
+    await enqueueOutbox(tx, { topic: "calendar.reconcileBusiness", businessId: input.businessId, aggregateType: "calendar_connection", aggregateId: input.connectionId, dedupeKey: `calendar:${input.connectionId}:staff:${Date.now()}`, payload: { connectionId: input.connectionId } });
+  });
+}
+
+export async function selectCalendar(
+  context: DomainContext,
+  input: { userId: string; businessId: string; connectionId: string; calendarId: string },
+): Promise<void> {
+  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    const changed = await tx.update(calendarConnections).set({ selectedCalendarId: input.calendarId.trim().slice(0, 255), status: "connected", lastSyncError: null, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId))).returning({ id: calendarConnections.id });
+    if (!changed.length) throw new Error("Calendar connection not found.");
+    await enqueueOutbox(tx, { topic: "calendar.reconcileBusiness", businessId: input.businessId, aggregateType: "calendar_connection", aggregateId: input.connectionId, dedupeKey: `calendar:${input.connectionId}:select:${Date.now()}`, payload: { connectionId: input.connectionId } });
+  });
+}
+
+export async function refreshCalendar(
+  context: DomainContext,
+  input: { userId: string; businessId: string; connectionId: string },
+): Promise<void> {
+  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    const connection = (await tx.select({ id: calendarConnections.id }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), eq(calendarConnections.status, "connected"))).limit(1))[0];
+    if (!connection) throw new Error("Calendar connection not found.");
+    await enqueueOutbox(tx, { topic: "calendar.reconcileBusiness", businessId: input.businessId, aggregateType: "calendar_connection", aggregateId: input.connectionId, dedupeKey: `calendar:${input.connectionId}:refresh:${Date.now()}`, payload: { connectionId: input.connectionId } });
+  });
+}
+
+export async function discoverCalendars(
+  context: DomainContext,
+  input: {
+    userId: string;
+    businessId: string;
+    connectionId: string;
+    decryptAccessToken: (value: string) => string;
+    listCalendars: (input: { accessToken: string }) => Promise<Array<{ id: string; summary: string; primary: boolean; accessRole?: string }>>;
+  },
+): Promise<Array<{ id: string; summary: string; primary: boolean; accessRole?: string; selected: boolean }>> {
+  const connection = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, input);
+    return (await tx.select({ encryptedAccessToken: calendarConnections.encryptedAccessToken, selectedCalendarId: calendarConnections.selectedCalendarId, status: calendarConnections.status }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId))).limit(1))[0] ?? null;
+  });
+  if (!connection || connection.status !== "connected" || !connection.encryptedAccessToken) throw new Error("Calendar connection requires reconnection before calendars can be discovered.");
+  const calendars = await input.listCalendars({ accessToken: input.decryptAccessToken(connection.encryptedAccessToken) });
+  return calendars.map((calendar) => ({ ...calendar, selected: calendar.id === connection.selectedCalendarId }));
 }

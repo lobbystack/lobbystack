@@ -1,8 +1,9 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 
-import { calls, contacts, conversations, conversationSessions, enqueueOutbox, transcripts, withBusinessTransaction } from "@lobbystack/db";
+import { appointments, calls, contacts, conversations, conversationSessions, enqueueOutbox, services, staff, storageObjects, transcripts, withBusinessTransaction } from "@lobbystack/db";
 import { isTerminalTwilioCallStatus } from "@lobbystack/shared";
 
+import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
 import { queueOperatorAlertInTransaction } from "./notifications";
 import { applyNonAiUsageInTransaction, finalizeWebVoiceUsageInTransaction, normalizeWebCallMaxDurationMs, reserveWebVoiceUsageInTransaction } from "./billing";
@@ -250,5 +251,152 @@ export async function recordCallProviderPricing(
     if (input.providerCostUsd !== undefined) await recordUnitEconomicsEventInTransaction(tx, { businessId: input.businessId, eventKey: `voice_provider:${call.id}`, eventKind: "voice_provider", channel: "voice", costUsd: input.providerCostUsd, occurredAt: call.startedAt, ...(call.providerDurationSeconds !== null ? { quantity: call.providerDurationSeconds } : {}), quantityUnit: "second", provider: "twilio", callId: call.id });
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "call", aggregateId: call.id, dedupeKey: `call:${call.id}:pricing:${call.revision}`, payload: { type: "call.updated", entityId: call.id, revision: call.revision } });
     return true;
+  });
+}
+
+type RecordingState = "available" | "pending" | "expired" | "missing";
+
+function recordingState(input: { recordingObjectId: string | null; recordingStatus: string | null; retentionUntil: Date | null }): RecordingState {
+  if (!input.recordingObjectId) return "missing";
+  if (!input.recordingStatus || input.recordingStatus === "pending") return "pending";
+  if (input.recordingStatus === "deleted" || (input.retentionUntil !== null && input.retentionUntil <= new Date())) return "expired";
+  return "available";
+}
+
+export async function listCalls(
+  context: DomainContext,
+  input: { userId: string; businessId: string; search?: string; limit?: number; offset?: number },
+): Promise<{ calls: Array<Record<string, unknown>>; pagination: { limit: number; offset: number; hasNext: boolean } }> {
+  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, input);
+    const limit = Math.min(Math.max(Math.trunc(input.limit ?? 50), 1), 100);
+    const offset = Math.max(Math.trunc(input.offset ?? 0), 0);
+    const search = input.search?.trim();
+    const rows = await tx.select({
+       id: calls.id,
+      providerCallId: calls.providerCallId,
+      status: calls.status,
+      disposition: calls.disposition,
+      startedAt: calls.startedAt,
+      endedAt: calls.endedAt,
+      providerDurationSeconds: calls.providerDurationSeconds,
+      contactName: contacts.name,
+      contactPhone: contacts.phone,
+      recordingObjectId: calls.recordingObjectId,
+      recordingStatus: storageObjects.status,
+       recordingRetentionUntil: storageObjects.retentionUntil,
+       transcriptPreview: sql<string | null>`(select ${transcripts.text} from ${transcripts} where ${transcripts.callId} = ${calls.id} order by ${transcripts.sequence} desc limit 1)`,
+    }).from(calls)
+      .leftJoin(contacts, eq(calls.contactId, contacts.id))
+      .leftJoin(storageObjects, eq(calls.recordingObjectId, storageObjects.id))
+      .where(and(
+        eq(calls.businessId, input.businessId),
+        ...(search ? [or(ilike(contacts.name, `%${search}%`), ilike(contacts.phone, `%${search}%`), ilike(calls.disposition, `%${search}%`), ilike(calls.providerCallId, `%${search}%`))!] : []),
+      ))
+      .orderBy(desc(calls.startedAt))
+      .limit(limit + 1)
+      .offset(offset);
+    const hasNext = rows.length > limit;
+    return {
+      calls: rows.slice(0, limit).map((row) => ({
+        id: row.id,
+        providerCallId: row.providerCallId,
+        status: row.status,
+        disposition: row.disposition,
+        startedAt: row.startedAt,
+        endedAt: row.endedAt,
+        providerDurationSeconds: row.providerDurationSeconds,
+        contactName: row.contactName,
+        contactPhone: row.contactPhone,
+         recordingState: recordingState({ recordingObjectId: row.recordingObjectId, recordingStatus: row.recordingStatus, retentionUntil: row.recordingRetentionUntil }),
+         transcriptPreview: row.transcriptPreview,
+      })),
+      pagination: { limit, offset, hasNext },
+    };
+  });
+}
+
+export async function getCallDetail(
+  context: DomainContext,
+  input: { userId: string; businessId: string; callId: string },
+): Promise<{
+  call: Record<string, unknown>;
+  contact: Record<string, unknown> | null;
+  outcome: string | null;
+  timeline: Array<{ type: string; at: Date; status: string }>;
+  transcript: Array<Record<string, unknown>>;
+  recording: { state: RecordingState; objectId?: string; contentType?: string; retentionUntil?: Date };
+  appointments: Array<Record<string, unknown>>;
+  followUpTasks: Array<Record<string, unknown>>;
+} | null> {
+  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, input);
+    const row = (await tx.select({
+      id: calls.id,
+      providerCallId: calls.providerCallId,
+      provider: calls.provider,
+      transport: calls.transport,
+      status: calls.status,
+      disposition: calls.disposition,
+      transferState: calls.transferState,
+      startedAt: calls.startedAt,
+      endedAt: calls.endedAt,
+      providerDurationSeconds: calls.providerDurationSeconds,
+      gatewaySessionId: calls.gatewaySessionId,
+      contactId: calls.contactId,
+      recordingObjectId: calls.recordingObjectId,
+      recordingStatus: storageObjects.status,
+      recordingContentType: storageObjects.contentType,
+      recordingRetentionUntil: storageObjects.retentionUntil,
+      contactName: contacts.name,
+      contactPhone: contacts.phone,
+      contactEmail: contacts.email,
+      contactBlockedAt: contacts.operatorBlockedAt,
+    }).from(calls)
+      .leftJoin(contacts, eq(calls.contactId, contacts.id))
+      .leftJoin(storageObjects, eq(calls.recordingObjectId, storageObjects.id))
+      .where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId)))
+      .limit(1))[0];
+    if (!row) return null;
+
+    const [transcript, appointmentRows] = await Promise.all([
+      tx.select({ id: transcripts.id, sequence: transcripts.sequence, speaker: transcripts.speaker, text: transcripts.text, confidence: transcripts.confidence, final: transcripts.final, createdAt: transcripts.createdAt }).from(transcripts).where(and(eq(transcripts.callId, input.callId), eq(transcripts.businessId, input.businessId))).orderBy(asc(transcripts.sequence)),
+      row.contactId
+        ? tx.select({ id: appointments.id, startsAt: appointments.startsAt, endsAt: appointments.endsAt, timezone: appointments.timezone, status: appointments.status, serviceName: services.name, staffName: staff.name }).from(appointments).innerJoin(services, eq(appointments.serviceId, services.id)).innerJoin(staff, eq(appointments.staffId, staff.id)).where(and(eq(appointments.businessId, input.businessId), eq(appointments.contactId, row.contactId))).orderBy(asc(appointments.startsAt))
+        : Promise.resolve([]),
+    ]);
+    const state = recordingState({ recordingObjectId: row.recordingObjectId, recordingStatus: row.recordingStatus, retentionUntil: row.recordingRetentionUntil });
+    const timeline = [
+      { type: "started", at: row.startedAt, status: row.status },
+      ...(row.endedAt ? [{ type: "ended", at: row.endedAt, status: row.status }] : []),
+    ];
+    return {
+      call: {
+        id: row.id,
+        providerCallId: row.providerCallId,
+        provider: row.provider,
+        transport: row.transport,
+        status: row.status,
+        disposition: row.disposition,
+        transferState: row.transferState,
+        startedAt: row.startedAt,
+        endedAt: row.endedAt,
+        providerDurationSeconds: row.providerDurationSeconds,
+        gatewaySessionId: row.gatewaySessionId,
+      },
+      contact: row.contactId ? { id: row.contactId, name: row.contactName, phone: row.contactPhone, email: row.contactEmail, blockedAt: row.contactBlockedAt } : null,
+      outcome: row.disposition,
+      timeline,
+      transcript,
+      recording: {
+        state,
+        ...(row.recordingObjectId ? { objectId: row.recordingObjectId } : {}),
+        ...(row.recordingContentType ? { contentType: row.recordingContentType } : {}),
+        ...(row.recordingRetentionUntil ? { retentionUntil: row.recordingRetentionUntil } : {}),
+      },
+      appointments: appointmentRows,
+      // Follow-up tasks are not part of the replacement schema yet.
+      followUpTasks: [],
+    };
   });
 }

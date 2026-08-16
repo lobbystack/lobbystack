@@ -18,7 +18,8 @@ export async function GET(request: Request) {
     const session = await requireApiSession(request);
     const businessId = businessIdFromRequest(request);
     if (!businessId) throw new Error("A businessId is required.");
-    return NextResponse.json(await listCatalog(createDomainContext(), { userId: session.user.id, businessId }));
+    const url = new URL(request.url);
+    return NextResponse.json(await listCatalog(createDomainContext(), { userId: session.user.id, businessId, ...(url.searchParams.get("search") ? { search: url.searchParams.get("search")! } : {}), ...(url.searchParams.get("limit") ? { limit: Number(url.searchParams.get("limit")) } : {}), ...(url.searchParams.get("offset") ? { offset: Number(url.searchParams.get("offset")) } : {}) }));
   } catch (error) {
     return asApiResponse(error);
   }

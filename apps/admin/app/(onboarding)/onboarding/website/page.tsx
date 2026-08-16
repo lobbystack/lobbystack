@@ -1,3 +1,4 @@
-import { LiveKnowledgeSurface } from "@/components/live-knowledge-surface";
+import { OnboardingWebsiteSurface } from "@/components/onboarding-website-surface";
+import { requireOnboardingStage } from "@/lib/onboarding-route";
 
-export default function OnboardingWebsitePage() { return <LiveKnowledgeSurface />; }
+export default async function OnboardingWebsitePage() { await requireOnboardingStage("/onboarding/website"); return <OnboardingWebsiteSurface />; }

@@ -57,6 +57,7 @@ import {
 } from "@web/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { formatPhoneNumberDisplay } from "@web/lib/phone";
+import { DashboardUtilityBar } from "./dashboard-utility-bar";
 
 type Business = {
   businessId: string;
@@ -103,6 +104,7 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
         <SidebarInset className="@container/content min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain">
           <SiteHeader fixed />
           <div className="hidden h-16 shrink-0 border-b md:block" />
+          <DashboardUtilityBar />
           <Main className="flex flex-1 flex-col" fixed={pathname === "/messages"}>
             {children}
           </Main>
@@ -122,7 +124,7 @@ function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
     { label: t("nav:items.contacts"), href: "/contacts", icon: UsersIcon },
   ];
   const receptionist: NavigationItem[] = [
-    { label: t("agent:sections.basicSettings.title"), href: "/agent", icon: ClipboardCheckIcon },
+    { label: t("agent:sections.basicSettings.title"), href: "/agent/basic-settings", icon: ClipboardCheckIcon },
     { label: t("agent:sections.knowledge.title"), href: "/agent/knowledge", icon: BookOpenIcon },
     { label: t("agent:sections.services.title"), href: "/agent/services", icon: BlocksIcon },
     { label: t("agent:sections.rules.title"), href: "/agent/rules", icon: WorkflowIcon },

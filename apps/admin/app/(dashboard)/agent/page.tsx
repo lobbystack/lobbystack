@@ -1,5 +1,5 @@
-import { PageSurface } from "@/components/page-surface";
+import { redirect } from "next/navigation";
 
-export default function AgentPage() { return <PageSurface eyebrow="Receptionist" title="AI receptionist" description="Configure the voice and SMS receptionist using structured business facts, rules, and tenant-scoped knowledge."><div className="grid gap-6 md:grid-cols-3"><SetupCard title="Basic settings" description="Greeting, tone, transfer policy, and locale." href="/agent/basic-settings" /><SetupCard title="Knowledge" description="Documents, website sources, and snippets." href="/agent/knowledge" /><SetupCard title="Services" description="Services, durations, staff, and availability." href="/agent/services" /></div></PageSurface>; }
+export default function AgentPage() { redirect("/agent/basic-settings"); }
 
 function SetupCard({ title, description, href }: { title: string; description: string; href: string }) { return <a className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md" href={href}><h2 className="font-semibold text-slate-950">{title}</h2><p className="mt-2 text-sm leading-6 text-slate-500">{description}</p><span className="mt-6 inline-block text-sm font-medium text-teal-700">Open settings →</span></a>; }

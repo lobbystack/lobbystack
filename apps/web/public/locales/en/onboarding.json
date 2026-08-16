@@ -19,17 +19,41 @@
   "businessName": {
     "title": "First, what is the name of your business?",
     "description": "",
+    "createTitle": "Create workspace",
+    "createDescription": "These details become the foundation of the receptionist context.",
+    "existingTitle": "Workspace already exists",
+    "existingDescription": "Continue setup using the active workspace.",
+    "configured": "Business details are already configured.",
+    "continueSetup": "Continue setup",
+    "loading": "Loading workspaces...",
+    "unavailable": "Workspace setup is unavailable.",
     "label": "Business name",
     "placeholder": "Bar George",
+    "slugLabel": "Slug",
+    "slugPlaceholder": "maple-family-clinic",
+    "timezoneLabel": "Timezone",
+    "timezonePlaceholder": "America/Toronto",
+    "typeLabel": "Business type",
+    "types": {
+      "serviceCompany": "Service company",
+      "clinic": "Clinic",
+      "salon": "Salon or spa",
+      "professionalServices": "Professional services",
+      "other": "Other"
+    },
+    "create": "Create and continue",
     "continue": "Continue",
     "submitting": "Saving...",
-    "submitFailed": "We couldn't save that business name right now. Please try again."
+    "submitFailed": "We couldn't save that business right now. Please try again."
   },
   "website": {
     "title": "Now let's train LobbyStack on your website",
     "description": "",
     "label": "Website",
     "placeholder": "yourcompany.com",
+    "sourceName": "Source name",
+    "sourceNameHint": "Optional label for the imported source.",
+    "sourceNamePlaceholder": "Company website",
     "continue": "Continue",
     "submitting": "Starting import...",
     "skip": "Skip for now",
@@ -68,6 +92,9 @@
     "title": "How should we greet your callers?",
     "description": "This is what your AI says first. You can change it any time.",
     "label": "Greeting",
+    "language": "Language",
+    "english": "English",
+    "french": "French",
     "placeholder": "Thanks for calling. How can I help?",
     "continue": "Continue",
     "submitting": "Saving...",
@@ -129,6 +156,21 @@
     "selectedTitle": "Your AI's phone number",
     "selectedNumberLabel": "Selected number",
     "continue": "Continue"
+  },
+  "attribution": {
+    "title": "How did you hear about us?",
+    "question": "One last question",
+    "description": "This helps us improve LobbyStack. You can skip it.",
+    "label": "Source",
+    "preferNot": "Prefer not to say",
+    "search": "Search engine",
+    "referral": "Friend or colleague",
+    "social": "Social media",
+    "event": "Event or community",
+    "other": "Other",
+    "finish": "Finish setup",
+    "finishing": "Finishing setup...",
+    "failed": "Unable to finish setup."
   },
   "plan": {
     "title": "Choose your plan",
@@ -323,30 +365,5 @@
     "continue": "Continue",
     "continuing": "Continuing...",
     "continueFailed": "We couldn't continue right now. Please try again."
-  },
-  "attribution": {
-    "title": "How did you hear about LobbyStack?",
-    "description": "It helps us focus on what's working.",
-    "options": {
-      "ai_assistant": "ChatGPT, Claude, etc.",
-      "newsletter": "Newsletter or blog",
-      "podcast": "Podcast",
-      "news": "In the news",
-      "work": "From work",
-      "school": "Friends or school",
-      "x": "X",
-      "reddit": "Reddit",
-      "facebook": "Facebook",
-      "youtube": "YouTube",
-      "instagram": "Instagram",
-      "linkedin": "LinkedIn",
-      "google": "Google",
-      "tiktok": "TikTok",
-      "other": "Other"
-    },
-    "skip": "Skip",
-    "finish": "Finish",
-    "finishing": "Finishing...",
-    "submitFailed": "We couldn't save that right now. Please try again."
   }
 }

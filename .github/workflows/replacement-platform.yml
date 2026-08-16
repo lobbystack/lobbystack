@@ -57,10 +57,11 @@ jobs:
       - name: Verify migration rerun safety
         run: pnpm db:migrate
       - run: pnpm db:check
-      - run: pnpm db:verify-rls
+      - run: VERIFY_RLS_BEHAVIOR=true pnpm db:verify-rls
       - run: pnpm db:seed
       - run: pnpm replacement:inventory
       - run: pnpm replacement:parity
+      - run: pnpm replacement:admin-ui-parity
       - run: pnpm replacement:drift
       - run: pnpm replacement:security
       - run: pnpm replacement:recovery
@@ -75,6 +76,9 @@ jobs:
       - run: pnpm replacement:import-check
       - run: pnpm replacement:reconciliation
       - run: pnpm replacement:phone-onboarding
+      - run: pnpm replacement:call-detail
+      - run: pnpm replacement:roles
+      - run: pnpm replacement:locale
       - run: pnpm --filter @lobbystack/contracts typecheck
       - run: pnpm --filter @lobbystack/jobs typecheck
       - run: pnpm --filter @lobbystack/telemetry typecheck

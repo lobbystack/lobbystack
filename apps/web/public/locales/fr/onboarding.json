@@ -19,17 +19,41 @@
   "businessName": {
     "title": "D'abord, quel est le nom de votre entreprise ?",
     "description": "",
+    "createTitle": "Créer un espace de travail",
+    "createDescription": "Ces informations constituent la base du contexte de votre réceptionniste.",
+    "existingTitle": "L'espace de travail existe déjà",
+    "existingDescription": "Continuez la configuration avec l'espace de travail actif.",
+    "configured": "Les détails de l'entreprise sont déjà configurés.",
+    "continueSetup": "Continuer la configuration",
+    "loading": "Chargement des espaces de travail...",
+    "unavailable": "La configuration de l'espace de travail est indisponible.",
     "label": "Nom de l'entreprise",
     "placeholder": "Bar George",
+    "slugLabel": "Slug",
+    "slugPlaceholder": "clinique-familiale-maple",
+    "timezoneLabel": "Fuseau horaire",
+    "timezonePlaceholder": "America/Toronto",
+    "typeLabel": "Type d'entreprise",
+    "types": {
+      "serviceCompany": "Entreprise de services",
+      "clinic": "Clinique",
+      "salon": "Salon ou spa",
+      "professionalServices": "Services professionnels",
+      "other": "Autre"
+    },
+    "create": "Créer et continuer",
     "continue": "Continuer",
     "submitting": "Enregistrement...",
-    "submitFailed": "Impossible d'enregistrer ce nom pour le moment. Réessayez."
+    "submitFailed": "Impossible d'enregistrer cette entreprise pour le moment. Réessayez."
   },
   "website": {
     "title": "Entraînons LobbyStack avec votre site web",
     "description": "",
     "label": "Site web",
     "placeholder": "votreentreprise.com",
+    "sourceName": "Nom de la source",
+    "sourceNameHint": "Libellé facultatif pour la source importée.",
+    "sourceNamePlaceholder": "Site web de l'entreprise",
     "continue": "Continuer",
     "submitting": "Démarrage de l'import...",
     "skip": "Ignorer pour l'instant",
@@ -68,6 +92,9 @@
     "title": "Comment devons-nous accueillir vos appelants ?",
     "description": "C'est la première phrase que dira votre IA. Modifiable à tout moment.",
     "label": "Message d'accueil",
+    "language": "Langue",
+    "english": "Anglais",
+    "french": "Français",
     "placeholder": "Merci d'appeler. Comment puis-je vous aider ?",
     "continue": "Continuer",
     "submitting": "Enregistrement...",
@@ -129,6 +156,21 @@
     "selectedTitle": "Le numéro de votre IA",
     "selectedNumberLabel": "Numéro sélectionné",
     "continue": "Continuer"
+  },
+  "attribution": {
+    "title": "Comment avez-vous entendu parler de nous ?",
+    "question": "Une dernière question",
+    "description": "Cela nous aide à améliorer LobbyStack. Vous pouvez ignorer cette étape.",
+    "label": "Source",
+    "preferNot": "Je préfère ne pas répondre",
+    "search": "Moteur de recherche",
+    "referral": "Ami ou collègue",
+    "social": "Réseaux sociaux",
+    "event": "Événement ou communauté",
+    "other": "Autre",
+    "finish": "Terminer la configuration",
+    "finishing": "Finalisation...",
+    "failed": "Impossible de terminer la configuration."
   },
   "plan": {
     "title": "Choisissez votre forfait",
@@ -323,30 +365,5 @@
     "continue": "Continuer",
     "continuing": "Continuer...",
     "continueFailed": "Impossible de continuer maintenant. Réessayez."
-  },
-  "attribution": {
-    "title": "Comment avez-vous connu LobbyStack ?",
-    "description": "Cela nous aide à savoir ce qui fonctionne.",
-    "options": {
-      "ai_assistant": "ChatGPT, Claude, etc.",
-      "newsletter": "Newsletter ou blog",
-      "podcast": "Podcast",
-      "news": "Dans les médias",
-      "work": "Au travail",
-      "school": "Amis ou école",
-      "x": "X",
-      "reddit": "Reddit",
-      "facebook": "Facebook",
-      "youtube": "YouTube",
-      "instagram": "Instagram",
-      "linkedin": "LinkedIn",
-      "google": "Google",
-      "tiktok": "TikTok",
-      "other": "Autre"
-    },
-    "skip": "Ignorer",
-    "finish": "Terminer",
-    "finishing": "Finalisation...",
-    "submitFailed": "Impossible d'enregistrer maintenant. Réessayez."
   }
 }

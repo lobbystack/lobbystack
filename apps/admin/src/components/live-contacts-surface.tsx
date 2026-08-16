@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -9,11 +9,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@web/components/page-header";
 import { TableCardSkeleton } from "@web/components/loading-skeletons";
 import { Badge } from "@web/components/ui/badge";
+import { Button } from "@web/components/ui/button";
 import { Input } from "@web/components/ui/input";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@web/components/ui/table";
 import { formatDateTime } from "@/lib/locale";
+import { selectActiveBusiness } from "@/lib/active-business";
 
-type Business = { businessId: string; active: boolean };
+type Business = { businessId: string; active: boolean; role: string };
 type Contact = { id: string; name: string | null; phone: string; email: string | null; smsConsentStatus: string | null; operatorBlockedAt: string | null; createdAt: string; updatedAt: string };
 
 async function getJson<T>(url: string): Promise<T> {
@@ -26,9 +28,10 @@ export function LiveContactsSurface() {
   const { i18n, t } = useTranslation("contacts");
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [offset, setOffset] = useState(0);
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => getJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
-  const contacts = useQuery({ queryKey: ["contacts", business?.businessId], queryFn: () => getJson<{ contacts: Contact[] }>("/api/contacts"), enabled: Boolean(business) });
+  const business = selectActiveBusiness(businesses.data?.businesses);
+  const contacts = useQuery({ queryKey: ["contacts", business?.businessId, search, offset], queryFn: () => getJson<{ contacts: Contact[]; pagination: { hasNext: boolean } }>(`/api/contacts?limit=50&offset=${offset}${search ? `&search=${encodeURIComponent(search)}` : ""}`), enabled: Boolean(business) });
 
   useEffect(() => {
     if (!business) return;
@@ -38,12 +41,12 @@ export function LiveContactsSurface() {
     return () => source.close();
   }, [business, queryClient]);
 
-  const rows = useMemo(() => (contacts.data?.contacts ?? []).filter((contact) => [contact.name, contact.phone, contact.email].filter(Boolean).join(" ").toLowerCase().includes(search.trim().toLowerCase())), [contacts.data, search]);
+  const rows = contacts.data?.contacts ?? [];
 
   return (
     <div className="flex flex-1 flex-col gap-6">
       <PageHeader title={t("page.title")} />
-      <div className="relative max-w-sm"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-10" onChange={(event) => setSearch(event.target.value)} placeholder={t("page.searchPlaceholder")} value={search} /></div>
+      <div className="relative max-w-sm"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-10" onChange={(event) => { setOffset(0); setSearch(event.target.value); }} placeholder={t("page.searchPlaceholder")} value={search} /></div>
       {businesses.isLoading || contacts.isLoading ? <TableCardSkeleton columns={5} /> : (
         <TableCard>
           <Table className="min-w-[50rem]">
@@ -52,6 +55,7 @@ export function LiveContactsSurface() {
           </Table>
         </TableCard>
       )}
+      <div className="flex justify-end gap-2"><Button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 50))} size="sm" variant="outline">Previous</Button><Button disabled={!contacts.data?.pagination.hasNext} onClick={() => setOffset(offset + 50)} size="sm" variant="outline">Next</Button></div>
     </div>
   );
 }

@@ -148,7 +148,8 @@
         "voice": "Voice",
         "sms": "SMS",
         "dashboard": "Dashboard"
-      }
+      },
+      "withStaff": "with {{staff}}"
     }
   },
   "setup": {

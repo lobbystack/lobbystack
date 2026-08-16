@@ -1,5 +1,5 @@
-import { LivePlanSurface } from "@/components/live-plan-surface";
+import { LiveUsageSurface } from "@/components/live-usage-surface";
 
 export default function SettingsUsagePage() {
-  return <LivePlanSurface />;
+  return <LiveUsageSurface />;
 }

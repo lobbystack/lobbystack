@@ -555,6 +555,7 @@
     }
   },
   "account": {
+    "title": "Compte",
     "actions": {
       "change": "Modifier"
     },

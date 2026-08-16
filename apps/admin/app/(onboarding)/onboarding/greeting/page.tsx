@@ -1,3 +1,4 @@
-import { LiveAgentBasicSettingsSurface } from "@/components/live-agent-basic-settings-surface";
+import { OnboardingGreetingSurface } from "@/components/onboarding-greeting-surface";
+import { requireOnboardingStage } from "@/lib/onboarding-route";
 
-export default function OnboardingGreetingPage() { return <LiveAgentBasicSettingsSurface />; }
+export default async function OnboardingGreetingPage() { await requireOnboardingStage("/onboarding/greeting"); return <OnboardingGreetingSurface />; }

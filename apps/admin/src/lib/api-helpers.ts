@@ -6,6 +6,22 @@ import { requireBusinessMembership, type AuthorizationError } from "@lobbystack/
 import { getSession, type Session } from "./auth";
 import { claimInternalRequestNonce, verifyInternalRequest } from "./internal-auth";
 
+export type ApiErrorPayload = {
+  error: string;
+  code?: string;
+};
+
+export type ApiPagination = {
+  limit: number;
+  offset: number;
+  total?: number;
+  hasNext: boolean;
+};
+
+export type ApiMutationPayload<T extends Record<string, unknown> = Record<string, never>> = {
+  ok: true;
+} & T;
+
 let appDatabase: ReturnType<typeof createDatabaseClient> | undefined;
 let workerDatabase: ReturnType<typeof createDatabaseClient> | undefined;
 let dispatcherDatabase: ReturnType<typeof createDatabaseClient> | undefined;
@@ -33,6 +49,21 @@ export function getDispatcherDatabase() {
 
 export function jsonError(message: string, status = 400, code?: string): NextResponse {
   return NextResponse.json({ error: message, ...(code ? { code } : {}) }, { status });
+}
+
+export function parsePagination(request: Request, defaults: { limit?: number; maxLimit?: number } = {}): { limit: number; offset: number } {
+  const url = new URL(request.url);
+  const maxLimit = defaults.maxLimit ?? 100;
+  const requestedLimit = Number(url.searchParams.get("limit") ?? defaults.limit ?? 50);
+  const requestedOffset = Number(url.searchParams.get("offset") ?? 0);
+  return {
+    limit: Number.isFinite(requestedLimit) ? Math.min(Math.max(Math.trunc(requestedLimit), 1), maxLimit) : defaults.limit ?? 50,
+    offset: Number.isFinite(requestedOffset) ? Math.max(Math.trunc(requestedOffset), 0) : 0,
+  };
+}
+
+export function mutationResponse<T extends Record<string, unknown> = Record<string, never>>(data?: T, status = 200): NextResponse<ApiMutationPayload<T>> {
+  return NextResponse.json({ ok: true, ...(data ?? {}) } as ApiMutationPayload<T>, { status });
 }
 
 export async function readJson(request: Request): Promise<unknown> {

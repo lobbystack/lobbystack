@@ -1,3 +1,4 @@
-import { PageSurface } from "@/components/page-surface";
+import { OnboardingAttributionSurface } from "@/components/onboarding-attribution-surface";
+import { requireOnboardingStage } from "@/lib/onboarding-route";
 
-export default function OnboardingAttributionPage() { return <PageSurface title="How did you hear about us?" description="This helps us improve LobbyStack. You can skip this question." action="Finish setup" />; }
+export default async function OnboardingAttributionPage() { await requireOnboardingStage("/onboarding/attribution"); return <OnboardingAttributionSurface />; }

@@ -1,6 +1,6 @@
 import { and, eq, lt, or, sql } from "drizzle-orm";
 
-import { billingAccounts, billingCheckoutRequests, billingTransactions, billingUsageEvents, enqueueOutbox, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, billingCheckoutRequests, billingTransactions, billingUsageEvents, businesses, enqueueOutbox, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { billingErrorCodes, billingPlanCatalog, billingPlanSlugs, type BillingPlanSlug } from "@lobbystack/shared";
 
 import type { DomainContext } from "./context";
@@ -162,6 +162,7 @@ export async function loadBillingCheckoutRequest(
   error: string | null;
   customerEmail: string;
   externalCustomerId: string;
+  onboardingStage: string;
 } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const row = (await tx.select({
@@ -175,9 +176,11 @@ export async function loadBillingCheckoutRequest(
       error: billingCheckoutRequests.error,
       customerEmail: users.email,
       billingKey: billingAccounts.billingKey,
+      onboardingStage: businesses.onboardingStage,
     }).from(billingCheckoutRequests)
       .innerJoin(users, eq(users.id, billingCheckoutRequests.requestedByUserId))
       .leftJoin(billingAccounts, eq(billingAccounts.businessId, billingCheckoutRequests.businessId))
+      .innerJoin(businesses, eq(businesses.id, billingCheckoutRequests.businessId))
       .where(and(eq(billingCheckoutRequests.id, input.requestId), eq(billingCheckoutRequests.businessId, input.businessId)))
       .limit(1))[0];
     if (!row || !isBillingCheckoutTarget(row.target) || !isBillingInterval(row.billingInterval)) return null;

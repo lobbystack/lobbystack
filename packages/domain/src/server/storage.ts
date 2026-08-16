@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { and, eq, isNotNull, lt, ne, or } from "drizzle-orm";
+import { and, eq, gte, isNotNull, isNull, lt, ne, or } from "drizzle-orm";
 
 import { calls, enqueueOutbox, knowledgeDocuments, storageObjects, withBusinessTransaction } from "@lobbystack/db";
 import { isAllowedUploadContentType } from "@lobbystack/contracts";
@@ -109,6 +109,7 @@ export async function createObjectDownload(
       eq(storageObjects.id, input.objectId),
       eq(storageObjects.businessId, input.businessId),
       eq(storageObjects.status, "ready"),
+      or(isNull(storageObjects.retentionUntil), gte(storageObjects.retentionUntil, new Date())),
     )).limit(1))[0] ?? null;
   });
   if (!object) {

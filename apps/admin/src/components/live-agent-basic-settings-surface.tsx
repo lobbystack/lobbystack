@@ -7,7 +7,7 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { PageSurface } from "./page-surface";
 
-type Business = { id: string; name: string; timezone: string; defaultLocale: string };
+type Business = { businessId: string; name: string; active: boolean };
 type Profile = {
   greeting: string;
   tone: string;
@@ -44,8 +44,8 @@ const emptyForm: FormState = {
 
 export function LiveAgentBasicSettingsSurface() {
   const queryClient = useQueryClient();
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Array<{ businessId: string; name: string }> }>("/api/businesses") });
-  const business = businesses.data?.businesses[0];
+  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
+  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
   const agent = useQuery({ queryKey: ["agent", business?.businessId], queryFn: () => requestJson<AgentResponse>(`/api/agent?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
   const [form, setForm] = useState<FormState>(emptyForm);
   const [message, setMessage] = useState<string | null>(null);
