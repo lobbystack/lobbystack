@@ -1,40 +1,41 @@
-import { loadLatestBusinessSnapshot, type DomainContext } from "@lobbystack/domain";
+import { deserializeSnapshot, serializeSnapshot, snapshotCacheKey, SNAPSHOT_CACHE_TTL_SECONDS, type SnapshotCacheClient } from "@lobbystack/domain";
 import type { BusinessContextSnapshot } from "@lobbystack/shared";
+import Redis from "ioredis";
 
-const DEFAULT_TTL_MS = 5 * 60 * 1_000;
+let redis: Redis | undefined;
 
-export type SnapshotLoader = (context: DomainContext, input: { businessId: string }) => Promise<BusinessContextSnapshot | null>;
-
-type CacheEntry = { snapshot: BusinessContextSnapshot; expiresAt: number };
-
-export type WidgetSnapshotCache = {
-  get(context: DomainContext, input: { businessId: string }): Promise<BusinessContextSnapshot | null>;
-  clear(): void;
-};
-
-export function createWidgetSnapshotCache(options: { ttlMs?: number; load?: SnapshotLoader } = {}): WidgetSnapshotCache {
-  const ttlMs = options.ttlMs ?? DEFAULT_TTL_MS;
-  const load: SnapshotLoader = options.load ?? loadLatestBusinessSnapshot;
-  const store = new Map<string, CacheEntry>();
-
-  return {
-    async get(context, input) {
-      const cached = store.get(input.businessId);
-      if (cached && cached.expiresAt > Date.now()) {
-        return cached.snapshot;
-      }
-      const snapshot = await load(context, { businessId: input.businessId });
-      if (snapshot) {
-        store.set(input.businessId, { snapshot, expiresAt: Date.now() + ttlMs });
-      } else {
-        store.delete(input.businessId);
-      }
-      return snapshot;
-    },
-    clear() {
-      store.clear();
-    },
-  };
+export async function closeAdminSnapshotCache(): Promise<void> {
+  const store = redis;
+  redis = undefined;
+  if (store) await store.quit().catch(() => store.disconnect());
 }
 
-export const widgetSnapshotCache: WidgetSnapshotCache = createWidgetSnapshotCache();
+function getRedis(): Redis | undefined {
+  const url = process.env.REDIS_URL;
+  if (!url) return undefined;
+  if (!redis) {
+    redis = new Redis(url, {
+      connectionName: `${process.env.REDIS_PREFIX ?? "lobbystack"}:admin-snapshot`,
+      connectTimeout: 2_000,
+      enableOfflineQueue: false,
+      lazyConnect: true,
+      maxRetriesPerRequest: 1,
+    });
+    redis.on("error", () => undefined);
+  }
+  return redis;
+}
+
+export const getAdminSnapshotCache = (): SnapshotCacheClient => ({
+  async get(businessId) {
+    const store = getRedis();
+    if (!store) return null;
+    const raw = await store.get(snapshotCacheKey(businessId)).catch(() => null);
+    return deserializeSnapshot(raw ?? undefined);
+  },
+  async set(businessId, snapshot: BusinessContextSnapshot) {
+    const store = getRedis();
+    if (!store) return;
+    await store.set(snapshotCacheKey(businessId), serializeSnapshot(snapshot), "EX", SNAPSHOT_CACHE_TTL_SECONDS).catch(() => undefined);
+  },
+});

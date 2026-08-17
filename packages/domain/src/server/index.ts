@@ -21,6 +21,7 @@ export * from "./privacy";
 export * from "./productEvents";
 export * from "./rules";
 export * from "./sms";
+export * from "./snapshotCache";
 export * from "./storage";
 export * from "./tenancy";
 export * from "./voice";

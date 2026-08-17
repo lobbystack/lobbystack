@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getWebVoiceBillingAllowance, getWidgetChatAllowance, loadLatestBusinessSnapshot, registerWidgetVisitor } from "@lobbystack/domain";
+import { getCachedBusinessSnapshot, getWebVoiceBillingAllowance, getWidgetChatAllowance, registerWidgetVisitor } from "@lobbystack/domain";
 
 import { asApiResponse } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     await touchWidgetKeyLastUsed({ businessId: session.businessId, widgetKeyId: session.widgetKeyId });
 
     const [snapshot, chatBilling, voiceBilling] = await Promise.all([
-      loadLatestBusinessSnapshot(context, { businessId: session.businessId }),
+      getCachedBusinessSnapshot(context, { businessId: session.businessId }),
       getWidgetChatAllowance(context, { businessId: session.businessId }),
       getWebVoiceBillingAllowance(context, { businessId: session.businessId }),
     ]);

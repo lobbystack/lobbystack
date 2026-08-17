@@ -2,10 +2,13 @@ import type { Database, DatabaseTransaction, RlsContext } from "@lobbystack/db";
 import { withBusinessTransaction } from "@lobbystack/db";
 import { createTelemetryFacade, type TelemetryFacade } from "@lobbystack/telemetry";
 
+import type { SnapshotCacheClient } from "./snapshotCache";
+
 export type DomainContext = {
   db: Database;
   telemetry?: TelemetryFacade;
   embeddings?: { embed(values: string[]): Promise<number[][]> };
+  snapshotCache?: SnapshotCacheClient;
 };
 
 export type DomainActor = RlsContext & {

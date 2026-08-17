@@ -319,6 +319,7 @@ export async function refreshBusinessSnapshot(
   input: { businessId: string },
 ): Promise<string> {
   const startedAt = performance.now();
+  let builtSnapshot: BusinessContextSnapshot | undefined;
   const version = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [business, profile] = await Promise.all([
       tx.select().from(businesses).where(eq(businesses.id, input.businessId)).limit(1),
@@ -336,7 +337,7 @@ export async function refreshBusinessSnapshot(
     ]);
     const currentProfile = profile[0];
     const version = `${Date.now()}`;
-    const snapshot = buildBusinessContextSnapshot({
+    builtSnapshot = buildBusinessContextSnapshot({
       businessId: input.businessId,
       version,
       generatedAt: new Date().toISOString(),
@@ -358,7 +359,7 @@ export async function refreshBusinessSnapshot(
       snippets: snippets.map((row) => ({ id: row.id, title: row.title, content: row.content, tags: row.tags, priority: row.priority })),
       transferPolicy: { mode: currentProfile?.transferMode === "always" ? "always" : "on_request", ...(currentProfile?.transferNumber ? { transferNumber: currentProfile.transferNumber } : {}) },
     });
-    await tx.insert(businessContextSnapshots).values({ businessId: input.businessId, version, snapshot: snapshot as unknown as Record<string, unknown> });
+    await tx.insert(businessContextSnapshots).values({ businessId: input.businessId, version, snapshot: builtSnapshot as unknown as Record<string, unknown> });
     await enqueueOutbox(tx, {
       topic: "realtime.publish",
       businessId: input.businessId,
@@ -369,6 +370,9 @@ export async function refreshBusinessSnapshot(
     });
     return version;
   });
+  if (context.snapshotCache && builtSnapshot) {
+    await context.snapshotCache.set(input.businessId, builtSnapshot).catch(() => undefined);
+  }
   snapshotRefreshDuration.record(performance.now() - startedAt, { operation: "snapshot.refresh" });
   return version;
 }

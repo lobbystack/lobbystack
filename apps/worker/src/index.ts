@@ -8,6 +8,7 @@ import { handleJob, type WorkerDependencies } from "./handlers";
 import { startHealthServer } from "./health";
 import { OutboxDispatcher } from "./outboxDispatcher";
 import { configureSchedulers } from "./scheduler";
+import { getWorkerSnapshotCache } from "./snapshot-cache";
 
 function optionalNumber(name: string): number | undefined {
   const value = process.env[name];
@@ -118,7 +119,7 @@ async function main(): Promise<void> {
   if (storage) {
     await storage.ensureBucket();
   }
-  const dependencies: WorkerDependencies = { domain: { db: database.db, ...(embeddings ? { embeddings } : {}) }, realtime, ...(calendar ? { calendar } : {}), ...(crawler ? { crawler } : {}), ...(productAnalytics ? { productAnalytics } : {}), ...(email ? { email } : {}), ...(embeddings ? { embeddings } : {}), ...(twilio ? { twilio } : {}), ...(storage ? { storage } : {}), ...(polar ? { polar } : {}) };
+  const dependencies: WorkerDependencies = { domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) }, realtime, ...(calendar ? { calendar } : {}), ...(crawler ? { crawler } : {}), ...(productAnalytics ? { productAnalytics } : {}), ...(email ? { email } : {}), ...(embeddings ? { embeddings } : {}), ...(twilio ? { twilio } : {}), ...(storage ? { storage } : {}), ...(polar ? { polar } : {}) };
   const workers = jobQueues.map((queueName) => {
     const queue = queues.get(queueName);
     if (!queue) {

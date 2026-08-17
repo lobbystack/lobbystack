@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { buildChatSystemPrompt } from "@lobbystack/ai";
-import { appendMessage, getOrCreateWidgetConversation, getWidgetChatAllowance, loadWidgetChatHistory, registerWidgetVisitor, reserveWidgetChatUsageInTransaction, type DomainContext } from "@lobbystack/domain";
+import { appendMessage, getCachedBusinessSnapshot, getOrCreateWidgetConversation, getWidgetChatAllowance, loadWidgetChatHistory, registerWidgetVisitor, reserveWidgetChatUsageInTransaction, type DomainContext } from "@lobbystack/domain";
 import { conversations, withBusinessTransaction } from "@lobbystack/db";
 import { GeminiTextProvider } from "@lobbystack/providers";
 import { widgetChatRequestSchema, type BusinessContextSnapshot } from "@lobbystack/shared";
@@ -12,7 +12,6 @@ import { createWorkerDomainContext } from "@/lib/domain-context";
 import { resolveWidgetAccess, type WidgetSession } from "@/lib/widget-access";
 import { requestIpHash } from "@/lib/widget-keys";
 import { enforceWidgetRateLimits } from "@/lib/widget-policy";
-import { widgetSnapshotCache } from "@/lib/widget-snapshot-cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -98,7 +97,7 @@ export async function POST(request: Request) {
             return;
           }
 
-          const snapshot = await widgetSnapshotCache.get(context, { businessId: session.businessId });
+          const snapshot = await getCachedBusinessSnapshot(context, { businessId: session.businessId });
           const activeSnapshot = snapshot ?? fallbackSnapshot(session);
           await withBusinessTransaction(getWorkerDatabase().db, { businessId: session.businessId, actorType: "worker" }, async (tx) => {
             await reserveWidgetChatUsageInTransaction(tx, { businessId: session.businessId, conversationId });

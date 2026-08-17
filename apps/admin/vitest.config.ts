@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@lobbystack/db": `${root}/packages/db/src/index.ts`,
+      "@lobbystack/domain": `${root}/packages/domain/src/index.ts`,
       "@": src,
     },
   },
