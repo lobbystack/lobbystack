@@ -2,12 +2,14 @@
 
 ## Project Structure
 
-- `apps/admin/`: Next.js operator dashboard, authentication, and HTTP API.
+- `apps/admin/`: Next.js operator dashboard, authentication, and HTTP API. Hosts the embeddable widget API (`/api/widget/*`), the loader (`/embed.js`), and the widget iframe app (`/embed/[key]`) in addition to the dashboard.
 - `apps/worker/`: asynchronous jobs and transactional outbox dispatch.
-- `apps/voice-gateway/`: narrow Fastify runtime for Twilio Voice, Media Streams, and OpenAI Realtime.
+- `apps/voice-gateway/`: narrow Fastify runtime for Twilio Voice, Media Streams, and OpenAI Realtime. Forwards `widgetId`/`widgetKey` in its web-call flow and accepts a `widgetKey` param on `/web-call/sessions`.
 - `apps/landing/`: public marketing site.
 - `packages/db/`: Drizzle schema, PostgreSQL migrations, role-specific clients, and RLS helpers.
-- `packages/domain/`: durable business logic shared by admin and worker runtimes.
+- `packages/domain/`: durable business logic shared by admin and worker runtimes. Widget conversations use the `web_chat` channel and key on `widget_visitor_id` (no phone required).
+- `packages/ai/`: system-prompt builders, including `buildChatSystemPrompt` for the website widget.
+- `packages/embed/`: Vite bundle producing the IIFE widget loader (`dist/embed.js`, served at `/embed.js`, copied into `apps/admin/public/embed/` by `scripts/copy-widget-embed.mjs`).
 - `packages/`: shared contracts, jobs, providers, telemetry, configuration, and test helpers.
 - `docker/`, `docker-compose.yml`, and `scripts/`: local infrastructure, operations, migration, and certification tooling.
 
@@ -19,7 +21,8 @@
 - `pnpm dev`: run admin, worker, voice gateway, and landing apps.
 - `pnpm typecheck`: typecheck all active workspaces and scripts.
 - `pnpm test`: run all Vitest suites.
-- `pnpm build`: build every workspace package and app.
+- `pnpm build`: build every workspace package and app (also copies the embed loader into the admin standalone output).
+- `pnpm widget:embed:build`: rebuild `packages/embed` and copy the loader into `apps/admin/public/embed/`.
 
 ## Coding Style
 

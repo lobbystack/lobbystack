@@ -34,6 +34,7 @@ export const voiceContextBySlugRequestSchema = z.object({
   ipHash: z.string().max(128).optional(),
   visitorId: z.string().max(128).optional(),
   widgetId: z.string().max(128).optional(),
+  widgetKey: z.string().max(256).optional(),
   prospectDemoToken: z.string().max(512).optional(),
   maxDurationMs: z.number().int().positive().max(30 * 60 * 1_000).optional(),
 });

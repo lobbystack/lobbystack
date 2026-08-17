@@ -70,6 +70,7 @@ const snapshot: BusinessContextSnapshot = {
   greeting: "Hello and welcome.",
   voiceInstructions: "Keep it short.",
   smsInstructions: "Keep it short.",
+  chatInstructions: "Keep it short.",
   summary: "A clinic.",
   bookingPolicy: "Normal policy.",
   knowledgeDigest: "Clinic info.",

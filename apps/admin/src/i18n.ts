@@ -25,6 +25,7 @@ const namespaces = [
   "affiliate",
   "demos",
   "admin",
+  "widget",
 ] as const;
 
 export const i18nReady = i18n

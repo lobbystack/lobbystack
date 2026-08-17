@@ -14,6 +14,7 @@ export type WidgetSession = {
   origin: string | null;
   key: WidgetKeyConfig;
   businessName: string;
+  businessSlug: string;
   defaultLocale: "en" | "fr";
   config: WidgetConfig;
 };
@@ -31,7 +32,7 @@ export async function resolveWidgetAccess(request: Request, key: string | null |
   const session = await withBusinessTransaction(getWorkerDatabase().db, { businessId: resolved.businessId, actorType: "worker" }, async (tx) => {
     const [keyRow, business] = await Promise.all([
       tx.select().from(widgetKeys).where(eq(widgetKeys.id, resolved.widgetKeyId)).limit(1).then((rows) => rows[0]),
-      tx.select({ name: businesses.name, defaultLocale: businesses.defaultLocale }).from(businesses).where(eq(businesses.id, resolved.businessId)).limit(1).then((rows) => rows[0]),
+      tx.select({ name: businesses.name, slug: businesses.slug, defaultLocale: businesses.defaultLocale }).from(businesses).where(eq(businesses.id, resolved.businessId)).limit(1).then((rows) => rows[0]),
     ]);
     if (!keyRow) return null;
     const key = serializeWidgetKeyConfig(keyRow as unknown as Parameters<typeof serializeWidgetKeyConfig>[0]);
@@ -43,6 +44,7 @@ export async function resolveWidgetAccess(request: Request, key: string | null |
       key,
       config: key.config as WidgetConfig,
       businessName: business?.name ?? "",
+      businessSlug: business?.slug ?? "",
       defaultLocale: (business?.defaultLocale === "fr" ? "fr" : "en") as "en" | "fr",
     };
   });

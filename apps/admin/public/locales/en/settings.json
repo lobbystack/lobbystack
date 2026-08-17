@@ -16,7 +16,8 @@
     "integrations": "Integrations",
     "billing": "Plan",
     "usage": "Usage",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "widget": "Website widget"
   },
   "billing": {
     "toast": {

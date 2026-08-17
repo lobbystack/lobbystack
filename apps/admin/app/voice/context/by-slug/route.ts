@@ -7,6 +7,7 @@ import { getWebVoiceBillingAllowance } from "@lobbystack/domain";
 import { asApiResponse, getWorkerDatabase, requireInternalService } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { resolveWebVoiceAccess } from "@/lib/prospect-demo";
+import { hashWidgetKey, resolveWidgetKeyByHash } from "@/lib/widget-keys";
 import { enforceWebVoiceRateLimits } from "@/lib/web-voice-policy";
 
 export const runtime = "nodejs";
@@ -20,6 +21,11 @@ export async function POST(request: Request) {
     const access = await resolveWebVoiceAccess(body);
     if (!access.allowed) return NextResponse.json({ code: access.reason, message: "Web voice access denied." }, { status: access.status });
     const businessId = access.businessId;
+    if (body.widgetKey !== undefined && body.widgetKey.length > 0) {
+      const resolved = await resolveWidgetKeyByHash(hashWidgetKey(body.widgetKey));
+      if (!resolved) return NextResponse.json({ code: "widget_key_invalid", message: "The widget key is invalid." }, { status: 403 });
+      if (resolved.businessId !== businessId) return NextResponse.json({ code: "widget_key_mismatch", message: "The widget key does not match this business." }, { status: 403 });
+    }
     const rateLimit = await enforceWebVoiceRateLimits({
       businessId,
       origin: body.origin,

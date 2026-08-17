@@ -218,6 +218,7 @@ export async function fetchWebVoiceContext(input: {
   ipHash?: string;
   visitorId?: string;
   widgetId?: string;
+  widgetKey?: string;
   prospectDemoToken?: string;
   maxDurationMs?: number;
 }): Promise<WebVoiceContextResponse> {

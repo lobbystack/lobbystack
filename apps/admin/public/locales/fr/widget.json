@@ -1,0 +1,46 @@
+{
+  "chat": {
+    "titlePlaceholder": "Discutez avec nous",
+    "subtitlePlaceholder": "Nous répondons habituellement en quelques minutes",
+    "welcome": "Bonjour ! Comment pouvons-nous vous aider ?",
+    "composerPlaceholder": "Écrivez votre message...",
+    "send": "Envoyer",
+    "sendingFailed": "Votre message n'a pas pu être envoyé. Veuillez réessayer.",
+    "loadingTranscript": "Chargement de la conversation...",
+    "chatUnavailable": "La messagerie n'est pas disponible pour le moment.",
+    "emptyBody": "Veuillez saisir un message.",
+    "limitReached": "La limite de sessions de ce mois est atteinte. Notre équipe vous répondra sous peu.",
+    "aiAgentLabel": "Assistant",
+    "youLabel": "Vous",
+    "pendingLabel": "L'assistant écrit…",
+    "handoffBanner": "Un membre de l'équipe vous répondra sous peu.",
+    "handoffActive": "Messagerie en pause",
+    "voiceButton": "Parlez-nous en direct",
+    "voiceConnected": "Vous parlez avec la réceptionniste.",
+    "voiceEnded": "La connexion vocale a été interrompue. Vous pouvez continuer à discuter ci-dessous.",
+    "voiceUnavailable": "La voix en direct n'est pas disponible. Réessayez plus tard.",
+    "voiceConnecting": "Connexion…",
+    "voiceRequestingMic": "Autorisez l'accès au micro pour continuer.",
+    "voiceEnd": "Terminer l'appel",
+    "leaveDetails": "Laissez vos coordonnées",
+    "leadFormSubmitted": "Merci ! Nous vous contacterons bientôt."
+  },
+  "lead": {
+    "heading": "Laissez vos coordonnées",
+    "description": "Ajoutez vos coordonnées pour que nous puissions vous recontacter.",
+    "name": "Nom",
+    "email": "Courriel",
+    "phone": "Téléphone",
+    "submit": "Continuer",
+    "invalidEmail": "Veuillez saisir une adresse courriel valide.",
+    "invalidPhone": "Veuillez saisir un numéro de téléphone valide.",
+    "required": "Ce champ est obligatoire.",
+    "beforeChatHeading": "Avant de commencer",
+    "skip": "Passer"
+  },
+  "errors": {
+    "configLoad": "Le widget n'a pas pu être chargé.",
+    "invalidKey": "Ce widget n'est pas disponible.",
+    "originDenied": "Ce site n'est pas autorisé à charger ce widget."
+  }
+}

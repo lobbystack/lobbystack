@@ -1,0 +1,46 @@
+{
+  "chat": {
+    "titlePlaceholder": "Chat with us",
+    "subtitlePlaceholder": "We usually reply in a few minutes",
+    "welcome": "Hi there! How can we help today?",
+    "composerPlaceholder": "Type your message...",
+    "send": "Send",
+    "sendingFailed": "Your message couldn't be sent. Please try again.",
+    "loadingTranscript": "Loading conversation...",
+    "chatUnavailable": "Chat is unavailable right now.",
+    "emptyBody": "Please enter a message.",
+    "limitReached": "This month's chat session limit has been reached. Our team will reply shortly.",
+    "aiAgentLabel": "Assistant",
+    "youLabel": "You",
+    "pendingLabel": "Assistant is typing…",
+    "handoffBanner": "A team member will reply shortly.",
+    "handoffActive": "Chat paused",
+    "voiceButton": "Talk to us live",
+    "voiceConnected": "You are speaking with the receptionist.",
+    "voiceEnded": "The voice connection ended. You can keep chatting below.",
+    "voiceUnavailable": "Live voice is unavailable. Try again later.",
+    "voiceConnecting": "Connecting…",
+    "voiceRequestingMic": "Allow microphone access to continue.",
+    "voiceEnd": "End call",
+    "leaveDetails": "Leave your details",
+    "leadFormSubmitted": "Thanks! We'll reach out soon."
+  },
+  "lead": {
+    "heading": "Leave your details",
+    "description": "Add your contact info so we can follow up.",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "submit": "Continue",
+    "invalidEmail": "Please enter a valid email.",
+    "invalidPhone": "Please enter a valid phone number.",
+    "required": "This field is required.",
+    "beforeChatHeading": "Before we start",
+    "skip": "Skip"
+  },
+  "errors": {
+    "configLoad": "The widget could not be loaded.",
+    "invalidKey": "This widget is not available.",
+    "originDenied": "This website is not authorized to load this widget."
+  }
+}

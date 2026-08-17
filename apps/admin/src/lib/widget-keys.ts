@@ -66,11 +66,18 @@ export function requestWidgetOrigin(request: Request): string | null {
 }
 
 export function isAllowedWidgetOrigin(origin: string, allowedOrigins: unknown): boolean {
-  const normalized = normalizeAllowedOrigins(allowedOrigins);
-  if (normalized.has(normalizeOrigin(origin))) return true;
-  if (isLocalhostHttp(normalizeOrigin(origin)) && process.env.NODE_ENV !== "production") return true;
-  const adminOrigin = normalizeOrigin(new URL(process.env.APP_BASE_URL ?? "").origin);
-  return adminOrigin !== "null" && normalized.has(adminOrigin);
+  const normalized = normalizeOrigin(origin);
+  const allowlist = normalizeAllowedOrigins(allowedOrigins);
+  if (allowlist.has(normalized)) return true;
+  if (isLocalhostHttp(normalized) && process.env.NODE_ENV !== "production") return true;
+  let adminOrigin = "";
+  try {
+    adminOrigin = normalizeOrigin(new URL(process.env.APP_BASE_URL ?? "").origin);
+  } catch {
+    // Fall through when APP_BASE_URL is unset.
+  }
+  if (adminOrigin && normalized === adminOrigin) return true;
+  return Boolean(adminOrigin) && allowlist.has(adminOrigin);
 }
 
 export function serializeWidgetKeyConfig(row: { id: string; status: string | null; label: string | null; allowedOrigins: unknown; config: unknown; lastUsedAt: Date | null; createdAt: Date }): WidgetKeyConfig {

@@ -24,6 +24,7 @@ type WebCallSessionRequest = {
   businessSlug: string;
   dashboardTestCallProof?: string;
   widgetId?: string;
+  widgetKey?: string;
   sdp: string;
   pageUrl?: string;
   visitorId?: string;
@@ -197,6 +198,7 @@ function parseWebCallSessionRequest(
   const rawPageUrl = getStringProperty(input, "pageUrl");
   const rawVisitorId = getStringProperty(input, "visitorId");
   const rawWidgetId = getStringProperty(input, "widgetId");
+  const rawWidgetKey = getStringProperty(input, "widgetKey");
   const rawDashboardTestCallProof = getStringProperty(
     input,
     "dashboardTestCallProof",
@@ -232,6 +234,7 @@ function parseWebCallSessionRequest(
   const pageUrl = rawPageUrl?.trim();
   const visitorId = rawVisitorId?.trim();
   const widgetId = rawWidgetId?.trim();
+  const widgetKey = rawWidgetKey?.trim();
   const dashboardTestCallProof = rawDashboardTestCallProof?.trim();
   const prospectDemoToken = rawProspectDemoToken?.trim();
 
@@ -244,6 +247,7 @@ function parseWebCallSessionRequest(
       ...(pageUrl ? { pageUrl } : {}),
       ...(visitorId ? { visitorId } : {}),
       ...(widgetId ? { widgetId } : {}),
+      ...(widgetKey ? { widgetKey } : {}),
       ...(prospectDemoToken ? { prospectDemoToken } : {}),
     },
   };
@@ -1615,6 +1619,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
           ...(ipHash !== undefined ? { ipHash } : {}),
           ...(visitorId !== undefined ? { visitorId } : {}),
           ...(widgetId !== undefined ? { widgetId } : {}),
+          ...(body.widgetKey !== undefined ? { widgetKey: body.widgetKey } : {}),
           ...(body.prospectDemoToken !== undefined
             ? { prospectDemoToken: body.prospectDemoToken }
             : {}),

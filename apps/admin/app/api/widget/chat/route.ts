@@ -2,12 +2,12 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { buildChatSystemPrompt } from "@lobbystack/ai";
-import { appendMessage, getOrCreateWidgetConversation, getWidgetChatAllowance, loadLatestBusinessSnapshot, loadWidgetChatHistory, registerWidgetVisitor, type DomainContext } from "@lobbystack/domain";
+import { appendMessage, getOrCreateWidgetConversation, getWidgetChatAllowance, loadLatestBusinessSnapshot, loadWidgetChatHistory, registerWidgetVisitor, reserveWidgetChatUsageInTransaction, type DomainContext } from "@lobbystack/domain";
 import { conversations, withBusinessTransaction } from "@lobbystack/db";
 import { GeminiTextProvider } from "@lobbystack/providers";
 import { widgetChatRequestSchema, type BusinessContextSnapshot } from "@lobbystack/shared";
 
-import { readJson } from "@/lib/api-helpers";
+import { getWorkerDatabase, readJson } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { resolveWidgetAccess, type WidgetSession } from "@/lib/widget-access";
 import { requestIpHash } from "@/lib/widget-keys";
@@ -99,6 +99,9 @@ export async function POST(request: Request) {
 
           const snapshot = await loadLatestBusinessSnapshot(context, { businessId: session.businessId });
           const activeSnapshot = snapshot ?? fallbackSnapshot(session);
+          await withBusinessTransaction(getWorkerDatabase().db, { businessId: session.businessId, actorType: "worker" }, async (tx) => {
+            await reserveWidgetChatUsageInTransaction(tx, { businessId: session.businessId, conversationId });
+          });
           const history = await loadWidgetChatHistory(context, { businessId: session.businessId, conversationId });
           const historyText = history.slice(-20).map((row) => `${row.direction === "inbound" ? "Visitor" : "Assistant"}: ${row.body}`).join("\n");
           const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
