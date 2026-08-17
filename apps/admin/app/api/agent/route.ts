@@ -13,13 +13,14 @@ const profileFields = [
   "bookingPolicy",
   "voiceInstructions",
   "smsInstructions",
+  "chatInstructions",
   "transferMode",
   "transferNumber",
 ] as const;
 
 type ProfileField = (typeof profileFields)[number];
 type ProfilePatch = Partial<Record<"greeting" | "tone" | "summary" | "bookingPolicy" | "transferMode", string>> &
-  Partial<Record<"voiceInstructions" | "smsInstructions" | "transferNumber", string | null>>;
+  Partial<Record<"voiceInstructions" | "smsInstructions" | "chatInstructions" | "transferNumber", string | null>>;
 
 function optionalText(value: unknown, field: string, maxLength: number): string | null | undefined {
   if (value === undefined) return undefined;
@@ -34,9 +35,9 @@ function readProfilePatch(body: Record<string, unknown>): ProfilePatch {
   const patch: Partial<Record<ProfileField, string | null | undefined>> = {};
   for (const field of profileFields) {
     if (!(field in body)) continue;
-    const maxLength = field === "voiceInstructions" || field === "smsInstructions" ? 8_000 : 2_000;
+    const maxLength = field === "voiceInstructions" || field === "smsInstructions" || field === "chatInstructions" ? 8_000 : 2_000;
     const value = optionalText(body[field], field, maxLength);
-    if (value === null && !["voiceInstructions", "smsInstructions", "transferNumber"].includes(field)) {
+    if (value === null && !["voiceInstructions", "smsInstructions", "chatInstructions", "transferNumber"].includes(field)) {
       throw new Error(`${field} cannot be empty.`);
     }
     if (value !== undefined) patch[field] = value;
@@ -91,6 +92,7 @@ export async function PATCH(request: Request) {
         bookingPolicy: patch.bookingPolicy ?? "Confirm availability before booking.",
         ...(patch.voiceInstructions !== undefined ? { voiceInstructions: patch.voiceInstructions } : {}),
         ...(patch.smsInstructions !== undefined ? { smsInstructions: patch.smsInstructions } : {}),
+        ...(patch.chatInstructions !== undefined ? { chatInstructions: patch.chatInstructions } : {}),
         transferMode: patch.transferMode ?? "on_request",
         ...(patch.transferNumber !== undefined ? { transferNumber: patch.transferNumber } : {}),
       }).onConflictDoUpdate({

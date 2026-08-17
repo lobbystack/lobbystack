@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { demoSnapshot } from "@lobbystack/shared";
 
-import { buildSmsSystemPrompt, buildVoiceSystemPrompt } from "./index";
+import { buildChatSystemPrompt, buildSmsSystemPrompt, buildVoiceSystemPrompt } from "./index";
 
 describe("buildVoiceSystemPrompt", () => {
   it("does not anchor voice calls to the business default locale", () => {
@@ -76,5 +76,23 @@ describe("buildSmsSystemPrompt", () => {
     expect(prompt).toContain("Business summary:");
     expect(prompt).toContain("Booking policy:");
     expect(prompt).toContain("Knowledge digest:");
+  });
+});
+
+describe("buildChatSystemPrompt", () => {
+  it("anchors the widget to a live chat and includes instructions and facts", () => {
+    const prompt = buildChatSystemPrompt({
+      ...demoSnapshot,
+      chatInstructions: "Stay concise in the widget.",
+    });
+
+    expect(prompt).toContain("This is a live website chat conversation, not a phone call or SMS thread.");
+    expect(prompt).toContain("Stay concise in the widget.");
+    expect(prompt).toContain("Customer Rules:");
+    expect(prompt).toContain("Business summary:");
+    expect(prompt).toContain("Booking policy:");
+    expect(prompt).toContain("Knowledge digest:");
+    expect(prompt).toContain("Available services: General Checkup (30 min)");
+    expect(prompt).not.toContain("This is an SMS conversation.");
   });
 });

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const stateChangingMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-const csrfExemptPrefixes = ["/api/auth", "/api/webhooks", "/api/health", "/api/voice"];
+const csrfExemptPrefixes = ["/api/auth", "/api/webhooks", "/api/health", "/api/voice", "/api/widget"];
 
 function configuredOrigins(request: NextRequest): Set<string> {
   const origins = new Set<string>([request.nextUrl.origin]);
@@ -58,14 +58,25 @@ function securityHeaders(): Record<string, string> {
   };
 }
 
-export function middleware(request: NextRequest): NextResponse {
-  if (stateChangingMethods.has(request.method) && request.nextUrl.pathname.startsWith("/api/") && !csrfExemptPrefixes.some((prefix) => request.nextUrl.pathname.startsWith(prefix)) && !hasValidCsrfOrigin(request)) {
-    return NextResponse.json({ error: "CSRF origin validation failed." }, { status: 403, headers: securityHeaders() });
-  }
+function embeddableSecurityHeaders(): Record<string, string> {
+  const base = securityHeaders();
+  const csp = base["Content-Security-Policy"] ?? "";
+  return {
+    ...base,
+    "Content-Security-Policy": csp.replace("frame-ancestors 'none'", "frame-ancestors *"),
+  };
+}
 
+export function middleware(request: NextRequest): NextResponse {
   const response = NextResponse.next();
-  for (const [name, value] of Object.entries(securityHeaders())) response.headers.set(name, value);
+  const isEmbedPath = request.nextUrl.pathname === "/embed.js" || request.nextUrl.pathname.startsWith("/embed/");
+  const headers = isEmbedPath ? embeddableSecurityHeaders() : securityHeaders();
+  for (const [name, value] of Object.entries(headers)) response.headers.set(name, value);
+  if (isEmbedPath) response.headers.delete("X-Frame-Options");
   if (process.env.NODE_ENV === "production") response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  if (stateChangingMethods.has(request.method) && request.nextUrl.pathname.startsWith("/api/") && !csrfExemptPrefixes.some((prefix) => request.nextUrl.pathname.startsWith(prefix)) && !hasValidCsrfOrigin(request)) {
+    return NextResponse.json({ error: "CSRF origin validation failed." }, { status: 403, headers });
+  }
   return response;
 }
 

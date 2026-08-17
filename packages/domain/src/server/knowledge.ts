@@ -349,6 +349,7 @@ export async function refreshBusinessSnapshot(
       bookingPolicy: currentProfile?.bookingPolicy ?? "Confirm availability before booking.",
       ...(currentProfile?.voiceInstructions ? { voiceInstructions: currentProfile.voiceInstructions } : {}),
       ...(currentProfile?.smsInstructions ? { smsInstructions: currentProfile.smsInstructions } : {}),
+      ...(currentProfile?.chatInstructions ? { chatInstructions: currentProfile.chatInstructions } : {}),
       summary: currentProfile?.summary ?? business[0].name,
       hours: hours.map((row) => ({ dayOfWeek: row.dayOfWeek, openMinutes: row.openMinutes, closeMinutes: row.closeMinutes })),
       closures: closureRows.map((row) => ({ startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), reason: row.reason })),

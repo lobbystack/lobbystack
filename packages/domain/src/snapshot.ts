@@ -22,6 +22,7 @@ type SnapshotBuilderInput = {
   bookingPolicy: string;
   voiceInstructions?: string;
   smsInstructions?: string;
+  chatInstructions?: string;
   summary: string;
   hours: Array<HoursWindow>;
   closures: Array<ClosureWindow>;
@@ -65,6 +66,9 @@ export function buildBusinessContextSnapshot(
     smsInstructions:
       input.smsInstructions ??
       `${commonConstraints} Reply clearly in SMS form. Ask one follow-up question at a time.`,
+    chatInstructions:
+      input.chatInstructions ??
+      `${commonConstraints} Be friendly and concise. Use short paragraphs and plain language.`,
     summary: input.summary,
     bookingPolicy: input.bookingPolicy,
     knowledgeDigest: input.knowledgeDigest ?? "",

@@ -36,9 +36,11 @@ describe("buildBusinessContextSnapshot", () => {
       transferPolicy: { mode: "on_urgent", transferNumber: "+14165551234" },
       phoneNumber: "+14165550000",
       smsNumber: "+14165550000",
+      chatInstructions: "Be concise in the chat widget.",
     });
 
     expect(snapshot.knowledgeDigest).toBe("Parking is behind the building.");
+    expect(snapshot.chatInstructions).toBe("Be concise in the chat widget.");
     expect(snapshot.knowledgeSnippets?.map((snippet) => snippet.id)).toEqual([
       "snippet-2",
       "snippet-1",

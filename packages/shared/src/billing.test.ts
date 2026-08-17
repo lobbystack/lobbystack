@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   billingPlanCatalog,
+  billingMeterEventNames,
+  billingUsageKinds,
   getBillingMonthlyChargeCents,
   getBillingPeriodChargeCents,
   getKnowledgeStorageLimitBytes,
+  getPolarMeteredUsagePayload,
 } from "./billing";
 
 describe("knowledge storage limits", () => {
@@ -14,6 +17,22 @@ describe("knowledge storage limits", () => {
     expect(getKnowledgeStorageLimitBytes("starter")).toBe(100 * 1024 * 1024);
     expect(getKnowledgeStorageLimitBytes("pro")).toBe(500 * 1024 * 1024);
     expect(getKnowledgeStorageLimitBytes("enterprise")).toBeNull();
+  });
+});
+
+describe("website chat AI sessions", () => {
+  it("declares chat_ai_tokens as a billing usage kind", () => {
+    expect(billingUsageKinds).toContain("chat_ai_tokens");
+    expect(billingMeterEventNames.chatAiTokens).toBe("billing.chat_ai_tokens");
+    expect(getPolarMeteredUsagePayload("chat_ai_tokens", 3)).toEqual({ eventName: "billing.chat_ai_tokens", quantity: 3 });
+  });
+
+  it("configures chat session allowances per plan", () => {
+    expect(billingPlanCatalog.free_cloud.chatAiTokensIncluded).toBe(5);
+    expect(billingPlanCatalog.starter.chatAiTokensIncluded).toBe(50);
+    expect(billingPlanCatalog.pro.chatAiTokensIncluded).toBe(200);
+    expect(billingPlanCatalog.self_host.chatAiTokensIncluded).toBeNull();
+    expect(billingPlanCatalog.enterprise.chatAiTokensIncluded).toBeNull();
   });
 });
 

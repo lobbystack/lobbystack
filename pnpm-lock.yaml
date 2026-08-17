@@ -680,7 +680,11 @@ importers:
         specifier: ^7.0.4
         version: 7.0.12
 
-  packages/shared: {}
+  packages/shared:
+    dependencies:
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
 
   packages/telemetry:
     dependencies:

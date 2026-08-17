@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export type DeploymentMode = "cloud" | "self_hosted_standard" | "development";
 
 export const deploymentModes = [
@@ -24,7 +26,7 @@ export type BusinessRole =
   | "scheduler"
   | "viewer";
 
-export type ChannelKind = "sms" | "voice" | "dashboard";
+export type ChannelKind = "sms" | "voice" | "dashboard" | "web_chat";
 export type DocumentMimeType =
   | "application/pdf"
   | "text/plain"
@@ -104,6 +106,7 @@ export type BusinessContextSnapshot = {
   greeting: string;
   voiceInstructions: string;
   smsInstructions: string;
+  chatInstructions: string;
   summary: string;
   bookingPolicy: string;
   knowledgeDigest: string;
@@ -175,6 +178,8 @@ export const demoSnapshot: BusinessContextSnapshot = {
     "Answer politely, keep medical responses administrative only, and transfer urgent issues.",
   smsInstructions:
     "Reply clearly in short SMS messages. Ask one question at a time when booking.",
+  chatInstructions:
+    "Be friendly and concise in the website chat widget. Answer in short paragraphs, use plain language, and invite callers to book or leave their details for follow-up.",
   summary:
     "A family clinic offering checkups, follow-ups, and vaccine appointments.",
   bookingPolicy: "Do not book same-day appointments after 4pm local time.",
@@ -220,6 +225,125 @@ export const demoSnapshot: BusinessContextSnapshot = {
     email: "frontdesk@mapleclinic.example",
   },
 };
+
+// Website chat widget contracts.
+export type WidgetPosition = "bottom-right" | "bottom-left" | "bottom-center";
+
+export type WidgetLeadFormConfig = {
+  enabled: boolean;
+  requirePhone?: boolean;
+  requireEmail?: boolean;
+  showBeforeChat?: boolean;
+};
+
+export type WidgetConfig = {
+  color?: string;
+  position?: WidgetPosition;
+  title?: string;
+  subtitle?: string;
+  greeting?: string;
+  localeOverride?: RuntimeLocale;
+  leadForm?: WidgetLeadFormConfig;
+};
+
+export const widgetPositions = [
+  "bottom-right",
+  "bottom-left",
+  "bottom-center",
+] as const satisfies ReadonlyArray<WidgetPosition>;
+
+export const defaultWidgetConfig: WidgetConfig = {
+  position: "bottom-right",
+  title: "",
+  leadForm: { enabled: false, requirePhone: false, requireEmail: false, showBeforeChat: false },
+};
+
+export const widgetLeadFormConfigSchema = z.object({
+  enabled: z.boolean(),
+  requirePhone: z.boolean().optional(),
+  requireEmail: z.boolean().optional(),
+  showBeforeChat: z.boolean().optional(),
+});
+
+export const widgetConfigSchema = z.object({
+  color: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).optional(),
+  position: z.enum(widgetPositions).optional(),
+  title: z.string().max(160).optional(),
+  subtitle: z.string().max(320).optional(),
+  greeting: z.string().max(400).optional(),
+  localeOverride: z.enum(runtimeLocales).optional(),
+  leadForm: widgetLeadFormConfigSchema.optional(),
+});
+
+export const widgetVisitorIdentitySchema = z.object({
+  widgetKey: z.string().min(1),
+  visitorId: z.string().uuid(),
+  name: z.string().max(160).optional(),
+  email: z.string().email().max(320).optional(),
+  phone: z.string().max(32).optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+export type WidgetVisitorIdentity = z.infer<typeof widgetVisitorIdentitySchema>;
+
+export type WidgetChatRole = "user" | "assistant";
+
+export type WidgetChatPart =
+  | { type: "text"; text: string }
+  | { type: "text-delta"; delta: string }
+  | { type: "tool-invocation"; toolInvocation: Record<string, unknown> };
+
+export type WidgetChatReplyRole = "assistant" | "human";
+
+export const widgetChatRequestSchema = z.object({
+  widgetKey: z.string().min(1),
+  visitorId: z.string().uuid(),
+  messageId: z.string().uuid(),
+  content: z.string().min(1).max(4_000),
+  locale: z.enum(runtimeLocales).optional(),
+});
+
+export type WidgetChatRequest = z.infer<typeof widgetChatRequestSchema>;
+
+export const widgetChatResponseSchema = z.object({
+  messageId: z.string().uuid(),
+  role: z.enum(["assistant", "human"]),
+  content: z.string(),
+  automationState: z.enum(["ai_active", "human_handoff"]).optional(),
+});
+
+export type WidgetChatResponse = z.infer<typeof widgetChatResponseSchema>;
+
+export const widgetLeadRequestSchema = z.object({
+  widgetKey: z.string().min(1),
+  visitorId: z.string().uuid(),
+  name: z.string().max(160).optional(),
+  email: z.string().email().max(320).optional(),
+  phone: z.string().max(32).optional(),
+});
+
+export type WidgetLeadRequest = z.infer<typeof widgetLeadRequestSchema>;
+
+export const widgetChatMessageRecordSchema = z.object({
+  id: z.string().uuid(),
+  role: z.enum(["user", "assistant"]),
+  content: z.string(),
+  createdAt: z.string().datetime(),
+});
+
+export type WidgetChatMessageRecord = z.infer<typeof widgetChatMessageRecordSchema>;
+
+export const widgetKeyConfigSchema = z.object({
+  id: z.string().uuid(),
+  label: z.string().nullable(),
+  status: z.enum(["active", "disabled", "revoked"]),
+  allowedOrigins: z.array(z.string()),
+  config: widgetConfigSchema,
+  lastUsedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+});
+
+export type WidgetKeyConfig = z.infer<typeof widgetKeyConfigSchema>;
 
 export {
   getTerminalTwilioCallReconciliationFields,

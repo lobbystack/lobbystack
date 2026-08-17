@@ -280,7 +280,7 @@ export async function setNotificationPreferences(
   });
 }
 
-export const operatorNotificationEventKeys = ["voiceMessage", "pausedSms", "smsFailed", "calendarSync", "transferFailed", "aiReplyFailed"] as const;
+export const operatorNotificationEventKeys = ["voiceMessage", "pausedSms", "smsFailed", "calendarSync", "transferFailed", "aiReplyFailed", "widgetChat"] as const;
 export type OperatorNotificationEventKey = (typeof operatorNotificationEventKeys)[number];
 export type OperatorNotificationEventPreferences = Record<OperatorNotificationEventKey, { email: boolean; sms: boolean }>;
 
@@ -296,6 +296,7 @@ const dailySummaryLabels: Record<OperatorNotificationEventKey, string> = {
   calendarSync: "Calendar sync issues",
   transferFailed: "Transfer failures",
   aiReplyFailed: "AI reply failures",
+  widgetChat: "Website chat messages",
 };
 
 function assertDailySummaryTime(value: string | null | undefined): void {

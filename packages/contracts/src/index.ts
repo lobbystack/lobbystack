@@ -202,6 +202,7 @@ export const snapshotSchema = z.object({
   greeting: z.string(),
   voiceInstructions: z.string(),
   smsInstructions: z.string(),
+  chatInstructions: z.string(),
   summary: z.string(),
   bookingPolicy: z.string(),
   knowledgeDigest: z.string(),

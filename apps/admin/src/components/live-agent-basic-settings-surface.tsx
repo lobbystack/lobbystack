@@ -15,13 +15,15 @@ type Profile = {
   bookingPolicy: string;
   voiceInstructions: string | null;
   smsInstructions: string | null;
+  chatInstructions: string | null;
   transferMode: string;
   transferNumber: string | null;
 };
 type AgentResponse = { business: Business | null; profile: Profile | null };
-type FormState = Omit<Profile, "voiceInstructions" | "smsInstructions" | "transferNumber"> & {
+type FormState = Omit<Profile, "voiceInstructions" | "smsInstructions" | "chatInstructions" | "transferNumber"> & {
   voiceInstructions: string;
   smsInstructions: string;
+  chatInstructions: string;
   transferNumber: string;
 };
 
@@ -38,6 +40,7 @@ const emptyForm: FormState = {
   bookingPolicy: "",
   voiceInstructions: "",
   smsInstructions: "",
+  chatInstructions: "",
   transferMode: "on_request",
   transferNumber: "",
 };
@@ -60,13 +63,14 @@ export function LiveAgentBasicSettingsSurface() {
       bookingPolicy: profile.bookingPolicy,
       voiceInstructions: profile.voiceInstructions ?? "",
       smsInstructions: profile.smsInstructions ?? "",
+      chatInstructions: profile.chatInstructions ?? "",
       transferMode: profile.transferMode,
       transferNumber: profile.transferNumber ?? "",
     });
   }, [agent.data?.profile]);
 
   const save = useMutation({
-    mutationFn: () => requestJson<{ profile: Profile }>(`/api/agent?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ ...form, transferNumber: form.transferNumber || null, voiceInstructions: form.voiceInstructions || null, smsInstructions: form.smsInstructions || null }) }),
+    mutationFn: () => requestJson<{ profile: Profile }>(`/api/agent?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ ...form, transferNumber: form.transferNumber || null, voiceInstructions: form.voiceInstructions || null, smsInstructions: form.smsInstructions || null, chatInstructions: form.chatInstructions || null }) }),
     onSuccess: async () => {
       setMessage("Saved. The receptionist context will refresh through the worker.");
       await queryClient.invalidateQueries({ queryKey: ["agent", business?.businessId] });
@@ -99,6 +103,10 @@ export function LiveAgentBasicSettingsSurface() {
       <Card>
         <CardHeader><CardTitle>SMS instructions</CardTitle><CardDescription>Short operational guidance for generated SMS replies.</CardDescription></CardHeader>
         <CardContent><textarea className="min-h-28 w-full rounded-xl border border-slate-200 p-3" value={form.smsInstructions} onChange={(event) => update("smsInstructions", event.target.value)} placeholder="Optional guidance for SMS replies" /></CardContent>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle>Website chat instructions</CardTitle><CardDescription>Guidance for the embedded website chat widget. Governs tone and behavior for chat replies.</CardDescription></CardHeader>
+        <CardContent><textarea className="min-h-28 w-full rounded-xl border border-slate-200 p-3" value={form.chatInstructions} onChange={(event) => update("chatInstructions", event.target.value)} placeholder="Optional guidance for website chat replies" /></CardContent>
       </Card>
       <div className="flex items-center gap-4"><Button type="submit" disabled={save.isPending}>{save.isPending ? "Saving..." : "Save changes"}</Button>{message ? <p className="text-sm text-teal-700">{message}</p> : null}{save.isError ? <p className="text-sm text-red-600">{save.error.message}</p> : null}</div>
     </form>

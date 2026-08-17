@@ -121,6 +121,43 @@ export async function finalizeWebVoiceUsageInTransaction(
   await enqueueUsageSyncInTransaction(tx, { businessId: input.businessId, usageEventId });
 }
 
+export type WidgetChatBillingAllowance = {
+  allowed: boolean;
+  errorCode: typeof billingErrorCodes.chatAiLimitReached | null;
+  plan: BillingPlanSlug;
+};
+
+export async function getWidgetChatAllowance(
+  context: DomainContext,
+  input: { businessId: string },
+): Promise<WidgetChatBillingAllowance> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const status = await getUsageStatusInTransaction(tx, { businessId: input.businessId });
+    const entitlement = billingPlanCatalog[status.plan];
+    if (entitlement.chatAiTokensIncluded === null || entitlement.overagesBillable) {
+      return { allowed: true, errorCode: null, plan: status.plan };
+    }
+    if (status.chatAiBlocked || Math.max(0, entitlement.chatAiTokensIncluded - status.chatAiTokensUsed) < 1) {
+      return { allowed: false, errorCode: billingErrorCodes.chatAiLimitReached, plan: status.plan };
+    }
+    return { allowed: true, errorCode: null, plan: status.plan };
+  });
+}
+
+export async function reserveWidgetChatUsageInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; conversationId: string },
+): Promise<WidgetChatBillingAllowance> {
+  const status = await getUsageStatusInTransaction(tx, { businessId: input.businessId });
+  const entitlement = billingPlanCatalog[status.plan];
+  if (entitlement.chatAiTokensIncluded !== null) {
+    const reservation = await applyNonAiUsageInTransaction(tx, { operation: "reserve", businessId: input.businessId, usageKind: "chat_ai_tokens", sourceKey: `chat:${input.conversationId}`, quantity: 1 });
+    if (!reservation.allowed) return { allowed: false, errorCode: billingErrorCodes.chatAiLimitReached, plan: status.plan };
+    return { allowed: true, errorCode: null, plan: status.plan };
+  }
+  return { allowed: true, errorCode: null, plan: status.plan };
+}
+
 export async function createBillingCheckoutRequest(
   context: DomainContext,
   input: { userId: string; businessId: string; target: BillingCheckoutTarget; billingInterval: BillingInterval },

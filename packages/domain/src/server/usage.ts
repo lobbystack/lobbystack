@@ -3,7 +3,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { billingAccounts, billingUsageEvents, billingUsageMonths, businesses, enqueueOutbox, type DatabaseTransaction } from "@lobbystack/db";
 import { billingErrorCodes, billingPlanCatalog, billingPlanSlugs, type BillingPlanSlug } from "@lobbystack/shared";
 
-export type NonAiBillingUsageKind = "voice_seconds" | "alert_sms_segments" | "outbound_call_attempts";
+export type NonAiBillingUsageKind = "voice_seconds" | "alert_sms_segments" | "outbound_call_attempts" | "chat_ai_tokens";
 
 type UsageCounts = Record<NonAiBillingUsageKind, number>;
 
@@ -23,12 +23,15 @@ export type UsageStatus = {
   voiceSecondsUsed: number;
   alertSmsSegmentsUsed: number;
   outboundCallAttemptsUsed: number;
+  chatAiTokensUsed: number;
   voiceSecondsIncluded: number | null;
   alertSmsSegmentsIncluded: number | null;
   outboundCallAttemptsIncluded: number | null;
+  chatAiTokensIncluded: number | null;
   voiceBlocked: boolean;
   alertSmsBlocked: boolean;
   outboundCallAttemptsBlocked: boolean;
+  chatAiBlocked: boolean;
   overageSpendCents: number;
   overageSpendingCapCents: number | null;
   overageSpendingCapReached: boolean;
@@ -39,6 +42,7 @@ const emptyUsage: UsageCounts = {
   voice_seconds: 0,
   alert_sms_segments: 0,
   outbound_call_attempts: 0,
+  chat_ai_tokens: 0,
 };
 
 const GSM_BASIC = new Set(Array.from("@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ`¿abcdefghijklmnopqrstuvwxyzäöñüà"));
@@ -76,6 +80,7 @@ function includedQuantity(plan: BillingPlanSlug, kind: NonAiBillingUsageKind): n
   const config = billingPlanCatalog[plan];
   if (kind === "voice_seconds") return config.voiceSecondsIncluded;
   if (kind === "alert_sms_segments") return config.alertSmsSegmentsIncluded;
+  if (kind === "chat_ai_tokens") return config.chatAiTokensIncluded;
   return config.outboundCallAttemptsIncluded;
 }
 
@@ -174,12 +179,15 @@ async function refreshUsageMonth(tx: DatabaseTransaction, input: { businessId: s
     voiceSecondsUsed: replay.usage.voice_seconds,
     alertSmsSegmentsUsed: replay.usage.alert_sms_segments,
     outboundCallAttemptsUsed: replay.usage.outbound_call_attempts,
+    chatAiTokensUsed: replay.usage.chat_ai_tokens,
     voiceSecondsIncluded: config.voiceSecondsIncluded,
     alertSmsSegmentsIncluded: config.alertSmsSegmentsIncluded,
     outboundCallAttemptsIncluded: config.outboundCallAttemptsIncluded,
+    chatAiTokensIncluded: config.chatAiTokensIncluded,
     voiceBlocked: (!config.overagesBillable && config.voiceSecondsIncluded !== null && replay.usage.voice_seconds >= config.voiceSecondsIncluded) || capReached,
     alertSmsBlocked: (!config.overagesBillable && config.alertSmsSegmentsIncluded !== null && replay.usage.alert_sms_segments >= config.alertSmsSegmentsIncluded) || capReached,
     outboundCallAttemptsBlocked: (!config.overagesBillable && config.outboundCallAttemptsIncluded !== null && replay.usage.outbound_call_attempts >= config.outboundCallAttemptsIncluded) || capReached,
+    chatAiBlocked: (!config.overagesBillable && config.chatAiTokensIncluded !== null && replay.usage.chat_ai_tokens >= config.chatAiTokensIncluded) || capReached,
     overageSpendCents,
     overageSpendingCapCents: input.capCents,
     overageSpendingCapReached: capReached,
@@ -191,9 +199,11 @@ async function refreshUsageMonth(tx: DatabaseTransaction, input: { businessId: s
     voiceSecondsUsed: status.voiceSecondsUsed,
     alertSmsSegmentsUsed: status.alertSmsSegmentsUsed,
     outboundCallAttemptsUsed: status.outboundCallAttemptsUsed,
+    chatAiTokensUsed: status.chatAiTokensUsed,
     voiceBlocked: status.voiceBlocked,
     alertSmsBlocked: status.alertSmsBlocked,
     outboundCallAttemptsBlocked: status.outboundCallAttemptsBlocked,
+    chatAiBlocked: status.chatAiBlocked,
     overageSpendCents: status.overageSpendCents,
     lastRecordedAt: new Date(),
     updatedAt: new Date(),
@@ -228,18 +238,18 @@ export async function reserveUsageInTransaction(tx: DatabaseTransaction, input: 
   if (quantity <= 0) {
     const unlimitedVoice = input.usageKind === "voice_seconds" && (billing.plan === "self_host" || (billingPlanCatalog[billing.plan].overagesBillable && billing.capCents === null));
     if (unlimitedVoice) return { allowed: true, errorCode: null, syncNeeded: false, periodKey, plan: billing.plan };
-    const errorCode = input.usageKind === "voice_seconds" ? billingErrorCodes.voiceLimitReached : input.usageKind === "alert_sms_segments" ? billingErrorCodes.alertSmsLimitReached : billingErrorCodes.outboundCallAttemptLimitReached;
+    const errorCode = input.usageKind === "voice_seconds" ? billingErrorCodes.voiceLimitReached : input.usageKind === "alert_sms_segments" ? billingErrorCodes.alertSmsLimitReached : input.usageKind === "chat_ai_tokens" ? billingErrorCodes.chatAiLimitReached : billingErrorCodes.outboundCallAttemptLimitReached;
     return { allowed: false, errorCode, syncNeeded: false, periodKey, plan: billing.plan };
   }
   const included = includedQuantity(billing.plan, input.usageKind);
   if (!billingPlanCatalog[billing.plan].overagesBillable && included !== null && current.usage[input.usageKind] + quantity > included) {
-    const errorCode = input.usageKind === "voice_seconds" ? billingErrorCodes.voiceLimitReached : input.usageKind === "alert_sms_segments" ? billingErrorCodes.alertSmsLimitReached : billingErrorCodes.outboundCallAttemptLimitReached;
+    const errorCode = input.usageKind === "voice_seconds" ? billingErrorCodes.voiceLimitReached : input.usageKind === "alert_sms_segments" ? billingErrorCodes.alertSmsLimitReached : input.usageKind === "chat_ai_tokens" ? billingErrorCodes.chatAiLimitReached : billingErrorCodes.outboundCallAttemptLimitReached;
     return { allowed: false, errorCode, syncNeeded: false, periodKey, plan: billing.plan };
   }
   const eventPayload = { sourceKey: input.sourceKey, quantity, usageKind: input.usageKind, planAtRecordTime: billing.plan, billingIntervalAtRecordTime: billing.billingInterval, createdAt: recordedAt, isFinal: input.usageKind === "outbound_call_attempts" };
   const simulated = replayEvents([...events, eventPayload], billing.plan);
   if (billing.capCents !== null && simulated.rawSpendCents > billing.capCents) {
-    const errorCode = input.usageKind === "voice_seconds" ? billingErrorCodes.voiceLimitReached : input.usageKind === "alert_sms_segments" ? billingErrorCodes.alertSmsLimitReached : billingErrorCodes.outboundCallAttemptLimitReached;
+    const errorCode = input.usageKind === "voice_seconds" ? billingErrorCodes.voiceLimitReached : input.usageKind === "alert_sms_segments" ? billingErrorCodes.alertSmsLimitReached : input.usageKind === "chat_ai_tokens" ? billingErrorCodes.chatAiLimitReached : billingErrorCodes.outboundCallAttemptLimitReached;
     return { allowed: false, errorCode, syncNeeded: false, periodKey, plan: billing.plan };
   }
   const syncNeeded = billing.plan === "starter" || billing.plan === "pro";

@@ -327,6 +327,7 @@ export const receptionistProfiles = pgTable(
     bookingPolicy: text("booking_policy").notNull(),
     voiceInstructions: text("voice_instructions"),
     smsInstructions: text("sms_instructions"),
+    chatInstructions: text("chat_instructions"),
     transferMode: varchar("transfer_mode", { length: 32 }).notNull(),
     transferNumber: text("transfer_number"),
     appointmentChangePolicy: jsonb("appointment_change_policy").$type<Record<string, unknown>>(),
@@ -416,6 +417,7 @@ export const conversations = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
     contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
+    widgetVisitorId: uuid("widget_visitor_id").references(() => widgetVisitors.id, { onDelete: "set null" }),
     channel: varchar("channel", { length: 32 }).notNull(),
     status: varchar("status", { length: 32 }).default("open").notNull(),
     automationState: varchar("automation_state", { length: 32 }).default("ai_active").notNull(),
@@ -428,7 +430,7 @@ export const conversations = pgTable(
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("conversations_business_status_idx").on(table.businessId, table.status), index("conversations_contact_idx").on(table.businessId, table.contactId)],
+  (table) => [index("conversations_business_status_idx").on(table.businessId, table.status), index("conversations_contact_idx").on(table.businessId, table.contactId), index("conversations_business_widget_visitor_idx").on(table.businessId, table.widgetVisitorId)],
 );
 
 export const conversationSessions = pgTable(
@@ -889,9 +891,11 @@ export const billingUsageMonths = pgTable(
     voiceSecondsUsed: doublePrecision("voice_seconds_used").default(0).notNull(),
     alertSmsSegmentsUsed: doublePrecision("alert_sms_segments_used").default(0).notNull(),
     outboundCallAttemptsUsed: doublePrecision("outbound_call_attempts_used").default(0).notNull(),
+    chatAiTokensUsed: doublePrecision("chat_ai_tokens_used").default(0).notNull(),
     voiceBlocked: boolean("voice_blocked").default(false).notNull(),
     alertSmsBlocked: boolean("alert_sms_blocked").default(false).notNull(),
     outboundCallAttemptsBlocked: boolean("outbound_call_attempts_blocked").default(false).notNull(),
+    chatAiBlocked: boolean("chat_ai_tokens_blocked").default(false).notNull(),
     overageSpendCents: integer("overage_spend_cents").default(0).notNull(),
     lastRecordedAt: timestamp("last_recorded_at", { withTimezone: true }).defaultNow().notNull(),
     ...timestamps,

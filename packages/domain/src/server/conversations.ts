@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 
-import { calls, contacts, conversations, conversationSessions, enqueueOutbox, messages, transcripts, withBusinessTransaction } from "@lobbystack/db";
+import { calls, contacts, conversations, conversationSessions, enqueueOutbox, messages, transcripts, widgetVisitors, withBusinessTransaction } from "@lobbystack/db";
 
 import { requireBusinessMembership } from "../authz";
 import { buildConversationSessionSummary } from "./conversationSummary";
@@ -56,7 +56,7 @@ export async function getOrCreateConversation(
 
 export async function appendMessage(
   context: DomainContext,
-  input: { businessId: string; conversationId: string; body: string; direction: "inbound" | "outbound"; channel: "sms" | "dashboard"; providerMessageId?: string; aiGenerated?: boolean; userId?: string; operatorAlert?: { eventKind: OperatorNotificationEventKey; subject: string; body: string } },
+  input: { businessId: string; conversationId: string; body: string; direction: "inbound" | "outbound"; channel: "sms" | "dashboard" | "web_chat"; providerMessageId?: string; aiGenerated?: boolean; userId?: string; operatorAlert?: { eventKind: OperatorNotificationEventKey; subject: string; body: string } },
 ): Promise<string> {
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: input.userId ? "operator" : "worker" }, async (tx) => {
     if (input.userId) {
@@ -122,3 +122,62 @@ export async function setAutomationState(
     });
   });
 }
+
+export async function registerWidgetVisitor(
+  context: DomainContext,
+  input: { businessId: string; visitorId: string; name?: string; email?: string; phone?: string; metadata?: Record<string, unknown> },
+): Promise<{ visitorId: string; contactId: string | null }> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const existing = (await tx.select({ id: widgetVisitors.id, contactId: widgetVisitors.contactId, metadata: widgetVisitors.metadata }).from(widgetVisitors).where(and(eq(widgetVisitors.id, input.visitorId), eq(widgetVisitors.businessId, input.businessId))).limit(1))[0];
+    let contactId = existing?.contactId ?? null;
+    const suppliedIdentity = input.email !== undefined || input.phone !== undefined;
+    if (!contactId && suppliedIdentity) {
+      const contact = (input.email !== undefined ? (await tx.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.email, input.email!))).limit(1))[0] : undefined)
+        ?? (input.phone ? (await tx.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.phone))).limit(1))[0] : undefined);
+      if (contact) {
+        contactId = contact.id;
+      } else {
+        const [created] = await tx.insert(contacts).values({ businessId: input.businessId, ...(input.name ? { name: input.name } : {}), ...(input.email !== undefined ? { email: input.email } : {}), ...(input.phone ? { phone: input.phone } : {}) }).returning({ id: contacts.id });
+        contactId = created?.id ?? null;
+      }
+      if (contactId && (input.name || input.phone)) {
+        await tx.update(contacts).set({ ...(input.name ? { name: input.name } : {}), ...(input.phone ? { phone: input.phone } : {}), updatedAt: new Date() }).where(and(eq(contacts.id, contactId), eq(contacts.businessId, input.businessId)));
+      }
+    }
+    const mergedMetadata = { ...(typeof existing?.metadata === "object" && existing.metadata !== null ? existing.metadata : {}), ...(input.metadata ?? {}) };
+    if (existing) {
+      await tx.update(widgetVisitors).set({ ...(input.name ? { name: input.name } : {}), ...(input.email !== undefined ? { email: input.email } : {}), ...(input.metadata ? { metadata: mergedMetadata } : {}), ...(contactId ? { contactId } : {}), lastSeenAt: new Date(), updatedAt: new Date() }).where(and(eq(widgetVisitors.id, input.visitorId), eq(widgetVisitors.businessId, input.businessId)));
+    } else {
+      await tx.insert(widgetVisitors).values({ id: input.visitorId, businessId: input.businessId, ...(input.name ? { name: input.name } : {}), ...(input.email !== undefined ? { email: input.email } : {}), metadata: mergedMetadata, ...(contactId ? { contactId } : {}), lastSeenAt: new Date(), updatedAt: new Date() }).onConflictDoUpdate({ target: widgetVisitors.id, set: { ...(input.name ? { name: input.name } : {}), ...(input.email !== undefined ? { email: input.email } : {}), metadata: mergedMetadata, ...(contactId ? { contactId } : {}), lastSeenAt: new Date(), updatedAt: new Date() } });
+    }
+    return { visitorId: input.visitorId, contactId };
+  });
+}
+
+export async function getOrCreateWidgetConversation(
+  context: DomainContext,
+  input: { businessId: string; widgetVisitorId: string },
+): Promise<{ conversationId: string }> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const visitor = (await tx.select({ id: widgetVisitors.id }).from(widgetVisitors).where(and(eq(widgetVisitors.id, input.widgetVisitorId), eq(widgetVisitors.businessId, input.businessId))).limit(1))[0];
+    if (!visitor) throw new Error("Widget visitor not found.");
+    const current = await tx.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.widgetVisitorId, input.widgetVisitorId), eq(conversations.channel, "web_chat"), eq(conversations.status, "open"))).orderBy(desc(conversations.updatedAt)).limit(1);
+    const conversationId = current[0]?.id ?? (await tx.insert(conversations).values({ businessId: input.businessId, widgetVisitorId: input.widgetVisitorId, channel: "web_chat", status: "open", automationState: "ai_active" }).onConflictDoNothing().returning({ id: conversations.id }))[0]?.id;
+    if (!conversationId) {
+      const existing = await tx.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.widgetVisitorId, input.widgetVisitorId), eq(conversations.channel, "web_chat"))).orderBy(desc(conversations.updatedAt)).limit(1);
+      throw new Error(existing[0] ? "Widget conversation already exists and is closed." : "Conversation could not be created.");
+    }
+    return { conversationId };
+  });
+}
+
+export async function loadWidgetChatHistory(
+  context: DomainContext,
+  input: { businessId: string; conversationId: string },
+): Promise<Array<{ id: string; direction: "inbound" | "outbound"; body: string; createdAt: Date }>> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const rows = await tx.select({ id: messages.id, direction: messages.direction, body: messages.body, createdAt: messages.createdAt }).from(messages).where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId))).orderBy(asc(messages.createdAt)).limit(200);
+    return rows.map((row) => ({ ...row, direction: row.direction === "inbound" ? "inbound" : "outbound" }));
+  });
+}
+

@@ -1,5 +1,5 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { generateText } from "ai";
+import { generateText, streamText } from "ai";
 
 import { calculateTokenCost, type AiProviderUsage } from "./aiUsage";
 
@@ -67,5 +67,29 @@ export class GeminiTextProvider {
       outputCostPerMillionTokens: this.outputCostPerMillionTokens,
     });
     return { text, usage: { ...usage, ...(totalCostUsd !== undefined ? { totalCostUsd } : {}) } };
+  }
+
+  streamReply(input: { instructions: string; prompt: string; context?: string }): AsyncIterable<string> {
+    const prompt = input.context ? `${input.context}\n\nUser message:\n${input.prompt}` : input.prompt;
+    const stream = streamText({
+      model: this.google(this.model),
+      system: input.instructions,
+      prompt,
+      temperature: 0.2,
+      maxOutputTokens: 512,
+      experimental_telemetry: {
+        isEnabled: true,
+        recordInputs: false,
+        recordOutputs: false,
+        functionId: "lobbystack.gemini.stream",
+      },
+    });
+    return {
+      async *[Symbol.asyncIterator]() {
+        for await (const delta of stream.textStream) {
+          yield delta;
+        }
+      },
+    };
   }
 }
