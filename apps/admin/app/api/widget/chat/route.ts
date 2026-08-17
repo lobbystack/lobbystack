@@ -93,7 +93,7 @@ export async function POST(request: Request) {
             const fallback = "Thanks for your message! Our team will reply shortly.";
             await appendMessage(context, { businessId: session.businessId, conversationId, body: fallback, direction: "outbound", channel: "web_chat", aiGenerated: false });
             emit({ type: "error", code: "chat_ai_limit_reached", message: "This month's chat session limit has been reached." });
-            emit({ type: "finish", message: null, automationState: "ai_active" });
+            emit({ type: "finish", message: { id: "", role: "assistant", content: fallback, createdAt: new Date().toISOString() }, automationState: "ai_active" });
             return;
           }
 
