@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 
 import { contacts, conversationSessions, conversations, enqueueOutbox, messages, phoneNumbers, providerEvents, smsConsentEvents, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { isTerminalTwilioMessageStatus, mapTwilioStatusToMessageStatus, normalizeTwilioMessageStatus, shouldApplyMessageStatusTransition } from "@lobbystack/shared";
@@ -118,9 +118,10 @@ export async function loadSmsDeliveryTarget(db: Database, input: { businessId: s
       .innerJoin(conversations, and(eq(conversations.id, messages.conversationId), eq(conversations.businessId, input.businessId)))
       .innerJoin(contacts, and(eq(contacts.id, conversations.contactId), eq(contacts.businessId, input.businessId)))
       .innerJoin(phoneNumbers, and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), eq(phoneNumbers.smsEnabled, true)))
-      .where(and(eq(messages.id, input.messageId), eq(messages.businessId, input.businessId), eq(messages.direction, "outbound"), eq(messages.channel, "sms"), isNull(contacts.operatorBlockedAt), or(eq(contacts.smsConsentStatus, "subscribed"), eq(messages.providerStatus, "compliance_reply")), inArray(messages.status, ["queued", "sending"])))
+      .where(and(eq(messages.id, input.messageId), eq(messages.businessId, input.businessId), eq(messages.direction, "outbound"), eq(messages.channel, "sms"), isNull(contacts.operatorBlockedAt), isNotNull(contacts.phone), or(eq(contacts.smsConsentStatus, "subscribed"), eq(messages.providerStatus, "compliance_reply")), inArray(messages.status, ["queued", "sending"])))
       .limit(1))[0];
-    return row ?? null;
+    if (!row || row.to === null) return null;
+    return { to: row.to, from: row.from, body: row.body };
   });
 }
 
@@ -136,7 +137,9 @@ export async function setContactSmsManualBlock(
       .where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId)))
       .returning({ id: contacts.id, phone: contacts.phone });
     if (!contact) return false;
-    await tx.insert(smsConsentEvents).values({ businessId: input.businessId, contactId: contact.id, phone: contact.phone, recipientType: "contact", action: input.blocked ? "manual_blocked" : "manual_unblocked", source: `operator:${input.userId}` });
+    if (contact.phone !== null) {
+      await tx.insert(smsConsentEvents).values({ businessId: input.businessId, contactId: contact.id, phone: contact.phone, recipientType: "contact", action: input.blocked ? "manual_blocked" : "manual_unblocked", source: `operator:${input.userId}` });
+    }
     return true;
   });
 }

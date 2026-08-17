@@ -1,4 +1,5 @@
 import { customType } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import {
   boolean,
   doublePrecision,
@@ -340,7 +341,7 @@ export const contacts = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
     name: text("name"),
-    phone: varchar("phone", { length: 32 }).notNull(),
+    phone: varchar("phone", { length: 32 }),
     email: text("email"),
     timezone: varchar("timezone", { length: 80 }),
     preferredLocale: varchar("preferred_locale", { length: 8 }),
@@ -351,7 +352,45 @@ export const contacts = pgTable(
     ...legacyId,
     ...timestamps,
   },
-  (table) => [uniqueIndex("contacts_business_phone_unique").on(table.businessId, table.phone), index("contacts_business_email_idx").on(table.businessId, table.email)],
+  (table) => [uniqueIndex("contacts_business_phone_unique").on(table.businessId, table.phone).where(sql`${table.phone} is not null`), index("contacts_business_email_idx").on(table.businessId, table.email)],
+);
+
+export const widgetKeys = pgTable(
+  "widget_keys",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    keyHash: text("key_hash").notNull(),
+    label: varchar("label", { length: 120 }),
+    status: varchar("status", { length: 32 }).default("active").notNull(),
+    allowedOrigins: jsonb("allowed_origins").$type<string[]>().notNull().default([]),
+    config: jsonb("config").$type<Record<string, unknown>>().notNull().default({}),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("widget_keys_key_hash_unique").on(table.keyHash),
+    index("widget_keys_business_created_idx").on(table.businessId, table.createdAt),
+  ],
+);
+
+export const widgetVisitors = pgTable(
+  "widget_visitors",
+  {
+    id: uuid("id").primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
+    name: text("name"),
+    email: text("email"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).defaultNow().notNull(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    index("widget_visitors_business_last_seen_idx").on(table.businessId, table.lastSeenAt),
+    index("widget_visitors_contact_idx").on(table.businessId, table.contactId),
+  ],
 );
 
 export const smsConsentEvents = pgTable(
@@ -1193,6 +1232,8 @@ export const allTenantTables = [
   onboardingNumberClaimEvents,
   receptionistProfiles,
   contacts,
+  widgetKeys,
+  widgetVisitors,
   smsConsentEvents,
   conversations,
   conversationSessions,
@@ -1251,6 +1292,8 @@ export const schema = {
   onboardingNumberClaimEvents,
   receptionistProfiles,
   contacts,
+  widgetKeys,
+  widgetVisitors,
   smsConsentEvents,
   conversations,
   conversationSessions,
