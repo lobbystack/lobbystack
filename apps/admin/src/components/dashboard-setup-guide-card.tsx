@@ -36,6 +36,7 @@ export function DashboardSetupGuideCard() {
       <Button
         aria-label={t("sidebar.setupGuide.open")}
         className="h-auto w-full justify-start rounded-xl bg-foreground px-4 py-3 text-background hover:!bg-foreground hover:!text-background focus-visible:!bg-foreground focus-visible:!text-background active:!bg-foreground active:!text-background"
+        nativeButton={false}
         render={<Link href="/setup-guide" />}
         type="button"
         variant="ghost"

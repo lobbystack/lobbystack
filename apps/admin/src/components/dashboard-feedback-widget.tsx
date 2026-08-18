@@ -108,6 +108,7 @@ export function DashboardFeedbackWidget({ businessId, className }: { businessId:
             <Button
               aria-label={t("feedback.helpCenter")}
               className="text-sidebar-foreground hover:bg-transparent hover:text-sidebar-accent-foreground"
+              nativeButton={false}
               render={<a href="https://docs.lobbystack.com" rel="noreferrer" target="_blank" />}
               size="icon-xs"
               variant="ghost"
