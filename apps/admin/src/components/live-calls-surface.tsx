@@ -58,7 +58,7 @@ export function LiveCallsSurface() {
           </Table>
          </TableCard>
       )}
-      <div className="flex justify-end gap-2"><Button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 50))} size="sm" variant="outline">Previous</Button><Button disabled={!calls.data?.pagination.hasNext} onClick={() => setOffset(offset + 50)} size="sm" variant="outline">Next</Button></div>
+      <div className="flex items-center justify-between gap-4 text-sm text-muted-foreground"><span>Page {Math.floor(offset / 50) + 1}</span><div className="flex gap-2"><Button disabled={offset === 0} onClick={() => setOffset(0)} size="sm" variant="outline">First</Button><Button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 50))} size="sm" variant="outline">Previous</Button><Button disabled={!calls.data?.pagination.hasNext} onClick={() => setOffset(offset + 50)} size="sm" variant="outline">Next</Button><Button disabled={!calls.data?.pagination.hasNext} onClick={() => setOffset(offset + 50)} size="sm" variant="outline">Last</Button></div></div>
     </div>
   );
 }

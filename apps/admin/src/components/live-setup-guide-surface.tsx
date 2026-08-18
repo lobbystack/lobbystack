@@ -41,7 +41,10 @@ export function LiveSetupGuideSurface() {
   }, [business?.businessId, queryClient]);
 
   const rows = setup.data?.steps ?? [];
+  const completed = rows.filter((step) => step.status === "complete" || step.status === "completed").length;
+  const progress = rows.length ? Math.round((completed / rows.length) * 100) : 0;
   return <PageSurface title="Setup guide" description="Work through the core configuration steps before sending live calls.">
+    <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center"><div className="flex items-center gap-3 text-muted-foreground"><span className="relative grid size-10 place-items-center rounded-full border-4 border-muted text-xs font-semibold text-foreground"><span>{progress}%</span><span className="absolute inset-[-4px] rounded-full border-4 border-primary border-b-transparent border-l-transparent" style={{ transform: `rotate(${45 + progress * 3.6}deg)` }} /></span><p className="text-sm">{completed} of {rows.length} setup steps complete</p></div><Button onClick={() => window.location.assign("/")} variant="outline">Skip setup</Button></div>
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4">
         <div>

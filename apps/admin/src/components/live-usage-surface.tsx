@@ -34,5 +34,6 @@ export function LiveUsageSurface() {
 }
 
 function UsageCard({ label, value, blocked }: { label: string; value: number; blocked: boolean }) {
-  return <div className="rounded-xl border p-4"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold">{value.toLocaleString()}</p>{blocked ? <p className="mt-1 text-xs text-destructive">Blocked</p> : null}</div>;
+  const percent = Math.min(100, Math.max(4, Math.round((value / 10000) * 100)));
+  return <div className="rounded-xl border p-5"><div className="flex items-start justify-between gap-3"><p className="text-sm text-muted-foreground">{label}</p>{blocked ? <span className="rounded-full bg-destructive/10 px-2 py-1 text-xs text-destructive">Blocked</span> : null}</div><p className="mt-3 text-3xl font-normal tabular-nums">{value.toLocaleString()}</p><div className="mt-5 h-2.5 rounded-full bg-muted"><div className="h-2.5 rounded-full bg-primary transition-all" style={{ width: `${percent}%` }} /></div><p className="mt-2 text-xs text-muted-foreground">{percent}% of included usage</p></div>;
 }

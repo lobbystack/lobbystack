@@ -40,6 +40,7 @@ function formatDuration(seconds: number | null): string {
 
 export function LiveCallDetailSurface({ callId }: { callId: string }) {
   const { i18n, t } = useTranslation("calls");
+  const [activeTab, setActiveTab] = useState<"transcript" | "recording" | "details">("transcript");
   const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
   const [recordingError, setRecordingError] = useState<string | null>(null);
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => getJson<{ businesses: Business[] }>("/api/businesses") });
@@ -62,7 +63,7 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
   }
 
   if (businesses.isLoading || detail.isLoading) return <PageSurface title={t("detail.callLabel")} description=""><Card><CardContent className="py-16 text-center text-sm text-muted-foreground">Loading call details...</CardContent></Card></PageSurface>;
-  if (businesses.isError || detail.isError || !detail.data) return <PageSurface title={t("detail.notFound")} description=""><Card><CardContent className="space-y-3 py-16 text-center text-sm text-muted-foreground"><p>{t("detail.notFoundDescription")}</p><Button render={<Link href="/calls" />}>{t("detail.backToList")}</Button></CardContent></Card></PageSurface>;
+  if (businesses.isError || detail.isError || !detail.data) return <PageSurface title={t("detail.notFound")} description=""><Card><CardContent className="space-y-3 py-16 text-center text-sm text-muted-foreground"><p>{t("detail.notFoundDescription")}</p><Button nativeButton={false} render={<Link href="/calls" />}>{t("detail.backToList")}</Button></CardContent></Card></PageSurface>;
 
   const { call, contact, recording } = detail.data;
   return <PageSurface title={`${t("detail.callLabel")} · ${contact?.name ?? t("detail.unknownCaller")}`} description="">
@@ -78,8 +79,11 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
           <span className="rounded-full bg-muted px-3 py-2 text-sm capitalize text-muted-foreground">{call.status}</span>
         </div>
       </div>
+      <div className="inline-flex w-fit items-center gap-1 rounded-full border bg-muted/40 p-1" role="tablist" aria-label="Call detail sections">
+        {(["transcript", "recording", "details"] as const).map((tab) => <button className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${activeTab === tab ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`} key={tab} onClick={() => setActiveTab(tab)} role="tab" aria-selected={activeTab === tab} type="button">{t(`detail.tabs.${tab}`)}</button>)}
+      </div>
       {recordingError ? <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{recordingError}</p> : null}
-      {recordingUrl ? <audio className="w-full" controls src={recordingUrl} /> : null}
+      {recordingUrl ? <audio className="w-full" controls id="recording" src={recordingUrl} /> : null}
       <div className="grid gap-6 xl:grid-cols-[0.7fr_1.3fr]">
         <div className="space-y-6">
           <Card><CardHeader><CardTitle>{t("detail.details.outcomeTitle")}</CardTitle></CardHeader><CardContent className="space-y-3"><Info icon={PhoneCall} label={t("detail.details.disposition")} value={detail.data.outcome ?? t("detail.details.noDisposition")} /><Info icon={PhoneCall} label={t("detail.metadata.duration")} value={formatDuration(call.providerDurationSeconds)} /><Info icon={UserRound} label={t("detail.metadata.from")} value={contact?.phone ?? t("detail.noNumber")} /></CardContent></Card>

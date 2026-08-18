@@ -105,7 +105,7 @@ export function LiveIntegrationsSurface() {
         {error ? <p className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700" role="alert">{error}</p> : null}
         {businesses.isLoading || integrations.isLoading ? <p className="py-12 text-center text-sm text-slate-500">Loading integrations...</p> : null}
         {businesses.isError || integrations.isError ? <p className="py-12 text-center text-sm text-red-600">Integrations are unavailable.</p> : null}
-        {!businesses.isLoading && !integrations.isLoading && !businesses.isError && !integrations.isError ? <div className="overflow-x-auto">
+        {!businesses.isLoading && !integrations.isLoading && !businesses.isError && !integrations.isError ? <><div className="mb-6 grid gap-4 md:grid-cols-2">{rows.map((integration) => <article className="rounded-xl border bg-background p-5" key={`${integration.name}-summary`}><div className="flex items-start justify-between gap-4"><div><p className="font-medium">{integration.name}</p><p className="mt-1 text-sm text-muted-foreground">{integration.account}</p></div><span className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${integration.status === "connected" ? "bg-teal-50 text-teal-700" : "bg-muted text-muted-foreground"}`}>{integration.status.replaceAll("_", " ")}</span></div><p className="mt-4 text-xs text-muted-foreground">{integration.updatedAt ? `Updated ${formatDate(integration.updatedAt)}` : "Not connected"}</p></article>)}</div><div className="overflow-x-auto">
           <table className="w-full min-w-[1080px] text-left text-sm">
             <thead><tr className="border-b border-slate-100 text-xs uppercase tracking-[0.12em] text-slate-400"><th className="px-3 py-3 font-semibold">Integration</th><th className="px-3 py-3 font-semibold">Account</th><th className="px-3 py-3 font-semibold">Status</th><th className="px-3 py-3 font-semibold">Last updated</th><th className="px-3 py-3 font-semibold">Calendar</th><th className="px-3 py-3 font-semibold">Staff</th><th className="px-3 py-3 font-semibold">Actions</th></tr></thead>
             <tbody>{rows.map((integration) => <tr className="border-b border-slate-50 align-top last:border-0" key={integration.name}>
@@ -118,7 +118,7 @@ export function LiveIntegrationsSurface() {
               <td className="px-3 py-4">{integration.connectionId ? <div className="flex flex-wrap gap-2"><Button variant="ghost" disabled={!canMutate || action.isPending} onClick={() => action.mutate({ method: "POST", connectionId: integration.connectionId! })}>Refresh</Button><Button variant="ghost" disabled={!canMutate || action.isPending} onClick={() => action.mutate({ method: "DELETE", connectionId: integration.connectionId! })}>Disconnect</Button></div> : "-"}</td>
             </tr>)}</tbody>
           </table>
-        </div> : null}
+        </div></> : null}
       </CardContent>
     </Card>
   </PageSurface>;

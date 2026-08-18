@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
@@ -19,6 +20,8 @@ const widths = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg", xl: "max-w-xl",
 
 export function ReplacementOnboardingShell({ eyebrow, title, description, progress, width = "md", children, footer }: OnboardingShellProps) {
   const { t } = useTranslation("onboarding");
+  const pathname = usePathname();
+  const progressRoutes = ["/onboarding/business", "/onboarding/website", "/onboarding/knowledge", "/onboarding/greeting", "/onboarding/verify-phone", "/onboarding/verify-phone/code", "/onboarding/plan", "/onboarding/number", "/onboarding/attribution"];
   return (
     <div className="relative flex min-h-svh w-full flex-col bg-background text-foreground">
       <main className="flex flex-1 flex-col items-center px-6 py-12">
@@ -37,7 +40,7 @@ export function ReplacementOnboardingShell({ eyebrow, title, description, progre
         </div>
       </main>
       <footer className="flex flex-col items-center gap-4 px-6 pb-12 pt-16">
-        {progress ? <div aria-label={`${progress.current} of ${progress.total}`} className="flex items-center gap-2">{Array.from({ length: progress.total }, (_, index) => <span className={cn("size-1.5 rounded-full bg-muted", index + 1 === progress.current && "bg-foreground")} key={index} />)}</div> : null}
+        {progress ? <nav aria-label={`${progress.current} of ${progress.total}`} className="flex items-center gap-1.5">{Array.from({ length: progress.total }, (_, index) => { const step = index + 1; const href = progressRoutes[Math.min(index, progressRoutes.length - 1)]; const completed = step < progress.current; const active = step === progress.current; return <Link aria-current={active ? "step" : undefined} className={cn("block rounded-full transition-all", active ? "h-1.5 w-6 bg-foreground" : completed ? "size-1.5 bg-foreground/50 hover:bg-foreground" : "size-1.5 bg-muted hover:bg-muted-foreground")} href={href ?? pathname} key={step} />; })}</nav> : null}
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <Link className="hover:text-foreground" href="/terms" target="_blank">{t("shell.terms")}</Link>
           <span aria-hidden="true">·</span>

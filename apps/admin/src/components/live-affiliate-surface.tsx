@@ -34,6 +34,7 @@ function date(value: string): string {
 export function LiveAffiliateSurface() {
   const affiliate = useQuery({ queryKey: ["affiliate"], queryFn: getAffiliate });
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
   const profile = affiliate.data?.profile;
   const stats = affiliate.data?.stats;
 
@@ -45,6 +46,9 @@ export function LiveAffiliateSurface() {
   }
 
   return <PageSurface title="Affiliate" description="Track referral clicks, attributed workspaces, commissions, and payouts.">
+    <div className="flex w-full items-center gap-1 overflow-x-auto rounded-full border bg-muted/30 p-1"><div className="flex min-w-max gap-1">{([ ["overview", "Overview"], ["quickstart", "Quickstart"], ["earnings", "Earnings"], ["payouts", "Payouts"], ["faq", "FAQ"], ["settings", "Settings"] ] as const).map(([value, label]) => <button className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${activeTab === value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`} key={value} onClick={() => setActiveTab(value)} type="button">{label}</button>)}</div></div>
+    {activeTab === "quickstart" ? <Card><CardHeader><CardTitle>Quickstart</CardTitle><CardDescription>Share your referral link with businesses that need a receptionist.</CardDescription></CardHeader><CardContent className="space-y-3 text-sm text-muted-foreground"><p>Copy your referral link, publish it in your community, and eligible workspace conversions will appear in Earnings.</p><p>Commissions become payable after the clearing period shown in the commission table.</p></CardContent></Card> : null}
+    {activeTab === "faq" ? <Card><CardHeader><CardTitle>Affiliate FAQ</CardTitle></CardHeader><CardContent className="space-y-4 text-sm"><div><p className="font-medium">When is a commission credited?</p><p className="mt-1 text-muted-foreground">After the referred workspace completes an eligible payment and the clearing period passes.</p></div><div><p className="font-medium">How do payouts work?</p><p className="mt-1 text-muted-foreground">Cleared commissions are grouped into the next payout period.</p></div></CardContent></Card> : null}
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {[["Referral clicks", stats ? String(stats.clickCount) : "-"], ["Attributed workspaces", stats ? String(stats.referralCount) : "-"], ["Pending commission", stats ? money(stats.pendingCommissionCents) : "-"], ["Paid commission", stats ? money(stats.paidCommissionCents) : "-"]].map(([label, value]) => <Card key={label}><CardContent className="p-5"><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{value}</p></CardContent></Card>)}
     </div>

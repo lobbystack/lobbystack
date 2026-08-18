@@ -18,11 +18,12 @@ import {
   UsersIcon,
   WorkflowIcon,
 } from "lucide-react";
-import { Check, ChevronsUpDown, Contrast, LogOut, Plus, UserRound } from "lucide-react";
+import { Check, ChevronsUpDown, CircleAlert, Contrast, LogOut, Plus, UserRound } from "lucide-react";
 import { TeamSwitcher } from "@/components/layout/team-switcher";
 import { Main } from "@/components/layout/main";
 import { SiteHeader } from "@/components/site-header";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -105,6 +106,7 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
 
   return (
     <div className="flex h-svh w-full flex-col overflow-hidden bg-background">
+      <BillingBanner />
       <SidebarProvider
         className="relative min-h-0 flex-1 overflow-hidden"
         defaultOpen={getSidebarDefaultOpen()}
@@ -125,6 +127,14 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
       </SidebarProvider>
     </div>
   );
+}
+
+function BillingBanner() {
+  const businesses = useQuery({ queryKey: ["businesses"], queryFn: getBusinesses });
+  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
+  const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: async () => await (await fetch(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`, { credentials: "include" })).json() as { account?: { subscriptionState?: string | null } }, enabled: Boolean(business?.businessId) });
+  if (billing.data?.account?.subscriptionState !== "past_due") return null;
+  return <div className="relative z-50 shrink-0 border-b border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-100"><div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:px-6"><div className="flex items-start gap-3"><CircleAlert className="mt-0.5 size-5 shrink-0 text-amber-600" /><div><p className="text-sm font-medium">Payment needs attention</p><p className="text-sm text-amber-900/80 dark:text-amber-100/80">Your subscription is past due. Update billing details to keep calls and messages active.</p></div></div><Button nativeButton={false} render={<Link href="/settings/plan" />} size="sm" variant="outline">Review billing</Button></div></div>;
 }
 
 function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
