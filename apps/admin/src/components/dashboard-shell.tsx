@@ -19,8 +19,6 @@ import {
   WorkflowIcon,
 } from "lucide-react";
 import { Check, ChevronsUpDown, Contrast, LogOut, Plus, UserRound } from "lucide-react";
-import { useTheme } from "next-themes";
-
 import { TeamSwitcher } from "@/components/layout/team-switcher";
 import { Main } from "@/components/layout/main";
 import { SiteHeader } from "@/components/site-header";
@@ -60,6 +58,7 @@ import { cn } from "@/lib/utils";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { DashboardUtilityBar } from "./dashboard-utility-bar";
 import { DashboardSetupGuideCard } from "./dashboard-setup-guide-card";
+import { useTheme } from "./theme-provider";
 
 type Business = {
   businessId: string;

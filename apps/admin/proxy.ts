@@ -40,7 +40,7 @@ function securityHeaders(): Record<string, string> {
       "base-uri 'self'",
       "frame-ancestors 'none'",
       "object-src 'none'",
-      "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://*.posthog.com",
+      `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com https://*.posthog.com`,
       "style-src 'self' 'unsafe-inline'",
       `img-src 'self' data: blob: https:`,
       `connect-src 'self' ${posthogOrigin} https://challenges.cloudflare.com https://*.posthog.com wss:`,
