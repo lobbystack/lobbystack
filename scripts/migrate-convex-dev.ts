@@ -77,6 +77,11 @@ function slug(value: string | undefined, id: string): string {
   return base;
 }
 
+function onboardingStage(value: unknown): string {
+  const stage = text(value, "create_business")!;
+  return stage === "completed" ? "complete" : stage;
+}
+
 function contentHash(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -251,7 +256,7 @@ async function main(): Promise<void> {
         id: ids.businesses.get(row._id)!, legacy_convex_id: row._id, slug: slug(text(row.slug), row._id), name: text(row.name, `Legacy business ${row._id}`)!,
         timezone: text(row.timezone, "UTC"), default_locale: text(row.defaultLocale, "en"), business_type: text(row.businessType, "general"),
         deployment_mode: text(row.deploymentMode, "cloud"), status: text(row.status, "active"), website_url: text(row.websiteUrl),
-        onboarding_stage: text(row.onboardingStage, "create_business"), telemetry_enabled: true, created_at: created(row), updated_at: updated(row),
+        onboarding_stage: onboardingStage(row.onboardingStage), telemetry_enabled: true, created_at: created(row), updated_at: updated(row),
       }, ["legacy_convex_id"]);
       count("businesses");
     }
