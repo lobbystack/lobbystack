@@ -12,7 +12,7 @@ export function AgentShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { t } = useTranslation("agent");
   const section = pathname.includes("/knowledge") ? "knowledge" : pathname.includes("/services") ? "services" : pathname.includes("/rules") ? "rules" : "basicSettings";
-  const actionTarget = section === "knowledge" ? "#knowledge-source-form" : section === "services" ? "#service-form" : section === "rules" ? "#rule-form" : null;
+  const actionTarget = section === "knowledge" ? "#knowledge-source-form" : section === "rules" ? "#rule-form" : null;
   const actionLabel = section === "knowledge" ? t("sections.knowledge.addKnowledge") : section === "services" ? t("sections.services.addKnowledge") : section === "rules" ? t("sections.rules.addKnowledge") : null;
   return (
     <section className="flex flex-1 flex-col gap-6">
