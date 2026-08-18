@@ -77,6 +77,7 @@
     "replacement:parity": "tsx scripts/replacement-parity-check.ts",
     "replacement:admin-ui-parity": "tsx scripts/admin-ui-parity-check.ts",
     "replacement:import": "tsx --tsconfig tsconfig.base.json scripts/replacement-import.ts",
+    "convex:dev:migrate": "tsx --tsconfig tsconfig.base.json scripts/migrate-convex-dev.ts",
     "replacement:import-check": "tsx --tsconfig tsconfig.base.json scripts/replacement-import-check.ts",
     "replacement:reconciliation": "tsx --tsconfig tsconfig.base.json scripts/replacement-reconciliation.ts",
     "replacement:drift": "tsx scripts/check-drift.ts",
