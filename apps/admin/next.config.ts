@@ -28,13 +28,14 @@ const nextConfig: NextConfig = {
   },
   poweredByHeader: false,
   async headers() {
+    const developmentScriptSource = process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'";
     const contentSecurityPolicy = [
       "default-src 'self'",
       "base-uri 'self'",
       "form-action 'self'",
       "frame-ancestors 'none'",
       "object-src 'none'",
-      "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://*.posthog.com",
+      `script-src 'self' 'unsafe-inline'${developmentScriptSource} https://challenges.cloudflare.com https://*.posthog.com`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
