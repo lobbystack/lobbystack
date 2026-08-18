@@ -11,12 +11,14 @@ const nextConfig: NextConfig = {
     "@lobbystack/providers",
     "@lobbystack/shared",
   ],
-  serverExternalPackages: [
-    "@lobbystack/telemetry/node",
-    "@opentelemetry/sdk-node",
-    "@opentelemetry/exporter-logs-otlp-grpc",
-    "@grpc/grpc-js",
-  ],
+  serverExternalPackages: process.env.NODE_ENV === "production"
+    ? [
+        "@lobbystack/telemetry/node",
+        "@opentelemetry/sdk-node",
+        "@opentelemetry/exporter-logs-otlp-grpc",
+        "@grpc/grpc-js",
+      ]
+    : [],
   turbopack: {
     resolveAlias: {
       "@lobbystack/telemetry": "../../packages/telemetry/dist/index.js",
