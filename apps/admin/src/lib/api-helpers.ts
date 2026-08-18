@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
 
-import { createDatabaseClient, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { createDatabaseClient, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { requireBusinessMembership, type AuthorizationError } from "@lobbystack/domain";
 
 import { getSession, type Session } from "./auth";
@@ -101,6 +102,17 @@ export function businessIdFromRequest(request: Request): string | null {
   return new URL(request.url).searchParams.get("businessId") ?? request.headers.get("x-business-id");
 }
 
+async function activeBusinessIdForUser(userId: string): Promise<string | null> {
+  return await withBusinessTransaction(getAppDatabase().db, { userId, actorType: "operator" }, async (tx) => {
+    const [user] = await tx
+      .select({ activeBusinessId: users.activeBusinessId })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    return user?.activeBusinessId ?? null;
+  });
+}
+
 export async function requireInternalService(request: Request, body: string | Uint8Array): Promise<void> {
   const token = process.env.INTERNAL_SERVICE_TOKEN;
   if (process.env.NODE_ENV !== "production" && token && request.headers.get("x-internal-service-token") === token) {
@@ -134,7 +146,7 @@ export async function withOperatorTransaction<T>(
   options: { minimumRole?: "viewer" | "scheduler" | "business_admin" | "business_owner" } = {},
 ): Promise<T> {
   const session = await requireApiSession(request);
-  const businessId = businessIdFromRequest(request);
+  const businessId = businessIdFromRequest(request) ?? await activeBusinessIdForUser(session.user.id);
   if (!businessId) {
     throw jsonError("A businessId is required.", 400, "business_required");
   }

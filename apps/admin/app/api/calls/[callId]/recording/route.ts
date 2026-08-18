@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { createObjectDownload, getCallDetail } from "@lobbystack/domain";
 import { S3StorageProvider } from "@lobbystack/providers";
-import { asApiResponse, businessIdFromRequest, requireApiSession } from "@/lib/api-helpers";
+import { asApiResponse, withOperatorTransaction } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
@@ -20,11 +20,13 @@ function storageProvider(): S3StorageProvider {
 
 export async function GET(request: Request, { params }: { params: Promise<{ callId: string }> }) {
   try {
-    const session = await requireApiSession(request);
-    const businessId = businessIdFromRequest(request);
-    if (!businessId) return NextResponse.json({ error: "A businessId is required." }, { status: 400 });
     const { callId } = await params;
-    const detail = await getCallDetail(createDomainContext(), { userId: session.user.id, businessId, callId });
+    const resolved = await withOperatorTransaction(request, async ({ session, businessId }) => ({
+      session,
+      businessId,
+      detail: await getCallDetail(createDomainContext(), { userId: session.user.id, businessId, callId }),
+    }));
+    const { session, businessId, detail } = resolved;
     if (!detail) return NextResponse.json({ error: "Call not found.", code: "not_found" }, { status: 404 });
     if (detail.recording.state !== "available" || !detail.recording.objectId) {
       const status = detail.recording.state === "expired" ? 410 : 409;

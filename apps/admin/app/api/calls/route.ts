@@ -1,26 +1,23 @@
 import { NextResponse } from "next/server";
 
 import { listCalls, startCall } from "@lobbystack/domain";
-import { asApiResponse, readJson, businessIdFromRequest, requireApiSession, withOperatorTransaction } from "@/lib/api-helpers";
+import { asApiResponse, readJson, withOperatorTransaction } from "@/lib/api-helpers";
 import { createDomainContext, createWorkerDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    const session = await requireApiSession(request);
-    const businessId = businessIdFromRequest(request);
-    if (!businessId) return NextResponse.json({ error: "A businessId is required." }, { status: 400 });
     const url = new URL(request.url);
     const limit = Number(url.searchParams.get("limit") ?? 50);
     const offset = Number(url.searchParams.get("offset") ?? 0);
-    return NextResponse.json(await listCalls(createDomainContext(), {
+    return NextResponse.json(await withOperatorTransaction(request, async ({ session, businessId }) => await listCalls(createDomainContext(), {
       userId: session.user.id,
       businessId,
       ...(url.searchParams.get("search") ? { search: url.searchParams.get("search")! } : {}),
       ...(Number.isFinite(limit) ? { limit } : {}),
       ...(Number.isFinite(offset) ? { offset } : {}),
-    }));
+    })));
   } catch (error) { return asApiResponse(error); }
 }
 

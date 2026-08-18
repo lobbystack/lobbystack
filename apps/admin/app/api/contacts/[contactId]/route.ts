@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { anonymizeContact, getContactDetail, setContactSmsManualBlock } from "@lobbystack/domain";
-import { asApiResponse, businessIdFromRequest, readJson, requireApiSession } from "@/lib/api-helpers";
+import { asApiResponse, businessIdFromRequest, readJson, requireApiSession, withOperatorTransaction } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
@@ -9,10 +9,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request, context: { params: Promise<{ contactId: string }> }) {
   try {
     const { contactId } = await context.params;
-    const session = await requireApiSession(request);
-    const businessId = businessIdFromRequest(request);
-    if (!businessId) return NextResponse.json({ error: "A businessId is required." }, { status: 400 });
-    return NextResponse.json(await getContactDetail(createDomainContext(), { userId: session.user.id, businessId, contactId }));
+    return NextResponse.json(await withOperatorTransaction(request, async ({ session, businessId }) => await getContactDetail(createDomainContext(), { userId: session.user.id, businessId, contactId })));
   } catch (error) {
     return asApiResponse(error);
   }
