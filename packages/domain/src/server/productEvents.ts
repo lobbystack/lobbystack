@@ -35,6 +35,7 @@ export type DurableAiUsage = {
   cachedInputTokens?: number;
   reasoningTokens?: number;
   totalCostUsd?: number;
+  isStreaming?: boolean;
 };
 
 export async function recordAiGenerationEvent(
@@ -60,7 +61,7 @@ export async function recordAiGenerationEvent(
       model: input.model,
       latencyMs: input.latencyMs,
       isError: false,
-      isStreaming: false,
+      isStreaming: input.isStreaming ?? false,
       ...(input.inputTokens !== undefined ? { inputTokens: input.inputTokens } : {}),
       ...(input.outputTokens !== undefined ? { outputTokens: input.outputTokens } : {}),
       ...(input.totalTokens !== undefined ? { totalTokens: input.totalTokens } : {}),

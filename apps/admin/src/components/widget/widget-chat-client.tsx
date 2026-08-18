@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Phone, PhoneOff, Send } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport, type UIMessage } from "ai";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 
@@ -29,14 +31,22 @@ type WidgetConfigPayload = {
   voiceEnabled?: boolean;
 };
 
-type ChatMessage = { id: string; role: "user" | "assistant"; content: string };
-type ChatPart =
-  | { type: "start"; messageId?: string }
-  | { type: "text-start"; id: string }
-  | { type: "text-delta"; id: string; delta: string }
-  | { type: "text-end"; id: string }
-  | { type: "finish"; finishReason?: string; messageMetadata?: { automationState?: string } }
-  | { type: "error"; errorText: string };
+type WidgetMessageMetadata = { automationState?: "ai_active" | "human_handoff" };
+type WidgetMessage = UIMessage<WidgetMessageMetadata>;
+
+function messageText(message: WidgetMessage): string {
+  return message.parts.filter((part): part is Extract<WidgetMessage["parts"][number], { type: "text" }> => part.type === "text").map((part) => part.text).join("");
+}
+
+function chatErrorKey(error: unknown): string {
+  if (!(error instanceof Error)) return "chat.sendingFailed";
+  try {
+    const parsed = JSON.parse(error.message) as { code?: unknown };
+    return parsed.code === "chat_ai_limit_reached" ? "chat.limitReached" : "chat.sendingFailed";
+  } catch {
+    return "chat.sendingFailed";
+  }
+}
 
 function renderSafeMarkdown(value: string): string {
   return value
@@ -77,18 +87,53 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
   const [parentVisitorId, setParentVisitorId] = useState<string | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [parentOrigin, setParentOrigin] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
-  const [sending, setSending] = useState(false);
-  const [handoff, setHandoff] = useState(false);
   const [leadOpen, setLeadOpen] = useState(false);
   const [leadDone, setLeadDone] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [configState, setConfigState] = useState<WidgetConfigPayload | null>(null);
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const threadRef = useRef<HTMLDivElement | null>(null);
   const [lead, setLead] = useState({ name: "", email: "", phone: "" });
   const [leadSubmitting, setLeadSubmitting] = useState(false);
+
+  const visitorId = useMemo(() => (parentVisitorId ?? visitorIdRef.current) || "", [parentVisitorId]);
+
+  const transport = useMemo(() => new DefaultChatTransport<WidgetMessage>({
+    api: "/api/widget/chat",
+    credentials: "include",
+    headers: () => ({
+      ...(sessionToken ? { authorization: `Bearer ${sessionToken}` } : {}),
+      ...(parentOrigin ? { "x-widget-parent-origin": parentOrigin } : {}),
+    }),
+    prepareSendMessagesRequest: ({ messages }) => {
+      const lastUserMessage = [...messages].reverse().find((message) => message.role === "user");
+      return {
+        body: {
+          visitorId: visitorIdRef.current || visitorId,
+          messageId: lastUserMessage?.id ?? (typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `m-${Date.now()}`),
+          content: lastUserMessage ? messageText(lastUserMessage) : "",
+          locale: i18n.language === "fr" ? "fr" : "en",
+        },
+      };
+    },
+  }), [parentOrigin, sessionToken, visitorId]);
+
+  const {
+    messages,
+    setMessages,
+    sendMessage,
+    status,
+    clearError,
+  } = useChat<WidgetMessage>({
+    id: `widget:${widgetKey}`,
+    transport,
+    onError: (error) => setSubmitError(chatErrorKey(error)),
+  });
+
+  const sending = status === "submitted" || status === "streaming";
+  const handoff = messages.some((message) => message.metadata?.automationState === "human_handoff");
+  const lastMessage = messages.at(-1);
+  const streamingMessageId = status === "streaming" && lastMessage?.role === "assistant" ? lastMessage.id : null;
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -131,8 +176,6 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
     if (locale === "en" || locale === "fr") void i18n.changeLanguage(locale);
   }, [configState]);
 
-  const visitorId = useMemo(() => (parentVisitorId ?? visitorIdRef.current) || "", [parentVisitorId]);
-
   useEffect(() => {
     if (parentVisitorId) {
       try {
@@ -153,7 +196,13 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
         const response = await fetch(url, { headers: { authorization: `Bearer ${sessionToken}`, "x-widget-parent-origin": parentOrigin ?? "" }, credentials: "include" });
         if (!response.ok) return;
         const data = await response.json() as { messages?: Array<{ id: string; role: "user" | "assistant"; content: string }> };
-        if (Array.isArray(data.messages)) setMessages(data.messages.map((message) => ({ id: message.id, role: message.role === "assistant" ? "assistant" : "user", content: message.content })));
+        if (Array.isArray(data.messages)) {
+          setMessages(data.messages.map((message) => ({
+            id: message.id,
+            role: message.role === "assistant" ? "assistant" : "user",
+            parts: [{ type: "text", text: message.content }],
+          })));
+        }
       } catch {
         /* transcript resume is best effort */
       }
@@ -163,7 +212,7 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
 
   useEffect(() => {
     threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight });
-  }, [messages, streamingMessageId]);
+  }, [messages, status]);
 
   useEffect(() => {
     const reportHeight = () => {
@@ -183,67 +232,12 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
     if (!content || sending) return;
     if (!visitorIdRef.current) return;
     setSubmitError(null);
-    const optimistic: ChatMessage = { id: typeof crypto.randomUUID === "function" ? crypto.randomUUID() as string : `m-${Date.now()}`, role: "user", content };
-    setMessages((current) => [...current, optimistic]);
     setDraft("");
-    setSending(true);
-    const assistantId = typeof crypto.randomUUID === "function" ? crypto.randomUUID() as string : `a-${Date.now()}`;
-    setStreamingMessageId(assistantId);
     try {
-      const response = await fetch("/api/widget/chat", {
-        method: "POST",
-        credentials: "include",
-        headers: { "content-type": "application/json", authorization: `Bearer ${sessionToken}`, "x-widget-parent-origin": parentOrigin ?? "" },
-        body: JSON.stringify({ visitorId: visitorIdRef.current, messageId: optimistic.id, content, locale: i18n.language === "fr" ? "fr" : "en" }),
-      });
-      if (!response.ok || !response.body) {
-        const body = await response.json().catch(() => null) as { code?: string } | null;
-        if (body?.code === "chat_ai_limit_reached") setSubmitError("chat.limitReached");
-        else setSubmitError("chat.sendingFailed");
-        return;
-      }
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let assistantText = "";
-      setMessages((current) => [...current, { id: assistantId, role: "assistant", content: "" }]);
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed.startsWith("data:")) continue;
-          const raw = trimmed.slice(5).trim();
-          if (!raw) continue;
-          let part: ChatPart;
-          try {
-            part = JSON.parse(raw) as ChatPart;
-          } catch {
-            continue;
-          }
-          if (part.type === "text-start") {
-            setMessages((current) => current.some((message) => message.id === assistantId) ? current : [...current, { id: assistantId, role: "assistant", content: "" }]);
-          } else if (part.type === "text-delta") {
-            assistantText += part.delta;
-            setMessages((current) => current.map((message) => (message.id === assistantId ? { ...message, content: assistantText } : message)));
-          } else if (part.type === "error") {
-            setSubmitError("chat.sendingFailed");
-          } else if (part.type === "finish") {
-            setHandoff(part.messageMetadata?.automationState === "human_handoff");
-          }
-        }
-      }
-      if (!assistantText) {
-        setMessages((current) => current.filter((message) => message.id !== assistantId));
-      }
+      clearError();
+      await sendMessage({ text: content });
     } catch {
       setSubmitError("chat.sendingFailed");
-    } finally {
-      setStreamingMessageId(null);
-      setSending(false);
     }
   }
 
@@ -313,11 +307,11 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
         {messages.map((message) => (
           <div key={message.id} className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}>
             <div className={cn("max-w-[85%] rounded-2xl px-3 py-2 text-sm", message.role === "user" ? "rounded-br-sm text-white" : "rounded-bl-sm bg-zinc-100")} style={message.role === "user" ? { backgroundColor: color } : undefined}>
-              <p><MessageContent content={message.content} pending={streamingMessageId === message.id} /></p>
+              <p><MessageContent content={messageText(message)} pending={streamingMessageId === message.id} /></p>
             </div>
           </div>
         ))}
-        {streamingMessageId && messages.at(-1)?.id !== streamingMessageId ? <div className="flex justify-start"><div className="rounded-2xl rounded-bl-sm bg-zinc-100 px-3 py-2 text-sm text-zinc-400">{t("chat.pendingLabel")}</div></div> : null}
+        {sending && messages.at(-1)?.role === "user" ? <div className="flex justify-start"><div className="rounded-2xl rounded-bl-sm bg-zinc-100 px-3 py-2 text-sm text-zinc-400">{t("chat.pendingLabel")}</div></div> : null}
         {submitError ? <p className="text-center text-xs text-red-600">{t(submitError)}</p> : null}
       </div>
 

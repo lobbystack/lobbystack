@@ -90,21 +90,66 @@ describe("provider-agnostic AI providers", () => {
     expect(mocks.createOpenAICompatible).toHaveBeenCalledWith({ name: "ollama", baseURL: "http://localhost:11434/v1" });
   });
 
+  it("requires credentials for the default OpenAI endpoint", () => {
+    expect(createTextAiProvider({ AI_CHAT_API_KEY: "", OPENAI_API_KEY: "" })).toBeUndefined();
+  });
+
+  it("falls back to OPENAI_API_KEY for the default endpoint", () => {
+    const provider = createTextAiProvider({ OPENAI_API_KEY: "fallback-key" });
+    expect(provider).toBeDefined();
+    expect(mocks.createOpenAICompatible).toHaveBeenCalledWith({ name: "openai", baseURL: "https://api.openai.com/v1", apiKey: "fallback-key" });
+  });
+
   it("streams reply chunks", async () => {
     mocks.streamText.mockReturnValue({
       textStream: (async function* () {
         yield "Hel";
         yield "lo";
       })(),
+      usage: Promise.resolve({ inputTokens: 2, outputTokens: 1, totalTokens: 3, inputTokenDetails: {}, outputTokenDetails: {} }),
+      finishReason: Promise.resolve("stop"),
     });
 
     const provider = new OpenAiCompatibleTextProvider({ apiKey: "test" });
     const chunks: string[] = [];
-    for await (const chunk of provider.streamReply({ instructions: "x", prompt: "Hi" })) {
+    const stream = provider.streamReply({ instructions: "x", prompt: "Hi" });
+    for await (const chunk of stream.textStream) {
       chunks.push(chunk);
     }
 
     expect(chunks).toEqual(["Hel", "lo"]);
+    await expect(stream.usage).resolves.toMatchObject({ inputTokens: 2, outputTokens: 1, totalTokens: 3 });
+    await expect(stream.finishReason).resolves.toBe("stop");
     expect(mocks.streamText).toHaveBeenCalled();
+  });
+
+  it("passes cancellation and timeout controls to streaming generations", () => {
+    mocks.streamText.mockReturnValue({
+      textStream: (async function* () { yield "ok"; })(),
+      usage: Promise.resolve({ inputTokens: 1, outputTokens: 1, totalTokens: 2, inputTokenDetails: {}, outputTokenDetails: {} }),
+      finishReason: Promise.resolve("stop"),
+    });
+    const controller = new AbortController();
+    const onError = vi.fn();
+    const onAbort = vi.fn();
+    const provider = new OpenAiCompatibleTextProvider({ apiKey: "test", timeoutMs: 1234, chunkTimeoutMs: 456 });
+    provider.streamReply({ instructions: "x", prompt: "Hi", abortSignal: controller.signal, onError, onAbort });
+    const options = mocks.streamText.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    expect(options).toMatchObject({ abortSignal: controller.signal, timeout: { totalMs: 1234, chunkMs: 456 } });
+    (options.onError as (event: { error: unknown }) => void)({ error: new Error("provider") });
+    (options.onAbort as () => void)();
+    expect(onError).toHaveBeenCalled();
+    expect(onAbort).toHaveBeenCalled();
+  });
+
+  it("limits embedding concurrency and composes caller cancellation with a timeout", async () => {
+    mocks.embedMany.mockResolvedValue({ embeddings: [new Array(1536).fill(0.5)], usage: { tokens: 1 } });
+    const controller = new AbortController();
+    const provider = new OpenAiCompatibleEmbeddingProvider({ apiKey: "test", timeoutMs: 1234, maxParallelCalls: 3 });
+    await provider.embed(["Greeting"], undefined, { abortSignal: controller.signal });
+    const options = mocks.embedMany.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    expect(options.maxParallelCalls).toBe(3);
+    expect(options.abortSignal).toBeInstanceOf(AbortSignal);
+    expect(options.abortSignal).not.toBe(controller.signal);
   });
 });

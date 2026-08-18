@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
+    "@ai-sdk/react": "^4.0.70",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
@@ -30,7 +31,7 @@
     "@lobbystack/telemetry": "workspace:*",
     "@tanstack/react-query": "^5.75.0",
     "@tanstack/react-table": "^8.21.3",
-    "ai": "^6.0.116",
+    "ai": "^7.0.67",
     "better-auth": "^1.4.18",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

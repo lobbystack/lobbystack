@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   loadAutomationState: vi.fn(),
   getCachedBusinessSnapshot: vi.fn(),
   loadWidgetChatHistory: vi.fn(),
+  recordAiGenerationEvent: vi.fn(),
   withBusinessTransaction: vi.fn(),
   reserveWidgetChatUsageInTransaction: vi.fn(),
   getWorkerDatabase: vi.fn(),
@@ -25,6 +26,7 @@ vi.mock("@lobbystack/domain", () => ({
   getOrCreateWidgetConversation: mocks.getOrCreateWidgetConversation,
   getCachedBusinessSnapshot: mocks.getCachedBusinessSnapshot,
   loadWidgetChatHistory: mocks.loadWidgetChatHistory,
+  recordAiGenerationEvent: mocks.recordAiGenerationEvent,
   registerWidgetVisitor: mocks.registerWidgetVisitor,
   reserveWidgetChatUsageInTransaction: mocks.reserveWidgetChatUsageInTransaction,
   queueOperatorAlert: mocks.queueOperatorAlert,
@@ -119,11 +121,18 @@ beforeEach(() => {
   mocks.getOrCreateWidgetConversation.mockResolvedValue({ conversationId });
   mocks.appendMessage.mockResolvedValue(inboundMessageId);
   mocks.queueOperatorAlert.mockResolvedValue(undefined);
+  mocks.recordAiGenerationEvent.mockResolvedValue("event-id");
   mocks.registerWidgetVisitor.mockResolvedValue({ visitorId, contactId: null });
   mocks.getWorkerDatabase.mockReturnValue({ db: {} });
   mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(automationTx([])));
   mocks.reserveWidgetChatUsageInTransaction.mockResolvedValue({ allowed: true, plan: "scale" });
-  mocks.createTextAiProvider.mockReturnValue(null);
+  mocks.createTextAiProvider.mockReturnValue({
+    streamReply: vi.fn().mockReturnValue({
+      textStream: (async function* () { yield "Thanks"; })(),
+      usage: Promise.resolve({ provider: "test", model: "test", latencyMs: 1, inputTokens: 1, outputTokens: 1, totalTokens: 2 }),
+      finishReason: Promise.resolve("stop"),
+    }),
+  });
 });
 
 afterEach(() => {
@@ -164,7 +173,15 @@ describe("POST /api/widget/chat", () => {
     const response = await POST(widgetRequest());
     expect(response.status).toBe(402);
     expect(await response.json()).toMatchObject({ code: "chat_ai_limit_reached" });
-    expect(mocks.createTextAiProvider).not.toHaveBeenCalled();
+    expect(mocks.createTextAiProvider).toHaveBeenCalled();
+  });
+
+  it("returns a configuration error before reserving chat allowance", async () => {
+    mocks.createTextAiProvider.mockReturnValue(null);
+    const response = await POST(widgetRequest());
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ code: "ai_provider_unavailable" });
+    expect(mocks.reserveWidgetChatUsageInTransaction).not.toHaveBeenCalled();
   });
 
   it("streams an AI reply and persists the outbound message when automation is active", async () => {
@@ -172,13 +189,12 @@ describe("POST /api/widget/chat", () => {
     mocks.getCachedBusinessSnapshot.mockResolvedValue({ businessId } as BusinessContextSnapshot);
     mocks.loadWidgetChatHistory.mockResolvedValue([]);
     const streamReply = vi.fn().mockReturnValue({
-      [Symbol.asyncIterator]() {
-        let index = 0;
-        const parts = ["Thanks", " for reaching out!"];
-        return {
-          next: async () => ({ done: index >= parts.length, value: parts[index++] }),
-        };
-      },
+      textStream: (async function* () {
+        yield "Thanks";
+        yield " for reaching out!";
+      })(),
+      usage: Promise.resolve({ provider: "test", model: "test", latencyMs: 1, inputTokens: 1, outputTokens: 1, totalTokens: 2 }),
+      finishReason: Promise.resolve("stop"),
     });
     class FakeSignedProvider {
       streamReply = streamReply;
@@ -192,5 +208,18 @@ describe("POST /api/widget/chat", () => {
     expect(body).toContain("Thanks");
     expect(body).toContain("for reaching out!");
     expect(mocks.appendMessage).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ direction: "outbound", channel: "web_chat", aiGenerated: true }));
+  });
+
+  it("does not expose provider error details in the UI stream", async () => {
+    mocks.createTextAiProvider.mockReturnValue({
+      streamReply: vi.fn().mockReturnValue({
+        textStream: (async function* () { throw new Error("secret provider token"); })(),
+        usage: Promise.resolve({ provider: "test", model: "test", latencyMs: 1 }),
+        finishReason: Promise.resolve("error"),
+      }),
+    });
+    const body = await readSse(await POST(widgetRequest()));
+    expect(body).toContain("The chat could not be processed.");
+    expect(body).not.toContain("secret provider token");
   });
 });

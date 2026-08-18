@@ -12,13 +12,13 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^2.0.69",
+    "@ai-sdk/openai-compatible": "^3.0.31",
     "@aws-sdk/client-s3": "^3.1017.0",
     "@aws-sdk/s3-request-presigner": "^3.1017.0",
     "@lobbystack/contracts": "workspace:*",
     "@lobbystack/shared": "workspace:*",
     "@lobbystack/telemetry": "workspace:*",
-    "ai": "^6.0.116",
+    "ai": "^7.0.67",
     "nodemailer": "^7.0.6",
     "standardwebhooks": "^1.0.0",
     "twilio": "^5.12.2"
