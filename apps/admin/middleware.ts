@@ -28,7 +28,6 @@ function hasValidCsrfOrigin(request: NextRequest): boolean {
 
 function securityHeaders(): Record<string, string> {
   const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com";
-  const developmentScriptSource = process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'";
   let posthogOrigin = "https://us.i.posthog.com";
   try {
     posthogOrigin = new URL(posthogHost).origin;
@@ -41,7 +40,7 @@ function securityHeaders(): Record<string, string> {
       "base-uri 'self'",
       "frame-ancestors 'none'",
       "object-src 'none'",
-      `script-src 'self' 'unsafe-inline'${developmentScriptSource} https://challenges.cloudflare.com https://*.posthog.com`,
+      "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://*.posthog.com",
       "style-src 'self' 'unsafe-inline'",
       `img-src 'self' data: blob: https:`,
       `connect-src 'self' ${posthogOrigin} https://challenges.cloudflare.com https://*.posthog.com wss:`,
