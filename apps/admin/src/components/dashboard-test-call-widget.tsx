@@ -9,7 +9,7 @@ import { Button } from "./ui/button";
 
 const endpoint = process.env.NEXT_PUBLIC_WEB_CALL_ENDPOINT ?? "https://voice.lobbystack.com/web-call/sessions";
 
-export function DashboardTestCallWidget({ businessId, businessSlug }: { businessId: string; businessSlug: string }) {
+export function DashboardTestCallWidget({ businessId, businessSlug, className }: { businessId: string; businessSlug: string; className?: string }) {
   const [proofError, setProofError] = useState<string | null>(null);
   const { t } = useTranslation("admin");
   const call = useWebVoiceCall({ businessSlug, endpoint, widgetId: "lobbystack-dashboard-test-call", getStartPayload: async () => {
@@ -25,7 +25,7 @@ export function DashboardTestCallWidget({ businessId, businessSlug }: { business
   }, [call.remoteAudioRef, call.remoteStream]);
 
   const message = proofError ?? (call.errorKey ? errorMessage(call.errorKey) : null);
-  return <div className="flex flex-wrap items-center gap-2"><audio ref={call.remoteAudioRef} autoPlay className="hidden" /><Button aria-label={t("utilities.testCall")} disabled={call.isBusy} onClick={() => { setProofError(null); if (call.isCallActive) void call.forceEndCall(); else void call.startCall(); }} size="sm" variant={call.isCallActive ? "destructive" : "outline"}>{call.isCallActive ? <PhoneOff className="size-4" /> : call.isBusy ? <Mic className="size-4 animate-pulse" /> : <Phone className="size-4" />}{call.isCallActive ? t("utilities.endTestCall") : call.isBusy ? t("utilities.connecting") : t("utilities.testCall")}</Button>{message ? <span className="max-w-64 text-xs text-destructive" role="alert">{message}</span> : null}</div>;
+  return <div className={`flex items-center gap-2 ${className ?? ""}`}><audio ref={call.remoteAudioRef} autoPlay className="hidden" /><Button aria-label={t("utilities.testCall")} disabled={call.isBusy} onClick={() => { setProofError(null); if (call.isCallActive) void call.forceEndCall(); else void call.startCall(); }} size="sm" variant={call.isCallActive ? "destructive" : "outline"}>{call.isCallActive ? <PhoneOff className="size-4" /> : call.isBusy ? <Mic className="size-4 animate-pulse" /> : <Phone className="size-4" />}{call.isCallActive ? t("utilities.endTestCall") : call.isBusy ? t("utilities.connecting") : t("utilities.testCall")}</Button>{message ? <span className="max-w-64 text-xs text-destructive" role="alert">{message}</span> : null}</div>;
 }
 
 function errorMessage(error: WebVoiceErrorKey): string {

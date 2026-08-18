@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, type ComponentType } from "react";
+import { useLayoutEffect, useRef, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -10,6 +10,7 @@ import {
   BlocksIcon,
   ChartColumnIncreasingIcon,
   ClipboardCheckIcon,
+  Building2Icon,
   HomeIcon,
   MessageSquareMoreIcon,
   PhoneIcon,
@@ -58,6 +59,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { DashboardUtilityBar } from "./dashboard-utility-bar";
+import { DashboardSetupGuideCard } from "./dashboard-setup-guide-card";
 
 type Business = {
   businessId: string;
@@ -93,6 +95,15 @@ function getSidebarDefaultOpen(): boolean {
 
 export function DashboardShell({ children, user }: DashboardShellProps) {
   const pathname = usePathname();
+  const contentScrollRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const contentScroll = contentScrollRef.current;
+    if (!contentScroll) return;
+    contentScroll.scrollTop = 0;
+    contentScroll.scrollLeft = 0;
+  }, [pathname]);
+
   return (
     <div className="flex h-svh w-full flex-col overflow-hidden bg-background">
       <SidebarProvider
@@ -101,8 +112,11 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
         style={{ "--sidebar-width": "16rem" } as React.CSSProperties}
       >
         <ReplacementSidebar user={user} />
-        <SidebarInset className="@container/content min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain">
-          <SiteHeader fixed />
+        <SidebarInset
+          ref={contentScrollRef}
+          className="@container/content min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain has-data-[layout=fixed]:h-full peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100%-(var(--spacing)*4))]"
+        >
+          <SiteHeader fixed scrollContainerRef={contentScrollRef} />
           <div className="hidden h-16 shrink-0 border-b md:block" />
           <DashboardUtilityBar />
           <Main className="flex flex-1 flex-col" fixed={pathname === "/messages"}>
@@ -147,6 +161,7 @@ function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
         <NavigationGroup items={other} pathname={pathname} title={t("nav:sidebar.other")} />
       </SidebarContent>
       <SidebarFooter>
+        <DashboardSetupGuideCard />
         <UserMenu user={user} />
       </SidebarFooter>
       <SidebarRail />
@@ -237,7 +252,7 @@ function WorkspaceSwitcher() {
               />
             }
           >
-            <ItemMedia variant="icon"><BlocksIcon /></ItemMedia>
+            <ItemMedia variant="icon"><Building2Icon /></ItemMedia>
             <ItemContent className="min-w-0 gap-0.5">
               <ItemTitle className="line-clamp-2 w-full text-left font-medium leading-tight">
                 {active?.name ?? t("sidebar.businessSlugFallback")}
