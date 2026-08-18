@@ -67,7 +67,7 @@ function embeddableSecurityHeaders(): Record<string, string> {
   };
 }
 
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const response = NextResponse.next();
   const isEmbedPath = request.nextUrl.pathname === "/embed.js" || request.nextUrl.pathname.startsWith("/embed/");
   const headers = isEmbedPath ? embeddableSecurityHeaders() : securityHeaders();
