@@ -1,6 +1,6 @@
 import { businesses, createDatabaseClient, databaseHealthCheck, withDispatcherTransaction } from "@lobbystack/db";
-import { createQueue, createRedisConnection, createWorkerOptions, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
-import { FirecrawlProvider, GoogleCalendarProvider, OpenAiCompatibleEmbeddingProvider, PolarBillingProvider, S3StorageProvider, SmtpEmailProvider, TwilioProvider } from "@lobbystack/providers";
+import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
+import { createEmbeddingProvider, FirecrawlProvider, GoogleCalendarProvider, PolarBillingProvider, S3StorageProvider, SmtpEmailProvider, TwilioProvider } from "@lobbystack/providers";
 import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withSpan } from "@lobbystack/telemetry/node";
 import { Worker } from "bullmq";
 
@@ -9,13 +9,6 @@ import { startHealthServer } from "./health";
 import { OutboxDispatcher } from "./outboxDispatcher";
 import { configureSchedulers } from "./scheduler";
 import { getWorkerSnapshotCache } from "./snapshot-cache";
-
-function optionalNumber(name: string): number | undefined {
-  const value = process.env[name];
-  if (!value) return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
-}
 
 function createEmailProvider(): SmtpEmailProvider | undefined {
   const host = process.env.SMTP_HOST;
@@ -31,20 +24,6 @@ function createEmailProvider(): SmtpEmailProvider | undefined {
     from: process.env.EMAIL_FROM ?? "LobbyStack <no-reply@localhost>",
     ...(process.env.EMAIL_REPLY_TO ? { replyTo: process.env.EMAIL_REPLY_TO } : {}),
   });
-}
-
-function createEmbeddingProvider(): OpenAiCompatibleEmbeddingProvider | undefined {
-  const apiKey = process.env.AI_EMBEDDING_API_KEY ?? process.env.OPENAI_API_KEY;
-  const inputCostPerMillionTokens = optionalNumber("AI_EMBEDDING_INPUT_COST_PER_MILLION_TOKENS");
-  return apiKey
-    ? new OpenAiCompatibleEmbeddingProvider({
-        apiKey,
-        ...(process.env.AI_EMBEDDING_MODEL ? { model: process.env.AI_EMBEDDING_MODEL } : {}),
-        ...(process.env.AI_EMBEDDING_BASE_URL ? { baseURL: process.env.AI_EMBEDDING_BASE_URL } : {}),
-        ...(process.env.AI_EMBEDDING_PROVIDER_NAME ? { name: process.env.AI_EMBEDDING_PROVIDER_NAME } : {}),
-        ...(inputCostPerMillionTokens !== undefined ? { inputCostPerMillionTokens } : {}),
-      })
-    : undefined;
 }
 
 function createTwilioProvider(): TwilioProvider | undefined {
@@ -120,6 +99,20 @@ async function main(): Promise<void> {
   const crawler = createCrawlerProvider();
   const calendar = createCalendarProvider();
   const productAnalytics = createProductAnalytics();
+  if (embeddings) {
+    const embeddingQueue = queues.get("bulk");
+    if (embeddingQueue) {
+      const embeddingBusinesses = await withDispatcherTransaction(dispatcherDatabase.db, async (tx) => await tx.select({ id: businesses.id }).from(businesses));
+      for (const business of embeddingBusinesses) {
+        await enqueueJob(embeddingQueue, {
+          type: "knowledge.reembedBusiness",
+          businessId: business.id,
+          payload: { fingerprint: embeddings.fingerprint },
+          idempotencyKey: `knowledge-reembed:${business.id}:${embeddings.fingerprint}`,
+        });
+      }
+    }
+  }
   if (storage) {
     await storage.ensureBucket();
   }

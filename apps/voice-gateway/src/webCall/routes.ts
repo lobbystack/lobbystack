@@ -25,6 +25,7 @@ type WebCallSessionRequest = {
   dashboardTestCallProof?: string;
   widgetId?: string;
   widgetKey?: string;
+  widgetSessionToken?: string;
   sdp: string;
   pageUrl?: string;
   visitorId?: string;
@@ -102,6 +103,9 @@ type ActiveWebCall = {
   sessionMode?: "prospect_demo";
   prospectDemoToken?: string;
   dashboardTestCallToken?: string;
+  widgetSessionToken?: string;
+  widgetOrigin?: string;
+  visitorId?: string;
 };
 
 type CompletedWebCall = {
@@ -199,6 +203,7 @@ function parseWebCallSessionRequest(
   const rawVisitorId = getStringProperty(input, "visitorId");
   const rawWidgetId = getStringProperty(input, "widgetId");
   const rawWidgetKey = getStringProperty(input, "widgetKey");
+  const rawWidgetSessionToken = getStringProperty(input, "widgetSessionToken");
   const rawDashboardTestCallProof = getStringProperty(
     input,
     "dashboardTestCallProof",
@@ -248,6 +253,7 @@ function parseWebCallSessionRequest(
       ...(visitorId ? { visitorId } : {}),
       ...(widgetId ? { widgetId } : {}),
       ...(widgetKey ? { widgetKey } : {}),
+      ...(rawWidgetSessionToken ? { widgetSessionToken: rawWidgetSessionToken } : {}),
       ...(prospectDemoToken ? { prospectDemoToken } : {}),
     },
   };
@@ -314,6 +320,13 @@ function isAllowedOrigin(
   const allowedOrigins = getAllowedOrigins(
     server.runtimeConfig.WEB_CALL_ALLOWED_ORIGINS,
   );
+  if (server.runtimeConfig.APP_BASE_URL) {
+    try {
+      allowedOrigins.add(new URL(server.runtimeConfig.APP_BASE_URL).origin);
+    } catch {
+      // The environment schema already validates the URL.
+    }
+  }
   return (
     allowedOrigins.has(origin) ||
     (server.runtimeConfig.DEPLOYMENT_MODE === "development" &&
@@ -363,7 +376,7 @@ function getWebCallDurationSeconds(
 function addCorsHeaders(reply: FastifyReply, origin: string): void {
   reply.header("Access-Control-Allow-Origin", origin);
   reply.header("Access-Control-Allow-Methods", "POST, OPTIONS");
-  reply.header("Access-Control-Allow-Headers", "Content-Type");
+  reply.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Widget-Parent-Origin");
   reply.header("Access-Control-Max-Age", "600");
   reply.header("Vary", "Origin");
 }
@@ -1459,6 +1472,9 @@ async function handleToolCall(
   try {
     const context = await fetchWebVoiceContext({
       businessSlug: session.businessSlug,
+      ...(session.widgetOrigin ? { origin: session.widgetOrigin } : {}),
+      ...(session.widgetSessionToken ? { widgetSessionToken: session.widgetSessionToken } : {}),
+      ...(session.visitorId ? { visitorId: session.visitorId } : {}),
       ...(session.prospectDemoToken !== undefined
         ? { prospectDemoToken: session.prospectDemoToken }
         : {}),
@@ -1593,7 +1609,17 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         return { error: parsedBody.message };
       }
       const body = parsedBody.data;
+      if (body.widgetId === "lobbystack-widget" && !body.widgetSessionToken) {
+        reply.code(403);
+        return { error: "A signed widget session is required." };
+      }
       const businessSlug = body.businessSlug;
+      const widgetOriginHeader = request.headers["x-widget-parent-origin"];
+      const widgetOrigin = typeof widgetOriginHeader === "string" ? widgetOriginHeader.trim() : undefined;
+      if (body.widgetSessionToken && !widgetOrigin) {
+        reply.code(403);
+        return { error: "A widget parent origin is required." };
+      }
 
       const gatewaySessionId = crypto.randomUUID();
       const widgetId = normalizeOptionalAbuseKey(body.widgetId);
@@ -1612,7 +1638,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       try {
         context = await fetchWebVoiceContext({
           businessSlug,
-          origin: origin!,
+          origin: widgetOrigin ?? origin!,
           ...(dashboardTestCallToken !== undefined
             ? { dashboardTestCallToken }
             : {}),
@@ -1620,6 +1646,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
           ...(visitorId !== undefined ? { visitorId } : {}),
           ...(widgetId !== undefined ? { widgetId } : {}),
           ...(body.widgetKey !== undefined ? { widgetKey: body.widgetKey } : {}),
+          ...(body.widgetSessionToken !== undefined ? { widgetSessionToken: body.widgetSessionToken } : {}),
           ...(body.prospectDemoToken !== undefined
             ? { prospectDemoToken: body.prospectDemoToken }
             : {}),
@@ -1732,6 +1759,9 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         ...(dashboardTestCallToken !== undefined
           ? { dashboardTestCallToken }
           : {}),
+        ...(body.widgetSessionToken !== undefined ? { widgetSessionToken: body.widgetSessionToken } : {}),
+        ...(widgetOrigin !== undefined ? { widgetOrigin } : {}),
+        ...(visitorId !== undefined ? { visitorId } : {}),
       };
       const sidebandSocket = createSidebandSocket({
         server,

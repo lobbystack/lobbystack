@@ -35,6 +35,7 @@ export const voiceContextBySlugRequestSchema = z.object({
   visitorId: z.string().max(128).optional(),
   widgetId: z.string().max(128).optional(),
   widgetKey: z.string().max(256).optional(),
+  widgetSessionToken: z.string().max(4096).optional(),
   prospectDemoToken: z.string().max(512).optional(),
   maxDurationMs: z.number().int().positive().max(30 * 60 * 1_000).optional(),
 });
@@ -270,6 +271,7 @@ export const jobTypes = [
   "knowledge.crawlWebsite",
   "knowledge.indexDocument",
   "knowledge.reindexBusiness",
+  "knowledge.reembedBusiness",
   "snapshot.refresh",
   "notification.dispatch",
   "notification.dailySummary",

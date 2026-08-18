@@ -70,7 +70,7 @@ export function initWidget(): boolean {
   const position = (currentScriptAttribute("data-position") as "bottom-left" | "bottom-center" | "bottom-right" | null) ?? "bottom-right";
   const color = currentScriptAttribute("data-color") ?? "#0f766e";
   const adminOrigin = resolveOrigin() || window.origin;
-  const visitorId = makeVisitorId(widgetKey);
+  let visitorId = makeVisitorId(widgetKey);
   const frameSrc = `${adminOrigin}/embed/${encodeURIComponent(widgetKey)}`;
 
   injectStyles();
@@ -106,6 +106,30 @@ export function initWidget(): boolean {
 
   let open = false;
   let badgeCount = 0;
+  let frameLoaded = false;
+  let sessionMessage: WidgetMessage | null = null;
+  let sessionRefreshTimer: number | undefined;
+
+  async function refreshSession(nextVisitorId: string): Promise<void> {
+    visitorId = nextVisitorId;
+    try {
+      const response = await fetch(`${adminOrigin}/api/widget/session`, {
+        method: "POST",
+        headers: { "content-type": "text/plain" },
+        body: JSON.stringify({ widgetKey, visitorId }),
+      });
+      if (!response.ok) return;
+      const payload = await response.json() as { token?: string; expiresAt?: string };
+      if (!payload.token) return;
+      sessionMessage = { type: "session", token: payload.token, expiresAt: payload.expiresAt, visitorId, parentOrigin: window.location.origin };
+      if (frameLoaded) postToFrame(sessionMessage);
+      if (sessionRefreshTimer !== undefined) window.clearTimeout(sessionRefreshTimer);
+      const expiresAtMs = payload.expiresAt ? Date.parse(payload.expiresAt) : Date.now() + 3_600_000;
+      sessionRefreshTimer = window.setTimeout(() => void refreshSession(visitorId), Math.max(30_000, expiresAtMs - Date.now() - 60_000));
+    } catch {
+      /* the iframe displays the configuration error if session creation fails */
+    }
+  }
 
   function syncBadge(): void {
     badge.textContent = String(badgeCount);
@@ -136,7 +160,12 @@ export function initWidget(): boolean {
     }
   }
 
-  frame.addEventListener("load", () => postToFrame({ type: "visitor", visitorId }));
+  frame.addEventListener("load", () => {
+    frameLoaded = true;
+    if (sessionMessage) postToFrame(sessionMessage);
+    postToFrame({ type: "visitor", visitorId });
+  });
+  void refreshSession(visitorId);
 
   bubble.addEventListener("click", () => setOpen(!open));
   window.addEventListener("message", (event: MessageEvent) => {

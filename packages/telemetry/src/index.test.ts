@@ -374,14 +374,14 @@ describe("telemetry redaction", () => {
     const traceProperties = buildPostHogAiTraceProperties({
       traceId: "trace-2",
       sessionId: "session-2",
-      model: "gemini-3.1-flash-lite",
+      model: "test-chat-model",
       provider: "google",
       conversationId: "conv-2",
     });
     const spanProperties = buildPostHogAiSpanProperties({
       traceId: "trace-2",
       sessionId: "session-2",
-      model: "gemini-3.1-flash-lite",
+      model: "test-chat-model",
       provider: "google",
       conversationId: "conv-2",
       spanName: "tool_call:searchKnowledge",
@@ -404,7 +404,7 @@ describe("telemetry redaction", () => {
     expect(traceProperties.$ai_session_id).toBe("session-2");
     expect(traceProperties.traceId).toBe("trace-2");
     expect(traceProperties.sessionId).toBe("session-2");
-    expect(traceProperties.model).toBe("gemini-3.1-flash-lite");
+    expect(traceProperties.model).toBe("test-chat-model");
     expect(traceProperties.provider).toBe("google");
     expect(traceProperties.conversationId).toBe("conv-2");
     expect(spanProperties.spanName).toBe("tool_call:searchKnowledge");

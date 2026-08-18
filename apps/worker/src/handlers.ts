@@ -1,10 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
 import Redis from "ioredis";
-import { and, eq, lte, ne } from "drizzle-orm";
+import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
 
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { getPolarMeteredUsagePayload, type BillingUsageKind } from "@lobbystack/shared";
-import { appointments, calendarConnections, calls, contacts, enqueueOutbox, knowledgeDocuments, messages, notifications, phoneNumbers, services, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
+import { appointments, calendarConnections, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, services, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimPhoneVerificationSend, claimSmsDelivery, deleteCallRecording, deleteExpiredObjectsForBusiness, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, generateAffiliatePayoutRun, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, markNotificationSkipped, markPhoneVerificationSendFailed, markPhoneVerificationSent, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, type DurableAiUsage } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, correctAlertSmsUsage, estimateSmsSegments, loadOperatorNotificationDelivery, markFeedbackEmailFailed, markFeedbackEmailSent, markOperatorNotificationSent, markOperatorNotificationSkipped, queueDailyOperatorSummaries, refreshUnitEconomicsMonth, releaseOperatorNotificationDelivery, reserveAlertSmsUsage } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
@@ -28,7 +28,7 @@ export type WorkerDependencies = {
   email?: Pick<SmtpEmailProvider, "sendTemplate">;
   twilio?: Pick<TwilioProvider, "sendSms"> & Partial<Pick<TwilioProvider, "getMessagePricing" | "getCallPricing" | "releasePhoneNumber" | "verifyPhone" | "findOwnedPhoneNumber" | "purchasePhoneNumber">>;
   polar?: { recordUsage(input: { meterId: string; externalCustomerId: string; quantity: number; timestamp: string; idempotencyKey: string }): Promise<void>; createCheckout?(input: { productId: string; customerEmail: string; externalCustomerId: string; successUrl: string; idempotencyKey?: string }): Promise<{ checkoutUrl: string; checkoutId: string }> };
-  embeddings?: { embed(values: string[], onUsage?: (usage: DurableAiUsage) => Promise<void> | void): Promise<number[][]> };
+  embeddings?: { fingerprint?: string; embed(values: string[], onUsage?: (usage: DurableAiUsage) => Promise<void> | void): Promise<number[][]> };
   crawler?: { crawl(input: { url: string; limit?: number }): Promise<Array<{ url: string; title?: string; markdown?: string }>> };
   calendar?: { getBusyBlocks(input: { accessToken: string; calendarId: string; startsAt: string; endsAt: string }): Promise<Array<{ startsAt: string; endsAt: string }>>; upsertEvent(input: { accessToken: string; calendarId: string; eventId?: string; clientEventId?: string; title: string; startsAt: string; endsAt: string; description?: string }): Promise<{ externalEventId: string }> };
   productAnalytics?: { capture(events: Array<{ event: string; distinctId: string; properties: Record<string, unknown>; timestamp: string }>): Promise<void> };
@@ -172,6 +172,48 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
         }
       }
       return { status: indexedDocuments > 0 ? "completed" : "skipped", entityId: `${businessId}:${indexedDocuments}` };
+    }
+    case "knowledge.reembedBusiness": {
+      const businessId = businessIdOrThrow(job);
+      const fingerprint = dependencies.embeddings?.fingerprint;
+      if (!dependencies.embeddings || !fingerprint) return { status: "skipped", entityId: businessId };
+      const batchSize = 64;
+      let reembedded = 0;
+      while (true) {
+        const rows = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) =>
+          await tx.select({ id: knowledgeChunks.id, content: knowledgeChunks.content })
+            .from(knowledgeChunks)
+            .where(and(eq(knowledgeChunks.businessId, businessId), or(isNull(knowledgeChunks.embeddingFingerprint), ne(knowledgeChunks.embeddingFingerprint, fingerprint), isNull(knowledgeChunks.embedding), eq(knowledgeChunks.embeddingStatus, "pending"), eq(knowledgeChunks.embeddingStatus, "failed"))))
+            .limit(batchSize),
+        );
+        if (rows.length === 0) break;
+        const rowIds = rows.map((row) => row.id);
+        let embeddings: number[][];
+        try {
+          await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
+            await tx.update(knowledgeChunks).set({ embeddingStatus: "pending", embeddingError: null, updatedAt: new Date() }).where(and(eq(knowledgeChunks.businessId, businessId), inArray(knowledgeChunks.id, rowIds)));
+          });
+          embeddings = await dependencies.embeddings.embed(rows.map((row) => row.content));
+          if (embeddings.length !== rows.length) throw new Error("Embedding provider returned an incomplete re-embedding batch.");
+          if (embeddings.some((embedding) => embedding.length !== 1536 || embedding.some((value) => !Number.isFinite(value)) || embedding.every((value) => value === 0))) {
+            throw new Error("Embedding provider returned an incompatible re-embedding vector.");
+          }
+        } catch (error) {
+          await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
+            await tx.update(knowledgeChunks).set({ embeddingStatus: "failed", embeddingError: error instanceof Error ? error.message.slice(0, 1000) : "Embedding failed.", updatedAt: new Date() }).where(and(eq(knowledgeChunks.businessId, businessId), inArray(knowledgeChunks.id, rowIds)));
+          });
+          throw error;
+        }
+        await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
+          for (const [index, row] of rows.entries()) {
+            const embedding = embeddings[index];
+            if (!embedding) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
+            await tx.update(knowledgeChunks).set({ embedding, embeddingFingerprint: fingerprint, embeddingStatus: "completed", embeddingError: null, updatedAt: new Date() }).where(and(eq(knowledgeChunks.id, row.id), eq(knowledgeChunks.businessId, businessId)));
+          }
+        });
+        reembedded += rows.length;
+      }
+      return { status: reembedded > 0 ? "completed" : "skipped", entityId: `${businessId}:${reembedded}` };
     }
     case "calendar.syncAppointment":
       {
@@ -679,7 +721,7 @@ async function indexKnowledgeText(
   }
 
   const indexStartedAt = performance.now();
-  const indexed = await indexDocumentText(dependencies.domain, { ...input, embeddings });
+  const indexed = await indexDocumentText(dependencies.domain, { ...input, embeddings, ...(dependencies.embeddings?.fingerprint ? { embeddingFingerprint: dependencies.embeddings.fingerprint } : {}) });
   indexDuration.record(performance.now() - indexStartedAt, { operation: "knowledge.index" });
   if (usage) {
     await recordAiGenerationEvent(dependencies.domain, {

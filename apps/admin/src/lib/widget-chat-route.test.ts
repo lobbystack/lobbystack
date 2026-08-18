@@ -4,7 +4,7 @@ import type { BusinessContextSnapshot } from "@lobbystack/shared";
 
 const mocks = vi.hoisted(() => ({
   readJson: vi.fn(),
-  resolveWidgetAccess: vi.fn(),
+  resolveWidgetSessionAccess: vi.fn(),
   enforceWidgetRateLimits: vi.fn(),
   requestIpHash: vi.fn(),
   registerWidgetVisitor: vi.fn(),
@@ -12,25 +12,25 @@ const mocks = vi.hoisted(() => ({
   appendMessage: vi.fn(),
   queueOperatorAlert: vi.fn(),
   loadAutomationState: vi.fn(),
-  getWidgetChatAllowance: vi.fn(),
   getCachedBusinessSnapshot: vi.fn(),
   loadWidgetChatHistory: vi.fn(),
   withBusinessTransaction: vi.fn(),
   reserveWidgetChatUsageInTransaction: vi.fn(),
   getWorkerDatabase: vi.fn(),
-  OpenAiCompatibleTextProvider: vi.fn(),
+  createTextAiProvider: vi.fn(),
 }));
 
 vi.mock("@lobbystack/domain", () => ({
   appendMessage: mocks.appendMessage,
   getOrCreateWidgetConversation: mocks.getOrCreateWidgetConversation,
   getCachedBusinessSnapshot: mocks.getCachedBusinessSnapshot,
-  getWidgetChatAllowance: mocks.getWidgetChatAllowance,
   loadWidgetChatHistory: mocks.loadWidgetChatHistory,
   registerWidgetVisitor: mocks.registerWidgetVisitor,
   reserveWidgetChatUsageInTransaction: mocks.reserveWidgetChatUsageInTransaction,
   queueOperatorAlert: mocks.queueOperatorAlert,
 }));
+
+vi.mock("drizzle-orm", () => ({ eq: vi.fn(() => ({})) }));
 
 vi.mock("@lobbystack/db", () => ({
   withBusinessTransaction: mocks.withBusinessTransaction,
@@ -38,7 +38,7 @@ vi.mock("@lobbystack/db", () => ({
 }));
 
 vi.mock("@lobbystack/providers", () => ({
-  OpenAiCompatibleTextProvider: mocks.OpenAiCompatibleTextProvider,
+  createTextAiProvider: mocks.createTextAiProvider,
 }));
 
 vi.mock("@/lib/api-helpers", () => ({
@@ -51,7 +51,7 @@ vi.mock("@/lib/domain-context", () => ({
 }));
 
 vi.mock("@/lib/widget-access", () => ({
-  resolveWidgetAccess: mocks.resolveWidgetAccess,
+  resolveWidgetSessionAccess: mocks.resolveWidgetSessionAccess,
 }));
 
 vi.mock("@/lib/widget-keys", () => ({
@@ -80,6 +80,7 @@ const session = {
   businessSlug: "maple-clinic",
   defaultLocale: "en" as const,
   config: {},
+  visitorId,
 };
 
 function automationTx(rows: unknown) {
@@ -94,7 +95,6 @@ function automationTx(rows: unknown) {
 
 function widgetRequest(overrides: Record<string, unknown> = {}): Request {
   mocks.readJson.mockResolvedValue({
-    widgetKey: "wk_live_abc",
     visitorId,
     messageId: "00000000-0000-4000-8000-000000000006",
     content: "Hi, I would like to book a checkup.",
@@ -113,7 +113,7 @@ async function readSse(response: Response): Promise<string> {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.resolveWidgetAccess.mockResolvedValue({ ok: true, session });
+  mocks.resolveWidgetSessionAccess.mockResolvedValue({ ok: true, session });
   mocks.enforceWidgetRateLimits.mockResolvedValue({ allowed: true });
   mocks.requestIpHash.mockReturnValue("ip-hash");
   mocks.getOrCreateWidgetConversation.mockResolvedValue({ conversationId });
@@ -122,6 +122,8 @@ beforeEach(() => {
   mocks.registerWidgetVisitor.mockResolvedValue({ visitorId, contactId: null });
   mocks.getWorkerDatabase.mockReturnValue({ db: {} });
   mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(automationTx([])));
+  mocks.reserveWidgetChatUsageInTransaction.mockResolvedValue({ allowed: true, plan: "scale" });
+  mocks.createTextAiProvider.mockReturnValue(null);
 });
 
 afterEach(() => {
@@ -130,7 +132,7 @@ afterEach(() => {
 
 describe("POST /api/widget/chat", () => {
   it("rejects when the widget key cannot be resolved", async () => {
-    mocks.resolveWidgetAccess.mockResolvedValue({
+    mocks.resolveWidgetSessionAccess.mockResolvedValue({
       ok: false,
       response: new Response(JSON.stringify({ error: "nope" }), { status: 401, headers: { "content-type": "application/json" } }),
     });
@@ -153,24 +155,20 @@ describe("POST /api/widget/chat", () => {
     expect(mocks.appendMessage).toHaveBeenCalledTimes(1);
     expect(mocks.appendMessage).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ direction: "inbound", channel: "web_chat" }));
     expect(mocks.queueOperatorAlert).toHaveBeenCalled();
-    expect(mocks.OpenAiCompatibleTextProvider).not.toHaveBeenCalled();
+    expect(mocks.createTextAiProvider).not.toHaveBeenCalled();
     expect(body).toContain("human_handoff");
   });
 
-  it("returns a billing-exhausted event and fallback without calling the model when chat allowance is spent", async () => {
-    mocks.getWidgetChatAllowance.mockResolvedValue({ allowed: false, plan: "starter" });
+  it("returns HTTP 402 without calling the model when chat allowance is spent", async () => {
+    mocks.reserveWidgetChatUsageInTransaction.mockResolvedValue({ allowed: false, plan: "starter" });
     const response = await POST(widgetRequest());
-    const body = await readSse(response);
-    expect(response.status).toBe(200);
-    expect(body).toContain("chat_ai_limit_reached");
-    expect(body).toContain("Thanks for your message!");
-    expect(mocks.OpenAiCompatibleTextProvider).not.toHaveBeenCalled();
-    expect(mocks.appendMessage).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ direction: "outbound", aiGenerated: false }));
+    expect(response.status).toBe(402);
+    expect(await response.json()).toMatchObject({ code: "chat_ai_limit_reached" });
+    expect(mocks.createTextAiProvider).not.toHaveBeenCalled();
   });
 
   it("streams an AI reply and persists the outbound message when automation is active", async () => {
     vi.stubEnv("AI_CHAT_API_KEY", "test-api-key");
-    mocks.getWidgetChatAllowance.mockResolvedValue({ allowed: true, plan: "scale" });
     mocks.getCachedBusinessSnapshot.mockResolvedValue({ businessId } as BusinessContextSnapshot);
     mocks.loadWidgetChatHistory.mockResolvedValue([]);
     const streamReply = vi.fn().mockReturnValue({
@@ -185,9 +183,7 @@ describe("POST /api/widget/chat", () => {
     class FakeSignedProvider {
       streamReply = streamReply;
     }
-    mocks.OpenAiCompatibleTextProvider.mockImplementation(function () {
-      return new FakeSignedProvider();
-    });
+    mocks.createTextAiProvider.mockReturnValue(new FakeSignedProvider());
 
     const response = await POST(widgetRequest());
     const body = await readSse(response);

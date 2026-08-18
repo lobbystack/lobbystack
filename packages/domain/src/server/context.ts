@@ -7,7 +7,7 @@ import type { SnapshotCacheClient } from "./snapshotCache";
 export type DomainContext = {
   db: Database;
   telemetry?: TelemetryFacade;
-  embeddings?: { embed(values: string[]): Promise<number[][]> };
+  embeddings?: { fingerprint?: string; embed(values: string[], onUsage?: (usage: unknown) => Promise<void> | void): Promise<number[][]> };
   snapshotCache?: SnapshotCacheClient;
 };
 

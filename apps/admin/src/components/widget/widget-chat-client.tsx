@@ -18,6 +18,7 @@ type WidgetConfigPayload = {
     title?: string;
     subtitle?: string;
     greeting?: string;
+    localeOverride?: "en" | "fr";
     leadForm?: { enabled: boolean; requirePhone?: boolean; requireEmail?: boolean; showBeforeChat?: boolean };
   };
   billing: { chatAllowed: boolean; plan: string };
@@ -30,11 +31,25 @@ type WidgetConfigPayload = {
 
 type ChatMessage = { id: string; role: "user" | "assistant"; content: string };
 type ChatPart =
-  | { type: "start"; chatId: string; messageId: string }
-  | { type: "text-delta"; delta: string }
-  | { type: "finish"; message: { id: string; role: string; content: string } | null; automationState?: string }
-  | { type: "handoff"; chatId?: string }
-  | { type: "error"; code?: string; message: string };
+  | { type: "start"; messageId?: string }
+  | { type: "text-start"; id: string }
+  | { type: "text-delta"; id: string; delta: string }
+  | { type: "text-end"; id: string }
+  | { type: "finish"; finishReason?: string; messageMetadata?: { automationState?: string } }
+  | { type: "error"; errorText: string };
+
+function renderSafeMarkdown(value: string): string {
+  return value
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer noopener">$1</a>')
+    .replace(/\n/g, "<br />");
+}
+
+function MessageContent({ content, pending }: { content: string; pending?: boolean }) {
+  return <span className="widget-message-content" dangerouslySetInnerHTML={{ __html: renderSafeMarkdown(content || (pending ? "…" : "")) }} />;
+}
 
 function storageVisitorKey(widgetKey: string): string {
   return `lobbystack.widget.visitorId.${widgetKey}`;
@@ -60,6 +75,8 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
   const { t } = useTranslation("widget");
   const visitorIdRef = useRef<string>("");
   const [parentVisitorId, setParentVisitorId] = useState<string | null>(null);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [parentOrigin, setParentOrigin] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -75,9 +92,15 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      const data = event.data as { type?: string; visitorId?: string };
+      if (event.source !== window.parent) return;
+      const data = event.data as { type?: string; visitorId?: string; token?: string; parentOrigin?: string };
       if (data && data.type === "visitor" && typeof data.visitorId === "string") {
         setParentVisitorId(data.visitorId);
+      }
+      if (data && data.type === "session" && typeof data.token === "string" && typeof data.parentOrigin === "string" && event.origin === data.parentOrigin) {
+        setSessionToken(data.token);
+        setParentOrigin(data.parentOrigin);
+        if (typeof data.visitorId === "string") setParentVisitorId(data.visitorId);
       }
     };
     window.addEventListener("message", handleMessage);
@@ -85,12 +108,11 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
   }, []);
 
   const config = useQuery({
-    queryKey: ["widget-config", widgetKey],
+    queryKey: ["widget-config", widgetKey, sessionToken],
+    enabled: Boolean(sessionToken),
     queryFn: async () => {
       const url = new URL("/api/widget/config", window.location.origin);
-      url.searchParams.set("key", widgetKey);
-      if (visitorIdRef.current) url.searchParams.set("visitorId", visitorIdRef.current);
-      const response = await fetch(url, { credentials: "include" });
+      const response = await fetch(url, { headers: { authorization: `Bearer ${sessionToken}`, "x-widget-parent-origin": parentOrigin ?? "" }, credentials: "include" });
       if (!response.ok) {
         const body = await response.json().catch(() => null) as { code?: string } | null;
         if (body?.code === "widget_origin_denied") throw new Error("originDenied");
@@ -105,7 +127,7 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
 
   useEffect(() => {
     if (!configState) return;
-    const locale = configState.business?.defaultLocale ?? navigator.language.split("-")[0];
+    const locale = configState.config?.localeOverride ?? configState.business?.defaultLocale ?? navigator.language.split("-")[0];
     if (locale === "en" || locale === "fr") void i18n.changeLanguage(locale);
   }, [configState]);
 
@@ -127,10 +149,8 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
     visitorIdRef.current = id;
     const loadHistory = async () => {
       const url = new URL("/api/widget/history", window.location.origin);
-      url.searchParams.set("key", widgetKey);
-      url.searchParams.set("visitorId", id);
       try {
-        const response = await fetch(url, { credentials: "include" });
+        const response = await fetch(url, { headers: { authorization: `Bearer ${sessionToken}`, "x-widget-parent-origin": parentOrigin ?? "" }, credentials: "include" });
         if (!response.ok) return;
         const data = await response.json() as { messages?: Array<{ id: string; role: "user" | "assistant"; content: string }> };
         if (Array.isArray(data.messages)) setMessages(data.messages.map((message) => ({ id: message.id, role: message.role === "assistant" ? "assistant" : "user", content: message.content })));
@@ -139,7 +159,7 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
       }
     };
     void loadHistory();
-  }, [configState, parentVisitorId, widgetKey]);
+  }, [configState, parentOrigin, parentVisitorId, sessionToken, widgetKey]);
 
   useEffect(() => {
     threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight });
@@ -173,8 +193,8 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
       const response = await fetch("/api/widget/chat", {
         method: "POST",
         credentials: "include",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ widgetKey, visitorId: visitorIdRef.current, messageId: optimistic.id, content }),
+        headers: { "content-type": "application/json", authorization: `Bearer ${sessionToken}`, "x-widget-parent-origin": parentOrigin ?? "" },
+        body: JSON.stringify({ visitorId: visitorIdRef.current, messageId: optimistic.id, content, locale: i18n.language === "fr" ? "fr" : "en" }),
       });
       if (!response.ok || !response.body) {
         const body = await response.json().catch(() => null) as { code?: string } | null;
@@ -204,18 +224,15 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
           } catch {
             continue;
           }
-          if (part.type === "text-delta") {
+          if (part.type === "text-start") {
+            setMessages((current) => current.some((message) => message.id === assistantId) ? current : [...current, { id: assistantId, role: "assistant", content: "" }]);
+          } else if (part.type === "text-delta") {
             assistantText += part.delta;
             setMessages((current) => current.map((message) => (message.id === assistantId ? { ...message, content: assistantText } : message)));
-          } else if (part.type === "handoff") {
-            setHandoff(true);
           } else if (part.type === "error") {
-            if (part.code === "chat_ai_limit_reached") setSubmitError("chat.limitReached");
+            setSubmitError("chat.sendingFailed");
           } else if (part.type === "finish") {
-            setHandoff(part.automationState === "human_handoff");
-            if (part.message?.content) {
-              setMessages((current) => current.map((message) => (message.id === assistantId ? { ...message, content: part.message!.content } : message)));
-            }
+            setHandoff(part.messageMetadata?.automationState === "human_handoff");
           }
         }
       }
@@ -248,8 +265,8 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
       const response = await fetch("/api/widget/lead", {
         method: "POST",
         credentials: "include",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ widgetKey, visitorId: visitorIdRef.current, ...(lead.name.trim() ? { name: lead.name.trim() } : {}), ...(email ? { email } : {}), ...(phone ? { phone } : {}) }),
+        headers: { "content-type": "application/json", authorization: `Bearer ${sessionToken}`, "x-widget-parent-origin": parentOrigin ?? "" },
+        body: JSON.stringify({ visitorId: visitorIdRef.current, ...(lead.name.trim() ? { name: lead.name.trim() } : {}), ...(email ? { email } : {}), ...(phone ? { phone } : {}) }),
       });
       if (!response.ok) {
         setSubmitError("chat.sendingFailed");
@@ -278,7 +295,7 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
           <p className="truncate text-sm font-semibold">{title}</p>
           {configState?.config?.subtitle ? <p className="truncate text-xs text-zinc-500">{configState.config.subtitle}</p> : null}
         </div>
-        {voiceEnabled ? <VoiceButton className="ml-auto" businessSlug={configState!.businessSlug!} baseUrl={configState!.webCallBaseUrl} visitorId={visitorIdRef.current} widgetKey={widgetKey} onStatusChange={setSubmitError} /> : null}
+        {voiceEnabled ? <VoiceButton className="ml-auto" businessSlug={configState!.businessSlug!} baseUrl={configState!.webCallBaseUrl} visitorId={visitorIdRef.current} sessionToken={sessionToken} parentOrigin={parentOrigin} onStatusChange={setSubmitError} /> : null}
       </header>
 
       {handoff ? <div className="border-b bg-amber-50 px-4 py-2 text-xs font-medium text-amber-800">{t("chat.handoffBanner")}</div> : null}
@@ -296,7 +313,7 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
         {messages.map((message) => (
           <div key={message.id} className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}>
             <div className={cn("max-w-[85%] rounded-2xl px-3 py-2 text-sm", message.role === "user" ? "rounded-br-sm text-white" : "rounded-bl-sm bg-zinc-100")} style={message.role === "user" ? { backgroundColor: color } : undefined}>
-              <p className="whitespace-pre-wrap">{message.content || (streamingMessageId === message.id ? t("chat.pendingLabel") : "")}</p>
+              <p><MessageContent content={message.content} pending={streamingMessageId === message.id} /></p>
             </div>
           </div>
         ))}
@@ -305,7 +322,7 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
       </div>
 
       {showLeadBeforeChat ? (
-        <LeadForm className="border-t p-4" lead={lead} setLead={setLead} onSubmit={submitLead} submitting={leadSubmitting} onSkip={() => setLeadOpen(true)} config={configState?.config} t={t} />
+        <LeadForm className="border-t p-4" lead={lead} setLead={setLead} onSubmit={submitLead} submitting={leadSubmitting} onSkip={() => { setLeadDone(true); setLeadOpen(false); }} config={configState?.config} t={t} />
       ) : null}
 
       <form className="flex items-end gap-2 border-t p-3" onSubmit={(event) => void submitChat(event)}>
@@ -329,7 +346,7 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
   );
 }
 
-function VoiceButton({ className, businessSlug, baseUrl, visitorId, widgetKey, onStatusChange }: { className?: string; businessSlug: string; baseUrl: string | undefined; visitorId: string; widgetKey: string; onStatusChange: (message: string | null) => void }) {
+function VoiceButton({ className, businessSlug, baseUrl, visitorId, sessionToken, parentOrigin, onStatusChange }: { className?: string; businessSlug: string; baseUrl: string | undefined; visitorId: string; sessionToken: string | null; parentOrigin: string | null; onStatusChange: (message: string | null) => void }) {
   const [status, setStatus] = useState<"idle" | "connecting" | "connected" | "error" | "ending">("idle");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
@@ -393,8 +410,8 @@ function VoiceButton({ className, businessSlug, baseUrl, visitorId, widgetKey, o
       await peer.setLocalDescription(offer);
       const response = await fetch(endpoint, {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ businessSlug, widgetId: "lobbystack-widget", widgetKey, visitorId, sdp: offer.sdp, pageUrl: window.location.href }),
+        headers: { "content-type": "application/json", ...(sessionToken ? { authorization: `Bearer ${sessionToken}` } : {}), ...(parentOrigin ? { "x-widget-parent-origin": parentOrigin } : {}) },
+        body: JSON.stringify({ businessSlug, widgetId: "lobbystack-widget", visitorId, widgetSessionToken: sessionToken, sdp: offer.sdp, pageUrl: window.location.href }),
       });
       if (!response.ok) {
         cleanup();

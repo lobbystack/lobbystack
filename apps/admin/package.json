@@ -30,6 +30,7 @@
     "@lobbystack/telemetry": "workspace:*",
     "@tanstack/react-query": "^5.75.0",
     "@tanstack/react-table": "^8.21.3",
+    "ai": "^6.0.116",
     "better-auth": "^1.4.18",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

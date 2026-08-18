@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { defaultWidgetConfig, widgetConfigSchema } from "@lobbystack/shared";
 
-import { hashWidgetKey, isAllowedWidgetOrigin, normalizeOrigin, normalizeAllowedOrigins, serializeWidgetKeyConfig } from "./widget-keys";
+import { createWidgetSessionToken, hashWidgetKey, isAllowedWidgetOrigin, normalizeOrigin, normalizeAllowedOrigins, serializeWidgetKeyConfig, verifyWidgetSessionToken } from "./widget-keys";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -48,5 +48,36 @@ describe("widget key hashing and origin policy", () => {
     expect(key.config.position).toBe(defaultWidgetConfig.position);
     expect(key.allowedOrigins).toEqual(["https://example.com"]);
     expect(widgetConfigSchema.safeParse(key.config).success).toBe(true);
+  });
+
+  it("binds signed sessions to the visitor and normalized parent origin", () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("WIDGET_SESSION_SECRET", "session-secret");
+    const created = createWidgetSessionToken({
+      widgetKeyId: "00000000-0000-4000-8000-000000000010",
+      businessId: "00000000-0000-4000-8000-000000000011",
+      visitorId: "00000000-0000-4000-8000-000000000012",
+      origin: "https://example.com/",
+    });
+    expect(verifyWidgetSessionToken(created.token)).toMatchObject({
+      widgetKeyId: "00000000-0000-4000-8000-000000000010",
+      businessId: "00000000-0000-4000-8000-000000000011",
+      visitorId: "00000000-0000-4000-8000-000000000012",
+      origin: "https://example.com",
+    });
+  });
+
+  it("rejects expired or tampered widget sessions", () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("WIDGET_SESSION_SECRET", "session-secret");
+    const expired = createWidgetSessionToken({
+      widgetKeyId: "00000000-0000-4000-8000-000000000010",
+      businessId: "00000000-0000-4000-8000-000000000011",
+      visitorId: "00000000-0000-4000-8000-000000000012",
+      origin: "https://example.com",
+      ttlSeconds: -1,
+    });
+    expect(verifyWidgetSessionToken(expired.token)).toBeNull();
+    expect(verifyWidgetSessionToken(`${expired.token.slice(0, -1)}x`)).toBeNull();
   });
 });

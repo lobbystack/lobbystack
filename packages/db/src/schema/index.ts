@@ -26,7 +26,7 @@ const legacyId = {
 
 const vector = customType<{ data: number[]; driverData: string }>({
   dataType() {
-    return "vector";
+    return "vector(1536)";
   },
   toDriver(value) {
     return `[${value.join(",")}]`;
@@ -620,10 +620,13 @@ export const knowledgeChunks = pgTable(
     content: text("content").notNull(),
     contentHash: varchar("content_hash", { length: 128 }).notNull(),
     embedding: vector("embedding"),
+    embeddingFingerprint: varchar("embedding_fingerprint", { length: 64 }),
+    embeddingStatus: varchar("embedding_status", { length: 16 }).default("pending").notNull(),
+    embeddingError: text("embedding_error"),
     tokenCount: integer("token_count"),
     ...timestamps,
   },
-  (table) => [uniqueIndex("knowledge_chunks_document_sequence_unique").on(table.documentId, table.sequence), index("knowledge_chunks_business_idx").on(table.businessId)],
+  (table) => [uniqueIndex("knowledge_chunks_document_sequence_unique").on(table.documentId, table.sequence), index("knowledge_chunks_business_idx").on(table.businessId), index("knowledge_chunks_business_embedding_fingerprint_idx").on(table.businessId, table.embeddingFingerprint)],
 );
 
 export const knowledgeSnippets = pgTable(

@@ -1,15 +1,18 @@
+import { randomUUID } from "node:crypto";
+
+import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { buildChatSystemPrompt } from "@lobbystack/ai";
-import { appendMessage, getCachedBusinessSnapshot, getOrCreateWidgetConversation, getWidgetChatAllowance, loadWidgetChatHistory, registerWidgetVisitor, reserveWidgetChatUsageInTransaction, type DomainContext } from "@lobbystack/domain";
+import { appendMessage, getCachedBusinessSnapshot, getOrCreateWidgetConversation, loadWidgetChatHistory, registerWidgetVisitor, reserveWidgetChatUsageInTransaction, type DomainContext } from "@lobbystack/domain";
 import { conversations, withBusinessTransaction } from "@lobbystack/db";
-import { OpenAiCompatibleTextProvider } from "@lobbystack/providers";
+import { createTextAiProvider } from "@lobbystack/providers";
 import { widgetChatRequestSchema, type BusinessContextSnapshot } from "@lobbystack/shared";
 
 import { getWorkerDatabase, readJson } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
-import { resolveWidgetAccess, type WidgetSession } from "@/lib/widget-access";
+import { resolveWidgetSessionAccess, type WidgetSession } from "@/lib/widget-access";
 import { requestIpHash } from "@/lib/widget-keys";
 import { enforceWidgetRateLimits } from "@/lib/widget-policy";
 
@@ -40,10 +43,6 @@ function fallbackSnapshot(session: WidgetSession): BusinessContextSnapshot {
   };
 }
 
-function sseChunk(encoder: TextEncoder, payload: unknown): Uint8Array {
-  return encoder.encode(`data: ${JSON.stringify(payload)}\n\n`);
-}
-
 async function loadAutomationState(context: DomainContext, businessId: string, conversationId: string): Promise<"ai_active" | "human_handoff"> {
   return await withBusinessTransaction(context.db, { businessId, actorType: "worker" }, async (tx) => {
     const row = (await tx.select({ automationState: conversations.automationState }).from(conversations).where(eq(conversations.id, conversationId)).limit(1))[0];
@@ -54,98 +53,82 @@ async function loadAutomationState(context: DomainContext, businessId: string, c
 export async function POST(request: Request) {
   try {
     const body = widgetChatRequestSchema.parse(await readJson(request));
-    const access = await resolveWidgetAccess(request, body.widgetKey);
+    const access = await resolveWidgetSessionAccess(request);
     if (!access.ok) return access.response;
     const { session } = access;
+    if (session.visitorId !== body.visitorId) return NextResponse.json({ error: "The visitor does not match the widget session.", code: "widget_visitor_mismatch" }, { status: 403 });
     const rate = await enforceWidgetRateLimits({ businessId: session.businessId, widgetKeyId: session.widgetKeyId, visitorId: body.visitorId, ...(requestIpHash(request) ? { ipHash: requestIpHash(request) } : {}), operation: "chat" }, { consume: true });
     if (!rate.allowed) {
       return NextResponse.json({ error: "Chat rate limit reached.", code: rate.code }, { status: rate.status });
     }
 
-    const encoder = new TextEncoder();
     const context = createWorkerDomainContext();
-    const stream = new ReadableStream<Uint8Array>({
-      async start(controller) {
-        const emit = (payload: unknown) => controller.enqueue(sseChunk(encoder, payload));
+    await registerWidgetVisitor(context, { businessId: session.businessId, visitorId: body.visitorId, metadata: { userAgent: request.headers.get("user-agent") ?? undefined } });
+    const { conversationId } = await getOrCreateWidgetConversation(context, { businessId: session.businessId, widgetVisitorId: body.visitorId });
+    const inboundMessageId = await appendMessage(context, { businessId: session.businessId, conversationId, body: body.content, direction: "inbound", channel: "web_chat" });
+    const { queueOperatorAlert } = await import("@lobbystack/domain");
+    await queueOperatorAlert(context, {
+      businessId: session.businessId,
+      eventKind: "widgetChat",
+      eventKey: `widget-chat:${inboundMessageId}`,
+      subject: "New website chat message",
+      body: body.content.slice(0, 240) || "A website visitor sent a chat message.",
+    });
+    const automationState = await loadAutomationState(context, session.businessId, conversationId);
+    if (automationState === "ai_active") {
+      const reservation = await withBusinessTransaction(getWorkerDatabase().db, { businessId: session.businessId, actorType: "worker" }, async (tx) => await reserveWidgetChatUsageInTransaction(tx, { businessId: session.businessId, conversationId }));
+      if (!reservation.allowed) return NextResponse.json({ error: "This month's chat session limit has been reached.", code: "chat_ai_limit_reached" }, { status: 402 });
+    }
+    const assistantMessageId = randomUUID();
+    const stream = createUIMessageStream({
+      execute: async ({ writer }) => {
+        writer.write({ type: "start", messageId: assistantMessageId });
         try {
-          await registerWidgetVisitor(context, { businessId: session.businessId, visitorId: body.visitorId, metadata: { userAgent: request.headers.get("user-agent") ?? undefined } });
-          const { conversationId } = await getOrCreateWidgetConversation(context, { businessId: session.businessId, widgetVisitorId: body.visitorId });
-          const inboundMessageId = await appendMessage(context, { businessId: session.businessId, conversationId, body: body.content, direction: "inbound", channel: "web_chat" });
-          const { queueOperatorAlert } = await import("@lobbystack/domain");
-          await queueOperatorAlert(context, {
-            businessId: session.businessId,
-            eventKind: "widgetChat",
-            eventKey: `widget-chat:${inboundMessageId}`,
-            subject: "New website chat message",
-            body: body.content.slice(0, 240) || "A website visitor sent a chat message.",
-          });
-          emit({ type: "start", chatId: conversationId, messageId: inboundMessageId });
-
-          const automationState = await loadAutomationState(context, session.businessId, conversationId);
           if (automationState === "human_handoff") {
-            emit({ type: "handoff", chatId: conversationId });
-            emit({ type: "finish", message: null, automationState: "human_handoff" });
-            return;
-          }
-
-          const billing = await getWidgetChatAllowance(context, { businessId: session.businessId });
-          if (!billing.allowed) {
-            const fallback = "Thanks for your message! Our team will reply shortly.";
-            await appendMessage(context, { businessId: session.businessId, conversationId, body: fallback, direction: "outbound", channel: "web_chat", aiGenerated: false });
-            emit({ type: "error", code: "chat_ai_limit_reached", message: "This month's chat session limit has been reached." });
-            emit({ type: "finish", message: { id: "", role: "assistant", content: fallback, createdAt: new Date().toISOString() }, automationState: "ai_active" });
+            writer.write({ type: "finish", finishReason: "stop", messageMetadata: { automationState: "human_handoff" } });
             return;
           }
 
           const snapshot = await getCachedBusinessSnapshot(context, { businessId: session.businessId });
           const activeSnapshot = snapshot ?? fallbackSnapshot(session);
-          await withBusinessTransaction(getWorkerDatabase().db, { businessId: session.businessId, actorType: "worker" }, async (tx) => {
-            await reserveWidgetChatUsageInTransaction(tx, { businessId: session.businessId, conversationId });
-          });
           const history = await loadWidgetChatHistory(context, { businessId: session.businessId, conversationId });
           const historyText = history.slice(-20).map((row) => `${row.direction === "inbound" ? "Visitor" : "Assistant"}: ${row.body}`).join("\n");
-          const apiKey = process.env.AI_CHAT_API_KEY ?? process.env.OPENAI_API_KEY;
-
-          if (!apiKey) {
+          const provider = createTextAiProvider();
+          writer.write({ type: "text-start", id: assistantMessageId });
+          if (!provider) {
             const fallback = "Thanks for your message! Our team will reply shortly.";
             await appendMessage(context, { businessId: session.businessId, conversationId, body: fallback, direction: "outbound", channel: "web_chat", aiGenerated: false });
-            emit({ type: "text-delta", delta: "" });
-            emit({ type: "finish", message: { id: "", role: "assistant", content: fallback, createdAt: new Date().toISOString() }, automationState: "ai_active" });
+            writer.write({ type: "text-delta", id: assistantMessageId, delta: fallback });
+            writer.write({ type: "text-end", id: assistantMessageId });
+            writer.write({ type: "finish", finishReason: "stop", messageMetadata: { automationState: "ai_active" } });
             return;
           }
 
-          const provider = new OpenAiCompatibleTextProvider({
-            apiKey,
-            ...(process.env.AI_CHAT_MODEL ? { model: process.env.AI_CHAT_MODEL } : {}),
-            ...(process.env.AI_CHAT_BASE_URL ? { baseURL: process.env.AI_CHAT_BASE_URL } : {}),
-            ...(process.env.AI_CHAT_PROVIDER_NAME ? { name: process.env.AI_CHAT_PROVIDER_NAME } : {}),
-          });
           const text: string[] = [];
           for await (const part of provider.streamReply({
-            instructions: buildChatSystemPrompt(activeSnapshot),
+            instructions: `${buildChatSystemPrompt(activeSnapshot)}\nReply in ${body.locale === "fr" || (!body.locale && (session.config.localeOverride === "fr" || session.defaultLocale === "fr")) ? "French" : "English"} unless the visitor clearly asks to switch languages.`,
             prompt: body.content,
             context: historyText,
           })) {
             text.push(part);
-            emit({ type: "text-delta", delta: part });
+            writer.write({ type: "text-delta", id: assistantMessageId, delta: part });
           }
           const reply = text.join("");
           if (!reply.trim()) throw new Error("The AI assistant returned an empty reply.");
           await appendMessage(context, { businessId: session.businessId, conversationId, body: reply, direction: "outbound", channel: "web_chat", aiGenerated: true });
-          emit({ type: "finish", message: { id: "", role: "assistant", content: reply, createdAt: new Date().toISOString() }, automationState: "ai_active" });
+          writer.write({ type: "text-end", id: assistantMessageId });
+          writer.write({ type: "finish", finishReason: "stop", messageMetadata: { automationState: "ai_active" } });
         } catch (cause) {
           const message = cause instanceof Error ? cause.message : "The chat could not be processed.";
-          emit({ type: "error", code: "chat_failed", message });
-          emit({ type: "finish", message: null, automationState: "ai_active" });
-        } finally {
-          controller.close();
+          writer.write({ type: "error", errorText: message });
+          writer.write({ type: "finish", finishReason: "error", messageMetadata: { automationState: "ai_active" } });
         }
       },
     });
 
-    return new NextResponse(stream, {
+    return createUIMessageStreamResponse({
+      stream,
       headers: {
-        "content-type": "text/event-stream",
         "cache-control": "no-cache, no-transform",
         "x-accel-buffering": "no",
       },

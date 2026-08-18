@@ -5,7 +5,7 @@ import { widgetLeadRequestSchema } from "@lobbystack/shared";
 
 import { readJson } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
-import { resolveWidgetAccess } from "@/lib/widget-access";
+import { resolveWidgetSessionAccess } from "@/lib/widget-access";
 import { isValidUuid, requestIpHash } from "@/lib/widget-keys";
 import { enforceWidgetRateLimits } from "@/lib/widget-policy";
 
@@ -15,9 +15,10 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     const body = widgetLeadRequestSchema.parse(await readJson(request));
-    const access = await resolveWidgetAccess(request, body.widgetKey);
+    const access = await resolveWidgetSessionAccess(request);
     if (!access.ok) return access.response;
     const { session } = access;
+    if (session.visitorId !== body.visitorId) return NextResponse.json({ error: "The visitor does not match the widget session.", code: "widget_visitor_mismatch" }, { status: 403 });
     const rate = await enforceWidgetRateLimits({ businessId: session.businessId, widgetKeyId: session.widgetKeyId, visitorId: body.visitorId, ...(requestIpHash(request) ? { ipHash: requestIpHash(request) } : {}), operation: "lead" }, { consume: true });
     if (!rate.allowed) return NextResponse.json({ error: "Rate limit reached.", code: rate.code }, { status: rate.status });
     if (!isValidUuid(body.visitorId)) return NextResponse.json({ error: "A valid visitorId is required.", code: "visitor_required" }, { status: 400 });

@@ -7,7 +7,7 @@ export const DEFAULT_TEXT_AI_BASE_URL = "https://api.openai.com/v1";
 export const DEFAULT_TEXT_AI_MODEL = "gpt-4o-mini";
 
 export type TextAiConfig = {
-  apiKey: string;
+  apiKey?: string;
   model?: string;
   baseURL?: string;
   name?: string;
@@ -27,8 +27,8 @@ export class OpenAiCompatibleTextProvider {
     this.providerName = config.name ?? "openai";
     const factory = createOpenAICompatible({
       name: this.providerName,
-      apiKey: config.apiKey,
       baseURL: config.baseURL ?? DEFAULT_TEXT_AI_BASE_URL,
+      ...(config.apiKey ? { apiKey: config.apiKey } : {}),
     });
     this.api = factory.chatModel(this.model);
     this.inputCostPerMillionTokens = config.inputCostPerMillionTokens ?? 0.15;
@@ -102,4 +102,29 @@ export class OpenAiCompatibleTextProvider {
       },
     };
   }
+}
+
+export type TextAiEnvironment = Record<string, string | undefined>;
+
+export function createTextAiProvider(environment: TextAiEnvironment = process.env): OpenAiCompatibleTextProvider | undefined {
+  const baseURL = environment.AI_CHAT_BASE_URL ?? DEFAULT_TEXT_AI_BASE_URL;
+  const apiKey = environment.AI_CHAT_API_KEY ?? environment.OPENAI_API_KEY;
+  if (!apiKey && baseURL.replace(/\/+$/, "") === DEFAULT_TEXT_AI_BASE_URL) return undefined;
+  const inputCost = parseOptionalNumber(environment.AI_CHAT_INPUT_COST_PER_MILLION_TOKENS);
+  const config: TextAiConfig = {
+    ...(apiKey ? { apiKey } : {}),
+    ...(environment.AI_CHAT_MODEL ? { model: environment.AI_CHAT_MODEL } : {}),
+    ...(environment.AI_CHAT_BASE_URL ? { baseURL: environment.AI_CHAT_BASE_URL } : {}),
+    ...(environment.AI_CHAT_PROVIDER_NAME ? { name: environment.AI_CHAT_PROVIDER_NAME } : {}),
+  };
+  if (inputCost !== undefined) config.inputCostPerMillionTokens = inputCost;
+  const outputCost = parseOptionalNumber(environment.AI_CHAT_OUTPUT_COST_PER_MILLION_TOKENS);
+  if (outputCost !== undefined) config.outputCostPerMillionTokens = outputCost;
+  return new OpenAiCompatibleTextProvider(config);
+}
+
+function parseOptionalNumber(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }

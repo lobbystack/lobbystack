@@ -160,7 +160,7 @@ export async function deleteKnowledgeSnippet(context: DomainContext, input: { us
 
 export async function indexDocumentText(
   context: DomainContext,
-  input: { businessId: string; documentId: string; text: string; embeddings: number[][] },
+  input: { businessId: string; documentId: string; text: string; embeddings: number[][]; embeddingFingerprint?: string },
 ): Promise<{ chunkCount: number }> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const document = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1))[0];
@@ -185,6 +185,9 @@ export async function indexDocumentText(
         content,
         contentHash: hashContent(content),
         embedding: input.embeddings[sequence]!,
+        ...(input.embeddingFingerprint ? { embeddingFingerprint: input.embeddingFingerprint } : {}),
+        embeddingStatus: input.embeddingFingerprint ? "completed" : "pending",
+        embeddingError: null,
       })));
     }
     await tx.update(knowledgeDocuments).set({ status: "indexed", processingProgress: 100, contentHash: hashContent(input.text), revision: document.revision + 1, updatedAt: new Date() }).where(eq(knowledgeDocuments.id, input.documentId));
@@ -264,6 +267,7 @@ export async function searchKnowledge(
     if (terms.length === 0) {
       return [];
     }
+    let semanticRows: Array<{ chunk_id: string; title: string; content: string }> = [];
     if (context.embeddings) {
       try {
         const [embedding] = await context.embeddings.embed([input.query]);
@@ -275,19 +279,30 @@ export async function searchKnowledge(
             INNER JOIN knowledge_documents AS documents ON documents.id = chunks.document_id
             WHERE chunks.business_id = ${input.businessId}
               AND chunks.embedding IS NOT NULL
+              ${context.embeddings.fingerprint ? sql`AND chunks.embedding_fingerprint = ${context.embeddings.fingerprint} AND chunks.embedding_status = 'completed'` : sql``}
             ORDER BY chunks.embedding <=> ${vector}::vector
             LIMIT ${input.limit ?? 4}
           `);
-          if (vectorRows.rows.length > 0) {
-            return vectorRows.rows.map((row) => ({ chunkId: row.chunk_id, title: row.title, content: row.content }));
-          }
+          semanticRows = vectorRows.rows;
         }
       } catch {
         // Keyword retrieval remains available when the embedding provider is unavailable.
       }
     }
-    const rows = await tx.select({ chunkId: knowledgeChunks.id, title: knowledgeDocuments.title, content: knowledgeChunks.content }).from(knowledgeChunks).innerJoin(knowledgeDocuments, eq(knowledgeChunks.documentId, knowledgeDocuments.id)).where(and(eq(knowledgeChunks.businessId, input.businessId), ...terms.map((term) => ilike(knowledgeChunks.content, `%${term}%`)))).orderBy(desc(knowledgeDocuments.updatedAt)).limit(input.limit ?? 4);
-    return rows;
+    const limit = input.limit ?? 4;
+    if (semanticRows.length >= limit) {
+      return semanticRows.slice(0, limit).map((row) => ({ chunkId: row.chunk_id, title: row.title, content: row.content }));
+    }
+    const rows = await tx.select({ chunkId: knowledgeChunks.id, title: knowledgeDocuments.title, content: knowledgeChunks.content }).from(knowledgeChunks).innerJoin(knowledgeDocuments, eq(knowledgeChunks.documentId, knowledgeDocuments.id)).where(and(eq(knowledgeChunks.businessId, input.businessId), ...terms.map((term) => ilike(knowledgeChunks.content, `%${term}%`)))).orderBy(desc(knowledgeDocuments.updatedAt)).limit(limit);
+    const seen = new Set(semanticRows.map((row) => row.chunk_id));
+    const combined = semanticRows.map((row) => ({ chunkId: row.chunk_id, title: row.title, content: row.content }));
+    for (const row of rows) {
+      if (seen.has(row.chunkId)) continue;
+      combined.push(row);
+      seen.add(row.chunkId);
+      if (combined.length >= limit) break;
+    }
+    return combined;
   });
   searchDuration.record(performance.now() - startedAt, { operation: "knowledge.search" });
   searchResultCount.record(results.length, { operation: "knowledge.search" });

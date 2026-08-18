@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 
@@ -65,19 +65,69 @@ export function requestWidgetOrigin(request: Request): string | null {
   }
 }
 
-export function isAllowedWidgetOrigin(origin: string, allowedOrigins: unknown): boolean {
+export function isAllowedWidgetOrigin(origin: string, allowedOrigins: unknown, options: { allowAdminOrigin?: boolean; allowLocalhost?: boolean } = {}): boolean {
   const normalized = normalizeOrigin(origin);
   const allowlist = normalizeAllowedOrigins(allowedOrigins);
   if (allowlist.has(normalized)) return true;
-  if (isLocalhostHttp(normalized) && process.env.NODE_ENV !== "production") return true;
+  if (options.allowLocalhost !== false && isLocalhostHttp(normalized) && process.env.NODE_ENV !== "production") return true;
   let adminOrigin = "";
   try {
     adminOrigin = normalizeOrigin(new URL(process.env.APP_BASE_URL ?? "").origin);
   } catch {
     // Fall through when APP_BASE_URL is unset.
   }
-  if (adminOrigin && normalized === adminOrigin) return true;
-  return Boolean(adminOrigin) && allowlist.has(adminOrigin);
+  if (options.allowAdminOrigin !== false && adminOrigin && normalized === adminOrigin) return true;
+  return options.allowAdminOrigin !== false && Boolean(adminOrigin) && allowlist.has(adminOrigin);
+}
+
+type WidgetSessionTokenPayload = {
+  v: 1;
+  widgetKeyId: string;
+  businessId: string;
+  visitorId: string;
+  origin: string;
+  exp: number;
+};
+
+function widgetSessionSecret(): string {
+  const secret = [process.env.WIDGET_SESSION_SECRET, process.env.BETTER_AUTH_SECRET]
+    .map((value) => value?.trim())
+    .find((value): value is string => Boolean(value));
+  if (!secret && process.env.NODE_ENV === "production") throw new Error("WIDGET_SESSION_SECRET or BETTER_AUTH_SECRET is required in production.");
+  return secret ?? "development-only-widget-session-secret";
+}
+
+function encodeTokenPart(value: unknown): string {
+  return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+function signTokenParts(header: string, payload: string): string {
+  return createHmac("sha256", widgetSessionSecret()).update(`${header}.${payload}`).digest("base64url");
+}
+
+export function createWidgetSessionToken(input: Omit<WidgetSessionTokenPayload, "v" | "exp"> & { ttlSeconds?: number }): { token: string; expiresAt: string } {
+  const header = encodeTokenPart({ alg: "HS256", typ: "JWT" });
+  const payload: WidgetSessionTokenPayload = { v: 1, widgetKeyId: input.widgetKeyId, businessId: input.businessId, visitorId: input.visitorId, origin: normalizeOrigin(input.origin), exp: Math.floor(Date.now() / 1000) + (input.ttlSeconds ?? 3600) };
+  const encodedPayload = encodeTokenPart(payload);
+  return { token: `${header}.${encodedPayload}.${signTokenParts(header, encodedPayload)}`, expiresAt: new Date(payload.exp * 1000).toISOString() };
+}
+
+export function verifyWidgetSessionToken(token: string): WidgetSessionTokenPayload | null {
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  const [header, payload, signature] = parts;
+  if (!header || !payload || !signature) return null;
+  const expected = signTokenParts(header, payload);
+  const expectedBuffer = Buffer.from(expected);
+  const signatureBuffer = Buffer.from(signature);
+  if (expectedBuffer.length !== signatureBuffer.length || !timingSafeEqual(expectedBuffer, signatureBuffer)) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as WidgetSessionTokenPayload;
+    if (parsed.v !== 1 || typeof parsed.widgetKeyId !== "string" || typeof parsed.businessId !== "string" || typeof parsed.visitorId !== "string" || typeof parsed.origin !== "string" || typeof parsed.exp !== "number" || parsed.exp <= Math.floor(Date.now() / 1000)) return null;
+    return { ...parsed, origin: normalizeOrigin(parsed.origin) };
+  } catch {
+    return null;
+  }
 }
 
 export function serializeWidgetKeyConfig(row: { id: string; status: string | null; label: string | null; allowedOrigins: unknown; config: unknown; lastUsedAt: Date | null; createdAt: Date }): WidgetKeyConfig {

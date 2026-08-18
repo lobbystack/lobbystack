@@ -24,6 +24,7 @@ export const queueForJobType: Record<JobType, JobQueue> = {
   "knowledge.crawlWebsite": "bulk",
   "knowledge.indexDocument": "bulk",
   "knowledge.reindexBusiness": "bulk",
+  "knowledge.reembedBusiness": "bulk",
   "snapshot.refresh": "default",
   "notification.dispatch": "default",
   "notification.dailySummary": "maintenance",

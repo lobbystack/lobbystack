@@ -99,7 +99,7 @@ LobbyStack can be adapted for many local business workflows:
 | SMS | Text conversations and booking outcomes connected to the same customer history. |
 | Dashboard | Calls, messages, contacts, appointments, recordings, transcripts, follow-ups, and analytics together. |
 | Usage and billing | Hosted plans, voice usage, alert SMS, outbound call attempts, storage, and metered add-ons. |
-| Bring your own API keys | Self-hosted deployments can use your own Twilio, OpenAI, calendar, email, analytics, and billing provider credentials. |
+| Bring your own API keys | Self-hosted deployments can use your own Twilio, OpenAI-compatible AI, calendar, email, analytics, and billing provider credentials. |
 
 ## Built With
 
@@ -115,7 +115,7 @@ LobbyStack is open source with a hosted cloud service.
 
 Use **LobbyStack Cloud** when you want the product managed for you. You still control the receptionist behavior, knowledge, services, rules, numbers, integrations, and team workflow from the app.
 
-Self-host when your team wants to run the stack on your own infrastructure, bring your own API keys, and use your own PostgreSQL, Twilio, OpenAI, calendar, analytics, billing, and email provider accounts.
+Self-host when your team wants to run the stack on your own infrastructure, bring your own API keys, and use your own PostgreSQL, Twilio, OpenAI-compatible AI, calendar, analytics, billing, and email provider accounts.
 
 Full product control in the hosted app. Infrastructure ownership when you self-host. Same open-source core either way.
 
@@ -157,7 +157,7 @@ pnpm db:migrate
 pnpm dev
 ```
 
-Mock providers are part of the default development path, so contributors can exercise flows without live Twilio, OpenAI, calendar, or email credentials. Provider setup notes live in the [docs](https://docs.lobbystack.com/self-hosting/providers).
+Mock providers are part of the default development path, so contributors can exercise flows without live Twilio, AI, calendar, or email credentials. Provider setup notes live in the [docs](https://docs.lobbystack.com/self-hosting/providers).
 
 ### Self-Hosted Docker Compose
 

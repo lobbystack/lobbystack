@@ -286,6 +286,19 @@ export const widgetVisitorIdentitySchema = z.object({
 
 export type WidgetVisitorIdentity = z.infer<typeof widgetVisitorIdentitySchema>;
 
+export const widgetSessionRequestSchema = z.object({
+  widgetKey: z.string().min(1),
+  visitorId: z.string().uuid(),
+});
+export type WidgetSessionRequest = z.infer<typeof widgetSessionRequestSchema>;
+
+export const widgetSessionResponseSchema = z.object({
+  token: z.string().min(1),
+  expiresAt: z.string().datetime(),
+  visitorId: z.string().uuid(),
+});
+export type WidgetSessionResponse = z.infer<typeof widgetSessionResponseSchema>;
+
 export type WidgetChatRole = "user" | "assistant";
 
 export type WidgetChatPart =
@@ -296,7 +309,6 @@ export type WidgetChatPart =
 export type WidgetChatReplyRole = "assistant" | "human";
 
 export const widgetChatRequestSchema = z.object({
-  widgetKey: z.string().min(1),
   visitorId: z.string().uuid(),
   messageId: z.string().uuid(),
   content: z.string().min(1).max(4_000),
@@ -315,7 +327,6 @@ export const widgetChatResponseSchema = z.object({
 export type WidgetChatResponse = z.infer<typeof widgetChatResponseSchema>;
 
 export const widgetLeadRequestSchema = z.object({
-  widgetKey: z.string().min(1),
   visitorId: z.string().uuid(),
   name: z.string().max(160).optional(),
   email: z.string().email().max(320).optional(),

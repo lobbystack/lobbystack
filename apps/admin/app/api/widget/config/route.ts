@@ -4,8 +4,8 @@ import { getCachedBusinessSnapshot, getWebVoiceBillingAllowance, getWidgetChatAl
 
 import { asApiResponse } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
-import { resolveWidgetAccess } from "@/lib/widget-access";
-import { isValidUuid, requestIpHash, touchWidgetKeyLastUsed } from "@/lib/widget-keys";
+import { resolveWidgetSessionAccess } from "@/lib/widget-access";
+import { requestIpHash, touchWidgetKeyLastUsed } from "@/lib/widget-keys";
 import { enforceWidgetRateLimits } from "@/lib/widget-policy";
 
 export const runtime = "nodejs";
@@ -15,20 +15,16 @@ const webCallBaseUrl = process.env.NEXT_PUBLIC_WEB_CALL_ENDPOINT ?? (process.env
 
 export async function GET(request: Request) {
   try {
-    const url = new URL(request.url);
-    const widgetKey = url.searchParams.get("key");
-    const visitorId = url.searchParams.get("visitorId") ?? "";
-    const access = await resolveWidgetAccess(request, widgetKey);
+    const access = await resolveWidgetSessionAccess(request);
     if (!access.ok) return access.response;
     const { session } = access;
-    const customerOrigin = request.headers.get("origin") ?? request.headers.get("referer") ?? "";
-    const rate = await enforceWidgetRateLimits({ businessId: session.businessId, widgetKeyId: session.widgetKeyId, ...(isValidUuid(visitorId) ? { visitorId } : {}), ...(requestIpHash(request) ? { ipHash: requestIpHash(request) } : {}), operation: "config" }, { consume: true });
+    const visitorId = session.visitorId ?? "";
+    const customerOrigin = session.origin ?? "";
+    const rate = await enforceWidgetRateLimits({ businessId: session.businessId, widgetKeyId: session.widgetKeyId, ...(visitorId ? { visitorId } : {}), ...(requestIpHash(request) ? { ipHash: requestIpHash(request) } : {}), operation: "config" }, { consume: true });
     if (!rate.allowed) return NextResponse.json({ error: "Rate limit reached.", code: rate.code }, { status: rate.status });
 
     const context = createWorkerDomainContext();
-    if (isValidUuid(visitorId)) {
-      await registerWidgetVisitor(context, { businessId: session.businessId, visitorId, metadata: { userAgent: request.headers.get("user-agent") ?? undefined, pageUrl: customerOrigin ? new URL(customerOrigin).pathname : undefined } });
-    }
+    if (visitorId) await registerWidgetVisitor(context, { businessId: session.businessId, visitorId, metadata: { userAgent: request.headers.get("user-agent") ?? undefined, ...(customerOrigin ? { pageUrl: customerOrigin } : {}) } });
     await touchWidgetKeyLastUsed({ businessId: session.businessId, widgetKeyId: session.widgetKeyId });
 
     const [snapshot, chatBilling, voiceBilling] = await Promise.all([

@@ -4,18 +4,19 @@ const mocks = vi.hoisted(() => ({
   embedMany: vi.fn(),
   generateText: vi.fn(),
   streamText: vi.fn(),
+  createOpenAICompatible: vi.fn(),
 }));
 
 vi.mock("@ai-sdk/openai-compatible", () => ({
-  createOpenAICompatible: () => ({
+  createOpenAICompatible: mocks.createOpenAICompatible.mockImplementation(() => ({
     chatModel: (model: string) => ({ model, type: "language", specificationVersion: "v3" }),
     embeddingModel: (model: string) => ({ model, type: "embedding", specificationVersion: "v3" }),
-  }),
+  })),
 }));
 vi.mock("ai", () => mocks);
 
 import { OpenAiCompatibleEmbeddingProvider } from "./embeddingProvider";
-import { OpenAiCompatibleTextProvider } from "./textAiProvider";
+import { createTextAiProvider, OpenAiCompatibleTextProvider } from "./textAiProvider";
 
 describe("provider-agnostic AI providers", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -63,6 +64,30 @@ describe("provider-agnostic AI providers", () => {
     expect(vector).toBeDefined();
     expect(vector!).toHaveLength(1536);
     expect(Math.sqrt(vector!.reduce((sum, value) => sum + value * value, 0))).toBeCloseTo(1);
+  });
+
+  it("rejects vectors that do not match the fixed storage dimension", async () => {
+    mocks.embedMany.mockResolvedValue({ embeddings: [new Array(768).fill(0.5)], usage: { tokens: 1 } });
+    const provider = new OpenAiCompatibleEmbeddingProvider({ apiKey: "test" });
+    await expect(provider.embed(["Greeting"])).rejects.toThrow("requires exactly 1536");
+  });
+
+  it("rejects non-finite vectors instead of coercing them", async () => {
+    mocks.embedMany.mockResolvedValue({ embeddings: [Object.assign(new Array(1536).fill(0.5), { 12: Number.NaN })], usage: { tokens: 1 } });
+    const provider = new OpenAiCompatibleEmbeddingProvider({ apiKey: "test" });
+    await expect(provider.embed(["Greeting"])).rejects.toThrow("non-finite");
+  });
+
+  it("changes the embedding fingerprint when the operator bumps the revision", () => {
+    const first = new OpenAiCompatibleEmbeddingProvider({ apiKey: "test", revision: "1" });
+    const second = new OpenAiCompatibleEmbeddingProvider({ apiKey: "test", revision: "2" });
+    expect(first.fingerprint).not.toBe(second.fingerprint);
+  });
+
+  it("passes provider configuration through and allows keyless local endpoints", () => {
+    const provider = createTextAiProvider({ AI_CHAT_BASE_URL: "http://localhost:11434/v1", AI_CHAT_MODEL: "llama3.1:8b", AI_CHAT_PROVIDER_NAME: "ollama" });
+    expect(provider).toBeDefined();
+    expect(mocks.createOpenAICompatible).toHaveBeenCalledWith({ name: "ollama", baseURL: "http://localhost:11434/v1" });
   });
 
   it("streams reply chunks", async () => {

@@ -11,7 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { Input } from "./ui/input";
 
 type Business = { businessId: string; name: string; active: boolean };
-type WidgetKeyRecord = { id: string; label: string | null; status: "active" | "disabled" | "revoked"; allowedOrigins: string[]; config: { color?: string; position?: "bottom-right" | "bottom-left" | "bottom-center"; title?: string; subtitle?: string; greeting?: string; leadForm?: { enabled?: boolean; requirePhone?: boolean; requireEmail?: boolean; showBeforeChat?: boolean } }; lastUsedAt: string | null; createdAt: string };
+type WidgetKeyConfig = { color?: string; position?: "bottom-right" | "bottom-left" | "bottom-center"; title?: string; subtitle?: string; greeting?: string; localeOverride?: "en" | "fr"; leadForm?: { enabled?: boolean; requirePhone?: boolean; requireEmail?: boolean; showBeforeChat?: boolean } };
+type WidgetKeyRecord = { id: string; label: string | null; status: "active" | "disabled" | "revoked"; allowedOrigins: string[]; config: WidgetKeyConfig; lastUsedAt: string | null; createdAt: string };
 type KeysResponse = { keys: WidgetKeyRecord[] };
 type CreatedKey = { id: string; key: string } | null;
 
@@ -42,6 +43,13 @@ export function LiveWidgetSettingsSurface() {
   const [color, setColor] = useState("#0f766e");
   const [position, setPosition] = useState<"bottom-right" | "bottom-left" | "bottom-center">("bottom-right");
   const [leadEnabled, setLeadEnabled] = useState(false);
+  const [leadRequireEmail, setLeadRequireEmail] = useState(false);
+  const [leadRequirePhone, setLeadRequirePhone] = useState(false);
+  const [leadShowBeforeChat, setLeadShowBeforeChat] = useState(false);
+  const [title, setTitle] = useState("");
+  const [subtitle, setSubtitle] = useState("");
+  const [greeting, setGreeting] = useState("");
+  const [localeOverride, setLocaleOverride] = useState<"" | "en" | "fr">("");
   const [createdKey, setCreatedKey] = useState<CreatedKey>(null);
   const [copied, setCopied] = useState(false);
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
@@ -52,7 +60,7 @@ export function LiveWidgetSettingsSurface() {
   const create = useMutation({
     mutationFn: async () => await requestJson<{ key: { id: string; key: string } }>(`/api/widget-keys?businessId=${encodeURIComponent(business!.businessId)}`, {
       method: "POST",
-      body: JSON.stringify({ ...(label.trim() ? { label: label.trim() } : {}), allowedOrigins: originsFromText(origins), config: { color, position, leadForm: { enabled: leadEnabled } } }),
+      body: JSON.stringify({ ...(label.trim() ? { label: label.trim() } : {}), allowedOrigins: originsFromText(origins), config: { color, position, ...(title.trim() ? { title: title.trim() } : {}), ...(subtitle.trim() ? { subtitle: subtitle.trim() } : {}), ...(greeting.trim() ? { greeting: greeting.trim() } : {}), ...(localeOverride ? { localeOverride } : {}), leadForm: { enabled: leadEnabled, requireEmail: leadRequireEmail, requirePhone: leadRequirePhone, showBeforeChat: leadShowBeforeChat } } }),
     }),
     onSuccess: async (result) => {
       setCreatedKey(result.key);
@@ -62,7 +70,7 @@ export function LiveWidgetSettingsSurface() {
   });
 
   const patch = useMutation({
-    mutationFn: async (input: { id: string; label: string; allowedOrigins: string[] }) => await requestJson(`/api/widget-keys?businessId=${encodeURIComponent(business!.businessId)}&id=${encodeURIComponent(input.id)}`, { method: "PATCH", body: JSON.stringify({ label: input.label, allowedOrigins: input.allowedOrigins }) }),
+    mutationFn: async (input: { id: string; label: string; allowedOrigins: string[]; config: WidgetKeyConfig }) => await requestJson(`/api/widget-keys?businessId=${encodeURIComponent(business!.businessId)}&id=${encodeURIComponent(input.id)}`, { method: "PATCH", body: JSON.stringify({ label: input.label, allowedOrigins: input.allowedOrigins, config: input.config }) }),
     onSuccess: async () => await queryClient.invalidateQueries({ queryKey: ["widget-keys", business?.businessId] }),
   });
 
@@ -100,7 +108,12 @@ export function LiveWidgetSettingsSurface() {
           <label className="space-y-2 text-sm font-medium sm:col-span-2">Allowed origins<input className="min-h-11 w-full rounded-xl border border-slate-200 px-3 font-normal" value={origins} onChange={(event) => setOrigins(event.target.value)} placeholder="https://example.com, https://www.example.com" /></label>
           <label className="space-y-2 text-sm font-medium">Accent color<div className="flex items-center gap-2"><input className="h-11 w-16 rounded-xl border p-1" type="color" value={color} onChange={(event) => setColor(event.target.value)} /><span className="text-sm text-slate-500">{color}</span></div></label>
           <label className="space-y-2 text-sm font-medium">Position<select className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 font-normal" value={position} onChange={(event) => setPosition(event.target.value as typeof position)}><option value="bottom-right">Bottom right</option><option value="bottom-left">Bottom left</option><option value="bottom-center">Bottom center</option></select></label>
+          <label className="space-y-2 text-sm font-medium">Title<input className="min-h-11 w-full rounded-xl border border-slate-200 px-3 font-normal" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Chat with us" /></label>
+          <label className="space-y-2 text-sm font-medium">Subtitle<input className="min-h-11 w-full rounded-xl border border-slate-200 px-3 font-normal" value={subtitle} onChange={(event) => setSubtitle(event.target.value)} placeholder="We usually reply in a few minutes" /></label>
+          <label className="space-y-2 text-sm font-medium sm:col-span-2">Greeting<textarea className="min-h-20 w-full rounded-xl border border-slate-200 p-3 font-normal" value={greeting} onChange={(event) => setGreeting(event.target.value)} placeholder="Hi there! How can we help today?" /></label>
+          <label className="space-y-2 text-sm font-medium">Locale override<select className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 font-normal" value={localeOverride} onChange={(event) => setLocaleOverride(event.target.value as typeof localeOverride)}><option value="">Use visitor language</option><option value="en">English</option><option value="fr">Français</option></select></label>
           <label className="flex items-center gap-2 text-sm font-medium sm:col-span-2"><input className="size-4" type="checkbox" checked={leadEnabled} onChange={(event) => setLeadEnabled(event.target.checked)} />Enable a lead form so visitors can share their contact details</label>
+          {leadEnabled ? <div className="grid gap-2 sm:col-span-2 sm:grid-cols-3"><label className="flex items-center gap-2 text-sm"><input className="size-4" type="checkbox" checked={leadRequireEmail} onChange={(event) => setLeadRequireEmail(event.target.checked)} />Require email</label><label className="flex items-center gap-2 text-sm"><input className="size-4" type="checkbox" checked={leadRequirePhone} onChange={(event) => setLeadRequirePhone(event.target.checked)} />Require phone</label><label className="flex items-center gap-2 text-sm"><input className="size-4" type="checkbox" checked={leadShowBeforeChat} onChange={(event) => setLeadShowBeforeChat(event.target.checked)} />Show before chat</label></div> : null}
           <div className="sm:col-span-2"><Button loading={create.isPending} disabled={!business || !origins.trim()} onClick={() => create.mutate()}>Create widget key</Button>{create.isError ? <p className="mt-2 text-sm text-red-600">{create.error.message}</p> : null}</div>
         </CardContent>
       </Card>
@@ -126,9 +139,10 @@ export function LiveWidgetSettingsSurface() {
   );
 }
 
-function WidgetKeyEditor({ row, onSave, onStatus, busy }: { row: WidgetKeyRecord; onSave: (input: { id: string; label: string; allowedOrigins: string[] }) => void; onStatus: (status: "active" | "disabled" | "revoked") => void; busy: boolean }) {
+function WidgetKeyEditor({ row, onSave, onStatus, busy }: { row: WidgetKeyRecord; onSave: (input: { id: string; label: string; allowedOrigins: string[]; config: WidgetKeyConfig }) => void; onStatus: (status: "active" | "disabled" | "revoked") => void; busy: boolean }) {
   const [label, setLabel] = useState(row.label ?? "");
   const [origins, setOrigins] = useState(originsToText(row.allowedOrigins));
+  const [config, setConfig] = useState<WidgetKeyConfig>(row.config);
   return (
     <article className="rounded-xl border border-slate-200 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -145,9 +159,16 @@ function WidgetKeyEditor({ row, onSave, onStatus, busy }: { row: WidgetKeyRecord
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="space-y-1.5 text-sm font-medium">Label<input className="min-h-10 w-full rounded-xl border border-slate-200 px-3 font-normal" value={label} onChange={(event) => setLabel(event.target.value)} /></label>
         <label className="space-y-1.5 text-sm font-medium">Allowed origins<input className="min-h-10 w-full rounded-xl border border-slate-200 px-3 font-normal" value={origins} onChange={(event) => setOrigins(event.target.value)} /></label>
+        <label className="space-y-1.5 text-sm font-medium">Accent color<div className="flex items-center gap-2"><input className="h-10 w-14 rounded-xl border p-1" type="color" value={config.color ?? "#0f766e"} onChange={(event) => setConfig({ ...config, color: event.target.value })} /><span className="text-xs text-slate-500">{config.color ?? "#0f766e"}</span></div></label>
+        <label className="space-y-1.5 text-sm font-medium">Position<select className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 font-normal" value={config.position ?? "bottom-right"} onChange={(event) => setConfig({ ...config, position: event.target.value as NonNullable<WidgetKeyConfig["position"]> })}><option value="bottom-right">Bottom right</option><option value="bottom-left">Bottom left</option><option value="bottom-center">Bottom center</option></select></label>
+        <label className="space-y-1.5 text-sm font-medium">Title<input className="min-h-10 w-full rounded-xl border border-slate-200 px-3 font-normal" value={config.title ?? ""} onChange={(event) => setConfig({ ...config, title: event.target.value })} /></label>
+        <label className="space-y-1.5 text-sm font-medium">Subtitle<input className="min-h-10 w-full rounded-xl border border-slate-200 px-3 font-normal" value={config.subtitle ?? ""} onChange={(event) => setConfig({ ...config, subtitle: event.target.value })} /></label>
+        <label className="space-y-1.5 text-sm font-medium sm:col-span-2">Greeting<textarea className="min-h-16 w-full rounded-xl border border-slate-200 p-2 font-normal" value={config.greeting ?? ""} onChange={(event) => setConfig({ ...config, greeting: event.target.value })} /></label>
+        <label className="space-y-1.5 text-sm font-medium">Locale override<select className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 font-normal" value={config.localeOverride ?? ""} onChange={(event) => { const next = { ...config }; if (event.target.value === "en" || event.target.value === "fr") next.localeOverride = event.target.value; else delete next.localeOverride; setConfig(next); }}><option value="">Use visitor language</option><option value="en">English</option><option value="fr">Français</option></select></label>
+        <div className="space-y-2 text-sm sm:col-span-2"><p className="font-medium">Lead capture</p><div className="flex flex-wrap gap-x-4 gap-y-2"><label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(config.leadForm?.enabled)} onChange={(event) => setConfig({ ...config, leadForm: { ...config.leadForm, enabled: event.target.checked } })} />Enabled</label><label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(config.leadForm?.requireEmail)} onChange={(event) => setConfig({ ...config, leadForm: { enabled: Boolean(config.leadForm?.enabled), ...config.leadForm, requireEmail: event.target.checked } })} />Require email</label><label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(config.leadForm?.requirePhone)} onChange={(event) => setConfig({ ...config, leadForm: { enabled: Boolean(config.leadForm?.enabled), ...config.leadForm, requirePhone: event.target.checked } })} />Require phone</label><label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(config.leadForm?.showBeforeChat)} onChange={(event) => setConfig({ ...config, leadForm: { enabled: Boolean(config.leadForm?.enabled), ...config.leadForm, showBeforeChat: event.target.checked } })} />Show before chat</label></div></div>
       </div>
       <div className="mt-3 flex items-center gap-3">
-        <Button size="sm" disabled={busy} onClick={() => onSave({ id: row.id, label: label.trim() || (row.label ?? ""), allowedOrigins: originsFromText(origins) })}>Save</Button>
+        <Button size="sm" disabled={busy} onClick={() => onSave({ id: row.id, label: label.trim() || (row.label ?? ""), allowedOrigins: originsFromText(origins), config })}>Save</Button>
         {row.lastUsedAt ? <p className="text-xs text-slate-500">Last used {new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(row.lastUsedAt))}</p> : null}
       </div>
     </article>

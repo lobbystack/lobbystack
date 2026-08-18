@@ -45,8 +45,11 @@ Use `.env.example` as the source of truth. Store production values in your deplo
 | Variable group | Purpose |
 | --- | --- |
 | `TWILIO_*` | Voice, verification, number provisioning, and webhook authentication. |
-| `OPENAI_*` | Realtime voice and transcription. |
-| `GEMINI_*`, `GOOGLE_GENERATIVE_AI_API_KEY` | Text generation and embeddings. |
+| `OPENAI_API_KEY` | Realtime voice and fallback key for compatible AI providers. |
+| `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_PROVIDER_NAME` | OpenAI-compatible chat generation. |
+| `AI_EMBEDDING_API_KEY`, `AI_EMBEDDING_BASE_URL`, `AI_EMBEDDING_MODEL`, `AI_EMBEDDING_PROVIDER_NAME`, `AI_EMBEDDING_REVISION` | OpenAI-compatible 1536-dimensional embeddings. |
+| `WIDGET_SESSION_SECRET` | Signs cross-origin website-widget sessions. |
+| `WEB_CALL_ALLOWED_ORIGINS` | Origins allowed to reach the voice gateway transport; the signed widget token still controls the customer parent origin. |
 | `FIRECRAWL_*` | Website knowledge ingestion. |
 | `GOOGLE_*` | Google Calendar OAuth. |
 | `SMTP_*`, `EMAIL_*` | Transactional email. |

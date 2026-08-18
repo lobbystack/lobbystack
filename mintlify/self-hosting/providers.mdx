@@ -19,8 +19,8 @@ The Docker Compose baseline runs LobbyStack's application, PostgreSQL, Redis, an
 ## Knowledge and automation
 
 <AccordionGroup>
-  <Accordion title="Gemini" icon="sparkles">
-    Gemini provides non-realtime text generation and embeddings for knowledge retrieval and background workflows.
+  <Accordion title="OpenAI-compatible AI" icon="sparkles">
+    Configure any provider or self-hosted runtime that implements the OpenAI-compatible chat and embeddings APIs using the `AI_CHAT_*` and `AI_EMBEDDING_*` variables. Embedding models must return exactly 1536 dimensions.
   </Accordion>
   <Accordion title="Firecrawl" icon="globe">
     Firecrawl imports public website content into the knowledge pipeline. You can omit it if operators only upload documents and enter knowledge manually.
