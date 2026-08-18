@@ -17,6 +17,12 @@ const nextConfig: NextConfig = {
     "@opentelemetry/exporter-logs-otlp-grpc",
     "@grpc/grpc-js",
   ],
+  turbopack: {
+    resolveAlias: {
+      "@lobbystack/telemetry": "../../packages/telemetry/dist/index.js",
+      "@lobbystack/telemetry/node": "../../packages/telemetry/dist/node.js",
+    },
+  },
   webpack(config, { isServer }) {
     if (isServer) {
       config.externals = [

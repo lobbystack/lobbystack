@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "NODE_ENV=production next build",
     "start": "next start",
     "typecheck": "tsc -p tsconfig.json --noEmit",
