@@ -9,6 +9,7 @@
 - `packages/db/`: Drizzle schema, PostgreSQL migrations, role-specific clients, and RLS helpers.
 - `packages/domain/`: durable business logic shared by admin and worker runtimes. Widget conversations use the `web_chat` channel and key on `widget_visitor_id` (no phone required).
 - `packages/ai/`: system-prompt builders, including `buildChatSystemPrompt` for the website widget.
+- `packages/providers/`: provider-agnostic AI adapters (text generation and embeddings) built on the Vercel AI SDK. Any OpenAI-compatible endpoint works: set `AI_CHAT_*`/`AI_EMBEDDING_*` env vars (`API_KEY`, `BASE_URL`, `MODEL`, `PROVIDER_NAME`); defaults point at OpenAI. Widget chat falls back to `OPENAI_API_KEY` and streams via `streamText`.
 - `packages/embed/`: Vite bundle producing the IIFE widget loader (`dist/embed.js`, served at `/embed.js`, copied into `apps/admin/public/embed/` by `scripts/copy-widget-embed.mjs`).
 - `packages/`: shared contracts, jobs, providers, telemetry, configuration, and test helpers.
 - `docker/`, `docker-compose.yml`, and `scripts/`: local infrastructure, operations, migration, and certification tooling.

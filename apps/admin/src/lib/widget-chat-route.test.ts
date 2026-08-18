@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => ({
   withBusinessTransaction: vi.fn(),
   reserveWidgetChatUsageInTransaction: vi.fn(),
   getWorkerDatabase: vi.fn(),
-  GeminiTextProvider: vi.fn(),
+  OpenAiCompatibleTextProvider: vi.fn(),
 }));
 
 vi.mock("@lobbystack/domain", () => ({
@@ -38,7 +38,7 @@ vi.mock("@lobbystack/db", () => ({
 }));
 
 vi.mock("@lobbystack/providers", () => ({
-  GeminiTextProvider: mocks.GeminiTextProvider,
+  OpenAiCompatibleTextProvider: mocks.OpenAiCompatibleTextProvider,
 }));
 
 vi.mock("@/lib/api-helpers", () => ({
@@ -153,7 +153,7 @@ describe("POST /api/widget/chat", () => {
     expect(mocks.appendMessage).toHaveBeenCalledTimes(1);
     expect(mocks.appendMessage).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ direction: "inbound", channel: "web_chat" }));
     expect(mocks.queueOperatorAlert).toHaveBeenCalled();
-    expect(mocks.GeminiTextProvider).not.toHaveBeenCalled();
+    expect(mocks.OpenAiCompatibleTextProvider).not.toHaveBeenCalled();
     expect(body).toContain("human_handoff");
   });
 
@@ -164,12 +164,12 @@ describe("POST /api/widget/chat", () => {
     expect(response.status).toBe(200);
     expect(body).toContain("chat_ai_limit_reached");
     expect(body).toContain("Thanks for your message!");
-    expect(mocks.GeminiTextProvider).not.toHaveBeenCalled();
+    expect(mocks.OpenAiCompatibleTextProvider).not.toHaveBeenCalled();
     expect(mocks.appendMessage).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ direction: "outbound", aiGenerated: false }));
   });
 
   it("streams an AI reply and persists the outbound message when automation is active", async () => {
-    vi.stubEnv("GEMINI_API_KEY", "test-api-key");
+    vi.stubEnv("AI_CHAT_API_KEY", "test-api-key");
     mocks.getWidgetChatAllowance.mockResolvedValue({ allowed: true, plan: "scale" });
     mocks.getCachedBusinessSnapshot.mockResolvedValue({ businessId } as BusinessContextSnapshot);
     mocks.loadWidgetChatHistory.mockResolvedValue([]);
@@ -185,7 +185,7 @@ describe("POST /api/widget/chat", () => {
     class FakeSignedProvider {
       streamReply = streamReply;
     }
-    mocks.GeminiTextProvider.mockImplementation(function () {
+    mocks.OpenAiCompatibleTextProvider.mockImplementation(function () {
       return new FakeSignedProvider();
     });
 

@@ -1,26 +1,38 @@
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { generateText, streamText } from "ai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { generateText, streamText, type LanguageModel } from "ai";
 
 import { calculateTokenCost, type AiProviderUsage } from "./aiUsage";
 
-export type GeminiTextConfig = {
+export const DEFAULT_TEXT_AI_BASE_URL = "https://api.openai.com/v1";
+export const DEFAULT_TEXT_AI_MODEL = "gpt-4o-mini";
+
+export type TextAiConfig = {
   apiKey: string;
   model?: string;
+  baseURL?: string;
+  name?: string;
   inputCostPerMillionTokens?: number;
   outputCostPerMillionTokens?: number;
 };
 
-export class GeminiTextProvider {
+export class OpenAiCompatibleTextProvider {
   private readonly model: string;
-  private readonly google: ReturnType<typeof createGoogleGenerativeAI>;
+  private readonly api: LanguageModel;
+  private readonly providerName: string;
   private readonly inputCostPerMillionTokens: number;
   private readonly outputCostPerMillionTokens: number;
 
-  constructor(config: GeminiTextConfig) {
-    this.model = config.model ?? "gemini-2.0-flash";
-    this.google = createGoogleGenerativeAI({ apiKey: config.apiKey });
-    this.inputCostPerMillionTokens = config.inputCostPerMillionTokens ?? 0.1;
-    this.outputCostPerMillionTokens = config.outputCostPerMillionTokens ?? 0.4;
+  constructor(config: TextAiConfig) {
+    this.model = config.model ?? DEFAULT_TEXT_AI_MODEL;
+    this.providerName = config.name ?? "openai";
+    const factory = createOpenAICompatible({
+      name: this.providerName,
+      apiKey: config.apiKey,
+      baseURL: config.baseURL ?? DEFAULT_TEXT_AI_BASE_URL,
+    });
+    this.api = factory.chatModel(this.model);
+    this.inputCostPerMillionTokens = config.inputCostPerMillionTokens ?? 0.15;
+    this.outputCostPerMillionTokens = config.outputCostPerMillionTokens ?? 0.6;
   }
 
   async generateReply(input: { instructions: string; prompt: string; context?: string }): Promise<{ text: string; usage: AiProviderUsage }> {
@@ -35,7 +47,7 @@ export class GeminiTextProvider {
   private async generate(input: { instructions: string; prompt: string }): Promise<{ text: string; usage: AiProviderUsage }> {
     const startedAt = performance.now();
     const result = await generateText({
-      model: this.google(this.model),
+      model: this.api,
       system: input.instructions,
       prompt: input.prompt,
       temperature: 0.2,
@@ -45,20 +57,18 @@ export class GeminiTextProvider {
         isEnabled: true,
         recordInputs: false,
         recordOutputs: false,
-        functionId: "lobbystack.gemini.generate",
+        functionId: "lobbystack.textAi.generate",
       },
     });
     const text = result.text.trim();
-    if (!text) throw new Error("Gemini returned an empty response.");
+    if (!text) throw new Error("The AI provider returned an empty response.");
     const usage: AiProviderUsage = {
-      provider: "google",
+      provider: this.providerName,
       model: this.model,
       latencyMs: performance.now() - startedAt,
-      ...(result.usage.inputTokens !== undefined ? { inputTokens: result.usage.inputTokens } : {}),
-      ...(result.usage.outputTokens !== undefined ? { outputTokens: result.usage.outputTokens } : {}),
-      ...(result.usage.totalTokens !== undefined ? { totalTokens: result.usage.totalTokens } : {}),
-      ...(result.usage.inputTokenDetails.cacheReadTokens !== undefined ? { cachedInputTokens: result.usage.inputTokenDetails.cacheReadTokens } : {}),
-      ...(result.usage.outputTokenDetails.reasoningTokens !== undefined ? { reasoningTokens: result.usage.outputTokenDetails.reasoningTokens } : {}),
+      ...(result.usage?.inputTokens !== undefined ? { inputTokens: result.usage.inputTokens } : {}),
+      ...(result.usage?.outputTokens !== undefined ? { outputTokens: result.usage.outputTokens } : {}),
+      ...(result.usage?.totalTokens !== undefined ? { totalTokens: result.usage.totalTokens } : {}),
     };
     const totalCostUsd = calculateTokenCost({
       ...(usage.inputTokens !== undefined ? { inputTokens: usage.inputTokens } : {}),
@@ -72,7 +82,7 @@ export class GeminiTextProvider {
   streamReply(input: { instructions: string; prompt: string; context?: string }): AsyncIterable<string> {
     const prompt = input.context ? `${input.context}\n\nUser message:\n${input.prompt}` : input.prompt;
     const stream = streamText({
-      model: this.google(this.model),
+      model: this.api,
       system: input.instructions,
       prompt,
       temperature: 0.2,
@@ -81,7 +91,7 @@ export class GeminiTextProvider {
         isEnabled: true,
         recordInputs: false,
         recordOutputs: false,
-        functionId: "lobbystack.gemini.stream",
+        functionId: "lobbystack.textAi.stream",
       },
     });
     return {

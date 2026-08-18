@@ -1,39 +1,50 @@
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { embedMany } from "ai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { embedMany, type EmbeddingModel } from "ai";
 
 import { calculateTokenCost, type AiProviderUsage } from "./aiUsage";
 
-export type GeminiEmbeddingConfig = {
+export const DEFAULT_EMBEDDING_AI_BASE_URL = "https://api.openai.com/v1";
+export const DEFAULT_EMBEDDING_AI_MODEL = "text-embedding-3-small";
+
+export type EmbeddingAiConfig = {
   apiKey: string;
   model?: string;
+  baseURL?: string;
+  name?: string;
   dimensions?: number;
   inputCostPerMillionTokens?: number;
 };
 
-export class GeminiEmbeddingProvider {
+export class OpenAiCompatibleEmbeddingProvider {
   private readonly model: string;
   private readonly dimensions: number;
-  private readonly google: ReturnType<typeof createGoogleGenerativeAI>;
+  private readonly api: EmbeddingModel;
+  private readonly providerName: string;
   private readonly inputCostPerMillionTokens: number;
 
-  constructor(config: GeminiEmbeddingConfig) {
-    this.model = config.model ?? "gemini-embedding-001";
+  constructor(config: EmbeddingAiConfig) {
+    this.model = config.model ?? DEFAULT_EMBEDDING_AI_MODEL;
+    this.providerName = config.name ?? "openai";
     this.dimensions = config.dimensions ?? 1536;
-    this.google = createGoogleGenerativeAI({ apiKey: config.apiKey });
-    this.inputCostPerMillionTokens = config.inputCostPerMillionTokens ?? 0.15;
+    const factory = createOpenAICompatible({
+      name: this.providerName,
+      apiKey: config.apiKey,
+      baseURL: config.baseURL ?? DEFAULT_EMBEDDING_AI_BASE_URL,
+    });
+    this.api = factory.embeddingModel(this.model);
+    this.inputCostPerMillionTokens = config.inputCostPerMillionTokens ?? 0.02;
   }
 
   async embed(values: string[], onUsage?: (usage: AiProviderUsage) => Promise<void> | void): Promise<number[][]> {
     const startedAt = performance.now();
     const result = await embedMany({
-      model: this.google.embedding(this.model),
+      model: this.api,
       values,
-      providerOptions: { google: { outputDimensionality: this.dimensions } },
       experimental_telemetry: {
         isEnabled: true,
         recordInputs: false,
         recordOutputs: false,
-        functionId: "lobbystack.gemini.embed",
+        functionId: "lobbystack.embeddingAi.embed",
       },
     });
     const latencyMs = performance.now() - startedAt;
@@ -43,7 +54,7 @@ export class GeminiEmbeddingProvider {
       outputCostPerMillionTokens: 0,
     });
     await onUsage?.({
-      provider: "google",
+      provider: this.providerName,
       model: this.model,
       latencyMs,
       inputTokens: result.usage.tokens,

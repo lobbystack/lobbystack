@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { buildChatSystemPrompt } from "@lobbystack/ai";
 import { appendMessage, getCachedBusinessSnapshot, getOrCreateWidgetConversation, getWidgetChatAllowance, loadWidgetChatHistory, registerWidgetVisitor, reserveWidgetChatUsageInTransaction, type DomainContext } from "@lobbystack/domain";
 import { conversations, withBusinessTransaction } from "@lobbystack/db";
-import { GeminiTextProvider } from "@lobbystack/providers";
+import { OpenAiCompatibleTextProvider } from "@lobbystack/providers";
 import { widgetChatRequestSchema, type BusinessContextSnapshot } from "@lobbystack/shared";
 
 import { getWorkerDatabase, readJson } from "@/lib/api-helpers";
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
           });
           const history = await loadWidgetChatHistory(context, { businessId: session.businessId, conversationId });
           const historyText = history.slice(-20).map((row) => `${row.direction === "inbound" ? "Visitor" : "Assistant"}: ${row.body}`).join("\n");
-          const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+          const apiKey = process.env.AI_CHAT_API_KEY ?? process.env.OPENAI_API_KEY;
 
           if (!apiKey) {
             const fallback = "Thanks for your message! Our team will reply shortly.";
@@ -114,7 +114,12 @@ export async function POST(request: Request) {
             return;
           }
 
-          const provider = new GeminiTextProvider({ apiKey });
+          const provider = new OpenAiCompatibleTextProvider({
+            apiKey,
+            ...(process.env.AI_CHAT_MODEL ? { model: process.env.AI_CHAT_MODEL } : {}),
+            ...(process.env.AI_CHAT_BASE_URL ? { baseURL: process.env.AI_CHAT_BASE_URL } : {}),
+            ...(process.env.AI_CHAT_PROVIDER_NAME ? { name: process.env.AI_CHAT_PROVIDER_NAME } : {}),
+          });
           const text: string[] = [];
           for await (const part of provider.streamReply({
             instructions: buildChatSystemPrompt(activeSnapshot),

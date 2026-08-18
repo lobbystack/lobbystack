@@ -1,6 +1,6 @@
 import { businesses, createDatabaseClient, databaseHealthCheck, withDispatcherTransaction } from "@lobbystack/db";
 import { createQueue, createRedisConnection, createWorkerOptions, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
-import { FirecrawlProvider, GeminiEmbeddingProvider, GoogleCalendarProvider, PolarBillingProvider, S3StorageProvider, SmtpEmailProvider, TwilioProvider } from "@lobbystack/providers";
+import { FirecrawlProvider, GoogleCalendarProvider, OpenAiCompatibleEmbeddingProvider, PolarBillingProvider, S3StorageProvider, SmtpEmailProvider, TwilioProvider } from "@lobbystack/providers";
 import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withSpan } from "@lobbystack/telemetry/node";
 import { Worker } from "bullmq";
 
@@ -33,14 +33,18 @@ function createEmailProvider(): SmtpEmailProvider | undefined {
   });
 }
 
-function createEmbeddingProvider(): GeminiEmbeddingProvider | undefined {
-  const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-  const inputCostPerMillionTokens = optionalNumber("GEMINI_EMBEDDING_INPUT_COST_PER_MILLION_TOKENS");
-  return apiKey ? new GeminiEmbeddingProvider({
-    apiKey,
-    ...(process.env.GEMINI_EMBEDDING_MODEL ? { model: process.env.GEMINI_EMBEDDING_MODEL } : {}),
-    ...(inputCostPerMillionTokens !== undefined ? { inputCostPerMillionTokens } : {}),
-  }) : undefined;
+function createEmbeddingProvider(): OpenAiCompatibleEmbeddingProvider | undefined {
+  const apiKey = process.env.AI_EMBEDDING_API_KEY ?? process.env.OPENAI_API_KEY;
+  const inputCostPerMillionTokens = optionalNumber("AI_EMBEDDING_INPUT_COST_PER_MILLION_TOKENS");
+  return apiKey
+    ? new OpenAiCompatibleEmbeddingProvider({
+        apiKey,
+        ...(process.env.AI_EMBEDDING_MODEL ? { model: process.env.AI_EMBEDDING_MODEL } : {}),
+        ...(process.env.AI_EMBEDDING_BASE_URL ? { baseURL: process.env.AI_EMBEDDING_BASE_URL } : {}),
+        ...(process.env.AI_EMBEDDING_PROVIDER_NAME ? { name: process.env.AI_EMBEDDING_PROVIDER_NAME } : {}),
+        ...(inputCostPerMillionTokens !== undefined ? { inputCostPerMillionTokens } : {}),
+      })
+    : undefined;
 }
 
 function createTwilioProvider(): TwilioProvider | undefined {

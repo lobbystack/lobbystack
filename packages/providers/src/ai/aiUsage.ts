@@ -1,5 +1,5 @@
 export type AiProviderUsage = {
-  provider: "google";
+  provider: string;
   model: string;
   latencyMs: number;
   inputTokens?: number;
