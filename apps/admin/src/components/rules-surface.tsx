@@ -28,8 +28,8 @@ export function RulesSurface() {
   const [editing, setEditing] = useState<Rule | null>(null);
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: async () => (await requestJson<{ businesses: Business[] }>("/api/businesses")).businesses });
-  const business = selectActiveBusiness(businesses.data);
+  const businesses = useQuery({ queryKey: ["businesses"], queryFn: async () => await requestJson<{ businesses: Business[] }>("/api/businesses") });
+  const business = selectActiveBusiness(businesses.data?.businesses);
   const canMutate = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   const rules = useQuery({ queryKey: ["rules", business?.businessId], enabled: Boolean(business), queryFn: async () => await requestJson<Rule[]>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}`) });
   const invalidate = () => void queryClient.invalidateQueries({ queryKey: ["rules", business?.businessId] });
