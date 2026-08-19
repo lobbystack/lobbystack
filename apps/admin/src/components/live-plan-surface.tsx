@@ -8,7 +8,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Item, ItemContent, ItemDescription, ItemTitle } from "./ui/item";
 import { PageSurface } from "./page-surface";
+import { Surface } from "./ui/surface";
 
 type Business = { businessId: string; name: string; slug: string; role: string; active: boolean };
 type Billing = {
@@ -118,5 +120,5 @@ export function LivePlanSurface() {
 }
 
 function PlanOption({ name, description, features, current }: { name: string; description: string; features: string[]; current: boolean }) {
-  return <Card className={current ? "border-primary ring-1 ring-primary/20" : undefined} size="sm"><CardHeader><div className="flex items-start justify-between gap-3"><div><CardTitle>{name}</CardTitle><CardDescription>{description}</CardDescription></div>{current ? <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">Current</span> : null}</div></CardHeader><CardContent><ul className="space-y-2 text-sm text-muted-foreground">{features.map((feature) => <li className="flex items-center gap-2" key={feature}><span className="size-1.5 rounded-full bg-primary" />{feature}</li>)}</ul></CardContent></Card>;
+  return <Surface className={current ? "border-primary ring-1 ring-primary/20" : undefined}><Item className="rounded-none border-0" variant="default"><ItemContent><ItemTitle>{name}</ItemTitle><ItemDescription>{description}</ItemDescription><ul className="mt-3 space-y-2 text-sm text-muted-foreground">{features.map((feature) => <li className="flex items-center gap-2" key={feature}><span className="size-1.5 rounded-full bg-primary" />{feature}</li>)}</ul></ItemContent>{current ? <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">Current</span> : null}</Item></Surface>;
 }

@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 import { PageSurface } from "./page-surface";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "./ui/item";
+import { Surface } from "./ui/surface";
 
 type Business = { businessId: string; name: string; active: boolean };
 type NumberRow = { id: string; e164: string; voiceEnabled: boolean; smsEnabled: boolean; status: string; reclaimScheduledAt: string | null; reclaimReason: string | null };
@@ -53,45 +55,40 @@ export function LivePhoneNumberSettingsSurface() {
 
   return (
     <PageSurface title="Phone numbers" description="Manage the Twilio numbers used for voice and SMS.">
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
-          <div>
-            <CardTitle className="flex items-center gap-2"><Phone className="size-5 text-teal-700" />Workspace numbers</CardTitle>
-            <CardDescription>{business?.name ?? "Active workspace"}</CardDescription>
-          </div>
-          <Button variant="ghost" onClick={() => void numbers.refetch()}><RefreshCw className="size-4" />Refresh</Button>
-        </CardHeader>
-        <CardContent>
+      <ItemGroup spacing="section"><section className="flex flex-col gap-3"><h2 className="font-heading text-sm leading-snug font-medium">Current number</h2><Surface className="flex flex-col"><Item className="rounded-none border-0" variant="default">
+        <ItemContent><ItemTitle className="flex items-center gap-2"><Phone className="size-4 text-muted-foreground" />{business?.name ?? "Active workspace"}</ItemTitle><ItemDescription>Twilio numbers used for voice and SMS.</ItemDescription></ItemContent><ItemActions><Button size="sm" variant="ghost" onClick={() => void numbers.refetch()}><RefreshCw className="size-4" />Refresh</Button></ItemActions>
+      </Item>
           {businesses.isLoading || numbers.isLoading ? <p className="py-12 text-center text-sm text-slate-500">Loading numbers...</p> : null}
           {businesses.isError || numbers.isError ? <p className="py-12 text-center text-sm text-red-600">Phone numbers are unavailable.</p> : null}
           {!numbers.isLoading && !numbers.isError ? (
             <div className="space-y-3">
               {rows.length ? rows.map((number) => (
-                <article key={number.id} className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <article key={number.id} className="flex flex-col gap-4 border-t border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="font-semibold text-slate-900">{number.e164}</p>
-                    <p className="mt-1 text-sm text-slate-500">Voice {number.voiceEnabled ? "enabled" : "disabled"}; SMS {number.smsEnabled ? "enabled" : "disabled"}; <span className="capitalize">{number.status}</span></p>
-                    {number.reclaimScheduledAt ? <p className="mt-1 text-xs font-medium text-amber-700">Release scheduled for {new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(number.reclaimScheduledAt))}{number.reclaimReason === "replacement" ? " after replacement" : ""}</p> : null}
+                    <p className="font-medium">{number.e164}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Voice {number.voiceEnabled ? "enabled" : "disabled"}; SMS {number.smsEnabled ? "enabled" : "disabled"}; <span className="capitalize">{number.status}</span></p>
+                    {number.reclaimScheduledAt ? <p className="mt-1 text-xs font-medium text-amber-600">Release scheduled for {new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(number.reclaimScheduledAt))}{number.reclaimReason === "replacement" ? " after replacement" : ""}</p> : null}
                   </div>
                   <Button variant="destructive" disabled={release.isPending || number.status !== "active" || Boolean(number.reclaimScheduledAt)} onClick={() => { if (window.confirm(`Release ${number.e164}? This disables calls and SMS and cannot be undone.`)) release.mutate(number.id); }}><Trash2 className="size-4" />Release number</Button>
                 </article>
-              )) : <p className="py-12 text-center text-sm text-slate-500">No phone numbers are assigned to this workspace.</p>}
-              {release.isError ? <p className="text-sm text-red-600">{release.error.message}</p> : null}
+              )) : <p className="px-4 py-12 text-center text-sm text-muted-foreground">No phone numbers are assigned to this workspace.</p>}
+              {release.isError ? <p className="px-4 pb-4 text-sm text-destructive">{release.error.message}</p> : null}
             </div>
           ) : null}
-        </CardContent>
+        </Surface></section>
+        <section className="flex flex-col gap-3"><h2 className="font-heading text-sm leading-snug font-medium">Number replacement</h2><Surface>
         {rows.some((number) => number.status === "active" && !number.reclaimScheduledAt) ? (
-          <div className="border-t border-slate-200 px-6 py-5">
+          <div className="px-4 py-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="max-w-2xl">
-                <p className="text-sm font-semibold text-slate-900">One-time number replacement</p>
-                <p className="mt-1 text-sm leading-6 text-slate-500">Choose a new number once. Your current number stays active for 30 days after the replacement connects.</p>
+                <p className="text-sm font-medium">One-time number replacement</p>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">Choose a new number once. Your current number stays active for 30 days after the replacement connects.</p>
               </div>
               <Button variant="outline" disabled={replacementUsed || replacementPending} onClick={() => setChooserOpen((open) => !open)}>{chooserOpen ? <X className="size-4" /> : <ArrowRightLeft className="size-4" />}{replacementUsed ? "Replacement used" : chooserOpen ? "Close" : "Replace number"}</Button>
             </div>
           </div>
-        ) : null}
-      </Card>
+        ) : <p className="px-4 py-4 text-sm text-muted-foreground">A replacement becomes available when an active number is assigned.</p>}
+      </Surface></section></ItemGroup>
 
       {chooserOpen && !replacementUsed ? (
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm" aria-labelledby="replacement-heading">
