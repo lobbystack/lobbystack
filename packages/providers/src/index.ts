@@ -119,4 +119,6 @@ export * from "./google/calendar";
 export * from "./polar/polarBilling";
 export * from "./polar/webhook";
 export * from "./storage/s3";
+export * from "./storage/local";
+export * from "./storage/provider";
 export * from "./twilio/twilioProvider";

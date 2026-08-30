@@ -24,7 +24,7 @@
     "zod": "^3.24.2"
   },
   "scripts": {
-    "dev": "concurrently -n admin,worker,voice,landing \"pnpm dev:admin\" \"pnpm dev:worker\" \"pnpm dev:voice\" \"pnpm dev:landing\"",
+    "dev": "node --env-file-if-exists=.env --env-file-if-exists=.env.local node_modules/concurrently/dist/bin/concurrently.js -n admin,worker,voice,landing \"pnpm dev:admin\" \"pnpm dev:worker\" \"pnpm dev:voice\" \"pnpm dev:landing\"",
     "dev:admin": "pnpm --filter @lobbystack/admin dev",
     "dev:worker": "pnpm --filter @lobbystack/worker dev",
     "docs:dev": "pnpm --filter @lobbystack/docs dev",

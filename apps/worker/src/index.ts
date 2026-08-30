@@ -1,6 +1,6 @@
 import { businesses, createDatabaseClient, databaseHealthCheck, withDispatcherTransaction } from "@lobbystack/db";
 import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
-import { createEmbeddingProvider, FirecrawlProvider, GoogleCalendarProvider, PolarBillingProvider, S3StorageProvider, SmtpEmailProvider, TwilioProvider } from "@lobbystack/providers";
+import { createEmbeddingProvider, createStorageProvider, FirecrawlProvider, GoogleCalendarProvider, PolarBillingProvider, SmtpEmailProvider, TwilioProvider } from "@lobbystack/providers";
 import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withSpan } from "@lobbystack/telemetry/node";
 import { Worker } from "bullmq";
 
@@ -30,13 +30,6 @@ function createTwilioProvider(): TwilioProvider | undefined {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   return accountSid && authToken ? new TwilioProvider({ accountSid, authToken }) : undefined;
-}
-
-function createStorageProvider(): S3StorageProvider | undefined {
-  const endpoint = process.env.S3_ENDPOINT;
-  const accessKeyId = process.env.S3_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
-  return accessKeyId && secretAccessKey ? new S3StorageProvider({ bucket: process.env.S3_BUCKET ?? "lobbystack", region: process.env.S3_REGION ?? "us-east-1", ...(endpoint ? { endpoint } : {}), accessKeyId, secretAccessKey, forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true" }) : undefined;
 }
 
 function createPolarProvider(): PolarBillingProvider | undefined {
@@ -89,7 +82,7 @@ async function main(): Promise<void> {
   await refreshSchedulers();
   const schedulerRefresh = setInterval(() => void refreshSchedulers().catch((error) => console.error("scheduler refresh failed", redactOtelExceptionText(error instanceof Error ? error.message : String(error)))), 5 * 60_000);
   schedulerRefresh.unref();
-  const state = { ready: false, redis: false, database: false, activeJobs: 0 };
+  const state = { ready: false, redis: false, database: false, storage: false, activeJobs: 0 };
   const health = startHealthServer(Number(process.env.PORT ?? 3002), state);
   const email = createEmailProvider();
   const embeddings = createEmbeddingProvider();
@@ -113,10 +106,8 @@ async function main(): Promise<void> {
       }
     }
   }
-  if (storage) {
-    await storage.ensureBucket();
-  }
-  const dependencies: WorkerDependencies = { domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) }, realtime, ...(calendar ? { calendar } : {}), ...(crawler ? { crawler } : {}), ...(productAnalytics ? { productAnalytics } : {}), ...(email ? { email } : {}), ...(embeddings ? { embeddings } : {}), ...(twilio ? { twilio } : {}), ...(storage ? { storage } : {}), ...(polar ? { polar } : {}) };
+  await storage.ensureReady();
+  const dependencies: WorkerDependencies = { domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) }, realtime, ...(calendar ? { calendar } : {}), ...(crawler ? { crawler } : {}), ...(productAnalytics ? { productAnalytics } : {}), ...(email ? { email } : {}), ...(embeddings ? { embeddings } : {}), ...(twilio ? { twilio } : {}), storage, ...(polar ? { polar } : {}) };
   const workers = jobQueues.map((queueName) => {
     const queue = queues.get(queueName);
     if (!queue) {
@@ -151,16 +142,19 @@ async function main(): Promise<void> {
   }
   state.redis = redisChecks.every(Boolean);
   state.database = (await databaseHealthCheck(database)).ok;
-  state.ready = state.redis && state.database;
+  state.storage = await storage.ensureReady().then(() => true).catch(() => false);
+  state.ready = state.redis && state.database && state.storage;
   const healthRefresh = setInterval(() => void (async () => {
-    const [databaseStatus, ...queueStatuses] = await Promise.all([
+    const [databaseStatus, storageStatus, ...queueStatuses] = await Promise.all([
       databaseHealthCheck(database).then((result) => result.ok).catch(() => false),
+      storage.ensureReady().then(() => true).catch(() => false),
       ...[...queues.values()].map(async (queue) => { try { await queue.getJobCounts(); return true; } catch { return false; } }),
       realtime.ping().then((result) => result === "PONG").catch(() => false),
     ]);
     state.database = databaseStatus;
+    state.storage = storageStatus;
     state.redis = queueStatuses.every(Boolean);
-    state.ready = state.database && state.redis;
+    state.ready = state.database && state.redis && state.storage;
   })(), 10_000);
   healthRefresh.unref();
 

@@ -17,7 +17,7 @@
 ## Development Commands
 
 - `pnpm install`: install workspace dependencies.
-- `docker compose up -d postgres redis minio minio-init`: start local infrastructure.
+- `docker compose up -d postgres redis`: start local infrastructure. Add `--profile minio` when testing the optional MinIO storage backend.
 - `pnpm db:migrate`: apply PostgreSQL migrations.
 - `pnpm dev`: run admin, worker, voice gateway, and landing apps.
 - `pnpm typecheck`: typecheck all active workspaces and scripts.

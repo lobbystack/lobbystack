@@ -17,6 +17,7 @@
     "@lobbystack/domain": "workspace:*",
     "@lobbystack/jobs": "workspace:*",
     "@lobbystack/providers": "workspace:*",
+    "@lobbystack/shared": "workspace:*",
     "@lobbystack/telemetry": "workspace:*",
     "bullmq": "^5.71.0",
     "drizzle-orm": "^0.44.7",

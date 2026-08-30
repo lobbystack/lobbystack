@@ -4,6 +4,7 @@ export type WorkerHealthState = {
   ready: boolean;
   redis: boolean;
   database: boolean;
+  storage: boolean;
   activeJobs: number;
 };
 
@@ -16,7 +17,7 @@ export function startHealthServer(port: number, state: WorkerHealthState): Serve
       return;
     }
     if (path === "/health/ready") {
-      const ok = state.ready && state.redis && state.database;
+      const ok = state.ready && state.redis && state.database && state.storage;
       response.writeHead(ok ? 200 : 503, { "content-type": "application/json" });
       response.end(JSON.stringify({ ok, ...state }));
       return;

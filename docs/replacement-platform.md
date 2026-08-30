@@ -1,13 +1,13 @@
 # Replacement Platform
 
-The canonical stack provides a Next.js admin/backend, PostgreSQL with RLS, Redis/BullMQ, MinIO-compatible storage, the voice gateway, and an OpenTelemetry collector. Convex remains relevant only as the production migration source until cutover and rollback are complete.
+The canonical stack provides a Next.js admin/backend, PostgreSQL with RLS, Redis/BullMQ, shared local storage, the voice gateway, and an OpenTelemetry collector. You can enable the MinIO profile when you need S3-compatible storage. Convex remains relevant only as the production migration source until cutover and rollback are complete.
 
 ## Local Stack
 
 1. Copy `.env.example` to `.env` and replace every development secret before exposing the stack.
 2. Start the stack with `docker compose --env-file .env -f docker-compose.yml up --build`.
 3. Open `http://localhost:13000` for the admin application, or `http://localhost` when using Caddy.
-4. Open `http://localhost:9001` for the MinIO console.
+4. Add `--profile minio` and set `STORAGE_PROVIDER=s3` when a certification run requires MinIO. The MinIO console listens on `http://localhost:9001`.
 5. Use `docker compose --env-file .env -f docker-compose.yml --profile development up mailpit` for local email inspection.
 
 Keep each `LOBBYSTACK_*_DATABASE_URL` password synchronized with its matching `LOBBYSTACK_*_PASSWORD` value. The Postgres init script creates the least-privilege runtime roles from those variables.
@@ -28,7 +28,8 @@ Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USERNAME`, `SMTP_PASSWORD`, a
 - Voice readiness: `http://localhost:13001/health/ready`
 - PostgreSQL: `localhost:15433`
 - Redis: `localhost:16380`
-- MinIO API: `localhost:9000`
+- Local storage: the `storage_data` Docker volume
+- MinIO API with the `minio` profile: `localhost:9000`
 - OTLP HTTP: `localhost:4318`
 - Collector health: `http://localhost:13133/health`
 - Prometheus: `http://localhost:9090`
@@ -39,7 +40,7 @@ Run these checks against the healthy Compose stack:
 
 - `pnpm replacement:smoke` verifies service liveness and readiness.
 - `pnpm replacement:internal` verifies signed voice access through the worker database role and rejects nonce replay.
-- `pnpm replacement:storage` verifies upload/finalize/download lifecycle, byte ranges, and cross-tenant denial against PostgreSQL and MinIO.
+- `pnpm replacement:storage` verifies the S3 upload/finalize/download lifecycle, byte ranges, and cross-tenant denial against PostgreSQL and MinIO. Start the MinIO profile before running it.
 - `pnpm replacement:realtime` creates an isolated Better Auth fixture, rejects unauthenticated and cross-tenant SSE access, validates every realtime event type, checks reconnect delivery, and enforces the 500 ms local p95 target.
 - `pnpm replacement:webhooks` verifies Polar Standard Webhooks, optional Resend/Svix webhooks, and Twilio signatures, rejects tampered requests, and confirms duplicate provider delivery remains idempotent.
 - `pnpm replacement:telemetry` runs an isolated detailed collector, exports correlated cross-service traces plus metrics and logs, and fails if customer identifiers, credentials, prompts, transcripts, object keys, customer filenames, or signed storage URLs reach the collector.
@@ -50,7 +51,7 @@ Run these checks against the healthy Compose stack:
 - `pnpm replacement:email-send` drives the worker `email.send` handler through a live SMTP conversation with an in-process sink, verifying transactional delivery, a stable privacy-safe Message-ID across retries, and no secret leakage.
 - `pnpm replacement:sms-consent` proves contact and operator consent, duplicate webhook idempotency, manual-block preservation, dispatch-time rechecks, cross-tenant denial, and immutable consent history. AI-generated SMS is not part of the replacement backend.
 - `pnpm replacement:parity` enforces the scoped non-UI capability manifest. Required capabilities must name implementation, test, and certification evidence; excluded AI SMS and Twilio A2P patterns are rejected from replacement backend sources.
-- `pnpm replacement:privacy` proves message scrubbing, selective transcript expiry, attachment cleanup, and recording deletion through the transactional outbox and live worker.
+- `pnpm replacement:privacy` proves message scrubbing, selective transcript expiry, attachment cleanup, and recording deletion through the transactional outbox and live worker. Its S3 checks require the MinIO profile.
 - `pnpm replacement:notifications` proves operator preference persistence, cross-tenant denial, durable outbox-backed delivery, duplicate event safety, production-source delivery for voice messages, customer SMS, failed SMS, calendar sync failures, and transfer failures, plus idempotent timezone-aware daily summaries.
 - `pnpm replacement:billing` verifies multi-kind usage, retries, annual accounting, plan snapshots, concurrent reservations, authorization, cap removal, completeness, and shared Starter/Pro overage caps.
 - `pnpm replacement:feedback`, `pnpm replacement:appointment-audits`, and `pnpm replacement:unit-economics` certify the remaining restored backend capabilities.
@@ -62,9 +63,9 @@ The certification scripts remove their temporary database rows and storage objec
 
 ## Backup And Restore
 
-`pnpm replacement:backup` briefly stops the admin, worker, and voice gateway to produce a consistent PostgreSQL custom dump and full MinIO bucket mirror under `.replacement-backups/`. Pass a destination after `--` to store the artifact elsewhere. Every artifact includes database and object checksums.
+`pnpm replacement:backup` stops the admin, worker, and voice gateway while it creates a PostgreSQL custom dump and copies the active storage backend under `.replacement-backups/`. It snapshots the shared volume for local storage and mirrors the MinIO bucket for S3 storage. Pass a destination after `--` to store the artifact elsewhere. Every artifact includes database and file checksums.
 
-Restore is destructive. Verify that the destination stack and `REPLACEMENT_ENV_FILE` are correct, set `REPLACEMENT_COMPOSE_PROJECT` explicitly, then run `CONFIRM_REPLACEMENT_RESTORE=1 pnpm replacement:restore -- <backup-directory>`. The restore recreates the `lobbystack` database, replaces the bucket contents, and flushes Redis so queued work from the newer state cannot replay against restored durable data. Runtime services that were running before the restore are restarted afterward.
+Restore is destructive. Verify that the destination stack and `REPLACEMENT_ENV_FILE` are correct, set `REPLACEMENT_COMPOSE_PROJECT` explicitly, then run `CONFIRM_REPLACEMENT_RESTORE=1 pnpm replacement:restore -- <backup-directory>`. The restore recreates the `lobbystack` database, replaces the configured file storage contents, and flushes Redis so queued work from the newer state cannot replay against restored durable data. The script restarts the runtime services that were running before the restore.
 
 Run `REPLACEMENT_COMPOSE_PROJECT=<disposable-project> CONFIRM_REPLACEMENT_RESTORE_DRILL=1 pnpm replacement:restore-drill` against a disposable local stack to prove database-row and object integrity through deletion and full restore. The drill is intentionally destructive to changes made after its snapshot and retains its backup under `.tmp/` for inspection.
 

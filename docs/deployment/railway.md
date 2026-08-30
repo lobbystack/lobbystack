@@ -9,7 +9,7 @@ Keep the collector private. Admin, worker, and voice gateway send OTLP to its pr
 - Database role URLs: `LOBBYSTACK_MIGRATOR_DATABASE_URL`, `LOBBYSTACK_AUTH_DATABASE_URL`, `LOBBYSTACK_APP_DATABASE_URL`, `LOBBYSTACK_WORKER_DATABASE_URL`, and `LOBBYSTACK_DISPATCHER_DATABASE_URL`.
 - Redis: `REDIS_URL` and an environment-specific `REDIS_PREFIX`.
 - Security: `BETTER_AUTH_SECRET`, `INTERNAL_SERVICE_SECRET`, `INTERNAL_SERVICE_TOKEN`, `ENCRYPTION_KEY`, and `OTP_HASH_SECRET`.
-- Storage: Railway bucket references for `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and `S3_BUCKET`; set `S3_FORCE_PATH_STYLE=false`.
+- Storage: set `STORAGE_PROVIDER=s3`, add Railway bucket references for `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and `S3_BUCKET`, and set `S3_FORCE_PATH_STYLE=false`.
 - Telemetry: `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector.railway.internal:4318`, `SERVICE_VERSION` set to the release SHA, and PostHog OTLP endpoints and authorization on the collector only.
 
 Provider credentials belong only on the services that use them. Follow `.env.example` for the complete variable names without copying development placeholder values.

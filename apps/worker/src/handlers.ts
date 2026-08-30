@@ -10,7 +10,7 @@ import { claimOperatorNotificationDelivery, correctAlertSmsUsage, estimateSmsSeg
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
 import { getTwilioProviderErrorCode, SecretBox } from "@lobbystack/providers";
 import type { DomainContext } from "@lobbystack/domain";
-import type { S3StorageProvider, SmtpEmailProvider, TwilioProvider } from "@lobbystack/providers";
+import type { RuntimeStorageProvider, SmtpEmailProvider, TwilioProvider } from "@lobbystack/providers";
 import { extractDocumentText } from "./documentExtraction";
 import { getMeter } from "@lobbystack/telemetry/node";
 import { redactTelemetryProperties, type TelemetryProperties } from "@lobbystack/telemetry";
@@ -24,7 +24,7 @@ const indexDuration = ragMeter.createHistogram("rag.index.duration_ms", { unit: 
 
 export type WorkerDependencies = {
   domain: DomainContext;
-  storage?: S3StorageProvider;
+  storage?: RuntimeStorageProvider;
   email?: Pick<SmtpEmailProvider, "sendTemplate">;
   twilio?: Pick<TwilioProvider, "sendSms"> & Partial<Pick<TwilioProvider, "getMessagePricing" | "getCallPricing" | "releasePhoneNumber" | "verifyPhone" | "findOwnedPhoneNumber" | "purchasePhoneNumber">>;
   polar?: { recordUsage(input: { meterId: string; externalCustomerId: string; quantity: number; timestamp: string; idempotencyKey: string }): Promise<void>; createCheckout?(input: { productId: string; customerEmail: string; externalCustomerId: string; successUrl: string; idempotencyKey?: string }): Promise<{ checkoutUrl: string; checkoutId: string }> };

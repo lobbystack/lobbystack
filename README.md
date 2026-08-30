@@ -152,10 +152,12 @@ The full hosted walkthrough lives in the [quick start guide](https://docs.lobbys
 ```bash
 cp .env.example .env
 pnpm install
-docker compose up -d postgres redis minio minio-init
+docker compose up -d postgres redis
 pnpm db:migrate
 pnpm dev
 ```
+
+Local development stores recordings and uploads under `.lobbystack/storage`. Set `STORAGE_PROVIDER=s3` when you need to test an S3-compatible service.
 
 Mock providers are part of the default development path, so contributors can exercise flows without live Twilio, AI, calendar, or email credentials. Provider setup notes live in the [docs](https://docs.lobbystack.com/self-hosting/providers).
 

@@ -18,7 +18,9 @@ cd lobbystack
 cp .env.example .env
 ```
 
-Replace every placeholder in `.env`. At minimum, set strong PostgreSQL role passwords, `BETTER_AUTH_SECRET`, `INTERNAL_SERVICE_SECRET`, `INTERNAL_SERVICE_TOKEN`, `ENCRYPTION_KEY`, `OTP_HASH_SECRET`, `APP_BASE_URL`, and provider credentials.
+Replace every placeholder in `.env`. At minimum, set strong PostgreSQL role passwords, `BETTER_AUTH_SECRET`, `INTERNAL_SERVICE_SECRET`, `INTERNAL_SERVICE_TOKEN`, `LOCAL_STORAGE_SIGNING_SECRET`, `ENCRYPTION_KEY`, `OTP_HASH_SECRET`, `APP_BASE_URL`, and provider credentials.
+
+Compose sets `STORAGE_PROVIDER=local` by default. The admin and worker mount the same persistent `storage_data` volume at `/var/lib/lobbystack/storage`.
 
 <Warning>
   Do not expose a stack that still uses the example passwords or `change-me` secrets.
@@ -32,6 +34,41 @@ docker compose ps
 ```
 
 The migrator applies PostgreSQL migrations before the admin and worker services start. Health checks hold dependent services until their prerequisites are ready.
+
+The admin readiness response includes database and storage checks. The worker readiness response includes PostgreSQL, Redis, and storage status.
+
+## Choose a storage backend
+
+The default local provider supports a single Docker host. Back up the `storage_data` volume with PostgreSQL and restore both from the same recovery point.
+
+Use S3 when the admin and worker run on different hosts. Set these values in `.env`:
+
+```dotenv
+STORAGE_PROVIDER=s3
+S3_BUCKET=lobbystack
+S3_REGION=us-east-1
+S3_ENDPOINT=
+S3_ACCESS_KEY_ID=replace-with-access-key
+S3_SECRET_ACCESS_KEY=replace-with-secret-key
+S3_FORCE_PATH_STYLE=false
+```
+
+AWS workloads may omit the access-key variables when the container can use an AWS credential role.
+
+MinIO remains available through a Compose profile. Configure the S3 variables for MinIO, then start the stack with the profile:
+
+```dotenv
+STORAGE_PROVIDER=s3
+S3_ENDPOINT=http://minio:9000
+S3_BUCKET=lobbystack
+S3_ACCESS_KEY_ID=minioadmin
+S3_SECRET_ACCESS_KEY=replace-with-a-long-minio-password
+S3_FORCE_PATH_STYLE=true
+```
+
+```bash
+docker compose --env-file .env --profile minio up -d --build
+```
 
 For local email inspection, start Mailpit:
 
@@ -60,9 +97,9 @@ The default service ports bind to localhost. Put public traffic through Caddy or
 - replace all development credentials and limit `.env` permissions
 - use production HTTPS values for `APP_BASE_URL`, `VOICE_GATEWAY_BASE_URL`, and `NEXT_PUBLIC_WEB_CALL_ENDPOINT`
 - configure `WEB_CALL_ALLOWED_ORIGINS` with exact dashboard and website origins
-- configure off-host PostgreSQL and object-storage backups
+- configure off-host PostgreSQL and file-storage backups
 - run a restore drill before accepting production traffic
-- restrict MinIO, PostgreSQL, Redis, Prometheus, and collector ports to private networks
+- restrict PostgreSQL, Redis, Prometheus, collector, and optional MinIO ports to private networks
 - monitor admin, worker, voice gateway, queue, database, and object-storage health
 - pin image versions before planned upgrades
 
@@ -74,4 +111,4 @@ docker compose --env-file .env build
 docker compose --env-file .env up -d
 ```
 
-Back up PostgreSQL and object storage before upgrading. Review new migrations and environment variables before restarting services.
+Back up PostgreSQL and the configured storage backend before upgrading. Review new migrations and environment variables before restarting services.

@@ -25,6 +25,8 @@ WORKDIR /app
 
 RUN groupadd --system --gid 1001 lobbystack && \
     useradd --system --uid 1001 --gid lobbystack lobbystack && \
+    mkdir -p /var/lib/lobbystack/storage && \
+    chown -R lobbystack:lobbystack /var/lib/lobbystack && \
     rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=build --chown=lobbystack:lobbystack /prod/worker/ ./
 

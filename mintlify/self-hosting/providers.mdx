@@ -3,7 +3,7 @@ title: "Third-party providers"
 description: "What each external provider does in a self-hosted LobbyStack deployment."
 ---
 
-The Docker Compose baseline runs LobbyStack's application, PostgreSQL, Redis, and object storage. Connect your own provider accounts for external capabilities.
+The Docker Compose baseline runs LobbyStack's application, PostgreSQL, Redis, and a shared local-storage volume. Connect your own provider accounts for external capabilities.
 
 ## Required for live calls
 
@@ -33,7 +33,10 @@ The Docker Compose baseline runs LobbyStack's application, PostgreSQL, Redis, an
 - SMTP for verification, password reset, and operational email
 - Polar for hosted billing and metered usage
 - PostHog and OpenTelemetry for analytics, error tracking, traces, metrics, and logs
-- S3-compatible managed storage instead of the included MinIO service
+- AWS S3 or compatible storage for multi-host deployments
+- MinIO through the optional `minio` Compose profile
 - managed PostgreSQL and Redis instead of the included containers
+
+Set `STORAGE_PROVIDER=s3` for AWS S3, MinIO, or another compatible service. Leave `S3_ENDPOINT` empty for AWS S3. MinIO requires its HTTP endpoint and `S3_FORCE_PATH_STYLE=true`.
 
 Use the [environment variable reference](/self-hosting/environment-variables) for configuration names and the [Docker Compose guide](/self-hosting/docker-compose) for deployment steps.

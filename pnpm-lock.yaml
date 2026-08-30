@@ -496,6 +496,9 @@ importers:
       '@lobbystack/providers':
         specifier: workspace:*
         version: link:../../packages/providers
+      '@lobbystack/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@lobbystack/telemetry':
         specifier: workspace:*
         version: link:../../packages/telemetry

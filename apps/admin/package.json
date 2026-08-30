@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "set -a; [ ! -f ../../.env ] || . ../../.env; set +a; next dev",
+    "dev": "node --env-file-if-exists=../../.env --env-file-if-exists=../../.env.local scripts/dev.mjs",
     "build": "NODE_ENV=production next build",
     "start": "next start",
     "typecheck": "tsc -p tsconfig.json --noEmit",

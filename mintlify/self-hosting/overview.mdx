@@ -15,7 +15,7 @@ The repository's [`docker-compose.yml`](https://github.com/lobbystack/lobbystack
 
 - PostgreSQL with pgvector for durable data, authentication state, and knowledge embeddings
 - Redis for queues, rate limits, and realtime coordination
-- MinIO for recordings and uploaded documents
+- a persistent Docker volume for recordings and uploaded documents
 - the Next.js admin dashboard and HTTP API
 - the background worker and transactional outbox dispatcher
 - the voice gateway for Twilio Media Streams and OpenAI Realtime
@@ -28,16 +28,20 @@ The repository's [`docker-compose.yml`](https://github.com/lobbystack/lobbystack
 2. Durable side effects enter the PostgreSQL outbox in the same transaction as business state changes.
 3. The worker dispatches queued jobs and refreshes business context snapshots.
 4. The voice gateway fetches one snapshot at call start and calls the admin backend only for authoritative operations.
-5. Recordings and documents are stored in S3-compatible object storage.
+5. The admin and worker share the configured storage provider. Single-host Compose deployments use a persistent local volume by default.
 
 ## Responsibilities
 
 You are responsible for:
 
-- PostgreSQL, Redis, and object-storage durability
+- PostgreSQL, Redis, and file-storage durability
 - backups, restore drills, upgrades, and monitoring
 - public DNS and TLS for the dashboard and voice gateway
 - Twilio, OpenAI, email, calendar, billing, and analytics credentials
 - secret rotation and least-privilege database roles
 
 Continue with the [Docker Compose deployment guide](/self-hosting/docker-compose), [environment variables](/self-hosting/environment-variables), and [provider reference](/self-hosting/providers).
+
+<Warning>
+  Local storage requires the admin and worker to run on the same Docker host. Deployments with application containers on more than one host must set `STORAGE_PROVIDER=s3` and use AWS S3 or a compatible service.
+</Warning>

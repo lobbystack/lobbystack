@@ -16,8 +16,8 @@ export type S3StorageConfig = {
   bucket: string;
   region: string;
   endpoint?: string;
-  accessKeyId: string;
-  secretAccessKey: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
   forcePathStyle?: boolean;
 };
 
@@ -35,7 +35,7 @@ export class S3StorageProvider {
       region: config.region,
       ...(config.endpoint ? { endpoint: config.endpoint } : {}),
       forcePathStyle: config.forcePathStyle ?? false,
-      credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
+      ...(config.accessKeyId && config.secretAccessKey ? { credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey } } : {}),
     });
   }
 
@@ -66,6 +66,11 @@ export class S3StorageProvider {
       this.bucketReady = undefined;
       throw error;
     }
+  }
+
+  async ensureReady(): Promise<void> {
+    await this.ensureBucket();
+    await this.run("health_check", async () => { await this.client.send(new HeadBucketCommand({ Bucket: this.bucket })); });
   }
 
   async createUpload(input: { key: string; contentType: string; length: number; checksum?: string }): Promise<{ url: string; headers: Record<string, string> }> {

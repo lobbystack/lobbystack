@@ -39,6 +39,7 @@ services:
 
   minio:
     image: minio/minio:latest
+    profiles: [minio]
     restart: unless-stopped
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
@@ -57,6 +58,7 @@ services:
 
   minio-init:
     image: minio/mc:latest
+    profiles: [minio]
     depends_on:
       minio:
         condition: service_healthy
@@ -168,12 +170,15 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost/api/calendar/google/callback}
       REDIS_URL: redis://redis:6379
-      S3_ENDPOINT: http://minio:9000
-      S3_BUCKET: ${S3_BUCKET:-lobbystack}
-      S3_REGION: us-east-1
-      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-minioadmin}
-      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-minioadminminio}
-      S3_FORCE_PATH_STYLE: "true"
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-}
+      LOCAL_STORAGE_PATH: /var/lib/lobbystack/storage
+      LOCAL_STORAGE_SIGNING_SECRET: ${LOCAL_STORAGE_SIGNING_SECRET:-change-me-before-production}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-false}
       OTEL_SERVICE_NAME: lobbystack-admin
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
     depends_on:
@@ -181,10 +186,10 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
-      minio-init:
-        condition: service_completed_successfully
       otel-collector:
         condition: service_started
+    volumes:
+      - storage_data:/var/lib/lobbystack/storage
     ports:
       - "127.0.0.1:${ADMIN_PORT:-3000}:3000"
     healthcheck:
@@ -217,12 +222,15 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       EMAIL_FROM: ${EMAIL_FROM:-LobbyStack <no-reply@localhost>}
       EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-}
-      S3_ENDPOINT: http://minio:9000
-      S3_BUCKET: ${S3_BUCKET:-lobbystack}
-      S3_REGION: us-east-1
-      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-minioadmin}
-      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-minioadminminio}
-      S3_FORCE_PATH_STYLE: "true"
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-}
+      LOCAL_STORAGE_PATH: /var/lib/lobbystack/storage
+      LOCAL_STORAGE_SIGNING_SECRET: ${LOCAL_STORAGE_SIGNING_SECRET:-change-me-before-production}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-false}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       AI_CHAT_API_KEY: ${AI_CHAT_API_KEY:-}
       AI_CHAT_BASE_URL: ${AI_CHAT_BASE_URL:-https://api.openai.com/v1}
@@ -265,6 +273,8 @@ services:
       POLAR_AI_SMS_ADDON_PRODUCT_ID: ${POLAR_AI_SMS_ADDON_PRODUCT_ID:-}
       POSTHOG_API_KEY: ${POSTHOG_API_KEY:-}
       POSTHOG_HOST: ${POSTHOG_HOST:-https://us.i.posthog.com}
+    volumes:
+      - storage_data:/var/lib/lobbystack/storage
     depends_on:
       migrator:
         condition: service_completed_successfully
@@ -367,6 +377,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  storage_data:
   minio_data:
   caddy_data:
   caddy_config:
