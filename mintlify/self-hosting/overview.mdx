@@ -20,7 +20,8 @@ The repository's [`docker-compose.yml`](https://github.com/lobbystack/lobbystack
 - the background worker and transactional outbox dispatcher
 - the voice gateway for Twilio Media Streams and OpenAI Realtime
 - Caddy for public routing and TLS
-- OpenTelemetry Collector, with optional Prometheus monitoring
+
+LobbyStack does not add monitoring containers to the Compose stack. Server runtimes can send traces, metrics, and OpenTelemetry logs to a configured OTLP-compatible backend.
 
 ## Data flow
 

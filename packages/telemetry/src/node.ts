@@ -1,4 +1,5 @@
 import {
+  type Attributes,
   context,
   propagation,
   SpanStatusCode,
@@ -7,7 +8,7 @@ import {
   type Span,
   type SpanOptions,
 } from "@opentelemetry/api";
-import { logs, type Logger } from "@opentelemetry/api-logs";
+import { logs, type AnyValue, type AnyValueMap, type Logger } from "@opentelemetry/api-logs";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
@@ -15,10 +16,11 @@ import { resourceFromAttributes } from "@opentelemetry/resources";
 import { BatchLogRecordProcessor, LoggerProvider } from "@opentelemetry/sdk-logs";
 import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
+import { BatchSpanProcessor, type ReadableSpan, type SpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { UndiciInstrumentation } from "@opentelemetry/instrumentation-undici";
 
-import { redactOtelAttributes, redactSignedStorageUrls } from "./redaction.js";
+import { maskString, redactOtelAttributes, redactSignedStorageUrls, shouldRedactKey } from "./redaction.js";
 
 export { redactOtelAttributes } from "./redaction.js";
 
@@ -37,6 +39,69 @@ let sdk: NodeSDK | undefined;
 let loggerProvider: LoggerProvider | undefined;
 let initialized = false;
 const storageHttpOrigins = new Set<string>();
+const forcedExportRedactionKeys = new Set([
+  "db.statement",
+  "http.request.body",
+  "http.target",
+  "http.url",
+  "lobbystack.prompt",
+  "lobbystack.transcript",
+  "messaging.message.body",
+  "url.full",
+  "url.path",
+  "url.query",
+]);
+
+export function redactExportAttributes(attributes: Attributes): Attributes {
+  return Object.fromEntries(Object.entries(attributes).map(([key, value]) => {
+    if (forcedExportRedactionKeys.has(key) || shouldRedactKey(key)) {
+      return [key, typeof value === "string" && key.toLowerCase().includes("phone") ? maskString(value) : "[redacted]"];
+    }
+    return [key, typeof value === "string" ? redactOtelExceptionText(value) : value];
+  }));
+}
+
+export function redactExportLogValue(value: AnyValue, key?: string): AnyValue {
+  if (key && (forcedExportRedactionKeys.has(key) || shouldRedactKey(key))) {
+    return typeof value === "string" && key.toLowerCase().includes("phone") ? maskString(value) : "[redacted]";
+  }
+  if (typeof value === "string") return redactOtelExceptionText(value);
+  if (Array.isArray(value)) return value.map((item) => redactExportLogValue(item));
+  if (value && typeof value === "object" && !(value instanceof Uint8Array)) {
+    return Object.fromEntries(Object.entries(value).map(([nestedKey, nestedValue]) => [
+      nestedKey,
+      redactExportLogValue(nestedValue, nestedKey),
+    ]));
+  }
+  return value;
+}
+
+function redactLogExportAttributes(attributes: AnyValueMap): AnyValueMap {
+  return Object.fromEntries(Object.entries(attributes).map(([key, value]) => [key, redactExportLogValue(value, key)]));
+}
+
+function replaceAttributes(target: Attributes, sanitized: Attributes): void {
+  for (const key of Object.keys(target)) delete target[key];
+  Object.assign(target, sanitized);
+}
+
+class RedactingSpanProcessor implements SpanProcessor {
+  onStart(): void {}
+
+  onEnd(span: ReadableSpan): void {
+    replaceAttributes(span.attributes, redactExportAttributes(span.attributes));
+    for (const event of span.events) {
+      if (event.attributes) replaceAttributes(event.attributes, redactExportAttributes(event.attributes));
+    }
+    for (const link of span.links) {
+      if (link.attributes) replaceAttributes(link.attributes, redactExportAttributes(link.attributes));
+    }
+    if (span.status.message) span.status.message = redactOtelExceptionText(span.status.message);
+  }
+
+  forceFlush(): Promise<void> { return Promise.resolve(); }
+  shutdown(): Promise<void> { return Promise.resolve(); }
+}
 
 export function registerStorageHttpEndpoint(endpoint: string | undefined): void {
   if (!endpoint) return;
@@ -67,20 +132,22 @@ function configuredEndpoint(options: TelemetryInitializationOptions): string | u
   return options.endpoint ?? process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
 }
 
+export function parseOtlpHeaders(raw: string | undefined): Record<string, string> | undefined {
+  if (!raw) return undefined;
+  const headers = Object.fromEntries(
+    raw.split(",").flatMap((entry) => {
+      const separator = entry.indexOf("=");
+      return separator > 0 ? [[entry.slice(0, separator).trim(), entry.slice(separator + 1).trim()]] : [];
+    }),
+  );
+  return Object.keys(headers).length > 0 ? headers : undefined;
+}
+
 function configuredHeaders(options: TelemetryInitializationOptions): Record<string, string> | undefined {
   if (options.headers) {
     return options.headers;
   }
-  const raw = process.env.OTEL_EXPORTER_OTLP_HEADERS;
-  if (!raw) {
-    return undefined;
-  }
-  return Object.fromEntries(
-    raw.split(",").flatMap((entry) => {
-      const separator = entry.indexOf("=");
-      return separator > 0 ? [[entry.slice(0, separator), entry.slice(separator + 1)]] : [];
-    }),
-  );
+  return parseOtlpHeaders(process.env.OTEL_EXPORTER_OTLP_HEADERS);
 }
 
 export async function initializeTelemetry(
@@ -112,9 +179,10 @@ export async function initializeTelemetry(
       url: `${endpoint.replace(/\/$/, "")}/v1/metrics`,
       ...(headers ? { headers } : {}),
     });
+    const traceExporter = new OTLPTraceExporter(exporterOptions);
     sdk = new NodeSDK({
       resource,
-      traceExporter: new OTLPTraceExporter(exporterOptions),
+      spanProcessors: [new RedactingSpanProcessor(), new BatchSpanProcessor(traceExporter)],
       instrumentations: [new HttpInstrumentation({ ignoreOutgoingRequestHook: isStorageHttpRequest }), new UndiciInstrumentation({ ignoreRequestHook: isStorageHttpRequest })],
       metricReader: new PeriodicExportingMetricReader({
         exporter: metricsExporter,
@@ -125,6 +193,15 @@ export async function initializeTelemetry(
     loggerProvider = new LoggerProvider({
       resource,
       processors: [
+        {
+          onEmit(logRecord) {
+            const sanitized = redactLogExportAttributes(logRecord.attributes);
+            for (const [key, value] of Object.entries(sanitized)) logRecord.setAttribute(key, value);
+            logRecord.setBody(redactExportLogValue(logRecord.body));
+          },
+          forceFlush: () => Promise.resolve(),
+          shutdown: () => Promise.resolve(),
+        },
         new BatchLogRecordProcessor(
           new OTLPLogExporter({
             url: `${endpoint.replace(/\/$/, "")}/v1/logs`,

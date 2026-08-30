@@ -1,14 +1,17 @@
-import "dotenv/config";
-
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
+import { config as loadEnv } from "dotenv";
 import { sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { initializeTelemetry, shutdownTelemetry } from "@lobbystack/telemetry/node";
 
 import { createDatabaseClient, databaseHealthCheck } from "./client";
 import { businesses } from "./schema";
+
+const repositoryRoot = fileURLToPath(new URL("../../..", import.meta.url));
+loadEnv({ path: [resolve(repositoryRoot, ".env.local"), resolve(repositoryRoot, ".env")], quiet: true });
 
 async function main(): Promise<void> {
   await initializeTelemetry({ serviceName: "lobbystack-migrator" });

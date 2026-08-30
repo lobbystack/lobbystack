@@ -110,7 +110,6 @@ jobs:
           docker build --build-arg SERVICE_VERSION="$GITHUB_SHA" --file Dockerfile.migrator --tag lobbystack/migrator:ci .
           docker build --build-arg SERVICE_VERSION="$GITHUB_SHA" --file Dockerfile.worker --tag lobbystack/worker:ci .
           docker build --build-arg SERVICE_VERSION="$GITHUB_SHA" --file Dockerfile.voice-gateway --tag lobbystack/voice-gateway:ci .
-          docker build --build-arg SERVICE_VERSION="$GITHUB_SHA" --file Dockerfile.otel-collector --tag lobbystack/otel-collector:ci .
       - run: pnpm replacement:telemetry
       - name: Scan repository for vulnerabilities, misconfigurations, and secrets
         uses: aquasecurity/trivy-action@v0.36.0
@@ -161,31 +160,6 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
           skip-setup-trivy: true
-      - name: Scan collector image
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: lobbystack/otel-collector:ci
-          scanners: vuln
-          vuln-type: os,library
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
-          skip-setup-trivy: true
-      - name: Validate collector configuration
-        run: |
-          docker run --rm \
-            --entrypoint /otelcol-contrib \
-            --env POSTHOG_OTLP_TRACES_ENDPOINT=https://us.i.posthog.com/i/v1/traces \
-            --env POSTHOG_OTLP_METRICS_ENDPOINT=https://us.i.posthog.com/i/v1/metrics \
-            --env POSTHOG_OTLP_LOGS_ENDPOINT=https://us.i.posthog.com/i/v1/logs \
-            --env POSTHOG_OTLP_AUTHORIZATION= \
-            --env OTEL_TRACE_SAMPLING_PERCENTAGE=100 \
-            lobbystack/otel-collector:ci \
-             validate --config=/etc/otelcol-contrib/config.yaml
-      - name: Validate and test Prometheus alert rules
-        run: |
-          docker run --rm --entrypoint promtool -v "$PWD/docker/prometheus:/etc/prometheus:ro" prom/prometheus:v3.2.1 check config /etc/prometheus/prometheus.yml
-          docker run --rm --entrypoint promtool -v "$PWD/docker/prometheus:/etc/prometheus:ro" prom/prometheus:v3.2.1 test rules /etc/prometheus/tests/alerts.test.yml
       - run: docker compose --env-file .env.example -f docker-compose.yml config --quiet
 
   staging-provider-certification:

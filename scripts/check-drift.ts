@@ -47,13 +47,7 @@ for (const path of [
   "Dockerfile.migrator",
   "Dockerfile.worker",
   "Dockerfile.voice-gateway",
-  "Dockerfile.otel-collector",
   "docker-compose.yml",
-  "docker/otel-collector/config.yaml",
-  "docker/otel-collector/railway.json",
-  "docker/prometheus/prometheus.yml",
-  "docker/prometheus/rules/alerts.yml",
-  "docker/prometheus/tests/alerts.test.yml",
   ".github/workflows/replacement-platform.yml",
   "apps/admin/railway.json",
   "apps/worker/railway.json",
@@ -140,30 +134,37 @@ if (!rls.includes("ALTER TABLE public.affiliate_profiles ENABLE ROW LEVEL SECURI
 }
 
 const compose = readText("docker-compose.yml");
-for (const endpoint of ["https://us.i.posthog.com/i/v1/traces", "https://us.i.posthog.com/i/v1/metrics", "https://us.i.posthog.com/i/v1/logs"]) {
-  if (!compose.includes(endpoint)) {
-    errors.push(`OTel collector is missing the PostHog signal endpoint: ${endpoint}`);
-  }
+function composeServiceBlock(service: string): string {
+  return compose.match(new RegExp(`^  ${service}:([\\s\\S]*?)(?=^  [a-z][a-z0-9-]*:|^volumes:)`, "m"))?.[1] ?? "";
 }
+
 if ((compose.match(/DATABASE_URL: postgres:\/\/postgres:/g) ?? []).length > 1) {
   errors.push("runtime services must not use the PostgreSQL superuser URL");
 }
-for (const service of ["postgres", "redis", "minio", "minio-init", "migrator", "otel-collector", "otel-certifier", "admin", "worker", "voice-gateway", "caddy", "prometheus"]) {
+for (const service of ["postgres", "redis", "minio", "minio-init", "migrator", "admin", "worker", "voice-gateway", "caddy"]) {
   if (!new RegExp(`^  ${service}:`, "m").test(compose)) {
     errors.push(`Compose service is missing: ${service}`);
   }
 }
 for (const service of ["admin", "worker", "voice-gateway", "caddy"]) {
-  const block = compose.match(new RegExp(`^  ${service}:([\\s\\S]*?)(?=^  [a-z][a-z0-9-]*:|^volumes:)`, "m"))?.[1] ?? "";
+  const block = composeServiceBlock(service);
   if (!block.includes("healthcheck:")) {
     errors.push(`Compose service is missing a healthcheck: ${service}`);
   }
 }
-if (!readText("docker/prometheus/prometheus.yml").includes("/etc/prometheus/rules/*.yml")) {
-  errors.push("Prometheus configuration is missing replacement alert rules");
+for (const service of ["migrator", "admin", "worker", "voice-gateway"]) {
+  const block = composeServiceBlock(service);
+  if (!block.includes("OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}")) {
+    errors.push(`Core Compose service does not default OTel export to disabled: ${service}`);
+  }
+  if (!block.includes("OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}")) {
+    errors.push(`Core Compose service does not pass direct OTLP headers: ${service}`);
+  }
 }
-if (!replacementWorkflow.includes("test rules /etc/prometheus/tests/alerts.test.yml")) {
-  errors.push("replacement CI is missing Prometheus alert rule tests");
+for (const removed of ["otel-collector", "otel-certifier", "prometheus", "Dockerfile.otel-collector", "docker/otel-collector", "docker/prometheus"]) {
+  if (compose.includes(removed) || replacementWorkflow.includes(removed)) {
+    errors.push(`Removed bundled observability infrastructure is still referenced: ${removed}`);
+  }
 }
 for (const variable of ["POLAR_WEBHOOK_SECRET", "RESEND_WEBHOOK_SECRET", "TWILIO_AUTH_TOKEN", "TWILIO_SMS_WEBHOOK_URL", "TWILIO_STATUS_CALLBACK_URL"]) {
   if (!compose.includes(`${variable}:`)) {

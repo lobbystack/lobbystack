@@ -12,6 +12,8 @@
     "./replacement-import.ts",
     "./replacement-parity-check.ts",
     "./replacement-reconciliation.ts",
+    "./replacement-smoke.ts",
+    "./replacement-smoke.test.ts",
     "./replacement-sms-consent-check.ts",
     "./replacement-unit-economics-check.ts"
   ]

@@ -46,6 +46,15 @@ Use `.env.example` as the source of truth. Store production values in your deplo
 
 Local storage fits a single-host deployment. Use S3 when the admin and worker run on different hosts or when you need storage managed outside the Docker host.
 
+## Observability
+
+| Variable | Purpose |
+| --- | --- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP base URL. LobbyStack appends `/v1/traces`, `/v1/metrics`, and `/v1/logs`. Leave empty to disable export. |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Optional comma-separated `key=value` headers sent with each OTLP request. For PostHog, use `Authorization=Bearer <phc_project_token>`. |
+
+An empty OTLP endpoint does not disable container stdout logs, application health endpoints, direct product analytics, or direct voice-gateway error reporting.
+
 ## Providers
 
 | Variable group | Purpose |
@@ -60,7 +69,7 @@ Local storage fits a single-host deployment. Use S3 when the admin and worker ru
 | `GOOGLE_*` | Google Calendar OAuth. |
 | `SMTP_*`, `EMAIL_*` | Transactional email. |
 | `POLAR_*` | Hosted billing and usage meters. |
-| `POSTHOG_*`, `OTEL_*` | Product analytics, traces, metrics, and logs. |
+| `POSTHOG_*` | Direct product analytics and error reporting. |
 
 <Warning>
   Never place secrets in `NEXT_PUBLIC_*` variables. Next.js includes those values in browser bundles.

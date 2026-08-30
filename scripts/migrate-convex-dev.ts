@@ -6,7 +6,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { basename, extname, join, resolve } from "node:path";
 
 import { createDatabaseClient } from "@lobbystack/db";
-import { S3StorageProvider } from "../packages/providers/src/storage/s3.ts";
+import { createStorageProvider } from "../packages/providers/src/storage/provider.ts";
 
 type LegacyRow = Record<string, unknown> & { _id: string; _creationTime?: number };
 
@@ -389,7 +389,7 @@ async function main(): Promise<void> {
   }
 
   if (!DRY_RUN && uploaded.length > 0) {
-    const storage = new S3StorageProvider({ bucket: process.env.S3_BUCKET ?? "lobbystack", region: process.env.S3_REGION ?? "us-east-1", ...(process.env.S3_ENDPOINT ? { endpoint: process.env.S3_ENDPOINT } : {}), accessKeyId: process.env.S3_ACCESS_KEY_ID ?? "minioadmin", secretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? "minioadmin", forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true" });
+    const storage = createStorageProvider();
     let uploadedCount = 0;
     for (const item of uploaded) {
       try { await storage.putObject({ key: item.key, body: new Uint8Array(await readFile(item.file)), contentType: item.contentType }); uploadedCount += 1; } catch (error) { console.warn(`Storage upload failed for ${item.file}: ${error instanceof Error ? error.message : String(error)}`); }

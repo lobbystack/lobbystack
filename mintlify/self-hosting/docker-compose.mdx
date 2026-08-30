@@ -37,6 +37,8 @@ The migrator applies PostgreSQL migrations before the admin and worker services 
 
 The admin readiness response includes database and storage checks. The worker readiness response includes PostgreSQL, Redis, and storage status.
 
+LobbyStack does not run monitoring containers. Application logs remain available through `docker compose logs`, and the health endpoints continue to work.
+
 ## Choose a storage backend
 
 The default local provider supports a single Docker host. Back up the `storage_data` volume with PostgreSQL and restore both from the same recovery point.
@@ -76,11 +78,24 @@ For local email inspection, start Mailpit:
 docker compose --env-file .env --profile development up -d mailpit
 ```
 
-For Prometheus:
+## Export OpenTelemetry data
+
+OpenTelemetry export is disabled when `OTEL_EXPORTER_OTLP_ENDPOINT` is empty. To send traces, metrics, and OpenTelemetry logs to PostHog, add these values to `.env`:
+
+```dotenv
+OTEL_EXPORTER_OTLP_ENDPOINT=https://us.i.posthog.com/i
+OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <phc_project_token>
+```
+
+Use your regional PostHog host and project token. LobbyStack appends `/v1/traces`, `/v1/metrics`, and `/v1/logs` to the base URL. You can use the same variables with another OTLP-compatible backend.
+
+Restart the application containers after changing the values:
 
 ```bash
-docker compose --env-file .env --profile observability up -d prometheus
+docker compose --env-file .env up -d
 ```
+
+Direct product analytics and voice-gateway error reporting use their own PostHog configuration.
 
 ## Verify the deployment
 
@@ -99,7 +114,7 @@ The default service ports bind to localhost. Put public traffic through Caddy or
 - configure `WEB_CALL_ALLOWED_ORIGINS` with exact dashboard and website origins
 - configure off-host PostgreSQL and file-storage backups
 - run a restore drill before accepting production traffic
-- restrict PostgreSQL, Redis, Prometheus, collector, and optional MinIO ports to private networks
+- restrict PostgreSQL, Redis, and optional MinIO ports to private networks
 - monitor admin, worker, voice gateway, queue, database, and object-storage health
 - pin image versions before planned upgrades
 

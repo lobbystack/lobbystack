@@ -24,7 +24,7 @@ Telemetry must not contain transcripts, message bodies, phone numbers, email add
 
 ## Collection
 
-Server runtimes export OTLP to the private OpenTelemetry Collector. The collector forwards traces, metrics, and logs to configured PostHog endpoints. Browser events use the public PostHog key and host configured through `NEXT_PUBLIC_POSTHOG_*`.
+Server runtimes send traces, metrics, and logs to the OTLP base URL configured through `OTEL_EXPORTER_OTLP_ENDPOINT`. They attach headers from `OTEL_EXPORTER_OTLP_HEADERS` and sanitize telemetry before export. An empty endpoint disables server export. Browser events use the public PostHog key and host configured through `NEXT_PUBLIC_POSTHOG_*`.
 
 ## Validation
 

@@ -1,6 +1,6 @@
 # Replacement Platform
 
-The canonical stack provides a Next.js admin/backend, PostgreSQL with RLS, Redis/BullMQ, shared local storage, the voice gateway, and an OpenTelemetry collector. You can enable the MinIO profile when you need S3-compatible storage. Convex remains relevant only as the production migration source until cutover and rollback are complete.
+The canonical stack provides a Next.js admin/backend, PostgreSQL with RLS, Redis/BullMQ, shared local storage, and the voice gateway. You can enable the MinIO profile when you need S3-compatible storage. Convex remains relevant only as the production migration source until cutover and rollback are complete.
 
 ## Local Stack
 
@@ -9,6 +9,7 @@ The canonical stack provides a Next.js admin/backend, PostgreSQL with RLS, Redis
 3. Open `http://localhost:13000` for the admin application, or `http://localhost` when using Caddy.
 4. Add `--profile minio` and set `STORAGE_PROVIDER=s3` when a certification run requires MinIO. The MinIO console listens on `http://localhost:9001`.
 5. Use `docker compose --env-file .env -f docker-compose.yml --profile development up mailpit` for local email inspection.
+6. Set `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` when you want direct export to an OTLP-compatible backend.
 
 Keep each `LOBBYSTACK_*_DATABASE_URL` password synchronized with its matching `LOBBYSTACK_*_PASSWORD` value. The Postgres init script creates the least-privilege runtime roles from those variables.
 
@@ -30,20 +31,17 @@ Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USERNAME`, `SMTP_PASSWORD`, a
 - Redis: `localhost:16380`
 - Local storage: the `storage_data` Docker volume
 - MinIO API with the `minio` profile: `localhost:9000`
-- OTLP HTTP: `localhost:4318`
-- Collector health: `http://localhost:13133/health`
-- Prometheus: `http://localhost:9090`
 
 ## Local Certification
 
 Run these checks against the healthy Compose stack:
 
-- `pnpm replacement:smoke` verifies service liveness and readiness.
+- `pnpm replacement:smoke` verifies core service liveness and readiness.
 - `pnpm replacement:internal` verifies signed voice access through the worker database role and rejects nonce replay.
 - `pnpm replacement:storage` verifies the S3 upload/finalize/download lifecycle, byte ranges, and cross-tenant denial against PostgreSQL and MinIO. Start the MinIO profile before running it.
 - `pnpm replacement:realtime` creates an isolated Better Auth fixture, rejects unauthenticated and cross-tenant SSE access, validates every realtime event type, checks reconnect delivery, and enforces the 500 ms local p95 target.
 - `pnpm replacement:webhooks` verifies Polar Standard Webhooks, optional Resend/Svix webhooks, and Twilio signatures, rejects tampered requests, and confirms duplicate provider delivery remains idempotent.
-- `pnpm replacement:telemetry` runs an isolated detailed collector, exports correlated cross-service traces plus metrics and logs, and fails if customer identifiers, credentials, prompts, transcripts, object keys, customer filenames, or signed storage URLs reach the collector.
+- `pnpm replacement:telemetry` runs an in-process OTLP receiver, verifies correlated cross-service traces plus metrics and logs, and rejects customer identifiers, credentials, prompts, transcripts, object keys, customer filenames, or signed storage URLs.
 - `pnpm replacement:security` checks admin/browser import boundaries, CSP directives, SSRF rejection, upload validation, and storage telemetry redaction without external credentials.
 - `pnpm replacement:recovery` proves deterministic duplicate job IDs, transactional outbox publication, Redis client reconnect, and, when `RECOVERY_COMPOSE_PROJECT` is supplied, post-restart dispatcher recovery. Set `RECOVERY_CHECK_WORKER=1` with the production queue prefix to also restart the worker and prove a post-restart global job completes.
 - `pnpm replacement:performance` measures concurrent admin, worker, and voice readiness paths against the plan’s 500 ms API and 300 ms voice-context local p95 targets.
@@ -71,9 +69,9 @@ Run `REPLACEMENT_COMPOSE_PROJECT=<disposable-project> CONFIRM_REPLACEMENT_RESTOR
 
 ## Cloud Shape
 
-Railway should run separate `admin`, `worker`, `voice-gateway`, `postgres`, `redis`, bucket, and private collector services. Set `BACKEND_INTERNAL_URL` on the gateway to the private admin URL. Keep `INTERNAL_SERVICE_SECRET`, database URLs, Better Auth secrets, provider credentials, and S3 credentials in Railway variables, never in the repository.
+Railway should run separate `admin`, `worker`, `voice-gateway`, `postgres`, `redis`, and bucket services. Set `BACKEND_INTERNAL_URL` on the gateway to the private admin URL. Keep `INTERNAL_SERVICE_SECRET`, database URLs, Better Auth secrets, provider credentials, and S3 credentials in Railway variables, never in the repository.
 
-Build runtime images with `SERVICE_VERSION` set to the deployed Git SHA. Keep staging at `OTEL_TRACE_SAMPLING_PERCENTAGE=100`. In production, use a lower baseline percentage; failed traces, traces slower than 500 ms, and voice-gateway traces are retained by the collector independently of that baseline.
+Build runtime images with `SERVICE_VERSION` set to the deployed Git SHA. Configure telemetry retention and sampling in the OTLP backend.
 
 Production traffic cutover, DNS changes, and Convex shutdown remain operator-controlled actions. Import and reconciliation tooling is included but must first be run against a disposable restored production snapshot and rollback-tested staging environment.
 

@@ -81,42 +81,11 @@ services:
     environment:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/lobbystack
       OTEL_SERVICE_NAME: lobbystack-migrator
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
     depends_on:
       postgres:
         condition: service_healthy
-      otel-collector:
-        condition: service_started
-
-  otel-collector:
-    build:
-      context: .
-      dockerfile: Dockerfile.otel-collector
-      args:
-        SERVICE_VERSION: ${SERVICE_VERSION:-development}
-    restart: unless-stopped
-    environment:
-      POSTHOG_OTLP_TRACES_ENDPOINT: ${POSTHOG_OTLP_TRACES_ENDPOINT:-https://us.i.posthog.com/i/v1/traces}
-      POSTHOG_OTLP_METRICS_ENDPOINT: ${POSTHOG_OTLP_METRICS_ENDPOINT:-https://us.i.posthog.com/i/v1/metrics}
-      POSTHOG_OTLP_LOGS_ENDPOINT: ${POSTHOG_OTLP_LOGS_ENDPOINT:-https://us.i.posthog.com/i/v1/logs}
-      POSTHOG_OTLP_AUTHORIZATION: ${POSTHOG_OTLP_AUTHORIZATION:-}
-      OTEL_TRACE_SAMPLING_PERCENTAGE: ${OTEL_TRACE_SAMPLING_PERCENTAGE:-100}
-    ports:
-      - "127.0.0.1:${OTEL_GRPC_PORT:-4317}:4317"
-      - "127.0.0.1:${OTEL_HTTP_PORT:-4318}:4318"
-      - "127.0.0.1:${OTEL_HEALTH_PORT:-13133}:13133"
-      - "127.0.0.1:${OTEL_PROMETHEUS_PORT:-9464}:9464"
-
-  otel-certifier:
-    build:
-      context: .
-      dockerfile: Dockerfile.otel-collector
-    profiles: [certification]
-    command: ["--config=/etc/otelcol-contrib/certification.yaml"]
-    volumes:
-      - ./docker/otel-collector/certification.yaml:/etc/otelcol-contrib/certification.yaml:ro
-    ports:
-      - "127.0.0.1:${OTEL_CERTIFICATION_PORT:-14318}:4318"
 
   admin:
     build:
@@ -180,14 +149,13 @@ services:
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-false}
       OTEL_SERVICE_NAME: lobbystack-admin
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
     depends_on:
       migrator:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
-      otel-collector:
-        condition: service_started
     volumes:
       - storage_data:/var/lib/lobbystack/storage
     ports:
@@ -251,7 +219,8 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-change-me-before-production}
       OTP_HASH_SECRET: ${OTP_HASH_SECRET:-change-me-before-production}
       OTEL_SERVICE_NAME: lobbystack-worker
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
       FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
       FIRECRAWL_BASE_URL: ${FIRECRAWL_BASE_URL:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
@@ -280,8 +249,6 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
-      otel-collector:
-        condition: service_started
     ports:
       - "127.0.0.1:${WORKER_PORT:-3002}:3002"
     healthcheck:
@@ -312,12 +279,11 @@ services:
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       OTEL_SERVICE_NAME: lobbystack-voice-gateway
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
     depends_on:
       admin:
         condition: service_healthy
-      otel-collector:
-        condition: service_started
     ports:
       - "127.0.0.1:${VOICE_GATEWAY_PORT:-3001}:3001"
     healthcheck:
@@ -359,21 +325,6 @@ services:
       - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
       - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
 
-  prometheus:
-    image: prom/prometheus:v3.2.1
-    profiles: [observability]
-    restart: unless-stopped
-    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus"]
-    volumes:
-      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./docker/prometheus/rules:/etc/prometheus/rules:ro
-      - prometheus_data:/prometheus
-    depends_on:
-      otel-collector:
-        condition: service_started
-    ports:
-      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
-
 volumes:
   postgres_data:
   redis_data:
@@ -381,4 +332,3 @@ volumes:
   minio_data:
   caddy_data:
   caddy_config:
-  prometheus_data:

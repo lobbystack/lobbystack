@@ -1,12 +1,6 @@
 # Critical Alerts
 
-Prometheus evaluates the replacement platform rules in `docker/prometheus/rules/alerts.yml`. Route these alerts through the environment's managed Alertmanager or equivalent paging integration; the local Compose profile intentionally only evaluates and displays alerts.
-
-Run `docker compose --env-file .env -f docker-compose.yml --profile observability up -d prometheus` and inspect `http://localhost:9090/alerts`. CI validates the configuration and executes `promtool test rules` against deterministic fixtures.
-
-## ReplacementCollectorUnavailable
-
-The collector metrics endpoint has been unreachable for two minutes. Confirm `/health`, container status, memory pressure, and recent collector logs. Product traffic must continue while telemetry is unavailable. Restart the collector only after preserving relevant logs.
+Configure these conditions in your OTLP backend or infrastructure monitoring system. LobbyStack does not include a monitoring service.
 
 ## ReplacementOutboxDeadLettered
 
@@ -22,7 +16,6 @@ At least three PostgreSQL polling attempts failed within five minutes. Check the
 
 ## Test Procedure
 
-1. Run the Prometheus rule tests.
-2. In a disposable environment, stop the collector for more than two minutes and confirm `ReplacementCollectorUnavailable` becomes active.
-3. Submit a deliberately unsupported outbox topic and advance it to the terminal retry threshold; confirm `ReplacementOutboxDeadLettered` becomes active without exposing its payload.
-4. Restore each dependency and confirm the availability alerts resolve and durable processing resumes.
+1. Submit a deliberately unsupported outbox topic and advance it to the terminal retry threshold. Confirm `ReplacementOutboxDeadLettered` activates without exposing its payload.
+2. Interrupt Redis and PostgreSQL in a disposable environment. Confirm the worker and dispatcher alerts activate.
+3. Restore each dependency and confirm the alerts resolve and durable processing resumes.
