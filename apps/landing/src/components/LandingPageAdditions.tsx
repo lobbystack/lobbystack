@@ -167,30 +167,7 @@ const homeSectionsCopy = {
       heading: "Proudly open-source, self-hosted",
       body: "Host LobbyStack on your own server. Own your customer data and stay fully compliant with regulatory standards.",
       cta: "View on GitHub",
-      solutionCta: "Open-source receptionist",
-      selfHostedCta: "Self-hosting overview",
-    },
-    resources: {
-      heading: "Learn more about AI receptionists",
-      body: "Guides, calculators, and comparisons to help you evaluate call coverage before you go live.",
-      links: [
-        {
-          label: "How to choose an AI receptionist",
-          href: "/blog/how-to-choose-an-ai-receptionist/",
-        },
-        {
-          label: "Missed call revenue calculator",
-          href: "/missed-call-revenue-calculator/",
-        },
-        {
-          label: "AI receptionist comparison",
-          href: "/blog/ai-receptionist-vs-virtual-receptionist/",
-        },
-        {
-          label: "Open-source receptionist stack",
-          href: "/blog/open-source-ai-receptionist-stack/",
-        },
-      ],
+      selfHostedCta: "Self-Hosting Overview",
     },
   },
   fr: {
@@ -359,30 +336,7 @@ const homeSectionsCopy = {
       heading: "Open source, prêt pour l'auto-hébergement",
       body: "Hébergez LobbyStack sur votre propre serveur. Gardez la maîtrise de vos données client et de vos exigences de conformité.",
       cta: "Voir sur GitHub",
-      solutionCta: "Réceptionniste IA open source",
       selfHostedCta: "Aperçu de l'auto-hébergement",
-    },
-    resources: {
-      heading: "En savoir plus sur les réceptionnistes IA",
-      body: "Guides, calculateurs et comparatifs pour évaluer la couverture téléphonique avant la mise en production.",
-      links: [
-        {
-          label: "Comment choisir un réceptionniste IA",
-          href: "/blog/how-to-choose-an-ai-receptionist/",
-        },
-        {
-          label: "Calculateur d'appels manqués",
-          href: "/missed-call-revenue-calculator/",
-        },
-        {
-          label: "Comparaison de réceptionnistes IA",
-          href: "/blog/ai-receptionist-vs-virtual-receptionist/",
-        },
-        {
-          label: "Pile open source pour réceptionniste IA",
-          href: "/blog/open-source-ai-receptionist-stack/",
-        },
-      ],
     },
   },
 }
@@ -729,19 +683,6 @@ function OpenSourceSection({ locale = "en" }: LocalizedProps) {
           <a
             href={localizeHref(
               locale,
-              "/solutions/open-source-ai-receptionist/"
-            )}
-            data-ph-capture-attribute-section="open_source"
-            data-ph-capture-attribute-action="view_open_source_solution"
-            data-ph-capture-attribute-destination="/solutions/open-source-ai-receptionist/"
-            className="inline-flex h-11 items-center justify-center gap-3 rounded-full border border-border/70 bg-background px-6 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-          >
-            {sectionCopy.solutionCta}
-            <ArrowRight className="size-4" />
-          </a>
-          <a
-            href={localizeHref(
-              locale,
               "/solutions/self-hosted-ai-receptionist/"
             )}
             data-ph-capture-attribute-section="open_source"
@@ -758,37 +699,6 @@ function OpenSourceSection({ locale = "en" }: LocalizedProps) {
   )
 }
 
-function HomeResourcesSection({ locale = "en" }: LocalizedProps) {
-  const sectionCopy = homeSectionsCopy[locale].resources
-
-  return (
-    <section
-      className="section-spacing border-t border-border/70"
-      id="resources"
-    >
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="max-w-3xl">
-          <h2 className="section-heading">{sectionCopy.heading}</h2>
-          <p className="section-intro">{sectionCopy.body}</p>
-        </div>
-        <ul className="mt-10 grid gap-4 md:grid-cols-2">
-          {sectionCopy.links.map((link) => (
-            <li key={link.href}>
-              <a
-                href={localizeHref(locale, link.href)}
-                className="flex items-center justify-between rounded-[1.35rem] border border-border/70 bg-background px-6 py-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-              >
-                {link.label}
-                <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
-  )
-}
-
 export function LandingPageAdditions({ locale = "en" }: LocalizedProps) {
   return (
     <>
@@ -798,7 +708,6 @@ export function LandingPageAdditions({ locale = "en" }: LocalizedProps) {
       <ControlOwnershipSection locale={locale} />
       <PricingPreviewSection locale={locale} />
       <OpenSourceSection locale={locale} />
-      <HomeResourcesSection locale={locale} />
     </>
   )
 }
