@@ -12,7 +12,7 @@ Scope: the 12 English competitor posts and their research dossiers. This audit i
 | Starter | $30 monthly or $24 monthly with annual billing; 150 voice minutes, then $0.20/min; 50 alert SMS segments; 20 outbound call attempts |
 | Pro | $100 monthly or $80 monthly with annual billing; 500 voice minutes, then $0.18/min; 200 alert SMS segments; 100 outbound call attempts |
 | Included on all plans | Appointment booking, Google and Outlook calendars, appointment confirmations, appointment changes, transfers, urgent handoff, email/SMS notifications, summaries, transcripts, recordings, call history, spam filtering, website knowledge import, multilingual support, and concurrent calls |
-| Deployment | Managed cloud for low-ops setup; public AGPL-3.0 source and self-hosting for teams that want to control provider accounts, infrastructure, retention, upgrades, and custom integrations |
+| Deployment | Managed cloud for low-ops setup; public MIT-licensed source and self-hosting for teams that want to control provider accounts, infrastructure, retention, upgrades, and custom integrations |
 | Honest boundary | LobbyStack hands calls to the customer's configured team. It does not bundle an external live-receptionist workforce. Self-hosting adds operations, security, backup, and upgrade work. |
 
 The existing posts mention source access and self-hosting well. They underuse the ongoing free plan, the all-features policy, included SMS allowances, unlimited booking, and unlimited call records. These facts distinguish LobbyStack from trials, feature-gated entry plans, and products that require a phone-suite subscription.

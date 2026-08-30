@@ -27,7 +27,7 @@ LobbyStack consacre le budget à la réception : rendez-vous, modifications, rel
 | Canaux | Voix, SMS, chat web | Voix, alertes SMS et suivi |
 | Réservation | Réservation et déplacement annoncés | Réservation et modifications |
 | Plateforme de base | Ajout à un forfait Nextiva | Produit indépendant |
-| Code source | Non annoncé | Dépôt public AGPL-3.0 |
+| Code source | Non annoncé | Dépôt public sous licence MIT |
 
 Prix et fonctions vérifiés le 30 juillet 2026.
 

@@ -20,7 +20,7 @@ LobbyStack gives teams a modern AI front desk that can be hosted in the cloud or
 [Self-hosting](https://docs.lobbystack.com/self-hosting/overview) &middot;
 [GitHub](https://github.com/morencyr/LobbyStack)
 
-[![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-111111.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-111111.svg)](./LICENSE)
 [![Open source](https://img.shields.io/badge/open%20source-yes-22c55e.svg)](https://github.com/morencyr/LobbyStack)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/backend-PostgreSQL-336791.svg)](https://www.postgresql.org/)
@@ -186,4 +186,4 @@ pnpm test
 
 ## License
 
-LobbyStack is licensed under the [GNU Affero General Public License v3.0 only](./LICENSE).
+LobbyStack is licensed under the [MIT License](./LICENSE).

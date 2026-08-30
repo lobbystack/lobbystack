@@ -27,7 +27,7 @@ LobbyStack also includes a free 30-minute plan for real phone testing, plus book
 | Base platform | CloudTalk user subscription required | No contact-center subscription required |
 | Integrations | More than 100 advertised | Product integrations plus open source and API |
 | Main role | Questions, messages, routing, transfer | Answering, intake, booking, handoff |
-| Source code | Not advertised | Public AGPL-3.0 repository |
+| Source code | Not advertised | Public MIT-licensed repository |
 | Deployment | CloudTalk-managed | Managed cloud or self-hosted |
 
 Pricing and features were checked on July 30, 2026.

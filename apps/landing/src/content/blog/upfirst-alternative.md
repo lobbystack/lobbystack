@@ -28,7 +28,7 @@ Upfirst charges by handled call, while LobbyStack charges by voice minute. Lobby
 | Transfers | Warm and waterfall transfers | Human handoff with call context |
 | Languages | More than 35 advertised | Depends on the configured voice stack |
 | Deployment | Hosted service | Managed cloud or self-hosted |
-| Source code | Public pages do not advertise source access | Public AGPL-3.0 repository |
+| Source code | Public pages do not advertise source access | Public MIT-licensed repository |
 
 Pricing and features were checked on July 30, 2026. Review both vendors' current pages before buying.
 

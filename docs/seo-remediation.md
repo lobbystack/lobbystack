@@ -64,10 +64,9 @@ consistent on GitHub, Capterra, SourceForge, AlternativeTo, SaaSHub, and other
 verified profiles. The public schema may include a profile in `sameAs` only
 after its URL and representation of LobbyStack have been verified.
 
-Existing listings must be checked against current pricing and licensing before
-they are promoted. In particular, the source repository is licensed
-AGPL-3.0-only. Do not describe it as permissively licensed or imply unrestricted
-white-label rights.
+Check existing listings against current pricing and licensing before promoting
+them. The source repository uses the permissive MIT License. Keep trademark
+rights separate from the software license when discussing white-label use.
 
 Request canonical links from existing editorial mentions that identify
 LobbyStack but omit or misdirect the official website. Do not use paid links,

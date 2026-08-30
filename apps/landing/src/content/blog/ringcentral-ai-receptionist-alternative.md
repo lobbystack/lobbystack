@@ -27,7 +27,7 @@ LobbyStack runs as an independent managed service or a self-hosted stack. Buyers
 | Channels | Voice, SMS, WhatsApp | Voice, SMS alerts and follow-up |
 | Phone-system depth | RingCentral queues and administration | Provider-connected receptionist |
 | Booking | Calendly and other integrations advertised | Calendar booking with business rules |
-| Source code | Not advertised | Public AGPL-3.0 repository |
+| Source code | Not advertised | Public MIT-licensed repository |
 | Deployment | RingCentral-managed | Managed cloud or self-hosted |
 
 Pricing and features were checked on July 30, 2026.

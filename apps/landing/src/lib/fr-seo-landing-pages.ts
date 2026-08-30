@@ -189,7 +189,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         points: [
           "Consignes, règles de réservation et transferts configurables",
           "Résumés, transcriptions et résultats réunis dans le tableau de bord",
-          "Documentation publique et dépôt sous licence AGPL-3.0-only",
+          "Documentation publique et dépôt sous licence MIT",
         ],
       },
     ],
@@ -496,11 +496,11 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       eyebrow: "Auto-hébergement",
       h1: "Un réceptionniste IA auto-hébergé sur l’infrastructure que vous contrôlez",
       intro:
-        "LobbyStack publie son code sous licence AGPL-3.0-only et fournit un parcours auto-hébergé aux équipes qui veulent maîtriser le déploiement et les données.",
+        "LobbyStack publie son code sous licence MIT et fournit un parcours auto-hébergé aux équipes qui veulent maîtriser le déploiement et les données.",
       imageAlt:
         "Architecture auto-hébergée de LobbyStack avec contrôles de déploiement",
       proofPoints: [
-        "Code source public sous licence AGPL-3.0-only",
+        "Code source public sous licence MIT",
         "Infrastructure, journaux, conservation et fournisseurs sous votre contrôle",
         "Cloud géré disponible lorsque vous ne voulez pas exploiter la pile",
       ],
@@ -516,7 +516,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Inspectez et adaptez les flux",
-          body: "Le dépôt public permet d’examiner la logique de prise d’appel, de réservation et de transfert. Les modifications restent soumises aux conditions de l’AGPL-3.0-only.",
+          body: "Le dépôt public permet d’examiner la logique de prise d’appel, de réservation et de transfert. La licence MIT autorise la modification et la redistribution sous réserve de conserver les avis requis.",
           points: [
             "Consignes, questions d’accueil et règles d’escalade modifiables",
             "Webhooks et intégrations adaptés à vos systèmes",
@@ -546,7 +546,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Sous quelle licence LobbyStack est-il publié ?",
           answer:
-            "Le dépôt est publié sous GNU AGPL-3.0-only. Consultez le fichier LICENSE et obtenez un avis juridique si vous modifiez ou redistribuez le service.",
+            "Le dépôt est publié sous licence MIT. Conservez les avis de droit d’auteur et d’autorisation requis lorsque vous copiez ou redistribuez le logiciel.",
         },
         {
           question: "Que faut-il pour l’auto-hébergement ?",
@@ -853,7 +853,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "Réceptionniste IA open source | LobbyStack",
       description:
-        "Inspectez, adaptez et auto-hébergez LobbyStack, un réceptionniste IA open source sous AGPL-3.0-only pour répondre, réserver et transférer les appels.",
+        "Inspectez, adaptez et auto-hébergez LobbyStack, un réceptionniste IA open source sous licence MIT pour répondre, réserver et transférer les appels.",
       eyebrow: "Open source",
       h1: "Un réceptionniste IA open source que vous pouvez inspecter et auto-héberger",
       intro:
@@ -861,7 +861,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       imageAlt:
         "Code et contrôles de déploiement du réceptionniste IA open source LobbyStack",
       proofPoints: [
-        "Dépôt public sous licence AGPL-3.0-only",
+        "Dépôt public sous licence MIT",
         "Consignes, accueil, transferts et intégrations adaptables",
         "Déploiement auto-hébergé ou cloud géré",
       ],
@@ -908,7 +908,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Quelle est la licence de LobbyStack ?",
           answer:
-            "LobbyStack est publié sous GNU AGPL-3.0-only. Lisez le fichier LICENSE avant de modifier, distribuer ou offrir une version modifiée comme service.",
+            "LobbyStack est publié sous licence MIT. Conservez les avis de droit d’auteur et d’autorisation requis lorsque vous copiez ou distribuez le logiciel.",
         },
         {
           question: "Puis-je auto-héberger LobbyStack ?",
@@ -940,7 +940,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       ],
       ctaHeading: "Examinez le code avant de confier vos appels au système",
       ctaBody:
-        "Consultez le dépôt AGPL-3.0-only, la documentation et les options de déploiement de LobbyStack.",
+        "Consultez le dépôt sous licence MIT, la documentation et les options de déploiement de LobbyStack.",
       ctaPrimaryLabel: "Voir sur GitHub",
       ctaPrimaryHref: "https://github.com/lobbystack/lobbystack",
       ctaSecondaryLabel: "Lire la documentation",

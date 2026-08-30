@@ -30,7 +30,7 @@ Frontdesk, anciennement My AI Front Desk, vend un large espace commercial IA. Lo
 | Rendez-vous et dossiers | Inclus avec le forfait vocal | Inclus sur Gratuit, Starter et Pro |
 | CRM | CRM natif et séquences | Dossiers de réception et intégrations |
 | Déploiement | Hébergé | Cloud géré ou auto-hébergement |
-| Code source | Non annoncé | Dépôt public AGPL-3.0 |
+| Code source | Non annoncé | Dépôt public sous licence MIT |
 
 Prix et fonctions vérifiés le 30 juillet 2026.
 

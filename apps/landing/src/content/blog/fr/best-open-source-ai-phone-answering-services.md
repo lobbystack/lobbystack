@@ -37,7 +37,8 @@ Faites un vrai test d'appel pour chaque finaliste : demande de réservation, que
 ### LobbyStack — meilleure plateforme complète de réceptionniste (cloud ou auto-hébergée)
 
 **GitHub :** [lobbystack/lobbystack](https://github.com/lobbystack/lobbystack)  
-**Licence :** AGPL-3.0  
+**Licence :** MIT
+
 **Idéal pour :** Les entreprises de services et les agences qui veulent appels, réservations, transcriptions, tableaux de bord, facturation et auto-hébergement sans assembler dix dépôts
 
 [LobbyStack](https://lobbystack.com/) est l'option de cette liste la plus proche d'un produit complet de **réceptionniste IA**. Il couvre les appels entrants, les réservations et modifications, les transcriptions et résumés, le contexte métier et les FAQ, les SMS, le transfert humain, les tableaux de bord, le suivi d'usage et les déploiements type client. Vous pouvez utiliser le cloud hébergé, l'employer comme [réceptionniste IA open source](/solutions/open-source-ai-receptionist/) ou [l'auto-héberger avec Docker](/solutions/self-hosted-ai-receptionist/).

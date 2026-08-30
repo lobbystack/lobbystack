@@ -26,7 +26,7 @@ Sona focuses on answering, lead capture, messages, and summaries inside Quo. Lob
 | Platform requirement | Paid Quo phone plan | No business-phone suite required |
 | Main job | Answering, lead and message capture | Answering, booking, handoff, call operations |
 | Allowance behavior | Falls back when credits end unless overages are enabled | Minute overage follows the plan |
-| Source code | Not advertised | Public AGPL-3.0 repository |
+| Source code | Not advertised | Public MIT-licensed repository |
 | Deployment | Quo-managed | Managed cloud or self-hosted |
 
 Pricing and features were checked on July 30, 2026.

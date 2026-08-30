@@ -28,7 +28,7 @@ LobbyStack focuses that budget on phone reception: booking, appointment changes,
 | Booking | Booking and rescheduling advertised | Booking and appointment changes |
 | Multi-location | Advertised | Enterprise and configurable deployment |
 | Base platform | Added to a Nextiva plan | Independent hosted or self-hosted product |
-| Source code | Not advertised | Public AGPL-3.0 repository |
+| Source code | Not advertised | Public MIT-licensed repository |
 
 Pricing and features were checked on July 30, 2026.
 

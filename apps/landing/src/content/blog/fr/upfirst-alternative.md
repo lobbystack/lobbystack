@@ -28,7 +28,7 @@ Upfirst facture chaque appel traité. LobbyStack facture les minutes et ajoute l
 | Transferts | Transferts assistés et en cascade | Relais humain avec le contexte |
 | Langues | Plus de 35 annoncées | Selon la pile vocale configurée |
 | Déploiement | Service hébergé | Cloud géré ou auto-hébergement |
-| Code source | Non annoncé sur les pages consultées | Dépôt public AGPL-3.0 |
+| Code source | Non annoncé sur les pages consultées | Dépôt public sous licence MIT |
 
 Prix et fonctions vérifiés le 30 juillet 2026.
 

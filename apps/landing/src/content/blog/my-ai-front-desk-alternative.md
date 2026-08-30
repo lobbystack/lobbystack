@@ -30,7 +30,7 @@ Frontdesk, formerly My AI Front Desk, now sells a broad AI sales workspace. Lobb
 | Booking and call records | Included on the voice plan | Included on Free, Starter, and Pro |
 | CRM | Native CRM and sequences | Receptionist records plus integrations |
 | Deployment | Hosted | Managed cloud or self-hosted |
-| Source access | Not advertised on reviewed pages | Public AGPL-3.0 repository |
+| Source access | Not advertised on reviewed pages | Public MIT-licensed repository |
 
 Pricing and features were checked on July 30, 2026.
 
@@ -79,7 +79,7 @@ A broad product can reduce the number of vendors. It also asks a team to adopt m
 
 LobbyStack fits between the phone and those business systems. Convex holds the receptionist's business state, while the voice gateway handles the live call. A self-hosted operator can control the deployment, provider accounts, logs, and retention.
 
-Frontdesk's reviewed pages do not advertise self-hosting or public source access. LobbyStack customers can inspect the AGPL-3.0 code, choose the managed product, or deploy the stack on infrastructure they control. They keep a route out of vendor lock-in.
+Frontdesk's reviewed pages do not advertise self-hosting or public source access. LobbyStack customers can inspect the MIT-licensed code, choose the managed product, or deploy the stack on infrastructure they control. They keep a route out of vendor lock-in.
 
 ## A lead-generation agency example
 

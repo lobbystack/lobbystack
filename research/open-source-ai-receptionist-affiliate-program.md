@@ -98,7 +98,7 @@ LobbyStack is not the highest-commission option in the niche. Upfirst, My AI Fro
 3. **Value proposition for affiliates**
    - Not just a commission link: a credible technical product that agencies can explain and, when needed, deploy more deeply.
    - Hosted cloud for fast referrals; self-hosting for clients with provider-control, compliance, or infrastructure preferences.
-   - AGPL/open-source trust signal: affiliates can point skeptical buyers to the codebase instead of asking them to trust a closed black box.
+   - MIT/open-source trust signal: affiliates can point skeptical buyers to the codebase instead of asking them to trust a closed black box.
 
 4. **How to discuss commission without overclaiming**
    - "20% for the first year" is normal-to-competitive for SaaS and open-source SaaS.

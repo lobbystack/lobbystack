@@ -37,7 +37,8 @@ Run a real call test for each finalist: booking request, pricing question, angry
 ### LobbyStack — best full receptionist platform (cloud or self-hosted)
 
 **GitHub:** [lobbystack/lobbystack](https://github.com/lobbystack/lobbystack)  
-**License:** AGPL-3.0  
+**License:** MIT
+
 **Best for:** Service businesses and agencies that want calls, booking, transcripts, dashboards, billing, and self-hosting without assembling ten repos
 
 [LobbyStack](https://lobbystack.com/) is the option on this list closest to a complete **AI receptionist** product. It covers inbound calls, appointment booking and changes, transcripts and summaries, business context and FAQs, SMS, human handoff, staff dashboards, usage tracking, and client-style deployments. You can run the hosted cloud, use it as an [open-source AI receptionist](/solutions/open-source-ai-receptionist/), or [self-host with Docker](/solutions/self-hosted-ai-receptionist/).

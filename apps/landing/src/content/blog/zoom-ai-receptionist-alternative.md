@@ -27,7 +27,7 @@ LobbyStack includes booking, human handoff, SMS alerts, transcripts, summaries, 
 | Existing phone system | Advertised | Call forwarding and voice-provider setup |
 | Booking | Google, Microsoft, and Calendly advertised | Calendar booking with business rules |
 | Languages | More than 10 advertised | Depends on the configured voice stack |
-| Source code | Not advertised | Public AGPL-3.0 repository |
+| Source code | Not advertised | Public MIT-licensed repository |
 | Deployment | Zoom-managed service | Managed cloud or self-hosted |
 
 Pricing and features were checked on July 30, 2026.
@@ -62,7 +62,7 @@ Zoom's product is new. A trial should test the specific call flows that matter, 
 
 Zoom provides a managed product inside its proprietary platform. Its reviewed pages do not advertise public source access or self-hosted deployment.
 
-LobbyStack publishes the receptionist code under AGPL-3.0. A business can inspect the call logic, run the managed cloud, or deploy the stack itself. Self-hosting lets the operator choose provider accounts, set retention, schedule upgrades, and adapt integrations.
+LobbyStack publishes the receptionist code under the MIT License. A business can inspect the call logic, run the managed cloud, or deploy the stack itself. Self-hosting lets the operator choose provider accounts, set retention, schedule upgrades, and adapt integrations.
 
 That freedom requires someone to run the system. Zoom's managed service is a better fit when the business wants one vendor to own operation and support.
 

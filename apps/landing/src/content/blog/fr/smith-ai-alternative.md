@@ -25,7 +25,7 @@ Smith.ai associe l'IA à un réseau de réceptionnistes en Amérique du Nord. Lo
 | Entrée payante | Pro dès 150 $ pour 75 appels | Starter à 30 $ pour 150 minutes |
 | Relais humain | Réseau d'agents, certaines tâches facturées par appel | Équipe que vous configurez |
 | Langues | Anglais et espagnol annoncés | Selon la pile vocale |
-| Code source | Non annoncé | Dépôt public AGPL-3.0 |
+| Code source | Non annoncé | Dépôt public sous licence MIT |
 | Auto-hébergement | Non annoncé | Parcours pris en charge |
 
 Prix et fonctions vérifiés le 30 juillet 2026.

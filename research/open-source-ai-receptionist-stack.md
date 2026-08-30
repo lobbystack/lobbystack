@@ -23,7 +23,7 @@
 
 LobbyStack should be positioned as the open-source AI receptionist platform that replaces the fragile “build your own stack” path: realtime voice vendor plus Twilio wiring, automation glue, scheduling logic, transcripts, prompt/routing rules, dashboard, usage billing, alerts, and monitoring. The article should argue that a demo voice bot is easy, but a production receptionist requires an integrated operating system for calls, messages, appointments, knowledge, staff handoff, and review.
 
-Use the contrast carefully: not “Retell/Vapi/n8n/Zapier are bad,” but “assembling them still leaves you owning the product layer.” LobbyStack provides that layer as an AGPL-licensed, inspectable codebase with hosted cloud for speed and Docker/self-hosting for infrastructure control.
+Use the contrast carefully: assembling Retell, Vapi, n8n, or Zapier still leaves you owning the product layer. LobbyStack provides that layer as an MIT-licensed, inspectable codebase with hosted cloud for speed and Docker self-hosting for infrastructure control.
 
 ## Article outline
 

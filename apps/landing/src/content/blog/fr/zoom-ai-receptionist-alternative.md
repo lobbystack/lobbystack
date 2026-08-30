@@ -27,7 +27,7 @@ LobbyStack inclut réservation, relais, alertes SMS, transcriptions, résumés e
 | Téléphonie existante | Prise en charge annoncée | Renvoi d'appel et fournisseur vocal |
 | Réservation | Google, Microsoft et Calendly | Calendrier avec règles métier |
 | Langues | Plus de 10 annoncées | Selon la pile vocale |
-| Code source | Non annoncé | Dépôt public AGPL-3.0 |
+| Code source | Non annoncé | Dépôt public sous licence MIT |
 | Déploiement | Service géré par Zoom | Cloud géré ou auto-hébergement |
 
 Prix et fonctions vérifiés le 30 juillet 2026.
@@ -60,7 +60,7 @@ Le produit Zoom est récent. Testez les appels qui comptent même si votre équi
 
 Zoom fournit un produit géré dans une plateforme propriétaire. Les pages consultées n'annoncent ni code public ni auto-hébergement.
 
-LobbyStack publie son code sous AGPL-3.0. Vous pouvez choisir le cloud ou gérer votre déploiement, vos fournisseurs et votre conservation. Cette liberté demande une personne responsable du système.
+LobbyStack publie son code sous licence MIT. Vous pouvez choisir le cloud ou gérer votre déploiement, vos fournisseurs et votre conservation. Cette liberté demande une personne responsable du système.
 
 ## Exemple de cabinet multi-sites
 

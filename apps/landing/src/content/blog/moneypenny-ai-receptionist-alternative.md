@@ -27,7 +27,7 @@ Moneypenny adds managed onboarding and access to its live-receptionist operation
 | Human escalation | Customer team or Moneypenny staff | Configured customer team |
 | Onboarding | Managed setup advertised | Self-serve cloud or implementation support |
 | Booking and qualification | Advertised | Included receptionist workflows |
-| Source code | Not advertised | Public AGPL-3.0 repository |
+| Source code | Not advertised | Public MIT-licensed repository |
 | Deployment | Moneypenny-managed | Managed cloud or self-hosted |
 
 Pricing and features were checked on July 30, 2026.
