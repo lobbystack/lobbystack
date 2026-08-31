@@ -221,6 +221,7 @@ export async function fetchWebVoiceContext(input: {
   widgetKey?: string;
   widgetSessionToken?: string;
   prospectDemoToken?: string;
+  publicWebCall?: boolean;
   maxDurationMs?: number;
 }): Promise<WebVoiceContextResponse> {
   return await postJson<WebVoiceContextResponse>("/voice/context/by-slug", input);
@@ -240,6 +241,8 @@ export async function startWebVoiceCall(input: {
   startedAt: string;
   prospectDemoToken?: string;
   dashboardTestCallToken?: string;
+  widgetSessionToken?: string;
+  publicWebCall?: boolean;
 }): Promise<StartWebCallResponse> {
   return await postJson<StartWebCallResponse>("/voice/call/start-web", input);
 }

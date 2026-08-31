@@ -12,6 +12,7 @@ primary_region = "iad"
   PORT = "3001"
   VOICE_GATEWAY_TRUST_PROXY = "true"
   WEB_CALL_ALLOWED_ORIGINS = "https://app.lobbystack.com,https://lobbystack.com,https://www.lobbystack.com"
+  WEB_CALL_PUBLIC_BUSINESS_SLUG = "lobbystack-mp35s9y1"
 
 [http_service]
   internal_port = 3001

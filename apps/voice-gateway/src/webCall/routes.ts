@@ -106,6 +106,7 @@ type ActiveWebCall = {
   widgetSessionToken?: string;
   widgetOrigin?: string;
   visitorId?: string;
+  publicWebCall?: boolean;
 };
 
 type CompletedWebCall = {
@@ -1481,6 +1482,7 @@ async function handleToolCall(
       ...(session.dashboardTestCallToken !== undefined
         ? { dashboardTestCallToken: session.dashboardTestCallToken }
         : {}),
+      ...(session.publicWebCall ? { publicWebCall: true } : {}),
     });
     executed = await executeVoiceTool({
       toolName: toolCall.name,
@@ -1609,10 +1611,6 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         return { error: parsedBody.message };
       }
       const body = parsedBody.data;
-      if (body.widgetId === "lobbystack-widget" && !body.widgetSessionToken) {
-        reply.code(403);
-        return { error: "A signed widget session is required." };
-      }
       const businessSlug = body.businessSlug;
       const widgetOriginHeader = request.headers["x-widget-parent-origin"];
       const widgetOrigin = typeof widgetOriginHeader === "string" ? widgetOriginHeader.trim() : undefined;
@@ -1634,6 +1632,18 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         })
           ? server.runtimeConfig.DASHBOARD_TEST_CALL_TOKEN?.trim()
           : undefined;
+      const publicWebCall =
+        server.runtimeConfig.WEB_CALL_PUBLIC_BUSINESS_SLUG !== undefined &&
+        businessSlug === server.runtimeConfig.WEB_CALL_PUBLIC_BUSINESS_SLUG;
+      if (
+        !body.widgetSessionToken &&
+        !body.prospectDemoToken &&
+        !dashboardTestCallToken &&
+        !publicWebCall
+      ) {
+        reply.code(403);
+        return { error: "A signed web call authorization is required." };
+      }
       let context: Awaited<ReturnType<typeof fetchWebVoiceContext>>;
       try {
         context = await fetchWebVoiceContext({
@@ -1650,6 +1660,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
           ...(body.prospectDemoToken !== undefined
             ? { prospectDemoToken: body.prospectDemoToken }
             : {}),
+          ...(publicWebCall ? { publicWebCall: true } : {}),
           maxDurationMs: server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
         });
       } catch (error) {
@@ -1717,6 +1728,10 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
           ...(dashboardTestCallToken !== undefined
             ? { dashboardTestCallToken }
             : {}),
+          ...(body.widgetSessionToken !== undefined
+            ? { widgetSessionToken: body.widgetSessionToken }
+            : {}),
+          ...(publicWebCall ? { publicWebCall: true } : {}),
         });
       } catch (error) {
         await hangupOpenAiRealtimeProviderCall(server, {
@@ -1762,6 +1777,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         ...(body.widgetSessionToken !== undefined ? { widgetSessionToken: body.widgetSessionToken } : {}),
         ...(widgetOrigin !== undefined ? { widgetOrigin } : {}),
         ...(visitorId !== undefined ? { visitorId } : {}),
+        ...(publicWebCall ? { publicWebCall: true } : {}),
       };
       const sidebandSocket = createSidebandSocket({
         server,

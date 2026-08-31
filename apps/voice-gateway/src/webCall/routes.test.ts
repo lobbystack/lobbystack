@@ -177,6 +177,7 @@ describe("web call routes", () => {
     process.env.TWILIO_AUTH_TOKEN = "twilio-auth-token";
     process.env.OPENAI_API_KEY = "test-openai-key";
     process.env.WEB_CALL_ALLOWED_ORIGINS = "https://lobbystack.com";
+    process.env.WEB_CALL_PUBLIC_BUSINESS_SLUG = "lobbystack";
   });
 
   afterEach(() => {
@@ -188,6 +189,7 @@ describe("web call routes", () => {
     delete process.env.OPENAI_API_KEY;
     delete process.env.VOICE_GATEWAY_TRUST_PROXY;
     delete process.env.WEB_CALL_ALLOWED_ORIGINS;
+    delete process.env.WEB_CALL_PUBLIC_BUSINESS_SLUG;
     delete process.env.WEB_CALL_MAX_DURATION_MS;
     delete process.env.DASHBOARD_TEST_CALL_TOKEN;
   });
@@ -265,13 +267,7 @@ describe("web call routes", () => {
     );
   });
 
-  it("returns backend lookup failures for unknown public widget business slugs", async () => {
-    fetchWebVoiceContextMock.mockRejectedValueOnce(
-      new runtimeRequestErrorClass({
-        message: "Not found",
-        status: 404,
-      }),
-    );
+  it("rejects unsigned calls for business slugs that are not configured as public", async () => {
     const server = createServer();
 
     const response = await server.inject({
@@ -287,11 +283,86 @@ describe("web call routes", () => {
       },
     });
 
-    expect(response.statusCode).toBe(404);
-    expect(fetchWebVoiceContextMock).toHaveBeenCalledWith(
-      expect.objectContaining({ businessSlug: "other-business" }),
-    );
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({
+      error: "A signed web call authorization is required.",
+    });
+    expect(fetchWebVoiceContextMock).not.toHaveBeenCalled();
     expect(startWebVoiceCallMock).not.toHaveBeenCalled();
+  });
+
+  it("does not trust a caller-supplied widget identity for a non-public business", async () => {
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "other-business",
+        widgetId: "lobbystack-landing",
+        sdp: "v=0",
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(fetchWebVoiceContextMock).not.toHaveBeenCalled();
+    expect(startWebVoiceCallMock).not.toHaveBeenCalled();
+  });
+
+  it("allows a signed widget session for a non-public business", async () => {
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "x-widget-parent-origin": "https://customer.example",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "other-business",
+        widgetId: "lobbystack-widget",
+        visitorId: "visitor-123",
+        widgetSessionToken: "signed-widget-session",
+        sdp: "v=0",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(fetchWebVoiceContextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        businessSlug: "other-business",
+        origin: "https://customer.example",
+        visitorId: "visitor-123",
+        widgetSessionToken: "signed-widget-session",
+      }),
+    );
+    expect(startWebVoiceCallMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        businessSlug: "other-business",
+        widgetSessionToken: "signed-widget-session",
+      }),
+    );
   });
 
   it("requires an SDP offer", async () => {

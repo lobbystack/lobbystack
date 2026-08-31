@@ -93,4 +93,13 @@ describe("loadVoiceGatewayEnv", () => {
 
     expect(env.DASHBOARD_TEST_CALL_TOKEN).toBe("dashboard-token");
   });
+
+  it("loads the only business allowed to receive unsigned public web calls", () => {
+    const env = loadVoiceGatewayEnv({
+      ...baseVoiceGatewayEnv,
+      WEB_CALL_PUBLIC_BUSINESS_SLUG: "public-business",
+    });
+
+    expect(env.WEB_CALL_PUBLIC_BUSINESS_SLUG).toBe("public-business");
+  });
 });

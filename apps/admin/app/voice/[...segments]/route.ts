@@ -200,6 +200,9 @@ export async function POST(request: Request, context: { params: Promise<{ segmen
     const domain = createWorkerDomainContext();
 
     if (path === "call/start-web") {
+      if (!stringValue(body, "widgetSessionToken") && !stringValue(body, "prospectDemoToken") && !stringValue(body, "dashboardTestCallToken") && !booleanValue(body, "publicWebCall")) {
+        return NextResponse.json({ code: "web_voice_authorization_required", message: "Web voice authorization is required." }, { status: 403 });
+      }
       const access = await resolveWebVoiceAccess({
         businessSlug: requiredString(body, "businessSlug"),
         ...(stringValue(body, "dashboardTestCallToken") ? { dashboardTestCallToken: stringValue(body, "dashboardTestCallToken") } : {}),

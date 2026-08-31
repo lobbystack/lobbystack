@@ -18,6 +18,9 @@ export async function POST(request: Request) {
     await requireInternalService(request, rawBody);
     const body = voiceContextBySlugRequestSchema.parse(JSON.parse(rawBody));
     if (!body.origin) return NextResponse.json({ code: "origin_required", message: "Web voice origin is required." }, { status: 400 });
+    if (!body.widgetSessionToken && !body.widgetKey && !body.prospectDemoToken && !body.dashboardTestCallToken && body.publicWebCall !== true) {
+      return NextResponse.json({ code: "web_voice_authorization_required", message: "Web voice authorization is required." }, { status: 403 });
+    }
     const normalizedOrigin = normalizeOrigin(body.origin);
     const access = await resolveWebVoiceAccess(body);
     if (!access.allowed) return NextResponse.json({ code: access.reason, message: "Web voice access denied." }, { status: access.status });

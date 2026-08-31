@@ -63,6 +63,7 @@ const voiceGatewayEnvSchema = z.object({
     .default(
       "https://app.lobbystack.com,https://lobbystack.com,https://www.lobbystack.com",
     ),
+  WEB_CALL_PUBLIC_BUSINESS_SLUG: z.string().min(1).max(120).optional(),
   WEB_CALL_MAX_DURATION_MS: z.coerce
     .number()
     .int()
