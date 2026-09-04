@@ -15,8 +15,8 @@ export async function GET(request: Request) {
   try {
     return NextResponse.json(await withOperatorTransaction(request, async ({ businessId, tx }) => {
       const [rows, invitations] = await Promise.all([
-        tx.select({ membershipId: businessMemberships.id, userId: users.id, name: users.name, email: users.email, role: businessMemberships.role, status: businessMemberships.status }).from(businessMemberships).innerJoin(users, eq(users.id, businessMemberships.userId)).where(eq(businessMemberships.businessId, businessId)),
-        tx.select({ invitationId: businessInvitations.id, email: businessInvitations.email, role: businessInvitations.role, status: businessInvitations.status, expiresAt: businessInvitations.expiresAt }).from(businessInvitations).where(eq(businessInvitations.businessId, businessId)),
+        tx.select({ membershipId: businessMemberships.id, userId: users.id, name: users.name, email: users.email, role: businessMemberships.role, status: businessMemberships.status, joinedAt: businessMemberships.createdAt }).from(businessMemberships).innerJoin(users, eq(users.id, businessMemberships.userId)).where(eq(businessMemberships.businessId, businessId)),
+        tx.select({ invitationId: businessInvitations.id, email: businessInvitations.email, role: businessInvitations.role, status: businessInvitations.status, expiresAt: businessInvitations.expiresAt, invitedAt: businessInvitations.createdAt }).from(businessInvitations).where(eq(businessInvitations.businessId, businessId)),
       ]);
       return { members: rows, invitations };
     }));

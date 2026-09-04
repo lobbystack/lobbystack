@@ -3,11 +3,10 @@
 import { Mic, Phone, PhoneOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { webCallEndpoint } from "@/lib/web-call-endpoint";
 import { Button } from "./ui/button";
 
 type Status = "idle" | "requesting" | "connecting" | "connected" | "ending" | "error";
-
-const endpoint = process.env.NEXT_PUBLIC_WEB_CALL_ENDPOINT || (process.env.NODE_ENV === "production" ? "https://voice.lobbystack.com/web-call/sessions" : "http://127.0.0.1:3001/web-call/sessions");
 
 function visitorId(): string {
   const key = "lobbystack.prospectDemoVisitorId";
@@ -38,14 +37,14 @@ export function DemoVoiceClient({ businessSlug, token }: { businessSlug: string;
     setStatus("ending");
     const sessionId = sessionIdRef.current;
     sessionIdRef.current = null;
-    if (sessionId) void fetch(`${endpoint}/${encodeURIComponent(sessionId)}/end`, { method: "POST", keepalive: true }).catch(() => undefined);
+    if (sessionId) void fetch(`${webCallEndpoint}/${encodeURIComponent(sessionId)}/end`, { method: "POST", keepalive: true }).catch(() => undefined);
     cleanup();
     setStatus("idle");
   };
 
   useEffect(() => () => {
     const sessionId = sessionIdRef.current;
-    if (sessionId) void fetch(`${endpoint}/${encodeURIComponent(sessionId)}/end`, { method: "POST", keepalive: true }).catch(() => undefined);
+    if (sessionId) void fetch(`${webCallEndpoint}/${encodeURIComponent(sessionId)}/end`, { method: "POST", keepalive: true }).catch(() => undefined);
     cleanup();
   }, []);
 
@@ -77,7 +76,7 @@ export function DemoVoiceClient({ businessSlug, token }: { businessSlug: string;
       };
       const offer = await peer.createOffer({ offerToReceiveAudio: true });
       await peer.setLocalDescription(offer);
-      const response = await fetch(endpoint, {
+      const response = await fetch(webCallEndpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ businessSlug, prospectDemoToken: token, visitorId: visitorId(), widgetId: "lobbystack-prospect-demo", sdp: offer.sdp, pageUrl: `${window.location.origin}${window.location.pathname}${window.location.search}` }),

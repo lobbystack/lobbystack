@@ -28,3 +28,21 @@ export async function GET(request: Request) {
     return asApiResponse(error);
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const session = await requireApiSession(request);
+    const body = await request.json() as { payoutEmail?: unknown };
+    const payoutEmail = typeof body.payoutEmail === "string" ? body.payoutEmail.trim().toLowerCase() : "";
+    if (!payoutEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payoutEmail)) {
+      return NextResponse.json({ error: "A valid payout email is required." }, { status: 400 });
+    }
+    return NextResponse.json(await withBusinessTransaction(getAppDatabase().db, { userId: session.user.id, actorType: "operator" }, async (tx) => {
+      const [profile] = await tx.update(affiliateProfiles).set({ payoutEmail, updatedAt: new Date() }).where(eq(affiliateProfiles.userId, session.user.id)).returning({ id: affiliateProfiles.id, payoutEmail: affiliateProfiles.payoutEmail });
+      if (!profile) return { profile: null };
+      return { profile };
+    }));
+  } catch (error) {
+    return asApiResponse(error);
+  }
+}

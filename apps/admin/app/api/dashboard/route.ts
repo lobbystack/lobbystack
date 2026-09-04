@@ -38,35 +38,19 @@ export async function GET(request: Request) {
       const previousStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1_000);
       const chartStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
 
-      const [
-        currentCallCount,
-        previousCallCount,
-        currentAppointmentCount,
-        previousAppointmentCount,
-        currentMessageCount,
-        previousMessageCount,
-        currentCalls,
-        previousCalls,
-        recentCalls,
-        upcoming,
-        chartCalls,
-        liveCallCount,
-        handoffConversations,
-      ] = await Promise.all([
-        tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, currentStart))),
-        tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, previousStart), lt(calls.startedAt, currentStart))),
-        tx.select({ count: count() }).from(appointments).where(and(eq(appointments.businessId, businessId), gte(appointments.createdAt, currentStart))),
-        tx.select({ count: count() }).from(appointments).where(and(eq(appointments.businessId, businessId), gte(appointments.createdAt, previousStart), lt(appointments.createdAt, currentStart))),
-        tx.select({ count: count() }).from(messages).where(and(eq(messages.businessId, businessId), gte(messages.createdAt, currentStart))),
-        tx.select({ count: count() }).from(messages).where(and(eq(messages.businessId, businessId), gte(messages.createdAt, previousStart), lt(messages.createdAt, currentStart))),
-        tx.select({ providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt, endedAt: calls.endedAt }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, currentStart))),
-        tx.select({ providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt, endedAt: calls.endedAt }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, previousStart), lt(calls.startedAt, currentStart))),
-        tx.select({ id: calls.id, startedAt: calls.startedAt, status: calls.status, providerDurationSeconds: calls.providerDurationSeconds, endedAt: calls.endedAt, contactName: contacts.name, contactPhone: contacts.phone }).from(calls).leftJoin(contacts, eq(calls.contactId, contacts.id)).where(eq(calls.businessId, businessId)).orderBy(desc(calls.startedAt)).limit(5),
-        tx.select({ id: appointments.id, startsAt: appointments.startsAt, timezone: appointments.timezone, status: appointments.status, sourceChannel: appointments.sourceChannel, contactName: contacts.name, serviceName: services.name, staffName: staff.name }).from(appointments).leftJoin(contacts, eq(appointments.contactId, contacts.id)).leftJoin(services, eq(appointments.serviceId, services.id)).leftJoin(staff, eq(appointments.staffId, staff.id)).where(and(eq(appointments.businessId, businessId), gte(appointments.startsAt, now))).orderBy(appointments.startsAt).limit(5),
-        tx.select({ startedAt: calls.startedAt }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, chartStart))),
-        tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), eq(calls.status, "started"))),
-        tx.select({ id: conversations.id, contactName: contacts.name, summary: conversations.summary, currentIntent: conversations.currentIntent, updatedAt: conversations.updatedAt }).from(conversations).leftJoin(contacts, eq(conversations.contactId, contacts.id)).where(and(eq(conversations.businessId, businessId), eq(conversations.automationState, "human_handoff"))).orderBy(desc(conversations.updatedAt)).limit(6),
-      ]);
+      const currentCallCount = await tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, currentStart)));
+      const previousCallCount = await tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, previousStart), lt(calls.startedAt, currentStart)));
+      const currentAppointmentCount = await tx.select({ count: count() }).from(appointments).where(and(eq(appointments.businessId, businessId), gte(appointments.createdAt, currentStart)));
+      const previousAppointmentCount = await tx.select({ count: count() }).from(appointments).where(and(eq(appointments.businessId, businessId), gte(appointments.createdAt, previousStart), lt(appointments.createdAt, currentStart)));
+      const currentMessageCount = await tx.select({ count: count() }).from(messages).where(and(eq(messages.businessId, businessId), gte(messages.createdAt, currentStart)));
+      const previousMessageCount = await tx.select({ count: count() }).from(messages).where(and(eq(messages.businessId, businessId), gte(messages.createdAt, previousStart), lt(messages.createdAt, currentStart)));
+      const currentCalls = await tx.select({ providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt, endedAt: calls.endedAt }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, currentStart)));
+      const previousCalls = await tx.select({ providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt, endedAt: calls.endedAt }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, previousStart), lt(calls.startedAt, currentStart)));
+      const recentCalls = await tx.select({ id: calls.id, startedAt: calls.startedAt, status: calls.status, providerDurationSeconds: calls.providerDurationSeconds, endedAt: calls.endedAt, contactName: contacts.name, contactPhone: contacts.phone }).from(calls).leftJoin(contacts, eq(calls.contactId, contacts.id)).where(eq(calls.businessId, businessId)).orderBy(desc(calls.startedAt)).limit(5);
+      const upcoming = await tx.select({ id: appointments.id, startsAt: appointments.startsAt, timezone: appointments.timezone, status: appointments.status, sourceChannel: appointments.sourceChannel, contactName: contacts.name, serviceName: services.name, staffName: staff.name }).from(appointments).leftJoin(contacts, eq(appointments.contactId, contacts.id)).leftJoin(services, eq(appointments.serviceId, services.id)).leftJoin(staff, eq(appointments.staffId, staff.id)).where(and(eq(appointments.businessId, businessId), gte(appointments.startsAt, now))).orderBy(appointments.startsAt).limit(5);
+      const chartCalls = await tx.select({ startedAt: calls.startedAt }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, chartStart)));
+      const liveCallCount = await tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), eq(calls.status, "started")));
+      const handoffConversations = await tx.select({ id: conversations.id, contactName: contacts.name, summary: conversations.summary, currentIntent: conversations.currentIntent, updatedAt: conversations.updatedAt }).from(conversations).leftJoin(contacts, eq(conversations.contactId, contacts.id)).where(and(eq(conversations.businessId, businessId), eq(conversations.automationState, "human_handoff"))).orderBy(desc(conversations.updatedAt)).limit(6);
 
       const currentCallsTotal = Number(currentCallCount[0]?.count ?? 0);
       const previousCallsTotal = Number(previousCallCount[0]?.count ?? 0);
@@ -86,6 +70,7 @@ export async function GET(request: Request) {
       });
 
       return {
+        businessId,
         kpis: {
           calls: { total: currentCallsTotal, deltaPercent: percentageDelta(currentCallsTotal, previousCallsTotal) },
           messages: { total: currentMessagesTotal, deltaPercent: percentageDelta(currentMessagesTotal, previousMessagesTotal) },

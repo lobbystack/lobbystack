@@ -103,6 +103,7 @@
       "documentBadge": "Document",
       "textBadge": "Texte",
       "emptyState": "Aucun service ajouté pour le moment.",
+      "unavailable": "Le catalogue de services est indisponible.",
       "durationValue": "Rendez-vous de {{count}} min",
       "previewPending": "Ce document est en cours de traitement.",
       "previewError": "Ce document n'a pas pu être traité.",
@@ -231,6 +232,11 @@
     "defaults": {
       "title": "Valeurs par défaut"
     },
+    "instructions": { "title": "Instructions" },
+    "summary": { "label": "Résumé de l'entreprise", "hint": "Le contexte essentiel que votre réceptionniste doit connaître." },
+    "bookingPolicy": { "label": "Politique de réservation", "hint": "Instructions pour proposer et confirmer les rendez-vous." },
+    "voiceInstructions": { "label": "Instructions vocales" },
+    "smsInstructions": { "label": "Instructions SMS" },
     "greeting": {
       "label": "Message d'accueil",
       "placeholder": "Bonjour, merci d'avoir appelé…",
@@ -280,12 +286,21 @@
     "cancelImportTitle": "Annuler l'import du site web ?",
     "cancelImportDescription": "Cela arrêtera l'import du site web et retirera l'entrée en cours du tableau.",
     "enable": "Activer",
-    "disable": "Desactiver",
+    "disable": "Désactiver",
+    "retry": "Réessayer",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
     "activateEntry": "Activer l'entrée",
     "deactivateEntry": "Désactiver l'entrée",
     "upload": "Téléverser",
     "uploading": "Téléversement…"
   },
+  "loading": {
+    "workspace": "Chargement de l’espace de travail…",
+    "rules": "Chargement des règles…",
+    "knowledge": "Chargement des connaissances…"
+  },
+  "readOnly": "L’accès lecteur est en lecture seule.",
   "empty": {
     "description": "Créez d'abord une entreprise, puis revenez ici pour configurer votre réceptionniste IA."
   }

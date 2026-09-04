@@ -17,7 +17,7 @@ export async function listCatalog(
       tx.select().from(services).where(and(eq(services.businessId, input.businessId), ...(input.search?.trim() ? [ilike(services.name, `%${input.search.trim()}%`)] : []))).orderBy(asc(services.name)).limit(Math.min(Math.max(Math.trunc(input.limit ?? 100), 1), 100) + 1).offset(Math.max(Math.trunc(input.offset ?? 0), 0)),
       tx.select().from(businessHours).where(eq(businessHours.businessId, input.businessId)).orderBy(asc(businessHours.dayOfWeek)),
       tx.select().from(closures).where(eq(closures.businessId, input.businessId)).orderBy(asc(closures.startsAt)),
-      tx.select().from(phoneNumbers).where(eq(phoneNumbers.businessId, input.businessId)).orderBy(asc(phoneNumbers.e164)),
+      tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(asc(phoneNumbers.e164)),
       tx.select().from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1),
       tx.select().from(agentRules).where(eq(agentRules.businessId, input.businessId)).orderBy(asc(agentRules.sortOrder)),
     ]);

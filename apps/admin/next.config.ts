@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+import { webCallConnectSource } from "./csp";
+
 const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: [
@@ -36,6 +38,7 @@ const nextConfig: NextConfig = {
   },
   poweredByHeader: false,
   async headers() {
+    const webCallOrigin = webCallConnectSource();
     const contentSecurityPolicy = [
       "default-src 'self'",
       "base-uri 'self'",
@@ -46,7 +49,7 @@ const nextConfig: NextConfig = {
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https://challenges.cloudflare.com https://*.posthog.com wss:",
+      `connect-src 'self' https://challenges.cloudflare.com https://*.posthog.com${webCallOrigin ? ` ${webCallOrigin}` : ""} wss:`,
       "frame-src 'self' https://challenges.cloudflare.com",
       "media-src 'self' blob:",
       "worker-src 'self' blob:",

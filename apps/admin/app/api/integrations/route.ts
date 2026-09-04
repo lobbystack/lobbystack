@@ -36,7 +36,11 @@ export async function GET(request: Request) {
         }
       }
       return {
-        calendarConnections: calendar,
+        calendarConnections: calendar.map((connection) => ({
+          ...connection,
+          lastSyncedAt: connection.updatedAt,
+          selectedCalendarSummary: calendarOptions.find((option) => option.id === connection.selectedCalendarId)?.summary ?? null,
+        })),
         staff: staffRows,
         calendarOptions,
         discoveryError,

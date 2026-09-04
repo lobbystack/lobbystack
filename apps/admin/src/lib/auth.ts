@@ -16,7 +16,7 @@ let authDatabase: ReturnType<typeof createDatabaseClient> | undefined;
 let emailDatabase: ReturnType<typeof createDatabaseClient> | undefined;
 let authRedis: Redis | undefined;
 
-function getAuthDatabase() {
+export function getAuthDatabase() {
   if (!authDatabase) {
     authDatabase = createDatabaseClient("lobbystack_auth");
   }

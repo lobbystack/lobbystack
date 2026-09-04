@@ -20,6 +20,8 @@ import { hashProspectDemoToken, resolveWebVoiceAccess } from "./prospect-demo";
 
 describe("prospect demo web voice access", () => {
   const originalDashboardToken = process.env.DASHBOARD_TEST_CALL_TOKEN;
+  const originalDeploymentMode = process.env.DEPLOYMENT_MODE;
+  const originalInternalToken = process.env.INTERNAL_SERVICE_TOKEN;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -36,6 +38,10 @@ describe("prospect demo web voice access", () => {
   afterEach(() => {
     if (originalDashboardToken === undefined) delete process.env.DASHBOARD_TEST_CALL_TOKEN;
     else process.env.DASHBOARD_TEST_CALL_TOKEN = originalDashboardToken;
+    if (originalDeploymentMode === undefined) delete process.env.DEPLOYMENT_MODE;
+    else process.env.DEPLOYMENT_MODE = originalDeploymentMode;
+    if (originalInternalToken === undefined) delete process.env.INTERNAL_SERVICE_TOKEN;
+    else process.env.INTERNAL_SERVICE_TOKEN = originalInternalToken;
   });
 
   it("hashes public tokens before resolver lookup", () => {
@@ -84,6 +90,27 @@ describe("prospect demo web voice access", () => {
     mocks.limit.mockResolvedValueOnce([{ status: "active" }]);
 
     await expect(resolveWebVoiceAccess({ businessSlug: "business", dashboardTestCallToken: "dashboard-secret" })).resolves.toEqual({
+      allowed: true,
+      businessId: "business-a",
+      mode: "normal",
+      dashboardTestCall: true,
+    });
+  });
+
+  it("accepts the development dashboard token derived from the internal service token", async () => {
+    delete process.env.DASHBOARD_TEST_CALL_TOKEN;
+    process.env.DEPLOYMENT_MODE = "development";
+    process.env.INTERNAL_SERVICE_TOKEN = "internal-secret";
+    mocks.execute.mockResolvedValueOnce({ rows: [{ business_id: "business-a" }] });
+    mocks.limit.mockResolvedValueOnce([{ status: "active" }]);
+
+    await expect(
+      resolveWebVoiceAccess({
+        businessSlug: "business",
+        dashboardTestCallToken:
+          "b012961b48165c1c711e6f15dc5c3fb767b2520c99f239c73c2cfd167f0fc80d",
+      }),
+    ).resolves.toEqual({
       allowed: true,
       businessId: "business-a",
       mode: "normal",

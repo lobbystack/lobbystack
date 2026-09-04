@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { webCallConnectSource } from "./csp";
+
 const stateChangingMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const csrfExemptPrefixes = ["/api/auth", "/api/webhooks", "/api/health", "/api/voice", "/api/widget"];
 
@@ -34,6 +36,7 @@ function securityHeaders(): Record<string, string> {
   } catch {
     // Keep the safe default when a public analytics URL is malformed.
   }
+  const webCallOrigin = webCallConnectSource();
   return {
     "Content-Security-Policy": [
       "default-src 'self'",
@@ -43,7 +46,7 @@ function securityHeaders(): Record<string, string> {
       `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com https://*.posthog.com`,
       "style-src 'self' 'unsafe-inline'",
       `img-src 'self' data: blob: https:`,
-      `connect-src 'self' ${posthogOrigin} https://challenges.cloudflare.com https://*.posthog.com wss:`,
+      `connect-src 'self' ${posthogOrigin} https://challenges.cloudflare.com https://*.posthog.com${webCallOrigin ? ` ${webCallOrigin}` : ""} wss:`,
       "font-src 'self' data:",
       "frame-src 'self' https://challenges.cloudflare.com",
       "form-action 'self'",

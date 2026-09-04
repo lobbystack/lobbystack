@@ -15,7 +15,7 @@ const routes = {
   "/onboarding/verify-phone/code": { key: "verifyPhoneCode", step: 7, width: "sm" },
   "/onboarding/plan": { key: "plan", step: 8, width: "wide" },
   "/onboarding/number": { key: "number", step: 9, width: "wide" },
-  "/onboarding/attribution": { key: "attribution", step: 10, width: "sm" },
+  "/onboarding/attribution": { key: "attribution", step: 10, width: "xl" },
 } as const;
 
 export function OnboardingRouteShell({ children }: { children: React.ReactNode }) {
@@ -24,7 +24,7 @@ export function OnboardingRouteShell({ children }: { children: React.ReactNode }
   const route = routes[pathname as keyof typeof routes] ?? routes["/onboarding/business"];
   return (
     <ReplacementOnboardingShell
-      description={t(`${route.key}.description`)}
+      description={route.key === "verifyPhoneCode" ? "" : t(`${route.key}.description`)}
       progress={{ current: route.step, total: 10 }}
       title={t(`${route.key}.title`)}
       width={route.width}

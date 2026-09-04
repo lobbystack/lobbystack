@@ -36,8 +36,9 @@ export async function startCall(
       const contact = (await tx.select({ operatorBlockedAt: contacts.operatorBlockedAt }).from(contacts).where(and(eq(contacts.id, existing[0].contactId), eq(contacts.businessId, input.businessId))).limit(1))[0];
       return { callId: existing[0].id, conversationId: existing[0].conversationId, contactId: existing[0].contactId, duplicate: true, blocked: Boolean(contact?.operatorBlockedAt), ...(existing[0].webCallMaxDurationMs !== null ? { webCallMaxDurationMs: existing[0].webCallMaxDurationMs } : {}) };
     }
-    const existingContacts = await tx.select({ id: contacts.id, operatorBlockedAt: contacts.operatorBlockedAt }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.from))).limit(1);
-    const contactId = existing[0]?.contactId ?? existingContacts[0]?.id ?? (await tx.insert(contacts).values({ businessId: input.businessId, phone: input.from }).returning({ id: contacts.id }))[0]?.id;
+    const anonymousWebCaller = input.from === "web";
+    const existingContacts = anonymousWebCaller ? [] : await tx.select({ id: contacts.id, operatorBlockedAt: contacts.operatorBlockedAt }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.from))).limit(1);
+    const contactId = existing[0]?.contactId ?? existingContacts[0]?.id ?? (await tx.insert(contacts).values({ businessId: input.businessId, ...(anonymousWebCaller ? {} : { phone: input.from }) }).returning({ id: contacts.id }))[0]?.id;
     if (!contactId) {
       throw new Error("Call contact could not be created.");
     }
@@ -277,6 +278,7 @@ export async function listCalls(
       providerCallId: calls.providerCallId,
       status: calls.status,
       disposition: calls.disposition,
+      reason: conversations.summary,
       startedAt: calls.startedAt,
       endedAt: calls.endedAt,
       providerDurationSeconds: calls.providerDurationSeconds,
@@ -288,10 +290,11 @@ export async function listCalls(
        transcriptPreview: sql<string | null>`(select ${transcripts.text} from ${transcripts} where ${transcripts.callId} = ${calls.id} order by ${transcripts.sequence} desc limit 1)`,
     }).from(calls)
       .leftJoin(contacts, eq(calls.contactId, contacts.id))
+      .leftJoin(conversations, eq(calls.conversationId, conversations.id))
       .leftJoin(storageObjects, eq(calls.recordingObjectId, storageObjects.id))
       .where(and(
         eq(calls.businessId, input.businessId),
-        ...(search ? [or(ilike(contacts.name, `%${search}%`), ilike(contacts.phone, `%${search}%`), ilike(calls.disposition, `%${search}%`), ilike(calls.providerCallId, `%${search}%`))!] : []),
+        ...(search ? [or(ilike(contacts.name, `%${search}%`), ilike(contacts.phone, `%${search}%`), ilike(conversations.summary, `%${search}%`), ilike(calls.disposition, `%${search}%`), ilike(calls.providerCallId, `%${search}%`))!] : []),
       ))
       .orderBy(desc(calls.startedAt))
       .limit(limit + 1)
@@ -303,6 +306,7 @@ export async function listCalls(
         providerCallId: row.providerCallId,
         status: row.status,
         disposition: row.disposition,
+        reason: row.reason === row.disposition ? null : row.reason,
         startedAt: row.startedAt,
         endedAt: row.endedAt,
         providerDurationSeconds: row.providerDurationSeconds,
@@ -338,6 +342,7 @@ export async function getCallDetail(
       transport: calls.transport,
       status: calls.status,
       disposition: calls.disposition,
+      reason: conversations.summary,
       transferState: calls.transferState,
       startedAt: calls.startedAt,
       endedAt: calls.endedAt,
@@ -354,6 +359,7 @@ export async function getCallDetail(
       contactBlockedAt: contacts.operatorBlockedAt,
     }).from(calls)
       .leftJoin(contacts, eq(calls.contactId, contacts.id))
+      .leftJoin(conversations, eq(calls.conversationId, conversations.id))
       .leftJoin(storageObjects, eq(calls.recordingObjectId, storageObjects.id))
       .where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId)))
       .limit(1))[0];
@@ -385,7 +391,7 @@ export async function getCallDetail(
         gatewaySessionId: row.gatewaySessionId,
       },
       contact: row.contactId ? { id: row.contactId, name: row.contactName, phone: row.contactPhone, email: row.contactEmail, blockedAt: row.contactBlockedAt } : null,
-      outcome: row.disposition,
+      outcome: row.reason === row.disposition ? null : row.reason,
       timeline,
       transcript,
       recording: {

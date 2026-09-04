@@ -110,6 +110,8 @@
     "hint": "Utilisez un numéro de mobile personnel qui peut recevoir des SMS.",
     "sendCode": "Envoyer le code",
     "sending": "Envoi du code...",
+    "reuse": "Réutiliser un téléphone déjà vérifié",
+    "reuseFailed": "Nous n'avons pas pu réutiliser ce téléphone. Réessayez.",
     "invalidNumber": "Entrez un numéro de mobile valide avec l'indicatif du pays.",
     "mobileRequired": "Utilisez un numéro de mobile qui peut recevoir des SMS de vérification.",
     "tooManyAttempts": "Trop de tentatives de vérification. Attendez un peu, puis réessayez.",
@@ -133,8 +135,15 @@
     "title": "Choisissez le numéro de votre IA",
     "description": "Choisissez un numéro local que vos appelants peuvent composer.",
     "countryLabel": "Pays",
+    "kindLocal": "Local",
+    "kindTollFree": "Sans frais",
     "areaCodeLabel": "Indicatif",
     "areaCodePlaceholder": "Indicatif",
+    "cityLabel": "Ville",
+    "cityPlaceholder": "Ville",
+    "location": "Emplacement",
+    "capabilities": "Fonctions",
+    "voiceSms": "Voix · SMS",
     "search": "Rechercher",
     "tableHeaders": {
       "phoneNumber": "Numéro"
@@ -158,9 +167,26 @@
     "continue": "Continuer"
   },
   "attribution": {
-    "title": "Comment avez-vous entendu parler de nous ?",
-    "question": "Une dernière question",
-    "description": "Cela nous aide à améliorer LobbyStack. Vous pouvez ignorer cette étape.",
+    "title": "Comment avez-vous connu LobbyStack ?",
+    "description": "Cela nous aide à savoir ce qui fonctionne.",
+    "options": {
+      "ai_assistant": "ChatGPT, Claude, etc.",
+      "newsletter": "Newsletter ou blog",
+      "podcast": "Podcast",
+      "news": "Dans les médias",
+      "work": "Au travail",
+      "school": "Amis ou école",
+      "x": "X",
+      "reddit": "Reddit",
+      "facebook": "Facebook",
+      "youtube": "YouTube",
+      "instagram": "Instagram",
+      "linkedin": "LinkedIn",
+      "google": "Google",
+      "tiktok": "TikTok",
+      "other": "Autre"
+    },
+    "skip": "Ignorer",
     "label": "Source",
     "preferNot": "Je préfère ne pas répondre",
     "search": "Moteur de recherche",
@@ -170,7 +196,8 @@
     "other": "Autre",
     "finish": "Terminer la configuration",
     "finishing": "Finalisation...",
-    "failed": "Impossible de terminer la configuration."
+    "failed": "Impossible de terminer la configuration.",
+    "submitFailed": "Impossible d'enregistrer maintenant. Réessayez."
   },
   "plan": {
     "title": "Choisissez votre forfait",

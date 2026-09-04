@@ -103,6 +103,7 @@
       "documentBadge": "Document",
       "textBadge": "Text",
       "emptyState": "No services added yet.",
+      "unavailable": "Service catalog is unavailable.",
       "durationValue": "{{count}} min appointment",
       "previewPending": "This document is being processed.",
       "previewError": "This document couldn't be processed.",
@@ -231,6 +232,11 @@
     "defaults": {
       "title": "Defaults"
     },
+    "instructions": { "title": "Instructions" },
+    "summary": { "label": "Business summary", "hint": "The essential context your receptionist should know about the business." },
+    "bookingPolicy": { "label": "Booking policy", "hint": "Instructions for offering and confirming appointments." },
+    "voiceInstructions": { "label": "Voice instructions" },
+    "smsInstructions": { "label": "SMS instructions" },
     "greeting": {
       "label": "Greeting",
       "placeholder": "Hello, thank you for calling…",
@@ -281,11 +287,20 @@
     "cancelImportDescription": "This will stop the website import and remove the in-progress entry from the table.",
     "enable": "Enable",
     "disable": "Disable",
+    "retry": "Retry",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
     "activateEntry": "Activate entry",
     "deactivateEntry": "Deactivate entry",
     "upload": "Upload",
     "uploading": "Uploading…"
   },
+  "loading": {
+    "workspace": "Loading workspace…",
+    "rules": "Loading rules…",
+    "knowledge": "Loading knowledge…"
+  },
+  "readOnly": "Viewer access is read-only.",
   "empty": {
     "description": "Create a business first, then return here to configure your AI receptionist."
   }

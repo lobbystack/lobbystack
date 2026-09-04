@@ -3,12 +3,13 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { businesses } from "@lobbystack/db";
 import { asApiResponse, businessIdFromRequest, requireApiSession, withOperatorTransaction } from "@/lib/api-helpers";
+import { resolveDashboardTestCallToken } from "@/lib/dashboard-test-call-token";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    const token = process.env.DASHBOARD_TEST_CALL_TOKEN?.trim();
+    const token = resolveDashboardTestCallToken();
     if (!token) return NextResponse.json({ error: "Dashboard test calls are not configured." }, { status: 503 });
     await requireApiSession(request);
     const businessId = businessIdFromRequest(request);

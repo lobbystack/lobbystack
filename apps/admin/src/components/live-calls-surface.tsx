@@ -1,20 +1,51 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  useReactTable,
+  type ColumnDef,
+  type PaginationState,
+} from "@tanstack/react-table";
+import { Pause, Play, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { PageHeader } from "@/components/page-header";
+import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
+import { DataTablePagination } from "@/components/data-table/pagination";
 import { TableCardSkeleton } from "@/components/loading-skeletons";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDateTime } from "@/lib/locale";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCard,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { formatDateTime } from "@/lib/locale";
 
 type Business = { businessId: string; active: boolean };
-type Call = { id: string; providerCallId: string; status: string; disposition: string | null; startedAt: string; providerDurationSeconds: number | null; contactName: string | null; contactPhone: string | null; recordingState: "available" | "pending" | "expired" | "missing"; transcriptPreview: string | null };
+type Call = {
+  id: string;
+  providerCallId: string;
+  status: string;
+  disposition: string | null;
+  reason: string | null;
+  startedAt: string;
+  providerDurationSeconds: number | null;
+  contactName: string | null;
+  contactPhone: string | null;
+  recordingState: "available" | "pending" | "expired" | "missing";
+  transcriptPreview: string | null;
+};
 
 async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(url, { credentials: "include" });
@@ -22,43 +53,205 @@ async function getJson<T>(url: string): Promise<T> {
   return await response.json() as T;
 }
 
-function formatDuration(seconds: number | null): string {
-  if (seconds === null) return "-";
-  return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
-}
-
 export function LiveCallsSurface() {
   const { i18n, t } = useTranslation("calls");
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [offset, setOffset] = useState(0);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => getJson<{ businesses: Business[] }>("/api/businesses") });
+  const [activeRecordingId, setActiveRecordingId] = useState<string | null>(null);
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const businesses = useQuery({
+    queryKey: ["businesses"],
+    queryFn: () => getJson<{ businesses: Business[] }>("/api/businesses"),
+  });
   const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
-  const calls = useQuery({ queryKey: ["calls", business?.businessId, search, offset], queryFn: () => getJson<{ calls: Call[]; pagination: { hasNext: boolean } }>(`/api/calls?limit=50&offset=${offset}${search ? `&search=${encodeURIComponent(search)}` : ""}`), enabled: Boolean(business) });
+  const calls = useQuery({
+    queryKey: ["calls", business?.businessId],
+    queryFn: () => getJson<{ calls: Call[] }>("/api/calls?limit=50"),
+    enabled: Boolean(business),
+  });
+  const recording = useQuery({
+    queryKey: ["call-recording", activeRecordingId],
+    queryFn: () => getJson<{ url: string }>(`/api/calls/${encodeURIComponent(activeRecordingId!)}/recording`),
+    enabled: Boolean(activeRecordingId),
+  });
 
   useEffect(() => {
     if (!business) return;
-    const source = new EventSource("/api/realtime");
+    const source = new EventSource(`/api/realtime?businessId=${encodeURIComponent(business.businessId)}`);
     const refresh = () => void queryClient.invalidateQueries({ queryKey: ["calls", business.businessId] });
-    for (const event of ["call.started", "call.updated", "call.completed", "recording.available"]) source.addEventListener(event, refresh);
+    for (const event of ["call.started", "call.updated", "call.completed", "recording.available"]) {
+      source.addEventListener(event, refresh);
+    }
     return () => source.close();
   }, [business, queryClient]);
 
   const rows = calls.data?.calls ?? [];
+  const filteredRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return rows;
+    return rows.filter((call) => (
+      [call.contactName, call.contactPhone, call.reason, call.disposition, call.transcriptPreview]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(query)
+    ));
+  }, [rows, search]);
+
+  useEffect(() => {
+    setPagination((current) => {
+      const finalPage = Math.max(0, Math.ceil(filteredRows.length / current.pageSize) - 1);
+      return current.pageIndex > finalPage ? { ...current, pageIndex: finalPage } : current;
+    });
+  }, [filteredRows.length]);
+
+  const columns = useMemo<Array<ColumnDef<Call>>>(() => [
+    {
+      id: "caller",
+      accessorFn: (call) => call.contactName ?? t("table.unknownCaller"),
+      header: () => t("table.caller"),
+      cell: ({ row }) => <span className="font-medium">{row.original.contactName ?? t("table.unknownCaller")}</span>,
+    },
+    {
+      id: "number",
+      accessorFn: (call) => call.contactPhone ?? t("table.noNumber"),
+      header: () => t("table.number"),
+      cell: ({ row }) => row.original.contactPhone ?? t("table.noNumber"),
+    },
+    {
+      id: "purpose",
+      accessorFn: (call) => call.reason ?? t("outcome.none"),
+      header: () => t("table.purpose"),
+      cell: ({ row }) => <span className="type-body-muted line-clamp-2">{row.original.reason ?? t("outcome.none")}</span>,
+    },
+    {
+      id: "time",
+      accessorFn: (call) => call.startedAt,
+      header: () => <span className="block text-right">{t("table.time")}</span>,
+      cell: ({ row }) => <span className="block text-right">{formatDateTime(row.original.startedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" })}</span>,
+    },
+    {
+      id: "play",
+      header: () => null,
+      cell: ({ row }) => {
+        const call = row.original;
+        if (call.recordingState !== "available") {
+          return <span className="type-body-muted">{call.recordingState === "pending" ? t("actions.audioPending") : t("actions.audioUnavailable")}</span>;
+        }
+        const active = call.id === activeRecordingId;
+        return (
+          <Button
+            aria-label={active ? t("actions.pause") : t("actions.play")}
+            onClick={(event) => {
+              event.stopPropagation();
+              setActiveRecordingId((current) => current === call.id ? null : call.id);
+            }}
+            size="icon-sm"
+            title={active ? t("actions.pause") : t("actions.play")}
+            variant="ghost"
+          >
+            {active ? <Pause className="size-4" /> : <Play className="size-4" />}
+          </Button>
+        );
+      },
+    },
+  ], [activeRecordingId, i18n.language, t]);
+
+  const table = useReactTable({
+    columns,
+    data: filteredRows,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onPaginationChange: setPagination,
+    state: { pagination },
+  });
+  const liveCalls = rows.filter((call) => call.status === "started").length;
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <PageHeader actions={<div className="inline-flex shrink-0 items-center gap-2"><span className="text-base font-semibold leading-none">{(calls.data?.calls.filter((call) => call.status === "started").length ?? 0).toLocaleString(i18n.language)}</span><span className="relative flex size-2.5 shrink-0"><span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500/45" /><span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" /></span></div>} title={t("page.title")} />
-       <div className="relative max-w-sm"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-10" onChange={(event) => { setOffset(0); setSearch(event.target.value); }} placeholder={t("filters.searchPlaceholder")} value={search} /></div>
+      <PageHeader
+        actions={
+          <div className="inline-flex shrink-0 items-center gap-2">
+            {calls.isLoading ? <Skeleton className="h-6 w-8" /> : <span className="text-base font-semibold leading-none">{liveCalls.toLocaleString(i18n.language)}</span>}
+            <span className="relative flex size-2.5 shrink-0">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500/45" />
+              <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" />
+            </span>
+          </div>
+        }
+        title={t("page.title")}
+      />
+      <div className="relative max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          className="pl-10"
+          onChange={(event) => {
+            setSearch(event.target.value);
+            setPagination((current) => ({ ...current, pageIndex: 0 }));
+          }}
+          placeholder={t("filters.searchPlaceholder")}
+          value={search}
+        />
+      </div>
+      <CallRecordingPlayer
+        autoPlay
+        downloadLabel={t("actions.download")}
+        initialDurationSeconds={rows.find((call) => call.id === activeRecordingId)?.providerDurationSeconds ?? 0}
+        onEnded={() => setActiveRecordingId(null)}
+        pauseLabel={t("actions.pause")}
+        playLabel={t("actions.play")}
+        src={recording.data?.url ?? null}
+        variant="hidden"
+      />
       {businesses.isLoading || calls.isLoading ? <TableCardSkeleton columns={5} /> : (
-        <TableCard>
-          <Table className="min-w-[56rem]">
-             <TableHeader><TableRow><TableHead>{t("table.caller")}</TableHead><TableHead>{t("table.number")}</TableHead><TableHead className="min-w-80">{t("table.purpose")}</TableHead><TableHead className="min-w-72">Transcript</TableHead><TableHead className="text-right">{t("table.time")}</TableHead><TableHead className="text-right">{t("table.status")}</TableHead><TableHead className="text-right">{t("table.audio")}</TableHead></TableRow></TableHeader>
-             <TableBody>{rows.length ? rows.map((call) => <TableRow key={call.id}><TableCell className="font-medium"><Link href={`/calls/${call.id}`}>{call.contactName ?? t("table.unknownCaller")}</Link></TableCell><TableCell>{call.contactPhone ?? t("table.noNumber")}</TableCell><TableCell className="type-body-muted">{call.disposition ?? call.status}</TableCell><TableCell className="max-w-72 truncate text-muted-foreground">{call.transcriptPreview ?? "No transcript yet"}</TableCell><TableCell className="text-right">{formatDateTime(call.startedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" })}</TableCell><TableCell className="text-right">{formatDuration(call.providerDurationSeconds)}</TableCell><TableCell className="text-right capitalize"><Link href={`/calls/${call.id}`}>{call.recordingState === "available" ? t("actions.listen") : call.recordingState === "pending" ? t("actions.audioPending") : call.recordingState === "expired" ? t("actions.audioExpired") : t("actions.audioUnavailable")}</Link></TableCell></TableRow>) : <TableRow><TableCell className="h-32 text-center text-muted-foreground" colSpan={7}>{t("table.empty")}</TableCell></TableRow>}</TableBody>
-          </Table>
-         </TableCard>
+        <>
+          <TableCard>
+            <Table className="min-w-[56rem]">
+              <TableHeader>
+                {table.getHeaderGroups().map((group) => (
+                  <TableRow key={group.id}>
+                    {group.headers.map((header) => (
+                      <TableHead className={header.column.id === "purpose" ? "min-w-80" : header.column.id === "play" ? "w-12 text-right" : undefined} key={header.id}>
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    className="h-12 cursor-pointer"
+                    data-state={row.original.id === activeRecordingId ? "selected" : undefined}
+                    key={row.id}
+                    onClick={() => router.push(`/calls/${row.original.id}`)}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell className={cell.column.id === "purpose" ? "max-w-0 whitespace-normal" : cell.column.id === "play" ? "w-12 text-right" : undefined} key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+                {table.getRowModel().rows.length === 0 ? <TableRow><TableCell className="h-24 text-center text-muted-foreground" colSpan={5}>{t("table.empty")}</TableCell></TableRow> : null}
+              </TableBody>
+            </Table>
+          </TableCard>
+          <DataTablePagination
+            labels={{
+              rowsPerPage: t("pagination.rowsPerPage"),
+              pageOf: (page, total) => t("pagination.pageOf", { page, total }),
+              firstPage: t("pagination.firstPage"),
+              previousPage: t("pagination.previousPage"),
+              nextPage: t("pagination.nextPage"),
+              lastPage: t("pagination.lastPage"),
+              goToPage: (page) => t("pagination.goToPage", { page }),
+            }}
+            table={table}
+          />
+        </>
       )}
-      <div className="flex items-center justify-between gap-4 text-sm text-muted-foreground"><span>Page {Math.floor(offset / 50) + 1}</span><div className="flex gap-2"><Button disabled={offset === 0} onClick={() => setOffset(0)} size="sm" variant="outline">First</Button><Button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 50))} size="sm" variant="outline">Previous</Button><Button disabled={!calls.data?.pagination.hasNext} onClick={() => setOffset(offset + 50)} size="sm" variant="outline">Next</Button><Button disabled={!calls.data?.pagination.hasNext} onClick={() => setOffset(offset + 50)} size="sm" variant="outline">Last</Button></div></div>
     </div>
   );
 }

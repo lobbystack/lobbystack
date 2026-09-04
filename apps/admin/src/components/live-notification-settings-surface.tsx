@@ -1,56 +1,40 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, Mail, MessageSquare, Save } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { PageSurface } from "./page-surface";
-import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "./ui/item";
-import { Surface } from "./ui/surface";
-import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import type { WorkspaceViewModel } from "@/lib/page-view-models";
+import { requestJson } from "@/lib/request-json";
+import { selectActiveBusiness } from "@/lib/active-business";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Surface } from "@/components/ui/surface";
+import { Switch } from "@/components/ui/switch";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-const events = [
-  ["voiceMessage", "Voice message", "A caller leaves a message for the team."],
-  ["pausedSms", "Human SMS handoff", "AI automation pauses for operator attention."],
-  ["smsFailed", "SMS delivery failure", "A customer message cannot be delivered."],
-  ["calendarSync", "Calendar sync issue", "A connected calendar needs attention."],
-  ["transferFailed", "Call transfer failure", "A requested live transfer fails."],
-  ["aiReplyFailed", "AI reply failure", "An automated reply cannot be generated."],
-] as const;
-type EventKey = (typeof events)[number][0];
-type Preferences = { emailEnabled: boolean; smsEnabled: boolean; eventPreferences: Record<EventKey, { email: boolean; sms: boolean }>; dailySummaryEnabled: boolean; dailySummarySendTime: string | null };
-type Business = { businessId: string; name: string; active: boolean };
-
-async function getJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { credentials: "include" });
-  if (!response.ok) throw new Error("Unable to load notification preferences.");
-  return await response.json() as T;
-}
+const events = ["voiceMessage", "pausedSms", "widgetChat", "smsFailed", "calendarSync", "transferFailed", "aiReplyFailed"] as const;
+type EventKey = (typeof events)[number];
+type Preferences = { emailEnabled: boolean; smsEnabled: boolean; smsConsent: boolean; eventPreferences: Record<EventKey, { email: boolean; sms: boolean }>; dailySummaryEnabled: boolean; dailySummarySendTime: string | null };
+const communicationEvents: EventKey[] = ["voiceMessage", "pausedSms", "widgetChat"];
+const issueEvents: EventKey[] = ["smsFailed", "calendarSync", "transferFailed", "aiReplyFailed"];
 
 export function LiveNotificationSettingsSurface() {
+  const { t } = useTranslation("settings");
   const queryClient = useQueryClient();
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => getJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
-  const preferences = useQuery({ queryKey: ["notification-preferences", business?.businessId], queryFn: () => getJson<Preferences>(`/api/notification-preferences?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
-  const [form, setForm] = useState<Preferences | null>(null);
-  useEffect(() => { if (preferences.data) setForm(preferences.data); }, [preferences.data]);
-  const save = useMutation({
-    mutationFn: async () => {
-      const response = await fetch(`/api/notification-preferences?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PUT", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify(form) });
-      if (!response.ok) throw new Error("Unable to save notification preferences.");
-    },
-    onSuccess: async () => await queryClient.invalidateQueries({ queryKey: ["notification-preferences", business?.businessId] }),
-  });
-  const toggleEvent = (key: EventKey, channel: "email" | "sms") => setForm((current) => current ? { ...current, eventPreferences: { ...current.eventPreferences, [key]: { ...current.eventPreferences[key], [channel]: !current.eventPreferences[key][channel] } } } : current);
-  if (businesses.isLoading || preferences.isLoading || !form) return <PageSurface title="Notifications" description="Choose when operators receive email and SMS alerts."><Card><CardContent className="py-16 text-center text-sm text-slate-500">Loading preferences...</CardContent></Card></PageSurface>;
-  if (businesses.isError || preferences.isError) return <PageSurface title="Notifications" description="Choose when operators receive email and SMS alerts."><Card><CardContent className="py-16 text-center text-sm text-red-600">Notification preferences are unavailable.</CardContent></Card></PageSurface>;
-  return <PageSurface title="Notifications" description={`Delivery preferences for ${business?.name ?? "the active workspace"}.`}>
-    <div className="w-full overflow-y-auto pb-12"><div className="flex w-full flex-col gap-8"><section className="flex flex-col gap-3"><h2 className="font-heading text-sm leading-snug font-medium">Delivery channels</h2><Surface className="flex flex-col"><Item className="rounded-none border-x-0 border-t-0 border-b border-border" variant="default"><ItemContent><ItemTitle className="flex items-center gap-2"><Mail className="size-4 text-muted-foreground" />Email notifications</ItemTitle><ItemDescription>Disabling email suppresses all email event deliveries.</ItemDescription></ItemContent><ItemActions><input aria-label="Email notifications" type="checkbox" checked={form.emailEnabled} onChange={(event) => setForm({ ...form, emailEnabled: event.target.checked })} className="size-4 accent-primary" /></ItemActions></Item><Item className="rounded-none border-0" variant="default"><ItemContent><ItemTitle className="flex items-center gap-2"><MessageSquare className="size-4 text-muted-foreground" />SMS notifications</ItemTitle><ItemDescription>Disabling SMS suppresses all SMS event deliveries.</ItemDescription></ItemContent><ItemActions><input aria-label="SMS notifications" type="checkbox" checked={form.smsEnabled} onChange={(event) => setForm({ ...form, smsEnabled: event.target.checked })} className="size-4 accent-primary" /></ItemActions></Item></Surface></section><section className="flex flex-col gap-3"><h2 className="font-heading text-sm leading-snug font-medium">Daily summary</h2><Surface className="flex flex-col"><Item className="rounded-none border-0" variant="default"><ItemContent><ItemTitle>Daily summary</ItemTitle><ItemDescription>Receive one summary of the previous day’s operational alerts.</ItemDescription></ItemContent><ItemActions><input aria-label="Enable daily summary" type="checkbox" checked={form.dailySummaryEnabled} onChange={(event) => setForm({ ...form, dailySummaryEnabled: event.target.checked, dailySummarySendTime: event.target.checked ? form.dailySummarySendTime ?? "09:00" : form.dailySummarySendTime })} className="size-4 accent-primary" /><input aria-label="Daily summary send time" type="time" value={form.dailySummarySendTime ?? "09:00"} disabled={!form.dailySummaryEnabled} onChange={(event) => setForm({ ...form, dailySummarySendTime: event.target.value })} className="min-h-9 rounded-xl border bg-transparent px-2 text-sm" /></ItemActions></Item></Surface></section><section className="flex flex-col gap-3"><h2 className="font-heading text-sm leading-snug font-medium">Event preferences</h2><TableCard><Table className="min-w-[38rem]"><TableHeader className="bg-transparent"><TableRow><TableHead>Event</TableHead>{form.emailEnabled ? <TableHead className="w-28 text-center">Email</TableHead> : null}{form.smsEnabled ? <TableHead className="w-28 text-center">SMS</TableHead> : null}</TableRow></TableHeader><TableBody>{events.map(([key, label, description]) => <TableRow key={key}><TableCell className="whitespace-normal"><div className="flex flex-col gap-1"><span className="font-medium">{label}</span><span className="text-sm text-muted-foreground">{description}</span></div></TableCell>{form.emailEnabled ? <TableCell className="text-center"><input aria-label={`${label} email`} type="checkbox" checked={form.eventPreferences[key].email} onChange={() => toggleEvent(key, "email")} className="size-4 accent-primary" /></TableCell> : null}{form.smsEnabled ? <TableCell className="text-center"><input aria-label={`${label} SMS`} type="checkbox" checked={form.eventPreferences[key].sms} onChange={() => toggleEvent(key, "sms")} className="size-4 accent-primary" /></TableCell> : null}</TableRow>)}</TableBody></Table></TableCard></section><div className="flex items-center justify-end gap-3">{save.isError ? <p className="text-sm text-destructive">{save.error.message}</p> : null}{save.isSuccess ? <p className="text-sm text-muted-foreground">Preferences saved.</p> : null}<Button onClick={() => save.mutate()} disabled={save.isPending}><Save className="size-4" />{save.isPending ? "Saving..." : "Save preferences"}</Button></div></div></div>
-  </PageSurface>;
+  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: WorkspaceViewModel[] }>("/api/businesses") });
+  const business = selectActiveBusiness(businesses.data?.businesses);
+  const preferences = useQuery({ queryKey: ["notification-preferences", business?.businessId], queryFn: () => requestJson<Preferences>(`/api/notification-preferences?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
+  const [draft, setDraft] = useState<Preferences | null>(null);
+  useEffect(() => { if (preferences.data) setDraft(preferences.data); }, [preferences.data]);
+  const save = useMutation({ mutationFn: (next: Preferences) => requestJson(`/api/notification-preferences?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PUT", body: JSON.stringify(next) }), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["notification-preferences", business?.businessId] }); }, onError: () => toast.error(t("notifications.toast.saveFailed")) });
+  function persist(next: Preferences) { setDraft(next); save.mutate(next); }
+
+  if (!draft || preferences.isLoading || businesses.isLoading) return <div className="flex flex-col gap-12"><Skeleton className="h-40 w-full rounded-xl" /><Skeleton className="h-64 w-full rounded-xl" /><Skeleton className="h-40 w-full rounded-xl" /></div>;
+  return <div className="w-full overflow-y-auto pb-12"><div className="flex w-full flex-col gap-12"><section className="flex flex-col gap-4"><h3 className="text-sm font-medium">{t("notifications.sources.title")}</h3><Surface className="flex flex-col"><Item className="rounded-none border-x-0 border-t-0 border-b"><ItemContent><ItemTitle>{t("notifications.sources.email.title")}</ItemTitle><ItemDescription>{t("notifications.sources.email.description")}</ItemDescription></ItemContent><ItemActions><Switch aria-label={t("notifications.sources.email.title")} checked={draft.emailEnabled} onCheckedChange={(checked) => persist({ ...draft, emailEnabled: checked })} /></ItemActions></Item><Item className="rounded-none border-0"><ItemContent><ItemTitle>{t("notifications.sources.sms.title")}</ItemTitle><ItemDescription>{t("notifications.sources.sms.description")}</ItemDescription></ItemContent><ItemActions><Switch aria-label={t("notifications.sources.sms.title")} checked={draft.smsEnabled} onCheckedChange={(checked) => { if (checked && !draft.smsConsent && !window.confirm(t("notifications.smsConsent.description"))) return; persist({ ...draft, smsEnabled: checked, smsConsent: checked ? true : draft.smsConsent }); }} /></ItemActions></Item></Surface></section><NotificationTable draft={draft} events={communicationEvents} onChange={persist} title={t("notifications.communication.title")} t={t} /><NotificationTable draft={draft} events={issueEvents} onChange={persist} title={t("notifications.systemIssues.title")} t={t} /></div></div>;
 }
 
-function ChannelToggle({ icon: Icon, label, checked, onChange }: { icon: typeof Mail; label: string; checked: boolean; onChange: (checked: boolean) => void }) {
-  return <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-slate-200 p-4"><span className="flex items-center gap-3 font-medium text-slate-800"><Icon className="size-5 text-teal-700" />{label}</span><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="size-5 accent-teal-700" /></label>;
+function NotificationTable({ draft, events: rows, onChange, title, t }: { draft: Preferences; events: EventKey[]; onChange: (next: Preferences) => void; title: string; t: (key: string) => string }) {
+  return <section className="flex flex-col gap-4"><h3 className="text-sm font-medium">{title}</h3><Surface><Table><TableHeader><TableRow className="hover:bg-transparent"><TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("notifications.communication.eventColumn")}</TableHead>{draft.emailEnabled ? <TableHead className="h-12 w-[120px] px-6 text-center text-sm font-medium text-foreground">{t("notifications.sources.email.title")}</TableHead> : null}{draft.smsEnabled ? <TableHead className="h-12 w-[120px] px-6 text-center text-sm font-medium text-foreground">{t("notifications.sources.sms.title")}</TableHead> : null}</TableRow></TableHeader><TableBody>{rows.map((event) => <TableRow className="hover:bg-transparent" key={event}><TableCell className="whitespace-normal px-6 py-5"><div className="flex flex-col gap-1 pr-4"><span className="text-sm font-medium">{t(`notifications.events.${event}.title`)}</span><span className="text-sm text-muted-foreground">{t(`notifications.events.${event}.description`)}</span></div></TableCell>{draft.emailEnabled ? <TableCell className="px-6 py-5 text-center"><input aria-label={`${t("notifications.sources.email.title")} - ${t(`notifications.events.${event}.title`)}`} checked={draft.eventPreferences[event]?.email ?? false} className="size-4 accent-foreground" onChange={(change) => onChange({ ...draft, eventPreferences: { ...draft.eventPreferences, [event]: { ...(draft.eventPreferences[event] ?? { email: false, sms: false }), email: change.target.checked } } })} type="checkbox" /></TableCell> : null}{draft.smsEnabled ? <TableCell className="px-6 py-5 text-center"><input aria-label={`${t("notifications.sources.sms.title")} - ${t(`notifications.events.${event}.title`)}`} checked={draft.eventPreferences[event]?.sms ?? false} className="size-4 accent-foreground" onChange={(change) => onChange({ ...draft, eventPreferences: { ...draft.eventPreferences, [event]: { ...(draft.eventPreferences[event] ?? { email: false, sms: false }), sms: change.target.checked } } })} type="checkbox" /></TableCell> : null}</TableRow>)}</TableBody></Table></Surface></section>;
 }

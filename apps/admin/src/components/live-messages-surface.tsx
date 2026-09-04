@@ -68,7 +68,7 @@ export function LiveMessagesSurface() {
 
   useEffect(() => {
     if (!business) return;
-    const source = new EventSource("/api/realtime");
+    const source = new EventSource(`/api/realtime?businessId=${encodeURIComponent(business.businessId)}`);
     const refresh = () => void queryClient.invalidateQueries({ queryKey: ["messages", business.businessId] });
     for (const event of ["message.upserted", "message.deliveryUpdated", "conversation.updated"]) source.addEventListener(event, refresh);
     return () => source.close();

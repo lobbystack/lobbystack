@@ -11,12 +11,10 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     return NextResponse.json(await withOperatorTransaction(request, async ({ session, businessId, tx }) => {
-      const [workspace, activeReplacementClaim] = await Promise.all([
-        tx.select({ replacementReservedAt: businesses.phoneNumberReplacementReservedAt, replacementUsedAt: businesses.phoneNumberReplacementUsedAt }).from(businesses).where(eq(businesses.id, businessId)).limit(1),
-        tx.select({ id: onboardingNumberClaimEvents.id, status: onboardingNumberClaimEvents.status }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, businessId), eq(onboardingNumberClaimEvents.userId, session.user.id), eq(onboardingNumberClaimEvents.purpose, "replacement"), inArray(onboardingNumberClaimEvents.status, ["reserved", "provisioning"]))).orderBy(desc(onboardingNumberClaimEvents.reservedAt)).limit(1),
-      ]);
+      const workspace = await tx.select({ replacementReservedAt: businesses.phoneNumberReplacementReservedAt, replacementUsedAt: businesses.phoneNumberReplacementUsedAt }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
+      const activeReplacementClaim = await tx.select({ id: onboardingNumberClaimEvents.id, status: onboardingNumberClaimEvents.status }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, businessId), eq(onboardingNumberClaimEvents.userId, session.user.id), eq(onboardingNumberClaimEvents.purpose, "replacement"), inArray(onboardingNumberClaimEvents.status, ["reserved", "provisioning"]))).orderBy(desc(onboardingNumberClaimEvents.reservedAt)).limit(1);
       return {
-        phoneNumbers: await tx.select().from(phoneNumbers).where(eq(phoneNumbers.businessId, businessId)).orderBy(asc(phoneNumbers.createdAt)),
+        phoneNumbers: await tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"))).orderBy(asc(phoneNumbers.createdAt)),
         replacement: { reservedAt: workspace[0]?.replacementReservedAt ?? null, usedAt: workspace[0]?.replacementUsedAt ?? null, activeClaim: activeReplacementClaim[0] ?? null },
       };
     }));

@@ -1,41 +1,45 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { billingPlanCatalog, type BillingPlanSlug } from "@lobbystack/shared";
 
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Item, ItemContent, ItemDescription, ItemTitle } from "./ui/item";
-import { PageSurface } from "./page-surface";
-import { Surface } from "./ui/surface";
+import type { BillingUsageViewModel, WorkspaceViewModel } from "@/lib/page-view-models";
+import { requestJson } from "@/lib/request-json";
+import { selectActiveBusiness } from "@/lib/active-business";
+import { SectionBlock } from "@/components/section-block";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Surface } from "@/components/ui/surface";
 
-type Business = { businessId: string; name: string; active: boolean };
-type Billing = {
-  account: { plan: string | null; billingInterval: string | null; overageSpendingCapCents: number | null } | null;
-  usage: Array<{ periodKey: string; usageKind: string; quantity: number; isFinal: boolean; syncStatus: string }>;
-  usageStatus: { voiceSecondsUsed: number; alertSmsSegmentsUsed: number; outboundCallAttemptsUsed: number; voiceBlocked: boolean; alertSmsBlocked: boolean; outboundCallAttemptsBlocked: boolean; overageSpendCents: number; overageSpendingCapCents: number | null; overageSpendingCapReached: boolean; usageComplete: boolean } | null;
-};
-
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
-  if (!response.ok) throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Billing request failed.");
-  return await response.json() as T;
-}
+function isPlan(value: string | null | undefined): value is BillingPlanSlug { return value != null && value in billingPlanCatalog; }
 
 export function LiveUsageSurface() {
-  const queryClient = useQueryClient();
-  const [cap, setCap] = useState("");
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
-  const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: () => requestJson<Billing>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business) });
-  const saveCap = useMutation({ mutationFn: () => requestJson(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ capCents: cap.trim() ? Number(cap) : null }) }), onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["billing", business?.businessId] }) });
+  const { i18n, t } = useTranslation("settings");
+  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: WorkspaceViewModel[] }>("/api/businesses") });
+  const business = selectActiveBusiness(businesses.data?.businesses);
+  const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: () => requestJson<BillingUsageViewModel>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
+  const accountPlan = billing.data?.account?.plan;
+  const plan = isPlan(accountPlan) ? accountPlan : "free_cloud";
+  const catalog = billingPlanCatalog[plan];
   const status = billing.data?.usageStatus;
-  return <PageSurface title="Usage" description="">
-    <div className="space-y-6"><Card><CardHeader><CardTitle>Current-period usage</CardTitle><CardDescription>{business ? `${business.name} · ${billing.data?.account?.plan ?? "No plan"}` : "Choose a workspace to view usage."}</CardDescription></CardHeader><CardContent>{billing.isLoading || businesses.isLoading ? <p className="py-10 text-center text-sm text-muted-foreground">Loading usage...</p> : null}{billing.isError || businesses.isError ? <p className="py-10 text-center text-sm text-destructive">Usage data is unavailable.</p> : null}{status ? <div className="grid gap-4 sm:grid-cols-3"><UsageCard label="Voice seconds" value={status.voiceSecondsUsed} blocked={status.voiceBlocked} /><UsageCard label="Alert SMS segments" value={status.alertSmsSegmentsUsed} blocked={status.alertSmsBlocked} /><UsageCard label="Outbound call attempts" value={status.outboundCallAttemptsUsed} blocked={status.outboundCallAttemptsBlocked} /></div> : null}</CardContent></Card><Card><CardHeader><CardTitle>Overage cap</CardTitle><CardDescription>Set a whole-dollar cap for eligible overage usage. Leave blank to remove the cap.</CardDescription></CardHeader><CardContent className="space-y-4"><div className="flex flex-wrap items-end gap-3"><label className="space-y-2 text-sm font-medium">Cap in cents<input aria-label="Overage spending cap in cents" className="min-h-11 w-48 rounded-xl border px-3 font-normal" inputMode="numeric" value={cap || String(billing.data?.usageStatus?.overageSpendingCapCents ?? "")} onChange={(event) => setCap(event.target.value.replace(/\D/g, ""))} placeholder="5000" /></label><Button disabled={!business || saveCap.isPending} onClick={() => saveCap.mutate()}>{saveCap.isPending ? "Saving..." : "Save cap"}</Button></div>{status?.overageSpendingCapReached ? <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">The overage cap has been reached. New billable usage is blocked.</p> : null}{saveCap.isError ? <p className="text-sm text-destructive">{saveCap.error.message}</p> : null}</CardContent></Card><Card><CardHeader><CardTitle>Usage events</CardTitle><CardDescription>Finalization and provider synchronization state.</CardDescription></CardHeader><CardContent><div className="overflow-x-auto"><table className="w-full min-w-[560px] text-left text-sm"><thead><tr className="border-b text-xs uppercase tracking-[0.12em] text-muted-foreground"><th className="px-3 py-3">Kind</th><th className="px-3 py-3">Quantity</th><th className="px-3 py-3">State</th><th className="px-3 py-3">Sync</th></tr></thead><tbody>{billing.data?.usage.map((event) => <tr className="border-b last:border-0" key={`${event.periodKey}-${event.usageKind}-${event.quantity}`}><td className="px-3 py-3 capitalize">{event.usageKind.replaceAll("_", " ")}</td><td className="px-3 py-3">{event.quantity}</td><td className="px-3 py-3">{event.isFinal ? "Final" : "Incomplete"}</td><td className="px-3 py-3 capitalize">{event.syncStatus}</td></tr>)}</tbody></table>{!billing.data?.usage.length ? <p className="py-8 text-center text-sm text-muted-foreground">No usage events recorded this period.</p> : null}</div></CardContent></Card></div>
-  </PageSurface>;
+  const resetAt = billing.data?.account?.currentPeriodEnd;
+
+  if (businesses.isLoading || billing.isLoading) return <UsageSkeleton />;
+  if (businesses.isError || billing.isError) return <Surface className="p-6 text-sm text-destructive">Usage data is unavailable.</Surface>;
+  if (plan === "self_host") return <SectionBlock title={t("billing.usage.title")}><Surface className="p-6"><p className="text-[15px] leading-6 text-muted-foreground">{t("billing.currentPlan.selfHostNotice")}</p></Surface></SectionBlock>;
+
+  const description = resetAt ? t("billing.usage.description", { resetAt: new Intl.DateTimeFormat(i18n.language, { month: "long", day: "numeric" }).format(new Date(resetAt)) }) : undefined;
+  return <div className="flex w-full flex-col gap-10"><SectionBlock description={description} title={t("billing.usage.title")}><Surface className="p-0">{status ? <>
+    <UsageMeter blocked={status.voiceBlocked} included={catalog.voiceSecondsIncluded === null ? null : catalog.voiceSecondsIncluded / 60} label={t("billing.usage.voiceTitle")} unit={t("billing.usage.units.voice")} used={Math.round((status.voiceSecondsUsed / 60) * 10) / 10} />
+    <UsageMeter blocked={status.outboundCallAttemptsBlocked} included={catalog.outboundCallAttemptsIncluded} label={t("billing.usage.outboundAttemptsTitle")} unit={t("billing.usage.units.outboundAttempts")} used={status.outboundCallAttemptsUsed} />
+    <UsageMeter blocked={status.alertSmsBlocked} included={catalog.alertSmsSegmentsIncluded} label={t("billing.usage.alertSmsTitle")} unit={t("billing.usage.units.segments")} used={status.alertSmsSegmentsUsed} />
+    <div className="px-6 py-5"><div className="flex items-center justify-between gap-4"><span className="text-[15px] font-medium leading-6">{t("billing.usage.knowledgeTitle")}</span><span className="text-[15px] leading-6 text-muted-foreground">—</span></div></div>
+  </> : <div className="p-6 text-[15px] text-muted-foreground">No usage has been recorded for this period.</div>}</Surface></SectionBlock></div>;
 }
 
-function UsageCard({ label, value, blocked }: { label: string; value: number; blocked: boolean }) {
-  const percent = Math.min(100, Math.max(4, Math.round((value / 10000) * 100)));
-  return <Surface className="p-0"><Item className="rounded-none border-0" variant="default"><ItemContent><ItemTitle>{label}</ItemTitle><ItemDescription className="mt-2 text-3xl tabular-nums text-foreground">{value.toLocaleString()}</ItemDescription><div className="mt-4 h-2.5 rounded-full bg-muted"><div className="h-2.5 rounded-full bg-primary transition-all" style={{ width: `${percent}%` }} /></div><ItemDescription className="mt-2 text-xs">{percent}% of included usage</ItemDescription></ItemContent>{blocked ? <span className="rounded-full bg-destructive/10 px-2 py-1 text-xs text-destructive">Blocked</span> : null}</Item></Surface>;
+function UsageMeter({ label, used, included, unit, blocked }: { label: string; used: number; included: number | null; unit: string; blocked: boolean }) {
+  const percentage = included && included > 0 ? Math.min(100, (used / included) * 100) : 0;
+  return <div className="border-b border-border px-6 py-5 last:border-b-0"><div className="flex flex-col gap-2"><div className="flex items-center justify-between gap-4"><span className="text-[15px] font-medium leading-6">{label}</span><span className="text-[15px] leading-6 text-muted-foreground tabular-nums">{used.toLocaleString()} {included === null ? "" : `/ ${included.toLocaleString()} `}{unit}</span></div>{included !== null && included > 0 ? <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary"><div className={blocked ? "h-full rounded-full bg-destructive" : "h-full rounded-full bg-foreground transition-all duration-700"} style={{ width: `${percentage}%` }} /></div> : null}{blocked ? <span className="text-sm leading-6 text-destructive">Limit reached — usage is paused until the next period.</span> : null}</div></div>;
 }
+
+function UsageSkeleton() { return <div className="flex flex-col gap-3"><div className="space-y-2"><Skeleton className="h-5 w-32" /><Skeleton className="h-4 w-44" /></div><Surface>{Array.from({ length: 4 }).map((_, index) => <div className="space-y-2 border-b px-6 py-5 last:border-b-0" key={index}><div className="flex justify-between"><Skeleton className="h-5 w-32" /><Skeleton className="h-5 w-24" /></div><Skeleton className="h-1.5 w-full rounded-full" /></div>)}</Surface></div>; }

@@ -875,6 +875,42 @@ describe("web call routes", () => {
     );
   });
 
+  it("derives matching dashboard authorization from the internal token in development", async () => {
+    process.env.WEB_CALL_ALLOWED_ORIGINS = "http://localhost:3000";
+    const derivedToken = createHmac("sha256", "test-service-token")
+      .update("lobbystack:dashboard-test-call:development")
+      .digest("hex");
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response("answer-sdp", {
+      status: 200,
+      headers: { location: "/v1/realtime/calls/rtc_test" },
+    })));
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: { origin: "http://localhost:3000", "content-type": "application/json" },
+      payload: {
+        businessSlug: "private-business",
+        dashboardTestCallProof: createDashboardTestCallProof({ businessSlug: "private-business", token: derivedToken }),
+        sdp: "v=0",
+        widgetId: "lobbystack-dashboard-test-call",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(fetchWebVoiceContextMock).toHaveBeenCalledWith(expect.objectContaining({
+      businessSlug: "private-business",
+      dashboardTestCallToken: derivedToken,
+    }));
+  });
+
   it("forwards dashboard test call tokens during tool context fetches", async () => {
     process.env.WEB_CALL_ALLOWED_ORIGINS = "https://app.lobbystack.com";
     process.env.DASHBOARD_TEST_CALL_TOKEN = "dashboard-token";

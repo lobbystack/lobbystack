@@ -7,11 +7,10 @@ import { createWorkerDomainContext } from "@/lib/domain-context";
 import { resolveWidgetSessionAccess } from "@/lib/widget-access";
 import { requestIpHash, touchWidgetKeyLastUsed } from "@/lib/widget-keys";
 import { enforceWidgetRateLimits } from "@/lib/widget-policy";
+import { webCallEndpoint } from "@/lib/web-call-endpoint";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const webCallBaseUrl = process.env.NEXT_PUBLIC_WEB_CALL_ENDPOINT ?? (process.env.NODE_ENV === "production" ? "https://voice.lobbystack.com/web-call/sessions" : "http://127.0.0.1:3001/web-call/sessions");
 
 export async function GET(request: Request) {
   try {
@@ -41,7 +40,7 @@ export async function GET(request: Request) {
       greeting: session.config.greeting ?? snapshot?.greeting ?? undefined,
       snapshotPresent: snapshot !== null,
       businessSlug: session.businessSlug,
-      webCallBaseUrl,
+      webCallBaseUrl: webCallEndpoint,
       voiceEnabled: Boolean(snapshot?.contactChannels?.phoneNumber),
     });
   } catch (error) {

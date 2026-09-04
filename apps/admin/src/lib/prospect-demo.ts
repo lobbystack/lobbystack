@@ -4,6 +4,7 @@ import { eq, sql } from "drizzle-orm";
 
 import { prospectDemos, withBusinessTransaction } from "@lobbystack/db";
 import { getAppDatabase, getWorkerDatabase } from "./api-helpers";
+import { resolveDashboardTestCallToken } from "./dashboard-test-call-token";
 
 type WebVoiceAccess =
   | { allowed: true; businessId: string; mode: "normal"; dashboardTestCall: boolean }
@@ -26,6 +27,7 @@ export async function resolveWebVoiceAccess(input: {
   dashboardTestCallToken?: string | undefined;
   prospectDemoToken?: string | undefined;
 }): Promise<WebVoiceAccess> {
+  const dashboardTestCallToken = resolveDashboardTestCallToken();
   const slugResult = await getAppDatabase().db.execute<{ business_id: string }>(
     sql`select app.resolve_business_by_slug(${input.businessSlug}) as business_id`,
   );
@@ -48,7 +50,11 @@ export async function resolveWebVoiceAccess(input: {
     { businessId, actorType: "worker" },
     async (tx) => (await tx.select({ status: prospectDemos.status }).from(prospectDemos).where(eq(prospectDemos.businessId, businessId)).limit(1))[0],
   );
-  if (demo && demo.status !== "claimed" && !equalSecret(input.dashboardTestCallToken, process.env.DASHBOARD_TEST_CALL_TOKEN?.trim())) {
+  if (
+    demo &&
+    demo.status !== "claimed" &&
+    !equalSecret(input.dashboardTestCallToken, dashboardTestCallToken)
+  ) {
     return { allowed: false, status: 403, reason: "token_required" };
   }
 
@@ -56,6 +62,9 @@ export async function resolveWebVoiceAccess(input: {
     allowed: true,
     businessId,
     mode: "normal",
-    dashboardTestCall: equalSecret(input.dashboardTestCallToken, process.env.DASHBOARD_TEST_CALL_TOKEN?.trim()),
+    dashboardTestCall: equalSecret(
+      input.dashboardTestCallToken,
+      dashboardTestCallToken,
+    ),
   };
 }

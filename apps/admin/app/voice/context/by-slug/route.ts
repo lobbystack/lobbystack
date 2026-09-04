@@ -1,10 +1,11 @@
-import { desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { snapshotSchema, voiceContextBySlugRequestSchema } from "@lobbystack/contracts";
-import { businessContextSnapshots, widgetKeys, withBusinessTransaction } from "@lobbystack/db";
+import { voiceContextBySlugRequestSchema } from "@lobbystack/contracts";
+import { widgetKeys, withBusinessTransaction } from "@lobbystack/db";
 import { getWebVoiceBillingAllowance } from "@lobbystack/domain";
 import { asApiResponse, getWorkerDatabase, requireInternalService } from "@/lib/api-helpers";
+import { loadValidBusinessSnapshot } from "@/lib/business-snapshot";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { resolveWebVoiceAccess } from "@/lib/prospect-demo";
 import { hashWidgetKey, isAllowedWidgetOrigin, normalizeOrigin, resolveWidgetKeyByHash, verifyWidgetSessionToken } from "@/lib/widget-keys";
@@ -52,13 +53,15 @@ export async function POST(request: Request) {
       const billing = await getWebVoiceBillingAllowance(createWorkerDomainContext(), { businessId, ...(body.maxDurationMs !== undefined ? { maxDurationMs: body.maxDurationMs } : {}) });
       if (!billing.allowed) return NextResponse.json({ code: billing.errorCode, message: "Voice usage limit reached." }, { status: 402 });
     }
-    return NextResponse.json(await withBusinessTransaction(getWorkerDatabase().db, { businessId, actorType: "worker" }, async (tx) => {
-      const snapshot = (await tx.select().from(businessContextSnapshots).where(eq(businessContextSnapshots.businessId, businessId)).orderBy(desc(businessContextSnapshots.generatedAt)).limit(1))[0]?.snapshot;
-      return {
-        businessId,
-        snapshot: snapshot ? snapshotSchema.parse(snapshot) : null,
-        ...(access.mode === "prospect_demo" ? { sessionMode: access.mode, prospectDemoId: access.prospectDemoId } : {}),
-      };
-    }));
+    return NextResponse.json({
+      businessId,
+      snapshot: await loadValidBusinessSnapshot(businessId),
+      ...(access.mode === "prospect_demo"
+        ? {
+            sessionMode: access.mode,
+            prospectDemoId: access.prospectDemoId,
+          }
+        : {}),
+    });
   } catch (error) { return asApiResponse(error); }
 }

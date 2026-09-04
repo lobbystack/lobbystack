@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm";
 
 import { appointments, calls, contacts, conversations, enqueueOutbox, messages, services, staff, withBusinessTransaction } from "@lobbystack/db";
 
@@ -16,7 +16,23 @@ export async function listContacts(
     const search = input.search?.trim();
     const filter = and(eq(contacts.businessId, input.businessId), ...(search ? [or(ilike(contacts.name, `%${search}%`), ilike(contacts.phone, `%${search}%`), ilike(contacts.email, `%${search}%`))!] : []));
     const [rows, total] = await Promise.all([
-      tx.select().from(contacts).where(filter).orderBy(asc(contacts.name), asc(contacts.phone)).limit(limit + 1).offset(offset),
+      tx.select({
+        id: contacts.id,
+        name: contacts.name,
+        phone: contacts.phone,
+        email: contacts.email,
+        timezone: contacts.timezone,
+        preferredLocale: contacts.preferredLocale,
+        smsConsentStatus: contacts.smsConsentStatus,
+        smsConsentUpdatedAt: contacts.smsConsentUpdatedAt,
+        smsConsentSource: contacts.smsConsentSource,
+        operatorBlockedAt: contacts.operatorBlockedAt,
+        createdAt: contacts.createdAt,
+        updatedAt: contacts.updatedAt,
+        callCount: sql<number>`(select count(*) from ${calls} where ${calls.contactId} = ${contacts.id} and ${calls.businessId} = ${input.businessId})`,
+        messageCount: sql<number>`(select count(*) from ${messages} inner join ${conversations} on ${conversations.id} = ${messages.conversationId} where ${conversations.contactId} = ${contacts.id} and ${messages.businessId} = ${input.businessId})`,
+        appointmentCount: sql<number>`(select count(*) from ${appointments} where ${appointments.contactId} = ${contacts.id} and ${appointments.businessId} = ${input.businessId})`,
+      }).from(contacts).where(filter).orderBy(asc(contacts.name), asc(contacts.phone)).limit(limit + 1).offset(offset),
       tx.select({ count: count() }).from(contacts).where(filter),
     ]);
     return { contacts: rows.slice(0, limit), pagination: { limit, offset, total: Number(total[0]?.count ?? 0), hasNext: rows.length > limit } };

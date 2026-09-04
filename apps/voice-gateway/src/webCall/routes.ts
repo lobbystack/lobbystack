@@ -311,6 +311,20 @@ function verifyDashboardTestCallProof(input: {
   );
 }
 
+function resolveDashboardTestCallToken(source: {
+  DASHBOARD_TEST_CALL_TOKEN?: string | undefined;
+  DEPLOYMENT_MODE?: string | undefined;
+  INTERNAL_SERVICE_TOKEN?: string | undefined;
+  NODE_ENV?: string | undefined;
+}): string | undefined {
+  const configuredToken = source.DASHBOARD_TEST_CALL_TOKEN?.trim();
+  if (configuredToken) return configuredToken;
+  if (source.NODE_ENV === "production" || source.DEPLOYMENT_MODE !== "development") return undefined;
+  const internalToken = source.INTERNAL_SERVICE_TOKEN?.trim();
+  if (!internalToken) return undefined;
+  return createHmac("sha256", internalToken).update("lobbystack:dashboard-test-call:development").digest("hex");
+}
+
 function isAllowedOrigin(
   server: FastifyInstance,
   origin: string | null,
@@ -1623,14 +1637,15 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       const widgetId = normalizeOptionalAbuseKey(body.widgetId);
       const visitorId = normalizeOptionalAbuseKey(body.visitorId);
       const ipHash = hashAbuseKey(server, getClientIp(request));
+      const configuredDashboardTestCallToken = resolveDashboardTestCallToken(server.runtimeConfig);
       const dashboardTestCallToken =
         widgetId === DASHBOARD_TEST_CALL_WIDGET_ID &&
         verifyDashboardTestCallProof({
           businessSlug,
           proof: body.dashboardTestCallProof,
-          token: server.runtimeConfig.DASHBOARD_TEST_CALL_TOKEN,
+          token: configuredDashboardTestCallToken,
         })
-          ? server.runtimeConfig.DASHBOARD_TEST_CALL_TOKEN?.trim()
+          ? configuredDashboardTestCallToken
           : undefined;
       const publicWebCall =
         server.runtimeConfig.WEB_CALL_PUBLIC_BUSINESS_SLUG !== undefined &&

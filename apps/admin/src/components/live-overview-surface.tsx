@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserRound } from "lucide-react";
 
@@ -17,7 +17,13 @@ import { Separator } from "@/components/ui/separator";
 import { Surface } from "@/components/ui/surface";
 import { formatDateTime } from "@/lib/locale";
 
+const OverviewCallChart = dynamic(() => import("./overview-call-chart").then((module) => module.OverviewCallChart), {
+  loading: () => <div className="h-[350px] animate-pulse rounded-xl bg-muted" />,
+  ssr: false,
+});
+
 type DashboardSummary = {
+  businessId: string;
   kpis: {
     calls: { total: number; deltaPercent: number };
     messages: { total: number; deltaPercent: number };
@@ -51,17 +57,18 @@ export function LiveOverviewSurface() {
   const { i18n, t } = useTranslation("dashboard");
   const queryClient = useQueryClient();
   const summary = useQuery({ queryKey: ["dashboard"], queryFn: getSummary });
+  const businessId = summary.data?.businessId;
 
   useEffect(() => {
-    const source = new EventSource("/api/realtime");
+    if (!businessId) return;
+    const source = new EventSource(`/api/realtime?businessId=${encodeURIComponent(businessId)}`);
     const refresh = () => void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     for (const event of ["call.started", "call.updated", "call.completed", "message.upserted", "appointment.updated"]) source.addEventListener(event, refresh);
     return () => source.close();
-  }, [queryClient]);
+  }, [businessId, queryClient]);
 
   const metrics = summary.data ? [
     { key: "calls", value: summary.data.kpis.calls.total.toLocaleString(i18n.language), description: formatDelta(summary.data.kpis.calls.deltaPercent, t) },
-    { key: "messages", value: summary.data.kpis.messages.total.toLocaleString(i18n.language), description: formatDelta(summary.data.kpis.messages.deltaPercent, t) },
     { key: "appointments", value: summary.data.kpis.appointments.total.toLocaleString(i18n.language), description: formatDelta(summary.data.kpis.appointments.deltaPercent, t) },
     { key: "averageDuration", value: formatDuration(summary.data.kpis.averageDuration.totalSeconds), description: formatDurationDelta(summary.data.kpis.averageDuration.deltaSeconds, t) },
   ] as const : [];
@@ -70,8 +77,8 @@ export function LiveOverviewSurface() {
     <div className="flex flex-col gap-6">
       <PageHeader title={t("home.title")} />
       <div className="flex flex-col gap-6">
-        {summary.isLoading ? <MetricCardGridSkeleton count={4} /> : (
-          <Surface className="grid sm:grid-cols-2 md:grid-cols-4">
+        {summary.isLoading ? <MetricCardGridSkeleton count={3} /> : (
+          <Surface className="grid sm:grid-cols-2 md:grid-cols-3">
             {metrics.map((metric) => (
               <section className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 md:border-b-0 md:border-r md:last:border-r-0" key={metric.key}>
                 <div className="flex flex-col gap-4">
@@ -106,7 +113,7 @@ export function LiveOverviewSurface() {
           </motion.section>
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-          <Card className="col-span-1 lg:col-span-4"><CardHeader><CardTitle>{t("home.chart.title")}</CardTitle></CardHeader><CardContent className="ps-2"><ResponsiveContainer height={350} width="100%"><BarChart data={(summary.data?.monthlyCalls ?? []).map((item) => ({ name: formatDateTime(item.monthStart, i18n.language, { month: "short", timeZone: "UTC" }), total: item.total }))}><XAxis axisLine={false} dataKey="name" fontSize={12} stroke="#888888" tickLine={false} /><YAxis axisLine={false} direction="ltr" fontSize={12} stroke="#888888" tickLine={false} /><Bar className="fill-primary" dataKey="total" fill="currentColor" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></CardContent></Card>
+          <Card className="col-span-1 lg:col-span-4"><CardHeader><CardTitle>{t("home.chart.title")}</CardTitle></CardHeader><CardContent className="ps-2"><OverviewCallChart data={(summary.data?.monthlyCalls ?? []).map((item) => ({ name: formatDateTime(item.monthStart, i18n.language, { month: "short", timeZone: "UTC" }), total: item.total }))} /></CardContent></Card>
           <Card className="col-span-1 lg:col-span-3"><CardHeader><CardTitle>{t("home.recentCalls.title")}</CardTitle><CardDescription>{t("home.recentCalls.description", { count: summary.data?.recentCalls.length ?? 0 })}</CardDescription></CardHeader><CardContent><div className="flex flex-col gap-6">{(summary.data?.recentCalls ?? []).map((call) => <div className="flex items-center gap-4" key={call.id}><Avatar className="h-9 w-9"><AvatarFallback>{initials(call.contactName)}</AvatarFallback></Avatar><div className="flex flex-1 flex-wrap items-center justify-between"><div className="flex flex-col gap-1"><p className="type-item-title leading-none">{call.contactName ?? t("home.recentCalls.unknownCaller")}</p><p className="type-body-muted">{call.contactPhone ?? formatDateTime(call.startedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" })}</p></div><div className="type-item-title">{call.durationSeconds ? t("home.recentCalls.durationValue", { value: call.durationSeconds }) : call.status}</div></div></div>)}</div></CardContent></Card>
         </div>
       </div>

@@ -403,6 +403,7 @@
       "search": "Rechercher",
       "phoneNumberHeader": "Numéro de téléphone",
       "select": "Sélectionner",
+      "claiming": "Connexion de votre nouveau numéro...",
       "loadMore": "Charger plus",
       "empty": "Aucun numéro ne correspond à cette recherche.",
       "loadFailed": "Impossible de charger les numéros pour le moment.",
@@ -440,6 +441,7 @@
     }
   },
   "integrations": {
+    "permissions": { "manageRequired": "Seuls les propriétaires et les administrateurs peuvent gérer les intégrations." },
     "actions": {
       "connect": "Connecter",
       "connected": "Connecté",

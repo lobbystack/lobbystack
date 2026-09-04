@@ -5,16 +5,19 @@ import { Mic, Phone, PhoneOff } from "lucide-react";
 import { useWebVoiceCall, type WebVoiceErrorKey } from "@/components/web-voice/useWebVoiceCall";
 import { useTranslation } from "react-i18next";
 
+import { webCallEndpoint } from "@/lib/web-call-endpoint";
 import { Button } from "./ui/button";
-
-const endpoint = process.env.NEXT_PUBLIC_WEB_CALL_ENDPOINT ?? "https://voice.lobbystack.com/web-call/sessions";
 
 export function DashboardTestCallWidget({ businessId, businessSlug, className }: { businessId: string; businessSlug: string; className?: string }) {
   const [proofError, setProofError] = useState<string | null>(null);
   const { t } = useTranslation("admin");
-  const call = useWebVoiceCall({ businessSlug, endpoint, widgetId: "lobbystack-dashboard-test-call", getStartPayload: async () => {
+  const call = useWebVoiceCall({ businessSlug, endpoint: webCallEndpoint, widgetId: "lobbystack-dashboard-test-call", getStartPayload: async () => {
     const response = await fetch(`/api/voice/test-call/proof?businessId=${encodeURIComponent(businessId)}`, { credentials: "include" });
-    if (!response.ok) throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Test calls are unavailable.");
+    if (!response.ok) {
+      const message = (await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Test calls are unavailable.";
+      setProofError(message);
+      throw new Error(message);
+    }
     setProofError(null);
     const result = await response.json() as { proof: string };
     return { dashboardTestCallProof: result.proof };

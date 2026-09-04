@@ -3,7 +3,7 @@ import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { calls, contacts, conversations, conversationSessions, enqueueOutbox, messages, transcripts, widgetVisitors, withBusinessTransaction } from "@lobbystack/db";
 
 import { requireBusinessMembership } from "../authz";
-import { buildConversationSessionSummary } from "./conversationSummary";
+import { buildConversationSessionSummary, extractCallerContext } from "./conversationSummary";
 import type { DomainContext } from "./context";
 import { queueOperatorAlertInTransaction, type OperatorNotificationEventKey } from "./notifications";
 
@@ -14,19 +14,23 @@ export async function finalizeConversationSession(
   input: { businessId: string; callId: string },
 ): Promise<{ sessionId?: string; finalized: boolean }> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const call = (await tx.select({ conversationId: calls.conversationId, disposition: calls.disposition, startedAt: calls.startedAt, endedAt: calls.endedAt }).from(calls).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId))).limit(1))[0];
+    const call = (await tx.select({ conversationId: calls.conversationId, contactId: calls.contactId, disposition: calls.disposition, startedAt: calls.startedAt, endedAt: calls.endedAt }).from(calls).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId))).limit(1))[0];
     if (!call?.conversationId) return { finalized: false };
     const conversation = (await tx.select({ summary: conversations.summary, currentIntent: conversations.currentIntent, locale: conversations.locale }).from(conversations).where(and(eq(conversations.id, call.conversationId), eq(conversations.businessId, input.businessId))).limit(1))[0];
     if (!conversation) return { finalized: false };
     const existing = (await tx.select({ id: conversationSessions.id, summaryGeneratedAt: conversationSessions.summaryGeneratedAt }).from(conversationSessions).where(and(eq(conversationSessions.businessId, input.businessId), eq(conversationSessions.callId, input.callId))).limit(1))[0];
     if (existing?.summaryGeneratedAt) return { sessionId: existing.id, finalized: false };
-    const transcript = await tx.select({ text: transcripts.text }).from(transcripts).where(and(eq(transcripts.businessId, input.businessId), eq(transcripts.callId, input.callId), eq(transcripts.final, true))).orderBy(asc(transcripts.sequence));
-    const summary = buildConversationSessionSummary({ ...conversation, disposition: call.disposition, transcript: transcript.map((row) => row.text) });
+    const transcript = await tx.select({ speaker: transcripts.speaker, text: transcripts.text }).from(transcripts).where(and(eq(transcripts.businessId, input.businessId), eq(transcripts.callId, input.callId), eq(transcripts.final, true))).orderBy(asc(transcripts.sequence));
+    const callerContext = extractCallerContext(transcript);
+    const summary = buildConversationSessionSummary({ ...conversation, disposition: call.disposition, transcript });
     const now = call.endedAt ?? new Date();
     const session = existing ?? (await tx.insert(conversationSessions).values({ businessId: input.businessId, conversationId: call.conversationId, callId: input.callId, channel: "voice", status: "open", startedAt: call.startedAt }).onConflictDoNothing({ target: conversationSessions.callId }).returning({ id: conversationSessions.id }))[0];
     if (!session) return { finalized: false };
     await tx.update(conversationSessions).set({ status: "closed", closedAt: now, lastMessageAt: now, summaryGeneratedAt: new Date(), summaryKind: summary.kind, summary, updatedAt: new Date() }).where(and(eq(conversationSessions.id, session.id), eq(conversationSessions.businessId, input.businessId)));
-    const summaryText = summary.kind === "summary" ? summary.summary : summary.kind === "message_taking" ? summary.summary : summary.disposition;
+    if (call.contactId && callerContext.callerName) {
+      await tx.update(contacts).set({ name: callerContext.callerName, updatedAt: new Date() }).where(and(eq(contacts.id, call.contactId), eq(contacts.businessId, input.businessId), sql`${contacts.name} is null`));
+    }
+    const summaryText = summary.kind === "summary" ? summary.summary : summary.kind === "message_taking" ? summary.summary : undefined;
     await tx.update(conversations).set({ status: "closed", ...(summaryText ? { summary: summaryText } : {}), revision: sql`${conversations.revision} + 1`, updatedAt: new Date() }).where(and(eq(conversations.id, call.conversationId), eq(conversations.businessId, input.businessId)));
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "conversation", aggregateId: call.conversationId, dedupeKey: `conversation:${call.conversationId}:finalized:${session.id}`, payload: { type: "conversation.updated", entityId: call.conversationId } });
     return { sessionId: session.id, finalized: true };
@@ -180,4 +184,3 @@ export async function loadWidgetChatHistory(
     return rows.map((row) => ({ ...row, direction: row.direction === "inbound" ? "inbound" : "outbound" }));
   });
 }
-

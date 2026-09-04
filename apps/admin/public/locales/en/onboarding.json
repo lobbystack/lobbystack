@@ -110,6 +110,8 @@
     "hint": "Use a personal mobile number that can receive SMS.",
     "sendCode": "Send code",
     "sending": "Sending code...",
+    "reuse": "Reuse a previously verified phone",
+    "reuseFailed": "We couldn't reuse that phone right now. Please try again.",
     "invalidNumber": "Enter a valid mobile number, including the country code.",
     "mobileRequired": "Use a mobile number that can receive SMS verification.",
     "tooManyAttempts": "Too many verification attempts. Please wait a bit and try again.",
@@ -133,8 +135,15 @@
     "title": "Pick your AI's phone number",
     "description": "Choose a local number callers can reach you on.",
     "countryLabel": "Country",
+    "kindLocal": "Local",
+    "kindTollFree": "Toll-free",
     "areaCodeLabel": "Area code",
     "areaCodePlaceholder": "Area code",
+    "cityLabel": "City",
+    "cityPlaceholder": "City",
+    "location": "Location",
+    "capabilities": "Capabilities",
+    "voiceSms": "Voice · SMS",
     "search": "Search",
     "tableHeaders": {
       "phoneNumber": "Phone number"
@@ -158,9 +167,26 @@
     "continue": "Continue"
   },
   "attribution": {
-    "title": "How did you hear about us?",
-    "question": "One last question",
-    "description": "This helps us improve LobbyStack. You can skip it.",
+    "title": "How did you hear about LobbyStack?",
+    "description": "It helps us focus on what's working.",
+    "options": {
+      "ai_assistant": "ChatGPT, Claude, etc.",
+      "newsletter": "Newsletter or blog",
+      "podcast": "Podcast",
+      "news": "In the news",
+      "work": "From work",
+      "school": "Friends or school",
+      "x": "X",
+      "reddit": "Reddit",
+      "facebook": "Facebook",
+      "youtube": "YouTube",
+      "instagram": "Instagram",
+      "linkedin": "LinkedIn",
+      "google": "Google",
+      "tiktok": "TikTok",
+      "other": "Other"
+    },
+    "skip": "Skip",
     "label": "Source",
     "preferNot": "Prefer not to say",
     "search": "Search engine",
@@ -170,7 +196,8 @@
     "other": "Other",
     "finish": "Finish setup",
     "finishing": "Finishing setup...",
-    "failed": "Unable to finish setup."
+    "failed": "Unable to finish setup.",
+    "submitFailed": "We couldn't save that right now. Please try again."
   },
   "plan": {
     "title": "Choose your plan",

@@ -403,6 +403,7 @@
       "search": "Search",
       "phoneNumberHeader": "Phone number",
       "select": "Select",
+      "claiming": "Connecting your new number...",
       "loadMore": "Load more",
       "empty": "No numbers matched that search.",
       "loadFailed": "We couldn't load numbers right now.",
@@ -440,6 +441,7 @@
     }
   },
   "integrations": {
+    "permissions": { "manageRequired": "Only workspace owners and admins can manage integrations." },
     "actions": {
       "connect": "Connect",
       "connected": "Connected",
