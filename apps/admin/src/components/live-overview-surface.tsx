@@ -1,5 +1,7 @@
 "use client";
 
+import { subscribeRealtimeQuery } from "@/lib/realtime-query";
+
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { formatPhoneNumberDisplay } from "@/lib/phone";
@@ -67,10 +69,7 @@ export function LiveOverviewSurface() {
 
   useEffect(() => {
     if (!businessId) return;
-    const source = new EventSource(`/api/realtime?businessId=${encodeURIComponent(businessId)}`);
-    const refresh = () => void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-    for (const event of ["call.started", "call.updated", "call.completed", "message.upserted", "appointment.updated"]) source.addEventListener(event, refresh);
-    return () => source.close();
+    return subscribeRealtimeQuery(queryClient, businessId, ["dashboard"], ["call.started", "call.updated", "call.completed", "message.upserted", "appointment.updated"]);
   }, [businessId, queryClient]);
 
   const metrics = summary.data ? [

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { claimOutboxBatch, markOutboxFailed, markOutboxPublished, type Database } from "@lobbystack/db";
-import { createQueue, enqueueJob, queueForJobType, type JobType } from "@lobbystack/jobs";
+import { createQueue, enqueueJob, isKnownJobType, queueForJobType, type JobType } from "@lobbystack/jobs";
 import { outboxMessageSchema } from "@lobbystack/contracts";
 import { getMeter, redactOtelExceptionText } from "@lobbystack/telemetry/node";
 
@@ -24,6 +24,9 @@ export class OutboxDispatcher {
   private readonly dispatchFailures = getMeter("lobbystack-worker").createCounter("lobbystack.outbox.dispatch_failures");
   private readonly deadLettered = getMeter("lobbystack-worker").createCounter("lobbystack.outbox.dead_lettered");
   private readonly pollFailures = getMeter("lobbystack-worker").createCounter("lobbystack.outbox.poll_failures");
+  private readonly publishDuration = getMeter("lobbystack-worker").createHistogram("lobbystack.outbox.publish_duration_ms", { unit: "ms" });
+  private readonly published = getMeter("lobbystack-worker").createCounter("lobbystack.outbox.published");
+  private readonly publishAge = getMeter("lobbystack-worker").createHistogram("lobbystack.outbox.publish_age_ms", { unit: "ms" });
   private stopped = false;
 
   constructor(private readonly db: Database, private readonly queues: Map<string, ReturnType<typeof createQueue>>) {}
@@ -31,6 +34,9 @@ export class OutboxDispatcher {
   async dispatchOnce(): Promise<number> {
     const rows = await claimOutboxBatch(this.db, { dispatcherId: this.dispatcherId, limit: 50 });
     for (const row of rows) {
+      const started = performance.now();
+      let outcome = "success";
+      const topic = isKnownJobType(row.topic) ? row.topic : "unknown";
       try {
         const payload = outboxMessageSchema.parse({ id: row.id, topic: row.topic, businessId: row.businessId, aggregateType: row.aggregateType, aggregateId: row.aggregateId, dedupeKey: row.dedupeKey, payload: row.payload, trace: { ...(row.traceparent ? { traceparent: row.traceparent } : {}), ...(row.tracestate ? { tracestate: row.tracestate } : {}) } });
         const type = payload.topic as JobType;
@@ -41,13 +47,18 @@ export class OutboxDispatcher {
         }
         await enqueueJob(queue, { type, businessId: payload.businessId ?? undefined, payload: payload.payload, trace: payload.trace, idempotencyKey: payload.dedupeKey });
         await markOutboxPublished(this.db, row.id);
+        this.published.add(1, { topic });
+        this.publishAge.record(Math.max(0, Date.now() - row.createdAt.getTime()), { topic });
       } catch (error) {
+        outcome = "error";
         const attributes = { "lobbystack.outbox.topic": row.topic };
         const deadLettered = await markOutboxFailed(this.db, row.id, error, new Date(Date.now() + Math.min(300_000, 2 ** row.attempts * 1000)));
         this.dispatchFailures.add(1, attributes);
         if (deadLettered) {
           this.deadLettered.add(1, attributes);
         }
+      } finally {
+        this.publishDuration.record(performance.now() - started, { topic, outcome });
       }
     }
     return rows.length;

@@ -2,6 +2,7 @@
   "appName": "LobbyStack",
   "loading": {
     "title": "Chargement...",
+    "retry": "Réessayer le chargement",
     "description": "Synchronisation de votre espace et des réglages de la réceptionniste."
   },
   "language": {

@@ -36,6 +36,26 @@ try {
   assert(analytics.series[0]?.agentResponseSeconds === 5, "Response time was not assigned to its reply bucket.");
   assert(analytics.messages.current === 1 && analytics.channels.other === 1, "Analytics leaked another tenant or misclassified website chat.");
   assert(analytics.outcomes.length === 4 && analytics.outcomes.every((row) => row.count === 0), "Empty outcomes must retain all four display states.");
+  const additionalConversation = randomUUID();
+  await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async tx => {
+    await tx.insert(conversations).values({ id: additionalConversation, businessId, channel: "web_chat" });
+    await tx.insert(messages).values([
+      { businessId, conversationId: additionalConversation, channel: "web_chat", direction: "inbound", body: "Seed", createdAt: new Date("2026-08-31T23:59:58Z") },
+      { businessId, conversationId: additionalConversation, channel: "web_chat", direction: "outbound", aiGenerated: true, body: "Previous-period reply", createdAt: new Date("2026-09-01T00:00:03Z") },
+      { businessId, conversationId: additionalConversation, channel: "web_chat", direction: "outbound", aiGenerated: true, body: "Repeated reply", createdAt: new Date("2026-09-01T00:00:09Z") },
+      { businessId, conversationId: additionalConversation, channel: "web_chat", direction: "inbound", body: "First inbound", createdAt: new Date("2026-09-02T00:00:01Z") },
+      { businessId, conversationId: additionalConversation, channel: "web_chat", direction: "inbound", body: "Latest inbound", createdAt: new Date("2026-09-02T00:00:02Z") },
+      { businessId, conversationId: additionalConversation, channel: "web_chat", direction: "outbound", aiGenerated: false, body: "Human reply", createdAt: new Date("2026-09-02T00:00:03Z") },
+      { businessId, conversationId: additionalConversation, channel: "web_chat", direction: "outbound", aiGenerated: true, body: "AI reply", createdAt: new Date("2026-09-02T00:00:09Z") },
+      { businessId, conversationId: additionalConversation, channel: "web_chat", direction: "outbound", aiGenerated: true, body: "Repeated AI reply", createdAt: new Date("2026-09-02T00:00:10Z") },
+    ]);
+  });
+  for (const granularity of ["hour", "day", "week", "month", "year"] as const) {
+    const result = await getAnalytics({ db: app.db }, { userId, businessId, from: new Date("2026-09-02T00:00:00Z"), to: new Date("2026-09-03T00:00:00Z"), previousFrom: new Date("2026-09-01T00:00:00Z"), granularity });
+    assert(result.agentResponseSeconds.previous === 5, "Must seed responses from before the previous period.");
+    assert(result.agentResponseSeconds.current === 6, "Must pair latest inbound independently per conversation and ignore human/repeated AI replies.");
+    assert(result.series.find(row => row.messages > 0)?.agentResponseSeconds === 6, `Incorrect ${granularity} response bucket.`);
+  }
   await withBusinessTransaction(app.db, { businessId, userId, actorType: "operator" }, async (tx) => {
     assert(await getKnowledgeStorageUsageBytes(tx, businessId) === 102, "Storage usage must include uploaded bytes and UTF-8 extracted text.");
     assert(await getKnowledgeStorageUsageBytes(tx, foreignBusinessId) === 0, "Storage usage escaped the active tenant RLS context.");

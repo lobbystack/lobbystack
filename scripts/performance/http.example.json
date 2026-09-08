@@ -1,0 +1,15 @@
+{
+  "environment": "staging",
+  "baseUrl": "https://admin-staging-7e92.up.railway.app",
+  "concurrency": [1, 10, 30],
+  "warmupSeconds": 60,
+  "durationSeconds": 300,
+  "soakSeconds": 1800,
+  "timeoutMs": 15000,
+  "scenarios": [
+    { "name": "dashboard", "path": "/api/dashboard", "cookieEnv": "PERFORMANCE_SESSION_COOKIE", "fixtureSize": 10000 },
+    { "name": "contacts", "path": "/api/contacts?businessId=REPLACE_WITH_SYNTHETIC_BUSINESS_ID&limit=50&offset=0", "cookieEnv": "PERFORMANCE_SESSION_COOKIE", "fixtureSize": 10000 },
+    { "name": "analytics", "path": "/api/analytics?businessId=REPLACE_WITH_SYNTHETIC_BUSINESS_ID&days=30", "cookieEnv": "PERFORMANCE_SESSION_COOKIE", "fixtureSize": 10000 },
+    { "name": "appointments", "path": "/api/appointments?businessId=REPLACE_WITH_SYNTHETIC_BUSINESS_ID", "cookieEnv": "PERFORMANCE_SESSION_COOKIE", "fixtureSize": 10000 }
+  ]
+}

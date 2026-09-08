@@ -9,24 +9,8 @@ import {
   SUPPORTED_LOCALES,
 } from "@/lib/locale";
 
-const namespaces = [
-  "common",
-  "auth",
-  "nav",
-  "dashboard",
-  "onboarding",
-  "settings",
-  "knowledge",
-  "inbox",
-  "calls",
-  "messages",
-  "contacts",
-  "agent",
-  "affiliate",
-  "demos",
-  "admin",
-  "widget",
-] as const;
+import commonEn from "../public/locales/en/common.json";
+import commonFr from "../public/locales/fr/common.json";
 
 export const i18nReady = i18n
   .use(HttpBackend)
@@ -37,7 +21,9 @@ export const i18nReady = i18n
     fallbackLng: DEFAULT_LOCALE,
     load: "languageOnly",
     defaultNS: "common",
-    ns: namespaces,
+    ns: ["common"],
+    resources: { en: { common: commonEn }, fr: { common: commonFr } },
+    partialBundledLanguages: true,
     interpolation: { escapeValue: false },
     backend: { loadPath: "/locales/{{lng}}/{{ns}}.json" },
     detection: {
@@ -47,9 +33,6 @@ export const i18nReady = i18n
     },
     react: { useSuspense: false },
     returnNull: false,
-  })
-  .then(async () => {
-    await i18n.loadNamespaces(namespaces);
   });
 
 export default i18n;

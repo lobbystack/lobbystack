@@ -19,6 +19,7 @@ import { NodeSDK } from "@opentelemetry/sdk-node";
 import { BatchSpanProcessor, type ReadableSpan, type SpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { UndiciInstrumentation } from "@opentelemetry/instrumentation-undici";
+import { monitorEventLoopDelay } from "node:perf_hooks";
 
 import { maskString, redactOtelAttributes, redactSignedStorageUrls, shouldRedactKey } from "./redaction.js";
 
@@ -38,6 +39,7 @@ export type TraceContextCarrier = Record<string, string>;
 let sdk: NodeSDK | undefined;
 let loggerProvider: LoggerProvider | undefined;
 let initialized = false;
+let stopRuntimeMetrics: (() => void) | undefined;
 const storageHttpOrigins = new Set<string>();
 const forcedExportRedactionKeys = new Set([
   "db.statement",
@@ -214,6 +216,21 @@ export async function initializeTelemetry(
 
     try {
       await sdk.start();
+      const delay = monitorEventLoopDelay({ resolution: 20 });
+      delay.enable();
+      const meter = getMeter("lobbystack-runtime");
+      const heap = meter.createObservableGauge("process.memory.heap_used_bytes", { unit: "By" });
+      const rss = meter.createObservableGauge("process.memory.rss_bytes", { unit: "By" });
+      const eventLoop = meter.createObservableGauge("process.event_loop.delay_p99_ms", { unit: "ms" });
+      const callback: Parameters<typeof meter.addBatchObservableCallback>[0] = result => {
+        const memory = process.memoryUsage();
+        result.observe(heap, memory.heapUsed);
+        result.observe(rss, memory.rss);
+        if (delay.count > 0) result.observe(eventLoop, delay.percentile(99) / 1_000_000);
+        delay.reset();
+      };
+      meter.addBatchObservableCallback(callback, [heap, rss, eventLoop]);
+      stopRuntimeMetrics = () => { delay.disable(); meter.removeBatchObservableCallback(callback, [heap, rss, eventLoop]); };
     } catch (error) {
       // Telemetry is deliberately best effort and must never block startup.
       console.warn("[otel] exporter initialization failed", error instanceof Error ? error.message : String(error));
@@ -222,6 +239,8 @@ export async function initializeTelemetry(
 }
 
 export async function shutdownTelemetry(): Promise<void> {
+  stopRuntimeMetrics?.();
+  stopRuntimeMetrics = undefined;
   const activeSdk = sdk;
   const activeLoggerProvider = loggerProvider;
   sdk = undefined;

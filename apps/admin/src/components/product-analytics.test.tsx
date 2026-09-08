@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { consumeAuthSuccess, recordAuthSuccess } from "@/lib/auth-success-analytics";
 import { ProductAnalytics, sanitizeAnalyticsUrl } from "./product-analytics";
 
-const mocks = vi.hoisted(() => ({ pathname: "/calls", posthog: { __loaded: false, init: vi.fn(), capture: vi.fn(), opt_in_capturing: vi.fn(), opt_out_capturing: vi.fn() } }));
+const mocks = vi.hoisted(() => ({ pathname: "/calls", posthog: { __loaded: false, init: vi.fn(), set_config: vi.fn(), capture: vi.fn(), opt_in_capturing: vi.fn(), opt_out_capturing: vi.fn() } }));
 vi.mock("next/navigation", () => ({ usePathname: () => mocks.pathname }));
 vi.mock("posthog-js", () => ({ default: mocks.posthog }));
 const clients: QueryClient[] = [];
@@ -27,7 +27,7 @@ describe("workspace telemetry preference", () => {
   });
   it("starts only for an enabled tenant and stops immediately when switched off", async () => {
     const client = setup(true);
-    expect(mocks.posthog.capture).toHaveBeenCalledWith("$pageview", expect.objectContaining({ path: "/calls", businessId: "business" }));
+    await waitFor(() => expect(mocks.posthog.capture).toHaveBeenCalledWith("$pageview", expect.objectContaining({ path: "/calls", businessId: "business" })));
     const beforeSend = mocks.posthog.init.mock.calls[0]![1].before_send;
     const event = { properties: { $current_url: "https://example.invalid/demo/private-token?token=secret#secret", $referrer: "https://example.invalid/login?email=private@example.invalid" } };
     expect(beforeSend(event).properties).toEqual({ $current_url: "https://example.invalid/demo/[token]", $referrer: "https://example.invalid/login" });
@@ -35,8 +35,9 @@ describe("workspace telemetry preference", () => {
     await waitFor(() => expect(mocks.posthog.opt_out_capturing).toHaveBeenCalled());
     expect(beforeSend(event)).toBeNull();
   });
-  it("strips token and query data from initial person properties too", () => {
+  it("strips token and query data from initial person properties too", async () => {
     setup(true);
+    await waitFor(() => expect(mocks.posthog.init).toHaveBeenCalled());
     const beforeSend = mocks.posthog.init.mock.calls[0]![1].before_send;
     const event = { properties: {
       $set: { $current_url: "https://example.invalid/reset-password/private?code=secret", plan: "free_cloud" },
@@ -52,6 +53,13 @@ describe("workspace telemetry preference", () => {
     setup(true);
     expect(mocks.posthog.init).not.toHaveBeenCalled();
     expect(mocks.posthog.capture).not.toHaveBeenCalled();
+  });
+  it("removes nested web-vitals URLs and DOM attribution", async () => {
+    setup(true);
+    await waitFor(() => expect(mocks.posthog.init).toHaveBeenCalled());
+    const beforeSend = mocks.posthog.init.mock.calls[0]![1].before_send;
+    const event = { properties: { $web_vitals_LCP_event: { name: "LCP", value: 123, $current_url: "https://example.invalid/private?token=secret", entries: [{ url: "private" }], attribution: { element: "private" } } } };
+    expect(beforeSend(event).properties.$web_vitals_LCP_event).toEqual({ name: "LCP", value: 123 });
   });
   it("removes reset tokens and rejects malformed analytics URLs", () => {
     expect(sanitizeAnalyticsUrl("https://example.invalid/reset-password/private-token?x=1#secret")).toBe("https://example.invalid/reset-password/[token]");

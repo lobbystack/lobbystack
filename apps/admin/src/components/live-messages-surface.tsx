@@ -1,5 +1,7 @@
 "use client";
 
+import { subscribeRealtimeQuery } from "@/lib/realtime-query";
+
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ArrowLeft, Bot, SearchIcon, Send, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -67,12 +69,9 @@ export function LiveMessagesSurface() {
   });
 
   useEffect(() => {
-    if (!business) return;
-    const source = new EventSource(`/api/realtime?businessId=${encodeURIComponent(business.businessId)}`);
-    const refresh = () => void queryClient.invalidateQueries({ queryKey: ["messages", business.businessId] });
-    for (const event of ["message.upserted", "message.deliveryUpdated", "conversation.updated"]) source.addEventListener(event, refresh);
-    return () => source.close();
-  }, [business, queryClient]);
+    if (!business?.businessId) return;
+    return subscribeRealtimeQuery(queryClient, business?.businessId, ["messages", business?.businessId], ["message.upserted", "message.deliveryUpdated", "conversation.updated"]);
+  }, [business?.businessId, queryClient]);
 
   const conversations = useMemo(() => {
     const grouped = new Map<string, Message[]>();

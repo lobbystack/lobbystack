@@ -1,5 +1,7 @@
 "use client";
 
+import { subscribeRealtimeQuery } from "@/lib/realtime-query";
+
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
@@ -32,12 +34,9 @@ export function LiveAppointmentsSurface() {
   const appointments = useQuery({ queryKey: ["appointments", business?.businessId], queryFn: () => getJson<{ appointments: Appointment[] }>(`/api/appointments?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business) });
 
   useEffect(() => {
-    if (!business) return;
-    const source = new EventSource(`/api/realtime?businessId=${encodeURIComponent(business.businessId)}`);
-    const refresh = () => void queryClient.invalidateQueries({ queryKey: ["appointments", business.businessId] });
-    source.addEventListener("appointment.updated", refresh);
-    return () => { source.removeEventListener("appointment.updated", refresh); source.close(); };
-  }, [business, queryClient]);
+    if (!business?.businessId) return;
+    return subscribeRealtimeQuery(queryClient, business?.businessId, ["appointments", business?.businessId], ["appointment.updated"]);
+  }, [business?.businessId, queryClient]);
 
   const rows = appointments.data?.appointments ?? [];
   return <PageSurface description="" title={t("appointments.title")}><div className="flex w-full flex-col gap-6">

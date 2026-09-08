@@ -1,5 +1,7 @@
 "use client";
 
+import { subscribeRealtimeQuery } from "@/lib/realtime-query";
+
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -81,14 +83,9 @@ export function LiveCallsSurface() {
   });
 
   useEffect(() => {
-    if (!business) return;
-    const source = new EventSource(`/api/realtime?businessId=${encodeURIComponent(business.businessId)}`);
-    const refresh = () => void queryClient.invalidateQueries({ queryKey: ["calls", business.businessId] });
-    for (const event of ["call.started", "call.updated", "call.completed", "recording.available"]) {
-      source.addEventListener(event, refresh);
-    }
-    return () => source.close();
-  }, [business, queryClient]);
+    if (!business?.businessId) return;
+    return subscribeRealtimeQuery(queryClient, business?.businessId, ["calls", business?.businessId], ["call.started", "call.updated", "call.completed", "recording.available"]);
+  }, [business?.businessId, queryClient]);
 
   const rows = calls.data?.calls ?? [];
   const filteredRows = useMemo(() => {

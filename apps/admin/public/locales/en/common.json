@@ -2,6 +2,7 @@
   "appName": "LobbyStack",
   "loading": {
     "title": "Loading...",
+    "retry": "Retry loading",
     "description": "Syncing your workspace and receptionist settings."
   },
   "language": {

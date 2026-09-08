@@ -28,6 +28,7 @@
     "./replacement-webhook-check.ts",
     "./replacement-telemetry-check.ts",
     "./replacement-password-recovery-check.ts",
-    "./replacement-email-change-check.ts"
+    "./replacement-email-change-check.ts",
+    "./performance/**/*.ts"
   ]
 }

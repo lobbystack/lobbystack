@@ -1,5 +1,7 @@
 "use client";
 
+import { subscribeRealtimeQuery } from "@/lib/realtime-query";
+
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -86,12 +88,9 @@ export function LiveContactsSurface() {
   });
 
   useEffect(() => {
-    if (!business) return;
-    const source = new EventSource(`/api/realtime?businessId=${encodeURIComponent(business.businessId)}`);
-    const refresh = () => void queryClient.invalidateQueries({ queryKey: ["contacts", business.businessId] });
-    for (const event of ["call.completed", "message.upserted", "conversation.updated"]) source.addEventListener(event, refresh);
-    return () => source.close();
-  }, [business, queryClient]);
+    if (!business?.businessId) return;
+    return subscribeRealtimeQuery(queryClient, business?.businessId, ["contacts", business?.businessId], ["call.completed", "message.upserted", "conversation.updated"]);
+  }, [business?.businessId, queryClient]);
 
   const rows = contacts.data?.contacts ?? [];
   const total = contacts.data?.pagination.total ?? 0;

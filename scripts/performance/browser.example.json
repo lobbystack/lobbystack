@@ -1,0 +1,8 @@
+{
+  "environment": "local",
+  "baseUrl": "http://127.0.0.1:13000",
+  "scenarios": [
+    { "name": "login", "path": "/login", "readySelector": "input[type=email]" },
+    { "name": "signup", "path": "/signup", "readySelector": "input[type=email]" }
+  ]
+}

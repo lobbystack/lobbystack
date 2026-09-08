@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray, lt, or, sql, type SQL, type SQLWrapper } from "drizzle-orm";
+import { and, eq, gte, lt, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 
 import { appointments, calls, conversations, messages, unitEconomicsRollups, withBusinessTransaction } from "@lobbystack/db";
 
@@ -84,8 +84,54 @@ export function agentResponsePoints(messages: ResponseMessage[]) {
   return points;
 }
 
-function averageResponse(points: Array<{ seconds: number }>): number {
-  return points.length ? Math.round(points.reduce((sum, point) => sum + point.seconds, 0) / points.length) : 0;
+/** Bounded aggregate output; message histories stay in PostgreSQL. */
+export function analyticsResponseQuery(input: AnalyticsInput): SQL {
+  const bucket = analyticsBucketExpression(sql`(created_at at time zone 'UTC')`, input.granularity);
+  return sql`with period as materialized (
+    select id, conversation_id, created_at, direction from messages
+    where business_id = ${input.businessId}::uuid
+      and created_at >= ${input.previousFrom.toISOString()}::timestamptz
+      and created_at < ${input.to.toISOString()}::timestamptz
+      and (direction = 'inbound' or (direction = 'outbound' and ai_generated))
+  ), seeds as (
+    select seed.* from (select distinct conversation_id from period) active
+    cross join lateral (
+      select id, conversation_id, created_at, direction from messages
+      where business_id = ${input.businessId}::uuid and conversation_id = active.conversation_id
+        and created_at < ${input.previousFrom.toISOString()}::timestamptz
+        and (direction = 'inbound' or (direction = 'outbound' and ai_generated))
+      order by created_at desc, id desc limit 1
+    ) seed
+  ), ordered as (
+    select *, lag(direction) over conversation as previous_direction,
+      lag(created_at) over conversation as previous_at
+    from (select * from seeds union all select * from period) relevant
+    window conversation as (partition by conversation_id order by created_at, id)
+  ), responses as (
+    select case when created_at >= ${input.from.toISOString()}::timestamptz
+      then (${bucket}) at time zone 'UTC' else null end as bucket,
+      greatest(0, round(extract(epoch from created_at - previous_at))) as seconds
+    from ordered where direction = 'outbound' and previous_direction = 'inbound'
+      and created_at >= ${input.previousFrom.toISOString()}::timestamptz
+  ) select bucket, sum(seconds) as seconds, count(*) as count from responses group by bucket`;
+}
+
+type ActivityRow = {
+  kind: string; bucket: Date | string | null; category: string | null;
+  current: string; previous: string; averageSeconds: string;
+};
+
+/** One scan per activity table supplies totals, series, outcomes and channels. */
+function activityQuery(source: SQL): SQL {
+  return sql`with activity as (${source})
+    select case when grouping(bucket) = 0 then 'bucket'
+      when grouping(outcome) = 0 then 'outcome'
+      when grouping(channel) = 0 then 'channel' else 'total' end as kind,
+      bucket, coalesce(outcome, channel) as category,
+      count(*) filter (where current) as current,
+      count(*) filter (where not current) as previous,
+      coalesce(avg(duration) filter (where current), 0) as "averageSeconds"
+    from activity group by grouping sets ((bucket), (outcome), (channel), ())`;
 }
 
 export async function getAnalytics(context: DomainContext, input: AnalyticsInput) {
@@ -95,28 +141,41 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
     const appointmentBucket = analyticsBucketExpression(appointments.startsAt, input.granularity);
     const messageBucket = analyticsBucketExpression(messages.createdAt, input.granularity);
     const economicsMonth = analyticsMonthStartExpression(unitEconomicsRollups.monthKey);
-    const callFilter = and(eq(calls.businessId, input.businessId), gte(calls.startedAt, input.from), lt(calls.startedAt, input.to));
-    const appointmentFilter = and(eq(appointments.businessId, input.businessId), gte(appointments.startsAt, input.from), lt(appointments.startsAt, input.to));
-    const messageFilter = and(eq(messages.businessId, input.businessId), gte(messages.createdAt, input.from), lt(messages.createdAt, input.to));
-    const currentCalls = await tx.select({ count: count() }).from(calls).where(callFilter);
-    const previousCalls = await tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, input.businessId), gte(calls.startedAt, input.previousFrom), lt(calls.startedAt, input.from)));
-    const currentAppointments = await tx.select({ count: count() }).from(appointments).where(appointmentFilter);
-    const previousAppointments = await tx.select({ count: count() }).from(appointments).where(and(eq(appointments.businessId, input.businessId), gte(appointments.startsAt, input.previousFrom), lt(appointments.startsAt, input.from)));
-    const currentMessages = await tx.select({ count: count() }).from(messages).where(messageFilter);
-    const previousMessages = await tx.select({ count: count() }).from(messages).where(and(eq(messages.businessId, input.businessId), gte(messages.createdAt, input.previousFrom), lt(messages.createdAt, input.from)));
-    const duration = await tx.select({ averageSeconds: sql<number>`coalesce(avg(${calls.providerDurationSeconds}), 0)` }).from(calls).where(callFilter);
-    const callSeries = await tx.select({ bucket: callBucket, count: count() }).from(calls).where(callFilter).groupBy(callBucket).orderBy(callBucket);
-    const appointmentSeries = await tx.select({ bucket: appointmentBucket, count: count() }).from(appointments).where(appointmentFilter).groupBy(appointmentBucket).orderBy(appointmentBucket);
-    const messageSeries = await tx.select({ bucket: messageBucket, count: count() }).from(messages).where(messageFilter).groupBy(messageBucket).orderBy(messageBucket);
     const outcomeKey = sql<string>`case
       when ${calls.transferState} is not null and ${calls.transferState} <> 'idle' then 'transferred'
       when ${calls.status} in ('in_progress', 'open') and (${calls.transport} <> 'webrtc' or ${calls.startedAt} >= current_timestamp - (coalesce(${calls.webCallMaxDurationMs}, 300000) + 60000) * interval '1 millisecond') then 'live'
       when lower(coalesce(${calls.disposition}, '')) similar to '%(miss|voicemail|busy|no_answer)%' or lower(${calls.status}) like '%failed%' then 'missed'
       when ${calls.providerDurationSeconds} > 0 or ${calls.status} = 'completed' then 'completed'
       else 'missed' end`;
-    const outcomes = await tx.select({ outcome: outcomeKey, count: count() }).from(calls).where(callFilter).groupBy(outcomeKey);
-    const callChannels = await tx.select({ channel: sql<string>`coalesce(${conversations.channel}, 'voice')`, count: count() }).from(calls).leftJoin(conversations, eq(calls.conversationId, conversations.id)).where(callFilter).groupBy(conversations.channel);
-    const messageChannels = await tx.select({ channel: messages.channel, count: count() }).from(messages).where(messageFilter).groupBy(messages.channel);
+    const callRows = (await tx.execute<ActivityRow>(activityQuery(sql`
+      select ${callBucket} as bucket, ${outcomeKey} as outcome,
+        coalesce(${conversations.channel}, 'voice') as channel,
+        ${calls.startedAt} >= ${input.from.toISOString()}::timestamptz as current,
+        ${calls.providerDurationSeconds} as duration
+      from ${calls} left join ${conversations} on ${calls.conversationId} = ${conversations.id}
+      where ${calls.businessId} = ${input.businessId}::uuid
+        and ${calls.startedAt} >= ${input.previousFrom.toISOString()}::timestamptz and ${calls.startedAt} < ${input.to.toISOString()}::timestamptz
+    `))).rows;
+    const appointmentRows = (await tx.execute<ActivityRow>(activityQuery(sql`
+      select ${appointmentBucket} as bucket, null::text as outcome, null::text as channel,
+        ${appointments.startsAt} >= ${input.from.toISOString()}::timestamptz as current, null::integer as duration
+      from ${appointments} where ${appointments.businessId} = ${input.businessId}::uuid
+        and ${appointments.startsAt} >= ${input.previousFrom.toISOString()}::timestamptz and ${appointments.startsAt} < ${input.to.toISOString()}::timestamptz
+    `))).rows;
+    const messageRows = (await tx.execute<ActivityRow>(activityQuery(sql`
+      select ${messageBucket} as bucket, null::text as outcome, ${messages.channel} as channel,
+        ${messages.createdAt} >= ${input.from.toISOString()}::timestamptz as current, null::integer as duration
+      from ${messages} where ${messages.businessId} = ${input.businessId}::uuid
+        and ${messages.createdAt} >= ${input.previousFrom.toISOString()}::timestamptz and ${messages.createdAt} < ${input.to.toISOString()}::timestamptz
+    `))).rows;
+    const callTotals = callRows.find(row => row.kind === "total");
+    const appointmentTotals = appointmentRows.find(row => row.kind === "total");
+    const messageTotals = messageRows.find(row => row.kind === "total");
+    const seriesRows = (rows: ActivityRow[]) => rows.filter(row => row.kind === "bucket" && Number(row.current) > 0).map(row => ({ bucket: row.bucket!, count: Number(row.current) }));
+    const callSeries = seriesRows(callRows), appointmentSeries = seriesRows(appointmentRows), messageSeries = seriesRows(messageRows);
+    const outcomes = callRows.filter(row => row.kind === "outcome").map(row => ({ outcome: row.category, count: row.current }));
+    const channelRows = (rows: ActivityRow[]) => rows.filter(row => row.kind === "channel").map(row => ({ channel: row.category ?? "", count: row.current }));
+    const callChannels = channelRows(callRows), messageChannels = channelRows(messageRows);
     const channels = { voice: 0, sms: 0, other: 0 };
     for (const row of [...callChannels, ...messageChannels]) {
       const channel = row.channel.toLowerCase();
@@ -125,28 +184,16 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
 
     const economics = await tx.select({ totalCostUsd: unitEconomicsRollups.totalCostUsd, costPerVoiceCallUsd: unitEconomicsRollups.costPerVoiceCallUsd, costPerActiveUserUsd: unitEconomicsRollups.costPerActiveUserUsd }).from(unitEconomicsRollups).where(and(eq(unitEconomicsRollups.businessId, input.businessId), gte(economicsMonth, input.from), lt(economicsMonth, input.to))).orderBy(unitEconomicsRollups.monthKey).limit(1);
 
-    const responseMessages = await tx.select({ conversationId: messages.conversationId, createdAt: messages.createdAt, direction: messages.direction, aiGenerated: messages.aiGenerated }).from(messages).where(and(eq(messages.businessId, input.businessId), gte(messages.createdAt, input.previousFrom), lt(messages.createdAt, input.to)));
-    const responseConversationIds = [...new Set(responseMessages.map((message) => message.conversationId))];
-    const responseSeeds = responseConversationIds.length > 0
-      ? await tx.selectDistinctOn([messages.conversationId], { conversationId: messages.conversationId, createdAt: messages.createdAt, direction: messages.direction, aiGenerated: messages.aiGenerated })
-          .from(messages)
-          .where(and(
-            eq(messages.businessId, input.businessId),
-            inArray(messages.conversationId, responseConversationIds),
-            lt(messages.createdAt, input.previousFrom),
-            or(eq(messages.direction, "inbound"), and(eq(messages.direction, "outbound"), eq(messages.aiGenerated, true))),
-          ))
-          .orderBy(messages.conversationId, desc(messages.createdAt))
-      : [];
-    const responsePoints = agentResponsePoints([...responseSeeds, ...responseMessages]);
-    const currentResponses = responsePoints.filter((point) => point.timestamp >= input.from);
-    const previousResponses = responsePoints.filter((point) => point.timestamp >= input.previousFrom && point.timestamp < input.from);
-    const responseBuckets = new Map<string, Array<{ seconds: number }>>();
-    for (const point of currentResponses) {
-      const key = bucketKey(analyticsBucketStart(point.timestamp, input.granularity));
-      const values = responseBuckets.get(key) ?? [];
-      values.push(point);
-      responseBuckets.set(key, values);
+    const responseRows = (await tx.execute<{ bucket: Date | string | null; seconds: string; count: string }>(analyticsResponseQuery(input))).rows;
+    const responseBuckets = new Map<string, number>();
+    let currentSeconds = 0, currentCount = 0, previousSeconds = 0, previousCount = 0;
+    for (const row of responseRows) {
+      const seconds = Number(row.seconds), count = Number(row.count);
+      if (row.bucket === null) { previousSeconds += seconds; previousCount += count; }
+      else {
+        currentSeconds += seconds; currentCount += count;
+        responseBuckets.set(bucketKey(row.bucket), Math.round(seconds / count));
+      }
     }
 
     const buckets = new Map<string, { bucket: string; calls: number; appointments: number; messages: number }>();
@@ -172,12 +219,12 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
       from: input.from,
       to: input.to,
       granularity: input.granularity,
-      calls: { current: Number(currentCalls[0]?.count ?? 0), previous: Number(previousCalls[0]?.count ?? 0) },
-      appointments: { current: Number(currentAppointments[0]?.count ?? 0), previous: Number(previousAppointments[0]?.count ?? 0) },
-      messages: { current: Number(currentMessages[0]?.count ?? 0), previous: Number(previousMessages[0]?.count ?? 0) },
-      averageCallDurationSeconds: Number(duration[0]?.averageSeconds ?? 0),
-      agentResponseSeconds: { current: averageResponse(currentResponses), previous: averageResponse(previousResponses) },
-      series: [...buckets.values()].map((point) => ({ ...point, agentResponseSeconds: averageResponse(responseBuckets.get(point.bucket) ?? []) })).sort((left, right) => left.bucket.localeCompare(right.bucket)),
+      calls: { current: Number(callTotals?.current ?? 0), previous: Number(callTotals?.previous ?? 0) },
+      appointments: { current: Number(appointmentTotals?.current ?? 0), previous: Number(appointmentTotals?.previous ?? 0) },
+      messages: { current: Number(messageTotals?.current ?? 0), previous: Number(messageTotals?.previous ?? 0) },
+      averageCallDurationSeconds: Number(callTotals?.averageSeconds ?? 0),
+      agentResponseSeconds: { current: currentCount ? Math.round(currentSeconds / currentCount) : 0, previous: previousCount ? Math.round(previousSeconds / previousCount) : 0 },
+      series: [...buckets.values()].map((point) => ({ ...point, agentResponseSeconds: (responseBuckets.get(point.bucket) ?? 0) })).sort((left, right) => left.bucket.localeCompare(right.bucket)),
       outcomes: ["completed", "transferred", "live", "missed"].map((outcome) => ({ outcome, count: Number(outcomes.find((row) => row.outcome === outcome)?.count ?? 0) })),
       channels,
       unitEconomics: economics[0] ?? null,

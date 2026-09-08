@@ -1,5 +1,7 @@
 "use client";
 
+import { subscribeRealtimeQuery } from "@/lib/realtime-query";
+
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { CalendarIcon, Check, ChevronDown } from "lucide-react";
@@ -76,10 +78,7 @@ export function LiveAnalyticsSurface() {
 
   useEffect(() => {
     if (!business?.businessId) return;
-    const source = new EventSource(`/api/realtime?businessId=${encodeURIComponent(business.businessId)}`);
-    const refresh = () => void queryClient.invalidateQueries({ queryKey: ["analytics", business.businessId] });
-    for (const event of ["call.started", "call.completed", "message.upserted", "appointment.updated"]) source.addEventListener(event, refresh);
-    return () => { for (const event of ["call.started", "call.completed", "message.upserted", "appointment.updated"]) source.removeEventListener(event, refresh); source.close(); };
+    return subscribeRealtimeQuery(queryClient, business?.businessId, ["analytics", business?.businessId], ["call.started", "call.completed", "message.upserted", "appointment.updated"]);
   }, [business?.businessId, queryClient]);
 
   const data = analytics.data;

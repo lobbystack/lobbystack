@@ -8,6 +8,7 @@ import { getMeter, getTracer, recordException } from "@lobbystack/telemetry/node
 
 import { rlsContextStatements, type RlsContext } from "./rls/context";
 import { schema } from "./schema";
+import { instrumentPool } from "./instrumentation";
 
 export type Database = NodePgDatabase<typeof schema>;
 export type DatabaseTransaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
@@ -64,20 +65,12 @@ export function createDatabaseClient(
   source: Record<string, string | undefined> = process.env,
 ): DatabaseClient {
   const pool = new Pool(poolConfig(role, source));
+  instrumentPool(pool, role, { query: queryDurationHistogram, wait: poolWaitHistogram });
   pool.on("error", (error) => {
     recordException(error, { service: "database", operation: "pool_error", role });
   });
 
-  const db = drizzle(pool, {
-    schema,
-    logger: {
-      logQuery(query, params) {
-        const startedAt = Date.now();
-        queryDurationHistogram.record(Date.now() - startedAt, { role, statement: query.slice(0, 80) });
-        void params;
-      },
-    },
-  });
+  const db = drizzle(pool, { schema });
   return { pool, db, role };
 }
 
@@ -169,7 +162,6 @@ export async function databaseHealthCheck(client: DatabaseClient): Promise<{
   try {
     await client.db.execute(sql`select 1`);
     const latencyMs = Date.now() - startedAt;
-    poolWaitHistogram.record(latencyMs, { role: client.role, outcome: "success" });
     span.end();
     return { ok: true, latencyMs, role: client.role };
   } catch (error) {

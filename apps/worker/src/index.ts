@@ -1,6 +1,6 @@
 import { businesses, createDatabaseClient, databaseHealthCheck, withDispatcherTransaction } from "@lobbystack/db";
 import { assertProductionSecrets } from "@lobbystack/config";
-import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
+import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, isKnownJobType, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
 import { createEmbeddingProvider, createStorageProvider, FirecrawlProvider, GoogleCalendarProvider, PolarBillingProvider, SmtpEmailProvider, TwilioProvider } from "@lobbystack/providers";
 import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withSpan } from "@lobbystack/telemetry/node";
 import { Worker } from "bullmq";
@@ -129,16 +129,27 @@ async function main(): Promise<void> {
   await storage.ensureReady();
   const dependencies: WorkerDependencies = { domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) }, realtime, ...(calendar ? { calendar } : {}), ...(crawler ? { crawler } : {}), ...(productAnalytics ? { productAnalytics } : {}), ...(email ? { email } : {}), ...(embeddings ? { embeddings } : {}), ...(twilio ? { twilio } : {}), ...(twilioAlerts ? { twilioAlerts } : {}), storage, ...(polar ? { polar } : {}) };
   const workers = jobQueues.map((queueName) => {
+    const meter = getMeter("lobbystack-worker");
+    const duration = meter.createHistogram("lobbystack.worker.job_duration_ms", { unit: "ms" });
+    const wait = meter.createHistogram("lobbystack.worker.job_wait_ms", { unit: "ms" });
     const queue = queues.get(queueName);
     if (!queue) {
       throw new Error(`Queue ${queueName} is not configured.`);
     }
     const worker = new Worker<JobEnvelope>(queueName, async (job) => await withSpan(`job.${job.data.type}`, { attributes: { "messaging.system": "bullmq", "messaging.destination.name": queueName, "lobbystack.job_type": job.data.type } }, async () => {
       state.activeJobs += 1;
+      const started = performance.now();
+      let outcome = "success";
+      const type = isKnownJobType(job.data.type) ? job.data.type : "unknown";
+      wait.record(Math.max(0, Date.now() - job.timestamp - (job.delay ?? 0)), { queue: queueName, type });
       try {
         const maxAttempts = job.opts.attempts ?? 1;
         return await handleJob(job.data, dependencies, { isFinalAttempt: job.attemptsMade + 1 >= maxAttempts });
+      } catch (error) {
+        outcome = "error";
+        throw error;
       } finally {
+        duration.record(performance.now() - started, { queue: queueName, type, outcome });
         state.activeJobs -= 1;
       }
     }), createWorkerOptions(queueName));
