@@ -14,8 +14,10 @@ export async function register(): Promise<void> {
   await initializeTelemetry({ serviceName: "lobbystack-admin" });
 }
 
-export async function onRequestError(error: unknown): Promise<void> {
-  console.warn("[admin] request error", error instanceof Error ? error.name : "unknown");
+export const onRequestError: import("next").Instrumentation.onRequestError = async (error, request, context) => {
+  if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  const { reportServerError } = await import("./src/lib/error-reporting");
+  await reportServerError(error, { operation: context.routeType, route: context.routePath, method: request.method, ...(error instanceof Error && "digest" in error ? { digest: String(error.digest) } : {}) });
 }
 
 export async function shutdownTelemetry(): Promise<void> {

@@ -26,7 +26,7 @@ import {
   recordAiGenerationEvent,
   rescheduleAppointmentForCaller,
   reserveOutboundCallAttempt,
-  searchKnowledge,
+  searchKnowledgeEvidence,
   setTransferState,
   startCall,
   verifyAppointmentChangeOtp,
@@ -197,8 +197,9 @@ async function handleVoiceTool(path: string, body: Body) {
   }
 
   if (path === "search-knowledge") {
-    const results = await searchKnowledge(context, { businessId, query: requiredString(body, "query"), limit: 4 });
-    return results.map((result) => ({ title: result.title, text: result.content }));
+    const evidence = await searchKnowledgeEvidence(context, { businessId, query: requiredString(body, "query"), limit: 6, ...(stringValue(body, "callId") ? { callId: stringValue(body, "callId")! } : {}), ...(stringValue(body, "turnId") ? { turnId: stringValue(body, "turnId")! } : {}) });
+    const matches = evidence.matches.map(({ content, ...source }) => ({ ...source, text: content }));
+    return body.evidenceResponse === true ? { ...evidence, matches } : matches;
   }
 
   throw new Error(`Unknown voice tool: ${path}`);

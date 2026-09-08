@@ -1,5 +1,6 @@
 {
   "appName": "LobbyStack",
+  "errors": { "unexpected": "Something went wrong. Please try again." },
   "loading": {
     "title": "Loading...",
     "retry": "Retry loading",

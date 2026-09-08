@@ -150,10 +150,21 @@ type TakeMessageResponse = {
   inboxItemId: string;
 };
 
-type SearchVoiceKnowledgeResponse = Array<{
+type VoiceKnowledgePassage = {
   title?: string;
   text: string;
-}>;
+  chunkId?: string;
+  documentId?: string;
+  sourceUrl?: string | null;
+  sourceRevision?: number;
+};
+type SearchVoiceKnowledgeResponse = VoiceKnowledgePassage[] | {
+  matches: VoiceKnowledgePassage[];
+  outcome: "found" | "empty" | "unavailable";
+  mode: "hybrid" | "keyword";
+  durationMs: number;
+  failure?: string;
+};
 
 function getRuntimeBaseUrl(): string {
   const env = loadVoiceGatewayEnv(process.env);
@@ -188,13 +199,14 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
-async function postJson<T>(path: string, body: unknown): Promise<T> {
+async function postJson<T>(path: string, body: unknown, timeoutMs?: number): Promise<T> {
   return await withSpan("voice.backend.request", { attributes: { "http.request.method": "POST", "url.path": path } }, async () => {
     const serialized = JSON.stringify(body);
     const response = await fetch(`${getRuntimeBaseUrl()}${path}`, {
       method: "POST",
       headers: getRuntimeHeaders(serialized),
       body: serialized,
+      ...(timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : {}),
     });
     return await parseJsonResponse<T>(response);
   });
@@ -520,6 +532,8 @@ export async function takeVoiceMessage(input: {
 export async function searchVoiceKnowledge(input: {
   businessId: string;
   query: string;
+  callId?: string;
+  turnId?: string;
 }): Promise<SearchVoiceKnowledgeResponse> {
-  return await postJson<SearchVoiceKnowledgeResponse>("/voice/tool/search-knowledge", input);
+  return await postJson<SearchVoiceKnowledgeResponse>("/voice/tool/search-knowledge", { ...input, evidenceResponse: true }, 4500);
 }

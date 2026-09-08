@@ -7,6 +7,7 @@
     ]
   },
   "include": [
+    "./voice-knowledge-retrieval-check.ts",
     "./replacement-appointment-audit-check.ts",
     "./replacement-billing-check.ts",
     "./replacement-feedback-check.ts",

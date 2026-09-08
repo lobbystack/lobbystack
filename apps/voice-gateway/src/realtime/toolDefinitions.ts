@@ -39,7 +39,7 @@ export function createWebRealtimeToolDefinitions(options?: {
       type: "function" as const,
       name: "searchKnowledge",
       description:
-        "Search indexed business knowledge and uploaded documents for a specific factual question. Use before answering questions about capabilities, workflows, policies, limits, pricing, billing, usage, integrations, product features, documents, FAQs, or plan rules.",
+        "Look up every business-specific fact not explicitly available in current evidence, even simple yes/no questions about cash, parking, accessibility, what to bring, staff languages, services, course names, exact course codes, products, policies, prices, and document facts. Never guess from the business name or common practice. Make the query self-contained using prior conversation context and preserve exact identifiers. Refine once if the returned evidence is insufficient.",
       parameters: {
         type: "object",
         properties: {

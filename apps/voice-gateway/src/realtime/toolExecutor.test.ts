@@ -46,6 +46,7 @@ vi.mock("../backend/runtimeClient", () => ({
 }));
 
 vi.mock("../observability/posthog", () => ({
+  capturePostHogException: vi.fn(),
   recordToolExecutionFailure: recordToolExecutionFailureMock,
   recordToolExecutionLatency: recordToolExecutionLatencyMock,
 }));
@@ -80,6 +81,16 @@ describe("executeVoiceTool searchKnowledge", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
+  it("stops after the permitted refinement budget", async () => {
+    const result = await executeVoiceTool({ toolName: "searchKnowledge", rawArguments: JSON.stringify({ query: "management" }), snapshot: demoSnapshot, businessId: "business_123", callerPhone: "web", claimKnowledgeLookup: () => false });
+    expect(searchVoiceKnowledgeMock).not.toHaveBeenCalled();
+    expect(result.result).toMatchObject({ outcome: "unavailable", reason: "refinement_limit" });
+  });
+  it("preserves source-linked degraded retrieval outcomes", async () => {
+    searchVoiceKnowledgeMock.mockResolvedValue({ outcome: "found", mode: "keyword", durationMs: 100, matches: [{ title: "Management", text: "MNGT 10407", chunkId: "chunk", sourceRevision: 3 }] });
+    const result = await executeVoiceTool({ toolName: "searchKnowledge", rawArguments: JSON.stringify({ query: "management" }), snapshot: demoSnapshot, businessId: "business_123", callerPhone: "web" });
+    expect(result.result).toMatchObject({ outcome: "found", mode: "keyword", matches: [{ chunkId: "chunk", sourceRevision: 3 }] });
+  });
 
   it("returns RAG matches when indexed knowledge search succeeds", async () => {
     searchVoiceKnowledgeMock.mockResolvedValue([
@@ -100,6 +111,8 @@ describe("executeVoiceTool searchKnowledge", () => {
     });
     expect(result.result).toEqual({
       matches: [{ title: "Handbook", text: "The handbook says to bring ID." }],
+      outcome: "found",
+      mode: "legacy",
       source: "rag",
       fallbackUsed: false,
     });
@@ -134,11 +147,8 @@ describe("executeVoiceTool searchKnowledge", () => {
           title: "Appointments",
           text: "Appointments are recommended before walking in.",
         },
-        {
-          title: "Knowledge digest",
-          text: "Appointments are recommended before walking in.",
-        },
       ],
+      outcome: "found",
       source: "snapshot_fallback",
       fallbackUsed: true,
       fallbackReason: "no_matches",
@@ -174,11 +184,8 @@ describe("executeVoiceTool searchKnowledge", () => {
           title: "Parking",
           text: "Parking is available behind the building.",
         },
-        {
-          title: "Knowledge digest",
-          text: "Parking is available behind the building.",
-        },
       ],
+      outcome: "found",
       source: "snapshot_fallback",
       fallbackUsed: true,
       fallbackReason: "rag_error",
@@ -202,6 +209,7 @@ describe("executeVoiceTool searchKnowledge", () => {
 
     expect(result.result).toEqual({
       matches: [],
+      outcome: "empty",
       source: "none",
       fallbackUsed: false,
     });
@@ -244,11 +252,8 @@ describe("executeVoiceTool searchKnowledge", () => {
           title: "Refund policy",
           text: "Refunds are only available within 30 days of purchase.",
         },
-        {
-          title: "Knowledge digest",
-          text: "Parking is behind the building. Refunds are only available within 30 days of purchase.",
-        },
       ],
+      outcome: "found",
       source: "snapshot_fallback",
       fallbackUsed: true,
       fallbackReason: "no_matches",

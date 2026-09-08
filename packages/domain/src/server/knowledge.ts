@@ -5,6 +5,8 @@ import { and, asc, desc, eq, ilike, sql } from "drizzle-orm";
 import { agentRules, businessContextSnapshots, businessHours, businesses, closures, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, receptionistProfiles, services, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { normalizeAppointmentChangePolicy, normalizeTransferMode, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { buildBusinessContextSnapshot } from "../snapshot";
+import { fuseKnowledgeRanks, knowledgeLexicalQueries, knowledgeQueryTerms, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
+import { countKnowledgeTokens } from "@lobbystack/ai";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
@@ -21,23 +23,34 @@ export { normalizeWebsiteSourceUrl } from "./knowledgeUrl";
 
 export function chunkText(text: string, options: { maxCharacters?: number; overlap?: number } = {}): string[] {
   const maxCharacters = options.maxCharacters ?? 1800;
+  if (!Number.isInteger(maxCharacters) || maxCharacters < 2 || (options.overlap ?? 180) < 0) throw new Error("Invalid chunk size or overlap.");
   const overlap = Math.min(options.overlap ?? 180, Math.floor(maxCharacters / 2));
-  const normalized = text.replace(/\s+/g, " ").trim();
+  const normalized = text.replace(/\r\n?/g, "\n").replace(/[\t ]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
   if (!normalized) {
     return [];
   }
   const chunks: string[] = [];
-  let start = 0;
-  while (start < normalized.length) {
-    const end = Math.min(normalized.length, start + maxCharacters);
-    const chunk = normalized.slice(start, end).trim();
-    if (chunk) {
-      chunks.push(chunk);
+  // Keep Markdown sections separate, including headings in previously flattened imports.
+  for (const section of normalized.split(/(?<=\s)(?=#{1,6} )/)) {
+    const sectionText = section.trim();
+    let start = 0;
+    while (start < sectionText.length) {
+      let end = Math.min(sectionText.length, start + maxCharacters);
+      if (end < sectionText.length) {
+        const boundary = sectionText.lastIndexOf("\n", end);
+        const wordBoundary = sectionText.lastIndexOf(" ", end);
+        if (boundary > start + maxCharacters / 2) end = boundary;
+        else if (wordBoundary > start + maxCharacters / 2) end = wordBoundary;
+      }
+      const chunk = sectionText.slice(start, end).trim();
+      if (chunk) {
+        chunks.push(chunk);
+      }
+      if (end >= sectionText.length) {
+        break;
+      }
+      start = Math.max(start + 1, end - overlap);
     }
-    if (end >= normalized.length) {
-      break;
-    }
-    start = Math.max(start + 1, end - overlap);
   }
   return chunks;
 }
@@ -201,6 +214,29 @@ export async function indexDocumentText(context: DomainContext, input: IndexDocu
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, (tx) => indexDocumentTextInTransaction(tx, input));
 }
 
+/** Rebuild stored evidence without fetching the source or overwriting a concurrent edit. */
+export async function reindexStoredKnowledgeDocument(
+  context: DomainContext,
+  input: { businessId: string; documentId: string; expectedRevision: number },
+): Promise<{ chunkCount: number }> {
+  if (!context.embeddings) throw new Error("An embedding provider is required.");
+  const actor = { businessId: input.businessId, actorType: "worker" as const };
+  const text = await withBusinessTransaction(context.db, actor, async tx => {
+    const document = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1))[0];
+    if (!document || !document.active || document.status !== "indexed" || document.revision !== input.expectedRevision) throw new Error("Knowledge source changed or is not active and indexed.");
+    const chunks = await tx.select({ content: knowledgeChunks.content }).from(knowledgeChunks).where(and(eq(knowledgeChunks.businessId, input.businessId), eq(knowledgeChunks.documentId, input.documentId))).orderBy(asc(knowledgeChunks.sequence));
+    return chunks.map(chunk => chunk.content).join("\n\n");
+  });
+  const chunks = chunkText(text);
+  if (!chunks.length) throw new Error("No stored knowledge to reindex.");
+  const embeddings = await context.embeddings.embed(chunks);
+  return withBusinessTransaction(context.db, actor, async tx => {
+    const document = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update"))[0];
+    if (!document || !document.active || document.status !== "indexed" || document.revision !== input.expectedRevision) throw new Error("Knowledge source changed during reindexing.");
+    return indexDocumentTextInTransaction(tx, { ...input, text, embeddings, ...(context.embeddings!.fingerprint ? { embeddingFingerprint: context.embeddings!.fingerprint } : {}) });
+  });
+}
+
 async function indexDocumentTextInTransaction(tx: DatabaseTransaction, input: IndexDocumentInput, preserveImport = false): Promise<{ chunkCount: number }> {
     const document = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update"))[0];
     if (!document) {
@@ -231,6 +267,7 @@ async function indexDocumentTextInTransaction(tx: DatabaseTransaction, input: In
       })));
     }
     await tx.update(knowledgeDocuments).set({ status: preserveImport ? "processing" : "indexed", processingProgress: 100, contentHash: hashContent(input.text), revision: document.revision + (preserveImport ? 0 : 1), updatedAt: new Date() }).where(eq(knowledgeDocuments.id, input.documentId));
+    if (!preserveImport) await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: input.documentId, dedupeKey: `knowledge:${input.documentId}:snapshot:${document.revision + 1}`, payload: { businessId: input.businessId, reason: "document_indexed" } });
     await enqueueOutbox(tx, {
       topic: "realtime.publish",
       businessId: input.businessId,
@@ -310,57 +347,80 @@ export async function searchKnowledge(
   context: DomainContext,
   input: { userId?: string; businessId: string; query: string; limit?: number },
 ): Promise<Array<{ chunkId: string; title: string; content: string }>> {
+  return (await searchKnowledgeEvidence(context, input)).matches;
+}
+
+export async function searchKnowledgeEvidence(
+  context: DomainContext,
+  input: { userId?: string; businessId: string; query: string; limit?: number; callId?: string; turnId?: string },
+): Promise<{ matches: KnowledgePassage[]; mode: "hybrid" | "keyword"; outcome: "found" | "empty" | "unavailable"; failure?: "embedding_unavailable" | "search_unavailable"; durationMs: number }> {
   const startedAt = performance.now();
-  const results = await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: input.userId ? "operator" : "worker" }, async (tx) => {
-    if (input.userId) {
-      await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId });
-    }
-    const terms = input.query.trim().split(/\s+/).filter(Boolean).slice(0, 5);
-    if (terms.length === 0) {
-      return [];
-    }
-    let semanticRows: Array<{ chunk_id: string; title: string; content: string }> = [];
-    if (context.embeddings) {
-      try {
-        const [embedding] = await context.embeddings.embed([input.query]);
-        if (embedding?.length) {
-          const vector = JSON.stringify(embedding);
-          const vectorRows = await tx.execute<{ chunk_id: string; title: string; content: string }>(sql`
-            SELECT chunks.id AS chunk_id, documents.title, chunks.content
-            FROM knowledge_chunks AS chunks
-            INNER JOIN knowledge_documents AS documents ON documents.id = chunks.document_id
-            WHERE chunks.business_id = ${input.businessId}
-              AND documents.business_id = ${input.businessId}
-              AND documents.active = true
-              AND chunks.embedding IS NOT NULL
-              ${context.embeddings.fingerprint ? sql`AND chunks.embedding_fingerprint = ${context.embeddings.fingerprint} AND chunks.embedding_status = 'completed'` : sql``}
-            ORDER BY chunks.embedding <=> ${vector}::vector
-            LIMIT ${input.limit ?? 4}
-          `);
-          semanticRows = vectorRows.rows;
-        }
-      } catch {
-        // Keyword retrieval remains available when the embedding provider is unavailable.
-      }
-    }
-    const limit = input.limit ?? 4;
-    if (semanticRows.length >= limit) {
-      return semanticRows.slice(0, limit).map((row) => ({ chunkId: row.chunk_id, title: row.title, content: row.content }));
-    }
-    const rows = await tx.select({ chunkId: knowledgeChunks.id, title: knowledgeDocuments.title, content: knowledgeChunks.content }).from(knowledgeChunks).innerJoin(knowledgeDocuments, eq(knowledgeChunks.documentId, knowledgeDocuments.id)).where(and(eq(knowledgeChunks.businessId, input.businessId), eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.active, true), ...terms.map((term) => ilike(knowledgeChunks.content, `%${term}%`)))).orderBy(desc(knowledgeDocuments.updatedAt)).limit(limit);
-    const seen = new Set(semanticRows.map((row) => row.chunk_id));
-    const combined = semanticRows.map((row) => ({ chunkId: row.chunk_id, title: row.title, content: row.content }));
-    for (const row of rows) {
-      if (seen.has(row.chunkId)) continue;
-      combined.push(row);
-      seen.add(row.chunkId);
-      if (combined.length >= limit) break;
-    }
-    return combined;
+  const actor = { userId: input.userId, businessId: input.businessId, actorType: input.userId ? "operator" as const : "worker" as const };
+  if (input.userId) await withBusinessTransaction(context.db, actor, tx => requireBusinessMembership(tx, { userId: input.userId!, businessId: input.businessId }));
+  const query = input.query.trim().slice(0, 2000);
+  const terms = knowledgeQueryTerms(query);
+  const fields = sql`c.id AS "chunkId", c.document_id AS "documentId", d.title, c.content,
+    d.source_url AS "sourceUrl", d.revision AS "sourceRevision", c.sequence`;
+  const from = sql`FROM knowledge_chunks c JOIN knowledge_documents d ON d.id = c.document_id`;
+  const select = sql`SELECT ${fields} ${from}`;
+  const filters = sql`c.business_id = ${input.businessId} AND d.business_id = ${input.businessId}
+    AND d.active = true AND d.status = 'indexed'`;
+  const execute = (statement: ReturnType<typeof sql>) => withBusinessTransaction(context.db, actor, async tx => {
+    await tx.execute(sql`SET LOCAL statement_timeout = '2000ms'`);
+    return (await tx.execute<KnowledgePassage>(statement)).rows;
   });
-  searchDuration.record(performance.now() - startedAt, { operation: "knowledge.search" });
-  searchResultCount.record(results.length, { operation: "knowledge.search" });
-  return results;
+  const { any: lexicalQuery, all: allTermsQuery } = knowledgeLexicalQueries(terms);
+  const lexical = terms.length ? execute(sql`${select} WHERE ${filters}
+    AND (to_tsvector('simple', c.content) @@ to_tsquery('simple', ${lexicalQuery})
+      OR to_tsvector('simple', d.title) @@ to_tsquery('simple', ${lexicalQuery}))
+    ORDER BY ts_rank_cd(to_tsvector('simple', d.title || ' ' || c.content), to_tsquery('simple', ${allTermsQuery})) DESC,
+      ts_rank_cd(to_tsvector('simple', d.title || ' ' || c.content), to_tsquery('simple', ${lexicalQuery})) DESC, c.id LIMIT 12`) : Promise.resolve([]);
+  const semantic = (async () => {
+    if (!query || !context.embeddings) throw new Error("embedding_unavailable");
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const [embedding] = await Promise.race([
+        context.embeddings.embed([query]),
+        new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error("embedding_timeout")), 1800); }),
+      ]);
+      if (!embedding?.length || embedding.some(value => !Number.isFinite(value))) throw new Error("invalid_embedding");
+      return await execute(sql`WITH eligible AS MATERIALIZED (SELECT ${fields}, c.embedding ${from} WHERE ${filters} AND c.embedding IS NOT NULL
+        AND c.embedding_status = 'completed'
+        ${context.embeddings.fingerprint ? sql`AND c.embedding_fingerprint = ${context.embeddings.fingerprint}` : sql``})
+        SELECT "chunkId", "documentId", title, content, "sourceUrl", "sourceRevision", sequence FROM eligible
+        ORDER BY embedding <=> ${JSON.stringify(embedding)}::vector, "chunkId" LIMIT 12`);
+    } finally { if (timer) clearTimeout(timer); }
+  })();
+  const [lexicalResult, semanticResult] = await Promise.allSettled([lexical, semantic]);
+  const mode = semanticResult.status === "fulfilled" ? "hybrid" as const : "keyword" as const;
+  const candidates = fuseKnowledgeRanks([
+    lexicalResult.status === "fulfilled" ? lexicalResult.value : [],
+    semanticResult.status === "fulfilled" ? semanticResult.value : [],
+  ], Math.min(6, Math.max(1, input.limit ?? 6)));
+  // Recheck revisions after parallel retrieval so an in-flight edit cannot label old chunks as current.
+  let validationFailed = false;
+  const current = candidates.length ? await execute(sql`${select} WHERE ${filters} AND (${sql.join(candidates.map(p => sql`(c.document_id = ${p.documentId} AND d.revision = ${p.sourceRevision} AND c.sequence BETWEEN ${p.sequence - 1} AND ${p.sequence + 1})`), sql` OR `)})`).catch(() => { validationFailed = true; return []; }) : [];
+  const valid = new Map(current.map(p => [p.chunkId, p]));
+  // Reserve the ranked primary passages first. Neighbors must not crowd out distinct candidates.
+  const matches = withinKnowledgeBudget(candidates.filter(p => valid.has(p.chunkId)), 3000, p => JSON.stringify(p));
+  for (let index = 0; index < matches.length; index += 1) {
+    const p = matches[index]!;
+    const neighbors = current.filter(row => row.documentId === p.documentId && row.sourceRevision === p.sourceRevision && Math.abs(row.sequence - p.sequence) <= 1).sort((a, b) => a.sequence - b.sequence);
+    const expanded = { ...p, supportingChunkIds: neighbors.map(row => row.chunkId), content: neighbors.map(row => row.content).join("\n\n") };
+    const proposed = matches.map((match, candidateIndex) => candidateIndex === index ? expanded : match);
+    if (proposed.reduce((sum, match) => sum + countKnowledgeTokens(JSON.stringify(match) + "\n"), 0) <= 3000) matches[index] = expanded;
+  }
+  const failed = validationFailed || (lexicalResult.status === "rejected" && semanticResult.status === "rejected");
+  const outcome = matches.length ? "found" as const : failed ? "unavailable" as const : "empty" as const;
+  const durationMs = performance.now() - startedAt;
+  searchDuration.record(durationMs, { operation: "knowledge.search", mode, outcome });
+  searchResultCount.record(matches.length, { operation: "knowledge.search", mode, outcome });
+  await context.telemetry?.track({
+    name: "knowledge.search_executed", businessId: input.businessId,
+    ...(input.callId ? { callId: input.callId } : {}),
+    properties: { mode, outcome, resultCount: matches.length, durationMs, fallbackUsed: mode === "keyword", ...(input.turnId ? { turnId: input.turnId } : {}) },
+  }).catch(() => undefined);
+  return { matches, mode, outcome, durationMs, ...(failed ? { failure: "search_unavailable" as const } : semanticResult.status === "rejected" ? { failure: "embedding_unavailable" as const } : {}) };
 }
 
 export async function loadLatestBusinessSnapshot(
@@ -397,12 +457,13 @@ export async function refreshBusinessSnapshot(
     if (!business[0]) {
       throw new Error("Business not found.");
     }
-    const [hours, closureRows, serviceRows, ruleRows, snippets] = await Promise.all([
+    const [hours, closureRows, serviceRows, ruleRows, snippets, documents] = await Promise.all([
       tx.select().from(businessHours).where(eq(businessHours.businessId, input.businessId)).orderBy(asc(businessHours.dayOfWeek)),
       tx.select().from(closures).where(eq(closures.businessId, input.businessId)).orderBy(asc(closures.startsAt)),
       tx.select().from(services).where(and(eq(services.businessId, input.businessId), eq(services.active, true))).orderBy(asc(services.name)),
       tx.select().from(agentRules).where(and(eq(agentRules.businessId, input.businessId), eq(agentRules.active, true))).orderBy(asc(agentRules.sortOrder)),
       tx.select().from(knowledgeSnippets).where(and(eq(knowledgeSnippets.businessId, input.businessId), eq(knowledgeSnippets.active, true))).orderBy(desc(knowledgeSnippets.priority)).limit(8),
+      tx.select({ title: knowledgeDocuments.title, sourceUrl: knowledgeDocuments.sourceUrl, tags: knowledgeDocuments.tags, revision: knowledgeDocuments.revision }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.active, true), eq(knowledgeDocuments.status, "indexed"))).orderBy(desc(knowledgeDocuments.updatedAt), asc(knowledgeDocuments.id)).limit(40),
     ]);
     const currentProfile = profile[0];
     const version = `${Date.now()}`;
@@ -421,6 +482,7 @@ export async function refreshBusinessSnapshot(
       ...(currentProfile?.smsInstructions ? { smsInstructions: currentProfile.smsInstructions } : {}),
       ...(currentProfile?.chatInstructions ? { chatInstructions: currentProfile.chatInstructions } : {}),
       summary: currentProfile?.summary ?? business[0].name,
+      knowledgeDigest: withinKnowledgeBudget(documents, 1600, row => JSON.stringify(row)).map(row => JSON.stringify(row)).join("\n"),
       hours: hours.map((row) => ({ dayOfWeek: row.dayOfWeek, openMinutes: row.openMinutes, closeMinutes: row.closeMinutes })),
       closures: closureRows.map((row) => ({ startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), reason: row.reason })),
       services: serviceRows.map((row) => ({ id: row.id, name: row.name, durationMinutes: row.durationMinutes, ...(row.description ? { description: row.description } : {}) })),

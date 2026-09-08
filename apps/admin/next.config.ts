@@ -1,8 +1,13 @@
 import type { NextConfig } from "next";
+import { withPostHogConfig } from "@posthog/nextjs-config";
 
 import { recordingStorageSource, webCallConnectSource } from "./csp";
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_SERVICE_VERSION: process.env.RAILWAY_DEPLOYMENT_ID ?? process.env.SERVICE_VERSION ?? "development",
+    NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT_NAME ?? process.env.NODE_ENV ?? "development",
+  },
   output: "standalone",
   outputFileTracingExcludes: {
     "/*": ["./.next/dev/**/*", "./.next/cache/**/*", "./.next/standalone/**/*"],
@@ -62,4 +67,11 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default process.env.POSTHOG_SOURCEMAP_API_KEY
+  ? withPostHogConfig(nextConfig, {
+      personalApiKey: process.env.POSTHOG_SOURCEMAP_API_KEY,
+      projectId: process.env.POSTHOG_PROJECT_ID ?? "266281",
+      host: "https://us.posthog.com",
+      sourcemaps: { enabled: true, releaseName: "lobbystack-admin", releaseVersion: process.env.RAILWAY_DEPLOYMENT_ID ?? process.env.SERVICE_VERSION ?? "development", deleteAfterUpload: true },
+    })
+  : nextConfig;

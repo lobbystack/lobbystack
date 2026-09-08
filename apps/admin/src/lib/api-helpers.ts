@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { reportServerError } from "./error-reporting";
 import { eq } from "drizzle-orm";
 
 import { createDatabaseClient, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
@@ -165,5 +166,11 @@ export function asApiResponse(error: unknown): NextResponse {
   }
   const status = typeof error === "object" && error !== null && "status" in error && typeof error.status === "number" ? error.status : 500;
   const message = status >= 500 ? "Request failed." : error instanceof Error ? error.message : "Request failed.";
+  if (status >= 500) {
+    const errorId = crypto.randomUUID();
+    const report = () => reportServerError(error, { operation: "api_response", errorId });
+    try { after(report); } catch { void report(); }
+    return NextResponse.json({ error: message, errorId }, { status, headers: { "x-error-id": errorId } });
+  }
   return jsonError(message, status);
 }

@@ -633,7 +633,7 @@ export const knowledgeDocuments = pgTable(
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("knowledge_documents_business_status_idx").on(table.businessId, table.status), uniqueIndex("knowledge_documents_hash_unique").on(table.businessId, table.contentHash), uniqueIndex("knowledge_documents_business_url_unique").on(table.businessId, table.sourceUrl)],
+  (table) => [index("knowledge_documents_business_status_idx").on(table.businessId, table.status), uniqueIndex("knowledge_documents_hash_unique").on(table.businessId, table.contentHash), uniqueIndex("knowledge_documents_business_url_unique").on(table.businessId, table.sourceUrl), index("knowledge_documents_title_keyword_idx").using("gin", sql`to_tsvector('simple', ${table.title})`)],
 );
 
 export const knowledgeChunks = pgTable(
@@ -652,7 +652,7 @@ export const knowledgeChunks = pgTable(
     tokenCount: integer("token_count"),
     ...timestamps,
   },
-  (table) => [uniqueIndex("knowledge_chunks_document_sequence_unique").on(table.documentId, table.sequence), index("knowledge_chunks_business_idx").on(table.businessId), index("knowledge_chunks_business_embedding_fingerprint_idx").on(table.businessId, table.embeddingFingerprint)],
+  (table) => [uniqueIndex("knowledge_chunks_document_sequence_unique").on(table.documentId, table.sequence), index("knowledge_chunks_business_idx").on(table.businessId), index("knowledge_chunks_business_embedding_fingerprint_idx").on(table.businessId, table.embeddingFingerprint), index("knowledge_chunks_keyword_idx").using("gin", sql`to_tsvector('simple', ${table.content})`)],
 );
 
 export const knowledgeSnippets = pgTable(

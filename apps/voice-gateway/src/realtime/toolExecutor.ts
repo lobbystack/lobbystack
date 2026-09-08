@@ -2,6 +2,7 @@ import { isTransferPermitted, type BusinessContextSnapshot } from "@lobbystack/s
 import { z } from "zod";
 
 import {
+  capturePostHogException,
   recordToolExecutionFailure,
   recordToolExecutionLatency,
 } from "../observability/posthog";
@@ -112,18 +113,8 @@ function buildSnapshotFallbackMatches(
       } satisfies VoiceKnowledgeMatch,
     ];
   });
-  const digest = snapshot.knowledgeDigest?.trim();
-  return [
-    ...snippetMatches,
-    ...(digest && matchesKnowledgeQuery(digest, query)
-      ? [
-          {
-            title: "Knowledge digest",
-            text: digest,
-          } satisfies VoiceKnowledgeMatch,
-        ]
-      : []),
-  ];
+  // The digest is a source inventory, not supporting evidence.
+  return snippetMatches;
 }
 
 const checkAvailabilitySchema = z.object({
@@ -235,6 +226,8 @@ export async function executeVoiceTool(input: {
   snapshot: BusinessContextSnapshot;
   businessId: string;
   callId?: string;
+  turnId?: string;
+  claimKnowledgeLookup?: () => boolean;
   conversationId?: string;
   callerPhone: string;
   channel?: "voice" | "web_voice";
@@ -284,16 +277,28 @@ export async function executeVoiceTool(input: {
       }
       case "searchKnowledge": {
         const parsed = searchKnowledgeSchema.parse(JSON.parse(input.rawArguments || "{}"));
+        if (input.claimKnowledgeLookup && !input.claimKnowledgeLookup()) {
+          return { result: { matches: [], outcome: "unavailable", source: "none", fallbackUsed: false, reason: "refinement_limit", message: "The lookup limit for this turn has been reached. Ask for clarification or explain that the answer could not be verified." } };
+        }
         try {
-          const matches = await searchVoiceKnowledge({
+          const response = await searchVoiceKnowledge({
             businessId: input.businessId,
             query: parsed.query,
+            ...(input.callId ? { callId: input.callId } : {}),
+            ...(input.turnId ? { turnId: input.turnId } : {}),
           });
+          const matches = Array.isArray(response) ? response : response.matches;
+          const outcome = Array.isArray(response) ? (matches.length ? "found" : "empty") : response.outcome;
+          attributes["knowledge.outcome"] = outcome;
+          attributes["knowledge.mode"] = Array.isArray(response) ? "legacy" : response.mode;
+          attributes["knowledge.result_count"] = matches.length;
 
           if (matches.length > 0) {
             return {
               result: {
                 matches,
+                outcome,
+                mode: Array.isArray(response) ? "legacy" : response.mode,
                 source: "rag",
                 fallbackUsed: false,
               },
@@ -305,9 +310,10 @@ export async function executeVoiceTool(input: {
             return {
               result: {
                 matches: fallbackMatches,
+                outcome: "found",
                 source: "snapshot_fallback",
                 fallbackUsed: true,
-                fallbackReason: "no_matches",
+                fallbackReason: outcome === "unavailable" ? "rag_error" : "no_matches",
               },
             };
           }
@@ -315,16 +321,21 @@ export async function executeVoiceTool(input: {
           return {
             result: {
               matches: [],
+              outcome,
               source: "none",
               fallbackUsed: false,
             },
           };
-        } catch {
+        } catch (error) {
+          capturePostHogException(error, { businessId: input.businessId, properties: { operation: "knowledge_lookup", callId: input.callId, toolName: input.toolName } });
+          attributes["knowledge.outcome"] = "unavailable";
+          attributes["knowledge.result_count"] = 0;
           const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot, parsed.query);
           if (fallbackMatches.length > 0) {
             return {
               result: {
                 matches: fallbackMatches,
+                outcome: "found",
                 source: "snapshot_fallback",
                 fallbackUsed: true,
                 fallbackReason: "rag_error",
@@ -335,6 +346,7 @@ export async function executeVoiceTool(input: {
           return {
             result: {
               matches: [],
+              outcome: "unavailable",
               source: "none",
               fallbackUsed: false,
             },

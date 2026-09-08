@@ -158,6 +158,7 @@ type OpenAiRealtimeMessage = {
 };
 
 type ActiveVoiceSession = {
+  knowledgeTurn?: { id: string; lookups: number };
   businessId: string | null;
   snapshot: BusinessContextSnapshot | null;
   callSid: string | null;
@@ -2392,9 +2393,12 @@ async function handleToolCall(
       throw new Error("Voice session has not been initialized.");
     }
 
+    const knowledgeTurn = session.knowledgeTurn ??= { id: message.callId, lookups: 0 };
     const result = await executeVoiceTool({
       toolName: message.name,
       rawArguments: message.arguments,
+      turnId: knowledgeTurn.id,
+      claimKnowledgeLookup: () => ++knowledgeTurn.lookups <= 2,
       snapshot: session.snapshot,
       businessId: session.businessId,
       ...(session.callId !== null ? { callId: session.callId } : {}),
@@ -3031,6 +3035,7 @@ function handleOpenAiMessage(
       return;
     }
     case "input_audio_buffer.speech_started": {
+      session.knowledgeTurn = { id: crypto.randomUUID(), lookups: 0 };
       if (session.openingGreetingActive) {
         server.log.info(
           {

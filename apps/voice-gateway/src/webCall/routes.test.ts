@@ -10,6 +10,7 @@ const {
   fetchWebVoiceContextMock,
   runtimeRequestErrorClass,
   startWebVoiceCallMock,
+  searchVoiceKnowledgeMock,
   takeVoiceMessageMock,
   uploadVoiceRecordingMock,
   webSocketInstances,
@@ -33,6 +34,7 @@ const {
     }
   },
   startWebVoiceCallMock: vi.fn(),
+  searchVoiceKnowledgeMock: vi.fn(),
   takeVoiceMessageMock: vi.fn(),
   uploadVoiceRecordingMock: vi.fn(),
   webSocketInstances: [] as Array<{
@@ -107,7 +109,7 @@ vi.mock("../backend/runtimeClient", () => ({
   findVoiceAvailability: vi.fn(),
   lookupVoiceAppointmentForChange: vi.fn(),
   rescheduleVoiceAppointment: vi.fn(),
-  searchVoiceKnowledge: vi.fn(),
+  searchVoiceKnowledge: searchVoiceKnowledgeMock,
   sendVoiceAppointmentChangeOtp: vi.fn(),
   takeVoiceMessage: takeVoiceMessageMock,
   updateVoiceTransferState: vi.fn(),
@@ -642,13 +644,13 @@ describe("web call routes", () => {
     );
 
     expect(sessionUpdate.session?.instructions).toContain(
-      "feature, workflow, policy, limitation, pricing, usage, billing, integration",
+      "For every business-specific factual question",
     );
     expect(sessionUpdate.session?.instructions).toContain(
-      "call searchKnowledge before answering",
+      "use searchKnowledge before answering",
     );
     expect(searchKnowledge?.description).toContain(
-      "capabilities, workflows, policies, limits, pricing, billing, usage, integrations",
+      "course names, exact course codes, products, policies, prices, and document facts",
     );
   });
 
@@ -831,7 +833,7 @@ describe("web call routes", () => {
     );
   });
 
-  it("injects dashboard test call tokens for signed dashboard widget starts", async () => {
+  it("preserves dashboard authorization and origin through knowledge tool execution", async () => {
     process.env.WEB_CALL_ALLOWED_ORIGINS = "https://app.lobbystack.com";
     process.env.DASHBOARD_TEST_CALL_TOKEN = "dashboard-token";
     fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
@@ -889,6 +891,34 @@ describe("web call routes", () => {
         widgetId: "lobbystack-dashboard-test-call",
       }),
     );
+    fetchWebVoiceContextMock.mockImplementation(async (input) => {
+      if (input.origin !== "https://app.lobbystack.com") {
+        throw new Error("Web voice origin is required.");
+      }
+      return { snapshot: demoSnapshot };
+    });
+    searchVoiceKnowledgeMock.mockResolvedValueOnce({
+      outcome: "found", mode: "hybrid",
+      matches: [{ text: "Management: MNGT 10407", documentId: "course-document" }],
+    });
+    const socket = webSocketInstances[0]!;
+    socket.emit("open");
+    socket.emit("message", Buffer.from(JSON.stringify({
+      type: "response.function_call_arguments.done",
+      name: "searchKnowledge", call_id: "knowledge-call",
+      arguments: JSON.stringify({ query: "management BAA" }),
+    })));
+    await vi.waitFor(() => expect(searchVoiceKnowledgeMock).toHaveBeenCalledWith(
+      expect.objectContaining({ businessId: "business_123", callId: "call_123", query: "management BAA" }),
+    ));
+    await vi.waitFor(() => expect(socket.send.mock.calls.map(([value]) => JSON.parse(String(value))))
+      .toContainEqual(expect.objectContaining({
+        type: "conversation.item.create",
+        item: expect.objectContaining({
+          type: "function_call_output", call_id: "knowledge-call",
+          output: expect.stringContaining("MNGT 10407"),
+        }),
+      })));
   });
 
   it("derives matching dashboard authorization from the internal token in development", async () => {

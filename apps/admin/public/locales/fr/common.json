@@ -1,5 +1,6 @@
 {
   "appName": "LobbyStack",
+  "errors": { "unexpected": "Une erreur est survenue. Veuillez réessayer." },
   "loading": {
     "title": "Chargement...",
     "retry": "Réessayer le chargement",

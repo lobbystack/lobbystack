@@ -27,6 +27,7 @@ async function main(): Promise<void> {
           const file = await readFile(resolve("migrations", fileName), "utf8");
           await migrator.db.execute(sql.raw(file));
         }
+        await migrator.db.execute(sql.raw(await readFile(resolve("migrations", "0048_knowledge_keyword_search.sql"), "utf8")));
         console.log("Database migrations applied.");
         break;
       case "check": {

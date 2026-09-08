@@ -77,6 +77,7 @@ type RealtimeUsageMetrics = NonNullable<
 >["usage"];
 
 type ActiveWebCall = {
+  knowledgeTurn?: { id: string; lookups: number };
   gatewaySessionId: string;
   businessSlug: string;
   businessId: string;
@@ -104,7 +105,7 @@ type ActiveWebCall = {
   prospectDemoToken?: string;
   dashboardTestCallToken?: string;
   widgetSessionToken?: string;
-  widgetOrigin?: string;
+  contextOrigin: string;
   visitorId?: string;
   publicWebCall?: boolean;
 };
@@ -1152,8 +1153,6 @@ function createSidebandSocket(input: {
         instructions: [
           buildVoiceSystemPrompt(input.snapshot),
           "You are speaking through a website voice widget, not a phone call.",
-          "Represent LobbyStack and answer questions about the business from the supplied snapshot and tools.",
-          "For LobbyStack feature, workflow, policy, limitation, pricing, usage, billing, integration, plan, and documentation questions, call searchKnowledge before answering unless the exact answer is already present in the current conversation or structured snapshot.",
           "Use the configured greeting only once at the start of the session. Never repeat it after the opening greeting, even after interruptions, silence, or filler speech.",
           "If the latest audio is silence, background noise, echo of your own previous audio, hold music, TV audio, side conversation, or speech not addressed to you, call waitForUser and do not speak.",
           ...(input.session.sessionMode === "prospect_demo"
@@ -1426,6 +1425,7 @@ async function handleSidebandMessage(
   }
 
   if (payload.type === "input_audio_buffer.speech_started") {
+    session.knowledgeTurn = { id: crypto.randomUUID(), lookups: 0 };
     if (session.openingGreetingActive) {
       server.log.info(
         {
@@ -1487,7 +1487,7 @@ async function handleToolCall(
   try {
     const context = await fetchWebVoiceContext({
       businessSlug: session.businessSlug,
-      ...(session.widgetOrigin ? { origin: session.widgetOrigin } : {}),
+      origin: session.contextOrigin,
       ...(session.widgetSessionToken ? { widgetSessionToken: session.widgetSessionToken } : {}),
       ...(session.visitorId ? { visitorId: session.visitorId } : {}),
       ...(session.prospectDemoToken !== undefined
@@ -1498,9 +1498,12 @@ async function handleToolCall(
         : {}),
       ...(session.publicWebCall ? { publicWebCall: true } : {}),
     });
+    const knowledgeTurn = session.knowledgeTurn ??= { id: toolCall.callId, lookups: 0 };
     executed = await executeVoiceTool({
       toolName: toolCall.name,
       rawArguments: toolCall.arguments,
+      turnId: knowledgeTurn.id,
+      claimKnowledgeLookup: () => ++knowledgeTurn.lookups <= 2,
       snapshot: context.snapshot,
       businessId: session.businessId,
       callId: session.callId,
@@ -1518,6 +1521,10 @@ async function handleToolCall(
       },
       "Failed to execute web voice tool call",
     );
+    capturePostHogException(error, {
+      businessId: session.businessId,
+      properties: { operation: "web_voice_tool", channel: "web_voice", callId: session.callId, toolName: toolCall.name },
+    });
     postRealtimeEvent(socket, {
       type: "conversation.item.create",
       item: {
@@ -1793,7 +1800,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
           ? { dashboardTestCallToken }
           : {}),
         ...(body.widgetSessionToken !== undefined ? { widgetSessionToken: body.widgetSessionToken } : {}),
-        ...(widgetOrigin !== undefined ? { widgetOrigin } : {}),
+        contextOrigin: widgetOrigin ?? origin!,
         ...(visitorId !== undefined ? { visitorId } : {}),
         ...(publicWebCall ? { publicWebCall: true } : {}),
       };

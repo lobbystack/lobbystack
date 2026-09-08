@@ -74,6 +74,7 @@ export function ProductAnalytics() {
       if (!posthog.__loaded) posthog.init(apiKey, {
         api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com",
         autocapture: false,
+        capture_exceptions: false,
         capture_pageview: false,
         capture_pageleave: false,
         disable_session_recording: true,
@@ -91,5 +92,18 @@ export function ProductAnalytics() {
     }).catch(() => { /* Optional analytics must never block the application. */ });
     return () => { cancelled = true; allowedRef.current = false; sdkRef.current?.opt_out_capturing(); };
   }, [allowed, apiKey, businessId, pathname, preference.data?.telemetryEnabled, sensitive]);
+  useEffect(() => {
+    if (!allowed) return;
+    const report = (error: unknown) => {
+      void import("@/lib/browser-error-reporting").then(({ captureBrowserError }) => {
+        if (allowedRef.current) captureBrowserError(error);
+      }).catch(() => {});
+    };
+    const onError = (event: ErrorEvent) => report(event.error);
+    const onRejection = (event: PromiseRejectionEvent) => report(event.reason);
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => { window.removeEventListener("error", onError); window.removeEventListener("unhandledrejection", onRejection); };
+  }, [allowed]);
   return null;
 }
