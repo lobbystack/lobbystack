@@ -104,7 +104,7 @@
     "@types/luxon": "^3.7.1",
     "@types/node": "^24.0.0",
     "concurrently": "^9.1.2",
-    "drizzle-orm": "^0.44.7",
+    "drizzle-orm": "^0.45.2",
     "lucia": "^3.2.2",
     "playwright": "^1.58.2",
     "railway": "3.11.0",

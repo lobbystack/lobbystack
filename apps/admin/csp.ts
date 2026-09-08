@@ -10,3 +10,24 @@ export function webCallConnectSource(
     return undefined;
   }
 }
+export function recordingStorageSource(
+  source: Readonly<Record<string, string | undefined>> = process.env,
+): string | undefined {
+  if (source.STORAGE_PROVIDER !== "s3") return undefined;
+  const bucket = source.S3_BUCKET?.trim();
+  if (!bucket || !/^[a-z0-9][a-z0-9.-]*[a-z0-9]$/.test(bucket)) return undefined;
+  try {
+    const region = source.S3_REGION?.trim() || "us-east-1";
+    if (!/^[a-z0-9-]+$/.test(region)) return undefined;
+    const endpoint = new URL(source.S3_ENDPOINT || `https://s3.${region}.amazonaws.com`);
+    if (!["https:", "http:"].includes(endpoint.protocol) || endpoint.username || endpoint.password) return undefined;
+    // Match S3's path-style fallback for IP endpoints and dotted HTTPS buckets.
+    const pathStyle = source.S3_FORCE_PATH_STYLE === "true" ||
+      /^[\d.]+$/.test(endpoint.hostname) || endpoint.hostname.startsWith("[") ||
+      (endpoint.protocol === "https:" && bucket.includes("."));
+    if (!pathStyle) endpoint.hostname = `${bucket}.${endpoint.hostname}`;
+    return endpoint.origin;
+  } catch {
+    return undefined;
+  }
+}
