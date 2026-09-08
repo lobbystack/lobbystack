@@ -22,7 +22,7 @@ Beaucoup de projets de réceptionniste IA commencent avec les mêmes briques :
 
 - Retell, Vapi ou Twilio pour la voix ;
 - n8n, Zapier, Make ou des webhooks maison pour relier les outils ;
-- Google Calendar ou Outlook pour les réservations ;
+- Google Calendar pour les réservations ;
 - une base de données pour les appels, contacts, transcriptions, enregistrements et rendez-vous ;
 - de la logique de prompt pour les règles métier, les escalades et les transferts ;
 - des notifications SMS et courriel ;
@@ -70,7 +70,7 @@ Certaines équipes veulent un produit géré. [LobbyStack Cloud](/pricing/) sert
 
 D'autres équipes veulent la pile sur leur propre infrastructure. LobbyStack le permet aussi.
 
-Le parcours [réceptionniste IA auto-hébergé](/solutions/self-hosted-ai-receptionist/) utilise Docker Compose comme base mono-serveur. La configuration documentée lance le backend Convex, le tableau de bord Convex, le tableau de bord web, la passerelle vocale et Caddy pour HTTPS. Vous apportez les comptes fournisseurs que vous voulez contrôler, comme Twilio, OpenAI, calendrier, courriel, analytics et facturation.
+Le parcours [réceptionniste IA auto-hébergé](/solutions/self-hosted-ai-receptionist/) utilise Docker Compose comme base mono-serveur. La configuration documentée lance PostgreSQL, Redis, l'application Next.js, le worker, la passerelle vocale et Caddy pour HTTPS. Vous apportez les comptes fournisseurs que vous voulez contrôler, comme Twilio, une IA compatible avec OpenAI, Google Calendar, le courriel, les analytics et la facturation.
 
 Cela donne aux agences et aux opérateurs techniques une histoire plus claire pour les clients. Si une clinique, un spa médical, une entreprise de services ou un cabinet juridique veut que le système tourne sur ses propres serveurs ou son propre compte cloud, vous pouvez le déployer là-bas au lieu d'imposer une application fermée.
 

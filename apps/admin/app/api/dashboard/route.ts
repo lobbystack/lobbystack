@@ -10,6 +10,7 @@ import {
   services,
   staff,
 } from "@lobbystack/db";
+import { listOpenVoiceFollowUps } from "@lobbystack/domain";
 import { asApiResponse, withOperatorTransaction } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
       const now = new Date();
       const currentStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1_000);
       const previousStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1_000);
-      const chartStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
+      const chartStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
 
       const currentCallCount = await tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, currentStart)));
       const previousCallCount = await tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, previousStart), lt(calls.startedAt, currentStart)));
@@ -51,6 +52,7 @@ export async function GET(request: Request) {
       const chartCalls = await tx.select({ startedAt: calls.startedAt }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, chartStart)));
       const liveCallCount = await tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), eq(calls.status, "started")));
       const handoffConversations = await tx.select({ id: conversations.id, contactName: contacts.name, summary: conversations.summary, currentIntent: conversations.currentIntent, updatedAt: conversations.updatedAt }).from(conversations).leftJoin(contacts, eq(conversations.contactId, contacts.id)).where(and(eq(conversations.businessId, businessId), eq(conversations.automationState, "human_handoff"))).orderBy(desc(conversations.updatedAt)).limit(6);
+      const voiceFollowUps = await listOpenVoiceFollowUps(tx, businessId);
 
       const currentCallsTotal = Number(currentCallCount[0]?.count ?? 0);
       const previousCallsTotal = Number(previousCallCount[0]?.count ?? 0);
@@ -60,8 +62,8 @@ export async function GET(request: Request) {
       const previousMessagesTotal = Number(previousMessageCount[0]?.count ?? 0);
       const currentDuration = average(currentCalls.map(durationSeconds));
       const previousDuration = average(previousCalls.map(durationSeconds));
-      const monthlyCalls = Array.from({ length: 6 }, (_, index) => {
-        const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5 + index, 1));
+      const monthlyCalls = Array.from({ length: 12 }, (_, index) => {
+        const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11 + index, 1));
         const nextMonth = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 1));
         return {
           monthStart: monthStart.toISOString(),
@@ -87,14 +89,21 @@ export async function GET(request: Request) {
           contactName: call.contactName,
           contactPhone: call.contactPhone,
         })),
-        actionRequired: handoffConversations.map((conversation) => ({
+        actionRequired: [...voiceFollowUps.map((item) => ({
+          id: item.id,
+          kind: "voice_message",
+          title: item.title,
+          body: item.body,
+          createdAt: item.createdAt.toISOString(),
+          callId: item.relatedCallId,
+        })), ...handoffConversations.map((conversation) => ({
           id: conversation.id,
           kind: "human_handoff",
           title: conversation.contactName ?? "Human follow-up requested",
           body: conversation.summary ?? conversation.currentIntent ?? "A customer conversation needs an operator response.",
           createdAt: conversation.updatedAt.toISOString(),
           conversationId: conversation.id,
-        })),
+        }))].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()).slice(0, 6),
         upcoming: upcoming.map((appointment) => ({
           ...appointment,
           startsAt: appointment.startsAt.toISOString(),

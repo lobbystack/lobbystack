@@ -1,6 +1,6 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, sql } from "drizzle-orm";
 
-import { affiliateAttributions, affiliateProfileStats, affiliateProfiles, businesses, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { affiliateAttributions, affiliateProfileStats, affiliateProfiles, billingAccounts, businesses, onboardingPhoneVerifications, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
@@ -33,6 +33,20 @@ const stageRoutes: Record<OnboardingStage, string> = {
   complete: "/",
 };
 
+const stageSteps: Record<OnboardingStage, number> = {
+  create_business: 2,
+  website: 3,
+  knowledge: 4,
+  greeting: 5,
+  verify_phone: 6,
+  verify_phone_code: 7,
+  plan: 8,
+  phone_number: 9,
+  phone_number_claiming: 9,
+  attribution: 10,
+  complete: 11,
+};
+
 const transitions: Record<OnboardingStage, readonly OnboardingStage[]> = {
   create_business: ["website"],
   website: ["knowledge"],
@@ -51,12 +65,20 @@ export function resolveOnboardingRoute(stage: string | null | undefined): string
   return stageRoutes[(stage ?? "create_business") as OnboardingStage] ?? stageRoutes.create_business;
 }
 
+export function resolveOnboardingStageForPlan(stage: OnboardingStage, plan: string | null): OnboardingStage {
+  return (stage === "phone_number" || stage === "phone_number_claiming") && plan === "free_cloud" ? "plan" : stage;
+}
+
 export function isOnboardingStage(value: unknown): value is OnboardingStage {
-  return typeof value === "string" && value in stageRoutes;
+  return typeof value === "string" && Object.hasOwn(stageRoutes, value);
 }
 
 export function isValidOnboardingTransition(from: OnboardingStage, to: OnboardingStage): boolean {
   return transitions[from].includes(to);
+}
+
+export function canVisitOnboardingStage(current: OnboardingStage, target: OnboardingStage): boolean {
+  return stageSteps[target] <= stageSteps[current];
 }
 
 export async function getActiveOnboardingState(
@@ -68,9 +90,10 @@ export async function getActiveOnboardingState(
     if (!user?.activeBusinessId) return { businessId: null, stage: "create_business" };
     await tx.execute(sql`select set_config('app.business_id', ${user.activeBusinessId}, true)`);
     const business = (await tx.select({ onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, user.activeBusinessId)).limit(1))[0];
+    const billing = (await tx.select({ plan: billingAccounts.plan }).from(billingAccounts).where(eq(billingAccounts.businessId, user.activeBusinessId)).limit(1))[0];
     return {
       businessId: user.activeBusinessId,
-      stage: isOnboardingStage(business?.onboardingStage) ? business.onboardingStage : "create_business",
+      stage: resolveOnboardingStageForPlan(isOnboardingStage(business?.onboardingStage) ? business.onboardingStage : "create_business", billing?.plan ?? null),
     };
   });
 }
@@ -100,8 +123,27 @@ export async function advanceOnboardingStage(
   input: { userId: string; businessId: string; to: OnboardingStage },
 ): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
-    const current = (await tx.select({ onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
+    await requireBusinessAdmin(tx, input);
+    const current = (await tx.select({ onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
     if (!current || !isOnboardingStage(current.onboardingStage)) throw new Error("Business onboarding state was not found.");
+    // Revisiting an earlier form must never move durable onboarding progress backwards.
+    if (canVisitOnboardingStage(current.onboardingStage, input.to)) return;
+    if (input.to === "verify_phone_code" || stageSteps[input.to] >= stageSteps.plan) {
+      const verified = (await tx.select({ id: onboardingPhoneVerifications.id }).from(onboardingPhoneVerifications).where(and(
+        eq(onboardingPhoneVerifications.businessId, input.businessId),
+        eq(onboardingPhoneVerifications.userId, input.userId),
+        eq(onboardingPhoneVerifications.status, "approved"),
+      )).limit(1))[0];
+      const pending = !verified && input.to === "verify_phone_code"
+        ? (await tx.select({ id: onboardingPhoneVerifications.id }).from(onboardingPhoneVerifications).where(and(
+            eq(onboardingPhoneVerifications.businessId, input.businessId),
+            eq(onboardingPhoneVerifications.userId, input.userId),
+            inArray(onboardingPhoneVerifications.status, ["queued", "processing", "pending"]),
+            gt(onboardingPhoneVerifications.expiresAt, new Date()),
+          )).limit(1))[0]
+        : undefined;
+      if (!verified && !pending) throw Object.assign(new Error("Phone verification is required before continuing."), { status: 409, code: "phone_verification_required" });
+    }
     await advanceOnboardingStageInTransaction(tx, { ...input, from: current.onboardingStage });
   });
 }

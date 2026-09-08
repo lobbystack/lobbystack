@@ -11,6 +11,7 @@ import i18n from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { renderSafeMarkdown } from "@/lib/widget-markdown";
 
 type WidgetConfigPayload = {
   key: string;
@@ -48,14 +49,6 @@ function chatErrorKey(error: unknown): string {
   }
 }
 
-function renderSafeMarkdown(value: string): string {
-  return value
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer noopener">$1</a>')
-    .replace(/\n/g, "<br />");
-}
 
 function MessageContent({ content, pending }: { content: string; pending?: boolean }) {
   return <span className="widget-message-content" dangerouslySetInnerHTML={{ __html: renderSafeMarkdown(content || (pending ? "…" : "")) }} />;
@@ -126,6 +119,7 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
     clearError,
   } = useChat<WidgetMessage>({
     id: `widget:${widgetKey}`,
+    generateId: () => crypto.randomUUID(),
     transport,
     onError: (error) => setSubmitError(chatErrorKey(error)),
   });
@@ -138,7 +132,10 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.source !== window.parent) return;
-      const data = event.data as { type?: string; visitorId?: string; token?: string; parentOrigin?: string };
+      const data = event.data as { type?: string; visitorId?: string; token?: string; parentOrigin?: string; code?: string };
+      if (data && data.type === "session-error") {
+        setSubmitError(data.code === "widget_origin_denied" ? "errors.originDenied" : data.code === "widget_key_invalid" ? "errors.invalidKey" : "errors.configLoad");
+      }
       if (data && data.type === "visitor" && typeof data.visitorId === "string") {
         setParentVisitorId(data.visitorId);
       }
@@ -149,6 +146,8 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
       }
     };
     window.addEventListener("message", handleMessage);
+    // The loader may finish fetching a session before this client hydrates.
+    window.parent?.postMessage({ type: "ready" }, "*");
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
@@ -328,7 +327,6 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
           placeholder={t("chat.composerPlaceholder")}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) event.preventDefault(); }}
           disabled={!config.data || sending || leadOpen}
           aria-label={t("chat.composerPlaceholder")}
         />

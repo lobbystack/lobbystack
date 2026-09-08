@@ -3,9 +3,10 @@ import { NextResponse } from "next/server";
 
 import { twilioSmsStatusSchema } from "@lobbystack/contracts";
 import { updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, updateSmsDeliveryStatus } from "@lobbystack/domain";
-import { normalizeTwilioFormFields, validateTwilioSignature } from "@lobbystack/shared";
+import { normalizeTwilioFormFields, resolveTwilioWebhookUrl, validateTwilioSignature } from "@lobbystack/shared";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
+import { twilioStatusAuthToken } from "@/lib/twilio-status-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export async function POST(request: Request) {
   try {
     const rawBody = await request.text();
     const params = normalizeTwilioFormFields(new URLSearchParams(rawBody));
-    const valid = await validateTwilioSignature({ authToken: process.env.TWILIO_AUTH_TOKEN, signatureHeader: request.headers.get("x-twilio-signature"), url: process.env.TWILIO_STATUS_CALLBACK_URL ?? request.url, params });
+    const valid = await validateTwilioSignature({ authToken: twilioStatusAuthToken(params, request.url, process.env, request.headers.get("x-twilio-signature-key-sid")), signatureHeader: request.headers.get("x-twilio-signature"), url: resolveTwilioWebhookUrl(request.url, process.env.TWILIO_STATUS_CALLBACK_URL), params });
     if (!valid) return new NextResponse("Unauthorized", { status: 401 });
     const body = twilioSmsStatusSchema.parse(params);
     const providerPrice = body.Price !== undefined && Number.isFinite(Number(body.Price)) ? Number(body.Price) : undefined;

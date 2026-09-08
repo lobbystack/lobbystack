@@ -2,7 +2,10 @@ import { createHash, randomInt, timingSafeEqual } from "node:crypto";
 
 import { and, eq, gt, inArray, lt, or } from "drizzle-orm";
 
-import { appointmentChangeVerifications, appointments, auditLogs, contacts, enqueueOutbox, phoneNumbers, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { appointmentChangeVerifications, appointments, auditLogs, contacts, enqueueOutbox, phoneNumbers, receptionistProfiles, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { normalizeAppointmentChangePolicy } from "@lobbystack/shared";
+
+import { appointmentTimesMatch, serviceNamesMatch, storedContactNameMatchesIfPresent, substantiveServiceNameFactMatches } from "./appointmentFacts";
 
 import type { DomainContext } from "./context";
 
@@ -34,18 +37,33 @@ async function auditAppointmentChange(tx: DatabaseTransaction, input: { business
 
 export async function createAppointmentChangeVerification(
   context: DomainContext,
-  input: { businessId: string; appointmentId: string; callerPhone: string; action: "cancel" | "reschedule" },
+  input: { businessId: string; appointmentId?: string; callerPhone: string; action: "cancel" | "reschedule"; callerName?: string; appointmentStartsAt?: string; serviceName?: string },
 ): Promise<{ verificationId: string; appointmentId: string; contactId: string; status: string; expiresAt: string } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const appointment = (await tx.select({ id: appointments.id, contactId: appointments.contactId }).from(appointments).innerJoin(contacts, and(eq(contacts.id, appointments.contactId), eq(contacts.businessId, input.businessId))).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), eq(contacts.phone, input.callerPhone), eq(appointments.status, "confirmed"))).limit(1))[0];
-    if (!appointment) return null;
+    const profile = (await tx.select({ policy: receptionistProfiles.appointmentChangePolicy }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1))[0];
+    const policy = normalizeAppointmentChangePolicy(profile?.policy);
+    if (!policy.enabled || policy.verificationMode === "operator_only" || (input.action === "cancel" ? !policy.allowCancel : !policy.allowReschedule)) return null;
+    if (!input.appointmentStartsAt?.trim() && !input.serviceName?.trim()) return null;
+    const candidates = await tx.select({ id: appointments.id, contactId: appointments.contactId, startsAt: appointments.startsAt, timezone: appointments.timezone, name: contacts.name, serviceName: services.name, serviceSlug: services.slug, localizedNames: services.localizedNames }).from(appointments)
+      .innerJoin(contacts, and(eq(contacts.id, appointments.contactId), eq(contacts.businessId, input.businessId)))
+      .innerJoin(services, and(eq(services.id, appointments.serviceId), eq(services.businessId, input.businessId)))
+      .where(and(input.appointmentId ? eq(appointments.id, input.appointmentId) : undefined, eq(appointments.businessId, input.businessId), eq(contacts.phone, input.callerPhone), eq(appointments.status, "confirmed")));
+    const matches = candidates.filter((row) => {
+      const service = { name: row.serviceName, slug: row.serviceSlug, localizedNames: row.localizedNames };
+      return storedContactNameMatchesIfPresent(row.name ?? undefined, input.callerName)
+        && (!input.appointmentStartsAt?.trim() || appointmentTimesMatch({ startsAt: row.startsAt.toISOString(), timezone: row.timezone }, input.appointmentStartsAt))
+        && (!input.serviceName?.trim() || (input.appointmentId ? serviceNamesMatch : substantiveServiceNameFactMatches)(service, input.serviceName));
+    });
+    if (matches.length !== 1) return null;
+    const appointment = matches[0]!;
     const now = new Date();
-    await tx.update(appointmentChangeVerifications).set({ status: "superseded", updatedAt: now }).where(and(eq(appointmentChangeVerifications.businessId, input.businessId), eq(appointmentChangeVerifications.appointmentId, input.appointmentId), eq(appointmentChangeVerifications.callerPhone, input.callerPhone), inArray(appointmentChangeVerifications.status, ["pending", "otp_pending", "otp_queued", "otp_sent"])));
+    await tx.update(appointmentChangeVerifications).set({ status: "superseded", updatedAt: now }).where(and(eq(appointmentChangeVerifications.businessId, input.businessId), eq(appointmentChangeVerifications.appointmentId, appointment.id), eq(appointmentChangeVerifications.callerPhone, input.callerPhone), inArray(appointmentChangeVerifications.status, ["pending", "facts_verified", "otp_verified", "otp_pending", "otp_queued", "otp_sent"])));
     const expiresAt = new Date(now.getTime() + OTP_TTL_MS);
-    const [verification] = await tx.insert(appointmentChangeVerifications).values({ businessId: input.businessId, appointmentId: appointment.id, contactId: appointment.contactId, callerPhone: input.callerPhone, action: input.action, status: "otp_pending", expiresAt, attemptCount: 0 }).returning({ id: appointmentChangeVerifications.id });
+    const status = policy.verificationMode === "otp_required" ? "otp_pending" : "facts_verified";
+    const [verification] = await tx.insert(appointmentChangeVerifications).values({ businessId: input.businessId, appointmentId: appointment.id, contactId: appointment.contactId, callerPhone: input.callerPhone, action: input.action, status, expiresAt, attemptCount: 0 }).returning({ id: appointmentChangeVerifications.id });
     if (!verification) throw new Error("Appointment change verification could not be created.");
     await auditAppointmentChange(tx, { businessId: input.businessId, appointmentId: appointment.id, verificationId: verification.id, eventType: "appointment_change.verification_created", payload: { action: input.action } });
-    return { verificationId: verification.id, appointmentId: appointment.id, contactId: appointment.contactId, status: "otp_pending", expiresAt: expiresAt.toISOString() };
+    return { verificationId: verification.id, appointmentId: appointment.id, contactId: appointment.contactId, status, expiresAt: expiresAt.toISOString() };
   });
 }
 
@@ -161,7 +179,10 @@ export async function consumeAppointmentChangeVerificationInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; verificationId: string; appointmentId: string; callerPhone: string; action: "cancel" | "reschedule" },
 ): Promise<boolean> {
-  const rows = await tx.update(appointmentChangeVerifications).set({ status: "used", updatedAt: new Date() }).where(and(eq(appointmentChangeVerifications.id, input.verificationId), eq(appointmentChangeVerifications.businessId, input.businessId), eq(appointmentChangeVerifications.appointmentId, input.appointmentId), eq(appointmentChangeVerifications.callerPhone, input.callerPhone), eq(appointmentChangeVerifications.action, input.action), eq(appointmentChangeVerifications.status, "otp_verified"), gt(appointmentChangeVerifications.expiresAt, new Date()))).returning({ id: appointmentChangeVerifications.id });
+  const profile = (await tx.select({ policy: receptionistProfiles.appointmentChangePolicy }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1).for("share"))[0];
+  const policy = normalizeAppointmentChangePolicy(profile?.policy);
+  if (!policy.enabled || policy.verificationMode === "operator_only" || (input.action === "cancel" ? !policy.allowCancel : !policy.allowReschedule)) return false;
+  const rows = await tx.update(appointmentChangeVerifications).set({ status: "used", updatedAt: new Date() }).where(and(eq(appointmentChangeVerifications.id, input.verificationId), eq(appointmentChangeVerifications.businessId, input.businessId), eq(appointmentChangeVerifications.appointmentId, input.appointmentId), eq(appointmentChangeVerifications.callerPhone, input.callerPhone), eq(appointmentChangeVerifications.action, input.action), inArray(appointmentChangeVerifications.status, policy.verificationMode === "otp_required" ? ["otp_verified"] : ["facts_verified", "otp_verified"]), gt(appointmentChangeVerifications.expiresAt, new Date()))).returning({ id: appointmentChangeVerifications.id });
   if (rows.length > 0) await auditAppointmentChange(tx, { businessId: input.businessId, appointmentId: input.appointmentId, verificationId: input.verificationId, eventType: "appointment_change.verification_consumed", payload: { action: input.action } });
   return rows.length > 0;
 }

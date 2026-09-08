@@ -62,7 +62,26 @@ async function main(): Promise<void> {
 
     const preview = await previewProspectDemo({ db: app.db }, token);
     assert(preview.state === "active" && preview.businessName === "Certified Demo", "Public demo preview did not resolve the active token.");
-    const claimed = await claimProspectDemo({ db: app.db }, { userId: claimantUserId, token });
+    const simultaneous = await Promise.all([
+      claimProspectDemo({ db: app.db }, { userId: claimantUserId, token }),
+      claimProspectDemo({ db: app.db }, { userId: claimantUserId, token }),
+    ]);
+    assert(simultaneous.filter(result => result.status === "claimed").length === 1 && simultaneous.filter(result => result.status === "already_claimed").length === 1, "Concurrent claims were not serialized and idempotent.");
+    const claimed = simultaneous[0]!;
+    await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async tx => {
+      const business = (await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId)))[0];
+      assert(business?.stage === "create_business", "Claim did not start original business onboarding.");
+      await tx.update(businesses).set({ onboardingStage: "website" }).where(eq(businesses.id, businessId));
+    });
+    const replay = await claimProspectDemo({ db: app.db }, { userId: claimantUserId, token });
+    assert(replay.status === "already_claimed", "Original claimant could not re-enter their demo.");
+    await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async tx => {
+      const business = (await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId)))[0];
+      assert(business?.stage === "website", "Re-entering a claimed demo reset onboarding progress.");
+    });
+    let foreignRejected = false;
+    try { await claimProspectDemo({ db: app.db }, { userId: operatorUserId, token }); } catch { foreignRejected = true; }
+    assert(foreignRejected, "Another user took over an already claimed demo.");
     assert(claimed.businessId === businessId, "Claim returned the wrong business.");
 
     await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async (tx) => {
@@ -76,7 +95,7 @@ async function main(): Promise<void> {
     assert(claimant?.activeBusinessId === businessId, "Claimed workspace was not activated for the claimant.");
     const claimedPreview = await previewProspectDemo({ db: app.db }, token);
     assert(claimedPreview.state === "claimed", "Public preview did not transition to claimed state.");
-    console.log(JSON.stringify({ createdPreparing: true, tokenRotated: true, readinessPublished: true, revokedClosed: true, expirySwept: true, previewResolved: true, ownershipTransferred: true, operatorRemoved: true, claimedStateVisible: true }));
+    console.log(JSON.stringify({ createdPreparing: true, tokenRotated: true, readinessPublished: true, revokedClosed: true, expirySwept: true, previewResolved: true, ownershipTransferred: true, operatorRemoved: true, claimedStateVisible: true, concurrentClaimsSerialized: true, originalClaimantReplay: true, foreignClaimRejected: true }));
   } finally {
     for (const createdBusinessId of createdBusinessIds) {
       await withBusinessTransaction(worker.db, { businessId: createdBusinessId, actorType: "worker" }, async (tx) => {

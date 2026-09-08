@@ -81,7 +81,7 @@ LobbyStack donne aux affiliés du matériel plus solide :
 
 - **Inspection du code.** Un acheteur sceptique peut examiner le produit au lieu de s'en remettre à la page marketing.
 - **Auto-hébergement.** Les équipes peuvent faire tourner LobbyStack sur leur propre infrastructure quand elles veulent ce contrôle.
-- **Fournisseurs au choix.** Les déploiements auto-hébergés peuvent utiliser leurs propres comptes Convex, Twilio, OpenAI, calendrier, analytics, facturation et courriel.
+- **Fournisseurs au choix.** Les déploiements auto-hébergés peuvent utiliser leurs propres comptes PostgreSQL, Redis, Twilio, IA compatible avec OpenAI, Google Calendar, analytics, facturation et courriel.
 - **Extensibilité.** Les agences et développeurs peuvent adapter la pile aux workflows clients sans reconstruire la couche réceptionniste.
 - **Cloud hébergé.** Les entreprises non techniques peuvent choisir le produit géré et éviter l'infrastructure.
 
@@ -113,7 +113,7 @@ Utilisez le programme quand vous pouvez défendre un cas précis.
 
 ### Pour les entreprises locales
 
-LobbyStack répond aux appels, répond aux SMS, prend des rendez-vous, gère les changements de rendez-vous et transfère les conversations à une personne quand il le faut. Utilisez cet angle pour les opérateurs qui perdent du revenu quand l'équipe ne peut pas répondre.
+LobbyStack répond aux appels, centralise les conversations SMS et web, prend des rendez-vous, gère les changements de rendez-vous et transfère les appels à une personne quand il le faut. Utilisez cet angle pour les opérateurs qui perdent du revenu quand l'équipe ne peut pas répondre.
 
 ### Pour les agences
 

@@ -1,5 +1,5 @@
 ---
-title: "How Much Can an AI Receptionist Save You?"
+title: "How much can an AI receptionist save you?"
 description: "Estimate AI receptionist savings from lower answering costs, fewer missed calls, and faster follow-up. Use the missed call calculator to run the numbers."
 pubDate: 2026-06-03T12:00:00-04:00
 author: "LobbyStack Team"
@@ -22,7 +22,7 @@ The most obvious savings are the costs you can reduce or avoid.
 
 A full-time receptionist is useful, but even a modest hourly wage turns into a real monthly expense. The [Bureau of Labor Statistics](https://www.bls.gov/ooh/Office-and-Administrative-Support/Receptionists.htm) reported a median receptionist wage of $17.90/hour in May 2024. At 40 hours a week, that is roughly $3,100/month before payroll taxes, benefits, hiring, training, sick days, and coverage when the person is already on another call.
 
-For most businesses, this is more nuanced than a simple receptionist replacement question. A great person at the front desk does more than answer phones. Many small businesses, though, do not need a full-time hire solely for overflow, lunch breaks, weekends, after-hours calls, or the moments when the owner is doing the actual work.
+For most businesses, this is more nuanced than a receptionist replacement question. A great person at the front desk does more than answer phones. Many small businesses, though, do not need a full-time hire solely for overflow, lunch breaks, weekends, after-hours calls, or the moments when the owner is doing the actual work.
 
 Live answering services can fill that gap, but they are usually priced around receptionist minutes. For example, [Ruby's public pricing](https://www.ruby.com/plans-and-pricing/) lists 50 receptionist minutes at $250/month and 100 minutes at $395/month. That can be worth it if you need a human voice for every call. It can also get expensive if callers mostly need routine answers, booking help, intake, or a fast handoff.
 
@@ -61,7 +61,7 @@ That number is usually uncomfortable enough on its own.
 
 ## Use the missed call calculator
 
-LobbyStack has a [missed call revenue calculator](/missed-call-revenue-calculator/) for this exact reason. It uses a simple formula:
+LobbyStack has a [missed call revenue calculator](/missed-call-revenue-calculator/) for this exact reason. It uses a formula:
 
 ```text
 monthly revenue at risk =
@@ -99,7 +99,7 @@ Now make the recovery estimate boring on purpose. Assume better answering only s
 
 If the AI receptionist costs $30 to $100/month, the return can still make sense. One or two extra good bookings can cover the month.
 
-This is why average customer value matters so much. A $45 order, a $900 emergency job, a $2,500 project, and a repeat customer all lead to very different ROI.
+This is why average customer value matters so much. A $45 order, a $900 emergency job, a $2,500 project, and a repeat customer all lead to different ROI.
 
 ## Subtract the AI receptionist cost
 
@@ -131,12 +131,12 @@ An AI receptionist can help by:
 - Answering before callers hit voicemail.
 - Asking consistent intake questions.
 - Capturing names, numbers, preferred times, and the reason for the call.
-- Booking simple appointments when your rules allow it.
+- Booking routine appointments when your rules allow it.
 - Sending a call summary so the handoff is not based on memory.
 - Routing urgent calls differently from routine ones.
 - Following up while the caller is still interested.
 
-That last point matters. A callback two hours later often loses to an answer in the moment. Many customers are simply busy, and the next business that answers makes their life easier.
+That last point matters. A callback two hours later often loses to an answer in the moment. Many customers are busy, and the next business that answers removes another task from their day.
 
 ## AI receptionist vs answering service vs hiring
 
@@ -148,7 +148,7 @@ The best option depends on what callers need from the first conversation.
 | Answering service | Calls that need a live human but not someone inside your business | Minute-based pricing can climb as volume grows |
 | In-house receptionist | High-touch environments where the front desk handles many kinds of work | Payroll, coverage gaps, training, and backup coverage |
 
-For many small businesses, the practical question is which calls need human judgment and which calls simply need a fast, accurate first response.
+For many small businesses, the practical question is which calls need human judgment and which calls need a fast, accurate first response.
 
 If a caller needs judgment, escalation, or a sensitive conversation, route them. If they need hours, pricing basics, appointment options, intake, or a callback, automation may be enough to keep the opportunity alive.
 
@@ -165,7 +165,7 @@ An AI receptionist tends to make financial sense when a few of these are true:
 
 It is especially useful for calls where the next step is clear: answer a question, collect details, book an appointment, send a summary, route an urgent caller, or follow up right away.
 
-The more repeatable your call flow is, the easier it is for an AI receptionist to save money. If you already know the five questions your staff asks every new caller, you have a good starting point.
+Repeatable call flows give an AI receptionist more opportunities to save money. If you already know the five questions your staff asks every new caller, you have a good starting point.
 
 ## When it might not save much
 
@@ -177,11 +177,11 @@ If most calls require a licensed professional, a custom quote, or a sensitive hu
 
 The useful part is coverage. Good callers get a response before they vanish.
 
-There is also a trust question. If callers expect a highly personal conversation from the first second, automation should be used carefully. A bad implementation can feel like a wall. A good one should feel like a helpful first step: quick, clear, and honest about when a person will follow up.
+There is also a trust question. If callers expect a highly personal conversation from the first second, automation should be used carefully. A bad implementation can feel like a wall. A good one should feel like a helpful first step: brief, clear, and honest about when a person will follow up.
 
-The goal is to prevent easy opportunities from dying in voicemail.
+The goal is to prevent reachable opportunities from dying in voicemail.
 
-## A quick way to estimate your savings
+## Estimate your savings
 
 Use this five-minute worksheet:
 
@@ -194,7 +194,7 @@ Use this five-minute worksheet:
 
 Or skip the spreadsheet and use the [missed call calculator](/missed-call-revenue-calculator/).
 
-If you are unsure about the recovery percentage, start low. Try 10%, 25%, and 50% and see where the decision changes. If the numbers only work at 80% recovery, the case is probably too optimistic. If they work at 10% or 25%, the downside is easier to understand.
+If you are unsure about the recovery percentage, start low. Try 10%, 25%, and 50% and see where the decision changes. If the numbers only work at 80% recovery, the case is probably too optimistic. If they work at 10% or 25%, the downside is clear.
 
 It also helps to separate three numbers:
 
@@ -216,7 +216,7 @@ Add the revenue you expect to recover from missed calls to any answering costs y
 
 ### Does an AI receptionist recover every missed call?
 
-No. Some callers are not ready to book, unqualified, outside your service area, or a poor fit. The point is to recover a realistic share of the good calls by answering faster, collecting the right details, and making the next step easy.
+No. Some callers are not ready to book, unqualified, outside your service area, or a poor fit. The point is to recover a realistic share of the good calls by answering faster, collecting the right details, and making the next step clear.
 
 ### What if most of my missed calls are spam?
 
@@ -228,7 +228,7 @@ It depends on your average customer value. If one booked job is worth $300 and t
 
 ### Will customers care that it is AI?
 
-Some will, especially if the call feels evasive or trapped. Most care more about whether they get helped quickly. Be clear, keep the flow short, and hand off to a person when the caller needs judgment, urgency, or a real conversation.
+Some will, especially if the call feels evasive or trapped. Most care more about whether they receive prompt help. Be clear, keep the flow short, and hand off to a person when the caller needs judgment, urgency, or a real conversation.
 
 ## The short answer
 

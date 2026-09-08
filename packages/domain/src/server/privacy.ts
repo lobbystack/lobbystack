@@ -1,7 +1,8 @@
 import { and, eq, isNotNull, lt } from "drizzle-orm";
 
-import { calls, enqueueOutbox, messages, operatorNotificationDeliveries, storageObjects, transcripts, withBusinessTransaction } from "@lobbystack/db";
+import { calls, enqueueOutbox, inboxItems, messages, operatorNotificationDeliveries, storageObjects, transcripts, withBusinessTransaction } from "@lobbystack/db";
 
+import { EXPIRED_FOLLOW_UP_BODY, EXPIRED_FOLLOW_UP_TITLE } from "./followUpRetention";
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 
@@ -15,9 +16,13 @@ export async function scrubExpiredMessageContent(context: DomainContext, input: 
 export async function runPrivacyRetentionSweep(
   context: DomainContext,
   input: { businessId: string; now?: Date },
-): Promise<{ scrubbedMessages: number; scrubbedOperatorDeliveries: number; deletedTranscripts: number; queuedRecordings: number }> {
+): Promise<{ scrubbedFollowUps: number; scrubbedMessages: number; scrubbedOperatorDeliveries: number; deletedTranscripts: number; queuedRecordings: number }> {
   const now = input.now ?? new Date();
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const scrubbedFollowUps = await tx.update(inboxItems)
+      .set({ title: EXPIRED_FOLLOW_UP_TITLE, body: EXPIRED_FOLLOW_UP_BODY, contentRetentionStatus: "scrubbed", updatedAt: now })
+      .where(and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.contentRetentionStatus, "active"), isNotNull(inboxItems.contentExpiresAt), lt(inboxItems.contentExpiresAt, now)))
+      .returning({ id: inboxItems.id });
     const scrubbedMessages = await tx.update(messages)
       .set({ body: "[content expired]", contentExpiresAt: null, updatedAt: now })
       .where(and(eq(messages.businessId, input.businessId), isNotNull(messages.contentExpiresAt), lt(messages.contentExpiresAt, now)))
@@ -63,6 +68,7 @@ export async function runPrivacyRetentionSweep(
       });
     }
     return {
+      scrubbedFollowUps: scrubbedFollowUps.length,
       scrubbedMessages: scrubbedMessages.length,
       scrubbedOperatorDeliveries: scrubbedOperatorDeliveries.length,
       deletedTranscripts: deletedTranscripts.length,

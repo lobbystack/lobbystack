@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq, gte, isNotNull, isNull, lt, ne, or } from "drizzle-orm";
 
-import { calls, enqueueOutbox, knowledgeDocuments, storageObjects, withBusinessTransaction } from "@lobbystack/db";
+import { billingAccounts, businesses, calls, enqueueOutbox, knowledgeDocuments, storageObjects, withBusinessTransaction } from "@lobbystack/db";
+import { billingPlanSlugs, getKnowledgeStorageLimitBytes, type BillingPlanSlug } from "@lobbystack/shared";
+import { getKnowledgeStorageUsageBytes } from "./knowledge";
 import { isAllowedUploadContentType } from "@lobbystack/contracts";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -26,10 +28,12 @@ export async function createUpload(
 ): Promise<{ objectId: string; key: string; url: string; headers?: Record<string, string> }> {
   if (!isAllowedUploadContentType(input.purpose, input.contentType)) throw new Error(`Content type is not allowed for ${input.purpose} uploads.`);
   if (input.purpose === "knowledge" && !input.checksum) throw new Error("Knowledge uploads require a SHA-256 checksum.");
+  if (input.purpose === "knowledge" && input.length > 10 * 1024 * 1024) throw new Error("Documents must be 10 MB or smaller.");
   const objectId = randomUUID();
   const key = `${input.businessId}/${input.purpose}/${objectId}/${input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
-    await requireBusinessMembership(tx, input);
+    if (input.purpose === "knowledge") await requireBusinessAdmin(tx, input);
+    else await requireBusinessMembership(tx, input);
     await tx.insert(storageObjects).values({ id: objectId, businessId: input.businessId, objectKey: key, purpose: input.purpose, fileName: input.fileName, contentType: input.contentType, contentLength: input.length, ...(input.checksum !== undefined ? { checksum: input.checksum } : {}), status: "pending", expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) });
   });
   const upload = await storage.createUpload({ key, contentType: input.contentType, length: input.length, ...(input.checksum !== undefined ? { checksum: input.checksum } : {}) });
@@ -38,7 +42,7 @@ export async function createUpload(
 
 export async function finalizeUpload(
   context: DomainContext,
-  input: { userId: string; businessId: string; objectId: string; length: number; contentType: string; checksum?: string | undefined },
+  input: { userId: string; businessId: string; objectId: string; length: number; contentType: string; title?: string | undefined; tags?: string[] | undefined; checksum?: string | undefined },
   storage: StorageProvider,
 ): Promise<void> {
   const object = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
@@ -52,17 +56,26 @@ export async function finalizeUpload(
   const metadata = await storage.headObject({ key: object.objectKey });
   if (!isAllowedUploadContentType(object.purpose, input.contentType)) throw new Error(`Content type is not allowed for ${object.purpose} uploads.`);
   if (object.purpose === "knowledge" && (!input.checksum || !object.checksum)) throw new Error("Knowledge uploads require a SHA-256 checksum.");
-  if (!metadata || metadata.length !== input.length || metadata.contentType !== input.contentType || metadata.contentType !== object.contentType || (object.checksum && input.checksum !== object.checksum) || (input.checksum && metadata.checksum !== input.checksum)) {
+  if (!metadata || metadata.length !== input.length || metadata.length !== object.contentLength || metadata.contentType !== input.contentType || metadata.contentType !== object.contentType || (object.checksum && input.checksum !== object.checksum) || (input.checksum && metadata.checksum !== input.checksum)) {
     throw new Error("Uploaded object metadata does not match the requested upload.");
   }
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    await tx.update(storageObjects).set({ status: "ready", contentLength: metadata.length, contentType: metadata.contentType, ...(metadata.checksum ? { checksum: metadata.checksum } : {}), updatedAt: new Date() }).where(eq(storageObjects.id, input.objectId));
+    if (object.purpose === "knowledge") {
+      const [business] = await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, input.businessId)).for("update");
+      const [account] = await tx.select({ plan: billingAccounts.plan }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId));
+      const plan = account?.plan && (billingPlanSlugs as readonly string[]).includes(account.plan) ? account.plan as BillingPlanSlug : business?.deploymentMode === "self_hosted_standard" ? "self_host" : "free_cloud";
+      const limit = getKnowledgeStorageLimitBytes(plan);
+      if (limit !== null && await getKnowledgeStorageUsageBytes(tx, input.businessId) + metadata.length > limit) throw new Error(`Knowledge storage limit reached. ${Math.ceil(limit / 1024 / 1024)} MB is included on this plan.`);
+    }
+    const finalized = await tx.update(storageObjects).set({ status: "ready", contentLength: metadata.length, contentType: metadata.contentType, ...(metadata.checksum ? { checksum: metadata.checksum } : {}), updatedAt: new Date() }).where(and(eq(storageObjects.id, input.objectId), eq(storageObjects.businessId, input.businessId), eq(storageObjects.status, "pending"))).returning({ id: storageObjects.id });
+    if (!finalized.length) throw new Error("Upload is missing or already finalized.");
     if (object.purpose === "knowledge") {
       const [document] = await tx.insert(knowledgeDocuments).values({
         businessId: input.businessId,
         sourceType: "upload",
-        title: object.fileName,
+        title: input.title?.trim() || object.fileName,
+        tags: input.tags ?? [],
         storageObjectId: input.objectId,
         mimeType: metadata.contentType,
         status: "pending",

@@ -542,7 +542,7 @@ export function useWebVoiceCall({
           visitorId,
           ...(getStartPayload ? await getStartPayload() : {}),
           sdp: offer.sdp,
-          pageUrl: window.location.href,
+          pageUrl: `${window.location.origin}${window.location.pathname}`,
         }),
       });
 

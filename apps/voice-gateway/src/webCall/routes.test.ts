@@ -313,6 +313,22 @@ describe("web call routes", () => {
     expect(startWebVoiceCallMock).not.toHaveBeenCalled();
   });
 
+  it("rejects an unprepared voice snapshot before opening a provider call", async () => {
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: null });
+    const providerFetch = vi.fn();
+    vi.stubGlobal("fetch", providerFetch);
+    const server = createServer();
+    const response = await server.inject({
+      method: "POST", url: "/web-call/sessions",
+      headers: { origin: "https://lobbystack.com", "x-widget-parent-origin": "https://customer.example", "content-type": "application/json" },
+      payload: { businessSlug: "other-business", widgetSessionToken: "signed-widget-session", sdp: "v=0" },
+    });
+    expect(response.statusCode).toBe(503);
+    expect(providerFetch).not.toHaveBeenCalled();
+    expect(startWebVoiceCallMock).not.toHaveBeenCalled();
+    await server.close();
+  });
+
   it("allows a signed widget session for a non-public business", async () => {
     fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
     startWebVoiceCallMock.mockResolvedValueOnce({

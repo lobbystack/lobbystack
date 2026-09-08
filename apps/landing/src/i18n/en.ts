@@ -27,9 +27,9 @@ export const en = {
         "LobbyStack is open-source AI receptionist software for small businesses, with 24/7 phone answering, lead qualification, appointment booking, and call routing.",
     },
     "/features/": {
-      title: "AI Receptionist Features for Calls, SMS, and Booking",
+      title: "AI receptionist features for calls, messages, and booking",
       description:
-        "Explore LobbyStack AI receptionist features for phone answering, SMS, appointment booking, call routing, lead qualification, follow-up, and summaries.",
+        "Explore LobbyStack features for phone answering, website chat, SMS alerts, appointment booking, call routing, follow-up, and summaries.",
     },
     "/pricing/": {
       title: "AI Receptionist Pricing for Small Businesses",

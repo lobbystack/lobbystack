@@ -82,7 +82,7 @@ LobbyStack donne à l'agence un réceptionniste moins cher, du code qu'elle peut
 
 L'agence doit tester la séparation des clients, la facturation des fournisseurs, l'accès aux appels, les pannes de calendrier et les exports.
 
-## Choisissez Frontdesk si
+## Choisissez frontdesk si
 
 Choisissez Frontdesk si vous avez besoin de regrouper voix, messagerie, chat, courriel et CRM et comptez utiliser ces canaux comme un seul espace commercial.
 

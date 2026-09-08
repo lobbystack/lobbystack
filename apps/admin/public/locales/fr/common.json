@@ -88,5 +88,37 @@
       "unavailable": "Votre réceptionniste IA est indisponible pour le moment.",
       "generic": "Une erreur est survenue au démarrage de l’appel."
     }
+  },
+  "appointments": {
+    "title": "Rendez-vous",
+    "summary_one": "{{name}} · {{count}} rendez-vous à venir",
+    "summary_other": "{{name}} · {{count}} rendez-vous à venir",
+    "chooseWorkspace": "Choisissez un espace pour consulter les rendez-vous.",
+    "refresh": "Actualiser",
+    "time": "Heure",
+    "customer": "Client",
+    "service": "Service",
+    "staff": "Personnel",
+    "status": "Statut",
+    "calendar": "Calendrier",
+    "loading": "Chargement des rendez-vous…",
+    "unavailable": "Les rendez-vous sont indisponibles.",
+    "empty": "Aucun rendez-vous à venir.",
+    "unknownContact": "Contact inconnu",
+    "statuses": {
+      "confirmed": "Confirmé",
+      "cancelled": "Annulé",
+      "completed": "Terminé",
+      "no_show": "Absent",
+      "pending": "En attente"
+    },
+    "calendarStates": {
+      "not_required": "Non requis",
+      "pending": "En attente",
+      "synced": "Synchronisé",
+      "failed": "Échec",
+      "error": "Erreur",
+      "cancelled": "Annulé"
+    }
   }
 }

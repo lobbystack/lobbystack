@@ -79,6 +79,16 @@ export const defaultAppointmentChangePolicy: AppointmentChangePolicy = {
   verificationMode: "phone_match_and_facts",
 };
 
+/** Missing legacy policy uses the original defaults; malformed policies disable automation. */
+export function normalizeAppointmentChangePolicy(value: unknown): AppointmentChangePolicy {
+  if (value == null) return { ...defaultAppointmentChangePolicy };
+  const policy = value as Partial<AppointmentChangePolicy>;
+  if (typeof policy.enabled === "boolean" && typeof policy.allowCancel === "boolean" && typeof policy.allowReschedule === "boolean" && ["phone_match_and_facts", "otp_required", "operator_only"].includes(policy.verificationMode ?? "")) {
+    return { enabled: policy.enabled, allowCancel: policy.allowCancel, allowReschedule: policy.allowReschedule, verificationMode: policy.verificationMode! };
+  }
+  return { enabled: false, allowCancel: false, allowReschedule: false, verificationMode: "operator_only" };
+}
+
 export type KnowledgeSnippet = {
   id: string;
   title: string;
@@ -371,6 +381,7 @@ export type {
 export {
   buildTwilioSignaturePayload,
   computeTwilioSignature,
+  resolveTwilioWebhookUrl,
   escapeXmlText,
   normalizeTwilioFormFields,
   validateTwilioSignature,
@@ -390,3 +401,7 @@ export type {
 } from "./twilioMessageStatus";
 export * from "./billing";
 export { normalizeAuthEmail } from "./auth";
+
+export { isTransferPermitted, normalizeTransferMode } from "./transferPolicy";
+
+export { OPERATOR_SMS_DISCLOSURE_TEXT, OPERATOR_SMS_DISCLOSURE_VERSION } from "./operatorSmsConsent";

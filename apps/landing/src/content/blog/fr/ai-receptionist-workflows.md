@@ -16,7 +16,7 @@ Un outil de workflow voit quatre chemins. Une réceptionniste entend un client q
 
 C'est là que beaucoup de workflows de réceptionniste IA deviennent difficiles à maintenir. La première démo marche parce que l'appelant suit le script. Les vrais appels ne le font pas.
 
-## La démo est simple
+## La démo masque la complexité
 
 Un premier montage de réceptionniste IA ressemble souvent à ceci :
 

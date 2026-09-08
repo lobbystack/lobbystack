@@ -43,5 +43,53 @@
     "unavailableTitle": "Ce lien de démo est indisponible",
     "unavailableDescription": "Le lien de démo est manquant ou n'est plus valide.",
     "retry": "Réessayer"
+  },
+  "operator": {
+    "title": "Démos de prospection",
+    "description": "Préparez des espaces de réception isolés et temporaires avant de les partager avec un prospect.",
+    "count_one": "{{count}} démo",
+    "count_other": "{{count}} démos",
+    "refresh": "Actualiser",
+    "loading": "Chargement des démos...",
+    "empty": "Aucune démo de prospection n’a encore été préparée.",
+    "rotate": "Renouveler le lien",
+    "publish": "Publier",
+    "revoke": "Révoquer",
+    "openLink": "Ouvrir le lien sécurisé",
+    "tokenHint": "Renouvelez le lien dans cette session avant de publier ou de partager la démo. Les jetons bruts ne sont jamais stockés.",
+    "prepare": "Préparer une démo",
+    "prepareDescription": "L’espace reste privé pendant l’indexation de son site Web public.",
+    "businessName": "Nom de l’entreprise",
+    "websiteUrl": "URL du site Web",
+    "greeting": "Message d’accueil",
+    "suggestedPrompts": "Questions suggérées",
+    "create": "Créer une démo isolée",
+    "ingestion": "Importation :",
+    "snapshot": "Configuration :",
+    "prompts": "Questions :",
+    "promptsPlaceholder": "Quels services proposez-vous ?\nPuis-je demander un devis ?",
+    "statuses": {
+      "pending": "en attente",
+      "ready": "prêt",
+      "missing": "manquant",
+      "queued": "en file d’attente",
+      "crawling": "exploration",
+      "indexing": "indexation",
+      "completed": "terminé",
+      "failed": "échec",
+      "cancelled": "annulé",
+      "preparing": "en préparation",
+      "active": "actif",
+      "claimed": "réclamé",
+      "revoked": "révoqué",
+      "expired": "expiré"
+    },
+    "errors": {
+      "load": "Impossible de charger les démos de prospection. Essayez d’actualiser la page.",
+      "create": "Impossible de créer la démo. Vos saisies sont conservées ; veuillez réessayer.",
+      "rotate": "Impossible de renouveler le lien de la démo. Veuillez réessayer.",
+      "publish": "Impossible de publier la démo. Veuillez réessayer.",
+      "revoke": "Impossible de révoquer la démo. Veuillez réessayer."
+    }
   }
 }

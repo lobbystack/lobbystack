@@ -1,64 +1,263 @@
 {
+  "referenceCommit": "98df89901f1dca22b8c96ccf9509a8cd549f2eb9",
+  "visualHarness": "apps/admin/e2e/visual-parity.e2e.ts",
+  "visualCertifier": "scripts/admin-ui-visual-certify.mjs",
+  "visualMatrix": {
+    "locales": [
+      "en",
+      "fr"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "viewports": [
+      "1440x1000",
+      "390x844"
+    ],
+    "maxDiffPixelRatio": 0.001,
+    "colorThreshold": 0
+  },
+  "visualExemptions": [
+    "/messages",
+    "/settings/widget",
+    "/embed/[key]",
+    "/settings/plan/ai-sms-compliance"
+  ],
   "capabilities": [
     {
       "id": "onboarding.lifecycle",
       "status": "required",
-      "routes": ["/onboarding/business", "/onboarding/website", "/onboarding/knowledge", "/onboarding/greeting", "/onboarding/verify-phone", "/onboarding/verify-phone/code", "/onboarding/plan", "/onboarding/number", "/onboarding/attribution"],
-      "actions": ["create workspace", "capture website", "review knowledge", "configure greeting and locale", "verify phone", "select or skip number", "submit attribution", "resume after refresh"],
-      "roles": { "owner": "mutate", "admin": "mutate", "scheduler": "read", "viewer": "read" },
-      "implementation": ["apps/admin/src/lib/onboarding-route.ts", "apps/admin/src/components/onboarding-website-surface.tsx", "apps/admin/src/components/onboarding-knowledge-surface.tsx", "apps/admin/src/components/onboarding-greeting-surface.tsx", "apps/admin/src/components/onboarding-attribution-surface.tsx", "apps/admin/app/api/onboarding/stage/route.ts", "apps/admin/app/api/onboarding/attribution/route.ts", "packages/domain/src/server/onboarding.ts"],
-       "acceptanceTests": ["apps/admin/e2e/operator-auth.e2e.ts", "apps/admin/e2e/onboarding-flow.e2e.ts", "scripts/replacement-phone-onboarding-check.ts"]
+      "routes": [
+        "/onboarding/business",
+        "/onboarding/website",
+        "/onboarding/knowledge",
+        "/onboarding/greeting",
+        "/onboarding/verify-phone",
+        "/onboarding/verify-phone/code",
+        "/onboarding/plan",
+        "/onboarding/number",
+        "/onboarding/attribution"
+      ],
+      "actions": [
+        "create workspace",
+        "capture website",
+        "review knowledge",
+        "configure greeting and locale",
+        "verify phone",
+        "select or skip number",
+        "submit attribution",
+        "resume after refresh"
+      ],
+      "roles": {
+        "owner": "mutate",
+        "admin": "mutate",
+        "scheduler": "read",
+        "viewer": "read"
+      },
+      "implementation": [
+        "apps/admin/src/lib/onboarding-route.ts",
+        "apps/admin/src/components/onboarding-website-surface.tsx",
+        "apps/admin/src/components/onboarding-knowledge-surface.tsx",
+        "apps/admin/src/components/onboarding-greeting-surface.tsx",
+        "apps/admin/src/components/onboarding-attribution-surface.tsx",
+        "apps/admin/app/api/onboarding/stage/route.ts",
+        "apps/admin/app/api/onboarding/attribution/route.ts",
+        "packages/domain/src/server/onboarding.ts"
+      ],
+      "acceptanceTests": [
+        "apps/admin/e2e/operator-auth.e2e.ts",
+        "apps/admin/e2e/onboarding-flow.e2e.ts",
+        "scripts/replacement-phone-onboarding-check.ts"
+      ]
     },
     {
       "id": "calls.detail_and_recordings",
       "status": "required",
-      "routes": ["/calls", "/calls/[callId]"],
-      "actions": ["search calls", "paginate calls", "open transcript", "view outcome", "view recording state", "download signed recording"],
-      "roles": { "owner": "mutate", "admin": "mutate", "scheduler": "read", "viewer": "read" },
-      "implementation": ["apps/admin/app/api/calls/route.ts", "apps/admin/app/api/calls/[callId]/route.ts", "apps/admin/app/api/calls/[callId]/recording/route.ts", "apps/admin/src/components/live-call-detail-surface.tsx", "packages/domain/src/server/voice.ts", "packages/domain/src/server/storage.ts"],
-       "acceptanceTests": ["apps/admin/e2e/operator-auth.e2e.ts", "scripts/replacement-call-detail-check.ts", "scripts/replacement-storage-check.ts"]
+      "routes": [
+        "/calls",
+        "/calls/[callId]"
+      ],
+      "actions": [
+        "search calls",
+        "paginate calls",
+        "open transcript",
+        "view outcome",
+        "view recording state",
+        "download signed recording"
+      ],
+      "roles": {
+        "owner": "mutate",
+        "admin": "mutate",
+        "scheduler": "read",
+        "viewer": "read"
+      },
+      "implementation": [
+        "apps/admin/app/api/calls/route.ts",
+        "apps/admin/app/api/calls/[callId]/route.ts",
+        "apps/admin/app/api/calls/[callId]/recording/route.ts",
+        "apps/admin/src/components/live-call-detail-surface.tsx",
+        "packages/domain/src/server/voice.ts",
+        "packages/domain/src/server/storage.ts"
+      ],
+      "acceptanceTests": [
+        "apps/admin/e2e/operator-auth.e2e.ts",
+        "scripts/replacement-call-detail-check.ts",
+        "scripts/replacement-storage-check.ts"
+      ]
     },
     {
       "id": "management.crud",
       "status": "required",
-      "routes": ["/agent/knowledge", "/agent/services", "/agent/rules", "/contacts", "/settings/team"],
-      "actions": ["create", "edit", "enable or disable", "delete", "search", "paginate", "reorder rules", "manage members"],
-      "roles": { "owner": "mutate", "admin": "mutate", "scheduler": "limited", "viewer": "read" },
-      "implementation": ["apps/admin/app/api/knowledge/route.ts", "apps/admin/app/api/catalog/route.ts", "apps/admin/app/api/rules/route.ts", "apps/admin/app/api/contacts/route.ts", "apps/admin/app/api/team/route.ts", "packages/domain/src/server/knowledge.ts", "packages/domain/src/server/catalog.ts", "packages/domain/src/server/rules.ts", "packages/domain/src/server/tenancy.ts"],
-       "acceptanceTests": ["apps/admin/e2e/operator-auth.e2e.ts", "scripts/replacement-role-authorization-check.ts"]
+      "routes": [
+        "/agent/knowledge",
+        "/agent/services",
+        "/agent/rules",
+        "/contacts",
+        "/settings/team"
+      ],
+      "actions": [
+        "create",
+        "edit",
+        "enable or disable",
+        "delete",
+        "search",
+        "paginate",
+        "reorder rules",
+        "manage members"
+      ],
+      "roles": {
+        "owner": "mutate",
+        "admin": "mutate",
+        "scheduler": "limited",
+        "viewer": "read"
+      },
+      "implementation": [
+        "apps/admin/app/api/knowledge/route.ts",
+        "apps/admin/app/api/catalog/route.ts",
+        "apps/admin/app/api/rules/route.ts",
+        "apps/admin/app/api/contacts/route.ts",
+        "apps/admin/app/api/team/route.ts",
+        "packages/domain/src/server/knowledge.ts",
+        "packages/domain/src/server/catalog.ts",
+        "packages/domain/src/server/rules.ts",
+        "packages/domain/src/server/tenancy.ts"
+      ],
+      "acceptanceTests": [
+        "apps/admin/e2e/operator-auth.e2e.ts",
+        "scripts/replacement-role-authorization-check.ts"
+      ]
     },
     {
       "id": "integrations.google_calendar",
       "status": "required",
-      "routes": ["/integrations"],
-       "actions": ["connect", "discover calendars", "select calendar", "assign staff", "refresh", "disconnect"],
-      "roles": { "owner": "mutate", "admin": "mutate", "scheduler": "read", "viewer": "read" },
-      "implementation": ["apps/admin/app/api/integrations/route.ts", "apps/admin/app/api/calendar/google/start/route.ts", "apps/admin/app/api/calendar/google/callback/route.ts", "packages/domain/src/server/calendar.ts", "apps/admin/src/lib/google-calendar-oauth.ts"],
-      "acceptanceTests": ["apps/admin/src/lib/google-calendar-oauth.test.ts"]
+      "routes": [
+        "/integrations"
+      ],
+      "actions": [
+        "connect",
+        "discover calendars",
+        "select calendar",
+        "assign staff",
+        "refresh",
+        "disconnect"
+      ],
+      "roles": {
+        "owner": "mutate",
+        "admin": "mutate",
+        "scheduler": "read",
+        "viewer": "read"
+      },
+      "implementation": [
+        "apps/admin/app/api/integrations/route.ts",
+        "apps/admin/app/api/calendar/google/start/route.ts",
+        "apps/admin/app/api/calendar/google/callback/route.ts",
+        "packages/domain/src/server/calendar.ts",
+        "apps/admin/src/lib/google-calendar-oauth.ts"
+      ],
+      "acceptanceTests": [
+        "apps/admin/src/lib/google-calendar-oauth.test.ts"
+      ]
     },
     {
       "id": "analytics_and_billing.ux",
       "status": "required",
-      "routes": ["/analytics", "/settings/usage", "/settings/plan"],
-      "actions": ["choose date range", "view metrics", "view usage", "change billing interval", "open invoices", "edit overage cap"],
-      "roles": { "owner": "mutate", "admin": "mutate", "scheduler": "read", "viewer": "read" },
-      "implementation": ["apps/admin/app/api/analytics/route.ts", "apps/admin/app/api/billing/route.ts", "apps/admin/src/components/live-analytics-surface.tsx", "apps/admin/src/components/live-plan-surface.tsx", "packages/domain/src/server/billing.ts", "packages/domain/src/server/unitEconomics.ts"],
-      "acceptanceTests": ["scripts/replacement-billing-check.ts", "scripts/replacement-unit-economics-check.ts"]
+      "routes": [
+        "/analytics",
+        "/settings/usage",
+        "/settings/plan"
+      ],
+      "actions": [
+        "choose date range",
+        "view metrics",
+        "view usage",
+        "change billing interval",
+        "open invoices",
+        "edit overage cap"
+      ],
+      "roles": {
+        "owner": "mutate",
+        "admin": "mutate",
+        "scheduler": "read",
+        "viewer": "read"
+      },
+      "implementation": [
+        "apps/admin/app/api/analytics/route.ts",
+        "apps/admin/app/api/billing/route.ts",
+        "apps/admin/src/components/live-analytics-surface.tsx",
+        "apps/admin/src/components/live-plan-surface.tsx",
+        "packages/domain/src/server/billing.ts",
+        "packages/domain/src/server/unitEconomics.ts"
+      ],
+      "acceptanceTests": [
+        "scripts/replacement-billing-check.ts",
+        "scripts/replacement-unit-economics-check.ts"
+      ]
     },
     {
       "id": "dashboard.utilities",
       "status": "required",
-      "routes": ["/", "/setup-guide", "/affiliate", "/agent"],
-      "actions": ["test call", "send feedback", "open setup guide", "open affiliate", "redirect agent entry point"],
-      "roles": { "owner": "mutate", "admin": "mutate", "scheduler": "limited", "viewer": "read" },
-      "implementation": ["apps/admin/src/components/dashboard-shell.tsx", "apps/admin/app/api/feedback/route.ts", "apps/admin/app/(dashboard)/agent/page.tsx", "apps/admin/src/components/live-setup-guide-surface.tsx", "apps/admin/src/components/live-affiliate-surface.tsx"],
-      "acceptanceTests": ["apps/admin/src/lib/feedback-rate-limit.test.ts"]
+      "routes": [
+        "/",
+        "/setup-guide",
+        "/affiliate",
+        "/agent"
+      ],
+      "actions": [
+        "test call",
+        "send feedback",
+        "open setup guide",
+        "open affiliate",
+        "redirect agent entry point"
+      ],
+      "roles": {
+        "owner": "mutate",
+        "admin": "mutate",
+        "scheduler": "limited",
+        "viewer": "read"
+      },
+      "implementation": [
+        "apps/admin/src/components/dashboard-shell.tsx",
+        "apps/admin/app/api/feedback/route.ts",
+        "apps/admin/app/(dashboard)/agent/page.tsx",
+        "apps/admin/src/components/live-setup-guide-surface.tsx",
+        "apps/admin/src/components/live-affiliate-surface.tsx"
+      ],
+      "acceptanceTests": [
+        "apps/admin/src/lib/feedback-rate-limit.test.ts"
+      ]
     },
     {
       "id": "demo.path_token",
       "status": "replaced",
-      "implementation": ["apps/admin/src/components/demo-token-compatibility-route.tsx", "apps/admin/src/components/demo-surface.tsx", "apps/admin/src/components/claim-demo-surface.tsx"],
-      "acceptanceTests": ["scripts/replacement-demo-check.ts"]
+      "implementation": [
+        "apps/admin/src/components/demo-token-compatibility-route.tsx",
+        "apps/admin/src/components/demo-surface.tsx",
+        "apps/admin/src/components/claim-demo-surface.tsx"
+      ],
+      "acceptanceTests": [
+        "scripts/replacement-demo-check.ts"
+      ]
     },
     {
       "id": "billing.ai_sms",
@@ -69,6 +268,1047 @@
       "id": "compliance.twilio_a2p",
       "status": "excluded",
       "reason": "Twilio A2P registration is intentionally excluded."
+    }
+  ],
+  "visualRoutes": [
+    {
+      "path": "/login",
+      "fixtureState": "public",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/signup",
+      "fixtureState": "public",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/forgot-password",
+      "fixtureState": "public",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/confirm-email-change",
+      "fixtureState": "public",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/accept-invite",
+      "fixtureState": "public",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/demo",
+      "forcedTheme": "light",
+      "fixtureState": "public",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/demo/[demoToken]",
+      "fixtureState": "public",
+      "state": "default",
+      "comparison": "frozen-main",
+      "dynamicKey": "demoToken",
+      "snapshotId": "/demo/[token]",
+      "portExpectedPath": "/demo",
+      "forcedTheme": "light",
+      "expectedPath": "/demo"
+    },
+    {
+      "path": "/claim-demo?token=[demoToken]",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main",
+      "dynamicKey": "demoToken",
+      "snapshotId": "/claim-demo-token",
+      "standalone": true
+    },
+    {
+      "path": "/reset-password/[resetToken]",
+      "fixtureState": "public",
+      "state": "legacy-link-compatibility",
+      "comparison": "port-baseline",
+      "dynamicKey": "resetToken",
+      "snapshotId": "/reset-password/[token]"
+    },
+    {
+      "path": "/onboarding/business",
+      "fixtureState": "onboarding",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/onboarding/website",
+      "fixtureState": "onboarding",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/onboarding/knowledge",
+      "fixtureState": "onboarding",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/onboarding/greeting",
+      "fixtureState": "onboarding",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/onboarding/verify-phone",
+      "fixtureState": "onboarding",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/onboarding/verify-phone/code",
+      "fixtureState": "onboarding",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/onboarding/number",
+      "fixtureState": "onboarding",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/onboarding/plan",
+      "fixtureState": "onboarding",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/onboarding/attribution",
+      "fixtureState": "onboarding",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/calls",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/analytics",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/agent",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/agent/basic-settings",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/agent/knowledge",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/agent/services",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/agent/rules",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/integrations",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/setup-guide",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/affiliate",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/contacts",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/settings",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main",
+      "expectedPath": "/settings/usage"
+    },
+    {
+      "path": "/settings/team",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/settings/appearance",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/settings/phone-number",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/settings/plan",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/settings/usage",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/settings/notifications",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/settings/account",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/calls/[callId]",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main",
+      "dynamicKey": "callId"
+    },
+    {
+      "path": "/contacts/[contactId]",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "frozen-main",
+      "dynamicKey": "contactId"
+    },
+    {
+      "path": "/verify-email",
+      "fixtureState": "public",
+      "state": "default",
+      "comparison": "port-baseline"
+    },
+    {
+      "path": "/reset-password",
+      "fixtureState": "public",
+      "state": "default",
+      "comparison": "port-baseline"
+    },
+    {
+      "path": "/messages",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New AI chat view"
+    },
+    {
+      "path": "/settings/widget",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New AI chat widget settings"
+    },
+    {
+      "path": "/embed/[key]",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New embeddable AI chat view"
+    },
+    {
+      "path": "/settings/plan/ai-sms-compliance",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "AI-SMS compliance is intentionally excluded"
+    },
+    {
+      "path": "/calls",
+      "snapshotId": "/calls-feedback-empty",
+      "fixtureState": "operator",
+      "state": "feedback-empty",
+      "comparison": "frozen-main",
+      "interaction": "feedback-empty",
+      "viewports": [
+        "desktop"
+      ]
+    },
+    {
+      "path": "/calls",
+      "snapshotId": "/calls-feedback-invalid",
+      "fixtureState": "operator",
+      "state": "feedback-invalid",
+      "comparison": "frozen-main",
+      "interaction": "feedback-invalid",
+      "viewports": [
+        "desktop"
+      ]
+    },
+    {
+      "path": "/agent/knowledge",
+      "snapshotId": "/agent/knowledge-indexed",
+      "fixtureState": "operator",
+      "state": "indexed-document-expanded",
+      "comparison": "frozen-main",
+      "interaction": "knowledge-indexed",
+      "requiredFixture": "PARITY_KNOWLEDGE_DOCUMENTS_FIXTURE"
+    },
+    {
+      "path": "/agent/knowledge",
+      "snapshotId": "/agent/knowledge-processing",
+      "fixtureState": "operator",
+      "state": "processing-document-expanded",
+      "comparison": "frozen-main",
+      "interaction": "knowledge-processing",
+      "requiredFixture": "PARITY_KNOWLEDGE_DOCUMENTS_FIXTURE"
+    },
+    {
+      "path": "/agent/knowledge",
+      "snapshotId": "/agent/knowledge-error",
+      "fixtureState": "operator",
+      "state": "error-document-expanded",
+      "comparison": "frozen-main",
+      "interaction": "knowledge-error",
+      "requiredFixture": "PARITY_KNOWLEDGE_DOCUMENTS_FIXTURE"
+    },
+    {
+      "path": "/agent/services",
+      "snapshotId": "/agent/service-add",
+      "fixtureState": "operator",
+      "state": "create-dialog",
+      "comparison": "frozen-main",
+      "interaction": "service-add",
+      "requiredFixture": "PARITY_AGENT_EDITOR_FIXTURE"
+    },
+    {
+      "path": "/agent/rules",
+      "snapshotId": "/agent/rule-add",
+      "fixtureState": "operator",
+      "state": "create-dialog",
+      "comparison": "frozen-main",
+      "interaction": "rule-add",
+      "requiredFixture": "PARITY_AGENT_EDITOR_FIXTURE"
+    },
+    {
+      "path": "/agent/knowledge",
+      "snapshotId": "/agent/knowledge-add-text",
+      "fixtureState": "operator",
+      "state": "create-text-dialog",
+      "comparison": "frozen-main",
+      "interaction": "add-text",
+      "requiredFixture": "PARITY_AGENT_EDITOR_FIXTURE"
+    },
+    {
+      "path": "/agent/knowledge",
+      "snapshotId": "/agent/knowledge-add-website",
+      "fixtureState": "operator",
+      "state": "create-website-dialog",
+      "comparison": "frozen-main",
+      "interaction": "add-website",
+      "requiredFixture": "PARITY_AGENT_EDITOR_FIXTURE"
+    },
+    {
+      "path": "/agent/knowledge",
+      "snapshotId": "/agent/knowledge-add-upload",
+      "fixtureState": "operator",
+      "state": "create-upload-dialog",
+      "comparison": "frozen-main",
+      "interaction": "add-upload",
+      "requiredFixture": "PARITY_AGENT_EDITOR_FIXTURE"
+    },
+    {
+      "path": "/onboarding/number",
+      "snapshotId": "/onboarding/number-populated",
+      "fixtureState": "onboarding",
+      "state": "provider-inventory-populated",
+      "comparison": "frozen-main",
+      "interaction": "number-populated",
+      "requiredFixture": "PARITY_NUMBER_INVENTORY_FIXTURE"
+    },
+    {
+      "path": "/onboarding/number",
+      "snapshotId": "/onboarding/number-more",
+      "fixtureState": "onboarding",
+      "state": "provider-inventory-more",
+      "comparison": "frozen-main",
+      "interaction": "number-more",
+      "requiredFixture": "PARITY_NUMBER_INVENTORY_FIXTURE"
+    },
+    {
+      "path": "/onboarding/number",
+      "snapshotId": "/onboarding/number-selected",
+      "fixtureState": "onboarding",
+      "state": "selected-number-review",
+      "comparison": "frozen-main",
+      "requiredFixture": "PARITY_SELECTED_NUMBER_FIXTURE"
+    },
+    {
+      "path": "/calls/[callId]",
+      "snapshotId": "/calls/recording-unavailable",
+      "fixtureState": "operator",
+      "state": "recording-unavailable",
+      "comparison": "frozen-main",
+      "dynamicKey": "callId",
+      "interaction": "recording-tab",
+      "requiredFixture": "PARITY_RECORDING_MISSING_FIXTURE"
+    },
+    {
+      "path": "/settings/phone-number",
+      "snapshotId": "/settings/upgrade-dialog",
+      "fixtureState": "operator",
+      "state": "upgrade-dialog",
+      "comparison": "frozen-main",
+      "interaction": "upgrade-dialog",
+      "requiredFixture": "PARITY_UPGRADE_DIALOG_FIXTURE"
+    },
+    {
+      "path": "/calls",
+      "snapshotId": "/calls-user-menu",
+      "fixtureState": "operator",
+      "state": "user-menu",
+      "comparison": "frozen-main",
+      "interaction": "user-menu",
+      "requiredFixture": "PARITY_NAV_MENU_FIXTURE"
+    },
+    {
+      "path": "/forgot-password",
+      "snapshotId": "/forgot-password-verify",
+      "fixtureState": "public",
+      "state": "verify",
+      "comparison": "frozen-main",
+      "interaction": "reset-verify",
+      "requiredFixture": "PARITY_PASSWORD_RECOVERY_FIXTURE"
+    },
+    {
+      "path": "/forgot-password",
+      "snapshotId": "/forgot-password-invalid-code",
+      "fixtureState": "public",
+      "state": "invalid-code",
+      "comparison": "frozen-main",
+      "interaction": "reset-invalid-code",
+      "requiredFixture": "PARITY_PASSWORD_RECOVERY_FIXTURE"
+    },
+    {
+      "path": "/forgot-password",
+      "snapshotId": "/forgot-password-invalid-password",
+      "fixtureState": "public",
+      "state": "invalid-password",
+      "comparison": "frozen-main",
+      "interaction": "reset-invalid-password",
+      "requiredFixture": "PARITY_PASSWORD_RECOVERY_FIXTURE"
+    },
+    {
+      "path": "/confirm-email-change?token=parity-confirmation&email=new-email@example.invalid",
+      "snapshotId": "/confirm-email-change-ready",
+      "fixtureState": "public",
+      "state": "ready",
+      "comparison": "frozen-main",
+      "interaction": "email-change-ready",
+      "requiredFixture": "PARITY_EMAIL_CHANGE_FIXTURE"
+    },
+    {
+      "path": "/confirm-email-change?token=parity-confirmation&email=new-email@example.invalid",
+      "snapshotId": "/confirm-email-change-success",
+      "fixtureState": "public",
+      "state": "success",
+      "comparison": "frozen-main",
+      "interaction": "email-change-success",
+      "requiredFixture": "PARITY_EMAIL_CHANGE_FIXTURE"
+    },
+    {
+      "path": "/confirm-email-change?token=parity-confirmation&email=new-email@example.invalid",
+      "snapshotId": "/confirm-email-change-error",
+      "fixtureState": "public",
+      "state": "error",
+      "comparison": "frozen-main",
+      "interaction": "email-change-error",
+      "requiredFixture": "PARITY_EMAIL_CHANGE_FIXTURE"
+    },
+    {
+      "path": "/onboarding/number",
+      "snapshotId": "/onboarding/number-empty",
+      "fixtureState": "onboarding",
+      "state": "provider-inventory-empty",
+      "comparison": "frozen-main",
+      "interaction": "number-empty",
+      "requiredFixture": "PARITY_NUMBER_INVENTORY_FIXTURE"
+    },
+    {
+      "path": "/claim-demo?token=parity-claim-fixture",
+      "snapshotId": "/claim-demo-preparing",
+      "fixtureState": "operator",
+      "standalone": true,
+      "state": "preparing",
+      "comparison": "frozen-main",
+      "interaction": "claim-preparing",
+      "requiredFixture": "PARITY_DEMO_CLAIM_FIXTURE"
+    },
+    {
+      "path": "/claim-demo?token=parity-claim-fixture",
+      "snapshotId": "/claim-demo-invalid",
+      "fixtureState": "operator",
+      "standalone": true,
+      "state": "invalid",
+      "comparison": "frozen-main",
+      "interaction": "claim-invalid",
+      "requiredFixture": "PARITY_DEMO_CLAIM_FIXTURE"
+    },
+    {
+      "path": "/claim-demo?token=parity-claim-fixture",
+      "snapshotId": "/claim-demo-error",
+      "fixtureState": "operator",
+      "standalone": true,
+      "state": "error",
+      "comparison": "frozen-main",
+      "interaction": "claim-error",
+      "requiredFixture": "PARITY_DEMO_CLAIM_FIXTURE"
+    },
+    {
+      "path": "/demo#prospect_demo_token=parity-preview",
+      "referencePath": "/demo/parity-preview",
+      "portExpectedPath": "/demo",
+      "snapshotId": "/demo-active",
+      "fixtureState": "public",
+      "forcedTheme": "light",
+      "state": "active",
+      "comparison": "frozen-main",
+      "interaction": "demo-active",
+      "requiredFixture": "PARITY_DEMO_PREVIEW_FIXTURE",
+      "expectedPath": "/demo"
+    },
+    {
+      "path": "/demo#prospect_demo_token=parity-preview",
+      "referencePath": "/demo/parity-preview",
+      "portExpectedPath": "/demo",
+      "snapshotId": "/demo-preparing",
+      "fixtureState": "public",
+      "forcedTheme": "light",
+      "state": "preparing",
+      "comparison": "frozen-main",
+      "interaction": "demo-preparing",
+      "requiredFixture": "PARITY_DEMO_PREVIEW_FIXTURE",
+      "expectedPath": "/demo"
+    },
+    {
+      "path": "/demo#prospect_demo_token=parity-preview",
+      "referencePath": "/demo/parity-preview",
+      "portExpectedPath": "/demo",
+      "snapshotId": "/demo-expired",
+      "fixtureState": "public",
+      "forcedTheme": "light",
+      "state": "expired",
+      "comparison": "frozen-main",
+      "interaction": "demo-expired",
+      "requiredFixture": "PARITY_DEMO_PREVIEW_FIXTURE",
+      "expectedPath": "/demo"
+    },
+    {
+      "path": "/demo#prospect_demo_token=parity-preview",
+      "referencePath": "/demo/parity-preview",
+      "portExpectedPath": "/demo",
+      "snapshotId": "/demo-revoked",
+      "fixtureState": "public",
+      "forcedTheme": "light",
+      "state": "revoked",
+      "comparison": "frozen-main",
+      "interaction": "demo-revoked",
+      "requiredFixture": "PARITY_DEMO_PREVIEW_FIXTURE",
+      "expectedPath": "/demo"
+    },
+    {
+      "path": "/demo#prospect_demo_token=parity-preview",
+      "referencePath": "/demo/parity-preview",
+      "portExpectedPath": "/demo",
+      "snapshotId": "/demo-claimed",
+      "fixtureState": "public",
+      "forcedTheme": "light",
+      "state": "claimed",
+      "comparison": "frozen-main",
+      "interaction": "demo-claimed",
+      "requiredFixture": "PARITY_DEMO_PREVIEW_FIXTURE",
+      "expectedPath": "/demo"
+    },
+    {
+      "path": "/settings/plan",
+      "snapshotId": "/settings/plan-paid",
+      "fixtureState": "operator",
+      "state": "paid",
+      "comparison": "frozen-main",
+      "interaction": "billing-paid",
+      "requiredFixture": "PARITY_PAID_BILLING_FIXTURE"
+    },
+    {
+      "path": "/settings/plan",
+      "snapshotId": "/settings/plan-readonly",
+      "fixtureState": "operator",
+      "state": "readonly",
+      "comparison": "frozen-main",
+      "interaction": "billing-readonly",
+      "requiredFixture": "PARITY_PAID_BILLING_FIXTURE"
+    },
+    {
+      "path": "/settings/plan",
+      "snapshotId": "/settings/plan-incomplete",
+      "fixtureState": "operator",
+      "state": "incomplete",
+      "comparison": "frozen-main",
+      "interaction": "billing-incomplete",
+      "requiredFixture": "PARITY_PAID_BILLING_FIXTURE"
+    },
+    {
+      "path": "/settings/plan",
+      "snapshotId": "/settings/plan-transactions",
+      "fixtureState": "operator",
+      "state": "transactions",
+      "comparison": "frozen-main",
+      "interaction": "billing-transactions",
+      "requiredFixture": "PARITY_PAID_BILLING_FIXTURE"
+    },
+    {
+      "path": "/agent/knowledge",
+      "snapshotId": "/agent/import-queued",
+      "fixtureState": "operator",
+      "state": "website-import-queued",
+      "comparison": "frozen-main",
+      "interaction": "import-queued",
+      "requiredFixture": "PARITY_WEBSITE_IMPORT_FIXTURE"
+    },
+    {
+      "path": "/agent/knowledge",
+      "snapshotId": "/agent/import-crawling",
+      "fixtureState": "operator",
+      "state": "website-import-crawling",
+      "comparison": "frozen-main",
+      "interaction": "import-crawling",
+      "requiredFixture": "PARITY_WEBSITE_IMPORT_FIXTURE"
+    },
+    {
+      "path": "/agent/knowledge",
+      "snapshotId": "/agent/import-indexing",
+      "fixtureState": "operator",
+      "state": "website-import-indexing",
+      "comparison": "frozen-main",
+      "interaction": "import-indexing",
+      "requiredFixture": "PARITY_WEBSITE_IMPORT_FIXTURE"
+    },
+    {
+      "path": "/agent/knowledge",
+      "snapshotId": "/agent/import-failed",
+      "fixtureState": "operator",
+      "state": "website-import-failed",
+      "comparison": "frozen-main",
+      "interaction": "import-failed",
+      "requiredFixture": "PARITY_WEBSITE_IMPORT_FIXTURE"
+    },
+    {
+      "path": "/agent/knowledge",
+      "snapshotId": "/agent/import-cancel",
+      "fixtureState": "operator",
+      "state": "website-import-cancel",
+      "comparison": "frozen-main",
+      "interaction": "import-cancel",
+      "requiredFixture": "PARITY_WEBSITE_IMPORT_FIXTURE"
+    },
+    {
+      "path": "/agent/knowledge",
+      "snapshotId": "/agent/import-failed-menu",
+      "fixtureState": "operator",
+      "state": "website-import-failed-menu",
+      "comparison": "frozen-main",
+      "interaction": "import-failed-menu",
+      "requiredFixture": "PARITY_WEBSITE_IMPORT_FIXTURE"
+    },
+    {
+      "path": "/agent/integrations",
+      "expectedPath": "/agent",
+      "fixtureState": "operator",
+      "state": "legacy-redirect",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/login",
+      "snapshotId": "/login/invalid-email",
+      "fixtureState": "public",
+      "state": "invalid-email",
+      "comparison": "frozen-main",
+      "interaction": "auth-invalid-email",
+      "requiredFixture": "PARITY_AUTH_STATE_FIXTURE"
+    },
+    {
+      "path": "/login",
+      "snapshotId": "/login/rejected",
+      "fixtureState": "public",
+      "state": "rejected",
+      "comparison": "frozen-main",
+      "interaction": "auth-rejected",
+      "requiredFixture": "PARITY_AUTH_STATE_FIXTURE"
+    },
+    {
+      "path": "/login",
+      "snapshotId": "/login/submitting",
+      "fixtureState": "public",
+      "state": "submitting",
+      "comparison": "frozen-main",
+      "interaction": "auth-submitting",
+      "requiredFixture": "PARITY_AUTH_STATE_FIXTURE"
+    },
+    {
+      "path": "/signup",
+      "snapshotId": "/signup/invalid-email",
+      "fixtureState": "public",
+      "state": "invalid-email",
+      "comparison": "frozen-main",
+      "interaction": "auth-invalid-email",
+      "requiredFixture": "PARITY_AUTH_STATE_FIXTURE"
+    },
+    {
+      "path": "/signup",
+      "snapshotId": "/signup/password-criteria",
+      "fixtureState": "public",
+      "state": "password-criteria",
+      "comparison": "frozen-main",
+      "interaction": "auth-password-criteria",
+      "requiredFixture": "PARITY_AUTH_STATE_FIXTURE"
+    },
+    {
+      "path": "/signup",
+      "snapshotId": "/signup/account-exists",
+      "fixtureState": "public",
+      "state": "account-exists",
+      "comparison": "frozen-main",
+      "interaction": "auth-account-exists",
+      "requiredFixture": "PARITY_AUTH_STATE_FIXTURE"
+    },
+    {
+      "path": "/signup",
+      "snapshotId": "/signup/submitting",
+      "fixtureState": "public",
+      "state": "submitting",
+      "comparison": "frozen-main",
+      "interaction": "auth-submitting",
+      "requiredFixture": "PARITY_AUTH_STATE_FIXTURE"
+    },
+    {
+      "path": "/",
+      "state": "page-data-loading",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "harness": "apps/admin/e2e/loading-parity.e2e.ts",
+      "queries": [
+        "dashboard/overview:getHomeSummary"
+      ],
+      "requests": [
+        "**/api/dashboard"
+      ]
+    },
+    {
+      "path": "/analytics",
+      "state": "page-data-loading",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "harness": "apps/admin/e2e/loading-parity.e2e.ts",
+      "queries": [
+        "dashboard/overview:getAnalyticsSummary"
+      ],
+      "requests": [
+        "**/api/analytics?*"
+      ]
+    },
+    {
+      "path": "/calls",
+      "state": "page-data-loading",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "harness": "apps/admin/e2e/loading-parity.e2e.ts",
+      "queries": [
+        "voice/runtime:listRecentCalls",
+        "dashboard/overview:getHomeSummary"
+      ],
+      "requests": [
+        "**/api/calls?*"
+      ]
+    },
+    {
+      "path": "/contacts",
+      "state": "page-data-loading",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "harness": "apps/admin/e2e/loading-parity.e2e.ts",
+      "queries": [
+        "dashboard/contacts:listContacts"
+      ],
+      "requests": [
+        "**/api/contacts?*"
+      ]
+    },
+    {
+      "path": "/agent/knowledge",
+      "state": "page-data-loading",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "harness": "apps/admin/e2e/loading-parity.e2e.ts",
+      "queries": [
+        "ai/context/knowledge:listKnowledge"
+      ],
+      "requests": [
+        "**/api/knowledge?*",
+        "**/api/knowledge/snippets?*"
+      ]
+    },
+    {
+      "path": "/agent/services",
+      "state": "page-data-loading",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "harness": "apps/admin/e2e/loading-parity.e2e.ts",
+      "queries": [
+        "businesses/catalog:getBusinessConfiguration"
+      ],
+      "requests": [
+        "**/api/catalog?*"
+      ]
+    },
+    {
+      "path": "/agent/rules",
+      "state": "page-data-loading",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "harness": "apps/admin/e2e/loading-parity.e2e.ts",
+      "queries": [
+        "ai/context/rules:listRules"
+      ],
+      "requests": [
+        "**/api/rules?*"
+      ]
+    },
+    {
+      "path": "/appointments",
+      "state": "empty",
+      "fixtureState": "operator",
+      "comparison": "port-baseline",
+      "harness": "apps/admin/e2e/new-operator-visual.e2e.ts"
+    },
+    {
+      "path": "/appointments",
+      "state": "populated",
+      "fixtureState": "operator",
+      "comparison": "port-baseline",
+      "harness": "apps/admin/e2e/new-operator-visual.e2e.ts"
+    },
+    {
+      "path": "/appointments",
+      "state": "loading",
+      "fixtureState": "operator",
+      "comparison": "port-baseline",
+      "harness": "apps/admin/e2e/new-operator-visual.e2e.ts"
+    },
+    {
+      "path": "/appointments",
+      "state": "error",
+      "fixtureState": "operator",
+      "comparison": "port-baseline",
+      "harness": "apps/admin/e2e/new-operator-visual.e2e.ts"
+    },
+    {
+      "path": "/demos",
+      "state": "empty",
+      "fixtureState": "operator",
+      "comparison": "port-baseline",
+      "harness": "apps/admin/e2e/new-operator-visual.e2e.ts"
+    },
+    {
+      "path": "/demos",
+      "state": "populated",
+      "fixtureState": "operator",
+      "comparison": "port-baseline",
+      "harness": "apps/admin/e2e/new-operator-visual.e2e.ts"
+    },
+    {
+      "path": "/demos",
+      "state": "loading",
+      "fixtureState": "operator",
+      "comparison": "port-baseline",
+      "harness": "apps/admin/e2e/new-operator-visual.e2e.ts"
+    },
+    {
+      "path": "/demos",
+      "state": "error",
+      "fixtureState": "operator",
+      "comparison": "port-baseline",
+      "harness": "apps/admin/e2e/new-operator-visual.e2e.ts"
+    },
+    {
+      "path": "/",
+      "state": "voice-follow-up-and-appointment",
+      "snapshotId": "/home/follow-up",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "interaction": "dashboard-follow-up",
+      "requiredFixture": "PARITY_DASHBOARD_FOLLOWUP_FIXTURE"
+    },
+    {
+      "path": "/accept-invite?token=parity-invitation",
+      "state": "loading",
+      "fixtureState": "public",
+      "comparison": "frozen-main",
+      "harness": "apps/admin/e2e/invitation-parity.e2e.ts"
+    },
+    {
+      "path": "/accept-invite?token=parity-invitation",
+      "state": "expired",
+      "fixtureState": "public",
+      "comparison": "frozen-main",
+      "harness": "apps/admin/e2e/invitation-parity.e2e.ts"
+    },
+    {
+      "path": "/accept-invite?token=parity-invitation",
+      "state": "valid",
+      "fixtureState": "public",
+      "comparison": "frozen-main",
+      "harness": "apps/admin/e2e/invitation-parity.e2e.ts"
+    },
+    {
+      "path": "/accept-invite?token=parity-invitation",
+      "state": "authenticated",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "harness": "apps/admin/e2e/invitation-parity.e2e.ts"
+    },
+    {
+      "path": "/accept-invite?token=parity-invitation",
+      "state": "authenticated-loading",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "harness": "apps/admin/e2e/invitation-parity.e2e.ts"
+    },
+    {
+      "path": "/accept-invite?token=parity-invitation",
+      "state": "submitting",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "harness": "apps/admin/e2e/invitation-parity.e2e.ts"
+    },
+    {
+      "path": "/accept-invite?token=parity-invitation",
+      "state": "rejected",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "harness": "apps/admin/e2e/invitation-parity.e2e.ts"
+    },
+    {
+      "path": "/signup",
+      "state": "challenge-required",
+      "snapshotId": "/signup/challenge-required",
+      "fixtureState": "public",
+      "comparison": "frozen-main",
+      "interaction": "auth-challenge-missing",
+      "requiredFixture": "PARITY_AUTH_STATE_FIXTURE"
+    },
+    {
+      "path": "/agent",
+      "snapshotId": "/agent/viewer",
+      "state": "viewer",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "interaction": "viewer",
+      "requiredFixture": "PARITY_VIEWER_FIXTURE"
+    },
+    {
+      "path": "/agent/knowledge",
+      "snapshotId": "/agent/knowledge/viewer",
+      "state": "viewer",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "interaction": "viewer",
+      "requiredFixture": "PARITY_VIEWER_FIXTURE"
+    },
+    {
+      "path": "/agent/services",
+      "snapshotId": "/agent/services/viewer",
+      "state": "viewer",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "interaction": "viewer",
+      "requiredFixture": "PARITY_VIEWER_FIXTURE"
+    },
+    {
+      "path": "/agent/rules",
+      "snapshotId": "/agent/rules/viewer",
+      "state": "viewer",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "interaction": "viewer",
+      "requiredFixture": "PARITY_VIEWER_FIXTURE"
+    },
+    {
+      "path": "/integrations",
+      "snapshotId": "/integrations/viewer",
+      "state": "viewer",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "interaction": "viewer",
+      "requiredFixture": "PARITY_VIEWER_FIXTURE"
+    },
+    {
+      "path": "/settings/phone-number",
+      "snapshotId": "/settings/phone-number/viewer",
+      "state": "viewer",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "interaction": "viewer",
+      "requiredFixture": "PARITY_VIEWER_FIXTURE"
+    },
+    {
+      "path": "/settings/team",
+      "snapshotId": "/settings/team/viewer",
+      "state": "viewer",
+      "fixtureState": "operator",
+      "comparison": "frozen-main",
+      "interaction": "viewer",
+      "requiredFixture": "PARITY_VIEWER_FIXTURE"
     }
   ]
 }

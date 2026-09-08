@@ -1,4 +1,7 @@
 import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
+
+const tsxCli = createRequire(import.meta.url).resolve("tsx/cli");
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage } from "node:http";
 import { createServer as createTcpServer } from "node:net";
@@ -85,8 +88,8 @@ async function emitOutage(): Promise<void> {
 async function runChild(root: string, traceparent: string, endpoint: string): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child = spawn(
-      "pnpm",
-      ["exec", "tsx", "--tsconfig", "tsconfig.base.json", "scripts/replacement-telemetry-check.ts", "--destination", traceparent],
+      process.execPath,
+      [tsxCli, "--tsconfig", "tsconfig.base.json", "scripts/replacement-telemetry-check.ts", "--destination", traceparent],
       {
         cwd: root,
         env: {
@@ -110,8 +113,8 @@ async function runChild(root: string, traceparent: string, endpoint: string): Pr
 async function runOutageChild(root: string, endpoint: string): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child = spawn(
-      "pnpm",
-      ["exec", "tsx", "--tsconfig", "tsconfig.base.json", "scripts/replacement-telemetry-check.ts", "--outage"],
+      process.execPath,
+      [tsxCli, "--tsconfig", "tsconfig.base.json", "scripts/replacement-telemetry-check.ts", "--outage"],
       {
         cwd: root,
         env: {

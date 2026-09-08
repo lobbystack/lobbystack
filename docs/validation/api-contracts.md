@@ -1,4 +1,4 @@
-# Admin API Contracts
+# Follow the admin API contracts
 
 Admin routes use the following response conventions:
 

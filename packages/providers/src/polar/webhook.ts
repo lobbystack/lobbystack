@@ -7,11 +7,15 @@ export type PolarWebhookHeaders = {
 };
 
 export function verifyPolarWebhookSignature(body: string, headers: PolarWebhookHeaders, secret: string): boolean {
-  try {
-    const base64Secret = Buffer.from(secret, "utf8").toString("base64");
-    new Webhook(base64Secret).verify(body, headers);
-    return true;
-  } catch {
-    return false;
+  // Polar switched new secrets to Standard Webhooks on 2026-09-08.
+  // Older endpoints sign with the literal UTF-8 secret, so retain both formats.
+  for (const key of [secret, Buffer.from(secret, "utf8").toString("base64")]) {
+    try {
+      new Webhook(key).verify(body, headers);
+      return true;
+    } catch {
+      // Try the legacy signing key without relaxing timestamp/body validation.
+    }
   }
+  return false;
 }

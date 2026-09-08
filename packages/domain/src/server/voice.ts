@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, count, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 
-import { appointments, calls, contacts, conversations, conversationSessions, enqueueOutbox, services, staff, storageObjects, transcripts, withBusinessTransaction } from "@lobbystack/db";
+import { appointments, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { isTerminalTwilioCallStatus } from "@lobbystack/shared";
 
 import { requireBusinessMembership } from "../authz";
@@ -9,6 +9,10 @@ import { queueOperatorAlertInTransaction } from "./notifications";
 import { applyNonAiUsageInTransaction, finalizeWebVoiceUsageInTransaction, normalizeWebCallMaxDurationMs, reserveWebVoiceUsageInTransaction } from "./billing";
 import { enqueueUsageSyncInTransaction } from "./usage";
 import { recordUnitEconomicsEventInTransaction } from "./unitEconomics";
+import { FOLLOW_UP_RETENTION_MS, visibleFollowUpBody, visibleFollowUpTitle } from "./followUpRetention";
+import { recordCallOutcomeInTransaction, resolveCallOutcome } from "./callOutcome";
+import { buildCallEvents } from "./callEvents";
+import { recordingListState, recordingState, type RecordingState } from "./recordingState";
 
 export async function startCall(
   context: DomainContext,
@@ -255,30 +259,25 @@ export async function recordCallProviderPricing(
   });
 }
 
-type RecordingState = "available" | "pending" | "expired" | "missing";
-
-function recordingState(input: { recordingObjectId: string | null; recordingStatus: string | null; retentionUntil: Date | null }): RecordingState {
-  if (!input.recordingObjectId) return "missing";
-  if (!input.recordingStatus || input.recordingStatus === "pending") return "pending";
-  if (input.recordingStatus === "deleted" || (input.retentionUntil !== null && input.retentionUntil <= new Date())) return "expired";
-  return "available";
-}
-
 export async function listCalls(
   context: DomainContext,
   input: { userId: string; businessId: string; search?: string; limit?: number; offset?: number },
-): Promise<{ calls: Array<Record<string, unknown>>; pagination: { limit: number; offset: number; hasNext: boolean } }> {
+): Promise<{ calls: Array<Record<string, unknown>>; pagination: { limit: number; offset: number; total: number; hasNext: boolean } }> {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
     const limit = Math.min(Math.max(Math.trunc(input.limit ?? 50), 1), 100);
     const offset = Math.max(Math.trunc(input.offset ?? 0), 0);
     const search = input.search?.trim();
+    const filter = and(eq(calls.businessId, input.businessId), ...(search ? [or(ilike(contacts.name, `%${search}%`), ilike(contacts.phone, `%${search}%`), ilike(conversations.summary, `%${search}%`), ilike(calls.disposition, `%${search}%`), ilike(calls.providerCallId, `%${search}%`))!] : []));
     const rows = await tx.select({
        id: calls.id,
       providerCallId: calls.providerCallId,
       status: calls.status,
+      transport: calls.transport,
       disposition: calls.disposition,
       reason: conversations.summary,
+      currentIntent: conversations.currentIntent,
+      persistedOutcome: conversationSessions.summary,
       startedAt: calls.startedAt,
       endedAt: calls.endedAt,
       providerDurationSeconds: calls.providerDurationSeconds,
@@ -291,14 +290,13 @@ export async function listCalls(
     }).from(calls)
       .leftJoin(contacts, eq(calls.contactId, contacts.id))
       .leftJoin(conversations, eq(calls.conversationId, conversations.id))
+      .leftJoin(conversationSessions, and(eq(conversationSessions.callId, calls.id), eq(conversationSessions.businessId, calls.businessId)))
       .leftJoin(storageObjects, eq(calls.recordingObjectId, storageObjects.id))
-      .where(and(
-        eq(calls.businessId, input.businessId),
-        ...(search ? [or(ilike(contacts.name, `%${search}%`), ilike(contacts.phone, `%${search}%`), ilike(conversations.summary, `%${search}%`), ilike(calls.disposition, `%${search}%`), ilike(calls.providerCallId, `%${search}%`))!] : []),
-      ))
+      .where(filter)
       .orderBy(desc(calls.startedAt))
       .limit(limit + 1)
       .offset(offset);
+    const [total] = await tx.select({ count: count() }).from(calls).leftJoin(contacts, eq(calls.contactId, contacts.id)).leftJoin(conversations, eq(calls.conversationId, conversations.id)).where(filter);
     const hasNext = rows.length > limit;
     return {
       calls: rows.slice(0, limit).map((row) => ({
@@ -307,15 +305,16 @@ export async function listCalls(
         status: row.status,
         disposition: row.disposition,
         reason: row.reason === row.disposition ? null : row.reason,
+        outcome: resolveCallOutcome({ persisted: row.persistedOutcome, currentIntent: row.currentIntent, summary: row.reason, disposition: row.disposition }),
         startedAt: row.startedAt,
         endedAt: row.endedAt,
         providerDurationSeconds: row.providerDurationSeconds,
         contactName: row.contactName,
         contactPhone: row.contactPhone,
-         recordingState: recordingState({ recordingObjectId: row.recordingObjectId, recordingStatus: row.recordingStatus, retentionUntil: row.recordingRetentionUntil }),
+         recordingState: recordingListState({ ...row, retentionUntil: row.recordingRetentionUntil }),
          transcriptPreview: row.transcriptPreview,
       })),
-      pagination: { limit, offset, hasNext },
+      pagination: { limit, offset, total: Number(total?.count ?? 0), hasNext },
     };
   });
 }
@@ -327,7 +326,7 @@ export async function getCallDetail(
   call: Record<string, unknown>;
   contact: Record<string, unknown> | null;
   outcome: string | null;
-  timeline: Array<{ type: string; at: Date; status: string }>;
+  timeline: Array<{ type: string; at: Date | null; status: string }>;
   transcript: Array<Record<string, unknown>>;
   recording: { state: RecordingState; objectId?: string; contentType?: string; retentionUntil?: Date };
   appointments: Array<Record<string, unknown>>;
@@ -337,6 +336,7 @@ export async function getCallDetail(
     await requireBusinessMembership(tx, input);
     const row = (await tx.select({
       id: calls.id,
+      legacyConvexId: calls.legacyConvexId,
       providerCallId: calls.providerCallId,
       provider: calls.provider,
       transport: calls.transport,
@@ -365,20 +365,22 @@ export async function getCallDetail(
       .limit(1))[0];
     if (!row) return null;
 
-    const [transcript, appointmentRows] = await Promise.all([
+    const [transcript, appointmentRows, followUpTasks] = await Promise.all([
       tx.select({ id: transcripts.id, sequence: transcripts.sequence, speaker: transcripts.speaker, text: transcripts.text, confidence: transcripts.confidence, final: transcripts.final, createdAt: transcripts.createdAt }).from(transcripts).where(and(eq(transcripts.callId, input.callId), eq(transcripts.businessId, input.businessId))).orderBy(asc(transcripts.sequence)),
       row.contactId
         ? tx.select({ id: appointments.id, startsAt: appointments.startsAt, endsAt: appointments.endsAt, timezone: appointments.timezone, status: appointments.status, serviceName: services.name, staffName: staff.name }).from(appointments).innerJoin(services, eq(appointments.serviceId, services.id)).innerJoin(staff, eq(appointments.staffId, staff.id)).where(and(eq(appointments.businessId, input.businessId), eq(appointments.contactId, row.contactId))).orderBy(asc(appointments.startsAt))
         : Promise.resolve([]),
+      tx.select({ id: inboxItems.id, title: visibleFollowUpTitle, body: visibleFollowUpBody, status: inboxItems.status, createdAt: inboxItems.createdAt, updatedAt: inboxItems.updatedAt })
+        .from(inboxItems)
+        .where(and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.relatedCallId, input.callId), eq(inboxItems.kind, "voice_message")))
+        .orderBy(desc(inboxItems.createdAt)),
     ]);
-    const state = recordingState({ recordingObjectId: row.recordingObjectId, recordingStatus: row.recordingStatus, retentionUntil: row.recordingRetentionUntil });
-    const timeline = [
-      { type: "started", at: row.startedAt, status: row.status },
-      ...(row.endedAt ? [{ type: "ended", at: row.endedAt, status: row.status }] : []),
-    ];
+    const state = recordingState({ ...row, retentionUntil: row.recordingRetentionUntil });
+    const timeline = buildCallEvents({ ...row, startedAt: row.startedAt.toISOString(), endedAt: row.endedAt?.toISOString() ?? null }).map((event) => ({ type: event.key, at: event.timestamp ? new Date(event.timestamp) : null, status: event.failed ? "failed" : event.reached ? "reached" : "pending" }));
     return {
       call: {
         id: row.id,
+        legacyConvexId: row.legacyConvexId,
         providerCallId: row.providerCallId,
         provider: row.provider,
         transport: row.transport,
@@ -401,8 +403,64 @@ export async function getCallDetail(
         ...(row.recordingRetentionUntil ? { retentionUntil: row.recordingRetentionUntil } : {}),
       },
       appointments: appointmentRows,
-      // Follow-up tasks are not part of the replacement schema yet.
-      followUpTasks: [],
+      followUpTasks,
     };
   });
+}
+
+export async function createVoiceFollowUpTask(
+  context: DomainContext,
+  input: { businessId: string; callId?: string; callerName?: string; callbackPhone?: string; urgency?: string; callbackWindow?: string; message: string },
+): Promise<{ inboxItemId: string }> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    if (input.callId) {
+      // Serialize retries on the call row, including the first task creation.
+      // A lookup followed by insert alone can create concurrent duplicates.
+      const [call] = await tx.select({ id: calls.id }).from(calls).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId))).limit(1).for("update");
+      if (!call) throw new Error("Call not found in this business.");
+    }
+    const title = `Voice message from ${input.callerName?.trim() || input.callbackPhone?.trim() || "unknown caller"}`;
+    const body = [
+      input.callbackPhone?.trim() ? `Callback: ${input.callbackPhone.trim()}` : null,
+      input.urgency?.trim() ? `Urgency: ${input.urgency.trim()}` : null,
+      input.callbackWindow?.trim() ? `Preferred callback: ${input.callbackWindow.trim()}` : null,
+      "",
+      input.message.trim(),
+    ].filter((line): line is string => line !== null).join("\n");
+    const values = { businessId: input.businessId, kind: "voice_message", title, body, contentExpiresAt: new Date(Date.now() + FOLLOW_UP_RETENTION_MS), ...(input.callId ? { relatedCallId: input.callId } : {}) };
+    const existing = input.callId ? (await tx.select({ id: inboxItems.id }).from(inboxItems).where(and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.relatedCallId, input.callId), eq(inboxItems.kind, "voice_message"), eq(inboxItems.status, "open"))).orderBy(desc(inboxItems.createdAt)).limit(1))[0] : null;
+    const [item] = existing
+      ? await tx.update(inboxItems).set({ title, body, contentRetentionStatus: "active", contentExpiresAt: values.contentExpiresAt, updatedAt: new Date() }).where(eq(inboxItems.id, existing.id)).returning({ id: inboxItems.id })
+      : await tx.insert(inboxItems).values(values).returning({ id: inboxItems.id });
+    if (!item) throw new Error("Voice follow-up task could not be saved.");
+    if (input.callId) await recordCallOutcomeInTransaction(tx, { businessId: input.businessId, callId: input.callId, outcome: { kind: "message_taking" } });
+    return { inboxItemId: item.id };
+  });
+}
+
+export async function completeVoiceFollowUpTasks(
+  context: DomainContext,
+  input: { userId: string; businessId: string; callId: string },
+): Promise<{ completed: number }> {
+  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, input);
+    const rows = await tx.update(inboxItems).set({ status: "done", updatedAt: new Date() }).where(and(
+      eq(inboxItems.businessId, input.businessId),
+      eq(inboxItems.relatedCallId, input.callId),
+      eq(inboxItems.kind, "voice_message"),
+      eq(inboxItems.status, "open"),
+    )).returning({ id: inboxItems.id });
+    return { completed: rows.length };
+  });
+}
+
+/** Imported duplicate tasks represent one action per call; keep the newest. */
+export async function listOpenVoiceFollowUps(tx: DatabaseTransaction, businessId: string) {
+  const group = sql`coalesce(${inboxItems.relatedCallId}, ${inboxItems.id})`;
+  const latest = tx.selectDistinctOn([group], {
+    id: inboxItems.id, title: visibleFollowUpTitle, body: visibleFollowUpBody,
+    relatedCallId: inboxItems.relatedCallId, createdAt: inboxItems.createdAt,
+  }).from(inboxItems).where(and(eq(inboxItems.businessId, businessId), eq(inboxItems.kind, "voice_message"), eq(inboxItems.status, "open")))
+    .orderBy(group, desc(inboxItems.createdAt), desc(inboxItems.id)).as("latest_voice_follow_ups");
+  return await tx.select().from(latest).orderBy(desc(latest.createdAt)).limit(6);
 }

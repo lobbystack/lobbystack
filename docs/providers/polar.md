@@ -1,226 +1,135 @@
-# Polar billing setup
+---
+meta:
+  title: Configure Polar billing
+  navLabel: Polar Billing
+  contentType: How-to
+  category: Providers
+---
 
-This repo uses Polar for hosted cloud billing.
+<!-- Content plan: Help operators configure hosted billing. Cover products, event ingestion, secrets, webhooks, and verification. Goal: connect an existing Polar organization without changing its prices. Open questions: none for application configuration; confirm live prices in Polar before taking payments. -->
 
-The integration is intentionally hosted and backend-driven:
+# Configure Polar billing
 
-- checkout creation stays in [convex/billing.ts](/convex/billing.ts)
-- customer self-service uses Polar customer sessions instead of custom billing UI
-- subscription and transaction state are synchronized from Polar webhooks
-- metered usage is emitted from backend usage events, never from the client
+Use this guide to connect your Polar organization to hosted Starter and Pro billing. You need access to Polar settings and your deployment platform’s secret store.
 
-## Products
+## Create the hosted products
 
-Create or verify these Polar products:
+Copy your four recurring product IDs into the matching environment variables. Reuse existing products during a migration. Confirm their live prices in Polar before accepting payments.
 
-- `LobbyStack Starter Monthly`
-  - recurring monthly product
-  - `$30/month`
-  - mapped to `POLAR_STARTER_MONTHLY_PRODUCT_ID`
-  - created product ID: `fc07b74d-3dc7-4efb-9270-be74de48e187`
-- `LobbyStack Starter Annual`
-  - recurring annual product
-  - `$288/year`
-  - mapped to `POLAR_STARTER_ANNUAL_PRODUCT_ID`
-  - created product ID: `40145a2c-9cfd-491c-8cec-b6aa63b6b52f`
-- `LobbyStack Pro Monthly`
-  - recurring monthly product
-  - `$100/month`
-  - mapped to `POLAR_PRO_MONTHLY_PRODUCT_ID`
-  - created product ID: `f1e1fbeb-a0d5-4f40-bb98-b27d70a2c0d3`
-- `LobbyStack Pro Annual`
-  - recurring annual product
-  - `$960/year`
-  - mapped to `POLAR_PRO_ANNUAL_PRODUCT_ID`
-  - created product ID: `747a648b-0939-4626-967f-93941bcff296`
-- `LobbyStack Starter Monthly + AI SMS`
-  - recurring monthly product
-  - mapped to `POLAR_STARTER_MONTHLY_AI_SMS_PRODUCT_ID`
-  - include the Starter monthly base price, the `$5/month` AI SMS recurring price, and the AI SMS metered unit price
-- `LobbyStack Starter Annual + AI SMS`
-  - recurring annual Starter base product with monthly AI SMS metered usage
-  - mapped to `POLAR_STARTER_ANNUAL_AI_SMS_PRODUCT_ID`
-  - include the Starter annual base price, the `$5/month` AI SMS recurring price, and the AI SMS metered unit price
-- `LobbyStack Pro Monthly + AI SMS`
-  - recurring monthly product
-  - mapped to `POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID`
-  - legacy fallback env: `POLAR_PRO_AI_SMS_PRODUCT_ID`
-  - include the Pro monthly base price, the `$5/month` AI SMS recurring price, and the AI SMS metered unit price
-- `LobbyStack Pro Annual + AI SMS`
-  - recurring annual Pro base product with monthly AI SMS metered usage
-  - mapped to `POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID`
-  - include the Pro annual base price, the `$5/month` AI SMS recurring price, and the AI SMS metered unit price
-- `AI SMS setup`
-  - one-time purchase product
-  - mapped to `POLAR_AI_SMS_SETUP_PRODUCT_ID`
-  - include the `$19` one-time setup price on this product
+| Product | Price | Environment variable |
+| --- | --- | --- |
+| Starter monthly | $30 each month | `POLAR_STARTER_MONTHLY_PRODUCT_ID` |
+| Starter annual | $288 each year | `POLAR_STARTER_ANNUAL_PRODUCT_ID` |
+| Pro monthly | $100 each month | `POLAR_PRO_MONTHLY_PRODUCT_ID` |
+| Pro annual | $960 each year | `POLAR_PRO_ANNUAL_PRODUCT_ID` |
 
-Do not model the `$19` AI SMS setup fee as metered usage. Polar renders every
-metered price under "Additional metered usage", which makes a setup fee look
-usage-based. AI SMS enablement uses a one-time setup checkout first. After Polar
-confirms the setup order is paid, the backend updates the existing Pro
-subscription to the `Pro + AI SMS` product. This keeps the customer on one Polar
-subscription while preserving a real one-time setup charge.
+Use `starter` or `pro` for checkout, with monthly or annual billing. The checkout worker ignores separate product IDs for AI-generated text messages.
 
-The current hosted pricing model is:
+## Configure usage event ingestion
 
-- `Free`
-  - no Polar subscription
-  - `30` voice minutes included
-  - `10` Alert SMS segments included
-  - `2` outbound call attempts included
-  - no AI SMS
-  - no overages
-- `Starter`
-  - `$30/month` or `$288/year`
-  - `150` voice minutes included per month
-  - `50` Alert SMS segments included per month
-  - `20` outbound call attempts included per month
-  - overages after the included pool is consumed
-- `Pro`
-  - `$100/month` or `$960/year`
-  - `500` voice minutes included per month
-  - `200` Alert SMS segments included per month
-  - `100` outbound call attempts included per month
-  - overages after the included pool is consumed
-- `AI SMS add-on`
-  - `$5/month`
-  - `$19` one-time setup
-  - `$0.03` per AI SMS segment
+The worker sends finalized paid-plan usage from `billing_usage_events` to Polar.
 
-## Metered events
+| Usage | Event name | Quantity unit |
+| --- | --- | --- |
+| Voice | `billing.voice_minutes` | Minutes (seconds divided by 60) |
+| Alert text messages | `billing.alert_sms_segments` | Short Message Service (SMS) segments |
+| Outbound call attempts | `billing.outbound_call_attempts` | Attempts |
 
-The app sends these usage events to Polar:
+Grant your token `events:write` access for `POST /v1/events/ingest`. You don’t need `POLAR_*METER_ID` variables. The worker sends these fields:
 
-- `billing.voice_minutes`
-- `billing.alert_sms_segments`
-- `billing.outbound_call_attempts`
-- `billing.ai_sms_segments`
+| Field | Value |
+| --- | --- |
+| `external_customer_id` | The account’s billing key |
+| `external_id` | The usage source key, which prevents duplicate ingestion |
+| `metadata` | Quantity, business ID, and usage kind |
 
-Monthly hosted products use Polar meter-credit benefits for the included usage
-pool. Annual hosted products should not grant annual meter-credit benefits for
-voice minutes, Alert SMS segments, or outbound call attempts. LobbyStack tracks
-included usage by calendar month and sends only monthly overage quantities to
-Polar for annual hosted subscriptions, preserving monthly usage resets while the
-base subscription renews yearly.
+Keep your existing Polar meters and prices. Connecting this application leaves them unchanged. See [Polar event ingestion](https://polar.sh/docs/features/usage-based-billing/event-ingestion) for the request format.
 
-`Alert SMS` and `AI SMS` are intentionally separate:
+Starter and Pro include usage allowances that reset each month, including on annual subscriptions. The worker sends `billableQuantity` when present, including zero; otherwise, it sends the recorded quantity.
 
-- `Alert SMS` is sent from Noncia's shared platform sender
-- `AI SMS` is sent from the customer's own business number
+The worker skips these events:
 
-## Environment variables
+- Provisional usage
+- Free-plan usage
+- Usage without a linked Polar customer
 
-Set these backend environment values when billing is enabled:
+## Set the environment variables
 
-- `POLAR_ACCESS_TOKEN`
-- `POLAR_ORGANIZATION_ID`
-- `POLAR_API_BASE_URL`
-- `POLAR_WEBHOOK_SECRET`
-- `POLAR_STARTER_MONTHLY_PRODUCT_ID`
-- `POLAR_STARTER_ANNUAL_PRODUCT_ID`
-- `POLAR_PRO_MONTHLY_PRODUCT_ID`
-- `POLAR_PRO_ANNUAL_PRODUCT_ID`
-- `POLAR_STARTER_MONTHLY_AI_SMS_PRODUCT_ID`
-- `POLAR_STARTER_ANNUAL_AI_SMS_PRODUCT_ID`
-- `POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID`
-- `POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID`
-- `POLAR_AI_SMS_SETUP_PRODUCT_ID`
-- `POLAR_REFERRAL_DISCOUNT_ID`
-- `APP_BASE_URL`
+Copy these variable names from [`.env.example`](../../.env.example) into your deployment platform’s secret store. Replace the placeholder values with credentials from the same Polar environment.
 
-`POLAR_AI_SMS_ADDON_PRODUCT_ID` is optional and only exists to recognize legacy
-separate AI SMS subscriptions from the older add-on subscription flow. New AI SMS
-enablement uses `POLAR_AI_SMS_SETUP_PRODUCT_ID` for checkout and
-the matching `{plan, interval} + AI SMS` product for the existing paid
-subscription update. `POLAR_PRO_AI_SMS_PRODUCT_ID` is still accepted as a legacy
-fallback for `POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID`.
+```dotenv
+POLAR_ACCESS_TOKEN=your_polar_access_token
+POLAR_WEBHOOK_SECRET=your_polar_webhook_secret
+POLAR_ORGANIZATION_ID=your_polar_organization_id
+POLAR_API_BASE_URL=https://sandbox-api.polar.sh
 
-Create a 5% percentage discount in Polar for referred customers and set its ID as
-`POLAR_REFERRAL_DISCOUNT_ID`. LobbyStack applies this discount server-side when
-an eligible referred business starts a hosted plan checkout. Referral discounts
-are not entered by the customer as coupon codes; the checkout receives the
-configured Polar discount automatically from the stored referral attribution.
+POLAR_STARTER_MONTHLY_PRODUCT_ID=your_starter_monthly_product_id
+POLAR_STARTER_ANNUAL_PRODUCT_ID=your_starter_annual_product_id
+POLAR_PRO_MONTHLY_PRODUCT_ID=your_pro_monthly_product_id
+POLAR_PRO_ANNUAL_PRODUCT_ID=your_pro_annual_product_id
+```
 
-For hosted Alert SMS, also configure:
+Match `POLAR_API_BASE_URL` to the environment that issued the token, webhook secret, and product IDs.
 
-- `TWILIO_ALERT_SMS_FROM`
+## Route billing requests
 
-## Secret handling
+The Next.js app exposes three billing entry points.
 
-Treat these as backend-only secrets:
+| Route | Purpose |
+| --- | --- |
+| `POST /api/billing/checkout` | Queue a Starter or Pro checkout request. |
+| `POST /api/billing/portal` | Create a customer portal session for an active paid subscription. |
+| `POST /api/webhooks/polar` | Verify and store Polar events for worker reconciliation. |
 
-- `POLAR_ACCESS_TOKEN`
-- `POLAR_WEBHOOK_SECRET`
+Configure Polar to send subscription and order webhooks to `https://app.example.com/api/webhooks/polar`. Replace `app.example.com` with your admin application’s public host.
 
-Do not expose them to the web app, mobile clients, third-party scripts, or browser-visible env vars.
+Set `POLAR_WEBHOOK_SECRET` in production. The route rejects missing secrets and invalid signatures with HTTP 401.
 
-Operational defaults:
+## Understand the billing flow
 
-- use separate Polar credentials for `sandbox` and `production`
-- keep `POLAR_SERVER` aligned with the matching token, webhook secret, and product IDs
-- store secrets in your deployment platform's secret manager or protected environment configuration
-- never log Polar secrets, paste them into tickets, or include them in analytics payloads
+Use this sequence to check where a checkout stops:
 
-If a Polar secret is exposed:
+1. The admin API writes a checkout request and enqueues `billing.createCheckout`.
+2. The worker creates the Polar checkout with the configured product ID.
+3. The browser opens the checkout URL after the request becomes ready.
+4. Polar sends subscription and order events to the Next.js webhook route.
+5. The route stores each provider event once and enqueues `billing.reconcile`.
+6. The worker updates local subscription and transaction records.
 
-1. Rotate the affected credential immediately.
-2. Review recent checkout, subscription, transaction, and metered-event activity.
-3. Re-verify webhook delivery and metered usage sync after rotation.
+The billing page reads PostgreSQL for plan, usage, spending-cap, and transaction data. It creates portal sessions on the server for billing administrators.
 
-This repo does not assume Stripe-style restricted API keys exist in Polar. Until Polar documents an equivalent scoped credential for this workflow, keep the organization token limited to backend infrastructure you control.
+## Recover failed usage syncs
 
-## Webhook routing
+Use `billing_usage_events` to investigate metered usage that did not reach Polar.
 
-Configure Polar to send events to the Next.js API endpoint:
+Inspect these columns and the worker’s job logs:
 
-- `/api/webhooks/polar`
+- `sync_status`
+- `source_key`
+- `quantity` and `billable_quantity`
+- `is_final`
+- `updated_at`
 
-Webhook handling expectations:
+The queue allows five attempts per job, with exponential backoff between attempts. Inspect worker logs for provider failures before retrying.
 
-- signature verification is enforced before application handlers run
-- webhook updates are the source of truth for hosted plan, add-on, and transaction state
-- do not introduce separate manual renewal loops or invoice polling to drive subscription state
+Fix the provider error before you requeue `billing.syncUsage`. Keep the usage row and source key to prevent duplicate ingestion.
 
-### Recover a missing order
+## Recover missing orders
 
-If Polar contains an order that is absent from `billing_transactions`, replay the signed webhook
-from Polar after correcting the underlying configuration. The handler resolves the tenant from
-the customer link and uses provider IDs for idempotency. Do not insert billing rows manually.
+Replay a signed Polar webhook when Polar contains an order missing from `billing_transactions`.
 
-## Metered usage operations
+The webhook handler uses provider event IDs for idempotency. Do not insert billing transactions by hand.
 
-Polar metered usage is driven by rows in the `billing_usage_events` table.
+## Validate the integration
 
-Important fields:
+Run these checks in the Polar sandbox before enabling production billing:
 
-- `syncStatus`
-- `syncAttemptedAt`
-- `syncedAt`
-- `syncError`
+- Confirm only business administrators can start checkout or open the portal.
+- Complete monthly and annual checkout for Starter and Pro.
+- Confirm invalid webhook signatures receive an unauthorized response.
+- Confirm duplicate webhook deliveries create one provider event.
+- Generate each metered usage type and verify the Polar quantity.
+- Confirm annual subscriptions send monthly overage quantities.
+- Confirm worker logs identify usage-sync failures and that requeueing recovers them.
 
-Expected retry behavior for the `billing.syncUsage` worker job:
-
-- immediate first attempt from the triggering workflow
-- best-effort retries after `30s`, `2m`, `10m`, and `30m`
-
-Operational guidance:
-
-- treat repeated `syncStatus = "failed"` rows as an alertable billing issue
-- check `syncError` first for token, customer-link, or transient Polar API failures
-- after fixing the underlying issue, requeue `billing.syncUsage` for the affected usage event IDs
-- do not backfill usage by minting ad hoc Polar events outside this table unless you also reconcile local billing records deliberately
-
-## Validation
-
-Before go-live, confirm:
-
-- checkout creation works only from backend actions and only for billing admins
-- customer portal sessions are created server-side and only for billing admins
-- `/api/webhooks/polar` rejects missing or invalid webhook signatures
-- metered usage failures are visible through `billing_usage_events.syncStatus`
-
-## Notes
-
-- `Self-host` workspaces stay outside hosted billing enforcement.
-- Legacy billing records from earlier pricing models are still accepted by the current schema to keep the dev deployment deployable during migration.
+Self-hosted workspaces remain outside hosted billing enforcement. Convex billing data appears only in migration and reconciliation workflows.

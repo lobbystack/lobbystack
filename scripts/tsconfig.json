@@ -2,7 +2,9 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "include": [
     "./replacement-appointment-audit-check.ts",
@@ -15,6 +17,17 @@
     "./replacement-smoke.ts",
     "./replacement-smoke.test.ts",
     "./replacement-sms-consent-check.ts",
-    "./replacement-unit-economics-check.ts"
+    "./replacement-unit-economics-check.ts",
+    "./replacement-analytics-usage-check.ts",
+    "./replacement-follow-up-check.ts",
+    "./replacement-knowledge-lifecycle-check.ts",
+    "./replacement-appointment-policy-check.ts",
+    "./replacement-onboarding-check.ts",
+    "./replacement-catalog-check.ts",
+    "./replacement-realtime-check.ts",
+    "./replacement-webhook-check.ts",
+    "./replacement-telemetry-check.ts",
+    "./replacement-password-recovery-check.ts",
+    "./replacement-email-change-check.ts"
   ]
 }

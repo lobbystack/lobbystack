@@ -1,4 +1,4 @@
-# LobbyStack Mintlify Docs
+# LobbyStack Mintlify docs
 
 This directory contains the source for [docs.lobbystack.com](https://docs.lobbystack.com/).
 
@@ -10,7 +10,7 @@ mintlify
 
 The site uses `docs.json` for navigation, branding, colors, and global settings. Public pages are written as MDX files next to that config.
 
-## Development
+## Preview the Help Center
 
 Preview documentation changes locally with the Mintlify CLI:
 
@@ -33,8 +33,6 @@ pnpm docs:validate
 pnpm docs:broken-links
 ```
 
-View your local preview at `http://localhost:3000`.
-
-## Publishing changes
+## Publish changes
 
 Mintlify deploys from the connected GitHub repository. Push changes to the configured branch to publish updates.

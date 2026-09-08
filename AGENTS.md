@@ -1,6 +1,6 @@
-# Repository Guidelines
+# Repository guidelines
 
-## Project Structure
+## Project structure
 
 - `apps/admin/`: Next.js operator dashboard, authentication, and HTTP API. Hosts the embeddable widget API (`/api/widget/*`), the loader (`/embed.js`), and the widget iframe app (`/embed/[key]`) in addition to the dashboard.
 - `apps/worker/`: asynchronous jobs and transactional outbox dispatch.
@@ -14,7 +14,7 @@
 - `packages/`: shared contracts, jobs, providers, telemetry, configuration, and test helpers.
 - `docker/`, `docker-compose.yml`, and `scripts/`: local infrastructure, operations, migration, and certification tooling.
 
-## Development Commands
+## Development commands
 
 - `pnpm install`: install workspace dependencies.
 - `docker compose up -d postgres redis`: start local infrastructure. Add `--profile minio` when testing the optional MinIO storage backend.
@@ -25,7 +25,7 @@
 - `pnpm build`: build every workspace package and app (also copies the embed loader into the admin standalone output).
 - `pnpm widget:embed:build`: rebuild `packages/embed` and copy the loader into `apps/admin/public/embed/`.
 
-## Coding Style
+## Coding style
 
 - TypeScript ESM throughout; use 2-space indentation and LF line endings.
 - Use `PascalCase` for React components and `camelCase` for functions and utilities.
@@ -33,7 +33,7 @@
 - Keep the voice gateway focused on the live call path; it calls the admin backend for authoritative operations.
 - Keep voice personalization snapshot-based. Fetch a business snapshot at call start and avoid per-turn backend reads for common replies.
 
-## Design System
+## Design system
 
 - Treat `shadcn/ui` as the default operator UI system in `apps/admin`.
 - Use Geist Sans and Lucide icons; do not mix icon families.
@@ -56,7 +56,7 @@
 - Run `pnpm typecheck`, `pnpm test`, and `pnpm build` before opening a PR.
 - When changing migrations or RLS, also run `pnpm db:check` and `pnpm db:verify-rls` against the test database.
 
-## Migration Guardrails
+## Migration guardrails
 
 - PostgreSQL is the canonical runtime datastore.
 - Retain `replacement:import`, `replacement:import-check`, and `replacement:reconciliation` until production cutover and rollback windows close.

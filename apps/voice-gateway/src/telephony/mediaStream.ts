@@ -1,6 +1,6 @@
 import { buildVoiceSystemPrompt } from "@lobbystack/ai";
 import { loadVoiceGatewayEnv } from "@lobbystack/config";
-import { demoBusinessId, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { isTransferPermitted, demoBusinessId, type BusinessContextSnapshot } from "@lobbystack/shared";
 import type { ProviderErrorClassification } from "@lobbystack/telemetry";
 import type { IncomingHttpHeaders } from "node:http";
 import type { FastifyInstance } from "fastify";
@@ -879,7 +879,10 @@ function createRealtimeToolDefinitions() {
         type: "object",
         properties: {
           reason: { type: "string" },
+          callerRequested: { type: "boolean", description: "True only when the caller explicitly requested a human." },
+          urgent: { type: "boolean", description: "True only when the caller described an urgent situation." },
         },
+        required: ["callerRequested", "urgent"],
         additionalProperties: false,
       },
     },
@@ -1824,7 +1827,7 @@ async function recoverFromProviderFailure(
 
   const transferDestination = session.snapshot?.transferPolicy.transferNumber ?? null;
   const transferAvailable =
-    session.snapshot?.transferPolicy.mode !== "never" && Boolean(transferDestination);
+    Boolean(session.snapshot && isTransferPermitted(session.snapshot));
   const fallbackMessage = buildProviderFailureMessage({ transferAvailable });
 
   try {
@@ -2520,8 +2523,7 @@ async function handleToolCall(
       });
     }
     const transferAvailable =
-      session.snapshot?.transferPolicy.mode !== "never" &&
-      Boolean(session.snapshot?.transferPolicy.transferNumber);
+      Boolean(session.snapshot && isTransferPermitted(session.snapshot));
     postRealtimeEvent(openAiSocket, {
       type: "conversation.item.create",
       item: {

@@ -1,6 +1,6 @@
 ---
-title: "Upfirst Alternative: LobbyStack vs Upfirst"
-seoTitle: "Upfirst Alternative: LobbyStack vs Upfirst"
+title: "Upfirst alternative: LobbyStack vs Upfirst"
+seoTitle: "Upfirst alternative: LobbyStack vs Upfirst"
 description: "Compare LobbyStack and Upfirst on pricing, booking, transfers, languages, open-source access, and self-hosting to choose the right AI receptionist."
 pubDate: 2026-07-30T11:50:00-04:00
 updatedDate: 2026-07-30T11:50:00-04:00

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -12,12 +12,14 @@ import {
   Headphones,
   Info,
   Phone,
+  XCircle,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
 import { SectionBlock } from "@/components/section-block";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,11 +27,13 @@ import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { selectActiveBusiness } from "@/lib/active-business";
+import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 type Business = { businessId: string; active: boolean };
 type Detail = {
   call: {
     id: string;
+    legacyConvexId: string | null;
     providerCallId: string;
     provider: string;
     transport: string;
@@ -43,15 +47,15 @@ type Detail = {
   };
   contact: { id: string; name: string | null; phone: string | null; email: string | null; blockedAt: string | null } | null;
   outcome: string | null;
-  timeline: Array<{ type: string; at: string; status: string }>;
+  timeline: Array<{ type: string; at: string | null; status: string }>;
   transcript: Array<{ id: string; sequence: number; speaker: string; text: string; confidence: number | null; final: boolean; createdAt: string }>;
   recording: { state: "available" | "pending" | "expired" | "missing"; objectId?: string; contentType?: string };
   appointments: Array<{ id: string; startsAt: string; endsAt: string; timezone: string; status: string; serviceName: string; staffName: string }>;
-  followUpTasks: Array<Record<string, unknown>>;
+  followUpTasks: Array<{ id: string; title: string; body: string; status: string; createdAt: string; updatedAt: string }>;
 };
 
-async function getJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { credentials: "include" });
+async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, { credentials: "include", ...init });
   if (!response.ok) {
     throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Unable to load call details.");
   }
@@ -63,16 +67,47 @@ function formatDate(value: string, locale: string): string {
 }
 
 function formatDuration(seconds: number | null): string {
-  if (seconds === null) return "-";
-  return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) return "—";
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return minutes > 0 ? `${minutes}m ${String(remainingSeconds).padStart(2, "0")}s` : `${remainingSeconds}s`;
 }
 
-function truncateId(value: string): string {
-  return value.length > 14 ? `${value.slice(0, 6)}…${value.slice(-5)}` : value;
+function truncateId(value: string, maxLength = 16): string {
+  return value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
+}
+
+function CallEventTimeline({ events, locale }: { events: Detail["timeline"]; locale: string }) {
+  const { t } = useTranslation("calls");
+  return (
+    <div className="flex items-start gap-0 overflow-x-auto px-2 py-4">
+      {events.map((event, index) => {
+        const reached = event.status !== "pending";
+        const failed = event.status === "failed";
+        return (
+          <div className="flex items-start" key={`${event.type}-${event.at}`}>
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="flex size-8 items-center justify-center">
+                {failed ? <XCircle className="size-5 text-destructive" /> : reached ? <CheckCircle2 className="size-5 text-emerald-500" /> : <Circle className="size-5 text-muted-foreground/40" />}
+              </div>
+              <span className={cn("type-body whitespace-nowrap", reached ? failed ? "text-destructive" : "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
+                {t(`detail.events.${event.type}`)}
+              </span>
+              <span className="type-meta">
+                {event.at ? <>{new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(new Date(event.at))}{", "}{new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit" }).format(new Date(event.at))}</> : <>&nbsp;</>}
+              </span>
+            </div>
+            {index < events.length - 1 ? <div className="mt-3.5 h-px w-12 self-start bg-border sm:w-20" /> : null}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export function LiveCallDetailSurface({ callId }: { callId: string }) {
   const { i18n, t } = useTranslation("calls");
+  const queryClient = useQueryClient();
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const businesses = useQuery({
     queryKey: ["businesses"],
@@ -89,6 +124,7 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
     queryFn: () => getJson<{ url: string }>(`/api/calls/${encodeURIComponent(callId)}/recording`),
     enabled: detail.data?.recording.state === "available",
   });
+  const completeFollowUp = useMutation({ mutationFn: () => getJson<{ completed: number }>(`/api/calls/${encodeURIComponent(callId)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ action: "complete_follow_up" }) }), onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ["call", business?.businessId, callId] }), queryClient.invalidateQueries({ queryKey: ["dashboard"] })]); } });
 
   function copyToClipboard(text: string, field: string) {
     void navigator.clipboard.writeText(text).then(() => {
@@ -113,7 +149,7 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
 
   const { call, contact } = detail.data;
   const callerName = contact?.name ?? contact?.phone ?? t("detail.unknownCaller");
-  const callerPhone = contact?.phone ?? t("detail.noNumber");
+  const callerPhone = contact?.phone ? formatPhoneNumberDisplay(contact.phone, i18n.language) : t("detail.noNumber");
   const blocked = Boolean(contact?.blockedAt) || call.disposition?.includes("blocked");
 
   return (
@@ -130,35 +166,19 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
             </div>
           ) : null}
         </div>
-        <Badge variant="outline">{call.status}</Badge>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <MetadataField copiedField={copiedField} fieldKey="from" label={t("detail.metadata.from")} onCopy={copyToClipboard} value={callerPhone} />
         <MetadataField fieldKey="duration" label={t("detail.metadata.duration")} value={formatDuration(call.providerDurationSeconds)} />
         <MetadataField fieldKey="started" label={t("detail.metadata.started")} value={formatDate(call.startedAt, i18n.language)} />
-        <MetadataField copiedField={copiedField} fieldKey="id" label={t("detail.metadata.id")} onCopy={copyToClipboard} rawValue={call.id} value={truncateId(call.id)} />
+        <MetadataField copiedField={copiedField} fieldKey="id" label={t("detail.metadata.id")} onCopy={copyToClipboard} rawValue={call.legacyConvexId ?? call.id} value={truncateId(call.legacyConvexId ?? call.id)} />
       </div>
 
       <Separator />
 
       <SectionBlock title={t("detail.events.title")}>
-        <Surface className="px-4">
-          <div className="flex min-w-max items-start py-5">
-            {detail.data.timeline.map((event, index) => (
-              <div className="flex flex-1 items-start" key={`${event.type}-${event.at}`}>
-                <div className="flex min-w-28 flex-col items-center text-center">
-                  <span className="grid size-8 place-items-center rounded-full border bg-background">
-                    {index === detail.data.timeline.length - 1 ? <CheckCircle2 className="size-4 text-primary" /> : <Circle className="size-3 fill-primary text-primary" />}
-                  </span>
-                  <span className="type-item-title mt-2 capitalize">{event.type}</span>
-                  <span className="type-meta mt-1">{formatDate(event.at, i18n.language)}</span>
-                </div>
-                {index < detail.data.timeline.length - 1 ? <div className="mt-4 h-px min-w-10 flex-1 bg-border" /> : null}
-              </div>
-            ))}
-          </div>
-        </Surface>
+        <Surface className="px-4"><CallEventTimeline events={detail.data.timeline} locale={i18n.language} /></Surface>
       </SectionBlock>
 
       <Tabs defaultValue="transcript">
@@ -174,7 +194,7 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
           <RecordingTab detail={detail.data} src={recording.data?.url ?? null} />
         </TabsContent>
         <TabsContent value="details">
-          <DetailsTab detail={detail.data} locale={i18n.language} />
+          <DetailsTab detail={detail.data} markingDone={completeFollowUp.isPending} onCompleteFollowUp={() => completeFollowUp.mutate()} />
         </TabsContent>
       </Tabs>
     </div>
@@ -216,18 +236,17 @@ function RecordingTab({ detail, src }: { detail: Detail; src: string | null }) {
   return <div className="py-4"><Card size="sm"><CallRecordingPlayer className="px-4 py-0" downloadLabel={t("actions.download")} initialDurationSeconds={detail.call.providerDurationSeconds ?? 0} pauseLabel={t("actions.pause")} playLabel={t("actions.play")} src={src} /></Card></div>;
 }
 
-function DetailsTab({ detail, locale }: { detail: Detail; locale: string }) {
+function DetailsTab({ detail, markingDone, onCompleteFollowUp }: { detail: Detail; markingDone: boolean; onCompleteFollowUp: () => void }) {
   const { t } = useTranslation("calls");
   return (
     <div className="py-4">
       <Surface className="flex flex-col">
-        <DetailSection title={t("detail.details.outcomeTitle")}><p className="type-body-muted">{detail.outcome ?? t("detail.details.noDisposition")}</p></DetailSection>
-        <DetailSection className="border-t border-border" title={t("detail.details.followUpTitle")}><p className="type-body-muted">{detail.followUpTasks.length ? String(detail.followUpTasks[0]?.title ?? t("detail.details.followUpTitle")) : t("detail.details.noFollowUp")}</p></DetailSection>
+        <DetailSection title={t("detail.details.followUpTitle")}>{detail.followUpTasks.some((item) => item.status === "open") ? <div className="flex flex-col gap-3"><p className="type-item-title">{detail.followUpTasks.find((item) => item.status === "open")?.title}</p><p className="type-body-muted whitespace-pre-line">{detail.followUpTasks.find((item) => item.status === "open")?.body}</p><div className="flex items-center gap-2 pt-1"><Button disabled={markingDone} onClick={onCompleteFollowUp} size="sm" variant="outline">{markingDone ? t("detail.details.markingDone") : t("detail.details.markDone")}</Button></div></div> : <p className="type-body-muted">{t("detail.details.noFollowUp")}</p>}</DetailSection>
         <DetailSection className="border-t border-border" title={t("detail.details.callInfoTitle")}>
           <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-3">
             <dt className="type-meta">{t("detail.details.twilioCallSid")}</dt><dd className="type-technical-value truncate">{detail.call.providerCallId}</dd>
             {detail.call.gatewaySessionId ? <><dt className="type-meta">{t("detail.details.gatewaySession")}</dt><dd className="type-technical-value truncate">{detail.call.gatewaySessionId}</dd></> : null}
-            <dt className="type-meta">{t("detail.metadata.started")}</dt><dd className="type-body">{formatDate(detail.call.startedAt, locale)}</dd>
+            {detail.call.providerDurationSeconds !== null ? <><dt className="type-meta">{t("detail.metadata.duration")}</dt><dd className="type-body">{formatDuration(detail.call.providerDurationSeconds)}</dd></> : null}
           </dl>
         </DetailSection>
       </Surface>

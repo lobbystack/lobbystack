@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 
 import { businesses, businessMemberships, calls, createDatabaseClient, storageObjects, users, withBusinessTransaction } from "@lobbystack/db";
-import { completeCall, getCallDetail, persistCallRecording, startCall, upsertTranscript } from "@lobbystack/domain";
+import { completeCall, getCallDetail, listCalls, persistCallRecording, startCall, upsertTranscript } from "@lobbystack/domain";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -42,6 +42,8 @@ async function main(): Promise<void> {
     const created = await startCall({ db: worker.db }, { businessId, provider: "certification", providerCallId: `call-${userId}`, from: "+14165550100", to: "+14165550199", transport: "voice", billable: false });
     const missing = await getCallDetail({ db: app.db }, { userId, businessId, callId: created.callId });
     assert(missing?.recording.state === "missing", "A call without a recording was not reported as missing.");
+    const list = await listCalls({ db: app.db }, { userId, businessId });
+    assert(list.calls.find(call => call.id === created.callId)?.recordingState === "pending", "Main list pending state was lost while restoring the detail unavailable state.");
 
     const pendingCall = await startCall({ db: worker.db }, { businessId, provider: "certification", providerCallId: `pending-${userId}`, from: "+14165550102", to: "+14165550199", transport: "voice", billable: false });
     const pendingObjectId = randomUUID();

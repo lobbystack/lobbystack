@@ -35,10 +35,11 @@ export async function POST(request: Request) {
     if (!businessId) throw new Error("A businessId is required.");
     const durationMinutes = typeof input.durationMinutes === "number" ? input.durationMinutes : Number(input.durationMinutes);
     if (!Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 1_440) throw new Error("durationMinutes is invalid.");
+    if (input.active !== undefined && typeof input.active !== "boolean") throw new Error("active is invalid.");
     const name = requiredString(input.name, "name", 160);
     const slug = requiredString(input.slug ?? name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""), "slug", 160);
     const description = input.description === undefined || input.description === null ? undefined : requiredString(input.description, "description", 2_000);
-    const serviceId = await createService(createDomainContext(), { userId: session.user.id, businessId, name, slug, durationMinutes, ...(description ? { description } : {}) });
+    const serviceId = await createService(createDomainContext(), { userId: session.user.id, businessId, name, slug, durationMinutes, ...(typeof input.active === "boolean" ? { active: input.active } : {}), ...(description ? { description } : {}) });
     return NextResponse.json({ serviceId }, { status: 201 });
   } catch (error) {
     return asApiResponse(error);

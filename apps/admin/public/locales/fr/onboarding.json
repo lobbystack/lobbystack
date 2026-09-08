@@ -194,13 +194,14 @@
     "social": "Réseaux sociaux",
     "event": "Événement ou communauté",
     "other": "Autre",
-    "finish": "Terminer la configuration",
+    "finish": "Terminer",
     "finishing": "Finalisation...",
     "failed": "Impossible de terminer la configuration.",
     "submitFailed": "Impossible d'enregistrer maintenant. Réessayez."
   },
   "plan": {
     "title": "Choisissez votre forfait",
+    "checkoutSuccess": "Paiement effectué avec succès.",
     "popular": "Populaire",
     "enterpriseSubject": "Forfait Entreprise",
     "compareTitle": "Comparer les forfaits en détail",

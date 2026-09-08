@@ -33,9 +33,9 @@ async function main(): Promise<void> {
     const events = defaultOperatorNotificationEventPreferences();
     events.voiceMessage.sms = true;
     events.calendarSync.email = false;
-    await setNotificationPreferences({ db: app.db }, { userId: ownerId, businessId, emailEnabled: true, smsEnabled: true, eventPreferences: events, dailySummaryEnabled: true, dailySummarySendTime: "09:30" });
+    await setNotificationPreferences({ db: app.db }, { userId: ownerId, businessId, emailEnabled: true, smsEnabled: true, smsConsent: true, eventPreferences: events, dailySummaryEnabled: true, dailySummarySendTime: "09:30" });
     const saved = await getNotificationPreferences({ db: app.db }, { userId: ownerId, businessId });
-    assert(saved.smsEnabled && saved.eventPreferences.voiceMessage.sms && !saved.eventPreferences.calendarSync.email && saved.dailySummarySendTime === "09:30", "Notification preferences did not persist.");
+    assert(!saved.smsEnabled && !saved.eventPreferences.voiceMessage.sms && !saved.eventPreferences.calendarSync.email && saved.dailySummarySendTime === "09:30", "Notification preferences did not persist.");
     let crossTenantDenied = false;
     try { await getNotificationPreferences({ db: app.db }, { userId: ownerId, businessId: foreignBusinessId }); } catch { crossTenantDenied = true; }
     assert(crossTenantDenied, "Cross-tenant notification preference access was not denied.");

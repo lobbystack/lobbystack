@@ -1,4 +1,4 @@
-# Research: Plain-Language AI Receptionist Workflows
+# Research: Plain-Language AI receptionist workflows
 
 Research date: 2026-06-18
 
@@ -14,7 +14,7 @@ Requested scope:
 - SEO/search intent angles.
 - Product-led positioning for LobbyStack without generic AI marketing.
 
-## Executive Takeaways
+## Executive takeaways
 
 - The strongest angle is not "AI receptionists are better than workflow builders." Buyers already know n8n, Zapier, Make, Twilio, Retell, and Vapi can be useful. The post should say these tools are fine for prototypes and backend automations, but real phone behavior should live in a receptionist product model that understands calls, state, tools, and fallbacks.
 - The post should include both categories:
@@ -24,7 +24,7 @@ Requested scope:
 - "Plain-language workflow" needs careful wording. It should not imply the model can invent safe behavior. The business describes the receptionist's policy in plain English; the system still uses tools and backend checks for authoritative actions such as booking, appointment changes, transfers, messages, and callbacks.
 - The article should be product-led, but it should spend most of its time explaining the operational problem. Mention LobbyStack after the reader sees why call behavior breaks when you model it as a chain of nodes.
 
-## Search Intent
+## Search intent
 
 This topic can capture a mix of searchable and shareable intent.
 
@@ -62,7 +62,7 @@ Reader questions:
 - Can I keep the flexibility of a custom system without owning a blank voice-agent platform?
 - Can I use an open product instead of locking the client into a hosted black box?
 
-## Market Context
+## Market context
 
 ### Builder tools are common in prototypes
 
@@ -99,7 +99,7 @@ Hosted AI receptionist products sell speed, packaging, and less operational work
 
 The blog should avoid attacking these products. Closed tools are legitimate choices when the buyer wants someone else to own hosting, onboarding, and support. The product-led opportunity for LobbyStack is control: open source, self-hostable, configurable, and still packaged as a receptionist system instead of a pile of workflow nodes.
 
-## Source Anchors
+## Source anchors
 
 Use these as factual anchors in the post or internal brief:
 
@@ -125,7 +125,7 @@ Use these as factual anchors in the post or internal brief:
   - `apps/landing/src/components/features/FeatureWall.tsx`: "Build workflows with words, not flowcharts" and "Your business is not a flowchart."
   - `apps/admin/app/voice/[...segments]/route.ts`: voice tools include finding/checking availability, booking, lookup/verify appointment changes, OTP for appointment changes, cancel/reschedule appointment, search knowledge, and take message.
 
-## Why Workflow Chains Get Brittle
+## Why workflow chains get brittle
 
 Use concrete operational failure modes instead of vague "complexity" language.
 
@@ -198,7 +198,7 @@ If the logic cannot combine pricing and booking, the caller gets bounced through
 
 Phone calls are unforgiving because the customer waits in real time. A dashboard bug can wait until tomorrow. A bad transfer or false booking promise cannot.
 
-## Prompt/Tool Behavior vs Low-Code Chains
+## Prompt/Tool behavior vs Low-Code chains
 
 Avoid framing this as "prompts replace workflows." That sounds unsafe and generic.
 
@@ -221,7 +221,7 @@ The builder expresses the call as a sequence of boxes:
 Strengths:
 
 - Good for deterministic backend automation.
-- Easy to inspect for simple flows.
+- Clear for basic deterministic flows.
 - Strong ecosystem for connecting SaaS tools.
 - Useful after the call for follow-up tasks.
 
@@ -269,7 +269,7 @@ Guardrail:
 
 - Do not say "the AI decides everything." Say the receptionist follows plain-language instructions and calls tools when it needs to take an action.
 
-## Concrete Examples
+## Concrete examples
 
 ### Booking
 
@@ -459,7 +459,7 @@ Suggested phrasing:
 
 > Hosted AI receptionist tools package the front desk for you. Builder stacks let you wire your own. LobbyStack gives you a third option: a receptionist product you can run, inspect, and adapt, with behavior configured in plain language instead of scattered across workflow branches.
 
-## Suggested Blog Structure
+## Suggested blog structure
 
 Working title options:
 
@@ -489,7 +489,7 @@ Then move into the point:
 
 Suggested sections:
 
-1. `The demo workflow is easy`
+1. `The demo workflow hides complexity`
    - Retell/Vapi/Twilio plus n8n/Zapier/Make plus calendar plus CRM.
    - Works when the caller follows the path.
 2. `Production calls break the graph`
@@ -509,7 +509,7 @@ Suggested sections:
    - Not raw voice API, not closed workflow box.
    - GitHub/docs CTA.
 
-## Tone Guidance
+## Tone guidance
 
 Use the Stop Slop rules:
 
@@ -537,7 +537,7 @@ Phrases to avoid:
 - "Fully autonomous receptionist"
 - "Works perfectly"
 
-## Internal Linking Opportunities
+## Internal linking opportunities
 
 Link to:
 
@@ -552,9 +552,9 @@ Potential CTA:
 
 > LobbyStack is open source. Try the hosted product, self-host it, or read the code on GitHub before you trust it with a phone line.
 
-## Draftable Examples
+## Draftable examples
 
-### Example 1: Booking Policy
+### Example 1: booking policy
 
 ```text
 For appointment calls, collect the service, preferred day or time, name, and
@@ -562,7 +562,7 @@ phone number. Offer times only from the availability tool. Confirm the booking
 only after the booking tool succeeds. If no slot works, create a callback task.
 ```
 
-### Example 2: Quote Policy
+### Example 2: quote policy
 
 ```text
 For quote calls, ask for service type, location, timeline, and budget. Share
@@ -570,7 +570,7 @@ approved starting prices when they exist. If pricing depends on staff review,
 create a quote callback and include the details in the note.
 ```
 
-### Example 3: Handoff Policy
+### Example 3: handoff policy
 
 ```text
 Transfer urgent calls, upset customers, and questions the AI is not allowed to
@@ -578,7 +578,7 @@ answer. If the transfer fails, take a message, mark it urgent when needed, and
 send the team the transcript summary.
 ```
 
-## Risks To Avoid In The Blog
+## Risks to avoid in the blog
 
 - Do not imply plain-language config removes testing. The post should say teams still need to review transcripts and test real call paths.
 - Do not say workflow builders are useless. They are useful around the receptionist.
@@ -587,7 +587,7 @@ send the team the transcript summary.
 - Do not say "this helps two groups." Keep the piece unified around the reader's job: make the receptionist match the business without building a fragile chain.
 - Do not close with a generic "I'd love feedback" question. Use a product CTA.
 
-## Useful Final Angle
+## Useful final angle
 
 The blog post should make readers feel this:
 

@@ -1,6 +1,6 @@
-# Code of Conduct
+# Code of conduct
 
-This project follows a simple standard:
+This project follows a clear standard:
 
 - be respectful
 - be direct

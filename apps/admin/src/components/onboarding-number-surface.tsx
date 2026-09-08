@@ -1,33 +1,76 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { LoaderCircle, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-
+import { PhoneNumberChooser, type AvailableNumberSummary, type ClaimResult, type NumberSelectionContext } from "./phone-number-chooser";
+import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
+import { requestJson } from "@/lib/request-json";
+import { normalizeOnboardingPhoneCountry, type SupportedOnboardingPhoneCountry } from "@/lib/phone";
+import { LoaderCircle } from "lucide-react";
 import { Button } from "./ui/button";
-import { FieldError } from "./ui/field";
-import { Input } from "./ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Surface } from "./ui/surface";
-import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { FieldError } from "./ui/field";
 
-type Business = { businessId: string; name: string; active: boolean };
-type NumberOffer = { phoneE164: string; locality?: string; region?: string; countryCode: string; capabilities: { sms: boolean; voice: boolean }; claimToken: string };
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> { const response = await fetch(url, { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } }); if (!response.ok) throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Request failed."); return await response.json() as T; }
+type Business = { businessId: string; active: boolean; onboardingStage?: string };
+type NumberOffer = { phoneE164: string; locality?: string; region?: string; countryCode: string; claimToken: string; capabilities: { sms: boolean; voice: boolean } };
+
+function toNumber(offer: NumberOffer, selectionContext: NumberSelectionContext): AvailableNumberSummary {
+  const digits = offer.phoneE164.replace(/\D/g, "");
+  const display = digits.length === 11 && digits.startsWith("1") ? `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}` : offer.phoneE164;
+  return { ...offer, e164: offer.phoneE164, display, kind: "local", selectionContext };
+}
 
 export function OnboardingNumberSurface() {
   const { t } = useTranslation("onboarding");
-  const router = useRouter(); const [countryCode, setCountryCode] = useState("CA"); const [kind, setKind] = useState("local"); const [areaCode, setAreaCode] = useState(""); const [city, setCity] = useState(""); const [numbers, setNumbers] = useState<NumberOffer[]>([]); const [claimId, setClaimId] = useState<string | null>(null);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") }); const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
-  const suggestions = useQuery({ queryKey: ["number-suggestions", business?.businessId], queryFn: () => requestJson<{ numbers: NumberOffer[] }>(`/api/onboarding/phone-numbers/suggestion?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business), retry: false });
-  useEffect(() => { if (suggestions.data) setNumbers(suggestions.data.numbers); }, [suggestions.data]);
-  const search = useMutation({ mutationFn: () => requestJson<{ numbers: NumberOffer[] }>(`/api/onboarding/phone-numbers/search?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ selection: { countryCode, kind, ...(areaCode ? { areaCode } : {}), ...(city ? { city } : {}) }, limit: 12 }) }), onSuccess: (result) => setNumbers(result.numbers) });
-  const claim = useMutation({ mutationFn: (claimToken: string) => requestJson<{ claimId: string }>(`/api/onboarding/phone-numbers/claim?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ claimToken, idempotencyKey: crypto.randomUUID() }) }), onSuccess: (result) => setClaimId(result.claimId) });
+  const router = useRouter();
+  const [claiming, setClaiming] = useState(false);
+  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
+  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
+  const phones = useQuery({ queryKey: ["onboarding-primary-number", business?.businessId], refetchInterval: query => query.state.data?.activeClaim ? 1000 : false, enabled: Boolean(business), queryFn: () => requestJson<{ activeClaim?: { id: string; status: string } | null; phoneNumbers: Array<{ id: string; e164: string; reclaimScheduledAt: string | null }> }>(`/api/phone-numbers?businessId=${encodeURIComponent(business!.businessId)}`) });
+  const primary = phones.data?.phoneNumbers.find(number => !number.reclaimScheduledAt);
+  const reachedAttribution = ["attribution", "complete"].includes(business?.onboardingStage ?? "");
+  useEffect(() => { if (primary && !reachedAttribution) router.replace("/onboarding/attribution"); }, [primary, reachedAttribution, router]);
+  const getInitialNumberSuggestion = useCallback(async ({ businessId }: { businessId: string }) => {
+    const result = await requestJson<{ numbers: NumberOffer[]; market?: { countryCode: string; areaCode?: string } }>(`/api/onboarding/phone-numbers/suggestion?businessId=${encodeURIComponent(businessId)}`);
+    const countryCode = normalizeOnboardingPhoneCountry(result.market?.countryCode ?? result.numbers[0]?.countryCode);
+    const numbers = result.numbers.map(offer => toNumber(offer, { mode: "suggested", countryCode }));
+    return { market: { ...result.market, countryCode }, suggestion: numbers[0] ?? null, alternatives: numbers.slice(1) };
+  }, []);
+  const searchAvailableNumbers = useCallback(async ({ businessId, mode, countryCode, areaCode, limit }: { businessId: string; mode: "suggested" | "area_code"; countryCode: SupportedOnboardingPhoneCountry; areaCode?: string; limit: number }) => {
+    const selectionContext = { mode, countryCode, ...(areaCode ? { areaCode } : {}) };
+    const result = await requestJson<{ numbers: NumberOffer[]; market?: { countryCode: string; areaCode?: string } }>(`/api/onboarding/phone-numbers/search?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ selection: { countryCode, kind: "local", ...(areaCode ? { areaCode } : {}) }, limit }) });
+    return { market: { countryCode }, selectionContext, numbers: result.numbers.map(offer => toNumber(offer, selectionContext)) };
+  }, []);
+  const claimNumber = useCallback(async ({ businessId, claimToken, selectionContext }: { businessId: string; claimToken: string; selectionContext?: NumberSelectionContext }): Promise<ClaimResult> => {
+    setClaiming(true);
+    try {
+    const { claimId } = await requestJson<{ claimId: string }>(`/api/onboarding/phone-numbers/claim?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ claimToken, idempotencyKey: crypto.randomUUID() }) });
+    const deadline = Date.now() + 120_000;
+    while (Date.now() < deadline) {
+      const { claim } = await requestJson<{ claim: { status: string; requestedE164: string; phoneNumberId: string | null } | null }>(`/api/onboarding/phone-numbers/claim/${encodeURIComponent(claimId)}?businessId=${encodeURIComponent(businessId)}`);
+      if (claim?.status === "claimed" && claim.phoneNumberId) return { status: "claimed", phoneNumberId: claim.phoneNumberId, e164: claim.requestedE164 };
+      if (claim?.status === "unavailable") {
+        const refreshed = selectionContext
+          ? await searchAvailableNumbers({ businessId, mode: selectionContext.mode === "area_code" ? "area_code" : "suggested", countryCode: normalizeOnboardingPhoneCountry(selectionContext.countryCode), ...(selectionContext.areaCode ? { areaCode: selectionContext.areaCode } : {}), limit: 10 })
+          : await getInitialNumberSuggestion({ businessId });
+        const alternatives = "numbers" in refreshed ? refreshed.numbers : [...(refreshed.suggestion ? [refreshed.suggestion] : []), ...refreshed.alternatives];
+        return { status: "unavailable", message: t("number.unavailable"), alternatives };
+      }
+      if (!claim || claim.status === "failed") return { status: "failed", message: t("number.claimFailed") };
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    return { status: "failed", message: t("number.claimFailed") };
+    } finally { setClaiming(false); }
+  }, [t, searchAvailableNumbers, getInitialNumberSuggestion]);
+  const getErrorMessage = useCallback((error: unknown, fallback: string) => getSafeOnboardingErrorMessage(error, t, fallback), [t]);
   const skip = useMutation({ mutationFn: () => requestJson(`/api/onboarding/phone-numbers/skip?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST" }), onSuccess: () => router.push("/onboarding/attribution") });
-  const status = useQuery({ queryKey: ["number-claim", business?.businessId, claimId], queryFn: () => requestJson<{ claim: { status: string; requestedE164: string; lastError: string | null } | null }>(`/api/onboarding/phone-numbers/claim/${claimId}?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business && claimId), refetchInterval: (query) => ["reserved", "provisioning"].includes(query.state.data?.claim?.status ?? "") ? 1000 : false });
-  useEffect(() => { if (status.data?.claim?.status === "claimed") router.push("/onboarding/attribution"); }, [router, status.data?.claim?.status]);
-  const pending = claim.isPending || ["reserved", "provisioning"].includes(status.data?.claim?.status ?? "");
-  return <div className="flex flex-col gap-6"><Surface className="p-5"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto]"><Select onValueChange={(value) => value && setCountryCode(value)} value={countryCode}><SelectTrigger className="h-11 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="CA">Canada</SelectItem><SelectItem value="US">United States</SelectItem><SelectItem value="GB">United Kingdom</SelectItem><SelectItem value="AU">Australia</SelectItem></SelectContent></Select><Select onValueChange={(value) => value && setKind(value)} value={kind}><SelectTrigger className="h-11 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="local">Local</SelectItem><SelectItem value="toll_free">Toll-free</SelectItem></SelectContent></Select><Input aria-label={t("number.areaCodeLabel")} className="h-11" disabled={kind === "toll_free"} onChange={(event) => setAreaCode(event.target.value.replace(/\D/g, ""))} placeholder={t("number.areaCodePlaceholder")} value={areaCode} /><Input aria-label="City" className="h-11" disabled={kind === "toll_free"} onChange={(event) => setCity(event.target.value)} placeholder="City" value={city} /><Button className="h-11" disabled={!business || search.isPending || pending} onClick={() => search.mutate()}><RefreshCw className={search.isPending ? "size-4 animate-spin" : "size-4"} />{t("number.search")}</Button></div></Surface>{suggestions.isLoading ? <Surface className="flex justify-center p-8"><LoaderCircle className="size-5 animate-spin text-muted-foreground" /></Surface> : <TableCard><Table><TableHeader><TableRow><TableHead>{t("number.tableHeaders.phoneNumber")}</TableHead><TableHead>Location</TableHead><TableHead>Capabilities</TableHead><TableHead className="text-right"><span className="sr-only">{t("number.select")}</span></TableHead></TableRow></TableHeader><TableBody>{numbers.length ? numbers.map((number) => <TableRow key={number.phoneE164}><TableCell className="font-medium">{number.phoneE164}</TableCell><TableCell className="text-muted-foreground">{[number.locality, number.region, number.countryCode].filter(Boolean).join(", ")}</TableCell><TableCell className="text-muted-foreground">Voice · SMS</TableCell><TableCell className="text-right"><Button disabled={pending} onClick={() => claim.mutate(number.claimToken)} size="sm">{pending ? <LoaderCircle className="size-4 animate-spin" /> : null}{t("number.select")}</Button></TableCell></TableRow>) : <TableRow><TableCell className="h-24 text-center text-muted-foreground" colSpan={4}>{t("number.empty")}</TableCell></TableRow>}</TableBody></Table></TableCard>}{suggestions.isError || search.isError ? <FieldError>{(search.error ?? suggestions.error)?.message}</FieldError> : null}{status.data?.claim && ["failed", "unavailable"].includes(status.data.claim.status) ? <FieldError>{status.data.claim.lastError ?? t("number.unavailable")}</FieldError> : null}{claim.isError ? <FieldError>{claim.error.message}</FieldError> : null}<button className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={!business || skip.isPending || pending} onClick={() => skip.mutate()} type="button">{skip.isPending ? t("number.skipping") : t("number.skipLater")}</button>{skip.isError ? <FieldError>{skip.error.message}</FieldError> : null}</div>;
+  if (!phones.data || (!claiming && phones.data.activeClaim) || (primary && !reachedAttribution)) return <Surface className="flex justify-center p-6"><LoaderCircle className="size-5 animate-spin text-muted-foreground" /></Surface>;
+  if (primary) return <Surface className="flex flex-col gap-5 p-6 text-center"><div className="flex flex-col gap-2"><p className="text-sm font-medium text-muted-foreground">{t("number.selectedNumberLabel")}</p><p className="text-2xl font-semibold text-foreground">{toNumber({ phoneE164: primary.e164, countryCode: "US", claimToken: "", capabilities: { sms: true, voice: true } }, { mode: "suggested", countryCode: "US" }).display}</p></div><Button onClick={() => router.push("/onboarding/attribution")} type="button">{t("number.continue")}</Button></Surface>;
+  return <div className="flex flex-col gap-6">
+    {business ? <PhoneNumberChooser businessId={business.businessId} getInitialNumberSuggestion={getInitialNumberSuggestion} searchAvailableNumbers={searchAvailableNumbers} claimNumber={claimNumber} getErrorMessage={getErrorMessage} onClaimed={() => { setClaiming(false); router.push(business.onboardingStage === "complete" ? "/settings/phone-number" : "/onboarding/attribution"); }} labels={{ countryLabel: t("number.countryLabel"), areaCodeLabel: t("number.areaCodeLabel"), areaCodePlaceholder: t("number.areaCodePlaceholder"), search: t("number.search"), phoneNumberHeader: t("number.tableHeaders.phoneNumber"), select: t("number.select"), loadMore: t("number.loadMore"), empty: t("number.empty"), loadFailed: "number.loadFailed", searchFailed: "number.searchFailed", claimFailed: "number.claimFailed", unavailable: t("number.unavailable") }} /> : null}
+    {business?.onboardingStage !== "complete" ? <button className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={!business || skip.isPending || claiming} onClick={() => skip.mutate()} type="button">{skip.isPending ? t("number.skipping") : t("number.skipLater")}</button> : null}
+    {skip.isError ? <FieldError>{t("number.skipFailed")}</FieldError> : null}
+  </div>;
 }

@@ -1,4 +1,4 @@
-# Architecture Overview
+# Understand the platform architecture
 
 LobbyStack is a TypeScript monorepo with four active application runtimes:
 
@@ -9,7 +9,7 @@ LobbyStack is a TypeScript monorepo with four active application runtimes:
 
 PostgreSQL is the durable source of truth. `packages/db` owns schema, migrations, role-specific clients, and row-level security. `packages/domain` owns business operations shared by admin and worker runtimes. Redis provides queues, rate limiting, and realtime coordination. S3-compatible storage holds recordings and uploaded documents.
 
-## Voice Data Flow
+## Follow the voice data flow
 
 1. The admin/worker runtimes compile structured facts and indexed knowledge into a business context snapshot.
 2. The voice gateway resolves that snapshot once at call start through the private admin backend.

@@ -1,6 +1,6 @@
 ---
-title: "Smith.ai Alternative: AI and Human Coverage"
-seoTitle: "Smith.ai Alternative: LobbyStack vs Smith.ai"
+title: "Smith.ai alternative: AI and human coverage"
+seoTitle: "Smith.ai alternative: LobbyStack vs Smith.ai"
 description: "Compare LobbyStack and Smith.ai on AI call handling, live-agent backup, pricing, booking, customization, source access, and self-hosted deployment."
 pubDate: 2026-07-30T11:30:00-04:00
 updatedDate: 2026-07-30T11:30:00-04:00

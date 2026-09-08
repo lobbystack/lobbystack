@@ -1,14 +1,16 @@
 import { betterAuth } from "better-auth";
+import { emailOTP } from "better-auth/plugins";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import Redis from "ioredis";
+import { z } from "zod";
 import { createHash, randomUUID } from "node:crypto";
 import { and, eq, isNotNull } from "drizzle-orm";
 
 import { createDatabaseClient, enqueueOutbox, withBusinessTransaction } from "@lobbystack/db";
 import { accounts, sessions, users, verifications } from "@lobbystack/db";
 
-import { hashReplacementPassword, isLegacyScryptHash, verifyLegacyPassword } from "./password";
+import { hashReplacementPassword, isLegacyScryptHash, meetsPasswordRequirements, verifyLegacyPassword } from "./password";
 import { verifyTurnstileForSignUp } from "./turnstile";
 
 let instance: any;
@@ -176,6 +178,26 @@ export function getAuth() {
       useSecureCookies: secureCookies,
       database: { generateId: () => randomUUID() },
     },
+    plugins: [emailOTP({
+      disableSignUp: true,
+      storeOTP: "hashed",
+      expiresIn: 600,
+      allowedAttempts: 3,
+      sendVerificationOTP: async ({ email, otp, type }) => {
+        if (type !== "forget-password") throw new Error("Only password recovery codes are enabled.");
+        const user = (await database.db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1))[0];
+        if (!user) return;
+        await withBusinessTransaction(getEmailDatabase().db, { actorType: "system" }, async (tx) => {
+          await enqueueOutbox(tx, {
+            topic: "email.send",
+            aggregateType: "auth_email",
+            aggregateId: user.id,
+            dedupeKey: `auth-reset-code:${user.id}:${randomUUID()}`,
+            payload: { template: "password_reset", to: email, subject: "Reset your LobbyStack password", variables: { code: otp } },
+          });
+        });
+      },
+    })],
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
@@ -184,17 +206,39 @@ export function getAuth() {
         verify: async ({ hash, password }: { hash: string; password: string }) => await verifyLegacyPassword(hash, password),
       },
       revokeSessionsOnPasswordReset: true,
+      onPasswordReset: async ({ user }: { user: { id: string } }) => {
+        const account = (await database.db.select({ password: accounts.password }).from(accounts)
+          .where(and(eq(accounts.userId, user.id), eq(accounts.providerId, "credential"))).limit(1))[0];
+        if (account?.password) await database.db.update(users).set({ passwordHash: account.password, passwordAlgorithm: "lobbystack-scrypt-v1", updatedAt: new Date() }).where(eq(users.id, user.id));
+      },
       sendResetPassword: async ({ user, url }: { user: { id: string; email: string }; url: string }) => {
         await enqueueAuthEmail({ purpose: "password_reset", userId: user.id, email: user.email, url });
       },
     },
     emailVerification: {
+      afterEmailVerification: async (user: { id: string; email: string }) => {
+        await database.db.update(users).set({ normalizedEmail: user.email.trim().toLowerCase(), updatedAt: new Date() }).where(eq(users.id, user.id));
+      },
       sendOnSignUp: process.env.SEND_VERIFICATION_EMAIL_ON_SIGNUP === "true",
       sendVerificationEmail: async ({ user, url }: { user: { id: string; email: string }; url: string }) => {
-        await enqueueAuthEmail({ purpose: "verification", userId: user.id, email: user.email, url });
+        const storedUser = (await database.db.select({ email: users.email }).from(users).where(eq(users.id, user.id)).limit(1))[0];
+        let deliveryUrl = url;
+        if (storedUser && storedUser.email !== user.email) {
+          // The second, new-address verification step uses the original confirmation UI.
+          // Better Auth still verifies the signed token and performs the authoritative update.
+          const verificationUrl = new URL(url);
+          const confirmationUrl = new URL("/confirm-email-change", process.env.APP_BASE_URL ?? "http://localhost:3000");
+          confirmationUrl.searchParams.set("token", verificationUrl.searchParams.get("token") ?? "");
+          confirmationUrl.searchParams.set("email", user.email);
+          deliveryUrl = confirmationUrl.toString();
+        }
+        await enqueueAuthEmail({ purpose: "verification", userId: user.id, email: user.email, url: deliveryUrl });
       },
     },
     user: {
+      additionalFields: {
+        preferredLocale: { type: "string", required: false, defaultValue: "en", input: true, validator: { input: z.enum(["en", "fr"]) } },
+      },
       changeEmail: {
         enabled: true,
         sendChangeEmailConfirmation: async ({ user, url }: { user: { id: string; email: string }; newEmail: string; url: string }) => {
@@ -220,6 +264,20 @@ export function getAuth() {
     },
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        // Enable recovery only; the OTP plugin must not introduce passwordless sign-in.
+        const recoveryPaths = ["/email-otp/request-password-reset", "/email-otp/reset-password"];
+        if ((ctx.path.startsWith("/email-otp/") || ctx.path.endsWith("/email-otp")) && !recoveryPaths.includes(ctx.path)) {
+          throw new APIError("NOT_FOUND", { message: "Endpoint not enabled." });
+        }
+        if (recoveryPaths.includes(ctx.path) && !z.string().email().safeParse(ctx.body?.email).success) {
+          throw new APIError("BAD_REQUEST", { message: "Invalid email address." });
+        }
+        if (["/sign-up/email", "/email-otp/reset-password", "/reset-password", "/change-password"].includes(ctx.path)) {
+          const password = ctx.body?.newPassword ?? ctx.body?.password;
+          if (typeof password !== "string" || !meetsPasswordRequirements(password)) {
+            throw new APIError("BAD_REQUEST", { code: "INVALID_PASSWORD", message: "Invalid password" });
+          }
+        }
         if (ctx.path !== "/sign-up/email") {
           return;
         }

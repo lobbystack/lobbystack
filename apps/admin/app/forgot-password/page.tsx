@@ -1,36 +1,55 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ForgotPasswordForm } from "@/components/forgot-password-form";
+import { ReplacementOnboardingShell } from "@/components/replacement-onboarding-shell";
 
 export default function ForgotPasswordPage() {
+  const { t } = useTranslation("auth");
+  const router = useRouter();
+  const [step, setStep] = useState<"request" | "verify">("request");
   const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setLoading(true);
+    setErrorMessage(null);
+    setIsSubmitting(true);
+    let signingIn = false;
     try {
-      const response = await fetch("/api/auth/request-password-reset", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, redirectTo: `${window.location.origin}/reset-password` }),
+      const normalizedEmail = email.trim().toLowerCase();
+      const response = await fetch(`/api/auth/email-otp/${step === "request" ? "request-password-reset" : "reset-password"}`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify(step === "request" ? { email: normalizedEmail } : { email: normalizedEmail, otp: code.trim(), password: newPassword }),
       });
       if (!response.ok) {
-        throw new Error("Unable to request a password reset.");
+        const failure = await response.json().catch(() => ({}));
+        const key = step === "request" ? "passwordResetRequestFailed"
+          : failure.code === "INVALID_PASSWORD" || failure.code === "PASSWORD_TOO_SHORT" || failure.code === "PASSWORD_TOO_LONG" ? "invalidPassword"
+          : failure.code === "USER_NOT_FOUND" || failure.code === "INVALID_OTP" || failure.code === "OTP_EXPIRED" || failure.code === "TOO_MANY_ATTEMPTS" ? "invalidResetCode" : "passwordResetFailed";
+        throw new Error(t(`errors.${key}`));
       }
-      setSubmitted(true);
+      if (step === "request") { setStep("verify"); return; }
+      const login = await fetch("/api/auth/sign-in/email", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail, password: newPassword }),
+      });
+      // The password has changed even if a transient login/rate-limit error occurs.
+      signingIn = true;
+      router.replace(login.ok ? "/" : "/login");
+      router.refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to request a password reset.");
-    } finally {
-      setLoading(false);
-    }
+      setErrorMessage(cause instanceof Error ? cause.message : t("errors.passwordResetFailed"));
+    } finally { if (!signingIn) setIsSubmitting(false); }
   }
 
-  return <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12"><Card className="w-full max-w-md"><CardHeader><CardTitle>Reset your password</CardTitle><CardDescription className="mt-2">Enter your email and we will send a secure reset link if an account exists.</CardDescription></CardHeader><CardContent>{submitted ? <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800">If an account exists for that address, a reset link is on its way.</p> : <form className="space-y-4" onSubmit={submit}><label className="block space-y-2 text-sm font-medium text-slate-700">Email<input aria-label="Email" className="min-h-11 w-full rounded-xl border border-slate-200 px-3" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>{error ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}<button className="min-h-11 w-full rounded-xl bg-teal-700 px-4 py-3 text-sm font-medium text-white disabled:opacity-60" disabled={loading} type="submit">{loading ? "Sending..." : "Send reset link"}</button></form>}<Link className="mt-6 block text-center text-sm text-slate-500 hover:text-slate-900" href="/login">Back to sign in</Link></CardContent></Card></main>;
+  return <ReplacementOnboardingShell description={step === "verify" ? t("forgotPassword.verifySubtitle", { email }) : t("forgotPassword.subtitle")} progress={null} title={step === "verify" ? t("forgotPassword.verifyTitle") : t("forgotPassword.title")} width="sm">
+    <ForgotPasswordForm step={step} email={email} code={code} newPassword={newPassword} isSubmitting={isSubmitting} errorMessage={errorMessage} onEmailChange={setEmail} onCodeChange={setCode} onNewPasswordChange={setNewPassword} onSubmit={submit} onBackToRequest={() => { setStep("request"); setCode(""); setNewPassword(""); setErrorMessage(null); }} />
+  </ReplacementOnboardingShell>;
 }

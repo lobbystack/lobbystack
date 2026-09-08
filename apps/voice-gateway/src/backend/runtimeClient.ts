@@ -384,6 +384,7 @@ export async function uploadVoiceRecording(input: {
 }
 
 export async function findVoiceAvailability(input: {
+  callId?: string;
   businessId: string;
   serviceName: string;
   date: string;
@@ -397,6 +398,7 @@ export async function findVoiceAvailability(input: {
 }
 
 export async function checkVoiceAvailability(input: {
+  callId?: string;
   businessId: string;
   serviceName: string;
   startsAt: string;
@@ -407,6 +409,7 @@ export async function checkVoiceAvailability(input: {
 }
 
 export async function bookVoiceAppointment(input: {
+  callId?: string;
   businessId: string;
   serviceName: string;
   startsAt: string;

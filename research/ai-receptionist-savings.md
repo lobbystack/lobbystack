@@ -1,4 +1,4 @@
-# Research: AI Receptionist Savings
+# Research: AI receptionist savings
 
 Topic: How much can a small business save using an AI receptionist?
 

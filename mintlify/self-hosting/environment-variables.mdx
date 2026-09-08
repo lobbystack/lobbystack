@@ -1,6 +1,8 @@
 ---
-title: "Environment variables"
+title: "Configure environment variables"
 description: "Key environment variables for the LobbyStack admin, worker, voice gateway, storage, and providers."
+sidebarTitle: "Environment variables"
+contentType: "Reference"
 ---
 
 Use `.env.example` as the source of truth. Store production values in your deployment secret manager or a permission-restricted `.env` file.
@@ -51,7 +53,7 @@ Local storage fits a single-host deployment. Use S3 when the admin and worker ru
 | Variable | Purpose |
 | --- | --- |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP base URL. LobbyStack appends `/v1/traces`, `/v1/metrics`, and `/v1/logs`. Leave empty to disable export. |
-| `OTEL_EXPORTER_OTLP_HEADERS` | Optional comma-separated `key=value` headers sent with each OTLP request. For PostHog, use `Authorization=Bearer <phc_project_token>`. |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Optional comma-separated `key=value` headers sent with each OTLP request. For PostHog, use `Authorization=Bearer your_posthog_project_token_here`. |
 
 An empty OTLP endpoint does not disable container stdout logs, application health endpoints, direct product analytics, or direct voice-gateway error reporting.
 

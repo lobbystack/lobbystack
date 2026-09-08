@@ -1,5 +1,6 @@
 import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import Redis from "ioredis";
+import { assertProductionSecrets } from "@lobbystack/config";
 
 const seenNonces = new Map<string, number>();
 let replayStore: Redis | undefined;
@@ -17,6 +18,11 @@ export function buildInternalHeaders(input: { serviceId: string; body: string; t
 }
 
 export function verifyInternalRequest(input: { serviceId: string; timestamp: string | null; nonce: string | null; bodyHash: string | null; signature: string | null; body: string | Uint8Array; maxAgeMs?: number }): boolean {
+  try {
+    assertProductionSecrets(process.env, ["INTERNAL_SERVICE_SECRET"]);
+  } catch {
+    return false;
+  }
   if (!input.timestamp || !input.nonce || !input.bodyHash || !input.signature) {
     return false;
   }

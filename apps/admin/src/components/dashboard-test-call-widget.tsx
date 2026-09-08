@@ -1,37 +1,157 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Mic, Phone, PhoneOff } from "lucide-react";
-import { useWebVoiceCall, type WebVoiceErrorKey } from "@/components/web-voice/useWebVoiceCall";
+import { useCallback, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { Phone } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
+import { AuraVoiceDemo } from "@/components/web-voice/AuraVoiceDemo";
 import { webCallEndpoint } from "@/lib/web-call-endpoint";
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
-export function DashboardTestCallWidget({ businessId, businessSlug, className }: { businessId: string; businessSlug: string; className?: string }) {
-  const [proofError, setProofError] = useState<string | null>(null);
-  const { t } = useTranslation("admin");
-  const call = useWebVoiceCall({ businessSlug, endpoint: webCallEndpoint, widgetId: "lobbystack-dashboard-test-call", getStartPayload: async () => {
-    const response = await fetch(`/api/voice/test-call/proof?businessId=${encodeURIComponent(businessId)}`, { credentials: "include" });
-    if (!response.ok) {
-      const message = (await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Test calls are unavailable.";
-      setProofError(message);
-      throw new Error(message);
+type TestCallWidgetProps = {
+  businessId?: string;
+  businessSlug?: string;
+  className?: string;
+};
+
+type WebVoiceControls = {
+  forceEndCall: () => Promise<void>;
+  startCall: () => Promise<void>;
+};
+
+export function DashboardTestCallWidget({
+  businessId,
+  businessSlug,
+  className,
+}: TestCallWidgetProps) {
+  const { t } = useTranslation("common");
+  const [open, setOpen] = useState(false);
+  const voiceControlsRef = useRef<WebVoiceControls | null>(null);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      void voiceControlsRef.current?.forceEndCall();
     }
-    setProofError(null);
-    const result = await response.json() as { proof: string };
-    return { dashboardTestCallProof: result.proof };
-  } });
+    setOpen(nextOpen);
+  };
 
-  useEffect(() => {
-    if (call.remoteAudioRef.current && call.remoteStream) call.remoteAudioRef.current.srcObject = call.remoteStream;
-  }, [call.remoteAudioRef, call.remoteStream]);
+  const handleTestCallClick = () => {
+    setOpen(true);
+    void voiceControlsRef.current?.startCall();
+  };
 
-  const message = proofError ?? (call.errorKey ? errorMessage(call.errorKey) : null);
-  return <div className={`flex items-center gap-2 ${className ?? ""}`}><audio ref={call.remoteAudioRef} autoPlay className="hidden" /><Button aria-label={t("utilities.testCall")} disabled={call.isBusy} onClick={() => { setProofError(null); if (call.isCallActive) void call.forceEndCall(); else void call.startCall(); }} size="sm" variant={call.isCallActive ? "destructive" : "outline"}>{call.isCallActive ? <PhoneOff className="size-4" /> : call.isBusy ? <Mic className="size-4 animate-pulse" /> : <Phone className="size-4" />}{call.isCallActive ? t("utilities.endTestCall") : call.isBusy ? t("utilities.connecting") : t("utilities.testCall")}</Button>{message ? <span className="max-w-64 text-xs text-destructive" role="alert">{message}</span> : null}</div>;
+  if (!businessSlug) {
+    return null;
+  }
+
+  return (
+    <div className={cn("hidden items-center md:flex", className)}>
+      <Button
+        aria-label={t("testCall.trigger")}
+        onClick={handleTestCallClick}
+        size="sm"
+        type="button"
+        variant="outline"
+      >
+        <Phone className="text-sidebar-foreground" />
+        <span className="text-sidebar-foreground">{t("testCall.trigger")}</span>
+      </Button>
+
+      <Dialog onOpenChange={handleOpenChange} open={open}>
+        <DialogContent
+          className="border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-[34rem]"
+          overlayClassName="bg-black/60 backdrop-blur-lg"
+          showCloseButton={false}
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>{t("testCall.title")}</DialogTitle>
+            <DialogDescription>{t("testCall.description")}</DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+      <TestCallAuraPortal open={open}>
+        <TestCallAura
+          businessId={businessId}
+          businessSlug={businessSlug}
+          onCallEnded={() => setOpen(false)}
+          onRegisterControls={(controls) => {
+            voiceControlsRef.current = controls;
+          }}
+        />
+      </TestCallAuraPortal>
+    </div>
+  );
 }
 
-function errorMessage(error: WebVoiceErrorKey): string {
-  const messages: Record<WebVoiceErrorKey, string> = { microphoneBlocked: "Microphone permission was blocked.", microphoneNotFound: "No microphone was found.", microphoneInUse: "The microphone is already in use.", gatewayTimeout: "The voice gateway timed out.", gatewayUnreachable: "The voice gateway is unavailable.", connectionDropped: "The test call connection dropped.", browserNoMicrophone: "This browser cannot access a microphone.", browserNoWebRtc: "This browser does not support live voice calls.", businessNotFound: "The workspace could not be found.", rateLimited: "Too many test calls. Try again shortly.", unavailable: "The AI receptionist is unavailable.", generic: "The test call could not be started." };
-  return messages[error];
+function TestCallAuraPortal({
+  open,
+  children,
+}: {
+  open: boolean;
+  children: ReactNode;
+}) {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      aria-hidden={!open}
+      className={cn(
+        "pointer-events-none fixed inset-0 z-[70] flex items-center justify-center transition-opacity duration-100",
+        open ? "opacity-100" : "invisible opacity-0",
+      )}
+    >
+      <div className="pointer-events-auto w-full max-w-[22rem] md:max-w-[30rem]">
+        {children}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+type TestCallAuraProps = {
+  businessId?: string | undefined;
+  businessSlug: string;
+  onCallEnded: () => void;
+  onRegisterControls: (controls: WebVoiceControls) => void;
+};
+
+function TestCallAura({
+  businessId,
+  businessSlug,
+  onCallEnded,
+  onRegisterControls,
+}: TestCallAuraProps) {
+  const getStartPayload = useCallback(async (): Promise<Record<string, string>> => {
+    if (!businessId) return {};
+    const response = await fetch(`/api/voice/test-call/proof?businessId=${encodeURIComponent(businessId)}`, { credentials: "include" });
+    if (!response.ok) throw new Error("Test calls are unavailable.");
+    const { proof } = await response.json() as { proof: string };
+    return { dashboardTestCallProof: proof };
+  }, [businessId]);
+
+  return (
+    <AuraVoiceDemo
+      auraTone="dark"
+      businessSlug={businessSlug}
+      className="w-full"
+      endpoint={webCallEndpoint}
+      getStartPayload={getStartPayload}
+      onCallEnded={onCallEnded}
+      onRegisterControls={onRegisterControls}
+      widgetId="lobbystack-dashboard-test-call"
+    />
+  );
 }

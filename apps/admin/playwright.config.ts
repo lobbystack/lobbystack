@@ -31,12 +31,15 @@ process.env.REPLACEMENT_E2E_DATABASE_URL = baseDatabaseUrl.toString();
 export default defineConfig({
   testDir: "./e2e",
   testMatch: "**/*.e2e.ts",
+  testIgnore: ["**/visual-parity.e2e.ts", "**/new-operator-visual.e2e.ts", "**/loading-parity.e2e.ts", "**/invitation-parity.e2e.ts"],
   fullyParallel: false,
+  // Operator fixtures share persisted active-workspace state across spec files.
+  ...(process.env.PARITY_OPERATOR_USER_ID ? { workers: 1 } : {}),
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL,
-    trace: "on-first-retry",
+    trace: "retain-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {

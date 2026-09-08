@@ -34,9 +34,10 @@ Faites un vrai test d'appel pour chaque finaliste : demande de réservation, que
 
 ## Les meilleures options open source, par cas d'usage
 
-### LobbyStack — meilleure plateforme complète de réceptionniste (cloud ou auto-hébergée)
+### LobbyStack: meilleure plateforme complète de réceptionniste (cloud ou auto-hébergée)
 
-**GitHub :** [lobbystack/lobbystack](https://github.com/lobbystack/lobbystack)  
+**GitHub :** [lobbystack/lobbystack](https://github.com/lobbystack/lobbystack)
+
 **Licence :** MIT
 
 **Idéal pour :** Les entreprises de services et les agences qui veulent appels, réservations, transcriptions, tableaux de bord, facturation et auto-hébergement sans assembler dix dépôts
@@ -47,10 +48,12 @@ Le compromis, c'est l'ampleur. Vous obtenez une vraie couche opérationnelle aut
 
 Choisissez LobbyStack quand votre problème est « répondre aux appels et finir le travail », pas « prouver la voix IA en laboratoire ».
 
-### AVA (Asterisk AI Voice Agent) — idéal pour les environnements Asterisk / FreePBX existants
+### AVA (Asterisk AI voice agent): idéal pour les environnements Asterisk / FreePBX existants
 
-**GitHub :** [hkjarral/Asterisk-AI-Voice-Agent](https://github.com/hkjarral/Asterisk-AI-Voice-Agent)  
-**Licence :** MIT  
+**GitHub :** [hkjarral/Asterisk-AI-Voice-Agent](https://github.com/hkjarral/Asterisk-AI-Voice-Agent)
+
+**Licence :** MIT
+
 **Idéal pour :** Les équipes déjà sur Asterisk qui veulent un agent vocal modulaire avec pipelines cloud, hybrides ou entièrement locaux
 
 AVA est la communauté open source la plus active autour d'un **agent vocal IA Asterisk** aujourd'hui. Il se branche sur Asterisk via ARI, prend en charge AudioSocket et ExternalMedia RTP, et permet de mixer les fournisseurs STT, LLM et TTS. Vous pouvez utiliser des fournisseurs cloud (OpenAI Realtime, Google Live, Deepgram et autres), une configuration hybride locale ou une pile entièrement sur site avec Faster Whisper, llama.cpp et Kokoro TTS.
@@ -59,10 +62,12 @@ Ce que vous obtenez : une intégration téléphonique sérieuse, des configurati
 
 Choisissez AVA quand Asterisk est déjà votre téléphonie et que vous voulez un contrôle maximal sur le pipeline vocal.
 
-### Helix AI Virtual Receptionist — meilleur réceptionniste Asterisk orienté local
+### Helix AI virtual receptionist: meilleur réceptionniste Asterisk orienté local
 
-**GitHub :** [BB-AI-Arena/helix-ai-virtual-receptionist](https://github.com/BB-AI-Arena/helix-ai-virtual-receptionist)  
-**Licence :** MIT  
+**GitHub :** [BB-AI-Arena/helix-ai-virtual-receptionist](https://github.com/BB-AI-Arena/helix-ai-virtual-receptionist)
+
+**Licence :** MIT
+
 **Idéal pour :** Les opérateurs qui veulent une réponse sur Asterisk sans envoyer la parole ou le LLM vers des API externes
 
 Helix vise le travail de réceptionniste plus directement qu'un simple agent vocal. Il tourne sur Asterisk ARI avec Whisper STT local, détection d'intention via Ollama, Kokoro TTS, planification Google Calendar, messagerie vocale, routage VIP, contrôle des heures d'ouverture et tableau de bord opérationnel. Le projet est plus récent et plus petit qu'AVA, mais la direction est claire : accueil multilingue auto-hébergé avec hooks CRM optionnels (Vtiger) et moins de dépendance aux factures cloud à la minute.
@@ -71,10 +76,12 @@ Le compromis, c'est le matériel et le réglage. La voix locale sur CPU peut sem
 
 Choisissez Helix quand la confidentialité, les coûts prévisibles et le routage natif Asterisk comptent plus que de brancher le dernier modèle vocal hébergé dès le premier jour.
 
-### AIReceptionist — meilleure pile minimale OpenAI Realtime + LiveKit
+### AIReceptionist: meilleure pile minimale OpenAI Realtime + LiveKit
 
-**GitHub :** [kirklandsig/AIReceptionist](https://github.com/kirklandsig/AIReceptionist)  
-**Licence :** AGPL-3.0  
+**GitHub :** [kirklandsig/AIReceptionist](https://github.com/kirklandsig/AIReceptionist)
+
+**Licence :** AGPL-3.0
+
 **Idéal pour :** Les développeurs qui veulent une qualité speech-to-speech rapidement, avec configuration YAML et SIP via LiveKit
 
 Ce projet est volontairement étroit. Il connecte les appels PSTN entrants (Twilio ou Telnyx) à une salle LiveKit, exécute l'API Realtime d'OpenAI pour une conversation speech-to-speech, et expose réponses FAQ, transferts, prise de message, règles hors heures et configuration multi-entreprise en YAML. La réduction de bruit pour l'audio téléphonique est intégrée.
@@ -83,10 +90,12 @@ Vous échangez l'ampleur contre la vitesse pour obtenir une ligne au son naturel
 
 Choisissez AIReceptionist quand vous aimez déjà LiveKit, voulez la qualité Realtime et construireez la couche métier vous-même.
 
-### Hearthline — meilleure option open source pour les services à domicile
+### Hearthline: meilleure option open source pour les services à domicile
 
-**GitHub :** [codewithmuh/hearthline](https://github.com/codewithmuh/hearthline)  
-**Licence :** AGPL-3.0 (licence commerciale disponible)  
+**GitHub :** [codewithmuh/hearthline](https://github.com/codewithmuh/hearthline)
+
+**Licence :** AGPL-3.0 (licence commerciale disponible)
+
 **Idéal pour :** CVC, plomberie et métiers similaires qui veulent appels, SMS, devis et flux type dispatch
 
 Hearthline est un logiciel vertical, pas un kit vocal générique. La pile combine Django, Next.js, Postgres, Vapi pour la voix, Twilio pour les SMS et des clés API chiffrées par entreprise. Il se concentre sur la qualification de leads, les devis photo, les grilles tarifaires, les connecteurs CRM et les règles par canal que les équipes de services à domicile utilisent réellement.

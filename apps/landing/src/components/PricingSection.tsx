@@ -393,12 +393,6 @@ const comparisonGroupsEn: ComparisonGroup[] = [
         enterprise: true,
       },
       {
-        feature: "Outlook integration",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
         feature: "Missed-call follow-up",
         free: true,
         pro: true,
@@ -642,12 +636,6 @@ const comparisonGroupsFr: ComparisonGroup[] = [
       },
       {
         feature: "Intégration Google Calendar",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        feature: "Intégration Outlook",
         free: true,
         pro: true,
         enterprise: true,

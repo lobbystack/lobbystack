@@ -1,8 +1,8 @@
-# Transactional Email Setup
+# Configure transactional email
 
 LobbyStack sends authentication and operational email through the worker's SMTP provider. The current flows include verification, password reset, email changes, notifications, and feedback delivery.
 
-## Required Environment
+## Configure the environment
 
 - `SMTP_HOST`
 - `SMTP_PORT`
@@ -25,7 +25,7 @@ For local development, start Mailpit with `docker compose --env-file .env --prof
 5. Repeat with signup verification and email change.
 6. Submit dashboard feedback and confirm asynchronous delivery to `FEEDBACK_TO_EMAIL`.
 
-## Production Notes
+## Operate email in production
 
 - Use a verified sender domain with SPF and DKIM.
 - Keep SMTP credentials on admin/worker server runtimes only.

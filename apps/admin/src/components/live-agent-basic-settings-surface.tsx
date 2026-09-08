@@ -1,35 +1,556 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { requestJson } from "@/lib/request-json";
+import type { AppointmentChangePolicy, RuntimeLocale } from "@lobbystack/shared";
+import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
-import { requestJson } from "@/lib/request-json";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/components/ui/item";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@/components/ui/item";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
-import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 
-type Profile = { greeting: string; tone: string; summary: string; bookingPolicy: string; voiceInstructions: string | null; smsInstructions: string | null; chatInstructions: string | null; transferMode: string; transferNumber: string | null };
-type AgentResponse = { business: { id: string; name: string; defaultLocale: "en" | "fr" } | null; profile: Profile | null };
+type AgentBasicSettingsPageProps = {
+  businessId: string;
+  canManageTenant: boolean;
+};
+
+export function resolveTransferNumberForSave({
+  rawInputValue,
+  validTransferNumber,
+}: {
+  rawInputValue: string;
+  validTransferNumber: string;
+}):
+  | { ok: true; value: string | null }
+  | { ok: false; errorKey: "agent:fields.transferNumber.errors.invalid" } {
+  const trimmedVisibleTransferNumber = rawInputValue.trim();
+  if (trimmedVisibleTransferNumber.length === 0) {
+    return { ok: true, value: null };
+  }
+
+  const trimmedTransferNumber = validTransferNumber.trim();
+  if (trimmedTransferNumber.length > 0) {
+    return { ok: true, value: trimmedTransferNumber };
+  }
+
+  return {
+    ok: false,
+    errorKey: "agent:fields.transferNumber.errors.invalid",
+  };
+}
+
+export function buildAppointmentChangePolicyForSave({
+  allowCancel,
+  allowReschedule,
+  requireOtp,
+}: {
+  allowCancel: boolean;
+  allowReschedule: boolean;
+  requireOtp: boolean;
+}): AppointmentChangePolicy {
+  return {
+    enabled: allowCancel || allowReschedule,
+    allowCancel,
+    allowReschedule,
+    verificationMode: requireOtp ? "otp_required" : "phone_match_and_facts",
+  };
+}
+
+export function AgentBasicSettingsPage({
+  businessId,
+  canManageTenant,
+}: AgentBasicSettingsPageProps) {
+  const { i18n, t } = useTranslation(["agent", "common", "settings"]);
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: ["agent-settings", businessId],
+    queryFn: () => requestJson<{ business: { defaultLocale: RuntimeLocale } | null; profile: { greeting: string; transferNumber: string | null; transferMode: string; appointmentChangePolicy: AppointmentChangePolicy | null } | null }>(`/api/agent?businessId=${encodeURIComponent(businessId)}`),
+    enabled: Boolean(businessId),
+  });
+  const configuration = query.data;
+  const isLoadingConfiguration = !businessId || query.isLoading;
+  async function saveProfile({ defaultLocale: locale, ...patch }: { businessId: string; defaultLocale?: RuntimeLocale; greeting?: string; transferNumber?: string | null; transferMode?: string; appointmentChangePolicy?: AppointmentChangePolicy }) {
+    await requestJson(`/api/agent?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", body: JSON.stringify({ ...patch, ...(locale ? { locale } : {}) }) });
+    await queryClient.invalidateQueries({ queryKey: ["agent-settings", businessId] });
+  }
+  const persistedProfile = configuration?.profile;
+
+  const [greeting, setGreeting] = useState("");
+  const [defaultLocale, setDefaultLocale] = useState<RuntimeLocale>("en");
+  const [transferNumber, setTransferNumber] = useState("");
+  const [transferNumberInputValue, setTransferNumberInputValue] = useState("");
+  const [allowAppointmentCancel, setAllowAppointmentCancel] = useState(true);
+  const [allowAppointmentReschedule, setAllowAppointmentReschedule] = useState(true);
+  const [requireAppointmentChangeOtp, setRequireAppointmentChangeOtp] = useState(false);
+  const [greetingStatus, setGreetingStatus] = useState<string | null>(null);
+  const [localeStatus, setLocaleStatus] = useState<string | null>(null);
+  const [transferStatus, setTransferStatus] = useState<string | null>(null);
+  const [appointmentChangeStatus, setAppointmentChangeStatus] = useState<string | null>(null);
+  const [isGreetingSaving, setIsGreetingSaving] = useState(false);
+  const [isLocaleSaving, setIsLocaleSaving] = useState(false);
+  const [isTransferSaving, setIsTransferSaving] = useState(false);
+  const [isAppointmentChangeSaving, setIsAppointmentChangeSaving] = useState(false);
+  const [transferStatusTone, setTransferStatusTone] = useState<"success" | "error">("success");
+  useEffect(() => {
+    const profile = configuration?.profile;
+    if (!profile) {
+      return;
+    }
+    setGreeting(profile.greeting);
+    setDefaultLocale(configuration.business?.defaultLocale ?? "en");
+    setTransferNumber(profile.transferNumber ?? "");
+    setTransferNumberInputValue(profile.transferNumber ?? "");
+    const appointmentChangePolicy = profile.appointmentChangePolicy as AppointmentChangePolicy | null;
+    setAllowAppointmentCancel(appointmentChangePolicy?.allowCancel ?? true);
+    setAllowAppointmentReschedule(appointmentChangePolicy?.allowReschedule ?? true);
+    setRequireAppointmentChangeOtp(
+      appointmentChangePolicy?.verificationMode === "otp_required",
+    );
+  }, [configuration]);
+
+  useEffect(() => {
+    const timeouts: number[] = [];
+
+    if (greetingStatus) {
+      timeouts.push(window.setTimeout(() => {
+        setGreetingStatus(null);
+      }, 3000));
+    }
+
+    if (localeStatus) {
+      timeouts.push(window.setTimeout(() => {
+        setLocaleStatus(null);
+      }, 3000));
+    }
+
+    if (transferStatus) {
+      timeouts.push(window.setTimeout(() => {
+        setTransferStatus(null);
+        setTransferStatusTone("success");
+      }, 3000));
+    }
+
+    if (appointmentChangeStatus) {
+      timeouts.push(window.setTimeout(() => {
+        setAppointmentChangeStatus(null);
+      }, 3000));
+    }
+
+    return () => {
+      for (const timeoutId of timeouts) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [appointmentChangeStatus, greetingStatus, localeStatus, transferStatus]);
+
+  async function saveGreeting(): Promise<void> {
+    if (!canManageTenant || !persistedProfile) {
+      return;
+    }
+
+    const transferNumberResolution = resolveTransferNumberForSave({
+      rawInputValue: transferNumberInputValue,
+      validTransferNumber: transferNumber,
+    });
+    if (!transferNumberResolution.ok) {
+      setTransferStatus(t(transferNumberResolution.errorKey));
+      setTransferStatusTone("error");
+      return;
+    }
+
+    setIsGreetingSaving(true);
+    setGreetingStatus(null);
+    try {
+      await saveProfile({
+        businessId,
+        defaultLocale,
+        greeting,
+        transferNumber: transferNumberResolution.value,
+      });
+      setGreetingStatus(t("agent:actions.saved"));
+    } catch {
+      toast.error(t("agent:actions.saveFailed"));
+    } finally {
+      setIsGreetingSaving(false);
+    }
+  }
+
+  async function saveTransferNumber(): Promise<void> {
+    if (!canManageTenant || !persistedProfile) {
+      return;
+    }
+
+    const transferNumberResolution = resolveTransferNumberForSave({
+      rawInputValue: transferNumberInputValue,
+      validTransferNumber: transferNumber,
+    });
+    if (!transferNumberResolution.ok) {
+      setTransferStatus(t(transferNumberResolution.errorKey));
+      setTransferStatusTone("error");
+      return;
+    }
+
+    setIsTransferSaving(true);
+    setTransferStatus(null);
+    try {
+      await saveProfile({
+        businessId,
+        defaultLocale,
+        greeting,
+        transferNumber: transferNumberResolution.value,
+      });
+      setTransferStatus(t("agent:actions.saved"));
+      setTransferStatusTone("success");
+    } catch {
+      toast.error(t("agent:actions.saveFailed"));
+    } finally {
+      setIsTransferSaving(false);
+    }
+  }
+
+  async function saveAppointmentChangePolicy({
+    allowCancel = allowAppointmentCancel,
+    allowReschedule = allowAppointmentReschedule,
+    requireOtp = requireAppointmentChangeOtp,
+  }: {
+    allowCancel?: boolean;
+    allowReschedule?: boolean;
+    requireOtp?: boolean;
+  } = {}): Promise<void> {
+    if (!canManageTenant || !persistedProfile) {
+      return;
+    }
+
+    const transferNumberResolution = resolveTransferNumberForSave({
+      rawInputValue: transferNumberInputValue,
+      validTransferNumber: transferNumber,
+    });
+    if (!transferNumberResolution.ok) {
+      setTransferStatus(t(transferNumberResolution.errorKey));
+      setTransferStatusTone("error");
+      return;
+    }
+
+    setIsAppointmentChangeSaving(true);
+    setAppointmentChangeStatus(null);
+    try {
+      await saveProfile({
+        businessId,
+        defaultLocale,
+        greeting,
+        transferNumber: transferNumberResolution.value,
+        appointmentChangePolicy: buildAppointmentChangePolicyForSave({
+          allowCancel,
+          allowReschedule,
+          requireOtp,
+        }),
+      });
+      setAppointmentChangeStatus(t("agent:actions.saved"));
+    } catch {
+      toast.error(t("agent:actions.saveFailed"));
+    } finally {
+      setIsAppointmentChangeSaving(false);
+    }
+  }
+
+  return (
+    <div className="w-full overflow-y-auto pb-12">
+      <div className="flex w-full flex-col gap-8">
+        <section className="flex flex-col gap-3">
+          <h2 className="font-heading text-sm leading-snug font-medium">
+            {t("agent:fields.defaults.title")}
+          </h2>
+          <Surface className="flex flex-col">
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
+              <ItemContent>
+                <ItemTitle>{t("agent:fields.greeting.label")}</ItemTitle>
+                <ItemDescription>{t("agent:fields.greeting.hint")}</ItemDescription>
+                <div className="pt-2">
+                  {isLoadingConfiguration ? (
+                    <Skeleton className="h-10 w-full rounded-md sm:max-w-md" />
+                  ) : (
+                    <Input
+                      className="w-full sm:max-w-md"
+                      disabled={!canManageTenant}
+                      id="agent-greeting"
+                      onChange={(event) => {
+                        setGreeting(event.target.value);
+                        setGreetingStatus(null);
+                      }}
+                      placeholder={t("agent:fields.greeting.placeholder")}
+                      value={greeting}
+                    />
+                  )}
+                </div>
+                {greetingStatus ? <ItemDescription>{greetingStatus}</ItemDescription> : null}
+              </ItemContent>
+              <ItemActions className="w-full justify-end self-center sm:w-auto">
+                <Button
+                  disabled={
+                    isLoadingConfiguration ||
+                    isGreetingSaving ||
+                    !persistedProfile ||
+                    !canManageTenant
+                  }
+                  onClick={() => void saveGreeting()}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {isGreetingSaving ? t("agent:actions.saving") : t("agent:actions.save")}
+                </Button>
+              </ItemActions>
+            </Item>
+
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
+              <ItemContent>
+                <ItemTitle>{t("agent:fields.defaultLocale.label")}</ItemTitle>
+                <ItemDescription>{t("agent:fields.defaultLocale.hint")}</ItemDescription>
+                {isLocaleSaving ? (
+                  <ItemDescription>{t("agent:actions.saving")}</ItemDescription>
+                ) : null}
+                {!isLocaleSaving && localeStatus ? (
+                  <ItemDescription>{localeStatus}</ItemDescription>
+                ) : null}
+              </ItemContent>
+              <ItemActions className="w-full sm:w-auto">
+                {isLoadingConfiguration ? (
+                  <Skeleton className="h-10 w-full rounded-md sm:w-[9.5ch]" />
+                ) : (
+                  <NativeSelect
+                    aria-label={t("agent:fields.defaultLocale.label")}
+                    className="w-full sm:w-[9.5ch]"
+                    disabled={!canManageTenant}
+                    id="agent-default-language"
+                    onChange={(event) => {
+                      const nextLocale = ((event.target.value as RuntimeLocale | "") || "en");
+                      setDefaultLocale(nextLocale);
+                      setLocaleStatus(null);
+                      void (async () => {
+                        if (!canManageTenant || !persistedProfile) {
+                          return;
+                        }
+
+                        const transferNumberResolution = resolveTransferNumberForSave({
+                          rawInputValue: transferNumberInputValue,
+                          validTransferNumber: transferNumber,
+                        });
+                        if (!transferNumberResolution.ok) {
+                          setTransferStatus(t(transferNumberResolution.errorKey));
+                          setTransferStatusTone("error");
+                          return;
+                        }
+
+                        setIsLocaleSaving(true);
+                        try {
+                          await saveProfile({
+                            businessId,
+                            defaultLocale: nextLocale,
+                            greeting,
+                            transferNumber: transferNumberResolution.value,
+                          });
+                          setLocaleStatus(t("agent:actions.saved"));
+                        } catch {
+      toast.error(t("agent:actions.saveFailed"));
+    } finally {
+                          setIsLocaleSaving(false);
+                        }
+                      })();
+                    }}
+                    value={defaultLocale}
+                  >
+                    <NativeSelectOption value="en">
+                      {t("common:language.english")}
+                    </NativeSelectOption>
+                    <NativeSelectOption value="fr">
+                      {t("common:language.french")}
+                    </NativeSelectOption>
+                  </NativeSelect>
+                )}
+              </ItemActions>
+            </Item>
+
+
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
+              <ItemContent>
+                <ItemTitle>{t("agent:fields.transferNumber.label")}</ItemTitle>
+                <ItemDescription>{t("agent:fields.transferNumber.hint")}</ItemDescription>
+                <div className="pt-2">
+                  {isLoadingConfiguration ? (
+                    <Skeleton className="h-10 w-32 rounded-md" />
+                  ) : (
+                    <PhoneInput
+                      className="w-full min-w-0 sm:w-[12ch]"
+                      containerClassName="w-full sm:w-fit"
+                      disabled={!canManageTenant}
+                      id="agent-transfer-number"
+                      locale={i18n.language}
+                      maxLength={18}
+                      onChange={(nextValue) => {
+                        setTransferNumber(nextValue ?? "");
+                        setTransferStatus(null);
+                        setTransferStatusTone("success");
+                      }}
+                      onRawValueChange={(nextRawValue) => {
+                        setTransferNumberInputValue(nextRawValue);
+                        setTransferStatus(null);
+                        setTransferStatusTone("success");
+                      }}
+                      {...(transferNumber ? { value: transferNumber } : {})}
+                    />
+                  )}
+                </div>
+                {transferStatus ? (
+                  <ItemDescription
+                    className={transferStatusTone === "error" ? "text-destructive" : undefined}
+                  >
+                    {transferStatus}
+                  </ItemDescription>
+                ) : null}
+              </ItemContent>
+              <ItemActions className="w-full justify-end self-center sm:w-auto">
+                <Button
+                  disabled={
+                    isLoadingConfiguration ||
+                    isTransferSaving ||
+                    !persistedProfile ||
+                    !canManageTenant
+                  }
+                  onClick={() => void saveTransferNumber()}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {isTransferSaving ? t("agent:actions.saving") : t("agent:actions.save")}
+                </Button>
+              </ItemActions>
+            </Item>
+          </Surface>
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="font-heading text-sm leading-snug font-medium">
+            {t("agent:appointmentChanges.title")}
+          </h2>
+          <Surface className="flex flex-col">
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
+              <ItemContent>
+                <ItemTitle>{t("agent:appointmentChanges.allowCancel.label")}</ItemTitle>
+                <ItemDescription>
+                  {t("agent:appointmentChanges.allowCancel.hint")}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                {isLoadingConfiguration ? (
+                  <Skeleton className="h-5 w-8 rounded-full" />
+                ) : (
+                  <Switch
+                    aria-label={t("agent:appointmentChanges.allowCancel.label")}
+                    checked={allowAppointmentCancel}
+                    disabled={isAppointmentChangeSaving || !persistedProfile || !canManageTenant}
+                    onCheckedChange={(checked) => {
+                      setAllowAppointmentCancel(checked);
+                      setAppointmentChangeStatus(null);
+                      void saveAppointmentChangePolicy({ allowCancel: checked });
+                    }}
+                  />
+                )}
+              </ItemActions>
+            </Item>
+
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
+              <ItemContent>
+                <ItemTitle>{t("agent:appointmentChanges.allowReschedule.label")}</ItemTitle>
+                <ItemDescription>
+                  {t("agent:appointmentChanges.allowReschedule.hint")}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                {isLoadingConfiguration ? (
+                  <Skeleton className="h-5 w-8 rounded-full" />
+                ) : (
+                  <Switch
+                    aria-label={t("agent:appointmentChanges.allowReschedule.label")}
+                    checked={allowAppointmentReschedule}
+                    disabled={isAppointmentChangeSaving || !persistedProfile || !canManageTenant}
+                    onCheckedChange={(checked) => {
+                      setAllowAppointmentReschedule(checked);
+                      setAppointmentChangeStatus(null);
+                      void saveAppointmentChangePolicy({ allowReschedule: checked });
+                    }}
+                  />
+                )}
+              </ItemActions>
+            </Item>
+
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
+              <ItemContent>
+                <ItemTitle>{t("agent:appointmentChanges.requireOtp.label")}</ItemTitle>
+                <ItemDescription>
+                  {t("agent:appointmentChanges.requireOtp.hint")}
+                </ItemDescription>
+                {appointmentChangeStatus ? (
+                  <ItemDescription>{appointmentChangeStatus}</ItemDescription>
+                ) : null}
+              </ItemContent>
+              <ItemActions>
+                {isLoadingConfiguration ? (
+                  <Skeleton className="h-5 w-8 rounded-full" />
+                ) : (
+                  <Switch
+                    aria-label={t("agent:appointmentChanges.requireOtp.label")}
+                    checked={requireAppointmentChangeOtp}
+                    disabled={isAppointmentChangeSaving || !persistedProfile || !canManageTenant}
+                    onCheckedChange={(checked) => {
+                      setRequireAppointmentChangeOtp(checked);
+                      setAppointmentChangeStatus(null);
+                      void saveAppointmentChangePolicy({ requireOtp: checked });
+                    }}
+                  />
+                )}
+              </ItemActions>
+            </Item>
+          </Surface>
+        </section>
+      </div>
+    </div>
+  );
+}
 
 export function LiveAgentBasicSettingsSurface() {
-  const { i18n, t } = useTranslation(["agent", "common"]);
-  const queryClient = useQueryClient();
-  const configuration = useQuery({ queryKey: ["agent"], queryFn: () => requestJson<AgentResponse>("/api/agent") });
-  const [greeting, setGreeting] = useState(""); const [locale, setLocale] = useState<"en" | "fr">("en"); const [transferNumber, setTransferNumber] = useState(""); const [summary, setSummary] = useState(""); const [bookingPolicy, setBookingPolicy] = useState(""); const [voiceInstructions, setVoiceInstructions] = useState(""); const [smsInstructions, setSmsInstructions] = useState("");
-  useEffect(() => { const profile = configuration.data?.profile; if (!profile) return; setGreeting(profile.greeting); setLocale(configuration.data?.business?.defaultLocale ?? "en"); setTransferNumber(profile.transferNumber ?? ""); setSummary(profile.summary); setBookingPolicy(profile.bookingPolicy); setVoiceInstructions(profile.voiceInstructions ?? ""); setSmsInstructions(profile.smsInstructions ?? ""); }, [configuration.data]);
-  const save = useMutation({ mutationFn: (patch: Record<string, unknown>) => requestJson<{ profile: Profile }>("/api/agent", { method: "PATCH", body: JSON.stringify(patch) }), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["agent"] }); }, });
-  const status = save.isSuccess ? t("agent:actions.saved") : null;
-
-  return <div className="w-full overflow-y-auto pb-12"><div className="flex w-full flex-col gap-8"><section className="flex flex-col gap-3"><h2 className="font-heading text-sm leading-snug font-medium">{t("agent:fields.defaults.title")}</h2><Surface className="flex flex-col">
-    <Item className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"><ItemContent><ItemTitle>{t("agent:fields.greeting.label")}</ItemTitle><ItemDescription>{t("agent:fields.greeting.hint")}</ItemDescription><div className="pt-2">{configuration.isLoading ? <Skeleton className="h-10 w-full sm:max-w-md" /> : <Input className="w-full sm:max-w-md" onChange={(event) => setGreeting(event.target.value)} placeholder={t("agent:fields.greeting.placeholder")} value={greeting} />}</div>{status ? <ItemDescription>{status}</ItemDescription> : null}</ItemContent><ItemActions className="w-full justify-end sm:w-auto"><Button disabled={save.isPending || configuration.isLoading} onClick={() => save.mutate({ greeting })} size="sm" variant="outline">{save.isPending ? t("agent:actions.saving") : t("agent:actions.save")}</Button></ItemActions></Item>
-    <Item className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"><ItemContent><ItemTitle>{t("agent:fields.defaultLocale.label")}</ItemTitle><ItemDescription>{t("agent:fields.defaultLocale.hint")}</ItemDescription></ItemContent><ItemActions className="w-full sm:w-auto">{configuration.isLoading ? <Skeleton className="h-10 w-24" /> : <NativeSelect aria-label={t("agent:fields.defaultLocale.label")} className="w-full sm:w-[9.5ch]" onChange={(event) => { const next = event.target.value as "en" | "fr"; setLocale(next); save.mutate({ locale: next }); }} value={locale}><NativeSelectOption value="en">{t("common:language.english")}</NativeSelectOption><NativeSelectOption value="fr">{t("common:language.french")}</NativeSelectOption></NativeSelect>}</ItemActions></Item>
-    <Item className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"><ItemContent><ItemTitle>{t("agent:fields.transferNumber.label")}</ItemTitle><ItemDescription>{t("agent:fields.transferNumber.hint")}</ItemDescription><div className="pt-2">{configuration.isLoading ? <Skeleton className="h-10 w-32" /> : <PhoneInput className="w-full min-w-0 sm:w-[12ch]" containerClassName="w-full sm:w-fit" locale={i18n.language} onChange={(value) => setTransferNumber(value ?? "")} {...(transferNumber ? { value: transferNumber } : {})} />}</div></ItemContent><ItemActions className="w-full justify-end sm:w-auto"><Button disabled={save.isPending || configuration.isLoading} onClick={() => save.mutate({ transferNumber: transferNumber || null })} size="sm" variant="outline">{save.isPending ? t("agent:actions.saving") : t("agent:actions.save")}</Button></ItemActions></Item>
-  </Surface></section>
-  <section className="flex flex-col gap-3"><h2 className="font-heading text-sm leading-snug font-medium">{t("agent:fields.instructions.title")}</h2><Surface className="flex flex-col"><Item className="rounded-none border-x-0 border-t-0 border-b"><ItemContent><ItemTitle>{t("agent:fields.summary.label")}</ItemTitle><ItemDescription>{t("agent:fields.summary.hint")}</ItemDescription><Textarea className="mt-2 min-h-24" onChange={(event) => setSummary(event.target.value)} value={summary} /></ItemContent></Item><Item className="rounded-none border-x-0 border-t-0 border-b"><ItemContent><ItemTitle>{t("agent:fields.bookingPolicy.label")}</ItemTitle><ItemDescription>{t("agent:fields.bookingPolicy.hint")}</ItemDescription><Textarea className="mt-2 min-h-24" onChange={(event) => setBookingPolicy(event.target.value)} value={bookingPolicy} /></ItemContent></Item><Item className="rounded-none border-x-0 border-t-0 border-b"><ItemContent><ItemTitle>{t("agent:fields.voiceInstructions.label")}</ItemTitle><Textarea className="mt-2 min-h-28" onChange={(event) => setVoiceInstructions(event.target.value)} value={voiceInstructions} /></ItemContent></Item><Item className="rounded-none border-0"><ItemContent><ItemTitle>{t("agent:fields.smsInstructions.label")}</ItemTitle><Textarea className="mt-2 min-h-28" onChange={(event) => setSmsInstructions(event.target.value)} value={smsInstructions} /></ItemContent><ItemActions className="self-end"><Button disabled={save.isPending} onClick={() => save.mutate({ summary, bookingPolicy, voiceInstructions: voiceInstructions || null, smsInstructions: smsInstructions || null })} size="sm">{save.isPending ? t("agent:actions.saving") : t("agent:actions.save")}</Button></ItemActions></Item></Surface></section></div></div>;
+  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Array<{ businessId: string; active: boolean; role: string }> }>("/api/businesses") });
+  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
+  return <AgentBasicSettingsPage businessId={business?.businessId ?? ""} canManageTenant={Boolean(business && ["business_owner", "business_admin"].includes(business.role))} />;
 }

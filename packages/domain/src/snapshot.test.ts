@@ -34,11 +34,14 @@ describe("buildBusinessContextSnapshot", () => {
         { id: "snippet-2", title: "Masks", content: "Optional", tags: [], priority: 10 },
       ],
       transferPolicy: { mode: "on_urgent", transferNumber: "+14165551234" },
+      appointmentChangePolicy: { enabled: true, allowCancel: false, allowReschedule: true, verificationMode: "otp_required" },
       phoneNumber: "+14165550000",
       smsNumber: "+14165550000",
       chatInstructions: "Be concise in the chat widget.",
     });
 
+    expect(snapshot.transferPolicy.mode).toBe("on_urgent");
+    expect(snapshot.appointmentChangePolicy).toEqual({ enabled: true, allowCancel: false, allowReschedule: true, verificationMode: "otp_required" });
     expect(snapshot.knowledgeDigest).toBe("Parking is behind the building.");
     expect(snapshot.chatInstructions).toBe("Be concise in the chat widget.");
     expect(snapshot.knowledgeSnippets?.map((snippet) => snippet.id)).toEqual([

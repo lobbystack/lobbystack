@@ -137,6 +137,7 @@ async function main(): Promise<void> {
     conversationSessions: rows("conversation_sessions"),
     messages: rows("messages"),
     calls: rows("calls"),
+    inboxItems: rows("inbox_items"),
     transcripts: rows("transcripts"),
     appointments: rows("appointments"),
     knowledgeDocuments: rows("knowledge_documents"),
@@ -182,6 +183,7 @@ async function main(): Promise<void> {
     conversationSessions: mapRows(all.conversationSessions),
     messages: mapRows(all.messages),
     calls: mapRows(all.calls),
+    inboxItems: mapRows(all.inboxItems),
     transcripts: mapRows(all.transcripts),
     appointments: mapRows(all.appointments),
     knowledgeDocuments: mapRows(all.knowledgeDocuments),
@@ -256,7 +258,7 @@ async function main(): Promise<void> {
         id: ids.businesses.get(row._id)!, legacy_convex_id: row._id, slug: slug(text(row.slug), row._id), name: text(row.name, `Legacy business ${row._id}`)!,
         timezone: text(row.timezone, "UTC"), default_locale: text(row.defaultLocale, "en"), business_type: text(row.businessType, "general"),
         deployment_mode: text(row.deploymentMode, "cloud"), status: text(row.status, "active"), website_url: text(row.websiteUrl),
-        onboarding_stage: onboardingStage(row.onboardingStage), telemetry_enabled: true, created_at: created(row), updated_at: updated(row),
+        onboarding_stage: onboardingStage(row.onboardingStage), setup_guide_skipped_steps: json(row.setupGuideSkippedSteps, []), telemetry_enabled: bool(row.telemetryEnabled, true), created_at: created(row), updated_at: updated(row),
       }, ["legacy_convex_id"]);
       count("businesses");
     }
@@ -318,6 +320,11 @@ async function main(): Promise<void> {
       const conversationId = row.conversationId ? ids.conversations.get(String(row.conversationId)) : undefined; const contactId = row.contactId ? ids.contacts.get(String(row.contactId)) : undefined;
       await upsert(db, "calls", { id: ids.calls.get(row._id)!, legacy_convex_id: row._id, business_id: businessId, conversation_id: conversationId, contact_id: contactId, provider: text(row.provider, "twilio"), provider_call_id: text(row.providerCallId, text(row.twilioCallSid, row._id))!, gateway_session_id: text(row.gatewaySessionId), transport: text(row.transport, "pstn"), status: text(row.status, "started"), transfer_state: text(row.transferState), disposition: text(row.disposition), started_at: date(row.startedAt, created(row)), ended_at: date(row.endedAt), provider_duration_seconds: number(row.providerCallDurationSeconds), recording_object_id: row.recordingStorageId ? ids.storage.get(String(row.recordingStorageId)) : undefined, revision: 0, created_at: created(row), updated_at: updated(row), provider_updated_at: date(row.providerUpdatedAt), provider_price: number(row.providerPrice), provider_price_unit: text(row.providerPriceUnit), provider_cost_usd: number(row.providerCostUsd), origin_url: text(row.originUrl), user_agent: text(row.userAgent), widget_id: text(row.widgetId), session_purpose: text(row.sessionPurpose), web_call_max_duration_ms: number(row.webCallMaxDurationMs), billing_excluded: false }, ["id"]); count("calls");
     }
+    for (const row of all.inboxItems) {
+      const businessId = required(ids.businesses, row.businessId, `inbox item ${row._id}`); if (!businessId) continue;
+      const relatedCallId = row.relatedId ? ids.calls.get(String(row.relatedId)) : undefined;
+      await upsert(db, "inbox_items", { id: ids.inboxItems.get(row._id)!, legacy_convex_id: row._id, business_id: businessId, kind: text(row.kind, "voice_message")!, title: ["expired", "scrubbed"].includes(String(row.contentRetentionStatus)) ? "Expired voice message" : text(row.title, "Voice message")!, body: ["expired", "scrubbed"].includes(String(row.contentRetentionStatus)) ? "[Expired by 365-day retention policy]" : text(row.body, "")!, related_call_id: relatedCallId, status: text(row.status, "open")!, content_retention_status: row.contentRetentionStatus === "expired" ? "scrubbed" : text(row.contentRetentionStatus, "active")!, content_expires_at: date(row.contentExpiresAt), created_at: created(row), updated_at: updated(row) }, ["id"]); count("inbox_items");
+    }
     for (const row of all.conversationSessions) {
       const businessId = required(ids.businesses, row.businessId, `conversation session ${row._id}`); const conversationId = required(ids.conversations, row.conversationId, `conversation session ${row._id}`); if (!businessId || !conversationId) continue;
       await upsert(db, "conversation_sessions", { id: ids.conversationSessions.get(row._id)!, legacy_convex_id: row._id, business_id: businessId, conversation_id: conversationId, call_id: row.callId ? ids.calls.get(String(row.callId)) : undefined, channel: text(row.channel, "voice"), status: text(row.status, "closed"), started_at: date(row.startedAt, created(row)), last_message_at: date(row.lastMessageAt, created(row)), closed_at: date(row.closedAt), summary: json(row.summary), summary_generated_at: date(row.summaryGeneratedAt), summary_kind: text(row.summaryKind), created_at: created(row), updated_at: updated(row) }, ["id"]); count("conversation_sessions");
@@ -346,7 +353,7 @@ async function main(): Promise<void> {
       const uniqueHash = hash && !documentHashes.has(`${businessId}:${hash}`) ? hash : undefined;
       if (uniqueSourceUrl) documentUrls.add(`${businessId}:${uniqueSourceUrl}`);
       if (uniqueHash) documentHashes.add(`${businessId}:${uniqueHash}`);
-      await upsert(db, "knowledge_documents", { id: ids.knowledgeDocuments.get(row._id)!, legacy_convex_id: row._id, business_id: businessId, source_type: text(row.sourceType, "upload"), title: text(row.title, "Imported knowledge")!, source_url: uniqueSourceUrl, storage_object_id: storageId ? ids.storage.get(storageId) : undefined, mime_type: text(row.mimeType), status: text(row.status, "indexed"), processing_progress: number(row.processingProgress, 100), content_hash: uniqueHash, error: text(row.error), revision: 0, created_at: created(row), updated_at: updated(row) }, ["id"]);
+      await upsert(db, "knowledge_documents", { id: ids.knowledgeDocuments.get(row._id)!, legacy_convex_id: row._id, business_id: businessId, source_type: text(row.sourceType, "upload"), title: text(row.title, "Imported knowledge")!, tags: Array.isArray(row.tags) ? row.tags.filter((tag): tag is string => typeof tag === "string") : [], source_url: uniqueSourceUrl, storage_object_id: storageId ? ids.storage.get(storageId) : undefined, mime_type: text(row.mimeType), status: text(row.status, "indexed"), processing_progress: number(row.processingProgress, 100), content_hash: uniqueHash, error: text(row.error), revision: 0, created_at: created(row), updated_at: updated(row) }, ["id"]);
       if (sourceText) await upsert(db, "knowledge_chunks", { id: uuidFor(`${row._id}:chunk:0`), business_id: businessId, document_id: ids.knowledgeDocuments.get(row._id)!, sequence: 0, content: sourceText, content_hash: contentHash(sourceText), embedding_status: "pending", embedding_fingerprint: null, created_at: created(row), updated_at: updated(row) }, ["id"]);
       count("knowledge_documents"); if (sourceText) count("knowledge_chunks");
     }

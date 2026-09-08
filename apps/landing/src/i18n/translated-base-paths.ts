@@ -44,6 +44,8 @@ export const translatedBasePaths = [
   "/blog/best-open-source-ai-phone-answering-services/",
   "/blog/ai-receptionist-workflows/",
   "/blog/ai-receptionist-affiliate-program/",
+  "/blog/why-lobbystack-is-moving-away-from-convex/",
+  "/blog/lobbystack-mit-license-ai-receptionist-resellers/",
   "/affiliate-program/",
   "/about/",
   "/docs/api/",

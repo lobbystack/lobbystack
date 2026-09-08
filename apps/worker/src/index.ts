@@ -1,4 +1,5 @@
 import { businesses, createDatabaseClient, databaseHealthCheck, withDispatcherTransaction } from "@lobbystack/db";
+import { assertProductionSecrets } from "@lobbystack/config";
 import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
 import { createEmbeddingProvider, createStorageProvider, FirecrawlProvider, GoogleCalendarProvider, PolarBillingProvider, SmtpEmailProvider, TwilioProvider } from "@lobbystack/providers";
 import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withSpan } from "@lobbystack/telemetry/node";
@@ -38,6 +39,19 @@ function createPolarProvider(): PolarBillingProvider | undefined {
   return accessToken && organizationId ? new PolarBillingProvider({ accessToken, organizationId, ...(process.env.POLAR_API_BASE_URL ? { baseUrl: process.env.POLAR_API_BASE_URL } : {}) }) : undefined;
 }
 
+function createAlertSmsProvider(): WorkerDependencies["twilioAlerts"] {
+  const accountSid = process.env.TWILIO_ALERT_ACCOUNT_SID;
+  const apiKeySid = process.env.TWILIO_ALERT_API_KEY_SID;
+  const apiKeySecret = process.env.TWILIO_ALERT_API_KEY_SECRET;
+  const from = process.env.TWILIO_ALERT_SMS_FROM;
+  if (!accountSid || !apiKeySid || !apiKeySecret || !from) return undefined;
+  const provider = new TwilioProvider({ accountSid, apiKeySid, apiKeySecret });
+  return { from, sendSms: input => {
+    if (input.from !== from) throw new Error("Restricted alert provider cannot use another sender.");
+    return provider.sendSms(input);
+  } };
+}
+
 function createCrawlerProvider(): FirecrawlProvider | undefined {
   const apiKey = process.env.FIRECRAWL_API_KEY;
   return apiKey ? new FirecrawlProvider({ apiKey, ...(process.env.FIRECRAWL_BASE_URL ? { baseUrl: process.env.FIRECRAWL_BASE_URL } : {}) }) : undefined;
@@ -67,6 +81,11 @@ function createProductAnalytics(): WorkerDependencies["productAnalytics"] {
 }
 
 async function main(): Promise<void> {
+  assertProductionSecrets(process.env, [
+    "ENCRYPTION_KEY",
+    "OTP_HASH_SECRET",
+    ...(process.env.STORAGE_PROVIDER === "s3" ? [] : ["LOCAL_STORAGE_SIGNING_SECRET"]),
+  ]);
   await initializeTelemetry({ serviceName: "lobbystack-worker" });
   const database = createDatabaseClient("lobbystack_worker");
   const dispatcherDatabase = createDatabaseClient("lobbystack_dispatcher");
@@ -87,6 +106,7 @@ async function main(): Promise<void> {
   const email = createEmailProvider();
   const embeddings = createEmbeddingProvider();
   const twilio = createTwilioProvider();
+  const twilioAlerts = createAlertSmsProvider();
   const storage = createStorageProvider();
   const polar = createPolarProvider();
   const crawler = createCrawlerProvider();
@@ -107,7 +127,7 @@ async function main(): Promise<void> {
     }
   }
   await storage.ensureReady();
-  const dependencies: WorkerDependencies = { domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) }, realtime, ...(calendar ? { calendar } : {}), ...(crawler ? { crawler } : {}), ...(productAnalytics ? { productAnalytics } : {}), ...(email ? { email } : {}), ...(embeddings ? { embeddings } : {}), ...(twilio ? { twilio } : {}), storage, ...(polar ? { polar } : {}) };
+  const dependencies: WorkerDependencies = { domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) }, realtime, ...(calendar ? { calendar } : {}), ...(crawler ? { crawler } : {}), ...(productAnalytics ? { productAnalytics } : {}), ...(email ? { email } : {}), ...(embeddings ? { embeddings } : {}), ...(twilio ? { twilio } : {}), ...(twilioAlerts ? { twilioAlerts } : {}), storage, ...(polar ? { polar } : {}) };
   const workers = jobQueues.map((queueName) => {
     const queue = queues.get(queueName);
     if (!queue) {
@@ -116,7 +136,8 @@ async function main(): Promise<void> {
     const worker = new Worker<JobEnvelope>(queueName, async (job) => await withSpan(`job.${job.data.type}`, { attributes: { "messaging.system": "bullmq", "messaging.destination.name": queueName, "lobbystack.job_type": job.data.type } }, async () => {
       state.activeJobs += 1;
       try {
-        return await handleJob(job.data, dependencies);
+        const maxAttempts = job.opts.attempts ?? 1;
+        return await handleJob(job.data, dependencies, { isFinalAttempt: job.attemptsMade + 1 >= maxAttempts });
       } finally {
         state.activeJobs -= 1;
       }

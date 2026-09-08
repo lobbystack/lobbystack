@@ -30,10 +30,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { CallOutcome } from "../../../../packages/domain/src/server/callOutcome";
+import { formatCallOutcomeSummary } from "@/lib/call-outcome";
 import { formatDateTime } from "@/lib/locale";
+import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 type Business = { businessId: string; active: boolean };
 type Call = {
+  outcome: CallOutcome;
   id: string;
   providerCallId: string;
   status: string;
@@ -117,13 +121,13 @@ export function LiveCallsSurface() {
       id: "number",
       accessorFn: (call) => call.contactPhone ?? t("table.noNumber"),
       header: () => t("table.number"),
-      cell: ({ row }) => row.original.contactPhone ?? t("table.noNumber"),
+      cell: ({ row }) => row.original.contactPhone ? formatPhoneNumberDisplay(row.original.contactPhone, i18n.language) : t("table.noNumber"),
     },
     {
       id: "purpose",
       accessorFn: (call) => call.reason ?? t("outcome.none"),
       header: () => t("table.purpose"),
-      cell: ({ row }) => <span className="type-body-muted line-clamp-2">{row.original.reason ?? t("outcome.none")}</span>,
+      cell: ({ row }) => <span className="type-body-muted">{row.original.outcome?.kind !== "none" ? formatCallOutcomeSummary(row.original.outcome, i18n.language, t) : row.original.transcriptPreview?.trim() || t("outcome.none")}</span>,
     },
     {
       id: "time",

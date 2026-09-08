@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, Globe, Palette, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
 
+import { LiveNotificationSettingsSurface } from "./live-notification-settings-surface";
 import { PageSurface } from "./page-surface";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -135,6 +136,7 @@ export function LiveWidgetSettingsSurface() {
           </div> : null}
         </CardContent>
       </Card>
+      <LiveNotificationSettingsSurface widgetOnly />
     </PageSurface>
   );
 }

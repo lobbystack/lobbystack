@@ -1,6 +1,6 @@
 ---
-title: "Zoom AI Receptionist Alternative"
-seoTitle: "Zoom AI Receptionist Alternative: LobbyStack"
+title: "Zoom AI Receptionist alternative"
+seoTitle: "Zoom AI Receptionist alternative: LobbyStack"
 description: "Compare Zoom Virtual Agent Receptionist and LobbyStack on pricing, phone-system fit, booking, languages, source access, cloud service, and self-hosting."
 pubDate: 2026-07-30T11:00:00-04:00
 updatedDate: 2026-07-30T11:00:00-04:00
@@ -17,7 +17,7 @@ A **Zoom AI Receptionist alternative** can include 50% more voice time at the sa
 
 LobbyStack includes booking, human handoff, SMS alerts, transcripts, summaries, and call history. It also gives technical teams public source code, provider choice, and self-hosting.
 
-## Zoom Virtual Agent Receptionist vs LobbyStack
+## Zoom virtual agent receptionist vs LobbyStack
 
 | Area | Zoom Virtual Agent Receptionist | LobbyStack |
 | --- | --- | --- |
@@ -40,7 +40,7 @@ That extra capacity gives a small business more room to test booking rules, afte
 
 Zoom brings a familiar communications brand and more than 10 advertised languages. LobbyStack brings better entry usage and ownership of the stack. A technical buyer can keep the managed service or move to infrastructure and providers it controls.
 
-## Zoom made the phone-system decision easier
+## Zoom reduced the phone-system tradeoffs
 
 Zoom's launch announcement says businesses can use the receptionist with an existing phone system. That avoids a forced migration to Zoom Phone for buyers who only want AI coverage.
 

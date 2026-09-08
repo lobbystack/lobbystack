@@ -17,7 +17,7 @@ Une **alternative au réceptionniste IA de Zoom** peut inclure 50 % plus de minu
 
 LobbyStack inclut réservation, relais, alertes SMS, transcriptions, résumés et historique. Les équipes techniques obtiennent aussi le code public, le choix des fournisseurs et l'auto-hébergement.
 
-## Zoom Virtual Agent Receptionist et LobbyStack
+## Zoom virtual agent receptionist et LobbyStack
 
 | Critère | Zoom | LobbyStack |
 | --- | --- | --- |

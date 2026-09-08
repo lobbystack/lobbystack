@@ -1,6 +1,10 @@
 import { createHash, createHmac, randomUUID } from "node:crypto";
 
-const body = JSON.stringify({ businessSlug: process.env.REPLACEMENT_TEST_BUSINESS_SLUG ?? "demo-business" });
+const body = JSON.stringify({
+  businessSlug: process.env.REPLACEMENT_TEST_BUSINESS_SLUG ?? "demo-business",
+  origin: process.env.ADMIN_BASE_URL ?? "http://127.0.0.1:13000",
+  publicWebCall: true,
+});
 const serviceId = process.env.INTERNAL_SERVICE_ID ?? "lobbystack-voice-gateway";
 const secret = process.env.INTERNAL_SERVICE_SECRET ?? "replace-with-a-long-service-secret";
 const timestamp = String(Date.now());

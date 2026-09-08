@@ -16,7 +16,7 @@ Today, [LobbyStack](https://lobbystack.com/) is live.
 
 LobbyStack is an **open-source AI receptionist** for businesses that depend on calls, bookings, quotes, and fast follow-up. It answers when your team is busy, closed, driving between jobs, or already helping another customer.
 
-The point is not to make phone support feel futuristic. The point is simpler than that: **a good caller should not become a missed opportunity just because they called at the wrong time.**
+The goal is practical: **a good caller should not become a missed opportunity because they called at the wrong time.**
 
 Voicemail is not a workflow. LobbyStack is our answer to that.
 

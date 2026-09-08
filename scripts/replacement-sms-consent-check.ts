@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq } from "drizzle-orm";
 
-import { businessMemberships, businesses, contacts, conversations, createDatabaseClient, messages, operatorNotificationDeliveries, outboxMessages, phoneNumbers, smsConsentEvents, users, withBusinessTransaction } from "@lobbystack/db";
-import { appendMessage, claimOperatorNotificationDelivery, claimSmsDelivery, defaultOperatorNotificationEventPreferences, loadOperatorNotificationDelivery, loadSmsDeliveryTarget, queueOperatorAlert, receiveInboundSms, setContactSmsManualBlock, setNotificationPreferences } from "@lobbystack/domain";
+import { billingAccounts, businessMemberships, businesses, contacts, conversations, createDatabaseClient, messages, operatorNotificationDeliveries, operatorNotificationPreferences, outboxMessages, phoneNumbers, smsConsentEvents, users, withBusinessTransaction } from "@lobbystack/db";
+import { appendMessage, claimOperatorNotificationDelivery, claimSmsDelivery, defaultOperatorNotificationEventPreferences, getNotificationPreferences, loadOperatorNotificationDelivery, loadSmsDeliveryTarget, queueOperatorAlert, receiveInboundSms, setContactSmsManualBlock, setNotificationPreferences } from "@lobbystack/domain";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -17,9 +17,10 @@ async function main(): Promise<void> {
   const foreignBusinessId = randomUUID();
   const userId = randomUUID();
   const phone = "+14165550777";
+  const originalAlertSender = process.env.TWILIO_ALERT_SMS_FROM;
   try {
     await migrator.db.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, phone: "+14165550778" });
-    await migrator.db.insert(businesses).values([{ id: businessId, slug: `sms-consent-${businessId}`, name: "SMS consent certification", timezone: "UTC", businessType: "test" }, { id: foreignBusinessId, slug: `sms-consent-${foreignBusinessId}`, name: "Foreign SMS consent certification", timezone: "UTC", businessType: "test" }]);
+    await migrator.db.insert(businesses).values([{ id: businessId, slug: `sms-consent-${businessId}`, name: "SMS consent certification", deploymentMode: "self_hosted_standard", timezone: "UTC", businessType: "test" }, { id: foreignBusinessId, slug: `sms-consent-${foreignBusinessId}`, name: "Foreign SMS consent certification", timezone: "UTC", businessType: "test" }]);
     await migrator.db.insert(businessMemberships).values({ businessId, userId, role: "business_owner" });
     await migrator.db.insert(phoneNumbers).values({ businessId, e164: "+14165550779", providerPhoneId: `PN-${randomUUID()}` });
 
@@ -62,12 +63,31 @@ async function main(): Promise<void> {
 
     const preferences = defaultOperatorNotificationEventPreferences();
     preferences.voiceMessage.sms = true;
+    let missingConsentDenied = false;
+    try { await setNotificationPreferences({ db: app.db }, { userId, businessId, emailEnabled: false, smsEnabled: true, eventPreferences: preferences }); } catch { missingConsentDenied = true; }
+    assert(missingConsentDenied, "SMS alert preferences were enabled without consent.");
+    await setNotificationPreferences({ db: app.db }, { userId, businessId, emailEnabled: false, smsEnabled: true, smsConsent: true, eventPreferences: preferences });
+    const [savedPreference] = await withBusinessTransaction(app.db, { businessId, userId, actorType: "operator" }, async tx => tx.select().from(operatorNotificationPreferences).where(eq(operatorNotificationPreferences.businessId, businessId)));
+    assert(savedPreference?.smsConsentDisclosureVersion === "operator-alerts-2026-05-22", "Accepted disclosure version was not persisted.");
+    await withBusinessTransaction(app.db, { businessId, userId, actorType: "operator" }, async tx => tx.update(operatorNotificationPreferences).set({ smsConsentDisclosureVersion: "outdated" }).where(eq(operatorNotificationPreferences.businessId, businessId)));
+    assert((await queueOperatorAlert({ db: worker.db }, { businessId, eventKind: "voiceMessage", eventKey: `outdated:${randomUUID()}`, subject: "Certification", body: "Outdated consent" })).length === 0, "Outdated disclosure consent permitted SMS dispatch.");
     await setNotificationPreferences({ db: app.db }, { userId, businessId, emailEnabled: false, smsEnabled: true, smsConsent: true, eventPreferences: preferences });
     const [operatorDeliveryId] = await queueOperatorAlert({ db: worker.db }, { businessId, eventKind: "voiceMessage", eventKey: `voiceMessage:${randomUUID()}`, subject: "Certification", body: "Consent race certification" });
     assert(operatorDeliveryId, "Operator SMS was not queued after consent.");
     assert(await claimOperatorNotificationDelivery({ db: worker.db }, { businessId, deliveryId: operatorDeliveryId }), "Operator SMS could not be claimed.");
     await setNotificationPreferences({ db: app.db }, { userId, businessId, emailEnabled: false, smsEnabled: true, smsConsent: false, eventPreferences: preferences });
     assert(await loadOperatorNotificationDelivery({ db: worker.db }, { businessId, deliveryId: operatorDeliveryId }) === null, "Operator consent revocation was not rechecked before delivery.");
+
+    await migrator.db.insert(billingAccounts).values({ businessId, billingKey: `sender-${businessId}`, plan: "free_cloud" });
+    delete process.env.TWILIO_ALERT_SMS_FROM;
+    const hostedPreferences = await getNotificationPreferences({ db: app.db }, { businessId, userId, phoneVerified: true });
+    assert(!hostedPreferences.canUseSms && hostedPreferences.smsUnavailableReason === "sender_missing", "Hosted alerts incorrectly used the dedicated business number without a platform sender.");
+    process.env.TWILIO_ALERT_SMS_FROM = "+14165550780";
+    assert((await getNotificationPreferences({ db: app.db }, { businessId, userId, phoneVerified: true })).canUseSms, "Configured hosted alert sender was not exposed.");
+    await setNotificationPreferences({ db: app.db }, { userId, businessId, emailEnabled: false, smsEnabled: true, smsConsent: true, eventPreferences: preferences });
+    const [hostedDeliveryId] = await queueOperatorAlert({ db: worker.db }, { businessId, eventKind: "voiceMessage", eventKey: `hosted:${randomUUID()}`, subject: "Certification", body: "Hosted sender" });
+    const hostedDelivery = (await migrator.db.select().from(operatorNotificationDeliveries).where(eq(operatorNotificationDeliveries.id, hostedDeliveryId!)))[0];
+    assert(hostedDelivery?.sender === "+14165550780", "Hosted alert dispatch did not use the configured platform sender.");
 
     let immutable = false;
     try { await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async (tx) => await tx.update(smsConsentEvents).set({ action: "tampered" }).where(eq(smsConsentEvents.businessId, businessId))); } catch { immutable = true; }
@@ -78,6 +98,7 @@ async function main(): Promise<void> {
     assert(delivery?.status === "processing", "Certification expected the claimed operator delivery to remain available for the worker skip path.");
     console.log(JSON.stringify({ contactStopStart: true, duplicateWebhookIdempotent: true, complianceReplyDeduplicated: true, manualBlockPreserved: true, queuedMessageRaceBlocked: true, operatorConsentRechecked: true, crossTenantDenied: true, immutableHistory: true }));
   } finally {
+    if (originalAlertSender === undefined) delete process.env.TWILIO_ALERT_SMS_FROM; else process.env.TWILIO_ALERT_SMS_FROM = originalAlertSender;
     await migrator.db.delete(businesses).where(eq(businesses.id, businessId)).catch(() => undefined);
     await migrator.db.delete(businesses).where(eq(businesses.id, foreignBusinessId)).catch(() => undefined);
     await migrator.db.delete(users).where(eq(users.id, userId)).catch(() => undefined);

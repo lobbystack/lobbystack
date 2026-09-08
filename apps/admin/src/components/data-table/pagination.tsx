@@ -32,7 +32,7 @@ export function DataTablePagination<TData>({
   className,
   labels,
 }: DataTablePaginationProps<TData>) {
-  const totalRows = table.getPrePaginationRowModel().rows.length
+  const totalRows = table.options.rowCount ?? table.getPrePaginationRowModel().rows.length
   const currentPage = table.getState().pagination.pageIndex + 1
   const totalPages = table.getPageCount()
   const pageNumbers = getPageNumbers(currentPage, totalPages)

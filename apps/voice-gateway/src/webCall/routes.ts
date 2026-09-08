@@ -1693,6 +1693,9 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         }
         throw error;
       }
+      if (!context.snapshot) {
+        return reply.code(503).send({ error: "The voice agent is still being prepared. Please try again shortly." });
+      }
       let exchange: Awaited<ReturnType<typeof exchangeWebRtcOffer>>;
       try {
         exchange = await exchangeWebRtcOffer({

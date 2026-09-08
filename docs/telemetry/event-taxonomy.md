@@ -1,9 +1,11 @@
-# Event Taxonomy
+# Use the telemetry event taxonomy
+
+This reference assigns event ownership and defines the properties required for product and operational telemetry.
 
 ## Ownership
 
 - `apps/admin` emits operator intent and workflow events
-- `convex` emits authoritative business outcome events
+- `apps/admin` and `apps/worker` emit authoritative business outcome events
 - `apps/voice-gateway` emits runtime observability and AI trace events
 
 Do not duplicate ownership between runtimes unless there is a specific analytics reason.
@@ -81,6 +83,8 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 - `workflow.failed`
 
 ### Operations events
+
+The shared telemetry contract retains three `ops.convex.*` names for compatibility with existing PostHog insights. The admin and worker emit these events; no active runtime depends on Convex.
 
 - `ops.convex.heartbeat`
 - `ops.convex.outbox_backlog_sample`

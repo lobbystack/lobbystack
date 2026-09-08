@@ -15,6 +15,8 @@ import {
   conversations,
   createDatabaseClient,
   feedbackSubmissions,
+  inboxItems,
+  knowledgeDocuments,
   messages,
   notifications,
   operatorNotificationDeliveries,
@@ -25,6 +27,8 @@ import {
 
 type LegacyRow = Record<string, unknown> & { _id: string };
 type ImportBundle = {
+  knowledgeDocumentSettings?: LegacyRow[];
+  inboxItems?: LegacyRow[];
   billingAccounts?: LegacyRow[];
   billingUsageEvents?: LegacyRow[];
   billingUsageMonths?: LegacyRow[];
@@ -90,6 +94,29 @@ async function main(): Promise<void> {
         legacyMap(await tx.select({ id: notifications.id, legacyConvexId: notifications.legacyConvexId }).from(notifications)),
         legacyMap(await tx.select({ id: operatorNotificationDeliveries.id, legacyConvexId: operatorNotificationDeliveries.legacyConvexId }).from(operatorNotificationDeliveries)),
       ]);
+
+      // Document bodies/storage are migrated separately; preserve enablement on their existing lineage.
+      for (const row of bundle.knowledgeDocumentSettings ?? []) {
+        const businessId = requiredMapping(businessMap, row, "businessId");
+        const [document] = await tx.select({ id: knowledgeDocuments.id, businessId: knowledgeDocuments.businessId }).from(knowledgeDocuments).where(eq(knowledgeDocuments.legacyConvexId, row._id));
+        if (!document || document.businessId !== businessId) throw new Error(`Knowledge settings ${row._id} have no matching tenant document.`);
+        await tx.update(knowledgeDocuments).set({ active: booleanValue(row, "active") ?? true }).where(eq(knowledgeDocuments.id, document.id));
+        counts.knowledgeDocumentSettings = (counts.knowledgeDocumentSettings ?? 0) + 1;
+      }
+
+      for (const row of bundle.inboxItems ?? []) {
+        const businessId = requiredMapping(businessMap, row, "businessId");
+        const relatedId = text(row, "relatedId");
+        const relatedCallId = relatedId && text(row, "kind") === "voice_message" ? requiredMapping(callMap, row, "relatedId") : undefined;
+        if (relatedCallId) {
+          const [call] = await tx.select({ businessId: calls.businessId }).from(calls).where(eq(calls.id, relatedCallId));
+          if (call?.businessId !== businessId) throw new Error(`Inbox item ${row._id} references a call from another business.`);
+        }
+        const scrubbed = ["expired", "scrubbed"].includes(text(row, "contentRetentionStatus") ?? "active");
+        const values = { businessId, legacyConvexId: row._id, kind: text(row, "kind") ?? "voice_message", title: scrubbed ? "Expired voice message" : text(row, "title") ?? "Voice message", body: scrubbed ? "[Expired by 365-day retention policy]" : text(row, "body") ?? "", relatedCallId: relatedCallId ?? null, status: text(row, "status") ?? "open", contentRetentionStatus: scrubbed ? "scrubbed" : "active", contentExpiresAt: dateValue(row, "contentExpiresAt") ?? null, createdAt: dateValue(row, "_creationTime") ?? dateValue(row, "createdAt") ?? new Date(), updatedAt: dateValue(row, "updatedAt") ?? new Date() };
+        await tx.insert(inboxItems).values(values).onConflictDoUpdate({ target: inboxItems.legacyConvexId, set: values });
+        counts.inboxItems = (counts.inboxItems ?? 0) + 1;
+      }
 
       for (const row of bundle.billingAccounts ?? []) {
         const businessId = requiredMapping(businessMap, row, "businessId");

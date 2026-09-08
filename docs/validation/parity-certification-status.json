@@ -1,0 +1,1439 @@
+{
+  "referenceCommit": "98df89901f1dca22b8c96ccf9509a8cd549f2eb9",
+  "releaseCertified": false,
+  "validated": [
+    {
+      "gate": "strict-public-visual",
+      "passed": 48,
+      "referenceCaptures": 48,
+      "locales": [
+        "en",
+        "fr"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "viewports": [
+        "1440x1000",
+        "390x844"
+      ],
+      "maxDiffPixelRatio": 0.001,
+      "routes": [
+        "/login",
+        "/signup",
+        "/forgot-password",
+        "/confirm-email-change",
+        "/accept-invite",
+        "/demo"
+      ],
+      "scope": "Default route states only. Demo intentionally renders light in both preference cases. Signup challenge provider is stubbed, with no screenshot mask.",
+      "artifacts": ".tmp/admin-ui-parity/strict-public-v2-2026-09-05"
+    },
+    {
+      "gate": "admin-unit",
+      "files": 19,
+      "passed": 62
+    },
+    {
+      "gate": "domain-unit",
+      "files": 25,
+      "passed": 110
+    },
+    {
+      "gate": "admin-typecheck",
+      "status": "passed"
+    },
+    {
+      "gate": "domain-typecheck",
+      "status": "passed"
+    },
+    {
+      "gate": "admin-production-build",
+      "status": "passed",
+      "builder": "Next.js default Turbopack, pnpm 10.30.3 in Docker",
+      "artifacts": ".tmp/admin-ui-parity/restored-test-call-build.log"
+    },
+    {
+      "gate": "production-call-ui-smoke",
+      "status": "passed",
+      "checks": [
+        "Formatted fixture phone number",
+        "Pending asynchronous phone recording",
+        "Original call overlay opens",
+        "Escape dismisses overlay and invokes call cleanup"
+      ],
+      "limitation": "No microphone access or live provider call. Cleanup is separately asserted in the component test.",
+      "artifacts": ".tmp/admin-ui-parity/restored-test-call-dialog.png"
+    },
+    {
+      "gate": "strict-public-visual-and-accessibility",
+      "passed": 48,
+      "referenceCaptures": 48,
+      "locales": [
+        "en",
+        "fr"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "viewports": [
+        "1440x1000",
+        "390x844"
+      ],
+      "maxDiffPixelRatio": 0.001,
+      "artifacts": ".tmp/admin-ui-parity/strict-public-semantic-v2-2026-09-05",
+      "scope": "Default states for login, signup, password recovery, email confirmation, invalid invitation and demo. Compares screenshots and accessible roles, names, URLs and states. Only the empty Next.js route-announcement node is normalized in semantic snapshots; screenshots have no masks."
+    },
+    {
+      "gate": "feedback-component",
+      "passed": 5,
+      "checks": [
+        "Popover and help links",
+        "Empty-message submission prevention",
+        "Original optimistic submission with trimmed payload and page context",
+        "Background failure toast",
+        "Over-limit aria-invalid state and disabled Send"
+      ]
+    },
+    {
+      "gate": "admin-production-build",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/invitation-parity-build.log",
+      "builder": "Next.js default Turbopack, pnpm 10.30.3 in Docker"
+    },
+    {
+      "gate": "workspace-unit-2026-09-05",
+      "status": "passed",
+      "tests": 631,
+      "artifacts": ".tmp/admin-ui-parity/latest-full-unit-gate.log",
+      "scope": "Historical passing run included compiled dist test duplicates; do not interpret its test count as unique coverage. Superseded by source-only discovery."
+    },
+    {
+      "gate": "workspace-build-2026-09-05",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/latest-full-build-gate.log",
+      "scope": "All workspace apps/packages, default Turbopack, landing, and embed."
+    },
+    {
+      "gate": "clean-database",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/clean-database-gate.log",
+      "scope": "New parity_cert_20260905_1320 database, migrations twice, db:check, forced RLS on 63 tables."
+    },
+    {
+      "gate": "clean-domain-certification",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/clean-domain-certification.log",
+      "scope": "Authorization, billing, response-time calculations, channels, UTF-8 storage accounting, tenant isolation."
+    },
+    {
+      "gate": "agent-browser-persistence",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/agent-persistence",
+      "scope": "Real greeting, transfer mode, cancellation and OTP controls; reload and invalid input checks; fixture restored."
+    },
+    {
+      "gate": "configured-browser-suite",
+      "status": "passed",
+      "tests": 4,
+      "artifacts": ".tmp/admin-ui-parity/full-browser-gate-v3.log",
+      "scope": "Every currently configured functional Playwright test; does not cover all requested scenarios."
+    },
+    {
+      "gate": "follow-up-postgresql",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/follow-up-certification.log",
+      "scope": "Concurrent creation, legacy duplicate display, completion of all duplicates, idempotency, RLS, immediate expiry redaction and physical scrubbing."
+    },
+    {
+      "gate": "security-locale-drift",
+      "status": "passed",
+      "artifacts": [
+        ".tmp/admin-ui-parity/current-security-gate.log",
+        ".tmp/admin-ui-parity/current-locale-gate.log",
+        ".tmp/admin-ui-parity/current-drift-gate.log"
+      ]
+    },
+    {
+      "gate": "knowledge-expanded-french-mobile",
+      "passed": 6,
+      "referenceCaptures": 12,
+      "totalComparisons": 12,
+      "failed": 6,
+      "maxDiffPixelRatio": 0.001,
+      "scope": "Indexed, processing and error previews; mobile light/dark both pass pixels and ARIA. Desktop fails for extra Messages navigation.",
+      "artifacts": ".tmp/admin-ui-parity/knowledge-preview-v3"
+    },
+    {
+      "gate": "french-mobile-operator-routes",
+      "passed": 22,
+      "failed": 22,
+      "referenceCaptures": 44,
+      "maxDiffPixelRatio": 0.001,
+      "scope": "Default states only; includes populated calls, contacts and knowledge. Failures retained without masking new controls. Referral fixture aligned after this run.",
+      "artifacts": ".tmp/admin-ui-parity/french-mobile-v2"
+    },
+    {
+      "gate": "appointment-policy-postgresql",
+      "status": "passed",
+      "scope": "Correct worker role, disposable clean database; name/service facts, missing facts, OTP escalation, policy revocation, fact-based appointment resolution, cancellation and replay.",
+      "artifacts": ".tmp/admin-ui-parity/appointment-policy-certification.log"
+    },
+    {
+      "gate": "appointment-audit-postgresql",
+      "status": "passed",
+      "scope": "OTP lifecycle and cancel/reschedule audit regression.",
+      "artifacts": ".tmp/admin-ui-parity/appointment-audit-certification.log"
+    },
+    {
+      "gate": "setup-authenticated-api",
+      "passed": 1,
+      "scope": "Concurrent five-step skips persist, invalid step rejected, unskip persists, viewer GET/PATCH denied; disposable tenant cleaned.",
+      "artifacts": ".tmp/admin-ui-parity/setup-api-certification.log"
+    },
+    {
+      "gate": "knowledge-import-lifecycle-postgresql",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/knowledge-lifecycle-certification.log"
+    },
+    {
+      "gate": "follow-up-import-rollback",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/import-follow-up-certification.log"
+    },
+    {
+      "gate": "voice-gateway-unit",
+      "files": 17,
+      "passed": 146,
+      "scope": "Includes transfer-mode enforcement; run before appointment fact adapter restoration.",
+      "artifacts": ".tmp/admin-ui-parity/transfer-voice-tests.log"
+    },
+    {
+      "gate": "workspace-unique-unit",
+      "passed": 514,
+      "scope": "Source-only test discovery; build output duplicates excluded. Before latest onboarding restoration.",
+      "artifacts": ".tmp/admin-ui-parity/unique-full-unit-gate.log"
+    },
+    {
+      "gate": "configured-browser-suite-onboarding",
+      "passed": 6,
+      "scope": "All currently configured Chromium tests; does not cover every requested journey.",
+      "artifacts": ".tmp/admin-ui-parity/full-browser-gate-v6.log"
+    },
+    {
+      "gate": "strict-core-onboarding-visual-and-accessibility",
+      "passed": 48,
+      "referenceCaptures": 48,
+      "maxDiffPixelRatio": 0.001,
+      "scope": "Business, website, knowledge, greeting, phone input and verification code; English/French, light/dark, desktop/mobile.",
+      "artifacts": ".tmp/admin-ui-parity/onboarding-core-v2"
+    },
+    {
+      "gate": "onboarding-postgresql",
+      "status": "passed",
+      "scope": "Restricted application role; website URL and stage commit, concurrent deduplication, verified progression, rejected verification bypass, preserved revisits, viewer denial.",
+      "artifacts": ".tmp/admin-ui-parity/onboarding-domain-certification-v2.log"
+    },
+    {
+      "gate": "onboarding-component-restoration",
+      "passed": 6,
+      "scope": "Five website form tests plus original safe-error mapping test.",
+      "artifacts": ".tmp/admin-ui-parity/onboarding-component-tests.log"
+    },
+    {
+      "gate": "follow-up-booking-outcomes-postgresql",
+      "status": "passed",
+      "scope": "Follow-up deduplication, message outcome, booked outcome preserved through finalization, foreign call rollback.",
+      "artifacts": ".tmp/admin-ui-parity/follow-up-outcome-certification.log"
+    },
+    {
+      "gate": "strict-late-onboarding-visual-and-accessibility",
+      "passed": 24,
+      "referenceCaptures": 24,
+      "maxDiffPixelRatio": 0.001,
+      "scope": "Default plan, number and attribution routes in English/French, light/dark, desktop/mobile. Number inventory is an unavailable-provider state, not a populated inventory certification.",
+      "artifacts": ".tmp/admin-ui-parity/onboarding-late-v1"
+    },
+    {
+      "gate": "strict-service-rule-dialogs",
+      "passed": 16,
+      "referenceCaptures": 16,
+      "maxDiffPixelRatio": 0.001,
+      "scope": "Empty create dialogs across both locales, themes and viewports.",
+      "artifacts": ".tmp/admin-ui-parity/agent-editors-v3"
+    },
+    {
+      "gate": "agent-workflow-browser",
+      "passed": 1,
+      "scope": "Empty submission guarded; service inactive creation, edit, enable, reload; rule create, delete cancel/confirm; viewer UI and API denial.",
+      "artifacts": ".tmp/admin-ui-parity/agent-workflows-v3.log"
+    },
+    {
+      "gate": "catalog-call-pagination-postgresql",
+      "status": "passed",
+      "scope": "Inactive service creation, multi-service staff assignments, paginated totals, filtered call totals, and follow-up/booking factual outcomes.",
+      "artifacts": ".tmp/admin-ui-parity/catalog-call-pagination-certification.log"
+    },
+    {
+      "gate": "onboarding-workspace-unit",
+      "passed": 526,
+      "scope": "Unique source tests only; before final service/rule dialog and catalog changes.",
+      "artifacts": ".tmp/admin-ui-parity/onboarding-full-unit.log"
+    },
+    {
+      "gate": "onboarding-workspace-types-lint",
+      "status": "passed",
+      "scope": "Before final service/rule dialog and catalog changes.",
+      "artifacts": [
+        ".tmp/admin-ui-parity/onboarding-full-typecheck.log",
+        ".tmp/admin-ui-parity/onboarding-full-lint.log"
+      ]
+    },
+    {
+      "gate": "knowledge-dialogs-strict",
+      "passed": 24,
+      "referenceCaptures": 24,
+      "maxDiffPixelRatio": 0.001,
+      "scope": "Create text, website and upload dialogs, EN/FR, light/dark, desktop/mobile, pixels and ARIA.",
+      "artifacts": ".tmp/admin-ui-parity/knowledge-forms-v1"
+    },
+    {
+      "gate": "knowledge-metadata-database",
+      "status": "passed",
+      "scope": "Migration twice, health, forced RLS on 63 tables; upload title/tags persist; viewer/oversize rejection; cancel/retry/deletion stale-worker and tenant isolation. Storage provider simulated for lifecycle test.",
+      "artifacts": ".tmp/admin-ui-parity/knowledge-metadata-database-gate.log"
+    },
+    {
+      "gate": "knowledge-forms-unit",
+      "passed": 8,
+      "scope": "Original form guards, tags, website failures, file validation and upload failures."
+    },
+    {
+      "gate": "setup-editor-deep-links",
+      "passed": 7,
+      "scope": "Services, rules, website, upload and calendar dialogs consume only the setup query parameter; late workspace load and viewer denial."
+    },
+    {
+      "gate": "knowledge-admin-docker-turbopack",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/knowledge-dialogs-build.log"
+    },
+    {
+      "gate": "isolated-twilio-account",
+      "status": "provisioned-not-certified",
+      "scope": "Dedicated subaccount created; no numbers purchased or calls/messages sent. Public isolated staging runtime and live flow certification remain outstanding.",
+      "artifacts": ".tmp/admin-ui-parity/providers/twilio-isolated-account.json"
+    },
+    {
+      "gate": "number-chooser-unit",
+      "passed": 7,
+      "scope": "Inventory deduplication/load more, verified market country, concurrent claim guard, selected-number review and attribution/completed onboarding routing."
+    },
+    {
+      "gate": "unique-workspace-unit",
+      "passed": 585,
+      "scope": "584 workspace source tests and 1 root script test, no compiled dist duplicates.",
+      "artifacts": [
+        ".tmp/admin-ui-parity/number-chooser-full-unit.log",
+        ".tmp/admin-ui-parity/number-chooser-script-unit-correct.log"
+      ]
+    },
+    {
+      "gate": "workspace-lint-and-script-types",
+      "status": "passed",
+      "artifacts": [
+        ".tmp/admin-ui-parity/number-chooser-lint.log",
+        ".tmp/admin-ui-parity/number-inventory-harness-types.log"
+      ]
+    },
+    {
+      "gate": "knowledge-browser-mutations",
+      "passed": 1,
+      "scope": "Service/rule workflow plus knowledge create/edit/reload tags, disable and viewer denial through real HTTP APIs and PostgreSQL.",
+      "artifacts": ".tmp/admin-ui-parity/knowledge-mutation-browser.log"
+    },
+    {
+      "gate": "configured-browser-suite",
+      "passed": 7,
+      "scope": "All currently configured Chromium tests, before extending the agent workflow with knowledge mutations. This does not represent every required browser scenario.",
+      "artifacts": ".tmp/admin-ui-parity/knowledge-full-browser-gate.log"
+    },
+    {
+      "gate": "phone-number-revisit-database",
+      "status": "passed",
+      "scope": "Migrations twice, health and forced RLS; completed onboarding number selection/provisioning preserves progress, daily purchase quota remains enforced, existing verification and replacement lifecycle gates pass. Providers simulated.",
+      "artifacts": ".tmp/admin-ui-parity/phone-revisit-database-gate-v2.log"
+    },
+    {
+      "gate": "static-certifications",
+      "status": "passed",
+      "scope": "Route manifest, locale, drift, replacement parity and proxy/CSP security. Rendered parity certified separately.",
+      "artifacts": ".tmp/admin-ui-parity/knowledge-number-static-certification.log"
+    },
+    {
+      "gate": "number-inventory-strict",
+      "passed": 16,
+      "referenceCaptures": 16,
+      "maxDiffPixelRatio": 0.001,
+      "scope": "Populated inventory and load-more states, EN/FR light/dark desktop/mobile. Equivalent provider inventory fixtures on real reference and port components; no provider purchases.",
+      "artifacts": ".tmp/admin-ui-parity/number-inventory-v2"
+    },
+    {
+      "gate": "selected-number-strict",
+      "passed": 8,
+      "referenceCaptures": 8,
+      "maxDiffPixelRatio": 0.001,
+      "scope": "Selected-number review with matched PostgreSQL and local reference fixtures, EN/FR light/dark desktop/mobile.",
+      "artifacts": ".tmp/admin-ui-parity/number-selected-v1"
+    },
+    {
+      "gate": "appearance-workspace-mutations",
+      "passed": 2,
+      "scope": "Late success/failure from a previous workspace cannot change or disable current workspace controls, or display a stale failure toast."
+    },
+    {
+      "gate": "knowledge-finalization",
+      "status": "passed",
+      "scope": "PostgreSQL verification of plan storage cap, reserved byte length, duplicate concurrent finalize rejection, title/tags, role/tenant isolation, cancel/retry stale-worker handling.",
+      "artifacts": ".tmp/admin-ui-parity/knowledge-capacity-database-gate.log"
+    },
+    {
+      "gate": "number-admin-worker-voice-build",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/number-chooser-build.log"
+    },
+    {
+      "gate": "notification-consent-components",
+      "passed": 6,
+      "scope": "Original channels, widget-only controls on excluded view, SMS availability, cancel and explicit disclosure acceptance."
+    },
+    {
+      "gate": "operator-notification-consent-database",
+      "status": "passed",
+      "scope": "Missing consent rejected; disclosure version persists; stale versions cannot dispatch; revocation checked before delivery; immutable history and existing notification lifecycle gates.",
+      "artifacts": ".tmp/admin-ui-parity/notification-consent-database-gate-v2.log"
+    },
+    {
+      "gate": "exact-main-agent-setup-strict",
+      "passed": 12,
+      "referenceCaptures": 12,
+      "maxDiffPixelRatio": 0.001,
+      "scope": "French Agent, basic-settings alias and setup-guide; desktop/mobile, light/dark, screenshots and ARIA. Transfer control removed per explicit user instruction.",
+      "artifacts": ".tmp/admin-ui-parity/agent-setup-exact-v1"
+    },
+    {
+      "gate": "notification-consent-browser",
+      "passed": 1,
+      "scope": "Real service/rule/knowledge mutations, viewer rejection, SMS unavailable denial, disclosure cancel/accept/reload/disable; disposable PostgreSQL tenant.",
+      "artifacts": ".tmp/admin-ui-parity/notification-consent-browser.log"
+    },
+    {
+      "gate": "exact-main-unique-unit",
+      "passed": 593,
+      "scope": "592 workspace source tests and one root script test; no dist duplicates. Includes corrected recording availability.",
+      "artifacts": [
+        ".tmp/admin-ui-parity/exact-main-full-unit.log",
+        ".tmp/admin-ui-parity/exact-main-script-unit.log"
+      ]
+    },
+    {
+      "gate": "exact-main-lint",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/current-full-lint.log"
+    },
+    {
+      "gate": "exact-main-agent-turbopack",
+      "status": "passed",
+      "scope": "Docker default Turbopack with transfer UI removed. Subsequent recording state fix awaits its own build.",
+      "artifacts": ".tmp/admin-ui-parity/exact-main-agent-build.log"
+    },
+    {
+      "gate": "current-domain-battery",
+      "status": "partial-first-pass",
+      "passed": 18,
+      "failed": 1,
+      "artifacts": ".tmp/admin-ui-parity/current-domain-gates.json",
+      "scope": "The failed call-detail check found the recording-state mismatch; corrected and rerun passed. Full rerun is pending to produce one green evidence bundle."
+    },
+    {
+      "gate": "current-domain-battery-v2",
+      "status": "passed",
+      "checks": 19,
+      "scope": "Disposable PostgreSQL domain suite, including recording retention, SMS consent/disclosure and hosted sender routing, plus local SMTP and telemetry receivers. Provider delivery simulated where appropriate.",
+      "artifacts": ".tmp/admin-ui-parity/current-domain-gates.json"
+    },
+    {
+      "gate": "current-local-runtime-battery",
+      "status": "passed",
+      "checks": 7,
+      "scope": "Legacy password rehash, authenticated SSE isolation/reconnect, signed webhook replay, local MinIO storage/privacy, Redis recovery and runtime performance. Not live provider certification.",
+      "artifacts": ".tmp/admin-ui-parity/current-http-gates.json"
+    },
+    {
+      "gate": "current-import-rollback",
+      "status": "passed",
+      "scope": "Dry run, failed partial import rollback, repeated import, follow-up linkage and expired content scrubbing, relationships and aggregate reconciliation.",
+      "artifacts": ".tmp/admin-ui-parity/current-import-rollback-gate.log"
+    },
+    {
+      "gate": "current-isolated-restore",
+      "status": "passed",
+      "scope": "Separate disposable Compose project; fresh database migrated twice, consistency and forced RLS on 63 tables; database and local storage backup, checksums, deletion and restore integrity.",
+      "artifacts": [
+        ".tmp/admin-ui-parity/restore-clean-database-gate.log",
+        ".tmp/admin-ui-parity/current-isolated-restore-drill-v2.log",
+        ".tmp/replacement-restore-drill-20260905T205644Z/backup"
+      ]
+    },
+    {
+      "gate": "phone-replacement-permission-components",
+      "passed": 4,
+      "artifacts": ".tmp/admin-ui-parity/phone-permission-components.log"
+    },
+    {
+      "gate": "current-operator-auth-rerun",
+      "passed": 2,
+      "scope": "Full multi-account auth/isolation/revocation journey and French signup after increasing total multi-step test budget to 120 seconds; individual assertion budgets unchanged.",
+      "artifacts": ".tmp/admin-ui-parity/current-operator-auth-v2.log"
+    },
+    {
+      "gate": "original-phone-and-upgrade-components",
+      "passed": 15,
+      "artifacts": ".tmp/admin-ui-parity/restored-phone-upgrade-components.log"
+    },
+    {
+      "gate": "checkout-workspace-isolation",
+      "passed": 2,
+      "artifacts": ".tmp/admin-ui-parity/checkout-workspace-components.log"
+    },
+    {
+      "gate": "password-recovery-components",
+      "passed": 2,
+      "artifacts": ".tmp/admin-ui-parity/password-recovery-components.log"
+    },
+    {
+      "gate": "password-recovery-postgresql-handlers",
+      "status": "passed",
+      "scope": "Hashed expiring one-use reset codes, original password complexity, enumeration-safe response, attempt limits, session revocation, synchronized credential lineage, passwordless endpoints disabled. Source handlers on disposable database; no live email delivery.",
+      "artifacts": ".tmp/admin-ui-parity/password-recovery-source-gate-v2.log"
+    },
+    {
+      "gate": "password-recovery-rendered-parity",
+      "passed": 32,
+      "scope": "Request, verify, invalid code and invalid password; English/French, light/dark, desktop/mobile; pixel ratio <=0.001 and exact normalized ARIA. Deterministic service fixtures; frozen main source unchanged.",
+      "artifacts": ".tmp/admin-ui-parity/password-recovery-visual-v1"
+    },
+    {
+      "gate": "password-recovery-browser",
+      "passed": 1,
+      "scope": "Real HTTP reset from email outbox through form submission, automatic sign-in, old session revocation and old/new password checks. Local worker paused; no provider email.",
+      "artifacts": ".tmp/admin-ui-parity/password-recovery-browser-v1.log"
+    },
+    {
+      "gate": "recovery-workspace-unit-tests",
+      "passed": 612,
+      "scope": "Workspace suite before additional seven password-policy/link-compatibility tests.",
+      "artifacts": ".tmp/admin-ui-parity/recovery-menu-full-unit.log"
+    },
+    {
+      "gate": "password-policy-link-compatibility-tests",
+      "passed": 7,
+      "artifacts": ".tmp/admin-ui-parity/password-compat-policy-components.log"
+    },
+    {
+      "gate": "account-menu-parity",
+      "passed": 8,
+      "scope": "Both locales, themes and viewports; strict pixels and ARIA, including mobile button navigation and expanded trigger state.",
+      "artifacts": ".tmp/admin-ui-parity/account-menu-exact-v1"
+    },
+    {
+      "gate": "complete-configured-browser-suite",
+      "passed": 8,
+      "scope": "All configured public, onboarding, auth/isolation, setup, editor/consent/viewer and real password recovery tests. SMS fixture explicitly self-hosted; worker paused for test email isolation.",
+      "artifacts": ".tmp/admin-ui-parity/recovery-complete-browser-suite-v2.log"
+    },
+    {
+      "gate": "invite-email-change-components",
+      "passed": 4,
+      "artifacts": ".tmp/admin-ui-parity/invite-email-change-components.log"
+    },
+    {
+      "gate": "email-change-signed-handler-certification",
+      "status": "passed",
+      "scope": "Current address approval, new address verification through original confirmation route, other-account rejection, replay rejection, normalized identity update and login with new email. No provider email.",
+      "artifacts": ".tmp/admin-ui-parity/email-change-source-gate.log"
+    },
+    {
+      "gate": "verified-phone-market-database",
+      "status": "passed",
+      "scope": "Migration twice, consistency/RLS checks, market retained for empty results, original metro priority, stale-phone rejection, tenant isolation and complete existing phone lifecycle. Disposable test database.",
+      "artifacts": ".tmp/admin-ui-parity/phone-market-gates.log"
+    },
+    {
+      "gate": "phone-picker-components",
+      "passed": 12,
+      "artifacts": ".tmp/admin-ui-parity/phone-market-components.log"
+    },
+    {
+      "gate": "email-change-rendered-parity",
+      "passed": 32,
+      "scope": "Default, ready, success and error; both locales, themes and viewports, strict pixels and ARIA.",
+      "artifacts": ".tmp/admin-ui-parity/email-change-visual-v1"
+    },
+    {
+      "gate": "verified-market-picker-parity",
+      "passed": 24,
+      "scope": "Populated, empty and load-more states with area-code prefill; both locales, themes and viewports, strict pixels and ARIA.",
+      "artifacts": ".tmp/admin-ui-parity/phone-market-visual-v1"
+    },
+    {
+      "gate": "phone-market-full-workspace-unit-tests",
+      "passed": 626,
+      "artifacts": ".tmp/admin-ui-parity/phone-market-full-unit.log"
+    },
+    {
+      "gate": "widget-markdown-attribute-regression",
+      "passed": 2,
+      "scope": "Previously failing quote-to-event-attribute injection now passes; HTML/non-HTTP links remain inert and formatting preserved.",
+      "artifacts": ".tmp/admin-ui-parity/widget-markdown-after-fix.log"
+    },
+    {
+      "gate": "embed-ready-handshake-tests",
+      "passed": 2,
+      "artifacts": ".tmp/admin-ui-parity/embed-handshake-unit.log"
+    },
+    {
+      "gate": "widget-fixes-workspace-unit",
+      "passed": 630,
+      "artifacts": ".tmp/admin-ui-parity/widget-fixes-full-unit.log"
+    },
+    {
+      "gate": "widget-fixes-root-unit",
+      "passed": 1,
+      "artifacts": ".tmp/admin-ui-parity/widget-root-unit.log"
+    },
+    {
+      "gate": "phone-claim-recovery-unit",
+      "passed": 18,
+      "artifacts": ".tmp/admin-ui-parity/claim-resume-unit.log"
+    },
+    {
+      "gate": "phone-claim-recovery-workspace-typecheck",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/claim-resume-all-types.log"
+    },
+    {
+      "gate": "phone-claim-recovery-browser",
+      "passed": 1,
+      "artifacts": ".tmp/admin-ui-parity/claim-resume-browser-v2.log"
+    },
+    {
+      "gate": "latest-local-runtime",
+      "passed": 7,
+      "artifacts": ".tmp/admin-ui-parity/widget-final-http-gates.log"
+    },
+    {
+      "gate": "restore-database-final-migrations",
+      "status": "passed",
+      "checks": [
+        "migrate twice",
+        "consistency",
+        "RLS"
+      ],
+      "artifacts": ".tmp/admin-ui-parity/restore-final-db-gate.log"
+    },
+    {
+      "gate": "final-isolated-backup-restore",
+      "status": "passed",
+      "checks": [
+        "PostgreSQL marker restored",
+        "storage marker restored",
+        "backup checksums verified"
+      ],
+      "artifacts": ".tmp/admin-ui-parity/final-isolated-restore-drill.log"
+    },
+    {
+      "gate": "demo-surfaces-unit",
+      "passed": 15,
+      "artifacts": ".tmp/admin-ui-parity/demo-surfaces-unit-v3.log"
+    },
+    {
+      "gate": "demo-claim-concurrency",
+      "status": "passed",
+      "checks": [
+        "concurrent claims serialized",
+        "original claimant replay",
+        "foreign claimant rejected",
+        "first claim starts onboarding",
+        "replay preserves onboarding"
+      ],
+      "artifacts": ".tmp/admin-ui-parity/current-demo-gate.log"
+    },
+    {
+      "gate": "sms-consent-fixture-correction",
+      "status": "passed",
+      "reason": "Consent fixture now explicitly selects self-hosted mode before independently testing hosted sender behavior.",
+      "artifacts": ".tmp/admin-ui-parity/sms-consent-fixture-v2.log"
+    },
+    {
+      "gate": "strict-demo-claim-states",
+      "passed": 24,
+      "maxDiffPixelRatio": 0.001,
+      "artifacts": ".tmp/admin-ui-parity/demo-claim-visual-v1"
+    },
+    {
+      "gate": "strict-public-demo-states",
+      "passed": 40,
+      "maxDiffPixelRatio": 0.001,
+      "states": [
+        "active",
+        "preparing",
+        "expired",
+        "revoked",
+        "claimed"
+      ],
+      "animation": "Original canvas frozen identically using deterministic randomness and frame timestamps; no masking.",
+      "artifacts": ".tmp/admin-ui-parity/demo-preview-visual-v3"
+    },
+    {
+      "gate": "auth-return-browser",
+      "passed": 1,
+      "artifacts": ".tmp/admin-ui-parity/auth-return-browser-v2.log"
+    },
+    {
+      "gate": "demo-claim-and-phone-recovery-browser",
+      "passed": 2,
+      "artifacts": ".tmp/admin-ui-parity/demo-claim-browser-v2.log"
+    },
+    {
+      "gate": "workspace-telemetry-preference-unit",
+      "passed": 5,
+      "artifacts": ".tmp/admin-ui-parity/telemetry-preference-unit.log"
+    },
+    {
+      "gate": "safe-auth-return-unit",
+      "passed": 5,
+      "artifacts": ".tmp/admin-ui-parity/auth-return-to-unit.log"
+    },
+    {
+      "gate": "spending-cap-unit",
+      "passed": 16,
+      "artifacts": ".tmp/admin-ui-parity/spending-cap-unit.log"
+    },
+    {
+      "gate": "checkout-return-unit",
+      "passed": 6,
+      "artifacts": ".tmp/admin-ui-parity/checkout-return-unit.log"
+    },
+    {
+      "gate": "all-container-production-builds",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/telemetry-final-compose-build.log",
+      "limitation": "Subsequent billing/admin changes have their own production build."
+    },
+    {
+      "gate": "landing-production-build",
+      "status": "passed",
+      "pages": 110,
+      "artifacts": ".tmp/admin-ui-parity/demo-final-landing-build-v2.log"
+    },
+    {
+      "gate": "current-proxy-security-certification",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/demo-final-security-check.log"
+    },
+    {
+      "gate": "paid-billing-strict-visual",
+      "passed": 32,
+      "referenceCaptures": 32,
+      "maxDiffPixelRatio": 0.001,
+      "states": [
+        "paid",
+        "readonly",
+        "incomplete",
+        "transactions"
+      ],
+      "locales": [
+        "en",
+        "fr"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "viewports": [
+        "1440x1000",
+        "390x844"
+      ],
+      "artifacts": ".tmp/admin-ui-parity/paid-billing-visual-v1",
+      "scope": "Matching rendered text, accessibility tree and screenshots. Provider/API data is adapted from equivalent deterministic fixtures; no live checkout."
+    },
+    {
+      "gate": "billing-return-cap-browser-viewer-authorization",
+      "passed": 1,
+      "artifacts": ".tmp/admin-ui-parity/billing-return-cap-browser-v2.log"
+    },
+    {
+      "gate": "billing-overview-ported-unit",
+      "passed": 7,
+      "artifacts": ".tmp/admin-ui-parity/paid-billing-overview-unit-v2.log"
+    },
+    {
+      "gate": "workspace-switcher-ported-unit",
+      "passed": 4,
+      "artifacts": ".tmp/admin-ui-parity/workspace-switcher-unit.log"
+    },
+    {
+      "gate": "business-onboarding-integrations-ported-unit",
+      "passed": 3,
+      "artifacts": ".tmp/admin-ui-parity/original-onboarding-integrations-unit.log"
+    },
+    {
+      "gate": "full-workspace-unit-before-shell-restoration",
+      "passed": 679,
+      "artifacts": ".tmp/admin-ui-parity/paid-billing-full-unit.log"
+    },
+    {
+      "gate": "full-domain-certification-current",
+      "passed": 19,
+      "artifacts": ".tmp/admin-ui-parity/paid-billing-domain-gates.log"
+    },
+    {
+      "gate": "runtime-certification-current",
+      "passed": 7,
+      "artifacts": ".tmp/admin-ui-parity/paid-billing-http-gates.log"
+    },
+    {
+      "gate": "import-reconciliation-rollback-current",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/final-import-rollback.log"
+    },
+    {
+      "gate": "knowledge-activity-production-build",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/knowledge-activity-compose-build.log"
+    },
+    {
+      "gate": "knowledge-workspace-types",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/knowledge-all-types.log"
+    },
+    {
+      "gate": "knowledge-root-types",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/knowledge-root-types.log"
+    },
+    {
+      "gate": "knowledge-workspace-lint",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/knowledge-all-lint.log"
+    },
+    {
+      "gate": "knowledge-workspace-unit",
+      "status": "passed",
+      "passed": 733,
+      "artifacts": ".tmp/admin-ui-parity/knowledge-all-unit.log"
+    },
+    {
+      "gate": "knowledge-original-row-unit",
+      "status": "passed",
+      "passed": 15,
+      "artifacts": ".tmp/admin-ui-parity/knowledge-progress-unit-v2.log"
+    },
+    {
+      "gate": "setup-guide-original-intents",
+      "status": "passed",
+      "passed": 11,
+      "artifacts": ".tmp/admin-ui-parity/setup-guide-intents-unit.log"
+    },
+    {
+      "gate": "telemetry-nested-url-properties",
+      "status": "passed",
+      "passed": 6,
+      "artifacts": ".tmp/admin-ui-parity/telemetry-nested-properties-unit.log"
+    },
+    {
+      "gate": "knowledge-domain-certification",
+      "status": "passed",
+      "passed": 19,
+      "artifacts": ".tmp/admin-ui-parity/knowledge-all-domain-gates.log"
+    },
+    {
+      "gate": "knowledge-runtime-certification",
+      "status": "passed",
+      "passed": 7,
+      "artifacts": ".tmp/admin-ui-parity/knowledge-all-http-gates.log"
+    },
+    {
+      "gate": "knowledge-activity-import",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/knowledge-activity-import-check.log"
+    },
+    {
+      "gate": "knowledge-activity-migrate-twice-rls",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/knowledge-active-migration-v2.log"
+    },
+    {
+      "gate": "full-browser-auth-setup",
+      "status": "passed",
+      "passed": 13,
+      "artifacts": ".tmp/admin-ui-parity/complete-browser-v6.log"
+    },
+    {
+      "gate": "auth-original-page-intents",
+      "status": "passed",
+      "passed": 9,
+      "artifacts": ".tmp/admin-ui-parity/auth-original-intents-unit-v3.log"
+    },
+    {
+      "gate": "contact-delete-interactions",
+      "status": "passed",
+      "passed": 4,
+      "artifacts": ".tmp/admin-ui-parity/contact-deletion-unit.log"
+    },
+    {
+      "gate": "contact-delete-domain",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/contact-deletion-domain.log"
+    },
+    {
+      "gate": "contact-auth-workspace-unit",
+      "status": "passed",
+      "passed": 758,
+      "artifacts": ".tmp/admin-ui-parity/contact-auth-all-unit.log"
+    },
+    {
+      "gate": "current-security",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/latest-security-check.log"
+    },
+    {
+      "gate": "current-locales",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/latest-locale-check.log"
+    },
+    {
+      "gate": "current-schema-job-drift",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/latest-drift-check.log"
+    },
+    {
+      "gate": "knowledge-restore-migrations-rls",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/knowledge-restore-db-gate.log"
+    },
+    {
+      "gate": "widget-history-explicit-readiness",
+      "status": "passed",
+      "passed": 4,
+      "artifacts": ".tmp/admin-ui-parity/widget-browser-readiness-v2.log"
+    },
+    {
+      "gate": "contact-deletion-browser",
+      "status": "passed",
+      "passed": 1,
+      "artifacts": ".tmp/admin-ui-parity/contact-deletion-browser.log"
+    },
+    {
+      "gate": "website-job-ui",
+      "status": "passed",
+      "passed": 21,
+      "artifacts": ".tmp/admin-ui-parity/website-job-ui-final-unit.log"
+    },
+    {
+      "gate": "website-job-worker-lifecycle",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/website-job-worker-final.log"
+    },
+    {
+      "gate": "knowledge-0046-restore-drill",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/knowledge-isolated-restore-drill.log"
+    },
+    {
+      "gate": "website-job-0047-migration",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/website-job-migration.log"
+    },
+    {
+      "gate": "website-import-strict-visual-final",
+      "passed": 48,
+      "referenceCaptures": 48,
+      "maxDiffPixelRatio": 0.001,
+      "locales": [
+        "en",
+        "fr"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "viewports": [
+        "1440x1000",
+        "390x844"
+      ],
+      "states": [
+        "queued",
+        "crawling",
+        "indexing",
+        "failed",
+        "cancel-confirmation",
+        "failed-menu"
+      ],
+      "artifacts": ".tmp/admin-ui-parity/website-import-visual-v4",
+      "scope": "Visible text, ARIA and pixels pass. No masks. Subsequent Agent index route change is being recertified separately."
+    },
+    {
+      "gate": "current-script-unit",
+      "passed": 4,
+      "artifacts": ".tmp/admin-ui-parity/final-current-script-tests.log"
+    },
+    {
+      "gate": "current-domain-certification",
+      "passed": 19,
+      "artifacts": ".tmp/admin-ui-parity/final-current-domain.log"
+    },
+    {
+      "gate": "frozen-route-inventory",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/frozen-route-complete-check.log",
+      "scope": "Both frozen React Router routes and current Next pages must be represented. This gate does not prove rendered parity."
+    },
+    {
+      "gate": "migration-0047-backup-restore",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/website-import-restore-drill.log",
+      "backup": ".tmp/replacement-restore-drill-20260906T035916Z/backup"
+    },
+    {
+      "gate": "website-import-browser",
+      "passed": 1,
+      "artifacts": ".tmp/admin-ui-parity/complete-browser-v9.log",
+      "scope": "Queued progress, confirmed cancellation, reimport, failed retry, read-only UI and API authorization. Full run has a separate Agent redirect failure; not a green full-browser gate."
+    },
+    {
+      "gate": "current-http-certification",
+      "passed": 7,
+      "artifacts": ".tmp/admin-ui-parity/final-current-http.log"
+    },
+    {
+      "gate": "current-contact-certification",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/final-current-contact.log"
+    },
+    {
+      "gate": "current-import-reconciliation-rollback",
+      "status": "passed",
+      "artifacts": ".tmp/admin-ui-parity/final-current-import.log"
+    },
+    {
+      "gate": "current-static-certification",
+      "passed": 4,
+      "artifacts": ".tmp/admin-ui-parity/final-current-static.log",
+      "scope": "Frozen/current route inventory, localization, schema/job drift, and proxy/CSP security inspection."
+    },
+    {
+      "gate": "billing-retained-intents",
+      "passed": 37,
+      "artifacts": ".tmp/admin-ui-parity/billing-original-intents-v4.log",
+      "scope": "Five component suites; 20 retained original billing intents mapped with domain and browser evidence. Live Polar remains uncertified."
+    },
+    {
+      "gate": "current-complete-browser",
+      "passed": 14,
+      "skipped": 4,
+      "artifacts": ".tmp/admin-ui-parity/complete-browser-v10.log",
+      "scope": "All selected public/onboarding/operator workflows pass. Widget scenarios run in their separate provider fixture. The newly added authorized demo operator workflow is not included in this historical run."
+    },
+    {
+      "gate": "fresh-final-database",
+      "passed": 25,
+      "artifacts": ".tmp/admin-ui-parity/fresh-final-database/results.json",
+      "scope": "New empty disposable database. Migrations twice, consistency, behavioral RLS, 20 domain workflows, and import/reconciliation/rollback."
+    },
+    {
+      "gate": "demo-operator-mutation-unit",
+      "passed": 6,
+      "artifacts": ".tmp/admin-ui-parity/demo-operator-mutations.log"
+    },
+    {
+      "gate": "new-operator-state-baselines",
+      "passed": 64,
+      "captures": 64,
+      "artifacts": ".tmp/admin-ui-parity/new-operator-states-v1",
+      "scope": "Appointments and demos: empty, populated, loading and error; both languages, themes and viewports. Port-owned baselines with deterministic service fixtures, not frozen-main comparisons."
+    },
+    {
+      "gate": "authorized-demo-operator-browser",
+      "passed": 1,
+      "artifacts": ".tmp/admin-ui-parity/demo-operator-browser-v3.log",
+      "scope": "Real HTTP and PostgreSQL: French creation, form reset, token rotation, publication, revocation and non-operator rejection. Crawl/snapshot readiness seeded with worker paused; live crawl/provider certification is separate. Temporary app removed and worker resumed."
+    },
+    {
+      "gate": "current-workspace-unit",
+      "passed": 779,
+      "artifacts": ".tmp/admin-ui-parity/final-current-unit-v3.log"
+    },
+    {
+      "gate": "new-operator-unit",
+      "passed": 9,
+      "artifacts": ".tmp/admin-ui-parity/new-operator-unit.log"
+    },
+    {
+      "gate": "new-operator-production-build",
+      "status": "passed",
+      "builder": "Default Turbopack in Docker",
+      "artifacts": ".tmp/admin-ui-parity/new-operator-build.log"
+    }
+  ],
+  "invalidatedEvidence": {
+    "artifacts": ".tmp/admin-ui-parity/full-static-cert-2026-09-05",
+    "reason": "Old harness hid controls and used an incorrect locale storage key. The 280-case run also recorded 46 failures. Previous full-parity claims are withdrawn.",
+    "stagingVoiceConnectionOnly": {
+      "artifact": ".tmp/admin-ui-parity/staging-browser-voice.json",
+      "reason": "Connection-only check missed gateway crash and failed termination; full spoken-response check supersedes it."
+    }
+  },
+  "latestStrictOperatorComparison": {
+    "locale": "fr",
+    "selectedCases": 192,
+    "passed": 192,
+    "failures": 0,
+    "maxDiffPixelRatio": 0.001,
+    "artifacts": ".tmp/admin-ui-parity/french-operator-v7",
+    "runLog": ".tmp/admin-ui-parity/french-operator-v7.log",
+    "scope": "All selected French operator cases pass pixels and ARIA, including website-import states and exact Agent index/legacy redirect. Subsequent changes to the new demos page are outside frozen-main comparisons and are being certified separately."
+  },
+  "remaining": [
+    "Audit original test assertions and unrepresented failure/permission/destructive states beyond the declared visual manifest.",
+    "Run isolated live-provider certification with verified disposable provider resources.",
+    "Resolve or explicitly disposition the recorded unstable frozen-main feedback overflow case before release."
+  ],
+  "knownReferenceIssues": [
+    {
+      "state": "Feedback with 2001 wide characters",
+      "artifacts": ".tmp/admin-ui-parity/strict-feedback-v3-2026-09-05",
+      "finding": "Auto-sized textarea exceeds viewport; popover collision positioning and document scrolling produce unstable screenshots even on frozen main. This overflow case remains uncertified. Compact over-limit text is a separate validation-state case."
+    }
+  ],
+  "sharedNavigationDecision": "Apply the user\u2019s explicit copy requirement on reference routes. AI navigation remains on /messages and /settings/widget; widget notification controls move to /settings/widget. No screenshot masking.",
+  "transferModeDecision": "User explicitly chose exact main parity and removal of the UI control. Persisted transfer policy, API, snapshots and live voice enforcement remain.",
+  "recordingParityCorrection": {
+    "finding": "Frozen main intentionally differs: eligible calls with no recording object show pending in the calls list and unavailable in call detail.",
+    "change": "Separate recordingListState and recordingState helpers preserve both displays.",
+    "validation": "All 19 domain gates pass; all 16 calls/detail/feedback/recording comparison cases in call-upgrade-menu-fr-v4 pass pixels and ARIA."
+  },
+  "latestEnglishOperatorComparison": {
+    "passed": 168,
+    "failed": 0,
+    "cases": 168,
+    "status": "passed",
+    "artifacts": ".tmp/admin-ui-parity/english-operator-v5",
+    "scope": "Expanded English operator route/state matrix with equivalent no-number upgrade-dialog fixture. Strict 0.001 pixel ratio and ARIA. English fixture has empty calls/contacts; French populated-detail evidence is separate."
+  },
+  "latestSharedDialogComparison": {
+    "artifacts": ".tmp/admin-ui-parity/call-upgrade-menu-fr-v4",
+    "cases": 24,
+    "pixelsPassed": 24,
+    "passed": 20,
+    "failed": 4,
+    "scope": "French calls, detail, feedback, unavailable recording, upgrade dialog and account menu; 0.001 pixel ratio and ARIA.",
+    "findings": [
+      "Account menu missing expanded state in ARIA; mobile navigation must use buttons like main. Source corrected; fresh build and recapture pending."
+    ],
+    "recapture": "All eight account-menu cases across both languages pass in account-menu-exact-v1 after the accessibility corrections."
+  },
+  "widgetBrowserCoverage": {
+    "status": "passed",
+    "cases": 4,
+    "locales": [
+      "en",
+      "fr"
+    ],
+    "viewports": [
+      "1440x1000",
+      "390x844"
+    ],
+    "checks": [
+      "real embed initialization and allowed-origin enforcement",
+      "Enter submits UUID message IDs",
+      "local deterministic AI SSE streaming",
+      "persisted history after reload",
+      "human handoff prevents AI request"
+    ],
+    "limitations": [
+      "AI provider is isolated local fixture; live provider certification remains outstanding",
+      "Handoff is seeded in PostgreSQL; operator handoff UI requires separate coverage"
+    ],
+    "artifacts": ".tmp/admin-ui-parity/widget-browser-readiness-v2.log"
+  },
+  "testLineage": "docs/validation/parity-test-lineage.json",
+  "visualComparisonPolicy": {
+    "maxDiffPixelRatio": 0.001,
+    "colorThreshold": 0,
+    "note": "Historical cohorts without an explicit colorThreshold used Playwright default 0.2. They are not strict-color release evidence. All new main-versus-port captures save rendered port PNGs and compare visible accessibility trees."
+  },
+  "currentStrictVisualEvidence": [
+    {
+      "gate": "english-populated-operator",
+      "passed": 192,
+      "referenceCaptures": 192,
+      "colorThreshold": 0,
+      "maxDiffPixelRatio": 0.001,
+      "artifacts": ".tmp/admin-ui-parity/english-populated-strict-v2",
+      "verificationLog": ".tmp/admin-ui-parity/english-populated-strict-v3.log",
+      "scope": "Exact sidebar selection and notification divider verified. Later dashboard changes require additional evidence."
+    },
+    {
+      "gate": "french-populated-operator",
+      "passed": 196,
+      "referenceCaptures": 196,
+      "colorThreshold": 0,
+      "maxDiffPixelRatio": 0.001,
+      "artifacts": ".tmp/admin-ui-parity/french-operator-strict-v8",
+      "scope": "Original operator routes and interactions plus populated voice follow-up and appointment dashboard."
+    },
+    {
+      "gate": "loading-parity",
+      "passed": 56,
+      "referenceCaptures": 56,
+      "colorThreshold": 0,
+      "maxDiffPixelRatio": 0.001,
+      "artifacts": ".tmp/admin-ui-parity/loading-parity-v4",
+      "scope": "Home, analytics, calls, contacts, knowledge, services and rules; EN/FR, both themes and viewports."
+    },
+    {
+      "gate": "dashboard-populated",
+      "passed": 8,
+      "referenceCaptures": 8,
+      "colorThreshold": 0,
+      "maxDiffPixelRatio": 0.001,
+      "artifacts": ".tmp/admin-ui-parity/dashboard-populated-strict-v1",
+      "scope": "Voice follow-up links, urgent badges, callback metadata and localized appointment labels in both locales and visual variants."
+    },
+    {
+      "gate": "public-authentication",
+      "passed": 112,
+      "referenceCaptures": 112,
+      "colorThreshold": 0,
+      "maxDiffPixelRatio": 0.001,
+      "artifacts": ".tmp/admin-ui-parity/auth-public-strict-v7",
+      "scope": "Default public/auth pages and login/signup validation, rejection and submitting states. CSS transitions disabled before interactions to capture settled opacity. Includes challenge-required state."
+    },
+    {
+      "gate": "public-recovery-email-demo-flows",
+      "passed": 88,
+      "referenceCaptures": 88,
+      "colorThreshold": 0,
+      "maxDiffPixelRatio": 0.001,
+      "artifacts": ".tmp/admin-ui-parity/public-flow-strict-v1",
+      "scope": "Recovery verification/errors, email change ready/success/error, and public demo active/preparing/expired/revoked/claimed states."
+    },
+    {
+      "gate": "onboarding-core",
+      "passed": 48,
+      "referenceCaptures": 48,
+      "colorThreshold": 0,
+      "maxDiffPixelRatio": 0.001,
+      "artifacts": ".tmp/admin-ui-parity/onboarding-core-strict-v3"
+    },
+    {
+      "gate": "onboarding-late",
+      "passed": 48,
+      "referenceCaptures": 48,
+      "colorThreshold": 0,
+      "maxDiffPixelRatio": 0.001,
+      "artifacts": ".tmp/admin-ui-parity/onboarding-late-strict-v2"
+    },
+    {
+      "gate": "onboarding-selected-number",
+      "passed": 8,
+      "referenceCaptures": 8,
+      "colorThreshold": 0,
+      "maxDiffPixelRatio": 0.001,
+      "artifacts": ".tmp/admin-ui-parity/onboarding-selected-strict-v2"
+    },
+    {
+      "gate": "invitation-states",
+      "passed": 56,
+      "referenceCaptures": 56,
+      "colorThreshold": 0,
+      "maxDiffPixelRatio": 0.001,
+      "artifacts": ".tmp/admin-ui-parity/invitation-parity-v3"
+    },
+    {
+      "gate": "dynamic-demo-links",
+      "passed": 16,
+      "referenceCaptures": 16,
+      "colorThreshold": 0,
+      "maxDiffPixelRatio": 0.001,
+      "artifacts": ".tmp/admin-ui-parity/dynamic-demo-strict-v1"
+    },
+    {
+      "gate": "viewer-permissions",
+      "passed": 56,
+      "referenceCaptures": 56,
+      "colorThreshold": 0,
+      "maxDiffPixelRatio": 0.001,
+      "artifacts": ".tmp/admin-ui-parity/viewer-strict-v1",
+      "runLog": ".tmp/admin-ui-parity/viewer-strict-v2.log",
+      "scope": "Agent, knowledge, services, rules, integrations, phone numbers and team. Removed three port-only viewer banners; mutation restrictions retained."
+    }
+  ],
+  "latestWorkspaceUnit": {
+    "passed": true,
+    "tests": 796,
+    "artifact": ".tmp/admin-ui-parity/voice-readiness-unit.log"
+  },
+  "evidenceHistoryNotice": "The validated array retains historical runs and intermediate findings. currentStrictVisualEvidence identifies the strict-color cohorts; releaseCertified stays false until all route/state, local and isolated provider gates are complete.",
+  "latestVoiceFollowUpBrowser": {
+    "passed": 1,
+    "log": ".tmp/admin-ui-parity/voice-followup-browser-v1.log",
+    "traces": "apps/admin/.tmp-followup-browser-traces",
+    "scope": "Real PostgreSQL tenant: deduplicated dashboard link, call detail, complete all three duplicates, immediate navigation back to empty dashboard; fixture and active workspace restored."
+  },
+  "latestFullWorkspaceBuild": {
+    "status": "passed",
+    "builder": "pnpm 10.30.3; all workspace builds in Docker, default Turbopack and embed copy",
+    "log": ".tmp/admin-ui-parity/full-default-docker-build-v4.log",
+    "hostLimitation": "macOS build worker still receives EPERM while binding; Docker build succeeds.",
+    "configuration": "Explicit fixture environment loading supplies both public build arguments. Earlier v3 omitted the client challenge key; final v4 auth browser tests pass."
+  },
+  "latestRenderedCoverage": {
+    "status": "passed",
+    "covered": 968,
+    "required": 968,
+    "rejectedCohorts": 0,
+    "inventory": "docs/validation/parity-visual-evidence.json",
+    "report": ".tmp/admin-ui-parity/visual-coverage.json",
+    "command": "pnpm replacement:visual-coverage",
+    "scope": "Recompares every declared non-excluded route/state/locale/theme/viewport screenshot at zero color threshold and 0.001 difference ratio, with passing paired ARIA results. Includes 88 port-owned baseline variants; those are not main comparisons. Does not certify states absent from the manifest or live providers."
+  },
+  "latestCompleteBrowserBattery": {
+    "standard": {
+      "passed": 16,
+      "skipped": 5,
+      "log": ".tmp/admin-ui-parity/complete-browser-v15.log"
+    },
+    "separateRequiredScenarios": [
+      {
+        "passed": 4,
+        "log": ".tmp/admin-ui-parity/widget-isolated-latest.log",
+        "scope": "Local fake AI endpoint; real persistence and embedding host."
+      },
+      {
+        "passed": 1,
+        "log": ".tmp/admin-ui-parity/demo-operator-browser-v4.log",
+        "scope": "Isolated runtime with designated disposable operator."
+      }
+    ],
+    "scope": "All 21 declared browser scenarios passed across the standard and separately configured runtimes. Five standard-run skips are covered by the separate runs. Live providers remain uncertified."
+  },
+  "isolatedStaging": {
+    "platform": "Railway",
+    "projectId": "af0a130e-7b02-4fc0-94ef-b0ac45a0a0a6",
+    "projectName": "lobbystack-parity-20260907",
+    "environmentId": "22237215-5837-4754-842b-9306d43588ed",
+    "environmentName": "staging",
+    "status": "deployed-provider-certification-in-progress",
+    "productionDataUsed": false,
+    "infrastructureAsCode": {
+      "file": ".railway/railway.ts",
+      "cli": "5.49.2",
+      "sdk": "3.11.0",
+      "planChanges": 0,
+      "diagnostics": 0,
+      "legacyConfigRemoved": true
+    },
+    "healthyServices": [
+      "Postgres",
+      "Redis",
+      "migrator",
+      "admin",
+      "worker",
+      "voice-gateway"
+    ],
+    "httpsReadiness": [
+      "admin",
+      "voice-gateway"
+    ],
+    "storageCertification": {
+      "passed": true,
+      "artifact": ".tmp/admin-ui-parity/staging-storage-certification.json"
+    },
+    "remainingProviders": [
+      "Twilio PSTN calls, recordings and carrier SMS delivery",
+      "Google Calendar OAuth and appointment lifecycle",
+      "Polar sandbox billing lifecycle",
+      "SMTP/Resend delivery",
+      "PostHog/OpenTelemetry ingestion verification"
+    ],
+    "browserCertification": {
+      "passed": true,
+      "artifact": ".tmp/admin-ui-parity/staging-browser-certification.json",
+      "checks": [
+        "English desktop signup and workspace persistence",
+        "French mobile signup and locale persistence",
+        "Secure HTTP-only session cookies",
+        "Tenant isolation",
+        "Logout session revocation"
+      ]
+    },
+    "twilioIngressCertification": {
+      "passed": true,
+      "artifact": ".tmp/admin-ui-parity/providers/twilio-staging-ingress.json",
+      "scope": "Signature validation including query tampering; synthetic unmatched payloads, not real provider delivery",
+      "liveVoiceBlockedBy": "Missing isolated AI realtime key"
+    },
+    "databaseRestoreCertification": {
+      "passed": true,
+      "artifact": ".tmp/admin-ui-parity/staging-database-restore.json",
+      "rlsEnabledAndForcedTables": 63
+    },
+    "fixedDefects": [
+      "Configured public Twilio callbacks behind Railway proxy",
+      "Preserved query parameters in Twilio callback signature verification"
+    ],
+    "webhookReplayCertification": {
+      "passed": true,
+      "artifact": ".tmp/admin-ui-parity/staging-webhook-replay.json",
+      "scope": "Concurrent synthetic signed callbacks against real staging database; carrier delivery remains untested"
+    },
+    "adminDeploymentId": "fde64df8-bfb1-4a38-bd5d-206f2f9979ec",
+    "openAiLocalCertification": {
+      "passed": true,
+      "checks": [
+        "actual provider adapter generation",
+        "actual provider adapter streaming",
+        "1536-dimension embeddings",
+        "gpt-realtime-2 realtime text response"
+      ],
+      "artifacts": [
+        ".tmp/admin-ui-parity/providers/openai-adapters.json",
+        ".tmp/admin-ui-parity/providers/openai-realtime.json"
+      ],
+      "scope": "Synthetic requests from local machine, not deployed widget/voice certification"
+    },
+    "openAiStagingCredentialStatus": "User explicitly approved copying .env.local OpenAI key to staging admin, worker, and voice gateway; configured and redeployed.",
+    "liveWidgetCertification": {
+      "passed": true,
+      "artifact": ".tmp/admin-ui-parity/staging-live-widget.json",
+      "scope": "Real browser loader/iframe, live OpenAI streaming, PostgreSQL messages, reload history"
+    },
+    "voiceReadinessDefect": {
+      "issue": "Missing business snapshot crashed voice gateway sideband handler",
+      "fix": "Generate missing snapshot on first lookup; reject unavailable context before provider session",
+      "regressionTests": 3,
+      "deploymentVerification": "passed: automatic spoken response, zero realtime errors, successful termination"
+    },
+    "liveBrowserVoiceCertification": {
+      "passed": true,
+      "artifact": ".tmp/admin-ui-parity/staging-browser-voice.json",
+      "scope": "Real Railway/OpenAI WebRTC, automatic spoken greeting, completed response, zero error events, HTTP 204 termination; synthetic microphone input"
+    },
+    "voiceDeploymentId": "604e1ce1-2839-4f5f-b75d-7322593c61e7"
+  }
+}

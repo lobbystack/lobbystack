@@ -36,9 +36,14 @@ async function main(): Promise<void> {
     assert(!source.includes("@opentelemetry/sdk-node") && !source.includes("@lobbystack/telemetry/node"), `Browser source imports Node telemetry: ${relative(root, path)}`);
   }
 
-  const middleware = await readFile(join(root, "apps/admin/middleware.ts"), "utf8");
-  for (const directive of ["default-src 'self'", "frame-ancestors 'none'", "object-src 'none'", "form-action 'self'"]) assert(middleware.includes(directive), `Admin CSP is missing ${directive}.`);
-  assert(!middleware.includes("'unsafe-eval'"), "Admin CSP permits unsafe eval.");
+  const [proxy, csp] = await Promise.all([
+    readFile(join(root, "apps/admin/proxy.ts"), "utf8"),
+    readFile(join(root, "apps/admin/csp.ts"), "utf8"),
+  ]);
+  const securitySource = `${proxy}\n${csp}`;
+  assert(proxy.includes("content-security-policy") || proxy.includes("Content-Security-Policy"), "Admin proxy does not install its CSP header.");
+  for (const directive of ["default-src 'self'", "frame-ancestors 'none'", "object-src 'none'", "form-action 'self'"]) assert(securitySource.includes(directive), `Admin CSP is missing ${directive}.`);
+  assert(!securitySource.includes("script-src 'self' 'unsafe-eval'"), "Admin production CSP permits unsafe eval.");
 
   for (const scriptName of ["replacement-backup.sh", "replacement-restore.sh", "replacement-restore-drill.sh"]) {
     const script = await readFile(join(root, "scripts", scriptName), "utf8");

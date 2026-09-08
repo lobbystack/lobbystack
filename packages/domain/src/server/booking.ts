@@ -5,9 +5,11 @@ import { computeAvailability } from "../availability";
 
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
+import { recordCallOutcomeInTransaction } from "./callOutcome";
 import { consumeAppointmentChangeVerificationInTransaction } from "./appointmentChanges";
 
 type BookingInput = {
+  callId?: string;
   businessId: string;
   userId?: string;
   serviceId: string;
@@ -167,6 +169,7 @@ export async function bookAppointment(
         });
       }
     }
+    if (input.callId) await recordCallOutcomeInTransaction(tx, { businessId: input.businessId, callId: input.callId, contactId, outcome: { kind: "booked", serviceName: service.name, startsAt: startsAt.toISOString() } });
     return { appointmentId: appointment.id, contactId, staffId: selectedStaff.id };
   });
 }

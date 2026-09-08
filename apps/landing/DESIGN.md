@@ -43,13 +43,13 @@ components:
     padding: "32px"
 ---
 
-# Design System: LobbyStack
+# Design system: LobbyStack
 
 ## 1. Overview
 
 **Creative North Star: "The Utilitarian Operator"**
 
-This system is built for calm confidence. It is direct, reassuring, and exceptionally professional, acting as a trusted operational partner rather than a flashy tech toy. The aesthetic relies on an extremely restrained, purely achromatic palette (black, white, and warm grays) and rigorous typography to communicate reliability. It explicitly rejects highly colorful, cluttered SaaS interfaces, bubbly consumer-app aesthetics, and generic AI templates. 
+This system is built for calm confidence. It is direct, reassuring, and exceptionally professional, acting as a trusted operational partner rather than a flashy tech toy. The aesthetic relies on an extremely restrained, purely achromatic palette (black, white, and warm grays) and rigorous typography to communicate reliability. It explicitly rejects highly colorful, cluttered SaaS interfaces, bubbly consumer-app aesthetics, and generic AI templates.
 
 **Key Characteristics:**
 - Purely achromatic palette.
@@ -67,10 +67,10 @@ A purely achromatic scale focused on clarity and contrast.
 
 ### Neutral
 - **Neutral Background** (oklch(1 0 0)): Pure white. The canvas.
-- **Neutral Muted** (oklch(0.97 0 0)): Very light gray, used for secondary backgrounds and subdued containers.
+- **Neutral Muted** (oklch(0.97 0 0)): Light gray, used for secondary backgrounds and subdued containers.
 - **Neutral Border** (oklch(0.922 0 0)): Used for subtle structural boundaries.
 
-### State / Semantic
+### State / semantic
 - **Destructive** (oklch(0.577 0.245 27.325)): A muted red reserved strictly for destructive actions or critical errors.
 
 **The Achromatic Rule.** The brand identity relies on the absence of color. No accent hues are permitted. Hierarchy is established strictly through typographic scale, weight, and layout spacing.
@@ -78,6 +78,7 @@ A purely achromatic scale focused on clarity and contrast.
 ## 3. Typography
 
 **Display Font:** Geist Variable
+
 **Body Font:** Geist Variable
 
 **Character:** Technical, clean, and highly legible.
@@ -94,7 +95,7 @@ A purely achromatic scale focused on clarity and contrast.
 
 Surfaces are predominantly flat by default, relying on tonal layering (light gray backgrounds on white) or subtle borders (`1px solid oklch(0.922 0 0)`) to separate content.
 
-### Shadow Vocabulary
+### Shadow vocabulary
 - **Browser Frame Drop Shadow** (`0 1px 3px oklch(0 0 0 / 4%), 0 8px 32px oklch(0 0 0 / 6%), 0 24px 60px oklch(0 0 0 / 4%)`): A deep, diffused shadow used exclusively to lift hero product mockups and browser frames off the page.
 
 **The Structural Lift Rule.** Shadows are not used for decoration. They are used only for modals, popovers, and the main product showcase frame.
@@ -108,12 +109,12 @@ Components are soft and responsible, strictly adhering to the `shadcn` `base-mai
 - **Primary:** Dark gray (`oklch(0.205 0 0)`) background with near-white text. Generous internal padding (12px vertical, 16px horizontal).
 - **Secondary:** Light gray or ghost styles for lower-priority actions.
 
-### Cards / Containers
+### Cards / containers
 - **Corner Style:** Large radii, often `rounded-[1.35rem]` (21.6px) for major layout blocks.
-- **Background:** White or very light gray.
+- **Background:** White or light gray.
 - **Internal Padding:** Generous, typically `p-8 md:p-10` (32px to 40px).
 
-### Badges / Labels
+### Badges / labels
 - **Style:** Small, subdued.
 - **Rule:** Never use badges or pills as decorative section headers.
 

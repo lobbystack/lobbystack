@@ -21,7 +21,7 @@ afterEach(() => {
 
 describe("internal request authentication", () => {
   it("verifies signed requests without throwing on malformed signatures", () => {
-    process.env.INTERNAL_SERVICE_SECRET = "test-secret";
+    process.env.INTERNAL_SERVICE_SECRET = "test-internal-service-secret-at-least-32-characters";
     process.env.INTERNAL_SERVICE_ID = "test-service";
     const body = JSON.stringify({ callId: "call-1" });
     const headers = buildInternalHeaders({ serviceId: "test-service", body });
@@ -29,6 +29,23 @@ describe("internal request authentication", () => {
     const signed = { serviceId: headers["x-service-id"]!, timestamp: headers["x-service-timestamp"]!, nonce: headers["x-service-nonce"]!, bodyHash: headers["x-body-sha256"]!, signature: headers["x-service-signature"]! };
     expect(verifyInternalRequest({ ...signed, body })).toBe(true);
     expect(verifyInternalRequest({ ...signed, signature: "z".repeat(64), body })).toBe(false);
+  });
+
+  it("rejects a placeholder signing secret in production", () => {
+    mutableEnv.NODE_ENV = "production";
+    process.env.INTERNAL_SERVICE_SECRET = "change-me-before-production";
+    process.env.INTERNAL_SERVICE_ID = "test-service";
+    const body = JSON.stringify({ callId: "call-1" });
+    const headers = buildInternalHeaders({ serviceId: "test-service", body });
+
+    expect(verifyInternalRequest({
+      serviceId: headers["x-service-id"]!,
+      timestamp: headers["x-service-timestamp"]!,
+      nonce: headers["x-service-nonce"]!,
+      bodyHash: headers["x-body-sha256"]!,
+      signature: headers["x-service-signature"]!,
+      body,
+    })).toBe(false);
   });
 
   it("claims each nonce once when Redis is not configured outside production", async () => {

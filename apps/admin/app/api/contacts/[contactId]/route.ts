@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { anonymizeContact, getContactDetail, setContactSmsManualBlock } from "@lobbystack/domain";
+import { deleteContact, getContactDetail, setContactSmsManualBlock } from "@lobbystack/domain";
 import { asApiResponse, businessIdFromRequest, readJson, requireApiSession, withOperatorTransaction } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
@@ -37,7 +37,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ cont
     const businessId = businessIdFromRequest(request);
     if (!businessId) return NextResponse.json({ error: "A businessId is required." }, { status: 400 });
     const { contactId } = await context.params;
-    const deleted = await anonymizeContact(createDomainContext(), { userId: session.user.id, businessId, contactId });
-    return deleted ? NextResponse.json({ ok: true, behavior: "anonymized" }) : NextResponse.json({ error: "Contact not found." }, { status: 404 });
+    const deleted = await deleteContact(createDomainContext(), { userId: session.user.id, businessId, contactId });
+    return deleted ? NextResponse.json({ ok: true, behavior: "deleted" }) : NextResponse.json({ error: "Contact not found." }, { status: 404 });
   } catch (error) { return asApiResponse(error); }
 }

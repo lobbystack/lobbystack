@@ -194,13 +194,14 @@
     "social": "Social media",
     "event": "Event or community",
     "other": "Other",
-    "finish": "Finish setup",
-    "finishing": "Finishing setup...",
+    "finish": "Finish",
+    "finishing": "Finishing...",
     "failed": "Unable to finish setup.",
     "submitFailed": "We couldn't save that right now. Please try again."
   },
   "plan": {
     "title": "Choose your plan",
+    "checkoutSuccess": "Checkout completed successfully.",
     "popular": "Popular",
     "enterpriseSubject": "Enterprise plan",
     "compareTitle": "Compare plans in detail",

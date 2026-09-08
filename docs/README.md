@@ -1,12 +1,15 @@
-# LobbyStack Technical Docs
+# Find engineering documentation
 
-This directory is the canonical source for LobbyStack technical documentation:
-architecture notes, ADRs, deployment guides, provider setup notes, telemetry
-docs, validation docs, and internal tracking notes.
+This directory documents LobbyStack's current architecture, operations, providers, and release checks. Customer-facing guides live in [`mintlify/`](../mintlify/README.md).
 
-The customer-facing Help Center lives in the landing-site repo at
-`/Users/raphael/Coding/ai-receptionist-landing-site`, because it is public
-website content rather than product engineering documentation.
-
-Keep internal planning and workflow notes, including `tracking/`, out of any
-public website surface unless they are intentionally ready for external readers.
+- `architecture/`: Runtime boundaries and data flow
+- `adr/`: Architecture decision records
+- `knowledge/`: Knowledge ingestion and retrieval
+- `telemetry/`: Event contracts, key performance indicators, and validation
+- `voice/`: Voice gateway runtime behavior
+- `providers/`: Provider configuration and operations
+- `deployment/`: Hosting and deployment procedures
+- `migrations/`: Convex import, reconciliation, cutover, and rollback procedures
+- `operations/`: Backup, restore, and alert runbooks
+- `validation/`: Release certification and contract checks
+- `platform.md`: Local stack, service checks, deployment, and cutover summary

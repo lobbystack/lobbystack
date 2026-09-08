@@ -88,5 +88,37 @@
       "unavailable": "Your AI receptionist is unavailable right now.",
       "generic": "Something went wrong while starting the call."
     }
+  },
+  "appointments": {
+    "title": "Appointments",
+    "summary_one": "{{name}} · {{count}} upcoming appointment",
+    "summary_other": "{{name}} · {{count}} upcoming appointments",
+    "chooseWorkspace": "Choose a workspace to view appointments.",
+    "refresh": "Refresh",
+    "time": "Time",
+    "customer": "Customer",
+    "service": "Service",
+    "staff": "Staff",
+    "status": "Status",
+    "calendar": "Calendar",
+    "loading": "Loading appointments…",
+    "unavailable": "Appointments are unavailable.",
+    "empty": "No upcoming appointments.",
+    "unknownContact": "Unknown contact",
+    "statuses": {
+      "confirmed": "Confirmed",
+      "cancelled": "Cancelled",
+      "completed": "Completed",
+      "no_show": "No-show",
+      "pending": "Pending"
+    },
+    "calendarStates": {
+      "not_required": "Not required",
+      "pending": "Pending",
+      "synced": "Synced",
+      "failed": "Failed",
+      "error": "Error",
+      "cancelled": "Cancelled"
+    }
   }
 }

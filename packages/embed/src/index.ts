@@ -118,16 +118,20 @@ export function initWidget(): boolean {
         headers: { "content-type": "text/plain" },
         body: JSON.stringify({ widgetKey, visitorId }),
       });
-      if (!response.ok) return;
-      const payload = await response.json() as { token?: string; expiresAt?: string };
-      if (!payload.token) return;
+      const payload = await response.json() as { token?: string; expiresAt?: string; code?: string };
+      if (!response.ok || !payload.token) {
+        sessionMessage = { type: "session-error", code: payload.code ?? "widget_session_failed" };
+        if (frameLoaded) postToFrame(sessionMessage);
+        return;
+      }
       sessionMessage = { type: "session", token: payload.token, expiresAt: payload.expiresAt, visitorId, parentOrigin: window.location.origin };
       if (frameLoaded) postToFrame(sessionMessage);
       if (sessionRefreshTimer !== undefined) window.clearTimeout(sessionRefreshTimer);
       const expiresAtMs = payload.expiresAt ? Date.parse(payload.expiresAt) : Date.now() + 3_600_000;
       sessionRefreshTimer = window.setTimeout(() => void refreshSession(visitorId), Math.max(30_000, expiresAtMs - Date.now() - 60_000));
     } catch {
-      /* the iframe displays the configuration error if session creation fails */
+      sessionMessage = { type: "session-error", code: "widget_session_failed" };
+      if (frameLoaded) postToFrame(sessionMessage);
     }
   }
 
@@ -169,9 +173,14 @@ export function initWidget(): boolean {
 
   bubble.addEventListener("click", () => setOpen(!open));
   window.addEventListener("message", (event: MessageEvent) => {
-    if (event.origin !== adminOrigin) return;
+    if (event.origin !== adminOrigin || event.source !== frame.contentWindow) return;
     const data = event.data as Partial<WidgetMessage>;
     if (!data || typeof data !== "object") return;
+    if (data.type === "ready") {
+      frameLoaded = true;
+      if (sessionMessage) postToFrame(sessionMessage);
+      postToFrame({ type: "visitor", visitorId });
+    }
     if (data.type === "resize" && typeof data.height === "number" && open) {
       holder.style.height = `${Math.max(0, Math.min(data.height, Math.floor(window.innerHeight - 120)))}px`;
     }

@@ -6,7 +6,7 @@ import { vi } from "vitest";
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, expireProspectDemos, generateAffiliatePayoutRun, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markNotificationSent, recordCallProviderPricing, recordSmsProviderPricing, reconcileBillingProviderEvent, releaseNotificationDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, loadOperatorNotificationDelivery, markOperatorNotificationSent, queueDailyOperatorSummaries } from "@lobbystack/domain";
-import { claimPhoneVerificationSend, markPhoneVerificationSent } from "@lobbystack/domain";
+import { claimPhoneVerificationSend, markPhoneVerificationSendFailed, markPhoneVerificationSent } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning } from "@lobbystack/domain";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => {
@@ -93,6 +93,13 @@ function pricingJob(type: "sms.syncPrice" | "call.syncPrice", payload: Record<st
 }
 
 describe("worker handlers", () => {
+  it("marks a verification failed instead of silently skipping missing configuration", async () => {
+    const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
+    vi.stubEnv("TWILIO_VERIFY_SERVICE_SID", "");
+    await expect(handleJob({ jobId: randomUUID(), type: "phoneVerification.send", queue: "critical", businessId, payload: { attemptId }, trace: {}, idempotencyKey: `phone:${attemptId}`, scheduled: false }, { domain })).rejects.toThrow("Phone verification provider is not configured.");
+    expect(markPhoneVerificationSendFailed).toHaveBeenCalledWith(domain, { businessId, attemptId });
+    expect(claimPhoneVerificationSend).not.toHaveBeenCalled();
+  });
   it("sends a reserved phone verification through Twilio Verify", async () => {
     const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
     vi.stubEnv("TWILIO_VERIFY_SERVICE_SID", "VA123");
@@ -119,7 +126,7 @@ describe("worker handlers", () => {
   it("runs all tenant retention work from the hourly privacy job", async () => {
     const businessId = randomUUID();
     const domain = { db: undefined as never };
-    vi.mocked(runPrivacyRetentionSweep).mockResolvedValue({ scrubbedMessages: 2, scrubbedOperatorDeliveries: 1, deletedTranscripts: 3, queuedRecordings: 1 });
+    vi.mocked(runPrivacyRetentionSweep).mockResolvedValue({ scrubbedFollowUps: 1, scrubbedMessages: 2, scrubbedOperatorDeliveries: 1, deletedTranscripts: 3, queuedRecordings: 1 });
 
     const result = await handleJob({
       jobId: randomUUID(),
@@ -132,7 +139,7 @@ describe("worker handlers", () => {
       scheduled: true,
     }, { domain });
 
-    expect(result).toEqual({ status: "completed", entityId: JSON.stringify({ scrubbedMessages: 2, scrubbedOperatorDeliveries: 1, deletedTranscripts: 3, queuedRecordings: 1 }) });
+    expect(result).toEqual({ status: "completed", entityId: JSON.stringify({ scrubbedFollowUps: 1, scrubbedMessages: 2, scrubbedOperatorDeliveries: 1, deletedTranscripts: 3, queuedRecordings: 1 }) });
     expect(runPrivacyRetentionSweep).toHaveBeenCalledWith(domain, { businessId });
   });
 
@@ -262,11 +269,13 @@ describe("worker handlers", () => {
   });
 
   it("syncs the existing usage event with a stable Polar idempotency key", async () => {
-    vi.stubEnv("POLAR_USAGE_METER_ID", "meter-1");
     const job = billingJob({ usageEventId: randomUUID() });
     const domain = { db: undefined as never };
     vi.mocked(loadBillingUsageEvent).mockResolvedValue({
       id: String(job.payload.usageEventId),
+      sourceKey: "alert_sms:operator_notification:delivery-1",
+      isFinal: true,
+      plan: "starter",
       businessId: job.businessId!,
       usageKind: "alert_sms_segments",
       quantity: 2,
@@ -275,7 +284,7 @@ describe("worker handlers", () => {
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       syncStatus: "pending",
       billingKey: "business-key",
-      customerId: null,
+      customerId: "polar-customer-id",
     });
     vi.mocked(markBillingUsageSynced).mockResolvedValue(true);
     const recordUsage = vi.fn().mockResolvedValue(undefined);
@@ -284,13 +293,28 @@ describe("worker handlers", () => {
 
     expect(result).toEqual({ status: "completed", entityId: String(job.payload.usageEventId) });
     expect(recordUsage).toHaveBeenCalledWith({
-      meterId: "meter-1",
+      eventName: "billing.alert_sms_segments",
       externalCustomerId: "business-key",
       quantity: 2,
       timestamp: "2026-01-01T00:00:00.000Z",
-      idempotencyKey: `billing-usage:${String(job.payload.usageEventId)}`,
+      idempotencyKey: "alert_sms:operator_notification:delivery-1",
+      businessId: job.businessId,
+      usageKind: "alert_sms_segments",
     });
     expect(markBillingUsageSynced).toHaveBeenCalledWith(domain, { businessId: job.businessId, usageEventId: String(job.payload.usageEventId) });
+
+    const event = vi.mocked(loadBillingUsageEvent).mock.results[0]!.value;
+    const original = await event;
+    vi.mocked(loadBillingUsageEvent).mockResolvedValue({ ...original!, usageKind: "voice_seconds", quantity: 180, billableQuantity: 30, billingIntervalAtRecordTime: "annual" });
+    await handleJob(job, { domain, polar: { recordUsage } });
+    expect(recordUsage).toHaveBeenLastCalledWith(expect.objectContaining({ eventName: "billing.voice_minutes", quantity: 0.5, externalCustomerId: "business-key" }));
+
+    for (const change of [{ isFinal: false }, { customerId: null }, { syncStatus: "skipped" }, { plan: "free_cloud" }]) {
+      recordUsage.mockClear();
+      vi.mocked(loadBillingUsageEvent).mockResolvedValue({ ...original!, ...change });
+      expect((await handleJob(job, { domain, polar: { recordUsage } })).status).toBe("skipped");
+      expect(recordUsage).not.toHaveBeenCalled();
+    }
   });
 
   it("records complete Twilio SMS pricing only for terminal messages", async () => {
@@ -370,6 +394,20 @@ describe("worker handlers", () => {
     expect(result).toEqual({ status: "completed", entityId: deliveryId });
     expect(sendTemplate).toHaveBeenCalledWith(expect.objectContaining({ to: "operator@example.test", idempotencyKey: `operator-notification:${deliveryId}` }));
     expect(markOperatorNotificationSent).toHaveBeenCalledWith(domain, { businessId, deliveryId, providerMessageId: "email-123" });
+  });
+
+  it("uses separate main-account credentials only for the configured operator alert sender", async () => {
+    const businessId = randomUUID(); const deliveryId = randomUUID(); const domain = { db: undefined as never };
+    vi.mocked(claimOperatorNotificationDelivery).mockResolvedValue(true);
+    vi.mocked(loadOperatorNotificationDelivery).mockResolvedValue({ id: deliveryId, businessId, userId: randomUUID(), eventKind: "voiceMessage", eventKey: "voice:1", channel: "sms", status: "processing", destination: "+14165550100", sender: "+14165550101", subject: "New message", body: "A caller left a message.", providerMessageId: null, scheduledFor: new Date(), sentAt: null, contentExpiresAt: new Date(), lastError: null, createdAt: new Date(), updatedAt: new Date() });
+    const mainSend = vi.fn().mockResolvedValue({ providerMessageId: "SMmain" });
+    const stagingSend = vi.fn().mockResolvedValue({ providerMessageId: "SMstaging" });
+    const job = { ...notificationJob({ operatorDeliveryId: deliveryId }), businessId };
+    await handleJob(job, { domain, twilio: { sendSms: stagingSend }, twilioAlerts: { from: "+14165550101", sendSms: mainSend } });
+    expect(mainSend).toHaveBeenCalledOnce();
+    expect(stagingSend).not.toHaveBeenCalled();
+    await handleJob(job, { domain, twilio: { sendSms: stagingSend }, twilioAlerts: { from: "+14165550999", sendSms: mainSend } });
+    expect(stagingSend).toHaveBeenCalledOnce();
   });
 
   it("runs the tenant-scoped daily operator summary job", async () => {

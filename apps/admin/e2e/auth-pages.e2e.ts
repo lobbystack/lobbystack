@@ -26,3 +26,17 @@ test("auth layout preserves the original mobile composition", async ({ page }) =
   await expect(page.getByRole("contentinfo")).toContainText("Terms");
   await expect(page.getByRole("contentinfo")).toContainText("Privacy");
 });
+
+test("verification callbacks remain local even with malformed return URLs", async ({ page }) => {
+  await page.route("**/api/auth/verify-email?**", route => route.fulfill({ status: 200, contentType: "text/html", body: "Verification endpoint reached" }));
+  for (const callback of ["https://example.invalid/elsewhere", "//example.invalid/elsewhere", "/\\example.invalid/elsewhere"]) {
+    const verification = page.waitForRequest(request => new URL(request.url()).pathname === "/api/auth/verify-email");
+    await page.goto(`/verify-email?token=fixture-token&callbackURL=${encodeURIComponent(callback)}`, { waitUntil: "commit" });
+    const destination = new URL((await verification).url());
+    expect(destination.origin).toBe(new URL(page.url()).origin);
+    expect(destination.pathname).toBe("/api/auth/verify-email");
+    expect(destination.searchParams.get("token")).toBe("fixture-token");
+    expect(destination.searchParams.get("callbackURL")).toBe("/login?verified=true");
+    await expect(page.getByText("Verification endpoint reached", { exact: true })).toBeVisible();
+  }
+});

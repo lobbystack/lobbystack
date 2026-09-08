@@ -30,7 +30,7 @@ export const fr = {
     "/features/": {
       title: "Fonctionnalités de réceptionniste IA",
       description:
-        "Découvrez comment LobbyStack répond aux appels, qualifie les demandes, planifie les rendez-vous, envoie des SMS et transfère les urgences.",
+        "Découvrez comment LobbyStack répond aux appels, qualifie les demandes, planifie les rendez-vous, envoie des alertes SMS et transfère les urgences.",
     },
     "/pricing/": {
       title: "Tarifs de réceptionniste IA pour petites entreprises",

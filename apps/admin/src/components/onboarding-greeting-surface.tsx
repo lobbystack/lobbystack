@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,7 +50,7 @@ export function OnboardingGreetingSurface() {
     try {
       await save.mutateAsync();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("greeting.submitFailed"));
+      setError(getSafeOnboardingErrorMessage(cause, t, "greeting.submitFailed"));
     }
   }
 

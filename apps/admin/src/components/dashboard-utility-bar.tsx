@@ -14,7 +14,7 @@ import { DashboardFeedbackWidget } from "./dashboard-feedback-widget";
 type Business = { businessId: string; name: string; slug: string; active: boolean; role: string };
 
 export function DashboardUtilityBar() {
-  const { t } = useTranslation("admin");
+  const { t } = useTranslation("nav");
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: async () => await (await fetch("/api/businesses", { credentials: "include" })).json() as { businesses: Business[] } });
   const business = selectActiveBusiness(businesses.data?.businesses);
   if (!business) return null;
@@ -27,7 +27,8 @@ export function DashboardUtilityBar() {
           <TooltipTrigger
             render={
               <Button
-                aria-label={t("utilities.affiliate")}
+                aria-label={t("items.affiliate")}
+                role="link"
                 className="pointer-events-auto text-sidebar-foreground hover:bg-transparent hover:text-sidebar-accent-foreground"
                 nativeButton={false}
                 render={<Link href="/affiliate" />}
@@ -38,7 +39,7 @@ export function DashboardUtilityBar() {
           >
             <GiftIcon className="size-[18px] -translate-x-px" strokeWidth={1.75} />
           </TooltipTrigger>
-          <TooltipContent>{t("utilities.affiliate")}</TooltipContent>
+          <TooltipContent>{t("items.affiliate")}</TooltipContent>
         </Tooltip>
         <DashboardFeedbackWidget className="pointer-events-auto" businessId={business.businessId} />
       </div>

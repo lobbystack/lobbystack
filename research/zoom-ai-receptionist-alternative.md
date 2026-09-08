@@ -1,4 +1,4 @@
-# Zoom Virtual Agent Receptionist comparison research
+# Zoom virtual agent receptionist comparison research
 
 Checked: 2026-07-30
 

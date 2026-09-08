@@ -8,13 +8,16 @@ vi.mock("../health/backendReachability", () => ({
 
 import { createServer } from "./server";
 
+const internalServiceToken = "test-internal-service-token-at-least-32-characters";
+
 describe("/health/backend", () => {
   beforeEach(() => {
     process.env.DEPLOYMENT_MODE = "self_hosted_standard";
     process.env.NODE_ENV = "production";
     process.env.VOICE_GATEWAY_BASE_URL = "http://127.0.0.1:3001";
     process.env.BACKEND_INTERNAL_URL = "http://admin:3000";
-    process.env.INTERNAL_SERVICE_TOKEN = "test-service-token";
+    process.env.INTERNAL_SERVICE_TOKEN = internalServiceToken;
+    process.env.INTERNAL_SERVICE_SECRET = "test-internal-service-secret-at-least-32-characters";
     probeBackendReachabilityMock.mockResolvedValue({ ok: true, status: 404 });
   });
 
@@ -25,6 +28,7 @@ describe("/health/backend", () => {
     delete process.env.VOICE_GATEWAY_BASE_URL;
     delete process.env.BACKEND_INTERNAL_URL;
     delete process.env.INTERNAL_SERVICE_TOKEN;
+    delete process.env.INTERNAL_SERVICE_SECRET;
   });
 
   it("returns reachability status for private-network requests", async () => {
@@ -34,7 +38,7 @@ describe("/health/backend", () => {
       method: "GET",
       url: "/health/backend",
       headers: {
-        "x-internal-service-token": "test-service-token",
+        "x-internal-service-token": internalServiceToken,
       },
     });
 
@@ -42,7 +46,7 @@ describe("/health/backend", () => {
     expect(response.json()).toEqual({ ok: true, status: 404 });
     expect(probeBackendReachabilityMock).toHaveBeenCalledWith({
       backendUrl: "http://admin:3000",
-      internalServiceToken: "test-service-token",
+      internalServiceToken,
     });
   });
 
@@ -54,7 +58,7 @@ describe("/health/backend", () => {
       url: "/health/backend",
       remoteAddress: "203.0.113.10",
       headers: {
-        "x-internal-service-token": "test-service-token",
+        "x-internal-service-token": internalServiceToken,
       },
     });
 
@@ -88,7 +92,7 @@ describe("/health/backend", () => {
       method: "GET",
       url: "/health/backend",
       headers: {
-        "x-internal-service-token": "test-service-token",
+        "x-internal-service-token": internalServiceToken,
       },
     });
 

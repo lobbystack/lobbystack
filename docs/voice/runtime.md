@@ -1,4 +1,4 @@
-# Voice Runtime
+# Understand the voice runtime
 
 `apps/voice-gateway` is a narrow public runtime for Twilio Voice, Media Streams, and OpenAI Realtime. Durable business state remains in PostgreSQL behind the admin backend.
 
@@ -15,7 +15,7 @@ The gateway owns:
 
 The gateway does not own authentication, tenant state, booking records, contacts, messages, knowledge ingestion, billing, or long-running workflows.
 
-## Call Flow
+## Follow a call
 
 1. Twilio sends an authenticated voice webhook.
 2. The gateway resolves the called number through `BACKEND_INTERNAL_URL` and fetches a business context snapshot.
@@ -24,7 +24,7 @@ The gateway does not own authentication, tenant state, booking records, contacts
 5. Common replies use the in-memory snapshot. Booking, message capture, transfer state, and other authoritative actions call the backend.
 6. On completion, transcripts, recording metadata, usage, and final call state are persisted through signed requests. Binary recordings are uploaded to S3-compatible storage through the backend.
 
-## Failure Behavior
+## Handle runtime failures
 
 - Production never falls back to demo business data.
 - Development can use `demoSnapshot` when backend context lookup fails.

@@ -95,7 +95,8 @@
       "includedStorageUnlimited": "Unlimited storage",
       "includedVoiceUnlimited": "Unlimited voice minutes",
       "includedSmsUnlimited": "Unlimited SMS alerts",
-      "includedOutboundUnlimited": "Unlimited outbound calls"
+      "includedOutboundUnlimited": "Unlimited outbound calls",
+      "includedStorage": "{{amount}} {{unit}} storage"
     },
     "upgradeDialog": {
       "title": "Upgrade plan",
@@ -204,8 +205,10 @@
       "units": {
         "voice": "min",
         "outboundAttempts": "attempts",
-        "segments": "segments"
-      }
+        "segments": "segments",
+        "storage": "MB"
+      },
+      "unavailable": "Usage data is unavailable."
     },
     "catalog": {
       "title": "Hosted offers",
@@ -423,7 +426,8 @@
     "saved": "Appearance preferences updated.",
     "language": {
       "label": "Dashboard language",
-      "description": "Choose the language used in the dashboard."
+      "description": "Choose the language used in the dashboard.",
+      "saveFailed": "We couldn’t save your language preference. Please try again."
     },
     "timeFormat": {
       "label": "Time format",
@@ -438,10 +442,17 @@
       "lightDescription": "Bright surfaces with soft contrast for daytime work.",
       "dark": "Dark",
       "darkDescription": "Dimmed surfaces that keep late sessions easier on the eyes."
+    },
+    "telemetry": {
+      "label": "Share telemetry data",
+      "description": "Help us improve LobbyStack by sharing anonymized usage and error data.",
+      "saveFailed": "We couldn’t save your telemetry preference. Please try again."
     }
   },
   "integrations": {
-    "permissions": { "manageRequired": "Only workspace owners and admins can manage integrations." },
+    "permissions": {
+      "manageRequired": "Only workspace owners and admins can manage integrations."
+    },
     "actions": {
       "connect": "Connect",
       "connected": "Connected",
@@ -763,7 +774,7 @@
     "transferPolicy": "Transfer policy",
     "services": "Services in snapshot",
     "knowledgeDigest": "Knowledge digest",
-      "emptyDigest": "No generated digest yet. Add knowledge or documents to enrich the receptionist."
+    "emptyDigest": "No generated digest yet. Add knowledge or documents to enrich the receptionist."
   },
   "nextSteps": {
     "title": "What to do next",
@@ -829,6 +840,10 @@
       "aiReplyFailed": {
         "title": "SMS AI reply failed",
         "description": "When the system fails to generate or send an AI SMS reply."
+      },
+      "widgetChat": {
+        "title": "New website chat message",
+        "description": "When a visitor sends a message through your website widget."
       }
     },
     "systemIssues": {

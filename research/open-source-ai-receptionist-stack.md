@@ -1,4 +1,4 @@
-# Open-Source AI Receptionist Stack Research
+# Open-source AI receptionist stack research
 
 ## Target audience
 
@@ -21,7 +21,7 @@
 
 ## Core positioning
 
-LobbyStack should be positioned as the open-source AI receptionist platform that replaces the fragile “build your own stack” path: realtime voice vendor plus Twilio wiring, automation glue, scheduling logic, transcripts, prompt/routing rules, dashboard, usage billing, alerts, and monitoring. The article should argue that a demo voice bot is easy, but a production receptionist requires an integrated operating system for calls, messages, appointments, knowledge, staff handoff, and review.
+LobbyStack should be positioned as the open-source AI receptionist platform that replaces the fragile “build your own stack” path: realtime voice vendor plus Twilio wiring, automation glue, scheduling logic, transcripts, prompt/routing rules, dashboard, usage billing, alerts, and monitoring. The article should show that an initial voice demo hides the work required for production. A production receptionist needs an integrated system for calls, messages, appointments, knowledge, staff handoff, and review.
 
 Use the contrast carefully: assembling Retell, Vapi, n8n, or Zapier still leaves you owning the product layer. LobbyStack provides that layer as an MIT-licensed, inspectable codebase with hosted cloud for speed and Docker self-hosting for infrastructure control.
 
@@ -67,7 +67,7 @@ Use the contrast carefully: assembling Retell, Vapi, n8n, or Zapier still leaves
 
 5. **Tools turn plain-language behavior into safe actions.** Local voice tools include business hours, services, knowledge search, availability lookup, booking, appointment change verification/OTP, cancellation, rescheduling, transfer, hold, end call, and message/callback capture.
 
-6. **Booking is treated as authoritative, not improvised.** The shared snapshot policy says never promise a booking until the booking tool confirms success, matching the positioning that LobbyStack is for outcomes, not just conversation.
+6. **Booking is treated as authoritative, not improvised.** The shared snapshot policy says never promise a booking until the booking tool confirms success. This supports LobbyStack's focus on completed outcomes.
 
 7. **Self-hosting is documented as a real deployment model.** The Docker Compose guide includes PostgreSQL, Redis, object storage, the Next.js dashboard/API, worker, voice gateway, Caddy, public HTTPS, Twilio webhooks, provider keys, verification, and a production checklist.
 

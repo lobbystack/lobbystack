@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   computeTwilioSignature,
+  resolveTwilioWebhookUrl,
   escapeXmlText,
   validateTwilioSignature,
 } from "./twilioSecurity";
@@ -67,6 +68,21 @@ describe("twilio security helpers", () => {
         params,
       }),
     ).resolves.toBe(false);
+  });
+
+  it("validates public callbacks behind a proxy without dropping or trusting unsigned query values", async () => {
+    const endpoint = "https://staging.example.com/api/webhooks/twilio/status";
+    const query = "?notificationId=abc&label=a%2Fb+test";
+    const params = { MessageSid: "SMtest", MessageStatus: "delivered" };
+    const signature = createHmac("sha1", "auth-token")
+      .update(`${endpoint}${query}MessageSidSMtestMessageStatusdelivered`).digest("base64");
+    const url = resolveTwilioWebhookUrl(`http://internal:3000/api/webhooks/twilio/status${query}`, endpoint);
+    expect(url).toBe(endpoint + query);
+    await expect(validateTwilioSignature({ authToken: "auth-token", signatureHeader: signature, url, params })).resolves.toBe(true);
+    const tampered = resolveTwilioWebhookUrl("http://internal:3000/api/webhooks/twilio/status?notificationId=other", endpoint);
+    await expect(validateTwilioSignature({ authToken: "auth-token", signatureHeader: signature, url: tampered, params })).resolves.toBe(false);
+    expect(resolveTwilioWebhookUrl(endpoint, endpoint + "?notificationId=abc")).toBe(endpoint);
+    expect(resolveTwilioWebhookUrl(endpoint + query)).toBe(endpoint + query);
   });
 
   it("escapes XML-sensitive characters for TwiML text nodes", () => {

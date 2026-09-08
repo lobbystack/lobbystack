@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
-import { billingAccounts, businessMemberships, businesses, createDatabaseClient, onboardingPhoneVerifications, outboxMessages, phoneNumbers, users, withBusinessTransaction } from "@lobbystack/db";
-import { checkPhoneVerification, claimNumberProvisioning, claimPhoneVerificationSend, completeNumberProvisioning, getLatestPhoneVerificationAttempt, markPhoneVerificationSent, requestPhoneVerification, reserveOnboardingNumberClaim, reserveReplacementNumberClaim, reuseVerifiedPhoneForOnboarding, searchAvailableBusinessNumbers } from "@lobbystack/domain";
+import { billingAccounts, businessMemberships, businesses, createDatabaseClient, onboardingPhoneVerifications, onboardingNumberClaimEvents, outboxMessages, phoneNumbers, users, withBusinessTransaction } from "@lobbystack/db";
+import { checkPhoneVerification, claimNumberProvisioning, claimPhoneVerificationSend, completeNumberProvisioning, getLatestPhoneVerificationAttempt, markPhoneVerificationSent, requestPhoneVerification, reserveOnboardingNumberClaim, reserveReplacementNumberClaim, reuseVerifiedPhoneForOnboarding, searchAvailableBusinessNumbers, searchBusinessNumberInventory, skipOnboardingNumber } from "@lobbystack/domain";
 import { handleJob } from "../apps/worker/src/handlers";
 
 function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
@@ -32,6 +32,18 @@ async function main(): Promise<void> {
     const verifiedUser = (await auth.db.select().from(users).where(eq(users.id, userId)))[0];
     assert(approvedState.business?.onboardingStage === "plan" && approvedState.verification?.status === "approved" && verifiedUser?.phone === "+14165550100" && verifiedUser.phoneVerifiedAt, "Approval did not update protected user and onboarding state.");
     const secret = "phone-certification-secret-at-least-32-characters";
+    const searched: Array<{ areaCode?: string; city?: string }> = [];
+    const emptyInventory = await searchBusinessNumberInventory({ db: app.db }, { userId, businessId, claimTokenSecret: secret }, { listAvailablePhoneNumbers: async selection => { searched.push(selection); return []; } });
+    assert(emptyInventory.numbers.length === 0 && emptyInventory.market.countryCode === "CA" && emptyInventory.market.areaCode === "416" && emptyInventory.market.city === "Toronto", "An empty inventory lost the verified phone market.");
+    assert(searched[0]?.areaCode === "416" && searched[1]?.areaCode === "647" && searched[2]?.areaCode === "437" && searched.some(selection => selection.city === "Toronto"), "Suggestions did not preserve main's metro preference order.");
+    const foreignMarket = await withBusinessTransaction(app.db, { userId, businessId, actorType: "operator" }, async tx => tx.execute(sql`SELECT app.resolve_verified_phone_market(${foreignBusinessId}::uuid, ${userId}::uuid) AS market`));
+    assert(foreignMarket.rows[0]?.market === null, "Market resolver leaked through a different tenant context.");
+    await auth.db.update(users).set({ phone: "+14165550999" }).where(eq(users.id, userId));
+    let stalePhoneDenied = false;
+    try { await searchBusinessNumberInventory({ db: app.db }, { userId, businessId, claimTokenSecret: secret }, { listAvailablePhoneNumbers: async () => { throw new Error("Provider must not run for a stale verification"); } }); }
+    catch (error) { stalePhoneDenied = error instanceof Error && error.message.includes("verified phone"); }
+    assert(stalePhoneDenied, "An old verification must not authorize a different current phone.");
+    await auth.db.update(users).set({ phone: "+14165550100" }).where(eq(users.id, userId));
     const offers = await searchAvailableBusinessNumbers({ db: app.db }, { userId, businessId, claimTokenSecret: secret }, { listAvailablePhoneNumbers: async (selection) => [{ phoneE164: "+14165550199", locality: "Toronto", region: "ON", countryCode: selection.countryCode, capabilities: { sms: true, voice: true } }] });
     assert(offers.length === 1 && offers[0]?.claimToken, "Signed number offer was not issued.");
     const claimId = await reserveOnboardingNumberClaim({ db: app.db }, { userId, businessId, claimToken: offers[0]!.claimToken, claimTokenSecret: secret, idempotencyKey: "certification-claim" });
@@ -65,10 +77,26 @@ async function main(): Promise<void> {
     await withBusinessTransaction(worker.db, { businessId: foreignBusinessId, actorType: "worker" }, async (tx) => { await tx.insert(businessMemberships).values({ businessId: foreignBusinessId, userId, role: "business_owner", status: "active" }); });
     const reusedId = await reuseVerifiedPhoneForOnboarding({ db: app.db }, { userId, businessId: foreignBusinessId });
     assert(Boolean(reusedId), "Verified phone could not be reused across workspaces.");
+    await withBusinessTransaction(worker.db, { businessId: foreignBusinessId, actorType: "worker" }, async tx => {
+      await tx.update(businesses).set({ onboardingStage: "complete" }).where(eq(businesses.id, foreignBusinessId));
+      await tx.insert(billingAccounts).values({ businessId: foreignBusinessId, billingKey: `business:${foreignBusinessId}`, plan: "starter", subscriptionState: "active" });
+    });
+    await skipOnboardingNumber({ db: app.db }, { userId, businessId: foreignBusinessId });
+    const revisitOffers = await searchAvailableBusinessNumbers({ db: app.db }, { userId, businessId: foreignBusinessId, claimTokenSecret: secret }, { listAvailablePhoneNumbers: async selection => [{ phoneE164: "+14165550201", countryCode: selection.countryCode, capabilities: { sms: true, voice: true } }] });
+    let quotaBlocked = false;
+    try { await reserveOnboardingNumberClaim({ db: app.db }, { userId, businessId: foreignBusinessId, claimToken: revisitOffers[0]!.claimToken, claimTokenSecret: secret, idempotencyKey: "revisit-quota" }); } catch { quotaBlocked = true; }
+    assert(quotaBlocked, "Revisiting onboarding bypassed the daily phone purchase quota.");
+    await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async tx => tx.update(onboardingNumberClaimEvents).set({ purchasedAt: new Date(Date.now() - 2 * 24 * 60 * 60_000) }).where(eq(onboardingNumberClaimEvents.businessId, businessId)));
+    const revisitClaimId = await reserveOnboardingNumberClaim({ db: app.db }, { userId, businessId: foreignBusinessId, claimToken: revisitOffers[0]!.claimToken, claimTokenSecret: secret, idempotencyKey: "revisit-complete" });
+    const getRevisitStage = async () => await withBusinessTransaction(worker.db, { businessId: foreignBusinessId, actorType: "worker" }, async tx => (await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, foreignBusinessId)))[0]?.stage);
+    assert(await getRevisitStage() === "complete", "Revisiting number selection regressed completed onboarding.");
+    await claimNumberProvisioning({ db: worker.db }, { businessId: foreignBusinessId, claimId: revisitClaimId });
+    await completeNumberProvisioning({ db: worker.db }, { businessId: foreignBusinessId, claimId: revisitClaimId, e164: "+14165550201", providerPhoneId: "PN_revisit", voiceUrl: "https://app.test/voice", smsUrl: "https://app.test/sms" });
+    assert(await getRevisitStage() === "complete", "Late phone provisioning regressed completed onboarding.");
     let cooldown = false; try { await requestPhoneVerification({ db: app.db }, { userId, businessId, phoneNumber: "4165550100" }, { lookupPhoneNumber: async () => ({ phoneE164: "+14165550100", countryCode: "CA", valid: true, lineType: "mobile" }) }); } catch { cooldown = true; }
     const attempts = await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async (tx) => await tx.select().from(onboardingPhoneVerifications).where(eq(onboardingPhoneVerifications.businessId, businessId)));
     assert(cooldown && attempts.length === 1, "Verification resend cooldown was not enforced.");
-    console.log(JSON.stringify({ reservationDurable: true, outboxBacked: true, workerLifecycle: true, staleVerificationLeaseRecovered: true, crossTenantDenied: true, cooldownEnforced: true, approvalPersisted: true, verifiedPhoneReused: true, signedOfferIssued: true, claimIdempotent: true, numberProvisioned: true, replacementIdempotent: true, replacementActivatedBeforeRetirement: true, replacementEntitlementConsumed: true, retirementWindowScheduled: true, providerSidSafeReclaim: true }));
+    console.log(JSON.stringify({ verifiedMarketRetainedWhenEmpty: true, metroPreferenceOrder: true, stalePhoneVerificationDenied: true, marketTenantIsolation: true, completedOnboardingRevisit: true, revisitPurchaseQuotaPreserved: true, completedProgressPreserved: true, reservationDurable: true, outboxBacked: true, workerLifecycle: true, staleVerificationLeaseRecovered: true, crossTenantDenied: true, cooldownEnforced: true, approvalPersisted: true, verifiedPhoneReused: true, signedOfferIssued: true, claimIdempotent: true, numberProvisioned: true, replacementIdempotent: true, replacementActivatedBeforeRetirement: true, replacementEntitlementConsumed: true, retirementWindowScheduled: true, providerSidSafeReclaim: true }));
   } finally {
     for (const id of [businessId, foreignBusinessId]) await withBusinessTransaction(worker.db, { businessId: id, actorType: "worker" }, async (tx) => await tx.delete(businesses).where(eq(businesses.id, id))).catch(() => undefined);
     await auth.db.delete(users).where(eq(users.id, userId)).catch(() => undefined); await Promise.all([auth.pool.end(), app.pool.end(), worker.pool.end()]);

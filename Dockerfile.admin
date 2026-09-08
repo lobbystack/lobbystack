@@ -5,11 +5,18 @@ ENV PATH=$PNPM_HOME:$PATH
 ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_WEB_CALL_ENDPOINT
 ENV NEXT_PUBLIC_WEB_CALL_ENDPOINT=$NEXT_PUBLIC_WEB_CALL_ENDPOINT
+ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
+ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
+ARG NEXT_PUBLIC_POSTHOG_KEY
+ENV NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY
+ARG NEXT_PUBLIC_POSTHOG_HOST
+ENV NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST
 
 RUN corepack enable
 WORKDIR /app
 COPY . .
 RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @lobbystack/embed build && node scripts/copy-widget-embed.mjs
 RUN pnpm --filter @lobbystack/admin... build
 RUN swc_helpers_path="$(find /app/node_modules/.pnpm -type d -path '*/node_modules/@swc/helpers' -print -quit)" && \
     test -n "$swc_helpers_path" && \

@@ -1,6 +1,6 @@
 ---
-title: "Goodcall Alternative: Compare the Billing Models"
-seoTitle: "Goodcall Alternative: LobbyStack vs Goodcall"
+title: "Goodcall alternative: Compare the billing models"
+seoTitle: "Goodcall alternative: LobbyStack vs Goodcall"
 description: "Compare LobbyStack and Goodcall on unique-caller versus minute pricing, routing, integrations, history, open-source access, and self-hosting."
 pubDate: 2026-07-30T11:20:00-04:00
 updatedDate: 2026-07-30T11:20:00-04:00

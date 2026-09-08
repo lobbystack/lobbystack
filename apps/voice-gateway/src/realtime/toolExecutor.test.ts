@@ -4,6 +4,8 @@ import { demoSnapshot } from "@lobbystack/shared";
 
 const {
   bookVoiceAppointmentMock,
+  checkVoiceAvailabilityMock,
+  findVoiceAvailabilityMock,
   cancelVoiceAppointmentMock,
   lookupVoiceAppointmentForChangeMock,
   recordToolExecutionFailureMock,
@@ -15,6 +17,8 @@ const {
   verifyVoiceAppointmentForChangeMock,
 } = vi.hoisted(() => ({
   bookVoiceAppointmentMock: vi.fn(),
+  checkVoiceAvailabilityMock: vi.fn(),
+  findVoiceAvailabilityMock: vi.fn(),
   cancelVoiceAppointmentMock: vi.fn(),
   lookupVoiceAppointmentForChangeMock: vi.fn(),
   recordToolExecutionFailureMock: vi.fn(),
@@ -29,8 +33,8 @@ const {
 vi.mock("../backend/runtimeClient", () => ({
   bookVoiceAppointment: bookVoiceAppointmentMock,
   cancelVoiceAppointment: cancelVoiceAppointmentMock,
-  checkVoiceAvailability: vi.fn(),
-  findVoiceAvailability: vi.fn(),
+  checkVoiceAvailability: checkVoiceAvailabilityMock,
+  findVoiceAvailability: findVoiceAvailabilityMock,
   lookupVoiceAppointmentForChange: lookupVoiceAppointmentForChangeMock,
   rescheduleVoiceAppointment: rescheduleVoiceAppointmentMock,
   searchVoiceKnowledge: searchVoiceKnowledgeMock,
@@ -634,5 +638,30 @@ describe("executeVoiceTool call control", () => {
         holdCapped: true,
       }),
     );
+  });
+});
+
+
+describe("executeVoiceTool transfer policy enforcement", () => {
+  it.each([
+    ["never", true, true, false],
+    ["on_request", false, true, false],
+    ["on_request", true, false, true],
+    ["on_urgent", true, false, false],
+    ["on_urgent", false, true, true],
+    ["always", false, false, true],
+  ] as const)("enforces %s with requested=%s urgent=%s", async (mode, callerRequested, urgent, allowed) => {
+    const result = await executeVoiceTool({ toolName: "transferCall", rawArguments: JSON.stringify({ callerRequested, urgent }), snapshot: { ...demoSnapshot, transferPolicy: { mode, transferNumber: "+14165550100" } }, businessId: "business_123", callerPhone: "+14165550000" });
+    expect(result.result).toMatchObject({ ok: allowed });
+    expect(result.pendingTransferDestination).toBe(allowed ? "+14165550100" : undefined);
+  });
+});
+
+describe("scheduling call association", () => {
+  it.each(["checkAvailability", "findAvailability"])("forwards the call identity through %s", async (toolName) => {
+    const mock = toolName === "checkAvailability" ? checkVoiceAvailabilityMock : findVoiceAvailabilityMock;
+    mock.mockResolvedValue({ slots: [] });
+    await executeVoiceTool({ toolName, callId: "call_123", businessId: "business_123", callerPhone: "+14165550000", snapshot: demoSnapshot, rawArguments: JSON.stringify({ serviceName: "Consultation", startsAt: "2027-01-01T10:00:00Z", date: "2027-01-01", timezone: "UTC" }) });
+    expect(mock).toHaveBeenCalledWith(expect.objectContaining({ callId: "call_123", businessId: "business_123" }));
   });
 });

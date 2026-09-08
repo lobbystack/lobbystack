@@ -126,6 +126,7 @@ export const businesses = pgTable(
     websiteUrl: text("website_url"),
     onboardingStage: varchar("onboarding_stage", { length: 64 }).default("create_business").notNull(),
     onboardingAttribution: varchar("onboarding_attribution", { length: 120 }),
+    setupGuideSkippedSteps: jsonb("setup_guide_skipped_steps").$type<string[]>().default([]).notNull(),
     phoneNumberReplacementReservedAt: timestamp("phone_number_replacement_reserved_at", { withTimezone: true }),
     phoneNumberReplacementUsedAt: timestamp("phone_number_replacement_used_at", { withTimezone: true }),
     telemetryEnabled: boolean("telemetry_enabled").default(true).notNull(),
@@ -451,7 +452,7 @@ export const conversationSessions = pgTable(
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("conversation_sessions_conversation_idx").on(table.conversationId, table.startedAt), uniqueIndex("conversation_sessions_call_unique").on(table.callId)],
+  (table) => [index("conversation_sessions_conversation_idx").on(table.conversationId, table.startedAt), uniqueIndex("conversation_sessions_call_unique").on(table.callId).where(sql`${table.callId} is not null`)],
 );
 
 export const messages = pgTable(
@@ -527,6 +528,29 @@ export const calls = pgTable(
   ],
 );
 
+export const inboxItems = pgTable(
+  "inbox_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    kind: varchar("kind", { length: 64 }).notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    relatedCallId: uuid("related_call_id").references(() => calls.id, { onDelete: "set null" }),
+    status: varchar("status", { length: 32 }).default("open").notNull(),
+    contentRetentionStatus: varchar("content_retention_status", { length: 32 }).default("active").notNull(),
+    contentExpiresAt: timestamp("content_expires_at", { withTimezone: true }),
+    ...legacyId,
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("inbox_items_legacy_convex_id_unique").on(table.legacyConvexId),
+    index("inbox_items_business_status_idx").on(table.businessId, table.status),
+    index("inbox_items_business_kind_status_idx").on(table.businessId, table.kind, table.status),
+    index("inbox_items_related_call_idx").on(table.relatedCallId),
+  ],
+);
+
 export const transcripts = pgTable(
   "transcripts",
   {
@@ -596,6 +620,8 @@ export const knowledgeDocuments = pgTable(
     businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
     sourceType: varchar("source_type", { length: 32 }).notNull(),
     title: text("title").notNull(),
+    active: boolean("active").default(true).notNull(),
+    tags: jsonb("tags").$type<string[]>().default([]).notNull(),
     sourceUrl: text("source_url"),
     storageObjectId: uuid("storage_object_id"),
     mimeType: varchar("mime_type", { length: 255 }),
@@ -665,6 +691,7 @@ export const websiteIngestionJobs = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    rootDocumentId: uuid("root_document_id").references(() => knowledgeDocuments.id, { onDelete: "cascade" }),
     websiteUrl: text("website_url").notNull(),
     provider: varchar("provider", { length: 32 }).notNull(),
     status: varchar("status", { length: 32 }).default("pending").notNull(),
@@ -674,7 +701,7 @@ export const websiteIngestionJobs = pgTable(
     lastError: text("last_error"),
     ...timestamps,
   },
-  (table) => [index("website_jobs_business_status_idx").on(table.businessId, table.status)],
+  (table) => [index("website_jobs_business_status_idx").on(table.businessId, table.status), uniqueIndex("website_jobs_root_document_idx").on(table.rootDocumentId)],
 );
 
 export const businessContextSnapshots = pgTable(

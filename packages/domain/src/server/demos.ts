@@ -214,17 +214,25 @@ export async function previewProspectDemo(context: DomainContext, token: string)
 export async function claimProspectDemo(
   context: DomainContext,
   input: { userId: string; token: string },
-): Promise<{ businessId: string }> {
+): Promise<{ businessId: string; status: "claimed" | "already_claimed" }> {
   const hash = tokenHash(input.token);
-  const resolved = await context.db.execute<{ business_id: string }>(sql`select business_id from app.resolve_business_by_demo_token(${hash})`);
+  const resolved = await context.db.execute<{ business_id: string }>(sql`select business_id from app.resolve_prospect_demo_by_token(${hash})`);
   const businessId = resolved.rows[0]?.business_id;
   if (!businessId) throw new Error("Demo is invalid, expired, or no longer claimable.");
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId, actorType: "system" }, async (tx) => {
-    const demo = (await tx.select({ id: prospectDemos.id, operatorUserId: prospectDemos.operatorUserId })
+    const demo = (await tx.select({ id: prospectDemos.id, operatorUserId: prospectDemos.operatorUserId, status: prospectDemos.status, claimedByUserId: prospectDemos.claimedByUserId, expiresAt: prospectDemos.expiresAt })
       .from(prospectDemos)
-      .where(and(eq(prospectDemos.businessId, businessId), eq(prospectDemos.tokenHash, hash), eq(prospectDemos.status, "active")))
-      .limit(1))[0];
+      .where(and(eq(prospectDemos.businessId, businessId), eq(prospectDemos.tokenHash, hash)))
+      .limit(1).for("update"))[0];
     if (!demo) throw new Error("Demo is invalid, expired, or no longer claimable.");
+    if (demo.status === "claimed") {
+      if (demo.claimedByUserId !== input.userId) throw new Error("This prospect demo has already been claimed.");
+      await tx.update(users).set({ activeBusinessId: businessId, updatedAt: new Date() }).where(eq(users.id, input.userId));
+      return { businessId, status: "already_claimed" };
+    }
+    if (demo.status !== "active" || demo.expiresAt.getTime() <= Date.now()) throw new Error("Demo is invalid, expired, or no longer claimable.");
+    const business = (await tx.select({ status: businesses.status }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
+    if (business?.status !== "active") throw new Error("Prospect demo business is unavailable.");
     await tx.insert(businessMemberships).values({ businessId, userId: input.userId, role: "business_owner", status: "active" }).onConflictDoUpdate({
       target: [businessMemberships.businessId, businessMemberships.userId],
       set: { role: "business_owner", status: "active", updatedAt: new Date() },
@@ -232,8 +240,9 @@ export async function claimProspectDemo(
     if (demo.operatorUserId !== input.userId) {
       await tx.delete(businessMemberships).where(and(eq(businessMemberships.businessId, businessId), eq(businessMemberships.userId, demo.operatorUserId)));
     }
+    await tx.update(businesses).set({ onboardingStage: "create_business", updatedAt: new Date() }).where(eq(businesses.id, businessId));
     await tx.update(prospectDemos).set({ status: "claimed", claimedAt: new Date(), claimedByUserId: input.userId, updatedAt: new Date() }).where(eq(prospectDemos.id, demo.id));
     await tx.update(users).set({ activeBusinessId: businessId, updatedAt: new Date() }).where(eq(users.id, input.userId));
-    return { businessId };
+    return { businessId, status: "claimed" };
   });
 }

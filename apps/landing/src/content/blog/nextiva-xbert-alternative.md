@@ -1,6 +1,6 @@
 ---
-title: "Nextiva XBert Alternative"
-seoTitle: "Nextiva XBert Alternative: LobbyStack vs XBert"
+title: "Nextiva XBert alternative"
+seoTitle: "Nextiva XBert alternative: LobbyStack vs XBert"
 description: "Compare Nextiva XBert and LobbyStack on interaction pricing, voice and chat coverage, booking, integrations, source access, and self-hosting."
 pubDate: 2026-07-30T10:30:00-04:00
 updatedDate: 2026-07-30T10:30:00-04:00
@@ -34,7 +34,7 @@ Pricing and features were checked on July 30, 2026.
 
 ## LobbyStack avoids the $99 add-on and base-plan requirement
 
-XBert joins a Nextiva subscription. The buyer must price both products and decide how quickly voice, SMS, and chat consume the shared 100-interaction allowance.
+XBert joins a Nextiva subscription. The buyer must price both products and determine how voice, SMS, and chat consume the shared 100-interaction allowance.
 
 LobbyStack needs no Nextiva base plan. A company can test 30 minutes of real calls free, then buy 150 voice minutes for $30. Spam and calls under 10 seconds do not count toward the allowance. The receptionist can book, transfer, send alerts, and leave a transcript and summary for staff.
 
@@ -90,7 +90,7 @@ Choose XBert when voice, SMS, and web chat need one assistant inside Nextiva. It
 
 ## Choose LobbyStack when
 
-Choose LobbyStack when inbound calls are the priority and you want a free test, a $30 paid entry, no Nextiva plan requirement, simple minute pricing, public code, or self-hosting.
+Choose LobbyStack when inbound calls are the priority and you want a free test, a $30 paid entry, no Nextiva plan requirement, minute-based pricing, public code, or self-hosting.
 
 ## Sources
 

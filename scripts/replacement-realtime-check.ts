@@ -2,8 +2,9 @@ import { randomUUID } from "node:crypto";
 import { createConnection } from "node:net";
 
 import { eq } from "drizzle-orm";
+import { Scrypt } from "lucia";
 
-import { businesses, businessMemberships, createDatabaseClient, users } from "@lobbystack/db";
+import { accounts, businesses, businessMemberships, createDatabaseClient, users } from "@lobbystack/db";
 
 const postgresPort = process.env.POSTGRES_PORT ?? "15433";
 const postgresPassword = process.env.POSTGRES_PASSWORD ?? "replace-with-a-long-local-password";
@@ -13,7 +14,7 @@ const migrator = createDatabaseClient("lobbystack_migrator", {
 const adminBaseUrl = process.env.ADMIN_BASE_URL ?? "http://localhost:13000";
 const redisHost = process.env.REPLACEMENT_REDIS_HOST ?? "127.0.0.1";
 const redisPort = Number(process.env.REDIS_PORT ?? "16380");
-const redisPrefix = process.env.REDIS_PREFIX ?? "lobbystack";
+const redisPrefix = process.env.REDIS_PREFIX || "lobbystack";
 const realtimeEventTypes = [
   "call.started",
   "call.updated",
@@ -89,7 +90,7 @@ class EventStreamReader {
 }
 
 async function openStream(businessId: string, cookie: string, signal?: AbortSignal): Promise<{ response: Response; reader?: EventStreamReader }> {
-  const response = await fetch(`${adminBaseUrl}/api/realtime?businessId=${businessId}`, { headers: { cookie }, signal });
+  const response = await fetch(`${adminBaseUrl}/api/realtime?businessId=${businessId}`, { headers: { cookie }, ...(signal ? { signal } : {}) });
   return { response, ...(response.ok ? { reader: new EventStreamReader(response) } : {}) };
 }
 
@@ -98,17 +99,26 @@ async function main(): Promise<void> {
   const email = `${suffix}@realtime.invalid`;
   const firstBusinessId = randomUUID();
   const secondBusinessId = randomUUID();
+  const controller = new AbortController();
+  const reconnectController = new AbortController();
 
   try {
-    const signup = await fetch(`${adminBaseUrl}/api/auth/sign-up/email`, {
+    // Realtime certification seeds its own account; public signup/challenge behavior
+    // is exercised by the separate browser authentication journey.
+    const userId = randomUUID();
+    const password = `Realtime-${suffix}!`;
+    const passwordHash = await new Scrypt().hash(password);
+    await migrator.db.insert(users).values({ id: userId, email, normalizedEmail: email, emailVerified: true, passwordHash });
+    await migrator.db.insert(accounts).values({ userId, providerId: "credential", accountId: userId, password: passwordHash });
+    const signin = await fetch(`${adminBaseUrl}/api/auth/sign-in/email`, {
       method: "POST",
       headers: { "content-type": "application/json", origin: adminBaseUrl },
-      body: JSON.stringify({ email, name: "Realtime Check", password: `Realtime-${suffix}!` }),
+      body: JSON.stringify({ email, password }),
     });
-    if (!signup.ok) throw new Error(`Better Auth signup failed with status ${signup.status}: ${await signup.text()}`);
-    const cookie = sessionCookie(signup);
+    if (!signin.ok) throw new Error(`Better Auth sign-in failed with status ${signin.status}: ${await signin.text()}`);
+    const cookie = sessionCookie(signin);
     const user = (await migrator.db.select({ id: users.id }).from(users).where(eq(users.normalizedEmail, email)).limit(1))[0];
-    if (!user) throw new Error("Better Auth signup did not persist the certification user.");
+    if (!user) throw new Error("The certification account is missing.");
 
     await migrator.db.insert(businesses).values([
       { id: firstBusinessId, slug: `realtime-a-${suffix}`, name: "Realtime A", timezone: "UTC", businessType: "service_company" },
@@ -121,9 +131,10 @@ async function main(): Promise<void> {
     const unauthorized = await openStream(secondBusinessId, cookie);
     if (unauthorized.response.status !== 403) throw new Error(`Cross-tenant SSE returned ${unauthorized.response.status} instead of 403.`);
 
-    const controller = new AbortController();
+    console.log("realtime-access-control: ok");
     const first = await openStream(firstBusinessId, cookie, controller.signal);
     if (!first.reader) throw new Error(`Authenticated SSE failed with status ${first.response.status}.`);
+    console.log("realtime-stream-open: ok");
     const ready = await first.reader.nextFrame();
     if (!ready.includes("event: ready") || !ready.includes(firstBusinessId)) throw new Error("SSE stream did not emit the expected ready frame.");
 
@@ -146,10 +157,12 @@ async function main(): Promise<void> {
     const sortedLatencies = [...latencies].sort((left, right) => left - right);
     const p95 = sortedLatencies[Math.ceil(sortedLatencies.length * 0.95) - 1] ?? Number.POSITIVE_INFINITY;
     if (p95 >= 500) throw new Error(`Realtime local p95 was ${p95.toFixed(1)} ms, exceeding the 500 ms target.`);
+    console.log("realtime-event-delivery: ok");
     controller.abort();
     await first.reader.close();
 
-    const reconnect = await openStream(firstBusinessId, cookie);
+    console.log("realtime-first-stream-closed: ok");
+    const reconnect = await openStream(firstBusinessId, cookie, reconnectController.signal);
     if (!reconnect.reader) throw new Error(`SSE reconnect failed with status ${reconnect.response.status}.`);
     const reconnectReady = await reconnect.reader.nextFrame();
     if (!reconnectReady.includes("event: ready")) throw new Error("SSE reconnect did not emit a ready frame for client reconciliation.");
@@ -157,6 +170,7 @@ async function main(): Promise<void> {
     await publish(`${redisPrefix}:realtime:${firstBusinessId}`, JSON.stringify(reconnectEvent));
     const reconnectDelivered = await reconnect.reader.nextFrame();
     if (!reconnectDelivered.includes(reconnectEvent.id)) throw new Error("SSE reconnect did not resume event delivery.");
+    reconnectController.abort();
     await reconnect.reader.close();
 
     console.log("realtime-authentication: ok");
@@ -164,6 +178,8 @@ async function main(): Promise<void> {
     console.log("realtime-reconnect: ok");
     console.log(`realtime-events: ok (${realtimeEventTypes.length} types, p95 ${p95.toFixed(1)} ms)`);
   } finally {
+    controller.abort();
+    reconnectController.abort();
     await migrator.db.delete(users).where(eq(users.normalizedEmail, email)).catch(() => undefined);
     await migrator.db.delete(businesses).where(eq(businesses.id, firstBusinessId)).catch(() => undefined);
     await migrator.db.delete(businesses).where(eq(businesses.id, secondBusinessId)).catch(() => undefined);

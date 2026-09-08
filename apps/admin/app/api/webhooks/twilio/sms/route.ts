@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { twilioSmsInboundSchema } from "@lobbystack/contracts";
 import { receiveInboundSms } from "@lobbystack/domain";
-import { normalizeTwilioFormFields, validateTwilioSignature } from "@lobbystack/shared";
+import { normalizeTwilioFormFields, resolveTwilioWebhookUrl, validateTwilioSignature } from "@lobbystack/shared";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   try {
     const rawBody = await request.text();
     const params = normalizeTwilioFormFields(new URLSearchParams(rawBody));
-    const valid = await validateTwilioSignature({ authToken: process.env.TWILIO_AUTH_TOKEN, signatureHeader: request.headers.get("x-twilio-signature"), url: process.env.TWILIO_SMS_WEBHOOK_URL ?? request.url, params });
+    const valid = await validateTwilioSignature({ authToken: process.env.TWILIO_AUTH_TOKEN, signatureHeader: request.headers.get("x-twilio-signature"), url: resolveTwilioWebhookUrl(request.url, process.env.TWILIO_SMS_WEBHOOK_URL), params });
     if (!valid) return new NextResponse("Unauthorized", { status: 401 });
     const body = twilioSmsInboundSchema.parse(params);
     const resolved = await getAppDatabase().db.execute<{ business_id: string }>(sql`select app.resolve_business_by_phone(${body.To}) as business_id`);

@@ -6,54 +6,44 @@
 
 # LobbyStack
 
-### The open-source AI receptionist for calls, texts, and appointments. An alternative to Myaifrontdesk, Upfirst, Goodcall, Phonely, etc.
+### The open-source AI receptionist for calls, messages, and appointments
 
-LobbyStack is an open-source AI receptionist platform for small businesses. It answers phone calls, responds to SMS messages, books appointments, handles reschedules and cancellations, and transfers conversations to a human when needed.
+LobbyStack is an open-source AI receptionist platform for small businesses. It answers phone calls, manages website chat and SMS conversations, books appointments, handles appointment changes, and transfers calls to a person when needed.
 
 It is built for clinics, salons, repair shops, local service companies, restaurants, and any business that loses revenue when nobody is available to answer the phone.
 
 LobbyStack gives teams a modern AI front desk that can be hosted in the cloud or self-hosted on their own infrastructure.
 
-[Website](https://lobbystack.com) &middot;
-[Try the app](https://app.lobbystack.com/signup) &middot;
-[Docs](https://docs.lobbystack.com) &middot;
-[Self-hosting](https://docs.lobbystack.com/self-hosting/overview) &middot;
-[GitHub](https://github.com/morencyr/LobbyStack)
+[Website](https://lobbystack.com) &middot; [Try the app](https://app.lobbystack.com/signup) &middot; [Docs](https://docs.lobbystack.com) &middot; [Self-hosting](https://docs.lobbystack.com/self-hosting/overview) &middot; [GitHub](https://github.com/morencyr/LobbyStack)
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-111111.svg)](./LICENSE)
-[![Open source](https://img.shields.io/badge/open%20source-yes-22c55e.svg)](https://github.com/morencyr/LobbyStack)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg)](https://www.typescriptlang.org/)
-[![PostgreSQL](https://img.shields.io/badge/backend-PostgreSQL-336791.svg)](https://www.postgresql.org/)
-[![Self-hostable](https://img.shields.io/badge/deploy-self--hostable-7c3aed.svg)](https://docs.lobbystack.com/self-hosting/overview)
+[![License: MIT](https://img.shields.io/badge/license-MIT-111111.svg)](./LICENSE) [![Open source](https://img.shields.io/badge/open%20source-yes-22c55e.svg)](https://github.com/morencyr/LobbyStack) [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg)](https://www.typescriptlang.org/) [![PostgreSQL](https://img.shields.io/badge/backend-PostgreSQL-336791.svg)](https://www.postgresql.org/) [![Self-hostable](https://img.shields.io/badge/deploy-self--hostable-7c3aed.svg)](https://docs.lobbystack.com/self-hosting/overview)
 
 </div>
 
----
-
-## Why LobbyStack?
+## Why teams use LobbyStack
 
 Most AI receptionist tools are closed, expensive, and difficult to adapt to real business workflows. LobbyStack is different.
 
 - **Open source by default.** Inspect the code, self-host it, extend it, and keep control of your data.
 - **Built for real phone calls.** Handle natural voice conversations, interruptions, transfers, and follow-ups.
-- **Calls and SMS in one place.** Manage phone conversations and text messages from the same inbox.
-- **Scheduling built in.** Book, reschedule, and cancel appointments through Google Calendar or Outlook.
-- **Designed for SMBs.** Simple setup, transparent pricing, and no enterprise-only feature gatekeeping.
+- **Calls and messages in one place.** Manage calls, SMS, and website chat from the same dashboard.
+- **Scheduling built in.** Book, reschedule, and cancel appointments through Google Calendar.
+- **Designed for small businesses.** Guided setup, transparent pricing, and no enterprise-only feature gatekeeping.
 - **Human fallback.** Transfer calls or escalate messages when the AI should not handle something alone.
 
-## Core Features
+## Core features
 
 ### ☎️ AI phone receptionist
 
 LobbyStack answers inbound calls with a natural voice agent trained on your business information. It can answer common questions, collect caller details, take messages, qualify requests, offer appointment slots, and transfer to a human when required.
 
-### 💬 AI SMS assistant
+### 💬 Messages and website chat
 
-Customers can text the business number and receive helpful replies automatically. LobbyStack can answer questions, continue conversations after calls, and handle replies to booking confirmations.
+Review SMS threads, send manual replies, and manage website chat from the same dashboard. Website chat can answer from saved knowledge and hand conversations to an operator.
 
 ### 📅 Appointment scheduling
 
-LobbyStack connects to calendars, checks availability, offers time slots, books appointments, and sends confirmations. Customers can also reply later to reschedule or cancel without calling back.
+LobbyStack connects to Google Calendar, checks availability, offers time slots, books appointments, and sends confirmations. Callers can also reschedule or cancel during a later call.
 
 ### 📚 Knowledge base
 
@@ -61,7 +51,7 @@ Upload business information, FAQs, services, pricing, policies, and internal not
 
 ### 🧑‍💼 Human handoff
 
-Some conversations should go to a person. LobbyStack can transfer a live call, take a message, or notify the team by SMS, email, Slack, or another configured channel.
+LobbyStack can transfer a live call, take a message, or notify the team by SMS or email when a person needs to respond.
 
 ### 📥 Shared inbox
 
@@ -71,7 +61,7 @@ Review calls, SMS threads, transcripts, recordings, appointments, and customer d
 
 LobbyStack is designed to connect with the tools small businesses already use:
 
-- Google Calendar and Microsoft Outlook for appointment availability
+- Google Calendar for appointment availability
 
 ## Use cases
 
@@ -85,9 +75,9 @@ LobbyStack can be adapted for many local business workflows:
 - Dental offices
 - Law firms and professional services
 - Property managers
-- Any business that receives appointment, pricing, hours, or availability questions by phone or SMS
+- Any business that receives appointment, pricing, hours, or availability questions by phone or website chat
 
-## Product Areas
+## Product areas
 
 | Area | What it gives you |
 | --- | --- |
@@ -96,12 +86,13 @@ LobbyStack can be adapted for many local business workflows:
 | Booking | Service-aware scheduling with availability checks and calendar handoff. |
 | Appointment changes | Safer cancellation and rescheduling flows with appointment lookup and verification. |
 | Human handoff | Live transfer and follow-up tasks for calls that need staff attention. |
-| SMS | Text conversations and booking outcomes connected to the same customer history. |
+| Messages | Manual SMS conversations and AI-assisted website chat connected to customer history. |
+| Website widget | Embeddable chat, lead capture, and browser calls with per-site access controls. |
 | Dashboard | Calls, messages, contacts, appointments, recordings, transcripts, follow-ups, and analytics together. |
-| Usage and billing | Hosted plans, voice usage, alert SMS, outbound call attempts, storage, and metered add-ons. |
+| Usage and billing | Hosted plans, voice usage, alert SMS, outbound call attempts, storage, and spending caps. |
 | Bring your own API keys | Self-hosted deployments can use your own Twilio, OpenAI-compatible AI, calendar, email, analytics, and billing provider credentials. |
 
-## Built With
+## Technology
 
 | Layer | Main components |
 | --- | --- |
@@ -109,7 +100,7 @@ LobbyStack can be adapted for many local business workflows:
 | Backend | PostgreSQL, Drizzle ORM, Redis, BullMQ |
 | Voice gateway | Fastify, Twilio, OpenAI Realtime |
 
-## Hosted And Open Source
+## Hosted and open source
 
 LobbyStack is open source with a hosted cloud service.
 
@@ -119,7 +110,7 @@ Self-host when your team wants to run the stack on your own infrastructure, brin
 
 Full product control in the hosted app. Infrastructure ownership when you self-host. Same open-source core either way.
 
-## Built For Developers Too
+## Architecture for contributors
 
 LobbyStack is a TypeScript monorepo with PostgreSQL as the durable source of truth and a narrow voice gateway for the live call path.
 
@@ -128,6 +119,7 @@ apps/
   admin/           Next.js dashboard and HTTP API
   worker/          asynchronous jobs and outbox dispatch
   voice-gateway/   Twilio Voice, Media Streams, and OpenAI Realtime bridge
+packages/embed/    Vite bundle for the embeddable website widget loader
 packages/          database, domain, jobs, providers, telemetry, and shared contracts
 mintlify/          public documentation source
 docs/              architecture notes, ADRs, provider docs, and validation notes
@@ -135,19 +127,20 @@ docs/              architecture notes, ADRs, provider docs, and validation notes
 
 Read the [self-hosting overview](https://docs.lobbystack.com/self-hosting/overview) for the provider map and deployment expectations, or use the [Docker Compose guide](https://docs.lobbystack.com/self-hosting/docker-compose) for the official single-host baseline.
 
-## Getting Started
+## Get started
 
-### Hosted App
+### Use the hosted app
 
 1. [Create a LobbyStack account](https://app.lobbystack.com/signup).
 2. Verify your mobile number.
 3. Import website knowledge, or skip and add knowledge manually later.
-4. Claim a business number.
-5. Configure AI settings, services, knowledge, and rules before sending live calls.
+4. Choose a plan.
+5. Claim a business number on Starter or Pro.
+6. Configure AI settings, services, knowledge, and rules before sending live calls.
 
-The full hosted walkthrough lives in the [quick start guide](https://docs.lobbystack.com/quickstart).
+The full hosted walkthrough lives in the [setup guide](https://docs.lobbystack.com/quickstart).
 
-### Local Development
+### Run local development
 
 ```bash
 cp .env.example .env
@@ -161,7 +154,7 @@ Local development stores recordings and uploads under `.lobbystack/storage`. Set
 
 Mock providers are part of the default development path, so contributors can exercise flows without live Twilio, AI, calendar, or email credentials. Provider setup notes live in the [docs](https://docs.lobbystack.com/self-hosting/providers).
 
-### Self-Hosted Docker Compose
+### Deploy with Docker Compose
 
 ```bash
 git clone https://github.com/lobbystack/lobbystack.git

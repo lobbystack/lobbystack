@@ -1,45 +1,27 @@
 "use client";
 
 import Link from "next/link";
+import { requestJson } from "@/lib/request-json";
+import { selectActiveBusiness } from "@/lib/active-business";
 import { usePathname, useRouter } from "next/navigation";
-import { useLayoutEffect, useRef, useState, type ComponentType } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  BookOpenIcon,
-  BlocksIcon,
-  ChartColumnIncreasingIcon,
-  ClipboardCheckIcon,
-  Building2Icon,
-  HomeIcon,
-  MessageSquareMoreIcon,
-  PhoneIcon,
-  SettingsIcon,
-  UsersIcon,
-  WorkflowIcon,
-} from "lucide-react";
-import { Check, ChevronsUpDown, CircleAlert, Contrast, LogOut, Plus, UserRound } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { BookTextIcon } from "@/components/ui/book-text";
+import { BlocksIcon } from "@/components/ui/blocks";
+import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasing";
+import { ClipboardCheckIcon } from "@/components/ui/clipboard-check";
+import { HomeIcon } from "@/components/ui/home";
+import { MessageSquareMoreIcon } from "@/components/ui/message-square-more";
+import { PhoneAnimatedIcon } from "@/components/ui/phone-animated";
+import { SettingsIcon } from "@/components/ui/settings";
+import { UsersIcon } from "@/components/ui/users";
+import { WorkflowIcon } from "@/components/ui/workflow";
+import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
 import { TeamSwitcher } from "@/components/layout/team-switcher";
 import { Main } from "@/components/layout/main";
 import { SiteHeader } from "@/components/site-header";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemMedia,
-  ItemTitle,
-} from "@/components/ui/item";
 import {
   Sidebar,
   SidebarContent,
@@ -56,10 +38,12 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { formatPhoneNumberDisplay } from "@/lib/phone";
+import { LiveUpgradePlanProvider } from "./live-upgrade-plan-provider";
+import { BillingPastDueBanner, type BillingPermissions } from "./billing-past-due-banner";
 import { DashboardUtilityBar } from "./dashboard-utility-bar";
 import { DashboardSetupGuideCard } from "./dashboard-setup-guide-card";
-import { useTheme } from "./theme-provider";
+import { NavUser } from "./nav-user";
+import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
 
 type Business = {
   businessId: string;
@@ -78,7 +62,7 @@ type DashboardShellProps = {
 type NavigationItem = {
   href: string;
   label: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: typeof HomeIcon;
 };
 
 async function getBusinesses(): Promise<{ businesses: Business[] }> {
@@ -105,6 +89,7 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
   }, [pathname]);
 
   return (
+    <LiveUpgradePlanProvider>
     <div className="flex h-svh w-full flex-col overflow-hidden bg-background">
       <BillingBanner />
       <SidebarProvider
@@ -126,15 +111,20 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
         </SidebarInset>
       </SidebarProvider>
     </div>
+    </LiveUpgradePlanProvider>
   );
 }
 
 function BillingBanner() {
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: getBusinesses });
   const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
-  const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: async () => await (await fetch(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`, { credentials: "include" })).json() as { account?: { subscriptionState?: string | null } }, enabled: Boolean(business?.businessId) });
-  if (billing.data?.account?.subscriptionState !== "past_due") return null;
-  return <div className="relative z-50 shrink-0 border-b border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-100"><div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:px-6"><div className="flex items-start gap-3"><CircleAlert className="mt-0.5 size-5 shrink-0 text-amber-600" /><div><p className="text-sm font-medium">Payment needs attention</p><p className="text-sm text-amber-900/80 dark:text-amber-100/80">Your subscription is past due. Update billing details to keep calls and messages active.</p></div></div><Button nativeButton={false} render={<Link href="/settings/plan" />} size="sm" variant="outline">Review billing</Button></div></div>;
+  const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: async () => {
+    const response = await fetch(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`, { credentials: "include" });
+    if (!response.ok) throw new Error("Billing unavailable");
+    return await response.json() as { account: { plan: string | null; subscriptionState: string | null } | null; permissions: BillingPermissions };
+  }, enabled: Boolean(business?.businessId) });
+  if (!business || !billing.data?.account || !billing.data.permissions) return null;
+  return <BillingPastDueBanner businessId={business.businessId} plan={billing.data.account.plan} subscriptionState={billing.data.account.subscriptionState} permissions={billing.data.permissions} />;
 }
 
 function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
@@ -142,13 +132,13 @@ function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
   const { t } = useTranslation(["nav", "settings", "agent"]);
   const general: NavigationItem[] = [
     { label: t("nav:items.home"), href: "/", icon: HomeIcon },
-    { label: t("nav:items.calls"), href: "/calls", icon: PhoneIcon },
-    { label: t("nav:items.messages"), href: "/messages", icon: MessageSquareMoreIcon },
+    { label: t("nav:items.calls"), href: "/calls", icon: PhoneAnimatedIcon },
+    ...(["/messages", "/settings/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`)) ? [{ label: t("nav:items.messages"), href: "/messages", icon: MessageSquareMoreIcon }] : []),
     { label: t("nav:items.contacts"), href: "/contacts", icon: UsersIcon },
   ];
   const receptionist: NavigationItem[] = [
-    { label: t("agent:sections.basicSettings.title"), href: "/agent/basic-settings", icon: ClipboardCheckIcon },
-    { label: t("agent:sections.knowledge.title"), href: "/agent/knowledge", icon: BookOpenIcon },
+    { label: t("agent:sections.basicSettings.title"), href: "/agent", icon: ClipboardCheckIcon },
+    { label: t("agent:sections.knowledge.title"), href: "/agent/knowledge", icon: BookTextIcon },
     { label: t("agent:sections.services.title"), href: "/agent/services", icon: BlocksIcon },
     { label: t("agent:sections.rules.title"), href: "/agent/rules", icon: WorkflowIcon },
   ];
@@ -156,6 +146,7 @@ function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
     { label: t("nav:items.analytics"), href: "/analytics", icon: ChartColumnIncreasingIcon },
     { label: t("settings:sections.integrations"), href: "/integrations", icon: BlocksIcon },
     { label: t("nav:items.settings"), href: "/settings/usage", icon: SettingsIcon },
+    ...(["/messages", "/settings/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`)) ? [{ label: t("settings:sections.widget"), href: "/settings/widget", icon: SettingsIcon }] : []),
   ];
 
   return (
@@ -178,8 +169,19 @@ function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
   );
 }
 
+function AnimatedNavigationIcon({ icon: Icon, hovered }: { icon: typeof HomeIcon; hovered: boolean }) {
+  const iconRef = useRef<{ startAnimation: () => void; stopAnimation: () => void } | null>(null);
+  useEffect(() => {
+    if (hovered) iconRef.current?.startAnimation();
+    else iconRef.current?.stopAnimation();
+  }, [hovered]);
+  return <Icon ref={iconRef} className="size-4 shrink-0 [&_svg]:size-4" size={16} />;
+}
+
 function NavigationGroup({ items, pathname, title }: { items: NavigationItem[]; pathname: string; title: string }) {
+  const router = useRouter();
   const { isMobile, setOpenMobile } = useSidebar();
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   return (
     <SidebarGroup>
       <SidebarGroupLabel>{title}</SidebarGroupLabel>
@@ -189,16 +191,20 @@ function NavigationGroup({ items, pathname, title }: { items: NavigationItem[]; 
             ? pathname === "/"
             : item.href === "/settings/usage"
               ? pathname.startsWith("/settings")
-              : pathname === item.href || pathname.startsWith(`${item.href}/`);
+              : pathname === item.href;
           return (
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
+                onMouseEnter={() => setHoveredItem(item.href)}
+                onMouseLeave={() => setHoveredItem(null)}
+                onFocus={() => setHoveredItem(item.href)}
+                onBlur={() => setHoveredItem(null)}
                 isActive={active}
-                render={<Link href={item.href} />}
+                {...(!isMobile ? { render: <Link href={item.href} /> } : {})}
                 tooltip={item.label}
-                onClick={() => isMobile && setOpenMobile(false)}
+                onClick={() => { if (isMobile) { router.push(item.href); setOpenMobile(false); } }}
               >
-                <item.icon className="size-4 shrink-0" />
+                <AnimatedNavigationIcon icon={item.icon} hovered={hoveredItem === item.href} />
                 <span>{item.label}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -209,131 +215,24 @@ function NavigationGroup({ items, pathname, title }: { items: NavigationItem[]; 
   );
 }
 
-function WorkspaceSwitcher() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  const { i18n, t } = useTranslation("nav");
-  const { isMobile } = useSidebar();
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: getBusinesses });
-  const [switching, setSwitching] = useState(false);
-  const active = businesses.data?.businesses.find((business) => business.active) ?? businesses.data?.businesses[0];
-  const phoneNumbers = useQuery({
-    queryKey: ["phone-numbers", active?.businessId],
-    queryFn: async () => {
-      const response = await fetch("/api/phone-numbers", { credentials: "include" });
-      if (!response.ok) throw new Error("Unable to load workspace phone number.");
-      return await response.json() as { phoneNumbers: Array<{ e164: string; status: string }> };
-    },
-    enabled: Boolean(active),
-  });
-  const primaryPhone = phoneNumbers.data?.phoneNumbers.find((number) => number.status === "active") ?? phoneNumbers.data?.phoneNumbers[0];
-
-  async function selectBusiness(businessId: string) {
-    if (businessId === active?.businessId) return;
-    setSwitching(true);
-    try {
-      const response = await fetch("/api/businesses/switch", {
-        method: "POST",
-        credentials: "include",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ businessId }),
-      });
-      if (!response.ok) throw new Error("Workspace switch failed.");
-      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== "businesses" });
-      await queryClient.invalidateQueries({ queryKey: ["businesses"] });
-      router.refresh();
-    } finally {
-      setSwitching(false);
-    }
-  }
-
-  return (
-    <SidebarMenu className="group-data-[collapsible=icon]:hidden">
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Item
-                className="w-full gap-2 px-3 py-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[popup-open=true]:bg-sidebar-accent data-[popup-open=true]:text-sidebar-accent-foreground"
-                render={<button disabled={switching} type="button" />}
-                size="xs"
-                variant="outline"
-              />
-            }
-          >
-            <ItemMedia variant="icon"><Building2Icon /></ItemMedia>
-            <ItemContent className="min-w-0 gap-0.5">
-              <ItemTitle className="line-clamp-2 w-full text-left font-medium leading-tight">
-                {active?.name ?? t("sidebar.businessSlugFallback")}
-              </ItemTitle>
-              <ItemDescription className="text-xs">{phoneNumbers.isLoading ? t("sidebar.loadingPhone") : primaryPhone ? formatPhoneNumberDisplay(primaryPhone.e164, i18n.language) : t("sidebar.noBusinessPhone")}</ItemDescription>
-            </ItemContent>
-            <ItemActions><ChevronsUpDown className="size-4 text-muted-foreground" /></ItemActions>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-56 rounded-xl" side={isMobile ? "bottom" : "right"} sideOffset={4}>
-            <DropdownMenuGroup>
-              {(businesses.data?.businesses ?? []).map((business) => (
-                <DropdownMenuItem className="gap-2.5 px-3 py-2" key={business.businessId} onClick={() => void selectBusiness(business.businessId)}>
-                  {business.businessId === active?.businessId ? <Check className="size-4" /> : <span className="size-4" />}
-                  <span className="truncate">{business.name}</span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2.5 px-3 py-2" render={<Link href="/onboarding/business?create=true" />}>
-              <Plus className="size-4" />
-              {t("sidebar.createBusiness")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
-  );
-}
 
 function UserMenu({ user }: Pick<DashboardShellProps, "user">) {
   const router = useRouter();
-  const { t } = useTranslation("nav");
-  const { isMobile } = useSidebar();
-  const { resolvedTheme, setTheme } = useTheme();
+  const openUpgradePlanDialog = useOpenUpgradePlanDialog();
   const [signingOut, setSigningOut] = useState(false);
-  const initial = user.email.trim().charAt(0).toUpperCase() || "?";
-
+  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
+  const business = selectActiveBusiness(businesses.data?.businesses);
+  const billing = useQuery({ queryKey: ["billing", business?.businessId], enabled: Boolean(business?.businessId), queryFn: () => requestJson<{ account: { plan: string | null } | null; permissions: BillingPermissions; availableCheckoutPlans: Array<"starter" | "pro">; availableCheckoutIntervals: Record<"starter" | "pro", string[]> }>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`) });
+  const showUpgradeToPro = billing.data?.permissions.hasCheckoutAccess === true && (billing.data.account?.plan ?? "free_cloud") === "free_cloud" && (billing.data.availableCheckoutPlans ?? []).some(plan => billing.data?.availableCheckoutIntervals[plan].length);
   async function signOut() {
+    if (signingOut) return;
     setSigningOut(true);
     try {
-      await fetch("/api/auth/sign-out", {
-        method: "POST",
-        credentials: "include",
-        headers: { "content-type": "application/json" },
-        body: "{}",
-      });
+      const response = await fetch("/api/auth/sign-out", { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: "{}" });
+      if (!response.ok) return;
       router.replace("/login");
       router.refresh();
-    } finally {
-      setSigningOut(false);
-    }
+    } finally { setSigningOut(false); }
   }
-
-  return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger render={<SidebarMenuButton className="data-[popup-open=true]:bg-sidebar-accent" size="lg" />}>
-            <Avatar className="shadow-xs" size="sm"><AvatarFallback>{initial}</AvatarFallback></Avatar>
-            <div className="grid flex-1 text-start text-sm leading-tight"><span className="truncate text-sm">{user.email}</span></div>
-            <ChevronsUpDown className="ms-auto size-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-56 rounded-xl" side={isMobile ? "bottom" : "right"} sideOffset={4}>
-            <DropdownMenuGroup>
-              <DropdownMenuItem render={<Link href="/settings/account" />}><UserRound />{t("sidebar.account")}</DropdownMenuItem>
-              <DropdownMenuItem closeOnClick={false} onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}><Contrast />{t("sidebar.toggleTheme")}</DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem disabled={signingOut} onClick={() => void signOut()} variant="destructive"><LogOut />{t("sidebar.signOut")}</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
-  );
+  return <NavUser user={{ ...user, avatar: "" }} onSignOut={() => void signOut()} onUpgradeToPro={openUpgradePlanDialog} showUpgradeToPro={showUpgradeToPro} />;
 }

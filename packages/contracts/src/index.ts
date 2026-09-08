@@ -151,6 +151,8 @@ export const uploadCreateRequestSchema = z.object({
 });
 
 export const uploadFinalizeRequestSchema = z.object({
+  title: z.string().max(1000).optional(),
+  tags: z.array(z.string().max(255)).max(100).optional(),
   businessId: z.string().uuid(),
   objectId: z.string().uuid(),
   length: z.number().int().positive(),
@@ -209,8 +211,14 @@ export const snapshotSchema = z.object({
   summary: z.string(),
   bookingPolicy: z.string(),
   knowledgeDigest: z.string(),
+  appointmentChangePolicy: z.object({
+    enabled: z.boolean(),
+    allowCancel: z.boolean(),
+    allowReschedule: z.boolean(),
+    verificationMode: z.enum(["phone_match_and_facts", "otp_required", "operator_only"]),
+  }).optional(),
   transferPolicy: z.object({
-    mode: z.string(),
+    mode: z.enum(["never", "always", "on_request", "on_urgent", "during_business_hours"]),
     transferNumber: z.string().optional(),
   }),
   hours: z.array(z.object({

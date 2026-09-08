@@ -1,6 +1,8 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+
+import { toast } from "sonner";
 
 import i18n from "@/i18n";
 import {
@@ -27,6 +29,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     }),
   );
   const [isSaving, setIsSaving] = useState(false);
+  const preferenceRevision = useRef(0);
 
   useEffect(() => {
     const handleLanguageChange = (language: string) => setLocaleState(resolveLocale(language));
@@ -36,9 +39,11 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    const revision = preferenceRevision.current;
     void fetch("/api/preferences/locale", { credentials: "include" }).then(async (response) => {
       if (!response.ok || cancelled) return;
       const data = await response.json() as { locale?: string };
+      if (cancelled || revision !== preferenceRevision.current) return;
       const preferred = resolveLocale(data.locale);
       writeStoredLocale(preferred);
       await i18n.changeLanguage(preferred);
@@ -50,6 +55,9 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     locale,
     isSaving,
     setLocale: async (nextLocale) => {
+      const previousLocale = locale;
+      const revision = ++preferenceRevision.current;
+      setIsSaving(true);
       setLocaleState(nextLocale);
       writeStoredLocale(nextLocale);
       await i18n.changeLanguage(nextLocale);
@@ -62,8 +70,15 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({ locale: nextLocale }),
         });
         if (!response.ok) throw new Error("Unable to save locale preference.");
+      } catch {
+        if (revision === preferenceRevision.current) {
+          setLocaleState(previousLocale);
+          writeStoredLocale(previousLocale);
+          await i18n.changeLanguage(previousLocale);
+          toast.error(i18n.t("settings:appearance.language.saveFailed"));
+        }
       } finally {
-        setIsSaving(false);
+        if (revision === preferenceRevision.current) setIsSaving(false);
       }
     },
   }), [isSaving, locale]);

@@ -43,5 +43,53 @@
     "unavailableTitle": "This demo link is unavailable",
     "unavailableDescription": "The demo link is missing or no longer valid.",
     "retry": "Try again"
+  },
+  "operator": {
+    "title": "Prospect demos",
+    "description": "Prepare isolated, expiring receptionist workspaces before sharing them with a prospect.",
+    "count_one": "{{count}} demo",
+    "count_other": "{{count}} demos",
+    "refresh": "Refresh",
+    "loading": "Loading demos...",
+    "empty": "No prospect demos have been prepared yet.",
+    "rotate": "Rotate link",
+    "publish": "Publish",
+    "revoke": "Revoke",
+    "openLink": "Open secure link",
+    "tokenHint": "Rotate the link in this session before publishing or sharing it. Raw tokens are never stored.",
+    "prepare": "Prepare a demo",
+    "prepareDescription": "The workspace starts private while its public website is indexed.",
+    "businessName": "Business name",
+    "websiteUrl": "Website URL",
+    "greeting": "Greeting",
+    "suggestedPrompts": "Suggested prompts",
+    "create": "Create isolated demo",
+    "ingestion": "Ingestion:",
+    "snapshot": "Snapshot:",
+    "prompts": "Prompts:",
+    "promptsPlaceholder": "What services do you offer?\nCan I request a quote?",
+    "statuses": {
+      "pending": "pending",
+      "ready": "ready",
+      "missing": "missing",
+      "queued": "queued",
+      "crawling": "crawling",
+      "indexing": "indexing",
+      "completed": "completed",
+      "failed": "failed",
+      "cancelled": "cancelled",
+      "preparing": "preparing",
+      "active": "active",
+      "claimed": "claimed",
+      "revoked": "revoked",
+      "expired": "expired"
+    },
+    "errors": {
+      "load": "Unable to load prospect demos. Try refreshing.",
+      "create": "Unable to create the demo. Your entries have been kept; please try again.",
+      "rotate": "Unable to rotate the demo link. Please try again.",
+      "publish": "Unable to publish the demo. Please try again.",
+      "revoke": "Unable to revoke the demo. Please try again."
+    }
   }
 }

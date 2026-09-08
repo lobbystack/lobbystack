@@ -1,5 +1,7 @@
 # LobbyStack Mintlify docs instructions
 
+Use these instructions when you change the public LobbyStack Help Center.
+
 ## About this project
 
 - This is the source for [docs.lobbystack.com](https://docs.lobbystack.com/).
@@ -18,7 +20,7 @@
 ## Style preferences
 
 - Use active voice and second person ("you")
-- Keep sentences concise — one idea per sentence
+- Keep sentences concise: one idea per sentence
 - Use sentence case for headings
 - Bold for UI elements: Click **Settings**
 - Code formatting for file names, commands, paths, and code references

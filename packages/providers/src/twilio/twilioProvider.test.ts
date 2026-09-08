@@ -22,9 +22,16 @@ const mocks = vi.hoisted(() => {
 vi.mock("twilio", () => ({ default: vi.fn(() => mocks.client) }));
 
 import { getTwilioProviderErrorCode, TwilioProvider } from "./twilioProvider";
+import twilio from "twilio";
 
 describe("TwilioProvider phone provisioning", () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it("authenticates a restricted REST key with the owning account and never uses it for webhook validation", async () => {
+    const restricted = new TwilioProvider({ accountSid: "ACowner", apiKeySid: "SKrestricted", apiKeySecret: "restricted-secret" });
+    expect(twilio).toHaveBeenCalledWith("SKrestricted", "restricted-secret", { accountSid: "ACowner" });
+    expect(await restricted.validateWebhook({ signature: "anything", url: "https://app.test/status", params: {} })).toBe(false);
+  });
 
   it("normalizes Lookup line type results", async () => {
     mocks.lookupFetch.mockResolvedValue({ phoneNumber: "+14165550100", countryCode: "CA", valid: true, validationErrors: [], lineTypeIntelligence: { type: "mobile", errorCode: null } });

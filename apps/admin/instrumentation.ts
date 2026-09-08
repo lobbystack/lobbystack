@@ -1,5 +1,15 @@
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  const { assertProductionSecrets } = await import("@lobbystack/config");
+  assertProductionSecrets(process.env, [
+    "BETTER_AUTH_SECRET",
+    "INTERNAL_SERVICE_SECRET",
+    "INTERNAL_SERVICE_TOKEN",
+    "WIDGET_SESSION_SECRET",
+    "ENCRYPTION_KEY",
+    "OTP_HASH_SECRET",
+    ...(process.env.STORAGE_PROVIDER === "s3" ? [] : ["LOCAL_STORAGE_SIGNING_SECRET"]),
+  ]);
   const { initializeTelemetry } = await import("@lobbystack/telemetry/node");
   await initializeTelemetry({ serviceName: "lobbystack-admin" });
 }

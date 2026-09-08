@@ -1,4 +1,6 @@
-# ADR 0007: PostgreSQL Is The Main Backend
+# ADR 0007: use PostgreSQL as the main backend
+
+PostgreSQL stores durable state while shared domain modules coordinate work across the admin and worker runtimes.
 
 ## Status
 

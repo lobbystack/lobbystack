@@ -3,13 +3,15 @@
 import { getCoreRowModel, getPaginationRowModel, useReactTable, type PaginationState } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, MoreHorizontal, Pause, Play, Plus, Search, Trash2 } from "lucide-react";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useSetupAction } from "@/lib/use-setup-action";
 import { selectActiveBusiness } from "@/lib/active-business";
 import { requestJson } from "@/lib/request-json";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { DataTablePagination } from "./data-table/pagination";
+import { TableCardSkeleton } from "./loading-skeletons";
 import { PageSurface } from "./page-surface";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -39,6 +41,7 @@ export function RulesSurface() {
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
   const business = selectActiveBusiness(businesses.data?.businesses);
   const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
+  useSetupAction(canManage, useCallback((action: string) => { if (action !== "rule") return false; setEditingRule(null); setDialogOpen(true); return true; }, []));
   const rules = useQuery({ queryKey: ["rules", business?.businessId], enabled: Boolean(business), queryFn: () => requestJson<Rule[]>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}`) });
   const invalidate = async () => { await queryClient.invalidateQueries({ queryKey: ["rules", business?.businessId] }); };
   const createRule = useMutation({ mutationFn: (input: { title: string; content: string }) => requestJson<string>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify(input) }), onSuccess: invalidate });
@@ -74,17 +77,16 @@ export function RulesSurface() {
   return (
     <PageSurface description="" title={t("sections.rules.title")}>
       <div className="flex w-full flex-col gap-6">
-        {!canManage ? <p className="rounded-xl bg-muted p-3 text-sm text-muted-foreground">{t("readOnly")}</p> : null}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative max-w-sm flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-10" onChange={(event) => setSearch(event.target.value)} placeholder={t("table.searchPlaceholder")} value={search} /></div>
-          {canManage ? <Button onClick={() => { setEditingRule(null); setDialogOpen(true); }}><Plus data-icon="inline-start" />{t("sections.rules.addKnowledge")}</Button> : null}
+          {canManage ? <div className="flex shrink-0 flex-wrap items-center gap-2"><Button onClick={() => { setEditingRule(null); setDialogOpen(true); }}><Plus data-icon="inline-start" />{t("sections.rules.addKnowledge")}</Button></div> : null}
         </div>
-        <TableCard>
+        {rules.isLoading ? <TableCardSkeleton columns={5} /> : <><TableCard>
           <Table className="min-w-[60rem] w-full table-fixed">
             <colgroup><col className="w-[18%]" /><col className="w-[42%]" /><col className="w-[14%]" /><col className="w-[18%]" /><col className="w-12" /></colgroup>
             <TableHeader><TableRow><TableHead>{t("table.title")}</TableHead><TableHead>{t("table.preview")}</TableHead><TableHead>{t("table.status")}</TableHead><TableHead className="text-right">{t("table.added")}</TableHead><TableHead /></TableRow></TableHeader>
             <TableBody>
-              {rules.isLoading ? <TableRow><TableCell className="h-24 text-center text-muted-foreground" colSpan={5}>{t("loading.rules")}</TableCell></TableRow> : pageRows.length ? pageRows.map((rule) => {
+              {pageRows.length ? pageRows.map((rule) => {
                 const orderedIndex = orderedRules.findIndex((candidate) => candidate.id === rule.id);
                 return <TableRow className={canManage ? "h-12 cursor-pointer" : "h-12"} key={rule.id} onClick={() => { if (canManage) { setEditingRule(rule); setDialogOpen(true); } }}>
                   <TableCell className="max-w-0 overflow-hidden"><span className="block truncate font-medium" title={rule.title}>{summarize(rule.title, 32)}</span></TableCell>
@@ -97,7 +99,7 @@ export function RulesSurface() {
             </TableBody>
           </Table>
         </TableCard>
-        <DataTablePagination labels={{ rowsPerPage: t("pagination.rowsPerPage"), pageOf: (page, total) => t("pagination.pageOf", { page, total }), firstPage: t("pagination.firstPage"), previousPage: t("pagination.previousPage"), nextPage: t("pagination.nextPage"), lastPage: t("pagination.lastPage"), goToPage: (page) => t("pagination.goToPage", { page }) }} table={table} />
+        <DataTablePagination labels={{ rowsPerPage: t("pagination.rowsPerPage"), pageOf: (page, total) => t("pagination.pageOf", { page, total }), firstPage: t("pagination.firstPage"), previousPage: t("pagination.previousPage"), nextPage: t("pagination.nextPage"), lastPage: t("pagination.lastPage"), goToPage: (page) => t("pagination.goToPage", { page }) }} table={table} /></>}
         <RuleDialog editingRule={editingRule} onOpenChange={(open) => { setDialogOpen(open); if (!open) setEditingRule(null); }} open={dialogOpen} pending={createRule.isPending || updateRule.isPending} save={async (input) => { if (editingRule) await updateRule.mutateAsync({ ruleId: editingRule.id, ...input }); else await createRule.mutateAsync(input); setDialogOpen(false); setEditingRule(null); }} />
         <ConfirmDeleteDialog cancelLabel={t("actions.deleteCancel")} confirmLabel={t("actions.delete")} description={t("actions.deleteDescription")} onConfirm={async () => { if (deleteCandidate) await deleteRule.mutateAsync(deleteCandidate.id); }} onOpenChange={(open) => { if (!open) setDeleteCandidate(null); }} open={deleteCandidate !== null} pending={deleteRule.isPending} title={t("actions.deleteTitle")} />
       </div>
@@ -112,5 +114,5 @@ function RuleDialog({ editingRule, onOpenChange, open, pending, save }: { editin
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   useEffect(() => { if (open) { setTitle(editingRule?.title ?? ""); setContent(editingRule?.content ?? ""); } }, [editingRule, open]);
-  return <Dialog onOpenChange={onOpenChange} open={open}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{t(editingRule ? "sections.rules.editKnowledge" : "sections.rules.addKnowledge")}</DialogTitle><DialogDescription>{t(editingRule ? "sections.rules.editKnowledgeDescription" : "sections.rules.addKnowledgeDescription")}</DialogDescription></DialogHeader><form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); void save({ title: title.trim(), content: content.trim() }); }}><FieldGroup><Field><FieldContent><FieldLabel htmlFor={titleId}>{t("sections.rules.fields.title.label")}</FieldLabel><FieldDescription>{t("sections.rules.fields.title.hint")}</FieldDescription></FieldContent><Input id={titleId} onChange={(event) => setTitle(event.target.value)} placeholder={t("sections.rules.fields.title.placeholder")} required value={title} /></Field><Field><FieldContent><FieldLabel htmlFor={contentId}>{t("sections.rules.fields.content.label")}</FieldLabel><FieldDescription>{t("sections.rules.fields.content.hint")}</FieldDescription></FieldContent><Textarea className="min-h-40" id={contentId} onChange={(event) => setContent(event.target.value)} placeholder={t("sections.rules.fields.content.placeholder")} required value={content} /></Field></FieldGroup><DialogFooter><Button className="w-full" disabled={pending || !title.trim() || !content.trim()} type="submit">{pending ? t("actions.saving") : t(editingRule ? "actions.saveChanges" : "actions.save")}</Button></DialogFooter></form></DialogContent></Dialog>;
+  return <Dialog onOpenChange={onOpenChange} open={open}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{t(editingRule ? "sections.rules.editKnowledge" : "sections.rules.addKnowledge")}</DialogTitle><DialogDescription>{t(editingRule ? "sections.rules.editKnowledgeDescription" : "sections.rules.addKnowledgeDescription")}</DialogDescription></DialogHeader><form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); if (!pending && title.trim() && content.trim()) void save({ title: title.trim(), content: content.trim() }); }}><FieldGroup><Field><FieldContent><FieldLabel htmlFor={titleId}>{t("sections.rules.fields.title.label")}</FieldLabel><FieldDescription>{t("sections.rules.fields.title.hint")}</FieldDescription></FieldContent><Input id={titleId} onChange={(event) => setTitle(event.target.value)} placeholder={t("sections.rules.fields.title.placeholder")} value={title} /></Field><Field><FieldContent><FieldLabel htmlFor={contentId}>{t("sections.rules.fields.content.label")}</FieldLabel><FieldDescription>{t("sections.rules.fields.content.hint")}</FieldDescription></FieldContent><Textarea className="min-h-40" id={contentId} onChange={(event) => setContent(event.target.value)} placeholder={t("sections.rules.fields.content.placeholder")} value={content} /></Field></FieldGroup><DialogFooter><Button className="w-full" disabled={pending} type="submit">{pending ? t("actions.saving") : t(editingRule ? "actions.saveChanges" : "actions.save")}</Button></DialogFooter></form></DialogContent></Dialog>;
 }

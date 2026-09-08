@@ -20,8 +20,8 @@ export class PolarBillingProvider {
     return { checkoutUrl: result.url, checkoutId: result.id };
   }
 
-  async recordUsage(input: { meterId: string; externalCustomerId: string; quantity: number; timestamp: string; idempotencyKey: string }): Promise<void> {
-    await this.request(`/v1/metrics/${encodeURIComponent(input.meterId)}/events`, { method: "POST", headers: { "idempotency-key": input.idempotencyKey }, body: JSON.stringify({ external_customer_id: input.externalCustomerId, amount: input.quantity, timestamp: input.timestamp }) });
+  async recordUsage(input: { eventName: string; externalCustomerId: string; quantity: number; timestamp: string; idempotencyKey: string; businessId: string; usageKind: string }): Promise<void> {
+    await this.request("/v1/events/ingest", { method: "POST", body: JSON.stringify({ events: [{ name: input.eventName, external_customer_id: input.externalCustomerId, external_id: input.idempotencyKey, timestamp: input.timestamp, metadata: { quantity: input.quantity, businessId: input.businessId, usageKind: input.usageKind } }] }) });
   }
 
   async createCustomerPortalSession(input: { externalCustomerId: string; returnUrl: string }): Promise<{ url: string }> {

@@ -18,3 +18,5 @@ export async function hashReplacementPassword(password: string): Promise<string>
 export function isLegacyScryptHash(hash: string | null | undefined): boolean {
   return typeof hash === "string" && hash.length > 0 && !hash.startsWith(replacementPasswordPrefix) && hash.includes(":");
 }
+
+export { meetsPasswordRequirements } from "./password-policy";

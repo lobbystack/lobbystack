@@ -1,8 +1,8 @@
-# Telemetry Architecture
+# Understand telemetry architecture
 
 LobbyStack uses PostHog for product analytics and error tracking, and OpenTelemetry for server traces, metrics, and logs.
 
-## Runtime Ownership
+## Assign runtime ownership
 
 - `apps/admin` browser code emits operator intent, navigation, and workflow outcomes.
 - `apps/admin` server code traces HTTP, authentication, database, and provider operations.
@@ -10,11 +10,11 @@ LobbyStack uses PostHog for product analytics and error tracking, and OpenTeleme
 - `apps/voice-gateway` emits call lifecycle, realtime, audio, transfer, and provider telemetry.
 - `packages/telemetry` owns shared event names, redaction, trace propagation, and runtime-specific clients.
 
-## Durable Events
+## Record durable events
 
 Business events that must survive process failure are written to the PostgreSQL outbox in the same transaction as business state. The dispatcher publishes them asynchronously and records retries or dead-letter outcomes. In-process telemetry is reserved for diagnostics where loss during a crash is acceptable.
 
-## Trace Propagation
+## Propagate traces
 
 Admin, worker, and voice gateway requests propagate W3C trace context. Signed voice-backend requests include trace headers after signature material is calculated. Queue jobs retain correlation identifiers without storing customer content in telemetry fields.
 

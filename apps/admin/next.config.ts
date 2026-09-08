@@ -4,6 +4,9 @@ import { webCallConnectSource } from "./csp";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  outputFileTracingExcludes: {
+    "/*": ["./.next/dev/**/*", "./.next/cache/**/*", "./.next/standalone/**/*"],
+  },
   transpilePackages: [
     "@lobbystack/ai",
     "@lobbystack/config",

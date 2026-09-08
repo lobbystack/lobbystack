@@ -32,8 +32,6 @@ export async function loadValidBusinessSnapshot(
   businessId: string,
 ): Promise<ReturnType<typeof snapshotSchema.parse> | null> {
   const current = await readLatestSnapshot(businessId);
-  if (current === null) return null;
-
   const parsed = snapshotSchema.safeParse(current);
   if (parsed.success) return parsed.data;
 

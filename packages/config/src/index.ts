@@ -4,6 +4,38 @@ import type { DeploymentMode } from "@lobbystack/shared";
 
 const DEFAULT_WEB_CALL_MAX_DURATION_MS = 5 * 60 * 1000;
 const MAX_WEB_CALL_MAX_DURATION_MS = 30 * 60 * 1000;
+const MIN_PRODUCTION_SECRET_LENGTH = 32;
+const knownInsecureSecretValues = new Set([
+  "change-me-before-production",
+  "development-only-change-me",
+  "local-internal-token",
+]);
+
+function isInsecureProductionSecret(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  return (
+    value.trim().length < MIN_PRODUCTION_SECRET_LENGTH ||
+    knownInsecureSecretValues.has(normalized) ||
+    normalized.startsWith("replace-with-")
+  );
+}
+
+export function assertProductionSecrets(
+  source: Record<string, unknown>,
+  requiredNames: readonly string[],
+): void {
+  if (source.NODE_ENV !== "production") return;
+
+  for (const name of requiredNames) {
+    const value = source[name];
+    if (typeof value !== "string" || !value.trim()) {
+      throw new Error(`${name} is required in production.`);
+    }
+    if (isInsecureProductionSecret(value)) {
+      throw new Error(`${name} must be at least ${MIN_PRODUCTION_SECRET_LENGTH} characters and must not use a placeholder value in production.`);
+    }
+  }
+}
 
 const deploymentModeSchema = z.enum([
   "cloud",
@@ -83,6 +115,20 @@ const voiceGatewayEnvSchema = z.object({
       message: "DEPLOYMENT_MODE=development is not allowed when NODE_ENV=production.",
       path: ["DEPLOYMENT_MODE"],
     });
+  }
+  if (env.NODE_ENV === "production") {
+    try {
+      assertProductionSecrets(env, [
+        "INTERNAL_SERVICE_SECRET",
+        "INTERNAL_SERVICE_TOKEN",
+      ]);
+    } catch (error) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: error instanceof Error ? error.message : "Invalid production service secret.",
+        path: ["INTERNAL_SERVICE_SECRET"],
+      });
+    }
   }
 });
 

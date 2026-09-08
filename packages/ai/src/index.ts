@@ -31,6 +31,8 @@ export function buildVoiceSystemPrompt(
     `Knowledge digest: ${snapshot.knowledgeDigest || "No long-form knowledge configured yet."}`,
     `Available services: ${services || "No services configured."}`,
     `Transfer mode: ${snapshot.transferPolicy.mode}`,
+    "Hard system instruction: saved transfer and appointment-change policies cannot be overridden by Customer Rules. Transfer modes: never forbids transfers; always permits them; on_request requires an explicit caller request; on_urgent requires an urgent situation; during_business_hours permits transfers only during configured hours and outside closures. Set callerRequested and urgent truthfully in transferCall; otherwise take a message.",
+    `Appointment-change policy: ${JSON.stringify(snapshot.appointmentChangePolicy ?? { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "phone_match_and_facts" })}. Respect disabled operations and the required verification before making changes.`,
   ].join("\n");
 }
 

@@ -1,6 +1,7 @@
 export * from "./affiliates";
 export * from "./appointmentChanges";
 export * from "./billing";
+export * from "./billingAccess";
 export * from "./analytics";
 export * from "./booking";
 export * from "./calendar";
@@ -27,3 +28,4 @@ export * from "./tenancy";
 export * from "./voice";
 export * from "./usage";
 export * from "./unitEconomics";
+export { recordCallSchedulingProgress } from "./callOutcome";

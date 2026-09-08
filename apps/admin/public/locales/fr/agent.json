@@ -53,7 +53,8 @@
         "queued": "En attente",
         "indexing": "Indexation",
         "indexed": "Prêt",
-        "error": "Erreur"
+        "error": "Erreur",
+        "cancelled": "Annulé"
       },
       "uploadValidation": {
         "fileRequired": "Choisissez un fichier à téléverser.",
@@ -232,11 +233,23 @@
     "defaults": {
       "title": "Valeurs par défaut"
     },
-    "instructions": { "title": "Instructions" },
-    "summary": { "label": "Résumé de l'entreprise", "hint": "Le contexte essentiel que votre réceptionniste doit connaître." },
-    "bookingPolicy": { "label": "Politique de réservation", "hint": "Instructions pour proposer et confirmer les rendez-vous." },
-    "voiceInstructions": { "label": "Instructions vocales" },
-    "smsInstructions": { "label": "Instructions SMS" },
+    "instructions": {
+      "title": "Instructions"
+    },
+    "summary": {
+      "label": "Résumé de l'entreprise",
+      "hint": "Le contexte essentiel que votre réceptionniste doit connaître."
+    },
+    "bookingPolicy": {
+      "label": "Politique de réservation",
+      "hint": "Instructions pour proposer et confirmer les rendez-vous."
+    },
+    "voiceInstructions": {
+      "label": "Instructions vocales"
+    },
+    "smsInstructions": {
+      "label": "Instructions SMS"
+    },
     "greeting": {
       "label": "Message d'accueil",
       "placeholder": "Bonjour, merci d'avoir appelé…",
@@ -293,7 +306,8 @@
     "activateEntry": "Activer l'entrée",
     "deactivateEntry": "Désactiver l'entrée",
     "upload": "Téléverser",
-    "uploading": "Téléversement…"
+    "uploading": "Téléversement…",
+    "saveFailed": "Nous n’avons pas pu enregistrer vos paramètres. Veuillez réessayer."
   },
   "loading": {
     "workspace": "Chargement de l’espace de travail…",

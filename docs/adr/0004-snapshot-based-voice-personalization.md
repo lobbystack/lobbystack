@@ -1,4 +1,6 @@
-# ADR 0004: Use Snapshot-Based Voice Personalization
+# ADR 0004: use snapshot-based voice personalization
+
+Each voice call loads one durable business snapshot before starting the live model session.
 
 ## Status
 
@@ -6,7 +8,7 @@ Accepted
 
 ## Decision
 
-Compile business personalization into a call-start snapshot fetched once by the voice gateway.
+The admin and worker compile business configuration and knowledge into a call-start snapshot stored in PostgreSQL. The voice gateway fetches the snapshot from the private admin backend once per call.
 
 ## Rationale
 

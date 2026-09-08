@@ -1,4 +1,4 @@
-# PostHog and OpenTelemetry Validation
+# Validate PostHog and OpenTelemetry
 
 Run `pnpm replacement:telemetry` to verify correlated traces, metrics, logs, headers, redaction, and exporter-outage behavior against a temporary local OTLP receiver.
 

@@ -1,4 +1,4 @@
-# Build vs. Buy AI Receptionist Research
+# Build vs. buy AI receptionist research
 
 Research date: 2026-06-12
 
@@ -10,7 +10,7 @@ Topic: small businesses deciding whether to build an AI receptionist from scratc
 - Building from scratch can make sense when the phone workflow is a competitive advantage, the business has engineering capacity, and the team wants deep control over data, routing, integrations, and edge cases.
 - Buying hosted software is usually fastest when the business wants coverage now and can live within the vendor's workflow, pricing model, and integration limits.
 - Self-hosting/open-source is the middle path: less blank-page engineering than a ground-up build, more transparency and customization than a closed hosted tool, but still requires someone to own deployment, upgrades, and providers.
-- Cost comparisons should include labor and opportunity cost, not just API minutes. A few weeks of developer time can exceed a year of hosted AI receptionist fees for many small businesses.
+- Cost comparisons should include labor and opportunity cost, more than API minutes. A few weeks of developer time can exceed a year of hosted AI receptionist fees for many small businesses.
 
 ## Required source anchors
 
@@ -26,7 +26,7 @@ Topic: small businesses deciding whether to build an AI receptionist from scratc
 
 - [Goodcall pricing](https://www.goodcall.com/pricing): Goodcall lists AI phone agent plans at $79/month per agent, $129/month per agent, and $249/month per agent on monthly billing. Public page says plans include unlimited minutes and tokens but are limited by unique monthly customers, with $0.50/customer overage after included allowances. Good comparison point for hosted AI tools that avoid minute-based pricing but still meter usage in another way.
 - [Slang AI pricing](https://www.slang.ai/pricing): Slang AI lists restaurant-focused AI answering plans starting at $399/month per location and $599/month per location, with custom enterprise pricing. Useful vertical-AI example: more opinionated workflows and integrations, higher starting price, less generic SMB positioning.
-- [Twilio Media Streams docs](https://www.twilio.com/docs/voice/media-streams): Twilio Media Streams gives access to raw Programmable Voice call audio over WebSockets. Bidirectional streams can receive audio and send audio back for playback, which is the path for real-time AI assistant conversations. Important proof that a custom build is an evented media system, not just a prompt.
+- [Twilio Media Streams docs](https://www.twilio.com/docs/voice/media-streams): Twilio Media Streams gives access to raw Programmable Voice call audio over WebSockets. Bidirectional streams can receive audio and send audio back for playback, which is the path for real-time AI assistant conversations. Important proof that a custom build is an evented media system, more than a prompt.
 - [OpenAI Realtime docs](https://platform.openai.com/docs/guides/realtime): OpenAI Realtime sessions connect to `/v1/realtime` and handle audio/text, responses, tool calls, and session events. The docs recommend choosing WebRTC for browser/mobile audio, WebSocket when the server already receives raw audio from a media pipeline, and SIP for telephony voice agents. Useful for explaining architecture decisions.
 - [BLS software developer wage](https://www.bls.gov/ooh/computer-and-information-technology/software-developers.htm): BLS lists 2024 median software developer pay at $133,080/year. Use cautiously as a public benchmark for engineering cost; businesses should use their actual loaded hourly cost.
 
@@ -145,7 +145,7 @@ Avoid exact promises. Use "typical" and "depends on call complexity."
 
 | Path | Best fit | Avoid when |
 | --- | --- | --- |
-| Build from scratch | You have an engineering team, unusual workflow, strict integration needs, and phone automation is strategic. | You mainly need missed-call coverage, appointment booking, and FAQ answers quickly. |
+| Build from scratch | You have an engineering team, unusual workflow, strict integration needs, and phone automation is strategic. | You mainly need prompt missed-call coverage, appointment booking, and FAQ answers. |
 | Buy hosted AI receptionist | You want speed, support, predictable setup, and can accept vendor workflow limits. | You need deep customization, data control, source visibility, or provider portability. |
 | Self-host/open-source | You want control and customization without starting from a blank repo; you can operate software or pay someone who can. | Nobody owns infrastructure, upgrades, monitoring, or provider configuration. |
 | Hybrid | You want AI for routine calls and humans for urgent, emotional, complex, or high-value calls. | Your volume is tiny or your budget cannot absorb both software and human answering. |
@@ -217,4 +217,3 @@ Avoid:
 - Saying self-hosting is effortless.
 - Saying AI replaces a receptionist in every business.
 - Guaranteeing revenue recovery.
-

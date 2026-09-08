@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -44,23 +45,35 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
       router.push("/onboarding/website");
     },
   });
+  const existing = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
+  useEffect(() => {
+    if (existing && !createNew) setName(existing.name);
+  }, [createNew, existing]);
+  const update = useMutation({
+    mutationFn: () => requestJson(`/api/businesses?businessId=${encodeURIComponent(existing!.businessId)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name: name.trim() }),
+    }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["businesses"] });
+      router.push("/onboarding/website");
+    },
+  });
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     try {
       if (businesses.data?.businesses.length && !createNew) {
-        router.push("/onboarding/website");
+        await update.mutateAsync();
         return;
       }
       await create.mutateAsync();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("businessName.submitFailed"));
+      setError(getSafeOnboardingErrorMessage(cause, t, "businessName.submitFailed"));
     }
   }
 
-  const existing = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
-  const value = existing && !createNew ? existing.name : name;
   return (
     <form className="flex flex-col gap-4" onSubmit={submit}>
       <FieldGroup className="gap-4">
@@ -68,11 +81,11 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
           <FieldLabel htmlFor="onboarding-business-name">{t("businessName.label")}</FieldLabel>
           <div className="relative">
             <Building2 aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input autoComplete="organization" autoFocus className="h-11 pl-9" disabled={Boolean(existing && !createNew)} id="onboarding-business-name" onChange={(event) => setName(event.target.value)} placeholder={t("businessName.placeholder")} required type="text" value={value} />
+            <Input autoComplete="organization" autoFocus className="h-11 pl-9" id="onboarding-business-name" onChange={(event) => setName(event.target.value)} placeholder={t("businessName.placeholder")} required type="text" value={name} />
           </div>
         </Field>
         {error || businesses.isError ? <FieldError>{error ?? t("businessName.unavailable")}</FieldError> : null}
-        <Button className="mt-2 h-11 w-full" disabled={businesses.isLoading || create.isPending || (!existing && name.trim().length === 0)} type="submit">{create.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("businessName.submitting")}</> : existing && !createNew ? t("businessName.continueSetup") : t("businessName.continue")}</Button>
+        <Button className="mt-2 h-11 w-full" disabled={businesses.isLoading || create.isPending || update.isPending || name.trim().length === 0} type="submit">{create.isPending || update.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("businessName.submitting")}</> : t("businessName.continue")}</Button>
       </FieldGroup>
     </form>
   );

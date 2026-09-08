@@ -45,7 +45,9 @@ function templateBody(template: "verify_email" | "password_reset" | "invitation"
     case "verify_email":
       return `Verify your LobbyStack email address using this link: ${variables.url ?? ""}`;
     case "password_reset":
-      return `Reset your LobbyStack password using this link: ${variables.url ?? ""}`;
+      return variables.code
+        ? `Your LobbyStack password reset code is: ${variables.code}. It expires in 10 minutes.`
+        : `Reset your LobbyStack password using this link: ${variables.url ?? ""}`;
     case "invitation":
       return `You have been invited to join LobbyStack. Accept the invitation here: ${variables.url ?? ""}`;
     case "operator_alert":

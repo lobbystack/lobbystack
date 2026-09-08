@@ -1,10 +1,10 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
-import { businessInvitations, businessMemberships, businesses, users } from "@lobbystack/db";
-import { normalizeAuthEmail } from "@lobbystack/shared";
+import { businessInvitations, businessMemberships, businesses, receptionistProfiles, users } from "@lobbystack/db";
+import { defaultAppointmentChangePolicy, normalizeAuthEmail } from "@lobbystack/shared";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
@@ -59,6 +59,17 @@ export async function createBusiness(
     if (!membership) {
       throw new Error("Business owner membership could not be created.");
     }
+    await tx.insert(receptionistProfiles).values({
+      businessId,
+      greeting: `Thanks for calling ${input.name.trim()}.`,
+      tone: "warm and direct",
+      summary: `${input.name.trim()} uses LobbyStack to handle calls and SMS.`,
+      bookingPolicy: "Only confirm a booking after availability is checked.",
+      voiceInstructions: "Sound calm, confident, and concise. Escalate urgent requests to a human when policy requires it.",
+      smsInstructions: "Keep replies concise and friendly. Ask one follow-up question at a time.",
+      transferMode: "on_request",
+      appointmentChangePolicy: defaultAppointmentChangePolicy,
+    });
     await tx.update(users).set({ activeBusinessId: businessId, updatedAt: new Date() }).where(eq(users.id, input.userId));
     await enqueueOutbox(tx, {
       topic: "snapshot.refresh",
@@ -75,15 +86,27 @@ export async function createBusiness(
 export async function listUserBusinesses(
   db: Database,
   userId: string,
-): Promise<Array<{ businessId: string; name: string; slug: string; role: string; active: boolean }>> {
+): Promise<Array<{ businessId: string; name: string; slug: string; role: string; active: boolean; onboardingStage?: string }>> {
   const result = await withBusinessTransaction(db, { userId, actorType: "operator" }, async (tx) => {
     const [user] = await tx.select({ activeBusinessId: users.activeBusinessId }).from(users).where(eq(users.id, userId)).limit(1);
     const rows = await tx.execute(sql`select business_id, name, slug, role from app.list_user_businesses(${userId})`);
-    const ids = rows.rows.map((row) => String(row.business_id));
-    const details = ids.length ? await tx.select({ id: businesses.id, timezone: businesses.timezone, businessType: businesses.businessType, defaultLocale: businesses.defaultLocale, websiteUrl: businesses.websiteUrl }).from(businesses).where(inArray(businesses.id, ids)) : [];
+    const details = [];
+    for (const row of rows.rows) {
+      const businessId = String(row.business_id);
+      await tx.execute(sql`select set_config('app.business_id', ${businessId}, true)`);
+      const [detail] = await tx.select({
+        id: businesses.id,
+        timezone: businesses.timezone,
+        businessType: businesses.businessType,
+        defaultLocale: businesses.defaultLocale,
+        websiteUrl: businesses.websiteUrl,
+        onboardingStage: businesses.onboardingStage,
+      }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
+      if (detail) details.push(detail);
+    }
     return { activeBusinessId: user?.activeBusinessId ?? null, rows: rows.rows, details };
   });
-  return result.rows.map((row) => { const detail = result.details.find((item) => item.id === String(row.business_id)); return { businessId: String(row.business_id), name: String(row.name), slug: String(row.slug), role: String(row.role), active: String(row.business_id) === result.activeBusinessId, ...(detail ? { timezone: detail.timezone, businessType: detail.businessType, defaultLocale: detail.defaultLocale, websiteUrl: detail.websiteUrl } : {}) }; });
+  return result.rows.map((row) => { const detail = result.details.find((item) => item.id === String(row.business_id)); return { businessId: String(row.business_id), name: String(row.name), slug: String(row.slug), role: String(row.role), active: String(row.business_id) === result.activeBusinessId, ...(detail ? { timezone: detail.timezone, businessType: detail.businessType, defaultLocale: detail.defaultLocale, websiteUrl: detail.websiteUrl, onboardingStage: detail.onboardingStage } : {}) }; });
 }
 
 export async function updateBusiness(
@@ -181,6 +204,25 @@ export async function acceptInvitation(
     });
     await tx.update(businessInvitations).set({ status: "accepted", acceptedByUserId: input.userId, acceptedAt: new Date(), updatedAt: new Date() }).where(eq(businessInvitations.id, invitation.id));
     return { businessId: invitation.businessId, role: invitation.role };
+  });
+}
+
+export async function previewInvitation(
+  context: DomainContext,
+  input: { tokenHash: string },
+): Promise<{ businessName: string; email: string; expired: boolean; status: string } | null> {
+  const resolved = await context.db.execute<{ business_id: string }>(sql`select app.resolve_business_by_invitation(${input.tokenHash}) as business_id`);
+  const businessId = resolved.rows[0]?.business_id;
+  if (!businessId) return null;
+  return await withBusinessTransaction(context.db, { actorType: "system", businessId }, async (tx) => {
+    const rows = await tx.select({
+      businessName: businesses.name,
+      email: businessInvitations.email,
+      expiresAt: businessInvitations.expiresAt,
+      status: businessInvitations.status,
+    }).from(businessInvitations).innerJoin(businesses, eq(businesses.id, businessInvitations.businessId)).where(and(eq(businessInvitations.tokenHash, input.tokenHash), eq(businessInvitations.businessId, businessId))).limit(1);
+    const invitation = rows[0];
+    return invitation ? { businessName: invitation.businessName, email: invitation.email, expired: invitation.expiresAt <= new Date(), status: invitation.status } : null;
   });
 }
 

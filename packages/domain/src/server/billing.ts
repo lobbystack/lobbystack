@@ -104,6 +104,7 @@ export async function reserveWebVoiceUsageInTransaction(
 ): Promise<WebVoiceBillingAllowance> {
   const allowance = await loadWebVoiceBillingAllowance(tx, input);
   if (!allowance.allowed) return allowance;
+  if (allowance.plan === "self_host") return allowance;
   const reservation = await applyNonAiUsageInTransaction(tx, { operation: "reserve", businessId: input.businessId, usageKind: "voice_seconds", sourceKey: `voice:${input.callId}`, quantity: allowance.maxDurationMs / 1_000 });
   if (!reservation.allowed) {
     return { allowed: false, errorCode: billingErrorCodes.voiceLimitReached, maxDurationMs: 0, plan: allowance.plan };
@@ -384,6 +385,9 @@ export async function loadBillingUsageEvent(
   input: { businessId: string; usageEventId: string },
 ): Promise<{
   id: string;
+  sourceKey: string;
+  isFinal: boolean;
+  plan: string | null;
   businessId: string;
   usageKind: string;
   quantity: number;
@@ -397,6 +401,9 @@ export async function loadBillingUsageEvent(
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const row = (await tx.select({
       id: billingUsageEvents.id,
+      sourceKey: billingUsageEvents.sourceKey,
+      isFinal: billingUsageEvents.isFinal,
+      plan: sql<string | null>`coalesce(${billingUsageEvents.planAtRecordTime}, ${billingAccounts.plan})`,
       businessId: billingUsageEvents.businessId,
       usageKind: billingUsageEvents.usageKind,
       quantity: billingUsageEvents.quantity,

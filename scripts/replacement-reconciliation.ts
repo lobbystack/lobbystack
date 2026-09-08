@@ -8,6 +8,8 @@ const mappings = [
   ["businesses", "businesses"],
   ["contacts", "contacts"],
   ["appointments", "appointments"],
+  ["inbox_items", "inboxItems"],
+  ["knowledge_documents", "knowledgeDocumentSettings"],
   ["billing_accounts", "billingAccounts"],
   ["billing_usage_events", "billingUsageEvents"],
   ["sms_consent_events", "smsConsentEvents"],
@@ -41,6 +43,7 @@ async function main(): Promise<void> {
 
     const relationships = await client.db.execute<{ relationship: string; orphan_count: string }>(sql`
       select 'billing_accounts.business_id' as relationship, count(*)::text as orphan_count from billing_accounts a left join businesses b on b.id = a.business_id where b.id is null
+      union all select 'inbox_items.related_call_id', count(*)::text from inbox_items i left join calls c on c.id = i.related_call_id and c.business_id = i.business_id where i.related_call_id is not null and c.id is null
       union all select 'billing_usage_events.business_id', count(*)::text from billing_usage_events e left join businesses b on b.id = e.business_id where b.id is null
       union all select 'sms_consent_events.contact_id', count(*)::text from sms_consent_events e left join contacts c on c.id = e.contact_id where e.contact_id is not null and c.id is null
       union all select 'feedback_submissions.user_id', count(*)::text from feedback_submissions f left join users u on u.id = f.user_id where u.id is null
@@ -48,6 +51,13 @@ async function main(): Promise<void> {
       union all select 'unit_economics_events.business_id', count(*)::text from unit_economics_events e left join businesses b on b.id = e.business_id where b.id is null
     `);
     for (const row of relationships.rows) if (Number(row.orphan_count) > 0) failures.push(`${row.relationship}: ${row.orphan_count} orphaned rows`);
+
+    for (const value of source?.knowledgeDocumentSettings ?? []) {
+      if (!value || typeof value !== "object" || !("_id" in value) || typeof value._id !== "string") { failures.push("knowledge_documents: invalid source settings row"); continue; }
+      const document = value as { _id: string; active?: unknown };
+      const result = await client.db.execute<{ active: boolean }>(sql`select active from knowledge_documents where legacy_convex_id = ${document._id}`);
+      if (result.rows[0]?.active !== (document.active !== false)) failures.push(`knowledge_documents: activity differs for ${document._id}`);
+    }
 
     const aggregateDifferences = await client.db.execute<{ business_id: string; period_key: string; voice_difference: string; sms_difference: string; transfer_difference: string }>(sql`
       with event_totals as (

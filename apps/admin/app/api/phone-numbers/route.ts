@@ -12,10 +12,11 @@ export async function GET(request: Request) {
   try {
     return NextResponse.json(await withOperatorTransaction(request, async ({ session, businessId, tx }) => {
       const workspace = await tx.select({ replacementReservedAt: businesses.phoneNumberReplacementReservedAt, replacementUsedAt: businesses.phoneNumberReplacementUsedAt }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
-      const activeReplacementClaim = await tx.select({ id: onboardingNumberClaimEvents.id, status: onboardingNumberClaimEvents.status }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, businessId), eq(onboardingNumberClaimEvents.userId, session.user.id), eq(onboardingNumberClaimEvents.purpose, "replacement"), inArray(onboardingNumberClaimEvents.status, ["reserved", "provisioning"]))).orderBy(desc(onboardingNumberClaimEvents.reservedAt)).limit(1);
+      const activeClaims = await tx.select({ id: onboardingNumberClaimEvents.id, status: onboardingNumberClaimEvents.status, purpose: onboardingNumberClaimEvents.purpose }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.businessId, businessId), eq(onboardingNumberClaimEvents.userId, session.user.id), inArray(onboardingNumberClaimEvents.status, ["reserved", "provisioning"]))).orderBy(desc(onboardingNumberClaimEvents.reservedAt));
       return {
         phoneNumbers: await tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"))).orderBy(asc(phoneNumbers.createdAt)),
-        replacement: { reservedAt: workspace[0]?.replacementReservedAt ?? null, usedAt: workspace[0]?.replacementUsedAt ?? null, activeClaim: activeReplacementClaim[0] ?? null },
+        activeClaim: activeClaims[0] ?? null,
+        replacement: { reservedAt: workspace[0]?.replacementReservedAt ?? null, usedAt: workspace[0]?.replacementUsedAt ?? null, activeClaim: activeClaims.find(claim => claim.purpose === "replacement") ?? null },
       };
     }));
   } catch (error) { return asApiResponse(error); }

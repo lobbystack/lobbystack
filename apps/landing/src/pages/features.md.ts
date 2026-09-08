@@ -7,7 +7,7 @@ export const GET: APIRoute = () =>
   markdownResponse({
     markdown: featuresMarkdown,
     canonical: absoluteUrl("/features/"),
-    title: "AI Receptionist Features for Calls, SMS, and Booking",
+    title: "AI receptionist features for calls, messages, and booking",
     description:
-      "Explore LobbyStack AI receptionist features for phone answering, SMS, appointment booking, call routing, lead qualification, follow-up, and summaries.",
+      "Explore LobbyStack features for phone answering, website chat, SMS alerts, appointment booking, call routing, follow-up, and summaries.",
   })

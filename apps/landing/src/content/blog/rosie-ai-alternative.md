@@ -1,6 +1,6 @@
 ---
-title: "Rosie AI Alternative: Plans and Tradeoffs"
-seoTitle: "Rosie AI Alternative: LobbyStack vs Rosie"
+title: "Rosie AI alternative: Plans and tradeoffs"
+seoTitle: "Rosie AI alternative: LobbyStack vs Rosie"
 description: "Compare LobbyStack and Rosie on included minutes, booking, transfers, texting, languages, open-source access, cloud service, and self-hosting."
 pubDate: 2026-07-30T11:10:00-04:00
 updatedDate: 2026-07-30T11:10:00-04:00
@@ -32,7 +32,7 @@ LobbyStack includes booking, human handoff, SMS alerts, transcripts, summaries, 
 
 Pricing and features were checked on July 30, 2026.
 
-## LobbyStack includes the workflow Rosie reserves for Scale
+## LobbyStack includes the workflow Rosie reserves for scale
 
 Rosie's entry plan offers a large answering allowance for message-taking. A business that needs the AI to book an appointment, send a text during the call, or complete a warm transfer must compare against the $149 Scale tier instead.
 

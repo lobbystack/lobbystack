@@ -1,6 +1,6 @@
 ---
-title: "RingCentral AI Receptionist Alternative"
-seoTitle: "RingCentral AI Receptionist Alternative: LobbyStack"
+title: "RingCentral AI Receptionist alternative"
+seoTitle: "RingCentral AI Receptionist alternative: LobbyStack"
 description: "Compare RingCentral AI Receptionist and LobbyStack on pricing, phone-system fit, channels, booking, integrations, open-source access, and self-hosting."
 pubDate: 2026-07-30T10:40:00-04:00
 updatedDate: 2026-07-30T10:40:00-04:00

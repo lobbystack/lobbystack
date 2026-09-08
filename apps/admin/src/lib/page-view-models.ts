@@ -22,12 +22,15 @@ export type AnalyticsViewModel = {
   appointments: AnalyticsMetricViewModel;
   messages: AnalyticsMetricViewModel;
   averageCallDurationSeconds: number;
+  agentResponseSeconds: AnalyticsMetricViewModel;
   series: Array<{
     bucket: string;
+    agentResponseSeconds: number;
     calls: number;
     appointments: number;
     messages: number;
   }>;
+  channels: { voice: number; sms: number; other: number };
   outcomes: Array<{ outcome: string; count: number }>;
   unitEconomics: {
     totalCostUsd: number;
@@ -93,6 +96,7 @@ export type PhoneNumberViewModel = {
 };
 
 export type BillingUsageViewModel = {
+  knowledgeStorageBytesUsed: number;
   account: {
     plan: string | null;
     billingInterval: string | null;

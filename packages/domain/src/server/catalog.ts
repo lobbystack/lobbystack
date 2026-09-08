@@ -1,4 +1,4 @@
-import { and, asc, eq, ilike } from "drizzle-orm";
+import { and, asc, count, eq, ilike, inArray } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction } from "@lobbystack/db";
 import { agentRules, businessHours, closures, phoneNumbers, receptionistProfiles, services, staff, staffServiceAssignments } from "@lobbystack/db";
@@ -23,16 +23,17 @@ export async function listCatalog(
     ]);
     const limit = Math.min(Math.max(Math.trunc(input.limit ?? 100), 1), 100);
     const offset = Math.max(Math.trunc(input.offset ?? 0), 0);
+    const [total] = await tx.select({ count: count() }).from(services).where(and(eq(services.businessId, input.businessId), ...(input.search?.trim() ? [ilike(services.name, `%${input.search.trim()}%`)] : [])));
     const page = serviceRows.slice(0, limit);
     const serviceIds = page.map((service) => service.id);
-    const assignments = serviceIds.length ? await tx.select({ serviceId: staffServiceAssignments.serviceId, staffId: staffServiceAssignments.staffId }).from(staffServiceAssignments).where(and(eq(staffServiceAssignments.businessId, input.businessId), ...serviceIds.map((serviceId) => eq(staffServiceAssignments.serviceId, serviceId)))) : [];
-    return { staff: staffRows, services: page.map((service) => ({ ...service, assignedStaffIds: assignments.filter((assignment) => assignment.serviceId === service.id).map((assignment) => assignment.staffId) })), servicesPagination: { limit, offset, hasNext: serviceRows.length > limit }, hours: hoursRows, closures: closureRows, phoneNumbers: numberRows, receptionistProfile: profileRows[0] ?? null, rules: ruleRows };
+    const assignments = serviceIds.length ? await tx.select({ serviceId: staffServiceAssignments.serviceId, staffId: staffServiceAssignments.staffId }).from(staffServiceAssignments).where(and(eq(staffServiceAssignments.businessId, input.businessId), inArray(staffServiceAssignments.serviceId, serviceIds))) : [];
+    return { staff: staffRows, services: page.map((service) => ({ ...service, assignedStaffIds: assignments.filter((assignment) => assignment.serviceId === service.id).map((assignment) => assignment.staffId) })), servicesPagination: { limit, offset, total: Number(total?.count ?? 0), hasNext: serviceRows.length > limit }, hours: hoursRows, closures: closureRows, phoneNumbers: numberRows, receptionistProfile: profileRows[0] ?? null, rules: ruleRows };
   });
 }
 
 export async function createService(
   context: DomainContext,
-  input: { userId: string; businessId: string; name: string; slug: string; durationMinutes: number; description?: string },
+  input: { userId: string; businessId: string; name: string; slug: string; durationMinutes: number; description?: string; active?: boolean },
 ): Promise<string> {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
@@ -42,6 +43,7 @@ export async function createService(
       slug: input.slug.trim().toLowerCase(),
       durationMinutes: input.durationMinutes,
       description: input.description,
+      active: input.active ?? true,
     }).returning({ id: services.id });
     if (!service) {
       throw new Error("Service could not be created.");

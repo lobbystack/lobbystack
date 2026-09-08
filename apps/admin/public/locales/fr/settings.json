@@ -95,7 +95,8 @@
       "includedStorageUnlimited": "Stockage illimité",
       "includedVoiceUnlimited": "Minutes vocales illimitées",
       "includedSmsUnlimited": "Alertes SMS illimitées",
-      "includedOutboundUnlimited": "Appels sortants illimités"
+      "includedOutboundUnlimited": "Appels sortants illimités",
+      "includedStorage": "{{amount}} {{unit}} stockage"
     },
     "upgradeDialog": {
       "title": "Changer de forfait",
@@ -204,8 +205,10 @@
       "units": {
         "voice": "min",
         "outboundAttempts": "tentatives",
-        "segments": "segments"
-      }
+        "segments": "segments",
+        "storage": "MB"
+      },
+      "unavailable": "Les données d’utilisation sont indisponibles."
     },
     "catalog": {
       "title": "Offres hébergées",
@@ -423,7 +426,8 @@
     "saved": "Préférences d'apparence mises à jour.",
     "language": {
       "label": "Langue du tableau de bord",
-      "description": "Choisissez la langue utilisée dans le tableau de bord."
+      "description": "Choisissez la langue utilisée dans le tableau de bord.",
+      "saveFailed": "Nous n’avons pas pu enregistrer votre langue. Veuillez réessayer."
     },
     "timeFormat": {
       "label": "Format de l'heure",
@@ -438,10 +442,17 @@
       "lightDescription": "Des surfaces lumineuses au contraste doux pour le travail de jour.",
       "dark": "Sombre",
       "darkDescription": "Des surfaces tamisées plus confortables pour les sessions tardives."
+    },
+    "telemetry": {
+      "label": "Partager les données de télémétrie",
+      "description": "Aidez-nous à améliorer LobbyStack en partageant des données d'utilisation et d'erreurs anonymisées.",
+      "saveFailed": "Nous n’avons pas pu enregistrer votre préférence de télémétrie. Veuillez réessayer."
     }
   },
   "integrations": {
-    "permissions": { "manageRequired": "Seuls les propriétaires et les administrateurs peuvent gérer les intégrations." },
+    "permissions": {
+      "manageRequired": "Seuls les propriétaires et les administrateurs peuvent gérer les intégrations."
+    },
     "actions": {
       "connect": "Connecter",
       "connected": "Connecté",
@@ -558,7 +569,7 @@
     }
   },
   "account": {
-    "title": "Compte",
+    "title": "Account",
     "actions": {
       "change": "Modifier"
     },
@@ -763,7 +774,7 @@
     "transferPolicy": "Politique de transfert",
     "services": "Services dans l'instantané",
     "knowledgeDigest": "Résumé des connaissances",
-      "emptyDigest": "Aucun résumé généré pour le moment. Ajoutez des connaissances ou des documents pour enrichir la réceptionniste."
+    "emptyDigest": "Aucun résumé généré pour le moment. Ajoutez des connaissances ou des documents pour enrichir la réceptionniste."
   },
   "nextSteps": {
     "title": "Prochaines étapes",
@@ -829,6 +840,10 @@
       "aiReplyFailed": {
         "title": "Réponse SMS IA échouée",
         "description": "Quand le système ne parvient pas à générer ou envoyer une réponse SMS IA."
+      },
+      "widgetChat": {
+        "title": "Nouveau message sur le clavardage du site",
+        "description": "Lorsqu’un visiteur envoie un message via le widget de votre site."
       }
     },
     "systemIssues": {

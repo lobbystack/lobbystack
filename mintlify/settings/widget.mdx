@@ -1,0 +1,42 @@
+---
+title: "Add the website widget"
+description: "Configure LobbyStack's embeddable chat and web-call widget, then add the loader script to your website."
+sidebarTitle: "Website widget"
+contentType: "How-to"
+---
+
+The **Settings** > **Widget** page creates and manages keys for the receptionist widget. Visitors can chat, leave contact details, and start a browser call from the widget.
+
+## Configure the widget
+
+<Steps>
+  <Step title="Open Widget settings">
+    Go to **Settings** > **Widget**.
+  </Step>
+  <Step title="Configure its appearance">
+    Choose the color, position, title, subtitle, greeting, and language behavior.
+  </Step>
+  <Step title="Configure lead capture">
+    Enable the lead form, choose required contact fields, and decide whether it appears before chat.
+  </Step>
+  <Step title="Set allowed websites">
+    Enter each exact public origin that can embed the widget, such as `https://www.example.com`.
+  </Step>
+  <Step title="Copy the installation snippet">
+    Copy the generated loader snippet and add it before the closing `</body>` tag on your website.
+  </Step>
+</Steps>
+
+## Protect web calls
+
+LobbyStack signs widget sessions and checks the visitor's parent origin. Your self-hosted voice gateway must also include the website origin in `WEB_CALL_ALLOWED_ORIGINS`.
+
+Use an HTTPS website in production. Keep `WIDGET_SESSION_SECRET` and other signing credentials on the server.
+
+## Manage widget keys
+
+Each key has its own origin allowlist and configuration. You can edit an active key, pause it temporarily, or revoke it permanently. Revoking a key stops every embed that uses it.
+
+## Verify the installation
+
+Open the public website in a private browser window. Confirm that the widget loads, starts a chat, and displays the contact form. If web calls are enabled, grant microphone access and place a test call.

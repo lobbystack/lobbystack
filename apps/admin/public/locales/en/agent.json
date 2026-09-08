@@ -53,7 +53,8 @@
         "queued": "Queued",
         "indexing": "Indexing",
         "indexed": "Ready",
-        "error": "Error"
+        "error": "Error",
+        "cancelled": "Cancelled"
       },
       "uploadValidation": {
         "fileRequired": "Choose a file to upload.",
@@ -232,11 +233,23 @@
     "defaults": {
       "title": "Defaults"
     },
-    "instructions": { "title": "Instructions" },
-    "summary": { "label": "Business summary", "hint": "The essential context your receptionist should know about the business." },
-    "bookingPolicy": { "label": "Booking policy", "hint": "Instructions for offering and confirming appointments." },
-    "voiceInstructions": { "label": "Voice instructions" },
-    "smsInstructions": { "label": "SMS instructions" },
+    "instructions": {
+      "title": "Instructions"
+    },
+    "summary": {
+      "label": "Business summary",
+      "hint": "The essential context your receptionist should know about the business."
+    },
+    "bookingPolicy": {
+      "label": "Booking policy",
+      "hint": "Instructions for offering and confirming appointments."
+    },
+    "voiceInstructions": {
+      "label": "Voice instructions"
+    },
+    "smsInstructions": {
+      "label": "SMS instructions"
+    },
     "greeting": {
       "label": "Greeting",
       "placeholder": "Hello, thank you for calling…",
@@ -293,7 +306,8 @@
     "activateEntry": "Activate entry",
     "deactivateEntry": "Deactivate entry",
     "upload": "Upload",
-    "uploading": "Uploading…"
+    "uploading": "Uploading…",
+    "saveFailed": "We couldn't save your settings. Please try again."
   },
   "loading": {
     "workspace": "Loading workspace…",

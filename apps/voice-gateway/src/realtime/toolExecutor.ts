@@ -1,4 +1,4 @@
-import type { BusinessContextSnapshot } from "@lobbystack/shared";
+import { isTransferPermitted, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { z } from "zod";
 
 import {
@@ -126,10 +126,6 @@ function buildSnapshotFallbackMatches(
   ];
 }
 
-function isTransferAllowed(snapshot: BusinessContextSnapshot): boolean {
-  return snapshot.transferPolicy.mode !== "never" && Boolean(snapshot.transferPolicy.transferNumber);
-}
-
 const checkAvailabilitySchema = z.object({
   serviceName: z.string(),
   startsAt: z.string(),
@@ -190,6 +186,8 @@ const rescheduleAppointmentSchema = z.object({
 });
 
 const transferCallSchema = z.object({
+  callerRequested: z.boolean().optional().default(false),
+  urgent: z.boolean().optional().default(false),
   reason: z.string().optional(),
 });
 
@@ -346,6 +344,7 @@ export async function executeVoiceTool(input: {
       case "checkAvailability": {
         const parsed = checkAvailabilitySchema.parse(JSON.parse(input.rawArguments || "{}"));
         const result = await checkVoiceAvailability({
+          ...(input.callId ? { callId: input.callId } : {}),
           businessId: input.businessId,
           serviceName: parsed.serviceName,
           startsAt: parsed.startsAt,
@@ -361,6 +360,7 @@ export async function executeVoiceTool(input: {
       case "findAvailability": {
         const parsed = findAvailabilitySchema.parse(JSON.parse(input.rawArguments || "{}"));
         const result = await findVoiceAvailability({
+          ...(input.callId ? { callId: input.callId } : {}),
           businessId: input.businessId,
           serviceName: parsed.serviceName,
           date: parsed.date,
@@ -392,6 +392,7 @@ export async function executeVoiceTool(input: {
           };
         }
         const result = await bookVoiceAppointment({
+          ...(input.callId ? { callId: input.callId } : {}),
           businessId: input.businessId,
           serviceName: parsed.serviceName,
           startsAt: parsed.startsAt,
@@ -517,12 +518,12 @@ export async function executeVoiceTool(input: {
       }
       case "transferCall": {
         const parsed = transferCallSchema.parse(JSON.parse(input.rawArguments || "{}"));
-        if (!isTransferAllowed(input.snapshot) || !input.snapshot.transferPolicy.transferNumber) {
+        if (!isTransferPermitted(input.snapshot, parsed) || !input.snapshot.transferPolicy.transferNumber) {
           return {
             result: {
               ok: false,
               reason:
-                "Transfers are not enabled for this business or no transfer number is configured.",
+                "The configured transfer policy does not permit this handoff. Offer to take a message.",
             },
           };
         }

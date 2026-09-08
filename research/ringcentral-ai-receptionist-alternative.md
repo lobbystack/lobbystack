@@ -1,4 +1,4 @@
-# RingCentral AI Receptionist comparison research
+# RingCentral AI receptionist comparison research
 
 Checked: 2026-07-30
 

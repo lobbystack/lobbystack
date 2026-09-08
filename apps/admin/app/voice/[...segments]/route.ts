@@ -7,6 +7,8 @@ import {
   calls,
   contacts,
   conversations,
+  inboxItems,
+  receptionistProfiles,
   services,
   withBusinessTransaction,
 } from "@lobbystack/db";
@@ -20,6 +22,7 @@ import {
   issueAppointmentChangeOtp,
   reconcileCallStatus,
   recordUsage,
+  recordCallSchedulingProgress,
   recordAiGenerationEvent,
   rescheduleAppointmentForCaller,
   reserveOutboundCallAttempt,
@@ -27,7 +30,9 @@ import {
   setTransferState,
   startCall,
   verifyAppointmentChangeOtp,
+  createVoiceFollowUpTask,
 } from "@lobbystack/domain";
+import { normalizeAppointmentChangePolicy } from "@lobbystack/shared";
 import { asApiResponse, getAppDatabase, readJson, requireInternalService } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { resolveWebVoiceAccess } from "@/lib/prospect-demo";
@@ -94,6 +99,8 @@ async function handleVoiceTool(path: string, body: Body) {
       ? dateTimeForVoice(requiredString(body, "date"), timezone, numberValue(body, "preferredHour24") ?? 9, numberValue(body, "preferredMinute") ?? 0)
       : requiredString(body, "startsAt");
     const slots = await findAvailability(context, { businessId, serviceId: service.id, startsAt, timezone, ...(stringValue(body, "preferredStaffId") ? { staffIds: [stringValue(body, "preferredStaffId")!] } : {}) });
+    const callId = stringValue(body, "callId");
+    if (callId) await recordCallSchedulingProgress(context, { businessId, callId, serviceName: service.name, ...(path === "check-availability" ? { startsAt } : {}) });
     if (path === "check-availability") {
       return { serviceId: service.id, serviceName: service.name, setupIssue: null, availability: slots };
     }
@@ -116,6 +123,7 @@ async function handleVoiceTool(path: string, body: Body) {
     const service = await resolveService(context, businessId, serviceName);
     if (!service) return { ok: false, reason: "Service is not available." };
     const appointment = await bookAppointment(context, {
+      ...(stringValue(body, "callId") ? { callId: stringValue(body, "callId")! } : {}),
       businessId,
       serviceId: service.id,
       startsAt: requiredString(body, "startsAt"),
@@ -132,18 +140,22 @@ async function handleVoiceTool(path: string, body: Body) {
   if (path === "lookup-appointment-for-change") {
     const callerPhone = requiredString(body, "callerPhone");
     return await withBusinessTransaction(context.db, { businessId, actorType: "worker" }, async (tx) => {
-      const rows = await tx.select({ id: appointments.id, startsAt: appointments.startsAt, endsAt: appointments.endsAt, status: appointments.status, serviceName: services.name }).from(appointments).innerJoin(contacts, eq(appointments.contactId, contacts.id)).innerJoin(services, eq(appointments.serviceId, services.id)).where(and(eq(appointments.businessId, businessId), eq(contacts.phone, callerPhone), ne(appointments.status, "canceled"))).orderBy(asc(appointments.startsAt));
-      return { ok: true, policy: { enabled: rows.length > 0, allowCancel: true, allowReschedule: true, verificationMode: "phone_match_and_facts" }, phoneMatched: rows.length > 0, appointmentCount: rows.length, hasConfirmedAppointments: rows.some((row) => row.status === "confirmed"), appointments: rows.map((row) => ({ appointmentId: row.id, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), serviceName: row.serviceName, status: row.status })) };
+      const [rows, profile] = await Promise.all([
+        tx.select({ id: appointments.id, startsAt: appointments.startsAt, endsAt: appointments.endsAt, status: appointments.status, serviceName: services.name }).from(appointments).innerJoin(contacts, eq(appointments.contactId, contacts.id)).innerJoin(services, eq(appointments.serviceId, services.id)).where(and(eq(appointments.businessId, businessId), eq(contacts.phone, callerPhone), eq(appointments.status, "confirmed"))).orderBy(asc(appointments.startsAt)),
+        tx.select({ appointmentChangePolicy: receptionistProfiles.appointmentChangePolicy }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)).limit(1),
+      ]);
+      const policy = normalizeAppointmentChangePolicy(profile[0]?.appointmentChangePolicy);
+      return { ok: true, policy: { ...policy, enabled: policy.enabled && rows.length > 0 }, phoneMatched: rows.length > 0, appointmentCount: rows.length, hasConfirmedAppointments: rows.some((row) => row.status === "confirmed"), appointments: [] };
     });
   }
 
   if (path === "verify-appointment-for-change") {
     const appointmentId = stringValue(body, "appointmentId");
     const callerPhone = requiredString(body, "callerPhone");
-    if (!appointmentId) return { ok: false, verified: false, reason: "An appointment is required." };
-    const verification = await createAppointmentChangeVerification(context, { businessId, appointmentId, callerPhone, action: stringValue(body, "action") === "reschedule" ? "reschedule" : "cancel" });
+    const verification = await createAppointmentChangeVerification(context, { businessId, ...(appointmentId ? { appointmentId } : {}), callerPhone, action: stringValue(body, "action") === "reschedule" ? "reschedule" : "cancel", ...(stringValue(body, "callerName") ? { callerName: stringValue(body, "callerName")! } : {}), ...(stringValue(body, "appointmentStartsAt") ? { appointmentStartsAt: stringValue(body, "appointmentStartsAt")! } : {}), ...(stringValue(body, "serviceName") ? { serviceName: stringValue(body, "serviceName")! } : {}) });
     if (!verification) return { ok: false, verified: false, reason: "The appointment could not be verified." };
-    return { ok: true, verified: false, requiresOtp: true, verificationId: verification.verificationId, appointmentId: verification.appointmentId, contactId: verification.contactId, status: verification.status };
+    const verified = verification.status === "otp_verified" || verification.status === "facts_verified";
+    return { ok: true, verified, requiresOtp: !verified, verificationId: verification.verificationId, appointmentId: verification.appointmentId, contactId: verification.contactId, status: verification.status };
   }
 
   if (path === "send-appointment-change-otp") {
@@ -179,7 +191,9 @@ async function handleVoiceTool(path: string, body: Body) {
   if (path === "take-message") {
     const conversation = stringValue(body, "conversationId") ? { conversationId: stringValue(body, "conversationId")!, contactId: "" } : await getOrCreateConversation(context, { businessId, contactPhone: stringValue(body, "callbackPhone") ?? "unknown", channel: stringValue(body, "channel") ?? "voice" });
     const messageId = await appendMessage(context, { businessId, conversationId: conversation.conversationId, body: requiredString(body, "message"), direction: "inbound", channel: "dashboard", operatorAlert: { eventKind: "voiceMessage", subject: "New voice message", body: "A caller left a voice message. Open the inbox to review it." } });
-    return { inboxItemId: messageId };
+    const followUp = await createVoiceFollowUpTask(context, { businessId, ...(stringValue(body, "callId") ? { callId: stringValue(body, "callId")! } : {}), ...(stringValue(body, "callerName") ? { callerName: stringValue(body, "callerName")! } : {}), ...(stringValue(body, "callbackPhone") ? { callbackPhone: stringValue(body, "callbackPhone")! } : {}), ...(stringValue(body, "urgency") ? { urgency: stringValue(body, "urgency")! } : {}), ...(stringValue(body, "callbackWindow") ? { callbackWindow: stringValue(body, "callbackWindow")! } : {}), message: requiredString(body, "message") });
+    void messageId;
+    return followUp;
   }
 
   if (path === "search-knowledge") {

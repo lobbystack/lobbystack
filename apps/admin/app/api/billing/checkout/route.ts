@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { billingCheckoutRequests } from "@lobbystack/db";
+import { billingAccounts, billingCheckoutRequests } from "@lobbystack/db";
 import { createBillingCheckoutRequest, type BillingCheckoutTarget, type BillingInterval } from "@lobbystack/domain";
 import { asApiResponse, businessIdFromRequest, readJson, requireApiSession, withOperatorTransaction } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
@@ -16,10 +16,12 @@ export async function GET(request: Request) {
     const requestId = new URL(request.url).searchParams.get("requestId");
     if (!requestId) throw new Error("A requestId is required.");
     return NextResponse.json(await withOperatorTransaction(request, async ({ businessId, tx }) => {
-      const row = (await tx.select({ id: billingCheckoutRequests.id, status: billingCheckoutRequests.status, checkoutId: billingCheckoutRequests.checkoutId, checkoutUrl: billingCheckoutRequests.checkoutUrl, error: billingCheckoutRequests.error }).from(billingCheckoutRequests).where(and(eq(billingCheckoutRequests.id, requestId), eq(billingCheckoutRequests.businessId, businessId))).limit(1))[0];
+      const row = (await tx.select({ id: billingCheckoutRequests.id, status: billingCheckoutRequests.status, checkoutId: billingCheckoutRequests.checkoutId, checkoutUrl: billingCheckoutRequests.checkoutUrl, error: billingCheckoutRequests.error, target: billingCheckoutRequests.target, billingInterval: billingCheckoutRequests.billingInterval }).from(billingCheckoutRequests).where(and(eq(billingCheckoutRequests.id, requestId), eq(billingCheckoutRequests.businessId, businessId))).limit(1))[0];
       if (!row) throw new Error("Checkout request not found.");
-      return row;
-    }));
+      const account = (await tx.select({ plan: billingAccounts.plan, interval: billingAccounts.billingInterval, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1))[0];
+      const synced = row.status === "ready" && account?.plan === row.target && account.interval === row.billingInterval && ["active", "trialing"].includes(account.state ?? "");
+      return { ...row, synced };
+    }, { minimumRole: "business_admin" }));
   } catch (error) {
     return asApiResponse(error);
   }

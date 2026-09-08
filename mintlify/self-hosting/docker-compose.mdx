@@ -1,6 +1,8 @@
 ---
-title: "Docker Compose deployment"
+title: "Deploy with Docker Compose"
 description: "Deploy LobbyStack on a single host using Docker Compose."
+sidebarTitle: "Docker Compose"
+contentType: "Tutorial"
 ---
 
 ## Prerequisites
@@ -84,7 +86,7 @@ OpenTelemetry export is disabled when `OTEL_EXPORTER_OTLP_ENDPOINT` is empty. To
 
 ```dotenv
 OTEL_EXPORTER_OTLP_ENDPOINT=https://us.i.posthog.com/i
-OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <phc_project_token>
+OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer your_posthog_project_token_here
 ```
 
 Use your regional PostHog host and project token. LobbyStack appends `/v1/traces`, `/v1/metrics`, and `/v1/logs` to the base URL. You can use the same variables with another OTLP-compatible backend.

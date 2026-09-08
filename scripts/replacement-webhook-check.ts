@@ -1,4 +1,5 @@
 import { createHmac, randomUUID } from "node:crypto";
+import { Webhook } from "standardwebhooks";
 
 import { and, eq, inArray } from "drizzle-orm";
 
@@ -16,13 +17,14 @@ const twilioToken = process.env.TWILIO_AUTH_TOKEN ?? "replace-with-twilio-auth-t
 const resendSecret = process.env.RESEND_WEBHOOK_SECRET;
 
 function polarHeaders(body: string, eventId: string): Record<string, string> {
-  const timestamp = String(Math.floor(Date.now() / 1000));
-  const signature = createHmac("sha256", polarSecret).update(`${eventId}.${timestamp}.${body}`).digest("base64");
+  const signedAt = new Date();
+  const timestamp = String(Math.floor(signedAt.getTime() / 1000));
+  const signature = new Webhook(Buffer.from(polarSecret, "utf8").toString("base64")).sign(eventId, signedAt, body);
   return {
     "content-type": "application/json",
     "webhook-id": eventId,
     "webhook-timestamp": timestamp,
-    "webhook-signature": `v1,${signature}`,
+    "webhook-signature": signature,
   };
 }
 

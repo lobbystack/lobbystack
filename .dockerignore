@@ -20,4 +20,9 @@
 .env.self-hosted.local
 .env.development.local
 .env.test.local
+.env.*
+!.env.example
+.tmp
+.agents
+.codex
 convex/.generated

@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
 
 import { polarWebhookSchema } from "@lobbystack/contracts";
-import { enqueueOutbox, providerEvents, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
+import { businesses, enqueueOutbox, providerEvents, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
 import { verifyPolarWebhookSignature } from "@lobbystack/providers";
 import { getDispatcherDatabase, getWorkerDatabase } from "@/lib/api-helpers";
+import { normalizePolarEvent } from "@/lib/polar-event";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,11 +28,20 @@ export async function POST(request: Request) {
   try {
     const body = await request.text();
     if (!validSignature(body, request.headers)) return new NextResponse("Unauthorized", { status: 401 });
-    const event = polarWebhookSchema.safeParse(JSON.parse(body) as unknown);
+    // Standard Webhooks supplies the delivery ID in headers, not the JSON body.
+    const raw = JSON.parse(body) as Record<string, unknown>;
+    const event = polarWebhookSchema.safeParse({ ...raw, id: request.headers.get("webhook-id") ?? raw.id });
     if (!event.success) return NextResponse.json({ error: "Invalid webhook." }, { status: 400 });
-    const businessId = typeof event.data.data.businessId === "string" ? event.data.data.businessId : undefined;
+    const normalized = normalizePolarEvent(event.data.type, event.data.data);
+    const businessId = normalized.businessId;
+    // The live Polar organization also serves the old deployment. Do not import
+    // its customers/events into staging or trust unknown IDs as local tenants.
+    if (!businessId) return NextResponse.json({ accepted: true, ignored: true });
+    const exists = await withDispatcherTransaction(getDispatcherDatabase().db, async tx =>
+      (await tx.select({ id: businesses.id }).from(businesses).where(eq(businesses.id, businessId)).limit(1)).length > 0);
+    if (!exists) return NextResponse.json({ accepted: true, ignored: true });
     const persist = async (tx: Parameters<Parameters<ReturnType<typeof getWorkerDatabase>["db"]["transaction"]>[0]>[0]) => {
-      const [stored] = await tx.insert(providerEvents).values({ provider: "polar", providerEventId: event.data.id, eventType: event.data.type, ...(businessId ? { businessId } : {}), payload: event.data.data }).onConflictDoNothing().returning({ id: providerEvents.id });
+      const [stored] = await tx.insert(providerEvents).values({ provider: "polar", providerEventId: event.data.id, eventType: event.data.type, businessId, payload: normalized.payload }).onConflictDoNothing().returning({ id: providerEvents.id });
       if (stored && businessId) {
         await enqueueOutbox(tx, { topic: "billing.reconcile", businessId, aggregateType: "provider_event", aggregateId: stored.id, dedupeKey: `provider-event:${event.data.id}:billing`, payload: { providerEventId: stored.id } });
       }

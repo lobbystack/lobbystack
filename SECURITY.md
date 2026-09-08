@@ -1,6 +1,6 @@
-# Security Policy
+# Security policy
 
-## Supported Deployments
+## Supported deployments
 
 - Cloud deployments are fully supported by default.
 - Self-hosted deployments are supported through the documented install path only.
@@ -17,7 +17,7 @@ Include:
 - reproduction steps
 - expected impact
 
-## Security Principles
+## Security principles
 
 - Verify inbound webhooks and OAuth callbacks.
 - Keep secrets out of the browser bundle.

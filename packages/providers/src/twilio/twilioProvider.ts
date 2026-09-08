@@ -4,8 +4,7 @@ import { validateTwilioSignature } from "@lobbystack/shared";
 
 export type TwilioProviderConfig = {
   accountSid: string;
-  authToken: string;
-};
+} & ({ authToken: string; apiKeySid?: never; apiKeySecret?: never } | { authToken?: never; apiKeySid: string; apiKeySecret: string });
 
 export type TwilioMessagePricing = {
   providerUpdatedAt?: string;
@@ -61,10 +60,14 @@ export class TwilioProvider {
 
   constructor(config: TwilioProviderConfig) {
     this.config = config;
-    this.client = twilio(config.accountSid, config.authToken);
+    this.client = config.apiKeySid
+      ? twilio(config.apiKeySid, config.apiKeySecret, { accountSid: config.accountSid })
+      : twilio(config.accountSid, config.authToken);
   }
 
   async validateWebhook(input: { signature: string | null; url: string; params: Record<string, string> }): Promise<boolean> {
+    // API key secrets authenticate REST requests, not Twilio webhook signatures.
+    if (!this.config.authToken) return false;
     return await validateTwilioSignature({ authToken: this.config.authToken, signatureHeader: input.signature, url: input.url, params: input.params });
   }
 
