@@ -201,6 +201,7 @@ export const snapshotSchema = z.object({
   version: z.string().min(1),
   generatedAt: z.string().datetime(),
   displayName: z.string().min(1),
+  legalName: z.string().optional(),
   timezone: z.string().min(1),
   defaultLocale: z.enum(["en", "fr"]),
   businessType: z.string().min(1),
@@ -211,6 +212,19 @@ export const snapshotSchema = z.object({
   summary: z.string(),
   bookingPolicy: z.string(),
   knowledgeDigest: z.string(),
+  knowledgeSnippets: z.array(z.object({
+    id: z.string(),
+    title: z.string(),
+    content: z.string(),
+    tags: z.array(z.string()),
+    priority: z.number(),
+  })).optional(),
+  rules: z.array(z.object({
+    id: z.string(),
+    title: z.string(),
+    content: z.string(),
+    order: z.number(),
+  })).optional(),
   appointmentChangePolicy: z.object({
     enabled: z.boolean(),
     allowCancel: z.boolean(),

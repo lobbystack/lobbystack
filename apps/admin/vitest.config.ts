@@ -10,6 +10,7 @@ export default defineConfig({
     alias: {
       "@lobbystack/shared": `${root}/packages/shared/src/index.ts`,
       "@lobbystack/config": `${root}/packages/config/src/index.ts`,
+      "@lobbystack/contracts": `${root}/packages/contracts/src/index.ts`,
       "@lobbystack/db": `${root}/packages/db/src/index.ts`,
       "@lobbystack/domain": `${root}/packages/domain/src/index.ts`,
       "@": src,
