@@ -30,7 +30,54 @@ import {
 type ToolExecutionAttributes = Record<string, string | number | boolean | undefined>;
 
 function normalizeComparable(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
+  return value
+    .normalize("NFKD")
+    .replace(/\p{M}+/gu, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ");
+}
+
+const KNOWLEDGE_QUERY_STOP_WORDS = new Set([
+  "about",
+  "avec",
+  "comment",
+  "dans",
+  "does",
+  "est",
+  "for",
+  "from",
+  "how",
+  "les",
+  "plus",
+  "pour",
+  "quel",
+  "quelle",
+  "quelles",
+  "quels",
+  "quoi",
+  "sont",
+  "sur",
+  "the",
+  "what",
+  "which",
+  "with",
+]);
+
+function knowledgeTokenKey(token: string): string {
+  const singular = token.length > 4 && token.endsWith("s")
+    ? token.slice(0, -1)
+    : token;
+  return singular.length >= 6 ? singular.slice(0, 5) : singular;
+}
+
+function knowledgeTokenKeys(value: string): Set<string> {
+  return new Set(
+    normalizeComparable(value)
+      .split(" ")
+      .filter((token) => token.length >= 3 && !KNOWLEDGE_QUERY_STOP_WORDS.has(token))
+      .map(knowledgeTokenKey),
+  );
 }
 
 function formatMinutes(totalMinutes: number): string {
@@ -75,6 +122,9 @@ type VoiceKnowledgeMatch = {
   text: string;
 };
 
+const CURATED_EVIDENCE_GUIDANCE =
+  "Curated facts are operator-provided supporting evidence. If one directly answers the caller, use it even when imported pages omit the same claim. Absence from another passage is not a contradiction.";
+
 function matchesKnowledgeQuery(value: string, query: string): boolean {
   const normalizedValue = normalizeComparable(value);
   const normalizedQuery = normalizeComparable(query);
@@ -87,12 +137,9 @@ function matchesKnowledgeQuery(value: string, query: string): boolean {
     return true;
   }
 
-  const queryTokens = normalizedQuery
-    .split(" ")
-    .map((token) => token.trim())
-    .filter((token) => token.length >= 3);
-
-  return queryTokens.some((token) => normalizedValue.includes(token));
+  const valueKeys = knowledgeTokenKeys(normalizedValue);
+  const queryKeys = knowledgeTokenKeys(normalizedQuery);
+  return [...queryKeys].some((key) => valueKeys.has(key));
 }
 
 function buildSnapshotKnowledgeMatches(
@@ -115,6 +162,17 @@ function buildSnapshotKnowledgeMatches(
   });
   // The digest is a source inventory, not supporting evidence.
   return snippetMatches;
+}
+
+function buildSnapshotKnowledgeFacts(
+  snapshot: BusinessContextSnapshot,
+): Array<VoiceKnowledgeMatch> {
+  return (snapshot.knowledgeSnippets ?? []).flatMap((snippet) => {
+    const text = snippet.content.trim();
+    return text
+      ? [{ title: snippet.title, text } satisfies VoiceKnowledgeMatch]
+      : [];
+  });
 }
 
 const checkAvailabilitySchema = z.object({
@@ -280,6 +338,11 @@ export async function executeVoiceTool(input: {
         if (input.claimKnowledgeLookup && !input.claimKnowledgeLookup()) {
           return { result: { matches: [], outcome: "unavailable", source: "none", fallbackUsed: false, reason: "refinement_limit", message: "The lookup limit for this turn has been reached. Ask for clarification or explain that the answer could not be verified." } };
         }
+        const curatedFacts = buildSnapshotKnowledgeFacts(input.snapshot);
+        const curatedEvidence = {
+          curatedFacts,
+          evidenceGuidance: CURATED_EVIDENCE_GUIDANCE,
+        };
         try {
           const response = await searchVoiceKnowledge({
             businessId: input.businessId,
@@ -297,7 +360,6 @@ export async function executeVoiceTool(input: {
             input.snapshot,
             parsed.query,
           );
-
           if (matches.length > 0) {
             const combinedMatches = [...snapshotMatches, ...matches].slice(0, 6);
             return {
@@ -308,6 +370,7 @@ export async function executeVoiceTool(input: {
                 source:
                   snapshotMatches.length > 0 ? "rag_and_snapshot" : "rag",
                 fallbackUsed: false,
+                ...curatedEvidence,
               },
             };
           }
@@ -321,6 +384,7 @@ export async function executeVoiceTool(input: {
                 source: "snapshot_fallback",
                 fallbackUsed: true,
                 fallbackReason: outcome === "unavailable" ? "rag_error" : "no_matches",
+                ...curatedEvidence,
               },
             };
           }
@@ -331,6 +395,7 @@ export async function executeVoiceTool(input: {
               outcome,
               source: "none",
               fallbackUsed: false,
+              ...curatedEvidence,
             },
           };
         } catch (error) {
@@ -346,6 +411,7 @@ export async function executeVoiceTool(input: {
                 source: "snapshot_fallback",
                 fallbackUsed: true,
                 fallbackReason: "rag_error",
+                ...curatedEvidence,
               },
             };
           }
@@ -356,6 +422,7 @@ export async function executeVoiceTool(input: {
               outcome: "unavailable",
               source: "none",
               fallbackUsed: false,
+              ...curatedEvidence,
             },
           };
         }

@@ -115,6 +115,13 @@ describe("executeVoiceTool searchKnowledge", () => {
       mode: "legacy",
       source: "rag",
       fallbackUsed: false,
+      curatedFacts: [
+        {
+          title: "Parking",
+          text: "Parking is available behind the building.",
+        },
+      ],
+      evidenceGuidance: expect.stringContaining("operator-provided"),
     });
   });
 
@@ -171,6 +178,73 @@ describe("executeVoiceTool searchKnowledge", () => {
       mode: "hybrid",
       source: "rag_and_snapshot",
       fallbackUsed: false,
+      curatedFacts: [
+        {
+          title: "Programme populaire",
+          text: "Le BAA est notre programme le plus populaire.",
+        },
+      ],
+      evidenceGuidance: expect.stringContaining("operator-provided"),
+    });
+  });
+
+  it("matches a curated fact when the model reformulates French nouns", async () => {
+    searchVoiceKnowledgeMock.mockResolvedValue({
+      outcome: "found",
+      mode: "hybrid",
+      durationMs: 120,
+      matches: [
+        {
+          title: "Programmes de HEC Montréal",
+          text: "Cette page présente plusieurs programmes.",
+          chunkId: "chunk-programs",
+          sourceRevision: 2,
+        },
+      ],
+    });
+
+    const result = await executeVoiceTool({
+      toolName: "searchKnowledge",
+      rawArguments: JSON.stringify({
+        query: "popularité des programmes et statistiques d'inscription",
+      }),
+      snapshot: {
+        ...demoSnapshot,
+        knowledgeSnippets: [
+          {
+            id: "snippet-popular-program",
+            title: "Programme populaire",
+            content: "Le BAA est notre programme le plus populaire.",
+            tags: [],
+            priority: 75,
+          },
+        ],
+      },
+      businessId: "business_123",
+      callerPhone: "web",
+    });
+
+    expect(result.result).toMatchObject({
+      curatedFacts: [
+        {
+          title: "Programme populaire",
+          text: "Le BAA est notre programme le plus populaire.",
+        },
+      ],
+      outcome: "found",
+      source: "rag_and_snapshot",
+    });
+    expect(result.result.matches).toEqual(
+      expect.arrayContaining([
+        {
+          title: "Programme populaire",
+          text: "Le BAA est notre programme le plus populaire.",
+        },
+      ]),
+    );
+    expect((result.result.matches as Array<{ title?: string; text: string }>)[0]).toEqual({
+      title: "Programme populaire",
+      text: "Le BAA est notre programme le plus populaire.",
     });
   });
 
@@ -208,6 +282,13 @@ describe("executeVoiceTool searchKnowledge", () => {
       source: "snapshot_fallback",
       fallbackUsed: true,
       fallbackReason: "no_matches",
+      curatedFacts: [
+        {
+          title: "Appointments",
+          text: "Appointments are recommended before walking in.",
+        },
+      ],
+      evidenceGuidance: expect.stringContaining("operator-provided"),
     });
   });
 
@@ -245,6 +326,13 @@ describe("executeVoiceTool searchKnowledge", () => {
       source: "snapshot_fallback",
       fallbackUsed: true,
       fallbackReason: "rag_error",
+      curatedFacts: [
+        {
+          title: "Parking",
+          text: "Parking is available behind the building.",
+        },
+      ],
+      evidenceGuidance: expect.stringContaining("operator-provided"),
     });
   });
 
@@ -268,6 +356,8 @@ describe("executeVoiceTool searchKnowledge", () => {
       outcome: "empty",
       source: "none",
       fallbackUsed: false,
+      curatedFacts: [],
+      evidenceGuidance: expect.stringContaining("operator-provided"),
     });
   });
 
@@ -313,6 +403,17 @@ describe("executeVoiceTool searchKnowledge", () => {
       source: "snapshot_fallback",
       fallbackUsed: true,
       fallbackReason: "no_matches",
+      curatedFacts: [
+        {
+          title: "Parking",
+          text: "Parking is available behind the building.",
+        },
+        {
+          title: "Refund policy",
+          text: "Refunds are only available within 30 days of purchase.",
+        },
+      ],
+      evidenceGuidance: expect.stringContaining("operator-provided"),
     });
   });
 });

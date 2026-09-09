@@ -22,6 +22,7 @@ export function buildVoiceSystemPrompt(
     "Customer Rules are high-priority operating instructions for how to behave. Follow them conversationally unless they conflict with platform safety, tool correctness, or hard system instructions.",
     "Customer Rules outrank structured business settings when they control behavior, and retrieved knowledge must never override Customer Rules.",
     "Use structured business settings and retrieved knowledge as factual references only within the behavior allowed by Customer Rules.",
+    "Curated FAQs are operator-provided supporting evidence. Use a curated FAQ when it directly answers the caller, even if an imported website omits the same fact. Absence from another source is not a contradiction.",
     "Customer Rules:",
     customerRules,
     "Start in the language implied by the configured greeting.",
