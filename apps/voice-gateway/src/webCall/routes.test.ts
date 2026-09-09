@@ -142,7 +142,7 @@ function createDashboardTestCallProof(input: {
 }
 
 describe("createWebRealtimeTurnDetectionConfig", () => {
-  it("can disable auto responses and interruptions during the opening greeting", () => {
+  it("can disable auto responses and interruptions for manual response flows", () => {
     expect(
       createWebRealtimeTurnDetectionConfig({
         createResponse: false,
@@ -158,7 +158,7 @@ describe("createWebRealtimeTurnDetectionConfig", () => {
     });
   });
 
-  it("defaults to normal web caller turn handling after the greeting", () => {
+  it("defaults to interruptible web caller turn handling", () => {
     expect(createWebRealtimeTurnDetectionConfig()).toEqual({
       type: "server_vad",
       threshold: 0.65,
@@ -543,6 +543,80 @@ describe("web call routes", () => {
     expect(webSocketInstances[0]?.url).toBe(
       "wss://api.openai.com/v1/realtime?call_id=rtc_test",
     );
+  });
+
+  it("preserves caller audio when speech interrupts the opening greeting", async () => {
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const socket = webSocketInstances[0]!;
+    socket.emit("open");
+    socket.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({ type: "input_audio_buffer.speech_started" }),
+      ),
+    );
+    socket.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({
+          type: "response.done",
+          response: { id: "interrupted-greeting", status: "cancelled" },
+        }),
+      ),
+    );
+
+    const sentMessages = socket.send.mock.calls.map(([value]) =>
+      JSON.parse(String(value)) as {
+        type?: string;
+        session?: {
+          audio?: {
+            input?: {
+              turn_detection?: Record<string, unknown>;
+            };
+          };
+        };
+      },
+    );
+    const sessionUpdate = sentMessages.find(
+      (message) => message.type === "session.update",
+    );
+
+    expect(sessionUpdate?.session?.audio?.input?.turn_detection).toMatchObject({
+      type: "server_vad",
+      create_response: true,
+      interrupt_response: true,
+    });
+    expect(sentMessages).not.toContainEqual({ type: "input_audio_buffer.clear" });
   });
 
   it("does not forward prospect demo bearer URLs to call storage", async () => {
@@ -1487,7 +1561,6 @@ describe("web call routes", () => {
         JSON.stringify({ type: "response.done", response: { id: "greeting" } }),
       ),
     );
-    await new Promise((resolve) => setTimeout(resolve, 2_050));
 
     webSocketInstances[0]?.emit(
       "message",

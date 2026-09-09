@@ -216,7 +216,6 @@ type ActiveVoiceSession = {
   openingGreetingResponseDone: boolean;
   openingGreetingPlaybackDone: boolean;
   openingGreetingPlaybackMarkName: string | null;
-  openingGreetingTurnDetectionTimer: ReturnType<typeof setTimeout> | null;
 };
 
 type RealtimeUsageMetrics = {
@@ -258,7 +257,6 @@ const REALTIME_VAD_THRESHOLD = 0.8;
 const REALTIME_VAD_PREFIX_PADDING_MS = 300;
 const REALTIME_IDLE_TIMEOUT_MIN_MS = 5_000;
 const REALTIME_IDLE_TIMEOUT_MAX_MS = 30_000;
-const POST_GREETING_INPUT_GRACE_MS = 1_500;
 
 function asUnknownRecord(
   value: unknown,
@@ -1042,7 +1040,7 @@ function disableRealtimeIdleTimeoutForHold(socket: WebSocket): void {
   }
 }
 
-function enableCallerTurnDetectionAfterOpeningGreeting(
+function finishOpeningGreeting(
   server: FastifyInstance,
   openAiSocket: WebSocket,
   twilioSocket: WebSocket,
@@ -1053,17 +1051,11 @@ function enableCallerTurnDetectionAfterOpeningGreeting(
     return;
   }
 
-  if (session.openingGreetingTurnDetectionTimer !== null) {
-    clearTimeout(session.openingGreetingTurnDetectionTimer);
-    session.openingGreetingTurnDetectionTimer = null;
-  }
   session.openingGreetingActive = false;
   session.openingGreetingResponseDone = true;
   session.openingGreetingPlaybackDone = true;
   session.openingGreetingPlaybackMarkName = null;
-  session.pendingInboundAudio = [];
 
-  postRealtimeEvent(openAiSocket, { type: "input_audio_buffer.clear" });
   updateRealtimeIdleTimeout(openAiSocket, NORMAL_IDLE_TIMEOUT_MS);
   session.inactivity = markAssistantResponseDone(session.inactivity, Date.now());
   scheduleInactivityTimer(server, openAiSocket, twilioSocket, session);
@@ -1075,51 +1067,7 @@ function enableCallerTurnDetectionAfterOpeningGreeting(
       streamSid: session.streamSid,
       reason,
     },
-    "Enabled caller turn detection after opening greeting",
-  );
-}
-
-function finishOpeningGreeting(
-  server: FastifyInstance,
-  openAiSocket: WebSocket,
-  twilioSocket: WebSocket,
-  session: ActiveVoiceSession,
-  reason: string,
-): void {
-  if (
-    !session.openingGreetingActive ||
-    session.finalized ||
-    session.openingGreetingTurnDetectionTimer !== null
-  ) {
-    return;
-  }
-
-  session.openingGreetingResponseDone = true;
-  session.openingGreetingPlaybackDone = true;
-  session.openingGreetingPlaybackMarkName = null;
-  session.pendingInboundAudio = [];
-
-  postRealtimeEvent(openAiSocket, { type: "input_audio_buffer.clear" });
-  session.openingGreetingTurnDetectionTimer = setTimeout(() => {
-    session.openingGreetingTurnDetectionTimer = null;
-    enableCallerTurnDetectionAfterOpeningGreeting(
-      server,
-      openAiSocket,
-      twilioSocket,
-      session,
-      reason,
-    );
-  }, POST_GREETING_INPUT_GRACE_MS);
-
-  server.log.info(
-    {
-      callId: session.callId,
-      callSid: session.callSid,
-      streamSid: session.streamSid,
-      reason,
-      graceMs: POST_GREETING_INPUT_GRACE_MS,
-    },
-    "Waiting briefly before enabling caller turn detection after opening greeting",
+    "Finished opening greeting",
   );
 }
 
@@ -1738,10 +1686,6 @@ async function finalizeCall(
   await applyPendingImplicitEndCallBeforeFinalize(server, session);
   session.finalized = true;
   clearInactivityTimer(session);
-  if (session.openingGreetingTurnDetectionTimer !== null) {
-    clearTimeout(session.openingGreetingTurnDetectionTimer);
-    session.openingGreetingTurnDetectionTimer = null;
-  }
   if (session.activeCallCounted) {
     session.activeCallCounted = false;
   }
@@ -2289,10 +2233,7 @@ async function configureOpenAiSession(
           transcription: {
             model: runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
           },
-          turn_detection: createRealtimeTurnDetectionConfig(NORMAL_IDLE_TIMEOUT_MS, {
-            createResponse: false,
-            interruptResponse: false,
-          }),
+          turn_detection: createRealtimeTurnDetectionConfig(NORMAL_IDLE_TIMEOUT_MS),
         },
         output: {
           format: { type: "audio/pcmu" },
@@ -3039,13 +2980,24 @@ function handleOpenAiMessage(
     case "input_audio_buffer.speech_started": {
       session.knowledgeTurn = { id: crypto.randomUUID(), lookups: 0 };
       if (session.openingGreetingActive) {
+        interruptAssistantPlaybackForCallerSpeech(
+          server,
+          openAiSocket,
+          twilioSocket,
+          session,
+        );
+        session.openingGreetingActive = false;
+        session.openingGreetingResponseDone = true;
+        session.openingGreetingPlaybackDone = true;
+        session.openingGreetingPlaybackMarkName = null;
+        resetInactivityForCallerActivity(openAiSocket, session);
         server.log.info(
           {
             callId: session.callId,
             callSid: session.callSid,
             streamSid: session.streamSid,
           },
-          "Ignored caller speech detection during opening greeting",
+          "Caller interrupted opening greeting",
         );
         return;
       }
@@ -3257,10 +3209,6 @@ export async function handleMediaStreamConnection(
           return;
         }
 
-        if (session.openingGreetingActive) {
-          return;
-        }
-
         session.inboundAudio.push({
           offsetMs: Number(payload.media.timestamp ?? 0),
           payload: payload.media.payload,
@@ -3366,7 +3314,6 @@ export async function handleMediaStreamConnection(
     openingGreetingResponseDone: false,
     openingGreetingPlaybackDone: false,
     openingGreetingPlaybackMarkName: null,
-    openingGreetingTurnDetectionTimer: null,
   };
 
   const runtimeConfig = server.runtimeConfig;

@@ -26,7 +26,7 @@ import {
 } from "./mediaStream";
 
 describe("createRealtimeTurnDetectionConfig", () => {
-  it("can disable auto responses and interruptions during the opening greeting", () => {
+  it("can disable auto responses and interruptions for manual response flows", () => {
     expect(
       createRealtimeTurnDetectionConfig(30_000, {
         createResponse: false,
@@ -43,7 +43,7 @@ describe("createRealtimeTurnDetectionConfig", () => {
     });
   });
 
-  it("defaults to normal caller turn handling after the greeting", () => {
+  it("defaults to interruptible caller turn handling", () => {
     expect(createRealtimeTurnDetectionConfig(30_000)).toEqual({
       type: "server_vad",
       threshold: 0.8,
