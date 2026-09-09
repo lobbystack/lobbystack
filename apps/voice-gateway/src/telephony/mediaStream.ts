@@ -5,6 +5,7 @@ import type { ProviderErrorClassification } from "@lobbystack/telemetry";
 import type { IncomingHttpHeaders } from "node:http";
 import type { FastifyInstance } from "fastify";
 import WebSocket from "ws";
+import { observeVoiceLatency, vadSilenceMs } from "../realtime/latency";
 
 import { buildStereoCallRecording, type TimedAudioChunk } from "../audio/wav";
 import {
@@ -255,7 +256,6 @@ const TRANSFER_QUOTA_REACHED_MESSAGE =
 const IMPLICIT_TERMINAL_HANGUP_RETRY_DELAYS_MS = [250, 1_000, 2_500];
 const REALTIME_VAD_THRESHOLD = 0.8;
 const REALTIME_VAD_PREFIX_PADDING_MS = 300;
-const REALTIME_VAD_SILENCE_DURATION_MS = 700;
 const REALTIME_IDLE_TIMEOUT_MIN_MS = 5_000;
 const REALTIME_IDLE_TIMEOUT_MAX_MS = 30_000;
 const POST_GREETING_INPUT_GRACE_MS = 1_500;
@@ -980,7 +980,7 @@ export function createRealtimeTurnDetectionConfig(
     type: "server_vad",
     threshold: REALTIME_VAD_THRESHOLD,
     prefix_padding_ms: REALTIME_VAD_PREFIX_PADDING_MS,
-    silence_duration_ms: REALTIME_VAD_SILENCE_DURATION_MS,
+    silence_duration_ms: vadSilenceMs(),
     create_response: options.createResponse ?? true,
     interrupt_response: options.interruptResponse ?? true,
   };
@@ -2658,6 +2658,8 @@ function handleOpenAiMessage(
   };
 
   const payload = JSON.parse(rawMessage.toString()) as OpenAiRealtimeMessage;
+  const latency = observeVoiceLatency(session, payload.type);
+  if (latency) server.log.info({ ...latency, callId: session.callId, channel: "phone" }, "Voice turn latency");
 
   if (
     payload.type !== "response.audio.delta" &&

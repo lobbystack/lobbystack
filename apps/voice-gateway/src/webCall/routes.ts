@@ -19,6 +19,7 @@ import { capturePostHogException } from "../observability/posthog";
 import type { EndCallRequest } from "../realtime/callControl";
 import { executeVoiceTool } from "../realtime/toolExecutor";
 import { createWebRealtimeToolDefinitions } from "../realtime/toolDefinitions";
+import { observeVoiceLatency, vadSilenceMs } from "../realtime/latency";
 
 type WebCallSessionRequest = {
   businessSlug: string;
@@ -132,7 +133,6 @@ const activeWebCalls = new Map<string, ActiveWebCall>();
 const completedWebCalls = new Map<string, CompletedWebCall>();
 const WEB_REALTIME_VAD_THRESHOLD = 0.65;
 const WEB_REALTIME_VAD_PREFIX_PADDING_MS = 300;
-const WEB_REALTIME_VAD_SILENCE_DURATION_MS = 700;
 const WEB_POST_GREETING_INPUT_GRACE_MS = 2_000;
 const WEB_COMPLETED_SESSION_UPLOAD_GRACE_MS = 10 * 60_000;
 const WEB_ASSISTANT_TRANSCRIPT_REORDER_GRACE_MS = 1_500;
@@ -673,7 +673,7 @@ export function createWebRealtimeTurnDetectionConfig(
     type: "server_vad",
     threshold: WEB_REALTIME_VAD_THRESHOLD,
     prefix_padding_ms: WEB_REALTIME_VAD_PREFIX_PADDING_MS,
-    silence_duration_ms: WEB_REALTIME_VAD_SILENCE_DURATION_MS,
+    silence_duration_ms: vadSilenceMs(),
     create_response: options.createResponse ?? true,
     interrupt_response: options.interruptResponse ?? true,
   };
@@ -1281,6 +1281,8 @@ async function handleSidebandMessage(
   rawMessage: WebSocket.RawData,
 ): Promise<void> {
   const payload = JSON.parse(rawMessage.toString()) as OpenAiRealtimeMessage;
+  const latency = observeVoiceLatency(session, payload.type);
+  if (latency) server.log.info({ ...latency, callId: session.callId, channel: "web_voice" }, "Voice turn latency");
 
   if (
     payload.type === "response.function_call_arguments.done" &&
@@ -1484,6 +1486,8 @@ async function handleToolCall(
   }
 
   let executed: Awaited<ReturnType<typeof executeVoiceTool>>;
+  const toolStartedAt = performance.now();
+  let contextDurationMs: number | undefined;
   try {
     const context = await fetchWebVoiceContext({
       businessSlug: session.businessSlug,
@@ -1498,6 +1502,7 @@ async function handleToolCall(
         : {}),
       ...(session.publicWebCall ? { publicWebCall: true } : {}),
     });
+    contextDurationMs = performance.now() - toolStartedAt;
     const knowledgeTurn = session.knowledgeTurn ??= { id: toolCall.callId, lookups: 0 };
     executed = await executeVoiceTool({
       toolName: toolCall.name,
@@ -1539,6 +1544,11 @@ async function handleToolCall(
     postRealtimeEvent(socket, { type: "response.create" });
     return;
   }
+
+  server.log.info({
+    event: "voice.tool_latency", callId: session.callId, channel: "web_voice",
+    toolName: toolCall.name, contextDurationMs, durationMs: performance.now() - toolStartedAt,
+  }, "Voice tool latency");
 
   postRealtimeEvent(socket, {
     type: "conversation.item.create",
