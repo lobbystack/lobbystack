@@ -95,7 +95,7 @@ function matchesKnowledgeQuery(value: string, query: string): boolean {
   return queryTokens.some((token) => normalizedValue.includes(token));
 }
 
-function buildSnapshotFallbackMatches(
+function buildSnapshotKnowledgeMatches(
   snapshot: BusinessContextSnapshot,
   query: string,
 ): Array<VoiceKnowledgeMatch> {
@@ -293,19 +293,26 @@ export async function executeVoiceTool(input: {
           attributes["knowledge.mode"] = Array.isArray(response) ? "legacy" : response.mode;
           attributes["knowledge.result_count"] = matches.length;
 
+          const snapshotMatches = buildSnapshotKnowledgeMatches(
+            input.snapshot,
+            parsed.query,
+          );
+
           if (matches.length > 0) {
+            const combinedMatches = [...snapshotMatches, ...matches].slice(0, 6);
             return {
               result: {
-                matches,
+                matches: combinedMatches,
                 outcome,
                 mode: Array.isArray(response) ? "legacy" : response.mode,
-                source: "rag",
+                source:
+                  snapshotMatches.length > 0 ? "rag_and_snapshot" : "rag",
                 fallbackUsed: false,
               },
             };
           }
 
-          const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot, parsed.query);
+          const fallbackMatches = snapshotMatches;
           if (fallbackMatches.length > 0) {
             return {
               result: {
@@ -330,7 +337,7 @@ export async function executeVoiceTool(input: {
           capturePostHogException(error, { businessId: input.businessId, properties: { operation: "knowledge_lookup", callId: input.callId, toolName: input.toolName } });
           attributes["knowledge.outcome"] = "unavailable";
           attributes["knowledge.result_count"] = 0;
-          const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot, parsed.query);
+          const fallbackMatches = buildSnapshotKnowledgeMatches(input.snapshot, parsed.query);
           if (fallbackMatches.length > 0) {
             return {
               result: {

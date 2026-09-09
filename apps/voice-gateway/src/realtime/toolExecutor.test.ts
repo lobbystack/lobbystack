@@ -118,6 +118,62 @@ describe("executeVoiceTool searchKnowledge", () => {
     });
   });
 
+  it("prioritizes matching curated knowledge when RAG also returns passages", async () => {
+    searchVoiceKnowledgeMock.mockResolvedValue({
+      outcome: "found",
+      mode: "hybrid",
+      durationMs: 120,
+      matches: [
+        {
+          title: "Baccalauréat en administration des affaires",
+          text: "La page décrit le programme de B.A.A.",
+          chunkId: "chunk-baa",
+          sourceRevision: 2,
+        },
+      ],
+    });
+
+    const result = await executeVoiceTool({
+      toolName: "searchKnowledge",
+      rawArguments: JSON.stringify({
+        query: "Quel est le programme le plus populaire?",
+      }),
+      snapshot: {
+        ...demoSnapshot,
+        knowledgeSnippets: [
+          {
+            id: "snippet-popular-program",
+            title: "Programme populaire",
+            content: "Le BAA est notre programme le plus populaire.",
+            tags: [],
+            priority: 75,
+          },
+        ],
+      },
+      businessId: "business_123",
+      callerPhone: "web",
+    });
+
+    expect(result.result).toEqual({
+      matches: [
+        {
+          title: "Programme populaire",
+          text: "Le BAA est notre programme le plus populaire.",
+        },
+        {
+          title: "Baccalauréat en administration des affaires",
+          text: "La page décrit le programme de B.A.A.",
+          chunkId: "chunk-baa",
+          sourceRevision: 2,
+        },
+      ],
+      outcome: "found",
+      mode: "hybrid",
+      source: "rag_and_snapshot",
+      fallbackUsed: false,
+    });
+  });
+
   it("falls back to snapshot knowledge when RAG returns no matches", async () => {
     searchVoiceKnowledgeMock.mockResolvedValue([]);
 
