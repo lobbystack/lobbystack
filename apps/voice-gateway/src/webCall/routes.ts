@@ -92,6 +92,7 @@ type ActiveWebCall = {
   maxDurationTimer: ReturnType<typeof setTimeout> | null;
   finalized: boolean;
   openingGreetingActive: boolean;
+  openingGreetingInterrupted: boolean;
   seenTranscriptKeys: Set<string>;
   transcriptSequence: number;
   pendingAssistantTranscriptFlushTimer: ReturnType<typeof setTimeout> | null;
@@ -676,23 +677,36 @@ export function createWebRealtimeTurnDetectionConfig(
   };
 }
 
-function finishWebOpeningGreeting(
+function enableWebRealtimeTurnDetection(
   server: FastifyInstance,
+  socket: WebSocket,
   session: ActiveWebCall,
   reason: string,
 ): void {
-  if (!session.openingGreetingActive || session.finalized) {
+  if (session.finalized) {
     return;
   }
 
   session.openingGreetingActive = false;
+  session.openingGreetingInterrupted = false;
+  postRealtimeEvent(socket, {
+    type: "session.update",
+    session: {
+      type: "realtime",
+      audio: {
+        input: {
+          turn_detection: createWebRealtimeTurnDetectionConfig(),
+        },
+      },
+    },
+  });
   server.log.info(
     {
       callId: session.callId,
       providerCallId: session.providerCallId,
       reason,
     },
-    "Finished web voice opening greeting",
+    "Enabled web voice turn detection after opening greeting",
   );
 }
 
@@ -1114,7 +1128,10 @@ function createSidebandSocket(input: {
             transcription: {
               model: input.server.runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
             },
-            turn_detection: createWebRealtimeTurnDetectionConfig(),
+            turn_detection: createWebRealtimeTurnDetectionConfig({
+              createResponse: false,
+              interruptResponse: false,
+            }),
           },
           output: {
             voice: input.server.runtimeConfig.OPENAI_REALTIME_VOICE,
@@ -1306,7 +1323,12 @@ async function handleSidebandMessage(
     }
 
     if (session.openingGreetingActive) {
-      finishWebOpeningGreeting(server, session, "response_done");
+      enableWebRealtimeTurnDetection(
+        server,
+        socket,
+        session,
+        "response_done",
+      );
     }
     return;
   }
@@ -1361,7 +1383,10 @@ async function handleSidebandMessage(
   if (payload.type === "input_audio_buffer.speech_started") {
     session.knowledgeTurn = { id: crypto.randomUUID(), lookups: 0 };
     if (session.openingGreetingActive) {
-      finishWebOpeningGreeting(server, session, "caller_barge_in");
+      session.openingGreetingActive = false;
+      session.openingGreetingInterrupted = true;
+      postRealtimeEvent(socket, { type: "response.cancel" });
+      postRealtimeEvent(socket, { type: "output_audio_buffer.clear" });
       server.log.info(
         {
           callId: session.callId,
@@ -1370,6 +1395,20 @@ async function handleSidebandMessage(
         "Caller interrupted web voice opening greeting",
       );
     }
+    return;
+  }
+
+  if (
+    payload.type === "input_audio_buffer.speech_stopped" &&
+    session.openingGreetingInterrupted
+  ) {
+    enableWebRealtimeTurnDetection(
+      server,
+      socket,
+      session,
+      "caller_barge_in_complete",
+    );
+    postRealtimeEvent(socket, { type: "response.create" });
     return;
   }
 
@@ -1725,6 +1764,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         maxDurationTimer: null,
         finalized: false,
         openingGreetingActive: true,
+        openingGreetingInterrupted: false,
         seenTranscriptKeys: new Set(),
         transcriptSequence: 1,
         pendingAssistantTranscriptFlushTimer: null,

@@ -594,6 +594,12 @@ describe("web call routes", () => {
         }),
       ),
     );
+    socket.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({ type: "input_audio_buffer.speech_stopped" }),
+      ),
+    );
 
     const sentMessages = socket.send.mock.calls.map(([value]) =>
       JSON.parse(String(value)) as {
@@ -607,15 +613,27 @@ describe("web call routes", () => {
         };
       },
     );
-    const sessionUpdate = sentMessages.find(
+    const sessionUpdates = sentMessages.filter(
       (message) => message.type === "session.update",
     );
 
-    expect(sessionUpdate?.session?.audio?.input?.turn_detection).toMatchObject({
+    expect(
+      sessionUpdates[0]?.session?.audio?.input?.turn_detection,
+    ).toMatchObject({
+      type: "server_vad",
+      create_response: false,
+      interrupt_response: false,
+    });
+    expect(
+      sessionUpdates[1]?.session?.audio?.input?.turn_detection,
+    ).toMatchObject({
       type: "server_vad",
       create_response: true,
       interrupt_response: true,
     });
+    expect(sentMessages).toContainEqual({ type: "response.cancel" });
+    expect(sentMessages).toContainEqual({ type: "output_audio_buffer.clear" });
+    expect(sentMessages.at(-1)).toEqual({ type: "response.create" });
     expect(sentMessages).not.toContainEqual({ type: "input_audio_buffer.clear" });
   });
 
