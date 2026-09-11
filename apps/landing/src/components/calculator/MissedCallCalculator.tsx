@@ -274,10 +274,10 @@ export function MissedCallCalculator({ locale = "en" }: { locale?: Locale }) {
             <h3 className="text-sm font-medium text-muted-foreground">
               {t.monthlyRevenue}
             </h3>
-            <div className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+            <div className="ph-mask text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
               {formatCurrency(revenueAtRiskMonthly)}
             </div>
-            <p className="pt-2 text-sm text-muted-foreground">
+            <p className="ph-mask pt-2 text-sm text-muted-foreground">
               {t.yearlyResult(
                 formatCurrency(revenueAtRiskYearly),
                 jobsAtRisk.toFixed(1)

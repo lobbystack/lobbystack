@@ -60,6 +60,7 @@ export function initializePostHog() {
   posthog.init(projectKey, {
     api_host: apiHost,
     ui_host: uiHost,
+    defaults: "2026-05-30",
     autocapture: true,
     capture_pageview: true,
     capture_pageleave: "if_capture_pageview",
@@ -67,10 +68,9 @@ export function initializePostHog() {
     disable_session_recording: false,
     persistence: "localStorage+cookie",
     session_recording: {
-      maskAllInputs: true,
-      maskInputOptions: {
-        password: true,
-      },
+      // Inputs and passwords are masked by the SDK defaults. Text is not, so mask
+      // the values rendered back from them, such as the calculator results.
+      maskTextSelector: ".ph-mask",
     },
   })
 

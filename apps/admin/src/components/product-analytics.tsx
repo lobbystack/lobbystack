@@ -77,6 +77,7 @@ export function ProductAnalytics() {
       };
       if (!posthog.__loaded) posthog.init(apiKey, {
         api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com",
+        defaults: "2026-05-30",
         autocapture: false,
         capture_exceptions: false,
         capture_pageview: false,

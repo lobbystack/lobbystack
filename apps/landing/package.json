@@ -28,7 +28,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.577.0",
-    "posthog-js": "^1.372.5",
+    "posthog-js": "^1.429.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "satori": "^0.26.0",
