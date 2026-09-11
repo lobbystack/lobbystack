@@ -6,7 +6,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useTranslation } from "react-i18next";
-import i18n from "@/i18n";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,7 +74,7 @@ function localVisitorId(widgetKey: string): string {
 }
 
 export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
-  const { t } = useTranslation("widget");
+  const { t, i18n } = useTranslation("widget");
   const visitorIdRef = useRef<string>("");
   const [parentVisitorId, setParentVisitorId] = useState<string | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
@@ -315,7 +314,7 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
       </div>
 
       {showLeadBeforeChat ? (
-        <LeadForm className="border-t p-4" lead={lead} setLead={setLead} onSubmit={submitLead} submitting={leadSubmitting} onSkip={() => { setLeadDone(true); setLeadOpen(false); }} config={configState?.config} t={t} />
+        <LeadForm className="border-t p-4" lead={lead} setLead={setLead} onSubmit={submitLead} submitting={leadSubmitting} onSkip={() => { setLeadDone(true); setLeadOpen(false); }} t={t} />
       ) : null}
 
       <form className="flex items-end gap-2 border-t p-3" onSubmit={(event) => void submitChat(event)}>
@@ -333,7 +332,7 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
         <Button aria-label={t("chat.send")} disabled={!draft.trim() || sending || leadOpen} loading={sending} size="icon-lg" type="submit" style={{ backgroundColor: color }}><Send /></Button>
       </form>
 
-      {leadOpen && !showLeadBeforeChat ? <LeadOverlay lead={lead} setLead={setLead} onSubmit={submitLead} submitting={leadSubmitting} onClose={() => setLeadOpen(false)} config={configState?.config} t={t} /> : null}
+      {leadOpen && !showLeadBeforeChat ? <LeadOverlay lead={lead} setLead={setLead} onSubmit={submitLead} submitting={leadSubmitting} onClose={() => setLeadOpen(false)} t={t} /> : null}
     </main>
   );
 }
@@ -434,7 +433,7 @@ function VoiceButton({ className, businessSlug, baseUrl, visitorId, sessionToken
   );
 }
 
-function LeadOverlay({ lead, setLead, onSubmit, submitting, onClose, config, t }: { lead: { name: string; email: string; phone: string }; setLead: (value: { name: string; email: string; phone: string }) => void; onSubmit: (event: FormEvent) => void; submitting: boolean; onClose: () => void; config: WidgetConfigPayload["config"] | undefined; t: (key: string) => string }) {
+function LeadOverlay({ lead, setLead, onSubmit, submitting, onClose, t }: { lead: { name: string; email: string; phone: string }; setLead: (value: { name: string; email: string; phone: string }) => void; onSubmit: (event: FormEvent) => void; submitting: boolean; onClose: () => void; t: (key: string) => string }) {
   return (
     <div className="absolute inset-0 z-10 flex items-end bg-black/30 p-4 sm:items-center">
       <form className="w-full rounded-2xl bg-white p-4 shadow-xl" onSubmit={onSubmit}>
@@ -454,7 +453,7 @@ function LeadOverlay({ lead, setLead, onSubmit, submitting, onClose, config, t }
   );
 }
 
-function LeadForm({ lead, setLead, onSubmit, submitting, onSkip, config, t, className }: { lead: { name: string; email: string; phone: string }; setLead: (value: { name: string; email: string; phone: string }) => void; onSubmit: (event: FormEvent) => void; submitting: boolean; onSkip: () => void; config: WidgetConfigPayload["config"] | undefined; t: (key: string) => string; className?: string }) {
+function LeadForm({ lead, setLead, onSubmit, submitting, onSkip, t, className }: { lead: { name: string; email: string; phone: string }; setLead: (value: { name: string; email: string; phone: string }) => void; onSubmit: (event: FormEvent) => void; submitting: boolean; onSkip: () => void; t: (key: string) => string; className?: string }) {
   return (
     <form className={cn("space-y-3", className)} onSubmit={onSubmit}>
       <div>

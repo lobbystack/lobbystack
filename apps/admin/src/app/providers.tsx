@@ -3,60 +3,94 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { ProductAnalytics } from "@/components/product-analytics";
+import { I18nextProvider } from "react-i18next";
 
-import { LocaleProvider } from "@/components/replacement-locale-provider";
+import { ProductAnalytics } from "@/components/product-analytics";
 import { AppearanceProvider } from "@/components/appearance-provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { LocaleProvider } from "@/components/replacement-locale-provider";
 import { Toaster } from "@/components/ui/sonner";
-import i18n, { i18nReady } from "@/i18n";
-import { routeNamespaces } from "@/lib/route-namespaces";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { createI18nInstance, loadRouteNamespaces, missingNamespaces, type I18nNamespaceResources } from "@/i18n";
+import type { SupportedLocale } from "@/lib/locale";
+import type { LocaleSource } from "@/lib/locale-request";
+import { routeNamespaces } from "@/lib/route-namespaces";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+type ProvidersProps = {
+  children: React.ReactNode;
+  initialLocale: SupportedLocale;
+  initialLocaleSource: LocaleSource;
+  initialResources: I18nNamespaceResources;
+};
+
+export function Providers({ children, initialLocale, initialLocaleSource, initialResources }: ProvidersProps) {
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 10_000, refetchOnWindowFocus: false } } }));
+  const [i18n] = useState(() => createI18nInstance({ locale: initialLocale, resources: initialResources }));
   const pathname = usePathname() ?? "/";
   const namespaceKey = routeNamespaces(pathname).join(",");
-  const [readyKey, setReadyKey] = useState<string | null>(null);
+  const [language, setLanguage] = useState(() => i18n.resolvedLanguage ?? initialLocale);
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [failedKey, setFailedKey] = useState<string | null>(null);
-  const [loadingLocale, setLoadingLocale] = useState("en");
+  const [retryToken, setRetryToken] = useState(0);
 
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      await i18nReady;
-      if (!cancelled) setLoadingLocale(i18n.resolvedLanguage ?? "en");
-      const namespaces = namespaceKey.split(",");
-      await new Promise<void>((resolve, reject) => i18n.loadNamespaces(namespaces, error => {
-        const missing = namespaces.some(namespace => !i18n.languages.some(language => i18n.hasResourceBundle(language, namespace)));
-        missing ? reject(error ?? new Error("Route translations unavailable")) : resolve();
-      }));
-      if (!cancelled) { setReadyKey(namespaceKey); setFailedKey(null); }
-    })().catch(() => { if (!cancelled) setFailedKey(namespaceKey); });
-    return () => { cancelled = true; };
-  }, [namespaceKey]);
+    const handleLanguageChanged = (nextLanguage: string) => setLanguage(nextLanguage);
+    i18n.on("languageChanged", handleLanguageChanged);
+    return () => { i18n.off("languageChanged", handleLanguageChanged); };
+  }, [i18n]);
 
-  const translationsReady = readyKey === namespaceKey;
+  useEffect(() => {
+    const namespaces = namespaceKey.split(",");
+    if (missingNamespaces(i18n, language, namespaces).length === 0) {
+      setLoadingKey(null);
+      setFailedKey(null);
+      return;
+    }
+
+    let cancelled = false;
+    const requestKey = `${language}:${namespaceKey}`;
+    setLoadingKey(requestKey);
+    void loadRouteNamespaces(i18n, language, namespaces).then(() => {
+      if (cancelled) return;
+      setLoadingKey(null);
+      setFailedKey(null);
+    }).catch(() => {
+      if (cancelled) return;
+      setLoadingKey(null);
+      setFailedKey(requestKey);
+    });
+    return () => { cancelled = true; };
+  }, [i18n, language, namespaceKey, retryToken]);
+
+  const failed = failedKey !== null;
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AppearanceProvider>
-          <LocaleProvider>
-            <ProductAnalytics />
-            {!translationsReady ? (
-              <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 p-6" role="status" aria-busy={failedKey !== namespaceKey}>
-                <span className="sr-only">{i18n.t("common:loading.title", { lng: loadingLocale })}</span>
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-48 w-full" />
-                {failedKey === namespaceKey && <Button variant="outline" onClick={() => window.location.reload()}>{i18n.t("common:loading.retry")}</Button>}
-              </div>
-            ) : children}
-            <Toaster richColors />
-          </LocaleProvider>
-        </AppearanceProvider>
-      </ThemeProvider>
+      <I18nextProvider i18n={i18n}>
+        <ThemeProvider>
+          <AppearanceProvider>
+            <LocaleProvider initialLocale={initialLocale} initialLocaleSource={initialLocaleSource}>
+              <ProductAnalytics />
+              {loadingKey !== null ? (
+                <div aria-busy="true" className="fixed inset-x-0 top-0 z-50 h-1 overflow-hidden bg-primary/15" role="status">
+                  <div className="h-full w-1/2 animate-pulse rounded-full bg-primary" />
+                  <span className="sr-only">{i18n.t("common:loading.title")}</span>
+                </div>
+              ) : null}
+              {failed ? (
+                <div className="fixed inset-x-0 top-0 z-50 flex flex-wrap items-center justify-center gap-3 border-b border-border bg-background/95 px-4 py-2 text-sm text-muted-foreground" role="alert">
+                  <span>{i18n.t("common:loading.failed")}</span>
+                  <Button onClick={() => setRetryToken(token => token + 1)} size="sm" variant="outline">
+                    {i18n.t("common:loading.retry")}
+                  </Button>
+                </div>
+              ) : null}
+              {children}
+              <Toaster richColors />
+            </LocaleProvider>
+          </AppearanceProvider>
+        </ThemeProvider>
+      </I18nextProvider>
     </QueryClientProvider>
   );
 }

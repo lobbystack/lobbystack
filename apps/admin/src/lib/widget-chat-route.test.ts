@@ -220,6 +220,7 @@ describe("POST /api/widget/chat", () => {
   it("does not expose provider error details in the UI stream", async () => {
     mocks.createTextAiProvider.mockReturnValue({
       streamReply: vi.fn().mockReturnValue({
+        // eslint-disable-next-line require-yield -- mock generator must throw before yielding.
         textStream: (async function* () { throw new Error("secret provider token"); })(),
         usage: Promise.resolve({ provider: "test", model: "test", latencyMs: 1 }),
         finishReason: Promise.resolve("error"),

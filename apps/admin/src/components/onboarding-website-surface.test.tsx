@@ -12,7 +12,7 @@ afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); client
 beforeEach(() => push.mockReset());
 function setup(options: { websiteUrl?: string; fail?: boolean; refresh?: Promise<Response> } = {}) {
   let reads = 0;
-  const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
+  const fetcher = vi.fn(async (url: string, _init?: RequestInit) => {
     if (url === "/api/businesses") {
       if (reads++ > 0 && options.refresh) return options.refresh;
       return Response.json({ businesses: [{ businessId: "business-1", active: true, websiteUrl: options.websiteUrl }] });

@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { PasswordResetForm } from "./password-reset-form";
 
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en", resolvedLanguage: "en" }, t: (key: string) => key }) }));
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 it("disables a missing token and uses translated validation", async () => {
   const fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);

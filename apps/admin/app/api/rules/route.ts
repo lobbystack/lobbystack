@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createAgentRule, deleteAgentRule, listAgentRules, reorderAgentRules, updateAgentRule } from "@lobbystack/domain";
-import { asApiResponse, readJson, requireApiSession, withOperatorTransaction } from "@/lib/api-helpers";
+import { asApiResponse, readJson, withOperatorTransaction } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
 const createSchema = z.object({ title: z.string().trim().min(1).max(160), content: z.string().trim().min(1).max(10_000), active: z.boolean().optional() });

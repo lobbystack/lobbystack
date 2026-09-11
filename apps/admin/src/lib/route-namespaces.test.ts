@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import { routeNamespaces } from "./route-namespaces";
 
 it("keeps login and embed startup independent of dashboard translations", () => {
-  expect(routeNamespaces("/login")).toEqual(["common", "auth"]);
+  expect(routeNamespaces("/login")).toEqual(["common", "auth", "onboarding"]);
   expect(routeNamespaces("/embed/key")).toEqual(["common", "widget"]);
 });
 it("loads detail-route namespaces alongside shared navigation", () => {

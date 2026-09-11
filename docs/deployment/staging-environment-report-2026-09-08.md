@@ -32,7 +32,7 @@ The application services now use these settings:
 | Polar webhooks | Admin | Created a separate staging endpoint and set `POLAR_WEBHOOK_SECRET`. Kept the existing production endpoint. Corrected signature handling and tenant mapping. |
 | Usage billing | Worker | Restored named event ingestion through `/v1/events/ingest`, matching the historical Convex implementation. No meter-ID variables, new meters, or price changes. |
 | Website crawling | Worker | Set `FIRECRAWL_API_KEY`. |
-| Product analytics | Admin | Set `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST`, including Docker build arguments. |
+| Product analytics | Admin | Set `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` and `NEXT_PUBLIC_POSTHOG_HOST`, including Docker build arguments. |
 | Product analytics | Worker | Set `POSTHOG_API_KEY` and `POSTHOG_HOST`. |
 | Voice analytics | Voice gateway | Set `POSTHOG_KEY`, `POSTHOG_HOST`, and `POSTHOG_PRIVACY_MODE`. |
 | Logs, traces, and metrics | Admin, worker, voice gateway | Set `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS`, and `SERVICE_VERSION`. Verified empty OpenTelemetry Protocol (OTLP) batches against the PostHog ingestion endpoints. |

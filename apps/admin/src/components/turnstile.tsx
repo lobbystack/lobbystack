@@ -125,7 +125,7 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
   const executeTimerRef = useRef<number | null>(null);
   const onTokenChangeRef = useRef(onTokenChange);
   const onErrorRef = useRef(onError);
-  const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [, setErrorCode] = useState<string | null>(null);
 
   onTokenChangeRef.current = onTokenChange;
   onErrorRef.current = onError;

@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Turnstile } from "@/components/turnstile";
 import { recordAuthSuccess } from "@/lib/auth-success-analytics";
 import { resolveLocale } from "@/lib/locale";
+import { localizeMarketingHref } from "@/lib/marketing-site-url";
 import { cn } from "@/lib/utils";
 import { captureAffiliateReferralFromUrl, getAffiliateVisitorId } from "@/lib/affiliate-referral";
 
@@ -85,12 +86,13 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
     { label: t("signup.passwordCriteria.specialCharacter"), isMet: /[^A-Za-z0-9\s]/.test(password) },
   ];
   const isSignupReady = isEmailValid && passwordCriteria.every((criterion) => criterion.isMet);
+  const marketingLocale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const legalFooter = !login ? (
     <p className="max-w-full text-center text-xs leading-5 text-muted-foreground sm:whitespace-nowrap">
       {t("signup.legal.prefix")} {" "}
-      <Link className="underline underline-offset-4 hover:text-foreground" href="/terms" target="_blank">{t("signup.legal.terms")}</Link>{" "}
+      <a className="underline underline-offset-4 hover:text-foreground" href={localizeMarketingHref(marketingLocale, "/terms")} rel="noreferrer" target="_blank">{t("signup.legal.terms")}</a>{" "}
       {t("signup.legal.and")} {" "}
-      <Link className="underline underline-offset-4 hover:text-foreground" href="/privacy" target="_blank">{t("signup.legal.privacy")}</Link>
+      <a className="underline underline-offset-4 hover:text-foreground" href={localizeMarketingHref(marketingLocale, "/privacy")} rel="noreferrer" target="_blank">{t("signup.legal.privacy")}</a>
       {t("signup.legal.suffix")}
     </p>
   ) : undefined;

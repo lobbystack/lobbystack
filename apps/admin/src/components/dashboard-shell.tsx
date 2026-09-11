@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import posthog from "posthog-js";
+import { createBrowserTelemetry } from "@lobbystack/telemetry/browser";
 import { requestJson } from "@/lib/request-json";
 import { selectActiveBusiness } from "@/lib/active-business";
 import { usePathname, useRouter } from "next/navigation";
@@ -21,7 +23,6 @@ import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
 import { TeamSwitcher } from "@/components/layout/team-switcher";
 import { Main } from "@/components/layout/main";
 import { SiteHeader } from "@/components/site-header";
-import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -37,7 +38,6 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
 import { LiveUpgradePlanProvider } from "./live-upgrade-plan-provider";
 import { BillingPastDueBanner, type BillingPermissions } from "./billing-past-due-banner";
 import { DashboardUtilityBar } from "./dashboard-utility-bar";
@@ -232,12 +232,15 @@ function UserMenu({ user }: Pick<DashboardShellProps, "user">) {
       if (!response.ok) return;
       // Remove the prior operator and workspace association before the next
       // person uses this browser session. This is deliberately best-effort.
-      void import("posthog-js").then(({ default: posthog }) => {
+      try {
         if (posthog.__loaded) {
-          posthog.reset();
-          posthog.opt_out_capturing();
+          const telemetry = createBrowserTelemetry(posthog, { optedOut: false });
+          telemetry.reset();
+          telemetry.setOptOut(true);
         }
-      }).catch(() => undefined);
+      } catch {
+        // Analytics must never block sign-out.
+      }
       router.replace("/login");
       router.refresh();
     } finally { setSigningOut(false); }

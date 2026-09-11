@@ -1,12 +1,13 @@
-import { and, count, desc, eq, gte, lt } from "drizzle-orm";
+import { and, count, desc, eq, gte } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import {
+  dashboardAggregatesQuery,
+  type DashboardAggregates,
   appointments,
   calls,
   contacts,
   conversations,
-  messages,
   services,
   staff,
 } from "@lobbystack/db";
@@ -15,68 +16,63 @@ import { asApiResponse, withOperatorTransaction } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
 
+const DAY_MS = 24 * 60 * 60 * 1_000;
+
+/** Percent change between two reporting periods, matching the previous dashboard math. */
 function percentageDelta(current: number, previous: number): number {
   if (previous === 0) return current === 0 ? 0 : 100;
   return ((current - previous) / previous) * 100;
 }
 
+/** Duration used by the recent-call list; mirrors the SQL duration expression below. */
 function durationSeconds(call: { providerDurationSeconds: number | null; startedAt: Date; endedAt: Date | null }): number {
   if (call.providerDurationSeconds !== null) return call.providerDurationSeconds;
   if (!call.endedAt) return 0;
   return Math.max(0, Math.round((call.endedAt.getTime() - call.startedAt.getTime()) / 1_000));
 }
 
-function average(values: number[]): number {
-  if (values.length === 0) return 0;
-  return Math.round(values.reduce((total, value) => total + value, 0) / values.length);
+/** First day of the month in UTC, formatted like the SQL month buckets. */
+function utcMonthKey(value: Date): string {
+  return value.toISOString().slice(0, 10);
 }
+
 
 export async function GET(request: Request) {
   try {
     return NextResponse.json(await withOperatorTransaction(request, async ({ businessId, tx }) => {
       const now = new Date();
-      const currentStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1_000);
-      const previousStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1_000);
+      const currentStart = new Date(now.getTime() - 30 * DAY_MS);
+      const previousStart = new Date(now.getTime() - 60 * DAY_MS);
       const chartStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
 
-      const currentCallCount = await tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, currentStart)));
-      const previousCallCount = await tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, previousStart), lt(calls.startedAt, currentStart)));
-      const currentAppointmentCount = await tx.select({ count: count() }).from(appointments).where(and(eq(appointments.businessId, businessId), gte(appointments.createdAt, currentStart)));
-      const previousAppointmentCount = await tx.select({ count: count() }).from(appointments).where(and(eq(appointments.businessId, businessId), gte(appointments.createdAt, previousStart), lt(appointments.createdAt, currentStart)));
-      const currentMessageCount = await tx.select({ count: count() }).from(messages).where(and(eq(messages.businessId, businessId), gte(messages.createdAt, currentStart)));
-      const previousMessageCount = await tx.select({ count: count() }).from(messages).where(and(eq(messages.businessId, businessId), gte(messages.createdAt, previousStart), lt(messages.createdAt, currentStart)));
-      const currentCalls = await tx.select({ providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt, endedAt: calls.endedAt }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, currentStart)));
-      const previousCalls = await tx.select({ providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt, endedAt: calls.endedAt }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, previousStart), lt(calls.startedAt, currentStart)));
+      const aggregateResult = await tx.execute(dashboardAggregatesQuery({ businessId, currentStart, previousStart, chartStart }));
+      const [aggregates] = aggregateResult.rows as unknown as [DashboardAggregates];
       const recentCalls = await tx.select({ id: calls.id, startedAt: calls.startedAt, status: calls.status, providerDurationSeconds: calls.providerDurationSeconds, endedAt: calls.endedAt, contactName: contacts.name, contactPhone: contacts.phone }).from(calls).leftJoin(contacts, eq(calls.contactId, contacts.id)).where(eq(calls.businessId, businessId)).orderBy(desc(calls.startedAt)).limit(5);
       const upcoming = await tx.select({ id: appointments.id, startsAt: appointments.startsAt, timezone: appointments.timezone, status: appointments.status, sourceChannel: appointments.sourceChannel, contactName: contacts.name, serviceName: services.name, staffName: staff.name }).from(appointments).leftJoin(contacts, eq(appointments.contactId, contacts.id)).leftJoin(services, eq(appointments.serviceId, services.id)).leftJoin(staff, eq(appointments.staffId, staff.id)).where(and(eq(appointments.businessId, businessId), gte(appointments.startsAt, now))).orderBy(appointments.startsAt).limit(5);
-      const chartCalls = await tx.select({ startedAt: calls.startedAt }).from(calls).where(and(eq(calls.businessId, businessId), gte(calls.startedAt, chartStart)));
       const liveCallCount = await tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), eq(calls.status, "started")));
       const handoffConversations = await tx.select({ id: conversations.id, contactName: contacts.name, summary: conversations.summary, currentIntent: conversations.currentIntent, updatedAt: conversations.updatedAt }).from(conversations).leftJoin(contacts, eq(conversations.contactId, contacts.id)).where(and(eq(conversations.businessId, businessId), eq(conversations.automationState, "human_handoff"))).orderBy(desc(conversations.updatedAt)).limit(6);
       const voiceFollowUps = await listOpenVoiceFollowUps(tx, businessId);
 
-      const currentCallsTotal = Number(currentCallCount[0]?.count ?? 0);
-      const previousCallsTotal = Number(previousCallCount[0]?.count ?? 0);
-      const currentAppointmentsTotal = Number(currentAppointmentCount[0]?.count ?? 0);
-      const previousAppointmentsTotal = Number(previousAppointmentCount[0]?.count ?? 0);
-      const currentMessagesTotal = Number(currentMessageCount[0]?.count ?? 0);
-      const previousMessagesTotal = Number(previousMessageCount[0]?.count ?? 0);
-      const currentDuration = average(currentCalls.map(durationSeconds));
-      const previousDuration = average(previousCalls.map(durationSeconds));
+      const monthlyTotals = new Map((aggregates?.monthlyCalls ?? []).map((bucket) => [bucket.month, bucket.total]));
       const monthlyCalls = Array.from({ length: 12 }, (_, index) => {
         const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11 + index, 1));
-        const nextMonth = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 1));
         return {
           monthStart: monthStart.toISOString(),
-          total: chartCalls.filter((call) => call.startedAt >= monthStart && call.startedAt < nextMonth).length,
+          total: monthlyTotals.get(utcMonthKey(monthStart)) ?? 0,
         };
       });
+
+      const currentCallsTotal = aggregates?.callsCurrent ?? 0;
+      const previousCallsTotal = aggregates?.callsPrevious ?? 0;
+      const currentDuration = aggregates?.averageDurationCurrent ?? 0;
+      const previousDuration = aggregates?.averageDurationPrevious ?? 0;
 
       return {
         businessId,
         kpis: {
           calls: { total: currentCallsTotal, deltaPercent: percentageDelta(currentCallsTotal, previousCallsTotal) },
-          messages: { total: currentMessagesTotal, deltaPercent: percentageDelta(currentMessagesTotal, previousMessagesTotal) },
-          appointments: { total: currentAppointmentsTotal, deltaPercent: percentageDelta(currentAppointmentsTotal, previousAppointmentsTotal) },
+          messages: { total: aggregates?.messagesCurrent ?? 0, deltaPercent: percentageDelta(aggregates?.messagesCurrent ?? 0, aggregates?.messagesPrevious ?? 0) },
+          appointments: { total: aggregates?.appointmentsCurrent ?? 0, deltaPercent: percentageDelta(aggregates?.appointmentsCurrent ?? 0, aggregates?.appointmentsPrevious ?? 0) },
           averageDuration: { totalSeconds: currentDuration, deltaSeconds: currentDuration - previousDuration },
         },
         liveCalls: Number(liveCallCount[0]?.count ?? 0),

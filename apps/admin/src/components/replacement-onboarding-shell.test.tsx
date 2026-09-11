@@ -7,6 +7,7 @@ afterEach(cleanup);
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
+    i18n: { language: "en", resolvedLanguage: "en" },
     t: (key: string) => key,
   }),
 }));

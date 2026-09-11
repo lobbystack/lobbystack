@@ -8,7 +8,7 @@
     "build": "NODE_ENV=production next build",
     "start": "next start",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
     "test": "vitest run --passWithNoTests",
     "e2e": "playwright test",
     "e2e:parity": "playwright test --config playwright.parity.config.ts",
@@ -65,6 +65,8 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@next/eslint-plugin-next": "16.3.1",
     "@playwright/test": "^1.58.2",
     "@posthog/nextjs-config": "^1.11.1",
     "@tailwindcss/postcss": "^4.2.1",
@@ -74,11 +76,16 @@
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "autoprefixer": "^10.4.21",
+    "eslint": "^9.39.4",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "globals": "^16.5.0",
     "jsdom": "^29.0.1",
     "postcss": "^8.5.23",
     "shadcn": "^4.7.0",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.57.1",
     "vitest": "^4.1.2"
   }
 }

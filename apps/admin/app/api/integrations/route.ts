@@ -1,4 +1,4 @@
-import { and, count, eq, ne } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { billingAccounts, phoneNumbers } from "@lobbystack/db";

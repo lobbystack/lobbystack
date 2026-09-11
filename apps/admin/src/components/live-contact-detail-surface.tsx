@@ -151,7 +151,7 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
       <BackLink label={t("detail.backToList")} />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="type-page-title">{displayName}</h1>
+          <h1 className="type-page-title ph-mask">{displayName}</h1>
           {contact.operatorBlockedAt ? <div className="flex flex-wrap items-center gap-2"><Badge variant="destructive">{t("detail.blocking.badge")}</Badge><span className="type-body-muted">{t("detail.blocking.blockedAtInline", { time: dateTime(contact.operatorBlockedAt, i18n.language) })}</span></div> : null}
         </div>
         <DropdownMenu>
@@ -164,8 +164,8 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <MetadataField copied={copiedField === "phone"} label={t("detail.metadata.phone")} onCopy={() => copy(contact.phone, "phone")} value={displayPhone} />
-        <MetadataField label={t("detail.metadata.email")} value={contact.email ?? "—"} />
+        <MetadataField copied={copiedField === "phone"} label={t("detail.metadata.phone")} maskValue onCopy={() => copy(contact.phone, "phone")} value={displayPhone} />
+        <MetadataField label={t("detail.metadata.email")} maskValue value={contact.email ?? "—"} />
         <MetadataField label={t("detail.metadata.firstSeen")} value={dateTime(contact.createdAt, i18n.language, true)} />
       </div>
       <Separator />
@@ -197,9 +197,9 @@ function BackLink({ label }: { label: string }) {
   return <Link className="type-body-muted inline-flex w-fit items-center gap-1.5 transition-colors hover:text-foreground" href="/contacts"><ArrowLeft className="size-4" />{label}</Link>;
 }
 
-function MetadataField({ copied, label, onCopy, value }: { copied?: boolean; label: string; onCopy?: () => void; value: string }) {
+function MetadataField({ copied, label, maskValue, onCopy, value }: { copied?: boolean; label: string; maskValue?: boolean; onCopy?: () => void; value: string }) {
   const { t } = useTranslation("contacts");
-  return <div className="flex flex-col gap-1"><span className="type-meta">{label}</span><div className="flex items-center gap-1.5"><span className="type-body truncate">{value}</span>{onCopy ? <button aria-label={t("detail.details.copy")} className={cn("flex size-5 items-center justify-center rounded-full text-muted-foreground/60 hover:text-foreground", copied && "text-emerald-500")} onClick={onCopy} type="button">{copied ? <CheckCircle2 className="size-3" /> : <Copy className="size-3" />}</button> : null}</div></div>;
+  return <div className="flex flex-col gap-1"><span className="type-meta">{label}</span><div className="flex items-center gap-1.5"><span className={cn("type-body truncate", maskValue && "ph-mask")}>{value}</span>{onCopy ? <button aria-label={t("detail.details.copy")} className={cn("flex size-5 items-center justify-center rounded-full text-muted-foreground/60 hover:text-foreground", copied && "text-emerald-500")} onClick={onCopy} type="button">{copied ? <CheckCircle2 className="size-3" /> : <Copy className="size-3" />}</button> : null}</div></div>;
 }
 
 function StatCard({ className, label, value }: { className?: string; label: string; value: number }) {
@@ -245,7 +245,7 @@ function DetailsTab({ contact, copiedField, locale, onCopy }: { contact: NonNull
   const { t } = useTranslation("contacts");
   const displayId = contact.legacyConvexId ?? contact.id;
   return <div className="py-4"><Surface className="flex flex-col">
-    <DetailSection title={t("detail.details.contactInfoTitle")}><DescriptionList rows={[[t("detail.details.name"), contact.name ?? t("detail.details.notSet")], [t("detail.details.phone"), formatPhoneNumberDisplay(contact.phone, locale)], [t("detail.details.email"), contact.email ?? t("detail.details.notSet")], [t("detail.details.timezone"), contact.timezone ?? t("detail.details.notSet")], [t("detail.details.preferredLocale"), contact.preferredLocale ? new Intl.DisplayNames([locale], { type: "language" }).of(contact.preferredLocale) ?? contact.preferredLocale : t("detail.details.notSet")]]} /></DetailSection>
+    <DetailSection className="ph-mask" title={t("detail.details.contactInfoTitle")}><DescriptionList rows={[[t("detail.details.name"), contact.name ?? t("detail.details.notSet")], [t("detail.details.phone"), formatPhoneNumberDisplay(contact.phone, locale)], [t("detail.details.email"), contact.email ?? t("detail.details.notSet")], [t("detail.details.timezone"), contact.timezone ?? t("detail.details.notSet")], [t("detail.details.preferredLocale"), contact.preferredLocale ? new Intl.DisplayNames([locale], { type: "language" }).of(contact.preferredLocale) ?? contact.preferredLocale : t("detail.details.notSet")]]} /></DetailSection>
     <DetailSection className="border-t" title={t("detail.details.blockingTitle")}><DescriptionList rows={[[t("detail.details.blockingStatus"), contact.operatorBlockedAt ? t("detail.blocking.badge") : t("detail.blocking.active")], [t("detail.details.blockedAt"), contact.operatorBlockedAt ? dateTime(contact.operatorBlockedAt, locale) : t("detail.details.notSet")], [t("detail.details.blockedBy"), t("detail.details.notSet")]]} /></DetailSection>
     <DetailSection className="border-t" title={t("detail.details.smsConsentTitle")}><DescriptionList rows={[[t("detail.details.smsConsentStatus"), contact.smsConsentStatus ?? t("detail.details.notSet")], [t("detail.details.smsConsentUpdatedAt"), contact.smsConsentUpdatedAt ? dateTime(contact.smsConsentUpdatedAt, locale) : t("detail.details.notSet")], [t("detail.details.smsConsentSource"), contact.smsConsentSource ?? t("detail.details.notSet")]]} /></DetailSection>
     <DetailSection className="border-t" title={t("detail.details.systemTitle")}><dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-3"><dt className="type-meta">{t("detail.details.contactId")}</dt><dd className="flex items-center gap-1.5"><span className="type-technical-value">{truncateId(displayId)}</span><button aria-label={t("detail.details.copy")} className={cn("text-muted-foreground", copiedField === "contactId" && "text-emerald-500")} onClick={() => onCopy(displayId, "contactId")} type="button">{copiedField === "contactId" ? <CheckCircle2 className="size-3" /> : <Copy className="size-3" />}</button></dd><dt className="type-meta">{t("detail.details.createdAt")}</dt><dd className="type-body">{dateTime(contact.createdAt, locale)}</dd></dl></DetailSection>

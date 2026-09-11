@@ -19,7 +19,6 @@ type SiteHeaderProps = React.HTMLAttributes<HTMLElement> & {
 export function SiteHeader({
   className,
   fixed,
-  links = [],
   scrollContainerRef,
   ...props
 }: SiteHeaderProps) {

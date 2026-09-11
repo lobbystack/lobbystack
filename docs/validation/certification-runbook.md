@@ -22,6 +22,8 @@ Verify Redis, worker, admin, and voice-gateway restarts. Perform PostgreSQL and 
 
 Using staging credentials, verify signup and SMTP, Google OAuth and reconciliation, Twilio voice booking and cancellation, recordings, inbound and outbound SMS status, Polar billing, knowledge extraction and embeddings, and PostHog traces, logs, metrics, product opt-out, and replay exclusions.
 
+For replay exclusions, confirm a consented workspace produces a recording, that call detail transcripts and the recording player are masked in playback, and that sessions on `/login`, `/demo/*`, and `/embed/*` produce no recording.
+
 AI-generated SMS, AI-SMS add-on billing, and Twilio A2P registration are excluded. Before production alert or reminder SMS, retain evidence that the configured sender is independently compliant for the target countries and traffic type.
 
 ## Rehearse migration and cutover

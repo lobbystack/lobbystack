@@ -6,7 +6,7 @@ import { reportServerError } from "./error-reporting";
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); mocks.capture.mockClear(); });
 describe("server exception reporting", () => {
   it("captures sanitized diagnostics once and retains correlation", async () => {
-    vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "fixture");
+    vi.stubEnv("NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", "fixture");
     vi.spyOn(console, "error").mockImplementation(() => {});
     const error = new Error("Provider refused Bearer private-token for caller@example.com");
     await reportServerError(error, { operation: "fixture", errorId: "reference-123" });
@@ -19,7 +19,7 @@ describe("server exception reporting", () => {
     expect(properties.errorId).toBe("reference-123");
   });
   it("does not replace application failures when delivery fails", async () => {
-    vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "fixture");
+    vi.stubEnv("NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", "fixture");
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
     mocks.capture.mockRejectedValueOnce(new Error("offline"));

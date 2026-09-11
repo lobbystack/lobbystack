@@ -1,3 +1,24 @@
+/**
+ * Origins the browser needs for PostHog ingestion, session replay assets, and
+ * error reporting. PostHog serves its SDK bundles from changing posthog.com
+ * subdomains, so the wildcard is kept alongside the configured ingestion host,
+ * which is the first-party reverse proxy in deployed environments.
+ */
+export function posthogSources(
+  source: Readonly<Record<string, string | undefined>> = process.env,
+): string[] {
+  const origins = ["https://*.posthog.com"];
+  const configured = source.NEXT_PUBLIC_POSTHOG_HOST?.trim();
+  if (configured) {
+    try {
+      origins.unshift(new URL(configured).origin);
+    } catch {
+      // Keep the PostHog defaults when a public analytics URL is malformed.
+    }
+  }
+  return Array.from(new Set(origins));
+}
+
 export function webCallConnectSource(
   source: Readonly<Record<string, string | undefined>> = process.env,
 ): string | undefined {

@@ -9,7 +9,6 @@ import { PageSurface } from "./page-surface";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Input } from "./ui/input";
 
 type Business = { businessId: string; name: string; active: boolean };
 type WidgetKeyConfig = { color?: string; position?: "bottom-right" | "bottom-left" | "bottom-center"; title?: string; subtitle?: string; greeting?: string; localeOverride?: "en" | "fr"; leadForm?: { enabled?: boolean; requirePhone?: boolean; requireEmail?: boolean; showBeforeChat?: boolean } };

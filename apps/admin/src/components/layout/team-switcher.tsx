@@ -1,4 +1,3 @@
-import { SidebarTeamSkeleton } from "@/components/loading-skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   SidebarMenu,

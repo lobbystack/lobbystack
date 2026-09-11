@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, or, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { NextResponse } from "next/server";
 
@@ -6,8 +6,6 @@ import {
   appointments,
   calls,
   contacts,
-  conversations,
-  inboxItems,
   receptionistProfiles,
   services,
   withBusinessTransaction,

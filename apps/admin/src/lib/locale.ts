@@ -6,6 +6,9 @@ export type TimeFormatPreference = "24h" | "ampm";
 export const DEFAULT_LOCALE: SupportedLocale = "en";
 export const LOCALE_STORAGE_KEY = "lobbystack.locale";
 export const TIME_FORMAT_STORAGE_KEY = "lobbystack.time-format";
+/** Cookie name mirroring {@link LOCALE_STORAGE_KEY} for server-side rendering. */
+export const LOCALE_COOKIE = LOCALE_STORAGE_KEY;
+export const LOCALE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
 export function normalizeLocale(value: string | null | undefined): SupportedLocale | null {
   if (!value) {
@@ -66,6 +69,19 @@ export function writeStoredLocale(locale: SupportedLocale): void {
   }
 
   window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+}
+
+/**
+ * Mirrors the locale into a cookie so the server can render the visitor's
+ * choice on the next document request, instead of only after hydration.
+ */
+export function writeStoredLocaleCookie(locale: SupportedLocale): void {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const secure = window.location.protocol === "https:" ? "; secure" : "";
+  document.cookie = `${LOCALE_STORAGE_KEY}=${locale}; path=/; max-age=${LOCALE_COOKIE_MAX_AGE_SECONDS}; samesite=lax${secure}`;
 }
 
 export function normalizeTimeFormatPreference(

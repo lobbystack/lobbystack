@@ -109,13 +109,13 @@ export function LiveContactsSurface() {
       id: "contact",
       accessorFn: (contact) => contact.name ?? t("table.unknownContact"),
       header: () => t("table.contact"),
-      cell: ({ row }) => <div className="flex min-w-0 items-center gap-2"><span className="truncate font-semibold">{row.original.name ?? t("table.unknownContact")}</span>{row.original.operatorBlockedAt ? <Badge variant="destructive">{t("table.status.blocked")}</Badge> : null}</div>,
+      cell: ({ row }) => <div className="flex min-w-0 items-center gap-2"><span className="ph-mask truncate font-semibold">{row.original.name ?? t("table.unknownContact")}</span>{row.original.operatorBlockedAt ? <Badge variant="destructive">{t("table.status.blocked")}</Badge> : null}</div>,
     },
     {
       id: "channels",
       accessorFn: (contact) => [contact.phone, contact.email].filter(Boolean).join(" "),
       header: () => t("table.channels"),
-      cell: ({ row }) => <div className="flex min-w-0 flex-col gap-2"><span className="truncate" title={row.original.phone}>{formatPhoneNumberDisplay(row.original.phone, i18n.language)}</span>{row.original.email ? <Badge className="block max-w-full overflow-hidden text-ellipsis whitespace-nowrap" title={row.original.email} variant="outline">{row.original.email}</Badge> : null}</div>,
+      cell: ({ row }) => <div className="ph-no-capture flex min-w-0 flex-col gap-2"><span className="truncate" title={row.original.phone}>{formatPhoneNumberDisplay(row.original.phone, i18n.language)}</span>{row.original.email ? <Badge className="block max-w-full overflow-hidden text-ellipsis whitespace-nowrap" title={row.original.email} variant="outline">{row.original.email}</Badge> : null}</div>,
     },
     {
       id: "activity",

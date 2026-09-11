@@ -112,13 +112,13 @@ export function LiveCallsSurface() {
       id: "caller",
       accessorFn: (call) => call.contactName ?? t("table.unknownCaller"),
       header: () => t("table.caller"),
-      cell: ({ row }) => <span className="font-medium">{row.original.contactName ?? t("table.unknownCaller")}</span>,
+      cell: ({ row }) => <span className="ph-mask font-medium">{row.original.contactName ?? t("table.unknownCaller")}</span>,
     },
     {
       id: "number",
       accessorFn: (call) => call.contactPhone ?? t("table.noNumber"),
       header: () => t("table.number"),
-      cell: ({ row }) => row.original.contactPhone ? formatPhoneNumberDisplay(row.original.contactPhone, i18n.language) : t("table.noNumber"),
+      cell: ({ row }) => <span className="ph-mask">{row.original.contactPhone ? formatPhoneNumberDisplay(row.original.contactPhone, i18n.language) : t("table.noNumber")}</span>,
     },
     {
       id: "purpose",

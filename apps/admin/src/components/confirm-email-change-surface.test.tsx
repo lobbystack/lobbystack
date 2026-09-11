@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { ConfirmEmailChangeSurface } from "./confirm-email-change-surface";
 
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en", resolvedLanguage: "en" }, t: (key: string) => key }) }));
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); window.history.replaceState({}, "", "/"); });
 it.each([true, false])("renders original inline confirmation state for success=%s", async success => {
   window.history.replaceState({}, "", "/confirm-email-change?token=fixture&email=new@example.invalid");

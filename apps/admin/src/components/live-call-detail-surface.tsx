@@ -158,7 +158,7 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="type-page-title">{callerName}</h1>
+          <h1 className="type-page-title ph-mask">{callerName}</h1>
           {blocked ? (
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="destructive">{t("detail.blocking.badge")}</Badge>
@@ -169,7 +169,7 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <MetadataField copiedField={copiedField} fieldKey="from" label={t("detail.metadata.from")} onCopy={copyToClipboard} value={callerPhone} />
+        <MetadataField copiedField={copiedField} fieldKey="from" label={t("detail.metadata.from")} maskValue onCopy={copyToClipboard} value={callerPhone} />
         <MetadataField fieldKey="duration" label={t("detail.metadata.duration")} value={formatDuration(call.providerDurationSeconds)} />
         <MetadataField fieldKey="started" label={t("detail.metadata.started")} value={formatDate(call.startedAt, i18n.language)} />
         <MetadataField copiedField={copiedField} fieldKey="id" label={t("detail.metadata.id")} onCopy={copyToClipboard} rawValue={call.legacyConvexId ?? call.id} value={truncateId(call.legacyConvexId ?? call.id)} />
@@ -217,7 +217,7 @@ function TranscriptTab({ detail }: { detail: Detail }) {
               <div className={cn("flex", caller ? "justify-start" : "justify-end")} key={segment.id}>
                 <div className={cn("max-w-[80%] px-4 py-2.5", caller ? "rounded-[16px_16px_16px_0] bg-muted" : "rounded-[16px_16px_0_16px] bg-primary/10 dark:bg-primary/20")}>
                   <p className={cn("type-meta mb-1", caller ? "text-muted-foreground" : "text-primary/80 dark:text-primary/60")}>{caller ? t("detail.transcript.caller") : t("detail.transcript.assistant")}</p>
-                  <p className="type-body whitespace-pre-wrap">{segment.text}</p>
+                  <p className="type-body ph-mask whitespace-pre-wrap">{segment.text}</p>
                 </div>
               </div>
             );
@@ -233,7 +233,7 @@ function RecordingTab({ detail, src }: { detail: Detail; src: string | null }) {
   if (!src) {
     return <div className="flex flex-col items-center gap-2 py-16 text-center"><Headphones className="size-8 text-muted-foreground/40" /><p className="type-empty-description">{detail.recording.state === "pending" ? t("detail.recording.pending") : t("detail.recording.unavailable")}</p></div>;
   }
-  return <div className="py-4"><Card size="sm"><CallRecordingPlayer className="px-4 py-0" downloadLabel={t("actions.download")} initialDurationSeconds={detail.call.providerDurationSeconds ?? 0} pauseLabel={t("actions.pause")} playLabel={t("actions.play")} src={src} /></Card></div>;
+    return <div className="py-4"><Card className="ph-no-capture" size="sm"><CallRecordingPlayer className="px-4 py-0" downloadLabel={t("actions.download")} initialDurationSeconds={detail.call.providerDurationSeconds ?? 0} pauseLabel={t("actions.pause")} playLabel={t("actions.play")} src={src} /></Card></div>;
 }
 
 function DetailsTab({ detail, markingDone, onCompleteFollowUp }: { detail: Detail; markingDone: boolean; onCompleteFollowUp: () => void }) {
@@ -258,14 +258,14 @@ function DetailSection({ children, className, title }: { children: React.ReactNo
   return <section className={cn("flex flex-col gap-4 px-4 py-4", className)}><h3 className="font-heading text-base font-medium">{title}</h3>{children}</section>;
 }
 
-function MetadataField({ copiedField, fieldKey, label, onCopy, rawValue, value }: { copiedField?: string | null; fieldKey: string; label: string; onCopy?: (text: string, field: string) => void; rawValue?: string; value: string }) {
+function MetadataField({ copiedField, fieldKey, label, maskValue, onCopy, rawValue, value }: { copiedField?: string | null; fieldKey: string; label: string; maskValue?: boolean; onCopy?: (text: string, field: string) => void; rawValue?: string; value: string }) {
   const { t } = useTranslation("calls");
   const copied = copiedField === fieldKey;
   return (
     <div className="flex flex-col gap-1">
       <span className="type-meta">{label}</span>
       <div className="flex items-center gap-1.5">
-        <span className="type-body truncate">{value}</span>
+        <span className={cn("type-body truncate", maskValue && "ph-mask")}>{value}</span>
         {onCopy ? <button aria-label={t("actions.copy")} className={cn("flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:text-foreground", copied && "text-emerald-500")} onClick={() => onCopy(rawValue ?? value, fieldKey)} type="button">{copied ? <CheckCircle2 className="size-3" /> : <Copy className="size-3" />}</button> : null}
       </div>
     </div>

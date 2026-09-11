@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 
+import { resolveLocale } from "@/lib/locale";
+import { localizeMarketingHref } from "@/lib/marketing-site-url";
 import { cn } from "@/lib/utils";
 
 type OnboardingShellProps = {
@@ -20,7 +22,8 @@ type OnboardingShellProps = {
 const widths = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg", xl: "max-w-xl", wide: "max-w-7xl" } as const;
 
 export function ReplacementOnboardingShell({ eyebrow, title, description, progress, width = "md", children, footer, legalFooter, onSignOut }: OnboardingShellProps) {
-  const { t } = useTranslation("onboarding");
+  const { t, i18n } = useTranslation("onboarding");
+  const marketingLocale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const progressRoutes: Record<number, string> = {
     2: "/onboarding/business",
     3: "/onboarding/website",
@@ -76,9 +79,9 @@ export function ReplacementOnboardingShell({ eyebrow, title, description, progre
           </nav>
         ) : null}
         {legalFooter ?? <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <Link className="hover:text-foreground" href="/terms" target="_blank">{t("shell.terms")}</Link>
+          <a className="hover:text-foreground" href={localizeMarketingHref(marketingLocale, "/terms")} rel="noreferrer" target="_blank">{t("shell.terms")}</a>
           <span aria-hidden="true">·</span>
-          <Link className="hover:text-foreground" href="/privacy" target="_blank">{t("shell.privacy")}</Link>
+          <a className="hover:text-foreground" href={localizeMarketingHref(marketingLocale, "/privacy")} rel="noreferrer" target="_blank">{t("shell.privacy")}</a>
         </div>}
       </footer>
     </div>

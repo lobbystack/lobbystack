@@ -157,6 +157,7 @@ export function DashboardFeedbackWidget({ businessId, className }: FeedbackWidge
               nativeButton={false}
               render={
                 <a
+                  aria-label={t("feedback.helpCenter")}
                   href="https://docs.lobbystack.com"
                   rel="noreferrer"
                   target="_blank"

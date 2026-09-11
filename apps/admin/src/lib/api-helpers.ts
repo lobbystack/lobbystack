@@ -3,7 +3,7 @@ import { reportServerError } from "./error-reporting";
 import { eq } from "drizzle-orm";
 
 import { createDatabaseClient, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { requireBusinessMembership, type AuthorizationError } from "@lobbystack/domain";
+import { requireBusinessMembership } from "@lobbystack/domain";
 
 import { getSession, type Session } from "./auth";
 import { claimInternalRequestNonce, verifyInternalRequest } from "./internal-auth";

@@ -4,6 +4,7 @@
   "loading": {
     "title": "Loading...",
     "retry": "Retry loading",
+    "failed": "Some translations could not be loaded.",
     "description": "Syncing your workspace and receptionist settings."
   },
   "language": {

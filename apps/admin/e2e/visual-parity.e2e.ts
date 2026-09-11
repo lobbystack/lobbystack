@@ -503,7 +503,7 @@ for (const routeCase of routes) for (const viewport of viewports) for (const loc
     }
     await page.addStyleTag({ content: "*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important;caret-color:transparent!important}" });
     await page.evaluate(async () => { await document.fonts.ready; });
-    const name = `${routeCase.snapshotId === "/" ? "home" : routeCase.snapshotId.replace(/^\//, "").replace(/[/?=&\[\]]+/g, "-")}-${viewport.name}-${locale}-${theme}.png`;
+    const name = `${routeCase.snapshotId === "/" ? "home" : routeCase.snapshotId.replace(/^\//, "").replace(/[/?=&[\]]+/g, "-")}-${viewport.name}-${locale}-${theme}.png`;
     let accessibleTree = await page.locator("body").ariaSnapshot();
     // Normalize only Next's framework-owned route announcement. Application
     // alerts remain compared, including nonempty validation and error messages.

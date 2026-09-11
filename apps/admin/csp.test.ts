@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import nextConfig from "./next.config";
 import { proxy } from "./proxy";
 
-import { recordingStorageSource, webCallConnectSource } from "./csp";
+import { posthogSources, recordingStorageSource, webCallConnectSource } from "./csp";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -12,6 +12,7 @@ it("allows recording fetch and playback in both emitted policies", async () => {
   vi.stubEnv("S3_BUCKET", "recordings");
   vi.stubEnv("S3_ENDPOINT", "https://t3.storageapi.dev");
   vi.stubEnv("S3_FORCE_PATH_STYLE", "false");
+  vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "https://ts.lobbystack.com");
   const headers = await nextConfig.headers!();
   const policies = [
     headers[0]?.headers.find(header => header.key === "Content-Security-Policy")?.value,
@@ -19,6 +20,9 @@ it("allows recording fetch and playback in both emitted policies", async () => {
   ];
   for (const policy of policies) {
     expect(policy).toBeTruthy();
+    for (const directive of ["script-src", "connect-src"]) {
+      expect(policy?.split(";").find(value => value.trim().startsWith(directive))?.split(" ")).toContain("https://ts.lobbystack.com");
+    }
     for (const directive of ["connect-src", "media-src"]) {
       expect(policy?.split(";").find(value => value.trim().startsWith(directive))?.split(" ")).toContain("https://recordings.t3.storageapi.dev");
     }
@@ -49,6 +53,18 @@ describe("recordingStorageSource", () => {
 });
 
 describe("webCallConnectSource", () => {
+  it("allows the configured PostHog proxy alongside PostHog's own hosts", () => {
+    expect(posthogSources({ NEXT_PUBLIC_POSTHOG_HOST: "https://ts.lobbystack.com" })).toEqual([
+      "https://ts.lobbystack.com",
+      "https://*.posthog.com",
+    ]);
+  });
+
+  it("falls back to PostHog hosts for missing or malformed values", () => {
+    expect(posthogSources({})).toEqual(["https://*.posthog.com"]);
+    expect(posthogSources({ NEXT_PUBLIC_POSTHOG_HOST: "not a url" })).toEqual(["https://*.posthog.com"]);
+  });
+
   it("allows only the configured web-call origin", () => {
     expect(
       webCallConnectSource({

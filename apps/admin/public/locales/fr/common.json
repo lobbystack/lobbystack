@@ -4,6 +4,7 @@
   "loading": {
     "title": "Chargement...",
     "retry": "Réessayer le chargement",
+    "failed": "Certaines traductions n'ont pas pu être chargées.",
     "description": "Synchronisation de votre espace et des réglages de la réceptionniste."
   },
   "language": {

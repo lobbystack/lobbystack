@@ -61,7 +61,7 @@ export function CallRecordingPlayer({
   const playOnLoadRef = useRef(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(normalizeDurationSeconds(initialDurationSeconds));
-  const [bufferedTime, setBufferedTime] = useState(0);
+  const [, setBufferedTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [playbackSrc, setPlaybackSrc] = useState<string | null>(null);

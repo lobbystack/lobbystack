@@ -7,7 +7,7 @@ import { AcceptInviteSurface } from "./accept-invite-surface";
 const spies = vi.hoisted(() => ({ success: vi.fn(), replace: vi.fn(), refresh: vi.fn() }));
 vi.mock("sonner", () => ({ toast: spies }));
 vi.mock("next/navigation", () => ({ useRouter: () => spies }));
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en", resolvedLanguage: "en" }, t: (key: string) => key }) }));
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); window.history.replaceState({}, "", "/"); });
 
 it("preserves main's success toast and navigates to team settings after accepting", async () => {

@@ -65,7 +65,7 @@ export function AcceptInviteSurface() {
   else if (invitation?.expired) description = t("acceptInvite.expired");
   else if (isInvitationValid) description = t("acceptInvite.subtitle", { businessName: invitation!.businessName, email: invitation!.email });
 
-  return <div data-ph-no-capture><ReplacementOnboardingShell description={description} progress={null} title={t("acceptInvite.title")} width="sm"><div className="flex flex-col gap-6">
+  return <div className="ph-no-capture"><ReplacementOnboardingShell description={description} progress={null} title={t("acceptInvite.title")} width="sm"><div className="flex flex-col gap-6">
     {errorMessage ? <p className="text-center text-sm text-destructive">{errorMessage}</p> : null}
     {isAuthenticated ? <form className="flex flex-col" onSubmit={submit}><Button className="h-11 w-full" disabled={!isInvitationValid || isSubmitting || isPreviewLoading} loading={isSubmitting} loadingLabel={t("acceptInvite.submitting")} type="submit">{t("acceptInvite.submit")}</Button></form> : <div className="flex flex-col gap-3">
       <Button className="h-11 w-full" role="link" nativeButton={false} render={<Link href={loginHref} />}>{t("acceptInvite.signIn")}</Button>

@@ -221,6 +221,7 @@ function Transactions({ transactions, t, locale }: { transactions: Billing["tran
                       <Button
                         render={
                           <a
+                            aria-label={t("billing.transactions.invoice")}
                             href={tx.invoiceUrl}
                             rel="noopener noreferrer"
                             target="_blank"
@@ -362,4 +363,3 @@ function BillingSkeleton({
     </div>
   );
 }
-

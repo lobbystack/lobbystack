@@ -45,7 +45,7 @@ export function ConfirmEmailChangeSurface() {
     finally { setIsSubmitting(false); }
   }
 
-  return <div data-ph-no-capture><ReplacementOnboardingShell description={description} progress={null} title={t("confirmEmailChange.title")} width="sm"><div className="flex flex-col gap-6">
+  return <div className="ph-no-capture"><ReplacementOnboardingShell description={description} progress={null} title={t("confirmEmailChange.title")} width="sm"><div className="flex flex-col gap-6">
     {statusMessage ? <p className="text-center text-sm text-muted-foreground">{statusMessage}</p> : null}
     {errorMessage ? <p className="text-center text-sm text-destructive">{errorMessage}</p> : null}
     <form className="flex flex-col" onSubmit={submit}><Button className="h-11 w-full" disabled={!valid || isSubmitting || statusMessage !== null} type="submit">{isSubmitting ? t("confirmEmailChange.submitting") : t("confirmEmailChange.submit")}</Button></form>

@@ -1,9 +1,10 @@
 import type { NextConfig } from "next";
 import { withPostHogConfig } from "@posthog/nextjs-config";
 
-import { recordingStorageSource, webCallConnectSource } from "./csp";
+import { embeddableSecurityHeaders, securityHeaders, toNextHeaderList } from "./security-headers";
 
 const nextConfig: NextConfig = {
+  experimental: { requestInsights: process.env.NODE_ENV === "development" },
   env: {
     NEXT_PUBLIC_SERVICE_VERSION: process.env.RAILWAY_DEPLOYMENT_ID ?? process.env.SERVICE_VERSION ?? "development",
     NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT_NAME ?? process.env.NODE_ENV ?? "development",
@@ -33,6 +34,7 @@ const nextConfig: NextConfig = {
     resolveAlias: {
       "@lobbystack/telemetry": "../../packages/telemetry/dist/index.js",
       "@lobbystack/telemetry/node": "../../packages/telemetry/dist/node.js",
+      "@lobbystack/telemetry/browser": "../../packages/telemetry/dist/browser.js",
     },
   },
   webpack(config, { isServer }) {
@@ -46,24 +48,14 @@ const nextConfig: NextConfig = {
   },
   poweredByHeader: false,
   async headers() {
-    const webCallOrigin = webCallConnectSource();
-    const recordingOrigin = recordingStorageSource();
-    const contentSecurityPolicy = [
-      "default-src 'self'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "frame-ancestors 'none'",
-      "object-src 'none'",
-      `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com https://*.posthog.com`,
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https:",
-      "font-src 'self' data:",
-      `connect-src 'self' https://challenges.cloudflare.com https://*.posthog.com${webCallOrigin ? ` ${webCallOrigin}` : ""}${recordingOrigin ? ` ${recordingOrigin}` : ""} wss:`,
-      "frame-src 'self' https://challenges.cloudflare.com",
-      `media-src 'self' blob:${recordingOrigin ? ` ${recordingOrigin}` : ""}`,
-      "worker-src 'self' blob:",
-    ].join("; ");
-    return [{ source: "/(.*)", headers: [{ key: "Content-Security-Policy", value: contentSecurityPolicy }, { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" }, { key: "X-Content-Type-Options", value: "nosniff" }, { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" }, { key: "X-Frame-Options", value: "DENY" }] }];
+    // The iframe document routes own their own framing policy: the global DENY
+    // header must not be stamped on top of the embeddable CSP.
+    const embeddable = toNextHeaderList(embeddableSecurityHeaders());
+    return [
+      { source: "/((?!embed\\.js|embed/).*)", headers: toNextHeaderList(securityHeaders()) },
+      { source: "/embed.js", headers: embeddable },
+      { source: "/embed/:key*", headers: embeddable },
+    ];
   },
 };
 

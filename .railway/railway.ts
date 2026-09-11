@@ -133,7 +133,7 @@ export default defineRailway((ctx) => {
       LOBBYSTACK_DISPATCHER_DATABASE_URL: preserve(),
       LOBBYSTACK_WORKER_DATABASE_URL: preserve(),
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: preserve(),
-      NEXT_PUBLIC_POSTHOG_KEY: preserve(),
+      NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN: preserve(),
       NEXT_PUBLIC_POSTHOG_HOST: preserve(),
       NEXT_PUBLIC_WEB_CALL_ENDPOINT: preserve(),
       OPENAI_API_KEY: preserve(),

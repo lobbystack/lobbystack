@@ -2,9 +2,6 @@ const MARKDOWN_TOKEN_COUNT = "120"
 const CONTENT_SIGNAL = "ai-train=yes, search=yes, ai-input=yes"
 const CANONICAL_HOST = "lobbystack.com"
 const WWW_HOST = "www.lobbystack.com"
-const POSTHOG_PROXY_HOST = "ts.lobbystack.com"
-const POSTHOG_API_HOST = "us.i.posthog.com"
-const POSTHOG_ASSET_HOST = "us-assets.i.posthog.com"
 const DEFAULT_LOCALE = "en"
 const TRANSLATED_PATHS = new Set([
   "/",
@@ -62,19 +59,7 @@ const TRANSLATED_PATHS = new Set([
   "/terms/",
   "/search/",
 ])
-const ALLOWED_POSTHOG_PROXY_ORIGINS = new Set([
-  "https://app.lobbystack.com",
-  "https://lobbystack.com",
-  "https://www.lobbystack.com",
-  "http://127.0.0.1:4174",
-  "http://127.0.0.1:4175",
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "http://localhost:5175",
-  "http://localhost:5180",
-])
 
-const isPostHogProxyRequest = (url) => url.hostname === POSTHOG_PROXY_HOST
 const isWwwHost = (url) => url.hostname === WWW_HOST
 
 const normalizePath = (pathname) => {
@@ -172,8 +157,6 @@ const redirectToFrench = (request, url) => {
   return new Response(null, { status: 302, headers })
 }
 
-const isPostHogAssetPath = (pathname) =>
-  pathname.startsWith("/static/") || pathname.startsWith("/array/")
 
 const wantsMarkdown = (request) =>
   request.headers
@@ -193,131 +176,6 @@ const getHomepageMarkdownPath = (pathname) => {
   return null
 }
 
-const getAllowedPostHogProxyOrigin = (request) => {
-  const origin = request.headers.get("Origin")
-
-  if (!origin || !ALLOWED_POSTHOG_PROXY_ORIGINS.has(origin)) {
-    return null
-  }
-
-  return origin
-}
-
-const setCorsHeaders = (headers, request) => {
-  const allowedOrigin = getAllowedPostHogProxyOrigin(request)
-  const requestedHeaders = request.headers.get("Access-Control-Request-Headers")
-
-  if (allowedOrigin) {
-    headers.set("Access-Control-Allow-Origin", allowedOrigin)
-    headers.set("Access-Control-Allow-Credentials", "true")
-  }
-
-  headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-  headers.set(
-    "Access-Control-Allow-Headers",
-    requestedHeaders || "Content-Type"
-  )
-  headers.set("Access-Control-Max-Age", "86400")
-  headers.append("Vary", "Origin")
-  headers.append("Vary", "Access-Control-Request-Headers")
-  headers.append("Vary", "Access-Control-Request-Method")
-}
-
-const addCorsHeaders = (response, request) => {
-  const headers = new Headers(response.headers)
-
-  setCorsHeaders(headers, request)
-  headers.delete("set-cookie")
-
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  })
-}
-
-const preflightResponse = (request) => {
-  const headers = new Headers({
-    "Cache-Control": "public, max-age=86400",
-  })
-
-  setCorsHeaders(headers, request)
-
-  return new Response(null, {
-    status: 204,
-    headers,
-  })
-}
-
-const retrievePostHogAsset = async (request, pathWithSearch, context) => {
-  const cache = globalThis.caches?.default
-  const cacheKey = new Request(request.url, request)
-
-  if (cache) {
-    const cached = await cache.match(cacheKey)
-
-    if (cached) {
-      return cached
-    }
-  }
-
-  const response = await fetch(`https://${POSTHOG_ASSET_HOST}${pathWithSearch}`)
-
-  if (cache && response.ok) {
-    context.waitUntil(cache.put(cacheKey, response.clone()))
-  }
-
-  return response
-}
-
-const forwardPostHogRequest = async (request, pathWithSearch, url) => {
-  const ip = request.headers.get("CF-Connecting-IP") || ""
-  const headers = new Headers(request.headers)
-
-  headers.delete("cookie")
-  headers.delete("host")
-  headers.set("X-Forwarded-For", ip)
-  headers.set("X-Forwarded-Host", url.host)
-  headers.set("X-Forwarded-Proto", url.protocol.replace(":", ""))
-
-  const body =
-    request.method !== "GET" && request.method !== "HEAD"
-      ? await request.arrayBuffer()
-      : null
-
-  return fetch(
-    new Request(`https://${POSTHOG_API_HOST}${pathWithSearch}`, {
-      method: request.method,
-      headers,
-      body,
-      redirect: request.redirect,
-    })
-  )
-}
-
-const proxyPostHogRequest = async (context, url) => {
-  const { request } = context
-
-  if (url.pathname === "/healthz") {
-    return new Response("ok\n", {
-      headers: {
-        "Cache-Control": "no-store",
-        "Content-Type": "text/plain; charset=utf-8",
-      },
-    })
-  }
-
-  if (request.method === "OPTIONS") {
-    return preflightResponse(request)
-  }
-
-  const pathWithSearch = url.pathname + url.search
-  const response = isPostHogAssetPath(url.pathname)
-    ? await retrievePostHogAsset(request, pathWithSearch, context)
-    : await forwardPostHogRequest(request, pathWithSearch, url)
-
-  return addCorsHeaders(response, request)
-}
 
 export async function onRequest(context) {
   const url = new URL(context.request.url)
@@ -325,10 +183,6 @@ export async function onRequest(context) {
 
   if (isWwwHost(url)) {
     return redirectToCanonicalHost(url)
-  }
-
-  if (isPostHogProxyRequest(url)) {
-    return proxyPostHogRequest(context, url)
   }
 
   if (shouldRedirectToFrench(context.request, url)) {

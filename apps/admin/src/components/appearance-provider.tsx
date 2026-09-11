@@ -6,7 +6,8 @@ import {
   type ReactNode,
 } from "react";
 
-import i18n from "@/i18n";
+import { useTranslation } from "react-i18next";
+
 import {
   readStoredTimeFormatPreference,
   resolveTimeFormatPreference,
@@ -22,6 +23,7 @@ type AppearanceContextValue = {
 const AppearanceContext = createContext<AppearanceContextValue | null>(null);
 
 export function AppearanceProvider({ children }: { children: ReactNode }) {
+  const { i18n } = useTranslation();
   const [timeFormatPreference, setTimeFormatPreferenceState] =
     useState<TimeFormatPreference>(
       resolveTimeFormatPreference({

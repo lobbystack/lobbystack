@@ -17,7 +17,7 @@ export async function GET(request: Request) {
       const row = business[0];
       return {
         steps: [
-          { id: "website", name: "Add your website", description: "Import your public website", status: Boolean(row?.websiteUrl) ? "complete" : row?.skippedSteps.includes("website") ? "skipped" : "needs setup" },
+          { id: "website", name: "Add your website", description: "Import your public website", status: row?.websiteUrl ? "complete" : row?.skippedSteps.includes("website") ? "skipped" : "needs setup" },
           { id: "sources", name: "Add more sources", description: "Upload policies, FAQs, or pricing", status: Number(knowledge[0]?.count ?? 0) > 0 ? "complete" : row?.skippedSteps.includes("sources") ? "skipped" : "needs setup" },
           { id: "calendar", name: "Connect your calendar", description: "Keep appointment times in sync", status: Number(calendar[0]?.count ?? 0) > 0 ? "complete" : row?.skippedSteps.includes("calendar") ? "skipped" : "needs setup" },
           { id: "services", name: "Add your services", description: "Configure services customers can book", status: Number(serviceCount[0]?.count ?? 0) > 0 ? "complete" : row?.skippedSteps.includes("services") ? "skipped" : "needs setup" },

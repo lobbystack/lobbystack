@@ -6,7 +6,7 @@ export type BrowserAnalyticsClient = {
   identify?: (distinctId: string, properties?: Record<string, unknown>) => void;
   reset?: () => void;
   opt_out_capturing?: () => void;
-  opt_in_capturing?: () => void;
+  opt_in_capturing?: (options?: { captureEventName?: false }) => void;
   startSessionRecording?: () => void;
   stopSessionRecording?: () => void;
 };
@@ -19,11 +19,25 @@ export type BrowserTelemetry = {
   setSensitiveRoute: (sensitive: boolean) => void;
 };
 
+/** State the client already has before any setter runs. */
+export type BrowserTelemetryState = {
+  optedOut?: boolean;
+  sensitiveRoute?: boolean;
+};
+
 export function createBrowserTelemetry(
   client: BrowserAnalyticsClient | undefined,
+  state: BrowserTelemetryState = {},
 ): BrowserTelemetry {
-  let optedOut = false;
-  let sensitiveRoute = false;
+  let optedOut = state.optedOut ?? false;
+  let sensitiveRoute = state.sensitiveRoute ?? false;
+
+  function startSessionRecording() {
+    if (!client || optedOut || sensitiveRoute) {
+      return;
+    }
+    client.startSessionRecording?.();
+  }
 
   return {
     track(event, properties = {}) {
@@ -33,7 +47,7 @@ export function createBrowserTelemetry(
       client.capture(event, redactTelemetryProperties(properties) as Record<string, unknown>);
     },
     identify(distinctId, properties = {}) {
-      if (!client || optedOut) {
+      if (!client || optedOut || sensitiveRoute) {
         return;
       }
       client.identify?.(distinctId, redactTelemetryProperties(properties) as Record<string, unknown>);
@@ -42,20 +56,29 @@ export function createBrowserTelemetry(
       client?.reset?.();
     },
     setOptOut(nextOptedOut) {
+      if (optedOut === nextOptedOut) {
+        return;
+      }
       optedOut = nextOptedOut;
       if (nextOptedOut) {
-        client?.opt_out_capturing?.();
         client?.stopSessionRecording?.();
+        client?.opt_out_capturing?.();
       } else {
-        client?.opt_in_capturing?.();
+        // Granting consent also captures the current page as a pageview, so no
+        // explicit pageview is needed here.
+        client?.opt_in_capturing?.({ captureEventName: false });
+        startSessionRecording();
       }
     },
     setSensitiveRoute(sensitive) {
+      if (sensitiveRoute === sensitive) {
+        return;
+      }
       sensitiveRoute = sensitive;
       if (sensitive) {
         client?.stopSessionRecording?.();
-      } else if (!optedOut) {
-        client?.startSessionRecording?.();
+      } else {
+        startSessionRecording();
       }
     },
   };
