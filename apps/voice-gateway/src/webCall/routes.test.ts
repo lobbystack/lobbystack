@@ -5,6 +5,8 @@ import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 const {
   appendVoiceTranscriptMock,
   bookVoiceAppointmentMock,
+  captureAiGenerationMock,
+  captureAiTraceStartedMock,
   completeVoiceCallMock,
   fetchWebCallRecordingTargetMock,
   fetchWebVoiceContextMock,
@@ -17,6 +19,8 @@ const {
 } = vi.hoisted(() => ({
   appendVoiceTranscriptMock: vi.fn(),
   bookVoiceAppointmentMock: vi.fn(),
+  captureAiGenerationMock: vi.fn(),
+  captureAiTraceStartedMock: vi.fn(),
   completeVoiceCallMock: vi.fn(),
   fetchWebCallRecordingTargetMock: vi.fn(),
   fetchWebVoiceContextMock: vi.fn(),
@@ -115,6 +119,13 @@ vi.mock("../backend/runtimeClient", () => ({
   updateVoiceTransferState: vi.fn(),
   verifyVoiceAppointmentChangeOtp: vi.fn(),
   verifyVoiceAppointmentForChange: vi.fn(),
+}));
+
+vi.mock("../observability/posthog", async importOriginal => ({
+  ...(await importOriginal<typeof import("../observability/posthog")>()),
+  captureAiGeneration: captureAiGenerationMock,
+  captureAiTraceStarted: captureAiTraceStartedMock,
+  capturePostHogException: vi.fn(),
 }));
 
 import { demoSnapshot } from "@lobbystack/shared";
@@ -594,6 +605,19 @@ describe("web call routes", () => {
         }),
       ),
     );
+    await vi.waitFor(() => expect(captureAiGenerationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        businessId: "business_123",
+        callId: "call_123",
+        conversationId: "conversation_123",
+        isStreaming: true,
+        isError: false,
+        properties: {
+          channel: "web_voice",
+          operation: "web_voice.response_generation",
+        },
+      }),
+    ));
     socket.emit(
       "message",
       Buffer.from(
@@ -635,6 +659,77 @@ describe("web call routes", () => {
     expect(sentMessages).toContainEqual({ type: "output_audio_buffer.clear" });
     expect(sentMessages.at(-1)).toEqual({ type: "response.create" });
     expect(sentMessages).not.toContainEqual({ type: "input_audio_buffer.clear" });
+  });
+
+  it("times an automatic VAD response from provider creation through completion", async () => {
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+    await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: { origin: "https://lobbystack.com", "content-type": "application/json" },
+      payload: { businessSlug: "lobbystack", sdp: "v=0" },
+    });
+    const socket = webSocketInstances[0]!;
+    socket.emit("open");
+    // Finish the explicit greeting first. Once VAD is enabled, OpenAI creates
+    // ordinary caller-turn responses without a response.create from us.
+    socket.emit("message", Buffer.from(JSON.stringify({
+      type: "response.created",
+      response: { id: "opening-greeting" },
+    })));
+    socket.emit("message", Buffer.from(JSON.stringify({
+      type: "response.done",
+      response: { id: "opening-greeting", status: "completed" },
+    })));
+    await vi.waitFor(() => expect(captureAiGenerationMock).toHaveBeenCalled());
+    captureAiGenerationMock.mockClear();
+
+    const now = vi.spyOn(Date, "now");
+    try {
+      socket.emit("message", Buffer.from(JSON.stringify({
+        type: "input_audio_buffer.speech_stopped",
+      })));
+      now.mockReturnValue(1_000);
+      socket.emit("message", Buffer.from(JSON.stringify({
+        type: "response.created",
+        response: { id: "automatic-response" },
+      })));
+      now.mockReturnValue(1_275);
+      socket.emit("message", Buffer.from(JSON.stringify({
+        type: "response.done",
+        response: {
+          id: "automatic-response",
+          status: "completed",
+          usage: { input_tokens: 11, output_tokens: 7, total_tokens: 18 },
+        },
+      })));
+
+      await vi.waitFor(() => expect(captureAiGenerationMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          callId: "call_123",
+          latencyMs: 275,
+          inputTokens: 11,
+          outputTokens: 7,
+        }),
+      ));
+    } finally {
+      now.mockRestore();
+    }
   });
 
   it("does not forward prospect demo bearer URLs to call storage", async () => {
@@ -791,7 +886,7 @@ describe("web call routes", () => {
     expect(formData.get("sdp")).toBe("v=0\r\n");
     expect(JSON.parse(String(formData.get("session")))).toEqual({
       type: "realtime",
-      model: "gpt-realtime",
+      model: "gpt-realtime-2.1",
       audio: {
         output: {
           voice: "marin",

@@ -27,6 +27,7 @@ export type ApiMutationPayload<T extends Record<string, unknown> = Record<string
 let appDatabase: ReturnType<typeof createDatabaseClient> | undefined;
 let workerDatabase: ReturnType<typeof createDatabaseClient> | undefined;
 let dispatcherDatabase: ReturnType<typeof createDatabaseClient> | undefined;
+let financeExportDatabase: ReturnType<typeof createDatabaseClient> | undefined;
 
 export function getAppDatabase() {
   if (!appDatabase) {
@@ -47,6 +48,17 @@ export function getDispatcherDatabase() {
     dispatcherDatabase = createDatabaseClient("lobbystack_dispatcher");
   }
   return dispatcherDatabase;
+}
+
+/** The finance endpoint may only use its separately provisioned read role. */
+export function getFinanceExportDatabase() {
+  if (!process.env.LOBBYSTACK_FINANCE_EXPORT_DATABASE_URL) {
+    throw new Error("Finance export database role is not configured.");
+  }
+  if (!financeExportDatabase) {
+    financeExportDatabase = createDatabaseClient("lobbystack_finance_export");
+  }
+  return financeExportDatabase;
 }
 
 export function jsonError(message: string, status = 400, code?: string): NextResponse {

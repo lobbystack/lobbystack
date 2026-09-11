@@ -93,6 +93,8 @@ export async function POST(request: Request) {
       if (!reservation.allowed) return NextResponse.json({ error: "This month's chat session limit has been reached.", code: "chat_ai_limit_reached" }, { status: 402 });
     }
     const assistantMessageId = randomUUID();
+    const traceId = randomUUID();
+    const generationStartedAt = performance.now();
     const stream = createUIMessageStream({
       onError: () => SAFE_CHAT_ERROR,
       execute: async ({ writer }) => {
@@ -130,6 +132,7 @@ export async function POST(request: Request) {
             operation: "widget.chat",
             conversationId,
             messageId: persistedAssistantMessageId,
+            traceId,
             isStreaming: true,
             ...usage,
           }).catch((cause: unknown) => logGenerationFailure(cause));
@@ -138,6 +141,20 @@ export async function POST(request: Request) {
           writer.write({ type: "finish", finishReason });
         } catch (cause) {
           logGenerationFailure(cause);
+          // The event deliberately contains only a stable category: provider
+          // errors can include request or customer content in their messages.
+          void recordAiGenerationEvent(context, {
+            businessId: session.businessId,
+            operation: "widget.chat",
+            conversationId,
+            traceId,
+            provider: "unknown",
+            model: "unknown",
+            latencyMs: performance.now() - generationStartedAt,
+            isStreaming: true,
+            isError: true,
+            error: request.signal.aborted ? "request_aborted" : "generation_failed",
+          }).catch((recordingError: unknown) => logGenerationFailure(recordingError));
           writer.write({ type: "error", errorText: request.signal.aborted ? "The chat request was cancelled." : SAFE_CHAT_ERROR });
           writer.write({ type: "message-metadata", messageMetadata: { automationState: "ai_active" } });
           writer.write({ type: "finish", finishReason: "error" });

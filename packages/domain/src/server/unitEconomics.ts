@@ -9,13 +9,18 @@ export type UnitEconomicsEventInput = {
   eventKey: string;
   eventKind: string;
   channel: string;
-  costUsd: number;
+  costUsd?: number | null | undefined;
   occurredAt?: Date;
   quantity?: number;
   quantityUnit?: string;
   provider?: string;
   model?: string;
   operation?: string;
+  pricingVersion?: string;
+  pricingSource?: string;
+  pricingEffectiveDate?: string;
+  pricingRates?: Record<string, number>;
+  tokenUsage?: Record<string, number>;
   callId?: string;
   conversationId?: string;
   messageId?: string;
@@ -27,8 +32,8 @@ function monthKey(value: Date): string {
   return value.toISOString().slice(0, 7);
 }
 
-function safeCost(value: number): number {
-  return Number.isFinite(value) && value >= 0 ? Math.round(value * 1_000_000) / 1_000_000 : 0;
+function safeCost(value: number | null | undefined): number | null {
+  return value !== undefined && value !== null && Number.isFinite(value) && value >= 0 ? Math.round(value * 1_000_000) / 1_000_000 : null;
 }
 
 function roundUsd(value: number): number {
@@ -61,6 +66,11 @@ export async function recordUnitEconomicsEventInTransaction(tx: DatabaseTransact
     ...(input.provider !== undefined ? { provider: input.provider } : {}),
     ...(input.model !== undefined ? { model: input.model } : {}),
     ...(input.operation !== undefined ? { operation: input.operation } : {}),
+    ...(input.pricingVersion !== undefined ? { pricingVersion: input.pricingVersion } : {}),
+    ...(input.pricingSource !== undefined ? { pricingSource: input.pricingSource } : {}),
+    ...(input.pricingEffectiveDate !== undefined ? { pricingEffectiveDate: input.pricingEffectiveDate } : {}),
+    ...(input.pricingRates !== undefined ? { pricingRates: input.pricingRates } : {}),
+    ...(input.tokenUsage !== undefined ? { tokenUsage: input.tokenUsage } : {}),
     ...(input.callId !== undefined ? { callId: input.callId } : {}),
     ...(input.conversationId !== undefined ? { conversationId: input.conversationId } : {}),
     ...(input.messageId !== undefined ? { messageId: input.messageId } : {}),
@@ -68,7 +78,7 @@ export async function recordUnitEconomicsEventInTransaction(tx: DatabaseTransact
     ...(input.operatorNotificationDeliveryId !== undefined ? { operatorNotificationDeliveryId: input.operatorNotificationDeliveryId } : {}),
     updatedAt: new Date(),
   };
-  const [event] = await tx.insert(unitEconomicsEvents).values(values).onConflictDoUpdate({ target: [unitEconomicsEvents.businessId, unitEconomicsEvents.eventKey], set: { monthKey: values.monthKey, occurredAt, eventKind: input.eventKind, channel: input.channel, costUsd: values.costUsd, ...(input.quantity !== undefined ? { quantity: input.quantity } : {}), ...(input.quantityUnit !== undefined ? { quantityUnit: input.quantityUnit } : {}), ...(input.provider !== undefined ? { provider: input.provider } : {}), ...(input.model !== undefined ? { model: input.model } : {}), ...(input.operation !== undefined ? { operation: input.operation } : {}), updatedAt: new Date() } }).returning({ id: unitEconomicsEvents.id });
+  const [event] = await tx.insert(unitEconomicsEvents).values(values).onConflictDoUpdate({ target: [unitEconomicsEvents.businessId, unitEconomicsEvents.eventKey], set: { monthKey: values.monthKey, occurredAt, eventKind: input.eventKind, channel: input.channel, costUsd: values.costUsd, ...(input.quantity !== undefined ? { quantity: input.quantity } : {}), ...(input.quantityUnit !== undefined ? { quantityUnit: input.quantityUnit } : {}), ...(input.provider !== undefined ? { provider: input.provider } : {}), ...(input.model !== undefined ? { model: input.model } : {}), ...(input.operation !== undefined ? { operation: input.operation } : {}), ...(input.pricingVersion !== undefined ? { pricingVersion: input.pricingVersion } : {}), ...(input.pricingSource !== undefined ? { pricingSource: input.pricingSource } : {}), ...(input.pricingEffectiveDate !== undefined ? { pricingEffectiveDate: input.pricingEffectiveDate } : {}), ...(input.pricingRates !== undefined ? { pricingRates: input.pricingRates } : {}), ...(input.tokenUsage !== undefined ? { tokenUsage: input.tokenUsage } : {}), ...(input.callId !== undefined ? { callId: input.callId } : {}), ...(input.conversationId !== undefined ? { conversationId: input.conversationId } : {}), ...(input.messageId !== undefined ? { messageId: input.messageId } : {}), updatedAt: new Date() } }).returning({ id: unitEconomicsEvents.id });
   if (!event) throw new Error("Unit economics event could not be recorded.");
   await enqueueOutbox(tx, { topic: "billing.refreshUnitEconomics", businessId: input.businessId, aggregateType: "unit_economics_event", aggregateId: event.id, dedupeKey: `unit-economics:${event.id}:${values.monthKey}:${values.costUsd}`, payload: { monthKey: values.monthKey } });
   return event.id;
@@ -82,8 +92,8 @@ export async function refreshUnitEconomicsMonth(context: DomainContext, input: {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const targetMonth = input.monthKey ?? monthKey(new Date());
     const events = await tx.select().from(unitEconomicsEvents).where(and(eq(unitEconomicsEvents.businessId, input.businessId), eq(unitEconomicsEvents.monthKey, targetMonth))).orderBy(asc(unitEconomicsEvents.occurredAt));
-    const providerCostUsd = roundUsd(events.filter((event) => event.eventKind === "voice_provider" || event.eventKind === "sms_provider" || event.eventKind === "notification_provider" || event.eventKind === "operator_notification_provider").reduce((sum, event) => sum + event.costUsd, 0));
-    const aiCostUsd = roundUsd(events.filter((event) => event.eventKind === "voice_ai" || event.eventKind === "dashboard_ai").reduce((sum, event) => sum + event.costUsd, 0));
+    const providerCostUsd = roundUsd(events.filter((event) => event.eventKind === "voice_provider" || event.eventKind === "sms_provider" || event.eventKind === "notification_provider" || event.eventKind === "operator_notification_provider").reduce((sum, event) => sum + (event.costUsd ?? 0), 0));
+    const aiCostUsd = roundUsd(events.filter((event) => event.eventKind === "voice_ai" || event.eventKind === "dashboard_ai").reduce((sum, event) => sum + (event.costUsd ?? 0), 0));
     const voiceEvents = events.filter((event) => event.channel === "voice");
     const alertSmsEvents = events.filter((event) => event.eventKind === "notification_provider" || event.eventKind === "operator_notification_provider");
     const smsEvents = events.filter((event) => event.channel === "sms");
@@ -91,9 +101,9 @@ export async function refreshUnitEconomicsMonth(context: DomainContext, input: {
     const outboundSmsCount = new Set(smsEvents.filter((event) => event.messageId !== null).map((event) => event.messageId)).size;
     const smsThreadCount = new Set(smsEvents.filter((event) => event.conversationId !== null).map((event) => event.conversationId)).size;
     const voiceMinutes = roundUsd(voiceEvents.reduce((sum, event) => sum + (event.quantityUnit === "second" ? (event.quantity ?? 0) / 60 : event.quantityUnit === "minute" ? event.quantity ?? 0 : 0), 0));
-    const voiceCostUsd = roundUsd(voiceEvents.reduce((sum, event) => sum + event.costUsd, 0));
-    const smsCostUsd = roundUsd(smsEvents.reduce((sum, event) => sum + event.costUsd, 0));
-    const alertSmsCostUsd = roundUsd(alertSmsEvents.reduce((sum, event) => sum + event.costUsd, 0));
+    const voiceCostUsd = roundUsd(voiceEvents.reduce((sum, event) => sum + (event.costUsd ?? 0), 0));
+    const smsCostUsd = roundUsd(smsEvents.reduce((sum, event) => sum + (event.costUsd ?? 0), 0));
+    const alertSmsCostUsd = roundUsd(alertSmsEvents.reduce((sum, event) => sum + (event.costUsd ?? 0), 0));
     const activeUsers = await tx.select({ count: sql<string>`count(distinct ${businessMemberships.userId})` }).from(businessMemberships).where(and(eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active")));
     const activeUserCount = Number(activeUsers[0]?.count ?? 0);
     const activeBusinesses = await tx.select({ count: sql<string>`count(*)` }).from(businesses).where(eq(businesses.status, "active"));

@@ -23,7 +23,6 @@ import {
   reconcileCallStatus,
   recordUsage,
   recordCallSchedulingProgress,
-  recordAiGenerationEvent,
   rescheduleAppointmentForCaller,
   reserveOutboundCallAttempt,
   searchKnowledgeEvidence,
@@ -37,6 +36,7 @@ import { asApiResponse, getAppDatabase, readJson, requireInternalService } from 
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { resolveWebVoiceAccess } from "@/lib/prospect-demo";
 import { enforceWebVoiceRateLimits } from "@/lib/web-voice-policy";
+import { recordVoiceAiCostLedger } from "@/lib/voice-ai-cost";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -312,18 +312,40 @@ export async function POST(request: Request, context: { params: Promise<{ segmen
     if (path === "call/ai-cost") {
       const businessId = requiredString(body, "businessId");
       const eventKey = requiredString(body, "eventKey");
-      const costUsd = numberValue(body, "costUsd") ?? 0;
-      await recordUsage(domain, { businessId, periodKey: new Date().toISOString().slice(0, 7), sourceKey: eventKey, usageKind: "voice.ai.cost", quantity: costUsd, sync: false });
-      await recordAiGenerationEvent(domain, {
+      const costUsd = numberValue(body, "costUsd");
+      const occurredAt = stringValue(body, "occurredAt");
+      const callId = stringValue(body, "callId");
+      const conversationId = stringValue(body, "conversationId");
+      // Billing usage represents a known monetary amount.  The immutable AI
+      // usage ledger below also records unpriced generations with null cost.
+      if (costUsd !== undefined) {
+        await recordUsage(domain, { businessId, periodKey: new Date().toISOString().slice(0, 7), sourceKey: eventKey, usageKind: "voice.ai.cost", quantity: costUsd, sync: false });
+      }
+      await recordVoiceAiCostLedger(domain, {
         businessId,
-        operation: stringValue(body, "operation") ?? "voice.realtime",
+        eventKey,
+        costUsd: costUsd ?? null,
         provider: stringValue(body, "provider") ?? "openai",
         model: stringValue(body, "model") ?? "unknown",
-        latencyMs: 0,
-        totalCostUsd: costUsd,
-        ...(stringValue(body, "callId") ? { callId: stringValue(body, "callId") } : {}),
-        ...(stringValue(body, "conversationId") ? { conversationId: stringValue(body, "conversationId") } : {}),
-      }).catch(() => undefined);
+        operation: stringValue(body, "operation") ?? "voice.realtime",
+        ...(() => {
+          const pricingVersion = stringValue(body, "pricingVersion");
+          return pricingVersion ? { pricingVersion } : {};
+        })(),
+        ...(() => {
+          const pricingSource = stringValue(body, "pricingSource");
+          return pricingSource ? { pricingSource } : {};
+        })(),
+        ...(() => {
+          const pricingEffectiveDate = stringValue(body, "pricingEffectiveDate");
+          return pricingEffectiveDate ? { pricingEffectiveDate } : {};
+        })(),
+        ...(body.pricingRates && typeof body.pricingRates === "object" && !Array.isArray(body.pricingRates) ? { pricingRates: body.pricingRates as Record<string, number> } : {}),
+        ...(body.tokenUsage && typeof body.tokenUsage === "object" && !Array.isArray(body.tokenUsage) ? { tokenUsage: body.tokenUsage as Record<string, number> } : {}),
+        ...(occurredAt ? { occurredAt } : {}),
+        ...(callId ? { callId } : {}),
+        ...(conversationId ? { conversationId } : {}),
+      });
       return NextResponse.json({ ok: true });
     }
 

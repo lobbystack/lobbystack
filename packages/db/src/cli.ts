@@ -28,6 +28,7 @@ async function main(): Promise<void> {
           await migrator.db.execute(sql.raw(file));
         }
         await migrator.db.execute(sql.raw(await readFile(resolve("migrations", "0048_knowledge_keyword_search.sql"), "utf8")));
+        await migrator.db.execute(sql.raw(await readFile(resolve("migrations", "0049_finance_usage_metadata.sql"), "utf8")));
         console.log("Database migrations applied.");
         break;
       case "check": {
@@ -101,6 +102,11 @@ async function main(): Promise<void> {
             ('lobbystack_app', 'prospect_demos', 'SELECT'),
             ('lobbystack_worker', 'prospect_demos', 'SELECT'),
             ('lobbystack_readonly', 'prospect_demos', 'SELECT')
+            ,('lobbystack_finance_export', 'businesses', 'SELECT')
+            ,('lobbystack_finance_export', 'billing_accounts', 'SELECT')
+            ,('lobbystack_finance_export', 'calls', 'SELECT')
+            ,('lobbystack_finance_export', 'appointments', 'SELECT')
+            ,('lobbystack_finance_export', 'unit_economics_events', 'SELECT')
           ) as expected(role_name, table_name, privilege_type)
           where not has_table_privilege(expected.role_name, 'public.' || expected.table_name, expected.privilege_type)
         `);

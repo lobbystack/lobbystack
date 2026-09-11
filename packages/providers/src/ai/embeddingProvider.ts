@@ -18,6 +18,9 @@ export type EmbeddingAiConfig = {
   dimensions?: number;
   inputCostPerMillionTokens?: number;
   revision?: string;
+  pricingVersion?: string;
+  pricingSource?: string;
+  pricingEffectiveDate?: string;
   timeoutMs?: number;
   maxParallelCalls?: number;
 };
@@ -31,7 +34,10 @@ export class OpenAiCompatibleEmbeddingProvider {
   private readonly dimensions: number;
   private readonly api: EmbeddingModel;
   private readonly providerName: string;
-  private readonly inputCostPerMillionTokens: number;
+  private readonly inputCostPerMillionTokens: number | undefined;
+  private readonly pricingVersion: string | undefined;
+  private readonly pricingSource: string | undefined;
+  private readonly pricingEffectiveDate: string | undefined;
   private readonly embeddingFingerprint: string;
   private readonly timeoutMs: number;
   private readonly maxParallelCalls: number;
@@ -50,7 +56,11 @@ export class OpenAiCompatibleEmbeddingProvider {
       ...(config.apiKey ? { apiKey: config.apiKey } : {}),
     });
     this.api = factory.embeddingModel(this.model);
-    this.inputCostPerMillionTokens = config.inputCostPerMillionTokens ?? 0.02;
+    // Do not attach an unauditable price to financial usage records.
+    this.inputCostPerMillionTokens = hasVersionedPricing(config) ? config.inputCostPerMillionTokens : undefined;
+    this.pricingVersion = config.pricingVersion;
+    this.pricingSource = config.pricingSource;
+    this.pricingEffectiveDate = config.pricingEffectiveDate;
     this.timeoutMs = config.timeoutMs ?? DEFAULT_EMBEDDING_TIMEOUT_MS;
     this.maxParallelCalls = config.maxParallelCalls ?? DEFAULT_EMBEDDING_MAX_PARALLEL_CALLS;
     if (!Number.isInteger(this.maxParallelCalls) || this.maxParallelCalls < 1) {
@@ -98,9 +108,17 @@ export class OpenAiCompatibleEmbeddingProvider {
       inputTokens: result.usage.tokens,
       totalTokens: result.usage.tokens,
       ...(totalCostUsd !== undefined ? { totalCostUsd } : {}),
+      ...(this.pricingVersion ? { pricingVersion: this.pricingVersion } : {}),
+      ...(this.pricingSource ? { pricingSource: this.pricingSource } : {}),
+      ...(this.pricingEffectiveDate ? { pricingEffectiveDate: this.pricingEffectiveDate } : {}),
+      ...(this.inputCostPerMillionTokens !== undefined ? { ratesUsdPerMillionTokens: { input: this.inputCostPerMillionTokens } } : {}),
     });
     return result.embeddings.map((embedding) => normalizeEmbedding(embedding, this.dimensions));
   }
+}
+
+function hasVersionedPricing(config: Pick<EmbeddingAiConfig, "pricingVersion" | "pricingSource" | "pricingEffectiveDate">): boolean {
+  return Boolean(config.pricingVersion?.trim() && config.pricingSource?.trim() && config.pricingEffectiveDate?.trim());
 }
 
 export function normalizeEmbedding(values: number[], dimensions = 1536): number[] {
@@ -141,6 +159,9 @@ export function createEmbeddingProvider(environment: EmbeddingAiEnvironment = pr
     ...(environment.AI_EMBEDDING_BASE_URL?.trim() ? { baseURL: environment.AI_EMBEDDING_BASE_URL.trim() } : {}),
     ...(environment.AI_EMBEDDING_PROVIDER_NAME ? { name: environment.AI_EMBEDDING_PROVIDER_NAME } : {}),
     ...(environment.AI_EMBEDDING_REVISION ? { revision: environment.AI_EMBEDDING_REVISION } : {}),
+    ...(environment.AI_EMBEDDING_PRICING_VERSION?.trim() ? { pricingVersion: environment.AI_EMBEDDING_PRICING_VERSION.trim() } : {}),
+    ...(environment.AI_EMBEDDING_PRICING_SOURCE?.trim() ? { pricingSource: environment.AI_EMBEDDING_PRICING_SOURCE.trim() } : {}),
+    ...(environment.AI_EMBEDDING_PRICING_EFFECTIVE_DATE?.trim() ? { pricingEffectiveDate: environment.AI_EMBEDDING_PRICING_EFFECTIVE_DATE.trim() } : {}),
     ...(inputCostPerMillionTokens !== undefined ? { inputCostPerMillionTokens } : {}),
     ...(timeoutMs !== undefined ? { timeoutMs } : {}),
     ...(maxParallelCalls !== undefined ? { maxParallelCalls } : {}),

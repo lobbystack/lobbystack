@@ -19,6 +19,8 @@ import {
   getImplicitEndCallForAssistantTranscript,
   getRealtimeGenerationOutcome,
   markRealtimeToolCallHandled,
+  markTranscriptionCommitted,
+  consumeTranscriptionLatencyMs,
   shouldRecoverFromOpenAiRealtimeServerError,
   shouldSkipImplicitEndCallAudioDone,
   shouldSkipImplicitEndCallResponseDone,
@@ -260,6 +262,28 @@ describe("estimateRealtimeTotalCostUsd", () => {
     );
 
     expect(totalCostUsd).toBeCloseTo(0.0046);
+  });
+});
+
+describe("transcription item correlation", () => {
+  it("keeps concurrent committed items separate and cleans them on completion", () => {
+    const commits = new Map<string, number>();
+    markTranscriptionCommitted(commits, "item-a", 100);
+    markTranscriptionCommitted(commits, "item-b", 200);
+
+    expect(consumeTranscriptionLatencyMs(commits, "item-b", 260)).toBe(60);
+    expect(commits.has("item-b")).toBe(false);
+    expect(consumeTranscriptionLatencyMs(commits, "item-a", 310)).toBe(210);
+    expect(commits.size).toBe(0);
+  });
+
+  it("omits latency without a committed item and still clears failed items", () => {
+    const commits = new Map<string, number>();
+    markTranscriptionCommitted(commits, "failed-item", 100);
+    expect(consumeTranscriptionLatencyMs(commits, undefined, 200)).toBeUndefined();
+    expect(commits.has("failed-item")).toBe(true);
+    expect(consumeTranscriptionLatencyMs(commits, "failed-item", 200)).toBe(100);
+    expect(commits.size).toBe(0);
   });
 });
 

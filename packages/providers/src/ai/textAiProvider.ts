@@ -15,6 +15,9 @@ export type TextAiConfig = {
   name?: string;
   inputCostPerMillionTokens?: number;
   outputCostPerMillionTokens?: number;
+  pricingVersion?: string;
+  pricingSource?: string;
+  pricingEffectiveDate?: string;
   timeoutMs?: number;
   chunkTimeoutMs?: number;
 };
@@ -30,8 +33,11 @@ export class OpenAiCompatibleTextProvider {
   private readonly model: string;
   private readonly api: LanguageModel;
   private readonly providerName: string;
-  private readonly inputCostPerMillionTokens: number;
-  private readonly outputCostPerMillionTokens: number;
+  private readonly inputCostPerMillionTokens: number | undefined;
+  private readonly outputCostPerMillionTokens: number | undefined;
+  private readonly pricingVersion: string | undefined;
+  private readonly pricingSource: string | undefined;
+  private readonly pricingEffectiveDate: string | undefined;
   private readonly timeoutMs: number;
   private readonly chunkTimeoutMs: number;
 
@@ -44,8 +50,14 @@ export class OpenAiCompatibleTextProvider {
       ...(config.apiKey ? { apiKey: config.apiKey } : {}),
     });
     this.api = factory.chatModel(this.model);
-    this.inputCostPerMillionTokens = config.inputCostPerMillionTokens ?? 0.15;
-    this.outputCostPerMillionTokens = config.outputCostPerMillionTokens ?? 0.6;
+    // A rate without its version, source, and effective date cannot be
+    // audited later. Keep the monetary value unknown in that case.
+    const versionedPricing = hasVersionedPricing(config);
+    this.inputCostPerMillionTokens = versionedPricing ? config.inputCostPerMillionTokens : undefined;
+    this.outputCostPerMillionTokens = versionedPricing ? config.outputCostPerMillionTokens : undefined;
+    this.pricingVersion = config.pricingVersion;
+    this.pricingSource = config.pricingSource;
+    this.pricingEffectiveDate = config.pricingEffectiveDate;
     this.timeoutMs = config.timeoutMs ?? DEFAULT_TEXT_AI_TIMEOUT_MS;
     this.chunkTimeoutMs = config.chunkTimeoutMs ?? DEFAULT_TEXT_AI_CHUNK_TIMEOUT_MS;
   }
@@ -91,7 +103,7 @@ export class OpenAiCompatibleTextProvider {
       inputCostPerMillionTokens: this.inputCostPerMillionTokens,
       outputCostPerMillionTokens: this.outputCostPerMillionTokens,
     });
-    return { text, usage: { ...usage, ...(totalCostUsd !== undefined ? { totalCostUsd } : {}) } };
+    return { text, usage: this.withPricing(usage, totalCostUsd) };
   }
 
   streamReply(input: {
@@ -162,8 +174,19 @@ export class OpenAiCompatibleTextProvider {
       inputCostPerMillionTokens: this.inputCostPerMillionTokens,
       outputCostPerMillionTokens: this.outputCostPerMillionTokens,
     });
-    return { ...usage, ...(totalCostUsd !== undefined ? { totalCostUsd } : {}) };
+    return this.withPricing(usage, totalCostUsd);
   }
+
+  private withPricing(usage: AiProviderUsage, totalCostUsd: number | undefined): AiProviderUsage {
+    const rates = this.inputCostPerMillionTokens !== undefined || this.outputCostPerMillionTokens !== undefined
+      ? { ...(this.inputCostPerMillionTokens !== undefined ? { input: this.inputCostPerMillionTokens } : {}), ...(this.outputCostPerMillionTokens !== undefined ? { output: this.outputCostPerMillionTokens } : {}) }
+      : undefined;
+    return { ...usage, ...(totalCostUsd !== undefined ? { totalCostUsd } : {}), ...(this.pricingVersion ? { pricingVersion: this.pricingVersion } : {}), ...(this.pricingSource ? { pricingSource: this.pricingSource } : {}), ...(this.pricingEffectiveDate ? { pricingEffectiveDate: this.pricingEffectiveDate } : {}), ...(rates ? { ratesUsdPerMillionTokens: rates } : {}) };
+  }
+}
+
+function hasVersionedPricing(config: Pick<TextAiConfig, "pricingVersion" | "pricingSource" | "pricingEffectiveDate">): boolean {
+  return Boolean(config.pricingVersion?.trim() && config.pricingSource?.trim() && config.pricingEffectiveDate?.trim());
 }
 
 export type TextAiEnvironment = Record<string, string | undefined>;
@@ -182,6 +205,9 @@ export function createTextAiProvider(environment: TextAiEnvironment = process.en
   if (inputCost !== undefined) config.inputCostPerMillionTokens = inputCost;
   const outputCost = parseOptionalNumber(environment.AI_CHAT_OUTPUT_COST_PER_MILLION_TOKENS);
   if (outputCost !== undefined) config.outputCostPerMillionTokens = outputCost;
+  if (environment.AI_CHAT_PRICING_VERSION?.trim()) config.pricingVersion = environment.AI_CHAT_PRICING_VERSION.trim();
+  if (environment.AI_CHAT_PRICING_SOURCE?.trim()) config.pricingSource = environment.AI_CHAT_PRICING_SOURCE.trim();
+  if (environment.AI_CHAT_PRICING_EFFECTIVE_DATE?.trim()) config.pricingEffectiveDate = environment.AI_CHAT_PRICING_EFFECTIVE_DATE.trim();
   const timeoutMs = parsePositiveNumber(environment.AI_CHAT_TIMEOUT_MS);
   if (timeoutMs !== undefined) config.timeoutMs = timeoutMs;
   const chunkTimeoutMs = parsePositiveNumber(environment.AI_CHAT_CHUNK_TIMEOUT_MS);

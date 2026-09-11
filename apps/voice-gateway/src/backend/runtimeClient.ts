@@ -335,10 +335,15 @@ export async function recordVoiceAiCost(input: {
   callId: string;
   occurredAt: string;
   eventKey: string;
-  costUsd: number;
+  costUsd: number | null;
   provider: string;
   model: string;
   operation?: string;
+  pricingVersion?: string;
+  pricingSource?: string;
+  pricingEffectiveDate?: string;
+  pricingRates?: Record<string, number>;
+  tokenUsage?: Record<string, number>;
   conversationId?: string;
 }): Promise<void> {
   await postJson("/voice/call/ai-cost", input);

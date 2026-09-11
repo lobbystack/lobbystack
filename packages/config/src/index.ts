@@ -78,7 +78,7 @@ const voiceGatewayEnvSchema = z.object({
   INTERNAL_SERVICE_TOKEN: z.string().min(1),
   INTERNAL_SERVICE_SECRET: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().optional(),
-  OPENAI_REALTIME_MODEL: z.string().default("gpt-realtime"),
+  OPENAI_REALTIME_MODEL: z.string().default("gpt-realtime-2.1"),
   OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
   OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
   OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),

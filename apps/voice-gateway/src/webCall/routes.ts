@@ -1,7 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { buildVoiceSystemPrompt } from "@lobbystack/ai";
-import { WEB_CALL_STALE_GRACE_MS } from "@lobbystack/shared";
+import { resolveOpenAiPricing, WEB_CALL_STALE_GRACE_MS } from "@lobbystack/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import WebSocket from "ws";
 
@@ -15,7 +15,11 @@ import {
   startWebVoiceCall,
   uploadVoiceRecording,
 } from "../backend/runtimeClient";
-import { capturePostHogException } from "../observability/posthog";
+import {
+  captureAiGeneration,
+  captureAiTraceStarted,
+  capturePostHogException,
+} from "../observability/posthog";
 import type { EndCallRequest } from "../realtime/callControl";
 import { executeVoiceTool } from "../realtime/toolExecutor";
 import { createWebRealtimeToolDefinitions } from "../realtime/toolDefinitions";
@@ -50,6 +54,7 @@ type OpenAiRealtimeMessage = {
   transcript?: string;
   response?: {
     id?: string;
+    model?: string;
     status?: string;
     metadata?: Record<string, string | number | boolean | null> | null;
     usage?: {
@@ -85,7 +90,10 @@ type ActiveWebCall = {
   callId: string;
   conversationId: string;
   providerCallId: string;
+  aiTraceId: string;
   startedAtMs: number;
+  pendingAssistantResponseRequestAtMs: number | null;
+  assistantResponseStartedAtMsById: Map<string, number>;
   maxDurationMs: number;
   handledToolCallIds: Set<string>;
   sidebandSocket: WebSocket | null;
@@ -883,9 +891,7 @@ function requestWebFinalMessageBeforeHangup(
   }
 
   session.pendingEndCall = endCall;
-  postRealtimeEvent(socket, {
-    type: "response.create",
-    response: {
+  requestWebResponse(socket, session, {
       metadata: {
         lobbystack_purpose: WEB_FINAL_MESSAGE_METADATA_PURPOSE,
       },
@@ -895,7 +901,6 @@ function requestWebFinalMessageBeforeHangup(
         "Do not call any tools and do not add anything else.",
       ].join(" "),
       tool_choice: "none",
-    },
   });
 
   session.pendingEndCallFallbackTimer = setTimeout(() => {
@@ -973,18 +978,53 @@ function postRealtimeEvent(
   }
 }
 
+function requestWebResponse(
+  socket: WebSocket,
+  session: ActiveWebCall,
+  response?: Record<string, unknown>,
+): void {
+  session.pendingAssistantResponseRequestAtMs = Date.now();
+  postRealtimeEvent(socket, {
+    type: "response.create",
+    ...(response ? { response } : {}),
+  });
+}
+
+function trackWebResponseCreated(
+  session: ActiveWebCall,
+  responseId: string | undefined,
+): void {
+  // Manual responses are timed from our request. Automatic VAD responses have
+  // no client-side request, so their provider-created event is the first
+  // defensible timestamp available to the gateway.
+  const startedAtMs =
+    session.pendingAssistantResponseRequestAtMs ?? Date.now();
+  if (responseId) {
+    session.assistantResponseStartedAtMsById.set(responseId, startedAtMs);
+  }
+  // The request timestamp belongs to the newly-created response. Keeping it
+  // after this point could incorrectly attribute a subsequent VAD response to
+  // an earlier manual response.
+  session.pendingAssistantResponseRequestAtMs = null;
+}
+
 function priceUsage(
   server: FastifyInstance,
   usage: RealtimeUsageMetrics | undefined,
+  model = server.runtimeConfig.OPENAI_REALTIME_MODEL,
 ): number | null {
   if (!usage) {
     return null;
   }
 
+  const catalog = (typeof resolveOpenAiPricing === "function" ? resolveOpenAiPricing(model) : undefined)
+    ?.ratesUsdPerMillionTokens;
   const fallbackInputPrice =
-    server.runtimeConfig.OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD;
+    server.runtimeConfig.OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD ??
+    (catalog?.textInput !== undefined ? catalog.textInput / 1_000_000 : undefined);
   const fallbackOutputPrice =
-    server.runtimeConfig.OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD;
+    server.runtimeConfig.OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD ??
+    (catalog?.textOutput !== undefined ? catalog.textOutput / 1_000_000 : undefined);
   const textInputTokens = usage.input_token_details?.text_tokens;
   const audioInputTokens = usage.input_token_details?.audio_tokens;
   const cachedInputTokens = usage.input_token_details?.cached_tokens ?? 0;
@@ -994,14 +1034,17 @@ function priceUsage(
     server.runtimeConfig.OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD ??
     fallbackInputPrice;
   const audioInputPrice =
-    server.runtimeConfig.OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD;
+    server.runtimeConfig.OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD ??
+    (catalog?.audioInput !== undefined ? catalog.audioInput / 1_000_000 : undefined);
   const textOutputPrice =
     server.runtimeConfig.OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD ??
     fallbackOutputPrice;
   const audioOutputPrice =
-    server.runtimeConfig.OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD;
+    server.runtimeConfig.OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD ??
+    (catalog?.audioOutput !== undefined ? catalog.audioOutput / 1_000_000 : undefined);
   const cachedInputPrice =
-    server.runtimeConfig.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD;
+    server.runtimeConfig.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD ??
+    (catalog?.cachedInput !== undefined ? catalog.cachedInput / 1_000_000 : undefined);
 
   const hasDetailedInput =
     textInputTokens !== undefined || audioInputTokens !== undefined;
@@ -1030,10 +1073,7 @@ function priceUsage(
         [outputTokens, fallbackOutputPrice],
       ];
 
-  const hasAnyPricedTokens = pricedBuckets.some(
-    ([tokens, price]) => tokens !== undefined && price !== undefined,
-  );
-  if (!hasAnyPricedTokens) {
+  if (pricedBuckets.some(([tokens, price]) => tokens !== undefined && tokens > 0 && price === undefined)) {
     return null;
   }
 
@@ -1146,15 +1186,20 @@ function createSidebandSocket(input: {
       },
     });
 
-    postRealtimeEvent(socket, {
-      type: "response.create",
-      response: {
+    captureAiTraceStarted({
+      businessId: input.session.businessId,
+      traceId: input.session.aiTraceId,
+      callId: input.session.callId,
+      conversationId: input.session.conversationId,
+      model: input.server.runtimeConfig.OPENAI_REALTIME_MODEL,
+      provider: "openai",
+    });
+    requestWebResponse(socket, input.session, {
         instructions: [
           `Begin by greeting the visitor with this exact greeting: "${input.snapshot.greeting}"`,
           "Then stop speaking and wait for the visitor.",
           "Do not repeat this greeting later in the session.",
         ].join(" "),
-      },
     });
   });
 
@@ -1238,6 +1283,11 @@ async function handleSidebandMessage(
   const latency = observeVoiceLatency(session, payload.type);
   if (latency) server.log.info({ ...latency, callId: session.callId, channel: "web_voice" }, "Voice turn latency");
 
+  if (payload.type === "response.created") {
+    trackWebResponseCreated(session, payload.response?.id);
+    return;
+  }
+
   if (
     payload.type === "response.function_call_arguments.done" &&
     payload.name &&
@@ -1268,20 +1318,64 @@ async function handleSidebandMessage(
   }
 
   if (payload.type === "response.done") {
-    if (payload.response?.usage) {
-      const costUsd = priceUsage(server, payload.response.usage);
-      if (costUsd !== null) {
-        await recordVoiceAiCost({
+    const response = payload.response;
+    const model = response?.model ?? server.runtimeConfig.OPENAI_REALTIME_MODEL;
+    const responseStartedAtMs = response?.id
+      ? session.assistantResponseStartedAtMsById.get(response.id) ?? session.pendingAssistantResponseRequestAtMs
+      : session.pendingAssistantResponseRequestAtMs;
+    const latencyMs =
+      responseStartedAtMs === null || responseStartedAtMs === undefined
+        ? undefined
+        : Date.now() - responseStartedAtMs;
+    const usage = response?.usage;
+    const costUsd = usage ? priceUsage(server, usage, model) : null;
+    captureAiGeneration({
+        businessId: session.businessId,
+        traceId: session.aiTraceId,
+        callId: session.callId,
+        conversationId: session.conversationId,
+        model,
+        provider: "openai",
+        ...(latencyMs !== undefined ? { latencyMs } : {}),
+        ...(usage?.input_tokens !== undefined
+          ? { inputTokens: usage.input_tokens }
+          : {}),
+        ...(usage?.output_tokens !== undefined
+          ? { outputTokens: usage.output_tokens }
+          : {}),
+        ...(usage?.total_tokens !== undefined
+          ? { totalTokens: usage.total_tokens }
+          : {}),
+        ...(usage?.input_token_details?.cached_tokens !== undefined
+          ? { cachedInputTokens: usage.input_token_details.cached_tokens }
+          : {}),
+        ...(costUsd !== null ? { totalCostUsd: costUsd } : {}),
+        isStreaming: true,
+        isError: response?.status === "failed",
+        ...(response?.status === "failed" ? { error: "generation_failed" } : {}),
+        properties: { channel: "web_voice", operation: "web_voice.response_generation" },
+    });
+    if (usage) {
+      const pricing = typeof resolveOpenAiPricing === "function" ? resolveOpenAiPricing(model) : undefined;
+        await Promise.resolve(recordVoiceAiCost({
           businessId: session.businessId,
           callId: session.callId,
           conversationId: session.conversationId,
           occurredAt: new Date().toISOString(),
-          eventKey: `web_voice_ai:response:${session.callId}:${payload.response.id ?? payload.event_id ?? crypto.randomUUID()}`,
+          eventKey: `web_voice_ai:response:${session.callId}:${response?.id ?? payload.event_id ?? crypto.randomUUID()}`,
           costUsd,
           provider: "openai",
-          model: server.runtimeConfig.OPENAI_REALTIME_MODEL,
+          model,
           operation: "web_voice.response_generation",
-        }).catch((error: unknown) => {
+          ...(pricing ? { pricingVersion: pricing.version, pricingSource: pricing.sourceUrl, pricingEffectiveDate: pricing.effectiveDate, pricingRates: pricing.ratesUsdPerMillionTokens } : {}),
+          tokenUsage: {
+            ...(usage.input_tokens !== undefined ? { inputTokens: usage.input_tokens } : {}),
+            ...(usage.output_tokens !== undefined ? { outputTokens: usage.output_tokens } : {}),
+            ...(usage.input_token_details?.cached_tokens !== undefined ? { cachedInputTokens: usage.input_token_details.cached_tokens } : {}),
+            ...(usage.input_token_details?.audio_tokens !== undefined ? { audioInputTokens: usage.input_token_details.audio_tokens } : {}),
+            ...(usage.output_token_details?.audio_tokens !== undefined ? { audioOutputTokens: usage.output_token_details.audio_tokens } : {}),
+          },
+        })).catch((error: unknown) => {
           server.log.error(
             {
               err: error,
@@ -1291,7 +1385,11 @@ async function handleSidebandMessage(
             "Failed to persist web voice response AI cost",
           );
         });
-      }
+    }
+    if (response?.id) {
+      session.assistantResponseStartedAtMsById.delete(response.id);
+    } else {
+      session.pendingAssistantResponseRequestAtMs = null;
     }
 
     if (
@@ -1408,7 +1506,7 @@ async function handleSidebandMessage(
       session,
       "caller_barge_in_complete",
     );
-    postRealtimeEvent(socket, { type: "response.create" });
+    requestWebResponse(socket, session);
     return;
   }
 
@@ -1452,7 +1550,7 @@ async function handleToolCall(
         }),
       },
     });
-    postRealtimeEvent(socket, { type: "response.create" });
+    requestWebResponse(socket, session);
     return;
   }
 
@@ -1512,7 +1610,7 @@ async function handleToolCall(
         }),
       },
     });
-    postRealtimeEvent(socket, { type: "response.create" });
+    requestWebResponse(socket, session);
     return;
   }
 
@@ -1545,7 +1643,7 @@ async function handleToolCall(
     return;
   }
 
-  postRealtimeEvent(socket, { type: "response.create" });
+  requestWebResponse(socket, session);
 }
 
 export function registerWebCallRoutes(server: FastifyInstance): void {
@@ -1757,7 +1855,10 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         callId: call.callId,
         conversationId: call.conversationId,
         providerCallId,
+        aiTraceId: crypto.randomUUID(),
         startedAtMs: Date.parse(startedAt),
+        pendingAssistantResponseRequestAtMs: null,
+        assistantResponseStartedAtMsById: new Map(),
         maxDurationMs: call.webCallMaxDurationMs ?? server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
         handledToolCallIds: new Set(),
         sidebandSocket: null,

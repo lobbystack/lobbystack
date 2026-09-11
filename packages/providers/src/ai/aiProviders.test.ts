@@ -66,6 +66,34 @@ describe("provider-agnostic AI providers", () => {
     expect(Math.sqrt(vector!.reduce((sum, value) => sum + value * value, 0))).toBeCloseTo(1);
   });
 
+  it("reports the configured embedding model and only versioned pricing", async () => {
+    mocks.embedMany.mockResolvedValue({
+      embeddings: [new Array(1536).fill(0.5)],
+      usage: { tokens: 1_000_000 },
+    });
+    const usage = vi.fn();
+    const unversioned = new OpenAiCompatibleEmbeddingProvider({ apiKey: "test", model: "embedding-provider-model", inputCostPerMillionTokens: 0.5 });
+    await unversioned.embed(["Greeting"], usage);
+    expect(usage).toHaveBeenLastCalledWith(expect.objectContaining({ model: "embedding-provider-model" }));
+    expect(usage.mock.calls.at(-1)?.[0]?.totalCostUsd).toBeUndefined();
+
+    const versioned = new OpenAiCompatibleEmbeddingProvider({
+      apiKey: "test",
+      model: "embedding-provider-model",
+      inputCostPerMillionTokens: 0.5,
+      pricingVersion: "provider-2026-09",
+      pricingSource: "https://provider.example/pricing",
+      pricingEffectiveDate: "2026-09-01",
+    });
+    await versioned.embed(["Greeting"], usage);
+    expect(usage).toHaveBeenLastCalledWith(expect.objectContaining({
+      model: "embedding-provider-model",
+      totalCostUsd: 0.5,
+      pricingVersion: "provider-2026-09",
+      ratesUsdPerMillionTokens: { input: 0.5 },
+    }));
+  });
+
   it("rejects vectors that do not match the fixed storage dimension", async () => {
     mocks.embedMany.mockResolvedValue({ embeddings: [new Array(768).fill(0.5)], usage: { tokens: 1 } });
     const provider = new OpenAiCompatibleEmbeddingProvider({ apiKey: "test" });
@@ -98,6 +126,31 @@ describe("provider-agnostic AI providers", () => {
     const provider = createTextAiProvider({ OPENAI_API_KEY: "fallback-key" });
     expect(provider).toBeDefined();
     expect(mocks.createOpenAICompatible).toHaveBeenCalledWith({ name: "openai", baseURL: "https://api.openai.com/v1", apiKey: "fallback-key" });
+  });
+
+  it("keeps configured token prices unknown until their versioned provenance is complete", async () => {
+    mocks.generateText.mockResolvedValue({ text: "Reply", usage: { inputTokens: 1_000_000, outputTokens: 0, totalTokens: 1_000_000 } });
+    const unversioned = new OpenAiCompatibleTextProvider({ apiKey: "test", inputCostPerMillionTokens: 1 });
+    const unversionedResult = await unversioned.generateReply({ instructions: "x", prompt: "Hi" });
+    expect(unversionedResult.usage.totalCostUsd).toBeUndefined();
+
+    const versioned = new OpenAiCompatibleTextProvider({
+      apiKey: "test",
+      inputCostPerMillionTokens: 1,
+      outputCostPerMillionTokens: 1,
+      pricingVersion: "provider-2026-09",
+      pricingSource: "https://provider.example/pricing",
+      pricingEffectiveDate: "2026-09-01",
+    });
+    await expect(versioned.generateReply({ instructions: "x", prompt: "Hi" })).resolves.toMatchObject({
+      usage: {
+        totalCostUsd: 1,
+        pricingVersion: "provider-2026-09",
+        pricingSource: "https://provider.example/pricing",
+        pricingEffectiveDate: "2026-09-01",
+        ratesUsdPerMillionTokens: { input: 1 },
+      },
+    });
   });
 
   it("streams reply chunks", async () => {

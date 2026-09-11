@@ -230,6 +230,14 @@ function UserMenu({ user }: Pick<DashboardShellProps, "user">) {
     try {
       const response = await fetch("/api/auth/sign-out", { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: "{}" });
       if (!response.ok) return;
+      // Remove the prior operator and workspace association before the next
+      // person uses this browser session. This is deliberately best-effort.
+      void import("posthog-js").then(({ default: posthog }) => {
+        if (posthog.__loaded) {
+          posthog.reset();
+          posthog.opt_out_capturing();
+        }
+      }).catch(() => undefined);
       router.replace("/login");
       router.refresh();
     } finally { setSigningOut(false); }

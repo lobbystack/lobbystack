@@ -19,7 +19,8 @@ export type DatabaseRole =
   | "lobbystack_app"
   | "lobbystack_worker"
   | "lobbystack_dispatcher"
-  | "lobbystack_readonly";
+  | "lobbystack_readonly"
+  | "lobbystack_finance_export";
 
 export type DatabaseClient = {
   pool: Pool;
@@ -84,6 +85,7 @@ export function createDatabaseClients(
     lobbystack_worker: createDatabaseClient("lobbystack_worker", source),
     lobbystack_dispatcher: createDatabaseClient("lobbystack_dispatcher", source),
     lobbystack_readonly: createDatabaseClient("lobbystack_readonly", source),
+    lobbystack_finance_export: createDatabaseClient("lobbystack_finance_export", source),
   };
 }
 

@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+export { resolveOpenAiPricing } from "./aiPricing";
+export type { AiPricingRatesUsdPerMillionTokens, VersionedAiPricing } from "./aiPricing";
+
 export type DeploymentMode = "cloud" | "self_hosted_standard" | "development";
 
 export const deploymentModes = [

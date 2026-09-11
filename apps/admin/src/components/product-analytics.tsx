@@ -47,10 +47,13 @@ export function ProductAnalytics() {
   const pathname = usePathname();
   const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
   const sensitive = /^\/(demo|claim-demo|reset-password|confirm-email-change|accept-invite|login|signup|forgot-password)(\/|$)/.test(pathname ?? "");
+  const session = useQuery({ queryKey: ["product-analytics-session"], enabled: Boolean(apiKey) && !sensitive, retry: false, staleTime: 0, refetchOnMount: "always", queryFn: () => requestJson<{ user?: { id?: string } } | null>("/api/auth/get-session") });
+  // Do not reuse a cached identity after a sign-out or a different user logs in.
+  const userId = session.isSuccess && !session.isFetching ? session.data?.user?.id : undefined;
   const businesses = useQuery({ queryKey: ["businesses"], enabled: Boolean(apiKey) && !sensitive, retry: false, queryFn: () => requestJson<{ businesses: Array<{ businessId: string; active: boolean }> }>("/api/businesses") });
   const businessId = selectActiveBusiness(businesses.data?.businesses)?.businessId;
   const preference = useQuery({ queryKey: ["appearance-preferences", businessId], enabled: Boolean(apiKey && businessId) && !sensitive, retry: false, queryFn: () => requestJson<{ telemetryEnabled: boolean }>(`/api/preferences/appearance?businessId=${encodeURIComponent(businessId!)}`) });
-  const allowed = Boolean(apiKey && businessId && preference.data?.telemetryEnabled === true && !sensitive);
+  const allowed = Boolean(apiKey && userId && businessId && preference.data?.telemetryEnabled === true && !sensitive);
   const sdkRef = useRef<PostHog | null>(null);
   const allowedRef = useRef(false);
   allowedRef.current = allowed;
@@ -59,6 +62,7 @@ export function ProductAnalytics() {
     allowedRef.current = allowed;
     if (!allowed || !apiKey) {
       if (!sensitive && businessId && preference.data?.telemetryEnabled === false) consumeAuthSuccess();
+      if (sensitive && sdkRef.current?.__loaded) sdkRef.current.reset();
       sdkRef.current?.opt_out_capturing();
       return;
     }
@@ -86,12 +90,25 @@ export function ProductAnalytics() {
       });
       else posthog.set_config({ before_send: beforeSend });
       posthog.opt_in_capturing({ captureEventName: false });
+      const distinctId = `user:${userId}`;
+      const businessGroup = `business:${businessId}`;
+      // An operator remains one person while moving between workspaces. The
+      // group is updated for the active workspace; each event also carries it
+      // explicitly so its historical attribution cannot depend on browser state.
+      posthog.identify(distinctId);
+      posthog.group("business", businessGroup);
+      const eventProperties = {
+        businessId,
+        $groups: { business: businessGroup },
+        $current_url: `${window.location.origin}${pathname}`,
+        $pathname: pathname,
+      };
       const authEvent = consumeAuthSuccess();
-      if (authEvent) posthog.capture(authEvent, { businessId, $current_url: `${window.location.origin}${pathname}`, $pathname: pathname });
-      posthog.capture("$pageview", { path: pathname, businessId, $current_url: `${window.location.origin}${pathname}`, $pathname: pathname });
+      if (authEvent) posthog.capture(authEvent, eventProperties);
+      posthog.capture("$pageview", { path: pathname, ...eventProperties });
     }).catch(() => { /* Optional analytics must never block the application. */ });
     return () => { cancelled = true; allowedRef.current = false; sdkRef.current?.opt_out_capturing(); };
-  }, [allowed, apiKey, businessId, pathname, preference.data?.telemetryEnabled, sensitive]);
+  }, [allowed, apiKey, businessId, pathname, preference.data?.telemetryEnabled, sensitive, userId]);
   useEffect(() => {
     if (!allowed) return;
     const report = (error: unknown) => {

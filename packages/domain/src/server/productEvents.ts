@@ -4,7 +4,7 @@ import { and, eq, isNull, inArray } from "drizzle-orm";
 
 import { businesses, productEvents, withBusinessTransaction } from "@lobbystack/db";
 
-import { buildPostHogAiGenerationProperties, redactTelemetryProperties, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
+import { buildPostHogAiGenerationProperties, getPostHogBusinessGroupKey, getPostHogDistinctIdForBusinessSystem, redactTelemetryProperties, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 import type { DomainContext } from "./context";
 import { recordUnitEconomicsEvent } from "./unitEconomics";
 
@@ -35,6 +35,12 @@ export type DurableAiUsage = {
   cachedInputTokens?: number;
   reasoningTokens?: number;
   totalCostUsd?: number;
+  pricingVersion?: string;
+  pricingSource?: string;
+  pricingEffectiveDate?: string;
+  pricingRates?: Record<string, number>;
+  ratesUsdPerMillionTokens?: Record<string, number>;
+  tokenUsage?: Record<string, number>;
   isStreaming?: boolean;
 };
 
@@ -47,20 +53,31 @@ export async function recordAiGenerationEvent(
     conversationId?: string | undefined;
     messageId?: string | undefined;
     traceId?: string | undefined;
+    sessionId?: string | undefined;
+    /** Stable provider generation/item ID for durable idempotency. */
+    financialEventKey?: string | undefined;
+    isError?: boolean | undefined;
+    error?: string | undefined;
   },
 ): Promise<string | null> {
   const traceId = input.traceId ?? randomUUID();
+  // A generation is analyzed in the context of a customer conversation or call.
+  // Background generations have no such durable session, so use their trace rather
+  // than leaving the AI session field empty.
+  const sessionId = input.sessionId ?? input.conversationId ?? input.callId ?? traceId;
   const eventId = await recordProductEvent(context, {
     name: "$ai_generation",
-    distinctId: input.businessId,
+    distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
     businessId: input.businessId,
     actorType: "worker",
     properties: buildPostHogAiGenerationProperties({
       traceId,
+      sessionId,
       provider: input.provider,
       model: input.model,
       latencyMs: input.latencyMs,
-      isError: false,
+      isError: input.isError ?? false,
+      ...(input.error !== undefined ? { error: input.error } : {}),
       isStreaming: input.isStreaming ?? false,
       ...(input.inputTokens !== undefined ? { inputTokens: input.inputTokens } : {}),
       ...(input.outputTokens !== undefined ? { outputTokens: input.outputTokens } : {}),
@@ -71,14 +88,19 @@ export async function recordAiGenerationEvent(
       ...(input.callId !== undefined ? { callId: input.callId } : {}),
       ...(input.conversationId !== undefined ? { conversationId: input.conversationId } : {}),
       ...(input.messageId !== undefined ? { messageId: input.messageId } : {}),
-      properties: { operation: input.operation },
+      properties: {
+        operation: input.operation,
+        $groups: { business: getPostHogBusinessGroupKey(input.businessId) },
+      },
     }),
   });
-  if (input.totalCostUsd !== undefined && Number.isFinite(input.totalCostUsd) && input.totalCostUsd >= 0 && !input.operation.startsWith("sms.")) {
+  // Finance records are durable operational data and do not depend on the
+  // business's optional product-analytics consent. Unknown cost stays null.
+  if (!input.operation.startsWith("sms.")) {
     const channel = input.operation.startsWith("sms.") ? "sms" : input.operation.startsWith("voice.") ? "voice" : "dashboard";
     await recordUnitEconomicsEvent(context, {
       businessId: input.businessId,
-      eventKey: `ai_generation:${traceId}`,
+      eventKey: input.financialEventKey ?? `ai_generation:${traceId}`,
       eventKind: `${channel}_ai`,
       channel,
       costUsd: input.totalCostUsd,
@@ -87,6 +109,19 @@ export async function recordAiGenerationEvent(
       provider: input.provider,
       model: input.model,
       operation: input.operation,
+      ...(input.pricingVersion !== undefined ? { pricingVersion: input.pricingVersion } : {}),
+      ...(input.pricingSource !== undefined ? { pricingSource: input.pricingSource } : {}),
+      ...(input.pricingEffectiveDate !== undefined ? { pricingEffectiveDate: input.pricingEffectiveDate } : {}),
+      ...(input.pricingRates !== undefined ? { pricingRates: input.pricingRates } : input.ratesUsdPerMillionTokens !== undefined ? { pricingRates: input.ratesUsdPerMillionTokens } : {}),
+      ...(input.tokenUsage !== undefined ? { tokenUsage: input.tokenUsage } : {
+        tokenUsage: {
+          ...(input.inputTokens !== undefined ? { inputTokens: input.inputTokens } : {}),
+          ...(input.outputTokens !== undefined ? { outputTokens: input.outputTokens } : {}),
+          ...(input.totalTokens !== undefined ? { totalTokens: input.totalTokens } : {}),
+          ...(input.cachedInputTokens !== undefined ? { cachedInputTokens: input.cachedInputTokens } : {}),
+          ...(input.reasoningTokens !== undefined ? { reasoningTokens: input.reasoningTokens } : {}),
+        },
+      }),
       ...(input.callId !== undefined ? { callId: input.callId } : {}),
       ...(input.conversationId !== undefined ? { conversationId: input.conversationId } : {}),
       ...(input.messageId !== undefined ? { messageId: input.messageId } : {}),

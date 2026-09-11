@@ -1,6 +1,6 @@
 import { buildVoiceSystemPrompt } from "@lobbystack/ai";
 import { loadVoiceGatewayEnv } from "@lobbystack/config";
-import { isTransferPermitted, demoBusinessId, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { isTransferPermitted, demoBusinessId, resolveOpenAiPricing, type BusinessContextSnapshot } from "@lobbystack/shared";
 import type { ProviderErrorClassification } from "@lobbystack/telemetry";
 import type { IncomingHttpHeaders } from "node:http";
 import type { FastifyInstance } from "fastify";
@@ -122,6 +122,7 @@ type OpenAiRealtimeMessage = {
     text?: string;
   };
   item?: {
+    id?: string;
     type?: string;
     name?: string;
     call_id?: string;
@@ -136,6 +137,7 @@ type OpenAiRealtimeMessage = {
   };
   response?: {
     id?: string;
+    model?: string;
     status?: string;
     conversation_id?: string | null;
     metadata?: Record<string, string | number | boolean | null> | null;
@@ -211,6 +213,7 @@ type ActiveVoiceSession = {
   aiTraceId: string;
   assistantResponseRequestedAtMs: number | null;
   assistantFirstOutputAtMs: number | null;
+  transcriptionCommittedAtMsByItemId: Map<string, number>;
   activeCallCounted: boolean;
   openingGreetingActive: boolean;
   openingGreetingResponseDone: boolean;
@@ -383,30 +386,32 @@ function getRealtimePricingConfig(
     | "OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD"
     | "OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD"
     | "OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD"
-  >,
+  > & { OPENAI_REALTIME_MODEL: string },
+  model = env.OPENAI_REALTIME_MODEL,
 ): RealtimePricingConfig {
+  const catalog = (typeof resolveOpenAiPricing === "function" ? resolveOpenAiPricing(model) : undefined)?.ratesUsdPerMillionTokens;
   return {
     ...(env.OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD !== undefined
       ? { inputTokenPriceUsd: env.OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD }
-      : {}),
+      : catalog?.textInput !== undefined ? { inputTokenPriceUsd: catalog.textInput / 1_000_000 } : {}),
     ...(env.OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD !== undefined
       ? { outputTokenPriceUsd: env.OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD }
-      : {}),
+      : catalog?.textOutput !== undefined ? { outputTokenPriceUsd: catalog.textOutput / 1_000_000 } : {}),
     ...(env.OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD !== undefined
       ? { textInputTokenPriceUsd: env.OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD }
-      : {}),
+      : catalog?.textInput !== undefined ? { textInputTokenPriceUsd: catalog.textInput / 1_000_000 } : {}),
     ...(env.OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD !== undefined
       ? { audioInputTokenPriceUsd: env.OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD }
-      : {}),
+      : catalog?.audioInput !== undefined ? { audioInputTokenPriceUsd: catalog.audioInput / 1_000_000 } : {}),
     ...(env.OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD !== undefined
       ? { textOutputTokenPriceUsd: env.OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD }
-      : {}),
+      : catalog?.textOutput !== undefined ? { textOutputTokenPriceUsd: catalog.textOutput / 1_000_000 } : {}),
     ...(env.OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD !== undefined
       ? { audioOutputTokenPriceUsd: env.OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD }
-      : {}),
+      : catalog?.audioOutput !== undefined ? { audioOutputTokenPriceUsd: catalog.audioOutput / 1_000_000 } : {}),
     ...(env.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD !== undefined
       ? { cachedInputTokenPriceUsd: env.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD }
-      : {}),
+      : catalog?.cachedInput !== undefined ? { cachedInputTokenPriceUsd: catalog.cachedInput / 1_000_000 } : {}),
   };
 }
 
@@ -550,16 +555,36 @@ export function estimateRealtimeTotalCostUsd(
       ? metrics.outputTokens * pricing.outputTokenPriceUsd
       : undefined;
 
-  const totalCostUsd =
-    (nonCachedInputCostUsd ?? 0) +
-    (cachedInputCostUsd ?? 0) +
-    (outputCostUsd ?? 0);
+  const buckets: Array<readonly [number | undefined, number | undefined]> = [
+    [nonCachedInputTokens, nonCachedInputCostUsd],
+    [metrics.cachedInputTokens, cachedInputCostUsd],
+    [metrics.outputTokens, outputCostUsd],
+  ];
+  if (buckets.some(([tokens, cost]) => tokens !== undefined && tokens > 0 && cost === undefined)) {
+    return undefined;
+  }
+  if (!buckets.some(([tokens]) => tokens !== undefined)) return undefined;
+  return buckets.reduce((sum, [, cost]) => sum + (cost ?? 0), 0);
+}
 
-  return nonCachedInputCostUsd !== undefined ||
-    cachedInputCostUsd !== undefined ||
-    outputCostUsd !== undefined
-    ? totalCostUsd
-    : undefined;
+/** Item IDs let concurrent Realtime transcriptions be timed independently. */
+export function markTranscriptionCommitted(
+  commits: Map<string, number>,
+  itemId: string | undefined,
+  nowMs = Date.now(),
+): void {
+  if (itemId) commits.set(itemId, nowMs);
+}
+
+export function consumeTranscriptionLatencyMs(
+  commits: Map<string, number>,
+  itemId: string | undefined,
+  nowMs = Date.now(),
+): number | undefined {
+  if (!itemId) return undefined;
+  const startedAtMs = commits.get(itemId);
+  commits.delete(itemId);
+  return startedAtMs === undefined ? undefined : Math.max(0, nowMs - startedAtMs);
 }
 
 export function getRealtimeGenerationOutcome(
@@ -2669,6 +2694,13 @@ function handleOpenAiMessage(
   }
 
   switch (payload.type) {
+    case "input_audio_buffer.committed": {
+      // Realtime identifies the committed audio item again when its
+      // transcription completes. This is the only defensible latency pair.
+      const itemId = payload.item_id ?? payload.item?.id;
+      markTranscriptionCommitted(session.transcriptionCommittedAtMsByItemId, itemId);
+      return;
+    }
     case "response.audio.delta":
     case "response.output_audio.delta": {
       if (
@@ -2711,6 +2743,11 @@ function handleOpenAiMessage(
     }
     case "conversation.item.input_audio_transcription.completed": {
       const runtimeConfig = loadVoiceGatewayEnv(process.env);
+      const transcriptionItemId = payload.item_id ?? payload.item?.id;
+      const transcriptionLatencyMs = consumeTranscriptionLatencyMs(
+        session.transcriptionCommittedAtMsByItemId,
+        transcriptionItemId,
+      );
       const usageMetrics = extractTranscriptionUsageMetrics(payload);
       const totalCostUsd = estimateRealtimeTotalCostUsd(
         usageMetrics,
@@ -2725,6 +2762,9 @@ function handleOpenAiMessage(
           ...(session.conversationId ? { conversationId: session.conversationId } : {}),
           model: runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
           provider: "openai",
+          ...(transcriptionLatencyMs !== undefined
+            ? { latencyMs: transcriptionLatencyMs }
+            : {}),
           ...(usageMetrics.inputTokens !== undefined
             ? { inputTokens: usageMetrics.inputTokens }
             : {}),
@@ -2766,16 +2806,33 @@ function handleOpenAiMessage(
           },
         });
       }
-      if (session.businessId && session.callId && totalCostUsd !== undefined) {
+      const transcriptionEventId = transcriptionItemId ?? payload.event_id;
+      if (session.businessId && session.callId && transcriptionEventId) {
         const recordCostTask = recordVoiceAiCost({
           businessId: session.businessId,
           callId: session.callId,
           occurredAt: new Date().toISOString(),
-          eventKey: `voice_ai:transcription:${session.callId}:${payload.item_id ?? payload.event_id ?? "unknown"}`,
-          costUsd: totalCostUsd,
+          // Realtime's stable item/event ID makes retries an update rather
+          // than another financial generation. Do not manufacture a shared
+          // "unknown" key for an unidentifiable provider event.
+          eventKey: `voice_ai:transcription:${session.callId}:${transcriptionEventId}`,
+          costUsd: totalCostUsd ?? null,
           provider: "openai",
           model: runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
           operation: "voice.input_audio_transcription",
+          tokenUsage: {
+            ...(usageMetrics.inputTokens !== undefined ? { inputTokens: usageMetrics.inputTokens } : {}),
+            ...(usageMetrics.outputTokens !== undefined ? { outputTokens: usageMetrics.outputTokens } : {}),
+            ...(usageMetrics.totalTokens !== undefined ? { totalTokens: usageMetrics.totalTokens } : {}),
+            ...(usageMetrics.textInputTokens !== undefined ? { textInputTokens: usageMetrics.textInputTokens } : {}),
+            ...(usageMetrics.audioInputTokens !== undefined ? { audioInputTokens: usageMetrics.audioInputTokens } : {}),
+            ...(usageMetrics.cachedInputTokens !== undefined ? { cachedInputTokens: usageMetrics.cachedInputTokens } : {}),
+            ...(usageMetrics.cachedTextInputTokens !== undefined ? { cachedTextInputTokens: usageMetrics.cachedTextInputTokens } : {}),
+            ...(usageMetrics.cachedAudioInputTokens !== undefined ? { cachedAudioInputTokens: usageMetrics.cachedAudioInputTokens } : {}),
+            ...(usageMetrics.textOutputTokens !== undefined ? { textOutputTokens: usageMetrics.textOutputTokens } : {}),
+            ...(usageMetrics.audioOutputTokens !== undefined ? { audioOutputTokens: usageMetrics.audioOutputTokens } : {}),
+            ...(usageMetrics.reasoningTokens !== undefined ? { reasoningTokens: usageMetrics.reasoningTokens } : {}),
+          },
           ...(session.conversationId ? { conversationId: session.conversationId } : {}),
         }).catch((error: unknown) => {
           server.log.error(
@@ -2843,6 +2900,8 @@ function handleOpenAiMessage(
     case "response.output_text.delta":
       return;
     case "conversation.item.input_audio_transcription.failed": {
+      const itemId = payload.item_id ?? payload.item?.id;
+      consumeTranscriptionLatencyMs(session.transcriptionCommittedAtMsByItemId, itemId);
       server.log.warn(
         {
           itemId: payload.item_id,
@@ -2878,19 +2937,20 @@ function handleOpenAiMessage(
           ? session.assistantFirstOutputAtMs - session.assistantResponseRequestedAtMs
           : undefined;
       const usageMetrics = extractRealtimeUsageMetrics(payload.response);
+      const model = payload.response?.model ?? runtimeConfig.OPENAI_REALTIME_MODEL;
 
       if (latencyMs !== undefined) {
         recordOpenAiTurnLatency(latencyMs, {
           ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
           ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
           "lobbystack.provider": "openai",
-          "lobbystack.model": runtimeConfig.OPENAI_REALTIME_MODEL,
+          "lobbystack.model": model,
         });
       }
 
       const totalCostUsd = estimateRealtimeTotalCostUsd(
         usageMetrics,
-        getRealtimePricingConfig(runtimeConfig),
+        getRealtimePricingConfig(runtimeConfig, model),
       );
       const generationOutcome = getRealtimeGenerationOutcome(payload.response?.status);
 
@@ -2900,7 +2960,7 @@ function handleOpenAiMessage(
           traceId: session.aiTraceId,
           ...(session.callId ? { callId: session.callId } : {}),
           ...(session.conversationId ? { conversationId: session.conversationId } : {}),
-          model: runtimeConfig.OPENAI_REALTIME_MODEL,
+          model,
           provider: "openai",
           ...(latencyMs !== undefined ? { latencyMs } : {}),
           ...(ttftMs !== undefined ? { ttftMs } : {}),
@@ -2947,18 +3007,26 @@ function handleOpenAiMessage(
       if (
         session.businessId &&
         session.callId &&
-        totalCostUsd !== undefined &&
         payload.response?.id
       ) {
+        const pricing = resolveOpenAiPricing(model);
         const recordCostTask = recordVoiceAiCost({
           businessId: session.businessId,
           callId: session.callId,
           occurredAt: new Date().toISOString(),
           eventKey: `voice_ai:response:${session.callId}:${payload.response.id}`,
-          costUsd: totalCostUsd,
+          costUsd: totalCostUsd ?? null,
           provider: "openai",
-          model: runtimeConfig.OPENAI_REALTIME_MODEL,
+          model,
           operation: "voice.response_generation",
+          ...(pricing ? { pricingVersion: pricing.version, pricingSource: pricing.sourceUrl, pricingEffectiveDate: pricing.effectiveDate, pricingRates: pricing.ratesUsdPerMillionTokens } : {}),
+          tokenUsage: {
+            ...(usageMetrics.inputTokens !== undefined ? { inputTokens: usageMetrics.inputTokens } : {}),
+            ...(usageMetrics.outputTokens !== undefined ? { outputTokens: usageMetrics.outputTokens } : {}),
+            ...(usageMetrics.cachedInputTokens !== undefined ? { cachedInputTokens: usageMetrics.cachedInputTokens } : {}),
+            ...(usageMetrics.audioInputTokens !== undefined ? { audioInputTokens: usageMetrics.audioInputTokens } : {}),
+            ...(usageMetrics.audioOutputTokens !== undefined ? { audioOutputTokens: usageMetrics.audioOutputTokens } : {}),
+          },
           ...(session.conversationId ? { conversationId: session.conversationId } : {}),
         }).catch((error: unknown) => {
           server.log.error(
@@ -3361,6 +3429,7 @@ export async function handleMediaStreamConnection(
     aiTraceId: crypto.randomUUID(),
     assistantResponseRequestedAtMs: null,
     assistantFirstOutputAtMs: null,
+    transcriptionCommittedAtMsByItemId: new Map(),
     activeCallCounted: false,
     openingGreetingActive: true,
     openingGreetingResponseDone: false,

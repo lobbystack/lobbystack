@@ -208,6 +208,13 @@ describe("POST /api/widget/chat", () => {
     expect(body).toContain("Thanks");
     expect(body).toContain("for reaching out!");
     expect(mocks.appendMessage).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ direction: "outbound", channel: "web_chat", aiGenerated: true }));
+    await vi.waitFor(() => expect(mocks.recordAiGenerationEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      businessId,
+      conversationId,
+      isStreaming: true,
+      provider: "test",
+      model: "test",
+    })));
   });
 
   it("does not expose provider error details in the UI stream", async () => {
@@ -221,5 +228,13 @@ describe("POST /api/widget/chat", () => {
     const body = await readSse(await POST(widgetRequest()));
     expect(body).toContain("The chat could not be processed.");
     expect(body).not.toContain("secret provider token");
+    await vi.waitFor(() => expect(mocks.recordAiGenerationEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      businessId,
+      conversationId,
+      isError: true,
+      error: "generation_failed",
+      provider: "unknown",
+      model: "unknown",
+    })));
   });
 });
