@@ -129,7 +129,8 @@
     "invalidCode": "Ce code est invalide ou expiré. Essayez d'en demander un nouveau.",
     "startAgain": "Recommencez la vérification du téléphone avant d'entrer un code.",
     "failed": "Impossible de vérifier ce code. Réessayez.",
-    "resendFailed": "Impossible de renvoyer un code maintenant. Réessayez."
+    "resendFailed": "Impossible de renvoyer un code maintenant. Réessayez.",
+    "unavailable": "Cette tentative de vérification est indisponible ou expirée. Sélectionnez Renvoyer pour demander un nouveau code."
   },
   "number": {
     "title": "Choisissez le numéro de votre IA",

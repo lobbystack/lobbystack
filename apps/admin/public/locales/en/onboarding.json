@@ -129,7 +129,8 @@
     "invalidCode": "That code is invalid or expired. Try requesting a new one.",
     "startAgain": "Start phone verification again before entering a code.",
     "failed": "We couldn't verify that code right now. Please try again.",
-    "resendFailed": "We couldn't resend a code right now. Please try again."
+    "resendFailed": "We couldn't resend a code right now. Please try again.",
+    "unavailable": "This verification attempt is unavailable or expired. Select Resend to request a new code."
   },
   "number": {
     "title": "Pick your AI's phone number",

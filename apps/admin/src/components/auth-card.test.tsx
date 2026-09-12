@@ -11,6 +11,24 @@ vi.mock("@/lib/affiliate-referral", () => ({ captureAffiliateReferralFromUrl: ()
 beforeEach(() => { vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", ""); window.history.replaceState(null, "", "/"); vi.stubGlobal("fetch", vi.fn(async () => Response.json({ code: "INVALID_CREDENTIALS" }, { status: 401 }))); });
 afterEach(() => { cleanup(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
 describe("original login and signup behavior", () => {
+  it("shows verification instructions when signup succeeds without a session", async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ token: null, user: { id: "operator" } }));
+    render(<AuthCard mode="signup" />);
+    await userEvent.type(screen.getByLabelText("signup.email"), "owner@example.invalid");
+    await userEvent.type(screen.getByLabelText("signup.password"), "Valid-Password-123!");
+    await userEvent.click(screen.getByRole("button", { name: "signup.submit" }));
+    expect((await screen.findByRole("status")).textContent).toBe("signup.checkEmailBody");
+    expect(screen.queryByRole("button", { name: "signup.submit" })).toBeNull();
+    expect(analytics.record).not.toHaveBeenCalled();
+  });
+  it("explains when login requires email verification", async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ code: "EMAIL_NOT_VERIFIED" }, { status: 403 }));
+    render(<AuthCard mode="login" />);
+    await userEvent.type(screen.getByLabelText("login.email"), "owner@example.invalid");
+    await userEvent.type(screen.getByLabelText("login.password"), "Valid-Password-123!");
+    await userEvent.click(screen.getByRole("button", { name: "login.submit" }));
+    expect(await screen.findByText("errors.emailNotVerified")).toBeTruthy();
+  });
   it.each(["login", "signup"] as const)("validates %s email on blur and clears it while editing", async mode => {
     render(<AuthCard mode={mode} />);
     const email = screen.getByLabelText(`${mode}.email`);

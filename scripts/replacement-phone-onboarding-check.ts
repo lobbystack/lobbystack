@@ -23,6 +23,14 @@ async function main(): Promise<void> {
     const reclaimedVerification = await claimPhoneVerificationSend({ db: worker.db }, { businessId, attemptId });
     assert(reclaimedVerification?.phoneE164 === "+14165550100", "A stale phone verification lease was not recovered.");
     await markPhoneVerificationSent({ db: worker.db }, { businessId, attemptId, providerVerificationId: "VE_certification", status: "pending" });
+    const resendId = randomUUID();
+    await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, tx => tx.insert(onboardingPhoneVerifications).values({ id: resendId, businessId, userId, phoneE164: "+14165550100", countryCode: "CA", status: "processing", expiresAt: new Date(Date.now() + 600_000), requestFingerprint: "resend-regression" }));
+    await markPhoneVerificationSent({ db: worker.db }, { businessId, attemptId: resendId, providerVerificationId: "VE_certification", status: "pending" });
+    await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async tx => {
+      const resend = (await tx.select().from(onboardingPhoneVerifications).where(eq(onboardingPhoneVerifications.id, resendId)))[0];
+      assert(resend?.status === "pending", "A repeated provider verification SID must remain verifiable.");
+      await tx.delete(onboardingPhoneVerifications).where(eq(onboardingPhoneVerifications.id, resendId));
+    });
     assert((await getLatestPhoneVerificationAttempt({ db: app.db }, { userId, businessId }))?.status === "pending", "Operator could not recover pending verification state.");
     let denied = false; try { await getLatestPhoneVerificationAttempt({ db: app.db }, { userId, businessId: foreignBusinessId }); } catch { denied = true; }
     assert(denied, "Cross-tenant verification access was not denied.");

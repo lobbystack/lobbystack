@@ -110,7 +110,8 @@ describe("OnboardingVerifyPhonePage", () => {
         phoneE164: "+12133734253",
       });
     });
-    expect(navigateMock).toHaveBeenCalledWith("/onboarding/verify-phone/code");
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith("/onboarding/verify-phone/code"));
+    expect(clients[0]?.getQueryState(["phone-verification", "business-1"])?.isInvalidated).toBe(true);
   });
 
   it("changes country from the calling-code prefix picker", async () => {

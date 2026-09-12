@@ -27,6 +27,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [verificationPending, setVerificationPending] = useState(false);
   const [hasBlurredEmail, setHasBlurredEmail] = useState(false);
   const [hasFocusedPassword, setHasFocusedPassword] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -66,7 +67,12 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
       if (!response.ok) {
         const failure = await response.json().catch(() => null) as { code?: string } | null;
         const accountExists = ["USER_ALREADY_EXISTS", "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"].includes(failure?.code ?? "");
-        throw new Error(mode === "login" ? t("errors.incorrectCredentials") : t(accountExists ? "errors.accountExists" : "errors.signupFailed"));
+        throw new Error(mode === "login" ? t(failure?.code === "EMAIL_NOT_VERIFIED" ? "errors.emailNotVerified" : "errors.incorrectCredentials") : t(accountExists ? "errors.accountExists" : "errors.signupFailed"));
+      }
+      const result = await response.json() as { token?: string | null };
+      if (mode === "signup" && result.token === null) {
+        setVerificationPending(true);
+        return;
       }
       recordAuthSuccess(mode === "login" ? "web.auth.login_succeeded" : "web.auth.signup_succeeded");
       window.location.assign(getSafeReturnTo(new URLSearchParams(window.location.search).get("returnTo")) ?? "/");
@@ -79,6 +85,12 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   }
 
   const login = mode === "login";
+  if (verificationPending) return (
+    <ReplacementOnboardingShell title={t("signup.checkEmailTitle")} width="sm">
+      <p role="status" className="text-sm text-muted-foreground">{t("signup.checkEmailBody")}</p>
+      <Link className="text-sm underline" href={buildAuthPathWithReturnTo("/login", returnTo)}>{t("signup.signIn")}</Link>
+    </ReplacementOnboardingShell>
+  );
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const passwordCriteria = [
     { label: t("signup.passwordCriteria.minimumLength"), isMet: password.length >= 8 },
