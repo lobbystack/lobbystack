@@ -53,7 +53,7 @@ Run these checks against the healthy Compose stack:
 - `pnpm replacement:notifications` proves operator preference persistence, cross-tenant denial, durable outbox-backed delivery, duplicate event safety, production-source delivery for voice messages, customer SMS, failed SMS, calendar sync failures, and transfer failures, plus idempotent timezone-aware daily summaries.
 - `pnpm replacement:billing` verifies multi-kind usage, retries, annual accounting, plan snapshots, concurrent reservations, authorization, cap removal, completeness, and shared Starter/Pro overage caps.
 - `pnpm replacement:feedback`, `pnpm replacement:appointment-audits`, and `pnpm replacement:unit-economics` certify the remaining restored backend capabilities.
-- `pnpm replacement:import-check` imports a representative legacy bundle twice and requires row-count, relationship, aggregate-total, and sample reconciliation to pass.
+- `pnpm replacement:import-check` imports a representative legacy fixture bundle twice and checks its declared row counts, relationships, aggregates, and samples. It is fixture coverage, not production source-to-target reconciliation.
 - `pnpm replacement:phone-onboarding` proves durable verification, signed number offers, idempotent onboarding and replacement claims, purchase-before-retirement replacement, the 30-day retirement window, provider-SID-safe reclaim, cooldown enforcement, approval, and verified-phone reuse.
 - `VERIFY_RLS_BEHAVIOR=true pnpm db:verify-rls` verifies forced RLS, tenant isolation, and database actor-role spoofing protection.
 
@@ -63,7 +63,7 @@ The certification scripts remove their temporary database rows and storage objec
 
 `pnpm replacement:backup` stops the admin, worker, and voice gateway while it creates a PostgreSQL custom dump and copies the active storage backend under `.replacement-backups/`. It snapshots the shared volume for local storage and mirrors the MinIO bucket for S3 storage. Pass a destination after `--` to store the artifact elsewhere. Every artifact includes database and file checksums.
 
-Restore is destructive. Verify that the destination stack and `REPLACEMENT_ENV_FILE` are correct, set `REPLACEMENT_COMPOSE_PROJECT` explicitly, then run `CONFIRM_REPLACEMENT_RESTORE=1 pnpm replacement:restore -- /secure/path/backup_directory`. The restore recreates the `lobbystack` database, replaces the configured file storage contents, and flushes Redis so queued work from the newer state cannot replay against restored durable data. The script restarts the runtime services that were running before the restore.
+Restore is destructive. Verify that the destination stack and `REPLACEMENT_ENV_FILE` are correct, set `REPLACEMENT_COMPOSE_PROJECT` explicitly, then run `CONFIRM_REPLACEMENT_RESTORE=1 pnpm replacement:restore -- <backup-directory>`. The restore recreates the `lobbystack` database, replaces the configured file storage contents, and flushes Redis so queued work from the newer state cannot replay against restored durable data. The script restarts the runtime services that were running before the restore.
 
 Run `REPLACEMENT_COMPOSE_PROJECT=lobbystack_restore_drill CONFIRM_REPLACEMENT_RESTORE_DRILL=1 pnpm replacement:restore-drill` against a disposable local stack to prove database-row and object integrity through deletion and full restore. The drill is intentionally destructive to changes made after its snapshot and retains its backup under `.tmp/` for inspection.
 
@@ -73,10 +73,10 @@ Railway should run separate `admin`, `worker`, `voice-gateway`, `postgres`, `red
 
 Build runtime images with `SERVICE_VERSION` set to the deployed Git SHA. Configure telemetry retention and sampling in the OTLP backend.
 
-Production traffic cutover, DNS changes, and Convex shutdown remain operator-controlled actions. Import and reconciliation tooling is included but must first be run against a disposable restored production snapshot and rollback-tested staging environment.
+Production traffic cutover, DNS changes, and Convex shutdown remain operator-controlled actions. The development importer and selected reconciliation checks do not authorize production snapshot import or source-to-target reconciliation. Follow `docs/validation/production-readiness.md` and `docs/migrations/production-rehearsal.md`; production migration remains blocked until the missing controls are implemented and rehearsed.
 
-The replacement stack implements non-AI usage metering for voice seconds, alert/reminder SMS segments, and outbound transfer attempts, including shared overage caps for Starter and Pro. Dashboard feedback delivery and appointment-change audit events are persisted through PostgreSQL and the transactional outbox. Run `pnpm replacement:import -- --input=convex_export.json` for an idempotent import and `pnpm replacement:reconciliation -- --source=convex_export.json` for the required report.
+The replacement stack implements non-AI usage metering for voice seconds, alert/reminder SMS segments, and outbound transfer attempts, including shared overage caps for Starter and Pro. Dashboard feedback delivery and appointment-change audit events are persisted through PostgreSQL and the transactional outbox. The existing import and reconciliation commands are development and fixture tooling; they are not a production importer or source-to-target reconciliation implementation.
 
 Configure separate Polar meter IDs with `POLAR_VOICE_USAGE_METER_ID`, `POLAR_ALERT_SMS_USAGE_METER_ID`, and `POLAR_OUTBOUND_ATTEMPTS_USAGE_METER_ID`. `POLAR_USAGE_METER_ID` remains a fallback for existing deployments.
 
-Use `docs/deployment/railway.md` for Railway service configuration, `docs/operations/backup-restore.md` for recovery, `docs/operations/alerts.md` for critical alert response, and `docs/validation/certification-runbook.md` for the staging exit gate.
+Use `docs/deployment/railway.md` for Railway service configuration, `docs/operations/backup-restore.md` for recovery, `docs/operations/alerts.md` for critical alert response, `docs/validation/certification-runbook.md` for the staging exit gate, `docs/validation/readiness-implementation-2026-09-12.md` for current implementation scope, and `docs/validation/production-readiness.md` for the blocked production plan.

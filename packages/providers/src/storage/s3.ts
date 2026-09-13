@@ -5,6 +5,7 @@ import {
   GetObjectCommand,
   HeadObjectCommand,
   HeadBucketCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
   type BucketLocationConstraint,
@@ -73,7 +74,7 @@ export class S3StorageProvider {
     await this.run("health_check", async () => { await this.client.send(new HeadBucketCommand({ Bucket: this.bucket })); });
   }
 
-  async createUpload(input: { key: string; contentType: string; length: number; checksum?: string }): Promise<{ url: string; headers: Record<string, string> }> {
+  async createUpload(input: { key: string; contentType: string; length: number; checksum?: string; ifNoneMatch?: boolean }): Promise<{ url: string; headers: Record<string, string> }> {
     await this.ensureBucket();
     const command = new PutObjectCommand({
       Bucket: this.bucket,
@@ -81,6 +82,7 @@ export class S3StorageProvider {
       ContentType: input.contentType,
       ContentLength: input.length,
       ...(input.checksum ? { ChecksumSHA256: input.checksum } : {}),
+      ...(input.ifNoneMatch ? { IfNoneMatch: "*" } : {}),
     });
     const url = await this.run("create_upload", async () => await getSignedUrl(this.client, command, { expiresIn: 900 }));
     return {
@@ -89,6 +91,7 @@ export class S3StorageProvider {
         "content-type": input.contentType,
         "content-length": String(input.length),
         ...(input.checksum ? { "x-amz-checksum-sha256": input.checksum } : {}),
+        ...(input.ifNoneMatch ? { "if-none-match": "*" } : {}),
       },
     };
   }
@@ -137,5 +140,18 @@ export class S3StorageProvider {
   async copyObject(input: { sourceKey: string; destinationKey: string }): Promise<void> {
     await this.ensureBucket();
     await this.run("copy", async () => { await this.client.send(new CopyObjectCommand({ Bucket: this.bucket, Key: input.destinationKey, CopySource: `${this.bucket}/${input.sourceKey}` })); });
+  }
+
+  async listObjectKeys(prefix = ""): Promise<string[]> {
+    await this.ensureBucket();
+    const keys: string[] = [];
+    let continuation: string | undefined;
+    do {
+      const page = await this.run("list", async () => await this.client.send(new ListObjectsV2Command({ Bucket: this.bucket, Prefix: prefix, ...(continuation ? { ContinuationToken: continuation } : {}) })));
+      for (const item of page.Contents ?? []) if (item.Key !== undefined) keys.push(item.Key);
+      continuation = page.IsTruncated ? page.NextContinuationToken : undefined;
+      if (page.IsTruncated && !continuation) throw new Error("Incomplete storage listing");
+    } while (continuation);
+    return keys;
   }
 }

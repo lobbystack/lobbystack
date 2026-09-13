@@ -30,6 +30,8 @@ async function main(): Promise<void> {
         await migrator.db.execute(sql.raw(await readFile(resolve("migrations", "0048_knowledge_keyword_search.sql"), "utf8")));
         await migrator.db.execute(sql.raw(await readFile(resolve("migrations", "0049_finance_usage_metadata.sql"), "utf8")));
         await migrator.db.execute(sql.raw(await readFile(resolve("migrations", "0050_phone_verification_resends.sql"), "utf8")));
+        await migrator.db.execute(sql.raw(await readFile(resolve("migrations", "0051_knowledge_content_hash_index.sql"), "utf8")));
+        await migrator.db.execute(sql.raw(await readFile(resolve("migrations", "0052_calendar_sync_freshness.sql"), "utf8")));
         console.log("Database migrations applied.");
         break;
       case "check": {
@@ -228,6 +230,7 @@ async function verifyRlsBehavior(client: ReturnType<typeof createDatabaseClient>
     } finally {
       await tx.execute(sql.raw("reset role"));
       await tx.execute(sql`delete from public.businesses where id in (${ids.business_a}::uuid, ${ids.business_b}::uuid)`);
+      await tx.execute(sql`delete from public.users where id = ${ids.user_id}::uuid`);
     }
   });
 }

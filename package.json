@@ -50,6 +50,12 @@
     "lint": "pnpm -r lint",
     "test": "pnpm -r test && pnpm test:scripts",
     "test:scripts": "vitest run --passWithNoTests --config scripts/vitest.config.ts",
+    "release:check": "tsx --tsconfig scripts/tsconfig.json scripts/release-readiness.ts",
+    "migration:preflight": "tsx --tsconfig scripts/tsconfig.json scripts/production-migration-preflight.ts",
+    "migration:plan-check": "tsx --tsconfig tsconfig.base.json scripts/migration/snapshot-plan-check.ts",
+    "migration:rehearse": "tsx --tsconfig tsconfig.base.json scripts/migration/rehearsal-import.ts",
+    "migration:rebuild-snapshots": "tsx --tsconfig tsconfig.base.json scripts/migration/rebuild-snapshots.ts",
+    "release:seed-e2e": "tsx --tsconfig scripts/tsconfig.json scripts/seed-release-e2e.ts",
     "db:generate": "pnpm --filter @lobbystack/db db:generate",
     "db:migrate": "pnpm --filter @lobbystack/db db:migrate",
     "db:check": "pnpm --filter @lobbystack/db db:check",
@@ -101,6 +107,7 @@
     "replacement:appointment-policy": "tsx --tsconfig scripts/tsconfig.json scripts/replacement-appointment-policy-check.ts",
     "replacement:onboarding": "tsx --tsconfig scripts/tsconfig.json scripts/replacement-onboarding-check.ts",
     "replacement:catalog": "tsx --tsconfig scripts/tsconfig.json scripts/replacement-catalog-check.ts",
+    "replacement:calendar": "tsx --tsconfig scripts/tsconfig.json scripts/replacement-calendar-check.ts",
     "replacement:contacts": "tsx --tsconfig scripts/tsconfig.json scripts/replacement-contact-pagination-check.ts"
   },
   "devDependencies": {

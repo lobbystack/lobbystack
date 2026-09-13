@@ -45,6 +45,8 @@ export async function POST(request: Request) {
     else await updateSmsDeliveryStatus(workerContext, { businessId, providerMessageId, providerStatus: body.MessageStatus });
     return NextResponse.json({ ok: true });
   } catch {
-    return NextResponse.json({ ok: true });
+    // Never acknowledge an event whose durable status update failed. An
+    // ingress retry policy must be configured separately with Twilio.
+    return NextResponse.json({ ok: false, error: "Temporary webhook failure." }, { status: 503, headers: { "Retry-After": "60" } });
   }
 }

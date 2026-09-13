@@ -1,8 +1,20 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SmtpEmailProvider } from "./smtp";
 
+afterEach(() => vi.unstubAllEnvs());
+
 describe("SMTP delivery", () => {
+  it("blocks unapproved certification recipients before SMTP delivery", async () => {
+    vi.stubEnv("LOBBYSTACK_CERTIFICATION_MODE", "true");
+    vi.stubEnv("LOBBYSTACK_CERTIFICATION_EMAILS", "approved@example.invalid");
+    const sendMail = vi.fn().mockResolvedValue({ messageId: "fixture" });
+    const provider = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "no-reply@example.test" }, { sendMail } as never);
+    await expect(provider.sendTemplate({ template: "operator_alert", to: "other@example.invalid", subject: "Test", variables: {} })).rejects.toThrow("CERTIFICATION_RECIPIENT_BLOCKED");
+    expect(sendMail).not.toHaveBeenCalled();
+    await provider.sendTemplate({ template: "operator_alert", to: "approved@example.invalid", subject: "Test", variables: {} });
+    expect(sendMail).toHaveBeenCalledOnce();
+  });
   it("sends reset codes as codes while preserving previously issued reset links", async () => {
     const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
     const provider = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "no-reply@example.test" }, { sendMail } as never);

@@ -1,15 +1,24 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createInMemorySnapshotCache, deserializeSnapshot, serializeSnapshot, snapshotCacheKey, type SnapshotCacheClient } from "@lobbystack/domain";
 import { demoSnapshot } from "@lobbystack/shared";
 
 import { closeAdminSnapshotCache, getAdminSnapshotCache } from "./widget-snapshot-cache";
 
+beforeEach(() => {
+  vi.stubEnv("REDIS_URL", "");
+  vi.stubEnv("REDIS_PREFIX", undefined);
+});
+
 afterEach(() => {
   vi.unstubAllEnvs();
 });
 
 describe("admin widget snapshot cache (Redis-backed)", () => {
+  it("honors an explicitly isolated namespace", () => {
+    vi.stubEnv("REDIS_PREFIX", "release-fixture");
+    expect(snapshotCacheKey("business")).toBe("release-fixture:widget:snapshot:business");
+  });
   it("falls back to a cache miss and no-op write when REDIS_URL is absent (dev)", async () => {
     vi.stubEnv("REDIS_URL", "");
     const cache = getAdminSnapshotCache();

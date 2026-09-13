@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { isMaintenanceMode } from "@lobbystack/shared";
 
 import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE_SECONDS } from "@/lib/locale";
 import {
@@ -14,6 +15,21 @@ import { embeddableSecurityHeaders, isEmbeddablePath, securityHeaders } from "./
 
 const stateChangingMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const csrfExemptPrefixes = ["/api/auth", "/api/webhooks", "/api/health", "/api/voice", "/api/widget"];
+
+function isWebhookPath(pathname: string): boolean {
+  return pathname.startsWith("/api/webhooks/");
+}
+
+function isMaintenanceHealthProbe(pathname: string, method: string): boolean {
+  return (method === "GET" || method === "HEAD") && (pathname === "/api/health/live" || pathname === "/api/health/ready");
+}
+
+function maintenanceResponse(headers: Record<string, string>): NextResponse {
+  return new NextResponse("Service temporarily unavailable.", {
+    status: 503,
+    headers: { ...headers, "Cache-Control": "no-store", "Retry-After": "60" },
+  });
+}
 
 function configuredOrigins(request: NextRequest): Set<string> {
   const origins = new Set<string>([request.nextUrl.origin]);
@@ -40,6 +56,16 @@ function hasValidCsrfOrigin(request: NextRequest): boolean {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const headers = isEmbeddablePath(pathname) ? embeddableSecurityHeaders() : securityHeaders();
+
+  const isApiRequest = pathname.startsWith("/api/");
+  // Voice GET routes can resolve or refresh durable state too. Only the signed
+  // readiness handler may run; it authenticates then reports maintenance as 503.
+  const isVoiceOperation = pathname.startsWith("/voice/") && pathname !== "/voice/ready";
+  if (isMaintenanceMode(process.env) && (isVoiceOperation || isWebhookPath(pathname) || (isApiRequest && !isMaintenanceHealthProbe(pathname, request.method)) || stateChangingMethods.has(request.method))) {
+    // Webhooks are rejected before their handlers can validate, enqueue, or acknowledge them.
+    // Health probes are the only API exemption: GET handlers can perform side effects.
+    return maintenanceResponse(headers);
+  }
 
   // The root layout reads these request headers so the first paint is rendered in
   // the negotiated locale for the route being requested.

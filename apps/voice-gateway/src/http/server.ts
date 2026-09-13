@@ -5,7 +5,7 @@ import { WebSocketServer } from "ws";
 import { context, SpanKind, SpanStatusCode, trace, type Span } from "@opentelemetry/api";
 
 import { loadVoiceGatewayEnv } from "@lobbystack/config";
-import type { BusinessContextSnapshot } from "@lobbystack/shared";
+import { isMaintenanceMode, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { extractTraceContext, getTracer, recordException } from "@lobbystack/telemetry/node";
 
 import { handleMediaStreamConnection } from "../telephony/mediaStream";
@@ -37,7 +37,14 @@ export function createServer(): ReturnType<typeof Fastify> {
   server.register(fastifyRateLimit, {
     global: false,
   });
-  server.addHook("onRequest", (request, _reply, done) => {
+  server.addHook("onRequest", (request, reply, done) => {
+    const pathname = request.url.split("?")[0] ?? "/";
+    if (isMaintenanceMode(process.env) && pathname !== "/health" && pathname !== "/health/live") {
+      reply.status(503).send({ ok: false, service: "lobbystack-voice-gateway" });
+      done();
+      return;
+    }
+
     const parent = extractTraceContext(Object.fromEntries(Object.entries(request.headers).flatMap(([key, value]) => typeof value === "string" ? [[key, value]] : Array.isArray(value) && value[0] ? [[key, value[0]]] : [])));
     const span = getTracer("lobbystack-voice-gateway").startSpan(`http.${request.method.toLowerCase()}`, {
       kind: SpanKind.SERVER,
@@ -75,6 +82,12 @@ export function createServer(): ReturnType<typeof Fastify> {
 
   const mediaStreamServer = new WebSocketServer({ noServer: true });
   server.server.on("upgrade", (request, socket, head) => {
+    if (isMaintenanceMode(process.env)) {
+      socket.write("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+
     const requestUrl = request.url ?? "";
     const pathname = requestUrl.split("?")[0];
 
@@ -124,7 +137,19 @@ export function createServer(): ReturnType<typeof Fastify> {
   const healthResponse = async () => ({ ok: true, service: "lobbystack-voice-gateway" });
   server.get("/health", healthResponse);
   server.get("/health/live", healthResponse);
-  server.get("/health/ready", healthResponse);
+  server.get("/health/ready", async (_request, reply) => {
+    const result = await probeBackendReachability({
+      backendUrl: env.BACKEND_INTERNAL_URL,
+      internalServiceSecret: env.INTERNAL_SERVICE_SECRET ?? env.INTERNAL_SERVICE_TOKEN,
+      serviceId: process.env.VOICE_GATEWAY_SERVICE_ID ?? "lobbystack-voice-gateway",
+    });
+
+    if (!result.ok) {
+      return reply.status(503).send({ ok: false, service: "lobbystack-voice-gateway" });
+    }
+
+    return { ok: true, service: "lobbystack-voice-gateway" };
+  });
 
   server.get("/health/backend", async (request, reply) => {
     const peerAddress = request.socket.remoteAddress;
@@ -145,13 +170,13 @@ export function createServer(): ReturnType<typeof Fastify> {
 
     const result = await probeBackendReachability({
       backendUrl: env.BACKEND_INTERNAL_URL,
-      internalServiceToken: env.INTERNAL_SERVICE_TOKEN,
+      internalServiceSecret: env.INTERNAL_SERVICE_SECRET ?? env.INTERNAL_SERVICE_TOKEN,
+      serviceId: process.env.VOICE_GATEWAY_SERVICE_ID ?? "lobbystack-voice-gateway",
     });
 
     if (!result.ok) {
       return reply.status(503).send({
         ok: false,
-        error: result.error,
         status: result.status,
       });
     }

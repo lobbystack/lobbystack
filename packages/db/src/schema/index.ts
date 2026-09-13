@@ -633,7 +633,7 @@ export const knowledgeDocuments = pgTable(
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("knowledge_documents_business_status_idx").on(table.businessId, table.status), uniqueIndex("knowledge_documents_hash_unique").on(table.businessId, table.contentHash), uniqueIndex("knowledge_documents_business_url_unique").on(table.businessId, table.sourceUrl), index("knowledge_documents_title_keyword_idx").using("gin", sql`to_tsvector('simple', ${table.title})`)],
+  (table) => [index("knowledge_documents_business_status_idx").on(table.businessId, table.status), index("knowledge_documents_hash_idx").on(table.businessId, table.contentHash), uniqueIndex("knowledge_documents_business_url_unique").on(table.businessId, table.sourceUrl), index("knowledge_documents_title_keyword_idx").using("gin", sql`to_tsvector('simple', ${table.title})`)],
 );
 
 export const knowledgeChunks = pgTable(
@@ -750,6 +750,7 @@ export const calendarConnections = pgTable(
     encryptedRefreshToken: text("encrypted_refresh_token"),
     tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
     syncCursor: text("sync_cursor"),
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
     status: varchar("status", { length: 32 }).default("connected").notNull(),
     lastSyncError: text("last_sync_error"),
     ...timestamps,

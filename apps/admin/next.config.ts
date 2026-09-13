@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: {
     "/*": ["./.next/dev/**/*", "./.next/cache/**/*", "./.next/standalone/**/*"],
   },
+  outputFileTracingIncludes: {
+    "/*": ["../../node_modules/.pnpm/@swc+helpers@*/node_modules/@swc/helpers/esm/**/*"],
+  },
   transpilePackages: [
     "@lobbystack/ai",
     "@lobbystack/config",

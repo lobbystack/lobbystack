@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { RefreshCcw, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
@@ -12,11 +12,12 @@ import type { IntegrationsViewModel, WorkspaceViewModel } from "@/lib/page-view-
 import { requestJson } from "@/lib/request-json";
 import { selectActiveBusiness } from "@/lib/active-business";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { PageHeader } from "@/components/page-header";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { surfaceClassName } from "@/components/ui/surface";
 
@@ -36,19 +37,21 @@ export function LiveIntegrationsSurface() {
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: WorkspaceViewModel[] }>("/api/businesses") });
   const business = selectActiveBusiness(businesses.data?.businesses);
   const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
-  const integrations = useQuery({ queryKey: ["integrations", business?.businessId], queryFn: () => requestJson<IntegrationsViewModel>(`/api/integrations?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId && canManage) });
-  const connections = integrations.data?.calendarConnections ?? [];
-  const google = useMemo(() => connections.find((connection) => connection.provider === "google") ?? null, [connections]);
+  const integrations = useQuery({ queryKey: ["integrations", business?.businessId], queryFn: () => requestJson<IntegrationsViewModel>(`/api/integrations?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId && canManage), refetchInterval: (query) => query.state.data?.calendarConnections.some((connection) => connection.status === "syncing") ? 2000 : false });
+  const google = integrations.data?.calendarConnections.find((connection) => connection.provider === "google") ?? null;
   const connected = google?.status === "connected";
+  const syncing = google?.status === "syncing";
+  const discoveryFailed = Boolean(integrations.isError || integrations.data?.discoveryError);
+  const calendarOptions = integrations.data?.calendarOptions ?? [];
 
-  useEffect(() => { if (google?.selectedCalendarId) setSelectedCalendarId(google.selectedCalendarId); }, [google?.selectedCalendarId]);
+  useEffect(() => { setSelectedCalendarId(google?.selectedCalendarId ?? ""); }, [google?.id, google?.selectedCalendarId]);
   useSetupAction(canManage, useCallback((action: string) => { if (action !== "calendar") return false; setDialogOpen(true); return true; }, []));
   useEffect(() => {
-    const calendar = searchParams.get("calendar"); const status = searchParams.get("status"); const message = searchParams.get("message"); const key = `${calendar}:${status}:${message}`;
+    const calendar = searchParams.get("calendar"); const status = searchParams.get("status"); const key = `${calendar}:${status}`;
     if (calendar !== "google" || !status || handledCallback.current === key) return;
     handledCallback.current = key;
-    if (status === "success") { toast.success(message ?? t("integrations.google.connectedSuccess")); void queryClient.invalidateQueries({ queryKey: ["integrations", business?.businessId] }); setDialogOpen(true); }
-    else toast.error(message ?? t("integrations.google.connectFailed"));
+    if (status === "success") { toast.success(t("integrations.google.connectedSuccess")); void queryClient.invalidateQueries({ queryKey: ["integrations", business?.businessId] }); setDialogOpen(true); }
+    else toast.error(t("integrations.google.connectFailed"));
   }, [business?.businessId, queryClient, searchParams, t]);
 
   const update = useMutation({
@@ -59,8 +62,41 @@ export function LiveIntegrationsSurface() {
 
   async function connect() { if (!business) return; try { const result = await requestJson<{ url: string }>(`/api/calendar/google/start?businessId=${encodeURIComponent(business.businessId)}`); window.location.assign(result.url); } catch (error) { toast.error(error instanceof Error ? error.message : t("integrations.google.connectFailed")); } }
 
-  return <><div className="flex flex-col gap-6"><PageHeader title={t("sections.integrations")} /><ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"><li className={`${surfaceClassName} p-4`}><div className="mb-8 flex items-center justify-between gap-3"><div className="flex size-10 shrink-0 items-center justify-center"><GoogleCalendarLogo /></div><div className="flex items-center gap-2">{integrations.isLoading ? <Skeleton className="h-9 w-24 rounded-md" /> : <><Button disabled={!canManage} onClick={() => connected ? setDialogOpen(true) : void connect()} size="sm" type="button" variant="outline" className={connected ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300" : undefined}>{connected ? t("integrations.actions.connected") : google ? t("integrations.google.reconnect") : t("integrations.actions.connect")}</Button></>}</div></div><div className="flex flex-col gap-1"><h2 className="type-section-title text-lg">{t("integrations.cards.google.title")}</h2><p className="type-body-muted line-clamp-2">{t("integrations.cards.google.description")}</p></div></li></ul></div>
-    <Dialog onOpenChange={setDialogOpen} open={dialogOpen}><DialogContent className="max-h-[90vh] w-full overflow-hidden p-0 sm:max-w-xl"><DialogHeader className="gap-0 border-b p-6 pb-5"><div className="flex items-start gap-4"><div className="flex size-11 shrink-0 items-center justify-center"><GoogleCalendarLogo /></div><div className="flex flex-col gap-1"><DialogTitle>{t("integrations.google.sheetTitle")}</DialogTitle><DialogDescription>{t("integrations.google.sheetDescription")}</DialogDescription></div></div></DialogHeader><div className="flex max-h-[calc(90vh-7rem)] flex-col gap-6 overflow-y-auto p-6"><section className="flex flex-col gap-4 rounded-xl border p-4"><div className="flex flex-col gap-1"><h3 className="type-item-title">{t("integrations.google.connectionSectionTitle")}</h3><p className="type-body-muted">{t("integrations.google.connectionSectionDescription")}</p></div><Button className="w-full sm:w-auto" disabled={!canManage} onClick={() => void connect()}>{google ? t("integrations.google.reconnect") : t("integrations.google.connect")}</Button>{google ? <div className="grid gap-3 rounded-xl bg-muted/35 p-4 sm:grid-cols-2"><div className="flex flex-col gap-1"><p className="type-meta">{t("integrations.google.connectedAccount")}</p><p className="type-body">{google.externalAccountId ?? t("integrations.google.connectedAccountUnavailable")}</p></div><div className="flex flex-col gap-1"><p className="type-meta">{t("integrations.google.lastSync")}</p><p className="type-body">{formatTimestamp(google.lastSyncedAt, i18n.language) ?? t("integrations.google.neverSynced")}</p></div></div> : <div className="type-body-muted rounded-xl border border-dashed px-4 py-4">{t("integrations.google.notConnectedDescription")}</div>}</section>
-      {google ? <section className="flex flex-col gap-4 rounded-xl border p-4"><div className="flex flex-col gap-1"><h3 className="type-item-title">{t("integrations.google.calendarSectionTitle")}</h3><p className="type-body-muted">{t("integrations.google.calendarSectionDescription")}</p></div><div className="flex flex-wrap items-center gap-2"><Badge variant={connected ? "secondary" : "destructive"}>{connected ? t("integrations.status.connected") : t("integrations.status.reconnectRequired")}</Badge>{google.lastSyncError ? <Badge variant="destructive">{t("integrations.google.syncNeedsAttention")}</Badge> : <Badge variant="outline">{t("integrations.google.syncHealthy")}</Badge>}</div><FieldGroup><Field><FieldContent><FieldLabel>{t("integrations.google.calendarLabel")}</FieldLabel><FieldDescription>{connected ? t("integrations.google.selectCalendar") : t("integrations.google.reconnect")}</FieldDescription></FieldContent><Select disabled={!connected || integrations.data?.calendarOptions.length === 0} onValueChange={(value) => setSelectedCalendarId(value ?? "")} value={selectedCalendarId}><SelectTrigger className="w-full"><SelectValue placeholder={t("integrations.google.selectCalendar")} /></SelectTrigger><SelectContent>{integrations.data?.calendarOptions.map((calendar) => <SelectItem key={calendar.id} value={calendar.id}>{calendar.primary ? t("integrations.google.primaryCalendarLabel", { summary: calendar.summary }) : calendar.summary}</SelectItem>)}</SelectContent></Select></Field></FieldGroup><div className="flex flex-wrap gap-2"><Button disabled={!selectedCalendarId || update.isPending || !connected} onClick={() => update.mutate({ method: "PATCH", calendarId: selectedCalendarId })} variant="secondary">{update.isPending ? t("integrations.google.savingCalendar") : t("integrations.google.saveCalendar")}</Button><Button disabled={update.isPending || !connected} onClick={() => update.mutate({ method: "POST" })} variant="ghost"><RefreshCcw className="size-4" />{t("integrations.google.refreshCalendars")}</Button><Button disabled={update.isPending} onClick={() => update.mutate({ method: "DELETE" })} size="sm" variant="outline"><Trash2 className="size-4" />{t("integrations.google.disconnect")}</Button></div></section> : null}</div></DialogContent></Dialog>
+  return <>
+    <div className="flex flex-col gap-6">
+      <PageHeader title={t("sections.integrations")} />
+      {discoveryFailed || google?.lastSyncError ? <Alert variant="destructive"><AlertTitle>{t("integrations.google.syncNeedsAttention")}</AlertTitle><AlertDescription>{t("integrations.google.discoveryFailed")}</AlertDescription></Alert> : null}
+      <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"><li className={`${surfaceClassName} p-4`}>
+        <div className="mb-8 flex items-center justify-between gap-3"><div className="flex size-10 shrink-0 items-center justify-center"><GoogleCalendarLogo /></div><div className="flex items-center gap-2">
+          {integrations.isLoading ? <Skeleton className="h-9 w-24 rounded-md" /> : <Button disabled={!canManage} onClick={() => google ? setDialogOpen(true) : void connect()} size="sm" type="button" variant="outline" className={connected ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300" : undefined}>{connected ? t("integrations.actions.connected") : syncing ? t("integrations.status.syncing") : google ? t("integrations.google.reconnect") : t("integrations.actions.connect")}</Button>}
+        </div></div>
+        <div className="flex flex-col gap-1"><h2 className="type-section-title text-lg">{t("integrations.cards.google.title")}</h2><p className="type-body-muted line-clamp-2">{t("integrations.cards.google.description")}</p></div>
+      </li></ul>
+    </div>
+    <Dialog onOpenChange={setDialogOpen} open={dialogOpen}><DialogContent className="max-h-[90vh] w-full overflow-hidden p-0 sm:max-w-xl">
+      <DialogHeader className="gap-0 border-b p-6 pb-5"><div className="flex items-start gap-4"><div className="flex size-11 shrink-0 items-center justify-center"><GoogleCalendarLogo /></div><div className="flex flex-col gap-1"><DialogTitle>{t("integrations.google.sheetTitle")}</DialogTitle><DialogDescription>{t("integrations.google.sheetDescription")}</DialogDescription></div></div></DialogHeader>
+      <div className="flex max-h-[calc(90vh-7rem)] flex-col gap-6 overflow-y-auto p-6">
+        <section className="flex flex-col gap-4 rounded-xl border p-4">
+          <div className="flex flex-col gap-1"><h3 className="type-item-title">{t("integrations.google.connectionSectionTitle")}</h3><p className="type-body-muted">{t("integrations.google.connectionSectionDescription")}</p></div>
+          <Button className="w-full sm:w-auto" disabled={!canManage} onClick={() => void connect()}>{google ? t("integrations.google.reconnect") : t("integrations.google.connect")}</Button>
+          {google ? <div className="grid gap-3 rounded-xl bg-muted/35 p-4 sm:grid-cols-2"><div className="flex flex-col gap-1"><p className="type-meta">{t("integrations.google.connectedAccount")}</p><p className="type-body">{google.externalAccountId ?? t("integrations.google.connectedAccountUnavailable")}</p></div><div className="flex flex-col gap-1"><p className="type-meta">{t("integrations.google.lastSync")}</p><p className="type-body">{formatTimestamp(google.lastSyncedAt, i18n.language) ?? t("integrations.google.neverSynced")}</p></div></div> : <div className="type-body-muted rounded-xl border border-dashed px-4 py-4">{t("integrations.google.notConnectedDescription")}</div>}
+        </section>
+        {google ? <section className="flex flex-col gap-4 rounded-xl border p-4">
+          <div className="flex flex-col gap-1"><h3 className="type-item-title">{t("integrations.google.calendarSectionTitle")}</h3><p className="type-body-muted">{t("integrations.google.calendarSectionDescription")}</p></div>
+          <div className="flex flex-wrap items-center gap-2"><Badge variant={connected || syncing ? "secondary" : "destructive"}>{connected ? t("integrations.status.connected") : syncing ? t("integrations.status.syncing") : t("integrations.status.reconnectRequired")}</Badge>{google.lastSyncError ? <Badge variant="destructive">{t("integrations.google.syncNeedsAttention")}</Badge> : <Badge variant="outline">{syncing ? t("integrations.status.syncing") : google.lastSyncedAt ? t("integrations.google.syncHealthy") : t("integrations.google.neverSynced")}</Badge>}</div>
+          <FieldGroup><Field><FieldContent><FieldLabel htmlFor="calendar-selection">{t("integrations.google.calendarLabel")}</FieldLabel><FieldDescription>{t("integrations.google.selectCalendar")}</FieldDescription></FieldContent>
+            <Select disabled={!canManage || discoveryFailed || !calendarOptions.length} items={calendarOptions.map((calendar) => ({ value: calendar.id, label: calendar.primary ? t("integrations.google.primaryCalendarLabel", { summary: calendar.summary }) : calendar.summary }))} onValueChange={(value) => setSelectedCalendarId(value ?? "")} value={selectedCalendarId}>
+              <SelectTrigger id="calendar-selection" className="w-full"><SelectValue placeholder={t("integrations.google.selectCalendar")} /></SelectTrigger>
+              <SelectContent><SelectGroup>{calendarOptions.map((calendar) => <SelectItem key={calendar.id} value={calendar.id} disabled={!["owner", "writer"].includes(calendar.accessRole ?? "")}>{calendar.primary ? t("integrations.google.primaryCalendarLabel", { summary: calendar.summary }) : calendar.summary}</SelectItem>)}</SelectGroup></SelectContent>
+            </Select>
+          </Field></FieldGroup>
+          <div className="flex flex-wrap gap-2">
+            <Button disabled={!canManage || !selectedCalendarId || update.isPending || discoveryFailed} onClick={() => update.mutate({ method: "PATCH", calendarId: selectedCalendarId })} variant="secondary">{update.isPending ? t("integrations.google.savingCalendar") : t("integrations.google.saveCalendar")}</Button>
+            <Button disabled={!canManage || update.isPending || syncing || !google.selectedCalendarId} onClick={() => update.mutate({ method: "POST" })} variant="ghost"><RefreshCcw data-icon="inline-start" />{t("integrations.google.refreshCalendars")}</Button>
+            <Button disabled={!canManage || update.isPending} onClick={() => update.mutate({ method: "DELETE" })} size="sm" variant="outline"><Trash2 data-icon="inline-start" />{t("integrations.google.disconnect")}</Button>
+          </div>
+        </section> : null}
+      </div>
+    </DialogContent></Dialog>
   </>;
 }

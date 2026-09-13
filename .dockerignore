@@ -26,3 +26,9 @@
 .agents
 .codex
 convex/.generated
+.lobbystack
+.firecrawl
+.claude
+output
+tmp
+OPENCODE.local.md

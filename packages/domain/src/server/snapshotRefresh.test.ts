@@ -80,6 +80,21 @@ afterEach(() => {
 });
 
 describe("refreshBusinessSnapshot write-through", () => {
+  it("preserves business identity, active contact numbers, locale labels, and opt-out", async () => {
+    mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({
+      businesses: [{ ...businessRow, legalName: "Maple Clinic Inc.", businessType: "clinic", telemetryEnabled: false }],
+      receptionist_profiles: [profileRow],
+      phone_numbers: [
+        { e164: "+14165550001", status: "released", voiceEnabled: true, smsEnabled: true },
+        { e164: "+14165550002", status: "active", voiceEnabled: true, smsEnabled: false },
+        { e164: "+14165550003", status: "active", voiceEnabled: false, smsEnabled: true },
+      ],
+      services: [{ id: "service", name: "Consultation", durationMinutes: 30, localizedNames: { en: "Consultation", fr: "Consultation française" } }],
+    })));
+    const cache = createInMemorySnapshotCache();
+    await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
+    expect(await cache.get(businessId)).toMatchObject({ legalName: "Maple Clinic Inc.", businessType: "clinic", telemetryEnabled: false, contactChannels: { phoneNumber: "+14165550002", smsNumber: "+14165550003" }, services: [{ localizedNames: { fr: "Consultation française" } }] });
+  });
   it("pushes the regenerated snapshot into the shared cache", async () => {
     const cache = createInMemorySnapshotCache();
     const context = { db: {} as never, snapshotCache: cache };

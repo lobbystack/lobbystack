@@ -3,23 +3,38 @@ import { describe, expect, it, vi } from "vitest";
 import { probeBackendReachability } from "./backendReachability";
 
 describe("probeBackendReachability", () => {
-  it("treats 404 from /voice/context as reachable", async () => {
-    const fetchImpl = vi.fn(async () => new Response(null, { status: 404 }));
+  it("accepts the signed readiness marker", async () => {
+    const fetchImpl = vi.fn(async () => Response.json({
+      ok: true,
+      service: "lobbystack-voice",
+      readiness: "ready",
+    }));
 
     await expect(
       probeBackendReachability({
         backendUrl: "http://admin:3000",
-        internalServiceToken: "token",
+        internalServiceSecret: "secret",
+        serviceId: "voice",
         fetchImpl,
       }),
-    ).resolves.toEqual({ ok: true, status: 404 });
+    ).resolves.toEqual({ ok: true, status: 200 });
 
     expect(fetchImpl).toHaveBeenCalledWith(
-      "http://admin:3000/voice/context",
+      "http://admin:3000/voice/ready",
       expect.objectContaining({
-        method: "POST",
+        method: "GET",
         headers: expect.objectContaining({
-          "x-internal-service-token": "token",
+          "x-service-id": "voice",
+          "x-service-signature": expect.any(String),
+        }),
+        signal: expect.any(AbortSignal),
+      }),
+    );
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.not.objectContaining({
+          "x-internal-service-token": expect.anything(),
         }),
       }),
     );
@@ -31,7 +46,7 @@ describe("probeBackendReachability", () => {
     await expect(
       probeBackendReachability({
         backendUrl: "http://admin:3000/",
-        internalServiceToken: "token",
+        internalServiceSecret: "secret",
         fetchImpl,
       }),
     ).resolves.toEqual({
@@ -41,20 +56,65 @@ describe("probeBackendReachability", () => {
     });
   });
 
-  it("reports network failures as unreachable", async () => {
+  it("rejects a 404 or an unexpected success response", async () => {
+    const notFound = vi.fn(async () => new Response(null, { status: 404 }));
+    const wrongUpstream = vi.fn(async () => Response.json({ ok: true }));
+
+    await expect(
+      probeBackendReachability({
+        backendUrl: "http://admin:3000",
+        internalServiceSecret: "secret",
+        fetchImpl: notFound,
+      }),
+    ).resolves.toEqual({ ok: false, error: "unexpected_status", status: 404 });
+
+    await expect(
+      probeBackendReachability({
+        backendUrl: "http://admin:3000",
+        internalServiceSecret: "secret",
+        fetchImpl: wrongUpstream,
+      }),
+    ).resolves.toEqual({ ok: false, error: "invalid_readiness_response", status: 200 });
+  });
+
+  it("reports network failures without exposing diagnostics", async () => {
     const fetchImpl = vi.fn(async () => {
-      throw new Error("connect ECONNREFUSED");
+      throw new Error("connect ECONNREFUSED http://admin:3000?token=secret");
     });
+
+    const result = await probeBackendReachability({
+      backendUrl: "http://127.0.0.1:3000",
+      internalServiceSecret: "secret",
+      fetchImpl,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: "backend_unreachable",
+    });
+    expect(JSON.stringify(result)).not.toContain("secret");
+  });
+
+  it("uses the supplied timeout", async () => {
+    let requestInit: RequestInit | undefined;
+    const fetchImpl: typeof fetch = async (_input, init) => {
+      requestInit = init;
+      return Response.json({
+        ok: true,
+        service: "lobbystack-voice",
+        readiness: "ready",
+      });
+    };
 
     await expect(
       probeBackendReachability({
         backendUrl: "http://127.0.0.1:3000",
-        internalServiceToken: "token",
+        internalServiceSecret: "secret",
+        timeoutMs: 25,
         fetchImpl,
       }),
-    ).resolves.toEqual({
-      ok: false,
-      error: "connect ECONNREFUSED",
-    });
+    ).resolves.toEqual({ ok: true, status: 200 });
+
+    expect(requestInit?.signal).toBeInstanceOf(AbortSignal);
   });
 });

@@ -28,16 +28,18 @@ AI-generated SMS, AI-SMS add-on billing, and Twilio A2P registration are exclude
 
 ## Rehearse migration and cutover
 
-1. Restore an encrypted production snapshot into a disposable environment with no production provider credentials.
-2. Export the curated Convex tables and run `pnpm replacement:import -- --input=convex_export.json` twice.
-3. Run `pnpm replacement:reconciliation -- --source=convex_export.json` and retain the JSON output. Any row-count, relationship, aggregate, or sampled-record discrepancy blocks cutover.
-4. Run all automated gates and provider scenarios against staging.
-5. Take a pre-cutover backup, perform the staging traffic switch, verify required workflows no longer call Convex, then execute the documented restore procedure to prove rollback.
-6. Repeat the cutover after rollback and attach import, reconciliation, provider, performance, and rollback logs to the release record.
+Follow [production readiness](./production-readiness.md), the [current implementation validation report](./readiness-implementation-2026-09-12.md), and [production migration rehearsal](../migrations/production-rehearsal.md). Production migration and traffic cutover are not certified by this runbook.
+
+1. Run the two snapshot rehearsals only after their approval, isolation, provider, and legacy-freeze prerequisites are met.
+2. Run the audit-only `pnpm migration:preflight` command against each approved snapshot. It rejects apply, remains production-uncertified, and does not establish archive-to-unpacked provenance from a hash alone.
+3. Do not use the development-only curated importer with a production snapshot. No production importer exists.
+4. Run all automated gates and provider scenarios against isolated staging, including `pnpm release:check --staging`. This target is a disposable certification deployment, never a production snapshot database.
+5. Treat `pnpm replacement:reconciliation` as limited evidence only. It checks a selected mapping of tables, selected orphan relationships, knowledge-document active flags, and billing usage aggregates; it is not implemented source-to-target reconciliation and does not reconcile every source table, relationship, transformed field, file, provider state, or sampled record.
+6. Run a state restore drill under [backup and restore](../operations/backup-restore.md), but do not record it as traffic rollback evidence. Traffic rollback needs its own approved and rehearsed routing, provider, session, and in-flight-event procedure.
 
 ## Apply the exit gate
 
-Certification passes only when RLS and pool-context isolation pass, telemetry contains no customer content, realtime p95 is below 500 ms, ordinary API p95 is below 500 ms excluding providers, voice context p95 is below 300 ms, webhook durable response p95 is below one second, outbox dispatch p95 is below two seconds, restore succeeds, critical alerts are tested, migration reconciliation has no unexplained differences, staging rollback succeeds, required workflows have no Convex dependency, compliant SMS sender evidence is attached, and no critical defects remain.
+Certification passes only when RLS and pool-context isolation pass, telemetry contains no customer content, realtime p95 is below 500 ms, ordinary API p95 is below 500 ms excluding providers, voice context p95 is below 300 ms, webhook durable response p95 is below one second, outbox dispatch p95 is below two seconds, restore succeeds, critical alerts are tested, the approved migration reconciliation criteria have no unexplained differences, a traffic rollback rehearsal succeeds, required workflows have no Convex dependency, compliant SMS sender evidence is attached, and no critical defects remain. Until a production importer and those criteria exist, production migration certification remains blocked.
 
 ## Publish the platform-port articles
 

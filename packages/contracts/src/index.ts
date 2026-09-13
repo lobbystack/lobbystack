@@ -205,6 +205,7 @@ export const snapshotSchema = z.object({
   timezone: z.string().min(1),
   defaultLocale: z.enum(["en", "fr"]),
   businessType: z.string().min(1),
+  telemetryEnabled: z.boolean().optional(),
   greeting: z.string(),
   voiceInstructions: z.string(),
   smsInstructions: z.string(),
@@ -248,6 +249,7 @@ export const snapshotSchema = z.object({
   services: z.array(z.object({
     id: z.string().uuid(),
     name: z.string(),
+    localizedNames: z.object({ en: z.string().optional(), fr: z.string().optional() }).optional(),
     durationMinutes: z.number().int().positive(),
     description: z.string().optional(),
   })),

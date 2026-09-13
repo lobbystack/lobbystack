@@ -1,4 +1,5 @@
 import { loadVoiceGatewayEnv } from "@lobbystack/config";
+import { assertCertificationRecipient } from "@lobbystack/shared";
 
 export class TwilioLiveCallUpdateError extends Error {
   public readonly status: number;
@@ -90,6 +91,7 @@ export async function transferLiveCall(input: {
   actionUrl?: string;
   sayMessage?: string;
 }): Promise<void> {
+  assertCertificationRecipient("phone", input.destination);
   await updateLiveCallTwiml({
     callSid: input.callSid,
     twiml: buildLiveCallUpdateTwiml({

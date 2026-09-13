@@ -9,7 +9,7 @@ This directory documents LobbyStack's current architecture, operations, provider
 - `voice/`: Voice gateway runtime behavior
 - `providers/`: Provider configuration and operations
 - `deployment/`: Hosting and deployment procedures
-- `migrations/`: Convex import, reconciliation, cutover, and rollback procedures
-- `operations/`: Backup, restore, and alert runbooks
-- `validation/`: Release certification and contract checks
+- `migrations/`: Development Convex import and the [blocked production-snapshot rehearsal boundary](migrations/production-rehearsal.md)
+- `operations/`: Backup, restore, and alert runbooks; restore is separate from traffic rollback
+- `validation/`: Release certification, contract checks, the [production-readiness matrix](validation/production-readiness.md), and the [current implementation validation report](validation/readiness-implementation-2026-09-12.md)
 - `platform.md`: Local stack, service checks, deployment, and cutover summary

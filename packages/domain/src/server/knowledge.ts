@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { and, asc, desc, eq, ilike, sql } from "drizzle-orm";
 
-import { agentRules, businessContextSnapshots, businessHours, businesses, closures, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, receptionistProfiles, services, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agentRules, businessContextSnapshots, businessHours, businesses, closures, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, receptionistProfiles, services, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { normalizeAppointmentChangePolicy, normalizeTransferMode, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { buildBusinessContextSnapshot } from "../snapshot";
 import { fuseKnowledgeRanks, knowledgeLexicalQueries, knowledgeQueryTerms, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
@@ -457,24 +457,31 @@ export async function refreshBusinessSnapshot(
     if (!business[0]) {
       throw new Error("Business not found.");
     }
-    const [hours, closureRows, serviceRows, ruleRows, snippets, documents] = await Promise.all([
+    const [hours, closureRows, serviceRows, ruleRows, snippets, documents, numbers] = await Promise.all([
       tx.select().from(businessHours).where(eq(businessHours.businessId, input.businessId)).orderBy(asc(businessHours.dayOfWeek)),
       tx.select().from(closures).where(eq(closures.businessId, input.businessId)).orderBy(asc(closures.startsAt)),
       tx.select().from(services).where(and(eq(services.businessId, input.businessId), eq(services.active, true))).orderBy(asc(services.name)),
       tx.select().from(agentRules).where(and(eq(agentRules.businessId, input.businessId), eq(agentRules.active, true))).orderBy(asc(agentRules.sortOrder)),
       tx.select().from(knowledgeSnippets).where(and(eq(knowledgeSnippets.businessId, input.businessId), eq(knowledgeSnippets.active, true))).orderBy(desc(knowledgeSnippets.priority)).limit(8),
       tx.select({ title: knowledgeDocuments.title, sourceUrl: knowledgeDocuments.sourceUrl, tags: knowledgeDocuments.tags, revision: knowledgeDocuments.revision }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.active, true), eq(knowledgeDocuments.status, "indexed"))).orderBy(desc(knowledgeDocuments.updatedAt), asc(knowledgeDocuments.id)).limit(40),
+      tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(desc(phoneNumbers.createdAt), asc(phoneNumbers.id)),
     ]);
     const currentProfile = profile[0];
+    const phoneNumber = numbers.find((number) => number.status === "active" && number.voiceEnabled)?.e164;
+    const smsNumber = numbers.find((number) => number.status === "active" && number.smsEnabled)?.e164;
     const version = `${Date.now()}`;
     builtSnapshot = buildBusinessContextSnapshot({
       businessId: input.businessId,
       version,
       generatedAt: new Date().toISOString(),
       displayName: business[0].name,
+      ...(business[0].legalName ? { legalName: business[0].legalName } : {}),
       timezone: business[0].timezone,
       defaultLocale: business[0].defaultLocale === "fr" ? "fr" : "en",
-      businessType: "other",
+      businessType: ["clinic", "repair_shop", "salon", "service_company"].includes(business[0].businessType) ? business[0].businessType as BusinessContextSnapshot["businessType"] : "other",
+      telemetryEnabled: business[0].telemetryEnabled,
+      ...(phoneNumber ? { phoneNumber } : {}),
+      ...(smsNumber ? { smsNumber } : {}),
       greeting: currentProfile?.greeting ?? `Thank you for calling ${business[0].name}.`,
       tone: currentProfile?.tone ?? "professional",
       bookingPolicy: currentProfile?.bookingPolicy ?? "Confirm availability before booking.",
@@ -485,7 +492,14 @@ export async function refreshBusinessSnapshot(
       knowledgeDigest: withinKnowledgeBudget(documents, 1600, row => JSON.stringify(row)).map(row => JSON.stringify(row)).join("\n"),
       hours: hours.map((row) => ({ dayOfWeek: row.dayOfWeek, openMinutes: row.openMinutes, closeMinutes: row.closeMinutes })),
       closures: closureRows.map((row) => ({ startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), reason: row.reason })),
-      services: serviceRows.map((row) => ({ id: row.id, name: row.name, durationMinutes: row.durationMinutes, ...(row.description ? { description: row.description } : {}) })),
+      services: serviceRows.map((row) => ({
+        id: row.id, name: row.name, durationMinutes: row.durationMinutes,
+        ...(row.description ? { description: row.description } : {}),
+        ...(row.localizedNames ? { localizedNames: {
+          ...(typeof row.localizedNames.en === "string" ? { en: row.localizedNames.en } : {}),
+          ...(typeof row.localizedNames.fr === "string" ? { fr: row.localizedNames.fr } : {}),
+        } } : {}),
+      })),
       rules: ruleRows.map((row) => ({ id: row.id, title: row.title, content: row.content, order: row.sortOrder })),
       snippets: snippets.map((row) => ({ id: row.id, title: row.title, content: row.content, tags: row.tags, priority: row.priority })),
       appointmentChangePolicy: normalizeAppointmentChangePolicy(currentProfile?.appointmentChangePolicy),

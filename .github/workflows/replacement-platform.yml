@@ -79,31 +79,17 @@ jobs:
       - run: pnpm replacement:call-detail
       - run: pnpm replacement:roles
       - run: pnpm replacement:locale
-      - run: pnpm --filter @lobbystack/contracts typecheck
-      - run: pnpm --filter @lobbystack/jobs typecheck
-      - run: pnpm --filter @lobbystack/telemetry typecheck
-      - run: pnpm --filter @lobbystack/config typecheck
-      - run: pnpm --filter @lobbystack/db typecheck
-      - run: pnpm --filter @lobbystack/domain typecheck
-      - run: pnpm --filter @lobbystack/providers typecheck
-      - run: pnpm --filter @lobbystack/admin typecheck
-      - run: pnpm --filter @lobbystack/worker typecheck
-      - run: pnpm --filter @lobbystack/voice-gateway typecheck
-      - run: pnpm --filter @lobbystack/contracts build
-      - run: pnpm --filter @lobbystack/jobs build
-      - run: pnpm --filter @lobbystack/telemetry build
-      - run: pnpm --filter @lobbystack/db build
-      - run: pnpm --filter @lobbystack/domain build
-      - run: pnpm --filter @lobbystack/providers build
-      - run: pnpm --filter @lobbystack/worker build
-      - run: pnpm --filter @lobbystack/admin build
-        env:
-          NODE_ENV: production
+      - name: Run deterministic release baseline
+        run: pnpm exec tsx --tsconfig scripts/tsconfig.json scripts/release-readiness.ts --evidence certification-results/deterministic-baseline.json
+      - name: Retain deterministic release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: replacement-deterministic-baseline-${{ github.sha }}
+          path: certification-results/deterministic-baseline.json
+          retention-days: 90
       - run: pnpm --filter @lobbystack/admin exec playwright install --with-deps chromium
       - run: pnpm --filter @lobbystack/admin e2e
-      - run: pnpm --filter @lobbystack/voice-gateway test
-      - run: pnpm test
-      - run: pnpm build
       - name: Build replacement runtime images
         run: |
           docker build --build-arg SERVICE_VERSION="$GITHUB_SHA" --file Dockerfile.admin --tag lobbystack/admin:ci .
@@ -172,8 +158,10 @@ jobs:
       WORKER_BASE_URL: ${{ secrets.REPLACEMENT_WORKER_BASE_URL }}
       VOICE_BASE_URL: ${{ secrets.REPLACEMENT_VOICE_BASE_URL }}
       DATABASE_URL: ${{ secrets.REPLACEMENT_DATABASE_URL }}
-      REPLACEMENT_MIGRATOR_DATABASE_URL: ${{ secrets.REPLACEMENT_DATABASE_URL }}
+      REPLACEMENT_MIGRATOR_DATABASE_URL: ${{ secrets.REPLACEMENT_MIGRATOR_DATABASE_URL }}
       REPLACEMENT_APP_DATABASE_URL: ${{ secrets.REPLACEMENT_APP_DATABASE_URL }}
+      REPLACEMENT_WORKER_DATABASE_URL: ${{ secrets.REPLACEMENT_WORKER_DATABASE_URL }}
+      RELEASE_CERTIFICATION_TARGET: isolated-staging
       REDIS_URL: ${{ secrets.REPLACEMENT_REDIS_URL }}
       REPLACEMENT_REDIS_HOST: ${{ secrets.REPLACEMENT_REDIS_HOST }}
       REDIS_PORT: ${{ secrets.REPLACEMENT_REDIS_PORT }}
@@ -183,6 +171,10 @@ jobs:
       S3_SECRET_ACCESS_KEY: ${{ secrets.REPLACEMENT_S3_SECRET_ACCESS_KEY }}
       POLAR_WEBHOOK_SECRET: ${{ secrets.REPLACEMENT_POLAR_WEBHOOK_SECRET }}
       TWILIO_AUTH_TOKEN: ${{ secrets.REPLACEMENT_TWILIO_AUTH_TOKEN }}
+      INTERNAL_SERVICE_SECRET: ${{ secrets.REPLACEMENT_INTERNAL_SERVICE_SECRET }}
+      REPLACEMENT_TEST_BUSINESS_SLUG: ${{ secrets.REPLACEMENT_TEST_BUSINESS_SLUG }}
+      RESEND_WEBHOOKS_ENABLED: ${{ vars.REPLACEMENT_RESEND_WEBHOOKS_ENABLED }}
+      RESEND_WEBHOOK_SECRET: ${{ secrets.REPLACEMENT_RESEND_WEBHOOK_SECRET }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -193,16 +185,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Run staging certification
-        run: |
-          mkdir -p certification-results
-          pnpm replacement:performance 2>&1 | tee certification-results/performance.log
-          pnpm replacement:storage 2>&1 | tee certification-results/storage.log
-          pnpm replacement:realtime 2>&1 | tee certification-results/realtime.log
-          pnpm replacement:webhooks 2>&1 | tee certification-results/webhooks.log
-          pnpm replacement:privacy 2>&1 | tee certification-results/privacy.log
-          pnpm replacement:smoke 2>&1 | tee certification-results/smoke.log
-          pnpm replacement:internal 2>&1 | tee certification-results/internal.log
+      - name: Run explicit staging certification gates
+        run: pnpm exec tsx --tsconfig scripts/tsconfig.json scripts/release-readiness.ts --staging --evidence certification-results/staging-gates.json
       - name: Retain certification evidence
         if: always()
         uses: actions/upload-artifact@v4

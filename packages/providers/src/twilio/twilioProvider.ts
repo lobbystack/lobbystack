@@ -1,6 +1,6 @@
 import twilio from "twilio";
 
-import { validateTwilioSignature } from "@lobbystack/shared";
+import { validateTwilioSignature, assertCertificationRecipient, assertCertificationOperationAllowed } from "@lobbystack/shared";
 
 export type TwilioProviderConfig = {
   accountSid: string;
@@ -72,6 +72,7 @@ export class TwilioProvider {
   }
 
   async sendSms(input: { to: string; from: string; body: string; statusCallback?: string }): Promise<{ providerMessageId: string }> {
+    assertCertificationRecipient("phone", input.to);
     const message = await this.client.messages.create({ to: input.to, from: input.from, body: input.body, ...(input.statusCallback ? { statusCallback: input.statusCallback } : {}) });
     return { providerMessageId: message.sid };
   }
@@ -103,6 +104,7 @@ export class TwilioProvider {
   }
 
   async releasePhoneNumber(input: { providerPhoneId: string }): Promise<void> {
+    assertCertificationOperationAllowed();
     const number = this.client.incomingPhoneNumbers(input.providerPhoneId);
     try {
       await number.remove();
@@ -126,6 +128,7 @@ export class TwilioProvider {
   }
 
   async verifyPhone(input: { to: string; serviceSid: string }): Promise<{ verificationSid: string; status: string }> {
+    assertCertificationRecipient("phone", input.to);
     const verification = await this.client.verify.v2.services(input.serviceSid).verifications.create({ to: input.to, channel: "sms" });
     return { verificationSid: verification.sid, status: verification.status };
   }
@@ -136,6 +139,7 @@ export class TwilioProvider {
   }
 
   async lookupPhoneNumber(input: { phoneNumber: string; includeLineType?: boolean }): Promise<{ phoneE164: string; countryCode: string; valid: boolean; validationErrors?: string[]; lineType?: string; lineTypeErrorCode?: number }> {
+    assertCertificationRecipient("phone", input.phoneNumber);
     const result = await this.client.lookups.v2.phoneNumbers(input.phoneNumber).fetch(input.includeLineType === false ? {} : { fields: "line_type_intelligence" });
     const lineType = result.lineTypeIntelligence?.type ?? undefined;
     const lineTypeErrorCode = result.lineTypeIntelligence?.errorCode ?? undefined;
@@ -150,6 +154,7 @@ export class TwilioProvider {
   }
 
   async purchasePhoneNumber(input: { e164: string; friendlyName: string; smsUrl: string; voiceUrl: string; statusCallbackUrl: string }): Promise<{ providerPhoneId: string; e164: string; smsUrl?: string; voiceUrl?: string }> {
+    assertCertificationOperationAllowed();
     const number = await this.client.incomingPhoneNumbers.create({ phoneNumber: input.e164, friendlyName: input.friendlyName, smsUrl: input.smsUrl, smsMethod: "POST", voiceUrl: input.voiceUrl, voiceMethod: "POST", statusCallback: input.statusCallbackUrl, statusCallbackMethod: "POST" });
     return { providerPhoneId: number.sid, e164: number.phoneNumber, ...(number.smsUrl ? { smsUrl: number.smsUrl } : {}), ...(number.voiceUrl ? { voiceUrl: number.voiceUrl } : {}) };
   }
@@ -160,10 +165,12 @@ export class TwilioProvider {
   }
 
   async configureIncomingPhoneNumber(input: { providerPhoneId: string; smsUrl?: string | null; voiceUrl?: string | null; statusCallbackUrl?: string | null }): Promise<void> {
+    assertCertificationOperationAllowed();
     await this.client.incomingPhoneNumbers(input.providerPhoneId).update({ ...(input.smsUrl !== undefined ? { smsUrl: input.smsUrl ?? "", smsMethod: "POST" } : {}), ...(input.voiceUrl !== undefined ? { voiceUrl: input.voiceUrl ?? "", voiceMethod: "POST" } : {}), ...(input.statusCallbackUrl !== undefined ? { statusCallback: input.statusCallbackUrl ?? "", statusCallbackMethod: "POST" } : {}) });
   }
 
   async transferCall(input: { callSid: string; destination: string; twimlUrl: string }): Promise<void> {
+    assertCertificationRecipient("phone", input.destination);
     await this.client.calls(input.callSid).update({ url: input.twimlUrl, method: "POST" });
     void input.destination;
   }

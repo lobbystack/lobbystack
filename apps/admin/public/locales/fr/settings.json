@@ -515,7 +515,8 @@
       "lastSyncState": "État de la dernière synchronisation",
       "lastSyncOk": "Sain",
       "syncHealthy": "Synchronisation saine",
-      "syncNeedsAttention": "Attention requise"
+      "syncNeedsAttention": "Attention requise",
+      "discoveryFailed": "L’accès au calendrier ou sa synchronisation n’a pas pu être vérifié. Réessayez la synchronisation ou reconnectez votre compte Google."
     },
     "cards": {
       "google": {
@@ -530,6 +531,7 @@
     "status": {
       "connected": "Connecté",
       "reconnectRequired": "Reconnexion requise",
+      "syncing": "Synchronisation en cours",
       "notConnected": "Pas encore connecté"
     },
     "summary": {

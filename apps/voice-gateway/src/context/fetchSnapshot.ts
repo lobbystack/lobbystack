@@ -3,6 +3,7 @@ import { demoSnapshot, type BusinessContextSnapshot } from "@lobbystack/shared";
 
 import { signedBackendHeaders } from "../backend/request";
 import { withSpan } from "@lobbystack/telemetry/node";
+import { setBusinessTelemetryConsent } from "../observability/posthog";
 
 type VoiceContextResponse = {
   businessId: string;
@@ -27,6 +28,7 @@ export async function fetchSnapshotForPhoneNumber(
     }
 
     const payload = (await response.json()) as VoiceContextResponse;
+    setBusinessTelemetryConsent(payload.businessId, payload.snapshot.telemetryEnabled === true);
     return payload.snapshot;
   } catch (error) {
     if (env.DEPLOYMENT_MODE === "development" && env.NODE_ENV !== "production") {

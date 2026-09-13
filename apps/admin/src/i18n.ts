@@ -10,6 +10,8 @@ export type I18nNamespaceResources = Record<string, Record<string, unknown>>;
 export type I18nResources = Record<string, I18nNamespaceResources>;
 
 let fallbackInstance: I18nextInstance | undefined;
+// Resolution state belongs to one render tree, never a shared user's locale.
+const resolvedFallbacks = new WeakMap<I18nextInstance, Set<string>>();
 
 /** Chrome strings every route needs, available without a network request. */
 const chromeResources: I18nResources = {
@@ -65,7 +67,8 @@ export function missingNamespaces(
   locale: string,
   namespaces: readonly string[],
 ): string[] {
-  return namespaces.filter((namespace) => !instance.hasResourceBundle(locale, namespace));
+  return namespaces.filter((namespace) => !instance.hasResourceBundle(locale, namespace)
+    && !(resolvedFallbacks.get(instance)?.has(`${locale}:${namespace}`) && instance.hasResourceBundle(DEFAULT_LOCALE, namespace)));
 }
 
 /**
@@ -95,14 +98,31 @@ export async function loadRouteNamespaces(
   }
 
   const loaded = await Promise.all(missing.map(async (namespace) => {
-    const response = await fetch(`/locales/${locale}/${namespace}.json`, { cache: "force-cache" });
-    if (!response.ok) {
-      throw new Error(`Unable to load the ${namespace} translations.`);
+    const fetchBundle = async (language: string): Promise<Record<string, unknown>> => {
+      const response = await fetch(`/locales/${language}/${namespace}.json`, { cache: "no-cache" });
+      if (!response.ok) throw new Error(`Unable to load the ${namespace} translations.`);
+      const bundle: unknown = await response.json();
+      if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) throw new Error(`Invalid ${namespace} translations.`);
+      return bundle as Record<string, unknown>;
+    };
+    try {
+      return { namespace, language: locale, bundle: await fetchBundle(locale) };
+    } catch (error) {
+      if (locale === DEFAULT_LOCALE) throw error;
+      // The manual route loader has no i18next HTTP backend to fetch fallback
+      // languages for it. Load English explicitly without changing the locale.
+      const bundle = instance.hasResourceBundle(DEFAULT_LOCALE, namespace)
+        ? instance.getResourceBundle(DEFAULT_LOCALE, namespace) as Record<string, unknown>
+        : await fetchBundle(DEFAULT_LOCALE);
+      return { namespace, language: DEFAULT_LOCALE, bundle };
     }
-    return [namespace, await response.json() as Record<string, unknown>] as const;
   }));
 
-  for (const [namespace, bundle] of loaded) {
-    instance.addResourceBundle(locale, namespace, bundle, true, true);
+  const fallbacks = resolvedFallbacks.get(instance) ?? new Set<string>();
+  resolvedFallbacks.set(instance, fallbacks);
+  for (const { namespace, language, bundle } of loaded) {
+    if (language !== locale) fallbacks.add(`${locale}:${namespace}`);
+    else fallbacks.delete(`${locale}:${namespace}`);
+    instance.addResourceBundle(language, namespace, bundle, true, true);
   }
 }

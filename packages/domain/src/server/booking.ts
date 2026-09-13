@@ -1,6 +1,6 @@
-import { and, eq, gt, lt, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 
-import { appointments, auditLogs, businessHours, closures, contacts, enqueueOutbox, notifications, services, smsConsentEvents, staff, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, auditLogs, businesses, businessHours, calendarBusyBlocks, calendarConnections, closures, contacts, enqueueOutbox, notifications, services, smsConsentEvents, staff, staffServiceAssignments, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { computeAvailability } from "../availability";
 
 import { requireBusinessMembership } from "../authz";
@@ -26,6 +26,50 @@ async function lockStaff(tx: DatabaseTransaction, staffId: string): Promise<void
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${staffId}, 0))`);
 }
 
+export const MAX_CALENDAR_SYNC_AGE_MS = 20 * 60_000;
+export const CALENDAR_SYNC_HORIZON_MS = 90 * 24 * 60 * 60_000;
+
+async function availabilityInTransaction(tx: DatabaseTransaction, input: { businessId: string; serviceId: string; startsAt: string; staffIds?: string[]; ignoreAppointmentId?: string }) {
+  const [service] = await tx.select({ durationMinutes: services.durationMinutes }).from(services).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId), eq(services.active, true))).limit(1);
+  const [business] = await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
+  if (!service || !business) throw new Error("Service is not available.");
+  const startsAt = new Date(input.startsAt);
+  if (!Number.isFinite(startsAt.getTime()) || !Number.isSafeInteger(service.durationMinutes) || service.durationMinutes <= 0) throw new Error("A valid appointment time and duration are required.");
+  const endsAt = new Date(startsAt.getTime() + service.durationMinutes * 60_000);
+  const activeStaff = await tx.select({ id: staff.id }).from(staff).where(and(eq(staff.businessId, input.businessId), eq(staff.active, true))).orderBy(asc(staff.id));
+  const assignments = await tx.select({ staffId: staffServiceAssignments.staffId }).from(staffServiceAssignments).where(and(eq(staffServiceAssignments.businessId, input.businessId), eq(staffServiceAssignments.serviceId, input.serviceId)));
+  // Unassigned services retain the existing all-active-staff default. Explicit
+  // assignments constrain eligibility instead of being silently ignored.
+  const assigned = new Set(assignments.map((row) => row.staffId));
+  let selected = activeStaff.map((row) => row.id).filter((id) => (!input.staffIds || input.staffIds.includes(id)) && (!assigned.size || assigned.has(id)));
+  if (!selected.length) return [];
+  const connections = await tx.select().from(calendarConnections).where(and(eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"), or(isNull(calendarConnections.staffId), inArray(calendarConnections.staffId, selected))));
+  const now = Date.now();
+  const configured = connections.filter((connection) => connection.selectedCalendarId);
+  selected = selected.filter((id) => !configured.some((connection) => (!connection.staffId || connection.staffId === id) && (
+    connection.status !== "connected" || !connection.lastSyncedAt || now - connection.lastSyncedAt.getTime() > MAX_CALENDAR_SYNC_AGE_MS
+    || startsAt.getTime() < connection.lastSyncedAt.getTime() || endsAt.getTime() > connection.lastSyncedAt.getTime() + CALENDAR_SYNC_HORIZON_MS
+  )));
+  if (!selected.length) return [];
+  const hours = await tx.select().from(businessHours).where(eq(businessHours.businessId, input.businessId));
+  const closed = await tx.select().from(closures).where(and(eq(closures.businessId, input.businessId), lt(closures.startsAt, endsAt), gt(closures.endsAt, startsAt)));
+  const existing = await tx.select({ staffId: appointments.staffId, startsAt: appointments.startsAt, endsAt: appointments.endsAt }).from(appointments).where(and(eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"), input.ignoreAppointmentId ? ne(appointments.id, input.ignoreAppointmentId) : undefined, inArray(appointments.staffId, selected), lt(appointments.startsAt, endsAt), gt(appointments.endsAt, startsAt)));
+  const connectionIds = configured.filter((connection) => connection.status === "connected").map((connection) => connection.id);
+  const busy = connectionIds.length ? await tx.select().from(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.businessId, input.businessId), inArray(calendarBusyBlocks.connectionId, connectionIds), lt(calendarBusyBlocks.startsAt, endsAt), gt(calendarBusyBlocks.endsAt, startsAt))) : [];
+  const staffByConnection = new Map(connections.map((connection) => [connection.id, connection.staffId]));
+  return computeAvailability({
+    request: { serviceId: input.serviceId, startsAt: startsAt.toISOString(), timezone: business.timezone },
+    serviceDurationMinutes: service.durationMinutes,
+    staffIds: selected,
+    hours,
+    closures: closed.map((row) => ({ startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), reason: row.reason })),
+    existingAppointments: [
+      ...existing.map((row) => ({ staffId: row.staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })),
+      ...busy.flatMap((row) => { const owner = row.staffId ?? staffByConnection.get(row.connectionId); return (owner ? [owner] : selected).map((staffId) => ({ staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })); }),
+    ],
+  });
+}
+
 export async function findAvailability(
   context: DomainContext,
   input: { userId?: string; businessId: string; serviceId: string; startsAt: string; timezone: string; staffIds?: string[] },
@@ -34,26 +78,7 @@ export async function findAvailability(
     if (input.userId) {
       await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId });
     }
-    const serviceRows = await tx.select({ durationMinutes: services.durationMinutes }).from(services).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId), eq(services.active, true))).limit(1);
-    const service = serviceRows[0];
-    if (!service) {
-      throw new Error("Service is not available.");
-    }
-    const staffRows = await tx.select({ id: staff.id }).from(staff).where(and(eq(staff.businessId, input.businessId), eq(staff.active, true)));
-    const [hoursRows, closureRows] = await Promise.all([
-      tx.select().from(businessHours).where(eq(businessHours.businessId, input.businessId)),
-      tx.select().from(closures).where(eq(closures.businessId, input.businessId)),
-    ]);
-    const selectedStaffIds = (input.staffIds ?? staffRows.map((row) => row.id));
-    const existing = await tx.select({ staffId: appointments.staffId, startsAt: appointments.startsAt, endsAt: appointments.endsAt }).from(appointments).where(and(eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"), or(...selectedStaffIds.map((staffId) => eq(appointments.staffId, staffId)))));
-    return computeAvailability({
-      request: { serviceId: input.serviceId, startsAt: input.startsAt, timezone: input.timezone },
-      serviceDurationMinutes: service.durationMinutes,
-      staffIds: selectedStaffIds,
-      hours: hoursRows,
-      closures: closureRows.map((row) => ({ startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), reason: row.reason })),
-      existingAppointments: existing.map((row) => ({ staffId: row.staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })),
-    });
+    return await availabilityInTransaction(tx, input);
   });
 }
 
@@ -70,12 +95,16 @@ export async function bookAppointment(
     if (!service) {
       throw new Error("Service is not available.");
     }
-    const staffRows = await tx.select({ id: staff.id }).from(staff).where(and(eq(staff.businessId, input.businessId), eq(staff.active, true), input.preferredStaffId ? eq(staff.id, input.preferredStaffId) : undefined));
-    const selectedStaff = staffRows[0];
+    const staffRows = await tx.select({ id: staff.id }).from(staff).where(and(eq(staff.businessId, input.businessId), eq(staff.active, true), input.preferredStaffId ? eq(staff.id, input.preferredStaffId) : undefined)).orderBy(asc(staff.id));
+    let selectedStaff: { id: string } | undefined;
+    for (const candidate of staffRows) {
+      await lockStaff(tx, candidate.id);
+      const slots = await availabilityInTransaction(tx, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.startsAt, staffIds: [candidate.id] });
+      if (slots.length) { selectedStaff = candidate; break; }
+    }
     if (!selectedStaff) {
       throw new Error("No staff member is available for this service.");
     }
-    await lockStaff(tx, selectedStaff.id);
     const startsAt = new Date(input.startsAt);
     const endsAt = new Date(startsAt.getTime() + service.durationMinutes * 60_000);
     const conflicting = await tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, input.businessId), eq(appointments.staffId, selectedStaff.id), ne(appointments.status, "canceled"), lt(appointments.startsAt, endsAt), gt(appointments.endsAt, startsAt))).limit(1);
@@ -223,6 +252,8 @@ export async function rescheduleAppointmentForCaller(
     const startsAt = new Date(input.startsAt);
     if (!Number.isFinite(startsAt.getTime())) throw new Error("A valid appointment start time is required.");
     const endsAt = new Date(startsAt.getTime() + row.durationMinutes * 60_000);
+    const slots = await availabilityInTransaction(tx, { businessId: input.businessId, serviceId: row.serviceId, startsAt: input.startsAt, staffIds: [row.staffId], ignoreAppointmentId: row.id });
+    if (!slots.length) throw new Error("That appointment time is no longer available.");
     const conflict = (await tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, input.businessId), eq(appointments.staffId, row.staffId), ne(appointments.status, "canceled"), ne(appointments.id, row.id), lt(appointments.startsAt, endsAt), gt(appointments.endsAt, startsAt))).limit(1))[0];
     if (conflict) throw new Error("That appointment time is no longer available.");
     const consumed = await consumeAppointmentChangeVerificationInTransaction(tx, { businessId: input.businessId, verificationId: input.verificationId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, action: "reschedule" });

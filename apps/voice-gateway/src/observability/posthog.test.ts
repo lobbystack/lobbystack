@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { captureExceptionMock, postHogConstructorMock, shutdownMock } = vi.hoisted(() => ({
+const { captureExceptionMock, captureMock, postHogConstructorMock, shutdownMock } = vi.hoisted(() => ({
   captureExceptionMock: vi.fn(),
+  captureMock: vi.fn(),
   postHogConstructorMock: vi.fn(),
   shutdownMock: vi.fn(),
 }));
@@ -10,7 +11,7 @@ vi.mock("posthog-node", () => ({
   PostHog: vi.fn().mockImplementation(function PostHog(...args: unknown[]) {
     postHogConstructorMock(...args);
     return {
-      capture: vi.fn(),
+      capture: captureMock,
       captureException: captureExceptionMock,
       shutdown: shutdownMock,
     };
@@ -32,6 +33,7 @@ describe("voice-gateway PostHog provider exception telemetry", () => {
   beforeEach(() => {
     vi.resetModules();
     captureExceptionMock.mockClear();
+    captureMock.mockClear();
     postHogConstructorMock.mockClear();
     shutdownMock.mockClear();
 
@@ -61,7 +63,8 @@ describe("voice-gateway PostHog provider exception telemetry", () => {
   });
 
   it("uses a safe synthetic exception message for provider failures", async () => {
-    const { captureProviderFailureException } = await import("./posthog");
+    const { captureProviderFailureException, setBusinessTelemetryConsent } = await import("./posthog");
+    setBusinessTelemetryConsent("business_123", true);
     const providerError = new Error(
       "The 'To' number +14165550123 is not a valid phone number.",
     );
@@ -83,9 +86,7 @@ describe("voice-gateway PostHog provider exception telemetry", () => {
     const [capturedError, distinctId, properties] =
       captureExceptionMock.mock.calls[0] ?? [];
     expect(capturedError).toBeInstanceOf(Error);
-    expect((capturedError as Error).message).toBe(
-      "twilio provider failure (invalid_request: 21211)",
-    );
+    expect((capturedError as Error).message).toContain("twilio_live_call_update failed");
     expect((capturedError as Error).message).not.toContain("+14165550123");
     expect((capturedError as Error).cause).toBeUndefined();
     expect(distinctId).toBe("system:business:business_123");
@@ -100,6 +101,38 @@ describe("voice-gateway PostHog provider exception telemetry", () => {
       runtime: "voice-gateway",
       service: "voice-gateway",
     });
+  });
+
+  it("suppresses tenant AI events and errors without affirmative call-start consent", async () => {
+    const { captureAiTraceStarted, captureAiGeneration, captureAiSpan, capturePostHogException, emitOperationalLog, setBusinessTelemetryConsent } = await import("./posthog");
+    const trace = { businessId: "business_123", traceId: "trace", model: "fixture", provider: "openai" };
+    captureAiTraceStarted(trace);
+    captureAiGeneration(trace);
+    captureAiSpan({ ...trace, spanName: "fixture" });
+    capturePostHogException(new Error("private"), { businessId: trace.businessId });
+    emitOperationalLog({ level: "error", message: "private", businessId: trace.businessId });
+    expect(captureMock).not.toHaveBeenCalled();
+    expect(captureExceptionMock).not.toHaveBeenCalled();
+    captureAiTraceStarted({ ...trace, telemetryEnabled: true });
+    captureAiGeneration(trace);
+    expect(captureMock).toHaveBeenCalledTimes(2);
+    setBusinessTelemetryConsent(trace.businessId, false);
+    captureAiGeneration(trace);
+    capturePostHogException(new Error("private"), { businessId: trace.businessId });
+    expect(captureMock).toHaveBeenCalledTimes(2);
+    expect(captureExceptionMock).not.toHaveBeenCalled();
+  });
+
+  it("never hands raw exception messages or causes to the external SDK", async () => {
+    const { capturePostHogException, setBusinessTelemetryConsent } = await import("./posthog");
+    setBusinessTelemetryConsent("business_123", true);
+    const original = new Error("private-customer-message user@example.invalid", { cause: new Error("private-cause") });
+    capturePostHogException(original, { businessId: "business_123", properties: { operation: "fixture" } });
+    const captured = captureExceptionMock.mock.calls[0]?.[0] as Error;
+    expect(captured).not.toBe(original);
+    expect(captured.message).not.toContain("private-customer-message");
+    expect(captured.stack).not.toContain("user@example.invalid");
+    expect(captured.cause).toBeUndefined();
   });
 
   it("captures and flushes fatal process errors", async () => {
@@ -124,7 +157,8 @@ describe("voice-gateway PostHog provider exception telemetry", () => {
 
     const [capturedError, distinctId, properties] =
       captureExceptionMock.mock.calls[0] ?? [];
-    expect(capturedError).toBe(fatalError);
+    expect(capturedError).not.toBe(fatalError);
+    expect((capturedError as Error).name).toBe("FatalStartupError");
     expect(distinctId).toBe("system:voice-gateway");
     expect(properties).toMatchObject({
       $exception_level: "fatal",

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {
   const numberResource = { remove: vi.fn(), update: vi.fn(), fetch: vi.fn() };
@@ -26,6 +26,20 @@ import twilio from "twilio";
 
 describe("TwilioProvider phone provisioning", () => {
   beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("blocks unapproved sends and inventory mutations during certification", async () => {
+    vi.stubEnv("LOBBYSTACK_CERTIFICATION_MODE", "true");
+    vi.stubEnv("LOBBYSTACK_CERTIFICATION_PHONES", "+14165550123");
+    const client = provider();
+    await expect(client.sendSms({ to: "+14165550999", from: "+14165550100", body: "fixture" })).rejects.toThrow("CERTIFICATION_RECIPIENT_BLOCKED");
+    await expect(client.verifyPhone({ to: "+14165550999", serviceSid: "fixture" })).rejects.toThrow("CERTIFICATION_RECIPIENT_BLOCKED");
+    await expect(client.releasePhoneNumber({ providerPhoneId: "fixture" })).rejects.toThrow("CERTIFICATION_OPERATION_BLOCKED");
+    await expect(client.configureIncomingPhoneNumber({ providerPhoneId: "fixture", voiceUrl: "https://example.invalid" })).rejects.toThrow("CERTIFICATION_OPERATION_BLOCKED");
+    expect(mocks.client.messages.create).not.toHaveBeenCalled();
+    expect(mocks.verificationCreate).not.toHaveBeenCalled();
+    expect(mocks.incomingPhoneNumbers).not.toHaveBeenCalled();
+  });
 
   it("authenticates a restricted REST key with the owning account and never uses it for webhook validation", async () => {
     const restricted = new TwilioProvider({ accountSid: "ACowner", apiKeySid: "SKrestricted", apiKeySecret: "restricted-secret" });

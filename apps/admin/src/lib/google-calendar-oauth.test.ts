@@ -4,6 +4,7 @@ import { createCalendarOAuthState, verifyCalendarOAuthState } from "./google-cal
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.restoreAllMocks();
 });
 
 describe("Google Calendar OAuth state", () => {
@@ -17,5 +18,16 @@ describe("Google Calendar OAuth state", () => {
     vi.stubEnv("BETTER_AUTH_SECRET", "oauth-test-secret");
     const state = createCalendarOAuthState({ userId: "user-1", businessId: "business-1" });
     expect(verifyCalendarOAuthState(`${state}tampered`)).toBeNull();
+    expect(verifyCalendarOAuthState(`${state}.extra`)).toBeNull();
+  });
+  it("uses unique nonces and rejects expired or far-future issuance", () => {
+    vi.stubEnv("BETTER_AUTH_SECRET", "oauth-test-secret");
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
+    const state = createCalendarOAuthState({ userId: "user", businessId: "business" });
+    expect(createCalendarOAuthState({ userId: "user", businessId: "business" })).not.toBe(state);
+    clock.mockReturnValue(1_800_000_000_000 + 11 * 60_000);
+    expect(verifyCalendarOAuthState(state)).toBeNull();
+    clock.mockReturnValue(1_800_000_000_000 - 60_000);
+    expect(verifyCalendarOAuthState(state)).toBeNull();
   });
 });

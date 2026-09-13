@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { GoogleCalendarProvider } from "@lobbystack/providers";
 import { asApiResponse, businessIdFromRequest, requireApiSession, withOperatorTransaction } from "@/lib/api-helpers";
 import { createCalendarOAuthState } from "@/lib/google-calendar-oauth";
+import { storeCalendarOAuthState } from "@/lib/google-calendar-oauth-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ export async function GET(request: Request) {
     if (!businessId) return NextResponse.json({ error: "businessId is required." }, { status: 400 });
     await withOperatorTransaction(request, async () => undefined, { minimumRole: "business_admin" });
     const state = createCalendarOAuthState({ userId: session.user.id, businessId });
+    await storeCalendarOAuthState(state);
     return NextResponse.json({ url: provider().buildAuthorizationUrl({ state }) });
   } catch (error) {
     return asApiResponse(error);

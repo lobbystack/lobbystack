@@ -8,6 +8,7 @@ import {
 import { PostHog } from "posthog-node";
 
 import { loadVoiceGatewayEnv, type VoiceGatewayEnv } from "@lobbystack/config";
+import { redactOtelExceptionText } from "@lobbystack/telemetry/node";
 import {
   bucketLatencyMs,
   buildAlertableExceptionTelemetryProperties,
@@ -29,6 +30,7 @@ import {
 
 type AiTraceCommon = {
   businessId: string;
+  telemetryEnabled?: boolean;
   traceId: string;
   callId?: string;
   conversationId?: string;
@@ -46,6 +48,26 @@ let loggerProvider: LoggerProvider | null = null;
 let operationalLogger: Logger | null = null;
 let runtimeEnv: VoiceGatewayEnv | null | undefined;
 let fatalHandlersInstalled = false;
+const tenantConsent = new Map<string, { enabled: boolean; expiresAt: number }>();
+
+/** Called with authoritative call-start context, not user-supplied call data. */
+export function setBusinessTelemetryConsent(businessId: string, enabled: boolean): void {
+  tenantConsent.delete(businessId);
+  tenantConsent.set(businessId, { enabled, expiresAt: Date.now() + 60 * 60 * 1000 });
+  if (tenantConsent.size > 4096) tenantConsent.delete(tenantConsent.keys().next().value!);
+}
+
+function allowsExternalTelemetry(businessId?: string, properties?: Record<string, unknown>): boolean {
+  const id = businessId ?? (typeof properties?.businessId === "string" ? properties.businessId : undefined);
+  if (id) {
+    const consent = tenantConsent.get(id);
+    if (consent && consent.expiresAt <= Date.now()) tenantConsent.delete(id);
+    return consent?.enabled === true && consent.expiresAt > Date.now();
+  }
+  // Unknown call ownership is not consent. Anonymous process health remains
+  // available independently from optional tenant usage/error collection.
+  return !properties?.callId && !properties?.conversationId && !properties?.traceId;
+}
 
 const VOICE_GATEWAY_DISTINCT_ID = "system:voice-gateway";
 const SLOW_TURN_THRESHOLD_MS = 2_500;
@@ -165,6 +187,7 @@ function capture(
     properties: Record<string, unknown>;
   },
 ): void {
+  if (!allowsExternalTelemetry(input.businessId, input.properties)) return;
   const activeClient = getClient();
   if (!activeClient) {
     return;
@@ -322,6 +345,7 @@ export function emitOperationalLog(input: {
   properties?: TelemetryProperties;
   businessId?: string;
 }): void {
+  if (!allowsExternalTelemetry(input.businessId, input.properties)) return;
   const logger = getOperationalLogger();
   if (!logger) {
     return;
@@ -355,6 +379,7 @@ export async function startPostHogObservability(): Promise<void> {
 }
 
 export function captureAiTraceStarted(input: AiTraceCommon): void {
+  setBusinessTelemetryConsent(input.businessId, input.telemetryEnabled === true);
   capture("$ai_trace", {
     distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
     businessId: input.businessId,
@@ -515,7 +540,7 @@ export async function shutdownPostHog(): Promise<void> {
 }
 
 function getErrorExceptionType(error: unknown): string {
-  if (error instanceof Error && error.name) {
+  if (error instanceof Error && /^[A-Za-z0-9_.-]{1,80}$/.test(error.name)) {
     return error.name;
   }
   return "ApplicationError";
@@ -590,6 +615,7 @@ export function capturePostHogException(
     properties?: TelemetryProperties;
   },
 ): void {
+  if (!allowsExternalTelemetry(input?.businessId, input?.properties)) return;
   const activeClient = getClient();
   if (!activeClient) {
     return;
@@ -634,8 +660,13 @@ export function capturePostHogException(
     };
   }
 
+  const safeError = new Error(exceptionMessage);
+  safeError.name = /^[A-Za-z0-9_.-]{1,80}$/.test(exceptionType) ? exceptionType : "Error";
+  if (error instanceof Error && error.stack) {
+    safeError.stack = [`${safeError.name}: ${safeError.message}`, ...error.stack.split("\n").slice(1, 30).filter((line) => line.trimStart().startsWith("at ")).map(redactOtelExceptionText)].join("\n");
+  }
   activeClient.captureException(
-    error,
+    safeError,
     input?.distinctId ??
       (input?.businessId
         ? getPostHogDistinctIdForBusinessSystem(input.businessId)

@@ -3,6 +3,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { roleDatabaseUrl } from "./playwright-database-url";
+import { playwrightTestSecrets } from "./playwright-test-secrets";
+
 function replacementEnvironment(): Record<string, string> {
   if (process.env.CI) return {};
   const root = resolve(fileURLToPath(new URL(".", import.meta.url)), "../..");
@@ -15,17 +18,12 @@ function replacementEnvironment(): Record<string, string> {
 }
 
 const replacement = replacementEnvironment();
+const testSecrets = playwrightTestSecrets(process.env);
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:13000";
 const localDatabaseUrl = Object.keys(replacement).length > 0
   ? `postgres://postgres:${process.env.POSTGRES_PASSWORD ?? replacement.POSTGRES_PASSWORD ?? "postgres"}@127.0.0.1:${process.env.POSTGRES_PORT ?? replacement.POSTGRES_PORT ?? "15433"}/lobbystack`
   : undefined;
 const baseDatabaseUrl = new URL(localDatabaseUrl ?? process.env.DATABASE_URL ?? "postgres://postgres:postgres@127.0.0.1:5432/lobbystack");
-const roleDatabaseUrl = (role: string, password: string) => {
-  const url = new URL(baseDatabaseUrl);
-  url.username = role;
-  url.password = password;
-  return url.toString();
-};
 process.env.REPLACEMENT_E2E_DATABASE_URL = baseDatabaseUrl.toString();
 
 export default defineConfig({
@@ -43,7 +41,7 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "mkdir -p .next/standalone/apps/admin/.next && cp -R .next/static .next/standalone/apps/admin/.next/static && cp -R public .next/standalone/apps/admin/public && node .next/standalone/apps/admin/server.js",
+    command: "pnpm exec tsx --tsconfig ../../scripts/tsconfig.json ../../scripts/prepare-admin-standalone.ts && node .next/standalone/apps/admin/server.js",
     url: `${baseURL}/login`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
@@ -51,14 +49,19 @@ export default defineConfig({
       PORT: new URL(baseURL).port || "13000",
       APP_BASE_URL: baseURL,
       AUTH_TRUSTED_ORIGINS: baseURL,
-      BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? replacement.BETTER_AUTH_SECRET ?? "replacement-e2e-secret-at-least-32-characters",
+      ...testSecrets,
       BETTER_AUTH_USE_SECURE_COOKIES: "false",
-      DATABASE_URL: roleDatabaseUrl("lobbystack_app", process.env.LOBBYSTACK_APP_PASSWORD ?? replacement.LOBBYSTACK_APP_PASSWORD ?? "app"),
-      LOBBYSTACK_APP_DATABASE_URL: roleDatabaseUrl("lobbystack_app", process.env.LOBBYSTACK_APP_PASSWORD ?? replacement.LOBBYSTACK_APP_PASSWORD ?? "app"),
-      LOBBYSTACK_AUTH_DATABASE_URL: roleDatabaseUrl("lobbystack_auth", process.env.LOBBYSTACK_AUTH_PASSWORD ?? replacement.LOBBYSTACK_AUTH_PASSWORD ?? "auth"),
-      LOBBYSTACK_WORKER_DATABASE_URL: roleDatabaseUrl("lobbystack_worker", process.env.LOBBYSTACK_WORKER_PASSWORD ?? replacement.LOBBYSTACK_WORKER_PASSWORD ?? "worker"),
-      LOBBYSTACK_DISPATCHER_DATABASE_URL: roleDatabaseUrl("lobbystack_dispatcher", process.env.LOBBYSTACK_DISPATCHER_PASSWORD ?? replacement.LOBBYSTACK_DISPATCHER_PASSWORD ?? "dispatcher"),
+      DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_app", process.env.LOBBYSTACK_APP_PASSWORD ?? replacement.LOBBYSTACK_APP_PASSWORD ?? "app", process.env.LOBBYSTACK_APP_DATABASE_URL),
+      LOBBYSTACK_APP_DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_app", process.env.LOBBYSTACK_APP_PASSWORD ?? replacement.LOBBYSTACK_APP_PASSWORD ?? "app", process.env.LOBBYSTACK_APP_DATABASE_URL),
+      LOBBYSTACK_AUTH_DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_auth", process.env.LOBBYSTACK_AUTH_PASSWORD ?? replacement.LOBBYSTACK_AUTH_PASSWORD ?? "auth", process.env.LOBBYSTACK_AUTH_DATABASE_URL),
+      LOBBYSTACK_WORKER_DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_worker", process.env.LOBBYSTACK_WORKER_PASSWORD ?? replacement.LOBBYSTACK_WORKER_PASSWORD ?? "worker", process.env.LOBBYSTACK_WORKER_DATABASE_URL),
+      LOBBYSTACK_DISPATCHER_DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_dispatcher", process.env.LOBBYSTACK_DISPATCHER_PASSWORD ?? replacement.LOBBYSTACK_DISPATCHER_PASSWORD ?? "dispatcher", process.env.LOBBYSTACK_DISPATCHER_DATABASE_URL),
       ...(process.env.REDIS_URL || replacement.REDIS_PORT ? { REDIS_URL: process.env.REDIS_URL ?? `redis://127.0.0.1:${replacement.REDIS_PORT}` } : {}),
+      ...(process.env.AI_CHAT_API_KEY && process.env.AI_CHAT_BASE_URL && process.env.AI_CHAT_MODEL ? {
+        AI_CHAT_API_KEY: process.env.AI_CHAT_API_KEY,
+        AI_CHAT_BASE_URL: process.env.AI_CHAT_BASE_URL,
+        AI_CHAT_MODEL: process.env.AI_CHAT_MODEL,
+      } : {}),
       NODE_ENV: "production",
     },
   },

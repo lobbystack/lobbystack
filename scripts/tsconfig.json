@@ -2,11 +2,18 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "types": [
       "node"
     ]
   },
   "include": [
+    "./migration/**/*.ts",
+    "./release-readiness*.ts",
+    "./seed-release-e2e.ts",
+    "./production-migration-preflight.ts",
+    "./prepare-admin-standalone*.ts",
+    "./replacement-calendar-check.ts",
     "./replacement-dashboard-aggregates-check.ts",
     "./voice-knowledge-retrieval-check.ts",
     "./replacement-appointment-audit-check.ts",

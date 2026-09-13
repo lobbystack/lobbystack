@@ -4,14 +4,15 @@ import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
 
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { getPolarMeteredUsagePayload, type BillingUsageKind } from "@lobbystack/shared";
-import { appointments, calendarConnections, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, services, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
+import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimPhoneVerificationSend, claimSmsDelivery, deleteCallRecording, deleteExpiredObjectsForBusiness, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, markNotificationSkipped, markPhoneVerificationSendFailed, markPhoneVerificationSent, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, type DurableAiUsage } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, correctAlertSmsUsage, estimateSmsSegments, loadOperatorNotificationDelivery, markFeedbackEmailFailed, markFeedbackEmailSent, markOperatorNotificationSent, markOperatorNotificationSkipped, queueDailyOperatorSummaries, refreshUnitEconomicsMonth, releaseOperatorNotificationDelivery, reserveAlertSmsUsage } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
-import { getTwilioProviderErrorCode, SecretBox } from "@lobbystack/providers";
+import { getTwilioProviderErrorCode } from "@lobbystack/providers";
 import type { DomainContext } from "@lobbystack/domain";
 import type { RuntimeStorageProvider, SmtpEmailProvider, TwilioProvider } from "@lobbystack/providers";
 import { extractDocumentText } from "./documentExtraction";
+import { reconcileBusinessCalendar, syncAppointmentCalendar, type CalendarOperations } from "./calendarJobs";
 import { getMeter } from "@lobbystack/telemetry/node";
 import { redactTelemetryProperties, type TelemetryProperties } from "@lobbystack/telemetry";
 
@@ -31,7 +32,7 @@ export type WorkerDependencies = {
   polar?: { recordUsage(input: { eventName: string; externalCustomerId: string; quantity: number; timestamp: string; idempotencyKey: string; businessId: string; usageKind: string }): Promise<void>; createCheckout?(input: { productId: string; customerEmail: string; externalCustomerId: string; successUrl: string; idempotencyKey?: string }): Promise<{ checkoutUrl: string; checkoutId: string }> };
   embeddings?: { fingerprint?: string; embed(values: string[], onUsage?: (usage: DurableAiUsage) => Promise<void> | void): Promise<number[][]> };
   crawler?: { crawl(input: { url: string; limit?: number }): Promise<Array<{ url: string; title?: string; markdown?: string }>> };
-  calendar?: { getBusyBlocks(input: { accessToken: string; calendarId: string; startsAt: string; endsAt: string }): Promise<Array<{ startsAt: string; endsAt: string }>>; upsertEvent(input: { accessToken: string; calendarId: string; eventId?: string; clientEventId?: string; title: string; startsAt: string; endsAt: string; description?: string }): Promise<{ externalEventId: string }> };
+  calendar?: CalendarOperations;
   productAnalytics?: { capture(events: Array<{ event: string; distinctId: string; properties: Record<string, unknown>; timestamp: string }>): Promise<void> };
   realtime?: Redis;
 };
@@ -240,58 +241,9 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
       return { status: reembedded > 0 ? "completed" : "skipped", entityId: `${businessId}:${reembedded}` };
     }
     case "calendar.syncAppointment":
-      {
-        const businessId = businessIdOrThrow(job);
-        const appointmentId = String(job.payload.appointmentId ?? "");
-        if (!appointmentId || !dependencies.calendar || !process.env.ENCRYPTION_KEY) return { status: "skipped", entityId: appointmentId };
-        const appointment = (await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) =>
-          await tx.select({ id: appointments.id, startsAt: appointments.startsAt, endsAt: appointments.endsAt, externalEventId: appointments.calendarExternalId, serviceName: services.name, contactName: contacts.name, calendarId: calendarConnections.selectedCalendarId, encryptedAccessToken: calendarConnections.encryptedAccessToken })
-            .from(appointments)
-            .innerJoin(services, and(eq(services.id, appointments.serviceId), eq(services.businessId, businessId)))
-            .leftJoin(contacts, and(eq(contacts.id, appointments.contactId), eq(contacts.businessId, businessId)))
-            .innerJoin(calendarConnections, and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected")))
-            .where(and(eq(appointments.id, appointmentId), eq(appointments.businessId, businessId)))
-            .limit(1),
-        ))[0];
-        if (!appointment?.encryptedAccessToken) return { status: "skipped", entityId: appointmentId };
-        try {
-          const clientEventId = `a${createHash("sha256").update(appointment.id).digest("hex").slice(0, 31)}`;
-          const external = await dependencies.calendar.upsertEvent({ accessToken: new SecretBox(process.env.ENCRYPTION_KEY).decrypt(appointment.encryptedAccessToken), calendarId: appointment.calendarId ?? "primary", ...(appointment.externalEventId ? { eventId: appointment.externalEventId } : { clientEventId }), title: appointment.serviceName, startsAt: appointment.startsAt.toISOString(), endsAt: appointment.endsAt.toISOString(), ...(appointment.contactName ? { description: `Appointment for ${appointment.contactName}` } : {}) });
-          await updateAppointmentSyncState(dependencies.domain, { businessId, appointmentId, state: "synced", externalEventId: external.externalEventId });
-          return { status: "completed", entityId: appointmentId };
-        } catch (error) {
-          await updateAppointmentSyncState(dependencies.domain, { businessId, appointmentId, state: "failed", error: error instanceof Error ? error.message : String(error) });
-          throw error;
-        }
-      }
-    case "calendar.reconcileBusiness": {
-      const businessId = businessIdOrThrow(job);
-      const encryptionKey = process.env.ENCRYPTION_KEY;
-      if (!dependencies.calendar || !encryptionKey) return { status: "skipped", entityId: businessId };
-      const connections = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) =>
-        await tx.select({ id: calendarConnections.id, calendarId: calendarConnections.selectedCalendarId, encryptedAccessToken: calendarConnections.encryptedAccessToken }).from(calendarConnections).where(and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"))),
-      );
-      const secretBox = new SecretBox(encryptionKey);
-      let synced = 0;
-      const startsAt = new Date();
-      const endsAt = new Date(startsAt.getTime() + 90 * 24 * 60 * 60_000);
-      for (const connection of connections) {
-        if (!connection.encryptedAccessToken) {
-          await markCalendarConnectionSync(dependencies.domain, { businessId, connectionId: connection.id, error: "Calendar access token is missing." });
-          continue;
-        }
-        try {
-          const blocks = await dependencies.calendar.getBusyBlocks({ accessToken: secretBox.decrypt(connection.encryptedAccessToken), calendarId: connection.calendarId ?? "primary", startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() });
-          await upsertBusyBlocks(dependencies.domain, { businessId, connectionId: connection.id, blocks });
-          await markCalendarConnectionSync(dependencies.domain, { businessId, connectionId: connection.id });
-          synced += 1;
-        } catch (error) {
-          await markCalendarConnectionSync(dependencies.domain, { businessId, connectionId: connection.id, error: error instanceof Error ? error.message : String(error) });
-          throw error;
-        }
-      }
-      return { status: synced > 0 ? "completed" : "skipped", entityId: `${businessId}:${synced}` };
-    }
+      return await syncAppointmentCalendar(dependencies, { businessId: businessIdOrThrow(job), appointmentId: String(job.payload.appointmentId ?? "") });
+    case "calendar.reconcileBusiness":
+      return await reconcileBusinessCalendar(dependencies, businessIdOrThrow(job));
     case "email.send":
       if (!dependencies.email) {
         return { status: "skipped" };

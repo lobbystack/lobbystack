@@ -1,7 +1,11 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ capture: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("posthog-node", () => ({ PostHog: class { captureExceptionImmediate = mocks.capture; } }));
 import { reportServerError } from "./error-reporting";
+
+// Exercise the public-token fallback independently of the invoking shell's
+// server telemetry configuration (release fixtures explicitly disable it).
+beforeEach(() => { vi.stubEnv("POSTHOG_KEY", undefined); });
 
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); mocks.capture.mockClear(); });
 describe("server exception reporting", () => {

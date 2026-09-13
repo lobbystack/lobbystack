@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import nodemailer, { type Transporter } from "nodemailer";
+import { assertCertificationRecipient } from "@lobbystack/shared";
 
 export type SmtpConfig = {
   host: string;
@@ -27,6 +28,7 @@ export class SmtpEmailProvider {
   }
 
   async sendTemplate(input: { template: "verify_email" | "password_reset" | "invitation" | "operator_alert" | "feedback_submission"; to: string; subject: string; variables: Record<string, string>; idempotencyKey?: string }): Promise<{ messageId: string }> {
+    assertCertificationRecipient("email", input.to);
     const body = templateBody(input.template, input.variables);
     const result = await this.transporter.sendMail({
       from: this.config.from,

@@ -36,12 +36,15 @@ async function main(): Promise<void> {
     assert(!source.includes("@opentelemetry/sdk-node") && !source.includes("@lobbystack/telemetry/node"), `Browser source imports Node telemetry: ${relative(root, path)}`);
   }
 
-  const [proxy, csp] = await Promise.all([
+  const [proxy, csp, headers] = await Promise.all([
     readFile(join(root, "apps/admin/proxy.ts"), "utf8"),
     readFile(join(root, "apps/admin/csp.ts"), "utf8"),
+    readFile(join(root, "apps/admin/security-headers.ts"), "utf8"),
   ]);
-  const securitySource = `${proxy}\n${csp}`;
-  assert(proxy.includes("content-security-policy") || proxy.includes("Content-Security-Policy"), "Admin proxy does not install its CSP header.");
+  const securitySource = `${proxy}\n${csp}\n${headers}`;
+  // The proxy applies securityHeaders(); the header values live in security-headers.ts.
+  assert(proxy.includes("securityHeaders"), "Admin proxy does not apply the shared security headers.");
+  assert(headers.includes("content-security-policy") || headers.includes("Content-Security-Policy"), "Admin security headers do not install a CSP header.");
   for (const directive of ["default-src 'self'", "frame-ancestors 'none'", "object-src 'none'", "form-action 'self'"]) assert(securitySource.includes(directive), `Admin CSP is missing ${directive}.`);
   assert(!securitySource.includes("script-src 'self' 'unsafe-eval'"), "Admin production CSP permits unsafe eval.");
 

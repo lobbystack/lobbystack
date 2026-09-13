@@ -8,6 +8,7 @@ import { Worker } from "bullmq";
 import { handleJob, type WorkerDependencies } from "./handlers";
 import { startHealthServer } from "./health";
 import { OutboxDispatcher } from "./outboxDispatcher";
+import { getWorkerStartupMode } from "./maintenance";
 import { configureSchedulers } from "./scheduler";
 import { getWorkerSnapshotCache } from "./snapshot-cache";
 
@@ -81,6 +82,13 @@ function createProductAnalytics(): WorkerDependencies["productAnalytics"] {
 }
 
 async function main(): Promise<void> {
+  const startupMode = getWorkerStartupMode(process.env);
+  if (!startupMode.startsConsumers) {
+    // Keep liveness available, but report unready and avoid all queue, scheduler, and provider startup.
+    startHealthServer(Number(process.env.PORT ?? 3002), { ready: false, redis: false, database: false, storage: false, activeJobs: 0 });
+    console.warn("Worker consumer startup is isolated by maintenance mode.");
+    return;
+  }
   assertProductionSecrets(process.env, [
     "ENCRYPTION_KEY",
     "OTP_HASH_SECRET",

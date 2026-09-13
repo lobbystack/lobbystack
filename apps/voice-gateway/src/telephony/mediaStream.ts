@@ -2333,6 +2333,7 @@ async function configureOpenAiSession(
   if (session.businessId) {
     captureAiTraceStarted({
       businessId: session.businessId,
+      telemetryEnabled: session.snapshot.telemetryEnabled === true,
       traceId: session.aiTraceId,
       ...(session.callId ? { callId: session.callId } : {}),
       ...(session.conversationId ? { conversationId: session.conversationId } : {}),

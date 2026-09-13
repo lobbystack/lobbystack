@@ -2,6 +2,8 @@ import { z } from "zod";
 
 export { resolveOpenAiPricing } from "./aiPricing";
 export type { AiPricingRatesUsdPerMillionTokens, VersionedAiPricing } from "./aiPricing";
+export { isMaintenanceMode } from "./maintenance";
+export { isCertificationMode, assertCertificationRecipient, assertCertificationOperationAllowed, assertCertificationCalendar, assertCertificationBillingSandbox } from "./certification";
 
 export type DeploymentMode = "cloud" | "self_hosted_standard" | "development";
 
@@ -116,6 +118,8 @@ export type BusinessContextSnapshot = {
   timezone: string;
   defaultLocale: RuntimeLocale;
   businessType: BusinessType;
+  /** Optional analytics consent captured at call start; absence is not consent. */
+  telemetryEnabled?: boolean;
   greeting: string;
   voiceInstructions: string;
   smsInstructions: string;

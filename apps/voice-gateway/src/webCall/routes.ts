@@ -19,6 +19,7 @@ import {
   captureAiGeneration,
   captureAiTraceStarted,
   capturePostHogException,
+  setBusinessTelemetryConsent,
 } from "../observability/posthog";
 import type { EndCallRequest } from "../realtime/callControl";
 import { executeVoiceTool } from "../realtime/toolExecutor";
@@ -1188,6 +1189,7 @@ function createSidebandSocket(input: {
 
     captureAiTraceStarted({
       businessId: input.session.businessId,
+      telemetryEnabled: input.snapshot.telemetryEnabled === true,
       traceId: input.session.aiTraceId,
       callId: input.session.callId,
       conversationId: input.session.conversationId,
@@ -1782,6 +1784,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       if (!context.snapshot) {
         return reply.code(503).send({ error: "The voice agent is still being prepared. Please try again shortly." });
       }
+      setBusinessTelemetryConsent(context.businessId, context.snapshot.telemetryEnabled === true);
       let exchange: Awaited<ReturnType<typeof exchangeWebRtcOffer>>;
       try {
         exchange = await exchangeWebRtcOffer({

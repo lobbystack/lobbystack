@@ -1,6 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { buildLiveCallUpdateTwiml } from "./transferCall";
+import { buildLiveCallUpdateTwiml, transferLiveCall } from "./transferCall";
+
+afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
+
+it("rejects an unapproved rehearsal transfer before any provider request", async () => {
+  vi.stubEnv("LOBBYSTACK_CERTIFICATION_MODE", "true");
+  vi.stubEnv("LOBBYSTACK_CERTIFICATION_PHONES", "+14165550123");
+  const request = vi.spyOn(globalThis, "fetch");
+  await expect(transferLiveCall({ callSid: "fixture", destination: "+14165550999" })).rejects.toThrow("CERTIFICATION_RECIPIENT_BLOCKED");
+  expect(request).not.toHaveBeenCalled();
+});
 
 describe("buildLiveCallUpdateTwiml", () => {
   it("builds transfer TwiML with optional preface and action URL", () => {
