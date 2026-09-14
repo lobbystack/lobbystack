@@ -1,6 +1,8 @@
 # Production readiness progress — 2026-09-13
 
-**Not approved for production traffic.** This extends the [initial implementation record](./readiness-implementation-2026-09-12.md). All evidence refers to the modified working tree based on `141f174c`, not an immutable release commit.
+**Not approved for production traffic.** This extends the [initial implementation record](./readiness-implementation-2026-09-12.md). All evidence refers to the modified working tree.
+
+A local candidate commit `c775fa25` ("Harden production readiness for migration cutover") now captures the tested revision. It was **not pushed and not deployed**. The per-check evidence timestamps may span just before that commit; the code is unchanged in content from the committed tree.
 
 ## Verified
 
@@ -48,6 +50,24 @@ The functional profile now runs the full default non-visual suite and the Postgr
 - Certification mode restricts email/SMS/transfer recipients and calendar targets, blocks phone inventory/routing mutations, and rejects live Polar endpoints. Billing portal configuration now respects the configured sandbox URL.
 - The Twilio status webhook no longer acknowledges durable-update failures with `200`; it returns `503` with `Retry-After` and no provider text. It also gained regression coverage. Twilio retry behavior for non-2xx status callbacks must still be confirmed before cutover.
 - `replacement:security` was reading CSP from a stale file after an earlier refactor and failed even though the policy was correct. The check now reads `security-headers.ts` (the actual source of truth) and verifies the proxy applies it. All security sub-checks pass.
+
+## Freeze-control rehearsal (non-production)
+
+The Convex write-freeze control was rehearsed against the **development** deployment `dev:valiant-ibis-521` (never production):
+
+- Pause request returned `200`; a full `convex export` then **succeeded while paused** (archive created, ~36s), and an unpause request returned `200`. The deployment was confirmed serving again afterwards.
+- This validates the candidate freeze mechanism for the export step. It does **not** prove in-flight writes have drained, and the earlier research noted pause is a "reject new calls" switch rather than a documented quiesce barrier. Provider webhooks are still not buffered. The final cutover runbook must bound the observe/drain window and define provider handling.
+- One earlier attempt failed for a CLI working-directory reason; that was a tooling setup error, not a pause limitation, and is corrected in the recorded result.
+
+## Real Google Calendar attempt
+
+The real Google Calendar connect was started against the existing staging environment but **not completed**:
+
+- Google shows an "app hasn't been verified" interstitial because the OAuth client is unverified; completing it requires the `Advanced -> Go to LobbyStack (unsafe)` path plus consent.
+- The first pass reached the consent screen, but >10 minutes elapsed before completion, so the callback was correctly rejected with "Google OAuth state is invalid or expired." That confirms the state-expiry control, but it did not connect.
+- Staging also runs the pre-fix build, so a successful connect there would exercise the old calendar code, not the fixes in this tree. Real Google Calendar lifecycle certification therefore remains an open release blocker. `assertCertificationCalendar` and the calendar regression cover the new logic locally but do not substitute for a live provider run.
+
+Polar sandbox lifecycle was also not completed; it needs an authenticated sandbox account with product IDs.
 
 ## Remaining before switch-over
 
