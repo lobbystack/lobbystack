@@ -19,6 +19,7 @@ A local candidate commit `c775fa25` ("Harden production readiness for migration 
 - **Deployed worker outbox email passed.** A row inserted into the isolated database outbox was dispatched by the running worker to the allowlisted test address on its first attempt (`published_at` set, no dead-letter). This exercises the full `outbox -> worker -> SMTP` deployment path, which the earlier direct-provider test did not.
 - **Health/readiness performance passed**: admin-ready p95 153 ms (< 500 ms target), voice-ready p95 179 ms (< 300 ms target), worker-ready p95 3 ms from the private network (< 500 ms target). This is endpoint latency only; an authenticated workflow soak is still outstanding.
 - The user confirmed receipt of the controlled email and SMS.
+- Candidate `c775fa25` was deployed to the **existing staging** environment for the Google verification (migrations `0051`/`0052` applied; all services healthy). This is the certification environment, not production; no production traffic, DNS, or webhooks changed.
 - The isolated runtime was returned to maintenance mode after testing to reduce idle exposure of its real provider credentials. `LOBBYSTACK_MAINTENANCE_MODE=false` can be re-applied for a live test window (admin/worker/voice), then reverted.
 
 ## Latest automated gate
@@ -59,15 +60,18 @@ The Convex write-freeze control was rehearsed against the **development** deploy
 - This validates the candidate freeze mechanism for the export step. It does **not** prove in-flight writes have drained, and the earlier research noted pause is a "reject new calls" switch rather than a documented quiesce barrier. Provider webhooks are still not buffered. The final cutover runbook must bound the observe/drain window and define provider handling.
 - One earlier attempt failed for a CLI working-directory reason; that was a tooling setup error, not a pause limitation, and is corrected in the recorded result.
 
-## Real Google Calendar attempt
+## Real Google Calendar verification (passed)
 
-The real Google Calendar connect was started against the existing staging environment but **not completed**:
+Candidate `c775fa25` was deployed to the existing staging environment (migrator applied `0051`/`0052`; admin, worker, and voice redeployed and healthy, including the new dependency-aware voice readiness). The real Google Calendar lifecycle then passed against the deployed worker:
 
-- Google shows an "app hasn't been verified" interstitial because the OAuth client is unverified; completing it requires the `Advanced -> Go to LobbyStack (unsafe)` path plus consent.
-- The first pass reached the consent screen, but >10 minutes elapsed before completion, so the callback was correctly rejected with "Google OAuth state is invalid or expired." That confirms the state-expiry control, but it did not connect.
-- Staging also runs the pre-fix build, so a successful connect there would exercise the old calendar code, not the fixes in this tree. Real Google Calendar lifecycle certification therefore remains an open release blocker. `assertCertificationCalendar` and the calendar regression cover the new logic locally but do not substitute for a live provider run.
+1. **Connect**: the OAuth flow now requests `openid email calendar`; consent completed and the callback stored the connection with the new state nonce. The prior staging failure was reproduced first and matched the logs exactly: `Google account lookup failed with status 401` (missing `openid` scope), which this fix resolves.
+2. **Discovery/selection**: the account's calendars were discovered; a dedicated writable secondary calendar, **LobbyStack Test**, was created (the holiday calendar is read-only) and selected. Selection was applied in the isolated staging database because the Base UI dropdown did not respond to UI automation reliably.
+3. **Reconcile**: the deployed worker fetched Google free/busy and marked the connection synced (`last_synced_at` set, empty `last_sync_error`, outbox published on first attempt).
+4. **Create**: a test appointment synced to Google; the real event existed with the deterministic client event ID (`a34193b2201e37d2267b5d2cf9873680`, summary "Calendar Test Service").
+5. **Cancel**: the event was soft-deleted by Google (`events.delete` returns 204; a follow-up `events.get` reports `status: cancelled` and `events.list` no longer returns it; a second delete returns 410). The appointment reached `calendar_sync_state = synced`. This confirms the cancellation regression is fixed: the old code re-upserted the event and left it booked.
+6. Test appointments, service, staff, contact, and outbox rows were removed from staging; the connection remains selected to the LobbyStack Test calendar.
 
-Polar sandbox lifecycle was also not completed; it needs an authenticated sandbox account with product IDs.
+Scope note: this used a controlled SQL fixture and the deployed worker rather than clicking through every UI screen; the connect, discovery, token use, event create, and event cancel all exercised real Google. Polar sandbox lifecycle was not completed; it needs an authenticated sandbox account with product IDs.
 
 ## Remaining before switch-over
 
