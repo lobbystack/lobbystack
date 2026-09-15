@@ -130,6 +130,8 @@ Still outstanding for billing: metered usage ingestion and quantity verification
 
 **More journey checks passed locally.** Against the disposable databases: `replacement:auth` (5), `replacement:roles` (4), `replacement:onboarding` (11), `replacement:contacts` (8), `replacement:catalog` (5), `replacement:appointment-policy` (8), `replacement:knowledge-lifecycle`, `replacement:unit-economics` (7), `replacement:analytics-usage` (7), `replacement:feedback` (6), `replacement:phone-onboarding`, `replacement:call-detail` (6), `replacement:sms-consent` (8), `replacement:web-voice-policy` (4, with `REDIS_URL` configured for the rate limiter), `replacement:follow-up` (7), `replacement:appointment-audits` (6), and `replacement:recovery` (3, run against a clean outbox target). Two checks had a fixture omission — they booked appointments without seeding `business_hours`, so availability was empty and booking failed; both now seed all-week hours. `pnpm typecheck:scripts` is clean and the scripts suite is 125/125.
 
+**Static, locale, parity, and RLS gates passed.** `pnpm replacement:drift` (32 job types, 53 tenant tables, and required deployment files aligned), `pnpm replacement:locale` (15 namespaces with matching English and French keys), `pnpm replacement:parity` (7 required, 2 excluded, 1 retired), and `VERIFY_RLS_BEHAVIOR=true pnpm db:verify-rls` (RLS enabled and forced on 63 tables) all passed against the disposable target.
+
 ## Decisions (owner-delegated, 2026-09-14)
 
 The owner does not author code and delegated implementation decisions; the following dispositions are recorded on that basis. They are decisions, not evidence, and they do not make the release certified.
