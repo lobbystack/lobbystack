@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq } from "drizzle-orm";
 
-import { appointmentChangeVerifications, appointments, auditLogs, businesses, contacts, createDatabaseClient, outboxMessages, phoneNumbers, receptionistProfiles, services, smsConsentEvents, staff } from "@lobbystack/db";
+import { appointmentChangeVerifications, appointments, auditLogs, businesses, businessHours, contacts, createDatabaseClient, outboxMessages, phoneNumbers, receptionistProfiles, services, smsConsentEvents, staff } from "@lobbystack/db";
 import { bookAppointment, cancelAppointmentForCaller, claimAppointmentChangeOtp, createAppointmentChangeVerification, issueAppointmentChangeOtp, markAppointmentChangeOtpSent, releaseAppointmentChangeOtp, rescheduleAppointmentForCaller, verifyAppointmentChangeOtp } from "@lobbystack/domain";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -19,6 +19,8 @@ async function main(): Promise<void> {
     const [contact] = await db.db.insert(contacts).values({ businessId, phone: callerPhone, smsConsentStatus: "subscribed" }).returning({ id: contacts.id });
     const [service] = await db.db.insert(services).values({ businessId, name: "Audit service", slug: "audit-service", durationMinutes: 30 }).returning({ id: services.id });
     const [staffMember] = await db.db.insert(staff).values({ businessId, name: "Audit staff", timezone: "UTC" }).returning({ id: staff.id });
+    // Booking requires an open hours window for the requested weekday.
+    await db.db.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1439 })));
     await db.db.insert(phoneNumbers).values({ businessId, e164: "+14165550992", providerPhoneId: `PN-${randomUUID()}` });
     await db.db.insert(receptionistProfiles).values({
       businessId,

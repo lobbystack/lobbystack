@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { businesses, businessMemberships, calls, contacts, conversations, conversationSessions, appointments, services, staff, createDatabaseClient, inboxItems, users, withBusinessTransaction } from "@lobbystack/db";
+import { businesses, businessHours, businessMemberships, calls, contacts, conversations, conversationSessions, appointments, services, staff, createDatabaseClient, inboxItems, users, withBusinessTransaction } from "@lobbystack/db";
 import { recordCallSchedulingProgress, bookAppointment, finalizeConversationSession, listCalls, completeVoiceFollowUpTasks, createVoiceFollowUpTask, listOpenVoiceFollowUps, getCallDetail, runPrivacyRetentionSweep, startCall } from "@lobbystack/domain";
 function assert(value: unknown, message: string): asserts value { if (!value) throw new Error(message); }
 const auth = createDatabaseClient("lobbystack_auth");
@@ -26,6 +26,8 @@ try {
       if (tenant === businessId) {
         await tx.insert(services).values({ id: serviceId, businessId, name: "Consultation", slug: "consultation", durationMinutes: 30 });
         await tx.insert(staff).values({ businessId, name: "Provider", timezone: "UTC" });
+        // Booking requires an open hours window for the requested weekday.
+        await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1439 })));
       }
     });
   }

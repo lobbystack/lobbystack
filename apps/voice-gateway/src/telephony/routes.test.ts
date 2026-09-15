@@ -222,7 +222,7 @@ describe("voice routes", () => {
     await server.close();
   });
 
-  it("returns a retryable response when the call-status callback arrives before reconciliation can find the call", async () => {
+  it.each(["call_not_found", "unknown_call"])("returns a retryable response when the call-status callback reason is %s", async (reason) => {
     const server = createServer();
     const payload = {
       CallSid: "CA123",
@@ -231,7 +231,7 @@ describe("voice routes", () => {
 
     reconcileVoiceCallStatusMock.mockResolvedValueOnce({
       ignored: true,
-      reason: "unknown_call",
+      reason,
     });
 
     const response = await server.inject({

@@ -292,7 +292,10 @@ export function registerVoiceRoutes(server: FastifyInstance): void {
         : {}),
     });
 
-    if (result.ignored && result.reason === "unknown_call") {
+    // The admin backend reports "call_not_found" when no tenant matches the
+    // Twilio call SID yet; older code used "unknown_call". Both mean the call
+    // record may exist on a provider retry, so both must be retryable.
+    if (result.ignored && (result.reason === "call_not_found" || result.reason === "unknown_call")) {
       server.log.warn(
         {
           callSid: normalized.callSid,

@@ -38,6 +38,7 @@
     "./replacement-telemetry-check.ts",
     "./replacement-password-recovery-check.ts",
     "./replacement-email-change-check.ts",
-    "./performance/**/*.ts"
+    "./performance/**/*.ts",
+    "./operations/**/*.ts"
   ]
 }
