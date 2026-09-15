@@ -139,7 +139,7 @@ The owner does not author code and delegated implementation decisions; the follo
 - **Snapshot manifest correction** (`prospect_demos` imported, approved source identifier `prod:determined-reindeer-80`, declared isolated target): accepted by the delegated decision-maker. The manifest must still be promoted from `DRAFT`, and the isolated target must be provisioned and verified, before a production rehearsal.
 - **Provider retry semantics:** the implemented handlers return retryable statuses for durable failure cases (webhook `503`/`Retry-After`; dead-letter after retry budget). Provider-side retry-schedule confirmation is accepted as an operational prerequisite before endpoint changes, not a code change.
 - **Legacy freeze:** the pause/resume control is accepted as a candidate freeze mechanism with its documented limitations (no in-flight drain proof, no durable webhook buffer).
-- **Immutable release candidate:** the tested working tree at baseline run `cd30ef7b-955a-4a57-a2ab-231279637300` is the release candidate; it has **not** been committed or pushed.
+- **Immutable release candidate:** local commit `bccdb4af25511c1c2e487f344880deb89cfa2183` captures the tested tree. The clean-commit baseline run `3d03ad41-8170-45f1-acc0-9336e9495b03` passed `lint`/`typecheck`/`test`/`build` with `dirtyGit: false` and `releaseCertified: false`. It has **not** been pushed, and no production rollout is authorized.
 - **Production rollout:** not authorized. No production DNS, provider endpoint, database, or legacy write state was changed.
 
 ## Remaining before switch-over
