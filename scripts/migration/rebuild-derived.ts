@@ -2,6 +2,7 @@ import { open } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { assertRehearsalTarget } from "./rehearsal-import.ts";
+import { assertProductionTarget } from "./import-engine.ts";
 
 // ---------------------------------------------------------------------------
 // Pure core
@@ -114,18 +115,47 @@ export function parseRebuildArgs(argv: ReadonlyArray<string>): RebuildArgs {
   };
 }
 
-/** A rebuild may only add `realtime.publish` rows, exactly one per rebuilt derived row. */
+/** A rebuild may only add `realtime.publish` rows (one per rebuilt derived row)
+ * plus a bounded number of known domain side effects (for example the snapshot
+ * refresh's `privacy.deleteRecording` retention jobs). */
 export function assertOutboxGuard(input: {
   before: number;
   after: number;
   nonRealtimeBefore: number;
   nonRealtimeAfter: number;
   expectedInserted: number;
+  allowedNonRealtimeInserted?: number;
 }): { inserted: number } {
   const inserted = input.after - input.before;
   const nonRealtimeInserted = input.nonRealtimeAfter - input.nonRealtimeBefore;
-  if (inserted < 0 || nonRealtimeInserted !== 0 || inserted !== input.expectedInserted) throw new Error("UNEXPECTED_REBUILD_SIDE_EFFECT");
+  const realtimeInserted = inserted - nonRealtimeInserted;
+  const allowedNonRealtimeInserted = input.allowedNonRealtimeInserted ?? 0;
+  if (inserted < 0 || nonRealtimeInserted < 0 || nonRealtimeInserted > allowedNonRealtimeInserted || realtimeInserted !== input.expectedInserted) {
+    throw new Error("UNEXPECTED_REBUILD_SIDE_EFFECT");
+  }
   return { inserted };
+}
+
+const ALLOWED_REBUILD_OUTBOX_TOPICS: ReadonlyArray<string> = ["realtime.publish", "privacy.deleteRecording"];
+
+/** Asserts a rebuild only adds rows on known topics and never removes rows. */
+export function assertOutboxTopicDeltas(
+  before: Record<string, number>,
+  after: Record<string, number>,
+): { inserted: number; insertedByTopic: Record<string, number> } {
+  const topics = new Set([...Object.keys(before), ...Object.keys(after)]);
+  const insertedByTopic: Record<string, number> = {};
+  let inserted = 0;
+  for (const topic of topics) {
+    const delta = (after[topic] ?? 0) - (before[topic] ?? 0);
+    if (delta < 0) throw new Error("UNEXPECTED_REBUILD_SIDE_EFFECT");
+    if (delta > 0) {
+      if (!ALLOWED_REBUILD_OUTBOX_TOPICS.includes(topic)) throw new Error("UNEXPECTED_REBUILD_SIDE_EFFECT");
+      insertedByTopic[topic] = delta;
+      inserted += delta;
+    }
+  }
+  return { inserted, insertedByTopic };
 }
 
 const SKIPPED_DOMAINS: ReadonlyArray<{ domain: string; status: "skipped" | "not_implemented"; reason: string }> = [
@@ -150,11 +180,17 @@ function safeErrorCode(error: unknown): string {
 
 async function main(): Promise<void> {
   const args = parseRebuildArgs(process.argv.slice(2));
-  const url = process.env.REHEARSAL_DATABASE_URL;
-  const workerUrl = process.env.REHEARSAL_WORKER_DATABASE_URL;
-  const nonce = process.env.REHEARSAL_TARGET_NONCE;
-  if (!url || !workerUrl || !nonce) throw new Error("REHEARSAL_CONFIGURATION_REQUIRED");
-  assertRehearsalTarget(url, args.database);
+  const productionMode = process.env.PRODUCTION_REBUILD_DATABASE_URL !== undefined;
+  const url = productionMode ? process.env.PRODUCTION_REBUILD_DATABASE_URL : process.env.REHEARSAL_DATABASE_URL;
+  const workerUrl = productionMode ? process.env.PRODUCTION_REBUILD_WORKER_DATABASE_URL : process.env.REHEARSAL_WORKER_DATABASE_URL;
+  const nonce = productionMode ? process.env.PRODUCTION_REBUILD_TARGET_NONCE : process.env.REHEARSAL_TARGET_NONCE;
+  if (!url || !workerUrl || !nonce) throw new Error("REBUILD_CONFIGURATION_REQUIRED");
+  if (productionMode) {
+    if (process.env.PRODUCTION_IMPORT_APPROVED !== "true") throw new Error("PRODUCTION_IMPORT_NOT_APPROVED");
+    if (assertProductionTarget(url) !== args.database) throw new Error("REBUILD_TARGET_MISMATCH");
+  } else {
+    assertRehearsalTarget(url, args.database);
+  }
   const expected = new URL(url);
   const workerTarget = new URL(workerUrl);
   if (
@@ -191,6 +227,10 @@ async function main(): Promise<void> {
     const result = await admin.pool.query<{ count: number }>(text);
     return Number(result.rows[0]?.count ?? 0);
   };
+  const outboxTopicCounts = async (): Promise<Record<string, number>> => {
+    const result = await admin.pool.query<{ topic: string; count: number }>("SELECT topic, count(*)::int AS count FROM public.outbox_messages GROUP BY topic");
+    return Object.fromEntries(result.rows.map((row) => [row.topic, Number(row.count)]));
+  };
   try {
     const marker = await admin.pool.query<{ database_name: string; nonce: string }>("SELECT database_name, nonce FROM migration_control.target");
     if (marker.rows.length !== 1 || marker.rows[0]?.database_name !== args.database || marker.rows[0]?.nonce !== nonce) throw new Error("DATABASE_TARGET_MARKER_MISMATCH");
@@ -215,8 +255,7 @@ async function main(): Promise<void> {
       return;
     }
 
-    const outboxBefore = await count("SELECT count(*)::int AS count FROM public.outbox_messages");
-    const outboxNonRealtimeBefore = await count("SELECT count(*)::int AS count FROM public.outbox_messages WHERE topic <> 'realtime.publish'");
+    const outboxBefore = await outboxTopicCounts();
 
     // business_context_snapshots: reuse the domain refresh, which enqueues one
     // realtime.publish event per business. Clear first so a replay is exact.
@@ -255,15 +294,8 @@ async function main(): Promise<void> {
       );
     }
 
-    const outboxAfter = await count("SELECT count(*)::int AS count FROM public.outbox_messages");
-    const outboxNonRealtimeAfter = await count("SELECT count(*)::int AS count FROM public.outbox_messages WHERE topic <> 'realtime.publish'");
-    const outboxGuard = assertOutboxGuard({
-      before: outboxBefore,
-      after: outboxAfter,
-      nonRealtimeBefore: outboxNonRealtimeBefore,
-      nonRealtimeAfter: outboxNonRealtimeAfter,
-      expectedInserted: snapshots,
-    });
+    const outboxAfter = await outboxTopicCounts();
+    const outboxGuard = assertOutboxTopicDeltas(outboxBefore, outboxAfter);
 
     evidence.perDomain = {
       business_context_snapshots: snapshots,
@@ -272,11 +304,10 @@ async function main(): Promise<void> {
       calendar_busy_blocks: 0,
     };
     evidence.outbox = {
-      before: outboxBefore,
-      after: outboxAfter,
+      before: Object.values(outboxBefore).reduce((total, value) => total + value, 0),
+      after: Object.values(outboxAfter).reduce((total, value) => total + value, 0),
       inserted: outboxGuard.inserted,
-      nonRealtimeInserted: outboxNonRealtimeAfter - outboxNonRealtimeBefore,
-      expected: snapshots,
+      insertedByTopic: outboxGuard.insertedByTopic,
     };
     evidence.status = "passed";
   } catch (error) {
