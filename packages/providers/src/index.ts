@@ -58,7 +58,7 @@ export interface CalendarProvider {
 
 export interface EmailProvider {
   sendTemplate(input: {
-    template: "verify_email" | "password_reset" | "operator_alert";
+    template: "verify_email" | "password_reset" | "operator_alert" | "feedback_submission";
     to: string;
     subject: string;
     variables: Record<string, string>;
@@ -106,3 +106,19 @@ export interface DurableExecutionRuntime {
     args: TArgs,
   ): Promise<void>;
 }
+
+export * from "./ai/aiUsage";
+export * from "./ai/embeddingProvider";
+export * from "./ai/textAiProvider";
+export * from "./crypto/secretBox";
+export * from "./crawling/firecrawl";
+export * from "./crawling/urlSafety";
+export * from "./email/smtp";
+export * from "./email/webhook";
+export * from "./google/calendar";
+export * from "./polar/polarBilling";
+export * from "./polar/webhook";
+export * from "./storage/s3";
+export * from "./storage/local";
+export * from "./storage/provider";
+export * from "./twilio/twilioProvider";

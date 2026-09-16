@@ -1,6 +1,6 @@
 ---
-title: "Quo Sona Alternative for AI Call Answering"
-seoTitle: "Quo Sona Alternative: LobbyStack vs Sona"
+title: "Quo Sona alternative for AI call answering"
+seoTitle: "Quo Sona alternative: LobbyStack vs Sona"
 description: "Compare Quo Sona and LobbyStack on call-credit pricing, phone-system requirements, message capture, booking, source access, and self-hosting."
 pubDate: 2026-07-30T10:20:00-04:00
 updatedDate: 2026-07-30T10:20:00-04:00
@@ -26,7 +26,7 @@ Sona focuses on answering, lead capture, messages, and summaries inside Quo. Lob
 | Platform requirement | Paid Quo phone plan | No business-phone suite required |
 | Main job | Answering, lead and message capture | Answering, booking, handoff, call operations |
 | Allowance behavior | Falls back when credits end unless overages are enabled | Minute overage follows the plan |
-| Source code | Not advertised | Public AGPL-3.0 repository |
+| Source code | Not advertised | Public MIT-licensed repository |
 | Deployment | Quo-managed | Managed cloud or self-hosted |
 
 Pricing and features were checked on July 30, 2026.
@@ -80,7 +80,7 @@ LobbyStack can fit when the team wants consultation booking, custom lead qualifi
 
 The team's current phone system should carry more weight than a small difference in AI price.
 
-## Test the edges of Sona's phone workflow
+## Test the edges of sona's phone workflow
 
 Ask Sona to route a caller by office, language, and named employee. Place a second call after hours, decline the first transfer, and leave a message. Check where the summary appears in Quo and whether another teammate can continue the work without opening a separate system.
 

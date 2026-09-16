@@ -1,8 +1,8 @@
-# LobbyStack Landing Site
+# LobbyStack landing site
 
 Astro marketing site for `lobbystack.com`, with React islands, shadcn/ui components, SEO routes, RSS, Pagefind search, localized French pages, and Cloudflare Pages middleware.
 
-## Development
+## Run the landing site
 
 Run commands from the repository root:
 
@@ -15,24 +15,20 @@ pnpm landing:preview
 
 ## PostHog analytics
 
-The site initializes PostHog from `src/lib/posthog.ts` when
-`PUBLIC_POSTHOG_ENABLED=true` and `PUBLIC_POSTHOG_KEY` is present.
+The site initializes PostHog from `src/lib/posthog.ts` when `PUBLIC_POSTHOG_ENABLED=true` and `PUBLIC_POSTHOG_KEY` is present.
 
 Production should use the first-party Cloudflare Pages proxy:
 
 ```ini
 PUBLIC_POSTHOG_ENABLED=true
-PUBLIC_POSTHOG_KEY=phc_...
+PUBLIC_POSTHOG_KEY=your_posthog_project_token_here
 PUBLIC_POSTHOG_HOST=https://ts.lobbystack.com
 PUBLIC_POSTHOG_UI_HOST=https://us.posthog.com
 ```
 
-Attach `ts.lobbystack.com` to the same Cloudflare Pages project. Requests on
-that hostname are handled by `functions/_middleware.js` and forwarded to the
-correct PostHog US ingestion or asset host. Keep preview deployments disabled
-unless actively validating analytics.
+Attach `ts.lobbystack.com` to the same Cloudflare Pages project. Requests on that hostname are handled by `functions/_middleware.js` and forwarded to the correct PostHog US ingestion or asset host. Keep preview deployments disabled unless actively validating analytics.
 
-## Adding components
+## Add a component
 
 To add components to your app, run the following command:
 
@@ -40,9 +36,9 @@ To add components to your app, run the following command:
 pnpm --filter @lobbystack/landing exec shadcn add button
 ```
 
-This will place the ui components in the `src/components` directory.
+The command adds the UI component to `src/components`.
 
-## Using components
+## Use a component
 
 To use the components in your app, import them in an `.astro` file:
 

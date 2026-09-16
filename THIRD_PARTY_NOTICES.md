@@ -2,7 +2,7 @@
 
 ## shadcn-admin
 
-Portions of `apps/web` are adapted from `satnaing/shadcn-admin`.
+Portions of `apps/admin` are adapted from `satnaing/shadcn-admin`.
 
 - Source: https://github.com/satnaing/shadcn-admin
 - License: MIT

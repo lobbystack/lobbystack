@@ -4,6 +4,8 @@ import { demoSnapshot } from "@lobbystack/shared";
 
 const {
   bookVoiceAppointmentMock,
+  checkVoiceAvailabilityMock,
+  findVoiceAvailabilityMock,
   cancelVoiceAppointmentMock,
   lookupVoiceAppointmentForChangeMock,
   recordToolExecutionFailureMock,
@@ -15,6 +17,8 @@ const {
   verifyVoiceAppointmentForChangeMock,
 } = vi.hoisted(() => ({
   bookVoiceAppointmentMock: vi.fn(),
+  checkVoiceAvailabilityMock: vi.fn(),
+  findVoiceAvailabilityMock: vi.fn(),
   cancelVoiceAppointmentMock: vi.fn(),
   lookupVoiceAppointmentForChangeMock: vi.fn(),
   recordToolExecutionFailureMock: vi.fn(),
@@ -26,11 +30,11 @@ const {
   verifyVoiceAppointmentForChangeMock: vi.fn(),
 }));
 
-vi.mock("../convex/runtimeClient", () => ({
+vi.mock("../backend/runtimeClient", () => ({
   bookVoiceAppointment: bookVoiceAppointmentMock,
   cancelVoiceAppointment: cancelVoiceAppointmentMock,
-  checkVoiceAvailability: vi.fn(),
-  findVoiceAvailability: vi.fn(),
+  checkVoiceAvailability: checkVoiceAvailabilityMock,
+  findVoiceAvailability: findVoiceAvailabilityMock,
   lookupVoiceAppointmentForChange: lookupVoiceAppointmentForChangeMock,
   rescheduleVoiceAppointment: rescheduleVoiceAppointmentMock,
   searchVoiceKnowledge: searchVoiceKnowledgeMock,
@@ -42,6 +46,7 @@ vi.mock("../convex/runtimeClient", () => ({
 }));
 
 vi.mock("../observability/posthog", () => ({
+  capturePostHogException: vi.fn(),
   recordToolExecutionFailure: recordToolExecutionFailureMock,
   recordToolExecutionLatency: recordToolExecutionLatencyMock,
 }));
@@ -76,6 +81,16 @@ describe("executeVoiceTool searchKnowledge", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
+  it("stops after the permitted refinement budget", async () => {
+    const result = await executeVoiceTool({ toolName: "searchKnowledge", rawArguments: JSON.stringify({ query: "management" }), snapshot: demoSnapshot, businessId: "business_123", callerPhone: "web", claimKnowledgeLookup: () => false });
+    expect(searchVoiceKnowledgeMock).not.toHaveBeenCalled();
+    expect(result.result).toMatchObject({ outcome: "unavailable", reason: "refinement_limit" });
+  });
+  it("preserves source-linked degraded retrieval outcomes", async () => {
+    searchVoiceKnowledgeMock.mockResolvedValue({ outcome: "found", mode: "keyword", durationMs: 100, matches: [{ title: "Management", text: "MNGT 10407", chunkId: "chunk", sourceRevision: 3 }] });
+    const result = await executeVoiceTool({ toolName: "searchKnowledge", rawArguments: JSON.stringify({ query: "management" }), snapshot: demoSnapshot, businessId: "business_123", callerPhone: "web" });
+    expect(result.result).toMatchObject({ outcome: "found", mode: "keyword", matches: [{ chunkId: "chunk", sourceRevision: 3 }] });
+  });
 
   it("returns RAG matches when indexed knowledge search succeeds", async () => {
     searchVoiceKnowledgeMock.mockResolvedValue([
@@ -96,7 +111,65 @@ describe("executeVoiceTool searchKnowledge", () => {
     });
     expect(result.result).toEqual({
       matches: [{ title: "Handbook", text: "The handbook says to bring ID." }],
+      outcome: "found",
+      mode: "legacy",
       source: "rag",
+      fallbackUsed: false,
+    });
+  });
+
+  it("prioritizes matching curated knowledge when RAG also returns passages", async () => {
+    searchVoiceKnowledgeMock.mockResolvedValue({
+      outcome: "found",
+      mode: "hybrid",
+      durationMs: 120,
+      matches: [
+        {
+          title: "Baccalauréat en administration des affaires",
+          text: "La page décrit le programme de B.A.A.",
+          chunkId: "chunk-baa",
+          sourceRevision: 2,
+        },
+      ],
+    });
+
+    const result = await executeVoiceTool({
+      toolName: "searchKnowledge",
+      rawArguments: JSON.stringify({
+        query: "Quel est le programme le plus populaire?",
+      }),
+      snapshot: {
+        ...demoSnapshot,
+        knowledgeSnippets: [
+          {
+            id: "snippet-popular-program",
+            title: "Programme populaire",
+            content: "Le BAA est notre programme le plus populaire.",
+            tags: [],
+            priority: 75,
+          },
+        ],
+      },
+      businessId: "business_123",
+      callerPhone: "web",
+    });
+
+    expect(result.result).toEqual({
+      matches: [
+        {
+          title: "Programme populaire",
+          text: "Le BAA est notre programme le plus populaire.",
+        },
+        {
+          title: "Baccalauréat en administration des affaires",
+          text: "La page décrit le programme de B.A.A.",
+          chunkId: "chunk-baa",
+          sourceRevision: 2,
+        },
+      ],
+      outcome: "found",
+      mode: "hybrid",
+      source: "rag_and_snapshot",
       fallbackUsed: false,
     });
   });
@@ -130,11 +203,8 @@ describe("executeVoiceTool searchKnowledge", () => {
           title: "Appointments",
           text: "Appointments are recommended before walking in.",
         },
-        {
-          title: "Knowledge digest",
-          text: "Appointments are recommended before walking in.",
-        },
       ],
+      outcome: "found",
       source: "snapshot_fallback",
       fallbackUsed: true,
       fallbackReason: "no_matches",
@@ -170,11 +240,8 @@ describe("executeVoiceTool searchKnowledge", () => {
           title: "Parking",
           text: "Parking is available behind the building.",
         },
-        {
-          title: "Knowledge digest",
-          text: "Parking is available behind the building.",
-        },
       ],
+      outcome: "found",
       source: "snapshot_fallback",
       fallbackUsed: true,
       fallbackReason: "rag_error",
@@ -198,6 +265,7 @@ describe("executeVoiceTool searchKnowledge", () => {
 
     expect(result.result).toEqual({
       matches: [],
+      outcome: "empty",
       source: "none",
       fallbackUsed: false,
     });
@@ -240,11 +308,8 @@ describe("executeVoiceTool searchKnowledge", () => {
           title: "Refund policy",
           text: "Refunds are only available within 30 days of purchase.",
         },
-        {
-          title: "Knowledge digest",
-          text: "Parking is behind the building. Refunds are only available within 30 days of purchase.",
-        },
       ],
+      outcome: "found",
       source: "snapshot_fallback",
       fallbackUsed: true,
       fallbackReason: "no_matches",
@@ -634,5 +699,30 @@ describe("executeVoiceTool call control", () => {
         holdCapped: true,
       }),
     );
+  });
+});
+
+
+describe("executeVoiceTool transfer policy enforcement", () => {
+  it.each([
+    ["never", true, true, false],
+    ["on_request", false, true, false],
+    ["on_request", true, false, true],
+    ["on_urgent", true, false, false],
+    ["on_urgent", false, true, true],
+    ["always", false, false, true],
+  ] as const)("enforces %s with requested=%s urgent=%s", async (mode, callerRequested, urgent, allowed) => {
+    const result = await executeVoiceTool({ toolName: "transferCall", rawArguments: JSON.stringify({ callerRequested, urgent }), snapshot: { ...demoSnapshot, transferPolicy: { mode, transferNumber: "+14165550100" } }, businessId: "business_123", callerPhone: "+14165550000" });
+    expect(result.result).toMatchObject({ ok: allowed });
+    expect(result.pendingTransferDestination).toBe(allowed ? "+14165550100" : undefined);
+  });
+});
+
+describe("scheduling call association", () => {
+  it.each(["checkAvailability", "findAvailability"])("forwards the call identity through %s", async (toolName) => {
+    const mock = toolName === "checkAvailability" ? checkVoiceAvailabilityMock : findVoiceAvailabilityMock;
+    mock.mockResolvedValue({ slots: [] });
+    await executeVoiceTool({ toolName, callId: "call_123", businessId: "business_123", callerPhone: "+14165550000", snapshot: demoSnapshot, rawArguments: JSON.stringify({ serviceName: "Consultation", startsAt: "2027-01-01T10:00:00Z", date: "2027-01-01", timezone: "UTC" }) });
+    expect(mock).toHaveBeenCalledWith(expect.objectContaining({ callId: "call_123", businessId: "business_123" }));
   });
 });

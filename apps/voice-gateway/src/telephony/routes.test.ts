@@ -38,7 +38,7 @@ vi.mock("../context/fetchSnapshot", () => ({
   fetchSnapshotForPhoneNumber: fetchSnapshotForPhoneNumberMock,
 }));
 
-vi.mock("../convex/runtimeClient", () => ({
+vi.mock("../backend/runtimeClient", () => ({
   RuntimeRequestError: runtimeRequestErrorClass,
   bookVoiceAppointment: vi.fn(),
   cancelVoiceAppointment: vi.fn(),
@@ -70,6 +70,7 @@ const snapshot: BusinessContextSnapshot = {
   greeting: "Hello and welcome.",
   voiceInstructions: "Keep it short.",
   smsInstructions: "Keep it short.",
+  chatInstructions: "Keep it short.",
   summary: "A clinic.",
   bookingPolicy: "Normal policy.",
   knowledgeDigest: "Clinic info.",
@@ -100,7 +101,7 @@ describe("voice routes", () => {
   beforeEach(() => {
     process.env.DEPLOYMENT_MODE = "development";
     process.env.VOICE_GATEWAY_BASE_URL = "https://voice.example.com";
-    process.env.CONVEX_SITE_URL = "https://convex.example.com";
+    process.env.BACKEND_INTERNAL_URL = "https://admin.example.com";
     process.env.INTERNAL_SERVICE_TOKEN = "test-service-token";
     process.env.TWILIO_AUTH_TOKEN = "twilio-auth-token";
 
@@ -221,7 +222,7 @@ describe("voice routes", () => {
     await server.close();
   });
 
-  it("returns a retryable response when the call-status callback arrives before reconciliation can find the call", async () => {
+  it.each(["call_not_found", "unknown_call"])("returns a retryable response when the call-status callback reason is %s", async (reason) => {
     const server = createServer();
     const payload = {
       CallSid: "CA123",
@@ -230,7 +231,7 @@ describe("voice routes", () => {
 
     reconcileVoiceCallStatusMock.mockResolvedValueOnce({
       ignored: true,
-      reason: "unknown_call",
+      reason,
     });
 
     const response = await server.inject({

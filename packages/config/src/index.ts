@@ -4,6 +4,38 @@ import type { DeploymentMode } from "@lobbystack/shared";
 
 const DEFAULT_WEB_CALL_MAX_DURATION_MS = 5 * 60 * 1000;
 const MAX_WEB_CALL_MAX_DURATION_MS = 30 * 60 * 1000;
+const MIN_PRODUCTION_SECRET_LENGTH = 32;
+const knownInsecureSecretValues = new Set([
+  "change-me-before-production",
+  "development-only-change-me",
+  "local-internal-token",
+]);
+
+function isInsecureProductionSecret(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  return (
+    value.trim().length < MIN_PRODUCTION_SECRET_LENGTH ||
+    knownInsecureSecretValues.has(normalized) ||
+    normalized.startsWith("replace-with-")
+  );
+}
+
+export function assertProductionSecrets(
+  source: Record<string, unknown>,
+  requiredNames: readonly string[],
+): void {
+  if (source.NODE_ENV !== "production") return;
+
+  for (const name of requiredNames) {
+    const value = source[name];
+    if (typeof value !== "string" || !value.trim()) {
+      throw new Error(`${name} is required in production.`);
+    }
+    if (isInsecureProductionSecret(value)) {
+      throw new Error(`${name} must be at least ${MIN_PRODUCTION_SECRET_LENGTH} characters and must not use a placeholder value in production.`);
+    }
+  }
+}
 
 const deploymentModeSchema = z.enum([
   "cloud",
@@ -35,77 +67,18 @@ const trustProxyEnvSchema = z
       .filter(Boolean);
   });
 
-const serverEnvSchema = z.object({
-  NODE_ENV: z.string().default("development"),
-  DEPLOYMENT_MODE: deploymentModeSchema.default("development"),
-  APP_BASE_URL: z.string().url(),
-  VOICE_GATEWAY_BASE_URL: z.string().url(),
-  CONVEX_URL: z.string().url(),
-  CONVEX_SITE_URL: z.string().url(),
-  INTERNAL_SERVICE_TOKEN: z.string().min(1),
-  SESSION_ENCRYPTION_KEY: z.string().min(1),
-  OPENAI_API_KEY: z.string().optional(),
-  OPENAI_REALTIME_MODEL: z.string().default("gpt-realtime"),
-  OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
-  GEMINI_TEXT_MODEL: z.string().default("gemini-3.1-flash-lite"),
-  GEMINI_EMBEDDING_MODEL: z.string().default("gemini-embedding-001"),
-  TWILIO_ACCOUNT_SID: z.string().optional(),
-  TWILIO_AUTH_TOKEN: z.string().optional(),
-  TWILIO_API_KEY: z.string().optional(),
-  TWILIO_API_SECRET: z.string().optional(),
-  TWILIO_MESSAGING_SERVICE_SID: z.string().optional(),
-  GOOGLE_CLIENT_ID: z.string().optional(),
-  GOOGLE_CLIENT_SECRET: z.string().optional(),
-  GOOGLE_REDIRECT_URI: z.string().url().optional(),
-  MICROSOFT_CLIENT_ID: z.string().optional(),
-  MICROSOFT_CLIENT_SECRET: z.string().optional(),
-  MICROSOFT_TENANT_ID: z.string().default("common"),
-  MICROSOFT_REDIRECT_URI: z.string().url().optional(),
-  RESEND_API_KEY: z.string().optional(),
-  EMAIL_FROM_ADDRESS: z.string().email(),
-  FEEDBACK_TO_EMAIL: z.string().email().optional(),
-  POSTHOG_KEY: z.string().optional(),
-  POSTHOG_HOST: z.string().url().optional(),
-  POSTHOG_PRIVACY_MODE: booleanEnvSchema,
-  TURNSTILE_SECRET_KEY: z.string().optional(),
-  LANGFUSE_PUBLIC_KEY: z.string().optional(),
-  LANGFUSE_SECRET_KEY: z.string().optional(),
-  LANGFUSE_HOST: z.string().url().optional(),
-  UNIT_ECONOMICS_MONTHLY_CONVEX_COST_USD: z.coerce.number().optional(),
-  UNIT_ECONOMICS_MONTHLY_FLY_COST_USD: z.coerce.number().optional(),
-});
-
-const clientEnvSchema = z.object({
-  CONVEX_URL: z.string().url(),
-  CONVEX_SITE_URL: z.string().url(),
-  VITE_APP_NAME: z.string().default("LobbyStack"),
-  VITE_DEPLOYMENT_MODE: deploymentModeSchema.default("development"),
-  VITE_POSTHOG_KEY: z.string().optional(),
-  VITE_POSTHOG_HOST: z.string().min(1).optional(),
-  VITE_POSTHOG_UI_HOST: z.string().url().optional(),
-  VITE_TURNSTILE_SITE_KEY: z.string().optional(),
-  VITE_WEB_CALL_ENDPOINT: z.string().url().optional(),
-});
-
 const voiceGatewayEnvSchema = z.object({
   NODE_ENV: z.string().default("development"),
   DEPLOYMENT_MODE: deploymentModeSchema.default("development"),
   PORT: z.coerce.number().default(3001),
   VOICE_GATEWAY_TRUST_PROXY: trustProxyEnvSchema,
   VOICE_GATEWAY_BASE_URL: z.string().url(),
-  CONVEX_SITE_URL: z.string().url(),
+  BACKEND_INTERNAL_URL: z.string().url(),
+  APP_BASE_URL: z.string().url().optional(),
   INTERNAL_SERVICE_TOKEN: z.string().min(1),
+  INTERNAL_SERVICE_SECRET: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().optional(),
-  OPENAI_REALTIME_MODEL: z.string().default("gpt-realtime"),
+  OPENAI_REALTIME_MODEL: z.string().default("gpt-realtime-2.1"),
   OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
   OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
   OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
@@ -122,6 +95,7 @@ const voiceGatewayEnvSchema = z.object({
     .default(
       "https://app.lobbystack.com,https://lobbystack.com,https://www.lobbystack.com",
     ),
+  WEB_CALL_PUBLIC_BUSINESS_SLUG: z.string().min(1).max(120).optional(),
   WEB_CALL_MAX_DURATION_MS: z.coerce
     .number()
     .int()
@@ -142,10 +116,22 @@ const voiceGatewayEnvSchema = z.object({
       path: ["DEPLOYMENT_MODE"],
     });
   }
+  if (env.NODE_ENV === "production") {
+    try {
+      assertProductionSecrets(env, [
+        "INTERNAL_SERVICE_SECRET",
+        "INTERNAL_SERVICE_TOKEN",
+      ]);
+    } catch (error) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: error instanceof Error ? error.message : "Invalid production service secret.",
+        path: ["INTERNAL_SERVICE_SECRET"],
+      });
+    }
+  }
 });
 
-export type ServerEnv = z.infer<typeof serverEnvSchema>;
-export type ClientEnv = z.infer<typeof clientEnvSchema>;
 export type VoiceGatewayEnv = z.infer<typeof voiceGatewayEnvSchema>;
 
 function normalizeEnvSource(
@@ -156,14 +142,6 @@ function normalizeEnvSource(
     normalized[key] = value?.trim() === "" ? undefined : value;
   }
   return normalized;
-}
-
-export function loadServerEnv(source: Record<string, string | undefined>): ServerEnv {
-  return serverEnvSchema.parse(normalizeEnvSource(source));
-}
-
-export function loadClientEnv(source: Record<string, string | undefined>): ClientEnv {
-  return clientEnvSchema.parse(normalizeEnvSource(source));
 }
 
 export function loadVoiceGatewayEnv(

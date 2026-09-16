@@ -1,4 +1,4 @@
-# CloudTalk AI Receptionist comparison research
+# CloudTalk AI receptionist comparison research
 
 Checked: 2026-07-30
 
@@ -12,7 +12,7 @@ Checked: 2026-07-30
 
 CloudTalk offers an AI receptionist template inside its business-phone and contact-center platform. Public AI pricing lists $99 for 200 minutes, $199 for 500, $299 for 1,000, and $699 for 2,500. A CloudTalk platform subscription starts around $19 to $25 per user on the reviewed page.
 
-The receptionist advertises FAQ handling, message capture, intent routing, multilingual calls, knowledge uploads, human transfer, CRM export, more than 100 integrations, and call-flow tools. CloudTalk describes its Receptionist tier as a generalist for simple questions and routing. Its AI Specialist tier starts at a higher published price for more complex task resolution.
+The receptionist advertises FAQ handling, message capture, intent routing, multilingual calls, knowledge uploads, human transfer, CRM export, more than 100 integrations, and call-flow tools. CloudTalk describes its Receptionist tier as a generalist for common questions and routing. Its AI Specialist tier starts at a higher published price for more complex task resolution.
 
 ## Fair comparison
 

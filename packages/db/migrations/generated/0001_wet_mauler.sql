@@ -1,0 +1,3 @@
+ALTER TABLE "conversations" ADD COLUMN "automation_paused_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "conversations" ADD COLUMN "automation_paused_by_user_id" uuid;--> statement-breakpoint
+ALTER TABLE "conversations" ADD CONSTRAINT "conversations_automation_paused_by_user_id_users_id_fk" FOREIGN KEY ("automation_paused_by_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;

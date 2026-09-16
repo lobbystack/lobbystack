@@ -1,4 +1,6 @@
-# ADR 0001: Use A pnpm Monorepo
+# ADR 0001: use a pnpm monorepo
+
+LobbyStack keeps application runtimes, shared packages, database migrations, and operational tooling in one repository.
 
 ## Status
 
@@ -6,7 +8,7 @@ Accepted
 
 ## Decision
 
-Use one pnpm monorepo with apps, shared packages, and a root Convex backend.
+Use one pnpm monorepo with application runtimes, shared packages, database migrations, and operational tooling.
 
 ## Rationale
 

@@ -1,5 +1,5 @@
 ---
-title: "Should You Build or Buy an AI Receptionist?"
+title: "Should you build or buy an AI receptionist?"
 description: "Compare building an AI receptionist from scratch, buying a hosted tool, or self-hosting open-source LobbyStack before you spend serious time or budget."
 pubDate: 2026-06-12T09:00:00-04:00
 author: "LobbyStack Team"
@@ -10,7 +10,7 @@ locale: "en"
 canonicalSlug: "build-or-buy-ai-receptionist"
 ---
 
-Should you build AI receptionist software yourself, or use something that already exists? The uncomfortable version of the question is simpler: are you saving money, or are you creating another system someone has to babysit every week?
+Should you build AI receptionist software yourself, or use something that already exists? The practical question is whether you save money or create another system someone must maintain every week.
 
 That is the part most build-vs-buy conversations skip. A working demo can be fast. A receptionist that handles real callers, books cleanly, escalates safely, survives provider failures, and does not embarrass the business is a different thing.
 
@@ -30,7 +30,7 @@ Write down:
 - Which systems need to be updated after a good call.
 - Who will review transcripts and fix mistakes.
 
-If you cannot answer those questions, building will not make the problem clearer. It will just move the uncertainty into code.
+If you cannot answer those questions, building will not make the problem clearer. It will move the uncertainty into code.
 
 The important question is not "Can an AI answer the phone?" It can. The better question is: what should happen after the caller says something messy, specific, or risky?
 
@@ -40,14 +40,14 @@ Before you choose a path, decide what success looks like:
 
 ```text
 successful call =
-answered quickly + understood correctly + next step completed + safe handoff when needed
+prompt answer + correct understanding + completed next step + safe handoff when needed
 ```
 
 That standard makes the build vs buy AI receptionist decision much less abstract.
 
-## What building from scratch really means
+## What building from scratch requires
 
-A custom AI receptionist is not just a prompt connected to a phone number.
+A custom AI receptionist is more than a prompt connected to a phone number.
 
 At minimum, you are building or wiring together:
 
@@ -61,7 +61,7 @@ At minimum, you are building or wiring together:
 - Monitoring for dropped calls, failed tool calls, timeouts, and bad handoffs.
 - Test calls for accents, noise, vague callers, angry callers, spam, and emergencies.
 
-This is why a phone agent feels simple until it meets real customers. A phone agent is production software the moment a real customer calls it.
+This is why a phone agent appears contained until it meets real customers. A phone agent is production software the moment a real customer calls it.
 
 The raw infrastructure can look cheap on paper. [Twilio Voice pricing](https://www.twilio.com/en-us/voice/pricing/us) lists US local inbound calling in fractions of a cent per minute, plus phone number and add-on costs. [OpenAI API pricing](https://openai.com/api/pricing/) publishes realtime audio model pricing separately from text models. Those rates matter, but they are not the whole bill.
 
@@ -88,7 +88,7 @@ It may make sense if:
 - You will reuse the system across many locations, clients, or internal workflows.
 - The receptionist experience is part of your competitive advantage.
 
-If that is you, building is not foolish. It is just a real software project. Treat it like one. Budget for discovery, QA, observability, security review, maintenance, and the second version you will need after the first 100 messy calls.
+If that is you, building is not foolish. It is a real software project. Treat it like one. Budget for discovery, QA, observability, security review, maintenance, and the second version you will need after the first 100 messy calls.
 
 If you mainly need missed-call coverage, appointment booking, FAQs, intake, and clean handoffs, building from zero is usually a slow way to solve a solved problem.
 
@@ -108,7 +108,7 @@ Buying is usually best when:
 - You are comfortable with the vendor's workflow.
 - You would rather pay a subscription than own infrastructure.
 
-The tradeoff is control. A closed hosted tool may not let you inspect how calls are routed, version your rules, bring your own model provider, export everything cleanly, or self-host later. Some products are easy to start and hard to leave.
+The tradeoff is control. A closed hosted tool may not let you inspect how calls are routed, version your rules, bring your own model provider, export everything cleanly, or self-host later. Some products reduce initial setup but make migration difficult.
 
 Pricing also needs careful reading. "AI receptionist pricing" can mean monthly subscription, per minute, per call, per agent, per location, per unique caller, per SMS segment, per integration, or per overage. Live virtual receptionist services use yet another model. For context, [Ruby's public pricing](https://www.ruby.com/plans-and-pricing/) lists virtual receptionist plans by included receptionist minutes, with 50 minutes at $250/month and 100 minutes at $395/month at the time of writing.
 
@@ -117,7 +117,7 @@ That may be worth it when every call needs a trained human. It may be more than 
 The cheapest option on a pricing page is not always the cheapest option after six months of edge cases. Before buying, ask:
 
 - What counts as billable usage?
-- Are spam calls or very short calls charged?
+- Are spam calls or brief calls charged?
 - What happens when the AI is unsure?
 - Can it transfer to a human with context?
 - Can you export recordings, transcripts, summaries, and contacts?
@@ -199,7 +199,7 @@ setup_hours x loaded_hourly_rate
 + optional_support
 ```
 
-This is often the most misunderstood option. It is not free, because your time is not free. But it can be cheaper than building from zero, more flexible than a closed vendor, and easier to trust when call data is sensitive.
+This is often the most misunderstood option. It is not free, because your time is not free. But it can cost less than building from zero, offer more flexibility than a closed vendor, and support direct review when call data is sensitive.
 
 Use your own call volume too. A business that gets 40 short calls a month has a different answer than a multi-location team taking hundreds of booking, dispatch, and after-hours calls. If missed calls are the main reason you are considering this, run the numbers with the [missed call revenue calculator](/missed-call-revenue-calculator/) before spending money either way.
 
@@ -212,7 +212,7 @@ Use this as the blunt version.
 | Path | Best fit | Watch out for |
 | --- | --- | --- |
 | Build from scratch | You have engineering capacity, unusual workflows, strict integration needs, and phone automation is strategic. | Slow first launch, hidden maintenance, compliance work, provider failures, and ongoing QA. |
-| Buy hosted | You need coverage quickly and your calls fit a vendor's existing workflow. | Vendor lock-in, opaque routing, pricing limits, export limits, and less customization. |
+| Buy hosted | You need prompt coverage and your calls fit a vendor's existing workflow. | Vendor lock-in, opaque routing, pricing limits, export limits, and less customization. |
 | Self-host LobbyStack | You want an open-source starting point, data control, customization, and the option to inspect or modify the stack. | You still need someone to own deployment, upgrades, monitoring, and provider setup. |
 | Hybrid | You want AI for routine calls and humans for urgent, emotional, complex, or high-value calls. | You may pay for both software and human coverage, so routing rules need to be clear. |
 

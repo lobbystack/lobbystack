@@ -1,6 +1,6 @@
 ---
-title: "My AI Front Desk Alternative"
-seoTitle: "My AI Front Desk Alternative: Frontdesk vs LobbyStack"
+title: "My AI Front Desk alternative"
+seoTitle: "My AI Front Desk alternative: Frontdesk vs LobbyStack"
 description: "Compare Frontdesk, formerly My AI Front Desk, with LobbyStack on voice, CRM tools, booking, pricing, open-source access, and self-hosted control."
 pubDate: 2026-07-30T11:40:00-04:00
 updatedDate: 2026-07-30T11:40:00-04:00
@@ -30,7 +30,7 @@ Frontdesk, formerly My AI Front Desk, now sells a broad AI sales workspace. Lobb
 | Booking and call records | Included on the voice plan | Included on Free, Starter, and Pro |
 | CRM | Native CRM and sequences | Receptionist records plus integrations |
 | Deployment | Hosted | Managed cloud or self-hosted |
-| Source access | Not advertised on reviewed pages | Public AGPL-3.0 repository |
+| Source access | Not advertised on reviewed pages | Public MIT-licensed repository |
 
 Pricing and features were checked on July 30, 2026.
 
@@ -77,9 +77,9 @@ Frontdesk bundles more sales software into its $99 plan. That bundle creates val
 
 A broad product can reduce the number of vendors. It also asks a team to adopt more of Frontdesk's workflow. Businesses that already run HubSpot, Salesforce, Jobber, ServiceTitan, or another operating system may not want a second CRM.
 
-LobbyStack fits between the phone and those business systems. Convex holds the receptionist's business state, while the voice gateway handles the live call. A self-hosted operator can control the deployment, provider accounts, logs, and retention.
+LobbyStack fits between the phone and those business systems. PostgreSQL holds the receptionist's durable business state, the Next.js app handles operator and API traffic, and the voice gateway handles live calls. A self-hosted operator can control the deployment, provider accounts, logs, and retention.
 
-Frontdesk's reviewed pages do not advertise self-hosting or public source access. LobbyStack customers can inspect the AGPL-3.0 code, choose the managed product, or deploy the stack on infrastructure they control. They keep a route out of vendor lock-in.
+Frontdesk's reviewed pages do not advertise self-hosting or public source access. LobbyStack customers can inspect the MIT-licensed code, choose the managed product, or deploy the stack on infrastructure they control. They keep a route out of vendor lock-in.
 
 ## A lead-generation agency example
 
@@ -91,7 +91,7 @@ LobbyStack gives the agency a lower-cost receptionist product, code it can inspe
 
 The agency should test tenant separation, client access, provider billing, call review, calendar failures, and export before choosing. A white-label logo alone does not settle those operational questions.
 
-## Choose Frontdesk when
+## Choose frontdesk when
 
 Choose Frontdesk when you need a hosted voice, messaging, chat, email, and CRM bundle and plan to use those channels as one sales workspace. Its broader surface can replace several tools for a small team starting without a CRM.
 

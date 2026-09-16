@@ -1,0 +1,533 @@
+{
+  "referenceCommit": "98df89901f1dca22b8c96ccf9509a8cd549f2eb9",
+  "referenceFiles": 40,
+  "releaseCertified": false,
+  "purpose": "Track the 40 removed feature/component test files against their Next.js/React Query adapters. Mapping alone does not establish equivalent assertions or passing gates.",
+  "tests": [
+    {
+      "referenceTest": "apps/web/src/components/app-sidebar.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/dashboard-shell.test.tsx",
+        "apps/admin/src/components/nav-user.test.tsx",
+        "apps/admin/src/components/dashboard-setup-guide-card.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/components/data-table/pagination.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/data-table/pagination.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/components/feedback-widget.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/dashboard-feedback-widget.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/components/layout/authenticated-layout.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/dashboard-shell.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/components/layout/nav-group.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/dashboard-shell.test.tsx"
+      ],
+      "status": "reviewed; unused generic branch retired",
+      "notes": "The single original assertion exercises a generic collapsible group that no frozen sidebar route uses. The port retains the actual flat groups and repeated mobile navigation; dashboard-shell tests and strict operator screenshots cover the shipped configuration. No collapsible control is added to the UI."
+    },
+    {
+      "referenceTest": "apps/web/src/components/layout/workspace-switcher.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/layout/workspace-switcher.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/components/site-header.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/site-header.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/components/test-call-widget.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/dashboard-test-call-widget.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/components/turnstile.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/turnstile.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/components/ui/phone-input.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/ui/phone-input.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/components/ui/slider.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/ui/slider.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/components/ui/surface.test.ts",
+      "adapterTests": [
+        "apps/admin/src/components/ui/surface.test.ts"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/components/web-voice/useWebVoiceCall.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/web-voice/useWebVoiceCall.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/agent/AgentBasicSettingsPage.test.ts",
+      "adapterTests": [
+        "apps/admin/src/components/live-agent-basic-settings-surface.test.ts"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/agent/AgentKnowledgePage.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/live-knowledge-surface.test.tsx",
+        "apps/admin/src/components/knowledge-forms.test.tsx",
+        "apps/admin/e2e/website-import.e2e.ts"
+      ],
+      "status": "mapped with component, visual and browser evidence",
+      "notes": "Knowledge adapters cover queued rows, bounded/monotonic progress, cancellation, reimport/retry, previews, activity toggles and confirmations. All 48 import-state pixel/ARIA cases pass in website-import-visual-v4; real browser workflow passes in complete-browser-v10; database lifecycle passes on the fresh final database."
+    },
+    {
+      "referenceTest": "apps/web/src/features/agent/AgentLayout.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/agent-setup-links.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/agent/AgentServicesPage.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/agent-setup-links.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/agent/KnowledgeActionsMenu.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/knowledge-forms.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/auth/AuthPages.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/auth-card.test.tsx",
+        "apps/admin/src/components/forgot-password-page.test.tsx",
+        "apps/admin/src/components/password-reset-form.test.tsx",
+        "apps/admin/src/components/accept-invite-surface.test.tsx",
+        "apps/admin/src/lib/auth-return-to.test.ts",
+        "apps/admin/src/components/product-analytics.test.tsx",
+        "apps/admin/src/lib/public-auth-session.test.ts",
+        "apps/admin/e2e/invitation-parity.e2e.ts"
+      ],
+      "status": "reviewed; adapter and strict visual evidence",
+      "notes": "Better Auth errors preserve the original public messages. Login/signup success events are restored and deferred until tenant telemetry consent resolves; opt-out discards them without rotating the PostHog session. Challenge-required submission resumes once after a token arrives. Invitation states have strict visual evidence and session reads honor both retry headers.",
+      "intentAudit": {
+        "invitationSuccessToast": "accept-invite-surface.test.tsx; original toast and settings/team destination",
+        "emailBlurValidationAndRawLoginSignup": "auth-card.test.tsx covers both modes, case-preserved API values and credential/account-exists errors",
+        "legalFooters": "auth-public-strict-v7 paired ARIA and screenshots for default login and signup, both locales/themes/viewports",
+        "returnToLinks": "auth-card.test.tsx both link directions; auth-return-to.e2e.ts actual redirect journey",
+        "successAnalytics": "auth-card.test.tsx and product-analytics.test.tsx; events deferred until tenant consent resolves, opt-out discards, no session reset",
+        "recoveryRequestsAndVerification": "forgot-password-page.test.tsx and password-recovery.e2e.ts; Better Auth JSON/OTP adapter normalizes email while preserving user input in the form; original Convex FormData transport retired",
+        "recoveryErrorsAndAccountEnumeration": "forgot-password-page.test.tsx maps INVALID_OTP and USER_NOT_FOUND to the same original invalid-code text",
+        "missingConvexSiteUrl": "Retired with Convex runtime; not a Next.js operator state. Required deployment configuration is checked by configuration and runtime gates.",
+        "passwordCriteria": "auth-card.test.tsx focus visibility, disabled state and rejection of programmatic invalid submission",
+        "turnstile": "auth-card.test.tsx immediate configured-key mounting and exactly-once automatic submission after the pending token arrives; auth-public-strict-v7 challenge-required screenshot state"
+      }
+    },
+    {
+      "referenceTest": "apps/web/src/features/calls/CallDetailPage.test.ts",
+      "adapterTests": [
+        "packages/domain/src/server/callEvents.test.ts",
+        "packages/domain/src/server/callOutcome.test.ts"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/calls/CallsPage.test.ts",
+      "adapterTests": [
+        "apps/admin/src/lib/call-outcome.test.ts"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/contacts/ContactsPage.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/live-contacts-surface.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/demos/ClaimDemoPage.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/claim-demo-surface.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/demos/ProspectDemoPage.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/demo-surface.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/onboarding/OnboardingBusinessNamePage.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/onboarding-business-surface.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/onboarding/OnboardingNumberPage.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/onboarding-number-surface.test.tsx",
+        "apps/admin/src/components/phone-number-chooser.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/onboarding/OnboardingPlanPage.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/onboarding-plan-surface.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/onboarding/OnboardingVerifyPhoneCodePage.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/onboarding-phone-verification-code.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/onboarding/OnboardingVerifyPhonePage.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/onboarding-phone-verification-surface.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/onboarding/OnboardingWebsitePage.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/onboarding-website-surface.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/onboarding/components/OnboardingShell.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/replacement-onboarding-shell.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/onboarding/onboardingErrors.test.ts",
+      "adapterTests": [
+        "apps/admin/src/lib/onboarding-errors.test.ts"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/onboarding/onboardingNavigation.test.ts",
+      "adapterTests": [
+        "packages/domain/src/server/onboarding.test.ts",
+        "apps/admin/src/components/onboarding-phone-verification-code.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/settings/IntegrationsPage.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/live-integrations-surface.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/settings/SettingsAppearancePage.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/settings-appearance.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/settings/SettingsBillingPage.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/live-plan-surface.test.tsx",
+        "apps/admin/src/components/billing-spending-cap.test.tsx",
+        "apps/admin/src/components/upgrade-plan-dialog.test.tsx",
+        "apps/admin/src/components/live-upgrade-plan-provider.test.tsx",
+        "apps/admin/src/components/billing-past-due-banner.test.tsx",
+        "apps/admin/src/components/live-usage-surface.test.tsx",
+        "packages/domain/src/server/billingAccess.test.ts",
+        "apps/admin/e2e/billing-return-cap.e2e.ts"
+      ],
+      "status": "non-AI intents audited; see scoped passing evidence",
+      "notes": "34 original intents: 20 retained, 14 AI-SMS/add-on/compliance exclusions. Current focused billing run: 37 passing tests across five component adapters. Domain permission and browser checkout/cap gates provide additional coverage. This does not certify live Polar or every billing visual state.",
+      "intentAudit": [
+        {
+          "referenceIntent": "opens the upgrade pricing dialog from the single plan action",
+          "status": "covered",
+          "evidence": "live-plan-surface.test.tsx + live-upgrade-plan-provider.test.tsx"
+        },
+        {
+          "referenceIntent": "updates dialog pricing when switching from annual to monthly",
+          "status": "covered",
+          "evidence": "live-upgrade-plan-provider.test.tsx"
+        },
+        {
+          "referenceIntent": "only renders configured checkout intervals in the upgrade dialog",
+          "status": "covered",
+          "evidence": "upgrade-plan-dialog.test.tsx"
+        },
+        {
+          "referenceIntent": "starts Starter checkout with the selected billing interval",
+          "status": "covered",
+          "evidence": "live-upgrade-plan-provider.test.tsx + upgrade-plan-dialog.test.tsx"
+        },
+        {
+          "referenceIntent": "starts Pro checkout with the selected billing interval",
+          "status": "covered",
+          "evidence": "live-upgrade-plan-provider.test.tsx + upgrade-plan-dialog.test.tsx"
+        },
+        {
+          "referenceIntent": "opens a contact email for Enterprise without starting checkout",
+          "status": "covered",
+          "evidence": "upgrade-plan-dialog.test.tsx"
+        },
+        {
+          "referenceIntent": "shows a tooltip for the disabled enable button on the free plan",
+          "status": "intentionally excluded",
+          "evidence": "AI-generated SMS, add-on and A2P/compliance exclusion"
+        },
+        {
+          "referenceIntent": "does not render the Pro upgrade tooltip action when checkout is unavailable",
+          "status": "intentionally excluded",
+          "evidence": "AI-generated SMS, add-on and A2P/compliance exclusion"
+        },
+        {
+          "referenceIntent": "starts AI SMS checkout when an eligible Pro workspace clicks enable",
+          "status": "intentionally excluded",
+          "evidence": "AI-generated SMS, add-on and A2P/compliance exclusion"
+        },
+        {
+          "referenceIntent": "refreshes billing status after returning from a successful checkout",
+          "status": "covered",
+          "evidence": "live-plan-surface.test.tsx + billing-return-cap.e2e.ts"
+        },
+        {
+          "referenceIntent": "keeps checkout success params when checkout refresh is not synced",
+          "status": "covered",
+          "evidence": "live-plan-surface.test.tsx + billing-return-cap.e2e.ts"
+        },
+        {
+          "referenceIntent": "keeps checkout success params when checkout refresh fails",
+          "status": "covered",
+          "evidence": "live-plan-surface.test.tsx"
+        },
+        {
+          "referenceIntent": "renders the add-on as active once AI SMS is enabled",
+          "status": "intentionally excluded",
+          "evidence": "AI-generated SMS, add-on and A2P/compliance exclusion"
+        },
+        {
+          "referenceIntent": "opens invoice links safely in a new tab",
+          "status": "covered",
+          "evidence": "live-plan-surface.test.tsx"
+        },
+        {
+          "referenceIntent": "renders the redesigned plan card content for Pro",
+          "status": "covered",
+          "evidence": "live-plan-surface.test.tsx + strict paid-billing visual cases"
+        },
+        {
+          "referenceIntent": "shows the overage cap controls for Starter and Pro only",
+          "status": "covered",
+          "evidence": "billing-spending-cap.test.tsx"
+        },
+        {
+          "referenceIntent": "labels an overflowed overage spend as a lower bound",
+          "status": "covered",
+          "evidence": "billing-spending-cap.test.tsx"
+        },
+        {
+          "referenceIntent": "does not interpret English grouping as a decimal separator",
+          "status": "covered",
+          "evidence": "billing-spending-cap.test.tsx"
+        },
+        {
+          "referenceIntent": "accepts the French decimal separator while rejecting grouping",
+          "status": "covered",
+          "evidence": "billing-spending-cap.test.tsx"
+        },
+        {
+          "referenceIntent": "saves and removes a localized monthly overage cap",
+          "status": "covered",
+          "evidence": "billing-spending-cap.test.tsx + billing-return-cap.e2e.ts"
+        },
+        {
+          "referenceIntent": "rejects malformed cap amounts and keeps controls read-only for members",
+          "status": "covered",
+          "evidence": "billing-spending-cap.test.tsx"
+        },
+        {
+          "referenceIntent": "hides portal access for free workspaces without a subscription",
+          "status": "covered",
+          "evidence": "packages/domain/src/server/billingAccess.test.ts"
+        },
+        {
+          "referenceIntent": "keeps usage off the billing overview page",
+          "status": "covered",
+          "evidence": "live-plan-surface.test.tsx"
+        },
+        {
+          "referenceIntent": "shows a register link after AI SMS is purchased but compliance is not approved",
+          "status": "intentionally excluded",
+          "evidence": "AI-generated SMS, add-on and A2P/compliance exclusion"
+        },
+        {
+          "referenceIntent": "renders the hosted AI SMS compliance page for eligible workspaces",
+          "status": "intentionally excluded",
+          "evidence": "AI-generated SMS, add-on and A2P/compliance exclusion"
+        },
+        {
+          "referenceIntent": "keeps the register action hidden for non-admin members",
+          "status": "intentionally excluded",
+          "evidence": "AI-generated SMS, add-on and A2P/compliance exclusion"
+        },
+        {
+          "referenceIntent": "saves the compliance draft before starting registration",
+          "status": "intentionally excluded",
+          "evidence": "AI-generated SMS, add-on and A2P/compliance exclusion"
+        },
+        {
+          "referenceIntent": "falls back to the only active phone number when the saved approved sender is stale",
+          "status": "intentionally excluded",
+          "evidence": "AI-generated SMS, add-on and A2P/compliance exclusion"
+        },
+        {
+          "referenceIntent": "refreshes an in-review registration without resaving the draft",
+          "status": "intentionally excluded",
+          "evidence": "AI-generated SMS, add-on and A2P/compliance exclusion"
+        },
+        {
+          "referenceIntent": "shows an error toast instead of success when refresh returns a failed status",
+          "status": "intentionally excluded",
+          "evidence": "AI-generated SMS, add-on and A2P/compliance exclusion"
+        },
+        {
+          "referenceIntent": "allows changing the approved phone number while brand verification is pending",
+          "status": "intentionally excluded",
+          "evidence": "AI-generated SMS, add-on and A2P/compliance exclusion"
+        },
+        {
+          "referenceIntent": "sends public-company stock metadata when submitting the compliance form",
+          "status": "intentionally excluded",
+          "evidence": "AI-generated SMS, add-on and A2P/compliance exclusion"
+        },
+        {
+          "referenceIntent": "persists a replacement phone number before refreshing an approved stale sender",
+          "status": "intentionally excluded",
+          "evidence": "AI-generated SMS, add-on and A2P/compliance exclusion"
+        },
+        {
+          "referenceIntent": "renders usage on the dedicated usage page",
+          "status": "covered",
+          "evidence": "live-usage-surface.test.tsx"
+        }
+      ]
+    },
+    {
+      "referenceTest": "apps/web/src/features/settings/SettingsLayout.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/settings-shell.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/settings/SettingsNotificationsPage.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/settings-notifications.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/settings/SettingsPhoneNumberPage.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/settings-phone-number.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    },
+    {
+      "referenceTest": "apps/web/src/features/setup/SetupGuidePage.test.tsx",
+      "adapterTests": [
+        "apps/admin/src/components/live-setup-guide-surface.test.tsx"
+      ],
+      "status": "mapped; see test and gate evidence",
+      "notes": "File mapping is traceability, not a rendered-parity or release certificate."
+    }
+  ]
+}

@@ -6,6 +6,7 @@ import type {
   KnowledgeSnippet,
   ServiceSummary,
   TransferPolicy,
+  AppointmentChangePolicy,
 } from "@lobbystack/shared";
 
 type SnapshotBuilderInput = {
@@ -17,11 +18,13 @@ type SnapshotBuilderInput = {
   timezone: string;
   defaultLocale: BusinessContextSnapshot["defaultLocale"];
   businessType: BusinessContextSnapshot["businessType"];
+  telemetryEnabled?: boolean;
   greeting: string;
   tone: string;
   bookingPolicy: string;
   voiceInstructions?: string;
   smsInstructions?: string;
+  chatInstructions?: string;
   summary: string;
   hours: Array<HoursWindow>;
   closures: Array<ClosureWindow>;
@@ -30,6 +33,7 @@ type SnapshotBuilderInput = {
   snippets: Array<KnowledgeSnippet>;
   knowledgeDigest?: string;
   transferPolicy: TransferPolicy;
+  appointmentChangePolicy?: AppointmentChangePolicy;
   phoneNumber?: string;
   smsNumber?: string;
   email?: string;
@@ -58,6 +62,7 @@ export function buildBusinessContextSnapshot(
     timezone: input.timezone,
     defaultLocale: input.defaultLocale,
     businessType: input.businessType,
+    ...(input.telemetryEnabled !== undefined ? { telemetryEnabled: input.telemetryEnabled } : {}),
     greeting: input.greeting,
     voiceInstructions:
       input.voiceInstructions ??
@@ -65,10 +70,14 @@ export function buildBusinessContextSnapshot(
     smsInstructions:
       input.smsInstructions ??
       `${commonConstraints} Reply clearly in SMS form. Ask one follow-up question at a time.`,
+    chatInstructions:
+      input.chatInstructions ??
+      `${commonConstraints} Be friendly and concise. Use short paragraphs and plain language.`,
     summary: input.summary,
     bookingPolicy: input.bookingPolicy,
     knowledgeDigest: input.knowledgeDigest ?? "",
     transferPolicy: input.transferPolicy,
+    ...(input.appointmentChangePolicy ? { appointmentChangePolicy: input.appointmentChangePolicy } : {}),
     hours: input.hours,
     closures: input.closures,
     services: input.services,

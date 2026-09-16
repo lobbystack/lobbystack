@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { loadClientEnv, loadVoiceGatewayEnv } from "./index";
+import { assertProductionSecrets, loadVoiceGatewayEnv } from "./index";
 
 const baseVoiceGatewayEnv = {
   VOICE_GATEWAY_BASE_URL: "https://voice.example.com",
-  CONVEX_SITE_URL: "https://example.convex.site",
+  BACKEND_INTERNAL_URL: "https://admin.example.com",
   INTERNAL_SERVICE_TOKEN: "test-token",
 };
 
@@ -17,6 +17,27 @@ describe("loadVoiceGatewayEnv", () => {
         DEPLOYMENT_MODE: "development",
       }),
     ).toThrow("DEPLOYMENT_MODE=development is not allowed when NODE_ENV=production.");
+  });
+
+  it("requires a strong internal service secret in production", () => {
+    expect(() =>
+      loadVoiceGatewayEnv({
+        ...baseVoiceGatewayEnv,
+        NODE_ENV: "production",
+        DEPLOYMENT_MODE: "cloud",
+        INTERNAL_SERVICE_SECRET: "change-me-before-production",
+      }),
+    ).toThrow("INTERNAL_SERVICE_SECRET must be at least 32 characters");
+
+    expect(() =>
+      loadVoiceGatewayEnv({
+        ...baseVoiceGatewayEnv,
+        NODE_ENV: "production",
+        DEPLOYMENT_MODE: "cloud",
+        INTERNAL_SERVICE_SECRET: "a-secure-internal-service-secret-1234",
+        INTERNAL_SERVICE_TOKEN: "a-secure-internal-service-token-12345",
+      }),
+    ).not.toThrow();
   });
 
   it("allows development deployment mode outside production", () => {
@@ -65,7 +86,7 @@ describe("loadVoiceGatewayEnv", () => {
     ).toEqual(["10.0.0.0/8", "192.168.0.0/16"]);
   });
 
-  it("rejects web call max durations above the Convex stale timeout window", () => {
+  it("rejects web call max durations above the stale timeout window", () => {
     expect(() =>
       loadVoiceGatewayEnv({
         ...baseVoiceGatewayEnv,
@@ -93,18 +114,26 @@ describe("loadVoiceGatewayEnv", () => {
 
     expect(env.DASHBOARD_TEST_CALL_TOKEN).toBe("dashboard-token");
   });
-});
 
-describe("loadClientEnv", () => {
-  it("loads the optional web call endpoint", () => {
-    const env = loadClientEnv({
-      CONVEX_URL: "https://example.convex.cloud",
-      CONVEX_SITE_URL: "https://example.convex.site",
-      VITE_WEB_CALL_ENDPOINT: "https://voice.example.com/web-call/sessions",
+  it("loads the only business allowed to receive unsigned public web calls", () => {
+    const env = loadVoiceGatewayEnv({
+      ...baseVoiceGatewayEnv,
+      WEB_CALL_PUBLIC_BUSINESS_SLUG: "public-business",
     });
 
-    expect(env.VITE_WEB_CALL_ENDPOINT).toBe(
-      "https://voice.example.com/web-call/sessions",
-    );
+    expect(env.WEB_CALL_PUBLIC_BUSINESS_SLUG).toBe("public-business");
+  });
+});
+
+describe("assertProductionSecrets", () => {
+  it("rejects missing, short, and placeholder production secrets", () => {
+    expect(() => assertProductionSecrets({ NODE_ENV: "production" }, ["SECRET"])).toThrow("SECRET is required in production");
+    expect(() => assertProductionSecrets({ NODE_ENV: "production", SECRET: "too-short" }, ["SECRET"])).toThrow("SECRET must be at least 32 characters");
+    expect(() => assertProductionSecrets({ NODE_ENV: "production", SECRET: "replace-with-a-long-production-secret" }, ["SECRET"])).toThrow("SECRET must be at least 32 characters");
+  });
+
+  it("accepts strong production secrets and does not constrain development", () => {
+    expect(() => assertProductionSecrets({ NODE_ENV: "production", SECRET: "a-secure-production-secret-value-123" }, ["SECRET"])).not.toThrow();
+    expect(() => assertProductionSecrets({ NODE_ENV: "development", SECRET: "short" }, ["SECRET"])).not.toThrow();
   });
 });

@@ -1,4 +1,4 @@
-# Moneypenny AI Receptionist comparison research
+# Moneypenny AI receptionist comparison research
 
 Checked: 2026-07-30
 

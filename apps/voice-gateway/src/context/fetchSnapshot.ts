@@ -1,13 +1,13 @@
 import { loadVoiceGatewayEnv } from "@lobbystack/config";
 import { demoSnapshot, type BusinessContextSnapshot } from "@lobbystack/shared";
 
+import { signedBackendHeaders } from "../backend/request";
+import { withSpan } from "@lobbystack/telemetry/node";
+import { setBusinessTelemetryConsent } from "../observability/posthog";
+
 type VoiceContextResponse = {
   businessId: string;
   snapshot: BusinessContextSnapshot;
-};
-
-type VoiceTelemetryResponse = {
-  telemetryEnabled: boolean;
 };
 
 export async function fetchSnapshotForPhoneNumber(
@@ -16,20 +16,19 @@ export async function fetchSnapshotForPhoneNumber(
   const env = loadVoiceGatewayEnv(process.env);
 
   try {
-    const response = await fetch(`${env.CONVEX_SITE_URL}/voice/context`, {
+    const serialized = JSON.stringify({ phoneNumber, channel: "voice" });
+    const response = await withSpan("voice.backend.context", { attributes: { "http.request.method": "POST", "url.path": "/voice/context" } }, async () => await fetch(`${env.BACKEND_INTERNAL_URL}/voice/context`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-internal-service-token": env.INTERNAL_SERVICE_TOKEN,
-      },
-      body: JSON.stringify({ phoneNumber, channel: "voice" }),
-    });
+      headers: signedBackendHeaders({ serviceId: process.env.VOICE_GATEWAY_SERVICE_ID ?? "lobbystack-voice-gateway", secret: env.INTERNAL_SERVICE_SECRET ?? env.INTERNAL_SERVICE_TOKEN, body: serialized }),
+      body: serialized,
+    }));
 
     if (!response.ok) {
-      throw new Error(`Convex voice context lookup failed with ${response.status}.`);
+      throw new Error(`Backend voice context lookup failed with ${response.status}.`);
     }
 
     const payload = (await response.json()) as VoiceContextResponse;
+    setBusinessTelemetryConsent(payload.businessId, payload.snapshot.telemetryEnabled === true);
     return payload.snapshot;
   } catch (error) {
     if (env.DEPLOYMENT_MODE === "development" && env.NODE_ENV !== "production") {
@@ -38,25 +37,4 @@ export async function fetchSnapshotForPhoneNumber(
     }
     throw error;
   }
-}
-
-export async function fetchBusinessTelemetryEnabled(
-  businessId: string,
-): Promise<boolean> {
-  const env = loadVoiceGatewayEnv(process.env);
-  const response = await fetch(`${env.CONVEX_SITE_URL}/voice/telemetry`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-internal-service-token": env.INTERNAL_SERVICE_TOKEN,
-    },
-    body: JSON.stringify({ businessId }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Convex voice telemetry lookup failed with ${response.status}.`);
-  }
-
-  const payload = (await response.json()) as VoiceTelemetryResponse;
-  return payload.telemetryEnabled;
 }

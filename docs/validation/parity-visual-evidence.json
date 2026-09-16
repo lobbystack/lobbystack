@@ -1,0 +1,127 @@
+{
+  "output": ".tmp/admin-ui-parity/visual-coverage.json",
+  "cohorts": [
+    {
+      "id": "english-populated-strict-v2",
+      "comparison": "frozen-main",
+      "results": ".tmp/admin-ui-parity/english-populated-strict-v2/port/results.json",
+      "referenceResults": ".tmp/admin-ui-parity/english-populated-strict-v2/reference/results.json",
+      "scope": ".tmp/admin-ui-parity/english-populated-strict-v2/scope.json",
+      "rendered": ".tmp/admin-ui-parity/english-populated-strict-v2/port",
+      "snapshots": ".tmp/admin-ui-parity/english-populated-strict-v2/reference"
+    },
+    {
+      "id": "french-operator-strict-v8",
+      "comparison": "frozen-main",
+      "results": ".tmp/admin-ui-parity/french-operator-strict-v8/port/results.json",
+      "referenceResults": ".tmp/admin-ui-parity/french-operator-strict-v8/reference/results.json",
+      "scope": ".tmp/admin-ui-parity/french-operator-strict-v8/scope.json",
+      "rendered": ".tmp/admin-ui-parity/french-operator-strict-v8/port",
+      "snapshots": ".tmp/admin-ui-parity/french-operator-strict-v8/reference"
+    },
+    {
+      "id": "dashboard-populated-strict-v1",
+      "comparison": "frozen-main",
+      "results": ".tmp/admin-ui-parity/dashboard-populated-strict-v1/port/results.json",
+      "referenceResults": ".tmp/admin-ui-parity/dashboard-populated-strict-v1/reference/results.json",
+      "scope": ".tmp/admin-ui-parity/dashboard-populated-strict-v1/scope.json",
+      "rendered": ".tmp/admin-ui-parity/dashboard-populated-strict-v1/port",
+      "snapshots": ".tmp/admin-ui-parity/dashboard-populated-strict-v1/reference"
+    },
+    {
+      "id": "auth-public-strict-v7",
+      "comparison": "frozen-main",
+      "results": ".tmp/admin-ui-parity/auth-public-strict-v7/port/results.json",
+      "referenceResults": ".tmp/admin-ui-parity/auth-public-strict-v7/reference/results.json",
+      "scope": ".tmp/admin-ui-parity/auth-public-strict-v7/scope.json",
+      "rendered": ".tmp/admin-ui-parity/auth-public-strict-v7/port",
+      "snapshots": ".tmp/admin-ui-parity/auth-public-strict-v7/reference"
+    },
+    {
+      "id": "public-flow-strict-v1",
+      "comparison": "frozen-main",
+      "results": ".tmp/admin-ui-parity/public-flow-strict-v1/port/results.json",
+      "referenceResults": ".tmp/admin-ui-parity/public-flow-strict-v1/reference/results.json",
+      "scope": ".tmp/admin-ui-parity/public-flow-strict-v1/scope.json",
+      "rendered": ".tmp/admin-ui-parity/public-flow-strict-v1/port",
+      "snapshots": ".tmp/admin-ui-parity/public-flow-strict-v1/reference"
+    },
+    {
+      "id": "onboarding-core-strict-v3",
+      "comparison": "frozen-main",
+      "results": ".tmp/admin-ui-parity/onboarding-core-strict-v3/port/results.json",
+      "referenceResults": ".tmp/admin-ui-parity/onboarding-core-strict-v3/reference/results.json",
+      "scope": ".tmp/admin-ui-parity/onboarding-core-strict-v3/scope.json",
+      "rendered": ".tmp/admin-ui-parity/onboarding-core-strict-v3/port",
+      "snapshots": ".tmp/admin-ui-parity/onboarding-core-strict-v3/reference"
+    },
+    {
+      "id": "onboarding-late-strict-v2",
+      "comparison": "frozen-main",
+      "results": ".tmp/admin-ui-parity/onboarding-late-strict-v2/port/results.json",
+      "referenceResults": ".tmp/admin-ui-parity/onboarding-late-strict-v2/reference/results.json",
+      "scope": ".tmp/admin-ui-parity/onboarding-late-strict-v2/scope.json",
+      "rendered": ".tmp/admin-ui-parity/onboarding-late-strict-v2/port",
+      "snapshots": ".tmp/admin-ui-parity/onboarding-late-strict-v2/reference"
+    },
+    {
+      "id": "onboarding-selected-strict-v2",
+      "comparison": "frozen-main",
+      "results": ".tmp/admin-ui-parity/onboarding-selected-strict-v2/port/results.json",
+      "referenceResults": ".tmp/admin-ui-parity/onboarding-selected-strict-v2/reference/results.json",
+      "scope": ".tmp/admin-ui-parity/onboarding-selected-strict-v2/scope.json",
+      "rendered": ".tmp/admin-ui-parity/onboarding-selected-strict-v2/port",
+      "snapshots": ".tmp/admin-ui-parity/onboarding-selected-strict-v2/reference"
+    },
+    {
+      "id": "dynamic-demo-strict-v1",
+      "comparison": "frozen-main",
+      "results": ".tmp/admin-ui-parity/dynamic-demo-strict-v1/port/results.json",
+      "referenceResults": ".tmp/admin-ui-parity/dynamic-demo-strict-v1/reference/results.json",
+      "scope": ".tmp/admin-ui-parity/dynamic-demo-strict-v1/scope.json",
+      "rendered": ".tmp/admin-ui-parity/dynamic-demo-strict-v1/port",
+      "snapshots": ".tmp/admin-ui-parity/dynamic-demo-strict-v1/reference"
+    },
+    {
+      "id": "loading-parity-v4",
+      "comparison": "frozen-main",
+      "results": ".tmp/admin-ui-parity/loading-parity-v4/port/results.json",
+      "referenceResults": ".tmp/admin-ui-parity/loading-parity-v4/reference/results.json",
+      "scope": ".tmp/admin-ui-parity/loading-parity-v4/scope.json",
+      "rendered": ".tmp/admin-ui-parity/loading-parity-v4/port/traces",
+      "snapshots": ".tmp/admin-ui-parity/loading-parity-v4/snapshots"
+    },
+    {
+      "id": "invitation-parity-v3",
+      "comparison": "frozen-main",
+      "results": ".tmp/admin-ui-parity/invitation-parity-v3/port/results.json",
+      "referenceResults": ".tmp/admin-ui-parity/invitation-parity-v3/reference/results.json",
+      "scope": ".tmp/admin-ui-parity/invitation-parity-v3/scope.json",
+      "rendered": ".tmp/admin-ui-parity/invitation-parity-v3/port/traces",
+      "snapshots": ".tmp/admin-ui-parity/invitation-parity-v3/snapshots"
+    },
+    {
+      "id": "new-operator-states-strict-v2",
+      "comparison": "port-baseline",
+      "results": ".tmp/admin-ui-parity/new-operator-states-strict-v2/results.json",
+      "rendered": ".tmp/admin-ui-parity/new-operator-states-strict-v2/traces",
+      "snapshots": ".tmp/admin-ui-parity/new-operator-states-strict-v2/snapshots"
+    },
+    {
+      "id": "auth-compat-baselines-v1",
+      "comparison": "port-baseline",
+      "results": ".tmp/admin-ui-parity/auth-compat-baselines-v1/traces/results.json",
+      "rendered": ".tmp/admin-ui-parity/auth-compat-baselines-v1/traces",
+      "snapshots": ".tmp/admin-ui-parity/auth-compat-baselines-v1/snapshots"
+    },
+    {
+      "id": "viewer-strict-v1",
+      "comparison": "frozen-main",
+      "results": ".tmp/admin-ui-parity/viewer-strict-v1/port/results.json",
+      "referenceResults": ".tmp/admin-ui-parity/viewer-strict-v1/reference/results.json",
+      "scope": ".tmp/admin-ui-parity/viewer-strict-v1/scope.json",
+      "rendered": ".tmp/admin-ui-parity/viewer-strict-v1/port",
+      "snapshots": ".tmp/admin-ui-parity/viewer-strict-v1/reference"
+    }
+  ]
+}

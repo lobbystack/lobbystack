@@ -8,6 +8,7 @@ import {
 import { PostHog } from "posthog-node";
 
 import { loadVoiceGatewayEnv, type VoiceGatewayEnv } from "@lobbystack/config";
+import { redactOtelExceptionText } from "@lobbystack/telemetry/node";
 import {
   bucketLatencyMs,
   buildAlertableExceptionTelemetryProperties,
@@ -29,6 +30,7 @@ import {
 
 type AiTraceCommon = {
   businessId: string;
+  telemetryEnabled?: boolean;
   traceId: string;
   callId?: string;
   conversationId?: string;
@@ -46,21 +48,25 @@ let loggerProvider: LoggerProvider | null = null;
 let operationalLogger: Logger | null = null;
 let runtimeEnv: VoiceGatewayEnv | null | undefined;
 let fatalHandlersInstalled = false;
-const optedOutBusinessIds = new Set<string>();
+const tenantConsent = new Map<string, { enabled: boolean; expiresAt: number }>();
 
-export function setBusinessTelemetryEnabled(
-  businessId: string,
-  telemetryEnabled: boolean,
-): void {
-  if (telemetryEnabled) {
-    optedOutBusinessIds.delete(businessId);
-  } else {
-    optedOutBusinessIds.add(businessId);
-  }
+/** Called with authoritative call-start context, not user-supplied call data. */
+export function setBusinessTelemetryConsent(businessId: string, enabled: boolean): void {
+  tenantConsent.delete(businessId);
+  tenantConsent.set(businessId, { enabled, expiresAt: Date.now() + 60 * 60 * 1000 });
+  if (tenantConsent.size > 4096) tenantConsent.delete(tenantConsent.keys().next().value!);
 }
 
-function isBusinessOptedOut(businessId?: string): boolean {
-  return Boolean(businessId && optedOutBusinessIds.has(businessId));
+function allowsExternalTelemetry(businessId?: string, properties?: Record<string, unknown>): boolean {
+  const id = businessId ?? (typeof properties?.businessId === "string" ? properties.businessId : undefined);
+  if (id) {
+    const consent = tenantConsent.get(id);
+    if (consent && consent.expiresAt <= Date.now()) tenantConsent.delete(id);
+    return consent?.enabled === true && consent.expiresAt > Date.now();
+  }
+  // Unknown call ownership is not consent. Anonymous process health remains
+  // available independently from optional tenant usage/error collection.
+  return !properties?.callId && !properties?.conversationId && !properties?.traceId;
 }
 
 const VOICE_GATEWAY_DISTINCT_ID = "system:voice-gateway";
@@ -181,14 +187,7 @@ function capture(
     properties: Record<string, unknown>;
   },
 ): void {
-  const businessId = resolveOperationalBusinessId({
-    ...(input.businessId ? { businessId: input.businessId } : {}),
-    properties: input.properties as TelemetryProperties,
-  });
-  if (isBusinessOptedOut(businessId)) {
-    return;
-  }
-
+  if (!allowsExternalTelemetry(input.businessId, input.properties)) return;
   const activeClient = getClient();
   if (!activeClient) {
     return;
@@ -262,9 +261,6 @@ function normalizeOperationalAttributes(
       case "lobbystack.tool_name":
         normalized.toolName = String(value);
         break;
-      case "lobbystack.convex_path":
-        normalized.convexPath = String(value);
-        break;
       case "http.status_code":
         normalized.httpStatusCode = Number(value);
         break;
@@ -303,23 +299,6 @@ function coerceLogAttributes(
   return attributes;
 }
 
-function resolveOperationalBusinessId(input: {
-  businessId?: string;
-  properties?: TelemetryProperties;
-}): string | undefined {
-  if (input.businessId) {
-    return input.businessId;
-  }
-  if (typeof input.properties?.businessId === "string") {
-    return input.properties.businessId;
-  }
-  const rawBusinessId = input.properties?.["lobbystack.business_id"];
-  if (typeof rawBusinessId === "string") {
-    return rawBusinessId;
-  }
-  return undefined;
-}
-
 function captureOperationalEvent(input: {
   event: string;
   properties?: TelemetryProperties;
@@ -336,10 +315,9 @@ function captureOperationalEvent(input: {
     deploymentMode: env.DEPLOYMENT_MODE,
     runtime: "voice-gateway",
   });
-  const businessId = resolveOperationalBusinessId({
-    ...(input.businessId ? { businessId: input.businessId } : {}),
-    ...(input.properties ? { properties: input.properties } : {}),
-  });
+  const businessId =
+    input.businessId ??
+    (typeof properties.businessId === "string" ? properties.businessId : undefined);
 
   capture(input.event, {
     distinctId:
@@ -367,14 +345,7 @@ export function emitOperationalLog(input: {
   properties?: TelemetryProperties;
   businessId?: string;
 }): void {
-  const businessId = resolveOperationalBusinessId({
-    ...(input.businessId ? { businessId: input.businessId } : {}),
-    ...(input.properties ? { properties: input.properties } : {}),
-  });
-  if (isBusinessOptedOut(businessId)) {
-    return;
-  }
-
+  if (!allowsExternalTelemetry(input.businessId, input.properties)) return;
   const logger = getOperationalLogger();
   if (!logger) {
     return;
@@ -387,7 +358,7 @@ export function emitOperationalLog(input: {
 
   const attributes = coerceLogAttributes({
     ...input.properties,
-    ...(businessId ? { businessId } : {}),
+    ...(input.businessId ? { businessId: input.businessId } : {}),
     deploymentMode: env.DEPLOYMENT_MODE,
     runtime: "voice-gateway",
   });
@@ -408,6 +379,7 @@ export async function startPostHogObservability(): Promise<void> {
 }
 
 export function captureAiTraceStarted(input: AiTraceCommon): void {
+  setBusinessTelemetryConsent(input.businessId, input.telemetryEnabled === true);
   capture("$ai_trace", {
     distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
     businessId: input.businessId,
@@ -568,7 +540,7 @@ export async function shutdownPostHog(): Promise<void> {
 }
 
 function getErrorExceptionType(error: unknown): string {
-  if (error instanceof Error && error.name) {
+  if (error instanceof Error && /^[A-Za-z0-9_.-]{1,80}$/.test(error.name)) {
     return error.name;
   }
   return "ApplicationError";
@@ -643,14 +615,7 @@ export function capturePostHogException(
     properties?: TelemetryProperties;
   },
 ): void {
-  const businessId = resolveOperationalBusinessId({
-    ...(input?.businessId ? { businessId: input.businessId } : {}),
-    ...(input?.properties ? { properties: input.properties } : {}),
-  });
-  if (isBusinessOptedOut(businessId)) {
-    return;
-  }
-
+  if (!allowsExternalTelemetry(input?.businessId, input?.properties)) return;
   const activeClient = getClient();
   if (!activeClient) {
     return;
@@ -689,16 +654,23 @@ export function capturePostHogException(
     }),
   };
 
-  if (businessId) {
+  if (input?.businessId) {
     additionalProperties.$groups = {
-      business: getPostHogBusinessGroupKey(businessId),
+      business: getPostHogBusinessGroupKey(input.businessId),
     };
   }
 
+  const safeError = new Error(exceptionMessage);
+  safeError.name = /^[A-Za-z0-9_.-]{1,80}$/.test(exceptionType) ? exceptionType : "Error";
+  if (error instanceof Error && error.stack) {
+    safeError.stack = [`${safeError.name}: ${safeError.message}`, ...error.stack.split("\n").slice(1, 30).filter((line) => line.trimStart().startsWith("at ")).map(redactOtelExceptionText)].join("\n");
+  }
   activeClient.captureException(
-    error,
+    safeError,
     input?.distinctId ??
-      (businessId ? getPostHogDistinctIdForBusinessSystem(businessId) : undefined),
+      (input?.businessId
+        ? getPostHogDistinctIdForBusinessSystem(input.businessId)
+        : undefined),
     additionalProperties,
   );
 }

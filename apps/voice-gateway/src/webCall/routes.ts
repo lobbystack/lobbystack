@@ -1,7 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { buildVoiceSystemPrompt } from "@lobbystack/ai";
-import { WEB_CALL_STALE_GRACE_MS } from "@lobbystack/shared";
+import { resolveOpenAiPricing, WEB_CALL_STALE_GRACE_MS } from "@lobbystack/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import WebSocket from "ws";
 
@@ -14,19 +14,24 @@ import {
   RuntimeRequestError,
   startWebVoiceCall,
   uploadVoiceRecording,
-} from "../convex/runtimeClient";
+} from "../backend/runtimeClient";
 import {
+  captureAiGeneration,
+  captureAiTraceStarted,
   capturePostHogException,
-  setBusinessTelemetryEnabled,
+  setBusinessTelemetryConsent,
 } from "../observability/posthog";
 import type { EndCallRequest } from "../realtime/callControl";
 import { executeVoiceTool } from "../realtime/toolExecutor";
 import { createWebRealtimeToolDefinitions } from "../realtime/toolDefinitions";
+import { observeVoiceLatency, vadSilenceMs } from "../realtime/latency";
 
 type WebCallSessionRequest = {
   businessSlug: string;
   dashboardTestCallProof?: string;
   widgetId?: string;
+  widgetKey?: string;
+  widgetSessionToken?: string;
   sdp: string;
   pageUrl?: string;
   visitorId?: string;
@@ -50,6 +55,7 @@ type OpenAiRealtimeMessage = {
   transcript?: string;
   response?: {
     id?: string;
+    model?: string;
     status?: string;
     metadata?: Record<string, string | number | boolean | null> | null;
     usage?: {
@@ -78,19 +84,24 @@ type RealtimeUsageMetrics = NonNullable<
 >["usage"];
 
 type ActiveWebCall = {
+  knowledgeTurn?: { id: string; lookups: number };
   gatewaySessionId: string;
   businessSlug: string;
   businessId: string;
   callId: string;
   conversationId: string;
   providerCallId: string;
+  aiTraceId: string;
   startedAtMs: number;
+  pendingAssistantResponseRequestAtMs: number | null;
+  assistantResponseStartedAtMsById: Map<string, number>;
+  maxDurationMs: number;
   handledToolCallIds: Set<string>;
   sidebandSocket: WebSocket | null;
   maxDurationTimer: ReturnType<typeof setTimeout> | null;
   finalized: boolean;
   openingGreetingActive: boolean;
-  openingGreetingTurnDetectionTimer: ReturnType<typeof setTimeout> | null;
+  openingGreetingInterrupted: boolean;
   seenTranscriptKeys: Set<string>;
   transcriptSequence: number;
   pendingAssistantTranscriptFlushTimer: ReturnType<typeof setTimeout> | null;
@@ -103,6 +114,10 @@ type ActiveWebCall = {
   sessionMode?: "prospect_demo";
   prospectDemoToken?: string;
   dashboardTestCallToken?: string;
+  widgetSessionToken?: string;
+  contextOrigin: string;
+  visitorId?: string;
+  publicWebCall?: boolean;
 };
 
 type CompletedWebCall = {
@@ -127,8 +142,6 @@ const activeWebCalls = new Map<string, ActiveWebCall>();
 const completedWebCalls = new Map<string, CompletedWebCall>();
 const WEB_REALTIME_VAD_THRESHOLD = 0.65;
 const WEB_REALTIME_VAD_PREFIX_PADDING_MS = 300;
-const WEB_REALTIME_VAD_SILENCE_DURATION_MS = 700;
-const WEB_POST_GREETING_INPUT_GRACE_MS = 2_000;
 const WEB_COMPLETED_SESSION_UPLOAD_GRACE_MS = 10 * 60_000;
 const WEB_ASSISTANT_TRANSCRIPT_REORDER_GRACE_MS = 1_500;
 const WEB_RECORDING_BYTES_PER_SECOND_LIMIT = 64 * 1024;
@@ -150,7 +163,6 @@ const PROSPECT_DEMO_INTAKE_TOOL_NAMES = new Set([
 ]);
 export function resetWebCallRouteStateForTests(): void {
   for (const session of activeWebCalls.values()) {
-    clearWebOpeningGreetingTimer(session);
     clearWebMaxDurationTimer(session);
     clearWebEndCallFallbackTimer(session);
     if (session.pendingAssistantTranscriptFlushTimer !== null) {
@@ -199,6 +211,8 @@ function parseWebCallSessionRequest(
   const rawPageUrl = getStringProperty(input, "pageUrl");
   const rawVisitorId = getStringProperty(input, "visitorId");
   const rawWidgetId = getStringProperty(input, "widgetId");
+  const rawWidgetKey = getStringProperty(input, "widgetKey");
+  const rawWidgetSessionToken = getStringProperty(input, "widgetSessionToken");
   const rawDashboardTestCallProof = getStringProperty(
     input,
     "dashboardTestCallProof",
@@ -234,6 +248,7 @@ function parseWebCallSessionRequest(
   const pageUrl = rawPageUrl?.trim();
   const visitorId = rawVisitorId?.trim();
   const widgetId = rawWidgetId?.trim();
+  const widgetKey = rawWidgetKey?.trim();
   const dashboardTestCallProof = rawDashboardTestCallProof?.trim();
   const prospectDemoToken = rawProspectDemoToken?.trim();
 
@@ -246,6 +261,8 @@ function parseWebCallSessionRequest(
       ...(pageUrl ? { pageUrl } : {}),
       ...(visitorId ? { visitorId } : {}),
       ...(widgetId ? { widgetId } : {}),
+      ...(widgetKey ? { widgetKey } : {}),
+      ...(rawWidgetSessionToken ? { widgetSessionToken: rawWidgetSessionToken } : {}),
       ...(prospectDemoToken ? { prospectDemoToken } : {}),
     },
   };
@@ -302,6 +319,20 @@ function verifyDashboardTestCallProof(input: {
   );
 }
 
+function resolveDashboardTestCallToken(source: {
+  DASHBOARD_TEST_CALL_TOKEN?: string | undefined;
+  DEPLOYMENT_MODE?: string | undefined;
+  INTERNAL_SERVICE_TOKEN?: string | undefined;
+  NODE_ENV?: string | undefined;
+}): string | undefined {
+  const configuredToken = source.DASHBOARD_TEST_CALL_TOKEN?.trim();
+  if (configuredToken) return configuredToken;
+  if (source.NODE_ENV === "production" || source.DEPLOYMENT_MODE !== "development") return undefined;
+  const internalToken = source.INTERNAL_SERVICE_TOKEN?.trim();
+  if (!internalToken) return undefined;
+  return createHmac("sha256", internalToken).update("lobbystack:dashboard-test-call:development").digest("hex");
+}
+
 function isAllowedOrigin(
   server: FastifyInstance,
   origin: string | null,
@@ -312,6 +343,13 @@ function isAllowedOrigin(
   const allowedOrigins = getAllowedOrigins(
     server.runtimeConfig.WEB_CALL_ALLOWED_ORIGINS,
   );
+  if (server.runtimeConfig.APP_BASE_URL) {
+    try {
+      allowedOrigins.add(new URL(server.runtimeConfig.APP_BASE_URL).origin);
+    } catch {
+      // The environment schema already validates the URL.
+    }
+  }
   return (
     allowedOrigins.has(origin) ||
     (server.runtimeConfig.DEPLOYMENT_MODE === "development" &&
@@ -361,7 +399,7 @@ function getWebCallDurationSeconds(
 function addCorsHeaders(reply: FastifyReply, origin: string): void {
   reply.header("Access-Control-Allow-Origin", origin);
   reply.header("Access-Control-Allow-Methods", "POST, OPTIONS");
-  reply.header("Access-Control-Allow-Headers", "Content-Type");
+  reply.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Widget-Parent-Origin");
   reply.header("Access-Control-Max-Age", "600");
   reply.header("Vary", "Origin");
 }
@@ -642,7 +680,7 @@ export function createWebRealtimeTurnDetectionConfig(
     type: "server_vad",
     threshold: WEB_REALTIME_VAD_THRESHOLD,
     prefix_padding_ms: WEB_REALTIME_VAD_PREFIX_PADDING_MS,
-    silence_duration_ms: WEB_REALTIME_VAD_SILENCE_DURATION_MS,
+    silence_duration_ms: vadSilenceMs(),
     create_response: options.createResponse ?? true,
     interrupt_response: options.interruptResponse ?? true,
   };
@@ -654,16 +692,12 @@ function enableWebRealtimeTurnDetection(
   session: ActiveWebCall,
   reason: string,
 ): void {
-  if (!session.openingGreetingActive || session.finalized) {
+  if (session.finalized) {
     return;
   }
 
-  if (session.openingGreetingTurnDetectionTimer !== null) {
-    clearTimeout(session.openingGreetingTurnDetectionTimer);
-    session.openingGreetingTurnDetectionTimer = null;
-  }
   session.openingGreetingActive = false;
-  postRealtimeEvent(socket, { type: "input_audio_buffer.clear" });
+  session.openingGreetingInterrupted = false;
   postRealtimeEvent(socket, {
     type: "session.update",
     session: {
@@ -683,44 +717,6 @@ function enableWebRealtimeTurnDetection(
     },
     "Enabled web voice turn detection after opening greeting",
   );
-}
-
-function scheduleWebRealtimeTurnDetectionEnable(
-  server: FastifyInstance,
-  socket: WebSocket,
-  session: ActiveWebCall,
-  reason: string,
-): void {
-  if (
-    !session.openingGreetingActive ||
-    session.finalized ||
-    session.openingGreetingTurnDetectionTimer !== null
-  ) {
-    return;
-  }
-
-  postRealtimeEvent(socket, { type: "input_audio_buffer.clear" });
-  session.openingGreetingTurnDetectionTimer = setTimeout(() => {
-    session.openingGreetingTurnDetectionTimer = null;
-    enableWebRealtimeTurnDetection(server, socket, session, reason);
-  }, WEB_POST_GREETING_INPUT_GRACE_MS);
-
-  server.log.info(
-    {
-      callId: session.callId,
-      providerCallId: session.providerCallId,
-      reason,
-      graceMs: WEB_POST_GREETING_INPUT_GRACE_MS,
-    },
-    "Waiting briefly before enabling web voice turn detection after opening greeting",
-  );
-}
-
-function clearWebOpeningGreetingTimer(session: ActiveWebCall): void {
-  if (session.openingGreetingTurnDetectionTimer !== null) {
-    clearTimeout(session.openingGreetingTurnDetectionTimer);
-    session.openingGreetingTurnDetectionTimer = null;
-  }
 }
 
 function clearWebMaxDurationTimer(session: ActiveWebCall): void {
@@ -820,6 +816,10 @@ async function hangupOpenAiRealtimeProviderCall(
       },
     );
 
+    if (!response) {
+      return;
+    }
+
     if (!response.ok) {
       const body = await response.text().catch(() => "");
       server.log.warn(
@@ -856,7 +856,6 @@ async function finishWebCallSession(
   }
 
   session.finalized = true;
-  clearWebOpeningGreetingTimer(session);
   clearWebMaxDurationTimer(session);
   clearWebEndCallFallbackTimer(session);
   try {
@@ -893,9 +892,7 @@ function requestWebFinalMessageBeforeHangup(
   }
 
   session.pendingEndCall = endCall;
-  postRealtimeEvent(socket, {
-    type: "response.create",
-    response: {
+  requestWebResponse(socket, session, {
       metadata: {
         lobbystack_purpose: WEB_FINAL_MESSAGE_METADATA_PURPOSE,
       },
@@ -905,7 +902,6 @@ function requestWebFinalMessageBeforeHangup(
         "Do not call any tools and do not add anything else.",
       ].join(" "),
       tool_choice: "none",
-    },
   });
 
   session.pendingEndCallFallbackTimer = setTimeout(() => {
@@ -946,7 +942,7 @@ function scheduleWebMaxDurationTimer(
         );
       },
     );
-  }, server.runtimeConfig.WEB_CALL_MAX_DURATION_MS);
+  }, session.maxDurationMs);
 }
 
 function parseProviderCallId(
@@ -983,18 +979,53 @@ function postRealtimeEvent(
   }
 }
 
+function requestWebResponse(
+  socket: WebSocket,
+  session: ActiveWebCall,
+  response?: Record<string, unknown>,
+): void {
+  session.pendingAssistantResponseRequestAtMs = Date.now();
+  postRealtimeEvent(socket, {
+    type: "response.create",
+    ...(response ? { response } : {}),
+  });
+}
+
+function trackWebResponseCreated(
+  session: ActiveWebCall,
+  responseId: string | undefined,
+): void {
+  // Manual responses are timed from our request. Automatic VAD responses have
+  // no client-side request, so their provider-created event is the first
+  // defensible timestamp available to the gateway.
+  const startedAtMs =
+    session.pendingAssistantResponseRequestAtMs ?? Date.now();
+  if (responseId) {
+    session.assistantResponseStartedAtMsById.set(responseId, startedAtMs);
+  }
+  // The request timestamp belongs to the newly-created response. Keeping it
+  // after this point could incorrectly attribute a subsequent VAD response to
+  // an earlier manual response.
+  session.pendingAssistantResponseRequestAtMs = null;
+}
+
 function priceUsage(
   server: FastifyInstance,
   usage: RealtimeUsageMetrics | undefined,
+  model = server.runtimeConfig.OPENAI_REALTIME_MODEL,
 ): number | null {
   if (!usage) {
     return null;
   }
 
+  const catalog = (typeof resolveOpenAiPricing === "function" ? resolveOpenAiPricing(model) : undefined)
+    ?.ratesUsdPerMillionTokens;
   const fallbackInputPrice =
-    server.runtimeConfig.OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD;
+    server.runtimeConfig.OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD ??
+    (catalog?.textInput !== undefined ? catalog.textInput / 1_000_000 : undefined);
   const fallbackOutputPrice =
-    server.runtimeConfig.OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD;
+    server.runtimeConfig.OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD ??
+    (catalog?.textOutput !== undefined ? catalog.textOutput / 1_000_000 : undefined);
   const textInputTokens = usage.input_token_details?.text_tokens;
   const audioInputTokens = usage.input_token_details?.audio_tokens;
   const cachedInputTokens = usage.input_token_details?.cached_tokens ?? 0;
@@ -1004,14 +1035,17 @@ function priceUsage(
     server.runtimeConfig.OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD ??
     fallbackInputPrice;
   const audioInputPrice =
-    server.runtimeConfig.OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD;
+    server.runtimeConfig.OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD ??
+    (catalog?.audioInput !== undefined ? catalog.audioInput / 1_000_000 : undefined);
   const textOutputPrice =
     server.runtimeConfig.OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD ??
     fallbackOutputPrice;
   const audioOutputPrice =
-    server.runtimeConfig.OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD;
+    server.runtimeConfig.OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD ??
+    (catalog?.audioOutput !== undefined ? catalog.audioOutput / 1_000_000 : undefined);
   const cachedInputPrice =
-    server.runtimeConfig.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD;
+    server.runtimeConfig.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD ??
+    (catalog?.cachedInput !== undefined ? catalog.cachedInput / 1_000_000 : undefined);
 
   const hasDetailedInput =
     textInputTokens !== undefined || audioInputTokens !== undefined;
@@ -1040,10 +1074,7 @@ function priceUsage(
         [outputTokens, fallbackOutputPrice],
       ];
 
-  const hasAnyPricedTokens = pricedBuckets.some(
-    ([tokens, price]) => tokens !== undefined && price !== undefined,
-  );
-  if (!hasAnyPricedTokens) {
+  if (pricedBuckets.some(([tokens, price]) => tokens !== undefined && tokens > 0 && price === undefined)) {
     return null;
   }
 
@@ -1118,8 +1149,6 @@ function createSidebandSocket(input: {
         instructions: [
           buildVoiceSystemPrompt(input.snapshot),
           "You are speaking through a website voice widget, not a phone call.",
-          "Represent LobbyStack and answer questions about the business from the supplied snapshot and tools.",
-          "For LobbyStack feature, workflow, policy, limitation, pricing, usage, billing, integration, plan, and documentation questions, call searchKnowledge before answering unless the exact answer is already present in the current conversation or structured snapshot.",
           "Use the configured greeting only once at the start of the session. Never repeat it after the opening greeting, even after interruptions, silence, or filler speech.",
           "If the latest audio is silence, background noise, echo of your own previous audio, hold music, TV audio, side conversation, or speech not addressed to you, call waitForUser and do not speak.",
           ...(input.session.sessionMode === "prospect_demo"
@@ -1158,15 +1187,21 @@ function createSidebandSocket(input: {
       },
     });
 
-    postRealtimeEvent(socket, {
-      type: "response.create",
-      response: {
+    captureAiTraceStarted({
+      businessId: input.session.businessId,
+      telemetryEnabled: input.snapshot.telemetryEnabled === true,
+      traceId: input.session.aiTraceId,
+      callId: input.session.callId,
+      conversationId: input.session.conversationId,
+      model: input.server.runtimeConfig.OPENAI_REALTIME_MODEL,
+      provider: "openai",
+    });
+    requestWebResponse(socket, input.session, {
         instructions: [
           `Begin by greeting the visitor with this exact greeting: "${input.snapshot.greeting}"`,
           "Then stop speaking and wait for the visitor.",
           "Do not repeat this greeting later in the session.",
         ].join(" "),
-      },
     });
   });
 
@@ -1221,7 +1256,6 @@ function createSidebandSocket(input: {
       },
       "OpenAI Realtime web call sideband websocket closed",
     );
-    clearWebOpeningGreetingTimer(input.session);
     void finishWebCallSession(
       input.server,
       input.session,
@@ -1248,6 +1282,13 @@ async function handleSidebandMessage(
   rawMessage: WebSocket.RawData,
 ): Promise<void> {
   const payload = JSON.parse(rawMessage.toString()) as OpenAiRealtimeMessage;
+  const latency = observeVoiceLatency(session, payload.type);
+  if (latency) server.log.info({ ...latency, callId: session.callId, channel: "web_voice" }, "Voice turn latency");
+
+  if (payload.type === "response.created") {
+    trackWebResponseCreated(session, payload.response?.id);
+    return;
+  }
 
   if (
     payload.type === "response.function_call_arguments.done" &&
@@ -1279,20 +1320,64 @@ async function handleSidebandMessage(
   }
 
   if (payload.type === "response.done") {
-    if (payload.response?.usage) {
-      const costUsd = priceUsage(server, payload.response.usage);
-      if (costUsd !== null) {
-        await recordVoiceAiCost({
+    const response = payload.response;
+    const model = response?.model ?? server.runtimeConfig.OPENAI_REALTIME_MODEL;
+    const responseStartedAtMs = response?.id
+      ? session.assistantResponseStartedAtMsById.get(response.id) ?? session.pendingAssistantResponseRequestAtMs
+      : session.pendingAssistantResponseRequestAtMs;
+    const latencyMs =
+      responseStartedAtMs === null || responseStartedAtMs === undefined
+        ? undefined
+        : Date.now() - responseStartedAtMs;
+    const usage = response?.usage;
+    const costUsd = usage ? priceUsage(server, usage, model) : null;
+    captureAiGeneration({
+        businessId: session.businessId,
+        traceId: session.aiTraceId,
+        callId: session.callId,
+        conversationId: session.conversationId,
+        model,
+        provider: "openai",
+        ...(latencyMs !== undefined ? { latencyMs } : {}),
+        ...(usage?.input_tokens !== undefined
+          ? { inputTokens: usage.input_tokens }
+          : {}),
+        ...(usage?.output_tokens !== undefined
+          ? { outputTokens: usage.output_tokens }
+          : {}),
+        ...(usage?.total_tokens !== undefined
+          ? { totalTokens: usage.total_tokens }
+          : {}),
+        ...(usage?.input_token_details?.cached_tokens !== undefined
+          ? { cachedInputTokens: usage.input_token_details.cached_tokens }
+          : {}),
+        ...(costUsd !== null ? { totalCostUsd: costUsd } : {}),
+        isStreaming: true,
+        isError: response?.status === "failed",
+        ...(response?.status === "failed" ? { error: "generation_failed" } : {}),
+        properties: { channel: "web_voice", operation: "web_voice.response_generation" },
+    });
+    if (usage) {
+      const pricing = typeof resolveOpenAiPricing === "function" ? resolveOpenAiPricing(model) : undefined;
+        await Promise.resolve(recordVoiceAiCost({
           businessId: session.businessId,
           callId: session.callId,
           conversationId: session.conversationId,
           occurredAt: new Date().toISOString(),
-          eventKey: `web_voice_ai:response:${session.callId}:${payload.response.id ?? payload.event_id ?? crypto.randomUUID()}`,
+          eventKey: `web_voice_ai:response:${session.callId}:${response?.id ?? payload.event_id ?? crypto.randomUUID()}`,
           costUsd,
           provider: "openai",
-          model: server.runtimeConfig.OPENAI_REALTIME_MODEL,
+          model,
           operation: "web_voice.response_generation",
-        }).catch((error: unknown) => {
+          ...(pricing ? { pricingVersion: pricing.version, pricingSource: pricing.sourceUrl, pricingEffectiveDate: pricing.effectiveDate, pricingRates: pricing.ratesUsdPerMillionTokens } : {}),
+          tokenUsage: {
+            ...(usage.input_tokens !== undefined ? { inputTokens: usage.input_tokens } : {}),
+            ...(usage.output_tokens !== undefined ? { outputTokens: usage.output_tokens } : {}),
+            ...(usage.input_token_details?.cached_tokens !== undefined ? { cachedInputTokens: usage.input_token_details.cached_tokens } : {}),
+            ...(usage.input_token_details?.audio_tokens !== undefined ? { audioInputTokens: usage.input_token_details.audio_tokens } : {}),
+            ...(usage.output_token_details?.audio_tokens !== undefined ? { audioOutputTokens: usage.output_token_details.audio_tokens } : {}),
+          },
+        })).catch((error: unknown) => {
           server.log.error(
             {
               err: error,
@@ -1302,7 +1387,11 @@ async function handleSidebandMessage(
             "Failed to persist web voice response AI cost",
           );
         });
-      }
+    }
+    if (response?.id) {
+      session.assistantResponseStartedAtMsById.delete(response.id);
+    } else {
+      session.pendingAssistantResponseRequestAtMs = null;
     }
 
     if (
@@ -1334,7 +1423,7 @@ async function handleSidebandMessage(
     }
 
     if (session.openingGreetingActive) {
-      scheduleWebRealtimeTurnDetectionEnable(
+      enableWebRealtimeTurnDetection(
         server,
         socket,
         session,
@@ -1392,16 +1481,34 @@ async function handleSidebandMessage(
   }
 
   if (payload.type === "input_audio_buffer.speech_started") {
+    session.knowledgeTurn = { id: crypto.randomUUID(), lookups: 0 };
     if (session.openingGreetingActive) {
+      session.openingGreetingActive = false;
+      session.openingGreetingInterrupted = true;
+      postRealtimeEvent(socket, { type: "response.cancel" });
+      postRealtimeEvent(socket, { type: "output_audio_buffer.clear" });
       server.log.info(
         {
           callId: session.callId,
           providerCallId: session.providerCallId,
         },
-        "Ignored web voice speech detection during opening greeting",
+        "Caller interrupted web voice opening greeting",
       );
-      return;
     }
+    return;
+  }
+
+  if (
+    payload.type === "input_audio_buffer.speech_stopped" &&
+    session.openingGreetingInterrupted
+  ) {
+    enableWebRealtimeTurnDetection(
+      server,
+      socket,
+      session,
+      "caller_barge_in_complete",
+    );
+    requestWebResponse(socket, session);
     return;
   }
 
@@ -1445,24 +1552,34 @@ async function handleToolCall(
         }),
       },
     });
-    postRealtimeEvent(socket, { type: "response.create" });
+    requestWebResponse(socket, session);
     return;
   }
 
   let executed: Awaited<ReturnType<typeof executeVoiceTool>>;
+  const toolStartedAt = performance.now();
+  let contextDurationMs: number | undefined;
   try {
     const context = await fetchWebVoiceContext({
       businessSlug: session.businessSlug,
+      origin: session.contextOrigin,
+      ...(session.widgetSessionToken ? { widgetSessionToken: session.widgetSessionToken } : {}),
+      ...(session.visitorId ? { visitorId: session.visitorId } : {}),
       ...(session.prospectDemoToken !== undefined
         ? { prospectDemoToken: session.prospectDemoToken }
         : {}),
       ...(session.dashboardTestCallToken !== undefined
         ? { dashboardTestCallToken: session.dashboardTestCallToken }
         : {}),
+      ...(session.publicWebCall ? { publicWebCall: true } : {}),
     });
+    contextDurationMs = performance.now() - toolStartedAt;
+    const knowledgeTurn = session.knowledgeTurn ??= { id: toolCall.callId, lookups: 0 };
     executed = await executeVoiceTool({
       toolName: toolCall.name,
       rawArguments: toolCall.arguments,
+      turnId: knowledgeTurn.id,
+      claimKnowledgeLookup: () => ++knowledgeTurn.lookups <= 2,
       snapshot: context.snapshot,
       businessId: session.businessId,
       callId: session.callId,
@@ -1480,6 +1597,10 @@ async function handleToolCall(
       },
       "Failed to execute web voice tool call",
     );
+    capturePostHogException(error, {
+      businessId: session.businessId,
+      properties: { operation: "web_voice_tool", channel: "web_voice", callId: session.callId, toolName: toolCall.name },
+    });
     postRealtimeEvent(socket, {
       type: "conversation.item.create",
       item: {
@@ -1491,9 +1612,14 @@ async function handleToolCall(
         }),
       },
     });
-    postRealtimeEvent(socket, { type: "response.create" });
+    requestWebResponse(socket, session);
     return;
   }
+
+  server.log.info({
+    event: "voice.tool_latency", callId: session.callId, channel: "web_voice",
+    toolName: toolCall.name, contextDurationMs, durationMs: performance.now() - toolStartedAt,
+  }, "Voice tool latency");
 
   postRealtimeEvent(socket, {
     type: "conversation.item.create",
@@ -1519,7 +1645,7 @@ async function handleToolCall(
     return;
   }
 
-  postRealtimeEvent(socket, { type: "response.create" });
+  requestWebResponse(socket, session);
 }
 
 export function registerWebCallRoutes(server: FastifyInstance): void {
@@ -1588,34 +1714,57 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       }
       const body = parsedBody.data;
       const businessSlug = body.businessSlug;
+      const widgetOriginHeader = request.headers["x-widget-parent-origin"];
+      const widgetOrigin = typeof widgetOriginHeader === "string" ? widgetOriginHeader.trim() : undefined;
+      if (body.widgetSessionToken && !widgetOrigin) {
+        reply.code(403);
+        return { error: "A widget parent origin is required." };
+      }
 
       const gatewaySessionId = crypto.randomUUID();
       const widgetId = normalizeOptionalAbuseKey(body.widgetId);
       const visitorId = normalizeOptionalAbuseKey(body.visitorId);
       const ipHash = hashAbuseKey(server, getClientIp(request));
+      const configuredDashboardTestCallToken = resolveDashboardTestCallToken(server.runtimeConfig);
       const dashboardTestCallToken =
         widgetId === DASHBOARD_TEST_CALL_WIDGET_ID &&
         verifyDashboardTestCallProof({
           businessSlug,
           proof: body.dashboardTestCallProof,
-          token: server.runtimeConfig.DASHBOARD_TEST_CALL_TOKEN,
+          token: configuredDashboardTestCallToken,
         })
-          ? server.runtimeConfig.DASHBOARD_TEST_CALL_TOKEN?.trim()
+          ? configuredDashboardTestCallToken
           : undefined;
+      const publicWebCall =
+        server.runtimeConfig.WEB_CALL_PUBLIC_BUSINESS_SLUG !== undefined &&
+        businessSlug === server.runtimeConfig.WEB_CALL_PUBLIC_BUSINESS_SLUG;
+      if (
+        !body.widgetSessionToken &&
+        !body.prospectDemoToken &&
+        !dashboardTestCallToken &&
+        !publicWebCall
+      ) {
+        reply.code(403);
+        return { error: "A signed web call authorization is required." };
+      }
       let context: Awaited<ReturnType<typeof fetchWebVoiceContext>>;
       try {
         context = await fetchWebVoiceContext({
           businessSlug,
-          origin: origin!,
+          origin: widgetOrigin ?? origin!,
           ...(dashboardTestCallToken !== undefined
             ? { dashboardTestCallToken }
             : {}),
           ...(ipHash !== undefined ? { ipHash } : {}),
           ...(visitorId !== undefined ? { visitorId } : {}),
           ...(widgetId !== undefined ? { widgetId } : {}),
+          ...(body.widgetKey !== undefined ? { widgetKey: body.widgetKey } : {}),
+          ...(body.widgetSessionToken !== undefined ? { widgetSessionToken: body.widgetSessionToken } : {}),
           ...(body.prospectDemoToken !== undefined
             ? { prospectDemoToken: body.prospectDemoToken }
             : {}),
+          ...(publicWebCall ? { publicWebCall: true } : {}),
+          maxDurationMs: server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
         });
       } catch (error) {
         if (error instanceof RuntimeRequestError) {
@@ -1632,11 +1781,10 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         }
         throw error;
       }
-      request.businessId = context.businessId;
-      setBusinessTelemetryEnabled(
-        context.businessId,
-        context.snapshot.telemetryEnabled ?? true,
-      );
+      if (!context.snapshot) {
+        return reply.code(503).send({ error: "The voice agent is still being prepared. Please try again shortly." });
+      }
+      setBusinessTelemetryConsent(context.businessId, context.snapshot.telemetryEnabled === true);
       let exchange: Awaited<ReturnType<typeof exchangeWebRtcOffer>>;
       try {
         exchange = await exchangeWebRtcOffer({
@@ -1667,6 +1815,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       try {
         call = await startWebVoiceCall({
           businessSlug,
+          origin: origin!,
           providerCallId,
           gatewaySessionId,
           ...(ipHash !== undefined ? { ipHash } : {}),
@@ -1686,11 +1835,15 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
           ...(dashboardTestCallToken !== undefined
             ? { dashboardTestCallToken }
             : {}),
+          ...(body.widgetSessionToken !== undefined
+            ? { widgetSessionToken: body.widgetSessionToken }
+            : {}),
+          ...(publicWebCall ? { publicWebCall: true } : {}),
         });
       } catch (error) {
         await hangupOpenAiRealtimeProviderCall(server, {
           providerCallId,
-          reason: "convex_start_failed",
+          reason: "backend_start_failed",
         });
         if (error instanceof RuntimeRequestError) {
           return replyWithRuntimeRequestError(error, reply);
@@ -1705,13 +1858,17 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         callId: call.callId,
         conversationId: call.conversationId,
         providerCallId,
+        aiTraceId: crypto.randomUUID(),
         startedAtMs: Date.parse(startedAt),
+        pendingAssistantResponseRequestAtMs: null,
+        assistantResponseStartedAtMsById: new Map(),
+        maxDurationMs: call.webCallMaxDurationMs ?? server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
         handledToolCallIds: new Set(),
         sidebandSocket: null,
         maxDurationTimer: null,
         finalized: false,
         openingGreetingActive: true,
-        openingGreetingTurnDetectionTimer: null,
+        openingGreetingInterrupted: false,
         seenTranscriptKeys: new Set(),
         transcriptSequence: 1,
         pendingAssistantTranscriptFlushTimer: null,
@@ -1727,6 +1884,10 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         ...(dashboardTestCallToken !== undefined
           ? { dashboardTestCallToken }
           : {}),
+        ...(body.widgetSessionToken !== undefined ? { widgetSessionToken: body.widgetSessionToken } : {}),
+        contextOrigin: widgetOrigin ?? origin!,
+        ...(visitorId !== undefined ? { visitorId } : {}),
+        ...(publicWebCall ? { publicWebCall: true } : {}),
       };
       const sidebandSocket = createSidebandSocket({
         server,

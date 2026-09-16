@@ -20,6 +20,14 @@ const terminalMessageStatuses = new Set<SmsMessageStatus>([
   "failed",
 ]);
 
+const terminalTwilioMessageStatuses = new Set([
+  "sent",
+  "delivered",
+  "undelivered",
+  "failed",
+  "canceled",
+]);
+
 const terminalNotificationStatuses = new Set<NotificationDeliveryStatus>([
   "delivered",
   "failed",
@@ -45,6 +53,10 @@ const notificationStatusRank: Record<NotificationDeliveryStatus, number> = {
 
 export function normalizeTwilioMessageStatus(status: string | undefined): string {
   return status?.trim().toLowerCase() ?? "";
+}
+
+export function isTerminalTwilioMessageStatus(status: string | undefined): boolean {
+  return terminalTwilioMessageStatuses.has(normalizeTwilioMessageStatus(status));
 }
 
 export function mapTwilioStatusToMessageStatus(status: string | undefined): SmsMessageStatus {

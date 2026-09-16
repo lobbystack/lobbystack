@@ -1,7 +1,8 @@
-import type { BusinessContextSnapshot } from "@lobbystack/shared";
+import { isTransferPermitted, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { z } from "zod";
 
 import {
+  capturePostHogException,
   recordToolExecutionFailure,
   recordToolExecutionLatency,
 } from "../observability/posthog";
@@ -18,7 +19,7 @@ import {
   updateVoiceTransferState,
   verifyVoiceAppointmentChangeOtp,
   verifyVoiceAppointmentForChange,
-} from "../convex/runtimeClient";
+} from "../backend/runtimeClient";
 import {
   MAX_CUMULATIVE_HOLD_SECONDS,
   MAX_SINGLE_HOLD_SECONDS,
@@ -94,7 +95,7 @@ function matchesKnowledgeQuery(value: string, query: string): boolean {
   return queryTokens.some((token) => normalizedValue.includes(token));
 }
 
-function buildSnapshotFallbackMatches(
+function buildSnapshotKnowledgeMatches(
   snapshot: BusinessContextSnapshot,
   query: string,
 ): Array<VoiceKnowledgeMatch> {
@@ -112,22 +113,8 @@ function buildSnapshotFallbackMatches(
       } satisfies VoiceKnowledgeMatch,
     ];
   });
-  const digest = snapshot.knowledgeDigest?.trim();
-  return [
-    ...snippetMatches,
-    ...(digest && matchesKnowledgeQuery(digest, query)
-      ? [
-          {
-            title: "Knowledge digest",
-            text: digest,
-          } satisfies VoiceKnowledgeMatch,
-        ]
-      : []),
-  ];
-}
-
-function isTransferAllowed(snapshot: BusinessContextSnapshot): boolean {
-  return snapshot.transferPolicy.mode !== "never" && Boolean(snapshot.transferPolicy.transferNumber);
+  // The digest is a source inventory, not supporting evidence.
+  return snippetMatches;
 }
 
 const checkAvailabilitySchema = z.object({
@@ -190,6 +177,8 @@ const rescheduleAppointmentSchema = z.object({
 });
 
 const transferCallSchema = z.object({
+  callerRequested: z.boolean().optional().default(false),
+  urgent: z.boolean().optional().default(false),
   reason: z.string().optional(),
 });
 
@@ -237,6 +226,8 @@ export async function executeVoiceTool(input: {
   snapshot: BusinessContextSnapshot;
   businessId: string;
   callId?: string;
+  turnId?: string;
+  claimKnowledgeLookup?: () => boolean;
   conversationId?: string;
   callerPhone: string;
   channel?: "voice" | "web_voice";
@@ -251,7 +242,7 @@ export async function executeVoiceTool(input: {
     ...(input.conversationId
       ? { "lobbystack.conversation_id": input.conversationId }
       : {}),
-    "lobbystack.model": process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime",
+    "lobbystack.model": process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime-2.1",
     "lobbystack.tool_name": input.toolName,
   };
 
@@ -286,30 +277,50 @@ export async function executeVoiceTool(input: {
       }
       case "searchKnowledge": {
         const parsed = searchKnowledgeSchema.parse(JSON.parse(input.rawArguments || "{}"));
+        if (input.claimKnowledgeLookup && !input.claimKnowledgeLookup()) {
+          return { result: { matches: [], outcome: "unavailable", source: "none", fallbackUsed: false, reason: "refinement_limit", message: "The lookup limit for this turn has been reached. Ask for clarification or explain that the answer could not be verified." } };
+        }
         try {
-          const matches = await searchVoiceKnowledge({
+          const response = await searchVoiceKnowledge({
             businessId: input.businessId,
             query: parsed.query,
+            ...(input.callId ? { callId: input.callId } : {}),
+            ...(input.turnId ? { turnId: input.turnId } : {}),
           });
+          const matches = Array.isArray(response) ? response : response.matches;
+          const outcome = Array.isArray(response) ? (matches.length ? "found" : "empty") : response.outcome;
+          attributes["knowledge.outcome"] = outcome;
+          attributes["knowledge.mode"] = Array.isArray(response) ? "legacy" : response.mode;
+          attributes["knowledge.result_count"] = matches.length;
+
+          const snapshotMatches = buildSnapshotKnowledgeMatches(
+            input.snapshot,
+            parsed.query,
+          );
 
           if (matches.length > 0) {
+            const combinedMatches = [...snapshotMatches, ...matches].slice(0, 6);
             return {
               result: {
-                matches,
-                source: "rag",
+                matches: combinedMatches,
+                outcome,
+                mode: Array.isArray(response) ? "legacy" : response.mode,
+                source:
+                  snapshotMatches.length > 0 ? "rag_and_snapshot" : "rag",
                 fallbackUsed: false,
               },
             };
           }
 
-          const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot, parsed.query);
+          const fallbackMatches = snapshotMatches;
           if (fallbackMatches.length > 0) {
             return {
               result: {
                 matches: fallbackMatches,
+                outcome: "found",
                 source: "snapshot_fallback",
                 fallbackUsed: true,
-                fallbackReason: "no_matches",
+                fallbackReason: outcome === "unavailable" ? "rag_error" : "no_matches",
               },
             };
           }
@@ -317,16 +328,21 @@ export async function executeVoiceTool(input: {
           return {
             result: {
               matches: [],
+              outcome,
               source: "none",
               fallbackUsed: false,
             },
           };
-        } catch {
-          const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot, parsed.query);
+        } catch (error) {
+          capturePostHogException(error, { businessId: input.businessId, properties: { operation: "knowledge_lookup", callId: input.callId, toolName: input.toolName } });
+          attributes["knowledge.outcome"] = "unavailable";
+          attributes["knowledge.result_count"] = 0;
+          const fallbackMatches = buildSnapshotKnowledgeMatches(input.snapshot, parsed.query);
           if (fallbackMatches.length > 0) {
             return {
               result: {
                 matches: fallbackMatches,
+                outcome: "found",
                 source: "snapshot_fallback",
                 fallbackUsed: true,
                 fallbackReason: "rag_error",
@@ -337,6 +353,7 @@ export async function executeVoiceTool(input: {
           return {
             result: {
               matches: [],
+              outcome: "unavailable",
               source: "none",
               fallbackUsed: false,
             },
@@ -346,6 +363,7 @@ export async function executeVoiceTool(input: {
       case "checkAvailability": {
         const parsed = checkAvailabilitySchema.parse(JSON.parse(input.rawArguments || "{}"));
         const result = await checkVoiceAvailability({
+          ...(input.callId ? { callId: input.callId } : {}),
           businessId: input.businessId,
           serviceName: parsed.serviceName,
           startsAt: parsed.startsAt,
@@ -361,6 +379,7 @@ export async function executeVoiceTool(input: {
       case "findAvailability": {
         const parsed = findAvailabilitySchema.parse(JSON.parse(input.rawArguments || "{}"));
         const result = await findVoiceAvailability({
+          ...(input.callId ? { callId: input.callId } : {}),
           businessId: input.businessId,
           serviceName: parsed.serviceName,
           date: parsed.date,
@@ -392,6 +411,7 @@ export async function executeVoiceTool(input: {
           };
         }
         const result = await bookVoiceAppointment({
+          ...(input.callId ? { callId: input.callId } : {}),
           businessId: input.businessId,
           serviceName: parsed.serviceName,
           startsAt: parsed.startsAt,
@@ -517,12 +537,12 @@ export async function executeVoiceTool(input: {
       }
       case "transferCall": {
         const parsed = transferCallSchema.parse(JSON.parse(input.rawArguments || "{}"));
-        if (!isTransferAllowed(input.snapshot) || !input.snapshot.transferPolicy.transferNumber) {
+        if (!isTransferPermitted(input.snapshot, parsed) || !input.snapshot.transferPolicy.transferNumber) {
           return {
             result: {
               ok: false,
               reason:
-                "Transfers are not enabled for this business or no transfer number is configured.",
+                "The configured transfer policy does not permit this handoff. Offer to take a message.",
             },
           };
         }

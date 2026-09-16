@@ -9,7 +9,7 @@ export const selfHostedFaqs: FaqItem[] = [
   {
     question: "Is LobbyStack open source?",
     answer:
-      "Yes. LobbyStack is published under the GNU AGPL-3.0-only license. You can inspect, fork, modify, and deploy the source code under that license. Review the LICENSE file in the GitHub repository before distributing a modified service.",
+      "Yes. LobbyStack uses the MIT License. You can inspect, fork, modify, distribute, and deploy the source code under that license. Keep the copyright and permission notices with copies or substantial portions of the software.",
   },
   {
     question: "What are the self-hosting requirements?",
@@ -24,7 +24,7 @@ export const selfHostedFaqs: FaqItem[] = [
   {
     question: "Is self-hosting suitable for agencies and resellers?",
     answer:
-      "Agencies can evaluate separate or multi-tenant deployments for client work. Because LobbyStack uses the AGPL-3.0-only license, review its source-disclosure obligations before modifying or reselling the service, and seek legal advice for your use case.",
+      "Yes. The MIT License permits agencies to modify and distribute LobbyStack for client work. The LobbyStack name, logos, and branding remain subject to separate trademark rights.",
   },
   {
     question: "How do updates work for self-hosted deployments?",
@@ -49,6 +49,6 @@ export const selfHostedFaqs: FaqItem[] = [
   {
     question: "How does self-hosted pricing work?",
     answer:
-      "The AGPL-3.0-only source code has no separate software license fee. You remain responsible for infrastructure plus any telephony, AI, storage, monitoring, and integration-provider charges used by your deployment.",
+      "The MIT-licensed source code has no separate software license fee. You remain responsible for infrastructure plus any telephony, AI, storage, monitoring, and integration-provider charges used by your deployment.",
   },
 ]

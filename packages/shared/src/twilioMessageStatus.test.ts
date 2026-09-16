@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isTerminalTwilioMessageStatus,
   mapTwilioStatusToMessageStatus,
   mapTwilioStatusToNotificationStatus,
   normalizeTwilioMessageStatus,
@@ -12,6 +13,12 @@ describe("twilio message status helpers", () => {
   it("normalizes Twilio status strings for matching", () => {
     expect(normalizeTwilioMessageStatus(" Delivered ")).toBe("delivered");
     expect(normalizeTwilioMessageStatus(undefined)).toBe("");
+  });
+
+  it("recognizes provider terminal statuses used for pricing reconciliation", () => {
+    expect(isTerminalTwilioMessageStatus("sent")).toBe(true);
+    expect(isTerminalTwilioMessageStatus("delivered")).toBe(true);
+    expect(isTerminalTwilioMessageStatus("queued")).toBe(false);
   });
 
   it("maps Twilio provider status to app message state", () => {

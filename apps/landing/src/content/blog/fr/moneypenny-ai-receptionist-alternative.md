@@ -27,7 +27,7 @@ Moneypenny ajoute un accompagnement et l'accès à son activité de réception h
 | Relais humain | Votre équipe ou Moneypenny | Votre équipe configurée |
 | Mise en place | Accompagnement annoncé | Cloud libre-service ou aide Enterprise |
 | Déploiement | Géré par Moneypenny | Cloud géré ou auto-hébergement |
-| Code source | Non annoncé | Dépôt public AGPL-3.0 |
+| Code source | Non annoncé | Dépôt public sous licence MIT |
 
 Prix et fonctions vérifiés le 30 juillet 2026.
 

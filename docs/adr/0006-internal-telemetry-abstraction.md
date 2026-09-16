@@ -1,4 +1,6 @@
-# ADR 0006: Use An Internal Telemetry Abstraction
+# ADR 0006: use an internal telemetry abstraction
+
+Typed internal events keep provider code out of product and domain modules.
 
 ## Status
 

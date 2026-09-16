@@ -31,7 +31,7 @@ LobbyStack inclut réservation, relais humain, alertes SMS, transcriptions, rés
 
 Prix et fonctions vérifiés le 30 juillet 2026.
 
-## LobbyStack inclut le workflow réservé à Scale
+## LobbyStack inclut le workflow réservé à scale
 
 Le niveau d'entrée Rosie propose beaucoup de minutes pour prendre des messages. Une entreprise qui veut réserver, envoyer un texto pendant l'appel ou effectuer un transfert assisté doit comparer LobbyStack au niveau Scale à 149 $.
 

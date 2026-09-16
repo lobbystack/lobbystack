@@ -1,5 +1,5 @@
 ---
-title: "Open-Source AI Receptionist Stack"
+title: "Open-source AI receptionist stack"
 description: "LobbyStack is an open-source AI receptionist stack for calls, booking, transcripts, dashboards, billing, self-hosting, and client deployments."
 pubDate: 2026-06-18T10:00:00-04:00
 author: "LobbyStack Team"
@@ -22,7 +22,7 @@ Many AI receptionist projects start with the same pile of tools:
 
 - Retell, Vapi, or Twilio for voice
 - n8n, Zapier, Make, or custom webhooks for glue
-- Google Calendar or Outlook for booking
+- Google Calendar for booking
 - a database for calls, contacts, transcripts, recordings, and appointments
 - prompt logic for business rules, escalation, and handoff
 - SMS and email notifications
@@ -70,7 +70,7 @@ LobbyStack uses OpenAI Realtime for the live voice conversation and Twilio Voice
 
 The voice gateway stays narrow. It handles the live call, streams audio, manages the realtime session, executes call tools, buffers transcripts, and sends recordings where they need to go.
 
-Convex stays the source of truth. It owns business state, booking, knowledge, contacts, appointments, messages, workflows, transcripts, settings, and billing state.
+PostgreSQL is the durable source of truth. The Next.js app handles operator and API traffic, while the worker processes asynchronous jobs and transactional outbox events.
 
 That split matters. A phone call needs low latency, but a business action needs the backend to make the final decision. LobbyStack loads the business context snapshot at the start of a call, then calls backend tools when the AI needs to book, transfer, save a message, update an appointment, or create a follow-up task.
 
@@ -82,7 +82,7 @@ Some teams want the product managed. [LobbyStack Cloud](/pricing/) is for that. 
 
 Other teams want the stack on their own infrastructure. LobbyStack supports that too.
 
-The [self-hosted AI receptionist](/solutions/self-hosted-ai-receptionist/) path uses Docker Compose as the single-host baseline. The documented setup runs the Convex backend, Convex dashboard, web dashboard, voice gateway, and Caddy for HTTPS. You bring the provider accounts you want to control, including Twilio, OpenAI, calendar, email, analytics, and billing-related credentials.
+The [self-hosted AI receptionist](/solutions/self-hosted-ai-receptionist/) path uses Docker Compose as the single-host baseline. The documented setup runs PostgreSQL, Redis, the Next.js app, the background worker, the voice gateway, and Caddy for HTTPS. You bring the provider accounts you want to control, including Twilio, OpenAI-compatible AI, Google Calendar, email, analytics, and billing credentials.
 
 That gives agencies and technical operators a cleaner client story. If a clinic, med spa, home service company, or law firm wants the system on its own servers or cloud account, you can deploy there instead of forcing the business into a closed hosted app.
 
@@ -128,7 +128,7 @@ If you are comparing open-source phone answering options first, see the guide to
 
 ## Try it or self-host it
 
-Start with [LobbyStack Cloud](https://lobbystack.com/) if you want to test the product quickly.
+Start with [LobbyStack Cloud](https://lobbystack.com/) if you want to test the product without managing infrastructure.
 
 Use the [self-hosting overview](https://docs.lobbystack.com/self-hosting/overview) and [Docker Compose guide](https://docs.lobbystack.com/self-hosting/docker-compose) if you want to run the stack yourself.
 

@@ -1,0 +1,44 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "./migration/**/*.ts",
+    "./release-readiness*.ts",
+    "./seed-release-e2e.ts",
+    "./production-migration-preflight.ts",
+    "./prepare-admin-standalone*.ts",
+    "./replacement-calendar-check.ts",
+    "./replacement-dashboard-aggregates-check.ts",
+    "./voice-knowledge-retrieval-check.ts",
+    "./replacement-appointment-audit-check.ts",
+    "./replacement-billing-check.ts",
+    "./replacement-feedback-check.ts",
+    "./replacement-import-check.ts",
+    "./replacement-import.ts",
+    "./replacement-parity-check.ts",
+    "./replacement-reconciliation.ts",
+    "./replacement-smoke.ts",
+    "./replacement-smoke.test.ts",
+    "./replacement-sms-consent-check.ts",
+    "./replacement-unit-economics-check.ts",
+    "./replacement-analytics-usage-check.ts",
+    "./replacement-follow-up-check.ts",
+    "./replacement-knowledge-lifecycle-check.ts",
+    "./replacement-appointment-policy-check.ts",
+    "./replacement-onboarding-check.ts",
+    "./replacement-catalog-check.ts",
+    "./replacement-realtime-check.ts",
+    "./replacement-webhook-check.ts",
+    "./replacement-telemetry-check.ts",
+    "./replacement-password-recovery-check.ts",
+    "./replacement-email-change-check.ts",
+    "./performance/**/*.ts",
+    "./operations/**/*.ts"
+  ]
+}

@@ -27,6 +27,15 @@ function constantTimeEqual(left: string, right: string): boolean {
   return mismatch === 0;
 }
 
+/** Restore the configured public endpoint while retaining the exact signed query. */
+export function resolveTwilioWebhookUrl(requestUrl: string, publicEndpoint?: string): string {
+  if (!publicEndpoint) return requestUrl;
+  const endpoint = new URL(publicEndpoint);
+  endpoint.search = new URL(requestUrl).search;
+  endpoint.hash = "";
+  return endpoint.toString();
+}
+
 export function buildTwilioSignaturePayload(
   url: string,
   params: Record<string, string> = {},

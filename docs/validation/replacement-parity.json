@@ -1,0 +1,71 @@
+{
+  "capabilities": [
+    {
+      "id": "sms.consent",
+      "status": "required",
+      "implementation": ["packages/db/migrations/0029_sms_consent.sql", "packages/domain/src/server/sms.ts", "packages/domain/src/server/notifications.ts"],
+      "tests": ["packages/domain/src/server/smsConsent.test.ts"],
+      "certification": ["scripts/replacement-sms-consent-check.ts"]
+    },
+    {
+      "id": "billing.non_ai_usage_and_caps",
+      "status": "required",
+      "implementation": ["packages/domain/src/server/usage.ts", "packages/domain/src/server/billing.ts", "apps/admin/app/api/billing/route.ts"],
+      "tests": ["packages/domain/src/server/usage.test.ts"],
+      "certification": ["scripts/replacement-billing-check.ts"]
+    },
+    {
+      "id": "feedback.delivery",
+      "status": "required",
+      "implementation": ["packages/domain/src/server/feedback.ts", "apps/admin/app/api/feedback/route.ts", "apps/admin/src/lib/feedback-rate-limit.ts"],
+      "tests": ["apps/admin/src/lib/feedback-rate-limit.test.ts"],
+      "certification": ["scripts/replacement-feedback-check.ts"]
+    },
+    {
+      "id": "appointment.change_audit",
+      "status": "required",
+      "implementation": ["packages/domain/src/server/appointmentChanges.ts", "packages/domain/src/server/booking.ts"],
+      "tests": ["scripts/replacement-appointment-audit-check.ts"],
+      "certification": ["scripts/replacement-appointment-audit-check.ts"]
+    },
+    {
+      "id": "unit_economics.non_sms_ai",
+      "status": "required",
+      "implementation": ["packages/domain/src/server/unitEconomics.ts", "apps/admin/app/api/analytics/route.ts"],
+      "tests": ["scripts/replacement-unit-economics-check.ts"],
+      "certification": ["scripts/replacement-unit-economics-check.ts"]
+    },
+    {
+      "id": "migration.import_and_reconciliation",
+      "status": "required",
+      "implementation": ["scripts/replacement-import.ts", "packages/db/migrations/0036_replacement_import_ids.sql"],
+      "tests": ["scripts/replacement-import-check.ts"],
+      "certification": ["scripts/replacement-import-check.ts", "scripts/replacement-reconciliation.ts", "docs/validation/certification-runbook.md"]
+    },
+    {
+      "id": "certification.release_gates",
+      "status": "required",
+      "implementation": [".github/workflows/replacement-platform.yml"],
+      "tests": ["scripts/replacement-parity-check.ts"],
+      "certification": ["docs/validation/certification-runbook.md"]
+    },
+    {
+      "id": "billing.ai_sms",
+      "status": "excluded",
+      "reason": "AI-generated SMS and AI-SMS add-on billing or metering are intentionally excluded.",
+      "forbiddenPatterns": ["ai_sms", "sms_ai", "sms.processInbound", "sms.reply"]
+    },
+    {
+      "id": "compliance.twilio_a2p",
+      "status": "excluded",
+      "reason": "Twilio A2P registration is intentionally excluded; production alerts require an independently compliant sender.",
+      "forbiddenPatterns": ["twilioA2p", "10DLC", "a2pRegistration"]
+    },
+    {
+      "id": "parity.inventory_only",
+      "status": "retired",
+      "reason": "The generated source inventory was replaced by this curated, enforceable capability manifest."
+    }
+  ],
+  "excludedScanRoots": ["apps/admin/app/api", "apps/admin/app/voice", "apps/worker/src", "packages/domain/src/server", "packages/jobs/src"]
+}

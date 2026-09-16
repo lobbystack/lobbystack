@@ -1,4 +1,6 @@
-# ADR 0003: Use A Separate Voice Gateway
+# ADR 0003: use a separate voice gateway
+
+LobbyStack isolates latency-sensitive voice transport from the dashboard and durable backend.
 
 ## Status
 

@@ -1,5 +1,5 @@
 ---
-title: "AI Receptionist Workflows Without Flowcharts"
+title: "AI receptionist workflows without flowcharts"
 description: "AI receptionist workflows break when call behavior lives across prompts, webhooks, and branches. Use plain-language policy plus trusted tools instead."
 pubDate: 2026-06-18T09:00:00-04:00
 author: "LobbyStack Team"
@@ -16,7 +16,7 @@ A workflow builder sees four paths. A receptionist hears one customer trying to 
 
 That gap is where many AI receptionist workflows get messy. The first demo works because the caller follows the script. Production calls do not.
 
-## The demo workflow is easy
+## The demo workflow hides complexity
 
 A first AI receptionist build often looks clean:
 
@@ -114,7 +114,7 @@ The receptionist does not invent pricing. It collects the right details, shares 
 
 ### Callbacks
 
-Callbacks look simple until the caller says "tomorrow morning," gives a different phone number, or asks for a manager because the request feels urgent.
+Callbacks become harder when the caller says "tomorrow morning," gives a different phone number, or asks for a manager because the request feels urgent.
 
 The policy can say:
 

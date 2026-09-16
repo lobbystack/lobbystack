@@ -1,6 +1,6 @@
 ---
-title: "Moneypenny AI Receptionist Alternative"
-seoTitle: "Moneypenny AI Receptionist Alternative: LobbyStack"
+title: "Moneypenny AI Receptionist alternative"
+seoTitle: "Moneypenny AI Receptionist alternative: LobbyStack"
 description: "Compare Moneypenny AI Receptionist and LobbyStack on managed setup, human escalation, per-call pricing, source access, and self-hosted control."
 pubDate: 2026-07-30T10:00:00-04:00
 updatedDate: 2026-07-30T10:00:00-04:00
@@ -27,7 +27,7 @@ Moneypenny adds managed onboarding and access to its live-receptionist operation
 | Human escalation | Customer team or Moneypenny staff | Configured customer team |
 | Onboarding | Managed setup advertised | Self-serve cloud or implementation support |
 | Booking and qualification | Advertised | Included receptionist workflows |
-| Source code | Not advertised | Public AGPL-3.0 repository |
+| Source code | Not advertised | Public MIT-licensed repository |
 | Deployment | Moneypenny-managed | Managed cloud or self-hosted |
 
 Pricing and features were checked on July 30, 2026.

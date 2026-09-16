@@ -19,34 +19,16 @@ import {
   getImplicitEndCallForAssistantTranscript,
   getRealtimeGenerationOutcome,
   markRealtimeToolCallHandled,
+  markTranscriptionCommitted,
+  consumeTranscriptionLatencyMs,
   shouldRecoverFromOpenAiRealtimeServerError,
   shouldSkipImplicitEndCallAudioDone,
   shouldSkipImplicitEndCallResponseDone,
-  shouldUseCachedSnapshot,
   shouldUseAssistantFinalMessageForToolEndCall,
 } from "./mediaStream";
 
-describe("shouldUseCachedSnapshot", () => {
-  it("accepts a cached snapshot when the stream version matches", () => {
-    expect(shouldUseCachedSnapshot({ version: "snapshot-v1" }, "snapshot-v1")).toBe(
-      true,
-    );
-  });
-
-  it("rejects a cached snapshot when the stream has a newer version", () => {
-    expect(shouldUseCachedSnapshot({ version: "snapshot-v1" }, "snapshot-v2")).toBe(
-      false,
-    );
-  });
-
-  it("keeps supporting streams without a snapshot version", () => {
-    expect(shouldUseCachedSnapshot({ version: "snapshot-v1" })).toBe(true);
-    expect(shouldUseCachedSnapshot(null)).toBe(false);
-  });
-});
-
 describe("createRealtimeTurnDetectionConfig", () => {
-  it("can disable auto responses and interruptions during the opening greeting", () => {
+  it("can disable auto responses and interruptions for manual response flows", () => {
     expect(
       createRealtimeTurnDetectionConfig(30_000, {
         createResponse: false,
@@ -63,7 +45,7 @@ describe("createRealtimeTurnDetectionConfig", () => {
     });
   });
 
-  it("defaults to normal caller turn handling after the greeting", () => {
+  it("defaults to interruptible caller turn handling", () => {
     expect(createRealtimeTurnDetectionConfig(30_000)).toEqual({
       type: "server_vad",
       threshold: 0.8,
@@ -280,6 +262,28 @@ describe("estimateRealtimeTotalCostUsd", () => {
     );
 
     expect(totalCostUsd).toBeCloseTo(0.0046);
+  });
+});
+
+describe("transcription item correlation", () => {
+  it("keeps concurrent committed items separate and cleans them on completion", () => {
+    const commits = new Map<string, number>();
+    markTranscriptionCommitted(commits, "item-a", 100);
+    markTranscriptionCommitted(commits, "item-b", 200);
+
+    expect(consumeTranscriptionLatencyMs(commits, "item-b", 260)).toBe(60);
+    expect(commits.has("item-b")).toBe(false);
+    expect(consumeTranscriptionLatencyMs(commits, "item-a", 310)).toBe(210);
+    expect(commits.size).toBe(0);
+  });
+
+  it("omits latency without a committed item and still clears failed items", () => {
+    const commits = new Map<string, number>();
+    markTranscriptionCommitted(commits, "failed-item", 100);
+    expect(consumeTranscriptionLatencyMs(commits, undefined, 200)).toBeUndefined();
+    expect(commits.has("failed-item")).toBe(true);
+    expect(consumeTranscriptionLatencyMs(commits, "failed-item", 200)).toBe(100);
+    expect(commits.size).toBe(0);
   });
 });
 

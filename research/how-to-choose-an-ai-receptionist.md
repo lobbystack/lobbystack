@@ -1,34 +1,34 @@
-# Research: How to Choose an AI Receptionist
+# Research: how to choose an AI receptionist
 
 Research date: June 3, 2026
 
 Audience: small service businesses that rely on inbound calls for bookings, quotes, orders, appointments, or urgent requests.
 
-## Search Intent
+## Search intent
 
 The query "How to choose an AI receptionist?" is commercial investigation. Buyers are usually not asking what AI is; they are trying to compare vendors, avoid a bad purchase, and understand whether an AI receptionist can safely replace or support their current call handling.
 
 Likely questions:
 
-- Will it answer every call, or just take messages?
+- Will it answer every call, or only take messages?
 - Can it book appointments or qualify leads?
 - Will it work for my industry?
-- What does it really cost after usage limits and overages?
+- What does it cost after usage limits and overages?
 - What happens when the AI is wrong, uncertain, or the caller is upset?
 - What compliance or privacy issues should I check?
 
-## Main Buying Criteria
+## Main buying criteria
 
 - Call outcomes: prioritize booking, lead qualification, routing, intake, confirmations, and summaries over generic "24/7 answering."
 - Workflow fit: test against the business's real call types, such as new leads, reschedules, pricing questions, emergencies, complaints, and spam.
 - Scheduling depth: confirm real-time calendar access, service rules, staff availability, buffers, rescheduling, and confirmations.
 - Integrations: calendar, CRM, POS, dispatch, practice management, SMS, email, Zapier/webhooks/API.
-- Knowledge controls: approved answers, easy updates, restricted topics, and clear escalation when the AI is unsure.
+- Knowledge controls: approved answers, direct updates, restricted topics, and clear escalation when the AI is unsure.
 - Human handoff: live transfer, urgent alerts, fallback routing, and human backup for complex or high-risk calls.
 - Reporting: transcripts, recordings where legal, summaries, booked-call metrics, escalations, failures, and searchable history.
 - Privacy and security: data retention, deletion/export, model training policy, subprocessors, admin permissions, encryption, DPA/BAA availability.
 
-## Common Features in 2026
+## Common features in 2026
 
 - 24/7 call answering
 - AI voice conversation
@@ -47,7 +47,7 @@ Likely questions:
 
 Advanced or plan-dependent features include live human fallback, custom workflows, vertical integrations, multi-location routing, VIP handling, sentiment/urgency detection, outbound reminders, SSO, SLAs, and dedicated onboarding.
 
-## Pricing Considerations
+## Pricing considerations
 
 Common pricing models:
 
@@ -77,7 +77,7 @@ Public examples found during research:
 - Slang AI: restaurant-focused plans listed from $399 to $599 per location, with reservation, VIP, guest request, bilingual, and alert workflows.
 - My AI Front Desk / Frontdesk: listed a free tier and a $79/month annual Business-in-a-Box plan with 200 voice minutes/month plus chat, SMS, CRM, and automation allowances.
 
-## Risks and Red Flags
+## Risks and red flags
 
 - The AI only takes messages and cannot complete the core workflow.
 - No clear handoff to staff or live humans.
@@ -92,7 +92,7 @@ Public examples found during research:
 - Outbound AI calling without consent controls.
 - Vendor controls the phone number and makes switching difficult.
 
-## Practical Buyer Checklist
+## Practical buyer checklist
 
 Before shopping:
 
@@ -105,7 +105,7 @@ Before shopping:
 During vendor evaluation:
 
 - Test 20 to 50 realistic calls.
-- Include easy calls, edge cases, complaints, noisy callers, accents, reschedules, urgent requests, and integration failures.
+- Include routine calls, edge cases, complaints, noisy callers, accents, reschedules, urgent requests, and integration failures.
 - Verify that the AI books, routes, updates systems, summarizes, and escalates correctly.
 - Ask for exact pricing, usage limits, data terms, consent controls, and rollout support.
 
@@ -117,7 +117,7 @@ Rollout:
 - Update the knowledge base whenever hours, pricing, services, staff, menus, or policies change.
 - Recalculate ROI after 30, 60, and 90 days.
 
-## Source Notes
+## Source notes
 
 - Smith.ai AI Receptionist pricing: https://smith.ai/pricing/ai-receptionist
 - Goodcall pricing: https://www.goodcall.com/pricing

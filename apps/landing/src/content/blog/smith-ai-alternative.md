@@ -1,6 +1,6 @@
 ---
-title: "Smith.ai Alternative: AI and Human Coverage"
-seoTitle: "Smith.ai Alternative: LobbyStack vs Smith.ai"
+title: "Smith.ai alternative: AI and human coverage"
+seoTitle: "Smith.ai alternative: LobbyStack vs Smith.ai"
 description: "Compare LobbyStack and Smith.ai on AI call handling, live-agent backup, pricing, booking, customization, source access, and self-hosted deployment."
 pubDate: 2026-07-30T11:30:00-04:00
 updatedDate: 2026-07-30T11:30:00-04:00
@@ -26,7 +26,7 @@ Smith.ai combines AI with access to a North American receptionist network. Lobby
 | Human backup | Agent network; some live tasks cost per call | Transfer to your configured team |
 | Booking and intake | Advertised | Included with configurable rules |
 | Languages | English and Spanish advertised | Depends on the configured voice stack |
-| Source code | Not advertised | Public AGPL-3.0 repository |
+| Source code | Not advertised | Public MIT-licensed repository |
 | Self-hosting | Not advertised | Supported deployment path |
 
 Pricing and features were checked on July 30, 2026.

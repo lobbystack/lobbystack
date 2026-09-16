@@ -1,0 +1,17 @@
+{
+  "utilities": {
+    "testCall": "Test call",
+    "endTestCall": "End test call",
+    "connecting": "Connecting...",
+    "setupGuide": "Setup guide",
+    "affiliate": "Affiliate",
+    "appointments": "Appointments",
+    "demos": "Demos",
+    "billingAttention": "Billing attention",
+    "feedback": "Feedback",
+    "feedbackPlaceholder": "Share feedback",
+    "feedbackSending": "Sending...",
+    "feedbackSent": "Feedback sent",
+    "feedbackFailed": "Unable to send feedback"
+  }
+}

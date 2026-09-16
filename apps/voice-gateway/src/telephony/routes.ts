@@ -12,11 +12,8 @@ import {
   startVoiceCall,
   reconcileVoiceCallStatus,
   updateVoiceTransferState,
-} from "../convex/runtimeClient";
-import {
-  capturePostHogException,
-  setBusinessTelemetryEnabled,
-} from "../observability/posthog";
+} from "../backend/runtimeClient";
+import { capturePostHogException } from "../observability/posthog";
 import {
   isTerminalTwilioCallStatus,
   normalizeTwilioCallStatusPayload,
@@ -138,10 +135,6 @@ export function registerVoiceRoutes(server: FastifyInstance): void {
     const snapshot = await fetchSnapshotForPhoneNumber(calledNumber);
 
     server.snapshotCache.set(snapshot.businessId, snapshot);
-    setBusinessTelemetryEnabled(
-      snapshot.businessId,
-      snapshot.telemetryEnabled ?? true,
-    );
     const initializationState = await initializeInboundCallRecord(
       server,
       payload,
@@ -299,7 +292,10 @@ export function registerVoiceRoutes(server: FastifyInstance): void {
         : {}),
     });
 
-    if (result.ignored && result.reason === "unknown_call") {
+    // The admin backend reports "call_not_found" when no tenant matches the
+    // Twilio call SID yet; older code used "unknown_call". Both mean the call
+    // record may exist on a provider retry, so both must be retryable.
+    if (result.ignored && (result.reason === "call_not_found" || result.reason === "unknown_call")) {
       server.log.warn(
         {
           callSid: normalized.callSid,

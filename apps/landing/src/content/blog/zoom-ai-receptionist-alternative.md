@@ -1,6 +1,6 @@
 ---
-title: "Zoom AI Receptionist Alternative"
-seoTitle: "Zoom AI Receptionist Alternative: LobbyStack"
+title: "Zoom AI Receptionist alternative"
+seoTitle: "Zoom AI Receptionist alternative: LobbyStack"
 description: "Compare Zoom Virtual Agent Receptionist and LobbyStack on pricing, phone-system fit, booking, languages, source access, cloud service, and self-hosting."
 pubDate: 2026-07-30T11:00:00-04:00
 updatedDate: 2026-07-30T11:00:00-04:00
@@ -17,7 +17,7 @@ A **Zoom AI Receptionist alternative** can include 50% more voice time at the sa
 
 LobbyStack includes booking, human handoff, SMS alerts, transcripts, summaries, and call history. It also gives technical teams public source code, provider choice, and self-hosting.
 
-## Zoom Virtual Agent Receptionist vs LobbyStack
+## Zoom virtual agent receptionist vs LobbyStack
 
 | Area | Zoom Virtual Agent Receptionist | LobbyStack |
 | --- | --- | --- |
@@ -27,7 +27,7 @@ LobbyStack includes booking, human handoff, SMS alerts, transcripts, summaries, 
 | Existing phone system | Advertised | Call forwarding and voice-provider setup |
 | Booking | Google, Microsoft, and Calendly advertised | Calendar booking with business rules |
 | Languages | More than 10 advertised | Depends on the configured voice stack |
-| Source code | Not advertised | Public AGPL-3.0 repository |
+| Source code | Not advertised | Public MIT-licensed repository |
 | Deployment | Zoom-managed service | Managed cloud or self-hosted |
 
 Pricing and features were checked on July 30, 2026.
@@ -40,7 +40,7 @@ That extra capacity gives a small business more room to test booking rules, afte
 
 Zoom brings a familiar communications brand and more than 10 advertised languages. LobbyStack brings better entry usage and ownership of the stack. A technical buyer can keep the managed service or move to infrastructure and providers it controls.
 
-## Zoom made the phone-system decision easier
+## Zoom reduced the phone-system tradeoffs
 
 Zoom's launch announcement says businesses can use the receptionist with an existing phone system. That avoids a forced migration to Zoom Phone for buyers who only want AI coverage.
 
@@ -62,7 +62,7 @@ Zoom's product is new. A trial should test the specific call flows that matter, 
 
 Zoom provides a managed product inside its proprietary platform. Its reviewed pages do not advertise public source access or self-hosted deployment.
 
-LobbyStack publishes the receptionist code under AGPL-3.0. A business can inspect the call logic, run the managed cloud, or deploy the stack itself. Self-hosting lets the operator choose provider accounts, set retention, schedule upgrades, and adapt integrations.
+LobbyStack publishes the receptionist code under the MIT License. A business can inspect the call logic, run the managed cloud, or deploy the stack itself. Self-hosting lets the operator choose provider accounts, set retention, schedule upgrades, and adapt integrations.
 
 That freedom requires someone to run the system. Zoom's managed service is a better fit when the business wants one vendor to own operation and support.
 

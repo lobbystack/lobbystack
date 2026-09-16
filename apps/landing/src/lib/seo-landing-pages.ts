@@ -84,7 +84,7 @@ export const companyPages: SeoLandingPage[] = [
         title: "Why we built it open source",
         body: "Phone workflows sit on top of customer data, booking rules, and escalation policies. Teams should be able to inspect how those decisions are made instead of trusting a black box.",
         points: [
-          "Review the AGPL-3.0-only codebase, deployment model, and data boundaries on GitHub",
+          "Review the MIT-licensed codebase, deployment model, and data boundaries on GitHub",
           "Start on LobbyStack Cloud and move to self-hosting when your team needs more control",
           "Avoid vendor lock-in for the receptionist layer that sits in front of every caller",
         ],
@@ -376,7 +376,7 @@ export const solutionPages: SeoLandingPage[] = [
     eyebrow: "Self-hosted",
     h1: "Self-hosted AI receptionist for infrastructure you control",
     intro:
-      "LobbyStack is published under AGPL-3.0-only and includes a self-hosted path for teams that need to control deployment, provider accounts, access, and data retention.",
+      "LobbyStack uses the MIT License and includes a self-hosted path for teams that need to control deployment, provider accounts, access, and data retention.",
     image: "/illustrations/trust-controls.webp",
     imageAlt:
       "LobbyStack controls for a self-hosted AI receptionist deployment",
@@ -441,7 +441,7 @@ export const solutionPages: SeoLandingPage[] = [
     ],
     ctaHeading: "Deploy LobbyStack on your own infrastructure",
     ctaBody:
-      "Review the AGPL-3.0-only repository and deployment documentation, then evaluate the infrastructure, provider, security, and support responsibilities.",
+      "Review the MIT-licensed repository and deployment documentation, then evaluate the infrastructure, provider, security, and support responsibilities.",
     ctaPrimaryLabel: "Read deployment docs",
     ctaPrimaryHref: "/docs/api/",
     ctaSecondaryLabel: "View on GitHub",

@@ -26,7 +26,7 @@ LobbyStack fonctionne en service géré ou en auto-hébergement. L'acheteur gard
 | Prix client RingEX | Option dès 39 $ | Aucun abonnement de suite requis |
 | Canaux | Voix, SMS, WhatsApp | Voix, alertes SMS et suivi |
 | Téléphonie | Files et administration RingCentral | Réceptionniste relié aux fournisseurs |
-| Code source | Non annoncé | Dépôt public AGPL-3.0 |
+| Code source | Non annoncé | Dépôt public sous licence MIT |
 | Déploiement | Géré par RingCentral | Cloud géré ou auto-hébergement |
 
 Prix et fonctions vérifiés le 30 juillet 2026.

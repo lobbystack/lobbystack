@@ -1,0 +1,364 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lobbystack
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      LOBBYSTACK_MIGRATOR_PASSWORD: ${LOBBYSTACK_MIGRATOR_PASSWORD:?LOBBYSTACK_MIGRATOR_PASSWORD is required}
+      LOBBYSTACK_AUTH_PASSWORD: ${LOBBYSTACK_AUTH_PASSWORD:?LOBBYSTACK_AUTH_PASSWORD is required}
+      LOBBYSTACK_APP_PASSWORD: ${LOBBYSTACK_APP_PASSWORD:?LOBBYSTACK_APP_PASSWORD is required}
+      LOBBYSTACK_WORKER_PASSWORD: ${LOBBYSTACK_WORKER_PASSWORD:?LOBBYSTACK_WORKER_PASSWORD is required}
+      LOBBYSTACK_DISPATCHER_PASSWORD: ${LOBBYSTACK_DISPATCHER_PASSWORD:?LOBBYSTACK_DISPATCHER_PASSWORD is required}
+      LOBBYSTACK_READONLY_PASSWORD: ${LOBBYSTACK_READONLY_PASSWORD:?LOBBYSTACK_READONLY_PASSWORD is required}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-15433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init/roles.sh:/docker-entrypoint-initdb.d/10-roles.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lobbystack"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-16380}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    profiles: [minio]
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-minioadminminio}
+    ports:
+      - "127.0.0.1:${MINIO_API_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio-init:
+    image: minio/mc:latest
+    profiles: [minio]
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command: >-
+      "mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
+      mc mb --ignore-existing local/$${S3_BUCKET:-lobbystack}"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-minioadminminio}
+      S3_BUCKET: ${S3_BUCKET:-lobbystack}
+
+  migrator:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrator
+      args:
+        SERVICE_VERSION: ${SERVICE_VERSION:-development}
+        NEXT_PUBLIC_WEB_CALL_ENDPOINT: ${NEXT_PUBLIC_WEB_CALL_ENDPOINT:-}
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/lobbystack
+      OTEL_SERVICE_NAME: lobbystack-migrator
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  admin:
+    build:
+      context: .
+      dockerfile: Dockerfile.admin
+      args:
+        SERVICE_VERSION: ${SERVICE_VERSION:-development}
+        NEXT_PUBLIC_WEB_CALL_ENDPOINT: ${NEXT_PUBLIC_WEB_CALL_ENDPOINT:-}
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      LOBBYSTACK_MAINTENANCE_MODE: ${LOBBYSTACK_MAINTENANCE_MODE:-false}
+      LOBBYSTACK_CERTIFICATION_MODE: ${LOBBYSTACK_CERTIFICATION_MODE:-false}
+      LOBBYSTACK_CERTIFICATION_EMAILS: ${LOBBYSTACK_CERTIFICATION_EMAILS:-}
+      LOBBYSTACK_CERTIFICATION_PHONES: ${LOBBYSTACK_CERTIFICATION_PHONES:-}
+      LOBBYSTACK_CERTIFICATION_CALENDARS: ${LOBBYSTACK_CERTIFICATION_CALENDARS:-}
+      PORT: 3000
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost}
+      NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN: ${NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN:-}
+      NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-https://ts.lobbystack.com}
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AI_CHAT_API_KEY: ${AI_CHAT_API_KEY:-}
+      AI_CHAT_BASE_URL: ${AI_CHAT_BASE_URL:-https://api.openai.com/v1}
+      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-gpt-4o-mini}
+      AI_CHAT_PROVIDER_NAME: ${AI_CHAT_PROVIDER_NAME:-openai}
+      AI_CHAT_INPUT_COST_PER_MILLION_TOKENS: ${AI_CHAT_INPUT_COST_PER_MILLION_TOKENS:-0.15}
+      AI_CHAT_OUTPUT_COST_PER_MILLION_TOKENS: ${AI_CHAT_OUTPUT_COST_PER_MILLION_TOKENS:-0.60}
+      AI_EMBEDDING_API_KEY: ${AI_EMBEDDING_API_KEY:-}
+      AI_EMBEDDING_BASE_URL: ${AI_EMBEDDING_BASE_URL:-https://api.openai.com/v1}
+      AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-text-embedding-3-small}
+      AI_EMBEDDING_PROVIDER_NAME: ${AI_EMBEDDING_PROVIDER_NAME:-openai}
+      AI_EMBEDDING_REVISION: ${AI_EMBEDDING_REVISION:-1}
+      WIDGET_SESSION_SECRET: ${WIDGET_SESSION_SECRET:?WIDGET_SESSION_SECRET is required}
+      PROSPECT_DEMO_OPERATOR_EMAIL: ${PROSPECT_DEMO_OPERATOR_EMAIL:-}
+      DATABASE_URL: ${LOBBYSTACK_APP_DATABASE_URL:?LOBBYSTACK_APP_DATABASE_URL is required}
+      LOBBYSTACK_APP_DATABASE_URL: ${LOBBYSTACK_APP_DATABASE_URL:?LOBBYSTACK_APP_DATABASE_URL is required}
+      LOBBYSTACK_AUTH_DATABASE_URL: ${LOBBYSTACK_AUTH_DATABASE_URL:?LOBBYSTACK_AUTH_DATABASE_URL is required}
+      LOBBYSTACK_WORKER_DATABASE_URL: ${LOBBYSTACK_WORKER_DATABASE_URL:?LOBBYSTACK_WORKER_DATABASE_URL is required}
+      LOBBYSTACK_DISPATCHER_DATABASE_URL: ${LOBBYSTACK_DISPATCHER_DATABASE_URL:?LOBBYSTACK_DISPATCHER_DATABASE_URL is required}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
+      REQUIRE_EMAIL_VERIFICATION: ${REQUIRE_EMAIL_VERIFICATION:-false}
+      SEND_VERIFICATION_EMAIL_ON_SIGNUP: ${SEND_VERIFICATION_EMAIL_ON_SIGNUP:-false}
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:?INTERNAL_SERVICE_SECRET is required}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      INTERNAL_SERVICE_ID: lobbystack-voice-gateway
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      OTP_HASH_SECRET: ${OTP_HASH_SECRET:?OTP_HASH_SECRET is required}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_ALERT_SMS_FROM: ${TWILIO_ALERT_SMS_FROM:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_VERIFY_SERVICE_SID: ${TWILIO_VERIFY_SERVICE_SID:-}
+      NUMBER_CLAIM_TOKEN_SECRET: ${NUMBER_CLAIM_TOKEN_SECRET:-}
+      TWILIO_SMS_WEBHOOK_URL: ${TWILIO_SMS_WEBHOOK_URL:-}
+      TWILIO_STATUS_CALLBACK_URL: ${TWILIO_STATUS_CALLBACK_URL:-}
+      POLAR_WEBHOOK_SECRET: ${POLAR_WEBHOOK_SECRET:-}
+      POLAR_ACCESS_TOKEN: ${POLAR_ACCESS_TOKEN:-}
+      POLAR_ORGANIZATION_ID: ${POLAR_ORGANIZATION_ID:-}
+      POLAR_API_BASE_URL: ${POLAR_API_BASE_URL:-}
+      POLAR_STARTER_MONTHLY_PRODUCT_ID: ${POLAR_STARTER_MONTHLY_PRODUCT_ID:-}
+      POLAR_STARTER_ANNUAL_PRODUCT_ID: ${POLAR_STARTER_ANNUAL_PRODUCT_ID:-}
+      POLAR_PRO_MONTHLY_PRODUCT_ID: ${POLAR_PRO_MONTHLY_PRODUCT_ID:-}
+      POLAR_PRO_ANNUAL_PRODUCT_ID: ${POLAR_PRO_ANNUAL_PRODUCT_ID:-}
+      RESEND_WEBHOOK_SECRET: ${RESEND_WEBHOOK_SECRET:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost/api/calendar/google/callback}
+      REDIS_URL: redis://redis:6379
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-}
+      LOCAL_STORAGE_PATH: /var/lib/lobbystack/storage
+      LOCAL_STORAGE_SIGNING_SECRET: ${LOCAL_STORAGE_SIGNING_SECRET:?LOCAL_STORAGE_SIGNING_SECRET is required}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-false}
+      OTEL_SERVICE_NAME: lobbystack-admin
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    volumes:
+      - storage_data:/var/lib/lobbystack/storage
+    ports:
+      - "127.0.0.1:${ADMIN_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 12
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+      args:
+        SERVICE_VERSION: ${SERVICE_VERSION:-development}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      LOBBYSTACK_MAINTENANCE_MODE: ${LOBBYSTACK_MAINTENANCE_MODE:-false}
+      LOBBYSTACK_CERTIFICATION_MODE: ${LOBBYSTACK_CERTIFICATION_MODE:-false}
+      LOBBYSTACK_CERTIFICATION_EMAILS: ${LOBBYSTACK_CERTIFICATION_EMAILS:-}
+      LOBBYSTACK_CERTIFICATION_PHONES: ${LOBBYSTACK_CERTIFICATION_PHONES:-}
+      LOBBYSTACK_CERTIFICATION_CALENDARS: ${LOBBYSTACK_CERTIFICATION_CALENDARS:-}
+      PORT: 3002
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost}
+      DATABASE_URL: ${LOBBYSTACK_WORKER_DATABASE_URL:?LOBBYSTACK_WORKER_DATABASE_URL is required}
+      LOBBYSTACK_WORKER_DATABASE_URL: ${LOBBYSTACK_WORKER_DATABASE_URL:?LOBBYSTACK_WORKER_DATABASE_URL is required}
+      LOBBYSTACK_DISPATCHER_DATABASE_URL: ${LOBBYSTACK_DISPATCHER_DATABASE_URL:?LOBBYSTACK_DISPATCHER_DATABASE_URL is required}
+      REDIS_URL: redis://redis:6379
+      REDIS_PREFIX: lobbystack
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      EMAIL_FROM: ${EMAIL_FROM:-LobbyStack <no-reply@localhost>}
+      EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-}
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-}
+      LOCAL_STORAGE_PATH: /var/lib/lobbystack/storage
+      LOCAL_STORAGE_SIGNING_SECRET: ${LOCAL_STORAGE_SIGNING_SECRET:?LOCAL_STORAGE_SIGNING_SECRET is required}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AI_CHAT_API_KEY: ${AI_CHAT_API_KEY:-}
+      AI_CHAT_BASE_URL: ${AI_CHAT_BASE_URL:-https://api.openai.com/v1}
+      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-gpt-4o-mini}
+      AI_CHAT_PROVIDER_NAME: ${AI_CHAT_PROVIDER_NAME:-openai}
+      AI_CHAT_INPUT_COST_PER_MILLION_TOKENS: ${AI_CHAT_INPUT_COST_PER_MILLION_TOKENS:-0.15}
+      AI_CHAT_OUTPUT_COST_PER_MILLION_TOKENS: ${AI_CHAT_OUTPUT_COST_PER_MILLION_TOKENS:-0.60}
+      AI_EMBEDDING_API_KEY: ${AI_EMBEDDING_API_KEY:-}
+      AI_EMBEDDING_BASE_URL: ${AI_EMBEDDING_BASE_URL:-https://api.openai.com/v1}
+      AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-text-embedding-3-small}
+      AI_EMBEDDING_PROVIDER_NAME: ${AI_EMBEDDING_PROVIDER_NAME:-openai}
+      AI_EMBEDDING_REVISION: ${AI_EMBEDDING_REVISION:-1}
+      AI_EMBEDDING_INPUT_COST_PER_MILLION_TOKENS: ${AI_EMBEDDING_INPUT_COST_PER_MILLION_TOKENS:-0.02}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_ALERT_SMS_FROM: ${TWILIO_ALERT_SMS_FROM:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_VERIFY_SERVICE_SID: ${TWILIO_VERIFY_SERVICE_SID:-}
+      TWILIO_STATUS_CALLBACK_URL: ${TWILIO_STATUS_CALLBACK_URL:-}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      OTP_HASH_SECRET: ${OTP_HASH_SECRET:?OTP_HASH_SECRET is required}
+      OTEL_SERVICE_NAME: lobbystack-worker
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
+      FIRECRAWL_BASE_URL: ${FIRECRAWL_BASE_URL:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost/api/calendar/google/callback}
+      POLAR_ACCESS_TOKEN: ${POLAR_ACCESS_TOKEN:-}
+      POLAR_ORGANIZATION_ID: ${POLAR_ORGANIZATION_ID:-}
+      POLAR_USAGE_METER_ID: ${POLAR_USAGE_METER_ID:-}
+      POLAR_API_BASE_URL: ${POLAR_API_BASE_URL:-}
+      POLAR_STARTER_MONTHLY_PRODUCT_ID: ${POLAR_STARTER_MONTHLY_PRODUCT_ID:-}
+      POLAR_STARTER_ANNUAL_PRODUCT_ID: ${POLAR_STARTER_ANNUAL_PRODUCT_ID:-}
+      POLAR_PRO_MONTHLY_PRODUCT_ID: ${POLAR_PRO_MONTHLY_PRODUCT_ID:-}
+      POLAR_PRO_ANNUAL_PRODUCT_ID: ${POLAR_PRO_ANNUAL_PRODUCT_ID:-}
+      POLAR_STARTER_MONTHLY_AI_SMS_PRODUCT_ID: ${POLAR_STARTER_MONTHLY_AI_SMS_PRODUCT_ID:-}
+      POLAR_STARTER_ANNUAL_AI_SMS_PRODUCT_ID: ${POLAR_STARTER_ANNUAL_AI_SMS_PRODUCT_ID:-}
+      POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID: ${POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID:-}
+      POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID: ${POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID:-}
+      POLAR_AI_SMS_SETUP_PRODUCT_ID: ${POLAR_AI_SMS_SETUP_PRODUCT_ID:-}
+      POLAR_AI_SMS_ADDON_PRODUCT_ID: ${POLAR_AI_SMS_ADDON_PRODUCT_ID:-}
+      POSTHOG_API_KEY: ${POSTHOG_API_KEY:-}
+      POSTHOG_HOST: ${POSTHOG_HOST:-https://us.i.posthog.com}
+    volumes:
+      - storage_data:/var/lib/lobbystack/storage
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${WORKER_PORT:-3002}:3002"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 12
+
+  voice-gateway:
+    build:
+      context: .
+      dockerfile: docker/voice-gateway/Dockerfile
+      args:
+        SERVICE_VERSION: ${SERVICE_VERSION:-development}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      LOBBYSTACK_MAINTENANCE_MODE: ${LOBBYSTACK_MAINTENANCE_MODE:-false}
+      LOBBYSTACK_CERTIFICATION_MODE: ${LOBBYSTACK_CERTIFICATION_MODE:-false}
+      LOBBYSTACK_CERTIFICATION_EMAILS: ${LOBBYSTACK_CERTIFICATION_EMAILS:-}
+      LOBBYSTACK_CERTIFICATION_PHONES: ${LOBBYSTACK_CERTIFICATION_PHONES:-}
+      LOBBYSTACK_CERTIFICATION_CALENDARS: ${LOBBYSTACK_CERTIFICATION_CALENDARS:-}
+      DEPLOYMENT_MODE: ${DEPLOYMENT_MODE:-self_hosted_standard}
+      PORT: 3001
+      VOICE_GATEWAY_BASE_URL: ${VOICE_GATEWAY_BASE_URL:-http://localhost:3001}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost}
+      BACKEND_INTERNAL_URL: http://admin:3000
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:?INTERNAL_SERVICE_SECRET is required}
+      VOICE_GATEWAY_SERVICE_ID: lobbystack-voice-gateway
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      WEB_CALL_PUBLIC_BUSINESS_SLUG: ${WEB_CALL_PUBLIC_BUSINESS_SLUG:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_ALERT_SMS_FROM: ${TWILIO_ALERT_SMS_FROM:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      OTEL_SERVICE_NAME: lobbystack-voice-gateway
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+    depends_on:
+      admin:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${VOICE_GATEWAY_PORT:-3001}:3001"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 12
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      APP_HOSTNAME: ${APP_HOSTNAME:-localhost}
+      VOICE_HOSTNAME: ${VOICE_HOSTNAME:-voice.localhost}
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      admin:
+        condition: service_healthy
+      voice-gateway:
+        condition: service_healthy
+    ports:
+      - "${HTTP_BIND_ADDRESS:-127.0.0.1}:${HTTP_PORT:-80}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider --header='Host: '$${APP_HOSTNAME:-localhost} http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 12
+
+  mailpit:
+    image: axllent/mailpit:latest
+    profiles: [development]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+
+volumes:
+  postgres_data:
+  redis_data:
+  storage_data:
+  minio_data:
+  caddy_data:
+  caddy_config:

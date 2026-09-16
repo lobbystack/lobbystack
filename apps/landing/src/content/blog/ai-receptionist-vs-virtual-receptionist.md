@@ -1,6 +1,6 @@
 ---
-title: "AI vs Virtual Receptionist: A Practical Guide"
-seoTitle: "AI vs Virtual Receptionist: Cost and Coverage"
+title: "AI vs virtual receptionist: A practical guide"
+seoTitle: "AI vs virtual receptionist: Cost and coverage"
 description: "Compare AI and human virtual receptionists on cost, call volume, empathy, booking, transfers, and oversight to choose the right phone coverage."
 pubDate: 2026-07-30T09:50:00-04:00
 updatedDate: 2026-07-30T09:50:00-04:00

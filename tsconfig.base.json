@@ -19,10 +19,14 @@
     "paths": {
       "@lobbystack/ai": ["packages/ai/src"],
       "@lobbystack/config": ["packages/config/src"],
+      "@lobbystack/contracts": ["packages/contracts/src"],
+      "@lobbystack/db": ["packages/db/src"],
       "@lobbystack/domain": ["packages/domain/src"],
+      "@lobbystack/jobs": ["packages/jobs/src"],
       "@lobbystack/providers": ["packages/providers/src"],
       "@lobbystack/shared": ["packages/shared/src"],
-      "@lobbystack/telemetry": ["packages/telemetry/src"]
+      "@lobbystack/telemetry": ["packages/telemetry/src"],
+      "@lobbystack/telemetry/*": ["packages/telemetry/src/*"]
     }
   }
 }

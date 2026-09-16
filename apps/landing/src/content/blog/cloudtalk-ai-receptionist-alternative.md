@@ -1,6 +1,6 @@
 ---
-title: "CloudTalk AI Receptionist Alternative"
-seoTitle: "CloudTalk AI Receptionist Alternative: LobbyStack"
+title: "CloudTalk AI Receptionist alternative"
+seoTitle: "CloudTalk AI Receptionist alternative: LobbyStack"
 description: "Compare CloudTalk AI Receptionist and LobbyStack on platform costs, included minutes, routing, CRM integrations, open-source access, and self-hosting."
 pubDate: 2026-07-30T10:10:00-04:00
 updatedDate: 2026-07-30T10:10:00-04:00
@@ -13,7 +13,7 @@ locale: "en"
 canonicalSlug: "cloudtalk-ai-receptionist-alternative"
 ---
 
-A **CloudTalk AI Receptionist alternative** should not require a contact-center subscription just to answer and book calls. CloudTalk lists 200 AI minutes for $99 and 500 for $199, on top of its business-phone platform. LobbyStack includes 150 minutes for $30 and 500 for $100, with no CloudTalk seat requirement.
+A **CloudTalk AI Receptionist alternative** should not require a contact-center subscription to answer and book calls. CloudTalk lists 200 AI minutes for $99 and 500 for $199, on top of its business-phone platform. LobbyStack includes 150 minutes for $30 and 500 for $100, with no CloudTalk seat requirement.
 
 LobbyStack also includes a free 30-minute plan for real phone testing, plus booking, handoff, SMS alerts, transcripts, summaries, managed cloud, and self-hosting.
 
@@ -27,7 +27,7 @@ LobbyStack also includes a free 30-minute plan for real phone testing, plus book
 | Base platform | CloudTalk user subscription required | No contact-center subscription required |
 | Integrations | More than 100 advertised | Product integrations plus open source and API |
 | Main role | Questions, messages, routing, transfer | Answering, intake, booking, handoff |
-| Source code | Not advertised | Public AGPL-3.0 repository |
+| Source code | Not advertised | Public MIT-licensed repository |
 | Deployment | CloudTalk-managed | Managed cloud or self-hosted |
 
 Pricing and features were checked on July 30, 2026.
@@ -63,7 +63,7 @@ LobbyStack lists $30 for 150 minutes and $100 for 500. At the published 500-minu
 
 ## The receptionist template has a defined lane
 
-CloudTalk describes its AI Receptionist as a generalist for simple questions and routing. Its AI Specialist tier handles more complex task resolution and starts at a higher public price.
+CloudTalk describes its AI Receptionist as a generalist for common questions and routing. Its AI Specialist tier handles more complex task resolution and starts at a higher public price.
 
 That product separation can help a buyer choose the right agent. It also means a team should demonstrate the workflow rather than assume the receptionist tier can complete it.
 

@@ -5,17 +5,22 @@ import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 const {
   appendVoiceTranscriptMock,
   bookVoiceAppointmentMock,
+  captureAiGenerationMock,
+  captureAiTraceStartedMock,
   completeVoiceCallMock,
   fetchWebCallRecordingTargetMock,
   fetchWebVoiceContextMock,
   runtimeRequestErrorClass,
   startWebVoiceCallMock,
+  searchVoiceKnowledgeMock,
   takeVoiceMessageMock,
   uploadVoiceRecordingMock,
   webSocketInstances,
 } = vi.hoisted(() => ({
   appendVoiceTranscriptMock: vi.fn(),
   bookVoiceAppointmentMock: vi.fn(),
+  captureAiGenerationMock: vi.fn(),
+  captureAiTraceStartedMock: vi.fn(),
   completeVoiceCallMock: vi.fn(),
   fetchWebCallRecordingTargetMock: vi.fn(),
   fetchWebVoiceContextMock: vi.fn(),
@@ -33,6 +38,7 @@ const {
     }
   },
   startWebVoiceCallMock: vi.fn(),
+  searchVoiceKnowledgeMock: vi.fn(),
   takeVoiceMessageMock: vi.fn(),
   uploadVoiceRecordingMock: vi.fn(),
   webSocketInstances: [] as Array<{
@@ -92,7 +98,7 @@ vi.mock("ws", () => {
   return { default: MockWebSocket, WebSocketServer: MockWebSocketServer };
 });
 
-vi.mock("../convex/runtimeClient", () => ({
+vi.mock("../backend/runtimeClient", () => ({
   appendVoiceTranscript: appendVoiceTranscriptMock,
   completeVoiceCall: completeVoiceCallMock,
   fetchWebCallRecordingTarget: fetchWebCallRecordingTargetMock,
@@ -107,12 +113,19 @@ vi.mock("../convex/runtimeClient", () => ({
   findVoiceAvailability: vi.fn(),
   lookupVoiceAppointmentForChange: vi.fn(),
   rescheduleVoiceAppointment: vi.fn(),
-  searchVoiceKnowledge: vi.fn(),
+  searchVoiceKnowledge: searchVoiceKnowledgeMock,
   sendVoiceAppointmentChangeOtp: vi.fn(),
   takeVoiceMessage: takeVoiceMessageMock,
   updateVoiceTransferState: vi.fn(),
   verifyVoiceAppointmentChangeOtp: vi.fn(),
   verifyVoiceAppointmentForChange: vi.fn(),
+}));
+
+vi.mock("../observability/posthog", async importOriginal => ({
+  ...(await importOriginal<typeof import("../observability/posthog")>()),
+  captureAiGeneration: captureAiGenerationMock,
+  captureAiTraceStarted: captureAiTraceStartedMock,
+  capturePostHogException: vi.fn(),
 }));
 
 import { demoSnapshot } from "@lobbystack/shared";
@@ -140,7 +153,7 @@ function createDashboardTestCallProof(input: {
 }
 
 describe("createWebRealtimeTurnDetectionConfig", () => {
-  it("can disable auto responses and interruptions during the opening greeting", () => {
+  it("can disable auto responses and interruptions for manual response flows", () => {
     expect(
       createWebRealtimeTurnDetectionConfig({
         createResponse: false,
@@ -156,7 +169,7 @@ describe("createWebRealtimeTurnDetectionConfig", () => {
     });
   });
 
-  it("defaults to normal web caller turn handling after the greeting", () => {
+  it("defaults to interruptible web caller turn handling", () => {
     expect(createWebRealtimeTurnDetectionConfig()).toEqual({
       type: "server_vad",
       threshold: 0.65,
@@ -172,11 +185,12 @@ describe("web call routes", () => {
   beforeEach(() => {
     process.env.DEPLOYMENT_MODE = "development";
     process.env.VOICE_GATEWAY_BASE_URL = "https://voice.example.com";
-    process.env.CONVEX_SITE_URL = "https://convex.example.com";
+    process.env.BACKEND_INTERNAL_URL = "https://admin.example.com";
     process.env.INTERNAL_SERVICE_TOKEN = "test-service-token";
     process.env.TWILIO_AUTH_TOKEN = "twilio-auth-token";
     process.env.OPENAI_API_KEY = "test-openai-key";
     process.env.WEB_CALL_ALLOWED_ORIGINS = "https://lobbystack.com";
+    process.env.WEB_CALL_PUBLIC_BUSINESS_SLUG = "lobbystack";
   });
 
   afterEach(() => {
@@ -188,6 +202,7 @@ describe("web call routes", () => {
     delete process.env.OPENAI_API_KEY;
     delete process.env.VOICE_GATEWAY_TRUST_PROXY;
     delete process.env.WEB_CALL_ALLOWED_ORIGINS;
+    delete process.env.WEB_CALL_PUBLIC_BUSINESS_SLUG;
     delete process.env.WEB_CALL_MAX_DURATION_MS;
     delete process.env.DASHBOARD_TEST_CALL_TOKEN;
   });
@@ -265,13 +280,7 @@ describe("web call routes", () => {
     );
   });
 
-  it("returns Convex lookup failures for unknown public widget business slugs", async () => {
-    fetchWebVoiceContextMock.mockRejectedValueOnce(
-      new runtimeRequestErrorClass({
-        message: "Not found",
-        status: 404,
-      }),
-    );
+  it("rejects unsigned calls for business slugs that are not configured as public", async () => {
     const server = createServer();
 
     const response = await server.inject({
@@ -287,11 +296,102 @@ describe("web call routes", () => {
       },
     });
 
-    expect(response.statusCode).toBe(404);
-    expect(fetchWebVoiceContextMock).toHaveBeenCalledWith(
-      expect.objectContaining({ businessSlug: "other-business" }),
-    );
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({
+      error: "A signed web call authorization is required.",
+    });
+    expect(fetchWebVoiceContextMock).not.toHaveBeenCalled();
     expect(startWebVoiceCallMock).not.toHaveBeenCalled();
+  });
+
+  it("does not trust a caller-supplied widget identity for a non-public business", async () => {
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "other-business",
+        widgetId: "lobbystack-landing",
+        sdp: "v=0",
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(fetchWebVoiceContextMock).not.toHaveBeenCalled();
+    expect(startWebVoiceCallMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unprepared voice snapshot before opening a provider call", async () => {
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: null });
+    const providerFetch = vi.fn();
+    vi.stubGlobal("fetch", providerFetch);
+    const server = createServer();
+    const response = await server.inject({
+      method: "POST", url: "/web-call/sessions",
+      headers: { origin: "https://lobbystack.com", "x-widget-parent-origin": "https://customer.example", "content-type": "application/json" },
+      payload: { businessSlug: "other-business", widgetSessionToken: "signed-widget-session", sdp: "v=0" },
+    });
+    expect(response.statusCode).toBe(503);
+    expect(providerFetch).not.toHaveBeenCalled();
+    expect(startWebVoiceCallMock).not.toHaveBeenCalled();
+    await server.close();
+  });
+
+  it("allows a signed widget session for a non-public business", async () => {
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "x-widget-parent-origin": "https://customer.example",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "other-business",
+        widgetId: "lobbystack-widget",
+        visitorId: "visitor-123",
+        widgetSessionToken: "signed-widget-session",
+        sdp: "v=0",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(fetchWebVoiceContextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        businessSlug: "other-business",
+        origin: "https://customer.example",
+        visitorId: "visitor-123",
+        widgetSessionToken: "signed-widget-session",
+      }),
+    );
+    expect(startWebVoiceCallMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        businessSlug: "other-business",
+        widgetSessionToken: "signed-widget-session",
+      }),
+    );
   });
 
   it("requires an SDP offer", async () => {
@@ -456,6 +556,182 @@ describe("web call routes", () => {
     );
   });
 
+  it("preserves caller audio when speech interrupts the opening greeting", async () => {
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const socket = webSocketInstances[0]!;
+    socket.emit("open");
+    socket.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({ type: "input_audio_buffer.speech_started" }),
+      ),
+    );
+    socket.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({
+          type: "response.done",
+          response: { id: "interrupted-greeting", status: "cancelled" },
+        }),
+      ),
+    );
+    await vi.waitFor(() => expect(captureAiGenerationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        businessId: "business_123",
+        callId: "call_123",
+        conversationId: "conversation_123",
+        isStreaming: true,
+        isError: false,
+        properties: {
+          channel: "web_voice",
+          operation: "web_voice.response_generation",
+        },
+      }),
+    ));
+    socket.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({ type: "input_audio_buffer.speech_stopped" }),
+      ),
+    );
+
+    const sentMessages = socket.send.mock.calls.map(([value]) =>
+      JSON.parse(String(value)) as {
+        type?: string;
+        session?: {
+          audio?: {
+            input?: {
+              turn_detection?: Record<string, unknown>;
+            };
+          };
+        };
+      },
+    );
+    const sessionUpdates = sentMessages.filter(
+      (message) => message.type === "session.update",
+    );
+
+    expect(
+      sessionUpdates[0]?.session?.audio?.input?.turn_detection,
+    ).toMatchObject({
+      type: "server_vad",
+      create_response: false,
+      interrupt_response: false,
+    });
+    expect(
+      sessionUpdates[1]?.session?.audio?.input?.turn_detection,
+    ).toMatchObject({
+      type: "server_vad",
+      create_response: true,
+      interrupt_response: true,
+    });
+    expect(sentMessages).toContainEqual({ type: "response.cancel" });
+    expect(sentMessages).toContainEqual({ type: "output_audio_buffer.clear" });
+    expect(sentMessages.at(-1)).toEqual({ type: "response.create" });
+    expect(sentMessages).not.toContainEqual({ type: "input_audio_buffer.clear" });
+  });
+
+  it("times an automatic VAD response from provider creation through completion", async () => {
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+    await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: { origin: "https://lobbystack.com", "content-type": "application/json" },
+      payload: { businessSlug: "lobbystack", sdp: "v=0" },
+    });
+    const socket = webSocketInstances[0]!;
+    socket.emit("open");
+    // Finish the explicit greeting first. Once VAD is enabled, OpenAI creates
+    // ordinary caller-turn responses without a response.create from us.
+    socket.emit("message", Buffer.from(JSON.stringify({
+      type: "response.created",
+      response: { id: "opening-greeting" },
+    })));
+    socket.emit("message", Buffer.from(JSON.stringify({
+      type: "response.done",
+      response: { id: "opening-greeting", status: "completed" },
+    })));
+    await vi.waitFor(() => expect(captureAiGenerationMock).toHaveBeenCalled());
+    captureAiGenerationMock.mockClear();
+
+    const now = vi.spyOn(Date, "now");
+    try {
+      socket.emit("message", Buffer.from(JSON.stringify({
+        type: "input_audio_buffer.speech_stopped",
+      })));
+      now.mockReturnValue(1_000);
+      socket.emit("message", Buffer.from(JSON.stringify({
+        type: "response.created",
+        response: { id: "automatic-response" },
+      })));
+      now.mockReturnValue(1_275);
+      socket.emit("message", Buffer.from(JSON.stringify({
+        type: "response.done",
+        response: {
+          id: "automatic-response",
+          status: "completed",
+          usage: { input_tokens: 11, output_tokens: 7, total_tokens: 18 },
+        },
+      })));
+
+      await vi.waitFor(() => expect(captureAiGenerationMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          callId: "call_123",
+          latencyMs: 275,
+          inputTokens: 11,
+          outputTokens: 7,
+        }),
+      ));
+    } finally {
+      now.mockRestore();
+    }
+  });
+
   it("does not forward prospect demo bearer URLs to call storage", async () => {
     fetchWebVoiceContextMock.mockResolvedValueOnce({
       snapshot: demoSnapshot,
@@ -555,13 +831,13 @@ describe("web call routes", () => {
     );
 
     expect(sessionUpdate.session?.instructions).toContain(
-      "feature, workflow, policy, limitation, pricing, usage, billing, integration",
+      "For every business-specific factual question",
     );
     expect(sessionUpdate.session?.instructions).toContain(
-      "call searchKnowledge before answering",
+      "use searchKnowledge before answering",
     );
     expect(searchKnowledge?.description).toContain(
-      "capabilities, workflows, policies, limits, pricing, billing, usage, integrations",
+      "course names, exact course codes, products, policies, prices, and document facts",
     );
   });
 
@@ -610,7 +886,7 @@ describe("web call routes", () => {
     expect(formData.get("sdp")).toBe("v=0\r\n");
     expect(JSON.parse(String(formData.get("session")))).toEqual({
       type: "realtime",
-      model: "gpt-realtime",
+      model: "gpt-realtime-2.1",
       audio: {
         output: {
           voice: "marin",
@@ -619,7 +895,7 @@ describe("web call routes", () => {
     });
   });
 
-  it("returns durable Convex rate limits before starting an OpenAI web call", async () => {
+  it("returns durable backend rate limits before starting an OpenAI web call", async () => {
     fetchWebVoiceContextMock.mockRejectedValueOnce(
       new runtimeRequestErrorClass({
         message: "Too many web voice starts. Please try again shortly.",
@@ -744,7 +1020,7 @@ describe("web call routes", () => {
     );
   });
 
-  it("injects dashboard test call tokens for signed dashboard widget starts", async () => {
+  it("preserves dashboard authorization and origin through knowledge tool execution", async () => {
     process.env.WEB_CALL_ALLOWED_ORIGINS = "https://app.lobbystack.com";
     process.env.DASHBOARD_TEST_CALL_TOKEN = "dashboard-token";
     fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
@@ -802,6 +1078,70 @@ describe("web call routes", () => {
         widgetId: "lobbystack-dashboard-test-call",
       }),
     );
+    fetchWebVoiceContextMock.mockImplementation(async (input) => {
+      if (input.origin !== "https://app.lobbystack.com") {
+        throw new Error("Web voice origin is required.");
+      }
+      return { snapshot: demoSnapshot };
+    });
+    searchVoiceKnowledgeMock.mockResolvedValueOnce({
+      outcome: "found", mode: "hybrid",
+      matches: [{ text: "Management: MNGT 10407", documentId: "course-document" }],
+    });
+    const socket = webSocketInstances[0]!;
+    socket.emit("open");
+    socket.emit("message", Buffer.from(JSON.stringify({
+      type: "response.function_call_arguments.done",
+      name: "searchKnowledge", call_id: "knowledge-call",
+      arguments: JSON.stringify({ query: "management BAA" }),
+    })));
+    await vi.waitFor(() => expect(searchVoiceKnowledgeMock).toHaveBeenCalledWith(
+      expect.objectContaining({ businessId: "business_123", callId: "call_123", query: "management BAA" }),
+    ));
+    await vi.waitFor(() => expect(socket.send.mock.calls.map(([value]) => JSON.parse(String(value))))
+      .toContainEqual(expect.objectContaining({
+        type: "conversation.item.create",
+        item: expect.objectContaining({
+          type: "function_call_output", call_id: "knowledge-call",
+          output: expect.stringContaining("MNGT 10407"),
+        }),
+      })));
+  });
+
+  it("derives matching dashboard authorization from the internal token in development", async () => {
+    process.env.WEB_CALL_ALLOWED_ORIGINS = "http://localhost:3000";
+    const derivedToken = createHmac("sha256", "test-service-token")
+      .update("lobbystack:dashboard-test-call:development")
+      .digest("hex");
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response("answer-sdp", {
+      status: 200,
+      headers: { location: "/v1/realtime/calls/rtc_test" },
+    })));
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: { origin: "http://localhost:3000", "content-type": "application/json" },
+      payload: {
+        businessSlug: "private-business",
+        dashboardTestCallProof: createDashboardTestCallProof({ businessSlug: "private-business", token: derivedToken }),
+        sdp: "v=0",
+        widgetId: "lobbystack-dashboard-test-call",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(fetchWebVoiceContextMock).toHaveBeenCalledWith(expect.objectContaining({
+      businessSlug: "private-business",
+      dashboardTestCallToken: derivedToken,
+    }));
   });
 
   it("forwards dashboard test call tokens during tool context fetches", async () => {
@@ -1334,7 +1674,6 @@ describe("web call routes", () => {
         JSON.stringify({ type: "response.done", response: { id: "greeting" } }),
       ),
     );
-    await new Promise((resolve) => setTimeout(resolve, 2_050));
 
     webSocketInstances[0]?.emit(
       "message",
@@ -1478,7 +1817,7 @@ describe("web call routes", () => {
     );
   });
 
-  it("resolves recording uploads through Convex when the gateway session is not local", async () => {
+  it("resolves recording uploads through the backend when the gateway session is not local", async () => {
     const endedAtMs = Date.now();
     fetchWebCallRecordingTargetMock.mockResolvedValueOnce({
       callId: "call_durable_123",

@@ -1,4 +1,6 @@
-# Product KPI Spec
+# Measure product key performance indicators
+
+This reference defines the product metrics used by PostHog dashboards, saved insights, and validation checks.
 
 ## Goal
 

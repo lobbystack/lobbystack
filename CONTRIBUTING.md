@@ -1,28 +1,53 @@
-# Contributing
+# Contribute to LobbyStack
 
-## Expectations
+LobbyStack accepts focused fixes and features that preserve tenant isolation, provider boundaries, and the live call path. This guide explains the repository expectations and required checks.
 
-- Keep Convex as the main backend and source of truth.
-- Keep the voice gateway narrow. Do not move tenant state, booking state, or business rules into it.
-- Prefer shared abstractions in `packages/` over ad hoc SDK calls in feature code.
-- Add docs alongside major architectural changes.
+## Follow the architecture boundaries
 
-## Workflow
+- Keep PostgreSQL as the durable source of truth
+- Put persistence, migrations, roles, and row-level security in `packages/db`
+- Put reusable business operations in `packages/domain`
+- Keep the voice gateway focused on Twilio Voice, Media Streams, and OpenAI Realtime
+- Call the admin backend for authoritative voice operations
+- Use shared provider adapters instead of importing provider SDKs into domain code
 
-1. Open an issue or draft a proposal for architecture-affecting changes.
-2. Add or update tests for critical paths.
-3. Update docs and ADRs when changing major decisions.
-4. Keep changes focused and reviewable.
+## Prepare a change
 
-## Development
+1. Open an issue or draft a proposal for an architecture change.
+2. Add tests for affected critical paths.
+3. Update documentation and architecture decision records when behavior changes.
+4. Keep the change focused enough for a reviewer to verify.
 
-- Use `pnpm`.
-- Prefer mock providers for routine development.
-- Use `pnpm typecheck`, `pnpm lint`, and `pnpm test` before opening a PR.
+## Run the project
 
-## Code Style
+Use `pnpm` from the repository root. Start PostgreSQL and Redis before running the application:
 
-- TypeScript everywhere.
-- Strict typing at boundaries.
-- TSDoc/JSDoc for important exported modules and non-obvious invariants.
-- Avoid leaking provider SDKs into domain code.
+```bash
+pnpm install
+docker compose up -d postgres redis
+pnpm db:migrate
+pnpm dev
+```
+
+Mock providers support routine development without live Twilio, AI, calendar, or email credentials.
+
+## Verify your change
+
+Run these checks before opening a pull request:
+
+```bash
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+```
+
+Run `pnpm db:check` and `pnpm db:verify-rls` after changing migrations, roles, or row-level security.
+
+## Follow the code style
+
+- Use TypeScript with strict types at system boundaries
+- Add TSDoc or JSDoc to important exports and non-obvious invariants
+- Keep tests beside their source as `*.test.ts` or `*.test.tsx`
+- Use translation keys for dashboard copy
+- Format dates, times, and numbers with the active locale

@@ -14,6 +14,8 @@ for (const envPath of [
 }
 
 async function main(): Promise<void> {
+  const { initializeTelemetry, shutdownTelemetry } = await import("@lobbystack/telemetry/node");
+  await initializeTelemetry({ serviceName: "lobbystack-voice-gateway" });
   const [
     { createServer },
     {
@@ -43,6 +45,7 @@ async function main(): Promise<void> {
     await Promise.allSettled([
       server.close(),
       shutdownPostHog(),
+      shutdownTelemetry(),
     ]);
   };
 
@@ -72,6 +75,7 @@ void main().catch(async (error: unknown) => {
   const unknownError = error instanceof Error ? error : new Error(String(error));
   console.error(unknownError);
   const { capturePostHogException, shutdownPostHog } = await import("./observability/posthog");
+  const { shutdownTelemetry } = await import("@lobbystack/telemetry/node");
   capturePostHogException(unknownError, {
     properties: {
       operation: "voice_gateway_main",
@@ -80,6 +84,6 @@ void main().catch(async (error: unknown) => {
       expected: false,
     },
   });
-  await shutdownPostHog().catch(() => undefined);
+  await Promise.allSettled([shutdownPostHog(), shutdownTelemetry()]);
   process.exitCode = 1;
 });

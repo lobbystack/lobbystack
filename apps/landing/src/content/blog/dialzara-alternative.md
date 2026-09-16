@@ -1,6 +1,6 @@
 ---
-title: "Dialzara Alternative: Plans, Add-ons, and Control"
-seoTitle: "Dialzara Alternative: LobbyStack vs Dialzara"
+title: "Dialzara alternative: Plans, add-ons, and control"
+seoTitle: "Dialzara alternative: LobbyStack vs Dialzara"
 description: "Compare LobbyStack and Dialzara on minute pricing, booking, transfers, SMS, agency options, API access, open-source code, and self-hosted control."
 pubDate: 2026-07-30T10:50:00-04:00
 updatedDate: 2026-07-30T10:50:00-04:00

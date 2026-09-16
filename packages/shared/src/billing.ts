@@ -39,6 +39,7 @@ export const billingUsageKinds = [
   "alert_sms_segments",
   "outbound_call_attempts",
   "ai_sms_segments",
+  "chat_ai_tokens",
 ] as const;
 export type BillingUsageKind = (typeof billingUsageKinds)[number];
 
@@ -51,6 +52,7 @@ export const billingErrorCodes = {
   outboundCallAttemptLimitReached: "outbound_call_attempt_limit_reached",
   aiSmsNotEnabled: "ai_sms_not_enabled",
   dedicatedNumberRequiresPaidPlan: "dedicated_number_requires_paid_plan",
+  chatAiLimitReached: "chat_ai_limit_reached",
 } as const;
 
 export type BillingErrorCode =
@@ -66,6 +68,7 @@ export const billingMeterEventNames = {
   alertSmsSegments: "billing.alert_sms_segments",
   outboundCallAttempts: "billing.outbound_call_attempts",
   aiSmsSegments: "billing.ai_sms_segments",
+  chatAiTokens: "billing.chat_ai_tokens",
 } as const;
 
 export const billingPlanCatalog = {
@@ -78,6 +81,7 @@ export const billingPlanCatalog = {
     voiceSecondsIncluded: null,
     alertSmsSegmentsIncluded: null,
     outboundCallAttemptsIncluded: null,
+    chatAiTokensIncluded: null,
     includedBusinessNumbers: null,
     overagesBillable: false,
     voiceOverageRatePerMinuteCents: null,
@@ -93,6 +97,7 @@ export const billingPlanCatalog = {
     voiceSecondsIncluded: 1_800,
     alertSmsSegmentsIncluded: 10,
     outboundCallAttemptsIncluded: 2,
+    chatAiTokensIncluded: 5,
     includedBusinessNumbers: 0,
     overagesBillable: false,
     voiceOverageRatePerMinuteCents: null,
@@ -108,6 +113,7 @@ export const billingPlanCatalog = {
     voiceSecondsIncluded: 9_000,
     alertSmsSegmentsIncluded: 50,
     outboundCallAttemptsIncluded: 20,
+    chatAiTokensIncluded: 50,
     includedBusinessNumbers: 1,
     overagesBillable: true,
     voiceOverageRatePerMinuteCents: 20,
@@ -123,6 +129,7 @@ export const billingPlanCatalog = {
     voiceSecondsIncluded: 30_000,
     alertSmsSegmentsIncluded: 200,
     outboundCallAttemptsIncluded: 100,
+    chatAiTokensIncluded: 200,
     includedBusinessNumbers: 1,
     overagesBillable: true,
     voiceOverageRatePerMinuteCents: 18,
@@ -138,6 +145,7 @@ export const billingPlanCatalog = {
     voiceSecondsIncluded: null,
     alertSmsSegmentsIncluded: null,
     outboundCallAttemptsIncluded: null,
+    chatAiTokensIncluded: null,
     includedBusinessNumbers: null,
     overagesBillable: true,
     voiceOverageRatePerMinuteCents: null,
@@ -155,6 +163,7 @@ export const billingPlanCatalog = {
     voiceSecondsIncluded: number | null;
     alertSmsSegmentsIncluded: number | null;
     outboundCallAttemptsIncluded: number | null;
+    chatAiTokensIncluded: number | null;
     includedBusinessNumbers: number | null;
     overagesBillable: boolean;
     voiceOverageRatePerMinuteCents: number | null;
@@ -254,6 +263,11 @@ export function getPolarMeteredUsagePayload(
         eventName: billingMeterEventNames.aiSmsSegments,
         quantity,
       };
+    case "chat_ai_tokens":
+      return {
+        eventName: billingMeterEventNames.chatAiTokens,
+        quantity,
+      };
   }
 }
 
@@ -266,15 +280,18 @@ export type BillingUsageSnapshot = {
   alertSmsSegmentsUsed: number;
   outboundCallAttemptsUsed: number;
   aiSmsSegmentsUsed: number;
+  chatAiTokensUsed: number;
   voiceSecondsIncluded: number | null;
   alertSmsSegmentsIncluded: number | null;
   outboundCallAttemptsIncluded: number | null;
+  chatAiTokensIncluded: number | null;
   voiceSecondsRemaining: number | null;
   alertSmsSegmentsRemaining: number | null;
   outboundCallAttemptsRemaining: number | null;
   voiceBlocked: boolean;
   alertSmsBlocked: boolean;
   outboundCallAttemptsBlocked: boolean;
+  chatAiBlocked: boolean;
   knowledgeStorageBlocked: boolean;
 };
 
