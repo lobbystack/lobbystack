@@ -93,6 +93,11 @@ jobs:
       - run: pnpm replacement:call-detail
       - run: pnpm replacement:roles
       - run: pnpm replacement:locale
+      # Workspace packages resolve their main/subpath exports from dist/, and the
+      # deterministic baseline below runs `pnpm test`. ci.yml builds before testing;
+      # this job must too, or package imports like @lobbystack/telemetry/node fail.
+      - name: Build workspace packages
+        run: pnpm -r --filter "./packages/**" build
       - name: Run deterministic release baseline
         run: pnpm exec tsx --tsconfig scripts/tsconfig.json scripts/release-readiness.ts --evidence certification-results/deterministic-baseline.json
       - name: Retain deterministic release evidence
