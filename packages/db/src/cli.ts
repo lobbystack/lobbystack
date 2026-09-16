@@ -50,7 +50,10 @@ async function main(): Promise<void> {
         let updated = 0;
         for (const [role, password] of rolePasswords) {
           if (!password || !existingRoles.has(role)) continue;
-          await migrator.db.execute(sql`alter role ${sql.identifier(role)} with login password ${password}`);
+          // ALTER ROLE is a utility statement: it cannot take a bind parameter for
+          // the password. Role names come from the fixed allowlist above and the
+          // password is escaped as a single-quoted literal.
+          await migrator.db.execute(sql.raw(`alter role "${role.replaceAll('"', '""')}" with login password '${password.replaceAll("'", "''")}'`));
           updated += 1;
         }
         console.log(`Database role logins configured for ${updated} roles.`);
