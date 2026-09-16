@@ -1,6 +1,6 @@
 # Production rollout plan
 
-**Status:** preparation only. **No production rollout is authorized by this document.** Production is currently unprovisioned (the Railway `production` environment `17162691-75e0-494a-8318-0233cbecf2e0` has no services, no application variables, and no deployments). Creating paid production resources, loading production secrets, changing DNS or provider endpoints, freezing the legacy system, and switching traffic are irreversible or externally visible and require an explicit go/no-go.
+**Status:** production standby provisioned; **no cutover performed.** As of 2026-09-16 the Railway `production` environment `17162691-75e0-494a-8318-0233cbecf2e0` contains the replacement services, an isolated PostgreSQL/Redis/bucket, and the migrated (empty) schema, all healthy. No production data has been imported, no DNS record or provider endpoint points at production, and the legacy system still serves all traffic. Importing production data, changing DNS or provider endpoints, freezing the legacy system, and switching traffic remain irreversible or externally visible and are still gated on the entry criteria above and the go/no-go in section 8.
 
 Use with [production readiness](../validation/production-readiness.md), the [certification runbook](../validation/certification-runbook.md), the [production migration rehearsal](../migrations/production-rehearsal.md), the [traffic cutover/rollback runbook](./traffic-cutover-rollback.md), the [provider ingress plan](./provider-ingress-plan.md), the [legacy write-freeze runbook](./legacy-write-freeze.md), and the [isolated target evidence](./isolated-rehearsal-target.md).
 
@@ -8,7 +8,7 @@ Use with [production readiness](../validation/production-readiness.md), the [cer
 
 | Criterion | State |
 | --- | --- |
-| Immutable release candidate | Local commit `cb478b21f2ea384c82eb9ad4c33fe43beef8c2ae` (includes the auth rate-limit behind edge-proxy fix); clean baseline `90aa706c-1609-40e2-9a40-246a83c94da1` passed. Not pushed. |
+| Immutable release candidate | Local commit `faac87ba2da5a1980551aa3ff3209f72645a5974` (adds the database role-login bootstrap); clean baseline `e8db9938-0c01-4fd1-91a3-fde2850a34a2` passed. Not pushed. |
 | Local release baseline | Passed (lint/typecheck/test/build). |
 | Staging gate scripts | All pass against a local isolated stack; `release:check --staging` still requires the isolated-staging contract. |
 | Production importer + reconciliation | Implemented and green on two clean local targets. Human review and a provisioned target still required. |
@@ -79,3 +79,30 @@ The following require explicit human approval and production credentials; they a
 - [ ] Push and approve the release candidate commit.
 
 Until these are signed, production remains on the legacy system and the replacement stack stays `releaseCertified: false`.
+
+## 9. Provisioned production standby (2026-09-16)
+
+The owner approved provisioning and rollout. The reversible standby was built; the irreversible cutover steps were **not** performed.
+
+Provisioned in `production` (all healthy):
+
+| Resource | Identity | Domains/notes |
+| --- | --- | --- |
+| `admin` | service `3fd5070b-8cb2-4df2-a7f2-ee89eb0098fb` | `https://admin-production-8982.up.railway.app` (Railway-generated); `/api/health/ready` 200. |
+| `worker` | service `1c873b45-87f0-42aa-a0c8-e00cfb847476` | private; `/health/ready` 200. |
+| `voice-gateway` | service `2fe5fc51-8362-4c58-9884-a295fefe8afb` | `https://voice-gateway-production-c1a7.up.railway.app`; `/health/ready` 200. |
+| `migrator` | service `f5836a29-b3d9-471c-8ee6-c38006e5bd90` | run-once; migrations + `bootstrap` + RLS verification passed. |
+| `Postgres` | service `c4878c02-811f-407d-97f1-44acf4987913` | new `postgres-volume-production`; private `postgres.railway.internal`. |
+| `Redis-production` | database `Redis-production` | new `redis-volume-production`; `requirepass`, `appendonly yes`. |
+| bucket | `lobbystack-production` (`lobbystack-production-zomrgj`) | isolated from `parity-certification`. |
+
+Configuration notes:
+
+- `.railway/railway.ts` now manages `staging` **and** `production`; the managed Redis database and volumes are production-suffixed because Railway managed-database names are project-unique. Staging values are unchanged.
+- A new migrator `bootstrap` command (`packages/db/src/cli.ts`) sets `LOGIN` + password on the migration-created NOLOGIN roles from `LOBBYSTACK_*_PASSWORD`; fresh environments require it before the app roles can connect.
+- Production `REDIS_PREFIX` is `lobbystack-prod-20260916`; production `S3_*` come from the `lobbystack-production` bucket credentials.
+- Provider endpoints, DNS, `APP_BASE_URL`, `AUTH_TRUSTED_ORIGINS`, `GOOGLE_REDIRECT_URI`, and Twilio callback URLs point at the Railway-generated production domains, **not** at customer-facing domains, and no external provider has been repointed.
+- `LOBBYSTACK_MAINTENANCE_MODE` is `false` for the standby because the worker/voice `/health/ready` probes return `503` under maintenance and fail the Railway healthcheck (the documented readiness-vs-intentional-unreadiness conflict). Maintenance must be re-enabled as the first cutover step.
+- Production credentials live in the private restricted directory, not in this repository.
+
+Still required before any cutover: a fresh frozen production snapshot (the 2026-09-12 export is not the cutover artifact), the production import + reconciliation, provider-owner approval and endpoint changes, DNS/domain selection, the legacy write freeze, and the traffic-switch/rollback rehearsal.
