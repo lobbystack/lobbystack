@@ -8,7 +8,7 @@ Use with [production readiness](../validation/production-readiness.md), the [cer
 
 | Criterion | State |
 | --- | --- |
-| Immutable release candidate | Local commit `bccdb4af25511c1c2e487f344880deb89cfa2183`; clean baseline `3d03ad41-8170-45f1-acc0-9336e9495b03` passed. Not pushed. |
+| Immutable release candidate | Local commit `cb478b21f2ea384c82eb9ad4c33fe43beef8c2ae` (includes the auth rate-limit behind edge-proxy fix); clean baseline `90aa706c-1609-40e2-9a40-246a83c94da1` passed. Not pushed. |
 | Local release baseline | Passed (lint/typecheck/test/build). |
 | Staging gate scripts | All pass against a local isolated stack; `release:check --staging` still requires the isolated-staging contract. |
 | Production importer + reconciliation | Implemented and green on two clean local targets. Human review and a provisioned target still required. |
