@@ -177,6 +177,14 @@ export function getAuth() {
     advanced: {
       useSecureCookies: secureCookies,
       database: { generateId: () => randomUUID() },
+      // Railway's edge proxy overwrites `x-real-ip` with the connecting client
+      // address (and strips client-supplied values), so it is a trustworthy
+      // single-value IP source. The default `x-forwarded-for` carries a proxy
+      // hop on Railway, which Better Auth rejects when no trustedProxies are
+      // configured, collapsing everyone into one rate-limit bucket.
+      ipAddress: {
+        ipAddressHeaders: ["x-real-ip", "x-forwarded-for"],
+      },
     },
     plugins: [emailOTP({
       disableSignUp: true,
