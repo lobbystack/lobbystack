@@ -84,7 +84,8 @@ export default defineRailway((ctx) => {
     healthcheck: "/health/ready",
     healthcheckTimeout: 300,
     replicas: { "us-east4-eqdc4a": 1 },
-    deploy: { restartPolicyMaxRetries: 3 },
+    // Serverless (app sleeping): staging only. Production must stay awake for inbound calls.
+    deploy: { restartPolicyMaxRetries: 3, sleepApplication: !production },
     env: {
       ...observability,
       APP_BASE_URL: preserve(),
@@ -112,7 +113,9 @@ export default defineRailway((ctx) => {
     healthcheck: "/api/health/ready",
     healthcheckTimeout: 300,
     replicas: { "us-east4-eqdc4a": 1 },
-    deploy: { restartPolicyMaxRetries: 3 },
+    // Serverless (app sleeping): staging only. Production handles provider webhooks and
+    // the customer dashboard and must not cold-start.
+    deploy: { restartPolicyMaxRetries: 3, sleepApplication: !production },
     env: {
       ...observability,
       APP_BASE_URL: preserve(),
