@@ -34,6 +34,28 @@ async function main(): Promise<void> {
         await migrator.db.execute(sql.raw(await readFile(resolve("migrations", "0052_calendar_sync_freshness.sql"), "utf8")));
         console.log("Database migrations applied.");
         break;
+      case "bootstrap": {
+        const rolePasswords: Array<[string, string | undefined]> = [
+          ["lobbystack_migrator", process.env.LOBBYSTACK_MIGRATOR_PASSWORD],
+          ["lobbystack_auth", process.env.LOBBYSTACK_AUTH_PASSWORD],
+          ["lobbystack_app", process.env.LOBBYSTACK_APP_PASSWORD],
+          ["lobbystack_worker", process.env.LOBBYSTACK_WORKER_PASSWORD],
+          ["lobbystack_dispatcher", process.env.LOBBYSTACK_DISPATCHER_PASSWORD],
+          ["lobbystack_readonly", process.env.LOBBYSTACK_READONLY_PASSWORD],
+          ["lobbystack_finance_export", process.env.LOBBYSTACK_FINANCE_EXPORT_PASSWORD],
+        ];
+        const existingRoles = new Set(
+          (await migrator.db.execute<{ rolname: string }>(sql`select rolname from pg_roles where rolname like 'lobbystack_%'`)).rows.map((row) => row.rolname),
+        );
+        let updated = 0;
+        for (const [role, password] of rolePasswords) {
+          if (!password || !existingRoles.has(role)) continue;
+          await migrator.db.execute(sql`alter role ${sql.identifier(role)} with login password ${password}`);
+          updated += 1;
+        }
+        console.log(`Database role logins configured for ${updated} roles.`);
+        break;
+      }
       case "check": {
         const health = await databaseHealthCheck(migrator);
         if (!health.ok) {

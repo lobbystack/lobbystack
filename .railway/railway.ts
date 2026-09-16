@@ -2,23 +2,25 @@
 import { bucket, database, defineRailway, image, preserve, project, service, volume } from "railway/iac";
 
 export default defineRailway((ctx) => {
-  if (ctx.projectId !== "af0a130e-7b02-4fc0-94ef-b0ac45a0a0a6" || ctx.environment !== "staging") {
-    throw new Error("This infrastructure definition manages only the isolated parity staging environment.");
+  if (ctx.projectId !== "af0a130e-7b02-4fc0-94ef-b0ac45a0a0a6" || !["staging", "production"].includes(ctx.environment)) {
+    throw new Error("This infrastructure definition manages only the parity staging or production environment.");
   }
+  const production = ctx.environment === "production";
+  const stagingAdminUrl = "https://admin-staging-7e92.up.railway.app";
   const observability = {
     OTEL_EXPORTER_OTLP_ENDPOINT: preserve(),
     OTEL_EXPORTER_OTLP_HEADERS: preserve(),
     SERVICE_VERSION: preserve(),
   };
-  const Redis = database("Redis", "redis", { image: "redis:7-alpine", region: "us-east4-eqdc4a", defaultMountPath: "/data" });
+  const Redis = database(production ? "Redis-production" : "Redis", "redis", { image: "redis:7-alpine", region: "us-east4-eqdc4a", defaultMountPath: "/data" });
   Redis.deploy = { startCommand: "sh -c 'exec redis-server --bind :: 0.0.0.0 --appendonly yes --maxmemory-policy noeviction --requirepass \"$REDIS_PASSWORD\"'" };
   Redis.networking = { privateNetworkEndpoint: "redis" };
-  const postgresVolume = volume("postgres-volume", { alerts: { usage: { "100": {}, "80": {}, "95": {} } }, allowOnlineResize: true, region: "us-east4-eqdc4a", sizeMB: 5000 });
-  const redisVolume = volume("redis-volume", { alerts: { usage: { "100": {}, "80": {}, "95": {} } }, allowOnlineResize: true, region: "us-east4-eqdc4a", sizeMB: 5000 });
+  const postgresVolume = volume(production ? "postgres-volume-production" : "postgres-volume", { alerts: { usage: { "100": {}, "80": {}, "95": {} } }, allowOnlineResize: true, region: "us-east4-eqdc4a", sizeMB: 5000 });
+  const redisVolume = volume(production ? "redis-volume-production" : "redis-volume", { alerts: { usage: { "100": {}, "80": {}, "95": {} } }, allowOnlineResize: true, region: "us-east4-eqdc4a", sizeMB: 5000 });
   Redis.variables = { REDIS_PASSWORD: preserve() };
   // The database product owns its existing /data mount. Keep the volume resource
   // below, but do not also manage it as a service attachment (perpetual CLI drift).
-  const parityCertification = bucket("parity-certification", { region: "iad" });
+  const parityCertification = bucket(production ? "lobbystack-production" : "parity-certification", { region: "iad" });
   const worker = service("worker", {
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.worker" },
     healthcheck: "/health/ready",
@@ -62,7 +64,7 @@ export default defineRailway((ctx) => {
       TWILIO_ALERT_SMS_FROM: preserve(),
       TWILIO_ALERT_API_KEY_SID: preserve(),
       TWILIO_ALERT_API_KEY_SECRET: preserve(),
-      TWILIO_STATUS_CALLBACK_URL: "https://admin-staging-7e92.up.railway.app/api/webhooks/twilio/status",
+      TWILIO_STATUS_CALLBACK_URL: production ? preserve() : `${stagingAdminUrl}/api/webhooks/twilio/status`,
       NODE_ENV: preserve(),
       OTP_HASH_SECRET: preserve(),
       PORT: preserve(),
@@ -151,12 +153,12 @@ export default defineRailway((ctx) => {
       TWILIO_ACCOUNT_SID: preserve(),
       TWILIO_AUTH_TOKEN: preserve(),
       TWILIO_VERIFY_SERVICE_SID: preserve(),
-      TWILIO_SMS_WEBHOOK_URL: "https://admin-staging-7e92.up.railway.app/api/webhooks/twilio/sms",
+      TWILIO_SMS_WEBHOOK_URL: production ? preserve() : `${stagingAdminUrl}/api/webhooks/twilio/sms`,
       TWILIO_ALERT_ACCOUNT_SID: preserve(),
       TWILIO_ALERT_SMS_FROM: preserve(),
       TWILIO_ALERT_WEBHOOK_KEY_ID: preserve(),
       TWILIO_ALERT_WEBHOOK_SECRET: preserve(),
-      TWILIO_STATUS_CALLBACK_URL: "https://admin-staging-7e92.up.railway.app/api/webhooks/twilio/status",
+      TWILIO_STATUS_CALLBACK_URL: production ? preserve() : `${stagingAdminUrl}/api/webhooks/twilio/status`,
       NODE_ENV: preserve(),
       OTP_HASH_SECRET: preserve(),
       PORT: preserve(),
@@ -189,12 +191,24 @@ export default defineRailway((ctx) => {
   });
   const migrator = service("migrator", {
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.migrator" },
-    start: "sh -c 'node_modules/.bin/tsx dist/cli.js migrate && node_modules/.bin/tsx dist/cli.js migrate && node_modules/.bin/tsx dist/cli.js check && VERIFY_RLS_BEHAVIOR=true node_modules/.bin/tsx dist/cli.js verify-rls'",
+    start: production
+      ? "sh -c 'node_modules/.bin/tsx dist/cli.js migrate && node_modules/.bin/tsx dist/cli.js bootstrap && node_modules/.bin/tsx dist/cli.js check && VERIFY_RLS_BEHAVIOR=true node_modules/.bin/tsx dist/cli.js verify-rls'"
+      : "sh -c 'node_modules/.bin/tsx dist/cli.js migrate && node_modules/.bin/tsx dist/cli.js migrate && node_modules/.bin/tsx dist/cli.js check && VERIFY_RLS_BEHAVIOR=true node_modules/.bin/tsx dist/cli.js verify-rls'",
     replicas: { "us-east4-eqdc4a": 1 },
     deploy: { restartPolicyType: "NEVER" },
     env: {
       LOBBYSTACK_MIGRATOR_DATABASE_URL: preserve(),
       NODE_ENV: preserve(),
+      ...(production
+        ? {
+            LOBBYSTACK_AUTH_PASSWORD: preserve(),
+            LOBBYSTACK_APP_PASSWORD: preserve(),
+            LOBBYSTACK_WORKER_PASSWORD: preserve(),
+            LOBBYSTACK_DISPATCHER_PASSWORD: preserve(),
+            LOBBYSTACK_READONLY_PASSWORD: preserve(),
+            LOBBYSTACK_FINANCE_EXPORT_PASSWORD: preserve(),
+          }
+        : {}),
     },
   });
 
