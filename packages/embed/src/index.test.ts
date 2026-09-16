@@ -14,7 +14,10 @@ async function start(response: Response) {
   const frame = document.querySelector("iframe")!;
   const post = vi.spyOn(frame.contentWindow!, "postMessage");
   await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
-  await Promise.resolve(); await Promise.resolve();
+  // Flush the session request and its json/state continuations. A couple of
+  // microtasks is not enough under CI load, which let the first "ready" race
+  // the request and post only the visitor message.
+  for (let index = 0; index < 50; index += 1) await Promise.resolve();
   return { frame, post };
 }
 it("resends the completed session when the hydrated iframe announces readiness", async () => {

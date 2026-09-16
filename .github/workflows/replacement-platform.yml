@@ -41,7 +41,12 @@ jobs:
           --health-timeout=3s
           --health-retries=20
     steps:
+      # The admin UI parity check reads the legacy apps/web source with `git show`
+      # at a pinned commit, so this job needs the full history rather than the
+      # default single-commit shallow checkout.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 10.30.3
