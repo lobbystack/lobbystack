@@ -16,7 +16,7 @@ overrides:
   "@opentelemetry/sdk-node": 0.217.0
   "@puppeteer/browsers": 3.2.2
   "@xmldom/xmldom": 0.8.15
-  astro: 7.1.0
+  astro: 7.3.3
   axios: 1.18.0
   adm-zip: 0.6.0
   basic-ftp: 5.3.1
