@@ -7,7 +7,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  validate:
+  # This job is intentionally not named "validate": that context is owned by
+  # .github/workflows/ci.yml (typecheck, build, test), which is the required
+  # status check on main. Keep this name distinct so the two do not collide.
+  replacement-validate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -72,7 +75,13 @@ jobs:
       - run: pnpm replacement:recovery
       - run: pnpm replacement:notifications
       - run: pnpm replacement:billing
-      - run: pnpm replacement:auth
+      # Requires a live admin; run it only when a target environment is set
+      # (e.g. the replacement-staging environment), not on plain PR validation.
+      - name: Verify legacy password rehash against a live admin
+        if: ${{ vars.REPLACEMENT_ADMIN_BASE_URL != '' }}
+        env:
+          ADMIN_BASE_URL: ${{ vars.REPLACEMENT_ADMIN_BASE_URL }}
+        run: pnpm replacement:auth
       - run: pnpm replacement:email-send
       - run: pnpm replacement:sms-consent
       - run: pnpm replacement:feedback
