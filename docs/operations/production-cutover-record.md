@@ -37,9 +37,15 @@ Legacy Convex production was migrated to the Railway replacement (Next.js admin,
 
 Legacy Convex production remains **paused** (frozen). Before the no-return point, rollback is: restore the two DNS CNAMEs to the legacy targets (`lobbystack-app.pages.dev`, `lepk6x3.lobbystack-voice-prod.fly.dev`), restore the Twilio SMS webhook, and resume the Convex deployment. The imported replacement database is authoritative once writes are accepted there.
 
+## Provider endpoints switched
+
+- Twilio (production numbers `+12136686869`, `+18446562290`): SMS webhook now `https://app.lobbystack.com/api/webhooks/twilio/sms`; voice webhook remains `https://voice.lobbystack.com/twilio/voice/inbound`, which resolves to Railway.
+- Polar: the production webhook endpoint ("Convex Polar Events") was repointed to `https://app.lobbystack.com/api/webhooks/polar` (confirmed "Webhook Endpoint Updated"); its secret is unchanged.
+- Google Cloud OAuth client ("AI Receptionist Dev"): added authorized redirect URI `https://app.lobbystack.com/api/calendar/google/callback` (confirmed "OAuth client saved").
+- Resend: only if a delivery webhook is configured; the current API key is send-only and no production delivery webhook was found, so no change was made.
+
 ## Outstanding
 
-- Polar webhook endpoint: point to `https://app.lobbystack.com/api/webhooks/polar` (requires dashboard access; the organization token lacks `webhooks:write`).
-- Google Cloud OAuth client: add redirect URI `https://app.lobbystack.com/api/calendar/google/callback`.
-- Resend/Svix: move the delivery webhook if one is configured.
-- Observe the replacement for the agreed window, then retire the legacy deployment and close the rollback window.
+- Observe the replacement for the agreed window, then retire the legacy Convex deployment and close the rollback window.
+- Confirm whether any Resend/Svix delivery webhook exists for production; if so, add `https://app.lobbystack.com/api/webhooks/resend`.
+
