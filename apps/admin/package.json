@@ -49,7 +49,7 @@
     "lucia": "^3.2.2",
     "lucide-react": "^0.577.0",
     "luxon": "^3.7.2",
-    "next": "16.3.1",
+    "next": "16.3.3",
     "posthog-js": "^1.429.5",
     "posthog-node": "5.28.11",
     "react": "19.2.8",
