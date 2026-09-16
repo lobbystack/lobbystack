@@ -1,22 +1,29 @@
 # Railway infrastructure
 
-`railway.ts` owns all resources in the isolated parity certification project's `staging` environment. It refuses other project/environment targets. This is Railway Infrastructure as Code, using the pinned `railway/iac` SDK, not legacy per-service Config as Code.
+`railway.ts` owns the resources for the LobbyStack project (`lobbystack`, id `af0a130e-7b02-4fc0-94ef-b0ac45a0a0a6`) in the `staging` and `production` environments. It rejects any other project or environment. It uses the pinned `railway/iac` software development kit (SDK), not legacy per-service Config as Code.
 
-Use Railway CLI 5.49.2 or newer and pnpm 10.30.3. Link the checkout explicitly before planning:
+Link the target environment before you plan:
 
 ```sh
-railway link --project af0a130e-7b02-4fc0-94ef-b0ac45a0a0a6 --environment 22237215-5837-4754-842b-9306d43588ed
+railway link --project af0a130e-7b02-4fc0-94ef-b0ac45a0a0a6 --environment your_environment_id
 railway config plan
 railway config apply --yes
 railway config plan --detailed-exit-code
 ```
 
-Review the plan before applying. Never add `--confirm-destructive` routinely: removing a resource from this full-project definition means deletion. The generated Railway HTTPS domains remain platform-managed and are intentionally omitted by Railway's importer.
+Read the plan before you apply it. Don’t pass `--confirm-destructive` unless you mean to delete resources: removing a resource from this full-project definition deletes it from Railway. Railway manages the generated HTTPS domains itself, so the importer omits them.
 
-Secrets use `preserve()` and remain stored in Railway. This definition adopts existing staging infrastructure; a fresh environment requires provisioning its own isolated credentials and database roles. The migrator runs separately so the worker does not receive the database administrator credential.
+`preserve()` keeps each secret in Railway. Declare every variable that exists only in a live environment (set through the dashboard or `railway variable set`) here with `preserve()` as well; otherwise the next plan treats it as undeclared and deletes it. Declare variables that exist in one environment only with a conditional spread, `...(production ? { KEY: preserve() } : {})`, so the other environment doesn’t receive an empty variable.
 
-The Redis image is pinned to the existing `redis:7-alpine`. The default Redis helper/importer selected version 8 during the first preview; do not accept that upgrade as part of an infrastructure import.
+The definition declares Serverless (app sleeping) per environment to match the operational policy:
 
-See https://docs.railway.com/infrastructure-as-code and its reference for the supported authoring model.
+- Enabled in staging: `admin`, `worker`, `voice-gateway`, `Postgres`, and `Redis`.
+- Unset in production: every service.
 
-The final import plan reported zero changes. Redis uses the database product’s existing mount lifecycle; explicitly adding a service volume attachment produced perpetual drift in CLI 5.49.2. The live service read-back confirmed the existing `/data` mount and password variable. Do not convert it to a plain service: that plans a destructive resource replacement.
+Change these values only when you mean to. The setting applies on the next deploy of the service.
+
+The definition pins Redis to `redis:7-alpine`. The Redis helper in the importer selected version 8 during the first preview; reject that upgrade in an infrastructure import.
+
+See the [Railway Infrastructure as Code documentation](https://docs.railway.com/infrastructure-as-code) for the authoring model.
+
+The parser reports no changes for the current definition. The Redis database product owns its `/data` mount; adding a service volume attachment caused perpetual drift in Railway CLI version 5.49.2, and the live read-back confirmed the mount and the password variable. Don’t convert Redis to a plain service: that plans a destructive resource replacement.

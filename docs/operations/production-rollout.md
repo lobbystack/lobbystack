@@ -22,7 +22,7 @@ Do not provision production or change any production routing, provider endpoint,
 
 ## 2. Production resource plan
 
-Create in the `production` environment (same project `lobbystack-parity-20260907`, region `us-east4-eqdc4a` unless changed):
+Create in the `production` environment (same project `lobbystack`, region `us-east4-eqdc4a` unless changed):
 
 | Resource | Type | Notes |
 | --- | --- | --- |

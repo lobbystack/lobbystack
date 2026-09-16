@@ -1,9 +1,9 @@
-// Isolated certification infrastructure. Secrets remain in Railway via preserve().
+// LobbyStack platform infrastructure (staging and production). Secrets remain in Railway via preserve().
 import { bucket, database, defineRailway, image, preserve, project, service, volume } from "railway/iac";
 
 export default defineRailway((ctx) => {
   if (ctx.projectId !== "af0a130e-7b02-4fc0-94ef-b0ac45a0a0a6" || !["staging", "production"].includes(ctx.environment)) {
-    throw new Error("This infrastructure definition manages only the parity staging or production environment.");
+    throw new Error("This infrastructure definition manages only the lobbystack staging or production environment.");
   }
   const production = ctx.environment === "production";
   const stagingAdminUrl = "https://admin-staging-7e92.up.railway.app";
@@ -13,7 +13,7 @@ export default defineRailway((ctx) => {
     SERVICE_VERSION: preserve(),
   };
   const Redis = database(production ? "Redis-production" : "Redis", "redis", { image: "redis:7-alpine", region: "us-east4-eqdc4a", defaultMountPath: "/data" });
-  Redis.deploy = { startCommand: "sh -c 'exec redis-server --bind :: 0.0.0.0 --appendonly yes --maxmemory-policy noeviction --requirepass \"$REDIS_PASSWORD\"'" };
+  Redis.deploy = { startCommand: "sh -c 'exec redis-server --bind :: 0.0.0.0 --appendonly yes --maxmemory-policy noeviction --requirepass \"$REDIS_PASSWORD\"'", ...(production ? {} : { sleepApplication: true }) };
   Redis.networking = { privateNetworkEndpoint: "redis" };
   const postgresVolume = volume(production ? "postgres-volume-production" : "postgres-volume", { alerts: { usage: { "100": {}, "80": {}, "95": {} } }, allowOnlineResize: true, region: "us-east4-eqdc4a", sizeMB: 5000 });
   const redisVolume = volume(production ? "redis-volume-production" : "redis-volume", { alerts: { usage: { "100": {}, "80": {}, "95": {} } }, allowOnlineResize: true, region: "us-east4-eqdc4a", sizeMB: 5000 });
@@ -27,7 +27,7 @@ export default defineRailway((ctx) => {
     healthcheckTimeout: 300,
     preDeploy: [],
     replicas: { "us-east4-eqdc4a": 1 },
-    deploy: { restartPolicyMaxRetries: 3 },
+    deploy: { restartPolicyMaxRetries: 3, ...(production ? {} : { sleepApplication: true }) },
     env: {
       ...observability,
       APP_BASE_URL: preserve(),
@@ -77,6 +77,7 @@ export default defineRailway((ctx) => {
       S3_REGION: preserve(),
       S3_SECRET_ACCESS_KEY: preserve(),
       STORAGE_PROVIDER: preserve(),
+      ...(production ? { LOBBYSTACK_MAINTENANCE_MODE: preserve() } : {}),
     },
   });
   const voiceGateway = service("voice-gateway", {
@@ -84,8 +85,8 @@ export default defineRailway((ctx) => {
     healthcheck: "/health/ready",
     healthcheckTimeout: 300,
     replicas: { "us-east4-eqdc4a": 1 },
-    // Serverless (app sleeping): staging only. Production must stay awake for inbound calls.
-    deploy: { restartPolicyMaxRetries: 3, sleepApplication: !production },
+    // Serverless (app sleeping): preserve the staging setting; production stays always-on.
+    deploy: { restartPolicyMaxRetries: 3, ...(production ? {} : { sleepApplication: true }) },
     env: {
       ...observability,
       APP_BASE_URL: preserve(),
@@ -106,6 +107,18 @@ export default defineRailway((ctx) => {
       POSTHOG_KEY: preserve(),
       POSTHOG_HOST: preserve(),
       POSTHOG_PRIVACY_MODE: preserve(),
+      OPENAI_REALTIME_MODEL: preserve(),
+      VOICE_VAD_SILENCE_MS: preserve(),
+      ...(production
+        ? {
+            S3_ACCESS_KEY_ID: preserve(),
+            S3_BUCKET: preserve(),
+            S3_ENDPOINT: preserve(),
+            S3_FORCE_PATH_STYLE: preserve(),
+            S3_REGION: preserve(),
+            S3_SECRET_ACCESS_KEY: preserve(),
+          }
+        : {}),
     },
   });
   const admin = service("admin", {
@@ -113,9 +126,8 @@ export default defineRailway((ctx) => {
     healthcheck: "/api/health/ready",
     healthcheckTimeout: 300,
     replicas: { "us-east4-eqdc4a": 1 },
-    // Serverless (app sleeping): staging only. Production handles provider webhooks and
-    // the customer dashboard and must not cold-start.
-    deploy: { restartPolicyMaxRetries: 3, sleepApplication: !production },
+    // Serverless (app sleeping): preserve the staging setting; production stays always-on.
+    deploy: { restartPolicyMaxRetries: 3, ...(production ? {} : { sleepApplication: true }) },
     env: {
       ...observability,
       APP_BASE_URL: preserve(),
@@ -178,6 +190,12 @@ export default defineRailway((ctx) => {
       STORAGE_PROVIDER: preserve(),
       TURNSTILE_SECRET_KEY: preserve(),
       WIDGET_SESSION_SECRET: preserve(),
+      FINANCE_EXPORT_ENABLED: preserve(),
+      FINANCE_EXPORT_TOKEN: preserve(),
+      LOBBYSTACK_FINANCE_EXPORT_DATABASE_URL: preserve(),
+      NEXT_PUBLIC_POSTHOG_KEY: preserve(),
+      POSTHOG_SOURCEMAP_API_KEY: preserve(),
+      ...(production ? { LOBBYSTACK_MAINTENANCE_MODE: preserve() } : {}),
     },
   });
   const Postgres = service("Postgres", {
@@ -185,6 +203,8 @@ export default defineRailway((ctx) => {
     replicas: { "us-east4-eqdc4a": 1 },
     networking: { privateNetworkEndpoint: "postgres" },
     volumeMounts: { "/var/lib/postgresql/data": postgresVolume },
+    // Preserve the staging serverless setting; production stays always-on.
+    deploy: { ...(production ? {} : { sleepApplication: true }) },
     env: {
       PGDATA: preserve(),
       POSTGRES_DB: preserve(),
@@ -215,7 +235,7 @@ export default defineRailway((ctx) => {
     },
   });
 
-  return project("lobbystack-parity-20260907", {
+  return project("lobbystack", {
     resources: [Redis, worker, voiceGateway, admin, Postgres, migrator, postgresVolume, redisVolume, parityCertification],
   });
 });

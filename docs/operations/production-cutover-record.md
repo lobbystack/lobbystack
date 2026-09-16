@@ -11,7 +11,7 @@ Legacy Convex production was migrated to the Railway replacement (Next.js admin,
 
 ## Target
 
-- Railway project `lobbystack-parity-20260907`, environment `production` (`17162691-75e0-494a-8318-0233cbecf2e0`).
+- Railway project `lobbystack`, environment `production` (`17162691-75e0-494a-8318-0233cbecf2e0`).
 - Services: `admin`, `worker`, `voice-gateway`, `migrator`, `Postgres`, `Redis-production`, bucket `lobbystack-production`.
 
 ## Execution
