@@ -1,10 +1,9 @@
-import { createHash } from "node:crypto";
 import { and, eq, gt } from "drizzle-orm";
 import { verifications } from "@lobbystack/db";
 import { getAuthDatabase } from "./auth";
-import { verifyCalendarOAuthState } from "./google-calendar-oauth";
+import { calendarOAuthStateDigest, verifyCalendarOAuthState } from "./google-calendar-oauth";
 
-const identifier = (state: string) => `google-calendar:${createHash("sha256").update(state).digest("hex")}`;
+const identifier = (state: string) => `google-calendar:${calendarOAuthStateDigest(state)}`;
 
 export async function storeCalendarOAuthState(state: string): Promise<void> {
   const parsed = verifyCalendarOAuthState(state);

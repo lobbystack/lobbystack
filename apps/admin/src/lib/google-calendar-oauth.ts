@@ -1,4 +1,4 @@
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
 
 type CalendarOAuthState = { userId: string; businessId: string; issuedAt: number; nonce: string };
 
@@ -9,8 +9,14 @@ function secret(): string {
 export function createCalendarOAuthState(input: Omit<CalendarOAuthState, "issuedAt" | "nonce">): string {
   if (!secret()) throw new Error("Calendar OAuth signing is not configured.");
   const encoded = Buffer.from(JSON.stringify({ ...input, issuedAt: Date.now(), nonce: randomUUID() })).toString("base64url");
-  const signature = createHmac("sha256", secret()).update(encoded).digest("base64url");
+  const signature = scryptSync(encoded, secret(), 32).toString("base64url");
   return `${encoded}.${signature}`;
+}
+
+/** Deterministic, slow digest used to look up a stored state without persisting the bearer value. */
+export function calendarOAuthStateDigest(state: string): string {
+  if (!secret()) throw new Error("Calendar OAuth signing is not configured.");
+  return scryptSync(state, secret(), 32).toString("hex");
 }
 
 export function verifyCalendarOAuthState(value: string): CalendarOAuthState | null {
@@ -18,7 +24,7 @@ export function verifyCalendarOAuthState(value: string): CalendarOAuthState | nu
   if (parts.length !== 2) return null;
   const [encoded, signature] = parts;
   if (!encoded || !signature || !secret()) return null;
-  const expected = createHmac("sha256", secret()).update(encoded).digest("base64url");
+  const expected = scryptSync(encoded, secret(), 32).toString("base64url");
   if (expected.length !== signature.length || !timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) return null;
   try {
     const state = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as CalendarOAuthState;

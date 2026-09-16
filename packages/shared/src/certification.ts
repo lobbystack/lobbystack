@@ -12,7 +12,7 @@ export function assertCertificationRecipient(kind: "email" | "phone", recipient:
   const normalize = (value: string) => kind === "email" ? value.trim().toLowerCase() : value.trim();
   const allowed = (source[key] ?? "").split(/[\n,]/).map(normalize).filter(Boolean);
   const value = normalize(recipient);
-  const valid = kind === "email" ? /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/ : /^\+[1-9]\d{7,14}$/;
+  const valid = kind === "email" ? /^[^\s@,;<>]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/ : /^\+[1-9]\d{7,14}$/;
   if (!valid.test(value) || !allowed.length || allowed.some((item) => !valid.test(item)) || !allowed.includes(value)) throw new Error("CERTIFICATION_RECIPIENT_BLOCKED");
 }
 

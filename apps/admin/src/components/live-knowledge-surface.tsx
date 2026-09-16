@@ -37,8 +37,22 @@ function summarize(value: string, length: number): string {
   return normalized.length > length ? `${normalized.slice(0, length - 3).trimEnd()}...` : normalized;
 }
 
+function stripHtmlTags(value: string): string {
+  // Remove tags repeatedly until the text stops changing so nested or
+  // recombined tag markers cannot survive a single pass.
+  let previous: string;
+  let current = value;
+  do {
+    previous = current;
+    current = current.replace(/<[^>\s]+>/gu, "");
+  } while (current !== previous);
+  return current;
+}
+
 function previewText(value: string): string {
-  return value.replace(/!\[([^\]]*?)\]\((?:[^)\s]+(?:\s+["'][^"']*["'])?)\)/gu, "$1").replace(/\[([^\]]+)\]\((?:[^)\n]+)\)/gu, "$1").replace(/<[^>\s]+>/gu, "").replace(/\s+/gu, " ").trim();
+  const withoutImages = value.replace(/!\[([^\]]*?)\]\((?:[^)\s]+(?:\s+["'][^"']*["'])?)\)/gu, "$1");
+  const withoutLinks = withoutImages.replace(/\[([^\]]+)\]\((?:[^)\n]+)\)/gu, "$1");
+  return stripHtmlTags(withoutLinks).replace(/\s+/gu, " ").trim();
 }
 
 function isImportRow(row: Row): row is Document & { entryType: "document"; websiteImport: WebsiteImport } {

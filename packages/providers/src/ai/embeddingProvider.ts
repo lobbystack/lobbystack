@@ -146,10 +146,16 @@ export function createEmbeddingFingerprint(input: { baseURL: string; model: stri
 
 export type EmbeddingAiEnvironment = Record<string, string | undefined>;
 
+function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end -= 1;
+  return value.slice(0, end);
+}
+
 export function createEmbeddingProvider(environment: EmbeddingAiEnvironment = process.env): OpenAiCompatibleEmbeddingProvider | undefined {
   const baseURL = environment.AI_EMBEDDING_BASE_URL?.trim() || DEFAULT_EMBEDDING_AI_BASE_URL;
   const apiKey = environment.AI_EMBEDDING_API_KEY?.trim() || environment.OPENAI_API_KEY?.trim();
-  if (!apiKey && baseURL.replace(/\/+$/, "") === DEFAULT_EMBEDDING_AI_BASE_URL) return undefined;
+  if (!apiKey && trimTrailingSlashes(baseURL) === DEFAULT_EMBEDDING_AI_BASE_URL) return undefined;
   const inputCostPerMillionTokens = parseOptionalNumber(environment.AI_EMBEDDING_INPUT_COST_PER_MILLION_TOKENS);
   const timeoutMs = parsePositiveNumber(environment.AI_EMBEDDING_TIMEOUT_MS);
   const maxParallelCalls = parsePositiveNumber(environment.AI_EMBEDDING_MAX_PARALLEL_CALLS);

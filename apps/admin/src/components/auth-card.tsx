@@ -75,7 +75,9 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
         return;
       }
       recordAuthSuccess(mode === "login" ? "web.auth.login_succeeded" : "web.auth.signup_succeeded");
-      window.location.assign(getSafeReturnTo(new URLSearchParams(window.location.search).get("returnTo")) ?? "/");
+      const returnTo = getSafeReturnTo(new URLSearchParams(window.location.search).get("returnTo")) ?? "/";
+      const target = new URL(returnTo, window.location.origin);
+      window.location.assign(target.origin === window.location.origin ? `${target.pathname}${target.search}${target.hash}` : "/");
     } catch (cause) {
       if (mode === "signup") { setTurnstileToken(null); setTurnstileResetKey(key => key + 1); }
       setError(cause instanceof Error ? cause.message : t("errors.signupFailed"));

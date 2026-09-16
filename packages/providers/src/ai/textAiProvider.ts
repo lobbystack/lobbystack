@@ -191,10 +191,16 @@ function hasVersionedPricing(config: Pick<TextAiConfig, "pricingVersion" | "pric
 
 export type TextAiEnvironment = Record<string, string | undefined>;
 
+function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end -= 1;
+  return value.slice(0, end);
+}
+
 export function createTextAiProvider(environment: TextAiEnvironment = process.env): OpenAiCompatibleTextProvider | undefined {
   const baseURL = environment.AI_CHAT_BASE_URL?.trim() || DEFAULT_TEXT_AI_BASE_URL;
   const apiKey = environment.AI_CHAT_API_KEY?.trim() || environment.OPENAI_API_KEY?.trim();
-  if (!apiKey && baseURL.replace(/\/+$/, "") === DEFAULT_TEXT_AI_BASE_URL) return undefined;
+  if (!apiKey && trimTrailingSlashes(baseURL) === DEFAULT_TEXT_AI_BASE_URL) return undefined;
   const inputCost = parseOptionalNumber(environment.AI_CHAT_INPUT_COST_PER_MILLION_TOKENS);
   const config: TextAiConfig = {
     ...(apiKey ? { apiKey } : {}),

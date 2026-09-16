@@ -29,7 +29,7 @@ export function maskString(value: string): string {
 }
 
 export function redactSignedStorageUrls(value: string): string {
-  return value.replace(/https?:\/\/[^\s"'<>]+(?:\?|&)X-Amz-[^\s"'<>]*/gi, "[redacted-signed-url]");
+  return value.replace(/https?:\/\/[^\s"'<>?&]+[?&]X-Amz-[^\s"'<>]*/gi, "[redacted-signed-url]");
 }
 
 export function redactOtelAttributes(

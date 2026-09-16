@@ -16,7 +16,20 @@ const VOID_ORDER_STATUSES = new Set(["canceled", "cancelled", "refunded", "rever
 const VOID_REFUND_STATUSES = new Set(["succeeded"]);
 
 export function normalizeAffiliateReferralCode(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
+  let normalized = "";
+  let separator = false;
+  for (const character of value.trim().toLowerCase()) {
+    const isAlphaNumeric = (character >= "a" && character <= "z") || (character >= "0" && character <= "9");
+    if (isAlphaNumeric) {
+      if (separator) normalized += "-";
+      separator = false;
+      normalized += character;
+      if (normalized.length >= 32) break;
+    } else if (normalized.length > 0) {
+      separator = true;
+    }
+  }
+  return normalized.slice(0, 32);
 }
 
 function centsForCommission(amountCents: number): number {

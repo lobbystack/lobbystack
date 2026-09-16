@@ -47,7 +47,7 @@ export async function PATCH(request: Request) {
     const session = await requireApiSession(request);
     const body = await request.json() as { payoutEmail?: unknown };
     const payoutEmail = typeof body.payoutEmail === "string" ? body.payoutEmail.trim().toLowerCase() : "";
-    if (!payoutEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payoutEmail)) {
+    if (!payoutEmail || !/^[^\s@]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/.test(payoutEmail)) {
       return NextResponse.json({ error: "A valid payout email is required." }, { status: 400 });
     }
     return NextResponse.json(await withBusinessTransaction(getAppDatabase().db, { userId: session.user.id, actorType: "operator" }, async (tx) => {

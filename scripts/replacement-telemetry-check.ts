@@ -194,8 +194,9 @@ async function runCertification(): Promise<void> {
       response.writeHead(200, { "content-type": "application/x-protobuf" });
       response.end();
     } catch (error) {
+      console.error(error instanceof Error ? error.stack ?? error.message : String(error));
       response.writeHead(500);
-      response.end(error instanceof Error ? error.message : String(error));
+      response.end("receiver error");
     }
   });
   const storageServer = createTcpServer((socket) => socket.end("HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n"));
