@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +9,12 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { initializeTelemetry, shutdownTelemetry } from "@lobbystack/telemetry/node";
 
 import { createDatabaseClient, databaseHealthCheck } from "./client";
+import {
+  MIGRATION_JOURNAL_TABLE,
+  RAW_MIGRATIONS,
+  ROLE_MIGRATION,
+  SCHEMA_MIGRATIONS,
+} from "./migrations/raw-migrations";
 import { businesses } from "./schema";
 
 const repositoryRoot = fileURLToPath(new URL("../../..", import.meta.url));
@@ -20,20 +27,23 @@ async function main(): Promise<void> {
 
   try {
     switch (command) {
-      case "migrate":
-        await migrator.db.execute(sql.raw(await readFile(resolve("migrations", "0000_roles.sql"), "utf8")));
-        await migrate(migrator.db, { migrationsFolder: "./migrations/generated" });
-        for (const fileName of ["0002_rls.sql", "0003_resolvers.sql", "0004_vector.sql", "0005_booking_concurrency.sql", "0006_auth.sql", "0007_outbox_dlq.sql", "0008_dispatcher_business_listing.sql", "0009_knowledge_url_unique.sql", "0010_provider_pricing.sql", "0011_billing_affiliate_ledger.sql", "0012_dispatcher_runtime.sql", "0013_billing_checkout.sql", "0014_worker_affiliate_user_access.sql", "0015_actor_role_enforcement.sql", "0016_conversation_session_summaries.sql", "0017_prospect_demo_isolation.sql", "0018_fractional_usage_quantity.sql", "0019_web_voice_policy.sql", "0020_prospect_demo_lifecycle.sql", "0021_prospect_demo_operator_resolvers.sql", "0022_operator_notification_preferences.sql", "0023_operator_notification_deliveries.sql", "0024_phone_onboarding.sql", "0025_phone_claims.sql", "0026_phone_replacement.sql", "0027_operator_notification_resolver.sql", "0028_message_callback_resolver.sql", "0029_sms_consent.sql", "0030_billing_usage_caps.sql", "0031_feedback_submissions.sql", "0032_unit_economics.sql", "0033_notification_provider_pricing.sql", "0034_call_billing_exclusion.sql", "0035_app_user_profile_columns.sql", "0036_replacement_import_ids.sql", "0037_onboarding_attribution.sql", "0038_website_chat_widget.sql", "0039_website_chat_runtime.sql", "0040_embedding_fingerprints.sql", "0041_ui_functional_parity.sql", "0042_knowledge_document_tags.sql", "0043_phone_number_revisit.sql", "0044_operator_sms_consent_version.sql", "0045_verified_phone_market.sql", "0046_knowledge_document_activity.sql", "0047_website_import_document_link.sql"]) {
-          const file = await readFile(resolve("migrations", fileName), "utf8");
-          await migrator.db.execute(sql.raw(file));
+      case "migrate": {
+        const applied = await prepareMigrationJournal(migrator);
+        if (applied.size === 0 && (await appSchemaExists(migrator))) {
+          // The database was provisioned before this journal existed and already
+          // has the full schema. Record the known history as applied instead of
+          // replaying DDL against live tables.
+          await baselineExistingMigrations(migrator, applied);
+          console.log(`Baselined ${RAW_MIGRATIONS.length} previously-applied migrations into ${MIGRATION_JOURNAL_TABLE}.`);
         }
-        await migrator.db.execute(sql.raw(await readFile(resolve("migrations", "0048_knowledge_keyword_search.sql"), "utf8")));
-        await migrator.db.execute(sql.raw(await readFile(resolve("migrations", "0049_finance_usage_metadata.sql"), "utf8")));
-        await migrator.db.execute(sql.raw(await readFile(resolve("migrations", "0050_phone_verification_resends.sql"), "utf8")));
-        await migrator.db.execute(sql.raw(await readFile(resolve("migrations", "0051_knowledge_content_hash_index.sql"), "utf8")));
-        await migrator.db.execute(sql.raw(await readFile(resolve("migrations", "0052_calendar_sync_freshness.sql"), "utf8")));
+        await applyRawMigration(migrator, ROLE_MIGRATION, applied);
+        await migrate(migrator.db, { migrationsFolder: "./migrations/generated" });
+        for (const fileName of SCHEMA_MIGRATIONS) {
+          await applyRawMigration(migrator, fileName, applied);
+        }
         console.log("Database migrations applied.");
         break;
+      }
       case "bootstrap": {
         const rolePasswords: Array<[string, string | undefined]> = [
           ["lobbystack_migrator", process.env.LOBBYSTACK_MIGRATOR_PASSWORD],
@@ -90,7 +100,7 @@ async function main(): Promise<void> {
           select c.relname, c.relrowsecurity, c.relforcerowsecurity
           from pg_class c
           join pg_namespace n on n.oid = c.relnamespace
-          where n.nspname = 'public' and c.relkind = 'r' and c.relname not in ('__drizzle_migrations')
+          where n.nspname = 'public' and c.relkind = 'r' and c.relname not in ('__drizzle_migrations', '__lobbystack_migrations')
           order by c.relname
         `);
         const failures = rows.rows.filter((row) => !row.relrowsecurity || !row.relforcerowsecurity);
@@ -104,7 +114,7 @@ async function main(): Promise<void> {
           left join pg_policies p on p.schemaname = n.nspname and p.tablename = c.relname
           where n.nspname = 'public'
             and c.relkind = 'r'
-            and c.relname <> '__drizzle_migrations'
+            and c.relname not in ('__drizzle_migrations', '__lobbystack_migrations')
             and c.relrowsecurity
           group by c.relname
           having count(p.policyname) = 0
@@ -189,6 +199,83 @@ async function main(): Promise<void> {
     await migrator.pool.end().catch(() => undefined);
     await shutdownTelemetry();
   }
+}
+
+async function ensureMigrationJournal(client: ReturnType<typeof createDatabaseClient>): Promise<void> {
+  await client.db.execute(sql`
+    create table if not exists public.__lobbystack_migrations (
+      name text primary key,
+      checksum text not null,
+      applied_at timestamptz not null default now()
+    )
+  `);
+}
+
+async function readAppliedMigrations(client: ReturnType<typeof createDatabaseClient>): Promise<Map<string, string>> {
+  const result = await client.db.execute<{ name: string; checksum: string }>(sql`
+    select name, checksum from public.__lobbystack_migrations
+  `);
+  return new Map(result.rows.map((row) => [row.name, row.checksum]));
+}
+
+async function appSchemaExists(client: ReturnType<typeof createDatabaseClient>): Promise<boolean> {
+  const result = await client.db.execute<{ present: boolean }>(sql`
+    select to_regnamespace('app') is not null as present
+  `);
+  return result.rows[0]?.present ?? false;
+}
+
+async function prepareMigrationJournal(client: ReturnType<typeof createDatabaseClient>): Promise<Map<string, string>> {
+  await ensureMigrationJournal(client);
+  return readAppliedMigrations(client);
+}
+
+async function baselineExistingMigrations(
+  client: ReturnType<typeof createDatabaseClient>,
+  applied: Map<string, string>,
+): Promise<void> {
+  for (const fileName of RAW_MIGRATIONS) {
+    const contents = await readFile(resolve("migrations", fileName), "utf8");
+    const checksum = createHash("sha256").update(contents).digest("hex");
+    await client.db.execute(sql`
+      insert into public.__lobbystack_migrations (name, checksum)
+      values (${fileName}, ${checksum})
+      on conflict (name) do nothing
+    `);
+    applied.set(fileName, checksum);
+  }
+}
+
+async function applyRawMigration(
+  client: ReturnType<typeof createDatabaseClient>,
+  fileName: string,
+  applied: Map<string, string>,
+): Promise<void> {
+  const contents = await readFile(resolve("migrations", fileName), "utf8");
+  const checksum = createHash("sha256").update(contents).digest("hex");
+  const recorded = applied.get(fileName);
+  if (recorded !== undefined) {
+    if (recorded !== checksum) {
+      console.warn(`Migration ${fileName} was already applied with a different checksum; leaving the applied version in place.`);
+    } else {
+      console.log(`Skipping already-applied migration ${fileName}.`);
+    }
+    return;
+  }
+  // Apply the file and record it in one transaction so a failure never marks a
+  // migration as done. Postgres treats a multi-statement simple query as a
+  // single implicit transaction, so this preserves the previous atomicity while
+  // making it explicit for the journal write.
+  await client.db.transaction(async (tx) => {
+    await tx.execute(sql.raw(contents));
+    await tx.execute(sql`
+      insert into public.__lobbystack_migrations (name, checksum)
+      values (${fileName}, ${checksum})
+      on conflict (name) do update set checksum = excluded.checksum, applied_at = now()
+    `);
+  });
+  applied.set(fileName, checksum);
+  console.log(`Applied migration ${fileName}.`);
 }
 
 async function verifyRlsBehavior(client: ReturnType<typeof createDatabaseClient>): Promise<void> {
