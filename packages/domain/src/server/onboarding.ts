@@ -192,7 +192,7 @@ export async function submitOnboardingAttribution(
     }
     const changed = await tx.update(businesses)
       .set({ onboardingAttribution: input.source?.trim().slice(0, 120) || null, onboardingStage: "complete", updatedAt: new Date() })
-      .where(and(eq(businesses.id, input.businessId), eq(businesses.onboardingStage, "attribution")))
+      .where(and(eq(businesses.id, input.businessId), inArray(businesses.onboardingStage, ["attribution", "complete"])))
       .returning({ id: businesses.id });
     if (!changed.length) {
       const error = new Error("Attribution cannot be submitted at this onboarding stage.") as Error & { status: number; code: string };

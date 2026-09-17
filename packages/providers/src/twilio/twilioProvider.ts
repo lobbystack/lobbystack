@@ -150,7 +150,16 @@ export class TwilioProvider {
     const collection = this.client.availablePhoneNumbers(input.countryCode);
     const filters = { smsEnabled: true, voiceEnabled: true, limit: Math.max(1, Math.min(20, Math.trunc(input.limit))), ...(input.areaCode && /^\d+$/.test(input.areaCode) ? { areaCode: Number(input.areaCode) } : {}), ...(input.city ? { inLocality: input.city } : {}), ...(input.regionCode ? { inRegion: input.regionCode } : {}), ...(input.postalCode ? { inPostalCode: input.postalCode } : {}) };
     const numbers = input.kind === "toll_free" ? await collection.tollFree.list(filters) : await collection.local.list(filters);
-    return numbers.filter((number) => number.capabilities.sms && number.capabilities.voice).map((number) => ({ phoneE164: number.phoneNumber, ...(number.locality ? { locality: number.locality } : {}), ...(number.region ? { region: number.region } : {}), countryCode: input.countryCode.toUpperCase(), capabilities: { sms: Boolean(number.capabilities.sms), voice: Boolean(number.capabilities.voice) } }));
+    // Twilio returns capability keys as "SMS"/"MMS"/"voice", while its TypeScript
+    // types use lowercase. Read both so real inventory is not filtered out.
+    return numbers
+      .map((number) => {
+        const capabilities = (number.capabilities ?? {}) as Record<string, boolean | undefined>;
+        const sms = Boolean(capabilities.sms ?? capabilities.SMS);
+        const voice = Boolean(capabilities.voice ?? capabilities.VOICE);
+        return { phoneE164: number.phoneNumber, ...(number.locality ? { locality: number.locality } : {}), ...(number.region ? { region: number.region } : {}), countryCode: input.countryCode.toUpperCase(), capabilities: { sms, voice } };
+      })
+      .filter((number) => number.capabilities.sms && number.capabilities.voice);
   }
 
   async purchasePhoneNumber(input: { e164: string; friendlyName: string; smsUrl: string; voiceUrl: string; statusCallbackUrl: string }): Promise<{ providerPhoneId: string; e164: string; smsUrl?: string; voiceUrl?: string }> {
