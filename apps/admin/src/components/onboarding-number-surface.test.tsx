@@ -46,12 +46,17 @@ describe("onboarding number API adapter", () => {
     expect(navigation.push).toHaveBeenCalledWith("/onboarding/attribution");
     expect(fetchMock).not.toHaveBeenCalled();
   });
-  it.each(["attribution", "complete"])("claims a number from %s without exposing another skip to completed users", async stage => {
+  it.each(["attribution", "complete"])("claims a number from %s", async stage => {
     const fetchMock = setup(stage);
     await userEvent.click(await screen.findByRole("button", { name: "number.select" }));
     await waitFor(() => expect(navigation.push).toHaveBeenCalledWith(stage === "complete" ? "/settings/phone-number" : "/onboarding/attribution"));
     const claimRequest = fetchMock.mock.calls.find(([url]) => url.includes("/claim?"));
     expect(claimRequest).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "number.skipLater" }) !== null).toBe(stage !== "complete");
+  });
+  it("offers a skip that returns a completed workspace to the dashboard", async () => {
+    const fetchMock = setup("complete");
+    await userEvent.click(await screen.findByRole("button", { name: "number.skipLater" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url.includes("/skip?"))).toBe(true));
+    expect(navigation.push).toHaveBeenCalledWith("/");
   });
 });

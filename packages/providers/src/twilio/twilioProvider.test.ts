@@ -54,8 +54,8 @@ describe("TwilioProvider phone provisioning", () => {
     expect(mocks.lookupFetch).toHaveBeenCalledWith({ fields: "line_type_intelligence" });
   });
 
-  it("requests voice-and-SMS inventory and filters incomplete numbers", async () => {
-    mocks.localList.mockResolvedValue([{ phoneNumber: "+14165550100", locality: "Toronto", region: "ON", capabilities: { sms: true, voice: true } }, { phoneNumber: "+14165550101", capabilities: { sms: false, voice: true } }]);
+  it("requests voice-and-SMS inventory and normalizes Twilio's uppercase capability keys", async () => {
+    mocks.localList.mockResolvedValue([{ phoneNumber: "+14165550100", locality: "Toronto", region: "ON", capabilities: { SMS: true, voice: true } }, { phoneNumber: "+14165550101", capabilities: { SMS: false, voice: true } }]);
     const result = await provider().listAvailablePhoneNumbers({ countryCode: "ca", kind: "local", areaCode: "416", limit: 50 });
     expect(mocks.localList).toHaveBeenCalledWith(expect.objectContaining({ areaCode: 416, smsEnabled: true, voiceEnabled: true, limit: 20 }));
     expect(result).toEqual([{ phoneE164: "+14165550100", locality: "Toronto", region: "ON", countryCode: "CA", capabilities: { sms: true, voice: true } }]);
