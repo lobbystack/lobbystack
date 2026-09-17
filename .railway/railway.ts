@@ -10,6 +10,10 @@ export default defineRailway((ctx) => {
   // Watch paths (gitignore-style, anchored at the repo root) so a service only
   // redeploys when its app, shared workspace packages, or build inputs change.
   const sharedWatchPatterns = ["/package.json", "/pnpm-lock.yaml", "/pnpm-workspace.yaml", "/.npmrc", "/tsconfig.base.json", "/packages/**"];
+  // The migrator only builds `@lobbystack/db` plus its workspace dependencies
+  // (contracts, telemetry). Watching those instead of every package keeps
+  // unrelated changes from rebuilding and redeploying a migration run-once job.
+  const migratorWatchPatterns = ["/package.json", "/pnpm-lock.yaml", "/pnpm-workspace.yaml", "/.npmrc", "/tsconfig.base.json", "/packages/db/**", "/packages/contracts/**", "/packages/telemetry/**", "/Dockerfile.migrator"];
   const observability = {
     OTEL_EXPORTER_OTLP_ENDPOINT: preserve(),
     OTEL_EXPORTER_OTLP_HEADERS: preserve(),
@@ -216,7 +220,7 @@ export default defineRailway((ctx) => {
     },
   });
   const migrator = service("migrator", {
-    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.migrator", watchPatterns: [...sharedWatchPatterns, "/Dockerfile.migrator"] },
+    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.migrator", watchPatterns: migratorWatchPatterns },
     start: production
       ? "sh -c 'node_modules/.bin/tsx dist/cli.js migrate && node_modules/.bin/tsx dist/cli.js bootstrap && node_modules/.bin/tsx dist/cli.js check && VERIFY_RLS_BEHAVIOR=true node_modules/.bin/tsx dist/cli.js verify-rls'"
       : "sh -c 'node_modules/.bin/tsx dist/cli.js migrate && node_modules/.bin/tsx dist/cli.js migrate && node_modules/.bin/tsx dist/cli.js check && VERIFY_RLS_BEHAVIOR=true node_modules/.bin/tsx dist/cli.js verify-rls'",
