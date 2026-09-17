@@ -44,6 +44,11 @@ Legacy Convex production remains **paused** (frozen). Before the no-return point
 - Google Cloud OAuth client ("AI Receptionist Dev"): added authorized redirect URI `https://app.lobbystack.com/api/calendar/google/callback` (confirmed "OAuth client saved").
 - Resend: only if a delivery webhook is configured; the current API key is send-only and no production delivery webhook was found, so no change was made.
 
+## Post-cutover corrections
+
+- **Twilio account (2026-09-17).** The primary `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN` on `admin`, `worker`, and `voice-gateway` pointed at the staging Twilio account, which owns no phone numbers. Twilio signs webhook requests with the number-owning account's auth token, so `/twilio/voice/inbound` and the SMS webhook returned `403` and callers heard “Application error occurred.” We set the primary credentials and `TWILIO_VERIFY_SERVICE_SID` to the production account that owns the numbers, redeployed the three services, and confirmed the environment and health checks. The alert account already used the correct account.
+- **Email verification on imported users (2026-09-17).** The importer set `email_verified = false` for legacy accounts without an `emailVerificationTime` (82 of 85 users), and `REQUIRE_EMAIL_VERIFICATION=true` made Better Auth reject their sign-ins. We ran `0053_legacy_email_verified_backfill.sql` in production; all 85 accounts are verified and the requirement stays enabled for new sign-ups.
+
 ## Outstanding
 
 - Observe the replacement for the agreed window, then retire the legacy Convex deployment and close the rollback window.

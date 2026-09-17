@@ -60,6 +60,7 @@ export const SCHEMA_MIGRATIONS = [
   "0050_phone_verification_resends.sql",
   "0051_knowledge_content_hash_index.sql",
   "0052_calendar_sync_freshness.sql",
+  "0053_legacy_email_verified_backfill.sql",
 ] as const;
 
 export const RAW_MIGRATIONS = [ROLE_MIGRATION, ...SCHEMA_MIGRATIONS] as const;
