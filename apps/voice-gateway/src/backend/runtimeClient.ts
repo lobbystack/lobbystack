@@ -220,7 +220,18 @@ export async function startVoiceCall(input: {
   to: string;
   startedAt: string;
 }): Promise<StartCallResponse> {
-  return await postJson<StartCallResponse>("/voice/call/start", input);
+  // The admin `/voice/call/start` route parses `voiceCallStartRequestSchema`,
+  // which names the provider id `providerCallId`; sending `twilioCallSid` here
+  // made the route reject every inbound call with a Zod error.
+  return await postJson<StartCallResponse>("/voice/call/start", {
+    businessId: input.businessId,
+    providerCallId: input.twilioCallSid,
+    channel: "voice",
+    from: input.from,
+    to: input.to,
+    ...(input.gatewaySessionId ? { gatewaySessionId: input.gatewaySessionId } : {}),
+    startedAt: input.startedAt,
+  });
 }
 
 export async function fetchWebVoiceContext(input: {
