@@ -9,6 +9,15 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
+// Book at a fixed midday UTC time so the slot never straddles the 0..1439-minute
+// business-hours window. Booking at the current wall-clock time made this check
+// fail when it ran late in the UTC day.
+function bookingSlot(daysFromNow: number): Date {
+  const slot = new Date(Date.now() + daysFromNow * 24 * 60 * 60_000);
+  slot.setUTCHours(12, 0, 0, 0);
+  return slot;
+}
+
 async function main(): Promise<void> {
   const db = createDatabaseClient("lobbystack_migrator");
   const businessId = randomUUID();
@@ -32,10 +41,10 @@ async function main(): Promise<void> {
       appointmentChangePolicy: { enabled: true, verificationMode: "otp_required", allowCancel: true, allowReschedule: true },
     });
     assert(contact && service && staffMember, "Appointment audit fixtures could not be created.");
-    await bookAppointment({ db: db.db }, { businessId, serviceId: service.id, startsAt: new Date(Date.now() + 10 * 24 * 60 * 60_000).toISOString(), timezone: "UTC", contactPhone: callerPhone, sourceChannel: "voice", smsConsentGranted: true });
+    await bookAppointment({ db: db.db }, { businessId, serviceId: service.id, startsAt: bookingSlot(10).toISOString(), timezone: "UTC", contactPhone: callerPhone, sourceChannel: "voice", smsConsentGranted: true });
     const reminderConsent = await db.db.select().from(smsConsentEvents).where(and(eq(smsConsentEvents.businessId, businessId), eq(smsConsentEvents.action, "reminder_consent_granted")));
     assert(reminderConsent.length === 1, "Appointment reminder consent was not recorded.");
-    const startsAt = new Date(Date.now() + 48 * 60 * 60_000);
+    const startsAt = bookingSlot(2);
     const [appointment] = await db.db.insert(appointments).values({ businessId, contactId: contact.id, serviceId: service.id, staffId: staffMember.id, startsAt, endsAt: new Date(startsAt.getTime() + 30 * 60_000), timezone: "UTC", status: "confirmed", sourceChannel: "voice" }).returning({ id: appointments.id });
     assert(appointment, "Appointment fixture could not be created.");
 
