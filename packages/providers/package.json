@@ -19,7 +19,7 @@
     "@lobbystack/shared": "workspace:*",
     "@lobbystack/telemetry": "workspace:*",
     "ai": "^7.0.67",
-    "nodemailer": "^9.0.1",
+    "nodemailer": "^9.1.1",
     "standardwebhooks": "^1.0.0",
     "twilio": "^5.12.2"
   },
