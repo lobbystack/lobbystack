@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canVisitOnboardingStage, isOnboardingStage, isValidOnboardingTransition, resolveOnboardingRoute, resolveOnboardingStageForPlan } from "./onboarding";
+import { canVisitOnboardingStage, isOnboardingStage, isValidOnboardingTransition, resolveOnboardingRoute, resolveOnboardingStageForPlan, selectPreferredMembership } from "./onboarding";
 
 describe("onboarding stages", () => {
   it("maps persisted stages to their dedicated routes", () => {
@@ -40,5 +40,17 @@ describe("original legacy plan-stage navigation", () => {
   });
   it("preserves completed onboarding on the free plan", () => {
     expect(resolveOnboardingStageForPlan("complete", "free_cloud")).toBe("complete");
+  });
+});
+
+describe("active business fallback", () => {
+  it("prefers an operable membership over a viewer membership", () => {
+    expect(selectPreferredMembership([{ business_id: "a", role: "viewer" }, { business_id: "b", role: "business_owner" }])?.business_id).toBe("b");
+  });
+  it("uses the first membership when every membership is a viewer", () => {
+    expect(selectPreferredMembership([{ business_id: "a", role: "viewer" }, { business_id: "b", role: "viewer" }])?.business_id).toBe("a");
+  });
+  it("returns undefined when the user has no active membership", () => {
+    expect(selectPreferredMembership([])).toBeUndefined();
   });
 });
