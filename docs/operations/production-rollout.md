@@ -47,6 +47,10 @@ Set the following in the production environment. Reuse the exact names from `.en
 
 `LOBBYSTACK_CERTIFICATION_MODE` must be `false` (or unset) in production; it is only for isolated certification.
 
+Twilio credentials must belong to the account that owns the production numbers, not the staging account. Twilio signs each webhook with the number-owning account's auth token, so a mismatch makes every inbound voice and SMS callback return `403` and callers hear “Application error occurred.” Set `TWILIO_VERIFY_SERVICE_SID` to the production Verify service; a staging Verify service sends onboarding OTPs through the wrong account.
+
+The importer stores legacy accounts with `email_verified = false` unless their source row carried an `emailVerificationTime`. With `REQUIRE_EMAIL_VERIFICATION=true`, Better Auth blocks those accounts from signing in; run migration `0053_legacy_email_verified_backfill.sql` to mark them verified.
+
 ## 4. Domains and DNS
 
 Decide names (for example `app.<domain>` for admin, `voice.<domain>` for the gateway, plus any embed/widget host). Pre-lower TTL well before the window, add the Railway domains, verify certificates, and keep the legacy records until the observation window closes. Record the exact DNS records and the reversal steps in the release record.

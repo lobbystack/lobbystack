@@ -69,6 +69,7 @@
     "db:reset:test": "pnpm --filter @lobbystack/db db:reset:test",
     "db:verify-rls": "pnpm --filter @lobbystack/db db:verify-rls",
     "replacement:smoke": "tsx --tsconfig scripts/tsconfig.json scripts/replacement-smoke.ts",
+    "smoke:production": "tsx --tsconfig scripts/tsconfig.json scripts/production-smoke.ts",
     "replacement:internal": "tsx --tsconfig scripts/tsconfig.json scripts/replacement-internal-check.ts",
     "replacement:realtime": "tsx --tsconfig tsconfig.base.json scripts/replacement-realtime-check.ts",
     "replacement:call-detail": "tsx --tsconfig tsconfig.base.json scripts/replacement-call-detail-check.ts",
