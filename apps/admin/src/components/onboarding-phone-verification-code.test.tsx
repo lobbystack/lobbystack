@@ -9,7 +9,14 @@ vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 const clients: QueryClient[] = [];
 beforeEach(() => { Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => null }); vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} unobserve() {} }); });
-afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
+afterEach(async () => {
+  cleanup();
+  await Promise.all(clients.map(client => client.cancelQueries()));
+  // input-otp schedules uncleared 0/10/50ms timers that can fire after the jsdom
+  // environment is torn down, surfacing as an unhandled "window is not defined".
+  await new Promise(resolve => setTimeout(resolve, 60));
+  clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks();
+});
 function setup(approved: boolean, stage = "verify_phone_code", status = "pending") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, onboardingStage: stage }] });
