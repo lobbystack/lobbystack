@@ -7,6 +7,9 @@ export default defineRailway((ctx) => {
   }
   const production = ctx.environment === "production";
   const stagingAdminUrl = "https://admin-staging-7e92.up.railway.app";
+  // Watch paths (gitignore-style, anchored at the repo root) so a service only
+  // redeploys when its app, shared workspace packages, or build inputs change.
+  const sharedWatchPatterns = ["/package.json", "/pnpm-lock.yaml", "/pnpm-workspace.yaml", "/.npmrc", "/tsconfig.base.json", "/packages/**"];
   const observability = {
     OTEL_EXPORTER_OTLP_ENDPOINT: preserve(),
     OTEL_EXPORTER_OTLP_HEADERS: preserve(),
@@ -22,7 +25,7 @@ export default defineRailway((ctx) => {
   // below, but do not also manage it as a service attachment (perpetual CLI drift).
   const parityCertification = bucket(production ? "lobbystack-production" : "parity-certification", { region: "iad" });
   const worker = service("worker", {
-    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.worker" },
+    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.worker", watchPatterns: [...sharedWatchPatterns, "/apps/worker/**", "/Dockerfile.worker"] },
     healthcheck: "/health/ready",
     healthcheckTimeout: 300,
     preDeploy: [],
@@ -81,7 +84,7 @@ export default defineRailway((ctx) => {
     },
   });
   const voiceGateway = service("voice-gateway", {
-    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.voice-gateway" },
+    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.voice-gateway", watchPatterns: [...sharedWatchPatterns, "/apps/voice-gateway/**", "/Dockerfile.voice-gateway"] },
     healthcheck: "/health/ready",
     healthcheckTimeout: 300,
     replicas: { "us-east4-eqdc4a": 1 },
@@ -122,7 +125,7 @@ export default defineRailway((ctx) => {
     },
   });
   const admin = service("admin", {
-    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.admin" },
+    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.admin", watchPatterns: [...sharedWatchPatterns, "/apps/admin/**", "/scripts/copy-widget-embed.mjs", "/Dockerfile.admin"] },
     healthcheck: "/api/health/ready",
     healthcheckTimeout: 300,
     replicas: { "us-east4-eqdc4a": 1 },
@@ -213,7 +216,7 @@ export default defineRailway((ctx) => {
     },
   });
   const migrator = service("migrator", {
-    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.migrator" },
+    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.migrator", watchPatterns: [...sharedWatchPatterns, "/Dockerfile.migrator"] },
     start: production
       ? "sh -c 'node_modules/.bin/tsx dist/cli.js migrate && node_modules/.bin/tsx dist/cli.js bootstrap && node_modules/.bin/tsx dist/cli.js check && VERIFY_RLS_BEHAVIOR=true node_modules/.bin/tsx dist/cli.js verify-rls'"
       : "sh -c 'node_modules/.bin/tsx dist/cli.js migrate && node_modules/.bin/tsx dist/cli.js migrate && node_modules/.bin/tsx dist/cli.js check && VERIFY_RLS_BEHAVIOR=true node_modules/.bin/tsx dist/cli.js verify-rls'",

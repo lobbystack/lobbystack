@@ -1,7 +1,7 @@
 name: Replacement Platform
 
 on:
-  pull_request:
+  # Runs after merge to main and on demand; PRs rely on the faster CI workflow.
   push:
     branches: [main]
   workflow_dispatch:
