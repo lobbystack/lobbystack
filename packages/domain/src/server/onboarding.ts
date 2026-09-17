@@ -81,20 +81,46 @@ export function canVisitOnboardingStage(current: OnboardingStage, target: Onboar
   return stageSteps[target] <= stageSteps[current];
 }
 
+// Prefer a membership the user can operate; fall back to the first active one.
+export function selectPreferredMembership<T extends { role: string }>(rows: readonly T[]): T | undefined {
+  return rows.find((row) => row.role !== "viewer") ?? rows[0];
+}
+
+async function onboardingStateForBusiness(
+  tx: DatabaseTransaction,
+  businessId: string,
+): Promise<{ businessId: string; stage: OnboardingStage } | null> {
+  await tx.execute(sql`select set_config('app.business_id', ${businessId}, true)`);
+  const business = (await tx.select({ onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
+  if (!business) return null;
+  const billing = (await tx.select({ plan: billingAccounts.plan }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1))[0];
+  return {
+    businessId,
+    stage: resolveOnboardingStageForPlan(isOnboardingStage(business.onboardingStage) ? business.onboardingStage : "create_business", billing?.plan ?? null),
+  };
+}
+
 export async function getActiveOnboardingState(
   db: Database,
   userId: string,
 ): Promise<{ businessId: string | null; stage: OnboardingStage }> {
   return await withBusinessTransaction(db, { userId, actorType: "operator" }, async (tx) => {
     const user = (await tx.select({ activeBusinessId: users.activeBusinessId }).from(users).where(eq(users.id, userId)).limit(1))[0];
-    if (!user?.activeBusinessId) return { businessId: null, stage: "create_business" };
-    await tx.execute(sql`select set_config('app.business_id', ${user.activeBusinessId}, true)`);
-    const business = (await tx.select({ onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, user.activeBusinessId)).limit(1))[0];
-    const billing = (await tx.select({ plan: billingAccounts.plan }).from(billingAccounts).where(eq(billingAccounts.businessId, user.activeBusinessId)).limit(1))[0];
-    return {
-      businessId: user.activeBusinessId,
-      stage: resolveOnboardingStageForPlan(isOnboardingStage(business?.onboardingStage) ? business.onboardingStage : "create_business", billing?.plan ?? null),
-    };
+    if (user?.activeBusinessId) {
+      const active = await onboardingStateForBusiness(tx, user.activeBusinessId);
+      if (active) return active;
+    }
+    // The stored active business is missing, or its membership is no longer
+    // active (for example, removed after the legacy import). Fall back to an
+    // active membership so onboarding still resolves a stage instead of
+    // dead-ending on create_business and looping on the first step.
+    const memberships = await tx.execute<{ business_id: string; role: string }>(sql`select business_id, role from app.list_user_businesses(${userId})`);
+    const preferred = selectPreferredMembership(memberships.rows ?? []);
+    if (preferred) {
+      const fallback = await onboardingStateForBusiness(tx, String(preferred.business_id));
+      if (fallback) return fallback;
+    }
+    return { businessId: null, stage: "create_business" };
   });
 }
 
