@@ -47,6 +47,6 @@
     "@types/node": "^24.0.0",
     "@types/pg": "^8.15.5",
     "drizzle-kit": "^0.31.8",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.11"
   }
 }
