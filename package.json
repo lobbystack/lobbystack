@@ -64,6 +64,7 @@
     "release:seed-e2e": "tsx --tsconfig scripts/tsconfig.json scripts/seed-release-e2e.ts",
     "db:generate": "pnpm --filter @lobbystack/db db:generate",
     "db:migrate": "pnpm --filter @lobbystack/db db:migrate",
+    "env:generate": "node scripts/generate-env.mjs",
     "db:check": "pnpm --filter @lobbystack/db db:check",
     "db:seed": "pnpm --filter @lobbystack/db db:seed",
     "db:reset:test": "pnpm --filter @lobbystack/db db:reset:test",

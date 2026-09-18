@@ -8,6 +8,7 @@ contentType: "Tutorial"
 ## Prerequisites
 
 - Docker Engine 24 or later with Compose v2
+- Node.js 22 or later, to generate secrets
 - at least 4 CPU cores, 8 GB RAM, and durable disk storage
 - public DNS names for the dashboard and voice gateway
 - Twilio and OpenAI accounts for live calls
@@ -17,10 +18,12 @@ contentType: "Tutorial"
 ```bash
 git clone https://github.com/lobbystack/lobbystack.git
 cd lobbystack
-cp .env.example .env
+node scripts/generate-env.mjs
 ```
 
-Replace every placeholder in `.env`. At minimum, set strong PostgreSQL role passwords, `BETTER_AUTH_SECRET`, `INTERNAL_SERVICE_SECRET`, `INTERNAL_SERVICE_TOKEN`, `LOCAL_STORAGE_SIGNING_SECRET`, `ENCRYPTION_KEY`, `OTP_HASH_SECRET`, `APP_BASE_URL`, and provider credentials.
+The script copies `.env.example` to `.env` and fills every PostgreSQL role password and internal secret with a random 64-character value. It won't overwrite an existing `.env` unless you pass `--force`, which also replaces every secret in it.
+
+Then open `.env` and set `APP_BASE_URL`, `OPENAI_API_KEY`, and your Twilio credentials. Services build their database connection strings from the role passwords, so you don't need to write any database URLs.
 
 Compose sets `STORAGE_PROVIDER=local` by default. The admin and worker mount the same persistent `storage_data` volume at `/var/lib/lobbystack/storage`.
 

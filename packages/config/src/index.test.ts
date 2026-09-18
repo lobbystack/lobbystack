@@ -50,24 +50,13 @@ describe("loadVoiceGatewayEnv", () => {
     ).toBe("development");
   });
 
-  it("defaults web call allowed origins to production-safe origins", () => {
+  it("defaults web call allowed origins to none so deployments list their own", () => {
     const env = loadVoiceGatewayEnv({
       ...baseVoiceGatewayEnv,
       DEPLOYMENT_MODE: "cloud",
     });
 
-    expect(env.WEB_CALL_ALLOWED_ORIGINS).toBe(
-      "https://app.lobbystack.com,https://lobbystack.com,https://www.lobbystack.com",
-    );
-    expect(env.WEB_CALL_ALLOWED_ORIGINS).toContain(
-      "https://app.lobbystack.com",
-    );
-    expect(env.WEB_CALL_ALLOWED_ORIGINS).toContain("https://lobbystack.com");
-    expect(env.WEB_CALL_ALLOWED_ORIGINS).toContain(
-      "https://www.lobbystack.com",
-    );
-    expect(env.WEB_CALL_ALLOWED_ORIGINS).not.toContain("localhost");
-    expect(env.WEB_CALL_ALLOWED_ORIGINS).not.toContain("127.0.0.1");
+    expect(env.WEB_CALL_ALLOWED_ORIGINS).toBe("");
   });
 
   it("does not trust proxy headers unless explicitly enabled", () => {
