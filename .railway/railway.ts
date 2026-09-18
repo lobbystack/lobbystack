@@ -111,6 +111,9 @@ export default defineRailway((ctx) => {
       REDIS_URL: preserve(),
       VOICE_GATEWAY_BASE_URL: preserve(),
       WEB_CALL_ALLOWED_ORIGINS: preserve(),
+      // The landing page demo call sends no signed token; the gateway only
+      // accepts it for this public business slug.
+      WEB_CALL_PUBLIC_BUSINESS_SLUG: production ? "lobbystack-mp35s9y1" : "lobbystack-qa-motd3txq",
       POSTHOG_KEY: preserve(),
       POSTHOG_HOST: preserve(),
       POSTHOG_PRIVACY_MODE: preserve(),

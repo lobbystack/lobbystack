@@ -13,10 +13,9 @@ Use `.env.example` as the source of truth. Store production values in your deplo
 | --- | --- |
 | `APP_BASE_URL` | Public HTTPS URL for the dashboard and API. |
 | `DEPLOYMENT_MODE` | `cloud`, `self_hosted_standard`, or `development`. |
-| `LOBBYSTACK_APP_DATABASE_URL` | RLS-constrained admin/API connection. |
-| `LOBBYSTACK_AUTH_DATABASE_URL` | Authentication-only connection. |
-| `LOBBYSTACK_WORKER_DATABASE_URL` | Worker connection. |
-| `LOBBYSTACK_DISPATCHER_DATABASE_URL` | Transactional outbox dispatcher connection. |
+| `DATABASE_URL` | PostgreSQL connection for the service's main role: `lobbystack_app` for the admin, `lobbystack_worker` for the worker. |
+| `LOBBYSTACK_AUTH_PASSWORD`, `LOBBYSTACK_WORKER_PASSWORD`, `LOBBYSTACK_DISPATCHER_PASSWORD` | Passwords for the other roles. A service connects as each role by combining `DATABASE_URL`'s host and database with that role's password. |
+| `LOBBYSTACK_<ROLE>_DATABASE_URL` | Optional. Overrides the built connection string for one role, for example to use a different host. |
 | `BETTER_AUTH_SECRET` | Better Auth signing secret. Use at least 32 random characters. |
 | `ENCRYPTION_KEY` | Encrypts stored application credentials. |
 | `OTP_HASH_SECRET` | Hashes one-time verification codes. |
@@ -29,7 +28,7 @@ Use `.env.example` as the source of truth. Store production values in your deplo
 | `INTERNAL_SERVICE_SECRET` | HMAC secret for signed service requests. |
 | `INTERNAL_SERVICE_TOKEN` | Token used by protected internal health and compatibility routes. |
 | `VOICE_GATEWAY_BASE_URL` | Public HTTPS URL for Twilio callbacks and media streams. |
-| `WEB_CALL_ALLOWED_ORIGINS` | Comma-separated browser origins allowed to start web calls. |
+| `WEB_CALL_ALLOWED_ORIGINS` | Comma-separated browser origins allowed to start web calls, in addition to `APP_BASE_URL`. Empty by default. Add each website that embeds the call button. |
 | `NEXT_PUBLIC_WEB_CALL_ENDPOINT` | Public browser endpoint ending in `/web-call/sessions`. |
 
 ## Redis and file storage

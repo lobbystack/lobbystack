@@ -27,3 +27,21 @@ The definition pins Redis to `redis:7-alpine`. The Redis helper in the importer 
 See the [Railway Infrastructure as Code documentation](https://docs.railway.com/infrastructure-as-code) for the authoring model.
 
 The parser reports no changes for the current definition. The Redis database product owns its `/data` mount; adding a service volume attachment caused perpetual drift in Railway CLI version 5.49.2, and the live read-back confirmed the mount and the password variable. Don’t convert Redis to a plain service: that plans a destructive resource replacement.
+
+## Self-hosted template
+
+`template.ts` owns the `lobbystack-template` project (id `c2e1d45e-9a95-4292-a304-a5456bd0cbdd`, `production` environment). Railway generates the public LobbyStack template from that project, so keep it deployable from `main`.
+
+Plan it from a directory linked to the template project, so the repository link to the `lobbystack` project stays untouched:
+
+```sh
+railway link --project c2e1d45e-9a95-4292-a304-a5456bd0cbdd --environment production
+railway config plan --file /path/to/repo/.railway/template.ts
+```
+
+The `migrate` service runs migrations as the `postgres` superuser, like Docker Compose. `0000_roles.sql` creates the application roles, and `bootstrap` gives them logins. Every other service connects as a scoped role.
+
+Two things to know before you change it:
+
+- Generate secrets with `openssl rand -hex 32` and set them with `railway variable set`. `ctx.randomString()` returns a hash of the environment name, so anyone can compute its output.
+- Railway keeps a deleted volume for 48 hours, and an apply reattaches a pending-deletion volume that has the same name. Give a replacement volume a new name.

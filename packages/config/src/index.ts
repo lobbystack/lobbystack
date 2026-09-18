@@ -90,11 +90,8 @@ const voiceGatewayEnvSchema = z.object({
   OPENAI_TRANSCRIPTION_MODEL: z.string().default("gpt-4o-mini-transcribe"),
   OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
   OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  WEB_CALL_ALLOWED_ORIGINS: z
-    .string()
-    .default(
-      "https://app.lobbystack.com,https://lobbystack.com,https://www.lobbystack.com",
-    ),
+  // Empty by default: the gateway always allows APP_BASE_URL, and each deployment lists its own sites.
+  WEB_CALL_ALLOWED_ORIGINS: z.string().default(""),
   WEB_CALL_PUBLIC_BUSINESS_SLUG: z.string().min(1).max(120).optional(),
   WEB_CALL_MAX_DURATION_MS: z.coerce
     .number()

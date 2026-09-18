@@ -49,10 +49,25 @@ function databaseUrl(source: Record<string, string | undefined> = process.env): 
   return value;
 }
 
+// Resolves a role's connection string: an explicit `<ROLE>_DATABASE_URL` wins; otherwise, when
+// `<ROLE>_PASSWORD` is set, reuse DATABASE_URL's host and database with that role's credentials.
+// The migrator never derives: the migrate job holds every role password for `bootstrap`, but it must
+// connect with DATABASE_URL as given (the superuser on fresh installs).
+export function roleDatabaseUrl(role: DatabaseRole, source: Record<string, string | undefined> = process.env): string {
+  const explicit = source[`${role.toUpperCase()}_DATABASE_URL`];
+  if (explicit) return explicit;
+  const base = databaseUrl(source);
+  const password = role === "lobbystack_migrator" ? undefined : source[`${role.toUpperCase()}_PASSWORD`];
+  if (!password) return base;
+  const url = new URL(base);
+  url.username = role;
+  url.password = password;
+  return url.toString();
+}
+
 function poolConfig(role: DatabaseRole, source: Record<string, string | undefined>): PoolConfig {
-  const urlKey = `${role.toUpperCase()}_DATABASE_URL`;
   return {
-    connectionString: source[urlKey] ?? databaseUrl(source),
+    connectionString: roleDatabaseUrl(role, source),
     application_name: `lobbystack:${role}`,
     max: Number(source[`${role.toUpperCase()}_POOL_MAX`] ?? (role === "lobbystack_dispatcher" ? 4 : 12)),
     idleTimeoutMillis: 30_000,
