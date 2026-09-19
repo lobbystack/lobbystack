@@ -8,7 +8,7 @@ The voice gateway uses the admin's private hostname for `BACKEND_INTERNAL_URL`. 
 
 ## Configure shared variables
 
-- Database role URLs: `LOBBYSTACK_MIGRATOR_DATABASE_URL`, `LOBBYSTACK_AUTH_DATABASE_URL`, `LOBBYSTACK_APP_DATABASE_URL`, `LOBBYSTACK_WORKER_DATABASE_URL`, and `LOBBYSTACK_DISPATCHER_DATABASE_URL`.
+- Database: `DATABASE_URL` for the service's main role, plus a `LOBBYSTACK_<ROLE>_PASSWORD` for each other role the service uses. Services build those role URLs from `DATABASE_URL`'s host. Set `LOBBYSTACK_<ROLE>_DATABASE_URL` only to point a role at a different host. The migrator connects with `DATABASE_URL` as given.
 - Redis: `REDIS_URL` and an environment-specific `REDIS_PREFIX`.
 - Security: `BETTER_AUTH_SECRET`, `INTERNAL_SERVICE_SECRET`, `INTERNAL_SERVICE_TOKEN`, `ENCRYPTION_KEY`, and `OTP_HASH_SECRET`.
 - Storage: set `STORAGE_PROVIDER=s3`, add Railway bucket references for `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and `S3_BUCKET`, and set `S3_FORCE_PATH_STYLE=false`.
