@@ -105,3 +105,21 @@ describe("billableVoiceSeconds", () => {
     expect(billableVoiceSeconds(-30)).toBe(0);
   });
 });
+
+describe("billableVoiceSeconds with provider rounding", () => {
+  it("exempts a 9.2 second call the provider reported as 10 seconds", () => {
+    expect(billableVoiceSeconds(10, null, 9.2)).toBe(0);
+  });
+
+  it("bills a call both sources agree ran past the cutoff", () => {
+    expect(billableVoiceSeconds(11, null, 10.4)).toBe(11);
+  });
+
+  it("keeps the provider duration when it is the longer measure", () => {
+    expect(billableVoiceSeconds(65, null, 64.2)).toBe(65);
+  });
+
+  it("still exempts spam regardless of the measured time", () => {
+    expect(billableVoiceSeconds(300, "spam_ended", 299.5)).toBe(0);
+  });
+});

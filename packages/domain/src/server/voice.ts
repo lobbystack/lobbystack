@@ -169,13 +169,15 @@ export async function completeCall(
     if (!call) {
       return;
     }
+    // Providers round up to whole seconds, so the call's own timestamps decide the short-call exemption.
+    const measuredSeconds = Math.max(0, (new Date(input.endedAt).getTime() - call.startedAt.getTime()) / 1_000);
     if (call.billingExcluded) {
       // Prospect demos and other explicitly non-billable calls never create usage.
     } else if (call.transport === "web_voice") {
-      const durationSeconds = billableVoiceSeconds(input.providerDurationSeconds ?? Math.max(0, (new Date(input.endedAt).getTime() - call.startedAt.getTime()) / 1_000), call.disposition);
+      const durationSeconds = billableVoiceSeconds(input.providerDurationSeconds ?? measuredSeconds, call.disposition, measuredSeconds);
       await finalizeWebVoiceUsageInTransaction(tx, { businessId: input.businessId, callId: call.id, durationSeconds });
     } else {
-      const durationSeconds = billableVoiceSeconds(input.providerDurationSeconds ?? Math.max(0, (new Date(input.endedAt).getTime() - call.startedAt.getTime()) / 1_000), call.disposition);
+      const durationSeconds = billableVoiceSeconds(input.providerDurationSeconds ?? measuredSeconds, call.disposition, measuredSeconds);
       const usageEventId = await applyNonAiUsageInTransaction(tx, { operation: "correct", businessId: input.businessId, sourceKey: `voice:${call.id}`, usageKind: "voice_seconds", quantity: durationSeconds });
       await enqueueUsageSyncInTransaction(tx, { businessId: input.businessId, usageEventId });
     }

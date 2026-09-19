@@ -346,9 +346,15 @@ export function isNonBillableCallDisposition(disposition: string | null | undefi
   return typeof disposition === "string" && (nonBillableCallDispositions as readonly string[]).includes(disposition);
 }
 
-/** Voice seconds a call adds to usage: wrong numbers, instant hang-ups, and spam cost the caller nothing. */
-export function billableVoiceSeconds(durationSeconds: number, disposition?: string | null): number {
+/**
+ * Voice seconds a call adds to usage: wrong numbers, instant hang-ups, and spam cost the caller nothing.
+ *
+ * Providers report whole seconds and round up, so a 9.2 second call arrives as 10. `measuredSeconds`
+ * carries the unrounded elapsed time from the call record and decides the exemption when it is shorter.
+ */
+export function billableVoiceSeconds(durationSeconds: number, disposition?: string | null, measuredSeconds?: number): number {
   const normalizedDurationSeconds = Math.max(0, durationSeconds);
   if (isNonBillableCallDisposition(disposition)) return 0;
-  return normalizedDurationSeconds < MIN_BILLABLE_VOICE_DURATION_SECONDS ? 0 : normalizedDurationSeconds;
+  const shortestObservedSeconds = measuredSeconds === undefined ? normalizedDurationSeconds : Math.min(normalizedDurationSeconds, Math.max(0, measuredSeconds));
+  return shortestObservedSeconds < MIN_BILLABLE_VOICE_DURATION_SECONDS ? 0 : normalizedDurationSeconds;
 }
