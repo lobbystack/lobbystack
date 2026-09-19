@@ -1,7 +1,7 @@
 import { and, count, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 
 import { appointments, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { isTerminalTwilioCallStatus } from "@lobbystack/shared";
+import { billableVoiceSeconds, isTerminalTwilioCallStatus } from "@lobbystack/shared";
 
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
@@ -165,17 +165,17 @@ export async function completeCall(
       ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}),
       revision: sql`${calls.revision} + 1`,
       updatedAt: new Date(),
-    }).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId))).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, startedAt: calls.startedAt, billingExcluded: calls.billingExcluded });
+    }).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId))).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, startedAt: calls.startedAt, billingExcluded: calls.billingExcluded, disposition: calls.disposition });
     if (!call) {
       return;
     }
     if (call.billingExcluded) {
       // Prospect demos and other explicitly non-billable calls never create usage.
     } else if (call.transport === "web_voice") {
-      const durationSeconds = input.providerDurationSeconds ?? Math.max(0, (new Date(input.endedAt).getTime() - call.startedAt.getTime()) / 1_000);
+      const durationSeconds = billableVoiceSeconds(input.providerDurationSeconds ?? Math.max(0, (new Date(input.endedAt).getTime() - call.startedAt.getTime()) / 1_000), call.disposition);
       await finalizeWebVoiceUsageInTransaction(tx, { businessId: input.businessId, callId: call.id, durationSeconds });
     } else {
-      const durationSeconds = input.providerDurationSeconds ?? Math.max(0, (new Date(input.endedAt).getTime() - call.startedAt.getTime()) / 1_000);
+      const durationSeconds = billableVoiceSeconds(input.providerDurationSeconds ?? Math.max(0, (new Date(input.endedAt).getTime() - call.startedAt.getTime()) / 1_000), call.disposition);
       const usageEventId = await applyNonAiUsageInTransaction(tx, { operation: "correct", businessId: input.businessId, sourceKey: `voice:${call.id}`, usageKind: "voice_seconds", quantity: durationSeconds });
       await enqueueUsageSyncInTransaction(tx, { businessId: input.businessId, usageEventId });
     }
