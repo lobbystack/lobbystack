@@ -180,7 +180,7 @@ Sans rapports, vous devinez. Et si la ligne téléphonique génère du chiffre d
 
 Le forfait le moins cher n'est pas toujours le coût le plus bas pour faire tourner votre téléphone.
 
-Les tarifs de réceptionniste IA peuvent reposer sur des forfaits mensuels, des minutes, des appels, des clients uniques, des agents, des sites, des crédits, des SMS, des numéros, des transferts humains, des workflows personnalisés, de l'onboarding ou du support entreprise. Le même prix affiché peut signifier des choses très différentes une fois un mois normal d'appels passé dedans.
+Les tarifs de réceptionniste IA peuvent reposer sur des forfaits mensuels, des minutes, des appels, des clients uniques, des agents, des sites, des crédits, des SMS, des numéros, des transferts humains, des workflows personnalisés, de l'onboarding ou du support entreprise. Le même prix affiché peut signifier des choses très différentes une fois un mois normal d'appels passé dedans. Par exemple, [ElevenLabs Reception](/fr/blog/elevenlabs-reception-alternative/) puise les appels et le clavardage web dans une seule réserve de crédits, donc le clavardage réduit vos minutes d'appel.
 
 Posez ces questions avant de comparer les prix :
 

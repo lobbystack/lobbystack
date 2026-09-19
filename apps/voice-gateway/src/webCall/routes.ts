@@ -578,6 +578,7 @@ async function finishDurableWebCallSession(
       durable.webCallMaxDurationMs ??
         server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
     ),
+    mediaDurationSeconds: Math.max(0, endedAtMs - startedAtMs) / 1_000,
   });
 }
 
@@ -870,6 +871,7 @@ async function finishWebCallSession(
         0,
         Math.ceil((Date.now() - session.startedAtMs) / 1000),
       ),
+      mediaDurationSeconds: Math.max(0, Date.now() - session.startedAtMs) / 1_000,
     });
   } catch (error) {
     session.finalized = false;

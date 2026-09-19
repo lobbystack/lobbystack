@@ -155,7 +155,7 @@ export async function upsertTranscript(
 
 export async function completeCall(
   context: DomainContext,
-  input: { businessId: string; callId: string; status: string; endedAt: string; disposition?: string; providerDurationSeconds?: number },
+  input: { businessId: string; callId: string; status: string; endedAt: string; disposition?: string; providerDurationSeconds?: number; mediaDurationSeconds?: number },
 ): Promise<void> {
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [call] = await tx.update(calls).set({
@@ -169,13 +169,17 @@ export async function completeCall(
     if (!call) {
       return;
     }
+    // Providers round up to whole seconds, so unrounded time decides the short-call exemption. The
+    // gateway's media-session duration is the real talk time; calls.startedAt precedes the stream and
+    // includes setup, so it only serves as a fallback.
+    const measuredSeconds = input.mediaDurationSeconds ?? Math.max(0, (new Date(input.endedAt).getTime() - call.startedAt.getTime()) / 1_000);
     if (call.billingExcluded) {
       // Prospect demos and other explicitly non-billable calls never create usage.
     } else if (call.transport === "web_voice") {
-      const durationSeconds = billableVoiceSeconds(input.providerDurationSeconds ?? Math.max(0, (new Date(input.endedAt).getTime() - call.startedAt.getTime()) / 1_000), call.disposition);
+      const durationSeconds = billableVoiceSeconds(input.providerDurationSeconds ?? measuredSeconds, call.disposition, measuredSeconds);
       await finalizeWebVoiceUsageInTransaction(tx, { businessId: input.businessId, callId: call.id, durationSeconds });
     } else {
-      const durationSeconds = billableVoiceSeconds(input.providerDurationSeconds ?? Math.max(0, (new Date(input.endedAt).getTime() - call.startedAt.getTime()) / 1_000), call.disposition);
+      const durationSeconds = billableVoiceSeconds(input.providerDurationSeconds ?? measuredSeconds, call.disposition, measuredSeconds);
       const usageEventId = await applyNonAiUsageInTransaction(tx, { operation: "correct", businessId: input.businessId, sourceKey: `voice:${call.id}`, usageKind: "voice_seconds", quantity: durationSeconds });
       await enqueueUsageSyncInTransaction(tx, { businessId: input.businessId, usageEventId });
     }
