@@ -17,6 +17,7 @@ const competitorSlugs = [
   "quo-sona-alternative",
   "cloudtalk-ai-receptionist-alternative",
   "moneypenny-ai-receptionist-alternative",
+  "elevenlabs-reception-alternative",
 ] as const
 
 const comparisonSlugs = [
