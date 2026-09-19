@@ -24,6 +24,7 @@ Reception sounds excellent and speaks more than 70 languages. LobbyStack gives y
 | Free option | 14-day trial with 30 credits, no card | 30 voice minutes, no card, all features, no expiry |
 | Entry plan | $29 for 75 credits ($24 billed annually) | $30 for 150 minutes ($24 billed annually) |
 | Entry overage | $0.45 per credit | $0.20 per minute |
+| Wrong numbers and spam | Counted as used credits | Calls under 10 seconds and spam hang-ups are not billed |
 | Mid-tier plan | $79 for 275 credits ($66 billed annually) | $100 for 500 minutes ($80 billed annually) |
 | Mid-tier overage | $0.38 per credit | $0.18 per minute |
 | Concurrent calls on entry plan | 1 | Not capped by plan |
@@ -41,7 +42,7 @@ Reception's Basic plan costs $29 a month for 75 credits. One credit buys one min
 
 LobbyStack's Starter plan costs $30 a month for 150 voice minutes, and each extra minute costs $0.20. Pro costs $100 for 500 minutes at $0.18 for each extra. Annual billing brings Starter to $24 a month, the same as Reception Basic on an annual plan.
 
-A business that takes 150 minutes of calls a month pays $30 on LobbyStack Starter. On Reception Basic, the same month costs $29 plus 75 extra minutes at $0.45, for a total of $62.75.
+A business that takes 150 minutes of calls a month pays $30 on LobbyStack Starter. On Reception Basic, the same month costs $29 plus 75 extra minutes at $0.45, for a total of $62.75. LobbyStack also leaves calls under 10 seconds and calls the receptionist ends as spam out of your usage, so a robocall or a wrong number costs you nothing.
 
 ## Where ElevenLabs Reception is strong
 

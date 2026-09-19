@@ -24,6 +24,7 @@ Reception offre d'excellentes voix et parle plus de 70 langues. LobbyStack vous 
 | Option gratuite | Essai de 14 jours avec 30 crédits, sans carte | 30 minutes, sans carte, toutes les fonctions, sans date limite |
 | Entrée payante | 29 $ pour 75 crédits (24 $ par mois à l'année) | 30 $ pour 150 minutes (24 $ par mois à l'année) |
 | Dépassement d'entrée | 0,45 $ par crédit | 0,20 $ par minute |
+| Faux numéros et pourriels | Comptés comme crédits utilisés | Appels de moins de 10 secondes et pourriels non facturés |
 | Niveau intermédiaire | 79 $ pour 275 crédits (66 $ par mois à l'année) | 100 $ pour 500 minutes (80 $ par mois à l'année) |
 | Dépassement intermédiaire | 0,38 $ par crédit | 0,18 $ par minute |
 | Appels simultanés au premier niveau | 1 | Aucune limite par forfait |
@@ -41,7 +42,7 @@ Le forfait Basic de Reception coûte 29 $ par mois pour 75 crédits. Un crédit 
 
 Le forfait Starter de LobbyStack coûte 30 $ par mois pour 150 minutes, puis 0,20 $ par minute supplémentaire. Pro coûte 100 $ pour 500 minutes à 0,18 $ la minute de plus. En facturation annuelle, Starter revient à 24 $ par mois, le même prix que Reception Basic à l'année.
 
-Une entreprise qui reçoit 150 minutes d'appels par mois paie 30 $ avec LobbyStack Starter. Avec Reception Basic, le même mois coûte 29 $ plus 75 minutes à 0,45 $, soit 62,75 $.
+Une entreprise qui reçoit 150 minutes d'appels par mois paie 30 $ avec LobbyStack Starter. Avec Reception Basic, le même mois coûte 29 $ plus 75 minutes à 0,45 $, soit 62,75 $. LobbyStack exclut aussi de l'usage les appels de moins de 10 secondes et ceux que la réceptionniste termine comme pourriel, donc un robot ou un faux numéro ne vous coûte rien.
 
 ## Les forces d'ElevenLabs Reception
 
