@@ -39,6 +39,7 @@ const TRANSLATED_PATHS = new Set([
   "/blog/quo-sona-alternative/",
   "/blog/cloudtalk-ai-receptionist-alternative/",
   "/blog/moneypenny-ai-receptionist-alternative/",
+  "/blog/elevenlabs-reception-alternative/",
   "/blog/ai-receptionist-vs-virtual-receptionist/",
   "/blog/ai-receptionist-vs-voicemail/",
   "/blog/lobbystack-is-live/",
