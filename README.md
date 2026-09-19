@@ -108,6 +108,10 @@ Use **LobbyStack Cloud** when you want the product managed for you. You still co
 
 Self-host when your team wants to run the stack on your own infrastructure, bring your own API keys, and use your own PostgreSQL, Twilio, OpenAI-compatible AI, calendar, analytics, billing, and email provider accounts.
 
+To self-host on Railway, deploy the template. Railway generates every secret and database password, and you enter an OpenAI API key and your Twilio credentials.
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/OD4YrV)
+
 Full product control in the hosted app. Infrastructure ownership when you self-host. Same open-source core either way.
 
 ## Architecture for contributors

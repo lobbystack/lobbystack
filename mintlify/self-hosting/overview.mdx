@@ -11,6 +11,12 @@ LobbyStack can run on one Docker host or as separate managed services. Self-host
   Live calls still require Twilio, OpenAI, and public HTTPS endpoints for the dashboard and voice gateway.
 </Note>
 
+## Deploy on Railway
+
+The [LobbyStack Railway template](https://railway.com/deploy/OD4YrV) deploys the admin, worker, voice gateway, and migration services with PostgreSQL, Redis, and a storage bucket. Railway generates every secret and database password. You enter an OpenAI API key and your Twilio credentials, then create your account on the admin domain.
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/OD4YrV)
+
 ## Official baseline
 
 The repository's [`docker-compose.yml`](https://github.com/lobbystack/lobbystack/blob/main/docker-compose.yml) runs:
