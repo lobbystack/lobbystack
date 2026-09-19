@@ -27,7 +27,7 @@ Reception offre d'excellentes voix et parle plus de 70 langues. LobbyStack vous 
 | Faux numéros et pourriels | Comptés comme crédits utilisés | Appels de moins de 10 secondes et pourriels non facturés |
 | Niveau intermédiaire | 79 $ pour 275 crédits (66 $ par mois à l'année) | 100 $ pour 500 minutes (80 $ par mois à l'année) |
 | Dépassement intermédiaire | 0,38 $ par crédit | 0,18 $ par minute |
-| Appels simultanés au premier niveau | 1 | Aucune limite par forfait |
+| Appels simultanés au premier niveau | 1 | Aucune limite sur Starter et Pro sans plafond de dépenses |
 | Langues | Plus de 70, détection automatique | Répond dans la langue de l'appelant et change automatiquement |
 | Personnel en premier | Mode intégré | Par le renvoi d'appel de votre opérateur |
 | Intégrations | Google Calendar, Zapier, webhooks, MCP | Google Calendar, API publique |
@@ -58,7 +58,7 @@ Reception décompte les appels et le clavardage web dans une seule réserve de c
 
 Basic ne permet aussi qu'un appel à la fois. Si deux clients appellent en même temps, un seul joint la réceptionniste. Plus monte la limite à 3 et Premium à 10.
 
-LobbyStack compte les minutes d'appel à part, et le clavardage sur votre site ne les entame pas. Il ne limite pas les appels simultanés selon le forfait, donc une entreprise sur Starter ne perd pas d'appel quand deux personnes appellent ensemble.
+LobbyStack compte les minutes d'appel à part, et le clavardage sur votre site ne les entame pas. Aucun forfait ne limite le nombre d'appels simultanés, donc deux appelants sur Starter joignent tous deux la réceptionniste. Une exception : si vous fixez un plafond de dépenses mensuel, l'appel en cours réserve le solde restant et un deuxième appelant entend le message de limite jusqu'à la fin du premier appel.
 
 ## ElevenLabs Reception est-il conforme HIPAA?
 
@@ -76,9 +76,9 @@ LobbyStack publie son code sous licence MIT. Vous pouvez utiliser le cloud gér�
 
 Une entreprise de plomberie reçoit 120 appels par mois d'environ 2 minutes chacun, soit 240 minutes. Elle utilise aussi un widget de clavardage sur son site.
 
-Avec Reception, 240 minutes dépassent les 75 de Basic, donc l'entreprise a besoin de Plus à 79 $ pour 275 crédits. Le clavardage puise dans la même réserve, donc 70 minutes de clavardage utiliseraient les 35 derniers crédits et pousseraient le mois en dépassement à 0,38 $ le crédit.
+Avec Reception, 240 minutes dépassent les 75 de Basic, donc l'entreprise a besoin de Plus à 79 $ pour 275 crédits. Le clavardage puise dans la même réserve : 100 minutes de clavardage utilisent 50 crédits de plus, soit 290 au total. Les 15 crédits excédentaires coûtent 0,38 $ chacun, donc le mois revient à 84,70 $.
 
-Avec LobbyStack, 240 minutes coûtent 30 $ pour Starter plus 90 minutes à 0,20 $, soit 48 $. Deux appels d'urgence qui arrivent ensemble joignent tous deux la réceptionniste.
+Avec LobbyStack, 240 minutes coûtent 30 $ pour Starter plus 90 minutes à 0,20 $, soit 48 $. Le clavardage n'entame pas ces minutes, et deux appels d'urgence qui arrivent ensemble joignent tous deux la réceptionniste.
 
 ## Choisissez ElevenLabs Reception si
 
@@ -102,6 +102,6 @@ Pour d'autres comparaisons, lisez nos guides [Alternative à Rosie](/fr/blog/ros
 
 ## Verdict
 
-LobbyStack vous en donne plus pour votre argent. Au même prix annuel de 24 $, vous obtenez deux fois plus de minutes, un dépassement deux fois moins cher, et un deuxième appel n'est pas refusé au premier niveau. Reception l'emporte sur les voix, les langues et son mode personnel en premier, et reste un bon choix pour une entreprise qui préfère ces atouts aux minutes et à la propriété du logiciel.
+LobbyStack vous en donne plus pour votre argent. Au même prix annuel de 24 $, vous obtenez deux fois plus de minutes, un dépassement deux fois moins cher, et le premier niveau répond à deux appels à la fois. Reception l'emporte sur les voix, les langues et son mode personnel en premier, et reste un bon choix pour une entreprise qui préfère ces atouts aux minutes et à la propriété du logiciel.
 
 [Essayez LobbyStack avec 30 minutes gratuites](/fr/pricing/), puis comparez le forfait Reception complet avec votre vrai volume d'appels et de clavardage.

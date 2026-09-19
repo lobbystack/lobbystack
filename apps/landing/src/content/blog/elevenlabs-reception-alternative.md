@@ -27,7 +27,7 @@ Reception sounds excellent and speaks more than 70 languages. LobbyStack gives y
 | Wrong numbers and spam | Counted as used credits | Calls under 10 seconds and spam hang-ups are not billed |
 | Mid-tier plan | $79 for 275 credits ($66 billed annually) | $100 for 500 minutes ($80 billed annually) |
 | Mid-tier overage | $0.38 per credit | $0.18 per minute |
-| Concurrent calls on entry plan | 1 | Not capped by plan |
+| Concurrent calls on entry plan | 1 | No plan limit on Starter and Pro without a spending cap |
 | Languages | 70+ with automatic detection | Answers in the caller's language and switches automatically |
 | Staff answers first | Built-in staff-first mode | Through your carrier's call forwarding |
 | Integrations | Google Calendar, Zapier, webhooks, MCP | Google Calendar, public API |
@@ -58,7 +58,7 @@ Reception counts phone calls and web chat from one credit pool. A phone minute u
 
 Basic also allows one call at a time. If two customers call at once, only one reaches the receptionist. Plus raises the limit to 3 and Premium to 10.
 
-LobbyStack counts voice minutes on their own, and website chat doesn't draw from them. It doesn't limit simultaneous calls by plan, so a Starter business doesn't lose a caller when two people ring together.
+LobbyStack counts voice minutes on their own, and website chat doesn't draw from them. No plan caps how many calls run at once, so two callers on Starter both reach the receptionist. One exception: if you set a monthly spending cap, the active call reserves the remaining allowance, and a second caller hears the limit message until the first call ends.
 
 ## Is ElevenLabs Reception HIPAA compliant?
 
@@ -76,9 +76,9 @@ LobbyStack publishes its code under the MIT license. You can use the managed clo
 
 A plumbing company takes 120 calls a month that last about 2 minutes each, or 240 minutes in total. It also runs a chat widget on its website.
 
-On Reception, 240 minutes is more than Basic's 75, so the company needs Plus at $79 for 275 credits. Chat draws from the same pool, so 70 minutes of chat would use the last 35 credits and push the month into overage at $0.38 per credit.
+On Reception, 240 minutes is more than Basic's 75, so the company needs Plus at $79 for 275 credits. Chat draws from the same pool: 100 minutes of website chat uses 50 more credits, for 290 in total. The 15 credits over the allowance cost $0.38 each, so the month comes to $84.70.
 
-On LobbyStack, 240 minutes costs $30 for Starter plus 90 extra minutes at $0.20, for a total of $48. Two emergency calls that arrive together both reach the receptionist.
+On LobbyStack, 240 minutes costs $30 for Starter plus 90 extra minutes at $0.20, for a total of $48. Website chat doesn't touch those minutes, and two emergency calls that arrive together both reach the receptionist.
 
 ## Choose ElevenLabs Reception when
 
@@ -102,6 +102,6 @@ For more comparisons, read the [Rosie alternative](/blog/rosie-ai-alternative/) 
 
 ## Verdict
 
-LobbyStack gives you more receptionist for the money. At the same $24 annual price, you get twice the minutes and pay less than half the overage rate, and a second caller doesn't get turned away on the entry plan. Reception wins on voices, languages, and its staff-first mode, and it's a strong choice for a business that values those over minutes and ownership.
+LobbyStack gives you more receptionist for the money. At the same $24 annual price, you get twice the minutes and pay less than half the overage rate, and the entry plan answers two callers at once. Reception wins on voices, languages, and its staff-first mode, and it's a strong choice for a business that values those over minutes and ownership.
 
 [Try LobbyStack with 30 free voice minutes](/pricing/), then compare the finished Reception plan with your real call volume and chat traffic included.
