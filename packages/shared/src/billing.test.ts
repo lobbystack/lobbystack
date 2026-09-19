@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  billableVoiceSeconds,
   billingPlanCatalog,
   billingMeterEventNames,
   billingUsageKinds,
@@ -76,5 +77,31 @@ describe("hosted plan pricing", () => {
         billingInterval: "annual",
       }),
     ).toBe(96_000);
+  });
+});
+
+describe("billableVoiceSeconds", () => {
+  it("bills calls of 10 seconds or longer in full", () => {
+    expect(billableVoiceSeconds(10)).toBe(10);
+    expect(billableVoiceSeconds(184.5)).toBe(184.5);
+  });
+
+  it("exempts wrong numbers and instant hang-ups under 10 seconds", () => {
+    expect(billableVoiceSeconds(9.99)).toBe(0);
+    expect(billableVoiceSeconds(0)).toBe(0);
+  });
+
+  it("exempts calls the receptionist ended as spam", () => {
+    expect(billableVoiceSeconds(240, "spam_ended")).toBe(0);
+  });
+
+  it("bills other dispositions normally", () => {
+    expect(billableVoiceSeconds(240, "caller_finished")).toBe(240);
+    expect(billableVoiceSeconds(240, "abuse_ended")).toBe(240);
+    expect(billableVoiceSeconds(240, null)).toBe(240);
+  });
+
+  it("treats negative durations as zero", () => {
+    expect(billableVoiceSeconds(-30)).toBe(0);
   });
 });
