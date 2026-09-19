@@ -1807,6 +1807,7 @@ async function finalizeCall(
         endedAt: new Date().toISOString(),
         disposition: finalDisposition,
         providerDurationSeconds: Math.max(0, Math.ceil(durationMs / 1000)),
+        mediaDurationSeconds: durationMs / 1000,
       });
     }
   } catch (error) {

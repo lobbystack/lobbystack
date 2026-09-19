@@ -67,6 +67,9 @@ export const voiceCallCompleteRequestSchema = z.object({
   endedAt: z.string().datetime(),
   disposition: z.string().max(120).optional(),
   providerDurationSeconds: z.number().nonnegative().optional(),
+  // Unrounded media-session seconds. Providers report whole seconds, and the call record starts
+  // before the media stream connects, so only the gateway knows the real talk time.
+  mediaDurationSeconds: z.number().nonnegative().optional(),
 });
 
 export const voiceRecordingTargetRequestSchema = z.object({
