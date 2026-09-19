@@ -327,6 +327,7 @@ export async function completeVoiceCall(input: {
   endedAt: string;
   disposition?: string;
   providerDurationSeconds?: number;
+  mediaDurationSeconds?: number;
 }): Promise<void> {
   await postJson("/voice/call/complete", input);
 }
