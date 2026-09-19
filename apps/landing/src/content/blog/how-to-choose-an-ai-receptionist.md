@@ -180,7 +180,7 @@ Without reporting, you are guessing. And if the phone line drives revenue, guess
 
 The cheapest plan is not always the cheapest way to run your phone.
 
-AI receptionist pricing can be based on monthly plans, minutes, calls, unique customers, agents, locations, credits, SMS usage, phone numbers, live-agent handoff, custom workflows, onboarding, or enterprise support. The same advertised price can mean different things once a normal month of calls runs through it.
+AI receptionist pricing can be based on monthly plans, minutes, calls, unique customers, agents, locations, credits, SMS usage, phone numbers, live-agent handoff, custom workflows, onboarding, or enterprise support. The same advertised price can mean different things once a normal month of calls runs through it. For example, [ElevenLabs Reception](/blog/elevenlabs-reception-alternative/) draws phone calls and website chat from one credit pool, so chat traffic reduces your phone minutes.
 
 Ask these questions before you compare prices:
 
