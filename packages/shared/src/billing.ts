@@ -334,3 +334,21 @@ export type BillingStatus = {
   usage: BillingUsageSnapshot;
   recentTransactions: Array<BillingTransactionSummary>;
 };
+
+// Voice usage exemptions. Restored from the pre-PostgreSQL billing rules, which the
+// plan comparison and the public pricing pages still advertise.
+export const MIN_BILLABLE_VOICE_DURATION_SECONDS = 10;
+
+export const nonBillableCallDispositions = ["spam_ended"] as const;
+export type NonBillableCallDisposition = (typeof nonBillableCallDispositions)[number];
+
+export function isNonBillableCallDisposition(disposition: string | null | undefined): boolean {
+  return typeof disposition === "string" && (nonBillableCallDispositions as readonly string[]).includes(disposition);
+}
+
+/** Voice seconds a call adds to usage: wrong numbers, instant hang-ups, and spam cost the caller nothing. */
+export function billableVoiceSeconds(durationSeconds: number, disposition?: string | null): number {
+  const normalizedDurationSeconds = Math.max(0, durationSeconds);
+  if (isNonBillableCallDisposition(disposition)) return 0;
+  return normalizedDurationSeconds < MIN_BILLABLE_VOICE_DURATION_SECONDS ? 0 : normalizedDurationSeconds;
+}
