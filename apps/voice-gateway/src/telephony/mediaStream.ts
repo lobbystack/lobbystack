@@ -26,6 +26,10 @@ import {
   recordAiDirectedCallEnd,
   recordOpenAiRealtimeError,
   recordOpenAiTurnLatency,
+  recordPlaybackInterrupted,
+  recordHangupRetriesExhausted,
+  recordTranscriptionFailure,
+  recordTurnFirstAudio,
   recordSnapshotCacheHit,
   recordSnapshotCacheMiss,
   recordTwilioInvalidSignature,
@@ -1368,6 +1372,14 @@ function interruptAssistantPlaybackForCallerSpeech(
     },
     "Interrupted assistant playback for caller speech",
   );
+  recordPlaybackInterrupted({
+    ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+    ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+    channel: "phone",
+    elapsedMs,
+    hadPendingPlayback,
+    ...(interrupted ? { audioEndMs: interrupted.audioEndMs } : {}),
+  });
 }
 
 function clearPendingTransferPlaybackWait(
@@ -1484,6 +1496,13 @@ async function completeImplicitTerminalHangupWithRetry(
       }
 
       if (retryDelayMs === undefined) {
+        recordHangupRetriesExhausted({
+          ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+          ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+          channel: "phone",
+          reason: request.reason,
+          attempts: attemptIndex + 1,
+        });
         if (twilioSocket.readyState === WebSocket.OPEN) {
           server.log.warn(
             {
@@ -2686,7 +2705,14 @@ function handleOpenAiMessage(
 
   const payload = JSON.parse(rawMessage.toString()) as OpenAiRealtimeMessage;
   const latency = observeVoiceLatency(session, payload.type);
-  if (latency) server.log.info({ ...latency, callId: session.callId, channel: "phone" }, "Voice turn latency");
+  if (latency) {
+    server.log.info({ ...latency, callId: session.callId, channel: "phone" }, "Voice turn latency");
+    recordTurnFirstAudio(Number(latency.speechStopToOutputMs), {
+      ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+      ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+      channel: "phone",
+    });
+  }
 
   if (
     payload.type !== "response.audio.delta" &&
@@ -2903,7 +2929,13 @@ function handleOpenAiMessage(
       return;
     case "conversation.item.input_audio_transcription.failed": {
       const itemId = payload.item_id ?? payload.item?.id;
-      consumeTranscriptionLatencyMs(session.transcriptionCommittedAtMsByItemId, itemId);
+      const transcriptionLatencyMs = consumeTranscriptionLatencyMs(session.transcriptionCommittedAtMsByItemId, itemId);
+      recordTranscriptionFailure({
+        ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+        ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+        channel: "phone",
+        ...(transcriptionLatencyMs !== undefined ? { transcriptionLatencyMs } : {}),
+      });
       server.log.warn(
         {
           itemId: payload.item_id,
@@ -2947,6 +2979,7 @@ function handleOpenAiMessage(
           ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
           "lobbystack.provider": "openai",
           "lobbystack.model": model,
+          channel: "phone",
         });
       }
 

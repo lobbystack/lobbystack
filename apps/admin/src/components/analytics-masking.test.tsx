@@ -5,6 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LiveCallDetailSurface } from "./live-call-detail-surface";
 import { LiveContactsSurface } from "./live-contacts-surface";
+import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
+
+const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
+vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }), usePathname: () => "/calls" }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
@@ -12,6 +16,7 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 const clients: QueryClient[] = [];
 beforeEach(() => {
+  telemetryRef.current = createRecordedBrowserTelemetry();
   vi.stubGlobal("localStorage", { getItem: () => "en", setItem: vi.fn() });
   vi.stubGlobal("EventSource", class { addEventListener() {} close() {} });
 });

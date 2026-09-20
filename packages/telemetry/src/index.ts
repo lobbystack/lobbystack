@@ -37,7 +37,6 @@ export const WEB_EVENT_NAMES = [
   "web.onboarding.attribution_submitted",
   "web.knowledge.upload_started",
   "web.knowledge.upload_completed",
-  "web.knowledge.preview_answer_requested",
   "web.integration.calendar_connect_started",
   "web.integration.calendar_connect_completed",
   "web.integration.calendar_connect_failed",
@@ -47,13 +46,6 @@ export const WEB_EVENT_NAMES = [
   "web.voice.test_call_connected",
   "web.voice.test_call_ended",
   "web.voice.test_call_error",
-  "web.prospect_demo.viewed",
-  "web.prospect_demo.call_started",
-  "web.prospect_demo.call_completed",
-  "web.prospect_demo.call_error",
-  "web.prospect_demo.signup_clicked",
-  "web.prospect_demo.claim_succeeded",
-  "web.prospect_demo.claim_failed",
 ] as const;
 
 export const VOICE_EVENT_NAMES = [
@@ -64,22 +56,32 @@ export const VOICE_EVENT_NAMES = [
   "voice.transfer_requested",
   "voice.transfer_completed",
   "voice.snapshot_loaded",
-  "voice.tool_invoked",
 ] as const;
 
 export const SMS_EVENT_NAMES = [
   "sms.inbound_received",
-  "sms.reply_generated",
   "sms.delivery_accepted",
   "sms.delivery_failed",
   "sms.provider_cost_recorded",
-  "sms.automation_paused",
+  "conversation.automation_paused",
 ] as const;
 
 export const APPOINTMENT_EVENT_NAMES = [
   "appointment.booked",
   "appointment.booking_failed",
-  "appointment.confirmation_notification_failed",
+  "appointment.rescheduled",
+  "appointment.cancelled",
+  "notification.delivery_failed",
+] as const;
+
+export const PROSPECT_DEMO_EVENT_NAMES = [
+  "prospect_demo.viewed",
+  "prospect_demo.call_started",
+  "prospect_demo.call_completed",
+  "prospect_demo.call_error",
+  "prospect_demo.signup_clicked",
+  "prospect_demo.claim_succeeded",
+  "prospect_demo.claim_failed",
 ] as const;
 
 export const KNOWLEDGE_EVENT_NAMES = [
@@ -116,9 +118,13 @@ export const OPERATIONS_EVENT_NAMES = [
   "ops.voice.tool_completed",
   "ops.voice.tool_failed",
   "ops.voice.recording_upload_failed",
-  "ops.convex.heartbeat",
-  "ops.convex.outbox_backlog_sample",
-  "ops.convex.outbox_flush_failed",
+  "ops.voice.turn_first_audio",
+  "ops.voice.playback_interrupted",
+  "ops.voice.hangup_retries_exhausted",
+  "ops.voice.transcription_failed",
+  "ops.voice.snapshot_cache_evicted",
+  "ops.outbox.backlog_sample",
+  "ops.outbox.flush_failed",
   "ops.service.health_check",
   "ops.service.health_check_failed",
 ] as const;
@@ -128,6 +134,7 @@ export const TELEMETRY_EVENT_NAMES = [
   ...VOICE_EVENT_NAMES,
   ...SMS_EVENT_NAMES,
   ...APPOINTMENT_EVENT_NAMES,
+  ...PROSPECT_DEMO_EVENT_NAMES,
   ...KNOWLEDGE_EVENT_NAMES,
   ...AI_EVENT_NAMES,
   ...INTEGRATION_EVENT_NAMES,
@@ -136,6 +143,39 @@ export const TELEMETRY_EVENT_NAMES = [
 ] as const;
 
 export type TelemetryEventName = (typeof TELEMETRY_EVENT_NAMES)[number];
+
+export type TelemetryTransport = "durable" | "gateway" | "browser";
+
+function transportsFor<const Names extends ReadonlyArray<TelemetryEventName>>(
+  names: Names,
+  transports: ReadonlyArray<TelemetryTransport>,
+): { [Name in Names[number]]: ReadonlyArray<TelemetryTransport> } {
+  return Object.fromEntries(names.map((name) => [name, transports])) as {
+    [Name in Names[number]]: ReadonlyArray<TelemetryTransport>;
+  };
+}
+
+const GATEWAY_OPERATION_EVENT_NAMES = OPERATIONS_EVENT_NAMES.filter((name) =>
+  name.startsWith("ops.voice."),
+) as Array<Extract<(typeof OPERATIONS_EVENT_NAMES)[number], `ops.voice.${string}`>>;
+const DURABLE_OPERATION_EVENT_NAMES = OPERATIONS_EVENT_NAMES.filter(
+  (name) => !name.startsWith("ops.voice."),
+) as Array<Exclude<(typeof OPERATIONS_EVENT_NAMES)[number], `ops.voice.${string}`>>;
+
+/** The only supported delivery path(s) for each registered product event. */
+export const TELEMETRY_EVENT_TRANSPORT = {
+  ...transportsFor(WEB_EVENT_NAMES, ["browser"]),
+  ...transportsFor(VOICE_EVENT_NAMES, ["durable"]),
+  ...transportsFor(SMS_EVENT_NAMES, ["durable"]),
+  ...transportsFor(APPOINTMENT_EVENT_NAMES, ["durable"]),
+  ...transportsFor(PROSPECT_DEMO_EVENT_NAMES, ["durable"]),
+  ...transportsFor(KNOWLEDGE_EVENT_NAMES, ["durable"]),
+  "$ai_generation": ["durable", "gateway"],
+  ...transportsFor(INTEGRATION_EVENT_NAMES, ["durable"]),
+  ...transportsFor(WORKFLOW_EVENT_NAMES, ["durable"]),
+  ...transportsFor(GATEWAY_OPERATION_EVENT_NAMES, ["gateway"]),
+  ...transportsFor(DURABLE_OPERATION_EVENT_NAMES, ["durable"]),
+} satisfies Record<TelemetryEventName, ReadonlyArray<TelemetryTransport>>;
 
 export type TelemetryScalar = string | number | boolean | null;
 export type TelemetryValue =
@@ -202,17 +242,6 @@ export type TelemetryContext = {
   provider?: string;
   model?: string;
 };
-
-export type TelemetryEvent = TelemetryContext & {
-  name: TelemetryEventName;
-  occurredAt: string;
-  deploymentMode: DeploymentMode;
-  properties: TelemetryProperties;
-};
-
-export interface TelemetrySink {
-  emit(event: TelemetryEvent): Promise<void>;
-}
 
 export const PROVIDER_ERROR_PROVIDERS = [
   "openai",
@@ -362,7 +391,6 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "section",
     "contentType",
   ],
-  "web.knowledge.preview_answer_requested": ["businessId", "deploymentMode"],
   "web.integration.calendar_connect_started": [
     "businessId",
     "deploymentMode",
@@ -382,7 +410,7 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "businessId",
     "deploymentMode",
     "provider",
-    "staffId",
+    "scope",
   ],
   "web.voice.follow_up_completed": [
     "businessId",
@@ -394,13 +422,6 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.voice.test_call_connected": ["businessId", "deploymentMode"],
   "web.voice.test_call_ended": ["businessId", "deploymentMode"],
   "web.voice.test_call_error": ["businessId", "deploymentMode"],
-  "web.prospect_demo.viewed": ["deploymentMode", "prospectDemoId"],
-  "web.prospect_demo.call_started": ["deploymentMode", "prospectDemoId"],
-  "web.prospect_demo.call_completed": ["deploymentMode", "prospectDemoId"],
-  "web.prospect_demo.call_error": ["deploymentMode", "prospectDemoId"],
-  "web.prospect_demo.signup_clicked": ["deploymentMode", "prospectDemoId"],
-  "web.prospect_demo.claim_succeeded": ["deploymentMode", "prospectDemoId"],
-  "web.prospect_demo.claim_failed": ["deploymentMode", "prospectDemoId"],
   "voice.call_started": [
     "businessId",
     "deploymentMode",
@@ -444,22 +465,7 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "provider",
   ],
   "voice.snapshot_loaded": ["businessId", "deploymentMode", "provider"],
-  "voice.tool_invoked": [
-    "businessId",
-    "deploymentMode",
-    "callId",
-    "provider",
-    "model",
-  ],
   "sms.inbound_received": [
-    "businessId",
-    "deploymentMode",
-    "conversationId",
-    "messageId",
-    "channel",
-    "provider",
-  ],
-  "sms.reply_generated": [
     "businessId",
     "deploymentMode",
     "conversationId",
@@ -470,20 +476,20 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "sms.delivery_accepted": [
     "businessId",
     "deploymentMode",
-    "conversationId",
     "messageId",
     "channel",
     "provider",
     "providerStatus",
+    "deliveryContext",
   ],
   "sms.delivery_failed": [
     "businessId",
     "deploymentMode",
-    "conversationId",
     "messageId",
     "channel",
     "provider",
     "providerStatus",
+    "deliveryContext",
   ],
   "sms.provider_cost_recorded": [
     "businessId",
@@ -493,7 +499,7 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "channel",
     "provider",
   ],
-  "sms.automation_paused": [
+  "conversation.automation_paused": [
     "businessId",
     "deploymentMode",
     "conversationId",
@@ -510,16 +516,22 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "appointment.booking_failed": [
     "businessId",
     "deploymentMode",
-    "channel",
-    "serviceId",
-    "sourceChannel",
+    "reason",
   ],
-  "appointment.confirmation_notification_failed": [
+  "appointment.rescheduled": ["businessId", "deploymentMode", "appointmentId", "source"],
+  "appointment.cancelled": ["businessId", "deploymentMode", "appointmentId", "source"],
+  "notification.delivery_failed": [
     "businessId",
     "deploymentMode",
-    "appointmentId",
-    "channel",
+    "kind",
   ],
+  "prospect_demo.viewed": ["deploymentMode", "prospectDemoId"],
+  "prospect_demo.call_started": ["deploymentMode", "prospectDemoId"],
+  "prospect_demo.call_completed": ["deploymentMode", "prospectDemoId"],
+  "prospect_demo.call_error": ["deploymentMode", "prospectDemoId"],
+  "prospect_demo.signup_clicked": ["deploymentMode", "prospectDemoId"],
+  "prospect_demo.claim_succeeded": ["deploymentMode", "prospectDemoId"],
+  "prospect_demo.claim_failed": ["deploymentMode", "prospectDemoId"],
   "knowledge.document_indexed": ["businessId", "deploymentMode"],
   "knowledge.search_executed": ["businessId", "deploymentMode"],
   "$ai_generation": [],
@@ -527,7 +539,7 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "businessId",
     "deploymentMode",
     "provider",
-    "staffId",
+    "scope",
   ],
   "integration.calendar_sync_failed": [
     "businessId",
@@ -536,8 +548,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "provider",
   ],
   "business.snapshot_refreshed": ["businessId", "deploymentMode"],
-  "workflow.started": ["businessId", "deploymentMode", "workflowName"],
-  "workflow.failed": ["businessId", "deploymentMode", "workflowName"],
+  "workflow.started": ["deploymentMode", "workflowName", "scope"],
+  "workflow.failed": ["deploymentMode", "workflowName", "scope"],
   "ops.billing.usage_sync_failed": [
     "businessId",
     "deploymentMode",
@@ -566,6 +578,7 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "provider",
     "model",
     "latencyBucket",
+    "channel",
   ],
   "ops.voice.turn_slow": [
     "businessId",
@@ -574,6 +587,7 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "provider",
     "model",
     "latencyBucket",
+    "channel",
   ],
   "ops.voice.call_ended_by_ai": [
     "businessId",
@@ -589,6 +603,7 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "model",
     "toolName",
     "latencyBucket",
+    "channel",
   ],
   "ops.voice.tool_failed": [
     "businessId",
@@ -597,11 +612,19 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "provider",
     "model",
     "toolName",
+    "channel",
   ],
   "ops.voice.recording_upload_failed": ["deploymentMode", "callId"],
-  "ops.convex.heartbeat": ["deploymentMode"],
-  "ops.convex.outbox_backlog_sample": ["deploymentMode", "backlogBucket"],
-  "ops.convex.outbox_flush_failed": ["deploymentMode", "backlogBucket"],
+  // TTFA starts at the provider's speech_stopped event, after the configured
+  // VAD silence window. It is observed before carrier/browser playback and is
+  // therefore a lower bound on caller-perceived latency.
+  "ops.voice.turn_first_audio": ["businessId", "deploymentMode", "callId", "ttfaMs", "ttfaBucket", "channel"],
+  "ops.voice.playback_interrupted": ["businessId", "deploymentMode", "callId", "channel"],
+  "ops.voice.hangup_retries_exhausted": ["businessId", "deploymentMode", "callId", "channel"],
+  "ops.voice.transcription_failed": ["businessId", "deploymentMode", "callId", "channel"],
+  "ops.voice.snapshot_cache_evicted": ["businessId", "deploymentMode", "channel"],
+  "ops.outbox.backlog_sample": ["deploymentMode", "backlogBucket"],
+  "ops.outbox.flush_failed": ["deploymentMode"],
   "ops.service.health_check": [
     "deploymentMode",
     "service",
@@ -625,24 +648,6 @@ export type TelemetryValidationInput = Partial<TelemetryContext> & {
 export type TelemetryValidationResult = {
   ok: boolean;
   missing: Array<string>;
-};
-
-export class ConsoleSink implements TelemetrySink {
-  async emit(event: TelemetryEvent): Promise<void> {
-    console.log("[telemetry]", JSON.stringify(event));
-  }
-}
-
-export class NoopSink implements TelemetrySink {
-  async emit(_event: TelemetryEvent): Promise<void> {
-    return;
-  }
-}
-
-export type TelemetryFacade = {
-  track(
-    event: Omit<TelemetryEvent, "occurredAt" | "deploymentMode">,
-  ): Promise<void>;
 };
 
 const SENSITIVE_URL_PARAMS = new Set([
@@ -1280,6 +1285,27 @@ export function bucketLatencyMs(latencyMs: number): string {
   return "over_5s";
 }
 
+/**
+ * Buckets a tenant's publishable outbox backlog into stable ranges so the
+ * durable `ops.outbox.backlog_sample` event stays an aggregate fact. A zero or
+ * negative count collapses to `0`.
+ */
+export function bucketOutboxBacklog(backlog: number): string {
+  if (!Number.isFinite(backlog) || backlog <= 0) {
+    return "0";
+  }
+  if (backlog < 10) {
+    return "1_9";
+  }
+  if (backlog < 100) {
+    return "10_99";
+  }
+  if (backlog < 500) {
+    return "100_499";
+  }
+  return "500_plus";
+}
+
 export function getPostHogDistinctIdForOperator(userId: string): string {
   return `user:${userId}`;
 }
@@ -1322,46 +1348,5 @@ export function validateTelemetryEvent(
   return {
     ok: missing.length === 0,
     missing,
-  };
-}
-
-export function createTelemetryFacade(
-  deploymentMode: DeploymentMode,
-  sinks: Array<TelemetrySink>,
-): TelemetryFacade {
-  return {
-    async track(event) {
-      const validation = validateTelemetryEvent({
-        name: event.name,
-        deploymentMode,
-        ...(event.businessId !== undefined ? { businessId: event.businessId } : {}),
-        ...(event.conversationId !== undefined
-          ? { conversationId: event.conversationId }
-          : {}),
-        ...(event.callId !== undefined ? { callId: event.callId } : {}),
-        ...(event.messageId !== undefined ? { messageId: event.messageId } : {}),
-        ...(event.appointmentId !== undefined
-          ? { appointmentId: event.appointmentId }
-          : {}),
-        ...(event.channel !== undefined ? { channel: event.channel } : {}),
-        ...(event.provider !== undefined ? { provider: event.provider } : {}),
-        ...(event.model !== undefined ? { model: event.model } : {}),
-        properties: event.properties,
-      });
-      if (!validation.ok && deploymentMode !== "cloud") {
-        console.warn(
-          `[telemetry] Missing required properties for ${event.name}: ${validation.missing.join(", ")}`,
-        );
-      }
-
-      const payload: TelemetryEvent = {
-        ...event,
-        deploymentMode,
-        occurredAt: new Date().toISOString(),
-        properties: redactTelemetryProperties(event.properties),
-      };
-
-      await Promise.allSettled(sinks.map((sink) => sink.emit(payload)));
-    },
   };
 }

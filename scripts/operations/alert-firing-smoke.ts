@@ -81,11 +81,6 @@ export type AbsenceCheck = { id: string; signal: string; guidance: string };
 // Product Analytics absence alerts per docs/telemetry/provider-failure-error-tracking.md.
 export const HEARTBEAT_ABSENCE_CHECKS: AbsenceCheck[] = [
   {
-    id: "worker-heartbeat",
-    signal: "ops.convex.heartbeat",
-    guidance: "Configure a Product Analytics absence alert for a missing ops.convex.heartbeat from the worker runtime.",
-  },
-  {
     id: "voice-heartbeat",
     signal: "ops.voice.heartbeat",
     guidance: "Configure a Product Analytics absence alert for a missing ops.voice.heartbeat from the voice gateway.",

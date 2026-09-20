@@ -79,6 +79,7 @@
     "replacement:storage": "tsx --tsconfig tsconfig.base.json scripts/replacement-storage-check.ts",
     "replacement:webhooks": "tsx --tsconfig tsconfig.base.json scripts/replacement-webhook-check.ts",
     "replacement:telemetry": "tsx --tsconfig tsconfig.base.json scripts/replacement-telemetry-check.ts",
+    "telemetry:coverage": "tsx --tsconfig tsconfig.base.json scripts/telemetry-registry-coverage.ts",
     "replacement:privacy": "tsx --tsconfig tsconfig.base.json scripts/replacement-privacy-check.ts",
     "replacement:web-voice-policy": "tsx --tsconfig tsconfig.base.json scripts/replacement-web-voice-policy-check.ts",
     "replacement:demo": "tsx --tsconfig tsconfig.base.json scripts/replacement-demo-check.ts",

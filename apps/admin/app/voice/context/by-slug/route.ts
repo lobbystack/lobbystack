@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { voiceContextBySlugRequestSchema } from "@lobbystack/contracts";
 import { widgetKeys, withBusinessTransaction } from "@lobbystack/db";
-import { getWebVoiceBillingAllowance } from "@lobbystack/domain";
+import { getWebVoiceBillingAllowance, recordVoiceSnapshotLoaded } from "@lobbystack/domain";
 import { asApiResponse, getWorkerDatabase, requireInternalService } from "@/lib/api-helpers";
 import { loadValidBusinessSnapshot } from "@/lib/business-snapshot";
 import { createWorkerDomainContext } from "@/lib/domain-context";
@@ -53,9 +53,14 @@ export async function POST(request: Request) {
       const billing = await getWebVoiceBillingAllowance(createWorkerDomainContext(), { businessId, ...(body.maxDurationMs !== undefined ? { maxDurationMs: body.maxDurationMs } : {}) });
       if (!billing.allowed) return NextResponse.json({ code: billing.errorCode, message: "Voice usage limit reached." }, { status: 402 });
     }
+    const snapshot = await loadValidBusinessSnapshot(businessId);
+    // This endpoint serves browser calls, which run over the OpenAI Realtime provider.
+    if (snapshot) {
+      await recordVoiceSnapshotLoaded(createWorkerDomainContext(), { businessId, channel: "web_voice", provider: "openai_realtime" });
+    }
     return NextResponse.json({
       businessId,
-      snapshot: await loadValidBusinessSnapshot(businessId),
+      snapshot,
       ...(access.mode === "prospect_demo"
         ? {
             sessionMode: access.mode,

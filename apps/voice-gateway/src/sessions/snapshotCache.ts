@@ -1,6 +1,6 @@
 import type { BusinessContextSnapshot } from "@lobbystack/shared";
 
-export function createSnapshotCache(options: { ttlMs?: number; maxEntries?: number; now?: () => number } = {}): {
+export function createSnapshotCache(options: { ttlMs?: number; maxEntries?: number; now?: () => number; onEvict?: (input: { businessId: string; reason: "expired" | "capacity" }) => void } = {}): {
   get: (businessId: string) => BusinessContextSnapshot | null;
   set: (businessId: string, snapshot: BusinessContextSnapshot) => void;
 } {
@@ -18,6 +18,7 @@ export function createSnapshotCache(options: { ttlMs?: number; maxEntries?: numb
       if (!entry) return null;
       if (entry.expiresAt <= now()) {
         store.delete(businessId);
+        options.onEvict?.({ businessId, reason: "expired" });
         return null;
       }
       // LRU order changes on access, but reading never extends freshness.
@@ -28,7 +29,11 @@ export function createSnapshotCache(options: { ttlMs?: number; maxEntries?: numb
     set(businessId, snapshot) {
       store.delete(businessId);
       store.set(businessId, { snapshot, expiresAt: now() + ttlMs });
-      while (store.size > maxEntries) store.delete(store.keys().next().value!);
+      while (store.size > maxEntries) {
+        const evictedBusinessId = store.keys().next().value!;
+        store.delete(evictedBusinessId);
+        options.onEvict?.({ businessId: evictedBusinessId, reason: "capacity" });
+      }
     },
   };
 }

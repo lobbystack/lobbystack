@@ -1,12 +1,16 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LiveKnowledgeSurface, websiteImportProgress, type WebsiteImport } from "./live-knowledge-surface";
+import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
+const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
+vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }), usePathname: () => "/agent/knowledge", useSearchParams: () => new URLSearchParams() }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en", resolvedLanguage: "en" }, t: (key: string) => key }) }));
 const clients: QueryClient[] = [];
+beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 function setup({ snippet = false, active = true, role = "business_owner", status = "indexed", sourceType = "upload", textContent = "**Clinic** [hours](https://example.invalid)", websiteImport = null as null | WebsiteImport } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
@@ -135,5 +139,17 @@ describe("original knowledge row interactions", () => {
     setup({ status: "error", sourceType: "website", textContent, websiteImport: { id: "job", status: "failed", websiteUrl: "https://example.invalid", importedCount: 10, indexedCount: 1 } });
     expect(screen.getByText("sections.knowledge.websiteImport.status.failed")).toBeTruthy();
     expect(screen.getByText("sections.knowledge.websiteImport.previewFailed")).toBeTruthy();
+  });
+  it("records knowledge upload start and completion with the file content type", async () => {
+    vi.stubGlobal("crypto", { subtle: { digest: async () => new ArrayBuffer(32) } });
+    const fetchMock = setup();
+    await userEvent.click(screen.getByRole("button", { name: "sections.knowledge.addKnowledge" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "sections.knowledge.addKnowledgeOptions.upload" }));
+    fireEvent.change(document.getElementById("knowledge-document-file")!, { target: { files: [new File(["hours"], "hours.txt", { type: "text/plain" })] } });
+    await userEvent.click(screen.getByRole("button", { name: "actions.save" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url === "/api/uploads")).toBe(true));
+    const expected = { businessId: "business", section: "knowledge", contentType: "text/plain" };
+    telemetryRef.current!.expectEvent("web.knowledge.upload_started", expected);
+    telemetryRef.current!.expectEvent("web.knowledge.upload_completed", expected);
   });
 });

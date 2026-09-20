@@ -5,7 +5,7 @@ import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { getPolarMeteredUsagePayload, type BillingUsageKind } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
-import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimPhoneVerificationSend, claimSmsDelivery, deleteCallRecording, deleteExpiredObjectsForBusiness, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, markNotificationSkipped, markPhoneVerificationSendFailed, markPhoneVerificationSent, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, type DurableAiUsage } from "@lobbystack/domain";
+import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimPhoneVerificationSend, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteExpiredObjectsForBusiness, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, markNotificationSkipped, markPhoneVerificationSendFailed, markPhoneVerificationSent, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, type DurableAiUsage } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, correctAlertSmsUsage, estimateSmsSegments, loadOperatorNotificationDelivery, markFeedbackEmailFailed, markFeedbackEmailSent, markOperatorNotificationSent, markOperatorNotificationSkipped, queueDailyOperatorSummaries, refreshUnitEconomicsMonth, releaseOperatorNotificationDelivery, reserveAlertSmsUsage } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
 import { getTwilioProviderErrorCode } from "@lobbystack/providers";
@@ -14,7 +14,7 @@ import type { RuntimeStorageProvider, SmtpEmailProvider, TwilioProvider } from "
 import { extractDocumentText } from "./documentExtraction";
 import { reconcileBusinessCalendar, syncAppointmentCalendar, type CalendarOperations } from "./calendarJobs";
 import { getMeter } from "@lobbystack/telemetry/node";
-import { redactTelemetryProperties, type TelemetryProperties } from "@lobbystack/telemetry";
+import { bucketOutboxBacklog, getPostHogDistinctIdForBusinessSystem, redactTelemetryProperties, type TelemetryProperties } from "@lobbystack/telemetry";
 
 const ragMeter = getMeter("lobbystack-rag");
 const extractionDuration = ragMeter.createHistogram("rag.extraction.duration_ms", { unit: "ms" });
@@ -46,6 +46,101 @@ function businessIdOrThrow(job: JobEnvelope): string {
   return job.businessId;
 }
 
+type JobWorkflowScope = "business" | "global";
+
+function jobWorkflowScope(job: JobEnvelope): JobWorkflowScope {
+  return job.businessId ? "business" : "global";
+}
+
+/**
+ * Emits workflow lifecycle telemetry for a single job dispatch.
+ *
+ * The durable product-event sink (`recordProductEvent`) is business-scoped: it
+ * runs inside `withBusinessTransaction` and reads the business row for the
+ * deployment mode, and `product_events` is protected by RLS. It cannot persist
+ * a row with a null `business_id`, so global jobs (for example
+ * `affiliate.generatePayoutRun` or `prospectDemo.expire`) are deliberately not
+ * emitted here. Persisting global workflow events requires a global-safe
+ * durable sink or migration, which is out of scope for this phase; the scope is
+ * carried in the signature so a global sink can be wired later without changing
+ * call sites.
+ */
+async function recordWorkflowEvent(
+  dependencies: WorkerDependencies,
+  job: JobEnvelope,
+  name: "workflow.started" | "workflow.failed",
+  scope: JobWorkflowScope,
+): Promise<void> {
+  if (scope !== "business" || !job.businessId) return;
+  try {
+    await recordProductEvent(dependencies.domain, {
+      name,
+      businessId: job.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(job.businessId),
+      actorType: "worker",
+      properties: { workflowName: job.type, scope },
+    });
+  } catch {
+    // Workflow telemetry is best-effort and must never change job execution.
+  }
+}
+
+async function recordNotificationDeliveryFailed(
+  dependencies: WorkerDependencies,
+  input: { businessId: string; kind: string; appointmentId?: string },
+): Promise<void> {
+  try {
+    await recordProductEvent(dependencies.domain, {
+      name: "notification.delivery_failed",
+      businessId: input.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+      actorType: "worker",
+      properties: { kind: input.kind, ...(input.appointmentId ? { appointmentId: input.appointmentId } : {}) },
+    });
+  } catch {
+    // Notification failure telemetry is best-effort and must not mask the provider error.
+  }
+}
+
+async function recordBillingUsageSyncFailed(
+  dependencies: WorkerDependencies,
+  input: { businessId: string },
+): Promise<void> {
+  try {
+    await recordProductEvent(dependencies.domain, {
+      name: "ops.billing.usage_sync_failed",
+      businessId: input.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+      actorType: "worker",
+      properties: { provider: "polar" },
+    });
+  } catch {
+    // Billing sync telemetry is best-effort and must not mask the provider error.
+  }
+}
+
+/**
+ * Emits a durable outbox backlog sample for one tenant. `recordProductEvent`
+ * injects `deploymentMode`; `backlogBucket` comes from the tenant-scoped count.
+ * Backlog telemetry is best-effort and must never change job execution.
+ */
+async function recordOutboxBacklogSample(
+  dependencies: WorkerDependencies,
+  input: { businessId: string; backlog: number },
+): Promise<void> {
+  try {
+    await recordProductEvent(dependencies.domain, {
+      name: "ops.outbox.backlog_sample",
+      businessId: input.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+      actorType: "worker",
+      properties: { backlogBucket: bucketOutboxBacklog(input.backlog) },
+    });
+  } catch {
+    // Outbox backlog telemetry is best-effort and must not mask job failures.
+  }
+}
+
 function twilioStatusCallback(input: { messageId?: string; notificationId?: string; operatorDeliveryId?: string }): string | undefined {
   const configured = process.env.TWILIO_STATUS_CALLBACK_URL;
   if (!configured) return undefined;
@@ -66,6 +161,17 @@ function twilioStatusCallbackOption(input: { messageId?: string; notificationId?
 }
 
 export async function handleJob(job: JobEnvelope, dependencies: WorkerDependencies, execution: { isFinalAttempt?: boolean } = {}): Promise<JobResult> {
+  const scope = jobWorkflowScope(job);
+  await recordWorkflowEvent(dependencies, job, "workflow.started", scope);
+  try {
+    return await dispatchJob(job, dependencies, execution);
+  } catch (error) {
+    await recordWorkflowEvent(dependencies, job, "workflow.failed", scope);
+    throw error;
+  }
+}
+
+async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, execution: { isFinalAttempt?: boolean } = {}): Promise<JobResult> {
   const businessId = job.businessId;
   switch (job.type) {
     case "phoneVerification.send": {
@@ -362,15 +468,27 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
       if (!usageKind) return { status: "skipped", entityId: event.id };
       const quantity = event.billableQuantity ?? event.quantity;
       const metered = getPolarMeteredUsagePayload(usageKind, quantity);
-      await dependencies.polar.recordUsage({
-        eventName: metered.eventName,
-        externalCustomerId: event.billingKey,
-        quantity: metered.quantity,
-        timestamp: event.createdAt.toISOString(),
-        idempotencyKey: event.sourceKey,
-        businessId: event.businessId,
-        usageKind,
-      });
+      try {
+        await dependencies.polar.recordUsage({
+          eventName: metered.eventName,
+          externalCustomerId: event.billingKey,
+          quantity: metered.quantity,
+          timestamp: event.createdAt.toISOString(),
+          idempotencyKey: event.sourceKey,
+          businessId: event.businessId,
+          usageKind,
+        });
+      } catch (error) {
+        // `ops.billing.usage_sync_recovered` is intentionally not emitted here.
+        // `billing_usage_events.sync_status` only models pending/skipped/synced
+        // (plus a legacy "succeeded" read), and `markBillingUsageSynced`
+        // transitions only from "pending", so there is no durable failure state
+        // to recover from. Emitting a recovery event would require a persisted
+        // failed marker (schema/state change), which is out of scope for this
+        // phase and must not be fabricated.
+        await recordBillingUsageSyncFailed(dependencies, { businessId: event.businessId });
+        throw error;
+      }
       await markBillingUsageSynced(dependencies.domain, { businessId: event.businessId, usageEventId: event.id });
       return { status: "completed", entityId: event.id };
     }
@@ -445,6 +563,7 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
           if (usageEventId) await enqueueBillingUsageSync(dependencies.domain, { businessId, usageEventId });
           return { status: "completed", entityId: delivery.id };
         } catch (error) {
+          await recordNotificationDeliveryFailed(dependencies, { businessId, kind: delivery.eventKind });
           if (delivery.channel === "sms" && dependencies.domain.db) await correctAlertSmsUsage(dependencies.domain, { businessId, sourceKey: `alert_sms:operator_notification:${delivery.id}`, segments: 0 }).catch(() => undefined);
           await releaseOperatorNotificationDelivery(dependencies.domain, { businessId, deliveryId: delivery.id, error: "Provider delivery failed." });
           throw error;
@@ -497,6 +616,7 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
         if (usageEventId) await enqueueBillingUsageSync(dependencies.domain, { businessId, usageEventId });
         return { status: "completed", entityId: delivery.notificationId };
       } catch (error) {
+        await recordNotificationDeliveryFailed(dependencies, { businessId, kind: delivery.kind, ...(delivery.relatedId ? { appointmentId: delivery.relatedId } : {}) });
         if (delivery.channel === "sms" && dependencies.domain.db) await correctAlertSmsUsage(dependencies.domain, { businessId, sourceKey: `alert_sms:notification:${delivery.notificationId}`, segments: 0 }).catch(() => undefined);
         await releaseNotificationDelivery(dependencies.domain, { businessId, notificationId: delivery.notificationId });
         throw error;
@@ -598,6 +718,13 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
       const createdAt = typeof job.payload.createdAt === "string" && job.payload.createdAt.trim() ? job.payload.createdAt.trim() : undefined;
       const result = await generateAffiliatePayoutRun(dependencies.domain, { ...(periodKey ? { periodKey } : {}), ...(createdAt ? { createdAt } : {}) });
       return { status: "completed", entityId: result.payoutRunId };
+    }
+    case "outbox.backlogSample": {
+      const businessId = businessIdOrThrow(job);
+      const backlog = await countPublishableOutboxMessages(dependencies.domain, { businessId });
+      if (backlog <= 0) return { status: "skipped", entityId: `${businessId}:0` };
+      await recordOutboxBacklogSample(dependencies, { businessId, backlog });
+      return { status: "completed", entityId: `${businessId}:${bucketOutboxBacklog(backlog)}` };
     }
     case "telemetry.flush": {
       const businessId = businessIdOrThrow(job);

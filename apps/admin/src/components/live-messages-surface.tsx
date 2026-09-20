@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/locale";
+import { useTelemetry } from "@/components/product-analytics";
 
 type Business = { businessId: string; active: boolean };
 type Message = { id: string; conversationId: string; contactName: string | null; contactPhone: string | null; visitorName: string | null; visitorEmail: string | null; channel: string | null; automationState: string | null; body: string; direction: string; status: string; createdAt: string };
@@ -42,6 +43,7 @@ function conversationSubtitle(message: Message, t: (key: string) => string): str
 
 export function LiveMessagesSurface() {
   const { i18n, t } = useTranslation("messages");
+  const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -56,7 +58,11 @@ export function LiveMessagesSurface() {
       const response = await fetch(`/api/messages?businessId=${encodeURIComponent(business.businessId)}`, { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ conversationId: selectedId, body: draft.trim(), channel: selected.channel }) });
       if (!response.ok) throw new Error(t("page.sendFailed"));
     },
-    onSuccess: async () => { setDraft(""); await queryClient.invalidateQueries({ queryKey: ["messages", business?.businessId] }); },
+    onSuccess: async () => {
+      if (business && selectedId && selected) telemetry.track("web.messages.reply_sent", { businessId: business.businessId, conversationId: selectedId, channel: selected.channel });
+      setDraft("");
+      await queryClient.invalidateQueries({ queryKey: ["messages", business?.businessId] });
+    },
   });
   const toggleAutomation = useMutation({
     mutationFn: async (state: "ai_active" | "human_handoff") => {
@@ -101,7 +107,7 @@ export function LiveMessagesSurface() {
           <div className="relative"><SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label={t("page.searchPlaceholder")} className="pl-10" onChange={(event) => setSearch(event.target.value)} placeholder={t("page.searchPlaceholder")} value={search} /></div>
         </div>
         <div className="-mx-3 no-scrollbar h-full overflow-y-auto p-3">
-          {conversations.map((conversation) => <div key={conversation.id}><button className={cn("group flex w-full rounded-md px-2 py-2 text-start text-sm hover:bg-accent hover:text-accent-foreground", selectedId === conversation.id && "bg-muted")} onClick={() => setSelectedId(conversation.id)} type="button"><div className="flex w-full gap-2"><Avatar><AvatarFallback className="ph-mask">{initials(conversation.latest.visitorName ?? conversation.latest.contactName, conversation.displayName)}</AvatarFallback></Avatar><div className="min-w-0 flex-1"><div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2"><span className="ph-mask truncate font-semibold">{conversation.displayName}</span><span className="text-[11px] text-muted-foreground">{formatDateTime(conversation.latest.createdAt, i18n.language, { hour: "numeric", minute: "2-digit" })}</span></div><span className="ph-mask line-clamp-2 text-muted-foreground">{conversation.latest.body || t("page.emptyPreview")}</span></div>{conversation.channel === "web_chat" ? <span className="mt-0.5 flex size-4 items-center justify-center rounded-full bg-primary/10 text-primary" title="Web chat"><Bot className="size-3" /></span> : null}</div></button><Separator className="my-1" /></div>)}
+          {conversations.map((conversation) => <div key={conversation.id}><button className={cn("group flex w-full rounded-md px-2 py-2 text-start text-sm hover:bg-accent hover:text-accent-foreground", selectedId === conversation.id && "bg-muted")} onClick={() => { if (business) telemetry.track("web.messages.thread_opened", { businessId: business.businessId, conversationId: conversation.id, channel: conversation.channel }); setSelectedId(conversation.id); }} type="button"><div className="flex w-full gap-2"><Avatar><AvatarFallback className="ph-mask">{initials(conversation.latest.visitorName ?? conversation.latest.contactName, conversation.displayName)}</AvatarFallback></Avatar><div className="min-w-0 flex-1"><div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2"><span className="ph-mask truncate font-semibold">{conversation.displayName}</span><span className="text-[11px] text-muted-foreground">{formatDateTime(conversation.latest.createdAt, i18n.language, { hour: "numeric", minute: "2-digit" })}</span></div><span className="ph-mask line-clamp-2 text-muted-foreground">{conversation.latest.body || t("page.emptyPreview")}</span></div>{conversation.channel === "web_chat" ? <span className="mt-0.5 flex size-4 items-center justify-center rounded-full bg-primary/10 text-primary" title="Web chat"><Bot className="size-3" /></span> : null}</div></button><Separator className="my-1" /></div>)}
         </div>
       </div>
       <div className={cn("hidden min-w-0 w-full flex-1 flex-col border bg-background sm:flex sm:rounded-md", selected && "flex")}>

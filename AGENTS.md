@@ -53,6 +53,7 @@
 - Vitest is the default test runner; keep `*.test.ts` and `*.test.tsx` near their source.
 - Test database behavior against PostgreSQL with the correct runtime role and RLS context.
 - Prioritize booking, authz, webhook, outbox, snapshot, privacy, and telemetry regressions.
+- Every new telemetry event must include a test that asserts it fires from its real production code path.
 - Run `pnpm typecheck`, `pnpm test`, and `pnpm build` before opening a PR.
 - When changing migrations or RLS, also run `pnpm db:check` and `pnpm db:verify-rls` against the test database.
 

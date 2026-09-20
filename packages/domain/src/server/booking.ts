@@ -1,12 +1,14 @@
 import { and, asc, eq, gt, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 
 import { appointments, auditLogs, businesses, businessHours, calendarBusyBlocks, calendarConnections, closures, contacts, enqueueOutbox, notifications, services, smsConsentEvents, staff, staffServiceAssignments, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { computeAvailability } from "../availability";
+import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
+import { computeAvailability } from "../availability";
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
 import { recordCallOutcomeInTransaction } from "./callOutcome";
 import { consumeAppointmentChangeVerificationInTransaction } from "./appointmentChanges";
+import { recordProductEvent } from "./productEvents";
 
 type BookingInput = {
   callId?: string;
@@ -203,6 +205,22 @@ export async function bookAppointment(
   });
 }
 
+async function recordAppointmentChange(
+  context: DomainContext,
+  input: { name: "appointment.rescheduled" | "appointment.cancelled"; businessId: string; appointmentId: string; source: string },
+): Promise<void> {
+  try {
+    await recordProductEvent(context, {
+      name: input.name,
+      businessId: input.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+      properties: { appointmentId: input.appointmentId, source: input.source },
+    });
+  } catch {
+    // Product telemetry is best-effort and must not fail the appointment change.
+  }
+}
+
 export async function cancelAppointment(
   context: DomainContext,
   input: { userId: string; businessId: string; appointmentId: string },
@@ -239,13 +257,14 @@ export async function cancelAppointment(
       payload: { type: "appointment.updated", entityId: appointment.id, revision: appointment.revision },
     });
   });
+  await recordAppointmentChange(context, { name: "appointment.cancelled", businessId: input.businessId, appointmentId: input.appointmentId, source: "operator" });
 }
 
 export async function rescheduleAppointmentForCaller(
   context: DomainContext,
   input: { businessId: string; appointmentId: string; callerPhone: string; startsAt: string; verificationId: string },
 ): Promise<{ appointmentId: string; serviceId: string; startsAt: Date; endsAt: Date } | null> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+  const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const row = (await tx.select({ id: appointments.id, serviceId: appointments.serviceId, staffId: appointments.staffId, durationMinutes: services.durationMinutes }).from(appointments).innerJoin(contacts, and(eq(appointments.contactId, contacts.id), eq(contacts.businessId, input.businessId))).innerJoin(services, and(eq(appointments.serviceId, services.id), eq(services.businessId, input.businessId))).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), eq(contacts.phone, input.callerPhone))).limit(1))[0];
     if (!row) return null;
     await lockStaff(tx, row.staffId);
@@ -265,13 +284,17 @@ export async function rescheduleAppointmentForCaller(
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `appointment:${row.id}:updated:${updated.revision}`, payload: { type: "appointment.updated", entityId: row.id, revision: updated.revision } });
     return { appointmentId: row.id, serviceId: row.serviceId, startsAt, endsAt };
   });
+  if (result) {
+    await recordAppointmentChange(context, { name: "appointment.rescheduled", businessId: input.businessId, appointmentId: result.appointmentId, source: "caller" });
+  }
+  return result;
 }
 
 export async function cancelAppointmentForCaller(
   context: DomainContext,
   input: { businessId: string; appointmentId: string; callerPhone: string; verificationId: string },
 ): Promise<{ appointmentId: string; serviceId: string; startsAt: Date; endsAt: Date } | null> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+  const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const row = (await tx.select({ id: appointments.id, serviceId: appointments.serviceId, startsAt: appointments.startsAt, endsAt: appointments.endsAt }).from(appointments).innerJoin(contacts, and(eq(appointments.contactId, contacts.id), eq(contacts.businessId, input.businessId))).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), eq(contacts.phone, input.callerPhone), ne(appointments.status, "canceled"))).limit(1))[0];
     if (!row) return null;
     const consumed = await consumeAppointmentChangeVerificationInTransaction(tx, { businessId: input.businessId, verificationId: input.verificationId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, action: "cancel" });
@@ -284,4 +307,8 @@ export async function cancelAppointmentForCaller(
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `appointment:${row.id}:updated:${updated.revision}`, payload: { type: "appointment.updated", entityId: row.id, revision: updated.revision } });
     return { appointmentId: row.id, serviceId: row.serviceId, startsAt: row.startsAt, endsAt: row.endsAt };
   });
+  if (result) {
+    await recordAppointmentChange(context, { name: "appointment.cancelled", businessId: input.businessId, appointmentId: result.appointmentId, source: "caller" });
+  }
+  return result;
 }

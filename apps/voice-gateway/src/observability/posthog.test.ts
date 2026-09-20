@@ -185,4 +185,27 @@ describe("voice-gateway PostHog provider exception telemetry", () => {
       }),
     );
   });
+
+  it("delivers turn completion and first-audio events with channel labels", async () => {
+    const { recordOpenAiTurnLatency, recordTurnFirstAudio, setBusinessTelemetryConsent } = await import("./posthog");
+    setBusinessTelemetryConsent("business_123", true);
+    const attributes = {
+      "lobbystack.business_id": "business_123",
+      "lobbystack.call_id": "call_123",
+      "lobbystack.model": "gpt-realtime",
+      channel: "web",
+    };
+
+    recordOpenAiTurnLatency(1_250, attributes);
+    recordTurnFirstAudio(420, attributes);
+
+    expect(captureMock).toHaveBeenCalledWith(expect.objectContaining({
+      event: "ops.voice.turn_completed",
+      properties: expect.objectContaining({ channel: "web", generationMs: 1_250, latencyMs: 1_250 }),
+    }));
+    expect(captureMock).toHaveBeenCalledWith(expect.objectContaining({
+      event: "ops.voice.turn_first_audio",
+      properties: expect.objectContaining({ channel: "web", ttfaMs: 420, ttfaBucket: "under_500ms" }),
+    }));
+  });
 });

@@ -15,6 +15,7 @@ import { PhoneInput } from "./ui/phone-input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger } from "./ui/select";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { getDefaultPhoneCountry, getSupportedOnboardingPhoneCountryOptions, inferPhoneCountry, isSupportedOnboardingPhoneCountry, normalizeOnboardingPhoneCountry } from "@/lib/phone";
+import { useTelemetry } from "@/components/product-analytics";
 
 type Business = { businessId: string; name: string; active: boolean; onboardingStage?: string };
 type Attempt = { id: string; phoneE164: string; countryCode: string; status: string; expiresAt: string; attemptCount: number };
@@ -34,6 +35,7 @@ function useActiveBusiness() {
 export function OnboardingPhoneVerificationSurface() {
   const { i18n, t } = useTranslation("onboarding");
   const router = useRouter();
+  const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const { businesses, business } = useActiveBusiness();
   const locale = i18n.resolvedLanguage ?? i18n.language;
@@ -57,6 +59,7 @@ export function OnboardingPhoneVerificationSurface() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setError(null);
+    if (business) telemetry.track("web.onboarding.verify_phone_started", { businessId: business.businessId, countryCode: country });
     try { await start.mutateAsync(); } catch (cause) { setError(getSafeOnboardingErrorMessage(cause, t, "verifyPhone.sendFailed")); }
   }
 
@@ -66,14 +69,15 @@ export function OnboardingPhoneVerificationSurface() {
 export function OnboardingPhoneVerificationCodeSurface() {
   const { t } = useTranslation("onboarding");
   const router = useRouter();
+  const telemetry = useTelemetry();
   const { business } = useActiveBusiness();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const submittedCodeRef = useRef("");
   const attempt = useQuery({ queryKey: ["phone-verification", business?.businessId], queryFn: () => requestJson<{ attempt: Attempt | null }>(`/api/onboarding/phone-verification?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business), refetchInterval: (query) => ["queued", "processing"].includes(query.state.data?.attempt?.status ?? "") ? 1000 : false });
   const current = attempt.data?.attempt;
-  const check = useMutation({ mutationFn: (value: string) => requestJson<{ approved: boolean; status: string }>(`/api/onboarding/phone-verification/check?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ attemptId: current!.id, code: value }) }), onSuccess: (result) => { if (result.approved) router.replace(business?.onboardingStage === "complete" ? "/onboarding/number" : "/onboarding/plan"); else setError(t("verifyPhoneCode.invalidCode")); }, onError: () => setError(t("verifyPhoneCode.failed")) });
-  const resend = useMutation({ mutationFn: () => requestJson(`/api/onboarding/phone-verification/resend?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST" }), onSuccess: () => { setCode(""); submittedCodeRef.current = ""; void attempt.refetch(); }, onError: () => setError(t("verifyPhoneCode.resendFailed")) });
+  const check = useMutation({ mutationFn: (value: string) => requestJson<{ approved: boolean; status: string }>(`/api/onboarding/phone-verification/check?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ attemptId: current!.id, code: value }) }), onSuccess: (result) => { if (result.approved) { if (business) telemetry.track("web.onboarding.verify_phone_completed", { businessId: business.businessId }); router.replace(business?.onboardingStage === "complete" ? "/onboarding/number" : "/onboarding/plan"); } else setError(t("verifyPhoneCode.invalidCode")); }, onError: () => setError(t("verifyPhoneCode.failed")) });
+  const resend = useMutation({ mutationFn: () => requestJson(`/api/onboarding/phone-verification/resend?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST" }), onSuccess: () => { if (business) telemetry.track("web.onboarding.verify_phone_code_resent", { businessId: business.businessId }); setCode(""); submittedCodeRef.current = ""; void attempt.refetch(); }, onError: () => setError(t("verifyPhoneCode.resendFailed")) });
   const unavailable = current && ["failed", "expired", "canceled"].includes(current.status);
   const waiting = current?.status === "queued" || current?.status === "processing";
 

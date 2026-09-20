@@ -5,11 +5,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 const router = vi.hoisted(() => ({ refresh: vi.fn() }));
+const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
+vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en-US" }, t: (key: string) => key }) }));
 const clients: QueryClient[] = [];
 beforeEach(() => {
+  telemetryRef.current = createRecordedBrowserTelemetry();
   vi.stubGlobal("matchMedia", vi.fn(query => ({ matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
 });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
@@ -54,5 +58,6 @@ describe("original workspace switcher behavior", () => {
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
     expect(fetchMock).toHaveBeenCalledWith("/api/businesses/switch", expect.objectContaining({ method: "POST", body: JSON.stringify({ businessId: "business-2" }) }));
     expect(client.getQueryData(["contacts", "business-1"])).toBeUndefined();
+    telemetryRef.current!.expectEvent("web.workspace.business_switched", { businessId: "business-2", previousBusinessId: "business-1" });
   });
 });

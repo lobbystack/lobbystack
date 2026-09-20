@@ -29,6 +29,7 @@ import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRo
 import { formatDateTime } from "@/lib/locale";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { selectActiveBusiness } from "@/lib/active-business";
+import { useTelemetry } from "@/components/product-analytics";
 
 type Business = { businessId: string; active: boolean; role: string };
 type Contact = {
@@ -62,6 +63,7 @@ async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
 export function LiveContactsSurface() {
   const { i18n, t } = useTranslation("contacts");
   const router = useRouter();
+  const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -166,7 +168,7 @@ export function LiveContactsSurface() {
               <colgroup><col className="w-[24%]" /><col className="w-[20%]" /><col className="w-[20%]" /><col className="w-[12%]" /><col className="w-[16%]" /><col className="w-[8%]" /></colgroup>
               <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id}>{group.headers.map((header) => <TableHead className={header.column.id === "lastInteraction" || header.column.id === "actions" ? "text-right" : header.column.id === "contact" ? "min-w-[12rem]" : header.column.id === "channels" ? "min-w-[11rem]" : header.column.id === "activity" ? "min-w-[10rem]" : header.column.id === "appointments" ? "min-w-[7rem] text-center" : undefined} key={header.id}>{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
               <TableBody>
-                {table.getRowModel().rows.map((row) => <TableRow className="h-12 cursor-pointer transition-colors hover:bg-muted/40" key={row.id} onClick={() => router.push(`/contacts/${row.original.id}`)}>{row.getVisibleCells().map((cell) => <TableCell className={cell.column.id === "lastInteraction" ? "min-w-[11rem] max-w-0 whitespace-nowrap text-right" : cell.column.id === "actions" ? "w-16 text-right" : cell.column.id === "contact" ? "min-w-[12rem]" : cell.column.id === "channels" ? "min-w-[11rem]" : cell.column.id === "activity" ? "min-w-[10rem]" : cell.column.id === "appointments" ? "min-w-[7rem] text-center" : undefined} key={cell.id} onClick={cell.column.id === "actions" ? (event) => event.stopPropagation() : undefined}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>)}
+                {table.getRowModel().rows.map((row) => <TableRow className="h-12 cursor-pointer transition-colors hover:bg-muted/40" key={row.id} onClick={() => { if (business) telemetry.track("web.contacts.contact_opened", { businessId: business.businessId, contactId: row.original.id }); router.push(`/contacts/${row.original.id}`); }}>{row.getVisibleCells().map((cell) => <TableCell className={cell.column.id === "lastInteraction" ? "min-w-[11rem] max-w-0 whitespace-nowrap text-right" : cell.column.id === "actions" ? "w-16 text-right" : cell.column.id === "contact" ? "min-w-[12rem]" : cell.column.id === "channels" ? "min-w-[11rem]" : cell.column.id === "activity" ? "min-w-[10rem]" : cell.column.id === "appointments" ? "min-w-[7rem] text-center" : undefined} key={cell.id} onClick={cell.column.id === "actions" ? (event) => event.stopPropagation() : undefined}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>)}
                 {table.getRowModel().rows.length === 0 ? <TableRow><TableCell className="h-24 text-center text-muted-foreground" colSpan={6}>{t("table.empty")}</TableCell></TableRow> : null}
               </TableBody>
             </Table>

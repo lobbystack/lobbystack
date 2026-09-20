@@ -169,7 +169,7 @@ export async function updateSmsDeliveryStatus(
   input: { businessId: string; providerMessageId: string; providerStatus: string; messageId?: string },
 ): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const current = (await tx.select({ id: messages.id, status: messages.status })
+    const current = (await tx.select({ id: messages.id, status: messages.status, conversationId: messages.conversationId })
       .from(messages)
       .where(and(eq(messages.businessId, input.businessId), input.messageId ? eq(messages.id, input.messageId) : eq(messages.providerMessageId, input.providerMessageId)))
       .limit(1))[0];

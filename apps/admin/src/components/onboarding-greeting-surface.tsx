@@ -10,6 +10,7 @@ import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
+import { useTelemetry } from "@/components/product-analytics";
 
 type Business = { businessId: string; active: boolean };
 type Profile = { greeting: string };
@@ -23,6 +24,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
 export function OnboardingGreetingSurface() {
   const { i18n, t } = useTranslation("onboarding");
   const router = useRouter();
+  const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const [greeting, setGreeting] = useState("");
   const [hasUserEdited, setHasUserEdited] = useState(false);
@@ -39,6 +41,7 @@ export function OnboardingGreetingSurface() {
       return await requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "verify_phone" }) });
     },
     onSuccess: async () => {
+      if (business) telemetry.track("web.onboarding.greeting_submitted", { businessId: business.businessId });
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
       router.push("/onboarding/verify-phone");
     },

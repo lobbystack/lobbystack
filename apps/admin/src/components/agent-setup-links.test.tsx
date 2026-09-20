@@ -6,13 +6,17 @@ import { LiveServicesSurface } from "./live-services-surface";
 import { RulesSurface } from "./rules-surface";
 import { LiveIntegrationsSurface } from "./live-integrations-surface";
 import { LiveKnowledgeSurface } from "./live-knowledge-surface";
+import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
+
+const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
+vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 
 const navigation = vi.hoisted(() => ({ pathname: "/agent/services", search: "setup=service", replace: vi.fn() }));
 vi.mock("next/navigation", () => ({ usePathname: () => navigation.pathname, useSearchParams: () => new URLSearchParams(navigation.search), useRouter: () => ({ replace: navigation.replace }) }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en", resolvedLanguage: "en" }, t: (key: string) => key }) }));
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; });
-beforeEach(() => { navigation.replace.mockReset(); });
+beforeEach(() => { navigation.replace.mockReset(); telemetryRef.current = createRecordedBrowserTelemetry(); });
 function setup(kind: "service" | "rule" | "upload" | "website" | "calendar", loaded = true, role = "business_owner") {
   const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } });
   clients.push(client);

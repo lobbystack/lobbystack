@@ -12,7 +12,19 @@ LobbyStack uses PostHog for product analytics and error tracking, and OpenTeleme
 
 ## Record durable events
 
-Business events that must survive process failure are written to the PostgreSQL outbox in the same transaction as business state. The dispatcher publishes them asynchronously and records retries or dead-letter outcomes. In-process telemetry is reserved for diagnostics where loss during a crash is acceptable.
+Business outcomes are written through `recordProductEvent` to PostgreSQL after the authoritative operation commits. The worker's `telemetry.flush` job delivers pending rows to PostHog and retries failed delivery. A tenant-scoped `outbox.backlogSample` job samples each business's publishable outbox backlog every 60 seconds. In-process telemetry is reserved for diagnostics where loss during a crash is acceptable.
+
+## Use one declared transport
+
+`TELEMETRY_EVENT_TRANSPORT` is exhaustive and defines the permitted route for every registry event:
+
+- `durable` — business outcomes from admin, domain, and worker code through `recordProductEvent`.
+- `gateway` — realtime voice diagnostics through the gateway consent cache and PostHog client. This avoids database work on the audio hot path.
+- `browser` — operator intent and navigation through `createBrowserTelemetry` and `useTelemetry`.
+
+`$ai_generation` is intentionally allowed on both durable and gateway transports. Operational billing, outbox, and service events are durable; the `ops.*` prefix does not imply gateway ownership. Do not introduce another capture path. `pnpm telemetry:coverage` checks producer presence and transport ownership.
+
+All three transports validate required properties. Development and self-hosted runtimes throw on invalid events. Cloud runtimes preserve customer data, report `telemetry.validation_failed`, and continue.
 
 ## Propagate traces
 
@@ -36,4 +48,4 @@ Server runtimes send traces, metrics, and logs to the OTLP base URL configured t
 
 ## Validation
 
-Run `pnpm replacement:telemetry`, `pnpm replacement:privacy`, and the PostHog/OTel certification steps in `docs/validation/posthog-otel-validation.md` before production cutover.
+Run `pnpm telemetry:coverage`, `pnpm replacement:telemetry`, `pnpm replacement:privacy`, and the PostHog/OTel certification steps in `docs/validation/posthog-otel-validation.md` before production cutover.

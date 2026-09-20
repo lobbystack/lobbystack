@@ -5,9 +5,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OnboardingPhoneVerificationSurface } from "./onboarding-phone-verification-surface";
+import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
 const startPhoneVerificationMock = vi.fn();
 const navigateMock = vi.fn();
+const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
+vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -46,6 +49,7 @@ async function selectRegion(
 
 describe("OnboardingVerifyPhonePage", () => {
   beforeEach(() => {
+    telemetryRef.current = createRecordedBrowserTelemetry();
     startPhoneVerificationMock.mockReset();
     vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
       expect(url).toBe("/api/onboarding/phone-verification/start?businessId=business-1");
@@ -112,6 +116,7 @@ describe("OnboardingVerifyPhonePage", () => {
     });
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith("/onboarding/verify-phone/code"));
     expect(clients[0]?.getQueryState(["phone-verification", "business-1"])?.isInvalidated).toBe(true);
+    telemetryRef.current!.expectEvent("web.onboarding.verify_phone_started", { businessId: "business-1", countryCode: "US" });
   });
 
   it("changes country from the calling-code prefix picker", async () => {

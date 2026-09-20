@@ -48,6 +48,10 @@ export type NotificationDelivery = {
   notificationId: string;
   businessId: string;
   channel: "sms" | "email";
+  // Notification kind and related (appointment) id are carried through so the
+  // worker can attribute a provider delivery failure without re-reading the row.
+  kind: string;
+  relatedId?: string;
   to: string;
   from?: string;
   subject: string;
@@ -177,6 +181,8 @@ export async function resolveNotificationDelivery(
         notificationId: row.notificationId,
         businessId: input.businessId,
         channel: row.channel,
+        kind: row.kind,
+        relatedId: row.relatedId,
         to: row.channel === "sms" ? row.contactPhone! : row.contactEmail!,
         ...(row.channel === "sms" && row.senderPhone ? { from: row.senderPhone } : {}),
         subject: message.subject,

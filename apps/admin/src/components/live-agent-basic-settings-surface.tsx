@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
+import { useTelemetry } from "@/components/product-analytics";
 
 type AgentBasicSettingsPageProps = {
   businessId: string;
@@ -74,6 +75,7 @@ export function AgentBasicSettingsPage({
   canManageTenant,
 }: AgentBasicSettingsPageProps) {
   const { i18n, t } = useTranslation(["agent", "common", "settings"]);
+  const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["agent-settings", businessId],
@@ -180,6 +182,7 @@ export function AgentBasicSettingsPage({
         greeting,
         transferNumber: transferNumberResolution.value,
       });
+      telemetry.track("web.agent.settings_saved", { businessId, setting: "greeting" });
       setGreetingStatus(t("agent:actions.saved"));
     } catch {
       toast.error(t("agent:actions.saveFailed"));
@@ -212,6 +215,7 @@ export function AgentBasicSettingsPage({
         greeting,
         transferNumber: transferNumberResolution.value,
       });
+      telemetry.track("web.agent.settings_saved", { businessId, setting: "transfer_number" });
       setTransferStatus(t("agent:actions.saved"));
       setTransferStatusTone("success");
     } catch {
@@ -258,6 +262,7 @@ export function AgentBasicSettingsPage({
           requireOtp,
         }),
       });
+      telemetry.track("web.agent.settings_saved", { businessId, setting: "appointment_change_policy" });
       setAppointmentChangeStatus(t("agent:actions.saved"));
     } catch {
       toast.error(t("agent:actions.saveFailed"));
@@ -368,6 +373,7 @@ export function AgentBasicSettingsPage({
                             greeting,
                             transferNumber: transferNumberResolution.value,
                           });
+                          telemetry.track("web.agent.settings_saved", { businessId, setting: "default_locale" });
                           setLocaleStatus(t("agent:actions.saved"));
                         } catch {
       toast.error(t("agent:actions.saveFailed"));

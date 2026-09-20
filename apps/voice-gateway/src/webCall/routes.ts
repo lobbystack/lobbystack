@@ -19,6 +19,9 @@ import {
   captureAiGeneration,
   captureAiTraceStarted,
   capturePostHogException,
+  recordOpenAiTurnLatency,
+  recordTranscriptionFailure,
+  recordTurnFirstAudio,
   setBusinessTelemetryConsent,
 } from "../observability/posthog";
 import type { EndCallRequest } from "../realtime/callControl";
@@ -1285,7 +1288,14 @@ async function handleSidebandMessage(
 ): Promise<void> {
   const payload = JSON.parse(rawMessage.toString()) as OpenAiRealtimeMessage;
   const latency = observeVoiceLatency(session, payload.type);
-  if (latency) server.log.info({ ...latency, callId: session.callId, channel: "web_voice" }, "Voice turn latency");
+  if (latency) {
+    server.log.info({ ...latency, callId: session.callId, channel: "web" }, "Voice turn latency");
+    recordTurnFirstAudio(Number(latency.speechStopToOutputMs), {
+      "lobbystack.business_id": session.businessId,
+      "lobbystack.call_id": session.callId,
+      channel: "web",
+    });
+  }
 
   if (payload.type === "response.created") {
     trackWebResponseCreated(session, payload.response?.id);
@@ -1333,6 +1343,15 @@ async function handleSidebandMessage(
         : Date.now() - responseStartedAtMs;
     const usage = response?.usage;
     const costUsd = usage ? priceUsage(server, usage, model) : null;
+    if (latencyMs !== undefined) {
+      recordOpenAiTurnLatency(latencyMs, {
+        "lobbystack.business_id": session.businessId,
+        "lobbystack.call_id": session.callId,
+        "lobbystack.provider": "openai",
+        "lobbystack.model": model,
+        channel: "web",
+      });
+    }
     captureAiGeneration({
         businessId: session.businessId,
         traceId: session.aiTraceId,
@@ -1469,6 +1488,11 @@ async function handleSidebandMessage(
   }
 
   if (payload.type === "conversation.item.input_audio_transcription.failed") {
+    recordTranscriptionFailure({
+      "lobbystack.business_id": session.businessId,
+      "lobbystack.call_id": session.callId,
+      channel: "web",
+    });
     server.log.warn(
       {
         callId: session.callId,
@@ -1588,6 +1612,7 @@ async function handleToolCall(
       conversationId: session.conversationId,
       callerPhone: "web",
       channel: "web_voice",
+      ...(contextDurationMs !== undefined ? { contextDurationMs } : {}),
     });
   } catch (error) {
     server.log.error(

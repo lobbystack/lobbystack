@@ -19,6 +19,9 @@ import {
   getOrCreateConversation,
   issueAppointmentChangeOtp,
   reconcileCallStatus,
+  recordProductEvent,
+  recordProspectDemoCallError,
+  recordProspectDemoCallStarted,
   recordUsage,
   recordCallSchedulingProgress,
   rescheduleAppointmentForCaller,
@@ -30,6 +33,7 @@ import {
   createVoiceFollowUpTask,
 } from "@lobbystack/domain";
 import { normalizeAppointmentChangePolicy } from "@lobbystack/shared";
+import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { asApiResponse, getAppDatabase, readJson, requireInternalService } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { resolveWebVoiceAccess } from "@/lib/prospect-demo";
@@ -78,6 +82,34 @@ async function resolveService(context: ReturnType<typeof createWorkerDomainConte
   });
 }
 
+function bookingFailureReason(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+  if (message.includes("Service is not available")) return "service_unavailable";
+  if (message.includes("No staff member is available")) return "no_staff_available";
+  if (message.includes("no longer available")) return "slot_unavailable";
+  if (message.includes("required")) return "invalid_request";
+  if (message.includes("Contact could not be created")) return "contact_create_failed";
+  if (message.includes("Appointment could not be created")) return "appointment_create_failed";
+  if (message.includes("Booking confirmation notification")) return "notification_create_failed";
+  return "unknown";
+}
+
+function webVoiceStartFailureReason(error: unknown): string {
+  if (typeof error === "object" && error !== null && "code" in error && typeof error.code === "string" && error.code) return error.code;
+  return "web_call_start_failed";
+}
+
+async function safeRecordProductEvent(
+  context: ReturnType<typeof createWorkerDomainContext>,
+  input: Parameters<typeof recordProductEvent>[1],
+): Promise<void> {
+  try {
+    await recordProductEvent(context, input);
+  } catch {
+    // Product telemetry is best-effort and must never fail the booking tool call.
+  }
+}
+
 function dateTimeForVoice(date: string, timezone: string, hour = 9, minute = 0): string {
   const value = DateTime.fromISO(`${date}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00`, { zone: timezone }).toUTC().toISO();
   if (!value) throw new Error("A valid date and timezone are required.");
@@ -118,21 +150,46 @@ async function handleVoiceTool(path: string, body: Body) {
     const timezone = stringValue(body, "timezone") ?? "UTC";
     const contactName = stringValue(body, "contactName");
     const preferredStaffId = stringValue(body, "preferredStaffId");
+    const sourceChannel = stringValue(body, "channel") ?? "voice";
     const service = await resolveService(context, businessId, serviceName);
-    if (!service) return { ok: false, reason: "Service is not available." };
-    const appointment = await bookAppointment(context, {
-      ...(stringValue(body, "callId") ? { callId: stringValue(body, "callId")! } : {}),
-      businessId,
-      serviceId: service.id,
-      startsAt: requiredString(body, "startsAt"),
-      timezone,
-      contactPhone: requiredString(body, "contactPhone"),
-      sourceChannel: stringValue(body, "channel") ?? "voice",
-      ...(booleanValue(body, "smsConsentGranted") ? { smsConsentGranted: true } : {}),
-      ...(contactName !== undefined ? { contactName } : {}),
-      ...(preferredStaffId !== undefined ? { preferredStaffId } : {}),
-    });
-    return { appointmentId: appointment.appointmentId, contactId: appointment.contactId, serviceId: service.id, serviceName: service.name };
+    if (!service) {
+      await safeRecordProductEvent(context, {
+        name: "appointment.booking_failed",
+        businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(businessId),
+        properties: { reason: "service_unavailable", requestedServiceName: serviceName, channel: "voice", sourceChannel },
+      });
+      return { ok: false, reason: "Service is not available." };
+    }
+    try {
+      const appointment = await bookAppointment(context, {
+        ...(stringValue(body, "callId") ? { callId: stringValue(body, "callId")! } : {}),
+        businessId,
+        serviceId: service.id,
+        startsAt: requiredString(body, "startsAt"),
+        timezone,
+        contactPhone: requiredString(body, "contactPhone"),
+        sourceChannel,
+        ...(booleanValue(body, "smsConsentGranted") ? { smsConsentGranted: true } : {}),
+        ...(contactName !== undefined ? { contactName } : {}),
+        ...(preferredStaffId !== undefined ? { preferredStaffId } : {}),
+      });
+      await safeRecordProductEvent(context, {
+        name: "appointment.booked",
+        businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(businessId),
+        properties: { appointmentId: appointment.appointmentId, channel: "voice", serviceId: service.id, sourceChannel },
+      });
+      return { appointmentId: appointment.appointmentId, contactId: appointment.contactId, serviceId: service.id, serviceName: service.name };
+    } catch (error) {
+      await safeRecordProductEvent(context, {
+        name: "appointment.booking_failed",
+        businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(businessId),
+        properties: { reason: bookingFailureReason(error), serviceId: service.id, requestedServiceName: serviceName, channel: "voice", sourceChannel },
+      });
+      throw error;
+    }
   }
 
   if (path === "lookup-appointment-for-change") {
@@ -264,8 +321,24 @@ export async function POST(request: Request, context: { params: Promise<{ segmen
           ...(access.mode === "prospect_demo" ? { sessionPurpose: "prospect_demo", prospectDemoId: access.prospectDemoId } : {}),
           ...(maxDurationMs !== undefined ? { maxDurationMs } : {}),
         });
+        if (access.mode === "prospect_demo" && !result.duplicate) {
+          await recordProspectDemoCallStarted(domain, {
+            businessId,
+            prospectDemoId: access.prospectDemoId,
+            callId: result.callId,
+            channel: "web_voice",
+            provider: "openai_realtime",
+          });
+        }
         return NextResponse.json({ businessId, callId: result.callId, conversationId: result.conversationId, ...(result.webCallMaxDurationMs !== undefined ? { webCallMaxDurationMs: result.webCallMaxDurationMs } : {}) });
       } catch (error) {
+        if (access.mode === "prospect_demo") {
+          await recordProspectDemoCallError(domain, {
+            businessId,
+            prospectDemoId: access.prospectDemoId,
+            reason: webVoiceStartFailureReason(error),
+          });
+        }
         const status = typeof error === "object" && error !== null && "status" in error && typeof error.status === "number" ? error.status : undefined;
         const code = typeof error === "object" && error !== null && "code" in error && typeof error.code === "string" ? error.code : undefined;
         if (status && code) return NextResponse.json({ code, message: error instanceof Error ? error.message : "Web voice start denied." }, { status });

@@ -4,12 +4,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OnboardingNumberSurface } from "./onboarding-number-surface";
+import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 const navigation = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
+vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
-beforeEach(() => { navigation.push.mockReset(); navigation.replace.mockReset(); });
+beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); navigation.push.mockReset(); navigation.replace.mockReset(); });
 function setup(stage: string, primary = false, pending = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business-1", active: true, onboardingStage: stage }] });
@@ -52,6 +55,9 @@ describe("onboarding number API adapter", () => {
     await waitFor(() => expect(navigation.push).toHaveBeenCalledWith(stage === "complete" ? "/settings/phone-number" : "/onboarding/attribution"));
     const claimRequest = fetchMock.mock.calls.find(([url]) => url.includes("/claim?"));
     expect(claimRequest).toBeTruthy();
+    const claimProperties = { businessId: "business-1", countryCode: "CA", selectionMode: "suggested", numberKind: "local" };
+    telemetryRef.current!.expectEvent("web.onboarding.number_claim_started", claimProperties);
+    telemetryRef.current!.expectEvent("web.onboarding.number_claim_completed", claimProperties);
   });
   it("offers a skip that returns a completed workspace to the dashboard", async () => {
     const fetchMock = setup("complete");

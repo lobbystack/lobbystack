@@ -23,6 +23,7 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
+import { useTelemetry } from "@/components/product-analytics";
 import { clearAffiliateReferralCode, getStoredAffiliateReferralCode } from "@/lib/affiliate-referral";
 import { cn } from "@/lib/utils";
 
@@ -65,13 +66,15 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
 export function OnboardingAttributionSurface() {
   const { t } = useTranslation("onboarding");
   const router = useRouter();
+  const telemetry = useTelemetry();
   const [selected, setSelected] = useState<AttributionSource | null>(null);
   const [error, setError] = useState<string | null>(null);
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
   const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
   const finish = useMutation({
     mutationFn: (source: AttributionSource | null) => requestJson(`/api/onboarding/attribution?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ source, referralCode: getStoredAffiliateReferralCode() }) }),
-    onSuccess: () => {
+    onSuccess: (_result, source) => {
+      if (business && source) telemetry.track("web.onboarding.attribution_submitted", { businessId: business.businessId, source });
       clearAffiliateReferralCode();
       router.push("/");
       router.refresh();

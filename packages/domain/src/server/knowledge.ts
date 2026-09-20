@@ -12,7 +12,9 @@ import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
 import { normalizeWebsiteSourceUrl } from "./knowledgeUrl";
 import { getMeter } from "@lobbystack/telemetry/node";
+import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { advanceOnboardingStageInTransaction } from "./onboarding";
+import { recordProductEvent } from "./productEvents";
 
 const ragMeter = getMeter("lobbystack-rag");
 const searchDuration = ragMeter.createHistogram("rag.search.duration_ms", { unit: "ms" });
@@ -210,8 +212,26 @@ export async function deleteKnowledgeSnippet(context: DomainContext, input: { us
 
 type IndexDocumentInput = { businessId: string; documentId: string; text: string; embeddings: number[][]; embeddingFingerprint?: string };
 
+type IndexDocumentResult = { chunkCount: number; indexed: boolean; documentId: string };
+
+async function recordKnowledgeDocumentIndexed(context: DomainContext, input: { businessId: string; documentId: string }): Promise<void> {
+  try {
+    await recordProductEvent(context, {
+      name: "knowledge.document_indexed",
+      businessId: input.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+      actorType: "worker",
+      properties: { documentId: input.documentId },
+    });
+  } catch {
+    // Product telemetry is best-effort and must not fail knowledge indexing.
+  }
+}
+
 export async function indexDocumentText(context: DomainContext, input: IndexDocumentInput): Promise<{ chunkCount: number }> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, (tx) => indexDocumentTextInTransaction(tx, input));
+  const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, (tx) => indexDocumentTextInTransaction(tx, input));
+  if (result.indexed) await recordKnowledgeDocumentIndexed(context, { businessId: input.businessId, documentId: result.documentId });
+  return { chunkCount: result.chunkCount };
 }
 
 /** Rebuild stored evidence without fetching the source or overwriting a concurrent edit. */
@@ -230,19 +250,21 @@ export async function reindexStoredKnowledgeDocument(
   const chunks = chunkText(text);
   if (!chunks.length) throw new Error("No stored knowledge to reindex.");
   const embeddings = await context.embeddings.embed(chunks);
-  return withBusinessTransaction(context.db, actor, async tx => {
+  const result = await withBusinessTransaction(context.db, actor, async tx => {
     const document = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update"))[0];
     if (!document || !document.active || document.status !== "indexed" || document.revision !== input.expectedRevision) throw new Error("Knowledge source changed during reindexing.");
     return indexDocumentTextInTransaction(tx, { ...input, text, embeddings, ...(context.embeddings!.fingerprint ? { embeddingFingerprint: context.embeddings!.fingerprint } : {}) });
   });
+  if (result.indexed) await recordKnowledgeDocumentIndexed(context, { businessId: input.businessId, documentId: result.documentId });
+  return { chunkCount: result.chunkCount };
 }
 
-async function indexDocumentTextInTransaction(tx: DatabaseTransaction, input: IndexDocumentInput, preserveImport = false): Promise<{ chunkCount: number }> {
+async function indexDocumentTextInTransaction(tx: DatabaseTransaction, input: IndexDocumentInput, preserveImport = false): Promise<IndexDocumentResult> {
     const document = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update"))[0];
     if (!document) {
       throw new Error("Knowledge document not found.");
     }
-    if (document.status === "cancelled") return { chunkCount: 0 };
+    if (document.status === "cancelled") return { chunkCount: 0, indexed: false, documentId: input.documentId };
     const chunks = chunkText(input.text);
     if (chunks.length === 0) {
       await markKnowledgeDocumentFailedInTransaction(tx, input, document.revision, "No readable text was extracted from the document.");
@@ -276,19 +298,21 @@ async function indexDocumentTextInTransaction(tx: DatabaseTransaction, input: In
       dedupeKey: `knowledge:${input.documentId}:progress:${document.revision + 1}`,
       payload: { type: "document.progressed", entityId: input.documentId, progress: 100 },
     });
-    return { chunkCount: chunks.length };
+    return { chunkCount: chunks.length, indexed: !preserveImport, documentId: input.documentId };
 }
 
 /** Commit a crawled page only while its originating import is still current. */
 export async function indexCrawledWebsitePage(context: DomainContext, input: IndexDocumentInput & { sourceRevision: number; sourceUrl: string; title: string }): Promise<{ chunkCount: number }> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+  const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx): Promise<IndexDocumentResult> => {
     const [source] = await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update");
-    if (!source || source.status !== "processing" || source.revision !== input.sourceRevision) return { chunkCount: 0 };
+    if (!source || source.status !== "processing" || source.revision !== input.sourceRevision) return { chunkCount: 0, indexed: false, documentId: input.documentId };
     const sourceUrl = normalizeWebsiteSourceUrl(input.sourceUrl);
     const [page] = await tx.insert(knowledgeDocuments).values({ businessId: input.businessId, sourceType: "website", title: input.title, sourceUrl, status: "processing" }).onConflictDoUpdate({ target: [knowledgeDocuments.businessId, knowledgeDocuments.sourceUrl], set: { title: input.title, status: "processing", error: null, updatedAt: new Date() } }).returning({ id: knowledgeDocuments.id });
     if (!page) throw new Error("Website page could not be saved.");
     return await indexDocumentTextInTransaction(tx, { ...input, documentId: page.id }, page.id === source.id);
   });
+  if (result.indexed) await recordKnowledgeDocumentIndexed(context, { businessId: input.businessId, documentId: result.documentId });
+  return { chunkCount: result.chunkCount };
 }
 
 async function markKnowledgeDocumentFailedInTransaction(
@@ -415,10 +439,11 @@ export async function searchKnowledgeEvidence(
   const durationMs = performance.now() - startedAt;
   searchDuration.record(durationMs, { operation: "knowledge.search", mode, outcome });
   searchResultCount.record(matches.length, { operation: "knowledge.search", mode, outcome });
-  await context.telemetry?.track({
-    name: "knowledge.search_executed", businessId: input.businessId,
-    ...(input.callId ? { callId: input.callId } : {}),
-    properties: { mode, outcome, resultCount: matches.length, durationMs, fallbackUsed: mode === "keyword", ...(input.turnId ? { turnId: input.turnId } : {}) },
+  await recordProductEvent(context, {
+    name: "knowledge.search_executed",
+    businessId: input.businessId,
+    distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+    properties: { mode, outcome, resultCount: matches.length, durationMs, fallbackUsed: mode === "keyword", ...(input.callId ? { callId: input.callId } : {}), ...(input.turnId ? { turnId: input.turnId } : {}) },
   }).catch(() => undefined);
   return { matches, mode, outcome, durationMs, ...(failed ? { failure: "search_unavailable" as const } : semanticResult.status === "rejected" ? { failure: "embedding_unavailable" as const } : {}) };
 }
@@ -520,6 +545,17 @@ export async function refreshBusinessSnapshot(
     await context.snapshotCache.set(input.businessId, builtSnapshot).catch(() => undefined);
   }
   snapshotRefreshDuration.record(performance.now() - startedAt, { operation: "snapshot.refresh" });
+  try {
+    await recordProductEvent(context, {
+      name: "business.snapshot_refreshed",
+      businessId: input.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+      actorType: "worker",
+      properties: {},
+    });
+  } catch {
+    // Product telemetry is best-effort and must not fail the snapshot refresh.
+  }
   return version;
 }
 

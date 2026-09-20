@@ -118,7 +118,12 @@ describe("queued authentication analytics", () => {
     const client = setup(undefined);
     expect(mocks.posthog.capture).not.toHaveBeenCalled();
     await act(async () => { client.setQueryData(["appearance-preferences", "business"], { telemetryEnabled: true }); });
-    await waitFor(() => expect(mocks.posthog.capture).toHaveBeenCalledWith(event, { businessId: "business", $groups: { business: "business:business" } }));
+    await waitFor(() => expect(mocks.posthog.capture).toHaveBeenCalledWith(event, {
+      businessId: "business",
+      deploymentMode: "development",
+      pathname: "/calls",
+      $groups: { business: "business:business" },
+    }));
     expect(mocks.posthog.capture.mock.calls.filter(([name]) => name === event)).toHaveLength(1);
     expect(consumeAuthSuccess()).toBeNull();
   });

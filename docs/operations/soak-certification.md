@@ -89,7 +89,7 @@ pnpm exec tsx --tsconfig tsconfig.base.json scripts/operations/alert-firing-smok
   --confirmed-recovery=ReplacementOutboxDeadLettered,ReplacementWorkerJobFailures,ReplacementOutboxDispatcherUnavailable
 ```
 
-Heartbeat absence checks (`ops.convex.heartbeat`, `ops.voice.heartbeat`,
+Heartbeat and liveness absence checks (`ops.voice.heartbeat`,
 `ops.service.health_check`) belong in Product Analytics absence alerts, because Error
 Tracking cannot notify on an event that never arrived. See
 [provider-failure error tracking](../telemetry/provider-failure-error-tracking.md).

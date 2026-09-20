@@ -8,6 +8,8 @@ import { useTranslation } from "react-i18next";
 
 import { AuraVoiceDemo } from "@/components/web-voice/AuraVoiceDemo";
 import { webCallEndpoint } from "@/lib/web-call-endpoint";
+import { useTelemetry } from "@/components/product-analytics";
+import type { TelemetryEventName, TelemetryProperties } from "@lobbystack/telemetry";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -134,6 +136,11 @@ function TestCallAura({
   onCallEnded,
   onRegisterControls,
 }: TestCallAuraProps) {
+  const telemetry = useTelemetry();
+  const handleVoiceEvent = useCallback((eventName: TelemetryEventName, properties?: Record<string, unknown>) => {
+    if (!businessId) return;
+    telemetry.track(eventName, { businessId, ...properties } as TelemetryProperties);
+  }, [businessId, telemetry]);
   const getStartPayload = useCallback(async (): Promise<Record<string, string>> => {
     if (!businessId) return {};
     const response = await fetch(`/api/voice/test-call/proof?businessId=${encodeURIComponent(businessId)}`, { credentials: "include" });
@@ -150,6 +157,7 @@ function TestCallAura({
       endpoint={webCallEndpoint}
       getStartPayload={getStartPayload}
       onCallEnded={onCallEnded}
+      onEvent={handleVoiceEvent}
       onRegisterControls={onRegisterControls}
       widgetId="lobbystack-dashboard-test-call"
     />

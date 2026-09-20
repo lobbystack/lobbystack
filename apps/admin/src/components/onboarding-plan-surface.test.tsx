@@ -5,13 +5,16 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OnboardingPlanSurface } from "./onboarding-plan-surface";
+import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
 const route = vi.hoisted(() => ({ router: { push: vi.fn(), replace: vi.fn() }, search: new URLSearchParams() }));
+const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
+vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 vi.mock("next/navigation", () => ({ useRouter: () => route.router, useSearchParams: () => route.search }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("./onboarding-plan-comparison", () => ({ OnboardingPlanComparison: () => null }));
 const clients: QueryClient[] = [];
-beforeEach(() => { route.search = new URLSearchParams(); });
+beforeEach(() => { route.search = new URLSearchParams(); telemetryRef.current = createRecordedBrowserTelemetry(); });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 function setup(synced: boolean | "error" = false, monthlyOnly = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
@@ -49,8 +52,15 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
     const button = screen.getByRole("button", { name: `plan.tiers.pro.cta.${interval}` });
     await userEvent.click(button);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/billing/checkout", expect.objectContaining({ body: JSON.stringify({ businessId: "business", target: "pro", billingInterval: interval }) })));
+    telemetryRef.current!.expectEvent("web.onboarding.plan_selected", { businessId: "business", plan: "pro" });
+    telemetryRef.current!.expectEvent("web.onboarding.plan_checkout_started", { businessId: "business", plan: "pro" });
     expect(await screen.findByText("Checkout failed")).toBeTruthy();
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
+  });
+  it("records plan_selected when the free plan is chosen", async () => {
+    setup();
+    await userEvent.click(screen.getByRole("button", { name: "plan.tiers.free_cloud.cta" }));
+    telemetryRef.current!.expectEvent("web.onboarding.plan_selected", { businessId: "business", plan: "free_cloud" });
   });
   it("selects the only configured interval and disables unavailable plans", async () => {
     setup(false, true);

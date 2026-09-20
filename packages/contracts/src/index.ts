@@ -314,6 +314,7 @@ export const jobTypes = [
   "prospectDemo.expire",
   "affiliate.generatePayoutRun",
   "telemetry.flush",
+  "outbox.backlogSample",
   "realtime.publish",
 ] as const;
 export type JobType = (typeof jobTypes)[number];

@@ -4,12 +4,15 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LiveContactsSurface } from "./live-contacts-surface";
+import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
+const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
+vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 vi.mock("sonner", () => ({ toast }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
 const clients: QueryClient[] = [];
-beforeEach(() => { vi.stubGlobal("localStorage", { getItem: () => "en", setItem: vi.fn() }); vi.stubGlobal("EventSource", class { addEventListener() {} close() {} }); });
+beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); vi.stubGlobal("localStorage", { getItem: () => "en", setItem: vi.fn() }); vi.stubGlobal("EventSource", class { addEventListener() {} close() {} }); });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 function setup(deleteError?: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
@@ -58,5 +61,10 @@ describe("contact list parity and pagination", () => {
     await userEvent.type(screen.getByPlaceholderText("page.searchPlaceholder"), "beyond");
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url.includes("offset=0&search=beyond"))).toBe(true));
     expect(await screen.findByText("Matching contact beyond first 100")).toBeTruthy();
+  });
+  it("records contact_opened with the active business and contact identifiers", async () => {
+    setup();
+    await userEvent.click(await screen.findByText("Contact 1"));
+    telemetryRef.current!.expectEvent("web.contacts.contact_opened", { businessId: "business", contactId: "contact-0" });
   });
 });
