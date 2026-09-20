@@ -13,6 +13,8 @@ export default defineConfig({
       "@lobbystack/contracts": `${root}/packages/contracts/src/index.ts`,
       "@lobbystack/db": `${root}/packages/db/src/index.ts`,
       "@lobbystack/domain": `${root}/packages/domain/src/index.ts`,
+      "@lobbystack/providers/storage/local": `${root}/packages/providers/src/storage/local.ts`,
+      "@lobbystack/providers/storage/provider": `${root}/packages/providers/src/storage/provider.ts`,
       "@lobbystack/telemetry/node": `${root}/packages/telemetry/src/node.ts`,
       "@lobbystack/telemetry/browser": `${root}/packages/telemetry/src/browser.ts`,
       "@lobbystack/telemetry/testing": `${root}/packages/telemetry/src/testing.ts`,

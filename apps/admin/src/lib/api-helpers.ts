@@ -2,10 +2,11 @@ import { after, NextResponse } from "next/server";
 import { reportServerError } from "./error-reporting";
 import { eq } from "drizzle-orm";
 
-import { createDatabaseClient, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { requireBusinessMembership } from "@lobbystack/domain";
 
 import { getSession, type Session } from "./auth";
+import { getDatabase } from "./databases";
 import { claimInternalRequestNonce, verifyInternalRequest } from "./internal-auth";
 
 export type ApiErrorPayload = {
@@ -24,30 +25,16 @@ export type ApiMutationPayload<T extends Record<string, unknown> = Record<string
   ok: true;
 } & T;
 
-let appDatabase: ReturnType<typeof createDatabaseClient> | undefined;
-let workerDatabase: ReturnType<typeof createDatabaseClient> | undefined;
-let dispatcherDatabase: ReturnType<typeof createDatabaseClient> | undefined;
-let financeExportDatabase: ReturnType<typeof createDatabaseClient> | undefined;
-
 export function getAppDatabase() {
-  if (!appDatabase) {
-    appDatabase = createDatabaseClient("lobbystack_app");
-  }
-  return appDatabase;
+  return getDatabase("lobbystack_app");
 }
 
 export function getWorkerDatabase() {
-  if (!workerDatabase) {
-    workerDatabase = createDatabaseClient("lobbystack_worker");
-  }
-  return workerDatabase;
+  return getDatabase("lobbystack_worker");
 }
 
 export function getDispatcherDatabase() {
-  if (!dispatcherDatabase) {
-    dispatcherDatabase = createDatabaseClient("lobbystack_dispatcher");
-  }
-  return dispatcherDatabase;
+  return getDatabase("lobbystack_dispatcher");
 }
 
 /** The finance endpoint may only use its separately provisioned read role. */
@@ -55,10 +42,7 @@ export function getFinanceExportDatabase() {
   if (!process.env.LOBBYSTACK_FINANCE_EXPORT_DATABASE_URL) {
     throw new Error("Finance export database role is not configured.");
   }
-  if (!financeExportDatabase) {
-    financeExportDatabase = createDatabaseClient("lobbystack_finance_export");
-  }
-  return financeExportDatabase;
+  return getDatabase("lobbystack_finance_export");
 }
 
 export function jsonError(message: string, status = 400, code?: string): NextResponse {

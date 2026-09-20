@@ -14,6 +14,7 @@ import {
   writeStoredLocaleCookie,
   type SupportedLocale,
 } from "@/lib/locale";
+import { isPublicRoutePath, localizePublicPath } from "@/lib/locale-path";
 import type { LocaleSource } from "@/lib/locale-request";
 import { readPublicAuthSession } from "@/lib/public-auth-session";
 
@@ -48,7 +49,7 @@ export function LocaleProvider({
 }) {
   const { i18n } = useTranslation();
   const pathname = usePathname() ?? "/";
-  const publicPage = /^\/(login|signup|forgot-password|reset-password|verify-email|confirm-email-change|accept-invite|claim-demo|demo|embed)(\/|$)/.test(pathname);
+  const publicPage = isPublicRoutePath(pathname) || /^\/embed(?:\/|$)/.test(pathname);
   const [locale, setLocaleState] = useState<SupportedLocale>(() => resolveLocale(i18n.resolvedLanguage, initialLocale));
   const [isSaving, setIsSaving] = useState(false);
   const preferenceRevision = useRef(0);
@@ -72,7 +73,7 @@ export function LocaleProvider({
    * server could not see unless an explicit ?lng= outranks it.
    */
   useEffect(() => {
-    if (initialLocaleSource === "query") {
+    if (initialLocaleSource === "query" || initialLocaleSource === "path") {
       writeStoredLocale(initialLocale);
       writeStoredLocaleCookie(initialLocale);
       return;
@@ -122,6 +123,13 @@ export function LocaleProvider({
       writeStoredLocale(nextLocale);
       writeStoredLocaleCookie(nextLocale);
       await i18n.changeLanguage(nextLocale);
+      if (publicPage) {
+        const target = new URL(window.location.href);
+        target.pathname = localizePublicPath(target.pathname, nextLocale);
+        target.searchParams.delete("lng");
+        window.location.assign(`${target.pathname}${target.search}${target.hash}`);
+        return;
+      }
       try {
         const response = await fetch("/api/preferences/locale", {
           method: "PATCH",
@@ -142,7 +150,7 @@ export function LocaleProvider({
         if (revision === preferenceRevision.current) setIsSaving(false);
       }
     },
-  }), [i18n, isSaving, locale]);
+  }), [i18n, isSaving, locale, publicPage]);
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }

@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { resolveLocale } from "@/lib/locale";
 import { localizeMarketingHref } from "@/lib/marketing-site-url";
 import { cn } from "@/lib/utils";
+import { versionedAssetUrl } from "@/lib/versioned-assets";
 
 type OnboardingShellProps = {
   eyebrow?: string;
@@ -45,7 +46,7 @@ export function ReplacementOnboardingShell({ eyebrow, title, description, progre
       <main className="flex flex-1 flex-col items-center px-6 py-12">
         <div className={cn("my-auto flex w-full flex-col items-center", widths[width])}>
           <div aria-label="LobbyStack" className="flex w-full items-center justify-center gap-2.5">
-            <img alt="" aria-hidden="true" className="size-6 select-none dark:invert" draggable={false} src="/brand/logo-icon.svg" />
+            <img alt="" aria-hidden="true" className="size-6 select-none dark:invert" draggable={false} src={versionedAssetUrl("/brand/logo-icon.svg")} />
             <span className="font-heading text-xl font-semibold leading-none text-foreground">LobbyStack</span>
           </div>
           <div className="mt-10 flex w-full flex-col items-center gap-4 text-center">

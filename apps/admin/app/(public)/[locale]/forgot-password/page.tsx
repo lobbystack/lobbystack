@@ -6,9 +6,11 @@ import { useTranslation } from "react-i18next";
 
 import { ForgotPasswordForm } from "@/components/forgot-password-form";
 import { ReplacementOnboardingShell } from "@/components/replacement-onboarding-shell";
+import { resolveLocale } from "@/lib/locale";
+import { localizePublicPath } from "@/lib/locale-path";
 
 export default function ForgotPasswordPage() {
-  const { t } = useTranslation("auth");
+  const { t, i18n } = useTranslation("auth");
   const router = useRouter();
   const [step, setStep] = useState<"request" | "verify">("request");
   const [email, setEmail] = useState("");
@@ -42,7 +44,7 @@ export default function ForgotPasswordPage() {
       });
       // The password has changed even if a transient login/rate-limit error occurs.
       signingIn = true;
-      router.replace(login.ok ? "/" : "/login");
+      router.replace(login.ok ? "/" : localizePublicPath("/login", resolveLocale(i18n?.resolvedLanguage, i18n?.language)));
       router.refresh();
     } catch (cause) {
       setErrorMessage(cause instanceof Error ? cause.message : t("errors.passwordResetFailed"));

@@ -21,7 +21,7 @@ test("password recovery completes through the original form and revokes the old 
     await database.db.insert(users).values({ id, email, normalizedEmail: email, emailVerified: true, passwordHash: password });
     await database.db.insert(accounts).values({ userId: id, providerId: "credential", accountId: id, password });
     expect((await respectingAuthRateLimit(() => request.post("/api/auth/sign-in/email", { data: { email, password: oldPassword } }))).ok()).toBe(true);
-    await page.goto("/forgot-password");
+    await page.goto("/en/forgot-password");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByRole("button", { name: "Send reset code", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Enter your reset code" })).toBeVisible();

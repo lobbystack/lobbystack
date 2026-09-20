@@ -15,7 +15,29 @@ for (const envPath of [
 
 async function main(): Promise<void> {
   const { initializeTelemetry, shutdownTelemetry } = await import("@lobbystack/telemetry/node");
-  await initializeTelemetry({ serviceName: "lobbystack-voice-gateway" });
+  const postHogHost = process.env.POSTHOG_HOST;
+  const postHogKey = process.env.POSTHOG_KEY;
+  let postHogLogsEndpoint: string | undefined;
+  if (postHogHost && postHogKey) {
+    try {
+      postHogLogsEndpoint = new URL("/i/v1/logs", postHogHost).toString();
+    } catch {
+      // Environment validation reports invalid PostHog configuration separately.
+    }
+  }
+  await initializeTelemetry({
+    serviceName: "lobbystack-voice-gateway",
+    ...(process.env.DEPLOYMENT_MODE ? { environment: process.env.DEPLOYMENT_MODE } : {}),
+    ...(postHogLogsEndpoint && postHogKey
+      ? {
+          additionalLogDestinations: [{
+            endpoint: postHogLogsEndpoint,
+            headers: { Authorization: `Bearer ${postHogKey}` },
+          }],
+          includeDefaultLogDestination: false,
+        }
+      : {}),
+  });
   const [
     { createServer },
     {

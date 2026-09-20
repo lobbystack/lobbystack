@@ -1,6 +1,3 @@
-import mammoth from "mammoth";
-import { PDFParse } from "pdf-parse";
-import { createWorker } from "tesseract.js";
 import { getMeter } from "@lobbystack/telemetry/node";
 
 const textMimeTypes = new Set(["text/plain", "text/markdown", "text/x-markdown"]);
@@ -9,6 +6,7 @@ const ocrLanguages = ["eng", "fra"] as const;
 const ocrDuration = getMeter("lobbystack-rag").createHistogram("rag.ocr.duration_ms", { unit: "ms" });
 
 async function extractPdfText(body: Uint8Array): Promise<string> {
+  const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({ data: body });
   try {
     const result = await parser.getText();
@@ -19,6 +17,7 @@ async function extractPdfText(body: Uint8Array): Promise<string> {
 
     const ocrStartedAt = performance.now();
     const screenshots = await parser.getScreenshot({ imageBuffer: true, imageDataUrl: false, scale: 2 });
+    const { createWorker } = await import("tesseract.js");
     const worker = await createWorker([...ocrLanguages]);
     try {
       const pages: string[] = [];
@@ -41,10 +40,12 @@ export async function extractDocumentText(input: { body: Uint8Array; contentType
   if (textMimeTypes.has(contentType)) return new TextDecoder().decode(input.body);
   if (contentType === "application/pdf") return await extractPdfText(input.body);
   if (contentType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+    const { default: mammoth } = await import("mammoth");
     return (await mammoth.extractRawText({ buffer: Buffer.from(input.body) })).value ?? "";
   }
   if (contentType.startsWith("image/")) {
     const ocrStartedAt = performance.now();
+    const { createWorker } = await import("tesseract.js");
     const worker = await createWorker([...ocrLanguages]);
     try {
       return (await worker.recognize(Buffer.from(input.body))).data.text;

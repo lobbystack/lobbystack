@@ -7,29 +7,22 @@ import { z } from "zod";
 import { createHash, randomUUID } from "node:crypto";
 import { and, eq, isNotNull } from "drizzle-orm";
 
-import { createDatabaseClient, enqueueOutbox, withBusinessTransaction } from "@lobbystack/db";
+import { enqueueOutbox, withBusinessTransaction } from "@lobbystack/db";
 import { accounts, sessions, users, verifications } from "@lobbystack/db";
 
+import { getDatabase } from "./databases";
 import { hashReplacementPassword, isLegacyScryptHash, meetsPasswordRequirements, verifyLegacyPassword } from "./password";
 import { verifyTurnstileForSignUp } from "./turnstile";
 
 let instance: any;
-let authDatabase: ReturnType<typeof createDatabaseClient> | undefined;
-let emailDatabase: ReturnType<typeof createDatabaseClient> | undefined;
 let authRedis: Redis | undefined;
 
 export function getAuthDatabase() {
-  if (!authDatabase) {
-    authDatabase = createDatabaseClient("lobbystack_auth");
-  }
-  return authDatabase;
+  return getDatabase("lobbystack_auth");
 }
 
 function getEmailDatabase() {
-  if (!emailDatabase) {
-    emailDatabase = createDatabaseClient("lobbystack_app");
-  }
-  return emailDatabase;
+  return getDatabase("lobbystack_app");
 }
 
 function getAuthSecondaryStorage() {
@@ -235,7 +228,7 @@ export function getAuth() {
           // The second, new-address verification step uses the original confirmation UI.
           // Better Auth still verifies the signed token and performs the authoritative update.
           const verificationUrl = new URL(url);
-          const confirmationUrl = new URL("/confirm-email-change", process.env.APP_BASE_URL ?? "http://localhost:3000");
+          const confirmationUrl = new URL("/en/confirm-email-change", process.env.APP_BASE_URL ?? "http://localhost:3000");
           confirmationUrl.searchParams.set("token", verificationUrl.searchParams.get("token") ?? "");
           confirmationUrl.searchParams.set("email", user.email);
           deliveryUrl = confirmationUrl.toString();

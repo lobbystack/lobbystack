@@ -1,12 +1,21 @@
-import { Tiktoken } from "js-tiktoken/lite";
-import o200kBase from "js-tiktoken/ranks/o200k_base";
+import { createRequire } from "node:module";
+import type { Tiktoken as TiktokenEncoder } from "js-tiktoken/lite";
 
-let encoder: Tiktoken | undefined;
+const require = createRequire(import.meta.url);
+let encoder: TiktokenEncoder | undefined;
+
+function getEncoder(): TiktokenEncoder {
+  if (!encoder) {
+    const { Tiktoken } = require("js-tiktoken/lite") as typeof import("js-tiktoken/lite");
+    const o200kBase = require("js-tiktoken/ranks/o200k_base") as typeof import("js-tiktoken/ranks/o200k_base").default;
+    encoder = new Tiktoken(o200kBase);
+  }
+  return encoder;
+}
 
 // Versioned text-budget encoding; excludes audio and message-envelope overhead.
 export function countKnowledgeTokens(text: string): number {
-  encoder ??= new Tiktoken(o200kBase);
-  return encoder.encode(text, [], []).length;
+  return getEncoder().encode(text, [], []).length;
 }
 
 export function selectKnowledgeWithinBudget<T>(items: T[], budget: number, render: (item: T) => string): T[] {

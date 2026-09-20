@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
+import { resolveLocale } from "@/lib/locale";
+import { localizePublicPath } from "@/lib/locale-path";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -43,7 +45,8 @@ export function ForgotPasswordForm({
   onSubmit,
   onBackToRequest,
 }: ForgotPasswordFormProps) {
-  const { t } = useTranslation("auth");
+  const { t, i18n } = useTranslation("auth");
+  const loginPath = localizePublicPath("/login", resolveLocale(i18n?.resolvedLanguage, i18n?.language));
   const isVerifyStep = step === "verify";
 
   return (
@@ -135,7 +138,7 @@ export function ForgotPasswordForm({
       </form>
 
       <p className="text-center text-sm text-muted-foreground">
-        <Link className="font-medium text-foreground underline-offset-4 hover:underline" href="/login">
+        <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={loginPath}>
           {t("forgotPassword.backToLogin")}
         </Link>
       </p>

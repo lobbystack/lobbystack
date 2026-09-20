@@ -4,7 +4,14 @@ import { withPostHogConfig } from "@posthog/nextjs-config";
 import { embeddableSecurityHeaders, securityHeaders, toNextHeaderList } from "./security-headers";
 
 const nextConfig: NextConfig = {
-  experimental: { requestInsights: process.env.NODE_ENV === "development" },
+  experimental: {
+    preloadEntriesOnStart: false,
+    requestInsights: process.env.NODE_ENV === "development",
+  },
+  // Most admin routes are intentionally dynamic and the deployment has one
+  // long-lived instance. Avoid retaining Next.js' default 50 MB response cache
+  // in addition to the durable application caches in Postgres and Redis.
+  cacheMaxMemorySize: 0,
   env: {
     NEXT_PUBLIC_SERVICE_VERSION: process.env.RAILWAY_DEPLOYMENT_ID ?? process.env.SERVICE_VERSION ?? "development",
     NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT_NAME ?? process.env.NODE_ENV ?? "development",
@@ -55,9 +62,15 @@ const nextConfig: NextConfig = {
     // The iframe document routes own their own framing policy: the global DENY
     // header must not be stamped on top of the embeddable CSP.
     const embeddable = toNextHeaderList(embeddableSecurityHeaders());
+    const immutableAssetCache = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
+    const embedLoaderCache = [{ key: "Cache-Control", value: "public, max-age=600, s-maxage=3600, stale-while-revalidate=86400" }];
     return [
+      { source: "/locales/:path*", headers: immutableAssetCache },
+      { source: "/brand/:path*", headers: immutableAssetCache },
+      { source: "/lobbystack-logo.svg", headers: immutableAssetCache },
+      { source: "/embed/embed.js", headers: immutableAssetCache },
       { source: "/((?!embed\\.js|embed/).*)", headers: toNextHeaderList(securityHeaders()) },
-      { source: "/embed.js", headers: embeddable },
+      { source: "/embed.js", headers: [...embeddable, ...embedLoaderCache] },
       { source: "/embed/:key*", headers: embeddable },
     ];
   },

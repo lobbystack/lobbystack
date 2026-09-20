@@ -12,7 +12,7 @@ export async function GET() {
     return new Response(body, {
       headers: {
         "content-type": "application/javascript; charset=utf-8",
-        "cache-control": "public, max-age=600",
+        "cache-control": "public, max-age=600, s-maxage=3600, stale-while-revalidate=86400",
         "x-content-type-options": "nosniff",
       },
     });

@@ -2,6 +2,7 @@ import i18next, { type i18n as I18nextInstance } from "i18next";
 import { initReactI18next } from "react-i18next";
 
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES, resolveLocale, type SupportedLocale } from "@/lib/locale";
+import { versionedAssetUrl } from "@/lib/versioned-assets";
 
 import commonEn from "../public/locales/en/common.json";
 import commonFr from "../public/locales/fr/common.json";
@@ -99,7 +100,7 @@ export async function loadRouteNamespaces(
 
   const loaded = await Promise.all(missing.map(async (namespace) => {
     const fetchBundle = async (language: string): Promise<Record<string, unknown>> => {
-      const response = await fetch(`/locales/${language}/${namespace}.json`, { cache: "no-cache" });
+      const response = await fetch(versionedAssetUrl(`/locales/${language}/${namespace}.json`));
       if (!response.ok) throw new Error(`Unable to load the ${namespace} translations.`);
       const bundle: unknown = await response.json();
       if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) throw new Error(`Invalid ${namespace} translations.`);

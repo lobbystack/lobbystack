@@ -31,6 +31,11 @@ export type TelemetryInitializationOptions = {
   environment?: string;
   endpoint?: string;
   headers?: Record<string, string>;
+  additionalLogDestinations?: ReadonlyArray<{
+    endpoint: string;
+    headers?: Record<string, string>;
+  }>;
+  includeDefaultLogDestination?: boolean;
   enabled?: boolean;
 };
 
@@ -171,6 +176,14 @@ export async function initializeTelemetry(
     "service.version": serviceVersion,
     "deployment.environment": environment,
   });
+  const logDestinations = options.enabled === false
+    ? []
+    : [
+        ...(endpoint && options.includeDefaultLogDestination !== false
+          ? [{ endpoint: `${endpoint.replace(/\/$/, "")}/v1/logs`, headers }]
+          : []),
+        ...(options.additionalLogDestinations ?? []),
+      ];
 
   if (endpoint && options.enabled !== false) {
     const exporterOptions = {
@@ -192,6 +205,35 @@ export async function initializeTelemetry(
       }),
     });
 
+    try {
+      await sdk.start();
+      const delay = monitorEventLoopDelay({ resolution: 20 });
+      delay.enable();
+      const meter = getMeter("lobbystack-runtime");
+      const heap = meter.createObservableGauge("process.memory.heap_used_bytes", { unit: "By" });
+      const rss = meter.createObservableGauge("process.memory.rss_bytes", { unit: "By" });
+      const external = meter.createObservableGauge("process.memory.external_bytes", { unit: "By" });
+      const arrayBuffers = meter.createObservableGauge("process.memory.array_buffers_bytes", { unit: "By" });
+      const eventLoop = meter.createObservableGauge("process.event_loop.delay_p99_ms", { unit: "ms" });
+      const callback: Parameters<typeof meter.addBatchObservableCallback>[0] = result => {
+        const memory = process.memoryUsage();
+        result.observe(heap, memory.heapUsed);
+        result.observe(rss, memory.rss);
+        result.observe(external, memory.external);
+        result.observe(arrayBuffers, memory.arrayBuffers);
+        if (delay.count > 0) result.observe(eventLoop, delay.percentile(99) / 1_000_000);
+        delay.reset();
+      };
+      const runtimeMetrics = [heap, rss, external, arrayBuffers, eventLoop];
+      meter.addBatchObservableCallback(callback, runtimeMetrics);
+      stopRuntimeMetrics = () => { delay.disable(); meter.removeBatchObservableCallback(callback, runtimeMetrics); };
+    } catch (error) {
+      // Telemetry is deliberately best effort and must never block startup.
+      console.warn("[otel] exporter initialization failed", error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  if (logDestinations.length > 0) {
     loggerProvider = new LoggerProvider({
       resource,
       processors: [
@@ -204,37 +246,16 @@ export async function initializeTelemetry(
           forceFlush: () => Promise.resolve(),
           shutdown: () => Promise.resolve(),
         },
-        new BatchLogRecordProcessor(
-          new OTLPLogExporter({
-            url: `${endpoint.replace(/\/$/, "")}/v1/logs`,
-            ...(headers ? { headers } : {}),
-          }),
-        ),
+        ...logDestinations.map(({ endpoint: logEndpoint, headers: logHeaders }) =>
+          new BatchLogRecordProcessor(
+            new OTLPLogExporter({
+              url: logEndpoint,
+              ...(logHeaders ? { headers: logHeaders } : {}),
+            }),
+          )),
       ],
     });
     logs.setGlobalLoggerProvider(loggerProvider);
-
-    try {
-      await sdk.start();
-      const delay = monitorEventLoopDelay({ resolution: 20 });
-      delay.enable();
-      const meter = getMeter("lobbystack-runtime");
-      const heap = meter.createObservableGauge("process.memory.heap_used_bytes", { unit: "By" });
-      const rss = meter.createObservableGauge("process.memory.rss_bytes", { unit: "By" });
-      const eventLoop = meter.createObservableGauge("process.event_loop.delay_p99_ms", { unit: "ms" });
-      const callback: Parameters<typeof meter.addBatchObservableCallback>[0] = result => {
-        const memory = process.memoryUsage();
-        result.observe(heap, memory.heapUsed);
-        result.observe(rss, memory.rss);
-        if (delay.count > 0) result.observe(eventLoop, delay.percentile(99) / 1_000_000);
-        delay.reset();
-      };
-      meter.addBatchObservableCallback(callback, [heap, rss, eventLoop]);
-      stopRuntimeMetrics = () => { delay.disable(); meter.removeBatchObservableCallback(callback, [heap, rss, eventLoop]); };
-    } catch (error) {
-      // Telemetry is deliberately best effort and must never block startup.
-      console.warn("[otel] exporter initialization failed", error instanceof Error ? error.message : String(error));
-    }
   }
 }
 
@@ -252,6 +273,10 @@ export async function shutdownTelemetry(): Promise<void> {
     ...(activeLoggerProvider ? [activeLoggerProvider.shutdown()] : []),
   ]);
   await Promise.race([shutdown, new Promise<void>((resolve) => setTimeout(resolve, 5_000))]);
+}
+
+export async function forceFlushTelemetryLogs(): Promise<void> {
+  await loggerProvider?.forceFlush();
 }
 
 export function getTracer(name = "lobbystack"): ReturnType<typeof trace.getTracer> {

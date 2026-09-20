@@ -1,14 +1,8 @@
-import { logs, SeverityNumber, type Logger } from "@opentelemetry/api-logs";
-import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
-import { resourceFromAttributes } from "@opentelemetry/resources";
-import {
-  BatchLogRecordProcessor,
-  LoggerProvider,
-} from "@opentelemetry/sdk-logs";
+import { SeverityNumber, type Logger } from "@opentelemetry/api-logs";
 import { PostHog } from "posthog-node";
 
 import { loadVoiceGatewayEnv, type VoiceGatewayEnv } from "@lobbystack/config";
-import { redactOtelExceptionText } from "@lobbystack/telemetry/node";
+import { forceFlushTelemetryLogs, getLogger, redactOtelExceptionText } from "@lobbystack/telemetry/node";
 import {
   bucketLatencyMs,
   buildAlertableExceptionTelemetryProperties,
@@ -46,7 +40,6 @@ type OperationalAttributes = Record<string, string | number | boolean | undefine
 type LogLevel = "debug" | "info" | "warn" | "error";
 
 let client: PostHog | null | undefined;
-let loggerProvider: LoggerProvider | null = null;
 let operationalLogger: Logger | null = null;
 let runtimeEnv: VoiceGatewayEnv | null | undefined;
 let fatalHandlersInstalled = false;
@@ -54,8 +47,12 @@ const tenantConsent = new Map<string, { enabled: boolean; expiresAt: number }>()
 
 /** Called with authoritative call-start context, not user-supplied call data. */
 export function setBusinessTelemetryConsent(businessId: string, enabled: boolean): void {
+  const now = Date.now();
+  for (const [id, consent] of tenantConsent) {
+    if (consent.expiresAt <= now) tenantConsent.delete(id);
+  }
   tenantConsent.delete(businessId);
-  tenantConsent.set(businessId, { enabled, expiresAt: Date.now() + 60 * 60 * 1000 });
+  tenantConsent.set(businessId, { enabled, expiresAt: now + 60 * 60 * 1000 });
   if (tenantConsent.size > 4096) tenantConsent.delete(tenantConsent.keys().next().value!);
 }
 
@@ -123,10 +120,6 @@ function getClient(): PostHog | null {
   return client;
 }
 
-function buildLogsUrl(host: string): string {
-  return new URL("/i/v1/logs", host).toString();
-}
-
 function getOperationalLogger(): Logger | null {
   if (operationalLogger !== null) {
     return operationalLogger;
@@ -141,25 +134,7 @@ function getOperationalLogger(): Logger | null {
     return null;
   }
 
-  loggerProvider = new LoggerProvider({
-    resource: resourceFromAttributes({
-      "service.name": "lobbystack-voice-gateway",
-      "service.namespace": "lobbystack",
-      "deployment.environment": env.DEPLOYMENT_MODE,
-    }),
-    processors: [
-      new BatchLogRecordProcessor(
-        new OTLPLogExporter({
-          url: buildLogsUrl(env.POSTHOG_HOST),
-          headers: {
-            Authorization: `Bearer ${env.POSTHOG_KEY}`,
-          },
-        }),
-      ),
-    ],
-  });
-  logs.setGlobalLoggerProvider(loggerProvider);
-  operationalLogger = logs.getLogger("lobbystack.voice-gateway");
+  operationalLogger = getLogger("lobbystack.voice-gateway");
   return operationalLogger;
 }
 
@@ -546,12 +521,7 @@ export function captureAiSpan(
 }
 
 export async function shutdownPostHog(): Promise<void> {
-  if (loggerProvider) {
-    const activeProvider = loggerProvider;
-    loggerProvider = null;
-    operationalLogger = null;
-    await activeProvider.shutdown();
-  }
+  operationalLogger = null;
   if (client) {
     await client.shutdown();
   }
@@ -722,7 +692,7 @@ export async function handleFatalPostHogException(
     },
   });
 
-  await shutdownPostHog().catch(() => undefined);
+  await Promise.allSettled([shutdownPostHog(), forceFlushTelemetryLogs()]);
 
   if (options?.exitProcess ?? true) {
     process.exit(1);

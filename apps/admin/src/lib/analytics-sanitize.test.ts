@@ -4,20 +4,20 @@ import { sanitizeAnalyticsProperties, sanitizeAnalyticsUrl } from "./analytics-s
 
 describe("analytics property sanitization", () => {
   it("removes reset tokens and rejects malformed analytics URLs", () => {
-    expect(sanitizeAnalyticsUrl("https://example.invalid/reset-password/private-token?x=1#secret")).toBe("https://example.invalid/reset-password/[token]");
+    expect(sanitizeAnalyticsUrl("https://example.invalid/fr/reset-password/private-token?x=1#secret")).toBe("https://example.invalid/fr/reset-password/[token]");
     expect(sanitizeAnalyticsUrl("not a URL")).toBe("");
   });
 
   it("strips query and hash data from event URLs", () => {
     const properties: Record<string, unknown> = {
-      $current_url: "https://example.invalid/demo/private-token?token=secret#secret",
-      $referrer: "https://example.invalid/login?email=private@example.invalid",
+      $current_url: "https://example.invalid/en/demo/private-token?token=secret#secret",
+      $referrer: "https://example.invalid/en/login?email=private@example.invalid",
       plan: "free_cloud",
     };
     sanitizeAnalyticsProperties(properties);
     expect(properties).toEqual({
-      $current_url: "https://example.invalid/demo/[token]",
-      $referrer: "https://example.invalid/login",
+      $current_url: "https://example.invalid/en/demo/[token]",
+      $referrer: "https://example.invalid/en/login",
       plan: "free_cloud",
     });
   });

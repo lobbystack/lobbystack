@@ -5,13 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && tsup --config tsup.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {
-    "@types/ws": "^8.18.1"
+    "@types/ws": "^8.18.1",
+    "tsup": "8.5.1",
+    "tsx": "^4.21.0"
   },
   "dependencies": {
     "@fastify/formbody": "^8.0.2",
@@ -30,7 +32,6 @@
     "dotenv": "^17.3.1",
     "fastify": "^5.12.1",
     "posthog-node": "^5.28.11",
-    "tsx": "^4.21.0",
     "ws": "^8.21.0",
     "zod": "^3.24.2"
   }

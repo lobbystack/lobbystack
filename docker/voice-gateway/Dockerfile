@@ -32,4 +32,4 @@ COPY --from=build --chown=lobbystack:lobbystack /prod/voice-gateway/ ./
 USER lobbystack
 EXPOSE 3001
 HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=12 CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3001)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-CMD ["node_modules/.bin/tsx", "dist/apps/voice-gateway/src/index.js"]
+CMD ["node", "dist/runtime/index.js"]

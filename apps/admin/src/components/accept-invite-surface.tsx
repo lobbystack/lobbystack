@@ -10,11 +10,15 @@ import { useTranslation } from "react-i18next";
 
 import { ReplacementOnboardingShell } from "./replacement-onboarding-shell";
 import { Button } from "./ui/button";
+import { buildAuthPathWithReturnTo } from "@/lib/auth-return-to";
+import { resolveLocale } from "@/lib/locale";
+import { localizePublicPath } from "@/lib/locale-path";
 
 type Invitation = { businessName: string; email: string; expired: boolean; status: string };
 
 export function AcceptInviteSurface() {
-  const { t } = useTranslation("auth");
+  const { t, i18n } = useTranslation("auth");
+  const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const router = useRouter();
   const [token, setToken] = useState("");
   const [invitation, setInvitation] = useState<Invitation | null>(null);
@@ -39,9 +43,9 @@ export function AcceptInviteSurface() {
   }, []);
 
   const isInvitationValid = Boolean(invitation && invitation.status === "pending" && !invitation.expired && invitation.businessName);
-  const returnPath = `/accept-invite${token ? `?token=${encodeURIComponent(token)}` : ""}`;
-  const loginHref = `/login?returnTo=${encodeURIComponent(returnPath)}`;
-  const signupHref = `/signup?returnTo=${encodeURIComponent(returnPath)}`;
+  const returnPath = `${localizePublicPath("/accept-invite", locale)}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+  const loginHref = buildAuthPathWithReturnTo("/login", returnPath, locale);
+  const signupHref = buildAuthPathWithReturnTo("/signup", returnPath, locale);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -71,6 +75,6 @@ export function AcceptInviteSurface() {
       <Button className="h-11 w-full" role="link" nativeButton={false} render={<Link href={loginHref} />}>{t("acceptInvite.signIn")}</Button>
       <Button className="h-11 w-full" role="link" nativeButton={false} render={<Link href={signupHref} />} variant="outline">{t("acceptInvite.createAccount")}</Button>
     </div>}
-    <p className="text-center text-sm"><Link className="font-medium text-foreground underline-offset-4 hover:underline" href={isAuthenticated ? "/settings/team" : "/login"}>{isAuthenticated ? t("acceptInvite.backToSettings") : t("acceptInvite.backToLogin")}</Link></p>
+    <p className="text-center text-sm"><Link className="font-medium text-foreground underline-offset-4 hover:underline" href={isAuthenticated ? "/settings/team" : localizePublicPath("/login", locale)}>{isAuthenticated ? t("acceptInvite.backToSettings") : t("acceptInvite.backToLogin")}</Link></p>
   </div></ReplacementOnboardingShell></div>;
 }

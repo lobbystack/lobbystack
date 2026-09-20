@@ -348,7 +348,7 @@ for (const routeCase of routes) for (const viewport of viewports) for (const loc
     });
     await page.addInitScript(({ locale, theme }) => { localStorage.setItem("lobbystack.locale", locale); localStorage.setItem("theme", theme); document.documentElement?.classList.toggle("dark", theme === "dark"); }, { locale, theme });
     if (login) {
-      await page.goto(new URL("/login", baseURL!).toString(), { waitUntil: "domcontentloaded" });
+      await page.goto(new URL("/en/login", baseURL!).toString(), { waitUntil: "domcontentloaded" });
       await page.locator('input[type="email"]').fill(login.email);
       await page.locator('input[type="password"]').fill(login.password);
       await page.locator('button[type="submit"]').click();

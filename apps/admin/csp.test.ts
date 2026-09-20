@@ -15,7 +15,7 @@ it("allows recording fetch and playback in both emitted policies", async () => {
   vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "https://ts.lobbystack.com");
   const headers = await nextConfig.headers!();
   const policies = [
-    headers[0]?.headers.find(header => header.key === "Content-Security-Policy")?.value,
+    headers.flatMap(rule => rule.headers).find(header => header.key === "Content-Security-Policy")?.value,
     proxy(new NextRequest("https://dashboard.example/calls")).headers.get("Content-Security-Policy"),
   ];
   for (const policy of policies) {

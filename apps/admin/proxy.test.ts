@@ -9,7 +9,7 @@ it("skips known assets but retains proxy checks for application paths with exten
   for (const url of ["/locales/en/auth.json", "/brand/logo-icon.svg", "/_next/static/chunk.js", "/favicon.ico"]) {
     expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(false);
   }
-  for (const url of ["/api/contacts/contact.svg", "/embed.js", "/embed/key.svg", "/reset-password/token.txt", "/login"]) {
+  for (const url of ["/api/contacts/contact.svg", "/embed.js", "/embed/key.svg", "/en/reset-password/token.txt", "/en/login"]) {
     expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(true);
   }
 });
@@ -17,12 +17,57 @@ it("skips known assets but retains proxy checks for application paths with exten
 it("rejects cross-origin API mutations even when a dynamic identifier has an extension", () => {
   const response = proxy(new NextRequest("http://localhost:3210/api/contacts/contact.svg", { method: "PATCH", headers: { origin: "https://untrusted.invalid" } }));
   expect(response.status).toBe(403);
+  expect(response.headers.get("cache-control")).toBe("private, no-store");
 });
 
 it("overwrites supplied locale headers and tolerates malformed cookies", () => {
-  const response = proxy(new NextRequest("http://localhost:3210/login", { headers: { cookie: "lobbystack.locale=%E0%A4%A", "accept-language": "fr", "x-lobbystack-locale": "en", "x-lobbystack-pathname": "/settings" } }));
+  const response = proxy(new NextRequest("http://localhost:3210/fr/login", { headers: { cookie: "lobbystack.locale=%E0%A4%A", "accept-language": "en", "x-lobbystack-locale": "en", "x-lobbystack-pathname": "/settings" } }));
   expect(response.headers.get("x-middleware-request-x-lobbystack-locale")).toBe("fr");
-  expect(response.headers.get("x-middleware-request-x-lobbystack-pathname")).toBe("/login");
+  expect(response.headers.get("x-middleware-request-x-lobbystack-pathname")).toBe("/fr/login");
+  expect(response.headers.get("cache-control")).toBe("public, s-maxage=300, stale-while-revalidate=3600");
+  expect(response.headers.get("content-language")).toBe("fr");
+  expect(response.headers.get("vary")).toBe("Accept-Encoding");
+});
+
+it("redirects legacy public URLs to a canonical locale while preserving safe query values", () => {
+  const explicit = proxy(new NextRequest("http://localhost:3210/login?lng=fr&returnTo=%2Fsettings&campaign=fall", {
+    headers: { cookie: "lobbystack.locale=en", "accept-language": "en-US" },
+  }));
+  expect(explicit.status).toBe(308);
+  expect(explicit.headers.get("location")).toBe("http://localhost:3210/fr/login?returnTo=%2Fsettings&campaign=fall");
+  expect(explicit.headers.get("set-cookie")).toContain("lobbystack.locale=fr");
+  expect(explicit.headers.get("cache-control")).toBe("private, no-store");
+
+  const fromCookie = proxy(new NextRequest("http://localhost:3210/signup", {
+    headers: { cookie: "lobbystack.locale=fr", "accept-language": "en-US" },
+  }));
+  expect(fromCookie.headers.get("location")).toBe("http://localhost:3210/fr/signup");
+
+  const fromHeader = proxy(new NextRequest("http://localhost:3210/forgot-password", {
+    headers: { "accept-language": "fr-CA,fr;q=0.9" },
+  }));
+  expect(fromHeader.headers.get("location")).toBe("http://localhost:3210/fr/forgot-password");
+});
+
+it("keeps sensitive and dynamic responses private while caching fixed public pages", () => {
+  for (const url of [
+    "/en/reset-password/token-value",
+    "/fr/verify-email?token=private",
+    "/api/dashboard",
+    "/api/realtime",
+    "/embed/widget-key",
+    "/agent",
+    "/en/login?token=private",
+  ]) {
+    const response = proxy(new NextRequest(`http://localhost:3210${url}`));
+    expect(response.headers.get("cache-control"), url).toContain("private");
+    expect(response.headers.get("cache-control"), url).toContain("no-store");
+  }
+
+  const publicResponse = proxy(new NextRequest("http://localhost:3210/en/signup?campaign=fall"));
+  expect(publicResponse.headers.get("cache-control")).toBe("public, s-maxage=300, stale-while-revalidate=3600");
+  expect(publicResponse.headers.get("content-language")).toBe("en");
+  expect(publicResponse.headers.get("vary")).toBe("Accept-Encoding");
 });
 
 it("fails closed for API requests during maintenance while leaving health reads available", () => {

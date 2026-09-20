@@ -1,7 +1,13 @@
 import { businesses, createDatabaseClient, databaseHealthCheck, withDispatcherTransaction } from "@lobbystack/db";
 import { assertProductionSecrets } from "@lobbystack/config";
 import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, isKnownJobType, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
-import { createEmbeddingProvider, createStorageProvider, FirecrawlProvider, GoogleCalendarProvider, PolarBillingProvider, SmtpEmailProvider, TwilioProvider } from "@lobbystack/providers";
+import { createEmbeddingProvider } from "@lobbystack/providers/ai/embeddingProvider";
+import { FirecrawlProvider } from "@lobbystack/providers/crawling/firecrawl";
+import { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
+import { GoogleCalendarProvider } from "@lobbystack/providers/google/calendar";
+import { PolarBillingProvider } from "@lobbystack/providers/polar/polarBilling";
+import { createStorageProvider } from "@lobbystack/providers/storage/provider";
+import { TwilioProvider } from "@lobbystack/providers/twilio/twilioProvider";
 import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withSpan } from "@lobbystack/telemetry/node";
 import { Worker } from "bullmq";
 

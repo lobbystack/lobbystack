@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { versionedAssetUrl } from "@/lib/versioned-assets";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -30,14 +31,14 @@ export function TeamSwitcher({ isLoading = false }: TeamSwitcherProps) {
               <img
                 alt=""
                 className="size-[30px] shrink-0 object-contain dark:invert"
-                src="/brand/logo-icon.svg"
+                src={versionedAssetUrl("/brand/logo-icon.svg")}
               />
             </div>
             <div className="flex min-w-0 flex-1 items-center overflow-hidden">
               <img
                 alt=""
                 className="h-[26px] w-auto max-w-44 object-contain dark:invert"
-                src="/brand/logo-wordmark.svg"
+                src={versionedAssetUrl("/brand/logo-wordmark.svg")}
               />
             </div>
           </SidebarMenuButton>
