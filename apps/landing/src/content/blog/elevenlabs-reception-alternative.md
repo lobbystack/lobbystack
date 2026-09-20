@@ -93,7 +93,6 @@ Choose LobbyStack when you want 150 minutes for $30, a $0.20 overage rate, and a
 - [ElevenLabs Reception plans and pricing](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing)
 - [Reception by ElevenLabs](https://elevenlabs.io/reception)
 - [Reception receptionist features](https://elevenlabs.io/docs/reception-ai/receptionist/overview)
-- [ElevenLabs launch post](https://elevenlabs.io/blog/reception)
 - [LobbyStack pricing](/pricing/)
 - [Open-source AI receptionist](/solutions/open-source-ai-receptionist/)
 - [LobbyStack GitHub repository](https://github.com/lobbystack/lobbystack)

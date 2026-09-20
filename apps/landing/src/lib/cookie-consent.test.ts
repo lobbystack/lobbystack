@@ -6,6 +6,7 @@ import {
   clearPostHogClientStorage,
   createCookieConsent,
   hasAnalyticsConsent,
+  hasDeclinedAnalytics,
   parseCookieConsent,
   readCookieConsent,
   writeCookieConsent,
@@ -27,6 +28,31 @@ function createStorage() {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+})
+
+describe("distinguishing an unanswered banner from a refusal", () => {
+  it("does not treat an unanswered banner as a refusal", () => {
+    const storage = createStorage()
+
+    // This is the case the analytics undercount came from: no stored consent
+    // must still allow anonymous, cookieless counting.
+    expect(hasAnalyticsConsent(storage)).toBe(false)
+    expect(hasDeclinedAnalytics(storage)).toBe(false)
+  })
+
+  it("reports a refusal only after the visitor rejects", () => {
+    const storage = createStorage()
+    writeCookieConsent(false, storage)
+
+    expect(hasDeclinedAnalytics(storage)).toBe(true)
+  })
+
+  it("does not report a refusal after the visitor accepts", () => {
+    const storage = createStorage()
+    writeCookieConsent(true, storage)
+
+    expect(hasDeclinedAnalytics(storage)).toBe(false)
+  })
 })
 
 describe("landing cookie consent helpers", () => {
