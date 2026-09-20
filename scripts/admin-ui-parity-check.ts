@@ -21,13 +21,13 @@ function routeShape(path: string): string {
   return path.split(/[?#]/)[0]!.replace(/\[[^\]]+\]/g, "[]").replace(/:[^/]+/g, "[]");
 }
 
-async function currentPageRoutes(root: string): Promise<string[]> {
+export async function currentPageRoutes(root: string): Promise<string[]> {
   const appRoot = resolve(root, "apps/admin/app");
   const files = await readdir(appRoot, { recursive: true });
   return files
     .filter((file) => file.endsWith(`${sep}page.tsx`) || file === "page.tsx")
     .map((file) => relative(appRoot, resolve(appRoot, file)).split(sep))
-    .map((parts) => parts.slice(0, -1).filter((part) => !/^\(.+\)$/.test(part)))
+    .map((parts) => parts.slice(0, -1).filter((part) => !/^\(.+\)$/.test(part) && part !== "[locale]"))
     .map((parts) => parts.length === 0 ? "/" : `/${parts.join("/")}`)
     .sort();
 }
