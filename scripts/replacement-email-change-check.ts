@@ -34,7 +34,7 @@ async function queuedEmail() {
 try {
   const hash = await hashReplacementPassword(password);
   for (const [userId, address] of [[id, email], [otherId, otherEmail]] as const) {
-    await database.db.insert(users).values({ id: userId, email: address, normalizedEmail: address, emailVerified: true, passwordHash: hash });
+    await database.db.insert(users).values({ id: userId, email: address, normalizedEmail: address, emailVerified: true, passwordHash: hash, preferredLocale: userId === id ? "fr" : "en" });
     await database.db.insert(accounts).values({ userId, providerId: "credential", accountId: userId, password: hash });
   }
   const cookie = await login(email);
@@ -47,7 +47,7 @@ try {
   assert([200, 302].includes(approved.status), "Current-address approval failed");
   const verification = await queuedEmail();
   assert.equal(verification.to, newEmail, "New address must receive its own verification");
-  assert.equal(verification.url.pathname, "/confirm-email-change", "Final verification must open the original confirmation UI");
+  assert.equal(verification.url.pathname, "/fr/confirm-email-change", "Final verification must preserve the recipient locale");
   assert.equal(verification.url.searchParams.get("email"), newEmail);
   assert.equal((await database.db.select().from(users).where(eq(users.id, id)))[0]?.email, email, "Approval alone must not change the email");
   const token = verification.url.searchParams.get("token");

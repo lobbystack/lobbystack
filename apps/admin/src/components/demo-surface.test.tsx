@@ -36,7 +36,7 @@ describe("original prospect demo states", () => {
     expect(screen.getByText("What are your hours?")).toBeTruthy();
     expect(screen.getByText("Do you take walk-ins?")).toBeTruthy();
     const claimLink = screen.getByRole("link", { name: "en:active.claimCta" });
-    expect(claimLink.getAttribute("href")).toBe("/signup?returnTo=%2Fclaim-demo");
+    expect(claimLink.getAttribute("href")).toBe("/en/signup?returnTo=%2Fen%2Fclaim-demo");
     claimLink.addEventListener("click", event => event.preventDefault(), { once: true });
     fireEvent.click(claimLink);
     expect(sessionStorage.getItem("prospect_demo_token")).toBe("fixture-token");

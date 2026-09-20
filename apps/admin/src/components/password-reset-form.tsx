@@ -8,10 +8,13 @@ import { Button } from "./ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "./ui/field";
 import { Input } from "./ui/input";
 import { meetsPasswordRequirements } from "@/lib/password-policy";
+import { resolveLocale } from "@/lib/locale";
+import { localizePublicPath } from "@/lib/locale-path";
 
 // Compatibility for reset links issued before the original email-code flow was restored.
 export function PasswordResetForm({ token }: { token: string | null }) {
-  const { t } = useTranslation("auth");
+  const { t, i18n } = useTranslation("auth");
+  const loginPath = localizePublicPath("/login", resolveLocale(i18n.resolvedLanguage, i18n.language));
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(token ? null : "invalidResetCode");
   const [complete, setComplete] = useState(false);
@@ -41,7 +44,7 @@ export function PasswordResetForm({ token }: { token: string | null }) {
         {error ? <div className="-mt-1 flex flex-col gap-2"><FieldError>{t(`errors.${error}`)}</FieldError></div> : null}
         <div className="mt-2"><Button className="h-11 w-full" disabled={!token} loading={loading} loadingLabel={t("forgotPassword.verifySubmitting")} type="submit">{t("forgotPassword.verifySubmit")}</Button></div>
       </FieldGroup></form> : null}
-      <p className="text-center text-sm text-muted-foreground"><Link className="font-medium text-foreground underline-offset-4 hover:underline" href="/login">{t("forgotPassword.backToLogin")}</Link></p>
+      <p className="text-center text-sm text-muted-foreground"><Link className="font-medium text-foreground underline-offset-4 hover:underline" href={loginPath}>{t("forgotPassword.backToLogin")}</Link></p>
     </div>
   </ReplacementOnboardingShell>;
 }

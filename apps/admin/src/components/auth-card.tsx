@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Turnstile } from "@/components/turnstile";
 import { recordAuthSuccess } from "@/lib/auth-success-analytics";
 import { resolveLocale } from "@/lib/locale";
+import { localizePublicPath } from "@/lib/locale-path";
 import { localizeMarketingHref } from "@/lib/marketing-site-url";
 import { cn } from "@/lib/utils";
 import { captureAffiliateReferralFromUrl, getAffiliateVisitorId } from "@/lib/affiliate-referral";
@@ -21,6 +22,7 @@ import { buildAuthPathWithReturnTo, getSafeReturnTo } from "@/lib/auth-return-to
 export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const { t, i18n } = useTranslation("auth");
+  const authLocale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const [returnTo, setReturnTo] = useState<string | null>(null);
   useEffect(() => { setReturnTo(getSafeReturnTo(new URLSearchParams(window.location.search).get("returnTo"))); }, []);
   const [email, setEmail] = useState("");
@@ -90,7 +92,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   if (verificationPending) return (
     <ReplacementOnboardingShell title={t("signup.checkEmailTitle")} width="sm">
       <p role="status" className="text-sm text-muted-foreground">{t("signup.checkEmailBody")}</p>
-      <Link className="text-sm underline" href={buildAuthPathWithReturnTo("/login", returnTo)}>{t("signup.signIn")}</Link>
+      <Link className="text-sm underline" href={buildAuthPathWithReturnTo("/login", returnTo, authLocale)}>{t("signup.signIn")}</Link>
     </ReplacementOnboardingShell>
   );
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -117,7 +119,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
           <FieldGroup className="gap-4">
             <Field data-invalid={hasBlurredEmail && email.length > 0 && !isEmailValid ? true : undefined}><FieldLabel htmlFor="auth-email">{login ? t("login.email") : t("signup.email")}</FieldLabel><Input aria-invalid={hasBlurredEmail && email.length > 0 && !isEmailValid} autoComplete="email" className={cn("h-11", hasBlurredEmail && email.length > 0 && !isEmailValid && "border-destructive text-destructive focus-visible:border-destructive focus-visible:ring-destructive/20")} id="auth-email" onBlur={() => setHasBlurredEmail(true)} onChange={(event) => { setHasBlurredEmail(false); setEmail(event.target.value); }} placeholder={login ? t("login.emailPlaceholder") : t("signup.emailPlaceholder")} required type="email" value={email} />{hasBlurredEmail && email.length > 0 && !isEmailValid ? <FieldError className="flex items-center gap-2 font-medium"><TriangleAlert className="size-4 shrink-0" aria-hidden="true" /><span>{t(login ? "login.emailInvalid" : "signup.emailInvalid")}</span></FieldError> : null}</Field>
             <Field>
-              <div className="flex items-center justify-between gap-3"><FieldLabel htmlFor="auth-password">{login ? t("login.password") : t("signup.password")}</FieldLabel>{login ? <Link className="text-xs font-medium text-muted-foreground hover:text-foreground" href="/forgot-password">{t("login.forgotPassword")}</Link> : null}</div>
+              <div className="flex items-center justify-between gap-3"><FieldLabel htmlFor="auth-password">{login ? t("login.password") : t("signup.password")}</FieldLabel>{login ? <Link className="text-xs font-medium text-muted-foreground hover:text-foreground" href={localizePublicPath("/forgot-password", authLocale)}>{t("login.forgotPassword")}</Link> : null}</div>
               <Input autoComplete={login ? "current-password" : "new-password"} className="h-11" id="auth-password" minLength={8} onChange={(event) => setPassword(event.target.value)} onFocus={() => setHasFocusedPassword(true)} placeholder={login ? t("login.passwordPlaceholder") : t("signup.passwordPlaceholder")} required type="password" value={password} />
               {!login && hasFocusedPassword ? <ul aria-live="polite" className="flex flex-col gap-1 pt-0.5 text-sm font-medium">{passwordCriteria.map((criterion) => <li className={cn("flex items-center gap-2", criterion.isMet ? "text-emerald-700" : "text-muted-foreground")} key={criterion.label}><span aria-hidden="true" className="w-3 text-center">{criterion.isMet ? "✓" : "×"}</span><span>{criterion.label}</span></li>)}</ul> : null}
             </Field>
@@ -130,7 +132,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
           if (!token && pendingChallengeSubmit.current) { pendingChallengeSubmit.current = false; setLoading(false); setError(t("errors.turnstileRequired")); }
           if (token && pendingChallengeSubmit.current) { pendingChallengeSubmit.current = false; void submitCredentials(token); }
         }} siteKey={turnstileSiteKey} /> : null}
-        <p className="text-center text-sm text-muted-foreground">{login ? t("login.noAccount") : t("signup.haveAccount")} <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={buildAuthPathWithReturnTo(login ? "/signup" : "/login", returnTo)}>{login ? t("login.createOne") : t("signup.signIn")}</Link></p>
+        <p className="text-center text-sm text-muted-foreground">{login ? t("login.noAccount") : t("signup.haveAccount")} <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={buildAuthPathWithReturnTo(login ? "/signup" : "/login", returnTo, authLocale)}>{login ? t("login.createOne") : t("signup.signIn")}</Link></p>
       </div>
     </ReplacementOnboardingShell>
   );

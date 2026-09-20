@@ -1,12 +1,13 @@
 import { Readable } from "node:stream";
 
-import { LocalStorageProvider, LocalStorageValidationError, createStorageProvider } from "@lobbystack/providers";
+import { LocalStorageProvider, LocalStorageValidationError } from "@lobbystack/providers/storage/local";
+import { getStorageProvider } from "@/lib/storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function localStorage(): LocalStorageProvider {
-  const storage = createStorageProvider();
+  const storage = getStorageProvider();
   if (!(storage instanceof LocalStorageProvider)) throw new Error("Local storage is not enabled.");
   return storage;
 }

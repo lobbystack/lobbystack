@@ -3,17 +3,18 @@ import { and, asc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { appointments, calendarConnections, contacts, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { CALENDAR_SYNC_HORIZON_MS, markCalendarConnectionSync, recordProductEvent, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
-import { SecretBox, type GoogleCalendarProvider } from "@lobbystack/providers";
+import type { GoogleCalendarProvider } from "@lobbystack/providers/google/calendar";
 import type { JobResult } from "./handlers";
 
 export type CalendarOperations = Pick<GoogleCalendarProvider, "getBusyBlocks" | "upsertEvent" | "deleteEvent" | "refreshAccessToken">;
 type Dependencies = { domain: DomainContext; calendar?: CalendarOperations };
 
-function accessToken(dependencies: Dependencies, businessId: string, connectionId: string, forceRefresh = false): Promise<string> {
+async function accessToken(dependencies: Dependencies, businessId: string, connectionId: string, forceRefresh = false): Promise<string> {
   const key = process.env.ENCRYPTION_KEY;
   if (!key || !dependencies.calendar) throw new Error("Calendar synchronization is not configured.");
+  const { SecretBox } = await import("@lobbystack/providers/crypto/secretBox");
   const box = new SecretBox(key);
-  return resolveCalendarAccessToken(dependencies.domain, {
+  return await resolveCalendarAccessToken(dependencies.domain, {
     businessId, connectionId, forceRefresh,
     decryptToken: (value) => box.decrypt(value), encryptToken: (value) => box.encrypt(value),
     refreshAccessToken: (input) => dependencies.calendar!.refreshAccessToken(input),

@@ -3,6 +3,8 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { resolveLocale } from "@/lib/locale";
+import { localizePublicPath } from "@/lib/locale-path";
 
 import { requestJson } from "@/lib/request-json";
 import { maskPhone } from "@/lib/onboarding-phone";
@@ -24,7 +26,7 @@ const routes = {
 export function OnboardingRouteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { t } = useTranslation("onboarding");
+  const { t, i18n } = useTranslation("onboarding");
   const route = routes[pathname as keyof typeof routes] ?? routes["/onboarding/business"];
   const showDescription = !["number", "plan", "attribution", "verifyPhoneCode"].includes(route.key);
   const businesses = useQuery({
@@ -49,7 +51,7 @@ export function OnboardingRouteShell({ children }: { children: React.ReactNode }
   return (
     <ReplacementOnboardingShell
       description={route.key === "verifyPhoneCode" && verification.data?.attempt ? t("verifyPhoneCode.description", { phone: maskPhone(verification.data.attempt.phoneE164) }) : showDescription ? t(`${route.key}.description`) : ""}
-      onSignOut={() => void fetch("/api/auth/sign-out", { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: "{}" }).finally(() => { router.replace("/login"); router.refresh(); })}
+      onSignOut={() => void fetch("/api/auth/sign-out", { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: "{}" }).finally(() => { router.replace(localizePublicPath("/login", resolveLocale(i18n.resolvedLanguage, i18n.language))); router.refresh(); })}
       progress={{ current: route.step, ...(navigableUntil === undefined ? {} : { navigableUntil }), total: 10 }}
       title={t(selectedNumber ? "number.selectedTitle" : `${route.key}.title`)}
       width={route.key === "number" && (!phones.data || hasPrimaryNumber) ? "md" : route.width}

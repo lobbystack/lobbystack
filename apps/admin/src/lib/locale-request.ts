@@ -12,7 +12,7 @@ export const LOCALE_SOURCE_HEADER = "x-lobbystack-locale-source";
 /** Request header carrying the pathname so server components can scope translations. */
 export const PATHNAME_HEADER = "x-lobbystack-pathname";
 
-export type LocaleSource = "query" | "cookie" | "header" | "default";
+export type LocaleSource = "path" | "query" | "cookie" | "header" | "default";
 
 export type NegotiatedLocale = {
   locale: SupportedLocale;
@@ -20,7 +20,7 @@ export type NegotiatedLocale = {
 };
 
 function isLocaleSource(value: string | null | undefined): value is LocaleSource {
-  return value === "query" || value === "cookie" || value === "header" || value === "default";
+  return value === "path" || value === "query" || value === "cookie" || value === "header" || value === "default";
 }
 
 /** Picks the most preferred supported locale out of an `Accept-Language` header. */

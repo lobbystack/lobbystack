@@ -3,7 +3,7 @@ export function sanitizeAnalyticsUrl(value: string): string {
     const url = new URL(value);
     url.search = "";
     url.hash = "";
-    url.pathname = url.pathname.replace(/^\/(demo|reset-password)\/[^/]+/, "/$1/[token]");
+    url.pathname = url.pathname.replace(/^(\/(?:en|fr))?\/(demo|reset-password)\/[^/]+/, "$1/$2/[token]");
     return url.toString();
   } catch { return ""; }
 }

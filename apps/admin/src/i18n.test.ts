@@ -35,6 +35,6 @@ it("still requests French when English was already loaded on an earlier route", 
   vi.stubGlobal("fetch", request);
   await loadRouteNamespaces(instance, "fr", ["fixture"]);
   await instance.changeLanguage("fr");
-  expect(request).toHaveBeenCalledWith("/locales/fr/fixture.json", expect.any(Object));
+  expect(request).toHaveBeenCalledWith("/locales/fr/fixture.json?v=development");
   expect(instance.t("greeting", { ns: "fixture" })).toBe("Bonjour");
 });

@@ -25,6 +25,7 @@
       "@lobbystack/db": ["../../packages/db/src"],
       "@lobbystack/domain": ["../../packages/domain/src"],
       "@lobbystack/providers": ["../../packages/providers/src"],
+      "@lobbystack/providers/*": ["../../packages/providers/src/*"],
       "@lobbystack/shared": ["../../packages/shared/src"],
       "@lobbystack/telemetry": ["../../packages/telemetry/src"],
       "@lobbystack/telemetry/*": ["../../packages/telemetry/src/*"]

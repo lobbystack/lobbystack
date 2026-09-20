@@ -8,6 +8,9 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { requestJson } from "@/lib/request-json";
+import { buildAuthPathWithReturnTo } from "@/lib/auth-return-to";
+import { resolveLocale } from "@/lib/locale";
+import { localizePublicPath } from "@/lib/locale-path";
 
 type Preview = { state: "active" | "claimed" | "preparing" | "invalid" | "expired" | "revoked" };
 
@@ -36,7 +39,8 @@ function ClaimShell({
 }
 
 export function ClaimDemoSurface() {
-  const { t } = useTranslation("demos");
+  const { t, i18n } = useTranslation("demos");
+  const locale = resolveLocale(i18n?.resolvedLanguage, i18n?.language);
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [status, setStatus] = useState<ClaimStatus>("claiming");
@@ -100,7 +104,7 @@ export function ClaimDemoSurface() {
           return;
         }
         if (result === "authentication-required") {
-          router.replace(`/login?returnTo=${encodeURIComponent("/claim-demo")}`);
+          router.replace(buildAuthPathWithReturnTo("/login", localizePublicPath("/claim-demo", locale), locale));
           return;
         }
         window.sessionStorage.removeItem("prospect_demo_token");
@@ -124,7 +128,7 @@ export function ClaimDemoSurface() {
     return () => {
       cancelled = true;
     };
-  }, [attempt, router, preview, token]);
+  }, [attempt, locale, router, preview, token]);
 
   if (status === "unavailable") {
     return (

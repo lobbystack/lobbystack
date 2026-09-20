@@ -28,6 +28,22 @@ describe("voice snapshot cache", () => {
     expect(cache.get("a")?.businessId).toBe("a");
     expect(cache.get("c")?.businessId).toBe("c");
   });
+  it("sweeps expired entries before enforcing capacity", () => {
+    let time = 0;
+    const evictions: Array<{ businessId: string; reason: "expired" | "capacity" }> = [];
+    const cache = createSnapshotCache({ ttlMs: 10, maxEntries: 2, now: () => time, onEvict: event => evictions.push(event) });
+    cache.set("expired", snapshot("expired"));
+    time = 5;
+    cache.set("live", snapshot("live"));
+    cache.get("expired");
+    time = 10;
+    cache.set("new", snapshot("new"));
+
+    expect(cache.get("expired")).toBeNull();
+    expect(cache.get("live")?.businessId).toBe("live");
+    expect(cache.get("new")?.businessId).toBe("new");
+    expect(evictions).toEqual([{ businessId: "expired", reason: "expired" }]);
+  });
   it("reports expiration and capacity eviction reasons", () => {
     let time = 0;
     const evictions: Array<{ businessId: string; reason: "expired" | "capacity" }> = [];

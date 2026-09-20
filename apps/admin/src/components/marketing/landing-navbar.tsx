@@ -4,6 +4,8 @@ import {
   type MarketingLocale,
 } from "@/lib/marketing-site-url"
 import { cn } from "@/lib/utils"
+import { versionedAssetUrl } from "@/lib/versioned-assets"
+import { localizePublicPath } from "@/lib/locale-path"
 import {
   BookOpen,
   CalendarCheck,
@@ -300,7 +302,7 @@ export function LandingNavbar({ locale = "en" }: LandingNavbarProps) {
           className="flex items-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <img
-            src="/lobbystack-logo.svg"
+            src={versionedAssetUrl("/lobbystack-logo.svg")}
             alt="LobbyStack"
             width={155}
             height={43}
@@ -423,13 +425,13 @@ export function LandingNavbar({ locale = "en" }: LandingNavbarProps) {
         {/* Desktop CTAs */}
         <div className="hidden items-center gap-3 md:flex">
           <a
-            href="/login"
+            href={localizePublicPath("/login", locale)}
             className="rounded-md text-sm font-medium text-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             {copy.login}
           </a>
           <a
-            href="/signup"
+            href={localizePublicPath("/signup", locale)}
             className={cn(buttonVariants(), "rounded-full px-5")}
             data-ph-signup-cta
             data-ph-capture-attribute-section="navbar"
@@ -563,13 +565,13 @@ export function LandingNavbar({ locale = "en" }: LandingNavbarProps) {
             </nav>
             <div className="flex flex-col gap-2 px-6 pt-2 pb-4">
               <a
-                href="/login"
+                href={localizePublicPath("/login", locale)}
                 className="rounded-md px-3 py-2 text-center text-sm font-medium text-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 {copy.login}
               </a>
               <a
-                href="/signup"
+                href={localizePublicPath("/signup", locale)}
                 className={cn(buttonVariants(), "rounded-full")}
                 data-ph-signup-cta
                 data-ph-capture-attribute-section="mobile_navbar"

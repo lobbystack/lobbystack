@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { databaseHealthCheck } from "@lobbystack/db";
-import { createStorageProvider } from "@lobbystack/providers";
+import { getStorageProvider } from "@/lib/storage";
 import { isMaintenanceMode } from "@lobbystack/shared";
 import { asApiResponse, getAppDatabase, requireInternalService } from "@/lib/api-helpers";
 
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
     const [database, storage] = await Promise.all([
       databaseHealthCheck(getAppDatabase()),
-      createStorageProvider().ensureReady().then(() => true).catch(() => false),
+      getStorageProvider().ensureReady().then(() => true).catch(() => false),
     ]);
     const ok = database.ok && storage;
     return NextResponse.json(

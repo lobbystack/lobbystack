@@ -23,7 +23,7 @@ test("demo claim transfers ownership automatically and re-entry preserves onboar
     });
     const page = await context.newPage();
     const claimed = page.waitForResponse(response => new URL(response.url()).pathname === "/api/demo/claim");
-    await page.goto(`${baseURL}/claim-demo#prospect_demo_token=${token}`);
+    await page.goto(`${baseURL}/en/claim-demo#prospect_demo_token=${token}`);
     expect((await claimed).status()).toBe(200);
     await expect(page).toHaveURL(`${baseURL}/onboarding/business`);
     expect(await page.evaluate(() => sessionStorage.getItem("prospect_demo_token"))).toBeNull();

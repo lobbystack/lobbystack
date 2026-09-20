@@ -71,7 +71,7 @@ describe("main demo-claim behavior through the Next API", () => {
   });
   it("retains the token while redirecting an unauthenticated claimant to login", async () => {
     setup("active", async () => Response.json({ error: "Unauthorized" }, { status: 401 }));
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/login?returnTo=%2Fclaim-demo"));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/en/login?returnTo=%2Fen%2Fclaim-demo"));
     expect(sessionStorage.getItem("prospect_demo_token")).toBe("fixture-token");
   });
 });

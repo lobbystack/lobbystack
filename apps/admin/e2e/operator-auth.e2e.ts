@@ -49,7 +49,7 @@ async function cleanupFixtures(): Promise<void> {
 }
 
 async function signUp(page: Page, identity: string): Promise<void> {
-  await page.goto("/signup");
+  await page.goto("/en/signup");
   await page.locator('input[type="email"]').fill(`${prefix}-${identity}@example.invalid`);
   await page.locator('input[type="password"]').fill(password);
   if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
@@ -174,7 +174,7 @@ test.afterAll(cleanupFixtures);
 test("operator authentication, workspace access, isolation, and revocation", async ({ browser, page }) => {
   test.setTimeout(240_000);
   await page.goto("/");
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/en\/login$/);
 
   await signUp(page, "owner-a");
   const ownBusinessId = await createWorkspace(page, "owner-a");
@@ -195,7 +195,7 @@ test("operator authentication, workspace access, isolation, and revocation", asy
 
   await page.getByRole("button", { name: `${prefix}-owner-a@example.invalid` }).click();
   await page.getByRole("menuitem", { name: "Sign out" }).click();
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/en\/login$/);
   await page.getByLabel("Email").fill(`${prefix}-owner-a@example.invalid`);
   await page.locator('input[type="password"]').fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
@@ -221,7 +221,7 @@ test("operator authentication, workspace access, isolation, and revocation", asy
 
   await page.getByRole("button", { name: `${prefix}-owner-a@example.invalid` }).click();
   await page.getByRole("menuitem", { name: "Sign out" }).click();
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/en\/login$/);
   const revokedStatus = await page.evaluate(async () => (await fetch("/api/businesses", { credentials: "include" })).status);
   expect(revokedStatus).toBe(401);
 });

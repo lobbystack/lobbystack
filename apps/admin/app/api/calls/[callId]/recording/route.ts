@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
 import { createObjectDownload, getCallDetail } from "@lobbystack/domain";
-import { createStorageProvider } from "@lobbystack/providers";
 import { asApiResponse, withOperatorTransaction } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
+import { getStorageProvider } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ call
       const status = detail.recording.state === "expired" ? 410 : 409;
       return NextResponse.json({ error: `Recording is ${detail.recording.state}.`, code: `recording_${detail.recording.state}` }, { status });
     }
-    return NextResponse.json(await createObjectDownload(createDomainContext(), { userId: session.user.id, businessId, objectId: detail.recording.objectId }, createStorageProvider()));
+    return NextResponse.json(await createObjectDownload(createDomainContext(), { userId: session.user.id, businessId, objectId: detail.recording.objectId }, getStorageProvider()));
   } catch (error) {
     return asApiResponse(error);
   }

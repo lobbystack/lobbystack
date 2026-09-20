@@ -48,7 +48,8 @@ for (const state of states) for (const locale of ["en", "fr"] as const) for (con
         });
       }
       const page = await context.newPage();
-      await page.goto(`${process.env.INVITATION_PARITY_BASE_URL}/accept-invite?token=parity-invitation`, { waitUntil: "domcontentloaded" });
+      const invitationPath = side === "reference" ? "/accept-invite" : `/${locale}/accept-invite`;
+      await page.goto(`${process.env.INVITATION_PARITY_BASE_URL}${invitationPath}?token=parity-invitation`, { waitUntil: "domcontentloaded" });
       await page.waitForTimeout(1500);
       await page.addStyleTag({ content: "*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important;caret-color:transparent!important}" });
       await expect(page.getByRole("heading", { name: copy.title })).toBeVisible();

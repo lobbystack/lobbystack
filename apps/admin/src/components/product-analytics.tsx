@@ -11,12 +11,13 @@ import { consumeAuthSuccess } from "@/lib/auth-success-analytics";
 import { consumePendingOnboardingBusiness } from "@/lib/onboarding-analytics";
 import { consumePendingWorkspaceSwitch } from "@/lib/workspace-analytics";
 import { requestJson } from "@/lib/request-json";
+import { isPublicRoutePath, stripLocalePrefix } from "@/lib/locale-path";
 
-const SENSITIVE_ROUTE_PATTERN = /^\/(login|signup|forgot-password|reset-password|confirm-email-change|accept-invite|claim-demo|demo|demos|embed)(\/|$)/;
+const SENSITIVE_APP_ROUTE_PATTERN = /^\/(demos|embed)(\/|$)/;
 
 /** Authentication, prospect demo, and widget surfaces never capture or record. */
 export function isSensitiveAnalyticsRoute(pathname: string): boolean {
-  return SENSITIVE_ROUTE_PATTERN.test(pathname);
+  return isPublicRoutePath(pathname) || SENSITIVE_APP_ROUTE_PATTERN.test(stripLocalePrefix(pathname));
 }
 
 const PAGE_EVENTS: ReadonlyArray<readonly [RegExp, TelemetryEventName]> = [

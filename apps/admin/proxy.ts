@@ -2,11 +2,19 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { isMaintenanceMode } from "@lobbystack/shared";
 
-import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE_SECONDS } from "@/lib/locale";
+import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE_SECONDS, normalizeLocale } from "@/lib/locale";
+import {
+  isLegacyPublicRoutePath,
+  isPublicRoutePath,
+  isTokenBearingRoute,
+  localeFromPathname,
+  localizePublicPath,
+} from "@/lib/locale-path";
 import {
   LOCALE_HEADER,
   LOCALE_SOURCE_HEADER,
   PATHNAME_HEADER,
+  type NegotiatedLocale,
   localeFromCookieHeader,
   negotiateLocale,
 } from "@/lib/locale-request";
@@ -29,6 +37,50 @@ function maintenanceResponse(headers: Record<string, string>): NextResponse {
     status: 503,
     headers: { ...headers, "Cache-Control": "no-store", "Retry-After": "60" },
   });
+}
+
+function applyResponsePolicy(
+  response: NextResponse,
+  request: NextRequest,
+  headers: Record<string, string>,
+  locale: NegotiatedLocale,
+  cacheControl?: string,
+): NextResponse {
+  for (const [name, value] of Object.entries(headers)) response.headers.set(name, value);
+  if (process.env.NODE_ENV === "production") response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  if (cacheControl) response.headers.set("Cache-Control", cacheControl);
+  if (localeFromPathname(request.nextUrl.pathname) && isPublicRoutePath(request.nextUrl.pathname)) {
+    response.headers.set("Content-Language", locale.locale);
+    response.headers.set("Vary", "Accept-Encoding");
+  }
+  // Never add Set-Cookie to canonical locale-prefixed pages: shared caches must
+  // be able to store those responses. Explicit selection persists separately.
+  if (locale.source === "query") {
+    response.cookies.set({
+      name: LOCALE_COOKIE,
+      value: locale.locale,
+      path: "/",
+      maxAge: LOCALE_COOKIE_MAX_AGE_SECONDS,
+      sameSite: "lax",
+      secure: request.nextUrl.protocol === "https:",
+    });
+  }
+  return response;
+}
+
+function cacheControlForRequest(pathname: string, searchParams: URLSearchParams): string | undefined {
+  if (isTokenBearingRoute(pathname, searchParams)) return "private, no-store";
+  if (pathname.startsWith("/api/realtime") || pathname.startsWith("/api/widget/chat")) {
+    return "private, no-cache, no-store, no-transform";
+  }
+  if (pathname.startsWith("/api/") || pathname.startsWith("/voice/") || pathname.startsWith("/embed/")) {
+    return "private, no-store";
+  }
+  if (localeFromPathname(pathname) && isPublicRoutePath(pathname)) {
+    return "public, s-maxage=300, stale-while-revalidate=3600";
+  }
+  if (!isPublicRoutePath(pathname) && pathname !== "/embed.js") return "private, no-store";
+  return undefined;
 }
 
 function configuredOrigins(request: NextRequest): Set<string> {
@@ -67,34 +119,62 @@ export function proxy(request: NextRequest) {
     return maintenanceResponse(headers);
   }
 
-  // The root layout reads these request headers so the first paint is rendered in
-  // the negotiated locale for the route being requested.
-  const locale = negotiateLocale({
+  const negotiatedLocale = negotiateLocale({
     query: request.nextUrl.searchParams.get("lng"),
     cookie: localeFromCookieHeader(request.headers.get("cookie")),
     acceptLanguage: request.headers.get("accept-language"),
   });
+  const pathLocale = localeFromPathname(pathname);
+  const queryLocale = normalizeLocale(request.nextUrl.searchParams.get("lng"));
+
+  if (isLegacyPublicRoutePath(pathname)) {
+    const target = request.nextUrl.clone();
+    target.pathname = localizePublicPath(pathname, negotiatedLocale.locale);
+    target.searchParams.delete("lng");
+    return applyResponsePolicy(
+      NextResponse.redirect(target, 308),
+      request,
+      headers,
+      negotiatedLocale,
+      "private, no-store",
+    );
+  }
+
+  if (pathLocale && isPublicRoutePath(pathname) && request.nextUrl.searchParams.has("lng")) {
+    const targetLocale = queryLocale ?? pathLocale;
+    const target = request.nextUrl.clone();
+    target.pathname = localizePublicPath(pathname, targetLocale);
+    target.searchParams.delete("lng");
+    return applyResponsePolicy(
+      NextResponse.redirect(target, 308),
+      request,
+      headers,
+      { locale: targetLocale, source: queryLocale ? "query" : "path" },
+      "private, no-store",
+    );
+  }
+
+  // Dynamic application roots read these headers. Locale-prefixed public roots
+  // derive their first paint directly from the path and remain prerenderable.
+  const locale: NegotiatedLocale = pathLocale && isPublicRoutePath(pathname)
+    ? { locale: pathLocale, source: "path" }
+    : negotiatedLocale;
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(LOCALE_HEADER, locale.locale);
   requestHeaders.set(LOCALE_SOURCE_HEADER, locale.source);
   requestHeaders.set(PATHNAME_HEADER, pathname);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
-  for (const [name, value] of Object.entries(headers)) response.headers.set(name, value);
-  if (process.env.NODE_ENV === "production") response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-  if (locale.source === "query") {
-    response.cookies.set({
-      name: LOCALE_COOKIE,
-      value: locale.locale,
-      path: "/",
-      maxAge: LOCALE_COOKIE_MAX_AGE_SECONDS,
-      sameSite: "lax",
-      secure: request.nextUrl.protocol === "https:",
-    });
-  }
+  applyResponsePolicy(response, request, headers, locale, cacheControlForRequest(pathname, request.nextUrl.searchParams));
 
   if (stateChangingMethods.has(request.method) && pathname.startsWith("/api/") && !csrfExemptPrefixes.some((prefix) => pathname.startsWith(prefix)) && !hasValidCsrfOrigin(request)) {
-    return NextResponse.json({ error: "CSRF origin validation failed." }, { status: 403, headers });
+    return applyResponsePolicy(
+      NextResponse.json({ error: "CSRF origin validation failed." }, { status: 403 }),
+      request,
+      headers,
+      locale,
+      cacheControlForRequest(pathname, request.nextUrl.searchParams),
+    );
   }
   return response;
 }

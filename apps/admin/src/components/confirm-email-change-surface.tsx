@@ -7,10 +7,13 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ReplacementOnboardingShell } from "./replacement-onboarding-shell";
+import { resolveLocale } from "@/lib/locale";
+import { localizePublicPath } from "@/lib/locale-path";
 import { Button } from "./ui/button";
 
 export function ConfirmEmailChangeSurface() {
-  const { t } = useTranslation("auth");
+  const { t, i18n } = useTranslation("auth");
+  const loginPath = localizePublicPath("/login", resolveLocale(i18n.resolvedLanguage, i18n.language));
   const [token, setToken] = useState("");
   const [email, setEmail] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -49,6 +52,6 @@ export function ConfirmEmailChangeSurface() {
     {statusMessage ? <p className="text-center text-sm text-muted-foreground">{statusMessage}</p> : null}
     {errorMessage ? <p className="text-center text-sm text-destructive">{errorMessage}</p> : null}
     <form className="flex flex-col" onSubmit={submit}><Button className="h-11 w-full" disabled={!valid || isSubmitting || statusMessage !== null} type="submit">{isSubmitting ? t("confirmEmailChange.submitting") : t("confirmEmailChange.submit")}</Button></form>
-    <p className="text-center text-sm"><Link className="font-medium text-foreground underline-offset-4 hover:underline" href={isAuthenticated ? "/settings/usage" : "/login"}>{isAuthenticated ? t("confirmEmailChange.backToSettings") : t("confirmEmailChange.backToLogin")}</Link></p>
+    <p className="text-center text-sm"><Link className="font-medium text-foreground underline-offset-4 hover:underline" href={isAuthenticated ? "/settings/usage" : loginPath}>{isAuthenticated ? t("confirmEmailChange.backToSettings") : t("confirmEmailChange.backToLogin")}</Link></p>
   </div></ReplacementOnboardingShell></div>;
 }

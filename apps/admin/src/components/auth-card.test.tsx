@@ -39,7 +39,7 @@ describe("original login and signup behavior", () => {
   it.each(["login", "signup"] as const)("preserves returnTo in the %s switch link", mode => {
     window.history.replaceState(null, "", "/?returnTo=%2Fclaim-demo%3Ftoken%3Dfixture");
     render(<AuthCard mode={mode} />);
-    expect(screen.getByRole("link", { name: mode === "login" ? "login.createOne" : "signup.signIn" }).getAttribute("href")).toBe(`${mode === "login" ? "/signup" : "/login"}?returnTo=%2Fclaim-demo%3Ftoken%3Dfixture`);
+    expect(screen.getByRole("link", { name: mode === "login" ? "login.createOne" : "signup.signIn" }).getAttribute("href")).toBe(`${mode === "login" ? "/en/signup" : "/en/login"}?returnTo=%2Fclaim-demo%3Ftoken%3Dfixture`);
   });
   it("mounts the configured signup challenge immediately", () => {
     vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "fixture-site-key");

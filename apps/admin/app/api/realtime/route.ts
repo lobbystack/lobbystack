@@ -17,20 +17,35 @@ export async function GET(request: Request): Promise<Response> {
     if (!redisUrl) {
       return new Response("Realtime is not configured", { status: 503 });
     }
-    const subscriber = new Redis(redisUrl, { maxRetriesPerRequest: null, lazyConnect: false, connectionName: `lobbystack:sse:${businessId}` });
     const channel = `${process.env.REDIS_PREFIX ?? "lobbystack"}:realtime:${businessId}`;
     const encoder = new TextEncoder();
     let heartbeat: ReturnType<typeof setInterval> | undefined;
+    let cleanup: (closeController?: boolean) => Promise<void> = async () => undefined;
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
-        const close = async () => {
+        const subscriber = new Redis(redisUrl, {
+          maxRetriesPerRequest: 1,
+          lazyConnect: true,
+          connectionName: `lobbystack:sse:${businessId}`,
+        });
+        let closed = false;
+        const onAbort = () => { void cleanup(); };
+        cleanup = async (closeController = true) => {
+          if (closed) return;
+          closed = true;
           if (heartbeat) clearInterval(heartbeat);
+          request.signal.removeEventListener("abort", onAbort);
           subscriber.removeAllListeners("message");
-          await subscriber.unsubscribe(channel).catch(() => undefined);
-          await subscriber.quit().catch(() => undefined);
-          try { controller.close(); } catch { /* client disconnected */ }
+          subscriber.disconnect(false);
+          if (closeController) {
+            try { controller.close(); } catch { /* client disconnected */ }
+          }
         };
-        request.signal.addEventListener("abort", () => { void close(); }, { once: true });
+        request.signal.addEventListener("abort", onAbort, { once: true });
+        if (request.signal.aborted) {
+          await cleanup();
+          return;
+        }
         subscriber.on("message", (_receivedChannel, rawMessage) => {
           const event = parseRealtimeMessage(rawMessage, businessId);
           if (!event) {
@@ -38,14 +53,29 @@ export async function GET(request: Request): Promise<Response> {
           }
           controller.enqueue(encoder.encode(`id: ${event.id}\nevent: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`));
         });
-        await subscriber.subscribe(channel);
-        controller.enqueue(encoder.encode(`event: ready\ndata: ${JSON.stringify({ businessId })}\n\n`));
-        heartbeat = setInterval(() => controller.enqueue(encoder.encode(": keepalive\n\n")), 15_000);
-        heartbeat.unref?.();
+        try {
+          await subscriber.connect();
+          if (closed) return;
+          await subscriber.subscribe(channel);
+          if (closed) return;
+          controller.enqueue(encoder.encode(`event: ready\ndata: ${JSON.stringify({ businessId })}\n\n`));
+          heartbeat = setInterval(() => {
+            try {
+              controller.enqueue(encoder.encode(": keepalive\n\n"));
+            } catch {
+              void cleanup(false);
+            }
+          }, 15_000);
+          heartbeat.unref?.();
+        } catch (error) {
+          if (!closed) {
+            await cleanup(false);
+            controller.error(error);
+          }
+        }
       },
       cancel() {
-        if (heartbeat) clearInterval(heartbeat);
-        void subscriber.quit();
+        return cleanup(false);
       },
     });
     return new Response(stream, { headers: { "content-type": "text/event-stream", "cache-control": "no-cache, no-transform", connection: "keep-alive", "x-accel-buffering": "no" } });

@@ -44,6 +44,8 @@ import { DashboardUtilityBar } from "./dashboard-utility-bar";
 import { DashboardSetupGuideCard } from "./dashboard-setup-guide-card";
 import { NavUser } from "./nav-user";
 import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
+import { resolveLocale } from "@/lib/locale";
+import { localizePublicPath } from "@/lib/locale-path";
 
 type Business = {
   businessId: string;
@@ -218,6 +220,7 @@ function NavigationGroup({ items, pathname, title }: { items: NavigationItem[]; 
 
 function UserMenu({ user }: Pick<DashboardShellProps, "user">) {
   const router = useRouter();
+  const { i18n } = useTranslation();
   const openUpgradePlanDialog = useOpenUpgradePlanDialog();
   const [signingOut, setSigningOut] = useState(false);
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
@@ -241,7 +244,7 @@ function UserMenu({ user }: Pick<DashboardShellProps, "user">) {
       } catch {
         // Analytics must never block sign-out.
       }
-      router.replace("/login");
+      router.replace(localizePublicPath("/login", resolveLocale(i18n.resolvedLanguage, i18n.language)));
       router.refresh();
     } finally { setSigningOut(false); }
   }

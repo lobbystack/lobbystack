@@ -6,7 +6,7 @@ test("server-provided French auth copy survives unavailable client translation f
   const requested = new Set<string>();
   await page.route("**/locales/**", route => { requested.add(new URL(route.request().url()).pathname.split("/").at(-1)!); return route.fulfill({ status: 404, body: "Unavailable" }); });
   await page.route("**/api/preferences/locale", route => route.fulfill({ status: 401, body: "{}" }));
-  await page.goto("/login?lng=fr");
+  await page.goto("/fr/login");
   await expect(page.getByRole("heading", { name: "Bon retour" })).toBeVisible();
   await expect(page.getByLabel("Courriel", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Réessayer le chargement" })).toHaveCount(0);

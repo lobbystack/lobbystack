@@ -9,8 +9,8 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@lobbystack/db", () => ({ databaseHealthCheck: mocks.databaseHealthCheck }));
-vi.mock("@lobbystack/providers", () => ({
-  createStorageProvider: () => ({ ensureReady: mocks.ensureReady }),
+vi.mock("@/lib/storage", () => ({
+  getStorageProvider: () => ({ ensureReady: mocks.ensureReady }),
 }));
 vi.mock("@/lib/api-helpers", () => ({
   asApiResponse: mocks.asApiResponse,
