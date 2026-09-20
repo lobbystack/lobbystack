@@ -619,7 +619,7 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/ai-receptionist-for-electricians/",
     title: "AI Receptionist for Electricians | LobbyStack",
     description:
-      "LobbyStack answers electrical calls, gathers issue and location details, books service visits, and routes sparking or outage emergencies to your on-call electrician.",
+      "LobbyStack answers electrical calls, gathers issue and location details, books service visits, and routes outage emergencies to your on-call electrician.",
     eyebrow: "Electricians",
     h1: "AI receptionist for electricians that captures every service call",
     intro:
@@ -891,7 +891,7 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/ai-receptionist-for-locksmiths/",
     title: "AI Receptionist for Locksmiths | LobbyStack",
     description:
-      "LobbyStack is an AI receptionist for locksmiths that answers emergency lockout calls, books service appointments, and routes urgent calls to your on-call technician.",
+      "An AI receptionist for locksmiths that answers emergency lockout calls, books service appointments, and routes urgent calls to your on-call technician.",
     eyebrow: "Locksmiths",
     h1: "AI receptionist for locksmiths that captures every emergency call",
     intro:

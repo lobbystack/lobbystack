@@ -127,10 +127,20 @@ const shouldRedirectToFrench = (request, url) => {
   )
 }
 
+// Send alias hosts straight to the trailing-slash form so www and pages.dev
+// visitors do not pay a second redirect. Files keep their exact path.
+const canonicalPathname = (pathname) => {
+  if (pathname === "" || pathname === "/") return "/"
+  if (pathname.endsWith("/")) return pathname
+  const lastSegment = pathname.slice(pathname.lastIndexOf("/") + 1)
+  return lastSegment.includes(".") ? pathname : `${pathname}/`
+}
+
 const redirectToCanonicalHost = (url) => {
   const redirectUrl = new URL(url)
   redirectUrl.hostname = CANONICAL_HOST
   redirectUrl.protocol = "https:"
+  redirectUrl.pathname = canonicalPathname(redirectUrl.pathname)
 
   return new Response(null, {
     status: 301,

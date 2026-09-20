@@ -25,6 +25,36 @@ describe("canonical host redirects", () => {
   )
 })
 
+describe("canonical host path normalisation", () => {
+  it("adds the trailing slash in the same redirect", async () => {
+    const response = await onRequest({
+      request: new Request("https://www.lobbystack.com/pricing"),
+      env: {},
+      next: vi.fn(),
+    })
+
+    expect(response.status).toBe(301)
+    expect(response.headers.get("Location")).toBe(
+      "https://lobbystack.com/pricing/"
+    )
+  })
+
+  it.each(["/llms.txt", "/feed.xml", "/index.md"])(
+    "leaves %s untouched",
+    async (pathname) => {
+      const response = await onRequest({
+        request: new Request(`https://www.lobbystack.com${pathname}`),
+        env: {},
+        next: vi.fn(),
+      })
+
+      expect(response.headers.get("Location")).toBe(
+        `https://lobbystack.com${pathname}`
+      )
+    }
+  )
+})
+
 describe("homepage Markdown content negotiation", () => {
   it.each(["/fr/", "/fr/index.html"])(
     "serves the French Markdown sidecar for %s",

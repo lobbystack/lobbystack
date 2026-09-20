@@ -1,6 +1,6 @@
 ---
 title: "Des workflows IA sans flowcharts"
-description: "Les workflows de réceptionniste IA cassent quand le comportement vit dans des prompts, webhooks et branches. Utilisez une politique claire et des outils fiables."
+description: "Les workflows de réceptionniste IA cassent quand le comportement vit dans des prompts et des branches. Préférez une politique claire et des outils fiables."
 pubDate: 2026-06-18T09:00:00-04:00
 author: "Équipe LobbyStack"
 category: "Guides"

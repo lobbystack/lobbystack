@@ -679,7 +679,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
 
   "/solutions/ai-receptionist-for-appliance-repair/": tradePage({
     path: "/solutions/ai-receptionist-for-appliance-repair/",
-    title: "Réceptionniste IA pour réparation d’électroménagers | LobbyStack",
+    title: "Réceptionniste IA pour électroménagers | LobbyStack",
     description:
       "LobbyStack répond aux appels de réparation, recueille l’appareil, la marque, le modèle et les symptômes, puis planifie une visite adaptée avec le bon contexte.",
     eyebrow: "Réparation d’électroménagers",
@@ -756,9 +756,9 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
   "/solutions/after-hours-answering-service-for-contractors/": frenchPage(
     "/solutions/after-hours-answering-service-for-contractors/",
     {
-      title: "Service de réponse hors horaires pour entrepreneurs | LobbyStack",
+      title: "Réponse hors horaires pour entrepreneurs | LobbyStack",
       description:
-        "LobbyStack répond aux appels d’entrepreneurs le soir et le week-end, filtre les urgences, planifie le lendemain et transfère la personne d’astreinte avec contexte.",
+        "LobbyStack répond aux appels d’entrepreneurs le soir et le week-end, filtre les urgences, planifie le lendemain et transfère la personne d’astreinte.",
       eyebrow: "Entrepreneurs hors horaires",
       h1: "Un service de réponse hors horaires qui protège les appels urgents",
       intro:
