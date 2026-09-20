@@ -2,6 +2,7 @@ const MARKDOWN_TOKEN_COUNT = "120"
 const CONTENT_SIGNAL = "ai-train=yes, search=yes, ai-input=yes"
 const CANONICAL_HOST = "lobbystack.com"
 const WWW_HOST = "www.lobbystack.com"
+const PAGES_HOST = "lobbystack-landing.pages.dev"
 const DEFAULT_LOCALE = "en"
 const TRANSLATED_PATHS = new Set([
   "/",
@@ -61,7 +62,8 @@ const TRANSLATED_PATHS = new Set([
   "/search/",
 ])
 
-const isWwwHost = (url) => url.hostname === WWW_HOST
+const isPublicAliasHost = (url) =>
+  url.hostname === WWW_HOST || url.hostname === PAGES_HOST
 
 const normalizePath = (pathname) => {
   if (pathname === "") return "/"
@@ -182,7 +184,7 @@ export async function onRequest(context) {
   const url = new URL(context.request.url)
   const homepageMarkdownPath = getHomepageMarkdownPath(url.pathname)
 
-  if (isWwwHost(url)) {
+  if (isPublicAliasHost(url)) {
     return redirectToCanonicalHost(url)
   }
 

@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "apps/landing/src/**"
+      - "apps/landing/functions/**"
       - "apps/landing/public/**"
       - "apps/landing/astro.config.mjs"
       - ".github/workflows/landing-link-check.yml"
@@ -24,7 +25,8 @@ jobs:
           node-version: 22.12.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile=false
-      - run: pnpm --filter landing build
+      - run: pnpm --filter @lobbystack/landing build
+      - run: pnpm --filter @lobbystack/landing seo:validate
       - name: Start landing preview server
         run: |
           npx --yes serve apps/landing/dist -l 4173 &
