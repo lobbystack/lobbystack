@@ -171,7 +171,9 @@ export async function inviteMember(
         email: input.email,
         token,
         template: "invitation",
-        url: `${process.env.APP_BASE_URL ?? "http://localhost"}/en/accept-invite?token=${encodeURIComponent(token)}`,
+        // Invitations may go to someone without an account preference. Let the
+        // compatibility entry point negotiate their locale before redirecting.
+        url: `${process.env.APP_BASE_URL ?? "http://localhost"}/accept-invite?token=${encodeURIComponent(token)}`,
       },
     });
   });

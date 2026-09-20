@@ -13,7 +13,7 @@ test("signup and login preserve a demo claim return destination", async ({ brows
   try {
     const page = await context.newPage();
     await page.goto(`${baseURL}/en/signup?returnTo=%2Fen%2Fclaim-demo`);
-    await expect(page.locator('a[href="/login?returnTo=%2Fclaim-demo"]')).toBeVisible();
+    await expect(page.locator('a[href="/en/login?returnTo=%2Fen%2Fclaim-demo"]')).toBeVisible();
     await page.locator('input[type="email"]').fill(email);
     await page.locator('input[type="password"]').fill(password);
     if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) await expect.poll(() => page.evaluate(() => {
@@ -26,7 +26,7 @@ test("signup and login preserve a demo claim return destination", async ({ brows
     expect(signedOut.status()).toBe(200);
     await context.clearCookies();
     await page.goto(`${baseURL}/en/login?returnTo=%2Fen%2Fclaim-demo`);
-    await expect(page.locator('a[href="/signup?returnTo=%2Fclaim-demo"]')).toBeVisible();
+    await expect(page.locator('a[href="/en/signup?returnTo=%2Fen%2Fclaim-demo"]')).toBeVisible();
     await page.locator('input[type="email"]').fill(email);
     await page.locator('input[type="password"]').fill(password);
     await page.locator('button[type="submit"]').click();

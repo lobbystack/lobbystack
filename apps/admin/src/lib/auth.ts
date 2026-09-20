@@ -222,13 +222,14 @@ export function getAuth() {
       },
       sendOnSignUp: process.env.SEND_VERIFICATION_EMAIL_ON_SIGNUP === "true",
       sendVerificationEmail: async ({ user, url }: { user: { id: string; email: string }; url: string }) => {
-        const storedUser = (await database.db.select({ email: users.email }).from(users).where(eq(users.id, user.id)).limit(1))[0];
+        const storedUser = (await database.db.select({ email: users.email, preferredLocale: users.preferredLocale }).from(users).where(eq(users.id, user.id)).limit(1))[0];
         let deliveryUrl = url;
         if (storedUser && storedUser.email !== user.email) {
           // The second, new-address verification step uses the original confirmation UI.
           // Better Auth still verifies the signed token and performs the authoritative update.
           const verificationUrl = new URL(url);
-          const confirmationUrl = new URL("/en/confirm-email-change", process.env.APP_BASE_URL ?? "http://localhost:3000");
+          const recipientLocale = storedUser.preferredLocale === "fr" ? "fr" : "en";
+          const confirmationUrl = new URL(`/${recipientLocale}/confirm-email-change`, process.env.APP_BASE_URL ?? "http://localhost:3000");
           confirmationUrl.searchParams.set("token", verificationUrl.searchParams.get("token") ?? "");
           confirmationUrl.searchParams.set("email", user.email);
           deliveryUrl = confirmationUrl.toString();

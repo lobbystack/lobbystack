@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => {
   const changeLanguage = vi.fn((_locale: string) => Promise.resolve());
   return {
     pathname: "/",
+    replace: vi.fn(),
     changeLanguage,
     error: vi.fn(),
     readSession: vi.fn(async () => ({ user: { id: "user-1" } }) as { user?: { id: string } } | null),
@@ -23,7 +24,7 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: mocks.i18n, t: mocks.i18n.t }) }));
-vi.mock("next/navigation", () => ({ usePathname: () => mocks.pathname }));
+vi.mock("next/navigation", () => ({ usePathname: () => mocks.pathname, useRouter: () => ({ replace: mocks.replace }) }));
 vi.mock("@/lib/public-auth-session", () => ({ readPublicAuthSession: (..._args: unknown[]) => mocks.readSession() }));
 vi.mock("sonner", () => ({ toast: { error: mocks.error } }));
 
@@ -54,6 +55,7 @@ beforeEach(() => {
   mocks.readSession.mockReset();
   mocks.readSession.mockResolvedValue({ user: { id: "user-1" } });
   mocks.changeLanguage.mockClear();
+  mocks.replace.mockClear();
   mocks.error.mockClear();
 });
 
@@ -74,6 +76,19 @@ it("persists an explicit query locale instead of an older stored choice", () => 
   render(<QueryClientProvider client={new QueryClient()}><LocaleProvider initialLocale="fr" initialLocaleSource="query"><Controls /></LocaleProvider></QueryClientProvider>);
   expect(window.localStorage.getItem("lobbystack.locale")).toBe("fr");
   expect(document.cookie).toContain("lobbystack.locale=fr");
+});
+
+it("uses internal routing when changing locale on a public page", async () => {
+  mocks.pathname = "/en/login";
+  window.history.replaceState(null, "", "/en/login?lng=en&returnTo=%2Fen%2Fclaim-demo#form");
+  renderProvider(<Controls />);
+
+  fireEvent.click(screen.getByRole("button", { name: "French" }));
+
+  await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith(
+    "/fr/login?returnTo=%2Fen%2Fclaim-demo#form",
+    { scroll: false },
+  ));
 });
 
 it("does not request the account locale preference for signed-out visitors", async () => {

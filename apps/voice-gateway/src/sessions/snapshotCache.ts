@@ -31,7 +31,10 @@ export function createSnapshotCache(options: SnapshotCacheOptions = {}): {
     set(businessId, snapshot) {
       const currentTime = now();
       for (const [id, entry] of store) {
-        if (entry.expiresAt <= currentTime) store.delete(id);
+        if (entry.expiresAt <= currentTime) {
+          store.delete(id);
+          options.onEvict?.({ businessId: id, reason: "expired" });
+        }
       }
       store.delete(businessId);
       store.set(businessId, { snapshot, expiresAt: currentTime + ttlMs });

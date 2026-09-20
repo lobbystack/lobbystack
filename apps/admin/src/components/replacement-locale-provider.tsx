@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -48,6 +48,7 @@ export function LocaleProvider({
   initialLocaleSource: LocaleSource;
 }) {
   const { i18n } = useTranslation();
+  const router = useRouter();
   const pathname = usePathname() ?? "/";
   const publicPage = isPublicRoutePath(pathname) || /^\/embed(?:\/|$)/.test(pathname);
   const [locale, setLocaleState] = useState<SupportedLocale>(() => resolveLocale(i18n.resolvedLanguage, initialLocale));
@@ -124,10 +125,11 @@ export function LocaleProvider({
       writeStoredLocaleCookie(nextLocale);
       await i18n.changeLanguage(nextLocale);
       if (publicPage) {
-        const target = new URL(window.location.href);
-        target.pathname = localizePublicPath(target.pathname, nextLocale);
-        target.searchParams.delete("lng");
-        window.location.assign(`${target.pathname}${target.search}${target.hash}`);
+        const searchParams = new URLSearchParams(window.location.search);
+        searchParams.delete("lng");
+        const search = searchParams.size > 0 ? `?${searchParams.toString()}` : "";
+        const target = `${localizePublicPath(pathname, nextLocale)}${search}${window.location.hash}`;
+        router.replace(target, { scroll: false });
         return;
       }
       try {
@@ -150,7 +152,7 @@ export function LocaleProvider({
         if (revision === preferenceRevision.current) setIsSaving(false);
       }
     },
-  }), [i18n, isSaving, locale, publicPage]);
+  }), [i18n, isSaving, locale, pathname, publicPage, router]);
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
