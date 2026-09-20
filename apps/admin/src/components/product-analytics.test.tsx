@@ -3,6 +3,8 @@ import { act, cleanup, render, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { consumeAuthSuccess, recordAuthSuccess } from "@/lib/auth-success-analytics";
+import { consumePendingOnboardingBusiness, recordPendingOnboardingBusiness } from "@/lib/onboarding-analytics";
+import { consumePendingWorkspaceSwitch, recordPendingWorkspaceSwitch } from "@/lib/workspace-analytics";
 import { isSensitiveAnalyticsRoute, ProductAnalytics } from "./product-analytics";
 
 const mocks = vi.hoisted(() => ({
@@ -133,5 +135,77 @@ describe("queued authentication analytics", () => {
     setup(false);
     expect(mocks.posthog.capture).not.toHaveBeenCalled();
     expect(consumeAuthSuccess()).toBeNull();
+  });
+});
+
+describe("queued onboarding analytics", () => {
+  it("captures the first workspace event after its consent resolves", async () => {
+    recordPendingOnboardingBusiness("business");
+    const client = setup(undefined);
+    expect(mocks.posthog.capture).not.toHaveBeenCalled();
+
+    await act(async () => { client.setQueryData(["appearance-preferences", "business"], { telemetryEnabled: true }); });
+
+    await waitFor(() => expect(mocks.posthog.capture).toHaveBeenCalledWith(
+      "web.onboarding.business_name_submitted",
+      {
+        businessId: "business",
+        deploymentMode: "development",
+        $groups: { business: "business:business" },
+      },
+    ));
+    expect(consumePendingOnboardingBusiness()).toBeNull();
+  });
+
+  it("discards the first workspace event when the tenant opts out", () => {
+    recordPendingOnboardingBusiness("business");
+    setup(false);
+    expect(mocks.posthog.capture).not.toHaveBeenCalled();
+    expect(consumePendingOnboardingBusiness()).toBeNull();
+  });
+
+  it("keeps the event queued until the created workspace becomes active", () => {
+    recordPendingOnboardingBusiness("business-2");
+    setup(true);
+    expect(mocks.posthog.capture).not.toHaveBeenCalledWith("web.onboarding.business_name_submitted", expect.anything());
+    expect(consumePendingOnboardingBusiness()).toBe("business-2");
+  });
+});
+
+describe("queued workspace-switch analytics", () => {
+  it("captures the switch with the destination workspace's consent and group", async () => {
+    recordPendingWorkspaceSwitch("business-2", "business");
+    const client = setup(true);
+    mocks.posthog.capture.mockClear();
+
+    await act(async () => {
+      client.setQueryData(["businesses"], { businesses: [{ businessId: "business-2", active: true }] });
+      client.setQueryData(["appearance-preferences", "business-2"], { telemetryEnabled: true });
+    });
+
+    await waitFor(() => expect(mocks.posthog.capture).toHaveBeenCalledWith(
+      "web.workspace.business_switched",
+      {
+        businessId: "business-2",
+        previousBusinessId: "business",
+        deploymentMode: "development",
+        $groups: { business: "business:business-2" },
+      },
+    ));
+    expect(consumePendingWorkspaceSwitch()).toBeNull();
+  });
+
+  it("discards the switch when the destination workspace opts out", async () => {
+    recordPendingWorkspaceSwitch("business-2", "business");
+    const client = setup(true);
+    mocks.posthog.capture.mockClear();
+
+    await act(async () => {
+      client.setQueryData(["businesses"], { businesses: [{ businessId: "business-2", active: true }] });
+      client.setQueryData(["appearance-preferences", "business-2"], { telemetryEnabled: false });
+    });
+
+    expect(mocks.posthog.capture).not.toHaveBeenCalledWith("web.workspace.business_switched", expect.anything());
+    await waitFor(() => expect(window.sessionStorage.getItem("lobbystack.pending-workspace-switch")).toBeNull());
   });
 });

@@ -164,7 +164,7 @@ type OpenAiRealtimeMessage = {
   };
 };
 
-type ActiveVoiceSession = {
+export type ActiveVoiceSession = {
   knowledgeTurn?: { id: string; lookups: number };
   businessId: string | null;
   snapshot: BusinessContextSnapshot | null;
@@ -225,6 +225,62 @@ type ActiveVoiceSession = {
   openingGreetingPlaybackMarkName: string | null;
   openingGreetingTurnDetectionTimer: ReturnType<typeof setTimeout> | null;
 };
+
+export function createActiveVoiceSession(): ActiveVoiceSession {
+  return {
+    businessId: null,
+    snapshot: null,
+    callSid: null,
+    from: null,
+    to: null,
+    gatewaySessionId: crypto.randomUUID(),
+    startedAtIso: new Date().toISOString(),
+    startedAtMs: Date.now(),
+    streamSid: null,
+    callId: null,
+    conversationId: null,
+    openAiReady: false,
+    pendingTransferDestination: null,
+    pendingTransferMarkName: null,
+    pendingImplicitEndCall: null,
+    pendingImplicitHangupMarkName: null,
+    pendingImplicitEndCallSkipNextResponseDone: false,
+    pendingImplicitEndCallStaleResponseId: null,
+    transferExecuted: false,
+    providerRecoveryStarted: false,
+    finalized: false,
+    finalDispositionOverride: null,
+    transcriptSequence: 1,
+    seenTranscriptKeys: new Set(),
+    handledToolCallIds: new Set(),
+    recentCallerTranscripts: [],
+    inboundAudio: [],
+    outboundAudio: [],
+    outboundCursorMs: 0,
+    outboundQueuedCursorMs: 0,
+    activeAssistantResponseId: null,
+    activeAssistantItemId: null,
+    activeAssistantContentIndex: 0,
+    pendingOutboundAudio: [],
+    pendingOutboundStartMs: null,
+    pendingOutboundPlaybackGroups: [],
+    pendingInboundAudio: [],
+    pendingTasks: new Set(),
+    inactivity: createCallInactivityState(),
+    inactivityTimer: null,
+    terminalHangupInProgress: false,
+    aiTraceId: crypto.randomUUID(),
+    assistantResponseRequestedAtMs: null,
+    assistantFirstOutputAtMs: null,
+    transcriptionCommittedAtMsByItemId: new Map(),
+    activeCallCounted: false,
+    openingGreetingActive: true,
+    openingGreetingResponseDone: false,
+    openingGreetingPlaybackDone: false,
+    openingGreetingPlaybackMarkName: null,
+    openingGreetingTurnDetectionTimer: null,
+  };
+}
 
 type RealtimeUsageMetrics = {
   inputTokens?: number;
@@ -1446,7 +1502,7 @@ function restorePendingImplicitEndCall(
   session.finalDispositionOverride = null;
 }
 
-async function completeImplicitTerminalHangupWithRetry(
+export async function completeImplicitTerminalHangupWithRetry(
   server: FastifyInstance,
   openAiSocket: WebSocket | null,
   twilioSocket: WebSocket,
@@ -2617,7 +2673,7 @@ function getProviderClassificationAttributes(
   };
 }
 
-function handleOpenAiMessage(
+export function handleOpenAiMessage(
   server: FastifyInstance,
   openAiSocket: WebSocket,
   twilioSocket: WebSocket,
@@ -3419,59 +3475,7 @@ export async function handleMediaStreamConnection(
     },
     "Accepted Media Stream websocket route",
   );
-  const session: ActiveVoiceSession = {
-    businessId: null,
-    snapshot: null,
-    callSid: null,
-    from: null,
-    to: null,
-    gatewaySessionId: crypto.randomUUID(),
-    startedAtIso: new Date().toISOString(),
-    startedAtMs: Date.now(),
-    streamSid: null,
-    callId: null,
-    conversationId: null,
-    openAiReady: false,
-    pendingTransferDestination: null,
-    pendingTransferMarkName: null,
-    pendingImplicitEndCall: null,
-    pendingImplicitHangupMarkName: null,
-    pendingImplicitEndCallSkipNextResponseDone: false,
-    pendingImplicitEndCallStaleResponseId: null,
-    transferExecuted: false,
-    providerRecoveryStarted: false,
-    finalized: false,
-    finalDispositionOverride: null,
-    transcriptSequence: 1,
-    seenTranscriptKeys: new Set(),
-    handledToolCallIds: new Set(),
-    recentCallerTranscripts: [],
-    inboundAudio: [],
-    outboundAudio: [],
-    outboundCursorMs: 0,
-    outboundQueuedCursorMs: 0,
-    activeAssistantResponseId: null,
-    activeAssistantItemId: null,
-    activeAssistantContentIndex: 0,
-    pendingOutboundAudio: [],
-    pendingOutboundStartMs: null,
-    pendingOutboundPlaybackGroups: [],
-    pendingInboundAudio: [],
-    pendingTasks: new Set(),
-    inactivity: createCallInactivityState(),
-    inactivityTimer: null,
-    terminalHangupInProgress: false,
-    aiTraceId: crypto.randomUUID(),
-    assistantResponseRequestedAtMs: null,
-    assistantFirstOutputAtMs: null,
-    transcriptionCommittedAtMsByItemId: new Map(),
-    activeCallCounted: false,
-    openingGreetingActive: true,
-    openingGreetingResponseDone: false,
-    openingGreetingPlaybackDone: false,
-    openingGreetingPlaybackMarkName: null,
-    openingGreetingTurnDetectionTimer: null,
-  };
+  const session = createActiveVoiceSession();
 
   const runtimeConfig = server.runtimeConfig;
   const validationUrls = buildMediaStreamValidationUrls(

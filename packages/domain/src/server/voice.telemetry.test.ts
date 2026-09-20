@@ -58,7 +58,7 @@ describe("voice call lifecycle telemetry", () => {
   it("records voice.call_completed with final disposition and duration after commit", async () => {
     mocks.withBusinessTransaction.mockResolvedValue({ callId: "call_1", transport: "voice", provider: "twilio", disposition: "appointment_request", durationSeconds: 42, providerDurationSeconds: 42, billingExcluded: false });
 
-    await completeCall(context, { businessId: "biz_1", callId: "call_1", status: "completed", endedAt: "2027-01-01T10:00:42Z", disposition: "appointment_request", providerDurationSeconds: 42 });
+    await expect(completeCall(context, { businessId: "biz_1", callId: "call_1", status: "completed", endedAt: "2027-01-01T10:00:42Z", disposition: "appointment_request", providerDurationSeconds: 42 })).resolves.toBe(true);
 
     expect(mocks.recordProductEvent).toHaveBeenCalledWith(context, expect.objectContaining({
       name: "voice.call_completed",
@@ -72,10 +72,11 @@ describe("voice call lifecycle telemetry", () => {
   it("does not record voice.call_completed when the call was not found", async () => {
     mocks.withBusinessTransaction.mockResolvedValue(null);
 
-    await completeCall(context, { businessId: "biz_1", callId: "missing", status: "completed", endedAt: "2027-01-01T10:00:42Z" });
+    await expect(completeCall(context, { businessId: "biz_1", callId: "missing", status: "completed", endedAt: "2027-01-01T10:00:42Z" })).resolves.toBe(false);
 
     expect(mocks.recordProductEvent).not.toHaveBeenCalled();
   });
+
 });
 
 describe("voice transfer telemetry", () => {

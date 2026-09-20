@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useTelemetry } from "@/components/product-analytics";
+import { recordPendingOnboardingBusiness } from "@/lib/onboarding-analytics";
 
 type Business = { businessId: string; name: string; active: boolean };
 
@@ -43,7 +44,7 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
       }),
     }),
     onSuccess: async (created: { businessId: string }) => {
-      telemetry.track("web.onboarding.business_name_submitted", { businessId: created.businessId });
+      recordPendingOnboardingBusiness(created.businessId);
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
       router.push("/onboarding/website");
     },

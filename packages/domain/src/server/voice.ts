@@ -1,4 +1,4 @@
-import { and, count, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, count, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
 import { appointments, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { billableVoiceSeconds, isTerminalTwilioCallStatus } from "@lobbystack/shared";
@@ -227,7 +227,7 @@ export async function upsertTranscript(
 export async function completeCall(
   context: DomainContext,
   input: { businessId: string; callId: string; status: string; endedAt: string; disposition?: string; providerDurationSeconds?: number; mediaDurationSeconds?: number },
-): Promise<void> {
+): Promise<boolean> {
   const completion = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [call] = await tx.update(calls).set({
       status: input.status,
@@ -236,7 +236,7 @@ export async function completeCall(
       ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}),
       revision: sql`${calls.revision} + 1`,
       updatedAt: new Date(),
-    }).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId))).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, provider: calls.provider, startedAt: calls.startedAt, billingExcluded: calls.billingExcluded, disposition: calls.disposition });
+    }).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId), isNull(calls.endedAt))).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, provider: calls.provider, startedAt: calls.startedAt, billingExcluded: calls.billingExcluded, disposition: calls.disposition });
     if (!call) {
       return null;
     }
@@ -281,7 +281,7 @@ export async function completeCall(
       billingExcluded: call.billingExcluded,
     };
   });
-  if (!completion) return;
+  if (!completion) return false;
   await recordVoiceLifecycleEvent(context, {
     name: "voice.call_completed",
     businessId: input.businessId,
@@ -296,6 +296,7 @@ export async function completeCall(
       ...(completion.billingExcluded ? { billingExcluded: true } : {}),
     },
   });
+  return true;
 }
 
 export async function setTransferState(

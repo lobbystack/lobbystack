@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2Icon, Check, ChevronsUpDown, Plus } from "lucide-react";
 import { SidebarTeamSkeleton } from "@/components/loading-skeletons";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
-import { useTelemetry } from "@/components/product-analytics";
+import { recordPendingWorkspaceSwitch } from "@/lib/workspace-analytics";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { SidebarMenu, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
@@ -22,7 +22,6 @@ export function WorkspaceSwitcher() {
   const queryClient = useQueryClient();
   const { i18n, t } = useTranslation("nav");
   const { isMobile } = useSidebar();
-  const telemetry = useTelemetry();
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: getBusinesses });
   const [switching, setSwitching] = useState(false);
   const active = businesses.data?.businesses.find((business) => business.active) ?? businesses.data?.businesses[0];
@@ -48,7 +47,7 @@ export function WorkspaceSwitcher() {
         body: JSON.stringify({ businessId }),
       });
       if (!response.ok) throw new Error("Workspace switch failed.");
-      telemetry.track("web.workspace.business_switched", { businessId, previousBusinessId: active?.businessId ?? businessId });
+      recordPendingWorkspaceSwitch(businessId, active?.businessId ?? businessId);
       queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== "businesses" });
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
       router.refresh();
@@ -102,4 +101,3 @@ export function WorkspaceSwitcher() {
     </SidebarMenu>
   );
 }
-

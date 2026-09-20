@@ -39,7 +39,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.requireInternalService.mockResolvedValue(undefined);
   mocks.execute.mockResolvedValue({ rows: [{ business_id: "biz_1" }] });
-  mocks.completeCall.mockResolvedValue(undefined);
+  mocks.completeCall.mockResolvedValue(true);
   mocks.recordProspectDemoCallOutcome.mockResolvedValue(undefined);
 });
 
@@ -65,6 +65,16 @@ describe("prospect demo web call completion telemetry", () => {
 
     expect(response.status).toBe(404);
     expect(mocks.completeCall).not.toHaveBeenCalled();
+    expect(mocks.recordProspectDemoCallOutcome).not.toHaveBeenCalled();
+  });
+
+  it("does not record another outcome when the call was already completed", async () => {
+    mocks.completeCall.mockResolvedValueOnce(false);
+
+    const response = await postComplete({ callId, status: "completed", endedAt: "2027-01-01T10:00:42Z" });
+
+    expect(response.status).toBe(200);
+    expect(mocks.completeCall).toHaveBeenCalledOnce();
     expect(mocks.recordProspectDemoCallOutcome).not.toHaveBeenCalled();
   });
 });

@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const businessId = resolved.rows[0]?.business_id;
     if (!businessId) return NextResponse.json({ error: "Call not found." }, { status: 404 });
     const domain = createDomainContext();
-    await completeCall(domain, {
+    const completed = await completeCall(domain, {
       callId: body.callId,
       status: body.status,
       endedAt: body.endedAt,
@@ -25,13 +25,15 @@ export async function POST(request: Request) {
       ...(body.providerDurationSeconds !== undefined ? { providerDurationSeconds: body.providerDurationSeconds } : {}),
       ...(body.mediaDurationSeconds !== undefined ? { mediaDurationSeconds: body.mediaDurationSeconds } : {}),
     });
-    await recordProspectDemoCallOutcome(domain, {
-      businessId,
-      callId: body.callId,
-      status: body.status,
-      ...(body.disposition !== undefined ? { disposition: body.disposition } : {}),
-      ...(body.providerDurationSeconds !== undefined ? { providerDurationSeconds: body.providerDurationSeconds } : {}),
-    });
+    if (completed) {
+      await recordProspectDemoCallOutcome(domain, {
+        businessId,
+        callId: body.callId,
+        status: body.status,
+        ...(body.disposition !== undefined ? { disposition: body.disposition } : {}),
+        ...(body.providerDurationSeconds !== undefined ? { providerDurationSeconds: body.providerDurationSeconds } : {}),
+      });
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     return asApiResponse(error);

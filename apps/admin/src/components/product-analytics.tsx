@@ -8,6 +8,8 @@ import { createBrowserTelemetry, type BrowserTelemetry } from "@lobbystack/telem
 import type { DeploymentMode, TelemetryEventName } from "@lobbystack/telemetry";
 import { selectActiveBusiness } from "@/lib/active-business";
 import { consumeAuthSuccess } from "@/lib/auth-success-analytics";
+import { consumePendingOnboardingBusiness } from "@/lib/onboarding-analytics";
+import { consumePendingWorkspaceSwitch } from "@/lib/workspace-analytics";
 import { requestJson } from "@/lib/request-json";
 
 const SENSITIVE_ROUTE_PATTERN = /^\/(login|signup|forgot-password|reset-password|confirm-email-change|accept-invite|claim-demo|demo|demos|embed)(\/|$)/;
@@ -70,7 +72,11 @@ export function ProductAnalytics({ children }: { children?: ReactNode }) {
       if (sensitive) telemetry.reset();
       telemetry.setOptOut(true);
       telemetry.setSensitiveRoute(sensitive);
-      if (!sensitive && businessId && preference.data?.telemetryEnabled === false) consumeAuthSuccess();
+      if (!sensitive && businessId && preference.data?.telemetryEnabled === false) {
+        consumeAuthSuccess();
+        consumePendingOnboardingBusiness(businessId);
+        consumePendingWorkspaceSwitch(businessId);
+      }
       return;
     }
     // Granting consent captures the current page as a pageview; later
@@ -87,6 +93,21 @@ export function ProductAnalytics({ children }: { children?: ReactNode }) {
     posthog.group("business", businessGroup);
     const authEvent = consumeAuthSuccess();
     if (authEvent) telemetry.track(authEvent, { businessId, pathname: pathname ?? "/", $groups: { business: businessGroup } });
+    const pendingOnboardingBusinessId = consumePendingOnboardingBusiness(businessId);
+    if (pendingOnboardingBusinessId === businessId) {
+      telemetry.track("web.onboarding.business_name_submitted", {
+        businessId,
+        $groups: { business: businessGroup },
+      });
+    }
+    const pendingWorkspaceSwitch = consumePendingWorkspaceSwitch(businessId);
+    if (pendingWorkspaceSwitch) {
+      telemetry.track("web.workspace.business_switched", {
+        businessId,
+        previousBusinessId: pendingWorkspaceSwitch.previousBusinessId,
+        $groups: { business: businessGroup },
+      });
+    }
   }, [allowed, businessId, pathname, preference.data?.telemetryEnabled, sensitive, userId]);
   useEffect(() => {
     if (!allowed || !pathname || !businessId) return;

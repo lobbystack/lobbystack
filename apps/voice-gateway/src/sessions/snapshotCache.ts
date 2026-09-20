@@ -1,6 +1,8 @@
 import type { BusinessContextSnapshot } from "@lobbystack/shared";
 
-export function createSnapshotCache(options: { ttlMs?: number; maxEntries?: number; now?: () => number; onEvict?: (input: { businessId: string; reason: "expired" | "capacity" }) => void } = {}): {
+export type SnapshotCacheOptions = { ttlMs?: number; maxEntries?: number; now?: () => number; onEvict?: (input: { businessId: string; reason: "expired" | "capacity" }) => void };
+
+export function createSnapshotCache(options: SnapshotCacheOptions = {}): {
   get: (businessId: string) => BusinessContextSnapshot | null;
   set: (businessId: string, snapshot: BusinessContextSnapshot) => void;
 } {
