@@ -43,6 +43,7 @@ export type TraceContextCarrier = Record<string, string>;
 
 let sdk: NodeSDK | undefined;
 let loggerProvider: LoggerProvider | undefined;
+let activeLogRecordProcessors: LogRecordProcessor[] = [];
 let initialized = false;
 let stopRuntimeMetrics: (() => void) | undefined;
 const storageHttpOrigins = new Set<string>();
@@ -204,6 +205,7 @@ export async function initializeTelemetry(
             }),
           )),
       ];
+  activeLogRecordProcessors = logRecordProcessors;
 
   if (endpoint && options.enabled !== false) {
     const exporterOptions = {
@@ -270,6 +272,7 @@ export async function shutdownTelemetry(): Promise<void> {
   const activeLoggerProvider = loggerProvider;
   sdk = undefined;
   loggerProvider = undefined;
+  activeLogRecordProcessors = [];
   initialized = false;
 
   const shutdown = Promise.allSettled([
@@ -281,7 +284,7 @@ export async function shutdownTelemetry(): Promise<void> {
 }
 
 export async function forceFlushTelemetryLogs(): Promise<void> {
-  await loggerProvider?.forceFlush();
+  await Promise.all(activeLogRecordProcessors.map((processor) => processor.forceFlush()));
 }
 
 export function getTracer(name = "lobbystack"): ReturnType<typeof trace.getTracer> {
