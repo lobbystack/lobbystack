@@ -13,7 +13,7 @@ import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { resourceFromAttributes } from "@opentelemetry/resources";
-import { BatchLogRecordProcessor, LoggerProvider } from "@opentelemetry/sdk-logs";
+import { BatchLogRecordProcessor, LoggerProvider, type LogRecordProcessor } from "@opentelemetry/sdk-logs";
 import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { BatchSpanProcessor, type ReadableSpan, type SpanProcessor } from "@opentelemetry/sdk-trace-base";
@@ -43,6 +43,7 @@ export type TraceContextCarrier = Record<string, string>;
 
 let sdk: NodeSDK | undefined;
 let loggerProvider: LoggerProvider | undefined;
+let activeLogRecordProcessors: LogRecordProcessor[] = [];
 let initialized = false;
 let stopRuntimeMetrics: (() => void) | undefined;
 const storageHttpOrigins = new Set<string>();
@@ -184,6 +185,27 @@ export async function initializeTelemetry(
           : []),
         ...(options.additionalLogDestinations ?? []),
       ];
+  const logRecordProcessors: LogRecordProcessor[] = logDestinations.length === 0
+    ? []
+    : [
+        {
+          onEmit(logRecord) {
+            const sanitized = redactLogExportAttributes(logRecord.attributes);
+            for (const [key, value] of Object.entries(sanitized)) logRecord.setAttribute(key, value);
+            logRecord.setBody(redactExportLogValue(logRecord.body));
+          },
+          forceFlush: () => Promise.resolve(),
+          shutdown: () => Promise.resolve(),
+        },
+        ...logDestinations.map(({ endpoint: logEndpoint, headers: logHeaders }) =>
+          new BatchLogRecordProcessor(
+            new OTLPLogExporter({
+              url: logEndpoint,
+              ...(logHeaders ? { headers: logHeaders } : {}),
+            }),
+          )),
+      ];
+  activeLogRecordProcessors = logRecordProcessors;
 
   if (endpoint && options.enabled !== false) {
     const exporterOptions = {
@@ -198,6 +220,7 @@ export async function initializeTelemetry(
     sdk = new NodeSDK({
       resource,
       spanProcessors: [new RedactingSpanProcessor(), new BatchSpanProcessor(traceExporter)],
+      logRecordProcessors,
       instrumentations: [new HttpInstrumentation({ ignoreOutgoingRequestHook: isStorageHttpRequest }), new UndiciInstrumentation({ ignoreRequestHook: isStorageHttpRequest })],
       metricReader: new PeriodicExportingMetricReader({
         exporter: metricsExporter,
@@ -233,27 +256,10 @@ export async function initializeTelemetry(
     }
   }
 
-  if (logDestinations.length > 0) {
+  if (!endpoint && logRecordProcessors.length > 0) {
     loggerProvider = new LoggerProvider({
       resource,
-      processors: [
-        {
-          onEmit(logRecord) {
-            const sanitized = redactLogExportAttributes(logRecord.attributes);
-            for (const [key, value] of Object.entries(sanitized)) logRecord.setAttribute(key, value);
-            logRecord.setBody(redactExportLogValue(logRecord.body));
-          },
-          forceFlush: () => Promise.resolve(),
-          shutdown: () => Promise.resolve(),
-        },
-        ...logDestinations.map(({ endpoint: logEndpoint, headers: logHeaders }) =>
-          new BatchLogRecordProcessor(
-            new OTLPLogExporter({
-              url: logEndpoint,
-              ...(logHeaders ? { headers: logHeaders } : {}),
-            }),
-          )),
-      ],
+      processors: logRecordProcessors,
     });
     logs.setGlobalLoggerProvider(loggerProvider);
   }
@@ -266,6 +272,7 @@ export async function shutdownTelemetry(): Promise<void> {
   const activeLoggerProvider = loggerProvider;
   sdk = undefined;
   loggerProvider = undefined;
+  activeLogRecordProcessors = [];
   initialized = false;
 
   const shutdown = Promise.allSettled([
@@ -273,10 +280,11 @@ export async function shutdownTelemetry(): Promise<void> {
     ...(activeLoggerProvider ? [activeLoggerProvider.shutdown()] : []),
   ]);
   await Promise.race([shutdown, new Promise<void>((resolve) => setTimeout(resolve, 5_000))]);
+  logs.disable();
 }
 
 export async function forceFlushTelemetryLogs(): Promise<void> {
-  await loggerProvider?.forceFlush();
+  await Promise.all(activeLogRecordProcessors.map((processor) => processor.forceFlush()));
 }
 
 export function getTracer(name = "lobbystack"): ReturnType<typeof trace.getTracer> {

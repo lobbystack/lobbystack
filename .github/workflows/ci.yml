@@ -23,6 +23,7 @@ jobs:
       - run: pnpm telemetry:coverage
       - run: pnpm build
       - run: pnpm test
+      - run: pnpm replacement:telemetry
       - name: Validate Compose config
         run: docker compose --env-file .env.example -f docker-compose.yml config --quiet
 

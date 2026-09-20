@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createServer } from "node:http";
 
-import { initializeTelemetry, isStorageHttpRequest, parseOtlpHeaders, redactExportAttributes, redactExportLogValue, redactOtelExceptionText, registerStorageHttpEndpoint, shutdownTelemetry } from "./node";
+import { forceFlushTelemetryLogs, getLogger, initializeTelemetry, isStorageHttpRequest, parseOtlpHeaders, redactExportAttributes, redactExportLogValue, redactOtelExceptionText, registerStorageHttpEndpoint, shutdownTelemetry } from "./node";
 
 afterEach(async () => {
   vi.unstubAllEnvs();
@@ -77,5 +78,34 @@ describe("OTel exception redaction", () => {
     vi.stubEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "");
     await expect(initializeTelemetry({ serviceName: "lobbystack-test" })).resolves.toBeUndefined();
     await expect(shutdownTelemetry()).resolves.toBeUndefined();
+  });
+
+  it("explicitly flushes logs owned by NodeSDK", async () => {
+    const paths: string[] = [];
+    const receiver = createServer(async (request, response) => {
+      for await (const _chunk of request) { /* Drain the request before responding. */ }
+      paths.push(request.url ?? "");
+      response.writeHead(200, { "content-type": "application/x-protobuf" });
+      response.end();
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      receiver.once("error", reject);
+      receiver.listen(0, "127.0.0.1", resolve);
+    });
+    const address = receiver.address();
+    if (!address || typeof address === "string") throw new Error("OTLP test receiver did not start.");
+
+    try {
+      await initializeTelemetry({ endpoint: `http://127.0.0.1:${address.port}`, serviceName: "lobbystack-test" });
+      getLogger("telemetry-test").emit({ body: "flush before exit" });
+
+      await forceFlushTelemetryLogs();
+
+      expect(paths).toContain("/v1/logs");
+    } finally {
+      await shutdownTelemetry();
+      await new Promise<void>((resolve, reject) => receiver.close((error) => error ? reject(error) : resolve()));
+    }
   });
 });
