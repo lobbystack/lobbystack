@@ -49,14 +49,14 @@ const articleBody = plainTextFromMarkdown(entry.body)
 const dateLocale = locale === "fr" ? "fr-FR" : "en-US"
 const pageCopy = {
   en: {
-    titleSuffix: "LobbyStack Blog",
+    titleSuffix: "LobbyStack",
     updated: "Updated",
     by: "By",
     related: "Related reading",
     product: "Continue with LobbyStack",
   },
   fr: {
-    titleSuffix: "Blog LobbyStack",
+    titleSuffix: "LobbyStack",
     updated: "Mis à jour",
     by: "Par",
     related: "À lire aussi",
@@ -158,7 +158,7 @@ const productResources = slug.includes("open-source")
   seo={{
     title:
       entry.data.seoTitle ??
-      `${entry.data.title} - ${pageCopy[locale].titleSuffix}`,
+      `${entry.data.title} | ${pageCopy[locale].titleSuffix}`,
     description: entry.data.description,
     canonicalPath,
     locale,

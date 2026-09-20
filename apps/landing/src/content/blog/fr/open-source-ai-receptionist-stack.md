@@ -1,6 +1,6 @@
 ---
-title: "Réceptionniste IA open source"
-description: "LobbyStack est une pile open source pour réceptionniste IA : appels, réservation, transcriptions, tableaux de bord, facturation, auto-hébergement et déploiements clients."
+title: "Pile open source pour réceptionniste IA"
+description: "Une pile open source pour réceptionniste IA : appels, réservation, transcriptions, tableaux de bord, facturation et auto-hébergement."
 pubDate: 2026-06-18T10:00:00-04:00
 author: "Équipe LobbyStack"
 category: "Guides"

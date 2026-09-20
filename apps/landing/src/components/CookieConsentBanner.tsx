@@ -11,6 +11,7 @@ import {
 import {
   COOKIE_PREFERENCES_TRIGGER_SELECTOR,
   clearPostHogClientStorage,
+  hasDeclinedAnalytics,
   readCookieConsent,
   writeCookieConsent,
 } from "@/lib/cookie-consent"
@@ -57,8 +58,12 @@ export function CookieConsentBanner({
       ? undefined
       : window.setTimeout(() => setIsVisible(true), 0)
 
-    if (storedConsent?.analytics) {
-      void initializePostHog()
+    // Loading the module is what starts PostHog, in whichever mode the stored
+    // consent implies: anonymous and cookieless while the banner is unanswered,
+    // full tracking once accepted. An undecided visitor is only counted if the
+    // import actually happens, so this cannot be gated on acceptance.
+    if (!hasDeclinedAnalytics()) {
+      void startPostHog()
     }
 
     const handlePreferencesClick = (event: MouseEvent) => {
@@ -130,6 +135,11 @@ export function CookieConsentBanner({
       </Item>
     </aside>
   )
+}
+
+async function startPostHog() {
+  await import("@/lib/posthog")
+  postHogModuleLoaded = true
 }
 
 async function initializePostHog() {

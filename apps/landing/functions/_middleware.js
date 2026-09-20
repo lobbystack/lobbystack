@@ -2,6 +2,7 @@ const MARKDOWN_TOKEN_COUNT = "120"
 const CONTENT_SIGNAL = "ai-train=yes, search=yes, ai-input=yes"
 const CANONICAL_HOST = "lobbystack.com"
 const WWW_HOST = "www.lobbystack.com"
+const PAGES_HOST = "lobbystack-landing.pages.dev"
 const DEFAULT_LOCALE = "en"
 const TRANSLATED_PATHS = new Set([
   "/",
@@ -61,7 +62,8 @@ const TRANSLATED_PATHS = new Set([
   "/search/",
 ])
 
-const isWwwHost = (url) => url.hostname === WWW_HOST
+const isPublicAliasHost = (url) =>
+  url.hostname === WWW_HOST || url.hostname === PAGES_HOST
 
 const normalizePath = (pathname) => {
   if (pathname === "") return "/"
@@ -125,10 +127,20 @@ const shouldRedirectToFrench = (request, url) => {
   )
 }
 
+// Send alias hosts straight to the trailing-slash form so www and pages.dev
+// visitors do not pay a second redirect. Files keep their exact path.
+const canonicalPathname = (pathname) => {
+  if (pathname === "" || pathname === "/") return "/"
+  if (pathname.endsWith("/")) return pathname
+  const lastSegment = pathname.slice(pathname.lastIndexOf("/") + 1)
+  return lastSegment.includes(".") ? pathname : `${pathname}/`
+}
+
 const redirectToCanonicalHost = (url) => {
   const redirectUrl = new URL(url)
   redirectUrl.hostname = CANONICAL_HOST
   redirectUrl.protocol = "https:"
+  redirectUrl.pathname = canonicalPathname(redirectUrl.pathname)
 
   return new Response(null, {
     status: 301,
@@ -182,7 +194,7 @@ export async function onRequest(context) {
   const url = new URL(context.request.url)
   const homepageMarkdownPath = getHomepageMarkdownPath(url.pathname)
 
-  if (isWwwHost(url)) {
+  if (isPublicAliasHost(url)) {
     return redirectToCanonicalHost(url)
   }
 

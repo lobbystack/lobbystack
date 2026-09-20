@@ -93,7 +93,6 @@ Choisissez LobbyStack si vous voulez 150 minutes pour 30 $, un dépassement à 0
 - [Forfaits et prix d'ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing)
 - [Reception by ElevenLabs](https://elevenlabs.io/reception)
 - [Fonctions de la réceptionniste Reception](https://elevenlabs.io/docs/reception-ai/receptionist/overview)
-- [Annonce d'ElevenLabs](https://elevenlabs.io/blog/reception)
 - [Prix de LobbyStack](/fr/pricing/)
 - [Réceptionniste IA open source](/fr/solutions/open-source-ai-receptionist/)
 - [Dépôt GitHub de LobbyStack](https://github.com/lobbystack/lobbystack)

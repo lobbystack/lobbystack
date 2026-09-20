@@ -11,7 +11,7 @@ import { initializeTelemetry, shutdownTelemetry } from "@lobbystack/telemetry/no
 import { createDatabaseClient, databaseHealthCheck } from "./client";
 import {
   MIGRATION_JOURNAL_TABLE,
-  RAW_MIGRATIONS,
+  LEGACY_BASELINE_MIGRATIONS,
   ROLE_MIGRATION,
   SCHEMA_MIGRATIONS,
 } from "./migrations/raw-migrations";
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
           // has the full schema. Record the known history as applied instead of
           // replaying DDL against live tables.
           await baselineExistingMigrations(migrator, applied);
-          console.log(`Baselined ${RAW_MIGRATIONS.length} previously-applied migrations into ${MIGRATION_JOURNAL_TABLE}.`);
+          console.log(`Baselined ${LEGACY_BASELINE_MIGRATIONS.length} previously-applied migrations into ${MIGRATION_JOURNAL_TABLE}.`);
         }
         await applyRawMigration(migrator, ROLE_MIGRATION, applied);
         await migrate(migrator.db, { migrationsFolder: "./migrations/generated" });
@@ -145,6 +145,7 @@ async function main(): Promise<void> {
             ,('lobbystack_finance_export', 'calls', 'SELECT')
             ,('lobbystack_finance_export', 'appointments', 'SELECT')
             ,('lobbystack_finance_export', 'unit_economics_events', 'SELECT')
+            ,('lobbystack_finance_export', 'billing_transactions', 'SELECT')
           ) as expected(role_name, table_name, privilege_type)
           where not has_table_privilege(expected.role_name, 'public.' || expected.table_name, expected.privilege_type)
         `);
@@ -234,7 +235,7 @@ async function baselineExistingMigrations(
   client: ReturnType<typeof createDatabaseClient>,
   applied: Map<string, string>,
 ): Promise<void> {
-  for (const fileName of RAW_MIGRATIONS) {
+  for (const fileName of LEGACY_BASELINE_MIGRATIONS) {
     const contents = await readFile(resolve("migrations", fileName), "utf8");
     const checksum = createHash("sha256").update(contents).digest("hex");
     await client.db.execute(sql`

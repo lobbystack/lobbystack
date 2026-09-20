@@ -64,10 +64,7 @@ export const markdownAlternatePath = (pathname: string) => {
 
   if (alternates[basePath]) return `${localePrefix}${alternates[basePath]}`
   const seoLandingPage = seoLandingPageByPath(basePath)
-  if (
-    seoLandingPage?.group === "company" ||
-    seoLandingPage?.group === "solution"
-  )
+  if (seoLandingPage?.group === "company")
     return `${localePrefix}${basePath.slice(0, -1)}.md`
   if (basePath.startsWith("/blog/"))
     return `${localePrefix}${basePath.slice(0, -1)}.md`

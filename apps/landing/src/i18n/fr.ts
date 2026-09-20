@@ -65,7 +65,7 @@ export const fr = {
     "/blog/": {
       title: "Blog et mises à jour produit LobbyStack",
       description:
-        "Lisez les mises à jour produit et les guides pratiques sur les réceptionnistes IA, la réponse téléphonique, la prise de rendez‑vous et l’automatisation des appels.",
+        "Mises à jour produit et guides pratiques sur les réceptionnistes IA, la réponse téléphonique, la prise de rendez‑vous et l’automatisation des appels.",
     },
     "/changelog/": {
       title: "Journal LobbyStack du réceptionniste IA",

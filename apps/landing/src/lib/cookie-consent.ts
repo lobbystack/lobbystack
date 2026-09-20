@@ -89,6 +89,11 @@ export function hasAnalyticsConsent(storage = getBrowserStorage()) {
   return readCookieConsent(storage)?.analytics === true
 }
 
+/** True only for an explicit refusal. An unanswered banner is not a refusal. */
+export function hasDeclinedAnalytics(storage = getBrowserStorage()) {
+  return readCookieConsent(storage)?.analytics === false
+}
+
 export function onCookieConsentChanged(
   handler: (consent: CookieConsent | null) => void
 ) {

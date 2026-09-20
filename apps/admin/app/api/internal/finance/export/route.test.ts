@@ -77,6 +77,22 @@ describe("finance export", () => {
     expect(query).toContain("%_provider");
   });
 
+  it("exports legacy business identifiers for provider attribution", async () => {
+    process.env.FINANCE_EXPORT_ENABLED = "true";
+    process.env.FINANCE_EXPORT_TOKEN = "finance-only-token";
+    mocks.execute.mockResolvedValueOnce({ rows: [] });
+    const response = await GET(
+      new Request(
+        "http://localhost/api/internal/finance/export?resource=businesses",
+        { headers: { authorization: "Bearer finance-only-token" } },
+      ),
+    );
+    expect(response.status).toBe(200);
+    expect(mocks.execute.mock.calls[0]?.[0]).toContain(
+      'legacy_convex_id as "legacyConvexId"',
+    );
+  });
+
   it("exports service periods that overlap the requested window", async () => {
     process.env.FINANCE_EXPORT_ENABLED = "true";
     process.env.FINANCE_EXPORT_TOKEN = "finance-only-token";
@@ -88,6 +104,51 @@ describe("finance export", () => {
     const query = mocks.execute.mock.calls[0]?.[0] as string;
     expect(query).toContain("current_period_end is null or current_period_end >= '2026-09-01'::date");
     expect(query).toContain("current_period_start < ('2026-09-30'::date + interval '1 day')");
+  });
+
+  it("exports durable transaction-to-business attribution keys", async () => {
+    process.env.FINANCE_EXPORT_ENABLED = "true";
+    process.env.FINANCE_EXPORT_TOKEN = "finance-only-token";
+    mocks.execute.mockResolvedValueOnce({
+      rows: [
+        {
+          id: "transaction-id",
+          businessId: "business-id",
+          kind: "order",
+          sourceId: "polar-order-id",
+          orderId: "polar-order-id",
+          subscriptionId: null,
+          polarCustomerId: "polar-customer-id",
+          occurredAt: new Date("2026-09-12T00:00:00.000Z"),
+          updatedAt: "2026-09-12T00:00:01.000000Z",
+        },
+      ],
+    });
+    const response = await GET(
+      new Request(
+        "http://localhost/api/internal/finance/export?resource=transactions&from=2026-09-01&to=2026-09-30",
+        { headers: { authorization: "Bearer finance-only-token" } },
+      ),
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      version: "v1",
+      resource: "transactions",
+      data: [
+        expect.objectContaining({
+          businessId: "business-id",
+          orderId: "polar-order-id",
+          polarCustomerId: "polar-customer-id",
+          subscriptionId: null,
+        }),
+      ],
+    });
+    const query = mocks.execute.mock.calls[0]?.[0] as string;
+    expect(query).toContain("from billing_transactions");
+    expect(query).toContain("occurred_at >= '2026-09-01'::date");
+    expect(query).toContain("occurred_at < ('2026-09-30'::date + interval '1 day')");
+    expect(query).toContain("order by updated_at, id");
+    expect(query).not.toContain("amount_cents");
   });
 
   it("serializes updatedAt at microsecond precision for strict cursors", async () => {

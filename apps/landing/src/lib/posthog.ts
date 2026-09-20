@@ -2,7 +2,7 @@ import posthog from "posthog-js"
 
 import {
   clearPostHogClientStorage,
-  hasAnalyticsConsent,
+  readCookieConsent,
 } from "@/lib/cookie-consent"
 
 const DEFAULT_POSTHOG_HOST = "https://ts.lobbystack.com"
@@ -17,6 +17,74 @@ const canCapture =
   typeof window !== "undefined" && isEnabled && Boolean(projectKey)
 let isInitialized = false
 let isSignupCtaListenerAttached = false
+
+export type ConsentState = "granted" | "declined" | "undecided"
+
+/** Nothing stored yet means the visitor has not answered the banner. */
+export function readConsentState(): ConsentState {
+  const consent = readCookieConsent()
+
+  if (!consent) return "undecided"
+  return consent.analytics ? "granted" : "declined"
+}
+
+/**
+ * Before the visitor answers the banner we keep everything in page memory, so
+ * nothing is written to their device and no person profile is created. Session
+ * recording and autocapture stay off: counting a visit is the only purpose.
+ */
+const anonymousConfig = {
+  autocapture: false,
+  capture_pageview: true,
+  capture_pageleave: "if_capture_pageview",
+  disable_session_recording: true,
+  person_profiles: "identified_only",
+  persistence: "memory",
+} as const
+
+/** Everything the visitor agreed to once they accept. */
+const consentedConfig = {
+  autocapture: true,
+  capture_pageview: true,
+  capture_pageleave: "if_capture_pageview",
+  cross_subdomain_cookie: true,
+  disable_session_recording: false,
+  persistence: "localStorage+cookie",
+  session_recording: {
+    // Inputs and passwords are masked by the SDK defaults. Text is not, so mask
+    // the values rendered back from them, such as the calculator results.
+    maskTextSelector: ".ph-mask",
+  },
+} as const
+
+const attachSignupCtaListener = () => {
+  if (isSignupCtaListenerAttached) return
+  isSignupCtaListenerAttached = true
+
+  window.document.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) return
+
+    const signupCta = event.target.closest(SIGNUP_CTA_SELECTOR)
+
+    if (!(signupCta instanceof HTMLElement)) return
+
+    captureLandingSignupCtaClick(getSignupCtaProperties(signupCta))
+  })
+}
+
+const start = (consented: boolean) => {
+  if (isInitialized) return
+
+  posthog.init(projectKey!, {
+    api_host: apiHost,
+    ui_host: uiHost,
+    defaults: "2026-05-30",
+    ...(consented ? consentedConfig : anonymousConfig),
+  })
+
+  isInitialized = true
+  attachSignupCtaListener()
+}
 
 type LandingSignupCtaClickProperties = {
   action?: string
@@ -39,80 +107,55 @@ const getSignupCtaProperties = (
   section: element.dataset.phCaptureAttributeSection || "unknown",
 })
 
+/** Called when the visitor accepts. Upgrades an anonymous session in place. */
 export function initializePostHog() {
-  if (!canCapture || !projectKey || !hasAnalyticsConsent()) {
-    return false
-  }
+  if (!canCapture || !projectKey) return false
 
-  if (isInitialized) {
-    const posthogWithOptIn = posthog as typeof posthog & {
-      has_opted_out_capturing?: () => boolean
-      opt_in_capturing?: (options?: { captureEventName?: false }) => void
-    }
-
-    if (posthogWithOptIn.has_opted_out_capturing?.()) {
-      posthogWithOptIn.opt_in_capturing?.({ captureEventName: false })
-    }
-
+  if (!isInitialized) {
+    start(true)
     return true
   }
 
-  posthog.init(projectKey, {
-    api_host: apiHost,
-    ui_host: uiHost,
-    defaults: "2026-05-30",
-    autocapture: true,
-    capture_pageview: true,
-    capture_pageleave: "if_capture_pageview",
-    cross_subdomain_cookie: true,
-    disable_session_recording: false,
-    persistence: "localStorage+cookie",
-    session_recording: {
-      // Inputs and passwords are masked by the SDK defaults. Text is not, so mask
-      // the values rendered back from them, such as the calculator results.
-      maskTextSelector: ".ph-mask",
-    },
-  })
-
-  isInitialized = true
-
-  if (!isSignupCtaListenerAttached) {
-    isSignupCtaListenerAttached = true
-    window.document.addEventListener("click", (event) => {
-      if (!(event.target instanceof Element)) {
-        return
-      }
-
-      const signupCta = event.target.closest(SIGNUP_CTA_SELECTOR)
-
-      if (!(signupCta instanceof HTMLElement)) {
-        return
-      }
-
-      captureLandingSignupCtaClick(getSignupCtaProperties(signupCta))
-    })
+  const client = posthog as typeof posthog & {
+    has_opted_out_capturing?: () => boolean
+    opt_in_capturing?: (options?: { captureEventName?: false }) => void
+    startSessionRecording?: () => void
   }
+
+  if (client.has_opted_out_capturing?.()) {
+    client.opt_in_capturing?.({ captureEventName: false })
+  }
+
+  // Documented path for moving off memory persistence without reinitializing.
+  // Autocapture only binds at init, so it starts on the next page load.
+  posthog.set_config({ ...consentedConfig })
+  client.startSessionRecording?.()
 
   return true
 }
 
+/** Called when the visitor declines. An explicit no stops collection entirely. */
 export function disablePostHog() {
   if (canCapture && isInitialized) {
-    const posthogWithOptOut = posthog as typeof posthog & {
+    const client = posthog as typeof posthog & {
       opt_out_capturing?: () => void
       stopSessionRecording?: () => void
     }
 
-    posthogWithOptOut.stopSessionRecording?.()
+    client.stopSessionRecording?.()
     posthog.reset()
-    posthogWithOptOut.opt_out_capturing?.()
+    client.opt_out_capturing?.()
   }
 
   clearPostHogClientStorage()
 }
 
-if (canCapture && hasAnalyticsConsent()) {
-  initializePostHog()
+if (canCapture) {
+  const consent = readConsentState()
+
+  if (consent !== "declined") {
+    start(consent === "granted")
+  }
 }
 
 export function captureLandingSignupCtaClick({
@@ -122,9 +165,7 @@ export function captureLandingSignupCtaClick({
   plan,
   section,
 }: LandingSignupCtaClickProperties) {
-  if (!canCapture || !initializePostHog()) {
-    return
-  }
+  if (!canCapture || !isInitialized) return
 
   posthog.capture("landing.signup_cta_clicked", {
     action,
