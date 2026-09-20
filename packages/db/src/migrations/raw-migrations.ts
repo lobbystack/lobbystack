@@ -61,6 +61,18 @@ export const SCHEMA_MIGRATIONS = [
   "0051_knowledge_content_hash_index.sql",
   "0052_calendar_sync_freshness.sql",
   "0053_legacy_email_verified_backfill.sql",
+  "0054_finance_billing_transactions.sql",
 ] as const;
 
 export const RAW_MIGRATIONS = [ROLE_MIGRATION, ...SCHEMA_MIGRATIONS] as const;
+
+// The migration journal was introduced after 0052. Databases that predate the
+// journal may baseline only that fixed history; later migrations must execute.
+// Never extend this list when adding a migration.
+export const LEGACY_BASELINE_MIGRATIONS = [
+  ROLE_MIGRATION,
+  ...SCHEMA_MIGRATIONS.slice(
+    0,
+    SCHEMA_MIGRATIONS.indexOf("0053_legacy_email_verified_backfill.sql"),
+  ),
+] as const;

@@ -7,7 +7,7 @@ import { getFinanceExportDatabase } from "@/lib/api-helpers";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const RESOURCES = ["usage", "businesses", "service-periods", "metrics"] as const;
+const RESOURCES = ["usage", "businesses", "service-periods", "transactions", "metrics"] as const;
 type Resource = (typeof RESOURCES)[number];
 type Cursor = { updatedAt: string; id: string };
 
@@ -75,12 +75,16 @@ export async function GET(request: Request) {
     return envelope(resource, rows, size);
   }
   if (resource === "businesses") {
-    const rows = (await db.execute<Record<string, unknown>>(`select id, name as "tenantName", status, deployment_mode as "deploymentMode", created_at as "createdAt", ${exportUpdatedAt("updated_at")} as "updatedAt" from businesses where true ${cursorFilter(cursor, "updated_at", "id::text")} order by updated_at, id limit ${size + 1}`)).rows;
+    const rows = (await db.execute<Record<string, unknown>>(`select id, legacy_convex_id as "legacyConvexId", name as "tenantName", status, deployment_mode as "deploymentMode", created_at as "createdAt", ${exportUpdatedAt("updated_at")} as "updatedAt" from businesses where true ${cursorFilter(cursor, "updated_at", "id::text")} order by updated_at, id limit ${size + 1}`)).rows;
     return envelope(resource, rows, size);
   }
   if (resource === "service-periods") {
     const servicePeriodRange = `${from ? `and (current_period_end is null or current_period_end >= '${from}'::date)` : ""} ${to ? `and current_period_start < ('${to}'::date + interval '1 day')` : ""}`;
     const rows = (await db.execute<Record<string, unknown>>(`select id, business_id as "businessId", source, customer_id as "customerId", subscription_id as "subscriptionId", plan, billing_interval as "billingInterval", subscription_state as "subscriptionState", current_period_start as "currentPeriodStart", current_period_end as "currentPeriodEnd", ${exportUpdatedAt("updated_at")} as "updatedAt" from billing_accounts where true ${servicePeriodRange} ${cursorFilter(cursor, "updated_at", "id::text")} order by updated_at, id limit ${size + 1}`)).rows;
+    return envelope(resource, rows, size);
+  }
+  if (resource === "transactions") {
+    const rows = (await db.execute<Record<string, unknown>>(`select id, business_id as "businessId", kind, source_id as "sourceId", order_id as "orderId", subscription_id as "subscriptionId", polar_customer_id as "polarCustomerId", occurred_at as "occurredAt", ${exportUpdatedAt("updated_at")} as "updatedAt" from billing_transactions where true ${range(from, to, "occurred_at")} ${cursorFilter(cursor, "updated_at", "id::text")} order by updated_at, id limit ${size + 1}`)).rows;
     return envelope(resource, rows, size);
   }
 
