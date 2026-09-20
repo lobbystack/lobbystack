@@ -78,6 +78,26 @@ it("persists an explicit query locale instead of an older stored choice", () => 
   expect(document.cookie).toContain("lobbystack.locale=fr");
 });
 
+it("keeps a stored locale when the localized path uses a different locale", async () => {
+  mocks.pathname = "/en/signup";
+  window.localStorage.setItem("lobbystack.locale", "fr");
+  render(<QueryClientProvider client={new QueryClient()}><LocaleProvider initialLocale="en" initialLocaleSource="path"><Controls /></LocaleProvider></QueryClientProvider>);
+
+  await waitFor(() => expect(mocks.changeLanguage).toHaveBeenCalledWith("fr"));
+  expect(window.localStorage.getItem("lobbystack.locale")).toBe("fr");
+  expect(document.cookie).toContain("lobbystack.locale=fr");
+});
+
+it("keeps an explicit query choice after its canonical path redirect", () => {
+  mocks.pathname = "/fr/login";
+  window.localStorage.setItem("lobbystack.locale", "en");
+  document.cookie = "lobbystack.locale=fr; path=/";
+  render(<QueryClientProvider client={new QueryClient()}><LocaleProvider initialLocale="fr" initialLocaleSource="path"><Controls /></LocaleProvider></QueryClientProvider>);
+
+  expect(window.localStorage.getItem("lobbystack.locale")).toBe("fr");
+  expect(document.cookie).toContain("lobbystack.locale=fr");
+});
+
 it("uses internal routing when changing locale on a public page", async () => {
   mocks.pathname = "/en/login";
   window.history.replaceState(null, "", "/en/login?lng=en&returnTo=%2Fen%2Fclaim-demo#form");

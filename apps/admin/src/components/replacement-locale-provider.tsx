@@ -15,7 +15,7 @@ import {
   type SupportedLocale,
 } from "@/lib/locale";
 import { isPublicRoutePath, localizePublicPath } from "@/lib/locale-path";
-import type { LocaleSource } from "@/lib/locale-request";
+import { localeFromCookieHeader, type LocaleSource } from "@/lib/locale-request";
 import { readPublicAuthSession } from "@/lib/public-auth-session";
 
 type LocaleContextValue = {
@@ -56,6 +56,7 @@ export function LocaleProvider({
   const preferenceRevision = useRef(0);
   const userChangedLocale = useRef(false);
   const [storedLocale] = useState(() => readStoredLocale());
+  const [storedCookieLocale] = useState(() => localeFromCookieHeader(typeof document === "undefined" ? null : document.cookie));
 
   useEffect(() => {
     const handleLanguageChange = (language: string) => setLocaleState(resolveLocale(language));
@@ -74,9 +75,15 @@ export function LocaleProvider({
    * server could not see unless an explicit ?lng= outranks it.
    */
   useEffect(() => {
-    if (initialLocaleSource === "query" || initialLocaleSource === "path") {
+    if (initialLocaleSource === "query") {
       writeStoredLocale(initialLocale);
       writeStoredLocaleCookie(initialLocale);
+      return;
+    }
+    // A canonical redirect removes ?lng= before this page renders, but the
+    // redirect has already persisted that explicit choice in the locale cookie.
+    if (initialLocaleSource === "path" && storedCookieLocale === initialLocale && storedLocale !== initialLocale) {
+      writeStoredLocale(initialLocale);
       return;
     }
     if (storedLocale) {
@@ -86,10 +93,13 @@ export function LocaleProvider({
       }
       return;
     }
-    if (initialLocaleSource === "cookie") {
+    if (initialLocaleSource === "path") {
+      writeStoredLocale(initialLocale);
+      writeStoredLocaleCookie(initialLocale);
+    } else if (initialLocaleSource === "cookie") {
       writeStoredLocaleCookie(initialLocale);
     }
-  }, [i18n, initialLocale, initialLocaleSource, storedLocale]);
+  }, [i18n, initialLocale, initialLocaleSource, storedCookieLocale, storedLocale]);
 
   const accountLocale = useQuery({
     queryKey: ["account", "locale-preference", publicPage],
