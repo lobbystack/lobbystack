@@ -16,6 +16,7 @@ export * from "./email";
 export * from "./knowledge";
 export * from "./notifications";
 export * from "./onboarding";
+export * from "./outbox";
 export * from "./phoneVerification";
 export * from "./phoneNumbers";
 export * from "./privacy";

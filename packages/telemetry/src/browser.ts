@@ -1,5 +1,5 @@
-import type { TelemetryEventName, TelemetryProperties } from "./index.js";
-import { redactTelemetryProperties } from "./index.js";
+import type { DeploymentMode, TelemetryEventName, TelemetryProperties } from "./index.js";
+import { redactTelemetryProperties, validateTelemetryEvent } from "./index.js";
 
 export type BrowserAnalyticsClient = {
   capture: (event: string, properties?: Record<string, unknown>) => void;
@@ -23,6 +23,7 @@ export type BrowserTelemetry = {
 export type BrowserTelemetryState = {
   optedOut?: boolean;
   sensitiveRoute?: boolean;
+  deploymentMode?: DeploymentMode;
 };
 
 export function createBrowserTelemetry(
@@ -31,6 +32,7 @@ export function createBrowserTelemetry(
 ): BrowserTelemetry {
   let optedOut = state.optedOut ?? false;
   let sensitiveRoute = state.sensitiveRoute ?? false;
+  const deploymentMode = state.deploymentMode ?? "development";
 
   function startSessionRecording() {
     if (!client || optedOut || sensitiveRoute) {
@@ -44,7 +46,14 @@ export function createBrowserTelemetry(
       if (!client || optedOut || sensitiveRoute) {
         return;
       }
-      client.capture(event, redactTelemetryProperties(properties) as Record<string, unknown>);
+      const prepared = redactTelemetryProperties({ ...properties, deploymentMode });
+      const validation = validateTelemetryEvent({ name: event, deploymentMode, properties: prepared });
+      if (!validation.ok) {
+        const message = `Invalid telemetry event ${event}: missing ${validation.missing.join(", ")}`;
+        if (deploymentMode !== "cloud") throw new Error(message);
+        console.error("telemetry.validation_failed", { event, missing: validation.missing });
+      }
+      client.capture(event, prepared as Record<string, unknown>);
     },
     identify(distinctId, properties = {}) {
       if (!client || optedOut || sensitiveRoute) {

@@ -56,18 +56,19 @@ describe("browser telemetry consent and recording state", () => {
     const client = createClient();
     const telemetry = createBrowserTelemetry(client, { optedOut: false, sensitiveRoute: true });
 
-    telemetry.track("web.auth.login_succeeded", { businessId: "business" });
+    telemetry.track("web.auth.login_succeeded", { businessId: "business", pathname: "/" });
     expect(client.capture).not.toHaveBeenCalled();
 
     telemetry.identify("user:operator");
     expect(client.identify).not.toHaveBeenCalled();
 
     telemetry.setSensitiveRoute(false);
-    telemetry.track("web.auth.login_succeeded", { businessId: "business" });
+    telemetry.track("web.auth.login_succeeded", { businessId: "business", pathname: "/" });
     expect(client.capture).toHaveBeenCalledTimes(1);
+    expect(client.capture).toHaveBeenCalledWith("web.auth.login_succeeded", expect.objectContaining({ pathname: "/" }));
 
     telemetry.setOptOut(true);
-    telemetry.track("web.auth.login_succeeded", { businessId: "business" });
+    telemetry.track("web.auth.login_succeeded", { businessId: "business", pathname: "/" });
     expect(client.capture).toHaveBeenCalledTimes(1);
   });
 

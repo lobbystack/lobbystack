@@ -1,11 +1,13 @@
 import { and, eq, ne, sql } from "drizzle-orm";
 import { assertCertificationCalendar } from "@lobbystack/shared";
+import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import { appointments, calendarBusyBlocks, calendarConnections, enqueueOutbox, staff, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
 import { queueOperatorAlertInTransaction } from "./notifications";
+import { recordProductEvent } from "./productEvents";
 
 export async function resolveCalendarAccessToken(context: DomainContext, input: {
   businessId: string;
@@ -39,7 +41,7 @@ export async function connectCalendar(
   context: DomainContext,
   input: { userId: string; businessId: string; provider: string; externalAccountId: string; staffId?: string; encryptedAccessToken?: string; encryptedRefreshToken?: string; tokenExpiresAt?: string },
 ): Promise<string> {
-  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+  const connectionId = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const [connection] = await tx.insert(calendarConnections).values({
       businessId: input.businessId,
@@ -76,6 +78,17 @@ export async function connectCalendar(
     });
     return connection.id;
   });
+  try {
+    await recordProductEvent(context, {
+      name: "integration.calendar_connected",
+      businessId: input.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+      properties: { provider: input.provider, scope: input.staffId ? "staff" : "business" },
+    });
+  } catch {
+    // Product telemetry is best-effort and must not fail the calendar connection.
+  }
+  return connectionId;
 }
 
 export async function upsertBusyBlocks(

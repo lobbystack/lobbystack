@@ -39,6 +39,7 @@ export const queueForJobType: Record<JobType, JobQueue> = {
   "prospectDemo.expire": "maintenance",
   "affiliate.generatePayoutRun": "maintenance",
   "telemetry.flush": "maintenance",
+  "outbox.backlogSample": "maintenance",
   "realtime.publish": "default",
 };
 

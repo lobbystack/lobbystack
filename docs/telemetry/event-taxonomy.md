@@ -35,7 +35,6 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 - `web.onboarding.number_claim_completed`
 - `web.knowledge.upload_started`
 - `web.knowledge.upload_completed`
-- `web.knowledge.preview_answer_requested`
 - `web.integration.calendar_connect_started`
 - `web.integration.calendar_connect_completed`
 - `web.integration.calendar_connect_failed`
@@ -50,21 +49,32 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 - `voice.transfer_requested`
 - `voice.transfer_completed`
 - `voice.snapshot_loaded`
-- `voice.tool_invoked`
+- `voice.provider_cost_recorded`
 
 ### SMS events
 
 - `sms.inbound_received`
-- `sms.reply_generated`
 - `sms.delivery_accepted`
 - `sms.delivery_failed`
-- `sms.automation_paused`
+- `conversation.automation_paused`
 
 ### Appointment events
 
 - `appointment.booked`
 - `appointment.booking_failed`
-- `appointment.confirmation_notification_failed`
+- `appointment.rescheduled`
+- `appointment.cancelled`
+- `notification.delivery_failed`
+
+### Prospect demo events
+
+- `prospect_demo.viewed`
+- `prospect_demo.call_started`
+- `prospect_demo.call_completed`
+- `prospect_demo.call_error`
+- `prospect_demo.signup_clicked`
+- `prospect_demo.claim_succeeded`
+- `prospect_demo.claim_failed`
 
 ### Knowledge events
 
@@ -84,11 +94,12 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 
 ### Operations events
 
-The shared telemetry contract retains three `ops.convex.*` names for compatibility with existing PostHog insights. The admin and worker emit these events; no active runtime depends on Convex.
+Outbox health is reported durably from the worker. A tenant-scoped `outbox.backlogSample` job runs every 60 seconds, counts that business's publishable outbox rows, and records `ops.outbox.backlog_sample` with `deploymentMode` and `backlogBucket`. A zero backlog is not emitted, so the event tracks real backlog without idle-workspace noise.
 
-- `ops.convex.heartbeat`
-- `ops.convex.outbox_backlog_sample`
-- `ops.convex.outbox_flush_failed`
+`ops.outbox.flush_failed` remains a registered but undelivered contract. The dispatcher runs as `lobbystack_dispatcher`, which has no write grant on `product_events`, and a global poll failure has no tenant to scope an RLS-safe row to. Until a worker-role consumer exists, dispatcher failures are tracked by OpenTelemetry counters (`lobbystack.outbox.dispatch_failures`, `lobbystack.outbox.dead_lettered`, `lobbystack.outbox.poll_failures`).
+
+- `ops.outbox.backlog_sample`
+- `ops.outbox.flush_failed`
 - `ops.service.health_check`
 - `ops.service.health_check_failed`
 - `ops.voice.heartbeat`
@@ -129,7 +140,7 @@ Add route or target identifiers when relevant:
 - settings saves: `setting`
 - onboarding start events: `countryCode`
 - knowledge uploads: `section`, `contentType`
-- calendar disconnects: `provider`, `staffId`
+- calendar disconnects: `provider`, `scope`; add `staffId` only for staff scope
 - voice follow-up: `callId`, `inboxItemId`
 
 ### Conversation events
@@ -146,6 +157,7 @@ Add message-level context when relevant:
 - `messageId`
 - `provider`
 - `providerStatus`
+- `deliveryContext` for SMS delivery outcomes
 
 ### Voice events
 
@@ -160,6 +172,7 @@ Add when available:
 
 - `conversationId`
 - `channel`
+- `reason` for booking failures
 - `model`
 
 ### Appointment events
@@ -183,6 +196,7 @@ Always include:
 - `businessId`
 - `deploymentMode`
 - `provider`
+- `scope`
 
 Add when staff-scoped:
 
@@ -192,9 +206,11 @@ Add when staff-scoped:
 
 Always include:
 
-- `businessId`
 - `deploymentMode`
 - `workflowName`
+- `scope`
+
+Include `businessId` for business-scoped jobs. Global workflow events require a separate RLS-safe durable path before they can be delivered.
 
 ### Service health events
 

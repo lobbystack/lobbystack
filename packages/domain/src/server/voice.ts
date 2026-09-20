@@ -1,7 +1,8 @@
-import { and, count, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, count, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
 import { appointments, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { billableVoiceSeconds, isTerminalTwilioCallStatus } from "@lobbystack/shared";
+import { getPostHogDistinctIdForBusinessSystem, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
@@ -13,6 +14,62 @@ import { FOLLOW_UP_RETENTION_MS, visibleFollowUpBody, visibleFollowUpTitle } fro
 import { recordCallOutcomeInTransaction, resolveCallOutcome } from "./callOutcome";
 import { buildCallEvents } from "./callEvents";
 import { recordingListState, recordingState, type RecordingState } from "./recordingState";
+import { recordProductEvent } from "./productEvents";
+
+/** Live calls run over either the phone carrier or the browser; only the transport is durable. */
+function voiceChannelForTransport(transport: string): "voice" | "web_voice" {
+  return transport.includes("web") ? "web_voice" : "voice";
+}
+
+/**
+ * Voice lifecycle telemetry is durable audit data, not a control-flow dependency.
+ * Recording happens after the authoritative transaction commits and never fails it.
+ */
+async function recordVoiceLifecycleEvent(
+  context: DomainContext,
+  input: {
+    name: TelemetryEventName;
+    businessId: string;
+    callId?: string;
+    channel?: string;
+    provider?: string;
+    properties?: TelemetryProperties;
+  },
+): Promise<void> {
+  try {
+    await recordProductEvent(context, {
+      name: input.name,
+      businessId: input.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+      actorType: "worker",
+      properties: {
+        ...(input.callId !== undefined ? { callId: input.callId } : {}),
+        ...(input.channel !== undefined ? { channel: input.channel } : {}),
+        ...(input.provider !== undefined ? { provider: input.provider } : {}),
+        ...input.properties,
+      },
+    });
+  } catch {
+    // Product telemetry is best-effort and must not fail the durable voice path.
+  }
+}
+
+/**
+ * Records that the backend served a voice business context snapshot. The live
+ * call does not exist yet, so this event is keyed on the business and the
+ * transport provider inferred by the caller.
+ */
+export async function recordVoiceSnapshotLoaded(
+  context: DomainContext,
+  input: { businessId: string; channel: "voice" | "web_voice"; provider: string },
+): Promise<void> {
+  await recordVoiceLifecycleEvent(context, {
+    name: "voice.snapshot_loaded",
+    businessId: input.businessId,
+    channel: input.channel,
+    provider: input.provider,
+  });
+}
 
 export async function startCall(
   context: DomainContext,
@@ -34,7 +91,7 @@ export async function startCall(
     billable?: boolean;
   },
 ): Promise<{ callId: string; conversationId: string; contactId: string; duplicate: boolean; blocked: boolean; webCallMaxDurationMs?: number }> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+  const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const existing = await tx.select({ id: calls.id, conversationId: calls.conversationId, contactId: calls.contactId, webCallMaxDurationMs: calls.webCallMaxDurationMs }).from(calls).where(and(eq(calls.provider, input.provider), eq(calls.providerCallId, input.providerCallId))).limit(1);
     if (existing[0]?.conversationId && existing[0]?.contactId) {
       const contact = (await tx.select({ operatorBlockedAt: contacts.operatorBlockedAt }).from(contacts).where(and(eq(contacts.id, existing[0].contactId), eq(contacts.businessId, input.businessId))).limit(1))[0];
@@ -112,6 +169,20 @@ export async function startCall(
     });
     return { callId, conversationId, contactId, duplicate: false, blocked, ...(webCallMaxDurationMs !== undefined ? { webCallMaxDurationMs } : {}) };
   });
+  if (!result.duplicate) {
+    await recordVoiceLifecycleEvent(context, {
+      name: "voice.call_started",
+      businessId: input.businessId,
+      callId: result.callId,
+      channel: voiceChannelForTransport(input.transport),
+      provider: input.provider,
+      properties: {
+        ...(result.blocked ? { blocked: true } : {}),
+        ...(input.widgetId !== undefined ? { widgetId: input.widgetId } : {}),
+      },
+    });
+  }
+  return result;
 }
 
 export async function upsertTranscript(
@@ -156,8 +227,8 @@ export async function upsertTranscript(
 export async function completeCall(
   context: DomainContext,
   input: { businessId: string; callId: string; status: string; endedAt: string; disposition?: string; providerDurationSeconds?: number; mediaDurationSeconds?: number },
-): Promise<void> {
-  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+): Promise<boolean> {
+  const completion = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [call] = await tx.update(calls).set({
       status: input.status,
       endedAt: new Date(input.endedAt),
@@ -165,21 +236,22 @@ export async function completeCall(
       ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}),
       revision: sql`${calls.revision} + 1`,
       updatedAt: new Date(),
-    }).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId))).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, startedAt: calls.startedAt, billingExcluded: calls.billingExcluded, disposition: calls.disposition });
+    }).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId), isNull(calls.endedAt))).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, provider: calls.provider, startedAt: calls.startedAt, billingExcluded: calls.billingExcluded, disposition: calls.disposition });
     if (!call) {
-      return;
+      return null;
     }
     // Providers round up to whole seconds, so unrounded time decides the short-call exemption. The
     // gateway's media-session duration is the real talk time; calls.startedAt precedes the stream and
     // includes setup, so it only serves as a fallback.
     const measuredSeconds = input.mediaDurationSeconds ?? Math.max(0, (new Date(input.endedAt).getTime() - call.startedAt.getTime()) / 1_000);
+    let durationSeconds: number | undefined;
     if (call.billingExcluded) {
       // Prospect demos and other explicitly non-billable calls never create usage.
     } else if (call.transport === "web_voice") {
-      const durationSeconds = billableVoiceSeconds(input.providerDurationSeconds ?? measuredSeconds, call.disposition, measuredSeconds);
+      durationSeconds = billableVoiceSeconds(input.providerDurationSeconds ?? measuredSeconds, call.disposition, measuredSeconds);
       await finalizeWebVoiceUsageInTransaction(tx, { businessId: input.businessId, callId: call.id, durationSeconds });
     } else {
-      const durationSeconds = billableVoiceSeconds(input.providerDurationSeconds ?? measuredSeconds, call.disposition, measuredSeconds);
+      durationSeconds = billableVoiceSeconds(input.providerDurationSeconds ?? measuredSeconds, call.disposition, measuredSeconds);
       const usageEventId = await applyNonAiUsageInTransaction(tx, { operation: "correct", businessId: input.businessId, sourceKey: `voice:${call.id}`, usageKind: "voice_seconds", quantity: durationSeconds });
       await enqueueUsageSyncInTransaction(tx, { businessId: input.businessId, usageEventId });
     }
@@ -199,26 +271,71 @@ export async function completeCall(
       dedupeKey: `call:${call.id}:finalize`,
       payload: { callId: call.id },
     });
+    return {
+      callId: call.id,
+      transport: call.transport,
+      provider: call.provider,
+      disposition: call.disposition,
+      durationSeconds,
+      providerDurationSeconds: input.providerDurationSeconds,
+      billingExcluded: call.billingExcluded,
+    };
   });
+  if (!completion) return false;
+  await recordVoiceLifecycleEvent(context, {
+    name: "voice.call_completed",
+    businessId: input.businessId,
+    callId: completion.callId,
+    channel: voiceChannelForTransport(completion.transport),
+    provider: completion.provider,
+    properties: {
+      status: input.status,
+      ...(completion.disposition !== null ? { disposition: completion.disposition } : {}),
+      ...(completion.durationSeconds !== undefined ? { durationSeconds: completion.durationSeconds } : {}),
+      ...(completion.providerDurationSeconds !== undefined ? { providerDurationSeconds: completion.providerDurationSeconds } : {}),
+      ...(completion.billingExcluded ? { billingExcluded: true } : {}),
+    },
+  });
+  return true;
 }
 
 export async function setTransferState(
   context: DomainContext,
   input: { businessId: string; callId: string; transferState: string },
 ): Promise<void> {
-  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+  const change = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    // Compare the durable previous state so repeated no-op writes do not emit duplicate telemetry.
+    const [existing] = await tx.select({ transferState: calls.transferState, provider: calls.provider, transport: calls.transport }).from(calls).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId))).limit(1).for("update");
+    if (!existing) return null;
     const [call] = await tx.update(calls).set({ transferState: input.transferState, revision: sql`${calls.revision} + 1`, updatedAt: new Date() }).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId))).returning({ id: calls.id, revision: calls.revision });
-    if (call) {
-      await enqueueOutbox(tx, {
-        topic: "realtime.publish",
-        businessId: input.businessId,
-        aggregateType: "call",
-        aggregateId: call.id,
-        dedupeKey: `call:${call.id}:transfer:${call.revision}`,
-        payload: { type: "call.updated", entityId: call.id, revision: call.revision },
-      });
-      if (input.transferState === "failed") await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "transferFailed", eventKey: `transferFailed:${call.id}`, subject: "Live call transfer failed", body: "A live call transfer failed. Open the call details to review it." });
-    }
+    if (!call) return null;
+    await enqueueOutbox(tx, {
+      topic: "realtime.publish",
+      businessId: input.businessId,
+      aggregateType: "call",
+      aggregateId: call.id,
+      dedupeKey: `call:${call.id}:transfer:${call.revision}`,
+      payload: { type: "call.updated", entityId: call.id, revision: call.revision },
+    });
+    if (input.transferState === "failed") await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "transferFailed", eventKey: `transferFailed:${call.id}`, subject: "Live call transfer failed", body: "A live call transfer failed. Open the call details to review it." });
+    return { callId: call.id, previousTransferState: existing.transferState, provider: existing.provider, transport: existing.transport, changed: existing.transferState !== input.transferState };
+  });
+  if (!change?.changed) return;
+  await recordVoiceLifecycleEvent(context, {
+    name:
+      input.transferState === "requested"
+        ? "voice.transfer_requested"
+        : input.transferState === "completed"
+          ? "voice.transfer_completed"
+          : "voice.transfer_state_changed",
+    businessId: input.businessId,
+    callId: change.callId,
+    channel: voiceChannelForTransport(change.transport),
+    provider: change.provider,
+    properties: {
+      transferState: input.transferState,
+      ...(change.previousTransferState !== null ? { previousTransferState: change.previousTransferState } : {}),
+    },
   });
 }
 
@@ -247,7 +364,7 @@ export async function recordCallProviderPricing(
   context: DomainContext,
   input: { businessId: string; providerCallId: string; providerUpdatedAt?: string; providerPrice?: number; providerPriceUnit?: string; providerCostUsd?: number },
 ): Promise<boolean> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+  const recorded = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [call] = await tx.update(calls).set({
       ...(input.providerUpdatedAt ? { providerUpdatedAt: new Date(input.providerUpdatedAt) } : {}),
       ...(input.providerPrice !== undefined ? { providerPrice: input.providerPrice } : {}),
@@ -255,12 +372,29 @@ export async function recordCallProviderPricing(
       ...(input.providerCostUsd !== undefined ? { providerCostUsd: input.providerCostUsd } : {}),
       revision: sql`${calls.revision} + 1`,
       updatedAt: new Date(),
-    }).where(and(eq(calls.businessId, input.businessId), eq(calls.providerCallId, input.providerCallId))).returning({ id: calls.id, revision: calls.revision, providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt });
-    if (!call) return false;
+    }).where(and(eq(calls.businessId, input.businessId), eq(calls.providerCallId, input.providerCallId))).returning({ id: calls.id, revision: calls.revision, providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt, provider: calls.provider, transport: calls.transport });
+    if (!call) return null;
     if (input.providerCostUsd !== undefined) await recordUnitEconomicsEventInTransaction(tx, { businessId: input.businessId, eventKey: `voice_provider:${call.id}`, eventKind: "voice_provider", channel: "voice", costUsd: input.providerCostUsd, occurredAt: call.startedAt, ...(call.providerDurationSeconds !== null ? { quantity: call.providerDurationSeconds } : {}), quantityUnit: "second", provider: "twilio", callId: call.id });
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "call", aggregateId: call.id, dedupeKey: `call:${call.id}:pricing:${call.revision}`, payload: { type: "call.updated", entityId: call.id, revision: call.revision } });
-    return true;
+    return { callId: call.id, provider: call.provider, transport: call.transport, providerDurationSeconds: call.providerDurationSeconds };
   });
+  if (!recorded) return false;
+  if (input.providerCostUsd !== undefined) {
+    await recordVoiceLifecycleEvent(context, {
+      name: "voice.provider_cost_recorded",
+      businessId: input.businessId,
+      callId: recorded.callId,
+      channel: voiceChannelForTransport(recorded.transport),
+      provider: recorded.provider,
+      properties: {
+        costUsd: input.providerCostUsd,
+        ...(input.providerPrice !== undefined ? { providerPrice: input.providerPrice } : {}),
+        ...(input.providerPriceUnit !== undefined ? { providerPriceUnit: input.providerPriceUnit } : {}),
+        ...(recorded.providerDurationSeconds !== null ? { providerDurationSeconds: recorded.providerDurationSeconds } : {}),
+      },
+    });
+  }
+  return true;
 }
 
 export async function listCalls(

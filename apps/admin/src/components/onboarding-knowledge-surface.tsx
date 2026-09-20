@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
 import { selectActiveBusiness } from "@/lib/active-business";
+import { useTelemetry } from "@/components/product-analytics";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { FieldError } from "./ui/field";
@@ -25,6 +26,7 @@ async function checksum(file: File): Promise<string> { const digest = await cryp
 export function OnboardingKnowledgeSurface() {
   const { t } = useTranslation("onboarding");
   const router = useRouter();
+  const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<"upload" | "paste">("upload");
@@ -48,7 +50,7 @@ export function OnboardingKnowledgeSurface() {
       const id = crypto.randomUUID();
       if (file.size > 10 * 1024 * 1024) { setUploads((items) => [...items, { id, fileName: file.name, status: "error", errorMessage: t("knowledge.upload.tooLarge") }]); continue; }
       setUploads((items) => [...items, { id, fileName: file.name, status: "uploading" }]);
-      try { await upload.mutateAsync(file); setUploads((items) => items.map((item) => item.id === id ? { ...item, status: "completed" } : item)); await invalidate(); setUploads((items) => items.filter((item) => item.id !== id)); }
+      try { await upload.mutateAsync(file); if (business) telemetry.track("web.onboarding.knowledge_uploaded", { businessId: business.businessId }); setUploads((items) => items.map((item) => item.id === id ? { ...item, status: "completed" } : item)); await invalidate(); setUploads((items) => items.filter((item) => item.id !== id)); }
       catch (cause) { setUploads((items) => items.map((item) => item.id === id ? { ...item, status: "error", errorMessage: cause instanceof Error ? cause.message : t("knowledge.upload.failed") } : item)); }
     }
   }
@@ -59,7 +61,7 @@ export function OnboardingKnowledgeSurface() {
     catch { setError(t("knowledge.continueFailed")); }
   }
 
-  async function skip() { setError(null); try { await stage.mutateAsync(); } catch { setError(t("knowledge.skipFailed")); } }
+  async function skip() { setError(null); try { await stage.mutateAsync(); if (business) telemetry.track("web.onboarding.knowledge_skipped", { businessId: business.businessId }); } catch { setError(t("knowledge.skipFailed")); } }
   function drop(event: DragEvent<HTMLLabelElement>) { event.preventDefault(); setIsDragging(false); void uploadFiles(event.dataTransfer.files); }
 
   return <div className="flex flex-col gap-6"><Tabs onValueChange={(value) => setTab(value as "upload" | "paste")} value={tab}><TabsList className="w-full"><TabsTrigger value="upload">{t("knowledge.tabs.upload")}</TabsTrigger><TabsTrigger value="paste">{t("knowledge.tabs.paste")}</TabsTrigger></TabsList><TabsContent className="mt-4" value="upload"><input accept=".pdf,.docx,.txt,.md,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="sr-only" id="onboarding-knowledge-file" multiple onChange={(event) => { void uploadFiles(event.target.files); if (fileInputRef.current) fileInputRef.current.value = ""; }} ref={fileInputRef} type="file" /><label className={cn("flex w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-card p-10 text-center transition-colors", isDragging ? "border-foreground/60 bg-muted/40" : "border-border hover:border-foreground/40 hover:bg-muted/20")} htmlFor="onboarding-knowledge-file" onDragLeave={(event) => { event.preventDefault(); setIsDragging(false); }} onDragOver={(event) => { event.preventDefault(); setIsDragging(true); }} onDrop={drop}><div className="flex size-12 items-center justify-center rounded-full bg-muted"><Upload aria-hidden="true" className="size-5 text-muted-foreground" /></div><div className="flex flex-col gap-1"><span className="text-base font-medium">{t("knowledge.upload.headline")}</span><span className="text-sm text-muted-foreground">{t("knowledge.upload.formats")}</span></div></label>{stored.length || uploads.length ? <ul className="mt-4 flex flex-col gap-2">{stored.map((document) => <KnowledgeFile key={document.id} error={document.error ?? undefined} fileName={document.title} status={document.status === "processing" || document.status === "queued" ? "uploading" : document.status === "error" ? "error" : "completed"} />)}{uploads.map((entry) => <KnowledgeFile key={entry.id} error={entry.errorMessage} fileName={entry.fileName} onRemove={() => setUploads((items) => items.filter((item) => item.id !== entry.id))} status={entry.status} />)}</ul> : null}</TabsContent><TabsContent className="mt-4" value="paste"><Textarea autoFocus className="min-h-48 rounded-xl" id="onboarding-knowledge-paste" onChange={(event) => setPastedText(event.target.value)} placeholder={t("knowledge.paste.placeholder")} value={pastedText} /><p className="mt-2 text-xs text-muted-foreground">{t("knowledge.paste.hint")}</p></TabsContent></Tabs>{error ? <FieldError>{error}</FieldError> : null}<Button className="h-11 w-full" disabled={!business || working} onClick={() => void continueOnboarding()} type="button">{working ? <><LoaderCircle className="size-4 animate-spin" />{t("knowledge.continuing")}</> : t("knowledge.continue")}</Button><button className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={!business || working} onClick={() => void skip()} type="button">{stage.isPending ? t("knowledge.skipping") : t("knowledge.skip")}</button></div>;

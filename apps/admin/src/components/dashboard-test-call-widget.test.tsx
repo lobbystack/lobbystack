@@ -1,22 +1,30 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DashboardTestCallWidget } from "./dashboard-test-call-widget";
+import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
 const startCall = vi.fn();
 const forceEndCall = vi.fn();
+const voice = vi.hoisted(() => ({ onEvent: null as null | ((eventName: string, properties?: Record<string, unknown>) => void) }));
+const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
+vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
+beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); });
 
 vi.mock("@/components/web-voice/AuraVoiceDemo", () => ({
   AuraVoiceDemo: ({
+    onEvent,
     onRegisterControls,
   }: {
+    onEvent?: (eventName: string, properties?: Record<string, unknown>) => void;
     onRegisterControls?: (controls: {
       forceEndCall: () => Promise<void>;
       startCall: () => Promise<void>;
     }) => void;
   }) => {
+    voice.onEvent = onEvent ?? null;
     onRegisterControls?.({
       forceEndCall,
       startCall,
@@ -78,5 +86,22 @@ describe("DashboardTestCallWidget", () => {
     expect(startCall).toHaveBeenCalledTimes(1);
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape", code: "Escape" });
     await waitFor(() => expect(forceEndCall).toHaveBeenCalledTimes(1));
+  });
+
+  it("forwards web voice telemetry with the active business", () => {
+    render(
+      <DashboardTestCallWidget
+        businessId={"business-1" as never}
+        businessSlug="acme-dental"
+      />,
+    );
+
+    voice.onEvent?.("web.voice.test_call_started", {
+      widgetId: "lobbystack-dashboard-test-call",
+    });
+
+    telemetryRef.current!.expectEvent("web.voice.test_call_started", {
+      businessId: "business-1",
+    });
   });
 });

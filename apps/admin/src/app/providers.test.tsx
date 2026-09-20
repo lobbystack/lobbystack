@@ -28,7 +28,7 @@ vi.mock("@/i18n", () => ({
 vi.mock("@/components/theme-provider", () => ({ ThemeProvider: ({ children }: { children: ReactNode }) => children }));
 vi.mock("@/components/appearance-provider", () => ({ AppearanceProvider: ({ children }: { children: ReactNode }) => children }));
 vi.mock("@/components/replacement-locale-provider", () => ({ LocaleProvider: ({ children }: { children: ReactNode }) => children }));
-vi.mock("@/components/product-analytics", () => ({ ProductAnalytics: () => null }));
+vi.mock("@/components/product-analytics", () => ({ ProductAnalytics: ({ children }: { children?: ReactNode }) => children }));
 vi.mock("@/components/ui/sonner", () => ({ Toaster: () => null }));
 
 import { Providers } from "./providers";

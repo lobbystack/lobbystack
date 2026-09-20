@@ -19,9 +19,11 @@ import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
   getProviderErrorExceptionType,
+  isTelemetryEventName,
   PROVIDER_ERROR_PROVIDERS,
   redactAiTraceProperties,
   redactTelemetryProperties,
+  validateTelemetryEvent,
   classifyProviderError,
   type ExternalProvider,
   type ProviderErrorClassification,
@@ -188,6 +190,22 @@ function capture(
   },
 ): void {
   if (!allowsExternalTelemetry(input.businessId, input.properties)) return;
+  const env = getRuntimeEnv();
+  if (env && isTelemetryEventName(event)) {
+    const validation = validateTelemetryEvent({
+      name: event,
+      deploymentMode: env.DEPLOYMENT_MODE,
+      ...(input.businessId ? { businessId: input.businessId } : {}),
+      properties: input.properties as TelemetryProperties,
+    });
+    if (!validation.ok) {
+      const details = { event, missing: validation.missing, deploymentMode: env.DEPLOYMENT_MODE };
+      if (env.DEPLOYMENT_MODE !== "cloud") {
+        throw new Error(`Invalid telemetry event ${event}: missing ${validation.missing.join(", ")}`);
+      }
+      console.error("telemetry.validation_failed", details);
+    }
+  }
   const activeClient = getClient();
   if (!activeClient) {
     return;
@@ -860,6 +878,7 @@ export function recordOpenAiTurnLatency(
   const nextProperties = {
     provider: "openai",
     latencyMs,
+    generationMs: latencyMs,
     latencyBucket: bucketLatencyMs(latencyMs),
     thresholdMs: SLOW_TURN_THRESHOLD_MS,
     ...properties,
@@ -881,6 +900,48 @@ export function recordOpenAiTurnLatency(
       properties: nextProperties,
     });
   }
+}
+
+export function recordTurnFirstAudio(
+  ttfaMs: number,
+  attributes?: OperationalAttributes,
+): void {
+  captureOperationalEvent({
+    event: "ops.voice.turn_first_audio",
+    properties: {
+      ttfaMs,
+      ttfaBucket: bucketLatencyMs(ttfaMs),
+      ...normalizeOperationalAttributes(attributes),
+    },
+  });
+}
+
+export function recordPlaybackInterrupted(attributes?: OperationalAttributes): void {
+  captureOperationalEvent({
+    event: "ops.voice.playback_interrupted",
+    properties: normalizeOperationalAttributes(attributes),
+  });
+}
+
+export function recordHangupRetriesExhausted(attributes?: OperationalAttributes): void {
+  captureOperationalEvent({
+    event: "ops.voice.hangup_retries_exhausted",
+    properties: normalizeOperationalAttributes(attributes),
+  });
+}
+
+export function recordTranscriptionFailure(attributes?: OperationalAttributes): void {
+  captureOperationalEvent({
+    event: "ops.voice.transcription_failed",
+    properties: normalizeOperationalAttributes(attributes),
+  });
+}
+
+export function recordSnapshotCacheEviction(attributes?: OperationalAttributes): void {
+  captureOperationalEvent({
+    event: "ops.voice.snapshot_cache_evicted",
+    properties: normalizeOperationalAttributes(attributes),
+  });
 }
 
 export function recordToolExecutionLatency(

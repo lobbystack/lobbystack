@@ -70,7 +70,7 @@ export function Providers({ children, initialLocale, initialLocaleSource, initia
         <ThemeProvider>
           <AppearanceProvider>
             <LocaleProvider initialLocale={initialLocale} initialLocaleSource={initialLocaleSource}>
-              <ProductAnalytics />
+              <ProductAnalytics>
               {loadingKey !== null ? (
                 <div aria-busy="true" className="fixed inset-x-0 top-0 z-50 h-1 overflow-hidden bg-primary/15" role="status">
                   <div className="h-full w-1/2 animate-pulse rounded-full bg-primary" />
@@ -87,6 +87,7 @@ export function Providers({ children, initialLocale, initialLocaleSource, initia
               ) : null}
               {children}
               <Toaster richColors />
+              </ProductAnalytics>
             </LocaleProvider>
           </AppearanceProvider>
         </ThemeProvider>

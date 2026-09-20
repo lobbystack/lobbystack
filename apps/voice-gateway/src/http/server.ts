@@ -16,18 +16,26 @@ import { isPrivateNetworkAddress } from "../health/internalRequest";
 import { validateMediaStreamSignature } from "../telephony/twilioRequest";
 import {
   capturePostHogException,
+  recordSnapshotCacheEviction,
   recordTwilioInvalidSignature,
 } from "../observability/posthog";
-import { createSnapshotCache } from "../sessions/snapshotCache";
+import { createSnapshotCache, type SnapshotCacheOptions } from "../sessions/snapshotCache";
 
-export function createServer(): ReturnType<typeof Fastify> {
+export function createServer(options: { snapshotCache?: Omit<SnapshotCacheOptions, "onEvict"> } = {}): ReturnType<typeof Fastify> {
   const env = loadVoiceGatewayEnv(process.env);
   const server = Fastify({
     logger: true,
     trustProxy: env.VOICE_GATEWAY_TRUST_PROXY,
   });
 
-  const cache = createSnapshotCache();
+  const cache = createSnapshotCache({
+    ...options.snapshotCache,
+    onEvict: ({ businessId, reason }) => recordSnapshotCacheEviction({
+      "lobbystack.business_id": businessId,
+      channel: "phone",
+      reason,
+    }),
+  });
   const requestSpans = new WeakMap<object, Span>();
 
   server.decorate("snapshotCache", cache);

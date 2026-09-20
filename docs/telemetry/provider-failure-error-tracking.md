@@ -35,4 +35,4 @@ The code also keeps existing operational events such as `ops.voice.openai_realti
 
 Do not spend Product Analytics alert slots on provider failures when they already emit alertable `$exception` events. Reserve those slots for absence checks, especially missing worker or voice-gateway heartbeats, because Error Tracking cannot notify on an event that never arrived.
 
-Do not add paid or destructive synthetic provider probes by default. Real application traffic detects provider availability. `ops.service.health_check`, the compatibility event `ops.convex.heartbeat`, and `ops.voice.heartbeat` cover application and voice liveness.
+Do not add paid or destructive synthetic provider probes by default. Real application traffic detects provider availability. `ops.service.health_check` and `ops.voice.heartbeat` cover application and voice liveness.

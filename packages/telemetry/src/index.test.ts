@@ -1,15 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import type { TelemetryEvent } from "./index";
 import {
   bucketLatencyMs,
+  bucketOutboxBacklog,
   buildAlertableExceptionTelemetryProperties,
   buildPostHogAiGenerationProperties,
   buildPostHogAiSpanProperties,
   buildPostHogAiTraceProperties,
   buildProviderErrorTelemetryProperties,
   classifyProviderError,
-  createTelemetryFacade,
   getTelemetryRequiredProperties,
   getProviderErrorExceptionType,
   getPostHogBusinessGroupKey,
@@ -22,37 +21,21 @@ import {
   validateTelemetryEvent,
 } from "./index";
 
-class MemorySink {
-  public events: Array<TelemetryEvent> = [];
-
-  async emit(event: TelemetryEvent): Promise<void> {
-    this.events.push(event);
-  }
-}
-
 describe("telemetry redaction", () => {
-  it("redacts bodies, transcripts, tokens, and masks phone numbers", async () => {
-    const sink = new MemorySink();
-    const telemetry = createTelemetryFacade("development", [sink]);
-
-    await telemetry.track({
-      name: "sms.inbound_received",
-      businessId: "biz-1",
-      properties: {
-        customerPhone: "+14165550000",
-        body: "My name is Jane Doe",
-        transcript: "Full transcript",
-        internalToken: "secret",
-        harmless: "ok",
-      },
+  it("redacts bodies, transcripts, tokens, and masks phone numbers", () => {
+    const properties = redactTelemetryProperties({
+      customerPhone: "+14165550000",
+      body: "My name is Jane Doe",
+      transcript: "Full transcript",
+      internalToken: "secret",
+      harmless: "ok",
     });
 
-    expect(sink.events).toHaveLength(1);
-    expect(sink.events[0]?.properties.customerPhone).toBe("***0000");
-    expect(sink.events[0]?.properties.body).toBe("[redacted]");
-    expect(sink.events[0]?.properties.transcript).toBe("[redacted]");
-    expect(sink.events[0]?.properties.internalToken).toBe("[redacted]");
-    expect(sink.events[0]?.properties.harmless).toBe("ok");
+    expect(properties.customerPhone).toBe("***0000");
+    expect(properties.body).toBe("[redacted]");
+    expect(properties.transcript).toBe("[redacted]");
+    expect(properties.internalToken).toBe("[redacted]");
+    expect(properties.harmless).toBe("ok");
   });
 
   it("redacts nested AI trace content while leaving aggregate counters intact", () => {
@@ -472,6 +455,7 @@ describe("telemetry redaction", () => {
       "model",
       "toolName",
       "latencyBucket",
+      "channel",
     ]);
     expect(getTelemetryRequiredProperties("ops.billing.usage_sync_failed")).toEqual([
       "businessId",
@@ -522,5 +506,17 @@ describe("telemetry redaction", () => {
     expect(bucketLatencyMs(1_700)).toBe("1s_to_2_5s");
     expect(bucketLatencyMs(3_600)).toBe("2_5s_to_5s");
     expect(bucketLatencyMs(8_100)).toBe("over_5s");
+  });
+
+  it("buckets outbox backlog into stable aggregate ranges", () => {
+    expect(bucketOutboxBacklog(0)).toBe("0");
+    expect(bucketOutboxBacklog(-1)).toBe("0");
+    expect(bucketOutboxBacklog(1)).toBe("1_9");
+    expect(bucketOutboxBacklog(9)).toBe("1_9");
+    expect(bucketOutboxBacklog(10)).toBe("10_99");
+    expect(bucketOutboxBacklog(99)).toBe("10_99");
+    expect(bucketOutboxBacklog(100)).toBe("100_499");
+    expect(bucketOutboxBacklog(499)).toBe("100_499");
+    expect(bucketOutboxBacklog(500)).toBe("500_plus");
   });
 });

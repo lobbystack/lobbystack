@@ -26,6 +26,10 @@ import {
   recordAiDirectedCallEnd,
   recordOpenAiRealtimeError,
   recordOpenAiTurnLatency,
+  recordPlaybackInterrupted,
+  recordHangupRetriesExhausted,
+  recordTranscriptionFailure,
+  recordTurnFirstAudio,
   recordSnapshotCacheHit,
   recordSnapshotCacheMiss,
   recordTwilioInvalidSignature,
@@ -160,7 +164,7 @@ type OpenAiRealtimeMessage = {
   };
 };
 
-type ActiveVoiceSession = {
+export type ActiveVoiceSession = {
   knowledgeTurn?: { id: string; lookups: number };
   businessId: string | null;
   snapshot: BusinessContextSnapshot | null;
@@ -221,6 +225,62 @@ type ActiveVoiceSession = {
   openingGreetingPlaybackMarkName: string | null;
   openingGreetingTurnDetectionTimer: ReturnType<typeof setTimeout> | null;
 };
+
+export function createActiveVoiceSession(): ActiveVoiceSession {
+  return {
+    businessId: null,
+    snapshot: null,
+    callSid: null,
+    from: null,
+    to: null,
+    gatewaySessionId: crypto.randomUUID(),
+    startedAtIso: new Date().toISOString(),
+    startedAtMs: Date.now(),
+    streamSid: null,
+    callId: null,
+    conversationId: null,
+    openAiReady: false,
+    pendingTransferDestination: null,
+    pendingTransferMarkName: null,
+    pendingImplicitEndCall: null,
+    pendingImplicitHangupMarkName: null,
+    pendingImplicitEndCallSkipNextResponseDone: false,
+    pendingImplicitEndCallStaleResponseId: null,
+    transferExecuted: false,
+    providerRecoveryStarted: false,
+    finalized: false,
+    finalDispositionOverride: null,
+    transcriptSequence: 1,
+    seenTranscriptKeys: new Set(),
+    handledToolCallIds: new Set(),
+    recentCallerTranscripts: [],
+    inboundAudio: [],
+    outboundAudio: [],
+    outboundCursorMs: 0,
+    outboundQueuedCursorMs: 0,
+    activeAssistantResponseId: null,
+    activeAssistantItemId: null,
+    activeAssistantContentIndex: 0,
+    pendingOutboundAudio: [],
+    pendingOutboundStartMs: null,
+    pendingOutboundPlaybackGroups: [],
+    pendingInboundAudio: [],
+    pendingTasks: new Set(),
+    inactivity: createCallInactivityState(),
+    inactivityTimer: null,
+    terminalHangupInProgress: false,
+    aiTraceId: crypto.randomUUID(),
+    assistantResponseRequestedAtMs: null,
+    assistantFirstOutputAtMs: null,
+    transcriptionCommittedAtMsByItemId: new Map(),
+    activeCallCounted: false,
+    openingGreetingActive: true,
+    openingGreetingResponseDone: false,
+    openingGreetingPlaybackDone: false,
+    openingGreetingPlaybackMarkName: null,
+    openingGreetingTurnDetectionTimer: null,
+  };
+}
 
 type RealtimeUsageMetrics = {
   inputTokens?: number;
@@ -1368,6 +1428,14 @@ function interruptAssistantPlaybackForCallerSpeech(
     },
     "Interrupted assistant playback for caller speech",
   );
+  recordPlaybackInterrupted({
+    ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+    ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+    channel: "phone",
+    elapsedMs,
+    hadPendingPlayback,
+    ...(interrupted ? { audioEndMs: interrupted.audioEndMs } : {}),
+  });
 }
 
 function clearPendingTransferPlaybackWait(
@@ -1434,7 +1502,7 @@ function restorePendingImplicitEndCall(
   session.finalDispositionOverride = null;
 }
 
-async function completeImplicitTerminalHangupWithRetry(
+export async function completeImplicitTerminalHangupWithRetry(
   server: FastifyInstance,
   openAiSocket: WebSocket | null,
   twilioSocket: WebSocket,
@@ -1484,6 +1552,13 @@ async function completeImplicitTerminalHangupWithRetry(
       }
 
       if (retryDelayMs === undefined) {
+        recordHangupRetriesExhausted({
+          ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+          ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+          channel: "phone",
+          reason: request.reason,
+          attempts: attemptIndex + 1,
+        });
         if (twilioSocket.readyState === WebSocket.OPEN) {
           server.log.warn(
             {
@@ -2598,7 +2673,7 @@ function getProviderClassificationAttributes(
   };
 }
 
-function handleOpenAiMessage(
+export function handleOpenAiMessage(
   server: FastifyInstance,
   openAiSocket: WebSocket,
   twilioSocket: WebSocket,
@@ -2686,7 +2761,14 @@ function handleOpenAiMessage(
 
   const payload = JSON.parse(rawMessage.toString()) as OpenAiRealtimeMessage;
   const latency = observeVoiceLatency(session, payload.type);
-  if (latency) server.log.info({ ...latency, callId: session.callId, channel: "phone" }, "Voice turn latency");
+  if (latency) {
+    server.log.info({ ...latency, callId: session.callId, channel: "phone" }, "Voice turn latency");
+    recordTurnFirstAudio(Number(latency.speechStopToOutputMs), {
+      ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+      ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+      channel: "phone",
+    });
+  }
 
   if (
     payload.type !== "response.audio.delta" &&
@@ -2903,7 +2985,13 @@ function handleOpenAiMessage(
       return;
     case "conversation.item.input_audio_transcription.failed": {
       const itemId = payload.item_id ?? payload.item?.id;
-      consumeTranscriptionLatencyMs(session.transcriptionCommittedAtMsByItemId, itemId);
+      const transcriptionLatencyMs = consumeTranscriptionLatencyMs(session.transcriptionCommittedAtMsByItemId, itemId);
+      recordTranscriptionFailure({
+        ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+        ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+        channel: "phone",
+        ...(transcriptionLatencyMs !== undefined ? { transcriptionLatencyMs } : {}),
+      });
       server.log.warn(
         {
           itemId: payload.item_id,
@@ -2947,6 +3035,7 @@ function handleOpenAiMessage(
           ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
           "lobbystack.provider": "openai",
           "lobbystack.model": model,
+          channel: "phone",
         });
       }
 
@@ -3386,59 +3475,7 @@ export async function handleMediaStreamConnection(
     },
     "Accepted Media Stream websocket route",
   );
-  const session: ActiveVoiceSession = {
-    businessId: null,
-    snapshot: null,
-    callSid: null,
-    from: null,
-    to: null,
-    gatewaySessionId: crypto.randomUUID(),
-    startedAtIso: new Date().toISOString(),
-    startedAtMs: Date.now(),
-    streamSid: null,
-    callId: null,
-    conversationId: null,
-    openAiReady: false,
-    pendingTransferDestination: null,
-    pendingTransferMarkName: null,
-    pendingImplicitEndCall: null,
-    pendingImplicitHangupMarkName: null,
-    pendingImplicitEndCallSkipNextResponseDone: false,
-    pendingImplicitEndCallStaleResponseId: null,
-    transferExecuted: false,
-    providerRecoveryStarted: false,
-    finalized: false,
-    finalDispositionOverride: null,
-    transcriptSequence: 1,
-    seenTranscriptKeys: new Set(),
-    handledToolCallIds: new Set(),
-    recentCallerTranscripts: [],
-    inboundAudio: [],
-    outboundAudio: [],
-    outboundCursorMs: 0,
-    outboundQueuedCursorMs: 0,
-    activeAssistantResponseId: null,
-    activeAssistantItemId: null,
-    activeAssistantContentIndex: 0,
-    pendingOutboundAudio: [],
-    pendingOutboundStartMs: null,
-    pendingOutboundPlaybackGroups: [],
-    pendingInboundAudio: [],
-    pendingTasks: new Set(),
-    inactivity: createCallInactivityState(),
-    inactivityTimer: null,
-    terminalHangupInProgress: false,
-    aiTraceId: crypto.randomUUID(),
-    assistantResponseRequestedAtMs: null,
-    assistantFirstOutputAtMs: null,
-    transcriptionCommittedAtMsByItemId: new Map(),
-    activeCallCounted: false,
-    openingGreetingActive: true,
-    openingGreetingResponseDone: false,
-    openingGreetingPlaybackDone: false,
-    openingGreetingPlaybackMarkName: null,
-    openingGreetingTurnDetectionTimer: null,
-  };
+  const session = createActiveVoiceSession();
 
   const runtimeConfig = server.runtimeConfig;
   const validationUrls = buildMediaStreamValidationUrls(

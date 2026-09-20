@@ -231,6 +231,7 @@ export async function executeVoiceTool(input: {
   conversationId?: string;
   callerPhone: string;
   channel?: "voice" | "web_voice";
+  contextDurationMs?: number;
   holdBudget?: {
     remainingHoldSeconds: number;
   };
@@ -244,6 +245,10 @@ export async function executeVoiceTool(input: {
       : {}),
     "lobbystack.model": process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime-2.1",
     "lobbystack.tool_name": input.toolName,
+    channel: input.channel === "web_voice" ? "web" : "phone",
+    ...(input.contextDurationMs !== undefined
+      ? { contextDurationMs: input.contextDurationMs }
+      : {}),
   };
 
   try {

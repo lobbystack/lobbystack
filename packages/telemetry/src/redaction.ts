@@ -7,7 +7,7 @@ const partialRedactionKeywords = [
 ];
 
 const safeKeyPatterns = [
-  "cachedtokens", "cachedinputtokens", "charcount", "completiontokens", "costusd", "dimension", "embeddingtokens", "entrycount", "inputcharcount", "inputtokens", "messagelinkkey", "messagecount", "outputtokens", "outputcharcount", "prompttokens", "reasoningtokens", "spanname", "timetofirsttoken", "tokencount", "totaltokens", "traceid", "ttft", "toolname", "providername", "modelname", "exceptiontype", "httpstatuscode", "providererrorcode", "providererrorkind", "providererrorstatus", "sessionid", "workflowname",
+  "cachedtokens", "cachedinputtokens", "charcount", "completiontokens", "contextdurationms", "costusd", "dimension", "embeddingtokens", "entrycount", "inputcharcount", "inputtokens", "messagelinkkey", "messagecount", "outputtokens", "outputcharcount", "pathname", "prompttokens", "reasoningtokens", "spanname", "timetofirsttoken", "tokencount", "totaltokens", "traceid", "ttft", "toolname", "providername", "modelname", "exceptiontype", "httpstatuscode", "providererrorcode", "providererrorkind", "providererrorstatus", "sessionid", "workflowname",
 ];
 
 function normalizeKey(key: string): string {

@@ -32,6 +32,12 @@ export class OutboxDispatcher {
   constructor(private readonly db: Database, private readonly queues: Map<string, ReturnType<typeof createQueue>>) {}
 
   async dispatchOnce(): Promise<number> {
+    // The dispatched failures below intentionally emit only OpenTelemetry
+    // counters, never the durable `ops.outbox.flush_failed` product event.
+    // This dispatcher connects as `lobbystack_dispatcher`, which has no INSERT
+    // grant on `product_events`, and a poll failure has no tenant to associate
+    // with. Writing the event here would require an unsafe grant or a
+    // null-business RLS bypass. See scripts/telemetry-registry-coverage.ts.
     const rows = await claimOutboxBatch(this.db, { dispatcherId: this.dispatcherId, limit: 50 });
     for (const row of rows) {
       const started = performance.now();

@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { OnboardingPlanComparison } from "@/components/onboarding-plan-comparison";
+import { useTelemetry } from "@/components/product-analytics";
 import { cn } from "@/lib/utils";
 
 type Business = { businessId: string; active: boolean };
@@ -33,6 +34,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
 export function OnboardingPlanSurface() {
   const { t } = useTranslation("onboarding");
   const router = useRouter();
+  const telemetry = useTelemetry();
   const searchParams = useSearchParams();
   const [interval, setInterval] = useState<BillingInterval>("annual");
   const [checkoutRequestId, setCheckoutRequestId] = useState<string | null>(null);
@@ -94,8 +96,12 @@ export function OnboardingPlanSurface() {
   function act(plan: Plan) {
     if (!business || pendingPlan) return;
     setCheckoutError(null);
+    telemetry.track("web.onboarding.plan_selected", { businessId: business.businessId, plan });
     if (plan === "free_cloud") selectFree.mutate();
-    else if (plan === "starter" || plan === "pro") startCheckout.mutate(plan);
+    else if (plan === "starter" || plan === "pro") {
+      telemetry.track("web.onboarding.plan_checkout_started", { businessId: business.businessId, plan });
+      startCheckout.mutate(plan);
+    }
     else window.location.assign(`mailto:hello@lobbystack.ai?subject=${encodeURIComponent(t("plan.enterpriseSubject"))}`);
   }
 

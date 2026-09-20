@@ -10,6 +10,7 @@ import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useTelemetry } from "@/components/product-analytics";
 
 type Business = { businessId: string; active: boolean; websiteUrl?: string | null };
 
@@ -22,6 +23,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
 export function OnboardingWebsiteSurface() {
   const { t } = useTranslation("onboarding");
   const router = useRouter();
+  const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const [websiteUrl, setWebsiteUrl] = useState("");
   const edited = useRef(false);
@@ -32,6 +34,7 @@ export function OnboardingWebsiteSurface() {
   const add = useMutation({
     mutationFn: () => requestJson("/api/knowledge", { method: "POST", body: JSON.stringify({ businessId: business!.businessId, title: websiteUrl.trim(), sourceType: "website", sourceUrl: websiteUrl.trim(), onboarding: true }) }),
     onSuccess: async () => {
+      if (business) telemetry.track("web.onboarding.website_submitted", { businessId: business.businessId });
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
       router.push("/onboarding/knowledge");
     },
@@ -41,7 +44,7 @@ export function OnboardingWebsiteSurface() {
       method: "POST",
       body: JSON.stringify({ to: "knowledge" }),
     }),
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["businesses"] }); router.push("/onboarding/knowledge"); },
+    onSuccess: async () => { if (business) telemetry.track("web.onboarding.website_skipped", { businessId: business.businessId }); await queryClient.invalidateQueries({ queryKey: ["businesses"] }); router.push("/onboarding/knowledge"); },
     onError: (cause) => setError(getSafeOnboardingErrorMessage(cause, t, "website.skipFailed")),
   });
 

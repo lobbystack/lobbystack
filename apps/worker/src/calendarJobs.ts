@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { and, asc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { appointments, calendarConnections, contacts, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { CALENDAR_SYNC_HORIZON_MS, markCalendarConnectionSync, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
+import { CALENDAR_SYNC_HORIZON_MS, markCalendarConnectionSync, recordProductEvent, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
+import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { SecretBox, type GoogleCalendarProvider } from "@lobbystack/providers";
 import type { JobResult } from "./handlers";
 
@@ -27,6 +28,7 @@ export async function syncAppointmentCalendar(dependencies: Dependencies, input:
     id: appointments.id, status: appointments.status, startsAt: appointments.startsAt, endsAt: appointments.endsAt,
     externalEventId: appointments.calendarExternalId, serviceName: services.name, contactName: contacts.name,
     connectionId: calendarConnections.id, calendarId: calendarConnections.selectedCalendarId, connectionStatus: calendarConnections.status,
+    provider: calendarConnections.provider,
   }).from(appointments)
     .innerJoin(services, and(eq(services.id, appointments.serviceId), eq(services.businessId, businessId)))
     .leftJoin(contacts, and(eq(contacts.id, appointments.contactId), eq(contacts.businessId, businessId)))
@@ -61,7 +63,20 @@ export async function syncAppointmentCalendar(dependencies: Dependencies, input:
   } catch (error) {
     const message = error instanceof Error ? error.message : "Calendar synchronization failed.";
     await updateAppointmentSyncState(dependencies.domain, { businessId, appointmentId, state: "failed", error: message });
-    if (message !== "Calendar selection changed during synchronization.") await markCalendarConnectionSync(dependencies.domain, { businessId, connectionId: initial.connectionId, error: message });
+    if (message !== "Calendar selection changed during synchronization.") {
+      await markCalendarConnectionSync(dependencies.domain, { businessId, connectionId: initial.connectionId, error: message });
+      try {
+        await recordProductEvent(dependencies.domain, {
+          name: "integration.calendar_sync_failed",
+          businessId,
+          distinctId: getPostHogDistinctIdForBusinessSystem(businessId),
+          actorType: "worker",
+          properties: { appointmentId, provider: initial.provider },
+        });
+      } catch {
+        // Product telemetry is best-effort and must not mask the provider error.
+      }
+    }
     throw error;
   }
 }

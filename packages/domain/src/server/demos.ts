@@ -2,10 +2,13 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 
 import { and, desc, eq, sql } from "drizzle-orm";
 
-import { businessContextSnapshots, businessMemberships, businesses, enqueueOutbox, knowledgeDocuments, prospectDemos, receptionistProfiles, services, staff, staffServiceAssignments, users, websiteIngestionJobs, withBusinessTransaction } from "@lobbystack/db";
+import { businessContextSnapshots, businessMemberships, businesses, calls, enqueueOutbox, knowledgeDocuments, prospectDemos, receptionistProfiles, services, staff, staffServiceAssignments, users, websiteIngestionJobs, withBusinessTransaction } from "@lobbystack/db";
+
+import { type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 
 import type { DomainContext } from "./context";
 import { normalizeWebsiteSourceUrl } from "./knowledgeUrl";
+import { recordProductEvent } from "./productEvents";
 
 export type ProspectDemoPublicState = "preparing" | "active" | "claimed" | "revoked" | "expired" | "invalid";
 
@@ -52,6 +55,175 @@ function cleanPrompts(values: string[] = []): string[] {
 
 function generateToken(name: string): string {
   return `${cleanSlug(name)}-${randomBytes(12).toString("base64url")}`;
+}
+
+/**
+ * Every prospect-demo event shares one stable PostHog person per demo. The demo
+ * id is resolved server-side from the demo token and never returned to the
+ * browser, so banner clicks and call activity coalesce without leaking the id
+ * into the public page.
+ */
+export function getPostHogDistinctIdForProspectDemo(prospectDemoId: string): string {
+  return `prospect_demo:${prospectDemoId}`;
+}
+
+/**
+ * Prospect-demo product telemetry is durable audit data, not a control-flow
+ * dependency. It is recorded after the authoritative operation and never fails
+ * the demo path.
+ */
+async function recordProspectDemoEvent(
+  context: DomainContext,
+  input: {
+    name: TelemetryEventName;
+    businessId: string;
+    prospectDemoId: string;
+    actorType: "system" | "worker";
+    properties?: TelemetryProperties;
+  },
+): Promise<void> {
+  try {
+    await recordProductEvent(context, {
+      name: input.name,
+      businessId: input.businessId,
+      distinctId: getPostHogDistinctIdForProspectDemo(input.prospectDemoId),
+      actorType: input.actorType,
+      properties: {
+        prospectDemoId: input.prospectDemoId,
+        ...input.properties,
+      },
+    });
+  } catch {
+    // Best-effort: prospect-demo telemetry must not break the demo or claim flow.
+  }
+}
+
+export async function recordProspectDemoViewed(
+  context: DomainContext,
+  input: { businessId: string; prospectDemoId: string },
+): Promise<void> {
+  await recordProspectDemoEvent(context, {
+    name: "prospect_demo.viewed",
+    actorType: "system",
+    businessId: input.businessId,
+    prospectDemoId: input.prospectDemoId,
+  });
+}
+
+export async function recordProspectDemoCallStarted(
+  context: DomainContext,
+  input: { businessId: string; prospectDemoId: string; callId: string; channel?: string; provider?: string },
+): Promise<void> {
+  await recordProspectDemoEvent(context, {
+    name: "prospect_demo.call_started",
+    actorType: "worker",
+    businessId: input.businessId,
+    prospectDemoId: input.prospectDemoId,
+    properties: {
+      callId: input.callId,
+      ...(input.channel !== undefined ? { channel: input.channel } : {}),
+      ...(input.provider !== undefined ? { provider: input.provider } : {}),
+    },
+  });
+}
+
+export async function recordProspectDemoCallCompleted(
+  context: DomainContext,
+  input: { businessId: string; prospectDemoId: string; callId: string; status: string; disposition?: string; providerDurationSeconds?: number },
+): Promise<void> {
+  await recordProspectDemoEvent(context, {
+    name: "prospect_demo.call_completed",
+    actorType: "worker",
+    businessId: input.businessId,
+    prospectDemoId: input.prospectDemoId,
+    properties: {
+      callId: input.callId,
+      status: input.status,
+      ...(input.disposition !== undefined ? { disposition: input.disposition } : {}),
+      ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}),
+    },
+  });
+}
+
+export async function recordProspectDemoCallError(
+  context: DomainContext,
+  input: { businessId: string; prospectDemoId: string; callId?: string; reason: string },
+): Promise<void> {
+  await recordProspectDemoEvent(context, {
+    name: "prospect_demo.call_error",
+    actorType: "worker",
+    businessId: input.businessId,
+    prospectDemoId: input.prospectDemoId,
+    properties: {
+      reason: input.reason,
+      ...(input.callId !== undefined ? { callId: input.callId } : {}),
+    },
+  });
+}
+
+async function resolveProspectDemoIdForCall(
+  context: DomainContext,
+  input: { businessId: string; callId: string },
+): Promise<string | undefined> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const [call] = await tx.select({ prospectDemoId: calls.prospectDemoId }).from(calls).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId))).limit(1);
+    return call?.prospectDemoId ?? undefined;
+  });
+}
+
+/**
+ * Records the terminal state of a call once the caller has resolved the call's
+ * business. It is a no-op for non-demo calls, and any lookup or emission failure
+ * stays out of the call-completion response path.
+ */
+export async function recordProspectDemoCallOutcome(
+  context: DomainContext,
+  input: { businessId: string; callId: string; status: string; disposition?: string; providerDurationSeconds?: number },
+): Promise<void> {
+  try {
+    const prospectDemoId = await resolveProspectDemoIdForCall(context, input);
+    if (!prospectDemoId) return;
+    if (input.status === "failed") {
+      await recordProspectDemoCallError(context, { businessId: input.businessId, prospectDemoId, callId: input.callId, reason: "call_failed" });
+      return;
+    }
+    await recordProspectDemoCallCompleted(context, {
+      businessId: input.businessId,
+      prospectDemoId,
+      callId: input.callId,
+      status: input.status,
+      ...(input.disposition !== undefined ? { disposition: input.disposition } : {}),
+      ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}),
+    });
+  } catch {
+    // Best-effort: completion telemetry must not fail the call-completion route.
+  }
+}
+
+export async function recordProspectDemoClaimSucceeded(
+  context: DomainContext,
+  input: { businessId: string; prospectDemoId: string; status: "claimed" | "already_claimed" },
+): Promise<void> {
+  await recordProspectDemoEvent(context, {
+    name: "prospect_demo.claim_succeeded",
+    actorType: "system",
+    businessId: input.businessId,
+    prospectDemoId: input.prospectDemoId,
+    properties: { status: input.status },
+  });
+}
+
+export async function recordProspectDemoClaimFailed(
+  context: DomainContext,
+  input: { businessId: string; prospectDemoId: string; reason: string },
+): Promise<void> {
+  await recordProspectDemoEvent(context, {
+    name: "prospect_demo.claim_failed",
+    actorType: "system",
+    businessId: input.businessId,
+    prospectDemoId: input.prospectDemoId,
+    properties: { reason: input.reason },
+  });
 }
 
 export async function createProspectDemo(
@@ -190,6 +362,8 @@ async function resolveOperatorDemoBusiness(context: DomainContext, input: { oper
 export async function previewProspectDemo(context: DomainContext, token: string): Promise<ProspectDemoPreview> {
   if (!token.trim()) return { state: "invalid" };
   const result = await context.db.execute<{
+    prospect_demo_id: string;
+    business_id: string;
     business_slug: string;
     business_name: string;
     website_url: string;
@@ -197,10 +371,15 @@ export async function previewProspectDemo(context: DomainContext, token: string)
     suggested_prompts: string[];
     status: string;
     expires_at: Date;
-  }>(sql`select business_slug, business_name, website_url, locale, suggested_prompts, status, expires_at from app.resolve_prospect_demo_by_token(${tokenHash(token)})`);
+  }>(sql`select prospect_demo_id, business_id, business_slug, business_name, website_url, locale, suggested_prompts, status, expires_at from app.resolve_prospect_demo_by_token(${tokenHash(token)})`);
   const demo = result.rows[0];
   if (!demo) return { state: "invalid" };
   const state: ProspectDemoPublicState = demo.status === "active" && new Date(demo.expires_at).getTime() <= Date.now() ? "expired" : demo.status as ProspectDemoPublicState;
+  // Only a published demo is an honest "viewed" signal. The demo surfaces poll
+  // this endpoint while a demo is preparing, and polling stops once it is active.
+  if (state === "active" && demo.prospect_demo_id && demo.business_id) {
+    await recordProspectDemoViewed(context, { businessId: demo.business_id, prospectDemoId: demo.prospect_demo_id });
+  }
   return {
     state,
     businessName: demo.business_name,
@@ -216,33 +395,49 @@ export async function claimProspectDemo(
   input: { userId: string; token: string },
 ): Promise<{ businessId: string; status: "claimed" | "already_claimed" }> {
   const hash = tokenHash(input.token);
-  const resolved = await context.db.execute<{ business_id: string }>(sql`select business_id from app.resolve_prospect_demo_by_token(${hash})`);
+  const resolved = await context.db.execute<{ prospect_demo_id: string; business_id: string }>(sql`select prospect_demo_id, business_id from app.resolve_prospect_demo_by_token(${hash})`);
+  const prospectDemoId = resolved.rows[0]?.prospect_demo_id;
   const businessId = resolved.rows[0]?.business_id;
-  if (!businessId) throw new Error("Demo is invalid, expired, or no longer claimable.");
-  return await withBusinessTransaction(context.db, { userId: input.userId, businessId, actorType: "system" }, async (tx) => {
-    const demo = (await tx.select({ id: prospectDemos.id, operatorUserId: prospectDemos.operatorUserId, status: prospectDemos.status, claimedByUserId: prospectDemos.claimedByUserId, expiresAt: prospectDemos.expiresAt })
-      .from(prospectDemos)
-      .where(and(eq(prospectDemos.businessId, businessId), eq(prospectDemos.tokenHash, hash)))
-      .limit(1).for("update"))[0];
-    if (!demo) throw new Error("Demo is invalid, expired, or no longer claimable.");
-    if (demo.status === "claimed") {
-      if (demo.claimedByUserId !== input.userId) throw new Error("This prospect demo has already been claimed.");
+  if (!businessId || !prospectDemoId) throw new Error("Demo is invalid, expired, or no longer claimable.");
+  try {
+    const result = await withBusinessTransaction(context.db, { userId: input.userId, businessId, actorType: "system" }, async (tx) => {
+      const demo = (await tx.select({ id: prospectDemos.id, operatorUserId: prospectDemos.operatorUserId, status: prospectDemos.status, claimedByUserId: prospectDemos.claimedByUserId, expiresAt: prospectDemos.expiresAt })
+        .from(prospectDemos)
+        .where(and(eq(prospectDemos.businessId, businessId), eq(prospectDemos.tokenHash, hash)))
+        .limit(1).for("update"))[0];
+      if (!demo) throw new Error("Demo is invalid, expired, or no longer claimable.");
+      if (demo.status === "claimed") {
+        if (demo.claimedByUserId !== input.userId) throw new Error("This prospect demo has already been claimed.");
+        await tx.update(users).set({ activeBusinessId: businessId, updatedAt: new Date() }).where(eq(users.id, input.userId));
+        return { businessId, status: "already_claimed" as const };
+      }
+      if (demo.status !== "active" || demo.expiresAt.getTime() <= Date.now()) throw new Error("Demo is invalid, expired, or no longer claimable.");
+      const business = (await tx.select({ status: businesses.status }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
+      if (business?.status !== "active") throw new Error("Prospect demo business is unavailable.");
+      await tx.insert(businessMemberships).values({ businessId, userId: input.userId, role: "business_owner", status: "active" }).onConflictDoUpdate({
+        target: [businessMemberships.businessId, businessMemberships.userId],
+        set: { role: "business_owner", status: "active", updatedAt: new Date() },
+      });
+      if (demo.operatorUserId !== input.userId) {
+        await tx.delete(businessMemberships).where(and(eq(businessMemberships.businessId, businessId), eq(businessMemberships.userId, demo.operatorUserId)));
+      }
+      await tx.update(businesses).set({ onboardingStage: "create_business", updatedAt: new Date() }).where(eq(businesses.id, businessId));
+      await tx.update(prospectDemos).set({ status: "claimed", claimedAt: new Date(), claimedByUserId: input.userId, updatedAt: new Date() }).where(eq(prospectDemos.id, demo.id));
       await tx.update(users).set({ activeBusinessId: businessId, updatedAt: new Date() }).where(eq(users.id, input.userId));
-      return { businessId, status: "already_claimed" };
-    }
-    if (demo.status !== "active" || demo.expiresAt.getTime() <= Date.now()) throw new Error("Demo is invalid, expired, or no longer claimable.");
-    const business = (await tx.select({ status: businesses.status }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
-    if (business?.status !== "active") throw new Error("Prospect demo business is unavailable.");
-    await tx.insert(businessMemberships).values({ businessId, userId: input.userId, role: "business_owner", status: "active" }).onConflictDoUpdate({
-      target: [businessMemberships.businessId, businessMemberships.userId],
-      set: { role: "business_owner", status: "active", updatedAt: new Date() },
+      return { businessId, status: "claimed" as const };
     });
-    if (demo.operatorUserId !== input.userId) {
-      await tx.delete(businessMemberships).where(and(eq(businessMemberships.businessId, businessId), eq(businessMemberships.userId, demo.operatorUserId)));
-    }
-    await tx.update(businesses).set({ onboardingStage: "create_business", updatedAt: new Date() }).where(eq(businesses.id, businessId));
-    await tx.update(prospectDemos).set({ status: "claimed", claimedAt: new Date(), claimedByUserId: input.userId, updatedAt: new Date() }).where(eq(prospectDemos.id, demo.id));
-    await tx.update(users).set({ activeBusinessId: businessId, updatedAt: new Date() }).where(eq(users.id, input.userId));
-    return { businessId, status: "claimed" };
-  });
+    await recordProspectDemoClaimSucceeded(context, { businessId, prospectDemoId, status: result.status });
+    return result;
+  } catch (error) {
+    await recordProspectDemoClaimFailed(context, { businessId, prospectDemoId, reason: claimFailureReason(error) });
+    throw error;
+  }
+}
+
+function claimFailureReason(error: unknown): string {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (message.includes("already been claimed")) return "already_claimed";
+  if (message.includes("invalid, expired, or no longer claimable")) return "not_claimable";
+  if (message.includes("unavailable")) return "business_unavailable";
+  return "unknown";
 }

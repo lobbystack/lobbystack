@@ -8,6 +8,7 @@ import { PhoneNumberChooser, type AvailableNumberSummary, type ClaimResult, type
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { requestJson } from "@/lib/request-json";
 import { normalizeOnboardingPhoneCountry, type SupportedOnboardingPhoneCountry } from "@/lib/phone";
+import { useTelemetry } from "@/components/product-analytics";
 import { LoaderCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { Surface } from "./ui/surface";
@@ -25,6 +26,7 @@ function toNumber(offer: NumberOffer, selectionContext: NumberSelectionContext):
 export function OnboardingNumberSurface() {
   const { t } = useTranslation("onboarding");
   const router = useRouter();
+  const telemetry = useTelemetry();
   const [claiming, setClaiming] = useState(false);
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
   const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
@@ -69,7 +71,7 @@ export function OnboardingNumberSurface() {
   if (!phones.data || (!claiming && phones.data.activeClaim) || (primary && !reachedAttribution)) return <Surface className="flex justify-center p-6"><LoaderCircle className="size-5 animate-spin text-muted-foreground" /></Surface>;
   if (primary) return <Surface className="flex flex-col gap-5 p-6 text-center"><div className="flex flex-col gap-2"><p className="text-sm font-medium text-muted-foreground">{t("number.selectedNumberLabel")}</p><p className="text-2xl font-semibold text-foreground">{toNumber({ phoneE164: primary.e164, countryCode: "US", claimToken: "", capabilities: { sms: true, voice: true } }, { mode: "suggested", countryCode: "US" }).display}</p></div><Button onClick={() => router.push("/onboarding/attribution")} type="button">{t("number.continue")}</Button></Surface>;
   return <div className="flex flex-col gap-6">
-    {business ? <PhoneNumberChooser businessId={business.businessId} getInitialNumberSuggestion={getInitialNumberSuggestion} searchAvailableNumbers={searchAvailableNumbers} claimNumber={claimNumber} getErrorMessage={getErrorMessage} onClaimed={() => { setClaiming(false); router.push(business.onboardingStage === "complete" ? "/settings/phone-number" : "/onboarding/attribution"); }} labels={{ countryLabel: t("number.countryLabel"), areaCodeLabel: t("number.areaCodeLabel"), areaCodePlaceholder: t("number.areaCodePlaceholder"), search: t("number.search"), phoneNumberHeader: t("number.tableHeaders.phoneNumber"), select: t("number.select"), loadMore: t("number.loadMore"), empty: t("number.empty"), loadFailed: "number.loadFailed", searchFailed: "number.searchFailed", claimFailed: "number.claimFailed", unavailable: t("number.unavailable") }} /> : null}
+    {business ? <PhoneNumberChooser businessId={business.businessId} getInitialNumberSuggestion={getInitialNumberSuggestion} searchAvailableNumbers={searchAvailableNumbers} claimNumber={claimNumber} getErrorMessage={getErrorMessage} onClaimStarted={(number) => { telemetry.track("web.onboarding.number_claim_started", { businessId: business.businessId, countryCode: number.selectionContext.countryCode, selectionMode: number.selectionContext.mode, numberKind: number.kind }); }} onClaimCompleted={(number) => { telemetry.track("web.onboarding.number_claim_completed", { businessId: business.businessId, countryCode: number.selectionContext.countryCode, selectionMode: number.selectionContext.mode, numberKind: number.kind }); }} onClaimed={() => { setClaiming(false); router.push(business.onboardingStage === "complete" ? "/settings/phone-number" : "/onboarding/attribution"); }} labels={{ countryLabel: t("number.countryLabel"), areaCodeLabel: t("number.areaCodeLabel"), areaCodePlaceholder: t("number.areaCodePlaceholder"), search: t("number.search"), phoneNumberHeader: t("number.tableHeaders.phoneNumber"), select: t("number.select"), loadMore: t("number.loadMore"), empty: t("number.empty"), loadFailed: "number.loadFailed", searchFailed: "number.searchFailed", claimFailed: "number.claimFailed", unavailable: t("number.unavailable") }} /> : null}
     {business ? <button className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={!business || skip.isPending || claiming} onClick={() => skip.mutate()} type="button">{skip.isPending ? t("number.skipping") : t("number.skipLater")}</button> : null}
     {skip.isError ? <FieldError>{t("number.skipFailed")}</FieldError> : null}
   </div>;

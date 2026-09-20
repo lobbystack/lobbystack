@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { vi } from "vitest";
 
 import type { JobEnvelope } from "@lobbystack/contracts";
-import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, expireProspectDemos, generateAffiliatePayoutRun, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markNotificationSent, recordCallProviderPricing, recordSmsProviderPricing, reconcileBillingProviderEvent, releaseNotificationDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep } from "@lobbystack/domain";
+import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, countPublishableOutboxMessages, expireProspectDemos, generateAffiliatePayoutRun, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markNotificationSent, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, releaseNotificationDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, loadOperatorNotificationDelivery, markOperatorNotificationSent, queueDailyOperatorSummaries } from "@lobbystack/domain";
 import { claimPhoneVerificationSend, markPhoneVerificationSendFailed, markPhoneVerificationSent } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning } from "@lobbystack/domain";
@@ -28,6 +28,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     claimOperatorNotificationDelivery: vi.fn(),
     claimPhoneVerificationSend: vi.fn(),
     claimNumberProvisioning: vi.fn(),
+    countPublishableOutboxMessages: vi.fn(),
     loadOperatorNotificationDelivery: vi.fn(),
     markOperatorNotificationSent: vi.fn(),
     queueDailyOperatorSummaries: vi.fn(),
@@ -38,6 +39,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     releaseOperatorNotificationDelivery: vi.fn(),
     markNotificationSent: vi.fn(),
     recordCallProviderPricing: vi.fn(),
+    recordProductEvent: vi.fn(),
     recordSmsProviderPricing: vi.fn(),
     reconcileBillingProviderEvent: vi.fn(),
     releaseNotificationDelivery: vi.fn(),
@@ -360,6 +362,8 @@ describe("worker handlers", () => {
         notificationId,
         businessId,
         channel: "sms",
+        kind: "appointment_confirmation",
+        relatedId: "appointment_1",
         to: "+15555550123",
         from: "+15555550124",
         subject: "Appointment confirmed",
@@ -447,6 +451,8 @@ describe("worker handlers", () => {
         notificationId,
         businessId,
         channel: "sms",
+        kind: "appointment_confirmation",
+        relatedId: "appointment_1",
         to: "+15555550123",
         from: "+15555550124",
         subject: "Appointment confirmed",
@@ -461,5 +467,163 @@ describe("worker handlers", () => {
       twilio: { sendSms },
     })).rejects.toThrow(error);
     expect(releaseNotificationDelivery).toHaveBeenCalledWith({ db: undefined as never }, { businessId, notificationId });
+  });
+
+  it("emits workflow.started for a business-scoped job", async () => {
+    const businessId = randomUUID();
+    const domain = { db: undefined as never };
+    vi.mocked(queueDailyOperatorSummaries).mockResolvedValue({ eligible: 0, queued: 0 });
+
+    await handleJob({ ...notificationJob({}), type: "notification.dailySummary", queue: "maintenance", businessId }, { domain });
+
+    expect(recordProductEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      name: "workflow.started",
+      businessId,
+      properties: { workflowName: "notification.dailySummary", scope: "business" },
+    }));
+    expect(recordProductEvent).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ name: "workflow.failed" }));
+  });
+
+  it("emits workflow.failed and notification.delivery_failed when a notification provider fails", async () => {
+    const businessId = randomUUID();
+    const notificationId = randomUUID();
+    const domain = { db: undefined as never };
+    vi.mocked(claimNotificationDelivery).mockResolvedValue(true);
+    vi.mocked(resolveNotificationDelivery).mockResolvedValue({
+      kind: "ready",
+      delivery: {
+        notificationId,
+        businessId,
+        channel: "sms",
+        kind: "appointment_reminder",
+        relatedId: "appointment_9",
+        to: "+15555550123",
+        from: "+15555550124",
+        subject: "Appointment reminder",
+        body: "Reminder.",
+      },
+    });
+    const error = new Error("provider unavailable");
+    const sendSms = vi.fn().mockRejectedValue(error);
+
+    await expect(handleJob({ ...notificationJob({ notificationId }), businessId }, { domain, twilio: { sendSms } })).rejects.toThrow(error);
+
+    expect(recordProductEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      name: "workflow.started",
+      businessId,
+      properties: { workflowName: "notification.dispatch", scope: "business" },
+    }));
+    expect(recordProductEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      name: "workflow.failed",
+      businessId,
+      properties: { workflowName: "notification.dispatch", scope: "business" },
+    }));
+    expect(recordProductEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      name: "notification.delivery_failed",
+      businessId,
+      properties: { kind: "appointment_reminder", appointmentId: "appointment_9" },
+    }));
+  });
+
+  it("does not emit durable workflow events for global jobs", async () => {
+    const domain = { db: undefined as never };
+    vi.mocked(expireProspectDemos).mockResolvedValue(0);
+
+    await handleJob({
+      jobId: randomUUID(),
+      type: "prospectDemo.expire",
+      queue: "maintenance",
+      businessId: null,
+      payload: {},
+      trace: {},
+      idempotencyKey: "prospect-demo-expiry",
+      scheduled: true,
+    }, { domain });
+
+    expect(recordProductEvent).not.toHaveBeenCalled();
+  });
+
+  it("emits notification.delivery_failed with the operator event kind", async () => {
+    const businessId = randomUUID();
+    const deliveryId = randomUUID();
+    const domain = { db: undefined as never };
+    vi.mocked(claimOperatorNotificationDelivery).mockResolvedValue(true);
+    vi.mocked(loadOperatorNotificationDelivery).mockResolvedValue({ id: deliveryId, businessId, userId: randomUUID(), eventKind: "voiceMessage", eventKey: "voice:1", channel: "email", status: "processing", destination: "operator@example.test", sender: null, subject: "New message", body: "A caller left a message.", providerMessageId: null, scheduledFor: new Date(), sentAt: null, contentExpiresAt: new Date(), lastError: null, createdAt: new Date(), updatedAt: new Date() });
+    const error = new Error("smtp down");
+    const sendTemplate = vi.fn().mockRejectedValue(error);
+
+    await expect(handleJob({ ...notificationJob({ operatorDeliveryId: deliveryId }), businessId }, { domain, email: { sendTemplate } })).rejects.toThrow(error);
+
+    expect(recordProductEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      name: "notification.delivery_failed",
+      businessId,
+      properties: { kind: "voiceMessage" },
+    }));
+  });
+
+  it("emits ops.billing.usage_sync_failed without fabricating a recovery event", async () => {
+    const job = billingJob({ usageEventId: randomUUID() });
+    const domain = { db: undefined as never };
+    vi.mocked(loadBillingUsageEvent).mockResolvedValue({
+      id: String(job.payload.usageEventId),
+      sourceKey: "voice:call_1",
+      isFinal: true,
+      plan: "starter",
+      businessId: job.businessId!,
+      usageKind: "voice_seconds",
+      quantity: 120,
+      billableQuantity: null,
+      billingIntervalAtRecordTime: null,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      syncStatus: "pending",
+      billingKey: "business-key",
+      customerId: "polar-customer-id",
+    });
+    const error = new Error("polar unavailable");
+    const recordUsage = vi.fn().mockRejectedValue(error);
+
+    await expect(handleJob(job, { domain, polar: { recordUsage } })).rejects.toThrow(error);
+
+    expect(recordProductEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      name: "ops.billing.usage_sync_failed",
+      businessId: job.businessId,
+      properties: { provider: "polar" },
+    }));
+    expect(recordProductEvent).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ name: "ops.billing.usage_sync_recovered" }));
+    expect(markBillingUsageSynced).not.toHaveBeenCalled();
+  });
+
+  it("samples a tenant outbox backlog and records a durable product event only when non-empty", async () => {
+    const businessId = randomUUID();
+    const domain = { db: undefined as never };
+    const backlogJob = {
+      jobId: randomUUID(),
+      type: "outbox.backlogSample" as const,
+      queue: "maintenance" as const,
+      businessId,
+      payload: {},
+      trace: {},
+      idempotencyKey: `test:${randomUUID()}`,
+      scheduled: true,
+    };
+
+    vi.mocked(countPublishableOutboxMessages).mockResolvedValue(0);
+    const idle = await handleJob(backlogJob, { domain });
+
+    expect(idle).toEqual({ status: "skipped", entityId: `${businessId}:0` });
+    expect(countPublishableOutboxMessages).toHaveBeenCalledWith(domain, { businessId });
+    expect(recordProductEvent).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ name: "ops.outbox.backlog_sample" }));
+
+    vi.mocked(countPublishableOutboxMessages).mockResolvedValue(4);
+    const backlogged = await handleJob(backlogJob, { domain });
+
+    expect(backlogged).toEqual({ status: "completed", entityId: `${businessId}:1_9` });
+    expect(recordProductEvent).toHaveBeenCalledWith(domain, expect.objectContaining({
+      name: "ops.outbox.backlog_sample",
+      businessId,
+      distinctId: `system:business:${businessId}`,
+      actorType: "worker",
+      properties: { backlogBucket: "1_9" },
+    }));
   });
 });

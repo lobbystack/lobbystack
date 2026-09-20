@@ -1,12 +1,14 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 
 import { calls, contacts, conversations, conversationSessions, enqueueOutbox, messages, transcripts, widgetVisitors, withBusinessTransaction } from "@lobbystack/db";
+import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import { requireBusinessMembership } from "../authz";
 import { resolveCallOutcome } from "./callOutcome";
 import { buildConversationSessionSummary, extractCallerContext } from "./conversationSummary";
 import type { DomainContext } from "./context";
 import { queueOperatorAlertInTransaction, type OperatorNotificationEventKey } from "./notifications";
+import { recordProductEvent } from "./productEvents";
 
 export { buildConversationSessionSummary } from "./conversationSummary";
 
@@ -115,9 +117,9 @@ export async function setAutomationState(
   context: DomainContext,
   input: { userId: string; businessId: string; conversationId: string; state: "ai_active" | "human_handoff" },
 ): Promise<void> {
-  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+  const channel = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
-    await tx.update(conversations).set({ automationState: input.state, automationPausedAt: input.state === "human_handoff" ? new Date() : null, automationPausedByUserId: input.state === "human_handoff" ? input.userId : null, updatedAt: new Date() }).where(and(eq(conversations.id, input.conversationId), eq(conversations.businessId, input.businessId)));
+    const [updated] = await tx.update(conversations).set({ automationState: input.state, automationPausedAt: input.state === "human_handoff" ? new Date() : null, automationPausedByUserId: input.state === "human_handoff" ? input.userId : null, updatedAt: new Date() }).where(and(eq(conversations.id, input.conversationId), eq(conversations.businessId, input.businessId))).returning({ channel: conversations.channel });
     await enqueueOutbox(tx, {
       topic: "realtime.publish",
       businessId: input.businessId,
@@ -126,7 +128,19 @@ export async function setAutomationState(
       dedupeKey: `conversation:${input.conversationId}:automation:${input.state}:${Date.now()}`,
       payload: { type: "conversation.updated", entityId: input.conversationId },
     });
+    return updated?.channel ?? null;
   });
+  if (input.state !== "human_handoff" || !channel) return;
+  try {
+    await recordProductEvent(context, {
+      name: "conversation.automation_paused",
+      businessId: input.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+      properties: { conversationId: input.conversationId, channel },
+    });
+  } catch {
+    // Product telemetry is best-effort and must not fail the automation change.
+  }
 }
 
 export async function registerWidgetVisitor(

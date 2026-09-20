@@ -10,6 +10,8 @@ import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useTelemetry } from "@/components/product-analytics";
+import { recordPendingOnboardingBusiness } from "@/lib/onboarding-analytics";
 
 type Business = { businessId: string; name: string; active: boolean };
 
@@ -26,6 +28,7 @@ function slugify(value: string): string {
 export function OnboardingBusinessSurface({ createNew = false }: { createNew?: boolean }) {
   const { t } = useTranslation("onboarding");
   const router = useRouter();
+  const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +43,8 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
         businessType: "service_company",
       }),
     }),
-    onSuccess: async () => {
+    onSuccess: async (created: { businessId: string }) => {
+      recordPendingOnboardingBusiness(created.businessId);
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
       router.push("/onboarding/website");
     },
@@ -55,6 +59,7 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
       body: JSON.stringify({ name: name.trim() }),
     }),
     onSuccess: async () => {
+      if (existing) telemetry.track("web.onboarding.business_name_submitted", { businessId: existing.businessId });
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
       router.push("/onboarding/website");
     },

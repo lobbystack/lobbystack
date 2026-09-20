@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { createContext, useContext, useEffect, useRef, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import posthog from "posthog-js";
 import { createBrowserTelemetry, type BrowserTelemetry } from "@lobbystack/telemetry/browser";
+import type { DeploymentMode, TelemetryEventName } from "@lobbystack/telemetry";
 import { selectActiveBusiness } from "@/lib/active-business";
 import { consumeAuthSuccess } from "@/lib/auth-success-analytics";
+import { consumePendingOnboardingBusiness } from "@/lib/onboarding-analytics";
+import { consumePendingWorkspaceSwitch } from "@/lib/workspace-analytics";
 import { requestJson } from "@/lib/request-json";
 
 const SENSITIVE_ROUTE_PATTERN = /^\/(login|signup|forgot-password|reset-password|confirm-email-change|accept-invite|claim-demo|demo|demos|embed)(\/|$)/;
@@ -16,7 +19,30 @@ export function isSensitiveAnalyticsRoute(pathname: string): boolean {
   return SENSITIVE_ROUTE_PATTERN.test(pathname);
 }
 
-export function ProductAnalytics() {
+const PAGE_EVENTS: ReadonlyArray<readonly [RegExp, TelemetryEventName]> = [
+  [/^\/$/, "web.page.home_viewed"],
+  [/^\/calls$/, "web.page.calls_viewed"],
+  [/^\/calls\/[^/]+$/, "web.page.call_detail_viewed"],
+  [/^\/messages(?:\/|$)/, "web.page.messages_viewed"],
+  [/^\/contacts(?:\/|$)/, "web.page.contacts_viewed"],
+  [/^\/analytics(?:\/|$)/, "web.page.analytics_viewed"],
+  [/^\/agent(?:\/|$)/, "web.page.agent_viewed"],
+  [/^\/settings(?:\/|$)/, "web.page.settings_viewed"],
+];
+
+export function resolvePageEvent(pathname: string): TelemetryEventName | undefined {
+  return PAGE_EVENTS.find(([pattern]) => pattern.test(pathname))?.[1];
+}
+
+const AnalyticsTelemetryContext = createContext<BrowserTelemetry | null>(null);
+
+export function useTelemetry(): BrowserTelemetry {
+  const telemetry = useContext(AnalyticsTelemetryContext);
+  if (!telemetry) throw new Error("useTelemetry must be used within ProductAnalytics.");
+  return telemetry;
+}
+
+export function ProductAnalytics({ children }: { children?: ReactNode }) {
   const pathname = usePathname();
   const projectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
   const sensitive = isSensitiveAnalyticsRoute(pathname ?? "");
@@ -32,7 +58,10 @@ export function ProductAnalytics() {
   allowedRef.current = allowed;
   // The SDK initializes opted out, so no event is collected before the tenant
   // and route checks below grant consent.
-  if (!telemetryRef.current) telemetryRef.current = createBrowserTelemetry(posthog, { optedOut: true });
+  if (!telemetryRef.current) telemetryRef.current = createBrowserTelemetry(posthog, {
+    optedOut: true,
+    deploymentMode: (process.env.NEXT_PUBLIC_DEPLOYMENT_MODE ?? "development") as DeploymentMode,
+  });
 
   useEffect(() => {
     const telemetry = telemetryRef.current;
@@ -43,7 +72,11 @@ export function ProductAnalytics() {
       if (sensitive) telemetry.reset();
       telemetry.setOptOut(true);
       telemetry.setSensitiveRoute(sensitive);
-      if (!sensitive && businessId && preference.data?.telemetryEnabled === false) consumeAuthSuccess();
+      if (!sensitive && businessId && preference.data?.telemetryEnabled === false) {
+        consumeAuthSuccess();
+        consumePendingOnboardingBusiness(businessId);
+        consumePendingWorkspaceSwitch(businessId);
+      }
       return;
     }
     // Granting consent captures the current page as a pageview; later
@@ -59,8 +92,28 @@ export function ProductAnalytics() {
     posthog.register({ businessId });
     posthog.group("business", businessGroup);
     const authEvent = consumeAuthSuccess();
-    if (authEvent) posthog.capture(authEvent, { businessId, $groups: { business: businessGroup } });
-  }, [allowed, businessId, preference.data?.telemetryEnabled, sensitive, userId]);
+    if (authEvent) telemetry.track(authEvent, { businessId, pathname: pathname ?? "/", $groups: { business: businessGroup } });
+    const pendingOnboardingBusinessId = consumePendingOnboardingBusiness(businessId);
+    if (pendingOnboardingBusinessId === businessId) {
+      telemetry.track("web.onboarding.business_name_submitted", {
+        businessId,
+        $groups: { business: businessGroup },
+      });
+    }
+    const pendingWorkspaceSwitch = consumePendingWorkspaceSwitch(businessId);
+    if (pendingWorkspaceSwitch) {
+      telemetry.track("web.workspace.business_switched", {
+        businessId,
+        previousBusinessId: pendingWorkspaceSwitch.previousBusinessId,
+        $groups: { business: businessGroup },
+      });
+    }
+  }, [allowed, businessId, pathname, preference.data?.telemetryEnabled, sensitive, userId]);
+  useEffect(() => {
+    if (!allowed || !pathname || !businessId) return;
+    const event = resolvePageEvent(pathname);
+    if (event) telemetryRef.current?.track(event, { businessId, pathname });
+  }, [allowed, businessId, pathname]);
   useEffect(() => {
     if (!allowed) return;
     const report = (error: unknown) => {
@@ -74,5 +127,5 @@ export function ProductAnalytics() {
     window.addEventListener("unhandledrejection", onRejection);
     return () => { window.removeEventListener("error", onError); window.removeEventListener("unhandledrejection", onRejection); };
   }, [allowed]);
-  return null;
+  return <AnalyticsTelemetryContext.Provider value={telemetryRef.current}>{children}</AnalyticsTelemetryContext.Provider>;
 }

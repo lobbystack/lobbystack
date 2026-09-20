@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_SERVICE_VERSION: process.env.RAILWAY_DEPLOYMENT_ID ?? process.env.SERVICE_VERSION ?? "development",
     NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT_NAME ?? process.env.NODE_ENV ?? "development",
+    NEXT_PUBLIC_DEPLOYMENT_MODE: process.env.DEPLOYMENT_MODE ?? "development",
   },
   output: "standalone",
   outputFileTracingExcludes: {

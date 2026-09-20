@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 import { SidebarProvider } from "@/components/ui/sidebar";
 const router = vi.hoisted(() => ({ refresh: vi.fn() }));
+const pendingAnalytics = vi.hoisted(() => ({ record: vi.fn() }));
+vi.mock("@/lib/workspace-analytics", () => ({ recordPendingWorkspaceSwitch: pendingAnalytics.record }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en-US" }, t: (key: string) => key }) }));
 const clients: QueryClient[] = [];
@@ -54,5 +56,6 @@ describe("original workspace switcher behavior", () => {
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
     expect(fetchMock).toHaveBeenCalledWith("/api/businesses/switch", expect.objectContaining({ method: "POST", body: JSON.stringify({ businessId: "business-2" }) }));
     expect(client.getQueryData(["contacts", "business-1"])).toBeUndefined();
+    expect(pendingAnalytics.record).toHaveBeenCalledWith("business-2", "business-1");
   });
 });

@@ -4,20 +4,47 @@ import { and, eq, isNull, inArray } from "drizzle-orm";
 
 import { businesses, productEvents, withBusinessTransaction } from "@lobbystack/db";
 
-import { buildPostHogAiGenerationProperties, getPostHogBusinessGroupKey, getPostHogDistinctIdForBusinessSystem, redactTelemetryProperties, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
+import { buildPostHogAiGenerationProperties, getPostHogBusinessGroupKey, getPostHogDistinctIdForBusinessSystem, redactTelemetryProperties, validateTelemetryEvent, type DeploymentMode, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
+import { getMeter } from "@lobbystack/telemetry/node";
 import type { DomainContext } from "./context";
 import { recordUnitEconomicsEvent } from "./unitEconomics";
 
+const validationFailures = getMeter("lobbystack-domain").createCounter("telemetry.validation_failed", { unit: "{failure}" });
+
 export async function recordProductEvent(
   context: DomainContext,
-  input: { name: TelemetryEventName; distinctId: string; businessId?: string; actorType?: "system" | "worker"; properties: TelemetryProperties },
+  input: { name: TelemetryEventName; distinctId: string; businessId?: string; actorType?: "system" | "worker"; deploymentMode?: DeploymentMode; properties: TelemetryProperties },
 ): Promise<string | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: input.actorType ?? "system" }, async (tx) => {
+    let deploymentMode = input.deploymentMode ?? "development";
     if (input.businessId) {
-      const business = (await tx.select({ telemetryEnabled: businesses.telemetryEnabled }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
+      const business = (await tx.select({ telemetryEnabled: businesses.telemetryEnabled, deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
       if (!business?.telemetryEnabled) return null;
+      deploymentMode = business.deploymentMode as DeploymentMode;
     }
-    const [event] = await tx.insert(productEvents).values({ name: input.name, distinctId: input.distinctId, ...(input.businessId ? { businessId: input.businessId } : {}), properties: redactTelemetryProperties(input.properties) }).returning({ id: productEvents.id });
+    const properties = redactTelemetryProperties({
+      ...input.properties,
+      deploymentMode,
+      ...(input.businessId ? {
+        businessId: input.businessId,
+        $groups: { business: getPostHogBusinessGroupKey(input.businessId) },
+      } : {}),
+    });
+    const validation = validateTelemetryEvent({
+      name: input.name,
+      deploymentMode,
+      ...(input.businessId ? { businessId: input.businessId } : {}),
+      properties,
+    });
+    if (!validation.ok) {
+      validationFailures.add(1, { event: input.name, deployment_mode: deploymentMode });
+      const details = { event: input.name, missing: validation.missing, deploymentMode };
+      if (deploymentMode !== "cloud") {
+        throw new Error(`Invalid telemetry event ${input.name}: missing ${validation.missing.join(", ")}`);
+      }
+      console.error("telemetry.validation_failed", details);
+    }
+    const [event] = await tx.insert(productEvents).values({ name: input.name, distinctId: input.distinctId, ...(input.businessId ? { businessId: input.businessId } : {}), properties }).returning({ id: productEvents.id });
     if (!event) {
       throw new Error("Product event could not be recorded.");
     }

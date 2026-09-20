@@ -4,11 +4,14 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OnboardingPhoneVerificationCodeSurface } from "./onboarding-phone-verification-surface";
+import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 const router = vi.hoisted(() => ({ replace: vi.fn() }));
+const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
+vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 const clients: QueryClient[] = [];
-beforeEach(() => { Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => null }); vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} unobserve() {} }); });
+beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => null }); vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} unobserve() {} }); });
 afterEach(async () => {
   cleanup();
   await Promise.all(clients.map(client => client.cancelQueries()));
@@ -56,5 +59,17 @@ describe("original phone code verification", () => {
   it.each([["verify_phone_code", "/onboarding/plan"], ["complete", "/onboarding/number"]])("returns verified %s workspaces to %s", async (stage, destination) => {
     setup(true, stage); await userEvent.type(screen.getByRole("textbox"), "123456");
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith(destination));
+    telemetryRef.current!.expectEvent("web.onboarding.verify_phone_completed", { businessId: "business" });
+  });
+  it("records a code resend", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, onboardingStage: "verify_phone_code" }] });
+    client.setQueryData(["phone-verification", "business"], { attempt: { id: "attempt", status: "pending", phoneE164: "+14165550188" } });
+    const fetchMock = vi.fn(async (url: string) => url.includes("/resend?") ? Response.json({ ok: true }) : Response.json({ attempt: { id: "attempt", status: "pending", phoneE164: "+14165550188" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<QueryClientProvider client={client}><OnboardingPhoneVerificationCodeSurface /></QueryClientProvider>);
+    await userEvent.click(await screen.findByRole("button", { name: "verifyPhoneCode.resend" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url.includes("/resend?"))).toBe(true));
+    telemetryRef.current!.expectEvent("web.onboarding.verify_phone_code_resent", { businessId: "business" });
   });
 });
