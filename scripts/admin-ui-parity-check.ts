@@ -3,6 +3,7 @@ import { referenceUiRoutes } from "./admin-ui-reference-routes";
 import { readFile, readdir } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { relative, resolve, sep } from "node:path";
+import { routeShape, withoutLocaleSegment } from "./admin-ui-parity-routes";
 
 type Entry = { id: string; status: "required" | "replaced" | "excluded"; routes?: string[]; implementation?: string[]; acceptanceTests?: string[] };
 type VisualRoute = {
@@ -17,23 +18,19 @@ type VisualRoute = {
   reason?: string;
 };
 
-function routeShape(path: string): string {
-  return path.split(/[?#]/)[0]!.replace(/\[[^\]]+\]/g, "[]").replace(/:[^/]+/g, "[]");
-}
-
 export async function currentPageRoutes(root: string): Promise<string[]> {
   const appRoot = resolve(root, "apps/admin/app");
   const files = await readdir(appRoot, { recursive: true });
   return files
     .filter((file) => file.endsWith(`${sep}page.tsx`) || file === "page.tsx")
     .map((file) => relative(appRoot, resolve(appRoot, file)).split(sep))
-    .map((parts) => parts.slice(0, -1).filter((part) => !/^\(.+\)$/.test(part) && part !== "[locale]"))
+    .map((parts) => parts.slice(0, -1).filter((part) => !/^\(.+\)$/.test(part)))
     .map((parts) => parts.length === 0 ? "/" : `/${parts.join("/")}`)
     .sort();
 }
 
 export async function validateAdminUiParity(root = process.cwd()) {
-  const manifest = JSON.parse(await readFile(resolve(root, "docs/validation/admin-ui-parity.json"), "utf8")) as { referenceCommit: string; visualHarness: string; visualCertifier: string; visualMatrix: { locales: string[]; themes: string[]; viewports: string[]; maxDiffPixelRatio: number; colorThreshold: number }; visualExemptions: string[]; visualRoutes: VisualRoute[]; capabilities: Entry[] };
+  const manifest = JSON.parse(await readFile(resolve(root, "docs/validation/admin-ui-parity.json"), "utf8")) as { referenceCommit: string; visualHarness: string; visualCertifier: string; visualMatrix: { locales: string[]; themes: string[]; viewports: string[]; maxDiffPixelRatio: number; colorThreshold: number }; visualExemptions: string[]; localizedPortRoutes: string[]; visualRoutes: VisualRoute[]; capabilities: Entry[] };
   const errors: string[] = [];
   if (manifest.referenceCommit !== "98df89901f1dca22b8c96ccf9509a8cd549f2eb9") errors.push("Visual parity reference commit changed unexpectedly.");
   const exactMembers = (actual: string[], expected: string[]) => actual.length === expected.length && expected.every(value => actual.includes(value));
@@ -56,14 +53,22 @@ export async function validateAdminUiParity(root = process.cwd()) {
   if (!manifest.visualRoutes?.some((route) => route.comparison === "frozen-main")) errors.push("No frozen-main visual routes are declared.");
   if (!manifest.visualRoutes?.some((route) => route.comparison === "port-baseline")) errors.push("No port-owned visual baselines are declared.");
   const manifestShapes = new Set(manifest.visualRoutes.map((route) => routeShape(route.path)));
+  const localizedPortShapes = new Set(manifest.localizedPortRoutes.map((route) => routeShape(route)));
+  for (const localizedRoute of manifest.localizedPortRoutes) {
+    if (!localizedRoute.startsWith("/[locale]/")) errors.push(`Localized port route must start with /[locale]/: ${localizedRoute}`);
+    if (!manifestShapes.has(routeShape(withoutLocaleSegment(localizedRoute)))) errors.push(`Localized port route is missing from the route-and-state manifest: ${localizedRoute}`);
+  }
   const frozenSource = execFileSync("git", ["show", `${manifest.referenceCommit}:apps/web/src/App.tsx`], { cwd: root, encoding: "utf8" });
   const frozenRoutes = referenceUiRoutes(frozenSource);
   const referenceShapes = new Set(manifest.visualRoutes.map(route => routeShape(route.referencePath ?? route.path)));
   for (const referenceRoute of frozenRoutes) {
     if (!referenceShapes.has(routeShape(referenceRoute))) errors.push(`Frozen main route is missing from the route-and-state manifest: ${referenceRoute}`);
   }
-  for (const pageRoute of await currentPageRoutes(root)) {
-    if (!manifestShapes.has(routeShape(pageRoute))) errors.push(`Current page route is missing from the route-and-state manifest: ${pageRoute}`);
+  const pageRoutes = await currentPageRoutes(root);
+  const currentLocalizedRoutes = pageRoutes.filter((route) => route.startsWith("/[locale]/"));
+  if (!exactMembers(manifest.localizedPortRoutes, currentLocalizedRoutes)) errors.push("Localized port route inventory does not match the App Router pages.");
+  for (const pageRoute of pageRoutes) {
+    if (!manifestShapes.has(routeShape(pageRoute)) && !localizedPortShapes.has(routeShape(pageRoute))) errors.push(`Current page route is missing from the route-and-state manifest: ${pageRoute}`);
   }
   for (const exemptRoute of manifest.visualExemptions) {
     const entry = manifest.visualRoutes.find((route) => routeShape(route.path) === routeShape(exemptRoute));

@@ -24,6 +24,19 @@
     "/embed/[key]",
     "/settings/plan/ai-sms-compliance"
   ],
+  "localizedPortRoutes": [
+    "/[locale]/accept-invite",
+    "/[locale]/claim-demo",
+    "/[locale]/confirm-email-change",
+    "/[locale]/demo",
+    "/[locale]/demo/[token]",
+    "/[locale]/forgot-password",
+    "/[locale]/login",
+    "/[locale]/reset-password",
+    "/[locale]/reset-password/[token]",
+    "/[locale]/signup",
+    "/[locale]/verify-email"
+  ],
   "capabilities": [
     {
       "id": "onboarding.lifecycle",

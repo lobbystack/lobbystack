@@ -27,6 +27,15 @@ test("legacy auth URLs redirect permanently to the canonical locale", async ({ p
   await expect(page.getByRole("heading", { name: "Créer votre compte" })).toBeVisible();
 });
 
+test("an explicit query locale replaces a stale browser choice after redirect", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("lobbystack.locale", "en"));
+  await page.goto("/login?lng=fr");
+
+  await expect(page).toHaveURL(/\/fr\/login$/);
+  await expect(page.getByRole("heading", { name: "Bon retour" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("lobbystack.locale"))).toBe("fr");
+});
+
 test("auth layout preserves the original mobile composition", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/en/login");

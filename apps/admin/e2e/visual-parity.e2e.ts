@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { resolvePortVisualPath } from "../../../scripts/admin-ui-parity-routes";
 
 const baseURL = process.env.PARITY_BASE_URL;
 const dynamic = { callId: process.env.PARITY_CALL_ID, contactId: process.env.PARITY_CONTACT_ID, demoToken: process.env.PARITY_DEMO_TOKEN, resetToken: process.env.PARITY_RESET_TOKEN };
@@ -23,7 +24,7 @@ type VisualRoute = {
   requiredFixture?: string;
   viewports?: Array<"desktop" | "mobile">;
 };
-type ParityManifest = { visualRoutes: VisualRoute[]; visualMatrix: { maxDiffPixelRatio: number; colorThreshold: number } };
+type ParityManifest = { localizedPortRoutes: string[]; visualRoutes: VisualRoute[]; visualMatrix: { maxDiffPixelRatio: number; colorThreshold: number } };
 const manifestPath = fileURLToPath(new URL("../../../docs/validation/admin-ui-parity.json", import.meta.url));
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as ParityManifest;
 const paritySide = process.env.PARITY_SIDE ?? "port";
@@ -40,7 +41,6 @@ const routes = manifest.visualRoutes
   .filter((routeCase) => !routeCase.dynamicKey || Boolean(dynamic[routeCase.dynamicKey]))
   .map((routeCase) => ({
     ...routeCase,
-    path: resolveDynamicPath(paritySide === "reference" ? routeCase.referencePath ?? routeCase.path : routeCase.path),
     snapshotId: routeCase.snapshotId ?? routeCase.path,
   }));
 const viewports = [{ name: "desktop", width: 1440, height: 1000 }, { name: "mobile", width: 390, height: 844 }] as const;
@@ -51,6 +51,8 @@ for (const routeCase of routes) for (const viewport of viewports) for (const loc
   if (routeCase.viewports && !routeCase.viewports.includes(viewport.name)) continue;
   test(`${routeCase.fixtureState} ${routeCase.snapshotId} ${viewport.name} ${locale} ${theme}`, async ({ browser }) => {
     test.skip(!baseURL, "Set PARITY_BASE_URL to the frozen main or port server.");
+    const pathForSide = (path: string) => resolveDynamicPath(paritySide === "reference" ? path : resolvePortVisualPath(path, locale, manifest.localizedPortRoutes));
+    const routePath = pathForSide(paritySide === "reference" ? routeCase.referencePath ?? routeCase.path : routeCase.path);
     const fixturePrefix = `PARITY_${routeCase.fixtureState.toUpperCase()}`;
     const fixtureValue = (suffix: string) => process.env[`${fixturePrefix}_${suffix}_${locale.toUpperCase()}`] ?? process.env[`${fixturePrefix}_${suffix}`];
     const email = fixtureValue("LOGIN_EMAIL");
@@ -348,18 +350,20 @@ for (const routeCase of routes) for (const viewport of viewports) for (const loc
     });
     await page.addInitScript(({ locale, theme }) => { localStorage.setItem("lobbystack.locale", locale); localStorage.setItem("theme", theme); document.documentElement?.classList.toggle("dark", theme === "dark"); }, { locale, theme });
     if (login) {
-      await page.goto(new URL("/en/login", baseURL!).toString(), { waitUntil: "domcontentloaded" });
+      const loginUrl = new URL(paritySide === "reference" ? "/login" : `/${locale}/login`, baseURL!);
+      await page.goto(loginUrl.toString(), { waitUntil: "domcontentloaded" });
       await page.locator('input[type="email"]').fill(login.email);
       await page.locator('input[type="password"]').fill(login.password);
       await page.locator('button[type="submit"]').click();
-      await page.waitForURL((url) => url.pathname !== "/login", { timeout: 20_000 });
+      await page.waitForURL((url) => url.pathname !== loginUrl.pathname, { timeout: 20_000 });
     }
-    await page.goto(new URL(routeCase.path, baseURL!).toString(), { waitUntil: "domcontentloaded" });
+    await page.goto(new URL(routePath, baseURL!).toString(), { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("load");
     await page.waitForTimeout(routeCase.path === "/analytics" ? 3000 : 1500);
     // Disable CSS transitions before interactions so loading-state opacity is never captured mid-transition.
     await page.addStyleTag({ content: "*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important;caret-color:transparent!important}" });
-    await expect.poll(() => new URL(page.url()).pathname, { message: `The fixture must render the requested route or its documented redirect: ${routeCase.path}` }).toBe(new URL(resolveDynamicPath((paritySide === "port" ? routeCase.portExpectedPath : undefined) ?? routeCase.expectedPath ?? routeCase.path), baseURL!).pathname);
+    const expectedPath = (paritySide === "port" ? routeCase.portExpectedPath : undefined) ?? routeCase.expectedPath ?? routeCase.path;
+    await expect.poll(() => new URL(page.url()).pathname, { message: `The fixture must render the requested route or its documented redirect: ${routePath}` }).toBe(new URL(pathForSide(expectedPath), baseURL!).pathname);
     await expect.poll(() => page.evaluate(() => localStorage.getItem("lobbystack.locale")), { message: "Rendered fixture locale must match the matrix case; use a separate persisted user per locale." }).toBe(locale);
     await expect.poll(() => page.locator("html").evaluate((element) => element.classList.contains("dark"))).toBe((routeCase.forcedTheme ?? theme) === "dark");
     if (routeCase.interaction?.startsWith("auth-")) {

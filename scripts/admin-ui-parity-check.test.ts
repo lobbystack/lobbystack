@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { currentPageRoutes } from "./admin-ui-parity-check";
+import { resolvePortVisualPath } from "./admin-ui-parity-routes";
 
 const temporaryRoots: string[] = [];
 
@@ -11,7 +12,7 @@ afterEach(async () => {
 });
 
 describe("currentPageRoutes", () => {
-  it("normalizes route groups and the locale segment", async () => {
+  it("normalizes route groups while preserving the locale segment", async () => {
     const root = await mkdtemp(join(tmpdir(), "admin-ui-parity-"));
     temporaryRoots.push(root);
     const routes = [
@@ -26,9 +27,22 @@ describe("currentPageRoutes", () => {
     }));
 
     await expect(currentPageRoutes(root)).resolves.toEqual([
-      "/login",
-      "/reset-password/[token]",
+      "/[locale]/login",
+      "/[locale]/reset-password/[token]",
       "/settings",
     ]);
+  });
+});
+
+describe("resolvePortVisualPath", () => {
+  const localizedRoutes = ["/[locale]/login", "/[locale]/demo/[token]"];
+
+  it("expands localized static and dynamic port routes", () => {
+    expect(resolvePortVisualPath("/login?returnTo=%2F", "fr", localizedRoutes)).toBe("/fr/login?returnTo=%2F");
+    expect(resolvePortVisualPath("/demo/[demoToken]", "en", localizedRoutes)).toBe("/en/demo/[demoToken]");
+  });
+
+  it("leaves non-localized routes unchanged", () => {
+    expect(resolvePortVisualPath("/analytics", "fr", localizedRoutes)).toBe("/analytics");
   });
 });
