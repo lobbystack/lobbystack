@@ -22,11 +22,21 @@ The definition declares Serverless (app sleeping) per environment to match the o
 
 Change these values only when you mean to. The setting applies on the next deploy of the service.
 
+## Production application releases
+
+The production `admin`, `worker`, and `voice-gateway` services use `lobbystack/lobbystack` on `main` as their source. Railway builds each affected service from its existing Dockerfile and watch patterns. `checkSuites: true` makes Railway wait for the commit’s GitHub checks before deploying it.
+
+The `migrator` deliberately has no GitHub source. On every push to `main`, the `migrate-production` job uploads that exact checkout. The job waits for the run-once deployment to succeed. Railway blocks application deployments until the migration succeeds. Railway releases application containers after the migration.
+
+Store a production project token in the GitHub `production` environment as `RAILWAY_PRODUCTION_TOKEN`. Restrict that environment to the `main` branch. Do not store database credentials in GitHub; the migrator reads its preserved variables from Railway.
+
+To pause automatic application releases, disable **Auto Deploy** on all three services. A failed GitHub check or migration run leaves the previous application deployments running. For an application regression, roll each affected service back to its previous successful Railway deployment. Keep migrations backward-compatible with that version.
+
 The definition pins Redis to `redis:7-alpine`. The Redis helper in the importer selected version 8 during the first preview; reject that upgrade in an infrastructure import.
 
 See the [Railway Infrastructure as Code documentation](https://docs.railway.com/infrastructure-as-code) for the authoring model.
 
-The parser reports no changes for the current definition. The Redis database product owns its `/data` mount; adding a service volume attachment caused perpetual drift in Railway CLI version 5.49.2, and the live read-back confirmed the mount and the password variable. Don’t convert Redis to a plain service: that plans a destructive resource replacement.
+After you apply the production source rollout, the parser should report no production changes. The Redis database product owns its `/data` mount. Adding a service volume attachment caused perpetual drift in Railway CLI version 5.49.2. The live read-back confirmed the mount and password variable. Don’t convert Redis to a plain service: that plans a destructive resource replacement.
 
 ## Self-hosted template
 

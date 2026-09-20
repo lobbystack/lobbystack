@@ -1,11 +1,12 @@
 // LobbyStack platform infrastructure (staging and production). Secrets remain in Railway via preserve().
-import { bucket, database, defineRailway, image, preserve, project, service, volume } from "railway/iac";
+import { bucket, database, defineRailway, github, image, preserve, project, service, volume } from "railway/iac";
 
 export default defineRailway((ctx) => {
   if (ctx.projectId !== "af0a130e-7b02-4fc0-94ef-b0ac45a0a0a6" || !["staging", "production"].includes(ctx.environment)) {
     throw new Error("This infrastructure definition manages only the lobbystack staging or production environment.");
   }
   const production = ctx.environment === "production";
+  const productionSource = production ? github("lobbystack/lobbystack", { branch: "main", checkSuites: true }) : undefined;
   const stagingAdminUrl = "https://admin-staging-7e92.up.railway.app";
   // Watch paths (gitignore-style, anchored at the repo root) so a service only
   // redeploys when its app, shared workspace packages, or build inputs change.
@@ -29,6 +30,7 @@ export default defineRailway((ctx) => {
   // below, but do not also manage it as a service attachment (perpetual CLI drift).
   const parityCertification = bucket(production ? "lobbystack-production" : "parity-certification", { region: "iad" });
   const worker = service("worker", {
+    source: productionSource,
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.worker", watchPatterns: [...sharedWatchPatterns, "/apps/worker/**", "/Dockerfile.worker"] },
     healthcheck: "/health/ready",
     healthcheckTimeout: 300,
@@ -88,6 +90,7 @@ export default defineRailway((ctx) => {
     },
   });
   const voiceGateway = service("voice-gateway", {
+    source: productionSource,
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.voice-gateway", watchPatterns: [...sharedWatchPatterns, "/apps/voice-gateway/**", "/Dockerfile.voice-gateway"] },
     healthcheck: "/health/ready",
     healthcheckTimeout: 300,
@@ -132,6 +135,7 @@ export default defineRailway((ctx) => {
     },
   });
   const admin = service("admin", {
+    source: productionSource,
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.admin", watchPatterns: [...sharedWatchPatterns, "/apps/admin/**", "/scripts/copy-widget-embed.mjs", "/Dockerfile.admin"] },
     healthcheck: "/api/health/ready",
     healthcheckTimeout: 300,

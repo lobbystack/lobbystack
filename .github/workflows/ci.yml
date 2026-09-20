@@ -25,3 +25,46 @@ jobs:
       - run: pnpm test
       - name: Validate Compose config
         run: docker compose --env-file .env.example -f docker-compose.yml config --quiet
+
+  migrate-production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    concurrency:
+      group: production-migrations
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}
+      RAILWAY_PROJECT_ID: af0a130e-7b02-4fc0-94ef-b0ac45a0a0a6
+      RAILWAY_ENVIRONMENT: production
+      RAILWAY_SERVICE: migrator
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Railway CLI
+        run: npm install --global @railway/cli@5.57.9
+      - name: Verify release is current
+        run: |
+          remote_sha="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [[ "$remote_sha" != "$GITHUB_SHA" ]]; then
+            echo "::error::Skipping superseded release ${GITHUB_SHA}; main is ${remote_sha}."
+            exit 1
+          fi
+      - name: Run production migrations
+        run: >-
+          railway up
+          --ci
+          --project "$RAILWAY_PROJECT_ID"
+          --environment "$RAILWAY_ENVIRONMENT"
+          --service "$RAILWAY_SERVICE"
+          --message "GitHub ${GITHUB_SHA}"
+      - name: Confirm release is current
+        run: |
+          remote_sha="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [[ "$remote_sha" != "$GITHUB_SHA" ]]; then
+            echo "::error::Blocking superseded release ${GITHUB_SHA}; main is ${remote_sha}."
+            exit 1
+          fi
