@@ -45,6 +45,7 @@
     "i18next-http-backend": "^3.0.5",
     "input-otp": "^1.4.2",
     "ioredis": "^5.8.2",
+    "js-tiktoken": "1.0.21",
     "libphonenumber-js": "^1.12.41",
     "lucia": "^3.2.2",
     "lucide-react": "^0.577.0",

@@ -115,6 +115,11 @@ jobs:
           docker build --build-arg SERVICE_VERSION="$GITHUB_SHA" --file Dockerfile.migrator --tag lobbystack/migrator:ci .
           docker build --build-arg SERVICE_VERSION="$GITHUB_SHA" --file Dockerfile.worker --tag lobbystack/worker:ci .
           docker build --build-arg SERVICE_VERSION="$GITHUB_SHA" --file Dockerfile.voice-gateway --tag lobbystack/voice-gateway:ci .
+      - name: Certify lazy tokenizer runtime dependencies
+        run: |
+          docker run --rm --entrypoint node lobbystack/admin:ci -e 'const { createRequire } = require("node:module"); const runtimeRequire = createRequire("/app/apps/admin/.next/server/chunks/runtime-dependency-check.js"); const { Tiktoken } = runtimeRequire("js-tiktoken/lite"); const tokenizer = new Tiktoken(runtimeRequire("js-tiktoken/ranks/o200k_base")); if (tokenizer.encode("runtime smoke test").length === 0) process.exit(1);'
+          docker run --rm --entrypoint node lobbystack/worker:ci -e 'const { createRequire } = require("node:module"); const runtimeRequire = createRequire("/app/dist/runtime/index.js"); const { Tiktoken } = runtimeRequire("js-tiktoken/lite"); const tokenizer = new Tiktoken(runtimeRequire("js-tiktoken/ranks/o200k_base")); if (tokenizer.encode("runtime smoke test").length === 0) process.exit(1);'
+          docker run --rm --entrypoint node lobbystack/voice-gateway:ci -e 'const { createRequire } = require("node:module"); const runtimeRequire = createRequire("/app/dist/runtime/index.js"); const { Tiktoken } = runtimeRequire("js-tiktoken/lite"); const tokenizer = new Tiktoken(runtimeRequire("js-tiktoken/ranks/o200k_base")); if (tokenizer.encode("runtime smoke test").length === 0) process.exit(1);'
       - run: pnpm replacement:telemetry
       - name: Scan repository for vulnerabilities, misconfigurations, and secrets
         uses: aquasecurity/trivy-action@v0.36.0

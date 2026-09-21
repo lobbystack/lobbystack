@@ -154,6 +154,7 @@ const WEB_FINAL_MESSAGE_MAX_PLAYBACK_GRACE_MS = 8_000;
 const WEB_FINAL_MESSAGE_METADATA_PURPOSE = "web_final_message";
 const WEB_CALL_SESSION_START_RATE_LIMIT_MAX = 100;
 const WEB_CALL_SESSION_START_RATE_LIMIT_WINDOW = "1 minute";
+const WEB_CALL_COMPLETION_RETRY_DELAYS_MS = [100, 500] as const;
 const DASHBOARD_TEST_CALL_WIDGET_ID = "lobbystack-dashboard-test-call";
 const DASHBOARD_TEST_CALL_PROOF_PREFIX = "dashboard-test-call";
 const PROSPECT_DEMO_INTAKE_TOOL_NAMES = new Set([
@@ -865,7 +866,7 @@ async function finishWebCallSession(
   try {
     await flushPendingWebAssistantTranscripts(server, session);
     await hangupOpenAiRealtimeCall(server, session, disposition);
-    await completeVoiceCall({
+    const completion = {
       callId: session.callId,
       status: "completed",
       disposition,
@@ -875,15 +876,48 @@ async function finishWebCallSession(
         Math.ceil((Date.now() - session.startedAtMs) / 1000),
       ),
       mediaDurationSeconds: Math.max(0, Date.now() - session.startedAtMs) / 1_000,
-    });
-  } catch (error) {
-    session.finalized = false;
-    throw error;
+    };
+
+    for (
+      let attemptIndex = 0;
+      attemptIndex <= WEB_CALL_COMPLETION_RETRY_DELAYS_MS.length;
+      attemptIndex += 1
+    ) {
+      try {
+        await completeVoiceCall(completion);
+        break;
+      } catch (error) {
+        const retryDelayMs = WEB_CALL_COMPLETION_RETRY_DELAYS_MS[attemptIndex];
+        server.log.error(
+          {
+            err: error,
+            callId: session.callId,
+            disposition,
+            attempt: attemptIndex + 1,
+            maxAttempts: WEB_CALL_COMPLETION_RETRY_DELAYS_MS.length + 1,
+            ...(retryDelayMs !== undefined ? { retryDelayMs } : {}),
+          },
+          retryDelayMs !== undefined
+            ? "Failed to persist web call completion; retrying"
+            : "Failed to persist web call completion after retries",
+        );
+        if (retryDelayMs === undefined) {
+          throw error;
+        }
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, retryDelayMs);
+        });
+      }
+    }
+  } finally {
+    // Release provider and in-memory resources even when durable completion
+    // exhausts its retries. The caller still receives the final persistence
+    // error so it is logged and reported rather than becoming an orphaned task.
+    rememberCompletedWebCall(session);
+    session.sidebandSocket?.close(1000, "web call ended");
+    activeWebCalls.delete(session.gatewaySessionId);
   }
 
-  rememberCompletedWebCall(session);
-  session.sidebandSocket?.close(1000, "web call ended");
-  activeWebCalls.delete(session.gatewaySessionId);
 }
 
 function requestWebFinalMessageBeforeHangup(
@@ -1147,67 +1181,104 @@ function createSidebandSocket(input: {
   );
 
   socket.on("open", () => {
-    postRealtimeEvent(socket, {
-      type: "session.update",
-      session: {
-        type: "realtime",
-        instructions: [
-          buildVoiceSystemPrompt(input.snapshot),
-          "You are speaking through a website voice widget, not a phone call.",
-          "Use the configured greeting only once at the start of the session. Never repeat it after the opening greeting, even after interruptions, silence, or filler speech.",
-          "If the latest audio is silence, background noise, echo of your own previous audio, hold music, TV audio, side conversation, or speech not addressed to you, call waitForUser and do not speak.",
-          ...(input.session.sessionMode === "prospect_demo"
-            ? [
-                "This is a LobbyStack prospect demo. Answer from public business knowledge and collect a sample service or quote request with takeMessage.",
-                "Do not book appointments, check or promise availability, transfer calls, or promise outbound SMS or email.",
-              ]
-            : [
-                "Ask for a phone number before booking an appointment, taking a callback message, or discussing existing appointments.",
-              ]),
-          "Do not attempt phone transfer from the website widget.",
-          "End the session with endCall when the visitor is clearly finished, abusive, spammy, or repeatedly silent.",
-        ].join("\n\n"),
-        output_modalities: ["audio"],
-        audio: {
-          input: {
-            noise_reduction: { type: "far_field" },
-            transcription: {
-              model: input.server.runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
+    try {
+      postRealtimeEvent(socket, {
+        type: "session.update",
+        session: {
+          type: "realtime",
+          instructions: [
+            buildVoiceSystemPrompt(input.snapshot),
+            "You are speaking through a website voice widget, not a phone call.",
+            "Use the configured greeting only once at the start of the session. Never repeat it after the opening greeting, even after interruptions, silence, or filler speech.",
+            "If the latest audio is silence, background noise, echo of your own previous audio, hold music, TV audio, side conversation, or speech not addressed to you, call waitForUser and do not speak.",
+            ...(input.session.sessionMode === "prospect_demo"
+              ? [
+                  "This is a LobbyStack prospect demo. Answer from public business knowledge and collect a sample service or quote request with takeMessage.",
+                  "Do not book appointments, check or promise availability, transfer calls, or promise outbound SMS or email.",
+                ]
+              : [
+                  "Ask for a phone number before booking an appointment, taking a callback message, or discussing existing appointments.",
+                ]),
+            "Do not attempt phone transfer from the website widget.",
+            "End the session with endCall when the visitor is clearly finished, abusive, spammy, or repeatedly silent.",
+          ].join("\n\n"),
+          output_modalities: ["audio"],
+          audio: {
+            input: {
+              noise_reduction: { type: "far_field" },
+              transcription: {
+                model: input.server.runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
+              },
+              turn_detection: createWebRealtimeTurnDetectionConfig({
+                createResponse: false,
+                interruptResponse: false,
+              }),
             },
-            turn_detection: createWebRealtimeTurnDetectionConfig({
-              createResponse: false,
-              interruptResponse: false,
-            }),
+            output: {
+              voice: input.server.runtimeConfig.OPENAI_REALTIME_VOICE,
+            },
           },
-          output: {
-            voice: input.server.runtimeConfig.OPENAI_REALTIME_VOICE,
-          },
+          tools: createWebRealtimeToolDefinitions(
+            input.session.sessionMode === "prospect_demo"
+              ? { sessionMode: "prospect_demo" }
+              : undefined,
+          ),
+          tool_choice: "auto",
         },
-        tools: createWebRealtimeToolDefinitions(
-          input.session.sessionMode === "prospect_demo"
-            ? { sessionMode: "prospect_demo" }
-            : undefined,
-        ),
-        tool_choice: "auto",
-      },
-    });
+      });
 
-    captureAiTraceStarted({
-      businessId: input.session.businessId,
-      telemetryEnabled: input.snapshot.telemetryEnabled === true,
-      traceId: input.session.aiTraceId,
-      callId: input.session.callId,
-      conversationId: input.session.conversationId,
-      model: input.server.runtimeConfig.OPENAI_REALTIME_MODEL,
-      provider: "openai",
-    });
-    requestWebResponse(socket, input.session, {
+      captureAiTraceStarted({
+        businessId: input.session.businessId,
+        telemetryEnabled: input.snapshot.telemetryEnabled === true,
+        traceId: input.session.aiTraceId,
+        callId: input.session.callId,
+        conversationId: input.session.conversationId,
+        model: input.server.runtimeConfig.OPENAI_REALTIME_MODEL,
+        provider: "openai",
+      });
+      requestWebResponse(socket, input.session, {
         instructions: [
           `Begin by greeting the visitor with this exact greeting: "${input.snapshot.greeting}"`,
           "Then stop speaking and wait for the visitor.",
           "Do not repeat this greeting later in the session.",
         ].join(" "),
-    });
+      });
+    } catch (error) {
+      input.server.log.error(
+        {
+          err: error,
+          callId: input.session.callId,
+          providerCallId: input.session.providerCallId,
+        },
+        "Failed to configure OpenAI Realtime web call session",
+      );
+      try {
+        capturePostHogException(error, {
+          businessId: input.session.businessId,
+          properties: {
+            operation: "web_call_session_configuration",
+            channel: "web_voice",
+            provider: "openai",
+            callId: input.session.callId,
+          },
+        });
+      } catch (captureError) {
+        input.server.log.error(
+          { err: captureError, callId: input.session.callId },
+          "Failed to capture web call session configuration error",
+        );
+      }
+      void finishWebCallSession(
+        input.server,
+        input.session,
+        "provider_session_configuration_failed",
+      ).catch((finishError: unknown) => {
+        input.server.log.error(
+          { err: finishError, callId: input.session.callId },
+          "Failed to finalize web call after session configuration error",
+        );
+      });
+    }
   });
 
   socket.on("message", (rawMessage) => {

@@ -16,8 +16,8 @@ export async function configureSchedulers(
   ];
   const payoutQueue = queues.get("maintenance");
   if (payoutQueue) {
-    await payoutQueue.upsertJobScheduler("prospect-demo-expiry", { every: 60 * 60_000 }, { name: "prospectDemo.expire", data: { jobId: "prospect-demo-expiry", type: "prospectDemo.expire", queue: "maintenance", businessId: null, payload: {}, trace: {}, idempotencyKey: "prospect-demo-expiry", scheduled: true } });
-    await payoutQueue.upsertJobScheduler("affiliate-payout", { every: 24 * 60 * 60_000 }, { name: "affiliate.generatePayoutRun", data: { jobId: "affiliate-payout", type: "affiliate.generatePayoutRun", queue: "maintenance", businessId: null, payload: {}, trace: {}, idempotencyKey: "affiliate-payout", scheduled: true } });
+    await payoutQueue.upsertJobScheduler("prospect-demo-expiry", { every: 60 * 60_000 }, { name: "prospectDemo.expire", data: { jobId: "prospect-demo-expiry", type: "prospectDemo.expire", queue: "maintenance", businessId: null, payload: {}, trace: {}, idempotencyKey: "prospect-demo-expiry", scheduled: true, recurring: true } });
+    await payoutQueue.upsertJobScheduler("affiliate-payout", { every: 24 * 60 * 60_000 }, { name: "affiliate.generatePayoutRun", data: { jobId: "affiliate-payout", type: "affiliate.generatePayoutRun", queue: "maintenance", businessId: null, payload: {}, trace: {}, idempotencyKey: "affiliate-payout", scheduled: true, recurring: true } });
   }
   for (const businessId of businessIds) {
     for (const schedule of schedules) {
@@ -26,7 +26,7 @@ export async function configureSchedulers(
         continue;
       }
       const name = `${schedule.name}:${businessId}`;
-      await queue.upsertJobScheduler(name, { every: schedule.every }, { name: schedule.type, data: { jobId: name, type: schedule.type, queue: schedule.queue, businessId, payload: {}, trace: {}, idempotencyKey: name, scheduled: true } });
+      await queue.upsertJobScheduler(name, { every: schedule.every }, { name: schedule.type, data: { jobId: name, type: schedule.type, queue: schedule.queue, businessId, payload: {}, trace: {}, idempotencyKey: name, scheduled: true, recurring: true } });
     }
   }
 }

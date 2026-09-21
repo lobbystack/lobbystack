@@ -5,8 +5,10 @@ import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 const {
   appendVoiceTranscriptMock,
   bookVoiceAppointmentMock,
+  buildVoiceSystemPromptMock,
   captureAiGenerationMock,
   captureAiTraceStartedMock,
+  capturePostHogExceptionMock,
   completeVoiceCallMock,
   fetchWebCallRecordingTargetMock,
   fetchWebVoiceContextMock,
@@ -19,8 +21,10 @@ const {
 } = vi.hoisted(() => ({
   appendVoiceTranscriptMock: vi.fn(),
   bookVoiceAppointmentMock: vi.fn(),
+  buildVoiceSystemPromptMock: vi.fn(),
   captureAiGenerationMock: vi.fn(),
   captureAiTraceStartedMock: vi.fn(),
+  capturePostHogExceptionMock: vi.fn(),
   completeVoiceCallMock: vi.fn(),
   fetchWebCallRecordingTargetMock: vi.fn(),
   fetchWebVoiceContextMock: vi.fn(),
@@ -49,6 +53,15 @@ const {
     url: string | URL;
   }>,
 }));
+
+vi.mock("@lobbystack/ai", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@lobbystack/ai")>();
+  buildVoiceSystemPromptMock.mockImplementation(actual.buildVoiceSystemPrompt);
+  return {
+    ...actual,
+    buildVoiceSystemPrompt: buildVoiceSystemPromptMock,
+  };
+});
 
 vi.mock("ws", () => {
   class MockWebSocket {
@@ -125,7 +138,7 @@ vi.mock("../observability/posthog", async importOriginal => ({
   ...(await importOriginal<typeof import("../observability/posthog")>()),
   captureAiGeneration: captureAiGenerationMock,
   captureAiTraceStarted: captureAiTraceStartedMock,
-  capturePostHogException: vi.fn(),
+  capturePostHogException: capturePostHogExceptionMock,
 }));
 
 import { demoSnapshot } from "@lobbystack/shared";
@@ -553,6 +566,111 @@ describe("web call routes", () => {
     expect(response.statusCode).toBe(200);
     expect(webSocketInstances[0]?.url).toBe(
       "wss://api.openai.com/v1/realtime?call_id=rtc_test",
+    );
+  });
+
+  it("contains prompt configuration failures to the affected web call", async () => {
+    const configurationError = new Error("runtime tokenizer unavailable");
+    buildVoiceSystemPromptMock.mockImplementationOnce(() => {
+      throw configurationError;
+    });
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    completeVoiceCallMock.mockResolvedValueOnce(undefined);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(() => webSocketInstances[0]?.emit("open")).not.toThrow();
+    await vi.waitFor(() => expect(completeVoiceCallMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        callId: "call_123",
+        disposition: "provider_session_configuration_failed",
+      }),
+    ));
+    expect(capturePostHogExceptionMock).toHaveBeenCalledWith(
+      configurationError,
+      expect.objectContaining({
+        properties: expect.objectContaining({
+          operation: "web_call_session_configuration",
+        }),
+      }),
+    );
+  });
+
+  it("retries durable cleanup after a prompt configuration failure", async () => {
+    buildVoiceSystemPromptMock.mockImplementationOnce(() => {
+      throw new Error("runtime tokenizer unavailable");
+    });
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    completeVoiceCallMock
+      .mockRejectedValueOnce(new Error("temporary backend failure"))
+      .mockResolvedValueOnce(undefined);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    webSocketInstances[0]?.emit("open");
+    await vi.waitFor(
+      () => expect(completeVoiceCallMock).toHaveBeenCalledTimes(2),
+      { timeout: 1_000 },
+    );
+    expect(completeVoiceCallMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        callId: "call_123",
+        disposition: "provider_session_configuration_failed",
+      }),
     );
   });
 

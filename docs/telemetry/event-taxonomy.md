@@ -204,6 +204,8 @@ Add when staff-scoped:
 
 ### Workflow events
 
+Emit `workflow.started` for event-driven business jobs, including delayed jobs. Do not emit it for envelopes explicitly marked as recurring maintenance or for internal product-event retention continuations; these can run for every business even when they immediately skip. Continue to emit `workflow.failed` when recurring maintenance fails. Do not infer recurrence from the legacy `scheduled` flag because delayed jobs also set it.
+
 Always include:
 
 - `deploymentMode`

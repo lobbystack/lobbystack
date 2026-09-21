@@ -7,21 +7,27 @@ const mocks = vi.hoisted(() => ({
       { status: 500 },
     ),
   ),
+  dbExecute: vi.fn(),
+  getAppDatabase: vi.fn(),
   readJson: vi.fn(),
   recordUsage: vi.fn(),
   recordVoiceAiCostLedger: vi.fn(),
   requireInternalService: vi.fn(),
+  withBusinessTransaction: vi.fn(),
 }));
 
 vi.mock("@lobbystack/domain", () => ({
   recordUsage: mocks.recordUsage,
 }));
 
-vi.mock("@lobbystack/db", () => ({}));
+vi.mock("@lobbystack/db", () => ({
+  calls: {},
+  withBusinessTransaction: mocks.withBusinessTransaction,
+}));
 
 vi.mock("@/lib/api-helpers", () => ({
   asApiResponse: mocks.asApiResponse,
-  getAppDatabase: vi.fn(),
+  getAppDatabase: mocks.getAppDatabase,
   readJson: mocks.readJson,
   requireInternalService: mocks.requireInternalService,
 }));
@@ -37,6 +43,108 @@ vi.mock("@/lib/voice-ai-cost", () => ({
 }));
 
 import { POST } from "./route";
+
+describe("POST /voice/call/web-recording-target", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.requireInternalService.mockResolvedValue(undefined);
+    mocks.readJson.mockResolvedValue({ gatewaySessionId: "gateway-session-123" });
+    mocks.getAppDatabase.mockReturnValue({ db: { execute: mocks.dbExecute } });
+    mocks.withBusinessTransaction.mockResolvedValue(240_000);
+  });
+
+  it("serializes raw SQL timestamp strings for durable web-call cleanup", async () => {
+    mocks.dbExecute.mockResolvedValue({
+      rows: [{
+        call_id: "call_123",
+        business_id: "business_123",
+        provider_call_id: "provider_123",
+        started_at: "2026-09-21T02:33:00.000Z",
+        ended_at: "2026-09-21T02:33:12.000Z",
+        status: "completed",
+      }],
+    });
+
+    const response = await POST(
+      new Request("https://admin.example.test/voice/call/web-recording-target", {
+        method: "POST",
+        body: "{}",
+      }),
+      { params: Promise.resolve({ segments: ["call", "web-recording-target"] }) },
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      callId: "call_123",
+      providerCallId: "provider_123",
+      startedAt: "2026-09-21T02:33:00.000Z",
+      endedAt: "2026-09-21T02:33:12.000Z",
+      status: "completed",
+      webCallMaxDurationMs: 240_000,
+    });
+  });
+
+  it("preserves Date values and omits a null end timestamp", async () => {
+    mocks.dbExecute.mockResolvedValue({
+      rows: [{
+        call_id: "call_123",
+        business_id: "business_123",
+        provider_call_id: "provider_123",
+        started_at: new Date("2026-09-21T02:33:00.000Z"),
+        ended_at: null,
+        status: "in_progress",
+      }],
+    });
+
+    const response = await POST(
+      new Request("https://admin.example.test/voice/call/web-recording-target", {
+        method: "POST",
+        body: "{}",
+      }),
+      { params: Promise.resolve({ segments: ["call", "web-recording-target"] }) },
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      callId: "call_123",
+      providerCallId: "provider_123",
+      startedAt: "2026-09-21T02:33:00.000Z",
+      status: "in_progress",
+      webCallMaxDurationMs: 240_000,
+    });
+  });
+
+  it("rejects invalid raw SQL timestamps instead of serializing corrupt data", async () => {
+    mocks.dbExecute.mockResolvedValue({
+      rows: [{
+        call_id: "call_123",
+        business_id: "business_123",
+        provider_call_id: "provider_123",
+        started_at: "not-a-timestamp",
+        ended_at: null,
+        status: "in_progress",
+      }],
+    });
+
+    const response = await POST(
+      new Request("https://admin.example.test/voice/call/web-recording-target", {
+        method: "POST",
+        body: "{}",
+      }),
+      { params: Promise.resolve({ segments: ["call", "web-recording-target"] }) },
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Invalid started_at timestamp returned by the database.",
+    });
+    expect(mocks.asApiResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "Invalid started_at timestamp returned by the database.",
+      }),
+    );
+  });
+});
 
 describe("POST /voice/call/ai-cost", () => {
   beforeEach(() => {

@@ -5,17 +5,20 @@ import { fileURLToPath } from "node:url";
 
 import { config as loadEnv } from "dotenv";
 import { sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+import type { PoolClient } from "pg";
 import { initializeTelemetry, shutdownTelemetry } from "@lobbystack/telemetry/node";
 
 import { createDatabaseClient, databaseHealthCheck } from "./client";
 import {
+  concurrentIndexName,
   MIGRATION_JOURNAL_TABLE,
   LEGACY_BASELINE_MIGRATIONS,
   ROLE_MIGRATION,
   SCHEMA_MIGRATIONS,
 } from "./migrations/raw-migrations";
-import { businesses } from "./schema";
+import { businesses, schema } from "./schema";
 
 const repositoryRoot = fileURLToPath(new URL("../../..", import.meta.url));
 loadEnv({ path: [resolve(repositoryRoot, ".env.local"), resolve(repositoryRoot, ".env")], quiet: true });
@@ -24,22 +27,29 @@ async function main(): Promise<void> {
   await initializeTelemetry({ serviceName: "lobbystack-migrator" });
   const command = process.argv[2] ?? "check";
   const migrator = createDatabaseClient("lobbystack_migrator");
+  let migrationLockClient: PoolClient | undefined;
 
   try {
     switch (command) {
       case "migrate": {
-        const applied = await prepareMigrationJournal(migrator);
-        if (applied.size === 0 && (await appSchemaExists(migrator))) {
+        // Keep this session checked out for the whole migration run. Concurrent
+        // index builds are visible as invalid until their final phase, so a
+        // second migrator must not mistake an active build for a failed one.
+        migrationLockClient = await migrator.pool.connect();
+        await migrationLockClient.query("select pg_advisory_lock(hashtext('lobbystack:migrations'))");
+        const lockedMigrator = { ...migrator, db: drizzle(migrationLockClient, { schema }) };
+        const applied = await prepareMigrationJournal(lockedMigrator);
+        if (applied.size === 0 && (await appSchemaExists(lockedMigrator))) {
           // The database was provisioned before this journal existed and already
           // has the full schema. Record the known history as applied instead of
           // replaying DDL against live tables.
-          await baselineExistingMigrations(migrator, applied);
+          await baselineExistingMigrations(lockedMigrator, applied);
           console.log(`Baselined ${LEGACY_BASELINE_MIGRATIONS.length} previously-applied migrations into ${MIGRATION_JOURNAL_TABLE}.`);
         }
-        await applyRawMigration(migrator, ROLE_MIGRATION, applied);
-        await migrate(migrator.db, { migrationsFolder: "./migrations/generated" });
+        await applyRawMigration(lockedMigrator, ROLE_MIGRATION, applied);
+        await migrate(lockedMigrator.db, { migrationsFolder: "./migrations/generated" });
         for (const fileName of SCHEMA_MIGRATIONS) {
-          await applyRawMigration(migrator, fileName, applied);
+          await applyRawMigration(lockedMigrator, fileName, applied);
         }
         console.log("Database migrations applied.");
         break;
@@ -197,6 +207,10 @@ async function main(): Promise<void> {
         throw new Error(`Unknown database command: ${command}`);
     }
   } finally {
+    if (migrationLockClient) {
+      await migrationLockClient.query("select pg_advisory_unlock(hashtext('lobbystack:migrations'))").catch(() => undefined);
+      migrationLockClient.release();
+    }
     await migrator.pool.end().catch(() => undefined);
     await shutdownTelemetry();
   }
@@ -255,12 +269,37 @@ async function applyRawMigration(
   const contents = await readFile(resolve("migrations", fileName), "utf8");
   const checksum = createHash("sha256").update(contents).digest("hex");
   const recorded = applied.get(fileName);
+  const indexName = concurrentIndexName(contents);
   if (recorded !== undefined) {
     if (recorded !== checksum) {
       console.warn(`Migration ${fileName} was already applied with a different checksum; leaving the applied version in place.`);
-    } else {
-      console.log(`Skipping already-applied migration ${fileName}.`);
+      return;
     }
+    if (!indexName || (await readConcurrentIndexValidity(client, indexName)) === true) {
+      console.log(`Skipping already-applied migration ${fileName}.`);
+      return;
+    }
+    console.warn(`Repairing missing or invalid concurrent index ${indexName} for migration ${fileName}.`);
+  }
+  if (indexName) {
+    // CREATE INDEX CONCURRENTLY is intentionally outside a transaction so it
+    // does not block writes for the duration of a production index build. A
+    // failed concurrent build can leave an invalid index behind; remove only
+    // that invalid artifact before retrying the idempotent migration.
+    if ((await readConcurrentIndexValidity(client, indexName)) === false) {
+      await client.db.execute(sql.raw(`drop index concurrently if exists public."${indexName}"`));
+    }
+    await client.db.execute(sql.raw(contents));
+    if ((await readConcurrentIndexValidity(client, indexName)) !== true) {
+      throw new Error(`Concurrent index migration ${fileName} did not create a valid ${indexName} index.`);
+    }
+    await client.db.execute(sql`
+      insert into public.__lobbystack_migrations (name, checksum)
+      values (${fileName}, ${checksum})
+      on conflict (name) do update set checksum = excluded.checksum, applied_at = now()
+    `);
+    applied.set(fileName, checksum);
+    console.log(`Applied migration ${fileName}.`);
     return;
   }
   // Apply the file and record it in one transaction so a failure never marks a
@@ -277,6 +316,18 @@ async function applyRawMigration(
   });
   applied.set(fileName, checksum);
   console.log(`Applied migration ${fileName}.`);
+}
+
+async function readConcurrentIndexValidity(
+  client: ReturnType<typeof createDatabaseClient>,
+  indexName: string,
+): Promise<boolean | undefined> {
+  const result = await client.db.execute<{ valid: boolean }>(sql`
+    select i.indisvalid as valid
+    from pg_catalog.pg_index i
+    where i.indexrelid = to_regclass(${`public.${indexName}`})
+  `);
+  return result.rows[0]?.valid;
 }
 
 async function verifyRlsBehavior(client: ReturnType<typeof createDatabaseClient>): Promise<void> {

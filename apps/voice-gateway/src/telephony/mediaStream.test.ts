@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   createCallInactivityState,
@@ -15,6 +15,7 @@ import {
   createRealtimeHoldTurnDetectionConfig,
   createRealtimeHoldTurnDetectionUpdateEvents,
   createRealtimeTurnDetectionConfig,
+  createActiveVoiceSession,
   estimateRealtimeTotalCostUsd,
   getImplicitEndCallForAssistantTranscript,
   getRealtimeGenerationOutcome,
@@ -25,7 +26,47 @@ import {
   shouldSkipImplicitEndCallAudioDone,
   shouldSkipImplicitEndCallResponseDone,
   shouldUseAssistantFinalMessageForToolEndCall,
+  trackRealtimeSessionConfigurationTask,
 } from "./mediaStream";
+
+describe("trackRealtimeSessionConfigurationTask", () => {
+  it("turns a rejected configuration into a tracked call-scoped recovery", async () => {
+    const session = createActiveVoiceSession();
+    const error = new Error("runtime tokenizer unavailable");
+    const captureFailure = vi.fn().mockReturnValue({
+      kind: "configuration",
+      providerErrorCode: "tokenizer_unavailable",
+    });
+    const recover = vi.fn().mockResolvedValue(undefined);
+    const server = {
+      log: {
+        error: vi.fn(),
+      },
+    };
+    const twilioSocket = {};
+
+    trackRealtimeSessionConfigurationTask(
+      server as never,
+      twilioSocket as never,
+      session,
+      Promise.reject(error),
+      captureFailure,
+      { recover },
+    );
+
+    await vi.waitFor(() => expect(captureFailure).toHaveBeenCalledWith({
+      error,
+      operation: "openai_realtime_session_configuration",
+    }));
+    expect(recover).toHaveBeenCalledWith(
+      server,
+      twilioSocket,
+      session,
+      { disposition: "openai_session_configuration_failed" },
+    );
+    await vi.waitFor(() => expect(session.pendingTasks.size).toBe(0));
+  });
+});
 
 describe("createRealtimeTurnDetectionConfig", () => {
   it("can disable auto responses and interruptions for manual response flows", () => {

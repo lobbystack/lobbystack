@@ -12,7 +12,7 @@ LobbyStack uses PostHog for product analytics and error tracking, and OpenTeleme
 
 ## Record durable events
 
-Business outcomes are written through `recordProductEvent` to PostgreSQL after the authoritative operation commits. The worker's `telemetry.flush` job delivers pending rows to PostHog and retries failed delivery. A tenant-scoped `outbox.backlogSample` job samples each business's publishable outbox backlog every 60 seconds. In-process telemetry is reserved for diagnostics where loss during a crash is acceptable.
+Business outcomes are written through `recordProductEvent` to PostgreSQL after the authoritative operation commits. The worker's `telemetry.flush` job delivers pending rows to PostHog and retries failed delivery. A tenant-scoped `outbox.backlogSample` job samples each business's publishable outbox backlog every 60 seconds. Scheduler-created envelopes explicitly mark recurring work, whose ticks do not emit `workflow.started`; delayed event-driven jobs still emit starts, and recurring failures still emit `workflow.failed`. The hourly retention sweep deletes tenant-scoped sent product events older than seven days in indexed, lock-skipping batches. When one run reaches its batch cap, it schedules a bounded continuation through the transactional outbox until the fixed cutoff is drained, so cleanup converges without monopolizing one worker execution. In-process telemetry is reserved for diagnostics where loss during a crash is acceptable.
 
 ## Use one declared transport
 

@@ -65,6 +65,14 @@ function booleanValue(body: Body, key: string): boolean {
   return body[key] === true;
 }
 
+function serializeDatabaseTimestamp(value: Date | string, field: string): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Invalid ${field} timestamp returned by the database.`);
+  }
+  return date.toISOString();
+}
+
 async function resolveBusinessByCallId(callId: string): Promise<string | undefined> {
   const result = await getAppDatabase().db.execute<{ business_id: string }>(sql`select app.resolve_business_by_call_id(${callId}::uuid) as business_id`);
   return result.rows[0]?.business_id;
@@ -348,11 +356,11 @@ export async function POST(request: Request, context: { params: Promise<{ segmen
 
     if (path === "call/web-recording-target") {
       const sessionId = requiredString(body, "gatewaySessionId");
-      const result = await getAppDatabase().db.execute<{ call_id: string; business_id: string; provider_call_id: string; started_at: Date; ended_at: Date | null; status: string }>(sql`select call_id, business_id, provider_call_id, started_at, ended_at, status from app.resolve_business_by_gateway_session(${sessionId})`);
+      const result = await getAppDatabase().db.execute<{ call_id: string; business_id: string; provider_call_id: string; started_at: Date | string; ended_at: Date | string | null; status: string }>(sql`select call_id, business_id, provider_call_id, started_at, ended_at, status from app.resolve_business_by_gateway_session(${sessionId})`);
       const call = result.rows[0];
       if (!call) return new Response("Not found", { status: 404 });
       const duration = await withBusinessTransaction(domain.db, { businessId: call.business_id, actorType: "worker" }, async (tx) => (await tx.select({ maxDurationMs: calls.webCallMaxDurationMs }).from(calls).where(and(eq(calls.id, call.call_id), eq(calls.businessId, call.business_id))).limit(1))[0]?.maxDurationMs);
-      return NextResponse.json({ callId: call.call_id, providerCallId: call.provider_call_id, startedAt: call.started_at.toISOString(), ...(call.ended_at ? { endedAt: call.ended_at.toISOString() } : {}), status: call.status, webCallMaxDurationMs: duration ?? 5 * 60 * 1000 });
+      return NextResponse.json({ callId: call.call_id, providerCallId: call.provider_call_id, startedAt: serializeDatabaseTimestamp(call.started_at, "started_at"), ...(call.ended_at ? { endedAt: serializeDatabaseTimestamp(call.ended_at, "ended_at") } : {}), status: call.status, webCallMaxDurationMs: duration ?? 5 * 60 * 1000 });
     }
 
     if (path === "call/transfer-state" || path === "call/prepare-transfer" || path === "call/release-transfer") {
