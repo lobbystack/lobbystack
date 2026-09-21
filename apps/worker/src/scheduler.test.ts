@@ -21,9 +21,10 @@ describe("worker schedulers", () => {
     for (const call of tenantCalls) {
       expect(call[2].data.businessId).toMatch(/^business-[ab]$/);
       expect(call[2].data.businessId).not.toBeNull();
+      expect(call[2].data.recurring).toBe(true);
     }
-    expect(upsertJobScheduler.mock.calls.find((call) => call[2].data.type === "affiliate.generatePayoutRun")?.[2].data.businessId).toBeNull();
-    expect(upsertJobScheduler.mock.calls.find((call) => call[2].data.type === "prospectDemo.expire")?.[2].data.businessId).toBeNull();
+    expect(upsertJobScheduler.mock.calls.find((call) => call[2].data.type === "affiliate.generatePayoutRun")?.[2].data).toEqual(expect.objectContaining({ businessId: null, recurring: true }));
+    expect(upsertJobScheduler.mock.calls.find((call) => call[2].data.type === "prospectDemo.expire")?.[2].data).toEqual(expect.objectContaining({ businessId: null, recurring: true }));
   });
 
   it("does not register tenant jobs when no businesses are available", async () => {

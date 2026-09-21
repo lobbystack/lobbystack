@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { and, eq, isNull, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { businesses, productEvents, withBusinessTransaction } from "@lobbystack/db";
 
@@ -180,5 +180,32 @@ export async function markProductEventsSent(
       .where(and(eq(productEvents.businessId, input.businessId), inArray(productEvents.id, input.eventIds), isNull(productEvents.sentAt)))
       .returning({ id: productEvents.id });
     return rows.length;
+  });
+}
+
+export async function deleteSentProductEventsBefore(
+  context: DomainContext,
+  input: { businessId: string; before: Date; limit?: number },
+): Promise<number> {
+  const limit = Math.min(5_000, Math.max(1, Math.trunc(input.limit ?? 1_000)));
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const result = await tx.execute<{ id: string }>(sql`
+      with candidates as (
+        select ${productEvents.id}
+        from ${productEvents}
+        where ${productEvents.businessId} = ${input.businessId}
+          and ${productEvents.sentAt} is not null
+          and ${productEvents.sentAt} < ${input.before}
+        order by ${productEvents.sentAt}, ${productEvents.id}
+        for update skip locked
+        limit ${limit}
+      )
+      delete from ${productEvents}
+      using candidates
+      where ${productEvents.id} = candidates.id
+        and ${productEvents.businessId} = ${input.businessId}
+      returning ${productEvents.id}
+    `);
+    return result.rows.length;
   });
 }

@@ -328,6 +328,7 @@ export const jobEnvelopeSchema = z.object({
   trace: traceContextSchema,
   idempotencyKey: z.string().min(1).max(255),
   scheduled: z.boolean().default(false),
+  recurring: z.boolean().optional(),
 });
 
 export type JobEnvelope = z.infer<typeof jobEnvelopeSchema>;

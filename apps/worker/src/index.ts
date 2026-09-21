@@ -1,4 +1,4 @@
-import { businesses, createDatabaseClient, databaseHealthCheck, withDispatcherTransaction } from "@lobbystack/db";
+import { businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
 import { assertProductionSecrets } from "@lobbystack/config";
 import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, isKnownJobType, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
 import { createEmbeddingProvider } from "@lobbystack/providers/ai/embeddingProvider";
@@ -141,7 +141,36 @@ async function main(): Promise<void> {
     }
   }
   await storage.ensureReady();
-  const dependencies: WorkerDependencies = { domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) }, realtime, ...(calendar ? { calendar } : {}), ...(crawler ? { crawler } : {}), ...(productAnalytics ? { productAnalytics } : {}), ...(email ? { email } : {}), ...(embeddings ? { embeddings } : {}), ...(twilio ? { twilio } : {}), ...(twilioAlerts ? { twilioAlerts } : {}), storage, ...(polar ? { polar } : {}) };
+  const dependencies: WorkerDependencies = {
+    domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) },
+    realtime,
+    ...(calendar ? { calendar } : {}),
+    ...(crawler ? { crawler } : {}),
+    ...(productAnalytics ? { productAnalytics } : {}),
+    ...(email ? { email } : {}),
+    ...(embeddings ? { embeddings } : {}),
+    ...(twilio ? { twilio } : {}),
+    ...(twilioAlerts ? { twilioAlerts } : {}),
+    storage,
+    ...(polar ? { polar } : {}),
+    enqueueProductEventRetentionContinuation: async (input) => {
+      await withBusinessTransaction(database.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+        await enqueueOutbox(tx, {
+          topic: "privacy.scrubMessage",
+          businessId: input.businessId,
+          aggregateType: "product_event_retention",
+          dedupeKey: `product-event-retention:${input.businessId}:${input.chainId}:${input.sequence}`,
+          payload: {
+            productEventRetentionContinuation: true,
+            retentionBefore: input.before.toISOString(),
+            retentionChainId: input.chainId,
+            retentionSequence: input.sequence,
+          },
+          availableAt: input.availableAt,
+        });
+      });
+    },
+  };
   const workers = jobQueues.map((queueName) => {
     const meter = getMeter("lobbystack-worker");
     const duration = meter.createHistogram("lobbystack.worker.job_duration_ms", { unit: "ms" });
@@ -158,7 +187,11 @@ async function main(): Promise<void> {
       wait.record(Math.max(0, Date.now() - job.timestamp - (job.delay ?? 0)), { queue: queueName, type });
       try {
         const maxAttempts = job.opts.attempts ?? 1;
-        return await handleJob(job.data, dependencies, { isFinalAttempt: job.attemptsMade + 1 >= maxAttempts });
+        return await handleJob(job.data, dependencies, {
+          isFinalAttempt: job.attemptsMade + 1 >= maxAttempts,
+          ...(job.id ? { queueJobId: job.id } : {}),
+          queuedAtMs: job.timestamp,
+        });
       } catch (error) {
         outcome = "error";
         throw error;

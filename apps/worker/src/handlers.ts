@@ -5,7 +5,7 @@ import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { getPolarMeteredUsagePayload, type BillingUsageKind } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
-import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimPhoneVerificationSend, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteExpiredObjectsForBusiness, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, markNotificationSkipped, markPhoneVerificationSendFailed, markPhoneVerificationSent, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, type DurableAiUsage } from "@lobbystack/domain";
+import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimPhoneVerificationSend, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, markNotificationSkipped, markPhoneVerificationSendFailed, markPhoneVerificationSent, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, type DurableAiUsage } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, correctAlertSmsUsage, estimateSmsSegments, loadOperatorNotificationDelivery, markFeedbackEmailFailed, markFeedbackEmailSent, markOperatorNotificationSent, markOperatorNotificationSkipped, queueDailyOperatorSummaries, refreshUnitEconomicsMonth, releaseOperatorNotificationDelivery, reserveAlertSmsUsage } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
@@ -23,6 +23,22 @@ const chunkCount = ragMeter.createHistogram("rag.chunk.count", { unit: "{chunk}"
 const embeddingDuration = ragMeter.createHistogram("rag.embedding.duration_ms", { unit: "ms" });
 const embeddingFailures = ragMeter.createCounter("rag.embedding.failures", { unit: "{failure}" });
 const indexDuration = ragMeter.createHistogram("rag.index.duration_ms", { unit: "ms" });
+const sentProductEventRetentionMs = 7 * 24 * 60 * 60_000;
+const sentProductEventRetentionBatchSize = 1_000;
+const sentProductEventRetentionMaxBatches = 10;
+const sentProductEventRetentionContinuationDelayMs = 10_000;
+
+type JobExecution = {
+  isFinalAttempt?: boolean;
+  queueJobId?: string;
+  queuedAtMs?: number;
+};
+
+type ProductEventRetentionContinuation = {
+  before: Date;
+  chainId: string;
+  sequence: number;
+};
 
 export type WorkerDependencies = {
   domain: DomainContext;
@@ -36,6 +52,13 @@ export type WorkerDependencies = {
   calendar?: CalendarOperations;
   productAnalytics?: { capture(events: Array<{ event: string; distinctId: string; properties: Record<string, unknown>; timestamp: string }>): Promise<void> };
   realtime?: Redis;
+  enqueueProductEventRetentionContinuation?: (input: {
+    businessId: string;
+    before: Date;
+    chainId: string;
+    sequence: number;
+    availableAt: Date;
+  }) => Promise<void>;
 };
 
 export type JobResult = { status: "completed" | "skipped"; entityId?: string };
@@ -51,6 +74,17 @@ type JobWorkflowScope = "business" | "global";
 
 function jobWorkflowScope(job: JobEnvelope): JobWorkflowScope {
   return job.businessId ? "business" : "global";
+}
+
+function productEventRetentionContinuation(job: JobEnvelope): ProductEventRetentionContinuation | undefined {
+  if (job.payload.productEventRetentionContinuation !== true) return undefined;
+  const before = typeof job.payload.retentionBefore === "string" ? new Date(job.payload.retentionBefore) : new Date(Number.NaN);
+  const chainId = typeof job.payload.retentionChainId === "string" ? job.payload.retentionChainId : "";
+  const sequence = typeof job.payload.retentionSequence === "number" ? job.payload.retentionSequence : Number.NaN;
+  if (Number.isNaN(before.getTime()) || !/^[a-f0-9]{32}$/.test(chainId) || !Number.isSafeInteger(sequence) || sequence < 1) {
+    throw new Error("Invalid product event retention continuation payload.");
+  }
+  return { before, chainId, sequence };
 }
 
 /**
@@ -73,6 +107,11 @@ async function recordWorkflowEvent(
   scope: JobWorkflowScope,
 ): Promise<void> {
   if (scope !== "business" || !job.businessId) return;
+  // Recurring maintenance jobs run for every tenant, often every minute, even
+  // when there is no work. Persist failures, but do not turn every scheduler
+  // tick or retention continuation into another durable product event. Delayed
+  // event-driven jobs remain observable because `scheduled` is not used here.
+  if (name === "workflow.started" && (job.recurring === true || job.payload.productEventRetentionContinuation === true)) return;
   try {
     await recordProductEvent(dependencies.domain, {
       name,
@@ -161,7 +200,7 @@ function twilioStatusCallbackOption(input: { messageId?: string; notificationId?
   return statusCallback ? { statusCallback } : {};
 }
 
-export async function handleJob(job: JobEnvelope, dependencies: WorkerDependencies, execution: { isFinalAttempt?: boolean } = {}): Promise<JobResult> {
+export async function handleJob(job: JobEnvelope, dependencies: WorkerDependencies, execution: JobExecution = {}): Promise<JobResult> {
   const scope = jobWorkflowScope(job);
   await recordWorkflowEvent(dependencies, job, "workflow.started", scope);
   try {
@@ -172,7 +211,7 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
   }
 }
 
-async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, execution: { isFinalAttempt?: boolean } = {}): Promise<JobResult> {
+async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, execution: JobExecution = {}): Promise<JobResult> {
   const businessId = job.businessId;
   switch (job.type) {
     case "phoneVerification.send": {
@@ -634,8 +673,46 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const result = await finalizeConversationSession(dependencies.domain, { businessId: businessIdOrThrow(job), callId });
       return { status: result.finalized ? "completed" : "skipped", entityId: result.sessionId ?? callId };
     }
-    case "privacy.scrubMessage":
-      return { status: "completed", entityId: JSON.stringify(await runPrivacyRetentionSweep(dependencies.domain, { businessId: businessIdOrThrow(job) })) };
+    case "privacy.scrubMessage": {
+      const businessId = businessIdOrThrow(job);
+      const continuation = productEventRetentionContinuation(job);
+      const result = continuation ? undefined : await runPrivacyRetentionSweep(dependencies.domain, { businessId });
+      const queuedAtMs = execution.queuedAtMs ?? Date.now();
+      const before = continuation?.before ?? new Date(queuedAtMs - sentProductEventRetentionMs);
+      const chainId = continuation?.chainId ?? createHash("sha256")
+        .update(`${businessId}:${execution.queueJobId ?? job.jobId}:${queuedAtMs}`)
+        .digest("hex")
+        .slice(0, 32);
+      let deleted = 0;
+      let hasMore = false;
+      for (let batch = 0; batch < sentProductEventRetentionMaxBatches; batch += 1) {
+        const batchDeleted = await deleteSentProductEventsBefore(dependencies.domain, {
+          businessId,
+          before,
+          limit: sentProductEventRetentionBatchSize,
+        });
+        deleted += batchDeleted;
+        hasMore = batchDeleted === sentProductEventRetentionBatchSize;
+        if (!hasMore) break;
+      }
+      if (hasMore) {
+        const nextSequence = (continuation?.sequence ?? 0) + 1;
+        if (!dependencies.enqueueProductEventRetentionContinuation) {
+          throw new Error("Product event retention continuation queue is not configured.");
+        }
+        await dependencies.enqueueProductEventRetentionContinuation({
+          businessId,
+          before,
+          chainId,
+          sequence: nextSequence,
+          availableAt: new Date(Date.now() + sentProductEventRetentionContinuationDelayMs),
+        });
+      }
+      return {
+        status: "completed",
+        entityId: result ? JSON.stringify(result) : `${businessId}:${deleted}`,
+      };
+    }
     case "privacy.deleteTranscript": {
       const callId = String(job.payload.callId ?? "");
       if (!callId) return { status: "skipped" };

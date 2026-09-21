@@ -62,7 +62,14 @@ export const SCHEMA_MIGRATIONS = [
   "0052_calendar_sync_freshness.sql",
   "0053_legacy_email_verified_backfill.sql",
   "0054_finance_billing_transactions.sql",
+  "0055_product_event_retention_index.sql",
 ] as const;
+
+const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;
+
+export function concurrentIndexName(contents: string): string | undefined {
+  return CONCURRENT_INDEX_DIRECTIVE.exec(contents)?.[1];
+}
 
 export const RAW_MIGRATIONS = [ROLE_MIGRATION, ...SCHEMA_MIGRATIONS] as const;
 

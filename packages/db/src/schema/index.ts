@@ -1192,7 +1192,13 @@ export const productEvents = pgTable(
     sentAt: timestamp("sent_at", { withTimezone: true }),
     ...timestamps,
   },
-  (table) => [index("product_events_pending_idx").on(table.sentAt, table.occurredAt), index("product_events_business_idx").on(table.businessId, table.occurredAt)],
+  (table) => [
+    index("product_events_pending_idx").on(table.sentAt, table.occurredAt),
+    index("product_events_business_idx").on(table.businessId, table.occurredAt),
+    index("product_events_business_sent_idx")
+      .on(table.businessId, table.sentAt, table.id)
+      .where(sql`${table.sentAt} is not null`),
+  ],
 );
 
 export const unitEconomicsEvents = pgTable(

@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
+  concurrentIndexName,
   LEGACY_BASELINE_MIGRATIONS,
   RAW_MIGRATIONS,
   ROLE_MIGRATION,
@@ -34,5 +35,12 @@ describe("raw migration manifest", () => {
     expect(LEGACY_BASELINE_MIGRATIONS).not.toContain(
       "0053_legacy_email_verified_backfill.sql",
     );
+  });
+
+  it("recognizes only validated concurrent-index migration directives", () => {
+    expect(concurrentIndexName("-- lobbystack:concurrent-index product_events_business_sent_idx\nCREATE INDEX CONCURRENTLY ..."))
+      .toBe("product_events_business_sent_idx");
+    expect(concurrentIndexName("-- lobbystack:concurrent-index product-events;drop table users"))
+      .toBeUndefined();
   });
 });
