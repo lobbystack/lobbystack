@@ -24,10 +24,16 @@ export default defineRailway((ctx) => {
   Redis.deploy = { startCommand: "sh -c 'exec redis-server --bind :: 0.0.0.0 --appendonly yes --maxmemory-policy noeviction --requirepass \"$REDIS_PASSWORD\"'", ...(production ? {} : { sleepApplication: true }) };
   Redis.networking = { privateNetworkEndpoint: "redis" };
   const postgresVolume = volume(production ? "postgres-volume-production" : "postgres-volume", { alerts: { usage: { "100": {}, "80": {}, "95": {} } }, allowOnlineResize: true, region: "us-east4-eqdc4a", sizeMB: 5000 });
-  const redisVolume = volume(production ? "redis-volume-production" : "redis-volume", { alerts: { usage: { "100": {}, "80": {}, "95": {} } }, allowOnlineResize: true, region: "us-east4-eqdc4a", sizeMB: 5000 });
+  // Staging's existing database-owned volume already matches this resource name.
+  // Production owns `redis-production-volume`; declaring another volume there
+  // would create an unattached duplicate named `redis-volume-production`.
+  const redisVolumes = production
+    ? []
+    : [volume("redis-volume", { alerts: { usage: { "100": {}, "80": {}, "95": {} } }, allowOnlineResize: true, region: "us-east4-eqdc4a", sizeMB: 5000 })];
   Redis.variables = { REDIS_PASSWORD: preserve() };
-  // The database product owns its existing /data mount. Keep the volume resource
-  // below, but do not also manage it as a service attachment (perpetual CLI drift).
+  // The database product owns its existing /data mount. Keep the staging volume
+  // resource in the project, but do not manage either environment's attachment
+  // here because that causes perpetual CLI drift.
   const parityCertification = bucket(production ? "lobbystack-production" : "parity-certification", { region: "iad" });
   const worker = service("worker", {
     source: productionSource,
@@ -250,6 +256,6 @@ export default defineRailway((ctx) => {
   });
 
   return project("lobbystack", {
-    resources: [Redis, worker, voiceGateway, admin, Postgres, migrator, postgresVolume, redisVolume, parityCertification],
+    resources: [Redis, worker, voiceGateway, admin, Postgres, migrator, postgresVolume, ...redisVolumes, parityCertification],
   });
 });
