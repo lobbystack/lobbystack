@@ -1048,6 +1048,57 @@ function trackTask(session: ActiveVoiceSession, task: Promise<unknown>): void {
   );
 }
 
+export function trackRealtimeSessionConfigurationTask(
+  server: FastifyInstance,
+  twilioSocket: WebSocket,
+  session: ActiveVoiceSession,
+  configurationTask: Promise<void>,
+  captureFailure: (input: {
+    error: unknown;
+    operation: string;
+  }) => ProviderErrorClassification,
+  dependencies: {
+    recover?: typeof recoverFromProviderFailure;
+  } = {},
+): void {
+  const recoveryTask = configurationTask.catch(async (error: unknown) => {
+    let classification: ProviderErrorClassification | undefined;
+    try {
+      classification = captureFailure({
+        error,
+        operation: "openai_realtime_session_configuration",
+      });
+    } catch (captureError) {
+      server.log.error(
+        {
+          err: captureError,
+          callId: session.callId,
+          callSid: session.callSid,
+        },
+        "Failed to capture OpenAI Realtime session configuration error",
+      );
+    }
+    server.log.error(
+      {
+        err: error,
+        callId: session.callId,
+        callSid: session.callSid,
+        streamSid: session.streamSid,
+        providerErrorKind: classification?.kind,
+        providerErrorCode: classification?.providerErrorCode,
+      },
+      "Failed to configure OpenAI Realtime session",
+    );
+    await (dependencies.recover ?? recoverFromProviderFailure)(
+      server,
+      twilioSocket,
+      session,
+      { disposition: "openai_session_configuration_failed" },
+    );
+  });
+  trackTask(session, recoveryTask);
+}
+
 function postRealtimeEvent(socket: WebSocket, payload: Record<string, unknown>): void {
   if (socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(payload));
@@ -3610,7 +3661,13 @@ export async function handleMediaStreamConnection(
         },
         "OpenAI Realtime websocket opened",
       );
-      void configureOpenAiSession(openAiSocket as WebSocket, session, server);
+      trackRealtimeSessionConfigurationTask(
+        server,
+        twilioSocket,
+        session,
+        configureOpenAiSession(openAiSocket as WebSocket, session, server),
+        captureOpenAiRealtimeConnectionFailure,
+      );
     });
 
     openAiSocket.on("message", (rawMessage: WebSocket.RawData) => {

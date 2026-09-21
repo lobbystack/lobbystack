@@ -114,6 +114,7 @@
     "reuseFailed": "Nous n'avons pas pu réutiliser ce téléphone. Réessayez.",
     "invalidNumber": "Entrez un numéro de mobile valide avec l'indicatif du pays.",
     "mobileRequired": "Utilisez un numéro de mobile qui peut recevoir des SMS de vérification.",
+    "unsupportedCountry": "La vérification téléphonique n'est pas encore offerte dans ce pays.",
     "tooManyAttempts": "Trop de tentatives de vérification. Attendez un peu, puis réessayez.",
     "waitBeforeRetry": "Nous venons d'envoyer un code. Attendez un moment avant de réessayer.",
     "sendFailed": "Impossible d'envoyer un code maintenant. Réessayez."

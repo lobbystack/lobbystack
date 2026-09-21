@@ -161,6 +161,7 @@ export function asApiResponse(error: unknown): NextResponse {
     return NextResponse.json({ error: "Request failed." }, { status: error.status });
   }
   const status = typeof error === "object" && error !== null && "status" in error && typeof error.status === "number" ? error.status : 500;
+  const code = typeof error === "object" && error !== null && "code" in error && typeof error.code === "string" ? error.code : undefined;
   const message = status >= 500 ? "Request failed." : error instanceof Error ? error.message : "Request failed.";
   if (status >= 500) {
     const errorId = crypto.randomUUID();
@@ -168,5 +169,5 @@ export function asApiResponse(error: unknown): NextResponse {
     try { after(report); } catch { void report(); }
     return NextResponse.json({ error: message, errorId }, { status, headers: { "x-error-id": errorId } });
   }
-  return jsonError(message, status);
+  return jsonError(message, status, code);
 }

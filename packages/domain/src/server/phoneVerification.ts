@@ -9,21 +9,36 @@ import type { DomainContext } from "./context";
 
 const supportedCountries = new Set(["US", "CA", "GB", "AU"]);
 
-export type PhoneLookupProvider = { lookupPhoneNumber(input: { phoneNumber: string; includeLineType?: boolean }): Promise<{ phoneE164: string; countryCode: string; valid: boolean; lineType?: string }> };
+export type PhoneLookupResult = { phoneE164: string; countryCode: string; valid: boolean; lineType?: string };
+export type PhoneLookupProvider = { lookupPhoneNumber(input: { phoneNumber: string; includeLineType?: boolean }): Promise<PhoneLookupResult> };
 export type PhoneVerificationCheckProvider = { checkPhone(input: { serviceSid: string; verificationSid: string; code: string }): Promise<{ status: string; approved: boolean }> };
+
+function phoneVerificationValidationError(message: string, code: string): Error & { status: 422; code: string } {
+  return Object.assign(new Error(message), { status: 422 as const, code });
+}
+
+export function validatePhoneVerificationLookup(lookup: PhoneLookupResult): { phoneE164: string; countryCode: string; lineType?: string } {
+  const countryCode = lookup.countryCode.trim().toUpperCase();
+  const lineType = lookup.lineType?.trim().toLowerCase();
+  if (!lookup.valid || !/^\+[1-9]\d{7,14}$/.test(lookup.phoneE164)) {
+    throw phoneVerificationValidationError("A valid mobile phone number is required.", "phone_number_invalid");
+  }
+  if (!supportedCountries.has(countryCode)) {
+    throw phoneVerificationValidationError("Phone verification is not supported in this country.", "phone_country_unsupported");
+  }
+  if (lineType && lineType !== "mobile") {
+    throw phoneVerificationValidationError("A mobile phone number is required.", "phone_number_not_mobile");
+  }
+  return { phoneE164: lookup.phoneE164, countryCode, ...(lineType ? { lineType } : {}) };
+}
 
 export async function requestPhoneVerification(context: DomainContext, input: { userId: string; businessId: string; phoneNumber: string }, provider: PhoneLookupProvider): Promise<string> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => { await requireBusinessAdmin(tx, input); });
-  const lookup = await provider.lookupPhoneNumber({ phoneNumber: input.phoneNumber, includeLineType: true });
-  const countryCode = lookup.countryCode.trim().toUpperCase();
-  const lineType = lookup.lineType?.trim().toLowerCase();
-  if (!lookup.valid || !/^\+[1-9]\d{7,14}$/.test(lookup.phoneE164)) throw new Error("A valid mobile phone number is required.");
-  if (!supportedCountries.has(countryCode)) throw new Error("Phone verification is not supported in this country.");
-  if (lineType && lineType !== "mobile") throw new Error("A mobile phone number is required.");
+  const lookup = validatePhoneVerificationLookup(await provider.lookupPhoneNumber({ phoneNumber: input.phoneNumber, includeLineType: true }));
   const fingerprint = createHash("sha256").update(`${input.userId}:${lookup.phoneE164}`).digest("hex");
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const result = await tx.execute(sql`SELECT app.reserve_phone_verification_attempt(${input.businessId}::uuid, ${input.userId}::uuid, ${lookup.phoneE164}, ${countryCode}, ${lineType ?? null}, ${fingerprint}) AS id`);
+    const result = await tx.execute(sql`SELECT app.reserve_phone_verification_attempt(${input.businessId}::uuid, ${input.userId}::uuid, ${lookup.phoneE164}, ${lookup.countryCode}, ${lookup.lineType ?? null}, ${fingerprint}) AS id`);
     const attemptId = String((result.rows[0] as { id?: unknown } | undefined)?.id ?? "");
     if (!attemptId) throw new Error("Phone verification could not be reserved.");
     await tx.update(businesses).set({ onboardingStage: "verify_phone_code", updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), eq(businesses.onboardingStage, "verify_phone")));

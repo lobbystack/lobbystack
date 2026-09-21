@@ -114,6 +114,7 @@
     "reuseFailed": "We couldn't reuse that phone right now. Please try again.",
     "invalidNumber": "Enter a valid mobile number, including the country code.",
     "mobileRequired": "Use a mobile number that can receive SMS verification.",
+    "unsupportedCountry": "Phone verification isn't available for that country yet.",
     "tooManyAttempts": "Too many verification attempts. Please wait a bit and try again.",
     "waitBeforeRetry": "We just sent a code. Please wait a moment before trying again.",
     "sendFailed": "We couldn't send a verification code right now. Please try again."

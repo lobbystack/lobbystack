@@ -22,7 +22,10 @@ type Attempt = { id: string; phoneE164: string; countryCode: string; status: str
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
-  if (!response.ok) throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Request failed.");
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { error?: string; code?: string } | null;
+    throw Object.assign(new Error(payload?.error ?? "Request failed."), payload?.code ? { code: payload.code } : {});
+  }
   return await response.json() as T;
 }
 
@@ -77,7 +80,7 @@ export function OnboardingPhoneVerificationCodeSurface() {
   const attempt = useQuery({ queryKey: ["phone-verification", business?.businessId], queryFn: () => requestJson<{ attempt: Attempt | null }>(`/api/onboarding/phone-verification?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business), refetchInterval: (query) => ["queued", "processing"].includes(query.state.data?.attempt?.status ?? "") ? 1000 : false });
   const current = attempt.data?.attempt;
   const check = useMutation({ mutationFn: (value: string) => requestJson<{ approved: boolean; status: string }>(`/api/onboarding/phone-verification/check?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ attemptId: current!.id, code: value }) }), onSuccess: (result) => { if (result.approved) { if (business) telemetry.track("web.onboarding.verify_phone_completed", { businessId: business.businessId }); router.replace(business?.onboardingStage === "complete" ? "/onboarding/number" : "/onboarding/plan"); } else setError(t("verifyPhoneCode.invalidCode")); }, onError: () => setError(t("verifyPhoneCode.failed")) });
-  const resend = useMutation({ mutationFn: () => requestJson(`/api/onboarding/phone-verification/resend?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST" }), onSuccess: () => { if (business) telemetry.track("web.onboarding.verify_phone_code_resent", { businessId: business.businessId }); setCode(""); submittedCodeRef.current = ""; void attempt.refetch(); }, onError: () => setError(t("verifyPhoneCode.resendFailed")) });
+  const resend = useMutation({ mutationFn: () => requestJson(`/api/onboarding/phone-verification/resend?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST" }), onSuccess: () => { if (business) telemetry.track("web.onboarding.verify_phone_code_resent", { businessId: business.businessId }); setCode(""); submittedCodeRef.current = ""; void attempt.refetch(); }, onError: (cause) => setError(getSafeOnboardingErrorMessage(cause, t, "verifyPhoneCode.resendFailed")) });
   const unavailable = current && ["failed", "expired", "canceled"].includes(current.status);
   const waiting = current?.status === "queued" || current?.status === "processing";
 

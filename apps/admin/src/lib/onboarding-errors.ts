@@ -8,6 +8,12 @@ function getErrorText(error: unknown): string {
   return error instanceof Error ? error.message : "";
 }
 
+function getErrorCode(error: unknown): string | undefined {
+  return typeof error === "object" && error !== null && "code" in error && typeof error.code === "string"
+    ? error.code
+    : undefined;
+}
+
 function includesAny(value: string, needles: string[]): boolean {
   const normalized = value.toLowerCase();
   return needles.some((needle) => normalized.includes(needle.toLowerCase()));
@@ -19,6 +25,7 @@ export function getSafeOnboardingErrorMessage(
   fallbackKey: string,
 ): string {
   const message = getErrorText(error);
+  const code = getErrorCode(error);
 
   if (includesAny(message, ["Too many workspace creation attempts"])) {
     return t("errors.tooManyBusinesses");
@@ -29,16 +36,22 @@ export function getSafeOnboardingErrorMessage(
   }
 
   if (
+    code === "phone_number_invalid" ||
     includesAny(message, [
       "Enter a valid mobile number",
+      "A valid mobile phone number is required",
       "Invalid phone number",
     ])
   ) {
     return t("verifyPhone.invalidNumber");
   }
 
-  if (includesAny(message, ["real mobile number", "landline", "VoIP"])) {
+  if (code === "phone_number_not_mobile" || includesAny(message, ["A mobile phone number is required", "real mobile number", "landline", "VoIP"])) {
     return t("verifyPhone.mobileRequired");
+  }
+
+  if (code === "phone_country_unsupported" || includesAny(message, ["Phone verification is not supported in this country"])) {
+    return t("verifyPhone.unsupportedCountry");
   }
 
   if (includesAny(message, ["Please wait a moment before retrying"])) {
