@@ -97,12 +97,12 @@ Provisioned in `production` (all healthy):
 | `voice-gateway` | service `2fe5fc51-8362-4c58-9884-a295fefe8afb` | `https://voice-gateway-production-c1a7.up.railway.app`; `/health/ready` 200. |
 | `migrator` | service `f5836a29-b3d9-471c-8ee6-c38006e5bd90` | run-once; migrations + `bootstrap` + RLS verification passed. |
 | `Postgres` | service `c4878c02-811f-407d-97f1-44acf4987913` | new `postgres-volume-production`; private `postgres.railway.internal`. |
-| `Redis-production` | database `Redis-production` | new `redis-volume-production`; `requirepass`, `appendonly yes`. |
+| `Redis-production` | database `Redis-production` | database-owned `redis-production-volume`; `requirepass`, `appendonly yes`. |
 | bucket | `lobbystack-production` (`lobbystack-production-zomrgj`) | isolated from `parity-certification`. |
 
 Configuration notes:
 
-- `.railway/railway.ts` now manages `staging` **and** `production`; the managed Redis database and volumes are production-suffixed because Railway managed-database names are project-unique. Staging values are unchanged.
+- `.railway/railway.ts` now manages `staging` **and** `production`; Railway owns each managed Redis database's `/data` volume. Production uses `redis-production-volume`, while staging retains `redis-volume` as an adopted IaC resource. Staging values are unchanged.
 - A new migrator `bootstrap` command (`packages/db/src/cli.ts`) sets `LOGIN` + password on the migration-created NOLOGIN roles from `LOBBYSTACK_*_PASSWORD`; fresh environments require it before the app roles can connect.
 - Production `REDIS_PREFIX` is `lobbystack-prod-20260916`; production `S3_*` come from the `lobbystack-production` bucket credentials.
 - Provider endpoints, DNS, `APP_BASE_URL`, `AUTH_TRUSTED_ORIGINS`, `GOOGLE_REDIRECT_URI`, and Twilio callback URLs point at the Railway-generated production domains, **not** at customer-facing domains, and no external provider has been repointed.
