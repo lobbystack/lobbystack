@@ -2,9 +2,9 @@ import type { FaqItem } from "@/lib/seo"
 
 export const salonsSpasFaqs: FaqItem[] = [
   {
-    question: "What is an AI receptionist for salons and spas?",
+    question: "What is an AI answering service for salons and spas?",
     answer:
-      "An AI receptionist for salons and spas answers booking calls, schedules appointments, handles reschedules, answers service questions, and sends confirmations. It works when your front desk is busy, closed, or when clients call outside business hours.",
+      "An AI answering service for salons and spas answers booking calls, schedules appointments, handles reschedules, answers service questions, and sends confirmations. It works when your front desk is busy, closed, or when clients call outside business hours.",
   },
   {
     question: "Can it book appointments while stylists are with clients?",

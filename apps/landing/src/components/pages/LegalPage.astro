@@ -272,7 +272,7 @@ const t = legalCopy.fr[kind]
     noindex: true,
     locale,
     jsonLd: [
-      organizationJsonLd({ locale }),
+      organizationJsonLd(),
       breadcrumbJsonLd([
         { name: copy.common.home, path: localizePath(locale, "/") },
         { name: t.h1, path: canonicalPath },

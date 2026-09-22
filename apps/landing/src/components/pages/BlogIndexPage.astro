@@ -163,7 +163,7 @@ const dateLocale = locale === "fr" ? "fr-FR" : "en-US"
     canonicalPath,
     locale,
     jsonLd: [
-      organizationJsonLd({ locale }),
+      organizationJsonLd(),
       webSiteJsonLd({ locale }),
       blogJsonLd({ locale, path: canonicalPath }),
       breadcrumbJsonLd([

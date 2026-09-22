@@ -122,7 +122,9 @@ type LocaleInput = {
 const localeLanguage = (locale: LocaleInput["locale"] = "en") =>
   locale === "fr" ? "fr" : "en"
 
-export const organizationJsonLd = (options: LocaleInput = {}): JsonLd => ({
+// No inLanguage here: schema.org doesn't define it on Organization, and
+// validators flag the property.
+export const organizationJsonLd = (): JsonLd => ({
   "@type": "Organization",
   "@id": absoluteUrl("/#organization"),
   name: SITE_NAME,
@@ -138,7 +140,6 @@ export const organizationJsonLd = (options: LocaleInput = {}): JsonLd => ({
   },
   description:
     "LobbyStack is an open-source AI receptionist platform for small businesses that answers calls, books appointments, captures caller details, and routes urgent requests.",
-  inLanguage: localeLanguage(options.locale),
   sameAs: BRAND_SAME_AS,
   knowsAbout: [
     "AI receptionist software",

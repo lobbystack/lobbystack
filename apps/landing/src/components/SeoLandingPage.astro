@@ -65,7 +65,7 @@ const reassurance =
     image: page.image,
     imageAlt: page.imageAlt,
     jsonLd: [
-      organizationJsonLd({ locale }),
+      organizationJsonLd(),
       webSiteJsonLd({ locale }),
       breadcrumbJsonLd([
         { name: copy.common.home, path: localizePath(locale, "/") },

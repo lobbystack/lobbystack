@@ -2,9 +2,9 @@ import type { FaqItem } from "@/lib/seo"
 
 export const dentalOfficesFaqs: FaqItem[] = [
   {
-    question: "What is an AI receptionist for dental offices?",
+    question: "What is an AI dental answering service?",
     answer:
-      "An AI receptionist for dental practices answers patient calls, books appointments, handles recalls, and routes emergencies. It works around the clock so new patients and existing patients reach someone even when the front desk is busy or closed.",
+      "An AI dental answering service answers patient calls, books appointments, handles recalls, and routes emergencies. It works around the clock so new patients and existing patients reach someone even when the front desk is busy or closed.",
   },
   {
     question: "Can it book new patient appointments?",
