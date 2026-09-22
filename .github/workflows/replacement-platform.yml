@@ -5,12 +5,23 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      target:
+        description: Jobs to run
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - replacement-validate
+          - staging-provider-certification
 
 jobs:
   # This job is intentionally not named "validate": that context is owned by
   # .github/workflows/ci.yml (typecheck, build, test), which is the required
   # status check on main. Keep this name distinct so the two do not collide.
   replacement-validate:
+    if: github.event_name == 'push' || inputs.target == 'all' || inputs.target == 'replacement-validate'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -173,7 +184,7 @@ jobs:
       - run: docker compose --env-file .env.example -f docker-compose.yml config --quiet
 
   staging-provider-certification:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && (inputs.target == 'all' || inputs.target == 'staging-provider-certification')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: replacement-staging
