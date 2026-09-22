@@ -5,8 +5,10 @@ import { cn } from "@/lib/utils"
 import {
   BookOpen,
   CalendarCheck,
+  Building2,
   Calculator,
   ChevronDown,
+  CloudHail,
   DoorOpen,
   ExternalLink,
   Gift,
@@ -98,6 +100,8 @@ const solutionLabelMap = {
     applianceRepair: "Appliance repair",
     restoration: "Restoration",
     locksmiths: "Locksmiths",
+    roofing: "Roofing",
+    propertyManagement: "Property management",
   },
   fr: {
     solutions: "Solutions",
@@ -117,6 +121,8 @@ const solutionLabelMap = {
     applianceRepair: "Réparation d'électroménagers",
     restoration: "Restauration",
     locksmiths: "Serruriers",
+    roofing: "Toiture",
+    propertyManagement: "Gestion immobilière",
   },
 } satisfies Record<Locale, Record<string, string>>
 
@@ -221,6 +227,16 @@ const tradeLinks = (locale: Locale) =>
       label: solutionLabelMap[locale].locksmiths,
       href: "/solutions/ai-receptionist-for-locksmiths/",
       icon: KeyRound,
+    },
+    {
+      label: solutionLabelMap[locale].roofing,
+      href: "/solutions/roofing-answering-service/",
+      icon: CloudHail,
+    },
+    {
+      label: solutionLabelMap[locale].propertyManagement,
+      href: "/solutions/property-management-answering-service/",
+      icon: Building2,
     },
   ] satisfies NavChildLink[]
 

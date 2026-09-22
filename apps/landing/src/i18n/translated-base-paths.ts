@@ -18,6 +18,8 @@ export const translatedBasePaths = [
   "/solutions/ai-receptionist-for-restoration-companies/",
   "/solutions/ai-receptionist-for-locksmiths/",
   "/solutions/after-hours-answering-service-for-contractors/",
+  "/solutions/roofing-answering-service/",
+  "/solutions/property-management-answering-service/",
   "/solutions/open-source-ai-receptionist/",
   "/missed-call-revenue-calculator/",
   "/blog/",

@@ -11,6 +11,8 @@ import {
   applianceRepairFaqs,
   restorationFaqs,
   locksmithFaqs,
+  propertyManagementFaqs,
+  roofingFaqs,
 } from "@/lib/trade-faqs"
 import { contractorAfterHoursFaqs } from "@/lib/contractor-after-hours-faqs"
 import { openSourceReceptionistFaqs } from "@/lib/open-source-receptionist-faqs"
@@ -1023,6 +1025,152 @@ export const solutionPages: SeoLandingPage[] = [
   },
 
   // ── Open-source AI receptionist page ────────────────────────────
+
+  {
+    group: "solution",
+    slug: "property-management-answering-service",
+    path: "/solutions/property-management-answering-service/",
+    title: "Property Management Answering Service with AI | LobbyStack",
+    description:
+      "LobbyStack is an AI answering service for property managers. It sorts after-hours maintenance emergencies, answers leasing questions, and books showings.",
+    eyebrow: "Property management",
+    h1: "Property management answering service for after-hours maintenance calls",
+    intro:
+      "Tenants call at 2 a.m. about a leak, a lockout, or no heat. Prospects call at lunch asking about pets and parking. LobbyStack answers both, sends real emergencies to your on-call maintenance tech, and books showings for your leasing team.",
+    image: "/illustrations/business-knowledge.webp",
+    imageAlt:
+      "LobbyStack knowledge sources including FAQs, policies, and business hours, ready to answer tenant calls",
+    proofPoints: [
+      "Sorts maintenance emergencies from requests that can wait until morning",
+      "Answers leasing questions from the policies you enter",
+    ],
+    sections: [
+      {
+        title: "Triage maintenance calls with your emergency list",
+        body: "You probably keep a written list already: flooding, no heat in winter, a gas smell, a lockout, a sewer backup. Load it into LobbyStack. It asks the tenant for the unit number and what they see, transfers emergencies to your on-call tech, and logs the dripping faucet for the morning.",
+        points: [
+          "Collects the unit number, callback number, and a description of the problem",
+          "Transfers emergencies to your on-call maintenance tech",
+          "Logs routine requests for your morning queue",
+        ],
+      },
+      {
+        title: "Answer leasing questions and book showings",
+        body: "Prospects ask about rent, deposits, pet policy, parking, and which units are open. Add those details to LobbyStack's knowledge base and it answers from them. When a prospect wants to see a unit, it books the showing into your leasing agent's calendar and texts the confirmation.",
+        points: [
+          "Answers from the property details you enter",
+          "Books showings and sends confirmation texts",
+        ],
+      },
+      {
+        title: "Keep routine questions off your on-call phone",
+        body: "A tenant asking when rent is due at 11 p.m. shouldn't wake your maintenance tech. LobbyStack answers rent, office-hours, and portal questions from your policies and saves a summary of the call, so your on-call phone rings for the emergencies on your list.",
+        points: [
+          "Answers rent, office-hours, and portal questions",
+          "Saves a summary and transcript of each call in the dashboard",
+        ],
+      },
+      {
+        title: "What after-hours coverage costs",
+        body: "Say your properties generate 60 after-hours calls a month at 3 minutes each. That's 180 minutes. Starter includes 150 minutes for $30 a month, and the other 30 minutes cost $0.20 each, so you pay about $36. Pro includes 500 minutes for $100 if your portfolio grows.",
+        points: [
+          "Spam calls and calls under 10 seconds don't count toward usage",
+          "The Free plan includes 30 voice minutes for testing",
+        ],
+      },
+    ],
+    faqs: propertyManagementFaqs,
+    faqHeading: "Questions about property management answering services",
+    relatedLinks: [
+      {
+        label: "After-hours answering",
+        href: "/solutions/after-hours-answering-service/",
+      },
+      {
+        label: "AI appointment scheduler",
+        href: "/solutions/ai-appointment-scheduler/",
+      },
+      { label: "Pricing", href: "/pricing/" },
+    ],
+    ctaHeading: "Answer tenants after hours",
+    ctaBody:
+      "Load your emergency list, forward your after-hours line, and test LobbyStack on the Free plan.",
+    ctaPrimaryLabel: "Try for free",
+    ctaSecondaryLabel: "View pricing",
+  },
+
+  {
+    group: "solution",
+    slug: "roofing-answering-service",
+    path: "/solutions/roofing-answering-service/",
+    title: "Roofing Answering Service with AI | LobbyStack",
+    description:
+      "LobbyStack is an AI answering service for roofers. It handles storm-surge calls, sends active leaks to your on-call crew, and books inspections and estimates.",
+    eyebrow: "Roofing",
+    h1: "Roofing answering service that keeps up after a storm",
+    intro:
+      "After a hailstorm, homeowners call all day wanting an inspection before the adjuster shows up. LobbyStack answers those calls at the same time, books inspections into your calendar, and sends active leaks to your crew.",
+    image: "/illustrations/call-capture.webp",
+    imageAlt:
+      "Call routing that rings your team first and hands the call to LobbyStack when nobody is available",
+    proofPoints: [
+      "Takes simultaneous calls after a storm without a busy signal",
+      "Books inspections and estimates into your calendar",
+    ],
+    sections: [
+      {
+        title: "Handle the week after a storm",
+        body: "Hail and wind can bring a month of calls in two days. LobbyStack takes as many calls at once as come in, collects the address, the roof's age, and the damage the homeowner sees, and books the first open inspection slot. Your office starts the day with a list of booked inspections.",
+        points: [
+          "Answers simultaneous calls",
+          "Collects the address, roof age, and visible damage",
+          "Books inspections into open slots",
+        ],
+      },
+      {
+        title: "Send active leaks to your crew",
+        body: "Water coming through a ceiling needs a tarp tonight. You define what counts as urgent, and LobbyStack transfers those calls to your on-call crew with the address and what the homeowner described. A few missing shingles with no leak get an inspection booking.",
+        points: [
+          "Transfers active leaks with the address and description",
+          "Books non-urgent damage for inspection",
+        ],
+      },
+      {
+        title: "Answer insurance claim questions from your script",
+        body: "Homeowners ask whether you work with their insurer, whether you'll meet the adjuster, and what an inspection costs. Write your answers once. LobbyStack gives them on the call and flags anything outside your script for your office to call back.",
+        points: [
+          "Answers the insurance and inspection questions you approve",
+          "Flags unusual questions for a callback",
+        ],
+      },
+      {
+        title: "What storm season costs",
+        body: "Say a roofing call with intake questions runs 4 minutes. After a big storm, 200 calls in a month adds up to 800 minutes. Pro includes 500 minutes for $100, and the other 300 cost $0.18 each, so that month comes to $154. A quiet month stays at $100.",
+        points: [
+          "Spam calls and calls under 10 seconds don't count toward usage",
+          "The Free plan includes 30 voice minutes for testing",
+        ],
+      },
+    ],
+    faqs: roofingFaqs,
+    faqHeading: "Questions about roofing answering services",
+    relatedLinks: [
+      {
+        label: "Contractor answering service",
+        href: "/solutions/after-hours-answering-service-for-contractors/",
+      },
+      {
+        label: "Missed-call revenue calculator",
+        href: "/missed-call-revenue-calculator/",
+      },
+      { label: "Pricing", href: "/pricing/" },
+    ],
+    ctaHeading: "Be ready for the next storm",
+    ctaBody:
+      "Set up LobbyStack before storm season so it takes the overflow when your lines fill up.",
+    ctaPrimaryLabel: "Try for free",
+    ctaSecondaryLabel: "View pricing",
+  },
 
   {
     group: "solution",
