@@ -37,7 +37,8 @@ describe("original login and signup behavior", () => {
   it("verifies the six-digit code and records authentication success", async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(Response.json({ token: null, user: { id: "operator" } }))
-      .mockResolvedValueOnce(Response.json({ status: true, token: "session" }));
+      .mockResolvedValueOnce(Response.json({ status: true, token: null }))
+      .mockResolvedValueOnce(Response.json({ token: "session", user: { id: "operator" } }));
     render(<AuthCard mode="signup" />);
     await userEvent.type(screen.getByLabelText("signup.email"), "Owner@Example.invalid");
     await userEvent.type(screen.getByLabelText("signup.password"), "Valid-Password-123!");
@@ -45,7 +46,22 @@ describe("original login and signup behavior", () => {
     await userEvent.type(await screen.findByLabelText("verifyEmail.codeLabel"), "12ab3456");
     await userEvent.click(screen.getByRole("button", { name: "verifyEmail.verify" }));
     await waitFor(() => expect(fetch).toHaveBeenNthCalledWith(2, "/api/auth/email-otp/verify-email", expect.objectContaining({ body: JSON.stringify({ email: "owner@example.invalid", otp: "123456" }) })));
+    expect(fetch).toHaveBeenNthCalledWith(3, "/api/auth/sign-in/email", expect.objectContaining({ body: JSON.stringify({ email: "owner@example.invalid", password: "Valid-Password-123!" }) }));
     expect(analytics.record).toHaveBeenCalledExactlyOnceWith("web.auth.signup_succeeded");
+  });
+  it("does not authenticate when password sign-in fails after email verification", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(Response.json({ token: null, user: { id: "operator" } }))
+      .mockResolvedValueOnce(Response.json({ status: true, token: null }))
+      .mockResolvedValueOnce(Response.json({ code: "INVALID_CREDENTIALS" }, { status: 401 }));
+    render(<AuthCard mode="signup" />);
+    await userEvent.type(screen.getByLabelText("signup.email"), "owner@example.invalid");
+    await userEvent.type(screen.getByLabelText("signup.password"), "Valid-Password-123!");
+    await userEvent.click(screen.getByRole("button", { name: "signup.submit" }));
+    await userEvent.type(await screen.findByLabelText("verifyEmail.codeLabel"), "123456");
+    await userEvent.click(screen.getByRole("button", { name: "verifyEmail.verify" }));
+    expect(await screen.findByText("errors.verificationSignInFailed")).toBeTruthy();
+    expect(analytics.record).not.toHaveBeenCalled();
   });
   it("resends a verification code from the code entry screen", async () => {
     vi.mocked(fetch)

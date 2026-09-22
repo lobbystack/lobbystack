@@ -256,7 +256,6 @@ export function getAuth() {
       },
     },
     emailVerification: {
-      autoSignInAfterVerification: true,
       afterEmailVerification: async (user: { id: string; email: string }) => {
         await database.db.update(users).set({ normalizedEmail: user.email.trim().toLowerCase(), updatedAt: new Date() }).where(eq(users.id, user.id));
       },

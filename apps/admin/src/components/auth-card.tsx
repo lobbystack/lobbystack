@@ -133,6 +133,12 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
             : "invalidVerificationCode";
         throw new Error(t(`errors.${key}`));
       }
+      const signInResponse = await fetch("/api/auth/sign-in/email", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+      });
+      if (!signInResponse.ok) throw new Error(t("errors.verificationSignInFailed"));
       finishAuthentication();
     } catch (cause) {
       setVerificationError(cause instanceof Error ? cause.message : t("errors.invalidVerificationCode"));
