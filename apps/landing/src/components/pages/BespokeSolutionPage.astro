@@ -160,7 +160,7 @@ const homeLabel = locale === "fr" ? "Accueil" : "Home"
     image: variant.image,
     imageAlt: variant.imageAlt,
     jsonLd: [
-      organizationJsonLd({ locale }),
+      organizationJsonLd(),
       webSiteJsonLd({ locale }),
       breadcrumbJsonLd([
         { name: homeLabel, path: localizePath(locale, "/") },
