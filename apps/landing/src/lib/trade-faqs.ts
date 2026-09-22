@@ -266,3 +266,64 @@ export const locksmithFaqs: FaqItem[] = [
       "LobbyStack has a free plan with included voice minutes and paid plans for higher call volume. Most locksmith shops start on the free plan and upgrade as call volume grows. See the pricing page for current rates.",
   },
 ]
+
+export const propertyManagementFaqs: FaqItem[] = [
+  {
+    question: "Can it tell a maintenance emergency from a routine request?",
+    answer:
+      "Yes. You give LobbyStack your emergency list in plain language, such as flooding, no heat below a set temperature, a gas smell, or a lockout. It asks follow-up questions, transfers matching calls to your on-call tech, and sends the rest to your morning queue.",
+  },
+  {
+    question: "Can it answer questions about my properties?",
+    answer:
+      "Yes. Add details like rent, deposits, pet policy, parking, and open units to LobbyStack's knowledge base. It answers from those details and flags anything it can't answer for your office.",
+  },
+  {
+    question: "Can it book showings?",
+    answer:
+      "Yes. LobbyStack checks your leasing agent's calendar, offers open times, books the showing, and sends a confirmation text.",
+  },
+  {
+    question: "Does it work with my existing office number?",
+    answer:
+      "Yes. Forward your office line to LobbyStack after hours or all day, and tenants keep calling the number they know.",
+  },
+  {
+    question: "How much does a property management answering service cost?",
+    answer:
+      "LobbyStack's Free plan includes 30 voice minutes. Starter is $30 a month for 150 minutes, and Pro is $100 a month for 500 minutes. Spam calls and calls under 10 seconds don't count toward usage.",
+  },
+]
+
+export const roofingFaqs: FaqItem[] = [
+  {
+    question: "Can it handle a surge of calls after a storm?",
+    answer:
+      "Yes. LobbyStack answers simultaneous calls, so homeowners don't hit a busy signal or voicemail. It books inspections into your open slots and queues the rest for your office.",
+  },
+  {
+    question: "What does it do with an active leak?",
+    answer:
+      "It follows your rules. A common setup transfers active leaks to your on-call crew with the address and description, and books everything else for inspection.",
+  },
+  {
+    question: "Can it answer insurance claim questions?",
+    answer:
+      "Yes, from the answers you write, such as whether you meet adjusters and which insurers you work with. LobbyStack flags anything outside your script for a callback.",
+  },
+  {
+    question: "Will it quote roof repairs or replacements?",
+    answer:
+      "It books the inspection or estimate visit. You decide whether it quotes an inspection fee or a starting price for common repairs.",
+  },
+  {
+    question: "Does it work with my existing business number?",
+    answer:
+      "Yes. Forward your current number to LobbyStack, or send only overflow and after-hours calls to it.",
+  },
+  {
+    question: "How much does a roofing answering service cost?",
+    answer:
+      "LobbyStack's Free plan includes 30 voice minutes. Starter is $30 a month for 150 minutes, and Pro is $100 a month for 500 minutes, with extra minutes at $0.20 and $0.18. Spam calls and calls under 10 seconds don't count toward usage.",
+  },
+]

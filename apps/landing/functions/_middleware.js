@@ -24,6 +24,8 @@ const TRANSLATED_PATHS = new Set([
   "/solutions/ai-receptionist-for-restoration-companies/",
   "/solutions/ai-receptionist-for-locksmiths/",
   "/solutions/after-hours-answering-service-for-contractors/",
+  "/solutions/roofing-answering-service/",
+  "/solutions/property-management-answering-service/",
   "/solutions/open-source-ai-receptionist/",
   "/missed-call-revenue-calculator/",
   "/changelog/",
@@ -170,7 +172,6 @@ const redirectToFrench = (request, url) => {
   return new Response(null, { status: 302, headers })
 }
 
-
 const wantsMarkdown = (request) =>
   request.headers
     .get("Accept")
@@ -188,7 +189,6 @@ const getHomepageMarkdownPath = (pathname) => {
 
   return null
 }
-
 
 export async function onRequest(context) {
   const url = new URL(context.request.url)
