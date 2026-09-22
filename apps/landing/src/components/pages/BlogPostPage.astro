@@ -5,11 +5,8 @@ import { Footer } from "@/components/Footer"
 import { FeaturesCtaSection } from "@/components/features/FeaturesCtaSection"
 import { render } from "astro:content"
 import type { BlogEntry } from "@/lib/blog"
-import {
-  blogCanonicalSlug,
-  blogPath,
-  getBlogPosts,
-} from "@/lib/blog"
+import { blogCanonicalSlug, blogPath, getBlogPosts } from "@/lib/blog"
+import { nextInRotation } from "@/lib/related-posts"
 import {
   blogJsonLd,
   blogPostingJsonLd,
@@ -86,20 +83,20 @@ const displayedDateLabel = entry.data.updatedDate
 const coverImageWidth = 1672
 const coverImageHeight = 941
 const allPosts = await getBlogPosts(locale)
-const relatedPosts = allPosts
-  .filter(
-    (candidate) =>
-      blogCanonicalSlug(candidate) !== blogCanonicalSlug(entry) &&
-      candidate.data.category === entry.data.category
-  )
-  .slice(0, 3)
+const relatedPosts = nextInRotation(
+  allPosts.filter(
+    (candidate) => candidate.data.category === entry.data.category
+  ),
+  entry,
+  3,
+  (a, b) => blogCanonicalSlug(a) === blogCanonicalSlug(b)
+)
 const fallbackRelatedPosts = allPosts
   .filter(
     (candidate) =>
       blogCanonicalSlug(candidate) !== blogCanonicalSlug(entry) &&
       !relatedPosts.some(
-        (related) =>
-          blogCanonicalSlug(related) === blogCanonicalSlug(candidate)
+        (related) => blogCanonicalSlug(related) === blogCanonicalSlug(candidate)
       )
   )
   .slice(0, 3 - relatedPosts.length)
@@ -133,18 +130,14 @@ const productResources = slug.includes("open-source")
         },
         {
           label:
-            locale === "fr"
-              ? "Réponse téléphonique IA"
-              : "AI phone answering",
+            locale === "fr" ? "Réponse téléphonique IA" : "AI phone answering",
           href: "/solutions/ai-phone-answering/",
         },
       ]
     : [
         {
           label:
-            locale === "fr"
-              ? "Réponse téléphonique IA"
-              : "AI phone answering",
+            locale === "fr" ? "Réponse téléphonique IA" : "AI phone answering",
           href: "/solutions/ai-phone-answering/",
         },
         {
@@ -228,7 +221,8 @@ const productResources = slug.includes("open-source")
             {displayedDateLabel}
           </time>
           <span class="text-xs font-medium text-muted-foreground">
-            {pageCopy[locale].by} {entry.data.author}
+            {pageCopy[locale].by}
+            {entry.data.author}
           </span>
         </div>
       </header>
