@@ -16,6 +16,7 @@ export function normalizePolarEvent(type: string, data: RecordValue, env: Record
   const subscriptionState = text(subscription.status);
   return {
     businessId,
+    businessReference: candidate,
     payload: {
       ...data,
       ...(externalId ? { billingKey: externalId } : {}),
