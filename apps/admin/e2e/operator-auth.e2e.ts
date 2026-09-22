@@ -1,4 +1,5 @@
 import { respectingAuthRateLimit } from "./fixtures/auth-rate-limit";
+import { completeSignupEmailVerification, isolateAuthRateLimit } from "./fixtures/email-verification";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { eq, sql } from "drizzle-orm";
 import { spawnSync } from "node:child_process";
@@ -15,6 +16,8 @@ async function cleanupFixtures(): Promise<void> {
     const database = createDatabaseClient("lobbystack_migrator", { DATABASE_URL: databaseUrl });
     try {
       await database.db.execute(sql`delete from public.businesses where slug like ${`${prefix}-%`}`);
+      await database.db.execute(sql`delete from public.outbox_messages where aggregate_id in (select id from public.users where email like ${`${prefix}-%@example.invalid`})`);
+      await database.db.execute(sql`delete from public.verifications where identifier like ${`email-verification-otp-${prefix}-%@example.invalid`}`);
       await database.db.execute(sql`delete from public.users where email like ${`${prefix}-%@example.invalid`}`);
     } finally {
       await database.pool.end();
@@ -40,7 +43,7 @@ async function cleanupFixtures(): Promise<void> {
       "--set",
       "ON_ERROR_STOP=1",
       "--command",
-      "DELETE FROM public.businesses WHERE slug LIKE 'replacement-e2e-%'; DELETE FROM public.users WHERE email LIKE 'replacement-e2e-%@example.invalid';",
+      "DELETE FROM public.businesses WHERE slug LIKE 'replacement-e2e-%'; DELETE FROM public.outbox_messages WHERE aggregate_id IN (SELECT id FROM public.users WHERE email LIKE 'replacement-e2e-%@example.invalid'); DELETE FROM public.verifications WHERE identifier LIKE 'email-verification-otp-replacement-e2e-%@example.invalid'; DELETE FROM public.users WHERE email LIKE 'replacement-e2e-%@example.invalid';",
     ], { cwd: root, encoding: "utf8" });
     if (cleanup.status !== 0) throw new Error(cleanup.stderr || cleanup.stdout || "Compose fixture cleanup failed.");
     return;
@@ -49,8 +52,10 @@ async function cleanupFixtures(): Promise<void> {
 }
 
 async function signUp(page: Page, identity: string): Promise<void> {
+  const email = `${prefix}-${identity}@example.invalid`;
+  await isolateAuthRateLimit(page, email);
   await page.goto("/en/signup");
-  await page.locator('input[type="email"]').fill(`${prefix}-${identity}@example.invalid`);
+  await page.locator('input[type="email"]').fill(email);
   await page.locator('input[type="password"]').fill(password);
   if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
     await expect.poll(() => page.evaluate(() => {
@@ -64,6 +69,7 @@ async function signUp(page: Page, identity: string): Promise<void> {
     return await submitted;
   });
   expect(response.ok()).toBe(true);
+  await completeSignupEmailVerification(page, email);
   await expect(page).toHaveURL(/\/onboarding\/business$/);
 }
 
