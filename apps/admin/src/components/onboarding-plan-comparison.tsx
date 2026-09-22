@@ -1,6 +1,9 @@
 import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Minus } from "lucide-react";
+import { getCloudPlanFactSheet } from "@lobbystack/shared/product-capabilities";
+
+const freePlanFacts = getCloudPlanFactSheet("free_cloud");
 
 type ComparisonValue =
   | boolean
@@ -10,6 +13,7 @@ type ComparisonValue =
   | {
       includedKey: string;
       thenKey?: string;
+      params?: Record<string, string | number>;
     };
 
 type ComparisonRow = {
@@ -31,7 +35,7 @@ const comparisonGroups: ComparisonGroup[] = [
     rows: [
       {
         key: "voiceMinutes",
-        free: { includedKey: "usage.voiceMinutes.freeIncluded" },
+        free: { includedKey: "usage.voiceMinutes.freeIncluded", params: { minutes: freePlanFacts.voiceMinutesIncluded ?? 0 } },
         starter: { includedKey: "usage.voiceMinutes.starterIncluded", thenKey: "usage.voiceMinutes.starterThen" },
         pro: { includedKey: "usage.voiceMinutes.proIncluded", thenKey: "usage.voiceMinutes.proThen" },
         enterprise: { key: "common.custom" },
@@ -71,7 +75,7 @@ const comparisonGroups: ComparisonGroup[] = [
     rows: [
       {
         key: "callAnswering",
-        free: true,
+        free: { key: "common.browserTesting" },
         pro: true,
         enterprise: true,
       },
@@ -141,12 +145,6 @@ const comparisonGroups: ComparisonGroup[] = [
         enterprise: true,
       },
       {
-        key: "outlook",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
         key: "missedCallFollowUp",
         free: true,
         pro: true,
@@ -165,19 +163,19 @@ const comparisonGroups: ComparisonGroup[] = [
     rows: [
       {
         key: "urgentHandoff",
-        free: true,
+        free: false,
         pro: true,
         enterprise: true,
       },
       {
         key: "callTransfers",
-        free: true,
+        free: false,
         pro: true,
         enterprise: true,
       },
       {
         key: "afterHours",
-        free: true,
+        free: false,
         pro: true,
         enterprise: true,
       },
@@ -258,12 +256,6 @@ const comparisonGroups: ComparisonGroup[] = [
         pro: true,
         enterprise: true,
       },
-      {
-        key: "retentionGuidance",
-        free: false,
-        pro: false,
-        enterprise: true,
-      },
     ],
   },
   {
@@ -297,9 +289,9 @@ type OnboardingT = ReturnType<typeof useTranslation<"onboarding">>["t"];
 function ComparisonCell({ t, value }: { t: OnboardingT; value: ComparisonValue }) {
   if (typeof value === "boolean") {
     return value ? (
-      <Check className="mx-auto size-4 text-foreground/60" />
+      <span><Check aria-hidden="true" className="mx-auto size-4 text-foreground/60" /><span className="sr-only">{t("plan.comparison.values.common.included")}</span></span>
     ) : (
-      <Minus className="mx-auto size-4 text-muted-foreground/30" />
+      <span><Minus aria-hidden="true" className="mx-auto size-4 text-muted-foreground/30" /><span className="sr-only">{t("plan.comparison.values.common.notIncluded")}</span></span>
     );
   }
 
@@ -315,7 +307,7 @@ function ComparisonCell({ t, value }: { t: OnboardingT; value: ComparisonValue }
   return (
     <span className="inline-flex flex-col gap-0.5 leading-tight">
       <span className="font-medium text-foreground">
-        {t(`plan.comparison.values.${value.includedKey}`)}
+        {t(`plan.comparison.values.${value.includedKey}`, value.params ?? {})}
       </span>
       {value.thenKey ? (
         <span className="text-xs text-muted-foreground">

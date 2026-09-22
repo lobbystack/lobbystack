@@ -1,4 +1,4 @@
-import { randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 
 type CalendarOAuthState = { userId: string; businessId: string; issuedAt: number; nonce: string };
 
@@ -9,22 +9,29 @@ function secret(): string {
 export function createCalendarOAuthState(input: Omit<CalendarOAuthState, "issuedAt" | "nonce">): string {
   if (!secret()) throw new Error("Calendar OAuth signing is not configured.");
   const encoded = Buffer.from(JSON.stringify({ ...input, issuedAt: Date.now(), nonce: randomUUID() })).toString("base64url");
-  const signature = scryptSync(encoded, secret(), 32).toString("base64url");
-  return `${encoded}.${signature}`;
+  const signature = sign(`v1.${encoded}`);
+  return `v1.${encoded}.${signature}`;
 }
 
-/** Deterministic, slow digest used to look up a stored state without persisting the bearer value. */
+function sign(value: string): string {
+  return createHmac("sha256", secret()).update(`google-calendar:state:${value}`).digest("base64url");
+}
+
+/** Domain-separated lookup digest; never persist the bearer value. */
 export function calendarOAuthStateDigest(state: string): string {
   if (!secret()) throw new Error("Calendar OAuth signing is not configured.");
-  return scryptSync(state, secret(), 32).toString("hex");
+  return createHmac("sha256", secret()).update(`google-calendar:lookup:${state}`).digest("hex");
 }
 
 export function verifyCalendarOAuthState(value: string): CalendarOAuthState | null {
+  // Cutover intentionally rejects old unversioned states (10-minute lifetime).
+  // Users restart authorization; do not restore a public scrypt fallback.
+  if (value.length > 2048) return null;
   const parts = value.split(".");
-  if (parts.length !== 2) return null;
-  const [encoded, signature] = parts;
-  if (!encoded || !signature || !secret()) return null;
-  const expected = scryptSync(encoded, secret(), 32).toString("base64url");
+  if (parts.length !== 3) return null;
+  const [version, encoded, signature] = parts;
+  if (version !== "v1" || !encoded || !/^[A-Za-z0-9_-]+$/.test(encoded) || !signature || !/^[A-Za-z0-9_-]{43}$/.test(signature) || !secret()) return null;
+  const expected = sign(`${version}.${encoded}`);
   if (expected.length !== signature.length || !timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) return null;
   try {
     const state = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as CalendarOAuthState;

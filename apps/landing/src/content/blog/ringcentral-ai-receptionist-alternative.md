@@ -21,7 +21,7 @@ LobbyStack runs as an independent managed service or a self-hosted stack. Buyers
 
 | Area | RingCentral AIR | LobbyStack |
 | --- | --- | --- |
-| Ongoing free plan | Not advertised | 30 voice minutes, no card, all features |
+| Ongoing free plan | Not advertised | 30 browser voice minutes, no card, no telephone number |
 | Standalone entry | From $49 for 100 minutes | Free for 30 minutes; $30 for 150 |
 | Existing customer price | RingEX add-on from $39 | No base phone-suite subscription |
 | Channels | Voice, SMS, WhatsApp | Voice, SMS alerts and follow-up |
@@ -34,7 +34,7 @@ Pricing and features were checked on July 30, 2026.
 
 ## LobbyStack lowers the entry cost and removes the suite dependency
 
-LobbyStack Starter costs $19 less than RingCentral's standalone entry and includes 50 more minutes. The Free plan lets a company test real customer calls, appointment rules, transfers, and call records before choosing a paid tier.
+LobbyStack Starter costs $19 less than RingCentral's standalone entry and includes 50 more minutes. You can test greetings and answers in your browser on Free. Choose a paid plan to receive telephone calls and test transfers.
 
 Existing RingEX customers can buy AIR as an add-on from $39. That price still sits above LobbyStack Starter and keeps the AI inside RingCentral. LobbyStack can remain in place if the business changes carriers, phone systems, or infrastructure.
 

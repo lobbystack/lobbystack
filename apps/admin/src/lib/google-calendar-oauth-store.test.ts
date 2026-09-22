@@ -20,3 +20,11 @@ it("accepts one atomic consume and rejects a replay", async () => {
   await expect(consumeCalendarOAuthState(state, "user", "business")).resolves.toBe(true);
   await expect(consumeCalendarOAuthState(state, "user", "business")).resolves.toBe(false);
 });
+
+it("rejects invalid state and user or business mismatches before touching storage", async () => {
+  const state = createCalendarOAuthState({ userId: "user", businessId: "business" });
+  await expect(consumeCalendarOAuthState(state, "other", "business")).resolves.toBe(false);
+  await expect(consumeCalendarOAuthState(state, "user", "other")).resolves.toBe(false);
+  await expect(consumeCalendarOAuthState("legacy.signature", "user", "business")).resolves.toBe(false);
+  expect(mocks.where).not.toHaveBeenCalled();
+});

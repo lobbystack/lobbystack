@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import type { DeploymentMode } from "@lobbystack/shared";
 
+export * from "./trusted-client-ip";
+
 const DEFAULT_WEB_CALL_MAX_DURATION_MS = 5 * 60 * 1000;
 const MAX_WEB_CALL_MAX_DURATION_MS = 30 * 60 * 1000;
 const MIN_PRODUCTION_SECRET_LENGTH = 32;
@@ -72,6 +74,9 @@ const voiceGatewayEnvSchema = z.object({
   DEPLOYMENT_MODE: deploymentModeSchema.default("development"),
   PORT: z.coerce.number().default(3001),
   VOICE_GATEWAY_TRUST_PROXY: trustProxyEnvSchema,
+  // Opt-in single-value ingress header used for per-client rate-limit and abuse
+  // attribution. Empty/unknown values fall back to direct-peer attribution only.
+  TRUSTED_CLIENT_IP_HEADER: z.string().min(1).optional(),
   VOICE_GATEWAY_BASE_URL: z.string().url(),
   BACKEND_INTERNAL_URL: z.string().url(),
   APP_BASE_URL: z.string().url().optional(),

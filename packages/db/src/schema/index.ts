@@ -525,6 +525,7 @@ export const calls = pgTable(
     uniqueIndex("calls_provider_call_unique").on(table.provider, table.providerCallId),
     uniqueIndex("calls_gateway_session_unique").on(table.gatewaySessionId),
     index("calls_business_started_idx").on(table.businessId, table.startedAt),
+    index("calls_business_recording_idx").on(table.businessId, table.recordingObjectId).where(sql`${table.recordingObjectId} is not null`),
   ],
 );
 
@@ -591,6 +592,7 @@ export const appointments = pgTable(
   (table) => [
     index("appointments_business_start_idx").on(table.businessId, table.startsAt),
     index("appointments_staff_start_idx").on(table.staffId, table.startsAt),
+    index("appointments_business_created_idx").on(table.businessId, table.createdAt),
     uniqueIndex("appointments_calendar_external_unique").on(table.businessId, table.calendarExternalId),
   ],
 );
@@ -733,7 +735,12 @@ export const storageObjects = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     ...timestamps,
   },
-  (table) => [uniqueIndex("storage_objects_key_unique").on(table.objectKey), index("storage_objects_business_status_idx").on(table.businessId, table.status)],
+  (table) => [
+    uniqueIndex("storage_objects_key_unique").on(table.objectKey),
+    index("storage_objects_business_status_idx").on(table.businessId, table.status),
+    index("storage_objects_business_retention_idx").on(table.businessId, table.retentionUntil).where(sql`${table.retentionUntil} is not null and ${table.purpose} <> 'recording'`),
+    index("storage_objects_recording_retention_idx").on(table.businessId, table.retentionUntil, table.id).where(sql`${table.purpose} = 'recording' and ${table.status} = 'ready' and ${table.retentionUntil} is not null`),
+  ],
 );
 
 export const calendarConnections = pgTable(
@@ -770,7 +777,7 @@ export const calendarBusyBlocks = pgTable(
     externalEventId: text("external_event_id"),
     ...timestamps,
   },
-  (table) => [uniqueIndex("calendar_busy_blocks_external_unique").on(table.connectionId, table.externalEventId), index("calendar_busy_blocks_staff_idx").on(table.staffId, table.startsAt)],
+  (table) => [uniqueIndex("calendar_busy_blocks_external_unique").on(table.connectionId, table.externalEventId), index("calendar_busy_blocks_staff_idx").on(table.staffId, table.startsAt), index("calendar_busy_blocks_connection_start_idx").on(table.connectionId, table.startsAt)],
 );
 
 export const notifications = pgTable(

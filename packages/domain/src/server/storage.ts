@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 
-import { and, eq, gte, isNotNull, isNull, lt, ne, or } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne, notInArray, or, type SQL } from "drizzle-orm";
 
-import { billingAccounts, businesses, calls, enqueueOutbox, knowledgeDocuments, storageObjects, withBusinessTransaction } from "@lobbystack/db";
+import { billingAccounts, businesses, calls, enqueueOutbox, knowledgeDocuments, storageObjects, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { billingPlanSlugs, getKnowledgeStorageLimitBytes, type BillingPlanSlug } from "@lobbystack/shared";
 import { getKnowledgeStorageUsageBytes } from "./knowledge";
 import { isAllowedUploadContentType } from "@lobbystack/contracts";
@@ -142,37 +142,128 @@ export async function createObjectDownload(
   };
 }
 
+// Durable, retryable deletion states. `status` is an unconstrained varchar(32)
+// and `finalizeUpload` only promotes `pending`, so a claimed row cannot be
+// resurrected while its provider object is being deleted.
+export const EXPIRED_UPLOAD_STATUS = "deleting_expired_upload";
+export const RETAINED_DELETE_STATUS = "deleting_retained";
+export const STORAGE_DELETE_BATCH = 500;
+
+type ClaimedExpiredObject = { id: string; objectKey: string; kind: "expired_upload" | "retained" };
+type StorageTimestampColumn = typeof storageObjects.expiresAt | typeof storageObjects.retentionUntil;
+type StorageStatusPredicate = ReturnType<typeof inArray> | ReturnType<typeof notInArray>;
+
+// Claims rows into their deleting state inside the caller's transaction,
+// rechecking the original expiry/retention predicate so a concurrent extension
+// is never swept. Rows already in a deleting state are re-claimed for retry.
+async function claimExpiredObjectsForDeletion(
+  tx: DatabaseTransaction,
+  businessId: string,
+  now: Date,
+): Promise<ClaimedExpiredObject[]> {
+  const claim = async (input: {
+    kind: ClaimedExpiredObject["kind"];
+    statusPredicate: StorageStatusPredicate;
+    deletingStatus: string;
+    expiryColumn: StorageTimestampColumn;
+    extra?: SQL | undefined;
+  }): Promise<ClaimedExpiredObject[]> => {
+    const predicate = and(
+      eq(storageObjects.businessId, businessId),
+      input.statusPredicate,
+      isNotNull(input.expiryColumn),
+      lt(input.expiryColumn, now),
+      input.extra,
+    );
+    const candidates = await tx.select({ id: storageObjects.id })
+      .from(storageObjects)
+      .where(predicate)
+      .orderBy(asc(input.expiryColumn), asc(storageObjects.id))
+      .limit(STORAGE_DELETE_BATCH)
+      .for("update", { skipLocked: true });
+    if (!candidates.length) return [];
+    const rows = await tx.update(storageObjects)
+      .set({ status: input.deletingStatus, updatedAt: now })
+      .where(and(
+        eq(storageObjects.businessId, businessId),
+        inArray(storageObjects.id, candidates.map((row) => row.id)),
+        input.statusPredicate,
+        isNotNull(input.expiryColumn),
+        lt(input.expiryColumn, now),
+        input.extra,
+      ))
+      .returning({ id: storageObjects.id, objectKey: storageObjects.objectKey });
+    return rows.map((row) => ({ ...row, kind: input.kind }));
+  };
+
+  // Expired uploads are claimed first so a row that carries both an expiry and
+  // a retention timestamp is never handled by both branches.
+  const uploads = await claim({
+    kind: "expired_upload",
+    statusPredicate: inArray(storageObjects.status, ["pending", EXPIRED_UPLOAD_STATUS]),
+    deletingStatus: EXPIRED_UPLOAD_STATUS,
+    expiryColumn: storageObjects.expiresAt,
+  });
+  const retained = await claim({
+    kind: "retained",
+    statusPredicate: notInArray(storageObjects.status, ["deleted", EXPIRED_UPLOAD_STATUS]),
+    deletingStatus: RETAINED_DELETE_STATUS,
+    expiryColumn: storageObjects.retentionUntil,
+    extra: ne(storageObjects.purpose, "recording"),
+  });
+  return [...uploads, ...retained];
+}
+
 export async function deleteExpiredObjectsForBusiness(
   context: DomainContext,
   input: { businessId: string },
   storage: StorageProvider,
 ): Promise<number> {
-  const expired = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) =>
-    await tx.select({ id: storageObjects.id, objectKey: storageObjects.objectKey, status: storageObjects.status })
-      .from(storageObjects)
-      .where(and(
-        eq(storageObjects.businessId, input.businessId),
-        or(
-          and(eq(storageObjects.status, "pending"), isNotNull(storageObjects.expiresAt), lt(storageObjects.expiresAt, new Date())),
-          and(ne(storageObjects.purpose, "recording"), ne(storageObjects.status, "deleted"), isNotNull(storageObjects.retentionUntil), lt(storageObjects.retentionUntil, new Date())),
-        ),
-      )),
+  const now = new Date();
+  // Claim rows before any external I/O so a concurrent finalize cannot turn a
+  // claimed `pending` upload into a live `ready` row while its object is gone.
+  const claimed = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) =>
+    await claimExpiredObjectsForDeletion(tx, input.businessId, now),
   );
-  let deleted = 0;
-  for (const object of expired) {
-    await storage.deleteObject({ key: object.objectKey });
-    await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-      const rows = object.status === "pending"
-        ? await tx.delete(storageObjects)
-          .where(and(eq(storageObjects.id, object.id), eq(storageObjects.businessId, input.businessId), eq(storageObjects.status, "pending")))
-          .returning({ id: storageObjects.id })
-        : await tx.update(storageObjects)
-          .set({ status: "deleted", updatedAt: new Date() })
-          .where(and(eq(storageObjects.id, object.id), eq(storageObjects.businessId, input.businessId), ne(storageObjects.status, "deleted")))
-          .returning({ id: storageObjects.id });
-      deleted += rows.length;
-    });
+  if (!claimed.length) return 0;
+
+  // Provider deletion and verification are external I/O and stay outside any
+  // database transaction. A row stays in its deleting state until its object is
+  // confirmed absent, so a provider error or a lingering object is retried by a
+  // later sweep instead of being finalized.
+  const succeededUploadIds: string[] = [];
+  const succeededRetainedIds: string[] = [];
+  const failures: unknown[] = [];
+  for (const object of claimed) {
+    try {
+      await storage.deleteObject({ key: object.objectKey });
+      if (await storage.headObject({ key: object.objectKey })) throw new Error(`Storage object is still present after deletion: ${object.objectKey}`);
+      (object.kind === "expired_upload" ? succeededUploadIds : succeededRetainedIds).push(object.id);
+    } catch (error) {
+      failures.push(error);
+    }
   }
+
+  const deleted = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    let count = 0;
+    if (succeededUploadIds.length) {
+      const rows = await tx.delete(storageObjects)
+        .where(and(eq(storageObjects.businessId, input.businessId), inArray(storageObjects.id, succeededUploadIds), eq(storageObjects.status, EXPIRED_UPLOAD_STATUS)))
+        .returning({ id: storageObjects.id });
+      count += rows.length;
+    }
+    if (succeededRetainedIds.length) {
+      const rows = await tx.update(storageObjects)
+        .set({ status: "deleted", updatedAt: new Date() })
+        .where(and(eq(storageObjects.businessId, input.businessId), inArray(storageObjects.id, succeededRetainedIds), eq(storageObjects.status, RETAINED_DELETE_STATUS)))
+        .returning({ id: storageObjects.id });
+      count += rows.length;
+    }
+    return count;
+  });
+
+  // Succeeded rows are finalized first; the remaining failures stay retryable.
+  if (failures.length) throw failures[0];
   return deleted;
 }
 

@@ -12,9 +12,17 @@ on:
     - cron: "17 10 * * 1"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: landing-links-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lychee:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -24,7 +32,7 @@ jobs:
         with:
           node-version: 22.12.0
           cache: pnpm
-      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @lobbystack/landing build
       - run: pnpm --filter @lobbystack/landing seo:validate
       - name: Start landing preview server

@@ -2,20 +2,40 @@ import { betterAuth } from "better-auth";
 import { emailOTP } from "better-auth/plugins/email-otp";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { runWithAdapter } from "@better-auth/core/context";
 import Redis from "ioredis";
 import { z } from "zod";
 import { createHash, randomUUID } from "node:crypto";
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 
-import { enqueueOutbox, withBusinessTransaction } from "@lobbystack/db";
+import { assertDatabaseRole, enqueueOutbox, withBusinessTransaction } from "@lobbystack/db";
 import { accounts, sessions, users, verifications } from "@lobbystack/db";
 
 import { getDatabase } from "./databases";
 import { hashReplacementPassword, isLegacyScryptHash, meetsPasswordRequirements, verifyLegacyPassword } from "./password";
+import { trustedClientIp, trustedClientIpFromHeaders, trustedClientIpHeader } from "./trusted-client-ip";
 import { verifyTurnstileForSignUp } from "./turnstile";
 
 let instance: any;
 let authRedis: Redis | undefined;
+let databaseRolesReady: Promise<void> | undefined;
+
+function assertAuthDatabaseRoles(): Promise<void> {
+  // Share one in-flight assertion with concurrent callers, but clear it on
+  // rejection so a transient role mismatch is re-checked on the next request
+  // instead of caching the failure for the life of the process.
+  databaseRolesReady ??= Promise.all([
+    assertDatabaseRole(getAuthDatabase()),
+    assertDatabaseRole(getEmailDatabase()),
+  ]).then(
+    () => undefined,
+    (error: unknown) => {
+      databaseRolesReady = undefined;
+      throw error;
+    },
+  );
+  return databaseRolesReady;
+}
 
 const enabledEmailOtpPaths = new Set([
   "/email-otp/request-password-reset",
@@ -133,18 +153,13 @@ async function enqueueAuthEmail(input: {
   });
 }
 
-async function enqueueEmailVerificationCode(input: { email: string; otp: string }): Promise<boolean> {
-  const database = getAuthDatabase();
-  const user = (await database.db.select({ id: users.id, emailVerified: users.emailVerified }).from(users).where(eq(users.email, input.email)).limit(1))[0];
-  if (!user || user.emailVerified) return false;
-
-  const codeHash = createHash("sha256").update(input.otp).digest("hex");
+async function enqueueEmailVerificationCode(input: { userId: string; email: string; otp: string; issuanceId: string }): Promise<boolean> {
   await withBusinessTransaction(getEmailDatabase().db, { actorType: "system" }, async (tx) => {
     await enqueueOutbox(tx, {
       topic: "email.send",
       aggregateType: "auth_email",
-      aggregateId: user.id,
-      dedupeKey: `auth-email:verification-code:${user.id}:${codeHash}`,
+      aggregateId: input.userId,
+      dedupeKey: `auth-email:verification-code:${input.userId}:${input.issuanceId}`,
       payload: {
         template: "verify_email",
         to: input.email,
@@ -156,12 +171,27 @@ async function enqueueEmailVerificationCode(input: { email: string; otp: string 
   return true;
 }
 
-export async function issueEmailVerificationCode(email: string): Promise<boolean> {
+export async function issueEmailVerificationCode(email: string, remoteIp?: string | null): Promise<boolean> {
+  const { assertEmailVerificationSendAllowed, EmailVerificationRateLimitError } = await import("./email-verification-policy");
+  await assertAuthDatabaseRoles();
   const normalizedEmail = email.trim().toLowerCase();
-  const user = (await getAuthDatabase().db.select({ emailVerified: users.emailVerified }).from(users).where(eq(users.email, normalizedEmail)).limit(1))[0];
-  if (!user || user.emailVerified) return false;
-  const otp = await getAuth().api.createVerificationOTP({ body: { email: normalizedEmail, type: "email-verification" } });
-  return await enqueueEmailVerificationCode({ email: normalizedEmail, otp });
+  // Serialize generation and delivery across processes, including slow requests
+  // that outlive the Redis cooldown. Bind the OTP adapter to this transaction
+  // so concurrent issuances cannot exhaust the pool waiting for a second slot.
+  return await getAuthDatabase().db.transaction(async (tx) => {
+    const lock = await tx.execute<{ acquired: boolean }>(sql`select pg_try_advisory_xact_lock(hashtextextended(${`email-verification:${normalizedEmail}`}, 0)) as acquired`);
+    if (!lock.rows[0]?.acquired) throw new EmailVerificationRateLimitError();
+    await assertEmailVerificationSendAllowed({ email: normalizedEmail, ...(remoteIp ? { remoteIp } : {}) });
+    const user = (await tx.select({ id: users.id, emailVerified: users.emailVerified }).from(users).where(eq(users.email, normalizedEmail)).limit(1))[0];
+    if (!user || user.emailVerified) return false;
+    const issuanceId = randomUUID();
+    const issuer = createAuth(tx);
+    const { adapter } = await issuer.$context;
+    // Signup runs inside Better Auth's adapter AsyncLocalStorage. A nested
+    // instance alone does not replace that adapter for internal writes.
+    const otp = await runWithAdapter(adapter, () => issuer.api.createVerificationOTP({ body: { email: normalizedEmail, type: "email-verification" } }));
+    return await enqueueEmailVerificationCode({ userId: user.id, email: normalizedEmail, otp, issuanceId });
+  });
 }
 
 async function rehashLegacyPassword(userId: string, password: string): Promise<void> {
@@ -191,9 +221,10 @@ async function rehashLegacyPassword(userId: string, password: string): Promise<v
 }
 
 export function getAuth() {
-  if (instance) {
-    return instance;
-  }
+  return instance ??= createAuth();
+}
+
+function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
   if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL is required for Better Auth.");
   }
@@ -203,10 +234,11 @@ export function getAuth() {
   const secureCookies = process.env.BETTER_AUTH_USE_SECURE_COOKIES === undefined
     ? process.env.NODE_ENV === "production"
     : process.env.BETTER_AUTH_USE_SECURE_COOKIES === "true";
+  const trustedIpHeader = trustedClientIpHeader();
   const database = getAuthDatabase();
   const secondaryStorage = getAuthSecondaryStorage();
-  instance = betterAuth({
-    database: drizzleAdapter(database.db, {
+  return betterAuth({
+    database: drizzleAdapter(adapterDatabase ?? database.db, {
       provider: "pg",
       schema: { user: users, session: sessions, account: accounts, verification: verifications },
     }),
@@ -217,14 +249,11 @@ export function getAuth() {
     advanced: {
       useSecureCookies: secureCookies,
       database: { generateId: () => randomUUID() },
-      // Railway's edge proxy overwrites `x-real-ip` with the connecting client
-      // address (and strips client-supplied values), so it is a trustworthy
-      // single-value IP source. The default `x-forwarded-for` carries a proxy
-      // hop on Railway, which Better Auth rejects when no trustedProxies are
-      // configured, collapsing everyone into one rate-limit bucket.
-      ipAddress: {
-        ipAddressHeaders: ["x-real-ip", "x-forwarded-for"],
-      },
+      // Only an explicitly configured, ingress-controlled single-value header
+      // is trusted. Without the opt-in Better Auth keeps its default
+      // `x-forwarded-for`, which rejects a multi-hop chain and fails closed to
+      // the shared per-path bucket rather than trusting a spoofable value.
+      ...(trustedIpHeader ? { ipAddress: { ipAddressHeaders: [trustedIpHeader] } } : {}),
     },
     plugins: [emailOTP({
       disableSignUp: true,
@@ -270,11 +299,18 @@ export function getAuth() {
       afterEmailVerification: async (user: { id: string; email: string }) => {
         await database.db.update(users).set({ normalizedEmail: user.email.trim().toLowerCase(), updatedAt: new Date() }).where(eq(users.id, user.id));
       },
-      sendVerificationEmail: async ({ user, url }: { user: { id: string; email: string }; url: string }) => {
+      sendVerificationEmail: async ({ user, url }: { user: { id: string; email: string }; url: string }, request?: Request) => {
         const storedUser = (await database.db.select({ email: users.email, preferredLocale: users.preferredLocale }).from(users).where(eq(users.id, user.id)).limit(1))[0];
         if (!storedUser) return;
         if (storedUser.email === user.email) {
-          await issueEmailVerificationCode(user.email);
+          try {
+            await issueEmailVerificationCode(user.email, request ? trustedClientIp(request) : undefined);
+          } catch (error) {
+            const { EmailVerificationRateLimitError } = await import("./email-verification-policy");
+            // Sign-up/sign-in keep their normal response when a prior issuance
+            // already covers this recipient. Other failures remain fail-closed.
+            if (!(error instanceof EmailVerificationRateLimitError)) throw error;
+          }
           return;
         }
         // Keep the link callback for the existing two-address email-change flow.
@@ -311,14 +347,23 @@ export function getAuth() {
       window: 60,
       max: 30,
       storage: secondaryStorage ? "secondary-storage" : "memory",
+      // Explicit per-path rules for the account-recovery endpoints, matching
+      // the email-OTP plugin's own window/max so the plugin semantics are
+      // preserved. Better Auth keys each path separately, so a recovery attempt
+      // never consumes the verification recipient cooldown (or vice versa) and
+      // one purpose cannot lock out another.
       customRules: {
         "/sign-in/email": { window: 60, max: 5 },
         "/sign-up/email": { window: 60, max: 3 },
         "/request-password-reset": { window: 60, max: 5 },
+        "/email-otp/request-password-reset": { window: 60, max: 3 },
+        "/email-otp/reset-password": { window: 60, max: 3 },
+        "/email-otp/verify-email": { window: 60, max: 3 },
       },
     },
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        await assertAuthDatabaseRoles();
         // Enable verification and recovery only; the OTP plugin must not
         // introduce passwordless sign-in or email-change endpoints.
         // Server-only plugin methods, including createVerificationOTP, do not
@@ -343,7 +388,7 @@ export function getAuth() {
         const token = typeof ctx.body?.turnstileToken === "string"
           ? ctx.body.turnstileToken
           : ctx.body?.["cf-turnstile-response"];
-        const remoteIp = ctx.headers?.get("cf-connecting-ip") ?? ctx.headers?.get("x-real-ip");
+        const remoteIp = ctx.headers ? trustedClientIpFromHeaders(ctx.headers) : undefined;
         try {
           await verifyTurnstileForSignUp({
             token,
@@ -370,7 +415,6 @@ export function getAuth() {
       }),
     },
   });
-  return instance;
 }
 
 export type Session = { user: { id: string; name?: string | null; email?: string | null }; session: { id: string; userId: string; expiresAt: Date } } | null;

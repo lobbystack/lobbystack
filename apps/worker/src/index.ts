@@ -1,4 +1,4 @@
-import { businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
+import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
 import { assertProductionSecrets } from "@lobbystack/config";
 import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, isKnownJobType, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
 import { createEmbeddingProvider } from "@lobbystack/providers/ai/embeddingProvider";
@@ -103,6 +103,7 @@ async function main(): Promise<void> {
   await initializeTelemetry({ serviceName: "lobbystack-worker" });
   const database = createDatabaseClient("lobbystack_worker");
   const dispatcherDatabase = createDatabaseClient("lobbystack_dispatcher");
+  await Promise.all([assertDatabaseRole(database), assertDatabaseRole(dispatcherDatabase)]);
   const realtime = createRedisConnection({ prefix: process.env.REDIS_PREFIX ?? "lobbystack" });
   const queues = new Map<JobQueue, ReturnType<typeof createQueue>>();
   for (const queueName of jobQueues) {

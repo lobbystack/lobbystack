@@ -19,6 +19,80 @@
     "notifications": "Notifications",
     "widget": "Website widget"
   },
+  "widget": {
+    "title": "Website widget",
+    "description": "Embed the chat widget on your website.",
+    "created": {
+      "title": "Widget key created",
+      "description": "Copy this key now. You will not see it again.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copySnippet": "Copy embed snippet",
+      "hint": "Add the snippet to any page on an allowed origin. The widget loads automatically.",
+      "done": "Done"
+    },
+    "create": {
+      "title": "Create a widget key",
+      "description": "Each key belongs to this workspace and has its own list of allowed origins.",
+      "action": "Create widget key"
+    },
+    "restricted": {
+      "title": "New website widgets are not available yet",
+      "description": "We do not issue new website chat widgets yet. Existing widgets keep working, and you can still edit or pause them below."
+    },
+    "fields": {
+      "label": "Label",
+      "labelPlaceholder": "Main website",
+      "origins": "Allowed origins",
+      "color": "Accent color",
+      "position": "Position",
+      "title": "Title",
+      "titlePlaceholder": "Chat with us",
+      "subtitle": "Subtitle",
+      "subtitlePlaceholder": "We reply within a few minutes",
+      "greeting": "Greeting",
+      "greetingPlaceholder": "Hi there. How can we help?",
+      "localeOverride": "Language",
+      "leadEnabled": "Ask visitors for their contact details",
+      "requireEmail": "Require email",
+      "requirePhone": "Require phone",
+      "showBeforeChat": "Ask before chat"
+    },
+    "positions": {
+      "bottomRight": "Bottom right",
+      "bottomLeft": "Bottom left",
+      "bottomCenter": "Bottom center"
+    },
+    "locales": {
+      "visitor": "Visitor's language",
+      "english": "English",
+      "french": "French"
+    },
+    "leadCapture": {
+      "title": "Lead form",
+      "enabled": "Enabled"
+    },
+    "status": {
+      "active": "Active",
+      "disabled": "Paused",
+      "revoked": "Revoked"
+    },
+    "keys": {
+      "title": "Widget keys",
+      "fallbackBusiness": "Active workspace",
+      "refresh": "Refresh",
+      "loading": "Loading widget keys...",
+      "unavailable": "Widget keys are unavailable.",
+      "empty": "No widget keys yet.",
+      "untitled": "Untitled widget",
+      "pause": "Pause",
+      "resume": "Resume",
+      "revoke": "Revoke",
+      "revokeConfirm": "Revoke this widget key? Existing embeds will stop working.",
+      "save": "Save",
+      "lastUsed": "Last used {{date}}"
+    }
+  },
   "billing": {
     "toast": {
       "checkoutSuccess": "Checkout completed successfully.",
@@ -65,7 +139,8 @@
       "manageSubscription": "Manage subscription",
       "openingCheckout": "Opening checkout...",
       "openingPortal": "Opening portal...",
-      "viewInvoice": "View invoice"
+      "viewInvoice": "View invoice",
+      "retry": "Try again"
     },
     "currentPlan": {
       "title": "Your plan",
@@ -92,10 +167,10 @@
       "includedVoiceLabel": "voice minutes",
       "includedSmsLabel": "SMS alerts",
       "includedOutboundLabel": "outbound calls",
-      "includedStorageUnlimited": "Unlimited storage",
-      "includedVoiceUnlimited": "Unlimited voice minutes",
-      "includedSmsUnlimited": "Unlimited SMS alerts",
-      "includedOutboundUnlimited": "Unlimited outbound calls",
+      "includedStorageCustom": "Custom storage allowance",
+      "includedVoiceCustom": "Custom voice allowance",
+      "includedSmsCustom": "Custom SMS allowance",
+      "includedOutboundCustom": "Custom outbound call allowance",
       "includedStorage": "{{amount}} {{unit}} storage"
     },
     "upgradeDialog": {
@@ -118,12 +193,12 @@
         "free_cloud": {
           "name": "Free",
           "description": {
-            "monthly": "Per month, billed monthly",
-            "annual": "Per month, billed annually"
+            "monthly": "Test voice in your browser",
+            "annual": "Test voice in your browser"
           },
           "highlights": {
-            "voiceMinutes": "30 voice minutes included",
-            "allFeatures": "All features",
+            "voiceMinutes": "30 browser voice minutes included",
+            "allFeatures": "No telephone number",
             "support": "Community support"
           }
         },
@@ -208,7 +283,8 @@
         "segments": "segments",
         "storage": "MB"
       },
-      "unavailable": "Usage data is unavailable."
+      "unavailable": "Usage data is unavailable.",
+      "customAllowance": "{{used}} {{unit}} used · Custom allowance"
     },
     "catalog": {
       "title": "Hosted offers",

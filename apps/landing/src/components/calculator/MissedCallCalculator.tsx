@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type ReactNode } from "react"
+import { buildSignupUrl } from "@/lib/app-links"
 import { buttonVariants } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -287,7 +288,7 @@ export function MissedCallCalculator({ locale = "en" }: { locale?: Locale }) {
 
           <div className="pt-2">
             <a
-              href="https://app.lobbystack.com/signup?source=calculator"
+              href={buildSignupUrl(locale, "calculator")}
               className={buttonVariants({
                 size: "lg",
                 className: "w-full text-base",

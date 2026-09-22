@@ -207,7 +207,7 @@
     "popular": "Populaire",
     "enterpriseSubject": "Forfait Entreprise",
     "compareTitle": "Comparer les forfaits en détail",
-    "compareDescription": "Tous les forfaits incluent les fonctionnalités de base. Starter et Pro ajoutent plus d'utilisation avec réinitialisation mensuelle et dépassements à l'usage.",
+    "compareDescription": "Testez 30 minutes vocales dans le navigateur sur Free, sans numéro de téléphone. Starter et Pro comprennent un numéro dédié et des volumes mensuels.",
     "featureHeader": "Fonctionnalité",
     "billingInterval": {
       "label": "Intervalle de facturation",
@@ -223,8 +223,8 @@
         "description": "Essayez LobbyStack avec assez d'utilisation pour le voir en action.",
         "cta": "Commencer gratuitement",
         "highlights": {
-          "voiceMinutes": "30 minutes vocales incluses",
-          "bookingContacts": "Toutes les fonctionnalités",
+          "voiceMinutes": "30 minutes vocales dans le navigateur",
+          "bookingContacts": "Aucun numéro de téléphone",
           "support": "Support communautaire"
         }
       },
@@ -337,12 +337,15 @@
       "values": {
         "common": {
           "custom": "Sur mesure",
+          "included": "Inclus",
+          "notIncluded": "Non inclus",
           "multiple": "Plusieurs",
-          "unlimited": "Illimité"
+          "unlimited": "Illimité",
+          "browserTesting": "Tests dans le navigateur"
         },
         "usage": {
           "voiceMinutes": {
-            "freeIncluded": "30 incluses",
+            "freeIncluded": "{{minutes}} minutes dans le navigateur",
             "starterIncluded": "150 incluses",
             "starterThen": "puis 0,20 $/min",
             "proIncluded": "500 incluses",
@@ -374,8 +377,8 @@
         },
         "notifications": {
           "aiSms": {
-            "proIncluded": "5 $/mois + 19 $ de configuration",
-            "proThen": "puis 0,03 $/segment"
+            "proIncluded": "Option payante : 5 $/mois + 19 $ de configuration",
+            "proThen": "0,03 $/segment dès le premier segment"
           }
         },
         "deployment": {

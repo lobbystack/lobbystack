@@ -107,6 +107,15 @@ function webVoiceStartFailureReason(error: unknown): string {
   return "web_call_start_failed";
 }
 
+function isUniqueViolation(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 3 && current !== null && typeof current === "object"; depth += 1) {
+    if ("code" in current && (current as { code?: unknown }).code === "23505") return true;
+    current = "cause" in current ? (current as { cause?: unknown }).cause : null;
+  }
+  return false;
+}
+
 async function safeRecordProductEvent(
   context: ReturnType<typeof createWorkerDomainContext>,
   input: Parameters<typeof recordProductEvent>[1],
@@ -276,6 +285,31 @@ export async function POST(request: Request, context: { params: Promise<{ segmen
     const segments = (await context.params).segments;
     const path = segments.join("/");
     const domain = createWorkerDomainContext();
+
+    if (path === "call/bind-web-provider") {
+      const businessId = requiredString(body, "businessId");
+      const callId = requiredString(body, "callId");
+      const gatewaySessionId = requiredString(body, "gatewaySessionId");
+      const providerCallId = requiredString(body, "providerCallId");
+      if (providerCallId.startsWith("webcall_") || providerCallId.length > 255) {
+        return NextResponse.json({ code: "provider_call_invalid" }, { status: 400 });
+      }
+      const bound = await withBusinessTransaction(domain.db, { businessId, actorType: "worker" }, async (tx) => {
+        return await tx.update(calls).set({ providerCallId, updatedAt: new Date() }).where(and(
+          eq(calls.id, callId), eq(calls.businessId, businessId),
+          eq(calls.gatewaySessionId, gatewaySessionId), eq(calls.provider, "openai_realtime"),
+          or(eq(calls.status, "started"), eq(calls.status, "in_progress")), sql`${calls.endedAt} is null`,
+          or(eq(calls.providerCallId, `webcall_${gatewaySessionId}`), eq(calls.providerCallId, providerCallId)),
+        )).returning({ id: calls.id });
+      }).catch((error: unknown) => {
+        // The unique index on (provider, provider_call_id) is the real guard against two
+        // reservations claiming one provider call. Surface it as a conflict, not a 500.
+        if (isUniqueViolation(error)) return [];
+        throw error;
+      });
+      if (!bound.length) return NextResponse.json({ code: "web_call_reservation_conflict" }, { status: 409 });
+      return NextResponse.json({ ok: true });
+    }
 
     if (path === "call/start-web") {
       if (!stringValue(body, "widgetSessionToken") && !stringValue(body, "prospectDemoToken") && !stringValue(body, "dashboardTestCallToken") && !booleanValue(body, "publicWebCall")) {

@@ -44,6 +44,26 @@ export async function scheduleNotification(
   });
 }
 
+// Caller must hold the appointment row lock, and commit the schedule change in
+// this same transaction. A new delivery ID fences even legacy queued jobs.
+export async function rescheduleAppointmentReminderInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; appointmentId: string; startsAt: Date; revision: number },
+): Promise<void> {
+  const reminderAt = new Date(input.startsAt.getTime() - 24 * 60 * 60 * 1000);
+  // Preserve provider/accounting history and the appointment link while freeing
+  // the unique active-reminder slot. Never reuse a sent or processing identity.
+  await tx.update(notifications).set({
+    kind: `appointment_reminder_superseded:${input.revision}`,
+    status: sql`case when ${notifications.status} in ('pending', 'processing') then 'skipped' else ${notifications.status} end`,
+    updatedAt: new Date(),
+  }).where(and(eq(notifications.businessId, input.businessId), eq(notifications.relatedId, input.appointmentId), eq(notifications.kind, "appointment_reminder")));
+  if (reminderAt <= new Date()) return;
+  const [reminder] = await tx.insert(notifications).values({ businessId: input.businessId, channel: "sms", kind: "appointment_reminder", relatedId: input.appointmentId, scheduledFor: reminderAt, status: "pending" }).returning({ id: notifications.id });
+  if (!reminder) throw new Error("Appointment reminder could not be scheduled.");
+  await enqueueOutbox(tx, { topic: "notification.dispatch", businessId: input.businessId, aggregateType: "appointment", aggregateId: input.appointmentId, dedupeKey: `notification:${reminder.id}:dispatch:${input.revision}`, availableAt: reminderAt, payload: { notificationId: reminder.id, appointmentRevision: input.revision } });
+}
+
 export type NotificationDelivery = {
   notificationId: string;
   businessId: string;

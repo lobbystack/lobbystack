@@ -6,6 +6,7 @@ import { getPostHogDistinctIdForBusinessSystem, type TelemetryEventName, type Te
 
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
+import { contentExpiry } from "./contentRetentionPolicy";
 import { queueOperatorAlertInTransaction } from "./notifications";
 import { applyNonAiUsageInTransaction, finalizeWebVoiceUsageInTransaction, normalizeWebCallMaxDurationMs, reserveWebVoiceUsageInTransaction } from "./billing";
 import { enqueueUsageSyncInTransaction } from "./usage";
@@ -196,11 +197,13 @@ export async function upsertTranscript(
       sequence: input.sequence,
       speaker: input.speaker,
       text: input.text,
+      expiresAt: contentExpiry("transcripts"),
       final: input.final,
       ...(input.confidence !== undefined ? { confidence: Math.round(input.confidence * 100) } : {}),
     }).onConflictDoUpdate({
       target: [transcripts.callId, transcripts.sequence],
       set: {
+        // Creation-anchored expiry survives revisions, including historical nulls.
         speaker: input.speaker,
         text: input.text,
         final: input.final,
@@ -226,7 +229,7 @@ export async function upsertTranscript(
 
 export async function completeCall(
   context: DomainContext,
-  input: { businessId: string; callId: string; status: string; endedAt: string; disposition?: string; providerDurationSeconds?: number; mediaDurationSeconds?: number },
+  input: { businessId: string; callId: string; status: string; endedAt: string; disposition?: string; providerDurationSeconds?: number; mediaDurationSeconds?: number; expectedProviderCallId?: string },
 ): Promise<boolean> {
   const completion = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [call] = await tx.update(calls).set({
@@ -236,7 +239,14 @@ export async function completeCall(
       ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}),
       revision: sql`${calls.revision} + 1`,
       updatedAt: new Date(),
-    }).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId), isNull(calls.endedAt))).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, provider: calls.provider, startedAt: calls.startedAt, billingExcluded: calls.billingExcluded, disposition: calls.disposition });
+    }).where(and(
+      eq(calls.id, input.callId),
+      eq(calls.businessId, input.businessId),
+      isNull(calls.endedAt),
+      // Recovery re-validates the provider binding inside the finalizing write,
+      // so a bind that lands after the read cannot have its reservation released.
+      input.expectedProviderCallId !== undefined ? eq(calls.providerCallId, input.expectedProviderCallId) : undefined,
+    )).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, provider: calls.provider, startedAt: calls.startedAt, billingExcluded: calls.billingExcluded, disposition: calls.disposition });
     if (!call) {
       return null;
     }

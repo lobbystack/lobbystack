@@ -46,7 +46,7 @@ export function buildWidgetRateLimits(input: {
   widgetKeyId: string;
   ipHash?: string | undefined;
   visitorId?: string | undefined;
-  operation: "config" | "chat" | "lead" | "history";
+  operation: "config" | "chat" | "lead" | "history" | "session";
 }): WidgetLimit[] {
   const limits: WidgetLimit[] = [];
   if (input.ipHash) {
@@ -60,6 +60,7 @@ export function buildWidgetRateLimits(input: {
   limits.push(limit("widget-key-minute", `${input.businessId}:${input.widgetKeyId}`, input.operation === "chat" ? 60 : 180, minute, "rate_limit_key_minute"));
   limits.push(limit("widget-key-hour", `${input.businessId}:${input.widgetKeyId}`, input.operation === "chat" ? 600 : 1_000, hour, "rate_limit_key_hour"));
   limits.push(limit("global-minute", "global", 240, minute, "rate_limit_global"));
+  if (input.operation === "session") limits.push(limit("session-business-minute", input.businessId, 60, minute, "rate_limit_business"));
   return limits;
 }
 

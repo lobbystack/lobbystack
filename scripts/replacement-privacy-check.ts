@@ -25,6 +25,15 @@ const storage = new S3StorageProvider({
 });
 
 async function main(): Promise<void> {
+  const previousEnabled = process.env.CONTENT_RETENTION_ENABLED;
+  const previousPolicy = process.env.CONTENT_RETENTION_POLICY_JSON;
+  // This process sweeps only the generated fixture business below.
+  process.env.CONTENT_RETENTION_ENABLED = "true";
+  process.env.CONTENT_RETENTION_POLICY_JSON = JSON.stringify({
+    approvalId: "certification-fixtures-only",
+    categories: { messages: 1, transcripts: 1 },
+    messageMedia: "scrub_with_body",
+  });
   const suffix = randomUUID();
   const businessId = randomUUID();
   const conversationId = randomUUID();
@@ -87,6 +96,10 @@ async function main(): Promise<void> {
     console.log("privacy-attachment-cleanup: ok");
     console.log("privacy-recording-outbox: ok");
   } finally {
+    if (previousEnabled === undefined) delete process.env.CONTENT_RETENTION_ENABLED;
+    else process.env.CONTENT_RETENTION_ENABLED = previousEnabled;
+    if (previousPolicy === undefined) delete process.env.CONTENT_RETENTION_POLICY_JSON;
+    else process.env.CONTENT_RETENTION_POLICY_JSON = previousPolicy;
     await storage.deleteObject({ key: recordingKey }).catch(() => undefined);
     await storage.deleteObject({ key: attachmentKey }).catch(() => undefined);
     await migrator.db.delete(businesses).where(eq(businesses.id, businessId)).catch(() => undefined);

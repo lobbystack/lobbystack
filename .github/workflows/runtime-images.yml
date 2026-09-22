@@ -1,0 +1,63 @@
+name: Runtime images
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [admin, worker, voice-gateway, migrator]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build and load runtime image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.${{ matrix.service }}
+          load: true
+          tags: lobbystack/${{ matrix.service }}:ci
+          build-args: SERVICE_VERSION=${{ github.sha }}
+          cache-from: type=gha,scope=runtime-${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=runtime-${{ matrix.service }}
+      - name: Certify lazy tokenizer runtime dependencies
+        if: matrix.service != 'migrator'
+        env:
+          SERVICE: ${{ matrix.service }}
+        run: |
+          entry=/app/dist/runtime/index.js
+          if [[ "$SERVICE" == admin ]]; then entry=/app/apps/admin/.next/server/chunks/runtime-dependency-check.js; fi
+          docker run --rm --env RUNTIME_ENTRY="$entry" --entrypoint node "lobbystack/$SERVICE:ci" -e 'const { createRequire } = require("node:module"); const runtimeRequire = createRequire(process.env.RUNTIME_ENTRY); const { Tiktoken } = runtimeRequire("js-tiktoken/lite"); const tokenizer = new Tiktoken(runtimeRequire("js-tiktoken/ranks/o200k_base")); if (tokenizer.encode("runtime smoke test").length === 0) process.exit(1);'
+      - name: Verify runtime source maps are absent
+        env:
+          SERVICE: ${{ matrix.service }}
+        run: |
+          docker run --rm --entrypoint node "lobbystack/$SERVICE:ci" -e 'const fs = require("node:fs"); const walk = dir => { for (const entry of fs.readdirSync(dir, { withFileTypes: true })) { const path = `${dir}/${entry.name}`; if (entry.isDirectory()) walk(path); else if (entry.isFile() && entry.name.endsWith(".map")) throw new Error(`Runtime source map: ${path}`); } }; walk("/app");'
+      - name: Smoke migrator against isolated PostgreSQL
+        if: matrix.service == 'migrator'
+        run: |
+          docker network create migrator-test
+          docker run --detach --name migrator-postgres --network migrator-test --env POSTGRES_PASSWORD=test --env POSTGRES_DB=lobbystack_test --health-cmd='pg_isready -U postgres -d lobbystack_test' --health-interval=2s --health-retries=30 pgvector/pgvector:pg16
+          for attempt in {1..60}; do
+            if [[ "$(docker inspect --format '{{.State.Health.Status}}' migrator-postgres)" == healthy ]]; then break; fi
+            sleep 2
+          done
+          for pass in 1 2; do
+            docker run --rm --network migrator-test --env DATABASE_URL=postgres://postgres:test@migrator-postgres:5432/lobbystack_test lobbystack/migrator:ci
+          done
+      - name: Scan runtime image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: lobbystack/${{ matrix.service }}:ci
+          scanners: vuln
+          vuln-type: os,library
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"

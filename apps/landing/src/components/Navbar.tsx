@@ -304,21 +304,19 @@ export function Navbar({ locale = "en" }: NavbarProps) {
           {navLinks(locale).map((link) => (
             <div key={link.label} className="group relative">
               {link.type === "group" ? (
-                <>
-                  <button
-                    type="button"
-                    className="flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                    aria-haspopup="menu"
+                <details className="group/dropdown">
+                  <summary
+                    className="flex cursor-pointer list-none items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden"
                   >
                     {link.label}
                     <ChevronDown
-                      className="size-3.5 transition-transform group-focus-within:rotate-180 group-hover:rotate-180"
+                      className="size-3.5 transition-transform group-open/dropdown:rotate-180"
                       aria-hidden="true"
                     />
-                  </button>
+                  </summary>
                   <div
                     className={cn(
-                      "invisible absolute top-full left-0 z-50 grid min-w-56 translate-y-2 gap-3 rounded-lg border border-border/70 bg-popover p-1.5 text-popover-foreground opacity-0 shadow-lg transition-all duration-150 group-focus-within:visible group-focus-within:translate-y-1 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-1 group-hover:opacity-100",
+                      "absolute top-full left-0 z-50 grid min-w-56 translate-y-1 gap-3 rounded-lg border border-border/70 bg-popover p-1.5 text-popover-foreground shadow-lg",
                       link.columns.length === 2 && "w-[31rem] grid-cols-2",
                       link.columns.length === 3 &&
                         "w-max grid-cols-[minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)] gap-x-8 p-4",
@@ -393,7 +391,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                       </div>
                     ))}
                   </div>
-                </>
+                </details>
               ) : (
                 <a
                   href={localizeHref(locale, link.href)}
@@ -412,6 +410,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
 
         {/* Desktop CTAs */}
         <div className="hidden items-center gap-3 md:flex">
+          <a data-language-switch href={locale === "fr" ? "/" : "/fr/"} hrefLang={locale === "fr" ? "en" : "fr"} lang={locale === "fr" ? "en" : "fr"} className="rounded-md text-sm focus-visible:outline-2 focus-visible:outline-ring">{locale === "fr" ? "English" : "Français"}</a>
           <a
             href={APP_LOGIN_URL}
             className="rounded-md text-sm font-medium text-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
@@ -434,7 +433,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
           <summary
             className="inline-flex size-9 cursor-pointer list-none items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden"
             aria-controls={mobileMenuId}
-            aria-label="Open menu"
+            aria-label={locale === "fr" ? "Menu de navigation" : "Navigation menu"}
           >
             <Menu
               className="size-5 group-open/mobile-menu:hidden"
@@ -452,7 +451,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
           >
             <nav
               className="flex flex-col gap-1 px-6 py-4"
-              aria-label="Mobile navigation"
+              aria-label={locale === "fr" ? "Navigation mobile" : "Mobile navigation"}
             >
               {navLinks(locale).map((link) =>
                 link.type === "group" ? (
@@ -552,6 +551,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
               )}
             </nav>
             <div className="flex flex-col gap-2 px-6 pt-2 pb-4">
+              <a data-language-switch href={locale === "fr" ? "/" : "/fr/"} hrefLang={locale === "fr" ? "en" : "fr"} lang={locale === "fr" ? "en" : "fr"} className="rounded-md px-3 py-2 text-center text-sm focus-visible:outline-2 focus-visible:outline-ring">{locale === "fr" ? "English" : "Français"}</a>
               <a
                 href={APP_LOGIN_URL}
                 className="rounded-md px-3 py-2 text-center text-sm font-medium text-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"

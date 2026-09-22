@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import {
   useWebVoiceCall,
   webVoiceStatusLabel,
+  webVoiceStatusLabelFr,
   type WebVoiceWidgetStatus,
 } from "@/components/web-voice/useWebVoiceCall"
 import { useEffect, useRef } from "react"
@@ -37,13 +38,22 @@ function noise1D(x: number): number {
 // Component
 // ------------------------------------------------------------------
 type LobbyStackAuraVoiceDemoProps = {
+  locale?: "en" | "fr"
   businessSlug: string
   endpoint: string
   widgetId?: string
   onEvent?: (eventName: string, properties?: Record<string, unknown>) => void
 }
 
-function getButtonLabel(status: WebVoiceWidgetStatus, muted: boolean) {
+function getButtonLabel(status: WebVoiceWidgetStatus, muted: boolean, locale: "en" | "fr") {
+  if (locale === "fr") {
+    if (status === "connected") return "Terminer la démo vocale"
+    if (status === "ending") return "Fin de la démo vocale"
+    if (status === "requesting_microphone") return "Autorisez l’accès au microphone"
+    if (status === "connecting") return "Connexion à la démo vocale"
+    if (status === "error") return "Réessayer la démo vocale"
+    return "Démarrer la démo vocale"
+  }
   if (status === "connected") {
     return muted ? "End muted AI voice demo" : "End AI voice demo"
   }
@@ -63,6 +73,7 @@ function getButtonLabel(status: WebVoiceWidgetStatus, muted: boolean) {
 }
 
 export function LobbyStackAuraVoiceDemo({
+  locale = "en",
   businessSlug,
   endpoint,
   widgetId,
@@ -79,6 +90,7 @@ export function LobbyStackAuraVoiceDemo({
     isCallActive,
     isBusy,
   } = useWebVoiceCall({
+    locale,
     businessSlug,
     endpoint,
     widgetId,
@@ -376,7 +388,7 @@ export function LobbyStackAuraVoiceDemo({
         />
 
         <p className="sr-only" role="status" aria-live="polite">
-          {errorMessage ?? webVoiceStatusLabel[status]}
+          {errorMessage ?? (locale === "fr" ? webVoiceStatusLabelFr : webVoiceStatusLabel)[status]}
         </p>
 
         {/* Voice demo button, centered alone inside the aura */}
@@ -384,7 +396,7 @@ export function LobbyStackAuraVoiceDemo({
           type="button"
           onClick={isCallActive ? endCall : startCall}
           disabled={isBusy || status === "ending"}
-          aria-label={getButtonLabel(status, muted)}
+          aria-label={getButtonLabel(status, muted, locale)}
           className={cn(
             "voice-aura-button relative z-10 flex aspect-square w-36 items-center justify-center rounded-full",
             "transition-all duration-300 ease-out",
@@ -427,7 +439,7 @@ export function LobbyStackAuraVoiceDemo({
               disabled
               className="rounded-full"
             >
-              Connecting...
+              {locale === "fr" ? "Connexion…" : "Connecting…"}
             </Button>
           </div>
         ) : isCallActive ? (
@@ -440,7 +452,7 @@ export function LobbyStackAuraVoiceDemo({
               className="cursor-pointer rounded-full"
             >
               <PhoneOff className="size-4" aria-hidden="true" />
-              Hang up
+              {locale === "fr" ? "Raccrocher" : "Hang up"}
             </Button>
           </div>
         ) : null}

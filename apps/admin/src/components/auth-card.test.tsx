@@ -11,6 +11,20 @@ vi.mock("@/lib/affiliate-referral", () => ({ captureAffiliateReferralFromUrl: ()
 beforeEach(() => { vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", ""); window.history.replaceState(null, "", "/"); Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => null }); vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} unobserve() {} }); vi.stubGlobal("fetch", vi.fn(async () => Response.json({ code: "INVALID_CREDENTIALS" }, { status: 401 }))); });
 afterEach(async () => { cleanup(); await new Promise(resolve => setTimeout(resolve, 60)); vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
 describe("original login and signup behavior", () => {
+  it("preserves calculator attribution and a safe return path when switching to login", () => {
+    window.history.replaceState(null, "", "/en/signup?source=calculator&returnTo=%2Fagent");
+    render(<AuthCard mode="signup" />);
+    expect(screen.getByRole("link", { name: "signup.signIn" }).getAttribute("href")).toBe("/en/login?returnTo=%2Fagent&source=calculator");
+  });
+  it("carries the calculator source into the deferred signup analytics event", async () => {
+    window.history.replaceState(null, "", "/en/signup?source=calculator");
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ token: "session", user: { id: "operator" } }));
+    render(<AuthCard mode="signup" />);
+    await userEvent.type(screen.getByLabelText("signup.email"), "owner@example.invalid");
+    await userEvent.type(screen.getByLabelText("signup.password"), "Valid-Password-123!");
+    await userEvent.click(screen.getByRole("button", { name: "signup.submit" }));
+    await waitFor(() => expect(analytics.record).toHaveBeenCalledWith("web.auth.signup_succeeded", { source: "calculator" }));
+  });
   it("shows verification code entry when signup succeeds without a session", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(Response.json({ token: null, user: { id: "operator" } }));
     render(<AuthCard mode="signup" />);

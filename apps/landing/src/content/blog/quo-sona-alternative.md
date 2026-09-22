@@ -21,7 +21,7 @@ Sona focuses on answering, lead capture, messages, and summaries inside Quo. Lob
 
 | Area | Quo Sona | LobbyStack |
 | --- | --- | --- |
-| No-add-on allowance | About 10 calls, but paid Quo is required | 30 minutes, no card, all features |
+| No-add-on allowance | About 10 calls, but paid Quo is required | 30 browser voice minutes, no card, no telephone number |
 | Paid entry | $25 for 40 calls | $30 for 150 minutes |
 | Platform requirement | Paid Quo phone plan | No business-phone suite required |
 | Main job | Answering, lead and message capture | Answering, booking, handoff, call operations |
@@ -94,7 +94,7 @@ Choose Sona when you already use Quo and need answering, lead capture, and summa
 
 ## Choose LobbyStack when
 
-Choose LobbyStack when you need direct booking, handoff, a longer free phone test, no required Quo plan, public source code, or self-hosting.
+Choose LobbyStack for direct booking, handoff, public source code, or self-hosting. You can test voice conversations in your browser on Free without a Quo plan.
 
 ## Sources
 
@@ -107,4 +107,4 @@ Choose LobbyStack when you need direct booking, handoff, a longer free phone tes
 
 LobbyStack offers the more complete and portable receptionist. Sona remains a convenient message-taking add-on for teams committed to Quo, but it adds another charge and keeps the workflow inside that phone system.
 
-[Start LobbyStack free](/pricing/) and test booking, handoff, summaries, and provider portability before buying a phone-suite add-on.
+[Start LobbyStack free](/pricing/) and test voice conversations in your browser before choosing a paid plan.

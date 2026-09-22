@@ -2,10 +2,14 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { APP_SIGNUP_URL } from "@/lib/app-links"
 import type { Locale } from "@/i18n"
 import { cn } from "@/lib/utils"
+import { getCloudPlanFactSheet } from "@lobbystack/shared/product-capabilities"
 import { Check, Minus, ArrowRight } from "lucide-react"
 import { Fragment, useState } from "react"
 
 /* ─────────────────────────── Data ─────────────────────────── */
+
+const freePlanFacts = getCloudPlanFactSheet("free_cloud")
+const freeVoiceMinutes = freePlanFacts.voiceMinutesIncluded ?? 0
 
 type Tier = {
   name: string
@@ -48,8 +52,8 @@ const tiers: Tier[] = [
     },
     period: "",
     description: {
-      monthly: "Per month, billed monthly",
-      annual: "Per month, billed annually",
+      monthly: "Test voice in your browser",
+      annual: "Test voice in your browser",
     },
     cta: {
       monthly: "Start free",
@@ -58,8 +62,8 @@ const tiers: Tier[] = [
     ctaVariant: "outline" as const,
     highlight: false,
     highlights: [
-      "30 voice minutes included",
-      "All features",
+      `${freeVoiceMinutes} browser voice minutes included`,
+      ...(freePlanFacts.browserVoiceOnly ? ["No telephone number"] : []),
       "Community support",
     ],
   },
@@ -153,8 +157,8 @@ const tiersFr: Tier[] = [
     },
     period: "",
     description: {
-      monthly: "Par mois, facturé mensuellement",
-      annual: "Par mois, facturé annuellement",
+      monthly: "Testez la voix dans votre navigateur",
+      annual: "Testez la voix dans votre navigateur",
     },
     cta: {
       monthly: "Commencer gratuitement",
@@ -163,8 +167,8 @@ const tiersFr: Tier[] = [
     ctaVariant: "outline" as const,
     highlight: false,
     highlights: [
-      "30 minutes vocales incluses",
-      "Toutes les fonctionnalités",
+      `${freeVoiceMinutes} minutes vocales dans le navigateur`,
+      ...(freePlanFacts.browserVoiceOnly ? ["Aucun numéro de téléphone"] : []),
       "Support communautaire",
     ],
   },
@@ -283,7 +287,7 @@ const comparisonGroupsEn: ComparisonGroup[] = [
     rows: [
       {
         feature: "Voice minutes",
-        free: { included: "30 included" },
+        free: { included: `${freeVoiceMinutes} browser minutes` },
         starter: { included: "150 included", then: "then $0.20/min" },
         pro: { included: "500 included", then: "then $0.18/min" },
         enterprise: "Custom",
@@ -323,7 +327,7 @@ const comparisonGroupsEn: ComparisonGroup[] = [
     rows: [
       {
         feature: "24/7 call answering",
-        free: true,
+        free: "Browser testing",
         pro: true,
         enterprise: true,
       },
@@ -411,19 +415,19 @@ const comparisonGroupsEn: ComparisonGroup[] = [
     rows: [
       {
         feature: "Urgent call handoff",
-        free: true,
+        free: false,
         pro: true,
         enterprise: true,
       },
       {
         feature: "Call transfers",
-        free: true,
+        free: false,
         pro: true,
         enterprise: true,
       },
       {
         feature: "After-hours answering",
-        free: true,
+        free: false,
         pro: true,
         enterprise: true,
       },
@@ -455,6 +459,13 @@ const comparisonGroupsEn: ComparisonGroup[] = [
         free: true,
         pro: true,
         enterprise: true,
+      },
+      {
+        feature: "Two-way AI SMS (optional add-on)",
+        free: false,
+        starter: { included: "$5/mo + $19 setup", then: "$0.03/segment from the first segment" },
+        pro: { included: "$5/mo + $19 setup", then: "$0.03/segment from the first segment" },
+        enterprise: "Custom",
       },
     ],
   },
@@ -491,12 +502,6 @@ const comparisonGroupsEn: ComparisonGroup[] = [
         pro: true,
         enterprise: true,
       },
-      {
-        feature: "Data retention guidance",
-        free: false,
-        pro: false,
-        enterprise: true,
-      },
     ],
   },
   {
@@ -531,7 +536,7 @@ const comparisonGroupsFr: ComparisonGroup[] = [
     rows: [
       {
         feature: "Minutes vocales",
-        free: { included: "30 incluses" },
+        free: { included: `${freeVoiceMinutes} minutes dans le navigateur` },
         starter: { included: "150 incluses", then: "puis 0,20 $/min" },
         pro: { included: "500 incluses", then: "puis 0,18 $/min" },
         enterprise: "Sur mesure",
@@ -571,7 +576,7 @@ const comparisonGroupsFr: ComparisonGroup[] = [
     rows: [
       {
         feature: "Réponse aux appels 24/7",
-        free: true,
+        free: "Tests dans le navigateur",
         pro: true,
         enterprise: true,
       },
@@ -659,19 +664,19 @@ const comparisonGroupsFr: ComparisonGroup[] = [
     rows: [
       {
         feature: "Transfert des appels urgents",
-        free: true,
+        free: false,
         pro: true,
         enterprise: true,
       },
       {
         feature: "Transferts d'appel",
-        free: true,
+        free: false,
         pro: true,
         enterprise: true,
       },
       {
         feature: "Réponse hors horaires",
-        free: true,
+        free: false,
         pro: true,
         enterprise: true,
       },
@@ -703,6 +708,13 @@ const comparisonGroupsFr: ComparisonGroup[] = [
         free: true,
         pro: true,
         enterprise: true,
+      },
+      {
+        feature: "SMS IA bidirectionnels (option payante)",
+        free: false,
+        starter: { included: "5 $/mois + 19 $ de configuration", then: "0,03 $/segment dès le premier segment" },
+        pro: { included: "5 $/mois + 19 $ de configuration", then: "0,03 $/segment dès le premier segment" },
+        enterprise: "Sur mesure",
       },
     ],
   },
@@ -737,12 +749,6 @@ const comparisonGroupsFr: ComparisonGroup[] = [
         feature: "Import de connaissances depuis le site web",
         free: true,
         pro: true,
-        enterprise: true,
-      },
-      {
-        feature: "Conseils de conservation des données",
-        free: false,
-        pro: false,
         enterprise: true,
       },
     ],
@@ -845,7 +851,7 @@ const pricingSectionCopy = {
     save: "Save 20%",
     compareHeading: "Compare plans in detail",
     compareIntro:
-      "Every plan gives you access to all features. Starter and Pro give you higher included usage with monthly resets and usage-based overages.",
+      "Free includes 30 browser voice minutes with no telephone number. Starter and Pro include a dedicated number, monthly usage allowances, and usage-based overages.",
     billingLabel: "Billing interval",
     tableLabel: "Plan comparison table",
     caption:
@@ -863,7 +869,7 @@ const pricingSectionCopy = {
     save: "Économisez 20 %",
     compareHeading: "Comparer les forfaits en détail",
     compareIntro:
-      "Tous les forfaits donnent accès aux mêmes fonctionnalités. Starter et Pro ajoutent plus de volume inclus, avec remise à zéro mensuelle et dépassements facturés à l’usage.",
+      "Free comprend 30 minutes vocales dans le navigateur, sans numéro de téléphone. Starter et Pro comprennent un numéro dédié, des volumes mensuels et des dépassements facturés à l’usage.",
     billingLabel: "Intervalle de facturation",
     tableLabel: "Tableau de comparaison des forfaits",
     caption:

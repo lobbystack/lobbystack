@@ -20,7 +20,7 @@ export const pricingFaqs: FaqItem[] = [
   {
     question: "Can I use LobbyStack for free?",
     answer:
-      "Yes. The Free tier lets you try LobbyStack without a monthly subscription. It includes 30 voice minutes, 2 outbound call attempts, 10 alert SMS segments, appointment booking, summaries, and call history.",
+      "Yes. You can test 30 browser voice minutes on Free without a credit card. Free has no telephone number. Choose Starter or Pro for a dedicated number.",
   },
   {
     question: "What AI receptionist features are available today?",
@@ -49,7 +49,7 @@ export const pricingFaqsFr: FaqItem[] = [
   {
     question: "Puis-je utiliser LobbyStack gratuitement ?",
     answer:
-      "Oui. Le forfait Free vous permet d’essayer LobbyStack sans abonnement mensuel. Il inclut 30 minutes vocales, 2 tentatives d’appels sortants, 10 segments SMS d’alerte, la prise de rendez‑vous, les résumés et l’historique des appels.",
+      "Oui. Vous pouvez tester 30 minutes vocales dans le navigateur sur Free, sans carte bancaire. Free ne comprend aucun numéro de téléphone. Choisissez Starter ou Pro pour obtenir un numéro dédié.",
   },
   {
     question:

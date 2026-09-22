@@ -69,13 +69,10 @@ overrides:
 supportedArchitectures:
   os:
     - current
-    - linux
   cpu:
     - current
-    - arm64
   libc:
     - current
-    - glibc
 
 onlyBuiltDependencies:
   - core-js

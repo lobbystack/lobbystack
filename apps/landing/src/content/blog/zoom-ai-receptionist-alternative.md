@@ -21,7 +21,7 @@ LobbyStack includes booking, human handoff, SMS alerts, transcripts, summaries, 
 
 | Area | Zoom Virtual Agent Receptionist | LobbyStack |
 | --- | --- | --- |
-| Ongoing free plan | Not advertised | 30 voice minutes, no card, all features |
+| Ongoing free plan | Not advertised | 30 browser voice minutes, no card, no telephone number |
 | Launch price | $29.99 for 100 minutes | $30 for 150 minutes |
 | Annual price | $24.99 for 100 minutes | $24 for 150 minutes |
 | Existing phone system | Advertised | Call forwarding and voice-provider setup |
@@ -34,7 +34,7 @@ Pricing and features were checked on July 30, 2026.
 
 ## LobbyStack gives you more room to prove the workflow
 
-Zoom's launch plan provides 100 minutes. LobbyStack Starter provides 150 for one cent more, and the Free plan supports a real 30-minute phone test. On annual billing, LobbyStack costs $0.99 less per month and still includes 50 more minutes. Calls under 10 seconds and spam do not consume LobbyStack usage.
+Zoom's launch plan includes 100 minutes. LobbyStack Starter includes 150 for one cent more. You can test 30 browser voice minutes on Free, without a telephone number. On annual billing, LobbyStack costs $0.99 less per month and includes 50 more minutes.
 
 That extra capacity gives a small business more room to test booking rules, after-hours transfers, caller questions, and failure handling. The team can review transcripts and summaries before forwarding all traffic.
 
@@ -102,6 +102,6 @@ Choose LobbyStack when you want 30 free test minutes, 50% more included usage ne
 
 ## Verdict
 
-LobbyStack beats Zoom's launch plan on included minutes, offers a free way to test real calls, and leaves the deployment under the buyer's control. Zoom remains credible for teams that want its brand and communications administration.
+With LobbyStack, you get more minutes than Zoom's launch plan and can test voice conversations in your browser for free. Choose Zoom if your team prefers its communications administration.
 
-[Start LobbyStack free](/pricing/) and test the phone system and calendar before committing.
+[Start LobbyStack free](/pricing/) and test voice conversations in your browser.

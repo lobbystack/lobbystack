@@ -1,5 +1,6 @@
 {
   "appName": "LobbyStack",
+  "accessibility": { "close": "Fermer", "toggleSidebar": "Afficher ou masquer la barre latérale", "skipToContent": "Aller au contenu principal" },
   "errors": { "unexpected": "Une erreur est survenue. Veuillez réessayer." },
   "loading": {
     "title": "Chargement...",

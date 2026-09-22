@@ -1,6 +1,9 @@
 .DS_Store
 .git
-.github
+.github/*
+!.github/build
+.github/build/*
+!.github/build/prepare-image-workspace.mjs
 .idea
 .turbo
 **/.next
@@ -32,3 +35,8 @@ convex/.generated
 output
 tmp
 OPENCODE.local.md
+mintlify
+certification-results
+**/.env
+**/.env.*
+!**/.env.example

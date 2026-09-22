@@ -587,7 +587,7 @@ ${DEFAULT_DESCRIPTION}
 
 ## Pricing Snapshot
 
-- Free: $0/month with 30 voice minutes, 2 outbound call attempts, 10 alert SMS segments, and 25 MB knowledge base.
+- Free: $0/month with 30 browser voice minutes, no telephone number, and 25 MB knowledge base.
 - Starter: $30/month or $288/year ($24/month effective) with 150 voice minutes, 20 outbound call attempts, 50 alert SMS segments, and 100 MB knowledge base.
 - Pro: $100/month or $960/year ($80/month effective) with 500 voice minutes, 100 outbound call attempts, 200 alert SMS segments, and 500 MB knowledge base.
 - Starter overage: $0.20 per voice minute, $0.02 per outbound call attempt, and $0.02 per alert SMS segment.
@@ -638,7 +638,7 @@ LobbyStack has Free, Starter, Pro, and Enterprise options. Plans scale by usage 
 
 | Plan | Price | Included usage |
 | --- | ---: | --- |
-| Free | $0/month | 30 voice minutes, 2 outbound call attempts, 10 alert SMS segments, 25 MB knowledge base |
+| Free | $0/month | 30 browser voice minutes, no telephone number, 25 MB knowledge base |
 | Starter | $30/month or $288/year | 150 voice minutes, 20 outbound call attempts, 50 alert SMS segments, 100 MB knowledge base |
 | Pro | $100/month or $960/year | 500 voice minutes, 100 outbound call attempts, 200 alert SMS segments, 500 MB knowledge base |
 | Enterprise | Custom | Custom volume, multiple numbers, multi-location routing, custom fallback rules, and self-hosting implementation support |
@@ -657,7 +657,7 @@ LobbyStack has Free, Starter, Pro, and Enterprise options. Plans scale by usage 
 
 ### Does the Free plan include voice minutes?
 
-Yes. Free includes 30 voice minutes, 2 outbound call attempts, and 10 alert SMS segments.
+Yes. You can test 30 browser voice minutes on Free. Free has no telephone number.
 
 ### How do paid plans work?
 

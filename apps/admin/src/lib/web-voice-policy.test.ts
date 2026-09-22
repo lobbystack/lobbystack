@@ -12,6 +12,7 @@ describe("web voice policy", () => {
     const limits = buildWebVoiceRateLimits({ businessId: "business", origin: "https://example.test", prospectDemoId: "demo", visitorId: "visitor" });
     expect(limits.map((entry) => [entry.name, entry.limit, entry.windowSeconds])).toEqual([
       ["global-minute", 120, 60],
+      ["demo-business-hour", 60, 3600],
       ["demo-visitor-30d", 5, 2_592_000],
     ]);
   });
@@ -38,6 +39,13 @@ describe("web voice policy", () => {
       code: "web_voice_rate_limited",
       reason: "rate_limit_ip_day",
     });
+  });
+
+  it("isolates a shared origin per tenant while keeping the global emergency bucket", () => {
+    const first = buildWebVoiceRateLimits({ businessId: "first", origin: "https://shared.test" });
+    const second = buildWebVoiceRateLimits({ businessId: "second", origin: "https://shared.test" });
+    expect(first.find((entry) => entry.name === "origin-10m")!.key).not.toBe(second.find((entry) => entry.name === "origin-10m")!.key);
+    expect(first.find((entry) => entry.name === "global-minute")!.key).toBe(second.find((entry) => entry.name === "global-minute")!.key);
   });
 
   it("rejects demos without a visitor or IP identity", async () => {

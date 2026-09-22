@@ -60,11 +60,10 @@ const seo = getRouteSeo({ locale, path: "/pricing/" })
   }}
 >
   <Navbar locale={locale} />
-  <main>
+  <main id="main-content" tabindex="-1">
     <PricingSection client:load locale={locale} />
     <PricingFaqSection locale={locale} />
     <CtaSection locale={locale} />
   </main>
   <Footer locale={locale} />
 </Layout>
-

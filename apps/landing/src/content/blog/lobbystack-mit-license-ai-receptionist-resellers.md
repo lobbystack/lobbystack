@@ -36,7 +36,7 @@ For a commercial builder, that creates a wide field of use. You can change the i
 
 ## Four ways to build a business with LobbyStack
 
-LobbyStack already includes the product layer that sits around an AI voice model: calls, SMS, website chat, appointments, knowledge, transcripts, recordings, human handoff, usage, billing, and an operator dashboard. You can spend your time on the customer and market you know.
+LobbyStack already includes the product layer that sits around an AI voice model: calls, SMS, appointments, knowledge, transcripts, recordings, human handoff, usage, billing, and an operator dashboard. You can spend your time on the customer and market you know.
 
 ### Build a vertical AI receptionist
 

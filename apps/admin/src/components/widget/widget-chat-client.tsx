@@ -217,8 +217,10 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
       window.parent?.postMessage({ type: "resize", height: document.documentElement.scrollHeight }, "*");
     };
     reportHeight();
-    const timer = window.setInterval(reportHeight, 500);
-    return () => window.clearInterval(timer);
+    const observer = new ResizeObserver(reportHeight);
+    observer.observe(document.documentElement);
+    observer.observe(document.body);
+    return () => observer.disconnect();
   }, []);
 
   const color = configState?.config?.color ?? "#0f766e";
@@ -338,6 +340,7 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
 }
 
 function VoiceButton({ className, businessSlug, baseUrl, visitorId, sessionToken, parentOrigin, onStatusChange }: { className?: string; businessSlug: string; baseUrl: string | undefined; visitorId: string; sessionToken: string | null; parentOrigin: string | null; onStatusChange: (message: string | null) => void }) {
+  const { t } = useTranslation("widget");
   const [status, setStatus] = useState<"idle" | "connecting" | "connected" | "error" | "ending">("idle");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
@@ -394,7 +397,7 @@ function VoiceButton({ className, businessSlug, baseUrl, visitorId, sessionToken
         if (peer.connectionState === "failed" || peer.connectionState === "disconnected") {
           cleanup();
           setStatus("error");
-          onStatusChange("voiceEnded");
+          onStatusChange("chat.voiceEnded");
         }
       };
       const offer = await peer.createOffer({ offerToReceiveAudio: true });
@@ -407,7 +410,7 @@ function VoiceButton({ className, businessSlug, baseUrl, visitorId, sessionToken
       if (!response.ok) {
         cleanup();
         setStatus("error");
-        onStatusChange("voiceUnavailable");
+        onStatusChange("chat.voiceUnavailable");
         return;
       }
       const answer = await response.json() as { sessionId: string; sdp: string };
@@ -416,7 +419,7 @@ function VoiceButton({ className, businessSlug, baseUrl, visitorId, sessionToken
     } catch {
       cleanup();
       setStatus("error");
-      onStatusChange("voiceUnavailable");
+      onStatusChange("chat.voiceUnavailable");
     }
   };
 
@@ -425,9 +428,9 @@ function VoiceButton({ className, businessSlug, baseUrl, visitorId, sessionToken
     <>
       <audio ref={audioRef} autoPlay playsInline className="hidden" />
       {active ? (
-        <Button variant="destructive" size="icon" className="ml-auto" aria-label="End call" onClick={() => void endCall()}><PhoneOff className="size-4" /></Button>
+        <Button variant="destructive" size="icon" className="ml-auto" aria-label={t("chat.voiceEnd")} onClick={() => void endCall()}><PhoneOff /></Button>
       ) : (
-        <Button variant="outline" size="icon" className={cn("ml-auto", className)} aria-label="Talk to us live" onClick={() => void startCall()} disabled={status === "ending"}><Phone className="size-4" /></Button>
+        <Button variant="outline" size="icon" className={cn("ml-auto", className)} aria-label={t("chat.voiceButton")} onClick={() => void startCall()} disabled={status === "ending"}><Phone /></Button>
       )}
     </>
   );

@@ -21,7 +21,7 @@ Frontdesk, formerly My AI Front Desk, now sells a broad AI sales workspace. Lobb
 
 | Area | Frontdesk | LobbyStack |
 | --- | --- | --- |
-| Ongoing free plan | None; Basic costs $20 with 0 voice minutes | 30 voice minutes, no card, all features |
+| Ongoing free plan | None; Basic costs $20 with 0 voice minutes | 30 browser voice minutes, no card, no telephone number |
 | Product scope | Omnichannel AI workforce and CRM | Complete AI receptionist and call operations |
 | Usable voice entry | $99 monthly plan with 200 minutes | Free with 30 minutes and receptionist features |
 | Around $30/month | $20 Basic has 0 voice minutes | $30 Starter has 150 voice minutes |
@@ -34,11 +34,11 @@ Frontdesk, formerly My AI Front Desk, now sells a broad AI sales workspace. Lobb
 
 Pricing and features were checked on July 30, 2026.
 
-## LobbyStack lets you test real phone calls for free
+## Test LobbyStack in your browser for free
 
 Frontdesk calls its $20 Basic tier an entry plan, but that tier includes zero voice minutes. You can test chat, SMS, email drafts, forms, and workflow tools. You cannot use the included allowance to test the core job of an AI phone receptionist.
 
-LobbyStack's Free plan includes 30 voice minutes, 10 SMS alert segments, two outbound call attempts, appointment booking, summaries, and call history. You can forward a real number, run actual customer scenarios, and inspect the result before paying a monthly fee. LobbyStack also excludes spam calls and calls under 10 seconds from usage, so a robocall or instant hang-up does not consume the included allowance.
+LobbyStack's Free plan includes 30 browser voice minutes and no telephone number. You can test customer scenarios in your browser before choosing a paid plan. Starter and Pro include a dedicated number for telephone calls.
 
 That difference matters more than the two headline prices. A $20 plan with no voice allowance does not compete with a free plan that answers calls.
 
@@ -97,7 +97,7 @@ Choose Frontdesk when you need a hosted voice, messaging, chat, email, and CRM b
 
 ## Choose LobbyStack when
 
-Choose LobbyStack when you want to test real calls free, pay less for 150 to 200 minutes, or get 500 minutes near the $100 price point. LobbyStack also gives you booking, transcripts, summaries, SMS alerts, human handoff, public code, self-hosting, and provider control without forcing a CRM replacement.
+Choose LobbyStack to test voice conversations in your browser for free, pay less for 150 to 200 minutes, or get 500 minutes for $100. On a paid plan, you can receive telephone calls on a dedicated number without replacing your CRM.
 
 ## Sources
 
@@ -111,4 +111,4 @@ Choose LobbyStack when you want to test real calls free, pay less for 150 to 200
 
 Frontdesk sells more channels. LobbyStack offers the stronger AI receptionist value: usable free voice service, lower-cost paid call capacity, complete call operations, and an open deployment path.
 
-If your priority is answering and converting phone calls, [start with LobbyStack's free 30 voice minutes](/pricing/). You can test booking, handoff, summaries, and call history before Frontdesk's first voice-enabled plan would cost you $99.
+[Test 30 browser voice minutes on LobbyStack Free](/pricing/). Choose Starter or Pro when you need a dedicated number for telephone calls.

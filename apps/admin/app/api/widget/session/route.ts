@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 
 import { widgetSessionRequestSchema, widgetSessionResponseSchema } from "@lobbystack/shared";
 import { readJson } from "@/lib/api-helpers";
-import { createWidgetSessionToken } from "@/lib/widget-keys";
+import { createWidgetSessionToken, requestIpHash } from "@/lib/widget-keys";
+import { enforceWidgetRateLimits } from "@/lib/widget-policy";
 import { resolveWidgetAccess } from "@/lib/widget-access";
 
 export const runtime = "nodejs";
@@ -25,6 +26,8 @@ export async function POST(request: Request) {
     const { widgetKey, visitorId } = parsed.data;
     const access = await resolveWidgetAccess(request, widgetKey, { requireOrigin: true, strictOrigin: true });
     if (!access.ok) return access.response;
+    const allowance = await enforceWidgetRateLimits({ businessId: access.session.businessId, widgetKeyId: access.session.widgetKeyId, visitorId, ipHash: requestIpHash(request), operation: "session" }, { consume: true });
+    if (!allowance.allowed) return NextResponse.json({ error: "Widget session limit reached.", code: allowance.code }, { status: allowance.status, headers: corsHeaders(request) });
     const token = createWidgetSessionToken({ widgetKeyId: access.session.widgetKeyId, businessId: access.session.businessId, visitorId, origin: access.session.origin! });
     return NextResponse.json(widgetSessionResponseSchema.parse({ token: token.token, expiresAt: token.expiresAt, visitorId }), { headers: corsHeaders(request) });
   } catch (error) {

@@ -297,7 +297,7 @@ export const softwareApplicationJsonLd = (
       price: "0",
       priceCurrency: "USD",
       description:
-        "Free includes 30 voice minutes, 2 outbound call attempts, 10 alert SMS segments, and 25 MB knowledge base.",
+        "Test 30 browser voice minutes on Free, with no telephone number. Store up to 25 MB in your knowledge base.",
       url: absoluteUrl("/pricing/"),
       availability: "https://schema.org/InStock",
     },

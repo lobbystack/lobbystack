@@ -21,7 +21,7 @@ Moneypenny adds managed onboarding and access to its live-receptionist operation
 
 | Area | Moneypenny AI Receptionist | LobbyStack |
 | --- | --- | --- |
-| Ongoing free plan | Not advertised | 30 voice minutes, no card, all features |
+| Ongoing free plan | Not advertised | 30 browser voice minutes, no card, no telephone number |
 | Entry paid plan | $69 for 25 calls | $30 for 150 minutes |
 | 100-unit tier | $199 for 100 calls | $100 for 500 minutes |
 | Human escalation | Customer team or Moneypenny staff | Configured customer team |
@@ -109,4 +109,4 @@ Choose LobbyStack when your team can receive handoffs and you want a free test, 
 
 LobbyStack is the stronger value when your company already has someone to take urgent calls. Moneypenny earns its premium when you need to buy the human team as well as the AI.
 
-[Start LobbyStack free](https://app.lobbystack.com/signup) and test the handoff before paying per call for external coverage.
+[Start LobbyStack free](https://app.lobbystack.com/signup) and test voice conversations in your browser. Choose a paid plan to test telephone handoffs.

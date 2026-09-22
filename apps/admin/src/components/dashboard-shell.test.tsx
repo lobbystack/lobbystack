@@ -33,7 +33,8 @@ describe("original shared navigation", () => {
   it("keeps the original group ordering, integrations link, and product branding", () => {
     setup();
     expect(screen.getByRole("button", { name: "LobbyStack" })).toBeTruthy();
-    expect(screen.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/", "/calls", "/contacts", "/agent", "/agent/knowledge", "/agent/services", "/agent/rules", "/analytics", "/integrations", "/settings/usage"]);
+    expect(screen.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["#dashboard-main-content", "/", "/calls", "/contacts", "/agent", "/agent/knowledge", "/agent/services", "/agent/rules", "/analytics", "/integrations", "/settings/usage"]);
+    expect(document.getElementById("dashboard-main-content")?.tabIndex).toBe(-1);
   });
   it("keeps integrations visible for viewers", () => {
     setup("viewer"); expect(screen.getByRole("link", { name: "settings:sections.integrations" })).toBeTruthy();

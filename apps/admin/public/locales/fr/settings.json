@@ -19,6 +19,80 @@
     "notifications": "Notifications",
     "widget": "Widget de site web"
   },
+  "widget": {
+    "title": "Widget de site web",
+    "description": "Intégrez le widget de clavardage à votre site web.",
+    "created": {
+      "title": "Clé de widget créée",
+      "description": "Copiez cette clé maintenant. Vous ne la verrez plus.",
+      "copy": "Copier",
+      "copied": "Copié",
+      "copySnippet": "Copier le code d’intégration",
+      "hint": "Ajoutez le code à une page d’une origine autorisée. Le widget se charge automatiquement.",
+      "done": "Terminé"
+    },
+    "create": {
+      "title": "Créer une clé de widget",
+      "description": "Chaque clé appartient à cet espace de travail et possède sa propre liste d’origines autorisées.",
+      "action": "Créer la clé de widget"
+    },
+    "restricted": {
+      "title": "Les nouveaux widgets de site web ne sont pas encore disponibles",
+      "description": "Nous ne délivrons pas encore de nouvelles clés de widget. Les widgets existants continuent de fonctionner et vous pouvez toujours les modifier ou les mettre en pause ci-dessous."
+    },
+    "fields": {
+      "label": "Étiquette",
+      "labelPlaceholder": "Site principal",
+      "origins": "Origines autorisées",
+      "color": "Couleur d’accent",
+      "position": "Position",
+      "title": "Titre",
+      "titlePlaceholder": "Discutez avec nous",
+      "subtitle": "Sous-titre",
+      "subtitlePlaceholder": "Nous répondons en quelques minutes",
+      "greeting": "Message d’accueil",
+      "greetingPlaceholder": "Bonjour. Comment pouvons-nous vous aider ?",
+      "localeOverride": "Langue",
+      "leadEnabled": "Demander les coordonnées des visiteurs",
+      "requireEmail": "Courriel obligatoire",
+      "requirePhone": "Téléphone obligatoire",
+      "showBeforeChat": "Demander avant le clavardage"
+    },
+    "positions": {
+      "bottomRight": "Bas à droite",
+      "bottomLeft": "Bas à gauche",
+      "bottomCenter": "Bas au centre"
+    },
+    "locales": {
+      "visitor": "Langue du visiteur",
+      "english": "Anglais",
+      "french": "Français"
+    },
+    "leadCapture": {
+      "title": "Formulaire de coordonnées",
+      "enabled": "Activé"
+    },
+    "status": {
+      "active": "Actif",
+      "disabled": "En pause",
+      "revoked": "Révoqué"
+    },
+    "keys": {
+      "title": "Clés de widget",
+      "fallbackBusiness": "Espace de travail actif",
+      "refresh": "Actualiser",
+      "loading": "Chargement des clés de widget...",
+      "unavailable": "Les clés de widget sont indisponibles.",
+      "empty": "Aucune clé de widget pour le moment.",
+      "untitled": "Widget sans nom",
+      "pause": "Mettre en pause",
+      "resume": "Reprendre",
+      "revoke": "Révoquer",
+      "revokeConfirm": "Révoquer cette clé de widget ? Les intégrations existantes cesseront de fonctionner.",
+      "save": "Enregistrer",
+      "lastUsed": "Dernière utilisation {{date}}"
+    }
+  },
   "billing": {
     "toast": {
       "checkoutSuccess": "Le paiement a bien été lancé.",
@@ -65,7 +139,8 @@
       "manageSubscription": "Gérer l'abonnement",
       "openingCheckout": "Ouverture du paiement...",
       "openingPortal": "Ouverture du portail...",
-      "viewInvoice": "Voir la facture"
+      "viewInvoice": "Voir la facture",
+      "retry": "Réessayer"
     },
     "currentPlan": {
       "title": "Votre forfait",
@@ -92,10 +167,10 @@
       "includedVoiceLabel": "minutes vocales",
       "includedSmsLabel": "alertes SMS",
       "includedOutboundLabel": "appels sortants",
-      "includedStorageUnlimited": "Stockage illimité",
-      "includedVoiceUnlimited": "Minutes vocales illimitées",
-      "includedSmsUnlimited": "Alertes SMS illimitées",
-      "includedOutboundUnlimited": "Appels sortants illimités",
+      "includedStorageCustom": "Volume de stockage sur mesure",
+      "includedVoiceCustom": "Volume vocal sur mesure",
+      "includedSmsCustom": "Volume SMS sur mesure",
+      "includedOutboundCustom": "Volume d’appels sortants sur mesure",
       "includedStorage": "{{amount}} {{unit}} stockage"
     },
     "upgradeDialog": {
@@ -118,12 +193,12 @@
         "free_cloud": {
           "name": "Gratuit",
           "description": {
-            "monthly": "Par mois, facturé mensuellement",
-            "annual": "Par mois, facturé annuellement"
+            "monthly": "Testez la voix dans votre navigateur",
+            "annual": "Testez la voix dans votre navigateur"
           },
           "highlights": {
-            "voiceMinutes": "30 minutes vocales incluses",
-            "allFeatures": "Toutes les fonctionnalités",
+            "voiceMinutes": "30 minutes vocales dans le navigateur",
+            "allFeatures": "Aucun numéro de téléphone",
             "support": "Soutien communautaire"
           }
         },
@@ -208,7 +283,8 @@
         "segments": "segments",
         "storage": "MB"
       },
-      "unavailable": "Les données d’utilisation sont indisponibles."
+      "unavailable": "Les données d’utilisation sont indisponibles.",
+      "customAllowance": "{{used}} {{unit}} utilisés · Volume sur mesure"
     },
     "catalog": {
       "title": "Offres hébergées",

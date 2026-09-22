@@ -58,7 +58,7 @@ const seo = getRouteSeo({ locale, path: "/" })
   <Navbar locale={locale} />
   <main id="main-content">
     <HeroSection locale={locale}>
-      <LobbyStackHeroVoiceDemo client:idle />
+      <LobbyStackHeroVoiceDemo locale={locale} client:idle />
     </HeroSection>
     <ProductExtensionSection locale={locale} />
     <FeatureGrid locale={locale} />

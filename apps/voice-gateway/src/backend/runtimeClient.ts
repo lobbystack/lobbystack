@@ -286,6 +286,15 @@ export async function fetchWebCallRecordingTarget(input: {
   }
 }
 
+export async function bindWebVoiceProvider(input: {
+  businessId: string;
+  callId: string;
+  gatewaySessionId: string;
+  providerCallId: string;
+}): Promise<void> {
+  await postJson("/voice/call/bind-web-provider", input);
+}
+
 export async function appendVoiceTranscript(input: {
   businessId: string;
   callId: string;

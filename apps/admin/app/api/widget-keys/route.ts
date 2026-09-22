@@ -4,9 +4,9 @@ import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { widgetKeys } from "@lobbystack/db";
-import { widgetConfigSchema } from "@lobbystack/shared";
+import { isWidgetKeyIssuanceEnabled, widgetConfigSchema } from "@lobbystack/shared";
 
-import { asApiResponse, readJson, withOperatorTransaction } from "@/lib/api-helpers";
+import { asApiResponse, jsonError, readJson, withOperatorTransaction } from "@/lib/api-helpers";
 import { hashWidgetKey, normalizeOrigin, serializeWidgetKeyConfig } from "@/lib/widget-keys";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +36,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     return NextResponse.json(await withOperatorTransaction(request, async ({ businessId, tx }) => {
+      if (!isWidgetKeyIssuanceEnabled(process.env)) throw jsonError("New website chat widgets are not available yet.", 403, "widget_issuance_disabled");
       const body = await readJson(request) as { label?: string; allowedOrigins?: string[]; config?: Record<string, unknown> };
       const allowedOrigins = parseAllowedOrigins(body.allowedOrigins ?? []);
       const config = parseConfig(body.config);

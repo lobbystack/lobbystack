@@ -21,7 +21,7 @@ Reception sounds excellent and speaks more than 70 languages. LobbyStack gives y
 
 | Area | ElevenLabs Reception | LobbyStack |
 | --- | --- | --- |
-| Free option | 14-day trial with 30 credits, no card | 30 voice minutes, no card, all features, no expiry |
+| Free option | 14-day trial with 30 credits, no card | 30 browser voice minutes, no card, no telephone number |
 | Entry plan | $29 for 75 credits ($24 billed annually) | $30 for 150 minutes ($24 billed annually) |
 | Entry overage | $0.45 per credit | $0.20 per minute |
 | Wrong numbers and spam | Counted as used credits | Calls under 10 seconds and spam hang-ups are not billed |
@@ -58,7 +58,7 @@ Reception counts phone calls and web chat from one credit pool. A phone minute u
 
 Basic also allows one call at a time. If two customers call at once, only one reaches the receptionist. Plus raises the limit to 3 and Premium to 10.
 
-LobbyStack counts voice minutes on their own, and website chat doesn't draw from them. No plan caps how many calls run at once, so two callers on Starter both reach the receptionist. One exception: if you set a monthly spending cap, the active call reserves the remaining allowance, and a second caller hears the limit message until the first call ends.
+LobbyStack counts voice minutes on their own. No plan caps how many calls run at once, so two callers on Starter both reach the receptionist. One exception: if you set a monthly spending cap, the active call reserves the remaining allowance, and a second caller hears the limit message until the first call ends.
 
 ## Is ElevenLabs Reception HIPAA compliant?
 
@@ -86,7 +86,7 @@ Choose ElevenLabs Reception when voice quality and language coverage matter most
 
 ## Choose LobbyStack when
 
-Choose LobbyStack when you want 150 minutes for $30, a $0.20 overage rate, and a free plan with 30 voice minutes and all features that never expires. It also fits when two callers might ring at once, or when you want to own the software. The MIT code lets you self-host, change the product, or resell it to your own clients.
+Choose LobbyStack for 150 minutes at $30 and a $0.20 overage rate. You can test 30 browser voice minutes on Free without a telephone number. With the MIT code, you can self-host, change the product, or resell it to your own clients.
 
 ## Sources
 

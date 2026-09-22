@@ -116,8 +116,9 @@ describe("competitor comparison blog collection", () => {
       const english = readFileSync(postPath(slug, "en"), "utf8")
       const french = readFileSync(postPath(slug, "fr"), "utf8")
 
-      expect(english, slug).toMatch(/30 (?:free )?(?:voice )?minutes/)
-      expect(english, slug).toContain("all features")
+      expect(english, slug).toContain("30 browser voice minutes")
+      expect(english, slug).toContain("no telephone number")
+      expect(english, slug).not.toMatch(/\ball features\b/)
       expect(english, slug).toContain("## Choose LobbyStack")
       expect(english, slug).toContain("## Verdict")
       expect(english, slug).not.toMatch(
@@ -125,7 +126,8 @@ describe("competitor comparison blog collection", () => {
       )
 
       expect(french, slug).toMatch(/30 minutes/)
-      expect(french, slug).toContain("toutes les fonctions")
+      expect(french, slug).toContain("30 minutes vocales dans le navigateur")
+      expect(french, slug).toContain("sans carte ni numéro de téléphone")
       expect(french, slug).toContain("## Choisissez LobbyStack")
       expect(french, slug).toContain("## Verdict")
       expect(french, slug).not.toMatch(

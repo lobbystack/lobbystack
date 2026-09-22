@@ -1,11 +1,14 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { Check, Copy, Globe, Palette, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { LiveNotificationSettingsSurface } from "./live-notification-settings-surface";
 import { PageSurface } from "./page-surface";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
@@ -37,6 +40,7 @@ function embedSnippet(origin: string, key: string, config: WidgetKeyRecord["conf
 }
 
 export function LiveWidgetSettingsSurface() {
+  const { t } = useTranslation("settings");
   const queryClient = useQueryClient();
   const [label, setLabel] = useState("");
   const [origins, setOrigins] = useState("");
@@ -54,7 +58,7 @@ export function LiveWidgetSettingsSurface() {
   const [copied, setCopied] = useState(false);
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
   const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
-  const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: () => requestJson<{ account?: { plan?: string } }>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
+  const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: () => requestJson<{ widgetIssuanceEnabled?: boolean }>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
   const keys = useQuery({ queryKey: ["widget-keys", business?.businessId], queryFn: () => requestJson<KeysResponse>(`/api/widget-keys?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
 
   const create = useMutation({
@@ -81,56 +85,63 @@ export function LiveWidgetSettingsSurface() {
 
   const rows = keys.data?.keys ?? [];
   const embedOrigin = typeof window !== "undefined" ? window.location.origin : "";
-  const plan = billing.data?.account?.plan ?? null;
+  const issuanceEnabled = billing.data?.widgetIssuanceEnabled === true;
 
   return (
-    <PageSurface title="Website widget" description="Embed an AI chat widget on your website.">
+    <PageSurface title={t("widget.title")} description={t("widget.description")}>
       {createdKey ? (
         <Card className="border-border bg-muted/30">
-          <CardHeader><CardTitle className="flex items-center gap-2 text-foreground"><Check className="size-5" />Widget key created</CardTitle><CardDescription>Save this key now. You will not be able to see it again.</CardDescription></CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-foreground"><Check className="size-5" />{t("widget.created.title")}</CardTitle><CardDescription>{t("widget.created.description")}</CardDescription></CardHeader>
           <CardContent className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <code className="break-all rounded-lg bg-foreground px-3 py-2 text-sm text-primary-foreground">{createdKey.key}</code>
-              <Button size="sm" variant="outline" onClick={() => { void navigator.clipboard?.writeText(createdKey.key); setCopied(true); }}>{copied ? <Check className="size-4" /> : <Copy className="size-4" />}{copied ? "Copied" : "Copy"}</Button>
-              <Button size="sm" variant="outline" onClick={() => { void navigator.clipboard?.writeText(embedSnippet(embedOrigin, createdKey.key, { color, position })); setCopied(true); }}>Copy embed snippet</Button>
+              <Button size="sm" variant="outline" onClick={() => { void navigator.clipboard?.writeText(createdKey.key); setCopied(true); }}>{copied ? <Check className="size-4" /> : <Copy className="size-4" />}{copied ? t("widget.created.copied") : t("widget.created.copy")}</Button>
+              <Button size="sm" variant="outline" onClick={() => { void navigator.clipboard?.writeText(embedSnippet(embedOrigin, createdKey.key, { color, position })); setCopied(true); }}>{t("widget.created.copySnippet")}</Button>
             </div>
             <pre className="overflow-x-auto rounded-xl bg-foreground p-3 text-xs text-background" dir="ltr">{embedSnippet(embedOrigin, createdKey.key, { color, position })}</pre>
-            <p className="text-sm text-foreground">Add the snippet to any page on an allowed origin. The widget loads automatically.</p>
-            <Button variant="ghost" size="sm" onClick={() => setCreatedKey(null)}>Done</Button>
+            <p className="text-sm text-foreground">{t("widget.created.hint")}</p>
+            <Button variant="ghost" size="sm" onClick={() => setCreatedKey(null)}>{t("widget.created.done")}</Button>
           </CardContent>
         </Card>
       ) : null}
 
-      <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><Plus className="size-5 text-muted-foreground" />Create a widget key</CardTitle><CardDescription>Each key is tied to a workspace and its own origin allowlist.</CardDescription>{plan ? <CardDescription className="text-muted-foreground">This plan includes up to {plan === "free_cloud" ? "5" : plan === "starter" ? "50" : "200"} AI chat sessions per month{plan === "free_cloud" ? " (upgrade to Starter for more)" : ""}.</CardDescription> : null}</CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-2 text-sm font-medium sm:col-span-2">Label<input className="min-h-11 w-full rounded-xl border border-border px-3 font-normal" value={label} onChange={(event) => setLabel(event.target.value)} placeholder="Main website" /></label>
-          <label className="space-y-2 text-sm font-medium sm:col-span-2">Allowed origins<input className="min-h-11 w-full rounded-xl border border-border px-3 font-normal" value={origins} onChange={(event) => setOrigins(event.target.value)} placeholder="https://example.com, https://www.example.com" /></label>
-          <label className="space-y-2 text-sm font-medium">Accent color<div className="flex items-center gap-2"><input className="h-11 w-16 rounded-xl border p-1" type="color" value={color} onChange={(event) => setColor(event.target.value)} /><span className="text-sm text-muted-foreground">{color}</span></div></label>
-          <label className="space-y-2 text-sm font-medium">Position<select className="min-h-11 w-full rounded-xl border border-border bg-background px-3 font-normal" value={position} onChange={(event) => setPosition(event.target.value as typeof position)}><option value="bottom-right">Bottom right</option><option value="bottom-left">Bottom left</option><option value="bottom-center">Bottom center</option></select></label>
-          <label className="space-y-2 text-sm font-medium">Title<input className="min-h-11 w-full rounded-xl border border-border px-3 font-normal" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Chat with us" /></label>
-          <label className="space-y-2 text-sm font-medium">Subtitle<input className="min-h-11 w-full rounded-xl border border-border px-3 font-normal" value={subtitle} onChange={(event) => setSubtitle(event.target.value)} placeholder="We usually reply in a few minutes" /></label>
-          <label className="space-y-2 text-sm font-medium sm:col-span-2">Greeting<textarea className="min-h-20 w-full rounded-xl border border-border p-3 font-normal" value={greeting} onChange={(event) => setGreeting(event.target.value)} placeholder="Hi there! How can we help today?" /></label>
-          <label className="space-y-2 text-sm font-medium">Locale override<select className="min-h-11 w-full rounded-xl border border-border bg-background px-3 font-normal" value={localeOverride} onChange={(event) => setLocaleOverride(event.target.value as typeof localeOverride)}><option value="">Use visitor language</option><option value="en">English</option><option value="fr">Français</option></select></label>
-          <label className="flex items-center gap-2 text-sm font-medium sm:col-span-2"><input className="size-4" type="checkbox" checked={leadEnabled} onChange={(event) => setLeadEnabled(event.target.checked)} />Enable a lead form so visitors can share their contact details</label>
-          {leadEnabled ? <div className="grid gap-2 sm:col-span-2 sm:grid-cols-3"><label className="flex items-center gap-2 text-sm"><input className="size-4" type="checkbox" checked={leadRequireEmail} onChange={(event) => setLeadRequireEmail(event.target.checked)} />Require email</label><label className="flex items-center gap-2 text-sm"><input className="size-4" type="checkbox" checked={leadRequirePhone} onChange={(event) => setLeadRequirePhone(event.target.checked)} />Require phone</label><label className="flex items-center gap-2 text-sm"><input className="size-4" type="checkbox" checked={leadShowBeforeChat} onChange={(event) => setLeadShowBeforeChat(event.target.checked)} />Show before chat</label></div> : null}
-          <div className="sm:col-span-2"><Button loading={create.isPending} disabled={!business || !origins.trim()} onClick={() => create.mutate()}>Create widget key</Button>{create.isError ? <p className="mt-2 text-sm text-destructive">{create.error.message}</p> : null}</div>
-        </CardContent>
-      </Card>
+      {issuanceEnabled ? (
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Plus className="size-5 text-muted-foreground" />{t("widget.create.title")}</CardTitle><CardDescription>{t("widget.create.description")}</CardDescription></CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-2 text-sm font-medium sm:col-span-2">{t("widget.fields.label")}<input className="min-h-11 w-full rounded-xl border border-border px-3 font-normal" value={label} onChange={(event) => setLabel(event.target.value)} placeholder={t("widget.fields.labelPlaceholder")} /></label>
+            <label className="space-y-2 text-sm font-medium sm:col-span-2">{t("widget.fields.origins")}<input className="min-h-11 w-full rounded-xl border border-border px-3 font-normal" value={origins} onChange={(event) => setOrigins(event.target.value)} placeholder="https://example.com, https://www.example.com" /></label>
+            <label className="space-y-2 text-sm font-medium">{t("widget.fields.color")}<div className="flex items-center gap-2"><input className="h-11 w-16 rounded-xl border p-1" type="color" value={color} onChange={(event) => setColor(event.target.value)} /><span className="text-sm text-muted-foreground">{color}</span></div></label>
+            <label className="space-y-2 text-sm font-medium">{t("widget.fields.position")}<select className="min-h-11 w-full rounded-xl border border-border bg-background px-3 font-normal" value={position} onChange={(event) => setPosition(event.target.value as typeof position)}><option value="bottom-right">{t("widget.positions.bottomRight")}</option><option value="bottom-left">{t("widget.positions.bottomLeft")}</option><option value="bottom-center">{t("widget.positions.bottomCenter")}</option></select></label>
+            <label className="space-y-2 text-sm font-medium">{t("widget.fields.title")}<input className="min-h-11 w-full rounded-xl border border-border px-3 font-normal" value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t("widget.fields.titlePlaceholder")} /></label>
+            <label className="space-y-2 text-sm font-medium">{t("widget.fields.subtitle")}<input className="min-h-11 w-full rounded-xl border border-border px-3 font-normal" value={subtitle} onChange={(event) => setSubtitle(event.target.value)} placeholder={t("widget.fields.subtitlePlaceholder")} /></label>
+            <label className="space-y-2 text-sm font-medium sm:col-span-2">{t("widget.fields.greeting")}<textarea className="min-h-20 w-full rounded-xl border border-border p-3 font-normal" value={greeting} onChange={(event) => setGreeting(event.target.value)} placeholder={t("widget.fields.greetingPlaceholder")} /></label>
+            <label className="space-y-2 text-sm font-medium">{t("widget.fields.localeOverride")}<select className="min-h-11 w-full rounded-xl border border-border bg-background px-3 font-normal" value={localeOverride} onChange={(event) => setLocaleOverride(event.target.value as typeof localeOverride)}><option value="">{t("widget.locales.visitor")}</option><option value="en">{t("widget.locales.english")}</option><option value="fr">{t("widget.locales.french")}</option></select></label>
+            <label className="flex items-center gap-2 text-sm font-medium sm:col-span-2"><input className="size-4" type="checkbox" checked={leadEnabled} onChange={(event) => setLeadEnabled(event.target.checked)} />{t("widget.fields.leadEnabled")}</label>
+            {leadEnabled ? <div className="grid gap-2 sm:col-span-2 sm:grid-cols-3"><label className="flex items-center gap-2 text-sm"><input className="size-4" type="checkbox" checked={leadRequireEmail} onChange={(event) => setLeadRequireEmail(event.target.checked)} />{t("widget.fields.requireEmail")}</label><label className="flex items-center gap-2 text-sm"><input className="size-4" type="checkbox" checked={leadRequirePhone} onChange={(event) => setLeadRequirePhone(event.target.checked)} />{t("widget.fields.requirePhone")}</label><label className="flex items-center gap-2 text-sm"><input className="size-4" type="checkbox" checked={leadShowBeforeChat} onChange={(event) => setLeadShowBeforeChat(event.target.checked)} />{t("widget.fields.showBeforeChat")}</label></div> : null}
+            <div className="sm:col-span-2"><Button loading={create.isPending} disabled={!business || !origins.trim()} onClick={() => create.mutate()}>{t("widget.create.action")}</Button>{create.isError ? <p className="mt-2 text-sm text-destructive">{create.error.message}</p> : null}</div>
+          </CardContent>
+        </Card>
+      ) : billing.isSuccess ? (
+        <Alert>
+          <AlertTitle>{t("widget.restricted.title")}</AlertTitle>
+          <AlertDescription>{t("widget.restricted.description")}</AlertDescription>
+        </Alert>
+      ) : null}
 
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>
-            <CardTitle className="flex items-center gap-2"><Globe className="size-5 text-muted-foreground" />Widget keys</CardTitle>
-            <CardDescription>{business?.name ?? "Active workspace"}</CardDescription>
+            <CardTitle className="flex items-center gap-2"><Globe className="size-5 text-muted-foreground" />{t("widget.keys.title")}</CardTitle>
+            <CardDescription>{business?.name ?? t("widget.keys.fallbackBusiness")}</CardDescription>
           </div>
-          <Button variant="ghost" onClick={() => void keys.refetch()}><RefreshCw className="size-4" />Refresh</Button>
+          <Button variant="ghost" onClick={() => void keys.refetch()}><RefreshCw className="size-4" />{t("widget.keys.refresh")}</Button>
         </CardHeader>
         <CardContent>
-          {businesses.isLoading || keys.isLoading ? <p className="py-12 text-center text-sm text-muted-foreground">Loading widget keys...</p> : null}
-          {businesses.isError || keys.isError ? <p className="py-12 text-center text-sm text-destructive">Widget keys are unavailable.</p> : null}
+          {businesses.isLoading || keys.isLoading ? <p className="py-12 text-center text-sm text-muted-foreground">{t("widget.keys.loading")}</p> : null}
+          {businesses.isError || keys.isError ? <p className="py-12 text-center text-sm text-destructive">{t("widget.keys.unavailable")}</p> : null}
           {!keys.isLoading && !keys.isError ? <div className="space-y-3">
-            {rows.length ? rows.map((row) => <WidgetKeyEditor key={row.id} row={row} onSave={(input) => patch.mutate(input)} onStatus={(status) => setStatus.mutate({ id: row.id, status })} busy={patch.isPending || setStatus.isPending} />) : <p className="py-12 text-center text-sm text-muted-foreground">No widget keys yet. Create one to embed the widget on your website.</p>}
+            {rows.length ? rows.map((row) => <WidgetKeyEditor key={row.id} row={row} onSave={(input) => patch.mutate(input)} onStatus={(status) => setStatus.mutate({ id: row.id, status })} busy={patch.isPending || setStatus.isPending} t={t} />) : <p className="py-12 text-center text-sm text-muted-foreground">{t("widget.keys.empty")}</p>}
             {patch.isError ? <p className="text-sm text-destructive">{patch.error.message}</p> : null}
           </div> : null}
         </CardContent>
@@ -140,7 +151,7 @@ export function LiveWidgetSettingsSurface() {
   );
 }
 
-function WidgetKeyEditor({ row, onSave, onStatus, busy }: { row: WidgetKeyRecord; onSave: (input: { id: string; label: string; allowedOrigins: string[]; config: WidgetKeyConfig }) => void; onStatus: (status: "active" | "disabled" | "revoked") => void; busy: boolean }) {
+function WidgetKeyEditor({ row, onSave, onStatus, busy, t }: { row: WidgetKeyRecord; onSave: (input: { id: string; label: string; allowedOrigins: string[]; config: WidgetKeyConfig }) => void; onStatus: (status: "active" | "disabled" | "revoked") => void; busy: boolean; t: TFunction<"settings"> }) {
   const [label, setLabel] = useState(row.label ?? "");
   const [origins, setOrigins] = useState(originsToText(row.allowedOrigins));
   const [config, setConfig] = useState<WidgetKeyConfig>(row.config);
@@ -149,28 +160,28 @@ function WidgetKeyEditor({ row, onSave, onStatus, busy }: { row: WidgetKeyRecord
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Palette className="size-4 text-muted-foreground" />
-          <p className="font-semibold">{row.label ?? "Untitled widget"}</p>
-          <Badge variant={row.status === "active" ? "default" : row.status === "disabled" ? "secondary" : "destructive"}>{row.status}</Badge>
+          <p className="font-semibold">{row.label ?? t("widget.keys.untitled")}</p>
+          <Badge variant={row.status === "active" ? "default" : row.status === "disabled" ? "secondary" : "destructive"}>{t(`widget.status.${row.status}`)}</Badge>
         </div>
         <div className="flex items-center gap-2">
-          {row.status === "active" ? <Button size="sm" variant="outline" disabled={busy} onClick={() => onStatus("disabled")}>Pause</Button> : row.status === "disabled" ? <Button size="sm" variant="outline" disabled={busy} onClick={() => onStatus("active")}>Resume</Button> : null}
-          {row.status !== "revoked" ? <Button size="sm" variant="destructive" disabled={busy} onClick={() => { if (window.confirm("Revoke this widget key? Existing embeds will stop working.")) onStatus("revoked"); }}><Trash2 className="size-4" />Revoke</Button> : null}
+          {row.status === "active" ? <Button size="sm" variant="outline" disabled={busy} onClick={() => onStatus("disabled")}>{t("widget.keys.pause")}</Button> : row.status === "disabled" ? <Button size="sm" variant="outline" disabled={busy} onClick={() => onStatus("active")}>{t("widget.keys.resume")}</Button> : null}
+          {row.status !== "revoked" ? <Button size="sm" variant="destructive" disabled={busy} onClick={() => { if (window.confirm(t("widget.keys.revokeConfirm"))) onStatus("revoked"); }}><Trash2 className="size-4" />{t("widget.keys.revoke")}</Button> : null}
         </div>
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <label className="space-y-1.5 text-sm font-medium">Label<input className="min-h-10 w-full rounded-xl border border-border px-3 font-normal" value={label} onChange={(event) => setLabel(event.target.value)} /></label>
-        <label className="space-y-1.5 text-sm font-medium">Allowed origins<input className="min-h-10 w-full rounded-xl border border-border px-3 font-normal" value={origins} onChange={(event) => setOrigins(event.target.value)} /></label>
-        <label className="space-y-1.5 text-sm font-medium">Accent color<div className="flex items-center gap-2"><input className="h-10 w-14 rounded-xl border p-1" type="color" value={config.color ?? "#0f766e"} onChange={(event) => setConfig({ ...config, color: event.target.value })} /><span className="text-xs text-muted-foreground">{config.color ?? "#0f766e"}</span></div></label>
-        <label className="space-y-1.5 text-sm font-medium">Position<select className="min-h-10 w-full rounded-xl border border-border bg-background px-3 font-normal" value={config.position ?? "bottom-right"} onChange={(event) => setConfig({ ...config, position: event.target.value as NonNullable<WidgetKeyConfig["position"]> })}><option value="bottom-right">Bottom right</option><option value="bottom-left">Bottom left</option><option value="bottom-center">Bottom center</option></select></label>
-        <label className="space-y-1.5 text-sm font-medium">Title<input className="min-h-10 w-full rounded-xl border border-border px-3 font-normal" value={config.title ?? ""} onChange={(event) => setConfig({ ...config, title: event.target.value })} /></label>
-        <label className="space-y-1.5 text-sm font-medium">Subtitle<input className="min-h-10 w-full rounded-xl border border-border px-3 font-normal" value={config.subtitle ?? ""} onChange={(event) => setConfig({ ...config, subtitle: event.target.value })} /></label>
-        <label className="space-y-1.5 text-sm font-medium sm:col-span-2">Greeting<textarea className="min-h-16 w-full rounded-xl border border-border p-2 font-normal" value={config.greeting ?? ""} onChange={(event) => setConfig({ ...config, greeting: event.target.value })} /></label>
-        <label className="space-y-1.5 text-sm font-medium">Locale override<select className="min-h-10 w-full rounded-xl border border-border bg-background px-3 font-normal" value={config.localeOverride ?? ""} onChange={(event) => { const next = { ...config }; if (event.target.value === "en" || event.target.value === "fr") next.localeOverride = event.target.value; else delete next.localeOverride; setConfig(next); }}><option value="">Use visitor language</option><option value="en">English</option><option value="fr">Français</option></select></label>
-        <div className="space-y-2 text-sm sm:col-span-2"><p className="font-medium">Lead capture</p><div className="flex flex-wrap gap-x-4 gap-y-2"><label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(config.leadForm?.enabled)} onChange={(event) => setConfig({ ...config, leadForm: { ...config.leadForm, enabled: event.target.checked } })} />Enabled</label><label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(config.leadForm?.requireEmail)} onChange={(event) => setConfig({ ...config, leadForm: { enabled: Boolean(config.leadForm?.enabled), ...config.leadForm, requireEmail: event.target.checked } })} />Require email</label><label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(config.leadForm?.requirePhone)} onChange={(event) => setConfig({ ...config, leadForm: { enabled: Boolean(config.leadForm?.enabled), ...config.leadForm, requirePhone: event.target.checked } })} />Require phone</label><label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(config.leadForm?.showBeforeChat)} onChange={(event) => setConfig({ ...config, leadForm: { enabled: Boolean(config.leadForm?.enabled), ...config.leadForm, showBeforeChat: event.target.checked } })} />Show before chat</label></div></div>
+        <label className="space-y-1.5 text-sm font-medium">{t("widget.fields.label")}<input className="min-h-10 w-full rounded-xl border border-border px-3 font-normal" value={label} onChange={(event) => setLabel(event.target.value)} /></label>
+        <label className="space-y-1.5 text-sm font-medium">{t("widget.fields.origins")}<input className="min-h-10 w-full rounded-xl border border-border px-3 font-normal" value={origins} onChange={(event) => setOrigins(event.target.value)} /></label>
+        <label className="space-y-1.5 text-sm font-medium">{t("widget.fields.color")}<div className="flex items-center gap-2"><input className="h-10 w-14 rounded-xl border p-1" type="color" value={config.color ?? "#0f766e"} onChange={(event) => setConfig({ ...config, color: event.target.value })} /><span className="text-xs text-muted-foreground">{config.color ?? "#0f766e"}</span></div></label>
+        <label className="space-y-1.5 text-sm font-medium">{t("widget.fields.position")}<select className="min-h-10 w-full rounded-xl border border-border bg-background px-3 font-normal" value={config.position ?? "bottom-right"} onChange={(event) => setConfig({ ...config, position: event.target.value as NonNullable<WidgetKeyConfig["position"]> })}><option value="bottom-right">{t("widget.positions.bottomRight")}</option><option value="bottom-left">{t("widget.positions.bottomLeft")}</option><option value="bottom-center">{t("widget.positions.bottomCenter")}</option></select></label>
+        <label className="space-y-1.5 text-sm font-medium">{t("widget.fields.title")}<input className="min-h-10 w-full rounded-xl border border-border px-3 font-normal" value={config.title ?? ""} onChange={(event) => setConfig({ ...config, title: event.target.value })} /></label>
+        <label className="space-y-1.5 text-sm font-medium">{t("widget.fields.subtitle")}<input className="min-h-10 w-full rounded-xl border border-border px-3 font-normal" value={config.subtitle ?? ""} onChange={(event) => setConfig({ ...config, subtitle: event.target.value })} /></label>
+        <label className="space-y-1.5 text-sm font-medium sm:col-span-2">{t("widget.fields.greeting")}<textarea className="min-h-16 w-full rounded-xl border border-border p-2 font-normal" value={config.greeting ?? ""} onChange={(event) => setConfig({ ...config, greeting: event.target.value })} /></label>
+        <label className="space-y-1.5 text-sm font-medium">{t("widget.fields.localeOverride")}<select className="min-h-10 w-full rounded-xl border border-border bg-background px-3 font-normal" value={config.localeOverride ?? ""} onChange={(event) => { const next = { ...config }; if (event.target.value === "en" || event.target.value === "fr") next.localeOverride = event.target.value; else delete next.localeOverride; setConfig(next); }}><option value="">{t("widget.locales.visitor")}</option><option value="en">{t("widget.locales.english")}</option><option value="fr">{t("widget.locales.french")}</option></select></label>
+        <div className="space-y-2 text-sm sm:col-span-2"><p className="font-medium">{t("widget.leadCapture.title")}</p><div className="flex flex-wrap gap-x-4 gap-y-2"><label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(config.leadForm?.enabled)} onChange={(event) => setConfig({ ...config, leadForm: { ...config.leadForm, enabled: event.target.checked } })} />{t("widget.leadCapture.enabled")}</label><label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(config.leadForm?.requireEmail)} onChange={(event) => setConfig({ ...config, leadForm: { enabled: Boolean(config.leadForm?.enabled), ...config.leadForm, requireEmail: event.target.checked } })} />{t("widget.fields.requireEmail")}</label><label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(config.leadForm?.requirePhone)} onChange={(event) => setConfig({ ...config, leadForm: { enabled: Boolean(config.leadForm?.enabled), ...config.leadForm, requirePhone: event.target.checked } })} />{t("widget.fields.requirePhone")}</label><label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(config.leadForm?.showBeforeChat)} onChange={(event) => setConfig({ ...config, leadForm: { enabled: Boolean(config.leadForm?.enabled), ...config.leadForm, showBeforeChat: event.target.checked } })} />{t("widget.fields.showBeforeChat")}</label></div></div>
       </div>
       <div className="mt-3 flex items-center gap-3">
-        <Button size="sm" disabled={busy} onClick={() => onSave({ id: row.id, label: label.trim() || (row.label ?? ""), allowedOrigins: originsFromText(origins), config })}>Save</Button>
-        {row.lastUsedAt ? <p className="text-xs text-muted-foreground">Last used {new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(row.lastUsedAt))}</p> : null}
+        <Button size="sm" disabled={busy} onClick={() => onSave({ id: row.id, label: label.trim() || (row.label ?? ""), allowedOrigins: originsFromText(origins), config })}>{t("widget.keys.save")}</Button>
+        {row.lastUsedAt ? <p className="text-xs text-muted-foreground">{t("widget.keys.lastUsed", { date: new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(row.lastUsedAt)) })}</p> : null}
       </div>
     </article>
   );

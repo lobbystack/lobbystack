@@ -2,7 +2,6 @@ type LobbyStackApi = {
   open: () => void;
   close: () => void;
   toggle: () => void;
-  setVisitor: (visitor: Record<string, unknown>) => void;
 };
 
 type WidgetMessage = { type: string; [key: string]: unknown };
@@ -20,7 +19,6 @@ const WIDGET_STYLES = `
 .lobby-widget-frame-holder[data-position="bottom-center"]{left:50%;transform:translateX(-50%)}
 .lobby-widget-frame-holder.lobby-widget-open{opacity:1;pointer-events:auto}
 .lobby-widget-frame{width:100%;height:100%;border:0;border-radius:16px;background:#fff;box-shadow:0 24px 64px rgba(0,0,0,.24)}
-.lobby-widget-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:9999px;background:#ef4444;color:#fff;font:600 12px/20px system-ui,sans-serif;text-align:center;padding:0 5px;display:none}
 .lobby-widget-hidden{display:none!important}
 `;
 
@@ -69,6 +67,8 @@ export function initWidget(): boolean {
   if (!widgetKey) return false;
   const position = (currentScriptAttribute("data-position") as "bottom-left" | "bottom-center" | "bottom-right" | null) ?? "bottom-right";
   const color = currentScriptAttribute("data-color") ?? "#0f766e";
+  const french = (currentScriptAttribute("data-locale") ?? document.documentElement.lang ?? "en").toLowerCase().startsWith("fr");
+  const labels = french ? { title: "Discutez avec nous", open: "Ouvrir la discussion", close: "Fermer la discussion" } : { title: "Chat with us", open: "Open chat", close: "Close chat" };
   const adminOrigin = resolveOrigin() || window.origin;
   let visitorId = makeVisitorId(widgetKey);
   const frameSrc = `${adminOrigin}/embed/${encodeURIComponent(widgetKey)}`;
@@ -82,30 +82,28 @@ export function initWidget(): boolean {
   holder.setAttribute("data-position", position);
   const frame = document.createElement("iframe");
   frame.className = "lobby-widget-frame";
-  frame.setAttribute("src", frameSrc);
-  frame.setAttribute("title", "Chat with us");
+  frame.setAttribute("title", labels.title);
   frame.setAttribute("allow", "microphone");
-  frame.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms");
+  frame.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox");
   frame.setAttribute("loading", "lazy");
   const bubble = document.createElement("button");
   bubble.type = "button";
   bubble.className = "lobby-widget-bubble";
-  bubble.setAttribute("aria-label", "Open chat");
+  bubble.setAttribute("aria-label", labels.open);
+  bubble.setAttribute("aria-expanded", "false");
+  holder.inert = true;
   bubble.setAttribute("data-position", position);
   bubble.style.backgroundColor = color;
   bubble.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
-  const badge = document.createElement("span");
-  badge.className = "lobby-widget-badge";
   const closeSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
 
   holder.appendChild(frame);
   root.appendChild(holder);
   document.body.appendChild(root);
   document.body.appendChild(bubble);
-  bubble.appendChild(badge);
 
   let open = false;
-  let badgeCount = 0;
+  let started = false;
   let frameLoaded = false;
   let sessionMessage: WidgetMessage | null = null;
   let sessionRefreshTimer: number | undefined;
@@ -135,24 +133,22 @@ export function initWidget(): boolean {
     }
   }
 
-  function syncBadge(): void {
-    badge.textContent = String(badgeCount);
-    badge.style.display = badgeCount > 0 && !open ? "block" : "none";
-  }
-
   function syncBubbleIcon(): void {
     bubble.innerHTML = open ? closeSvg : `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
-    bubble.appendChild(badge);
   }
 
   function setOpen(next: boolean): void {
     open = next;
+    holder.inert = !open;
+    if (open && !started) {
+      started = true;
+      frame.setAttribute("src", frameSrc);
+    }
     holder.classList.toggle("lobby-widget-open", open);
     if (open && !holder.style.height) holder.style.height = "min(640px, calc(100vh - 120px))";
     bubble.setAttribute("aria-expanded", String(open));
-    bubble.setAttribute("aria-label", open ? "Close chat" : "Open chat");
+    bubble.setAttribute("aria-label", open ? labels.close : labels.open);
     syncBubbleIcon();
-    syncBadge();
     postToFrame({ type: open ? "open" : "close" });
   }
 
@@ -169,6 +165,11 @@ export function initWidget(): boolean {
     if (sessionMessage) postToFrame(sessionMessage);
     postToFrame({ type: "visitor", visitorId });
   });
+
+  // Issue the session when the script loads so the token is ready before the
+  // visitor opens the chat. Only the iframe itself is loaded lazily; the
+  // hydrated client expects the loader to have the session by the time it
+  // announces readiness.
   void refreshSession(visitorId);
 
   bubble.addEventListener("click", () => setOpen(!open));
@@ -181,12 +182,8 @@ export function initWidget(): boolean {
       if (sessionMessage) postToFrame(sessionMessage);
       postToFrame({ type: "visitor", visitorId });
     }
-    if (data.type === "resize" && typeof data.height === "number" && open) {
+    if (data.type === "resize" && typeof data.height === "number" && Number.isFinite(data.height) && open) {
       holder.style.height = `${Math.max(0, Math.min(data.height, Math.floor(window.innerHeight - 120)))}px`;
-    }
-    if (data.type === "unread" && typeof data.count === "number") {
-      badgeCount = data.count;
-      syncBadge();
     }
     if (data.type === "close") setOpen(false);
   });
@@ -195,7 +192,6 @@ export function initWidget(): boolean {
     open: () => setOpen(true),
     close: () => setOpen(false),
     toggle: () => setOpen(!open),
-    setVisitor: (visitor) => postToFrame({ type: "visitor", visitorId, ...visitor }),
   };
 
   return true;

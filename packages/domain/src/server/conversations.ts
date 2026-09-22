@@ -4,6 +4,7 @@ import { calls, contacts, conversations, conversationSessions, enqueueOutbox, me
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import { requireBusinessMembership } from "../authz";
+import { contentExpiry } from "./contentRetentionPolicy";
 import { resolveCallOutcome } from "./callOutcome";
 import { buildConversationSessionSummary, extractCallerContext } from "./conversationSummary";
 import type { DomainContext } from "./context";
@@ -78,6 +79,7 @@ export async function appendMessage(
       direction: input.direction,
       channel: input.channel,
       body: input.body,
+      contentExpiresAt: contentExpiry("messages"),
       ...(input.providerMessageId !== undefined ? { providerMessageId: input.providerMessageId } : {}),
       aiGenerated: input.aiGenerated ?? false,
       status: input.direction === "outbound" ? "queued" : "received",

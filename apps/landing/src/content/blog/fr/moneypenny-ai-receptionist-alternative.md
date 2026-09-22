@@ -21,7 +21,7 @@ Moneypenny ajoute un accompagnement et l'accès à son activité de réception h
 
 | Critère | Moneypenny | LobbyStack |
 | --- | --- | --- |
-| Forfait gratuit durable | Non annoncé | 30 minutes, sans carte, toutes les fonctions |
+| Forfait gratuit durable | Non annoncé | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
 | Entrée payante | 69 $ pour 25 appels | 30 $ pour 150 minutes |
 | Niveau 100 unités | 199 $ pour 100 appels | 100 $ pour 500 minutes |
 | Relais humain | Votre équipe ou Moneypenny | Votre équipe configurée |
@@ -98,4 +98,4 @@ Choisissez LobbyStack si votre équipe prend les transferts et si vous voulez un
 
 LobbyStack offre la meilleure valeur quand votre entreprise possède déjà la personne qui traite les exceptions. Moneypenny justifie son supplément si vous devez aussi acheter l'équipe humaine.
 
-[Commencez avec LobbyStack gratuitement](https://app.lobbystack.com/signup) et testez le relais avant de payer par appel.
+[Commencez avec LobbyStack gratuitement](https://app.lobbystack.com/signup) et testez la voix dans votre navigateur. Choisissez un forfait payant pour tester les transferts téléphoniques.
