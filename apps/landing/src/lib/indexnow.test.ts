@@ -27,6 +27,22 @@ describe("pageSignature", () => {
     )
   })
 
+  it("ignores scripts with unusual end tags and decodes entities once", () => {
+    const withScript = page({
+      body: '<h1>Plumbers &amp; drains</h1><script>var a = "&amp;lt;"</script >',
+    })
+
+    expect(pageSignature(withScript)).toBe(
+      pageSignature(page({ body: "<h1>Plumbers &amp; drains</h1>" }))
+    )
+    expect(JSON.parse(pageSignature(withScript)).text).toContain(
+      "Plumbers & drains"
+    )
+    expect(
+      pageSignature(page({ body: "<h1>Plumbers &amp;lt; drains</h1>" }))
+    ).toContain("Plumbers &lt; drains")
+  })
+
   it("detects a social image change with identical body content", () => {
     expect(
       pageSignature(

@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url"
 
 import { submitToIndexNow } from "@jdevalk/astro-seo-graph"
 import type { AstroIntegration, AstroIntegrationLogger } from "astro"
+import { parse, type DefaultTreeAdapterMap } from "parse5"
 
 type FetchLike = (
   url: string
@@ -10,54 +11,88 @@ type FetchLike = (
 
 const FETCH_CONCURRENCY = 8
 
-const decode = (value: string) =>
-  value
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+type HtmlNode = DefaultTreeAdapterMap["node"]
+type HtmlElement = DefaultTreeAdapterMap["element"]
 
-const firstMatch = (html: string, pattern: RegExp) =>
-  decode(pattern.exec(html)?.[1]?.trim() ?? "")
+const SKIPPED_ELEMENTS = new Set(["script", "style", "noscript", "template"])
+
+const isElement = (node: HtmlNode): node is HtmlElement => "tagName" in node
+
+const attribute = (element: HtmlElement, name: string) =>
+  element.attrs.find((attr) => attr.name === name)?.value.trim() ?? ""
+
+const walk = (node: HtmlNode, visit: (node: HtmlNode) => boolean | void) => {
+  if (visit(node) === false) return
+  if ("childNodes" in node) {
+    for (const child of node.childNodes) walk(child, visit)
+  }
+}
+
+const findElements = (
+  root: HtmlNode,
+  match: (element: HtmlElement) => boolean
+) => {
+  const found: HtmlElement[] = []
+  walk(root, (node) => {
+    if (isElement(node) && match(node)) found.push(node)
+  })
+  return found
+}
+
+const textContent = (root: HtmlNode) => {
+  const parts: string[] = []
+  walk(root, (node) => {
+    if (isElement(node) && SKIPPED_ELEMENTS.has(node.tagName)) return false
+    if (node.nodeName === "#text" && "value" in node) parts.push(node.value)
+  })
+  return parts.join(" ").replace(/\s+/g, " ").trim()
+}
+
+const metaContent = (
+  document: HtmlNode,
+  key: "name" | "property",
+  value: string
+) => {
+  const [meta] = findElements(
+    document,
+    (element) => element.tagName === "meta" && attribute(element, key) === value
+  )
+  return meta ? attribute(meta, "content") : ""
+}
 
 // Reduces a rendered page to the parts search engines index: title,
 // description, canonical, social image, visible main text, and the images and
-// links inside <main>. Asset hashes, scripts, and attribute ordering are left out so two
-// builds of an unchanged page produce the same signature.
+// links inside <main>. Scripts, styles, and query strings on image URLs are
+// left out so two builds of an unchanged page produce the same signature.
 export const pageSignature = (html: string) => {
-  const main = /<main[\s\S]*?<\/main>/i.exec(html)?.[0] ?? html
-  const body = main.replace(
-    /<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi,
-    ""
+  const document = parse(html)
+  const [title] = findElements(
+    document,
+    (element) => element.tagName === "title"
   )
-  const images = [...body.matchAll(/<img\b[^>]*>/gi)].map(([tag]) =>
-    [
-      firstMatch(tag, /\bsrc="([^"]*)"/i).replace(/\?.*$/, ""),
-      firstMatch(tag, /\balt="([^"]*)"/i),
-    ].join("|")
+  const [canonical] = findElements(
+    document,
+    (element) =>
+      element.tagName === "link" && attribute(element, "rel") === "canonical"
   )
-  const links = [...body.matchAll(/<a\b[^>]*\bhref="([^"]*)"/gi)].map(
-    ([, href]) => decode(href)
-  )
-  const text = decode(body.replace(/<[^>]+>/g, " "))
-    .replace(/\s+/g, " ")
-    .trim()
+  const [main] = findElements(document, (element) => element.tagName === "main")
+  const content = main ?? document
 
   return JSON.stringify({
-    title: firstMatch(html, /<title>([^<]*)<\/title>/i),
-    description: firstMatch(
-      html,
-      /<meta\s+name="description"\s+content="([^"]*)"/i
+    title: title ? textContent(title) : "",
+    description: metaContent(document, "name", "description"),
+    canonical: canonical ? attribute(canonical, "href") : "",
+    socialImage: metaContent(document, "property", "og:image"),
+    text: textContent(content),
+    images: findElements(content, (element) => element.tagName === "img").map(
+      (image) =>
+        [attribute(image, "src").split("?")[0], attribute(image, "alt")].join(
+          "|"
+        )
     ),
-    canonical: firstMatch(html, /<link\s+rel="canonical"\s+href="([^"]*)"/i),
-    socialImage: firstMatch(
-      html,
-      /<meta\s+property="og:image"\s+content="([^"]*)"/i
+    links: findElements(content, (element) => element.tagName === "a").map(
+      (link) => attribute(link, "href")
     ),
-    text,
-    images,
-    links,
   })
 }
 
