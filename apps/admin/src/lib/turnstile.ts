@@ -10,7 +10,7 @@ function isLocalApp(): boolean {
   return Boolean(baseUrl?.startsWith("http://localhost:") || baseUrl?.startsWith("http://127.0.0.1:"));
 }
 
-export async function verifyTurnstileForSignUp(input: { token?: unknown; remoteIp?: string | null }): Promise<void> {
+export async function verifyTurnstile(input: { token?: unknown; remoteIp?: string | null }): Promise<void> {
   const secret = process.env.TURNSTILE_SECRET_KEY?.trim();
   if (!secret) {
     if (isLocalApp()) return;
@@ -41,3 +41,5 @@ export async function verifyTurnstileForSignUp(input: { token?: unknown; remoteI
     throw new Error("Turnstile verification failed.");
   }
 }
+
+export const verifyTurnstileForSignUp = verifyTurnstile;

@@ -1,5 +1,5 @@
 import { betterAuth } from "better-auth";
-import { emailOTP } from "better-auth/plugins";
+import { emailOTP } from "better-auth/plugins/email-otp";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import Redis from "ioredis";
@@ -16,6 +16,18 @@ import { verifyTurnstileForSignUp } from "./turnstile";
 
 let instance: any;
 let authRedis: Redis | undefined;
+
+const enabledEmailOtpPaths = new Set([
+  "/email-otp/request-password-reset",
+  "/email-otp/reset-password",
+  "/email-otp/verify-email",
+]);
+
+export function isDisabledAuthEmailEndpoint(path?: string): boolean {
+  if (!path) return false;
+  if (path === "/send-verification-email") return true;
+  return (path.startsWith("/email-otp/") || path.endsWith("/email-otp")) && !enabledEmailOtpPaths.has(path);
+}
 
 export function getAuthDatabase() {
   return getDatabase("lobbystack_auth");
@@ -57,6 +69,10 @@ function getAuthSecondaryStorage() {
     delete: async (key: string) => {
       await waitForAuthRedis(authRedis!);
       await authRedis!.del(`${prefix}${key}`);
+    },
+    getAndDelete: async (key: string) => {
+      await waitForAuthRedis(authRedis!);
+      return await authRedis!.getdel(`${prefix}${key}`);
     },
     increment: async (key: string, ttl: number) => {
       await waitForAuthRedis(authRedis!);
@@ -115,6 +131,37 @@ async function enqueueAuthEmail(input: {
       },
     });
   });
+}
+
+async function enqueueEmailVerificationCode(input: { email: string; otp: string }): Promise<boolean> {
+  const database = getAuthDatabase();
+  const user = (await database.db.select({ id: users.id, emailVerified: users.emailVerified }).from(users).where(eq(users.email, input.email)).limit(1))[0];
+  if (!user || user.emailVerified) return false;
+
+  const codeHash = createHash("sha256").update(input.otp).digest("hex");
+  await withBusinessTransaction(getEmailDatabase().db, { actorType: "system" }, async (tx) => {
+    await enqueueOutbox(tx, {
+      topic: "email.send",
+      aggregateType: "auth_email",
+      aggregateId: user.id,
+      dedupeKey: `auth-email:verification-code:${user.id}:${codeHash}`,
+      payload: {
+        template: "verify_email",
+        to: input.email,
+        subject: "Your LobbyStack verification code",
+        variables: { code: input.otp },
+      },
+    });
+  });
+  return true;
+}
+
+export async function issueEmailVerificationCode(email: string): Promise<boolean> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const user = (await getAuthDatabase().db.select({ emailVerified: users.emailVerified }).from(users).where(eq(users.email, normalizedEmail)).limit(1))[0];
+  if (!user || user.emailVerified) return false;
+  const otp = await getAuth().api.createVerificationOTP({ body: { email: normalizedEmail, type: "email-verification" } });
+  return await enqueueEmailVerificationCode({ email: normalizedEmail, otp });
 }
 
 async function rehashLegacyPassword(userId: string, password: string): Promise<void> {
@@ -185,7 +232,7 @@ export function getAuth() {
       expiresIn: 600,
       allowedAttempts: 3,
       sendVerificationOTP: async ({ email, otp, type }) => {
-        if (type !== "forget-password") throw new Error("Only password recovery codes are enabled.");
+        if (type !== "forget-password") throw new Error("Only password recovery codes use the public OTP sender.");
         const user = (await database.db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1))[0];
         if (!user) return;
         await withBusinessTransaction(getEmailDatabase().db, { actorType: "system" }, async (tx) => {
@@ -201,6 +248,7 @@ export function getAuth() {
     })],
     emailAndPassword: {
       enabled: true,
+      autoSignIn: false,
       requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
       password: {
         hash: hashReplacementPassword,
@@ -217,28 +265,33 @@ export function getAuth() {
       },
     },
     emailVerification: {
+      sendOnSignUp: true,
+      sendOnSignIn: true,
       afterEmailVerification: async (user: { id: string; email: string }) => {
         await database.db.update(users).set({ normalizedEmail: user.email.trim().toLowerCase(), updatedAt: new Date() }).where(eq(users.id, user.id));
       },
-      sendOnSignUp: process.env.SEND_VERIFICATION_EMAIL_ON_SIGNUP === "true",
       sendVerificationEmail: async ({ user, url }: { user: { id: string; email: string }; url: string }) => {
         const storedUser = (await database.db.select({ email: users.email, preferredLocale: users.preferredLocale }).from(users).where(eq(users.id, user.id)).limit(1))[0];
-        let deliveryUrl = url;
-        if (storedUser && storedUser.email !== user.email) {
-          // The second, new-address verification step uses the original confirmation UI.
-          // Better Auth still verifies the signed token and performs the authoritative update.
-          const verificationUrl = new URL(url);
-          const recipientLocale = storedUser.preferredLocale === "fr" ? "fr" : "en";
-          const confirmationUrl = new URL(`/${recipientLocale}/confirm-email-change`, process.env.APP_BASE_URL ?? "http://localhost:3000");
-          confirmationUrl.searchParams.set("token", verificationUrl.searchParams.get("token") ?? "");
-          confirmationUrl.searchParams.set("email", user.email);
-          deliveryUrl = confirmationUrl.toString();
+        if (!storedUser) return;
+        if (storedUser.email === user.email) {
+          await issueEmailVerificationCode(user.email);
+          return;
         }
-        await enqueueAuthEmail({ purpose: "verification", userId: user.id, email: user.email, url: deliveryUrl });
+        // Keep the link callback for the existing two-address email-change flow.
+        const verificationUrl = new URL(url);
+        const recipientLocale = storedUser.preferredLocale === "fr" ? "fr" : "en";
+        const confirmationUrl = new URL(`/${recipientLocale}/confirm-email-change`, process.env.APP_BASE_URL ?? "http://localhost:3000");
+        confirmationUrl.searchParams.set("token", verificationUrl.searchParams.get("token") ?? "");
+        confirmationUrl.searchParams.set("email", user.email);
+        await enqueueAuthEmail({ purpose: "verification", userId: user.id, email: user.email, url: confirmationUrl.toString() });
       },
     },
     user: {
       additionalFields: {
+        // The database trigger replaces this placeholder with lower(email) on
+        // insert and update. Declaring it keeps Better Auth's schema validator
+        // aware that every user insert satisfies the required column.
+        normalizedEmail: { type: "string", required: false, defaultValue: "", input: false, returned: false },
         preferredLocale: { type: "string", required: false, defaultValue: "en", input: true, validator: { input: z.enum(["en", "fr"]) } },
       },
       changeEmail: {
@@ -266,11 +319,15 @@ export function getAuth() {
     },
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
-        // Enable recovery only; the OTP plugin must not introduce passwordless sign-in.
-        const recoveryPaths = ["/email-otp/request-password-reset", "/email-otp/reset-password"];
-        if ((ctx.path.startsWith("/email-otp/") || ctx.path.endsWith("/email-otp")) && !recoveryPaths.includes(ctx.path)) {
+        // Enable verification and recovery only; the OTP plugin must not
+        // introduce passwordless sign-in or email-change endpoints.
+        // Server-only plugin methods, including createVerificationOTP, do not
+        // have a route path. They remain callable from trusted application
+        // code while every unapproved public OTP route is rejected.
+        if (isDisabledAuthEmailEndpoint(ctx.path)) {
           throw new APIError("NOT_FOUND", { message: "Endpoint not enabled." });
         }
+        const recoveryPaths = ["/email-otp/request-password-reset", "/email-otp/reset-password"];
         if (recoveryPaths.includes(ctx.path) && !z.string().email().safeParse(ctx.body?.email).success) {
           throw new APIError("BAD_REQUEST", { message: "Invalid email address." });
         }
