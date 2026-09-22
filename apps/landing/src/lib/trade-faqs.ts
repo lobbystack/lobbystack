@@ -27,6 +27,12 @@ export const plumberFaqs: FaqItem[] = [
       "Yes. Forward your current number to LobbyStack, or give it a separate line for after-hours and overflow calls.",
   },
   {
+    question:
+      "How is an AI answering service different from a live plumbing answering service?",
+    answer:
+      "A live service puts a human operator on the line, who usually reads a script and takes a message. LobbyStack answers with AI, so it takes several calls at once, books jobs into your calendar during the call, and quotes the prices you set. You can still transfer any call to someone on your team.",
+  },
+  {
     question: "How much does it cost for a plumbing business?",
     answer:
       "The Free plan includes 30 voice minutes. Starter is $30 a month for 150 minutes, and Pro is $100 a month for 500 minutes. Spam calls and calls under 10 seconds don't count toward usage.",
@@ -60,6 +66,11 @@ export const hvacFaqs: FaqItem[] = [
       "Yes. Forward your current number to LobbyStack, or point only your overflow and after-hours calls at it.",
   },
   {
+    question: "Should I use an AI or a live HVAC answering service?",
+    answer:
+      "It depends on which calls you want a person to take. LobbyStack fits when you want calls booked into your calendar during the call and overflow handled without a busy signal. You can run it on overflow only and keep your office on the calls you want to answer yourself.",
+  },
+  {
     question: "How much does it cost for an HVAC company?",
     answer:
       "The Free plan includes 30 voice minutes. Starter is $30 a month for 150 minutes, and Pro is $100 a month for 500 minutes, with extra minutes at $0.20 and $0.18. Spam calls and calls under 10 seconds don't count toward usage.",
@@ -91,6 +102,11 @@ export const electricianFaqs: FaqItem[] = [
     question: "Does it work with my existing business number?",
     answer:
       "Yes. Forward your current number to LobbyStack, or use a separate line for after-hours and overflow calls.",
+  },
+  {
+    question: "What does an electrician answering service need to handle?",
+    answer:
+      "Two kinds of calls: hazards that need safety instructions and a fast transfer, and estimate requests that need the right intake questions. LobbyStack handles both with rules you write and books estimates into your calendar during the call.",
   },
   {
     question: "How much does it cost for an electrical contractor?",

@@ -204,11 +204,11 @@ export const solutionPages: SeoLandingPage[] = [
     group: "solution",
     slug: "ai-receptionist-for-dental-offices",
     path: "/solutions/ai-receptionist-for-dental-offices/",
-    title: "AI Receptionist for Dental Offices | LobbyStack",
+    title: "Dental Answering Service with AI | LobbyStack",
     description:
-      "LobbyStack is an AI receptionist for dental offices that answers patient calls, books appointments, handles recalls, and routes dental emergencies.",
+      "LobbyStack is an AI dental answering service that answers patient calls, books appointments, handles recalls, and routes dental emergencies.",
     eyebrow: "Dental offices",
-    h1: "AI receptionist for dental offices with busy front desks",
+    h1: "Dental answering service for busy front desks",
     intro:
       "LobbyStack helps dental teams answer new-patient calls, book appointments, handle routine questions, and route urgent issues without interrupting care.",
     image: "/illustrations/call-booking-summary.webp",
@@ -289,11 +289,11 @@ export const solutionPages: SeoLandingPage[] = [
     group: "solution",
     slug: "ai-receptionist-for-salons-and-spas",
     path: "/solutions/ai-receptionist-for-salons-and-spas/",
-    title: "AI Receptionist for Salons and Spas | LobbyStack",
+    title: "Salon and Spa Answering Service with AI | LobbyStack",
     description:
-      "LobbyStack is an AI receptionist for salons and spas that answers booking calls, schedules appointments, handles reschedules, and answers service questions.",
+      "LobbyStack is an AI answering service for salons and spas that answers booking calls, schedules appointments, handles reschedules, and answers service questions.",
     eyebrow: "Salons and spas",
-    h1: "AI receptionist for salons and spas that keeps booking",
+    h1: "Salon and spa answering service that keeps booking",
     intro:
       "LobbyStack answers calls for salons, spas, barbershops, and wellness studios so clients can book, reschedule, and get answers without waiting for the front desk.",
     image: "/illustrations/booking-flow.webp",
@@ -454,11 +454,11 @@ export const solutionPages: SeoLandingPage[] = [
     group: "solution",
     slug: "ai-receptionist-for-plumbers",
     path: "/solutions/ai-receptionist-for-plumbers/",
-    title: "AI Receptionist for Plumbers | LobbyStack",
+    title: "24/7 Plumbing Answering Service with AI | LobbyStack",
     description:
-      "LobbyStack answers plumbing calls, tells callers how to shut off the water while they wait, quotes your drain and dispatch fees, and routes burst pipes to your on-call plumber.",
+      "LobbyStack is an AI plumbing answering service. It tells callers how to shut off the water, quotes your drain and dispatch fees, and routes burst pipes to your on-call plumber.",
     eyebrow: "Plumbers",
-    h1: "AI receptionist for plumbers that handles the midnight burst pipe",
+    h1: "Plumbing answering service that handles the midnight burst pipe",
     intro:
       "A caller with water coming through the ceiling needs two things: someone to tell them where the main shutoff is, and a plumber on the way. LobbyStack does both on the first ring, then books the drain and water heater jobs into your calendar.",
     image: "/illustrations/missed-calls-v3.webp",
@@ -528,11 +528,11 @@ export const solutionPages: SeoLandingPage[] = [
     group: "solution",
     slug: "ai-receptionist-for-hvac",
     path: "/solutions/ai-receptionist-for-hvac/",
-    title: "AI Receptionist for HVAC Companies | LobbyStack",
+    title: "24/7 HVAC Answering Service with AI | LobbyStack",
     description:
-      "LobbyStack picks up HVAC overflow calls during heat waves and cold snaps, flags urgent no-heat and no-AC calls for your on-call tech, and books tune-ups and replacement estimates.",
+      "LobbyStack is an AI HVAC answering service. It picks up overflow during heat waves and cold snaps, flags urgent no-heat and no-AC calls, and books tune-ups and estimates.",
     eyebrow: "HVAC",
-    h1: "AI receptionist for HVAC companies built for peak-season call spikes",
+    h1: "HVAC answering service built for peak-season call spikes",
     intro:
       "Your phones go quiet in April, then ring nonstop the first hot week of June. LobbyStack takes the overflow, sorts real emergencies from thermostat questions, and books replacement estimates your office has no time to return.",
     image: "/illustrations/human-handoff.webp",
@@ -603,11 +603,11 @@ export const solutionPages: SeoLandingPage[] = [
     group: "solution",
     slug: "ai-receptionist-for-electricians",
     path: "/solutions/ai-receptionist-for-electricians/",
-    title: "AI Receptionist for Electricians | LobbyStack",
+    title: "Electrician Answering Service with AI | LobbyStack",
     description:
-      "LobbyStack answers electrical calls, gives callers your safety instructions for sparks and burning smells, and books panel upgrade, EV charger, and generator estimates.",
+      "LobbyStack is an AI answering service for electricians. It reads your safety instructions for sparks and burning smells and books panel upgrade, EV charger, and generator estimates.",
     eyebrow: "Electricians",
-    h1: "AI receptionist for electricians that screens hazards and books estimates",
+    h1: "Electrician answering service that screens hazards and books estimates",
     intro:
       "Your calls come in two kinds. One caller has a sparking outlet and needs safety instructions right now. The next wants a panel upgrade, an EV charger, or a standby generator and needs an estimate visit. LobbyStack handles both while you're on a job.",
     image: "/illustrations/call-routing-team.webp",
@@ -951,11 +951,11 @@ export const solutionPages: SeoLandingPage[] = [
     group: "solution",
     slug: "after-hours-answering-service-for-contractors",
     path: "/solutions/after-hours-answering-service-for-contractors/",
-    title: "After-Hours Answering Service for Contractors | LobbyStack",
+    title: "Contractor Answering Service for After-Hours Calls | LobbyStack",
     description:
-      "LobbyStack answers contractor calls after hours, screens emergencies, books next-day visits, and routes urgent jobs to your on-call staff with context.",
+      "LobbyStack is an after-hours contractor answering service. It screens emergencies, books next-day visits, and routes urgent jobs to your on-call staff with context.",
     eyebrow: "Contractor after-hours",
-    h1: "After-hours answering service for contractors that captures emergency jobs",
+    h1: "Contractor answering service for after-hours emergency jobs",
     intro:
       "LobbyStack answers contractor calls at night, on weekends, and during holidays. It screens for emergencies, books next-day appointments, and routes urgent requests to your on-call staff with full context.",
     image: "/illustrations/calls-need-person.webp",
