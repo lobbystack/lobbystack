@@ -23,16 +23,14 @@ describe("original login and signup behavior", () => {
     expect(screen.queryByRole("button", { name: "signup.submit" })).toBeNull();
     expect(analytics.record).not.toHaveBeenCalled();
   });
-  it("sends a code and shows verification entry when login requires verification", async () => {
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(Response.json({ code: "EMAIL_NOT_VERIFIED" }, { status: 403 }))
-      .mockResolvedValueOnce(Response.json({ success: true }));
+  it("shows verification entry after the password-authenticated login sends a code", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ code: "EMAIL_NOT_VERIFIED" }, { status: 403 }));
     render(<AuthCard mode="login" />);
     await userEvent.type(screen.getByLabelText("login.email"), "owner@example.invalid");
     await userEvent.type(screen.getByLabelText("login.password"), "Valid-Password-123!");
     await userEvent.click(screen.getByRole("button", { name: "login.submit" }));
     expect(await screen.findByLabelText("verifyEmail.codeLabel")).toBeTruthy();
-    expect(fetch).toHaveBeenNthCalledWith(2, "/api/auth/email-otp/send-verification-otp", expect.objectContaining({ body: JSON.stringify({ email: "owner@example.invalid", type: "email-verification" }) }));
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
   it("verifies the six-digit code and records authentication success", async () => {
     vi.mocked(fetch)
@@ -74,6 +72,23 @@ describe("original login and signup behavior", () => {
     await userEvent.click(await screen.findByRole("button", { name: "verifyEmail.resend" }));
     expect(await screen.findByText("verifyEmail.codeSent")).toBeTruthy();
     expect(fetch).toHaveBeenNthCalledWith(2, "/api/auth/email-otp/send-verification-otp", expect.objectContaining({ body: JSON.stringify({ email: "owner@example.invalid", type: "email-verification" }) }));
+  });
+  it("requires a fresh challenge before resending a verification code", async () => {
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "fixture-site-key");
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(Response.json({ token: null, user: { id: "operator" } }))
+      .mockResolvedValueOnce(Response.json({ success: true }));
+    render(<AuthCard mode="signup" />);
+    await userEvent.type(screen.getByLabelText("signup.email"), "owner@example.invalid");
+    await userEvent.type(screen.getByLabelText("signup.password"), "Valid-Password-123!");
+    await userEvent.click(screen.getByRole("button", { name: "Solve challenge" }));
+    await userEvent.click(screen.getByRole("button", { name: "signup.submit" }));
+    const resend = await screen.findByRole("button", { name: "verifyEmail.resend" });
+    expect((resend as HTMLButtonElement).disabled).toBe(true);
+    await userEvent.click(screen.getByRole("button", { name: "Solve challenge" }));
+    expect((resend as HTMLButtonElement).disabled).toBe(false);
+    await userEvent.click(resend);
+    expect(fetch).toHaveBeenNthCalledWith(2, "/api/auth/email-otp/send-verification-otp", expect.objectContaining({ body: JSON.stringify({ email: "owner@example.invalid", type: "email-verification", turnstileToken: "fixture-challenge-token" }) }));
   });
   it.each(["login", "signup"] as const)("validates %s email on blur and clears it while editing", async mode => {
     render(<AuthCard mode={mode} />);
@@ -117,13 +132,14 @@ describe("original login and signup behavior", () => {
     await userEvent.type(password, "1!");
     expect((screen.getByRole("button", { name: "signup.submit" }) as HTMLButtonElement).disabled).toBe(false);
   });
-  it("shows specific account-exists guidance from the auth adapter", async () => {
-    vi.mocked(fetch).mockResolvedValue(Response.json({ code: "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL" }, { status: 422 }));
+  it("keeps duplicate-account signup responses generic", async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ token: null, user: { id: "synthetic" } }));
     render(<AuthCard mode="signup" />);
     await userEvent.type(screen.getByLabelText("signup.email"), "Owner@Example.invalid");
     await userEvent.type(screen.getByLabelText("signup.password"), "abcde1!f");
     await userEvent.click(screen.getByRole("button", { name: "signup.submit" }));
-    expect(await screen.findByText("errors.accountExists")).toBeTruthy();
+    expect(await screen.findByText((_, element) => element?.tagName === "P" && element.textContent?.includes("verifyEmail.existingAccountHelp") === true)).toBeTruthy();
+    expect(screen.queryByText("errors.accountExists")).toBeNull();
     await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/auth/sign-up/email", expect.objectContaining({ body: expect.stringContaining('"email":"Owner@Example.invalid"') })));
   });
   it("submits the entered login email and renders credential errors", async () => {

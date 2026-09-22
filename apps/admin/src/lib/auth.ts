@@ -17,6 +17,18 @@ import { verifyTurnstileForSignUp } from "./turnstile";
 let instance: any;
 let authRedis: Redis | undefined;
 
+const enabledEmailOtpPaths = new Set([
+  "/email-otp/request-password-reset",
+  "/email-otp/reset-password",
+  "/email-otp/verify-email",
+]);
+
+export function isDisabledAuthEmailEndpoint(path?: string): boolean {
+  if (!path) return false;
+  if (path === "/send-verification-email") return true;
+  return (path.startsWith("/email-otp/") || path.endsWith("/email-otp")) && !enabledEmailOtpPaths.has(path);
+}
+
 export function getAuthDatabase() {
   return getDatabase("lobbystack_auth");
 }
@@ -121,10 +133,10 @@ async function enqueueAuthEmail(input: {
   });
 }
 
-async function enqueueEmailVerificationCode(input: { email: string; otp: string }): Promise<void> {
+async function enqueueEmailVerificationCode(input: { email: string; otp: string }): Promise<boolean> {
   const database = getAuthDatabase();
-  const user = (await database.db.select({ id: users.id }).from(users).where(eq(users.email, input.email)).limit(1))[0];
-  if (!user) return;
+  const user = (await database.db.select({ id: users.id, emailVerified: users.emailVerified }).from(users).where(eq(users.email, input.email)).limit(1))[0];
+  if (!user || user.emailVerified) return false;
 
   const codeHash = createHash("sha256").update(input.otp).digest("hex");
   await withBusinessTransaction(getEmailDatabase().db, { actorType: "system" }, async (tx) => {
@@ -141,6 +153,15 @@ async function enqueueEmailVerificationCode(input: { email: string; otp: string 
       },
     });
   });
+  return true;
+}
+
+export async function issueEmailVerificationCode(email: string): Promise<boolean> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const user = (await getAuthDatabase().db.select({ emailVerified: users.emailVerified }).from(users).where(eq(users.email, normalizedEmail)).limit(1))[0];
+  if (!user || user.emailVerified) return false;
+  const otp = await getAuth().api.createVerificationOTP({ body: { email: normalizedEmail, type: "email-verification" } });
+  return await enqueueEmailVerificationCode({ email: normalizedEmail, otp });
 }
 
 async function rehashLegacyPassword(userId: string, password: string): Promise<void> {
@@ -166,13 +187,6 @@ async function rehashLegacyPassword(userId: string, password: string): Promise<v
     await tx.update(users)
       .set({ passwordHash: replacementHash, passwordAlgorithm: "lobbystack-scrypt-v1", updatedAt: new Date() })
       .where(eq(users.id, userId));
-  });
-}
-
-export function rejectExistingUserSignUp(): never {
-  throw new APIError("UNPROCESSABLE_ENTITY", {
-    code: "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL",
-    message: "An account with this email already exists. Sign in instead.",
   });
 }
 
@@ -217,13 +231,8 @@ export function getAuth() {
       storeOTP: "hashed",
       expiresIn: 600,
       allowedAttempts: 3,
-      sendVerificationOnSignUp: true,
       sendVerificationOTP: async ({ email, otp, type }) => {
-        if (type === "email-verification") {
-          await enqueueEmailVerificationCode({ email, otp });
-          return;
-        }
-        if (type !== "forget-password") throw new Error("Only email verification and password recovery codes are enabled.");
+        if (type !== "forget-password") throw new Error("Only password recovery codes use the public OTP sender.");
         const user = (await database.db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1))[0];
         if (!user) return;
         await withBusinessTransaction(getEmailDatabase().db, { actorType: "system" }, async (tx) => {
@@ -239,8 +248,8 @@ export function getAuth() {
     })],
     emailAndPassword: {
       enabled: true,
+      autoSignIn: false,
       requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
-      onExistingUserSignUp: rejectExistingUserSignUp,
       password: {
         hash: hashReplacementPassword,
         verify: async ({ hash, password }: { hash: string; password: string }) => await verifyLegacyPassword(hash, password),
@@ -256,15 +265,19 @@ export function getAuth() {
       },
     },
     emailVerification: {
+      sendOnSignUp: true,
+      sendOnSignIn: true,
       afterEmailVerification: async (user: { id: string; email: string }) => {
         await database.db.update(users).set({ normalizedEmail: user.email.trim().toLowerCase(), updatedAt: new Date() }).where(eq(users.id, user.id));
       },
-      sendOnSignUp: process.env.SEND_VERIFICATION_EMAIL_ON_SIGNUP === "true",
       sendVerificationEmail: async ({ user, url }: { user: { id: string; email: string }; url: string }) => {
         const storedUser = (await database.db.select({ email: users.email, preferredLocale: users.preferredLocale }).from(users).where(eq(users.id, user.id)).limit(1))[0];
-        // Initial verification is handled by the email-OTP plugin. Keep the
-        // link callback only for the existing two-address email-change flow.
-        if (!storedUser || storedUser.email === user.email) return;
+        if (!storedUser) return;
+        if (storedUser.email === user.email) {
+          await issueEmailVerificationCode(user.email);
+          return;
+        }
+        // Keep the link callback for the existing two-address email-change flow.
         const verificationUrl = new URL(url);
         const recipientLocale = storedUser.preferredLocale === "fr" ? "fr" : "en";
         const confirmationUrl = new URL(`/${recipientLocale}/confirm-email-change`, process.env.APP_BASE_URL ?? "http://localhost:3000");
@@ -308,16 +321,10 @@ export function getAuth() {
       before: createAuthMiddleware(async (ctx) => {
         // Enable verification and recovery only; the OTP plugin must not
         // introduce passwordless sign-in or email-change endpoints.
-        const enabledEmailOtpPaths = [
-          "/email-otp/request-password-reset",
-          "/email-otp/reset-password",
-          "/email-otp/send-verification-otp",
-          "/email-otp/verify-email",
-        ];
-        if ((ctx.path.startsWith("/email-otp/") || ctx.path.endsWith("/email-otp")) && !enabledEmailOtpPaths.includes(ctx.path)) {
-          throw new APIError("NOT_FOUND", { message: "Endpoint not enabled." });
-        }
-        if (ctx.path === "/email-otp/send-verification-otp" && ctx.body?.type !== "email-verification") {
+        // Server-only plugin methods, including createVerificationOTP, do not
+        // have a route path. They remain callable from trusted application
+        // code while every unapproved public OTP route is rejected.
+        if (isDisabledAuthEmailEndpoint(ctx.path)) {
           throw new APIError("NOT_FOUND", { message: "Endpoint not enabled." });
         }
         const recoveryPaths = ["/email-otp/request-password-reset", "/email-otp/reset-password"];

@@ -1,22 +1,21 @@
-import { APIError } from "better-auth/api";
 import { describe, expect, it } from "vitest";
 
-import { rejectExistingUserSignUp } from "./auth";
+import { isDisabledAuthEmailEndpoint } from "./auth";
 
-describe("existing-user signup policy", () => {
-  it("stops duplicate signup before the verification-code hook can sign in an existing account", () => {
-    expect.assertions(3);
+describe("auth email endpoint policy", () => {
+  it("blocks public OTP send and passwordless endpoints", () => {
+    expect(isDisabledAuthEmailEndpoint("/send-verification-email")).toBe(true);
+    expect(isDisabledAuthEmailEndpoint("/email-otp/send-verification-otp")).toBe(true);
+    expect(isDisabledAuthEmailEndpoint("/sign-in/email-otp")).toBe(true);
+  });
 
-    try {
-      rejectExistingUserSignUp();
-    } catch (cause) {
-      expect(cause).toBeInstanceOf(APIError);
-      const error = cause as APIError;
-      expect(error.statusCode).toBe(422);
-      expect(error.body).toMatchObject({
-        code: "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL",
-        message: "An account with this email already exists. Sign in instead.",
-      });
-    }
+  it("allows only the required public OTP endpoints", () => {
+    expect(isDisabledAuthEmailEndpoint("/email-otp/verify-email")).toBe(false);
+    expect(isDisabledAuthEmailEndpoint("/email-otp/request-password-reset")).toBe(false);
+    expect(isDisabledAuthEmailEndpoint("/email-otp/reset-password")).toBe(false);
+  });
+
+  it("allows server-only OTP methods that have no route path", () => {
+    expect(isDisabledAuthEmailEndpoint(undefined)).toBe(false);
   });
 });

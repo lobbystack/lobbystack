@@ -36,6 +36,8 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   const [verificationLoading, setVerificationLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendStatus, setResendStatus] = useState<string | null>(null);
+  const [resendTurnstileToken, setResendTurnstileToken] = useState<string | null>(null);
+  const [resendTurnstileResetKey, setResendTurnstileResetKey] = useState(0);
   const [hasBlurredEmail, setHasBlurredEmail] = useState(false);
   const [hasFocusedPassword, setHasFocusedPassword] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -76,7 +78,6 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
       if (!response.ok) {
         const failure = await response.json().catch(() => null) as { code?: string } | null;
         if (login && failure?.code === "EMAIL_NOT_VERIFIED") {
-          await requestVerificationCode();
           setVerificationPending(true);
           return;
         }
@@ -104,13 +105,16 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
     window.location.assign(target.origin === window.location.origin ? `${target.pathname}${target.search}${target.hash}` : "/");
   }
 
-  async function requestVerificationCode() {
+  async function requestVerificationCode(challengeToken: string | null) {
     const response = await fetch("/api/auth/email-otp/send-verification-otp", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email: email.trim().toLowerCase(), type: "email-verification" }),
+      body: JSON.stringify({ email: email.trim().toLowerCase(), type: "email-verification", ...(challengeToken ? { turnstileToken: challengeToken } : {}) }),
     });
-    if (!response.ok) throw new Error(t("errors.verificationCodeRequestFailed"));
+    if (!response.ok) {
+      const failure = await response.json().catch(() => null) as { code?: string } | null;
+      throw new Error(t(failure?.code === "RATE_LIMITED" ? "errors.verificationCodeRateLimited" : "errors.verificationCodeRequestFailed"));
+    }
   }
 
   async function verifyEmail(event: FormEvent<HTMLFormElement>) {
@@ -148,21 +152,27 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   }
 
   async function resendVerificationCode() {
+    if (turnstileSiteKey && !resendTurnstileToken) {
+      setVerificationError(t("errors.turnstileRequired"));
+      return;
+    }
     setVerificationError(null);
     setResendStatus(null);
     setResendLoading(true);
     try {
-      await requestVerificationCode();
+      await requestVerificationCode(resendTurnstileToken);
       setResendStatus(t("verifyEmail.codeSent"));
     } catch (cause) {
       setVerificationError(cause instanceof Error ? cause.message : t("errors.verificationCodeRequestFailed"));
     } finally {
       setResendLoading(false);
+      setResendTurnstileToken(null);
+      setResendTurnstileResetKey((key) => key + 1);
     }
   }
 
   if (verificationPending) return (
-    <ReplacementOnboardingShell description={t("verifyEmail.codeDescription", { email: email.trim().toLowerCase() })} title={t("verifyEmail.codeTitle")} width="sm">
+    <ReplacementOnboardingShell description={t(login ? "verifyEmail.codeDescription" : "verifyEmail.codeDescriptionSignup", { email: email.trim().toLowerCase() })} title={t("verifyEmail.codeTitle")} width="sm">
       <div className="flex w-full flex-col gap-6">
         <form onSubmit={verifyEmail}>
           <FieldGroup className="gap-4">
@@ -185,9 +195,11 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
             {verificationError ? <FieldError>{verificationError}</FieldError> : null}
             {resendStatus ? <p className="text-sm text-muted-foreground" role="status">{resendStatus}</p> : null}
             <Button className="mt-2 h-11 w-full" disabled={verificationCode.length !== 6} loading={verificationLoading} loadingLabel={t("verifyEmail.verifying")} type="submit">{t("verifyEmail.verify")}</Button>
-            <Button className="h-11 w-full" disabled={verificationLoading} loading={resendLoading} loadingLabel={t("verifyEmail.resending")} onClick={() => void resendVerificationCode()} type="button" variant="outline">{t("verifyEmail.resend")}</Button>
+            {turnstileSiteKey ? <Turnstile key={resendTurnstileResetKey} onError={() => { setResendTurnstileToken(null); setVerificationError(t("errors.turnstileFailed")); }} onTokenChange={setResendTurnstileToken} siteKey={turnstileSiteKey} /> : null}
+            <Button className="h-11 w-full" disabled={verificationLoading || Boolean(turnstileSiteKey && !resendTurnstileToken)} loading={resendLoading} loadingLabel={t("verifyEmail.resending")} onClick={() => void resendVerificationCode()} type="button" variant="outline">{t("verifyEmail.resend")}</Button>
           </FieldGroup>
         </form>
+        {!login ? <p className="text-center text-sm text-muted-foreground">{t("verifyEmail.existingAccountHelp")} <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={buildAuthPathWithReturnTo("/login", returnTo, authLocale)}>{t("signup.signIn")}</Link> {t("verifyEmail.or")} <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={localizePublicPath("/forgot-password", authLocale)}>{t("verifyEmail.resetPassword")}</Link>.</p> : null}
         <button className="text-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" onClick={() => { setVerificationPending(false); setVerificationCode(""); setVerificationError(null); setResendStatus(null); }} type="button">{t("verifyEmail.useDifferentEmail")}</button>
       </div>
     </ReplacementOnboardingShell>
