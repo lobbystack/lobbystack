@@ -848,6 +848,218 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
     }
   ),
 
+  "/solutions/property-management-answering-service/": frenchPage(
+    "/solutions/property-management-answering-service/",
+    {
+      title: "Prise d’appels IA pour la gestion immobilière | LobbyStack",
+      description:
+        "LobbyStack répond aux locataires après les heures d’ouverture, trie les urgences d’entretien, répond aux questions de location et planifie les visites.",
+      eyebrow: "Gestion immobilière",
+      h1: "Prise d’appels pour la gestion immobilière, même en pleine nuit",
+      intro:
+        "Un locataire appelle à 2 h pour une fuite, une porte verrouillée ou une panne de chauffage. Un futur locataire appelle le midi pour savoir si les animaux sont acceptés. LobbyStack répond aux deux, transfère les vraies urgences à votre technicien de garde et planifie les visites pour votre équipe de location.",
+      imageAlt:
+        "Sources de connaissances LobbyStack, dont les FAQ, les politiques et les heures d’ouverture, prêtes à répondre aux locataires",
+      proofPoints: [
+        "Distingue les urgences d’entretien des demandes qui peuvent attendre",
+        "Répond aux questions de location à partir de vos politiques",
+        "Planifie les visites dans le calendrier de votre agent de location",
+      ],
+      sections: [
+        {
+          title: "Triez les appels d’entretien avec votre liste d’urgences",
+          body: "Vous avez sans doute déjà une liste écrite : dégât d’eau, panne de chauffage en hiver, odeur de gaz, porte verrouillée, refoulement d’égout. Ajoutez-la à LobbyStack. Il demande au locataire son numéro de logement et ce qu’il constate, transfère les urgences à votre technicien de garde et consigne le robinet qui fuit pour le lendemain matin.",
+          points: [
+            "Recueille le numéro de logement, le numéro de rappel et la description du problème",
+            "Transfère les urgences à votre technicien de garde",
+            "Consigne les demandes courantes pour la file du matin",
+          ],
+        },
+        {
+          title: "Répondez aux questions de location et planifiez les visites",
+          body: "Les futurs locataires demandent le loyer, les services inclus, la politique sur les animaux, le stationnement et les logements libres. Ajoutez ces détails à la base de connaissances de LobbyStack et il y répond. Quand quelqu’un veut visiter, il réserve la visite dans le calendrier de votre agent et envoie la confirmation par texto.",
+          points: [
+            "Répond à partir des détails de vos immeubles",
+            "Réserve les visites dans le calendrier de votre agent",
+            "Envoie une confirmation par texto",
+          ],
+        },
+        {
+          title: "Gardez les questions courantes loin du téléphone de garde",
+          body: "Un locataire qui demande à 23 h quand le loyer est dû ne devrait pas réveiller votre technicien. LobbyStack répond aux questions sur le loyer, les heures du bureau et le portail à partir de vos politiques, et enregistre un résumé de l’appel. Votre téléphone de garde sonne seulement pour les urgences de votre liste.",
+          points: [
+            "Répond aux questions sur le loyer, les heures et le portail",
+            "Enregistre un résumé et une transcription de chaque appel",
+            "Réserve votre téléphone de garde aux urgences de votre liste",
+          ],
+        },
+        {
+          title: "Ce que coûte la couverture hors heures",
+          body: "Supposons 60 appels hors heures par mois, de 3 minutes chacun, soit 180 minutes. Le forfait Starter inclut 150 minutes pour 30 $ par mois, et les 30 minutes restantes coûtent 0,20 $ chacune : environ 36 $ au total. Le forfait Pro inclut 500 minutes pour 100 $ si votre parc grandit.",
+          points: [
+            "Les appels indésirables et ceux de moins de 10 secondes ne comptent pas",
+            "Le forfait gratuit inclut 30 minutes vocales pour tester",
+            "Facturation mensuelle ou annuelle",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question:
+            "Peut-il distinguer une urgence d’entretien d’une demande courante ?",
+          answer:
+            "Oui. Vous donnez à LobbyStack votre liste d’urgences en langage courant, par exemple un dégât d’eau, une panne de chauffage sous une certaine température, une odeur de gaz ou une porte verrouillée. Il pose les questions de suivi, transfère les appels correspondants à votre technicien de garde et envoie le reste à la file du matin.",
+        },
+        {
+          question: "Peut-il répondre aux questions sur mes immeubles ?",
+          answer:
+            "Oui. Ajoutez le loyer, la politique sur les animaux, le stationnement et les logements libres à la base de connaissances. LobbyStack répond à partir de ces détails et signale à votre bureau ce qu’il ne peut pas traiter.",
+        },
+        {
+          question: "Peut-il planifier des visites ?",
+          answer:
+            "Oui. LobbyStack consulte le calendrier de votre agent de location, propose des plages libres, réserve la visite et envoie une confirmation par texto.",
+        },
+        {
+          question: "Fonctionne-t-il avec mon numéro de bureau actuel ?",
+          answer:
+            "Oui. Transférez votre ligne vers LobbyStack après les heures d’ouverture ou toute la journée. Les locataires continuent d’appeler le numéro qu’ils connaissent.",
+        },
+        {
+          question: "Combien coûte ce service ?",
+          answer:
+            "Le forfait gratuit inclut 30 minutes vocales. Starter coûte 30 $ par mois pour 150 minutes et Pro 100 $ par mois pour 500 minutes. Les appels indésirables et ceux de moins de 10 secondes ne comptent pas.",
+        },
+      ],
+      faqHeading: "Questions sur la prise d’appels en gestion immobilière",
+      relatedLinks: [
+        {
+          label: "Réponse téléphonique hors horaires",
+          href: "/solutions/after-hours-answering-service/",
+        },
+        {
+          label: "Planificateur de rendez-vous IA",
+          href: "/solutions/ai-appointment-scheduler/",
+        },
+        { label: "Tarifs", href: "/pricing/" },
+      ],
+      ctaHeading: "Répondez aux locataires après les heures",
+      ctaBody:
+        "Ajoutez votre liste d’urgences, transférez votre ligne hors heures et testez LobbyStack avec le forfait gratuit.",
+      ctaPrimaryLabel: "Essayer gratuitement",
+      ctaSecondaryLabel: "Voir les tarifs",
+    }
+  ),
+
+  "/solutions/roofing-answering-service/": frenchPage(
+    "/solutions/roofing-answering-service/",
+    {
+      title: "Prise d’appels IA pour couvreurs | LobbyStack",
+      description:
+        "LobbyStack répond aux appels des couvreurs après une tempête, transfère les fuites actives à votre équipe de garde et planifie les inspections et les estimations.",
+      eyebrow: "Toiture",
+      h1: "Prise d’appels pour couvreurs qui suit le rythme après une tempête",
+      intro:
+        "Après une tempête de grêle, les propriétaires appellent toute la journée pour obtenir une inspection avant la visite de l’expert en sinistre. LobbyStack prend ces appels en même temps, planifie les inspections dans votre calendrier et transfère les fuites actives à votre équipe.",
+      imageAlt:
+        "Acheminement d’appel qui fait sonner votre équipe d’abord, puis confie l’appel à LobbyStack si personne n’est disponible",
+      proofPoints: [
+        "Prend plusieurs appels à la fois après une tempête, sans signal occupé",
+        "Planifie les inspections et les estimations dans votre calendrier",
+        "Transfère les fuites actives à votre équipe de garde",
+      ],
+      sections: [
+        {
+          title: "Gérez la semaine qui suit une tempête",
+          body: "La grêle et le vent peuvent amener un mois d’appels en deux jours. LobbyStack prend autant d’appels simultanés qu’il en arrive, recueille l’adresse, l’âge de la toiture et les dommages visibles, puis réserve la première plage d’inspection libre. Votre bureau commence la journée avec une liste d’inspections réservées.",
+          points: [
+            "Répond aux appels simultanés",
+            "Recueille l’adresse, l’âge de la toiture et les dommages visibles",
+            "Réserve les inspections dans les plages libres",
+          ],
+        },
+        {
+          title: "Envoyez les fuites actives à votre équipe",
+          body: "De l’eau qui coule par un plafond demande une bâche ce soir. Vous définissez ce qui est urgent, et LobbyStack transfère ces appels à votre équipe de garde avec l’adresse et la description du propriétaire. Quelques bardeaux arrachés sans fuite obtiennent une inspection.",
+          points: [
+            "Transfère les fuites actives avec l’adresse et la description",
+            "Planifie une inspection pour les dommages non urgents",
+            "Consigne chaque appel dans le tableau de bord",
+          ],
+        },
+        {
+          title: "Répondez aux questions d’assurance avec votre script",
+          body: "Les propriétaires demandent si vous travaillez avec leur assureur, si vous rencontrez l’expert en sinistre et combien coûte une inspection. Écrivez vos réponses une fois. LobbyStack les donne pendant l’appel et signale à votre bureau toute question hors script.",
+          points: [
+            "Répond aux questions d’assurance et d’inspection que vous approuvez",
+            "Signale les questions inhabituelles pour un rappel",
+            "Joint les réponses au dossier de l’appel",
+          ],
+        },
+        {
+          title: "Ce que coûte la saison des tempêtes",
+          body: "Supposons qu’un appel de toiture avec questions d’accueil dure 4 minutes. Après une grosse tempête, 200 appels dans le mois font 800 minutes. Pro inclut 500 minutes pour 100 $, et les 300 autres coûtent 0,18 $ chacune : ce mois revient à 154 $. Un mois tranquille reste à 100 $.",
+          points: [
+            "Les appels indésirables et ceux de moins de 10 secondes ne comptent pas",
+            "Le forfait gratuit inclut 30 minutes vocales pour tester",
+            "Changez de forfait selon la saison",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Peut-il gérer une vague d’appels après une tempête ?",
+          answer:
+            "Oui. LobbyStack répond aux appels simultanés, alors les propriétaires ne tombent ni sur un signal occupé ni sur la boîte vocale. Il réserve les inspections dans vos plages libres et garde le reste pour votre bureau.",
+        },
+        {
+          question: "Que fait-il en cas de fuite active ?",
+          answer:
+            "Il suit vos règles. Une configuration courante transfère les fuites actives à votre équipe de garde avec l’adresse et la description, et planifie une inspection pour le reste.",
+        },
+        {
+          question:
+            "Peut-il répondre aux questions de réclamation d’assurance ?",
+          answer:
+            "Oui, à partir des réponses que vous écrivez, par exemple si vous rencontrez les experts en sinistre et avec quels assureurs vous travaillez. LobbyStack signale toute question hors script pour un rappel.",
+        },
+        {
+          question:
+            "Donne-t-il des prix pour les réparations ou les remplacements ?",
+          answer:
+            "Il réserve la visite d’inspection ou d’estimation. Vous décidez s’il annonce des frais d’inspection ou un prix de départ pour les réparations courantes.",
+        },
+        {
+          question: "Fonctionne-t-il avec mon numéro actuel ?",
+          answer:
+            "Oui. Transférez votre numéro actuel vers LobbyStack, ou envoyez-lui seulement les appels en débordement et hors heures.",
+        },
+        {
+          question: "Combien coûte ce service ?",
+          answer:
+            "Le forfait gratuit inclut 30 minutes vocales. Starter coûte 30 $ par mois pour 150 minutes et Pro 100 $ par mois pour 500 minutes. Les appels indésirables et ceux de moins de 10 secondes ne comptent pas.",
+        },
+      ],
+      faqHeading: "Questions sur la prise d’appels pour couvreurs",
+      relatedLinks: [
+        {
+          label: "Réponse hors horaires pour entrepreneurs",
+          href: "/solutions/after-hours-answering-service-for-contractors/",
+        },
+        {
+          label: "Calculateur de revenus d’appels manqués",
+          href: "/missed-call-revenue-calculator/",
+        },
+        { label: "Tarifs", href: "/pricing/" },
+      ],
+      ctaHeading: "Soyez prêt pour la prochaine tempête",
+      ctaBody:
+        "Configurez LobbyStack avant la saison des tempêtes pour qu’il prenne le débordement quand vos lignes sont pleines.",
+      ctaPrimaryLabel: "Essayer gratuitement",
+      ctaSecondaryLabel: "Voir les tarifs",
+    }
+  ),
+
   "/solutions/open-source-ai-receptionist/": frenchPage(
     "/solutions/open-source-ai-receptionist/",
     {
