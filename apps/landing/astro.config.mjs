@@ -6,10 +6,12 @@ import tailwindcss from "@tailwindcss/vite"
 import { defineConfig, fontProviders } from "astro/config"
 import { createLogger } from "vite"
 import { translatedBasePaths } from "./src/i18n/translated-base-paths.ts"
+import { createChangedUrlFilter } from "./src/lib/indexnow.ts"
 import { stableLastmodForUrl } from "./src/lib/sitemap.ts"
 
 const SITE_URL = "https://lobbystack.com"
 const INDEXNOW_KEY = process.env.INDEXNOW_KEY
+const isChangedInDeploy = INDEXNOW_KEY ? createChangedUrlFilter() : () => false
 const DEFAULT_LOCALE = "en"
 const translatedPathSet = new Set(translatedBasePaths)
 const NOINDEX_PATHS = new Set([
@@ -167,9 +169,12 @@ export default defineConfig({
               key: INDEXNOW_KEY,
               host: "lobbystack.com",
               siteUrl: SITE_URL,
+              // Only ping pages whose source changed in this deploy; resubmitting
+              // unchanged URLs on every build reads as IndexNow spam.
               filter: (url) => {
                 const pathname = new URL(url).pathname
                 return (
+                  isChangedInDeploy(url) &&
                   !isNoindexPath(pathname) &&
                   !pathname.startsWith("/api/") &&
                   !pathname.startsWith("/schema/") &&
