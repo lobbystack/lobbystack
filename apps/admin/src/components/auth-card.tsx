@@ -9,6 +9,7 @@ import { ReplacementOnboardingShell } from "@/components/replacement-onboarding-
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Turnstile } from "@/components/turnstile";
 import { recordAuthSuccess } from "@/lib/auth-success-analytics";
 import { resolveLocale } from "@/lib/locale";
@@ -30,11 +31,17 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [verificationPending, setVerificationPending] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [verificationLoading, setVerificationLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
   const [hasBlurredEmail, setHasBlurredEmail] = useState(false);
   const [hasFocusedPassword, setHasFocusedPassword] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const pendingChallengeSubmit = useRef(false);
+  const login = mode === "login";
 
   useEffect(() => {
     if (mode !== "signup") return;
@@ -68,18 +75,20 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
       const response = await fetch(`/api/auth/${mode === "login" ? "sign-in/email" : "sign-up/email"}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       if (!response.ok) {
         const failure = await response.json().catch(() => null) as { code?: string } | null;
+        if (login && failure?.code === "EMAIL_NOT_VERIFIED") {
+          await requestVerificationCode();
+          setVerificationPending(true);
+          return;
+        }
         const accountExists = ["USER_ALREADY_EXISTS", "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"].includes(failure?.code ?? "");
-        throw new Error(mode === "login" ? t(failure?.code === "EMAIL_NOT_VERIFIED" ? "errors.emailNotVerified" : "errors.incorrectCredentials") : t(accountExists ? "errors.accountExists" : "errors.signupFailed"));
+        throw new Error(login ? t("errors.incorrectCredentials") : t(accountExists ? "errors.accountExists" : "errors.signupFailed"));
       }
       const result = await response.json() as { token?: string | null };
       if (mode === "signup" && result.token === null) {
         setVerificationPending(true);
         return;
       }
-      recordAuthSuccess(mode === "login" ? "web.auth.login_succeeded" : "web.auth.signup_succeeded");
-      const returnTo = getSafeReturnTo(new URLSearchParams(window.location.search).get("returnTo")) ?? "/";
-      const target = new URL(returnTo, window.location.origin);
-      window.location.assign(target.origin === window.location.origin ? `${target.pathname}${target.search}${target.hash}` : "/");
+      finishAuthentication();
     } catch (cause) {
       if (mode === "signup") { setTurnstileToken(null); setTurnstileResetKey(key => key + 1); }
       setError(cause instanceof Error ? cause.message : t("errors.signupFailed"));
@@ -88,11 +97,93 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
     }
   }
 
-  const login = mode === "login";
+  function finishAuthentication() {
+    recordAuthSuccess(login ? "web.auth.login_succeeded" : "web.auth.signup_succeeded");
+    const safeReturnTo = getSafeReturnTo(new URLSearchParams(window.location.search).get("returnTo")) ?? "/";
+    const target = new URL(safeReturnTo, window.location.origin);
+    window.location.assign(target.origin === window.location.origin ? `${target.pathname}${target.search}${target.hash}` : "/");
+  }
+
+  async function requestVerificationCode() {
+    const response = await fetch("/api/auth/email-otp/send-verification-otp", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: email.trim().toLowerCase(), type: "email-verification" }),
+    });
+    if (!response.ok) throw new Error(t("errors.verificationCodeRequestFailed"));
+  }
+
+  async function verifyEmail(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (verificationCode.length !== 6) return;
+    setVerificationError(null);
+    setVerificationLoading(true);
+    try {
+      const response = await fetch("/api/auth/email-otp/verify-email", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), otp: verificationCode }),
+      });
+      if (!response.ok) {
+        const failure = await response.json().catch(() => null) as { code?: string } | null;
+        const key = failure?.code === "OTP_EXPIRED"
+          ? "verificationCodeExpired"
+          : failure?.code === "TOO_MANY_ATTEMPTS"
+            ? "verificationCodeTooManyAttempts"
+            : "invalidVerificationCode";
+        throw new Error(t(`errors.${key}`));
+      }
+      finishAuthentication();
+    } catch (cause) {
+      setVerificationError(cause instanceof Error ? cause.message : t("errors.invalidVerificationCode"));
+    } finally {
+      setVerificationLoading(false);
+    }
+  }
+
+  async function resendVerificationCode() {
+    setVerificationError(null);
+    setResendStatus(null);
+    setResendLoading(true);
+    try {
+      await requestVerificationCode();
+      setResendStatus(t("verifyEmail.codeSent"));
+    } catch (cause) {
+      setVerificationError(cause instanceof Error ? cause.message : t("errors.verificationCodeRequestFailed"));
+    } finally {
+      setResendLoading(false);
+    }
+  }
+
   if (verificationPending) return (
-    <ReplacementOnboardingShell title={t("signup.checkEmailTitle")} width="sm">
-      <p role="status" className="text-sm text-muted-foreground">{t("signup.checkEmailBody")}</p>
-      <Link className="text-sm underline" href={buildAuthPathWithReturnTo("/login", returnTo, authLocale)}>{t("signup.signIn")}</Link>
+    <ReplacementOnboardingShell description={t("verifyEmail.codeDescription", { email: email.trim().toLowerCase() })} title={t("verifyEmail.codeTitle")} width="sm">
+      <div className="flex w-full flex-col gap-6">
+        <form onSubmit={verifyEmail}>
+          <FieldGroup className="gap-4">
+            <Field data-invalid={verificationError ? true : undefined}>
+              <FieldLabel htmlFor="verification-code">{t("verifyEmail.codeLabel")}</FieldLabel>
+              <InputOTP
+                autoComplete="one-time-code"
+                autoFocus
+                containerClassName="justify-center"
+                id="verification-code"
+                maxLength={6}
+                onChange={(value) => setVerificationCode(value.replace(/\D/g, "").slice(0, 6))}
+                value={verificationCode}
+              >
+                <InputOTPGroup>
+                  {[0, 1, 2, 3, 4, 5].map((index) => <InputOTPSlot aria-invalid={verificationError ? true : undefined} className="size-12 text-lg" index={index} key={index} />)}
+                </InputOTPGroup>
+              </InputOTP>
+            </Field>
+            {verificationError ? <FieldError>{verificationError}</FieldError> : null}
+            {resendStatus ? <p className="text-sm text-muted-foreground" role="status">{resendStatus}</p> : null}
+            <Button className="mt-2 h-11 w-full" disabled={verificationCode.length !== 6} loading={verificationLoading} loadingLabel={t("verifyEmail.verifying")} type="submit">{t("verifyEmail.verify")}</Button>
+            <Button className="h-11 w-full" disabled={verificationLoading} loading={resendLoading} loadingLabel={t("verifyEmail.resending")} onClick={() => void resendVerificationCode()} type="button" variant="outline">{t("verifyEmail.resend")}</Button>
+          </FieldGroup>
+        </form>
+        <button className="text-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" onClick={() => { setVerificationPending(false); setVerificationCode(""); setVerificationError(null); setResendStatus(null); }} type="button">{t("verifyEmail.useDifferentEmail")}</button>
+      </div>
     </ReplacementOnboardingShell>
   );
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
