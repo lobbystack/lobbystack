@@ -85,6 +85,8 @@ Configure Polar to send subscription and order webhooks to `https://app.example.
 
 Set `POLAR_WEBHOOK_SECRET` in production. The route rejects missing secrets and invalid signatures with HTTP 401.
 
+During a Convex cutover, set `POLAR_ACCEPT_LEGACY_BUSINESS_IDS=true` only in production. This lets signed webhooks resolve existing `business:<legacy-id>` customer references through the retained `businesses.legacy_convex_id` mapping. Keep it disabled in staging so a shared Polar organization cannot route production customer events into the staging database.
+
 ## Understand the billing flow
 
 Use this sequence to check where a checkout stops:

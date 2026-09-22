@@ -33,13 +33,20 @@ export async function POST(request: Request) {
     const event = polarWebhookSchema.safeParse({ ...raw, id: request.headers.get("webhook-id") ?? raw.id });
     if (!event.success) return NextResponse.json({ error: "Invalid webhook." }, { status: 400 });
     const normalized = normalizePolarEvent(event.data.type, event.data.data);
-    const businessId = normalized.businessId;
-    // The live Polar organization also serves the old deployment. Do not import
-    // its customers/events into staging or trust unknown IDs as local tenants.
+    // The live Polar organization also serves staging. UUID references are safe
+    // everywhere; legacy Convex references are resolved only during production
+    // cutover when the environment explicitly enables compatibility routing.
+    const allowLegacyReference = process.env.POLAR_ACCEPT_LEGACY_BUSINESS_IDS === "true";
+    const businessId = await withDispatcherTransaction(getDispatcherDatabase().db, async tx => {
+      const condition = normalized.businessId
+        ? eq(businesses.id, normalized.businessId)
+        : allowLegacyReference && normalized.businessReference
+          ? eq(businesses.legacyConvexId, normalized.businessReference)
+          : undefined;
+      if (!condition) return undefined;
+      return (await tx.select({ id: businesses.id }).from(businesses).where(condition).limit(1))[0]?.id;
+    });
     if (!businessId) return NextResponse.json({ accepted: true, ignored: true });
-    const exists = await withDispatcherTransaction(getDispatcherDatabase().db, async tx =>
-      (await tx.select({ id: businesses.id }).from(businesses).where(eq(businesses.id, businessId)).limit(1)).length > 0);
-    if (!exists) return NextResponse.json({ accepted: true, ignored: true });
     const persist = async (tx: Parameters<Parameters<ReturnType<typeof getWorkerDatabase>["db"]["transaction"]>[0]>[0]) => {
       const [stored] = await tx.insert(providerEvents).values({ provider: "polar", providerEventId: event.data.id, eventType: event.data.type, businessId, payload: normalized.payload }).onConflictDoNothing().returning({ id: providerEvents.id });
       if (stored && businessId) {

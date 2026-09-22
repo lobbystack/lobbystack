@@ -179,6 +179,7 @@ export default defineRailway((ctx) => {
       POLAR_ORGANIZATION_ID: preserve(),
       POLAR_API_BASE_URL: preserve(),
       POLAR_WEBHOOK_SECRET: preserve(),
+      POLAR_ACCEPT_LEGACY_BUSINESS_IDS: production ? "true" : "false",
       POLAR_STARTER_MONTHLY_PRODUCT_ID: preserve(),
       POLAR_STARTER_ANNUAL_PRODUCT_ID: preserve(),
       POLAR_PRO_MONTHLY_PRODUCT_ID: preserve(),
