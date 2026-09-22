@@ -1,17 +1,29 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page, type TestInfo } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { desc, eq } from "drizzle-orm";
 
 import { createDatabaseClient, outboxMessages, users } from "@lobbystack/db";
 
-export async function isolateAuthRateLimit(page: Page, email: string): Promise<void> {
-  const digest = createHash("sha256").update(email).digest();
+export async function isolateAuthRateLimit(page: Page, email: string, testInfo: Pick<TestInfo, "parallelIndex" | "repeatEachIndex" | "retry" | "workerIndex">): Promise<void> {
+  const digest = createHash("sha256").update(`${email}:${testInfo.parallelIndex}:${testInfo.workerIndex}:${testInfo.retry}:${testInfo.repeatEachIndex}`).digest();
   await page.setExtraHTTPHeaders({ "x-real-ip": `198.18.${digest.readUInt8(0)}.${digest.readUInt8(1)}` });
 }
 
-export async function completeSignupEmailVerification(page: Page, email: string): Promise<void> {
+export async function completeSignupEmailVerification(page: Page, email: string, password: string): Promise<void> {
   const databaseUrl = process.env.REPLACEMENT_E2E_DATABASE_URL;
   if (!databaseUrl) throw new Error("The disposable E2E database is required for email verification.");
+
+  await expect(page.locator("#verification-code")).toBeVisible();
+  const unverifiedSignIn = await page.evaluate(async (credentials) => {
+    const response = await fetch("/api/auth/sign-in/email", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(credentials),
+    });
+    const body = await response.json().catch(() => null) as { code?: string } | null;
+    return { status: response.status, code: body?.code };
+  }, { email, password });
+  expect(unverifiedSignIn).toEqual({ status: 403, code: "EMAIL_NOT_VERIFIED" });
 
   const database = createDatabaseClient("lobbystack_migrator", { DATABASE_URL: databaseUrl });
   let code: string | undefined;
@@ -32,7 +44,6 @@ export async function completeSignupEmailVerification(page: Page, email: string)
   }
   if (!code) throw new Error("The signup verification email did not contain a code.");
 
-  await expect(page.locator("#verification-code")).toBeVisible();
   await page.locator("#verification-code").fill(code);
   const verificationResponsePromise = page.waitForResponse(response => response.url().endsWith("/api/auth/email-otp/verify-email") && response.request().method() === "POST");
   const signInResponsePromise = page.waitForResponse(response => response.url().endsWith("/api/auth/sign-in/email") && response.request().method() === "POST");

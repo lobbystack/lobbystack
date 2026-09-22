@@ -1,6 +1,6 @@
 import { respectingAuthRateLimit } from "./fixtures/auth-rate-limit";
 import { completeSignupEmailVerification, isolateAuthRateLimit } from "./fixtures/email-verification";
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page, type TestInfo } from "@playwright/test";
 import { eq, sql } from "drizzle-orm";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -51,9 +51,9 @@ async function cleanupFixtures(): Promise<void> {
   throw new Error("REPLACEMENT_E2E_DATABASE_URL is required for fixture cleanup.");
 }
 
-async function signUp(page: Page, identity: string): Promise<void> {
+async function signUp(page: Page, identity: string, testInfo: TestInfo): Promise<void> {
   const email = `${prefix}-${identity}@example.invalid`;
-  await isolateAuthRateLimit(page, email);
+  await isolateAuthRateLimit(page, email, testInfo);
   await page.goto("/en/signup");
   await page.locator('input[type="email"]').fill(email);
   await page.locator('input[type="password"]').fill(password);
@@ -69,7 +69,7 @@ async function signUp(page: Page, identity: string): Promise<void> {
     return await submitted;
   });
   expect(response.ok()).toBe(true);
-  await completeSignupEmailVerification(page, email);
+  await completeSignupEmailVerification(page, email, password);
   await expect(page).toHaveURL(/\/onboarding\/business$/);
 }
 
@@ -177,12 +177,12 @@ async function close(context: BrowserContext): Promise<void> {
 test.beforeAll(cleanupFixtures);
 test.afterAll(cleanupFixtures);
 
-test("operator authentication, workspace access, isolation, and revocation", async ({ browser, page }) => {
+test("operator authentication, workspace access, isolation, and revocation", async ({ browser, page }, testInfo) => {
   test.setTimeout(240_000);
   await page.goto("/");
   await expect(page).toHaveURL(/\/en\/login$/);
 
-  await signUp(page, "owner-a");
+  await signUp(page, "owner-a", testInfo);
   const ownBusinessId = await createWorkspace(page, "owner-a");
   await markPhoneVerified("owner-a", ownBusinessId);
   await completeOnboardingBySkippingOptionalInputs(page, ownBusinessId);
@@ -210,7 +210,7 @@ test("operator authentication, workspace access, isolation, and revocation", asy
   const foreignContext = await browser.newContext();
   try {
     const foreignPage = await foreignContext.newPage();
-    await signUp(foreignPage, "owner-b");
+    await signUp(foreignPage, "owner-b", testInfo);
     const foreignBusinessId = await createWorkspace(foreignPage, "owner-b");
 
     const isolation = await page.evaluate(async ({ own, foreign }) => {
@@ -233,10 +233,10 @@ test("operator authentication, workspace access, isolation, and revocation", asy
 });
 
 
-test("French signup retains the chosen locale through onboarding and reload", async ({ page }) => {
+test("French signup retains the chosen locale through onboarding and reload", async ({ page }, testInfo) => {
   test.setTimeout(180_000);
   await page.addInitScript(() => localStorage.setItem("lobbystack.locale", "fr"));
-  await signUp(page, "french-owner");
+  await signUp(page, "french-owner", testInfo);
   expect(await page.evaluate(async () => (await (await fetch("/api/preferences/locale")).json()).locale)).toBe("fr");
   await page.reload();
   await expect.poll(() => page.evaluate(() => localStorage.getItem("lobbystack.locale"))).toBe("fr");
