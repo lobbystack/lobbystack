@@ -192,4 +192,4 @@ Pour comprendre le produit avant de le recommander, consultez la [vue d'ensemble
 - [Programme d'affiliation My AI Front Desk](https://www.myaifrontdesk.com/affiliate)
 - [Programme d'affiliation Retell AI](https://affiliate.retellai.com/)
 - [Programme de référence Smith.ai](https://smith.ai/partners/referral-affiliate-program)
-- [Dépôt GitHub LobbyStack](https://github.com/morencyr/LobbyStack)
+- [Dépôt GitHub LobbyStack](https://github.com/lobbystack/lobbystack)

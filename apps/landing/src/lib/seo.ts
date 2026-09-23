@@ -29,6 +29,9 @@ const BRAND_SAME_AS = [
   "https://github.com/lobbystack/lobbystack",
   "https://www.capterra.com/p/10046185/LobbyStack/",
   "https://sourceforge.net/software/product/LobbyStack/",
+  "https://www.g2.com/products/lobbystack/reviews",
+  "https://alternativeto.net/software/lobbystack/about/",
+  "https://www.saashub.com/lobbystack",
 ]
 
 export type JsonLd = Record<string, unknown>
@@ -469,9 +472,7 @@ export const blogPostingJsonLd = ({
       "@id": absoluteUrl("/#organization"),
     },
     isPartOf: {
-      "@id": absoluteUrl(
-        `${locale === "fr" ? "/fr/blog/" : "/blog/"}#blog`
-      ),
+      "@id": absoluteUrl(`${locale === "fr" ? "/fr/blog/" : "/blog/"}#blog`),
     },
     mainEntityOfPage: {
       "@id": `${url}#webpage`,

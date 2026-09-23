@@ -9,7 +9,7 @@ export function Hero() {
       <div className="mx-auto max-w-7xl px-6 pt-16 pb-8 md:pt-20 md:pb-10 lg:pt-24 lg:pb-12">
         <div className="mx-auto max-w-4xl text-center">
           <h1 className="animate-fade-up font-heading text-4xl leading-[1.1] font-medium tracking-tight delay-100 md:text-5xl lg:text-[4rem]">
-            AI receptionist for home services that books jobs while your crew{" "}
+            Home services answering service that books jobs while your crew{" "}
             <span className="underline decoration-2 underline-offset-4">
               works
             </span>
