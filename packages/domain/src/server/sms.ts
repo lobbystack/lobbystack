@@ -4,7 +4,7 @@ import { contacts, conversationSessions, conversations, enqueueOutbox, messages,
 import { isTerminalTwilioMessageStatus, mapTwilioStatusToMessageStatus, normalizeTwilioMessageStatus, shouldApplyMessageStatusTransition } from "@lobbystack/shared";
 
 import type { DomainContext } from "./context";
-import { contentExpiry } from "./contentRetentionPolicy";
+import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { queueOperatorAlertInTransaction } from "./notifications";
 import { recordUnitEconomicsEventInTransaction } from "./unitEconomics";
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -64,7 +64,9 @@ export async function receiveInboundSms(
     if (!conversation) throw new Error("Inbound SMS conversation could not be created.");
     const session = (await tx.select({ id: conversationSessions.id }).from(conversationSessions).where(and(eq(conversationSessions.businessId, input.businessId), eq(conversationSessions.conversationId, conversation.id), eq(conversationSessions.status, "open"))).orderBy(sql`${conversationSessions.startedAt} desc`).limit(1))[0] ?? (await tx.insert(conversationSessions).values({ businessId: input.businessId, conversationId: conversation.id, channel: "sms", status: "open" }).returning({ id: conversationSessions.id }))[0];
     if (!session) throw new Error("Inbound SMS session could not be created.");
-    const [message] = await tx.insert(messages).values({ businessId: input.businessId, conversationId: conversation.id, conversationSessionId: session.id, direction: "inbound", channel: "sms", body: input.body, contentExpiresAt: contentExpiry("messages"), providerMessageId: input.providerMessageId, status: "received" }).onConflictDoNothing({ target: messages.providerMessageId }).returning({ id: messages.id });
+    const retentionPlan = isContentRetentionEnabled() ? await resolveBusinessBillingPlan(tx, input.businessId) : null;
+    const contentExpiresAt = retentionPlan ? contentExpiryForPlan(retentionPlan, "messages") : null;
+    const [message] = await tx.insert(messages).values({ businessId: input.businessId, conversationId: conversation.id, conversationSessionId: session.id, direction: "inbound", channel: "sms", body: input.body, contentExpiresAt, providerMessageId: input.providerMessageId, status: "received" }).onConflictDoNothing({ target: messages.providerMessageId }).returning({ id: messages.id });
     if (!message) {
       const existing = (await tx.select({ id: messages.id }).from(messages).where(and(eq(messages.businessId, input.businessId), eq(messages.providerMessageId, input.providerMessageId))).limit(1))[0];
       if (!existing) throw new Error("Inbound SMS message could not be persisted.");
@@ -83,7 +85,7 @@ export async function receiveInboundSms(
     }
     const optedOut = Boolean(contact.operatorBlockedAt) || consentUpdate?.status === "opted_out" || (contact.smsConsentStatus === "opted_out" && !consentUpdate);
     if (keywordReply && !optedOut) {
-      const [replyMessage] = await tx.insert(messages).values({ businessId: input.businessId, conversationId: conversation.id, conversationSessionId: session.id, direction: "outbound", channel: "sms", body: keywordReply.body, contentExpiresAt: contentExpiry("messages"), aiGenerated: false, status: "queued", providerStatus: "compliance_reply" }).returning({ id: messages.id });
+      const [replyMessage] = await tx.insert(messages).values({ businessId: input.businessId, conversationId: conversation.id, conversationSessionId: session.id, direction: "outbound", channel: "sms", body: keywordReply.body, contentExpiresAt, aiGenerated: false, status: "queued", providerStatus: "compliance_reply" }).returning({ id: messages.id });
       if (replyMessage) {
         await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "message", aggregateId: replyMessage.id, dedupeKey: `message:${replyMessage.id}:created`, payload: { type: "message.upserted", entityId: replyMessage.id, conversationId: conversation.id } });
         await enqueueOutbox(tx, { topic: "sms.send", businessId: input.businessId, aggregateType: "message", aggregateId: replyMessage.id, dedupeKey: `message:${replyMessage.id}:send`, payload: { messageId: replyMessage.id } });

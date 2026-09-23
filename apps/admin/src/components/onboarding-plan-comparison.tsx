@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Minus } from "lucide-react";
-import { getCloudPlanFactSheet } from "@lobbystack/shared/product-capabilities";
+import { getCloudPlanFactSheet, FREE_CONTENT_RETENTION_MAX_DAYS, contentRetentionDaysForPlan } from "@lobbystack/shared/product-capabilities";
 
 const freePlanFacts = getCloudPlanFactSheet("free_cloud");
 
@@ -237,6 +237,13 @@ const comparisonGroups: ComparisonGroup[] = [
         free: { key: "common.unlimited" },
         pro: { key: "common.unlimited" },
         enterprise: { key: "common.unlimited" },
+      },
+      {
+        key: "contentRetention",
+        free: { includedKey: "data.contentRetention.free", params: { days: FREE_CONTENT_RETENTION_MAX_DAYS } },
+        starter: { includedKey: "data.contentRetention.paid", params: { days: contentRetentionDaysForPlan("starter", "transcripts") } },
+        pro: { includedKey: "data.contentRetention.paid", params: { days: contentRetentionDaysForPlan("pro", "transcripts") } },
+        enterprise: { key: "common.custom" },
       },
       {
         key: "callerProfiles",

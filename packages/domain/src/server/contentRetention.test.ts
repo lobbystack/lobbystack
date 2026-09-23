@@ -14,7 +14,7 @@ import { appendMessage } from "./conversations";
 import { receiveInboundSms } from "./sms";
 import { upsertTranscript } from "./voice";
 import { deleteTranscriptForRetention, runPrivacyRetentionSweep, scrubExpiredMessageContent } from "./privacy";
-import { contentExpiry, getContentRetentionPolicy } from "./contentRetentionPolicy";
+import { getContentRetentionPolicy, isContentRetentionEnabled } from "./contentRetentionPolicy";
 
 const context = { db: {} as never };
 const now = new Date("2030-01-01T00:00:00Z");
@@ -57,20 +57,24 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); vi.clearAllMocks(); });
 
 describe("approved content retention", () => {
-  it.each([undefined, "false", "1"])("fails closed for gate %s", (gate) => {
+  it.each([undefined, "true", "1", ""])("stays enabled by default for gate %s", (gate) => {
     vi.stubEnv("CONTENT_RETENTION_ENABLED", gate);
-    expect(contentExpiry("messages")).toBeNull();
+    expect(isContentRetentionEnabled()).toBe(true);
+  });
+  it("disables content retention only for the explicit false escape hatch", () => {
+    vi.stubEnv("CONTENT_RETENTION_ENABLED", "false");
+    expect(isContentRetentionEnabled()).toBe(false);
   });
   it.each(["{", "{}", JSON.stringify({ ...policy, approvalId: " " }), JSON.stringify({ ...policy, categories: { messages: 0 } }), JSON.stringify({ ...policy, categories: { messages: 1.5 } }), JSON.stringify({ ...policy, messageMedia: "keep" })])("rejects invalid policies", (json) => {
     vi.stubEnv("CONTENT_RETENTION_POLICY_JSON", json);
     expect(getContentRetentionPolicy()).toBeNull();
   });
-  it.each(["sms", "web_chat", "dashboard"] as const)("assigns expiry on the real %s message creation path", async (channel) => {
+  it.each(["sms", "web_chat", "dashboard"] as const)("assigns free-plan expiry on the real %s message creation path", async (channel) => {
     await appendMessage(context, { businessId: "business", conversationId: "conversation", body: "test", direction: "inbound", channel });
-    expect(inserts.find((entry) => entry.table === messages)?.values.contentExpiresAt).toEqual(new Date("2030-01-03T00:00:00Z"));
+    expect(inserts.find((entry) => entry.table === messages)?.values.contentExpiresAt).toEqual(new Date("2030-01-31T00:00:00Z"));
   });
-  it("leaves production-created messages and transcripts unexpired without approval", async () => {
-    vi.stubEnv("CONTENT_RETENTION_POLICY_JSON", "{}");
+  it("leaves production-created messages and transcripts unexpired when content retention is disabled", async () => {
+    vi.stubEnv("CONTENT_RETENTION_ENABLED", "false");
     await appendMessage(context, { businessId: "business", conversationId: "conversation", body: "test", direction: "outbound", channel: "sms" });
     await upsertTranscript(context, { businessId: "business", callId: "call", sequence: 1, speaker: "caller", text: "test", final: false });
     expect(inserts.find((entry) => entry.table === messages)?.values.contentExpiresAt).toBeNull();
@@ -82,18 +86,19 @@ describe("approved content retention", () => {
     await receiveInboundSms(context, { businessId: "business", providerMessageId: "provider", from: "+10000000000", to: "+10000000001", body: "HELP", payload: {} });
     const rows = inserts.filter((entry) => entry.table === messages);
     expect(rows).toHaveLength(2);
-    expect(rows.map((entry) => entry.values.contentExpiresAt)).toEqual([new Date("2030-01-03T00:00:00Z"), new Date("2030-01-03T00:00:00Z")]);
+    expect(rows.map((entry) => entry.values.contentExpiresAt)).toEqual([new Date("2030-01-31T00:00:00Z"), new Date("2030-01-31T00:00:00Z")]);
   });
   it.each([null, new Date("2029-12-31T00:00:00Z"), new Date("2030-02-01T00:00:00Z")])("preserves existing transcript expiry %s on conflict", async (expiry) => {
     await upsertTranscript(context, { businessId: "business", callId: "call", sequence: 1, speaker: "caller", text: "revised", final: true });
     const entry = inserts.find((row) => row.table === transcripts)!;
-    expect(entry.values.expiresAt).toEqual(new Date("2030-01-04T00:00:00Z"));
+    expect(entry.values.expiresAt).toEqual(new Date("2030-01-31T00:00:00Z"));
     expect(entry.conflict).not.toHaveProperty("expiresAt");
     expect({ expiresAt: expiry, ...entry.conflict }).toMatchObject({ expiresAt: expiry, text: "revised", final: true });
   });
-  it("does not assign omitted categories", () => {
-    vi.stubEnv("CONTENT_RETENTION_POLICY_JSON", JSON.stringify({ ...policy, categories: { transcripts: 3 } }));
-    expect(contentExpiry("messages")).toBeNull();
+  it("ignores a malformed override and still applies free-plan defaults", async () => {
+    vi.stubEnv("CONTENT_RETENTION_POLICY_JSON", "{");
+    await appendMessage(context, { businessId: "business", conversationId: "conversation", body: "test", direction: "inbound", channel: "sms" });
+    expect(inserts.find((entry) => entry.table === messages)?.values.contentExpiresAt).toEqual(new Date("2030-01-31T00:00:00Z"));
   });
   it("scrubs body and media together and resets the expiry marker", async () => {
     await scrubExpiredMessageContent(context, { businessId: "business" });

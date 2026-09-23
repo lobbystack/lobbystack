@@ -2,12 +2,13 @@ import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { businessHours, calls, conversations, messages, storageObjects, transcripts } from "@lobbystack/db";
-import { affiliateCommissions, affiliatePayoutItems, affiliateProfiles, billingTransactions, appointments, auditLogs, businessMemberships, contacts, services, staff, users, businesses, notifications, outboxMessages, withBusinessTransaction, claimOutboxBatch, createDatabaseClient, enqueueOutbox, markOutboxFailed, markOutboxPublished, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { affiliateCommissions, affiliatePayoutItems, affiliateProfiles, billingAccounts, billingTransactions, appointments, auditLogs, businessMemberships, contacts, services, staff, users, businesses, notifications, outboxMessages, withBusinessTransaction, claimOutboxBatch, createDatabaseClient, enqueueOutbox, markOutboxFailed, markOutboxPublished, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { generateAffiliatePayoutRun } from "./affiliates";
 import { bookAppointment, cancelAppointment } from "./booking";
+import { appendMessage } from "./conversations";
 import { runPrivacyRetentionSweep } from "./privacy";
-import { EXPIRED_UPLOAD_STATUS, deleteExpiredObjectsForBusiness } from "./storage";
-import { completeCall } from "./voice";
+import { EXPIRED_UPLOAD_STATUS, deleteExpiredObjectsForBusiness, persistCallRecording } from "./storage";
+import { completeCall, upsertTranscript } from "./voice";
 import { claimNotificationDelivery, releaseNotificationDelivery, rescheduleAppointmentReminderInTransaction } from "./notifications";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -107,6 +108,83 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+
+  it("expires content by business plan under worker RLS and sweeps only due rows", async () => {
+    await rollbackTest(async (tx) => {
+      const freeBusinessId = randomUUID();
+      const paidBusinessId = randomUUID();
+      const freeConversationId = randomUUID();
+      const paidConversationId = randomUUID();
+      const freeCallId = randomUUID();
+      const paidCallId = randomUUID();
+      await tx.insert(businesses).values([
+        { id: freeBusinessId, slug: freeBusinessId, name: "Free retention", timezone: "UTC", businessType: "test", deploymentMode: "cloud" },
+        { id: paidBusinessId, slug: paidBusinessId, name: "Paid retention", timezone: "UTC", businessType: "test", deploymentMode: "cloud" },
+      ]);
+      await tx.insert(billingAccounts).values({ businessId: paidBusinessId, billingKey: `business:${paidBusinessId}`, plan: "starter" });
+      await tx.insert(conversations).values([
+        { id: freeConversationId, businessId: freeBusinessId, channel: "voice" },
+        { id: paidConversationId, businessId: paidBusinessId, channel: "voice" },
+      ]);
+      await tx.insert(calls).values([
+        { id: freeCallId, businessId: freeBusinessId, conversationId: freeConversationId, providerCallId: randomUUID(), transport: "web", status: "completed", startedAt: new Date() },
+        { id: paidCallId, businessId: paidBusinessId, conversationId: paidConversationId, providerCallId: randomUUID(), transport: "web", status: "completed", startedAt: new Date() },
+      ]);
+      // An expired free transcript prepared before switching to the worker role.
+      await tx.insert(transcripts).values({ businessId: freeBusinessId, callId: freeCallId, sequence: 2, speaker: "caller", text: "expired free", expiresAt: new Date(0) });
+      await tx.execute(sql`set local role lobbystack_worker`);
+      const db = tx as unknown as Database;
+      const daysBetween = (later: Date, earlier: Date) => Math.round((later.getTime() - earlier.getTime()) / 86_400_000);
+
+      await appendMessage({ db }, { businessId: freeBusinessId, conversationId: freeConversationId, body: "free inbound", direction: "inbound", channel: "sms" });
+      await upsertTranscript({ db }, { businessId: freeBusinessId, callId: freeCallId, sequence: 1, speaker: "caller", text: "free transcript", final: false });
+      await appendMessage({ db }, { businessId: paidBusinessId, conversationId: paidConversationId, body: "paid inbound", direction: "inbound", channel: "sms" });
+      await upsertTranscript({ db }, { businessId: paidBusinessId, callId: paidCallId, sequence: 1, speaker: "caller", text: "paid transcript", final: false });
+
+      await withBusinessTransaction(db, { businessId: freeBusinessId, actorType: "worker" }, async (workerTx) => {
+        const [freeMessage] = await workerTx.select({ createdAt: messages.createdAt, contentExpiresAt: messages.contentExpiresAt }).from(messages).where(eq(messages.businessId, freeBusinessId));
+        const [freeTranscript] = await workerTx.select({ createdAt: transcripts.createdAt, expiresAt: transcripts.expiresAt }).from(transcripts).where(and(eq(transcripts.businessId, freeBusinessId), eq(transcripts.sequence, 1)));
+        expect(daysBetween(freeMessage!.contentExpiresAt!, freeMessage!.createdAt)).toBe(30);
+        expect(daysBetween(freeTranscript!.expiresAt!, freeTranscript!.createdAt)).toBe(30);
+      });
+      await withBusinessTransaction(db, { businessId: paidBusinessId, actorType: "worker" }, async (workerTx) => {
+        const [paidMessage] = await workerTx.select({ createdAt: messages.createdAt, contentExpiresAt: messages.contentExpiresAt }).from(messages).where(eq(messages.businessId, paidBusinessId));
+        const [paidTranscript] = await workerTx.select({ createdAt: transcripts.createdAt, expiresAt: transcripts.expiresAt }).from(transcripts).where(eq(transcripts.businessId, paidBusinessId));
+        expect(daysBetween(paidMessage!.contentExpiresAt!, paidMessage!.createdAt)).toBe(365);
+        expect(daysBetween(paidTranscript!.expiresAt!, paidTranscript!.createdAt)).toBe(90);
+      });
+
+      // A paid 90-day transcript must not be swept early; the expired free one is removed.
+      expect(await runPrivacyRetentionSweep({ db }, { businessId: paidBusinessId })).toMatchObject({ deletedTranscripts: 0 });
+      expect(await runPrivacyRetentionSweep({ db }, { businessId: freeBusinessId })).toMatchObject({ deletedTranscripts: 1 });
+    });
+  });
+
+  it("sets a plan-based recording retention window under worker RLS", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = randomUUID();
+      const conversationId = randomUUID();
+      const callId = randomUUID();
+      await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Recording retention", timezone: "UTC", businessType: "test", deploymentMode: "cloud" });
+      await tx.insert(conversations).values({ id: conversationId, businessId, channel: "voice" });
+      await tx.insert(calls).values({ id: callId, businessId, conversationId, providerCallId: randomUUID(), transport: "voice", status: "completed", startedAt: new Date() });
+      await tx.execute(sql`set local role lobbystack_worker`);
+      const db = tx as unknown as Database;
+      const storage = {
+        createUpload: async () => ({ url: "https://example.invalid" }),
+        headObject: async () => null,
+        deleteObject: async () => undefined,
+        createDownloadUrl: async () => "https://example.invalid",
+        putObject: async () => undefined,
+      };
+      await persistCallRecording({ db }, { businessId, callId, durationMs: 1_000, contentType: "audio/wav", body: new Uint8Array([1, 2, 3]) }, storage);
+      await withBusinessTransaction(db, { businessId, actorType: "worker" }, async (workerTx) => {
+        const [object] = await workerTx.select({ createdAt: storageObjects.createdAt, retentionUntil: storageObjects.retentionUntil, purpose: storageObjects.purpose }).from(storageObjects).where(and(eq(storageObjects.businessId, businessId), eq(storageObjects.purpose, "recording")));
+        expect(object).toMatchObject({ purpose: "recording" });
+        expect(Math.round((object!.retentionUntil!.getTime() - object!.createdAt.getTime()) / 86_400_000)).toBe(30);
+      });
+    });
   });
 
   it("does not repeat operator cancellation revision, audit, or outbox effects", async () => {

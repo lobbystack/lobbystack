@@ -3,12 +3,13 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne, notInArray, or, type SQL } from "drizzle-orm";
 
 import { billingAccounts, businesses, calls, enqueueOutbox, knowledgeDocuments, storageObjects, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { billingPlanSlugs, getKnowledgeStorageLimitBytes, type BillingPlanSlug } from "@lobbystack/shared";
+import { getKnowledgeStorageLimitBytes } from "@lobbystack/shared";
 import { getKnowledgeStorageUsageBytes } from "./knowledge";
 import { isAllowedUploadContentType } from "@lobbystack/contracts";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
+import { billingPlanForAccount, contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 
 export type StorageProvider = {
   createUpload(input: { key: string; contentType: string; length: number; checksum?: string }): Promise<{ url: string; headers?: Record<string, string> }>;
@@ -64,7 +65,7 @@ export async function finalizeUpload(
     if (object.purpose === "knowledge") {
       const [business] = await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, input.businessId)).for("update");
       const [account] = await tx.select({ plan: billingAccounts.plan }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId));
-      const plan = account?.plan && (billingPlanSlugs as readonly string[]).includes(account.plan) ? account.plan as BillingPlanSlug : business?.deploymentMode === "self_hosted_standard" ? "self_host" : "free_cloud";
+      const plan = billingPlanForAccount(account?.plan, business?.deploymentMode);
       const limit = getKnowledgeStorageLimitBytes(plan);
       if (limit !== null && await getKnowledgeStorageUsageBytes(tx, input.businessId) + metadata.length > limit) throw new Error(`Knowledge storage limit reached. ${Math.ceil(limit / 1024 / 1024)} MB is included on this plan.`);
     }
@@ -279,7 +280,8 @@ export async function persistCallRecording(
     if (!call) {
       throw new Error("Call not found.");
     }
-    await tx.insert(storageObjects).values({ id: objectId, businessId: input.businessId, objectKey: key, purpose: "recording", fileName: `${input.callId}.wav`, contentType: input.contentType, contentLength: input.body.byteLength, status: "pending", retentionUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) });
+    const retentionPlan = isContentRetentionEnabled() ? await resolveBusinessBillingPlan(tx, input.businessId) : null;
+    await tx.insert(storageObjects).values({ id: objectId, businessId: input.businessId, objectKey: key, purpose: "recording", fileName: `${input.callId}.wav`, contentType: input.contentType, contentLength: input.body.byteLength, status: "pending", retentionUntil: retentionPlan ? contentExpiryForPlan(retentionPlan, "recordings") : null });
   });
   await storage.putObject({ key, body: input.body, contentType: input.contentType });
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {

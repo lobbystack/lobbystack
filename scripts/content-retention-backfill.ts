@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 import { and, asc, eq, gt, isNull, lt, ne, sql } from "drizzle-orm";
 import { createDatabaseClient, messages, transcripts, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { z } from "zod";
-import { contentExpiry, getContentRetentionPolicy } from "../packages/domain/src/server/contentRetentionPolicy";
+import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "../packages/domain/src/server/contentRetentionPolicy";
 
 const optionsSchema = z.object({
   businessId: z.string().uuid(),
@@ -36,8 +36,7 @@ export function parseContentRetentionArgs(args: string[]) {
 
 export async function backfillContentRetention(db: Database, raw: z.input<typeof optionsSchema>) {
   const input = optionsSchema.parse(raw);
-  const policy = getContentRetentionPolicy();
-  if (!policy || policy.categories[input.category] === undefined) throw new Error("An enabled approved category policy is required.");
+  if (!isContentRetentionEnabled()) throw new Error("Content retention is disabled.");
   const table = input.category === "messages" ? messages : transcripts;
   const expiryColumn = input.category === "messages" ? messages.contentExpiresAt : transcripts.expiresAt;
   return withBusinessTransaction(db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
@@ -49,11 +48,13 @@ export async function backfillContentRetention(db: Database, raw: z.input<typeof
         input.after ? gt(table.id, input.after) : undefined,
         input.category === "messages" ? ne(messages.body, "[content expired]") : undefined))
       .orderBy(asc(table.id)).limit(input.limit);
+    // Expiry follows the business plan; the JSON policy only overrides paid defaults.
+    const plan = await resolveBusinessBillingPlan(tx, input.businessId);
     let updated = 0;
     let alreadyDue = 0;
     const now = new Date();
     for (const row of candidates) {
-      const expiry = contentExpiry(input.category, row.createdAt, policy)!;
+      const expiry = contentExpiryForPlan(plan, input.category, row.createdAt);
       if (expiry <= now) alreadyDue++;
       if (!input.apply) continue;
       const changed = input.category === "messages"

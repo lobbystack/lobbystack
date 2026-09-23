@@ -4,6 +4,8 @@ import {
   type CloudBillingPlanSlug,
 } from "./billing";
 
+export { FREE_CONTENT_RETENTION_MAX_DAYS, contentRetentionDaysForPlan } from "./billing";
+
 /**
  * Factual status for a product capability. These describe what the product does
  * today, not a marketing promise. `restricted` means the product does not offer

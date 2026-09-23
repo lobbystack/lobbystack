@@ -178,6 +178,44 @@ export function getKnowledgeStorageLimitBytes(
   return billingPlanCatalog[plan].knowledgeStorageBytes;
 }
 
+export const contentRetentionCategories = [
+  "messages",
+  "transcripts",
+  "recordings",
+  "follow_ups",
+] as const;
+export type ContentRetentionCategory = (typeof contentRetentionCategories)[number];
+
+export type ContentRetentionOverrides = Partial<
+  Record<ContentRetentionCategory, number | undefined>
+>;
+
+/** Free content is a hard maximum: an override can never extend it past 30 days. */
+export const FREE_CONTENT_RETENTION_MAX_DAYS = 30;
+
+export const contentRetentionDaysByPlan = {
+  self_host: { messages: 365, transcripts: 90, recordings: 90, follow_ups: 365 },
+  free_cloud: { messages: 30, transcripts: 30, recordings: 30, follow_ups: 30 },
+  starter: { messages: 365, transcripts: 90, recordings: 90, follow_ups: 365 },
+  pro: { messages: 365, transcripts: 90, recordings: 90, follow_ups: 365 },
+  enterprise: { messages: 365, transcripts: 90, recordings: 90, follow_ups: 365 },
+} as const satisfies Record<
+  BillingPlanSlug,
+  Record<ContentRetentionCategory, number>
+>;
+
+export function contentRetentionDaysForPlan(
+  plan: BillingPlanSlug,
+  category: ContentRetentionCategory,
+  overrides?: ContentRetentionOverrides | null,
+): number {
+  const base = contentRetentionDaysByPlan[plan][category];
+  if (plan === "free_cloud") {
+    return Math.min(base, FREE_CONTENT_RETENTION_MAX_DAYS);
+  }
+  return overrides?.[category] ?? base;
+}
+
 export const billingAddonCatalog = {
   ai_sms: {
     recurringMonthlyChargeCents: 500,

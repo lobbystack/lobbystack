@@ -18,4 +18,9 @@ it.each(["en", "fr"] as const)("describes supported capabilities in %s", async (
   const numbers = screen.getByText(t("plan.comparison.features.phoneNumbers")).closest("tr")!;
   expect(within(numbers).getAllByRole("cell")[1]?.textContent).toBe(t("plan.comparison.values.common.notIncluded"));
   expect(screen.getAllByText(t("plan.comparison.values.notifications.aiSms.proIncluded"))).toHaveLength(2);
+  const retention = screen.getByText(t("plan.comparison.features.contentRetention")).closest("tr")!;
+  const retentionCells = within(retention).getAllByRole("cell");
+  expect(retentionCells[1]?.textContent).toBe(t("plan.comparison.values.data.contentRetention.free", { days: 30 }));
+  expect(retentionCells[2]?.textContent).toBe(t("plan.comparison.values.data.contentRetention.paid", { days: 90 }));
+  expect(retentionCells[3]?.textContent).toBe(t("plan.comparison.values.data.contentRetention.paid", { days: 90 }));
 });

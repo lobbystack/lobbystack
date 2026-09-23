@@ -7,13 +7,13 @@ meta:
 
 # Roll out the reliability fixes
 
-Use this runbook to validate and deploy the booking, voice, authentication, and packaging changes. Keep content retention disabled until you approve the periods and historical-data treatment. Keep new widget-key issuance disabled while chat remains restricted.
+Use this runbook to validate and deploy the booking, voice, authentication, and packaging changes. Content retention now runs from the business plan, so review the schedule and backfill decision in the retention section. Keep new widget-key issuance disabled while chat remains restricted.
 
 ## Deployment scope and prerequisites
 
 This runbook is for the release operator. Complete the checks, drain active work, deploy matching runtime versions, and verify the supported customer flows. Record the retention decision and any provider-recovery evidence in your change record.
 
-You need access to the release checks, runtime-role credentials, and a staging environment. Do not use production database credentials for the test suites. The remaining approvals cover retention periods, historical backfills, and any exception to restricted widget access.
+You need access to the release checks, runtime-role credentials, and a staging environment. Do not use production database credentials for the test suites. Retention follows the plan schedule; the only remaining retention decision is whether to backfill existing content, and any exception to restricted widget access.
 
 ## Check the release before deployment
 
@@ -44,8 +44,8 @@ Configure the following settings before replacing the runtimes:
 | `WIDGET_KEY_ISSUANCE_ENABLED` | Leave unset or `false`; existing keys continue working |
 | `TRUSTED_CLIENT_IP_HEADER` | Set to `x-real-ip` or `cf-connecting-ip`, and only after verifying that ingress overwrites that header. The admin and gateway share this setting |
 | `VOICE_GATEWAY_TRUST_PROXY` | Leave `false`. The gateway reads the configured single-value header instead of trusting the full forwarding chain |
-| `CONTENT_RETENTION_ENABLED` | Leave unset or `false` until policy approval |
-| `CONTENT_RETENTION_POLICY_JSON` | Leave empty until policy approval; use the same policy in admin and worker |
+| `CONTENT_RETENTION_ENABLED` | On by default. Free keeps 30 days, paid keeps the longer periods in the retention section |
+| `CONTENT_RETENTION_POLICY_JSON` | Optional. Overrides the paid periods only; leave empty for the defaults |
 
 Remove `SEND_VERIFICATION_EMAIL_ON_SIGNUP` from deployment configuration. Signup and unverified sign-in use the shared verification-code issuer; that retired variable no longer controls delivery.
 
@@ -82,13 +82,20 @@ Each `CREATE INDEX` takes a write lock while it builds. Production starts from a
 
 See [query-plan remediation](../validation/query-plan-remediation.md) for the measured before-and-after plans, rejected candidates, and deferred list. Re-run `scripts/query-plan-check.ts` after a large data change before adding more indexes.
 
-## Approve content retention separately
+## Confirm content retention
 
-Do not treat this release as approval to delete customer content. First record the periods for messages and transcripts, the start event for each period, exceptions, and the treatment of existing records. Message scrubbing removes body text and media references; it does not delete provider-hosted media or storage objects.
+Content retention runs by default and follows the business plan. Free content expires 30 days after creation. Paid and self-host plans keep the longer periods below.
 
-The policy JSON requires `approvalId`, `categories.messages` and/or `categories.transcripts` as positive integer days, and `messageMedia: "scrub_with_body"`. A missing or malformed policy applies no default period, so the gate fails closed and scrubs nothing. The implementation measures new-content expiry from creation time and does not extend transcript expiry on revisions. Existing inbox, notification, product-event, and recording policies remain separate.
+| Plan | messages | transcripts | recordings | follow-ups |
+| --- | ---: | ---: | ---: | ---: |
+| free_cloud | 30 | 30 | 30 | 30 |
+| starter, pro, enterprise, self_host | 365 | 90 | 90 | 365 |
 
-For a historical preview, configure the approved policy only in the backfill process. Keep the live worker’s retention gate disabled while reviewing the results. Set `CONTENT_RETENTION_DATABASE_URL` to an explicit worker-role connection, then run a bounded dry-run with your approved cutoff:
+Writers set each row's expiry from the business plan at creation time, and the sweep acts only on rows whose expiry has passed. `CONTENT_RETENTION_ENABLED=false` disables content deletion deployment-wide. `CONTENT_RETENTION_POLICY_JSON` overrides the paid periods per category; free stays capped at 30 days and cannot be raised. Operator notification deliveries keep their separate 30-day policy.
+
+Message scrubbing removes body text and media references. It does not delete provider-hosted media or storage objects. Recordings expire through their own storage retention.
+
+Existing rows carry no expiry until you backfill them, so a plan change alone does not purge old content. Preview before you apply. Set `CONTENT_RETENTION_DATABASE_URL` to an explicit worker-role connection, then run a bounded dry-run with your cutoff:
 
 ```sh
 pnpm exec tsx --tsconfig scripts/tsconfig.json \
@@ -97,9 +104,9 @@ pnpm exec tsx --tsconfig scripts/tsconfig.json \
   --before "$historical_cutoff" --limit 100
 ```
 
-The command reports counts, records already due, and a resume cursor without printing customer content. Keep the policy and cutoff fixed when resuming with `--after`. Apply requires `--apply`, `--historical-approval-id`, and `--historical-basis created-at`; review the already-due count before using those flags.
+The command resolves the business plan, reports counts, records already due, and a resume cursor without printing customer content. Keep the cutoff fixed when resuming with `--after`. Apply requires `--apply`, `--historical-approval-id`, and `--historical-basis created-at`; review the already-due count before using those flags.
 
-After approval, backfill in bounded pages and enable the agreed policy in both writers and workers. Disabling the gate stops future message/transcript sweeps; it cannot restore scrubbed or deleted content.
+Disabling the gate stops future sweeps. It cannot restore scrubbed or deleted content.
 
 ## Resolve uncertain voice allocations
 

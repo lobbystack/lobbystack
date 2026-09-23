@@ -324,8 +324,9 @@
         "emailNotifications": "Email notifications",
         "smsNotifications": "SMS notifications",
         "aiSms": "Two-way AI SMS conversations",
-        "summaries": "Call summaries and transcripts",
-        "history": "Call history and recordings",
+        "summaries": "Call summaries",
+        "history": "Call history",
+        "contentRetention": "Transcript and recording retention",
         "callerProfiles": "Caller profiles and notes",
         "contacts": "Contacts",
         "websiteImport": "Website knowledge import",
@@ -379,6 +380,12 @@
           "aiSms": {
             "proIncluded": "Optional add-on: $5/mo + $19 setup",
             "proThen": "$0.03/segment from the first segment"
+          }
+        },
+        "data": {
+          "contentRetention": {
+            "free": "{{days}} days",
+            "paid": "{{days}} days"
           }
         },
         "deployment": {

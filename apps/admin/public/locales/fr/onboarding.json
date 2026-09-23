@@ -324,8 +324,9 @@
         "emailNotifications": "Notifications par email",
         "smsNotifications": "Notifications SMS",
         "aiSms": "Conversations SMS IA bidirectionnelles",
-        "summaries": "Résumés et transcriptions d'appels",
-        "history": "Historique et enregistrements d'appels",
+        "summaries": "Résumés d'appels",
+        "history": "Historique des appels",
+        "contentRetention": "Conservation des transcriptions et enregistrements",
         "callerProfiles": "Profils et notes d'appelants",
         "contacts": "Contacts",
         "websiteImport": "Import des connaissances du site web",
@@ -379,6 +380,12 @@
           "aiSms": {
             "proIncluded": "Option payante : 5 $/mois + 19 $ de configuration",
             "proThen": "0,03 $/segment dès le premier segment"
+          }
+        },
+        "data": {
+          "contentRetention": {
+            "free": "{{days}} jours",
+            "paid": "{{days}} jours"
           }
         },
         "deployment": {

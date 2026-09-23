@@ -6,12 +6,12 @@ import { getPostHogDistinctIdForBusinessSystem, type TelemetryEventName, type Te
 
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
-import { contentExpiry } from "./contentRetentionPolicy";
+import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { queueOperatorAlertInTransaction } from "./notifications";
 import { applyNonAiUsageInTransaction, finalizeWebVoiceUsageInTransaction, normalizeWebCallMaxDurationMs, reserveWebVoiceUsageInTransaction } from "./billing";
 import { enqueueUsageSyncInTransaction } from "./usage";
 import { recordUnitEconomicsEventInTransaction } from "./unitEconomics";
-import { FOLLOW_UP_RETENTION_MS, visibleFollowUpBody, visibleFollowUpTitle } from "./followUpRetention";
+import { visibleFollowUpBody, visibleFollowUpTitle } from "./followUpRetention";
 import { recordCallOutcomeInTransaction, resolveCallOutcome } from "./callOutcome";
 import { buildCallEvents } from "./callEvents";
 import { recordingListState, recordingState, type RecordingState } from "./recordingState";
@@ -191,13 +191,14 @@ export async function upsertTranscript(
   input: { businessId: string; callId: string; sequence: number; speaker: string; text: string; final: boolean; confidence?: number },
 ): Promise<{ transcriptId: string; revision: number }> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const retentionPlan = isContentRetentionEnabled() ? await resolveBusinessBillingPlan(tx, input.businessId) : null;
     const [row] = await tx.insert(transcripts).values({
       businessId: input.businessId,
       callId: input.callId,
       sequence: input.sequence,
       speaker: input.speaker,
       text: input.text,
-      expiresAt: contentExpiry("transcripts"),
+      expiresAt: retentionPlan ? contentExpiryForPlan(retentionPlan, "transcripts") : null,
       final: input.final,
       ...(input.confidence !== undefined ? { confidence: Math.round(input.confidence * 100) } : {}),
     }).onConflictDoUpdate({
@@ -575,7 +576,8 @@ export async function createVoiceFollowUpTask(
       "",
       input.message.trim(),
     ].filter((line): line is string => line !== null).join("\n");
-    const values = { businessId: input.businessId, kind: "voice_message", title, body, contentExpiresAt: new Date(Date.now() + FOLLOW_UP_RETENTION_MS), ...(input.callId ? { relatedCallId: input.callId } : {}) };
+    const retentionPlan = isContentRetentionEnabled() ? await resolveBusinessBillingPlan(tx, input.businessId) : null;
+    const values = { businessId: input.businessId, kind: "voice_message", title, body, contentExpiresAt: retentionPlan ? contentExpiryForPlan(retentionPlan, "follow_ups") : null, ...(input.callId ? { relatedCallId: input.callId } : {}) };
     const existing = input.callId ? (await tx.select({ id: inboxItems.id }).from(inboxItems).where(and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.relatedCallId, input.callId), eq(inboxItems.kind, "voice_message"), eq(inboxItems.status, "open"))).orderBy(desc(inboxItems.createdAt)).limit(1))[0] : null;
     const [item] = existing
       ? await tx.update(inboxItems).set({ title, body, contentRetentionStatus: "active", contentExpiresAt: values.contentExpiresAt, updatedAt: new Date() }).where(eq(inboxItems.id, existing.id)).returning({ id: inboxItems.id })

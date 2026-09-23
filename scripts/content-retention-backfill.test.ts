@@ -7,6 +7,7 @@ vi.mock("@lobbystack/db", async () => ({
   ...(await import("../packages/db/src/schema/index")), withBusinessTransaction: mocks.transaction,
   createDatabaseClient: vi.fn(),
 }));
+import { billingAccounts, messages, transcripts } from "@lobbystack/db";
 import { backfillContentRetention, parseContentRetentionArgs } from "./content-retention-backfill";
 
 const businessId = "00000000-0000-4000-8000-000000000001";
@@ -15,21 +16,27 @@ const base = { businessId, category: "messages" as const, before: "2020-01-01T00
 let update: ReturnType<typeof vi.fn>;
 let select: ReturnType<typeof vi.fn>;
 let limit: ReturnType<typeof vi.fn>;
-let predicates: SQL[];
+let predicates: Array<{ table: unknown; predicate: SQL }>;
 let values: unknown[];
+
+function lastPredicate(table: unknown): SQL {
+  const match = predicates.filter((entry) => entry.table === table).at(-1);
+  if (!match) throw new Error("Expected a predicate for the table.");
+  return match.predicate;
+}
 
 beforeEach(() => {
   vi.stubEnv("CONTENT_RETENTION_ENABLED", "true");
-  vi.stubEnv("CONTENT_RETENTION_POLICY_JSON", JSON.stringify({ approvalId: "test-policy", categories: { messages: 2, transcripts: 3 }, messageMedia: "scrub_with_body" }));
+  vi.stubEnv("CONTENT_RETENTION_POLICY_JSON", JSON.stringify({ categories: { messages: 2, transcripts: 3 } }));
   predicates = []; values = [];
   limit = vi.fn().mockResolvedValue([{ id: rowId, createdAt: new Date("2019-01-01T00:00:00Z") }]);
-  select = vi.fn(() => ({ from: () => ({ where: (predicate: SQL) => {
-    predicates.push(predicate);
-    return { orderBy: () => ({ limit }) };
+  select = vi.fn(() => ({ from: (table: unknown) => ({ where: (predicate: SQL) => {
+    predicates.push({ table, predicate });
+    return { orderBy: () => ({ limit }), limit: async () => (table === billingAccounts ? [{ plan: "starter" }] : []) };
   } }) }));
-  update = vi.fn(() => ({ set: (value: unknown) => {
+  update = vi.fn((table: unknown) => ({ set: (value: unknown) => {
     values.push(value);
-    return { where: (predicate: SQL) => { predicates.push(predicate); return { returning: async () => [{ id: rowId }] }; } };
+    return { where: (predicate: SQL) => { predicates.push({ table, predicate }); return { returning: async () => [{ id: rowId }] }; } };
   } }));
   mocks.transaction.mockImplementation(async (_db, _scope, run) => run({ select, update, execute: vi.fn() }));
 });
@@ -52,7 +59,7 @@ it("previews only metadata, with no writes and a bounded resumable cursor", asyn
   expect(limit).toHaveBeenCalledWith(1);
   expect(update).not.toHaveBeenCalled();
   await backfillContentRetention({} as never, { ...base, after: rowId });
-  const query = new PgDialect().sqlToQuery(predicates[1]!);
+  const query = new PgDialect().sqlToQuery(lastPredicate(messages));
   expect(query.sql).toContain('"messages"."id" >');
   expect(query.params).toContain(rowId);
   expect(query.params).toContain(businessId);
@@ -60,18 +67,26 @@ it("previews only metadata, with no writes and a bounded resumable cursor", asyn
   expect(query.sql).toContain('"messages"."body" <>');
 });
 
-it.each(["messages", "transcripts"] as const)("requires separate historical approval to apply %s expiry", async (category) => {
+it.each(["messages", "transcripts"] as const)("resolves the business plan and applies the paid override to %s expiry", async (category) => {
   const result = await backfillContentRetention({} as never, { ...base, category, apply: true, historicalApprovalId: "test-history", historicalBasis: "created-at" });
   expect(result.updated).toBe(1);
+  expect(select).toHaveBeenCalled();
   expect(values).toEqual([category === "messages" ? { contentExpiresAt: new Date("2019-01-03T00:00:00Z") } : { expiresAt: new Date("2019-01-04T00:00:00Z") }]);
-  const query = new PgDialect().sqlToQuery(predicates[1]!);
+  const query = new PgDialect().sqlToQuery(lastPredicate(category === "messages" ? messages : transcripts));
   expect(query.sql).toContain("is null");
   expect(query.params).toContain(businessId);
   expect(query.params).toContain(rowId);
 });
 
-it("fails closed before accessing data when policy is disabled", async () => {
+it("applies the paid default when the override omits the category", async () => {
+  vi.stubEnv("CONTENT_RETENTION_POLICY_JSON", JSON.stringify({ categories: { messages: 2 } }));
+  const result = await backfillContentRetention({} as never, { ...base, category: "transcripts", apply: true, historicalApprovalId: "test-history", historicalBasis: "created-at" });
+  expect(result.updated).toBe(1);
+  expect(values).toEqual([{ expiresAt: new Date("2019-04-01T00:00:00Z") }]);
+});
+
+it("fails closed before accessing data when content retention is disabled", async () => {
   vi.stubEnv("CONTENT_RETENTION_ENABLED", "false");
-  await expect(backfillContentRetention({} as never, base)).rejects.toThrow("enabled approved category");
+  await expect(backfillContentRetention({} as never, base)).rejects.toThrow("disabled");
   expect(mocks.transaction).not.toHaveBeenCalled();
 });

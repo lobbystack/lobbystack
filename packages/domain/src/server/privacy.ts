@@ -5,10 +5,10 @@ import { calls, enqueueOutbox, inboxItems, messages, operatorNotificationDeliver
 import { EXPIRED_FOLLOW_UP_BODY, EXPIRED_FOLLOW_UP_TITLE } from "./followUpRetention";
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
-import { getContentRetentionPolicy } from "./contentRetentionPolicy";
+import { isContentRetentionEnabled } from "./contentRetentionPolicy";
 
 export async function scrubExpiredMessageContent(context: DomainContext, input: { businessId: string }): Promise<number> {
-  if (getContentRetentionPolicy()?.categories.messages === undefined) return 0;
+  if (!isContentRetentionEnabled()) return 0;
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const rows = await tx.update(messages).set({ body: "[content expired]", media: null, contentExpiresAt: null, updatedAt: new Date() }).where(and(eq(messages.businessId, input.businessId), isNotNull(messages.contentExpiresAt), lt(messages.contentExpiresAt, new Date()))).returning({ id: messages.id });
     return rows.length;
@@ -20,17 +20,17 @@ export async function runPrivacyRetentionSweep(
   input: { businessId: string; now?: Date },
 ): Promise<{ scrubbedFollowUps: number; scrubbedMessages: number; scrubbedOperatorDeliveries: number; deletedTranscripts: number; queuedRecordings: number }> {
   const now = input.now ?? new Date();
-  const policy = getContentRetentionPolicy();
+  const contentRetentionEnabled = isContentRetentionEnabled();
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const scrubbedFollowUps = await tx.update(inboxItems)
       .set({ title: EXPIRED_FOLLOW_UP_TITLE, body: EXPIRED_FOLLOW_UP_BODY, contentRetentionStatus: "scrubbed", updatedAt: now })
       .where(and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.contentRetentionStatus, "active"), isNotNull(inboxItems.contentExpiresAt), lt(inboxItems.contentExpiresAt, now)))
       .returning({ id: inboxItems.id });
-    const scrubbedMessages = policy?.categories.messages === undefined ? [] : await tx.update(messages)
+    const scrubbedMessages = !contentRetentionEnabled ? [] : await tx.update(messages)
       .set({ body: "[content expired]", media: null, contentExpiresAt: null, updatedAt: now })
       .where(and(eq(messages.businessId, input.businessId), isNotNull(messages.contentExpiresAt), lt(messages.contentExpiresAt, now)))
       .returning({ id: messages.id });
-    const deletedTranscripts = policy?.categories.transcripts === undefined ? [] : await tx.delete(transcripts)
+    const deletedTranscripts = !contentRetentionEnabled ? [] : await tx.delete(transcripts)
       .where(and(eq(transcripts.businessId, input.businessId), isNotNull(transcripts.expiresAt), lt(transcripts.expiresAt, now)))
       .returning({ callId: transcripts.callId });
     const scrubbedOperatorDeliveries = await tx.update(operatorNotificationDeliveries)
@@ -96,7 +96,7 @@ export async function deleteTranscriptForRetention(
   context: DomainContext,
   input: { businessId: string; callId: string },
 ): Promise<number> {
-  if (getContentRetentionPolicy()?.categories.transcripts === undefined) return 0;
+  if (!isContentRetentionEnabled()) return 0;
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const rows = await tx.delete(transcripts)
       .where(and(eq(transcripts.businessId, input.businessId), eq(transcripts.callId, input.callId), isNotNull(transcripts.expiresAt), lt(transcripts.expiresAt, new Date())))
