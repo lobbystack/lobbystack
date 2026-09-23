@@ -1,5 +1,6 @@
 import { buttonVariants } from "@/components/ui/button"
 import { APP_LOGIN_URL, APP_SIGNUP_URL } from "@/lib/app-links"
+import { GithubIcon } from "@/components/GithubIcon"
 import { localizeHref, localizePath, type Locale } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import {
@@ -59,6 +60,7 @@ const labels = {
     resources: "Resources",
     pricing: "Pricing",
     login: "Log in",
+    github: "LobbyStack on GitHub",
     tryFree: "Try for free",
     blog: "Blog",
     changelog: "Changelog",
@@ -72,6 +74,7 @@ const labels = {
     resources: "Ressources",
     pricing: "Tarifs",
     login: "Connexion",
+    github: "LobbyStack sur GitHub",
     tryFree: "Essayer gratuitement",
     blog: "Blog",
     changelog: "Journal des changements",
@@ -336,10 +339,12 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                     className={cn(
                       "invisible absolute top-full left-0 z-50 grid min-w-56 translate-y-2 gap-3 rounded-lg border border-border/70 bg-popover p-1.5 text-popover-foreground opacity-0 shadow-lg transition-all duration-150 group-focus-within:visible group-focus-within:translate-y-1 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-1 group-hover:opacity-100",
                       link.columns.length === 2 && "w-[31rem] grid-cols-2",
+                      // Wide menus start left of their trigger so they
+                      // stay inside a 1024px window.
                       link.columns.length === 3 &&
-                        "w-max grid-cols-[minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)] gap-x-8 p-4",
+                        "w-max -translate-x-1/4 grid-cols-[minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)] gap-x-8 p-4",
                       link.columns.length === 4 &&
-                        "w-max grid-cols-[minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)] gap-x-8 p-4"
+                        "w-max -translate-x-1/4 grid-cols-[minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)] gap-x-8 p-4"
                     )}
                   >
                     {link.columns.map((column, columnIndex) => (
@@ -429,6 +434,19 @@ export function Navbar({ locale = "en" }: NavbarProps) {
         {/* Desktop CTAs */}
         <div className="hidden items-center gap-3 md:flex">
           <a
+            href="https://github.com/lobbystack/lobbystack"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={copy.github}
+            title={copy.github}
+            className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            data-ph-capture-attribute-section="navbar"
+            data-ph-capture-attribute-action="view_github"
+            data-ph-capture-attribute-destination="https://github.com/lobbystack/lobbystack"
+          >
+            <GithubIcon className="size-[18px]" />
+          </a>
+          <a
             href={APP_LOGIN_URL}
             className="rounded-md text-sm font-medium text-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
@@ -494,7 +512,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                         >
                           <p
                             className={cn(
-                              "px-3 pt-2 text-xs font-medium tracking-wide text-muted-foreground uppercase",
+                              "px-3 pt-2 text-xs font-medium text-muted-foreground",
                               !column.title && "invisible"
                             )}
                           >
@@ -568,6 +586,18 @@ export function Navbar({ locale = "en" }: NavbarProps) {
               )}
             </nav>
             <div className="flex flex-col gap-2 px-6 pt-2 pb-4">
+              <a
+                href="https://github.com/lobbystack/lobbystack"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                data-ph-capture-attribute-section="mobile_navbar"
+                data-ph-capture-attribute-action="view_github"
+                data-ph-capture-attribute-destination="https://github.com/lobbystack/lobbystack"
+              >
+                <GithubIcon className="size-4" />
+                GitHub
+              </a>
               <a
                 href={APP_LOGIN_URL}
                 className="rounded-md px-3 py-2 text-center text-sm font-medium text-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"

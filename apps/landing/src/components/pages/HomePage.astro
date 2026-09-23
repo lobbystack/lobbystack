@@ -9,6 +9,7 @@ import {
   LandingPageAdditions,
 } from "@/components/LandingPageAdditions"
 import { FaqSection } from "@/components/FaqSection"
+import TradeLinks from "@/components/TradeLinks.astro"
 import { CtaSection } from "@/components/CtaSection"
 import { Footer } from "@/components/Footer"
 import { getHomeFaqs } from "@/lib/home-faqs"
@@ -58,11 +59,12 @@ const seo = getRouteSeo({ locale, path: "/" })
   <Navbar locale={locale} />
   <main id="main-content">
     <HeroSection locale={locale}>
-      <LobbyStackHeroVoiceDemo client:idle />
+      <LobbyStackHeroVoiceDemo client:idle locale={locale} />
     </HeroSection>
     <ProductExtensionSection locale={locale} />
     <FeatureGrid locale={locale} />
     <LandingPageAdditions locale={locale} />
+    <TradeLinks locale={locale} />
     <FaqSection locale={locale} />
     <CtaSection locale={locale} />
   </main>

@@ -22,9 +22,9 @@ export const en = {
   },
   routes: {
     "/": {
-      title: "LobbyStack | Open-Source AI Receptionist Software",
+      title: "AI Receptionist Software for Small Businesses | LobbyStack",
       description:
-        "LobbyStack is open-source AI receptionist software for small businesses, with 24/7 phone answering, lead qualification, appointment booking, and call routing.",
+        "LobbyStack answers your business calls 24/7, books appointments into your calendar, and transfers urgent calls to your team. Open source, with a free plan.",
     },
     "/features/": {
       title: "AI receptionist features for calls, messages, and booking",

@@ -2,10 +2,11 @@ export const SITE_URL = "https://lobbystack.com"
 
 export const SITE_NAME = "LobbyStack"
 
-export const DEFAULT_TITLE = "LobbyStack | Open-Source AI Receptionist Software"
+export const DEFAULT_TITLE =
+  "AI Receptionist Software for Small Businesses | LobbyStack"
 
 export const DEFAULT_DESCRIPTION =
-  "LobbyStack is open-source AI receptionist software for small businesses, with 24/7 phone answering, lead qualification, appointment booking, and call routing."
+  "LobbyStack answers your business calls 24/7, books appointments into your calendar, and transfers urgent calls to your team. Open source, with a free plan."
 
 export const DEFAULT_OG_IMAGE = "/og/index.jpg"
 

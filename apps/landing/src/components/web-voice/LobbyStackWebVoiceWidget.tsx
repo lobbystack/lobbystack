@@ -4,12 +4,15 @@ import { hasAnalyticsConsent } from "@/lib/cookie-consent"
 
 const DEFAULT_WEB_CALL_ENDPOINT =
   "https://voice.lobbystack.com/web-call/sessions"
-const DEV_WEB_CALL_ENDPOINT =
-  "https://voice-dev.lobbystack.com/web-call/sessions"
+// `pnpm dev` runs the voice gateway on port 3001.
+const DEV_WEB_CALL_ENDPOINT = "http://localhost:3001/web-call/sessions"
 const DEFAULT_BUSINESS_SLUG = "lobbystack-mp35s9y1"
 const DEV_BUSINESS_SLUG = "lobbystack-qa-motd3txq"
 
-function capturePosthog(eventName: string, properties?: Record<string, unknown>) {
+function capturePosthog(
+  eventName: string,
+  properties?: Record<string, unknown>
+) {
   if (!hasAnalyticsConsent()) {
     return
   }
@@ -54,13 +57,18 @@ export function LobbyStackWebVoiceWidget() {
   )
 }
 
-export function LobbyStackHeroVoiceDemo() {
+export function LobbyStackHeroVoiceDemo({
+  locale = "en",
+}: {
+  locale?: "en" | "fr"
+}) {
   return (
     <LobbyStackAuraVoiceDemo
       businessSlug={getBusinessSlug()}
       endpoint={getEndpoint()}
       widgetId="lobbystack-landing"
       onEvent={capturePosthog}
+      locale={locale}
     />
   )
 }
