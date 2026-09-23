@@ -1,16 +1,16 @@
 import Fastify from "fastify";
 import { expect, it, vi } from "vitest";
-import { acquireVoiceLease, initializeVoiceLifecycle, MAX_ACTIVE_VOICE_SESSIONS } from "./lifecycle";
+import { acquireVoiceLease, initializeVoiceLifecycle } from "./lifecycle";
 
-it("admits more than four calls for one business while bounding gateway-wide capacity", async () => {
+it("admits calls beyond the previous per-business and gateway-wide limits, then drains on shutdown", async () => {
   const server = Fastify();
   initializeVoiceLifecycle(server);
   const stop = vi.fn(async () => undefined);
-  const leases = Array.from({ length: MAX_ACTIVE_VOICE_SESSIONS }, () => acquireVoiceLease(server, stop));
+  const leases = Array.from({ length: 40 }, () => acquireVoiceLease(server, stop));
   expect(leases.every(Boolean)).toBe(true);
   expect(leases[4]).not.toBeNull();
-  expect(acquireVoiceLease(server, stop)).toBeNull();
+  expect(leases[32]).not.toBeNull();
   await server.close();
-  expect(stop).toHaveBeenCalledTimes(MAX_ACTIVE_VOICE_SESSIONS);
+  expect(stop).toHaveBeenCalledTimes(40);
   expect(acquireVoiceLease(server, stop)).toBeNull();
 });

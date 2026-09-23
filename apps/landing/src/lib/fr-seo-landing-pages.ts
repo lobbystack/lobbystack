@@ -971,7 +971,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       sections: [
         {
           title: "Gérez la semaine qui suit une tempête",
-          body: "La grêle et le vent peuvent amener un mois d’appels en deux jours. LobbyStack répond à plusieurs appels en même temps, recueille l’adresse, l’âge de la toiture et les dommages visibles, puis réserve la première plage d’inspection libre. Votre bureau commence la journée avec une liste d’inspections réservées.",
+          body: "La grêle et le vent peuvent amener un mois d’appels en deux jours. LobbyStack prend autant d’appels simultanés qu’il en arrive, recueille l’adresse, l’âge de la toiture et les dommages visibles, puis réserve la première plage d’inspection libre. Votre bureau commence la journée avec une liste d’inspections réservées.",
           points: [
             "Répond aux appels simultanés",
             "Recueille l’adresse, l’âge de la toiture et les dommages visibles",

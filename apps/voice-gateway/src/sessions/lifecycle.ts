@@ -4,7 +4,6 @@ import { settleVoiceTasks } from "../realtime/safety";
 type Lease = { stop: () => Promise<void> };
 type Registry = { closing: boolean; leases: Set<Lease> };
 const registries = new WeakMap<FastifyInstance, Registry>();
-export const MAX_ACTIVE_VOICE_SESSIONS = 32;
 
 export function isVoiceClosing(server: FastifyInstance): boolean {
   return registries.get(server)?.closing === true;
@@ -22,7 +21,7 @@ export function initializeVoiceLifecycle(server: FastifyInstance): void {
 
 export function acquireVoiceLease(server: FastifyInstance, stop: () => Promise<void>) {
   const registry = registries.get(server);
-  if (!registry || registry.closing || registry.leases.size >= MAX_ACTIVE_VOICE_SESSIONS) return null;
+  if (!registry || registry.closing) return null;
   const lease: Lease = { stop };
   registry.leases.add(lease);
   return {

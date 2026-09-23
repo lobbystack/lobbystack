@@ -1934,7 +1934,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       const lease = acquireVoiceLease(server, async () => {
         if (activeSession) await finishWebCallSession(server, activeSession, "gateway_shutdown");
       });
-      if (!lease) return reply.code(503).send({ error: "Voice capacity reached." });
+      if (!lease) return reply.code(503).send({ error: "Voice gateway is shutting down." });
       let providerCallId = `webcall_${gatewaySessionId}`;
       const startedAt = new Date().toISOString();
       let call: Awaited<ReturnType<typeof startWebVoiceCall>>;

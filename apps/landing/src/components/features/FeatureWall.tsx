@@ -120,7 +120,7 @@ const mediumCards: FeatureCard[] = [
     tag: "Multilingual",
   },
   {
-    title: "Concurrent calls",
+    title: "Unlimited concurrent calls",
     description:
       "Multiple customers can be helped at the same time instead of waiting in a queue or hitting a busy line.",
     icon: Users,
@@ -359,7 +359,7 @@ const mediumCardsFr: FeatureCard[] = [
     tag: "Multilingue",
   },
   {
-    title: "Appels simultanés",
+    title: "Appels simultanés illimités",
     description:
       "Plusieurs clients peuvent être aidés en même temps, sans file d’attente ni tonalité occupée.",
     icon: Users,

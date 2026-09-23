@@ -26,6 +26,6 @@ describe("featuresMarkdown", () => {
     expect(everyPlan).toContain("Free includes 30 browser voice minutes and no telephone number.")
     expect(everyPlan).toContain("Starter and Pro include a dedicated telephone number for inbound phone calls and call transfers.")
     expect(everyPlan).not.toMatch(/Every plan includes[^\n]*\b(outbound calls|transfers|telephone call answering)\b/)
-    expect(everyPlan).not.toContain("unlimited concurrent calls")
+    expect(everyPlan).toContain("unlimited concurrent calls")
   })
 })

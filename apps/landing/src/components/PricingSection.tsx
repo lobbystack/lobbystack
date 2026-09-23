@@ -362,7 +362,7 @@ const comparisonGroupsEn: ComparisonGroup[] = [
         enterprise: true,
       },
       {
-        feature: "Concurrent calls",
+        feature: "Unlimited concurrent calls",
         free: true,
         pro: true,
         enterprise: true,
@@ -611,7 +611,7 @@ const comparisonGroupsFr: ComparisonGroup[] = [
         enterprise: true,
       },
       {
-        feature: "Appels simultanés",
+        feature: "Appels simultanés illimités",
         free: true,
         pro: true,
         enterprise: true,
