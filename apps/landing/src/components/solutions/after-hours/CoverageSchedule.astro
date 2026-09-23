@@ -1,0 +1,91 @@
+---
+import { ArrowDown } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+// Each option shows the path a call takes. The step where LobbyStack picks
+// up is dark; everything else is the caller or your own phone.
+const modes = [
+  {
+    title: "After hours",
+    body: "Your team answers while you're open. LobbyStack takes over when you close.",
+    steps: [
+      { text: "A call comes in at 7:40 p.m." },
+      { text: "Your office is closed" },
+      { text: "LobbyStack answers", lobbystack: true },
+    ],
+    setting: "Turn on call forwarding when you close",
+  },
+  {
+    title: "Overflow",
+    body: "Your phone rings first. LobbyStack only picks up the calls your team misses.",
+    steps: [
+      { text: "A call comes in at 2:15 p.m." },
+      { text: "Your line is busy or nobody answers" },
+      { text: "LobbyStack picks up", lobbystack: true },
+    ],
+    setting: "Forward calls when busy or unanswered",
+  },
+  {
+    title: "Every call",
+    body: "LobbyStack answers first and sends your team only the calls that need a person.",
+    steps: [
+      { text: "A call comes in" },
+      { text: "LobbyStack answers", lobbystack: true },
+      { text: "Urgent calls go to your team" },
+    ],
+    setting: "Forward all calls",
+  },
+]
+---
+
+<section class="border-t border-border/40 py-20 md:py-28" id="coverage">
+  <div class="mx-auto max-w-7xl px-6">
+    <div class="max-w-3xl">
+      <h2 class="section-heading">Choose when LobbyStack answers</h2>
+      <p class="section-intro">
+        You keep your business number. Pick one of these setups with your phone
+        provider, and change it whenever you want, including for holidays.
+      </p>
+    </div>
+
+    <ul class="mt-12 grid gap-6 md:grid-cols-3">
+      {
+        modes.map((mode) => (
+          <li class="flex flex-col rounded-[1.35rem] border border-border/70 bg-background p-6 md:p-7">
+            <h3 class="card-heading text-xl md:text-2xl">{mode.title}</h3>
+            <p class="body-copy mt-2 text-base">{mode.body}</p>
+
+            <ol class="mt-6 flex flex-1 flex-col items-start">
+              {mode.steps.map((step, index) => (
+                <li class="flex flex-col items-start">
+                  {index > 0 && (
+                    <ArrowDown
+                      className="my-1.5 ml-4 size-4 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span
+                    class={cn(
+                      "rounded-full border px-4 py-2 text-sm font-medium",
+                      step.lobbystack
+                        ? "border-foreground bg-foreground text-background"
+                        : // #FAF8F6 matches the homepage illustrations
+                          "border-[#E4DCD1] bg-[#FAF8F6] text-foreground"
+                    )}
+                  >
+                    {step.text}
+                  </span>
+                </li>
+              ))}
+            </ol>
+
+            <p class="mt-6 border-t border-border/60 pt-4 text-sm text-muted-foreground">
+              <span class="font-medium text-foreground">Phone setting:</span>{" "}
+              {mode.setting}
+            </p>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>

@@ -8,27 +8,27 @@ import type { Locale } from "@/i18n"
 
 const featureGridCopy = {
   en: {
-    headingStart: "Handle every call, lead, and booking",
-    headingEmphasis: "automatically",
+    headingStart: "Answer calls and book appointments",
+    headingEmphasis: "while you work",
     intro:
       "Answer questions, qualify new customers, book appointments, capture follow-up details, and route urgent calls with context.",
     imageAlt:
       "LobbyStack AI receptionist capabilities: answers calls, books appointments, qualifies leads, transfers calls, and sends summaries",
     features: [
       {
-        title: "Answers every call",
+        title: "Answers your calls",
         description:
-          "LobbyStack can answer all calls, or only when you're unavailable. It answers complex questions, captures details, and keeps the conversation moving.",
+          "LobbyStack can answer all your calls, or only when you're unavailable. It answers questions from your business information and collects what your team needs to follow up.",
         icon: Phone,
       },
       {
         title: "Books appointments",
         description:
-          "Connect your calendar and LobbyStack will check availability, offer time slots, book appointments, and send confirmations automatically.",
+          "Connect Google Calendar, and LobbyStack checks availability, offers open times, books the appointment, and texts the caller a confirmation.",
         icon: CalendarCheck,
       },
       {
-        title: "Captures every detail",
+        title: "Collects caller details",
         description:
           "LobbyStack collects names, contact info, service needs, timing, and next steps so your team can follow up with context.",
         icon: ClipboardList,
@@ -42,16 +42,15 @@ const featureGridCopy = {
     ],
   },
   fr: {
-    headingStart:
-      "Répondez à chaque appel, qualifiez chaque demande et prenez les rendez‑vous",
-    headingEmphasis: "automatiquement",
+    headingStart: "Répondez aux appels et planifiez les rendez‑vous",
+    headingEmphasis: "pendant que vous travaillez",
     intro:
       "Répondez aux questions, qualifiez les nouveaux clients, planifiez les rendez‑vous, collectez les informations utiles et transférez les appels urgents avec le bon contexte.",
     imageAlt:
       "Fonctionnalités du réceptionniste IA LobbyStack : réponse aux appels, rendez‑vous, qualification, transferts et résumés",
     features: [
       {
-        title: "Répond à chaque appel",
+        title: "Répond à vos appels",
         description:
           "LobbyStack peut répondre à tous les appels ou seulement quand vous êtes indisponible. Il répond aux questions, collecte les détails importants et garde la conversation utile.",
         icon: Phone,

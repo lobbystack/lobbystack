@@ -1,5 +1,4 @@
 import { buttonVariants } from "@/components/ui/button"
-import { GithubIcon } from "@/components/GithubIcon"
 import { APP_SIGNUP_URL } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
 import { getCopy, type Locale } from "@/i18n"
@@ -13,18 +12,19 @@ type HeroSectionProps = {
 
 const heroCopy = {
   en: {
-    github: "Star us on GitHub",
     h1Start: "LobbyStack turns",
     h1Emphasis: "missed calls",
     h1End: "into booked work.",
-    body: "LobbyStack is open-source AI receptionist software for small businesses. It answers phone calls, qualifies leads, and books appointments 24/7. Use it for every inbound call, or only when your team is busy.",
+    body: "LobbyStack is an AI receptionist for small businesses. It answers your phone, books appointments into your calendar, and sends urgent calls to your team. Use it for every call, or only when you're busy.",
+    pricing: "Free plan with 30 minutes a month. Paid plans from $30.",
   },
   fr: {
-    github: "Soutenez-nous sur GitHub",
     h1Start: "LobbyStack transforme",
     h1Emphasis: "appels manqués",
     h1End: "en rendez‑vous.",
-    body: "LobbyStack est un réceptionniste IA open source qui répond au téléphone, qualifie les demandes et planifie des rendez‑vous 24/7. Activez-le pour tous vos appels ou seulement quand votre équipe est occupée.",
+    body: "LobbyStack est un réceptionniste IA pour les petites entreprises. Il répond au téléphone, planifie les rendez‑vous dans votre calendrier et transfère les appels urgents à votre équipe. Activez-le pour tous vos appels ou seulement quand vous êtes occupé.",
+    pricing:
+      "Forfait gratuit avec 30 minutes par mois. Forfaits payants à partir de 30 $.",
   },
 } satisfies Record<Locale, Record<string, string>>
 
@@ -40,21 +40,7 @@ export function HeroSection({ children, locale = "en" }: HeroSectionProps) {
       <div className="mx-auto w-full max-w-7xl px-6 pt-14 pb-10 md:pt-10 md:pb-20 lg:pt-12 lg:pb-24">
         <div className="grid min-w-0 items-center gap-6 md:gap-12 xl:grid-cols-2 xl:gap-16">
           <div className="max-w-3xl min-w-0 text-left">
-            <a
-              href="https://github.com/lobbystack/lobbystack"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="animate-fade-up mb-6 inline-flex h-9 items-center gap-2 rounded-full border border-border/70 bg-background px-4 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted"
-              data-ph-capture-attribute-section="hero"
-              data-ph-capture-attribute-action="view_github"
-              data-ph-capture-attribute-destination="https://github.com/lobbystack/lobbystack"
-            >
-              <GithubIcon className="size-4" />
-              {localCopy.github}
-              <ArrowRight className="size-4" />
-            </a>
-
-            <h1 className="animate-fade-up display-heading delay-100">
+            <h1 className="animate-fade-up display-heading">
               {locale === "fr" ? (
                 <>
                   {localCopy.h1Start} les{" "}
@@ -97,7 +83,7 @@ export function HeroSection({ children, locale = "en" }: HeroSectionProps) {
 
             {/* Micro-copy */}
             <p className="animate-fade-up fine-print mt-5 delay-400">
-              {copy.common.noCreditCard}
+              {localCopy.pricing}
             </p>
           </div>
 

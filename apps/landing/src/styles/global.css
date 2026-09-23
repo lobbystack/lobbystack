@@ -229,10 +229,6 @@
   @apply mt-4 max-w-[65ch] text-base leading-relaxed text-muted-foreground md:text-lg;
 }
 
-.eyebrow-label {
-  @apply font-mono text-[0.6875rem] font-medium tracking-[0.14em] text-muted-foreground uppercase;
-}
-
 .card-heading {
   @apply font-heading text-2xl leading-tight font-medium tracking-[-0.035em];
 }

@@ -9,10 +9,17 @@ import {
 import type { CallAction, TradeDetails } from "@/lib/trade-details"
 
 interface Props {
-  details: TradeDetails
+  details: Pick<TradeDetails, "noun" | "routing">
+  intro?: string
+  callHeading?: string
 }
 
 const { details } = Astro.props
+const article = /^(?:[aeiou]|HVAC)/i.test(details.noun) ? "an" : "a"
+const {
+  intro = `You decide what LobbyStack does with each kind of call. A typical setup for ${article} ${details.noun} business looks like this.`,
+  callHeading = "When a caller has",
+} = Astro.props
 
 const actionIcons: Record<CallAction, typeof PhoneForwarded> = {
   Transfers: PhoneForwarded,
@@ -26,10 +33,7 @@ const actionIcons: Record<CallAction, typeof PhoneForwarded> = {
 <section class="mx-auto max-w-7xl px-6 py-20 md:py-28" id="call-handling">
   <div class="max-w-3xl">
     <h2 class="section-heading">What happens to each {details.noun} call</h2>
-    <p class="section-intro">
-      You decide what LobbyStack does with each kind of call. A typical setup
-      for a {details.noun} business looks like this.
-    </p>
+    <p class="section-intro">{intro}</p>
   </div>
 
   <div
@@ -41,7 +45,7 @@ const actionIcons: Record<CallAction, typeof PhoneForwarded> = {
       <thead class="hidden bg-muted/50 md:table-header-group">
         <tr>
           <th scope="col" class="w-[34%] px-6 py-4 font-medium text-foreground">
-            When a caller has
+            {callHeading}
           </th>
           <th scope="col" class="w-[20%] px-6 py-4 font-medium text-foreground">
             LobbyStack

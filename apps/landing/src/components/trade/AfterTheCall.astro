@@ -3,7 +3,7 @@ import { Check } from "lucide-react"
 import type { TradeDetails } from "@/lib/trade-details"
 
 interface Props {
-  details: TradeDetails
+  details: Pick<TradeDetails, "noun" | "intake">
 }
 
 const { details } = Astro.props
