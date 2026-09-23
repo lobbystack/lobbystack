@@ -46,7 +46,6 @@ jobs:
             --exclude '^https://app\.lobbystack\.com/'
             --exclude '^https://voice\.lobbystack\.com/web-call/'
             --exclude '^http://localhost:3001/web-call/'
-            --exclude '^https://.*\.fly\.dev/web-call/'
             --exclude '^https://theresanaiforthat\.com/ai/lobbystack/'
             --exclude '^https://www\.bls\.gov/ooh/Office-and-Administrative-Support/Receptionists\.htm$'
             --exclude '^https://www\.hhs\.gov/hipaa/for-professionals/special-topics/health-information-technology/cloud-computing/$'
