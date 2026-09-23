@@ -104,6 +104,8 @@ pnpm exec tsx --tsconfig scripts/tsconfig.json \
   --before "$historical_cutoff" --limit 100
 ```
 
+Run the command once per category: `messages`, `transcripts`, and `recordings`. Messages and transcripts take their first expiry. Recordings already have a retention date, so that pass only shortens a date longer than the plan allows and never extends a shorter one.
+
 The command resolves the business plan, reports counts, records already due, and a resume cursor without printing customer content. Keep the cutoff fixed when resuming with `--after`. Apply requires `--apply`, `--historical-approval-id`, and `--historical-basis created-at`; review the already-due count before using those flags.
 
 Disabling the gate stops future sweeps. It cannot restore scrubbed or deleted content.
