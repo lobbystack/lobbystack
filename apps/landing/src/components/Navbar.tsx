@@ -1,12 +1,15 @@
 import { buttonVariants } from "@/components/ui/button"
 import { APP_LOGIN_URL, APP_SIGNUP_URL } from "@/lib/app-links"
+import { GithubIcon } from "@/components/GithubIcon"
 import { localizeHref, localizePath, type Locale } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import {
   BookOpen,
   CalendarCheck,
+  Building2,
   Calculator,
   ChevronDown,
+  CloudHail,
   DoorOpen,
   ExternalLink,
   Gift,
@@ -57,6 +60,7 @@ const labels = {
     resources: "Resources",
     pricing: "Pricing",
     login: "Log in",
+    github: "LobbyStack on GitHub",
     tryFree: "Try for free",
     blog: "Blog",
     changelog: "Changelog",
@@ -70,6 +74,7 @@ const labels = {
     resources: "Ressources",
     pricing: "Tarifs",
     login: "Connexion",
+    github: "LobbyStack sur GitHub",
     tryFree: "Essayer gratuitement",
     blog: "Blog",
     changelog: "Journal des changements",
@@ -98,6 +103,8 @@ const solutionLabelMap = {
     applianceRepair: "Appliance repair",
     restoration: "Restoration",
     locksmiths: "Locksmiths",
+    roofing: "Roofing",
+    propertyManagement: "Property management",
   },
   fr: {
     solutions: "Solutions",
@@ -117,6 +124,8 @@ const solutionLabelMap = {
     applianceRepair: "Réparation d'électroménagers",
     restoration: "Restauration",
     locksmiths: "Serruriers",
+    roofing: "Toiture",
+    propertyManagement: "Gestion immobilière",
   },
 } satisfies Record<Locale, Record<string, string>>
 
@@ -222,6 +231,16 @@ const tradeLinks = (locale: Locale) =>
       href: "/solutions/ai-receptionist-for-locksmiths/",
       icon: KeyRound,
     },
+    {
+      label: solutionLabelMap[locale].roofing,
+      href: "/solutions/roofing-answering-service/",
+      icon: CloudHail,
+    },
+    {
+      label: solutionLabelMap[locale].propertyManagement,
+      href: "/solutions/property-management-answering-service/",
+      icon: Building2,
+    },
   ] satisfies NavChildLink[]
 
 const tradeColumns = (locale: Locale): NavColumn[] => {
@@ -318,10 +337,12 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                     className={cn(
                       "absolute top-full left-0 z-50 grid min-w-56 translate-y-1 gap-3 rounded-lg border border-border/70 bg-popover p-1.5 text-popover-foreground shadow-lg",
                       link.columns.length === 2 && "w-[31rem] grid-cols-2",
+                      // Wide menus start left of their trigger so they
+                      // stay inside a 1024px window.
                       link.columns.length === 3 &&
-                        "w-max grid-cols-[minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)] gap-x-8 p-4",
+                        "w-max -translate-x-1/4 grid-cols-[minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)] gap-x-8 p-4",
                       link.columns.length === 4 &&
-                        "w-max grid-cols-[minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)] gap-x-8 p-4"
+                        "w-max -translate-x-1/4 grid-cols-[minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)] gap-x-8 p-4"
                     )}
                   >
                     {link.columns.map((column, columnIndex) => (
@@ -412,6 +433,19 @@ export function Navbar({ locale = "en" }: NavbarProps) {
         <div className="hidden items-center gap-3 md:flex">
           <a data-language-switch href={locale === "fr" ? "/" : "/fr/"} hrefLang={locale === "fr" ? "en" : "fr"} lang={locale === "fr" ? "en" : "fr"} className="rounded-md text-sm focus-visible:outline-2 focus-visible:outline-ring">{locale === "fr" ? "English" : "Français"}</a>
           <a
+            href="https://github.com/lobbystack/lobbystack"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={copy.github}
+            title={copy.github}
+            className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            data-ph-capture-attribute-section="navbar"
+            data-ph-capture-attribute-action="view_github"
+            data-ph-capture-attribute-destination="https://github.com/lobbystack/lobbystack"
+          >
+            <GithubIcon className="size-[18px]" />
+          </a>
+          <a
             href={APP_LOGIN_URL}
             className="rounded-md text-sm font-medium text-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
@@ -477,7 +511,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                         >
                           <p
                             className={cn(
-                              "px-3 pt-2 text-xs font-medium tracking-wide text-muted-foreground uppercase",
+                              "px-3 pt-2 text-xs font-medium text-muted-foreground",
                               !column.title && "invisible"
                             )}
                           >
@@ -552,6 +586,18 @@ export function Navbar({ locale = "en" }: NavbarProps) {
             </nav>
             <div className="flex flex-col gap-2 px-6 pt-2 pb-4">
               <a data-language-switch href={locale === "fr" ? "/" : "/fr/"} hrefLang={locale === "fr" ? "en" : "fr"} lang={locale === "fr" ? "en" : "fr"} className="rounded-md px-3 py-2 text-center text-sm focus-visible:outline-2 focus-visible:outline-ring">{locale === "fr" ? "English" : "Français"}</a>
+              <a
+                href="https://github.com/lobbystack/lobbystack"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                data-ph-capture-attribute-section="mobile_navbar"
+                data-ph-capture-attribute-action="view_github"
+                data-ph-capture-attribute-destination="https://github.com/lobbystack/lobbystack"
+              >
+                <GithubIcon className="size-4" />
+                GitHub
+              </a>
               <a
                 href={APP_LOGIN_URL}
                 className="rounded-md px-3 py-2 text-center text-sm font-medium text-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"

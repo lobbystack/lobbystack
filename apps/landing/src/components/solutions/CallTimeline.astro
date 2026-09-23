@@ -1,0 +1,126 @@
+---
+import { ArrowLeft, ArrowRight } from "lucide-react"
+import type { TimelineCall } from "@/lib/solution-details"
+import { cn } from "@/lib/utils"
+
+interface Props {
+  title: string
+  calls: TimelineCall[]
+}
+
+const { title, calls } = Astro.props
+const id = `timeline-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`
+---
+
+<figure aria-labelledby={id} data-call-timeline>
+  <figcaption>
+    <h2 id={id} class="section-heading">
+      {title}
+    </h2>
+  </figcaption>
+
+  <ol
+    class="mt-12 flex snap-x snap-mandatory gap-8 overflow-x-auto overscroll-x-contain [scrollbar-width:none] md:mt-16 [&::-webkit-scrollbar]:hidden"
+    aria-label={`${title}, in order`}
+    tabindex="0"
+    data-call-timeline-track
+  >
+    {
+      calls.map((call) => {
+        const urgent = call.action === "Transfers"
+        return (
+          <li class="relative flex w-[min(80vw,22rem)] shrink-0 snap-start flex-col">
+            {/* Each call draws the line to the next one */}
+            <span
+              class="absolute top-4 -right-8 left-0 h-px bg-border"
+              aria-hidden="true"
+            />
+            <span
+              class={cn(
+                "relative inline-flex h-8 w-fit items-center rounded-full border px-3.5 text-sm font-medium whitespace-nowrap tabular-nums",
+                urgent
+                  ? "border-foreground bg-foreground text-background"
+                  : // #FAF8F6 matches the background of the homepage illustrations
+                    "border-[#E4DCD1] bg-[#FAF8F6] text-foreground"
+              )}
+            >
+              {call.at}
+            </span>
+            <p class="mt-5 min-h-[2.75rem] text-base leading-snug font-medium text-foreground">
+              {call.reason}
+            </p>
+            <img
+              src={call.image}
+              alt={call.imageAlt}
+              width="900"
+              height="600"
+              class="mt-4 aspect-[3/2] w-full rounded-xl bg-[#FAF8F6] object-cover"
+              loading="lazy"
+              decoding="async"
+            />
+          </li>
+        )
+      })
+    }
+  </ol>
+
+  <div class="mt-6 flex gap-3">
+    <button
+      type="button"
+      class="flex size-10 cursor-pointer items-center justify-center rounded-full border border-border/70 bg-background text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-default disabled:opacity-40"
+      aria-label="Earlier calls"
+      data-call-timeline-prev
+    >
+      <ArrowLeft className="size-4" aria-hidden="true" />
+    </button>
+    <button
+      type="button"
+      class="flex size-10 cursor-pointer items-center justify-center rounded-full border border-border/70 bg-background text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-default disabled:opacity-40"
+      aria-label="Later calls"
+      data-call-timeline-next
+    >
+      <ArrowRight className="size-4" aria-hidden="true" />
+    </button>
+  </div>
+</figure>
+
+<script>
+  for (const root of document.querySelectorAll<HTMLElement>(
+    "[data-call-timeline]"
+  )) {
+    const track = root.querySelector<HTMLElement>("[data-call-timeline-track]")
+    const prev = root.querySelector<HTMLButtonElement>(
+      "[data-call-timeline-prev]"
+    )
+    const next = root.querySelector<HTMLButtonElement>(
+      "[data-call-timeline-next]"
+    )
+    if (!track || !prev || !next) continue
+
+    // Move by one call: its width plus the gap to the next one.
+    const step = () => {
+      const [first, second] = track.children
+      if (!(first instanceof HTMLElement)) return track.clientWidth
+      return second instanceof HTMLElement
+        ? second.offsetLeft - first.offsetLeft
+        : first.offsetWidth
+    }
+    const behavior = () =>
+      matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
+    const update = () => {
+      prev.disabled = track.scrollLeft <= 1
+      next.disabled =
+        track.scrollLeft + track.clientWidth >= track.scrollWidth - 1
+    }
+
+    prev.addEventListener("click", () =>
+      track.scrollBy({ left: -step(), behavior: behavior() })
+    )
+    next.addEventListener("click", () =>
+      track.scrollBy({ left: step(), behavior: behavior() })
+    )
+    track.addEventListener("scroll", update, { passive: true })
+    window.addEventListener("resize", update)
+    update()
+  }
+</script>

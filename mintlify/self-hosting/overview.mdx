@@ -1,6 +1,6 @@
 ---
 title: "Understand self-hosting"
-description: "Understand the services required to run LobbyStack with your own infrastructure and provider accounts."
+description: "Learn which services a self-hosted LobbyStack deployment runs, how call data moves between them, and which parts you operate, from Railway to your own servers."
 sidebarTitle: "Self-hosting overview"
 contentType: "Conceptual"
 ---
@@ -27,7 +27,7 @@ The repository's [`docker-compose.yml`](https://github.com/lobbystack/lobbystack
 - the Next.js admin dashboard and HTTP API
 - the background worker and transactional outbox dispatcher
 - the voice gateway for Twilio Media Streams and OpenAI Realtime
-- Caddy for public routing and TLS
+- Caddy to route the dashboard and voice gateway hostnames over plain HTTP, behind the proxy or load balancer that terminates HTTPS
 
 LobbyStack does not add monitoring containers to the Compose stack. Server runtimes can send traces, metrics, and OpenTelemetry logs to a configured OTLP-compatible backend.
 

@@ -6,6 +6,7 @@ import tailwindcss from "@tailwindcss/vite"
 import { defineConfig, fontProviders } from "astro/config"
 import { createLogger } from "vite"
 import { translatedBasePaths } from "./src/i18n/translated-base-paths.ts"
+import { indexNowChangedPages } from "./src/lib/indexnow.ts"
 import { stableLastmodForUrl } from "./src/lib/sitemap.ts"
 
 const SITE_URL = "https://lobbystack.com"
@@ -134,7 +135,7 @@ export default defineConfig({
       },
       directives: [
         "default-src 'self'",
-        "connect-src 'self' https://app.cal.com https://voice.lobbystack.com https://voice-dev.lobbystack.com https://lobbystack-voice-prod.fly.dev https://ai-receptionist-voice-dev-raphael.fly.dev http://localhost:3001 http://127.0.0.1:3001 https://cloudflareinsights.com https://ts.lobbystack.com https://us.i.posthog.com",
+        "connect-src 'self' https://app.cal.com https://voice.lobbystack.com http://localhost:3001 http://127.0.0.1:3001 https://cloudflareinsights.com https://ts.lobbystack.com https://us.i.posthog.com",
         "frame-src 'self' https://app.cal.com",
         "img-src 'self' data: https://app.cal.com https://images.unsplash.com https://i.pravatar.cc https://ts.lobbystack.com https://us.i.posthog.com",
       ],
@@ -161,25 +162,6 @@ export default defineConfig({
           href.startsWith("/feed.xml") ||
           href.startsWith("/llms.txt"),
       },
-      ...(INDEXNOW_KEY
-        ? {
-            indexNow: {
-              key: INDEXNOW_KEY,
-              host: "lobbystack.com",
-              siteUrl: SITE_URL,
-              filter: (url) => {
-                const pathname = new URL(url).pathname
-                return (
-                  !isNoindexPath(pathname) &&
-                  !pathname.startsWith("/api/") &&
-                  !pathname.startsWith("/schema/") &&
-                  !pathname.startsWith("/.well-known/") &&
-                  !pathname.endsWith(".md")
-                )
-              },
-            },
-          }
-        : {}),
     }),
     sitemap({
       entryLimit: 1000,
@@ -201,6 +183,20 @@ export default defineConfig({
         site: (item) => {
           if (!new URL(item.url).pathname.startsWith("/blog/")) return item
         },
+      },
+    }),
+    indexNowChangedPages({
+      key: INDEXNOW_KEY,
+      host: "lobbystack.com",
+      siteUrl: SITE_URL,
+      include: (url) => {
+        const pathname = new URL(url).pathname
+        return (
+          !isNoindexPath(pathname) &&
+          !pathname.startsWith("/api/") &&
+          !pathname.startsWith("/schema/") &&
+          !pathname.startsWith("/.well-known/")
+        )
       },
     }),
     pagefind(),

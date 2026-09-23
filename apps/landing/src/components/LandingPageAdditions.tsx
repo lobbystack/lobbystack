@@ -48,7 +48,6 @@ const homeSectionsCopy = {
           title: "A receptionist that picks up when you need it to",
           description:
             "Let LobbyStack answer every call, or only step in when your team is busy, after hours, or unable to pick up.",
-          cta: "Answering",
           image: "/illustrations/call-capture.webp",
           alt: "Incoming call routing to team members or LobbyStack when the team is unavailable",
           imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
@@ -60,7 +59,6 @@ const homeSectionsCopy = {
           title: "Appointments booked without the back-and-forth",
           description:
             "Offer available times, confirm appointments, and send follow-up details without manual back-and-forth.",
-          cta: "Booking",
           image: "/illustrations/booking-flow.webp",
           alt: "LobbyStack offering available appointment times and confirming a booking with caller confirmation",
           imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
@@ -72,7 +70,6 @@ const homeSectionsCopy = {
           title: "Human handoff when a call needs it",
           description:
             "Route urgent or unusual calls to a human with the caller's reason, contact details, and conversation context attached.",
-          cta: "Handoff",
           image: "/illustrations/human-handoff.webp",
           alt: "Urgent caller message transferred to a team member with reason and context attached",
           imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
@@ -165,7 +162,7 @@ const homeSectionsCopy = {
     },
     openSource: {
       heading: "Proudly open-source, self-hosted",
-      body: "Host LobbyStack on your own server. Own your customer data and stay fully compliant with regulatory standards.",
+      body: "Run LobbyStack on your own servers and keep call recordings and customer data in your own infrastructure.",
       cta: "View on GitHub",
       selfHostedCta: "Self-Hosting Overview",
     },
@@ -216,7 +213,6 @@ const homeSectionsCopy = {
           title: "Une réceptionniste qui décroche quand vous en avez besoin",
           description:
             "Laissez LobbyStack répondre à chaque appel, ou seulement prendre le relais quand votre équipe est occupée, fermée ou indisponible.",
-          cta: "Réponse",
           image: "/illustrations/call-capture.webp",
           alt: "Routage d’appel entrant vers l’équipe ou LobbyStack quand l’équipe est indisponible",
           imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
@@ -228,7 +224,6 @@ const homeSectionsCopy = {
           title: "Des rendez‑vous pris sans allers-retours",
           description:
             "Proposez des créneaux disponibles, confirmez les rendez‑vous et envoyez les informations de suivi sans échanges manuels.",
-          cta: "Réservation",
           image: "/illustrations/booking-flow.webp",
           alt: "LobbyStack propose des créneaux disponibles et confirme un rendez‑vous avec envoi de confirmation à l’appelant",
           imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
@@ -240,7 +235,6 @@ const homeSectionsCopy = {
           title: "Transfert humain quand l’appel l’exige",
           description:
             "Transférez les appels urgents ou inhabituels vers une personne avec le motif, les coordonnées et le contexte de la conversation.",
-          cta: "Transfert",
           image: "/illustrations/human-handoff.webp",
           alt: "Message urgent d’un appelant transféré à un membre de l’équipe avec le motif et le contexte",
           imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
@@ -334,7 +328,7 @@ const homeSectionsCopy = {
     },
     openSource: {
       heading: "Open source, prêt pour l'auto-hébergement",
-      body: "Hébergez LobbyStack sur votre propre serveur. Gardez la maîtrise de vos données client et de vos exigences de conformité.",
+      body: "Hébergez LobbyStack sur vos propres serveurs et gardez les enregistrements d’appels et les données client dans votre infrastructure.",
       cta: "Voir sur GitHub",
       selfHostedCta: "Aperçu de l'auto-hébergement",
     },
@@ -485,7 +479,6 @@ function QualityToolsSection({ locale = "en" }: LocalizedProps) {
                 />
               </div>
               <div className="w-full flex-1 md:py-8">
-                <span className="eyebrow-label mb-4 block">{card.cta}</span>
                 <h3 className="card-heading md:text-3xl">{card.title}</h3>
                 <p className="body-copy mt-5 max-w-[65ch] md:text-lg">
                   {card.description}

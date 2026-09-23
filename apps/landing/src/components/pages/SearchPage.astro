@@ -34,7 +34,7 @@ const pageCopy = {
     locale,
     noindex: true,
     jsonLd: [
-      organizationJsonLd({ locale }),
+      organizationJsonLd(),
       webSiteJsonLd({ locale }),
       breadcrumbJsonLd([
         { name: copy.common.home, path: localizePath(locale, "/") },

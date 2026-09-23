@@ -2,10 +2,11 @@ export const SITE_URL = "https://lobbystack.com"
 
 export const SITE_NAME = "LobbyStack"
 
-export const DEFAULT_TITLE = "LobbyStack | Open-Source AI Receptionist Software"
+export const DEFAULT_TITLE =
+  "AI Receptionist Software for Small Businesses | LobbyStack"
 
 export const DEFAULT_DESCRIPTION =
-  "LobbyStack is open-source AI receptionist software for small businesses, with 24/7 phone answering, lead qualification, appointment booking, and call routing."
+  "LobbyStack answers your business calls 24/7, books appointments into your calendar, and transfers urgent calls to your team. Open source, with a free plan."
 
 export const DEFAULT_OG_IMAGE = "/og/index.jpg"
 
@@ -29,6 +30,9 @@ const BRAND_SAME_AS = [
   "https://github.com/lobbystack/lobbystack",
   "https://www.capterra.com/p/10046185/LobbyStack/",
   "https://sourceforge.net/software/product/LobbyStack/",
+  "https://www.g2.com/products/lobbystack/reviews",
+  "https://alternativeto.net/software/lobbystack/about/",
+  "https://www.saashub.com/lobbystack",
 ]
 
 export type JsonLd = Record<string, unknown>
@@ -122,7 +126,9 @@ type LocaleInput = {
 const localeLanguage = (locale: LocaleInput["locale"] = "en") =>
   locale === "fr" ? "fr" : "en"
 
-export const organizationJsonLd = (options: LocaleInput = {}): JsonLd => ({
+// No inLanguage here: schema.org doesn't define it on Organization, and
+// validators flag the property.
+export const organizationJsonLd = (): JsonLd => ({
   "@type": "Organization",
   "@id": absoluteUrl("/#organization"),
   name: SITE_NAME,
@@ -138,7 +144,6 @@ export const organizationJsonLd = (options: LocaleInput = {}): JsonLd => ({
   },
   description:
     "LobbyStack is an open-source AI receptionist platform for small businesses that answers calls, books appointments, captures caller details, and routes urgent requests.",
-  inLanguage: localeLanguage(options.locale),
   sameAs: BRAND_SAME_AS,
   knowsAbout: [
     "AI receptionist software",
@@ -468,9 +473,7 @@ export const blogPostingJsonLd = ({
       "@id": absoluteUrl("/#organization"),
     },
     isPartOf: {
-      "@id": absoluteUrl(
-        `${locale === "fr" ? "/fr/blog/" : "/blog/"}#blog`
-      ),
+      "@id": absoluteUrl(`${locale === "fr" ? "/fr/blog/" : "/blog/"}#blog`),
     },
     mainEntityOfPage: {
       "@id": `${url}#webpage`,

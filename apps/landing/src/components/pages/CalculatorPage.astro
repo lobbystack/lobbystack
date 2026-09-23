@@ -252,7 +252,7 @@ const t = pageCopy[locale]
     canonicalPath,
     locale,
     jsonLd: [
-      organizationJsonLd({ locale }),
+      organizationJsonLd(),
       webSiteJsonLd({ locale }),
       breadcrumbJsonLd([
         { name: common.home, path: localizePath(locale, "/") },

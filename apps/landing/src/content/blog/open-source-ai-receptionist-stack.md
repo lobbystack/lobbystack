@@ -82,7 +82,7 @@ Some teams want the product managed. [LobbyStack Cloud](/pricing/) is for that. 
 
 Other teams want the stack on their own infrastructure. LobbyStack supports that too.
 
-The [self-hosted AI receptionist](/solutions/self-hosted-ai-receptionist/) path uses Docker Compose as the single-host baseline. The documented setup runs PostgreSQL, Redis, the Next.js app, the background worker, the voice gateway, and Caddy for HTTPS. You bring the provider accounts you want to control, including Twilio, OpenAI-compatible AI, Google Calendar, email, analytics, and billing credentials.
+The [self-hosted AI receptionist](/solutions/self-hosted-ai-receptionist/) path uses Docker Compose as the single-host baseline. The documented setup runs PostgreSQL, Redis, the Next.js app, the background worker, the voice gateway, and Caddy to route traffic to them. You put HTTPS in front of Caddy. You bring the provider accounts you want to control, including Twilio, OpenAI-compatible AI, Google Calendar, email, analytics, and billing credentials.
 
 That gives agencies and technical operators a cleaner client story. If a clinic, med spa, home service company, or law firm wants the system on its own servers or cloud account, you can deploy there instead of forcing the business into a closed hosted app.
 

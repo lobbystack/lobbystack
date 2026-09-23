@@ -105,7 +105,7 @@ const changelogItemListJsonLd = {
     canonicalPath,
     locale,
     jsonLd: [
-      organizationJsonLd({ locale }),
+      organizationJsonLd(),
       webSiteJsonLd({ locale }),
       breadcrumbJsonLd([
         { name: copy.common.home, path: localizePath(locale, "/") },
@@ -153,7 +153,7 @@ const changelogItemListJsonLd = {
                 <div class="md:pt-1 md:text-right">
                   <a
                     href={`#${anchorId}`}
-                    class="inline-flex rounded-xl bg-muted px-4 py-2 font-mono text-xs font-medium tracking-[0.08em] text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    class="inline-flex rounded-xl bg-muted px-4 py-2 font-mono text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
                     <time datetime={entry.data.pubDate.toISOString()}>
                       {formattedDate}
@@ -174,7 +174,7 @@ const changelogItemListJsonLd = {
                 <div class="min-w-0 pb-2 md:pb-16">
                   <div class="mb-6 flex flex-wrap items-center gap-3">
                     {entry.data.category && (
-                      <span class="rounded-md border border-border/70 px-2.5 py-1 font-mono text-[0.6875rem] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                      <span class="rounded-md border border-border/70 px-2.5 py-1 font-mono text-xs font-medium text-muted-foreground">
                         {entry.data.category}
                       </span>
                     )}

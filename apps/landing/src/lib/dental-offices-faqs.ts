@@ -2,9 +2,9 @@ import type { FaqItem } from "@/lib/seo"
 
 export const dentalOfficesFaqs: FaqItem[] = [
   {
-    question: "What is an AI receptionist for dental offices?",
+    question: "What is an AI dental answering service?",
     answer:
-      "An AI receptionist for dental practices answers patient calls, books appointments, handles recalls, and routes emergencies. It works around the clock so new patients and existing patients reach someone even when the front desk is busy or closed.",
+      "An AI dental answering service answers your practice’s phone, books appointments, answers insurance and policy questions, and routes emergencies. It picks up when the front desk is busy or closed, so patients reach someone instead of voicemail.",
   },
   {
     question: "Can it book new patient appointments?",
@@ -27,19 +27,19 @@ export const dentalOfficesFaqs: FaqItem[] = [
       "You define what counts as an emergency. LobbyStack can ask about pain level, swelling, trauma, or bleeding, then transfer the call to your emergency line or take a detailed message with context.",
   },
   {
-    question: "Can it send appointment reminders and recalls?",
+    question: "Can it send appointment reminders?",
     answer:
-      "Yes. LobbyStack can confirm appointments, send reminder texts, and follow up on recall lists. Your team sets the schedule and messaging, and LobbyStack handles the outreach.",
+      "Yes. LobbyStack texts a reminder 24 hours before each appointment it books, if the patient agreed to texts. It doesn't run recall campaigns for patients who are due for a cleaning.",
   },
   {
     question: "Is patient data handled securely?",
     answer:
-      "LobbyStack processes call transcripts and summaries. For HIPAA-covered practices, self-hosted deployment gives you full control over data storage and access. Our managed cloud environment uses encryption in transit and at rest. Consult your compliance officer to confirm the setup meets your requirements.",
+      "For each call, LobbyStack saves the recording, a transcript, a summary, the caller's name and number, and any appointment it booked. It also keeps text messages with patients and the documents you upload to its knowledge base. On LobbyStack Cloud, that data lives on our servers, and recordings are deleted after 90 days. Twilio and OpenAI also process the call audio while the call is live. If your practice is covered by HIPAA, you can self-host LobbyStack so the data stays on your own servers. Check the setup with your compliance officer before you take patient calls.",
   },
   {
     question: "Will it integrate with my practice management software?",
     answer:
-      "LobbyStack includes calendar booking and webhook notifications. Direct PMS integrations depend on your specific software. Many practices use the webhook or email alerts to feed booking data into their existing system.",
+      "Not directly. LobbyStack books into Google Calendar and doesn't connect to practice management software like Dentrix or Open Dental, so your team copies new bookings into your PMS.",
   },
   {
     question: "Can it reschedule or cancel appointments?",
@@ -49,6 +49,6 @@ export const dentalOfficesFaqs: FaqItem[] = [
   {
     question: "How much does it cost for a dental practice?",
     answer:
-      "LobbyStack offers a free plan with included voice minutes and paid plans for higher call volume. Most single-location dental practices start on the free plan. See the pricing page for current limits and rates.",
+      "The free plan includes 30 voice minutes for testing, without a phone number. Starter costs $30 a month for 150 minutes and a dedicated number, and Pro costs $100 a month for 500 minutes. Spam calls and calls under 10 seconds don't count.",
   },
 ]

@@ -1,0 +1,79 @@
+---
+import { CornerDownRight, PhoneCall } from "lucide-react"
+import type { TradeDetails } from "@/lib/trade-details"
+
+interface Props {
+  details: TradeDetails
+}
+
+const { details } = Astro.props
+// "an electrical business", "an HVAC business", "a plumbing business"
+const article = /^(?:[aeiou]|HVAC)/i.test(details.noun) ? "an" : "a"
+---
+
+<figure
+  class="overflow-hidden rounded-[1.35rem] border border-border/70 bg-background text-left shadow-[0_1px_3px_oklch(0_0_0/4%),0_8px_32px_oklch(0_0_0/6%),0_24px_60px_oklch(0_0_0/4%)]"
+  aria-labelledby="example-call-title"
+>
+  <header
+    class="flex items-start gap-3 border-b border-border/60 px-5 py-4 md:px-6"
+  >
+    <span
+      class="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground text-background"
+      aria-hidden="true"
+    >
+      <PhoneCall className="size-4" strokeWidth={2} />
+    </span>
+    <div>
+      <p id="example-call-title" class="text-sm font-semibold text-foreground">
+        Example call to {details.business}
+      </p>
+      <p class="mt-0.5 text-xs text-muted-foreground">{details.scenario}</p>
+    </div>
+  </header>
+
+  <ol class="space-y-4 px-5 py-5 md:px-6">
+    {
+      details.call.map((line) => (
+        <li class="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-3">
+          <span class="pt-0.5 text-xs text-muted-foreground tabular-nums">
+            {line.at}
+          </span>
+          <div>
+            <p class="text-xs font-semibold text-foreground">
+              {line.speaker === "lobbystack" ? "LobbyStack" : "Caller"}
+            </p>
+            <p
+              class={
+                line.speaker === "lobbystack"
+                  ? "mt-1 text-sm leading-relaxed text-foreground"
+                  : "mt-1 text-sm leading-relaxed text-muted-foreground"
+              }
+            >
+              {line.text}
+            </p>
+            {line.note && (
+              <p class="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-muted/60 px-2 py-1 text-xs font-medium text-foreground">
+                <CornerDownRight
+                  className="size-3.5 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                {line.note}
+              </p>
+            )}
+          </div>
+        </li>
+      ))
+    }
+  </ol>
+
+  <figcaption
+    class="border-t border-border/60 bg-muted/40 px-5 py-4 text-sm text-foreground md:px-6"
+  >
+    {details.outcome}
+    <span class="mt-1 block text-xs text-muted-foreground">
+      An example of how {article}
+      {details.noun} business can set up its rules. The business and caller are fictional.
+    </span>
+  </figcaption>
+</figure>

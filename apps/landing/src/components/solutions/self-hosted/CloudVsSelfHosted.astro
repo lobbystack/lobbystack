@@ -1,0 +1,113 @@
+---
+import { APP_SIGNUP_URL } from "@/lib/app-links"
+
+const rows = [
+  {
+    topic: "Who runs the servers",
+    cloud: "LobbyStack",
+    self: "You, on Docker Compose, Railway, or your own cloud",
+  },
+  {
+    topic: "Software cost",
+    cloud: "Free plan, then $30 or $100 a month with minutes included",
+    self: "No license fee under the MIT License",
+  },
+  {
+    topic: "Phone and AI usage",
+    cloud: "Included in your plan's minutes",
+    self: "Billed to your own Twilio and OpenAI accounts",
+  },
+  {
+    topic: "Where call data lives",
+    cloud: "LobbyStack's managed infrastructure",
+    self: "Your PostgreSQL database and storage",
+  },
+  {
+    topic: "Updates",
+    cloud: "Roll out automatically",
+    self: "You pull a release and redeploy when you're ready",
+  },
+  {
+    topic: "Backups and monitoring",
+    cloud: "Handled for you",
+    self: "Your team sets them up and tests restores",
+  },
+  {
+    topic: "Code",
+    cloud: "The open-source core",
+    self: "The same core, and you can change it",
+  },
+]
+---
+
+<section
+  class="border-t border-border/40 py-20 md:py-28"
+  id="cloud-vs-self-hosted"
+>
+  <div class="mx-auto max-w-7xl px-6">
+    <div class="max-w-3xl">
+      <h2 class="section-heading">LobbyStack Cloud or self-hosted</h2>
+      <p class="section-intro">
+        Both run the same receptionist. Pick self-hosting when you need the data
+        on your own servers and have someone to run them.
+      </p>
+    </div>
+
+    <div
+      class="mt-12 overflow-x-auto rounded-[1.35rem] border border-border/70"
+    >
+      <table class="w-full min-w-[640px] border-collapse text-left text-sm">
+        <thead class="bg-muted/50">
+          <tr>
+            <th
+              scope="col"
+              class="w-[24%] px-6 py-4 font-medium text-foreground"
+            >
+              <span class="sr-only">Topic</span>
+            </th>
+            <th
+              scope="col"
+              class="w-[38%] px-6 py-4 font-medium text-foreground"
+            >
+              Self-hosted
+            </th>
+            <th scope="col" class="px-6 py-4 font-medium text-foreground">
+              LobbyStack Cloud
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            rows.map((row) => (
+              <tr class="border-t border-border/60">
+                <th
+                  scope="row"
+                  class="px-6 py-5 align-top font-medium text-foreground"
+                >
+                  {row.topic}
+                </th>
+                <td class="px-6 py-5 align-top leading-relaxed text-foreground">
+                  {row.self}
+                </td>
+                <td class="px-6 py-5 align-top leading-relaxed text-muted-foreground">
+                  {row.cloud}
+                </td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="mt-6 text-sm text-muted-foreground">
+      Rather not run servers?{" "}
+      <a
+        href={APP_SIGNUP_URL}
+        data-ph-signup-cta
+        data-ph-capture-attribute-section="self_hosted_compare"
+        class="font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground"
+      >
+        Start on LobbyStack Cloud for free
+      </a>.
+    </p>
+  </div>
+</section>

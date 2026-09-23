@@ -1,0 +1,135 @@
+---
+// Matches the services in docker-compose.yml and the data flow in
+// mintlify/self-hosting/overview.mdx.
+const apps = [
+  { name: "Voice gateway", detail: "Runs live calls" },
+  { name: "Dashboard", detail: "Admin app and API" },
+  { name: "Worker", detail: "Background jobs" },
+]
+const data = [
+  { name: "PostgreSQL", detail: "Calls, contacts, settings" },
+  { name: "Redis", detail: "Queues and rate limits" },
+  { name: "Storage", detail: "Recordings and documents" },
+]
+---
+
+<figure aria-label="How a call moves through a self-hosted LobbyStack">
+  <div class="flex flex-col lg:flex-row lg:items-center">
+    <!-- Outside, left. Twilio is the only box in the row's flow, so the
+         call audio line meets its edge; Caller sits above it. -->
+    <div class="flex flex-col lg:relative lg:w-44 lg:shrink-0">
+      <div class="flex flex-col lg:absolute lg:inset-x-0 lg:bottom-full">
+        <div class="rounded-xl border border-border/70 bg-background px-4 py-3">
+          <p class="text-sm font-medium text-foreground">Caller</p>
+          <p class="mt-0.5 text-xs text-muted-foreground">
+            Dials your business number
+          </p>
+        </div>
+        <span class="mx-auto block h-6 w-px bg-border" aria-hidden="true"
+        ></span>
+      </div>
+      <div class="rounded-xl border border-border/70 bg-background px-4 py-3">
+        <p class="text-sm font-medium text-foreground">Twilio</p>
+        <p class="mt-0.5 text-xs text-muted-foreground">
+          Your account carries the call
+        </p>
+      </div>
+    </div>
+
+    <div
+      class="relative flex h-12 items-center justify-center lg:h-auto lg:min-w-24 lg:flex-1"
+    >
+      <span
+        class="block h-full w-px bg-border lg:h-px lg:w-full"
+        aria-hidden="true"></span>
+      <span
+        class="absolute left-1/2 ml-3 text-[11px] whitespace-nowrap text-muted-foreground lg:bottom-2 lg:left-auto lg:ml-0"
+      >
+        Call audio
+      </span>
+    </div>
+
+    <!-- Your server -->
+    <div
+      class="rounded-[1.35rem] border border-dashed border-foreground/35 bg-muted/30 p-4 md:p-5 lg:w-[50%] lg:shrink-0"
+    >
+      <p class="flex items-baseline justify-between gap-4 px-1">
+        <span class="text-sm font-semibold text-foreground">Your server</span>
+        <span class="font-mono text-xs text-muted-foreground">
+          docker compose
+        </span>
+      </p>
+      <div
+        class="mt-4 rounded-xl border border-border/70 bg-background px-4 py-2.5 text-center text-sm"
+      >
+        <span class="font-medium text-foreground">Caddy</span>
+        <span class="text-muted-foreground">
+          · Routes your dashboard and voice domains</span
+        >
+      </div>
+      <ul class="mt-3 grid gap-3 sm:grid-cols-3">
+        {
+          apps.map((service) => (
+            <li class="rounded-xl border border-border/70 bg-background px-4 py-3">
+              <p class="text-sm font-medium text-foreground">{service.name}</p>
+              <p class="mt-0.5 text-xs text-muted-foreground">
+                {service.detail}
+              </p>
+            </li>
+          ))
+        }
+      </ul>
+      <ul class="mt-3 grid gap-3 sm:grid-cols-3">
+        {
+          data.map((service) => (
+            <li class="rounded-xl border border-foreground/15 bg-foreground/[0.04] px-4 py-3">
+              <p class="text-sm font-medium text-foreground">{service.name}</p>
+              <p class="mt-0.5 text-xs text-muted-foreground">
+                {service.detail}
+              </p>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="mt-4 px-1 text-xs text-muted-foreground">
+        Recordings, transcripts, and customer records stay in the bottom row.
+      </p>
+    </div>
+
+    <div
+      class="relative flex h-12 items-center justify-center lg:h-auto lg:min-w-24 lg:flex-1"
+    >
+      <span
+        class="block h-full w-px bg-border lg:h-px lg:w-full"
+        aria-hidden="true"></span>
+      <span
+        class="absolute left-1/2 ml-3 text-[11px] whitespace-nowrap text-muted-foreground lg:bottom-2 lg:left-auto lg:ml-0"
+      >
+        Speech in and out
+      </span>
+    </div>
+
+    <!-- Outside, right. OpenAI is the only box in the row's flow, so the
+         speech line meets its edge; optional services hang below it. -->
+    <div class="flex flex-col lg:relative lg:w-44 lg:shrink-0">
+      <div class="rounded-xl border border-border/70 bg-background px-4 py-3">
+        <p class="text-sm font-medium text-foreground">OpenAI Realtime</p>
+        <p class="mt-0.5 text-xs text-muted-foreground">
+          Your account generates the replies
+        </p>
+      </div>
+      <div class="flex flex-col lg:absolute lg:inset-x-0 lg:top-full">
+        <span
+          class="mx-auto block h-6 w-px border-l border-dashed border-border"
+          aria-hidden="true"></span>
+        <div class="rounded-xl border border-dashed border-border px-4 py-3">
+          <p class="text-sm font-medium text-foreground">Optional</p>
+          <p class="mt-0.5 text-xs text-muted-foreground">
+            Google Calendar, email, analytics, and website import, if you
+            connect them
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</figure>

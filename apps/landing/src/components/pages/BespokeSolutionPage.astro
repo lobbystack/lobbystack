@@ -93,9 +93,9 @@ const variants = {
   },
   scheduler: {
     path: "/solutions/ai-appointment-scheduler/",
-    title: "AI Appointment Scheduler for Small Businesses | LobbyStack",
+    title: "AI Appointment Scheduler and Answering Service | LobbyStack",
     description:
-      "LobbyStack schedules appointments from phone calls, captures caller details, sends confirmations, and routes urgent requests to your team.",
+      "LobbyStack is an answering service with appointment scheduling built in. It books appointments during calls, captures caller details, sends confirmations, and routes urgent requests.",
     image: "/illustrations/booking-flow.webp",
     imageAlt: "LobbyStack AI appointment scheduler booking a caller",
     breadcrumb:
@@ -109,16 +109,16 @@ const variants = {
   },
   homeServices: {
     path: "/solutions/ai-receptionist-for-home-services/",
-    title: "AI Receptionist for Home Services | LobbyStack",
+    title: "Home Services Answering Service with AI | LobbyStack",
     description:
-      "LobbyStack answers calls for HVAC, plumbing, electrical, roofing, landscaping, and other home services teams while crews are on the job.",
+      "LobbyStack is an AI answering service for home services teams. It answers HVAC, plumbing, electrical, roofing, and landscaping calls while crews are on the job.",
     image: "/illustrations/industry-bookings.webp",
     imageAlt:
       "LobbyStack AI receptionist booking home services jobs from phone calls",
     breadcrumb:
       locale === "fr"
         ? "Services à domicile"
-        : "AI Receptionist for Home Services",
+        : "Home Services Answering Service",
     faqs: homeServicesFaqs,
     fr: {
       title: "Réceptionniste IA pour services à domicile | LobbyStack",
@@ -160,7 +160,7 @@ const homeLabel = locale === "fr" ? "Accueil" : "Home"
     image: variant.image,
     imageAlt: variant.imageAlt,
     jsonLd: [
-      organizationJsonLd({ locale }),
+      organizationJsonLd(),
       webSiteJsonLd({ locale }),
       breadcrumbJsonLd([
         { name: homeLabel, path: localizePath(locale, "/") },

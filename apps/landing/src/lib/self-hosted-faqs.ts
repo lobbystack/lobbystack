@@ -14,12 +14,12 @@ export const selfHostedFaqs: FaqItem[] = [
   {
     question: "What are the self-hosting requirements?",
     answer:
-      "You need a server or container platform that can run Node.js and a supported database. LobbyStack provides Docker and Docker Compose configurations for quick local and production deployments. You also need a telephony provider account for call handling.",
+      "The Docker Compose guide asks for Docker Engine 24 or later with Compose v2, Node.js 22 or later to generate secrets, and a server with at least 2 vCPU, 4 GB of RAM, and persistent disk. Live calls also need domains with HTTPS for the dashboard and voice gateway, plus Twilio and OpenAI accounts. The Railway template sets up the services and databases for you.",
   },
   {
     question: "Can I use my own LLM or API key?",
     answer:
-      "Self-hosted deployments use the provider credentials supported by the current LobbyStack repository and deployment documentation. Review the repository before deployment for the current model and telephony integrations rather than assuming every provider is interchangeable.",
+      "You use your own API keys. Voice calls run on OpenAI Realtime with your OpenAI account. Website chat and knowledge embeddings accept any OpenAI-compatible endpoint, so you can point them at another provider or a model you host.",
   },
   {
     question: "Is self-hosting suitable for agencies and resellers?",

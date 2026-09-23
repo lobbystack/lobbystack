@@ -9,6 +9,27 @@ import { APP_SIGNUP_URL } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
 import { ArrowRight, Check } from "lucide-react"
 import { LightModeDashboardMockup } from "@/components/solutions/LightModeDashboardMockup"
+import ExampleCall from "@/components/trade/ExampleCall.astro"
+import CallRouting from "@/components/trade/CallRouting.astro"
+import AfterTheCall from "@/components/trade/AfterTheCall.astro"
+import SetupAndCompare from "@/components/trade/SetupAndCompare.astro"
+import CallTimeline from "@/components/solutions/CallTimeline.astro"
+import StackedHero from "@/components/solutions/StackedHero.astro"
+import CoverageSchedule from "@/components/solutions/after-hours/CoverageSchedule.astro"
+import AfterHoursCost from "@/components/solutions/after-hours/AfterHoursCost.astro"
+import AfterHoursIndustries from "@/components/solutions/after-hours/AfterHoursIndustries.astro"
+import ArchitectureDiagram from "@/components/solutions/self-hosted/ArchitectureDiagram.astro"
+import SelfHostedHero from "@/components/solutions/self-hosted/SelfHostedHero.astro"
+import WhatYouRun from "@/components/solutions/self-hosted/WhatYouRun.astro"
+import CloudVsSelfHosted from "@/components/solutions/self-hosted/CloudVsSelfHosted.astro"
+import {
+  afterHoursRouting,
+  dentalCalls,
+  dentalDetails,
+  nightCalls,
+} from "@/lib/solution-details"
+import { seoLandingPages } from "@/lib/seo-landing-pages"
+import { tradeDetails, tradeDetailsFor } from "@/lib/trade-details"
 import {
   assertLocale,
   getCopy,
@@ -43,8 +64,27 @@ const tradeSlugs = [
   "ai-receptionist-for-locksmiths",
   "after-hours-answering-service-for-contractors",
 ]
-const isTradePage = tradeSlugs.includes(page.slug)
+// Trade pages with written call examples get the full trade layout. The
+// French pages don't have that content yet and keep the simpler layout.
+const details = locale === "en" ? tradeDetailsFor(page.slug) : undefined
+const isTradePage = tradeSlugs.includes(page.slug) && !details
+const otherTrades = details
+  ? seoLandingPages.filter(
+      (candidate) =>
+        candidate.slug !== page.slug && tradeDetails[candidate.slug]
+    )
+  : []
 const isAboutPage = page.path === "/about/"
+// The English after-hours and self-hosted pages get their own sections in
+// the same row layout as the trade pages.
+const isAfterHours =
+  locale === "en" && page.slug === "after-hours-answering-service"
+const isSelfHosted =
+  locale === "en" && page.slug === "self-hosted-ai-receptionist"
+const isDental =
+  locale === "en" && page.slug === "ai-receptionist-for-dental-offices"
+const stackedHero = isAfterHours || isDental
+const richLayout = Boolean(details) || stackedHero || isSelfHosted
 
 const faqJsonLd =
   page.faqs.length > 0
@@ -53,7 +93,9 @@ const faqJsonLd =
 const reassurance =
   locale === "fr"
     ? "Aucune carte bancaire requise. Fonctionne avec votre numero professionnel actuel."
-    : "No credit card required. Works with your existing business number."
+    : isSelfHosted
+      ? "Free to self-host under the MIT License. You pay your own hosting, Twilio, and OpenAI bills."
+      : "No credit card required. Works with your existing business number."
 ---
 
 <Layout
@@ -65,7 +107,7 @@ const reassurance =
     image: page.image,
     imageAlt: page.imageAlt,
     jsonLd: [
-      organizationJsonLd({ locale }),
+      organizationJsonLd(),
       webSiteJsonLd({ locale }),
       breadcrumbJsonLd([
         { name: copy.common.home, path: localizePath(locale, "/") },
@@ -79,109 +121,147 @@ const reassurance =
   <main id="main-content" class="min-h-screen bg-background text-foreground">
     <!-- Hero Section -->
     <section class="mx-auto max-w-7xl px-6 pt-16 pb-0 md:pt-20 lg:pt-24">
-      <div
-        class={cn(
-          "grid gap-12 lg:items-center",
-          isTradePage || isAboutPage
-            ? "mx-auto max-w-3xl text-center"
-            : "lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]"
-        )}
-      >
-        <div>
-          <p class="eyebrow-label mb-5">
-            {page.eyebrow}
-          </p>
-          <h1 class="display-heading">
-            {page.h1}
-          </h1>
-          <p
-            class={cn(
-              "body-copy mt-6 max-w-[65ch] md:text-lg",
-              (isTradePage || isAboutPage) && "mx-auto"
-            )}
+      {
+        isSelfHosted && (
+          <SelfHostedHero
+            h1={page.h1}
+            intro={page.intro}
+            guideHref={page.ctaPrimaryHref ?? "/docs/"}
+          />
+        )
+      }
+      {
+        stackedHero && (
+          <StackedHero
+            h1={page.h1}
+            intro={page.intro}
+            primary={{
+              href: localizeHref(locale, page.ctaPrimaryHref ?? APP_SIGNUP_URL),
+              label: page.ctaPrimaryLabel ?? copy.common.tryFree,
+            }}
+            secondary={{
+              href: localizeHref(locale, page.ctaSecondaryHref ?? "/pricing/"),
+              label: page.ctaSecondaryLabel ?? copy.common.seePricing,
+            }}
+            reassurance={reassurance}
           >
-            {page.intro}
-          </p>
-
+            {isAfterHours ? (
+              <CallTimeline
+                title="One night of calls to Harbor Plumbing & Heating"
+                calls={nightCalls}
+              />
+            ) : (
+              <CallTimeline
+                title="A day of calls to Maple Street Dental"
+                calls={dentalCalls}
+              />
+            )}
+          </StackedHero>
+        )
+      }
+      {
+        !(stackedHero || isSelfHosted) && (
           <div
             class={cn(
-              "mt-8 flex flex-wrap items-center gap-4",
-              (isTradePage || isAboutPage) && "justify-center"
+              "grid gap-12 lg:items-center",
+              isTradePage || isAboutPage
+                ? "mx-auto max-w-3xl text-center"
+                : richLayout
+                  ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start"
+                  : "lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]"
             )}
           >
-            <a
-              href={localizeHref(
-                locale,
-                page.ctaPrimaryHref ?? APP_SIGNUP_URL
-              )}
-              class={cn(
-                buttonVariants({ size: "lg" }),
-                "h-11 w-full max-w-80 rounded-full px-16 text-sm font-medium md:w-auto md:max-w-none"
-              )}
-            >
-              {page.ctaPrimaryLabel ?? copy.common.tryFree}
-              <ArrowRight className="ml-1 size-4" />
-            </a>
-            <a
-              href={localizeHref(
-                locale,
-                page.ctaSecondaryHref ?? "/pricing/"
-              )}
-              class="inline-flex h-11 w-full max-w-80 items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted md:w-auto md:max-w-none"
-            >
-              {page.ctaSecondaryLabel ?? copy.common.seePricing}
-            </a>
-          </div>
-          <p class="mt-4 text-xs text-muted-foreground">
-            {reassurance}
-          </p>
-        </div>
+            <div>
+              <h1 class="display-heading">{page.h1}</h1>
+              <p
+                class={cn(
+                  "body-copy mt-6 max-w-[65ch] md:text-lg",
+                  (isTradePage || isAboutPage) && "mx-auto"
+                )}
+              >
+                {page.intro}
+              </p>
 
-        {
-          !isTradePage && !isAboutPage && (
-            <div
-              class={cn(
-                "min-h-[300px] w-full sm:min-h-[380px] lg:min-h-[440px]",
-                page.group === "solution" ? "lg:translate-y-10" : undefined
-              )}
-            >
-              {page.group === "solution" &&
-              [
-                "after-hours-answering-service",
-                "ai-receptionist-for-dental-offices",
-                "ai-receptionist-for-salons-and-spas",
-                "self-hosted-ai-receptionist",
-              ].includes(page.slug) ? (
-                <LightModeDashboardMockup slug={page.slug} />
-              ) : (
-                <div class="h-full w-full overflow-hidden rounded-2xl border border-border/70 bg-muted shadow-[0_20px_50px_rgba(0,0,0,0.05)]">
-                  <img
-                    src={page.image}
-                    alt={page.imageAlt}
-                    width="1200"
-                    height="800"
-                    class="aspect-[4/3] h-full w-full object-cover lg:aspect-[1.15/1]"
-                    decoding="async"
-                    fetchpriority="high"
-                  />
-                </div>
-              )}
+              <div
+                class={cn(
+                  "mt-8 flex flex-wrap items-center gap-4",
+                  (isTradePage || isAboutPage) && "justify-center"
+                )}
+              >
+                <a
+                  href={localizeHref(
+                    locale,
+                    page.ctaPrimaryHref ?? APP_SIGNUP_URL
+                  )}
+                  class={cn(
+                    buttonVariants({ size: "lg" }),
+                    "h-11 w-full max-w-80 rounded-full px-16 text-sm font-medium md:w-auto md:max-w-none"
+                  )}
+                >
+                  {page.ctaPrimaryLabel ?? copy.common.tryFree}
+                  <ArrowRight className="ml-1 size-4" />
+                </a>
+                <a
+                  href={localizeHref(
+                    locale,
+                    page.ctaSecondaryHref ?? "/pricing/"
+                  )}
+                  class="inline-flex h-11 w-full max-w-80 items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted md:w-auto md:max-w-none"
+                >
+                  {page.ctaSecondaryLabel ?? copy.common.seePricing}
+                </a>
+              </div>
+              <p class="mt-4 text-xs text-muted-foreground">{reassurance}</p>
             </div>
-          )
-        }
-      </div>
+
+            {details && <ExampleCall details={details} />}
+            {!richLayout && !isTradePage && !isAboutPage && (
+              <div
+                class={cn(
+                  "min-h-[300px] w-full sm:min-h-[380px] lg:min-h-[440px]",
+                  page.group === "solution" ? "lg:translate-y-10" : undefined
+                )}
+              >
+                {page.group === "solution" &&
+                [
+                  "after-hours-answering-service",
+                  "ai-receptionist-for-dental-offices",
+                  "ai-receptionist-for-salons-and-spas",
+                  "self-hosted-ai-receptionist",
+                ].includes(page.slug) ? (
+                  <LightModeDashboardMockup slug={page.slug} />
+                ) : (
+                  <div class="h-full w-full overflow-hidden rounded-2xl border border-border/70 bg-muted shadow-[0_20px_50px_rgba(0,0,0,0.05)]">
+                    <img
+                      src={page.image}
+                      alt={page.imageAlt}
+                      width="1200"
+                      height="800"
+                      class="aspect-[4/3] h-full w-full object-cover lg:aspect-[1.15/1]"
+                      decoding="async"
+                      fetchpriority="high"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      }
 
       <!-- Proof Points / Benefits -->
-      <div class="mt-16 grid gap-6 py-12 sm:grid-cols-3">
+      <div
+        class="mt-16 grid divide-y divide-border/60 border-y border-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0"
+      >
         {
           page.proofPoints.map((point) => (
-            <div class="flex items-start gap-3.5">
-              <div class="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground/5">
+            <div class="flex items-center justify-center gap-3 px-6 py-6 text-center">
+              <span class="flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground/5">
                 <Check
                   className="size-3.5 text-foreground/80"
                   strokeWidth={2.5}
                 />
-              </div>
+              </span>
               <p class="text-sm leading-relaxed font-medium text-muted-foreground">
                 {point}
               </p>
@@ -194,74 +274,177 @@ const reassurance =
         isTradePage && (
           <figure class="mx-auto mb-16 max-w-5xl overflow-hidden rounded-2xl border border-border/60 bg-muted shadow-sm">
             <img
-              src="/screenshots/calls.webp"
+              src="/screenshots/dashboard.webp"
               alt={
                 locale === "fr"
-                  ? "Historique réel des appels LobbyStack avec résultats, durées et détails de suivi"
-                  : "Real LobbyStack call history showing outcomes, durations, and follow-up details"
+                  ? "Page d’accueil du tableau de bord LobbyStack avec les appels du mois, les suivis, les rendez-vous à venir et les appels récents"
+                  : "LobbyStack dashboard Home page with monthly calls, follow-ups, upcoming appointments, and recent calls"
               }
-              width="1024"
-              height="1024"
+              width="3020"
+              height="1898"
               class="h-auto w-full"
               loading="lazy"
               decoding="async"
             />
             <figcaption class="border-t border-border/50 px-5 py-4 text-sm text-muted-foreground">
               {locale === "fr"
-                ? "Chaque appel qualifié reste visible dans le tableau de bord pour que l’équipe puisse vérifier le résultat et la prochaine étape."
-                : "Every qualified call remains visible in the dashboard so the team can verify the outcome and next step."}
+                ? "Le tableau de bord LobbyStack affiche chaque appel répondu avec son résultat, ainsi que les suivis et les rendez-vous que votre équipe doit traiter."
+                : "The LobbyStack dashboard shows each answered call with its outcome, plus the follow-ups and appointments your team needs to handle."}
             </figcaption>
           </figure>
         )
       }
     </section>
 
+    {details && <CallRouting details={details} />}
+    {isDental && <CallRouting details={dentalDetails} />}
+    {
+      isAfterHours && (
+        <>
+          <CallRouting
+            details={afterHoursRouting}
+            intro="You decide what LobbyStack does with each kind of call. Here's a typical after-hours setup."
+            callHeading="The call"
+          />
+          <CoverageSchedule />
+        </>
+      )
+    }
+    {
+      isSelfHosted && (
+        <>
+          <section
+            class="border-t border-border/40 py-20 md:py-28"
+            id="architecture"
+          >
+            <div class="mx-auto max-w-7xl px-6">
+              <div class="max-w-3xl">
+                <h2 class="section-heading">
+                  How a call moves through your server
+                </h2>
+                <p class="section-intro">
+                  Everything inside the dashed line runs on your server. Twilio
+                  and OpenAI run on your own accounts.
+                </p>
+              </div>
+              <div class="mt-12">
+                <ArchitectureDiagram />
+              </div>
+            </div>
+          </section>
+          <WhatYouRun />
+        </>
+      )
+    }
+
     <!-- Alternating Solution Tour Sections -->
-    <section class="border-t border-border/40 bg-muted/15 py-20 md:py-28">
-      <div class="mx-auto max-w-7xl space-y-20 px-6 md:space-y-32">
-        {
-          page.sections.map((section, index) => {
-            const isEven = index % 2 === 0
-            return (
-              <div class="grid gap-12 lg:grid-cols-12 lg:items-center">
-                <div
-                  class={cn(
-                    "space-y-5 lg:col-span-6",
-                    isEven ? "lg:order-first" : "lg:order-last"
-                  )}
-                >
-                  <h2 class="section-heading text-left leading-[1.1]">
-                    {section.title}
-                  </h2>
-                  <p class="body-copy max-w-[55ch] text-base md:text-lg">
+    {
+      richLayout && (
+        <section class="border-t border-border/40 py-20 md:py-28">
+          <div class="mx-auto max-w-7xl divide-y divide-border/60 px-6">
+            {page.sections.map((section) => (
+              <div class="grid gap-6 py-12 first:pt-0 last:pb-0 lg:grid-cols-12 lg:gap-12">
+                <h2 class="font-heading text-2xl leading-[1.15] font-medium tracking-[-0.04em] md:text-3xl lg:col-span-5">
+                  {section.title}
+                </h2>
+                <div class="lg:col-span-7">
+                  <p class="body-copy max-w-[65ch] md:text-lg">
                     {section.body}
                   </p>
-                </div>
-                <div class="lg:col-span-6">
-                  <div class="rounded-2xl border border-border/60 bg-background p-8 shadow-[0_10px_30px_rgba(0,0,0,0.02)] md:p-10">
-                    <ul class="space-y-4">
-                      {section.points.map((point) => (
-                        <li class="flex items-start gap-3.5">
-                          <div class="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground/5">
-                            <Check
-                              className="size-3.5 text-foreground/80"
-                              strokeWidth={2.5}
-                            />
-                          </div>
-                          <span class="text-sm font-medium text-muted-foreground md:text-base">
-                            {point}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  <ul class="mt-6 space-y-3">
+                    {section.points.map((point) => (
+                      <li class="flex items-start gap-3 text-sm font-medium text-foreground md:text-base">
+                        <span class="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground/5">
+                          <Check
+                            className="size-3.5 text-foreground/80"
+                            strokeWidth={2.5}
+                          />
+                        </span>
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
-            )
-          })
-        }
-      </div>
-    </section>
+            ))}
+          </div>
+        </section>
+      )
+    }
+    {
+      !richLayout && (
+        <section class="border-t border-border/40 bg-muted/15 py-20 md:py-28">
+          <div class="mx-auto max-w-7xl space-y-20 px-6 md:space-y-32">
+            {page.sections.map((section, index) => {
+              const isEven = index % 2 === 0
+              return (
+                <div class="grid gap-12 lg:grid-cols-12 lg:items-center">
+                  <div
+                    class={cn(
+                      "space-y-5 lg:col-span-6",
+                      isEven ? "lg:order-first" : "lg:order-last"
+                    )}
+                  >
+                    <h2 class="section-heading text-left leading-[1.1]">
+                      {section.title}
+                    </h2>
+                    <p class="body-copy max-w-[55ch] text-base md:text-lg">
+                      {section.body}
+                    </p>
+                  </div>
+                  <div class="lg:col-span-6">
+                    <div class="rounded-2xl border border-border/60 bg-background p-8 shadow-[0_10px_30px_rgba(0,0,0,0.02)] md:p-10">
+                      <ul class="space-y-4">
+                        {section.points.map((point) => (
+                          <li class="flex items-start gap-3.5">
+                            <div class="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground/5">
+                              <Check
+                                className="size-3.5 text-foreground/80"
+                                strokeWidth={2.5}
+                              />
+                            </div>
+                            <span class="text-sm font-medium text-muted-foreground md:text-base">
+                              {point}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )
+    }
+
+    {
+      details && (
+        <>
+          <AfterTheCall details={details} />
+          <SetupAndCompare details={details} />
+        </>
+      )
+    }
+    {
+      isAfterHours && (
+        <>
+          <AfterHoursCost />
+          <SetupAndCompare details={afterHoursRouting} />
+          <AfterHoursIndustries />
+        </>
+      )
+    }
+    {isSelfHosted && <CloudVsSelfHosted />}
+    {
+      isDental && (
+        <>
+          <AfterTheCall details={dentalDetails} />
+          <SetupAndCompare details={dentalDetails} />
+        </>
+      )
+    }
 
     <!-- FAQ Section -->
     {
@@ -316,6 +499,28 @@ const reassurance =
         </p>
       </div>
     </section>
+
+    {
+      otherTrades.length > 0 && (
+        <section class="border-t border-border/40 py-16">
+          <div class="mx-auto max-w-7xl px-6">
+            <h2 class="card-heading">Answering services for other trades</h2>
+            <ul class="mt-6 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+              {otherTrades.map((trade) => (
+                <li>
+                  <a
+                    href={localizeHref(locale, trade.path)}
+                    class="text-base font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground"
+                  >
+                    {trade.eyebrow}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )
+    }
 
     <!-- Related Resources Footer -->
     <section

@@ -30,7 +30,7 @@ const seo = getRouteSeo({ locale, path: "/features/" })
     canonicalPath,
     locale,
     jsonLd: [
-      organizationJsonLd({ locale }),
+      organizationJsonLd(),
       webSiteJsonLd({ locale }),
       breadcrumbJsonLd([
         { name: copy.common.home, path: localizePath(locale, "/") },

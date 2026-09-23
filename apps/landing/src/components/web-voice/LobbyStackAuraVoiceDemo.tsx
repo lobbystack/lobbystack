@@ -1,6 +1,7 @@
-import { Mic, Phone, PhoneOff } from "lucide-react"
+import { ArrowRight, Mic, Phone, PhoneOff } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { APP_SIGNUP_URL } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
 import {
   useWebVoiceCall,
@@ -43,6 +44,22 @@ type LobbyStackAuraVoiceDemoProps = {
   endpoint: string
   widgetId?: string
   onEvent?: (eventName: string, properties?: Record<string, unknown>) => void
+}
+
+// Pill labels around the demo button, and the next step after a call ends.
+const demoCopy = {
+  en: {
+    start: "Start call",
+    connecting: "Connecting…",
+    prompt: "Want it answering your phone?",
+    cta: "Set up LobbyStack free",
+  },
+  fr: {
+    start: "Lancer l’appel",
+    connecting: "Connexion…",
+    prompt: "Vous voulez qu’il réponde à votre téléphone ?",
+    cta: "Configurer LobbyStack gratuitement",
+  },
 }
 
 function getButtonLabel(status: WebVoiceWidgetStatus, muted: boolean, locale: "en" | "fr") {
@@ -430,16 +447,29 @@ export function LobbyStackAuraVoiceDemo({
         </button>
 
         {/* Controls */}
-        {status === "connecting" ? (
+        {status === "idle" || status === "error" ? (
           <div className="absolute inset-x-0 top-1/2 z-20 mt-32 flex items-center justify-center">
             <Button
               type="button"
               size="sm"
-              variant="secondary"
-              disabled
-              className="rounded-full"
+              variant="outline"
+              onClick={startCall}
+              className="cursor-pointer rounded-full border-border bg-background text-foreground shadow-sm hover:bg-muted"
             >
-              {locale === "fr" ? "Connexion…" : "Connecting…"}
+              <Phone className="size-4" aria-hidden="true" />
+              {demoCopy[locale].start}
+            </Button>
+          </div>
+        ) : status === "requesting_microphone" || status === "connecting" ? (
+          <div className="absolute inset-x-0 top-1/2 z-20 mt-32 flex items-center justify-center">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled
+              className="rounded-full border-border bg-background text-foreground shadow-sm disabled:opacity-100"
+            >
+              {demoCopy[locale].connecting}
             </Button>
           </div>
         ) : isCallActive ? (
@@ -454,6 +484,26 @@ export function LobbyStackAuraVoiceDemo({
               <PhoneOff className="size-4" aria-hidden="true" />
               {locale === "fr" ? "Raccrocher" : "Hang up"}
             </Button>
+          </div>
+        ) : status === "ended" ? (
+          <div className="absolute inset-x-0 top-1/2 z-20 mt-28 flex flex-col items-center gap-3 px-4">
+            <p className="text-sm font-medium text-foreground">
+              {demoCopy[locale].prompt}
+            </p>
+            <a
+              href={APP_SIGNUP_URL}
+              className={cn(
+                buttonVariants({ size: "sm" }),
+                "rounded-full px-5"
+              )}
+              data-ph-signup-cta
+              data-ph-capture-attribute-section="voice_demo_ended"
+              data-ph-capture-attribute-action="try_for_free"
+              data-ph-capture-attribute-destination={APP_SIGNUP_URL}
+            >
+              {demoCopy[locale].cta}
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </a>
           </div>
         ) : null}
       </div>

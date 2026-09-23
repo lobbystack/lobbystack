@@ -35,7 +35,6 @@ const canonicalPath = localizePath(locale, "/blog/")
 
 const pageCopy = {
   en: {
-    eyebrow: "Latest news",
     h1: "AI receptionist blog and product updates",
     intro:
       "Product updates and practical notes on AI phone answering, missed-call recovery, appointment scheduling, call routing, lead follow-up, and open-source receptionist infrastructure.",
@@ -89,7 +88,6 @@ const pageCopy = {
     ],
   },
   fr: {
-    eyebrow: "Dernières nouvelles",
     h1: "Blog et mises à jour produit sur les réceptionnistes IA",
     intro:
       "Mises à jour produit et notes pratiques sur la réponse téléphonique IA, la récupération d’appels manqués, la planification, les transferts, le suivi des prospects et l’infrastructure open source.",
@@ -145,7 +143,6 @@ const pageCopy = {
 } satisfies Record<
   Locale,
   {
-    eyebrow: string
     h1: string
     intro: string
     topicsHeading: string
@@ -163,7 +160,7 @@ const dateLocale = locale === "fr" ? "fr-FR" : "en-US"
     canonicalPath,
     locale,
     jsonLd: [
-      organizationJsonLd({ locale }),
+      organizationJsonLd(),
       webSiteJsonLd({ locale }),
       blogJsonLd({ locale, path: canonicalPath }),
       breadcrumbJsonLd([
@@ -181,7 +178,6 @@ const dateLocale = locale === "fr" ? "fr-FR" : "en-US"
   >
     <header class="px-6 pt-24 pb-16 text-center">
       <div class="mx-auto max-w-7xl">
-        <span class="eyebrow-label mb-4 block">{pageCopy[locale].eyebrow}</span>
         <h1 class="display-heading">{pageCopy[locale].h1}</h1>
         <p class="body-copy mx-auto mt-6 max-w-[65ch] md:text-lg">
           {pageCopy[locale].intro}

@@ -22,9 +22,9 @@ export const en = {
   },
   routes: {
     "/": {
-      title: "LobbyStack | Open-Source AI Receptionist Software",
+      title: "AI Receptionist Software for Small Businesses | LobbyStack",
       description:
-        "LobbyStack is open-source AI receptionist software for small businesses, with 24/7 phone answering, lead qualification, appointment booking, and call routing.",
+        "LobbyStack answers your business calls 24/7, books appointments into your calendar, and transfers urgent calls to your team. Open source, with a free plan.",
     },
     "/features/": {
       title: "AI receptionist features for calls, messages, and booking",
@@ -47,14 +47,14 @@ export const en = {
         "Answer business calls 24/7 with LobbyStack. Qualify callers, capture details, book appointments, and route urgent requests to the right person.",
     },
     "/solutions/ai-appointment-scheduler/": {
-      title: "AI Appointment Scheduler for Small Businesses | LobbyStack",
+      title: "AI Appointment Scheduler and Answering Service | LobbyStack",
       description:
-        "Schedule appointments during phone calls with LobbyStack. Check availability, capture caller details, confirm bookings, and route exceptional requests.",
+        "LobbyStack is an answering service with appointment scheduling built in. It books appointments during calls, captures caller details, sends confirmations, and routes urgent requests.",
     },
     "/solutions/ai-receptionist-for-home-services/": {
-      title: "AI Receptionist for Home Services | LobbyStack",
+      title: "Home Services Answering Service with AI | LobbyStack",
       description:
-        "LobbyStack answers and qualifies calls for HVAC, plumbing, electrical, roofing, landscaping, and other home-service teams while crews are working.",
+        "LobbyStack is an AI answering service for home services teams. It answers HVAC, plumbing, electrical, roofing, and landscaping calls while crews are on the job.",
     },
     "/missed-call-revenue-calculator/": {
       title: "Missed Call Revenue Calculator | LobbyStack",

@@ -70,7 +70,7 @@ Certaines équipes veulent un produit géré. [LobbyStack Cloud](/pricing/) sert
 
 D'autres équipes veulent la pile sur leur propre infrastructure. LobbyStack le permet aussi.
 
-Le parcours [réceptionniste IA auto-hébergé](/solutions/self-hosted-ai-receptionist/) utilise Docker Compose comme base mono-serveur. La configuration documentée lance PostgreSQL, Redis, l'application Next.js, le worker, la passerelle vocale et Caddy pour HTTPS. Vous apportez les comptes fournisseurs que vous voulez contrôler, comme Twilio, une IA compatible avec OpenAI, Google Calendar, le courriel, les analytics et la facturation.
+Le parcours [réceptionniste IA auto-hébergé](/solutions/self-hosted-ai-receptionist/) utilise Docker Compose comme base mono-serveur. La configuration documentée lance PostgreSQL, Redis, l'application Next.js, le worker, la passerelle vocale et Caddy pour acheminer le trafic. Vous placez HTTPS devant Caddy. Vous apportez les comptes fournisseurs que vous voulez contrôler, comme Twilio, une IA compatible avec OpenAI, Google Calendar, le courriel, les analytics et la facturation.
 
 Cela donne aux agences et aux opérateurs techniques une histoire plus claire pour les clients. Si une clinique, un spa médical, une entreprise de services ou un cabinet juridique veut que le système tourne sur ses propres serveurs ou son propre compte cloud, vous pouvez le déployer là-bas au lieu d'imposer une application fermée.
 

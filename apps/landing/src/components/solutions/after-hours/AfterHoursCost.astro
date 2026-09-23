@@ -1,0 +1,109 @@
+---
+import { ArrowRight } from "lucide-react"
+
+const plans = [
+  { name: "Free", price: "$0", minutes: "30", overage: "None" },
+  {
+    name: "Starter",
+    price: "$30 a month",
+    minutes: "150",
+    overage: "$0.20 a minute",
+  },
+  {
+    name: "Pro",
+    price: "$100 a month",
+    minutes: "500",
+    overage: "$0.18 a minute",
+  },
+]
+---
+
+<section class="border-t border-border/40 py-20 md:py-28" id="cost">
+  <div
+    class="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16"
+  >
+    <div>
+      <h2 class="section-heading">
+        What an after-hours answering service costs
+      </h2>
+      <p class="section-intro">
+        Live answering services usually bill per minute or per call, and some
+        add setup or holiday fees. LobbyStack charges a flat monthly plan with
+        minutes included, and nights, weekends, and holidays cost the same as
+        any other hour.
+      </p>
+      <div class="mt-8 rounded-xl border border-border/70 bg-muted/40 p-5">
+        <p class="text-sm font-medium text-foreground">Example</p>
+        <p class="body-copy mt-2 text-base">
+          You get 40 after-hours calls a month and each one lasts about 3
+          minutes. That's 120 minutes, which fits in Starter for $30. Spam calls
+          and calls under 10 seconds don't count.
+        </p>
+      </div>
+      <div class="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium">
+        <a
+          href="/pricing/"
+          class="inline-flex items-center gap-1.5 text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground"
+        >
+          Compare plans <ArrowRight className="size-3.5" aria-hidden="true" />
+        </a>
+        <a
+          href="/missed-call-revenue-calculator/"
+          class="inline-flex items-center gap-1.5 text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground"
+        >
+          Estimate what missed calls cost you
+          <ArrowRight className="size-3.5" aria-hidden="true" />
+        </a>
+      </div>
+    </div>
+
+    <div
+      class="self-center overflow-x-auto rounded-[1.35rem] border border-border/70"
+    >
+      <table class="w-full min-w-[480px] border-collapse text-left text-sm">
+        <caption class="sr-only"
+          >LobbyStack plans for after-hours answering</caption
+        >
+        <thead class="bg-muted/50">
+          <tr>
+            <th scope="col" class="px-6 py-4 font-medium text-foreground"
+              >Plan</th
+            >
+            <th scope="col" class="px-6 py-4 font-medium text-foreground"
+              >Price</th
+            >
+            <th scope="col" class="px-6 py-4 font-medium text-foreground">
+              Minutes included
+            </th>
+            <th scope="col" class="px-6 py-4 font-medium text-foreground">
+              Extra minutes
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            plans.map((plan) => (
+              <tr class="border-t border-border/60">
+                <th scope="row" class="px-6 py-5 font-medium text-foreground">
+                  {plan.name}
+                </th>
+                <td class="px-6 py-5 text-foreground">{plan.price}</td>
+                <td class="px-6 py-5 text-foreground tabular-nums">
+                  {plan.minutes}
+                </td>
+                <td class="px-6 py-5 text-muted-foreground">{plan.overage}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+      <p
+        class="border-t border-border/60 px-6 py-4 text-xs text-muted-foreground"
+      >
+        Free has no phone number, so use it to test LobbyStack before you
+        forward calls. Starter and Pro include a dedicated number, and annual
+        billing costs $288 or $960 a year.
+      </p>
+    </div>
+  </div>
+</section>
