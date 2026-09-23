@@ -23,18 +23,20 @@ type Values = Record<string, unknown>;
 let inserts: Array<{ table: unknown; values: Values; conflict?: Values }>;
 let updates: Array<{ table: unknown; values: Values; where?: SQL }>;
 let deletes: Array<{ table: unknown; where?: SQL }>;
+let selectCalls: number;
+let directlySelected: unknown[];
 
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(now);
   vi.stubEnv("CONTENT_RETENTION_ENABLED", "true");
   vi.stubEnv("CONTENT_RETENTION_POLICY_JSON", JSON.stringify(policy));
-  inserts = []; updates = []; deletes = [];
+  inserts = []; updates = []; deletes = []; selectCalls = 0; directlySelected = [];
   const selected = [{ id: "existing", smsConsentStatus: "subscribed" }];
   const selectChain = { from: () => selectChain, innerJoin: () => selectChain, where: () => selectChain,
-    orderBy: () => selectChain, limit: async () => selected, then: (resolve: (rows: unknown[]) => unknown) => Promise.resolve([]).then(resolve) };
+    orderBy: () => selectChain, limit: async () => selected, then: (resolve: (rows: unknown[]) => unknown) => Promise.resolve(directlySelected).then(resolve) };
   const tx = {
-    select: () => selectChain,
+    select: () => { selectCalls += 1; return selectChain; },
     insert: (table: unknown) => ({ values: (values: Values) => {
       const entry: { table: unknown; values: Values; conflict?: Values } = { table, values };
       inserts.push(entry);
@@ -107,20 +109,31 @@ describe("approved content retention", () => {
     expect(query.sql).toContain('"messages"."business_id"');
     expect(query.sql).toContain('"messages"."content_expires_at" <');
   });
-  it("keeps new retention disabled while existing follow-up and notification sweeps still run", async () => {
+  it("keeps automatic content deletion disabled while follow-up and notification sweeps still run", async () => {
     vi.stubEnv("CONTENT_RETENTION_ENABLED", "false");
     expect(await scrubExpiredMessageContent(context, { businessId: "business" })).toBe(0);
     expect(await deleteTranscriptForRetention(context, { businessId: "business", callId: "call" })).toBe(0);
     const result = await runPrivacyRetentionSweep(context, { businessId: "business", now });
-    expect(result).toMatchObject({ scrubbedMessages: 0, deletedTranscripts: 0, scrubbedFollowUps: 1, scrubbedOperatorDeliveries: 1 });
+    expect(result).toMatchObject({ scrubbedMessages: 0, deletedTranscripts: 0, queuedRecordings: 0, scrubbedFollowUps: 1, scrubbedOperatorDeliveries: 1 });
     expect(updates.some((entry) => entry.table === messages)).toBe(false);
     expect(deletes).toHaveLength(0);
+    expect(selectCalls).toBe(0);
+    expect(mocks.enqueue).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "privacy.deleteRecording" }));
   });
   it("requires an expired timestamp for queued transcript retention jobs", async () => {
     await deleteTranscriptForRetention(context, { businessId: "business", callId: "call" });
     const query = new PgDialect().sqlToQuery(deletes[0]!.where!);
     expect(query.sql).toContain('"transcripts"."expires_at" is not null');
     expect(query.sql).toContain('"transcripts"."expires_at" <');
+  });
+  it("queues expired recordings when automatic content retention is enabled", async () => {
+    directlySelected = [{ callId: "call", objectId: "recording" }];
+    const result = await runPrivacyRetentionSweep(context, { businessId: "business", now });
+    expect(result.queuedRecordings).toBe(1);
+    expect(mocks.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      topic: "privacy.deleteRecording",
+      payload: { callId: "call", objectId: "recording" },
+    }));
   });
   it("uses the same media scrub in the scheduled sweep", async () => {
     const result = await runPrivacyRetentionSweep(context, { businessId: "business", now });

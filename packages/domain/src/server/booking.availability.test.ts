@@ -18,6 +18,7 @@ import { bookAppointment } from "./booking";
 type TransactionConfig = {
   staffRows?: unknown[];
   assignments?: unknown[];
+  assignmentsAfterLock?: unknown[];
   connections?: unknown[];
   hours?: unknown[];
 };
@@ -33,7 +34,9 @@ function createRecordingTransaction(config: TransactionConfig = {}) {
     if (table === services) return [{ id: "svc-1", name: "General Checkup", durationMinutes: 30 }];
     if (table === businesses) return [{ timezone: "UTC" }];
     if (table === staff) return config.staffRows ?? [{ id: "staff-1" }, { id: "staff-2" }, { id: "staff-3" }];
-    if (table === staffServiceAssignments) return config.assignments ?? [];
+    if (table === staffServiceAssignments) return executeCalls.length && config.assignmentsAfterLock
+      ? config.assignmentsAfterLock
+      : config.assignments ?? [];
     if (table === calendarConnections) return config.connections ?? [];
     if (table === businessHours) return config.hours ?? [{ dayOfWeek: 1, openMinutes: 0, closeMinutes: 1440 }];
     return [];
@@ -89,24 +92,23 @@ beforeEach(() => {
   mocks.enqueueOutbox.mockResolvedValue(undefined);
 });
 
-describe("booking availability reference reuse", () => {
-  it("loads reference data once while rechecking every candidate under the advisory lock", async () => {
+describe("booking availability reference locking", () => {
+  it("reloads reference data while rechecking every candidate under the advisory lock", async () => {
     const recording = useTransaction({ hours: [] });
 
     await expect(bookAppointment(context, input)).rejects.toThrow("No staff member is available for this service.");
 
     // The advisory lock is still taken for each candidate that is evaluated.
     expect(recording.executeCalls).toHaveLength(3);
-    expect(recording.fromCounts.get(services)).toBe(1);
-    expect(recording.fromCounts.get(businesses)).toBe(1);
-    expect(recording.fromCounts.get(staff)).toBe(1);
-    expect(recording.fromCounts.get(staffServiceAssignments)).toBe(1);
-    expect(recording.fromCounts.get(calendarConnections)).toBe(1);
-    expect(recording.fromCounts.get(businessHours)).toBe(1);
-    expect(recording.fromCounts.get(closures)).toBe(1);
-    // Only the staff-specific conflict read is repeated per candidate.
+    expect(recording.fromCounts.get(services)).toBe(4);
+    expect(recording.fromCounts.get(businesses)).toBe(4);
+    expect(recording.fromCounts.get(staff)).toBe(4);
+    expect(recording.fromCounts.get(staffServiceAssignments)).toBe(4);
+    expect(recording.fromCounts.get(calendarConnections)).toBe(4);
+    expect(recording.fromCounts.get(businessHours)).toBe(4);
+    expect(recording.fromCounts.get(closures)).toBe(4);
     expect(recording.fromCounts.get(appointments)).toBe(3);
-    expect(recording.selectCount()).toBe(10);
+    expect(recording.selectCount()).toBe(31);
   });
 
   it("rechecks conflicts after the lock and stops at the first available candidate", async () => {
@@ -116,8 +118,8 @@ describe("booking availability reference reuse", () => {
 
     expect(result).toEqual({ appointmentId: "apt-1", contactId: "contact-1", staffId: "staff-1" });
     expect(recording.executeCalls).toHaveLength(1);
-    expect(recording.fromCounts.get(services)).toBe(1);
-    expect(recording.fromCounts.get(staff)).toBe(1);
+    expect(recording.fromCounts.get(services)).toBe(2);
+    expect(recording.fromCounts.get(staff)).toBe(2);
     // One availability read plus the post-lock conflict recheck for the winner.
     expect(recording.fromCounts.get(appointments)).toBe(2);
     expect(recording.fromCounts.get(contacts)).toBe(1);
@@ -139,5 +141,15 @@ describe("booking availability reference reuse", () => {
     expect(recording.executeCalls).toHaveLength(3);
     // Only the assigned candidate reaches the staff-specific conflict read.
     expect(recording.fromCounts.get(appointments)).toBe(1);
+  });
+
+  it("honors assignment changes committed while waiting for the staff lock", async () => {
+    const recording = useTransaction({ assignments: [], assignmentsAfterLock: [{ staffId: "staff-2" }] });
+
+    const result = await bookAppointment(context, input);
+
+    expect(result.staffId).toBe("staff-2");
+    expect(recording.executeCalls).toHaveLength(2);
+    expect(recording.fromCounts.get(staffServiceAssignments)).toBe(3);
   });
 });

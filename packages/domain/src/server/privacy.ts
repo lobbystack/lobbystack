@@ -37,7 +37,7 @@ export async function runPrivacyRetentionSweep(
       .set({ subject: "[content expired]", body: "[content expired]", destination: "[expired]", sender: null, contentExpiresAt: new Date("9999-12-31T00:00:00.000Z"), updatedAt: now })
       .where(and(eq(operatorNotificationDeliveries.businessId, input.businessId), lt(operatorNotificationDeliveries.contentExpiresAt, now)))
       .returning({ id: operatorNotificationDeliveries.id });
-    const expiredRecordings = await tx.select({ callId: calls.id, objectId: storageObjects.id })
+    const expiredRecordings = !contentRetentionEnabled ? [] : await tx.select({ callId: calls.id, objectId: storageObjects.id })
       .from(calls)
       .innerJoin(storageObjects, eq(storageObjects.id, calls.recordingObjectId))
       .where(and(
@@ -60,15 +60,17 @@ export async function runPrivacyRetentionSweep(
         payload: { type: "transcript.upserted", entityId: callId, deleted: true },
       });
     }
-    for (const recording of expiredRecordings) {
-      await enqueueOutbox(tx, {
-        topic: "privacy.deleteRecording",
-        businessId: input.businessId,
-        aggregateType: "call",
-        aggregateId: recording.callId,
-        dedupeKey: `privacy:retention:recording:${recording.objectId}:${dateKey}`,
-        payload: { callId: recording.callId, objectId: recording.objectId },
-      });
+    if (contentRetentionEnabled) {
+      for (const recording of expiredRecordings) {
+        await enqueueOutbox(tx, {
+          topic: "privacy.deleteRecording",
+          businessId: input.businessId,
+          aggregateType: "call",
+          aggregateId: recording.callId,
+          dedupeKey: `privacy:retention:recording:${recording.objectId}:${dateKey}`,
+          payload: { callId: recording.callId, objectId: recording.objectId },
+        });
+      }
     }
     return {
       scrubbedFollowUps: scrubbedFollowUps.length,

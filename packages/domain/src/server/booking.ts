@@ -48,9 +48,8 @@ type AvailabilityReference = {
 };
 
 /**
- * Reads the reference data availability needs once per transaction. Callers that
- * evaluate several staff candidates reuse it instead of re-reading services,
- * staff, assignments, connections, hours, and closures for every candidate.
+ * Reads an availability reference snapshot. Booking callers reload it after
+ * waiting for an advisory lock so they do not validate against stale rules.
  */
 async function loadAvailabilityReference(tx: DatabaseTransaction, input: { businessId: string; serviceId: string; startsAt: string }): Promise<AvailabilityReference> {
   const [service] = await tx.select({ id: services.id, name: services.name, durationMinutes: services.durationMinutes }).from(services).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId), eq(services.active, true))).limit(1);
@@ -148,24 +147,29 @@ export async function bookAppointment(
     if (input.userId) {
       await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId, minimumRole: "scheduler" });
     }
-    // Load reference data once, then take the advisory lock and recheck only
-    // staff-specific conflicts for each candidate.
-    const reference = await loadAvailabilityReference(tx, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.startsAt });
-    const candidates = reference.activeStaffIds.filter((id) => !input.preferredStaffId || id === input.preferredStaffId);
-    const now = Date.now();
+    // The first read discovers a stable, sorted lock set. Reference data is
+    // reloaded after each candidate lock because it may change while we wait.
+    const initialReference = await loadAvailabilityReference(tx, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.startsAt });
+    const candidates = initialReference.activeStaffIds.filter((id) => !input.preferredStaffId || id === input.preferredStaffId);
     let selectedStaff: { id: string } | undefined;
+    let selectedReference: AvailabilityReference | undefined;
     for (const candidateId of candidates) {
-      // Keep the original lock set: every active candidate is locked before its
-      // reference and conflict checks so contention behavior is unchanged.
       await lockStaff(tx, candidateId);
+      const reference = await loadAvailabilityReference(tx, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.startsAt });
+      if (!reference.activeStaffIds.includes(candidateId)) continue;
       if (reference.assignedStaffIds.size && !reference.assignedStaffIds.has(candidateId)) continue;
-      if (!isCalendarFresh(reference, candidateId, now)) continue;
+      if (!isCalendarFresh(reference, candidateId, Date.now())) continue;
       const slots = await staffAvailabilityInTransaction(tx, reference, { staffIds: [candidateId] });
-      if (slots.length) { selectedStaff = { id: candidateId }; break; }
+      if (slots.length) {
+        selectedStaff = { id: candidateId };
+        selectedReference = reference;
+        break;
+      }
     }
-    if (!selectedStaff) {
+    if (!selectedStaff || !selectedReference) {
       throw new Error("No staff member is available for this service.");
     }
+    const reference = selectedReference;
     const startsAt = reference.startsAt;
     const endsAt = reference.endsAt;
     const conflicting = await tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, input.businessId), eq(appointments.staffId, selectedStaff.id), ne(appointments.status, "canceled"), lt(appointments.startsAt, endsAt), gt(appointments.endsAt, startsAt))).limit(1);
