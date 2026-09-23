@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ withBusinessTransaction: vi.fn() }));
 
@@ -7,7 +7,7 @@ vi.mock("@lobbystack/db", async (original) => ({
   withBusinessTransaction: mocks.withBusinessTransaction,
 }));
 
-import { deleteExpiredObjectsForBusiness } from "./storage";
+import { deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness } from "./storage";
 
 function thenable(resolve: () => unknown[]) {
   const node: Record<string, unknown> = {};
@@ -65,6 +65,22 @@ const context = { db: {} as never };
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe("deleteCallRecordingForRetention", () => {
+  it("does not enter a transaction when automatic retention is disabled", async () => {
+    vi.stubEnv("CONTENT_RETENTION_ENABLED", "false");
+    const storage = setup().storage;
+
+    await expect(deleteCallRecordingForRetention(context, { businessId: "biz-1", callId: "call-1" }, storage as never)).resolves.toBe(false);
+
+    expect(mocks.withBusinessTransaction).not.toHaveBeenCalled();
+    expect(storage.deleteObject).not.toHaveBeenCalled();
+  });
 });
 
 describe("deleteExpiredObjectsForBusiness", () => {

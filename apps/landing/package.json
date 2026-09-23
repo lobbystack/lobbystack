@@ -5,11 +5,13 @@
   "private": true,
   "scripts": {
     "dev": "astro dev",
+    "prebuild": "pnpm --filter @lobbystack/shared build",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{ts,tsx,astro}\"",
+    "pretypecheck": "pnpm --filter @lobbystack/shared build",
     "typecheck": "astro check",
     "test": "vitest run --passWithNoTests",
     "seo:validate": "node scripts/validate-seo-build.mjs"

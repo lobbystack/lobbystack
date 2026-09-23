@@ -101,6 +101,7 @@ type ActiveWebCall = {
   providerCallId: string;
   aiTraceId: string;
   startedAtMs: number;
+  mediaStartedAtMs: number | null;
   pendingAssistantResponseRequestAtMs: number | null;
   assistantResponseStartedAtMsById: Map<string, number>;
   maxDurationMs: number;
@@ -448,10 +449,11 @@ function rememberCompletedWebCall(session: ActiveWebCall): void {
     if (Date.now() - (completed.completedAtMs ?? 0) > WEB_COMPLETED_SESSION_UPLOAD_GRACE_MS) completedWebCalls.delete(id);
   }
   if (completedWebCalls.size >= 1_000) completedWebCalls.delete(completedWebCalls.keys().next().value!);
+  const completedAtMs = Date.now();
   completedWebCalls.set(session.gatewaySessionId, {
     callId: session.callId,
-    startedAtMs: session.startedAtMs,
-    completedAtMs: Date.now(),
+    startedAtMs: session.mediaStartedAtMs ?? completedAtMs,
+    completedAtMs,
   });
 }
 
@@ -480,12 +482,16 @@ function getWebCallForRecording(
 ): CompletedWebCall | null {
   const active = activeWebCalls.get(sessionId);
   if (active) {
-    if (!isActiveWebRecordingUploadAllowed(active.startedAtMs, maxDurationMs)) {
+    const mediaStartedAtMs = active.mediaStartedAtMs;
+    if (
+      mediaStartedAtMs === null ||
+      !isActiveWebRecordingUploadAllowed(mediaStartedAtMs, maxDurationMs)
+    ) {
       return null;
     }
     return {
       callId: active.callId,
-      startedAtMs: active.startedAtMs,
+      startedAtMs: mediaStartedAtMs,
     };
   }
 
@@ -888,6 +894,10 @@ async function finishWebCallResources(server: FastifyInstance, session: ActiveWe
   try {
     if (!await hangupOpenAiRealtimeCall(server, session, disposition)) throw new Error("Provider hangup is unconfirmed; retaining durable voice reservation.");
     const endedAtMs = Date.now();
+    // Bill from the media clock, which starts only once the provider session is
+    // allocated, bound, and its sideband is set up. The earlier durable
+    // startedAt anchor is for crash recovery, not for billing.
+    const mediaStartedAtMs = session.mediaStartedAtMs ?? endedAtMs;
     await settleVoiceTasks([transcriptTask]);
     const completion = {
       callId: session.callId,
@@ -896,9 +906,9 @@ async function finishWebCallResources(server: FastifyInstance, session: ActiveWe
       endedAt: new Date(endedAtMs).toISOString(),
       providerDurationSeconds: Math.max(
         0,
-        Math.ceil((endedAtMs - session.startedAtMs) / 1000),
+        Math.ceil((endedAtMs - mediaStartedAtMs) / 1000),
       ),
-      mediaDurationSeconds: Math.max(0, endedAtMs - session.startedAtMs) / 1_000,
+      mediaDurationSeconds: Math.max(0, endedAtMs - mediaStartedAtMs) / 1_000,
     };
 
     for (
@@ -1005,7 +1015,7 @@ function scheduleWebMaxDurationTimer(
         );
       },
     );
-  }, Math.max(0, session.maxDurationMs - (Date.now() - session.startedAtMs)));
+  }, Math.max(0, session.maxDurationMs - (Date.now() - (session.mediaStartedAtMs ?? Date.now()))));
 }
 
 function parseProviderCallId(
@@ -1961,6 +1971,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       // and reconciliation must never release that reservation from elapsed time alone.
       let exchange: Awaited<ReturnType<typeof exchangeWebRtcOffer>>;
       let providerAllocated = false;
+      let providerAllocatedAtMs: number | undefined;
       let exchangeAttempted = false;
       try {
         if (lease.closing) throw new Error("Voice gateway is closing.");
@@ -1971,6 +1982,10 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
           sdp: body.sdp,
         });
         providerAllocated = true;
+        // Provider billing starts at allocation, so failure compensation must
+        // not charge the pre-allocation latency accumulated since the durable
+        // startedAt anchor was written.
+        providerAllocatedAtMs = Date.now();
         providerCallId = exchange.providerCallId;
         if (providerCallId.startsWith("webcall_")) throw new Error("Provider omitted its call ID.");
         await bindWebVoiceProvider({ businessId: call.businessId, callId: call.callId, gatewaySessionId, providerCallId });
@@ -1982,7 +1997,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
             : !exchangeAttempted || (error instanceof OpenAiWebRtcSetupError && error.status >= 400 && error.status < 500);
           // Timeouts and missing provider IDs leave allocation uncertain. Keep
           // the durable reservation for reconciliation rather than crediting it.
-          if (hangupConfirmed) await completeVoiceCall({ callId: call.callId, status: "failed", disposition: "provider_setup_failed", endedAt: new Date().toISOString(), providerDurationSeconds: providerAllocated ? Math.ceil((Date.now() - Date.parse(startedAt)) / 1000) : 0, mediaDurationSeconds: 0 });
+          if (hangupConfirmed) await completeVoiceCall({ callId: call.callId, status: "failed", disposition: "provider_setup_failed", endedAt: new Date().toISOString(), providerDurationSeconds: providerAllocated && providerAllocatedAtMs !== undefined ? Math.ceil((Date.now() - providerAllocatedAtMs) / 1000) : 0, mediaDurationSeconds: 0 });
         } finally {
           lease.release();
         }
@@ -1999,6 +2014,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         providerCallId,
         aiTraceId: crypto.randomUUID(),
         startedAtMs: Date.parse(startedAt),
+        mediaStartedAtMs: null,
         pendingAssistantResponseRequestAtMs: null,
         assistantResponseStartedAtMsById: new Map(),
         maxDurationMs: call.webCallMaxDurationMs ?? server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
@@ -2032,6 +2048,10 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       activeWebCalls.set(gatewaySessionId, session);
       try {
         session.sidebandSocket = createSidebandSocket({ server, session, snapshot: context.snapshot });
+        // The billable/media clock starts only after the provider session is
+        // allocated, bound, and its sideband is set up. The early durable
+        // startedAt remains the crash-recovery anchor, never the media start.
+        session.mediaStartedAtMs = Date.now();
         scheduleWebMaxDurationTimer(server, session);
       } catch (error) {
         await finishWebCallSession(server, session, "provider_setup_failed");

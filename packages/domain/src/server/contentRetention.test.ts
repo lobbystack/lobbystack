@@ -9,7 +9,7 @@ vi.mock("@lobbystack/db", async (original) => ({
 }));
 vi.mock("./notifications", () => ({ queueOperatorAlertInTransaction: vi.fn() }));
 
-import { messages, transcripts } from "@lobbystack/db";
+import { inboxItems, messages, transcripts } from "@lobbystack/db";
 import { appendMessage } from "./conversations";
 import { receiveInboundSms } from "./sms";
 import { upsertTranscript } from "./voice";
@@ -114,8 +114,9 @@ describe("approved content retention", () => {
     expect(await scrubExpiredMessageContent(context, { businessId: "business" })).toBe(0);
     expect(await deleteTranscriptForRetention(context, { businessId: "business", callId: "call" })).toBe(0);
     const result = await runPrivacyRetentionSweep(context, { businessId: "business", now });
-    expect(result).toMatchObject({ scrubbedMessages: 0, deletedTranscripts: 0, queuedRecordings: 0, scrubbedFollowUps: 1, scrubbedOperatorDeliveries: 1 });
+    expect(result).toMatchObject({ scrubbedMessages: 0, deletedTranscripts: 0, queuedRecordings: 0, scrubbedFollowUps: 0, scrubbedOperatorDeliveries: 1 });
     expect(updates.some((entry) => entry.table === messages)).toBe(false);
+    expect(updates.some((entry) => entry.table === inboxItems)).toBe(false);
     expect(deletes).toHaveLength(0);
     expect(selectCalls).toBe(0);
     expect(mocks.enqueue).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "privacy.deleteRecording" }));
@@ -132,7 +133,7 @@ describe("approved content retention", () => {
     expect(result.queuedRecordings).toBe(1);
     expect(mocks.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       topic: "privacy.deleteRecording",
-      payload: { callId: "call", objectId: "recording" },
+      payload: { callId: "call", objectId: "recording", source: "retention" },
     }));
   });
   it("uses the same media scrub in the scheduled sweep", async () => {

@@ -336,3 +336,12 @@ export async function deleteCallRecording(
   });
   return true;
 }
+
+export async function deleteCallRecordingForRetention(
+  context: DomainContext,
+  input: { businessId: string; callId: string; objectId?: string },
+  storage: StorageProvider,
+): Promise<boolean> {
+  if (!isContentRetentionEnabled()) return false;
+  return await deleteCallRecording(context, input, storage);
+}

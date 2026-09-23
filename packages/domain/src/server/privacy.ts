@@ -22,7 +22,7 @@ export async function runPrivacyRetentionSweep(
   const now = input.now ?? new Date();
   const contentRetentionEnabled = isContentRetentionEnabled();
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const scrubbedFollowUps = await tx.update(inboxItems)
+    const scrubbedFollowUps = !contentRetentionEnabled ? [] : await tx.update(inboxItems)
       .set({ title: EXPIRED_FOLLOW_UP_TITLE, body: EXPIRED_FOLLOW_UP_BODY, contentRetentionStatus: "scrubbed", updatedAt: now })
       .where(and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.contentRetentionStatus, "active"), isNotNull(inboxItems.contentExpiresAt), lt(inboxItems.contentExpiresAt, now)))
       .returning({ id: inboxItems.id });
@@ -68,7 +68,7 @@ export async function runPrivacyRetentionSweep(
           aggregateType: "call",
           aggregateId: recording.callId,
           dedupeKey: `privacy:retention:recording:${recording.objectId}:${dateKey}`,
-          payload: { callId: recording.callId, objectId: recording.objectId },
+          payload: { callId: recording.callId, objectId: recording.objectId, source: "retention" },
         });
       }
     }
@@ -125,7 +125,7 @@ export async function markRecordingForDeletion(
     await requireBusinessAdmin(tx, input);
     const call = (await tx.select({ objectId: calls.recordingObjectId }).from(calls).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId))).limit(1))[0];
     if (call?.objectId) {
-      await enqueueOutbox(tx, { topic: "privacy.deleteRecording", businessId: input.businessId, aggregateType: "call", aggregateId: input.callId, dedupeKey: `privacy:recording:${input.callId}`, payload: { callId: input.callId, objectId: call.objectId } });
+      await enqueueOutbox(tx, { topic: "privacy.deleteRecording", businessId: input.businessId, aggregateType: "call", aggregateId: input.callId, dedupeKey: `privacy:recording:${input.callId}`, payload: { callId: input.callId, objectId: call.objectId, source: "manual" } });
     }
   });
 }

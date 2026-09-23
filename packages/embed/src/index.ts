@@ -107,9 +107,11 @@ export function initWidget(): boolean {
   let frameLoaded = false;
   let sessionMessage: WidgetMessage | null = null;
   let sessionRefreshTimer: number | undefined;
+  let sessionState: "idle" | "pending" | "ready" | "error" = "idle";
 
   async function refreshSession(nextVisitorId: string): Promise<void> {
     visitorId = nextVisitorId;
+    sessionState = "pending";
     try {
       const response = await fetch(`${adminOrigin}/api/widget/session`, {
         method: "POST",
@@ -118,16 +120,19 @@ export function initWidget(): boolean {
       });
       const payload = await response.json() as { token?: string; expiresAt?: string; code?: string };
       if (!response.ok || !payload.token) {
+        sessionState = "error";
         sessionMessage = { type: "session-error", code: payload.code ?? "widget_session_failed" };
         if (frameLoaded) postToFrame(sessionMessage);
         return;
       }
+      sessionState = "ready";
       sessionMessage = { type: "session", token: payload.token, expiresAt: payload.expiresAt, visitorId, parentOrigin: window.location.origin };
       if (frameLoaded) postToFrame(sessionMessage);
       if (sessionRefreshTimer !== undefined) window.clearTimeout(sessionRefreshTimer);
       const expiresAtMs = payload.expiresAt ? Date.parse(payload.expiresAt) : Date.now() + 3_600_000;
       sessionRefreshTimer = window.setTimeout(() => void refreshSession(visitorId), Math.max(30_000, expiresAtMs - Date.now() - 60_000));
     } catch {
+      sessionState = "error";
       sessionMessage = { type: "session-error", code: "widget_session_failed" };
       if (frameLoaded) postToFrame(sessionMessage);
     }
@@ -143,6 +148,9 @@ export function initWidget(): boolean {
     if (open && !started) {
       started = true;
       frame.setAttribute("src", frameSrc);
+    }
+    if (open && (sessionState === "idle" || sessionState === "error")) {
+      void refreshSession(visitorId);
     }
     holder.classList.toggle("lobby-widget-open", open);
     if (open && !holder.style.height) holder.style.height = "min(640px, calc(100vh - 120px))";
@@ -166,12 +174,9 @@ export function initWidget(): boolean {
     postToFrame({ type: "visitor", visitorId });
   });
 
-  // Issue the session when the script loads so the token is ready before the
-  // visitor opens the chat. Only the iframe itself is loaded lazily; the
-  // hydrated client expects the loader to have the session by the time it
-  // announces readiness.
-  void refreshSession(visitorId);
-
+  // Issue the session on first open instead of at script load. This keeps the
+  // widget dormant (and avoids an unauthenticated request) until a visitor
+  // engages, while a failed request can retry on a later open.
   bubble.addEventListener("click", () => setOpen(!open));
   window.addEventListener("message", (event: MessageEvent) => {
     if (event.origin !== adminOrigin || event.source !== frame.contentWindow) return;
