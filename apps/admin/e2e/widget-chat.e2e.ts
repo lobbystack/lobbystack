@@ -27,10 +27,15 @@ for (const locale of ["en", "fr"] as const) for (const viewport of [{ width: 144
       const denied = await request.post("/api/widget/session", { headers: { origin: "https://untrusted.example.invalid" }, data: { widgetKey: key, visitorId: randomUUID() } });
       expect(denied.status()).toBe(403);
       const page = await context.newPage();
-      const sessionResponse = page.waitForResponse(response => new URL(response.url()).pathname === "/api/widget/session");
+      let sessionRequests = 0;
+      page.on("request", request => { if (new URL(request.url()).pathname === "/api/widget/session") sessionRequests += 1; });
       await page.goto(`http://localhost:18090/widget-host?key=${key}`);
-      expect((await sessionResponse).status()).toBe(200);
+      await expect(page.getByRole("button", { name: "Open chat", exact: true })).toBeVisible();
+      expect(sessionRequests).toBe(0);
+      const sessionResponse = page.waitForResponse(response => new URL(response.url()).pathname === "/api/widget/session");
       await page.getByRole("button", { name: "Open chat", exact: true }).click();
+      expect((await sessionResponse).status()).toBe(200);
+      expect(sessionRequests).toBe(1);
       const frame = page.frameLocator('iframe[title="Chat with us"]');
       const composer = frame.getByRole("textbox", { name: t.chat.composerPlaceholder, exact: true });
       await expect(composer).toBeEnabled();
@@ -41,7 +46,10 @@ for (const locale of ["en", "fr"] as const) for (const viewport of [{ width: 144
       const restoredConfig = page.waitForResponse(response => new URL(response.url()).pathname === "/api/widget/config");
       const restoredHistory = page.waitForResponse(response => new URL(response.url()).pathname === "/api/widget/history");
       await page.reload();
+      expect(sessionRequests).toBe(1);
+      const restoredSession = page.waitForResponse(response => new URL(response.url()).pathname === "/api/widget/session");
       await page.getByRole("button", { name: "Open chat", exact: true }).click();
+      expect((await restoredSession).status()).toBe(200);
       expect((await restoredConfig).status()).toBe(200);
       expect((await restoredHistory).status()).toBe(200);
       await expect(frame.getByText(reply, { exact: true })).toBeVisible();

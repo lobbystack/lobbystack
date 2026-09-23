@@ -5,9 +5,11 @@ import { cn } from "@/lib/utils"
 import {
   useWebVoiceCall,
   webVoiceStatusLabel,
+  webVoiceStatusLabelFr,
 } from "@/components/web-voice/useWebVoiceCall"
 
 type WebVoiceWidgetProps = {
+  locale?: "en" | "fr"
   businessSlug: string
   endpoint: string
   widgetId?: string
@@ -16,6 +18,7 @@ type WebVoiceWidgetProps = {
 }
 
 export function WebVoiceWidget({
+  locale = "en",
   businessSlug,
   endpoint,
   widgetId,
@@ -33,6 +36,7 @@ export function WebVoiceWidget({
     isCallActive,
     isBusy,
   } = useWebVoiceCall({
+    locale,
     businessSlug,
     endpoint,
     widgetId,
@@ -60,20 +64,20 @@ export function WebVoiceWidget({
             >
               <Waves className="size-4" aria-hidden="true" />
             </span>
-            Talk to LobbyStack
+            {locale === "fr" ? "Parlez à LobbyStack" : "Talk to LobbyStack"}
           </div>
           <p
             className="mt-2 text-sm text-muted-foreground"
             role="status"
             aria-live="polite"
           >
-            {errorMessage ?? webVoiceStatusLabel[status]}
+            {errorMessage ?? (locale === "fr" ? webVoiceStatusLabelFr : webVoiceStatusLabel)[status]}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {status === "connecting" ? (
             <Button type="button" variant="secondary" disabled>
-              Connecting...
+              {locale === "fr" ? "Connexion…" : "Connecting…"}
             </Button>
           ) : isCallActive ? (
             <>
@@ -82,7 +86,7 @@ export function WebVoiceWidget({
                 size="icon"
                 variant="outline"
                 onClick={toggleMute}
-                aria-label={muted ? "Unmute microphone" : "Mute microphone"}
+                aria-label={locale === "fr" ? (muted ? "Activer le microphone" : "Couper le microphone") : (muted ? "Unmute microphone" : "Mute microphone")}
               >
                 {muted ? (
                   <MicOff className="size-4" aria-hidden="true" />
@@ -96,7 +100,7 @@ export function WebVoiceWidget({
                 variant="destructive"
                 onClick={endCall}
                 className="cursor-pointer"
-                aria-label="End call"
+                aria-label={locale === "fr" ? "Terminer l’appel" : "End call"}
               >
                 <PhoneOff className="size-4" aria-hidden="true" />
               </Button>
@@ -104,7 +108,7 @@ export function WebVoiceWidget({
           ) : (
             <Button type="button" onClick={startCall} disabled={isBusy}>
               <Phone className="size-4" aria-hidden="true" />
-              {isBusy ? "Connecting" : "Call now"}
+              {locale === "fr" ? (isBusy ? "Connexion" : "Appeler") : (isBusy ? "Connecting" : "Call now")}
             </Button>
           )}
         </div>

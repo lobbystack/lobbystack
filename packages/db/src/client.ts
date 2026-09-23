@@ -167,6 +167,22 @@ export async function withDispatcherTransaction<T>(
   return await withBusinessTransaction(db, { actorType: "dispatcher" }, callback);
 }
 
+export async function assertDatabaseRole(
+  client: DatabaseClient,
+  source: Record<string, string | undefined> = process.env,
+): Promise<void> {
+  if (source.NODE_ENV !== "production" || client.role === "lobbystack_migrator") return;
+  const result = await client.pool.query<{ role: string; privileged: boolean }>(`
+    select current_user as role,
+      (rolsuper or rolbypassrls or rolcreaterole or rolcreatedb) as privileged
+    from pg_roles where rolname = current_user
+  `);
+  const effective = result.rows[0];
+  if (!effective || effective.role !== client.role || effective.privileged) {
+    throw new Error(`Database role assertion failed: expected unprivileged ${client.role}.`);
+  }
+}
+
 export async function databaseHealthCheck(client: DatabaseClient): Promise<{
   ok: boolean;
   latencyMs: number;

@@ -9,7 +9,7 @@ export default defineRailway((ctx) => {
   if (ctx.projectId !== TEMPLATE_PROJECT_ID || ctx.environment !== "production") {
     throw new Error("This infrastructure definition manages only the lobbystack-template production environment.");
   }
-  const repo = github("lobbystack/lobbystack", { branch: "main" });
+  const repo = github("lobbystack/lobbystack", { branch: "main", checkSuites: true });
   const region = "us-east4-eqdc4a";
   const sharedWatchPatterns = ["/package.json", "/pnpm-lock.yaml", "/pnpm-workspace.yaml", "/.npmrc", "/tsconfig.base.json", "/packages/**"];
   const migratorWatchPatterns = ["/package.json", "/pnpm-lock.yaml", "/pnpm-workspace.yaml", "/.npmrc", "/tsconfig.base.json", "/packages/db/**", "/packages/contracts/**", "/packages/telemetry/**", "/Dockerfile.migrator"];
@@ -115,7 +115,7 @@ export default defineRailway((ctx) => {
       AUTH_TRUSTED_ORIGINS: adminOrigin,
       BETTER_AUTH_USE_SECURE_COOKIES: "true",
       REQUIRE_EMAIL_VERIFICATION: "false",
-      SEND_VERIFICATION_EMAIL_ON_SIGNUP: "false",
+      WIDGET_KEY_ISSUANCE_ENABLED: "false",
       NEXT_PUBLIC_WEB_CALL_ENDPOINT: `${voiceOrigin}/web-call/sessions`,
       TWILIO_SMS_WEBHOOK_URL: `${adminOrigin}/api/webhooks/twilio/sms`,
       TWILIO_STATUS_CALLBACK_URL: `${adminOrigin}/api/webhooks/twilio/status`,
@@ -131,6 +131,9 @@ export default defineRailway((ctx) => {
       NUMBER_CLAIM_TOKEN_SECRET: preserve(),
       OTP_HASH_SECRET: preserve(),
       WIDGET_SESSION_SECRET: preserve(),
+      // Railway's controlled ingress overwrites x-real-ip with the remote
+      // client; use it as the single-value per-client attribution header.
+      TRUSTED_CLIENT_IP_HEADER: "x-real-ip",
     },
   });
 
@@ -168,7 +171,10 @@ export default defineRailway((ctx) => {
       ...runtime,
       ...providers,
       PORT: "3001",
-      VOICE_GATEWAY_TRUST_PROXY: "true",
+      // Do not trust all forwarded-for hops. Railway's controlled ingress
+      // overwrites x-real-ip, which the gateway opts into below.
+      VOICE_GATEWAY_TRUST_PROXY: "false",
+      TRUSTED_CLIENT_IP_HEADER: "x-real-ip",
       APP_BASE_URL: adminOrigin,
       VOICE_GATEWAY_BASE_URL: voiceOrigin,
       BACKEND_INTERNAL_URL: "http://${{admin.RAILWAY_PRIVATE_DOMAIN}}:3000",

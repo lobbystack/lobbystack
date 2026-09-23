@@ -1,4 +1,5 @@
 ---
+import { buildSignupUrl } from "@/lib/app-links"
 import Layout from "@/layouts/main.astro"
 import { Navbar } from "@/components/Navbar"
 import { MissedCallCalculator } from "@/components/calculator/MissedCallCalculator"
@@ -410,7 +411,7 @@ const t = pageCopy[locale]
             </ul>
             <div class="mt-8 flex flex-wrap items-center gap-4">
               <a
-                href="https://app.lobbystack.com/signup?source=calculator"
+                href={buildSignupUrl(locale, "calculator")}
                 class="inline-flex h-12 items-center justify-center rounded-full bg-foreground px-8 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
               >
                 {common.tryFree}

@@ -21,7 +21,7 @@ LobbyStack fonctionne en service géré ou en auto-hébergement. L'acheteur gard
 
 | Critère | RingCentral AIR | LobbyStack |
 | --- | --- | --- |
-| Forfait gratuit durable | Non annoncé | 30 minutes, sans carte, toutes les fonctions |
+| Forfait gratuit durable | Non annoncé | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
 | Entrée autonome | Dès 49 $ pour 100 minutes | Gratuit pour 30, puis 30 $ pour 150 |
 | Prix client RingEX | Option dès 39 $ | Aucun abonnement de suite requis |
 | Canaux | Voix, SMS, WhatsApp | Voix, alertes SMS et suivi |

@@ -1,9 +1,13 @@
 name: Replacement Platform
 
 on:
-  # Runs after merge to main and on demand; PRs rely on the faster CI workflow.
+  # PRs use CI's required gate; this workflow adds post-merge certification.
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - "mintlify/**"
   workflow_dispatch:
     inputs:
       target:
@@ -16,14 +20,25 @@ on:
           - replacement-validate
           - staging-provider-certification
 
+permissions:
+  contents: read
+
+concurrency:
+  group: replacement-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  runtime-images:
+    if: github.event_name == 'workflow_dispatch' && (inputs.target == 'all' || inputs.target == 'replacement-validate')
+    uses: ./.github/workflows/runtime-images.yml
+
   # This job is intentionally not named "validate": that context is owned by
   # .github/workflows/ci.yml (typecheck, build, test), which is the required
   # status check on main. Keep this name distinct so the two do not collide.
   replacement-validate:
     if: github.event_name == 'push' || inputs.target == 'all' || inputs.target == 'replacement-validate'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     env:
       DATABASE_URL: postgres://postgres:lobbystack@127.0.0.1:5432/lobbystack
       REDIS_URL: redis://127.0.0.1:6379
@@ -120,17 +135,6 @@ jobs:
           retention-days: 90
       - run: pnpm --filter @lobbystack/admin exec playwright install --with-deps chromium
       - run: pnpm --filter @lobbystack/admin e2e
-      - name: Build replacement runtime images
-        run: |
-          docker build --build-arg SERVICE_VERSION="$GITHUB_SHA" --file Dockerfile.admin --tag lobbystack/admin:ci .
-          docker build --build-arg SERVICE_VERSION="$GITHUB_SHA" --file Dockerfile.migrator --tag lobbystack/migrator:ci .
-          docker build --build-arg SERVICE_VERSION="$GITHUB_SHA" --file Dockerfile.worker --tag lobbystack/worker:ci .
-          docker build --build-arg SERVICE_VERSION="$GITHUB_SHA" --file Dockerfile.voice-gateway --tag lobbystack/voice-gateway:ci .
-      - name: Certify lazy tokenizer runtime dependencies
-        run: |
-          docker run --rm --entrypoint node lobbystack/admin:ci -e 'const { createRequire } = require("node:module"); const runtimeRequire = createRequire("/app/apps/admin/.next/server/chunks/runtime-dependency-check.js"); const { Tiktoken } = runtimeRequire("js-tiktoken/lite"); const tokenizer = new Tiktoken(runtimeRequire("js-tiktoken/ranks/o200k_base")); if (tokenizer.encode("runtime smoke test").length === 0) process.exit(1);'
-          docker run --rm --entrypoint node lobbystack/worker:ci -e 'const { createRequire } = require("node:module"); const runtimeRequire = createRequire("/app/dist/runtime/index.js"); const { Tiktoken } = runtimeRequire("js-tiktoken/lite"); const tokenizer = new Tiktoken(runtimeRequire("js-tiktoken/ranks/o200k_base")); if (tokenizer.encode("runtime smoke test").length === 0) process.exit(1);'
-          docker run --rm --entrypoint node lobbystack/voice-gateway:ci -e 'const { createRequire } = require("node:module"); const runtimeRequire = createRequire("/app/dist/runtime/index.js"); const { Tiktoken } = runtimeRequire("js-tiktoken/lite"); const tokenizer = new Tiktoken(runtimeRequire("js-tiktoken/ranks/o200k_base")); if (tokenizer.encode("runtime smoke test").length === 0) process.exit(1);'
       - run: pnpm replacement:telemetry
       - name: Scan repository for vulnerabilities, misconfigurations, and secrets
         uses: aquasecurity/trivy-action@v0.36.0
@@ -141,46 +145,6 @@ jobs:
           severity: CRITICAL
           ignore-unfixed: true
           exit-code: "1"
-      - name: Scan admin image
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: lobbystack/admin:ci
-          scanners: vuln
-          vuln-type: os,library
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
-          skip-setup-trivy: true
-      - name: Scan migrator image
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: lobbystack/migrator:ci
-          scanners: vuln
-          vuln-type: os,library
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
-          skip-setup-trivy: true
-      - name: Scan worker image
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: lobbystack/worker:ci
-          scanners: vuln
-          vuln-type: os,library
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
-          skip-setup-trivy: true
-      - name: Scan voice gateway image
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: lobbystack/voice-gateway:ci
-          scanners: vuln
-          vuln-type: os,library
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
-          skip-setup-trivy: true
       - run: docker compose --env-file .env.example -f docker-compose.yml config --quiet
 
   staging-provider-certification:

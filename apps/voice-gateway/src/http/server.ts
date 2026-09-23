@@ -20,6 +20,8 @@ import {
   recordTwilioInvalidSignature,
 } from "../observability/posthog";
 import { createSnapshotCache, type SnapshotCacheOptions } from "../sessions/snapshotCache";
+import { initializeVoiceLifecycle, isVoiceClosing } from "../sessions/lifecycle";
+import { MAX_REALTIME_FRAME_BYTES } from "../realtime/safety";
 
 export function createServer(options: { snapshotCache?: Omit<SnapshotCacheOptions, "onEvict"> } = {}): ReturnType<typeof Fastify> {
   const env = loadVoiceGatewayEnv(process.env);
@@ -41,6 +43,7 @@ export function createServer(options: { snapshotCache?: Omit<SnapshotCacheOption
   server.decorate("snapshotCache", cache);
   server.decorate("runtimeConfig", env);
   server.decorateRequest("businessId", null);
+  initializeVoiceLifecycle(server);
 
   server.register(fastifyFormbody);
   server.register(fastifyRateLimit, {
@@ -90,9 +93,15 @@ export function createServer(options: { snapshotCache?: Omit<SnapshotCacheOption
     });
   });
 
-  const mediaStreamServer = new WebSocketServer({ noServer: true });
+  const mediaStreamServer = new WebSocketServer({ noServer: true, maxPayload: MAX_REALTIME_FRAME_BYTES });
+  let closing = false;
+  server.addHook("preClose", async () => {
+    closing = true;
+    for (const socket of mediaStreamServer.clients) socket.terminate();
+    mediaStreamServer.close();
+  });
   server.server.on("upgrade", (request, socket, head) => {
-    if (isMaintenanceMode(process.env)) {
+    if (closing || isVoiceClosing(server) || isMaintenanceMode(process.env)) {
       socket.write("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
       socket.destroy();
       return;
@@ -140,7 +149,7 @@ export function createServer(options: { snapshotCache?: Omit<SnapshotCacheOption
       void handleMediaStreamConnection(server, ws, {
         url: requestUrl,
         headers: request.headers,
-      });
+      }).catch((error) => { server.log.error(error); ws.terminate(); });
     });
   });
 

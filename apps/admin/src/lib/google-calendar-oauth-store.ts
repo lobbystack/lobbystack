@@ -12,6 +12,8 @@ export async function storeCalendarOAuthState(state: string): Promise<void> {
 }
 
 export async function consumeCalendarOAuthState(state: string, userId: string, businessId: string): Promise<boolean> {
+  const parsed = verifyCalendarOAuthState(state);
+  if (!parsed || parsed.userId !== userId || parsed.businessId !== businessId) return false;
   const rows = await getAuthDatabase().db.delete(verifications).where(and(eq(verifications.identifier, identifier(state)), eq(verifications.value, `${userId}:${businessId}`), gt(verifications.expiresAt, new Date()))).returning({ id: verifications.id });
   return rows.length === 1;
 }

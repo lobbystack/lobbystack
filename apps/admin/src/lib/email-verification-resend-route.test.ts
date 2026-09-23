@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {
   class RateLimitError extends Error {}
@@ -29,10 +29,13 @@ function resendRequest(body: unknown, headers: Record<string, string> = {}): Req
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "x-real-ip");
   mocks.assertAllowed.mockResolvedValue(undefined);
   mocks.issueCode.mockResolvedValue(true);
   mocks.verifyTurnstile.mockResolvedValue(undefined);
 });
+
+afterEach(() => vi.unstubAllEnvs());
 
 describe("email verification resend route", () => {
   it("requires a valid request and Turnstile challenge", async () => {
@@ -54,8 +57,8 @@ describe("email verification resend route", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ success: true });
     expect(mocks.verifyTurnstile).toHaveBeenCalledWith({ token: "challenge", remoteIp: "203.0.113.10" });
-    expect(mocks.assertAllowed).toHaveBeenCalledWith({ email: "owner@example.invalid", remoteIp: "203.0.113.10" });
-    expect(mocks.issueCode).toHaveBeenCalledWith("owner@example.invalid");
+    expect(mocks.assertAllowed).not.toHaveBeenCalled();
+    expect(mocks.issueCode).toHaveBeenCalledWith("owner@example.invalid", "203.0.113.10");
   });
 
   it("prefers Railway's trusted client IP header", async () => {
@@ -64,7 +67,18 @@ describe("email verification resend route", () => {
       { "x-real-ip": "203.0.113.10", "cf-connecting-ip": "198.51.100.20" },
     ));
     expect(mocks.verifyTurnstile).toHaveBeenCalledWith({ token: "challenge", remoteIp: "203.0.113.10" });
-    expect(mocks.assertAllowed).toHaveBeenCalledWith({ email: "owner@example.invalid", remoteIp: "203.0.113.10" });
+    expect(mocks.issueCode).toHaveBeenCalledWith("owner@example.invalid", "203.0.113.10");
+  });
+
+  it("omits the remote IP when no trusted header is configured", async () => {
+    vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "");
+    const response = await POST(resendRequest(
+      { email: "owner@example.invalid", type: "email-verification", turnstileToken: "challenge" },
+      { "x-real-ip": "203.0.113.10" },
+    ));
+    expect(response.status).toBe(200);
+    expect(mocks.verifyTurnstile).toHaveBeenCalledWith({ token: "challenge" });
+    expect(mocks.issueCode).toHaveBeenCalledWith("owner@example.invalid", undefined);
   });
 
   it("returns the same success response when no unverified recipient exists", async () => {
@@ -75,10 +89,10 @@ describe("email verification resend route", () => {
   });
 
   it("returns a generic recipient cooldown without issuing a code", async () => {
-    mocks.assertAllowed.mockRejectedValueOnce(new mocks.RateLimitError());
+    mocks.issueCode.mockRejectedValueOnce(new mocks.RateLimitError());
     const response = await POST(resendRequest({ email: "owner@example.invalid", type: "email-verification", turnstileToken: "challenge" }));
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("60");
-    expect(mocks.issueCode).not.toHaveBeenCalled();
+    expect(mocks.issueCode).toHaveBeenCalledTimes(1);
   });
 });

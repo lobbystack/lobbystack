@@ -138,7 +138,7 @@ const homeSectionsCopy = {
           name: "Free",
           price: "$0",
           description:
-            "30 voice minutes, 10 alert SMS segments, 2 outbound call attempts, and all features.",
+            "30 browser voice minutes. No telephone number or credit card required.",
         },
         {
           name: "Starter",
@@ -304,7 +304,7 @@ const homeSectionsCopy = {
           name: "Free",
           price: "$0",
           description:
-            "30 minutes vocales, 10 segments SMS d’alerte, 2 appels sortants et toutes les fonctionnalités.",
+            "30 minutes vocales dans le navigateur. Aucun numéro de téléphone ni carte bancaire requis.",
         },
         {
           name: "Starter",

@@ -1,4 +1,4 @@
-import { type HostedCheckoutPlanIntervals } from "@lobbystack/shared";
+import { isWidgetKeyIssuanceEnabled, type HostedCheckoutPlanIntervals } from "@lobbystack/shared";
 import { NextResponse } from "next/server";
 import { and, desc, eq, sql } from "drizzle-orm";
 
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
         }
       }
       const availableCheckoutPlans = (["starter", "pro"] as const).filter(plan => availableCheckoutIntervals[plan].length > 0);
-      return { availableCheckoutPlans, availableCheckoutIntervals, account: account[0] ?? null, knowledgeStorageBytesUsed, permissions, checkoutAvailable: permissions.hasCheckoutAccess, usage, usageStatus: month ? { ...month, usageComplete: Number(incompleteUsage[0]?.count ?? 0) === 0, overageSpendingCapCents: cap, overageSpendingCapReached: cap !== null && month.overageSpendCents > 0 && month.overageSpendCents >= cap } : null, transactions: permissions.hasBillingManagementAccess ? transactions : [] };
+      return { availableCheckoutPlans, availableCheckoutIntervals, account: account[0] ?? null, knowledgeStorageBytesUsed, permissions, checkoutAvailable: permissions.hasCheckoutAccess, widgetIssuanceEnabled: isWidgetKeyIssuanceEnabled(process.env), usage, usageStatus: month ? { ...month, usageComplete: Number(incompleteUsage[0]?.count ?? 0) === 0, overageSpendingCapCents: cap, overageSpendingCapReached: cap !== null && month.overageSpendCents > 0 && month.overageSpendCents >= cap } : null, transactions: permissions.hasBillingManagementAccess ? transactions : [] };
     }));
   } catch (error) {
     return asApiResponse(error);

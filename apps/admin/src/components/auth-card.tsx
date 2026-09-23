@@ -25,7 +25,16 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   const { t, i18n } = useTranslation("auth");
   const authLocale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const [returnTo, setReturnTo] = useState<string | null>(null);
-  useEffect(() => { setReturnTo(getSafeReturnTo(new URLSearchParams(window.location.search).get("returnTo"))); }, []);
+  const [signupSource, setSignupSource] = useState<"calculator" | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setReturnTo(getSafeReturnTo(params.get("returnTo")));
+    setSignupSource(params.get("source") === "calculator" ? "calculator" : null);
+  }, []);
+  function authPath(path: "/login" | "/signup") {
+    const target = buildAuthPathWithReturnTo(path, returnTo, authLocale);
+    return signupSource ? `${target}${target.includes("?") ? "&" : "?"}source=${signupSource}` : target;
+  }
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +108,9 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   }
 
   function finishAuthentication() {
-    recordAuthSuccess(login ? "web.auth.login_succeeded" : "web.auth.signup_succeeded");
+    const event = login ? "web.auth.login_succeeded" : "web.auth.signup_succeeded";
+    if (signupSource) recordAuthSuccess(event, { source: signupSource });
+    else recordAuthSuccess(event);
     const safeReturnTo = getSafeReturnTo(new URLSearchParams(window.location.search).get("returnTo")) ?? "/";
     const target = new URL(safeReturnTo, window.location.origin);
     window.location.assign(target.origin === window.location.origin ? `${target.pathname}${target.search}${target.hash}` : "/");
@@ -199,7 +210,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
             <Button className="h-11 w-full" disabled={verificationLoading || Boolean(turnstileSiteKey && !resendTurnstileToken)} loading={resendLoading} loadingLabel={t("verifyEmail.resending")} onClick={() => void resendVerificationCode()} type="button" variant="outline">{t("verifyEmail.resend")}</Button>
           </FieldGroup>
         </form>
-        {!login ? <p className="text-center text-sm text-muted-foreground">{t("verifyEmail.existingAccountHelp")} <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={buildAuthPathWithReturnTo("/login", returnTo, authLocale)}>{t("signup.signIn")}</Link> {t("verifyEmail.or")} <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={localizePublicPath("/forgot-password", authLocale)}>{t("verifyEmail.resetPassword")}</Link>.</p> : null}
+        {!login ? <p className="text-center text-sm text-muted-foreground">{t("verifyEmail.existingAccountHelp")} <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={authPath("/login")}>{t("signup.signIn")}</Link> {t("verifyEmail.or")} <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={localizePublicPath("/forgot-password", authLocale)}>{t("verifyEmail.resetPassword")}</Link>.</p> : null}
         <button className="text-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" onClick={() => { setVerificationPending(false); setVerificationCode(""); setVerificationError(null); setResendStatus(null); }} type="button">{t("verifyEmail.useDifferentEmail")}</button>
       </div>
     </ReplacementOnboardingShell>
@@ -241,7 +252,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
           if (!token && pendingChallengeSubmit.current) { pendingChallengeSubmit.current = false; setLoading(false); setError(t("errors.turnstileRequired")); }
           if (token && pendingChallengeSubmit.current) { pendingChallengeSubmit.current = false; void submitCredentials(token); }
         }} siteKey={turnstileSiteKey} /> : null}
-        <p className="text-center text-sm text-muted-foreground">{login ? t("login.noAccount") : t("signup.haveAccount")} <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={buildAuthPathWithReturnTo(login ? "/signup" : "/login", returnTo, authLocale)}>{login ? t("login.createOne") : t("signup.signIn")}</Link></p>
+        <p className="text-center text-sm text-muted-foreground">{login ? t("login.noAccount") : t("signup.haveAccount")} <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={authPath(login ? "/signup" : "/login")}>{login ? t("login.createOne") : t("signup.signIn")}</Link></p>
       </div>
     </ReplacementOnboardingShell>
   );

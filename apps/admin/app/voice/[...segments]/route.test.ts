@@ -50,10 +50,14 @@ describe("POST /voice/call/web-recording-target", () => {
     mocks.requireInternalService.mockResolvedValue(undefined);
     mocks.readJson.mockResolvedValue({ gatewaySessionId: "gateway-session-123" });
     mocks.getAppDatabase.mockReturnValue({ db: { execute: mocks.dbExecute } });
-    mocks.withBusinessTransaction.mockResolvedValue(240_000);
+    mocks.withBusinessTransaction.mockResolvedValue({ maxDurationMs: 240_000, mediaStartedAt: null });
   });
 
   it("serializes raw SQL timestamp strings for durable web-call cleanup", async () => {
+    mocks.withBusinessTransaction.mockResolvedValueOnce({
+      maxDurationMs: 240_000,
+      mediaStartedAt: new Date("2026-09-21T02:33:03.000Z"),
+    });
     mocks.dbExecute.mockResolvedValue({
       rows: [{
         call_id: "call_123",
@@ -78,6 +82,7 @@ describe("POST /voice/call/web-recording-target", () => {
       callId: "call_123",
       providerCallId: "provider_123",
       startedAt: "2026-09-21T02:33:00.000Z",
+      mediaStartedAt: "2026-09-21T02:33:03.000Z",
       endedAt: "2026-09-21T02:33:12.000Z",
       status: "completed",
       webCallMaxDurationMs: 240_000,

@@ -21,7 +21,7 @@ LobbyStack inclut réservation, relais, alertes SMS, transcriptions, résumés e
 
 | Critère | Zoom | LobbyStack |
 | --- | --- | --- |
-| Forfait gratuit durable | Non annoncé | 30 minutes, sans carte, toutes les fonctions |
+| Forfait gratuit durable | Non annoncé | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
 | Prix de lancement | 29,99 $ pour 100 minutes | 30 $ pour 150 minutes |
 | Prix annuel | Équivalent de 24,99 $ pour 100 minutes | 24 $ pour 150 minutes |
 | Téléphonie existante | Prise en charge annoncée | Renvoi d'appel et fournisseur vocal |
@@ -95,6 +95,6 @@ Choisissez LobbyStack pour 30 minutes gratuites, 50 % plus d'usage près de 30 $
 
 ## Verdict
 
-LobbyStack bat le forfait de lancement Zoom sur les minutes, permet de tester de vrais appels gratuitement et laisse le déploiement sous votre contrôle. Zoom reste crédible pour les équipes qui préfèrent sa marque et son administration.
+Avec LobbyStack, vous obtenez plus de minutes que sur le forfait de lancement Zoom et vous pouvez tester la voix dans votre navigateur gratuitement. Choisissez Zoom si votre équipe préfère son administration.
 
 [Commencez avec LobbyStack gratuitement](/fr/pricing/) et testez votre téléphone et votre calendrier.

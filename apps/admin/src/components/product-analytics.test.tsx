@@ -130,6 +130,19 @@ describe("queued authentication analytics", () => {
     expect(consumeAuthSuccess()).toBeNull();
   });
 
+  it("carries the calculator source onto the deferred signup event", async () => {
+    recordAuthSuccess("web.auth.signup_succeeded", { source: "calculator" });
+    const client = setup(undefined);
+    await act(async () => { client.setQueryData(["appearance-preferences", "business"], { telemetryEnabled: true }); });
+    await waitFor(() => expect(mocks.posthog.capture).toHaveBeenCalledWith("web.auth.signup_succeeded", {
+      businessId: "business",
+      deploymentMode: "development",
+      pathname: "/calls",
+      source: "calculator",
+      $groups: { business: "business:business" },
+    }));
+  });
+
   it("discards queued authentication analytics when the tenant opts out", () => {
     recordAuthSuccess("web.auth.login_succeeded");
     setup(false);

@@ -15,13 +15,13 @@ canonicalSlug: "cloudtalk-ai-receptionist-alternative"
 
 Une **alternative à CloudTalk AI Receptionist** ne devrait pas exiger un abonnement de centre de contact pour répondre et réserver. CloudTalk affiche 99 $ pour 200 minutes IA et 199 $ pour 500, en plus de sa plateforme téléphonique. LobbyStack offre 150 minutes pour 30 $ et 500 pour 100 $, sans siège CloudTalk.
 
-LobbyStack ajoute 30 minutes gratuites durables pour tester de vrais appels, avec réservation, relais humain, alertes SMS, transcriptions, résumés, cloud géré et auto-hébergement.
+Vous pouvez tester LobbyStack avec 30 minutes vocales gratuites dans votre navigateur, sans numéro de téléphone. Choisissez Starter ou Pro pour recevoir des appels sur un numéro dédié.
 
 ## CloudTalk et LobbyStack
 
 | Critère | CloudTalk | LobbyStack |
 | --- | --- | --- |
-| Forfait gratuit durable | Non, 50 minutes le premier mois | 30 minutes, sans carte, toutes les fonctions |
+| Forfait gratuit durable | Non, 50 minutes le premier mois | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
 | Entrée IA | 99 $ pour 200 minutes | 30 $ pour 150 minutes |
 | Niveau 500 minutes | 199 $ | 100 $ |
 | Plateforme de base | Abonnement par utilisateur | Aucun centre de contact requis |

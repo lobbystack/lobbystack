@@ -10,6 +10,7 @@ export type WebVoiceWidgetStatus =
   | "error"
 
 type UseWebVoiceCallOptions = {
+  locale?: "en" | "fr"
   businessSlug: string
   endpoint: string
   widgetId?: string
@@ -41,7 +42,23 @@ export const webVoiceStatusLabel: Record<WebVoiceWidgetStatus, string> = {
   error: "Could not start the call",
 }
 
-function getErrorMessage(error: unknown): string {
+export const webVoiceStatusLabelFr: Record<WebVoiceWidgetStatus, string> = {
+  idle: "Prêt pour votre appel",
+  requesting_microphone: "Autorisez l’accès au microphone",
+  connecting: "Connexion au réceptionniste IA",
+  connected: "En ligne avec le réceptionniste IA",
+  ending: "Fin de l’appel",
+  ended: "Appel terminé",
+  error: "Impossible de démarrer l’appel",
+}
+
+function getErrorMessage(error: unknown, locale: "en" | "fr" = "en"): string {
+  if (locale === "fr") {
+    if (error instanceof DOMException && error.name === "NotAllowedError") return "Autorisez l’accès au microphone dans votre navigateur."
+    if (error instanceof DOMException && error.name === "NotFoundError") return "Branchez un microphone pour continuer."
+    if (error instanceof DOMException && error.name === "NotReadableError") return "Fermez l’autre application qui utilise le microphone."
+    return "Impossible de démarrer l’appel. Réessayez."
+  }
   if (error instanceof DOMException && error.name === "NotAllowedError") {
     return "Microphone access was blocked."
   }
@@ -118,6 +135,7 @@ async function fetchWithTimeout(
 }
 
 export function useWebVoiceCall({
+  locale = "en",
   businessSlug,
   endpoint,
   widgetId,
@@ -434,7 +452,7 @@ export function useWebVoiceCall({
           peerConnection.connectionState === "disconnected"
         ) {
           setStatus("error")
-          setErrorMessage("The voice connection dropped.")
+          setErrorMessage(locale === "fr" ? "La connexion vocale a été interrompue." : "The voice connection dropped.")
           emit("landing.web_voice_call_error", {
             connectionState: peerConnection.connectionState,
           })
@@ -494,7 +512,7 @@ export function useWebVoiceCall({
       await endRemoteSession({ uploadRecording: false })
       cleanup()
       setStatus("error")
-      setErrorMessage(getErrorMessage(error))
+      setErrorMessage(getErrorMessage(error, locale))
       emit("landing.web_voice_call_error", {
         reason: getErrorMessage(error),
       })

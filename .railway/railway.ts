@@ -80,7 +80,7 @@ export default defineRailway((ctx) => {
       TWILIO_ALERT_API_KEY_SID: preserve(),
       TWILIO_ALERT_API_KEY_SECRET: preserve(),
       TWILIO_STATUS_CALLBACK_URL: production ? preserve() : `${stagingAdminUrl}/api/webhooks/twilio/status`,
-      NODE_ENV: preserve(),
+      NODE_ENV: "production",
       OTP_HASH_SECRET: preserve(),
       PORT: preserve(),
       REDIS_PREFIX: preserve(),
@@ -114,11 +114,15 @@ export default defineRailway((ctx) => {
       OPENAI_API_KEY: preserve(),
       TWILIO_ACCOUNT_SID: preserve(),
       TWILIO_AUTH_TOKEN: preserve(),
-      NODE_ENV: preserve(),
+      NODE_ENV: "production",
       PORT: preserve(),
       REDIS_PREFIX: preserve(),
       REDIS_URL: preserve(),
       VOICE_GATEWAY_BASE_URL: preserve(),
+      // Railway's controlled ingress overwrites x-real-ip with the remote
+      // client, so opt into that single-value header instead of trusting all
+      // forwarded-for hops. VOICE_GATEWAY_TRUST_PROXY stays false.
+      TRUSTED_CLIENT_IP_HEADER: "x-real-ip",
       WEB_CALL_ALLOWED_ORIGINS: preserve(),
       // The landing page demo call sends no signed token; the gateway only
       // accepts it for this public business slug.
@@ -195,7 +199,7 @@ export default defineRailway((ctx) => {
       TWILIO_ALERT_WEBHOOK_KEY_ID: preserve(),
       TWILIO_ALERT_WEBHOOK_SECRET: preserve(),
       TWILIO_STATUS_CALLBACK_URL: production ? preserve() : `${stagingAdminUrl}/api/webhooks/twilio/status`,
-      NODE_ENV: preserve(),
+      NODE_ENV: "production",
       OTP_HASH_SECRET: preserve(),
       PORT: preserve(),
       REDIS_PREFIX: preserve(),
@@ -207,10 +211,12 @@ export default defineRailway((ctx) => {
       S3_FORCE_PATH_STYLE: preserve(),
       S3_REGION: preserve(),
       S3_SECRET_ACCESS_KEY: preserve(),
-      SEND_VERIFICATION_EMAIL_ON_SIGNUP: preserve(),
       STORAGE_PROVIDER: preserve(),
       TURNSTILE_SECRET_KEY: preserve(),
       WIDGET_SESSION_SECRET: preserve(),
+      // Railway's controlled ingress overwrites x-real-ip with the remote
+      // client; use it as the single-value per-client attribution header.
+      TRUSTED_CLIENT_IP_HEADER: "x-real-ip",
       FINANCE_EXPORT_ENABLED: preserve(),
       FINANCE_EXPORT_TOKEN: preserve(),
       LOBBYSTACK_FINANCE_EXPORT_DATABASE_URL: preserve(),
@@ -242,7 +248,7 @@ export default defineRailway((ctx) => {
     deploy: { restartPolicyType: "NEVER" },
     env: {
       LOBBYSTACK_MIGRATOR_DATABASE_URL: preserve(),
-      NODE_ENV: preserve(),
+      NODE_ENV: "production",
       ...(production
         ? {
             LOBBYSTACK_AUTH_PASSWORD: preserve(),

@@ -10,6 +10,7 @@ import { selectActiveBusiness } from "@/lib/active-business";
 import { SectionBlock } from "@/components/section-block";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
+import { Button } from "@/components/ui/button";
 
 function isPlan(value: string | null | undefined): value is BillingPlanSlug { return value != null && value in billingPlanCatalog; }
 
@@ -36,7 +37,7 @@ export function LiveUsageSurface() {
   const resetAt = billing.data?.account?.currentPeriodEnd ?? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString();
 
   if (businesses.isLoading || billing.isLoading) return <UsageSkeleton />;
-  if (businesses.isError || billing.isError) return <Surface className="p-6 text-sm text-destructive">{t("billing.usage.unavailable")}</Surface>;
+  if (businesses.isError || billing.isError) return <Surface className="flex flex-col items-start gap-4 p-6"><p role="alert">{t("billing.usage.unavailable")}</p><Button variant="outline" onClick={() => { if (businesses.isError || !business) void businesses.refetch(); else void billing.refetch(); }}>{t("billing.actions.retry")}</Button></Surface>;
   if (plan === "self_host") return <SectionBlock title={t("billing.usage.title")}><Surface className="p-6"><p className="text-[15px] leading-6 text-muted-foreground">{t("billing.currentPlan.selfHostNotice")}</p></Surface></SectionBlock>;
 
   const description = resetAt ? t("billing.usage.description", { resetAt: new Intl.DateTimeFormat(i18n.language, { month: "long", day: "numeric" }).format(new Date(resetAt)) }) : undefined;
@@ -51,7 +52,7 @@ export function LiveUsageSurface() {
 function UsageMeter({ label, used, included, unit, blocked, showUsedUnit = false }: { label: string; used: number; included: number | null; unit: string; blocked: boolean; showUsedUnit?: boolean }) {
   const { i18n, t } = useTranslation("settings");
   const percentage = included && included > 0 ? Math.min(100, (used / included) * 100) : 0;
-  return <div className="border-b border-border px-6 py-5 last:border-b-0"><div className="flex flex-col gap-2"><div className="flex items-center justify-between gap-4"><span className="text-[15px] font-medium leading-6">{label}</span><span className="text-[15px] leading-6 text-muted-foreground tabular-nums">{used.toLocaleString(i18n.language)}{showUsedUnit ? ` ${unit}` : ""} {included === null ? "" : `/ ${included.toLocaleString(i18n.language)} `}{unit}</span></div>{included !== null && included > 0 ? <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary"><div className={blocked ? "h-full rounded-full bg-destructive" : "h-full rounded-full bg-foreground transition-all duration-700"} style={{ width: `${percentage}%` }} /></div> : null}{blocked ? <span className="text-sm leading-6 text-destructive">{t("billing.usage.blockedDescription")}</span> : null}</div></div>;
+  return <div className="border-b border-border px-6 py-5 last:border-b-0"><div className="flex flex-col gap-2"><div className="flex items-center justify-between gap-4"><span className="text-[15px] font-medium leading-6">{label}</span><span className="text-[15px] leading-6 text-muted-foreground tabular-nums">{included === null ? t("billing.usage.customAllowance", { used: used.toLocaleString(i18n.language), unit }) : <>{used.toLocaleString(i18n.language)}{showUsedUnit ? ` ${unit}` : ""} / {included.toLocaleString(i18n.language)} {unit}</>}</span></div>{included !== null && included > 0 ? <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary"><div className={blocked ? "h-full rounded-full bg-destructive" : "h-full rounded-full bg-foreground transition-all duration-700"} style={{ width: `${percentage}%` }} /></div> : null}{blocked ? <span className="text-sm leading-6 text-destructive">{t("billing.usage.blockedDescription")}</span> : null}</div></div>;
 }
 
 function UsageSkeleton() { return <div className="flex flex-col gap-3"><div className="space-y-2"><Skeleton className="h-5 w-32" /><Skeleton className="h-4 w-44" /></div><Surface>{Array.from({ length: 4 }).map((_, index) => <div className="space-y-2 border-b px-6 py-5 last:border-b-0" key={index}><div className="flex justify-between"><Skeleton className="h-5 w-32" /><Skeleton className="h-5 w-24" /></div><Skeleton className="h-1.5 w-full rounded-full" /></div>)}</Surface></div>; }

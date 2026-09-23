@@ -407,6 +407,7 @@ export type {
   SmsMessageStatus,
 } from "./twilioMessageStatus";
 export * from "./billing";
+export * from "./product-capabilities";
 export { normalizeAuthEmail } from "./auth";
 
 export { isTransferPermitted, normalizeTransferMode } from "./transferPolicy";

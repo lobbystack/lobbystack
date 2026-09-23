@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 function validSignature(body: string, headers: Headers): boolean {
   const secret = process.env.POLAR_WEBHOOK_SECRET;
-  if (!secret) return process.env.NODE_ENV !== "production";
+  if (!secret) return false;
   const id = headers.get("webhook-id");
   const timestamp = headers.get("webhook-timestamp");
   const signature = headers.get("webhook-signature");
@@ -29,7 +29,13 @@ export async function POST(request: Request) {
     const body = await request.text();
     if (!validSignature(body, request.headers)) return new NextResponse("Unauthorized", { status: 401 });
     // Standard Webhooks supplies the delivery ID in headers, not the JSON body.
-    const raw = JSON.parse(body) as Record<string, unknown>;
+    let raw: Record<string, unknown>;
+    try {
+      raw = JSON.parse(body) as Record<string, unknown>;
+    } catch {
+      return NextResponse.json({ error: "Invalid webhook." }, { status: 400 });
+    }
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return NextResponse.json({ error: "Invalid webhook." }, { status: 400 });
     const event = polarWebhookSchema.safeParse({ ...raw, id: request.headers.get("webhook-id") ?? raw.id });
     if (!event.success) return NextResponse.json({ error: "Invalid webhook." }, { status: 400 });
     const normalized = normalizePolarEvent(event.data.type, event.data.data);
@@ -37,13 +43,13 @@ export async function POST(request: Request) {
     // everywhere; legacy Convex references are resolved only during production
     // cutover when the environment explicitly enables compatibility routing.
     const allowLegacyReference = process.env.POLAR_ACCEPT_LEGACY_BUSINESS_IDS === "true";
+    const condition = normalized.businessId
+      ? eq(businesses.id, normalized.businessId)
+      : allowLegacyReference && normalized.businessReference
+        ? eq(businesses.legacyConvexId, normalized.businessReference)
+        : undefined;
+    if (!condition) return NextResponse.json({ accepted: true, ignored: true });
     const businessId = await withDispatcherTransaction(getDispatcherDatabase().db, async tx => {
-      const condition = normalized.businessId
-        ? eq(businesses.id, normalized.businessId)
-        : allowLegacyReference && normalized.businessReference
-          ? eq(businesses.legacyConvexId, normalized.businessReference)
-          : undefined;
-      if (!condition) return undefined;
       return (await tx.select({ id: businesses.id }).from(businesses).where(condition).limit(1))[0]?.id;
     });
     if (!businessId) return NextResponse.json({ accepted: true, ignored: true });
@@ -54,9 +60,7 @@ export async function POST(request: Request) {
       }
       return Boolean(stored);
     };
-    const inserted = businessId
-      ? await withBusinessTransaction(getWorkerDatabase().db, { businessId, actorType: "worker" }, persist)
-      : await withDispatcherTransaction(getDispatcherDatabase().db, persist);
+    const inserted = await withBusinessTransaction(getWorkerDatabase().db, { businessId, actorType: "worker" }, persist);
     return NextResponse.json({ accepted: true, duplicate: !inserted, eventId: event.data.id });
   } catch {
     return NextResponse.json({ error: "Webhook processing failed." }, { status: 500 });

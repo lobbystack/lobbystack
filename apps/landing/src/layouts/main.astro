@@ -163,5 +163,20 @@ Astro.response.headers.set("Content-Signal", CONTENT_SIGNAL)
     <slot />
     <CookieConsentBanner locale={locale} client:load />
     <script is:inline src="/webmcp.js" defer></script>
+    <script>
+      const main = document.querySelector<HTMLElement>("#main-content")
+      if (main) main.tabIndex = -1
+      document.querySelectorAll<HTMLAnchorElement>("[data-language-switch]").forEach((link) => {
+        const alternate = document.querySelector<HTMLLinkElement>(`link[rel="alternate"][hreflang="${link.hreflang}"]`)
+        if (alternate) link.href = new URL(alternate.href).pathname
+      })
+      document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") return
+        const details = (event.target as Element | null)?.closest<HTMLDetailsElement>("header details[open]")
+        if (!details) return
+        details.open = false
+        details.querySelector<HTMLElement>("summary")?.focus()
+      })
+    </script>
   </body>
 </html>

@@ -7,9 +7,11 @@ import WebSocket from "ws";
 
 import {
   appendVoiceTranscript,
+  bindWebVoiceProvider,
   completeVoiceCall,
   fetchWebCallRecordingTarget,
   fetchWebVoiceContext,
+  markWebVoiceMediaStarted,
   recordVoiceAiCost,
   RuntimeRequestError,
   startWebVoiceCall,
@@ -28,6 +30,9 @@ import type { EndCallRequest } from "../realtime/callControl";
 import { executeVoiceTool } from "../realtime/toolExecutor";
 import { createWebRealtimeToolDefinitions } from "../realtime/toolDefinitions";
 import { observeVoiceLatency, vadSilenceMs } from "../realtime/latency";
+import { assertSocketWritable, closeVoiceSocket, createFrameBudget, finalizeVoiceOnce, MAX_REALTIME_FRAME_BYTES, parseRealtimeFrame, settleVoiceTasks } from "../realtime/safety";
+import { acquireVoiceLease, initializeVoiceLifecycle } from "../sessions/lifecycle";
+import { resolveWebCallClientKey } from "./clientIp";
 
 type WebCallSessionRequest = {
   businessSlug: string;
@@ -87,6 +92,7 @@ type RealtimeUsageMetrics = NonNullable<
 >["usage"];
 
 type ActiveWebCall = {
+  releaseLease?: () => void;
   knowledgeTurn?: { id: string; lookups: number };
   gatewaySessionId: string;
   businessSlug: string;
@@ -96,6 +102,7 @@ type ActiveWebCall = {
   providerCallId: string;
   aiTraceId: string;
   startedAtMs: number;
+  mediaStartedAtMs: number | null;
   pendingAssistantResponseRequestAtMs: number | null;
   assistantResponseStartedAtMsById: Map<string, number>;
   maxDurationMs: number;
@@ -167,6 +174,9 @@ const PROSPECT_DEMO_INTAKE_TOOL_NAMES = new Set([
 ]);
 export function resetWebCallRouteStateForTests(): void {
   for (const session of activeWebCalls.values()) {
+    session.finalized = true;
+    closeVoiceSocket(session.sidebandSocket);
+    session.releaseLease?.();
     clearWebMaxDurationTimer(session);
     clearWebEndCallFallbackTimer(session);
     if (session.pendingAssistantTranscriptFlushTimer !== null) {
@@ -233,6 +243,8 @@ function parseWebCallSessionRequest(
     rawPageUrl === null ||
     rawVisitorId === null ||
     rawWidgetId === null ||
+    rawWidgetKey === null ||
+    rawWidgetSessionToken === null ||
     rawDashboardTestCallProof === null ||
     rawProspectDemoToken === null
   ) {
@@ -245,6 +257,9 @@ function parseWebCallSessionRequest(
   }
 
   const sdp = rawSdp ?? "";
+  if (sdp.length > 64 * 1024 || Object.entries(input).some(([key, value]) => typeof value === "string" && value.length > (key === "sdp" ? 64 * 1024 : 8 * 1024))) {
+    return { ok: false, message: "Web call request exceeds payload limit." };
+  }
   if (!sdp.trim()) {
     return { ok: false, message: "Missing SDP offer." };
   }
@@ -408,7 +423,7 @@ function addCorsHeaders(reply: FastifyReply, origin: string): void {
   reply.header("Vary", "Origin");
 }
 
-async function readRequestBodyBuffer(request: FastifyRequest): Promise<Buffer> {
+async function readRequestBodyBuffer(request: FastifyRequest, limit: number): Promise<Buffer> {
   if (Buffer.isBuffer(request.body)) {
     return request.body;
   }
@@ -420,24 +435,27 @@ async function readRequestBodyBuffer(request: FastifyRequest): Promise<Buffer> {
   }
 
   const chunks: Array<Buffer> = [];
+  let bytes = 0;
   for await (const chunk of request.raw) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    bytes += buffer.length;
+    if (bytes > limit) throw new Error("Voice recording exceeds payload limit.");
+    chunks.push(buffer);
   }
   return Buffer.concat(chunks);
 }
 
 function rememberCompletedWebCall(session: ActiveWebCall): void {
+  for (const [id, completed] of completedWebCalls) {
+    if (Date.now() - (completed.completedAtMs ?? 0) > WEB_COMPLETED_SESSION_UPLOAD_GRACE_MS) completedWebCalls.delete(id);
+  }
+  if (completedWebCalls.size >= 1_000) completedWebCalls.delete(completedWebCalls.keys().next().value!);
+  const completedAtMs = Date.now();
   completedWebCalls.set(session.gatewaySessionId, {
     callId: session.callId,
-    startedAtMs: session.startedAtMs,
-    completedAtMs: Date.now(),
+    startedAtMs: session.mediaStartedAtMs ?? completedAtMs,
+    completedAtMs,
   });
-  setTimeout(() => {
-    const completed = completedWebCalls.get(session.gatewaySessionId);
-    if (completed?.callId === session.callId) {
-      completedWebCalls.delete(session.gatewaySessionId);
-    }
-  }, WEB_COMPLETED_SESSION_UPLOAD_GRACE_MS).unref();
 }
 
 function isActiveWebRecordingUploadAllowed(
@@ -465,12 +483,16 @@ function getWebCallForRecording(
 ): CompletedWebCall | null {
   const active = activeWebCalls.get(sessionId);
   if (active) {
-    if (!isActiveWebRecordingUploadAllowed(active.startedAtMs, maxDurationMs)) {
+    const mediaStartedAtMs = active.mediaStartedAtMs;
+    if (
+      mediaStartedAtMs === null ||
+      !isActiveWebRecordingUploadAllowed(mediaStartedAtMs, maxDurationMs)
+    ) {
       return null;
     }
     return {
       callId: active.callId,
-      startedAtMs: active.startedAtMs,
+      startedAtMs: mediaStartedAtMs,
     };
   }
 
@@ -506,10 +528,15 @@ async function resolveWebCallForRecording(
     return null;
   }
 
-  const startedAtMs = Date.parse(durable.startedAt);
-  if (!Number.isFinite(startedAtMs)) {
+  const durableStartedAtMs = Date.parse(durable.startedAt);
+  if (!Number.isFinite(durableStartedAtMs)) {
     return null;
   }
+
+  const mediaStartedAtMs = durable.mediaStartedAt !== undefined
+    ? Date.parse(durable.mediaStartedAt)
+    : undefined;
+  if (mediaStartedAtMs !== undefined && !Number.isFinite(mediaStartedAtMs)) return null;
 
   const completedAtMs =
     durable.endedAt !== undefined ? Date.parse(durable.endedAt) : undefined;
@@ -521,12 +548,13 @@ async function resolveWebCallForRecording(
       return null;
     }
   } else {
-    if (durable.status !== "in_progress" && durable.status !== "open") {
+    if (durable.status !== "started" && durable.status !== "in_progress" && durable.status !== "open") {
       return null;
     }
     if (
+      mediaStartedAtMs === undefined ||
       !isActiveWebRecordingUploadAllowed(
-        startedAtMs,
+        mediaStartedAtMs,
         durable.webCallMaxDurationMs ?? maxDurationMs,
       )
     ) {
@@ -536,7 +564,7 @@ async function resolveWebCallForRecording(
 
   return {
     callId: durable.callId,
-    startedAtMs,
+    startedAtMs: mediaStartedAtMs ?? durableStartedAtMs,
     ...(completedAtMs !== undefined ? { completedAtMs } : {}),
   };
 }
@@ -553,22 +581,31 @@ async function finishDurableWebCallSession(
     return;
   }
 
-  if (durable.status !== "in_progress" && durable.status !== "open") {
+  if (durable.status !== "started" && durable.status !== "in_progress" && durable.status !== "open") {
     return;
   }
 
-  const startedAtMs = Date.parse(durable.startedAt);
-  if (!Number.isFinite(startedAtMs)) {
+  const mediaStartedAtMs = durable.mediaStartedAt !== undefined
+    ? Date.parse(durable.mediaStartedAt)
+    : Number.NaN;
+  if (!Number.isFinite(mediaStartedAtMs)) {
+    server.log.warn(
+      { callId: durable.callId, gatewaySessionId: sessionId },
+      "Durable web call has no media-start evidence; retaining reservation for reconciliation",
+    );
     return;
   }
 
   const endedAtMs = Date.now();
   if (durable.providerCallId !== undefined) {
-    await hangupOpenAiRealtimeProviderCall(server, {
+    const stopped = await hangupOpenAiRealtimeProviderCall(server, {
       callId: durable.callId,
       providerCallId: durable.providerCallId,
       reason: disposition,
     });
+    if (!stopped) throw new Error("Provider hangup is unconfirmed; retaining durable voice reservation.");
+  } else {
+    throw new Error("Provider identity is unknown; retaining durable voice reservation.");
   }
 
   await completeVoiceCall({
@@ -577,12 +614,12 @@ async function finishDurableWebCallSession(
     disposition,
     endedAt: new Date(endedAtMs).toISOString(),
     providerDurationSeconds: getWebCallDurationSeconds(
-      startedAtMs,
+      mediaStartedAtMs,
       endedAtMs,
       durable.webCallMaxDurationMs ??
         server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
     ),
-    mediaDurationSeconds: Math.max(0, endedAtMs - startedAtMs) / 1_000,
+    mediaDurationSeconds: Math.max(0, endedAtMs - mediaStartedAtMs) / 1_000,
   });
 }
 
@@ -748,8 +785,8 @@ function normalizeOptionalAbuseKey(
   return normalized.slice(0, 256);
 }
 
-function getClientIp(request: FastifyRequest): string | undefined {
-  return request.ip;
+function getClientIp(server: FastifyInstance, request: FastifyRequest): string {
+  return resolveWebCallClientKey(server, request);
 }
 
 function hashAbuseKey(
@@ -779,8 +816,8 @@ async function hangupOpenAiRealtimeCall(
   server: FastifyInstance,
   session: ActiveWebCall,
   reason: string,
-): Promise<void> {
-  await hangupOpenAiRealtimeProviderCall(server, {
+): Promise<boolean> {
+  return await hangupOpenAiRealtimeProviderCall(server, {
     callId: session.callId,
     providerCallId: session.providerCallId,
     reason,
@@ -794,7 +831,7 @@ async function hangupOpenAiRealtimeProviderCall(
     providerCallId: string;
     reason: string;
   },
-): Promise<void> {
+): Promise<boolean> {
   if (input.providerCallId.startsWith("webcall_")) {
     server.log.warn(
       {
@@ -804,7 +841,7 @@ async function hangupOpenAiRealtimeProviderCall(
       },
       "Skipping OpenAI Realtime hangup because no provider call ID was returned",
     );
-    return;
+    return false;
   }
 
   try {
@@ -822,10 +859,10 @@ async function hangupOpenAiRealtimeProviderCall(
     );
 
     if (!response) {
-      return;
+      return false;
     }
 
-    if (!response.ok) {
+    if (!response.ok && response.status !== 404 && response.status !== 410) {
       const body = await response.text().catch(() => "");
       server.log.warn(
         {
@@ -837,7 +874,9 @@ async function hangupOpenAiRealtimeProviderCall(
         },
         "OpenAI Realtime web call hangup failed",
       );
+      return false;
     }
+    return true;
   } catch (error) {
     server.log.error(
       {
@@ -848,6 +887,7 @@ async function hangupOpenAiRealtimeProviderCall(
       },
       "Failed to hang up OpenAI Realtime web call",
     );
+    return false;
   }
 }
 
@@ -856,26 +896,32 @@ async function finishWebCallSession(
   session: ActiveWebCall,
   disposition: string,
 ): Promise<void> {
-  if (session.finalized) {
-    return;
-  }
+  return finalizeVoiceOnce(session, () => finishWebCallResources(server, session, disposition));
+}
 
-  session.finalized = true;
+async function finishWebCallResources(server: FastifyInstance, session: ActiveWebCall, disposition: string): Promise<void> {
+  closeVoiceSocket(session.sidebandSocket);
   clearWebMaxDurationTimer(session);
   clearWebEndCallFallbackTimer(session);
+  const transcriptTask = flushPendingWebAssistantTranscripts(server, session).catch((error: unknown) => server.log.error(error));
   try {
-    await flushPendingWebAssistantTranscripts(server, session);
-    await hangupOpenAiRealtimeCall(server, session, disposition);
+    if (!await hangupOpenAiRealtimeCall(server, session, disposition)) throw new Error("Provider hangup is unconfirmed; retaining durable voice reservation.");
+    const endedAtMs = Date.now();
+    // Bill from the media clock, which starts only once the provider session is
+    // allocated, bound, and its sideband is set up. The earlier durable
+    // startedAt anchor is for crash recovery, not for billing.
+    const mediaStartedAtMs = session.mediaStartedAtMs ?? endedAtMs;
+    await settleVoiceTasks([transcriptTask]);
     const completion = {
       callId: session.callId,
       status: "completed",
       disposition,
-      endedAt: new Date().toISOString(),
+      endedAt: new Date(endedAtMs).toISOString(),
       providerDurationSeconds: Math.max(
         0,
-        Math.ceil((Date.now() - session.startedAtMs) / 1000),
+        Math.ceil((endedAtMs - mediaStartedAtMs) / 1000),
       ),
-      mediaDurationSeconds: Math.max(0, Date.now() - session.startedAtMs) / 1_000,
+      mediaDurationSeconds: Math.max(0, endedAtMs - mediaStartedAtMs) / 1_000,
     };
 
     for (
@@ -914,8 +960,9 @@ async function finishWebCallSession(
     // exhausts its retries. The caller still receives the final persistence
     // error so it is logged and reported rather than becoming an orphaned task.
     rememberCompletedWebCall(session);
-    session.sidebandSocket?.close(1000, "web call ended");
+    closeVoiceSocket(session.sidebandSocket);
     activeWebCalls.delete(session.gatewaySessionId);
+    session.releaseLease?.();
   }
 
 }
@@ -981,7 +1028,7 @@ function scheduleWebMaxDurationTimer(
         );
       },
     );
-  }, session.maxDurationMs);
+  }, Math.max(0, session.maxDurationMs - (Date.now() - (session.mediaStartedAtMs ?? Date.now()))));
 }
 
 function parseProviderCallId(
@@ -1014,6 +1061,7 @@ function postRealtimeEvent(
   payload: Record<string, unknown>,
 ): void {
   if (socket.readyState === WebSocket.OPEN) {
+    assertSocketWritable(socket);
     socket.send(JSON.stringify(payload));
   }
 }
@@ -1149,6 +1197,7 @@ async function exchangeWebRtcOffer(input: {
       Authorization: `Bearer ${input.apiKey}`,
     },
     body: formData,
+    signal: AbortSignal.timeout(15_000),
   });
 
   if (!response.ok) {
@@ -1174,6 +1223,8 @@ function createSidebandSocket(input: {
       input.session.providerCallId,
     )}`,
     {
+      maxPayload: MAX_REALTIME_FRAME_BYTES,
+      handshakeTimeout: 10_000,
       headers: {
         Authorization: `Bearer ${input.server.runtimeConfig.OPENAI_API_KEY}`,
       },
@@ -1181,6 +1232,7 @@ function createSidebandSocket(input: {
   );
 
   socket.on("open", () => {
+    if (input.session.finalized) { closeVoiceSocket(socket); return; }
     try {
       postRealtimeEvent(socket, {
         type: "session.update",
@@ -1281,34 +1333,22 @@ function createSidebandSocket(input: {
     }
   });
 
+  const consumeFrame = createFrameBudget();
+  let pendingMessages = 0;
   socket.on("message", (rawMessage) => {
-    void handleSidebandMessage(
-      input.server,
-      socket,
-      input.session,
-      rawMessage,
-    ).catch((error: unknown) => {
-      input.server.log.error(
-        {
-          err: error,
-          callId: input.session.callId,
-          providerCallId: input.session.providerCallId,
-        },
-        "Failed to handle OpenAI Realtime web call sideband message",
-      );
-      capturePostHogException(error, {
-        businessId: input.session.businessId,
-        properties: {
-          operation: "web_call_sideband_message",
-          channel: "web_voice",
-          provider: "openai",
-          callId: input.session.callId,
-        },
-      });
-    });
+    if (input.session.finalized) return;
+    void (async () => {
+      consumeFrame(rawMessage);
+      if (++pendingMessages > 64) throw new Error("Web voice message backlog exhausted.");
+      await handleSidebandMessage(input.server, socket, input.session, rawMessage);
+    })().catch(async (error: unknown) => {
+      input.server.log.error({ err: error, callId: input.session.callId }, "Web voice frame failed");
+      await finishWebCallSession(input.server, input.session, "provider_frame_failed");
+    }).catch((error: unknown) => input.server.log.error(error)).finally(() => { pendingMessages = Math.max(0, pendingMessages - 1); });
   });
 
   socket.on("error", (error) => {
+    void finishWebCallSession(input.server, input.session, "provider_socket_error").catch((failure) => input.server.log.error(failure));
     capturePostHogException(error, {
       businessId: input.session.businessId,
       properties: {
@@ -1357,7 +1397,8 @@ async function handleSidebandMessage(
   session: ActiveWebCall,
   rawMessage: WebSocket.RawData,
 ): Promise<void> {
-  const payload = JSON.parse(rawMessage.toString()) as OpenAiRealtimeMessage;
+  if (session.finalized) return;
+  const payload = parseRealtimeFrame(rawMessage, "type") as OpenAiRealtimeMessage;
   const latency = observeVoiceLatency(session, payload.type);
   if (latency) {
     server.log.info({ ...latency, callId: session.callId, channel: "web" }, "Voice turn latency");
@@ -1671,6 +1712,7 @@ async function handleToolCall(
       ...(session.publicWebCall ? { publicWebCall: true } : {}),
     });
     contextDurationMs = performance.now() - toolStartedAt;
+    if (session.finalized) return;
     const knowledgeTurn = session.knowledgeTurn ??= { id: toolCall.callId, lookups: 0 };
     executed = await executeVoiceTool({
       toolName: toolCall.name,
@@ -1719,6 +1761,7 @@ async function handleToolCall(
     toolName: toolCall.name, contextDurationMs, durationMs: performance.now() - toolStartedAt,
   }, "Voice tool latency");
 
+  if (session.finalized) return;
   postRealtimeEvent(socket, {
     type: "conversation.item.create",
     item: {
@@ -1747,6 +1790,7 @@ async function handleToolCall(
 }
 
 export function registerWebCallRoutes(server: FastifyInstance): void {
+  initializeVoiceLifecycle(server);
   const webRecordingBodyLimit = getWebRecordingBodyLimit(
     server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
   );
@@ -1785,10 +1829,13 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
   server.post(
     "/web-call/sessions",
     {
+      bodyLimit: 96 * 1024,
       config: {
         rateLimit: {
           max: WEB_CALL_SESSION_START_RATE_LIMIT_MAX,
           timeWindow: WEB_CALL_SESSION_START_RATE_LIMIT_WINDOW,
+          keyGenerator: (request: FastifyRequest) =>
+            resolveWebCallClientKey(server, request),
         },
       },
     },
@@ -1822,7 +1869,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       const gatewaySessionId = crypto.randomUUID();
       const widgetId = normalizeOptionalAbuseKey(body.widgetId);
       const visitorId = normalizeOptionalAbuseKey(body.visitorId);
-      const ipHash = hashAbuseKey(server, getClientIp(request));
+      const ipHash = hashAbuseKey(server, getClientIp(server, request));
       const configuredDashboardTestCallToken = resolveDashboardTestCallToken(server.runtimeConfig);
       const dashboardTestCallToken =
         widgetId === DASHBOARD_TEST_CALL_WIDGET_ID &&
@@ -1883,37 +1930,18 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         return reply.code(503).send({ error: "The voice agent is still being prepared. Please try again shortly." });
       }
       setBusinessTelemetryConsent(context.businessId, context.snapshot.telemetryEnabled === true);
-      let exchange: Awaited<ReturnType<typeof exchangeWebRtcOffer>>;
-      try {
-        exchange = await exchangeWebRtcOffer({
-          apiKey: server.runtimeConfig.OPENAI_API_KEY,
-          model: server.runtimeConfig.OPENAI_REALTIME_MODEL,
-          sdp: body.sdp,
-        });
-      } catch (error) {
-        if (error instanceof OpenAiWebRtcSetupError) {
-          server.log.error(
-            {
-              err: error,
-              status: error.status,
-              responseBody: error.responseBody.slice(0, 1_000),
-              businessSlug,
-            },
-            "OpenAI Realtime WebRTC setup failed for web call",
-          );
-        }
-        throw error;
-      }
-      const providerCallId = exchange.providerCallId.startsWith("webcall_")
-        ? `webcall_${gatewaySessionId}`
-        : exchange.providerCallId;
-
+      let activeSession: ActiveWebCall | undefined;
+      const lease = acquireVoiceLease(server, async () => {
+        if (activeSession) await finishWebCallSession(server, activeSession, "gateway_shutdown");
+      });
+      if (!lease) return reply.code(503).send({ error: "Voice gateway is shutting down." });
+      let providerCallId = `webcall_${gatewaySessionId}`;
       const startedAt = new Date().toISOString();
       let call: Awaited<ReturnType<typeof startWebVoiceCall>>;
       try {
         call = await startWebVoiceCall({
           businessSlug,
-          origin: origin!,
+          origin: widgetOrigin ?? origin!,
           providerCallId,
           gatewaySessionId,
           ...(ipHash !== undefined ? { ipHash } : {}),
@@ -1939,17 +1967,54 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
           ...(publicWebCall ? { publicWebCall: true } : {}),
         });
       } catch (error) {
-        await hangupOpenAiRealtimeProviderCall(server, {
-          providerCallId,
-          reason: "backend_start_failed",
-        });
+        lease.release();
         if (error instanceof RuntimeRequestError) {
           return replyWithRuntimeRequestError(error, reply);
         }
         throw error;
       }
 
+      // Order matters and must not change: the durable reservation (startWebVoiceCall) always
+      // precedes provider allocation, and the real provider ID is bound after. A crash between
+      // allocate and bind leaves the placeholder ID on the row, so allocation cannot be ruled out
+      // and reconciliation must never release that reservation from elapsed time alone.
+      let exchange: Awaited<ReturnType<typeof exchangeWebRtcOffer>>;
+      let providerAllocated = false;
+      let providerAllocatedAtMs: number | undefined;
+      let exchangeAttempted = false;
+      try {
+        if (lease.closing) throw new Error("Voice gateway is closing.");
+        exchangeAttempted = true;
+        exchange = await exchangeWebRtcOffer({
+          apiKey: server.runtimeConfig.OPENAI_API_KEY,
+          model: server.runtimeConfig.OPENAI_REALTIME_MODEL,
+          sdp: body.sdp,
+        });
+        providerAllocated = true;
+        // Provider billing starts at allocation, so failure compensation must
+        // not charge the pre-allocation latency accumulated since the durable
+        // startedAt anchor was written.
+        providerAllocatedAtMs = Date.now();
+        providerCallId = exchange.providerCallId;
+        if (providerCallId.startsWith("webcall_")) throw new Error("Provider omitted its call ID.");
+        await bindWebVoiceProvider({ businessId: call.businessId, callId: call.callId, gatewaySessionId, providerCallId });
+        if (lease.closing) throw new Error("Voice gateway is closing.");
+      } catch (error) {
+        try {
+          const hangupConfirmed = providerAllocated
+            ? !providerCallId.startsWith("webcall_") && await hangupOpenAiRealtimeProviderCall(server, { callId: call.callId, providerCallId, reason: "provider_setup_failed" })
+            : !exchangeAttempted || (error instanceof OpenAiWebRtcSetupError && error.status >= 400 && error.status < 500);
+          // Timeouts and missing provider IDs leave allocation uncertain. Keep
+          // the durable reservation for reconciliation rather than crediting it.
+          if (hangupConfirmed) await completeVoiceCall({ callId: call.callId, status: "failed", disposition: "provider_setup_failed", endedAt: new Date().toISOString(), providerDurationSeconds: providerAllocated && providerAllocatedAtMs !== undefined ? Math.ceil((Date.now() - providerAllocatedAtMs) / 1000) : 0, mediaDurationSeconds: 0 });
+        } finally {
+          lease.release();
+        }
+        throw error;
+      }
+
       const session: ActiveWebCall = {
+        releaseLease: () => lease.release(),
         gatewaySessionId,
         businessSlug,
         businessId: call.businessId,
@@ -1958,6 +2023,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         providerCallId,
         aiTraceId: crypto.randomUUID(),
         startedAtMs: Date.parse(startedAt),
+        mediaStartedAtMs: null,
         pendingAssistantResponseRequestAtMs: null,
         assistantResponseStartedAtMsById: new Map(),
         maxDurationMs: call.webCallMaxDurationMs ?? server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
@@ -1987,14 +2053,26 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         ...(visitorId !== undefined ? { visitorId } : {}),
         ...(publicWebCall ? { publicWebCall: true } : {}),
       };
-      const sidebandSocket = createSidebandSocket({
-        server,
-        session,
-        snapshot: context.snapshot,
-      });
-      session.sidebandSocket = sidebandSocket;
+      activeSession = session;
       activeWebCalls.set(gatewaySessionId, session);
-      scheduleWebMaxDurationTimer(server, session);
+      try {
+        session.sidebandSocket = createSidebandSocket({ server, session, snapshot: context.snapshot });
+        // The billable/media clock starts only after the provider session is
+        // allocated, bound, and its sideband is set up. The early durable
+        // startedAt remains the crash-recovery anchor, never the media start.
+        session.mediaStartedAtMs = Date.now();
+        await markWebVoiceMediaStarted({
+          businessId: session.businessId,
+          callId: session.callId,
+          gatewaySessionId,
+          providerCallId,
+          mediaStartedAt: new Date(session.mediaStartedAtMs).toISOString(),
+        });
+        scheduleWebMaxDurationTimer(server, session);
+      } catch (error) {
+        await finishWebCallSession(server, session, "provider_setup_failed");
+        throw error;
+      }
 
       return {
         sessionId: gatewaySessionId,
@@ -2052,7 +2130,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         return { error: "Unknown web voice session." };
       }
 
-      const audio = await readRequestBodyBuffer(request);
+      const audio = await readRequestBodyBuffer(request, webRecordingBodyLimit);
       if (audio.length === 0) {
         reply.code(400);
         return { error: "Missing recording audio." };

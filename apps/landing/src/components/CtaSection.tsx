@@ -13,13 +13,13 @@ const ctaCopy = {
     headingStart: "Never miss another",
     headingMiddle: "ready-to-book",
     headingEnd: "caller",
-    body: "Get started for free with 30 minutes included per month.",
+    body: "Test 30 browser voice minutes for free. No telephone number included.",
   },
   fr: {
     headingStart: "Ne manquez plus aucun",
     headingMiddle: "appel prêt à réserver",
     headingEnd: "",
-    body: "Commencez gratuitement avec 30 minutes incluses par mois.",
+    body: "Testez 30 minutes vocales dans le navigateur gratuitement. Aucun numéro de téléphone inclus.",
   },
 } satisfies Record<Locale, Record<string, string>>
 

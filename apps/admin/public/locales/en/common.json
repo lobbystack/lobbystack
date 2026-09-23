@@ -1,5 +1,6 @@
 {
   "appName": "LobbyStack",
+  "accessibility": { "close": "Close", "toggleSidebar": "Toggle sidebar", "skipToContent": "Skip to main content" },
   "errors": { "unexpected": "Something went wrong. Please try again." },
   "loading": {
     "title": "Loading...",

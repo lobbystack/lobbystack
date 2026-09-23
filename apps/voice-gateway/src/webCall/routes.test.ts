@@ -1,9 +1,10 @@
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 
 const {
   appendVoiceTranscriptMock,
+  bindWebVoiceProviderMock,
   bookVoiceAppointmentMock,
   buildVoiceSystemPromptMock,
   captureAiGenerationMock,
@@ -12,6 +13,7 @@ const {
   completeVoiceCallMock,
   fetchWebCallRecordingTargetMock,
   fetchWebVoiceContextMock,
+  markWebVoiceMediaStartedMock,
   runtimeRequestErrorClass,
   startWebVoiceCallMock,
   searchVoiceKnowledgeMock,
@@ -20,6 +22,7 @@ const {
   webSocketInstances,
 } = vi.hoisted(() => ({
   appendVoiceTranscriptMock: vi.fn(),
+  bindWebVoiceProviderMock: vi.fn(),
   bookVoiceAppointmentMock: vi.fn(),
   buildVoiceSystemPromptMock: vi.fn(),
   captureAiGenerationMock: vi.fn(),
@@ -28,6 +31,7 @@ const {
   completeVoiceCallMock: vi.fn(),
   fetchWebCallRecordingTargetMock: vi.fn(),
   fetchWebVoiceContextMock: vi.fn(),
+  markWebVoiceMediaStartedMock: vi.fn(),
   runtimeRequestErrorClass: class RuntimeRequestError extends Error {
     status: number;
     code?: string;
@@ -96,6 +100,8 @@ vi.mock("ws", () => {
   }
 
   class MockWebSocketServer {
+    clients = new Set();
+    close = vi.fn();
     handleUpgrade = vi.fn(
       (
         _request: unknown,
@@ -113,9 +119,11 @@ vi.mock("ws", () => {
 
 vi.mock("../backend/runtimeClient", () => ({
   appendVoiceTranscript: appendVoiceTranscriptMock,
+  bindWebVoiceProvider: bindWebVoiceProviderMock,
   completeVoiceCall: completeVoiceCallMock,
   fetchWebCallRecordingTarget: fetchWebCallRecordingTargetMock,
   fetchWebVoiceContext: fetchWebVoiceContextMock,
+  markWebVoiceMediaStarted: markWebVoiceMediaStartedMock,
   recordVoiceAiCost: vi.fn(),
   RuntimeRequestError: runtimeRequestErrorClass,
   startWebVoiceCall: startWebVoiceCallMock,
@@ -141,9 +149,11 @@ vi.mock("../observability/posthog", async importOriginal => ({
   capturePostHogException: capturePostHogExceptionMock,
 }));
 
+import { UNATTRIBUTABLE_CLIENT_IP } from "@lobbystack/config";
 import { demoSnapshot } from "@lobbystack/shared";
 
 import { createServer } from "../http/server";
+import * as toolExecutor from "../realtime/toolExecutor";
 import {
   createWebRealtimeTurnDetectionConfig,
   resetWebCallRouteStateForTests,
@@ -196,6 +206,7 @@ describe("createWebRealtimeTurnDetectionConfig", () => {
 
 describe("web call routes", () => {
   beforeEach(() => {
+    bindWebVoiceProviderMock.mockReset();
     process.env.DEPLOYMENT_MODE = "development";
     process.env.VOICE_GATEWAY_BASE_URL = "https://voice.example.com";
     process.env.BACKEND_INTERNAL_URL = "https://admin.example.com";
@@ -214,6 +225,7 @@ describe("web call routes", () => {
     webSocketInstances.length = 0;
     delete process.env.OPENAI_API_KEY;
     delete process.env.VOICE_GATEWAY_TRUST_PROXY;
+    delete process.env.TRUSTED_CLIENT_IP_HEADER;
     delete process.env.WEB_CALL_ALLOWED_ORIGINS;
     delete process.env.WEB_CALL_PUBLIC_BUSINESS_SLUG;
     delete process.env.WEB_CALL_MAX_DURATION_MS;
@@ -239,6 +251,113 @@ describe("web call routes", () => {
     expect(response.statusCode).toBe(403);
     expect(fetchWebVoiceContextMock).not.toHaveBeenCalled();
     expect(startWebVoiceCallMock).not.toHaveBeenCalled();
+  });
+
+  function safetySetup(count = 1) {
+    for (let index = 0; index < count; index++) {
+      fetchWebVoiceContextMock.mockResolvedValueOnce({ businessId: "business_safety", snapshot: demoSnapshot });
+      startWebVoiceCallMock.mockResolvedValueOnce({ businessId: "business_safety", callId: `call_safety_${index}`, conversationId: `conversation_${index}` });
+    }
+    const fetchMock = vi.fn(async (url: string) => url.endsWith("/hangup")
+      ? new Response(null, { status: 200 })
+      : new Response("answer", { status: 200, headers: { location: "/v1/realtime/calls/rtc_safety" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const server = createServer();
+    const start = () => server.inject({ method: "POST", url: "/web-call/sessions", headers: { origin: "https://lobbystack.com" }, payload: { businessSlug: "lobbystack", sdp: "v=0" } });
+    return { server, start, fetchMock };
+  }
+
+  it("reserves durably before allocating and binds the returned provider ID", async () => {
+    const { server, start, fetchMock } = safetySetup();
+    const response = await start();
+    expect(response.statusCode).toBe(200);
+    const sessionId = response.json().sessionId;
+    expect(startWebVoiceCallMock).toHaveBeenCalledWith(expect.objectContaining({ providerCallId: `webcall_${sessionId}` }));
+    expect(startWebVoiceCallMock.mock.invocationCallOrder[0]).toBeLessThan(fetchMock.mock.invocationCallOrder[0]!);
+    expect(bindWebVoiceProviderMock).toHaveBeenCalledWith({ businessId: "business_safety", callId: "call_safety_0", gatewaySessionId: sessionId, providerCallId: "rtc_safety" });
+    expect(markWebVoiceMediaStartedMock).toHaveBeenCalledWith({ businessId: "business_safety", callId: "call_safety_0", gatewaySessionId: sessionId, providerCallId: "rtc_safety", mediaStartedAt: expect.any(String) });
+    expect(bindWebVoiceProviderMock.mock.invocationCallOrder[0]).toBeLessThan(markWebVoiceMediaStartedMock.mock.invocationCallOrder[0]!);
+    await server.close();
+    expect(completeVoiceCallMock).toHaveBeenCalledWith(expect.objectContaining({ disposition: "gateway_shutdown" }));
+  });
+
+  it("allocates only the winner of concurrent durable admission", async () => {
+    const { server, start, fetchMock } = safetySetup(2);
+    startWebVoiceCallMock.mockReset();
+    let claimed = false;
+    startWebVoiceCallMock.mockImplementation(async () => {
+      if (claimed) throw new runtimeRequestErrorClass({ status: 402, code: "voice_limit_reached", message: "Exhausted" });
+      claimed = true;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      return { businessId: "business_safety", callId: "winner", conversationId: "conversation" };
+    });
+    const responses = await Promise.all([start(), start()]);
+    expect(responses.map((response) => response.statusCode).sort()).toEqual([200, 402]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(bindWebVoiceProviderMock).toHaveBeenCalledTimes(1);
+    await server.close();
+    startWebVoiceCallMock.mockReset();
+  });
+
+  it("compensates a failed provider binding and never exposes the session", async () => {
+    const { server, start, fetchMock } = safetySetup();
+    bindWebVoiceProviderMock.mockRejectedValueOnce(new Error("binding unavailable"));
+    expect((await start()).statusCode).toBe(500);
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("rtc_safety/hangup"), expect.anything());
+    expect(completeVoiceCallMock).toHaveBeenCalledWith(expect.objectContaining({ status: "failed", disposition: "provider_setup_failed" }));
+    expect(webSocketInstances).toHaveLength(0);
+    await server.close();
+  });
+
+  it("retains the reservation when provider allocation times out", async () => {
+    const { server, start, fetchMock } = safetySetup();
+    fetchMock.mockRejectedValueOnce(new Error("request timed out"));
+    expect((await start()).statusCode).toBe(500);
+    expect(completeVoiceCallMock).not.toHaveBeenCalled();
+    expect(bindWebVoiceProviderMock).not.toHaveBeenCalled();
+    await server.close();
+  });
+
+  it("retains the reservation when provider hangup is unconfirmed", async () => {
+    const { server, start, fetchMock } = safetySetup();
+    const response = await start();
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }));
+    const end = await server.inject({ method: "POST", url: `/web-call/sessions/${response.json().sessionId}/end`, headers: { origin: "https://lobbystack.com" } });
+    expect(end.statusCode).toBe(500);
+    expect(completeVoiceCallMock).not.toHaveBeenCalled();
+    expect(webSocketInstances[0]!.close).toHaveBeenCalledOnce();
+    await server.close();
+  });
+
+  it("does not rearm hangup timers when a terminal tool finishes after cleanup", async () => {
+    const { server, start } = safetySetup();
+    const response = await start();
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ businessId: "business_safety", snapshot: demoSnapshot });
+    let resolveTool!: (result: Awaited<ReturnType<typeof toolExecutor.executeVoiceTool>>) => void;
+    const execute = vi.spyOn(toolExecutor, "executeVoiceTool").mockImplementationOnce(() => new Promise(resolve => { resolveTool = resolve; }));
+    try {
+      webSocketInstances[0]!.emit("message", Buffer.from(JSON.stringify({ type: "response.function_call_arguments.done", name: "endCall", call_id: "late-terminal", arguments: "{}" })));
+      await vi.waitFor(() => expect(execute).toHaveBeenCalledOnce());
+      await server.inject({ method: "POST", url: `/web-call/sessions/${response.json().sessionId}/end`, headers: { origin: "https://lobbystack.com" } });
+      vi.useFakeTimers();
+      resolveTool({ result: { ok: true }, endCall: { reason: "caller_finished", message: "Goodbye" } });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(vi.getTimerCount()).toBe(0);
+      expect(completeVoiceCallMock).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+      execute.mockRestore();
+      await server.close();
+    }
+  });
+
+  it.each(["{", "null", "[]", JSON.stringify({ type: "response.output_audio_transcript.done", transcript: {} }), "x".repeat(256 * 1024 + 1)])("contains a malformed web provider frame %#", async (frame) => {
+    const { server, start } = safetySetup();
+    expect((await start()).statusCode).toBe(200);
+    expect(() => webSocketInstances[0]!.emit("message", Buffer.from(frame))).not.toThrow();
+    await vi.waitFor(() => expect(completeVoiceCallMock).toHaveBeenCalledWith(expect.objectContaining({ disposition: "provider_frame_failed" })));
+    expect(webSocketInstances[0]!.close).toHaveBeenCalledTimes(1);
+    await server.close();
   });
 
   it("rejects implicit localhost origins in cloud mode", async () => {
@@ -583,7 +702,7 @@ describe("web call routes", () => {
     completeVoiceCallMock.mockResolvedValueOnce(undefined);
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValueOnce(
+      vi.fn().mockResolvedValue(new Response(null, { status: 200 })).mockResolvedValueOnce(
         new Response("answer-sdp", {
           status: 200,
           headers: { location: "/v1/realtime/calls/rtc_test" },
@@ -638,7 +757,7 @@ describe("web call routes", () => {
       .mockResolvedValueOnce(undefined);
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValueOnce(
+      vi.fn().mockResolvedValue(new Response(null, { status: 200 })).mockResolvedValueOnce(
         new Response("answer-sdp", {
           status: 200,
           headers: { location: "/v1/realtime/calls/rtc_test" },
@@ -1388,7 +1507,10 @@ describe("web call routes", () => {
     );
   });
 
-  it("uses trusted forwarded IP headers when proxy trust is enabled", async () => {
+  it("derives distinct client keys from the opted-in ingress header and ignores forwarded-for", async () => {
+    process.env.TRUSTED_CLIENT_IP_HEADER = "x-real-ip";
+    // Even with proxy trust enabled, only the opted-in single-value header is
+    // used; the caller-controlled x-forwarded-for hop is irrelevant.
     process.env.VOICE_GATEWAY_TRUST_PROXY = "true";
     fetchWebVoiceContextMock
       .mockResolvedValueOnce({ snapshot: demoSnapshot })
@@ -1423,14 +1545,21 @@ describe("web call routes", () => {
     );
     const server = createServer();
 
-    for (const forwardedFor of ["203.0.113.10", "198.51.100.77"]) {
+    const clients = [
+      { realIp: "203.0.113.10", forwardedFor: "10.0.0.1" },
+      { realIp: "198.51.100.77", forwardedFor: "10.0.0.1" },
+    ];
+    for (const client of clients) {
       const response = await server.inject({
         method: "POST",
         url: "/web-call/sessions",
+        remoteAddress: "198.51.100.200",
         headers: {
           origin: "https://lobbystack.com",
           "content-type": "application/json",
-          "x-forwarded-for": forwardedFor,
+          "x-real-ip": client.realIp,
+          // Same injected leftmost hop for both clients must not affect the key.
+          "x-forwarded-for": client.forwardedFor,
         },
         payload: {
           businessSlug: "lobbystack",
@@ -1441,10 +1570,79 @@ describe("web call routes", () => {
       expect(response.statusCode).toBe(200);
     }
 
-    expect(fetchWebVoiceContextMock.mock.calls[0]?.[0].ipHash).toHaveLength(64);
-    expect(fetchWebVoiceContextMock.mock.calls[0]?.[0].ipHash).not.toBe(
-      fetchWebVoiceContextMock.mock.calls[1]?.[0].ipHash,
+    const firstHash = fetchWebVoiceContextMock.mock.calls[0]?.[0].ipHash;
+    const secondHash = fetchWebVoiceContextMock.mock.calls[1]?.[0].ipHash;
+    expect(firstHash).toHaveLength(64);
+    expect(secondHash).toHaveLength(64);
+    expect(firstHash).not.toBe(secondHash);
+    expect(firstHash).toBe(
+      createHash("sha256").update("test-service-token:203.0.113.10").digest("hex"),
     );
+    expect(secondHash).toBe(
+      createHash("sha256").update("test-service-token:198.51.100.77").digest("hex"),
+    );
+  });
+
+  it("fails closed to one shared key when the configured ingress header is absent or invalid", async () => {
+    process.env.TRUSTED_CLIENT_IP_HEADER = "x-real-ip";
+    fetchWebVoiceContextMock
+      .mockResolvedValueOnce({ snapshot: demoSnapshot })
+      .mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock
+      .mockResolvedValueOnce({
+        businessId: "business_123",
+        callId: "call_123",
+        conversationId: "conversation_123",
+      })
+      .mockResolvedValueOnce({
+        businessId: "business_123",
+        callId: "call_456",
+        conversationId: "conversation_456",
+      });
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response("answer-sdp", {
+            status: 200,
+            headers: { location: "/v1/realtime/calls/rtc_test_1" },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response("answer-sdp", {
+            status: 200,
+            headers: { location: "/v1/realtime/calls/rtc_test_2" },
+          }),
+        ),
+    );
+    const server = createServer();
+
+    for (const xRealIp of [undefined, "not-an-ip"]) {
+      const response = await server.inject({
+        method: "POST",
+        url: "/web-call/sessions",
+        headers: {
+          origin: "https://lobbystack.com",
+          "content-type": "application/json",
+          ...(xRealIp === undefined ? {} : { "x-real-ip": xRealIp }),
+          // A forged forwarded-for hop must not rescue attribution.
+          "x-forwarded-for": "203.0.113.10",
+        },
+        payload: {
+          businessSlug: "lobbystack",
+          sdp: "v=0",
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+    }
+
+    const sharedHash = createHash("sha256")
+      .update(`test-service-token:${UNATTRIBUTABLE_CLIENT_IP}`)
+      .digest("hex");
+    expect(fetchWebVoiceContextMock.mock.calls[0]?.[0].ipHash).toBe(sharedHash);
+    expect(fetchWebVoiceContextMock.mock.calls[1]?.[0].ipHash).toBe(sharedHash);
   });
 
   it("ignores spoofed forwarded IP headers from untrusted direct clients", async () => {
@@ -1525,13 +1723,19 @@ describe("web call routes", () => {
   });
 
   it("finalizes durable web calls when the in-memory session is missing", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
     const startedAtMs = Date.now();
+    const mediaStartedAtMs = startedAtMs + 5_000;
+    vi.setSystemTime(mediaStartedAtMs + 2_000);
     fetchWebCallRecordingTargetMock.mockResolvedValueOnce({
       callId: "call_durable_end",
+      providerCallId: "rtc_durable",
       startedAt: new Date(startedAtMs).toISOString(),
+      mediaStartedAt: new Date(mediaStartedAtMs).toISOString(),
       status: "open",
     });
     completeVoiceCallMock.mockResolvedValueOnce(null);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 200 })));
     const server = createServer();
 
     const response = await server.inject({
@@ -1551,9 +1755,33 @@ describe("web call routes", () => {
         callId: "call_durable_end",
         status: "completed",
         disposition: "caller_finished",
-        providerDurationSeconds: expect.any(Number),
+        providerDurationSeconds: 2,
+        mediaDurationSeconds: 2,
       }),
     );
+  });
+
+  it("leaves a durable web call without media-start evidence for reconciliation", async () => {
+    fetchWebCallRecordingTargetMock.mockResolvedValueOnce({
+      callId: "call_durable_without_media",
+      providerCallId: "rtc_durable_without_media",
+      startedAt: new Date(Date.now() - 5_000).toISOString(),
+      status: "started",
+    });
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions/session-without-media/end",
+      headers: { origin: "https://lobbystack.com" },
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(completeVoiceCallMock).not.toHaveBeenCalled();
+    await server.close();
   });
 
   it("hangs up OpenAI and completes the call after the max web call duration", async () => {
@@ -1616,10 +1844,161 @@ describe("web call routes", () => {
         providerDurationSeconds: expect.any(Number),
       }),
     );
-    expect(webSocketInstances[0]?.close).toHaveBeenCalledWith(
-      1000,
-      "web call ended",
+    expect(webSocketInstances[0]?.close).toHaveBeenCalled();
+  });
+
+  it("does not bill provider setup latency as web call media duration", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const setupStartedAtMs = Date.now();
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    // Provider setup (here the provider binding) takes five seconds after the
+    // provider was allocated. That latency must not reach the billed duration.
+    bindWebVoiceProviderMock.mockImplementationOnce(async () => {
+      vi.setSystemTime(setupStartedAtMs + 5_000);
+    });
+    completeVoiceCallMock.mockResolvedValueOnce(null);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const server = createServer();
+
+    const createResponse = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: { businessSlug: "lobbystack", sdp: "v=0" },
+    });
+    expect(createResponse.statusCode).toBe(200);
+
+    await server.inject({
+      method: "POST",
+      url: `/web-call/sessions/${createResponse.json().sessionId}/end`,
+      headers: { origin: "https://lobbystack.com" },
+    });
+
+    expect(completeVoiceCallMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        callId: "call_123",
+        providerDurationSeconds: 0,
+        mediaDurationSeconds: 0,
+      }),
     );
+    await server.close();
+  });
+
+  it("measures the web call max duration from media start, not the durable reservation", async () => {
+    process.env.WEB_CALL_MAX_DURATION_MS = "30000";
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const setupStartedAtMs = Date.now();
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    // Forty-five seconds of setup would already exceed the thirty second max
+    // duration if the timer were measured from the early durable reservation.
+    bindWebVoiceProviderMock.mockImplementationOnce(async () => {
+      vi.setSystemTime(setupStartedAtMs + 45_000);
+    });
+    completeVoiceCallMock.mockResolvedValueOnce(null);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const server = createServer();
+
+    const createResponse = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: { businessSlug: "lobbystack", sdp: "v=0" },
+    });
+    expect(createResponse.statusCode).toBe(200);
+
+    // A durable-reservation clock would have already exhausted the budget and
+    // hung up immediately; the media clock still has its full window to run.
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    expect(completeVoiceCallMock).not.toHaveBeenCalled();
+    await server.close();
+  });
+
+  it("excludes pre-allocation latency from provider setup failure compensation", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const requestStartedAtMs = Date.now();
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    // Four seconds elapse inside the allocation request before the provider is
+    // actually allocated, then binding fails immediately. Only post-allocation
+    // provider time may be compensated.
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(async () => {
+        vi.setSystemTime(requestStartedAtMs + 4_000);
+        return new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        });
+      })
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    bindWebVoiceProviderMock.mockRejectedValueOnce(
+      new Error("binding unavailable"),
+    );
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: { businessSlug: "lobbystack", sdp: "v=0" },
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("rtc_test/hangup"),
+      expect.anything(),
+    );
+    expect(completeVoiceCallMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "failed",
+        disposition: "provider_setup_failed",
+        providerDurationSeconds: 0,
+        mediaDurationSeconds: 0,
+      }),
+    );
+    await server.close();
   });
 
   it("uploads browser web call recordings for completed sessions", async () => {
@@ -1632,7 +2011,7 @@ describe("web call routes", () => {
     uploadVoiceRecordingMock.mockResolvedValueOnce(null);
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValueOnce(
+      vi.fn().mockResolvedValue(new Response(null, { status: 200 })).mockResolvedValueOnce(
         new Response("answer-sdp", {
           status: 200,
           headers: { location: "/v1/realtime/calls/rtc_test" },
@@ -1690,7 +2069,7 @@ describe("web call routes", () => {
     uploadVoiceRecordingMock.mockResolvedValueOnce(null);
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValueOnce(
+      vi.fn().mockResolvedValue(new Response(null, { status: 200 })).mockResolvedValueOnce(
         new Response("answer-sdp", {
           status: 200,
           headers: { location: "/v1/realtime/calls/rtc_test" },

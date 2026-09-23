@@ -5,10 +5,25 @@ on:
   push:
     branches:
       - main
+    # Documentation-only merges skip the code pipeline. Keep PRs unfiltered so
+    # required checks always report. Do not ignore app content markdown, which
+    # is a build input for the landing site.
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - "mintlify/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  validate:
+  checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -19,23 +34,110 @@ jobs:
           node-version: 22.12.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm test:build-config
       - run: pnpm typecheck
+      - run: pnpm --filter @lobbystack/admin --filter @lobbystack/landing lint
       - run: pnpm telemetry:coverage
       - run: pnpm build
+      - name: Verify the committed embed loader matches the build
+        run: git diff --exit-code -- apps/admin/public/embed/embed.js
       - run: pnpm test
-      - name: Build production runtime images
-        run: |
-          docker build --build-arg SERVICE_VERSION="$GITHUB_SHA" --file Dockerfile.admin --tag lobbystack/admin:ci .
-          docker build --build-arg SERVICE_VERSION="$GITHUB_SHA" --file Dockerfile.worker --tag lobbystack/worker:ci .
-          docker build --build-arg SERVICE_VERSION="$GITHUB_SHA" --file Dockerfile.voice-gateway --tag lobbystack/voice-gateway:ci .
-      - name: Certify lazy tokenizer runtime dependencies
-        run: |
-          docker run --rm --entrypoint node lobbystack/admin:ci -e 'const { createRequire } = require("node:module"); const runtimeRequire = createRequire("/app/apps/admin/.next/server/chunks/runtime-dependency-check.js"); const { Tiktoken } = runtimeRequire("js-tiktoken/lite"); const tokenizer = new Tiktoken(runtimeRequire("js-tiktoken/ranks/o200k_base")); if (tokenizer.encode("runtime smoke test").length === 0) process.exit(1);'
-          docker run --rm --entrypoint node lobbystack/worker:ci -e 'const { createRequire } = require("node:module"); const runtimeRequire = createRequire("/app/dist/runtime/index.js"); const { Tiktoken } = runtimeRequire("js-tiktoken/lite"); const tokenizer = new Tiktoken(runtimeRequire("js-tiktoken/ranks/o200k_base")); if (tokenizer.encode("runtime smoke test").length === 0) process.exit(1);'
-          docker run --rm --entrypoint node lobbystack/voice-gateway:ci -e 'const { createRequire } = require("node:module"); const runtimeRequire = createRequire("/app/dist/runtime/index.js"); const { Tiktoken } = runtimeRequire("js-tiktoken/lite"); const tokenizer = new Tiktoken(runtimeRequire("js-tiktoken/ranks/o200k_base")); if (tokenizer.encode("runtime smoke test").length === 0) process.exit(1);'
       - run: pnpm replacement:telemetry
       - name: Validate Compose config
         run: docker compose --env-file .env.example -f docker-compose.yml config --quiet
+
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_ENV: test
+      LOBBYSTACK_SKIP_ENV_FILES: "true"
+      DATABASE_URL: postgres://postgres:lobbystack@127.0.0.1:5432/lobbystack_test
+      LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL: postgres://postgres:lobbystack@127.0.0.1:5432/lobbystack_test
+      LOBBYSTACK_AUTH_TEST_DATABASE_URL: postgres://postgres:lobbystack@127.0.0.1:5432/lobbystack_test
+      LOBBYSTACK_APP_DATABASE_URL: postgres://lobbystack_app:app@127.0.0.1:5432/lobbystack_test
+      LOBBYSTACK_AUTH_DATABASE_URL: postgres://lobbystack_auth:auth@127.0.0.1:5432/lobbystack_test
+      LOBBYSTACK_WORKER_DATABASE_URL: postgres://lobbystack_worker:worker@127.0.0.1:5432/lobbystack_test
+      LOBBYSTACK_DISPATCHER_DATABASE_URL: postgres://lobbystack_dispatcher:dispatcher@127.0.0.1:5432/lobbystack_test
+      LOBBYSTACK_APP_PASSWORD: app
+      LOBBYSTACK_AUTH_PASSWORD: auth
+      LOBBYSTACK_WORKER_PASSWORD: worker
+      LOBBYSTACK_DISPATCHER_PASSWORD: dispatcher
+      REDIS_URL: redis://127.0.0.1:6379
+      REDIS_TEST_URL: redis://127.0.0.1:6379
+      VERIFY_RLS_BEHAVIOR: "true"
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: lobbystack
+          POSTGRES_DB: lobbystack_test
+        ports: [5432:5432]
+        options: >-
+          --health-cmd="pg_isready -U postgres -d lobbystack_test"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+      redis:
+        image: redis:7.4-alpine
+        ports: [6379:6379]
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s --health-timeout=3s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r --filter "./packages/**" build
+      - name: Migrate and bootstrap twice
+        run: |
+          for pass in 1 2; do
+            pnpm db:migrate
+            pnpm --filter @lobbystack/db exec tsx src/cli.ts bootstrap
+          done
+      - run: pnpm db:check
+      - run: pnpm db:verify-rls
+      - name: Test transactional reliability with PostgreSQL roles
+        run: pnpm test:reliability
+      - name: Test verification persistence and concurrent quotas
+        run: pnpm --filter @lobbystack/admin exec vitest run src/lib/auth-issuance.integration.test.ts src/lib/email-verification-policy.test.ts
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium
+        run: pnpm --filter @lobbystack/admin exec playwright install --with-deps chromium
+      - name: Run supported browser journeys against an isolated stack
+        run: bash scripts/e2e-local.sh
+
+  images:
+    uses: ./.github/workflows/runtime-images.yml
+
+  validate:
+    if: always()
+    needs: [checks, database, e2e, images]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require all PR and release gates
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node -e 'const results = JSON.parse(process.env.RESULTS); if (Object.values(results).some(job => job.result !== "success")) process.exit(1);'
 
   migrate-production:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

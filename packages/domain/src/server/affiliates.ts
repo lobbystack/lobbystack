@@ -217,7 +217,9 @@ export async function generateAffiliatePayoutRun(
 ): Promise<{ payoutRunId: string; periodKey: string; status: string; assignedCommissions: number; totalCents: number }> {
   const createdAt = input.createdAt ? new Date(input.createdAt) : new Date();
   const periodKey = input.periodKey ?? previousMonthKey(createdAt);
-  return await withDispatcherTransaction(context.db, async (tx) => {
+  return await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => {
+    // Serialize across periods too: a commission can belong to only one run.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended('affiliate-payout-generation', 0))`);
     const existing = (await tx.select().from(affiliatePayoutRuns).where(eq(affiliatePayoutRuns.periodKey, periodKey)).limit(1))[0];
     if (existing?.status === "paid") return { payoutRunId: existing.id, periodKey, status: existing.status, assignedCommissions: 0, totalCents: existing.totalCents };
     const run = existing ?? (await tx.insert(affiliatePayoutRuns).values({ periodKey, status: "draft", totalCents: 0, currency: DEFAULT_CURRENCY, createdAt, updatedAt: createdAt }).returning())[0];
@@ -234,7 +236,9 @@ export async function generateAffiliatePayoutRun(
       .innerJoin(affiliateProfiles, eq(affiliateProfiles.id, affiliateCommissions.affiliateProfileId))
       .innerJoin(users, eq(users.id, affiliateProfiles.userId))
       .where(and(eq(affiliateCommissions.status, "pending"), eq(affiliateCommissions.payoutState, "unassigned"), eq(affiliateCommissions.currency, DEFAULT_CURRENCY), lte(affiliateCommissions.clearsAt, createdAt), eq(affiliateProfiles.status, "active")))
-      .limit(PAYOUT_BATCH_LIMIT);
+      .orderBy(affiliateCommissions.clearsAt, affiliateCommissions.id)
+      .limit(PAYOUT_BATCH_LIMIT)
+      .for("update", { of: affiliateCommissions });
 
     const groups = new Map<string, typeof eligible>();
     for (const commission of eligible) {

@@ -6,11 +6,12 @@ import { getPostHogDistinctIdForBusinessSystem, type TelemetryEventName, type Te
 
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
+import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { queueOperatorAlertInTransaction } from "./notifications";
 import { applyNonAiUsageInTransaction, finalizeWebVoiceUsageInTransaction, normalizeWebCallMaxDurationMs, reserveWebVoiceUsageInTransaction } from "./billing";
 import { enqueueUsageSyncInTransaction } from "./usage";
 import { recordUnitEconomicsEventInTransaction } from "./unitEconomics";
-import { FOLLOW_UP_RETENTION_MS, visibleFollowUpBody, visibleFollowUpTitle } from "./followUpRetention";
+import { visibleFollowUpBody, visibleFollowUpTitle } from "./followUpRetention";
 import { recordCallOutcomeInTransaction, resolveCallOutcome } from "./callOutcome";
 import { buildCallEvents } from "./callEvents";
 import { recordingListState, recordingState, type RecordingState } from "./recordingState";
@@ -190,17 +191,20 @@ export async function upsertTranscript(
   input: { businessId: string; callId: string; sequence: number; speaker: string; text: string; final: boolean; confidence?: number },
 ): Promise<{ transcriptId: string; revision: number }> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const retentionPlan = isContentRetentionEnabled() ? await resolveBusinessBillingPlan(tx, input.businessId) : null;
     const [row] = await tx.insert(transcripts).values({
       businessId: input.businessId,
       callId: input.callId,
       sequence: input.sequence,
       speaker: input.speaker,
       text: input.text,
+      expiresAt: retentionPlan ? contentExpiryForPlan(retentionPlan, "transcripts") : null,
       final: input.final,
       ...(input.confidence !== undefined ? { confidence: Math.round(input.confidence * 100) } : {}),
     }).onConflictDoUpdate({
       target: [transcripts.callId, transcripts.sequence],
       set: {
+        // Creation-anchored expiry survives revisions, including historical nulls.
         speaker: input.speaker,
         text: input.text,
         final: input.final,
@@ -226,7 +230,7 @@ export async function upsertTranscript(
 
 export async function completeCall(
   context: DomainContext,
-  input: { businessId: string; callId: string; status: string; endedAt: string; disposition?: string; providerDurationSeconds?: number; mediaDurationSeconds?: number },
+  input: { businessId: string; callId: string; status: string; endedAt: string; disposition?: string; providerDurationSeconds?: number; mediaDurationSeconds?: number; expectedProviderCallId?: string },
 ): Promise<boolean> {
   const completion = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [call] = await tx.update(calls).set({
@@ -236,7 +240,14 @@ export async function completeCall(
       ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}),
       revision: sql`${calls.revision} + 1`,
       updatedAt: new Date(),
-    }).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId), isNull(calls.endedAt))).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, provider: calls.provider, startedAt: calls.startedAt, billingExcluded: calls.billingExcluded, disposition: calls.disposition });
+    }).where(and(
+      eq(calls.id, input.callId),
+      eq(calls.businessId, input.businessId),
+      isNull(calls.endedAt),
+      // Recovery re-validates the provider binding inside the finalizing write,
+      // so a bind that lands after the read cannot have its reservation released.
+      input.expectedProviderCallId !== undefined ? eq(calls.providerCallId, input.expectedProviderCallId) : undefined,
+    )).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, provider: calls.provider, startedAt: calls.startedAt, billingExcluded: calls.billingExcluded, disposition: calls.disposition });
     if (!call) {
       return null;
     }
@@ -565,7 +576,8 @@ export async function createVoiceFollowUpTask(
       "",
       input.message.trim(),
     ].filter((line): line is string => line !== null).join("\n");
-    const values = { businessId: input.businessId, kind: "voice_message", title, body, contentExpiresAt: new Date(Date.now() + FOLLOW_UP_RETENTION_MS), ...(input.callId ? { relatedCallId: input.callId } : {}) };
+    const retentionPlan = isContentRetentionEnabled() ? await resolveBusinessBillingPlan(tx, input.businessId) : null;
+    const values = { businessId: input.businessId, kind: "voice_message", title, body, contentExpiresAt: retentionPlan ? contentExpiryForPlan(retentionPlan, "follow_ups") : null, ...(input.callId ? { relatedCallId: input.callId } : {}) };
     const existing = input.callId ? (await tx.select({ id: inboxItems.id }).from(inboxItems).where(and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.relatedCallId, input.callId), eq(inboxItems.kind, "voice_message"), eq(inboxItems.status, "open"))).orderBy(desc(inboxItems.createdAt)).limit(1))[0] : null;
     const [item] = existing
       ? await tx.update(inboxItems).set({ title, body, contentRetentionStatus: "active", contentExpiresAt: values.contentExpiresAt, updatedAt: new Date() }).where(eq(inboxItems.id, existing.id)).returning({ id: inboxItems.id })

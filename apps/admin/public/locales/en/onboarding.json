@@ -207,7 +207,7 @@
     "popular": "Popular",
     "enterpriseSubject": "Enterprise plan",
     "compareTitle": "Compare plans in detail",
-    "compareDescription": "Every plan gets all core features. Starter and Pro add higher usage with monthly resets and pay-as-you-go overages.",
+    "compareDescription": "Test 30 browser voice minutes on Free, without a telephone number. Starter and Pro include a dedicated number and monthly usage allowances.",
     "featureHeader": "Feature",
     "billingInterval": {
       "label": "Billing interval",
@@ -223,8 +223,8 @@
         "description": "Try LobbyStack with enough usage to see it work.",
         "cta": "Start free",
         "highlights": {
-          "voiceMinutes": "30 voice minutes included",
-          "bookingContacts": "All features",
+          "voiceMinutes": "30 browser voice minutes included",
+          "bookingContacts": "No telephone number",
           "support": "Community support"
         }
       },
@@ -324,8 +324,9 @@
         "emailNotifications": "Email notifications",
         "smsNotifications": "SMS notifications",
         "aiSms": "Two-way AI SMS conversations",
-        "summaries": "Call summaries and transcripts",
-        "history": "Call history and recordings",
+        "summaries": "Call summaries",
+        "history": "Call history",
+        "contentRetention": "Transcript and recording retention",
         "callerProfiles": "Caller profiles and notes",
         "contacts": "Contacts",
         "websiteImport": "Website knowledge import",
@@ -337,12 +338,15 @@
       "values": {
         "common": {
           "custom": "Custom",
+          "included": "Included",
+          "notIncluded": "Not included",
           "multiple": "Multiple",
-          "unlimited": "Unlimited"
+          "unlimited": "Unlimited",
+          "browserTesting": "Browser testing"
         },
         "usage": {
           "voiceMinutes": {
-            "freeIncluded": "30 included",
+            "freeIncluded": "{{minutes}} browser minutes",
             "starterIncluded": "150 included",
             "starterThen": "then $0.20/min",
             "proIncluded": "500 included",
@@ -374,8 +378,14 @@
         },
         "notifications": {
           "aiSms": {
-            "proIncluded": "$5/mo + $19 setup",
-            "proThen": "then $0.03/segment"
+            "proIncluded": "Optional add-on: $5/mo + $19 setup",
+            "proThen": "$0.03/segment from the first segment"
+          }
+        },
+        "data": {
+          "contentRetention": {
+            "free": "{{days}} days",
+            "paid": "{{days}} days"
           }
         },
         "deployment": {

@@ -29,7 +29,7 @@ export const en = {
     "/features/": {
       title: "AI receptionist features for calls, messages, and booking",
       description:
-        "Explore LobbyStack features for phone answering, website chat, SMS alerts, appointment booking, call routing, follow-up, and summaries.",
+        "Explore LobbyStack features for phone answering, SMS alerts, appointment booking, call routing, follow-up, and summaries.",
     },
     "/pricing/": {
       title: "AI Receptionist Pricing for Small Businesses",

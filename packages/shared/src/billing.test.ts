@@ -5,6 +5,8 @@ import {
   billingPlanCatalog,
   billingMeterEventNames,
   billingUsageKinds,
+  contentRetentionCategories,
+  contentRetentionDaysForPlan,
   getBillingMonthlyChargeCents,
   getBillingPeriodChargeCents,
   getKnowledgeStorageLimitBytes,
@@ -18,6 +20,37 @@ describe("knowledge storage limits", () => {
     expect(getKnowledgeStorageLimitBytes("starter")).toBe(100 * 1024 * 1024);
     expect(getKnowledgeStorageLimitBytes("pro")).toBe(500 * 1024 * 1024);
     expect(getKnowledgeStorageLimitBytes("enterprise")).toBeNull();
+  });
+});
+
+describe("content retention by plan", () => {
+  it("keeps free content at 30 days across every category", () => {
+    for (const category of contentRetentionCategories) {
+      expect(contentRetentionDaysForPlan("free_cloud", category)).toBe(30);
+    }
+  });
+
+  it("uses the longer paid and self-host defaults", () => {
+    expect(contentRetentionDaysForPlan("starter", "messages")).toBe(365);
+    expect(contentRetentionDaysForPlan("starter", "transcripts")).toBe(90);
+    expect(contentRetentionDaysForPlan("starter", "recordings")).toBe(90);
+    expect(contentRetentionDaysForPlan("starter", "follow_ups")).toBe(365);
+    expect(contentRetentionDaysForPlan("pro", "messages")).toBe(365);
+    expect(contentRetentionDaysForPlan("enterprise", "transcripts")).toBe(90);
+    expect(contentRetentionDaysForPlan("self_host", "messages")).toBe(365);
+    expect(contentRetentionDaysForPlan("self_host", "recordings")).toBe(90);
+  });
+
+  it("never raises free content above the 30 day hard cap", () => {
+    expect(contentRetentionDaysForPlan("free_cloud", "messages", { messages: 999 })).toBe(30);
+    expect(contentRetentionDaysForPlan("free_cloud", "recordings", { recordings: 5 })).toBe(30);
+    expect(contentRetentionDaysForPlan("free_cloud", "follow_ups", { messages: 365, follow_ups: 365 })).toBe(30);
+  });
+
+  it("applies paid overrides per category and keeps paid defaults for absent categories", () => {
+    expect(contentRetentionDaysForPlan("starter", "messages", { messages: 10 })).toBe(10);
+    expect(contentRetentionDaysForPlan("starter", "transcripts", { messages: 10 })).toBe(90);
+    expect(contentRetentionDaysForPlan("self_host", "recordings", { recordings: 45 })).toBe(45);
   });
 });
 

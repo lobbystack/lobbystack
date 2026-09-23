@@ -12,10 +12,21 @@ const HOURLY_TTL_SECONDS = 3_660;
 let redis: Redis | undefined;
 
 type EmailVerificationLimitStore = {
-  set(key: string, value: string, expiryMode: "EX", ttl: number, setMode: "NX"): Promise<"OK" | null>;
-  incr(key: string): Promise<number>;
-  expire(key: string, seconds: number): Promise<number>;
+  eval(script: string, numberOfKeys: number, ...args: (string | number)[]): Promise<unknown>;
 };
+
+// Check and reserve in one operation: rejected attempts consume no extra quota,
+// and a process failure cannot leave a counter without its expiry.
+const reserveScript = `
+if redis.call('EXISTS', KEYS[1]) == 1 then return 0 end
+for i = 2, #KEYS do
+  if tonumber(redis.call('GET', KEYS[i]) or '0') >= tonumber(ARGV[i + 1]) then return 0 end
+end
+redis.call('SET', KEYS[1], '1', 'EX', ARGV[1])
+for i = 2, #KEYS do
+  if redis.call('INCR', KEYS[i]) == 1 then redis.call('EXPIRE', KEYS[i], ARGV[2]) end
+end
+return 1`;
 
 export class EmailVerificationRateLimitError extends Error {
   constructor() {
@@ -36,17 +47,10 @@ export async function enforceEmailVerificationSendLimit(
   const digest = recipientDigest(input.email);
   const cooldownKey = `${prefix}:email-verification:recipient:${digest}:cooldown`;
   const hourlyKey = `${prefix}:email-verification:recipient:${digest}:hour:${hour}`;
-  const reserved = await store.set(cooldownKey, "1", "EX", COOLDOWN_SECONDS, "NX");
-  if (reserved !== "OK") throw new EmailVerificationRateLimitError();
-
-  const keys = [hourlyKey];
+  const keys = [cooldownKey, hourlyKey];
   if (input.remoteIp) keys.push(`${prefix}:email-verification:ip:${recipientDigest(input.remoteIp)}:hour:${hour}`);
-  const counts = await Promise.all(keys.map(async (key) => {
-    const count = await store.incr(key);
-    if (count === 1) await store.expire(key, HOURLY_TTL_SECONDS);
-    return count;
-  }));
-  if ((counts[0] ?? 0) > HOURLY_LIMIT || (counts[1] ?? 0) > IP_HOURLY_LIMIT) throw new EmailVerificationRateLimitError();
+  const accepted = await store.eval(reserveScript, keys.length, ...keys, COOLDOWN_SECONDS, HOURLY_TTL_SECONDS, HOURLY_LIMIT, IP_HOURLY_LIMIT);
+  if (Number(accepted) !== 1) throw new EmailVerificationRateLimitError();
 }
 
 export async function assertEmailVerificationSendAllowed(input: { email: string; remoteIp?: string | null }): Promise<void> {

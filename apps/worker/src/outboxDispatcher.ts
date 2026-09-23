@@ -52,13 +52,19 @@ export class OutboxDispatcher {
           throw new Error(`No queue configured for outbox topic ${payload.topic}.`);
         }
         await enqueueJob(queue, { type, businessId: payload.businessId ?? undefined, payload: payload.payload, trace: payload.trace, idempotencyKey: payload.dedupeKey });
-        await markOutboxPublished(this.db, row.id);
+        // A false result means another dispatcher reclaimed the lease after ours
+        // expired. The job is already enqueued and consumers stay idempotent, but
+        // this dispatcher must not report the message as published.
+        if (!await markOutboxPublished(this.db, row)) {
+          outcome = "fenced";
+          continue;
+        }
         this.published.add(1, { topic });
         this.publishAge.record(Math.max(0, Date.now() - row.createdAt.getTime()), { topic });
       } catch (error) {
         outcome = "error";
         const attributes = { "lobbystack.outbox.topic": row.topic };
-        const deadLettered = await markOutboxFailed(this.db, row.id, error, new Date(Date.now() + Math.min(300_000, 2 ** row.attempts * 1000)));
+        const deadLettered = await markOutboxFailed(this.db, row, error, new Date(Date.now() + Math.min(300_000, 2 ** row.attempts * 1000)));
         this.dispatchFailures.add(1, attributes);
         if (deadLettered) {
           this.deadLettered.add(1, attributes);

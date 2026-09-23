@@ -52,7 +52,7 @@ const seo = getRouteSeo({ locale, path: "/features/" })
   }}
 >
   <Navbar locale={locale} />
-  <main>
+  <main id="main-content" tabindex="-1">
     <FeaturesHero locale={locale} />
     <FeatureWall locale={locale} />
     <IncludedOnEveryPlan locale={locale} />
@@ -60,4 +60,3 @@ const seo = getRouteSeo({ locale, path: "/features/" })
   </main>
   <Footer locale={locale} />
 </Layout>
-

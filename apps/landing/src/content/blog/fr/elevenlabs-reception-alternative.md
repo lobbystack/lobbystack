@@ -21,7 +21,7 @@ Reception offre d'excellentes voix et parle plus de 70 langues. LobbyStack vous 
 
 | Critère | ElevenLabs Reception | LobbyStack |
 | --- | --- | --- |
-| Option gratuite | Essai de 14 jours avec 30 crédits, sans carte | 30 minutes, sans carte, toutes les fonctions, sans date limite |
+| Option gratuite | Essai de 14 jours avec 30 crédits, sans carte | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
 | Entrée payante | 29 $ pour 75 crédits (24 $ par mois à l'année) | 30 $ pour 150 minutes (24 $ par mois à l'année) |
 | Dépassement d'entrée | 0,45 $ par crédit | 0,20 $ par minute |
 | Faux numéros et pourriels | Comptés comme crédits utilisés | Appels de moins de 10 secondes et pourriels non facturés |
@@ -58,7 +58,7 @@ Reception décompte les appels et le clavardage web dans une seule réserve de c
 
 Basic ne permet aussi qu'un appel à la fois. Si deux clients appellent en même temps, un seul joint la réceptionniste. Plus monte la limite à 3 et Premium à 10.
 
-LobbyStack compte les minutes d'appel à part, et le clavardage sur votre site ne les entame pas. Aucun forfait ne limite le nombre d'appels simultanés, donc deux appelants sur Starter joignent tous deux la réceptionniste. Une exception : si vous fixez un plafond de dépenses mensuel, l'appel en cours réserve le solde restant et un deuxième appelant entend le message de limite jusqu'à la fin du premier appel.
+LobbyStack compte les minutes d'appel à part. Aucun forfait ne limite le nombre d'appels simultanés, donc deux appelants sur Starter joignent tous deux la réceptionniste. Une exception : si vous fixez un plafond de dépenses mensuel, l'appel en cours réserve le solde restant et un deuxième appelant entend le message de limite jusqu'à la fin du premier appel.
 
 ## ElevenLabs Reception est-il conforme HIPAA?
 
@@ -78,7 +78,7 @@ Une entreprise de plomberie reçoit 120 appels par mois d'environ 2 minutes chac
 
 Avec Reception, 240 minutes dépassent les 75 de Basic, donc l'entreprise a besoin de Plus à 79 $ pour 275 crédits. Le clavardage puise dans la même réserve : 100 minutes de clavardage utilisent 50 crédits de plus, soit 290 au total. Les 15 crédits excédentaires coûtent 0,38 $ chacun, donc le mois revient à 84,70 $.
 
-Avec LobbyStack, 240 minutes coûtent 30 $ pour Starter plus 90 minutes à 0,20 $, soit 48 $. Le clavardage n'entame pas ces minutes, et deux appels d'urgence qui arrivent ensemble joignent tous deux la réceptionniste.
+Avec LobbyStack, 240 minutes coûtent 30 $ pour Starter plus 90 minutes à 0,20 $, soit 48 $. Deux appels d'urgence qui arrivent ensemble joignent tous deux la réceptionniste.
 
 ## Choisissez ElevenLabs Reception si
 
@@ -86,7 +86,7 @@ Choisissez ElevenLabs Reception si la qualité de la voix et le nombre de langue
 
 ## Choisissez LobbyStack si
 
-Choisissez LobbyStack si vous voulez 150 minutes pour 30 $, un dépassement à 0,20 $ et un forfait gratuit de 30 minutes avec toutes les fonctions, sans date limite. Il convient aussi si deux clients risquent d'appeler en même temps, ou si vous voulez posséder le logiciel. Le code MIT vous permet d'auto-héberger, de modifier le produit ou de le revendre à vos clients.
+Choisissez LobbyStack pour 150 minutes à 30 $ et un dépassement à 0,20 $. Vous pouvez tester 30 minutes vocales dans le navigateur sur Gratuit, sans numéro de téléphone. Avec le code MIT, vous pouvez auto-héberger, modifier le produit ou le revendre à vos clients.
 
 ## Sources
 

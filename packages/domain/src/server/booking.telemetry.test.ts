@@ -61,7 +61,7 @@ describe("booking appointment change telemetry", () => {
   });
 
   it("records an operator cancellation with the operator source", async () => {
-    mocks.withBusinessTransaction.mockResolvedValue(undefined);
+    mocks.withBusinessTransaction.mockResolvedValue(true);
 
     await cancelAppointment(context, { userId: "user_1", businessId: "biz_1", appointmentId: "apt_3" });
 
@@ -70,6 +70,12 @@ describe("booking appointment change telemetry", () => {
       businessId: "biz_1",
       properties: { appointmentId: "apt_3", source: "operator" },
     }));
+  });
+
+  it("does not repeat telemetry for an already canceled appointment", async () => {
+    mocks.withBusinessTransaction.mockResolvedValue(false);
+    await cancelAppointment(context, { userId: "user_1", businessId: "biz_1", appointmentId: "apt_3" });
+    expect(mocks.recordProductEvent).not.toHaveBeenCalled();
   });
 
   it("does not record an operator cancellation when the transaction fails", async () => {

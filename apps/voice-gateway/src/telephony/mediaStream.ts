@@ -6,6 +6,8 @@ import type { IncomingHttpHeaders } from "node:http";
 import type { FastifyInstance } from "fastify";
 import WebSocket from "ws";
 import { observeVoiceLatency, vadSilenceMs } from "../realtime/latency";
+import { assertSocketWritable, closeVoiceSocket, createFrameBudget, finalizeVoiceOnce, MAX_REALTIME_FRAME_BYTES, parseRealtimeFrame, settleVoiceTasks } from "../realtime/safety";
+import { acquireVoiceLease } from "../sessions/lifecycle";
 
 import { buildStereoCallRecording, type TimedAudioChunk } from "../audio/wav";
 import {
@@ -187,6 +189,7 @@ export type ActiveVoiceSession = {
   transferExecuted: boolean;
   providerRecoveryStarted: boolean;
   finalized: boolean;
+  releaseLease?: () => void;
   finalDispositionOverride: string | null;
   transcriptSequence: number;
   seenTranscriptKeys: Set<string>;
@@ -1100,6 +1103,7 @@ export function trackRealtimeSessionConfigurationTask(
 }
 
 function postRealtimeEvent(socket: WebSocket, payload: Record<string, unknown>): void {
+  assertSocketWritable(socket);
   if (socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(payload));
   }
@@ -1883,11 +1887,12 @@ async function finalizeCall(
   session: ActiveVoiceSession,
   disposition: string,
 ): Promise<void> {
-  if (session.finalized) {
-    return;
-  }
-  await applyPendingImplicitEndCallBeforeFinalize(server, session);
-  session.finalized = true;
+  return finalizeVoiceOnce(session, () => finalizeCallResources(server, openAiSocket, twilioSocket, session, disposition));
+}
+
+async function finalizeCallResources(server: FastifyInstance, openAiSocket: WebSocket | null, twilioSocket: WebSocket, session: ActiveVoiceSession, disposition: string): Promise<void> {
+  closeVoiceSocket(openAiSocket);
+  closeVoiceSocket(twilioSocket);
   clearInactivityTimer(session);
   if (session.openingGreetingTurnDetectionTimer !== null) {
     clearTimeout(session.openingGreetingTurnDetectionTimer);
@@ -1898,7 +1903,9 @@ async function finalizeCall(
   }
 
   try {
-    await Promise.allSettled(Array.from(session.pendingTasks));
+    await applyPendingImplicitEndCallBeforeFinalize(server, session);
+    // A terminal tool task can itself be awaiting finalization.
+    await settleVoiceTasks(Array.from(session.pendingTasks));
     const finalDisposition = session.finalDispositionOverride ?? disposition;
     flushElapsedOutboundPlayback(session, Date.now() - session.startedAtMs);
 
@@ -1939,12 +1946,9 @@ async function finalizeCall(
   } catch (error) {
     server.log.error(error);
   } finally {
-    if (openAiSocket?.readyState === WebSocket.OPEN) {
-      openAiSocket.close();
-    }
-    if (twilioSocket.readyState === WebSocket.OPEN) {
-      twilioSocket.close();
-    }
+    closeVoiceSocket(openAiSocket);
+    closeVoiceSocket(twilioSocket);
+    session.releaseLease?.();
   }
 }
 
@@ -2524,6 +2528,7 @@ async function initializeCallRecord(
         ...(session.gatewaySessionId ? { gatewaySessionId: session.gatewaySessionId } : {}),
       },
     });
+    throw error;
   }
 }
 
@@ -2567,6 +2572,7 @@ async function handleToolCall(
       },
     });
 
+    if (session.finalized) return;
     if (result.pendingTransferDestination) {
       session.pendingTransferDestination = result.pendingTransferDestination;
     }
@@ -2810,7 +2816,8 @@ export function handleOpenAiMessage(
     runImplicitTerminalHangup(server, openAiSocket, twilioSocket, session);
   };
 
-  const payload = JSON.parse(rawMessage.toString()) as OpenAiRealtimeMessage;
+  if (session.finalized) return;
+  const payload = parseRealtimeFrame(rawMessage, "type") as OpenAiRealtimeMessage;
   const latency = observeVoiceLatency(session, payload.type);
   if (latency) {
     server.log.info({ ...latency, callId: session.callId, channel: "phone" }, "Voice turn latency");
@@ -3384,14 +3391,33 @@ export async function handleMediaStreamConnection(
 ): Promise<void> {
   let openAiSocket: WebSocket | null = null;
   let signatureValidated = false;
+  let starting = false;
+  const consumeTwilioFrame = createFrameBudget();
+  const consumeProviderFrame = createFrameBudget();
+  const session = createActiveVoiceSession();
+  const stop = async (disposition = "gateway_shutdown") => {
+    await finalizeCall(server, openAiSocket, twilioSocket, session, disposition);
+  };
+  const lease = acquireVoiceLease(server, stop);
+  if (!lease) { closeVoiceSocket(twilioSocket); return; }
+  const lifetimeTimer = setTimeout(() => { void stop("duration_limit").catch((error) => server.log.error(error)); }, 30 * 60_000);
+  const startTimer = setTimeout(() => { if (!session.callId) void stop("stream_start_timeout").catch((error) => server.log.error(error)); }, 15_000);
+  lifetimeTimer.unref();
+  startTimer.unref();
+  session.releaseLease = () => { clearTimeout(startTimer); clearTimeout(lifetimeTimer); lease.release(); };
 
   twilioSocket.on("message", (rawMessage: WebSocket.RawData) => {
     void (async () => {
+      if (session.finalized) return;
+      if (session.pendingTasks.size >= 64) throw new Error("Voice task backlog exhausted.");
+      consumeTwilioFrame(rawMessage);
+      assertSocketWritable(twilioSocket);
+      if (openAiSocket) assertSocketWritable(openAiSocket);
       if (!ensureMediaStreamRequestIsAllowed()) {
         return;
       }
 
-      const payload = JSON.parse(rawMessage.toString()) as TwilioMediaMessage;
+      const payload = parseRealtimeFrame(rawMessage, "event") as TwilioMediaMessage;
       server.log.info(
         { event: payload.event, streamSid: payload.streamSid, callSid: payload.start?.callSid },
         "Received Twilio Media Stream event",
@@ -3463,6 +3489,13 @@ export async function handleMediaStreamConnection(
       }
 
       if (payload.event === "media" && payload.media?.payload) {
+        if (typeof payload.media.payload !== "string" || payload.media.payload.length > 16_384 ||
+            !/^[A-Za-z0-9+/]*={0,2}$/.test(payload.media.payload) ||
+            !Number.isFinite(Number(payload.media.timestamp ?? 0)) ||
+            Number(payload.media.timestamp ?? 0) < 0 || Number(payload.media.timestamp ?? 0) > 30 * 60_000) {
+          throw new Error("Invalid inbound voice audio.");
+        }
+        if (session.pendingInboundAudio.length >= 250) throw new Error("Voice startup audio buffer exhausted.");
         if (payload.media.track && payload.media.track !== "inbound") {
           return;
         }
@@ -3491,10 +3524,7 @@ export async function handleMediaStreamConnection(
       }
     })().catch((error) => {
       server.log.error(error);
-      const recoveryTask = recoverFromProviderFailure(server, twilioSocket, session, {
-        disposition: "stream_start_failed",
-      });
-      trackTask(session, recoveryTask);
+      void finalizeCall(server, openAiSocket, twilioSocket, session, "stream_frame_failed").catch((failure) => server.log.error(failure));
     });
   });
 
@@ -3510,11 +3540,12 @@ export async function handleMediaStreamConnection(
       },
       "Twilio Media Stream websocket closed",
     );
-    void finalizeCall(server, openAiSocket, twilioSocket, session, "twilio_socket_closed");
+    void finalizeCall(server, openAiSocket, twilioSocket, session, "twilio_socket_closed").catch((error) => server.log.error(error));
   });
 
   twilioSocket.on("error", (error: Error) => {
     server.log.error(error);
+    void finalizeCall(server, openAiSocket, twilioSocket, session, "twilio_socket_error").catch((failure) => server.log.error(failure));
   });
 
   server.log.info(
@@ -3526,8 +3557,6 @@ export async function handleMediaStreamConnection(
     },
     "Accepted Media Stream websocket route",
   );
-  const session = createActiveVoiceSession();
-
   const runtimeConfig = server.runtimeConfig;
   const validationUrls = buildMediaStreamValidationUrls(
     runtimeConfig.VOICE_GATEWAY_BASE_URL,
@@ -3570,11 +3599,17 @@ export async function handleMediaStreamConnection(
   }
 
   async function startRealtimeSession(message: TwilioMediaMessage): Promise<void> {
-    if (openAiSocket) {
+    if (openAiSocket || starting || session.finalized) {
       return;
     }
+    starting = true;
 
     const customParameters = message.start?.customParameters ?? {};
+    if (!message.start || typeof message.start.callSid !== "string" ||
+        typeof (message.start.streamSid ?? message.streamSid) !== "string" ||
+        [customParameters.businessId, customParameters.from, customParameters.to].some((value) => typeof value !== "string" || !value || value.length > 255)) {
+      throw new Error("Invalid Twilio stream start metadata.");
+    }
     session.callSid = message.start?.callSid ?? customParameters.callSid ?? "unknown-call";
     session.streamSid = message.start?.streamSid ?? message.streamSid ?? null;
     session.businessId = customParameters.businessId ?? null;
@@ -3602,7 +3637,13 @@ export async function handleMediaStreamConnection(
     }
 
     session.snapshot = snapshot;
+    if (session.finalized || lease!.closing) return;
     await initializeCallRecord(server, session);
+    clearTimeout(startTimer);
+    if (session.finalized) {
+      if (session.callId) await completeVoiceCall({ callId: session.callId, status: "completed", disposition: "stream_closed_during_start", endedAt: new Date().toISOString(), providerDurationSeconds: 0, mediaDurationSeconds: 0 });
+      return;
+    }
     if (!session.activeCallCounted) {
       session.activeCallCounted = true;
     }
@@ -3645,6 +3686,8 @@ export async function handleMediaStreamConnection(
     openAiSocket = new WebSocket(
       `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(runtimeConfig.OPENAI_REALTIME_MODEL)}`,
       {
+        maxPayload: MAX_REALTIME_FRAME_BYTES,
+        handshakeTimeout: 10_000,
         headers: {
           Authorization: `Bearer ${runtimeConfig.OPENAI_API_KEY}`,
         },
@@ -3652,6 +3695,7 @@ export async function handleMediaStreamConnection(
     );
 
     openAiSocket.on("open", () => {
+      if (session.finalized) { closeVoiceSocket(openAiSocket); return; }
       server.log.info(
         {
           callSid: session.callSid,
@@ -3671,7 +3715,17 @@ export async function handleMediaStreamConnection(
     });
 
     openAiSocket.on("message", (rawMessage: WebSocket.RawData) => {
-      handleOpenAiMessage(server, openAiSocket as WebSocket, twilioSocket, session, rawMessage);
+      if (session.finalized) return;
+      try {
+        consumeProviderFrame(rawMessage);
+        if (session.pendingTasks.size >= 64) throw new Error("Voice task backlog exhausted.");
+        assertSocketWritable(twilioSocket);
+        assertSocketWritable(openAiSocket as WebSocket);
+        handleOpenAiMessage(server, openAiSocket as WebSocket, twilioSocket, session, rawMessage);
+      } catch (error) {
+        server.log.error({ err: error, callId: session.callId }, "Invalid provider voice frame");
+        void finalizeCall(server, openAiSocket, twilioSocket, session, "provider_frame_failed").catch((failure) => server.log.error(failure));
+      }
     });
 
     openAiSocket.on("error", (error: Error) => {

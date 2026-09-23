@@ -21,7 +21,7 @@ Smith.ai combines AI with access to a North American receptionist network. Lobby
 
 | Area | Smith.ai AI Receptionist | LobbyStack |
 | --- | --- | --- |
-| Free allowance | 25 calls; card required | 30 minutes, no card, all features |
+| Free allowance | 25 calls; card required | 30 browser voice minutes, no card, no telephone number |
 | Paid entry | Pro from $150 for 75 calls | Starter at $30 for 150 minutes |
 | Human backup | Agent network; some live tasks cost per call | Transfer to your configured team |
 | Booking and intake | Advertised | Included with configurable rules |

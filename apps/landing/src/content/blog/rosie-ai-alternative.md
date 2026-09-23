@@ -15,13 +15,13 @@ canonicalSlug: "rosie-ai-alternative"
 
 A **Rosie AI alternative** should complete the receptionist job before you compare minute totals. Rosie's $49 plan includes 250 minutes, but its public pricing places calendar booking, live and warm transfers, and in-call texting on the $149 Scale plan.
 
-LobbyStack includes booking, human handoff, SMS alerts, transcripts, summaries, and call history from the Free plan upward. Starter costs $30, Pro costs $100, and technical teams can inspect or self-host the product.
+You can test LobbyStack in your browser on Free. Starter costs $30 and Pro costs $100, with a dedicated number for telephone calls. Technical teams can inspect or self-host the product.
 
 ## Rosie vs LobbyStack at a glance
 
 | Area | Rosie | LobbyStack |
 | --- | --- | --- |
-| Ongoing free plan | Not advertised on reviewed pricing | 30 voice minutes, no card, all features |
+| Ongoing free plan | Not advertised on reviewed pricing | 30 browser voice minutes, no card, no telephone number |
 | Entry paid plan | $49 for 250 minutes | $30 for 150 minutes |
 | Production tier | $149 for 1,000 minutes | $100 for 500 minutes |
 | Booking | Starts on Scale | Included in supported workflows |
@@ -94,7 +94,7 @@ Choose Rosie when generous included minutes, English and Spanish coverage, mobil
 
 ## Choose LobbyStack when
 
-Choose LobbyStack when you need booking, handoff, SMS, transcripts, and summaries below Rosie's $149 Scale tier. The free plan tests real calls, while public code, provider choice, and self-hosting protect long-term control.
+Choose LobbyStack for booking, handoff, SMS, transcripts, and summaries below Rosie's $149 Scale tier. You can test voice conversations in your browser on Free and inspect the public code before choosing a paid plan.
 
 ## Sources
 

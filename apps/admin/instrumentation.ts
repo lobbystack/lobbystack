@@ -12,6 +12,8 @@ export async function register(): Promise<void> {
   ]);
   const { initializeTelemetry } = await import("@lobbystack/telemetry/node");
   await initializeTelemetry({ serviceName: "lobbystack-admin" });
+  const { assertAdminDatabaseRoles } = await import("./src/lib/startup-role-assertion");
+  await assertAdminDatabaseRoles();
 }
 
 export const onRequestError: import("next").Instrumentation.onRequestError = async (error, request, context) => {

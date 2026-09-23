@@ -58,6 +58,7 @@ export function buildWebVoiceRateLimits(input: {
   const limits: WebVoiceLimit[] = [];
   if (input.prospectDemoId) {
     limits.push(limit("global-minute", "global", 120, minute, "rate_limit_global"));
+    limits.push(limit("demo-business-hour", input.businessId, 60, hour, "rate_limit_business_hour"));
     if (input.visitorId) limits.push(limit("demo-visitor-30d", `${input.prospectDemoId}:${input.visitorId}`, 5, 30 * day, "prospect_demo_rate_limit_visitor"));
     if (input.ipHash) limits.push(limit("demo-ip-30d", `${input.prospectDemoId}:${input.ipHash}`, 5, 30 * day, "prospect_demo_rate_limit_ip"));
     return limits;
@@ -72,7 +73,7 @@ export function buildWebVoiceRateLimits(input: {
     limits.push(limit(dashboard ? "dashboard-visitor-hour" : "visitor-hour", `${input.businessId}:${input.visitorId}`, dashboard ? 30 : 5, hour, "rate_limit_visitor_hour"));
     limits.push(limit(dashboard ? "dashboard-visitor-day" : "visitor-day", `${input.businessId}:${input.visitorId}`, dashboard ? 100 : 10, day, "rate_limit_visitor_day"));
   }
-  limits.push(limit(dashboard ? "dashboard-origin-10m" : "origin-10m", input.origin, 30 * (dashboard ? 4 : 1), 10 * minute, "rate_limit_origin"));
+  limits.push(limit(dashboard ? "dashboard-origin-10m" : "origin-10m", `${input.businessId}:${input.origin}`, 30 * (dashboard ? 4 : 1), 10 * minute, "rate_limit_origin"));
   limits.push(limit(dashboard ? "dashboard-business-hour" : "business-hour", input.businessId, dashboard ? 120 : 60, hour, "rate_limit_business_hour"));
   limits.push(limit(dashboard ? "dashboard-business-day" : "business-day", input.businessId, dashboard ? 600 : 300, day, "rate_limit_business_day"));
   limits.push(limit("global-minute", "global", 120, minute, "rate_limit_global"));

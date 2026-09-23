@@ -52,6 +52,11 @@ export default defineConfig({
       ...testSecrets,
       BETTER_AUTH_USE_SECURE_COOKIES: "false",
       REQUIRE_EMAIL_VERIFICATION: "true",
+      // The isolated test server is reachable only on localhost, and each spec
+      // mints a unique `x-real-ip` per user so auth rate limits stay per-test
+      // instead of collapsing into one shared bucket. Never copy this to a
+      // deployment whose ingress does not overwrite the header.
+      TRUSTED_CLIENT_IP_HEADER: "x-real-ip",
       DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_app", process.env.LOBBYSTACK_APP_PASSWORD ?? replacement.LOBBYSTACK_APP_PASSWORD ?? "app", process.env.LOBBYSTACK_APP_DATABASE_URL),
       LOBBYSTACK_APP_DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_app", process.env.LOBBYSTACK_APP_PASSWORD ?? replacement.LOBBYSTACK_APP_PASSWORD ?? "app", process.env.LOBBYSTACK_APP_DATABASE_URL),
       LOBBYSTACK_AUTH_DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_auth", process.env.LOBBYSTACK_AUTH_PASSWORD ?? replacement.LOBBYSTACK_AUTH_PASSWORD ?? "auth", process.env.LOBBYSTACK_AUTH_DATABASE_URL),

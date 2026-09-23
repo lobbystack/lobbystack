@@ -21,7 +21,7 @@ Smith.ai associe l'IA à un réseau de réceptionnistes en Amérique du Nord. Lo
 
 | Critère | Smith.ai AI Receptionist | LobbyStack |
 | --- | --- | --- |
-| Quota gratuit | 25 appels, carte requise | 30 minutes, sans carte, toutes les fonctions |
+| Quota gratuit | 25 appels, carte requise | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
 | Entrée payante | Pro dès 150 $ pour 75 appels | Starter à 30 $ pour 150 minutes |
 | Relais humain | Réseau d'agents, certaines tâches facturées par appel | Équipe que vous configurez |
 | Langues | Anglais et espagnol annoncés | Selon la pile vocale |

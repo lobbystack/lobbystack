@@ -93,7 +93,7 @@ export function ProductAnalytics({ children }: { children?: ReactNode }) {
     posthog.register({ businessId });
     posthog.group("business", businessGroup);
     const authEvent = consumeAuthSuccess();
-    if (authEvent) telemetry.track(authEvent, { businessId, pathname: pathname ?? "/", $groups: { business: businessGroup } });
+    if (authEvent) telemetry.track(authEvent.event, { businessId, pathname: pathname ?? "/", ...(authEvent.source ? { source: authEvent.source } : {}), $groups: { business: businessGroup } });
     const pendingOnboardingBusinessId = consumePendingOnboardingBusiness(businessId);
     if (pendingOnboardingBusinessId === businessId) {
       telemetry.track("web.onboarding.business_name_submitted", {

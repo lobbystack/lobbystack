@@ -104,6 +104,19 @@ describe("loadVoiceGatewayEnv", () => {
     expect(env.DASHBOARD_TEST_CALL_TOKEN).toBe("dashboard-token");
   });
 
+  it("loads the optional trusted client ip header and treats empty as unset", () => {
+    expect(
+      loadVoiceGatewayEnv({ ...baseVoiceGatewayEnv, TRUSTED_CLIENT_IP_HEADER: "" })
+        .TRUSTED_CLIENT_IP_HEADER,
+    ).toBeUndefined();
+    expect(
+      loadVoiceGatewayEnv({
+        ...baseVoiceGatewayEnv,
+        TRUSTED_CLIENT_IP_HEADER: "x-real-ip",
+      }).TRUSTED_CLIENT_IP_HEADER,
+    ).toBe("x-real-ip");
+  });
+
   it("loads the only business allowed to receive unsigned public web calls", () => {
     const env = loadVoiceGatewayEnv({
       ...baseVoiceGatewayEnv,

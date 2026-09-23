@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { markdownAlternatePath } from "./agent-discovery"
+import { featuresMarkdown, markdownAlternatePath } from "./agent-discovery"
 
 describe("markdownAlternatePath", () => {
   it("does not advertise missing Markdown alternates for solution pages", () => {
@@ -17,5 +17,15 @@ describe("markdownAlternatePath", () => {
     expect(markdownAlternatePath("/blog/ai-receptionist-savings/")).toBe(
       "/blog/ai-receptionist-savings.md"
     )
+  })
+})
+
+describe("featuresMarkdown", () => {
+  it("distinguishes Free browser voice from paid telephone features", () => {
+    const everyPlan = featuresMarkdown.split("## Every Plan Includes\n\n")[1]
+    expect(everyPlan).toContain("Free includes 30 browser voice minutes and no telephone number.")
+    expect(everyPlan).toContain("Starter and Pro include a dedicated telephone number for inbound phone calls and call transfers.")
+    expect(everyPlan).not.toMatch(/Every plan includes[^\n]*\b(outbound calls|transfers|telephone call answering)\b/)
+    expect(everyPlan).toContain("unlimited concurrent calls")
   })
 })

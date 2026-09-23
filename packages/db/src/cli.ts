@@ -21,7 +21,9 @@ import {
 import { businesses, schema } from "./schema";
 
 const repositoryRoot = fileURLToPath(new URL("../../..", import.meta.url));
-loadEnv({ path: [resolve(repositoryRoot, ".env.local"), resolve(repositoryRoot, ".env")], quiet: true });
+if (process.env.LOBBYSTACK_SKIP_ENV_FILES !== "true") {
+  loadEnv({ path: [resolve(repositoryRoot, ".env.local"), resolve(repositoryRoot, ".env")], quiet: true });
+}
 
 async function main(): Promise<void> {
   await initializeTelemetry({ serviceName: "lobbystack-migrator" });

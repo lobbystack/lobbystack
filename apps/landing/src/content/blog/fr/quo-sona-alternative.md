@@ -21,7 +21,7 @@ Sona se concentre sur la réponse, les prospects, les messages et les résumés 
 
 | Critère | Quo Sona | LobbyStack |
 | --- | --- | --- |
-| Quota sans option payante | Environ 10 appels, mais Quo payant est requis | 30 minutes, sans carte, toutes les fonctions |
+| Quota sans option payante | Environ 10 appels, mais Quo payant est requis | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
 | Entrée payante | 25 $ pour 40 appels | 30 $ pour 150 minutes |
 | Plateforme requise | Forfait Quo payant | Aucune suite téléphonique requise |
 | Travail principal | Réponse, prospects, messages | Réponse, réservation, relais, opérations |
@@ -95,4 +95,4 @@ Choisissez LobbyStack pour la réservation directe, le relais, un vrai test grat
 
 LobbyStack offre le réceptionniste le plus complet et portable. Sona reste une option pratique pour prendre des messages chez les équipes engagées dans Quo, mais ajoute un coût et garde le workflow dans cette suite.
 
-[Commencez avec LobbyStack gratuitement](/fr/pricing/) et testez réservation, relais, résumés et portabilité.
+[Commencez avec LobbyStack gratuitement](/fr/pricing/) et testez la voix dans votre navigateur avant de choisir un forfait payant.

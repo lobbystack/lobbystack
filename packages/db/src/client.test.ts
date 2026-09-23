@@ -1,8 +1,28 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { roleDatabaseUrl } from "./client";
+import { assertDatabaseRole, roleDatabaseUrl, type DatabaseClient } from "./client";
 
 const DATABASE_URL = "postgresql://postgres:superuser@postgres.internal:5432/lobbystack";
+
+describe("effective database role assertion", () => {
+  it.each(["lobbystack_worker", "lobbystack_dispatcher", "lobbystack_app"] as const)("checks %s in production", async (role) => {
+    const query = vi.fn().mockResolvedValue({ rows: [{ role, privileged: false }] });
+    const client = { role, pool: { query } } as unknown as DatabaseClient;
+    await expect(assertDatabaseRole(client, { NODE_ENV: "production" })).resolves.toBeUndefined();
+    query.mockResolvedValue({ rows: [{ role: "postgres", privileged: true }] });
+    await expect(assertDatabaseRole(client, { NODE_ENV: "production" })).rejects.toThrow("Database role assertion failed");
+    query.mockResolvedValue({ rows: [{ role, privileged: true }] });
+    await expect(assertDatabaseRole(client, { NODE_ENV: "production" })).rejects.toThrow("Database role assertion failed");
+    query.mockResolvedValue({ rows: [{ role: "other", privileged: false }] });
+    await expect(assertDatabaseRole(client, { NODE_ENV: "production" })).rejects.toThrow("Database role assertion failed");
+  });
+
+  it("allows privileged migrator bootstrap", async () => {
+    const query = vi.fn();
+    await assertDatabaseRole({ role: "lobbystack_migrator", pool: { query } } as unknown as DatabaseClient, { NODE_ENV: "production" });
+    expect(query).not.toHaveBeenCalled();
+  });
+});
 
 describe("roleDatabaseUrl", () => {
   it("prefers an explicit role URL", () => {

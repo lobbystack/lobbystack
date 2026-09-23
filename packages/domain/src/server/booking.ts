@@ -9,6 +9,7 @@ import type { DomainContext } from "./context";
 import { recordCallOutcomeInTransaction } from "./callOutcome";
 import { consumeAppointmentChangeVerificationInTransaction } from "./appointmentChanges";
 import { recordProductEvent } from "./productEvents";
+import { rescheduleAppointmentReminderInTransaction } from "./notifications";
 
 type BookingInput = {
   callId?: string;
@@ -31,45 +32,99 @@ async function lockStaff(tx: DatabaseTransaction, staffId: string): Promise<void
 export const MAX_CALENDAR_SYNC_AGE_MS = 20 * 60_000;
 export const CALENDAR_SYNC_HORIZON_MS = 90 * 24 * 60 * 60_000;
 
-async function availabilityInTransaction(tx: DatabaseTransaction, input: { businessId: string; serviceId: string; startsAt: string; staffIds?: string[]; ignoreAppointmentId?: string }) {
-  const [service] = await tx.select({ durationMinutes: services.durationMinutes }).from(services).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId), eq(services.active, true))).limit(1);
+type AvailabilityReference = {
+  businessId: string;
+  serviceId: string;
+  serviceName: string;
+  serviceDurationMinutes: number;
+  timezone: string;
+  startsAt: Date;
+  endsAt: Date;
+  activeStaffIds: string[];
+  assignedStaffIds: Set<string>;
+  connections: Array<typeof calendarConnections.$inferSelect>;
+  hours: Array<typeof businessHours.$inferSelect>;
+  closures: Array<{ startsAt: string; endsAt: string; reason: string }>;
+};
+
+/**
+ * Reads an availability reference snapshot. Booking callers reload it after
+ * waiting for an advisory lock so they do not validate against stale rules.
+ */
+async function loadAvailabilityReference(tx: DatabaseTransaction, input: { businessId: string; serviceId: string; startsAt: string }): Promise<AvailabilityReference> {
+  const [service] = await tx.select({ id: services.id, name: services.name, durationMinutes: services.durationMinutes }).from(services).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId), eq(services.active, true))).limit(1);
   const [business] = await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
   if (!service || !business) throw new Error("Service is not available.");
   const startsAt = new Date(input.startsAt);
   if (!Number.isFinite(startsAt.getTime()) || !Number.isSafeInteger(service.durationMinutes) || service.durationMinutes <= 0) throw new Error("A valid appointment time and duration are required.");
   const endsAt = new Date(startsAt.getTime() + service.durationMinutes * 60_000);
   const activeStaff = await tx.select({ id: staff.id }).from(staff).where(and(eq(staff.businessId, input.businessId), eq(staff.active, true))).orderBy(asc(staff.id));
+  const activeStaffIds = activeStaff.map((row) => row.id);
   const assignments = await tx.select({ staffId: staffServiceAssignments.staffId }).from(staffServiceAssignments).where(and(eq(staffServiceAssignments.businessId, input.businessId), eq(staffServiceAssignments.serviceId, input.serviceId)));
-  // Unassigned services retain the existing all-active-staff default. Explicit
-  // assignments constrain eligibility instead of being silently ignored.
-  const assigned = new Set(assignments.map((row) => row.staffId));
-  let selected = activeStaff.map((row) => row.id).filter((id) => (!input.staffIds || input.staffIds.includes(id)) && (!assigned.size || assigned.has(id)));
-  if (!selected.length) return [];
-  const connections = await tx.select().from(calendarConnections).where(and(eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"), or(isNull(calendarConnections.staffId), inArray(calendarConnections.staffId, selected))));
-  const now = Date.now();
-  const configured = connections.filter((connection) => connection.selectedCalendarId);
-  selected = selected.filter((id) => !configured.some((connection) => (!connection.staffId || connection.staffId === id) && (
-    connection.status !== "connected" || !connection.lastSyncedAt || now - connection.lastSyncedAt.getTime() > MAX_CALENDAR_SYNC_AGE_MS
-    || startsAt.getTime() < connection.lastSyncedAt.getTime() || endsAt.getTime() > connection.lastSyncedAt.getTime() + CALENDAR_SYNC_HORIZON_MS
-  )));
-  if (!selected.length) return [];
+  const connections = activeStaffIds.length
+    ? await tx.select().from(calendarConnections).where(and(eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"), or(isNull(calendarConnections.staffId), inArray(calendarConnections.staffId, activeStaffIds))))
+    : [];
   const hours = await tx.select().from(businessHours).where(eq(businessHours.businessId, input.businessId));
   const closed = await tx.select().from(closures).where(and(eq(closures.businessId, input.businessId), lt(closures.startsAt, endsAt), gt(closures.endsAt, startsAt)));
-  const existing = await tx.select({ staffId: appointments.staffId, startsAt: appointments.startsAt, endsAt: appointments.endsAt }).from(appointments).where(and(eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"), input.ignoreAppointmentId ? ne(appointments.id, input.ignoreAppointmentId) : undefined, inArray(appointments.staffId, selected), lt(appointments.startsAt, endsAt), gt(appointments.endsAt, startsAt)));
-  const connectionIds = configured.filter((connection) => connection.status === "connected").map((connection) => connection.id);
-  const busy = connectionIds.length ? await tx.select().from(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.businessId, input.businessId), inArray(calendarBusyBlocks.connectionId, connectionIds), lt(calendarBusyBlocks.startsAt, endsAt), gt(calendarBusyBlocks.endsAt, startsAt))) : [];
-  const staffByConnection = new Map(connections.map((connection) => [connection.id, connection.staffId]));
-  return computeAvailability({
-    request: { serviceId: input.serviceId, startsAt: startsAt.toISOString(), timezone: business.timezone },
+  return {
+    businessId: input.businessId,
+    serviceId: input.serviceId,
+    serviceName: service.name,
     serviceDurationMinutes: service.durationMinutes,
-    staffIds: selected,
+    timezone: business.timezone,
+    startsAt,
+    endsAt,
+    activeStaffIds,
+    assignedStaffIds: new Set(assignments.map((row) => row.staffId)),
+    connections,
     hours,
     closures: closed.map((row) => ({ startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), reason: row.reason })),
+  };
+}
+
+// Unassigned services retain the existing all-active-staff default. Explicit
+// assignments constrain eligibility instead of being silently ignored.
+function eligibleStaffIds(reference: AvailabilityReference, requestedStaffIds?: string[]): string[] {
+  return reference.activeStaffIds.filter((id) => (!requestedStaffIds || requestedStaffIds.includes(id)) && (!reference.assignedStaffIds.size || reference.assignedStaffIds.has(id)));
+}
+
+function isCalendarFresh(reference: AvailabilityReference, staffId: string, now: number): boolean {
+  return !reference.connections.some((connection) => connection.selectedCalendarId && (!connection.staffId || connection.staffId === staffId) && (
+    connection.status !== "connected" || !connection.lastSyncedAt || now - connection.lastSyncedAt.getTime() > MAX_CALENDAR_SYNC_AGE_MS
+    || reference.startsAt.getTime() < connection.lastSyncedAt.getTime() || reference.endsAt.getTime() > connection.lastSyncedAt.getTime() + CALENDAR_SYNC_HORIZON_MS
+  ));
+}
+
+/**
+ * Reads only staff-specific conflicts. Call after taking the staff advisory
+ * lock so the conflict check reflects the holder of the lock.
+ */
+async function staffAvailabilityInTransaction(tx: DatabaseTransaction, reference: AvailabilityReference, input: { staffIds: string[]; ignoreAppointmentId?: string }) {
+  if (!input.staffIds.length) return [];
+  const existing = await tx.select({ staffId: appointments.staffId, startsAt: appointments.startsAt, endsAt: appointments.endsAt }).from(appointments).where(and(eq(appointments.businessId, reference.businessId), ne(appointments.status, "canceled"), input.ignoreAppointmentId ? ne(appointments.id, input.ignoreAppointmentId) : undefined, inArray(appointments.staffId, input.staffIds), lt(appointments.startsAt, reference.endsAt), gt(appointments.endsAt, reference.startsAt)));
+  const configured = reference.connections.filter((connection) => connection.selectedCalendarId && input.staffIds.some((id) => !connection.staffId || connection.staffId === id));
+  const connectionIds = configured.filter((connection) => connection.status === "connected").map((connection) => connection.id);
+  const busy = connectionIds.length ? await tx.select().from(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.businessId, reference.businessId), inArray(calendarBusyBlocks.connectionId, connectionIds), lt(calendarBusyBlocks.startsAt, reference.endsAt), gt(calendarBusyBlocks.endsAt, reference.startsAt))) : [];
+  const staffByConnection = new Map(reference.connections.map((connection) => [connection.id, connection.staffId]));
+  return computeAvailability({
+    request: { serviceId: reference.serviceId, startsAt: reference.startsAt.toISOString(), timezone: reference.timezone },
+    serviceDurationMinutes: reference.serviceDurationMinutes,
+    staffIds: input.staffIds,
+    hours: reference.hours,
+    closures: reference.closures,
     existingAppointments: [
       ...existing.map((row) => ({ staffId: row.staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })),
-      ...busy.flatMap((row) => { const owner = row.staffId ?? staffByConnection.get(row.connectionId); return (owner ? [owner] : selected).map((staffId) => ({ staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })); }),
+      ...busy.flatMap((row) => { const owner = row.staffId ?? staffByConnection.get(row.connectionId); return (owner ? [owner] : input.staffIds).map((staffId) => ({ staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })); }),
     ],
   });
+}
+
+async function availabilityInTransaction(tx: DatabaseTransaction, input: { businessId: string; serviceId: string; startsAt: string; staffIds?: string[]; ignoreAppointmentId?: string }) {
+  const reference = await loadAvailabilityReference(tx, input);
+  const now = Date.now();
+  const selected = eligibleStaffIds(reference, input.staffIds).filter((id) => isCalendarFresh(reference, id, now));
+  if (!selected.length) return [];
+  return await staffAvailabilityInTransaction(tx, reference, input.ignoreAppointmentId ? { staffIds: selected, ignoreAppointmentId: input.ignoreAppointmentId } : { staffIds: selected });
 }
 
 export async function findAvailability(
@@ -92,23 +147,31 @@ export async function bookAppointment(
     if (input.userId) {
       await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId, minimumRole: "scheduler" });
     }
-    const serviceRows = await tx.select().from(services).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId), eq(services.active, true))).limit(1);
-    const service = serviceRows[0];
-    if (!service) {
-      throw new Error("Service is not available.");
-    }
-    const staffRows = await tx.select({ id: staff.id }).from(staff).where(and(eq(staff.businessId, input.businessId), eq(staff.active, true), input.preferredStaffId ? eq(staff.id, input.preferredStaffId) : undefined)).orderBy(asc(staff.id));
+    // The first read discovers a stable, sorted lock set. Reference data is
+    // reloaded after each candidate lock because it may change while we wait.
+    const initialReference = await loadAvailabilityReference(tx, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.startsAt });
+    const candidates = initialReference.activeStaffIds.filter((id) => !input.preferredStaffId || id === input.preferredStaffId);
     let selectedStaff: { id: string } | undefined;
-    for (const candidate of staffRows) {
-      await lockStaff(tx, candidate.id);
-      const slots = await availabilityInTransaction(tx, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.startsAt, staffIds: [candidate.id] });
-      if (slots.length) { selectedStaff = candidate; break; }
+    let selectedReference: AvailabilityReference | undefined;
+    for (const candidateId of candidates) {
+      await lockStaff(tx, candidateId);
+      const reference = await loadAvailabilityReference(tx, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.startsAt });
+      if (!reference.activeStaffIds.includes(candidateId)) continue;
+      if (reference.assignedStaffIds.size && !reference.assignedStaffIds.has(candidateId)) continue;
+      if (!isCalendarFresh(reference, candidateId, Date.now())) continue;
+      const slots = await staffAvailabilityInTransaction(tx, reference, { staffIds: [candidateId] });
+      if (slots.length) {
+        selectedStaff = { id: candidateId };
+        selectedReference = reference;
+        break;
+      }
     }
-    if (!selectedStaff) {
+    if (!selectedStaff || !selectedReference) {
       throw new Error("No staff member is available for this service.");
     }
-    const startsAt = new Date(input.startsAt);
-    const endsAt = new Date(startsAt.getTime() + service.durationMinutes * 60_000);
+    const reference = selectedReference;
+    const startsAt = reference.startsAt;
+    const endsAt = reference.endsAt;
     const conflicting = await tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, input.businessId), eq(appointments.staffId, selectedStaff.id), ne(appointments.status, "canceled"), lt(appointments.startsAt, endsAt), gt(appointments.endsAt, startsAt))).limit(1);
     if (conflicting[0]) {
       throw new Error("That appointment time is no longer available.");
@@ -196,11 +259,11 @@ export async function bookAppointment(
           aggregateId: appointment.id,
           dedupeKey: `notification:${reminder.id}:dispatch`,
           availableAt: reminderAt,
-          payload: { notificationId: reminder.id },
+          payload: { notificationId: reminder.id, appointmentRevision: appointment.revision },
         });
       }
     }
-    if (input.callId) await recordCallOutcomeInTransaction(tx, { businessId: input.businessId, callId: input.callId, contactId, outcome: { kind: "booked", serviceName: service.name, startsAt: startsAt.toISOString() } });
+    if (input.callId) await recordCallOutcomeInTransaction(tx, { businessId: input.businessId, callId: input.callId, contactId, outcome: { kind: "booked", serviceName: reference.serviceName, startsAt: startsAt.toISOString() } });
     return { appointmentId: appointment.id, contactId, staffId: selectedStaff.id };
   });
 }
@@ -225,10 +288,12 @@ export async function cancelAppointment(
   context: DomainContext,
   input: { userId: string; businessId: string; appointmentId: string },
 ): Promise<void> {
-  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+  const changed = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId, minimumRole: "scheduler" });
-    const [appointment] = await tx.update(appointments).set({ status: "canceled", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId))).returning({ id: appointments.id, revision: appointments.revision });
+    const [appointment] = await tx.update(appointments).set({ status: "canceled", calendarSyncState: "pending", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"))).returning({ id: appointments.id, revision: appointments.revision });
     if (!appointment) {
+      const [existing] = await tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId))).limit(1);
+      if (existing) return false;
       throw new Error("Appointment not found.");
     }
     await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "appointment_change.canceled", entityType: "appointment", entityId: appointment.id, payload: { source: "operator" } });
@@ -238,14 +303,14 @@ export async function cancelAppointment(
         eq(notifications.businessId, input.businessId),
         eq(notifications.relatedId, appointment.id),
         eq(notifications.kind, "appointment_reminder"),
-        eq(notifications.status, "pending"),
+        inArray(notifications.status, ["pending", "processing"]),
       ));
     await enqueueOutbox(tx, {
       topic: "calendar.syncAppointment",
       businessId: input.businessId,
       aggregateType: "appointment",
       aggregateId: appointment.id,
-      dedupeKey: `appointment:${appointment.id}:calendar:cancel:${Date.now()}`,
+      dedupeKey: `appointment:${appointment.id}:calendar:cancel:${appointment.revision}`,
       payload: { appointmentId: appointment.id, action: "cancel" },
     });
     await enqueueOutbox(tx, {
@@ -256,8 +321,9 @@ export async function cancelAppointment(
       dedupeKey: `appointment:${appointment.id}:updated:${appointment.revision}`,
       payload: { type: "appointment.updated", entityId: appointment.id, revision: appointment.revision },
     });
+    return true;
   });
-  await recordAppointmentChange(context, { name: "appointment.cancelled", businessId: input.businessId, appointmentId: input.appointmentId, source: "operator" });
+  if (changed) await recordAppointmentChange(context, { name: "appointment.cancelled", businessId: input.businessId, appointmentId: input.appointmentId, source: "operator" });
 }
 
 export async function rescheduleAppointmentForCaller(
@@ -277,8 +343,9 @@ export async function rescheduleAppointmentForCaller(
     if (conflict) throw new Error("That appointment time is no longer available.");
     const consumed = await consumeAppointmentChangeVerificationInTransaction(tx, { businessId: input.businessId, verificationId: input.verificationId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, action: "reschedule" });
     if (!consumed) return null;
-    const [updated] = await tx.update(appointments).set({ startsAt, endsAt, status: "confirmed", calendarSyncState: "pending", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, row.id), eq(appointments.businessId, input.businessId))).returning({ revision: appointments.revision });
+    const [updated] = await tx.update(appointments).set({ startsAt, endsAt, status: "confirmed", calendarSyncState: "pending", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, row.id), eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"))).returning({ revision: appointments.revision });
     if (!updated) return null;
+    await rescheduleAppointmentReminderInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, startsAt, revision: updated.revision });
     await tx.insert(auditLogs).values({ businessId: input.businessId, eventType: "appointment_change.rescheduled", entityType: "appointment", entityId: row.id, payload: { source: "caller", startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() } });
     await enqueueOutbox(tx, { topic: "calendar.syncAppointment", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `appointment:${row.id}:calendar:reschedule:${updated.revision}`, payload: { appointmentId: row.id, action: "reschedule" } });
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `appointment:${row.id}:updated:${updated.revision}`, payload: { type: "appointment.updated", entityId: row.id, revision: updated.revision } });
@@ -299,10 +366,10 @@ export async function cancelAppointmentForCaller(
     if (!row) return null;
     const consumed = await consumeAppointmentChangeVerificationInTransaction(tx, { businessId: input.businessId, verificationId: input.verificationId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, action: "cancel" });
     if (!consumed) return null;
-    const [updated] = await tx.update(appointments).set({ status: "canceled", calendarSyncState: "pending", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, row.id), eq(appointments.businessId, input.businessId))).returning({ revision: appointments.revision });
+    const [updated] = await tx.update(appointments).set({ status: "canceled", calendarSyncState: "pending", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, row.id), eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"))).returning({ revision: appointments.revision });
     if (!updated) return null;
     await tx.insert(auditLogs).values({ businessId: input.businessId, eventType: "appointment_change.canceled", entityType: "appointment", entityId: row.id, payload: { source: "caller" } });
-    await tx.update(notifications).set({ status: "skipped", updatedAt: new Date() }).where(and(eq(notifications.businessId, input.businessId), eq(notifications.relatedId, row.id), eq(notifications.kind, "appointment_reminder"), eq(notifications.status, "pending")));
+    await tx.update(notifications).set({ status: "skipped", updatedAt: new Date() }).where(and(eq(notifications.businessId, input.businessId), eq(notifications.relatedId, row.id), eq(notifications.kind, "appointment_reminder"), inArray(notifications.status, ["pending", "processing"])));
     await enqueueOutbox(tx, { topic: "calendar.syncAppointment", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `appointment:${row.id}:calendar:cancel:${updated.revision}`, payload: { appointmentId: row.id, action: "cancel" } });
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `appointment:${row.id}:updated:${updated.revision}`, payload: { type: "appointment.updated", entityId: row.id, revision: updated.revision } });
     return { appointmentId: row.id, serviceId: row.serviceId, startsAt: row.startsAt, endsAt: row.endsAt };

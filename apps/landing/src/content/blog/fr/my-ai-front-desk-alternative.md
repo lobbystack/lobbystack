@@ -21,7 +21,7 @@ Frontdesk, anciennement My AI Front Desk, vend un large espace commercial IA. Lo
 
 | Critère | Frontdesk | LobbyStack |
 | --- | --- | --- |
-| Forfait gratuit durable | Aucun, Basic coûte 20 $ avec 0 minute vocale | 30 minutes, sans carte, toutes les fonctions |
+| Forfait gratuit durable | Aucun, Basic coûte 20 $ avec 0 minute vocale | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
 | Périmètre | Main-d'œuvre IA multicanale et CRM | Réceptionniste IA complet et opérations d'appel |
 | Premier accès vocal | 99 $ avec 200 minutes | Gratuit avec 30 minutes et fonctions de réception |
 | Près de 30 $ | Basic à 20 $ offre 0 minute vocale | Starter à 30 $ offre 150 minutes |
@@ -34,11 +34,11 @@ Frontdesk, anciennement My AI Front Desk, vend un large espace commercial IA. Lo
 
 Prix et fonctions vérifiés le 30 juillet 2026.
 
-## LobbyStack permet de tester de vrais appels gratuitement
+## Testez LobbyStack dans votre navigateur gratuitement
 
 Frontdesk présente Basic à 20 $ comme forfait d'entrée, mais ce forfait contient zéro minute vocale. Vous pouvez essayer le chat, les SMS, les courriels, les formulaires et les workflows. Le quota inclus ne permet pas de tester le travail principal d'un réceptionniste téléphonique.
 
-Le forfait Gratuit de LobbyStack inclut 30 minutes vocales, 10 segments SMS d'alerte, deux appels sortants, les rendez-vous, les résumés et l'historique. Vous pouvez transférer un vrai numéro, passer des scénarios clients et examiner les résultats avant de payer un abonnement. LobbyStack ne compte pas les appels indésirables ni ceux de moins de 10 secondes dans l'usage.
+Avec le forfait Gratuit de LobbyStack, vous pouvez tester 30 minutes vocales dans le navigateur. Vous n'obtenez aucun numéro de téléphone. Choisissez Starter ou Pro pour recevoir des appels sur un numéro dédié.
 
 Un forfait à 20 $ sans voix ne concurrence pas un forfait gratuit qui répond au téléphone.
 
@@ -88,7 +88,7 @@ Choisissez Frontdesk si vous avez besoin de regrouper voix, messagerie, chat, co
 
 ## Choisissez LobbyStack si
 
-Choisissez LobbyStack pour tester de vrais appels gratuitement, payer moins entre 150 et 200 minutes, ou obtenir 500 minutes près de 100 $. Vous recevez aussi rendez-vous, transcriptions, résumés, alertes SMS, relais humain, code public, auto-hébergement et contrôle des fournisseurs sans remplacer votre CRM.
+Choisissez LobbyStack pour tester la voix dans le navigateur gratuitement, payer moins entre 150 et 200 minutes, ou obtenir 500 minutes près de 100 $. Sur un forfait payant, vous pouvez recevoir des appels sur un numéro dédié sans remplacer votre CRM.
 
 ## Sources
 
@@ -102,4 +102,4 @@ Choisissez LobbyStack pour tester de vrais appels gratuitement, payer moins entr
 
 Frontdesk vend plus de canaux. LobbyStack offre la meilleure valeur pour la réception téléphonique : voix gratuite utilisable, plus de capacité sur les forfaits payants, opérations d'appel complètes et déploiement ouvert.
 
-Si votre priorité consiste à répondre et convertir les appels, [commencez avec les 30 minutes gratuites de LobbyStack](/fr/pricing/). Vous testerez les rendez-vous, le relais, les résumés et l'historique avant de payer 99 $ pour le premier forfait vocal Frontdesk.
+[Testez 30 minutes vocales dans le navigateur sur LobbyStack Gratuit](/fr/pricing/). Choisissez Starter ou Pro pour recevoir des appels téléphoniques sur un numéro dédié.

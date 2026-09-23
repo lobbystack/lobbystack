@@ -6,6 +6,7 @@ import { widgetKeys as widgetKeysTable, withBusinessTransaction } from "@lobbyst
 import { defaultWidgetConfig, widgetConfigSchema, type WidgetConfig, type WidgetKeyConfig } from "@lobbystack/shared";
 
 import { getWorkerDatabase } from "./api-helpers";
+import { trustedClientIp } from "./trusted-client-ip";
 
 export function hashWidgetKey(key: string): string {
   return createHash("sha256").update(key.trim()).digest("hex");
@@ -159,8 +160,10 @@ export function isValidUuid(value: string | null | undefined): value is string {
 }
 
 export function requestIpHash(request: Request): string | undefined {
-  const forwarded = request.headers.get("x-forwarded-for");
-  const ip = forwarded?.split(",")[0]?.trim() || request.headers.get("x-real-ip")?.trim() || "";
+  // Shared trusted-IP derivation: opt in only when ingress overwrites the
+  // configured single-value header. No trusted header means no IP dimension,
+  // and the widget key/global limits still apply.
+  const ip = trustedClientIp(request);
   if (!ip) return undefined;
   return createHash("sha256").update(ip).digest("hex");
 }

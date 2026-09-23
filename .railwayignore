@@ -21,3 +21,8 @@
 output
 tmp
 OPENCODE.local.md
+mintlify
+certification-results
+**/.env
+**/.env.*
+!**/.env.example

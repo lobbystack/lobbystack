@@ -3,11 +3,11 @@ import { getCopy, localizeHref, type Locale } from "@/i18n"
 
 const includedCopy = {
   en: {
-    headingStart: "Every plan gets the full",
-    headingEmphasis: "receptionist",
+    headingStart: "Answer telephone calls with",
+    headingEmphasis: "Starter or Pro",
     intro:
-      "Plans scale by usage, not by locking basic receptionist features behind higher tiers.",
-    label: "Included on every plan",
+      "Test 30 browser voice minutes on Free, without a telephone number. Choose Starter or Pro for a dedicated number and the telephone features below.",
+    label: "Included on Starter and Pro",
     features: [
       "Call answering",
       "Plain-language workflows",
@@ -26,11 +26,11 @@ const includedCopy = {
     ],
   },
   fr: {
-    headingStart: "Tout ce qu’il faut pour votre réceptionniste IA,",
-    headingEmphasis: "dès le premier forfait",
+    headingStart: "Recevez des appels téléphoniques avec",
+    headingEmphasis: "Starter ou Pro",
     intro:
-      "Les forfaits évoluent avec votre volume d’appels. Les fonctions essentielles restent incluses.",
-    label: "Inclus dans chaque forfait",
+      "Testez 30 minutes vocales dans le navigateur sur Free, sans numéro de téléphone. Choisissez Starter ou Pro pour obtenir un numéro dédié et les fonctions téléphoniques ci-dessous.",
+    label: "Inclus dans Starter et Pro",
     features: [
       "Réponse aux appels",
       "Consignes en langage naturel",

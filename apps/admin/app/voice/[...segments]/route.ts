@@ -107,6 +107,15 @@ function webVoiceStartFailureReason(error: unknown): string {
   return "web_call_start_failed";
 }
 
+function isUniqueViolation(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 3 && current !== null && typeof current === "object"; depth += 1) {
+    if ("code" in current && (current as { code?: unknown }).code === "23505") return true;
+    current = "cause" in current ? (current as { cause?: unknown }).cause : null;
+  }
+  return false;
+}
+
 async function safeRecordProductEvent(
   context: ReturnType<typeof createWorkerDomainContext>,
   input: Parameters<typeof recordProductEvent>[1],
@@ -277,6 +286,52 @@ export async function POST(request: Request, context: { params: Promise<{ segmen
     const path = segments.join("/");
     const domain = createWorkerDomainContext();
 
+    if (path === "call/bind-web-provider") {
+      const businessId = requiredString(body, "businessId");
+      const callId = requiredString(body, "callId");
+      const gatewaySessionId = requiredString(body, "gatewaySessionId");
+      const providerCallId = requiredString(body, "providerCallId");
+      if (providerCallId.startsWith("webcall_") || providerCallId.length > 255) {
+        return NextResponse.json({ code: "provider_call_invalid" }, { status: 400 });
+      }
+      const bound = await withBusinessTransaction(domain.db, { businessId, actorType: "worker" }, async (tx) => {
+        return await tx.update(calls).set({ providerCallId, updatedAt: new Date() }).where(and(
+          eq(calls.id, callId), eq(calls.businessId, businessId),
+          eq(calls.gatewaySessionId, gatewaySessionId), eq(calls.provider, "openai_realtime"),
+          or(eq(calls.status, "started"), eq(calls.status, "in_progress")), sql`${calls.endedAt} is null`,
+          or(eq(calls.providerCallId, `webcall_${gatewaySessionId}`), eq(calls.providerCallId, providerCallId)),
+        )).returning({ id: calls.id });
+      }).catch((error: unknown) => {
+        // The unique index on (provider, provider_call_id) is the real guard against two
+        // reservations claiming one provider call. Surface it as a conflict, not a 500.
+        if (isUniqueViolation(error)) return [];
+        throw error;
+      });
+      if (!bound.length) return NextResponse.json({ code: "web_call_reservation_conflict" }, { status: 409 });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (path === "call/mark-web-media-started") {
+      const businessId = requiredString(body, "businessId");
+      const callId = requiredString(body, "callId");
+      const gatewaySessionId = requiredString(body, "gatewaySessionId");
+      const providerCallId = requiredString(body, "providerCallId");
+      const mediaStartedAt = new Date(requiredString(body, "mediaStartedAt"));
+      if (Number.isNaN(mediaStartedAt.getTime())) {
+        return NextResponse.json({ code: "media_started_at_invalid" }, { status: 400 });
+      }
+      const marked = await withBusinessTransaction(domain.db, { businessId, actorType: "worker" }, async (tx) => {
+        return await tx.update(calls).set({ mediaStartedAt, updatedAt: new Date() }).where(and(
+          eq(calls.id, callId), eq(calls.businessId, businessId),
+          eq(calls.gatewaySessionId, gatewaySessionId), eq(calls.provider, "openai_realtime"),
+          eq(calls.providerCallId, providerCallId),
+          or(eq(calls.status, "started"), eq(calls.status, "in_progress")), sql`${calls.endedAt} is null`,
+        )).returning({ id: calls.id });
+      });
+      if (!marked.length) return NextResponse.json({ code: "web_call_reservation_conflict" }, { status: 409 });
+      return NextResponse.json({ ok: true });
+    }
+
     if (path === "call/start-web") {
       if (!stringValue(body, "widgetSessionToken") && !stringValue(body, "prospectDemoToken") && !stringValue(body, "dashboardTestCallToken") && !booleanValue(body, "publicWebCall")) {
         return NextResponse.json({ code: "web_voice_authorization_required", message: "Web voice authorization is required." }, { status: 403 });
@@ -359,8 +414,8 @@ export async function POST(request: Request, context: { params: Promise<{ segmen
       const result = await getAppDatabase().db.execute<{ call_id: string; business_id: string; provider_call_id: string; started_at: Date | string; ended_at: Date | string | null; status: string }>(sql`select call_id, business_id, provider_call_id, started_at, ended_at, status from app.resolve_business_by_gateway_session(${sessionId})`);
       const call = result.rows[0];
       if (!call) return new Response("Not found", { status: 404 });
-      const duration = await withBusinessTransaction(domain.db, { businessId: call.business_id, actorType: "worker" }, async (tx) => (await tx.select({ maxDurationMs: calls.webCallMaxDurationMs }).from(calls).where(and(eq(calls.id, call.call_id), eq(calls.businessId, call.business_id))).limit(1))[0]?.maxDurationMs);
-      return NextResponse.json({ callId: call.call_id, providerCallId: call.provider_call_id, startedAt: serializeDatabaseTimestamp(call.started_at, "started_at"), ...(call.ended_at ? { endedAt: serializeDatabaseTimestamp(call.ended_at, "ended_at") } : {}), status: call.status, webCallMaxDurationMs: duration ?? 5 * 60 * 1000 });
+      const metadata = await withBusinessTransaction(domain.db, { businessId: call.business_id, actorType: "worker" }, async (tx) => (await tx.select({ maxDurationMs: calls.webCallMaxDurationMs, mediaStartedAt: calls.mediaStartedAt }).from(calls).where(and(eq(calls.id, call.call_id), eq(calls.businessId, call.business_id))).limit(1))[0]);
+      return NextResponse.json({ callId: call.call_id, providerCallId: call.provider_call_id, startedAt: serializeDatabaseTimestamp(call.started_at, "started_at"), ...(metadata?.mediaStartedAt ? { mediaStartedAt: serializeDatabaseTimestamp(metadata.mediaStartedAt, "media_started_at") } : {}), ...(call.ended_at ? { endedAt: serializeDatabaseTimestamp(call.ended_at, "ended_at") } : {}), status: call.status, webCallMaxDurationMs: metadata?.maxDurationMs ?? 5 * 60 * 1000 });
     }
 
     if (path === "call/transfer-state" || path === "call/prepare-transfer" || path === "call/release-transfer") {

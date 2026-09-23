@@ -21,7 +21,7 @@ LobbyStack inclut aussi réservation, relais humain, alertes SMS, transcriptions
 
 | Critère | Dialzara | LobbyStack |
 | --- | --- | --- |
-| Forfait gratuit durable | Non, essai de 7 jours annoncé | 30 minutes, sans carte, toutes les fonctions |
+| Forfait gratuit durable | Non, essai de 7 jours annoncé | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
 | Entrée payante | 29 $ pour 60 minutes | 30 $ pour 150 minutes |
 | Niveau intermédiaire | 99 $ pour 220 minutes | 100 $ pour 500 minutes |
 | Réservation et transfert | À partir de 99 $ | Workflows pris en charge |
@@ -87,7 +87,7 @@ Choisissez Dialzara si une offre d'agence hébergée, une marque blanche, Make o
 
 ## Choisissez LobbyStack si
 
-Choisissez LobbyStack pour 150 minutes près de 30 $, 500 près de 100 $, les alertes SMS incluses, la réservation et le relais sans attendre le niveau à 99 $, ou un essai gratuit sur de vrais appels.
+Choisissez LobbyStack pour 150 minutes à 30 $ ou 500 à 100 $, avec un numéro dédié. Vous pouvez tester la voix dans votre navigateur gratuitement avant de choisir un forfait payant.
 
 ## Sources
 

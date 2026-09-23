@@ -13,7 +13,7 @@ locale: "en"
 canonicalSlug: "nextiva-xbert-alternative"
 ---
 
-A **Nextiva XBert alternative** can answer real calls free instead of starting at $99 plus a Nextiva plan. LobbyStack includes 30 voice minutes on Free and 150 minutes for $30. XBert lists 100 shared voice, SMS, or web-chat interactions for $99, followed by $0.99 per interaction.
+A **Nextiva XBert alternative** can skip the XBert add-on and the Nextiva plan it requires. With LobbyStack, you can test 30 browser voice minutes on Free, then buy 150 minutes for $30. XBert lists 100 shared voice, SMS, or web-chat interactions for $99, followed by $0.99 per interaction.
 
 LobbyStack focuses that budget on phone reception: booking, appointment changes, handoff, SMS alerts, transcripts, summaries, and call history. It works as a managed service or a self-hosted stack independent of Nextiva.
 
@@ -21,7 +21,7 @@ LobbyStack focuses that budget on phone reception: booking, appointment changes,
 
 | Area | Nextiva XBert | LobbyStack |
 | --- | --- | --- |
-| Ongoing free plan | Not advertised | 30 voice minutes, no card, all features |
+| Ongoing free plan | Not advertised | 30 browser voice minutes, no card, no telephone number |
 | Entry price | $99 for 100 interactions | $30 for 150 voice minutes |
 | Overage | $0.99 per interaction | Minute overage by plan |
 | Channels | Voice, SMS, and web chat | Voice plus SMS alerts and follow-up |
@@ -36,7 +36,7 @@ Pricing and features were checked on July 30, 2026.
 
 XBert joins a Nextiva subscription. The buyer must price both products and determine how voice, SMS, and chat consume the shared 100-interaction allowance.
 
-LobbyStack needs no Nextiva base plan. A company can test 30 minutes of real calls free, then buy 150 voice minutes for $30. Spam and calls under 10 seconds do not count toward the allowance. The receptionist can book, transfer, send alerts, and leave a transcript and summary for staff.
+You can test 30 browser voice minutes on LobbyStack Free without a Nextiva plan or telephone number. On Starter, you get 150 minutes and a dedicated number for $30.
 
 XBert offers web chat and a unified Nextiva workspace. Those channels justify the bundle when a team needs them. A business buying phone coverage pays less and keeps more provider freedom with LobbyStack.
 

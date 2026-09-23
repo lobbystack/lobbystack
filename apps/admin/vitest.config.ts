@@ -8,6 +8,7 @@ export default defineConfig({
   oxc: { jsx: { runtime: "automatic" } },
   resolve: {
     alias: {
+      "@lobbystack/shared/product-capabilities": `${root}/packages/shared/src/product-capabilities.ts`,
       "@lobbystack/shared": `${root}/packages/shared/src/index.ts`,
       "@lobbystack/config": `${root}/packages/config/src/index.ts`,
       "@lobbystack/contracts": `${root}/packages/contracts/src/index.ts`,

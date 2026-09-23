@@ -1,3 +1,6 @@
+"use client"
+
+import { useEffect, useRef } from "react"
 import { buttonVariants } from "@/components/ui/button"
 import {
   localizeMarketingHref,
@@ -291,10 +294,25 @@ type LandingNavbarProps = {
 
 export function LandingNavbar({ locale = "en" }: LandingNavbarProps) {
   const mobileMenuId = "site-mobile-menu"
+  const headerRef = useRef<HTMLElement>(null)
   const copy = labels[locale]
 
+  useEffect(() => {
+    const header = headerRef.current
+    if (!header) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return
+      const details = (event.target as Element | null)?.closest<HTMLDetailsElement>("details[open]")
+      if (!details) return
+      details.open = false
+      details.querySelector<HTMLElement>("summary")?.focus()
+    }
+    header.addEventListener("keydown", onKeyDown)
+    return () => header.removeEventListener("keydown", onKeyDown)
+  }, [])
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl">
+    <header ref={headerRef} className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         {/* Logo */}
         <a
@@ -316,21 +334,19 @@ export function LandingNavbar({ locale = "en" }: LandingNavbarProps) {
           {navLinks(locale).map((link) => (
             <div key={link.label} className="group relative">
               {link.type === "group" ? (
-                <>
-                  <button
-                    type="button"
-                    className="flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                    aria-haspopup="menu"
+                <details className="group/dropdown">
+                  <summary
+                    className="flex cursor-pointer list-none items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden"
                   >
                     {link.label}
                     <ChevronDown
-                      className="size-3.5 transition-transform group-focus-within:rotate-180 group-hover:rotate-180"
+                      className="size-3.5 transition-transform group-open/dropdown:rotate-180"
                       aria-hidden="true"
                     />
-                  </button>
+                  </summary>
                   <div
                     className={cn(
-                      "invisible absolute top-full left-0 z-50 grid min-w-56 translate-y-2 gap-3 rounded-lg border border-border/70 bg-popover p-1.5 text-popover-foreground opacity-0 shadow-lg transition-all duration-150 group-focus-within:visible group-focus-within:translate-y-1 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-1 group-hover:opacity-100",
+                      "absolute top-full left-0 z-50 grid min-w-56 translate-y-1 gap-3 rounded-lg border border-border/70 bg-popover p-1.5 text-popover-foreground shadow-lg",
                       link.columns.length === 2 && "w-[31rem] grid-cols-2",
                       link.columns.length === 3 &&
                         "w-max grid-cols-[minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)] gap-x-8 p-4",
@@ -405,7 +421,7 @@ export function LandingNavbar({ locale = "en" }: LandingNavbarProps) {
                       </div>
                     ))}
                   </div>
-                </>
+                </details>
               ) : (
                 <a
                   href={localizeMarketingHref(locale, link.href)}
@@ -446,7 +462,7 @@ export function LandingNavbar({ locale = "en" }: LandingNavbarProps) {
           <summary
             className="inline-flex size-9 cursor-pointer list-none items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden"
             aria-controls={mobileMenuId}
-            aria-label="Open menu"
+            aria-label={locale === "fr" ? "Menu de navigation" : "Navigation menu"}
           >
             <Menu
               className="size-5 group-open/mobile-menu:hidden"
@@ -464,7 +480,7 @@ export function LandingNavbar({ locale = "en" }: LandingNavbarProps) {
           >
             <nav
               className="flex flex-col gap-1 px-6 py-4"
-              aria-label="Mobile navigation"
+              aria-label={locale === "fr" ? "Navigation mobile" : "Mobile navigation"}
             >
               {navLinks(locale).map((link) =>
                 link.type === "group" ? (

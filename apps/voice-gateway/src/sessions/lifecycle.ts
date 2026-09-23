@@ -1,0 +1,31 @@
+import type { FastifyInstance } from "fastify";
+import { settleVoiceTasks } from "../realtime/safety";
+
+type Lease = { stop: () => Promise<void> };
+type Registry = { closing: boolean; leases: Set<Lease> };
+const registries = new WeakMap<FastifyInstance, Registry>();
+
+export function isVoiceClosing(server: FastifyInstance): boolean {
+  return registries.get(server)?.closing === true;
+}
+
+export function initializeVoiceLifecycle(server: FastifyInstance): void {
+  if (registries.has(server)) return;
+  const registry: Registry = { closing: false, leases: new Set() };
+  registries.set(server, registry);
+  server.addHook("preClose", async () => {
+    registry.closing = true;
+    await settleVoiceTasks([...registry.leases].map((lease) => lease.stop()), 10_000);
+  });
+}
+
+export function acquireVoiceLease(server: FastifyInstance, stop: () => Promise<void>) {
+  const registry = registries.get(server);
+  if (!registry || registry.closing) return null;
+  const lease: Lease = { stop };
+  registry.leases.add(lease);
+  return {
+    get closing() { return registry.closing; },
+    release() { registry.leases.delete(lease); },
+  };
+}

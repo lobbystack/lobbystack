@@ -46,9 +46,14 @@ function getBusinessSlug() {
   return DEFAULT_BUSINESS_SLUG
 }
 
-export function LobbyStackWebVoiceWidget() {
+export function LobbyStackWebVoiceWidget({
+  locale = "en",
+}: {
+  locale?: "en" | "fr"
+}) {
   return (
     <WebVoiceWidget
+      locale={locale}
       businessSlug={getBusinessSlug()}
       endpoint={getEndpoint()}
       widgetId="lobbystack-landing"

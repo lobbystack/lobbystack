@@ -22,7 +22,7 @@ Goodcall's unlimited-duration model can favor repeated long calls from the same 
 | Area | Goodcall | LobbyStack |
 | --- | --- | --- |
 | Billing unit | Unique callers per agent | Voice minutes |
-| Entry plan | $79 for 100 unique callers | Free: 30 minutes, no card, all features |
+| Entry plan | $79 for 100 unique callers | Free: 30 browser voice minutes, no card, no telephone number |
 | Next paid tier | $129 for 250 unique callers | $30 for 150 minutes |
 | Call duration | Unlimited minutes advertised | Counts against minute allowance |
 | Routing | Directory, departments, transfers | Routing and human handoff |

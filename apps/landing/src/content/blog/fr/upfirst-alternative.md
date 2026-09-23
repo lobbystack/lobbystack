@@ -13,7 +13,7 @@ locale: "fr"
 canonicalSlug: "upfirst-alternative"
 ---
 
-Une **alternative à Upfirst** peut tester de vrais appels sans acheter de forfait. LobbyStack inclut 30 minutes gratuites, avec rendez-vous, relais, alertes SMS, transcriptions, résumés et historique. Le premier niveau Upfirst coûte 24,95 $ pour 30 appels.
+Vous pouvez tester une **alternative à Upfirst** dans votre navigateur sans acheter de forfait. Avec LobbyStack, vous obtenez 30 minutes vocales gratuites, sans numéro de téléphone. Le premier niveau Upfirst coûte 24,95 $ pour 30 appels.
 
 Upfirst facture chaque appel traité. LobbyStack facture les minutes et ajoute le code public, le contrôle des fournisseurs et l'auto-hébergement que les pages Upfirst consultées n'annoncent pas.
 
@@ -21,7 +21,7 @@ Upfirst facture chaque appel traité. LobbyStack facture les minutes et ajoute l
 
 | Critère | Upfirst | LobbyStack |
 | --- | --- | --- |
-| Forfait gratuit durable | Non, essai de 14 jours annoncé | 30 minutes, sans carte, toutes les fonctions |
+| Forfait gratuit durable | Non, essai de 14 jours annoncé | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
 | Forfait d'entrée | 24,95 $ pour 30 appels | Gratuit pour 30 minutes vocales |
 | Usage payant | Quotas et dépassements par appel | Quotas et dépassements par minute |
 | Réservation | Calendrier pendant l'appel | Réservation, modifications et règles métier |
@@ -91,7 +91,7 @@ Upfirst convient si vous voulez un service hébergé, une large couverture lingu
 
 ## Choisissez LobbyStack si
 
-Choisissez LobbyStack pour tester de vrais appels gratuitement, payer moins sur des appels courts fréquents, accéder au code, auto-héberger ou choisir vos fournisseurs.
+Choisissez LobbyStack pour tester la voix dans le navigateur gratuitement, accéder au code, auto-héberger ou choisir vos fournisseurs.
 
 ## Sources
 

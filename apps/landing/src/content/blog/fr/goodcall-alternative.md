@@ -22,7 +22,7 @@ Le modèle illimité de Goodcall favorise certains appels longs et répétés. L
 | Critère | Goodcall | LobbyStack |
 | --- | --- | --- |
 | Unité | Appelants uniques par agent | Minutes vocales |
-| Entrée | 79 $ pour 100 appelants | Gratuit : 30 minutes, sans carte, toutes les fonctions |
+| Entrée | 79 $ pour 100 appelants | Gratuit : 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
 | Niveau suivant | 129 $ pour 250 appelants | 30 $ pour 150 minutes |
 | Durée | Minutes illimitées annoncées | Déduites du quota |
 | Routage | Répertoire, services, transferts | Routage et relais humain |
@@ -94,6 +94,6 @@ Choisissez LobbyStack pour commencer gratuitement, payer 30 $ plutôt que 79 $, 
 
 ## Verdict
 
-LobbyStack offre la meilleure valeur par défaut : vrais appels gratuits, niveau payant à 30 $, workflow complet et choix du déploiement. Goodcall gagne dans un cas plus étroit où les mêmes clients appellent longtemps.
+Avec LobbyStack, vous pouvez tester la voix dans le navigateur gratuitement, puis choisir un forfait payant à 30 $. Goodcall peut coûter moins cher si les mêmes clients appellent longtemps.
 
 [Commencez avec LobbyStack gratuitement](/fr/pricing/) et comparez un mois d'appelants et de minutes.

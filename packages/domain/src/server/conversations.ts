@@ -4,6 +4,7 @@ import { calls, contacts, conversations, conversationSessions, enqueueOutbox, me
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import { requireBusinessMembership } from "../authz";
+import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { resolveCallOutcome } from "./callOutcome";
 import { buildConversationSessionSummary, extractCallerContext } from "./conversationSummary";
 import type { DomainContext } from "./context";
@@ -71,6 +72,7 @@ export async function appendMessage(
       await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId });
     }
     const session = (await tx.select({ id: conversationSessions.id }).from(conversationSessions).where(and(eq(conversationSessions.businessId, input.businessId), eq(conversationSessions.conversationId, input.conversationId), eq(conversationSessions.status, "open"))).orderBy(desc(conversationSessions.startedAt)).limit(1))[0] ?? (await tx.insert(conversationSessions).values({ businessId: input.businessId, conversationId: input.conversationId, channel: input.channel, status: "open" }).returning({ id: conversationSessions.id }))[0];
+    const retentionPlan = isContentRetentionEnabled() ? await resolveBusinessBillingPlan(tx, input.businessId) : null;
     const [message] = await tx.insert(messages).values({
       businessId: input.businessId,
       conversationId: input.conversationId,
@@ -78,6 +80,7 @@ export async function appendMessage(
       direction: input.direction,
       channel: input.channel,
       body: input.body,
+      contentExpiresAt: retentionPlan ? contentExpiryForPlan(retentionPlan, "messages") : null,
       ...(input.providerMessageId !== undefined ? { providerMessageId: input.providerMessageId } : {}),
       aiGenerated: input.aiGenerated ?? false,
       status: input.direction === "outbound" ? "queued" : "received",
