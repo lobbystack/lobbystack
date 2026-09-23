@@ -1,13 +1,13 @@
 import { parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
-import { and, asc, eq, gt, isNull, lt, ne, sql } from "drizzle-orm";
-import { createDatabaseClient, messages, transcripts, withBusinessTransaction, type Database } from "@lobbystack/db";
+import { and, asc, eq, gt, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { createDatabaseClient, messages, storageObjects, transcripts, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { z } from "zod";
-import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "../packages/domain/src/server/contentRetentionPolicy";
+import { contentExpiryForPlan, contentRetentionDays, isContentRetentionEnabled, resolveBusinessBillingPlan } from "../packages/domain/src/server/contentRetentionPolicy";
 
 const optionsSchema = z.object({
   businessId: z.string().uuid(),
-  category: z.enum(["messages", "transcripts"]),
+  category: z.enum(["messages", "transcripts", "recordings"]),
   before: z.string().datetime({ offset: true }).transform((value) => new Date(value)),
   after: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(500).default(100),
@@ -37,12 +37,57 @@ export function parseContentRetentionArgs(args: string[]) {
 export async function backfillContentRetention(db: Database, raw: z.input<typeof optionsSchema>) {
   const input = optionsSchema.parse(raw);
   if (!isContentRetentionEnabled()) throw new Error("Content retention is disabled.");
-  const table = input.category === "messages" ? messages : transcripts;
-  const expiryColumn = input.category === "messages" ? messages.contentExpiresAt : transcripts.expiresAt;
   return withBusinessTransaction(db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     // One bounded keyset page per invocation. Never load or print customer content.
     await tx.execute(sql`set local statement_timeout = '10s'`);
     await tx.execute(sql`set local lock_timeout = '2s'`);
+    const now = new Date();
+    let examined = 0;
+    let updated = 0;
+    let alreadyDue = 0;
+    let cursor: string | null = input.after ?? null;
+
+    if (input.category === "recordings") {
+      // Recordings already carry a retention date, so only shorten the ones
+      // longer than the plan allows. An existing shorter value is never extended.
+      const plan = await resolveBusinessBillingPlan(tx, input.businessId);
+      const days = contentRetentionDays(plan, "recordings");
+      const candidates = await tx.select({ id: storageObjects.id, createdAt: storageObjects.createdAt }).from(storageObjects)
+        .where(and(
+          eq(storageObjects.businessId, input.businessId),
+          eq(storageObjects.purpose, "recording"),
+          ne(storageObjects.status, "deleted"),
+          lt(storageObjects.createdAt, input.before),
+          input.after ? gt(storageObjects.id, input.after) : undefined,
+          or(
+            isNull(storageObjects.retentionUntil),
+            sql`${storageObjects.retentionUntil} > ${storageObjects.createdAt} + (${days} * interval '1 day')`,
+          ),
+        ))
+        .orderBy(asc(storageObjects.id)).limit(input.limit);
+      for (const row of candidates) {
+        const expiry = contentExpiryForPlan(plan, "recordings", row.createdAt);
+        examined += 1;
+        if (expiry <= now) alreadyDue += 1;
+        if (!input.apply) continue;
+        const changed = await tx.update(storageObjects)
+          .set({ retentionUntil: expiry, updatedAt: now })
+          .where(and(
+            eq(storageObjects.businessId, input.businessId),
+            eq(storageObjects.id, row.id),
+            eq(storageObjects.purpose, "recording"),
+            ne(storageObjects.status, "deleted"),
+            or(isNull(storageObjects.retentionUntil), sql`${storageObjects.retentionUntil} > ${expiry}`),
+          ))
+          .returning({ id: storageObjects.id });
+        updated += changed.length;
+      }
+      cursor = candidates.at(-1)?.id ?? cursor;
+      return { mode: input.apply ? "apply" : "dry-run", category: input.category, examined, updated, alreadyDue, nextCursor: cursor, pageFull: candidates.length === input.limit, before: input.before.toISOString() };
+    }
+
+    const table = input.category === "messages" ? messages : transcripts;
+    const expiryColumn = input.category === "messages" ? messages.contentExpiresAt : transcripts.expiresAt;
     const candidates = await tx.select({ id: table.id, createdAt: table.createdAt }).from(table)
       .where(and(eq(table.businessId, input.businessId), isNull(expiryColumn), lt(table.createdAt, input.before),
         input.after ? gt(table.id, input.after) : undefined,
@@ -50,21 +95,18 @@ export async function backfillContentRetention(db: Database, raw: z.input<typeof
       .orderBy(asc(table.id)).limit(input.limit);
     // Expiry follows the business plan; the JSON policy only overrides paid defaults.
     const plan = await resolveBusinessBillingPlan(tx, input.businessId);
-    let updated = 0;
-    let alreadyDue = 0;
-    const now = new Date();
     for (const row of candidates) {
       const expiry = contentExpiryForPlan(plan, input.category, row.createdAt);
-      if (expiry <= now) alreadyDue++;
+      examined += 1;
+      if (expiry <= now) alreadyDue += 1;
       if (!input.apply) continue;
       const changed = input.category === "messages"
         ? await tx.update(messages).set({ contentExpiresAt: expiry }).where(and(eq(messages.businessId, input.businessId), eq(messages.id, row.id), isNull(messages.contentExpiresAt), ne(messages.body, "[content expired]"))).returning({ id: messages.id })
         : await tx.update(transcripts).set({ expiresAt: expiry }).where(and(eq(transcripts.businessId, input.businessId), eq(transcripts.id, row.id), isNull(transcripts.expiresAt))).returning({ id: transcripts.id });
       updated += changed.length;
     }
-    return { mode: input.apply ? "apply" : "dry-run", category: input.category, examined: candidates.length,
-      updated, alreadyDue, nextCursor: candidates.at(-1)?.id ?? input.after ?? null,
-      pageFull: candidates.length === input.limit, before: input.before.toISOString() };
+    cursor = candidates.at(-1)?.id ?? cursor;
+    return { mode: input.apply ? "apply" : "dry-run", category: input.category, examined, updated, alreadyDue, nextCursor: cursor, pageFull: candidates.length === input.limit, before: input.before.toISOString() };
   });
 }
 

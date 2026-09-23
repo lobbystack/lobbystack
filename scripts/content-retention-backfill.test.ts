@@ -7,7 +7,7 @@ vi.mock("@lobbystack/db", async () => ({
   ...(await import("../packages/db/src/schema/index")), withBusinessTransaction: mocks.transaction,
   createDatabaseClient: vi.fn(),
 }));
-import { billingAccounts, messages, transcripts } from "@lobbystack/db";
+import { billingAccounts, messages, storageObjects, transcripts } from "@lobbystack/db";
 import { backfillContentRetention, parseContentRetentionArgs } from "./content-retention-backfill";
 
 const businessId = "00000000-0000-4000-8000-000000000001";
@@ -18,6 +18,7 @@ let select: ReturnType<typeof vi.fn>;
 let limit: ReturnType<typeof vi.fn>;
 let predicates: Array<{ table: unknown; predicate: SQL }>;
 let values: unknown[];
+let accountPlan: string | null;
 
 function lastPredicate(table: unknown): SQL {
   const match = predicates.filter((entry) => entry.table === table).at(-1);
@@ -28,11 +29,11 @@ function lastPredicate(table: unknown): SQL {
 beforeEach(() => {
   vi.stubEnv("CONTENT_RETENTION_ENABLED", "true");
   vi.stubEnv("CONTENT_RETENTION_POLICY_JSON", JSON.stringify({ categories: { messages: 2, transcripts: 3 } }));
-  predicates = []; values = [];
+  predicates = []; values = []; accountPlan = "starter";
   limit = vi.fn().mockResolvedValue([{ id: rowId, createdAt: new Date("2019-01-01T00:00:00Z") }]);
   select = vi.fn(() => ({ from: (table: unknown) => ({ where: (predicate: SQL) => {
     predicates.push({ table, predicate });
-    return { orderBy: () => ({ limit }), limit: async () => (table === billingAccounts ? [{ plan: "starter" }] : []) };
+    return { orderBy: () => ({ limit }), limit: async () => (table === billingAccounts ? [{ plan: accountPlan }] : []) };
   } }) }));
   update = vi.fn((table: unknown) => ({ set: (value: unknown) => {
     values.push(value);
@@ -89,4 +90,20 @@ it("fails closed before accessing data when content retention is disabled", asyn
   vi.stubEnv("CONTENT_RETENTION_ENABLED", "false");
   await expect(backfillContentRetention({} as never, base)).rejects.toThrow("disabled");
   expect(mocks.transaction).not.toHaveBeenCalled();
+});
+
+it("shortens existing recordings to the paid retention without extending them", async () => {
+  const result = await backfillContentRetention({} as never, { ...base, category: "recordings", apply: true, historicalApprovalId: "test-history", historicalBasis: "created-at" });
+  expect(result).toMatchObject({ mode: "apply", category: "recordings", examined: 1, updated: 1 });
+  expect(values).toEqual([{ retentionUntil: new Date("2019-04-01T00:00:00Z"), updatedAt: expect.any(Date) }]);
+  const query = new PgDialect().sqlToQuery(lastPredicate(storageObjects));
+  expect(query.sql).toContain('"storage_objects"."purpose"');
+  expect(query.sql).toContain('"storage_objects"."retention_until"');
+  expect(query.params).toContain(businessId);
+});
+
+it("caps free recordings at 30 days", async () => {
+  accountPlan = "free_cloud";
+  await backfillContentRetention({} as never, { ...base, category: "recordings", apply: true, historicalApprovalId: "test-history", historicalBasis: "created-at" });
+  expect(values).toEqual([{ retentionUntil: new Date("2019-01-31T00:00:00Z"), updatedAt: expect.any(Date) }]);
 });

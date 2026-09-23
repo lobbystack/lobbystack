@@ -61,13 +61,21 @@ export async function resolveBusinessBillingPlan(
   return billingPlanForAccount(null, business?.deploymentMode);
 }
 
+export function contentRetentionDays(
+  plan: BillingPlanSlug,
+  category: ContentRetentionCategory,
+  overrides: ContentRetentionOverrides | null = getContentRetentionPolicy()?.categories ?? null,
+): number {
+  return contentRetentionDaysForPlan(plan, category, overrides);
+}
+
 export function contentExpiryForPlan(
   plan: BillingPlanSlug,
   category: ContentRetentionCategory,
   createdAt = new Date(),
   overrides: ContentRetentionOverrides | null = getContentRetentionPolicy()?.categories ?? null,
 ): Date {
-  const duration = contentRetentionDaysForPlan(plan, category, overrides);
+  const duration = contentRetentionDays(plan, category, overrides);
   const expiry = new Date(createdAt.getTime() + duration * 86_400_000);
   if (!Number.isFinite(expiry.getTime())) throw new Error("Invalid content retention timestamp.");
   return expiry;
