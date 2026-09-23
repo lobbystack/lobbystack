@@ -1,11 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { settleVoiceTasks } from "../realtime/safety";
 
-type Lease = { tenant?: string; stop: () => Promise<void> };
+type Lease = { stop: () => Promise<void> };
 type Registry = { closing: boolean; leases: Set<Lease> };
 const registries = new WeakMap<FastifyInstance, Registry>();
 export const MAX_ACTIVE_VOICE_SESSIONS = 32;
-export const MAX_TENANT_VOICE_SESSIONS = 4;
 
 export function isVoiceClosing(server: FastifyInstance): boolean {
   return registries.get(server)?.closing === true;
@@ -28,12 +27,6 @@ export function acquireVoiceLease(server: FastifyInstance, stop: () => Promise<v
   registry.leases.add(lease);
   return {
     get closing() { return registry.closing; },
-    claimTenant(tenant: string): boolean {
-      if (registry.closing) return false;
-      if ([...registry.leases].filter((entry) => entry !== lease && entry.tenant === tenant).length >= MAX_TENANT_VOICE_SESSIONS) return false;
-      lease.tenant = tenant;
-      return true;
-    },
     release() { registry.leases.delete(lease); },
   };
 }

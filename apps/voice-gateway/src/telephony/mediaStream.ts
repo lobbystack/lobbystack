@@ -3638,7 +3638,6 @@ export async function handleMediaStreamConnection(
 
     session.snapshot = snapshot;
     if (session.finalized || lease!.closing) return;
-    if (!lease!.claimTenant(snapshot.businessId)) throw new Error("Voice tenant concurrency limit reached.");
     await initializeCallRecord(server, session);
     clearTimeout(startTimer);
     if (session.finalized) {

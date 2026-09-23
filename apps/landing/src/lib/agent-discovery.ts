@@ -621,7 +621,9 @@ LobbyStack is an open-source AI receptionist for call-heavy small businesses. It
 
 ## Every Plan Includes
 
-Call answering, plain-language workflows, appointment booking, appointment confirmation texts, outbound calls, transfers, call summaries, email notifications, SMS notifications, unlimited concurrent calls, knowledge base, dashboard, and call history.
+Every plan includes browser voice, plain-language workflows, appointment booking, call summaries, email notifications, knowledge base, dashboard, and call history. Multiple calls can run at the same time, subject to gateway capacity.
+
+Free includes 30 browser voice minutes and no telephone number. Starter and Pro include a dedicated telephone number for inbound phone calls and call transfers. Plan allowances for outbound call attempts and alert SMS segments are listed in the pricing comparison.
 `
 
 export const pricingMarkdown = `---
