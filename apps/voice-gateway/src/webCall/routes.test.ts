@@ -13,6 +13,7 @@ const {
   completeVoiceCallMock,
   fetchWebCallRecordingTargetMock,
   fetchWebVoiceContextMock,
+  markWebVoiceMediaStartedMock,
   runtimeRequestErrorClass,
   startWebVoiceCallMock,
   searchVoiceKnowledgeMock,
@@ -30,6 +31,7 @@ const {
   completeVoiceCallMock: vi.fn(),
   fetchWebCallRecordingTargetMock: vi.fn(),
   fetchWebVoiceContextMock: vi.fn(),
+  markWebVoiceMediaStartedMock: vi.fn(),
   runtimeRequestErrorClass: class RuntimeRequestError extends Error {
     status: number;
     code?: string;
@@ -121,6 +123,7 @@ vi.mock("../backend/runtimeClient", () => ({
   completeVoiceCall: completeVoiceCallMock,
   fetchWebCallRecordingTarget: fetchWebCallRecordingTargetMock,
   fetchWebVoiceContext: fetchWebVoiceContextMock,
+  markWebVoiceMediaStarted: markWebVoiceMediaStartedMock,
   recordVoiceAiCost: vi.fn(),
   RuntimeRequestError: runtimeRequestErrorClass,
   startWebVoiceCall: startWebVoiceCallMock,
@@ -272,6 +275,8 @@ describe("web call routes", () => {
     expect(startWebVoiceCallMock).toHaveBeenCalledWith(expect.objectContaining({ providerCallId: `webcall_${sessionId}` }));
     expect(startWebVoiceCallMock.mock.invocationCallOrder[0]).toBeLessThan(fetchMock.mock.invocationCallOrder[0]!);
     expect(bindWebVoiceProviderMock).toHaveBeenCalledWith({ businessId: "business_safety", callId: "call_safety_0", gatewaySessionId: sessionId, providerCallId: "rtc_safety" });
+    expect(markWebVoiceMediaStartedMock).toHaveBeenCalledWith({ businessId: "business_safety", callId: "call_safety_0", gatewaySessionId: sessionId, providerCallId: "rtc_safety", mediaStartedAt: expect.any(String) });
+    expect(bindWebVoiceProviderMock.mock.invocationCallOrder[0]).toBeLessThan(markWebVoiceMediaStartedMock.mock.invocationCallOrder[0]!);
     await server.close();
     expect(completeVoiceCallMock).toHaveBeenCalledWith(expect.objectContaining({ disposition: "gateway_shutdown" }));
   });
@@ -1718,11 +1723,15 @@ describe("web call routes", () => {
   });
 
   it("finalizes durable web calls when the in-memory session is missing", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
     const startedAtMs = Date.now();
+    const mediaStartedAtMs = startedAtMs + 5_000;
+    vi.setSystemTime(mediaStartedAtMs + 2_000);
     fetchWebCallRecordingTargetMock.mockResolvedValueOnce({
       callId: "call_durable_end",
       providerCallId: "rtc_durable",
       startedAt: new Date(startedAtMs).toISOString(),
+      mediaStartedAt: new Date(mediaStartedAtMs).toISOString(),
       status: "open",
     });
     completeVoiceCallMock.mockResolvedValueOnce(null);
@@ -1746,9 +1755,33 @@ describe("web call routes", () => {
         callId: "call_durable_end",
         status: "completed",
         disposition: "caller_finished",
-        providerDurationSeconds: expect.any(Number),
+        providerDurationSeconds: 2,
+        mediaDurationSeconds: 2,
       }),
     );
+  });
+
+  it("leaves a durable web call without media-start evidence for reconciliation", async () => {
+    fetchWebCallRecordingTargetMock.mockResolvedValueOnce({
+      callId: "call_durable_without_media",
+      providerCallId: "rtc_durable_without_media",
+      startedAt: new Date(Date.now() - 5_000).toISOString(),
+      status: "started",
+    });
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions/session-without-media/end",
+      headers: { origin: "https://lobbystack.com" },
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(completeVoiceCallMock).not.toHaveBeenCalled();
+    await server.close();
   });
 
   it("hangs up OpenAI and completes the call after the max web call duration", async () => {

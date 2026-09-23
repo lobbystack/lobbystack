@@ -57,7 +57,7 @@ When `TRUSTED_CLIENT_IP_HEADER` is unset in production, the admin logs one warni
 
 ## Replace the runtimes together
 
-Drain voice calls and pause incoming work before replacing the gateway and admin. The gateway now reserves allowance before provider allocation, then binds the provider ID through an internal admin route. Deploy the admin before the new gateway, and avoid running the new gateway against an old admin.
+Drain voice calls and pause incoming work before replacing the gateway and admin. Apply migrations through `0058_web_call_media_started_at.sql` first. The gateway now reserves allowance before provider allocation, binds the provider ID, and persists the billable media start through internal admin routes. Deploy the admin before the new gateway, and avoid running the new gateway against an old admin.
 
 Drain dispatchers before replacing workers. An old dispatcher does not enforce claim-token fencing and can still overwrite a reclaimed message. A queued reminder from before deployment can run, but the replacement reminder has a separate delivery ID.
 
@@ -74,9 +74,11 @@ After deployment, verify these flows:
 
 The Google Calendar authorization routes now rate-limit by user, business, and trusted IP. The callback rejects over-limit requests before state or provider work. A missing or invalid trusted header collapses those requests into one shared bucket instead of bypassing the limit.
 
-## Apply the new indexes
+## Apply the new schema changes
 
 Migration `0057_query_plan_indexes.sql` adds five indexes chosen from local `EXPLAIN (ANALYZE, BUFFERS)` evidence under the real application and worker roles. The indexes cover dashboard period counts, the recording retention sweep, retained-object cleanup, and the booking busy-block lookup. The migration uses bounded lock and statement timeouts and builds transactionally.
+
+Migration `0058_web_call_media_started_at.sql` adds the nullable durable media-start timestamp used to settle browser calls across gateway instances without charging provider setup latency. Deploy the migration and admin route before the matching gateway. Existing rows remain null and are not assigned an inferred billable start.
 
 Each `CREATE INDEX` takes a write lock while it builds. Production starts from an empty schema, so the build is short. Before you run this migration against a large table, move that index into its own file with a `-- lobbystack:concurrent-index <index_name>` header. The loader builds concurrent indexes outside a transaction and repairs an invalid index before it retries.
 

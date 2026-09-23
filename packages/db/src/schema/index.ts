@@ -510,6 +510,7 @@ export const calls = pgTable(
     transferState: varchar("transfer_state", { length: 32 }),
     disposition: varchar("disposition", { length: 120 }),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    mediaStartedAt: timestamp("media_started_at", { withTimezone: true }),
     endedAt: timestamp("ended_at", { withTimezone: true }),
     providerDurationSeconds: integer("provider_duration_seconds"),
     providerUpdatedAt: timestamp("provider_updated_at", { withTimezone: true }),

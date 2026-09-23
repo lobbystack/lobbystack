@@ -20,6 +20,9 @@ const body = { businessId: "business", callId: "call", gatewaySessionId: "sessio
 function bind(input = body) {
   return POST(new Request("https://admin.test/voice/call/bind-web-provider", { method: "POST", body: JSON.stringify(input) }), { params: Promise.resolve({ segments: ["call", "bind-web-provider"] }) });
 }
+function markMediaStarted(input = { ...body, mediaStartedAt: "2026-09-23T22:00:00.000Z" }) {
+  return POST(new Request("https://admin.test/voice/call/mark-web-media-started", { method: "POST", body: JSON.stringify(input) }), { params: Promise.resolve({ segments: ["call", "mark-web-media-started"] }) });
+}
 describe("provider binding route", () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -42,6 +45,20 @@ describe("provider binding route", () => {
   it("rejects a lost, completed or differently bound reservation", async () => {
     mocks.returning.mockResolvedValue([]);
     expect((await bind()).status).toBe(409);
+  });
+  it("persists media start only on the matching bound reservation", async () => {
+    expect((await markMediaStarted()).status).toBe(200);
+    expect(mocks.set).toHaveBeenCalledWith(expect.objectContaining({
+      mediaStartedAt: new Date("2026-09-23T22:00:00.000Z"),
+    }));
+    const query = new PgDialect().sqlToQuery(mocks.where.mock.calls[0]![0] as SQL);
+    expect(query.sql).toContain('"calls"."provider_call_id"');
+    expect(query.sql).toContain('"calls"."ended_at" is null');
+    expect(query.params).toEqual(["call", "business", "session", "openai_realtime", "rtc_actual", "started", "in_progress"]);
+  });
+  it("rejects an invalid media-start timestamp", async () => {
+    expect((await markMediaStarted({ ...body, mediaStartedAt: "invalid" })).status).toBe(400);
+    expect(mocks.transaction).not.toHaveBeenCalled();
   });
   it("requires internal authorization before touching persistence", async () => {
     mocks.authorize.mockRejectedValue(new Error("denied"));

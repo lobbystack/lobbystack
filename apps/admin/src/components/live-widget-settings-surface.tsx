@@ -40,7 +40,7 @@ function embedSnippet(origin: string, key: string, config: WidgetKeyRecord["conf
 }
 
 export function LiveWidgetSettingsSurface() {
-  const { t } = useTranslation("settings");
+  const { i18n, t } = useTranslation("settings");
   const queryClient = useQueryClient();
   const [label, setLabel] = useState("");
   const [origins, setOrigins] = useState("");
@@ -141,7 +141,7 @@ export function LiveWidgetSettingsSurface() {
           {businesses.isLoading || keys.isLoading ? <p className="py-12 text-center text-sm text-muted-foreground">{t("widget.keys.loading")}</p> : null}
           {businesses.isError || keys.isError ? <p className="py-12 text-center text-sm text-destructive">{t("widget.keys.unavailable")}</p> : null}
           {!keys.isLoading && !keys.isError ? <div className="space-y-3">
-            {rows.length ? rows.map((row) => <WidgetKeyEditor key={row.id} row={row} onSave={(input) => patch.mutate(input)} onStatus={(status) => setStatus.mutate({ id: row.id, status })} busy={patch.isPending || setStatus.isPending} t={t} />) : <p className="py-12 text-center text-sm text-muted-foreground">{t("widget.keys.empty")}</p>}
+            {rows.length ? rows.map((row) => <WidgetKeyEditor key={row.id} row={row} onSave={(input) => patch.mutate(input)} onStatus={(status) => setStatus.mutate({ id: row.id, status })} busy={patch.isPending || setStatus.isPending} locale={i18n.resolvedLanguage ?? i18n.language} t={t} />) : <p className="py-12 text-center text-sm text-muted-foreground">{t("widget.keys.empty")}</p>}
             {patch.isError ? <p className="text-sm text-destructive">{patch.error.message}</p> : null}
           </div> : null}
         </CardContent>
@@ -151,7 +151,7 @@ export function LiveWidgetSettingsSurface() {
   );
 }
 
-function WidgetKeyEditor({ row, onSave, onStatus, busy, t }: { row: WidgetKeyRecord; onSave: (input: { id: string; label: string; allowedOrigins: string[]; config: WidgetKeyConfig }) => void; onStatus: (status: "active" | "disabled" | "revoked") => void; busy: boolean; t: TFunction<"settings"> }) {
+function WidgetKeyEditor({ row, onSave, onStatus, busy, locale, t }: { row: WidgetKeyRecord; onSave: (input: { id: string; label: string; allowedOrigins: string[]; config: WidgetKeyConfig }) => void; onStatus: (status: "active" | "disabled" | "revoked") => void; busy: boolean; locale: string; t: TFunction<"settings"> }) {
   const [label, setLabel] = useState(row.label ?? "");
   const [origins, setOrigins] = useState(originsToText(row.allowedOrigins));
   const [config, setConfig] = useState<WidgetKeyConfig>(row.config);
@@ -181,7 +181,7 @@ function WidgetKeyEditor({ row, onSave, onStatus, busy, t }: { row: WidgetKeyRec
       </div>
       <div className="mt-3 flex items-center gap-3">
         <Button size="sm" disabled={busy} onClick={() => onSave({ id: row.id, label: label.trim() || (row.label ?? ""), allowedOrigins: originsFromText(origins), config })}>{t("widget.keys.save")}</Button>
-        {row.lastUsedAt ? <p className="text-xs text-muted-foreground">{t("widget.keys.lastUsed", { date: new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(row.lastUsedAt)) })}</p> : null}
+        {row.lastUsedAt ? <p className="text-xs text-muted-foreground">{t("widget.keys.lastUsed", { date: new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(row.lastUsedAt)) })}</p> : null}
       </div>
     </article>
   );

@@ -11,6 +11,7 @@ import {
   completeVoiceCall,
   fetchWebCallRecordingTarget,
   fetchWebVoiceContext,
+  markWebVoiceMediaStarted,
   recordVoiceAiCost,
   RuntimeRequestError,
   startWebVoiceCall,
@@ -527,10 +528,15 @@ async function resolveWebCallForRecording(
     return null;
   }
 
-  const startedAtMs = Date.parse(durable.startedAt);
-  if (!Number.isFinite(startedAtMs)) {
+  const durableStartedAtMs = Date.parse(durable.startedAt);
+  if (!Number.isFinite(durableStartedAtMs)) {
     return null;
   }
+
+  const mediaStartedAtMs = durable.mediaStartedAt !== undefined
+    ? Date.parse(durable.mediaStartedAt)
+    : undefined;
+  if (mediaStartedAtMs !== undefined && !Number.isFinite(mediaStartedAtMs)) return null;
 
   const completedAtMs =
     durable.endedAt !== undefined ? Date.parse(durable.endedAt) : undefined;
@@ -546,8 +552,9 @@ async function resolveWebCallForRecording(
       return null;
     }
     if (
+      mediaStartedAtMs === undefined ||
       !isActiveWebRecordingUploadAllowed(
-        startedAtMs,
+        mediaStartedAtMs,
         durable.webCallMaxDurationMs ?? maxDurationMs,
       )
     ) {
@@ -557,7 +564,7 @@ async function resolveWebCallForRecording(
 
   return {
     callId: durable.callId,
-    startedAtMs,
+    startedAtMs: mediaStartedAtMs ?? durableStartedAtMs,
     ...(completedAtMs !== undefined ? { completedAtMs } : {}),
   };
 }
@@ -578,8 +585,14 @@ async function finishDurableWebCallSession(
     return;
   }
 
-  const startedAtMs = Date.parse(durable.startedAt);
-  if (!Number.isFinite(startedAtMs)) {
+  const mediaStartedAtMs = durable.mediaStartedAt !== undefined
+    ? Date.parse(durable.mediaStartedAt)
+    : Number.NaN;
+  if (!Number.isFinite(mediaStartedAtMs)) {
+    server.log.warn(
+      { callId: durable.callId, gatewaySessionId: sessionId },
+      "Durable web call has no media-start evidence; retaining reservation for reconciliation",
+    );
     return;
   }
 
@@ -601,12 +614,12 @@ async function finishDurableWebCallSession(
     disposition,
     endedAt: new Date(endedAtMs).toISOString(),
     providerDurationSeconds: getWebCallDurationSeconds(
-      startedAtMs,
+      mediaStartedAtMs,
       endedAtMs,
       durable.webCallMaxDurationMs ??
         server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
     ),
-    mediaDurationSeconds: Math.max(0, endedAtMs - startedAtMs) / 1_000,
+    mediaDurationSeconds: Math.max(0, endedAtMs - mediaStartedAtMs) / 1_000,
   });
 }
 
@@ -2052,6 +2065,13 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         // allocated, bound, and its sideband is set up. The early durable
         // startedAt remains the crash-recovery anchor, never the media start.
         session.mediaStartedAtMs = Date.now();
+        await markWebVoiceMediaStarted({
+          businessId: session.businessId,
+          callId: session.callId,
+          gatewaySessionId,
+          providerCallId,
+          mediaStartedAt: new Date(session.mediaStartedAtMs).toISOString(),
+        });
         scheduleWebMaxDurationTimer(server, session);
       } catch (error) {
         await finishWebCallSession(server, session, "provider_setup_failed");

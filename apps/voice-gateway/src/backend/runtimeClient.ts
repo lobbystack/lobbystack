@@ -46,6 +46,7 @@ type WebCallRecordingTargetResponse = {
   callId: string;
   providerCallId?: string;
   startedAt: string;
+  mediaStartedAt?: string;
   endedAt?: string;
   status: string;
   webCallMaxDurationMs?: number;
@@ -293,6 +294,16 @@ export async function bindWebVoiceProvider(input: {
   providerCallId: string;
 }): Promise<void> {
   await postJson("/voice/call/bind-web-provider", input);
+}
+
+export async function markWebVoiceMediaStarted(input: {
+  businessId: string;
+  callId: string;
+  gatewaySessionId: string;
+  providerCallId: string;
+  mediaStartedAt: string;
+}): Promise<void> {
+  await postJson("/voice/call/mark-web-media-started", input);
 }
 
 export async function appendVoiceTranscript(input: {
