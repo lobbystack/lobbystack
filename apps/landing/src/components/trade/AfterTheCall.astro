@@ -1,0 +1,64 @@
+---
+import { Check } from "lucide-react"
+import type { TradeDetails } from "@/lib/trade-details"
+
+interface Props {
+  details: TradeDetails
+}
+
+const { details } = Astro.props
+---
+
+<section
+  class="border-t border-border/40 bg-muted/15 py-20 md:py-28"
+  id="intake"
+>
+  <div
+    class="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center"
+  >
+    <div>
+      <h2 class="section-heading">
+        What LobbyStack asks {details.noun} callers
+      </h2>
+      <p class="section-intro">
+        You choose the questions. These are the ones {details.noun} businesses start
+        with, and every answer lands in the call summary.
+      </p>
+      <ul class="mt-8 space-y-3">
+        {
+          details.intake.map((question) => (
+            <li class="flex items-start gap-3 text-base text-foreground">
+              <span class="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground/5">
+                <Check
+                  className="size-3.5 text-foreground/80"
+                  strokeWidth={2.5}
+                />
+              </span>
+              {question}
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <figure
+      class="overflow-hidden rounded-[1.35rem] border border-border/70 bg-background"
+    >
+      <img
+        src="/screenshots/dashboard.webp"
+        alt="LobbyStack dashboard Home page with monthly calls, follow-ups, upcoming appointments, and recent calls"
+        width="3020"
+        height="1898"
+        class="h-auto w-full"
+        loading="lazy"
+        decoding="async"
+      />
+      <figcaption
+        class="border-t border-border/60 px-5 py-4 text-sm text-muted-foreground"
+      >
+        Each answered call shows up in the dashboard with its outcome, the
+        caller's answers, a transcript, and a recording.
+      </figcaption>
+    </figure>
+  </div>
+</section>

@@ -1,0 +1,85 @@
+---
+import {
+  CalendarCheck,
+  MessageSquareText,
+  NotebookPen,
+  PhoneForwarded,
+  PhoneOff,
+} from "lucide-react"
+import type { CallAction, TradeDetails } from "@/lib/trade-details"
+
+interface Props {
+  details: TradeDetails
+}
+
+const { details } = Astro.props
+
+const actionIcons: Record<CallAction, typeof PhoneForwarded> = {
+  Transfers: PhoneForwarded,
+  Books: CalendarCheck,
+  Answers: MessageSquareText,
+  "Takes a message": NotebookPen,
+  "Ends the call": PhoneOff,
+}
+---
+
+<section class="mx-auto max-w-7xl px-6 py-20 md:py-28" id="call-handling">
+  <div class="max-w-3xl">
+    <h2 class="section-heading">What happens to each {details.noun} call</h2>
+    <p class="section-intro">
+      You decide what LobbyStack does with each kind of call. A typical setup
+      for a {details.noun} business looks like this.
+    </p>
+  </div>
+
+  <div
+    class="mt-12 overflow-hidden rounded-[1.35rem] border border-border/70"
+    role="region"
+    aria-label={`How LobbyStack handles ${details.noun} calls`}
+  >
+    <table class="w-full border-collapse text-left text-sm">
+      <thead class="hidden bg-muted/50 md:table-header-group">
+        <tr>
+          <th scope="col" class="w-[34%] px-6 py-4 font-medium text-foreground">
+            When a caller has
+          </th>
+          <th scope="col" class="w-[20%] px-6 py-4 font-medium text-foreground">
+            LobbyStack
+          </th>
+          <th scope="col" class="px-6 py-4 font-medium text-foreground">
+            What happens
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          details.routing.map((row) => {
+            const Icon = actionIcons[row.action]
+            return (
+              <tr class="grid grid-cols-1 gap-1 border-t border-border/60 px-5 py-4 first:border-t-0 md:table-row md:px-0 md:py-0 md:first:border-t">
+                <th
+                  scope="row"
+                  class="font-medium text-foreground md:px-6 md:py-5 md:align-top"
+                >
+                  {row.call}
+                </th>
+                <td class="md:px-6 md:py-5 md:align-top">
+                  <span class="inline-flex items-center gap-2 font-medium text-foreground">
+                    <Icon
+                      className="size-4 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    {row.action}
+                  </span>
+                </td>
+                <td class="leading-relaxed text-muted-foreground md:px-6 md:py-5 md:align-top">
+                  {row.detail}
+                </td>
+              </tr>
+            )
+          })
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
