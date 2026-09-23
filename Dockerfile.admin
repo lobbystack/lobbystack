@@ -12,10 +12,10 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
 COPY .github/build/prepare-image-workspace.mjs .github/build/prepare-image-workspace.mjs
 RUN node .github/build/prepare-image-workspace.mjs --lockfile-only
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store pnpm fetch --frozen-lockfile --store-dir=/pnpm/store
+RUN pnpm fetch --frozen-lockfile
 COPY . .
 RUN node .github/build/prepare-image-workspace.mjs
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store pnpm install --offline --frozen-lockfile --store-dir=/pnpm/store
+RUN pnpm install --offline --frozen-lockfile
 ARG NEXT_PUBLIC_WEB_CALL_ENDPOINT
 ENV NEXT_PUBLIC_WEB_CALL_ENDPOINT=$NEXT_PUBLIC_WEB_CALL_ENDPOINT
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
