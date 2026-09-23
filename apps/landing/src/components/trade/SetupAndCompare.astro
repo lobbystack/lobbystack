@@ -2,10 +2,12 @@
 import type { TradeDetails } from "@/lib/trade-details"
 
 interface Props {
-  details: TradeDetails
+  details: Pick<TradeDetails, "noun">
 }
 
 const { details } = Astro.props
+// "an HVAC emergency", "an after-hours emergency", "a plumbing emergency"
+const article = /^(?:[aeiou]|HVAC)/i.test(details.noun) ? "an" : "a"
 
 const steps = [
   {
@@ -14,7 +16,7 @@ const steps = [
   },
   {
     title: "Write your rules",
-    body: `Describe in plain language what counts as a ${details.noun} emergency, who's on call, which jobs to book, and which prices callers can hear.`,
+    body: `Describe in plain language what counts as ${article} ${details.noun} emergency, who's on call, which jobs to book, and which prices callers can hear.`,
   },
   {
     title: "Place a test call",

@@ -7,6 +7,8 @@ interface Props {
 }
 
 const { details } = Astro.props
+// "an electrical business", "an HVAC business", "a plumbing business"
+const article = /^(?:[aeiou]|HVAC)/i.test(details.noun) ? "an" : "a"
 ---
 
 <figure
@@ -70,8 +72,8 @@ const { details } = Astro.props
   >
     {details.outcome}
     <span class="mt-1 block text-xs text-muted-foreground">
-      An example of how a {details.noun} business can set up its rules. The business
-      and caller are fictional.
+      An example of how {article}
+      {details.noun} business can set up its rules. The business and caller are fictional.
     </span>
   </figcaption>
 </figure>
