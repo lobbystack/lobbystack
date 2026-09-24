@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect } from "@playwright/test";
 import { eq } from "drizzle-orm";
-import { billingAccounts, billingCheckoutRequests, businesses, businessMemberships, createDatabaseClient, onboardingPhoneVerifications, users, withBusinessTransaction } from "@lobbystack/db";
+import { billingAccounts, billingCheckoutRequests, businesses, businessMemberships, createDatabaseClient, users, withBusinessTransaction } from "@lobbystack/db";
 import settings from "../public/locales/fr/settings.json" with { type: "json" };
 
 test("checkout return waits for billing confirmation and localized spending caps persist with permissions", async ({ browser, baseURL }) => {
@@ -21,7 +21,6 @@ test("checkout return waits for billing confirmation and localized spending caps
       await tx.insert(businessMemberships).values({ businessId, userId: userId!, role: "business_owner", status: "active" });
       await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "free_cloud" });
       await tx.insert(billingCheckoutRequests).values({ id: requestId, businessId, requestedByUserId: userId!, target: "pro", billingInterval: "monthly", status: "ready", checkoutId: `fixture-${requestId}`, checkoutUrl: "https://example.invalid/checkout" });
-      await tx.insert(onboardingPhoneVerifications).values({ businessId, userId: userId!, phoneE164: "+14165550188", countryCode: "CA", status: "approved", approvedAt: new Date(), expiresAt: new Date(Date.now() + 60000), requestFingerprint: requestId });
     });
     await auth.db.update(users).set({ activeBusinessId: businessId }).where(eq(users.id, userId!));
     const statusUrl = `${baseURL}/api/billing/checkout?businessId=${businessId}&requestId=${requestId}`;

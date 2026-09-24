@@ -13,7 +13,7 @@ export type SmtpConfig = {
   replyTo?: string;
 };
 
-type TemplateName = "verify_email" | "password_reset" | "invitation" | "operator_alert" | "feedback_submission";
+type TemplateName = "existing_account" | "verify_email" | "password_reset" | "invitation" | "operator_alert" | "feedback_submission";
 
 export class SmtpEmailProvider {
   private readonly transporter: Transporter;
@@ -70,6 +70,10 @@ function renderTemplate(template: TemplateName, subject: string, variables: Reco
 
 function templateBody(template: TemplateName, variables: Record<string, string>): string {
   switch (template) {
+    case "existing_account":
+      return variables.locale === "fr"
+        ? `Vous avez déjà un compte LobbyStack. Connectez-vous pour continuer : ${variables.signInUrl}. Mot de passe oublié ? ${variables.resetUrl}. Si vous n’avez pas demandé la création d’un compte, ignorez cet e-mail.`
+        : `You already have a LobbyStack account. Sign in to continue: ${variables.signInUrl}. Forgot your password? ${variables.resetUrl}. If you did not request an account, ignore this email.`;
     case "verify_email":
       return variables.code
         ? `Your LobbyStack email verification code is: ${variables.code}. It expires in 10 minutes.`

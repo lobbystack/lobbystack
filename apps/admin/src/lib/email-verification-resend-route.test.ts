@@ -18,6 +18,7 @@ vi.mock("@/lib/auth", () => ({ issueEmailVerificationCode: mocks.issueCode }));
 vi.mock("@/lib/turnstile", () => ({ verifyTurnstile: mocks.verifyTurnstile }));
 
 import { POST } from "../../app/api/auth/email-otp/send-verification-otp/route";
+import { attachVerificationFlow } from "./verification-flow";
 
 function resendRequest(body: unknown, headers: Record<string, string> = {}): Request {
   return new Request("https://app.example.test/api/auth/email-otp/send-verification-otp", {
@@ -38,6 +39,20 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("email verification resend route", () => {
+  it("reuses signup proof without another challenge or extending its lifetime", async () => {
+    vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+    const signup = new Response();
+    attachVerificationFlow(signup, "owner@example.invalid");
+    const headers = { origin: "https://app.example.test", cookie: signup.headers.get("set-cookie")!.split(";")[0]! };
+    const response = await POST(resendRequest({ email: "owner@example.invalid", type: "email-verification" }, headers));
+    expect(response.status).toBe(200);
+    expect(mocks.verifyTurnstile).not.toHaveBeenCalled();
+    expect(mocks.issueCode).toHaveBeenCalledOnce();
+    expect(response.headers.get("set-cookie")).toBeNull();
+    mocks.issueCode.mockRejectedValueOnce(new mocks.RateLimitError());
+    const limited = await POST(resendRequest({ email: "owner@example.invalid", type: "email-verification" }, headers));
+    expect(limited.status).toBe(429);
+  });
   it("requires a valid request and Turnstile challenge", async () => {
     const invalid = await POST(resendRequest({ email: "not-an-email", type: "email-verification" }));
     expect(invalid.status).toBe(400);

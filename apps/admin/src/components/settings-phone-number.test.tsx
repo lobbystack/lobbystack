@@ -104,10 +104,11 @@ describe("phone-number replacement permissions", () => {
     expect(screen.queryByText("(416) 555-0200")).toBeNull();
     expect(fetchMock.mock.calls.at(-1)?.[0]).toContain("/search?");
   });
-  it("routes an unverified operator to phone verification", async () => {
+  it("shows an inventory error inline instead of redirecting to a retired verification step", async () => {
     const { fetchMock } = setup("starter", "business_owner", null, false);
-    fetchMock.mockResolvedValue(Response.json({ error: "A verified phone is required before choosing a number." }, { status: 400 }));
+    fetchMock.mockResolvedValue(Response.json({ error: "Inventory is temporarily unavailable." }, { status: 500 }));
     await userEvent.click(screen.getByRole("button", { name: "phoneNumber.actions.getNumber" }));
-    await waitFor(() => expect(actions.navigate).toHaveBeenCalledWith("/onboarding/verify-phone"));
+    await screen.findByText("Inventory is temporarily unavailable.");
+    expect(actions.navigate).not.toHaveBeenCalled();
   });
 });

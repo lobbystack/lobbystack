@@ -1,3 +1,3 @@
-import { AuthCard } from "@/components/auth-card";
+import { GuestAuthCard } from "@/components/guest-auth-card";
 
-export default function SignupPage() { return <AuthCard mode="signup" />; }
+export default function SignupPage() { return <GuestAuthCard mode="signup" />; }

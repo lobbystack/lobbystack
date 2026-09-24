@@ -3,7 +3,6 @@
 import { useCallback, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { billingPlanCatalog, type BillingPlanSlug } from "@lobbystack/shared";
 import { Button } from "@/components/ui/button";
@@ -44,8 +43,6 @@ function formatReclaimDate(value: number, locale: string): string {
 
 export function LivePhoneNumberSettingsSurface() {
   const { i18n, t } = useTranslation("settings");
-  const router = useRouter();
-  const navigate = (path: string) => router.push(path);
   const queryClient = useQueryClient();
   const openUpgradePlanDialog = useOpenUpgradePlanDialog();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -112,11 +109,6 @@ export function LivePhoneNumberSettingsSurface() {
     void queryClient.invalidateQueries({ queryKey: ["phone-numbers", businessId] });
     void queryClient.invalidateQueries({ queryKey: ["onboarding-primary-number", businessId] });
     void result;
-  }
-
-  function handleVerifyPhoneRequired(): void {
-    setIsDialogOpen(false);
-    navigate("/onboarding/verify-phone");
   }
 
   return (
@@ -239,7 +231,6 @@ export function LivePhoneNumberSettingsSurface() {
                             unavailable: t("phoneNumber.picker.unavailable"),
                           }}
                           onClaimed={handleClaimed}
-                          onVerifyPhoneRequired={handleVerifyPhoneRequired}
                           searchAvailableNumbers={
                             searchReplacementNumbers as (args: {
                               businessId: string;

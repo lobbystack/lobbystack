@@ -6,7 +6,8 @@ import { billingAccounts, businesses, enqueueOutbox, onboardingNumberClaimEvents
 
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
-import { resolveVerifiedPhoneMarket, buildSuggestionContextFromVerifiedPhoneMarket, getMetroAreaCodePriority } from "./phoneNumberMarket";
+import { normalizeOnboardingStage } from "./onboarding";
+import { resolveBusinessNumberMarket } from "./phoneNumberMarket";
 
 export type NumberSelection = { countryCode: "US" | "CA" | "GB" | "AU"; kind: "local" | "toll_free"; areaCode?: string; city?: string; regionCode?: string; postalCode?: string };
 export type NumberInventoryProvider = { listAvailablePhoneNumbers(input: NumberSelection & { limit: number }): Promise<Array<{ phoneE164: string; locality?: string; region?: string; countryCode: string; capabilities: { sms: boolean; voice: boolean } }>> };
@@ -28,22 +29,22 @@ export async function searchBusinessNumberInventory(context: DomainContext, inpu
   const purpose = input.purpose ?? "onboarding";
   const market = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const business = (await tx.select({ stage: businesses.onboardingStage, deploymentMode: businesses.deploymentMode, replacementUsedAt: businesses.phoneNumberReplacementUsedAt }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
+    const business = (await tx.select({ stage: businesses.onboardingStage, timezone: businesses.timezone, deploymentMode: businesses.deploymentMode, replacementUsedAt: businesses.phoneNumberReplacementUsedAt }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
     const billing = (await tx.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
     if (!business) throw new Error("Workspace not found.");
-    if (purpose === "onboarding" && !["plan", "phone_number", "attribution", "complete"].includes(business.stage)) throw new Error("Business number selection is not available at this onboarding stage.");
+    const onboardingStage = normalizeOnboardingStage(business.stage);
+    if (purpose === "onboarding" && !["plan", "phone_number", "attribution", "complete"].includes(onboardingStage)) throw new Error("Business number selection is not available at this onboarding stage.");
     if (purpose === "replacement") {
       if (business.replacementUsedAt) throw new Error("This workspace has already used its number replacement.");
       const active = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), isNull(phoneNumbers.reclaimScheduledAt))).limit(1);
       if (!active.length) throw new Error("An active phone number is required before choosing a replacement.");
     }
     if (business.deploymentMode === "cloud" && (!billing || !["starter", "pro", "enterprise"].includes(billing.plan ?? "") || !["active", "trialing", "past_due"].includes(billing.state ?? ""))) throw new Error("A paid plan is required for a dedicated business number.");
-    const result = await tx.execute(sql`SELECT app.resolve_verified_phone_market(${input.businessId}::uuid, ${input.userId}::uuid) AS market`);
-    const verified = (result.rows[0] as { market?: { countryCode?: string; phoneE164?: string } } | undefined)?.market;
-    if (!verified?.phoneE164 || !["US", "CA", "GB", "AU"].includes(verified.countryCode ?? "")) throw new Error("A verified phone is required before choosing a number.");
-    return resolveVerifiedPhoneMarket({ phoneE164: verified.phoneE164, countryCode: verified.countryCode! });
+    const requestedCountry = input.selection?.countryCode?.trim().toUpperCase();
+    if (requestedCountry && !["US", "CA", "GB", "AU"].includes(requestedCountry)) throw new Error("Unsupported country.");
+    return resolveBusinessNumberMarket({ selection: input.selection, timezone: business.timezone });
   });
-  const countryCode = input.selection?.countryCode ?? market.countryCode as NumberSelection["countryCode"];
+  const countryCode = market.countryCode;
   if (!["US", "CA", "GB", "AU"].includes(countryCode)) throw new Error("Unsupported country.");
   const selection: NumberSelection = { countryCode, kind: input.selection?.kind ?? "local", ...(input.selection?.areaCode ? { areaCode: input.selection.areaCode.replace(/\D/g, "") } : {}), ...(input.selection?.city ? { city: input.selection.city.trim() } : {}), ...(input.selection?.regionCode ? { regionCode: input.selection.regionCode.trim() } : {}), ...(input.selection?.postalCode ? { postalCode: input.selection.postalCode.trim() } : {}) };
   const limit = Math.max(1, Math.min(20, Math.trunc(input.limit ?? 10)));
@@ -52,15 +53,7 @@ export async function searchBusinessNumberInventory(context: DomainContext, inpu
     const numbers = await provider.listAvailablePhoneNumbers({ ...search, limit });
     collected.push(...numbers.filter(number => number.capabilities.sms && number.capabilities.voice).map(number => ({ ...number, selection: search })));
   }
-  const suggested = selection.countryCode === market.countryCode && selection.kind === "local" && !selection.areaCode && !selection.city && !selection.regionCode && !selection.postalCode;
-  if (suggested) {
-    for (const areaCode of getMetroAreaCodePriority(buildSuggestionContextFromVerifiedPhoneMarket(market))) {
-      await collect({ ...selection, areaCode });
-      if (collected.length >= limit) break;
-    }
-    if (collected.length < limit && (market.city || market.regionCode)) await collect({ ...selection, ...(market.city ? { city: market.city } : {}), ...(market.regionCode ? { regionCode: market.regionCode } : {}) });
-  }
-  if (!suggested || collected.length < limit) await collect(selection);
+  await collect(selection);
   const seen = new Set<string>();
   const numbers = collected.filter(number => {
     if (seen.has(number.phoneE164)) return false;

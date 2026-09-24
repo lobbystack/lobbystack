@@ -30,11 +30,9 @@ export function ReplacementOnboardingShell({ eyebrow, title, description, progre
     3: "/onboarding/website",
     4: "/onboarding/knowledge",
     5: "/onboarding/greeting",
-    6: "/onboarding/verify-phone",
-    7: "/onboarding/verify-phone/code",
-    8: "/onboarding/plan",
-    9: "/onboarding/number",
-    10: "/onboarding/attribution",
+    6: "/onboarding/plan",
+    7: "/onboarding/number",
+    8: "/onboarding/attribution",
   };
   return (
     <div className="relative flex min-h-svh w-full flex-col bg-background text-foreground">
@@ -63,7 +61,6 @@ export function ReplacementOnboardingShell({ eyebrow, title, description, progre
           <nav aria-label={`Onboarding progress: step ${progress.current} of ${progress.total}`}>
             <ol className="flex items-center justify-center gap-1.5">
               {Array.from({ length: progress.total }, (_, index) => index + 1)
-                .filter((step) => !((progress.navigableUntil ?? progress.current) > 7 && (step === 6 || step === 7)))
                 .map((step) => {
                   const active = step === progress.current;
                   const completed = step < progress.current;

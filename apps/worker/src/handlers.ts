@@ -5,7 +5,7 @@ import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { getPolarMeteredUsagePayload, type BillingUsageKind } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
-import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimPhoneVerificationSend, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, markNotificationSkipped, markPhoneVerificationSendFailed, markPhoneVerificationSent, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, type DurableAiUsage } from "@lobbystack/domain";
+import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, markNotificationSkipped, cancelRetiredPhoneVerificationSend, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, type DurableAiUsage } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, correctAlertSmsUsage, estimateSmsSegments, loadOperatorNotificationDelivery, markFeedbackEmailFailed, markFeedbackEmailSent, markOperatorNotificationSent, markOperatorNotificationSkipped, queueDailyOperatorSummaries, refreshUnitEconomicsMonth, releaseOperatorNotificationDelivery, reserveAlertSmsUsage } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
@@ -215,23 +215,13 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
   const businessId = job.businessId;
   switch (job.type) {
     case "phoneVerification.send": {
+      // Retired onboarding step. Drain a queued send without contacting a
+      // personal phone or re-entering the removed verification stages.
       const businessId = businessIdOrThrow(job);
       const attemptId = String(job.payload.attemptId ?? "");
       if (!attemptId) return { status: "skipped", entityId: attemptId };
-      if (!dependencies.twilio?.verifyPhone || !process.env.TWILIO_VERIFY_SERVICE_SID) {
-        await markPhoneVerificationSendFailed(dependencies.domain, { businessId, attemptId });
-        throw new Error("Phone verification provider is not configured.");
-      }
-      const attempt = await claimPhoneVerificationSend(dependencies.domain, { businessId, attemptId });
-      if (!attempt) return { status: "skipped", entityId: attemptId };
-      try {
-        const verification = await dependencies.twilio.verifyPhone({ to: attempt.phoneE164, serviceSid: process.env.TWILIO_VERIFY_SERVICE_SID });
-        await markPhoneVerificationSent(dependencies.domain, { businessId, attemptId, providerVerificationId: verification.verificationSid, status: verification.status });
-        return { status: "completed", entityId: attemptId };
-      } catch (error) {
-        await markPhoneVerificationSendFailed(dependencies.domain, { businessId, attemptId });
-        throw error;
-      }
+      await cancelRetiredPhoneVerificationSend(dependencies.domain, { businessId, attemptId });
+      return { status: "skipped", entityId: attemptId };
     }
     case "snapshot.refresh":
       return { status: "completed", entityId: await refreshBusinessSnapshot(dependencies.domain, { businessId: businessIdOrThrow(job) }) };
@@ -392,10 +382,13 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       return await reconcileBusinessCalendar(dependencies, businessIdOrThrow(job));
     case "email.send":
       if (!dependencies.email) {
+        if (["verify_email", "password_reset", "existing_account"].includes(String(job.payload.template))) {
+          throw new Error("Authentication email delivery requires SMTP configuration.");
+        }
         return { status: "skipped" };
       }
       {
-        const template = job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission"
+        const template = job.payload.template === "existing_account" || job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission"
           ? job.payload.template
           : "operator_alert";
         const variables = typeof job.payload.variables === "object" && job.payload.variables !== null

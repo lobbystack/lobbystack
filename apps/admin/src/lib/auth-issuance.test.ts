@@ -55,6 +55,22 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 
+it("sends a localized sign-in reminder for a verified duplicate signup", async () => {
+  const { getAuth } = await import("./auth"); getAuth();
+  mocks.select.mockResolvedValue([{ preferredLocale: "fr" }]);
+  await mocks.config.emailAndPassword.onExistingUserSignUp({ user: { id: "user-1", email: "owner@example.invalid", emailVerified: true } });
+  expect(mocks.createOtp).not.toHaveBeenCalled();
+  expect(mocks.allowed).toHaveBeenCalledOnce();
+  expect(mocks.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ payload: expect.objectContaining({ template: "existing_account", variables: expect.objectContaining({ locale: "fr", signInUrl: expect.stringContaining("/fr/login") }) }) }));
+});
+
+it("sends a verification code for an unverified duplicate signup", async () => {
+  const { getAuth } = await import("./auth"); getAuth();
+  await mocks.config.emailAndPassword.onExistingUserSignUp({ user: { id: "user-1", email: "owner@example.invalid", emailVerified: false } });
+  expect(mocks.createOtp).toHaveBeenCalledOnce();
+  expect(mocks.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ payload: expect.objectContaining({ template: "verify_email" }) }));
+});
+
 it("deduplicates by issuance identity rather than repeated OTP digits", async () => {
   const { issueEmailVerificationCode } = await import("./auth");
   await issueEmailVerificationCode("Owner@example.invalid");

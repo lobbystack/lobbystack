@@ -38,12 +38,12 @@ export function OnboardingGreetingSurface() {
   const save = useMutation({
     mutationFn: async () => {
       await requestJson("/api/agent", { method: "PATCH", body: JSON.stringify({ greeting: greeting.trim(), locale: i18n.language.startsWith("fr") ? "fr" : "en" }) });
-      return await requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "verify_phone" }) });
+      return await requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "plan" }) });
     },
     onSuccess: async () => {
       if (business) telemetry.track("web.onboarding.greeting_submitted", { businessId: business.businessId });
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
-      router.push("/onboarding/verify-phone");
+      router.push("/onboarding/plan");
     },
   });
 
