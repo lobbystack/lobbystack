@@ -12,6 +12,7 @@ import {
   markRealtimeConversationInput,
   markRealtimeResponseCreated,
   releaseUnconfirmedRealtimeResponse,
+  requeueRejectedRealtimeCreate,
   requestRealtimeResponse,
   resetRealtimeResponseGate,
   takeDeferredRealtimeResponse,
@@ -3446,8 +3447,10 @@ export function handleOpenAiMessage(
         //
         // The gate deliberately stays closed here. The conflict means a
         // provider response really is active, so releasing would let the next
-        // request race it and would throw away anything deferred behind the
-        // rejected create. That response's `response.done` releases the gate.
+        // request race it. The rejected create was never acted on, so it is
+        // queued behind that response; its `response.done` releases the gate
+        // and posts what is queued.
+        requeueRejectedRealtimeCreate(session.responseGate, payload.error?.event_id);
         recordOpenAiRealtimeStateConflict({
           ...(session.callSid ? { "lobbystack.call_sid": session.callSid } : {}),
           ...(session.streamSid ? { "lobbystack.stream_sid": session.streamSid } : {}),
@@ -3463,10 +3466,14 @@ export function handleOpenAiMessage(
       }
       // Any other rejection of our create will never be acknowledged, so the
       // gate has to be freed or every later turn would be deferred forever.
-      releaseUnconfirmedRealtimeResponse(
+      // Anything queued behind it is still unanswered and is posted now.
+      const releasedCreate = releaseUnconfirmedRealtimeResponse(
         session.responseGate,
         payload.error?.event_id,
       );
+      if (releasedCreate.post) {
+        postAssistantResponse(server, openAiSocket, session, releasedCreate.request);
+      }
       const classification = captureProviderFailureException({
         provider: "openai",
         error: providerError,

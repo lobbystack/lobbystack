@@ -7,6 +7,7 @@ import {
   markRealtimeResponseCreated,
   releaseUnconfirmedRealtimeResponse,
   requestRealtimeResponse,
+  requeueRejectedRealtimeCreate,
   resetRealtimeResponseGate,
   takeDeferredRealtimeResponse,
 } from "./responseGate";
@@ -202,8 +203,27 @@ describe("releaseUnconfirmedRealtimeResponse", () => {
     const gate = createRealtimeResponseGate();
     requestRealtimeResponse(gate, { instructions: "bad" }, "evt_create");
 
-    expect(releaseUnconfirmedRealtimeResponse(gate, "evt_create")).toBe(true);
+    expect(releaseUnconfirmedRealtimeResponse(gate, "evt_create")).toEqual({
+      released: true,
+      post: false,
+      request: undefined,
+    });
     expect(requestRealtimeResponse(gate, undefined, "evt_next")).toBe(true);
+  });
+
+  it("hands back a request queued behind the rejected create", () => {
+    const gate = createRealtimeResponseGate();
+    requestRealtimeResponse(gate, undefined, "evt_create");
+    // A parallel tool completion queued up behind the create that failed. The
+    // failed create emits no response.done, so nothing else would answer it.
+    requestRealtimeResponse(gate, { instructions: "recover" });
+
+    expect(releaseUnconfirmedRealtimeResponse(gate, "evt_create")).toEqual({
+      released: true,
+      post: true,
+      request: { instructions: "recover" },
+    });
+    expect(gate.assistantResponseInFlight).toBe(false);
   });
 
   it("ignores an error about some earlier client event", () => {
@@ -212,7 +232,9 @@ describe("releaseUnconfirmedRealtimeResponse", () => {
 
     // A late `response_cancel_not_active` for a `response.cancel` sent during
     // barge-in must not clear the create that is still waiting to be created.
-    expect(releaseUnconfirmedRealtimeResponse(gate, "evt_cancel")).toBe(false);
+    expect(releaseUnconfirmedRealtimeResponse(gate, "evt_cancel").released).toBe(
+      false,
+    );
     expect(gate.assistantResponseInFlight).toBe(true);
     expect(requestRealtimeResponse(gate, undefined, "evt_other")).toBe(false);
   });
@@ -221,7 +243,9 @@ describe("releaseUnconfirmedRealtimeResponse", () => {
     const gate = createRealtimeResponseGate();
     requestRealtimeResponse(gate, undefined, "evt_create");
 
-    expect(releaseUnconfirmedRealtimeResponse(gate, undefined)).toBe(false);
+    expect(releaseUnconfirmedRealtimeResponse(gate, undefined).released).toBe(
+      false,
+    );
     expect(gate.assistantResponseInFlight).toBe(true);
   });
 
@@ -231,7 +255,9 @@ describe("releaseUnconfirmedRealtimeResponse", () => {
     markRealtimeResponseCreated(gate);
     requestRealtimeResponse(gate, { instructions: "second" });
 
-    expect(releaseUnconfirmedRealtimeResponse(gate, "evt_create")).toBe(false);
+    expect(releaseUnconfirmedRealtimeResponse(gate, "evt_create").released).toBe(
+      false,
+    );
     expect(gate.assistantResponseInFlight).toBe(true);
     expect(gate.deferredAssistantResponse).toEqual({
       request: { instructions: "second" },
@@ -240,8 +266,57 @@ describe("releaseUnconfirmedRealtimeResponse", () => {
 
   it("does nothing when no response is in flight", () => {
     expect(
-      releaseUnconfirmedRealtimeResponse(createRealtimeResponseGate(), "evt_x"),
+      releaseUnconfirmedRealtimeResponse(createRealtimeResponseGate(), "evt_x")
+        .released,
     ).toBe(false);
+  });
+});
+
+describe("requeueRejectedRealtimeCreate", () => {
+  it("queues the rejected create so the active response answers it", () => {
+    const gate = createRealtimeResponseGate();
+    markRealtimeConversationInput(gate);
+    requestRealtimeResponse(gate, undefined, "evt_create");
+
+    expect(requeueRejectedRealtimeCreate(gate, "evt_create")).toBe(true);
+    // The gate stays closed: a provider response really is running.
+    expect(gate.assistantResponseInFlight).toBe(true);
+    expect(takeDeferredRealtimeResponse(gate, { responseId: "resp_other" })).toEqual({
+      post: true,
+      request: undefined,
+    });
+  });
+
+  it("keeps a forced terminal message when its create is rejected", () => {
+    const gate = createRealtimeResponseGate();
+    requestRealtimeResponse(gate, { instructions: "goodbye" }, "evt_final");
+
+    expect(requeueRejectedRealtimeCreate(gate, "evt_final")).toBe(true);
+    expect(takeDeferredRealtimeResponse(gate, { responseId: "resp_other" })).toEqual({
+      post: true,
+      request: { instructions: "goodbye" },
+    });
+  });
+
+  it("lets a newer queued request win over the rejected one", () => {
+    const gate = createRealtimeResponseGate();
+    requestRealtimeResponse(gate, undefined, "evt_create");
+    requestRealtimeResponse(gate, { instructions: "recover" });
+
+    requeueRejectedRealtimeCreate(gate, "evt_create");
+
+    expect(takeDeferredRealtimeResponse(gate, { responseId: "resp_other" })).toEqual({
+      post: true,
+      request: { instructions: "recover" },
+    });
+  });
+
+  it("ignores an error that does not name the pending create", () => {
+    const gate = createRealtimeResponseGate();
+    requestRealtimeResponse(gate, { instructions: "goodbye" }, "evt_final");
+
+    expect(requeueRejectedRealtimeCreate(gate, "evt_cancel")).toBe(false);
+    expect(gate.deferredAssistantResponse).toBeNull();
   });
 });
 

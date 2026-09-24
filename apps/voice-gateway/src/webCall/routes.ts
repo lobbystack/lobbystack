@@ -37,6 +37,7 @@ import {
   markRealtimeConversationInput,
   markRealtimeResponseCreated,
   releaseUnconfirmedRealtimeResponse,
+  requeueRejectedRealtimeCreate,
   requestRealtimeResponse,
   resetRealtimeResponseGate,
   takeDeferredRealtimeResponse,
@@ -1737,8 +1738,10 @@ async function handleSidebandMessage(
     if (isBenignRealtimeClientError(payload.error)) {
       // The gate deliberately stays closed here. The conflict means a provider
       // response really is active, so releasing would let the next request race
-      // it and would throw away anything deferred behind the rejected create.
-      // That response's `response.done` releases the gate.
+      // it. The rejected create was never acted on, so it is queued behind that
+      // response; its `response.done` releases the gate and posts what is
+      // queued.
+      requeueRejectedRealtimeCreate(session.responseGate, payload.error?.event_id);
       recordOpenAiRealtimeStateConflict({
         "lobbystack.business_id": session.businessId,
         "lobbystack.call_id": session.callId,
@@ -1751,11 +1754,15 @@ async function handleSidebandMessage(
       return;
     }
     // Any other rejection of our create will never be acknowledged, so the gate
-    // has to be freed or every later turn would be deferred forever.
-    releaseUnconfirmedRealtimeResponse(
+    // has to be freed or every later turn would be deferred forever. Anything
+    // queued behind it is still unanswered and is posted now.
+    const releasedCreate = releaseUnconfirmedRealtimeResponse(
       session.responseGate,
       payload.error?.event_id,
     );
+    if (releasedCreate.post) {
+      requestWebResponse(socket, session, releasedCreate.request);
+    }
     server.log.warn(
       {
         callId: session.callId,

@@ -26,6 +26,9 @@ export type RealtimeResponseGate = {
   // The `event_id` of the create we posted and are still waiting on, so a
   // provider error can be matched to it rather than assumed to be about it.
   pendingCreateEventId: string | null;
+  // What that create asked for, kept so a rejected create can be queued again
+  // rather than lost.
+  pendingCreateRequest: DeferredRealtimeResponse | null;
   // The id of the response the gate is tracking, so a `response.done` for some
   // older response cannot release it.
   activeResponseId: string | null;
@@ -43,6 +46,7 @@ export function createRealtimeResponseGate(): RealtimeResponseGate {
     activeAssistantResponseStartedSeq: null,
     activeAssistantResponseConfirmed: false,
     pendingCreateEventId: null,
+    pendingCreateRequest: null,
     activeResponseId: null,
     supersededResponseId: null,
     lastConversationInputSeq: null,
@@ -83,6 +87,7 @@ export function requestRealtimeResponse(
   gate.activeAssistantResponseStartedSeq = gate.sequence;
   gate.activeAssistantResponseConfirmed = false;
   gate.pendingCreateEventId = eventId ?? null;
+  gate.pendingCreateRequest = { request };
   gate.activeResponseId = null;
   gate.deferredAssistantResponse = null;
   return true;
@@ -98,6 +103,7 @@ export function markRealtimeResponseCreated(
   gate.assistantResponseInFlight = true;
   gate.activeAssistantResponseConfirmed = true;
   gate.pendingCreateEventId = null;
+  gate.pendingCreateRequest = null;
   gate.activeResponseId = responseId ?? null;
   if (gate.activeAssistantResponseStartedSeq === null) {
     gate.sequence += 1;
@@ -140,6 +146,7 @@ export function takeDeferredRealtimeResponse(
   gate.activeAssistantResponseStartedSeq = null;
   gate.activeAssistantResponseConfirmed = false;
   gate.pendingCreateEventId = null;
+  gate.pendingCreateRequest = null;
   gate.activeResponseId = null;
   gate.deferredAssistantResponse = null;
 
@@ -164,6 +171,7 @@ export function takeDeferredRealtimeResponse(
   gate.sequence += 1;
   gate.activeAssistantResponseStartedSeq = gate.sequence;
   gate.pendingCreateEventId = options.eventId ?? null;
+  gate.pendingCreateRequest = deferred;
   return { post: true, request: deferred.request };
 }
 
@@ -176,13 +184,45 @@ export function takeDeferredRealtimeResponse(
 export function releaseUnconfirmedRealtimeResponse(
   gate: RealtimeResponseGate,
   eventId?: string,
-): boolean {
+): { released: boolean; post: boolean; request: RealtimeResponseRequest } {
+  const ignored = { released: false, post: false, request: undefined };
   if (!gate.assistantResponseInFlight) {
-    return false;
+    return ignored;
   }
   if (gate.activeAssistantResponseConfirmed) {
-    return false;
+    return ignored;
   }
+  if (
+    gate.pendingCreateEventId === null ||
+    eventId !== gate.pendingCreateEventId
+  ) {
+    return ignored;
+  }
+
+  // The rejected create itself is not retried — the provider refused it — but
+  // anything queued behind it is still unanswered and is handed back to post.
+  const deferred = gate.deferredAssistantResponse;
+  gate.assistantResponseInFlight = false;
+  gate.activeAssistantResponseStartedSeq = null;
+  gate.pendingCreateEventId = null;
+  gate.pendingCreateRequest = null;
+  gate.activeResponseId = null;
+  gate.deferredAssistantResponse = null;
+
+  if (deferred === null) {
+    return { released: true, post: false, request: undefined };
+  }
+  return { released: true, post: true, request: deferred.request };
+}
+
+// A create rejected because a provider response is already active was never
+// acted on, so its request is queued behind that response instead of being
+// dropped. The gate stays closed; the active response's `response.done`
+// releases it and posts what is queued.
+export function requeueRejectedRealtimeCreate(
+  gate: RealtimeResponseGate,
+  eventId?: string,
+): boolean {
   if (
     gate.pendingCreateEventId === null ||
     eventId !== gate.pendingCreateEventId
@@ -190,11 +230,26 @@ export function releaseUnconfirmedRealtimeResponse(
     return false;
   }
 
-  gate.assistantResponseInFlight = false;
-  gate.activeAssistantResponseStartedSeq = null;
+  const rejected = gate.pendingCreateRequest;
   gate.pendingCreateEventId = null;
-  gate.activeResponseId = null;
-  gate.deferredAssistantResponse = null;
+  gate.pendingCreateRequest = null;
+  // The rejected create never took a place in the conversation, and the
+  // response that displaced it is one the gate never saw start. There is no
+  // position left to judge coverage against, so the queued request is answered
+  // rather than assumed already covered.
+  gate.activeAssistantResponseStartedSeq = null;
+  if (rejected === null) {
+    return false;
+  }
+
+  const deferred = gate.deferredAssistantResponse;
+  // Whatever was queued behind the rejected create is newer, so it wins unless
+  // the rejected request is the only one carrying instructions.
+  if (deferred === null) {
+    gate.deferredAssistantResponse = rejected;
+  } else if (deferred.request === undefined && rejected.request !== undefined) {
+    gate.deferredAssistantResponse = rejected;
+  }
   return true;
 }
 
@@ -207,6 +262,7 @@ export function resetRealtimeResponseGate(gate: RealtimeResponseGate): void {
   gate.activeAssistantResponseStartedSeq = null;
   gate.activeAssistantResponseConfirmed = false;
   gate.pendingCreateEventId = null;
+  gate.pendingCreateRequest = null;
   gate.activeResponseId = null;
   gate.lastConversationInputSeq = null;
   gate.deferredAssistantResponse = null;
