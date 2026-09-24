@@ -135,6 +135,68 @@ describe("phone media stream telemetry", () => {
     }));
   });
 
+  it("emits ops.voice.openai_realtime_state_conflict instead of paging on a lost response race", async () => {
+    const { mediaStream, session } = await loadMediaStream();
+    const { server, openAiSocket, twilioSocket } = createRuntimeDoubles();
+    session.callSid = "CA123";
+    session.streamSid = "stream_123";
+
+    mediaStream.handleOpenAiMessage(
+      server as never,
+      openAiSocket as never,
+      twilioSocket as never,
+      session,
+      Buffer.from(JSON.stringify({
+        type: "error",
+        error: {
+          type: "invalid_request_error",
+          code: "conversation_already_has_active_response",
+        },
+      })),
+    );
+
+    expect(mocks.capture).toHaveBeenCalledWith(expect.objectContaining({
+      event: "ops.voice.openai_realtime_state_conflict",
+      properties: expect.objectContaining({
+        businessId: "business_123",
+        callId: "call_123",
+        "lobbystack.provider_error_code": "conversation_already_has_active_response",
+      }),
+    }));
+    expect(mocks.capture).not.toHaveBeenCalledWith(expect.objectContaining({
+      event: "ops.voice.openai_realtime_error",
+    }));
+    expect(mocks.capture).not.toHaveBeenCalledWith(expect.objectContaining({
+      properties: expect.objectContaining({
+        $exception_type: "ProviderFailureError",
+      }),
+    }));
+  });
+
+  it("still emits ops.voice.openai_realtime_error for a real provider failure", async () => {
+    const { mediaStream, session } = await loadMediaStream();
+    const { server, openAiSocket, twilioSocket } = createRuntimeDoubles();
+
+    mediaStream.handleOpenAiMessage(
+      server as never,
+      openAiSocket as never,
+      twilioSocket as never,
+      session,
+      Buffer.from(JSON.stringify({
+        type: "error",
+        error: { type: "server_error", code: "internal_error" },
+      })),
+    );
+
+    expect(mocks.capture).toHaveBeenCalledWith(expect.objectContaining({
+      event: "ops.voice.openai_realtime_error",
+      properties: expect.objectContaining({
+        businessId: "business_123",
+        callId: "call_123",
+      }),
+    }));
+  });
+
   it("emits ops.voice.hangup_retries_exhausted after the terminal retry budget", async () => {
     vi.useFakeTimers();
     mocks.endLiveCallSilently.mockRejectedValue(new Error("provider unavailable"));

@@ -6,6 +6,17 @@ import type { IncomingHttpHeaders } from "node:http";
 import type { FastifyInstance } from "fastify";
 import WebSocket from "ws";
 import { observeVoiceLatency, vadSilenceMs } from "../realtime/latency";
+import {
+  createRealtimeResponseGate,
+  isBenignRealtimeClientError,
+  markRealtimeConversationInput,
+  markRealtimeResponseCreated,
+  releaseUnconfirmedRealtimeResponse,
+  requestRealtimeResponse,
+  resetRealtimeResponseGate,
+  takeDeferredRealtimeResponse,
+  type RealtimeResponseGate,
+} from "../realtime/responseGate";
 import { assertSocketWritable, closeVoiceSocket, createFrameBudget, finalizeVoiceOnce, MAX_REALTIME_FRAME_BYTES, parseRealtimeFrame, settleVoiceTasks } from "../realtime/safety";
 import { acquireVoiceLease } from "../sessions/lifecycle";
 import { beginVoicePresence } from "../sessions/voicePresence";
@@ -28,6 +39,7 @@ import {
   recordMediaStreamDisconnect,
   recordAiDirectedCallEnd,
   recordOpenAiRealtimeError,
+  recordOpenAiRealtimeStateConflict,
   recordOpenAiTurnLatency,
   recordPlaybackInterrupted,
   recordHangupRetriesExhausted,
@@ -220,6 +232,7 @@ export type ActiveVoiceSession = {
   inactivityTimer: ReturnType<typeof setTimeout> | null;
   terminalHangupInProgress: boolean;
   aiTraceId: string;
+  responseGate: RealtimeResponseGate;
   assistantResponseRequestedAtMs: number | null;
   assistantFirstOutputAtMs: number | null;
   transcriptionCommittedAtMsByItemId: Map<string, number>;
@@ -275,6 +288,7 @@ export function createActiveVoiceSession(): ActiveVoiceSession {
     inactivityTimer: null,
     terminalHangupInProgress: false,
     aiTraceId: crypto.randomUUID(),
+    responseGate: createRealtimeResponseGate(),
     assistantResponseRequestedAtMs: null,
     assistantFirstOutputAtMs: null,
     transcriptionCommittedAtMsByItemId: new Map(),
@@ -1111,6 +1125,78 @@ function postRealtimeEvent(socket: WebSocket, payload: Record<string, unknown>):
   }
 }
 
+// Every assistant turn starts here so that concurrent tool completions cannot
+// race each other into `conversation_already_has_active_response`. `force`
+// belongs to the terminal paths that deliberately take over the conversation.
+function postAssistantResponse(
+  server: FastifyInstance,
+  socket: WebSocket,
+  session: ActiveVoiceSession,
+  request?: Record<string, unknown>,
+  options: { force?: boolean } = {},
+): void {
+  if (options.force) {
+    resetRealtimeResponseGate(session.responseGate);
+    requestRealtimeResponse(session.responseGate, request);
+  } else if (!requestRealtimeResponse(session.responseGate, request)) {
+    server.log.debug(
+      {
+        callId: session.callId,
+        callSid: session.callSid,
+        streamSid: session.streamSid,
+      },
+      "Deferred assistant response while another response is active",
+    );
+    return;
+  }
+
+  session.assistantResponseRequestedAtMs = Date.now();
+  session.assistantFirstOutputAtMs = null;
+  postRealtimeEvent(socket, {
+    type: "response.create",
+    ...(request ? { response: request } : {}),
+  });
+}
+
+// Runs on every `response.done` to release the gate. A request deferred during
+// the finished response is re-issued only when it still has something to
+// answer and the call is not already on its way out.
+function flushDeferredAssistantResponse(
+  server: FastifyInstance,
+  socket: WebSocket,
+  session: ActiveVoiceSession,
+): void {
+  const deferred = takeDeferredRealtimeResponse(session.responseGate);
+  if (!deferred.post) {
+    return;
+  }
+
+  if (
+    session.finalized ||
+    session.terminalHangupInProgress ||
+    session.pendingImplicitEndCall ||
+    session.pendingTransferDestination
+  ) {
+    resetRealtimeResponseGate(session.responseGate);
+    return;
+  }
+
+  server.log.info(
+    {
+      callId: session.callId,
+      callSid: session.callSid,
+      streamSid: session.streamSid,
+    },
+    "Posting deferred assistant response after active response completed",
+  );
+  session.assistantResponseRequestedAtMs = Date.now();
+  session.assistantFirstOutputAtMs = null;
+  postRealtimeEvent(socket, {
+    type: "response.create",
+    ...(deferred.request ? { response: deferred.request } : {}),
+  });
+}
+
 export function createRealtimeTurnDetectionConfig(
   idleTimeoutMs?: number,
   options: {
@@ -1403,12 +1489,9 @@ async function runInactivityAction(
   if (action.kind === "hold_expired_check_in") {
     session.inactivity = markHoldExpiryCheckInSent(session.inactivity, nowMs);
     updateRealtimeIdleTimeout(openAiSocket, NORMAL_IDLE_TIMEOUT_MS);
-    postRealtimeEvent(openAiSocket, {
-      type: "response.create",
-      response: {
-        instructions:
-          "The caller asked you to hold and the hold time has expired. Briefly ask if they are still there, then stop and wait.",
-      },
+    postAssistantResponse(server, openAiSocket, session, {
+      instructions:
+        "The caller asked you to hold and the hold time has expired. Briefly ask if they are still there, then stop and wait.",
     });
     scheduleInactivityTimer(server, openAiSocket, twilioSocket, session);
     return;
@@ -1738,8 +1821,6 @@ function requestAssistantFinalMessageBeforeHangup(
   session.pendingImplicitEndCall = input;
   session.pendingImplicitEndCallSkipNextResponseDone = true;
   session.pendingImplicitEndCallStaleResponseId = session.activeAssistantResponseId;
-  session.assistantResponseRequestedAtMs = Date.now();
-  session.assistantFirstOutputAtMs = null;
   server.log.info(
     {
       callId: session.callId,
@@ -1749,9 +1830,13 @@ function requestAssistantFinalMessageBeforeHangup(
     },
     "Requesting assistant final message before terminal hangup",
   );
-  postRealtimeEvent(openAiSocket, {
-    type: "response.create",
-    response: {
+  // The call is ending: this message takes over from any response still in
+  // flight, and no deferred follow-up may outlive it.
+  postAssistantResponse(
+    server,
+    openAiSocket,
+    session,
+    {
       instructions: [
         `Say this exact final message: ${JSON.stringify(input.message)}.`,
         "Then stop speaking. The call will end automatically after your audio finishes.",
@@ -1759,7 +1844,8 @@ function requestAssistantFinalMessageBeforeHangup(
       ].join(" "),
       tool_choice: "none",
     },
-  });
+    { force: true },
+  );
 }
 
 async function performTransfer(
@@ -2480,19 +2566,14 @@ async function configureOpenAiSession(
   // or caller echo. Do not let it interrupt or answer the greeting.
   session.pendingInboundAudio = [];
 
-  session.assistantResponseRequestedAtMs = Date.now();
-  session.assistantFirstOutputAtMs = null;
-  postRealtimeEvent(openAiSocket, {
-    type: "response.create",
-    response: {
-      instructions: [
-        `Begin the call by greeting the caller with this exact greeting: "${session.snapshot.greeting}"`,
-        "After the greeting, continue in the language implied by that greeting unless the caller clearly prefers another language.",
-        "After the greeting, stop speaking and wait for the caller to respond.",
-        "Do not repeat this greeting later in the call.",
-        "Do not add any extra sentence before or after the greeting.",
-      ].join(" "),
-    },
+  postAssistantResponse(server, openAiSocket, session, {
+    instructions: [
+      `Begin the call by greeting the caller with this exact greeting: "${session.snapshot.greeting}"`,
+      "After the greeting, continue in the language implied by that greeting unless the caller clearly prefers another language.",
+      "After the greeting, stop speaking and wait for the caller to respond.",
+      "Do not repeat this greeting later in the call.",
+      "Do not add any extra sentence before or after the greeting.",
+    ].join(" "),
   });
 }
 
@@ -2632,6 +2713,7 @@ async function handleToolCall(
         output: JSON.stringify(toolOutput),
       },
     });
+    markRealtimeConversationInput(session.responseGate, Date.now());
 
     if (result.suppressResponse) {
       session.pendingInboundAudio = [];
@@ -2662,11 +2744,7 @@ async function handleToolCall(
       return;
     }
 
-    session.assistantResponseRequestedAtMs = Date.now();
-    session.assistantFirstOutputAtMs = null;
-    postRealtimeEvent(openAiSocket, {
-      type: "response.create",
-    });
+    postAssistantResponse(server, openAiSocket, session);
   } catch (error) {
     server.log.error(error);
     if (session.businessId) {
@@ -2709,16 +2787,12 @@ async function handleToolCall(
         }),
       },
     });
-    session.assistantResponseRequestedAtMs = Date.now();
-    session.assistantFirstOutputAtMs = null;
-    postRealtimeEvent(openAiSocket, {
-      type: "response.create",
-      response: {
-        instructions: buildToolFailureRecoveryInstructions({
-          toolName: message.name,
-          transferAvailable,
-        }),
-      },
+    markRealtimeConversationInput(session.responseGate, Date.now());
+    postAssistantResponse(server, openAiSocket, session, {
+      instructions: buildToolFailureRecoveryInstructions({
+        toolName: message.name,
+        transferAvailable,
+      }),
     });
   }
 }
@@ -2851,6 +2925,12 @@ export function handleOpenAiMessage(
       // transcription completes. This is the only defensible latency pair.
       const itemId = payload.item_id ?? payload.item?.id;
       markTranscriptionCommitted(session.transcriptionCommittedAtMsByItemId, itemId);
+      return;
+    }
+    case "response.created": {
+      // Server-side turn detection creates responses the gate never requested,
+      // so the active response is confirmed here rather than at request time.
+      markRealtimeResponseCreated(session.responseGate, Date.now());
       return;
     }
     case "response.audio.delta":
@@ -3083,6 +3163,7 @@ export function handleOpenAiMessage(
       return;
     }
     case "response.done": {
+      flushDeferredAssistantResponse(server, openAiSocket, session);
       const runtimeConfig = loadVoiceGatewayEnv(process.env);
       const completedAtMs = Date.now();
       const latencyMs =
@@ -3341,6 +3422,23 @@ export function handleOpenAiMessage(
     case "error": {
       const runtimeConfig = loadVoiceGatewayEnv(process.env);
       const providerError = payload.error ?? payload;
+      releaseUnconfirmedRealtimeResponse(session.responseGate);
+      if (isBenignRealtimeClientError(payload.error)) {
+        // A rejected `response.create` leaves the active response untouched, so
+        // the turn still completes. Record it without paging anyone.
+        recordOpenAiRealtimeStateConflict({
+          ...(session.callSid ? { "lobbystack.call_sid": session.callSid } : {}),
+          ...(session.streamSid ? { "lobbystack.stream_sid": session.streamSid } : {}),
+          ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+          ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+          "lobbystack.provider": "openai",
+          "lobbystack.model": runtimeConfig.OPENAI_REALTIME_MODEL,
+          ...(payload.error?.code
+            ? { "lobbystack.provider_error_code": payload.error.code }
+            : {}),
+        });
+        return;
+      }
       const classification = captureProviderFailureException({
         provider: "openai",
         error: providerError,
