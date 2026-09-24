@@ -274,7 +274,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
     </p>
   ) : undefined;
   return (
-    <ReplacementOnboardingShell legalFooter={legalFooter} progress={login ? null : { current: 1, total: 10 }} title={login ? t("login.title") : t("signup.title")} width="sm">
+    <ReplacementOnboardingShell legalFooter={legalFooter} progress={login ? null : { current: 1, total: 8 }} title={login ? t("login.title") : t("signup.title")} width="sm">
       <div className="flex w-full flex-col gap-6">
         <form onSubmit={submit}>
           <FieldGroup className="gap-4">
