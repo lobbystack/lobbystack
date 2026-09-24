@@ -23,7 +23,7 @@ export type CreateBusinessInput = {
 function cleanSlug(slug: string): string {
   const result = slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   if (result.length < 2 || result.length > 120) {
-    throw new Error("Business slug must be between 2 and 120 characters.");
+    throw Object.assign(new Error("Business slug must be between 2 and 120 characters."), { status: 400 });
   }
   return result;
 }
