@@ -21,6 +21,7 @@ import {
   captureAiGeneration,
   captureAiTraceStarted,
   capturePostHogException,
+  recordOpenAiRealtimeStateConflict,
   recordOpenAiTurnLatency,
   recordTranscriptionFailure,
   recordTurnFirstAudio,
@@ -30,6 +31,17 @@ import type { EndCallRequest } from "../realtime/callControl";
 import { executeVoiceTool } from "../realtime/toolExecutor";
 import { createWebRealtimeToolDefinitions } from "../realtime/toolDefinitions";
 import { observeVoiceLatency, vadSilenceMs } from "../realtime/latency";
+import {
+  createRealtimeResponseGate,
+  isBenignRealtimeClientError,
+  markRealtimeConversationInput,
+  markRealtimeResponseCreated,
+  releaseUnconfirmedRealtimeResponse,
+  requestRealtimeResponse,
+  resetRealtimeResponseGate,
+  takeDeferredRealtimeResponse,
+  type RealtimeResponseGate,
+} from "../realtime/responseGate";
 import { assertSocketWritable, closeVoiceSocket, createFrameBudget, finalizeVoiceOnce, MAX_REALTIME_FRAME_BYTES, parseRealtimeFrame, settleVoiceTasks } from "../realtime/safety";
 import { acquireVoiceLease, initializeVoiceLifecycle } from "../sessions/lifecycle";
 import { updateVoiceCallPresence } from "../backend/runtimeClient";
@@ -107,6 +119,7 @@ type ActiveWebCall = {
   mediaStartedAtMs: number | null;
   pendingAssistantResponseRequestAtMs: number | null;
   assistantResponseStartedAtMsById: Map<string, number>;
+  responseGate: RealtimeResponseGate;
   maxDurationMs: number;
   handledToolCallIds: Set<string>;
   sidebandSocket: WebSocket | null;
@@ -986,7 +999,12 @@ function requestWebFinalMessageBeforeHangup(
   }
 
   session.pendingEndCall = endCall;
-  requestWebResponse(socket, session, {
+  // The session is ending: this message takes over from any response still in
+  // flight, and no deferred follow-up may outlive it.
+  requestWebResponse(
+    socket,
+    session,
+    {
       metadata: {
         lobbystack_purpose: WEB_FINAL_MESSAGE_METADATA_PURPOSE,
       },
@@ -996,7 +1014,9 @@ function requestWebFinalMessageBeforeHangup(
         "Do not call any tools and do not add anything else.",
       ].join(" "),
       tool_choice: "none",
-  });
+    },
+    { force: true },
+  );
 
   session.pendingEndCallFallbackTimer = setTimeout(() => {
     session.pendingEndCallFallbackTimer = null;
@@ -1074,15 +1094,51 @@ function postRealtimeEvent(
   }
 }
 
+// Shares the phone path's gate: one active response per conversation, so
+// parallel tool completions queue instead of racing each other into
+// `conversation_already_has_active_response`. `force` belongs to the terminal
+// paths that deliberately take over the conversation.
 function requestWebResponse(
   socket: WebSocket,
   session: ActiveWebCall,
   response?: Record<string, unknown>,
+  options: { force?: boolean } = {},
 ): void {
+  if (options.force) {
+    resetRealtimeResponseGate(session.responseGate);
+    requestRealtimeResponse(session.responseGate, response);
+  } else if (!requestRealtimeResponse(session.responseGate, response)) {
+    return;
+  }
+
   session.pendingAssistantResponseRequestAtMs = Date.now();
   postRealtimeEvent(socket, {
     type: "response.create",
     ...(response ? { response } : {}),
+  });
+}
+
+// Runs on every `response.done` to release the gate, re-issuing a request that
+// was deferred during the finished response only when it still has something
+// to answer and the session is not already ending.
+function flushDeferredWebResponse(
+  socket: WebSocket,
+  session: ActiveWebCall,
+): void {
+  const deferred = takeDeferredRealtimeResponse(session.responseGate);
+  if (!deferred.post) {
+    return;
+  }
+
+  if (session.finalized || session.pendingEndCall !== null) {
+    resetRealtimeResponseGate(session.responseGate);
+    return;
+  }
+
+  session.pendingAssistantResponseRequestAtMs = Date.now();
+  postRealtimeEvent(socket, {
+    type: "response.create",
+    ...(deferred.request ? { response: deferred.request } : {}),
   });
 }
 
@@ -1418,6 +1474,9 @@ async function handleSidebandMessage(
   }
 
   if (payload.type === "response.created") {
+    // Server-side turn detection creates responses the gate never requested,
+    // so the active response is confirmed here rather than at request time.
+    markRealtimeResponseCreated(session.responseGate, Date.now());
     trackWebResponseCreated(session, payload.response?.id);
     return;
   }
@@ -1452,6 +1511,7 @@ async function handleSidebandMessage(
   }
 
   if (payload.type === "response.done") {
+    flushDeferredWebResponse(socket, session);
     const response = payload.response;
     const model = response?.model ?? server.runtimeConfig.OPENAI_REALTIME_MODEL;
     const responseStartedAtMs = response?.id
@@ -1659,6 +1719,21 @@ async function handleSidebandMessage(
   }
 
   if (payload.type === "error") {
+    // A request rejected before any response was confirmed would otherwise
+    // leave the gate closed for the rest of the session.
+    releaseUnconfirmedRealtimeResponse(session.responseGate);
+    if (isBenignRealtimeClientError(payload.error)) {
+      recordOpenAiRealtimeStateConflict({
+        "lobbystack.business_id": session.businessId,
+        "lobbystack.call_id": session.callId,
+        "lobbystack.provider": "openai",
+        "lobbystack.channel": "web_voice",
+        ...(payload.error?.code
+          ? { "lobbystack.provider_error_code": payload.error.code }
+          : {}),
+      });
+      return;
+    }
     server.log.warn(
       {
         callId: session.callId,
@@ -1698,6 +1773,7 @@ async function handleToolCall(
         }),
       },
     });
+    markRealtimeConversationInput(session.responseGate, Date.now());
     requestWebResponse(socket, session);
     return;
   }
@@ -1760,6 +1836,7 @@ async function handleToolCall(
         }),
       },
     });
+    markRealtimeConversationInput(session.responseGate, Date.now());
     requestWebResponse(socket, session);
     return;
   }
@@ -1778,6 +1855,7 @@ async function handleToolCall(
       output: JSON.stringify(executed.result),
     },
   });
+  markRealtimeConversationInput(session.responseGate, Date.now());
 
   if (executed.suppressResponse) {
     postRealtimeEvent(socket, { type: "input_audio_buffer.clear" });
@@ -2035,6 +2113,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         mediaStartedAtMs: null,
         pendingAssistantResponseRequestAtMs: null,
         assistantResponseStartedAtMsById: new Map(),
+        responseGate: createRealtimeResponseGate(),
         maxDurationMs: call.webCallMaxDurationMs ?? server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
         handledToolCallIds: new Set(),
         sidebandSocket: null,
