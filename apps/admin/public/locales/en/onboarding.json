@@ -100,39 +100,6 @@
     "submitting": "Saving...",
     "submitFailed": "We couldn't save that greeting right now. Please try again."
   },
-  "verifyPhone": {
-    "title": "Let's verify you're real",
-    "description": "",
-    "fields": {
-      "mobileNumber": "Mobile number",
-      "region": "Region"
-    },
-    "hint": "Use a personal mobile number that can receive SMS.",
-    "sendCode": "Send code",
-    "sending": "Sending code...",
-    "reuse": "Reuse a previously verified phone",
-    "reuseFailed": "We couldn't reuse that phone right now. Please try again.",
-    "invalidNumber": "Enter a valid mobile number, including the country code.",
-    "mobileRequired": "Use a mobile number that can receive SMS verification.",
-    "unsupportedCountry": "Phone verification isn't available for that country yet.",
-    "tooManyAttempts": "Too many verification attempts. Please wait a bit and try again.",
-    "waitBeforeRetry": "We just sent a code. Please wait a moment before trying again.",
-    "sendFailed": "We couldn't send a verification code right now. Please try again."
-  },
-  "verifyPhoneCode": {
-    "title": "Enter your code",
-    "description": "We sent a 6-digit code to {{phone}}.",
-    "didntGet": "Didn't get it?",
-    "resend": "Resend",
-    "resending": "Resending...",
-    "verifying": "Verifying...",
-    "changeNumber": "Use a different number",
-    "invalidCode": "That code is invalid or expired. Try requesting a new one.",
-    "startAgain": "Start phone verification again before entering a code.",
-    "failed": "We couldn't verify that code right now. Please try again.",
-    "resendFailed": "We couldn't resend a code right now. Please try again.",
-    "unavailable": "This verification attempt is unavailable or expired. Select Resend to request a new code."
-  },
   "number": {
     "title": "Pick your AI's phone number",
     "description": "Choose a local number callers can reach you on.",
@@ -162,7 +129,6 @@
     "trialAccountPurchaseLimit": "This Twilio account can't buy that number yet. Trial accounts can only buy eligible trial numbers; release an existing number or upgrade the account, then try again.",
     "skipFailed": "We couldn't skip this step right now. Please try again.",
     "tooManySearches": "Too many searches. Please wait a bit and try again.",
-    "verifyPhoneRequired": "Verify your mobile number before choosing a business number.",
     "unavailable": "That number was just taken. Pick another one from the refreshed list.",
     "selectedTitle": "Your AI's phone number",
     "selectedNumberLabel": "Selected number",

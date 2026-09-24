@@ -5,41 +5,24 @@ import { getSafeOnboardingErrorMessage } from "./onboarding-errors";
 const t = (key: string): string => key;
 
 describe("getSafeOnboardingErrorMessage", () => {
-  it("maps typed non-mobile phone validation without relying on provider wording", () => {
+  it("maps workspace creation rate limits", () => {
     expect(
       getSafeOnboardingErrorMessage(
-        Object.assign(new Error("Validation failed."), { code: "phone_number_not_mobile" }),
+        new Error("Too many workspace creation attempts."),
         t,
-        "verifyPhone.sendFailed",
+        "businessName.submitFailed",
       ),
-    ).toBe("verifyPhone.mobileRequired");
+    ).toBe("errors.tooManyBusinesses");
   });
 
-  it("maps the current mobile-number validation messages", () => {
+  it("maps number search rate limits", () => {
     expect(
       getSafeOnboardingErrorMessage(
-        new Error("A valid mobile phone number is required."),
+        new Error("Too many number searches. Please wait."),
         t,
-        "verifyPhone.sendFailed",
+        "number.searchFailed",
       ),
-    ).toBe("verifyPhone.invalidNumber");
-    expect(
-      getSafeOnboardingErrorMessage(
-        new Error("A mobile phone number is required."),
-        t,
-        "verifyPhone.sendFailed",
-      ),
-    ).toBe("verifyPhone.mobileRequired");
-  });
-
-  it("maps unsupported phone countries to localized guidance", () => {
-    expect(
-      getSafeOnboardingErrorMessage(
-        Object.assign(new Error("Validation failed."), { code: "phone_country_unsupported" }),
-        t,
-        "verifyPhone.sendFailed",
-      ),
-    ).toBe("verifyPhone.unsupportedCountry");
+    ).toBe("number.tooManySearches");
   });
 
   it("preserves actionable Twilio trial-account guidance", () => {
@@ -50,5 +33,15 @@ describe("getSafeOnboardingErrorMessage", () => {
         "number.claimFailed",
       ),
     ).toBe("number.trialAccountPurchaseLimit");
+  });
+
+  it("falls back for retired phone-verification errors instead of returning stale copy", () => {
+    expect(
+      getSafeOnboardingErrorMessage(
+        Object.assign(new Error("A valid mobile phone number is required."), { code: "phone_number_invalid" }),
+        t,
+        "number.searchFailed",
+      ),
+    ).toBe("number.searchFailed");
   });
 });

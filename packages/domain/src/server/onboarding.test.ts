@@ -1,17 +1,27 @@
 import { describe, expect, it } from "vitest";
 
-import { canVisitOnboardingStage, isOnboardingStage, isValidOnboardingTransition, resolveOnboardingRoute, resolveOnboardingStageForPlan, selectPreferredMembership } from "./onboarding";
+import { canVisitOnboardingStage, isOnboardingStage, isValidOnboardingTransition, normalizeOnboardingStage, resolveOnboardingRoute, resolveOnboardingStageForPlan, selectPreferredMembership } from "./onboarding";
 
 describe("onboarding stages", () => {
   it("maps persisted stages to their dedicated routes", () => {
-    expect(resolveOnboardingRoute("verify_phone_code")).toBe("/onboarding/verify-phone/code");
+    expect(resolveOnboardingRoute("plan")).toBe("/onboarding/plan");
     expect(resolveOnboardingRoute("phone_number_claiming")).toBe("/onboarding/number");
     expect(resolveOnboardingRoute("complete")).toBe("/");
+  });
+
+  it("normalizes retired verification stages forward to plan", () => {
+    expect(normalizeOnboardingStage("verify_phone")).toBe("plan");
+    expect(normalizeOnboardingStage("verify_phone_code")).toBe("plan");
+    expect(resolveOnboardingRoute("verify_phone")).toBe("/onboarding/plan");
+    expect(resolveOnboardingRoute("verify_phone_code")).toBe("/onboarding/plan");
+    expect(normalizeOnboardingStage("not-a-stage")).toBe("create_business");
   });
 
   it("allows only adjacent transitions, with an explicit number-selection skip", () => {
     expect(isValidOnboardingTransition("website", "knowledge")).toBe(true);
     expect(isValidOnboardingTransition("plan", "attribution")).toBe(true);
+    expect(isValidOnboardingTransition("greeting", "plan")).toBe(true);
+    expect(isValidOnboardingTransition("greeting", "knowledge")).toBe(false);
     expect(isValidOnboardingTransition("website", "plan")).toBe(false);
     expect(isValidOnboardingTransition("complete", "website")).toBe(false);
   });
@@ -20,6 +30,7 @@ describe("onboarding stages", () => {
     expect(isOnboardingStage("not-a-stage")).toBe(false);
     expect(isOnboardingStage("toString")).toBe(false);
     expect(isOnboardingStage("constructor")).toBe(false);
+    expect(isOnboardingStage("verify_phone")).toBe(false);
     expect(isOnboardingStage("attribution")).toBe(true);
   });
 

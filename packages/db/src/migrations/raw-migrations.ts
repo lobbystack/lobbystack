@@ -66,6 +66,7 @@ export const SCHEMA_MIGRATIONS = [
   "0056_phone_verified_email_backfill.sql",
   "0057_query_plan_indexes.sql",
   "0058_web_call_media_started_at.sql",
+  "0059_remove_onboarding_phone_verification.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

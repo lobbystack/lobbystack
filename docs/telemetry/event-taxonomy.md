@@ -29,8 +29,6 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 - `web.messages.thread_opened`
 - `web.messages.reply_sent`
 - `web.agent.settings_saved`
-- `web.onboarding.verify_phone_started`
-- `web.onboarding.verify_phone_completed`
 - `web.onboarding.number_claim_started`
 - `web.onboarding.number_claim_completed`
 - `web.knowledge.upload_started`

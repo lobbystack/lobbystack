@@ -21,7 +21,7 @@ function setup() {
   clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
   client.setQueryData(["onboarding-agent", "business"], { profile: { greeting: "Hi there" } });
-  const fetchMock = vi.fn(async (url: string) => url === "/api/businesses" ? Response.json({ businesses: [{ businessId: "business", active: true }] }) : Response.json({ ok: true }));
+  const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => url === "/api/businesses" ? Response.json({ businesses: [{ businessId: "business", active: true }] }) : Response.json({ ok: true }));
   vi.stubGlobal("fetch", fetchMock);
   render(<QueryClientProvider client={client}><OnboardingGreetingSurface /></QueryClientProvider>);
   return fetchMock;
@@ -33,8 +33,10 @@ describe("onboarding greeting telemetry", () => {
     const textarea = (await screen.findByLabelText("greeting.label")) as HTMLTextAreaElement;
     await waitFor(() => expect(textarea.value).toBe("Hi there"));
     await userEvent.click(screen.getByRole("button", { name: "greeting.continue" }));
-    await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/onboarding/verify-phone"));
-    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/onboarding/stage?"))).toBe(true);
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/onboarding/plan"));
+    const stageCall = fetchMock.mock.calls.find(([url]) => String(url).includes("/api/onboarding/stage?"));
+    expect(stageCall).toBeTruthy();
+    expect(JSON.parse(String(stageCall?.[1]?.body))).toEqual({ to: "plan" });
     telemetryRef.current!.expectEvent("web.onboarding.greeting_submitted", { businessId: "business" });
   });
 });

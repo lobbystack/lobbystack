@@ -105,7 +105,6 @@ type PhoneNumberChooserProps = {
   onClaimed: (result: Extract<ClaimResult, { status: "claimed" }>, number: AvailableNumberSummary) => void;
   onClaimStarted?: (number: AvailableNumberSummary) => void;
   onClaimCompleted?: (number: AvailableNumberSummary) => void;
-  onVerifyPhoneRequired?: () => void;
 };
 
 const COUNTRY_OPTIONS: Array<{
@@ -118,17 +117,6 @@ const COUNTRY_OPTIONS: Array<{
   { code: "GB", label: "UK", flag: "🇬🇧" },
   { code: "AU", label: "AU", flag: "🇦🇺" },
 ];
-
-function isVerifyPhoneRequiredError(error: unknown): boolean {
-  const message =
-    error instanceof Error
-      ? error.message
-      : typeof error === "string"
-        ? error
-        : "";
-
-  return message.includes("Verify your mobile number before choosing a business number.") || message.includes("A verified phone is required before choosing a number.");
-}
 
 function getNumberLocationLabel(number: AvailableNumberSummary): string | null {
   const parts = [number.locality, number.region].filter(
@@ -163,7 +151,6 @@ export function PhoneNumberChooser({
   onClaimed,
   onClaimStarted,
   onClaimCompleted,
-  onVerifyPhoneRequired,
 }: PhoneNumberChooserProps) {
   const [country, setCountry] = useState<SupportedOnboardingPhoneCountry>("US");
   const [areaCode, setAreaCode] = useState<string>("");
@@ -210,10 +197,6 @@ export function PhoneNumberChooser({
         setHasMore(initialList.length >= 10);
       } catch (loadError) {
         if (cancelled) return;
-        if (onVerifyPhoneRequired && isVerifyPhoneRequiredError(loadError)) {
-          onVerifyPhoneRequired();
-          return;
-        }
         setError(getErrorMessage(loadError, labels.loadFailed));
       } finally {
         if (!cancelled) {
@@ -226,7 +209,7 @@ export function PhoneNumberChooser({
     return () => {
       cancelled = true;
     };
-  }, [businessId, getErrorMessage, getInitialNumberSuggestion, labels.loadFailed, onVerifyPhoneRequired]);
+  }, [businessId, getErrorMessage, getInitialNumberSuggestion, labels.loadFailed]);
 
   async function handleSearch(source: "search" | "loadMore" = "search"): Promise<void> {
     setSearchSource(source);

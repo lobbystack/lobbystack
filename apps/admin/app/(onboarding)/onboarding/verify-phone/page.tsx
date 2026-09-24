@@ -1,4 +1,8 @@
-import { OnboardingPhoneVerificationSurface } from "@/components/onboarding-phone-verification-surface";
 import { requireOnboardingStage } from "@/lib/onboarding-route";
 
-export default async function OnboardingVerifyPhonePage() { await requireOnboardingStage("/onboarding/verify-phone"); return <OnboardingPhoneVerificationSurface />; }
+// Personal phone verification was removed from onboarding. Keep the old route
+// as a compatibility redirect to the caller's current onboarding step.
+export default async function OnboardingVerifyPhoneRedirectPage() {
+  await requireOnboardingStage("/onboarding/verify-phone");
+  return null;
+}

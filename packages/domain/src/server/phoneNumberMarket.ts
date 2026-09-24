@@ -251,3 +251,64 @@ export function getMetroAreaCodePriority(
   ];
 }
 
+export type SupportedNumberMarketCountry = "US" | "CA" | "GB" | "AU";
+
+export type BusinessNumberMarket = {
+  countryCode: SupportedNumberMarketCountry;
+  areaCode?: string;
+  regionCode?: string;
+  city?: string;
+  source: "selection" | "business_location" | "default";
+};
+
+const supportedNumberMarketCountries = new Set<string>(["US", "CA", "GB", "AU"]);
+
+// Canadian IANA zones that overlap the US prefix. Anything else under
+// America/ resolves to the US, and unmapped zones fall back to the default.
+const canadianTimezones = new Set<string>([
+  "America/St_Johns",
+  "America/Halifax",
+  "America/Glace_Bay",
+  "America/Moncton",
+  "America/Toronto",
+  "America/Iqaluit",
+  "America/Winnipeg",
+  "America/Regina",
+  "America/Edmonton",
+  "America/Vancouver",
+  "America/Whitehorse",
+  "America/Yellowknife",
+]);
+
+export function countryCodeForBusinessTimezone(
+  timezone: string | null | undefined,
+): SupportedNumberMarketCountry | undefined {
+  const normalized = timezone?.trim();
+  if (!normalized) return undefined;
+  if (normalized === "Europe/London") return "GB";
+  if (normalized.startsWith("Australia/")) return "AU";
+  if (normalized.startsWith("America/")) return canadianTimezones.has(normalized) ? "CA" : "US";
+  return undefined;
+}
+
+// Number inventory no longer depends on a personal verified phone. An explicit
+// picker selection wins; otherwise seed from the workspace timezone, then fall
+// back to the default supported country.
+export function resolveBusinessNumberMarket(input: {
+  selection?: { countryCode?: string; areaCode?: string; city?: string; regionCode?: string } | undefined;
+  timezone?: string | null;
+}): BusinessNumberMarket {
+  const requested = input.selection?.countryCode?.trim().toUpperCase();
+  if (requested && supportedNumberMarketCountries.has(requested)) {
+    return {
+      countryCode: requested as SupportedNumberMarketCountry,
+      ...(input.selection?.areaCode ? { areaCode: input.selection.areaCode } : {}),
+      ...(input.selection?.city ? { city: input.selection.city } : {}),
+      ...(input.selection?.regionCode ? { regionCode: input.selection.regionCode } : {}),
+      source: "selection",
+    };
+  }
+  const inferred = countryCodeForBusinessTimezone(input.timezone);
+  if (inferred) return { countryCode: inferred, source: "business_location" };
+  return { countryCode: "US", source: "default" };
+}

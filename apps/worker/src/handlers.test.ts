@@ -6,7 +6,7 @@ import { vi } from "vitest";
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteSentProductEventsBefore, expireProspectDemos, generateAffiliatePayoutRun, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markNotificationSent, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, releaseNotificationDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, loadOperatorNotificationDelivery, markOperatorNotificationSent, queueDailyOperatorSummaries } from "@lobbystack/domain";
-import { claimPhoneVerificationSend, markPhoneVerificationSendFailed, markPhoneVerificationSent } from "@lobbystack/domain";
+import { cancelRetiredPhoneVerificationSend } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning } from "@lobbystack/domain";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => {
@@ -27,7 +27,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     markAppointmentChangeOtpSent: vi.fn(),
     claimNotificationDelivery: vi.fn(),
     claimOperatorNotificationDelivery: vi.fn(),
-    claimPhoneVerificationSend: vi.fn(),
+    cancelRetiredPhoneVerificationSend: vi.fn(),
     claimNumberProvisioning: vi.fn(),
     countPublishableOutboxMessages: vi.fn(),
     deleteCallRecording: vi.fn(),
@@ -36,8 +36,6 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     loadOperatorNotificationDelivery: vi.fn(),
     markOperatorNotificationSent: vi.fn(),
     queueDailyOperatorSummaries: vi.fn(),
-    markPhoneVerificationSendFailed: vi.fn(),
-    markPhoneVerificationSent: vi.fn(),
     completeNumberProvisioning: vi.fn(),
     failNumberProvisioning: vi.fn(),
     releaseOperatorNotificationDelivery: vi.fn(),
@@ -99,22 +97,13 @@ function pricingJob(type: "sms.syncPrice" | "call.syncPrice", payload: Record<st
 }
 
 describe("worker handlers", () => {
-  it("marks a verification failed instead of silently skipping missing configuration", async () => {
+  it("drains a retired phone verification send without contacting the provider", async () => {
     const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
-    vi.stubEnv("TWILIO_VERIFY_SERVICE_SID", "");
-    await expect(handleJob({ jobId: randomUUID(), type: "phoneVerification.send", queue: "critical", businessId, payload: { attemptId }, trace: {}, idempotencyKey: `phone:${attemptId}`, scheduled: false }, { domain })).rejects.toThrow("Phone verification provider is not configured.");
-    expect(markPhoneVerificationSendFailed).toHaveBeenCalledWith(domain, { businessId, attemptId });
-    expect(claimPhoneVerificationSend).not.toHaveBeenCalled();
-  });
-  it("sends a reserved phone verification through Twilio Verify", async () => {
-    const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
-    vi.stubEnv("TWILIO_VERIFY_SERVICE_SID", "VA123");
-    vi.mocked(claimPhoneVerificationSend).mockResolvedValue({ id: attemptId, phoneE164: "+14165550100" });
-    const verifyPhone = vi.fn().mockResolvedValue({ verificationSid: "VE123", status: "pending" });
+    const verifyPhone = vi.fn();
     const result = await handleJob({ jobId: randomUUID(), type: "phoneVerification.send", queue: "critical", businessId, payload: { attemptId }, trace: {}, idempotencyKey: `phone:${attemptId}`, scheduled: false }, { domain, twilio: { sendSms: vi.fn(), verifyPhone } });
-    expect(result).toEqual({ status: "completed", entityId: attemptId });
-    expect(verifyPhone).toHaveBeenCalledWith({ to: "+14165550100", serviceSid: "VA123" });
-    expect(markPhoneVerificationSent).toHaveBeenCalledWith(domain, { businessId, attemptId, providerVerificationId: "VE123", status: "pending" });
+    expect(result).toEqual({ status: "skipped", entityId: attemptId });
+    expect(cancelRetiredPhoneVerificationSend).toHaveBeenCalledWith(domain, { businessId, attemptId });
+    expect(verifyPhone).not.toHaveBeenCalled();
   });
 
   it("reconciles an owned Twilio number before completing provisioning", async () => {

@@ -1,6 +1,6 @@
-import { and, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
-import { affiliateAttributions, affiliateProfileStats, affiliateProfiles, billingAccounts, businesses, onboardingPhoneVerifications, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { affiliateAttributions, affiliateProfileStats, affiliateProfiles, billingAccounts, businesses, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
@@ -11,8 +11,6 @@ export type OnboardingStage =
   | "website"
   | "knowledge"
   | "greeting"
-  | "verify_phone"
-  | "verify_phone_code"
   | "plan"
   | "phone_number"
   | "phone_number_claiming"
@@ -24,8 +22,6 @@ const stageRoutes: Record<OnboardingStage, string> = {
   website: "/onboarding/website",
   knowledge: "/onboarding/knowledge",
   greeting: "/onboarding/greeting",
-  verify_phone: "/onboarding/verify-phone",
-  verify_phone_code: "/onboarding/verify-phone/code",
   plan: "/onboarding/plan",
   phone_number: "/onboarding/number",
   phone_number_claiming: "/onboarding/number",
@@ -38,22 +34,18 @@ const stageSteps: Record<OnboardingStage, number> = {
   website: 3,
   knowledge: 4,
   greeting: 5,
-  verify_phone: 6,
-  verify_phone_code: 7,
-  plan: 8,
-  phone_number: 9,
-  phone_number_claiming: 9,
-  attribution: 10,
-  complete: 11,
+  plan: 6,
+  phone_number: 7,
+  phone_number_claiming: 7,
+  attribution: 8,
+  complete: 9,
 };
 
 const transitions: Record<OnboardingStage, readonly OnboardingStage[]> = {
   create_business: ["website"],
   website: ["knowledge"],
   knowledge: ["greeting"],
-  greeting: ["verify_phone"],
-  verify_phone: ["verify_phone_code"],
-  verify_phone_code: ["plan"],
+  greeting: ["plan"],
   plan: ["phone_number", "attribution"],
   phone_number: ["attribution"],
   phone_number_claiming: ["phone_number", "attribution"],
@@ -61,16 +53,27 @@ const transitions: Record<OnboardingStage, readonly OnboardingStage[]> = {
   complete: [],
 };
 
+// Personal phone verification was removed from onboarding. Workspaces parked on
+// a verification stage before the removal normalize forward to plan so they
+// resume instead of looping on a step that no longer exists.
+const legacyVerificationStages = new Set(["verify_phone", "verify_phone_code"]);
+
+export function isOnboardingStage(value: unknown): value is OnboardingStage {
+  return typeof value === "string" && Object.hasOwn(stageRoutes, value);
+}
+
+export function normalizeOnboardingStage(value: unknown): OnboardingStage {
+  if (isOnboardingStage(value)) return value;
+  if (typeof value === "string" && legacyVerificationStages.has(value)) return "plan";
+  return "create_business";
+}
+
 export function resolveOnboardingRoute(stage: string | null | undefined): string {
-  return stageRoutes[(stage ?? "create_business") as OnboardingStage] ?? stageRoutes.create_business;
+  return stageRoutes[normalizeOnboardingStage(stage ?? "create_business")];
 }
 
 export function resolveOnboardingStageForPlan(stage: OnboardingStage, plan: string | null): OnboardingStage {
   return (stage === "phone_number" || stage === "phone_number_claiming") && plan === "free_cloud" ? "plan" : stage;
-}
-
-export function isOnboardingStage(value: unknown): value is OnboardingStage {
-  return typeof value === "string" && Object.hasOwn(stageRoutes, value);
 }
 
 export function isValidOnboardingTransition(from: OnboardingStage, to: OnboardingStage): boolean {
@@ -96,7 +99,7 @@ async function onboardingStateForBusiness(
   const billing = (await tx.select({ plan: billingAccounts.plan }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1))[0];
   return {
     businessId,
-    stage: resolveOnboardingStageForPlan(isOnboardingStage(business.onboardingStage) ? business.onboardingStage : "create_business", billing?.plan ?? null),
+    stage: resolveOnboardingStageForPlan(normalizeOnboardingStage(business.onboardingStage), billing?.plan ?? null),
   };
 }
 
@@ -151,26 +154,18 @@ export async function advanceOnboardingStage(
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const current = (await tx.select({ onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
-    if (!current || !isOnboardingStage(current.onboardingStage)) throw new Error("Business onboarding state was not found.");
-    // Revisiting an earlier form must never move durable onboarding progress backwards.
-    if (canVisitOnboardingStage(current.onboardingStage, input.to)) return;
-    if (input.to === "verify_phone_code" || stageSteps[input.to] >= stageSteps.plan) {
-      const verified = (await tx.select({ id: onboardingPhoneVerifications.id }).from(onboardingPhoneVerifications).where(and(
-        eq(onboardingPhoneVerifications.businessId, input.businessId),
-        eq(onboardingPhoneVerifications.userId, input.userId),
-        eq(onboardingPhoneVerifications.status, "approved"),
-      )).limit(1))[0];
-      const pending = !verified && input.to === "verify_phone_code"
-        ? (await tx.select({ id: onboardingPhoneVerifications.id }).from(onboardingPhoneVerifications).where(and(
-            eq(onboardingPhoneVerifications.businessId, input.businessId),
-            eq(onboardingPhoneVerifications.userId, input.userId),
-            inArray(onboardingPhoneVerifications.status, ["queued", "processing", "pending"]),
-            gt(onboardingPhoneVerifications.expiresAt, new Date()),
-          )).limit(1))[0]
-        : undefined;
-      if (!verified && !pending) throw Object.assign(new Error("Phone verification is required before continuing."), { status: 409, code: "phone_verification_required" });
+    if (!current) throw new Error("Business onboarding state was not found.");
+    const currentStage = normalizeOnboardingStage(current.onboardingStage);
+    // Repair a legacy verification stage before reading or advancing it so the
+    // conditional stage write below still matches the persisted value.
+    if (currentStage !== current.onboardingStage) {
+      await tx.update(businesses)
+        .set({ onboardingStage: currentStage, updatedAt: new Date() })
+        .where(and(eq(businesses.id, input.businessId), eq(businesses.onboardingStage, current.onboardingStage)));
     }
-    await advanceOnboardingStageInTransaction(tx, { ...input, from: current.onboardingStage });
+    // Revisiting an earlier form must never move durable onboarding progress backwards.
+    if (canVisitOnboardingStage(currentStage, input.to)) return;
+    await advanceOnboardingStageInTransaction(tx, { ...input, from: currentStage });
   });
 }
 

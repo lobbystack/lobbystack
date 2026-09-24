@@ -11,8 +11,6 @@ const routeStages: Record<string, OnboardingStage> = {
   "/onboarding/website": "website",
   "/onboarding/knowledge": "knowledge",
   "/onboarding/greeting": "greeting",
-  "/onboarding/verify-phone": "verify_phone",
-  "/onboarding/verify-phone/code": "verify_phone_code",
   "/onboarding/plan": "plan",
   "/onboarding/number": "phone_number",
   "/onboarding/attribution": "attribution",

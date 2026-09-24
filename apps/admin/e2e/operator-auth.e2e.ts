@@ -1,11 +1,11 @@
 import { respectingAuthRateLimit } from "./fixtures/auth-rate-limit";
 import { completeSignupEmailVerification, isolateAuthRateLimit } from "./fixtures/email-verification";
 import { expect, test, type BrowserContext, type Page, type TestInfo } from "@playwright/test";
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-import { createDatabaseClient, onboardingPhoneVerifications, users } from "@lobbystack/db";
+import { createDatabaseClient } from "@lobbystack/db";
 
 const password = "Replacement-E2E-Password-123!";
 const prefix = "replacement-e2e";
@@ -73,20 +73,6 @@ async function signUp(page: Page, identity: string, testInfo: TestInfo): Promise
   await expect(page).toHaveURL(/\/onboarding\/business$/);
 }
 
-async function markPhoneVerified(identity: string, businessId: string): Promise<void> {
-  const databaseUrl = process.env.REPLACEMENT_E2E_DATABASE_URL;
-  if (!databaseUrl) throw new Error("REPLACEMENT_E2E_DATABASE_URL is required.");
-  const database = createDatabaseClient("lobbystack_migrator", { DATABASE_URL: databaseUrl });
-  try {
-    const now = new Date();
-    const user = (await database.db.update(users).set({ phone: "+14165550100", phoneVerifiedAt: now }).where(eq(users.email, `${prefix}-${identity}@example.invalid`)).returning({ id: users.id }))[0];
-    if (!user) throw new Error("The signup fixture user was not created.");
-    await database.db.insert(onboardingPhoneVerifications).values({ businessId, userId: user.id, phoneE164: "+14165550100", countryCode: "CA", lineType: "mobile", status: "approved", startedAt: now, expiresAt: now, approvedAt: now, requestFingerprint: `e2e:${identity}` });
-  } finally {
-    await database.pool.end();
-  }
-}
-
 async function readOnboardingState(identity: string): Promise<{ businessId: string | null; stage: string | null }> {
   const databaseUrl = process.env.REPLACEMENT_E2E_DATABASE_URL;
   if (!databaseUrl) throw new Error("REPLACEMENT_E2E_DATABASE_URL is required.");
@@ -133,7 +119,7 @@ async function createWorkspace(page: Page, identity: string): Promise<string> {
   return workspace.businessId;
 }
 
-async function completeOnboardingBySkippingOptionalInputs(page: Page, businessId: string): Promise<void> {
+async function completeOnboardingBySkippingOptionalInputs(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Skip for now" }).click();
   await expect(page).toHaveURL("/onboarding/knowledge");
   await page.goBack();
@@ -144,21 +130,7 @@ async function completeOnboardingBySkippingOptionalInputs(page: Page, businessId
   await expect(page).toHaveURL("/onboarding/greeting");
   await page.getByLabel("Greeting").fill("Thanks for calling. How can we help?");
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page).toHaveURL("/onboarding/verify-phone");
-  const verificationAdvance = await page.evaluate(async (id) => {
-    for (const stage of ["verify_phone_code", "plan"]) {
-      const response = await fetch(`/api/onboarding/stage?businessId=${encodeURIComponent(id)}`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ to: stage }),
-      });
-      if (!response.ok) return { ok: false, body: await response.text() };
-    }
-    return { ok: true, body: "" };
-  }, businessId);
-  expect(verificationAdvance.ok, verificationAdvance.body).toBe(true);
-  await page.goto("/onboarding/plan");
+  await expect(page).toHaveURL("/onboarding/plan");
   await expect(page).toHaveURL("/onboarding/plan");
   await page.goto("/onboarding/plan?checkout=success");
   await expect(page.getByRole("heading", { name: "Choose your plan", exact: true })).toBeVisible();
@@ -184,8 +156,7 @@ test("operator authentication, workspace access, isolation, and revocation", asy
 
   await signUp(page, "owner-a", testInfo);
   const ownBusinessId = await createWorkspace(page, "owner-a");
-  await markPhoneVerified("owner-a", ownBusinessId);
-  await completeOnboardingBySkippingOptionalInputs(page, ownBusinessId);
+  await completeOnboardingBySkippingOptionalInputs(page);
   await page.goto("/");
   await expect(page.getByRole("button", { name: /Replacement E2E owner-a/ })).toBeVisible();
 

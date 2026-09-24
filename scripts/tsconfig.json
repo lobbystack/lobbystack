@@ -35,6 +35,7 @@
     "./replacement-knowledge-lifecycle-check.ts",
     "./replacement-appointment-policy-check.ts",
     "./replacement-onboarding-check.ts",
+    "./replacement-phone-onboarding-check.ts",
     "./replacement-catalog-check.ts",
     "./replacement-realtime-check.ts",
     "./replacement-webhook-check.ts",
