@@ -26,6 +26,12 @@ export type RealtimeResponseGate = {
   // The `event_id` of the create we posted and are still waiting on, so a
   // provider error can be matched to it rather than assumed to be about it.
   pendingCreateEventId: string | null;
+  // The id of the response the gate is tracking, so a `response.done` for some
+  // older response cannot release it.
+  activeResponseId: string | null;
+  // The response a forced terminal message replaced. Its `response.done` still
+  // arrives afterwards and must not release the message that replaced it.
+  supersededResponseId: string | null;
   lastConversationInputSeq: number | null;
   deferredAssistantResponse: DeferredRealtimeResponse | null;
 };
@@ -37,6 +43,8 @@ export function createRealtimeResponseGate(): RealtimeResponseGate {
     activeAssistantResponseStartedSeq: null,
     activeAssistantResponseConfirmed: false,
     pendingCreateEventId: null,
+    activeResponseId: null,
+    supersededResponseId: null,
     lastConversationInputSeq: null,
     deferredAssistantResponse: null,
   };
@@ -75,17 +83,22 @@ export function requestRealtimeResponse(
   gate.activeAssistantResponseStartedSeq = gate.sequence;
   gate.activeAssistantResponseConfirmed = false;
   gate.pendingCreateEventId = eventId ?? null;
+  gate.activeResponseId = null;
   gate.deferredAssistantResponse = null;
   return true;
 }
 
-export function markRealtimeResponseCreated(gate: RealtimeResponseGate): void {
+export function markRealtimeResponseCreated(
+  gate: RealtimeResponseGate,
+  responseId?: string,
+): void {
   // The server can also create a response on its own, after a voice-activity
   // turn the gate never saw a request for. One of those takes its place in the
   // order here, which is the earliest point the gate learns of it.
   gate.assistantResponseInFlight = true;
   gate.activeAssistantResponseConfirmed = true;
   gate.pendingCreateEventId = null;
+  gate.activeResponseId = responseId ?? null;
   if (gate.activeAssistantResponseStartedSeq === null) {
     gate.sequence += 1;
     gate.activeAssistantResponseStartedSeq = gate.sequence;
@@ -98,8 +111,27 @@ export function markRealtimeResponseCreated(gate: RealtimeResponseGate): void {
 // instructions always posts.
 export function takeDeferredRealtimeResponse(
   gate: RealtimeResponseGate,
-  eventId?: string,
+  options: { responseId?: string; eventId?: string } = {},
 ): { post: boolean; request: RealtimeResponseRequest } {
+  if (options.responseId !== undefined) {
+    // A terminal message posted with `force` supersedes a response that is
+    // still finishing. That response's `response.done` arrives afterwards and
+    // would otherwise free the gate while the terminal message is live.
+    if (options.responseId === gate.supersededResponseId) {
+      gate.supersededResponseId = null;
+      return { post: false, request: undefined };
+    }
+    // Likewise for any other response that is not the one being tracked. An
+    // unknown id when nothing is tracked still releases, so a missed
+    // `response.created` cannot strand the gate.
+    if (
+      gate.activeResponseId !== null &&
+      options.responseId !== gate.activeResponseId
+    ) {
+      return { post: false, request: undefined };
+    }
+  }
+
   const deferred = gate.deferredAssistantResponse;
   const startedSeq = gate.activeAssistantResponseStartedSeq;
   const inputSeq = gate.lastConversationInputSeq;
@@ -108,6 +140,7 @@ export function takeDeferredRealtimeResponse(
   gate.activeAssistantResponseStartedSeq = null;
   gate.activeAssistantResponseConfirmed = false;
   gate.pendingCreateEventId = null;
+  gate.activeResponseId = null;
   gate.deferredAssistantResponse = null;
 
   if (deferred === null) {
@@ -130,7 +163,7 @@ export function takeDeferredRealtimeResponse(
   gate.assistantResponseInFlight = true;
   gate.sequence += 1;
   gate.activeAssistantResponseStartedSeq = gate.sequence;
-  gate.pendingCreateEventId = eventId ?? null;
+  gate.pendingCreateEventId = options.eventId ?? null;
   return { post: true, request: deferred.request };
 }
 
@@ -160,16 +193,21 @@ export function releaseUnconfirmedRealtimeResponse(
   gate.assistantResponseInFlight = false;
   gate.activeAssistantResponseStartedSeq = null;
   gate.pendingCreateEventId = null;
+  gate.activeResponseId = null;
   gate.deferredAssistantResponse = null;
   return true;
 }
 
-// A call that is ending or transferring must not start another turn.
+// A call that is ending or transferring must not start another turn. Whatever
+// response was being tracked becomes superseded rather than forgotten, so its
+// late `response.done` can still be told apart from the one replacing it.
 export function resetRealtimeResponseGate(gate: RealtimeResponseGate): void {
+  gate.supersededResponseId = gate.activeResponseId ?? gate.supersededResponseId;
   gate.assistantResponseInFlight = false;
   gate.activeAssistantResponseStartedSeq = null;
   gate.activeAssistantResponseConfirmed = false;
   gate.pendingCreateEventId = null;
+  gate.activeResponseId = null;
   gate.lastConversationInputSeq = null;
   gate.deferredAssistantResponse = null;
 }

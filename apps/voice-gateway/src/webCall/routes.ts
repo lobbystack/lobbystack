@@ -1131,9 +1131,13 @@ function requestWebResponse(
 function flushDeferredWebResponse(
   socket: WebSocket,
   session: ActiveWebCall,
+  responseId?: string,
 ): void {
   const eventId = crypto.randomUUID();
-  const deferred = takeDeferredRealtimeResponse(session.responseGate, eventId);
+  const deferred = takeDeferredRealtimeResponse(session.responseGate, {
+    ...(responseId ? { responseId } : {}),
+    eventId,
+  });
   if (!deferred.post) {
     return;
   }
@@ -1485,7 +1489,7 @@ async function handleSidebandMessage(
   if (payload.type === "response.created") {
     // Server-side turn detection creates responses the gate never requested,
     // so the active response is confirmed here rather than at request time.
-    markRealtimeResponseCreated(session.responseGate);
+    markRealtimeResponseCreated(session.responseGate, payload.response?.id);
     trackWebResponseCreated(session, payload.response?.id);
     return;
   }
@@ -1604,7 +1608,7 @@ async function handleSidebandMessage(
     }
     // Only once this response's latency has been recorded and its timestamps
     // cleared, so a deferred follow-up starts its own turn measurement.
-    flushDeferredWebResponse(socket, session);
+    flushDeferredWebResponse(socket, session, response?.id);
 
     if (
       session.pendingEndCall &&

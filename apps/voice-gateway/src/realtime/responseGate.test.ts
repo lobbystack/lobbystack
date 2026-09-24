@@ -266,6 +266,84 @@ describe("resetRealtimeResponseGate", () => {
   });
 });
 
+describe("takeDeferredRealtimeResponse response correlation", () => {
+  it("ignores a response.done for a response the gate is not tracking", () => {
+    const gate = createRealtimeResponseGate();
+
+    // The response that produced the tool call is confirmed and still running.
+    requestRealtimeResponse(gate, undefined, "evt_turn");
+    markRealtimeResponseCreated(gate, "resp_turn");
+
+    // A tool asked to end the call, so the terminal message takes over.
+    resetRealtimeResponseGate(gate);
+    requestRealtimeResponse(gate, { instructions: "goodbye" }, "evt_final");
+
+    // The superseded response finishes afterwards. Releasing on it would free
+    // the gate while the terminal message is still in flight.
+    expect(
+      takeDeferredRealtimeResponse(gate, { responseId: "resp_turn" }),
+    ).toEqual({ post: false, request: undefined });
+    expect(gate.assistantResponseInFlight).toBe(true);
+    expect(requestRealtimeResponse(gate, undefined)).toBe(false);
+  });
+
+  it("releases on the response.done that matches the tracked response", () => {
+    const gate = createRealtimeResponseGate();
+    requestRealtimeResponse(gate, undefined, "evt_turn");
+    markRealtimeResponseCreated(gate, "resp_turn");
+
+    expect(
+      takeDeferredRealtimeResponse(gate, { responseId: "resp_turn" }),
+    ).toEqual({ post: false, request: undefined });
+    expect(gate.assistantResponseInFlight).toBe(false);
+  });
+
+  it("releases on the terminal message's own done after the superseded one", () => {
+    const gate = createRealtimeResponseGate();
+    requestRealtimeResponse(gate, undefined, "evt_turn");
+    markRealtimeResponseCreated(gate, "resp_turn");
+    resetRealtimeResponseGate(gate);
+    requestRealtimeResponse(gate, { instructions: "goodbye" }, "evt_final");
+    markRealtimeResponseCreated(gate, "resp_final");
+
+    // The superseded response finishes after the terminal one was created.
+    expect(
+      takeDeferredRealtimeResponse(gate, { responseId: "resp_turn" }),
+    ).toEqual({ post: false, request: undefined });
+    expect(gate.assistantResponseInFlight).toBe(true);
+
+    // The terminal message's own done then releases the gate.
+    expect(
+      takeDeferredRealtimeResponse(gate, { responseId: "resp_final" }),
+    ).toEqual({ post: false, request: undefined });
+    expect(gate.assistantResponseInFlight).toBe(false);
+  });
+
+  it("releases on an unknown id when it is tracking no response", () => {
+    const gate = createRealtimeResponseGate();
+    // The greeting create was never acknowledged — a missed `response.created`
+    // must not strand the gate when that response finishes.
+    requestRealtimeResponse(gate, undefined, "evt_greeting");
+
+    expect(
+      takeDeferredRealtimeResponse(gate, { responseId: "resp_greeting" }),
+    ).toEqual({ post: false, request: undefined });
+    expect(gate.assistantResponseInFlight).toBe(false);
+  });
+
+  it("still releases when a response.done carries no id to correlate", () => {
+    const gate = createRealtimeResponseGate();
+    requestRealtimeResponse(gate, undefined, "evt_turn");
+    markRealtimeResponseCreated(gate, "resp_turn");
+
+    expect(takeDeferredRealtimeResponse(gate, {})).toEqual({
+      post: false,
+      request: undefined,
+    });
+    expect(gate.assistantResponseInFlight).toBe(false);
+  });
+});
+
 describe("isBenignRealtimeClientError", () => {
   it("recognizes conversation state conflicts the call recovers from", () => {
     expect(

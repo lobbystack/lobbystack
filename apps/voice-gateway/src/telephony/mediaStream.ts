@@ -1170,9 +1170,13 @@ function flushDeferredAssistantResponse(
   server: FastifyInstance,
   socket: WebSocket,
   session: ActiveVoiceSession,
+  responseId?: string,
 ): void {
   const eventId = crypto.randomUUID();
-  const deferred = takeDeferredRealtimeResponse(session.responseGate, eventId);
+  const deferred = takeDeferredRealtimeResponse(session.responseGate, {
+    ...(responseId ? { responseId } : {}),
+    eventId,
+  });
   if (!deferred.post) {
     return;
   }
@@ -2937,7 +2941,7 @@ export function handleOpenAiMessage(
     case "response.created": {
       // Server-side turn detection creates responses the gate never requested,
       // so the active response is confirmed here rather than at request time.
-      markRealtimeResponseCreated(session.responseGate);
+      markRealtimeResponseCreated(session.responseGate, payload.response?.id);
       return;
     }
     case "response.audio.delta":
@@ -3290,7 +3294,12 @@ export function handleOpenAiMessage(
       session.assistantFirstOutputAtMs = null;
       // Only once this response's latency has been recorded and its timestamps
       // cleared, so a deferred follow-up starts its own turn measurement.
-      flushDeferredAssistantResponse(server, openAiSocket, session);
+      flushDeferredAssistantResponse(
+        server,
+        openAiSocket,
+        session,
+        payload.response?.id,
+      );
 
       if (session.openingGreetingActive) {
         session.openingGreetingResponseDone = true;
