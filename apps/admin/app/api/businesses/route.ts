@@ -19,10 +19,13 @@ export async function POST(request: Request) {
   try {
     const session = await requireApiSession(request);
     const body = await readJson(request) as { name?: string; slug?: string; timezone?: string; businessType?: string };
-    if (!body.name || !body.slug || !body.timezone || !body.businessType) {
-      return NextResponse.json({ error: "name, slug, timezone, and businessType are required." }, { status: 400 });
+    if (!body.name || !body.timezone || !body.businessType) {
+      return NextResponse.json({ error: "name, timezone, and businessType are required." }, { status: 400 });
     }
-    return NextResponse.json(await createBusiness(createDomainContext(), { userId: session.user.id, name: body.name, slug: body.slug, timezone: body.timezone, businessType: body.businessType }), { status: 201 });
+    if (body.slug !== undefined && (typeof body.slug !== "string" || !body.slug.trim())) {
+      return NextResponse.json({ error: "slug must be a nonempty string when supplied." }, { status: 400 });
+    }
+    return NextResponse.json(await createBusiness(createDomainContext(), { userId: session.user.id, name: body.name, ...(body.slug !== undefined ? { slug: body.slug } : {}), timezone: body.timezone, businessType: body.businessType }), { status: 201 });
   } catch (error) {
     return asApiResponse(error);
   }

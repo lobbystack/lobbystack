@@ -14,7 +14,7 @@ export type BusinessRole = "business_owner" | "business_admin" | "scheduler" | "
 export type CreateBusinessInput = {
   userId: string;
   name: string;
-  slug: string;
+  slug?: string;
   timezone: string;
   businessType: string;
   deploymentMode?: string;
@@ -23,7 +23,7 @@ export type CreateBusinessInput = {
 function cleanSlug(slug: string): string {
   const result = slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   if (result.length < 2 || result.length > 120) {
-    throw new Error("Business slug must be between 2 and 120 characters.");
+    throw Object.assign(new Error("Business slug must be between 2 and 120 characters."), { status: 400 });
   }
   return result;
 }
@@ -33,20 +33,29 @@ export async function createBusiness(
   input: CreateBusinessInput,
 ): Promise<{ businessId: string; membershipId: string }> {
   const businessId = randomUUID();
+  const generatedSlug = input.name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 96).replace(/-$/, "") || "business";
+  const baseSlug = input.slug === undefined ? generatedSlug : cleanSlug(input.slug);
   return await withBusinessTransaction(context.db, {
     userId: input.userId,
     businessId,
     actorType: "system",
   }, async (tx) => {
-    const [business] = await tx.insert(businesses).values({
-      id: businessId,
-      name: input.name.trim(),
-      slug: cleanSlug(input.slug),
-      timezone: input.timezone,
-      businessType: input.businessType,
-      deploymentMode: input.deploymentMode ?? "cloud",
-      onboardingStage: "website",
-    }).returning({ id: businesses.id });
+    let business: { id: string } | undefined;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const insert = tx.insert(businesses).values({
+        id: businessId,
+        name: input.name.trim(),
+        slug: attempt === 0 ? baseSlug : `${baseSlug}-${randomBytes(6).toString("hex")}`,
+        timezone: input.timezone,
+        businessType: input.businessType,
+        deploymentMode: input.deploymentMode ?? "cloud",
+        onboardingStage: "website",
+      });
+      // Only generated slugs are replaceable. Target this constraint explicitly
+      // so unrelated insert failures still roll back the transaction.
+      [business] = await (input.slug === undefined ? insert.onConflictDoNothing({ target: businesses.slug }) : insert).returning({ id: businesses.id });
+      if (business) break;
+    }
     if (!business) {
       throw new Error("Business could not be created.");
     }
