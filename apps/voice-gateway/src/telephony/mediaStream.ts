@@ -1135,10 +1135,11 @@ function postAssistantResponse(
   request?: Record<string, unknown>,
   options: { force?: boolean } = {},
 ): void {
+  const nowMs = Date.now();
   if (options.force) {
     resetRealtimeResponseGate(session.responseGate);
-    requestRealtimeResponse(session.responseGate, request);
-  } else if (!requestRealtimeResponse(session.responseGate, request)) {
+    requestRealtimeResponse(session.responseGate, request, nowMs);
+  } else if (!requestRealtimeResponse(session.responseGate, request, nowMs)) {
     server.log.debug(
       {
         callId: session.callId,
@@ -1150,7 +1151,7 @@ function postAssistantResponse(
     return;
   }
 
-  session.assistantResponseRequestedAtMs = Date.now();
+  session.assistantResponseRequestedAtMs = nowMs;
   session.assistantFirstOutputAtMs = null;
   postRealtimeEvent(socket, {
     type: "response.create",
@@ -1166,7 +1167,7 @@ function flushDeferredAssistantResponse(
   socket: WebSocket,
   session: ActiveVoiceSession,
 ): void {
-  const deferred = takeDeferredRealtimeResponse(session.responseGate);
+  const deferred = takeDeferredRealtimeResponse(session.responseGate, Date.now());
   if (!deferred.post) {
     return;
   }
@@ -3163,7 +3164,6 @@ export function handleOpenAiMessage(
       return;
     }
     case "response.done": {
-      flushDeferredAssistantResponse(server, openAiSocket, session);
       const runtimeConfig = loadVoiceGatewayEnv(process.env);
       const completedAtMs = Date.now();
       const latencyMs =
@@ -3282,6 +3282,9 @@ export function handleOpenAiMessage(
       }
       session.assistantResponseRequestedAtMs = null;
       session.assistantFirstOutputAtMs = null;
+      // Only once this response's latency has been recorded and its timestamps
+      // cleared, so a deferred follow-up starts its own turn measurement.
+      flushDeferredAssistantResponse(server, openAiSocket, session);
 
       if (session.openingGreetingActive) {
         session.openingGreetingResponseDone = true;

@@ -15,21 +15,25 @@ describe("requestRealtimeResponse", () => {
   it("posts the first request and defers the ones racing behind it", () => {
     const gate = createRealtimeResponseGate();
 
-    expect(requestRealtimeResponse(gate, undefined)).toBe(true);
-    expect(requestRealtimeResponse(gate, { instructions: "second" })).toBe(false);
-    expect(requestRealtimeResponse(gate, { instructions: "third" })).toBe(false);
+    expect(requestRealtimeResponse(gate, undefined, 1_000)).toBe(true);
+    expect(requestRealtimeResponse(gate, { instructions: "second" }, 1_010)).toBe(
+      false,
+    );
+    expect(requestRealtimeResponse(gate, { instructions: "third" }, 1_020)).toBe(
+      false,
+    );
   });
 
   it("coalesces every deferred request into the most recent one", () => {
     const gate = createRealtimeResponseGate();
 
-    requestRealtimeResponse(gate, undefined);
-    markRealtimeResponseCreated(gate, 1_000);
-    requestRealtimeResponse(gate, { instructions: "second" });
-    requestRealtimeResponse(gate, { instructions: "third" });
+    requestRealtimeResponse(gate, undefined, 1_000);
+    markRealtimeResponseCreated(gate, 1_100);
+    requestRealtimeResponse(gate, { instructions: "second" }, 1_200);
+    requestRealtimeResponse(gate, { instructions: "third" }, 1_300);
     markRealtimeConversationInput(gate, 2_000);
 
-    expect(takeDeferredRealtimeResponse(gate)).toEqual({
+    expect(takeDeferredRealtimeResponse(gate, 3_000)).toEqual({
       post: true,
       request: { instructions: "third" },
     });
@@ -39,83 +43,121 @@ describe("requestRealtimeResponse", () => {
 describe("takeDeferredRealtimeResponse", () => {
   it("releases the gate for the next turn when nothing was deferred", () => {
     const gate = createRealtimeResponseGate();
-    requestRealtimeResponse(gate, undefined);
-    markRealtimeResponseCreated(gate, 1_000);
+    requestRealtimeResponse(gate, undefined, 1_000);
+    markRealtimeResponseCreated(gate, 1_100);
 
-    expect(takeDeferredRealtimeResponse(gate)).toEqual({
+    expect(takeDeferredRealtimeResponse(gate, 2_000)).toEqual({
       post: false,
       request: undefined,
     });
     expect(gate.assistantResponseInFlight).toBe(false);
-    expect(requestRealtimeResponse(gate, undefined)).toBe(true);
+    expect(requestRealtimeResponse(gate, undefined, 2_100)).toBe(true);
+  });
+
+  it("answers a deferred request that carries no options of its own", () => {
+    const gate = createRealtimeResponseGate();
+
+    // Two successful tool calls in one turn: neither asks for instructions, so
+    // a deferred parameterless request must stay distinguishable from none.
+    markRealtimeConversationInput(gate, 1_000);
+    requestRealtimeResponse(gate, undefined, 1_010);
+    markRealtimeResponseCreated(gate, 1_100);
+    markRealtimeConversationInput(gate, 1_200);
+    requestRealtimeResponse(gate, undefined, 1_210);
+
+    expect(takeDeferredRealtimeResponse(gate, 2_000)).toEqual({
+      post: true,
+      request: undefined,
+    });
   });
 
   it("drops a deferred request the finished response already answered", () => {
     const gate = createRealtimeResponseGate();
 
-    // Both tool outputs land before the response is created, so the model saw
+    // Both tool outputs land before the response is requested, so the model saw
     // them and the second request has nothing left to answer.
     markRealtimeConversationInput(gate, 1_000);
-    requestRealtimeResponse(gate, undefined);
     markRealtimeConversationInput(gate, 1_050);
-    requestRealtimeResponse(gate, { instructions: "recover" });
-    markRealtimeResponseCreated(gate, 2_000);
+    requestRealtimeResponse(gate, undefined, 1_100);
+    requestRealtimeResponse(gate, { instructions: "recover" }, 1_110);
+    markRealtimeResponseCreated(gate, 1_200);
 
-    expect(takeDeferredRealtimeResponse(gate)).toEqual({
+    expect(takeDeferredRealtimeResponse(gate, 2_000)).toEqual({
       post: false,
       request: undefined,
     });
   });
 
-  it("answers input that landed after the finished response was created", () => {
+  it("answers input that landed after the request, even when the ack came later", () => {
     const gate = createRealtimeResponseGate();
 
     markRealtimeConversationInput(gate, 1_000);
-    requestRealtimeResponse(gate, undefined);
+    requestRealtimeResponse(gate, undefined, 1_010);
+    // The slower tool finished after the create was sent but before the
+    // provider acknowledged it, so ordering by the ack would wrongly drop it.
+    markRealtimeConversationInput(gate, 1_050);
+    requestRealtimeResponse(gate, { instructions: "recover" }, 1_060);
     markRealtimeResponseCreated(gate, 1_500);
-    // The slower tool finished after the response was already under way.
-    markRealtimeConversationInput(gate, 2_000);
-    requestRealtimeResponse(gate, { instructions: "recover" });
 
-    const deferred = takeDeferredRealtimeResponse(gate);
+    const deferred = takeDeferredRealtimeResponse(gate, 2_000);
     expect(deferred).toEqual({ post: true, request: { instructions: "recover" } });
     // The follow-up is itself an active response until it completes.
     expect(gate.assistantResponseInFlight).toBe(true);
-    expect(requestRealtimeResponse(gate, undefined)).toBe(false);
+    expect(requestRealtimeResponse(gate, undefined, 2_100)).toBe(false);
   });
 
   it("answers a deferred request when the response was never confirmed", () => {
     const gate = createRealtimeResponseGate();
 
-    requestRealtimeResponse(gate, undefined);
-    markRealtimeConversationInput(gate, 1_000);
-    requestRealtimeResponse(gate, { instructions: "recover" });
+    requestRealtimeResponse(gate, undefined, 1_000);
+    markRealtimeConversationInput(gate, 1_500);
+    requestRealtimeResponse(gate, { instructions: "recover" }, 1_510);
 
-    expect(takeDeferredRealtimeResponse(gate)).toEqual({
+    expect(takeDeferredRealtimeResponse(gate, 2_000)).toEqual({
       post: true,
       request: { instructions: "recover" },
     });
   });
 });
 
+describe("markRealtimeResponseCreated", () => {
+  it("keeps the request time when the gate asked for the response", () => {
+    const gate = createRealtimeResponseGate();
+    requestRealtimeResponse(gate, undefined, 1_000);
+    markRealtimeResponseCreated(gate, 1_900);
+
+    expect(gate.activeAssistantResponseStartedAtMs).toBe(1_000);
+  });
+
+  it("stamps a server-started response with its acknowledgement", () => {
+    const gate = createRealtimeResponseGate();
+    markRealtimeResponseCreated(gate, 1_900);
+
+    expect(gate.assistantResponseInFlight).toBe(true);
+    expect(gate.activeAssistantResponseStartedAtMs).toBe(1_900);
+  });
+});
+
 describe("releaseUnconfirmedRealtimeResponse", () => {
   it("frees the gate when the request was rejected before it was created", () => {
     const gate = createRealtimeResponseGate();
-    requestRealtimeResponse(gate, { instructions: "bad" });
+    requestRealtimeResponse(gate, { instructions: "bad" }, 1_000);
 
     expect(releaseUnconfirmedRealtimeResponse(gate)).toBe(true);
-    expect(requestRealtimeResponse(gate, undefined)).toBe(true);
+    expect(requestRealtimeResponse(gate, undefined, 1_100)).toBe(true);
   });
 
   it("keeps the gate closed while a confirmed response is still running", () => {
     const gate = createRealtimeResponseGate();
-    requestRealtimeResponse(gate, undefined);
-    markRealtimeResponseCreated(gate, 1_000);
-    requestRealtimeResponse(gate, { instructions: "second" });
+    requestRealtimeResponse(gate, undefined, 1_000);
+    markRealtimeResponseCreated(gate, 1_100);
+    requestRealtimeResponse(gate, { instructions: "second" }, 1_200);
 
     expect(releaseUnconfirmedRealtimeResponse(gate)).toBe(false);
     expect(gate.assistantResponseInFlight).toBe(true);
-    expect(gate.deferredAssistantResponse).toEqual({ instructions: "second" });
+    expect(gate.deferredAssistantResponse).toEqual({
+      request: { instructions: "second" },
+    });
   });
 
   it("does nothing when no response is in flight", () => {
@@ -128,15 +170,15 @@ describe("releaseUnconfirmedRealtimeResponse", () => {
 describe("resetRealtimeResponseGate", () => {
   it("discards a deferred follow-up so it cannot outlive the call", () => {
     const gate = createRealtimeResponseGate();
-    requestRealtimeResponse(gate, undefined);
-    markRealtimeResponseCreated(gate, 1_000);
+    requestRealtimeResponse(gate, undefined, 1_000);
+    markRealtimeResponseCreated(gate, 1_100);
     markRealtimeConversationInput(gate, 2_000);
-    requestRealtimeResponse(gate, { instructions: "recover" });
+    requestRealtimeResponse(gate, { instructions: "recover" }, 2_010);
 
     resetRealtimeResponseGate(gate);
 
     expect(gate).toEqual(createRealtimeResponseGate());
-    expect(takeDeferredRealtimeResponse(gate)).toEqual({
+    expect(takeDeferredRealtimeResponse(gate, 3_000)).toEqual({
       post: false,
       request: undefined,
     });

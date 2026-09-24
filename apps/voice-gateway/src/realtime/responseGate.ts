@@ -7,17 +7,27 @@
 
 export type RealtimeResponseRequest = Record<string, unknown> | undefined;
 
+// Wrapping the request keeps "nothing deferred" (null) distinct from "a
+// deferred request that carries no options", which is what an ordinary tool
+// completion asks for.
+type DeferredRealtimeResponse = { request: RealtimeResponseRequest };
+
 export type RealtimeResponseGate = {
   assistantResponseInFlight: boolean;
-  activeAssistantResponseCreatedAtMs: number | null;
+  // When the active response was asked for, not when the provider acknowledged
+  // it. The provider orders the conversation by what it received, so the
+  // request is what conversation input must be compared against.
+  activeAssistantResponseStartedAtMs: number | null;
+  activeAssistantResponseConfirmed: boolean;
   lastConversationInputAtMs: number | null;
-  deferredAssistantResponse: RealtimeResponseRequest | null;
+  deferredAssistantResponse: DeferredRealtimeResponse | null;
 };
 
 export function createRealtimeResponseGate(): RealtimeResponseGate {
   return {
     assistantResponseInFlight: false,
-    activeAssistantResponseCreatedAtMs: null,
+    activeAssistantResponseStartedAtMs: null,
+    activeAssistantResponseConfirmed: false,
     lastConversationInputAtMs: null,
     deferredAssistantResponse: null,
   };
@@ -38,13 +48,16 @@ export function markRealtimeConversationInput(
 export function requestRealtimeResponse(
   gate: RealtimeResponseGate,
   request: RealtimeResponseRequest,
+  nowMs: number,
 ): boolean {
   if (gate.assistantResponseInFlight) {
-    gate.deferredAssistantResponse = request ?? null;
+    gate.deferredAssistantResponse = { request };
     return false;
   }
 
   gate.assistantResponseInFlight = true;
+  gate.activeAssistantResponseStartedAtMs = nowMs;
+  gate.activeAssistantResponseConfirmed = false;
   gate.deferredAssistantResponse = null;
   return true;
 }
@@ -54,40 +67,46 @@ export function markRealtimeResponseCreated(
   nowMs: number,
 ): void {
   // The server can also create a response on its own, after a voice-activity
-  // turn the gate never saw a request for.
+  // turn the gate never saw a request for. There is no send time to use for
+  // one of those, so its acknowledgement is the earliest defensible stamp.
   gate.assistantResponseInFlight = true;
-  gate.activeAssistantResponseCreatedAtMs = nowMs;
+  gate.activeAssistantResponseConfirmed = true;
+  if (gate.activeAssistantResponseStartedAtMs === null) {
+    gate.activeAssistantResponseStartedAtMs = nowMs;
+  }
 }
 
 // Clears the active response and returns the deferred request to post, if the
-// finished response predates conversation input it could not have answered.
-// Returning `{ post: false }` drops the deferred request as already covered.
-export function takeDeferredRealtimeResponse(gate: RealtimeResponseGate): {
-  post: boolean;
-  request: RealtimeResponseRequest;
-} {
+// finished response was asked for before conversation input it could not have
+// answered. Returning `{ post: false }` drops the request as already covered.
+export function takeDeferredRealtimeResponse(
+  gate: RealtimeResponseGate,
+  nowMs: number,
+): { post: boolean; request: RealtimeResponseRequest } {
   const deferred = gate.deferredAssistantResponse;
-  const createdAtMs = gate.activeAssistantResponseCreatedAtMs;
+  const startedAtMs = gate.activeAssistantResponseStartedAtMs;
   const inputAtMs = gate.lastConversationInputAtMs;
 
   gate.assistantResponseInFlight = false;
-  gate.activeAssistantResponseCreatedAtMs = null;
+  gate.activeAssistantResponseStartedAtMs = null;
+  gate.activeAssistantResponseConfirmed = false;
   gate.deferredAssistantResponse = null;
 
   if (deferred === null) {
     return { post: false, request: undefined };
   }
 
-  // Without a creation timestamp there is no evidence the active response saw
-  // the newer input, so answering it is the safer side of the trade.
+  // Without a start time there is no evidence the active response saw the
+  // newer input, so answering it is the safer side of the trade.
   const answeredNewerInput =
-    createdAtMs !== null && inputAtMs !== null && inputAtMs <= createdAtMs;
+    startedAtMs !== null && inputAtMs !== null && inputAtMs <= startedAtMs;
   if (answeredNewerInput) {
     return { post: false, request: undefined };
   }
 
   gate.assistantResponseInFlight = true;
-  return { post: true, request: deferred };
+  gate.activeAssistantResponseStartedAtMs = nowMs;
+  return { post: true, request: deferred.request };
 }
 
 // The gate marks a response in flight the moment it is requested, before the
@@ -101,11 +120,12 @@ export function releaseUnconfirmedRealtimeResponse(
   if (!gate.assistantResponseInFlight) {
     return false;
   }
-  if (gate.activeAssistantResponseCreatedAtMs !== null) {
+  if (gate.activeAssistantResponseConfirmed) {
     return false;
   }
 
   gate.assistantResponseInFlight = false;
+  gate.activeAssistantResponseStartedAtMs = null;
   gate.deferredAssistantResponse = null;
   return true;
 }
@@ -113,7 +133,8 @@ export function releaseUnconfirmedRealtimeResponse(
 // A call that is ending or transferring must not start another turn.
 export function resetRealtimeResponseGate(gate: RealtimeResponseGate): void {
   gate.assistantResponseInFlight = false;
-  gate.activeAssistantResponseCreatedAtMs = null;
+  gate.activeAssistantResponseStartedAtMs = null;
+  gate.activeAssistantResponseConfirmed = false;
   gate.lastConversationInputAtMs = null;
   gate.deferredAssistantResponse = null;
 }

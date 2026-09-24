@@ -109,6 +109,7 @@ export const OPERATIONS_EVENT_NAMES = [
   "ops.voice.snapshot_cache_hit",
   "ops.voice.snapshot_cache_miss",
   "ops.voice.openai_realtime_error",
+  "ops.voice.openai_realtime_state_conflict",
   "ops.voice.turn_completed",
   "ops.voice.turn_slow",
   "ops.voice.call_ended_by_ai",
@@ -561,6 +562,7 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "ops.voice.snapshot_cache_hit": ["businessId", "deploymentMode"],
   "ops.voice.snapshot_cache_miss": ["businessId", "deploymentMode"],
   "ops.voice.openai_realtime_error": ["deploymentMode", "provider"],
+  "ops.voice.openai_realtime_state_conflict": ["deploymentMode", "provider"],
   "ops.voice.turn_completed": [
     "businessId",
     "deploymentMode",

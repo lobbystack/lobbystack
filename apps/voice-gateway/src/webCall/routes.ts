@@ -1104,14 +1104,15 @@ function requestWebResponse(
   response?: Record<string, unknown>,
   options: { force?: boolean } = {},
 ): void {
+  const nowMs = Date.now();
   if (options.force) {
     resetRealtimeResponseGate(session.responseGate);
-    requestRealtimeResponse(session.responseGate, response);
-  } else if (!requestRealtimeResponse(session.responseGate, response)) {
+    requestRealtimeResponse(session.responseGate, response, nowMs);
+  } else if (!requestRealtimeResponse(session.responseGate, response, nowMs)) {
     return;
   }
 
-  session.pendingAssistantResponseRequestAtMs = Date.now();
+  session.pendingAssistantResponseRequestAtMs = nowMs;
   postRealtimeEvent(socket, {
     type: "response.create",
     ...(response ? { response } : {}),
@@ -1125,7 +1126,7 @@ function flushDeferredWebResponse(
   socket: WebSocket,
   session: ActiveWebCall,
 ): void {
-  const deferred = takeDeferredRealtimeResponse(session.responseGate);
+  const deferred = takeDeferredRealtimeResponse(session.responseGate, Date.now());
   if (!deferred.post) {
     return;
   }
@@ -1511,7 +1512,6 @@ async function handleSidebandMessage(
   }
 
   if (payload.type === "response.done") {
-    flushDeferredWebResponse(socket, session);
     const response = payload.response;
     const model = response?.model ?? server.runtimeConfig.OPENAI_REALTIME_MODEL;
     const responseStartedAtMs = response?.id
@@ -1594,6 +1594,9 @@ async function handleSidebandMessage(
     } else {
       session.pendingAssistantResponseRequestAtMs = null;
     }
+    // Only once this response's latency has been recorded and its timestamps
+    // cleared, so a deferred follow-up starts its own turn measurement.
+    flushDeferredWebResponse(socket, session);
 
     if (
       session.pendingEndCall &&
