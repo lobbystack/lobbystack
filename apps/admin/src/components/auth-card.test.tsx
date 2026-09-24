@@ -93,10 +93,11 @@ describe("original login and signup behavior", () => {
     expect(document.activeElement).toBe(code);
     expect(fetch).toHaveBeenNthCalledWith(2, "/api/auth/email-otp/send-verification-otp", expect.objectContaining({ body: JSON.stringify({ email: "owner@example.invalid", type: "email-verification" }) }));
   });
-  it("requires a fresh challenge before resending a verification code", async () => {
+  it("only requests another challenge when the server rejects the flow proof", async () => {
     vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "fixture-site-key");
     vi.mocked(fetch)
       .mockResolvedValueOnce(Response.json({ token: null, user: { id: "operator" } }))
+      .mockResolvedValueOnce(Response.json({ code: "CHALLENGE_FAILED" }, { status: 400 }))
       .mockResolvedValueOnce(Response.json({ success: true }));
     render(<AuthCard mode="signup" />);
     await userEvent.type(screen.getByLabelText("signup.email"), "owner@example.invalid");
@@ -104,11 +105,15 @@ describe("original login and signup behavior", () => {
     await userEvent.click(screen.getByRole("button", { name: "Solve challenge" }));
     await userEvent.click(screen.getByRole("button", { name: "signup.submit" }));
     const resend = await screen.findByRole("button", { name: "verifyEmail.resend" });
+    expect((resend as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByRole("button", { name: "Solve challenge" })).toBeNull();
+    await userEvent.click(resend);
+    await screen.findByText("errors.turnstileRequired");
     expect((resend as HTMLButtonElement).disabled).toBe(true);
     await userEvent.click(screen.getByRole("button", { name: "Solve challenge" }));
     expect((resend as HTMLButtonElement).disabled).toBe(false);
     await userEvent.click(resend);
-    expect(fetch).toHaveBeenNthCalledWith(2, "/api/auth/email-otp/send-verification-otp", expect.objectContaining({ body: JSON.stringify({ email: "owner@example.invalid", type: "email-verification", turnstileToken: "fixture-challenge-token" }) }));
+    expect(fetch).toHaveBeenNthCalledWith(3, "/api/auth/email-otp/send-verification-otp", expect.objectContaining({ body: JSON.stringify({ email: "owner@example.invalid", type: "email-verification", turnstileToken: "fixture-challenge-token" }) }));
   });
   it.each(["login", "signup"] as const)("validates %s email on blur and clears it while editing", async mode => {
     render(<AuthCard mode={mode} />);

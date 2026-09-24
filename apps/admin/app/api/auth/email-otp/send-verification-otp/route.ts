@@ -4,6 +4,7 @@ import { EmailVerificationRateLimitError } from "@/lib/email-verification-policy
 import { issueEmailVerificationCode } from "@/lib/auth";
 import { trustedClientIp } from "@/lib/trusted-client-ip";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { attachVerificationFlow, hasVerificationFlow } from "@/lib/verification-flow";
 
 export const runtime = "nodejs";
 
@@ -29,15 +30,18 @@ export async function POST(request: Request): Promise<Response> {
   // Shared trusted-IP derivation: only an explicitly configured, ingress-
   // controlled header is trusted, and an unset opt-in yields no remote IP.
   const remoteIp = trustedClientIp(request);
+  const hasProof = hasVerificationFlow(request, email);
   try {
-    await verifyTurnstile({ token: parsed.data.turnstileToken, ...(remoteIp ? { remoteIp } : {}) });
+    if (!hasProof) await verifyTurnstile({ token: parsed.data.turnstileToken, ...(remoteIp ? { remoteIp } : {}) });
   } catch {
     return Response.json({ code: "CHALLENGE_FAILED", message: "Verification challenge failed." }, { status: 400 });
   }
 
   try {
     await issueEmailVerificationCode(email, remoteIp);
-    return successResponse();
+    const response = successResponse();
+    if (!hasProof) attachVerificationFlow(response, email);
+    return response;
   } catch (error) {
     if (error instanceof EmailVerificationRateLimitError) {
       return Response.json(

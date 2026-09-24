@@ -47,6 +47,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendStatus, setResendStatus] = useState<string | null>(null);
   const [resendTurnstileToken, setResendTurnstileToken] = useState<string | null>(null);
+  const [resendChallengeRequired, setResendChallengeRequired] = useState(false);
   const [resendTurnstileResetKey, setResendTurnstileResetKey] = useState(0);
   const [hasBlurredEmail, setHasBlurredEmail] = useState(false);
   const [hasFocusedPassword, setHasFocusedPassword] = useState(false);
@@ -125,6 +126,10 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
     });
     if (!response.ok) {
       const failure = await response.json().catch(() => null) as { code?: string } | null;
+      if (failure?.code === "CHALLENGE_FAILED") {
+        setResendChallengeRequired(true);
+        throw new Error(t("errors.turnstileRequired"));
+      }
       throw new Error(t(failure?.code === "RATE_LIMITED" ? "errors.verificationCodeRateLimited" : "errors.verificationCodeRequestFailed"));
     }
   }
@@ -166,7 +171,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
 
   async function resendVerificationCode() {
     if (resendLoading || verificationLoading) return;
-    if (turnstileSiteKey && !resendTurnstileToken) {
+    if (resendChallengeRequired && turnstileSiteKey && !resendTurnstileToken) {
       setVerificationError(t("errors.turnstileRequired"));
       return;
     }
@@ -176,6 +181,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
     setResendLoading(true);
     try {
       await requestVerificationCode(resendTurnstileToken);
+      setResendChallengeRequired(false);
       setResendStatus(t("verifyEmail.codeSent"));
       document.getElementById("verification-code")?.focus();
     } catch (cause) {
@@ -222,8 +228,8 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
             {verificationError ? <FieldError>{verificationError}</FieldError> : null}
             {resendStatus ? <p className="text-sm text-muted-foreground" role="status">{resendStatus}</p> : null}
             <Button className="mt-2 h-11 w-full" disabled={verificationCode.length !== 6 || resendLoading} loading={verificationLoading} loadingLabel={t("verifyEmail.verifying")} type="submit">{t("verifyEmail.verify")}</Button>
-            {turnstileSiteKey ? <Turnstile key={resendTurnstileResetKey} onError={() => { setResendTurnstileToken(null); setVerificationError(t("errors.turnstileFailed")); }} onTokenChange={setResendTurnstileToken} siteKey={turnstileSiteKey} /> : null}
-            <Button className="h-11 w-full" disabled={verificationLoading || Boolean(turnstileSiteKey && !resendTurnstileToken)} loading={resendLoading} loadingLabel={t("verifyEmail.resending")} onClick={() => void resendVerificationCode()} type="button" variant="outline">{t("verifyEmail.resend")}</Button>
+            {resendChallengeRequired && turnstileSiteKey ? <Turnstile key={resendTurnstileResetKey} onError={() => { setResendTurnstileToken(null); setVerificationError(t("errors.turnstileFailed")); }} onTokenChange={setResendTurnstileToken} siteKey={turnstileSiteKey} /> : null}
+            <Button className="h-11 w-full" disabled={verificationLoading || Boolean(resendChallengeRequired && turnstileSiteKey && !resendTurnstileToken)} loading={resendLoading} loadingLabel={t("verifyEmail.resending")} onClick={() => void resendVerificationCode()} type="button" variant="outline">{t("verifyEmail.resend")}</Button>
           </FieldGroup>
         </form>
         {!login ? <p className="text-center text-sm text-muted-foreground">{t("verifyEmail.existingAccountHelp")} <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={authPath("/login")}>{t("signup.signIn")}</Link> {t("verifyEmail.or")} <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={localizePublicPath("/forgot-password", authLocale)}>{t("verifyEmail.resetPassword")}</Link>.</p> : null}
