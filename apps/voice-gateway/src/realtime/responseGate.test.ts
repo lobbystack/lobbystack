@@ -20,6 +20,38 @@ describe("requestRealtimeResponse", () => {
     expect(requestRealtimeResponse(gate, { instructions: "third" })).toBe(false);
   });
 
+  it("keeps deferred instructions when a bare request coalesces behind them", () => {
+    const gate = createRealtimeResponseGate();
+
+    requestRealtimeResponse(gate, undefined);
+    markRealtimeResponseCreated(gate);
+    // A tool failure recovery is deferred, then a successful parallel tool
+    // completion asks for a plain answer. Dropping the instructions here would
+    // leave the recovery turn without them.
+    requestRealtimeResponse(gate, { instructions: "recover" });
+    markRealtimeConversationInput(gate);
+    requestRealtimeResponse(gate, undefined);
+
+    expect(takeDeferredRealtimeResponse(gate)).toEqual({
+      post: true,
+      request: { instructions: "recover" },
+    });
+  });
+
+  it("lets a newer instructed request replace a deferred one", () => {
+    const gate = createRealtimeResponseGate();
+
+    requestRealtimeResponse(gate, undefined);
+    markRealtimeResponseCreated(gate);
+    requestRealtimeResponse(gate, { instructions: "first" });
+    requestRealtimeResponse(gate, { instructions: "second" });
+
+    expect(takeDeferredRealtimeResponse(gate)).toEqual({
+      post: true,
+      request: { instructions: "second" },
+    });
+  });
+
   it("coalesces every deferred request into the most recent one", () => {
     const gate = createRealtimeResponseGate();
 
@@ -166,21 +198,40 @@ describe("markRealtimeResponseCreated", () => {
 });
 
 describe("releaseUnconfirmedRealtimeResponse", () => {
-  it("frees the gate when the request was rejected before it was created", () => {
+  it("frees the gate when the request it names was rejected before creation", () => {
     const gate = createRealtimeResponseGate();
-    requestRealtimeResponse(gate, { instructions: "bad" });
+    requestRealtimeResponse(gate, { instructions: "bad" }, "evt_create");
 
-    expect(releaseUnconfirmedRealtimeResponse(gate)).toBe(true);
-    expect(requestRealtimeResponse(gate, undefined)).toBe(true);
+    expect(releaseUnconfirmedRealtimeResponse(gate, "evt_create")).toBe(true);
+    expect(requestRealtimeResponse(gate, undefined, "evt_next")).toBe(true);
+  });
+
+  it("ignores an error about some earlier client event", () => {
+    const gate = createRealtimeResponseGate();
+    requestRealtimeResponse(gate, undefined, "evt_create");
+
+    // A late `response_cancel_not_active` for a `response.cancel` sent during
+    // barge-in must not clear the create that is still waiting to be created.
+    expect(releaseUnconfirmedRealtimeResponse(gate, "evt_cancel")).toBe(false);
+    expect(gate.assistantResponseInFlight).toBe(true);
+    expect(requestRealtimeResponse(gate, undefined, "evt_other")).toBe(false);
+  });
+
+  it("ignores an error that names no client event at all", () => {
+    const gate = createRealtimeResponseGate();
+    requestRealtimeResponse(gate, undefined, "evt_create");
+
+    expect(releaseUnconfirmedRealtimeResponse(gate, undefined)).toBe(false);
+    expect(gate.assistantResponseInFlight).toBe(true);
   });
 
   it("keeps the gate closed while a confirmed response is still running", () => {
     const gate = createRealtimeResponseGate();
-    requestRealtimeResponse(gate, undefined);
+    requestRealtimeResponse(gate, undefined, "evt_create");
     markRealtimeResponseCreated(gate);
     requestRealtimeResponse(gate, { instructions: "second" });
 
-    expect(releaseUnconfirmedRealtimeResponse(gate)).toBe(false);
+    expect(releaseUnconfirmedRealtimeResponse(gate, "evt_create")).toBe(false);
     expect(gate.assistantResponseInFlight).toBe(true);
     expect(gate.deferredAssistantResponse).toEqual({
       request: { instructions: "second" },
@@ -188,9 +239,9 @@ describe("releaseUnconfirmedRealtimeResponse", () => {
   });
 
   it("does nothing when no response is in flight", () => {
-    expect(releaseUnconfirmedRealtimeResponse(createRealtimeResponseGate())).toBe(
-      false,
-    );
+    expect(
+      releaseUnconfirmedRealtimeResponse(createRealtimeResponseGate(), "evt_x"),
+    ).toBe(false);
   });
 });
 

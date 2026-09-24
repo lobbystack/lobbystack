@@ -23,6 +23,9 @@ export type RealtimeResponseGate = {
   // received, so the request is what conversation input is compared against.
   activeAssistantResponseStartedSeq: number | null;
   activeAssistantResponseConfirmed: boolean;
+  // The `event_id` of the create we posted and are still waiting on, so a
+  // provider error can be matched to it rather than assumed to be about it.
+  pendingCreateEventId: string | null;
   lastConversationInputSeq: number | null;
   deferredAssistantResponse: DeferredRealtimeResponse | null;
 };
@@ -33,6 +36,7 @@ export function createRealtimeResponseGate(): RealtimeResponseGate {
     sequence: 0,
     activeAssistantResponseStartedSeq: null,
     activeAssistantResponseConfirmed: false,
+    pendingCreateEventId: null,
     lastConversationInputSeq: null,
     deferredAssistantResponse: null,
   };
@@ -53,9 +57,16 @@ export function markRealtimeConversationInput(
 export function requestRealtimeResponse(
   gate: RealtimeResponseGate,
   request: RealtimeResponseRequest,
+  eventId?: string,
 ): boolean {
   if (gate.assistantResponseInFlight) {
-    gate.deferredAssistantResponse = { request };
+    // Coalescing is last-wins except for instructions. A parameterless request
+    // only asks the model to answer the conversation, which a deferred
+    // instructed request already does, so it must not overwrite one.
+    const deferred = gate.deferredAssistantResponse;
+    if (request !== undefined || deferred?.request === undefined) {
+      gate.deferredAssistantResponse = { request };
+    }
     return false;
   }
 
@@ -63,6 +74,7 @@ export function requestRealtimeResponse(
   gate.sequence += 1;
   gate.activeAssistantResponseStartedSeq = gate.sequence;
   gate.activeAssistantResponseConfirmed = false;
+  gate.pendingCreateEventId = eventId ?? null;
   gate.deferredAssistantResponse = null;
   return true;
 }
@@ -73,6 +85,7 @@ export function markRealtimeResponseCreated(gate: RealtimeResponseGate): void {
   // order here, which is the earliest point the gate learns of it.
   gate.assistantResponseInFlight = true;
   gate.activeAssistantResponseConfirmed = true;
+  gate.pendingCreateEventId = null;
   if (gate.activeAssistantResponseStartedSeq === null) {
     gate.sequence += 1;
     gate.activeAssistantResponseStartedSeq = gate.sequence;
@@ -83,10 +96,10 @@ export function markRealtimeResponseCreated(gate: RealtimeResponseGate): void {
 // request whose only job was to answer conversation input is dropped when the
 // finished response already covered that input; anything carrying its own
 // instructions always posts.
-export function takeDeferredRealtimeResponse(gate: RealtimeResponseGate): {
-  post: boolean;
-  request: RealtimeResponseRequest;
-} {
+export function takeDeferredRealtimeResponse(
+  gate: RealtimeResponseGate,
+  eventId?: string,
+): { post: boolean; request: RealtimeResponseRequest } {
   const deferred = gate.deferredAssistantResponse;
   const startedSeq = gate.activeAssistantResponseStartedSeq;
   const inputSeq = gate.lastConversationInputSeq;
@@ -94,6 +107,7 @@ export function takeDeferredRealtimeResponse(gate: RealtimeResponseGate): {
   gate.assistantResponseInFlight = false;
   gate.activeAssistantResponseStartedSeq = null;
   gate.activeAssistantResponseConfirmed = false;
+  gate.pendingCreateEventId = null;
   gate.deferredAssistantResponse = null;
 
   if (deferred === null) {
@@ -116,16 +130,19 @@ export function takeDeferredRealtimeResponse(gate: RealtimeResponseGate): {
   gate.assistantResponseInFlight = true;
   gate.sequence += 1;
   gate.activeAssistantResponseStartedSeq = gate.sequence;
+  gate.pendingCreateEventId = eventId ?? null;
   return { post: true, request: deferred.request };
 }
 
 // The gate marks a response in flight the moment it is requested, before the
 // server confirms it. If that request is rejected outright there will be no
 // `response.done` to release the gate, which would strand every later turn.
-// A rejection while a confirmed response is active is the ordinary
-// `conversation_already_has_active_response` case and must not release it.
+// The error must name that create, though: a late error about some earlier
+// client event — a `response.cancel` that had nothing left to cancel — would
+// otherwise clear a healthy response and let the next request race it.
 export function releaseUnconfirmedRealtimeResponse(
   gate: RealtimeResponseGate,
+  eventId?: string,
 ): boolean {
   if (!gate.assistantResponseInFlight) {
     return false;
@@ -133,9 +150,16 @@ export function releaseUnconfirmedRealtimeResponse(
   if (gate.activeAssistantResponseConfirmed) {
     return false;
   }
+  if (
+    gate.pendingCreateEventId === null ||
+    eventId !== gate.pendingCreateEventId
+  ) {
+    return false;
+  }
 
   gate.assistantResponseInFlight = false;
   gate.activeAssistantResponseStartedSeq = null;
+  gate.pendingCreateEventId = null;
   gate.deferredAssistantResponse = null;
   return true;
 }
@@ -145,6 +169,7 @@ export function resetRealtimeResponseGate(gate: RealtimeResponseGate): void {
   gate.assistantResponseInFlight = false;
   gate.activeAssistantResponseStartedSeq = null;
   gate.activeAssistantResponseConfirmed = false;
+  gate.pendingCreateEventId = null;
   gate.lastConversationInputSeq = null;
   gate.deferredAssistantResponse = null;
 }

@@ -95,8 +95,10 @@ type OpenAiRealtimeMessage = {
     };
   };
   error?: {
+    type?: string;
     code?: string;
     message?: string;
+    event_id?: string;
   };
 };
 
@@ -1105,16 +1107,20 @@ function requestWebResponse(
   options: { force?: boolean } = {},
 ): void {
   const nowMs = Date.now();
+  // Naming the create lets a later provider error be matched to this exact
+  // request instead of to whatever response happens to be in flight.
+  const eventId = crypto.randomUUID();
   if (options.force) {
     resetRealtimeResponseGate(session.responseGate);
-    requestRealtimeResponse(session.responseGate, response);
-  } else if (!requestRealtimeResponse(session.responseGate, response)) {
+    requestRealtimeResponse(session.responseGate, response, eventId);
+  } else if (!requestRealtimeResponse(session.responseGate, response, eventId)) {
     return;
   }
 
   session.pendingAssistantResponseRequestAtMs = nowMs;
   postRealtimeEvent(socket, {
     type: "response.create",
+    event_id: eventId,
     ...(response ? { response } : {}),
   });
 }
@@ -1126,7 +1132,8 @@ function flushDeferredWebResponse(
   socket: WebSocket,
   session: ActiveWebCall,
 ): void {
-  const deferred = takeDeferredRealtimeResponse(session.responseGate);
+  const eventId = crypto.randomUUID();
+  const deferred = takeDeferredRealtimeResponse(session.responseGate, eventId);
   if (!deferred.post) {
     return;
   }
@@ -1139,6 +1146,7 @@ function flushDeferredWebResponse(
   session.pendingAssistantResponseRequestAtMs = Date.now();
   postRealtimeEvent(socket, {
     type: "response.create",
+    event_id: eventId,
     ...(deferred.request ? { response: deferred.request } : {}),
   });
 }
@@ -1724,7 +1732,7 @@ async function handleSidebandMessage(
   if (payload.type === "error") {
     // A request rejected before any response was confirmed would otherwise
     // leave the gate closed for the rest of the session.
-    releaseUnconfirmedRealtimeResponse(session.responseGate);
+    releaseUnconfirmedRealtimeResponse(session.responseGate, payload.error?.event_id);
     if (isBenignRealtimeClientError(payload.error)) {
       recordOpenAiRealtimeStateConflict({
         "lobbystack.business_id": session.businessId,

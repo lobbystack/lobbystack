@@ -923,7 +923,12 @@ describe("web call routes", () => {
     });
     expect(sentMessages).toContainEqual({ type: "response.cancel" });
     expect(sentMessages).toContainEqual({ type: "output_audio_buffer.clear" });
-    expect(sentMessages.at(-1)).toEqual({ type: "response.create" });
+    // The create also carries an `event_id` so a later provider error can be
+    // matched back to it, and nothing else.
+    expect(sentMessages.at(-1)).toEqual({
+      type: "response.create",
+      event_id: expect.any(String),
+    });
     expect(sentMessages).not.toContainEqual({ type: "input_audio_buffer.clear" });
   });
 

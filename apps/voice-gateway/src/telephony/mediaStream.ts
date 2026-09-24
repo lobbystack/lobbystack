@@ -1136,10 +1136,13 @@ function postAssistantResponse(
   options: { force?: boolean } = {},
 ): void {
   const nowMs = Date.now();
+  // Naming the create lets a later provider error be matched to this exact
+  // request instead of to whatever response happens to be in flight.
+  const eventId = crypto.randomUUID();
   if (options.force) {
     resetRealtimeResponseGate(session.responseGate);
-    requestRealtimeResponse(session.responseGate, request);
-  } else if (!requestRealtimeResponse(session.responseGate, request)) {
+    requestRealtimeResponse(session.responseGate, request, eventId);
+  } else if (!requestRealtimeResponse(session.responseGate, request, eventId)) {
     server.log.debug(
       {
         callId: session.callId,
@@ -1155,6 +1158,7 @@ function postAssistantResponse(
   session.assistantFirstOutputAtMs = null;
   postRealtimeEvent(socket, {
     type: "response.create",
+    event_id: eventId,
     ...(request ? { response: request } : {}),
   });
 }
@@ -1167,7 +1171,8 @@ function flushDeferredAssistantResponse(
   socket: WebSocket,
   session: ActiveVoiceSession,
 ): void {
-  const deferred = takeDeferredRealtimeResponse(session.responseGate);
+  const eventId = crypto.randomUUID();
+  const deferred = takeDeferredRealtimeResponse(session.responseGate, eventId);
   if (!deferred.post) {
     return;
   }
@@ -1194,6 +1199,7 @@ function flushDeferredAssistantResponse(
   session.assistantFirstOutputAtMs = null;
   postRealtimeEvent(socket, {
     type: "response.create",
+    event_id: eventId,
     ...(deferred.request ? { response: deferred.request } : {}),
   });
 }
@@ -3425,7 +3431,10 @@ export function handleOpenAiMessage(
     case "error": {
       const runtimeConfig = loadVoiceGatewayEnv(process.env);
       const providerError = payload.error ?? payload;
-      releaseUnconfirmedRealtimeResponse(session.responseGate);
+      releaseUnconfirmedRealtimeResponse(
+        session.responseGate,
+        payload.error?.event_id,
+      );
       if (isBenignRealtimeClientError(payload.error)) {
         // A rejected `response.create` leaves the active response untouched, so
         // the turn still completes. Record it without paging anyone.
