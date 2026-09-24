@@ -4,12 +4,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthCard } from "./auth-card";
 const analytics = vi.hoisted(() => ({ record: vi.fn() }));
+const navigation = vi.hoisted(() => ({ replace: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
 vi.mock("@/lib/auth-success-analytics", () => ({ recordAuthSuccess: analytics.record }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en", resolvedLanguage: "en" } }) }));
 vi.mock("@/components/turnstile", () => ({ Turnstile: ({ siteKey, onTokenChange }: { siteKey: string; onTokenChange: (token: string) => void }) => <button data-testid="challenge" data-site-key={siteKey} onClick={() => onTokenChange("fixture-challenge-token")}>Solve challenge</button> }));
 vi.mock("@/lib/affiliate-referral", () => ({ captureAffiliateReferralFromUrl: () => null, getAffiliateVisitorId: () => "fixture" }));
 beforeEach(() => { vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", ""); window.history.replaceState(null, "", "/"); Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => null }); vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} unobserve() {} }); vi.stubGlobal("fetch", vi.fn(async () => Response.json({ code: "INVALID_CREDENTIALS" }, { status: 401 }))); });
-afterEach(async () => { cleanup(); await new Promise(resolve => setTimeout(resolve, 60)); vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
+afterEach(async () => { cleanup(); sessionStorage.clear(); await new Promise(resolve => setTimeout(resolve, 60)); vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
 describe("original login and signup behavior", () => {
   it("preserves calculator attribution and a safe return path when switching to login", () => {
     window.history.replaceState(null, "", "/en/signup?source=calculator&returnTo=%2Fagent");
@@ -60,21 +62,30 @@ describe("original login and signup behavior", () => {
     await waitFor(() => expect(fetch).toHaveBeenNthCalledWith(2, "/api/auth/email-otp/verify-email", expect.objectContaining({ body: JSON.stringify({ email: "owner@example.invalid", otp: "123456" }) })));
     expect(fetch).toHaveBeenNthCalledWith(3, "/api/auth/sign-in/email", expect.objectContaining({ body: JSON.stringify({ email: "owner@example.invalid", password: "Valid-Password-123!" }) }));
     expect(analytics.record).toHaveBeenCalledExactlyOnceWith("web.auth.signup_succeeded");
+    expect(screen.getByLabelText("verifyEmail.codeLabel")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "verifyEmail.verifying" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByText("verifyEmail.verifiedTitle")).toBeNull();
   });
-  it("does not authenticate when password sign-in fails after email verification", async () => {
+  it.each(["http", "network"])("returns to login when sign-in fails after verification (%s)", async failure => {
+    window.history.replaceState(null, "", "/en/signup?returnTo=%2Fagent");
     vi.mocked(fetch)
       .mockResolvedValueOnce(Response.json({ token: null, user: { id: "operator" } }))
-      .mockResolvedValueOnce(Response.json({ status: true, token: null }))
-      .mockResolvedValueOnce(Response.json({ code: "INVALID_CREDENTIALS" }, { status: 401 }));
+      .mockResolvedValueOnce(Response.json({ status: true, token: null }));
+    if (failure === "http") vi.mocked(fetch).mockResolvedValueOnce(Response.json({ code: "INVALID_CREDENTIALS" }, { status: 401 }));
+    else vi.mocked(fetch).mockRejectedValueOnce(new Error("offline"));
     render(<AuthCard mode="signup" />);
     await userEvent.type(screen.getByLabelText("signup.email"), "owner@example.invalid");
     await userEvent.type(screen.getByLabelText("signup.password"), "Valid-Password-123!");
     await userEvent.click(screen.getByRole("button", { name: "signup.submit" }));
     await userEvent.type(await screen.findByLabelText("verifyEmail.codeLabel"), "123456");
     await userEvent.click(screen.getByRole("button", { name: "verifyEmail.verify" }));
+    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/en/login?returnTo=%2Fagent"));
+    expect(JSON.parse(sessionStorage.getItem("auth-verification-recovery")!).email).toBe("owner@example.invalid");
+    cleanup();
+    render(<AuthCard mode="login" />);
     expect(await screen.findByText("errors.verificationSignInFailed")).toBeTruthy();
-    expect(screen.queryByLabelText("verifyEmail.codeLabel")).toBeNull();
-    expect(screen.getByRole("link", { name: "signup.signIn" })).toBeTruthy();
+    expect((screen.getByLabelText("login.email") as HTMLInputElement).value).toBe("owner@example.invalid");
+    expect(sessionStorage.getItem("auth-verification-recovery")).toBeNull();
     expect(analytics.record).not.toHaveBeenCalled();
   });
   it("resends a verification code from the code entry screen", async () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { TriangleAlert } from "lucide-react";
@@ -21,6 +22,7 @@ import { captureAffiliateReferralFromUrl, getAffiliateVisitorId } from "@/lib/af
 import { buildAuthPathWithReturnTo, getSafeReturnTo } from "@/lib/auth-return-to";
 
 export function AuthCard({ mode }: { mode: "login" | "signup" }) {
+  const router = useRouter();
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const { t, i18n } = useTranslation("auth");
   const authLocale = resolveLocale(i18n.resolvedLanguage, i18n.language);
@@ -40,7 +42,6 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [verificationPending, setVerificationPending] = useState(false);
-  const [emailVerified, setEmailVerified] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [verificationLoading, setVerificationLoading] = useState(false);
@@ -55,6 +56,20 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const pendingChallengeSubmit = useRef(false);
   const login = mode === "login";
+
+  useEffect(() => {
+    if (mode !== "login") return;
+    try {
+      const saved = sessionStorage.getItem("auth-verification-recovery");
+      sessionStorage.removeItem("auth-verification-recovery");
+      if (!saved) return;
+      const recovery = JSON.parse(saved) as { email?: unknown; expires?: number };
+      if (typeof recovery.email === "string" && (recovery.expires ?? 0) > Date.now()) {
+        setEmail(recovery.email);
+        setError(t("errors.verificationSignInFailed"));
+      }
+    } catch { /* Storage can be unavailable; the login form still works. */ }
+  }, [mode, t]);
 
   useEffect(() => {
     if (mode !== "signup") return;
@@ -139,6 +154,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
     if (verificationCode.length !== 6 || verificationLoading || resendLoading) return;
     setVerificationError(null);
     setVerificationLoading(true);
+    let verified = false;
     try {
       const response = await fetch("/api/auth/email-otp/verify-email", {
         method: "POST",
@@ -154,7 +170,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
             : "invalidVerificationCode";
         throw new Error(t(`errors.${key}`));
       }
-      setEmailVerified(true);
+      verified = true;
       const signInResponse = await fetch("/api/auth/sign-in/email", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -163,9 +179,22 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
       if (!signInResponse.ok) throw new Error(t("errors.verificationSignInFailed"));
       finishAuthentication();
     } catch (cause) {
-      setVerificationError(cause instanceof Error ? cause.message : t("errors.invalidVerificationCode"));
-    } finally {
-      setVerificationLoading(false);
+      if (verified) {
+        if (login) {
+          setVerificationPending(false);
+          setVerificationLoading(false);
+          setPassword("");
+          setError(t("errors.verificationSignInFailed"));
+        } else {
+          try {
+            sessionStorage.setItem("auth-verification-recovery", JSON.stringify({ email: email.trim().toLowerCase(), expires: Date.now() + 10 * 60_000 }));
+          } catch { /* Navigation must work even when storage is blocked. */ }
+          router.replace(authPath("/login"));
+        }
+      } else {
+        setVerificationError(cause instanceof Error ? cause.message : t("errors.invalidVerificationCode"));
+        setVerificationLoading(false);
+      }
     }
   }
 
@@ -193,17 +222,6 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
     }
   }
 
-  if (emailVerified) return (
-    <ReplacementOnboardingShell title={t("verifyEmail.verifiedTitle")} description={t("verifyEmail.verifiedDescription")} width="sm">
-      <div className="flex flex-col gap-4">
-        {verificationLoading ? <p role="status">{t("verifyEmail.verifying")}</p> : <>
-          {verificationError ? <FieldError>{verificationError}</FieldError> : null}
-          <Link className="text-center font-medium underline" href={authPath("/login")}>{t("signup.signIn")}</Link>
-          <Link className="text-center underline" href={localizePublicPath("/forgot-password", authLocale)}>{t("verifyEmail.resetPassword")}</Link>
-        </>}
-      </div>
-    </ReplacementOnboardingShell>
-  );
   if (verificationPending) return (
     <ReplacementOnboardingShell description={t(login ? "verifyEmail.codeDescription" : "verifyEmail.codeDescriptionSignup", { email: email.trim().toLowerCase() })} title={t("verifyEmail.codeTitle")} width="sm">
       <div className="flex w-full flex-col gap-6">
@@ -212,6 +230,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
             <Field data-invalid={verificationError ? true : undefined}>
               <FieldLabel htmlFor="verification-code">{t("verifyEmail.codeLabel")}</FieldLabel>
               <InputOTP
+                disabled={verificationLoading}
                 autoComplete="one-time-code"
                 autoFocus
                 containerClassName="justify-center"
@@ -233,7 +252,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
           </FieldGroup>
         </form>
         {!login ? <p className="text-center text-sm text-muted-foreground">{t("verifyEmail.existingAccountHelp")} <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={authPath("/login")}>{t("signup.signIn")}</Link> {t("verifyEmail.or")} <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={localizePublicPath("/forgot-password", authLocale)}>{t("verifyEmail.resetPassword")}</Link>.</p> : null}
-        <button className="text-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" onClick={() => { setVerificationPending(false); setVerificationCode(""); setVerificationError(null); setResendStatus(null); }} type="button">{t("verifyEmail.useDifferentEmail")}</button>
+        <button disabled={verificationLoading} className="text-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" onClick={() => { setVerificationPending(false); setVerificationCode(""); setVerificationError(null); setResendStatus(null); }} type="button">{t("verifyEmail.useDifferentEmail")}</button>
       </div>
     </ReplacementOnboardingShell>
   );
