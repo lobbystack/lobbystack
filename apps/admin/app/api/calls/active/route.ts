@@ -3,7 +3,7 @@ import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { calls } from "@lobbystack/db";
 
 import { asApiResponse, withOperatorTransaction } from "@/lib/api-helpers";
-import { countActiveVoiceCalls, getVoicePresenceCallIds, updateVoicePresence } from "@/lib/voice-presence";
+import { countActiveVoiceCalls, getVoicePresenceCallIds, removeCompletedVoicePresence } from "@/lib/voice-presence";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
         const completed = await tx.select({ id: calls.id }).from(calls).where(and(
           eq(calls.businessId, businessId), inArray(calls.id, ids), isNotNull(calls.endedAt),
         ));
-        await Promise.all(completed.map(({ id }) => updateVoicePresence({ businessId, callId: id, active: false, gatewayId: "reconciliation" })));
+        await Promise.all(completed.map(({ id }) => removeCompletedVoicePresence({ businessId, callId: id })));
       }
       return { active: await countActiveVoiceCalls(businessId) };
     }));

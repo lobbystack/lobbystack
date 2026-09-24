@@ -903,16 +903,17 @@ async function finishWebCallSession(
 
 async function finishWebCallResources(server: FastifyInstance, session: ActiveWebCall, disposition: string): Promise<void> {
   closeVoiceSocket(session.sidebandSocket);
-  let presenceCleanup: Promise<void> | undefined;
+  // The sideband is closed; retire media presence even if provider billing
+  // reconciliation must remain pending. Never block hangup on this request.
+  const presenceCleanup = (session.presenceUpdate ?? Promise.resolve()).catch(() => undefined)
+    .then(() => updateVoiceCallPresence({ businessId: session.businessId, callId: session.callId, active: false }))
+    .catch((error: unknown) => server.log.error(error));
   clearWebMaxDurationTimer(session);
   clearWebEndCallFallbackTimer(session);
   const transcriptTask = flushPendingWebAssistantTranscripts(server, session).catch((error: unknown) => server.log.error(error));
   try {
     if (!await hangupOpenAiRealtimeCall(server, session, disposition)) throw new Error("Provider hangup is unconfirmed; retaining durable voice reservation.");
     const endedAtMs = Date.now();
-    presenceCleanup = (session.presenceUpdate ?? Promise.resolve()).catch(() => undefined)
-      .then(() => updateVoiceCallPresence({ businessId: session.businessId, callId: session.callId, active: false }))
-      .catch((error: unknown) => server.log.error(error));
     // Bill from the media clock, which starts only once the provider session is
     // allocated, bound, and its sideband is set up. The earlier durable
     // startedAt anchor is for crash recovery, not for billing.

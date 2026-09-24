@@ -14,6 +14,7 @@ if not previous or tonumber(previous) <= tonumber(ARGV[3]) then
 end
 return 1`;
 const DEACTIVATE = `
+if ARGV[4] ~= '1' and redis.call('HGET', KEYS[3], ARGV[1]) ~= ARGV[3] then return 0 end
 local removed = redis.call('ZREM', KEYS[1], ARGV[1])
 redis.call('HDEL', KEYS[3], ARGV[1])
 if removed == 1 then redis.call('PUBLISH', KEYS[2], ARGV[2]) end
@@ -53,12 +54,23 @@ export async function renewVoicePresenceGateway(gatewayId: string): Promise<void
   `, 1, gatewayKey(), now, now + GATEWAY_TTL_MS, gatewayId);
 }
 
-export async function updateVoicePresence(input: {
+type VoicePresenceInput = {
   businessId: string;
   callId: string;
   active: boolean;
   gatewayId: string;
-}): Promise<void> {
+};
+
+export async function updateVoicePresence(input: VoicePresenceInput): Promise<void> {
+  await writeVoicePresence(input, false);
+}
+
+/** Only call after verifying durable completion in the business transaction. */
+export async function removeCompletedVoicePresence(input: { businessId: string; callId: string }): Promise<void> {
+  await writeVoicePresence({ ...input, active: false, gatewayId: "reconciliation" }, true);
+}
+
+async function writeVoicePresence(input: VoicePresenceInput, forceRemoval: boolean): Promise<void> {
   const client = store();
   const now = Date.now();
   const presenceKey = key(input.businessId);
@@ -75,7 +87,7 @@ export async function updateVoicePresence(input: {
     // Heartbeats update the expiry without causing a browser refetch each time.
     await client.eval(ACTIVATE, 3, presenceKey, realtimeChannel(input.businessId), `${presenceKey}:owners`, input.callId, now + VOICE_PRESENCE_TTL_MS, now, event, input.gatewayId);
   } else {
-    await client.eval(DEACTIVATE, 3, presenceKey, realtimeChannel(input.businessId), `${presenceKey}:owners`, input.callId, event);
+    await client.eval(DEACTIVATE, 3, presenceKey, realtimeChannel(input.businessId), `${presenceKey}:owners`, input.callId, event, input.gatewayId, forceRemoval ? "1" : "0");
   }
 }
 

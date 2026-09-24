@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import Redis from "ioredis";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 const testUrl = process.env.REDIS_TEST_URL;
 const businessId = randomUUID();
@@ -24,6 +24,11 @@ describe.runIf(Boolean(testUrl))("live voice presence in Redis", () => {
     await inspector.del(`${prefix}:voice-presence:${businessId}`, `${prefix}:voice-presence:${businessId}:owners`, `${prefix}:voice-presence:${otherBusinessId}`, `${prefix}:voice-presence:gateways`);
     subscriber.disconnect();
     inspector.disconnect();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    subscriber.removeAllListeners("message");
   });
 
   it("counts only fresh sessions and publishes transitions instead of every heartbeat", async () => {
@@ -69,5 +74,34 @@ describe.runIf(Boolean(testUrl))("live voice presence in Redis", () => {
     await updateVoicePresence({ businessId, callId, active: false, gatewayId });
     await vi.waitFor(() => expect(events).toHaveLength(5));
     expect(await countActiveVoiceCalls(businessId)).toBe(0);
+  });
+
+  it("ignores the previous gateway's removal after ownership changes and allows completion reconciliation", async () => {
+    const { countActiveVoiceCalls, renewVoicePresenceGateway, removeCompletedVoicePresence, updateVoicePresence } = await import("./voice-presence");
+    const callId = randomUUID();
+    const firstGateway = randomUUID();
+    const nextGateway = randomUUID();
+    const events: string[] = [];
+    subscriber.on("message", (_channel, message) => { events.push(message); });
+    await renewVoicePresenceGateway(firstGateway);
+    await renewVoicePresenceGateway(nextGateway);
+    await updateVoicePresence({ businessId, callId, active: true, gatewayId: firstGateway });
+    await vi.waitFor(() => expect(events).toHaveLength(1));
+    await updateVoicePresence({ businessId, callId, active: true, gatewayId: nextGateway });
+    await updateVoicePresence({ businessId, callId, active: false, gatewayId: firstGateway });
+    await subscriber.ping();
+    expect(events).toHaveLength(1);
+    expect(await countActiveVoiceCalls(businessId)).toBe(1);
+    expect(await inspector.hget(`${prefix}:voice-presence:${businessId}:owners`, callId)).toBe(nextGateway);
+
+    await updateVoicePresence({ businessId, callId, active: false, gatewayId: nextGateway });
+    await vi.waitFor(() => expect(events).toHaveLength(2));
+    expect(await countActiveVoiceCalls(businessId)).toBe(0);
+
+    await updateVoicePresence({ businessId, callId, active: true, gatewayId: nextGateway });
+    await removeCompletedVoicePresence({ businessId, callId });
+    await vi.waitFor(() => expect(events).toHaveLength(4));
+    expect(await countActiveVoiceCalls(businessId)).toBe(0);
+    expect(await inspector.hget(`${prefix}:voice-presence:${businessId}:owners`, callId)).toBeNull();
   });
 });

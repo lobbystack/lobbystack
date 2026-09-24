@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ count: vi.fn(), ids: vi.fn(), update: vi.fn(), withOperatorTransaction: vi.fn(), asApiResponse: vi.fn(), completed: vi.fn() }));
-vi.mock("@/lib/voice-presence", () => ({ countActiveVoiceCalls: mocks.count, getVoicePresenceCallIds: mocks.ids, updateVoicePresence: mocks.update }));
+vi.mock("@/lib/voice-presence", () => ({ countActiveVoiceCalls: mocks.count, getVoicePresenceCallIds: mocks.ids, removeCompletedVoicePresence: mocks.update }));
 vi.mock("@/lib/api-helpers", () => ({ withOperatorTransaction: mocks.withOperatorTransaction, asApiResponse: mocks.asApiResponse }));
 
 import { GET } from "./route";
@@ -35,6 +35,6 @@ it("removes only durably completed presence before calculating the summary", asy
   mocks.count.mockResolvedValue(1);
   const response = await GET(new Request("https://app.example/api/calls/active"));
   expect(response.status).toBe(200);
-  expect(mocks.update).toHaveBeenCalledExactlyOnceWith({ businessId: "authorized-business", callId: "completed-call", active: false, gatewayId: "reconciliation" });
+  expect(mocks.update).toHaveBeenCalledExactlyOnceWith({ businessId: "authorized-business", callId: "completed-call" });
   expect(mocks.update.mock.invocationCallOrder[0]).toBeLessThan(mocks.count.mock.invocationCallOrder[0]!);
 });
