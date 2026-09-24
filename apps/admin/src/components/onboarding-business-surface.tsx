@@ -21,10 +21,6 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   return await response.json() as T;
 }
 
-function slugify(value: string): string {
-  return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || "business";
-}
-
 export function OnboardingBusinessSurface({ createNew = false }: { createNew?: boolean }) {
   const { t } = useTranslation("onboarding");
   const router = useRouter();
@@ -38,7 +34,6 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
       method: "POST",
       body: JSON.stringify({
         name: name.trim(),
-        slug: slugify(name),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
         businessType: "service_company",
       }),

@@ -4,6 +4,7 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 import { businessHours, calls, conversations, messages, storageObjects, transcripts } from "@lobbystack/db";
 import { affiliateCommissions, affiliatePayoutItems, affiliateProfiles, billingAccounts, billingTransactions, appointments, auditLogs, businessMemberships, contacts, services, staff, users, businesses, notifications, outboxMessages, withBusinessTransaction, claimOutboxBatch, createDatabaseClient, enqueueOutbox, markOutboxFailed, markOutboxPublished, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { generateAffiliatePayoutRun } from "./affiliates";
+import { createBusiness } from "./tenancy";
 import { bookAppointment, cancelAppointment } from "./booking";
 import { appendMessage } from "./conversations";
 import { runPrivacyRetentionSweep } from "./privacy";
@@ -35,6 +36,52 @@ async function rollbackTest(run: (tx: DatabaseTransaction) => Promise<void>) {
 }
 
 describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () => {
+  it("creates concurrent same-name businesses without partial records", async () => {
+    const ids = [randomUUID(), randomUUID()];
+    const name = `Concurrent ${randomUUID()}`;
+    await client!.db.insert(users).values(ids.map(id => ({ id, email: `${id}@example.invalid`, normalizedEmail: `${id}@example.invalid` })));
+    try {
+      const results = await Promise.allSettled(ids.map(userId => client!.db.transaction(async tx => {
+        await tx.execute(sql`set local role lobbystack_app`);
+        return createBusiness({ db: tx as unknown as Database }, { userId, name, timezone: "UTC", businessType: "test" });
+      })));
+      expect(results.every(result => result.status === "fulfilled")).toBe(true);
+      const rows = await client!.db.select({ slug: businesses.slug }).from(businesses).where(eq(businesses.name, name));
+      expect(rows).toHaveLength(2);
+      expect(new Set(rows.map(row => row.slug)).size).toBe(2);
+    } finally {
+      await client!.db.delete(businesses).where(eq(businesses.name, name));
+      for (const id of ids) await client!.db.delete(users).where(eq(users.id, id));
+    }
+  });
+
+  it("rolls back business creation when the membership insert fails", async () => {
+    const name = `Rollback ${randomUUID()}`;
+    await expect(client!.db.transaction(async tx => {
+      await tx.execute(sql`set local role lobbystack_app`);
+      return createBusiness({ db: tx as unknown as Database }, { userId: randomUUID(), name, timezone: "UTC", businessType: "test" });
+    })).rejects.toThrow();
+    expect(await client!.db.select({ id: businesses.id }).from(businesses).where(eq(businesses.name, name))).toHaveLength(0);
+  });
+  it("creates businesses with colliding names under the app role", async () => {
+    await rollbackTest(async tx => {
+      const userIds = [randomUUID(), randomUUID()];
+      await tx.insert(users).values(userIds.map(id => ({ id, email: `${id}@example.invalid`, normalizedEmail: `${id}@example.invalid` })));
+      await tx.execute(sql`set local role lobbystack_app`);
+      const name = `Café ${randomUUID()}`;
+      const first = await createBusiness({ db: tx as unknown as Database }, { userId: userIds[0]!, name, timezone: "UTC", businessType: "test" });
+      const second = await createBusiness({ db: tx as unknown as Database }, { userId: userIds[1]!, name: name.replace("Café", "Cafe"), timezone: "UTC", businessType: "test" });
+      expect(first.businessId).not.toBe(second.businessId);
+      for (const shortName of ["a", "你好"]) {
+        await createBusiness({ db: tx as unknown as Database }, { userId: userIds[0]!, name: shortName, timezone: "UTC", businessType: "test" });
+      }
+      await tx.execute(sql`reset role`);
+      const rows = await tx.select({ slug: businesses.slug, name: businesses.name }).from(businesses).where(sql`${businesses.id} in (${first.businessId}::uuid, ${second.businessId}::uuid)`);
+      expect(rows).toHaveLength(2);
+      expect(new Set(rows.map(row => row.slug)).size).toBe(2);
+      expect(rows.map(row => row.name)).toContain(name);
+    });
+  });
   it("allows only one overlapping booking after two connections wait on the same staff lock", async () => {
     const businessId = randomUUID();
     const blocker = await client!.pool.connect();
