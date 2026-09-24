@@ -263,8 +263,8 @@ export type BusinessNumberMarket = {
 
 const supportedNumberMarketCountries = new Set<string>(["US", "CA", "GB", "AU"]);
 
-// Canadian IANA zones that overlap the US prefix. Anything else under
-// America/ resolves to the US, and unmapped zones fall back to the default.
+// America/ spans multiple countries. Only infer a country from known zones;
+// unknown zones use the default rather than claiming a business location.
 const canadianTimezones = new Set<string>([
   "America/St_Johns",
   "America/Halifax",
@@ -278,6 +278,22 @@ const canadianTimezones = new Set<string>([
   "America/Vancouver",
   "America/Whitehorse",
   "America/Yellowknife",
+  "America/Dawson",
+  "America/Dawson_Creek",
+  "America/Fort_Nelson",
+  "America/Creston",
+  "America/Swift_Current",
+  "America/Resolute",
+  "America/Rankin_Inlet",
+  "America/Cambridge_Bay",
+  "America/Inuvik",
+  "America/Blanc-Sablon",
+  "America/Atikokan",
+  "America/Thunder_Bay",
+  "America/Nipigon",
+  "America/Rainy_River",
+  "America/Pangnirtung",
+  "America/Montreal",
 ]);
 
 export function countryCodeForBusinessTimezone(
@@ -287,7 +303,8 @@ export function countryCodeForBusinessTimezone(
   if (!normalized) return undefined;
   if (normalized === "Europe/London") return "GB";
   if (normalized.startsWith("Australia/")) return "AU";
-  if (normalized.startsWith("America/")) return canadianTimezones.has(normalized) ? "CA" : "US";
+  if (canadianTimezones.has(normalized)) return "CA";
+  if (["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "America/Phoenix", "America/Detroit", "America/Anchorage", "America/Juneau", "America/Sitka", "America/Metlakatla", "America/Yakutat", "America/Nome", "America/Adak", "America/Boise", "Pacific/Honolulu"].includes(normalized) || normalized.startsWith("America/Indiana/") || normalized.startsWith("America/Kentucky/") || normalized.startsWith("America/North_Dakota/")) return "US";
   return undefined;
 }
 

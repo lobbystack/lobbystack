@@ -26,6 +26,13 @@ describe("resolveBusinessNumberMarket", () => {
 });
 
 describe("countryCodeForBusinessTimezone", () => {
+  it.each(["America/Dawson_Creek", "America/Fort_Nelson", "America/Montreal"])("recognizes Canadian zone %s", timezone => {
+    expect(countryCodeForBusinessTimezone(timezone)).toBe("CA");
+  });
+  it.each(["America/Mexico_City", "America/Sao_Paulo", "America/Bogota"])("does not infer US from %s", timezone => {
+    expect(countryCodeForBusinessTimezone(timezone)).toBeUndefined();
+    expect(resolveBusinessNumberMarket({ timezone }).source).toBe("default");
+  });
   it("ignores unmapped and empty timezones", () => {
     expect(countryCodeForBusinessTimezone("UTC")).toBeUndefined();
     expect(countryCodeForBusinessTimezone("")).toBeUndefined();

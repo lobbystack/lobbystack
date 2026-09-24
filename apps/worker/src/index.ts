@@ -21,6 +21,7 @@ import { getWorkerSnapshotCache } from "./snapshot-cache";
 function createEmailProvider(): SmtpEmailProvider | undefined {
   const host = process.env.SMTP_HOST;
   if (!host) {
+    console.warn("SMTP_HOST is missing. Authentication email jobs will fail until email delivery is configured.");
     return undefined;
   }
   return new SmtpEmailProvider({

@@ -73,6 +73,8 @@ describe("original login and signup behavior", () => {
     await userEvent.type(await screen.findByLabelText("verifyEmail.codeLabel"), "123456");
     await userEvent.click(screen.getByRole("button", { name: "verifyEmail.verify" }));
     expect(await screen.findByText("errors.verificationSignInFailed")).toBeTruthy();
+    expect(screen.queryByLabelText("verifyEmail.codeLabel")).toBeNull();
+    expect(screen.getByRole("link", { name: "signup.signIn" })).toBeTruthy();
     expect(analytics.record).not.toHaveBeenCalled();
   });
   it("resends a verification code from the code entry screen", async () => {
@@ -83,8 +85,12 @@ describe("original login and signup behavior", () => {
     await userEvent.type(screen.getByLabelText("signup.email"), "owner@example.invalid");
     await userEvent.type(screen.getByLabelText("signup.password"), "Valid-Password-123!");
     await userEvent.click(screen.getByRole("button", { name: "signup.submit" }));
+    const code = await screen.findByLabelText("verifyEmail.codeLabel") as HTMLInputElement;
+    await userEvent.type(code, "123456");
     await userEvent.click(await screen.findByRole("button", { name: "verifyEmail.resend" }));
     expect(await screen.findByText("verifyEmail.codeSent")).toBeTruthy();
+    expect(code.value).toBe("");
+    expect(document.activeElement).toBe(code);
     expect(fetch).toHaveBeenNthCalledWith(2, "/api/auth/email-otp/send-verification-otp", expect.objectContaining({ body: JSON.stringify({ email: "owner@example.invalid", type: "email-verification" }) }));
   });
   it("requires a fresh challenge before resending a verification code", async () => {

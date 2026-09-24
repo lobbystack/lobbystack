@@ -97,6 +97,9 @@ function pricingJob(type: "sms.syncPrice" | "call.syncPrice", payload: Record<st
 }
 
 describe("worker handlers", () => {
+  it.each(["verify_email", "password_reset", "existing_account"])("fails %s delivery when SMTP is missing", async template => {
+    await expect(handleJob({ jobId: randomUUID(), businessId: null, type: "email.send", queue: "default", payload: { template }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: undefined as never } })).rejects.toThrow("SMTP configuration");
+  });
   it("drains a retired phone verification send without contacting the provider", async () => {
     const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
     const verifyPhone = vi.fn();

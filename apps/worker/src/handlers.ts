@@ -382,10 +382,13 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       return await reconcileBusinessCalendar(dependencies, businessIdOrThrow(job));
     case "email.send":
       if (!dependencies.email) {
+        if (["verify_email", "password_reset", "existing_account"].includes(String(job.payload.template))) {
+          throw new Error("Authentication email delivery requires SMTP configuration.");
+        }
         return { status: "skipped" };
       }
       {
-        const template = job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission"
+        const template = job.payload.template === "existing_account" || job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission"
           ? job.payload.template
           : "operator_alert";
         const variables = typeof job.payload.variables === "object" && job.payload.variables !== null

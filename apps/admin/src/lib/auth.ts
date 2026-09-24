@@ -279,6 +279,31 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
       enabled: true,
       autoSignIn: false,
       requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
+      onExistingUserSignUp: async ({ user }, request) => {
+        const { assertEmailVerificationSendAllowed, EmailVerificationRateLimitError } = await import("./email-verification-policy");
+        try {
+          const remoteIp = request ? trustedClientIp(request) : undefined;
+          if (!user.emailVerified) {
+            await issueEmailVerificationCode(user.email, remoteIp);
+            return;
+          }
+          await assertEmailVerificationSendAllowed({ email: user.email, ...(remoteIp ? { remoteIp } : {}) });
+          const stored = (await database.db.select({ preferredLocale: users.preferredLocale }).from(users).where(eq(users.id, user.id)).limit(1))[0];
+          const locale = stored?.preferredLocale === "fr" ? "fr" : "en";
+          const base = process.env.APP_BASE_URL ?? "http://localhost:3000";
+          await withBusinessTransaction(getEmailDatabase().db, { actorType: "system" }, async (tx) => {
+            await enqueueOutbox(tx, {
+              topic: "email.send", aggregateType: "auth_email", aggregateId: user.id,
+              dedupeKey: `auth-existing-account:${user.id}:${randomUUID()}`,
+              payload: { template: "existing_account", to: user.email,
+                subject: locale === "fr" ? "Votre compte LobbyStack existe déjà" : "You already have a LobbyStack account",
+                variables: { locale, signInUrl: new URL(`/${locale}/login`, base).href, resetUrl: new URL(`/${locale}/forgot-password`, base).href } },
+            });
+          });
+        } catch (error) {
+          if (!(error instanceof EmailVerificationRateLimitError)) throw error;
+        }
+      },
       password: {
         hash: hashReplacementPassword,
         verify: async ({ hash, password }: { hash: string; password: string }) => await verifyLegacyPassword(hash, password),

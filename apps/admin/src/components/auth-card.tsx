@@ -40,6 +40,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [verificationPending, setVerificationPending] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [verificationLoading, setVerificationLoading] = useState(false);
@@ -130,7 +131,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
 
   async function verifyEmail(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (verificationCode.length !== 6) return;
+    if (verificationCode.length !== 6 || verificationLoading || resendLoading) return;
     setVerificationError(null);
     setVerificationLoading(true);
     try {
@@ -148,6 +149,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
             : "invalidVerificationCode";
         throw new Error(t(`errors.${key}`));
       }
+      setEmailVerified(true);
       const signInResponse = await fetch("/api/auth/sign-in/email", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -163,16 +165,19 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   }
 
   async function resendVerificationCode() {
+    if (resendLoading || verificationLoading) return;
     if (turnstileSiteKey && !resendTurnstileToken) {
       setVerificationError(t("errors.turnstileRequired"));
       return;
     }
     setVerificationError(null);
     setResendStatus(null);
+    setVerificationCode("");
     setResendLoading(true);
     try {
       await requestVerificationCode(resendTurnstileToken);
       setResendStatus(t("verifyEmail.codeSent"));
+      document.getElementById("verification-code")?.focus();
     } catch (cause) {
       setVerificationError(cause instanceof Error ? cause.message : t("errors.verificationCodeRequestFailed"));
     } finally {
@@ -182,6 +187,17 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
     }
   }
 
+  if (emailVerified) return (
+    <ReplacementOnboardingShell title={t("verifyEmail.verifiedTitle")} description={t("verifyEmail.verifiedDescription")} width="sm">
+      <div className="flex flex-col gap-4">
+        {verificationLoading ? <p role="status">{t("verifyEmail.verifying")}</p> : <>
+          {verificationError ? <FieldError>{verificationError}</FieldError> : null}
+          <Link className="text-center font-medium underline" href={authPath("/login")}>{t("signup.signIn")}</Link>
+          <Link className="text-center underline" href={localizePublicPath("/forgot-password", authLocale)}>{t("verifyEmail.resetPassword")}</Link>
+        </>}
+      </div>
+    </ReplacementOnboardingShell>
+  );
   if (verificationPending) return (
     <ReplacementOnboardingShell description={t(login ? "verifyEmail.codeDescription" : "verifyEmail.codeDescriptionSignup", { email: email.trim().toLowerCase() })} title={t("verifyEmail.codeTitle")} width="sm">
       <div className="flex w-full flex-col gap-6">
@@ -205,7 +221,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
             </Field>
             {verificationError ? <FieldError>{verificationError}</FieldError> : null}
             {resendStatus ? <p className="text-sm text-muted-foreground" role="status">{resendStatus}</p> : null}
-            <Button className="mt-2 h-11 w-full" disabled={verificationCode.length !== 6} loading={verificationLoading} loadingLabel={t("verifyEmail.verifying")} type="submit">{t("verifyEmail.verify")}</Button>
+            <Button className="mt-2 h-11 w-full" disabled={verificationCode.length !== 6 || resendLoading} loading={verificationLoading} loadingLabel={t("verifyEmail.verifying")} type="submit">{t("verifyEmail.verify")}</Button>
             {turnstileSiteKey ? <Turnstile key={resendTurnstileResetKey} onError={() => { setResendTurnstileToken(null); setVerificationError(t("errors.turnstileFailed")); }} onTokenChange={setResendTurnstileToken} siteKey={turnstileSiteKey} /> : null}
             <Button className="h-11 w-full" disabled={verificationLoading || Boolean(turnstileSiteKey && !resendTurnstileToken)} loading={resendLoading} loadingLabel={t("verifyEmail.resending")} onClick={() => void resendVerificationCode()} type="button" variant="outline">{t("verifyEmail.resend")}</Button>
           </FieldGroup>
