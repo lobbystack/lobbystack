@@ -1734,10 +1734,11 @@ async function handleSidebandMessage(
   }
 
   if (payload.type === "error") {
-    // A request rejected before any response was confirmed would otherwise
-    // leave the gate closed for the rest of the session.
-    releaseUnconfirmedRealtimeResponse(session.responseGate, payload.error?.event_id);
     if (isBenignRealtimeClientError(payload.error)) {
+      // The gate deliberately stays closed here. The conflict means a provider
+      // response really is active, so releasing would let the next request race
+      // it and would throw away anything deferred behind the rejected create.
+      // That response's `response.done` releases the gate.
       recordOpenAiRealtimeStateConflict({
         "lobbystack.business_id": session.businessId,
         "lobbystack.call_id": session.callId,
@@ -1749,6 +1750,12 @@ async function handleSidebandMessage(
       });
       return;
     }
+    // Any other rejection of our create will never be acknowledged, so the gate
+    // has to be freed or every later turn would be deferred forever.
+    releaseUnconfirmedRealtimeResponse(
+      session.responseGate,
+      payload.error?.event_id,
+    );
     server.log.warn(
       {
         callId: session.callId,

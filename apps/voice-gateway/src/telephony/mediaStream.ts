@@ -3440,13 +3440,14 @@ export function handleOpenAiMessage(
     case "error": {
       const runtimeConfig = loadVoiceGatewayEnv(process.env);
       const providerError = payload.error ?? payload;
-      releaseUnconfirmedRealtimeResponse(
-        session.responseGate,
-        payload.error?.event_id,
-      );
       if (isBenignRealtimeClientError(payload.error)) {
         // A rejected `response.create` leaves the active response untouched, so
         // the turn still completes. Record it without paging anyone.
+        //
+        // The gate deliberately stays closed here. The conflict means a
+        // provider response really is active, so releasing would let the next
+        // request race it and would throw away anything deferred behind the
+        // rejected create. That response's `response.done` releases the gate.
         recordOpenAiRealtimeStateConflict({
           ...(session.callSid ? { "lobbystack.call_sid": session.callSid } : {}),
           ...(session.streamSid ? { "lobbystack.stream_sid": session.streamSid } : {}),
@@ -3460,6 +3461,12 @@ export function handleOpenAiMessage(
         });
         return;
       }
+      // Any other rejection of our create will never be acknowledged, so the
+      // gate has to be freed or every later turn would be deferred forever.
+      releaseUnconfirmedRealtimeResponse(
+        session.responseGate,
+        payload.error?.event_id,
+      );
       const classification = captureProviderFailureException({
         provider: "openai",
         error: providerError,

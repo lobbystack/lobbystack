@@ -173,6 +173,74 @@ describe("phone media stream telemetry", () => {
     }));
   });
 
+  it("keeps the response gate closed when a create loses to an active response", async () => {
+    const { mediaStream, session } = await loadMediaStream();
+    const gate = await import("../realtime/responseGate");
+    const { server, openAiSocket, twilioSocket } = createRuntimeDoubles();
+
+    // A tool output is waiting on an answer, and our create for it was the one
+    // the provider rejected.
+    gate.markRealtimeConversationInput(session.responseGate);
+    gate.requestRealtimeResponse(session.responseGate, undefined, "evt_create");
+    gate.requestRealtimeResponse(session.responseGate, { instructions: "recover" });
+
+    mediaStream.handleOpenAiMessage(
+      server as never,
+      openAiSocket as never,
+      twilioSocket as never,
+      session,
+      Buffer.from(JSON.stringify({
+        type: "error",
+        error: {
+          type: "invalid_request_error",
+          code: "conversation_already_has_active_response",
+          event_id: "evt_create",
+        },
+      })),
+    );
+
+    // A provider response really is active, so the next request must still be
+    // held back, and the deferred one must survive to be answered.
+    expect(session.responseGate.assistantResponseInFlight).toBe(true);
+    expect(session.responseGate.deferredAssistantResponse).toEqual({
+      request: { instructions: "recover" },
+    });
+
+    // The active response finishing is what releases the gate and posts it.
+    expect(
+      gate.takeDeferredRealtimeResponse(session.responseGate, {
+        responseId: "resp_provider",
+      }),
+    ).toEqual({ post: true, request: { instructions: "recover" } });
+  });
+
+  it("frees the response gate when a create is rejected outright", async () => {
+    const { mediaStream, session } = await loadMediaStream();
+    const gate = await import("../realtime/responseGate");
+    const { server, openAiSocket, twilioSocket } = createRuntimeDoubles();
+
+    gate.requestRealtimeResponse(session.responseGate, undefined, "evt_create");
+
+    mediaStream.handleOpenAiMessage(
+      server as never,
+      openAiSocket as never,
+      twilioSocket as never,
+      session,
+      Buffer.from(JSON.stringify({
+        type: "error",
+        error: {
+          type: "invalid_request_error",
+          code: "invalid_value",
+          event_id: "evt_create",
+        },
+      })),
+    );
+
+    // Nothing will ever acknowledge that create, so holding the gate would
+    // strand every later turn.
+    expect(session.responseGate.assistantResponseInFlight).toBe(false);
+  });
+
   it("still emits ops.voice.openai_realtime_error for a real provider failure", async () => {
     const { mediaStream, session } = await loadMediaStream();
     const { server, openAiSocket, twilioSocket } = createRuntimeDoubles();
