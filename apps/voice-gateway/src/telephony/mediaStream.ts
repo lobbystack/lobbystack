@@ -1138,8 +1138,8 @@ function postAssistantResponse(
   const nowMs = Date.now();
   if (options.force) {
     resetRealtimeResponseGate(session.responseGate);
-    requestRealtimeResponse(session.responseGate, request, nowMs);
-  } else if (!requestRealtimeResponse(session.responseGate, request, nowMs)) {
+    requestRealtimeResponse(session.responseGate, request);
+  } else if (!requestRealtimeResponse(session.responseGate, request)) {
     server.log.debug(
       {
         callId: session.callId,
@@ -1167,7 +1167,7 @@ function flushDeferredAssistantResponse(
   socket: WebSocket,
   session: ActiveVoiceSession,
 ): void {
-  const deferred = takeDeferredRealtimeResponse(session.responseGate, Date.now());
+  const deferred = takeDeferredRealtimeResponse(session.responseGate);
   if (!deferred.post) {
     return;
   }
@@ -2714,7 +2714,7 @@ async function handleToolCall(
         output: JSON.stringify(toolOutput),
       },
     });
-    markRealtimeConversationInput(session.responseGate, Date.now());
+    markRealtimeConversationInput(session.responseGate);
 
     if (result.suppressResponse) {
       session.pendingInboundAudio = [];
@@ -2788,7 +2788,7 @@ async function handleToolCall(
         }),
       },
     });
-    markRealtimeConversationInput(session.responseGate, Date.now());
+    markRealtimeConversationInput(session.responseGate);
     postAssistantResponse(server, openAiSocket, session, {
       instructions: buildToolFailureRecoveryInstructions({
         toolName: message.name,
@@ -2931,7 +2931,7 @@ export function handleOpenAiMessage(
     case "response.created": {
       // Server-side turn detection creates responses the gate never requested,
       // so the active response is confirmed here rather than at request time.
-      markRealtimeResponseCreated(session.responseGate, Date.now());
+      markRealtimeResponseCreated(session.responseGate);
       return;
     }
     case "response.audio.delta":

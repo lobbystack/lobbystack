@@ -1107,8 +1107,8 @@ function requestWebResponse(
   const nowMs = Date.now();
   if (options.force) {
     resetRealtimeResponseGate(session.responseGate);
-    requestRealtimeResponse(session.responseGate, response, nowMs);
-  } else if (!requestRealtimeResponse(session.responseGate, response, nowMs)) {
+    requestRealtimeResponse(session.responseGate, response);
+  } else if (!requestRealtimeResponse(session.responseGate, response)) {
     return;
   }
 
@@ -1126,7 +1126,7 @@ function flushDeferredWebResponse(
   socket: WebSocket,
   session: ActiveWebCall,
 ): void {
-  const deferred = takeDeferredRealtimeResponse(session.responseGate, Date.now());
+  const deferred = takeDeferredRealtimeResponse(session.responseGate);
   if (!deferred.post) {
     return;
   }
@@ -1477,7 +1477,7 @@ async function handleSidebandMessage(
   if (payload.type === "response.created") {
     // Server-side turn detection creates responses the gate never requested,
     // so the active response is confirmed here rather than at request time.
-    markRealtimeResponseCreated(session.responseGate, Date.now());
+    markRealtimeResponseCreated(session.responseGate);
     trackWebResponseCreated(session, payload.response?.id);
     return;
   }
@@ -1776,7 +1776,7 @@ async function handleToolCall(
         }),
       },
     });
-    markRealtimeConversationInput(session.responseGate, Date.now());
+    markRealtimeConversationInput(session.responseGate);
     requestWebResponse(socket, session);
     return;
   }
@@ -1839,7 +1839,7 @@ async function handleToolCall(
         }),
       },
     });
-    markRealtimeConversationInput(session.responseGate, Date.now());
+    markRealtimeConversationInput(session.responseGate);
     requestWebResponse(socket, session);
     return;
   }
@@ -1858,7 +1858,7 @@ async function handleToolCall(
       output: JSON.stringify(executed.result),
     },
   });
-  markRealtimeConversationInput(session.responseGate, Date.now());
+  markRealtimeConversationInput(session.responseGate);
 
   if (executed.suppressResponse) {
     postRealtimeEvent(socket, { type: "input_audio_buffer.clear" });

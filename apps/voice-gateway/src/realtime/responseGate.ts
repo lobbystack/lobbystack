@@ -14,33 +14,38 @@ type DeferredRealtimeResponse = { request: RealtimeResponseRequest };
 
 export type RealtimeResponseGate = {
   assistantResponseInFlight: boolean;
-  // When the active response was asked for, not when the provider acknowledged
-  // it. The provider orders the conversation by what it received, so the
-  // request is what conversation input must be compared against.
-  activeAssistantResponseStartedAtMs: number | null;
+  // Ordering runs on a counter, not a clock. Adjacent promise continuations
+  // land in the same millisecond, and `Date.now()` cannot then tell a tool
+  // output sent after a `response.create` from one sent before it.
+  sequence: number;
+  // Where the active response was asked for in that order, not where the
+  // provider acknowledged it. The provider orders the conversation by what it
+  // received, so the request is what conversation input is compared against.
+  activeAssistantResponseStartedSeq: number | null;
   activeAssistantResponseConfirmed: boolean;
-  lastConversationInputAtMs: number | null;
+  lastConversationInputSeq: number | null;
   deferredAssistantResponse: DeferredRealtimeResponse | null;
 };
 
 export function createRealtimeResponseGate(): RealtimeResponseGate {
   return {
     assistantResponseInFlight: false,
-    activeAssistantResponseStartedAtMs: null,
+    sequence: 0,
+    activeAssistantResponseStartedSeq: null,
     activeAssistantResponseConfirmed: false,
-    lastConversationInputAtMs: null,
+    lastConversationInputSeq: null,
     deferredAssistantResponse: null,
   };
 }
 
 // Records a conversation item the assistant still owes an answer for, such as a
-// `function_call_output`. The timestamp is what later distinguishes input the
-// active response could not have seen from input it already consumed.
+// `function_call_output`. Its place in the order is what later distinguishes
+// input the active response could not have seen from input it already saw.
 export function markRealtimeConversationInput(
   gate: RealtimeResponseGate,
-  nowMs: number,
 ): void {
-  gate.lastConversationInputAtMs = nowMs;
+  gate.sequence += 1;
+  gate.lastConversationInputSeq = gate.sequence;
 }
 
 // Returns true when the caller should post the request now. A false return
@@ -48,7 +53,6 @@ export function markRealtimeConversationInput(
 export function requestRealtimeResponse(
   gate: RealtimeResponseGate,
   request: RealtimeResponseRequest,
-  nowMs: number,
 ): boolean {
   if (gate.assistantResponseInFlight) {
     gate.deferredAssistantResponse = { request };
@@ -56,39 +60,39 @@ export function requestRealtimeResponse(
   }
 
   gate.assistantResponseInFlight = true;
-  gate.activeAssistantResponseStartedAtMs = nowMs;
+  gate.sequence += 1;
+  gate.activeAssistantResponseStartedSeq = gate.sequence;
   gate.activeAssistantResponseConfirmed = false;
   gate.deferredAssistantResponse = null;
   return true;
 }
 
-export function markRealtimeResponseCreated(
-  gate: RealtimeResponseGate,
-  nowMs: number,
-): void {
+export function markRealtimeResponseCreated(gate: RealtimeResponseGate): void {
   // The server can also create a response on its own, after a voice-activity
-  // turn the gate never saw a request for. There is no send time to use for
-  // one of those, so its acknowledgement is the earliest defensible stamp.
+  // turn the gate never saw a request for. One of those takes its place in the
+  // order here, which is the earliest point the gate learns of it.
   gate.assistantResponseInFlight = true;
   gate.activeAssistantResponseConfirmed = true;
-  if (gate.activeAssistantResponseStartedAtMs === null) {
-    gate.activeAssistantResponseStartedAtMs = nowMs;
+  if (gate.activeAssistantResponseStartedSeq === null) {
+    gate.sequence += 1;
+    gate.activeAssistantResponseStartedSeq = gate.sequence;
   }
 }
 
-// Clears the active response and returns the deferred request to post, if the
-// finished response was asked for before conversation input it could not have
-// answered. Returning `{ post: false }` drops the request as already covered.
-export function takeDeferredRealtimeResponse(
-  gate: RealtimeResponseGate,
-  nowMs: number,
-): { post: boolean; request: RealtimeResponseRequest } {
+// Clears the active response and returns the deferred request to post. A
+// request whose only job was to answer conversation input is dropped when the
+// finished response already covered that input; anything carrying its own
+// instructions always posts.
+export function takeDeferredRealtimeResponse(gate: RealtimeResponseGate): {
+  post: boolean;
+  request: RealtimeResponseRequest;
+} {
   const deferred = gate.deferredAssistantResponse;
-  const startedAtMs = gate.activeAssistantResponseStartedAtMs;
-  const inputAtMs = gate.lastConversationInputAtMs;
+  const startedSeq = gate.activeAssistantResponseStartedSeq;
+  const inputSeq = gate.lastConversationInputSeq;
 
   gate.assistantResponseInFlight = false;
-  gate.activeAssistantResponseStartedAtMs = null;
+  gate.activeAssistantResponseStartedSeq = null;
   gate.activeAssistantResponseConfirmed = false;
   gate.deferredAssistantResponse = null;
 
@@ -96,16 +100,22 @@ export function takeDeferredRealtimeResponse(
     return { post: false, request: undefined };
   }
 
-  // Without a start time there is no evidence the active response saw the
-  // newer input, so answering it is the safer side of the trade.
-  const answeredNewerInput =
-    startedAtMs !== null && inputAtMs !== null && inputAtMs <= startedAtMs;
-  if (answeredNewerInput) {
-    return { post: false, request: undefined };
+  // A request that carries instructions of its own — a hold check-in, a tool
+  // failure recovery — is not answering conversation input, so no ordering of
+  // that input can show it was covered.
+  if (deferred.request === undefined) {
+    // Without a recorded position there is no evidence the active response saw
+    // the newer input, so answering it is the safer side of the trade.
+    const answeredInput =
+      startedSeq !== null && inputSeq !== null && inputSeq <= startedSeq;
+    if (answeredInput) {
+      return { post: false, request: undefined };
+    }
   }
 
   gate.assistantResponseInFlight = true;
-  gate.activeAssistantResponseStartedAtMs = nowMs;
+  gate.sequence += 1;
+  gate.activeAssistantResponseStartedSeq = gate.sequence;
   return { post: true, request: deferred.request };
 }
 
@@ -125,7 +135,7 @@ export function releaseUnconfirmedRealtimeResponse(
   }
 
   gate.assistantResponseInFlight = false;
-  gate.activeAssistantResponseStartedAtMs = null;
+  gate.activeAssistantResponseStartedSeq = null;
   gate.deferredAssistantResponse = null;
   return true;
 }
@@ -133,9 +143,9 @@ export function releaseUnconfirmedRealtimeResponse(
 // A call that is ending or transferring must not start another turn.
 export function resetRealtimeResponseGate(gate: RealtimeResponseGate): void {
   gate.assistantResponseInFlight = false;
-  gate.activeAssistantResponseStartedAtMs = null;
+  gate.activeAssistantResponseStartedSeq = null;
   gate.activeAssistantResponseConfirmed = false;
-  gate.lastConversationInputAtMs = null;
+  gate.lastConversationInputSeq = null;
   gate.deferredAssistantResponse = null;
 }
 
