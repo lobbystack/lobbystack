@@ -43,6 +43,10 @@ export const WEB_EVENT_NAMES = [
   "web.voice.test_call_connected",
   "web.voice.test_call_ended",
   "web.voice.test_call_error",
+  "web.activation.first_call_completed",
+  "web.activation.upgrade_prompt_shown",
+  "web.activation.upgrade_prompt_clicked",
+  "web.onboarding.plan_checkout_completed",
 ] as const;
 
 export const VOICE_EVENT_NAMES = [
@@ -99,6 +103,10 @@ export const WORKFLOW_EVENT_NAMES = [
   "workflow.failed",
 ] as const;
 
+export const BILLING_EVENT_NAMES = [
+  "billing.subscription_started",
+] as const;
+
 export const OPERATIONS_EVENT_NAMES = [
   "ops.billing.usage_sync_failed",
   "ops.billing.usage_sync_recovered",
@@ -136,6 +144,7 @@ export const TELEMETRY_EVENT_NAMES = [
   ...AI_EVENT_NAMES,
   ...INTEGRATION_EVENT_NAMES,
   ...WORKFLOW_EVENT_NAMES,
+  ...BILLING_EVENT_NAMES,
   ...OPERATIONS_EVENT_NAMES,
 ] as const;
 
@@ -170,6 +179,7 @@ export const TELEMETRY_EVENT_TRANSPORT = {
   "$ai_generation": ["durable", "gateway"],
   ...transportsFor(INTEGRATION_EVENT_NAMES, ["durable"]),
   ...transportsFor(WORKFLOW_EVENT_NAMES, ["durable"]),
+  ...transportsFor(BILLING_EVENT_NAMES, ["durable"]),
   ...transportsFor(GATEWAY_OPERATION_EVENT_NAMES, ["gateway"]),
   ...transportsFor(DURABLE_OPERATION_EVENT_NAMES, ["durable"]),
 } satisfies Record<TelemetryEventName, ReadonlyArray<TelemetryTransport>>;
@@ -368,6 +378,7 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   ],
   "web.onboarding.plan_selected": ["businessId", "deploymentMode", "plan"],
   "web.onboarding.plan_checkout_started": ["businessId", "deploymentMode", "plan"],
+  "web.onboarding.plan_checkout_completed": ["businessId", "deploymentMode", "plan"],
   "web.onboarding.attribution_submitted": ["businessId", "deploymentMode", "source"],
   "web.knowledge.upload_started": [
     "businessId",
@@ -412,6 +423,10 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.voice.test_call_connected": ["businessId", "deploymentMode"],
   "web.voice.test_call_ended": ["businessId", "deploymentMode"],
   "web.voice.test_call_error": ["businessId", "deploymentMode"],
+  "web.activation.first_call_completed": ["businessId", "deploymentMode", "transport"],
+  "web.activation.upgrade_prompt_shown": ["businessId", "deploymentMode", "trigger"],
+  "web.activation.upgrade_prompt_clicked": ["businessId", "deploymentMode", "trigger"],
+  "billing.subscription_started": ["businessId", "plan", "billingInterval", "previousPlan"],
   "voice.call_started": [
     "businessId",
     "deploymentMode",

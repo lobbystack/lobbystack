@@ -214,5 +214,19 @@
     "hours": "Set hours and services so booking can suggest real times.",
     "transfer": "Add transfer rules and a fallback number before handing off urgent calls.",
     "snapshot": "Refresh your snapshot after major policy changes so voice picks them up quickly."
+  },
+  "activation": {
+    "hearIt": {
+      "title": "Hear your agent answer",
+      "description": "Call it from your browser and listen to how it greets a customer.",
+      "descriptionWithPages_one": "It has read {{count}} page of {{host}}. Call it and ask something only your business would know.",
+      "descriptionWithPages_other": "It has read {{count}} pages of {{host}}. Call it and ask something only your business would know.",
+      "cta": "Start a call"
+    },
+    "upgrade": {
+      "title": "Give your agent a phone number",
+      "description": "You have heard it work. A dedicated number lets it answer your real customers, day and night.",
+      "cta": "Choose a plan"
+    }
   }
 }

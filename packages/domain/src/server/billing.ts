@@ -2,9 +2,11 @@ import { and, eq, lt, or, sql } from "drizzle-orm";
 
 import { billingAccounts, billingCheckoutRequests, billingTransactions, billingUsageEvents, businesses, enqueueOutbox, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { billingErrorCodes, billingPlanCatalog, billingPlanSlugs, type BillingPlanSlug } from "@lobbystack/shared";
+import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import type { DomainContext } from "./context";
 import { recordAffiliateCommissionInTransaction } from "./affiliates";
+import { recordProductEvent } from "./productEvents";
 import { requireBusinessAdmin } from "../authz";
 import { correctUsageInTransaction, enqueueUsageSyncInTransaction, getUsageStatusInTransaction, reserveUsageInTransaction, type NonAiBillingUsageKind, type UsageReservationResult } from "./usage";
 
@@ -473,17 +475,44 @@ function dateField(source: Record<string, unknown>, ...keys: string[]): Date | u
   return Number.isNaN(date.valueOf()) ? undefined : date;
 }
 
+export type SubscriptionStart = { plan: string; billingInterval: string | null; previousPlan: string | null };
+
+/**
+ * A subscription counts as started once the plan is billable and the provider
+ * says it is live. `past_due` counts as paying, matching the voice allowance
+ * and the dedicated-number gate, so recovering from a failed charge does not
+ * look like a second subscription.
+ */
+function isPaidSubscription(plan: string | null, state: string | null): boolean {
+  return ["starter", "pro", "enterprise"].includes(plan ?? "") && ["active", "trialing", "past_due"].includes(state ?? "");
+}
+
+/**
+ * A subscription starts on the edge into a paid, live plan. Later webhooks for
+ * the same subscription describe an account that was already paying, so they
+ * must not report a second start.
+ */
+export function detectSubscriptionStart(
+  previous: { plan: string | null; subscriptionState: string | null } | undefined,
+  next: { plan: string | null; subscriptionState: string | null; billingInterval: string | null },
+): SubscriptionStart | null {
+  if (!isPaidSubscription(next.plan, next.subscriptionState)) return null;
+  if (isPaidSubscription(previous?.plan ?? null, previous?.subscriptionState ?? null)) return null;
+  return { plan: next.plan!, billingInterval: next.billingInterval, previousPlan: previous?.plan ?? null };
+}
+
 export async function reconcileBillingProviderEvent(
   context: DomainContext,
   input: { businessId: string; providerEventId: string },
 ): Promise<boolean> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+  const outcome = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx): Promise<{ reconciled: boolean; started: SubscriptionStart | null }> => {
+    let startedSubscription: SubscriptionStart | null = null;
     const event = (await tx.select({ id: providerEvents.id, providerEventId: providerEvents.providerEventId, eventType: providerEvents.eventType, status: providerEvents.status, payload: providerEvents.payload, createdAt: providerEvents.createdAt })
       .from(providerEvents)
       .where(and(eq(providerEvents.id, input.providerEventId), eq(providerEvents.businessId, input.businessId)))
       .limit(1))[0];
-    if (!event) return false;
-    if (event.status === "processed") return true;
+    if (!event) return { reconciled: false, started: null };
+    if (event.status === "processed") return { reconciled: true, started: null };
 
     const payload = recordObject(event.payload);
     const transactionPayload = recordObject(payload.order ?? payload.refund ?? payload);
@@ -494,6 +523,9 @@ export async function reconcileBillingProviderEvent(
       billingKey: billingAccounts.billingKey,
       customerId: billingAccounts.customerId,
       subscriptionId: billingAccounts.subscriptionId,
+      plan: billingAccounts.plan,
+      subscriptionState: billingAccounts.subscriptionState,
+      billingInterval: billingAccounts.billingInterval,
     }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
     const billingKey = stringField(transactionPayload, "billingKey", "externalCustomerId", "customerId") ?? stringField(payload, "billingKey", "externalCustomerId", "customerId") ?? stringField(customer, "id", "externalId") ?? existing?.billingKey;
     if (billingKey) {
@@ -504,6 +536,11 @@ export async function reconcileBillingProviderEvent(
       const subscriptionState = stringField(transactionPayload, "subscriptionState", "status") ?? stringField(payload, "subscriptionState", "status") ?? (event.eventType.startsWith("subscription.") ? event.eventType.slice("subscription.".length) : undefined);
       const currentPeriodStart = dateField(transactionPayload, "currentPeriodStart", "current_period_start") ?? dateField(payload, "currentPeriodStart", "current_period_start") ?? dateField(subscription, "currentPeriodStart", "current_period_start");
       const currentPeriodEnd = dateField(transactionPayload, "currentPeriodEnd", "current_period_end") ?? dateField(payload, "currentPeriodEnd", "current_period_end") ?? dateField(subscription, "currentPeriodEnd", "current_period_end");
+      startedSubscription = detectSubscriptionStart(existing, {
+        plan: plan ?? existing?.plan ?? null,
+        subscriptionState: subscriptionState ?? existing?.subscriptionState ?? null,
+        billingInterval: billingInterval ?? existing?.billingInterval ?? null,
+      });
       await tx.insert(billingAccounts).values({
         businessId: input.businessId,
         billingKey,
@@ -588,6 +625,25 @@ export async function reconcileBillingProviderEvent(
     }
 
     await tx.update(providerEvents).set({ status: billingKey ? "processed" : "ignored", updatedAt: new Date() }).where(eq(providerEvents.id, event.id));
-    return Boolean(billingKey);
+    return { reconciled: Boolean(billingKey), started: startedSubscription };
   });
+
+  // Telemetry is audit data recorded after the authoritative transaction commits,
+  // so a reporting failure can never roll back a reconciled payment.
+  const started = outcome.started;
+  if (started) {
+    await recordProductEvent(context, {
+      name: "billing.subscription_started",
+      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+      businessId: input.businessId,
+      actorType: "worker",
+      properties: {
+        plan: started.plan,
+        billingInterval: started.billingInterval,
+        previousPlan: started.previousPlan,
+      },
+    }).catch(() => null);
+  }
+
+  return outcome.reconciled;
 }

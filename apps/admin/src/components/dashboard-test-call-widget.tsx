@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Phone } from "lucide-react";
 import { createPortal } from "react-dom";
@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 
 import { AuraVoiceDemo } from "@/components/web-voice/AuraVoiceDemo";
 import { webCallEndpoint } from "@/lib/web-call-endpoint";
+import { registerTestCallStarter } from "@/lib/test-call-launcher";
 import { useTelemetry } from "@/components/product-analytics";
 import type { TelemetryEventName, TelemetryProperties } from "@lobbystack/telemetry";
 import { Button } from "@/components/ui/button";
@@ -47,10 +48,15 @@ export function DashboardTestCallWidget({
     setOpen(nextOpen);
   };
 
-  const handleTestCallClick = () => {
+  const handleTestCallClick = useCallback(() => {
     setOpen(true);
     void voiceControlsRef.current?.startCall();
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!businessSlug) return;
+    return registerTestCallStarter(handleTestCallClick);
+  }, [businessSlug, handleTestCallClick]);
 
   if (!businessSlug) {
     return null;

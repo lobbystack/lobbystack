@@ -31,6 +31,10 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 - `web.agent.settings_saved`
 - `web.onboarding.number_claim_started`
 - `web.onboarding.number_claim_completed`
+- `web.onboarding.plan_checkout_completed`
+- `web.activation.first_call_completed`
+- `web.activation.upgrade_prompt_shown`
+- `web.activation.upgrade_prompt_clicked`
 - `web.knowledge.upload_started`
 - `web.knowledge.upload_completed`
 - `web.integration.calendar_connect_started`
@@ -89,6 +93,12 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 - `business.snapshot_refreshed`
 - `workflow.started`
 - `workflow.failed`
+
+### Billing events
+
+`billing.subscription_started` fires once, when a workspace crosses from free into a live paid plan. Renewals, plan changes between paid tiers, and recovery from `past_due` do not repeat it, so the event counts subscriptions rather than webhooks. The worker records it after the reconciling transaction commits, which means a reporting failure cannot roll back a payment.
+
+- `billing.subscription_started`
 
 ### Operations events
 

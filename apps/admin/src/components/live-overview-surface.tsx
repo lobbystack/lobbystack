@@ -19,6 +19,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
+import { DashboardActivationCard } from "@/components/dashboard-activation-card";
 import { ChartBlockSkeleton, MetricCardGridSkeleton } from "@/components/loading-skeletons";
 import { Item, ItemActions, ItemHeader, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
@@ -82,6 +83,7 @@ export function LiveOverviewSurface() {
     <div className="flex flex-col gap-6">
       <PageHeader title={t("home.title")} />
       <div className="flex flex-col gap-6">
+        <DashboardActivationCard businessId={businessId} />
         {summary.isLoading ? <MetricCardGridSkeleton count={3} /> : (
           <Surface className="grid sm:grid-cols-2 md:grid-cols-3">
             {metrics.map((metric) => (

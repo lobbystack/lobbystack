@@ -11,9 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { useTelemetry } from "@/components/product-analytics";
+import { isWebsiteImportRunning, WebsiteImportProgress, type WebsiteImportSummary } from "./website-import-progress";
 
 type Business = { businessId: string; active: boolean };
 type Profile = { greeting: string };
+type KnowledgeDocument = { id: string; websiteImport?: WebsiteImportSummary | null };
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
@@ -32,6 +34,13 @@ export function OnboardingGreetingSurface() {
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
   const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
   const agent = useQuery({ queryKey: ["onboarding-agent", business?.businessId], queryFn: () => requestJson<{ profile: Profile | null }>("/api/agent"), enabled: Boolean(business) });
+  const documents = useQuery({
+    queryKey: ["onboarding-knowledge", business?.businessId],
+    queryFn: () => requestJson<{ documents: KnowledgeDocument[] }>(`/api/knowledge?businessId=${encodeURIComponent(business!.businessId)}`),
+    enabled: Boolean(business),
+    refetchInterval: query => query.state.data?.documents?.some(document => isWebsiteImportRunning(document.websiteImport)) ? 2000 : false,
+  });
+  const websiteImport = documents.data?.documents?.find((document) => document.websiteImport)?.websiteImport ?? null;
   useEffect(() => {
     if (!hasUserEdited && agent.data?.profile?.greeting) setGreeting(agent.data.profile.greeting);
   }, [agent.data?.profile?.greeting, hasUserEdited]);
@@ -59,6 +68,7 @@ export function OnboardingGreetingSurface() {
 
   return (
     <form className="flex flex-col gap-4" onSubmit={submit}>
+      {websiteImport ? <WebsiteImportProgress job={websiteImport} /> : null}
       <FieldGroup className="gap-4">
         <Field>
           <FieldLabel htmlFor="onboarding-greeting">{t("greeting.label")}</FieldLabel>

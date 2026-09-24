@@ -8,6 +8,8 @@ import en from "../../public/locales/en/dashboard.json";
 import fr from "../../public/locales/fr/dashboard.json";
 import { LiveOverviewSurface } from "./live-overview-surface";
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
+// The activation card has its own suite; this one covers follow-up parity.
+vi.mock("./dashboard-activation-card", () => ({ DashboardActivationCard: () => null }));
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
 async function setup(locale: "en" | "fr", callId: string | null) {

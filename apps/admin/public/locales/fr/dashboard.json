@@ -214,5 +214,19 @@
     "hours": "Définissez les heures, les services et les affectations d'équipe afin que la réservation puisse proposer de vrais créneaux.",
     "transfer": "Ajoutez des règles de transfert et un numéro de secours avant de transférer les appels urgents.",
     "snapshot": "Actualisez l'instantané après des changements de politique importants pour que la voix les prenne rapidement en compte."
+  },
+  "activation": {
+    "hearIt": {
+      "title": "Écoutez votre agent répondre",
+      "description": "Appelez-le depuis votre navigateur et écoutez comment il accueille un client.",
+      "descriptionWithPages_one": "Il a lu {{count}} page de {{host}}. Appelez-le et posez une question que seule votre entreprise connaît.",
+      "descriptionWithPages_other": "Il a lu {{count}} pages de {{host}}. Appelez-le et posez une question que seule votre entreprise connaît.",
+      "cta": "Lancer un appel"
+    },
+    "upgrade": {
+      "title": "Donnez un numéro à votre agent",
+      "description": "Vous l'avez entendu travailler. Un numéro dédié lui permet de répondre à vos vrais clients, jour et nuit.",
+      "cta": "Choisir un forfait"
+    }
   }
 }

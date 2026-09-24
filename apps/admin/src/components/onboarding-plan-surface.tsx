@@ -62,19 +62,22 @@ export function OnboardingPlanSurface() {
   const returnedCheckout = useQuery({
     queryKey: ["onboarding-checkout-return", business?.businessId, returnRequestId],
     enabled: Boolean(business && returnRequestId),
-    queryFn: () => requestJson<{ synced: boolean }>(`/api/billing/checkout?businessId=${encodeURIComponent(business!.businessId)}&requestId=${encodeURIComponent(returnRequestId!)}`),
+    queryFn: () => requestJson<{ synced: boolean; target: string | null }>(`/api/billing/checkout?businessId=${encodeURIComponent(business!.businessId)}&requestId=${encodeURIComponent(returnRequestId!)}`),
     refetchInterval: query => query.state.data?.synced ? false : 1500,
   });
   useEffect(() => {
     const key = `${business?.businessId}:${returnRequestId}`;
     if (!business || !returnRequestId || !returnedCheckout.data?.synced) return;
-    if (returnAttempt.current?.key !== key) returnAttempt.current = { key, promise: requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business.businessId)}`, { method: "POST", body: JSON.stringify({ to: "phone_number" }) }) };
+    if (returnAttempt.current?.key !== key) {
+      telemetry.track("web.onboarding.plan_checkout_completed", { businessId: business.businessId, plan: returnedCheckout.data.target ?? "unknown" });
+      returnAttempt.current = { key, promise: requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business.businessId)}`, { method: "POST", body: JSON.stringify({ to: "phone_number" }) }) };
+    }
     let cancelled = false;
     void returnAttempt.current.promise.then(() => {
       if (!cancelled) router.replace("/onboarding/number");
     }).catch(() => { if (!cancelled) returnAttempt.current = null; });
     return () => { cancelled = true; };
-  }, [business, returnRequestId, returnedCheckout.data?.synced, router]);
+  }, [business, returnRequestId, returnedCheckout.data?.synced, returnedCheckout.data?.target, router, telemetry]);
   useEffect(() => {
     if (checkout.data?.status === "error" || checkout.isError) {
       setCheckoutError(checkout.data?.error ?? t("plan.continueFailed"));
