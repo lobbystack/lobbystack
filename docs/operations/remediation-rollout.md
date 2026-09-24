@@ -128,9 +128,15 @@ The dry-run lists call IDs, state, timing, and the required operator action. Che
 
 The tool refuses recent calls and unknown provider duration. Retrying a completed resolution does not bill the call twice. The tool does not look up provider usage or release unknown allocations on its own.
 
+The Calls header uses Redis-backed live media-session presence, not the number of `started` call records. It refreshes through realtime events and a five-second fallback poll; browser results become unavailable after 15 seconds without a fresh response. Telephone sessions renew their leases from the gateway. Browser sessions renew only while WebRTC reports `connected`, through the owning gateway's `/web-call/sessions/:sessionId/presence` route, which requires the same session affinity as the end route.
+
+Call leases and per-instance gateway readiness expire after 30 seconds. Expired call evidence makes the business count unavailable rather than treating missing heartbeats as confirmed hangups. Fresh evidence or an explicit end clears that uncertainty; the count endpoint also removes entries whose durable calls have been completed through provider reconciliation. A healthy replica cannot conceal an expired lease from another replica. Presence cleanup runs independently of provider hangup and billing-duration capture.
+
+Deploy the admin endpoints before the gateway and browser heartbeat writers, then roll the writer to every gateway replica. The indicator remains unavailable until a gateway is online; avoid relying on the count during a mixed-version gateway rollout. Historical unresolved call records still require the evidence-based voice recovery procedure above to settle usage.
+
 ## Scale the voice gateway
 
-The gateway holds active and completed call state in process memory. The end, recording, and sideband routes must reach the replica that owns the session.
+The gateway holds active and completed call state in process memory. The end, recording, and sideband routes must reach the replica that owns the session. Live-call presence is shared in Redis, but it does not provide session affinity for these routes.
 
 Run one replica, or route each session to the same replica, until that state moves to shared storage. Durable admission, allowance, and completion are stored in the admin database, so billing survives a restart and a redeploy. Only the live call lifecycle is process-local.
 

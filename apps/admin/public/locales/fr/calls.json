@@ -1,6 +1,7 @@
 {
   "page": {
     "title": "Appels",
+    "liveUnavailable": "État des appels indisponible",
     "description": "Consultez les appels récents et écoutez l'audio enregistré.",
     "emptyPreview": "Pas encore de transcription.",
     "selectCall": "Sélectionnez un appel pour afficher la transcription.",

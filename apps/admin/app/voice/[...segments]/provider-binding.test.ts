@@ -2,7 +2,7 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ transaction: vi.fn(), authorize: vi.fn(), where: vi.fn(), returning: vi.fn(), set: vi.fn() }));
+const mocks = vi.hoisted(() => ({ transaction: vi.fn(), authorize: vi.fn(), where: vi.fn(), returning: vi.fn(), set: vi.fn(), presence: vi.fn(), presenceReady: vi.fn(), presenceWhere: vi.fn(), limit: vi.fn() }));
 vi.mock("@lobbystack/domain", () => ({}));
 vi.mock("@lobbystack/db", async (importOriginal) => ({ ...await importOriginal<typeof import("@lobbystack/db")>(), withBusinessTransaction: mocks.transaction }));
 vi.mock("@/lib/api-helpers", () => ({
@@ -14,6 +14,7 @@ vi.mock("@/lib/domain-context", () => ({ createWorkerDomainContext: () => ({ db:
 vi.mock("@/lib/prospect-demo", () => ({}));
 vi.mock("@/lib/web-voice-policy", () => ({}));
 vi.mock("@/lib/voice-ai-cost", () => ({}));
+vi.mock("@/lib/voice-presence", () => ({ updateVoicePresence: mocks.presence, renewVoicePresenceGateway: mocks.presenceReady }));
 import { POST } from "./route";
 
 const body = { businessId: "business", callId: "call", gatewaySessionId: "session", providerCallId: "rtc_actual" };
@@ -23,11 +24,16 @@ function bind(input = body) {
 function markMediaStarted(input = { ...body, mediaStartedAt: "2026-09-23T22:00:00.000Z" }) {
   return POST(new Request("https://admin.test/voice/call/mark-web-media-started", { method: "POST", body: JSON.stringify(input) }), { params: Promise.resolve({ segments: ["call", "mark-web-media-started"] }) });
 }
+function presence(active: boolean) {
+  return POST(new Request("https://admin.test/voice/call/presence", { method: "POST", body: JSON.stringify({ businessId: "business", callId: "call", active, gatewayId: "gateway" }) }), { params: Promise.resolve({ segments: ["call", "presence"] }) });
+}
 describe("provider binding route", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.authorize.mockResolvedValue(undefined);
-    const tx = { update: () => ({ set: mocks.set }) };
+    const tx = { update: () => ({ set: mocks.set }), select: () => ({ from: () => ({ where: mocks.presenceWhere }) }) };
+    mocks.presenceWhere.mockReturnValue({ limit: mocks.limit });
+    mocks.limit.mockResolvedValue([{ id: "call" }]);
     mocks.set.mockReturnValue({ where: mocks.where });
     mocks.where.mockReturnValue({ returning: mocks.returning });
     mocks.returning.mockResolvedValue([{ id: "call" }]);
@@ -64,6 +70,35 @@ describe("provider binding route", () => {
     mocks.authorize.mockRejectedValue(new Error("denied"));
     expect((await bind()).status).toBe(403);
     expect(mocks.transaction).not.toHaveBeenCalled();
+  });
+  it("verifies the live call and tenant before publishing active presence", async () => {
+    expect((await presence(true)).status).toBe(200);
+    const query = new PgDialect().sqlToQuery(mocks.presenceWhere.mock.calls[0]![0] as SQL);
+    expect(query.sql).toContain('"calls"."business_id"');
+    expect(query.sql).toContain('"calls"."ended_at" is null');
+    expect(query.params).toEqual(["call", "business", "voice", "web_voice"]);
+    expect(mocks.presence).toHaveBeenCalledWith({ businessId: "business", callId: "call", active: true, gatewayId: "gateway" });
+  });
+  it("rejects activation of a completed call without publishing presence", async () => {
+    mocks.limit.mockResolvedValue([]);
+    expect((await presence(true)).status).toBe(409);
+    expect(mocks.presence).not.toHaveBeenCalled();
+  });
+  it("authorizes removal even after the call is complete", async () => {
+    expect((await presence(false)).status).toBe(200);
+    expect(mocks.transaction).not.toHaveBeenCalled();
+    expect(mocks.presence).toHaveBeenCalledWith({ businessId: "business", callId: "call", active: false, gatewayId: "gateway" });
+    mocks.authorize.mockRejectedValueOnce(new Error("denied"));
+    expect((await presence(false)).status).toBe(403);
+    expect(mocks.presence).toHaveBeenCalledTimes(1);
+  });
+  it("requires internal authorization for gateway readiness", async () => {
+    const ready = () => POST(new Request("https://admin.test/voice/call/presence-ready", { method: "POST", body: JSON.stringify({ gatewayId: "gateway" }) }), { params: Promise.resolve({ segments: ["call", "presence-ready"] }) });
+    expect((await ready()).status).toBe(200);
+    expect(mocks.presenceReady).toHaveBeenCalledOnce();
+    mocks.authorize.mockRejectedValueOnce(new Error("denied"));
+    expect((await ready()).status).toBe(403);
+    expect(mocks.presenceReady).toHaveBeenCalledOnce();
   });
   it("rejects a placeholder provider ID", async () => {
     expect((await bind({ ...body, providerCallId: "webcall_session" })).status).toBe(400);

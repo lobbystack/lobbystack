@@ -53,6 +53,7 @@ async function main(): Promise<void> {
   installPostHogFatalHandlers();
 
   const server = createServer();
+  const { renewVoicePresenceGateway } = await import("./backend/runtimeClient");
   const port = Number(process.env.PORT ?? 3001);
   const startedAtMs = Date.now();
   const heartbeatInterval = setInterval(() => {
@@ -61,9 +62,17 @@ async function main(): Promise<void> {
     });
   }, 60_000);
   heartbeatInterval.unref();
+  const renewPresence = () => {
+    void renewVoicePresenceGateway().catch((error: unknown) => {
+      server.log.error({ err: error }, "Voice presence readiness heartbeat failed");
+    });
+  };
+  const presenceInterval = setInterval(renewPresence, 10_000);
+  presenceInterval.unref();
 
   const shutdown = async () => {
     clearInterval(heartbeatInterval);
+    clearInterval(presenceInterval);
     await Promise.allSettled([
       server.close(),
       shutdownPostHog(),
@@ -80,6 +89,7 @@ async function main(): Promise<void> {
 
   try {
     await server.listen({ port, host: "0.0.0.0" });
+    renewPresence();
   } catch (error: unknown) {
     const unknownError = error instanceof Error ? error : new Error(String(error));
     server.log.error(unknownError);

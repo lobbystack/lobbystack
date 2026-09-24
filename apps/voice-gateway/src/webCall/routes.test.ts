@@ -19,6 +19,7 @@ const {
   searchVoiceKnowledgeMock,
   takeVoiceMessageMock,
   uploadVoiceRecordingMock,
+  updateVoiceCallPresenceMock,
   webSocketInstances,
 } = vi.hoisted(() => ({
   appendVoiceTranscriptMock: vi.fn(),
@@ -49,6 +50,7 @@ const {
   searchVoiceKnowledgeMock: vi.fn(),
   takeVoiceMessageMock: vi.fn(),
   uploadVoiceRecordingMock: vi.fn(),
+  updateVoiceCallPresenceMock: vi.fn(),
   webSocketInstances: [] as Array<{
     close: ReturnType<typeof vi.fn>;
     emit: (event: string, ...args: Array<unknown>) => void;
@@ -128,6 +130,7 @@ vi.mock("../backend/runtimeClient", () => ({
   RuntimeRequestError: runtimeRequestErrorClass,
   startWebVoiceCall: startWebVoiceCallMock,
   uploadVoiceRecording: uploadVoiceRecordingMock,
+  updateVoiceCallPresence: updateVoiceCallPresenceMock,
   bookVoiceAppointment: bookVoiceAppointmentMock,
   cancelVoiceAppointment: vi.fn(),
   checkVoiceAvailability: vi.fn(),
@@ -206,6 +209,7 @@ describe("createWebRealtimeTurnDetectionConfig", () => {
 
 describe("web call routes", () => {
   beforeEach(() => {
+    updateVoiceCallPresenceMock.mockReset().mockResolvedValue(undefined);
     bindWebVoiceProviderMock.mockReset();
     process.env.DEPLOYMENT_MODE = "development";
     process.env.VOICE_GATEWAY_BASE_URL = "https://voice.example.com";
@@ -277,8 +281,28 @@ describe("web call routes", () => {
     expect(bindWebVoiceProviderMock).toHaveBeenCalledWith({ businessId: "business_safety", callId: "call_safety_0", gatewaySessionId: sessionId, providerCallId: "rtc_safety" });
     expect(markWebVoiceMediaStartedMock).toHaveBeenCalledWith({ businessId: "business_safety", callId: "call_safety_0", gatewaySessionId: sessionId, providerCallId: "rtc_safety", mediaStartedAt: expect.any(String) });
     expect(bindWebVoiceProviderMock.mock.invocationCallOrder[0]).toBeLessThan(markWebVoiceMediaStartedMock.mock.invocationCallOrder[0]!);
+    expect(updateVoiceCallPresenceMock).not.toHaveBeenCalled();
+    const presence = await server.inject({ method: "POST", url: `/web-call/sessions/${sessionId}/presence`, headers: { origin: "https://lobbystack.com" } });
+    expect(presence.statusCode).toBe(204);
+    expect(updateVoiceCallPresenceMock).toHaveBeenCalledWith({ businessId: "business_safety", callId: "call_safety_0", active: true });
     await server.close();
     expect(completeVoiceCallMock).toHaveBeenCalledWith(expect.objectContaining({ disposition: "gateway_shutdown" }));
+    expect(updateVoiceCallPresenceMock).toHaveBeenLastCalledWith({ businessId: "business_safety", callId: "call_safety_0", active: false });
+  });
+
+  it("hangs up and captures duration without waiting for presence cleanup", async () => {
+    const { server, start, fetchMock } = safetySetup();
+    const response = await start();
+    const { sessionId } = response.json() as { sessionId: string };
+    let release!: () => void;
+    updateVoiceCallPresenceMock.mockImplementationOnce(() => new Promise<void>((resolve) => { release = resolve; }));
+    const ending = server.inject({ method: "POST", url: `/web-call/sessions/${sessionId}/end`, headers: { origin: "https://lobbystack.com" } });
+    const finished = Promise.resolve(ending);
+    await vi.waitFor(() => expect(completeVoiceCallMock).toHaveBeenCalled());
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/hangup"), expect.anything());
+    release();
+    expect((await finished).statusCode).toBe(204);
+    await server.close();
   });
 
   it("allocates only the winner of concurrent durable admission", async () => {
@@ -318,14 +342,19 @@ describe("web call routes", () => {
     await server.close();
   });
 
-  it("retains the reservation when provider hangup is unconfirmed", async () => {
+  it.each(["response", "exception"])("clears media presence but retains the reservation when provider hangup fails: %s", async (failure) => {
     const { server, start, fetchMock } = safetySetup();
     const response = await start();
-    fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }));
+    const presence = await server.inject({ method: "POST", url: `/web-call/sessions/${response.json().sessionId}/presence`, headers: { origin: "https://lobbystack.com" } });
+    expect(presence.statusCode).toBe(204);
+    expect(updateVoiceCallPresenceMock).toHaveBeenLastCalledWith({ businessId: "business_safety", callId: "call_safety_0", active: true });
+    if (failure === "response") fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }));
+    else fetchMock.mockRejectedValueOnce(new Error("hangup timed out"));
     const end = await server.inject({ method: "POST", url: `/web-call/sessions/${response.json().sessionId}/end`, headers: { origin: "https://lobbystack.com" } });
     expect(end.statusCode).toBe(500);
     expect(completeVoiceCallMock).not.toHaveBeenCalled();
     expect(webSocketInstances[0]!.close).toHaveBeenCalledOnce();
+    expect(updateVoiceCallPresenceMock).toHaveBeenLastCalledWith({ businessId: "business_safety", callId: "call_safety_0", active: false });
     await server.close();
   });
 

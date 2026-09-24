@@ -32,6 +32,7 @@ import { createWebRealtimeToolDefinitions } from "../realtime/toolDefinitions";
 import { observeVoiceLatency, vadSilenceMs } from "../realtime/latency";
 import { assertSocketWritable, closeVoiceSocket, createFrameBudget, finalizeVoiceOnce, MAX_REALTIME_FRAME_BYTES, parseRealtimeFrame, settleVoiceTasks } from "../realtime/safety";
 import { acquireVoiceLease, initializeVoiceLifecycle } from "../sessions/lifecycle";
+import { updateVoiceCallPresence } from "../backend/runtimeClient";
 import { resolveWebCallClientKey } from "./clientIp";
 
 type WebCallSessionRequest = {
@@ -92,6 +93,7 @@ type RealtimeUsageMetrics = NonNullable<
 >["usage"];
 
 type ActiveWebCall = {
+  presenceUpdate?: Promise<void>;
   releaseLease?: () => void;
   knowledgeTurn?: { id: string; lookups: number };
   gatewaySessionId: string;
@@ -901,6 +903,11 @@ async function finishWebCallSession(
 
 async function finishWebCallResources(server: FastifyInstance, session: ActiveWebCall, disposition: string): Promise<void> {
   closeVoiceSocket(session.sidebandSocket);
+  // The sideband is closed; retire media presence even if provider billing
+  // reconciliation must remain pending. Never block hangup on this request.
+  const presenceCleanup = (session.presenceUpdate ?? Promise.resolve()).catch(() => undefined)
+    .then(() => updateVoiceCallPresence({ businessId: session.businessId, callId: session.callId, active: false }))
+    .catch((error: unknown) => server.log.error(error));
   clearWebMaxDurationTimer(session);
   clearWebEndCallFallbackTimer(session);
   const transcriptTask = flushPendingWebAssistantTranscripts(server, session).catch((error: unknown) => server.log.error(error));
@@ -963,6 +970,7 @@ async function finishWebCallResources(server: FastifyInstance, session: ActiveWe
     closeVoiceSocket(session.sidebandSocket);
     activeWebCalls.delete(session.gatewaySessionId);
     session.releaseLease?.();
+    await presenceCleanup;
   }
 
 }
@@ -1821,6 +1829,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
 
   server.options("/web-call/sessions", handleCorsPreflight);
   server.options("/web-call/sessions/:sessionId/end", handleCorsPreflight);
+  server.options("/web-call/sessions/:sessionId/presence", handleCorsPreflight);
   server.options(
     "/web-call/sessions/:sessionId/recording",
     handleCorsPreflight,
@@ -2080,6 +2089,21 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       };
     },
   );
+
+  server.post<{ Params: { sessionId: string } }>("/web-call/sessions/:sessionId/presence", async (request, reply) => {
+    const origin = getRequestOrigin(request);
+    if (!isAllowedOrigin(server, origin)) return reply.code(403).send("Forbidden");
+    addCorsHeaders(reply, origin!);
+    const session = activeWebCalls.get(request.params.sessionId);
+    if (!session || session.finalized || session.sidebandSocket?.readyState !== WebSocket.OPEN) {
+      return reply.code(409).send("Session is not connected");
+    }
+    session.presenceUpdate = (session.presenceUpdate ?? Promise.resolve()).catch(() => undefined).then(async () => {
+      if (!session.finalized) await updateVoiceCallPresence({ businessId: session.businessId, callId: session.callId, active: true });
+    });
+    await session.presenceUpdate;
+    return reply.code(204).send();
+  });
 
   server.post<{
     Params: { sessionId: string };

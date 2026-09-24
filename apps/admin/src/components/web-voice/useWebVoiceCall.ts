@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { startWebCallPresence } from "@/lib/web-call-presence";
 
 import type { TelemetryEventName } from "@lobbystack/telemetry";
 
@@ -170,6 +171,7 @@ export function useWebVoiceCall({
   const remoteStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const stopPresenceRef = useRef<(() => void) | null>(null);
   const recordingRef = useRef<WebVoiceRecordingState | null>(null);
   const connectedRef = useRef(false);
   const startCallAttemptRef = useRef(0);
@@ -207,6 +209,8 @@ export function useWebVoiceCall({
   };
 
   const cleanup = (options: { resetState?: boolean } = {}) => {
+    stopPresenceRef.current?.();
+    stopPresenceRef.current = null;
     const resetState = options.resetState ?? true;
     invalidatePendingStart();
     stopRecordingWithoutUpload();
@@ -501,6 +505,8 @@ export function useWebVoiceCall({
 
       connection.onconnectionstatechange = () => {
         if (connection.connectionState === "connected") {
+          stopPresenceRef.current?.();
+          if (sessionIdRef.current) stopPresenceRef.current = startWebCallPresence(endpoint, sessionIdRef.current, connection);
           connectedRef.current = true;
           if (localStreamRef.current) {
             startRecording(localStreamRef.current);

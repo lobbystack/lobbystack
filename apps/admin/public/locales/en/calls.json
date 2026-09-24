@@ -1,6 +1,7 @@
 {
   "page": {
     "title": "Calls",
+    "liveUnavailable": "Live status unavailable",
     "description": "Review recent calls and listen to recorded audio.",
     "emptyPreview": "No transcript yet.",
     "selectCall": "Select a call to review the transcript.",
