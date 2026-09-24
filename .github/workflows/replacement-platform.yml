@@ -73,13 +73,13 @@ jobs:
       # The admin UI parity check reads the legacy apps/web source with `git show`
       # at a pinned commit, so this job needs the full history rather than the
       # default single-commit shallow checkout.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.30.3
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -128,7 +128,7 @@ jobs:
         run: pnpm exec tsx --tsconfig scripts/tsconfig.json scripts/release-readiness.ts --evidence certification-results/deterministic-baseline.json
       - name: Retain deterministic release evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: replacement-deterministic-baseline-${{ github.sha }}
           path: certification-results/deterministic-baseline.json
@@ -175,11 +175,11 @@ jobs:
       RESEND_WEBHOOKS_ENABLED: ${{ vars.REPLACEMENT_RESEND_WEBHOOKS_ENABLED }}
       RESEND_WEBHOOK_SECRET: ${{ secrets.REPLACEMENT_RESEND_WEBHOOK_SECRET }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.30.3
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -188,7 +188,7 @@ jobs:
         run: pnpm exec tsx --tsconfig scripts/tsconfig.json scripts/release-readiness.ts --staging --evidence certification-results/staging-gates.json
       - name: Retain certification evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: replacement-staging-certification-${{ github.sha }}
           path: certification-results
