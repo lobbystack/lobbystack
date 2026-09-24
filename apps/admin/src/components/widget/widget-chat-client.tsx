@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { renderSafeMarkdown } from "@/lib/widget-markdown";
+import { startWebCallPresence } from "@/lib/web-call-presence";
 
 type WidgetConfigPayload = {
   key: string;
@@ -346,9 +347,12 @@ function VoiceButton({ className, businessSlug, baseUrl, visitorId, sessionToken
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const stopPresenceRef = useRef<(() => void) | null>(null);
   const endpoint = baseUrl || (process.env.NODE_ENV === "production" ? "https://voice.lobbystack.com/web-call/sessions" : "http://127.0.0.1:3001/web-call/sessions");
 
   const cleanup = () => {
+    stopPresenceRef.current?.();
+    stopPresenceRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     peerRef.current?.close();
@@ -391,6 +395,8 @@ function VoiceButton({ className, businessSlug, baseUrl, visitorId, sessionToken
       };
       peer.onconnectionstatechange = () => {
         if (peer.connectionState === "connected") {
+          stopPresenceRef.current?.();
+          if (sessionIdRef.current) stopPresenceRef.current = startWebCallPresence(endpoint, sessionIdRef.current, peer);
           setStatus("connected");
           onStatusChange(null);
         }

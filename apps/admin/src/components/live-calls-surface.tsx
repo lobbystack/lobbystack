@@ -54,7 +54,7 @@ type Call = {
 };
 
 async function getJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { credentials: "include" });
+  const response = await fetch(url, { credentials: "include", signal: AbortSignal.timeout(5_000) });
   if (!response.ok) throw new Error("Unable to load live call data.");
   return await response.json() as T;
 }
@@ -64,6 +64,11 @@ export function LiveCallsSurface() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1_000);
+    return () => clearInterval(timer);
+  }, []);
   const [activeRecordingId, setActiveRecordingId] = useState<string | null>(null);
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const businesses = useQuery({
@@ -76,6 +81,13 @@ export function LiveCallsSurface() {
     queryFn: () => getJson<{ calls: Call[] }>("/api/calls?limit=50"),
     enabled: Boolean(business),
   });
+  const activeCalls = useQuery({
+    queryKey: ["active-calls", business?.businessId],
+    queryFn: () => getJson<{ active: number }>(`/api/calls/active?businessId=${encodeURIComponent(business!.businessId)}`),
+    enabled: Boolean(business),
+    retry: false,
+    refetchInterval: 5_000,
+  });
   const recording = useQuery({
     queryKey: ["call-recording", activeRecordingId],
     queryFn: () => getJson<{ url: string }>(`/api/calls/${encodeURIComponent(activeRecordingId!)}/recording`),
@@ -85,6 +97,11 @@ export function LiveCallsSurface() {
   useEffect(() => {
     if (!business?.businessId) return;
     return subscribeRealtimeQuery(queryClient, business?.businessId, ["calls", business?.businessId], ["call.started", "call.updated", "call.completed", "recording.available"]);
+  }, [business?.businessId, queryClient]);
+
+  useEffect(() => {
+    if (!business?.businessId) return;
+    return subscribeRealtimeQuery(queryClient, business.businessId, ["active-calls", business.businessId], ["call.started", "call.updated", "call.completed"]);
   }, [business?.businessId, queryClient]);
 
   const rows = calls.data?.calls ?? [];
@@ -167,18 +184,20 @@ export function LiveCallsSurface() {
     onPaginationChange: setPagination,
     state: { pagination },
   });
-  const liveCalls = rows.filter((call) => call.status === "started").length;
+  const liveCalls = activeCalls.isError || activeCalls.fetchStatus === "paused" || !activeCalls.data || now - activeCalls.dataUpdatedAt > 15_000 ? null : activeCalls.data.active;
 
   return (
     <div className="flex flex-1 flex-col gap-6">
       <PageHeader
         actions={
           <div className="inline-flex shrink-0 items-center gap-2">
-            {calls.isLoading ? <Skeleton className="h-6 w-8" /> : <span className="text-base font-semibold leading-none">{liveCalls.toLocaleString(i18n.language)}</span>}
-            <span className="relative flex size-2.5 shrink-0">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500/45" />
-              <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" />
-            </span>
+            {activeCalls.isLoading ? <Skeleton className="h-6 w-8" /> : liveCalls === null
+              ? <span className="text-sm text-muted-foreground">{t("page.liveUnavailable")}</span>
+              : <span className="text-base font-semibold leading-none">{liveCalls.toLocaleString(i18n.language)}</span>}
+            {!activeCalls.isLoading && <span className="relative flex size-2.5 shrink-0" aria-hidden="true" data-testid="live-call-indicator">
+              {liveCalls !== null && liveCalls > 0 && <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500/45" />}
+              <span className={`relative inline-flex size-2.5 rounded-full ${liveCalls === null ? "bg-muted-foreground" : "bg-emerald-500"}`} />
+            </span>}
           </div>
         }
         title={t("page.title")}

@@ -105,6 +105,8 @@ jobs:
         run: pnpm test:reliability
       - name: Test verification persistence and concurrent quotas
         run: pnpm --filter @lobbystack/admin exec vitest run src/lib/auth-issuance.integration.test.ts src/lib/email-verification-policy.test.ts
+      - name: Test live-call presence against Redis
+        run: pnpm --filter @lobbystack/admin exec vitest run src/lib/voice-presence.integration.test.ts
 
   e2e:
     runs-on: ubuntu-latest

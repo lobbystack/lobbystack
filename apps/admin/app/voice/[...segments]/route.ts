@@ -1,4 +1,4 @@
-import { and, asc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { NextResponse } from "next/server";
 
@@ -39,6 +39,7 @@ import { createWorkerDomainContext } from "@/lib/domain-context";
 import { resolveWebVoiceAccess } from "@/lib/prospect-demo";
 import { enforceWebVoiceRateLimits } from "@/lib/web-voice-policy";
 import { recordVoiceAiCostLedger } from "@/lib/voice-ai-cost";
+import { renewVoicePresenceGateway, updateVoicePresence } from "@/lib/voice-presence";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -285,6 +286,32 @@ export async function POST(request: Request, context: { params: Promise<{ segmen
     const segments = (await context.params).segments;
     const path = segments.join("/");
     const domain = createWorkerDomainContext();
+
+    if (path === "call/presence-ready") {
+      await renewVoicePresenceGateway(requiredString(body, "gatewayId"));
+      return NextResponse.json({ ok: true });
+    }
+
+    if (path === "call/presence") {
+      const businessId = requiredString(body, "businessId");
+      const callId = requiredString(body, "callId");
+      const active = body.active;
+      const gatewayId = requiredString(body, "gatewayId");
+      if (typeof active !== "boolean") return NextResponse.json({ code: "presence_invalid" }, { status: 400 });
+      if (active) {
+        const exists = await withBusinessTransaction(domain.db, { businessId, actorType: "worker" }, async (tx) =>
+          (await tx.select({ id: calls.id }).from(calls).where(and(
+            eq(calls.id, callId), eq(calls.businessId, businessId),
+            isNull(calls.endedAt),
+            or(eq(calls.transport, "voice"), eq(calls.transport, "web_voice")),
+          )).limit(1)).length > 0);
+        if (!exists) return NextResponse.json({ code: "call_not_active" }, { status: 409 });
+      }
+      // Only the internal gateway can send this request. Presence is never
+      // inferred from the durable call status, which can outlive the media.
+      await updateVoicePresence({ businessId, callId, active, gatewayId });
+      return NextResponse.json({ ok: true });
+    }
 
     if (path === "call/bind-web-provider") {
       const businessId = requiredString(body, "businessId");

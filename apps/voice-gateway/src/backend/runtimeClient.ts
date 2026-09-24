@@ -1,4 +1,7 @@
 import { signedBackendBinaryHeaders, signedBackendHeaders } from "./request";
+import { randomUUID } from "node:crypto";
+
+const presenceGatewayId = randomUUID();
 import { withSpan } from "@lobbystack/telemetry/node";
 import { loadVoiceGatewayEnv } from "@lobbystack/config";
 
@@ -233,6 +236,18 @@ export async function startVoiceCall(input: {
     ...(input.gatewaySessionId ? { gatewaySessionId: input.gatewaySessionId } : {}),
     startedAt: input.startedAt,
   });
+}
+
+export async function updateVoiceCallPresence(input: {
+  businessId: string;
+  callId: string;
+  active: boolean;
+}): Promise<void> {
+  await postJson("/voice/call/presence", { ...input, gatewayId: presenceGatewayId }, 2_000);
+}
+
+export async function renewVoicePresenceGateway(): Promise<void> {
+  await postJson("/voice/call/presence-ready", { gatewayId: presenceGatewayId }, 2_000);
 }
 
 export async function fetchWebVoiceContext(input: {

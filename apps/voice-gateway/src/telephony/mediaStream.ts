@@ -8,6 +8,7 @@ import WebSocket from "ws";
 import { observeVoiceLatency, vadSilenceMs } from "../realtime/latency";
 import { assertSocketWritable, closeVoiceSocket, createFrameBudget, finalizeVoiceOnce, MAX_REALTIME_FRAME_BYTES, parseRealtimeFrame, settleVoiceTasks } from "../realtime/safety";
 import { acquireVoiceLease } from "../sessions/lifecycle";
+import { beginVoicePresence } from "../sessions/voicePresence";
 
 import { buildStereoCallRecording, type TimedAudioChunk } from "../audio/wav";
 import {
@@ -190,6 +191,7 @@ export type ActiveVoiceSession = {
   providerRecoveryStarted: boolean;
   finalized: boolean;
   releaseLease?: () => void;
+  stopPresence?: () => Promise<void>;
   finalDispositionOverride: string | null;
   transcriptSequence: number;
   seenTranscriptKeys: Set<string>;
@@ -1893,6 +1895,7 @@ async function finalizeCall(
 async function finalizeCallResources(server: FastifyInstance, openAiSocket: WebSocket | null, twilioSocket: WebSocket, session: ActiveVoiceSession, disposition: string): Promise<void> {
   closeVoiceSocket(openAiSocket);
   closeVoiceSocket(twilioSocket);
+  const presenceCleanup = session.stopPresence?.();
   clearInactivityTimer(session);
   if (session.openingGreetingTurnDetectionTimer !== null) {
     clearTimeout(session.openingGreetingTurnDetectionTimer);
@@ -1949,6 +1952,7 @@ async function finalizeCallResources(server: FastifyInstance, openAiSocket: WebS
     closeVoiceSocket(openAiSocket);
     closeVoiceSocket(twilioSocket);
     session.releaseLease?.();
+    await presenceCleanup;
   }
 }
 
@@ -2516,6 +2520,12 @@ async function initializeCallRecord(
     });
     session.callId = result.callId;
     session.conversationId = result.conversationId ?? null;
+    if (result.blocked || session.finalized) return;
+    session.stopPresence = await beginVoicePresence(
+      { businessId: session.businessId, callId: result.callId },
+      (error) => server.log.error({ err: error, callId: result.callId }, "Telephone call presence update failed"),
+    );
+    if (session.finalized) await session.stopPresence();
   } catch (error) {
     server.log.error(error);
     capturePostHogException(error, {
