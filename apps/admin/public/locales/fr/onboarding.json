@@ -56,7 +56,7 @@
     "sourceNamePlaceholder": "Site web de l'entreprise",
     "continue": "Continuer",
     "submitting": "Démarrage de l'import...",
-    "skip": "Ignorer pour l'instant",
+    "skip": "Je n'ai pas de site web",
     "skipping": "Ignorer...",
     "submitFailed": "Impossible de démarrer l'import maintenant. Réessayez.",
     "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez."

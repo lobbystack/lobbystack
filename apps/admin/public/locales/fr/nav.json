@@ -36,19 +36,19 @@
       "progress": "{{completed}} / {{total}} complétés",
       "description": "{{completed}} étape(s) sur {{total}} complétée(s).",
       "steps": {
-        "website": "Ajoutez votre site web",
+        "fullScan": "Lire le reste de votre site",
         "sources": "Ajoutez d'autres sources",
         "testCall": "Écoutez votre agent",
         "phoneNumber": "Associez un numéro"
       },
       "stepDescriptions": {
-        "website": "Importez votre site public pour que votre réceptionniste apprenne les bases.",
+        "fullScan": "L'inscription a lu un échantillon de votre site pour que votre réceptionniste puisse commencer à répondre. Lisez le reste pour qu'il connaisse tout.",
         "sources": "Téléversez un document avec vos politiques, FAQ, tarifs ou autres détails utiles.",
         "testCall": "Appelez votre réceptionniste depuis ce navigateur et posez-lui une question que seule votre entreprise connaît.",
         "phoneNumber": "Donnez à votre réceptionniste son propre numéro pour qu'il réponde à vos vrais clients, jour et nuit."
       },
       "stepActions": {
-        "website": "Ajouter le site",
+        "fullScan": "Lire le reste",
         "sources": "Téléverser un document",
         "testCall": "Lancer un appel",
         "phoneNumber": "Choisir un numéro"

@@ -36,19 +36,19 @@
       "progress": "{{completed}} / {{total}} completed",
       "description": "{{completed}} of {{total}} setup steps complete.",
       "steps": {
-        "website": "Add your website",
+        "fullScan": "Read the rest of your site",
         "sources": "Add more sources",
         "testCall": "Hear your agent",
         "phoneNumber": "Connect a phone number"
       },
       "stepDescriptions": {
-        "website": "Import your public website so your receptionist can learn the basics.",
+        "fullScan": "Onboarding read a sample of your site so your receptionist could start answering. Read the rest so it knows the whole thing.",
         "sources": "Upload a document with policies, FAQs, pricing, or other details your receptionist should know.",
         "testCall": "Call your receptionist from this browser and ask it something only your business would know.",
         "phoneNumber": "Give your receptionist its own number so it can answer real callers, day and night."
       },
       "stepActions": {
-        "website": "Add website",
+        "fullScan": "Read the rest",
         "sources": "Upload document",
         "testCall": "Start a call",
         "phoneNumber": "Choose a number"
