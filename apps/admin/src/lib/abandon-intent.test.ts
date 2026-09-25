@@ -17,23 +17,19 @@ function storageWith(value: string | null) {
   };
 }
 
-const base = { businessId: "business", completedWebCalls: 0, hasFinePointer: true, now: 1_000_000 };
+const base = { businessId: "business", hasFinePointer: true, now: 1_000_000 };
 
 describe("abandon intent eligibility", () => {
-  it("prompts a workspace that has never heard a call", () => {
+  it("prompts a departing operator", () => {
     expect(canPromptAbandonIntent({ ...base, storage: storageWith(null) })).toBe(true);
   });
 
-  it("stays silent once a call has been heard", () => {
-    expect(canPromptAbandonIntent({ ...base, completedWebCalls: 1, storage: storageWith(null) })).toBe(false);
+  it("stays silent before the workspace is known", () => {
+    expect(canPromptAbandonIntent({ ...base, businessId: undefined, storage: storageWith(null) })).toBe(false);
   });
 
   it("stays silent on a touch device, where exit intent cannot be detected", () => {
     expect(canPromptAbandonIntent({ ...base, hasFinePointer: false, storage: storageWith(null) })).toBe(false);
-  });
-
-  it("stays silent while activation is still loading", () => {
-    expect(canPromptAbandonIntent({ ...base, completedWebCalls: undefined, storage: storageWith(null) })).toBe(false);
   });
 
   it("stays silent inside the cooldown and asks again after it", () => {

@@ -1,8 +1,8 @@
 /**
- * Decides when to ask an operator who has not yet heard their agent why they
- * are leaving. The answer is only worth having once, so the prompt is capped
- * per browser, and it must never compete with onboarding or with the upgrade
- * prompt that follows a finished test call.
+ * Decides when to ask a departing operator what they were after. Someone who
+ * has heard the agent and leaves anyway is worth hearing from too, so the only
+ * limits are the per-browser cap and the moment after a call, which belongs to
+ * the upgrade prompt.
  */
 
 export const ABANDON_INTENT_STORAGE_KEY = "lobbystack.activation.abandonPrompted";
@@ -13,13 +13,13 @@ export const ABANDON_INTENT_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1_000;
 /** Long enough that the page has rendered and been looked at. */
 export const ABANDON_INTENT_MIN_DWELL_MS = 20_000;
 
-/** A dashboard open this long with nothing heard is its own signal. */
+/** A dashboard left open this long without a move is its own signal. */
 export const ABANDON_INTENT_IDLE_MS = 3 * 60 * 1_000;
 
 /** A finished call hands the moment to the upgrade prompt. */
 export const ABANDON_INTENT_CALL_GRACE_MS = 60_000;
 
-export type AbandonIntentTrigger = "exit_intent" | "idle_without_test_call";
+export type AbandonIntentTrigger = "exit_intent" | "idle";
 
 type Storage = Pick<globalThis.Storage, "getItem" | "setItem">;
 
@@ -46,19 +46,14 @@ export function markAbandonIntentPrompted(businessId: string, now: number, stora
   }
 }
 
-/**
- * True while this operator is a candidate: a workspace that has never heard a
- * call, on a pointing device, outside the cooldown.
- */
+/** True while this operator is a candidate: a pointing device, outside the cooldown. */
 export function canPromptAbandonIntent(input: {
   businessId: string | undefined;
-  completedWebCalls: number | undefined;
   hasFinePointer: boolean;
   now: number;
   storage: Storage | undefined;
 }): boolean {
-  if (!input.businessId || input.completedWebCalls === undefined) return false;
-  if (input.completedWebCalls > 0) return false;
+  if (!input.businessId) return false;
   if (!input.hasFinePointer) return false;
   const promptedAt = readPromptedAt(input.businessId, input.storage);
   return promptedAt === null || input.now - promptedAt >= ABANDON_INTENT_COOLDOWN_MS;
