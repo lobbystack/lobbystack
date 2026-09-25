@@ -32,7 +32,7 @@ type GateStatus =
     }
   // The provider acknowledged a response, ours or one server turn detection
   // started on its own.
-  | { kind: "active"; responseId: string | null; startedSeq: number }
+  | { kind: "active"; responseId: string | null; startedSeq: number | null }
   // Our create was rejected because a response was already running. That
   // response is real but the gate never learned its id, and carries no
   // position of its own — which is why this state has no `startedSeq`, and a
@@ -51,6 +51,11 @@ export type RealtimeResponseGate = {
   // The response a forced terminal message replaced. Its `response.done` still
   // arrives afterwards and must not release the message that replaced it.
   supersededResponseId: string | null;
+  // The create a forced terminal message replaced before the provider had
+  // acknowledged it. That create may still become a response, and the provider
+  // answers client events in order, so the next acknowledgement belongs to it
+  // rather than to the terminal message.
+  supersededCreateEventId: string | null;
   deferred: PendingRequest | null;
 };
 
@@ -60,6 +65,7 @@ export function createRealtimeResponseGate(): RealtimeResponseGate {
     sequence: 0,
     lastConversationInputSeq: null,
     supersededResponseId: null,
+    supersededCreateEventId: null,
     deferred: null,
   };
 }
@@ -172,11 +178,31 @@ export function markRealtimeResponseCreated(
   gate: RealtimeResponseGate,
   responseId?: string,
 ): void {
+  const status = gate.status;
+
+  // A create replaced by a forced terminal message may still have been
+  // accepted. The provider answers client events in order, so if it was, this
+  // acknowledgement is its own and the terminal create has not been seen yet.
+  // The terminal message goes back in the queue so the rejection that follows
+  // cannot lose it, and this response's position is unknown because it belongs
+  // to a request the gate no longer holds.
+  if (gate.supersededCreateEventId !== null && status.kind === "requested") {
+    const terminal = status.pending;
+    gate.supersededCreateEventId = null;
+    gate.status = {
+      kind: "active",
+      responseId: responseId ?? null,
+      startedSeq: null,
+    };
+    enqueueBehindOlder(gate, terminal);
+    return;
+  }
+
   // A response the gate asked for keeps the position of its request, since the
   // provider ordered the conversation by what it received. One the server
   // started on its own has no request to borrow from, so it takes its place
   // here, the earliest point the gate learns of it.
-  const startedSeq = startedSequenceOf(gate.status) ?? nextSequence(gate);
+  const startedSeq = startedSequenceOf(status) ?? nextSequence(gate);
   gate.status = { kind: "active", responseId: responseId ?? null, startedSeq };
 }
 
@@ -265,6 +291,16 @@ export function releaseUnconfirmedRealtimeResponse(
     request: undefined,
     forced: false,
   };
+  // An error naming the create a forced message replaced settles that create:
+  // it was refused, so the next acknowledgement is the terminal message's own.
+  if (
+    gate.supersededCreateEventId !== null &&
+    eventId === gate.supersededCreateEventId
+  ) {
+    gate.supersededCreateEventId = null;
+    return ignored;
+  }
+
   const status = gate.status;
   if (status.kind !== "requested") {
     return ignored;
@@ -298,6 +334,16 @@ export function requeueRejectedRealtimeCreate(
   gate: RealtimeResponseGate,
   eventId?: string,
 ): boolean {
+  // As above: a rejection of the superseded create settles it rather than the
+  // terminal message that replaced it.
+  if (
+    gate.supersededCreateEventId !== null &&
+    eventId === gate.supersededCreateEventId
+  ) {
+    gate.supersededCreateEventId = null;
+    return false;
+  }
+
   const status = gate.status;
   if (status.kind !== "requested") {
     return false;
@@ -319,6 +365,11 @@ export function resetRealtimeResponseGate(gate: RealtimeResponseGate): void {
   const status = gate.status;
   if (status.kind === "active" && status.responseId !== null) {
     gate.supersededResponseId = status.responseId;
+  }
+  if (status.kind === "requested") {
+    // Posted but unacknowledged. It may still become a response, so it has to
+    // be remembered as superseded just like a confirmed one.
+    gate.supersededCreateEventId = status.eventId;
   }
   gate.status = { kind: "idle" };
   gate.lastConversationInputSeq = null;

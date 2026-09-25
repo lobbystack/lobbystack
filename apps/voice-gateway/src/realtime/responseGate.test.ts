@@ -490,6 +490,56 @@ describe("forced terminal messages", () => {
   });
 });
 
+describe("forcing over an unacknowledged create", () => {
+  it("keeps the terminal message when the replaced create is the one accepted", () => {
+    const gate = createRealtimeResponseGate();
+
+    // An ordinary tool completion posts a create that has not been
+    // acknowledged when a parallel endCall forces the terminal message.
+    requestRealtimeResponse(gate, undefined, "evt_turn");
+    resetRealtimeResponseGate(gate);
+    requestRealtimeResponse(gate, { instructions: "goodbye" }, "evt_final", {
+      forced: true,
+    });
+
+    // The provider answers client events in order, so the first create's
+    // acknowledgement necessarily arrives before the terminal one is refused.
+    markRealtimeResponseCreated(gate, "resp_turn");
+    expect(requeueRejectedRealtimeCreate(gate, "evt_final")).toBe(false);
+
+    // The goodbye survived that anyway, and the accepted response finishing
+    // posts it.
+    expect(
+      takeDeferredRealtimeResponse(gate, { responseId: "resp_turn" }),
+    ).toEqual({
+      post: true,
+      request: { instructions: "goodbye" },
+      forced: true,
+    });
+  });
+
+  it("keeps the terminal message live when the replaced create is refused", () => {
+    const gate = createRealtimeResponseGate();
+    requestRealtimeResponse(gate, undefined, "evt_turn");
+    resetRealtimeResponseGate(gate);
+    requestRealtimeResponse(gate, { instructions: "goodbye" }, "evt_final", {
+      forced: true,
+    });
+
+    // The other ordering: the replaced create is the one the provider refuses,
+    // so the acknowledgement that follows belongs to the terminal message.
+    expect(requeueRejectedRealtimeCreate(gate, "evt_turn")).toBe(false);
+    markRealtimeResponseCreated(gate, "resp_final");
+
+    // The goodbye is the active response, not something still queued behind
+    // it, so it must not be posted a second time.
+    expect(peekDeferredRealtimeResponse(gate)).toBeNull();
+    expect(
+      takeDeferredRealtimeResponse(gate, { responseId: "resp_final" }),
+    ).toMatchObject({ post: false });
+  });
+});
+
 describe("isBenignRealtimeClientError", () => {
   it("recognizes conversation state conflicts the call recovers from", () => {
     expect(
