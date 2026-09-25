@@ -112,6 +112,7 @@ describe("worker handlers", () => {
   it("reconciles an owned Twilio number before completing provisioning", async () => {
     const businessId = randomUUID(); const claimId = randomUUID(); const phoneNumberId = randomUUID(); const domain = { db: undefined as never };
     vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+    vi.stubEnv("VOICE_GATEWAY_BASE_URL", "https://voice.example.test");
     vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+14165550199" });
     vi.mocked(completeNumberProvisioning).mockResolvedValue(phoneNumberId);
     const findOwnedPhoneNumber = vi.fn().mockResolvedValue({ providerPhoneId: "PN123", e164: "+14165550199" }); const purchasePhoneNumber = vi.fn();
@@ -119,6 +120,39 @@ describe("worker handlers", () => {
     expect(result).toEqual({ status: "completed", entityId: phoneNumberId });
     expect(purchasePhoneNumber).not.toHaveBeenCalled();
     expect(completeNumberProvisioning).toHaveBeenCalledWith(domain, expect.objectContaining({ businessId, claimId, providerPhoneId: "PN123", e164: "+14165550199" }));
+    // Only the voice gateway serves TwiML. A number pointed at the admin app
+    // answers every call with Twilio's generic application error.
+    expect(completeNumberProvisioning).toHaveBeenCalledWith(domain, expect.objectContaining({ voiceUrl: "https://voice.example.test/twilio/voice/inbound" }));
+  });
+
+  it("buys a number with the voice gateway as its Twilio voice webhook", async () => {
+    const businessId = randomUUID(); const claimId = randomUUID(); const phoneNumberId = randomUUID(); const domain = { db: undefined as never };
+    vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+    vi.stubEnv("VOICE_GATEWAY_BASE_URL", "https://voice.example.test/");
+    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+14165550199" });
+    vi.mocked(completeNumberProvisioning).mockResolvedValue(phoneNumberId);
+    const findOwnedPhoneNumber = vi.fn().mockResolvedValue(null);
+    const purchasePhoneNumber = vi.fn().mockResolvedValue({ providerPhoneId: "PN456", e164: "+14165550199" });
+
+    await handleJob({ jobId: randomUUID(), type: "phoneNumber.provision", queue: "critical", businessId, payload: { claimId }, trace: {}, idempotencyKey: `claim:${claimId}`, scheduled: false }, { domain, twilio: { sendSms: vi.fn(), findOwnedPhoneNumber, purchasePhoneNumber } });
+
+    expect(purchasePhoneNumber).toHaveBeenCalledWith(expect.objectContaining({
+      voiceUrl: "https://voice.example.test/twilio/voice/inbound",
+      smsUrl: "https://app.example.test/api/webhooks/twilio/sms",
+      statusCallbackUrl: "https://app.example.test/api/webhooks/twilio/status",
+    }));
+  });
+
+  it("refuses to provision a number when the voice gateway is unconfigured", async () => {
+    const businessId = randomUUID(); const claimId = randomUUID(); const domain = { db: undefined as never };
+    vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+    vi.stubEnv("VOICE_GATEWAY_BASE_URL", "");
+    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+14165550199" });
+    const purchasePhoneNumber = vi.fn();
+
+    // Failing the job is better than buying a number that cannot answer.
+    await expect(handleJob({ jobId: randomUUID(), type: "phoneNumber.provision", queue: "critical", businessId, payload: { claimId }, trace: {}, idempotencyKey: `claim:${claimId}`, scheduled: false }, { domain, twilio: { sendSms: vi.fn(), findOwnedPhoneNumber: vi.fn(), purchasePhoneNumber } })).rejects.toThrow(/VOICE_GATEWAY_BASE_URL/);
+    expect(purchasePhoneNumber).not.toHaveBeenCalled();
   });
 
   it("runs all tenant retention work from the hourly privacy job", async () => {

@@ -21,6 +21,7 @@ import {
   captureAiGeneration,
   captureAiTraceStarted,
   capturePostHogException,
+  recordOpenAiRealtimeStateConflict,
   recordOpenAiTurnLatency,
   recordTranscriptionFailure,
   recordTurnFirstAudio,
@@ -30,6 +31,18 @@ import type { EndCallRequest } from "../realtime/callControl";
 import { executeVoiceTool } from "../realtime/toolExecutor";
 import { createWebRealtimeToolDefinitions } from "../realtime/toolDefinitions";
 import { observeVoiceLatency, vadSilenceMs } from "../realtime/latency";
+import {
+  createRealtimeResponseGate,
+  isBenignRealtimeClientError,
+  markRealtimeConversationInput,
+  markRealtimeResponseCreated,
+  releaseUnconfirmedRealtimeResponse,
+  requeueRejectedRealtimeCreate,
+  requestRealtimeResponse,
+  resetRealtimeResponseGate,
+  takeDeferredRealtimeResponse,
+  type RealtimeResponseGate,
+} from "../realtime/responseGate";
 import { assertSocketWritable, closeVoiceSocket, createFrameBudget, finalizeVoiceOnce, MAX_REALTIME_FRAME_BYTES, parseRealtimeFrame, settleVoiceTasks } from "../realtime/safety";
 import { acquireVoiceLease, initializeVoiceLifecycle } from "../sessions/lifecycle";
 import { updateVoiceCallPresence } from "../backend/runtimeClient";
@@ -83,8 +96,10 @@ type OpenAiRealtimeMessage = {
     };
   };
   error?: {
+    type?: string;
     code?: string;
     message?: string;
+    event_id?: string;
   };
 };
 
@@ -107,6 +122,7 @@ type ActiveWebCall = {
   mediaStartedAtMs: number | null;
   pendingAssistantResponseRequestAtMs: number | null;
   assistantResponseStartedAtMsById: Map<string, number>;
+  responseGate: RealtimeResponseGate;
   maxDurationMs: number;
   handledToolCallIds: Set<string>;
   sidebandSocket: WebSocket | null;
@@ -986,7 +1002,12 @@ function requestWebFinalMessageBeforeHangup(
   }
 
   session.pendingEndCall = endCall;
-  requestWebResponse(socket, session, {
+  // The session is ending: this message takes over from any response still in
+  // flight, and no deferred follow-up may outlive it.
+  requestWebResponse(
+    socket,
+    session,
+    {
       metadata: {
         lobbystack_purpose: WEB_FINAL_MESSAGE_METADATA_PURPOSE,
       },
@@ -996,7 +1017,9 @@ function requestWebFinalMessageBeforeHangup(
         "Do not call any tools and do not add anything else.",
       ].join(" "),
       tool_choice: "none",
-  });
+    },
+    { force: true },
+  );
 
   session.pendingEndCallFallbackTimer = setTimeout(() => {
     session.pendingEndCallFallbackTimer = null;
@@ -1074,15 +1097,71 @@ function postRealtimeEvent(
   }
 }
 
+// Shares the phone path's gate: one active response per conversation, so
+// parallel tool completions queue instead of racing each other into
+// `conversation_already_has_active_response`. `force` belongs to the terminal
+// paths that deliberately take over the conversation.
 function requestWebResponse(
   socket: WebSocket,
   session: ActiveWebCall,
   response?: Record<string, unknown>,
+  options: { force?: boolean } = {},
 ): void {
+  const nowMs = Date.now();
+  // Naming the create lets a later provider error be matched to this exact
+  // request instead of to whatever response happens to be in flight.
+  const eventId = crypto.randomUUID();
+  if (options.force) {
+    resetRealtimeResponseGate(session.responseGate);
+    requestRealtimeResponse(session.responseGate, response, eventId, {
+      forced: true,
+    });
+  } else if (!requestRealtimeResponse(session.responseGate, response, eventId)) {
+    return;
+  }
+
+  session.pendingAssistantResponseRequestAtMs = nowMs;
+  postRealtimeEvent(socket, {
+    type: "response.create",
+    event_id: eventId,
+    ...(response ? { response } : {}),
+  });
+}
+
+// Runs on every `response.done` to release the gate, re-issuing a request that
+// was deferred during the finished response only when it still has something
+// to answer and the session is not already ending.
+function flushDeferredWebResponse(
+  socket: WebSocket,
+  session: ActiveWebCall,
+  responseId?: string,
+): void {
+  const eventId = crypto.randomUUID();
+  const deferred = takeDeferredRealtimeResponse(session.responseGate, {
+    ...(responseId ? { responseId } : {}),
+    eventId,
+  });
+  if (!deferred.post) {
+    return;
+  }
+
+  // A terminal message is the one request these checks must not discard: the
+  // session is ending precisely because it was requested, and `pendingEndCall`
+  // is already set by the time it is queued.
+  if (session.finalized) {
+    resetRealtimeResponseGate(session.responseGate);
+    return;
+  }
+  if (!deferred.forced && session.pendingEndCall !== null) {
+    resetRealtimeResponseGate(session.responseGate);
+    return;
+  }
+
   session.pendingAssistantResponseRequestAtMs = Date.now();
   postRealtimeEvent(socket, {
     type: "response.create",
-    ...(response ? { response } : {}),
+    event_id: eventId,
+    ...(deferred.request ? { response: deferred.request } : {}),
   });
 }
 
@@ -1418,6 +1497,9 @@ async function handleSidebandMessage(
   }
 
   if (payload.type === "response.created") {
+    // Server-side turn detection creates responses the gate never requested,
+    // so the active response is confirmed here rather than at request time.
+    markRealtimeResponseCreated(session.responseGate, payload.response?.id);
     trackWebResponseCreated(session, payload.response?.id);
     return;
   }
@@ -1534,6 +1616,9 @@ async function handleSidebandMessage(
     } else {
       session.pendingAssistantResponseRequestAtMs = null;
     }
+    // Only once this response's latency has been recorded and its timestamps
+    // cleared, so a deferred follow-up starts its own turn measurement.
+    flushDeferredWebResponse(socket, session, response?.id);
 
     if (
       session.pendingEndCall &&
@@ -1659,6 +1744,34 @@ async function handleSidebandMessage(
   }
 
   if (payload.type === "error") {
+    if (isBenignRealtimeClientError(payload.error)) {
+      // The gate deliberately stays closed here. The conflict means a provider
+      // response really is active, so releasing would let the next request race
+      // it. The rejected create was never acted on, so it is queued behind that
+      // response; its `response.done` releases the gate and posts what is
+      // queued.
+      requeueRejectedRealtimeCreate(session.responseGate, payload.error?.event_id);
+      recordOpenAiRealtimeStateConflict({
+        "lobbystack.business_id": session.businessId,
+        "lobbystack.call_id": session.callId,
+        "lobbystack.provider": "openai",
+        "lobbystack.channel": "web_voice",
+        ...(payload.error?.code
+          ? { "lobbystack.provider_error_code": payload.error.code }
+          : {}),
+      });
+      return;
+    }
+    // Any other rejection of our create will never be acknowledged, so the gate
+    // has to be freed or every later turn would be deferred forever. Anything
+    // queued behind it is still unanswered and is posted now.
+    const releasedCreate = releaseUnconfirmedRealtimeResponse(
+      session.responseGate,
+      payload.error?.event_id,
+    );
+    if (releasedCreate.post) {
+      requestWebResponse(socket, session, releasedCreate.request);
+    }
     server.log.warn(
       {
         callId: session.callId,
@@ -1698,6 +1811,7 @@ async function handleToolCall(
         }),
       },
     });
+    markRealtimeConversationInput(session.responseGate);
     requestWebResponse(socket, session);
     return;
   }
@@ -1760,6 +1874,7 @@ async function handleToolCall(
         }),
       },
     });
+    markRealtimeConversationInput(session.responseGate);
     requestWebResponse(socket, session);
     return;
   }
@@ -1778,6 +1893,7 @@ async function handleToolCall(
       output: JSON.stringify(executed.result),
     },
   });
+  markRealtimeConversationInput(session.responseGate);
 
   if (executed.suppressResponse) {
     postRealtimeEvent(socket, { type: "input_audio_buffer.clear" });
@@ -2035,6 +2151,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         mediaStartedAtMs: null,
         pendingAssistantResponseRequestAtMs: null,
         assistantResponseStartedAtMsById: new Map(),
+        responseGate: createRealtimeResponseGate(),
         maxDurationMs: call.webCallMaxDurationMs ?? server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
         handledToolCallIds: new Set(),
         sidebandSocket: null,

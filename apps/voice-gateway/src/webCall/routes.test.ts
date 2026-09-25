@@ -923,7 +923,12 @@ describe("web call routes", () => {
     });
     expect(sentMessages).toContainEqual({ type: "response.cancel" });
     expect(sentMessages).toContainEqual({ type: "output_audio_buffer.clear" });
-    expect(sentMessages.at(-1)).toEqual({ type: "response.create" });
+    // The create also carries an `event_id` so a later provider error can be
+    // matched back to it, and nothing else.
+    expect(sentMessages.at(-1)).toEqual({
+      type: "response.create",
+      event_id: expect.any(String),
+    });
     expect(sentMessages).not.toContainEqual({ type: "input_audio_buffer.clear" });
   });
 
@@ -2493,6 +2498,76 @@ describe("web call routes", () => {
         disposition: "caller_finished",
       }),
     );
+  });
+
+  it("posts one response.create when the model runs two web tool calls at once", async () => {
+    fetchWebVoiceContextMock
+      .mockResolvedValue({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    takeVoiceMessageMock.mockResolvedValue({ inboxItemId: "inbox_123" });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const createResponse = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+      },
+    });
+
+    expect(createResponse.statusCode).toBe(200);
+    const socket = webSocketInstances[0]!;
+    socket.send.mockClear();
+
+    const takeMessageArgs = JSON.stringify({
+      callerName: "Sam",
+      message: "Please call me back.",
+    });
+    // Both calls belong to one model turn, so each completion independently
+    // wants to answer. Only the first may reach the provider.
+    for (const callId of ["parallel-call-1", "parallel-call-2"]) {
+      socket.emit(
+        "message",
+        Buffer.from(
+          JSON.stringify({
+            type: "response.function_call_arguments.done",
+            name: "takeMessage",
+            call_id: callId,
+            arguments: takeMessageArgs,
+          }),
+        ),
+      );
+    }
+
+    await vi.waitFor(() => {
+      const outputs = socket.send.mock.calls
+        .map(([value]) => JSON.parse(String(value)))
+        .filter((message) => message.item?.type === "function_call_output");
+      expect(outputs).toHaveLength(2);
+    });
+
+    const creates = socket.send.mock.calls
+      .map(([value]) => JSON.parse(String(value)))
+      .filter((message) => message.type === "response.create");
+    expect(creates).toHaveLength(1);
   });
 
   it("passes web_voice when a website visitor leaves a message", async () => {

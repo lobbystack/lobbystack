@@ -840,6 +840,31 @@ export function recordOpenAiRealtimeError(
   });
 }
 
+// A rejected client event that the call recovers from on its own, such as a
+// `response.create` that lost a race with an already active response. Kept
+// apart from `ops.voice.openai_realtime_error` so that metric keeps meaning a
+// real provider failure.
+export function recordOpenAiRealtimeStateConflict(
+  attributes?: OperationalAttributes,
+): void {
+  const properties = normalizeOperationalAttributes(attributes);
+  captureOperationalEvent({
+    event: "ops.voice.openai_realtime_state_conflict",
+    properties: {
+      provider: "openai",
+      ...properties,
+    },
+  });
+  emitOperationalLog({
+    level: "warn",
+    message: "OpenAI Realtime conversation state conflict",
+    properties: {
+      provider: "openai",
+      ...properties,
+    },
+  });
+}
+
 export function recordOpenAiTurnLatency(
   latencyMs: number,
   attributes?: OperationalAttributes,

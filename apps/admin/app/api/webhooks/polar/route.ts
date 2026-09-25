@@ -4,7 +4,9 @@ import { eq } from "drizzle-orm";
 import { polarWebhookSchema } from "@lobbystack/contracts";
 import { businesses, enqueueOutbox, providerEvents, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
 import { verifyPolarWebhookSignature } from "@lobbystack/providers";
+import { recordProductEvent } from "@lobbystack/domain";
 import { getDispatcherDatabase, getWorkerDatabase } from "@/lib/api-helpers";
+import { createWorkerDomainContext } from "@/lib/domain-context";
 import { normalizePolarEvent } from "@/lib/polar-event";
 
 export const runtime = "nodejs";
@@ -22,6 +24,29 @@ function validSignature(body: string, headers: Headers): boolean {
     "webhook-timestamp": timestamp,
     "webhook-signature": signature,
   }, secret);
+}
+
+// A webhook we cannot attribute to a business is dropped with a 200, which is
+// correct for Polar but leaves no trace of a subscription that never applied.
+// This is the only signal that a billing event went missing.
+async function recordUnresolvedWebhook(
+  input: { eventType: string; reason: "no_reference" | "unknown_business"; reference?: string },
+): Promise<void> {
+  try {
+    await recordProductEvent(createWorkerDomainContext(), {
+      name: "ops.billing.webhook_unresolved",
+      distinctId: `system:billing:${input.reason}`,
+      actorType: "worker",
+      properties: {
+        provider: "polar",
+        eventType: input.eventType,
+        reason: input.reason,
+        ...(input.reference ? { businessReference: input.reference } : {}),
+      },
+    });
+  } catch {
+    // Telemetry about a dropped webhook must not itself fail the webhook.
+  }
 }
 
 export async function POST(request: Request) {
@@ -48,11 +73,25 @@ export async function POST(request: Request) {
       : allowLegacyReference && normalized.businessReference
         ? eq(businesses.legacyConvexId, normalized.businessReference)
         : undefined;
-    if (!condition) return NextResponse.json({ accepted: true, ignored: true });
+    if (!condition) {
+      await recordUnresolvedWebhook({
+        eventType: event.data.type,
+        reason: "no_reference",
+        ...(normalized.businessReference ? { reference: normalized.businessReference } : {}),
+      });
+      return NextResponse.json({ accepted: true, ignored: true });
+    }
     const businessId = await withDispatcherTransaction(getDispatcherDatabase().db, async tx => {
       return (await tx.select({ id: businesses.id }).from(businesses).where(condition).limit(1))[0]?.id;
     });
-    if (!businessId) return NextResponse.json({ accepted: true, ignored: true });
+    if (!businessId) {
+      await recordUnresolvedWebhook({
+        eventType: event.data.type,
+        reason: "unknown_business",
+        ...(normalized.businessReference ? { reference: normalized.businessReference } : {}),
+      });
+      return NextResponse.json({ accepted: true, ignored: true });
+    }
     const persist = async (tx: Parameters<Parameters<ReturnType<typeof getWorkerDatabase>["db"]["transaction"]>[0]>[0]) => {
       const [stored] = await tx.insert(providerEvents).values({ provider: "polar", providerEventId: event.data.id, eventType: event.data.type, businessId, payload: normalized.payload }).onConflictDoNothing().returning({ id: providerEvents.id });
       if (stored && businessId) {
