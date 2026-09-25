@@ -65,7 +65,7 @@ export function WorkspaceSwitcher() {
           <DropdownMenuTrigger
             render={
               <Item
-                className="w-full gap-2 px-3 py-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[popup-open=true]:bg-sidebar-accent data-[popup-open=true]:text-sidebar-accent-foreground"
+                className="w-full gap-2 rounded-lg px-3 py-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[popup-open=true]:bg-sidebar-accent data-[popup-open=true]:text-sidebar-accent-foreground"
                 render={<button disabled={switching} type="button" />}
                 size="xs"
                 variant="outline"
