@@ -1,11 +1,19 @@
 // @vitest-environment jsdom
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DashboardAbandonIntent } from "./dashboard-abandon-intent";
 import { announceTestCallEnded } from "@/lib/test-call-launcher";
 import { ABANDON_INTENT_CALL_GRACE_MS, ABANDON_INTENT_IDLE_MS, ABANDON_INTENT_MIN_DWELL_MS } from "@/lib/abandon-intent";
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
+
+const survey = vi.hoisted(() => ({ shown: vi.fn(), dismissed: vi.fn(), response: vi.fn(() => true) }));
+vi.mock("@/lib/abandon-intent-survey", () => ({
+  captureSurveyShown: survey.shown,
+  captureSurveyDismissed: survey.dismissed,
+  captureSurveyResponse: survey.response,
+}));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
@@ -41,6 +49,46 @@ function leaveThroughTop() {
 }
 
 describe("abandon intent reporting", () => {
+  it("opens the dialog and records the survey as shown", async () => {
+    await setup();
+    await vi.advanceTimersByTimeAsync(ABANDON_INTENT_MIN_DWELL_MS);
+    leaveThroughTop();
+    expect(survey.shown).toHaveBeenCalledOnce();
+    expect(await screen.findByText("abandonIntent.title")).toBeTruthy();
+  });
+
+  it("sends both answers and shows the confirmation", async () => {
+    await setup();
+    await vi.advanceTimersByTimeAsync(ABANDON_INTENT_MIN_DWELL_MS);
+    leaveThroughTop();
+    await screen.findByText("abandonIntent.title");
+    fireEvent.change(screen.getByLabelText("abandonIntent.issue.label"), { target: { value: "Test call failed" } });
+    fireEvent.click(screen.getByRole("button", { name: "abandonIntent.submit" }));
+    expect(survey.response).toHaveBeenCalledWith({ issue: "Test call failed", missing: "" });
+    expect(await screen.findByText("abandonIntent.sentTitle")).toBeTruthy();
+    expect(survey.dismissed).not.toHaveBeenCalled();
+  });
+
+  it("records a dismissal when the dialog is closed untouched", async () => {
+    await setup();
+    await vi.advanceTimersByTimeAsync(ABANDON_INTENT_MIN_DWELL_MS);
+    leaveThroughTop();
+    await screen.findByText("abandonIntent.title");
+    fireEvent.click(screen.getByRole("button", { name: "abandonIntent.notNow" }));
+    expect(survey.dismissed).toHaveBeenCalledOnce();
+    expect(survey.response).not.toHaveBeenCalled();
+  });
+
+  it("keeps the submit button disabled until something is written", async () => {
+    await setup();
+    await vi.advanceTimersByTimeAsync(ABANDON_INTENT_MIN_DWELL_MS);
+    leaveThroughTop();
+    await screen.findByText("abandonIntent.title");
+    expect(screen.getByRole("button", { name: "abandonIntent.submit" }).hasAttribute("disabled")).toBe(true);
+    fireEvent.change(screen.getByLabelText("abandonIntent.missing.label"), { target: { value: "Hours editor" } });
+    expect(screen.getByRole("button", { name: "abandonIntent.submit" }).hasAttribute("disabled")).toBe(false);
+  });
+
   it("reports the operator leaving", async () => {
     await setup();
     await vi.advanceTimersByTimeAsync(ABANDON_INTENT_MIN_DWELL_MS);

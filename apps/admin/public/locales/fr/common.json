@@ -124,5 +124,22 @@
       "error": "Erreur",
       "cancelled": "Annulé"
     }
+  },
+  "abandonIntent": {
+    "title": "Avant de partir",
+    "description": "Deux questions rapides. Une seule suffit.",
+    "issue": {
+      "label": "Un problème ?",
+      "placeholder": "Décrivez ce qui s'est passé pour qu'on le corrige."
+    },
+    "missing": {
+      "label": "Il manque quelque chose ?",
+      "placeholder": "Dites-nous ce que vous aimeriez voir ensuite."
+    },
+    "notNow": "Pas maintenant",
+    "submit": "Envoyer",
+    "sentTitle": "Merci",
+    "sentDescription": "Nous lisons chacun de ces messages.",
+    "close": "Fermer"
   }
 }
