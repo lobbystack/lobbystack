@@ -10,6 +10,7 @@ import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { DashboardTestCallWidget } from "./dashboard-test-call-widget";
 import { DashboardFeedbackWidget } from "./dashboard-feedback-widget";
+import { DashboardAbandonIntent } from "./dashboard-abandon-intent";
 
 type Business = { businessId: string; name: string; slug: string; active: boolean; role: string };
 
@@ -19,6 +20,8 @@ export function DashboardUtilityBar() {
   const business = selectActiveBusiness(businesses.data?.businesses);
   if (!business) return null;
   return (
+    <>
+    <DashboardAbandonIntent businessId={business.businessId} />
     <div className="pointer-events-none absolute inset-x-0 top-4 z-40 hidden md:block">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-end gap-0.5 px-6">
         <DashboardTestCallWidget className="pointer-events-auto" businessId={business.businessId} businessSlug={business.slug} />
@@ -44,5 +47,6 @@ export function DashboardUtilityBar() {
         <DashboardFeedbackWidget className="pointer-events-auto" businessId={business.businessId} />
       </div>
     </div>
+    </>
   );
 }

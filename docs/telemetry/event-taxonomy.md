@@ -35,6 +35,7 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 - `web.activation.first_call_completed`
 - `web.activation.upgrade_prompt_shown`
 - `web.activation.upgrade_prompt_clicked`
+- `web.activation.abandon_intent`
 - `web.knowledge.upload_started`
 - `web.knowledge.upload_completed`
 - `web.integration.calendar_connect_started`

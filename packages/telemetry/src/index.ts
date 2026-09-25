@@ -46,6 +46,7 @@ export const WEB_EVENT_NAMES = [
   "web.activation.first_call_completed",
   "web.activation.upgrade_prompt_shown",
   "web.activation.upgrade_prompt_clicked",
+  "web.activation.abandon_intent",
   "web.onboarding.plan_checkout_completed",
 ] as const;
 
@@ -428,6 +429,7 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.activation.first_call_completed": ["businessId", "deploymentMode", "transport"],
   "web.activation.upgrade_prompt_shown": ["businessId", "deploymentMode", "trigger"],
   "web.activation.upgrade_prompt_clicked": ["businessId", "deploymentMode", "trigger"],
+  "web.activation.abandon_intent": ["businessId", "deploymentMode", "trigger"],
   "billing.subscription_started": ["businessId", "plan", "billingInterval", "previousPlan"],
   "voice.call_started": [
     "businessId",
