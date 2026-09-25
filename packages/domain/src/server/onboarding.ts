@@ -1,6 +1,6 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 
-import { affiliateAttributions, affiliateProfileStats, affiliateProfiles, billingAccounts, businesses, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { affiliateAttributions, affiliateProfileStats, affiliateProfiles, billingAccounts, businesses, enqueueOutbox, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
@@ -195,5 +195,67 @@ export async function submitOnboardingAttribution(
       error.code = "onboarding_stage_conflict";
       throw error;
     }
+    const completedAt = new Date();
+    // The dedupe key keeps a revisited attribution form from scheduling a second check-in.
+    await enqueueOutbox(tx, {
+      topic: "onboarding.sendFollowup",
+      businessId: input.businessId,
+      aggregateType: "business",
+      aggregateId: input.businessId,
+      dedupeKey: `onboarding-followup:${input.businessId}`,
+      availableAt: new Date(completedAt.getTime() + ONBOARDING_FOLLOWUP_DELAY_MS),
+      payload: { completedAt: completedAt.toISOString() },
+    });
   });
+}
+
+export const ONBOARDING_FOLLOWUP_DELAY_MS = 24 * 60 * 60_000;
+
+export type OnboardingFollowupSender = {
+  /** RFC 5322 sender, e.g. `Raphael from LobbyStack <raphael@lobbystack.com>`. Replies go here. */
+  from: string;
+  /** First name used in the greeting and signature. */
+  name: string;
+};
+
+/**
+ * Queues the founder check-in email for a business that finished onboarding,
+ * unless its owner has come back since or shares the sender's email domain.
+ * Returns whether an email was queued.
+ */
+export async function queueOnboardingFollowupEmail(
+  context: DomainContext,
+  input: { businessId: string; completedAt: Date; sender: OnboardingFollowupSender },
+): Promise<boolean> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const result = await tx.execute<{ user_id: string; email: string; name: string | null; preferred_locale: string; business_name: string }>(
+      sql`select user_id, email, name, preferred_locale, business_name from app.resolve_onboarding_followup_recipient(${input.businessId}::uuid, ${input.completedAt.toISOString()}::timestamptz)`,
+    );
+    const recipient = result.rows[0];
+    if (!recipient) return false;
+    const senderDomain = emailDomain(input.sender.from);
+    if (senderDomain && emailDomain(recipient.email) === senderDomain) return false;
+    const locale = recipient.preferred_locale === "fr" ? "fr" : "en";
+    const firstName = recipient.name?.trim().split(/\s+/)[0] ?? "";
+    await enqueueOutbox(tx, {
+      topic: "email.send",
+      businessId: input.businessId,
+      aggregateType: "business",
+      aggregateId: input.businessId,
+      dedupeKey: `onboarding-followup:${input.businessId}:email`,
+      payload: {
+        template: "onboarding_followup",
+        to: recipient.email,
+        from: input.sender.from,
+        subject: locale === "fr" ? "Qu'avez-vous pensé de LobbyStack ?" : "How'd you like LobbyStack?",
+        variables: { locale, firstName, businessName: recipient.business_name, senderName: input.sender.name },
+      },
+    });
+    return true;
+  });
+}
+
+function emailDomain(address: string): string | undefined {
+  const match = /@([^\s>@]+)>?\s*$/.exec(address.trim());
+  return match?.[1]?.toLowerCase();
 }

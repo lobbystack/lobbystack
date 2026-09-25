@@ -13,7 +13,7 @@ export type SmtpConfig = {
   replyTo?: string;
 };
 
-type TemplateName = "existing_account" | "verify_email" | "password_reset" | "invitation" | "operator_alert" | "feedback_submission";
+type TemplateName = "existing_account" | "verify_email" | "password_reset" | "invitation" | "operator_alert" | "feedback_submission" | "onboarding_followup";
 
 export class SmtpEmailProvider {
   private readonly transporter: Transporter;
@@ -29,12 +29,15 @@ export class SmtpEmailProvider {
     this.transporter = transporter;
   }
 
-  async sendTemplate(input: { template: TemplateName; to: string; subject: string; variables: Record<string, string>; idempotencyKey?: string }): Promise<{ messageId: string }> {
+  async sendTemplate(input: { template: TemplateName; to: string; subject: string; variables: Record<string, string>; idempotencyKey?: string; from?: string; replyTo?: string }): Promise<{ messageId: string }> {
     assertCertificationRecipient("email", input.to);
     const email = renderTemplate(input.template, input.subject, input.variables);
+    // A per-message sender (the founder check-in) replaces the default reply-to
+    // too, so replies reach that sender rather than the shared inbox.
+    const replyTo = input.from ? input.replyTo : input.replyTo ?? this.config.replyTo;
     const result = await this.transporter.sendMail({
-      from: this.config.from,
-      ...(this.config.replyTo ? { replyTo: this.config.replyTo } : {}),
+      from: input.from ?? this.config.from,
+      ...(replyTo ? { replyTo } : {}),
       to: input.to,
       subject: input.subject,
       text: email.text,
@@ -88,7 +91,50 @@ function templateBody(template: TemplateName, variables: Record<string, string>)
       return variables.message ?? "LobbyStack operator notification";
     case "feedback_submission":
       return variables.body ?? "LobbyStack dashboard feedback";
+    case "onboarding_followup":
+      return onboardingFollowupBody(variables);
   }
+}
+
+function onboardingFollowupBody(variables: Record<string, string>): string {
+  const sender = variables.senderName ?? "";
+  const business = variables.businessName ?? "";
+  if (variables.locale === "fr") {
+    return [
+      variables.firstName ? `Bonjour ${variables.firstName},` : "Bonjour,",
+      "",
+      `Je suis ${sender}, le fondateur de LobbyStack. Vous avez configuré une réceptionniste pour ${business} hier. Merci de l'avoir essayée.`,
+      "",
+      "J'aimerais savoir ce que vous en avez pensé :",
+      "",
+      "1. Avez-vous aimé l'expérience ? Qu'est-ce qui a bien fonctionné, et qu'est-ce qui clochait ?",
+      "2. Que devrions-nous améliorer ?",
+      "3. Comptez-vous l'utiliser pour vrai, avec votre propre numéro de téléphone ? Sinon, qu'est-ce qui vous en empêche ?",
+      "",
+      "Vous pouvez répondre à ce courriel, et deux lignes suffiraient !",
+      "",
+      "Merci encore,",
+      sender,
+      "Fondateur, LobbyStack",
+    ].join("\n");
+  }
+  return [
+    variables.firstName ? `Hi ${variables.firstName},` : "Hi,",
+    "",
+    `I'm ${sender}, the founder of LobbyStack. You set up a receptionist for ${business} yesterday. Thanks for giving it a try.`,
+    "",
+    "I'd love to hear what you thought:",
+    "",
+    "1. Did you like it? What worked, and what felt off?",
+    "2. What should we improve?",
+    "3. Do you plan to use it for real, with your own phone number? If not, what's stopping you?",
+    "",
+    "You can reply to this email, and two lines would be plenty!",
+    "",
+    "Thanks again,",
+    sender,
+    "Founder, LobbyStack",
+  ].join("\n");
 }
 
 function renderEmailLayout({ previewText, content }: { previewText: string; content: string }): string {
