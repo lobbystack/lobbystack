@@ -1142,7 +1142,9 @@ function postAssistantResponse(
   const eventId = crypto.randomUUID();
   if (options.force) {
     resetRealtimeResponseGate(session.responseGate);
-    requestRealtimeResponse(session.responseGate, request, eventId);
+    requestRealtimeResponse(session.responseGate, request, eventId, {
+      forced: true,
+    });
   } else if (!requestRealtimeResponse(session.responseGate, request, eventId)) {
     server.log.debug(
       {
@@ -1182,12 +1184,20 @@ function flushDeferredAssistantResponse(
     return;
   }
 
+  // A terminal message is the one request these checks must not discard: the
+  // call is ending precisely because it was requested, and `pendingImplicitEndCall`
+  // is already set by the time it is queued.
   if (
-    session.finalized ||
-    session.terminalHangupInProgress ||
-    session.pendingImplicitEndCall ||
-    session.pendingTransferDestination
+    !deferred.forced &&
+    (session.finalized ||
+      session.terminalHangupInProgress ||
+      session.pendingImplicitEndCall ||
+      session.pendingTransferDestination)
   ) {
+    resetRealtimeResponseGate(session.responseGate);
+    return;
+  }
+  if (deferred.forced && session.finalized) {
     resetRealtimeResponseGate(session.responseGate);
     return;
   }

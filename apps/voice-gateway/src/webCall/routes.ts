@@ -1113,7 +1113,9 @@ function requestWebResponse(
   const eventId = crypto.randomUUID();
   if (options.force) {
     resetRealtimeResponseGate(session.responseGate);
-    requestRealtimeResponse(session.responseGate, response, eventId);
+    requestRealtimeResponse(session.responseGate, response, eventId, {
+      forced: true,
+    });
   } else if (!requestRealtimeResponse(session.responseGate, response, eventId)) {
     return;
   }
@@ -1143,7 +1145,14 @@ function flushDeferredWebResponse(
     return;
   }
 
-  if (session.finalized || session.pendingEndCall !== null) {
+  // A terminal message is the one request these checks must not discard: the
+  // session is ending precisely because it was requested, and `pendingEndCall`
+  // is already set by the time it is queued.
+  if (session.finalized) {
+    resetRealtimeResponseGate(session.responseGate);
+    return;
+  }
+  if (!deferred.forced && session.pendingEndCall !== null) {
     resetRealtimeResponseGate(session.responseGate);
     return;
   }

@@ -33,7 +33,7 @@ describe("requestRealtimeResponse", () => {
     markRealtimeConversationInput(gate);
     requestRealtimeResponse(gate, undefined);
 
-    expect(takeDeferredRealtimeResponse(gate)).toEqual({
+    expect(takeDeferredRealtimeResponse(gate)).toMatchObject({
       post: true,
       request: { instructions: "recover" },
     });
@@ -47,7 +47,7 @@ describe("requestRealtimeResponse", () => {
     requestRealtimeResponse(gate, { instructions: "first" });
     requestRealtimeResponse(gate, { instructions: "second" });
 
-    expect(takeDeferredRealtimeResponse(gate)).toEqual({
+    expect(takeDeferredRealtimeResponse(gate)).toMatchObject({
       post: true,
       request: { instructions: "second" },
     });
@@ -62,7 +62,7 @@ describe("requestRealtimeResponse", () => {
     requestRealtimeResponse(gate, { instructions: "third" });
     markRealtimeConversationInput(gate);
 
-    expect(takeDeferredRealtimeResponse(gate)).toEqual({
+    expect(takeDeferredRealtimeResponse(gate)).toMatchObject({
       post: true,
       request: { instructions: "third" },
     });
@@ -75,7 +75,7 @@ describe("takeDeferredRealtimeResponse", () => {
     requestRealtimeResponse(gate, undefined);
     markRealtimeResponseCreated(gate);
 
-    expect(takeDeferredRealtimeResponse(gate)).toEqual({
+    expect(takeDeferredRealtimeResponse(gate)).toMatchObject({
       post: false,
       request: undefined,
     });
@@ -94,7 +94,7 @@ describe("takeDeferredRealtimeResponse", () => {
     markRealtimeConversationInput(gate);
     requestRealtimeResponse(gate, undefined);
 
-    expect(takeDeferredRealtimeResponse(gate)).toEqual({
+    expect(takeDeferredRealtimeResponse(gate)).toMatchObject({
       post: true,
       request: undefined,
     });
@@ -111,7 +111,7 @@ describe("takeDeferredRealtimeResponse", () => {
     requestRealtimeResponse(gate, undefined);
     markRealtimeResponseCreated(gate);
 
-    expect(takeDeferredRealtimeResponse(gate)).toEqual({
+    expect(takeDeferredRealtimeResponse(gate)).toMatchObject({
       post: false,
       request: undefined,
     });
@@ -128,7 +128,7 @@ describe("takeDeferredRealtimeResponse", () => {
     requestRealtimeResponse(gate, undefined);
     markRealtimeResponseCreated(gate);
 
-    expect(takeDeferredRealtimeResponse(gate)).toEqual({
+    expect(takeDeferredRealtimeResponse(gate)).toMatchObject({
       post: true,
       request: undefined,
     });
@@ -144,7 +144,7 @@ describe("takeDeferredRealtimeResponse", () => {
     markRealtimeResponseCreated(gate);
     requestRealtimeResponse(gate, { instructions: "still there?" });
 
-    expect(takeDeferredRealtimeResponse(gate)).toEqual({
+    expect(takeDeferredRealtimeResponse(gate)).toMatchObject({
       post: true,
       request: { instructions: "still there?" },
     });
@@ -170,7 +170,7 @@ describe("takeDeferredRealtimeResponse", () => {
     markRealtimeConversationInput(gate);
     requestRealtimeResponse(gate, { instructions: "recover" });
 
-    expect(takeDeferredRealtimeResponse(gate)).toEqual({
+    expect(takeDeferredRealtimeResponse(gate)).toMatchObject({
       post: true,
       request: { instructions: "recover" },
     });
@@ -203,7 +203,7 @@ describe("releaseUnconfirmedRealtimeResponse", () => {
     const gate = createRealtimeResponseGate();
     requestRealtimeResponse(gate, { instructions: "bad" }, "evt_create");
 
-    expect(releaseUnconfirmedRealtimeResponse(gate, "evt_create")).toEqual({
+    expect(releaseUnconfirmedRealtimeResponse(gate, "evt_create")).toMatchObject({
       released: true,
       post: false,
       request: undefined,
@@ -218,7 +218,7 @@ describe("releaseUnconfirmedRealtimeResponse", () => {
     // failed create emits no response.done, so nothing else would answer it.
     requestRealtimeResponse(gate, { instructions: "recover" });
 
-    expect(releaseUnconfirmedRealtimeResponse(gate, "evt_create")).toEqual({
+    expect(releaseUnconfirmedRealtimeResponse(gate, "evt_create")).toMatchObject({
       released: true,
       post: true,
       request: { instructions: "recover" },
@@ -261,6 +261,7 @@ describe("releaseUnconfirmedRealtimeResponse", () => {
     expect(gate.assistantResponseInFlight).toBe(true);
     expect(gate.deferredAssistantResponse).toEqual({
       request: { instructions: "second" },
+      forced: false,
     });
   });
 
@@ -281,7 +282,7 @@ describe("requeueRejectedRealtimeCreate", () => {
     expect(requeueRejectedRealtimeCreate(gate, "evt_create")).toBe(true);
     // The gate stays closed: a provider response really is running.
     expect(gate.assistantResponseInFlight).toBe(true);
-    expect(takeDeferredRealtimeResponse(gate, { responseId: "resp_other" })).toEqual({
+    expect(takeDeferredRealtimeResponse(gate, { responseId: "resp_other" })).toMatchObject({
       post: true,
       request: undefined,
     });
@@ -292,7 +293,7 @@ describe("requeueRejectedRealtimeCreate", () => {
     requestRealtimeResponse(gate, { instructions: "goodbye" }, "evt_final");
 
     expect(requeueRejectedRealtimeCreate(gate, "evt_final")).toBe(true);
-    expect(takeDeferredRealtimeResponse(gate, { responseId: "resp_other" })).toEqual({
+    expect(takeDeferredRealtimeResponse(gate, { responseId: "resp_other" })).toMatchObject({
       post: true,
       request: { instructions: "goodbye" },
     });
@@ -305,7 +306,7 @@ describe("requeueRejectedRealtimeCreate", () => {
 
     requeueRejectedRealtimeCreate(gate, "evt_create");
 
-    expect(takeDeferredRealtimeResponse(gate, { responseId: "resp_other" })).toEqual({
+    expect(takeDeferredRealtimeResponse(gate, { responseId: "resp_other" })).toMatchObject({
       post: true,
       request: { instructions: "recover" },
     });
@@ -334,7 +335,7 @@ describe("resetRealtimeResponseGate", () => {
     expect(gate.activeAssistantResponseStartedSeq).toBeNull();
     expect(gate.lastConversationInputSeq).toBeNull();
     expect(gate.deferredAssistantResponse).toBeNull();
-    expect(takeDeferredRealtimeResponse(gate)).toEqual({
+    expect(takeDeferredRealtimeResponse(gate)).toMatchObject({
       post: false,
       request: undefined,
     });
@@ -357,7 +358,7 @@ describe("takeDeferredRealtimeResponse response correlation", () => {
     // the gate while the terminal message is still in flight.
     expect(
       takeDeferredRealtimeResponse(gate, { responseId: "resp_turn" }),
-    ).toEqual({ post: false, request: undefined });
+    ).toMatchObject({ post: false, request: undefined });
     expect(gate.assistantResponseInFlight).toBe(true);
     expect(requestRealtimeResponse(gate, undefined)).toBe(false);
   });
@@ -369,7 +370,7 @@ describe("takeDeferredRealtimeResponse response correlation", () => {
 
     expect(
       takeDeferredRealtimeResponse(gate, { responseId: "resp_turn" }),
-    ).toEqual({ post: false, request: undefined });
+    ).toMatchObject({ post: false, request: undefined });
     expect(gate.assistantResponseInFlight).toBe(false);
   });
 
@@ -384,13 +385,13 @@ describe("takeDeferredRealtimeResponse response correlation", () => {
     // The superseded response finishes after the terminal one was created.
     expect(
       takeDeferredRealtimeResponse(gate, { responseId: "resp_turn" }),
-    ).toEqual({ post: false, request: undefined });
+    ).toMatchObject({ post: false, request: undefined });
     expect(gate.assistantResponseInFlight).toBe(true);
 
     // The terminal message's own done then releases the gate.
     expect(
       takeDeferredRealtimeResponse(gate, { responseId: "resp_final" }),
-    ).toEqual({ post: false, request: undefined });
+    ).toMatchObject({ post: false, request: undefined });
     expect(gate.assistantResponseInFlight).toBe(false);
   });
 
@@ -402,7 +403,7 @@ describe("takeDeferredRealtimeResponse response correlation", () => {
 
     expect(
       takeDeferredRealtimeResponse(gate, { responseId: "resp_greeting" }),
-    ).toEqual({ post: false, request: undefined });
+    ).toMatchObject({ post: false, request: undefined });
     expect(gate.assistantResponseInFlight).toBe(false);
   });
 
@@ -411,11 +412,74 @@ describe("takeDeferredRealtimeResponse response correlation", () => {
     requestRealtimeResponse(gate, undefined, "evt_turn");
     markRealtimeResponseCreated(gate, "resp_turn");
 
-    expect(takeDeferredRealtimeResponse(gate, {})).toEqual({
+    expect(takeDeferredRealtimeResponse(gate, {})).toMatchObject({
       post: false,
       request: undefined,
     });
     expect(gate.assistantResponseInFlight).toBe(false);
+  });
+});
+
+describe("forced terminal messages", () => {
+  it("drains a rejected terminal create on the superseded response's done", () => {
+    const gate = createRealtimeResponseGate();
+
+    // The response that produced the endCall tool is running.
+    requestRealtimeResponse(gate, undefined, "evt_turn");
+    markRealtimeResponseCreated(gate, "resp_turn");
+
+    // The terminal message takes over, but the provider rejects its create
+    // because that response has not finished yet.
+    resetRealtimeResponseGate(gate);
+    requestRealtimeResponse(gate, { instructions: "goodbye" }, "evt_final", {
+      forced: true,
+    });
+    expect(requeueRejectedRealtimeCreate(gate, "evt_final")).toBe(true);
+
+    // That response finishing is now the only event that can post the goodbye.
+    expect(
+      takeDeferredRealtimeResponse(gate, { responseId: "resp_turn" }),
+    ).toEqual({
+      post: true,
+      request: { instructions: "goodbye" },
+      forced: true,
+    });
+  });
+
+  it("still protects a live terminal response from the superseded done", () => {
+    const gate = createRealtimeResponseGate();
+    requestRealtimeResponse(gate, undefined, "evt_turn");
+    markRealtimeResponseCreated(gate, "resp_turn");
+    resetRealtimeResponseGate(gate);
+    requestRealtimeResponse(gate, { instructions: "goodbye" }, "evt_final", {
+      forced: true,
+    });
+
+    // The terminal create was accepted this time, so the superseded response's
+    // done must not free the gate underneath it.
+    expect(
+      takeDeferredRealtimeResponse(gate, { responseId: "resp_turn" }).post,
+    ).toBe(false);
+    expect(gate.assistantResponseInFlight).toBe(true);
+  });
+
+  it("keeps a queued terminal message ahead of ordinary requests", () => {
+    const gate = createRealtimeResponseGate();
+    requestRealtimeResponse(gate, undefined, "evt_turn");
+    markRealtimeResponseCreated(gate, "resp_turn");
+    resetRealtimeResponseGate(gate);
+    requestRealtimeResponse(gate, { instructions: "goodbye" }, "evt_final", {
+      forced: true,
+    });
+    requeueRejectedRealtimeCreate(gate, "evt_final");
+
+    // A parallel tool completion must not displace the goodbye.
+    requestRealtimeResponse(gate, undefined);
+    requestRealtimeResponse(gate, { instructions: "recover" });
+
+    expect(
+      takeDeferredRealtimeResponse(gate, { responseId: "resp_turn" }),
+    ).toMatchObject({ request: { instructions: "goodbye" }, forced: true });
   });
 });
 

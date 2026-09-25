@@ -9,8 +9,12 @@ export type RealtimeResponseRequest = Record<string, unknown> | undefined;
 
 // Wrapping the request keeps "nothing deferred" (null) distinct from "a
 // deferred request that carries no options", which is what an ordinary tool
-// completion asks for.
-type DeferredRealtimeResponse = { request: RealtimeResponseRequest };
+// completion asks for. `forced` marks a terminal message, which outranks every
+// ordinary request and survives the checks that stop a call starting new turns.
+type DeferredRealtimeResponse = {
+  request: RealtimeResponseRequest;
+  forced: boolean;
+};
 
 export type RealtimeResponseGate = {
   assistantResponseInFlight: boolean;
@@ -70,14 +74,18 @@ export function requestRealtimeResponse(
   gate: RealtimeResponseGate,
   request: RealtimeResponseRequest,
   eventId?: string,
+  options: { forced?: boolean } = {},
 ): boolean {
+  const forced = options.forced === true;
   if (gate.assistantResponseInFlight) {
     // Coalescing is last-wins except for instructions. A parameterless request
     // only asks the model to answer the conversation, which a deferred
-    // instructed request already does, so it must not overwrite one.
+    // instructed request already does, so it must not overwrite one. A queued
+    // terminal message outranks anything that is not itself terminal.
     const deferred = gate.deferredAssistantResponse;
-    if (request !== undefined || deferred?.request === undefined) {
-      gate.deferredAssistantResponse = { request };
+    const outranked = deferred?.forced === true && !forced;
+    if (!outranked && (request !== undefined || deferred?.request === undefined)) {
+      gate.deferredAssistantResponse = { request, forced };
     }
     return false;
   }
@@ -87,7 +95,7 @@ export function requestRealtimeResponse(
   gate.activeAssistantResponseStartedSeq = gate.sequence;
   gate.activeAssistantResponseConfirmed = false;
   gate.pendingCreateEventId = eventId ?? null;
-  gate.pendingCreateRequest = { request };
+  gate.pendingCreateRequest = { request, forced };
   gate.activeResponseId = null;
   gate.deferredAssistantResponse = null;
   return true;
@@ -118,23 +126,29 @@ export function markRealtimeResponseCreated(
 export function takeDeferredRealtimeResponse(
   gate: RealtimeResponseGate,
   options: { responseId?: string; eventId?: string } = {},
-): { post: boolean; request: RealtimeResponseRequest } {
+): { post: boolean; request: RealtimeResponseRequest; forced: boolean } {
+  const ignore = { post: false, request: undefined, forced: false };
   if (options.responseId !== undefined) {
-    // A terminal message posted with `force` supersedes a response that is
-    // still finishing. That response's `response.done` arrives afterwards and
-    // would otherwise free the gate while the terminal message is live.
     if (options.responseId === gate.supersededResponseId) {
       gate.supersededResponseId = null;
-      return { post: false, request: undefined };
-    }
-    // Likewise for any other response that is not the one being tracked. An
-    // unknown id when nothing is tracked still releases, so a missed
-    // `response.created` cannot strand the gate.
-    if (
+      // A terminal message posted with `force` supersedes a response that is
+      // still finishing, and that response's `response.done` arrives
+      // afterwards. It must not free the gate while the terminal message is
+      // live — but if the terminal create was itself rejected and queued
+      // behind this very response, its completion is what drains the queue.
+      const terminalStillOutstanding =
+        gate.activeResponseId !== null || gate.pendingCreateEventId !== null;
+      if (terminalStillOutstanding) {
+        return ignore;
+      }
+    } else if (
+      // Any other response that is not the one being tracked. An unknown id
+      // when nothing is tracked still releases, so a missed `response.created`
+      // cannot strand the gate.
       gate.activeResponseId !== null &&
       options.responseId !== gate.activeResponseId
     ) {
-      return { post: false, request: undefined };
+      return ignore;
     }
   }
 
@@ -151,7 +165,7 @@ export function takeDeferredRealtimeResponse(
   gate.deferredAssistantResponse = null;
 
   if (deferred === null) {
-    return { post: false, request: undefined };
+    return { post: false, request: undefined, forced: false };
   }
 
   // A request that carries instructions of its own — a hold check-in, a tool
@@ -163,7 +177,7 @@ export function takeDeferredRealtimeResponse(
     const answeredInput =
       startedSeq !== null && inputSeq !== null && inputSeq <= startedSeq;
     if (answeredInput) {
-      return { post: false, request: undefined };
+      return { post: false, request: undefined, forced: false };
     }
   }
 
@@ -172,7 +186,7 @@ export function takeDeferredRealtimeResponse(
   gate.activeAssistantResponseStartedSeq = gate.sequence;
   gate.pendingCreateEventId = options.eventId ?? null;
   gate.pendingCreateRequest = deferred;
-  return { post: true, request: deferred.request };
+  return { post: true, request: deferred.request, forced: deferred.forced };
 }
 
 // The gate marks a response in flight the moment it is requested, before the
@@ -184,8 +198,18 @@ export function takeDeferredRealtimeResponse(
 export function releaseUnconfirmedRealtimeResponse(
   gate: RealtimeResponseGate,
   eventId?: string,
-): { released: boolean; post: boolean; request: RealtimeResponseRequest } {
-  const ignored = { released: false, post: false, request: undefined };
+): {
+  released: boolean;
+  post: boolean;
+  request: RealtimeResponseRequest;
+  forced: boolean;
+} {
+  const ignored = {
+    released: false,
+    post: false,
+    request: undefined,
+    forced: false,
+  };
   if (!gate.assistantResponseInFlight) {
     return ignored;
   }
@@ -210,9 +234,14 @@ export function releaseUnconfirmedRealtimeResponse(
   gate.deferredAssistantResponse = null;
 
   if (deferred === null) {
-    return { released: true, post: false, request: undefined };
+    return { released: true, post: false, request: undefined, forced: false };
   }
-  return { released: true, post: true, request: deferred.request };
+  return {
+    released: true,
+    post: true,
+    request: deferred.request,
+    forced: deferred.forced,
+  };
 }
 
 // A create rejected because a provider response is already active was never
@@ -244,10 +273,16 @@ export function requeueRejectedRealtimeCreate(
 
   const deferred = gate.deferredAssistantResponse;
   // Whatever was queued behind the rejected create is newer, so it wins unless
-  // the rejected request is the only one carrying instructions.
+  // the rejected request is terminal, or is the only one carrying instructions.
   if (deferred === null) {
     gate.deferredAssistantResponse = rejected;
-  } else if (deferred.request === undefined && rejected.request !== undefined) {
+  } else if (rejected.forced && !deferred.forced) {
+    gate.deferredAssistantResponse = rejected;
+  } else if (
+    !deferred.forced &&
+    deferred.request === undefined &&
+    rejected.request !== undefined
+  ) {
     gate.deferredAssistantResponse = rejected;
   }
   return true;

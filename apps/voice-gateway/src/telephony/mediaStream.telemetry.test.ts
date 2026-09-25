@@ -204,6 +204,7 @@ describe("phone media stream telemetry", () => {
     expect(session.responseGate.assistantResponseInFlight).toBe(true);
     expect(session.responseGate.deferredAssistantResponse).toEqual({
       request: { instructions: "recover" },
+      forced: false,
     });
 
     // The active response finishing is what releases the gate and posts it.
@@ -211,7 +212,7 @@ describe("phone media stream telemetry", () => {
       gate.takeDeferredRealtimeResponse(session.responseGate, {
         responseId: "resp_provider",
       }),
-    ).toEqual({ post: true, request: { instructions: "recover" } });
+    ).toMatchObject({ post: true, request: { instructions: "recover" } });
   });
 
   it("frees the response gate when a create is rejected outright", async () => {
