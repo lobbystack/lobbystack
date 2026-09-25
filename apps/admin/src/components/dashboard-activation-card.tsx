@@ -121,24 +121,19 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
 
   return (
     <Surface className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted">
-          <Phone className="size-4" />
-        </span>
-        <div className="flex min-w-0 flex-col gap-1">
-          <p className="type-card-title text-foreground">
-            {!heardItWork ? t("activation.hearIt.title") : needsNumberClaim ? t("activation.claimNumber.title") : t("activation.upgrade.title")}
-          </p>
-          <p className="type-body-muted">
-            {!heardItWork
-              ? pagesRead && host
-                ? t("activation.hearIt.descriptionWithPages", { count: pagesRead, host })
-                : t("activation.hearIt.description")
-              : needsNumberClaim
-                ? t("activation.claimNumber.description")
-                : t("activation.upgrade.description")}
-          </p>
-        </div>
+      <div className="flex min-w-0 flex-col gap-1">
+        <p className="type-card-title text-foreground">
+          {!heardItWork ? t("activation.hearIt.title") : needsNumberClaim ? t("activation.claimNumber.title") : t("activation.upgrade.title")}
+        </p>
+        <p className="type-body-muted">
+          {!heardItWork
+            ? pagesRead && host
+              ? t("activation.hearIt.descriptionWithPages", { count: pagesRead, host })
+              : t("activation.hearIt.description")
+            : needsNumberClaim
+              ? t("activation.claimNumber.description")
+              : t("activation.upgrade.description")}
+        </p>
       </div>
       {!heardItWork
         ? canStartTestCall
