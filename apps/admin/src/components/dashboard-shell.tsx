@@ -20,7 +20,6 @@ import { SettingsIcon } from "@/components/ui/settings";
 import { UsersIcon } from "@/components/ui/users";
 import { WorkflowIcon } from "@/components/ui/workflow";
 import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
-import { TeamSwitcher } from "@/components/layout/team-switcher";
 import { Main } from "@/components/layout/main";
 import { SiteHeader } from "@/components/site-header";
 import {
@@ -156,10 +155,7 @@ function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
   return (
     <Sidebar className="absolute inset-y-0 h-full" collapsible="icon" variant="sidebar">
       <SidebarHeader>
-        <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-          <TeamSwitcher />
-          <WorkspaceSwitcher />
-        </div>
+        <WorkspaceSwitcher />
       </SidebarHeader>
       <SidebarContent>
         <NavigationGroup items={general} pathname={pathname} title={t("nav:sidebar.general")} />

@@ -56,10 +56,10 @@ export function WorkspaceSwitcher() {
     }
   }
 
-  if (businesses.isLoading) return <SidebarMenu className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden"><SidebarMenuItem><SidebarTeamSkeleton /></SidebarMenuItem></SidebarMenu>;
+  if (businesses.isLoading) return <SidebarMenu className="group-data-[collapsible=icon]:hidden"><SidebarMenuItem><SidebarTeamSkeleton /></SidebarMenuItem></SidebarMenu>;
 
   return (
-    <SidebarMenu className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+    <SidebarMenu className="group-data-[collapsible=icon]:hidden">
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger
