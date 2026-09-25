@@ -40,10 +40,11 @@ async function completedWorkspace(tx: DatabaseTransaction, email = `${randomUUID
   return { userId, businessId, email };
 }
 
+// The resolver trusts only the worker's login identity, so switch session_user rather than the current role.
 async function queueAsWorker(tx: DatabaseTransaction, businessId: string, completedAt: Date, from = sender) {
-  await tx.execute(sql`set local role lobbystack_worker`);
+  await tx.execute(sql`set local session authorization lobbystack_worker`);
   const queued = await queueOnboardingFollowupEmail({ db: tx as unknown as Database }, { businessId, completedAt, sender: from });
-  await tx.execute(sql`reset role`);
+  await tx.execute(sql`reset session authorization`);
   return queued;
 }
 
@@ -106,6 +107,23 @@ describe.skipIf(!testUrl)("onboarding follow-up email against dedicated PostgreS
       await tx.insert(calls).values({ businessId, providerCallId: randomUUID(), transport: "voice", startedAt: new Date(completedAt.getTime() + 5 * 60 * 60_000) });
       expect(await queueAsWorker(tx, businessId, completedAt)).toBe(false);
       expect(await followupEmails(tx, businessId)).toHaveLength(0);
+    });
+  });
+
+  it("answers only for the business bound to the worker transaction", async () => {
+    await rollbackTest(async tx => {
+      const { businessId } = await completedWorkspace(tx);
+      const other = await completedWorkspace(tx);
+      const completedAt = new Date(Date.now() - ONBOARDING_FOLLOWUP_DELAY_MS).toISOString();
+      const resolve = async () => (await tx.execute(sql`select email from app.resolve_onboarding_followup_recipient(${businessId}::uuid, ${completedAt}::timestamptz)`)).rows;
+      await tx.execute(sql`set local session authorization lobbystack_worker`);
+      expect(await resolve()).toHaveLength(0);
+      await tx.execute(sql`select set_config('app.actor_type', 'worker', true), set_config('app.business_id', ${other.businessId}, true)`);
+      expect(await resolve()).toHaveLength(0);
+      await tx.execute(sql`select set_config('app.business_id', ${businessId}, true)`);
+      expect(await resolve()).toHaveLength(1);
+      await tx.execute(sql`reset session authorization`);
+      expect(await resolve()).toHaveLength(0);
     });
   });
 
