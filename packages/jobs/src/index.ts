@@ -37,6 +37,7 @@ export const queueForJobType: Record<JobType, JobQueue> = {
   "phoneNumber.provision": "critical",
   "phoneNumber.reclaim": "maintenance",
   "prospectDemo.expire": "maintenance",
+  "onboarding.sendFollowup": "default",
   "affiliate.generatePayoutRun": "maintenance",
   "telemetry.flush": "maintenance",
   "outbox.backlogSample": "maintenance",

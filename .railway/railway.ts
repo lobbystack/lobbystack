@@ -54,6 +54,8 @@ export default defineRailway((ctx) => {
       OPENAI_API_KEY: preserve(),
       EMAIL_FROM: preserve(),
       FEEDBACK_TO_EMAIL: preserve(),
+      ONBOARDING_FOLLOWUP_FROM: preserve(),
+      ONBOARDING_FOLLOWUP_SENDER_NAME: preserve(),
       FIRECRAWL_API_KEY: preserve(),
       GOOGLE_CLIENT_ID: preserve(),
       GOOGLE_CLIENT_SECRET: preserve(),

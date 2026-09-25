@@ -15,6 +15,25 @@ describe("SMTP delivery", () => {
     await provider.sendTemplate({ template: "operator_alert", to: "approved@example.invalid", subject: "Test", variables: {} });
     expect(sendMail).toHaveBeenCalledOnce();
   });
+  it("sends the onboarding follow-up as plain text from the founder, with replies going to the founder", async () => {
+    const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const provider = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "no-reply@example.test", replyTo: "support@example.test" }, { sendMail } as never);
+    await provider.sendTemplate({ template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@example.test>", subject: "How'd you like LobbyStack?", variables: { locale: "en", firstName: "Sam", businessName: "Acme Dental", senderName: "Raphael" } });
+    const sent = sendMail.mock.calls[0]?.[0];
+    expect(sent.from).toBe("Raphael <raphael@example.test>");
+    expect(sent.replyTo).toBeUndefined();
+    expect(sent.html).toBeUndefined();
+    expect(sent.text).toMatch(/^Hi Sam,\n/);
+    expect(sent.text).toContain("I'm Raphael, the founder of LobbyStack. You set up a receptionist for Acme Dental yesterday.");
+    expect(sent.text).toContain("3. Do you plan to use it for real, with your own phone number?");
+    expect(sent.text).toContain("You can reply to this email, and two lines would be plenty!\n\nThanks again,\nRaphael\nFounder, LobbyStack");
+    await provider.sendTemplate({ template: "onboarding_followup", to: "owner@example.test", subject: "Qu'avez-vous pensé de LobbyStack ?", variables: { locale: "fr", firstName: "", businessName: "Clinique", senderName: "Raphael" } });
+    const french = sendMail.mock.calls[1]?.[0];
+    expect(french.from).toBe("no-reply@example.test");
+    expect(french.replyTo).toBe("support@example.test");
+    expect(french.text).toMatch(/^Bonjour,\n/);
+    expect(french.text).toContain("une réceptionniste pour Clinique hier");
+  });
   it("sends reset codes as codes while preserving previously issued reset links", async () => {
     const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
     const provider = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "no-reply@example.test" }, { sendMail } as never);
