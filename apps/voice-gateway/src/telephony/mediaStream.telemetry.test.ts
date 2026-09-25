@@ -135,6 +135,137 @@ describe("phone media stream telemetry", () => {
     }));
   });
 
+  it("emits ops.voice.openai_realtime_state_conflict instead of paging on a lost response race", async () => {
+    const { mediaStream, session } = await loadMediaStream();
+    const { server, openAiSocket, twilioSocket } = createRuntimeDoubles();
+    session.callSid = "CA123";
+    session.streamSid = "stream_123";
+
+    mediaStream.handleOpenAiMessage(
+      server as never,
+      openAiSocket as never,
+      twilioSocket as never,
+      session,
+      Buffer.from(JSON.stringify({
+        type: "error",
+        error: {
+          type: "invalid_request_error",
+          code: "conversation_already_has_active_response",
+        },
+      })),
+    );
+
+    expect(mocks.capture).toHaveBeenCalledWith(expect.objectContaining({
+      event: "ops.voice.openai_realtime_state_conflict",
+      properties: expect.objectContaining({
+        businessId: "business_123",
+        callId: "call_123",
+        "lobbystack.provider_error_code": "conversation_already_has_active_response",
+      }),
+    }));
+    expect(mocks.capture).not.toHaveBeenCalledWith(expect.objectContaining({
+      event: "ops.voice.openai_realtime_error",
+    }));
+    expect(mocks.capture).not.toHaveBeenCalledWith(expect.objectContaining({
+      properties: expect.objectContaining({
+        $exception_type: "ProviderFailureError",
+      }),
+    }));
+  });
+
+  it("keeps the response gate closed when a create loses to an active response", async () => {
+    const { mediaStream, session } = await loadMediaStream();
+    const gate = await import("../realtime/responseGate");
+    const { server, openAiSocket, twilioSocket } = createRuntimeDoubles();
+
+    // A tool output is waiting on an answer, and our create for it was the one
+    // the provider rejected.
+    gate.markRealtimeConversationInput(session.responseGate);
+    gate.requestRealtimeResponse(session.responseGate, undefined, "evt_create");
+    gate.requestRealtimeResponse(session.responseGate, { instructions: "recover" });
+
+    mediaStream.handleOpenAiMessage(
+      server as never,
+      openAiSocket as never,
+      twilioSocket as never,
+      session,
+      Buffer.from(JSON.stringify({
+        type: "error",
+        error: {
+          type: "invalid_request_error",
+          code: "conversation_already_has_active_response",
+          event_id: "evt_create",
+        },
+      })),
+    );
+
+    // A provider response really is active, so the next request must still be
+    // held back, and the deferred one must survive to be answered.
+    expect(gate.isRealtimeResponseInFlight(session.responseGate)).toBe(true);
+    expect(gate.peekDeferredRealtimeResponse(session.responseGate)).toEqual({
+      request: { instructions: "recover" },
+      forced: false,
+    });
+
+    // The active response finishing is what releases the gate and posts it.
+    expect(
+      gate.takeDeferredRealtimeResponse(session.responseGate, {
+        responseId: "resp_provider",
+      }),
+    ).toMatchObject({ post: true, request: { instructions: "recover" } });
+  });
+
+  it("frees the response gate when a create is rejected outright", async () => {
+    const { mediaStream, session } = await loadMediaStream();
+    const gate = await import("../realtime/responseGate");
+    const { server, openAiSocket, twilioSocket } = createRuntimeDoubles();
+
+    gate.requestRealtimeResponse(session.responseGate, undefined, "evt_create");
+
+    mediaStream.handleOpenAiMessage(
+      server as never,
+      openAiSocket as never,
+      twilioSocket as never,
+      session,
+      Buffer.from(JSON.stringify({
+        type: "error",
+        error: {
+          type: "invalid_request_error",
+          code: "invalid_value",
+          event_id: "evt_create",
+        },
+      })),
+    );
+
+    // Nothing will ever acknowledge that create, so holding the gate would
+    // strand every later turn.
+    expect(gate.isRealtimeResponseInFlight(session.responseGate)).toBe(false);
+  });
+
+  it("still emits ops.voice.openai_realtime_error for a real provider failure", async () => {
+    const { mediaStream, session } = await loadMediaStream();
+    const { server, openAiSocket, twilioSocket } = createRuntimeDoubles();
+
+    mediaStream.handleOpenAiMessage(
+      server as never,
+      openAiSocket as never,
+      twilioSocket as never,
+      session,
+      Buffer.from(JSON.stringify({
+        type: "error",
+        error: { type: "server_error", code: "internal_error" },
+      })),
+    );
+
+    expect(mocks.capture).toHaveBeenCalledWith(expect.objectContaining({
+      event: "ops.voice.openai_realtime_error",
+      properties: expect.objectContaining({
+        businessId: "business_123",
+        callId: "call_123",
+      }),
+    }));
+  });
+
   it("emits ops.voice.hangup_retries_exhausted after the terminal retry budget", async () => {
     vi.useFakeTimers();
     mocks.endLiveCallSilently.mockRejectedValue(new Error("provider unavailable"));
