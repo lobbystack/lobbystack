@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { Phone, Sparkles } from "lucide-react";
+import { Phone } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useTelemetry } from "@/components/product-analytics";
@@ -123,7 +123,7 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
     <Surface className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-start gap-3">
         <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted">
-          {heardItWork ? <Phone className="size-4" /> : <Sparkles className="size-4" />}
+          <Phone className="size-4" />
         </span>
         <div className="flex min-w-0 flex-col gap-1">
           <p className="type-card-title text-foreground">
