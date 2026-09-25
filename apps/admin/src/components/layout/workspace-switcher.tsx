@@ -4,12 +4,12 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2Icon, Check, ChevronsUpDown, Plus } from "lucide-react";
+import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { SidebarTeamSkeleton } from "@/components/loading-skeletons";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { recordPendingWorkspaceSwitch } from "@/lib/workspace-analytics";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { SidebarMenu, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 type Business = { businessId: string; name: string; active: boolean };
 async function getBusinesses(): Promise<{ businesses: Business[] }> {
@@ -56,10 +56,10 @@ export function WorkspaceSwitcher() {
     }
   }
 
-  if (businesses.isLoading) return <SidebarMenu className="group-data-[collapsible=icon]:hidden"><SidebarMenuItem><SidebarTeamSkeleton /></SidebarMenuItem></SidebarMenu>;
+  if (businesses.isLoading) return <SidebarMenu className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden"><SidebarMenuItem><SidebarTeamSkeleton /></SidebarMenuItem></SidebarMenu>;
 
   return (
-    <SidebarMenu className="group-data-[collapsible=icon]:hidden">
+    <SidebarMenu className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -72,7 +72,6 @@ export function WorkspaceSwitcher() {
               />
             }
           >
-            <ItemMedia variant="icon"><Building2Icon /></ItemMedia>
             <ItemContent className="min-w-0 gap-0.5">
               <ItemTitle className="ph-mask line-clamp-2 w-full text-left font-medium leading-tight">
                 {active?.name ?? t("sidebar.businessSlugFallback")}

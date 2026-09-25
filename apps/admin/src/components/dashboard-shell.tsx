@@ -155,9 +155,11 @@ function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
 
   return (
     <Sidebar className="absolute inset-y-0 h-full" collapsible="icon" variant="sidebar">
-      <SidebarHeader className="gap-1">
-        <TeamSwitcher />
-        <WorkspaceSwitcher />
+      <SidebarHeader>
+        <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
+          <TeamSwitcher />
+          <WorkspaceSwitcher />
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <NavigationGroup items={general} pathname={pathname} title={t("nav:sidebar.general")} />
