@@ -5,10 +5,28 @@ const text = (value: unknown): string | undefined => typeof value === "string" &
 /** Translate signed Polar subscription/order payloads into our billing vocabulary. */
 export function normalizePolarEvent(type: string, data: RecordValue, env: Record<string, string | undefined> = process.env) {
   const customer = record(data.customer);
+  const customerMetadata = record(customer.metadata);
   const subscription = type.startsWith("subscription.") ? data : record(data.subscription);
   const externalId = text(customer.external_id) ?? text(data.external_customer_id) ?? text(data.externalCustomerId);
-  const candidate = text(data.businessId) ?? externalId?.match(/^business:(.+)$/)?.[1];
-  const businessId = candidate && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(candidate) ? candidate : undefined;
+  // A Polar customer that predates the Postgres migration still carries the old
+  // Convex id in `external_id`, while its metadata holds the current one. Take
+  // whichever reference actually identifies a business rather than trusting
+  // the first field that happens to be populated.
+  const references = [
+    text(data.businessId),
+    text(customer.external_id),
+    text(data.external_customer_id),
+    text(data.externalCustomerId),
+    text(customerMetadata.externalCustomerId),
+    text(customerMetadata.businessId),
+  ].flatMap(value => {
+    if (!value) return [];
+    return [value.match(/^business:(.+)$/)?.[1] ?? value];
+  });
+  const isBusinessUuid = (value: string): boolean =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+  const businessId = references.find(isBusinessUuid);
+  const candidate = businessId ?? references[0];
   const productId = text(subscription.product_id) ?? text(data.product_id);
   const match = (["starter", "pro"] as const).flatMap(plan => (["monthly", "annual"] as const).map(interval => ({ plan, interval, id: env[`POLAR_${plan.toUpperCase()}_${interval.toUpperCase()}_PRODUCT_ID`] }))).find(product => product.id && product.id === productId);
   const subscriptionId = text(subscription.id) ?? text(data.subscription_id);
