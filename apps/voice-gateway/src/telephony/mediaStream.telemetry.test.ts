@@ -201,8 +201,8 @@ describe("phone media stream telemetry", () => {
 
     // A provider response really is active, so the next request must still be
     // held back, and the deferred one must survive to be answered.
-    expect(session.responseGate.assistantResponseInFlight).toBe(true);
-    expect(session.responseGate.deferredAssistantResponse).toEqual({
+    expect(gate.isRealtimeResponseInFlight(session.responseGate)).toBe(true);
+    expect(gate.peekDeferredRealtimeResponse(session.responseGate)).toEqual({
       request: { instructions: "recover" },
       forced: false,
     });
@@ -239,7 +239,7 @@ describe("phone media stream telemetry", () => {
 
     // Nothing will ever acknowledge that create, so holding the gate would
     // strand every later turn.
-    expect(session.responseGate.assistantResponseInFlight).toBe(false);
+    expect(gate.isRealtimeResponseInFlight(session.responseGate)).toBe(false);
   });
 
   it("still emits ops.voice.openai_realtime_error for a real provider failure", async () => {

@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   createRealtimeResponseGate,
+  getRealtimeResponseGateStatus,
   isBenignRealtimeClientError,
   markRealtimeConversationInput,
   markRealtimeResponseCreated,
   releaseUnconfirmedRealtimeResponse,
+  isRealtimeResponseInFlight,
+  peekDeferredRealtimeResponse,
   requestRealtimeResponse,
   requeueRejectedRealtimeCreate,
   resetRealtimeResponseGate,
@@ -79,7 +82,7 @@ describe("takeDeferredRealtimeResponse", () => {
       post: false,
       request: undefined,
     });
-    expect(gate.assistantResponseInFlight).toBe(false);
+    expect(isRealtimeResponseInFlight(gate)).toBe(false);
     expect(requestRealtimeResponse(gate, undefined)).toBe(true);
   });
 
@@ -159,7 +162,7 @@ describe("takeDeferredRealtimeResponse", () => {
     requestRealtimeResponse(gate, undefined);
 
     expect(takeDeferredRealtimeResponse(gate).post).toBe(true);
-    expect(gate.assistantResponseInFlight).toBe(true);
+    expect(isRealtimeResponseInFlight(gate)).toBe(true);
     expect(requestRealtimeResponse(gate, undefined)).toBe(false);
   });
 
@@ -181,20 +184,25 @@ describe("markRealtimeResponseCreated", () => {
   it("keeps the request's position when the gate asked for the response", () => {
     const gate = createRealtimeResponseGate();
     requestRealtimeResponse(gate, undefined);
-    const requestedSeq = gate.activeAssistantResponseStartedSeq;
+    // Input lands after the create was sent but before it was acknowledged.
     markRealtimeConversationInput(gate);
+    requestRealtimeResponse(gate, undefined);
     markRealtimeResponseCreated(gate);
 
-    expect(gate.activeAssistantResponseStartedSeq).toBe(requestedSeq);
+    // Ordering against the request rather than the acknowledgement is what
+    // leaves this input still owed an answer.
+    expect(takeDeferredRealtimeResponse(gate)).toMatchObject({ post: true });
   });
 
   it("gives a server-started response its own place in the order", () => {
     const gate = createRealtimeResponseGate();
     markRealtimeConversationInput(gate);
     markRealtimeResponseCreated(gate);
+    requestRealtimeResponse(gate, undefined);
 
-    expect(gate.assistantResponseInFlight).toBe(true);
-    expect(gate.activeAssistantResponseStartedSeq).toBe(gate.sequence);
+    expect(isRealtimeResponseInFlight(gate)).toBe(true);
+    // The response was created after that input, so it already saw it.
+    expect(takeDeferredRealtimeResponse(gate)).toMatchObject({ post: false });
   });
 });
 
@@ -223,7 +231,7 @@ describe("releaseUnconfirmedRealtimeResponse", () => {
       post: true,
       request: { instructions: "recover" },
     });
-    expect(gate.assistantResponseInFlight).toBe(false);
+    expect(isRealtimeResponseInFlight(gate)).toBe(false);
   });
 
   it("ignores an error about some earlier client event", () => {
@@ -235,7 +243,7 @@ describe("releaseUnconfirmedRealtimeResponse", () => {
     expect(releaseUnconfirmedRealtimeResponse(gate, "evt_cancel").released).toBe(
       false,
     );
-    expect(gate.assistantResponseInFlight).toBe(true);
+    expect(isRealtimeResponseInFlight(gate)).toBe(true);
     expect(requestRealtimeResponse(gate, undefined, "evt_other")).toBe(false);
   });
 
@@ -246,7 +254,7 @@ describe("releaseUnconfirmedRealtimeResponse", () => {
     expect(releaseUnconfirmedRealtimeResponse(gate, undefined).released).toBe(
       false,
     );
-    expect(gate.assistantResponseInFlight).toBe(true);
+    expect(isRealtimeResponseInFlight(gate)).toBe(true);
   });
 
   it("keeps the gate closed while a confirmed response is still running", () => {
@@ -258,8 +266,8 @@ describe("releaseUnconfirmedRealtimeResponse", () => {
     expect(releaseUnconfirmedRealtimeResponse(gate, "evt_create").released).toBe(
       false,
     );
-    expect(gate.assistantResponseInFlight).toBe(true);
-    expect(gate.deferredAssistantResponse).toEqual({
+    expect(isRealtimeResponseInFlight(gate)).toBe(true);
+    expect(peekDeferredRealtimeResponse(gate)).toEqual({
       request: { instructions: "second" },
       forced: false,
     });
@@ -281,7 +289,7 @@ describe("requeueRejectedRealtimeCreate", () => {
 
     expect(requeueRejectedRealtimeCreate(gate, "evt_create")).toBe(true);
     // The gate stays closed: a provider response really is running.
-    expect(gate.assistantResponseInFlight).toBe(true);
+    expect(isRealtimeResponseInFlight(gate)).toBe(true);
     expect(takeDeferredRealtimeResponse(gate, { responseId: "resp_other" })).toMatchObject({
       post: true,
       request: undefined,
@@ -317,7 +325,7 @@ describe("requeueRejectedRealtimeCreate", () => {
     requestRealtimeResponse(gate, { instructions: "goodbye" }, "evt_final");
 
     expect(requeueRejectedRealtimeCreate(gate, "evt_cancel")).toBe(false);
-    expect(gate.deferredAssistantResponse).toBeNull();
+    expect(peekDeferredRealtimeResponse(gate)).toBeNull();
   });
 });
 
@@ -331,10 +339,9 @@ describe("resetRealtimeResponseGate", () => {
 
     resetRealtimeResponseGate(gate);
 
-    expect(gate.assistantResponseInFlight).toBe(false);
-    expect(gate.activeAssistantResponseStartedSeq).toBeNull();
-    expect(gate.lastConversationInputSeq).toBeNull();
-    expect(gate.deferredAssistantResponse).toBeNull();
+    expect(isRealtimeResponseInFlight(gate)).toBe(false);
+    expect(getRealtimeResponseGateStatus(gate)).toBe("idle");
+    expect(peekDeferredRealtimeResponse(gate)).toBeNull();
     expect(takeDeferredRealtimeResponse(gate)).toMatchObject({
       post: false,
       request: undefined,
@@ -359,7 +366,7 @@ describe("takeDeferredRealtimeResponse response correlation", () => {
     expect(
       takeDeferredRealtimeResponse(gate, { responseId: "resp_turn" }),
     ).toMatchObject({ post: false, request: undefined });
-    expect(gate.assistantResponseInFlight).toBe(true);
+    expect(isRealtimeResponseInFlight(gate)).toBe(true);
     expect(requestRealtimeResponse(gate, undefined)).toBe(false);
   });
 
@@ -371,7 +378,7 @@ describe("takeDeferredRealtimeResponse response correlation", () => {
     expect(
       takeDeferredRealtimeResponse(gate, { responseId: "resp_turn" }),
     ).toMatchObject({ post: false, request: undefined });
-    expect(gate.assistantResponseInFlight).toBe(false);
+    expect(isRealtimeResponseInFlight(gate)).toBe(false);
   });
 
   it("releases on the terminal message's own done after the superseded one", () => {
@@ -386,13 +393,13 @@ describe("takeDeferredRealtimeResponse response correlation", () => {
     expect(
       takeDeferredRealtimeResponse(gate, { responseId: "resp_turn" }),
     ).toMatchObject({ post: false, request: undefined });
-    expect(gate.assistantResponseInFlight).toBe(true);
+    expect(isRealtimeResponseInFlight(gate)).toBe(true);
 
     // The terminal message's own done then releases the gate.
     expect(
       takeDeferredRealtimeResponse(gate, { responseId: "resp_final" }),
     ).toMatchObject({ post: false, request: undefined });
-    expect(gate.assistantResponseInFlight).toBe(false);
+    expect(isRealtimeResponseInFlight(gate)).toBe(false);
   });
 
   it("releases on an unknown id when it is tracking no response", () => {
@@ -404,7 +411,7 @@ describe("takeDeferredRealtimeResponse response correlation", () => {
     expect(
       takeDeferredRealtimeResponse(gate, { responseId: "resp_greeting" }),
     ).toMatchObject({ post: false, request: undefined });
-    expect(gate.assistantResponseInFlight).toBe(false);
+    expect(isRealtimeResponseInFlight(gate)).toBe(false);
   });
 
   it("still releases when a response.done carries no id to correlate", () => {
@@ -416,7 +423,7 @@ describe("takeDeferredRealtimeResponse response correlation", () => {
       post: false,
       request: undefined,
     });
-    expect(gate.assistantResponseInFlight).toBe(false);
+    expect(isRealtimeResponseInFlight(gate)).toBe(false);
   });
 });
 
@@ -460,7 +467,7 @@ describe("forced terminal messages", () => {
     expect(
       takeDeferredRealtimeResponse(gate, { responseId: "resp_turn" }).post,
     ).toBe(false);
-    expect(gate.assistantResponseInFlight).toBe(true);
+    expect(isRealtimeResponseInFlight(gate)).toBe(true);
   });
 
   it("keeps a queued terminal message ahead of ordinary requests", () => {
