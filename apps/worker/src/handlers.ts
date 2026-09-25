@@ -734,7 +734,14 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       if (!claimId || !dependencies.twilio?.findOwnedPhoneNumber || !dependencies.twilio.purchasePhoneNumber) return { status: "skipped", entityId: claimId };
       const claim = await claimNumberProvisioning(dependencies.domain, { businessId, claimId }); if (!claim) return { status: "skipped", entityId: claimId };
       const baseUrl = (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
-      const voiceUrl = `${baseUrl}/voice/context/by-slug`; const smsUrl = `${baseUrl}/api/webhooks/twilio/sms`; const statusCallbackUrl = `${baseUrl}/api/webhooks/twilio/status`;
+      // Twilio needs TwiML, which only the voice gateway serves. Pointing a
+      // number at the admin app buys a number that cannot answer: its context
+      // endpoints are internal JSON APIs behind service auth, so every call to
+      // it fails with Twilio's generic application error. Refuse to provision
+      // rather than sell a number that is dead on arrival.
+      const voiceBaseUrl = (process.env.VOICE_GATEWAY_BASE_URL ?? "").replace(/\/$/, "");
+      if (!voiceBaseUrl) throw new Error("VOICE_GATEWAY_BASE_URL is required to provision a phone number.");
+      const voiceUrl = `${voiceBaseUrl}/twilio/voice/inbound`; const smsUrl = `${baseUrl}/api/webhooks/twilio/sms`; const statusCallbackUrl = `${baseUrl}/api/webhooks/twilio/status`;
       let purchased = false; let providerPhoneId: string | undefined;
       try {
         const owned = await dependencies.twilio.findOwnedPhoneNumber({ e164: claim.e164 });
