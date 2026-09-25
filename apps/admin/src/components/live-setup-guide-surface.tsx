@@ -7,16 +7,18 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import { PageHeader } from "@/components/page-header";
+import { startTestCall } from "@/lib/test-call-launcher";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 
-type StepId = "website" | "sources" | "calendar" | "services" | "rules";
+type StepId = "website" | "sources" | "testCall" | "phoneNumber";
 type Business = { businessId: string; active: boolean; role: string };
 type Step = { id: StepId; name: string; description: string; status: string };
-const order: StepId[] = ["website", "sources", "calendar", "services", "rules"];
-const targets: Record<StepId, string> = { website: "/agent/knowledge?setup=website", sources: "/agent/knowledge?setup=upload", calendar: "/integrations?setup=calendar", services: "/agent/services?setup=service", rules: "/agent/rules?setup=rule" };
+const order: StepId[] = ["website", "sources", "testCall", "phoneNumber"];
+/** The call runs in place through the utility-bar widget, so it has no route. */
+const targets: Record<StepId, string | null> = { website: "/agent/knowledge?setup=website", sources: "/agent/knowledge?setup=upload", testCall: null, phoneNumber: "/settings/phone-number" };
 
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { credentials: "include", ...init });
@@ -57,7 +59,7 @@ export function LiveSetupGuideSurface() {
                 const complete = step.status === "complete" || step.status === "skipped";
                 return <AccordionItem key={step.id} value={step.id}>
                   <AccordionTrigger aria-disabled={complete || undefined} className={complete ? "min-h-16 cursor-default px-6 [&_[data-icon=inline-end]]:opacity-0" : "min-h-16 px-6"} tabIndex={complete ? -1 : undefined}><span className="flex min-w-0 items-center gap-4"><StepMarker completed={complete} /><span className={complete ? "truncate text-base text-muted-foreground line-through decoration-muted-foreground/70" : "truncate text-base"}>{t(`sidebar.setupGuide.steps.${step.id}`)}</span></span></AccordionTrigger>
-                  <AccordionContent aria-labelledby="" className="px-6"><div className="flex gap-4"><span className="size-6 shrink-0" /><div className="flex min-w-0 flex-1 flex-col gap-4"><p className="max-w-lg text-base leading-6 text-muted-foreground">{t(`sidebar.setupGuide.stepDescriptions.${step.id}`)}</p><div className="flex items-center justify-between gap-4"><Button onClick={() => router.push(targets[step.id])}>{t(`sidebar.setupGuide.stepActions.${step.id}`)}</Button><Button className="h-auto px-0 underline underline-offset-4" disabled={skip.isPending} onClick={async () => { await skip.mutateAsync(step.id); setOpenStep(steps[index + 1]?.id ?? step.id); }} variant="link">{t("sidebar.setupGuide.skipStep")}</Button></div></div></div></AccordionContent>
+                  <AccordionContent aria-labelledby="" className="px-6"><div className="flex gap-4"><span className="size-6 shrink-0" /><div className="flex min-w-0 flex-1 flex-col gap-4"><p className="max-w-lg text-base leading-6 text-muted-foreground">{t(`sidebar.setupGuide.stepDescriptions.${step.id}`)}</p><div className="flex items-center justify-between gap-4"><Button onClick={() => { const target = targets[step.id]; if (target) router.push(target); else startTestCall(); }}>{t(`sidebar.setupGuide.stepActions.${step.id}`)}</Button><Button className="h-auto px-0 underline underline-offset-4" disabled={skip.isPending} onClick={async () => { await skip.mutateAsync(step.id); setOpenStep(steps[index + 1]?.id ?? step.id); }} variant="link">{t("sidebar.setupGuide.skipStep")}</Button></div></div></div></AccordionContent>
                 </AccordionItem>;
               })}
             </Accordion>
