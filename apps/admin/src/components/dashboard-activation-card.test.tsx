@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DashboardActivationCard } from "./dashboard-activation-card";
 import { UpgradePlanDialogProvider } from "./upgrade-plan-dialog-context";
-import { registerTestCallStarter } from "@/lib/test-call-launcher";
+import { announceTestCallEnded, registerTestCallStarter } from "@/lib/test-call-launcher";
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
@@ -29,24 +29,32 @@ beforeEach(() => {
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
 type Activation = {
+  deploymentMode: string;
   plan: string;
   subscriptionState: string | null;
+  paidPlanLive: boolean;
   hasDedicatedNumber: boolean;
   completedWebCalls: number;
   firstCompletedWebCallAt: string | null;
   websiteImport: { status: string; websiteUrl: string; importedCount: number; indexedCount: number } | null;
 };
 
-function setup(activation: Partial<Activation>) {
-  const body: Activation = {
+function activationBody(activation: Partial<Activation>): Activation {
+  return {
+    deploymentMode: "cloud",
     plan: "free_cloud",
     subscriptionState: null,
+    paidPlanLive: false,
     hasDedicatedNumber: false,
     completedWebCalls: 0,
     firstCompletedWebCallAt: null,
     websiteImport: null,
     ...activation,
   };
+}
+
+function setup(activation: Partial<Activation>) {
+  const body = activationBody(activation);
   vi.stubGlobal("fetch", vi.fn(async () => Response.json(body)));
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   clients.push(client);
@@ -110,5 +118,44 @@ describe("dashboard activation card", () => {
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
     expect(screen.queryByText("activation.upgrade.title")).toBeNull();
     expect(telemetryRef.current!.events).toHaveLength(0);
+  });
+
+  it("stays hidden for a self-hosted workspace, whatever its billing row says", async () => {
+    setup({ deploymentMode: "self_hosted_standard", plan: "free_cloud", completedWebCalls: 1 });
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+    expect(screen.queryByText("activation.upgrade.title")).toBeNull();
+    expect(screen.queryByText("activation.hearIt.title")).toBeNull();
+    expect(telemetryRef.current!.events).toHaveLength(0);
+  });
+
+  it("sends a paying operator without a number to claiming instead of checkout", async () => {
+    setup({ plan: "starter", subscriptionState: "active", paidPlanLive: true, completedWebCalls: 1 });
+    expect(await screen.findByText("activation.claimNumber.title")).toBeTruthy();
+    expect(screen.getByText("activation.claimNumber.cta").closest("a")?.getAttribute("href")).toBe("/settings/phone-number");
+    expect(screen.queryByText("activation.upgrade.title")).toBeNull();
+    expect(telemetryRef.current!.events.filter(event => event.name === "web.activation.upgrade_prompt_shown")).toHaveLength(0);
+    telemetryRef.current!.expectEvent("web.activation.first_call_completed", { businessId: "business", transport: "web_voice" });
+  });
+
+  it("re-checks activation after a call ends in this tab", async () => {
+    const stop = registerTestCallStarter(vi.fn());
+    let completedWebCalls = 0;
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json(activationBody({ completedWebCalls }))));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    clients.push(client);
+    render(
+      <QueryClientProvider client={client}>
+        <UpgradePlanDialogProvider onOpen={vi.fn()}>
+          <DashboardActivationCard businessId="business" />
+        </UpgradePlanDialogProvider>
+      </QueryClientProvider>,
+    );
+    await screen.findByText("activation.hearIt.title");
+
+    completedWebCalls = 1;
+    announceTestCallEnded();
+
+    expect(await screen.findByText("activation.upgrade.title", {}, { timeout: 5000 })).toBeTruthy();
+    stop();
   });
 });

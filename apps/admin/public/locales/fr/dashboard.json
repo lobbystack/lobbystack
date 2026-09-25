@@ -223,6 +223,11 @@
       "descriptionWithPages_other": "Il a lu {{count}} pages de {{host}}. Appelez-le et posez une question que seule votre entreprise connaît.",
       "cta": "Lancer un appel"
     },
+    "claimNumber": {
+      "title": "Réservez votre numéro",
+      "description": "Votre forfait inclut un numéro dédié et vous n'en avez pas encore choisi un. Choisissez-le et l'agent commence à répondre.",
+      "cta": "Choisir un numéro"
+    },
     "upgrade": {
       "title": "Donnez un numéro à votre agent",
       "description": "Vous l'avez entendu travailler. Un numéro dédié lui permet de répondre à vos vrais clients, jour et nuit.",

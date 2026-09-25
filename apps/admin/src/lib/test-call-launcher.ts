@@ -39,3 +39,17 @@ export function startTestCall(): boolean {
   starter();
   return true;
 }
+
+const endListeners = new Set<() => void>();
+
+/** Surfaces that react to a finished call subscribe here; the widget announces it. */
+export function subscribeTestCallEnded(onEnded: () => void): () => void {
+  endListeners.add(onEnded);
+  return () => {
+    endListeners.delete(onEnded);
+  };
+}
+
+export function announceTestCallEnded(): void {
+  for (const listener of endListeners) listener();
+}

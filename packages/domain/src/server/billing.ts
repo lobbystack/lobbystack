@@ -507,6 +507,11 @@ export async function reconcileBillingProviderEvent(
 ): Promise<boolean> {
   const outcome = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx): Promise<{ reconciled: boolean; started: SubscriptionStart | null }> => {
     let startedSubscription: SubscriptionStart | null = null;
+    // The provider can deliver several live events for one checkout at once
+    // (subscription.active beside order.paid). Without this lock both workers
+    // read the same pre-paid account and each reports a subscription start, so
+    // the event would count webhook races instead of subscriptions.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`billing-reconcile:${input.businessId}`}, 0))`);
     const event = (await tx.select({ id: providerEvents.id, providerEventId: providerEvents.providerEventId, eventType: providerEvents.eventType, status: providerEvents.status, payload: providerEvents.payload, createdAt: providerEvents.createdAt })
       .from(providerEvents)
       .where(and(eq(providerEvents.id, input.providerEventId), eq(providerEvents.businessId, input.businessId)))

@@ -223,6 +223,11 @@
       "descriptionWithPages_other": "It has read {{count}} pages of {{host}}. Call it and ask something only your business would know.",
       "cta": "Start a call"
     },
+    "claimNumber": {
+      "title": "Claim your phone number",
+      "description": "Your plan includes a dedicated number and you have not picked one yet. Choose it and the agent starts answering.",
+      "cta": "Pick a number"
+    },
     "upgrade": {
       "title": "Give your agent a phone number",
       "description": "You have heard it work. A dedicated number lets it answer your real customers, day and night.",
