@@ -54,6 +54,16 @@ describe("findOpenings", () => {
     expect(result).toMatchObject({ ok: true, serviceName: "Drain cleaning" });
     expect(result.ok && result.openings.map((opening) => opening.startsAt)).toEqual(["2030-01-08T13:30:00.000Z", "2030-01-08T14:30:00.000Z"]);
   });
+
+  it("scans the whole day when only the last start time is free", async () => {
+    // 7 a.m. to 7 p.m. gives 23 start times for a one-hour service.
+    const longDay = [{ dayOfWeek: 2, openMinutes: 7 * 60, closeMinutes: 19 * 60 }];
+    const lastStart = "2030-01-08T23:00:00.000Z";
+    mocks.findAvailability.mockImplementation(async (_context, input: { startsAt: string }) => (input.startsAt === lastStart ? [{ startsAt: input.startsAt }] : []));
+    const result = await findOpenings(context, { businessId: "biz_1", serviceName: "drain cleaning", date: "2030-01-08", timezone: "America/Toronto", hours: longDay });
+    expect(result.ok && result.openings.map((opening) => opening.startsAt)).toEqual([lastStart]);
+    expect(mocks.findAvailability).toHaveBeenCalledTimes(23);
+  });
 });
 
 describe("bookForCaller telemetry", () => {

@@ -47,7 +47,9 @@ export function bookingFailureReason(error: unknown): string {
 }
 
 const OPENING_STEP_MINUTES = 30;
-const MAX_OPENING_CHECKS = 16;
+// Availability checks run this many at a time, so a busy day is scanned in
+// full without one slow query per start time.
+const OPENING_CHECK_BATCH = 6;
 
 // Start times to try on a local date, inside business hours, nearest to the
 // caller's preferred time first.
@@ -66,8 +68,7 @@ export function candidateStartTimes(input: { date: string; timezone: string; hou
     // Set the wall-clock time; adding minutes to midnight drifts an hour on DST days.
     .map((value) => day.set({ hour: Math.floor(value / 60), minute: value % 60 }))
     .filter((start) => start.toJSDate() > now)
-    .map((start) => start.toUTC().toISO()!)
-    .slice(0, MAX_OPENING_CHECKS);
+    .map((start) => start.toUTC().toISO()!);
 }
 
 export async function findOpenings(
@@ -85,10 +86,11 @@ export async function findOpenings(
   });
   const limit = input.limit ?? 3;
   const openings: string[] = [];
-  for (const startsAt of candidates) {
-    if (openings.length >= limit) break;
-    const slots = await findAvailability(context, { businessId: input.businessId, serviceId: service.id, startsAt, timezone: input.timezone });
-    if (slots.length) openings.push(startsAt);
+  // Scan the whole day, nearest first, and stop once there are enough openings.
+  for (let index = 0; index < candidates.length && openings.length < limit; index += OPENING_CHECK_BATCH) {
+    const batch = candidates.slice(index, index + OPENING_CHECK_BATCH);
+    const available = await Promise.all(batch.map(async (startsAt) => (await findAvailability(context, { businessId: input.businessId, serviceId: service.id, startsAt, timezone: input.timezone })).length > 0));
+    for (const [position, startsAt] of batch.entries()) if (available[position] && openings.length < limit) openings.push(startsAt);
   }
   if (input.callId) await recordCallSchedulingProgress(context, { businessId: input.businessId, callId: input.callId, serviceName: service.name });
   return {

@@ -124,6 +124,9 @@ function logError(sessionId: string, what: string) {
  */
 export function createLiveCallHandler(input: { domain: DomainContext }) {
   const active = new Map<string, { request: AttachRequest; controller: LiveCallController }>();
+  // Sessions whose attach is still loading, so an overlapping duplicate attach
+  // doesn't open a second sideband that would answer the same delegations.
+  const starting = new Set<string>();
   // Call records still being finalized, so shutdown can wait for them.
   const finishing = new Set<Promise<void>>();
   const client = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0 }) : undefined;
@@ -172,7 +175,16 @@ export function createLiveCallHandler(input: { domain: DomainContext }) {
 
   async function attach(request: AttachRequest): Promise<void> {
     if (!client || !model) throw new Error("OPENAI_API_KEY and a text model are required for live calls.");
-    if (active.has(request.sessionId)) return;
+    if (active.has(request.sessionId) || starting.has(request.sessionId)) return;
+    starting.add(request.sessionId);
+    try {
+      await startCall(request, client, model);
+    } finally {
+      starting.delete(request.sessionId);
+    }
+  }
+
+  async function startCall(request: AttachRequest, client: OpenAI, model: NonNullable<ReturnType<typeof createAgentModel>>): Promise<void> {
     const snapshot = await getCachedBusinessSnapshot(input.domain, { businessId: request.businessId });
     if (!snapshot) throw new Error("The business has no published snapshot.");
     const phone = request.channel === "voice";
