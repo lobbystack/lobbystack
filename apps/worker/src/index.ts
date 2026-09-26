@@ -10,6 +10,7 @@ import { PolarBillingProvider } from "@lobbystack/providers/polar/polarBilling";
 import { createStorageProvider } from "@lobbystack/providers/storage/provider";
 import { TwilioProvider } from "@lobbystack/providers/twilio/twilioProvider";
 import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withSpan } from "@lobbystack/telemetry/node";
+import { redactJobError } from "./redactJobError";
 import { Worker } from "bullmq";
 
 import { handleJob, type WorkerDependencies } from "./handlers";
@@ -205,7 +206,7 @@ async function main(): Promise<void> {
         });
       } catch (error) {
         outcome = "error";
-        throw error;
+        throw redactJobError(error);
       } finally {
         duration.record(performance.now() - started, { queue: queueName, type, outcome });
         state.activeJobs -= 1;

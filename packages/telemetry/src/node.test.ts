@@ -18,6 +18,12 @@ describe("OTel exception redaction", () => {
     expect(value).not.toContain("eyJabc.def.ghi");
   });
 
+  it("drops the bound parameters Drizzle appends to query errors", () => {
+    const value = redactOtelExceptionText("Failed query: insert into \"calendar_connections\" values ($1, $2)\nparams: biz-1,encrypted-access-token\n    at queryWithCache (chunk.js:8:1)");
+    expect(value).toBe("Failed query: insert into \"calendar_connections\" values ($1, $2)\nparams: [omitted]\n    at queryWithCache (chunk.js:8:1)");
+    expect(redactOtelExceptionText("params: biz-1,encrypted-access-token")).toBe("params: [omitted]");
+  });
+
   it("removes signed storage URLs from exception text", () => {
     const value = redactOtelExceptionText("Upload failed at https://storage.example.test/business/private.pdf?X-Amz-Credential=credential-marker&X-Amz-Signature=signature-marker");
     expect(value).toBe("Upload failed at [redacted-signed-url]");
