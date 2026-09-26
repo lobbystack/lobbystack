@@ -27,13 +27,16 @@ export function websiteImportHost(websiteUrl: string): string {
 }
 
 /**
- * Picks the crawl to show. The knowledge list comes back ordered by title, so
- * an operator who abandoned one URL and submitted another would otherwise watch
- * whichever site happens to sort first.
+ * Picks the crawl to show: the one for the business's own website, else the
+ * newest. The knowledge list comes back ordered by title, and resubmitting a URL
+ * reuses its earlier import, so neither list order nor creation time alone says
+ * which site the operator settled on. Mirrors currentWebsiteIngestion.
  */
-export function latestWebsiteImport<T extends { createdAt?: string; websiteImport?: WebsiteImportSummary | null }>(documents: T[] | undefined): WebsiteImportSummary | null {
+export function currentWebsiteImport<T extends { createdAt?: string; websiteImport?: WebsiteImportSummary | null }>(documents: T[] | undefined, websiteUrl?: string | null): WebsiteImportSummary | null {
   const imports = (documents ?? []).filter((document) => document.websiteImport);
   if (imports.length === 0) return null;
+  const matching = websiteUrl ? imports.find((document) => document.websiteImport!.websiteUrl === websiteUrl) : undefined;
+  if (matching) return matching.websiteImport ?? null;
   const newest = imports.reduce((latest, document) => (document.createdAt ?? "") > (latest.createdAt ?? "") ? document : latest);
   return newest.websiteImport ?? null;
 }

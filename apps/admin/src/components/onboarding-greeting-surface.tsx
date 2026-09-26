@@ -11,9 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { useTelemetry } from "@/components/product-analytics";
-import { isWebsiteImportRunning, latestWebsiteImport, WebsiteImportProgress, type WebsiteImportSummary } from "./website-import-progress";
+import { currentWebsiteImport, isWebsiteImportRunning, WebsiteImportProgress, type WebsiteImportSummary } from "./website-import-progress";
 
-type Business = { businessId: string; active: boolean };
+type Business = { businessId: string; active: boolean; websiteUrl?: string | null };
 type Profile = { greeting: string };
 type KnowledgeDocument = { id: string; createdAt?: string; websiteImport?: WebsiteImportSummary | null };
 
@@ -43,7 +43,7 @@ export function OnboardingGreetingSurface() {
     enabled: Boolean(business),
     refetchInterval: query => query.state.data?.documents?.some(document => isWebsiteImportRunning(document.websiteImport)) ? 2000 : false,
   });
-  const websiteImport = latestWebsiteImport(documents.data?.documents);
+  const websiteImport = currentWebsiteImport(documents.data?.documents, business?.websiteUrl);
   useEffect(() => {
     if (!hasUserEdited && agent.data?.profile?.greeting) setGreeting(agent.data.profile.greeting);
   }, [agent.data?.profile?.greeting, hasUserEdited]);

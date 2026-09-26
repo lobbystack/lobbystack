@@ -78,17 +78,24 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
   });
 
   const data = activation.data;
+  // Self-hosting is carried by the business, not the billing row: a self-hosted
+  // workspace has no hosted plan to sell and claims no numbers from us. The
+  // events below report this card's funnel, so they obey the same rule as its
+  // render; otherwise they fire for a card nobody sees.
+  const eligible = Boolean(data && !data.hasDedicatedNumber && data.deploymentMode === "cloud");
   const heardItWork = (data?.completedWebCalls ?? 0) > 0;
   // Someone already paying who skipped the number step needs the claiming
   // screen; the upgrade dialog disables their current plan and hands out no numbers.
   const needsNumberClaim = Boolean(data?.paidPlanLive);
-  const showsUpgrade = Boolean(data && !data.hasDedicatedNumber && heardItWork && !needsNumberClaim);
+  const showsUpgrade = eligible && heardItWork && !needsNumberClaim;
 
   useEffect(() => {
-    if (!businessId || !data || !heardItWork || hasReported(businessId)) return;
+    // Marking an ineligible workspace would also suppress the real report once
+    // it becomes eligible, since the marker is per browser.
+    if (!businessId || !eligible || !heardItWork || hasReported(businessId)) return;
     markReported(businessId);
     telemetry.track("web.activation.first_call_completed", { businessId, transport: "web_voice" });
-  }, [businessId, data, heardItWork, telemetry]);
+  }, [businessId, eligible, heardItWork, telemetry]);
 
   useEffect(() => {
     if (!businessId || !showsUpgrade) return;
@@ -100,9 +107,7 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
     openUpgradePlanDialog();
   }, [businessId, openUpgradePlanDialog, telemetry]);
 
-  // Self-hosting is carried by the business, not the billing row: a self-hosted
-  // workspace has no hosted plan to sell and claims no numbers from us.
-  if (!businessId || !data || data.hasDedicatedNumber || data.deploymentMode !== "cloud") return null;
+  if (!businessId || !data || !eligible) return null;
 
   if (isWebsiteImportRunning(data.websiteImport)) {
     return <WebsiteImportProgress job={data.websiteImport!} />;

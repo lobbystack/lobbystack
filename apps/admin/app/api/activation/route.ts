@@ -2,7 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { billingAccounts, businesses, phoneNumbers } from "@lobbystack/db";
-import { countOperatorTestCallsHeard, latestWebsiteIngestion } from "@lobbystack/domain";
+import { countOperatorTestCallsHeard, currentWebsiteIngestion } from "@lobbystack/domain";
 import { isPaidSubscription } from "@lobbystack/shared";
 import { asApiResponse, withOperatorTransaction } from "@/lib/api-helpers";
 
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
       const account = (await tx.select({ plan: billingAccounts.plan, subscriptionState: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1))[0];
       const number = (await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), isNull(phoneNumbers.reclaimScheduledAt))).limit(1))[0];
       const completedWebCalls = await countOperatorTestCallsHeard(tx, businessId);
-      const ingestion = await latestWebsiteIngestion(tx, businessId);
+      const ingestion = await currentWebsiteIngestion(tx, businessId);
       return {
         deploymentMode: business?.deploymentMode ?? "cloud",
         plan: account?.plan ?? "free_cloud",

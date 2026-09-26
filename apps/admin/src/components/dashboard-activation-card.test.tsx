@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -65,6 +65,16 @@ function setup(activation: Partial<Activation>) {
   return onOpen;
 }
 
+/**
+ * Waiting for fetch to be called is not enough for a card that renders
+ * nothing: the response and the effects it triggers land later, so an
+ * assertion that nothing fired would pass before anything could.
+ */
+async function activationLoaded() {
+  await waitFor(() => expect(clients.at(-1)!.getQueryState(["activation", "business"])?.status).toBe("success"));
+  await act(async () => {});
+}
+
 describe("dashboard activation card", () => {
   it("shows crawl progress while the website import is still running", async () => {
     setup({ websiteImport: { status: "crawling", websiteUrl: "https://example.com", importedCount: 4, indexedCount: 0 } });
@@ -111,17 +121,29 @@ describe("dashboard activation card", () => {
 
   it("stays hidden once the business has its own phone number", async () => {
     setup({ hasDedicatedNumber: true, completedWebCalls: 2 });
-    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+    await activationLoaded();
     expect(screen.queryByText("activation.upgrade.title")).toBeNull();
     expect(telemetryRef.current!.events).toHaveLength(0);
   });
 
   it("stays hidden for a self-hosted workspace, whatever its billing row says", async () => {
     setup({ deploymentMode: "self_hosted_standard", plan: "free_cloud", completedWebCalls: 1 });
-    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+    await activationLoaded();
     expect(screen.queryByText("activation.upgrade.title")).toBeNull();
     expect(screen.queryByText("activation.hearIt.title")).toBeNull();
     expect(telemetryRef.current!.events).toHaveLength(0);
+  });
+
+  it("keeps the first-call report for when the card can actually show", async () => {
+    // A workspace that has a number reports nothing, so the browser marker must
+    // stay unset: otherwise the real report is lost if the number goes away.
+    setup({ hasDedicatedNumber: true, completedWebCalls: 1 });
+    await activationLoaded();
+    cleanup();
+    telemetryRef.current = createRecordedBrowserTelemetry();
+    setup({ completedWebCalls: 1 });
+    await activationLoaded();
+    telemetryRef.current!.expectEvent("web.activation.first_call_completed", { businessId: "business", transport: "web_voice" });
   });
 
   it("sends a paying operator without a number to claiming instead of checkout", async () => {

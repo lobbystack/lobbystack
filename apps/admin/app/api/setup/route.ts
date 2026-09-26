@@ -2,7 +2,7 @@ import { and, count, eq, isNull, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { businesses, knowledgeDocuments, phoneNumbers } from "@lobbystack/db";
-import { countOperatorTestCallsHeard, latestWebsiteIngestion, ONBOARDING_CRAWL_PAGE_LIMIT } from "@lobbystack/domain";
+import { countOperatorTestCallsHeard, currentWebsiteIngestion, ONBOARDING_CRAWL_PAGE_LIMIT } from "@lobbystack/domain";
 import { asApiResponse, jsonError, readJson, withOperatorTransaction } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     return NextResponse.json(await withOperatorTransaction(request, async ({ businessId, tx }) => {
       const business = await tx.select({ name: businesses.name, websiteUrl: businesses.websiteUrl, timezone: businesses.timezone, skippedSteps: businesses.setupGuideSkippedSteps }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
       const knowledge = await tx.select({ count: count() }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, businessId), eq(knowledgeDocuments.sourceType, "upload"), ne(knowledgeDocuments.status, "error"), ne(knowledgeDocuments.status, "cancelled")));
-      const sampled = await latestWebsiteIngestion(tx, businessId);
+      const sampled = await currentWebsiteIngestion(tx, businessId);
       // Onboarding samples a site, and an expansion reuses the same row, so the
       // page count cannot say which kind of crawl produced it; the cap it ran
       // with can. The step is done once the site has been read in full: with no

@@ -1,6 +1,6 @@
-import { and, count, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, count, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 
-import { calls, websiteIngestionJobs, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, calls, websiteIngestionJobs, type DatabaseTransaction } from "@lobbystack/db";
 import { DASHBOARD_TEST_CALL_WIDGET_ID } from "@lobbystack/shared";
 
 /**
@@ -22,11 +22,13 @@ export async function countOperatorTestCallsHeard(tx: DatabaseTransaction, busin
 }
 
 /**
- * The crawl describing the site the operator is on now. Someone who resubmits a
- * different URL gets a second crawl, and the older one describes a site they
- * abandoned.
+ * The crawl describing the business's own website. Resubmitting a URL reuses
+ * that URL's earlier import, so creation time alone would favour whichever site
+ * was tried second: submit A, then B, then A again, and B is still newest. The
+ * business record holds the site they settled on, so match it first and fall
+ * back to the newest crawl when nothing matches.
  */
-export async function latestWebsiteIngestion(tx: DatabaseTransaction, businessId: string) {
+export async function currentWebsiteIngestion(tx: DatabaseTransaction, businessId: string) {
   return (await tx.select({
     rootDocumentId: websiteIngestionJobs.rootDocumentId,
     status: websiteIngestionJobs.status,
@@ -34,5 +36,9 @@ export async function latestWebsiteIngestion(tx: DatabaseTransaction, businessId
     importedCount: websiteIngestionJobs.importedCount,
     indexedCount: websiteIngestionJobs.indexedCount,
     pageLimit: websiteIngestionJobs.pageLimit,
-  }).from(websiteIngestionJobs).where(eq(websiteIngestionJobs.businessId, businessId)).orderBy(desc(websiteIngestionJobs.createdAt)).limit(1))[0];
+  }).from(websiteIngestionJobs).where(eq(websiteIngestionJobs.businessId, businessId)).orderBy(
+    // coalesce, because a null comparison would sort first under DESC.
+    desc(sql`coalesce(${websiteIngestionJobs.websiteUrl} = (select ${businesses.websiteUrl} from ${businesses} where ${businesses.id} = ${businessId}), false)`),
+    desc(websiteIngestionJobs.createdAt),
+  ).limit(1))[0];
 }

@@ -7,7 +7,7 @@ import { createI18nInstance } from "@/i18n";
 import { resourcesForRoute } from "@/lib/i18n-resources";
 import { routeNamespaces } from "@/lib/route-namespaces";
 
-import { latestWebsiteImport, WebsiteImportProgress, type WebsiteImportSummary } from "./website-import-progress";
+import { currentWebsiteImport, WebsiteImportProgress, type WebsiteImportSummary } from "./website-import-progress";
 
 /**
  * The card renders on both the dashboard and the onboarding flow, and those
@@ -58,7 +58,7 @@ describe("choosing which crawl to show", () => {
       { createdAt: "2026-09-01T10:00:00.000Z", websiteImport: abandoned },
       { createdAt: "2026-09-02T10:00:00.000Z", websiteImport: current },
     ];
-    expect(latestWebsiteImport(documents)?.websiteUrl).toBe("https://zzz-current.example");
+    expect(currentWebsiteImport(documents)?.websiteUrl).toBe("https://zzz-current.example");
   });
 
   it("ignores documents that carry no import at all", () => {
@@ -66,11 +66,25 @@ describe("choosing which crawl to show", () => {
       { createdAt: "2026-09-03T10:00:00.000Z" },
       { createdAt: "2026-09-02T10:00:00.000Z", websiteImport: current },
     ];
-    expect(latestWebsiteImport(documents)?.websiteUrl).toBe("https://zzz-current.example");
+    expect(currentWebsiteImport(documents)?.websiteUrl).toBe("https://zzz-current.example");
+  });
+
+  it("follows the business's own site after a URL is resubmitted, even though another import is newer", () => {
+    // Submit A, then B, then A again: A reuses its first import, so B stays the
+    // newest row while the business has settled back on A.
+    const siteA: WebsiteImportSummary = { status: "crawling", websiteUrl: "https://a.example", importedCount: 3, indexedCount: 0 };
+    const siteB: WebsiteImportSummary = { status: "completed", websiteUrl: "https://b.example", importedCount: 10, indexedCount: 10 };
+    const documents = [
+      { createdAt: "2026-09-01T10:00:00.000Z", websiteImport: siteA },
+      { createdAt: "2026-09-02T10:00:00.000Z", websiteImport: siteB },
+    ];
+    expect(currentWebsiteImport(documents, "https://a.example")?.websiteUrl).toBe("https://a.example");
+    // With no match, the newest import still wins.
+    expect(currentWebsiteImport(documents, "https://elsewhere.example")?.websiteUrl).toBe("https://b.example");
   });
 
   it("reports nothing when the workspace has never imported a site", () => {
-    expect(latestWebsiteImport([{ createdAt: "2026-09-03T10:00:00.000Z" }])).toBeNull();
-    expect(latestWebsiteImport(undefined)).toBeNull();
+    expect(currentWebsiteImport([{ createdAt: "2026-09-03T10:00:00.000Z" }])).toBeNull();
+    expect(currentWebsiteImport(undefined)).toBeNull();
   });
 });
