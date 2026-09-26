@@ -778,6 +778,9 @@ importers:
       ai:
         specifier: ^7.0.67
         version: 7.0.67(zod@4.6.5)
+      luxon:
+        specifier: ^3.7.2
+        version: 3.7.2
       nodemailer:
         specifier: 9.1.1
         version: 9.1.1
@@ -788,6 +791,9 @@ importers:
         specifier: ^5.12.2
         version: 5.12.2
     devDependencies:
+      '@types/luxon':
+        specifier: ^3.7.1
+        version: 3.7.1
       '@types/nodemailer':
         specifier: ^7.0.4
         version: 7.0.12

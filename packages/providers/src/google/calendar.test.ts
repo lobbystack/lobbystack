@@ -24,10 +24,10 @@ describe("GoogleCalendarProvider", () => {
     expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: "PUT" });
   });
 
-  it("requests identity scopes needed by account discovery", () => {
+  it("requests only the submitted identity and Calendar scopes", () => {
     const provider = new GoogleCalendarProvider({ clientId: "client", clientSecret: "secret", redirectUri: "https://app.example/oauth" });
     const scopes = new URL(provider.buildAuthorizationUrl({ state: "fixture" })).searchParams.get("scope")!.split(" ");
-    expect(scopes).toEqual(expect.arrayContaining(["openid", "email", "https://www.googleapis.com/auth/calendar"]));
+    expect(scopes).toEqual(["openid", "email", "https://www.googleapis.com/auth/calendar.calendarlist.readonly", "https://www.googleapis.com/auth/calendar.events"]);
   });
 
   it("refreshes expired credentials and keeps provider error details private", async () => {
@@ -40,12 +40,48 @@ describe("GoogleCalendarProvider", () => {
   });
 
   it("does not turn per-calendar failures into an empty availability window", async () => {
-    const request = vi.fn().mockResolvedValueOnce(Response.json({ calendars: { selected: { errors: [{ reason: "notFound" }] } } })).mockResolvedValueOnce(Response.json({ calendars: { selected: { busy: [] } } }));
+    const request = vi.fn().mockResolvedValueOnce(new Response(null, { status: 403 })).mockResolvedValueOnce(Response.json({ items: [] }));
     vi.stubGlobal("fetch", request);
     const provider = new GoogleCalendarProvider({ clientId: "client", clientSecret: "secret", redirectUri: "https://app.example/oauth" });
     const input = { accessToken: "access", calendarId: "selected", startsAt: "2026-09-14T10:00:00Z", endsAt: "2026-09-14T11:00:00Z" };
-    await expect(provider.getBusyBlocks(input)).rejects.toThrow("could not be verified");
+    await expect(provider.getBusyBlocks(input)).rejects.toThrow("status 403");
     await expect(provider.getBusyBlocks(input)).resolves.toEqual([]);
+  });
+
+  it("expands recurring events, follows every page, and excludes free or cancelled events", async () => {
+    const request = vi.fn()
+      .mockResolvedValueOnce(Response.json({ timeZone: "America/Toronto", nextPageToken: "page-2", items: [
+        { start: { date: "2026-11-01" }, end: { date: "2026-11-02" } },
+        { start: { dateTime: "2026-11-01T09:00:00-05:00" }, end: { dateTime: "2026-11-01T10:00:00-05:00" }, transparency: "transparent" },
+      ] }))
+      .mockResolvedValueOnce(Response.json({ timeZone: "America/Toronto", items: [
+        { start: { dateTime: "2026-11-02T09:00:00-05:00" }, end: { dateTime: "2026-11-02T10:00:00-05:00" } },
+        { start: { dateTime: "2026-11-02T10:00:00-05:00" }, end: { dateTime: "2026-11-02T11:00:00-05:00" }, status: "cancelled" },
+      ] }));
+    vi.stubGlobal("fetch", request);
+    const provider = new GoogleCalendarProvider({ clientId: "client", clientSecret: "secret", redirectUri: "https://app.example/oauth" });
+
+    await expect(provider.getBusyBlocks({ accessToken: "access", calendarId: "selected", startsAt: "2026-10-31T00:00:00Z", endsAt: "2026-11-04T00:00:00Z" })).resolves.toEqual([
+      { startsAt: "2026-11-01T04:00:00.000Z", endsAt: "2026-11-02T05:00:00.000Z" },
+      { startsAt: "2026-11-02T14:00:00.000Z", endsAt: "2026-11-02T15:00:00.000Z" },
+    ]);
+    const first = new URL(String(request.mock.calls[0]?.[0]));
+    const second = new URL(String(request.mock.calls[1]?.[0]));
+    expect(first.pathname).toBe("/calendar/v3/calendars/selected/events");
+    expect(first.searchParams.get("singleEvents")).toBe("true");
+    expect(first.searchParams.get("fields")).toContain("nextPageToken");
+    expect(second.searchParams.get("pageToken")).toBe("page-2");
+  });
+
+  it("fails closed on incomplete event data or repeated pagination tokens", async () => {
+    const request = vi.fn().mockResolvedValueOnce(Response.json({ items: [{}] }))
+      .mockResolvedValueOnce(Response.json({ items: [], nextPageToken: "same" }))
+      .mockResolvedValueOnce(Response.json({ items: [], nextPageToken: "same" }));
+    vi.stubGlobal("fetch", request);
+    const provider = new GoogleCalendarProvider({ clientId: "client", clientSecret: "secret", redirectUri: "https://app.example/oauth" });
+    const input = { accessToken: "access", calendarId: "selected", startsAt: "2026-09-14T10:00:00Z", endsAt: "2026-09-14T11:00:00Z" };
+    await expect(provider.getBusyBlocks(input)).rejects.toThrow("invalid busy interval");
+    await expect(provider.getBusyBlocks(input)).rejects.toThrow("pagination did not advance");
   });
 
   it("deletes cancelled events idempotently but does not hide provider failures", async () => {
