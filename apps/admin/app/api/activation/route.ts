@@ -1,4 +1,4 @@
-import { and, asc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { billingAccounts, businesses, calls, phoneNumbers, websiteIngestionJobs } from "@lobbystack/db";
@@ -25,7 +25,8 @@ export async function GET(request: Request) {
         isNotNull(calls.mediaStartedAt),
         isNotNull(calls.endedAt),
       )))[0];
-      const ingestion = (await tx.select({ status: websiteIngestionJobs.status, websiteUrl: websiteIngestionJobs.websiteUrl, importedCount: websiteIngestionJobs.importedCount, indexedCount: websiteIngestionJobs.indexedCount }).from(websiteIngestionJobs).where(eq(websiteIngestionJobs.businessId, businessId)).orderBy(asc(websiteIngestionJobs.createdAt)).limit(1))[0];
+      // The newest crawl is the one describing the site they are on now.
+      const ingestion = (await tx.select({ status: websiteIngestionJobs.status, websiteUrl: websiteIngestionJobs.websiteUrl, importedCount: websiteIngestionJobs.importedCount, indexedCount: websiteIngestionJobs.indexedCount }).from(websiteIngestionJobs).where(eq(websiteIngestionJobs.businessId, businessId)).orderBy(desc(websiteIngestionJobs.createdAt)).limit(1))[0];
       return {
         deploymentMode: business?.deploymentMode ?? "cloud",
         plan: account?.plan ?? "free_cloud",

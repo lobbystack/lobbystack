@@ -13,6 +13,38 @@ const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 function OpenButton() { const open = useOpenUpgradePlanDialog(); return <button onClick={open}>Open plans</button>; }
 
+describe("restarting a plan that lapsed", () => {
+  async function openPlansFor(subscriptionState: string | null) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    client.setQueryData(["billing", "business"], { account: { plan: "starter", subscriptionState }, availableCheckoutPlans: ["starter", "pro"], availableCheckoutIntervals: { starter: ["annual", "monthly"], pro: ["annual", "monthly"] } });
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ error: "Checkout unavailable" }, { status: 503 })));
+    render(<QueryClientProvider client={client}><LiveUpgradePlanProvider><OpenButton /></LiveUpgradePlanProvider></QueryClientProvider>);
+    await userEvent.click(screen.getByRole("button", { name: "Open plans" }));
+  }
+
+  it("lets a cancelled Starter buy Starter again, which is the tier that carries their number", async () => {
+    await openPlansFor("canceled");
+    const starter = screen.getByRole("button", { name: "billing.upgradeDialog.actions.starter" });
+    expect(starter.hasAttribute("disabled")).toBe(false);
+    // Free carries the current-plan marker instead, which is where a cancelled
+    // account actually sits.
+    expect(screen.getAllByRole("button", { name: "billing.upgradeDialog.actions.currentPlan" })).toHaveLength(1);
+  });
+
+  it("still marks a live Starter as the plan they are on", async () => {
+    await openPlansFor("active");
+    expect(screen.getByRole("button", { name: "billing.upgradeDialog.actions.currentPlan" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "billing.upgradeDialog.actions.starter" })).toBeNull();
+  });
+
+  it("treats a past_due Starter as still on the plan, matching the number gate", async () => {
+    await openPlansFor("past_due");
+    expect(screen.getByRole("button", { name: "billing.upgradeDialog.actions.currentPlan" })).toBeTruthy();
+  });
+});
+
 describe("checkout workspace isolation", () => {
   it.each(["starter", "pro"])("switches displayed prices and submits %s with the selected monthly interval", async target => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });

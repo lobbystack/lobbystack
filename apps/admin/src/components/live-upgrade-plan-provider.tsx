@@ -13,10 +13,13 @@ import { UpgradePlanDialogProvider } from "./upgrade-plan-dialog-context";
 
 type WorkspaceResponse = { businesses: WorkspaceViewModel[] };
 type Billing = {
-  account: { plan: string | null; billingInterval: string | null } | null;
+  account: { plan: string | null; billingInterval: string | null; subscriptionState: string | null } | null;
   availableCheckoutPlans: HostedUpgradePlan[];
   availableCheckoutIntervals: HostedCheckoutPlanIntervals;
 };
+/** The states the dedicated-number gate and the voice allowance also treat as paying. */
+const LIVE_SUBSCRIPTION_STATES = ["active", "trialing", "past_due"];
+
 type Checkout = { businessId: string; requestId: string; target: HostedUpgradePlan };
 
 export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
@@ -47,7 +50,10 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
     if (result.data?.status === "error" || result.isError) { toast.error(t("billing.toast.checkoutFailed")); setCheckout(null); }
   }, [businessId, checkout?.businessId, result.data, result.isError, t]);
   const rawPlan = billing.data?.account?.plan;
-  const plan: BillingPlanSlug = rawPlan === "self_hosted_standard" || rawPlan === "self_host" ? "self_host" : rawPlan === "starter" || rawPlan === "pro" || rawPlan === "enterprise" ? rawPlan : "free_cloud";
+  // A cancelled or lapsed tier is not the plan someone is on, and marking its
+  // card as current leaves them unable to start the tier they just lost.
+  const live = LIVE_SUBSCRIPTION_STATES.includes(billing.data?.account?.subscriptionState ?? "");
+  const plan: BillingPlanSlug = rawPlan === "self_hosted_standard" || rawPlan === "self_host" ? "self_host" : live && (rawPlan === "starter" || rawPlan === "pro" || rawPlan === "enterprise") ? rawPlan : "free_cloud";
   const pending = mutation.isPending && mutation.variables.businessId === businessId || checkout?.businessId === businessId;
   return <UpgradePlanDialogProvider onOpen={() => setOpen(true)}>
     {children}

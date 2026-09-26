@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { businessHours, calls, conversations, messages, storageObjects, transcripts } from "@lobbystack/db";
+import { businessHours, calls, conversations, messages, storageObjects, transcripts, websiteIngestionJobs } from "@lobbystack/db";
 import { affiliateCommissions, affiliatePayoutItems, affiliateProfiles, billingAccounts, billingTransactions, appointments, auditLogs, businessMemberships, contacts, productEvents, providerEvents, services, staff, users, businesses, notifications, outboxMessages, withBusinessTransaction, claimOutboxBatch, createDatabaseClient, enqueueOutbox, markOutboxFailed, markOutboxPublished, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { generateAffiliatePayoutRun } from "./affiliates";
 import { reconcileBillingProviderEvent } from "./billing";
@@ -430,6 +430,31 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
 
       const [account] = await client!.db.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId));
       expect(account).toMatchObject({ plan: "starter", state: "active" });
+    } finally {
+      await client!.db.delete(businesses).where(eq(businesses.id, businessId));
+    }
+  });
+
+  it("reads the newest crawl, so resubmitting a different site does not strand the guide", async () => {
+    // The first URL fails and the operator tries another. Reading the oldest row
+    // reports the abandoned site, and the guide calls the full scan done for a
+    // site nobody has read past the sample.
+    const businessId = randomUUID();
+    await client!.db.insert(businesses).values({ id: businessId, slug: businessId, name: "Resubmitted website", timezone: "UTC", businessType: "test" });
+    try {
+      const older = new Date(Date.now() - 60_000);
+      await client!.db.insert(websiteIngestionJobs).values([
+        { businessId, websiteUrl: "https://abandoned.example", provider: "firecrawl", status: "failed", importedCount: 0, pageLimit: 10, createdAt: older },
+        { businessId, websiteUrl: "https://current.example", provider: "firecrawl", status: "completed", importedCount: 10, pageLimit: 10 },
+      ]);
+      const newest = (await client!.db.select({ websiteUrl: websiteIngestionJobs.websiteUrl, status: websiteIngestionJobs.status, pageLimit: websiteIngestionJobs.pageLimit, importedCount: websiteIngestionJobs.importedCount })
+        .from(websiteIngestionJobs)
+        .where(eq(websiteIngestionJobs.businessId, businessId))
+        .orderBy(desc(websiteIngestionJobs.createdAt))
+        .limit(1))[0];
+      expect(newest?.websiteUrl).toBe("https://current.example");
+      // Which is the row that still has more of the site left to read.
+      expect(Boolean(newest && newest.status === "completed" && newest.pageLimit === 10 && newest.importedCount >= 10)).toBe(true);
     } finally {
       await client!.db.delete(businesses).where(eq(businesses.id, businessId));
     }

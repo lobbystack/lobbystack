@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, count, desc, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { businesses, calls, knowledgeDocuments, phoneNumbers, websiteIngestionJobs } from "@lobbystack/db";
@@ -13,10 +13,12 @@ export async function GET(request: Request) {
       const business = await tx.select({ name: businesses.name, websiteUrl: businesses.websiteUrl, timezone: businesses.timezone, skippedSteps: businesses.setupGuideSkippedSteps }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
       const knowledge = await tx.select({ count: count() }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, businessId), eq(knowledgeDocuments.sourceType, "upload"), ne(knowledgeDocuments.status, "error"), ne(knowledgeDocuments.status, "cancelled")));
       // A call that carried media and ended is a call the operator actually heard.
+      // Someone who resubmits a different URL gets a second crawl, and the older
+      // one describes a site they abandoned. The newest is the one they are on.
       // Onboarding samples a site, and an expansion reuses the same row, so the
       // page count cannot say which kind of crawl produced it. The cap the crawl
       // ran with can, and it survives the expansion that rewrites the count.
-      const sampled = (await tx.select({ rootDocumentId: websiteIngestionJobs.rootDocumentId, status: websiteIngestionJobs.status, importedCount: websiteIngestionJobs.importedCount, pageLimit: websiteIngestionJobs.pageLimit }).from(websiteIngestionJobs).where(eq(websiteIngestionJobs.businessId, businessId)).orderBy(asc(websiteIngestionJobs.createdAt)).limit(1))[0];
+      const sampled = (await tx.select({ rootDocumentId: websiteIngestionJobs.rootDocumentId, status: websiteIngestionJobs.status, importedCount: websiteIngestionJobs.importedCount, pageLimit: websiteIngestionJobs.pageLimit }).from(websiteIngestionJobs).where(eq(websiteIngestionJobs.businessId, businessId)).orderBy(desc(websiteIngestionJobs.createdAt)).limit(1))[0];
       const moreToRead = Boolean(sampled?.rootDocumentId && sampled.status === "completed" && sampled.pageLimit === ONBOARDING_CRAWL_PAGE_LIMIT && sampled.importedCount >= ONBOARDING_CRAWL_PAGE_LIMIT);
       const heardCall = await tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), eq(calls.transport, "web_voice"), isNull(calls.prospectDemoId), isNotNull(calls.mediaStartedAt), isNotNull(calls.endedAt)));
       const businessNumber = await tx.select({ count: count() }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), isNull(phoneNumbers.reclaimScheduledAt)));
