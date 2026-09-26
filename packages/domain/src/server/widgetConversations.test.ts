@@ -180,10 +180,11 @@ describe("getOrCreateWidgetConversation", () => {
 
 describe("loadWidgetChatHistory", () => {
   it("returns the transcript ordered oldest first", async () => {
+    // The query reads the newest messages first, as the database returns them.
     const { tx } = makeTx({
       messages: [
-        { id: "id-1", direction: "inbound", body: "Hi", createdAt: new Date("2026-01-01T00:00:00Z") },
         { id: "id-2", direction: "outbound", body: "Hello", createdAt: new Date("2026-01-01T00:00:01Z") },
+        { id: "id-1", direction: "inbound", body: "Hi", createdAt: new Date("2026-01-01T00:00:00Z") },
       ],
     });
     mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(tx));

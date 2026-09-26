@@ -38,6 +38,13 @@ describe("candidateStartTimes", () => {
     expect(candidateStartTimes({ date: "2030-01-06", timezone: "America/Toronto", hours: weekdayHours, durationMinutes: 60 })).toEqual([]);
     expect(candidateStartTimes({ date: "2030-01-08", timezone: "America/Toronto", hours: weekdayHours, durationMinutes: 60, now: new Date("2030-01-09T00:00:00Z") })).toEqual([]);
   });
+
+  it("keeps opening times on the wall clock when daylight saving starts", () => {
+    // 2030-03-10 is the Sunday Toronto moves to EDT (UTC-4).
+    const sundayHours = [{ dayOfWeek: 0, openMinutes: 9 * 60, closeMinutes: 11 * 60 }];
+    const times = candidateStartTimes({ date: "2030-03-10", timezone: "America/Toronto", hours: sundayHours, durationMinutes: 60, now: new Date("2030-03-01T00:00:00Z") });
+    expect(times).toEqual(["2030-03-10T13:00:00.000Z", "2030-03-10T13:30:00.000Z", "2030-03-10T14:00:00.000Z"]);
+  });
 });
 
 describe("findOpenings", () => {

@@ -97,6 +97,7 @@ export async function POST(request: Request) {
         sessionId,
         businessId: access.businessId,
         callId,
+        ...(call.conversationId ? { conversationId: call.conversationId } : {}),
         channel: "web_voice",
         ...(call.maxDurationMs ? { maxDurationMs: call.maxDurationMs } : {}),
         ...(access.prospectDemoId ? { intakeOnly: true } : {}),

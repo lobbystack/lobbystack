@@ -201,7 +201,7 @@ export function useWebVoiceCall({
   );
 
   const endCall = async () => {
-    if (status !== "connected" && status !== "connecting") {
+    if (status !== "connected" && status !== "connecting" && status !== "requesting_microphone") {
       return;
     }
     invalidatePendingStart();
@@ -377,6 +377,17 @@ export function useWebVoiceCall({
       };
       if (attemptId !== startCallAttemptRef.current) {
         stopAttemptResources();
+        // The server already started the session; end it so it doesn't run and
+        // bill until the silence timeout.
+        const endUrl = new URL(endpoint, window.location.href);
+        endUrl.pathname = `${endUrl.pathname.replace(/\/$/, "")}/end`;
+        endUrl.search = "";
+        void fetch(endUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: payload.sessionId }),
+          keepalive: true,
+        }).catch(() => undefined);
         return;
       }
       await connection.setRemoteDescription({

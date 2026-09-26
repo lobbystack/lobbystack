@@ -127,11 +127,11 @@ async function main(): Promise<void> {
   const schedulerRefresh = setInterval(() => void refreshSchedulers().catch((error) => console.error("scheduler refresh failed", redactOtelExceptionText(error instanceof Error ? error.message : String(error)))), 5 * 60_000);
   schedulerRefresh.unref();
   const state = { ready: false, redis: false, database: false, storage: false, activeJobs: 0 };
-  const liveCalls = createLiveCallHandler({ domain: { db: database.db, snapshotCache: getWorkerSnapshotCache() } });
+  const embeddings = createEmbeddingProvider();
+  const liveCalls = createLiveCallHandler({ domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) } });
   const health = startHealthServer(Number(process.env.PORT ?? 3002), state, liveCalls.handle);
   const email = createEmailProvider();
   const onboardingFollowupSender = createOnboardingFollowupSender();
-  const embeddings = createEmbeddingProvider();
   const twilio = createTwilioProvider();
   const twilioAlerts = createAlertSmsProvider();
   const storage = createStorageProvider();
@@ -257,7 +257,8 @@ async function main(): Promise<void> {
     clearInterval(healthRefresh);
     abort.abort();
     dispatcher.stop();
-    liveCalls.closeAll();
+    // Finalize live calls while the database pool is still open.
+    await liveCalls.closeAll();
     await Promise.allSettled([dispatchLoop, ...workers.map((worker) => worker.close()), ...[...queues.values()].map((queue) => queue.close()), realtime.quit(), database.pool.end(), dispatcherDatabase.pool.end(), new Promise<void>((resolve) => health.close(() => resolve())), shutdownTelemetry()]);
   };
   process.once("SIGINT", () => void shutdown().finally(() => process.exit(0)));

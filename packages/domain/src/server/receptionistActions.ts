@@ -10,6 +10,7 @@ import { bookAppointment, cancelAppointmentForCaller, findAvailability, reschedu
 import { recordCallSchedulingProgress } from "./callOutcome";
 import type { DomainContext } from "./context";
 import { appendMessage, getOrCreateConversation } from "./conversations";
+import { queueOperatorAlert } from "./notifications";
 import { recordProductEvent } from "./productEvents";
 import { createVoiceFollowUpTask } from "./voice";
 
@@ -62,7 +63,8 @@ export function candidateStartTimes(input: { date: string; timezone: string; hou
   const preferred = input.preferredMinutes;
   return minutes
     .sort((left, right) => preferred === undefined ? left - right : Math.abs(left - preferred) - Math.abs(right - preferred) || left - right)
-    .map((value) => day.plus({ minutes: value }))
+    // Set the wall-clock time; adding minutes to midnight drifts an hour on DST days.
+    .map((value) => day.set({ hour: Math.floor(value / 60), minute: value % 60 }))
     .filter((start) => start.toJSDate() > now)
     .map((start) => start.toUTC().toISO()!)
     .slice(0, MAX_OPENING_CHECKS);
@@ -189,15 +191,21 @@ export async function takeMessageForStaff(
   context: DomainContext,
   input: { businessId: string; message: string; channel: ReceptionistChannel; callerName?: string; callbackPhone?: string; urgency?: string; callbackWindow?: string; callId?: string; conversationId?: string },
 ) {
-  const conversationId = input.conversationId ?? (await getOrCreateConversation(context, { businessId: input.businessId, contactPhone: input.callbackPhone ?? "unknown", channel: input.channel === "web_chat" ? "web_chat" : "voice" })).conversationId;
-  await appendMessage(context, {
-    businessId: input.businessId,
-    conversationId,
-    body: input.message,
-    direction: "inbound",
-    channel: "dashboard",
-    operatorAlert: { eventKind: "voiceMessage", subject: "New voice message", body: "A caller left a voice message. Open the inbox to review it." },
-  });
+  const alert = { eventKind: "voiceMessage" as const, subject: "New voice message", body: "A caller left a voice message. Open the inbox to review it." };
+  // A website chat's conversation is the visitor's own thread: a staff note
+  // there would show up to them, and to the agent, as if they had written it.
+  const inVisitorThread = input.channel === "web_chat" && input.conversationId !== undefined;
+  if (!inVisitorThread) {
+    const conversationId = input.conversationId ?? (await getOrCreateConversation(context, { businessId: input.businessId, contactPhone: input.callbackPhone ?? "unknown", channel: input.channel === "web_chat" ? "web_chat" : "voice" })).conversationId;
+    await appendMessage(context, {
+      businessId: input.businessId,
+      conversationId,
+      body: input.message,
+      direction: "inbound",
+      channel: "dashboard",
+      operatorAlert: alert,
+    });
+  }
   const task = await createVoiceFollowUpTask(context, {
     businessId: input.businessId,
     message: input.message,
@@ -207,5 +215,6 @@ export async function takeMessageForStaff(
     ...(input.urgency ? { urgency: input.urgency } : {}),
     ...(input.callbackWindow ? { callbackWindow: input.callbackWindow } : {}),
   });
+  if (inVisitorThread) await queueOperatorAlert(context, { businessId: input.businessId, eventKey: `${alert.eventKind}:${task.inboxItemId}`, ...alert });
   return { ok: true as const, inboxItemId: task.inboxItemId };
 }

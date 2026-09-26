@@ -23,8 +23,9 @@ function setup(options: { silenceTimeoutMs?: number } = {}) {
   const turns: LiveCallTurn[] = [];
   const closed: LiveCallSummary[] = [];
   const onTimeout = vi.fn();
+  const hangup = vi.fn(async () => undefined);
   const controller = new LiveCallController({
-    client: {} as never,
+    client: { live: { sessions: { hangup } } } as never,
     sessionId: "live_1",
     agent: { generate } as never,
     greeting: "Thanks for calling Northside Plumbing.",
@@ -34,7 +35,7 @@ function setup(options: { silenceTimeoutMs?: number } = {}) {
     onClose: (summary) => closed.push(summary),
   });
   controller.start();
-  return { controller, socket: sockets.at(-1)!, generate, turns, closed, onTimeout };
+  return { controller, socket: sockets.at(-1)!, generate, turns, closed, onTimeout, hangup };
 }
 
 beforeEach(() => { sockets.length = 0; });
@@ -65,6 +66,20 @@ describe("LiveCallController", () => {
     socket.emit("session.closed", { reason: "remote_hangup", usage: { seconds: 42 } });
     expect(turns.at(-1)).toEqual({ sequence: 2, speaker: "caller", text: "Hi, are you open?" });
     expect(closed).toEqual([expect.objectContaining({ billedSeconds: 42, closeReason: "remote_hangup" })]);
+  });
+
+  it("hangs up the session when the sideband drops mid-call", () => {
+    const { socket, closed, hangup } = setup();
+    socket.emit("close");
+    expect(hangup).toHaveBeenCalledWith("live_1");
+    expect(closed).toEqual([expect.objectContaining({ closeReason: "sideband_closed" })]);
+  });
+
+  it("leaves an already closed session alone", () => {
+    const { socket, hangup } = setup();
+    socket.emit("session.closed", { reason: "remote_hangup" });
+    socket.emit("close");
+    expect(hangup).not.toHaveBeenCalled();
   });
 
   it("times out after a stretch of silence", () => {

@@ -79,7 +79,7 @@ export class LiveCallController {
     socket.on("session.input_transcript.delta", (event) => this.appendTranscript("caller", event.delta, event.end_ms));
     socket.on("session.output_transcript.delta", (event) => this.appendTranscript("receptionist", event.delta, event.end_ms));
     socket.on("session.delegation.created", (event) => void this.handleDelegation(event));
-    socket.on("session.closed", (event) => this.finish(event.reason ?? undefined, event.usage?.seconds));
+    socket.on("session.closed", (event) => this.finish(event.reason ?? undefined, event.usage?.seconds, true));
     socket.on("error", (error) => console.error(`[live] ${this.options.sessionId} sideband error`, error.message));
     socket.on("close", () => this.finish("sideband_closed"));
     // GPT-Live waits for the caller by default. OpenAI's documented way to speak
@@ -112,8 +112,10 @@ export class LiveCallController {
     });
   }
 
-  close(): void {
-    this.socket?.close({ code: 1000, reason: "controller closed" });
+  /** Stops handling the call and ends its session. Resolves once OpenAI has been asked to hang up. */
+  close(): Promise<void> {
+    this.finish("sideband_closed");
+    return this.sessionEnded;
   }
 
   /** Ends the whole session, which hangs up a browser call. OpenAI answers with session.closed. */
@@ -222,10 +224,14 @@ export class LiveCallController {
   }
 
   private finished = false;
+  private sessionEnded: Promise<void> = Promise.resolve();
 
-  private finish(closeReason?: string, billedSeconds?: number): void {
+  private finish(closeReason?: string, billedSeconds?: number, sessionClosed = false): void {
     if (this.finished) return;
     this.finished = true;
+    // Without the sideband nobody answers delegations, so end the session
+    // rather than leave the caller talking to it while OpenAI keeps billing.
+    if (!sessionClosed) this.sessionEnded = this.options.client.live.sessions.hangup(this.options.sessionId).then(() => undefined, () => undefined);
     clearTimeout(this.silenceTimer);
     clearTimeout(this.durationTimer);
     this.abort.abort();

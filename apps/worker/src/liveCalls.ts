@@ -29,6 +29,8 @@ type AttachRequest = {
   businessId: string;
   callId: string;
   channel: LiveChannel;
+  /** The call's own conversation, where messages taken on the call are filed. */
+  conversationId?: string;
   callerPhone?: string;
   /** Browser calls stop here; it comes from the plan's remaining minutes. */
   maxDurationMs?: number;
@@ -85,6 +87,7 @@ export function parseAttachRequest(raw: string): AttachRequest | undefined {
     businessId: body.businessId,
     callId: body.callId,
     channel: body.channel,
+    ...(typeof body.conversationId === "string" ? { conversationId: body.conversationId } : {}),
     ...(typeof body.callerPhone === "string" ? { callerPhone: body.callerPhone } : {}),
     ...(typeof body.maxDurationMs === "number" && body.maxDurationMs > 0 ? { maxDurationMs: body.maxDurationMs } : {}),
     ...(body.intakeOnly === true ? { intakeOnly: true } : {}),
@@ -107,6 +110,8 @@ function logError(sessionId: string, what: string) {
  */
 export function createLiveCallHandler(input: { domain: DomainContext }) {
   const active = new Map<string, { request: AttachRequest; controller: LiveCallController }>();
+  // Call records still being finalized, so shutdown can wait for them.
+  const finishing = new Set<Promise<void>>();
   const client = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0 }) : undefined;
   const model = createAgentModel();
   // The dashboard's live-call count trusts a call only while its owner renews
@@ -197,6 +202,7 @@ export function createLiveCallHandler(input: { domain: DomainContext }) {
         snapshot,
         channel: request.channel,
         callId: request.callId,
+        ...(request.conversationId ? { conversationId: request.conversationId } : {}),
         callControl,
         ...(request.callerPhone ? { callerPhone: request.callerPhone } : {}),
         ...(request.intakeOnly ? { intakeOnly: true } : {}),
@@ -227,7 +233,9 @@ export function createLiveCallHandler(input: { domain: DomainContext }) {
         active.delete(request.sessionId);
         setPresence(request, false);
         console.info(JSON.stringify({ event: "live.closed", sessionId: summary.sessionId, channel: request.channel, durationMs: summary.durationMs, billedSeconds: summary.billedSeconds, closeReason: summary.closeReason, end, delegations: summary.delegations.length }));
-        void finish(summary).catch(logError(request.sessionId, "finish failed"));
+        const pending = finish(summary).catch(logError(request.sessionId, "finish failed"));
+        finishing.add(pending);
+        void pending.finally(() => finishing.delete(pending));
       },
     });
     active.set(request.sessionId, { request, controller });
@@ -265,9 +273,11 @@ export function createLiveCallHandler(input: { domain: DomainContext }) {
     handle,
     setStorage: (provider: BinaryStorageProvider) => { storage = provider; },
     activeCalls: () => active.size,
-    closeAll: () => {
+    closeAll: async () => {
       if (presenceTimer) clearInterval(presenceTimer);
-      for (const { controller } of active.values()) controller.close();
+      // close() finishes synchronously, so every call is in `finishing` afterwards.
+      const hangups = [...active.values()].map(({ controller }) => controller.close());
+      await Promise.allSettled([...hangups, ...finishing]);
     },
   };
 }
