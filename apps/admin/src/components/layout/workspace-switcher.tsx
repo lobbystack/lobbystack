@@ -92,11 +92,11 @@ export function WorkspaceSwitcher() {
 
 /**
  * The workspace's first letter, matching the account avatar in the sidebar
- * footer and a size up from it, since this row names the workspace.
+ * footer, so the two account rows match.
  */
 function WorkspaceInitial({ name }: { name: string | undefined }) {
   return (
-    <Avatar aria-hidden="true" className="shadow-xs" size="default">
+    <Avatar aria-hidden="true" className="shadow-xs" size="sm">
       <AvatarFallback>{name?.trim().charAt(0).toUpperCase() || "?"}</AvatarFallback>
     </Avatar>
   );

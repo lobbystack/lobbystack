@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useStepNavigation } from "@/lib/use-step-navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -23,7 +23,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function OnboardingBusinessSurface({ createNew = false }: { createNew?: boolean }) {
   const { t } = useTranslation("onboarding");
-  const router = useRouter();
+  const { navigate, navigating, prefetch } = useStepNavigation();
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
@@ -43,10 +43,10 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
       // The next step looks this workspace up before it can save, so it has to
       // be in the cache before we move.
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
-      router.push("/onboarding/website");
+      navigate("/onboarding/website");
     },
   });
-  useEffect(() => { router.prefetch("/onboarding/website"); }, [router]);
+  useEffect(() => { prefetch("/onboarding/website"); }, [prefetch]);
   const existing = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
   useEffect(() => {
     if (existing && !createNew) setName(existing.name);
@@ -59,7 +59,7 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
     onSuccess: async () => {
       if (existing) telemetry.track("web.onboarding.business_name_submitted", { businessId: existing.businessId });
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
-      router.push("/onboarding/website");
+      navigate("/onboarding/website");
     },
   });
 
@@ -88,7 +88,7 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
           </div>
         </Field>
         {error || businesses.isError ? <FieldError>{error ?? t("businessName.unavailable")}</FieldError> : null}
-        <Button className="mt-2 h-11 w-full" disabled={businesses.isLoading || create.isPending || update.isPending || name.trim().length === 0} type="submit">{create.isPending || update.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("businessName.submitting")}</> : t("businessName.continue")}</Button>
+        <Button className="mt-2 h-11 w-full" disabled={businesses.isLoading || create.isPending || update.isPending || navigating || name.trim().length === 0} type="submit">{create.isPending || update.isPending || navigating ? <><LoaderCircle className="size-4 animate-spin" />{t("businessName.submitting")}</> : t("businessName.continue")}</Button>
       </FieldGroup>
     </form>
   );

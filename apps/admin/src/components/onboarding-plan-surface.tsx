@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useStepNavigation } from "@/lib/use-step-navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowRight, Check, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -33,7 +34,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function OnboardingPlanSurface() {
   const { t } = useTranslation("onboarding");
-  const router = useRouter();
+  const { navigate, navigating, router } = useStepNavigation();
   const telemetry = useTelemetry();
   const searchParams = useSearchParams();
   const [interval, setInterval] = useState<BillingInterval>("annual");
@@ -51,7 +52,7 @@ export function OnboardingPlanSurface() {
   });
   const selectFree = useMutation({
     mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "attribution" }) }),
-    onSuccess: () => router.push("/onboarding/attribution"),
+    onSuccess: () => navigate("/onboarding/attribution"),
   });
   const startCheckout = useMutation({
     mutationFn: (target: "starter" | "pro") => requestJson<{ requestId: string }>("/api/billing/checkout", { method: "POST", body: JSON.stringify({ businessId: business!.businessId, target, billingInterval: interval }) }),
@@ -94,7 +95,7 @@ export function OnboardingPlanSurface() {
     if (availableIntervals.length && !availableIntervals.includes(interval)) setInterval(availableIntervals[0]!);
   }, [availableIntervals, interval]);
 
-  const pendingPlan = selectFree.isPending ? "free_cloud" : startCheckout.isPending || checkoutRequestId ? "paid" : null;
+  const pendingPlan = selectFree.isPending || navigating ? "free_cloud" : startCheckout.isPending || checkoutRequestId ? "paid" : null;
 
   function act(plan: Plan) {
     if (!business || pendingPlan) return;

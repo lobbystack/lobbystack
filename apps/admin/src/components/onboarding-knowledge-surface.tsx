@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, FileText, LoaderCircle, Upload, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useStepNavigation } from "@/lib/use-step-navigation";
 import { useTranslation } from "react-i18next";
 
 import { selectActiveBusiness } from "@/lib/active-business";
@@ -26,7 +26,7 @@ async function checksum(file: File): Promise<string> { const digest = await cryp
 
 export function OnboardingKnowledgeSurface() {
   const { t } = useTranslation("onboarding");
-  const router = useRouter();
+  const { navigate, navigating, prefetch } = useStepNavigation();
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -36,13 +36,14 @@ export function OnboardingKnowledgeSurface() {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
+  useEffect(() => { prefetch("/onboarding/greeting"); }, [prefetch]);
   const business = selectActiveBusiness(businesses.data?.businesses);
   const documents = useQuery({ queryKey: ["onboarding-knowledge", business?.businessId], queryFn: () => requestJson<{ documents: Document[] }>(`/api/knowledge?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business), refetchInterval: query => query.state.data?.documents?.some(document => isWebsiteImportRunning(document.websiteImport)) ? 2000 : false });
   const invalidate = async () => { await queryClient.invalidateQueries({ queryKey: ["onboarding-knowledge", business?.businessId] }); };
   const addSnippet = useMutation({ mutationFn: (content: string) => requestJson(`/api/knowledge/snippets?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ title: t("knowledge.paste.defaultTitle"), content }) }) });
-  const stage = useMutation({ mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "greeting" }) }), onSuccess: () => router.push("/onboarding/greeting") });
+  const stage = useMutation({ mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "greeting" }) }), onSuccess: () => navigate("/onboarding/greeting") });
   const upload = useMutation({ mutationFn: async (file: File) => { const digest = await checksum(file); const created = await requestJson<{ objectId: string; url: string; headers?: Record<string, string> }>("/api/uploads", { method: "POST", body: JSON.stringify({ businessId: business!.businessId, purpose: "knowledge", fileName: file.name, contentType: file.type || "application/octet-stream", length: file.size, checksum: digest }) }); const uploaded = await fetch(created.url, { method: "PUT", ...(created.headers ? { headers: created.headers } : {}), body: file }); if (!uploaded.ok) throw new Error(t("knowledge.upload.failed")); await requestJson("/api/uploads", { method: "PUT", body: JSON.stringify({ businessId: business!.businessId, objectId: created.objectId, length: file.size, contentType: file.type || "application/octet-stream", checksum: digest }) }); } });
-  const working = upload.isPending || addSnippet.isPending || stage.isPending;
+  const working = upload.isPending || addSnippet.isPending || stage.isPending || navigating;
   const stored = documents.data?.documents?.filter((document) => document.sourceType === "upload") ?? [];
   const websiteImport = documents.data?.documents?.find((document) => document.websiteImport)?.websiteImport ?? null;
 

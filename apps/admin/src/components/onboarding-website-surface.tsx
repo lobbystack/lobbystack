@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useStepNavigation } from "@/lib/use-step-navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Globe, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -22,7 +22,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function OnboardingWebsiteSurface() {
   const { t } = useTranslation("onboarding");
-  const router = useRouter();
+  const { navigate, navigating, prefetch } = useStepNavigation();
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const [websiteUrl, setWebsiteUrl] = useState("");
@@ -31,7 +31,7 @@ export function OnboardingWebsiteSurface() {
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
   // The next step is fetched while the form is still being filled in, so
   // Continue waits only on the save.
-  useEffect(() => { router.prefetch("/onboarding/knowledge"); }, [router]);
+  useEffect(() => { prefetch("/onboarding/knowledge"); }, [prefetch]);
   const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
   useEffect(() => { if (!edited.current && business?.websiteUrl) setWebsiteUrl(business.websiteUrl); }, [business?.websiteUrl]);
   const add = useMutation({
@@ -39,7 +39,7 @@ export function OnboardingWebsiteSurface() {
     onSuccess: async () => {
       if (business) telemetry.track("web.onboarding.website_submitted", { businessId: business.businessId });
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
-      router.push("/onboarding/knowledge");
+      navigate("/onboarding/knowledge");
     },
   });
   const skip = useMutation({
@@ -47,7 +47,7 @@ export function OnboardingWebsiteSurface() {
       method: "POST",
       body: JSON.stringify({ to: "knowledge" }),
     }),
-    onSuccess: async () => { if (business) telemetry.track("web.onboarding.website_skipped", { businessId: business.businessId }); await queryClient.invalidateQueries({ queryKey: ["businesses"] }); router.push("/onboarding/knowledge"); },
+    onSuccess: async () => { if (business) telemetry.track("web.onboarding.website_skipped", { businessId: business.businessId }); await queryClient.invalidateQueries({ queryKey: ["businesses"] }); navigate("/onboarding/knowledge"); },
     onError: (cause) => setError(getSafeOnboardingErrorMessage(cause, t, "website.skipFailed")),
   });
 
@@ -61,7 +61,7 @@ export function OnboardingWebsiteSurface() {
     }
   }
 
-  const working = add.isPending || skip.isPending;
+  const working = add.isPending || skip.isPending || navigating;
 
   return (
     <div>
@@ -75,7 +75,7 @@ export function OnboardingWebsiteSurface() {
           </div>
         </Field>
         {error ? <FieldError>{error}</FieldError> : null}
-        <Button className="mt-2 h-11 w-full" disabled={!business || websiteUrl.trim().length === 0 || working} type="submit">{add.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("website.submitting")}</> : t("website.continue")}</Button>
+        <Button className="mt-2 h-11 w-full" disabled={!business || websiteUrl.trim().length === 0 || working} type="submit">{add.isPending || navigating ? <><LoaderCircle className="size-4 animate-spin" />{t("website.submitting")}</> : t("website.continue")}</Button>
       </FieldGroup>
       </form>
       <div className="mt-6 flex flex-col items-center gap-3">

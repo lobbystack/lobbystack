@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useStepNavigation } from "@/lib/use-step-navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -25,7 +25,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function OnboardingGreetingSurface() {
   const { i18n, t } = useTranslation("onboarding");
-  const router = useRouter();
+  const { navigate, navigating, prefetch } = useStepNavigation();
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const [greeting, setGreeting] = useState("");
@@ -35,7 +35,7 @@ export function OnboardingGreetingSurface() {
   const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
   // Warm the next step while the greeting is being written, so continuing
   // waits only on the save and its progress refresh.
-  useEffect(() => { router.prefetch("/onboarding/plan"); }, [router]);
+  useEffect(() => { prefetch("/onboarding/plan"); }, [prefetch]);
   const agent = useQuery({ queryKey: ["onboarding-agent", business?.businessId], queryFn: () => requestJson<{ profile: Profile | null }>("/api/agent"), enabled: Boolean(business) });
   const documents = useQuery({
     queryKey: ["onboarding-knowledge", business?.businessId],
@@ -55,7 +55,7 @@ export function OnboardingGreetingSurface() {
     onSuccess: async () => {
       if (business) telemetry.track("web.onboarding.greeting_submitted", { businessId: business.businessId });
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
-      router.push("/onboarding/plan");
+      navigate("/onboarding/plan");
     },
   });
 
@@ -78,7 +78,7 @@ export function OnboardingGreetingSurface() {
           <Textarea autoFocus className="min-h-32 rounded-xl" id="onboarding-greeting" onChange={(event) => { setHasUserEdited(true); setGreeting(event.target.value); }} placeholder={t("greeting.placeholder")} value={greeting} />
         </Field>
         {error ? <FieldError>{error}</FieldError> : null}
-        <Button className="mt-2 h-11 w-full" disabled={!business || greeting.trim().length === 0 || save.isPending} type="submit">{save.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("greeting.submitting")}</> : t("greeting.continue")}</Button>
+        <Button className="mt-2 h-11 w-full" disabled={!business || greeting.trim().length === 0 || save.isPending || navigating} type="submit">{save.isPending || navigating ? <><LoaderCircle className="size-4 animate-spin" />{t("greeting.submitting")}</> : t("greeting.continue")}</Button>
       </FieldGroup>
     </form>
   );
