@@ -70,6 +70,7 @@ export const SCHEMA_MIGRATIONS = [
   "0060_onboarding_followup_recipient.sql",
   "0061_website_ingestion_page_limit.sql",
   "0062_default_staff.sql",
+  "0063_booking_mode.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

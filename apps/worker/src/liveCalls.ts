@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { createAgentModel, createReceptionistAgent, LiveCallController, type AgentChannel } from "@lobbystack/agent-core";
+import { createAgentModel, createReceptionistAgent, LiveCallController, type AgentChannel, type CallControl } from "@lobbystack/agent-core";
 import { getCachedBusinessSnapshot, type DomainContext } from "@lobbystack/domain";
 import OpenAI from "openai";
 
@@ -36,7 +36,7 @@ async function readBody(request: IncomingMessage): Promise<string> {
 function parseAttachRequest(raw: string): AttachRequest | undefined {
   const body = JSON.parse(raw) as Partial<AttachRequest>;
   if (typeof body.sessionId !== "string" || typeof body.businessId !== "string") return undefined;
-  if (body.channel !== "voice" && body.channel !== "chat") return undefined;
+  if (body.channel !== "voice" && body.channel !== "web_voice") return undefined;
   return { sessionId: body.sessionId, businessId: body.businessId, channel: body.channel, ...(typeof body.callerPhone === "string" ? { callerPhone: body.callerPhone } : {}) };
 }
 
@@ -60,9 +60,23 @@ export function createLiveCallHandler(input: { domain: DomainContext }) {
     if (active.has(request.sessionId)) return;
     const snapshot = await getCachedBusinessSnapshot(input.domain, { businessId: request.businessId });
     if (!snapshot) throw new Error("The business has no published snapshot.");
+    // Phone calls arrive over OpenAI SIP, so the session can refer (transfer)
+    // or hang up the call. Browser calls have neither.
+    const callControl: CallControl | undefined = request.channel === "voice"
+      ? {
+          transfer: async (destination) => await client.live.sessions.refer(request.sessionId, { target_uri: `tel:${destination}` }),
+          hangup: async () => await client.live.sessions.hangup(request.sessionId),
+        }
+      : undefined;
     const agent = createReceptionistAgent({
       model,
-      context: { domain: input.domain, snapshot, channel: request.channel, ...(request.callerPhone ? { callerPhone: request.callerPhone } : {}) },
+      context: {
+        domain: input.domain,
+        snapshot,
+        channel: request.channel,
+        ...(request.callerPhone ? { callerPhone: request.callerPhone } : {}),
+        ...(callControl ? { callControl } : {}),
+      },
     });
     const controller = new LiveCallController({
       client,

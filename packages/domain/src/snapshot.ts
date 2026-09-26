@@ -7,6 +7,7 @@ import type {
   ServiceSummary,
   TransferPolicy,
   AppointmentChangePolicy,
+  BookingMode,
 } from "@lobbystack/shared";
 
 type SnapshotBuilderInput = {
@@ -34,6 +35,7 @@ type SnapshotBuilderInput = {
   knowledgeDigest?: string;
   transferPolicy: TransferPolicy;
   appointmentChangePolicy?: AppointmentChangePolicy;
+  bookingMode?: BookingMode;
   phoneNumber?: string;
   smsNumber?: string;
   email?: string;
@@ -78,6 +80,7 @@ export function buildBusinessContextSnapshot(
     knowledgeDigest: input.knowledgeDigest ?? "",
     transferPolicy: input.transferPolicy,
     ...(input.appointmentChangePolicy ? { appointmentChangePolicy: input.appointmentChangePolicy } : {}),
+    ...(input.bookingMode ? { bookingMode: input.bookingMode } : {}),
     hours: input.hours,
     closures: input.closures,
     services: input.services,

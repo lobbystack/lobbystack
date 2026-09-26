@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { requestJson } from "@/lib/request-json";
-import type { AppointmentChangePolicy, RuntimeLocale } from "@lobbystack/shared";
+import { normalizeBookingMode, type AppointmentChangePolicy, type BookingMode, type RuntimeLocale } from "@lobbystack/shared";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -79,12 +79,12 @@ export function AgentBasicSettingsPage({
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["agent-settings", businessId],
-    queryFn: () => requestJson<{ business: { defaultLocale: RuntimeLocale } | null; profile: { greeting: string; transferNumber: string | null; transferMode: string; appointmentChangePolicy: AppointmentChangePolicy | null } | null }>(`/api/agent?businessId=${encodeURIComponent(businessId)}`),
+    queryFn: () => requestJson<{ business: { defaultLocale: RuntimeLocale } | null; profile: { greeting: string; transferNumber: string | null; transferMode: string; appointmentChangePolicy: AppointmentChangePolicy | null; bookingMode: BookingMode } | null }>(`/api/agent?businessId=${encodeURIComponent(businessId)}`),
     enabled: Boolean(businessId),
   });
   const configuration = query.data;
   const isLoadingConfiguration = !businessId || query.isLoading;
-  async function saveProfile({ defaultLocale: locale, ...patch }: { businessId: string; defaultLocale?: RuntimeLocale; greeting?: string; transferNumber?: string | null; transferMode?: string; appointmentChangePolicy?: AppointmentChangePolicy }) {
+  async function saveProfile({ defaultLocale: locale, ...patch }: { businessId: string; defaultLocale?: RuntimeLocale; greeting?: string; transferNumber?: string | null; transferMode?: string; appointmentChangePolicy?: AppointmentChangePolicy; bookingMode?: BookingMode }) {
     await requestJson(`/api/agent?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", body: JSON.stringify({ ...patch, ...(locale ? { locale } : {}) }) });
     await queryClient.invalidateQueries({ queryKey: ["agent-settings", businessId] });
   }
@@ -97,6 +97,9 @@ export function AgentBasicSettingsPage({
   const [allowAppointmentCancel, setAllowAppointmentCancel] = useState(true);
   const [allowAppointmentReschedule, setAllowAppointmentReschedule] = useState(true);
   const [requireAppointmentChangeOtp, setRequireAppointmentChangeOtp] = useState(false);
+  const [bookingMode, setBookingMode] = useState<BookingMode>("instant");
+  const [bookingModeStatus, setBookingModeStatus] = useState<string | null>(null);
+  const [isBookingModeSaving, setIsBookingModeSaving] = useState(false);
   const [greetingStatus, setGreetingStatus] = useState<string | null>(null);
   const [localeStatus, setLocaleStatus] = useState<string | null>(null);
   const [transferStatus, setTransferStatus] = useState<string | null>(null);
@@ -115,6 +118,7 @@ export function AgentBasicSettingsPage({
     setDefaultLocale(configuration.business?.defaultLocale ?? "en");
     setTransferNumber(profile.transferNumber ?? "");
     setTransferNumberInputValue(profile.transferNumber ?? "");
+    setBookingMode(normalizeBookingMode(profile.bookingMode));
     const appointmentChangePolicy = profile.appointmentChangePolicy as AppointmentChangePolicy | null;
     setAllowAppointmentCancel(appointmentChangePolicy?.allowCancel ?? true);
     setAllowAppointmentReschedule(appointmentChangePolicy?.allowReschedule ?? true);
@@ -268,6 +272,21 @@ export function AgentBasicSettingsPage({
       toast.error(t("agent:actions.saveFailed"));
     } finally {
       setIsAppointmentChangeSaving(false);
+    }
+  }
+
+  async function saveBookingMode(nextMode: BookingMode): Promise<void> {
+    if (!canManageTenant || !persistedProfile) return;
+    setIsBookingModeSaving(true);
+    setBookingModeStatus(null);
+    try {
+      await saveProfile({ businessId, bookingMode: nextMode });
+      telemetry.track("web.agent.settings_saved", { businessId, setting: "booking_mode" });
+      setBookingModeStatus(t("agent:actions.saved"));
+    } catch {
+      toast.error(t("agent:actions.saveFailed"));
+    } finally {
+      setIsBookingModeSaving(false);
     }
   }
 
@@ -451,6 +470,47 @@ export function AgentBasicSettingsPage({
                 >
                   {isTransferSaving ? t("agent:actions.saving") : t("agent:actions.save")}
                 </Button>
+              </ItemActions>
+            </Item>
+          </Surface>
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="font-heading text-sm leading-snug font-medium">
+            {t("agent:booking.title")}
+          </h2>
+          <Surface className="flex flex-col">
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
+              <ItemContent>
+                <ItemTitle>{t("agent:booking.mode.label")}</ItemTitle>
+                <ItemDescription>{t(`agent:booking.mode.descriptions.${bookingMode}`)}</ItemDescription>
+                {isBookingModeSaving ? <ItemDescription>{t("agent:actions.saving")}</ItemDescription> : null}
+                {!isBookingModeSaving && bookingModeStatus ? <ItemDescription>{bookingModeStatus}</ItemDescription> : null}
+              </ItemContent>
+              <ItemActions className="w-full sm:w-auto">
+                {isLoadingConfiguration ? (
+                  <Skeleton className="h-10 w-full rounded-md sm:w-48" />
+                ) : (
+                  <NativeSelect
+                    aria-label={t("agent:booking.mode.label")}
+                    className="w-full sm:w-48"
+                    disabled={isBookingModeSaving || !persistedProfile || !canManageTenant}
+                    id="agent-booking-mode"
+                    onChange={(event) => {
+                      const nextMode = normalizeBookingMode(event.target.value);
+                      setBookingMode(nextMode);
+                      void saveBookingMode(nextMode);
+                    }}
+                    value={bookingMode}
+                  >
+                    <NativeSelectOption value="instant">{t("agent:booking.mode.options.instant")}</NativeSelectOption>
+                    <NativeSelectOption value="request">{t("agent:booking.mode.options.request")}</NativeSelectOption>
+                    <NativeSelectOption value="off">{t("agent:booking.mode.options.off")}</NativeSelectOption>
+                  </NativeSelect>
+                )}
               </ItemActions>
             </Item>
           </Surface>

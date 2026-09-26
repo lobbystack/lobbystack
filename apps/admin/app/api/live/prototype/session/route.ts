@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const createdAt = performance.now();
     const live = await getLiveClient().live.create({ session: buildBrowserSessionConfig(snapshot), transport: { type: "webrtc", sdp: body.sdp } });
     const sessionCreatedMs = Math.round(performance.now() - createdAt);
-    await attachWorkerToLiveSession({ sessionId: live.session.id, businessId, channel: "voice" });
+    await attachWorkerToLiveSession({ sessionId: live.session.id, businessId, channel: "web_voice" });
     const workerAttachMs = Math.round(performance.now() - createdAt) - sessionCreatedMs;
 
     return NextResponse.json({ sessionId: live.session.id, sdp: live.transport.sdp, timings: { sessionCreatedMs, workerAttachMs } }, { status: 201 });
