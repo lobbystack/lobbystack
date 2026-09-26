@@ -44,7 +44,7 @@
     "i18next": "^25.8.18",
     "i18next-browser-languagedetector": "^8.2.1",
     "i18next-http-backend": "^3.0.5",
-    "input-otp": "^1.4.2",
+    "input-otp": "^1.5.0",
     "ioredis": "^5.8.2",
     "js-tiktoken": "1.0.21",
     "libphonenumber-js": "^1.12.41",
