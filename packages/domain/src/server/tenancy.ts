@@ -3,7 +3,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
-import { businessInvitations, businessMemberships, businesses, receptionistProfiles, users } from "@lobbystack/db";
+import { businessInvitations, businessMemberships, businesses, receptionistProfiles, staff, users } from "@lobbystack/db";
 import { defaultAppointmentChangePolicy, normalizeAuthEmail } from "@lobbystack/shared";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -68,11 +68,14 @@ export async function createBusiness(
     if (!membership) {
       throw new Error("Business owner membership could not be created.");
     }
+    // Booking assigns every appointment to a staff member. Businesses that don't
+    // manage a team get one hidden member that stands for the business itself.
+    await tx.insert(staff).values({ businessId, name: input.name.trim(), timezone: input.timezone });
     await tx.insert(receptionistProfiles).values({
       businessId,
       greeting: `Thanks for calling ${input.name.trim()}.`,
       tone: "warm and direct",
-      summary: `${input.name.trim()} uses LobbyStack to handle calls and SMS.`,
+      summary: `${input.name.trim()} uses LobbyStack to answer calls.`,
       bookingPolicy: "Only confirm a booking after availability is checked.",
       voiceInstructions: "Sound calm, confident, and concise. Escalate urgent requests to a human when policy requires it.",
       smsInstructions: "Keep replies concise and friendly. Ask one follow-up question at a time.",
