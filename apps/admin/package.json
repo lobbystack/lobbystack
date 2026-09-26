@@ -30,6 +30,7 @@
     "@lobbystack/contracts": "workspace:*",
     "@lobbystack/db": "workspace:*",
     "@lobbystack/domain": "workspace:*",
+    "@lobbystack/jobs": "workspace:*",
     "@lobbystack/providers": "workspace:*",
     "@lobbystack/shared": "workspace:*",
     "@lobbystack/telemetry": "workspace:*",

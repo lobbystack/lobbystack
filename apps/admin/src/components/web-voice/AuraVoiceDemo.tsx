@@ -80,7 +80,7 @@ const AURA_WAVE_STYLE = {
 
 type AuraVoiceDemoProps = {
   businessSlug: string;
-  endpoint: string;
+  endpoint?: string;
   widgetId?: string;
   auraTone?: AuraTone;
   className?: string;
@@ -153,7 +153,7 @@ export function AuraVoiceDemo({
     isBusy,
   } = useWebVoiceCall({
     businessSlug,
-    endpoint,
+    ...(endpoint ? { endpoint } : {}),
     ...(getStartPayload ? { getStartPayload } : {}),
     ...(widgetId ? { widgetId } : {}),
     ...(onEvent ? { onEvent } : {}),

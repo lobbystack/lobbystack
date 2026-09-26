@@ -31,6 +31,7 @@ const nextConfig: NextConfig = {
     "@lobbystack/contracts",
     "@lobbystack/db",
     "@lobbystack/domain",
+    "@lobbystack/jobs",
     "@lobbystack/providers",
     "@lobbystack/shared",
   ],

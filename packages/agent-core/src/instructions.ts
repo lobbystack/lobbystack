@@ -24,7 +24,7 @@ const BOOKING_GUIDANCE: Record<BookingMode, string> = {
 
 // Instructions for the text agent that does the work. On voice it runs behind
 // GPT-Live, so its reply is spoken to the caller by the live model.
-export function buildAgentInstructions(snapshot: BusinessContextSnapshot, channel: AgentChannel): string {
+export function buildAgentInstructions(snapshot: BusinessContextSnapshot, channel: AgentChannel, options: { intakeOnly?: boolean } = {}): string {
   const now = DateTime.now().setZone(snapshot.timezone);
   const bookingMode = normalizeBookingMode(snapshot.bookingMode);
   const voice = channel !== "web_chat";
@@ -36,7 +36,9 @@ export function buildAgentInstructions(snapshot: BusinessContextSnapshot, channe
     "Use your tools for hours, services, business facts, appointments and messages. Never state availability, prices or policies you haven't looked up.",
     // The operator's own instructions for this channel.
     (voice ? snapshot.voiceInstructions : snapshot.chatInstructions)?.trim() ?? "",
-    BOOKING_GUIDANCE[bookingMode],
+    options.intakeOnly
+      ? "This is a demo of the receptionist. Answer questions and take messages only. Don't book or check appointments, don't transfer the call, and don't promise texts or emails."
+      : BOOKING_GUIDANCE[bookingMode],
     channel === "voice" && bookingMode === "instant"
       ? "Before booking on a phone call, ask: \"Can I text this number with your appointment confirmation and a reminder?\" Pass their answer as smsConsentGranted."
       : "",

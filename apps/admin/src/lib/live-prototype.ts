@@ -2,7 +2,7 @@ import OpenAI from "openai";
 
 import { jsonError } from "./api-helpers";
 
-type WorkerAttachInput = { sessionId: string; businessId: string; channel: "voice" | "web_voice"; callerPhone?: string; callId?: string };
+type WorkerAttachInput = { sessionId: string; businessId: string; callId: string; channel: "voice" | "web_voice"; callerPhone?: string; maxDurationMs?: number; intakeOnly?: boolean };
 
 let client: OpenAI | undefined;
 

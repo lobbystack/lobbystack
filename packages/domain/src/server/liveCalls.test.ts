@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("./voice", () => ({ completeCall: mocks.completeCall, setTransferState: mocks.setTransferState, startCall: mocks.startCall, upsertTranscript: mocks.upsertTranscript }));
 vi.mock("./billing", () => ({ reserveOutboundCallAttempt: mocks.reserveOutboundCallAttempt }));
 vi.mock("./unitEconomics", () => ({ recordUnitEconomicsEvent: mocks.recordUnitEconomicsEvent }));
+vi.mock("./demos", () => ({ recordProspectDemoCallOutcome: vi.fn() }));
 
 import { finishLiveCall, LIVE_CALL_PROVIDER, prepareLiveCallTransfer, saveLiveCallTurn, startLivePhoneCall } from "./liveCalls";
 

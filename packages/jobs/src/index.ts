@@ -133,3 +133,5 @@ export function createWorkerOptions(
 export function isKnownJobType(value: string): value is JobType {
   return (jobTypes as readonly string[]).includes(value);
 }
+
+export * from "./voicePresence";

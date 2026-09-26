@@ -41,6 +41,8 @@ export type LiveCallControllerOptions = {
   silenceTimeoutMs?: number;
   /** Hang up when the call runs this long. */
   maxDurationMs?: number;
+  /** Audio is flowing: the session started. */
+  onStarted?: () => void;
   onTurn?: (turn: LiveCallTurn) => void;
   onTimeout?: (reason: LiveCallTimeout) => void;
   onDelegation?: (timing: DelegationTiming) => void;
@@ -83,7 +85,10 @@ export class LiveCallController {
     // GPT-Live waits for the caller by default. OpenAI's documented way to speak
     // first is an instruction sent after session.started. The sideband replays
     // the last 3 seconds, so a late attach still sees the event.
-    socket.on("session.started", () => this.sendGreeting());
+    socket.on("session.started", () => {
+      this.options.onStarted?.();
+      this.sendGreeting();
+    });
     this.resetSilenceTimer();
     if (this.options.maxDurationMs) this.durationTimer = setTimeout(() => this.options.onTimeout?.("duration_limit"), this.options.maxDurationMs);
     // If we attached after the replay window, session.started never arrives.
@@ -109,6 +114,11 @@ export class LiveCallController {
 
   close(): void {
     this.socket?.close({ code: 1000, reason: "controller closed" });
+  }
+
+  /** Ends the whole session, which hangs up a browser call. OpenAI answers with session.closed. */
+  endSession(): void {
+    this.socket?.send({ type: "session.close" });
   }
 
   private resetSilenceTimer(): void {

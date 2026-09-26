@@ -200,6 +200,9 @@ importers:
       '@lobbystack/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@lobbystack/jobs':
+        specifier: workspace:*
+        version: link:../../packages/jobs
       '@lobbystack/providers':
         specifier: workspace:*
         version: link:../../packages/providers

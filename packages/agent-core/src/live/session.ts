@@ -26,6 +26,8 @@ export function buildBrowserSessionConfig(snapshot: BusinessContextSnapshot, voi
     audio: { output: { voice } },
     delegation: { type: "client" },
     client: { data_channel: { allowed_client_events: ["session.close"], allowed_server_events: BROWSER_SERVER_EVENTS } },
+    // Keep OpenAI's recording so the worker can copy it into our storage.
+    store: true,
   };
 }
 

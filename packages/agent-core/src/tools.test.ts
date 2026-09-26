@@ -44,6 +44,16 @@ describe("createReceptionistTools", () => {
     expect(toolNames({ channel: "voice", callControl })).toEqual(expect.arrayContaining(["transferCall", "endCall"]));
   });
 
+  it("limits prospect demos to answering questions and taking messages", () => {
+    expect(toolNames({ channel: "web_voice", intakeOnly: true, callControl })).toEqual(["endCall", "getBusinessHours", "getBusinessServices", "searchKnowledge", "takeMessage"]);
+  });
+
+  it("offers hang-up but not transfer on browser calls", () => {
+    const names = toolNames({ channel: "web_voice", callControl: { hangup: vi.fn() } });
+    expect(names).toContain("endCall");
+    expect(names).not.toContain("transferCall");
+  });
+
   it("refuses a transfer the rules don't allow", async () => {
     const tools = createReceptionistTools({
       domain: { db: {} as never },

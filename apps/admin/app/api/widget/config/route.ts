@@ -7,7 +7,6 @@ import { createWorkerDomainContext } from "@/lib/domain-context";
 import { resolveWidgetSessionAccess } from "@/lib/widget-access";
 import { requestIpHash, touchWidgetKeyLastUsed } from "@/lib/widget-keys";
 import { enforceWidgetRateLimits } from "@/lib/widget-policy";
-import { webCallEndpoint } from "@/lib/web-call-endpoint";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,7 +39,6 @@ export async function GET(request: Request) {
       greeting: session.config.greeting ?? snapshot?.greeting ?? undefined,
       snapshotPresent: snapshot !== null,
       businessSlug: session.businessSlug,
-      webCallBaseUrl: webCallEndpoint,
       voiceEnabled: Boolean(snapshot?.contactChannels?.phoneNumber),
     });
   } catch (error) {

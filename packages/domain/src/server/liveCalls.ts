@@ -1,9 +1,10 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 import { calls, contacts, withBusinessTransaction } from "@lobbystack/db";
 
 import { reserveOutboundCallAttempt } from "./billing";
 import type { DomainContext } from "./context";
+import { recordProspectDemoCallOutcome } from "./demos";
 import { recordUnitEconomicsEvent } from "./unitEconomics";
 import { completeCall, setTransferState, startCall, upsertTranscript } from "./voice";
 
@@ -64,6 +65,42 @@ export async function startLivePhoneCall(context: DomainContext, input: { busine
   return { callId: call.callId, conversationId: call.conversationId, blocked: call.blocked, duplicate: call.duplicate };
 }
 
+/**
+ * Records a browser call (dashboard test call, website widget, prospect demo)
+ * and reserves minutes for it, capped by what the plan has left. Throws a 402
+ * `voice_limit_reached` error when nothing is left. `maxDurationMs` in the
+ * result is how long the call may run.
+ */
+export async function startLiveWebCall(
+  context: DomainContext,
+  input: { businessId: string; sessionId: string; widgetId: string; billable: boolean; maxDurationMs?: number; sessionPurpose?: string; prospectDemoId?: string; originUrl?: string; userAgent?: string },
+) {
+  const call = await startCall(context, {
+    businessId: input.businessId,
+    provider: LIVE_CALL_PROVIDER,
+    providerCallId: input.sessionId,
+    from: "web",
+    to: "web",
+    transport: "web_voice",
+    gatewaySessionId: input.sessionId,
+    widgetId: input.widgetId,
+    billable: input.billable,
+    ...(input.maxDurationMs !== undefined ? { maxDurationMs: input.maxDurationMs } : {}),
+    ...(input.sessionPurpose ? { sessionPurpose: input.sessionPurpose } : {}),
+    ...(input.prospectDemoId ? { prospectDemoId: input.prospectDemoId } : {}),
+    ...(input.originUrl ? { originUrl: input.originUrl } : {}),
+    ...(input.userAgent ? { userAgent: input.userAgent } : {}),
+  });
+  return { callId: call.callId, conversationId: call.conversationId, maxDurationMs: call.webCallMaxDurationMs };
+}
+
+/** Marks when audio started flowing; test-call progress counts only calls that connected. */
+export async function markLiveCallMediaStarted(context: DomainContext, input: { businessId: string; callId: string; at?: Date }) {
+  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    await tx.update(calls).set({ mediaStartedAt: input.at ?? new Date(), updatedAt: new Date() }).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId), isNull(calls.mediaStartedAt)));
+  });
+}
+
 /** Saves one finished turn of the conversation. */
 export async function saveLiveCallTurn(context: DomainContext, input: { businessId: string; callId: string; sequence: number; speaker: "caller" | "assistant"; text: string }) {
   const text = input.text.trim();
@@ -100,23 +137,27 @@ export async function blockLiveCaller(context: DomainContext, input: { businessI
  * seconds and spam aren't billed) and the GPT-Live cost. `seconds` is the
  * session length OpenAI reports, which is what it bills us for.
  */
-export async function finishLiveCall(context: DomainContext, input: { businessId: string; callId: string; seconds: number; end: LiveCallEnd; endedAt?: Date }) {
+export async function finishLiveCall(context: DomainContext, input: { businessId: string; callId: string; seconds: number; end: LiveCallEnd; endedAt?: Date; channel?: "voice" | "web_voice" }) {
   const seconds = Math.max(0, input.seconds);
+  const status = input.end === "transferred" ? "transferred" : input.end === "blocked_contact" ? "blocked" : "completed";
   const completed = await completeCall(context, {
     businessId: input.businessId,
     callId: input.callId,
-    status: input.end === "transferred" ? "transferred" : input.end === "blocked_contact" ? "blocked" : "completed",
+    status,
     endedAt: (input.endedAt ?? new Date()).toISOString(),
     disposition: DISPOSITIONS[input.end],
     providerDurationSeconds: Math.ceil(seconds),
     mediaDurationSeconds: seconds,
   });
-  if (!completed || seconds === 0) return completed;
+  if (!completed) return completed;
+  // No-op unless the call belongs to a prospect demo.
+  await recordProspectDemoCallOutcome(context, { businessId: input.businessId, callId: input.callId, status, disposition: DISPOSITIONS[input.end], providerDurationSeconds: Math.ceil(seconds) });
+  if (seconds === 0) return completed;
   await recordUnitEconomicsEvent(context, {
     businessId: input.businessId,
     eventKey: `voice_ai:live_session:${input.callId}`,
     eventKind: "voice_ai",
-    channel: "voice",
+    channel: input.channel ?? "voice",
     costUsd: (seconds / 60) * LIVE_PRICING.usdPerMinute,
     quantity: seconds,
     quantityUnit: "second",

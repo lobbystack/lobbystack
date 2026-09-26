@@ -22,8 +22,8 @@ export type AgentChannel = "voice" | "web_voice" | "web_chat";
 
 /** Live-call controls the agent can use. Only phone calls provide them. */
 export type CallControl = {
-  /** Resolves false when the transfer can't start, for example the plan is out of transfer attempts. */
-  transfer(destination: string): Promise<boolean>;
+  /** Phone calls only. Resolves false when the transfer can't start, for example the plan is out of transfer attempts. */
+  transfer?(destination: string): Promise<boolean>;
   hangup(reason: "caller_finished" | "spam" | "abuse"): Promise<void>;
 };
 
@@ -36,6 +36,8 @@ export type AgentToolContext = {
   callId?: string;
   conversationId?: string;
   callControl?: CallControl;
+  /** Prospect demos only answer questions and take messages: no booking, no transfers. */
+  intakeOnly?: boolean;
 };
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -66,7 +68,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
   const { domain, snapshot } = context;
   const businessId = snapshot.businessId;
   const timezone = snapshot.timezone;
-  const bookingMode = normalizeBookingMode(snapshot.bookingMode);
+  const bookingMode = context.intakeOnly ? "off" : normalizeBookingMode(snapshot.bookingMode);
   const channel = context.channel;
   const tools: ToolSet = {
     getBusinessHours: tool({
@@ -274,7 +276,8 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
   }
 
   const callControl = context.callControl;
-  if (callControl) {
+  const transfer = context.intakeOnly ? undefined : callControl?.transfer?.bind(callControl);
+  if (transfer) {
     tools.transferCall = tool({
       description: "Transfer the call to a person at the business when the transfer rules allow it and the caller asks for a person or has an urgent problem.",
       inputSchema: z.object({
@@ -285,10 +288,12 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       execute: async (input) => {
         const destination = snapshot.transferPolicy.transferNumber;
         if (!destination || !isTransferPermitted(snapshot, input)) return { ok: false, reason: "Transfers aren't allowed right now. Offer to take a message." };
-        const started = await callControl.transfer(destination);
+        const started = await transfer(destination);
         return started ? { ok: true, transferring: true } : { ok: false, reason: "The transfer couldn't be started. Offer to take a message." };
       },
     });
+  }
+  if (callControl) {
     tools.endCall = tool({
       description: "Hang up after saying goodbye, when the caller is done, or when the call is spam or abusive.",
       inputSchema: z.object({ reason: z.enum(["caller_finished", "spam", "abuse"]) }),

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { startWebCallPresence } from "@/lib/web-call-presence";
 
 import type { TelemetryEventName } from "@lobbystack/telemetry";
 
@@ -12,30 +11,21 @@ export type WebVoiceWidgetStatus =
   | "ended"
   | "error";
 
+/** Browser calls start here; the server records the call and connects it to GPT-Live. */
+export const LIVE_WEB_CALL_ENDPOINT = "/api/voice/live/session";
+
 type UseWebVoiceCallOptions = {
   businessSlug: string;
-  endpoint: string;
+  /** Defaults to this app's session endpoint. */
+  endpoint?: string;
   widgetId?: string;
   getStartPayload?: () => Promise<Record<string, string>>;
+  /** Extra request headers, such as the widget's session token. */
+  getHeaders?: () => Record<string, string>;
   onEvent?: (
     eventName: TelemetryEventName,
     properties?: Record<string, unknown>,
   ) => void;
-};
-
-type WebVoiceRecordingState = {
-  audioContext: AudioContext;
-  destination: MediaStreamAudioDestinationNode;
-  recorder: MediaRecorder;
-  chunks: Blob[];
-  startedAtMs: number;
-  localSource: MediaStreamAudioSourceNode;
-  remoteSource: MediaStreamAudioSourceNode | null;
-};
-
-type WebVoiceRecordingUpload = {
-  blob: Blob;
-  durationMs: number;
 };
 
 export type WebVoiceErrorKey =
@@ -78,16 +68,13 @@ export function getWebVoiceErrorKey(error: unknown): WebVoiceErrorKey {
     if (error.message === "This browser does not support live voice calls.") {
       return "browserNoWebRtc";
     }
-    if (error.message === "Not found") {
+    if (error.message === "not_found") {
       return "businessNotFound";
     }
-    if (
-      error.message === "web_voice_rate_limited" ||
-      error.message === "Too many web voice starts. Please try again shortly."
-    ) {
+    if (error.message === "web_voice_rate_limited") {
       return "rateLimited";
     }
-    if (error.message === "The AI receptionist is unavailable right now.") {
+    if (error.message === "voice_limit_reached" || error.message === "voice_unavailable" || error.message === "The AI receptionist is unavailable right now.") {
       return "unavailable";
     }
   }
@@ -99,26 +86,6 @@ function getErrorMessage(error: unknown): string {
     return error.message;
   }
   return "Something went wrong while starting the call.";
-}
-
-function currentTimeMs(): number {
-  return Date.now();
-}
-
-function getRecordingMimeType(): string | undefined {
-  if (typeof MediaRecorder === "undefined") {
-    return undefined;
-  }
-
-  const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
-  return candidates.find((candidate) =>
-    MediaRecorder.isTypeSupported(candidate),
-  );
-}
-
-function getAudioContextConstructor(): typeof AudioContext | null {
-  const win = window as Window & { webkitAudioContext?: typeof AudioContext };
-  return window.AudioContext ?? win.webkitAudioContext ?? null;
 }
 
 function getVisitorId(): string | undefined {
@@ -155,10 +122,16 @@ async function fetchWithTimeout(
   }
 }
 
+/**
+ * A browser voice call on GPT-Live. The server records the call, answers
+ * the agent's requests and keeps the recording; the browser only carries
+ * audio and asks OpenAI to close the session when the caller hangs up.
+ */
 export function useWebVoiceCall({
   businessSlug,
-  endpoint,
+  endpoint = LIVE_WEB_CALL_ENDPOINT,
   getStartPayload,
+  getHeaders,
   widgetId,
   onEvent,
 }: UseWebVoiceCallOptions) {
@@ -167,13 +140,9 @@ export function useWebVoiceCall({
   const [errorKey, setErrorKey] = useState<WebVoiceErrorKey | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const eventsChannelRef = useRef<RTCDataChannel | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
-  const remoteStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
-  const sessionIdRef = useRef<string | null>(null);
-  const stopPresenceRef = useRef<(() => void) | null>(null);
-  const recordingRef = useRef<WebVoiceRecordingState | null>(null);
-  const connectedRef = useRef(false);
   const startCallAttemptRef = useRef(0);
 
   const invalidatePendingStart = () => {
@@ -191,35 +160,27 @@ export function useWebVoiceCall({
     });
   };
 
-  const stopRecordingWithoutUpload = () => {
-    const recording = recordingRef.current;
-    recordingRef.current = null;
-    if (!recording) {
-      return;
+  // Closing the session ends the call and its billing at OpenAI. If the
+  // channel never opened, dropping the peer connection ends it too.
+  const endRemoteSession = () => {
+    const channel = eventsChannelRef.current;
+    if (channel?.readyState === "open") {
+      try {
+        channel.send(JSON.stringify({ type: "session.close" }));
+      } catch {
+        // The peer connection closes next either way.
+      }
     }
-
-    recording.recorder.ondataavailable = null;
-    recording.recorder.onstop = null;
-    if (recording.recorder.state !== "inactive") {
-      recording.recorder.stop();
-    }
-    recording.localSource.disconnect();
-    recording.remoteSource?.disconnect();
-    void recording.audioContext.close().catch(() => undefined);
   };
 
   const cleanup = (options: { resetState?: boolean } = {}) => {
-    stopPresenceRef.current?.();
-    stopPresenceRef.current = null;
     const resetState = options.resetState ?? true;
     invalidatePendingStart();
-    stopRecordingWithoutUpload();
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
     localStreamRef.current = null;
+    eventsChannelRef.current = null;
     peerConnectionRef.current?.close();
     peerConnectionRef.current = null;
-    remoteStreamRef.current = null;
-    connectedRef.current = false;
     if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = null;
     }
@@ -229,164 +190,9 @@ export function useWebVoiceCall({
     }
   };
 
-  const startRecording = (localStream: MediaStream) => {
-    if (recordingRef.current) {
-      return;
-    }
-
-    if (typeof MediaRecorder === "undefined") {
-      return;
-    }
-
-    const AudioContextConstructor = getAudioContextConstructor();
-    if (!AudioContextConstructor) {
-      return;
-    }
-
-    try {
-      const audioContext = new AudioContextConstructor();
-      const destination = audioContext.createMediaStreamDestination();
-      const localSource = audioContext.createMediaStreamSource(localStream);
-      localSource.connect(destination);
-      const mimeType = getRecordingMimeType();
-      const recorder = new MediaRecorder(
-        destination.stream,
-        mimeType ? { mimeType } : undefined,
-      );
-      const recording: WebVoiceRecordingState = {
-        audioContext,
-        destination,
-        recorder,
-        chunks: [],
-        startedAtMs: currentTimeMs(),
-        localSource,
-        remoteSource: null,
-      };
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          recording.chunks.push(event.data);
-        }
-      };
-      recorder.start();
-      recordingRef.current = recording;
-      if (remoteStreamRef.current) {
-        attachRemoteToRecording(remoteStreamRef.current);
-      }
-      void audioContext.resume().catch(() => undefined);
-    } catch {
-      // Recording is optional for dashboard test calls.
-    }
-  };
-
-  const attachRemoteToRecording = (stream: MediaStream) => {
-    const recording = recordingRef.current;
-    if (!recording || recording.remoteSource) {
-      return;
-    }
-
-    try {
-      const remoteSource =
-        recording.audioContext.createMediaStreamSource(stream);
-      remoteSource.connect(recording.destination);
-      recording.remoteSource = remoteSource;
-    } catch {
-      // Recording is optional for dashboard test calls.
-    }
-  };
-
-  const stopRecordingForUpload =
-    async (): Promise<WebVoiceRecordingUpload | null> => {
-      const recording = recordingRef.current;
-      recordingRef.current = null;
-      if (!recording) {
-        return null;
-      }
-
-      const blob = await new Promise<Blob | null>((resolve) => {
-        recording.recorder.onstop = () => {
-          resolve(
-            recording.chunks.length > 0
-              ? new Blob(recording.chunks, {
-                  type: recording.recorder.mimeType || "audio/webm",
-                })
-              : null,
-          );
-        };
-        if (recording.recorder.state === "inactive") {
-          recording.recorder.onstop?.(new Event("stop"));
-          return;
-        }
-        recording.recorder.stop();
-      });
-
-      recording.localSource.disconnect();
-      recording.remoteSource?.disconnect();
-      void recording.audioContext.close().catch(() => undefined);
-
-      if (!blob || blob.size === 0) {
-        return null;
-      }
-
-      return {
-        blob,
-        durationMs: Math.max(0, currentTimeMs() - recording.startedAtMs),
-      };
-    };
-
-  const uploadRecordingBlob = async (
-    sessionId: string,
-    recording: WebVoiceRecordingUpload,
-  ) => {
-    const response = await fetch(
-      `${endpoint.replace(/\/$/, "")}/${encodeURIComponent(
-        sessionId,
-      )}/recording?durationMs=${encodeURIComponent(String(recording.durationMs))}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": recording.blob.type || "audio/webm",
-        },
-        body: recording.blob,
-      },
-    );
-    if (!response.ok) {
-      throw new Error("The recording could not be uploaded.");
-    }
-  };
-
-  const endRemoteSession = async (
-    options: { uploadRecording?: boolean; sessionId?: string } = {},
-  ) => {
-    const shouldUploadRecording = options.uploadRecording ?? true;
-    const sessionId = options.sessionId ?? sessionIdRef.current;
-    if (options.sessionId === undefined || sessionIdRef.current === options.sessionId) {
-      sessionIdRef.current = null;
-    }
-    if (!sessionId) {
-      stopRecordingWithoutUpload();
-      return;
-    }
-
-    const recording = shouldUploadRecording
-      ? await stopRecordingForUpload()
-      : (stopRecordingWithoutUpload(), null);
-
-    void fetch(
-      `${endpoint.replace(/\/$/, "")}/${encodeURIComponent(sessionId)}/end`,
-      {
-        method: "POST",
-        keepalive: true,
-      },
-    ).catch(() => undefined);
-
-    if (recording) {
-      void uploadRecordingBlob(sessionId, recording).catch(() => undefined);
-    }
-  };
-
   useEffect(
     () => () => {
-      void endRemoteSession({ uploadRecording: false });
+      endRemoteSession();
       cleanup({ resetState: false });
     },
     // The cleanup path must use the current refs at unmount, not restart on every render.
@@ -400,7 +206,7 @@ export function useWebVoiceCall({
     }
     invalidatePendingStart();
     setStatus("ending");
-    await endRemoteSession();
+    endRemoteSession();
     cleanup();
     setStatus("ended");
     emit("web.voice.test_call_ended");
@@ -421,7 +227,7 @@ export function useWebVoiceCall({
 
     invalidatePendingStart();
     setStatus("ending");
-    await endRemoteSession({ uploadRecording: connectedRef.current });
+    endRemoteSession();
     cleanup();
     setStatus("idle");
     setErrorKey(null);
@@ -455,8 +261,6 @@ export function useWebVoiceCall({
     };
 
     setErrorKey(null);
-    connectedRef.current = false;
-    remoteStreamRef.current = null;
     setStatus("requesting_microphone");
     emit("web.voice.test_call_started");
 
@@ -491,26 +295,21 @@ export function useWebVoiceCall({
       peerConnection = connection;
       peerConnectionRef.current = connection;
       stream.getAudioTracks().forEach((track) => connection.addTrack(track, stream));
+      // GPT-Live reads client events from this channel; we only ever send session.close.
+      eventsChannelRef.current = connection.createDataChannel("oai-events");
 
       connection.ontrack = (event) => {
         const [stream] = event.streams;
-        if (remoteAudioRef.current && stream) {
-          remoteStreamRef.current = stream;
-          setRemoteStream(stream);
-          attachRemoteToRecording(stream);
-          remoteAudioRef.current.srcObject = stream;
+        const remote = stream ?? new MediaStream([event.track]);
+        if (remoteAudioRef.current) {
+          setRemoteStream(remote);
+          remoteAudioRef.current.srcObject = remote;
           void remoteAudioRef.current.play().catch(() => undefined);
         }
       };
 
       connection.onconnectionstatechange = () => {
         if (connection.connectionState === "connected") {
-          stopPresenceRef.current?.();
-          if (sessionIdRef.current) stopPresenceRef.current = startWebCallPresence(endpoint, sessionIdRef.current, connection);
-          connectedRef.current = true;
-          if (localStreamRef.current) {
-            startRecording(localStreamRef.current);
-          }
           setStatus("connected");
           emit("web.voice.test_call_connected");
         }
@@ -523,9 +322,8 @@ export function useWebVoiceCall({
           emit("web.voice.test_call_error", {
             connectionState: connection.connectionState,
           });
-          void endRemoteSession({
-            uploadRecording: connectedRef.current,
-          }).finally(cleanup);
+          endRemoteSession();
+          cleanup();
         }
       };
 
@@ -541,7 +339,7 @@ export function useWebVoiceCall({
 
       const response = await fetchWithTimeout(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(getHeaders ? getHeaders() : {}) },
         body: JSON.stringify({
           businessSlug,
           widgetId,
@@ -579,13 +377,8 @@ export function useWebVoiceCall({
       };
       if (attemptId !== startCallAttemptRef.current) {
         stopAttemptResources();
-        await endRemoteSession({
-          uploadRecording: false,
-          sessionId: payload.sessionId,
-        });
         return;
       }
-      sessionIdRef.current = payload.sessionId;
       await connection.setRemoteDescription({
         type: "answer",
         sdp: payload.sdp,
@@ -595,7 +388,6 @@ export function useWebVoiceCall({
         stopAttemptResources();
         return;
       }
-      await endRemoteSession({ uploadRecording: false });
       cleanup();
       setStatus("error");
       setErrorKey(getWebVoiceErrorKey(error));
