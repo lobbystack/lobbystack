@@ -14,6 +14,7 @@ import { Worker } from "bullmq";
 
 import { handleJob, type WorkerDependencies } from "./handlers";
 import { startHealthServer } from "./health";
+import { createLiveCallHandler } from "./liveCalls";
 import { OutboxDispatcher } from "./outboxDispatcher";
 import { getWorkerStartupMode } from "./maintenance";
 import { configureSchedulers } from "./scheduler";
@@ -125,7 +126,8 @@ async function main(): Promise<void> {
   const schedulerRefresh = setInterval(() => void refreshSchedulers().catch((error) => console.error("scheduler refresh failed", redactOtelExceptionText(error instanceof Error ? error.message : String(error)))), 5 * 60_000);
   schedulerRefresh.unref();
   const state = { ready: false, redis: false, database: false, storage: false, activeJobs: 0 };
-  const health = startHealthServer(Number(process.env.PORT ?? 3002), state);
+  const liveCalls = createLiveCallHandler({ domain: { db: database.db, snapshotCache: getWorkerSnapshotCache() } });
+  const health = startHealthServer(Number(process.env.PORT ?? 3002), state, liveCalls.handle);
   const email = createEmailProvider();
   const onboardingFollowupSender = createOnboardingFollowupSender();
   const embeddings = createEmbeddingProvider();
@@ -253,6 +255,7 @@ async function main(): Promise<void> {
     clearInterval(healthRefresh);
     abort.abort();
     dispatcher.stop();
+    liveCalls.closeAll();
     await Promise.allSettled([dispatchLoop, ...workers.map((worker) => worker.close()), ...[...queues.values()].map((queue) => queue.close()), realtime.quit(), database.pool.end(), dispatcherDatabase.pool.end(), new Promise<void>((resolve) => health.close(() => resolve())), shutdownTelemetry()]);
   };
   process.once("SIGINT", () => void shutdown().finally(() => process.exit(0)));

@@ -1,0 +1,193 @@
+import type OpenAI from "openai";
+import type { DelegationCreatedEvent } from "openai/resources/live/live";
+import { SidebandWS } from "openai/resources/live/sideband/ws";
+
+import type { ReceptionistAgent } from "../agent";
+
+type Turn = { role: "caller" | "receptionist"; text: string; endMs: number };
+
+export type DelegationTiming = {
+  delegationId: string;
+  offsetMs: number;
+  transcriptWaitMs: number;
+  agentMs: number;
+  totalMs: number;
+  tools: string[];
+  answer: string;
+  failed: boolean;
+};
+
+export type LiveCallSummary = {
+  sessionId: string;
+  durationMs: number;
+  delegations: DelegationTiming[];
+  closeReason?: string;
+};
+
+export type LiveCallControllerOptions = {
+  client: OpenAI;
+  sessionId: string;
+  agent: ReceptionistAgent;
+  /** Spoken as soon as the call connects, so the caller doesn't have to speak first. */
+  greeting?: string;
+  onDelegation?: (timing: DelegationTiming) => void;
+  onClose?: (summary: LiveCallSummary) => void;
+};
+
+// Commentary appends are capped at 500 tokens; a spoken answer is far shorter.
+const MAX_ANSWER_CHARS = 1_200;
+// The caller's last words can arrive just after the delegation event.
+const TRANSCRIPT_WAIT_MS = 300;
+const GREETING_FALLBACK_MS = 1_500;
+const FALLBACK_ANSWER = "Sorry, I couldn't check that just now. Offer to take a message so the team can follow up.";
+
+/**
+ * Holds the sideband connection for one GPT-Live session for the whole call and
+ * answers every delegation with the receptionist agent.
+ */
+export class LiveCallController {
+  private readonly startedAt = Date.now();
+  private readonly turns: Turn[] = [];
+  private readonly delegations: DelegationTiming[] = [];
+  private readonly abort = new AbortController();
+  private socket: SidebandWS | undefined;
+  private transcriptWaiters: Array<{ offsetMs: number; resolve: () => void }> = [];
+
+  constructor(private readonly options: LiveCallControllerOptions) {}
+
+  start(): void {
+    const socket = new SidebandWS(this.options.client, { session_id: this.options.sessionId });
+    this.socket = socket;
+    socket.on("session.input_transcript.delta", (event) => this.appendTranscript("caller", event.delta, event.end_ms));
+    socket.on("session.output_transcript.delta", (event) => this.appendTranscript("receptionist", event.delta, event.end_ms));
+    socket.on("session.delegation.created", (event) => void this.handleDelegation(event));
+    socket.on("session.closed", (event) => this.finish(event.reason ?? undefined));
+    socket.on("error", (error) => console.error(`[live] ${this.options.sessionId} sideband error`, error.message));
+    socket.on("close", () => this.finish("sideband_closed"));
+    // GPT-Live waits for the caller by default. OpenAI's documented way to speak
+    // first is an instruction sent after session.started. The sideband replays
+    // the last 3 seconds, so a late attach still sees the event.
+    socket.on("session.started", () => this.sendGreeting());
+    // If we attached after the replay window, session.started never arrives.
+    // Greet anyway unless the caller has already started talking.
+    setTimeout(() => {
+      if (!this.turns.some((turn) => turn.role === "caller")) this.sendGreeting();
+    }, GREETING_FALLBACK_MS);
+  }
+
+  private greeted = false;
+
+  private sendGreeting(): void {
+    const greeting = this.options.greeting?.trim();
+    if (this.greeted || !greeting) return;
+    this.greeted = true;
+    this.socket?.send({
+      type: "session.instructions.append",
+      delegation_id: null,
+      content: `Start the conversation now: say exactly "${greeting}" in the language of that greeting, then stop and listen to the caller.`,
+      event_id: "greeting",
+    });
+  }
+
+  close(): void {
+    this.socket?.close({ code: 1000, reason: "controller closed" });
+  }
+
+  private appendTranscript(role: Turn["role"], delta: string, endMs: number): void {
+    const last = this.turns.at(-1);
+    if (last?.role === role) {
+      last.text += delta;
+      last.endMs = endMs;
+    } else {
+      this.turns.push({ role, text: delta, endMs });
+    }
+    if (role !== "caller") return;
+    this.transcriptWaiters = this.transcriptWaiters.filter((waiter) => {
+      if (endMs < waiter.offsetMs) return true;
+      waiter.resolve();
+      return false;
+    });
+  }
+
+  private async waitForCallerTranscript(offsetMs: number): Promise<void> {
+    const lastCaller = [...this.turns].reverse().find((turn) => turn.role === "caller");
+    if (lastCaller && lastCaller.endMs >= offsetMs) return;
+    await new Promise<void>((resolve) => {
+      const waiter = { offsetMs, resolve };
+      this.transcriptWaiters.push(waiter);
+      setTimeout(() => {
+        this.transcriptWaiters = this.transcriptWaiters.filter((item) => item !== waiter);
+        resolve();
+      }, TRANSCRIPT_WAIT_MS);
+    });
+  }
+
+  private conversationText(): string {
+    return this.turns.map((turn) => `${turn.role === "caller" ? "Caller" : "Receptionist"}: ${turn.text.trim()}`).join("\n");
+  }
+
+  private delegationPrompt(): string {
+    // The spoken transcript can lag or omit earlier answers, so list them
+    // explicitly; otherwise the agent re-answers requests it already handled.
+    const earlier = this.delegations.filter((item) => !item.failed).map((item) => `- ${item.answer}`);
+    return [
+      `Conversation so far:\n${this.conversationText()}`,
+      earlier.length ? `Answers you already gave in this call:\n${earlier.join("\n")}` : "",
+      "The voice model handed you the caller's most recent request. Handle only that request; earlier requests are already answered. Reply with what the receptionist should say next.",
+    ].filter(Boolean).join("\n\n");
+  }
+
+  private async handleDelegation(event: DelegationCreatedEvent): Promise<void> {
+    const delegationId = event.delegation.id;
+    const receivedAt = performance.now();
+    await this.waitForCallerTranscript(event.offset_ms);
+    const transcriptReadyAt = performance.now();
+
+    let answer = FALLBACK_ANSWER;
+    let tools: string[] = [];
+    let failed = false;
+    try {
+      const result = await this.options.agent.generate({
+        prompt: this.delegationPrompt(),
+        abortSignal: this.abort.signal,
+      });
+      tools = result.steps.flatMap((step) => step.toolCalls.map((call) => call.toolName));
+      if (result.text.trim()) answer = result.text.trim().slice(0, MAX_ANSWER_CHARS);
+    } catch (error) {
+      failed = true;
+      if (this.abort.signal.aborted) return;
+      console.error(`[live] ${this.options.sessionId} delegation ${delegationId} failed`, error instanceof Error ? error.message : error);
+    }
+    const answeredAt = performance.now();
+
+    this.socket?.send({ type: "session.commentary.append", delegation_id: delegationId, content: answer, event_id: `answer_${delegationId}` });
+
+    const timing: DelegationTiming = {
+      delegationId,
+      offsetMs: event.offset_ms,
+      transcriptWaitMs: Math.round(transcriptReadyAt - receivedAt),
+      agentMs: Math.round(answeredAt - transcriptReadyAt),
+      totalMs: Math.round(answeredAt - receivedAt),
+      tools,
+      answer,
+      failed,
+    };
+    this.delegations.push(timing);
+    this.options.onDelegation?.(timing);
+  }
+
+  private finished = false;
+
+  private finish(closeReason?: string): void {
+    if (this.finished) return;
+    this.finished = true;
+    this.abort.abort();
+    this.socket?.close({ code: 1000, reason: "session finished" });
+    this.options.onClose?.({
+      sessionId: this.options.sessionId,
+      durationMs: Date.now() - this.startedAt,
+      delegations: this.delegations,
+      ...(closeReason ? { closeReason } : {}),
+    });
+  }
+}

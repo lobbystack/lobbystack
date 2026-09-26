@@ -53,6 +53,8 @@ export default defineRailway((ctx) => {
       LOBBYSTACK_WORKER_DATABASE_URL: preserve(),
       OPENAI_API_KEY: preserve(),
       EMAIL_FROM: preserve(),
+      // GPT-Live prototype, staging only.
+      ...(production ? {} : { INTERNAL_SERVICE_TOKEN: preserve(), LIVE_PROTOTYPE_ENABLED: preserve() }),
       FEEDBACK_TO_EMAIL: preserve(),
       ONBOARDING_FOLLOWUP_FROM: preserve(),
       ONBOARDING_FOLLOWUP_SENDER_NAME: preserve(),
@@ -224,6 +226,8 @@ export default defineRailway((ctx) => {
       LOBBYSTACK_FINANCE_EXPORT_DATABASE_URL: preserve(),
       NEXT_PUBLIC_POSTHOG_KEY: preserve(),
       POSTHOG_SOURCEMAP_API_KEY: preserve(),
+      // GPT-Live prototype, staging only.
+      ...(production ? {} : { LIVE_PROTOTYPE_ENABLED: preserve(), OPENAI_WEBHOOK_SECRET: preserve(), WORKER_INTERNAL_URL: preserve() }),
       ...(production ? { LOBBYSTACK_MAINTENANCE_MODE: preserve() } : {}),
     },
   });

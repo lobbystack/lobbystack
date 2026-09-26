@@ -25,6 +25,7 @@ const nextConfig: NextConfig = {
     "/*": ["../../node_modules/.pnpm/@swc+helpers@*/node_modules/@swc/helpers/esm/**/*"],
   },
   transpilePackages: [
+    "@lobbystack/agent-core",
     "@lobbystack/ai",
     "@lobbystack/config",
     "@lobbystack/contracts",
