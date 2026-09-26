@@ -7,7 +7,7 @@ import { asApiResponse, readJson } from "@/lib/api-helpers";
 import { loadValidBusinessSnapshot } from "@/lib/business-snapshot";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { attachWorkerToLiveSession, getLiveClient, requireLivePrototype } from "@/lib/live-prototype";
-import { LIVE_WEB_CALL_WIDGET_IDS, publicCallCorsHeaders, resolveLiveWebCallAccess, type LiveWebCallRequest } from "@/lib/live-web-call";
+import { LIVE_WEB_CALL_WIDGET_IDS, liveSessionEndToken, publicCallCorsHeaders, resolveLiveWebCallAccess, type LiveWebCallRequest } from "@/lib/live-web-call";
 import { requestIpHash } from "@/lib/widget-keys";
 import { enforceWebVoiceRateLimits } from "@/lib/web-voice-policy";
 
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
         ...(call.maxDurationMs ? { maxDurationMs: call.maxDurationMs } : {}),
         ...(access.prospectDemoId ? { intakeOnly: true } : {}),
       });
-      return NextResponse.json({ sessionId, sdp: live.transport.sdp, ...(call.maxDurationMs ? { maxDurationMs: call.maxDurationMs } : {}) }, { status: 201, headers: cors });
+      return NextResponse.json({ sessionId, endToken: liveSessionEndToken(sessionId), sdp: live.transport.sdp, ...(call.maxDurationMs ? { maxDurationMs: call.maxDurationMs } : {}) }, { status: 201, headers: cors });
     } catch (error) {
       // The session exists at OpenAI; end it so nothing talks or bills without us.
       await client.live.sessions.hangup(sessionId).catch(() => undefined);

@@ -23,7 +23,7 @@ vi.mock("@lobbystack/domain", () => ({
   recordVoiceSnapshotLoaded: mocks.recordVoiceSnapshotLoaded,
   startLiveWebCall: mocks.startLiveWebCall,
 }));
-vi.mock("@/lib/live-web-call", async (original) => ({ ...(await original<typeof import("@/lib/live-web-call")>()), resolveLiveWebCallAccess: mocks.access }));
+vi.mock("@/lib/live-web-call", async (original) => ({ ...(await original<typeof import("@/lib/live-web-call")>()), resolveLiveWebCallAccess: mocks.access, liveSessionEndToken: (sessionId: string) => `token-for-${sessionId}` }));
 vi.mock("@/lib/web-voice-policy", () => ({ enforceWebVoiceRateLimits: mocks.rateLimit }));
 vi.mock("@/lib/business-snapshot", () => ({ loadValidBusinessSnapshot: mocks.snapshot }));
 vi.mock("@/lib/domain-context", () => ({ createWorkerDomainContext: () => ({ db: {} }) }));
@@ -97,6 +97,12 @@ describe("POST /api/voice/live/session", () => {
     mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true });
     await start("lobbystack-dashboard-test-call");
     expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ transport: { type: "webrtc", sdp: "v=0\r\n" } }));
+  });
+
+  it("returns the end token only the starting browser gets", async () => {
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true });
+    const response = await start("lobbystack-dashboard-test-call");
+    await expect(response.json()).resolves.toMatchObject({ sessionId: "live_1", endToken: "token-for-live_1", sdp: "answer" });
   });
 
   it("rejects unknown callers", async () => {

@@ -81,6 +81,22 @@ function getVisitorId(): string | undefined {
   }
 }
 
+type StartedSession = { sessionId: string; endToken: string }
+
+// Asks the server to end a session whose audio channel never opened. The end
+// route sits next to the start endpoint, and only accepts the start response's token.
+function requestSessionEnd(endpoint: string, session: StartedSession): void {
+  const url = new URL(endpoint, window.location.href)
+  url.pathname = `${url.pathname.replace(/\/$/, "")}/end`
+  url.search = ""
+  void fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(session),
+    keepalive: true,
+  }).catch(() => undefined)
+}
+
 async function fetchWithTimeout(
   input: RequestInfo | URL,
   init: RequestInit = {},
@@ -119,6 +135,9 @@ export function useWebVoiceCall({
   const eventsChannelRef = useRef<RTCDataChannel | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
+  const sessionRef = useRef<StartedSession | null>(null)
+  // Bumped when a call ends, so a start still in flight knows to stand down.
+  const startCallAttemptRef = useRef(0)
 
   const emit = (eventName: string, properties?: Record<string, unknown>) => {
     onEvent?.(eventName, {
@@ -130,6 +149,7 @@ export function useWebVoiceCall({
 
   const cleanup = (options: { resetState?: boolean } = {}) => {
     const resetState = options.resetState ?? true
+    startCallAttemptRef.current += 1
     localStreamRef.current?.getTracks().forEach((track) => track.stop())
     localStreamRef.current = null
     eventsChannelRef.current = null
@@ -144,17 +164,21 @@ export function useWebVoiceCall({
     }
   }
 
-  // Closing the session ends the call at OpenAI. If the channel never opened,
-  // dropping the peer connection ends it too.
+  // Closing the session ends the call at OpenAI. Before the channel opens,
+  // the server ends it instead.
   const endRemoteSession = () => {
     const channel = eventsChannelRef.current
+    const session = sessionRef.current
+    sessionRef.current = null
     if (channel?.readyState === "open") {
       try {
         channel.send(JSON.stringify({ type: "session.close" }))
+        return
       } catch {
-        // The peer connection closes next either way.
+        // Fall back to the server below.
       }
     }
+    if (session) requestSessionEnd(endpoint, session)
   }
 
   useEffect(
@@ -168,7 +192,7 @@ export function useWebVoiceCall({
   )
 
   const endCall = async () => {
-    if (status !== "connected" && status !== "connecting") {
+    if (status !== "connected" && status !== "connecting" && status !== "requesting_microphone") {
       return
     }
     setStatus("ending")
@@ -183,6 +207,8 @@ export function useWebVoiceCall({
       return
     }
 
+    const attemptId = ++startCallAttemptRef.current
+    const abandoned = () => attemptId !== startCallAttemptRef.current
     setErrorMessage(null)
     setStatus("requesting_microphone")
     emit("landing.web_voice_call_started")
@@ -202,6 +228,10 @@ export function useWebVoiceCall({
           autoGainControl: true,
         },
       })
+      if (abandoned()) {
+        localStream.getTracks().forEach((track) => track.stop())
+        return
+      }
       localStreamRef.current = localStream
       setStatus("connecting")
       const visitorId = getVisitorId()
@@ -277,10 +307,15 @@ export function useWebVoiceCall({
         )
       }
 
-      const payload = (await response.json()) as {
-        sessionId: string
-        sdp: string
+      const payload = (await response.json()) as StartedSession & { sdp: string }
+      const session = { sessionId: payload.sessionId, endToken: payload.endToken }
+      if (abandoned()) {
+        // The caller gave up while connecting, but the server already started
+        // the session; end it so it doesn't run until the silence timeout.
+        requestSessionEnd(endpoint, session)
+        return
       }
+      sessionRef.current = session
       await peerConnection.setRemoteDescription({
         type: "answer",
         sdp: payload.sdp,
@@ -289,6 +324,7 @@ export function useWebVoiceCall({
         sessionId: payload.sessionId,
       })
     } catch (error) {
+      if (abandoned()) return
       cleanup()
       setStatus("error")
       setErrorMessage(getErrorMessage(error, locale))

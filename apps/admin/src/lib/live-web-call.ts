@@ -1,3 +1,5 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
+
 import { eq } from "drizzle-orm";
 
 import { widgetKeys, withBusinessTransaction } from "@lobbystack/db";
@@ -6,6 +8,26 @@ import { DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID } from "@lobbyst
 import { getWorkerDatabase, withOperatorTransaction } from "./api-helpers";
 import { resolveWebVoiceAccess } from "./prospect-demo";
 import { isAllowedWidgetOrigin, normalizeOrigin, verifyWidgetSessionToken } from "./widget-keys";
+
+function endTokenSecret(): string {
+  const secret = process.env.INTERNAL_SERVICE_SECRET;
+  if (!secret) throw new Error("INTERNAL_SERVICE_SECRET is required to sign browser call end tokens.");
+  return secret;
+}
+
+/**
+ * Lets the browser that started a call end it before its audio channel opens.
+ * Only the start response carries it, so knowing a session ID isn't enough.
+ */
+export function liveSessionEndToken(sessionId: string): string {
+  return createHmac("sha256", endTokenSecret()).update(`live-session-end:${sessionId}`).digest("base64url");
+}
+
+export function verifyLiveSessionEndToken(sessionId: string, token: string): boolean {
+  const expected = Buffer.from(liveSessionEndToken(sessionId));
+  const presented = Buffer.from(token);
+  return presented.length === expected.length && timingSafeEqual(presented, expected);
+}
 
 /** Everything a browser can send to start a GPT-Live call. */
 export type LiveWebCallRequest = {
