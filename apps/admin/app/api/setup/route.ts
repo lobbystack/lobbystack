@@ -1,9 +1,8 @@
-import { and, count, desc, eq, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, count, eq, isNull, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { businesses, calls, knowledgeDocuments, phoneNumbers, websiteIngestionJobs } from "@lobbystack/db";
-import { ONBOARDING_CRAWL_PAGE_LIMIT } from "@lobbystack/domain";
-import { DASHBOARD_TEST_CALL_WIDGET_ID } from "@lobbystack/shared";
+import { businesses, knowledgeDocuments, phoneNumbers } from "@lobbystack/db";
+import { countOperatorTestCallsHeard, latestWebsiteIngestion, ONBOARDING_CRAWL_PAGE_LIMIT } from "@lobbystack/domain";
 import { asApiResponse, jsonError, readJson, withOperatorTransaction } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
@@ -13,24 +12,22 @@ export async function GET(request: Request) {
     return NextResponse.json(await withOperatorTransaction(request, async ({ businessId, tx }) => {
       const business = await tx.select({ name: businesses.name, websiteUrl: businesses.websiteUrl, timezone: businesses.timezone, skippedSteps: businesses.setupGuideSkippedSteps }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
       const knowledge = await tx.select({ count: count() }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, businessId), eq(knowledgeDocuments.sourceType, "upload"), ne(knowledgeDocuments.status, "error"), ne(knowledgeDocuments.status, "cancelled")));
-      // A call that carried media and ended is a call the operator actually heard,
-      // and only through their own test widget: a customer reaching the business
-      // through the website widget is web_voice too, but nobody on staff heard it.
-      // Someone who resubmits a different URL gets a second crawl, and the older
-      // one describes a site they abandoned. The newest is the one they are on.
+      const sampled = await latestWebsiteIngestion(tx, businessId);
       // Onboarding samples a site, and an expansion reuses the same row, so the
-      // page count cannot say which kind of crawl produced it. The cap the crawl
-      // ran with can, and it survives the expansion that rewrites the count.
-      const sampled = (await tx.select({ rootDocumentId: websiteIngestionJobs.rootDocumentId, status: websiteIngestionJobs.status, importedCount: websiteIngestionJobs.importedCount, pageLimit: websiteIngestionJobs.pageLimit }).from(websiteIngestionJobs).where(eq(websiteIngestionJobs.businessId, businessId)).orderBy(desc(websiteIngestionJobs.createdAt)).limit(1))[0];
-      const moreToRead = Boolean(sampled?.rootDocumentId && sampled.status === "completed" && sampled.pageLimit === ONBOARDING_CRAWL_PAGE_LIMIT && sampled.importedCount >= ONBOARDING_CRAWL_PAGE_LIMIT);
-      const heardCall = await tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), eq(calls.transport, "web_voice"), eq(calls.widgetId, DASHBOARD_TEST_CALL_WIDGET_ID), isNull(calls.prospectDemoId), isNotNull(calls.mediaStartedAt), isNotNull(calls.endedAt)));
+      // page count cannot say which kind of crawl produced it; the cap it ran
+      // with can. The step is done once the site has been read in full: with no
+      // crawl at all, or a completed one that was not cut off by the sample cap.
+      // A crawl still running or one that failed leaves the step open, so the
+      // count never goes backwards and a failed read keeps its way back in.
+      const fullyRead = !sampled?.rootDocumentId || (sampled.status === "completed" && !(sampled.pageLimit === ONBOARDING_CRAWL_PAGE_LIMIT && sampled.importedCount >= ONBOARDING_CRAWL_PAGE_LIMIT));
+      const heardCalls = await countOperatorTestCallsHeard(tx, businessId);
       const businessNumber = await tx.select({ count: count() }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), isNull(phoneNumbers.reclaimScheduledAt)));
       const row = business[0];
       return {
         steps: [
-          { id: "fullScan", name: "Read the rest of your site", description: "Onboarding read a sample", documentId: sampled?.rootDocumentId ?? null, status: !moreToRead ? "complete" : row?.skippedSteps.includes("fullScan") ? "skipped" : "needs setup" },
+          { id: "fullScan", name: "Read the rest of your site", description: "Onboarding read a sample", documentId: sampled?.rootDocumentId ?? null, status: fullyRead ? "complete" : row?.skippedSteps.includes("fullScan") ? "skipped" : "needs setup" },
           { id: "sources", name: "Add more sources", description: "Upload policies, FAQs, or pricing", status: Number(knowledge[0]?.count ?? 0) > 0 ? "complete" : row?.skippedSteps.includes("sources") ? "skipped" : "needs setup" },
-          { id: "testCall", name: "Hear your agent", description: "Call it from your browser", status: Number(heardCall[0]?.count ?? 0) > 0 ? "complete" : row?.skippedSteps.includes("testCall") ? "skipped" : "needs setup" },
+          { id: "testCall", name: "Hear your agent", description: "Call it from your browser", status: heardCalls > 0 ? "complete" : row?.skippedSteps.includes("testCall") ? "skipped" : "needs setup" },
           { id: "phoneNumber", name: "Connect a phone number", description: "Let it answer real callers", status: Number(businessNumber[0]?.count ?? 0) > 0 ? "complete" : row?.skippedSteps.includes("phoneNumber") ? "skipped" : "needs setup" },
         ],
       };

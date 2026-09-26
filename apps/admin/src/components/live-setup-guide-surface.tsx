@@ -7,7 +7,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import { PageHeader } from "@/components/page-header";
-import { startTestCall, subscribeTestCallEnded } from "@/lib/test-call-launcher";
+import { startTestCall } from "@/lib/test-call-launcher";
+import { useCallSettleRefetch } from "@/lib/use-call-settle-refetch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,9 +21,6 @@ const order: StepId[] = ["fullScan", "sources", "testCall", "phoneNumber"];
 /** The call and the deeper read both happen in place, so they have no route. */
 const targets: Record<StepId, string | null> = { fullScan: null, sources: "/agent/knowledge?setup=upload", testCall: null, phoneNumber: "/settings/phone-number" };
 
-/** The call ends in the browser before the gateway finishes writing it down. */
-const CALL_SETTLE_POLL_MS = 2_000;
-const CALL_SETTLE_WINDOW_MS = 60_000;
 
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { credentials: "include", ...init });
@@ -39,13 +37,12 @@ export function LiveSetupGuideSurface() {
   const canManage = Boolean(business && ["business_owner", "business_admin"].includes(business.role));
   // The call runs in place on this page, so nothing navigates when it ends and
   // the step would sit incomplete until a reload.
-  const [awaitingCallSince, setAwaitingCallSince] = useState<number | null>(null);
-  useEffect(() => subscribeTestCallEnded(() => setAwaitingCallSince(Date.now())), []);
+  const callSettleInterval = useCallSettleRefetch();
   const setup = useQuery({
     queryKey: ["setup", business?.businessId],
     queryFn: () => getJson<{ steps: Step[] }>(`/api/setup?businessId=${encodeURIComponent(business!.businessId)}`),
     enabled: canManage,
-    refetchInterval: () => awaitingCallSince && Date.now() - awaitingCallSince < CALL_SETTLE_WINDOW_MS ? CALL_SETTLE_POLL_MS : false,
+    refetchInterval: () => callSettleInterval(),
   });
   const steps = useMemo(() => order.map((id) => setup.data?.steps.find((step) => step.id === id) ?? { id, name: id, description: "", status: "complete" }), [setup.data?.steps]);
   const active = steps.find((step) => step.status === "needs setup")?.id ?? order[0]!;

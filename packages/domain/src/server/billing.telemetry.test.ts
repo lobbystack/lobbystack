@@ -12,6 +12,8 @@ vi.mock("@lobbystack/db", async (original) => ({
 
 vi.mock("./productEvents", () => ({ recordProductEventInTransaction: mocks.recordProductEventInTransaction }));
 
+import { validateTelemetryEvent } from "@lobbystack/telemetry";
+
 import { detectSubscriptionStart, reconcileBillingProviderEvent } from "./billing";
 
 const context = { db: {} as never };
@@ -106,8 +108,12 @@ describe("subscription start telemetry", () => {
       businessId: "biz_1",
       distinctId: "system:business:biz_1",
       actorType: "worker",
-      properties: { plan: "starter", billingInterval: "monthly", previousPlan: null },
+      properties: { plan: "starter", billingInterval: "monthly", previousPlan: "none" },
     }));
+    // A first subscription has no previous plan, and a null there fails the
+    // taxonomy; outside cloud that throws and would roll the payment back.
+    const recorded = mocks.recordProductEventInTransaction.mock.calls[0]![1] as { name: "billing.subscription_started"; properties: Record<string, string> };
+    expect(validateTelemetryEvent({ name: recorded.name, deploymentMode: "development", businessId: "biz_1", properties: recorded.properties }).ok).toBe(true);
     // Recorded before the provider event is marked processed, so no commit can
     // retire the webhook while the start it produced is still unwritten.
     expect(order.indexOf("event")).toBeGreaterThanOrEqual(0);

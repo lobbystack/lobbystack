@@ -1,8 +1,9 @@
-import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { billingAccounts, businesses, calls, phoneNumbers, websiteIngestionJobs } from "@lobbystack/db";
-import { DASHBOARD_TEST_CALL_WIDGET_ID } from "@lobbystack/shared";
+import { billingAccounts, businesses, phoneNumbers } from "@lobbystack/db";
+import { countOperatorTestCallsHeard, latestWebsiteIngestion } from "@lobbystack/domain";
+import { isPaidSubscription } from "@lobbystack/shared";
 import { asApiResponse, withOperatorTransaction } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
@@ -19,30 +20,17 @@ export async function GET(request: Request) {
       const business = (await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
       const account = (await tx.select({ plan: billingAccounts.plan, subscriptionState: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1))[0];
       const number = (await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), isNull(phoneNumbers.reclaimScheduledAt))).limit(1))[0];
-      const completed = (await tx.select({ count: sql<number>`count(*)::int`, firstAt: sql<string | null>`min(${calls.endedAt})` }).from(calls).where(and(
-        eq(calls.businessId, businessId),
-        eq(calls.transport, "web_voice"),
-        // A customer reaching the business through the website widget is a
-        // web_voice call too. Only the operator's own test widget means someone
-        // on staff has heard the agent.
-        eq(calls.widgetId, DASHBOARD_TEST_CALL_WIDGET_ID),
-        isNull(calls.prospectDemoId),
-        isNotNull(calls.mediaStartedAt),
-        isNotNull(calls.endedAt),
-      )))[0];
-      // The newest crawl is the one describing the site they are on now.
-      const ingestion = (await tx.select({ status: websiteIngestionJobs.status, websiteUrl: websiteIngestionJobs.websiteUrl, importedCount: websiteIngestionJobs.importedCount, indexedCount: websiteIngestionJobs.indexedCount }).from(websiteIngestionJobs).where(eq(websiteIngestionJobs.businessId, businessId)).orderBy(desc(websiteIngestionJobs.createdAt)).limit(1))[0];
+      const completedWebCalls = await countOperatorTestCallsHeard(tx, businessId);
+      const ingestion = await latestWebsiteIngestion(tx, businessId);
       return {
         deploymentMode: business?.deploymentMode ?? "cloud",
         plan: account?.plan ?? "free_cloud",
-        subscriptionState: account?.subscriptionState ?? null,
         // A live paid plan can still lack a number: the onboarding number step
         // can be skipped, and those operators need claiming, not checkout.
-        paidPlanLive: ["starter", "pro", "enterprise"].includes(account?.plan ?? "") && ["active", "trialing", "past_due"].includes(account?.subscriptionState ?? ""),
+        paidPlanLive: isPaidSubscription(account?.plan, account?.subscriptionState),
         hasDedicatedNumber: Boolean(number),
-        completedWebCalls: completed?.count ?? 0,
-        firstCompletedWebCallAt: completed?.firstAt ?? null,
-        websiteImport: ingestion ?? null,
+        completedWebCalls,
+        websiteImport: ingestion ? { status: ingestion.status, websiteUrl: ingestion.websiteUrl, importedCount: ingestion.importedCount, indexedCount: ingestion.indexedCount } : null,
       };
     }));
   } catch (error) {

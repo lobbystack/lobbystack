@@ -85,22 +85,29 @@ export function DashboardAbandonIntent({ businessId }: { businessId: string | un
       if (isExitIntentEvent(event)) fire("exit_intent");
     };
 
-    // Idle means untouched, not merely open. Without this every operator gets
-    // interrupted three minutes in, however hard they are working.
+    // Idle means untouched, not merely open. Activity only stamps the time, and
+    // one timer checks it, so a moving pointer costs an assignment per event
+    // rather than a fresh timer.
+    let lastActivityAt = Date.now();
+    const markActivity = (): void => { lastActivityAt = Date.now(); };
     let idleTimer = 0;
-    const restartIdleTimer = (): void => {
-      window.clearTimeout(idleTimer);
+    const checkIdle = (): void => {
       if (firedRef.current) return;
-      idleTimer = window.setTimeout(() => { if (!fire("idle")) restartIdleTimer(); }, ABANDON_INTENT_IDLE_MS);
+      if (Date.now() - lastActivityAt >= ABANDON_INTENT_IDLE_MS) {
+        if (fire("idle")) return;
+        // Suppressed, by a call for instance: wait out another quiet stretch.
+        lastActivityAt = Date.now();
+      }
+      idleTimer = window.setTimeout(checkIdle, ABANDON_INTENT_IDLE_MS - (Date.now() - lastActivityAt));
     };
 
     document.addEventListener("mouseout", onMouseOut);
-    for (const activity of ACTIVITY_EVENTS) document.addEventListener(activity, restartIdleTimer, { passive: true });
-    restartIdleTimer();
+    for (const activity of ACTIVITY_EVENTS) document.addEventListener(activity, markActivity, { passive: true });
+    idleTimer = window.setTimeout(checkIdle, ABANDON_INTENT_IDLE_MS);
 
     return () => {
       document.removeEventListener("mouseout", onMouseOut);
-      for (const activity of ACTIVITY_EVENTS) document.removeEventListener(activity, restartIdleTimer);
+      for (const activity of ACTIVITY_EVENTS) document.removeEventListener(activity, markActivity);
       window.clearTimeout(idleTimer);
     };
   }, [businessId, telemetry]);

@@ -1,7 +1,7 @@
 import { and, eq, lt, or, sql } from "drizzle-orm";
 
 import { billingAccounts, billingCheckoutRequests, billingTransactions, billingUsageEvents, businesses, enqueueOutbox, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { billingErrorCodes, billingPlanCatalog, billingPlanSlugs, type BillingPlanSlug } from "@lobbystack/shared";
+import { billingErrorCodes, billingPlanCatalog, billingPlanSlugs, isPaidSubscription, type BillingPlanSlug } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import type { DomainContext } from "./context";
@@ -478,16 +478,6 @@ function dateField(source: Record<string, unknown>, ...keys: string[]): Date | u
 export type SubscriptionStart = { plan: string; billingInterval: string | null; previousPlan: string | null };
 
 /**
- * A subscription counts as started once the plan is billable and the provider
- * says it is live. `past_due` counts as paying, matching the voice allowance
- * and the dedicated-number gate, so recovering from a failed charge does not
- * look like a second subscription.
- */
-function isPaidSubscription(plan: string | null, state: string | null): boolean {
-  return ["starter", "pro", "enterprise"].includes(plan ?? "") && ["active", "trialing", "past_due"].includes(state ?? "");
-}
-
-/**
  * A subscription starts on the edge into a paid, live plan. Later webhooks for
  * the same subscription describe an account that was already paying, so they
  * must not report a second start.
@@ -638,10 +628,13 @@ export async function reconcileBillingProviderEvent(
         distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
         businessId: input.businessId,
         actorType: "worker",
+        // The taxonomy requires both, and null reads as missing: in a non-cloud
+        // deployment that throws, which on this transaction would block the
+        // payment itself. A first subscription has no previous plan to name.
         properties: {
           plan: startedSubscription.plan,
-          billingInterval: startedSubscription.billingInterval,
-          previousPlan: startedSubscription.previousPlan,
+          billingInterval: startedSubscription.billingInterval ?? "unknown",
+          previousPlan: startedSubscription.previousPlan ?? "none",
         },
       });
     }

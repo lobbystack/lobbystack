@@ -43,6 +43,17 @@ export const billingUsageKinds = [
 ] as const;
 export type BillingUsageKind = (typeof billingUsageKinds)[number];
 
+/**
+ * States in which a subscription is paying. `past_due` counts, so a failed charge
+ * does not strip the number or the voice allowance while the provider retries.
+ */
+export const liveSubscriptionStates = ["active", "trialing", "past_due"] as const;
+
+/** A billable plan on a live subscription: the gate for numbers and paid prompts. */
+export function isPaidSubscription(plan: string | null | undefined, state: string | null | undefined): boolean {
+  return ["starter", "pro", "enterprise"].includes(plan ?? "") && (liveSubscriptionStates as readonly string[]).includes(state ?? "");
+}
+
 export const billingTransactionKinds = ["order", "refund"] as const;
 export type BillingTransactionKind = (typeof billingTransactionKinds)[number];
 

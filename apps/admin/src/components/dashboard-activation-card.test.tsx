@@ -31,11 +31,9 @@ afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.
 type Activation = {
   deploymentMode: string;
   plan: string;
-  subscriptionState: string | null;
   paidPlanLive: boolean;
   hasDedicatedNumber: boolean;
   completedWebCalls: number;
-  firstCompletedWebCallAt: string | null;
   websiteImport: { status: string; websiteUrl: string; importedCount: number; indexedCount: number } | null;
 };
 
@@ -43,11 +41,9 @@ function activationBody(activation: Partial<Activation>): Activation {
   return {
     deploymentMode: "cloud",
     plan: "free_cloud",
-    subscriptionState: null,
     paidPlanLive: false,
     hasDedicatedNumber: false,
     completedWebCalls: 0,
-    firstCompletedWebCallAt: null,
     websiteImport: null,
     ...activation,
   };
@@ -94,7 +90,7 @@ describe("dashboard activation card", () => {
   });
 
   it("records the first completed call and shows the upgrade prompt after it", async () => {
-    const onOpen = setup({ completedWebCalls: 1, firstCompletedWebCallAt: "2026-09-24T10:00:00Z" });
+    const onOpen = setup({ completedWebCalls: 1 });
     expect(await screen.findByText("activation.upgrade.title")).toBeTruthy();
     telemetryRef.current!.expectEvent("web.activation.first_call_completed", { businessId: "business", transport: "web_voice" });
     telemetryRef.current!.expectEvent("web.activation.upgrade_prompt_shown", { businessId: "business", trigger: "first_call_completed" });
@@ -105,10 +101,10 @@ describe("dashboard activation card", () => {
   });
 
   it("reports the first completed call once per browser", async () => {
-    setup({ completedWebCalls: 1, firstCompletedWebCallAt: "2026-09-24T10:00:00Z" });
+    setup({ completedWebCalls: 1 });
     await screen.findByText("activation.upgrade.title");
     cleanup();
-    setup({ completedWebCalls: 3, firstCompletedWebCallAt: "2026-09-24T10:00:00Z" });
+    setup({ completedWebCalls: 3 });
     await screen.findByText("activation.upgrade.title");
     expect(telemetryRef.current!.events.filter(event => event.name === "web.activation.first_call_completed")).toHaveLength(1);
   });
@@ -129,7 +125,7 @@ describe("dashboard activation card", () => {
   });
 
   it("sends a paying operator without a number to claiming instead of checkout", async () => {
-    setup({ plan: "starter", subscriptionState: "active", paidPlanLive: true, completedWebCalls: 1 });
+    setup({ plan: "starter", paidPlanLive: true, completedWebCalls: 1 });
     expect(await screen.findByText("activation.claimNumber.title")).toBeTruthy();
     expect(screen.getByText("activation.claimNumber.cta").closest("a")?.getAttribute("href")).toBe("/settings/phone-number");
     expect(screen.queryByText("activation.upgrade.title")).toBeNull();

@@ -1,5 +1,6 @@
 export * from "./affiliates";
 export * from "./appointmentChanges";
+export * from "./activation";
 export * from "./billing";
 export * from "./billingAccess";
 export * from "./analytics";

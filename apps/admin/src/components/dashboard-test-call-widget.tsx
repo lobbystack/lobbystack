@@ -52,8 +52,13 @@ export function DashboardTestCallWidget({
   const handleTestCallClick = useCallback(() => {
     setOpen(true);
     setTestCallActive(true);
-    void voiceControlsRef.current?.startCall();
+    void Promise.resolve(voiceControlsRef.current?.startCall()).catch(() => setTestCallActive(false));
   }, []);
+
+  // The flag lives in a module, so it outlives this widget: leaving the
+  // dashboard mid-call must not keep every other surface waiting on a call
+  // that no longer exists.
+  useEffect(() => () => setTestCallActive(false), []);
 
   useEffect(() => {
     if (!businessSlug) return;

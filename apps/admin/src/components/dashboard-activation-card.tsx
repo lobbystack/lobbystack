@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Phone } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useTelemetry } from "@/components/product-analytics";
-import { getTestCallStarter, startTestCall, subscribeTestCallEnded, subscribeTestCallStarter } from "@/lib/test-call-launcher";
+import { getTestCallStarter, startTestCall, subscribeTestCallStarter } from "@/lib/test-call-launcher";
+import { useCallSettleRefetch } from "@/lib/use-call-settle-refetch";
 import { Button } from "./ui/button";
 import { Surface } from "./ui/surface";
 import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
@@ -16,17 +17,11 @@ import { isWebsiteImportRunning, websiteImportHost, WebsiteImportProgress, type 
 type Activation = {
   deploymentMode: string;
   plan: string;
-  subscriptionState: string | null;
   paidPlanLive: boolean;
   hasDedicatedNumber: boolean;
   completedWebCalls: number;
-  firstCompletedWebCallAt: string | null;
   websiteImport: WebsiteImportSummary | null;
 };
-
-/** The call ends in the browser before the gateway finishes writing it down. */
-const CALL_SETTLE_POLL_MS = 2_000;
-const CALL_SETTLE_WINDOW_MS = 60_000;
 
 const REPORTED_FIRST_CALL_KEY = "lobbystack.activation.firstCallReported";
 
@@ -69,9 +64,7 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
   const telemetry = useTelemetry();
   const openUpgradePlanDialog = useOpenUpgradePlanDialog();
   const canStartTestCall = useSyncExternalStore(subscribeTestCallStarter, () => getTestCallStarter() !== null, () => false);
-  const [awaitingCallSince, setAwaitingCallSince] = useState<number | null>(null);
-
-  useEffect(() => subscribeTestCallEnded(() => setAwaitingCallSince(Date.now())), []);
+  const callSettleInterval = useCallSettleRefetch();
 
   const activation = useQuery({
     queryKey: ["activation", businessId],
@@ -80,8 +73,7 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
     refetchInterval: query => {
       if (isWebsiteImportRunning(query.state.data?.websiteImport)) return 2500;
       // A call just ended in this tab: poll briefly until the gateway records it.
-      if (awaitingCallSince && Date.now() - awaitingCallSince < CALL_SETTLE_WINDOW_MS) return CALL_SETTLE_POLL_MS;
-      return false;
+      return callSettleInterval();
     },
   });
 
