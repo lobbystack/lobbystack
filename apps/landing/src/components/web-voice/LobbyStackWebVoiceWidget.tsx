@@ -22,8 +22,10 @@ function capturePosthog(
 }
 
 function getEndpoint() {
-  if (import.meta.env.PUBLIC_WEB_CALL_ENDPOINT) {
-    return import.meta.env.PUBLIC_WEB_CALL_ENDPOINT
+  // A new name, so an old PUBLIC_WEB_CALL_ENDPOINT pointing at the retired
+  // voice gateway endpoint can't override it.
+  if (import.meta.env.PUBLIC_LIVE_CALL_ENDPOINT) {
+    return import.meta.env.PUBLIC_LIVE_CALL_ENDPOINT
   }
 
   if (import.meta.env.DEV) {

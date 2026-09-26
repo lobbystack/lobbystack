@@ -53,8 +53,9 @@ export default defineRailway((ctx) => {
       LOBBYSTACK_WORKER_DATABASE_URL: preserve(),
       OPENAI_API_KEY: preserve(),
       EMAIL_FROM: preserve(),
-      // GPT-Live prototype, staging only.
-      ...(production ? {} : { INTERNAL_SERVICE_TOKEN: preserve(), LIVE_PROTOTYPE_ENABLED: preserve() }),
+      // GPT-Live calls: the admin hands each call to the worker with this token.
+      INTERNAL_SERVICE_TOKEN: preserve(),
+      LIVE_PROTOTYPE_ENABLED: "true",
       FEEDBACK_TO_EMAIL: preserve(),
       ONBOARDING_FOLLOWUP_FROM: preserve(),
       ONBOARDING_FOLLOWUP_SENDER_NAME: preserve(),
@@ -230,8 +231,11 @@ export default defineRailway((ctx) => {
       LOBBYSTACK_FINANCE_EXPORT_DATABASE_URL: preserve(),
       NEXT_PUBLIC_POSTHOG_KEY: preserve(),
       POSTHOG_SOURCEMAP_API_KEY: preserve(),
-      // GPT-Live prototype, staging only.
-      ...(production ? {} : { LIVE_PROTOTYPE_ENABLED: preserve(), OPENAI_WEBHOOK_SECRET: preserve(), WORKER_INTERNAL_URL: preserve() }),
+      // GPT-Live browser calls. Phone calls reach GPT-Live only in staging so
+      // far; production numbers stay on the voice gateway until they move.
+      LIVE_PROTOTYPE_ENABLED: "true",
+      WORKER_INTERNAL_URL: "http://worker.railway.internal:3002",
+      ...(production ? {} : { OPENAI_WEBHOOK_SECRET: preserve() }),
       ...(production ? { LOBBYSTACK_MAINTENANCE_MODE: preserve() } : {}),
     },
   });
