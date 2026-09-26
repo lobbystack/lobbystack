@@ -211,7 +211,7 @@ export function createLiveCallHandler(input: { domain: DomainContext }) {
 
     const finish = async (summary: LiveCallSummary) => {
       const seconds = summary.billedSeconds ?? summary.durationMs / 1000;
-      await finishLiveCall(input.domain, { ...call, seconds, end: end ?? endFromCloseReason(summary.closeReason), channel: request.channel });
+      await finishLiveCall(input.domain, { ...call, seconds, measuredSeconds: summary.durationMs / 1000, end: end ?? endFromCloseReason(summary.closeReason), channel: request.channel });
       void saveRecording(request, seconds * 1000);
     };
 

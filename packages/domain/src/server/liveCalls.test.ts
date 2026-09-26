@@ -39,6 +39,11 @@ describe("finishLiveCall", () => {
     expect(mocks.recordUnitEconomicsEvent).toHaveBeenCalledWith(context, expect.objectContaining({ eventKey: "voice_ai:live_session:call_1", model: "gpt-live-1", costUsd: expect.closeTo(0.075, 6) }));
   });
 
+  it("passes the measured length so an abandoned call isn't billed OpenAI's minimum", async () => {
+    await finishLiveCall(context, { ...call, seconds: 15, measuredSeconds: 0.8, end: "caller_finished" });
+    expect(mocks.completeCall).toHaveBeenCalledWith(context, expect.objectContaining({ providerDurationSeconds: 15, mediaDurationSeconds: 0.8 }));
+  });
+
   it("uses the spam disposition billing already excludes", async () => {
     await finishLiveCall(context, { ...call, seconds: 40, end: "spam" });
     expect(mocks.completeCall).toHaveBeenCalledWith(context, expect.objectContaining({ disposition: "spam_ended" }));

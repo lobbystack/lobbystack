@@ -137,7 +137,12 @@ export async function blockLiveCaller(context: DomainContext, input: { businessI
  * seconds and spam aren't billed) and the GPT-Live cost. `seconds` is the
  * session length OpenAI reports, which is what it bills us for.
  */
-export async function finishLiveCall(context: DomainContext, input: { businessId: string; callId: string; seconds: number; end: LiveCallEnd; endedAt?: Date; channel?: "voice" | "web_voice" }) {
+/**
+ * `seconds` is what OpenAI bills, which can include a minimum. `measuredSeconds`
+ * is how long the call ran; the short-call exemption uses the shorter of the two,
+ * so an abandoned call isn't charged OpenAI's minimum.
+ */
+export async function finishLiveCall(context: DomainContext, input: { businessId: string; callId: string; seconds: number; measuredSeconds?: number; end: LiveCallEnd; endedAt?: Date; channel?: "voice" | "web_voice" }) {
   const seconds = Math.max(0, input.seconds);
   const status = input.end === "transferred" ? "transferred" : input.end === "blocked_contact" ? "blocked" : "completed";
   const completed = await completeCall(context, {
@@ -147,7 +152,7 @@ export async function finishLiveCall(context: DomainContext, input: { businessId
     endedAt: (input.endedAt ?? new Date()).toISOString(),
     disposition: DISPOSITIONS[input.end],
     providerDurationSeconds: Math.ceil(seconds),
-    mediaDurationSeconds: seconds,
+    mediaDurationSeconds: Math.max(0, input.measuredSeconds ?? seconds),
   });
   if (!completed) return completed;
   // No-op unless the call belongs to a prospect demo.
