@@ -45,6 +45,20 @@ const PRESENCE_INTERVAL_MS = 10_000;
 const RECORDING_ATTEMPTS = 12;
 const RECORDING_RETRY_MS = 5_000;
 
+// OpenAI bills 15 seconds when it creates a WebRTC session and credits it
+// against talk time once the session runs, so a browser call never costs less.
+const WEBRTC_MINIMUM_SECONDS = 15;
+
+/**
+ * The seconds OpenAI bills for a call. OpenAI reports them when the session
+ * closes; if the sideband dropped first we only have our own measurement.
+ */
+export function providerSeconds(summary: Pick<LiveCallSummary, "billedSeconds" | "durationMs">, channel: LiveChannel): number {
+  if (summary.billedSeconds !== undefined) return summary.billedSeconds;
+  const measured = summary.durationMs / 1000;
+  return channel === "web_voice" ? Math.max(WEBRTC_MINIMUM_SECONDS, measured) : measured;
+}
+
 function endFromCloseReason(reason: string | undefined): LiveCallEnd {
   switch (reason) {
     case "close_requested": return "caller_finished";
@@ -210,9 +224,10 @@ export function createLiveCallHandler(input: { domain: DomainContext }) {
     });
 
     const finish = async (summary: LiveCallSummary) => {
-      const seconds = summary.billedSeconds ?? summary.durationMs / 1000;
-      await finishLiveCall(input.domain, { ...call, seconds, measuredSeconds: summary.durationMs / 1000, end: end ?? endFromCloseReason(summary.closeReason), channel: request.channel });
-      void saveRecording(request, seconds * 1000);
+      const seconds = providerSeconds(summary, request.channel);
+      const measuredSeconds = summary.durationMs / 1000;
+      await finishLiveCall(input.domain, { ...call, seconds, measuredSeconds, end: end ?? endFromCloseReason(summary.closeReason), channel: request.channel });
+      void saveRecording(request, measuredSeconds * 1000);
     };
 
     controller = new LiveCallController({

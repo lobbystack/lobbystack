@@ -50,6 +50,8 @@ describe("finance export", () => {
     expect(mocks.execute.mock.calls[0]?.[0]).toContain("daily_bookings");
     expect(mocks.execute.mock.calls[0]?.[0]).toContain("booking_count");
     expect(mocks.execute.mock.calls[0]?.[0]).toContain("status <> 'canceled'");
+    expect(mocks.execute.mock.calls[0]?.[0]).toContain("short_calls_waived");
+    expect(mocks.execute.mock.calls[0]?.[0]).toContain("billed_voice_seconds");
   });
 
   it("rejects a syntactically valid cursor with an invalid timestamp", async () => {
@@ -75,6 +77,7 @@ describe("finance export", () => {
     expect(query).not.toContain("event_kind in");
     expect(query).toContain("knowledge.%");
     expect(query).toContain("%_provider");
+    expect(query).toContain(`bu.quantity as "billedSeconds"`);
   });
 
   it("exports legacy business identifiers for provider attribution", async () => {

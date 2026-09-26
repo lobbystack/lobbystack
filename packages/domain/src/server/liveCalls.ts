@@ -145,6 +145,7 @@ export async function blockLiveCaller(context: DomainContext, input: { businessI
 export async function finishLiveCall(context: DomainContext, input: { businessId: string; callId: string; seconds: number; measuredSeconds?: number; end: LiveCallEnd; endedAt?: Date; channel?: "voice" | "web_voice" }) {
   const seconds = Math.max(0, input.seconds);
   const status = input.end === "transferred" ? "transferred" : input.end === "blocked_contact" ? "blocked" : "completed";
+  const costUsd = (seconds / 60) * LIVE_PRICING.usdPerMinute;
   const completed = await completeCall(context, {
     businessId: input.businessId,
     callId: input.callId,
@@ -153,6 +154,7 @@ export async function finishLiveCall(context: DomainContext, input: { businessId
     disposition: DISPOSITIONS[input.end],
     providerDurationSeconds: Math.ceil(seconds),
     mediaDurationSeconds: Math.max(0, input.measuredSeconds ?? seconds),
+    providerCostUsd: costUsd,
   });
   if (!completed) return completed;
   // No-op unless the call belongs to a prospect demo.
@@ -163,7 +165,7 @@ export async function finishLiveCall(context: DomainContext, input: { businessId
     eventKey: `voice_ai:live_session:${input.callId}`,
     eventKind: "voice_ai",
     channel: input.channel ?? "voice",
-    costUsd: (seconds / 60) * LIVE_PRICING.usdPerMinute,
+    costUsd,
     quantity: seconds,
     quantityUnit: "second",
     provider: "openai",

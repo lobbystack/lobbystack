@@ -69,6 +69,26 @@ describe("voice call lifecycle telemetry", () => {
     expect(mocks.withBusinessTransaction.mock.invocationCallOrder[0]).toBeLessThan(mocks.recordProductEvent.mock.invocationCallOrder[0]!);
   });
 
+  it("records voice.short_call_waived when the short-call exemption lets a call off", async () => {
+    mocks.withBusinessTransaction.mockResolvedValue({ callId: "call_3", transport: "web_voice", provider: "openai_live", disposition: "caller_finished", durationSeconds: 0, providerDurationSeconds: 15, measuredSeconds: 0.84, shortCallWaived: true, billingExcluded: false });
+
+    await completeCall(context, { businessId: "biz_1", callId: "call_3", status: "completed", endedAt: "2027-01-01T10:00:01Z", disposition: "caller_finished", providerDurationSeconds: 15, mediaDurationSeconds: 0.84, providerCostUsd: 0.0125 });
+
+    expect(mocks.recordProductEvent).toHaveBeenCalledWith(context, expect.objectContaining({
+      name: "voice.short_call_waived",
+      businessId: "biz_1",
+      properties: expect.objectContaining({ callId: "call_3", channel: "web_voice", provider: "openai_live", providerDurationSeconds: 15, measuredSeconds: 0.8, estimatedCostUsd: 0.0125 }),
+    }));
+  });
+
+  it("does not record voice.short_call_waived for a billed call", async () => {
+    mocks.withBusinessTransaction.mockResolvedValue({ callId: "call_1", transport: "voice", provider: "twilio", disposition: "caller_finished", durationSeconds: 42, providerDurationSeconds: 42, measuredSeconds: 42, shortCallWaived: false, billingExcluded: false });
+
+    await completeCall(context, { businessId: "biz_1", callId: "call_1", status: "completed", endedAt: "2027-01-01T10:00:42Z", providerDurationSeconds: 42 });
+
+    expect(mocks.recordProductEvent).not.toHaveBeenCalledWith(context, expect.objectContaining({ name: "voice.short_call_waived" }));
+  });
+
   it("does not record voice.call_completed when the call was not found", async () => {
     mocks.withBusinessTransaction.mockResolvedValue(null);
 
