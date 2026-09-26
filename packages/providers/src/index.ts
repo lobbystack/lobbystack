@@ -58,7 +58,7 @@ export interface CalendarProvider {
 
 export interface EmailProvider {
   sendTemplate(input: {
-    template: "verify_email" | "password_reset" | "operator_alert" | "feedback_submission";
+    template: "verify_email" | "password_reset" | "operator_alert" | "feedback_submission" | "onboarding_followup";
     to: string;
     subject: string;
     variables: Record<string, string>;

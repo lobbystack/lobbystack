@@ -1,5 +1,6 @@
 import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
 import { assertProductionSecrets } from "@lobbystack/config";
+import type { OnboardingFollowupSender } from "@lobbystack/domain";
 import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, isKnownJobType, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
 import { createEmbeddingProvider } from "@lobbystack/providers/ai/embeddingProvider";
 import { FirecrawlProvider } from "@lobbystack/providers/crawling/firecrawl";
@@ -33,6 +34,12 @@ function createEmailProvider(): SmtpEmailProvider | undefined {
     from: process.env.EMAIL_FROM ?? "LobbyStack <no-reply@localhost>",
     ...(process.env.EMAIL_REPLY_TO ? { replyTo: process.env.EMAIL_REPLY_TO } : {}),
   });
+}
+
+function createOnboardingFollowupSender(): OnboardingFollowupSender | undefined {
+  const from = process.env.ONBOARDING_FOLLOWUP_FROM?.trim();
+  const name = process.env.ONBOARDING_FOLLOWUP_SENDER_NAME?.trim();
+  return from && name ? { from, name } : undefined;
 }
 
 function createTwilioProvider(): TwilioProvider | undefined {
@@ -120,6 +127,7 @@ async function main(): Promise<void> {
   const state = { ready: false, redis: false, database: false, storage: false, activeJobs: 0 };
   const health = startHealthServer(Number(process.env.PORT ?? 3002), state);
   const email = createEmailProvider();
+  const onboardingFollowupSender = createOnboardingFollowupSender();
   const embeddings = createEmbeddingProvider();
   const twilio = createTwilioProvider();
   const twilioAlerts = createAlertSmsProvider();
@@ -150,6 +158,7 @@ async function main(): Promise<void> {
     ...(crawler ? { crawler } : {}),
     ...(productAnalytics ? { productAnalytics } : {}),
     ...(email ? { email } : {}),
+    ...(onboardingFollowupSender ? { onboardingFollowupSender } : {}),
     ...(embeddings ? { embeddings } : {}),
     ...(twilio ? { twilio } : {}),
     ...(twilioAlerts ? { twilioAlerts } : {}),
