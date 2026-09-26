@@ -8,6 +8,7 @@ import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { SidebarTeamSkeleton } from "@/components/loading-skeletons";
 import { recordPendingWorkspaceSwitch } from "@/lib/workspace-analytics";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { SidebarMenu, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 type Business = { businessId: string; name: string; active: boolean };
@@ -60,7 +61,7 @@ export function WorkspaceSwitcher() {
               />
             }
           >
-            <ItemMedia variant="icon"><WorkspaceInitial name={active?.name} /></ItemMedia>
+            <ItemMedia><WorkspaceInitial name={active?.name} /></ItemMedia>
             <ItemContent className="min-w-0">
               <ItemTitle className="ph-mask w-full truncate text-left font-medium">
                 {active?.name ?? t("sidebar.businessSlugFallback")}
@@ -89,12 +90,14 @@ export function WorkspaceSwitcher() {
   );
 }
 
-/** The workspace's first letter, so the switcher reads as an account row. */
+/**
+ * The workspace's first letter, matching the account avatar in the sidebar
+ * footer and a size up from it, since this row names the workspace.
+ */
 function WorkspaceInitial({ name }: { name: string | undefined }) {
-  const initial = name?.trim().charAt(0).toUpperCase();
   return (
-    <span aria-hidden="true" className="flex size-6 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-xs font-medium text-sidebar-accent-foreground">
-      {initial || "?"}
-    </span>
+    <Avatar aria-hidden="true" className="shadow-xs" size="default">
+      <AvatarFallback>{name?.trim().charAt(0).toUpperCase() || "?"}</AvatarFallback>
+    </Avatar>
   );
 }
