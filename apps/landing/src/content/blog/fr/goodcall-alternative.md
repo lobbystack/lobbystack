@@ -15,7 +15,7 @@ canonicalSlug: "goodcall-alternative"
 
 Une **alternative à Goodcall** peut faire passer le prix d'entrée de 79 $ à zéro. LobbyStack inclut 30 minutes sur Gratuit et 150 minutes pour 30 $. Goodcall commence à 79 $ pour 100 appelants uniques, avec une logique, trois contacts de répertoire et sept jours d'historique sur Starter.
 
-Le modèle illimité de Goodcall favorise certains appels longs et répétés. LobbyStack fournit à la plupart des petites entreprises un départ moins cher, toutes les fonctions de réception, un historique illimité, un cloud géré et l'auto-hébergement.
+Le modèle illimité de Goodcall favorise certains appels longs et répétés. LobbyStack fournit à la plupart des petites entreprises un départ moins cher, toutes les fonctions de réception, un historique de plus de sept jours, un cloud géré et l'auto-hébergement.
 
 ## Goodcall et LobbyStack
 
@@ -25,7 +25,7 @@ Le modèle illimité de Goodcall favorise certains appels longs et répétés. L
 | Entrée | 79 $ pour 100 appelants | Gratuit : 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
 | Niveau suivant | 129 $ pour 250 appelants | 30 $ pour 150 minutes |
 | Durée | Minutes illimitées annoncées | Déduites du quota |
-| Routage | Répertoire, services, transferts | Routage et relais humain |
+| Routage | Répertoire, services, transferts | Transfert à une personne |
 | Historique | Sept jours sur Starter | Dossiers dans le tableau de bord |
 | Déploiement | Hébergé | Cloud géré ou auto-hébergement |
 
@@ -33,7 +33,7 @@ Prix et fonctions vérifiés le 30 juillet 2026.
 
 ## LobbyStack coûte moins cher et reste sous votre contrôle
 
-LobbyStack permet de tester réponse, réservation, relais, alertes SMS, résumés et historique sans abonnement. Starter ajoute 150 minutes pour 30 $, soit moins de la moitié du prix d'entrée Goodcall.
+LobbyStack permet de tester réponse, réservation, résumés et historique dans le navigateur sans abonnement. Starter ajoute 150 minutes pour 30 $, soit moins de la moitié du prix d'entrée Goodcall.
 
 Goodcall facture chaque agent et appelant unique. Plusieurs sites peuvent exiger plusieurs abonnements, et chaque nouveau prospect consomme le quota même si l'appel dure 30 secondes. LobbyStack mesure le temps et exclut le spam ainsi que les appels de moins de 10 secondes.
 
@@ -75,7 +75,7 @@ Le prix Goodcall dépend des appelants uniques. Demandez comment le service trai
 
 Testez ensuite les règles entre services. Demandez la location, signalez une réparation urgente, puis changez de sujet pendant l'appel. Vérifiez si l'agent conserve le nom, le motif et les coordonnées pendant le transfert.
 
-Faites passer les mêmes appels dans LobbyStack. Comparez la transcription, le résumé, le transfert et le message envoyé. Le mode de facturation compte, mais votre équipe doit aussi recevoir un dossier exploitable.
+Faites passer les mêmes appels dans LobbyStack. Comparez la transcription, le résumé, le transfert et le message laissé. Le mode de facturation compte, mais votre équipe doit aussi recevoir un dossier exploitable.
 
 ## Choisissez Goodcall si
 
@@ -83,7 +83,7 @@ Choisissez Goodcall si un groupe stable de clients passe des appels longs ou ré
 
 ## Choisissez LobbyStack si
 
-Choisissez LobbyStack pour commencer gratuitement, payer 30 $ plutôt que 79 $, garder un historique illimité, traiter de nombreux appels courts ou contrôler le code et le déploiement.
+Choisissez LobbyStack pour commencer gratuitement, payer 30 $ plutôt que 79 $, garder plus de sept jours d'historique, traiter de nombreux appels courts ou contrôler le code et le déploiement.
 
 ## Sources
 

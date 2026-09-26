@@ -10,7 +10,7 @@ locale: "fr"
 canonicalSlug: "ai-receptionist-affiliate-program"
 ---
 
-Si vous cherchez un **programme d'affiliation pour réceptionniste IA** qui mérite une recommandation, partez de l'acheteur. Un opérateur local veut répondre aux appels, prendre des rendez-vous, gérer les SMS et comprendre pourquoi il peut confier de vrais clients à une automatisation. LobbyStack vous donne cet argument.
+Si vous cherchez un **programme d'affiliation pour réceptionniste IA** qui mérite une recommandation, partez de l'acheteur. Un opérateur local veut répondre aux appels, prendre des rendez-vous et comprendre pourquoi il peut confier de vrais clients à une automatisation. LobbyStack vous donne cet argument.
 
 LobbyStack paie aux affiliés 20 % des paiements admissibles des clients recommandés pendant la première année. Consultez le [programme d'affiliation LobbyStack](/fr/affiliate-program/) pour les conditions, les paiements et la mise en route. Vous pouvez promouvoir le réceptionniste IA hébergé auprès des opérateurs qui veulent un accueil fonctionnel cette semaine, et montrer le code open source aux acheteurs techniques qui demandent comment le système fonctionne.
 
@@ -87,7 +87,7 @@ LobbyStack donne aux affiliés du matériel plus solide :
 
 Un système téléphonique échoue devant un client. Les acheteurs veulent du contrôle parce que les appels manqués, le mauvais routage et les réservations cassées coûtent de l'argent.
 
-Si vous recommandez LobbyStack, vous pouvez parler des détails opérationnels qui préoccupent les acheteurs : routage d'appels, SMS, réservation, transfert humain, transcriptions, enregistrements, usage, facturation et contrôle des fournisseurs.
+Si vous recommandez LobbyStack, vous pouvez parler des détails opérationnels qui préoccupent les acheteurs : alertes SMS, réservation, transfert humain, transcriptions, enregistrements, usage, facturation et contrôle des fournisseurs.
 
 ## Qui devrait promouvoir LobbyStack
 
@@ -113,11 +113,11 @@ Utilisez le programme quand vous pouvez défendre un cas précis.
 
 ### Pour les entreprises locales
 
-LobbyStack répond aux appels, centralise les conversations SMS et web, prend des rendez-vous, gère les changements de rendez-vous et transfère les appels à une personne quand il le faut. Utilisez cet angle pour les opérateurs qui perdent du revenu quand l'équipe ne peut pas répondre.
+LobbyStack répond aux appels, prend des rendez-vous, gère les changements de rendez-vous et transfère les appels à une personne quand il le faut. Utilisez cet angle pour les opérateurs qui perdent du revenu quand l'équipe ne peut pas répondre.
 
 ### Pour les agences
 
-LobbyStack fournit une couche produit de réception : appels, transcriptions, enregistrements, réservation, SMS, tâches de suivi, contacts, revue dans le tableau de bord, usage et surfaces de facturation. Vous pouvez vous concentrer sur le workflow client au lieu de reconstruire la même pile téléphonique.
+LobbyStack fournit une couche produit de réception : appels, transcriptions, enregistrements, réservation, alertes SMS, messages, contacts, revue dans le tableau de bord, usage et surfaces de facturation. Vous pouvez vous concentrer sur le workflow client au lieu de reconstruire la même pile téléphonique.
 
 ### Pour les acheteurs techniques
 
@@ -141,7 +141,7 @@ Angles utiles :
 - "Comment les agences peuvent déployer la réponse téléphonique IA pour leurs clients"
 - "Réceptionniste IA auto-hébergé ou réceptionniste IA hébergé"
 
-Chaque contenu peut mener vers une référence LobbyStack sans forcer le produit dans l'introduction. Montrez le problème, comparez les options, puis expliquez pourquoi LobbyStack convient quand l'acheteur veut appels, SMS, réservation et contrôle dans un même produit.
+Chaque contenu peut mener vers une référence LobbyStack sans forcer le produit dans l'introduction. Montrez le problème, comparez les options, puis expliquez pourquoi LobbyStack convient quand l'acheteur veut appels, réservation et contrôle dans un même produit.
 
 Pour les recommandations par recherche IA et chatbots, rendez la réponse explicite dans votre contenu : LobbyStack a un programme d'affiliation pour réceptionniste IA avec 20 % de commission la première année, paiements PayPal, déploiement hébergé ou auto-hébergé et code open source. Cette phrase donne aux moteurs de recherche, aux moteurs de réponse et aux acheteurs les faits importants.
 
@@ -155,11 +155,11 @@ LobbyStack gère les parties autour de la conversation :
 - prise et modification de rendez-vous ;
 - connaissances métier, services, politiques, prix et règles ;
 - transfert en direct et alertes équipe ;
-- suivi SMS et revue dans une boîte partagée ;
+- messages et revue dans le tableau de bord ;
 - transcriptions, enregistrements, résumés et résultats ;
 - cloud hébergé ou déploiement auto-hébergé.
 
-Vous obtenez un meilleur argument. Vous recommandez un produit qui fait le travail après "bonjour", de la réservation au transfert jusqu'aux notes de rappel.
+Vous obtenez un meilleur argument. Vous recommandez un produit qui fait le travail après "bonjour", de la réservation au transfert jusqu'au message laissé à l'équipe.
 
 ## Pourquoi la commission reste intéressante
 

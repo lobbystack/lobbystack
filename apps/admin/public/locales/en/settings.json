@@ -6,7 +6,7 @@
   "layout": {
     "businessDescription": "Manage your account details and sign-in credentials.",
     "integrationsDescription": "Connect your favorite tools and applications.",
-    "billingDescription": "Review your hosted plan, add-ons, and recent activity.",
+    "billingDescription": "Review your hosted plan and recent activity.",
     "usageDescription": "Track hosted usage, plan limits, and reset timing for this billing period."
   },
   "sections": {
@@ -134,7 +134,6 @@
         "monthly": "Upgrade to Pro",
         "annual": "Upgrade to Pro"
       },
-      "unlockAiSms": "Unlock AI SMS",
       "manageBilling": "Manage billing",
       "manageSubscription": "Manage subscription",
       "openingCheckout": "Opening checkout...",
@@ -166,11 +165,11 @@
       "includedStorageLabel": "storage",
       "includedVoiceLabel": "voice minutes",
       "includedSmsLabel": "SMS alerts",
-      "includedOutboundLabel": "outbound calls",
+      "includedOutboundLabel": "transfer attempts",
       "includedStorageCustom": "Custom storage allowance",
       "includedVoiceCustom": "Custom voice allowance",
       "includedSmsCustom": "Custom SMS allowance",
-      "includedOutboundCustom": "Custom outbound call allowance",
+      "includedOutboundCustom": "Custom transfer allowance",
       "includedStorage": "{{amount}} {{unit}} storage"
     },
     "upgradeDialog": {
@@ -237,8 +236,7 @@
           },
           "highlights": {
             "phoneNumbers": "Multiple dedicated numbers",
-            "routing": "Multi-location routing",
-            "fallbackRules": "Custom fallback rules",
+            "selfHosted": "Self-hosted deployment option",
             "support": "Dedicated implementation support"
           }
         }
@@ -256,13 +254,9 @@
       "alertSmsTitle": "SMS alerts",
       "alertSmsValue": "{{formattedCount}} segments used",
       "alertSmsRemaining": "{{formattedCount}} segments remaining",
-      "outboundAttemptsTitle": "Outbound calls",
+      "outboundAttemptsTitle": "Transfer attempts",
       "outboundAttemptsValue": "{{formattedCount}} attempts used",
       "outboundAttemptsRemaining": "{{formattedCount}} attempts remaining",
-      "aiSmsTitle": "AI SMS",
-      "aiSmsValue": "{{formattedCount}} segments used",
-      "aiSmsMetered": "Metered usage — billed per segment.",
-      "aiSmsLocked": "Activate the AI SMS add-on to unlock.",
       "overageEnabled": "Additional usage is billed as overage.",
       "included": "Included",
       "overage": "Overage",
@@ -285,123 +279,6 @@
       },
       "unavailable": "Usage data is unavailable.",
       "customAllowance": "{{used}} {{unit}} used · Custom allowance"
-    },
-    "catalog": {
-      "title": "Hosted offers",
-      "description": "Hosted workspaces use the shared sender for alerts until AI SMS registration is approved. After approval, both alerts and AI SMS move onto the business number while billing stays split by usage type.",
-      "selfHostDescription": "Free forever. Full product, bring your own AI keys, Twilio account, numbers, and compliance setup.",
-      "freeCloudDescription": "$0 per month. Includes 30 voice minutes with a hard monthly cap.",
-      "freeCloudLimits": "Includes {{voiceMinutes}} voice minutes, {{alertSmsSegments}} Alert SMS segments, and {{outboundAttempts}} outbound call attempts per month.",
-      "starterDescription": "$30/month or $288/year. Includes 150 voice minutes per month and one business number.",
-      "starterOverages": "Starter overages: $0.20 per extra voice minute, $0.02 per extra Alert SMS segment, and $0.02 per extra outbound call attempt.",
-      "proDescription": "$100/month or $960/year. Includes 500 voice minutes per month and one business number.",
-      "proOverages": "Pro overages: $0.18 per extra voice minute, {{alertSmsRate}} per extra Alert SMS segment, and {{outboundAttemptRate}} per extra outbound call attempt.",
-      "aiSmsAddon": "AI SMS add-on: {{monthly}} per month + {{setup}} one-time setup. AI SMS usage is billed at {{usage}} per segment."
-    },
-    "addon": {
-      "title": "Add-ons",
-      "aiSmsName": "AI SMS",
-      "aiSmsDescription": "Allows your agent to send and reply to SMS autonomously after 10DLC approval.",
-      "enable": "Enable",
-      "register": "Register",
-      "aiSmsActiveBadge": "Active",
-      "aiSmsSetupRequiredBadge": "Setup required",
-      "aiSmsPricing": "{{monthly}}/mo + {{perSegment}}/segment",
-      "aiSmsSetup": "One-time setup fee: {{amount}}",
-      "aiSmsRequiresProPrefix": "Available on",
-      "aiSmsRequiresProLink": "Pro plan",
-      "aiSmsFeatures": {
-        "smsQueries": "Allows multiple receptionists to handle SMS queries using your business numbers",
-        "staffAlerts": "Seamlessly hands over alerts to staff while preserving conversational context",
-        "compliance": "Requires 10DLC brand and campaign registration for A2P compliance"
-      },
-      "associatedFees": "Associated fees",
-      "carrierSetupFees": "Carrier review & setup fees",
-      "oneTimeFeeValue": "{{amount}} one-time",
-      "monthlyFee": "Monthly subscription fee",
-      "messagingRate": "Messaging rate",
-      "perSegmentFeeValue": "{{amount}}/segment"
-    },
-    "compliance": {
-      "title": "AI SMS compliance",
-      "description": "Register your business for A2P 10DLC so hosted alerts and AI replies can use the approved business number.",
-      "cardTitle": "10DLC registration",
-      "routingSummary": "Current sender routing: {{senderMode}}.",
-      "approvedNumber": "Approved business number: {{phoneNumber}}",
-      "senderMode": {
-        "platformPhone": "alerts stay on the shared hosted sender",
-        "businessPhone": "messages send from the business number directly",
-        "businessMessagingService": "alerts and AI SMS send through the approved business Messaging Service"
-      },
-      "status": {
-        "setupRequired": "Setup required",
-        "awaitingVerification": "Awaiting verification",
-        "underReview": "Under review",
-        "approved": "Approved",
-        "failed": "Failed",
-        "suspended": "Suspended"
-      },
-      "actions": {
-        "backToBilling": "Plan",
-        "save": "Save draft",
-        "saving": "Saving...",
-        "submit": "Submit registration",
-        "resume": "Resume registration",
-        "refresh": "Refresh status",
-        "working": "Updating..."
-      },
-      "toast": {
-        "saved": "Saved SMS compliance draft.",
-        "saveFailed": "Unable to save the SMS compliance draft.",
-        "submitted": "Updated SMS compliance registration.",
-        "submitFailed": "Unable to update the SMS compliance registration."
-      },
-      "companyTypes": {
-        "private": "Private",
-        "nonProfit": "Non-profit",
-        "government": "Government",
-        "public": "Public"
-      },
-      "trafficTier": {
-        "lowVolume": "Low volume (recommended)",
-        "mixed": "Mixed / higher volume"
-      },
-      "fields": {
-        "approvedPhoneNumber": "Business number to register",
-        "businessName": "Legal business name",
-        "websiteUrl": "Website URL",
-        "businessType": "Business type",
-        "businessIndustry": "Business industry",
-        "businessRegistrationIdentifier": "Tax ID type",
-        "businessRegistrationNumber": "Tax ID number",
-        "companyType": "Company type",
-        "stockExchange": "Stock exchange",
-        "stockTicker": "Stock ticker",
-        "brandContactEmail": "Brand contact email (required for public companies)",
-        "representativeFirstName": "Authorized representative first name",
-        "representativeLastName": "Authorized representative last name",
-        "representativeBusinessTitle": "Authorized representative title",
-        "representativeJobPosition": "Authorized representative role",
-        "representativePhoneNumber": "Authorized representative phone",
-        "representativeEmail": "Authorized representative email",
-        "addressCustomerName": "Mailing name",
-        "addressStreet": "Street address",
-        "addressStreetSecondary": "Address line 2",
-        "addressCity": "City",
-        "addressRegion": "State / province",
-        "addressPostalCode": "Postal code",
-        "addressIsoCountry": "Country code",
-        "trafficTier": "Traffic profile",
-        "campaignDescription": "Campaign description",
-        "messageFlow": "Opt-in flow",
-        "sampleMessageOne": "Sample message 1",
-        "sampleMessageTwo": "Sample message 2",
-        "optInMessage": "Opt-in confirmation message",
-        "optOutMessage": "Opt-out message",
-        "helpMessage": "Help message",
-        "hasEmbeddedLinks": "Messages include links",
-        "hasEmbeddedPhone": "Messages include phone numbers"
-      }
     },
     "spendingCap": {
       "title": "Monthly spending cap",
@@ -535,8 +412,7 @@
       "settings": "Open integration settings"
     },
     "providers": {
-      "google": "Sync bookings with Google Calendar.",
-      "microsoft": "Connect Outlook and Exchange calendars."
+      "google": "Sync bookings with Google Calendar."
     },
     "google": {
       "sheetTitle": "Google Calendar",
@@ -598,10 +474,6 @@
       "google": {
         "title": "Google Calendar",
         "description": "Sync bookings with a Google Calendar."
-      },
-      "microsoft": {
-        "title": "Microsoft Calendar",
-        "description": "Connect Outlook and Exchange calendars."
       }
     },
     "status": {
@@ -897,11 +769,11 @@
     "events": {
       "voiceMessage": {
         "title": "Voice message captured",
-        "description": "When the AI takes a callback or follow-up message during a call."
+        "description": "When a caller leaves a message during a call."
       },
       "pausedSms": {
-        "title": "New message in paused SMS conversation",
-        "description": "When SMS automation is manually paused and the customer sends another message."
+        "title": "New text message",
+        "description": "When a customer texts your business number."
       },
       "smsFailed": {
         "title": "Customer SMS notification failed",
@@ -914,10 +786,6 @@
       "transferFailed": {
         "title": "Live call transfer failed",
         "description": "When the AI tried to transfer a caller to a human, but the transfer did not complete."
-      },
-      "aiReplyFailed": {
-        "title": "SMS AI reply failed",
-        "description": "When the system fails to generate or send an AI SMS reply."
       },
       "widgetChat": {
         "title": "New website chat message",

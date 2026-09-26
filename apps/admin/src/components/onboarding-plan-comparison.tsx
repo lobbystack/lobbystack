@@ -42,14 +42,14 @@ const comparisonGroups: ComparisonGroup[] = [
       },
       {
         key: "outboundCalls",
-        free: { includedKey: "usage.outboundCalls.freeIncluded" },
+        free: false,
         starter: { includedKey: "usage.outboundCalls.starterIncluded", thenKey: "usage.outboundCalls.starterThen" },
         pro: { includedKey: "usage.outboundCalls.proIncluded", thenKey: "usage.outboundCalls.proThen" },
         enterprise: { key: "common.custom" },
       },
       {
         key: "alertSms",
-        free: { includedKey: "usage.alertSms.freeIncluded" },
+        free: false,
         starter: { includedKey: "usage.alertSms.starterIncluded", thenKey: "usage.alertSms.starterThen" },
         pro: { includedKey: "usage.alertSms.proIncluded", thenKey: "usage.alertSms.proThen" },
         enterprise: { key: "common.custom" },
@@ -134,24 +134,12 @@ const comparisonGroups: ComparisonGroup[] = [
       },
       {
         key: "confirmationTexts",
-        free: true,
+        free: false,
         pro: true,
         enterprise: true,
       },
       {
         key: "googleCalendar",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        key: "missedCallFollowUp",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        key: "outboundCalling",
         free: true,
         pro: true,
         enterprise: true,
@@ -179,18 +167,6 @@ const comparisonGroups: ComparisonGroup[] = [
         pro: true,
         enterprise: true,
       },
-      {
-        key: "multiLocation",
-        free: false,
-        pro: false,
-        enterprise: true,
-      },
-      {
-        key: "customEscalation",
-        free: false,
-        pro: false,
-        enterprise: true,
-      },
     ],
   },
   {
@@ -204,22 +180,9 @@ const comparisonGroups: ComparisonGroup[] = [
       },
       {
         key: "smsNotifications",
-        free: true,
+        free: false,
         pro: true,
         enterprise: true,
-      },
-      {
-        key: "aiSms",
-        free: false,
-        starter: {
-          includedKey: "notifications.aiSms.proIncluded",
-          thenKey: "notifications.aiSms.proThen",
-        },
-        pro: {
-          includedKey: "notifications.aiSms.proIncluded",
-          thenKey: "notifications.aiSms.proThen",
-        },
-        enterprise: { key: "common.custom" },
       },
     ],
   },

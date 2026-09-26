@@ -1,6 +1,6 @@
 ---
 title: "LobbyStack is live"
-description: "LobbyStack is now live: an open-source AI receptionist that answers calls, books appointments, follows up, and keeps teams in control."
+description: "LobbyStack is now live: an open-source AI receptionist that answers calls, books appointments, and keeps teams in control."
 pubDate: 2026-05-13T12:00:00-04:00
 author: "LobbyStack Team"
 category: "Product updates"
@@ -14,7 +14,7 @@ Most small businesses do not lose customers because they do bad work. They lose 
 
 Today, [LobbyStack](https://lobbystack.com/) is live.
 
-LobbyStack is an **open-source AI receptionist** for businesses that depend on calls, bookings, quotes, and fast follow-up. It answers when your team is busy, closed, driving between jobs, or already helping another customer.
+LobbyStack is an **open-source AI receptionist** for businesses that depend on phone calls and bookings. It answers when your team is busy, closed, driving between jobs, or already helping another customer.
 
 The goal is practical: **a good caller should not become a missed opportunity because they called at the wrong time.**
 
@@ -29,9 +29,9 @@ When a caller reaches LobbyStack, it can:
 - **answer questions** from your business knowledge
 - **capture caller details** like name, number, service need, location, and urgency
 - **book appointments** from your calendar availability
-- **send confirmations and summaries** by text or email
+- **send a booking confirmation** by text on paid plans
+- **alert your team** with a call summary by email or SMS
 - **transfer urgent calls** to the right person with context attached
-- **follow up** on missed calls, quote requests, reminders, and callbacks
 - **keep the record** with transcripts, recordings, summaries, callers, and outcomes in one dashboard
 
 It is not trying to replace the people who run the business. It is there to cover the moments when those people are with customers, closed for the night, or finally trying to eat lunch without holding a phone in one hand.
@@ -54,13 +54,13 @@ LobbyStack is not a chatbot strapped to a phone number. It is a receptionist sta
 
 It is built around **control, not magic**.
 
-You add the knowledge your receptionist should use: services, prices, hours, policies, locations, staff instructions, FAQs, and the details callers ask about most. You can also tell it what not to say, when not to book, when to transfer, and when to schedule a callback instead of guessing.
+You add the knowledge your receptionist should use: services, prices, hours, policies, locations, staff instructions, FAQs, and the details callers ask about most. You can also tell it what not to say, when not to book, when to transfer, and when to take a message instead of guessing.
 
 That matters because real calls are messy. People interrupt themselves. They ask two questions at once. They change their mind halfway through. They give the address before the service type. A rigid flowchart handles that badly.
 
 LobbyStack lets you describe the outcome in plain language:
 
-> If someone asks for pricing, collect the service type, location, budget, and timeline. Share the approved price range when one exists. If they need exact pricing, schedule a callback with sales.
+> If someone asks for pricing, collect the service type, location, budget, and timeline. Share the approved price range when one exists. If they need exact pricing, take a message for the sales team.
 
 That is closer to how you would train a person, and closer to how your team already thinks about the work.
 
@@ -85,13 +85,13 @@ The first version of LobbyStack focuses on the everyday calls that decide whethe
 - a caller asking about prices, hours, or policies
 - a lead who needs a quote before they commit
 - an urgent request that should reach a person now
-- a missed caller who should not have to call three competitors next
+- an after-hours caller who should not have to call three competitors next
 
 These are not edge cases. They are the ordinary calls that fill calendars, start estimates, rescue jobs, and keep customers from drifting to whoever answered first.
 
 ## Start small, then grow into it
 
-You can start with the [Free plan](https://lobbystack.com/pricing/), test real calls, and see whether LobbyStack fits your business before putting it in front of more customers. The Pro plan is designed for production call coverage with transparent usage-based billing, and Enterprise is available for higher volume, multiple locations, custom routing, or self-hosted implementation support.
+You can start with the [Free plan](https://lobbystack.com/pricing/), test calls in your browser, and see whether LobbyStack fits your business before putting it in front of more customers. The Pro plan is designed for production call coverage with transparent usage-based billing, and Enterprise is available for higher volume or self-hosted implementation support.
 
 Three things matter most in this first release:
 

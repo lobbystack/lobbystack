@@ -1,6 +1,6 @@
 ---
 title: "How much can an AI receptionist save you?"
-description: "Estimate AI receptionist savings from lower answering costs, fewer missed calls, and faster follow-up. Use the missed call calculator to run the numbers."
+description: "Estimate AI receptionist savings from lower answering costs and fewer missed calls. Use the missed call calculator to run the numbers."
 pubDate: 2026-06-03T12:00:00-04:00
 author: "LobbyStack Team"
 category: "Guides"
@@ -79,7 +79,7 @@ That works out to about **$1,238/month in revenue at risk**.
 
 That $1,238 is revenue at risk, not guaranteed revenue. Some callers will still be a poor fit. Some will change their mind. Some would have called back anyway.
 
-But if better answering and follow-up recover even 25% to 50% of that leak, the business is looking at roughly **$310 to $619/month in protected revenue** before subtracting the software cost.
+But if better answering recovers even 25% to 50% of that leak, the business is looking at roughly **$310 to $619/month in protected revenue** before subtracting the software cost.
 
 That is the number worth paying attention to.
 
@@ -134,9 +134,8 @@ An AI receptionist can help by:
 - Booking routine appointments when your rules allow it.
 - Sending a call summary so the handoff is not based on memory.
 - Routing urgent calls differently from routine ones.
-- Following up while the caller is still interested.
 
-That last point matters. A callback two hours later often loses to an answer in the moment. Many customers are busy, and the next business that answers removes another task from their day.
+Speed matters here. A callback two hours later often loses to an answer in the moment. Many customers are busy, and the next business that answers removes another task from their day.
 
 ## AI receptionist vs answering service vs hiring
 
@@ -163,7 +162,7 @@ An AI receptionist tends to make financial sense when a few of these are true:
 - You spend time listening to voicemails and calling people back.
 - One booked job, appointment, or order is worth more than the monthly plan.
 
-It is especially useful for calls where the next step is clear: answer a question, collect details, book an appointment, send a summary, route an urgent caller, or follow up right away.
+It is especially useful for calls where the next step is clear: answer a question, collect details, book an appointment, send a summary, or route an urgent caller.
 
 Repeatable call flows give an AI receptionist more opportunities to save money. If you already know the five questions your staff asks every new caller, you have a good starting point.
 
@@ -208,7 +207,7 @@ Put those together and the decision gets clearer. The product is coverage for a 
 
 ### Is an AI receptionist cheaper than an answering service?
 
-Usually, yes, especially for routine call answering, intake, appointment booking, and follow-up. A human answering service can still be the better choice when every call needs a live person. The real question is whether you need human judgment on every call, or reliable coverage for the repeatable calls that happen all day.
+Usually, yes, especially for routine call answering, intake, and appointment booking. A human answering service can still be the better choice when every call needs a live person. The real question is whether you need human judgment on every call, or reliable coverage for the repeatable calls that happen all day.
 
 ### How do I calculate AI receptionist ROI?
 
@@ -232,6 +231,6 @@ Some will, especially if the call feels evasive or trapped. Most care more about
 
 ## The short answer
 
-For many small businesses, an AI receptionist can save anywhere from a few dozen dollars a month in admin time to hundreds or thousands in protected revenue. The businesses that see the clearest return usually have valuable calls, busy staff, and a real follow-up gap.
+For many small businesses, an AI receptionist can save anywhere from a few dozen dollars a month in admin time to hundreds or thousands in protected revenue. The businesses that see the clearest return usually have valuable calls, busy staff, and a real coverage gap.
 
 The best way to find your number is to run your calls through the [missed call revenue calculator](/missed-call-revenue-calculator/), compare the result to the [pricing](/pricing/), and decide whether the next missed call is worth covering. For vendor evaluation, pair this with [how to choose an AI receptionist](/blog/how-to-choose-an-ai-receptionist/) and [build or buy an AI receptionist](/blog/build-or-buy-ai-receptionist/).

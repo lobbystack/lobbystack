@@ -24,22 +24,22 @@ export const salonsSpasFaqs: FaqItem[] = [
   {
     question: "Will it work with my online booking system?",
     answer:
-      "LobbyStack books appointments directly into your calendar. If you use an online booking platform, you can connect it through webhooks or calendar sync. Many salons use LobbyStack for phone bookings while keeping their online system for self-service clients.",
+      "LobbyStack books appointments into Google Calendar. It doesn't connect to salon booking platforms, so many salons use LobbyStack for phone bookings and keep their online system for self-service clients.",
   },
   {
     question: "Can it send appointment reminders?",
     answer:
-      "Yes. LobbyStack can send confirmation and reminder texts after booking. You control the timing and wording. This helps reduce no-shows and last-minute cancellations.",
+      "Yes, on paid plans. LobbyStack texts the client a confirmation after booking and, if the client agrees, one reminder 24 hours before the appointment. You can't change the timing or wording.",
   },
   {
     question: "What about walk-in clients?",
     answer:
-      "LobbyStack can tell callers about current wait times, check availability for same-day appointments, or add them to a waitlist. You set the policy, and it communicates it consistently.",
+      "LobbyStack can explain your walk-in policy and check availability for a same-day appointment.",
   },
   {
     question: "Can it handle gift card and package inquiries?",
     answer:
-      "Yes. You can add your gift card policies, package details, and redemption rules to LobbyStack. It answers questions, checks balances where possible, and routes purchase requests to your team.",
+      "Yes. You can add your gift card policies, package details, and redemption rules to LobbyStack. It answers questions from those details and takes a message for your team when a client wants to buy one.",
   },
   {
     question: "Does it work for med spas and barbershops too?",

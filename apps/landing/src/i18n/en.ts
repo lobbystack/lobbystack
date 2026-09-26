@@ -27,9 +27,9 @@ export const en = {
         "LobbyStack answers your business calls 24/7, books appointments into your calendar, and transfers urgent calls to your team. Open source, with a free plan.",
     },
     "/features/": {
-      title: "AI receptionist features for calls, messages, and booking",
+      title: "AI receptionist features for calls, booking, and alerts",
       description:
-        "Explore LobbyStack features for phone answering, SMS alerts, appointment booking, call routing, follow-up, and summaries.",
+        "Explore LobbyStack features for phone answering, appointment booking, call transfers, owner alerts, and call summaries.",
     },
     "/pricing/": {
       title: "AI Receptionist Pricing for Small Businesses",
@@ -89,7 +89,7 @@ export const en = {
     "/terms/": {
       title: "Terms of Service - LobbyStack",
       description:
-        "Terms of Service for LobbyStack, the business AI receptionist platform for calls, SMS, booking, routing, and follow-up workflows.",
+        "Terms of Service for LobbyStack, the business AI receptionist platform for calls, SMS alerts, booking, and call transfers.",
     },
     "/search/": {
       title: "Search - LobbyStack",

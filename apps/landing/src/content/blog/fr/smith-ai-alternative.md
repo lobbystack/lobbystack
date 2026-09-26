@@ -24,7 +24,7 @@ Smith.ai associe l'IA à un réseau de réceptionnistes en Amérique du Nord. Lo
 | Quota gratuit | 25 appels, carte requise | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
 | Entrée payante | Pro dès 150 $ pour 75 appels | Starter à 30 $ pour 150 minutes |
 | Relais humain | Réseau d'agents, certaines tâches facturées par appel | Équipe que vous configurez |
-| Langues | Anglais et espagnol annoncés | Selon la pile vocale |
+| Langues | Anglais et espagnol annoncés | Répond dans la langue de l'appelant |
 | Code source | Non annoncé | Dépôt public sous licence MIT |
 | Auto-hébergement | Non annoncé | Parcours pris en charge |
 
@@ -34,7 +34,7 @@ Prix et fonctions vérifiés le 30 juillet 2026.
 
 Le réseau Smith.ai apporte une vraie valeur quand personne dans l'entreprise ne peut reprendre un appel difficile. L'acheteur doit confirmer les relais inclus et les tâches humaines de vérification ou réservation facturées par appel.
 
-Beaucoup de petites entreprises ont déjà un propriétaire, un répartiteur ou un employé de garde. LobbyStack traite les questions et rendez-vous courants, puis transfère les cas sensibles à cette personne avec le contexte. Gratuit permet de tester 30 minutes avant tout paiement.
+Beaucoup de petites entreprises ont déjà un propriétaire, un répartiteur ou un employé de garde. LobbyStack traite les questions et rendez-vous courants, puis transfère les cas sensibles à cette personne avec le contexte. Gratuit permet de tester 30 minutes de conversation dans le navigateur avant tout paiement.
 
 LobbyStack garde aussi le workflow vérifiable. L'équipe contrôle fournisseurs, conservation, consignes et infrastructure sans attendre un niveau Enterprise.
 

@@ -10,7 +10,7 @@ locale: "fr"
 canonicalSlug: "open-source-ai-receptionist-stack"
 ---
 
-Une pile open source pour réceptionniste IA ne se limite pas à un agent vocal. Il faut aussi le routage téléphonique, la voix en temps réel, les réservations, les transcriptions, les rappels, les alertes à l'équipe, la relecture dans un tableau de bord, le suivi d'usage, la facturation et une façon simple de modifier ce que l'IA peut faire.
+Une pile open source pour réceptionniste IA ne se limite pas à un agent vocal. Il faut aussi le routage téléphonique, la voix en temps réel, les réservations, les transcriptions, la prise de messages, les alertes à l'équipe, la relecture dans un tableau de bord, le suivi d'usage, la facturation et une façon simple de modifier ce que l'IA peut faire.
 
 C'est la partie que beaucoup d'équipes finissent par reconstruire.
 
@@ -45,9 +45,9 @@ La plateforme couvre :
 - la prise, le déplacement et l'annulation de rendez-vous ;
 - les transcriptions, enregistrements, résumés et résultats d'appel ;
 - le contexte métier, les FAQ, les services, les prix, les politiques et les règles ;
-- les conversations SMS et les notifications par SMS ou courriel ;
-- le transfert humain, les messages, rappels et tâches ;
-- les demandes de devis et la qualification de prospects ;
+- les textos de confirmation et de rappel de rendez-vous, plus les alertes courriel ou SMS pour l'équipe ;
+- le transfert humain et les messages ;
+- la collecte des coordonnées de l'appelant et de la raison de l'appel ;
 - les contacts, rendez-vous, historiques d'appel, analytics, usage et surfaces de facturation.
 
 L'objectif n'est pas de remplacer tous les outils que vous utilisez déjà. Twilio, les calendriers, les fournisseurs courriel, les outils d'analyse et la facturation restent importants. LobbyStack fournit le produit de réception qui se place au-dessus.
@@ -59,14 +59,14 @@ Par exemple :
 ```text
 Si l'appelant demande un devis, collecte le type de service, la zone,
 le délai et le budget. Partage les prix de départ approuvés quand ils
-existent. Si le prix dépend du travail, crée une tâche de rappel.
+existent. Si le prix dépend du travail, prends un message pour l'équipe.
 ```
 
-L'IA peut mener la conversation, mais elle utilise des outils pour les actions qui doivent être fiables : vérifier les disponibilités, réserver, enregistrer des notes, créer des rappels, transférer l'appel, envoyer des notifications et terminer proprement.
+L'IA peut mener la conversation, mais elle utilise des outils pour les actions qui doivent être fiables : vérifier les disponibilités, réserver, enregistrer des messages, transférer l'appel, envoyer des notifications et terminer proprement.
 
 ## Cloud hébergé ou Docker auto-hébergé
 
-Certaines équipes veulent un produit géré. [LobbyStack Cloud](/pricing/) sert à cela : créer un compte, configurer l'entreprise, connecter les outils et tester des appels réels sans gérer l'infrastructure.
+Certaines équipes veulent un produit géré. [LobbyStack Cloud](/pricing/) sert à cela : créer un compte, configurer l'entreprise, connecter les outils et tester des appels sans gérer l'infrastructure.
 
 D'autres équipes veulent la pile sur leur propre infrastructure. LobbyStack le permet aussi.
 
@@ -83,7 +83,7 @@ Si vous construisez des réceptionnistes IA pour des clients, la marge n'est gé
 Elle est dans la compréhension de l'entreprise :
 
 - Quels appels doivent réserver ?
-- Quels appels doivent devenir des demandes de devis ?
+- Quels appels doivent se terminer par un message pour l'équipe ?
 - Quels appels exigent une personne tout de suite ?
 - Quelles informations l'équipe doit-elle voir après l'appel ?
 - Quelles règles comptent dans ce secteur ?
@@ -105,7 +105,7 @@ C'est particulièrement utile si vous avez besoin de :
 - comptes fournisseurs apportés par vous pour les déploiements auto-hébergés ;
 - prise et modification de rendez-vous ;
 - transcriptions, enregistrements, résumés et résultats d'appel ;
-- SMS, notifications courriel, rappels et tâches ;
+- les alertes courriel et SMS pour l'équipe ;
 - infrastructure contrôlée par le client pour les agences ou les déploiements réglementés.
 
 Ce n'est pas une façon d'éviter l'exploitation. Les systèmes téléphoniques doivent être testés. Le comportement IA doit être relu. Les comptes fournisseurs doivent être gérés.

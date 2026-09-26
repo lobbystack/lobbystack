@@ -54,7 +54,7 @@ export async function connectCalendar(
       ...(input.tokenExpiresAt !== undefined ? { tokenExpiresAt: new Date(input.tokenExpiresAt) } : {}),
       status: "connected",
     }).onConflictDoUpdate({
-      target: [calendarConnections.provider, calendarConnections.externalAccountId],
+      target: [calendarConnections.businessId, calendarConnections.provider, calendarConnections.externalAccountId],
       set: {
         ownerUserId: input.userId,
         ...(input.staffId !== undefined ? { staffId: input.staffId } : {}),

@@ -19,7 +19,7 @@ export const openSourceReceptionistFaqs: FaqItem[] = [
   {
     question: "Can I change the AI prompts and call flows?",
     answer:
-      "Yes. Because the code is open source, you can modify greeting scripts, intake questions, escalation rules, booking logic, and downstream integrations without waiting on a vendor roadmap.",
+      "Yes. Because the code is open source, you can modify greeting scripts, intake questions, escalation rules, and booking logic without waiting on a vendor roadmap.",
   },
   {
     question: "Does open source mean less support?",

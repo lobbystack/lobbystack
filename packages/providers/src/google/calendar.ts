@@ -1,4 +1,5 @@
 import { assertCertificationCalendar } from "@lobbystack/shared";
+import { DateTime } from "luxon";
 
 export class GoogleOAuthRefreshError extends Error {
   constructor(readonly reconnectRequired: boolean) {
@@ -23,7 +24,7 @@ export class GoogleCalendarProvider {
     url.searchParams.set("response_type", "code");
     url.searchParams.set("access_type", "offline");
     url.searchParams.set("prompt", "consent");
-    url.searchParams.set("scope", [...new Set(["openid", "email", ...(input.scopes ?? ["https://www.googleapis.com/auth/calendar"])])].join(" "));
+    url.searchParams.set("scope", [...new Set(["openid", "email", ...(input.scopes ?? ["https://www.googleapis.com/auth/calendar.calendarlist.readonly", "https://www.googleapis.com/auth/calendar.events"])])].join(" "));
     url.searchParams.set("state", input.state);
     return url.toString();
   }
@@ -69,21 +70,42 @@ export class GoogleCalendarProvider {
 
   async getBusyBlocks(input: { accessToken: string; calendarId: string; startsAt: string; endsAt: string }): Promise<Array<{ startsAt: string; endsAt: string }>> {
     assertCertificationCalendar(input.calendarId);
-    const response = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
-      method: "POST",
-      headers: { authorization: `Bearer ${input.accessToken}`, "content-type": "application/json" },
-      body: JSON.stringify({ timeMin: input.startsAt, timeMax: input.endsAt, items: [{ id: input.calendarId }] }),
-    });
-    if (!response.ok) {
-      throw new Error(`Google Calendar availability request failed with status ${response.status}.`);
+    const blocks: Array<{ startsAt: string; endsAt: string }> = [];
+    const seenPageTokens = new Set<string>();
+    let pageToken: string | undefined;
+    // An incomplete mirror must fail closed rather than advertising open slots.
+    for (let page = 0; page < 100; page++) {
+      const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(input.calendarId)}/events`);
+      url.searchParams.set("timeMin", input.startsAt);
+      url.searchParams.set("timeMax", input.endsAt);
+      url.searchParams.set("singleEvents", "true");
+      url.searchParams.set("maxResults", "2500");
+      url.searchParams.set("fields", "timeZone,nextPageToken,items(start,end,status,transparency,attendees(self,responseStatus))");
+      if (pageToken) url.searchParams.set("pageToken", pageToken);
+      const response = await fetch(url, { headers: { authorization: `Bearer ${input.accessToken}` } });
+      if (!response.ok) throw new Error(`Google Calendar availability request failed with status ${response.status}.`);
+      const payload = (await response.json()) as {
+        timeZone?: string;
+        nextPageToken?: string;
+        items?: Array<{ start?: { dateTime?: string; date?: string; timeZone?: string }; end?: { dateTime?: string; date?: string; timeZone?: string }; status?: string; transparency?: string; attendees?: Array<{ self?: boolean; responseStatus?: string }> }>;
+      };
+      if (!Array.isArray(payload.items)) throw new Error("Google Calendar availability could not be verified.");
+      for (const event of payload.items) {
+        if (event.status === "cancelled" || event.transparency === "transparent" || event.attendees?.some((attendee) => attendee.self && attendee.responseStatus === "declined")) continue;
+        const eventTime = (value: typeof event.start) => value?.dateTime
+          ? DateTime.fromISO(value.dateTime, { zone: value.timeZone ?? payload.timeZone ?? "UTC", setZone: true })
+          : value?.date ? DateTime.fromISO(value.date, { zone: value.timeZone ?? payload.timeZone ?? "UTC" }) : null;
+        const start = eventTime(event.start);
+        const end = eventTime(event.end);
+        if (!start?.isValid || !end?.isValid || end <= start) throw new Error("Google Calendar returned an invalid busy interval.");
+        blocks.push({ startsAt: start.toUTC().toISO()!, endsAt: end.toUTC().toISO()! });
+      }
+      if (!payload.nextPageToken) return blocks;
+      if (seenPageTokens.has(payload.nextPageToken)) throw new Error("Google Calendar availability pagination did not advance.");
+      seenPageTokens.add(payload.nextPageToken);
+      pageToken = payload.nextPageToken;
     }
-    const payload = (await response.json()) as { calendars?: Record<string, { errors?: unknown[]; busy?: Array<{ start?: string; end?: string }> }> };
-    const calendar = payload.calendars?.[input.calendarId];
-    if (!calendar || calendar.errors?.length || !Array.isArray(calendar.busy)) throw new Error("Google Calendar availability could not be verified.");
-    return calendar.busy.map((block) => {
-      if (!block.start || !block.end || !Number.isFinite(Date.parse(block.start)) || !Number.isFinite(Date.parse(block.end)) || Date.parse(block.end) <= Date.parse(block.start)) throw new Error("Google Calendar returned an invalid busy interval.");
-      return { startsAt: block.start, endsAt: block.end };
-    });
+    throw new Error("Google Calendar availability exceeded the page limit.");
   }
 
   async upsertEvent(input: { accessToken: string; calendarId: string; eventId?: string; clientEventId?: string; title: string; startsAt: string; endsAt: string; description?: string }): Promise<{ externalEventId: string }> {

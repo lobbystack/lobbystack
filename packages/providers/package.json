@@ -29,11 +29,13 @@
     "@lobbystack/shared": "workspace:*",
     "@lobbystack/telemetry": "workspace:*",
     "ai": "^7.0.67",
+    "luxon": "^3.7.2",
     "nodemailer": "^9.1.1",
     "standardwebhooks": "^1.0.0",
     "twilio": "^5.12.2"
   },
   "devDependencies": {
+    "@types/luxon": "^3.7.1",
     "@types/nodemailer": "^7.0.4"
   }
 }

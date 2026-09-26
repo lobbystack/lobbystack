@@ -15,7 +15,7 @@ canonicalSlug: "moneypenny-ai-receptionist-alternative"
 
 Une **alternative à Moneypenny AI Receptionist** peut réduire la facture quand votre équipe assure les urgences. Moneypenny commence à 69 $ pour 25 appels et facture 199 $ pour 100. LobbyStack commence gratuitement, facture 30 $ pour 150 minutes et inclut 500 minutes pour 100 $.
 
-Moneypenny ajoute un accompagnement et l'accès à son activité de réception humaine. LobbyStack fournit rendez-vous, relais, SMS, transcriptions, résumés, code public et auto-hébergement à un prix logiciel bien inférieur.
+Moneypenny ajoute un accompagnement et l'accès à son activité de réception humaine. LobbyStack fournit rendez-vous, relais, alertes SMS, transcriptions, résumés, code public et auto-hébergement à un prix logiciel bien inférieur.
 
 ## Moneypenny et LobbyStack
 

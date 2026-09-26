@@ -34,7 +34,7 @@ Prix et fonctions vérifiés le 30 juillet 2026.
 
 Les pages Sona consultées mettent en avant les réponses et la collecte de prospects ou messages. Elles n'annoncent pas l'exécution directe des rendez-vous. LobbyStack vérifie les disponibilités, applique les règles, réserve ou modifie, transfère une urgence et conserve le résultat.
 
-LobbyStack fonctionne aussi sans abonnement Quo. Gratuit donne 30 minutes pour tester ces actions. Starter fournit 150 minutes pour 30 $, avec alertes SMS et appels sortants inclus.
+LobbyStack fonctionne aussi sans abonnement Quo. Gratuit donne 30 minutes pour tester ces actions. Starter fournit 150 minutes pour 30 $, avec alertes SMS et 20 tentatives de transfert incluses.
 
 Sona convient à une équipe déjà engagée dans Quo qui veut des messages dans sa boîte partagée. LobbyStack convient à celle qui veut accomplir plus de travail et rester portable entre fournisseurs.
 
@@ -64,7 +64,7 @@ LobbyStack place la réservation et les modifications au cœur des workflows. Un
 
 Une équipe de cinq courtiers utilise les numéros partagés Quo. Les appelants posent des questions sur une propriété ou demandent un courtier.
 
-Sona convient si la collecte de messages dans Quo couvre le besoin. LobbyStack convient si l'équipe veut réserver des consultations, qualifier davantage ou contrôler son déploiement.
+Sona convient si la collecte de messages dans Quo couvre le besoin. LobbyStack convient si l'équipe veut réserver des consultations, recueillir les coordonnées hors de Quo ou contrôler son déploiement.
 
 ## Testez les limites du workflow Sona
 
@@ -72,7 +72,7 @@ Demandez à Sona de router un appel par bureau, langue et employé. Appelez ensu
 
 Si la réservation compte, testez votre calendrier. Confirmez les durées, les délais tampons, les modifications, les annulations et la route de secours lorsque le calendrier refuse une demande.
 
-Rejouez le scénario dans LobbyStack. Comparez le temps de configuration et le dossier remis au personnel. Sona profite de son intégration à Quo. LobbyStack sert les workflows sur mesure et les équipes qui imposent leurs propres limites d'infrastructure.
+Rejouez le scénario dans LobbyStack. Comparez le temps de configuration et le dossier remis au personnel. Sona profite de son intégration à Quo. LobbyStack fonctionne sans Quo et peut tourner sur une infrastructure que vous contrôlez.
 
 Vérifiez aussi la portabilité du numéro et l'export des dossiers avant de migrer. Demandez le format des transcriptions, des résumés et des contacts. Une équipe qui quitte Quo doit savoir quels historiques elle conserve. Une équipe qui auto-héberge LobbyStack doit prévoir ses propres sauvegardes et exports.
 

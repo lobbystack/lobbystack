@@ -26,7 +26,7 @@ Upfirst facture chaque appel traité. LobbyStack facture les minutes et ajoute l
 | Usage payant | Quotas et dépassements par appel | Quotas et dépassements par minute |
 | Réservation | Calendrier pendant l'appel | Réservation, modifications et règles métier |
 | Transferts | Transferts assistés et en cascade | Relais humain avec le contexte |
-| Langues | Plus de 35 annoncées | Selon la pile vocale configurée |
+| Langues | Plus de 35 annoncées | Répond dans la langue de l'appelant |
 | Déploiement | Service hébergé | Cloud géré ou auto-hébergement |
 | Code source | Non annoncé sur les pages consultées | Dépôt public sous licence MIT |
 
@@ -34,7 +34,7 @@ Prix et fonctions vérifiés le 30 juillet 2026.
 
 ## LobbyStack commence gratuitement et reste sous votre contrôle
 
-LobbyStack offre assez de temps gratuit pour tester l'accueil, les connaissances, les règles de rendez-vous, les urgences et les dossiers avec de vrais scénarios. Le spam et les appels de moins de 10 secondes ne consomment pas le quota.
+Gratuit permet de tester l'accueil et les réponses dans le navigateur. Choisissez un forfait payant avec un numéro dédié pour tester les appels téléphoniques et les transferts. Le spam et les appels de moins de 10 secondes ne consomment pas le quota.
 
 Le prix par appel Upfirst peut favoriser les longues admissions. Le prix à la minute LobbyStack peut coûter moins cher pour des demandes brèves. Quatre-vingt-dix appels d'une minute entrent dans Starter à 30 $, contre 59,95 $ pour 90 appels chez Upfirst.
 
@@ -103,6 +103,6 @@ Choisissez LobbyStack pour tester la voix dans le navigateur gratuitement, accé
 
 ## Verdict
 
-LobbyStack offre le meilleur point de départ : aucun abonnement, un workflow complet et une propriété qu'Upfirst n'annonce pas. Upfirst peut convenir aux longues conversations qui profitent de la facturation par appel.
+LobbyStack offre le meilleur point de départ : un test gratuit dans le navigateur, une facturation à la minute et une propriété qu'Upfirst n'annonce pas. Upfirst peut convenir aux longues conversations qui profitent de la facturation par appel.
 
 [Commencez avec LobbyStack gratuitement](/fr/pricing/) et chiffrez vos vrais appels. Si le contrôle compte, [consultez le code](https://github.com/lobbystack/lobbystack).

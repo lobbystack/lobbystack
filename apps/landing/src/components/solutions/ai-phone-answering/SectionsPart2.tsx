@@ -57,7 +57,7 @@ export function BusinessFit() {
 
         <p className="mt-12 text-center text-sm font-medium text-muted-foreground">
           If a missed call can mean a missed customer, LobbyStack can help you
-          answer faster and follow up with better context.
+          answer faster and give your team the details they need.
         </p>
       </div>
     </section>

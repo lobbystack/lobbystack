@@ -11,4 +11,4 @@ You can now keep a clearer set of instructions for how LobbyStack answers, quali
 
 Update the assistant as your business changes. Change how it greets callers, handles urgent requests, explains services, or decides when a person should step in.
 
-We also tightened the surrounding setup flow so the receptionist can use those rules consistently across live calls, summaries, and follow-up work.
+We also tightened the surrounding setup flow so the receptionist can use those rules consistently across live calls and summaries.

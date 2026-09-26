@@ -28,9 +28,9 @@ Reception sounds excellent and speaks more than 70 languages. LobbyStack gives y
 | Mid-tier plan | $79 for 275 credits ($66 billed annually) | $100 for 500 minutes ($80 billed annually) |
 | Mid-tier overage | $0.38 per credit | $0.18 per minute |
 | Concurrent calls on entry plan | 1 | No plan limit on Starter and Pro without a spending cap |
-| Languages | 70+ with automatic detection | Answers in the caller's language and switches automatically |
+| Languages | 70+ with automatic detection | Answers in the caller's language |
 | Staff answers first | Built-in staff-first mode | Through your carrier's call forwarding |
-| Integrations | Google Calendar, Zapier, webhooks, MCP | Google Calendar, public API |
+| Integrations | Google Calendar, Zapier, webhooks, MCP | Google Calendar |
 | HIPAA | Not supported | Self-host for full control of call data |
 | Code | Closed, hosted only | MIT license, managed cloud or self-hosted |
 
@@ -78,7 +78,7 @@ A plumbing company takes 120 calls a month that last about 2 minutes each, or 24
 
 On Reception, 240 minutes is more than Basic's 75, so the company needs Plus at $79 for 275 credits. Chat draws from the same pool: 100 minutes of website chat uses 50 more credits, for 290 in total. The 15 credits over the allowance cost $0.38 each, so the month comes to $84.70.
 
-On LobbyStack, 240 minutes costs $30 for Starter plus 90 extra minutes at $0.20, for a total of $48. Website chat doesn't touch those minutes, and two emergency calls that arrive together both reach the receptionist.
+On LobbyStack, 240 minutes costs $30 for Starter plus 90 extra minutes at $0.20, for a total of $48. LobbyStack covers phone calls only, so the chat widget stays with the tool the company uses today. Two emergency calls that arrive together both reach the receptionist.
 
 ## Choose ElevenLabs Reception when
 

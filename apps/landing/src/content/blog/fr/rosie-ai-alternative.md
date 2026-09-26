@@ -26,7 +26,7 @@ Vous pouvez tester LobbyStack dans votre navigateur sur Gratuit. Starter coûte 
 | Niveau supérieur | 149 $ pour 1 000 minutes | 100 $ pour 500 minutes |
 | Réservation | À partir de Scale | Dans les workflows pris en charge |
 | Transfert assisté | À partir de Scale | Relais humain |
-| Langues | Anglais et espagnol annoncés | Selon la pile vocale |
+| Langues | Anglais et espagnol annoncés | Répond dans la langue de l'appelant |
 | Déploiement | Hébergé | Cloud géré ou auto-hébergement |
 
 Prix et fonctions vérifiés le 30 juillet 2026.
@@ -35,7 +35,7 @@ Prix et fonctions vérifiés le 30 juillet 2026.
 
 Le niveau d'entrée Rosie propose beaucoup de minutes pour prendre des messages. Une entreprise qui veut réserver, envoyer un texto pendant l'appel ou effectuer un transfert assisté doit comparer LobbyStack au niveau Scale à 149 $.
 
-LobbyStack permet de tester réservation et relais avec 30 minutes gratuites. Starter offre 150 minutes pour 30 $ et Pro 500 pour 100 $. Chaque forfait hébergé inclut des alertes SMS et des appels sortants. Le spam et les appels de moins de 10 secondes ne réduisent pas le quota.
+LobbyStack permet de tester réservation et relais avec 30 minutes gratuites. Starter offre 150 minutes pour 30 $ et Pro 500 pour 100 $. Starter et Pro incluent des alertes SMS et des tentatives de transfert. Le spam et les appels de moins de 10 secondes ne réduisent pas le quota.
 
 Rosie garde un avantage pour les messages en anglais ou en espagnol à grand volume. LobbyStack fournit le travail complet à un niveau inférieur et conserve le choix des fournisseurs.
 
@@ -57,7 +57,7 @@ LobbyStack se concentre sur cette couche : connaissances approuvées, admission,
 
 ## La couverture linguistique peut décider
 
-Rosie annonce l'anglais et l'espagnol. LobbyStack dépend de la voix et du modèle configurés. Une équipe auto-hébergée peut choisir ses fournisseurs, puis doit tester la transcription et les consignes dans chaque langue.
+Rosie annonce l'anglais et l'espagnol. LobbyStack répond dans la langue de l'appelant. Une équipe auto-hébergée peut choisir ses fournisseurs, puis doit tester la transcription et les consignes dans chaque langue.
 
 Un nombre de langues ne garantit pas une qualité égale. Testez des noms, adresses, interruptions et changements de langue avec vos clients.
 
@@ -71,7 +71,7 @@ LobbyStack Pro couvre 500 minutes avant dépassement. Sa couche de réservation 
 
 ## Testez le niveau que vous comptez acheter
 
-Créez l'agent Rosie au niveau que vous garderez après l'essai. Demandez-lui de répondre à une politique, de réserver avec un délai tampon, de transférer une urgence et d'envoyer un texto. Confirmez les tâches incluses et celles qui exigent Scale ou Growth.
+Créez l'agent Rosie au niveau que vous garderez après l'essai. Demandez-lui de répondre à une politique, de réserver avec un délai tampon, de transférer une urgence et d'envoyer un texto de confirmation. Confirmez les tâches incluses et celles qui exigent Scale ou Growth.
 
 Utilisez le même scénario avec LobbyStack. Vérifiez si chaque système applique une règle d'annulation, refuse un service indisponible et transmet une question incertaine à un humain. Faites lire la transcription à l'employé qui recevra le dossier.
 
@@ -83,7 +83,7 @@ Choisissez Rosie si les minutes incluses, l'anglais et l'espagnol, l'accès mobi
 
 ## Choisissez LobbyStack si
 
-Choisissez LobbyStack pour obtenir réservation, relais, SMS, transcriptions et résumés sous les 149 $ de Scale. Vous pouvez tester la voix dans le navigateur sur Gratuit et consulter le code public avant de choisir un forfait payant.
+Choisissez LobbyStack pour obtenir réservation, relais, alertes SMS, transcriptions et résumés sous les 149 $ de Scale. Vous pouvez tester la voix dans le navigateur sur Gratuit et consulter le code public avant de choisir un forfait payant.
 
 ## Sources
 

@@ -13,7 +13,7 @@ locale: "fr"
 canonicalSlug: "nextiva-xbert-alternative"
 ---
 
-Une **alternative à Nextiva XBert** peut répondre gratuitement au lieu de commencer à 99 $ plus un forfait Nextiva. LobbyStack inclut 30 minutes sur Gratuit et 150 minutes pour 30 $. XBert affiche 100 interactions partagées entre voix, SMS et chat pour 99 $, puis 0,99 $ par interaction.
+Une **alternative à Nextiva XBert** peut se tester gratuitement au lieu de commencer à 99 $ plus un forfait Nextiva. LobbyStack inclut 30 minutes sur Gratuit et 150 minutes pour 30 $. XBert affiche 100 interactions partagées entre voix, SMS et chat pour 99 $, puis 0,99 $ par interaction.
 
 LobbyStack consacre le budget à la réception : rendez-vous, modifications, relais, alertes SMS, transcriptions, résumés et historique. Le produit reste indépendant de Nextiva, en cloud géré ou auto-hébergé.
 
@@ -24,7 +24,7 @@ LobbyStack consacre le budget à la réception : rendez-vous, modifications, rel
 | Forfait gratuit durable | Non annoncé | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
 | Prix d'entrée | 99 $ pour 100 interactions | 30 $ pour 150 minutes |
 | Dépassement | 0,99 $ par interaction | À la minute selon le forfait |
-| Canaux | Voix, SMS, chat web | Voix, alertes SMS et suivi |
+| Canaux | Voix, SMS, chat web | Voix, textos de réservation et alertes SMS |
 | Réservation | Réservation et déplacement annoncés | Réservation et modifications |
 | Plateforme de base | Ajout à un forfait Nextiva | Produit indépendant |
 | Code source | Non annoncé | Dépôt public sous licence MIT |
@@ -69,7 +69,7 @@ Un groupe possède trois cliniques. Les patients appellent, écrivent et utilise
 
 XBert peut convenir si le groupe veut un assistant sur tous ces canaux dans Nextiva. Il faut tester l'identité, le choix de clinique, les droits de calendrier et le comptage des changements de canal.
 
-LobbyStack peut convenir si le téléphone reste le canal principal et si le groupe veut contrôler l'infrastructure.
+LobbyStack peut convenir si le téléphone reste le canal principal et si le groupe veut contrôler l'infrastructure. LobbyStack ne répartit pas les appels entre cliniques, donc chaque clinique aurait son propre réceptionniste.
 
 ## Comptez un parcours client complet
 
@@ -96,6 +96,6 @@ Choisissez LobbyStack si les appels dominent et si vous voulez un test gratuit, 
 
 ## Verdict
 
-LobbyStack donne aux équipes centrées sur le téléphone la meilleure valeur et une sortie sûre : prix inférieur, usage gratuit, dossiers complets et aucune dépendance à une suite. XBert convient si Nextiva et le chat web faisaient déjà partie du plan.
+LobbyStack donne aux équipes centrées sur le téléphone la meilleure valeur et une sortie sûre : prix inférieur, test gratuit dans le navigateur, dossiers complets et aucune dépendance à une suite. XBert convient si Nextiva et le chat web faisaient déjà partie du plan.
 
 [Essayez LobbyStack gratuitement](/fr/pricing/) avant de payer 99 $ pour un quota partagé.

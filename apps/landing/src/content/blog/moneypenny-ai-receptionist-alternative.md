@@ -15,7 +15,7 @@ canonicalSlug: "moneypenny-ai-receptionist-alternative"
 
 A **Moneypenny AI Receptionist alternative** can lower the software bill when your own team handles escalations. Moneypenny starts at $69 for 25 calls and charges $199 for 100. LobbyStack starts free, charges $30 for 150 minutes, and includes 500 minutes for $100.
 
-Moneypenny adds managed onboarding and access to its live-receptionist operation. LobbyStack gives businesses booking, handoff, SMS, transcripts, summaries, public code, and self-hosting at a much lower software price.
+Moneypenny adds managed onboarding and access to its live-receptionist operation. LobbyStack gives businesses booking, handoff, SMS alerts, transcripts, summaries, public code, and self-hosting at a much lower software price.
 
 ## Moneypenny vs LobbyStack
 
@@ -26,7 +26,7 @@ Moneypenny adds managed onboarding and access to its live-receptionist operation
 | 100-unit tier | $199 for 100 calls | $100 for 500 minutes |
 | Human escalation | Customer team or Moneypenny staff | Configured customer team |
 | Onboarding | Managed setup advertised | Self-serve cloud or implementation support |
-| Booking and qualification | Advertised | Included receptionist workflows |
+| Booking and qualification | Advertised | Booking and lead capture included |
 | Source code | Not advertised | Public MIT-licensed repository |
 | Deployment | Moneypenny-managed | Managed cloud or self-hosted |
 
@@ -46,7 +46,7 @@ Moneypenny built its name around human answering. Its AI receptionist adds quali
 
 That managed model can help a business without employees available for transfers. It also gives buyers one vendor for AI coverage and live receptionist service.
 
-LobbyStack transfers calls to people the business configures. It sends context through caller details, summaries, transcripts, and notifications, but it does not include an external receptionist workforce. A company can connect another answering partner, though it owns that relationship.
+LobbyStack transfers calls to people the business configures. It sends context through caller details, summaries, transcripts, and notifications, but it does not include an external receptionist workforce. A company can transfer calls to another answering partner's number, though it owns that relationship.
 
 ## Per-call prices reflect the service model
 

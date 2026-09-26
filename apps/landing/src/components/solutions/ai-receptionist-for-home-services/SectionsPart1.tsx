@@ -216,19 +216,19 @@ export function UseCases() {
     },
     {
       title: "Quote intake",
-      copy: "Collect project details, square footage, issue descriptions, and photos so your estimator shows up prepared.",
+      copy: "Collect project details, square footage, and issue descriptions so your estimator shows up prepared.",
     },
     {
       title: "Appointment booking",
-      copy: "Offer open slots, book the service call, and send the homeowner a confirmation with arrival window.",
+      copy: "Offer open slots, book the service call, and send the homeowner a confirmation text.",
     },
     {
       title: "Parts and warranty questions",
       copy: "Answer routine questions about warranty coverage, part availability, and return policies without pulling a tech off a job.",
     },
     {
-      title: "Missed-call recovery",
-      copy: "Follow up with callers who got voicemail, collect the details, and help them book before they call someone else.",
+      title: "Spam and robocalls",
+      copy: "LobbyStack filters spam calls, and they don't count against your voice minutes.",
     },
   ]
 

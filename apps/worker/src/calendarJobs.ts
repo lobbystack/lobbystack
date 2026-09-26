@@ -3,6 +3,7 @@ import { and, asc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { appointments, calendarConnections, contacts, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { CALENDAR_SYNC_HORIZON_MS, markCalendarConnectionSync, recordProductEvent, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
+import { redactOtelExceptionText } from "@lobbystack/telemetry/node";
 import type { GoogleCalendarProvider } from "@lobbystack/providers/google/calendar";
 import type { JobResult } from "./handlers";
 
@@ -62,7 +63,7 @@ export async function syncAppointmentCalendar(dependencies: Dependencies, input:
       return { status: "completed", entityId: appointmentId };
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Calendar synchronization failed.";
+    const message = error instanceof Error ? redactOtelExceptionText(error.message) : "Calendar synchronization failed.";
     await updateAppointmentSyncState(dependencies.domain, { businessId, appointmentId, state: "failed", error: message });
     if (message !== "Calendar selection changed during synchronization.") {
       await markCalendarConnectionSync(dependencies.domain, { businessId, connectionId: initial.connectionId, error: message });
@@ -98,7 +99,7 @@ export async function reconcileBusinessCalendar(dependencies: Dependencies, busi
       await upsertBusyBlocks(dependencies.domain, { businessId, connectionId: connection.id, calendarId: connection.calendarId, markSynced: true, syncStartedAt: startsAt, blocks: blocks.map((block) => ({ ...block, ...(connection.staffId ? { staffId: connection.staffId } : {}) })) });
       synced++;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Calendar synchronization failed.";
+      const message = error instanceof Error ? redactOtelExceptionText(error.message) : "Calendar synchronization failed.";
       if (message === "Calendar selection changed during synchronization.") continue;
       await markCalendarConnectionSync(dependencies.domain, { businessId, connectionId: connection.id, error: message });
       failures++;

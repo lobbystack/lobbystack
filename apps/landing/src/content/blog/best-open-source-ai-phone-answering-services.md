@@ -42,7 +42,7 @@ Run a real call test for each finalist: booking request, pricing question, angry
 
 **Best for:** Service businesses and agencies that want calls, booking, transcripts, dashboards, billing, and self-hosting without assembling ten repos
 
-[LobbyStack](https://lobbystack.com/) is the option on this list closest to a complete **AI receptionist** product. It covers inbound calls, appointment booking and changes, transcripts and summaries, business context and FAQs, SMS, human handoff, staff dashboards, usage tracking, and client-style deployments. You can run the hosted cloud, use it as an [open-source AI receptionist](/solutions/open-source-ai-receptionist/), or [self-host with Docker](/solutions/self-hosted-ai-receptionist/).
+[LobbyStack](https://lobbystack.com/) is the option on this list closest to a complete **AI receptionist** product. It covers inbound calls, appointment booking and changes, transcripts and summaries, business context and FAQs, booking texts, email and SMS alerts, human handoff, staff dashboards, usage tracking, and client-style deployments. You can run the hosted cloud, use it as an [open-source AI receptionist](/solutions/open-source-ai-receptionist/), or [self-host with Docker](/solutions/self-hosted-ai-receptionist/).
 
 The tradeoff is scope. You get a real operating layer around the call, but you still bring provider accounts (Twilio, OpenAI, calendar, email, and related services) and own the deployment if you self-host. That is the honest cost of skipping SaaS lock-in while keeping product depth.
 

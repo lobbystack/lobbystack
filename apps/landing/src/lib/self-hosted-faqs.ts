@@ -19,7 +19,7 @@ export const selfHostedFaqs: FaqItem[] = [
   {
     question: "Can I use my own LLM or API key?",
     answer:
-      "You use your own API keys. Voice calls run on OpenAI Realtime with your OpenAI account. Website chat and knowledge embeddings accept any OpenAI-compatible endpoint, so you can point them at another provider or a model you host.",
+      "You use your own API keys. Voice calls run on OpenAI Realtime with your OpenAI account. Text generation and knowledge embeddings accept any OpenAI-compatible endpoint, so you can point them at another provider or a model you host.",
   },
   {
     question: "Is self-hosting suitable for agencies and resellers?",
@@ -44,7 +44,7 @@ export const selfHostedFaqs: FaqItem[] = [
   {
     question: "Can I customize the voice, prompts, and behavior?",
     answer:
-      "Yes. Self-hosted deployments give you full access to the prompt templates, voice settings, greeting scripts, routing rules, and integration hooks. You can tailor every aspect of the caller experience.",
+      "Yes. Self-hosted deployments give you full access to the prompt templates, voice settings, greeting scripts, and routing rules. You can tailor every aspect of the caller experience.",
   },
   {
     question: "How does self-hosted pricing work?",

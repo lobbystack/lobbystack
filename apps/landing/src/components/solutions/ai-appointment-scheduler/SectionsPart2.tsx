@@ -42,7 +42,7 @@ export function BusinessFit() {
             Built for businesses that book by phone
           </h2>
           <p className="section-intro">
-            LobbyStack is a good fit when appointments, service visits, consultations, estimates, or callbacks are part of how your business makes money.
+            LobbyStack is a good fit when appointments, service visits, consultations, or estimates are part of how your business makes money.
           </p>
         </div>
 

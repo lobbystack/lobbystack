@@ -69,7 +69,8 @@ Vous décrivez la politique en mots :
 Pour les appels de rendez-vous, collecte le service, le jour ou l'heure
 souhaités, le nom et le numéro. Propose des créneaux seulement depuis l'outil
 de disponibilité. Confirme la réservation seulement après le succès de
-l'outil de réservation. Si aucun créneau ne convient, crée une tâche de rappel.
+l'outil de réservation. Si aucun créneau ne convient, prends un message pour
+que l'équipe rappelle.
 ```
 
 La réceptionniste peut mener la conversation. Les outils gèrent les actions qui demandent une autorité.
@@ -107,25 +108,24 @@ Une politique de devis peut dire :
 ```text
 Pour les appels de devis, demande le type de service, la zone, le délai et
 le budget. Partage les prix de départ approuvés quand ils existent. Si le prix
-dépend d'une revue par l'équipe, crée un rappel de devis avec les détails.
+dépend d'une revue par l'équipe, prends un message avec les détails.
 ```
 
-La réceptionniste n'invente pas les prix. Elle collecte les bons détails, partage les fourchettes approuvées et crée une tâche quand une personne doit décider.
+La réceptionniste n'invente pas les prix. Elle collecte les bons détails, partage les fourchettes approuvées et prend un message quand une personne doit décider.
 
-### Rappels
+### Demandes de rappel
 
-Les rappels semblent simples jusqu'à ce que l'appelant dise "demain matin", donne un autre numéro ou demande un responsable parce que la situation presse.
+Les demandes de rappel semblent simples jusqu'à ce que l'appelant dise "demain matin", donne un autre numéro ou demande un responsable parce que la situation presse.
 
 La politique peut dire :
 
 ```text
-Si l'appelant a besoin d'un rappel, collecte la raison, la fenêtre souhaitée,
-le nom et le meilleur numéro. Si la demande semble urgente, marque le rappel
-urgent et préviens le contact de garde. Si la demande est normale, crée une
-tâche pour le prochain jour ouvrable.
+Si l'appelant veut être rappelé, prends un message avec la raison, la fenêtre
+souhaitée, le nom et le meilleur numéro. Si la demande semble urgente,
+indique-le au début du message.
 ```
 
-La réceptionniste transforme le langage de l'appelant en tâche utile pour l'équipe. Le produit garde la raison du rappel, la fenêtre, l'urgence et le contexte de transcription.
+La réceptionniste transforme le langage de l'appelant en message utile pour l'équipe. LobbyStack garde la raison, la fenêtre de rappel et l'urgence avec la transcription, puis alerte le propriétaire.
 
 ### Transfert humain
 
@@ -150,11 +150,11 @@ Si votre réceptionniste IA dépend d'une chaîne de branches pour décider quoi
 
 LobbyStack remplace cette couche. Il possède le comportement en direct, l'état de l'appel, les résultats d'outils, le contexte de transcription, la raison du transfert et le résultat final.
 
-Vous pouvez encore utiliser n8n, Zapier, Make ou des webhooks maison quand un client a des systèmes en aval que LobbyStack n'intègre pas encore. Gardez-les hors de l'appel en direct. Le réceptionniste IA doit pouvoir décider de la prochaine action responsable pendant l'appel, puis enregistrer un résultat clair auquel l'équipe peut se fier.
+Vous pouvez encore utiliser n8n, Zapier ou Make pour des automatisations hors appel. LobbyStack ne s'y connecte pas et n'envoie pas de webhooks sortants, donc ces outils restent hors de l'appel en direct. Le réceptionniste IA doit pouvoir décider de la prochaine action responsable pendant l'appel, puis enregistrer un résultat clair auquel l'équipe peut se fier.
 
 ## Où LobbyStack s'insère
 
-[LobbyStack](/fr/blog/open-source-ai-receptionist-stack/) est une plateforme open source de réceptionniste IA. Elle fournit la couche produit de réception : appels, réservations, transcriptions, enregistrements, SMS, rappels, tâches, demandes de devis, transferts, revue dans un tableau de bord, usage et surfaces de facturation.
+[LobbyStack](/fr/blog/open-source-ai-receptionist-stack/) est une plateforme open source de réceptionniste IA. Elle fournit la couche produit de réception : appels, réservations, transcriptions, enregistrements, résumés d'appel, messages, alertes au propriétaire, transferts, revue dans un tableau de bord, usage et facturation.
 
 Vous pouvez utiliser le cloud hébergé quand la vitesse compte, ou [l'auto-héberger avec Docker](/solutions/self-hosted-ai-receptionist/) quand vous voulez placer la pile sur votre infrastructure ou les serveurs d'un client.
 

@@ -141,8 +141,7 @@ const tiers: Tier[] = [
     highlight: false,
     highlights: [
       "Multiple dedicated numbers",
-      "Multi-location routing",
-      "Custom fallback rules",
+      "Custom usage limits",
       "Dedicated implementation support",
     ],
   },
@@ -246,8 +245,7 @@ const tiersFr: Tier[] = [
     highlight: false,
     highlights: [
       "Plusieurs numéros dédiés",
-      "Routage multi-sites",
-      "Règles de secours personnalisées",
+      "Limites d'utilisation sur mesure",
       "Accompagnement dédié à l’implémentation",
     ],
   },
@@ -293,15 +291,15 @@ const comparisonGroupsEn: ComparisonGroup[] = [
         enterprise: "Custom",
       },
       {
-        feature: "Outbound call attempts",
-        free: { included: "2 included" },
+        feature: "Transfer attempts",
+        free: false,
         starter: { included: "20 included", then: "then $0.02/attempt" },
         pro: { included: "100 included", then: "then $0.02/attempt" },
         enterprise: "Custom",
       },
       {
         feature: "Alert SMS segments",
-        free: { included: "10 included" },
+        free: false,
         starter: { included: "50 included", then: "then $0.02/segment" },
         pro: { included: "200 included", then: "then $0.02/segment" },
         enterprise: "Custom",
@@ -368,7 +366,7 @@ const comparisonGroupsEn: ComparisonGroup[] = [
         enterprise: true,
       },
       {
-        feature: "Multilingual support",
+        feature: "Answers in the caller's language",
         free: true,
         pro: true,
         enterprise: true,
@@ -376,7 +374,7 @@ const comparisonGroupsEn: ComparisonGroup[] = [
     ],
   },
   {
-    category: "Booking & follow-up",
+    category: "Booking",
     rows: [
       {
         feature: "Appointment booking",
@@ -386,24 +384,12 @@ const comparisonGroupsEn: ComparisonGroup[] = [
       },
       {
         feature: "Appointment confirmation texts",
-        free: true,
+        free: false,
         pro: true,
         enterprise: true,
       },
       {
         feature: "Google Calendar integration",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        feature: "Missed-call follow-up",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        feature: "Outbound calls",
         free: true,
         pro: true,
         enterprise: true,
@@ -431,18 +417,6 @@ const comparisonGroupsEn: ComparisonGroup[] = [
         pro: true,
         enterprise: true,
       },
-      {
-        feature: "Multi-location routing",
-        free: false,
-        pro: false,
-        enterprise: true,
-      },
-      {
-        feature: "Custom fallback and escalation rules",
-        free: false,
-        pro: false,
-        enterprise: true,
-      },
     ],
   },
   {
@@ -456,16 +430,9 @@ const comparisonGroupsEn: ComparisonGroup[] = [
       },
       {
         feature: "SMS notifications",
-        free: true,
+        free: false,
         pro: true,
         enterprise: true,
-      },
-      {
-        feature: "Two-way AI SMS (optional add-on)",
-        free: false,
-        starter: { included: "$5/mo + $19 setup", then: "$0.03/segment from the first segment" },
-        pro: { included: "$5/mo + $19 setup", then: "$0.03/segment from the first segment" },
-        enterprise: "Custom",
       },
     ],
   },
@@ -542,15 +509,15 @@ const comparisonGroupsFr: ComparisonGroup[] = [
         enterprise: "Sur mesure",
       },
       {
-        feature: "Tentatives d'appels sortants",
-        free: { included: "2 incluses" },
+        feature: "Tentatives de transfert",
+        free: false,
         starter: { included: "20 incluses", then: "puis 0,02 $/tentative" },
         pro: { included: "100 incluses", then: "puis 0,02 $/tentative" },
         enterprise: "Sur mesure",
       },
       {
         feature: "Segments SMS d'alerte",
-        free: { included: "10 inclus" },
+        free: false,
         starter: { included: "50 inclus", then: "puis 0,02 $/segment" },
         pro: { included: "200 inclus", then: "puis 0,02 $/segment" },
         enterprise: "Sur mesure",
@@ -617,7 +584,7 @@ const comparisonGroupsFr: ComparisonGroup[] = [
         enterprise: true,
       },
       {
-        feature: "Support multilingue",
+        feature: "Répond dans la langue de l'appelant",
         free: true,
         pro: true,
         enterprise: true,
@@ -625,7 +592,7 @@ const comparisonGroupsFr: ComparisonGroup[] = [
     ],
   },
   {
-    category: "Rendez-vous et suivi",
+    category: "Rendez-vous",
     rows: [
       {
         feature: "Prise de rendez‑vous",
@@ -635,24 +602,12 @@ const comparisonGroupsFr: ComparisonGroup[] = [
       },
       {
         feature: "SMS de confirmation de rendez‑vous",
-        free: true,
+        free: false,
         pro: true,
         enterprise: true,
       },
       {
         feature: "Intégration Google Calendar",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        feature: "Suivi des appels manqués",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        feature: "Appels sortants",
         free: true,
         pro: true,
         enterprise: true,
@@ -680,18 +635,6 @@ const comparisonGroupsFr: ComparisonGroup[] = [
         pro: true,
         enterprise: true,
       },
-      {
-        feature: "Routage multi-sites",
-        free: false,
-        pro: false,
-        enterprise: true,
-      },
-      {
-        feature: "Règles de secours et d’escalade personnalisées",
-        free: false,
-        pro: false,
-        enterprise: true,
-      },
     ],
   },
   {
@@ -705,16 +648,9 @@ const comparisonGroupsFr: ComparisonGroup[] = [
       },
       {
         feature: "Notifications SMS",
-        free: true,
+        free: false,
         pro: true,
         enterprise: true,
-      },
-      {
-        feature: "SMS IA bidirectionnels (option payante)",
-        free: false,
-        starter: { included: "5 $/mois + 19 $ de configuration", then: "0,03 $/segment dès le premier segment" },
-        pro: { included: "5 $/mois + 19 $ de configuration", then: "0,03 $/segment dès le premier segment" },
-        enterprise: "Sur mesure",
       },
     ],
   },
