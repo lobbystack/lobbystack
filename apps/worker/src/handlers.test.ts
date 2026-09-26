@@ -6,7 +6,7 @@ import { vi } from "vitest";
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteSentProductEventsBefore, expireProspectDemos, generateAffiliatePayoutRun, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markNotificationSent, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, releaseNotificationDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, loadOperatorNotificationDelivery, markOperatorNotificationSent, queueDailyOperatorSummaries } from "@lobbystack/domain";
-import { cancelRetiredPhoneVerificationSend } from "@lobbystack/domain";
+import { cancelRetiredPhoneVerificationSend, queueOnboardingFollowupEmail } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning } from "@lobbystack/domain";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => {
@@ -28,6 +28,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     claimNotificationDelivery: vi.fn(),
     claimOperatorNotificationDelivery: vi.fn(),
     cancelRetiredPhoneVerificationSend: vi.fn(),
+    queueOnboardingFollowupEmail: vi.fn(),
     claimNumberProvisioning: vi.fn(),
     countPublishableOutboxMessages: vi.fn(),
     deleteCallRecording: vi.fn(),
@@ -99,6 +100,29 @@ function pricingJob(type: "sms.syncPrice" | "call.syncPrice", payload: Record<st
 describe("worker handlers", () => {
   it.each(["verify_email", "password_reset", "existing_account"])("fails %s delivery when SMTP is missing", async template => {
     await expect(handleJob({ jobId: randomUUID(), businessId: null, type: "email.send", queue: "default", payload: { template }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: undefined as never } })).rejects.toThrow("SMTP configuration");
+  });
+  it("skips the onboarding follow-up when no founder sender is configured", async () => {
+    const businessId = randomUUID();
+    const job = { jobId: randomUUID(), type: "onboarding.sendFollowup" as const, queue: "default" as const, businessId, payload: { completedAt: new Date().toISOString() }, trace: {}, idempotencyKey: `onboarding-followup:${businessId}`, scheduled: false };
+    await expect(handleJob(job, { domain: { db: undefined as never }, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "skipped" });
+    expect(queueOnboardingFollowupEmail).not.toHaveBeenCalled();
+  });
+  it("queues the onboarding follow-up through the domain with the configured sender", async () => {
+    const businessId = randomUUID(); const domain = { db: undefined as never };
+    const completedAt = "2026-09-24T10:00:00.000Z";
+    const sender = { from: "Raphael from LobbyStack <raphael@lobbystack.com>", name: "Raphael" };
+    vi.mocked(queueOnboardingFollowupEmail).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    const job = { jobId: randomUUID(), type: "onboarding.sendFollowup" as const, queue: "default" as const, businessId, payload: { completedAt }, trace: {}, idempotencyKey: `onboarding-followup:${businessId}`, scheduled: false };
+    await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() }, onboardingFollowupSender: sender })).resolves.toEqual({ status: "completed", entityId: businessId });
+    expect(queueOnboardingFollowupEmail).toHaveBeenCalledWith(domain, { businessId, completedAt: new Date(completedAt), sender });
+    await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() }, onboardingFollowupSender: sender })).resolves.toEqual({ status: "skipped", entityId: businessId });
+    await expect(handleJob({ ...job, payload: {} }, { domain, email: { sendTemplate: vi.fn() }, onboardingFollowupSender: sender })).rejects.toThrow("Invalid onboarding follow-up payload.");
+  });
+  it("sends onboarding follow-up email from the founder sender", async () => {
+    const sendTemplate = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const payload = { template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@lobbystack.com>", subject: "How'd you like LobbyStack?", variables: { businessName: "Acme" } };
+    await handleJob({ jobId: randomUUID(), businessId: randomUUID(), type: "email.send", queue: "default", payload, trace: {}, idempotencyKey: "onboarding-followup:x:email", scheduled: false }, { domain: { db: undefined as never }, email: { sendTemplate } });
+    expect(sendTemplate).toHaveBeenCalledWith(expect.objectContaining({ template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@lobbystack.com>" }));
   });
   it("drains a retired phone verification send without contacting the provider", async () => {
     const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };

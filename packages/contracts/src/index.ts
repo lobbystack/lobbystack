@@ -312,6 +312,7 @@ export const jobTypes = [
   "phoneNumber.provision",
   "phoneNumber.reclaim",
   "prospectDemo.expire",
+  "onboarding.sendFollowup",
   "affiliate.generatePayoutRun",
   "telemetry.flush",
   "outbox.backlogSample",
