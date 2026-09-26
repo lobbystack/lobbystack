@@ -325,6 +325,9 @@ export function useWebVoiceCall({
       })
     } catch (error) {
       if (abandoned()) return
+      // The server may already have started a session, for example when the
+      // browser rejects OpenAI's answer; end it rather than leave it billing.
+      endRemoteSession()
       cleanup()
       setStatus("error")
       setErrorMessage(getErrorMessage(error, locale))

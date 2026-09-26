@@ -226,8 +226,10 @@ export function createLiveCallHandler(input: { domain: DomainContext }) {
     const finish = async (summary: LiveCallSummary) => {
       const seconds = providerSeconds(summary, request.channel);
       const measuredSeconds = summary.durationMs / 1000;
-      await finishLiveCall(input.domain, { ...call, seconds, measuredSeconds, end: end ?? endFromCloseReason(summary.closeReason), channel: request.channel });
-      void saveRecording(request, measuredSeconds * 1000);
+      const completed = await finishLiveCall(input.domain, { ...call, seconds, measuredSeconds, end: end ?? endFromCloseReason(summary.closeReason), channel: request.channel });
+      // Only the attach that finished the call keeps its recording, so a late
+      // retry that re-attaches to an ended call doesn't copy it twice.
+      if (completed) void saveRecording(request, measuredSeconds * 1000);
     };
 
     controller = new LiveCallController({

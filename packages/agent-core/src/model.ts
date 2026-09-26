@@ -10,8 +10,14 @@ type ReasoningEffort = (typeof REASONING_EFFORTS)[number];
 
 type AgentModelEnvironment = Record<string, string | undefined>;
 
+function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end -= 1;
+  return value.slice(0, end);
+}
+
 function usesOpenAI(environment: AgentModelEnvironment): boolean {
-  return (environment.AI_CHAT_BASE_URL?.trim() || DEFAULT_BASE_URL).replace(/\/+$/, "") === DEFAULT_BASE_URL;
+  return trimTrailingSlashes(environment.AI_CHAT_BASE_URL?.trim() || DEFAULT_BASE_URL) === DEFAULT_BASE_URL;
 }
 
 // Website chat and calls share one text model, set with the AI_CHAT_* variables.

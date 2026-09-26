@@ -14,6 +14,10 @@ describe("createAgentModel", () => {
     expect(model).toMatchObject({ provider: "openai.chat", modelId: "local-model" });
   });
 
+  it("treats OpenAI's URL with trailing slashes as OpenAI", () => {
+    expect(createAgentModel({ OPENAI_API_KEY: "sk-test", AI_CHAT_BASE_URL: "https://api.openai.com/v1//" })).toMatchObject({ provider: "openai.responses" });
+  });
+
   it("needs a key to reach OpenAI", () => {
     expect(createAgentModel({})).toBeUndefined();
   });

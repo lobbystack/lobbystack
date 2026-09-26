@@ -411,6 +411,9 @@ export function useWebVoiceCall({
         stopAttemptResources();
         return;
       }
+      // The server may already have started a session, for example when the
+      // browser rejects OpenAI's answer; end it rather than leave it billing.
+      endRemoteSession();
       cleanup();
       setStatus("error");
       setErrorKey(getWebVoiceErrorKey(error));

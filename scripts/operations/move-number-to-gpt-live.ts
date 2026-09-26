@@ -22,6 +22,13 @@ const optionsSchema = z.object({
   apply: z.boolean().default(false),
 });
 
+/** The voice gateway's inbound URL. Rollback refuses to run without an HTTPS gateway. */
+export function rollbackVoiceUrl(baseUrl: string | undefined): string {
+  const trimmed = baseUrl?.trim().replace(/\/$/, "") ?? "";
+  if (!trimmed.startsWith("https://")) throw new Error("Set VOICE_GATEWAY_BASE_URL to the gateway's HTTPS URL before rolling a number back.");
+  return `${trimmed}/twilio/voice/inbound`;
+}
+
 export async function main(argv = process.argv.slice(2)): Promise<void> {
   const { values } = parseArgs({ args: argv, options: { "business-id": { type: "string" }, number: { type: "string" }, rollback: { type: "boolean" }, apply: { type: "boolean" } } });
   const options = optionsSchema.parse({ businessId: values["business-id"], number: values.number, rollback: values.rollback ?? false, apply: values.apply ?? false });
@@ -37,15 +44,22 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
     if (!row?.providerPhoneId) throw new Error("That business has no active number matching it.");
     const target = options.rollback ? "voice gateway" : "GPT-Live";
     console.log(JSON.stringify({ number: options.number, phoneNumberId: row.id, current: row.voiceWebhookTargetUrl, target, apply: options.apply }));
+    // Checked before the dry run returns, so a dry run catches a missing gateway URL.
+    const gatewayVoiceUrl = options.rollback ? rollbackVoiceUrl(process.env.VOICE_GATEWAY_BASE_URL) : undefined;
     if (!options.apply) return;
 
     const twilio = new TwilioProvider({ accountSid, authToken });
-    if (options.rollback) await twilio.removeNumberFromSipTrunk({ trunkSid, providerPhoneId: row.providerPhoneId });
-    else await twilio.addNumberToSipTrunk({ trunkSid, providerPhoneId: row.providerPhoneId });
-    const voiceBaseUrl = (process.env.VOICE_GATEWAY_BASE_URL ?? "").replace(/\/$/, "");
+    if (gatewayVoiceUrl) {
+      // A number bought straight onto the trunk has no voice URL. Point it at
+      // the gateway before it leaves the trunk, so calls always have a target.
+      await twilio.configureIncomingPhoneNumber({ providerPhoneId: row.providerPhoneId, voiceUrl: gatewayVoiceUrl });
+      await twilio.removeNumberFromSipTrunk({ trunkSid, providerPhoneId: row.providerPhoneId });
+    } else {
+      await twilio.addNumberToSipTrunk({ trunkSid, providerPhoneId: row.providerPhoneId });
+    }
     await withBusinessTransaction(database.db, { businessId: options.businessId, actorType: "worker" }, async (tx) => {
       await tx.update(phoneNumbers).set({
-        voiceWebhookTargetUrl: options.rollback ? `${voiceBaseUrl}/twilio/voice/inbound` : `sip-trunk:${trunkSid}`,
+        voiceWebhookTargetUrl: gatewayVoiceUrl ?? `sip-trunk:${trunkSid}`,
         voiceWebhookLastSyncedAt: new Date(),
         updatedAt: new Date(),
       }).where(eq(phoneNumbers.id, row.id));

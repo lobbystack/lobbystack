@@ -76,9 +76,14 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
     }
     throw error;
   }
-  // A retried delivery for a call we already answered: the first delivery owns
-  // it, and accepting again would fail and close the live call record.
-  if (call.duplicate) return new NextResponse(null, { status: 200 });
+  // A retried delivery. The first one may have died before accepting or before
+  // the worker attached, so finish the job without touching the call record:
+  // accepting an accepted session just fails, and attaching is idempotent.
+  if (call.duplicate) {
+    await client.live.sessions.accept(input.sessionId, { session: buildPhoneSessionConfig(input.snapshot) }).catch(() => undefined);
+    await attachWorkerToLiveSession({ sessionId: input.sessionId, businessId: input.businessId, callId: call.callId, conversationId: call.conversationId, channel: "voice", ...(input.from ? { callerPhone: input.from } : {}) }).catch(() => undefined);
+    return new NextResponse(null, { status: 200 });
+  }
   if (call.blocked) {
     await client.live.sessions.reject(input.sessionId, { status_code: 603 });
     // Closes the record so the minute reservation doesn't stay open.
