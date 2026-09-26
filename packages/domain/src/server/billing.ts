@@ -6,7 +6,7 @@ import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import type { DomainContext } from "./context";
 import { recordAffiliateCommissionInTransaction } from "./affiliates";
-import { recordProductEvent } from "./productEvents";
+import { recordProductEventInTransaction } from "./productEvents";
 import { requireBusinessAdmin } from "../authz";
 import { correctUsageInTransaction, enqueueUsageSyncInTransaction, getUsageStatusInTransaction, reserveUsageInTransaction, type NonAiBillingUsageKind, type UsageReservationResult } from "./usage";
 
@@ -629,26 +629,26 @@ export async function reconcileBillingProviderEvent(
       });
     }
 
+    // The event commits with the reconciliation that produced it. Marking the
+    // provider event processed after reporting it separately would lose the
+    // start for good, because no later pass detects the same transition twice.
+    if (startedSubscription) {
+      await recordProductEventInTransaction(tx, {
+        name: "billing.subscription_started",
+        distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+        businessId: input.businessId,
+        actorType: "worker",
+        properties: {
+          plan: startedSubscription.plan,
+          billingInterval: startedSubscription.billingInterval,
+          previousPlan: startedSubscription.previousPlan,
+        },
+      });
+    }
+
     await tx.update(providerEvents).set({ status: billingKey ? "processed" : "ignored", updatedAt: new Date() }).where(eq(providerEvents.id, event.id));
     return { reconciled: Boolean(billingKey), started: startedSubscription };
   });
-
-  // Telemetry is audit data recorded after the authoritative transaction commits,
-  // so a reporting failure can never roll back a reconciled payment.
-  const started = outcome.started;
-  if (started) {
-    await recordProductEvent(context, {
-      name: "billing.subscription_started",
-      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
-      businessId: input.businessId,
-      actorType: "worker",
-      properties: {
-        plan: started.plan,
-        billingInterval: started.billingInterval,
-        previousPlan: started.previousPlan,
-      },
-    }).catch(() => null);
-  }
 
   return outcome.reconciled;
 }

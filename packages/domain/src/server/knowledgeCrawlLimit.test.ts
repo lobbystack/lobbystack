@@ -17,7 +17,23 @@ vi.mock("../authz", async (original) => ({
   requireBusinessAdmin: mocks.requireBusinessAdmin,
 }));
 
-import { createKnowledgeDocument, FULL_CRAWL_PAGE_LIMIT, ONBOARDING_CRAWL_PAGE_LIMIT } from "./knowledge";
+/** Rows written to website_ingestion_jobs, so a test can read the recorded cap. */
+const written: Record<string, unknown>[] = [];
+
+function recordingBuilder(rows: Record<string, unknown>[]): unknown {
+  const chain: unknown = new Proxy(function () {} as unknown as Record<string | symbol, unknown>, {
+    get(_target, property) {
+      if (property === "then") return (resolve: (value: unknown) => unknown) => resolve(rows);
+      if (property === "values") return (value: Record<string, unknown>) => { if ("pageLimit" in value) written.push(value); return chain; };
+      if (property === "onConflictDoUpdate") return (config: { set?: Record<string, unknown> }) => { if (config?.set && "pageLimit" in config.set) written.push(config.set); return chain; };
+      return () => chain;
+    },
+    apply: () => chain,
+  });
+  return chain;
+}
+
+import { createKnowledgeDocument, expandWebsiteCrawl, FULL_CRAWL_PAGE_LIMIT, ONBOARDING_CRAWL_PAGE_LIMIT } from "./knowledge";
 
 const context = { db: {} as never };
 
@@ -117,6 +133,33 @@ describe("website crawl page limits", () => {
   it("reads the whole site when the dashboard retries a crawl that failed", async () => {
     const job = await retryFailedWebsiteDocument(false);
     expect(job?.payload.limit).toBe(FULL_CRAWL_PAGE_LIMIT);
+  });
+
+  it("records the cap it crawled with, because the page count cannot tell a sample from a full read", async () => {
+    written.length = 0;
+    mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _input: unknown, run: (tx: unknown) => Promise<unknown>) => await run({
+      select: () => recordingBuilder([]),
+      insert: () => recordingBuilder([{ id: "doc_1" }]),
+      update: () => recordingBuilder([]),
+      execute: () => recordingBuilder([]),
+    }));
+    await createKnowledgeDocument(context, { userId: "user_1", businessId: "biz_1", title: "https://example.com", sourceType: "website", sourceUrl: "https://example.com", onboarding: true });
+    expect(written.at(0)?.pageLimit).toBe(ONBOARDING_CRAWL_PAGE_LIMIT);
+  });
+
+  it("rewrites the cap when the operator asks for the rest, so the guide step stays done", async () => {
+    written.length = 0;
+    mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _input: unknown, run: (tx: unknown) => Promise<unknown>) => await run({
+      select: () => recordingBuilder([{ id: "doc_1", sourceType: "website", sourceUrl: "https://example.com", revision: 1 }]),
+      insert: () => recordingBuilder([{ id: "job_1" }]),
+      update: () => recordingBuilder([]),
+      execute: () => recordingBuilder([]),
+    }));
+    await expandWebsiteCrawl(context, { userId: "user_1", businessId: "biz_1", documentId: "doc_1" });
+    // The expansion reuses the ingestion row, so the update has to carry the cap
+    // too; leaving the sample value behind reopens the step after every read.
+    expect(written.every(row => row.pageLimit === FULL_CRAWL_PAGE_LIMIT)).toBe(true);
+    expect(written.length).toBeGreaterThanOrEqual(2);
   });
 
   it("keeps the onboarding sample well below the full read", () => {
