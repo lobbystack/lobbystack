@@ -141,5 +141,14 @@
     "sentTitle": "Merci",
     "sentDescription": "Nous lisons chacun de ces messages.",
     "close": "Fermer"
+  },
+  "websiteImport": {
+    "runningTitle": "Lecture de {{host}}",
+    "runningHint": "{{imported}} pages lues jusqu'ici, {{indexed}} prêtes à répondre.",
+    "doneTitle": "Votre agent a lu {{host}}",
+    "doneHint_one": "{{count}} page est prête à répondre.",
+    "doneHint_other": "{{count}} pages sont prêtes à répondre.",
+    "failedTitle": "Nous n'avons pas pu lire {{host}}",
+    "failedHint": "Ajoutez vos informations à la main ci-dessous, ou relancez l'import depuis votre tableau de bord."
   }
 }

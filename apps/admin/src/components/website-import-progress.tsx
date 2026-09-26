@@ -31,7 +31,9 @@ export function websiteImportHost(websiteUrl: string): string {
  * can watch their agent learn instead of waiting in front of a blank step.
  */
 export function WebsiteImportProgress({ job }: { job: WebsiteImportSummary }) {
-  const { t } = useTranslation("onboarding");
+  // These strings live in common: the card renders on the dashboard too, and
+  // the dashboard does not carry the onboarding namespace.
+  const { t } = useTranslation("common");
   const host = websiteImportHost(job.websiteUrl);
   const failed = job.status === "failed" || job.status === "cancelled";
   const done = job.status === "completed";
@@ -57,7 +59,7 @@ export function WebsiteImportProgress({ job }: { job: WebsiteImportSummary }) {
             {failed
               ? t("websiteImport.failedHint")
               : done
-                ? t("websiteImport.doneHint", { pages: job.indexedCount || job.importedCount })
+                ? t("websiteImport.doneHint", { count: job.indexedCount || job.importedCount })
                 : t("websiteImport.runningHint", { imported: job.importedCount, indexed: job.indexedCount })}
           </p>
         </div>
