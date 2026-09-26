@@ -44,7 +44,8 @@ export async function POST(request: Request) {
     const businessId = resolved?.rows[0]?.business_id;
     const snapshot = businessId ? await getCachedBusinessSnapshot(createWorkerDomainContext(), { businessId }) : null;
     if (!businessId || !snapshot) {
-      const routing = event.data.sip_headers.filter((item) => ["to", "from", "diversion", "p-called-party-id"].includes(item.name.toLowerCase()));
+      // Only the dialled-number headers: "From" is the caller's own number.
+      const routing = event.data.sip_headers.filter((item) => ["to", "diversion", "p-called-party-id"].includes(item.name.toLowerCase()));
       console.warn("[live] no business for incoming call", JSON.stringify({ sessionId, to, businessId: businessId ?? null, routing }));
       await client.live.sessions.reject(sessionId, { status_code: 404 });
       return new NextResponse(null, { status: 200 });
