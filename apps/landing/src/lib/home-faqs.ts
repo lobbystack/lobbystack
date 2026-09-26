@@ -10,7 +10,7 @@ export const homeFaqs: FaqItem[] = [
   {
     question: "What happens when a caller asks something unusual?",
     answer:
-      "You define the fallback behavior. LobbyStack can take a message, offer to connect the caller to your team, send a follow-up text, or schedule a callback.",
+      "You define the fallback behavior. LobbyStack can take a message for your team or transfer the caller to a person.",
   },
   {
     question: "Can LobbyStack book appointments directly into my calendar?",
@@ -20,7 +20,7 @@ export const homeFaqs: FaqItem[] = [
   {
     question: "Can the AI receptionist send a call summary to my phone?",
     answer:
-      "Yes. You can receive an SMS or email summary after a call with the caller's details, reason for calling, outcome, and next step.",
+      "Yes. LobbyStack emails you after each call with the caller's details, reason for calling, outcome, and next step. On paid plans, you can also turn on SMS alerts.",
   },
   {
     question: "What types of calls should still go to a human?",
@@ -35,7 +35,7 @@ export const homeFaqs: FaqItem[] = [
   {
     question: "How much does an AI receptionist cost?",
     answer:
-      "LobbyStack starts free with 30 voice minutes per month. Paid plans begin at $30 per month for Starter and $100 per month for Pro, with usage-based overages. Enterprise pricing is available for higher volume, multiple locations, and self-hosted support.",
+      "LobbyStack starts free with 30 voice minutes per month for browser test calls. Paid plans begin at $30 per month for Starter and $100 per month for Pro, with usage-based overages. Enterprise pricing is available for higher volume and self-hosted support.",
   },
   {
     question: "How is LobbyStack different from a call tree or voicemail?",
@@ -55,7 +55,7 @@ export const homeFaqsFr: FaqItem[] = [
     question:
       "Que se passe-t-il si un appelant demande quelque chose d'inhabituel ?",
     answer:
-      "Vous définissez le comportement de secours. LobbyStack peut prendre un message, proposer de joindre votre équipe, envoyer un SMS de suivi ou planifier un rappel.",
+      "Vous définissez le comportement de secours. LobbyStack peut prendre un message pour votre équipe ou transférer l'appelant à une personne.",
   },
   {
     question: "LobbyStack peut-il planifier directement dans mon calendrier ?",
@@ -65,7 +65,7 @@ export const homeFaqsFr: FaqItem[] = [
   {
     question: "Le réceptionniste IA peut-il m'envoyer un résumé d'appel ?",
     answer:
-      "Oui. Vous pouvez recevoir un résumé par SMS ou courriel après l'appel avec les coordonnées de l'appelant, le motif, le résultat et la prochaine étape.",
+      "Oui. LobbyStack vous envoie un courriel après chaque appel avec les coordonnées de l'appelant, le motif, le résultat et la prochaine étape. Sur les forfaits payants, vous pouvez aussi activer les alertes SMS.",
   },
   {
     question: "Quels appels doivent encore revenir à une personne ?",
@@ -80,7 +80,7 @@ export const homeFaqsFr: FaqItem[] = [
   {
     question: "Combien coûte un réceptionniste IA ?",
     answer:
-      "LobbyStack commence gratuitement avec 30 minutes vocales par mois. Les forfaits payants démarrent à 30 $/mois pour Starter et 100 $/mois pour Pro, avec des dépassements à l'usage. Enterprise est disponible pour les volumes plus élevés, les sites multiples et l'accompagnement à l'auto-hébergement.",
+      "LobbyStack commence gratuitement avec 30 minutes vocales par mois pour des appels de test dans le navigateur. Les forfaits payants démarrent à 30 $/mois pour Starter et 100 $/mois pour Pro, avec des dépassements à l'usage. Enterprise est disponible pour les volumes plus élevés et l'accompagnement à l'auto-hébergement.",
   },
   {
     question:

@@ -52,8 +52,8 @@ export function Hero() {
           </div>
 
           <p className="animate-fade-up fine-print mt-5 delay-400">
-            No credit card required. Works with phone calls, calendars, and
-            follow-up texts.
+            No credit card required. Works with Google Calendar and sends
+            confirmation texts.
           </p>
 
           <div className="animate-fade-up mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-sm font-medium text-muted-foreground delay-500">
@@ -304,7 +304,7 @@ export function HowItWorks() {
   const steps = [
     {
       title: "Connect your phone and calendar",
-      copy: "Use a dedicated LobbyStack number or forward calls from your existing business number. Connect the calendar your team already uses for appointments.",
+      copy: "Use a dedicated LobbyStack number or forward calls from your existing business number. Connect the Google Calendar your team already uses for appointments.",
     },
     {
       title: "Add your booking rules",

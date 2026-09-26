@@ -575,7 +575,7 @@
       "fixtureState": "operator",
       "state": "default",
       "comparison": "excluded",
-      "reason": "AI-SMS compliance is intentionally excluded"
+      "reason": "Page removed: AI SMS is not offered"
     },
     {
       "path": "/calls",

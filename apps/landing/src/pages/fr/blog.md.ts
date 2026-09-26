@@ -8,7 +8,7 @@ export const GET: APIRoute = async () => {
 
   const markdown = `# Blog et mises à jour produit LobbyStack
 
-Mises à jour produit et notes pratiques sur la réponse téléphonique IA, la récupération d’appels manqués, la planification, les transferts et le suivi des prospects.
+Mises à jour produit et notes pratiques sur la réponse téléphonique IA, les appels manqués, la planification, les transferts et le suivi des prospects.
 
 ## Articles
 

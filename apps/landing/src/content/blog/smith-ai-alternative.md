@@ -25,7 +25,7 @@ Smith.ai combines AI with access to a North American receptionist network. Lobby
 | Paid entry | Pro from $150 for 75 calls | Starter at $30 for 150 minutes |
 | Human backup | Agent network; some live tasks cost per call | Transfer to your configured team |
 | Booking and intake | Advertised | Included with configurable rules |
-| Languages | English and Spanish advertised | Depends on the configured voice stack |
+| Languages | English and Spanish advertised | Answers in the caller's language |
 | Source code | Not advertised | Public MIT-licensed repository |
 | Self-hosting | Not advertised | Supported deployment path |
 
@@ -35,7 +35,7 @@ Pricing and features were checked on July 30, 2026.
 
 Smith.ai's live-agent network creates real value for a company with nobody available to take a difficult call. Buyers should confirm which escalations the plan includes and which live-agent verification or scheduling tasks add a per-call charge.
 
-Many small businesses already have an owner, dispatcher, or on-call employee for urgent work. LobbyStack handles routine questions and bookings, then transfers the calls that need judgment to that person with context. The Free plan lets the team test 30 minutes of those calls before paying.
+Many small businesses already have an owner, dispatcher, or on-call employee for urgent work. LobbyStack handles routine questions and bookings, then transfers the calls that need judgment to that person with context. The Free plan lets the team test 30 minutes of those conversations in the browser before paying.
 
 LobbyStack also keeps the workflow inspectable. Teams can control providers, retention, prompts, and infrastructure instead of waiting for an enterprise tier to unlock deeper customization.
 

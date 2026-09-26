@@ -21,7 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 type EventKey = "voiceMessage" | "pausedSms" | "widgetChat" | "smsFailed" | "calendarSync" | "transferFailed" | "aiReplyFailed";
 type Preferences = { emailEnabled: boolean; smsEnabled: boolean; smsConsent: boolean; eventPreferences: Record<EventKey, { email: boolean; sms: boolean }>; dailySummaryEnabled: boolean; dailySummarySendTime: string | null; canUseSms: boolean; smsUnavailableReason: "phone_unverified" | "sender_missing" | null };
 const communicationEvents: EventKey[] = ["voiceMessage", "pausedSms"];
-const issueEvents: EventKey[] = ["smsFailed", "calendarSync", "transferFailed", "aiReplyFailed"];
+const issueEvents: EventKey[] = ["smsFailed", "calendarSync", "transferFailed"];
 
 export function LiveNotificationSettingsSurface({ widgetOnly = false }: { widgetOnly?: boolean }) {
   const { t } = useTranslation("settings");

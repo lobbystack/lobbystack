@@ -26,7 +26,7 @@ Upfirst charges by handled call, while LobbyStack charges by voice minute. Lobby
 | Paid usage | Call allowances and per-call overages | Minute allowances and per-minute overages |
 | Booking | Direct calendar scheduling | Booking, changes, and business rules |
 | Transfers | Warm and waterfall transfers | Human handoff with call context |
-| Languages | More than 35 advertised | Depends on the configured voice stack |
+| Languages | More than 35 advertised | Answers in the caller's language |
 | Deployment | Hosted service | Managed cloud or self-hosted |
 | Source code | Public pages do not advertise source access | Public MIT-licensed repository |
 
@@ -112,6 +112,6 @@ Choose LobbyStack for free browser voice testing, public code, self-hosting, or 
 
 ## Verdict
 
-LobbyStack offers the stronger default starting point: no monthly charge, the full receptionist workflow, and an ownership path Upfirst does not advertise. Upfirst can still fit long-call businesses that value its language coverage and per-call billing.
+LobbyStack offers the stronger default starting point: free browser testing, minute-based pricing, and an ownership path Upfirst does not advertise. Upfirst can still fit long-call businesses that value its language coverage and per-call billing.
 
 [Start LobbyStack free](/pricing/) and price your actual call mix. If control matters after the trial, [inspect the code on GitHub](https://github.com/lobbystack/lobbystack).

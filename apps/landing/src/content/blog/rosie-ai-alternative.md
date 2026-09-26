@@ -26,8 +26,8 @@ You can test LobbyStack in your browser on Free. Starter costs $30 and Pro costs
 | Production tier | $149 for 1,000 minutes | $100 for 500 minutes |
 | Booking | Starts on Scale | Included in supported workflows |
 | Warm transfers | Starts on Scale | Human handoff |
-| In-call text | Starts on Scale | SMS alerts and follow-up |
-| Languages | English and Spanish advertised | Depends on the configured voice stack |
+| In-call text | Starts on Scale | Booking confirmation text on paid plans |
+| Languages | English and Spanish advertised | Answers in the caller's language |
 | Deployment | Hosted | Managed cloud or self-hosted |
 
 Pricing and features were checked on July 30, 2026.
@@ -36,7 +36,7 @@ Pricing and features were checked on July 30, 2026.
 
 Rosie's entry plan offers a large answering allowance for message-taking. A business that needs the AI to book an appointment, send a text during the call, or complete a warm transfer must compare against the $149 Scale tier instead.
 
-LobbyStack lets the same business test booking and handoff with 30 free minutes. Starter provides 150 minutes for $30 and Pro provides 500 for $100. Each hosted plan includes SMS alerts and outbound call attempts. Spam and calls under 10 seconds do not reduce the minute allowance.
+LobbyStack lets the same business test booking and handoff with 30 free minutes. Starter provides 150 minutes for $30 and Pro provides 500 for $100. Starter and Pro include SMS alerts and transfer attempts. Spam and calls under 10 seconds do not reduce the minute allowance.
 
 Rosie remains attractive for high-volume English or Spanish message capture. LobbyStack gives a buyer the complete receptionist workflow at a lower plan tier and preserves the option to change providers or self-host.
 
@@ -66,7 +66,7 @@ LobbyStack focuses on that operating layer. It can answer from approved business
 
 Rosie advertises English and Spanish. That covers many North American small businesses. A company that only needs those languages gets a clear published commitment.
 
-LobbyStack's language behavior depends on the voice and model configuration. Self-hosted teams can choose providers, but they must test call quality, transcription, prompts, and business knowledge in each language.
+LobbyStack answers in the caller's language. Self-hosted teams can choose providers, but they must test call quality, transcription, prompts, and business knowledge in each language.
 
 Do not treat a language count as proof of equal quality. Call each finalist with names, addresses, interruptions, and code-switching from the customers you serve.
 
@@ -82,7 +82,7 @@ The cheaper answering plan may not be the cheaper booking workflow.
 
 ## Test the feature boundary on the plan you would buy
 
-Create the Rosie account at the tier you expect to keep, not a higher trial tier. Ask the agent to answer a policy question, book a service with a buffer, transfer an urgent caller, and send a follow-up text. Confirm which tasks work on that plan and which require Scale or Growth.
+Create the Rosie account at the tier you expect to keep, not a higher trial tier. Ask the agent to answer a policy question, book a service with a buffer, transfer an urgent caller, and send a booking confirmation text. Confirm which tasks work on that plan and which require Scale or Growth.
 
 Use the same script with LobbyStack. Check whether each system follows a cancellation rule, refuses an unavailable service, and hands an uncertain answer to a person. Review the transcript with the employee who would handle the result.
 
@@ -94,7 +94,7 @@ Choose Rosie when generous included minutes, English and Spanish coverage, mobil
 
 ## Choose LobbyStack when
 
-Choose LobbyStack for booking, handoff, SMS, transcripts, and summaries below Rosie's $149 Scale tier. You can test voice conversations in your browser on Free and inspect the public code before choosing a paid plan.
+Choose LobbyStack for booking, handoff, SMS alerts, transcripts, and summaries below Rosie's $149 Scale tier. You can test voice conversations in your browser on Free and inspect the public code before choosing a paid plan.
 
 ## Sources
 

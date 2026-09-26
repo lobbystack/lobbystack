@@ -24,9 +24,9 @@ LobbyStack focuses that budget on phone reception: booking, appointment changes,
 | Ongoing free plan | Not advertised | 30 browser voice minutes, no card, no telephone number |
 | Entry price | $99 for 100 interactions | $30 for 150 voice minutes |
 | Overage | $0.99 per interaction | Minute overage by plan |
-| Channels | Voice, SMS, and web chat | Voice plus SMS alerts and follow-up |
+| Channels | Voice, SMS, and web chat | Voice, plus booking texts and SMS alerts |
 | Booking | Booking and rescheduling advertised | Booking and appointment changes |
-| Multi-location | Advertised | Enterprise and configurable deployment |
+| Multi-location | Advertised | Not offered |
 | Base platform | Added to a Nextiva plan | Independent hosted or self-hosted product |
 | Source code | Not advertised | Public MIT-licensed repository |
 
@@ -72,7 +72,7 @@ A dental group has three clinics. Patients call, text, and use web chat to ask a
 
 XBert can fit if the group wants one assistant across those channels and already uses Nextiva. The practice should test identity handling, clinic selection, calendar permissions, rescheduling, and how interactions count when a patient changes channels.
 
-LobbyStack can fit if the phone is the main intake channel and the group wants infrastructure control or a self-hosted option. The practice should test patient-data policies, office-specific rules, transfer fallback, and model-provider agreements.
+LobbyStack can fit if the phone is the main intake channel and the group wants infrastructure control or a self-hosted option. LobbyStack does not route callers between clinics, so each clinic would run its own receptionist. The practice should test patient-data policies, transfer fallback, and model-provider agreements.
 
 Neither product earns compliance from a feature page. The operator must configure access, retention, consent, and vendor agreements for its obligations.
 
@@ -101,6 +101,6 @@ Choose LobbyStack when inbound calls are the priority and you want a free test, 
 
 ## Verdict
 
-LobbyStack gives phone-first teams the better value and the safer exit: lower entry pricing, real free usage, complete call records, and no dependency on a customer-experience suite. XBert makes sense when Nextiva and web chat already belong in the plan.
+LobbyStack gives phone-first teams the better value and the safer exit: lower entry pricing, free browser testing, complete call records, and no dependency on a customer-experience suite. XBert makes sense when Nextiva and web chat already belong in the plan.
 
 [Try LobbyStack free](/pricing/) before paying $99 for a shared interaction allowance.

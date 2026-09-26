@@ -23,7 +23,7 @@ const tiers: Array<{ slug: Plan; highlight?: boolean; features: string[] }> = [
   { slug: "free_cloud", features: ["voiceMinutes", "bookingContacts", "support"] },
   { slug: "starter", features: ["voiceMinutes", "dedicatedNumber", "alertSms", "support"] },
   { slug: "pro", highlight: true, features: ["voiceMinutes", "dedicatedNumber", "alertSms", "support"] },
-  { slug: "enterprise", features: ["phoneNumbers", "routing", "selfHosted", "support"] },
+  { slug: "enterprise", features: ["phoneNumbers", "selfHosted", "support"] },
 ];
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {

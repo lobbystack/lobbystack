@@ -10,7 +10,7 @@ locale: "en"
 canonicalSlug: "open-source-ai-receptionist-stack"
 ---
 
-An open-source AI receptionist stack needs more than a voice agent. It needs phone routing, realtime voice, booking, transcripts, callbacks, staff alerts, dashboard review, usage tracking, billing, monitoring, and a way for the business to change what the AI can do.
+An open-source AI receptionist stack needs more than a voice agent. It needs phone routing, realtime voice, booking, transcripts, message taking, staff alerts, dashboard review, usage tracking, billing, monitoring, and a way for the business to change what the AI can do.
 
 That is the part many teams end up rebuilding.
 
@@ -45,9 +45,9 @@ It handles:
 - appointment booking, reschedules, and cancellations
 - transcripts, recordings, summaries, and call outcomes
 - business context, FAQs, services, prices, policies, and rules
-- SMS conversations and email or SMS notifications
-- human handoff, transfers, messages, callbacks, and tasks
-- quote requests and lead qualification
+- booking confirmation and reminder texts, plus email or SMS alerts for staff
+- human handoff, transfers, and messages
+- lead capture with caller details and the reason for the call
 - contacts, appointments, call history, analytics, usage, and billing surfaces
 
 The point is not to replace every tool you already use. Twilio, calendars, email providers, analytics tools, and billing providers still matter. LobbyStack gives you the receptionist product that sits across them.
@@ -59,10 +59,10 @@ For example:
 ```text
 If the caller asks for a quote, collect the service type, location,
 timeline, and budget. Share approved starting prices when they exist.
-If exact pricing depends on the job, create a callback task for the team.
+If exact pricing depends on the job, take a message for the team.
 ```
 
-The AI can talk through the call, but it still uses tools for the actions that need authority: checking availability, booking appointments, saving notes, creating callbacks, transferring calls, sending notifications, and ending the call cleanly.
+The AI can talk through the call, but it still uses tools for the actions that need authority: checking availability, booking appointments, saving messages, transferring calls, sending notifications, and ending the call cleanly.
 
 ## How the live call path works
 
@@ -72,13 +72,13 @@ The voice gateway stays narrow. It handles the live call, streams audio, manages
 
 PostgreSQL is the durable source of truth. The Next.js app handles operator and API traffic, while the worker processes asynchronous jobs and transactional outbox events.
 
-That split matters. A phone call needs low latency, but a business action needs the backend to make the final decision. LobbyStack loads the business context snapshot at the start of a call, then calls backend tools when the AI needs to book, transfer, save a message, update an appointment, or create a follow-up task.
+That split matters. A phone call needs low latency, but a business action needs the backend to make the final decision. LobbyStack loads the business context snapshot at the start of a call, then calls backend tools when the AI needs to book, transfer, save a message, or update an appointment.
 
 The receptionist can sound conversational without improvising the important parts.
 
 ## Hosted cloud or self-hosted Docker
 
-Some teams want the product managed. [LobbyStack Cloud](/pricing/) is for that. Create an account, configure the business, connect the pieces, and start testing real calls without running the infrastructure yourself.
+Some teams want the product managed. [LobbyStack Cloud](/pricing/) is for that. Create an account, configure the business, connect the pieces, and start testing calls without running the infrastructure yourself.
 
 Other teams want the stack on their own infrastructure. LobbyStack supports that too.
 
@@ -95,7 +95,7 @@ If you build AI receptionists for clients, the margin is rarely in rebuilding tr
 The margin is in understanding the business:
 
 - Which calls should book?
-- Which calls should become quote requests?
+- Which calls should end with a message for staff?
 - Which calls need a human now?
 - Which details should staff see after the call?
 - Which rules matter for that niche?
@@ -117,7 +117,7 @@ It is especially useful if you need:
 - bring-your-own provider accounts for self-hosted deployments
 - appointment booking and appointment changes
 - transcripts, recordings, summaries, and call outcomes
-- SMS, email notifications, callbacks, and tasks
+- email and SMS alerts for staff
 - client-controlled infrastructure for agency or regulated deployments
 
 It is not a way to avoid operations. Phone systems still need testing. AI behavior still needs review. Provider accounts still need care.

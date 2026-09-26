@@ -133,7 +133,7 @@ There is a middle path between "build every piece yourself" and "trust a black b
 
 You can start from an [open-source AI receptionist](/solutions/open-source-ai-receptionist/) and self-host it when you need more control. That is where LobbyStack fits.
 
-LobbyStack is an open-source AI receptionist for businesses that depend on calls, bookings, quotes, SMS, and fast follow-up. It gives you a working base for call answering, business knowledge, appointment booking, human handoff, transcripts, summaries, and configurable rules without forcing you to begin with a blank repo.
+LobbyStack is an open-source AI receptionist for businesses that depend on phone calls and bookings. It gives you a working base for call answering, business knowledge, appointment booking, human handoff, transcripts, summaries, and configurable rules without forcing you to begin with a blank repo.
 
 The important phrase is "working base." Open source does not remove maintenance. It moves the maintenance into your control.
 

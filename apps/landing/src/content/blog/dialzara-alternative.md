@@ -25,9 +25,9 @@ LobbyStack also includes booking, human handoff, SMS alerts, transcripts, summar
 | Entry paid plan | $29 for 60 minutes | $30 for 150 minutes |
 | Mid-tier plan | $99 for 220 minutes | $100 for 500 minutes |
 | Booking and warm transfer | Starts on the $99 plan | Supported receptionist workflows |
-| SMS | Separate $19 monthly add-on plus usage | Alert SMS included by hosted plan |
+| SMS | Separate $19 monthly add-on plus usage | Alert SMS included on Starter and Pro |
 | Agency options | Agency and white-label offers | Open code, affiliate program, self-hosting |
-| API | Higher tiers | Public API and source code |
+| API | Higher tiers | Source code |
 | Deployment | Hosted | Managed cloud or self-hosted |
 
 Pricing and features were checked on July 30, 2026.
@@ -69,7 +69,7 @@ An API lets a team connect a hosted service to other software. Source access let
 
 Dialzara advertises API access on higher tiers and connects to Make and Zapier. That can cover CRM updates, alerts, and downstream automation without operating the phone platform.
 
-LobbyStack exposes APIs and publishes the application code. A self-hosted operator can choose providers, change integrations, manage retention, and deploy updates on its schedule. The team also becomes responsible for uptime, backups, security, and call testing.
+LobbyStack publishes the application code. A self-hosted operator can choose providers, change the code, manage retention, and deploy updates on its schedule. The team also becomes responsible for uptime, backups, security, and call testing.
 
 Buyers who only need a webhook should not take on self-hosting. Buyers with infrastructure or customization requirements should not assume API access gives the same control as source access.
 
@@ -89,7 +89,7 @@ Build one quote for the work your client expects. Include the inbound plan, SMS 
 
 Build the LobbyStack quote from voice minutes, SMS segments, phone-provider charges, and the engineering time for custom changes. A self-hosted deployment also needs monitoring, backups, upgrades, and incident response.
 
-Test a booking that needs rescheduling and a transfer outside business hours. Then trigger an SMS and webhook. Your agency should compare the finished client record and the labor required to support it, not one line from either pricing page.
+Test a booking that needs rescheduling and a transfer outside business hours. Then trigger an SMS alert. Your agency should compare the finished client record and the labor required to support it, not one line from either pricing page.
 
 ## Choose Dialzara when
 

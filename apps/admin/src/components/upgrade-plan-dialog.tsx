@@ -66,7 +66,7 @@ const upgradePlanCards: UpgradePlanCard[] = [
       annual: "Custom",
     },
     period: "",
-    highlights: ["phoneNumbers", "routing", "fallbackRules", "support"],
+    highlights: ["phoneNumbers", "selfHosted", "support"],
   },
 ];
 

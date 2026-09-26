@@ -59,17 +59,17 @@ export const companyPages: SeoLandingPage[] = [
     path: "/about/",
     title: "About LobbyStack - Open-Source AI Receptionist",
     description:
-      "Learn about LobbyStack, the open-source AI receptionist for small businesses that need call answering, appointment booking, routing, SMS, and follow-up.",
+      "Learn about LobbyStack, the open-source AI receptionist for small businesses that need call answering, appointment booking, and call transfers.",
     eyebrow: "About",
     h1: "About LobbyStack",
     intro:
-      "LobbyStack exists to help small businesses answer calls, book appointments, and follow up without giving up control of their phone workflow or customer data.",
+      "LobbyStack exists to help small businesses answer calls and book appointments without giving up control of their phone workflow or customer data.",
     image: "/illustrations/value-network.webp",
     imageAlt:
       "LobbyStack open-source AI receptionist connecting callers, teams, and business workflows",
     proofPoints: [
       "Open-source AI receptionist for small businesses",
-      "Built around call answering, booking, routing, SMS, and summaries",
+      "Built around call answering, booking, transfers, and call summaries",
       "Designed for managed cloud use and self-hosted implementation support",
     ],
     sections: [
@@ -96,7 +96,7 @@ export const companyPages: SeoLandingPage[] = [
         body: "LobbyStack is built for owner-operators and small teams that live on inbound calls: home services, trades, clinics, salons, and local service businesses that cannot afford to miss ready-to-book callers.",
         points: [
           "Teams that miss calls while they are on jobs, in appointments, or closed for the day",
-          "Operators who want booking and follow-up without a phone tree or IVR builder",
+          "Operators who want phone booking without a phone tree or IVR builder",
           "Businesses that need after-hours coverage without hiring another full-time receptionist",
         ],
       },
@@ -200,7 +200,7 @@ export const solutionPages: SeoLandingPage[] = [
       "LobbyStack booking a patient appointment and summarizing the call",
     proofPoints: [
       "Answers new-patient, insurance, and scheduling calls",
-      "Books into Google Calendar and texts a reminder the day before",
+      "Books into Google Calendar and can text a reminder the day before",
       "Transfers after-hours emergencies to your on-call dentist",
     ],
     sections: [
@@ -215,10 +215,10 @@ export const solutionPages: SeoLandingPage[] = [
       },
       {
         title: "New patients book on the first call",
-        body: "New patients often call at lunch or after work. LobbyStack collects their insurance and reason for the visit, offers open times from your Google Calendar, and books the exam. The patient gets a text confirmation, then a reminder the day before.",
+        body: "New patients often call at lunch or after work. LobbyStack collects their insurance and reason for the visit, offers open times from your Google Calendar, and books the exam. The patient gets a text confirmation and, if they agree, a reminder text the day before.",
         points: [
           "Books into Google Calendar during the call",
-          "Texts a reminder 24 hours before each visit it books",
+          "Texts a reminder 24 hours before the visit if the patient agrees",
           "Moves or cancels appointments after checking who's calling",
         ],
       },
@@ -267,7 +267,7 @@ export const solutionPages: SeoLandingPage[] = [
     proofPoints: [
       "Books appointments while stylists and providers are busy",
       "Answers questions about services, pricing, and availability",
-      "Handles confirmations, reminders, cancellations, and reschedules",
+      "Handles cancellations and reschedules after checking who's calling",
     ],
     sections: [
       {
@@ -281,10 +281,9 @@ export const solutionPages: SeoLandingPage[] = [
       },
       {
         title: "Politely enforce cancellation policies",
-        body: "Last-minute no-shows and cancellations eat directly into your salon margins. LobbyStack can communicate your booking guidelines, secure cards on file for deposits, and manage reschedules politely and consistently.",
+        body: "Last-minute no-shows and cancellations eat directly into your salon margins. LobbyStack explains your booking guidelines and handles reschedules the same way on every call.",
         points: [
           "Communicates cancellation and reschedule policies during the call",
-          "Saves deposits for high-value treatments on file securely",
           "Allows clients to self-manage scheduling changes within allowed windows",
         ],
       },
@@ -512,11 +511,10 @@ export const solutionPages: SeoLandingPage[] = [
       },
       {
         title: "Keep replacement quotes from going cold",
-        body: "A homeowner pricing a new system will wait a day for a callback. Two weeks into peak season, they've signed with someone else. LobbyStack captures the home size, system age, and fuel type, books the estimate visit during the call, and can place the follow-up call when an estimate stays unscheduled.",
+        body: "A homeowner pricing a new system will wait a day for a callback. Two weeks into peak season, they've signed with someone else. LobbyStack captures the home size, system age, and fuel type, and books the estimate visit during the call.",
         points: [
           "Collects home size, system age, and fuel type",
           "Books estimate visits while the caller is on the line",
-          "Follows up on open quote requests",
         ],
       },
       {
@@ -591,7 +589,6 @@ export const solutionPages: SeoLandingPage[] = [
         points: [
           "Collects panel size, home age, and equipment details",
           "Books estimate visits during the call",
-          "Follows up on quotes you haven't closed",
         ],
       },
       {
@@ -1138,7 +1135,7 @@ export const solutionPages: SeoLandingPage[] = [
       "LobbyStack open-source AI receptionist code and deployment controls",
     proofPoints: [
       "Source code publicly available for audit and modification",
-      "Customize prompts, intake rules, escalation, and integrations",
+      "Customize prompts, intake rules, and escalation",
       "Self-host on your servers or use the managed cloud",
     ],
     sections: [
@@ -1153,11 +1150,10 @@ export const solutionPages: SeoLandingPage[] = [
       },
       {
         title:
-          "Modify prompts, rules, and integrations without a vendor roadmap",
-        body: "When your call workflow changes, you should not have to file a support ticket and wait. Because the code is open source, you can modify greeting scripts, intake questions, booking logic, escalation paths, and downstream integrations directly.",
+          "Modify prompts and rules without a vendor roadmap",
+        body: "When your call workflow changes, you should not have to file a support ticket and wait. Because the code is open source, you can modify greeting scripts, intake questions, booking logic, and escalation paths yourself.",
         points: [
           "Change prompts and call flows on your schedule",
-          "Add custom webhooks, CRM connections, and alert rules",
           "Fork the codebase for agency or multi-tenant deployments",
         ],
       },

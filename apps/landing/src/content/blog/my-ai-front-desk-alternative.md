@@ -13,7 +13,7 @@ locale: "en"
 canonicalSlug: "my-ai-front-desk-alternative"
 ---
 
-Buyers searching for a **My AI Front Desk alternative** should start with one pricing detail: Frontdesk's advertised $20 plan includes zero voice minutes. LobbyStack includes 30 voice minutes on its free plan, with appointment booking, summaries, call history, SMS alerts, and outbound call attempts.
+Buyers searching for a **My AI Front Desk alternative** should start with one pricing detail: Frontdesk's advertised $20 plan includes zero voice minutes. LobbyStack includes 30 browser voice minutes on its free plan, with appointment booking, call summaries, and call history.
 
 Frontdesk, formerly My AI Front Desk, now sells a broad AI sales workspace. LobbyStack gives businesses a complete phone receptionist at a lower entry price, more included voice usage on comparable paid plans, and the choice of managed cloud or self-hosting.
 
@@ -26,9 +26,9 @@ Frontdesk, formerly My AI Front Desk, now sells a broad AI sales workspace. Lobb
 | Usable voice entry | $99 monthly plan with 200 minutes | Free with 30 minutes and receptionist features |
 | Around $30/month | $20 Basic has 0 voice minutes | $30 Starter has 150 voice minutes |
 | Around $100/month | $99 Business has 200 voice minutes | $100 Pro has 500 voice minutes |
-| Channels | Voice, SMS, chat, email, forms | Voice, SMS alerts and follow-up, dashboard |
+| Channels | Voice, SMS, chat, email, forms | Voice, owner alerts by email or SMS, dashboard |
 | Booking and call records | Included on the voice plan | Included on Free, Starter, and Pro |
-| CRM | Native CRM and sequences | Receptionist records plus integrations |
+| CRM | Native CRM and sequences | Caller and call records, no CRM sync |
 | Deployment | Hosted | Managed cloud or self-hosted |
 | Source access | Not advertised on reviewed pages | Public MIT-licensed repository |
 
@@ -48,7 +48,7 @@ Frontdesk has moved beyond a phone-only receptionist. Its public product pages a
 
 That scope helps a small team that has no CRM and wants one product to capture a web lead, text them, call them, and track the exchange. Frontdesk also sells a white-label program for agencies.
 
-LobbyStack avoids charging receptionist customers for a replacement CRM they may not need. It stores callers, appointments, messages, transcripts, summaries, and business rules, then connects the phone workflow to the systems the team already uses.
+LobbyStack avoids charging receptionist customers for a replacement CRM they may not need. It stores callers, appointments, messages, transcripts, summaries, and business rules, and books appointments into Google Calendar.
 
 ## The advertised $20 plan does not include voice minutes
 
@@ -77,13 +77,13 @@ Frontdesk bundles more sales software into its $99 plan. That bundle creates val
 
 A broad product can reduce the number of vendors. It also asks a team to adopt more of Frontdesk's workflow. Businesses that already run HubSpot, Salesforce, Jobber, ServiceTitan, or another operating system may not want a second CRM.
 
-LobbyStack fits between the phone and those business systems. PostgreSQL holds the receptionist's durable business state, the Next.js app handles operator and API traffic, and the voice gateway handles live calls. A self-hosted operator can control the deployment, provider accounts, logs, and retention.
+LobbyStack handles the phone and leaves the CRM where it is. PostgreSQL holds the receptionist's durable business state, the Next.js app handles operator and API traffic, and the voice gateway handles live calls. A self-hosted operator can control the deployment, provider accounts, logs, and retention.
 
 Frontdesk's reviewed pages do not advertise self-hosting or public source access. LobbyStack customers can inspect the MIT-licensed code, choose the managed product, or deploy the stack on infrastructure they control. They keep a route out of vendor lock-in.
 
 ## A lead-generation agency example
 
-An agency builds websites and paid search campaigns for ten home-service clients. It wants an AI receptionist for each client and automated follow-up after missed calls.
+An agency builds websites and paid search campaigns for ten home-service clients. It wants an AI receptionist that answers each client's calls and books jobs.
 
 Frontdesk gives the agency a hosted omnichannel product and a published white-label offer. That can shorten launch time when the agency wants the vendor to own the platform.
 

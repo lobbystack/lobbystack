@@ -12,12 +12,12 @@ const featuresCtaCopy = {
   en: {
     headingStart: "Stop letting missed calls decide your",
     headingEmphasis: "revenue",
-    body: "Let LobbyStack answer, qualify, quote, book, follow up, and notify your team day or night.",
+    body: "Let LobbyStack answer, qualify, quote, book, and notify your team day or night.",
   },
   fr: {
     headingStart: "Ne laissez plus les appels manqués décider votre",
     headingEmphasis: "chiffre d’affaires",
-    body: "LobbyStack répond, qualifie, planifie, relance et prévient votre équipe, même le soir et la fin de semaine.",
+    body: "LobbyStack répond, qualifie, planifie et prévient votre équipe, même le soir et la fin de semaine.",
   },
 } satisfies Record<Locale, Record<string, string>>
 

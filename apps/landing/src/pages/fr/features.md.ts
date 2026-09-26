@@ -10,13 +10,13 @@ url: ${absoluteUrl("/fr/features/")}
 
 # Fonctionnalités LobbyStack
 
-LobbyStack répond aux appels, prend des rendez‑vous, collecte les détails importants, suit les prospects et transfère les appels vers une personne quand il le faut.
+LobbyStack répond aux appels, prend des rendez‑vous, collecte les détails importants, prend des messages et transfère les appels vers une personne quand il le faut.
 
 ## Capacités principales
 
 - Réponse téléphonique 24/7 ou seulement quand l’équipe est occupée, fermée ou indisponible.
 - Consignes en langage naturel pour décrire quoi demander, dire, réserver, transférer et notifier.
-- Prise de rendez‑vous avec disponibilités, confirmations, changements, annulations et rappels.
+- Prise de rendez‑vous dans Google Calendar avec changements, annulations, un texto de confirmation et, si l’appelant accepte, un texto de rappel 24 heures avant (forfaits payants).
 - Réponses depuis la base de connaissances : FAQ, services, prix, horaires, politiques, lieux et consignes.
 - Qualification de prospects et collecte structurée des détails de l’appelant.
 - Transfert humain avec résumés, notifications et contexte.

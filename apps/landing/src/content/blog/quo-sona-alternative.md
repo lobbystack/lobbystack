@@ -35,7 +35,7 @@ Pricing and features were checked on July 30, 2026.
 
 The reviewed Sona pages emphasize answering questions and collecting leads or messages. They do not advertise direct appointment execution. LobbyStack can check availability, apply business rules, book or change an appointment, transfer an urgent caller, and record the result.
 
-LobbyStack also works without a Quo subscription. The Free plan gives a business 30 minutes to test those workflows. Starter provides 150 minutes for $30, with SMS alerts and outbound attempts included.
+LobbyStack also works without a Quo subscription. The Free plan gives a business 30 minutes to test those workflows. Starter provides 150 minutes for $30, with SMS alerts and 20 transfer attempts included.
 
 Sona fits a team that already wants Quo and needs message capture inside its shared inbox. LobbyStack fits a team that wants the receptionist to complete more work and remain portable across phone providers.
 
@@ -76,7 +76,7 @@ A five-agent real-estate team uses Quo shared numbers. Most inbound callers ask 
 
 Sona can fit because message capture and call-flow integration solve the main job inside the team's existing phone workspace. The per-call allowance also makes sense when conversations run long.
 
-LobbyStack can fit when the team wants consultation booking, custom lead qualification, provider independence, or self-hosted control over call data. It adds another product to the staff workflow unless the team integrates records into its CRM.
+LobbyStack can fit when the team wants consultation booking, lead capture outside Quo, provider independence, or self-hosted control over call data. It adds another product to the staff workflow, and LobbyStack does not sync records into a CRM.
 
 The team's current phone system should carry more weight than a small difference in AI price.
 
@@ -86,7 +86,7 @@ Ask Sona to route a caller by office, language, and named employee. Place a seco
 
 If appointment booking matters, test the calendar you use rather than relying on a generic scheduling claim. Confirm duration rules, buffers, rescheduling, cancellations, and the fallback when the calendar rejects a request.
 
-Run the same script with LobbyStack. Compare the setup work and the record left for staff. Sona keeps the work inside Quo. LobbyStack supports custom workflows and infrastructure boundaries that Quo does not advertise.
+Run the same script with LobbyStack. Compare the setup work and the record left for staff. Sona keeps the work inside Quo. LobbyStack runs without Quo and can run on infrastructure you control.
 
 ## Choose Sona when
 

@@ -11,8 +11,10 @@ import {
 } from "./product-capabilities";
 
 describe("product capability metadata", () => {
-  it("marks website chat restricted and telephone voice available", () => {
+  it("marks website chat and AI SMS restricted and telephone voice available", () => {
     expect(isProductCapabilityRestricted("website_chat")).toBe(true);
+    expect(isProductCapabilityRestricted("ai_sms")).toBe(true);
+    expect(isProductCapabilityRestricted("alert_sms")).toBe(false);
     expect(isProductCapabilityRestricted("telephone_voice")).toBe(false);
     expect(isProductCapabilityRestricted("browser_voice_testing")).toBe(false);
   });

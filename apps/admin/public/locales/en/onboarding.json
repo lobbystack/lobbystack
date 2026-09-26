@@ -246,7 +246,6 @@
         "cta": "Contact us",
         "highlights": {
           "phoneNumbers": "Multiple dedicated numbers",
-          "routing": "Multi-location routing",
           "selfHosted": "Self-hosted deployment option",
           "support": "Dedicated implementation support"
         }
@@ -256,15 +255,15 @@
       "groups": {
         "usage": "Usage & limits",
         "core": "Core receptionist",
-        "booking": "Booking & follow-up",
+        "booking": "Booking",
         "routing": "Routing & transfers",
-        "notifications": "Notifications & messaging",
+        "notifications": "Notifications",
         "data": "Data & dashboard",
         "deployment": "Deployment & support"
       },
       "features": {
         "voiceMinutes": "Voice minutes",
-        "outboundCalls": "Outbound call attempts",
+        "outboundCalls": "Transfer attempts",
         "alertSms": "Alert SMS segments",
         "knowledgeStorage": "Knowledge base",
         "phoneNumbers": "Phone numbers",
@@ -275,28 +274,21 @@
         "spamFiltering": "Spam filtering",
         "shortCalls": "Calls under 10s excluded from billing",
         "concurrentCalls": "Concurrent call handling",
-        "multilingual": "Multilingual support",
+        "multilingual": "Answers in the caller's language",
         "appointmentBooking": "Appointment booking",
         "confirmationTexts": "Appointment confirmation texts",
         "googleCalendar": "Google Calendar integration",
-        "outlook": "Outlook integration",
-        "missedCallFollowUp": "Missed-call follow-up",
-        "outboundCalling": "Outbound calls",
         "urgentHandoff": "Urgent call handoff",
         "callTransfers": "Call transfers",
         "afterHours": "After-hours answering",
-        "multiLocation": "Multi-location routing",
-        "customEscalation": "Custom fallback and escalation rules",
         "emailNotifications": "Email notifications",
         "smsNotifications": "SMS notifications",
-        "aiSms": "Two-way AI SMS conversations",
         "summaries": "Call summaries",
         "history": "Call history",
         "contentRetention": "Transcript and recording retention",
         "callerProfiles": "Caller profiles and notes",
         "contacts": "Contacts",
         "websiteImport": "Website knowledge import",
-        "retentionGuidance": "Data retention guidance",
         "hosting": "Hosting",
         "usageBilling": "Usage-based overages",
         "support": "Support"
@@ -319,14 +311,12 @@
             "proThen": "then $0.18/min"
           },
           "outboundCalls": {
-            "freeIncluded": "2 included",
             "starterIncluded": "20 included",
             "starterThen": "then $0.02/attempt",
             "proIncluded": "100 included",
             "proThen": "then $0.02/attempt"
           },
           "alertSms": {
-            "freeIncluded": "10 included",
             "starterIncluded": "50 included",
             "starterThen": "then $0.02/segment",
             "proIncluded": "200 included",
@@ -340,12 +330,6 @@
           "phoneNumbers": {
             "starter": "1 dedicated",
             "pro": "1 dedicated"
-          }
-        },
-        "notifications": {
-          "aiSms": {
-            "proIncluded": "Optional add-on: $5/mo + $19 setup",
-            "proThen": "$0.03/segment from the first segment"
           }
         },
         "data": {

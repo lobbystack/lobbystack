@@ -6,9 +6,9 @@
 
 # LobbyStack
 
-### The open-source AI receptionist for calls, messages, and appointments
+### The open-source AI receptionist for phone calls and appointments
 
-LobbyStack is an open-source AI receptionist platform for small businesses. It answers phone calls, manages website chat and SMS conversations, books appointments, handles appointment changes, and transfers calls to a person when needed.
+LobbyStack is an open-source AI receptionist platform for small businesses. It answers phone calls, books appointments, handles appointment changes, and transfers calls to a person when needed.
 
 It is built for clinics, salons, repair shops, local service companies, restaurants, and any business that loses revenue when nobody is available to answer the phone.
 
@@ -27,8 +27,8 @@ LobbyStack gives teams a modern AI front desk that can be hosted in the cloud or
 Most AI receptionist tools are closed, expensive, and difficult to adapt to real business workflows. LobbyStack is different.
 
 - **Open source by default.** Inspect the code, self-host it, extend it, and keep control of your data.
-- **Built for real phone calls.** Handle natural voice conversations, interruptions, transfers, and follow-ups.
-- **Calls and messages in one place.** Manage calls, SMS, and website chat from the same dashboard.
+- **Built for real phone calls.** Handle natural voice conversations, interruptions, live transfers, and messages for your team.
+- **Calls and texts in one place.** Review calls, recordings, transcripts, and incoming texts from the same dashboard.
 - **Scheduling built in.** Book, reschedule, and cancel appointments through Google Calendar.
 - **Designed for small businesses.** Guided setup, transparent pricing, and no enterprise-only feature gatekeeping.
 - **Human fallback.** Transfer calls or escalate messages when the AI should not handle something alone.
@@ -39,13 +39,13 @@ Most AI receptionist tools are closed, expensive, and difficult to adapt to real
 
 LobbyStack answers inbound calls with a natural voice agent trained on your business information. It can answer common questions, collect caller details, take messages, qualify requests, offer appointment slots, and transfer to a human when required.
 
-### 💬 Messages and website chat
+### 💬 Text messages
 
-Review SMS threads, send manual replies, and manage website chat from the same dashboard. Website chat can answer from saved knowledge and hand conversations to an operator.
+LobbyStack saves texts sent to your business number and alerts your team. You read the thread and reply by hand from the dashboard. The AI doesn't answer texts; STOP and HELP get fixed replies.
 
 ### 📅 Appointment scheduling
 
-LobbyStack connects to Google Calendar, checks availability, offers time slots, books appointments, and sends confirmations. Callers can also reschedule or cancel during a later call.
+LobbyStack connects to Google Calendar, checks availability, offers time slots, books appointments, and sends a confirmation text and one reminder text 24 hours before, if the caller agrees. Callers can also reschedule or cancel during a later call.
 
 ### 📚 Knowledge base
 
@@ -53,7 +53,7 @@ Upload business information, FAQs, services, pricing, policies, and internal not
 
 ### 🧑‍💼 Human handoff
 
-LobbyStack can transfer a live call, take a message, or notify the team by SMS or email when a person needs to respond.
+LobbyStack can transfer a live call, take a message, or notify the team by email or opt-in SMS when a person needs to respond.
 
 ### 📥 Shared inbox
 
@@ -61,9 +61,7 @@ Review calls, SMS threads, transcripts, recordings, appointments, and customer d
 
 ### 🔌 Integrations
 
-LobbyStack is designed to connect with the tools small businesses already use:
-
-- Google Calendar for appointment availability
+LobbyStack connects to Google Calendar to check availability and book appointments. It doesn't connect to other calendars or CRMs yet.
 
 ## Use cases
 
@@ -77,7 +75,7 @@ LobbyStack can be adapted for many local business workflows:
 - Dental offices
 - Law firms and professional services
 - Property managers
-- Any business that receives appointment, pricing, hours, or availability questions by phone or website chat
+- Any business that receives appointment, pricing, hours, or availability questions by phone
 
 ## Product areas
 
@@ -88,10 +86,10 @@ LobbyStack can be adapted for many local business workflows:
 | Booking | Service-aware scheduling with availability checks and calendar handoff. |
 | Appointment changes | Safer cancellation and rescheduling flows with appointment lookup and verification. |
 | Human handoff | Live transfer and follow-up tasks for calls that need staff attention. |
-| Messages | Manual SMS conversations and AI-assisted website chat connected to customer history. |
-| Website widget | Embeddable chat, lead capture, and browser calls with per-site access controls. |
+| Messages | Incoming texts with manual replies, connected to customer history. |
+| Website widget | Embeddable chat, lead capture, and browser calls with per-site access controls. Restricted: new widget keys are off unless you set `WIDGET_KEY_ISSUANCE_ENABLED=true`. |
 | Dashboard | Calls, messages, contacts, appointments, recordings, transcripts, follow-ups, and analytics together. |
-| Usage and billing | Hosted plans, voice usage, alert SMS, outbound call attempts, storage, and spending caps. |
+| Usage and billing | Hosted plans, voice usage, alert SMS, transfer attempts, storage, and spending caps. |
 | Bring your own API keys | Self-hosted deployments can use your own Twilio, OpenAI-compatible AI, calendar, email, analytics, and billing provider credentials. |
 
 ## Technology

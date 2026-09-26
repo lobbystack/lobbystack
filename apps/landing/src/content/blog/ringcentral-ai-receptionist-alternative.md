@@ -24,9 +24,9 @@ LobbyStack runs as an independent managed service or a self-hosted stack. Buyers
 | Ongoing free plan | Not advertised | 30 browser voice minutes, no card, no telephone number |
 | Standalone entry | From $49 for 100 minutes | Free for 30 minutes; $30 for 150 |
 | Existing customer price | RingEX add-on from $39 | No base phone-suite subscription |
-| Channels | Voice, SMS, WhatsApp | Voice, SMS alerts and follow-up |
+| Channels | Voice, SMS, WhatsApp | Voice, plus booking texts and SMS alerts |
 | Phone-system depth | RingCentral queues and administration | Provider-connected receptionist |
-| Booking | Calendly and other integrations advertised | Calendar booking with business rules |
+| Booking | Calendly and other integrations advertised | Google Calendar booking with business rules |
 | Source code | Not advertised | Public MIT-licensed repository |
 | Deployment | RingCentral-managed | Managed cloud or self-hosted |
 
@@ -46,7 +46,7 @@ RingCentral has a mature business-phone and contact-center product. AIR adds FAQ
 
 A company already using RingEX can add AI reception without introducing a separate phone administration model. Teams can keep extensions, queues, permissions, reporting, and support under one vendor.
 
-LobbyStack does not replace a full unified communications suite. It sits on the call path to answer, qualify, book, transfer, and record the outcome. It can serve a business that wants to keep its existing providers or self-host the receptionist layer.
+LobbyStack does not replace a full unified communications suite. It sits on the call path to answer, capture caller details, book, transfer, and record the outcome. It can serve a business that wants to keep its existing providers or self-host the receptionist layer.
 
 ## Add-on pricing needs the base-system context
 
@@ -72,7 +72,7 @@ A retailer has 12 stores, RingCentral extensions, call queues, and a central sup
 
 AIR has a natural advantage because the phone system and queues already live in RingCentral. The retailer should test store identification, queue overflow, Shopify access, transfers, and reporting by location.
 
-LobbyStack may fit if the retailer needs custom business logic, wants a deployment it can inspect, or plans to connect several phone providers across regions. The team should test multi-location context, data boundaries, and the staff required to operate the stack.
+LobbyStack does not route calls across stores, so the retailer would run one receptionist per store. It may fit if the retailer wants a deployment it can inspect or expects to change phone providers. The team should test data boundaries and the staff required to operate the stack.
 
 The existing communications architecture carries more weight than a small difference in minute price.
 
