@@ -20,10 +20,10 @@
     "@lobbystack/shared": "workspace:*",
     "@lobbystack/telemetry": "workspace:*",
     "bullmq": "^5.71.0",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^0.45.3",
     "ioredis": "^5.8.2",
     "js-tiktoken": "1.0.21",
-    "mammoth": "^1.12.0",
+    "mammoth": "^1.12.3",
     "pdf-parse": "2.4.5",
     "tesseract.js": "^7.0.0"
   },
