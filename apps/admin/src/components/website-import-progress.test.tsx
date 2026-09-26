@@ -39,3 +39,11 @@ it("counts the pages it finished reading", () => {
   expect(screen.getByText("Your agent has read resend.com")).toBeTruthy();
   expect(screen.getByText("1 page is ready for questions.")).toBeTruthy();
 });
+
+it("points a failed import at details the operator can add anywhere it renders", () => {
+  renderOn("/onboarding/greeting", { status: "failed", websiteUrl: "https://resend.com", importedCount: 0, indexedCount: 0 });
+  expect(screen.getByText("We couldn't read resend.com")).toBeTruthy();
+  // The card also sits above the greeting field, so the hint cannot send
+  // anyone to a form "below" it.
+  expect(screen.getByText(/Add your business details by hand/)).toBeTruthy();
+});

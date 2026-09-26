@@ -149,6 +149,6 @@
     "doneHint_one": "{{count}} page is ready for questions.",
     "doneHint_other": "{{count}} pages are ready for questions.",
     "failedTitle": "We couldn't read {{host}}",
-    "failedHint": "Add your details by hand below, or try the import again from your dashboard."
+    "failedHint": "Add your business details by hand, or try the import again from your dashboard."
   }
 }
