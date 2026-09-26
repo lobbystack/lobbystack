@@ -20,9 +20,16 @@ export type DelegationTiming = {
 export type LiveCallSummary = {
   sessionId: string;
   durationMs: number;
+  /** Session length OpenAI bills for, when the session closed normally. */
+  billedSeconds?: number;
   delegations: DelegationTiming[];
   closeReason?: string;
 };
+
+/** A finished stretch of speech by one side, numbered in call order. */
+export type LiveCallTurn = { sequence: number; speaker: "caller" | "assistant"; text: string };
+
+export type LiveCallTimeout = "silence_timeout" | "duration_limit";
 
 export type LiveCallControllerOptions = {
   client: OpenAI;
@@ -30,6 +37,12 @@ export type LiveCallControllerOptions = {
   agent: ReceptionistAgent;
   /** Spoken as soon as the call connects, so the caller doesn't have to speak first. */
   greeting?: string;
+  /** Hang up after this long without either side speaking. */
+  silenceTimeoutMs?: number;
+  /** Hang up when the call runs this long. */
+  maxDurationMs?: number;
+  onTurn?: (turn: LiveCallTurn) => void;
+  onTimeout?: (reason: LiveCallTimeout) => void;
   onDelegation?: (timing: DelegationTiming) => void;
   onClose?: (summary: LiveCallSummary) => void;
 };
@@ -52,6 +65,9 @@ export class LiveCallController {
   private readonly abort = new AbortController();
   private socket: SidebandWS | undefined;
   private transcriptWaiters: Array<{ offsetMs: number; resolve: () => void }> = [];
+  private emittedTurns = 0;
+  private silenceTimer: ReturnType<typeof setTimeout> | undefined;
+  private durationTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private readonly options: LiveCallControllerOptions) {}
 
@@ -61,13 +77,15 @@ export class LiveCallController {
     socket.on("session.input_transcript.delta", (event) => this.appendTranscript("caller", event.delta, event.end_ms));
     socket.on("session.output_transcript.delta", (event) => this.appendTranscript("receptionist", event.delta, event.end_ms));
     socket.on("session.delegation.created", (event) => void this.handleDelegation(event));
-    socket.on("session.closed", (event) => this.finish(event.reason ?? undefined));
+    socket.on("session.closed", (event) => this.finish(event.reason ?? undefined, event.usage?.seconds));
     socket.on("error", (error) => console.error(`[live] ${this.options.sessionId} sideband error`, error.message));
     socket.on("close", () => this.finish("sideband_closed"));
     // GPT-Live waits for the caller by default. OpenAI's documented way to speak
     // first is an instruction sent after session.started. The sideband replays
     // the last 3 seconds, so a late attach still sees the event.
     socket.on("session.started", () => this.sendGreeting());
+    this.resetSilenceTimer();
+    if (this.options.maxDurationMs) this.durationTimer = setTimeout(() => this.options.onTimeout?.("duration_limit"), this.options.maxDurationMs);
     // If we attached after the replay window, session.started never arrives.
     // Greet anyway unless the caller has already started talking.
     setTimeout(() => {
@@ -93,13 +111,30 @@ export class LiveCallController {
     this.socket?.close({ code: 1000, reason: "controller closed" });
   }
 
+  private resetSilenceTimer(): void {
+    if (!this.options.silenceTimeoutMs || this.finished) return;
+    clearTimeout(this.silenceTimer);
+    this.silenceTimer = setTimeout(() => this.options.onTimeout?.("silence_timeout"), this.options.silenceTimeoutMs);
+  }
+
+  // Report every turn except the one still in progress.
+  private emitFinishedTurns(includeLast: boolean): void {
+    const ready = includeLast ? this.turns.length : this.turns.length - 1;
+    for (; this.emittedTurns < ready; this.emittedTurns += 1) {
+      const turn = this.turns[this.emittedTurns]!;
+      this.options.onTurn?.({ sequence: this.emittedTurns + 1, speaker: turn.role === "caller" ? "caller" : "assistant", text: turn.text });
+    }
+  }
+
   private appendTranscript(role: Turn["role"], delta: string, endMs: number): void {
+    this.resetSilenceTimer();
     const last = this.turns.at(-1);
     if (last?.role === role) {
       last.text += delta;
       last.endMs = endMs;
     } else {
       this.turns.push({ role, text: delta, endMs });
+      this.emitFinishedTurns(false);
     }
     if (role !== "caller") return;
     this.transcriptWaiters = this.transcriptWaiters.filter((waiter) => {
@@ -178,15 +213,19 @@ export class LiveCallController {
 
   private finished = false;
 
-  private finish(closeReason?: string): void {
+  private finish(closeReason?: string, billedSeconds?: number): void {
     if (this.finished) return;
     this.finished = true;
+    clearTimeout(this.silenceTimer);
+    clearTimeout(this.durationTimer);
     this.abort.abort();
     this.socket?.close({ code: 1000, reason: "session finished" });
+    this.emitFinishedTurns(true);
     this.options.onClose?.({
       sessionId: this.options.sessionId,
       durationMs: Date.now() - this.startedAt,
       delegations: this.delegations,
+      ...(billedSeconds !== undefined ? { billedSeconds } : {}),
       ...(closeReason ? { closeReason } : {}),
     });
   }

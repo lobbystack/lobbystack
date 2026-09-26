@@ -2,7 +2,8 @@ import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { buildPhoneSessionConfig } from "@lobbystack/agent-core/live/session";
-import { getCachedBusinessSnapshot } from "@lobbystack/domain";
+import { finishLiveCall, getCachedBusinessSnapshot, startLivePhoneCall } from "@lobbystack/domain";
+import type { BusinessContextSnapshot } from "@lobbystack/shared";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { attachWorkerToLiveSession, getLiveClient } from "@/lib/live-prototype";
@@ -48,12 +49,51 @@ export async function POST(request: Request) {
       await client.live.sessions.reject(sessionId, { status_code: 404 });
       return new NextResponse(null, { status: 200 });
     }
-    await client.live.sessions.accept(sessionId, { session: buildPhoneSessionConfig(snapshot) });
-    await attachWorkerToLiveSession({ sessionId, businessId, channel: "voice", ...(from ? { callerPhone: from } : {}) });
-    return new NextResponse(null, { status: 200 });
+    return await answerCall(client, { sessionId, businessId, snapshot, from, to: to! });
   } catch (error) {
     console.error("[live] incoming call failed", error instanceof Error ? error.message : error);
     await client.live.sessions.reject(sessionId, { status_code: 503 }).catch(() => undefined);
     return new NextResponse(null, { status: 200 });
   }
+}
+
+type LiveClient = ReturnType<typeof getLiveClient>;
+
+// Reserves minutes and records the call before accepting it, the same way the
+// Twilio media path does, so billing and limits behave identically.
+async function answerCall(client: LiveClient, input: { sessionId: string; businessId: string; snapshot: BusinessContextSnapshot; from: string | undefined; to: string }) {
+  const domain = createWorkerDomainContext();
+  let call: Awaited<ReturnType<typeof startLivePhoneCall>>;
+  try {
+    call = await startLivePhoneCall(domain, { businessId: input.businessId, sessionId: input.sessionId, from: input.from ?? "unknown", to: input.to });
+  } catch (error) {
+    if (error !== null && typeof error === "object" && "code" in error && error.code === "voice_limit_reached") {
+      // 486 Busy Here: the caller hears a busy signal rather than an answer
+      // the business can't pay for.
+      await client.live.sessions.reject(input.sessionId, { status_code: 486 });
+      return new NextResponse(null, { status: 200 });
+    }
+    throw error;
+  }
+  if (call.blocked) {
+    await client.live.sessions.reject(input.sessionId, { status_code: 603 });
+    // Closes the record so the minute reservation doesn't stay open.
+    await finishLiveCall(domain, { businessId: input.businessId, callId: call.callId, seconds: 0, end: "blocked_contact" });
+    return new NextResponse(null, { status: 200 });
+  }
+  try {
+    await client.live.sessions.accept(input.sessionId, { session: buildPhoneSessionConfig(input.snapshot) });
+  } catch (error) {
+    await finishLiveCall(domain, { businessId: input.businessId, callId: call.callId, seconds: 0, end: "setup_failed" });
+    throw error;
+  }
+  try {
+    await attachWorkerToLiveSession({ sessionId: input.sessionId, businessId: input.businessId, callId: call.callId, channel: "voice", ...(input.from ? { callerPhone: input.from } : {}) });
+  } catch (error) {
+    // Without the worker nobody answers delegations, so end the call cleanly.
+    await client.live.sessions.hangup(input.sessionId).catch(() => undefined);
+    await finishLiveCall(domain, { businessId: input.businessId, callId: call.callId, seconds: 0, end: "setup_failed" });
+    throw error;
+  }
+  return new NextResponse(null, { status: 200 });
 }

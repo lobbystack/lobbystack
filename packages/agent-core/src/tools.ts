@@ -22,8 +22,9 @@ export type AgentChannel = "voice" | "web_voice" | "web_chat";
 
 /** Live-call controls the agent can use. Only phone calls provide them. */
 export type CallControl = {
-  transfer(destination: string): Promise<void>;
-  hangup(): Promise<void>;
+  /** Resolves false when the transfer can't start, for example the plan is out of transfer attempts. */
+  transfer(destination: string): Promise<boolean>;
+  hangup(reason: "caller_finished" | "spam" | "abuse"): Promise<void>;
 };
 
 export type AgentToolContext = {
@@ -284,15 +285,15 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       execute: async (input) => {
         const destination = snapshot.transferPolicy.transferNumber;
         if (!destination || !isTransferPermitted(snapshot, input)) return { ok: false, reason: "Transfers aren't allowed right now. Offer to take a message." };
-        await callControl.transfer(destination);
-        return { ok: true, transferring: true };
+        const started = await callControl.transfer(destination);
+        return started ? { ok: true, transferring: true } : { ok: false, reason: "The transfer couldn't be started. Offer to take a message." };
       },
     });
     tools.endCall = tool({
       description: "Hang up after saying goodbye, when the caller is done, or when the call is spam or abusive.",
       inputSchema: z.object({ reason: z.enum(["caller_finished", "spam", "abuse"]) }),
-      execute: async () => {
-        await callControl.hangup();
+      execute: async ({ reason }) => {
+        await callControl.hangup(reason);
         return { ok: true };
       },
     });

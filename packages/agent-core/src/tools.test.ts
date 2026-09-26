@@ -15,7 +15,7 @@ function toolNames(overrides: Partial<AgentToolContext> & { bookingMode?: Bookin
   })).sort();
 }
 
-const callControl = { transfer: vi.fn(), hangup: vi.fn() };
+const callControl = { transfer: vi.fn(async () => true), hangup: vi.fn(async () => undefined) };
 
 describe("createReceptionistTools", () => {
   it("books directly by default", () => {

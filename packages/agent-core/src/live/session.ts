@@ -36,5 +36,7 @@ export function buildPhoneSessionConfig(snapshot: BusinessContextSnapshot, voice
     instructions: buildLiveInstructions(snapshot),
     audio: { output: { voice } },
     delegation: { type: "client" },
+    // Keep OpenAI's recording so the worker can copy it into our storage.
+    store: true,
   };
 }

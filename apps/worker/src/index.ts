@@ -153,6 +153,7 @@ async function main(): Promise<void> {
     }
   }
   await storage.ensureReady();
+  liveCalls.setStorage(storage);
   const dependencies: WorkerDependencies = {
     domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) },
     realtime,
