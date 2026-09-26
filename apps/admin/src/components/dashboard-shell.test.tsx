@@ -30,9 +30,10 @@ function setup(role = "business_owner") {
   return { ...view, navigate(pathname: string) { route.pathname = pathname; view.rerender(content()); } };
 }
 describe("original shared navigation", () => {
-  it("keeps the original group ordering, integrations link, and product branding", () => {
+  it("keeps the original group ordering and integrations link", () => {
     setup();
-    expect(screen.getByRole("button", { name: "LobbyStack" })).toBeTruthy();
+    // The sidebar header carries the workspace switcher alone; no brand mark.
+    expect(screen.queryByRole("img", { name: "LobbyStack" })).toBeNull();
     expect(screen.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["#dashboard-main-content", "/", "/calls", "/contacts", "/agent", "/agent/knowledge", "/agent/services", "/agent/rules", "/analytics", "/integrations", "/settings/usage"]);
     expect(document.getElementById("dashboard-main-content")?.tabIndex).toBe(-1);
   });

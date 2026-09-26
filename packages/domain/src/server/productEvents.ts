@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 
-import { businesses, productEvents, withBusinessTransaction } from "@lobbystack/db";
+import { businesses, productEvents, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { buildPostHogAiGenerationProperties, getPostHogBusinessGroupKey, getPostHogDistinctIdForBusinessSystem, redactTelemetryProperties, validateTelemetryEvent, type DeploymentMode, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 import { getMeter } from "@lobbystack/telemetry/node";
@@ -11,11 +11,18 @@ import { recordUnitEconomicsEvent } from "./unitEconomics";
 
 const validationFailures = getMeter("lobbystack-domain").createCounter("telemetry.validation_failed", { unit: "{failure}" });
 
-export async function recordProductEvent(
-  context: DomainContext,
-  input: { name: TelemetryEventName; distinctId: string; businessId?: string; actorType?: "system" | "worker"; deploymentMode?: DeploymentMode; properties: TelemetryProperties },
+type ProductEventInput = { name: TelemetryEventName; distinctId: string; businessId?: string; actorType?: "system" | "worker"; deploymentMode?: DeploymentMode; properties: TelemetryProperties };
+
+/**
+ * Writes the event on a caller's transaction, so a fact and the event that
+ * reports it commit together. The scheduled flush ships the row afterwards and
+ * retries on its own, which is what makes the row the durable part.
+ */
+export async function recordProductEventInTransaction(
+  tx: DatabaseTransaction,
+  input: ProductEventInput,
 ): Promise<string | null> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: input.actorType ?? "system" }, async (tx) => {
+  {
     let deploymentMode = input.deploymentMode ?? "development";
     if (input.businessId) {
       const business = (await tx.select({ telemetryEnabled: businesses.telemetryEnabled, deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
@@ -49,7 +56,14 @@ export async function recordProductEvent(
       throw new Error("Product event could not be recorded.");
     }
     return event.id;
-  });
+  }
+}
+
+export async function recordProductEvent(
+  context: DomainContext,
+  input: ProductEventInput,
+): Promise<string | null> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: input.actorType ?? "system" }, async (tx) => await recordProductEventInTransaction(tx, input));
 }
 
 export type DurableAiUsage = {

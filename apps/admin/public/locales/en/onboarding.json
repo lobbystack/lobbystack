@@ -56,7 +56,7 @@
     "sourceNamePlaceholder": "Company website",
     "continue": "Continue",
     "submitting": "Starting import...",
-    "skip": "Skip for now",
+    "skip": "I don't have a website",
     "skipping": "Skipping...",
     "submitFailed": "We couldn't start the website import right now. Please try again.",
     "skipFailed": "We couldn't skip this step right now. Please try again."

@@ -14,7 +14,17 @@ vi.mock("next/navigation", () => ({ useRouter: () => route.router, useSearchPara
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("./onboarding-plan-comparison", () => ({ OnboardingPlanComparison: () => null }));
 const clients: QueryClient[] = [];
-beforeEach(() => { route.search = new URLSearchParams(); telemetryRef.current = createRecordedBrowserTelemetry(); });
+let store: Record<string, string> = {};
+beforeEach(() => {
+  route.search = new URLSearchParams();
+  telemetryRef.current = createRecordedBrowserTelemetry();
+  store = {};
+  vi.stubGlobal("localStorage", {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => { store[key] = value; },
+    removeItem: (key: string) => { delete store[key]; },
+  });
+});
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 function setup(synced: boolean | "error" = false, monthlyOnly = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
@@ -24,7 +34,7 @@ function setup(synced: boolean | "error" = false, monthlyOnly = false) {
     if (url.includes("/api/onboarding/stage?")) return Response.json({ ok: true });
     if (url === "/api/billing/checkout" && init?.method === "POST") return Response.json({ requestId: "new-checkout" });
     if (url.includes("requestId=new-checkout")) return Response.json({ status: "error", checkoutUrl: null, error: "Checkout failed" });
-    if (url.includes("requestId=returned-checkout")) return synced === "error" ? Response.json({ error: "Not synchronized" }, { status: 503 }) : Response.json({ synced });
+    if (url.includes("requestId=returned-checkout")) return synced === "error" ? Response.json({ error: "Not synchronized" }, { status: 503 }) : Response.json({ synced, target: "pro" });
     throw new Error(`Unexpected request ${url}`);
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -37,6 +47,25 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
     const fetchMock = setup(true);
     await waitFor(() => expect(route.router.replace).toHaveBeenCalledWith("/onboarding/number"));
     expect(fetchMock.mock.calls.filter(([url]) => url.includes("/api/onboarding/stage?"))).toHaveLength(1);
+  });
+  it("records plan_checkout_completed once when a paid return synchronizes", async () => {
+    route.search = new URLSearchParams("checkout=success&requestId=returned-checkout");
+    setup(true);
+    await waitFor(() => expect(route.router.replace).toHaveBeenCalledWith("/onboarding/number"));
+    telemetryRef.current!.expectEvent("web.onboarding.plan_checkout_completed", { businessId: "business", plan: "pro" });
+    expect(telemetryRef.current!.events.filter(event => event.name === "web.onboarding.plan_checkout_completed")).toHaveLength(1);
+  });
+  it("does not report the same checkout again when the return page is reopened", async () => {
+    route.search = new URLSearchParams("checkout=success&requestId=returned-checkout");
+    setup(true);
+    await waitFor(() => expect(route.router.replace).toHaveBeenCalledWith("/onboarding/number"));
+    cleanup();
+    // A reload of the return URL: the endpoint still answers synced, and a
+    // fresh mount has a fresh ref.
+    route.router.replace.mockClear();
+    setup(true);
+    await waitFor(() => expect(route.router.replace).toHaveBeenCalledWith("/onboarding/number"));
+    expect(telemetryRef.current!.events.filter(event => event.name === "web.onboarding.plan_checkout_completed")).toHaveLength(1);
   });
   it.each([false, "error"] as const)("keeps return parameters and stays put while synchronization is %s", async synced => {
     route.search = new URLSearchParams("checkout=success&requestId=returned-checkout");

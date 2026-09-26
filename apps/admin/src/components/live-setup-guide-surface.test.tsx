@@ -1,19 +1,28 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LiveSetupGuideSurface } from "./live-setup-guide-surface";
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+const launcher = vi.hoisted(() => {
+  const ended = new Set<() => void>();
+  return {
+    startTestCall: vi.fn(),
+    subscribeTestCallEnded: (listener: () => void) => { ended.add(listener); return () => { ended.delete(listener); }; },
+    announceEnded: () => { for (const listener of ended) listener(); },
+  };
+});
+vi.mock("@/lib/test-call-launcher", () => ({ startTestCall: launcher.startTestCall, subscribeTestCallEnded: launcher.subscribeTestCallEnded }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string, options?: { completed?: number; total?: number }) => key === "sidebar.setupGuide.description" ? `${options?.completed}/${options?.total}` : key }) }));
-const order = ["website", "sources", "calendar", "services", "rules"];
+const order = ["fullScan", "sources", "testCall", "phoneNumber"];
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 function setup(completed: string[] = [], skipped: string[] = []) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
-  const steps = order.map(id => ({ id, status: completed.includes(id) ? "complete" : skipped.includes(id) ? "skipped" : "needs setup" }));
+  const steps = order.map(id => ({ id, documentId: id === "fullScan" ? "doc_1" : null, status: completed.includes(id) ? "complete" : skipped.includes(id) ? "skipped" : "needs setup" }));
   client.setQueryData(["setup", "business"], { steps });
   const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
     if (init?.method === "PATCH") { const { stepId } = JSON.parse(String(init.body)); steps.find(step => step.id === stepId)!.status = "skipped"; }
@@ -24,36 +33,56 @@ function setup(completed: string[] = [], skipped: string[] = []) {
 }
 describe("original setup guide interactions", () => {
   it("opens the first incomplete step with checklist progress", () => {
-    setup(["website", "services"]); expect(screen.getByText("2/5")).toBeTruthy();
+    setup(["fullScan", "phoneNumber"]); expect(screen.getByText("2/4")).toBeTruthy();
     expect(screen.getByRole("button", { name: "sidebar.setupGuide.stepActions.sources" })).toBeTruthy();
   });
   it("persists skipping a step and advances the accordion", async () => {
-    const fetchMock = setup(["website", "services"]);
+    const fetchMock = setup(["fullScan", "phoneNumber"]);
     await userEvent.click(screen.getByRole("button", { name: "sidebar.setupGuide.skipStep" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/setup?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ stepId: "sources", skipped: true }) })));
-    expect(await screen.findByRole("button", { name: "sidebar.setupGuide.stepActions.calendar" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "sidebar.setupGuide.stepActions.testCall" })).toBeTruthy();
   });
   it.each(["complete", "skipped"])("keeps %s steps closed", async status => {
-    setup(status === "complete" ? ["website"] : [], status === "skipped" ? ["website"] : []);
-    await userEvent.click(screen.getByRole("button", { name: "sidebar.setupGuide.steps.website" }));
-    expect(screen.queryByRole("button", { name: "sidebar.setupGuide.stepActions.website" })).toBeNull();
+    setup(status === "complete" ? ["fullScan"] : [], status === "skipped" ? ["fullScan"] : []);
+    await userEvent.click(screen.getByRole("button", { name: "sidebar.setupGuide.steps.fullScan" }));
+    expect(screen.queryByRole("button", { name: "sidebar.setupGuide.stepActions.fullScan" })).toBeNull();
     expect(screen.getByRole("button", { name: "sidebar.setupGuide.stepActions.sources" })).toBeTruthy();
   });
+  it("rechecks the test-call step once the call ends, since nothing navigates", async () => {
+    const fetchMock = setup(["fullScan", "sources"]);
+    await waitFor(() => expect(screen.getByRole("button", { name: "sidebar.setupGuide.stepActions.testCall" })).toBeTruthy());
+    const before = fetchMock.mock.calls.length;
+    act(() => launcher.announceEnded());
+    // The gateway writes the call down after the browser hangs up, so the guide
+    // polls rather than asking once.
+    await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(before), { timeout: 5_000 });
+  });
   it("persists remaining skips before leaving", async () => {
-    const fetchMock = setup(["website", "services"]);
+    const fetchMock = setup(["fullScan", "phoneNumber"]);
     await userEvent.click(screen.getByRole("button", { name: "sidebar.setupGuide.skip" }));
     await waitFor(() => expect(router.push).toHaveBeenCalledWith("/"));
-    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "PATCH").map(([, init]) => JSON.parse(String(init!.body)).stepId)).toEqual(["sources", "calendar", "rules"]);
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "PATCH").map(([, init]) => JSON.parse(String(init!.body)).stepId)).toEqual(["sources", "testCall"]);
   });
   it.each([
-    ["website", "/agent/knowledge?setup=website"], ["sources", "/agent/knowledge?setup=upload"], ["calendar", "/integrations?setup=calendar"], ["services", "/agent/services?setup=service"], ["rules", "/agent/rules?setup=rule"],
-  ])("opens the original %s target", async (step, target) => {
+    ["sources", "/agent/knowledge?setup=upload"], ["phoneNumber", "/settings/phone-number"],
+  ])("opens the %s target", async (step, target) => {
     setup(order.slice(0, order.indexOf(step!)));
     await userEvent.click(screen.getByRole("button", { name: `sidebar.setupGuide.stepActions.${step}` }));
     expect(router.push).toHaveBeenCalledWith(target);
   });
+  it("asks for the deeper read in place rather than navigating away", async () => {
+    const fetchMock = setup();
+    await userEvent.click(screen.getByRole("button", { name: "sidebar.setupGuide.stepActions.fullScan" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/doc_1?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ action: "expand" }) })));
+  });
+  it("starts the call in place rather than navigating away", async () => {
+    setup(["fullScan", "sources"]);
+    await userEvent.click(screen.getByRole("button", { name: "sidebar.setupGuide.stepActions.testCall" }));
+    expect(launcher.startTestCall).toHaveBeenCalledOnce();
+    expect(router.push).not.toHaveBeenCalled();
+  });
   it("redirects after every step is complete or skipped", async () => {
-    setup(["website", "sources"], ["calendar", "services", "rules"]);
+    setup(["fullScan", "sources"], ["testCall", "phoneNumber"]);
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
   });
 });

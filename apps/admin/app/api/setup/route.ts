@@ -1,7 +1,8 @@
-import { and, count, eq, isNotNull, ne } from "drizzle-orm";
+import { and, count, eq, isNull, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { agentRules, businesses, calendarConnections, knowledgeDocuments, services } from "@lobbystack/db";
+import { businesses, knowledgeDocuments, phoneNumbers } from "@lobbystack/db";
+import { countOperatorTestCallsHeard, currentWebsiteIngestion, ONBOARDING_CRAWL_PAGE_LIMIT } from "@lobbystack/domain";
 import { asApiResponse, jsonError, readJson, withOperatorTransaction } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
@@ -11,17 +12,23 @@ export async function GET(request: Request) {
     return NextResponse.json(await withOperatorTransaction(request, async ({ businessId, tx }) => {
       const business = await tx.select({ name: businesses.name, websiteUrl: businesses.websiteUrl, timezone: businesses.timezone, skippedSteps: businesses.setupGuideSkippedSteps }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
       const knowledge = await tx.select({ count: count() }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, businessId), eq(knowledgeDocuments.sourceType, "upload"), ne(knowledgeDocuments.status, "error"), ne(knowledgeDocuments.status, "cancelled")));
-      const calendar = await tx.select({ count: count() }).from(calendarConnections).where(and(eq(calendarConnections.businessId, businessId), eq(calendarConnections.status, "connected"), isNotNull(calendarConnections.selectedCalendarId), ne(calendarConnections.selectedCalendarId, "")));
-      const serviceCount = await tx.select({ count: count() }).from(services).where(and(eq(services.businessId, businessId), eq(services.active, true)));
-      const ruleCount = await tx.select({ count: count() }).from(agentRules).where(and(eq(agentRules.businessId, businessId), eq(agentRules.active, true)));
+      const sampled = await currentWebsiteIngestion(tx, businessId);
+      // Onboarding samples a site, and an expansion reuses the same row, so the
+      // page count cannot say which kind of crawl produced it; the cap it ran
+      // with can. The step is done once the site has been read in full: with no
+      // crawl at all, or a completed one that was not cut off by the sample cap.
+      // A crawl still running or one that failed leaves the step open, so the
+      // count never goes backwards and a failed read keeps its way back in.
+      const fullyRead = !sampled?.rootDocumentId || (sampled.status === "completed" && !(sampled.pageLimit === ONBOARDING_CRAWL_PAGE_LIMIT && sampled.importedCount >= ONBOARDING_CRAWL_PAGE_LIMIT));
+      const heardCalls = await countOperatorTestCallsHeard(tx, businessId);
+      const businessNumber = await tx.select({ count: count() }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), isNull(phoneNumbers.reclaimScheduledAt)));
       const row = business[0];
       return {
         steps: [
-          { id: "website", name: "Add your website", description: "Import your public website", status: row?.websiteUrl ? "complete" : row?.skippedSteps.includes("website") ? "skipped" : "needs setup" },
+          { id: "fullScan", name: "Read the rest of your site", description: "Onboarding read a sample", documentId: sampled?.rootDocumentId ?? null, status: fullyRead ? "complete" : row?.skippedSteps.includes("fullScan") ? "skipped" : "needs setup" },
           { id: "sources", name: "Add more sources", description: "Upload policies, FAQs, or pricing", status: Number(knowledge[0]?.count ?? 0) > 0 ? "complete" : row?.skippedSteps.includes("sources") ? "skipped" : "needs setup" },
-          { id: "calendar", name: "Connect your calendar", description: "Keep appointment times in sync", status: Number(calendar[0]?.count ?? 0) > 0 ? "complete" : row?.skippedSteps.includes("calendar") ? "skipped" : "needs setup" },
-          { id: "services", name: "Add your services", description: "Configure services customers can book", status: Number(serviceCount[0]?.count ?? 0) > 0 ? "complete" : row?.skippedSteps.includes("services") ? "skipped" : "needs setup" },
-          { id: "rules", name: "Define rules", description: "Set receptionist instructions", status: Number(ruleCount[0]?.count ?? 0) > 0 ? "complete" : row?.skippedSteps.includes("rules") ? "skipped" : "needs setup" },
+          { id: "testCall", name: "Hear your agent", description: "Call it from your browser", status: heardCalls > 0 ? "complete" : row?.skippedSteps.includes("testCall") ? "skipped" : "needs setup" },
+          { id: "phoneNumber", name: "Connect a phone number", description: "Let it answer real callers", status: Number(businessNumber[0]?.count ?? 0) > 0 ? "complete" : row?.skippedSteps.includes("phoneNumber") ? "skipped" : "needs setup" },
         ],
       };
     }, { minimumRole: "business_admin" }));
@@ -30,7 +37,7 @@ export async function GET(request: Request) {
   }
 }
 
-const stepIds = ["website", "sources", "calendar", "services", "rules"] as const;
+const stepIds = ["fullScan", "sources", "testCall", "phoneNumber"] as const;
 
 export async function PATCH(request: Request) {
   try {

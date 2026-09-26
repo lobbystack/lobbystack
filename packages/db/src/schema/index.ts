@@ -701,6 +701,8 @@ export const websiteIngestionJobs = pgTable(
     importedCount: integer("imported_count").default(0).notNull(),
     indexedCount: integer("indexed_count").default(0).notNull(),
     errorCount: integer("error_count").default(0).notNull(),
+    /** The cap the crawl ran with, so a sample stays distinguishable from a full read. */
+    pageLimit: integer("page_limit"),
     lastError: text("last_error"),
     ...timestamps,
   },

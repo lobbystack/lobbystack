@@ -4,12 +4,12 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2Icon, Check, ChevronsUpDown, Plus } from "lucide-react";
+import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { SidebarTeamSkeleton } from "@/components/loading-skeletons";
-import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { recordPendingWorkspaceSwitch } from "@/lib/workspace-analytics";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { SidebarMenu, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 type Business = { businessId: string; name: string; active: boolean };
 async function getBusinesses(): Promise<{ businesses: Business[] }> {
@@ -20,21 +20,11 @@ async function getBusinesses(): Promise<{ businesses: Business[] }> {
 export function WorkspaceSwitcher() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { i18n, t } = useTranslation("nav");
+  const { t } = useTranslation("nav");
   const { isMobile } = useSidebar();
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: getBusinesses });
   const [switching, setSwitching] = useState(false);
   const active = businesses.data?.businesses.find((business) => business.active) ?? businesses.data?.businesses[0];
-  const phoneNumbers = useQuery({
-    queryKey: ["phone-numbers", active?.businessId],
-    queryFn: async () => {
-      const response = await fetch(`/api/phone-numbers?businessId=${encodeURIComponent(active!.businessId)}`, { credentials: "include" });
-      if (!response.ok) throw new Error("Unable to load workspace phone number.");
-      return await response.json() as { phoneNumbers: Array<{ e164: string; status: string }> };
-    },
-    enabled: Boolean(active),
-  });
-  const primaryPhone = phoneNumbers.data?.phoneNumbers.find((number) => number.status === "active") ?? phoneNumbers.data?.phoneNumbers[0];
 
   async function selectBusiness(businessId: string) {
     if (businessId === active?.businessId) return;
@@ -65,19 +55,17 @@ export function WorkspaceSwitcher() {
           <DropdownMenuTrigger
             render={
               <Item
-                className="w-full gap-2 px-3 py-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[popup-open=true]:bg-sidebar-accent data-[popup-open=true]:text-sidebar-accent-foreground"
+                className="w-full gap-2 rounded-lg px-2 py-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[popup-open=true]:bg-sidebar-accent data-[popup-open=true]:text-sidebar-accent-foreground"
                 render={<button disabled={switching} type="button" />}
                 size="xs"
-                variant="outline"
               />
             }
           >
-            <ItemMedia variant="icon"><Building2Icon /></ItemMedia>
-            <ItemContent className="min-w-0 gap-0.5">
-              <ItemTitle className="ph-mask line-clamp-2 w-full text-left font-medium leading-tight">
+            <ItemMedia><WorkspaceInitial name={active?.name} /></ItemMedia>
+            <ItemContent className="min-w-0">
+              <ItemTitle className="ph-mask w-full truncate text-left font-medium">
                 {active?.name ?? t("sidebar.businessSlugFallback")}
               </ItemTitle>
-              <ItemDescription className={phoneNumbers.isLoading ? "text-xs" : "ph-mask text-xs tabular-nums"}>{phoneNumbers.isLoading ? t("sidebar.loadingPhone") : primaryPhone ? formatPhoneNumberDisplay(primaryPhone.e164, i18n.language) : t("sidebar.noBusinessPhone")}</ItemDescription>
             </ItemContent>
             <ItemActions><ChevronsUpDown className="size-4 text-muted-foreground" /></ItemActions>
           </DropdownMenuTrigger>
@@ -99,5 +87,17 @@ export function WorkspaceSwitcher() {
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
+  );
+}
+
+/**
+ * The workspace's first letter, matching the account avatar in the sidebar
+ * footer, so the two account rows match.
+ */
+function WorkspaceInitial({ name }: { name: string | undefined }) {
+  return (
+    <Avatar aria-hidden="true" className="shadow-xs" size="sm">
+      <AvatarFallback>{name?.trim().charAt(0).toUpperCase() || "?"}</AvatarFallback>
+    </Avatar>
   );
 }

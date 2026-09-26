@@ -1,10 +1,12 @@
 import { and, eq, lt, or, sql } from "drizzle-orm";
 
 import { billingAccounts, billingCheckoutRequests, billingTransactions, billingUsageEvents, businesses, enqueueOutbox, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { billingErrorCodes, billingPlanCatalog, billingPlanSlugs, type BillingPlanSlug } from "@lobbystack/shared";
+import { billingErrorCodes, billingPlanCatalog, billingPlanSlugs, isPaidSubscription, type BillingPlanSlug } from "@lobbystack/shared";
+import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import type { DomainContext } from "./context";
 import { recordAffiliateCommissionInTransaction } from "./affiliates";
+import { recordProductEventInTransaction } from "./productEvents";
 import { requireBusinessAdmin } from "../authz";
 import { correctUsageInTransaction, enqueueUsageSyncInTransaction, getUsageStatusInTransaction, reserveUsageInTransaction, type NonAiBillingUsageKind, type UsageReservationResult } from "./usage";
 
@@ -473,17 +475,39 @@ function dateField(source: Record<string, unknown>, ...keys: string[]): Date | u
   return Number.isNaN(date.valueOf()) ? undefined : date;
 }
 
+export type SubscriptionStart = { plan: string; billingInterval: string | null; previousPlan: string | null };
+
+/**
+ * A subscription starts on the edge into a paid, live plan. Later webhooks for
+ * the same subscription describe an account that was already paying, so they
+ * must not report a second start.
+ */
+export function detectSubscriptionStart(
+  previous: { plan: string | null; subscriptionState: string | null } | undefined,
+  next: { plan: string | null; subscriptionState: string | null; billingInterval: string | null },
+): SubscriptionStart | null {
+  if (!isPaidSubscription(next.plan, next.subscriptionState)) return null;
+  if (isPaidSubscription(previous?.plan ?? null, previous?.subscriptionState ?? null)) return null;
+  return { plan: next.plan!, billingInterval: next.billingInterval, previousPlan: previous?.plan ?? null };
+}
+
 export async function reconcileBillingProviderEvent(
   context: DomainContext,
   input: { businessId: string; providerEventId: string },
 ): Promise<boolean> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+  const outcome = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx): Promise<{ reconciled: boolean; started: SubscriptionStart | null }> => {
+    let startedSubscription: SubscriptionStart | null = null;
+    // The provider can deliver several live events for one checkout at once
+    // (subscription.active beside order.paid). Without this lock both workers
+    // read the same pre-paid account and each reports a subscription start, so
+    // the event would count webhook races instead of subscriptions.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`billing-reconcile:${input.businessId}`}, 0))`);
     const event = (await tx.select({ id: providerEvents.id, providerEventId: providerEvents.providerEventId, eventType: providerEvents.eventType, status: providerEvents.status, payload: providerEvents.payload, createdAt: providerEvents.createdAt })
       .from(providerEvents)
       .where(and(eq(providerEvents.id, input.providerEventId), eq(providerEvents.businessId, input.businessId)))
       .limit(1))[0];
-    if (!event) return false;
-    if (event.status === "processed") return true;
+    if (!event) return { reconciled: false, started: null };
+    if (event.status === "processed") return { reconciled: true, started: null };
 
     const payload = recordObject(event.payload);
     const transactionPayload = recordObject(payload.order ?? payload.refund ?? payload);
@@ -494,6 +518,9 @@ export async function reconcileBillingProviderEvent(
       billingKey: billingAccounts.billingKey,
       customerId: billingAccounts.customerId,
       subscriptionId: billingAccounts.subscriptionId,
+      plan: billingAccounts.plan,
+      subscriptionState: billingAccounts.subscriptionState,
+      billingInterval: billingAccounts.billingInterval,
     }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
     const billingKey = stringField(transactionPayload, "billingKey", "externalCustomerId", "customerId") ?? stringField(payload, "billingKey", "externalCustomerId", "customerId") ?? stringField(customer, "id", "externalId") ?? existing?.billingKey;
     if (billingKey) {
@@ -504,6 +531,11 @@ export async function reconcileBillingProviderEvent(
       const subscriptionState = stringField(transactionPayload, "subscriptionState", "status") ?? stringField(payload, "subscriptionState", "status") ?? (event.eventType.startsWith("subscription.") ? event.eventType.slice("subscription.".length) : undefined);
       const currentPeriodStart = dateField(transactionPayload, "currentPeriodStart", "current_period_start") ?? dateField(payload, "currentPeriodStart", "current_period_start") ?? dateField(subscription, "currentPeriodStart", "current_period_start");
       const currentPeriodEnd = dateField(transactionPayload, "currentPeriodEnd", "current_period_end") ?? dateField(payload, "currentPeriodEnd", "current_period_end") ?? dateField(subscription, "currentPeriodEnd", "current_period_end");
+      startedSubscription = detectSubscriptionStart(existing, {
+        plan: plan ?? existing?.plan ?? null,
+        subscriptionState: subscriptionState ?? existing?.subscriptionState ?? null,
+        billingInterval: billingInterval ?? existing?.billingInterval ?? null,
+      });
       await tx.insert(billingAccounts).values({
         businessId: input.businessId,
         billingKey,
@@ -587,7 +619,29 @@ export async function reconcileBillingProviderEvent(
       });
     }
 
+    // The event commits with the reconciliation that produced it. Marking the
+    // provider event processed after reporting it separately would lose the
+    // start for good, because no later pass detects the same transition twice.
+    if (startedSubscription) {
+      await recordProductEventInTransaction(tx, {
+        name: "billing.subscription_started",
+        distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+        businessId: input.businessId,
+        actorType: "worker",
+        // The taxonomy requires both, and null reads as missing: in a non-cloud
+        // deployment that throws, which on this transaction would block the
+        // payment itself. A first subscription has no previous plan to name.
+        properties: {
+          plan: startedSubscription.plan,
+          billingInterval: startedSubscription.billingInterval ?? "unknown",
+          previousPlan: startedSubscription.previousPlan ?? "none",
+        },
+      });
+    }
+
     await tx.update(providerEvents).set({ status: billingKey ? "processed" : "ignored", updatedAt: new Date() }).where(eq(providerEvents.id, event.id));
-    return Boolean(billingKey);
+    return { reconciled: Boolean(billingKey), started: startedSubscription };
   });
+
+  return outcome.reconciled;
 }

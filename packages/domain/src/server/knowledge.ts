@@ -61,6 +61,16 @@ export function hashContent(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
+/**
+ * Onboarding reads enough of a site to make the agent recognisable and no more.
+ * Most people who start onboarding never finish it, and every crawled page is
+ * billed, so the full read waits until someone asks for it.
+ */
+export const ONBOARDING_CRAWL_PAGE_LIMIT = 10;
+
+/** Matches the crawler's own default, used once someone asks for the full read. */
+export const FULL_CRAWL_PAGE_LIMIT = 50;
+
 export async function createKnowledgeDocument(
   context: DomainContext,
   input: { userId: string; businessId: string; title: string; sourceType: string; sourceUrl?: string; storageObjectId?: string; onboarding?: boolean },
@@ -88,7 +98,9 @@ export async function createKnowledgeDocument(
     if (isWebsite) {
       const existing = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceUrl, sourceUrl!))).limit(1).for("update"))[0];
       if (existing) {
-        if (["cancelled", "error"].includes(existing.status)) await queueKnowledgeDocumentRetry(tx, { businessId: input.businessId, documentId: existing.id }, existing);
+        // A retry of an onboarding submission is still onboarding: without the
+        // limit it would fall back to the full crawl this sampling exists to defer.
+        if (["cancelled", "error"].includes(existing.status)) await queueKnowledgeDocumentRetry(tx, { businessId: input.businessId, documentId: existing.id, crawlLimit: input.onboarding ? ONBOARDING_CRAWL_PAGE_LIMIT : FULL_CRAWL_PAGE_LIMIT }, existing);
         return existing.id;
       }
     }
@@ -103,14 +115,17 @@ export async function createKnowledgeDocument(
     if (!document) {
       throw new Error("Knowledge document could not be created.");
     }
-    const ingestion = isWebsite ? (await tx.insert(websiteIngestionJobs).values({ businessId: input.businessId, rootDocumentId: document.id, websiteUrl: sourceUrl!, provider: "firecrawl", status: "queued" }).returning({ id: websiteIngestionJobs.id }))[0] : undefined;
+    const crawlLimit = input.onboarding ? ONBOARDING_CRAWL_PAGE_LIMIT : FULL_CRAWL_PAGE_LIMIT;
+    const ingestion = isWebsite ? (await tx.insert(websiteIngestionJobs).values({ businessId: input.businessId, rootDocumentId: document.id, websiteUrl: sourceUrl!, provider: "firecrawl", status: "queued", pageLimit: crawlLimit }).returning({ id: websiteIngestionJobs.id }))[0] : undefined;
     await enqueueOutbox(tx, {
       topic: isWebsite ? "knowledge.crawlWebsite" : "knowledge.extractDocument",
       businessId: input.businessId,
       aggregateType: "knowledge_document",
       aggregateId: document.id,
       dedupeKey: isWebsite ? `knowledge:${document.id}:crawl` : `knowledge:${document.id}:extract`,
-      payload: isWebsite ? { url: sourceUrl, documentId: document.id, revision: 0, websiteIngestionJobId: ingestion!.id } : { documentId: document.id, revision: 0 },
+      payload: isWebsite
+        ? { url: sourceUrl, documentId: document.id, revision: 0, websiteIngestionJobId: ingestion!.id, limit: crawlLimit }
+        : { documentId: document.id, revision: 0 },
     });
     return document.id;
   });
@@ -123,10 +138,11 @@ export async function listKnowledgeSnippets(context: DomainContext, input: { use
   });
 }
 
-async function queueKnowledgeDocumentRetry(tx: DatabaseTransaction, input: { businessId: string; documentId: string }, document: Pick<typeof knowledgeDocuments.$inferSelect, "id" | "sourceType" | "sourceUrl" | "revision">): Promise<void> {
+async function queueKnowledgeDocumentRetry(tx: DatabaseTransaction, input: { businessId: string; documentId: string; crawlLimit?: number }, document: Pick<typeof knowledgeDocuments.$inferSelect, "id" | "sourceType" | "sourceUrl" | "revision">): Promise<void> {
     await tx.update(knowledgeDocuments).set({ status: document.sourceType === "website" ? "processing" : "pending", processingProgress: 0, error: null, revision: sql`${knowledgeDocuments.revision} + 1`, updatedAt: new Date() }).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId)));
-    const ingestion = document.sourceType === "website" && document.sourceUrl ? (await tx.insert(websiteIngestionJobs).values({ businessId: input.businessId, rootDocumentId: input.documentId, websiteUrl: document.sourceUrl, provider: "firecrawl", status: "queued" }).onConflictDoUpdate({ target: websiteIngestionJobs.rootDocumentId, set: { status: "queued", importedCount: 0, indexedCount: 0, errorCount: 0, lastError: null, updatedAt: new Date() } }).returning({ id: websiteIngestionJobs.id }))[0] : undefined;
-    await enqueueOutbox(tx, { topic: document.sourceType === "website" ? "knowledge.crawlWebsite" : "knowledge.extractDocument", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: input.documentId, dedupeKey: `knowledge:${input.documentId}:retry:${document.revision + 1}`, payload: document.sourceType === "website" && document.sourceUrl ? { documentId: input.documentId, url: document.sourceUrl, revision: document.revision + 1, websiteIngestionJobId: ingestion!.id } : { documentId: input.documentId, revision: document.revision + 1 } });
+    const retryLimit = input.crawlLimit ?? FULL_CRAWL_PAGE_LIMIT;
+    const ingestion = document.sourceType === "website" && document.sourceUrl ? (await tx.insert(websiteIngestionJobs).values({ businessId: input.businessId, rootDocumentId: input.documentId, websiteUrl: document.sourceUrl, provider: "firecrawl", status: "queued", pageLimit: retryLimit }).onConflictDoUpdate({ target: websiteIngestionJobs.rootDocumentId, set: { status: "queued", importedCount: 0, indexedCount: 0, errorCount: 0, lastError: null, pageLimit: retryLimit, updatedAt: new Date() } }).returning({ id: websiteIngestionJobs.id }))[0] : undefined;
+    await enqueueOutbox(tx, { topic: document.sourceType === "website" ? "knowledge.crawlWebsite" : "knowledge.extractDocument", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: input.documentId, dedupeKey: `knowledge:${input.documentId}:retry:${document.revision + 1}`, payload: document.sourceType === "website" && document.sourceUrl ? { documentId: input.documentId, url: document.sourceUrl, revision: document.revision + 1, websiteIngestionJobId: ingestion!.id, limit: retryLimit } : { documentId: input.documentId, revision: document.revision + 1 } });
 }
 
 export async function retryKnowledgeDocument(context: DomainContext, input: { userId: string; businessId: string; documentId: string }): Promise<void> {
@@ -135,6 +151,20 @@ export async function retryKnowledgeDocument(context: DomainContext, input: { us
     const document = (await tx.select({ id: knowledgeDocuments.id, sourceType: knowledgeDocuments.sourceType, sourceUrl: knowledgeDocuments.sourceUrl, revision: knowledgeDocuments.revision }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update"))[0];
     if (!document) throw new Error("Knowledge document not found.");
     await queueKnowledgeDocumentRetry(tx, input, document);
+  });
+}
+
+/**
+ * Reads the rest of a site that onboarding only sampled. Re-crawling at the
+ * full limit replaces the partial import rather than adding a second copy.
+ */
+export async function expandWebsiteCrawl(context: DomainContext, input: { userId: string; businessId: string; documentId: string }): Promise<void> {
+  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    const document = (await tx.select({ id: knowledgeDocuments.id, sourceType: knowledgeDocuments.sourceType, sourceUrl: knowledgeDocuments.sourceUrl, revision: knowledgeDocuments.revision }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update"))[0];
+    if (!document) throw Object.assign(new Error("Knowledge document not found."), { status: 404 });
+    if (document.sourceType !== "website" || !document.sourceUrl) throw Object.assign(new Error("Only a website import can be read further."), { status: 400 });
+    await queueKnowledgeDocumentRetry(tx, { ...input, crawlLimit: FULL_CRAWL_PAGE_LIMIT }, document);
   });
 }
 

@@ -124,5 +124,31 @@
       "error": "Erreur",
       "cancelled": "Annulé"
     }
+  },
+  "abandonIntent": {
+    "title": "Avant de partir",
+    "description": "Deux questions rapides. Une seule suffit.",
+    "issue": {
+      "label": "Un problème ?",
+      "placeholder": "Décrivez ce qui s'est passé pour qu'on le corrige."
+    },
+    "missing": {
+      "label": "Il manque quelque chose ?",
+      "placeholder": "Dites-nous ce que vous aimeriez voir ensuite."
+    },
+    "notNow": "Pas maintenant",
+    "submit": "Envoyer",
+    "sentTitle": "Merci",
+    "sentDescription": "Nous lisons chacun de ces messages.",
+    "close": "Fermer"
+  },
+  "websiteImport": {
+    "runningTitle": "Lecture de {{host}}",
+    "runningHint": "{{imported}} pages lues jusqu'ici, {{indexed}} prêtes à répondre.",
+    "doneTitle": "Votre agent a lu {{host}}",
+    "doneHint_one": "{{count}} page est prête à répondre.",
+    "doneHint_other": "{{count}} pages sont prêtes à répondre.",
+    "failedTitle": "Nous n'avons pas pu lire {{host}}",
+    "failedHint": "Ajoutez vos informations à la main, ou relancez l'import depuis votre tableau de bord."
   }
 }

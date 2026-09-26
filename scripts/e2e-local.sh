@@ -35,6 +35,7 @@ TESTS=(
   e2e/auth-pages.e2e.ts
   e2e/auth-return-to.e2e.ts
   e2e/onboarding-flow.e2e.ts
+  e2e/onboarding-pending.e2e.ts
   e2e/operator-auth.e2e.ts
   e2e/performance-startup.e2e.ts
   e2e/supported-journeys.e2e.ts
@@ -64,7 +65,14 @@ trap cleanup EXIT
 echo "==> Starting isolated PostgreSQL, Redis, and Mailpit"
 "${COMPOSE[@]}" up -d --wait postgres redis mailpit
 
+# The db CLI loads the repository .env unless told not to, and a developer's
+# .env names a migrator URL pointing at their own database. Without this the
+# migrations and the seed land there instead of the container below, leaving
+# these containers empty and every spec failing on a missing `users` table.
+export LOBBYSTACK_SKIP_ENV_FILES=true
+
 export DATABASE_URL="postgres://postgres:e2e-postgres@127.0.0.1:${POSTGRES_PORT}/lobbystack"
+export LOBBYSTACK_MIGRATOR_DATABASE_URL="postgres://postgres:e2e-postgres@127.0.0.1:${POSTGRES_PORT}/lobbystack"
 export LOBBYSTACK_APP_DATABASE_URL="postgres://lobbystack_app:app@127.0.0.1:${POSTGRES_PORT}/lobbystack"
 export LOBBYSTACK_AUTH_DATABASE_URL="postgres://lobbystack_auth:auth@127.0.0.1:${POSTGRES_PORT}/lobbystack"
 export LOBBYSTACK_WORKER_DATABASE_URL="postgres://lobbystack_worker:worker@127.0.0.1:${POSTGRES_PORT}/lobbystack"

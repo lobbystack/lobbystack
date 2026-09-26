@@ -1,3 +1,4 @@
+import { isPaidSubscription } from "@lobbystack/shared";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
@@ -39,7 +40,7 @@ export async function searchBusinessNumberInventory(context: DomainContext, inpu
       const active = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), isNull(phoneNumbers.reclaimScheduledAt))).limit(1);
       if (!active.length) throw new Error("An active phone number is required before choosing a replacement.");
     }
-    if (business.deploymentMode === "cloud" && (!billing || !["starter", "pro", "enterprise"].includes(billing.plan ?? "") || !["active", "trialing", "past_due"].includes(billing.state ?? ""))) throw new Error("A paid plan is required for a dedicated business number.");
+    if (business.deploymentMode === "cloud" && (!billing || !isPaidSubscription(billing.plan, billing.state))) throw new Error("A paid plan is required for a dedicated business number.");
     const requestedCountry = input.selection?.countryCode?.trim().toUpperCase();
     if (requestedCountry && !["US", "CA", "GB", "AU"].includes(requestedCountry)) throw new Error("Unsupported country.");
     return resolveBusinessNumberMarket({ selection: input.selection, timezone: business.timezone });

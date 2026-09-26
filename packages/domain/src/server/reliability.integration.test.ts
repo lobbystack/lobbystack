@@ -1,9 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { businessHours, calls, conversations, messages, storageObjects, transcripts } from "@lobbystack/db";
-import { affiliateCommissions, affiliatePayoutItems, affiliateProfiles, billingAccounts, billingTransactions, appointments, auditLogs, businessMemberships, contacts, services, staff, users, businesses, notifications, outboxMessages, withBusinessTransaction, claimOutboxBatch, createDatabaseClient, enqueueOutbox, markOutboxFailed, markOutboxPublished, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { businessHours, calls, conversations, messages, storageObjects, transcripts, websiteIngestionJobs } from "@lobbystack/db";
+import { affiliateCommissions, affiliatePayoutItems, affiliateProfiles, billingAccounts, billingTransactions, appointments, auditLogs, businessMemberships, contacts, productEvents, providerEvents, services, staff, users, businesses, notifications, outboxMessages, withBusinessTransaction, claimOutboxBatch, createDatabaseClient, enqueueOutbox, markOutboxFailed, markOutboxPublished, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { generateAffiliatePayoutRun } from "./affiliates";
+import { reconcileBillingProviderEvent } from "./billing";
+import { DASHBOARD_TEST_CALL_WIDGET_ID } from "@lobbystack/shared";
+import { currentWebsiteIngestion } from "./activation";
 import { createBusiness } from "./tenancy";
 import { bookAppointment, cancelAppointment } from "./booking";
 import { appendMessage } from "./conversations";
@@ -383,6 +386,117 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
       // 55P03 is lock_not_available, rather than a grant or constraint failure.
       expect(error?.cause?.code ?? error?.code).toBe("55P03");
     });
+  });
+
+  it("reports one subscription start when two live events race for the same checkout", async () => {
+    // Polar delivers subscription.active beside order.paid, and the worker queue
+    // can run both at once. Without serialization both read the free account
+    // before either upsert commits, and the funnel counts webhooks not customers.
+    const businessId = randomUUID();
+    const payload = { billingKey: `business:${businessId}`, plan: "starter", status: "active", billingInterval: "monthly" };
+    await client!.db.insert(businesses).values({ id: businessId, slug: businessId, name: "Billing race test", timezone: "UTC", businessType: "test" });
+    const events = await client!.db.insert(providerEvents).values([
+      { provider: "polar", providerEventId: `evt-${randomUUID()}`, eventType: "subscription.active", businessId, payload },
+      { provider: "polar", providerEventId: `evt-${randomUUID()}`, eventType: "order.paid", businessId, payload },
+    ]).returning({ id: providerEvents.id });
+    try {
+      const context = { db: client!.db as unknown as Database };
+
+      // While one reconciliation is open, a second worker cannot reach the
+      // account at all: the business-scoped advisory lock is held for the whole
+      // transaction, so it cannot read the still-free account and report a
+      // second start. Without that lock this acquisition succeeds immediately.
+      let blocked: unknown;
+      await rollbackTest(async (tx) => {
+        await tx.execute(sql`set local role lobbystack_worker`);
+        await reconcileBillingProviderEvent({ db: tx as unknown as Database }, { businessId, providerEventId: events[0]!.id });
+        try {
+          await client!.db.transaction(async (other) => {
+            await other.execute(sql`set local lock_timeout = '250ms'`);
+            await other.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`billing-reconcile:${businessId}`}, 0))`);
+          });
+        } catch (error) {
+          blocked = error;
+        }
+      });
+      const lockError = blocked as { code?: string; cause?: { code?: string } } | undefined;
+      // 55P03 is lock_not_available.
+      expect(lockError?.cause?.code ?? lockError?.code).toBe("55P03");
+
+      // Once the first event has committed, the follow-up event for the same
+      // checkout reconciles without reporting a second start.
+      for (const event of events) await reconcileBillingProviderEvent(context, { businessId, providerEventId: event.id });
+      const starts = await client!.db.select({ id: productEvents.id }).from(productEvents)
+        .where(and(eq(productEvents.businessId, businessId), eq(productEvents.name, "billing.subscription_started")));
+      expect(starts).toHaveLength(1);
+
+      const [account] = await client!.db.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId));
+      expect(account).toMatchObject({ plan: "starter", state: "active" });
+    } finally {
+      await client!.db.delete(businesses).where(eq(businesses.id, businessId));
+    }
+  });
+
+  it("counts only the operator's own test call, not a customer reaching the website widget", async () => {
+    // A visitor calling the business through the embedded widget is web_voice
+    // with media and an end, exactly like the operator's test call. Counting it
+    // tells someone they have heard their agent when they have not, and fires
+    // the activation event the moment they open the dashboard.
+    const businessId = randomUUID();
+    await client!.db.insert(businesses).values({ id: businessId, slug: businessId, name: "Widget call test", timezone: "UTC", businessType: "test" });
+    try {
+      const mediaStartedAt = new Date(Date.now() - 120_000);
+      const endedAt = new Date(Date.now() - 60_000);
+      await client!.db.insert(calls).values([
+        { businessId, provider: "openai", providerCallId: randomUUID(), transport: "web_voice", status: "completed", widgetId: "widget_public_site", startedAt: mediaStartedAt, mediaStartedAt, endedAt },
+        { businessId, provider: "openai", providerCallId: randomUUID(), transport: "web_voice", status: "completed", widgetId: DASHBOARD_TEST_CALL_WIDGET_ID, startedAt: mediaStartedAt, mediaStartedAt, endedAt },
+      ]);
+
+      const heard = await client!.db.select({ count: sql<number>`count(*)::int` }).from(calls).where(and(
+        eq(calls.businessId, businessId),
+        eq(calls.transport, "web_voice"),
+        eq(calls.widgetId, DASHBOARD_TEST_CALL_WIDGET_ID),
+        isNull(calls.prospectDemoId),
+        isNotNull(calls.mediaStartedAt),
+        isNotNull(calls.endedAt),
+      ));
+      expect(heard[0]?.count).toBe(1);
+
+      // Without the widget filter both rows qualify, which is the bug.
+      const unfiltered = await client!.db.select({ count: sql<number>`count(*)::int` }).from(calls).where(and(
+        eq(calls.businessId, businessId),
+        eq(calls.transport, "web_voice"),
+        isNull(calls.prospectDemoId),
+        isNotNull(calls.mediaStartedAt),
+        isNotNull(calls.endedAt),
+      ));
+      expect(unfiltered[0]?.count).toBe(2);
+    } finally {
+      await client!.db.delete(businesses).where(eq(businesses.id, businessId));
+    }
+  });
+
+  it("reads the crawl for the business's own site, even when another crawl is newer", async () => {
+    // Submit A, then B, then A again: A reuses its first import, so B stays the
+    // newest row. Reading by creation time alone reports the wrong site.
+    const businessId = randomUUID();
+    await client!.db.insert(businesses).values({ id: businessId, slug: businessId, name: "Resubmitted website", timezone: "UTC", businessType: "test", websiteUrl: "https://a.example" });
+    try {
+      const older = new Date(Date.now() - 60_000);
+      await client!.db.insert(websiteIngestionJobs).values([
+        { businessId, websiteUrl: "https://a.example", provider: "firecrawl", status: "completed", importedCount: 10, pageLimit: 10, createdAt: older },
+        { businessId, websiteUrl: "https://b.example", provider: "firecrawl", status: "failed", importedCount: 0, pageLimit: 10 },
+      ]);
+      const current = await client!.db.transaction(async (tx) => await currentWebsiteIngestion(tx, businessId));
+      expect(current?.websiteUrl).toBe("https://a.example");
+
+      // A business that names no site falls back to the newest crawl.
+      await client!.db.update(businesses).set({ websiteUrl: null }).where(eq(businesses.id, businessId));
+      const fallback = await client!.db.transaction(async (tx) => await currentWebsiteIngestion(tx, businessId));
+      expect(fallback?.websiteUrl).toBe("https://b.example");
+    } finally {
+      await client!.db.delete(businesses).where(eq(businesses.id, businessId));
+    }
   });
 
   it("keeps a failed expired-upload deletion claimed and retryable without resurrection", async () => {

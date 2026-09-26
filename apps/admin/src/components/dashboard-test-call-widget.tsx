@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Phone } from "lucide-react";
 import { createPortal } from "react-dom";
@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 
 import { AuraVoiceDemo } from "@/components/web-voice/AuraVoiceDemo";
 import { webCallEndpoint } from "@/lib/web-call-endpoint";
+import { announceTestCallEnded, registerTestCallStarter, setTestCallActive } from "@/lib/test-call-launcher";
 import { useTelemetry } from "@/components/product-analytics";
 import type { TelemetryEventName, TelemetryProperties } from "@lobbystack/telemetry";
 import { Button } from "@/components/ui/button";
@@ -43,14 +44,26 @@ export function DashboardTestCallWidget({
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       void voiceControlsRef.current?.forceEndCall();
+      setTestCallActive(false);
     }
     setOpen(nextOpen);
   };
 
-  const handleTestCallClick = () => {
+  const handleTestCallClick = useCallback(() => {
     setOpen(true);
-    void voiceControlsRef.current?.startCall();
-  };
+    setTestCallActive(true);
+    void Promise.resolve(voiceControlsRef.current?.startCall()).catch(() => setTestCallActive(false));
+  }, []);
+
+  // The flag lives in a module, so it outlives this widget: leaving the
+  // dashboard mid-call must not keep every other surface waiting on a call
+  // that no longer exists.
+  useEffect(() => () => setTestCallActive(false), []);
+
+  useEffect(() => {
+    if (!businessSlug) return;
+    return registerTestCallStarter(handleTestCallClick);
+  }, [businessSlug, handleTestCallClick]);
 
   if (!businessSlug) {
     return null;
@@ -86,7 +99,7 @@ export function DashboardTestCallWidget({
         <TestCallAura
           businessId={businessId}
           businessSlug={businessSlug}
-          onCallEnded={() => setOpen(false)}
+          onCallEnded={() => { setOpen(false); setTestCallActive(false); announceTestCallEnded(); }}
           onRegisterControls={(controls) => {
             voiceControlsRef.current = controls;
           }}

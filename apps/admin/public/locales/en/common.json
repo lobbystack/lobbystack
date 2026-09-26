@@ -124,5 +124,31 @@
       "error": "Error",
       "cancelled": "Cancelled"
     }
+  },
+  "abandonIntent": {
+    "title": "Before you go",
+    "description": "Two quick questions. Either one helps.",
+    "issue": {
+      "label": "Ran into an issue?",
+      "placeholder": "Describe what happened so we can fix it."
+    },
+    "missing": {
+      "label": "Missing something?",
+      "placeholder": "Tell us what you'd like to see next."
+    },
+    "notNow": "Not now",
+    "submit": "Send",
+    "sentTitle": "Thank you",
+    "sentDescription": "We read every one of these.",
+    "close": "Close"
+  },
+  "websiteImport": {
+    "runningTitle": "Reading {{host}}",
+    "runningHint": "{{imported}} pages read so far, {{indexed}} ready for questions.",
+    "doneTitle": "Your agent has read {{host}}",
+    "doneHint_one": "{{count}} page is ready for questions.",
+    "doneHint_other": "{{count}} pages are ready for questions.",
+    "failedTitle": "We couldn't read {{host}}",
+    "failedHint": "Add your business details by hand, or try the import again from your dashboard."
   }
 }

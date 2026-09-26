@@ -31,17 +31,25 @@ function setup(name = "Tim Hortons", loading = false) {
   return { ...view, client, fetchMock };
 }
 describe("original workspace switcher behavior", () => {
-  it("masks business names and phone numbers in analytics replay", async () => {
+  it("masks business names in analytics replay", async () => {
     setup();
     expect(screen.getByText("Tim Hortons").className).toContain("ph-mask");
-    expect(screen.getByText("(415) 555-0100").className).toContain("ph-mask");
     await userEvent.click(screen.getByRole("button", { name: /Tim Hortons/ }));
     expect((await screen.findByRole("menuitem", { name: /Acme Clinic/ })).querySelector("span.truncate")?.className).toContain("ph-mask");
   });
-  it("left-aligns long workspace names across two lines", () => {
+  it("keeps the workspace phone number out of the switcher", () => {
+    const { fetchMock } = setup();
+    expect(screen.queryByText("(415) 555-0100")).toBeNull();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/phone-numbers"))).toBe(false);
+  });
+  it("shows the workspace initial beside its name", () => {
+    setup("Plomberie Urgence Montréal (PUM)");
+    expect(screen.getByText("P")).toBeTruthy();
+  });
+  it("keeps a long workspace name on one line, left aligned", () => {
     setup("Plomberie Urgence Montréal (PUM)");
     const name = screen.getByText("Plomberie Urgence Montréal (PUM)");
-    for (const token of ["w-full", "text-left", "line-clamp-2"]) expect(name.className).toContain(token);
+    for (const token of ["w-full", "text-left", "truncate"]) expect(name.className).toContain(token);
   });
   it("shows the original skeleton while workspaces load", () => {
     const { container } = setup("Tim Hortons", true);

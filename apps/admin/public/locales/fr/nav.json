@@ -26,8 +26,6 @@
     "toggleTheme": "Changer le thème",
     "signOut": "Se déconnecter",
     "createBusiness": "Créer une entreprise",
-    "noBusinessPhone": "Aucun numéro pour le moment",
-    "loadingPhone": "Chargement du numéro...",
     "setupGuide": {
       "title": "Premiers pas",
       "open": "Ouvrir le guide de configuration",
@@ -36,25 +34,22 @@
       "progress": "{{completed}} / {{total}} complétés",
       "description": "{{completed}} étape(s) sur {{total}} complétée(s).",
       "steps": {
-        "website": "Ajouter votre site web",
-        "sources": "Ajouter plus de sources",
-        "calendar": "Connecter votre calendrier",
-        "services": "Ajouter vos services",
-        "rules": "Définir les règles"
+        "fullScan": "Lire le reste de votre site",
+        "sources": "Ajoutez d'autres sources",
+        "testCall": "Écoutez votre agent",
+        "phoneNumber": "Associez un numéro"
       },
       "stepDescriptions": {
-        "website": "Importez votre site public pour que votre réceptionniste apprenne les bases.",
+        "fullScan": "L'inscription a lu un échantillon de votre site pour que votre réceptionniste puisse commencer à répondre. Lisez le reste pour qu'il connaisse tout.",
         "sources": "Téléversez un document avec vos politiques, FAQ, tarifs ou autres détails utiles.",
-        "calendar": "Connectez un calendrier pour garder les disponibilités à jour.",
-        "services": "Ajoutez les services que les clients peuvent demander et réserver.",
-        "rules": "Définissez les consignes que votre réceptionniste doit suivre pendant les appels et messages."
+        "testCall": "Appelez votre réceptionniste depuis ce navigateur et posez-lui une question que seule votre entreprise connaît.",
+        "phoneNumber": "Donnez à votre réceptionniste son propre numéro pour qu'il réponde à vos vrais clients, jour et nuit."
       },
       "stepActions": {
-        "website": "Ajouter le site",
+        "fullScan": "Lire le reste",
         "sources": "Téléverser un document",
-        "calendar": "Connecter le calendrier",
-        "services": "Ajouter un service",
-        "rules": "Ajouter une règle"
+        "testCall": "Lancer un appel",
+        "phoneNumber": "Choisir un numéro"
       }
     }
   }

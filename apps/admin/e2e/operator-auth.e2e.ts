@@ -105,11 +105,11 @@ async function createWorkspace(page: Page, identity: string): Promise<string> {
   if (await continueSetup.isVisible()) await continueSetup.click();
   if (!page.url().endsWith("/onboarding/website")) await page.goto("/onboarding/website");
   await expect(page).toHaveURL("/onboarding/website");
-  await expect(page.getByRole("button", { name: "Skip for now" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "I don't have a website" })).toBeVisible();
   await page.goto("/onboarding/attribution");
   await expect(page).toHaveURL("/onboarding/website");
   await page.reload();
-  await expect(page.getByRole("button", { name: "Skip for now" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "I don't have a website" })).toBeVisible();
   const result = await page.evaluate(async () => {
     const response = await fetch("/api/businesses", { credentials: "include" });
     return await response.json() as { businesses: Array<{ businessId: string; active: boolean }> };
@@ -120,7 +120,7 @@ async function createWorkspace(page: Page, identity: string): Promise<string> {
 }
 
 async function completeOnboardingBySkippingOptionalInputs(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Skip for now" }).click();
+  await page.getByRole("button", { name: "I don't have a website" }).click();
   await expect(page).toHaveURL("/onboarding/knowledge");
   await page.goBack();
   await expect(page).toHaveURL("/onboarding/website");
