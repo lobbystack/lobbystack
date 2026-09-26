@@ -765,7 +765,7 @@ export const calendarConnections = pgTable(
     lastSyncError: text("last_sync_error"),
     ...timestamps,
   },
-  (table) => [uniqueIndex("calendar_connections_provider_account_unique").on(table.provider, table.externalAccountId), index("calendar_connections_business_idx").on(table.businessId, table.status)],
+  (table) => [uniqueIndex("calendar_connections_business_provider_account_unique").on(table.businessId, table.provider, table.externalAccountId), index("calendar_connections_business_idx").on(table.businessId, table.status)],
 );
 
 export const calendarBusyBlocks = pgTable(
