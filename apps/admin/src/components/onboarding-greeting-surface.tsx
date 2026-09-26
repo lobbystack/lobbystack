@@ -33,6 +33,9 @@ export function OnboardingGreetingSurface() {
   const [error, setError] = useState<string | null>(null);
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
   const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
+  // Warm the next step while the greeting is being written, so continuing
+  // waits only on the save and its progress refresh.
+  useEffect(() => { router.prefetch("/onboarding/plan"); }, [router]);
   const agent = useQuery({ queryKey: ["onboarding-agent", business?.businessId], queryFn: () => requestJson<{ profile: Profile | null }>("/api/agent"), enabled: Boolean(business) });
   const documents = useQuery({
     queryKey: ["onboarding-knowledge", business?.businessId],

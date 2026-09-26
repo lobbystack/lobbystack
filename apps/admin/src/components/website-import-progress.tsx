@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Globe, LoaderCircle, TriangleAlert } from "lucide-react";
+import { CheckCircle2, LoaderCircle, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Surface } from "./ui/surface";
@@ -40,9 +40,11 @@ export function WebsiteImportProgress({ job }: { job: WebsiteImportSummary }) {
   return (
     <Surface className="flex flex-col gap-3 p-4">
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
-          {failed ? <TriangleAlert className="size-4 text-destructive" /> : done ? <CheckCircle2 className="size-4" /> : <Globe className="size-4 text-muted-foreground" />}
-        </span>
+        {failed || done ? (
+          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
+            {failed ? <TriangleAlert className="size-4 text-destructive" /> : <CheckCircle2 className="size-4" />}
+          </span>
+        ) : null}
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <p className="truncate text-sm font-medium">
             {failed

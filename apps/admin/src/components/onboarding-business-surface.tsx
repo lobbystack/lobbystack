@@ -40,10 +40,13 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
     }),
     onSuccess: async (created: { businessId: string }) => {
       recordPendingOnboardingBusiness(created.businessId);
+      // The next step looks this workspace up before it can save, so it has to
+      // be in the cache before we move.
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
       router.push("/onboarding/website");
     },
   });
+  useEffect(() => { router.prefetch("/onboarding/website"); }, [router]);
   const existing = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
   useEffect(() => {
     if (existing && !createNew) setName(existing.name);

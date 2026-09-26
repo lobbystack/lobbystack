@@ -29,6 +29,9 @@ export function OnboardingWebsiteSurface() {
   const edited = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
+  // The next step is fetched while the form is still being filled in, so
+  // Continue waits only on the save.
+  useEffect(() => { router.prefetch("/onboarding/knowledge"); }, [router]);
   const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
   useEffect(() => { if (!edited.current && business?.websiteUrl) setWebsiteUrl(business.websiteUrl); }, [business?.websiteUrl]);
   const add = useMutation({
