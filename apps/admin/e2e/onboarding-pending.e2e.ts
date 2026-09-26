@@ -34,7 +34,9 @@ test.beforeAll(cleanup);
 test.afterAll(cleanup);
 
 async function signUp(page: Page, identity: string, testInfo: TestInfo): Promise<void> {
-  const email = `${prefix}-${identity}@example.invalid`;
+  // Playwright retries in CI, and a retry that reuses the address finds the
+  // account already made and waits forever for a signup email nobody sent.
+  const email = `${prefix}-${identity}-${testInfo.retry}@example.invalid`;
   await isolateAuthRateLimit(page, email, testInfo);
   await page.goto("/en/signup");
   await page.locator('input[type="email"]').fill(email);
@@ -50,26 +52,38 @@ async function signUp(page: Page, identity: string, testInfo: TestInfo): Promise
 }
 
 test("the continue button stays pending until the next onboarding step is on screen", async ({ page }, testInfo) => {
+  // Signup runs a full email round trip, and the gate runs these files in
+  // parallel, so the default per-test budget is not enough.
+  test.setTimeout(120_000);
   await signUp(page, "continue", testInfo);
 
-  // The save resolves long before the next step finishes loading. Holding the
-  // step's payload back widens that window so a regression is unmissable: the
-  // button used to drop back to Continue and sit there until the page changed.
+  // Hold the next step open instead of delaying it by a fixed amount. The save
+  // resolves while this is still parked, so the gap the regression lived in
+  // lasts exactly as long as the assertions below need it to.
+  let release = (): void => undefined;
+  const held = new Promise<void>((resolve) => { release = resolve; });
   await page.route(url => url.pathname.endsWith("/onboarding/website"), async route => {
-    await new Promise(resolve => setTimeout(resolve, 3_000));
+    await held;
     await route.continue();
   });
 
+  // The step disables its button while it looks up the workspace, so wait for
+  // the form to be ready rather than racing that query.
+  const submit = page.getByRole("button", { name: "Continue", exact: true });
   await page.getByLabel("Business name").fill(`${prefix} continue`);
+  await expect(submit).toBeEnabled({ timeout: 30_000 });
   const saved = page.waitForResponse(response => response.url().endsWith("/api/businesses") && response.request().method() === "POST");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await submit.click();
   expect((await saved).ok()).toBe(true);
 
-  // Still on the first step, with the save already done: the whole gap this
-  // test exists for.
+  // Sampling once here proves nothing: the button still holds its submitting
+  // label for a render or two after the save resolves even when the bug is
+  // present. Give React time to settle first, with the step still held back.
+  await page.waitForTimeout(1_000);
   await expect(page).toHaveURL(/\/onboarding\/business$/);
-  await expect(page.getByRole("button", { name: "Saving..." })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Saving..." })).toBeVisible();
 
+  release();
   await expect(page).toHaveURL(/\/onboarding\/website$/, { timeout: 30_000 });
 });
