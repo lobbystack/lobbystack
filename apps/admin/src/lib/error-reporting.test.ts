@@ -37,6 +37,14 @@ describe("server exception reporting", () => {
     expect(JSON.stringify(logged.mock.calls)).not.toContain("secret-row-value");
     expect(JSON.stringify(logged.mock.calls)).toContain("42501");
   });
+  it("masks values PostgreSQL quotes in the cause message", async () => {
+    vi.stubEnv("NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", "fixture");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const cause = Object.assign(new Error("invalid input syntax for type uuid: \"secret-business-value\""), { code: "22P02" });
+    await reportServerError(new Error("Failed query: select 1\nparams: secret-business-value", { cause }), { operation: "fixture" });
+    const [, , properties] = mocks.capture.mock.calls[0]!;
+    expect(properties.cause).toEqual({ name: "Error", message: "invalid input syntax for type uuid: \"[value]\"", code: "22P02" });
+  });
   it("does not replace application failures when delivery fails", async () => {
     vi.stubEnv("NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", "fixture");
     vi.spyOn(console, "error").mockImplementation(() => {});

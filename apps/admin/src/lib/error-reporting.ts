@@ -5,14 +5,15 @@ let client: PostHog | undefined;
 const reported = new WeakSet<object>();
 
 // Keep the database diagnosis (SQLSTATE, constraint, table) that Drizzle wraps
-// in `cause`; skip `detail`, which echoes row values.
+// in `cause`; skip `detail`, which echoes row values, and mask quoted literals
+// in `message` (e.g. `invalid input syntax for type uuid: "<value>"`).
 function databaseCause(error: Error): Record<string, string> | undefined {
   const cause: unknown = error.cause;
   if (!cause || typeof cause !== "object") return undefined;
   const fields: Record<string, string> = {};
   for (const key of ["name", "message", "code", "severity", "constraint", "table", "column", "routine"] as const) {
     const value = (cause as Record<string, unknown>)[key];
-    if (typeof value === "string" && value) fields[key] = redactOtelExceptionText(value);
+    if (typeof value === "string" && value) fields[key] = redactOtelExceptionText(key === "message" ? value.replace(/"[^"]*"/g, '"[value]"') : value);
   }
   return Object.keys(fields).length ? fields : undefined;
 }
