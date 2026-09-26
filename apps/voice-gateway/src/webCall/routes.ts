@@ -1,7 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { buildVoiceSystemPrompt } from "@lobbystack/ai";
-import { resolveOpenAiPricing, WEB_CALL_STALE_GRACE_MS } from "@lobbystack/shared";
+import { DASHBOARD_TEST_CALL_WIDGET_ID, resolveOpenAiPricing, WEB_CALL_STALE_GRACE_MS } from "@lobbystack/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import WebSocket from "ws";
 
@@ -180,7 +180,6 @@ const WEB_FINAL_MESSAGE_METADATA_PURPOSE = "web_final_message";
 const WEB_CALL_SESSION_START_RATE_LIMIT_MAX = 100;
 const WEB_CALL_SESSION_START_RATE_LIMIT_WINDOW = "1 minute";
 const WEB_CALL_COMPLETION_RETRY_DELAYS_MS = [100, 500] as const;
-const DASHBOARD_TEST_CALL_WIDGET_ID = "lobbystack-dashboard-test-call";
 const DASHBOARD_TEST_CALL_PROOF_PREFIX = "dashboard-test-call";
 const PROSPECT_DEMO_INTAKE_TOOL_NAMES = new Set([
   "waitForUser",

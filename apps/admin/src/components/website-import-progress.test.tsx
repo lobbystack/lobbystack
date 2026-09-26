@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { createI18nInstance } from "@/i18n";
 import { resourcesForRoute } from "@/lib/i18n-resources";
 import { routeNamespaces } from "@/lib/route-namespaces";
 
-import { WebsiteImportProgress, type WebsiteImportSummary } from "./website-import-progress";
+import { latestWebsiteImport, WebsiteImportProgress, type WebsiteImportSummary } from "./website-import-progress";
 
 /**
  * The card renders on both the dashboard and the onboarding flow, and those
@@ -46,4 +46,31 @@ it("points a failed import at details the operator can add anywhere it renders",
   // The card also sits above the greeting field, so the hint cannot send
   // anyone to a form "below" it.
   expect(screen.getByText(/Add your business details by hand/)).toBeTruthy();
+});
+
+describe("choosing which crawl to show", () => {
+  const abandoned: WebsiteImportSummary = { status: "failed", websiteUrl: "https://aaa-abandoned.example", importedCount: 0, indexedCount: 0 };
+  const current: WebsiteImportSummary = { status: "crawling", websiteUrl: "https://zzz-current.example", importedCount: 2, indexedCount: 0 };
+
+  it("follows the newest import, not whichever title sorts first", () => {
+    // The knowledge list arrives ordered by title, so the abandoned site leads.
+    const documents = [
+      { createdAt: "2026-09-01T10:00:00.000Z", websiteImport: abandoned },
+      { createdAt: "2026-09-02T10:00:00.000Z", websiteImport: current },
+    ];
+    expect(latestWebsiteImport(documents)?.websiteUrl).toBe("https://zzz-current.example");
+  });
+
+  it("ignores documents that carry no import at all", () => {
+    const documents = [
+      { createdAt: "2026-09-03T10:00:00.000Z" },
+      { createdAt: "2026-09-02T10:00:00.000Z", websiteImport: current },
+    ];
+    expect(latestWebsiteImport(documents)?.websiteUrl).toBe("https://zzz-current.example");
+  });
+
+  it("reports nothing when the workspace has never imported a site", () => {
+    expect(latestWebsiteImport([{ createdAt: "2026-09-03T10:00:00.000Z" }])).toBeNull();
+    expect(latestWebsiteImport(undefined)).toBeNull();
+  });
 });

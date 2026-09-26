@@ -27,6 +27,18 @@ export function websiteImportHost(websiteUrl: string): string {
 }
 
 /**
+ * Picks the crawl to show. The knowledge list comes back ordered by title, so
+ * an operator who abandoned one URL and submitted another would otherwise watch
+ * whichever site happens to sort first.
+ */
+export function latestWebsiteImport<T extends { createdAt?: string; websiteImport?: WebsiteImportSummary | null }>(documents: T[] | undefined): WebsiteImportSummary | null {
+  const imports = (documents ?? []).filter((document) => document.websiteImport);
+  if (imports.length === 0) return null;
+  const newest = imports.reduce((latest, document) => (document.createdAt ?? "") > (latest.createdAt ?? "") ? document : latest);
+  return newest.websiteImport ?? null;
+}
+
+/**
  * Crawl progress is written by the worker as it reads a site, so the operator
  * can watch their agent learn instead of waiting in front of a blank step.
  */

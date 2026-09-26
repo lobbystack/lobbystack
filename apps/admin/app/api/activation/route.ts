@@ -2,6 +2,7 @@ import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { billingAccounts, businesses, calls, phoneNumbers, websiteIngestionJobs } from "@lobbystack/db";
+import { DASHBOARD_TEST_CALL_WIDGET_ID } from "@lobbystack/shared";
 import { asApiResponse, withOperatorTransaction } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,10 @@ export async function GET(request: Request) {
       const completed = (await tx.select({ count: sql<number>`count(*)::int`, firstAt: sql<string | null>`min(${calls.endedAt})` }).from(calls).where(and(
         eq(calls.businessId, businessId),
         eq(calls.transport, "web_voice"),
+        // A customer reaching the business through the website widget is a
+        // web_voice call too. Only the operator's own test widget means someone
+        // on staff has heard the agent.
+        eq(calls.widgetId, DASHBOARD_TEST_CALL_WIDGET_ID),
         isNull(calls.prospectDemoId),
         isNotNull(calls.mediaStartedAt),
         isNotNull(calls.endedAt),

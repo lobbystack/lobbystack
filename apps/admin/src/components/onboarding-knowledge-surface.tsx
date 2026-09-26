@@ -15,10 +15,10 @@ import { FieldError } from "./ui/field";
 import { Surface } from "./ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Textarea } from "./ui/textarea";
-import { isWebsiteImportRunning, WebsiteImportProgress, type WebsiteImportSummary } from "./website-import-progress";
+import { isWebsiteImportRunning, latestWebsiteImport, WebsiteImportProgress, type WebsiteImportSummary } from "./website-import-progress";
 
 type Business = { businessId: string; name: string; active: boolean; role: string };
-type Document = { id: string; title: string; sourceType: string; status: string; processingProgress: number; error?: string | null; websiteImport?: WebsiteImportSummary | null };
+type Document = { id: string; title: string; sourceType: string; status: string; processingProgress: number; error?: string | null; createdAt?: string; websiteImport?: WebsiteImportSummary | null };
 type UploadEntry = { id: string; fileName: string; status: "uploading" | "completed" | "error"; errorMessage?: string };
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> { const response = await fetch(url, { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } }); if (!response.ok) throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Request failed."); return await response.json() as T; }
@@ -45,7 +45,7 @@ export function OnboardingKnowledgeSurface() {
   const upload = useMutation({ mutationFn: async (file: File) => { const digest = await checksum(file); const created = await requestJson<{ objectId: string; url: string; headers?: Record<string, string> }>("/api/uploads", { method: "POST", body: JSON.stringify({ businessId: business!.businessId, purpose: "knowledge", fileName: file.name, contentType: file.type || "application/octet-stream", length: file.size, checksum: digest }) }); const uploaded = await fetch(created.url, { method: "PUT", ...(created.headers ? { headers: created.headers } : {}), body: file }); if (!uploaded.ok) throw new Error(t("knowledge.upload.failed")); await requestJson("/api/uploads", { method: "PUT", body: JSON.stringify({ businessId: business!.businessId, objectId: created.objectId, length: file.size, contentType: file.type || "application/octet-stream", checksum: digest }) }); } });
   const working = upload.isPending || addSnippet.isPending || stage.isPending || navigating;
   const stored = documents.data?.documents?.filter((document) => document.sourceType === "upload") ?? [];
-  const websiteImport = documents.data?.documents?.find((document) => document.websiteImport)?.websiteImport ?? null;
+  const websiteImport = latestWebsiteImport(documents.data?.documents);
 
   async function uploadFiles(files: FileList | null) {
     if (!files) return;

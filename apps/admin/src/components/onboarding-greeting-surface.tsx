@@ -11,11 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { useTelemetry } from "@/components/product-analytics";
-import { isWebsiteImportRunning, WebsiteImportProgress, type WebsiteImportSummary } from "./website-import-progress";
+import { isWebsiteImportRunning, latestWebsiteImport, WebsiteImportProgress, type WebsiteImportSummary } from "./website-import-progress";
 
 type Business = { businessId: string; active: boolean };
 type Profile = { greeting: string };
-type KnowledgeDocument = { id: string; websiteImport?: WebsiteImportSummary | null };
+type KnowledgeDocument = { id: string; createdAt?: string; websiteImport?: WebsiteImportSummary | null };
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
@@ -43,7 +43,7 @@ export function OnboardingGreetingSurface() {
     enabled: Boolean(business),
     refetchInterval: query => query.state.data?.documents?.some(document => isWebsiteImportRunning(document.websiteImport)) ? 2000 : false,
   });
-  const websiteImport = documents.data?.documents?.find((document) => document.websiteImport)?.websiteImport ?? null;
+  const websiteImport = latestWebsiteImport(documents.data?.documents);
   useEffect(() => {
     if (!hasUserEdited && agent.data?.profile?.greeting) setGreeting(agent.data.profile.greeting);
   }, [agent.data?.profile?.greeting, hasUserEdited]);

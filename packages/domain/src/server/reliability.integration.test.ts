@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { businessHours, calls, conversations, messages, storageObjects, transcripts, websiteIngestionJobs } from "@lobbystack/db";
 import { affiliateCommissions, affiliatePayoutItems, affiliateProfiles, billingAccounts, billingTransactions, appointments, auditLogs, businessMemberships, contacts, productEvents, providerEvents, services, staff, users, businesses, notifications, outboxMessages, withBusinessTransaction, claimOutboxBatch, createDatabaseClient, enqueueOutbox, markOutboxFailed, markOutboxPublished, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { generateAffiliatePayoutRun } from "./affiliates";
 import { reconcileBillingProviderEvent } from "./billing";
+import { DASHBOARD_TEST_CALL_WIDGET_ID } from "@lobbystack/shared";
 import { createBusiness } from "./tenancy";
 import { bookAppointment, cancelAppointment } from "./booking";
 import { appendMessage } from "./conversations";
@@ -430,6 +431,45 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
 
       const [account] = await client!.db.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId));
       expect(account).toMatchObject({ plan: "starter", state: "active" });
+    } finally {
+      await client!.db.delete(businesses).where(eq(businesses.id, businessId));
+    }
+  });
+
+  it("counts only the operator's own test call, not a customer reaching the website widget", async () => {
+    // A visitor calling the business through the embedded widget is web_voice
+    // with media and an end, exactly like the operator's test call. Counting it
+    // tells someone they have heard their agent when they have not, and fires
+    // the activation event the moment they open the dashboard.
+    const businessId = randomUUID();
+    await client!.db.insert(businesses).values({ id: businessId, slug: businessId, name: "Widget call test", timezone: "UTC", businessType: "test" });
+    try {
+      const mediaStartedAt = new Date(Date.now() - 120_000);
+      const endedAt = new Date(Date.now() - 60_000);
+      await client!.db.insert(calls).values([
+        { businessId, provider: "openai", providerCallId: randomUUID(), transport: "web_voice", status: "completed", widgetId: "widget_public_site", startedAt: mediaStartedAt, mediaStartedAt, endedAt },
+        { businessId, provider: "openai", providerCallId: randomUUID(), transport: "web_voice", status: "completed", widgetId: DASHBOARD_TEST_CALL_WIDGET_ID, startedAt: mediaStartedAt, mediaStartedAt, endedAt },
+      ]);
+
+      const heard = await client!.db.select({ count: sql<number>`count(*)::int` }).from(calls).where(and(
+        eq(calls.businessId, businessId),
+        eq(calls.transport, "web_voice"),
+        eq(calls.widgetId, DASHBOARD_TEST_CALL_WIDGET_ID),
+        isNull(calls.prospectDemoId),
+        isNotNull(calls.mediaStartedAt),
+        isNotNull(calls.endedAt),
+      ));
+      expect(heard[0]?.count).toBe(1);
+
+      // Without the widget filter both rows qualify, which is the bug.
+      const unfiltered = await client!.db.select({ count: sql<number>`count(*)::int` }).from(calls).where(and(
+        eq(calls.businessId, businessId),
+        eq(calls.transport, "web_voice"),
+        isNull(calls.prospectDemoId),
+        isNotNull(calls.mediaStartedAt),
+        isNotNull(calls.endedAt),
+      ));
+      expect(unfiltered[0]?.count).toBe(2);
     } finally {
       await client!.db.delete(businesses).where(eq(businesses.id, businessId));
     }
