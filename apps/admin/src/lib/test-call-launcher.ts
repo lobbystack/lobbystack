@@ -53,3 +53,27 @@ export function subscribeTestCallEnded(onEnded: () => void): () => void {
 export function announceTestCallEnded(): void {
   for (const listener of endListeners) listener();
 }
+
+let callActive = false;
+const activeListeners = new Set<() => void>();
+
+/**
+ * Surfaces that must stay out of the way during a call read this. The widget
+ * owns the session, so it is the only writer.
+ */
+export function setTestCallActive(active: boolean): void {
+  if (callActive === active) return;
+  callActive = active;
+  for (const listener of activeListeners) listener();
+}
+
+export function isTestCallActive(): boolean {
+  return callActive;
+}
+
+export function subscribeTestCallActive(onChange: () => void): () => void {
+  activeListeners.add(onChange);
+  return () => {
+    activeListeners.delete(onChange);
+  };
+}

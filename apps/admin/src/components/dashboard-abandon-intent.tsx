@@ -5,7 +5,7 @@ import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useTelemetry } from "@/components/product-analytics";
-import { subscribeTestCallEnded } from "@/lib/test-call-launcher";
+import { isTestCallActive, subscribeTestCallEnded } from "@/lib/test-call-launcher";
 import {
   captureSurveyDismissed,
   captureSurveyResponse,
@@ -26,6 +26,9 @@ import { Field, FieldGroup, FieldLabel } from "./ui/field";
 import { Textarea } from "./ui/textarea";
 
 const MAX_ANSWER_LENGTH = 2_000;
+
+/** Anything that shows the operator is still working the page. */
+const ACTIVITY_EVENTS = ["pointerdown", "keydown", "pointermove", "scroll", "wheel"] as const;
 
 function browserStorage(): globalThis.Storage | undefined {
   try {
@@ -61,28 +64,43 @@ export function DashboardAbandonIntent({ businessId }: { businessId: string | un
     const armedAt = Date.now();
     firedRef.current = false;
 
-    const fire = (trigger: AbandonIntentTrigger) => {
-      if (firedRef.current) return;
+    /** Reports whether it asked, so a suppressed idle turn can come round again. */
+    const fire = (trigger: AbandonIntentTrigger): boolean => {
+      if (firedRef.current) return false;
       const now = Date.now();
-      if (now - armedAt < ABANDON_INTENT_MIN_DWELL_MS) return;
-      // A call just ended: that moment belongs to the upgrade prompt.
-      if (callEndedAtRef.current !== null && now - callEndedAtRef.current < ABANDON_INTENT_CALL_GRACE_MS) return;
+      if (now - armedAt < ABANDON_INTENT_MIN_DWELL_MS) return false;
+      // Never over a call in progress, and not straight after one: that moment
+      // belongs to the upgrade prompt.
+      if (isTestCallActive()) return false;
+      if (callEndedAtRef.current !== null && now - callEndedAtRef.current < ABANDON_INTENT_CALL_GRACE_MS) return false;
       firedRef.current = true;
       markAbandonIntentPrompted(businessId, now, storage);
       telemetry.track("web.activation.abandon_intent", { businessId, trigger });
       captureSurveyShown();
       setOpen(true);
+      return true;
     };
 
     const onMouseOut = (event: MouseEvent) => {
       if (isExitIntentEvent(event)) fire("exit_intent");
     };
 
+    // Idle means untouched, not merely open. Without this every operator gets
+    // interrupted three minutes in, however hard they are working.
+    let idleTimer = 0;
+    const restartIdleTimer = (): void => {
+      window.clearTimeout(idleTimer);
+      if (firedRef.current) return;
+      idleTimer = window.setTimeout(() => { if (!fire("idle")) restartIdleTimer(); }, ABANDON_INTENT_IDLE_MS);
+    };
+
     document.addEventListener("mouseout", onMouseOut);
-    const idleTimer = window.setTimeout(() => fire("idle"), ABANDON_INTENT_IDLE_MS);
+    for (const activity of ACTIVITY_EVENTS) document.addEventListener(activity, restartIdleTimer, { passive: true });
+    restartIdleTimer();
 
     return () => {
       document.removeEventListener("mouseout", onMouseOut);
+      for (const activity of ACTIVITY_EVENTS) document.removeEventListener(activity, restartIdleTimer);
       window.clearTimeout(idleTimer);
     };
   }, [businessId, telemetry]);

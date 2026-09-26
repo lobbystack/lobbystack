@@ -61,6 +61,36 @@ async function createWebsiteDocument(onboarding: boolean | undefined) {
   return mocks.enqueueOutbox.mock.calls.at(-1)?.[1] as { topic: string; payload: Record<string, unknown> } | undefined;
 }
 
+/**
+ * The reuse path: the business is mid-onboarding and an earlier crawl of the
+ * same URL failed, so the submission retries that document instead of making
+ * another one.
+ */
+async function retryFailedWebsiteDocument(onboarding: boolean) {
+  mocks.enqueueOutbox.mockClear();
+  const selected = [
+    [{ onboardingStage: "knowledge" }],
+    [{ id: "doc_1", sourceType: "website", sourceUrl: "https://example.com", revision: 2, status: "error" }],
+  ];
+  let call = 0;
+  const tx = {
+    select: () => builder(selected[call++] ?? []),
+    insert: () => builder([{ id: "job_1" }]),
+    update: () => builder([]),
+    execute: () => builder([]),
+  };
+  mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _input: unknown, run: (tx: unknown) => Promise<unknown>) => await run(tx));
+  await createKnowledgeDocument(context, {
+    userId: "user_1",
+    businessId: "biz_1",
+    title: "https://example.com",
+    sourceType: "website",
+    sourceUrl: "https://example.com",
+    onboarding,
+  });
+  return mocks.enqueueOutbox.mock.calls.at(-1)?.[1] as { topic: string; payload: Record<string, unknown> } | undefined;
+}
+
 describe("website crawl page limits", () => {
   it("samples a site during onboarding, because most people never finish and every page is billed", async () => {
     const job = await createWebsiteDocument(true);
@@ -75,6 +105,17 @@ describe("website crawl page limits", () => {
 
   it("treats an unflagged import as a dashboard import", async () => {
     const job = await createWebsiteDocument(undefined);
+    expect(job?.payload.limit).toBe(FULL_CRAWL_PAGE_LIMIT);
+  });
+
+  it("still samples when onboarding retries a crawl that failed", async () => {
+    const job = await retryFailedWebsiteDocument(true);
+    expect(job?.topic).toBe("knowledge.crawlWebsite");
+    expect(job?.payload.limit).toBe(ONBOARDING_CRAWL_PAGE_LIMIT);
+  });
+
+  it("reads the whole site when the dashboard retries a crawl that failed", async () => {
+    const job = await retryFailedWebsiteDocument(false);
     expect(job?.payload.limit).toBe(FULL_CRAWL_PAGE_LIMIT);
   });
 

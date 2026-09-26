@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DashboardAbandonIntent } from "./dashboard-abandon-intent";
-import { announceTestCallEnded } from "@/lib/test-call-launcher";
+import { announceTestCallEnded, setTestCallActive } from "@/lib/test-call-launcher";
 import { ABANDON_INTENT_CALL_GRACE_MS, ABANDON_INTENT_IDLE_MS, ABANDON_INTENT_MIN_DWELL_MS } from "@/lib/abandon-intent";
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
@@ -140,6 +140,33 @@ describe("abandon intent reporting", () => {
     await vi.advanceTimersByTimeAsync(ABANDON_INTENT_MIN_DWELL_MS);
     document.dispatchEvent(new MouseEvent("mouseout", { clientY: 120, relatedTarget: document.body, bubbles: true }));
     expect(telemetryRef.current!.events).toHaveLength(0);
+  });
+
+  it("does not interrupt an operator who is still working the page", async () => {
+    await setup();
+    // Three minutes of steady work: the timer has to start over each time.
+    for (let elapsed = 0; elapsed < ABANDON_INTENT_IDLE_MS * 2; elapsed += ABANDON_INTENT_IDLE_MS / 2) {
+      await vi.advanceTimersByTimeAsync(ABANDON_INTENT_IDLE_MS / 2);
+      document.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    }
+    expect(telemetryRef.current!.events).toHaveLength(0);
+  });
+
+  it("asks once the operator has gone quiet for long enough", async () => {
+    await setup();
+    await vi.advanceTimersByTimeAsync(ABANDON_INTENT_IDLE_MS / 2);
+    document.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    await vi.advanceTimersByTimeAsync(ABANDON_INTENT_IDLE_MS);
+    telemetryRef.current!.expectEvent("web.activation.abandon_intent", { businessId: "business", trigger: "idle" });
+  });
+
+  it("stays out of the way of a call still in progress", async () => {
+    await setup();
+    setTestCallActive(true);
+    await vi.advanceTimersByTimeAsync(ABANDON_INTENT_IDLE_MS);
+    leaveThroughTop();
+    expect(telemetryRef.current!.events).toHaveLength(0);
+    setTestCallActive(false);
   });
 
   it("stays quiet on a touch device", async () => {

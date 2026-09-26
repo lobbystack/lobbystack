@@ -98,7 +98,9 @@ export async function createKnowledgeDocument(
     if (isWebsite) {
       const existing = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceUrl, sourceUrl!))).limit(1).for("update"))[0];
       if (existing) {
-        if (["cancelled", "error"].includes(existing.status)) await queueKnowledgeDocumentRetry(tx, { businessId: input.businessId, documentId: existing.id }, existing);
+        // A retry of an onboarding submission is still onboarding: without the
+        // limit it would fall back to the full crawl this sampling exists to defer.
+        if (["cancelled", "error"].includes(existing.status)) await queueKnowledgeDocumentRetry(tx, { businessId: input.businessId, documentId: existing.id, crawlLimit: input.onboarding ? ONBOARDING_CRAWL_PAGE_LIMIT : FULL_CRAWL_PAGE_LIMIT }, existing);
         return existing.id;
       }
     }

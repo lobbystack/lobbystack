@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 
 import { AuraVoiceDemo } from "@/components/web-voice/AuraVoiceDemo";
 import { webCallEndpoint } from "@/lib/web-call-endpoint";
-import { announceTestCallEnded, registerTestCallStarter } from "@/lib/test-call-launcher";
+import { announceTestCallEnded, registerTestCallStarter, setTestCallActive } from "@/lib/test-call-launcher";
 import { useTelemetry } from "@/components/product-analytics";
 import type { TelemetryEventName, TelemetryProperties } from "@lobbystack/telemetry";
 import { Button } from "@/components/ui/button";
@@ -44,12 +44,14 @@ export function DashboardTestCallWidget({
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       void voiceControlsRef.current?.forceEndCall();
+      setTestCallActive(false);
     }
     setOpen(nextOpen);
   };
 
   const handleTestCallClick = useCallback(() => {
     setOpen(true);
+    setTestCallActive(true);
     void voiceControlsRef.current?.startCall();
   }, []);
 
@@ -92,7 +94,7 @@ export function DashboardTestCallWidget({
         <TestCallAura
           businessId={businessId}
           businessSlug={businessSlug}
-          onCallEnded={() => { setOpen(false); announceTestCallEnded(); }}
+          onCallEnded={() => { setOpen(false); setTestCallActive(false); announceTestCallEnded(); }}
           onRegisterControls={(controls) => {
             voiceControlsRef.current = controls;
           }}

@@ -1,12 +1,19 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LiveSetupGuideSurface } from "./live-setup-guide-surface";
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
-const launcher = vi.hoisted(() => ({ startTestCall: vi.fn() }));
-vi.mock("@/lib/test-call-launcher", () => ({ startTestCall: launcher.startTestCall }));
+const launcher = vi.hoisted(() => {
+  const ended = new Set<() => void>();
+  return {
+    startTestCall: vi.fn(),
+    subscribeTestCallEnded: (listener: () => void) => { ended.add(listener); return () => { ended.delete(listener); }; },
+    announceEnded: () => { for (const listener of ended) listener(); },
+  };
+});
+vi.mock("@/lib/test-call-launcher", () => ({ startTestCall: launcher.startTestCall, subscribeTestCallEnded: launcher.subscribeTestCallEnded }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string, options?: { completed?: number; total?: number }) => key === "sidebar.setupGuide.description" ? `${options?.completed}/${options?.total}` : key }) }));
 const order = ["fullScan", "sources", "testCall", "phoneNumber"];
@@ -40,6 +47,15 @@ describe("original setup guide interactions", () => {
     await userEvent.click(screen.getByRole("button", { name: "sidebar.setupGuide.steps.fullScan" }));
     expect(screen.queryByRole("button", { name: "sidebar.setupGuide.stepActions.fullScan" })).toBeNull();
     expect(screen.getByRole("button", { name: "sidebar.setupGuide.stepActions.sources" })).toBeTruthy();
+  });
+  it("rechecks the test-call step once the call ends, since nothing navigates", async () => {
+    const fetchMock = setup(["fullScan", "sources"]);
+    await waitFor(() => expect(screen.getByRole("button", { name: "sidebar.setupGuide.stepActions.testCall" })).toBeTruthy());
+    const before = fetchMock.mock.calls.length;
+    act(() => launcher.announceEnded());
+    // The gateway writes the call down after the browser hangs up, so the guide
+    // polls rather than asking once.
+    await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(before), { timeout: 5_000 });
   });
   it("persists remaining skips before leaving", async () => {
     const fetchMock = setup(["fullScan", "phoneNumber"]);

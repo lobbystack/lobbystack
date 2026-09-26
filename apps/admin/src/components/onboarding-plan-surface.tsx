@@ -32,6 +32,32 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   return await response.json() as T;
 }
 
+const REPORTED_CHECKOUT_KEY = "lobbystack.onboarding.checkoutReported";
+
+/**
+ * The funnel should count checkouts, not visits to the return URL. A ref only
+ * lasts one mount, so a reload of that URL would report the same checkout again.
+ */
+function hasReportedCheckout(key: string): boolean {
+  try {
+    const raw = window.localStorage.getItem(REPORTED_CHECKOUT_KEY);
+    return raw ? (JSON.parse(raw) as string[]).includes(key) : false;
+  } catch {
+    return false;
+  }
+}
+
+function markCheckoutReported(key: string): void {
+  try {
+    const raw = window.localStorage.getItem(REPORTED_CHECKOUT_KEY);
+    const current = raw ? JSON.parse(raw) as string[] : [];
+    if (current.includes(key)) return;
+    window.localStorage.setItem(REPORTED_CHECKOUT_KEY, JSON.stringify([...current.slice(-19), key]));
+  } catch {
+    // Storage is unavailable, so the per-mount ref is the only guard left.
+  }
+}
+
 export function OnboardingPlanSurface() {
   const { t } = useTranslation("onboarding");
   const { navigate, navigating, router } = useStepNavigation();
@@ -70,7 +96,10 @@ export function OnboardingPlanSurface() {
     const key = `${business?.businessId}:${returnRequestId}`;
     if (!business || !returnRequestId || !returnedCheckout.data?.synced) return;
     if (returnAttempt.current?.key !== key) {
-      telemetry.track("web.onboarding.plan_checkout_completed", { businessId: business.businessId, plan: returnedCheckout.data.target ?? "unknown" });
+      if (!hasReportedCheckout(key)) {
+        markCheckoutReported(key);
+        telemetry.track("web.onboarding.plan_checkout_completed", { businessId: business.businessId, plan: returnedCheckout.data.target ?? "unknown" });
+      }
       returnAttempt.current = { key, promise: requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business.businessId)}`, { method: "POST", body: JSON.stringify({ to: "phone_number" }) }) };
     }
     let cancelled = false;
