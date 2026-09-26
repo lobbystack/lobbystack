@@ -33,7 +33,7 @@ The **Settings** > **Widget** page creates and manages keys for the receptionist
 
 ## Protect web calls
 
-LobbyStack signs widget sessions and checks the visitor's parent origin. Your self-hosted voice gateway must also include the website origin in `WEB_CALL_ALLOWED_ORIGINS`.
+LobbyStack signs widget sessions and checks the visitor's parent origin against the widget key's allowed origins before it starts a call.
 
 Use an HTTPS website in production. Keep `WIDGET_SESSION_SECRET` and other signing credentials on the server.
 

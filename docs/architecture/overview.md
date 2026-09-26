@@ -1,20 +1,22 @@
 # Understand the platform architecture
 
-LobbyStack is a TypeScript monorepo with four active application runtimes:
+LobbyStack is a TypeScript monorepo with four application runtimes:
 
-- `apps/admin/` serves the Next.js dashboard, authentication, and HTTP API.
-- `apps/worker/` processes queued work and dispatches the transactional outbox.
-- `apps/voice-gateway/` handles Twilio webhooks, Media Streams, and OpenAI Realtime sessions.
+- `apps/admin/` serves the Next.js dashboard, authentication, and HTTP API. It also starts GPT-Live calls.
+- `apps/worker/` processes queued work, dispatches the transactional outbox, and runs each GPT-Live call.
+- `apps/voice-gateway/` answers Twilio numbers that aren't on the SIP trunk yet, through Media Streams and OpenAI Realtime.
 - `apps/landing/` serves the public marketing site.
 
-PostgreSQL is the durable source of truth. `packages/db` owns schema, migrations, role-specific clients, and row-level security. `packages/domain` owns business operations shared by admin and worker runtimes. Redis provides queues, rate limiting, and realtime coordination. S3-compatible storage holds recordings and uploaded documents.
+PostgreSQL is the durable source of truth. `packages/db` owns schema, migrations, role-specific clients, and row-level security. `packages/domain` owns business operations shared by admin and worker runtimes. `packages/agent-core` holds the receptionist agent that website chat and calls share. Redis provides queues, rate limiting, and realtime coordination. S3-compatible storage holds recordings and uploaded documents.
 
 ## Follow the voice data flow
 
-1. The admin/worker runtimes compile structured facts and indexed knowledge into a business context snapshot.
-2. The voice gateway resolves that snapshot once at call start through the private admin backend.
-3. The gateway answers common questions from memory during the live session.
-4. Booking, message capture, call state, and other authoritative operations use signed backend requests.
-5. Durable side effects enter the PostgreSQL outbox and are dispatched by the worker.
+OpenAI hosts call audio, so LobbyStack's runtimes only handle call setup and the agent's work:
 
-This keeps the live audio path responsive without moving business state into the voice gateway.
+1. The admin and worker compile structured facts and indexed knowledge into a business context snapshot.
+2. The admin loads that snapshot once when a call starts, records the call, and gives GPT-Live the business's instructions.
+3. The worker connects to the session and answers GPT-Live's delegated requests with the agent core.
+4. Booking, message capture, and call state go through `packages/domain` against PostgreSQL.
+5. Durable side effects enter the PostgreSQL outbox, and the worker dispatches them.
+
+See [the voice runtime](../voice/runtime.md) for the phone and browser call flows.

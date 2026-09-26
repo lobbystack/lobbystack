@@ -3,13 +3,14 @@
 ## Project structure
 
 - `apps/admin/`: Next.js operator dashboard, authentication, and HTTP API. Hosts the embeddable widget API (`/api/widget/*`), the loader (`/embed.js`), and the widget iframe app (`/embed/[key]`) in addition to the dashboard.
-- `apps/worker/`: asynchronous jobs and transactional outbox dispatch.
-- `apps/voice-gateway/`: narrow Fastify runtime for Twilio Voice, Media Streams, and OpenAI Realtime. Forwards `widgetId`/`widgetKey` in its web-call flow and accepts a `widgetKey` param on `/web-call/sessions`.
+- `apps/worker/`: asynchronous jobs, transactional outbox dispatch, and GPT-Live calls. The admin asks it to attach to each session at `/internal/live/attach`; it answers delegated requests, saves transcripts, and finishes the call.
+- `apps/voice-gateway/`: Fastify runtime for Twilio Media Streams and OpenAI Realtime. It only answers phone numbers that aren't on the Twilio SIP trunk, and goes away once they move. See `docs/voice/runtime.md`.
 - `apps/landing/`: public marketing site.
 - `packages/db/`: Drizzle schema, PostgreSQL migrations, role-specific clients, and RLS helpers.
 - `packages/domain/`: durable business logic shared by admin and worker runtimes. Widget conversations use the `web_chat` channel and key on `widget_visitor_id` (no phone required).
-- `packages/ai/`: system-prompt builders, including `buildChatSystemPrompt` for the website widget.
-- `packages/providers/`: provider-agnostic AI adapters (text generation and embeddings) built on the Vercel AI SDK. Any OpenAI-compatible endpoint works: set `AI_CHAT_*`/`AI_EMBEDDING_*` env vars (`API_KEY`, `BASE_URL`, `MODEL`, `PROVIDER_NAME`); defaults point at OpenAI. Widget chat falls back to `OPENAI_API_KEY` and streams via `streamText`.
+- `packages/agent-core/`: the receptionist agent (AI SDK `ToolLoopAgent`) shared by website chat and calls, its tools, and the GPT-Live session config and call controller.
+- `packages/ai/`: system-prompt builders.
+- `packages/providers/`: provider adapters (Twilio, embeddings, calendars, email). Text AI goes through the agent core: set `AI_CHAT_*` (`API_KEY`, `BASE_URL`, `MODEL`, `PROVIDER_NAME`, `REASONING_EFFORT`). On OpenAI the default is `gpt-6-luna` on high reasoning through the Responses API; other OpenAI-compatible endpoints use chat completions. `AI_EMBEDDING_*` configures embeddings. The key falls back to `OPENAI_API_KEY`.
 - `packages/embed/`: Vite bundle producing the IIFE widget loader (`dist/embed.js`, served at `/embed.js`, copied into `apps/admin/public/embed/` by `scripts/copy-widget-embed.mjs`).
 - `packages/`: shared contracts, jobs, providers, telemetry, configuration, and test helpers.
 - `docker/`, `docker-compose.yml`, and `scripts/`: local infrastructure, operations, migration, and certification tooling.
@@ -19,7 +20,7 @@
 - `pnpm install`: install workspace dependencies.
 - `docker compose up -d postgres redis`: start local infrastructure. Add `--profile minio` when testing the optional MinIO storage backend.
 - `pnpm db:migrate`: apply PostgreSQL migrations.
-- `pnpm dev`: run admin, worker, voice gateway, and landing apps.
+- `pnpm dev`: run admin, worker, voice gateway, and landing apps. Browser calls need `LIVE_PROTOTYPE_ENABLED=true` and `OPENAI_API_KEY` on admin and worker.
 - `pnpm typecheck`: typecheck all active workspaces and scripts.
 - `pnpm test`: run all Vitest suites.
 - `pnpm build`: build every workspace package and app (also copies the embed loader into the admin standalone output).
@@ -30,7 +31,7 @@
 - TypeScript ESM throughout; use 2-space indentation and LF line endings.
 - Use `PascalCase` for React components and `camelCase` for functions and utilities.
 - Keep durable business logic in `packages/domain` and persistence in `packages/db`.
-- Keep the voice gateway focused on the live call path; it calls the admin backend for authoritative operations.
+- Add receptionist capabilities as agent-core tools backed by `packages/domain`, so website chat and calls share them.
 - Keep voice personalization snapshot-based. Fetch a business snapshot at call start and avoid per-turn backend reads for common replies.
 
 ## Design system

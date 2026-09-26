@@ -116,7 +116,9 @@ export default defineRailway((ctx) => {
       BETTER_AUTH_USE_SECURE_COOKIES: "true",
       REQUIRE_EMAIL_VERIFICATION: "false",
       WIDGET_KEY_ISSUANCE_ENABLED: "false",
-      NEXT_PUBLIC_WEB_CALL_ENDPOINT: `${voiceOrigin}/web-call/sessions`,
+      // GPT-Live answers browser calls; the worker runs each call.
+      LIVE_PROTOTYPE_ENABLED: "true",
+      WORKER_INTERNAL_URL: "http://${{worker.RAILWAY_PRIVATE_DOMAIN}}:3002",
       TWILIO_SMS_WEBHOOK_URL: `${adminOrigin}/api/webhooks/twilio/sms`,
       TWILIO_STATUS_CALLBACK_URL: `${adminOrigin}/api/webhooks/twilio/status`,
       // Other role URLs are built from DATABASE_URL and the role passwords (packages/db roleDatabaseUrl).
@@ -149,6 +151,7 @@ export default defineRailway((ctx) => {
       ...s3,
       ...providers,
       PORT: "3002",
+      LIVE_PROTOTYPE_ENABLED: "true",
       APP_BASE_URL: adminOrigin,
       TWILIO_STATUS_CALLBACK_URL: `${adminOrigin}/api/webhooks/twilio/status`,
       DATABASE_URL: roleUrl("lobbystack_worker", "LOBBYSTACK_WORKER_PASSWORD"),

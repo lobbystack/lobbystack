@@ -8,7 +8,7 @@ contentType: "Conceptual"
 LobbyStack can run on one Docker host or as separate managed services. Self-hosting gives you control over application data, credentials, provider usage, backups, and upgrades.
 
 <Note>
-  Live calls still require Twilio, OpenAI, and public HTTPS endpoints for the dashboard and voice gateway.
+  Live calls still require Twilio, OpenAI, and a public HTTPS endpoint for the dashboard. The voice gateway needs its own endpoint while any phone number is off your Twilio SIP trunk.
 </Note>
 
 ## Deploy on Railway
@@ -25,8 +25,8 @@ The repository's [`docker-compose.yml`](https://github.com/lobbystack/lobbystack
 - Redis for queues, rate limits, and realtime coordination
 - a persistent Docker volume for recordings and uploaded documents
 - the Next.js admin dashboard and HTTP API
-- the background worker and transactional outbox dispatcher
-- the voice gateway for Twilio Media Streams and OpenAI Realtime
+- the background worker and transactional outbox dispatcher, which also runs each GPT-Live call
+- the voice gateway for phone numbers that aren't on a Twilio SIP trunk
 - Caddy to route the dashboard and voice gateway hostnames over plain HTTP, behind the proxy or load balancer that terminates HTTPS
 
 LobbyStack does not add monitoring containers to the Compose stack. Server runtimes can send traces, metrics, and OpenTelemetry logs to a configured OTLP-compatible backend.
@@ -36,7 +36,7 @@ LobbyStack does not add monitoring containers to the Compose stack. Server runti
 1. The dashboard and API read and write PostgreSQL through role-specific connections and row-level security.
 2. Durable side effects enter the PostgreSQL outbox in the same transaction as business state changes.
 3. The worker dispatches queued jobs and refreshes business context snapshots.
-4. The voice gateway fetches one snapshot at call start and calls the admin backend only for authoritative operations.
+4. OpenAI hosts call audio. The admin starts each call with the business snapshot, and the worker answers GPT-Live's requests for bookings, messages, and transfers.
 5. The admin and worker share the configured storage provider. Single-host Compose deployments use a persistent local volume by default.
 
 ## Responsibilities
@@ -45,7 +45,7 @@ You are responsible for:
 
 - PostgreSQL, Redis, and file-storage durability
 - backups, restore drills, upgrades, and monitoring
-- public DNS and TLS for the dashboard and voice gateway
+- public DNS and TLS for the dashboard, and for the voice gateway while you use it
 - Twilio, OpenAI, email, calendar, billing, and analytics credentials
 - secret rotation and least-privilege database roles
 

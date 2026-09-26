@@ -12,6 +12,5 @@ export function createReceptionistAgent(input: { model: LanguageModel; context: 
     tools: createReceptionistTools(input.context),
     // One lookup, maybe a second, then the answer. Voice callers are waiting.
     stopWhen: stepCountIs(4),
-    temperature: 0.2,
   });
 }

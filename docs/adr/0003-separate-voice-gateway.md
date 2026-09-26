@@ -4,7 +4,7 @@ LobbyStack isolates latency-sensitive voice transport from the dashboard and dur
 
 ## Status
 
-Accepted
+Superseded by [ADR 0008](0008-gpt-live-voice.md). The gateway still answers phone numbers that aren't on the Twilio SIP trunk.
 
 ## Decision
 

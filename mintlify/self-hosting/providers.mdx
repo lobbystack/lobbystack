@@ -11,10 +11,10 @@ The Docker Compose baseline runs LobbyStack's application, PostgreSQL, Redis, an
 
 <AccordionGroup>
   <Accordion title="Twilio" icon="phone">
-    Twilio supplies phone numbers, inbound voice webhooks, Media Streams, call transfers, recordings, and phone verification. Configure your public voice gateway URL and keep the Twilio auth token server-side.
+    Twilio supplies phone numbers, call transfers, and phone verification. An Elastic SIP trunk sends calls for your numbers to OpenAI. Numbers that aren't on the trunk use the voice gateway through Media Streams. Keep the Twilio auth token server-side.
   </Accordion>
   <Accordion title="OpenAI" icon="waveform">
-    OpenAI Realtime handles the live audio conversation. The voice gateway sends a business context snapshot at session start and keeps the audio path separate from durable application state.
+    OpenAI's GPT-Live model holds the conversation on phone and browser calls, and OpenAI hosts the audio. When the caller needs business data, such as openings or a booking, GPT-Live asks LobbyStack's worker, which answers with the receptionist agent. Your OpenAI project needs SIP enabled and an incoming-call webhook for phone calls.
   </Accordion>
 </AccordionGroup>
 
@@ -22,7 +22,7 @@ The Docker Compose baseline runs LobbyStack's application, PostgreSQL, Redis, an
 
 <AccordionGroup>
   <Accordion title="OpenAI-compatible AI" icon="sparkles">
-    Configure any provider or self-hosted runtime that implements the OpenAI-compatible chat and embeddings APIs using the `AI_CHAT_*` and `AI_EMBEDDING_*` variables. Embedding models must return exactly 1536 dimensions.
+    The receptionist agent for website chat and calls runs on `gpt-6-luna` with high reasoning by default. To use another provider or a self-hosted runtime that implements the OpenAI-compatible chat and embeddings APIs, set the `AI_CHAT_*` and `AI_EMBEDDING_*` variables. The model must support tool calls, and embedding models must return exactly 1536 dimensions.
   </Accordion>
   <Accordion title="Firecrawl" icon="globe">
     Firecrawl imports public website content into the knowledge pipeline. You can omit it if operators only upload documents and enter knowledge manually.

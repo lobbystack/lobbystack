@@ -1,6 +1,6 @@
 # Run the LobbyStack platform
 
-The canonical stack provides a Next.js admin/backend, PostgreSQL with RLS, Redis/BullMQ, shared local storage, and the voice gateway. You can enable the MinIO profile when you need S3-compatible storage. Convex remains relevant only as the production migration source until cutover and rollback are complete.
+The canonical stack provides a Next.js admin/backend, a worker that also runs GPT-Live calls, PostgreSQL with RLS, Redis/BullMQ, shared local storage, and the voice gateway for phone numbers not yet on the SIP trunk. You can enable the MinIO profile when you need S3-compatible storage. Convex remains relevant only as the production migration source until cutover and rollback are complete.
 
 ## Run the local stack
 
@@ -69,7 +69,7 @@ Run `REPLACEMENT_COMPOSE_PROJECT=lobbystack_restore_drill CONFIRM_REPLACEMENT_RE
 
 ## Deploy the cloud services
 
-Railway should run separate `admin`, `worker`, `voice-gateway`, `postgres`, `redis`, and bucket services. Set `BACKEND_INTERNAL_URL` on the gateway to the private admin URL. Keep `INTERNAL_SERVICE_SECRET`, database URLs, Better Auth secrets, provider credentials, and S3 credentials in Railway variables, never in the repository.
+Railway runs separate `admin`, `worker`, `voice-gateway`, `postgres`, `redis`, and bucket services. Set `WORKER_INTERNAL_URL` on admin to the worker's private URL so it can hand calls to the worker, and `BACKEND_INTERNAL_URL` on the gateway to the private admin URL. [The voice runtime](voice/runtime.md) lists the GPT-Live variables and the SIP trunk setup. Keep `INTERNAL_SERVICE_SECRET`, database URLs, Better Auth secrets, provider credentials, and S3 credentials in Railway variables, never in the repository.
 
 Build runtime images with `SERVICE_VERSION` set to the deployed Git SHA. Configure telemetry retention and sampling in the OTLP backend.
 

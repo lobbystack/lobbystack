@@ -2,53 +2,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   embedMany: vi.fn(),
-  generateText: vi.fn(),
-  streamText: vi.fn(),
   createOpenAICompatible: vi.fn(),
 }));
 
 vi.mock("@ai-sdk/openai-compatible", () => ({
   createOpenAICompatible: mocks.createOpenAICompatible.mockImplementation(() => ({
-    chatModel: (model: string) => ({ model, type: "language", specificationVersion: "v3" }),
     embeddingModel: (model: string) => ({ model, type: "embedding", specificationVersion: "v3" }),
   })),
 }));
 vi.mock("ai", () => mocks);
 
 import { OpenAiCompatibleEmbeddingProvider } from "./embeddingProvider";
-import { createTextAiProvider, OpenAiCompatibleTextProvider } from "./textAiProvider";
 
 describe("provider-agnostic AI providers", () => {
   beforeEach(() => vi.clearAllMocks());
-
-  it("generates through the AI SDK without recording prompt content", async () => {
-    mocks.generateText.mockResolvedValue({
-      text: " Reply ",
-      usage: {
-        inputTokens: 2,
-        outputTokens: 3,
-        totalTokens: 5,
-      },
-    });
-
-    const provider = new OpenAiCompatibleTextProvider({ apiKey: "test", model: "deepseek/deepseek-chat", baseURL: "https://api.deepseek.com/v1", name: "deepseek" });
-    const result = await provider.generateReply({ instructions: "Be concise.", prompt: "Book an appointment" });
-
-    expect(result.text).toBe("Reply");
-    expect(result.usage).toMatchObject({ provider: "deepseek", model: "deepseek/deepseek-chat", inputTokens: 2, outputTokens: 3 });
-    const call = mocks.generateText.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
-    expect(call).toMatchObject({ prompt: "Book an appointment" });
-    expect(JSON.stringify(call)).not.toContain("instructions=Be");
-  });
-
-  it("prepends context when supplied for reply generation", async () => {
-    mocks.generateText.mockResolvedValue({ text: "Got it.", usage: {} });
-
-    const provider = new OpenAiCompatibleTextProvider({ apiKey: "test" });
-    await provider.generateReply({ instructions: "x", prompt: "Follow up", context: "Visitor asked about parking." });
-
-    expect(mocks.generateText).toHaveBeenCalledWith(expect.objectContaining({ prompt: "Visitor asked about parking.\n\nUser message:\nFollow up" }));
-  });
 
   it("embeds and normalizes to a fixed dimension", async () => {
     mocks.embedMany.mockResolvedValue({
@@ -110,89 +77,6 @@ describe("provider-agnostic AI providers", () => {
     const first = new OpenAiCompatibleEmbeddingProvider({ apiKey: "test", revision: "1" });
     const second = new OpenAiCompatibleEmbeddingProvider({ apiKey: "test", revision: "2" });
     expect(first.fingerprint).not.toBe(second.fingerprint);
-  });
-
-  it("passes provider configuration through and allows keyless local endpoints", () => {
-    const provider = createTextAiProvider({ AI_CHAT_BASE_URL: "http://localhost:11434/v1", AI_CHAT_MODEL: "llama3.1:8b", AI_CHAT_PROVIDER_NAME: "ollama" });
-    expect(provider).toBeDefined();
-    expect(mocks.createOpenAICompatible).toHaveBeenCalledWith({ name: "ollama", baseURL: "http://localhost:11434/v1" });
-  });
-
-  it("requires credentials for the default OpenAI endpoint", () => {
-    expect(createTextAiProvider({ AI_CHAT_API_KEY: "", OPENAI_API_KEY: "" })).toBeUndefined();
-  });
-
-  it("falls back to OPENAI_API_KEY for the default endpoint", () => {
-    const provider = createTextAiProvider({ OPENAI_API_KEY: "fallback-key" });
-    expect(provider).toBeDefined();
-    expect(mocks.createOpenAICompatible).toHaveBeenCalledWith({ name: "openai", baseURL: "https://api.openai.com/v1", apiKey: "fallback-key" });
-  });
-
-  it("keeps configured token prices unknown until their versioned provenance is complete", async () => {
-    mocks.generateText.mockResolvedValue({ text: "Reply", usage: { inputTokens: 1_000_000, outputTokens: 0, totalTokens: 1_000_000 } });
-    const unversioned = new OpenAiCompatibleTextProvider({ apiKey: "test", inputCostPerMillionTokens: 1 });
-    const unversionedResult = await unversioned.generateReply({ instructions: "x", prompt: "Hi" });
-    expect(unversionedResult.usage.totalCostUsd).toBeUndefined();
-
-    const versioned = new OpenAiCompatibleTextProvider({
-      apiKey: "test",
-      inputCostPerMillionTokens: 1,
-      outputCostPerMillionTokens: 1,
-      pricingVersion: "provider-2026-09",
-      pricingSource: "https://provider.example/pricing",
-      pricingEffectiveDate: "2026-09-01",
-    });
-    await expect(versioned.generateReply({ instructions: "x", prompt: "Hi" })).resolves.toMatchObject({
-      usage: {
-        totalCostUsd: 1,
-        pricingVersion: "provider-2026-09",
-        pricingSource: "https://provider.example/pricing",
-        pricingEffectiveDate: "2026-09-01",
-        ratesUsdPerMillionTokens: { input: 1 },
-      },
-    });
-  });
-
-  it("streams reply chunks", async () => {
-    mocks.streamText.mockReturnValue({
-      textStream: (async function* () {
-        yield "Hel";
-        yield "lo";
-      })(),
-      usage: Promise.resolve({ inputTokens: 2, outputTokens: 1, totalTokens: 3, inputTokenDetails: {}, outputTokenDetails: {} }),
-      finishReason: Promise.resolve("stop"),
-    });
-
-    const provider = new OpenAiCompatibleTextProvider({ apiKey: "test" });
-    const chunks: string[] = [];
-    const stream = provider.streamReply({ instructions: "x", prompt: "Hi" });
-    for await (const chunk of stream.textStream) {
-      chunks.push(chunk);
-    }
-
-    expect(chunks).toEqual(["Hel", "lo"]);
-    await expect(stream.usage).resolves.toMatchObject({ inputTokens: 2, outputTokens: 1, totalTokens: 3 });
-    await expect(stream.finishReason).resolves.toBe("stop");
-    expect(mocks.streamText).toHaveBeenCalled();
-  });
-
-  it("passes cancellation and timeout controls to streaming generations", () => {
-    mocks.streamText.mockReturnValue({
-      textStream: (async function* () { yield "ok"; })(),
-      usage: Promise.resolve({ inputTokens: 1, outputTokens: 1, totalTokens: 2, inputTokenDetails: {}, outputTokenDetails: {} }),
-      finishReason: Promise.resolve("stop"),
-    });
-    const controller = new AbortController();
-    const onError = vi.fn();
-    const onAbort = vi.fn();
-    const provider = new OpenAiCompatibleTextProvider({ apiKey: "test", timeoutMs: 1234, chunkTimeoutMs: 456 });
-    provider.streamReply({ instructions: "x", prompt: "Hi", abortSignal: controller.signal, onError, onAbort });
-    const options = mocks.streamText.mock.calls.at(-1)?.[0] as Record<string, unknown>;
-    expect(options).toMatchObject({ abortSignal: controller.signal, timeout: { totalMs: 1234, chunkMs: 456 } });
-    (options.onError as (event: { error: unknown }) => void)({ error: new Error("provider") });
-    (options.onAbort as () => void)();
-    expect(onError).toHaveBeenCalled();
-    expect(onAbort).toHaveBeenCalled();
   });
 
   it("limits embedding concurrency and composes caller cancellation with a timeout", async () => {

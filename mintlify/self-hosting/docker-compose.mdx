@@ -10,7 +10,7 @@ contentType: "Tutorial"
 - Docker Engine 24 or later with Compose v2
 - Node.js 22 or later, to generate secrets
 - at least 2 vCPU, 4 GB of RAM, and durable disk storage
-- public DNS names for the dashboard and voice gateway
+- a public DNS name for the dashboard, plus one for the voice gateway if your phone numbers aren't on a Twilio SIP trunk
 - Twilio and OpenAI accounts for live calls
 
 ## Configure the environment
@@ -115,8 +115,9 @@ The default service ports bind to localhost. Put public traffic through Caddy or
 ## Production checklist
 
 - replace all development credentials and limit `.env` permissions
-- use production HTTPS values for `APP_BASE_URL`, `VOICE_GATEWAY_BASE_URL`, and `NEXT_PUBLIC_WEB_CALL_ENDPOINT`
-- configure `WEB_CALL_ALLOWED_ORIGINS` with exact dashboard and website origins
+- use production HTTPS values for `APP_BASE_URL` and `VOICE_GATEWAY_BASE_URL`
+- set `OPENAI_WEBHOOK_SECRET` and `TWILIO_SIP_TRUNK_SID` to answer phone calls with GPT-Live. The [voice calls variables](/self-hosting/environment-variables#voice-calls) list what each one does
+- set `WEB_CALL_ALLOWED_ORIGINS` to the exact sites that host your public demo call, if you run one
 - configure off-host PostgreSQL and file-storage backups
 - run a restore drill before accepting production traffic
 - restrict PostgreSQL, Redis, and optional MinIO ports to private networks

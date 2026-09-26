@@ -431,7 +431,6 @@ export function Navbar({ locale = "en" }: NavbarProps) {
 
         {/* Desktop CTAs */}
         <div className="hidden items-center gap-3 md:flex">
-          <a data-language-switch href={locale === "fr" ? "/" : "/fr/"} hrefLang={locale === "fr" ? "en" : "fr"} lang={locale === "fr" ? "en" : "fr"} className="rounded-md text-sm focus-visible:outline-2 focus-visible:outline-ring">{locale === "fr" ? "English" : "Français"}</a>
           <a
             href="https://github.com/lobbystack/lobbystack"
             target="_blank"
@@ -585,7 +584,6 @@ export function Navbar({ locale = "en" }: NavbarProps) {
               )}
             </nav>
             <div className="flex flex-col gap-2 px-6 pt-2 pb-4">
-              <a data-language-switch href={locale === "fr" ? "/" : "/fr/"} hrefLang={locale === "fr" ? "en" : "fr"} lang={locale === "fr" ? "en" : "fr"} className="rounded-md px-3 py-2 text-center text-sm focus-visible:outline-2 focus-visible:outline-ring">{locale === "fr" ? "English" : "Français"}</a>
               <a
                 href="https://github.com/lobbystack/lobbystack"
                 target="_blank"

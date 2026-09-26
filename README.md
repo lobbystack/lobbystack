@@ -81,7 +81,7 @@ LobbyStack can be adapted for many local business workflows:
 
 | Area | What it gives you |
 | --- | --- |
-| Voice reception | Inbound AI calls through Twilio Voice, Twilio Media Streams, and OpenAI Realtime. |
+| Voice reception | Inbound phone and browser calls answered by OpenAI GPT-Live, with Twilio phone numbers. |
 | Business knowledge | Answers from structured business facts, text entries, documents, and imported website pages. |
 | Booking | Service-aware scheduling with availability checks and calendar handoff. |
 | Appointment changes | Safer cancellation and rescheduling flows with appointment lookup and verification. |
@@ -98,7 +98,8 @@ LobbyStack can be adapted for many local business workflows:
 | --- | --- |
 | App | Next.js, React, Tailwind CSS, shadcn/ui |
 | Backend | PostgreSQL, Drizzle ORM, Redis, BullMQ |
-| Voice gateway | Fastify, Twilio, OpenAI Realtime |
+| Voice | OpenAI GPT-Live over SIP and WebRTC, Twilio Elastic SIP Trunking |
+| Agent | Vercel AI SDK, `gpt-6-luna` or any OpenAI-compatible model |
 
 ## Hosted and open source
 
@@ -114,15 +115,15 @@ Full product control in the hosted app. Infrastructure ownership when you self-h
 
 ## Architecture for contributors
 
-LobbyStack is a TypeScript monorepo with PostgreSQL as the durable source of truth and a narrow voice gateway for the live call path.
+LobbyStack is a TypeScript monorepo with PostgreSQL as the durable source of truth. OpenAI hosts call audio; the admin app starts each call and the worker runs it.
 
 ```text
 apps/
   admin/           Next.js dashboard and HTTP API
-  worker/          asynchronous jobs and outbox dispatch
-  voice-gateway/   Twilio Voice, Media Streams, and OpenAI Realtime bridge
+  worker/          asynchronous jobs, outbox dispatch, and live calls
+  voice-gateway/   Twilio Media Streams bridge for numbers not yet on the SIP trunk
 packages/embed/    Vite bundle for the embeddable website widget loader
-packages/          database, domain, jobs, providers, telemetry, and shared contracts
+packages/          database, domain, agent core, jobs, providers, telemetry, and shared contracts
 mintlify/          public documentation source
 docs/              architecture notes, ADRs, provider docs, and validation notes
 ```
@@ -173,7 +174,7 @@ For prerequisites, local smoke vs production go-live, helper scripts, and troubl
 
 ## Contributing
 
-Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), keep durable business logic in the domain/database layers, and keep the voice gateway focused on the live call path.
+Contributions are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), keep durable business logic in the domain and database layers, and put the receptionist's tools in the agent core.
 
 Before opening a PR, run:
 
