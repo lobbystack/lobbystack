@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import Redis from "ioredis";
 
 import { PUBLIC_API_DEFAULT_RATE_LIMIT_PER_MINUTE } from "@lobbystack/shared";
@@ -26,7 +24,8 @@ export async function checkApiRateLimit(store: RateLimitStore, input: { apiKeyId
   const now = input.now ?? Date.now();
   const window = Math.floor(now / (WINDOW_SECONDS * 1000));
   const resetAt = (window + 1) * WINDOW_SECONDS;
-  const key = `${input.prefix ?? process.env.REDIS_PREFIX ?? "lobbystack"}:public-api:rate:${createHash("sha256").update(input.apiKeyId).digest("hex").slice(0, 32)}:${window}`;
+  // apiKeyId is the key's database id (a UUID), never the secret, so it names the counter directly.
+  const key = `${input.prefix ?? process.env.REDIS_PREFIX ?? "lobbystack"}:public-api:rate:${input.apiKeyId}:${window}`;
   try {
     const count = await store.increment(key, WINDOW_SECONDS + 1);
     if (count > input.limit) return { allowed: false, reason: "limited", limit: input.limit, remaining: 0, resetAt, retryAfterSeconds: Math.max(1, resetAt - Math.floor(now / 1000)) };
