@@ -27,7 +27,9 @@ describe("OAuth page hops", () => {
 
   it("keeps the signed query when it moves to the consent page", () => {
     const response = oauthConsentRedirect(new Request(`https://app.example.com/oauth/consent?${signed}`));
-    expect(response.headers.get("location")).toMatch(new RegExp(`^/(en|fr)/oauth/consent\\?${signed.replace(/[?]/g, "\\?")}$`));
+    const location = response.headers.get("location")!;
+    expect(location).toMatch(/^\/(en|fr)\/oauth\/consent\?/);
+    expect(location.slice(location.indexOf("?") + 1)).toBe(signed);
   });
 });
 
