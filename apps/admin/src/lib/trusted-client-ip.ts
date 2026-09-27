@@ -1,5 +1,5 @@
-// Single-sourced with the voice gateway through the server-only config
-// package so admin and gateway always derive client identity identically.
+// Re-exported from the server-only config package so every runtime
+// derives client identity the same way.
 export {
   TRUSTED_CLIENT_IP_HEADERS,
   UNATTRIBUTABLE_CLIENT_IP,

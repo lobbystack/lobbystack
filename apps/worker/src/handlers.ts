@@ -735,29 +735,22 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     case "phoneNumber.provision": {
       const businessId = businessIdOrThrow(job); const claimId = String(job.payload.claimId ?? "");
       if (!claimId || !dependencies.twilio?.findOwnedPhoneNumber || !dependencies.twilio.purchasePhoneNumber) return { status: "skipped", entityId: claimId };
+      // Calls reach GPT-Live only through the Twilio SIP trunk. A number off the
+      // trunk has nothing to answer it, so refuse to buy one without a trunk.
+      const sipTrunkSid = process.env.TWILIO_SIP_TRUNK_SID?.trim();
+      if (!sipTrunkSid) throw new Error("TWILIO_SIP_TRUNK_SID is required to provision a phone number. See docs/voice/runtime.md.");
+      if (!dependencies.twilio.addNumberToSipTrunk) throw new Error("The Twilio provider can't assign numbers to a SIP trunk.");
+      const addNumberToSipTrunk = dependencies.twilio.addNumberToSipTrunk.bind(dependencies.twilio);
       const claim = await claimNumberProvisioning(dependencies.domain, { businessId, claimId }); if (!claim) return { status: "skipped", entityId: claimId };
       const baseUrl = (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
-      // Twilio needs TwiML, which only the voice gateway serves. Pointing a
-      // number at the admin app buys a number that cannot answer: its context
-      // endpoints are internal JSON APIs behind service auth, so every call to
-      // it fails with Twilio's generic application error. Refuse to provision
-      // rather than sell a number that is dead on arrival.
-      // With a SIP trunk, calls go to GPT-Live through OpenAI SIP and the voice
-      // URL is only a fallback if the number ever leaves the trunk.
-      const sipTrunkSid = process.env.TWILIO_SIP_TRUNK_SID?.trim();
-      const voiceBaseUrl = (process.env.VOICE_GATEWAY_BASE_URL ?? "").replace(/\/$/, "");
-      if (!voiceBaseUrl && !sipTrunkSid) throw new Error("VOICE_GATEWAY_BASE_URL or TWILIO_SIP_TRUNK_SID is required to provision a phone number.");
-      const voiceUrl = voiceBaseUrl ? `${voiceBaseUrl}/twilio/voice/inbound` : ""; const smsUrl = `${baseUrl}/api/webhooks/twilio/sms`; const statusCallbackUrl = `${baseUrl}/api/webhooks/twilio/status`;
+      const smsUrl = `${baseUrl}/api/webhooks/twilio/sms`; const statusCallbackUrl = `${baseUrl}/api/webhooks/twilio/status`;
       let purchased = false; let providerPhoneId: string | undefined;
       try {
         const owned = await dependencies.twilio.findOwnedPhoneNumber({ e164: claim.e164 });
         if (owned) providerPhoneId = owned.providerPhoneId;
-        else { const result = await dependencies.twilio.purchasePhoneNumber({ e164: claim.e164, friendlyName: `LobbyStack ${businessId}`, smsUrl, voiceUrl, statusCallbackUrl }); providerPhoneId = result.providerPhoneId; purchased = true; }
-        if (sipTrunkSid) {
-          if (!dependencies.twilio.addNumberToSipTrunk) throw new Error("The Twilio provider can't assign numbers to a SIP trunk.");
-          await dependencies.twilio.addNumberToSipTrunk({ trunkSid: sipTrunkSid, providerPhoneId });
-        }
-        const phoneNumberId = await completeNumberProvisioning(dependencies.domain, { businessId, claimId, e164: claim.e164, providerPhoneId, voiceUrl: sipTrunkSid ? `sip-trunk:${sipTrunkSid}` : voiceUrl, smsUrl });
+        else { const result = await dependencies.twilio.purchasePhoneNumber({ e164: claim.e164, friendlyName: `LobbyStack ${businessId}`, smsUrl, statusCallbackUrl }); providerPhoneId = result.providerPhoneId; purchased = true; }
+        await addNumberToSipTrunk({ trunkSid: sipTrunkSid, providerPhoneId });
+        const phoneNumberId = await completeNumberProvisioning(dependencies.domain, { businessId, claimId, e164: claim.e164, providerPhoneId, voiceUrl: `sip-trunk:${sipTrunkSid}`, smsUrl });
         return { status: "completed", entityId: phoneNumberId };
       } catch (error) {
         if (purchased && providerPhoneId && dependencies.twilio.releasePhoneNumber) await dependencies.twilio.releasePhoneNumber({ providerPhoneId }).catch(() => undefined);

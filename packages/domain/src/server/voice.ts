@@ -1,7 +1,7 @@
 import { and, count, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
 import { appointments, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { billableVoiceSeconds, isNonBillableCallDisposition, isTerminalTwilioCallStatus } from "@lobbystack/shared";
+import { billableVoiceSeconds, isNonBillableCallDisposition } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 
 import { requireBusinessMembership } from "../authz";
@@ -367,27 +367,6 @@ export async function setTransferState(
       transferState: input.transferState,
       ...(change.previousTransferState !== null ? { previousTransferState: change.previousTransferState } : {}),
     },
-  });
-}
-
-export async function reconcileCallStatus(
-  context: DomainContext,
-  input: { businessId: string; providerCallId: string; status: string; providerDurationSeconds?: number; providerUpdatedAt: string },
-): Promise<{ ignored: boolean; callId?: string }> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const [call] = await tx.update(calls).set({ status: input.status, ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}), updatedAt: new Date(input.providerUpdatedAt), revision: sql`${calls.revision} + 1` }).where(and(eq(calls.businessId, input.businessId), eq(calls.providerCallId, input.providerCallId))).returning({ id: calls.id, revision: calls.revision, providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt });
-    if (!call) {
-      return { ignored: true };
-    }
-    await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "call", aggregateId: call.id, dedupeKey: `call:${call.id}:provider-status:${call.revision}`, payload: { type: "call.updated", entityId: call.id, revision: call.revision } });
-    if (isTerminalTwilioCallStatus(input.status)) {
-      const estimatedRate = Number(process.env.TWILIO_VOICE_ESTIMATED_COST_PER_MINUTE_USD ?? "0");
-      if (Number.isFinite(estimatedRate) && estimatedRate > 0 && call.providerDurationSeconds !== null) {
-        await recordUnitEconomicsEventInTransaction(tx, { businessId: input.businessId, eventKey: `voice_provider:${call.id}`, eventKind: "voice_provider", channel: "voice", costUsd: call.providerDurationSeconds / 60 * estimatedRate, occurredAt: call.startedAt, quantity: call.providerDurationSeconds, quantityUnit: "second", provider: "twilio_estimate", callId: call.id });
-      }
-      await enqueueOutbox(tx, { topic: "call.syncPrice", businessId: input.businessId, aggregateType: "call", aggregateId: call.id, dedupeKey: `call:${call.id}:price:${input.status.trim().toLowerCase()}`, payload: { providerCallId: input.providerCallId, providerCallStatus: input.status } });
-    }
-    return { ignored: false, callId: call.id };
   });
 }
 

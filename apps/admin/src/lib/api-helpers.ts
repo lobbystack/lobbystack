@@ -7,7 +7,6 @@ import { requireBusinessMembership } from "@lobbystack/domain";
 
 import { getSession, type Session } from "./auth";
 import { getDatabase } from "./databases";
-import { claimInternalRequestNonce, verifyInternalRequest } from "./internal-auth";
 
 export type ApiErrorPayload = {
   error: string;
@@ -108,33 +107,6 @@ async function activeBusinessIdForUser(userId: string): Promise<string | null> {
       .limit(1);
     return user?.activeBusinessId ?? null;
   });
-}
-
-export async function requireInternalService(request: Request, body: string | Uint8Array): Promise<void> {
-  const token = process.env.INTERNAL_SERVICE_TOKEN;
-  if (process.env.NODE_ENV !== "production" && token && request.headers.get("x-internal-service-token") === token) {
-    return;
-  }
-  const serviceId = request.headers.get("x-service-id") ?? "unknown";
-  const nonce = request.headers.get("x-service-nonce");
-  const valid = verifyInternalRequest({
-    serviceId,
-    timestamp: request.headers.get("x-service-timestamp"),
-    nonce,
-    bodyHash: request.headers.get("x-body-sha256"),
-    signature: request.headers.get("x-service-signature"),
-    body,
-  });
-  if (!valid) {
-    throw jsonError("Unauthorized internal request.", 401, "internal_unauthorized");
-  }
-  const claim = await claimInternalRequestNonce({ serviceId, nonce: nonce!, maxAgeMs: 30_000 });
-  if (claim === "replayed") {
-    throw jsonError("The internal request has already been used.", 401, "internal_replay");
-  }
-  if (claim === "unavailable") {
-    throw jsonError("Internal request replay protection is unavailable.", 503, "internal_replay_unavailable");
-  }
 }
 
 export async function withOperatorTransaction<T>(

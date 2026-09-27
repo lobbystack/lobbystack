@@ -8,7 +8,6 @@ export function smokeTargets(source: NodeJS.ProcessEnv = process.env): SmokeTarg
     { name: "admin-ready", baseUrl: source.ADMIN_BASE_URL ?? "http://127.0.0.1:13000", path: "/api/health/ready" },
     { name: "worker", baseUrl: source.WORKER_BASE_URL ?? "http://127.0.0.1:13002", path: "/health/live" },
     { name: "worker-ready", baseUrl: source.WORKER_BASE_URL ?? "http://127.0.0.1:13002", path: "/health/ready" },
-    { name: "voice", baseUrl: source.VOICE_BASE_URL ?? "http://127.0.0.1:13001", path: "/health/live" },
   ];
 }
 

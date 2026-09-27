@@ -22,8 +22,8 @@ function capturePosthog(
 }
 
 function getEndpoint() {
-  // A new name, so an old PUBLIC_WEB_CALL_ENDPOINT pointing at the retired
-  // voice gateway endpoint can't override it.
+  // A new name, so an old PUBLIC_WEB_CALL_ENDPOINT from before GPT-Live
+  // can't override it.
   if (import.meta.env.PUBLIC_LIVE_CALL_ENDPOINT) {
     return import.meta.env.PUBLIC_LIVE_CALL_ENDPOINT
   }

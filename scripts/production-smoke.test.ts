@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildConfig, normalizeUrl, parseList, signInFailureIsExpected, webhookMatches } from "./production-smoke";
+import { buildConfig, normalizeUrl, parseList, signInFailureIsExpected, trunkMatches, webhookMatches } from "./production-smoke";
 
 describe("production smoke helpers", () => {
   it("parses comma-separated lists and trims blanks", () => {
@@ -8,13 +8,21 @@ describe("production smoke helpers", () => {
   });
 
   it("normalizes trailing slashes", () => {
-    expect(normalizeUrl("https://voice.lobbystack.com/twilio/voice/inbound/")).toBe("https://voice.lobbystack.com/twilio/voice/inbound");
+    expect(normalizeUrl("https://app.lobbystack.com/api/webhooks/twilio/sms/")).toBe("https://app.lobbystack.com/api/webhooks/twilio/sms");
   });
 
   it("matches webhook URLs regardless of trailing slash", () => {
     expect(webhookMatches("https://app.lobbystack.com/api/webhooks/twilio/sms/", "https://app.lobbystack.com/api/webhooks/twilio/sms")).toBe(true);
     expect(webhookMatches(null, "https://app.lobbystack.com/api/webhooks/twilio/sms")).toBe(false);
     expect(webhookMatches("https://example.com/other", "https://app.lobbystack.com/api/webhooks/twilio/sms")).toBe(false);
+  });
+
+  it("requires each number to sit on the SIP trunk", () => {
+    expect(trunkMatches("TK123", "TK123")).toBe(true);
+    expect(trunkMatches("TK123", undefined)).toBe(true);
+    expect(trunkMatches("TK999", "TK123")).toBe(false);
+    expect(trunkMatches(null, undefined)).toBe(false);
+    expect(buildConfig({ TWILIO_SIP_TRUNK_SID: " TK123 " }).expectedTrunkSid).toBe("TK123");
   });
 
   it("treats only 4xx credential rejections as the expected sign-in failure", () => {
@@ -28,8 +36,7 @@ describe("production smoke helpers", () => {
   it("defaults to the production base URLs and known numbers", () => {
     const config = buildConfig({});
     expect(config.adminBaseUrl).toBe("https://app.lobbystack.com");
-    expect(config.voiceBaseUrl).toBe("https://voice.lobbystack.com");
-    expect(config.expectedVoiceUrl).toBe("https://voice.lobbystack.com/twilio/voice/inbound");
+    expect(config.expectedTrunkSid).toBeUndefined();
     expect(config.expectedSmsUrl).toBe("https://app.lobbystack.com/api/webhooks/twilio/sms");
     expect(config.expectedNumbers).toEqual(["+12136686869", "+18446562290"]);
     expect(config.enableCall).toBe(false);

@@ -80,10 +80,6 @@ it("fails closed for API requests during maintenance while leaving health reads 
 
   expect(proxy(new NextRequest("http://localhost:3210/api/health/live")).status).toBe(200);
   expect(proxy(new NextRequest("http://localhost:3210/api/dashboard")).status).toBe(503);
-  expect(proxy(new NextRequest("http://localhost:3210/voice/context")).status).toBe(503);
-  expect(proxy(new NextRequest("http://localhost:3210/voice/context/by-slug")).status).toBe(503);
-  // The signed handler is responsible for authentication and its maintenance 503.
-  expect(proxy(new NextRequest("http://localhost:3210/voice/ready")).status).toBe(200);
 });
 
 it("rejects webhooks before their handlers can acknowledge events during maintenance", () => {

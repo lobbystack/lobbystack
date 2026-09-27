@@ -42,7 +42,6 @@ async function sourceFiles(directory: string): Promise<string[]> {
 }
 
 function transportForPath(path: string, event: TelemetryEventName): TelemetryTransport {
-  if (path.startsWith("apps/voice-gateway/")) return "gateway";
   if (event.startsWith("web.")) return "browser";
   return "durable";
 }

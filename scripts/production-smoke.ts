@@ -3,12 +3,12 @@ import { pathToFileURL } from "node:url";
 
 export type SmokeConfig = {
   adminBaseUrl: string;
-  voiceBaseUrl: string;
   workerBaseUrl?: string;
   twilioAccountSid?: string;
   twilioAuthToken?: string;
   expectedNumbers: string[];
-  expectedVoiceUrl: string;
+  /** The Twilio SIP trunk that carries calls to GPT-Live. Unset means any trunk. */
+  expectedTrunkSid?: string;
   expectedSmsUrl: string;
   loginEmail?: string;
   loginPassword?: string;
@@ -38,22 +38,26 @@ export function webhookMatches(actual: string | null | undefined, expected: stri
   return typeof actual === "string" && normalizeUrl(actual) === normalizeUrl(expected);
 }
 
+/** A number answers through GPT-Live only while it sits on the SIP trunk. */
+export function trunkMatches(actual: string | null | undefined, expected: string | undefined): boolean {
+  if (typeof actual !== "string" || !actual) return false;
+  return expected === undefined || actual === expected;
+}
+
 export function signInFailureIsExpected(status: number): boolean {
   return status === 400 || status === 401 || status === 403;
 }
 
 export function buildConfig(source: NodeJS.ProcessEnv = process.env): SmokeConfig {
   const adminBaseUrl = trimTrailingSlash(source.ADMIN_BASE_URL ?? "https://app.lobbystack.com");
-  const voiceBaseUrl = trimTrailingSlash(source.VOICE_BASE_URL ?? "https://voice.lobbystack.com");
   const workerBaseUrl = source.WORKER_BASE_URL ? trimTrailingSlash(source.WORKER_BASE_URL) : undefined;
   return {
     adminBaseUrl,
-    voiceBaseUrl,
     ...(workerBaseUrl ? { workerBaseUrl } : {}),
     ...(source.TWILIO_ACCOUNT_SID ? { twilioAccountSid: source.TWILIO_ACCOUNT_SID } : {}),
     ...(source.TWILIO_AUTH_TOKEN ? { twilioAuthToken: source.TWILIO_AUTH_TOKEN } : {}),
     expectedNumbers: parseList(source.SMOKE_EXPECTED_NUMBERS ?? "+12136686869,+18446562290"),
-    expectedVoiceUrl: trimTrailingSlash(source.SMOKE_EXPECTED_VOICE_URL ?? `${voiceBaseUrl}/twilio/voice/inbound`),
+    ...(source.TWILIO_SIP_TRUNK_SID?.trim() ? { expectedTrunkSid: source.TWILIO_SIP_TRUNK_SID.trim() } : {}),
     expectedSmsUrl: trimTrailingSlash(source.SMOKE_EXPECTED_SMS_URL ?? `${adminBaseUrl}/api/webhooks/twilio/sms`),
     ...(source.SMOKE_LOGIN_EMAIL ? { loginEmail: source.SMOKE_LOGIN_EMAIL } : {}),
     ...(source.SMOKE_LOGIN_PASSWORD ? { loginPassword: source.SMOKE_LOGIN_PASSWORD } : {}),
@@ -90,20 +94,20 @@ async function auditTwilioNumbers(config: SmokeConfig): Promise<SmokeCheck[]> {
   if (!response.ok) {
     return [{ name: "twilio account", ok: false, detail: `Twilio API returned ${response.status} (wrong account or token?)` }];
   }
-  const body = await response.json() as { incoming_phone_numbers?: Array<{ phone_number: string; voice_url: string | null; sms_url: string | null }> };
+  const body = await response.json() as { incoming_phone_numbers?: Array<{ phone_number: string; trunk_sid: string | null; sms_url: string | null }> };
   const byNumber = new Map((body.incoming_phone_numbers ?? []).map((number) => [number.phone_number, number]));
   return config.expectedNumbers.map((number) => {
     const found = byNumber.get(number);
     if (!found) {
       return { name: `twilio ${number}`, ok: false, detail: "number is not owned by this Twilio account" };
     }
-    if (!webhookMatches(found.voice_url, config.expectedVoiceUrl)) {
-      return { name: `twilio ${number} voice`, ok: false, detail: `voice webhook is ${found.voice_url ?? "(unset)"}, expected ${config.expectedVoiceUrl}` };
+    if (!trunkMatches(found.trunk_sid, config.expectedTrunkSid)) {
+      return { name: `twilio ${number} voice`, ok: false, detail: `SIP trunk is ${found.trunk_sid ?? "(none)"}, expected ${config.expectedTrunkSid ?? "any trunk"}` };
     }
     if (!webhookMatches(found.sms_url, config.expectedSmsUrl)) {
       return { name: `twilio ${number} sms`, ok: false, detail: `sms webhook is ${found.sms_url ?? "(unset)"}, expected ${config.expectedSmsUrl}` };
     }
-    return { name: `twilio ${number}`, ok: true, detail: "voice and sms webhooks match" };
+    return { name: `twilio ${number}`, ok: true, detail: "SIP trunk and sms webhook match" };
   });
 }
 
@@ -137,7 +141,8 @@ async function placeSmokeCall(config: SmokeConfig): Promise<SmokeCheck> {
   const create = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${config.twilioAccountSid}/Calls.json`, {
     method: "POST",
     headers: { authorization, "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ To: config.callTo, From: config.callFrom, Url: config.expectedVoiceUrl }).toString(),
+    // The caller side stays silent for a few seconds, then hangs up.
+    body: new URLSearchParams({ To: config.callTo, From: config.callFrom, Twiml: "<Response><Pause length=\"20\"/><Hangup/></Response>" }).toString(),
     signal: AbortSignal.timeout(15_000),
   });
   if (!create.ok) {
@@ -163,7 +168,6 @@ async function main(): Promise<void> {
   const healthTargets = [
     { name: "admin-ready", baseUrl: config.adminBaseUrl, path: "/api/health/ready" },
     ...(config.workerBaseUrl ? [{ name: "worker-ready", baseUrl: config.workerBaseUrl, path: "/health/ready" }] : []),
-    { name: "voice-ready", baseUrl: config.voiceBaseUrl, path: "/health/ready" },
   ];
   const checks: SmokeCheck[] = [
     ...(await Promise.all(healthTargets.map((target) => checkHealth(target.name, new URL(target.path, target.baseUrl).toString())))),
