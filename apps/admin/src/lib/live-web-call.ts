@@ -96,9 +96,11 @@ export async function resolveLiveWebCallAccess(request: Request, body: LiveWebCa
     // /api/voice is exempt from the CSRF middleware for the landing demo, so a
     // cookie-authenticated test call checks its origin here.
     const origin = request.headers.get("origin");
-    if (!origin || !trusted.includes(normalizeOrigin(origin))) return { status: 403, code: "origin_denied" };
+    const callerOrigin = origin ? normalizeOrigin(origin) : undefined;
+    if (!callerOrigin || !trusted.includes(callerOrigin)) return { status: 403, code: "origin_denied" };
     const businessId = await withOperatorTransaction(request, async ({ businessId }) => businessId, { minimumRole: "business_admin" });
-    return { businessId, origin: appOrigin, widgetId: body.widgetId, dashboardTestCall: true, ...(body.visitorId ? { visitorId: body.visitorId } : {}) };
+    // Rate limits count per origin, so record the trusted origin the call came from.
+    return { businessId, origin: callerOrigin, widgetId: body.widgetId, dashboardTestCall: true, ...(body.visitorId ? { visitorId: body.visitorId } : {}) };
   }
 
   const bearer = request.headers.get("authorization")?.match(/^Bearer (.+)$/)?.[1];

@@ -48,6 +48,12 @@ describe("resolveLiveWebCallAccess", () => {
     await expect(resolveLiveWebCallAccess(internal, { sdp: "v=0", widgetId: "lobbystack-dashboard-test-call" })).resolves.toMatchObject({ businessId: "biz_1", dashboardTestCall: true, origin: app });
   });
 
+  it("records the trusted origin the call came from, not the first configured one", async () => {
+    vi.stubEnv("AUTH_TRUSTED_ORIGINS", "https://second.lobbystack.test");
+    mocks.withOperatorTransaction.mockResolvedValue("biz_1");
+    await expect(resolveLiveWebCallAccess(request({ origin: "https://second.lobbystack.test" }), { sdp: "v=0", widgetId: "lobbystack-dashboard-test-call" })).resolves.toMatchObject({ businessId: "biz_1", origin: "https://second.lobbystack.test" });
+  });
+
   it("refuses a DNS-rebinding request whose host and origin match each other but not the app", async () => {
     const rebound = new Request("https://evil.example/api/voice/live/session", { method: "POST", headers: { origin: "https://evil.example" } });
     await expect(resolveLiveWebCallAccess(rebound, { sdp: "v=0", widgetId: "lobbystack-dashboard-test-call" })).resolves.toEqual({ status: 403, code: "origin_denied" });
