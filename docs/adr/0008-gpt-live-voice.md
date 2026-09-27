@@ -4,7 +4,7 @@ OpenAI hosts call audio, and LobbyStack's admin and worker run the call. This re
 
 ## Status
 
-Accepted. The voice gateway still answers phone numbers that aren't on the Twilio SIP trunk until they move.
+Accepted. Every phone number now sits on the Twilio SIP trunk, and we removed `apps/voice-gateway` from the repository.
 
 ## Decision
 

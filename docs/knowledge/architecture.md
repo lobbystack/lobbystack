@@ -17,7 +17,7 @@ Embedding vectors are stored at the fixed `vector(1536)` dimension together with
 
 ## Use knowledge during voice calls
 
-The voice gateway fetches one snapshot at call start. Structured facts stay authoritative; retrieval augments documents and FAQs. Booking and other state-changing operations still call the backend through signed service requests.
+The admin loads one snapshot when a call starts. Structured facts stay authoritative; retrieval augments documents and FAQs. The worker answers booking and other state-changing requests through the agent core and `packages/domain`.
 
 ## Keep provider boundaries
 

@@ -22,8 +22,8 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 
 describe("POST /api/webhooks/openai/live", () => {
-  it("rejects a call to an unknown number without logging the caller's number", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  it("leaves a call to an unknown number for the other deployment, without logging the caller's number", async () => {
+    const warn = vi.spyOn(console, "info").mockImplementation(() => undefined);
     mocks.unwrap.mockResolvedValue({
       type: "live.transport.incoming",
       data: {
@@ -39,7 +39,8 @@ describe("POST /api/webhooks/openai/live", () => {
     const response = await POST(new Request("https://admin.lobbystack.test/api/webhooks/openai/live", { method: "POST", body: "{}" }));
 
     expect(response.status).toBe(200);
-    expect(mocks.reject).toHaveBeenCalledWith("live_1", { status_code: 404 });
+    expect(mocks.reject).not.toHaveBeenCalled();
+    expect(mocks.accept).not.toHaveBeenCalled();
     const logged = warn.mock.calls.flat().join(" ");
     expect(logged).toContain("+15815550100");
     expect(logged).not.toContain("4165550134");
@@ -63,5 +64,23 @@ describe("POST /api/webhooks/openai/live", () => {
     expect(response.status).toBe(200);
     expect(mocks.attach).toHaveBeenCalledWith(expect.objectContaining({ sessionId: "live_1", callId: "call_1", channel: "voice" }));
     expect(mocks.finishLiveCall).not.toHaveBeenCalled();
+  });
+
+  it("leaves the call alone when the number lookup fails", async () => {
+    mocks.execute.mockRejectedValue(new Error("connection terminated"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.unwrap.mockResolvedValue({ type: "live.transport.incoming", data: { session_id: "live_1", sip_headers: [{ name: "Diversion", value: "<sip:+15815550100@example.com>" }] } });
+    const response = await POST(new Request("https://admin.lobbystack.test/api/webhooks/openai/live", { method: "POST", body: "{}" }));
+    expect(response.status).toBe(503);
+    expect(mocks.reject).not.toHaveBeenCalled();
+  });
+
+  it("rejects a call with no dialled number", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    mocks.unwrap.mockResolvedValue({ type: "live.transport.incoming", data: { session_id: "live_1", sip_headers: [{ name: "To", value: "<sip:proj_1@sip.api.openai.com>" }] } });
+    const response = await POST(new Request("https://admin.lobbystack.test/api/webhooks/openai/live", { method: "POST", body: "{}" }));
+    expect(response.status).toBe(200);
+    expect(mocks.reject).toHaveBeenCalledWith("live_1", { status_code: 404 });
+    expect(mocks.execute).not.toHaveBeenCalled();
   });
 });

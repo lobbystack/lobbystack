@@ -17,7 +17,7 @@ afterEach(() => {
 });
 
 const request = (headers: Record<string, string>) =>
-  new Request("https://voice.test/web-call/sessions", { headers });
+  new Request("https://app.test/api/voice/live/session", { headers });
 
 describe("trustedClientIpHeader", () => {
   it("trusts nothing without an explicit opt-in", () => {

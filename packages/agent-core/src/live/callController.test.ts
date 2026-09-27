@@ -42,6 +42,34 @@ beforeEach(() => { sockets.length = 0; });
 afterEach(() => { vi.useRealTimers(); });
 
 describe("LiveCallController", () => {
+  it("greets again once the session starts when the fallback fired too early", () => {
+    vi.useFakeTimers();
+    const { socket } = setup();
+    vi.advanceTimersByTime(1_600);
+    socket.emit("session.started", {});
+    vi.advanceTimersByTime(1_600);
+    vi.useRealTimers();
+    expect(socket.sent.filter((event) => (event as { event_id?: string }).event_id === "greeting")).toHaveLength(2);
+  });
+
+  it("doesn't repeat a fallback greeting that GPT-Live accepted", () => {
+    vi.useFakeTimers();
+    const { socket } = setup();
+    vi.advanceTimersByTime(1_600);
+    socket.emit("session.started", {});
+    socket.emit("session.output_transcript.delta", { delta: "Thanks for calling", end_ms: 400 });
+    vi.advanceTimersByTime(1_600);
+    vi.useRealTimers();
+    expect(socket.sent.filter((event) => (event as { event_id?: string }).event_id === "greeting")).toHaveLength(1);
+  });
+
+  it("doesn't greet after the receptionist has spoken", () => {
+    const { socket } = setup();
+    socket.emit("session.output_transcript.delta", { delta: "Hello", end_ms: 100 });
+    socket.emit("session.started", {});
+    expect(socket.sent.filter((event) => (event as { event_id?: string }).event_id === "greeting")).toHaveLength(0);
+  });
+
   it("greets the caller once the session starts", () => {
     const { socket } = setup();
     socket.emit("session.started", {});

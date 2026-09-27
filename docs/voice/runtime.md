@@ -2,8 +2,6 @@
 
 LobbyStack answers calls with OpenAI's GPT-Live model (`gpt-live-1`). OpenAI hosts the audio: phone calls reach it over SIP and browser calls over WebRTC. The admin app starts each call and the worker runs it. This page explains how a call flows, what each runtime does, and how to configure the phone path.
 
-Phone numbers that aren't on the Twilio SIP trunk still go through `apps/voice-gateway` (Twilio Media Streams and OpenAI Realtime). The gateway goes away once every number moves to the trunk.
-
 ## How a GPT-Live call works
 
 GPT-Live talks with the caller and hands anything that needs business data to LobbyStack. OpenAI calls this client delegation. The worker holds a sideband WebSocket to each session, receives the delegated request, and answers it with the agent core.
@@ -70,7 +68,7 @@ The admin and worker read these variables:
 | `OPENAI_WEBHOOK_SECRET` | admin | Verifies OpenAI's incoming-call webhook. Phone path only. |
 | `INTERNAL_SERVICE_TOKEN` | admin, worker | Authenticates the admin's attach request to the worker. |
 | `WORKER_INTERNAL_URL` | admin | Private URL of the worker's HTTP port, for example `http://worker:3002`. |
-| `TWILIO_SIP_TRUNK_SID` | worker | Adds new phone numbers to the SIP trunk when you provision them. |
+| `TWILIO_SIP_TRUNK_SID` | worker | Adds new phone numbers to the SIP trunk. The worker refuses to provision a number without it. |
 | `WEB_CALL_MAX_DURATION_MS` | admin | Optional cap on browser call length. |
 | `WEB_CALL_PUBLIC_BUSINESS_SLUG`, `WEB_CALL_ALLOWED_ORIGINS` | admin | The business the landing demo calls, and the sites allowed to start it. |
 | `AI_CHAT_MODEL`, `AI_CHAT_REASONING_EFFORT` | admin, worker | The agent's model and, on OpenAI, its reasoning effort. Leave both blank for `gpt-6-luna` on `high`. |
@@ -83,8 +81,8 @@ The phone path needs an OpenAI project with SIP enabled and a Twilio account. To
 
 1. In the OpenAI dashboard, add a webhook for `live.transport.incoming` that points to `https://your_app_domain/api/webhooks/openai/live`, and set its secret as `OPENAI_WEBHOOK_SECRET` on the admin.
 2. In Twilio, create an Elastic SIP trunk with the origination URI `sip:your_openai_project_id@sip.api.openai.com;transport=tls`, and set its transfer mode to allow transfers to any number.
-3. Set `TWILIO_SIP_TRUNK_SID` on the worker so new numbers join the trunk.
-4. Move each existing number with `scripts/operations/move-number-to-gpt-live.ts`.
+3. Set `TWILIO_SIP_TRUNK_SID` on the worker. New numbers join the trunk when you provision them, and provisioning fails without it.
+4. Move each existing number onto the trunk with `scripts/operations/move-number-to-gpt-live.ts`.
 
 The script only prints what it would change until you pass `--apply`:
 
@@ -93,8 +91,4 @@ pnpm exec tsx scripts/operations/move-number-to-gpt-live.ts \
   --business-id your_business_id --number +15815550123 --apply
 ```
 
-Pass `--rollback` to take a number off the trunk. Its calls go back to the voice gateway at once.
-
-## Voice gateway for numbers off the trunk
-
-`apps/voice-gateway` answers Twilio numbers that still point at its voice webhook. It streams call audio over Twilio Media Streams to OpenAI Realtime and calls the admin backend through signed requests for bookings, messages, and call state. It uses `INTERNAL_SERVICE_SECRET` for those signatures and `BACKEND_INTERNAL_URL` to reach the admin privately. Production never falls back to demo business data. The gateway no longer handles browser calls.
+A number off the trunk has nothing to answer its calls, so keep every number on it.

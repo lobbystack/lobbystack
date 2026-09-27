@@ -14,12 +14,12 @@ export const selfHostedFaqs: FaqItem[] = [
   {
     question: "What are the self-hosting requirements?",
     answer:
-      "The Docker Compose guide asks for Docker Engine 24 or later with Compose v2, Node.js 22 or later to generate secrets, and a server with at least 2 vCPU, 4 GB of RAM, and persistent disk. Live calls also need domains with HTTPS for the dashboard and voice gateway, plus Twilio and OpenAI accounts. The Railway template sets up the services and databases for you.",
+      "The Docker Compose guide asks for Docker Engine 24 or later with Compose v2, Node.js 22 or later to generate secrets, and a server with at least 2 vCPU, 4 GB of RAM, and persistent disk. Live calls also need a domain with HTTPS for the dashboard, plus Twilio and OpenAI accounts. The Railway template sets up the services and databases for you.",
   },
   {
     question: "Can I use my own LLM or API key?",
     answer:
-      "You use your own API keys. Voice calls run on OpenAI Realtime with your OpenAI account. Text generation and knowledge embeddings accept any OpenAI-compatible endpoint, so you can point them at another provider or a model you host.",
+      "You use your own API keys. Voice calls run on OpenAI GPT-Live with your OpenAI account. Text generation and knowledge embeddings accept any OpenAI-compatible endpoint, so you can point them at another provider or a model you host.",
   },
   {
     question: "Is self-hosting suitable for agencies and resellers?",

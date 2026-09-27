@@ -19,7 +19,6 @@ const stagingEnvironment = {
   RELEASE_CERTIFICATION_TARGET: "isolated-staging",
   ADMIN_BASE_URL: "https://admin.certification.example",
   WORKER_BASE_URL: "https://worker.certification.example",
-  VOICE_BASE_URL: "https://voice.certification.example",
   DATABASE_URL: "postgres://lobbystack_migrator:secret@db.certification.example/certification",
   REPLACEMENT_MIGRATOR_DATABASE_URL: "postgres://lobbystack_migrator:secret@db.certification.example/certification",
   REPLACEMENT_APP_DATABASE_URL: "postgres://lobbystack_app:secret@db.certification.example/certification",
@@ -52,7 +51,7 @@ describe("release readiness", () => {
     expect(result.status).toBe("planned");
     expect(result.scope.releaseCertified).toBe(false);
     expect(result.scope.resendWebhooks).toBe("unverified");
-    expect(result.gates).toHaveLength(7);
+    expect(result.gates).toHaveLength(6);
     expect(execute).not.toHaveBeenCalled();
   });
 

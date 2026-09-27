@@ -1,6 +1,6 @@
-// Live-call presence for the dashboard's "calls in progress" indicator. Whoever
-// holds a call (the voice gateway, or the worker for GPT-Live calls) renews its
-// owner heartbeat and each call's entry; the admin app counts them.
+// Live-call presence for the dashboard's "calls in progress" indicator. The
+// worker that holds a GPT-Live call renews its owner heartbeat and each call's
+// entry; the admin app counts them.
 import { randomUUID } from "node:crypto";
 
 import Redis from "ioredis";

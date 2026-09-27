@@ -92,7 +92,6 @@ export type SoakEvidence = {
     targetIdentity: string;
     adminBaseUrl: string;
     workerBaseUrl: string;
-    voiceBaseUrl: string;
   };
   configuration: {
     soakSeconds: number;
@@ -187,7 +186,7 @@ function originProblem(name: string, value: string): string | null {
 
 export function validateSoakEnvironment(environment: NodeJS.ProcessEnv): string[] {
   const problems: string[] = [];
-  for (const name of ["ADMIN_BASE_URL", "WORKER_BASE_URL", "VOICE_BASE_URL"] as const) {
+  for (const name of ["ADMIN_BASE_URL", "WORKER_BASE_URL"] as const) {
     const value = environment[name]?.trim();
     if (!value) {
       problems.push(`${name} (required)`);
@@ -277,15 +276,13 @@ export function validateSoakConfig(config: SoakRunnerConfig, environment: NodeJS
   return [...new Set(problems)];
 }
 
-export function healthTargets(adminBaseUrl: string, workerBaseUrl: string, voiceBaseUrl: string): HealthTarget[] {
+export function healthTargets(adminBaseUrl: string, workerBaseUrl: string): HealthTarget[] {
   const trim = (value: string) => value.replace(/\/+$/, "");
   return [
     { name: "admin-live", url: `${trim(adminBaseUrl)}/api/health/live`, expectedStatus: 200, targetMs: 500 },
     { name: "admin-ready", url: `${trim(adminBaseUrl)}/api/health/ready`, expectedStatus: 200, targetMs: 500 },
     { name: "worker-live", url: `${trim(workerBaseUrl)}/health/live`, expectedStatus: 200, targetMs: 500 },
     { name: "worker-ready", url: `${trim(workerBaseUrl)}/health/ready`, expectedStatus: 200, targetMs: 500 },
-    { name: "voice-live", url: `${trim(voiceBaseUrl)}/health/live`, expectedStatus: 200, targetMs: 300 },
-    { name: "voice-ready", url: `${trim(voiceBaseUrl)}/health/ready`, expectedStatus: 200, targetMs: 300 },
   ];
 }
 
@@ -435,7 +432,6 @@ function targetIdentity(environment: NodeJS.ProcessEnv): string {
   const source = [
     environment.ADMIN_BASE_URL,
     environment.WORKER_BASE_URL,
-    environment.VOICE_BASE_URL,
     environment.PERFORMANCE_DEPLOYMENT_ID,
   ].join("|");
   return `isolated-soak:${createHash("sha256").update(source).digest("hex").slice(0, 16)}`;
@@ -466,7 +462,6 @@ export async function runSoakCertification(options: SoakCertificationOptions = {
       targetIdentity: targetIdentity(environment),
       adminBaseUrl: environment.ADMIN_BASE_URL ?? "unset",
       workerBaseUrl: environment.WORKER_BASE_URL ?? "unset",
-      voiceBaseUrl: environment.VOICE_BASE_URL ?? "unset",
     },
     configuration: {
       soakSeconds: config ? effectiveSoakSeconds(config, environment) : 0,
@@ -480,7 +475,6 @@ export async function runSoakCertification(options: SoakCertificationOptions = {
     checks: [
       ...Object.entries(SOAK_CATEGORY_THRESHOLDS_MS).map(([category, limit]) => `${category} p95 < ${limit} ms`),
       "admin/worker health p95 < 500 ms",
-      "voice health p95 < 300 ms",
     ],
   };
 
@@ -517,7 +511,7 @@ export async function runSoakCertification(options: SoakCertificationOptions = {
   evidence.soak.targets = collectSoakTargets(rows);
   evidence.soak.thresholdMisses = evaluateSoakThresholds(rows, runConfig);
 
-  const targets = healthTargets(evidence.target.adminBaseUrl, evidence.target.workerBaseUrl, evidence.target.voiceBaseUrl);
+  const targets = healthTargets(evidence.target.adminBaseUrl, evidence.target.workerBaseUrl);
   let healthResults: Record<string, HealthTargetResult> = {};
   try {
     healthResults = await healthMeasurer(targets, evidence.health.concurrency, environment);

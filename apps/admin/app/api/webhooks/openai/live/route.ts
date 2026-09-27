@@ -39,18 +39,41 @@ export async function POST(request: Request) {
   // number in "Diversion".
   const to = phoneFromSipHeader(header("diversion")) ?? phoneFromSipHeader(header("to"));
   const from = phoneFromSipHeader(header("from"));
+  // Only the dialled-number headers: "From" is the caller's own number.
+  const routing = event.data.sip_headers.filter((item) => ["to", "diversion", "p-called-party-id"].includes(item.name.toLowerCase()));
+  if (!to) {
+    // No deployment can route a call without a dialled number.
+    console.warn("[live] incoming call without a dialled number", JSON.stringify({ sessionId, routing }));
+    await client.live.sessions.reject(sessionId, { status_code: 404 }).catch(() => undefined);
+    return new NextResponse(null, { status: 200 });
+  }
+
+  // Staging and production share one OpenAI project, so OpenAI sends every
+  // incoming call to both. Only the deployment that owns the number may accept
+  // or reject it; until ownership is known, this deployment leaves the call alone.
+  let businessId: string | null | undefined;
   try {
-    const resolved = to ? await getAppDatabase().db.execute<{ business_id: string | null }>(sql`select app.resolve_business_by_phone(${to}) as business_id`) : undefined;
-    const businessId = resolved?.rows[0]?.business_id;
-    const snapshot = businessId ? await getCachedBusinessSnapshot(createWorkerDomainContext(), { businessId }) : null;
-    if (!businessId || !snapshot) {
-      // Only the dialled-number headers: "From" is the caller's own number.
-      const routing = event.data.sip_headers.filter((item) => ["to", "diversion", "p-called-party-id"].includes(item.name.toLowerCase()));
-      console.warn("[live] no business for incoming call", JSON.stringify({ sessionId, to, businessId: businessId ?? null, routing }));
-      await client.live.sessions.reject(sessionId, { status_code: 404 });
+    const resolved = await getAppDatabase().db.execute<{ business_id: string | null }>(sql`select app.resolve_business_by_phone(${to}) as business_id`);
+    businessId = resolved.rows[0]?.business_id;
+  } catch (error) {
+    // Ownership is unknown: don't reject a call that may belong to the other
+    // deployment. A 503 makes OpenAI deliver the event again.
+    console.error("[live] couldn't look up the dialled number", error instanceof Error ? error.message : error);
+    return new NextResponse(null, { status: 503 });
+  }
+  if (!businessId) {
+    console.info("[live] incoming call for a number this deployment doesn't serve", JSON.stringify({ sessionId, to, routing }));
+    return new NextResponse(null, { status: 200 });
+  }
+
+  try {
+    const snapshot = await getCachedBusinessSnapshot(createWorkerDomainContext(), { businessId });
+    if (!snapshot) {
+      console.warn("[live] no published snapshot for incoming call", JSON.stringify({ sessionId, businessId }));
+      await client.live.sessions.reject(sessionId, { status_code: 503 });
       return new NextResponse(null, { status: 200 });
     }
-    return await answerCall(client, { sessionId, businessId, snapshot, from, to: to! });
+    return await answerCall(client, { sessionId, businessId, snapshot, from, to });
   } catch (error) {
     console.error("[live] incoming call failed", error instanceof Error ? error.message : error);
     await client.live.sessions.reject(sessionId, { status_code: 503 }).catch(() => undefined);

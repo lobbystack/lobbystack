@@ -4,13 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 
 import { subscribeTestCallEnded } from "@/lib/test-call-launcher";
 
-/** The call ends in the browser before the gateway finishes writing it down. */
+/** The call ends in the browser before the worker finishes writing it down. */
 export const CALL_SETTLE_POLL_MS = 2_000;
 export const CALL_SETTLE_WINDOW_MS = 60_000;
 
 /**
  * A refetch interval for anything that changes once a test call is recorded.
- * It polls briefly after a call ends in this tab, long enough for the gateway
+ * It polls briefly after a call ends in this tab, long enough for the worker
  * write to land, then stops.
  */
 export function useCallSettleRefetch(): () => number | false {

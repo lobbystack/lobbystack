@@ -42,13 +42,16 @@ const anonymousConfig = {
   persistence: "memory",
 } as const
 
-/** Everything the visitor agreed to once they accept. */
+/**
+ * Everything the visitor agreed to once they accept. Recording stays off here
+ * and `startRecording` turns it on once our bundled recorder has loaded.
+ */
 const consentedConfig = {
   autocapture: true,
   capture_pageview: true,
   capture_pageleave: "if_capture_pageview",
   cross_subdomain_cookie: true,
-  disable_session_recording: false,
+  disable_session_recording: true,
   persistence: "localStorage+cookie",
   session_recording: {
     // Inputs and passwords are masked by the SDK defaults. Text is not, so mask
@@ -56,6 +59,24 @@ const consentedConfig = {
     maskTextSelector: ".ph-mask",
   },
 } as const
+
+let isRecordingWanted = false
+
+/**
+ * The SDK otherwise fetches the recorder as a separate script from the
+ * PostHog host, and Safari 27 and some Firefox setups never run it, so those
+ * visitors were never recorded. Serving it from our own bundle avoids that.
+ * It is only loaded for visitors who accepted, since nobody else is recorded.
+ */
+const startRecording = () => {
+  isRecordingWanted = true
+
+  import("@/lib/session-recorder")
+    .then(() => {
+      if (isRecordingWanted) posthog.startSessionRecording()
+    })
+    .catch(() => {})
+}
 
 const attachSignupCtaListener = () => {
   if (isSignupCtaListenerAttached) return
@@ -84,6 +105,7 @@ const start = (consented: boolean) => {
 
   isInitialized = true
   attachSignupCtaListener()
+  if (consented) startRecording()
 }
 
 type LandingSignupCtaClickProperties = {
@@ -119,7 +141,6 @@ export function initializePostHog() {
   const client = posthog as typeof posthog & {
     has_opted_out_capturing?: () => boolean
     opt_in_capturing?: (options?: { captureEventName?: false }) => void
-    startSessionRecording?: () => void
   }
 
   if (client.has_opted_out_capturing?.()) {
@@ -129,13 +150,15 @@ export function initializePostHog() {
   // Documented path for moving off memory persistence without reinitializing.
   // Autocapture only binds at init, so it starts on the next page load.
   posthog.set_config({ ...consentedConfig })
-  client.startSessionRecording?.()
+  startRecording()
 
   return true
 }
 
 /** Called when the visitor declines. An explicit no stops collection entirely. */
 export function disablePostHog() {
+  isRecordingWanted = false
+
   if (canCapture && isInitialized) {
     const client = posthog as typeof posthog & {
       opt_out_capturing?: () => void

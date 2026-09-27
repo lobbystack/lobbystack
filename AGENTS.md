@@ -3,8 +3,7 @@
 ## Project structure
 
 - `apps/admin/`: Next.js operator dashboard, authentication, and HTTP API. Hosts the embeddable widget API (`/api/widget/*`), the loader (`/embed.js`), and the widget iframe app (`/embed/[key]`) in addition to the dashboard.
-- `apps/worker/`: asynchronous jobs, transactional outbox dispatch, and GPT-Live calls. The admin asks it to attach to each session at `/internal/live/attach`; it answers delegated requests, saves transcripts, and finishes the call.
-- `apps/voice-gateway/`: Fastify runtime for Twilio Media Streams and OpenAI Realtime. It only answers phone numbers that aren't on the Twilio SIP trunk, and goes away once they move. See `docs/voice/runtime.md`.
+- `apps/worker/`: asynchronous jobs, transactional outbox dispatch, and GPT-Live calls. The admin asks it to attach to each session at `/internal/live/attach`; it answers delegated requests, saves transcripts, and finishes the call. Phone calls reach GPT-Live through a Twilio Elastic SIP trunk; see `docs/voice/runtime.md`.
 - `apps/landing/`: public marketing site.
 - `packages/db/`: Drizzle schema, PostgreSQL migrations, role-specific clients, and RLS helpers.
 - `packages/domain/`: durable business logic shared by admin and worker runtimes. Widget conversations use the `web_chat` channel and key on `widget_visitor_id` (no phone required).
@@ -20,7 +19,7 @@
 - `pnpm install`: install workspace dependencies.
 - `docker compose up -d postgres redis`: start local infrastructure. Add `--profile minio` when testing the optional MinIO storage backend.
 - `pnpm db:migrate`: apply PostgreSQL migrations.
-- `pnpm dev`: run admin, worker, voice gateway, and landing apps. Browser calls need `LIVE_PROTOTYPE_ENABLED=true` and `OPENAI_API_KEY` on admin and worker.
+- `pnpm dev`: run admin, worker, and landing apps. Browser calls need `LIVE_PROTOTYPE_ENABLED=true` and `OPENAI_API_KEY` on admin and worker.
 - `pnpm typecheck`: typecheck all active workspaces and scripts.
 - `pnpm test`: run all Vitest suites.
 - `pnpm build`: build every workspace package and app (also copies the embed loader into the admin standalone output).

@@ -114,24 +114,6 @@ export const OPERATIONS_EVENT_NAMES = [
   "ops.billing.usage_sync_recovered",
   "ops.billing.unit_economics_rollup_recorded",
   "ops.billing.webhook_unresolved",
-  "ops.voice.heartbeat",
-  "ops.voice.invalid_signature",
-  "ops.voice.media_disconnect",
-  "ops.voice.snapshot_cache_hit",
-  "ops.voice.snapshot_cache_miss",
-  "ops.voice.openai_realtime_error",
-  "ops.voice.openai_realtime_state_conflict",
-  "ops.voice.turn_completed",
-  "ops.voice.turn_slow",
-  "ops.voice.call_ended_by_ai",
-  "ops.voice.tool_completed",
-  "ops.voice.tool_failed",
-  "ops.voice.recording_upload_failed",
-  "ops.voice.turn_first_audio",
-  "ops.voice.playback_interrupted",
-  "ops.voice.hangup_retries_exhausted",
-  "ops.voice.transcription_failed",
-  "ops.voice.snapshot_cache_evicted",
   "ops.outbox.backlog_sample",
   "ops.outbox.flush_failed",
   "ops.service.health_check",
@@ -154,7 +136,7 @@ export const TELEMETRY_EVENT_NAMES = [
 
 export type TelemetryEventName = (typeof TELEMETRY_EVENT_NAMES)[number];
 
-export type TelemetryTransport = "durable" | "gateway" | "browser";
+export type TelemetryTransport = "durable" | "browser";
 
 function transportsFor<const Names extends ReadonlyArray<TelemetryEventName>>(
   names: Names,
@@ -165,13 +147,6 @@ function transportsFor<const Names extends ReadonlyArray<TelemetryEventName>>(
   };
 }
 
-const GATEWAY_OPERATION_EVENT_NAMES = OPERATIONS_EVENT_NAMES.filter((name) =>
-  name.startsWith("ops.voice."),
-) as Array<Extract<(typeof OPERATIONS_EVENT_NAMES)[number], `ops.voice.${string}`>>;
-const DURABLE_OPERATION_EVENT_NAMES = OPERATIONS_EVENT_NAMES.filter(
-  (name) => !name.startsWith("ops.voice."),
-) as Array<Exclude<(typeof OPERATIONS_EVENT_NAMES)[number], `ops.voice.${string}`>>;
-
 /** The only supported delivery path(s) for each registered product event. */
 export const TELEMETRY_EVENT_TRANSPORT = {
   ...transportsFor(WEB_EVENT_NAMES, ["browser"]),
@@ -180,12 +155,11 @@ export const TELEMETRY_EVENT_TRANSPORT = {
   ...transportsFor(APPOINTMENT_EVENT_NAMES, ["durable"]),
   ...transportsFor(PROSPECT_DEMO_EVENT_NAMES, ["durable"]),
   ...transportsFor(KNOWLEDGE_EVENT_NAMES, ["durable"]),
-  "$ai_generation": ["durable", "gateway"],
+  "$ai_generation": ["durable"],
   ...transportsFor(INTEGRATION_EVENT_NAMES, ["durable"]),
   ...transportsFor(WORKFLOW_EVENT_NAMES, ["durable"]),
   ...transportsFor(BILLING_EVENT_NAMES, ["durable"]),
-  ...transportsFor(GATEWAY_OPERATION_EVENT_NAMES, ["gateway"]),
-  ...transportsFor(DURABLE_OPERATION_EVENT_NAMES, ["durable"]),
+  ...transportsFor(OPERATIONS_EVENT_NAMES, ["durable"]),
 } satisfies Record<TelemetryEventName, ReadonlyArray<TelemetryTransport>>;
 
 export type TelemetryScalar = string | number | boolean | null;
@@ -285,7 +259,7 @@ export type ProviderErrorClassification = {
 };
 
 export type AlertableExceptionTelemetryInput = {
-  runtime: "web" | "convex" | "voice-gateway";
+  runtime: "web" | "convex";
   service: string;
   operation: string;
   alertable?: boolean;
@@ -583,65 +557,6 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "monthKey",
   ],
   "ops.billing.webhook_unresolved": ["deploymentMode", "provider"],
-  "ops.voice.heartbeat": ["deploymentMode"],
-  "ops.voice.invalid_signature": ["deploymentMode", "provider"],
-  "ops.voice.media_disconnect": ["deploymentMode", "provider"],
-  "ops.voice.snapshot_cache_hit": ["businessId", "deploymentMode"],
-  "ops.voice.snapshot_cache_miss": ["businessId", "deploymentMode"],
-  "ops.voice.openai_realtime_error": ["deploymentMode", "provider"],
-  "ops.voice.openai_realtime_state_conflict": ["deploymentMode", "provider"],
-  "ops.voice.turn_completed": [
-    "businessId",
-    "deploymentMode",
-    "callId",
-    "provider",
-    "model",
-    "latencyBucket",
-    "channel",
-  ],
-  "ops.voice.turn_slow": [
-    "businessId",
-    "deploymentMode",
-    "callId",
-    "provider",
-    "model",
-    "latencyBucket",
-    "channel",
-  ],
-  "ops.voice.call_ended_by_ai": [
-    "businessId",
-    "deploymentMode",
-    "callId",
-    "reason",
-  ],
-  "ops.voice.tool_completed": [
-    "businessId",
-    "deploymentMode",
-    "callId",
-    "provider",
-    "model",
-    "toolName",
-    "latencyBucket",
-    "channel",
-  ],
-  "ops.voice.tool_failed": [
-    "businessId",
-    "deploymentMode",
-    "callId",
-    "provider",
-    "model",
-    "toolName",
-    "channel",
-  ],
-  "ops.voice.recording_upload_failed": ["deploymentMode", "callId"],
-  // TTFA starts at the provider's speech_stopped event, after the configured
-  // VAD silence window. It is observed before carrier/browser playback and is
-  // therefore a lower bound on caller-perceived latency.
-  "ops.voice.turn_first_audio": ["businessId", "deploymentMode", "callId", "ttfaMs", "ttfaBucket", "channel"],
-  "ops.voice.playback_interrupted": ["businessId", "deploymentMode", "callId", "channel"],
-  "ops.voice.hangup_retries_exhausted": ["businessId", "deploymentMode", "callId", "channel"],
-  "ops.voice.transcription_failed": ["businessId", "deploymentMode", "callId", "channel"],
-  "ops.voice.snapshot_cache_evicted": ["businessId", "deploymentMode", "channel"],
   "ops.outbox.backlog_sample": ["deploymentMode", "backlogBucket"],
   "ops.outbox.flush_failed": ["deploymentMode"],
   "ops.service.health_check": [
