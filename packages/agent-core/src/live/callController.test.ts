@@ -47,8 +47,20 @@ describe("LiveCallController", () => {
     const { socket } = setup();
     vi.advanceTimersByTime(1_600);
     socket.emit("session.started", {});
+    vi.advanceTimersByTime(1_600);
     vi.useRealTimers();
     expect(socket.sent.filter((event) => (event as { event_id?: string }).event_id === "greeting")).toHaveLength(2);
+  });
+
+  it("doesn't repeat a fallback greeting that GPT-Live accepted", () => {
+    vi.useFakeTimers();
+    const { socket } = setup();
+    vi.advanceTimersByTime(1_600);
+    socket.emit("session.started", {});
+    socket.emit("session.output_transcript.delta", { delta: "Thanks for calling", end_ms: 400 });
+    vi.advanceTimersByTime(1_600);
+    vi.useRealTimers();
+    expect(socket.sent.filter((event) => (event as { event_id?: string }).event_id === "greeting")).toHaveLength(1);
   });
 
   it("doesn't greet after the receptionist has spoken", () => {
