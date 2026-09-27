@@ -8,19 +8,19 @@ export function Hero() {
     <section className="relative overflow-hidden" id="hero">
       <div className="mx-auto max-w-7xl px-6 pt-16 pb-8 md:pt-20 md:pb-10 lg:pt-24 lg:pb-12">
         <div className="mx-auto max-w-4xl text-center">
-          <h1 className="animate-fade-up font-heading text-4xl leading-[1.1] font-medium tracking-tight delay-100 md:text-5xl lg:text-[4rem]">
+          <h1 className="animate-fade-up font-heading text-4xl leading-[1.1] font-medium tracking-tight stagger-1 md:text-5xl lg:text-[4rem]">
             Home services answering service that books jobs while your crew{" "}
             <span className="underline decoration-2 underline-offset-4">
               works
             </span>
           </h1>
-          <p className="animate-fade-up mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground delay-200 md:text-lg">
+          <p className="animate-fade-up mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground stagger-2 md:text-lg">
             LobbyStack answers calls for HVAC, plumbing, electrical, roofing,
             and landscaping businesses. It captures emergency calls, books
             appointments, and routes urgent jobs to your team while you are busy
             doing the work.
           </p>
-          <div className="animate-fade-up mt-8 flex items-center justify-center gap-4 delay-300">
+          <div className="animate-fade-up mt-8 flex items-center justify-center gap-4 stagger-3">
             <a
               href={APP_SIGNUP_URL}
               className={cn(
@@ -38,10 +38,10 @@ export function Hero() {
               See pricing
             </a>
           </div>
-          <p className="animate-fade-up mt-5 text-xs text-muted-foreground delay-400">
+          <p className="animate-fade-up mt-5 text-xs text-muted-foreground stagger-4">
             No credit card required. Works with your existing business number.
           </p>
-          <div className="animate-fade-up mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-sm font-medium text-muted-foreground delay-500">
+          <div className="animate-fade-up mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-sm font-medium text-muted-foreground stagger-5">
             <div className="flex items-center gap-2">
               <Check className="size-4 text-primary" />
               <span>Emergency call routing</span>

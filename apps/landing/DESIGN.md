@@ -49,17 +49,16 @@ components:
 
 **Creative North Star: "The Utilitarian Operator"**
 
-This system is built for calm confidence. It is direct, reassuring, and exceptionally professional, acting as a trusted operational partner rather than a flashy tech toy. The aesthetic relies on an extremely restrained, purely achromatic palette (black, white, and warm grays) and rigorous typography to communicate reliability. It explicitly rejects highly colorful, cluttered SaaS interfaces, bubbly consumer-app aesthetics, and generic AI templates.
+This system is built for calm confidence. It is direct, reassuring, and exceptionally professional, acting as a trusted operational partner rather than a flashy tech toy. Rigorous typography and a neutral base palette carry the sense of reliability. The system rejects cluttered SaaS interfaces, bubbly consumer-app aesthetics, and generic AI templates.
 
 **Key Characteristics:**
-- Purely achromatic palette.
 - Technical, precise typography using Geist Variable.
 - Soft, responsible components based on the shadcn `base-maia` preset.
 - Generous whitespace and a strict 4px/8px baseline grid.
 
 ## 2. Colors
 
-A purely achromatic scale focused on clarity and contrast.
+A neutral scale focused on clarity and contrast.
 
 ### Primary
 - **Neutral Primary** (oklch(0.205 0 0)): Used for primary actions, buttons, and high-emphasis UI elements.
@@ -72,8 +71,6 @@ A purely achromatic scale focused on clarity and contrast.
 
 ### State / semantic
 - **Destructive** (oklch(0.577 0.245 27.325)): A muted red reserved strictly for destructive actions or critical errors.
-
-**The Achromatic Rule.** The brand identity relies on the absence of color. No accent hues are permitted. Hierarchy is established strictly through typographic scale, weight, and layout spacing.
 
 ## 3. Typography
 

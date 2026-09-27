@@ -416,9 +416,9 @@ export function LobbyStackAuraVoiceDemo({
           aria-label={getButtonLabel(status, muted, locale)}
           className={cn(
             "voice-aura-button relative z-10 flex aspect-square w-36 items-center justify-center rounded-full",
-            "transition-all duration-300 ease-out",
+            "transition-[scale,opacity] duration-200 ease-(--ease-out)",
             "cursor-pointer disabled:cursor-not-allowed disabled:opacity-40",
-            !isCallActive && !isBusy && "hover:scale-110 active:scale-95",
+            !isCallActive && !isBusy && "hover:scale-[1.03] active:scale-[0.97]",
             isActive && "scale-105"
           )}
         >
@@ -448,7 +448,7 @@ export function LobbyStackAuraVoiceDemo({
 
         {/* Controls */}
         {status === "idle" || status === "error" ? (
-          <div className="absolute inset-x-0 top-1/2 z-20 mt-32 flex items-center justify-center">
+          <div key="idle" className="swap-in absolute inset-x-0 top-1/2 z-20 mt-32 flex items-center justify-center">
             <Button
               type="button"
               size="sm"
@@ -461,7 +461,7 @@ export function LobbyStackAuraVoiceDemo({
             </Button>
           </div>
         ) : status === "requesting_microphone" || status === "connecting" ? (
-          <div className="absolute inset-x-0 top-1/2 z-20 mt-32 flex items-center justify-center">
+          <div key="connecting" className="swap-in absolute inset-x-0 top-1/2 z-20 mt-32 flex items-center justify-center">
             <Button
               type="button"
               size="sm"
@@ -473,7 +473,7 @@ export function LobbyStackAuraVoiceDemo({
             </Button>
           </div>
         ) : isCallActive ? (
-          <div className="absolute inset-x-0 top-1/2 z-20 mt-32 flex items-center justify-center">
+          <div key="live" className="swap-in absolute inset-x-0 top-1/2 z-20 mt-32 flex items-center justify-center">
             <Button
               type="button"
               size="sm"
@@ -486,7 +486,7 @@ export function LobbyStackAuraVoiceDemo({
             </Button>
           </div>
         ) : status === "ended" ? (
-          <div className="absolute inset-x-0 top-1/2 z-20 mt-28 flex flex-col items-center gap-3 px-4">
+          <div key="ended" className="swap-in absolute inset-x-0 top-1/2 z-20 mt-28 flex flex-col items-center gap-3 px-4">
             <p className="text-sm font-medium text-foreground">
               {demoCopy[locale].prompt}
             </p>

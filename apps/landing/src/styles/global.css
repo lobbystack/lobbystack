@@ -71,6 +71,11 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
+  /* Motion: strong ease-out for entrances and presses, iOS sheet curve for
+     surfaces that slide in from an edge. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -90,6 +95,24 @@
   }
   html {
     @apply scroll-smooth font-sans;
+    interpolate-size: allow-keywords;
+  }
+
+  a,
+  button,
+  summary {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p,
+  li {
+    text-wrap: pretty;
   }
 
   :target {
@@ -105,7 +128,7 @@
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(24px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -125,7 +148,7 @@
 @keyframes slide-in-left {
   from {
     opacity: 0;
-    transform: translateX(-32px);
+    transform: translateX(-16px);
   }
   to {
     opacity: 1;
@@ -144,39 +167,125 @@
 }
 
 .animate-fade-up {
-  animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: fade-up 0.5s var(--ease-out) both;
 }
 
 .animate-fade-in {
-  animation: fade-in 0.6s ease both;
+  animation: fade-in 0.4s ease both;
 }
 
 .animate-slide-in-left {
-  animation: slide-in-left 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: slide-in-left 0.5s var(--ease-out) both;
 }
 
 .animate-float {
   animation: float 6s ease-in-out infinite;
 }
 
-/* Delay utilities for staggered reveals */
-.delay-100 {
-  animation-delay: 100ms;
+/* Stagger steps for reveals. Kept short so the whole hero lands in well
+   under a second and never holds content back from someone ready to read. */
+.stagger-1 {
+  animation-delay: 60ms;
 }
-.delay-200 {
-  animation-delay: 200ms;
+.stagger-2 {
+  animation-delay: 120ms;
 }
-.delay-300 {
+.stagger-3 {
+  animation-delay: 180ms;
+}
+.stagger-4 {
+  animation-delay: 240ms;
+}
+.stagger-5 {
   animation-delay: 300ms;
 }
-.delay-400 {
-  animation-delay: 400ms;
+
+/* Elements that swap in place (a price, a status pill). Only the entrance
+   animates; the blur blends old and new so it reads as one morphing value. */
+.swap-in {
+  transition:
+    opacity 200ms var(--ease-out),
+    filter 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(4px);
+  }
 }
-.delay-500 {
-  animation-delay: 500ms;
+
+/* Translucent chrome that content scrolls under. The bottom edge only
+   appears once something is actually underneath it. */
+.site-header {
+  background-color: oklch(1 0 0 / 72%);
+  backdrop-filter: blur(20px) saturate(180%);
 }
-.delay-600 {
-  animation-delay: 600ms;
+
+@supports (animation-timeline: scroll()) {
+  .site-header {
+    border-bottom-color: transparent;
+    animation: header-edge linear both;
+    animation-timeline: scroll();
+    animation-range: 0 48px;
+  }
+}
+
+@keyframes header-edge {
+  to {
+    border-bottom-color: oklch(0.922 0 0 / 60%);
+  }
+}
+
+/* Popovers grow out of the control that opened them. These live inside
+   <details>, whose content never passes through display: none, so the
+   entrance is keyed to [open] rather than @starting-style. Closing removes
+   the content at once, which is the fast exit we want. */
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    scale: 0.97;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+details[open] > .nav-popover {
+  animation: popover-in 180ms var(--ease-out);
+}
+
+details[open] > .mobile-menu-sheet {
+  animation: sheet-in 240ms var(--ease-drawer);
+}
+
+/* Disclosure panels open by height instead of snapping. Browsers without
+   ::details-content keep the native instant toggle. */
+.disclosure::details-content {
+  block-size: 0;
+  overflow-y: clip;
+  transition:
+    block-size 240ms var(--ease-out),
+    content-visibility 240ms allow-discrete;
+}
+
+.disclosure[open]::details-content {
+  block-size: auto;
+}
+
+.cookie-sheet {
+  transition:
+    opacity 400ms var(--ease-drawer),
+    transform 400ms var(--ease-drawer);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(24px);
+  }
 }
 
 /* Browser mockup frame */
@@ -213,16 +322,18 @@
   @apply py-12 md:py-16 lg:py-20;
 }
 
+/* Tracking tightens as size grows: what reads as crisp at 64px crowds the
+   letters together at 36px. */
 .display-heading {
-  @apply font-heading text-4xl leading-[1.05] font-medium tracking-[-0.055em] md:text-5xl lg:text-[4rem];
+  @apply font-heading text-4xl leading-[1.05] font-medium tracking-[-0.04em] md:text-5xl md:tracking-[-0.05em] lg:text-[4rem] lg:tracking-[-0.055em];
 }
 
 .display-heading-compact {
-  @apply font-heading text-4xl leading-[1.05] font-medium tracking-[-0.055em] md:text-5xl lg:text-[3.5rem];
+  @apply font-heading text-4xl leading-[1.05] font-medium tracking-[-0.04em] md:text-5xl md:tracking-[-0.05em] lg:text-[3.5rem] lg:tracking-[-0.055em];
 }
 
 .section-heading {
-  @apply font-heading text-3xl leading-[1.08] font-medium tracking-[-0.045em] md:text-4xl lg:text-[2.75rem];
+  @apply font-heading text-3xl leading-[1.08] font-medium tracking-[-0.035em] md:text-4xl md:tracking-[-0.04em] lg:text-[2.75rem] lg:tracking-[-0.045em];
 }
 
 .section-intro {
@@ -388,6 +499,8 @@
   @apply bg-muted/20;
 }
 
+/* Reduced motion keeps feedback but drops travel: reveals become short
+   cross-fades, and anything that slides or scales settles in place. */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -399,7 +512,52 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
+  }
+
+  .animate-fade-up,
+  .animate-slide-in-left {
+    animation: fade-in 200ms ease both !important;
+  }
+
+  details[open] > .nav-popover,
+  details[open] > .mobile-menu-sheet {
+    animation: fade-in 150ms ease !important;
+  }
+
+  .swap-in,
+  .cookie-sheet {
+    transition-property: opacity;
+    transition-duration: 150ms;
+
+    @starting-style {
+      filter: none;
+      transform: none;
+      scale: 1;
+    }
+  }
+
+  .disclosure::details-content {
+    transition: none;
+  }
+
+  .site-header {
+    animation: none;
+    border-bottom-color: oklch(0.922 0 0 / 60%);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .site-header,
+  .cookie-sheet > * {
+    background-color: var(--background);
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .site-header {
+    background-color: var(--background);
+    border-bottom-color: var(--foreground);
   }
 }
 

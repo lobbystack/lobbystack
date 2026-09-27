@@ -64,19 +64,19 @@ export function FeaturesHero({ locale = "en" }: FeaturesHeroProps) {
       <div className="mx-auto max-w-7xl px-6 pt-16 md:pt-20 lg:pt-24">
         {/* Hero copy */}
         <div className="mx-auto max-w-4xl text-center">
-          <h1 className="animate-fade-up display-heading delay-100">
+          <h1 className="animate-fade-up display-heading stagger-1">
             {copy.h1Start}{" "}
             <span className="underline decoration-2 underline-offset-4">
               {copy.h1Emphasis}
             </span>
           </h1>
 
-          <p className="animate-fade-up body-copy mx-auto mt-6 max-w-[65ch] delay-200 md:text-lg">
+          <p className="animate-fade-up body-copy mx-auto mt-6 max-w-[65ch] stagger-2 md:text-lg">
             {copy.body}
           </p>
 
           {/* CTAs */}
-          <div className="animate-fade-up mt-8 flex items-center justify-center gap-4 delay-300">
+          <div className="animate-fade-up mt-8 flex items-center justify-center gap-4 stagger-3">
             <a
               href={APP_SIGNUP_URL}
               className={cn(
@@ -104,7 +104,7 @@ export function FeaturesHero({ locale = "en" }: FeaturesHeroProps) {
         </div>
 
         {/* Three product panels */}
-        <div className="animate-fade-up mx-auto mt-16 max-w-5xl delay-500 md:mt-20">
+        <div className="animate-fade-up mx-auto mt-16 max-w-5xl stagger-5 md:mt-20">
           <div className="grid gap-4 md:grid-cols-3">
             {/* Panel 1: Plain-language workflow */}
             <div className="flex flex-col rounded-2xl border border-border/70 bg-background p-6">

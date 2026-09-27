@@ -107,7 +107,7 @@ export function CookieConsentBanner({
   return (
     <aside
       aria-label={copy.title}
-      className="fixed right-0 bottom-0 left-0 z-50 px-4 pb-4 sm:right-6 sm:bottom-6 sm:left-auto sm:w-[28rem] sm:px-0 sm:pb-0"
+      className="cookie-sheet fixed right-0 bottom-0 left-0 z-50 px-4 pb-4 sm:right-6 sm:bottom-6 sm:left-auto sm:w-[28rem] sm:px-0 sm:pb-0"
     >
       <Item
         variant="outline"

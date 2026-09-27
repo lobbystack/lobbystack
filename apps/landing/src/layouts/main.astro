@@ -170,6 +170,14 @@ Astro.response.headers.set("Content-Signal", CONTENT_SIGNAL)
         const alternate = document.querySelector<HTMLLinkElement>(`link[rel="alternate"][hreflang="${link.hreflang}"]`)
         if (alternate) link.href = new URL(alternate.href).pathname
       })
+      // Menus built on <details> stay open until toggled, so close them when
+      // a press lands anywhere outside.
+      document.addEventListener("pointerdown", (event) => {
+        document.querySelectorAll<HTMLDetailsElement>("header details[open]").forEach((details) => {
+          const isTopLevel = !details.parentElement?.closest("details")
+          if (isTopLevel && !details.contains(event.target as Node)) details.open = false
+        })
+      })
       document.addEventListener("keydown", (event) => {
         if (event.key !== "Escape") return
         const details = (event.target as Element | null)?.closest<HTMLDetailsElement>("header details[open]")

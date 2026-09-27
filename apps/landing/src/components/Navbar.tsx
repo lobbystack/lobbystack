@@ -301,7 +301,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
   const copy = labels[locale]
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl">
+    <header className="site-header sticky top-0 z-50 w-full border-b border-border/60">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         {/* Logo */}
         <a
@@ -323,26 +323,26 @@ export function Navbar({ locale = "en" }: NavbarProps) {
           {navLinks(locale).map((link) => (
             <div key={link.label} className="group relative">
               {link.type === "group" ? (
-                <details className="group/dropdown">
+                <details name="site-nav" className="group/dropdown">
                   <summary
-                    className="flex cursor-pointer list-none items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden"
+                    className="flex cursor-pointer list-none items-center gap-1 rounded-full px-3 py-2 text-sm font-medium text-foreground transition-colors duration-150 group-open/dropdown:bg-muted hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden"
                   >
                     {link.label}
                     <ChevronDown
-                      className="size-3.5 transition-transform group-open/dropdown:rotate-180"
+                      className="size-3.5 transition-transform duration-200 ease-(--ease-out) group-open/dropdown:rotate-180"
                       aria-hidden="true"
                     />
                   </summary>
                   <div
                     className={cn(
-                      "absolute top-full left-0 z-50 grid min-w-56 translate-y-1 gap-3 rounded-lg border border-border/70 bg-popover p-1.5 text-popover-foreground shadow-lg",
+                      "nav-popover absolute top-full left-0 z-50 grid min-w-56 origin-top-left translate-y-1 gap-3 rounded-lg border border-border/70 bg-popover p-1.5 text-popover-foreground shadow-lg",
                       link.columns.length === 2 && "w-[31rem] grid-cols-2",
                       // Wide menus start left of their trigger so they
                       // stay inside a 1024px window.
                       link.columns.length === 3 &&
-                        "w-max -translate-x-1/4 grid-cols-[minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)] gap-x-8 p-4",
+                        "w-max origin-[25%_0] -translate-x-1/4 grid-cols-[minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)] gap-x-8 p-4",
                       link.columns.length === 4 &&
-                        "w-max -translate-x-1/4 grid-cols-[minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)] gap-x-8 p-4"
+                        "w-max origin-[25%_0] -translate-x-1/4 grid-cols-[minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)_minmax(13rem,max-content)] gap-x-8 p-4"
                     )}
                   >
                     {link.columns.map((column, columnIndex) => (
@@ -420,7 +420,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                   data-ph-capture-attribute-action="navigate"
                   data-ph-capture-attribute-destination={link.href}
                   data-ph-capture-attribute-label={link.label}
-                  className="block rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  className="block rounded-full px-3 py-2 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
                   {link.label}
                 </a>
@@ -430,15 +430,15 @@ export function Navbar({ locale = "en" }: NavbarProps) {
         </nav>
 
         {/* Desktop CTAs */}
-        <div className="hidden items-center gap-3 md:flex">
-          <a data-language-switch href={locale === "fr" ? "/" : "/fr/"} hrefLang={locale === "fr" ? "en" : "fr"} lang={locale === "fr" ? "en" : "fr"} className="rounded-md text-sm focus-visible:outline-2 focus-visible:outline-ring">{locale === "fr" ? "English" : "Français"}</a>
+        <div className="hidden items-center gap-1 md:flex">
+          <a data-language-switch href={locale === "fr" ? "/" : "/fr/"} hrefLang={locale === "fr" ? "en" : "fr"} lang={locale === "fr" ? "en" : "fr"} className="rounded-full px-3 py-2 text-sm transition-colors duration-150 hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring">{locale === "fr" ? "English" : "Français"}</a>
           <a
             href="https://github.com/lobbystack/lobbystack"
             target="_blank"
             rel="noopener noreferrer"
             aria-label={copy.github}
             title={copy.github}
-            className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             data-ph-capture-attribute-section="navbar"
             data-ph-capture-attribute-action="view_github"
             data-ph-capture-attribute-destination="https://github.com/lobbystack/lobbystack"
@@ -447,13 +447,13 @@ export function Navbar({ locale = "en" }: NavbarProps) {
           </a>
           <a
             href={APP_LOGIN_URL}
-            className="rounded-md text-sm font-medium text-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="rounded-full px-3 py-2 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             {copy.login}
           </a>
           <a
             href={APP_SIGNUP_URL}
-            className={cn(buttonVariants(), "rounded-full px-5")}
+            className={cn(buttonVariants(), "ml-2 rounded-full px-5")}
             data-ph-signup-cta
             data-ph-capture-attribute-section="navbar"
             data-ph-capture-attribute-action="try_for_free"
@@ -481,7 +481,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
 
           <div
             id={mobileMenuId}
-            className="fixed inset-x-0 top-16 max-h-[calc(100svh-4rem)] overflow-y-auto border-t border-border/60 bg-background shadow-sm"
+            className="mobile-menu-sheet fixed inset-x-0 top-16 max-h-[calc(100svh-4rem)] overflow-y-auto border-t border-border/60 bg-background shadow-sm"
           >
             <nav
               className="flex flex-col gap-1 px-6 py-4"
@@ -491,12 +491,12 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                 link.type === "group" ? (
                   <details
                     key={link.label}
-                    className="group/mobile-submenu py-1"
+                    className="disclosure group/mobile-submenu py-1"
                   >
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-md px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-none [&::-webkit-details-marker]:hidden">
                       <span>{link.label}</span>
                       <ChevronDown
-                        className="size-4 shrink-0 transition-transform group-open/mobile-submenu:rotate-180"
+                        className="size-4 shrink-0 transition-transform duration-200 ease-(--ease-out) group-open/mobile-submenu:rotate-180"
                         aria-hidden="true"
                       />
                     </summary>

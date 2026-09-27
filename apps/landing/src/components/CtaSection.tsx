@@ -53,7 +53,7 @@ export function CtaSection({ locale = "en" }: CtaSectionProps) {
             data-ph-capture-attribute-destination={APP_SIGNUP_URL}
           >
             {copy.common.tryFree}
-            <ArrowRight className="ml-1 size-4" />
+            <ArrowRight className="ml-1 size-4 transition-transform duration-200 ease-(--ease-out) group-hover/button:translate-x-0.5" />
           </a>
         </div>
         <p className="fine-print mt-3">

@@ -60,11 +60,11 @@ export function HeroSection({ children, locale = "en" }: HeroSectionProps) {
               )}
             </h1>
 
-            <p className="animate-fade-up body-copy mt-6 max-w-[65ch] delay-200 md:text-lg">
+            <p className="animate-fade-up body-copy mt-6 max-w-[65ch] stagger-2 md:text-lg">
               {localCopy.body}
             </p>
 
-            <div className="animate-fade-up mt-8 flex items-center gap-4 delay-300">
+            <div className="animate-fade-up mt-8 flex items-center gap-4 stagger-3">
               <a
                 href={APP_SIGNUP_URL}
                 className={cn(
@@ -77,17 +77,17 @@ export function HeroSection({ children, locale = "en" }: HeroSectionProps) {
                 data-ph-capture-attribute-destination={APP_SIGNUP_URL}
               >
                 {copy.common.tryFree}
-                <ArrowRight className="ml-1 size-4" />
+                <ArrowRight className="ml-1 size-4 transition-transform duration-200 ease-(--ease-out) group-hover/button:translate-x-0.5" />
               </a>
             </div>
 
             {/* Micro-copy */}
-            <p className="animate-fade-up fine-print mt-5 delay-400">
+            <p className="animate-fade-up fine-print mt-5 stagger-4">
               {localCopy.pricing}
             </p>
           </div>
 
-          <div className="animate-fade-up mx-auto flex w-full max-w-[22rem] min-w-0 justify-center delay-500 md:max-w-[30rem] xl:max-w-none xl:justify-end">
+          <div className="animate-fade-up mx-auto flex w-full max-w-[22rem] min-w-0 justify-center stagger-5 md:max-w-[30rem] xl:max-w-none xl:justify-end">
             {children}
           </div>
         </div>

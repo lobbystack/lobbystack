@@ -4,7 +4,7 @@ import type { Locale } from "@/i18n"
 import { cn } from "@/lib/utils"
 import { getCloudPlanFactSheet } from "@lobbystack/shared/product-capabilities"
 import { Check, Minus, ArrowRight } from "lucide-react"
-import { Fragment, useState } from "react"
+import { Fragment, useLayoutEffect, useRef, useState } from "react"
 
 /* ─────────────────────────── Data ─────────────────────────── */
 
@@ -883,6 +883,30 @@ const pricingSectionCopy = {
 export function PricingSection({ locale = "en" }: PricingSectionProps) {
   const [billingInterval, setBillingInterval] =
     useState<BillingInterval>("annual")
+  const tabRefs = useRef<Record<BillingInterval, HTMLButtonElement | null>>({
+    monthly: null,
+    annual: null,
+  })
+  // Measured position of the selected tab. Until hydration measures it, the
+  // selected tab paints its own background so the server HTML still shows state.
+  const [thumb, setThumb] = useState<{ x: number; width: number } | null>(
+    null
+  )
+
+  useLayoutEffect(() => {
+    const tab = tabRefs.current[billingInterval]
+    if (!tab) return
+
+    const measure = () =>
+      setThumb({ x: tab.offsetLeft, width: tab.offsetWidth })
+    measure()
+
+    // Watch every tab: a late font swap can resize the one before this tab
+    // and shift it without changing its own size.
+    const observer = new ResizeObserver(measure)
+    Object.values(tabRefs.current).forEach((node) => node && observer.observe(node))
+    return () => observer.disconnect()
+  }, [billingInterval])
   const copy = pricingSectionCopy[locale]
   const localizedTiers = tiersByLocale[locale]
   const localizedComparisonGroups = comparisonGroupsByLocale[locale]
@@ -892,10 +916,10 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
       {/* ── Hero ── */}
       <section className="relative overflow-hidden">
         <div className="mx-auto max-w-4xl px-6 pt-16 pb-8 text-center md:pt-20 md:pb-10 lg:pb-12">
-          <h1 className="animate-fade-up display-heading-compact delay-100">
+          <h1 className="animate-fade-up display-heading-compact stagger-1">
             {copy.heading}
           </h1>
-          <p className="animate-fade-up body-copy mx-auto mt-5 max-w-[60ch] delay-200 md:text-lg">
+          <p className="animate-fade-up body-copy mx-auto mt-5 max-w-[60ch] stagger-2 md:text-lg">
             {copy.intro}
           </p>
         </div>
@@ -903,22 +927,35 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
 
       {/* ── Tier cards ── */}
       <section className="mx-auto max-w-7xl px-6 pt-8 pb-8 md:pt-10 md:pb-10 lg:pt-12 lg:pb-12">
-        <div className="animate-fade-up mb-8 flex justify-center delay-300">
+        <div className="animate-fade-up mb-8 flex justify-center stagger-3">
           <div
             aria-label={copy.billingLabel}
-            className="inline-flex rounded-full border border-border bg-input/30 p-1"
+            className="relative inline-flex rounded-full border border-border bg-input/30 p-1"
             role="tablist"
           >
+            {thumb && (
+              <span
+                aria-hidden="true"
+                className="absolute top-1 bottom-1 left-0 rounded-full bg-background shadow-sm transition-[translate,width] duration-250 ease-(--ease-out) motion-reduce:transition-none"
+                style={{ translate: `${thumb.x}px 0`, width: thumb.width }}
+              />
+            )}
             {(["monthly", "annual"] as const).map((interval) => (
               <Button
                 aria-selected={billingInterval === interval}
                 className={cn(
-                  "h-9 rounded-full px-4",
+                  "relative h-9 rounded-full border-transparent bg-transparent px-4 hover:bg-transparent",
                   billingInterval === interval
-                    ? "bg-background text-foreground shadow-sm hover:bg-background"
-                    : "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? cn(
+                        "text-foreground",
+                        !thumb && "bg-background shadow-sm hover:bg-background"
+                      )
+                    : "text-muted-foreground hover:text-foreground"
                 )}
                 key={interval}
+                ref={(node) => {
+                  tabRefs.current[interval] = node
+                }}
                 onClick={() => setBillingInterval(interval)}
                 role="tab"
                 size="sm"
@@ -936,7 +973,7 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
           </div>
         </div>
 
-        <div className="animate-fade-up grid gap-6 delay-300 md:grid-cols-2 xl:grid-cols-4">
+        <div className="animate-fade-up grid gap-6 stagger-3 md:grid-cols-2 xl:grid-cols-4">
           {localizedTiers.map((tier) => (
             <div
               key={tier.name}
@@ -952,7 +989,10 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
                   {tier.name}
                 </h2>
                 <div className="mt-3 flex items-baseline gap-1">
-                  <span className="font-heading text-4xl font-medium tracking-[-0.05em] tabular-nums">
+                  <span
+                    key={tier.price[billingInterval]}
+                    className="swap-in font-heading text-4xl font-medium tracking-[-0.05em] tabular-nums"
+                  >
                     {tier.price[billingInterval]}
                   </span>
                   {tier.period && (
@@ -984,7 +1024,7 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
                 data-ph-capture-attribute-label={tier.cta[billingInterval]}
               >
                 <span className="min-w-0">{tier.cta[billingInterval]}</span>
-                <ArrowRight className="size-4 shrink-0" />
+                <ArrowRight className="size-4 shrink-0 transition-transform duration-200 ease-(--ease-out) group-hover/button:translate-x-0.5" />
               </a>
 
               {/* Key highlights only */}

@@ -19,20 +19,20 @@ export function Hero() {
     <section className="relative overflow-hidden" id="hero">
       <div className="mx-auto max-w-7xl px-6 pt-16 pb-8 md:pt-20 md:pb-10 lg:pt-24 lg:pb-12">
         <div className="mx-auto max-w-4xl text-center">
-          <h1 className="animate-fade-up display-heading delay-100">
+          <h1 className="animate-fade-up display-heading stagger-1">
             AI appointment scheduling for callers{" "}
             <span className="underline decoration-2 underline-offset-4">
               ready to book
             </span>
           </h1>
 
-          <p className="animate-fade-up body-copy mx-auto mt-6 max-w-[65ch] delay-200 md:text-lg">
+          <p className="animate-fade-up body-copy mx-auto mt-6 max-w-[65ch] stagger-2 md:text-lg">
             LobbyStack answers calls, collects the details your team needs,
             offers available times, books appointments, and sends confirmations
             before the caller moves on.
           </p>
 
-          <div className="animate-fade-up mt-8 flex items-center justify-center gap-4 delay-300">
+          <div className="animate-fade-up mt-8 flex items-center justify-center gap-4 stagger-3">
             <a
               href={APP_SIGNUP_URL}
               className={cn(
@@ -51,12 +51,12 @@ export function Hero() {
             </a>
           </div>
 
-          <p className="animate-fade-up fine-print mt-5 delay-400">
+          <p className="animate-fade-up fine-print mt-5 stagger-4">
             No credit card required. Works with phone calls, calendars, and
             follow-up texts.
           </p>
 
-          <div className="animate-fade-up mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-sm font-medium text-muted-foreground delay-500">
+          <div className="animate-fade-up mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-sm font-medium text-muted-foreground stagger-5">
             <div className="flex items-center gap-2">
               <Check className="size-4 text-primary" />
               <span>Books appointments by phone</span>
