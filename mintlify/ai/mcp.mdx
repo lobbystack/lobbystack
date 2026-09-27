@@ -1,0 +1,97 @@
+---
+title: "Run your receptionist from an AI assistant"
+description: "Connect Claude, ChatGPT and other MCP clients to LobbyStack to read calls, book appointments and update what your receptionist knows."
+sidebarTitle: "MCP server"
+contentType: "Reference"
+---
+
+LobbyStack runs a Model Context Protocol (MCP) server. Connect an AI assistant to it and ask in plain language: "Who called yesterday and didn't book?", "Book Dana Whitfield for a cleaning on Tuesday morning", or "Close on Saturdays from now on."
+
+The assistant works through the same rules as the [REST API](/api/overview). It sees one business, it can do only what its API key allows, and every change it makes lands in the business's audit log.
+
+## Connect
+
+| Setting | Value |
+| --- | --- |
+| Server URL | `https://app.lobbystack.com/api/mcp` |
+| Transport | Streamable HTTP |
+| Authentication | `Authorization: Bearer <API key>` |
+
+Self-hosted deployments serve the same path on their own domain, for example `https://lobbystack.example.com/api/mcp`.
+
+<Steps>
+  <Step title="Create an API key">
+    Go to **Settings** > **API keys** and create a key for the assistant, such as `Claude`. See [Authentication](/api/authentication).
+  </Step>
+  <Step title="Pick scopes">
+    The assistant sees only the tools your scopes allow. Start with read scopes. Add `appointments:write` or `business:write` when you want the assistant to make changes.
+  </Step>
+  <Step title="Add the server to your assistant">
+    Follow the guide for [Claude](/ai/connect-claude), [ChatGPT](/ai/connect-chatgpt) or [another MCP client](/ai/connect-other-clients).
+  </Step>
+</Steps>
+
+<Note>
+Signing in with your LobbyStack account instead of pasting a key is coming soon. It will let Claude and ChatGPT connectors connect with one click.
+</Note>
+
+## Tools
+
+| Tool | Scope | What it does |
+| --- | --- | --- |
+| `get_business` | `business:read` | Business name, time zone, opening hours and booking mode |
+| `list_services` | `business:read` | Services customers can book |
+| `update_business_hours` | `business:write` | Replaces the week's opening hours |
+| `list_calls` | `calls:read` | Calls newest first, filtered by start time |
+| `get_call` | `calls:read` | One call with its transcript |
+| `search_contacts` | `contacts:read` | Contacts by phone, email or part of the name |
+| `get_contact` | `contacts:read` | One contact |
+| `create_contact` | `contacts:write` | Adds a contact |
+| `update_contact` | `contacts:write` | Changes a contact's details |
+| `list_appointments` | `appointments:read` | Appointments filtered by status and start time |
+| `get_appointment` | `appointments:read` | One appointment |
+| `check_availability` | `appointments:read` | Open times for a service, up to 7 days |
+| `book_appointment` | `appointments:write` | Books an open time |
+| `cancel_appointment` | `appointments:write` | Cancels an appointment |
+| `reschedule_appointment` | `appointments:write` | Moves an appointment to another open time |
+| `list_messages` | `messages:read` | Messages the receptionist took for your team |
+| `add_knowledge` | `knowledge:write` | Adds an FAQ or a text entry the receptionist can use |
+
+Tools return the same objects as the REST API, with times in UTC. Read-only tools carry the `readOnlyHint` annotation, and tools that cancel, move or replace data carry `destructiveHint`, so your assistant can ask you before it runs them.
+
+The `webhooks:manage` scope has no MCP tools. A key with only that scope can't connect.
+
+## Booking mode
+
+`book_appointment` and `reschedule_appointment` work only when **Appointments** is set to **Books appointments** (`booking_mode` `instant`). In other modes they return an error instead of booking:
+
+| Setting | `booking_mode` | Error code | What the assistant should do |
+| --- | --- | --- | --- |
+| **Takes requests** | `request` | `booking_requires_confirmation` | Tell you your team confirms requests from the inbox |
+| **Doesn't book** | `off` | `booking_disabled` | Tell you booking is turned off |
+
+You change this setting under **Agent** > **AI settings** > **Booking**. Cancelling works in every mode.
+
+## Errors
+
+A failed tool call returns a result marked as an error. Its text is JSON with the same codes as the [REST API](/api/requests):
+
+```json
+{ "error": { "code": "slot_unavailable", "message": "That time is not available. Pick another time from GET /availability." } }
+```
+
+The server itself answers `401` when the key is missing, unknown or revoked, and `403` when the key has no scope the MCP server uses.
+
+## Limits and retries
+
+Each tool call counts against the key's limit of 120 requests per minute, shared with any REST requests made with the same key. Listing tools doesn't count. Past the limit, the tool returns `rate_limited` with the seconds to wait.
+
+`book_appointment`, `create_contact` and `add_knowledge` accept an optional `idempotency_key`. Retry with the same value within 24 hours and you get the first result back instead of a duplicate.
+
+## Audit log
+
+LobbyStack records each change made through the MCP server in the business's audit log with the actor `mcp` and the API key's ID. It never logs the key itself. To cut off an assistant, revoke its key on **Settings** > **API keys**.
+
+## Guide for AI agents
+
+The [LobbyStack skill](/ai/lobbystack-skill) explains the tools, common workflows and error handling in a form you can give to an agent as instructions.

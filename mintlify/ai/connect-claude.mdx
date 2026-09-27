@@ -1,0 +1,97 @@
+---
+title: "Connect Claude"
+description: "Add the LobbyStack MCP server to Claude Code, Claude Desktop or the Claude API with an API key."
+sidebarTitle: "Claude"
+contentType: "How-to"
+---
+
+You need an API key from **Settings** > **API keys**. Pick the scopes you want Claude to have. See [MCP server](/ai/mcp) for the tools each scope unlocks.
+
+The examples read the key from the `LOBBYSTACK_API_KEY` environment variable. Replace `app.lobbystack.com` with your own domain if you self-host.
+
+<Note>
+The **Connectors** screen on claude.ai and in Claude Desktop connects with OAuth sign-in, which LobbyStack doesn't offer yet. Until it does, use Claude Code, Claude Desktop with `mcp-remote`, or the Claude API.
+</Note>
+
+## Claude Code
+
+Run this in your terminal:
+
+```bash
+claude mcp add --transport http lobbystack https://app.lobbystack.com/api/mcp \
+  --header "Authorization: Bearer $LOBBYSTACK_API_KEY"
+```
+
+Start Claude Code and run `/mcp` to check that `lobbystack` shows as connected. Then ask, for example: "List yesterday's calls that ended without a booking."
+
+## Claude Desktop
+
+Claude Desktop runs local servers from its config file, so you connect through [`mcp-remote`](https://www.npmjs.com/package/mcp-remote), which forwards requests to LobbyStack with your key. You need Node.js on your computer.
+
+<Steps>
+  <Step title="Open the config file">
+    In Claude Desktop, go to **Settings** > **Developer** and click **Edit Config**.
+  </Step>
+  <Step title="Add LobbyStack">
+    Add this entry under `mcpServers` and paste your key in place of `lsk_...`:
+
+    ```json claude_desktop_config.json
+    {
+      "mcpServers": {
+        "lobbystack": {
+          "command": "npx",
+          "args": [
+            "-y",
+            "mcp-remote",
+            "https://app.lobbystack.com/api/mcp",
+            "--header",
+            "Authorization:${LOBBYSTACK_AUTH}"
+          ],
+          "env": {
+            "LOBBYSTACK_AUTH": "Bearer lsk_..."
+          }
+        }
+      }
+    }
+    ```
+
+    The header value sits in `env` because some systems split arguments on spaces.
+  </Step>
+  <Step title="Restart Claude Desktop">
+    Quit and reopen the app. LobbyStack's tools appear under the tools menu in a new chat.
+  </Step>
+</Steps>
+
+## Claude API
+
+The Messages API connects to remote MCP servers with the MCP connector. Send the key as `authorization_token`:
+
+```bash
+curl https://api.anthropic.com/v1/messages \
+  -H "x-api-key: $ANTHROPIC_API_KEY" \
+  -H "anthropic-version: 2023-06-01" \
+  -H "anthropic-beta: mcp-client-2025-11-20" \
+  -H "content-type: application/json" \
+  -d '{
+    "model": "claude-opus-5",
+    "max_tokens": 4096,
+    "mcp_servers": [{
+      "type": "url",
+      "url": "https://app.lobbystack.com/api/mcp",
+      "name": "lobbystack",
+      "authorization_token": "'"$LOBBYSTACK_API_KEY"'"
+    }],
+    "tools": [{ "type": "mcp_toolset", "mcp_server_name": "lobbystack" }],
+    "messages": [{ "role": "user", "content": "Which messages are still open?" }]
+  }'
+```
+
+## Check the connection
+
+Ask Claude to call `get_business`. It should answer with your business name, time zone and booking mode. If the call fails:
+
+| Symptom | Fix |
+| --- | --- |
+| `401` or "unauthorized" | Check that you copied the whole key and that nobody revoked it. |
+| `403` or "insufficient_scope" | Create a key with at least one scope other than `webhooks:manage`. |
+| A tool is missing | Create a new key with the scope that tool needs. |

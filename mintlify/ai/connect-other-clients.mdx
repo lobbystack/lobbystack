@@ -1,0 +1,94 @@
+---
+title: "Connect other MCP clients"
+description: "Add the LobbyStack MCP server to Cursor, VS Code or any client that speaks Streamable HTTP, and test it with the MCP Inspector."
+sidebarTitle: "Other clients"
+contentType: "How-to"
+---
+
+Any MCP client that supports Streamable HTTP and custom headers can connect. Give it these settings:
+
+| Setting | Value |
+| --- | --- |
+| URL | `https://app.lobbystack.com/api/mcp` |
+| Transport | Streamable HTTP (sometimes labeled `http`) |
+| Header | `Authorization: Bearer <API key>` |
+
+The server is stateless. It supports the 2026-07-28 protocol revision and falls back to Streamable HTTP for 2025 clients. It doesn't support the older HTTP+SSE transport, so clients that only offer SSE can't connect.
+
+## Cursor
+
+Add LobbyStack to `~/.cursor/mcp.json`, or to `.cursor/mcp.json` in a project:
+
+```json mcp.json
+{
+  "mcpServers": {
+    "lobbystack": {
+      "url": "https://app.lobbystack.com/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ${env:LOBBYSTACK_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+## VS Code
+
+Add LobbyStack to `.vscode/mcp.json`. VS Code asks for the key the first time it starts the server and stores it for you:
+
+```json .vscode/mcp.json
+{
+  "inputs": [
+    { "type": "promptString", "id": "lobbystack-key", "description": "LobbyStack API key", "password": true }
+  ],
+  "servers": {
+    "lobbystack": {
+      "type": "http",
+      "url": "https://app.lobbystack.com/api/mcp",
+      "headers": { "Authorization": "Bearer ${input:lobbystack-key}" }
+    }
+  }
+}
+```
+
+## Clients without header support
+
+If a client can only launch local servers, run [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) as the local server and let it add the header. The [Claude Desktop](/ai/connect-claude#claude-desktop) guide shows the configuration.
+
+## Test with the MCP Inspector
+
+The [MCP Inspector](https://github.com/modelcontextprotocol/inspector) CLI lists the tools your key can use without an AI model in the loop:
+
+```bash
+npx @modelcontextprotocol/inspector --cli https://app.lobbystack.com/api/mcp \
+  --transport http \
+  --header "Authorization: Bearer $LOBBYSTACK_API_KEY" \
+  --method tools/list
+```
+
+Call a tool the same way:
+
+```bash
+npx @modelcontextprotocol/inspector --cli https://app.lobbystack.com/api/mcp \
+  --transport http \
+  --header "Authorization: Bearer $LOBBYSTACK_API_KEY" \
+  --method tools/call --tool-name get_business
+```
+
+## Build your own client
+
+The official MCP SDKs connect with a few lines. In TypeScript:
+
+```ts
+import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+
+const client = new Client({ name: "my-app", version: "1.0.0" });
+await client.connect(new StreamableHTTPClientTransport(new URL("https://app.lobbystack.com/api/mcp"), {
+  requestInit: { headers: { Authorization: `Bearer ${process.env.LOBBYSTACK_API_KEY}` } },
+}));
+
+const result = await client.callTool({ name: "list_messages", arguments: { status: "open" } });
+console.log(result.structuredContent);
+```
+
+If you're writing code rather than an assistant, the [REST API](/api/overview) gives you the same data with plain HTTP.

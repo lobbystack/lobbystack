@@ -125,6 +125,16 @@
         ]
       },
       {
+        "group": "AI assistants",
+        "pages": [
+          "ai/mcp",
+          "ai/connect-claude",
+          "ai/connect-chatgpt",
+          "ai/connect-other-clients",
+          "ai/lobbystack-skill"
+        ]
+      },
+      {
         "group": "API reference",
         "openapi": "api-reference/openapi.json"
       },
