@@ -13,7 +13,9 @@ export function routeNamespaces(pathname: string): string[] {
     messages: ["messages", "inbox"], appointments: [], integrations: [],
     agent: ["knowledge"], affiliate: ["affiliate"], demos: ["demos"],
     settings: ["widget"], "setup-guide": [],
+    inbox: ["calls", "messages", "inbox"], calendar: [], services: [], staff: [],
+    knowledge: ["knowledge"], numbers: ["widget"], receptionists: ["knowledge"],
   };
   // These namespaces belong to the shared dashboard navigation and dialogs.
-  return [...new Set(["common", "nav", "settings", "agent", ...(route[section] ?? ["dashboard"])])];
+  return [...new Set(["common", "nav", "settings", "agent", "receptionists", ...(route[section] ?? ["dashboard"])])];
 }

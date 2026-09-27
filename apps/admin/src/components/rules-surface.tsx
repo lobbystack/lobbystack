@@ -30,7 +30,8 @@ function summarize(value: string, length: number): string {
   return normalized.length > length ? `${normalized.slice(0, length - 3).trimEnd()}...` : normalized;
 }
 
-export function RulesSurface() {
+/** `agentId` shows one receptionist's rules; without it, the default receptionist's. */
+export function RulesSurface({ agentId }: { agentId?: string } = {}) {
   const { i18n, t } = useTranslation("agent");
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -42,12 +43,12 @@ export function RulesSurface() {
   const business = selectActiveBusiness(businesses.data?.businesses);
   const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   useSetupAction(canManage, useCallback((action: string) => { if (action !== "rule") return false; setEditingRule(null); setDialogOpen(true); return true; }, []));
-  const rules = useQuery({ queryKey: ["rules", business?.businessId], enabled: Boolean(business), queryFn: () => requestJson<Rule[]>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}`) });
-  const invalidate = async () => { await queryClient.invalidateQueries({ queryKey: ["rules", business?.businessId] }); };
-  const createRule = useMutation({ mutationFn: (input: { title: string; content: string }) => requestJson<string>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify(input) }), onSuccess: invalidate });
-  const updateRule = useMutation({ mutationFn: (input: { ruleId: string; title?: string; content?: string; active?: boolean }) => requestJson<{ ok: boolean }>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify(input) }), onSuccess: invalidate });
-  const deleteRule = useMutation({ mutationFn: (ruleId: string) => requestJson<{ ok: boolean }>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}`, { method: "DELETE", body: JSON.stringify({ ruleId }) }), onSuccess: invalidate });
-  const reorderRules = useMutation({ mutationFn: (ruleIds: string[]) => requestJson<{ ok: boolean }>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ ruleIds }) }), onSuccess: invalidate });
+  const rules = useQuery({ queryKey: ["rules", business?.businessId, agentId ?? "default"], enabled: Boolean(business), queryFn: () => requestJson<Rule[]>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}${agentId ? `&agentId=${encodeURIComponent(agentId)}` : ""}`) });
+  const invalidate = async () => { await queryClient.invalidateQueries({ queryKey: ["rules", business?.businessId, agentId ?? "default"] }); };
+  const createRule = useMutation({ mutationFn: (input: { title: string; content: string }) => requestJson<string>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}${agentId ? `&agentId=${encodeURIComponent(agentId)}` : ""}`, { method: "POST", body: JSON.stringify(input) }), onSuccess: invalidate });
+  const updateRule = useMutation({ mutationFn: (input: { ruleId: string; title?: string; content?: string; active?: boolean }) => requestJson<{ ok: boolean }>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}${agentId ? `&agentId=${encodeURIComponent(agentId)}` : ""}`, { method: "PATCH", body: JSON.stringify(input) }), onSuccess: invalidate });
+  const deleteRule = useMutation({ mutationFn: (ruleId: string) => requestJson<{ ok: boolean }>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}${agentId ? `&agentId=${encodeURIComponent(agentId)}` : ""}`, { method: "DELETE", body: JSON.stringify({ ruleId }) }), onSuccess: invalidate });
+  const reorderRules = useMutation({ mutationFn: (ruleIds: string[]) => requestJson<{ ok: boolean }>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}${agentId ? `&agentId=${encodeURIComponent(agentId)}` : ""}`, { method: "PATCH", body: JSON.stringify({ ruleIds }) }), onSuccess: invalidate });
 
   const orderedRules = useMemo(() => [...(rules.data ?? [])].sort((left, right) => left.sortOrder - right.sortOrder), [rules.data]);
   const filteredRules = useMemo(() => {

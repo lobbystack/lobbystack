@@ -15,14 +15,15 @@ export function hashWidgetKey(key: string): string {
 type ResolvedWidgetKey = {
   businessId: string;
   widgetKeyId: string;
+  agentId?: string;
 };
 
 export async function resolveWidgetKeyByHash(keyHash: string): Promise<ResolvedWidgetKey | null> {
-  const result = await getWorkerDatabase().db.execute<{ business_id: string; widget_key_id: string }>(
-    sql`select business_id, widget_key_id from app.resolve_business_by_widget_key(${keyHash})`,
+  const result = await getWorkerDatabase().db.execute<{ business_id: string; widget_key_id: string; agent_id: string | null }>(
+    sql`select business_id, widget_key_id, agent_id from app.resolve_business_by_widget_key(${keyHash})`,
   );
   const row = result.rows[0];
-  return row ? { businessId: row.business_id, widgetKeyId: row.widget_key_id } : null;
+  return row ? { businessId: row.business_id, widgetKeyId: row.widget_key_id, ...(row.agent_id ? { agentId: row.agent_id } : {}) } : null;
 }
 
 export function normalizeOrigin(value: string): string {

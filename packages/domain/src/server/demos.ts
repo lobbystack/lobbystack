@@ -1,14 +1,15 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 
-import { businessContextSnapshots, businessMemberships, businesses, calls, enqueueOutbox, knowledgeDocuments, prospectDemos, receptionistProfiles, services, staff, staffServiceAssignments, users, websiteIngestionJobs, withBusinessTransaction } from "@lobbystack/db";
+import { agents, businessContextSnapshots, businessMemberships, businesses, calls, enqueueOutbox, knowledgeDocuments, prospectDemos, services, staff, staffServiceAssignments, users, websiteIngestionJobs, withBusinessTransaction } from "@lobbystack/db";
 
 import { type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 
 import type { DomainContext } from "./context";
 import { normalizeWebsiteSourceUrl } from "./knowledgeUrl";
 import { recordProductEvent } from "./productEvents";
+import { defaultReceptionistName } from "./receptionists";
 
 export type ProspectDemoPublicState = "preparing" | "active" | "claimed" | "revoked" | "expired" | "invalid";
 
@@ -245,7 +246,9 @@ export async function createProspectDemo(
   return await withBusinessTransaction(context.db, { userId: input.operatorUserId, businessId, actorType: "system" }, async (tx) => {
     await tx.insert(businesses).values({ id: businessId, slug, name, timezone, defaultLocale: locale, websiteUrl: normalizedWebsiteUrl, businessType: "general", deploymentMode: process.env.DEPLOYMENT_MODE === "cloud" ? "cloud" : "development" });
     await tx.insert(businessMemberships).values({ businessId, userId: input.operatorUserId, role: "business_owner", status: "active" });
-    await tx.insert(receptionistProfiles).values({
+    await tx.insert(agents).values({
+      name: defaultReceptionistName(locale),
+      isDefault: true,
       businessId,
       greeting: input.greeting?.trim() || `Thanks for calling ${name}.`,
       tone: "professional and friendly",
@@ -272,11 +275,11 @@ export async function createProspectDemo(
 export async function getProspectDemoStatus(context: DomainContext, input: { operatorUserId: string; demoId: string }): Promise<ProspectDemoStatus> {
   const businessId = await resolveOperatorDemoBusiness(context, input);
   return await withBusinessTransaction(context.db, { userId: input.operatorUserId, businessId, actorType: "system" }, async (tx) => {
-    const row = (await tx.select({ demo: prospectDemos, slug: businesses.slug, ingestionStatus: websiteIngestionJobs.status, greeting: receptionistProfiles.greeting })
+    const row = (await tx.select({ demo: prospectDemos, slug: businesses.slug, ingestionStatus: websiteIngestionJobs.status, greeting: agents.greeting })
       .from(prospectDemos)
       .innerJoin(businesses, eq(businesses.id, prospectDemos.businessId))
       .leftJoin(websiteIngestionJobs, eq(websiteIngestionJobs.id, prospectDemos.websiteIngestionJobId))
-      .leftJoin(receptionistProfiles, eq(receptionistProfiles.businessId, prospectDemos.businessId))
+      .leftJoin(agents, and(eq(agents.businessId, prospectDemos.businessId), eq(agents.isDefault, true), isNull(agents.archivedAt)))
       .where(and(eq(prospectDemos.id, input.demoId), eq(prospectDemos.operatorUserId, input.operatorUserId))).limit(1))[0];
     if (!row) throw new Error("Prospect demo not found.");
     const snapshot = (await tx.select({ id: businessContextSnapshots.id }).from(businessContextSnapshots).where(eq(businessContextSnapshots.businessId, row.demo.businessId)).orderBy(desc(businessContextSnapshots.generatedAt)).limit(1))[0];
@@ -314,7 +317,7 @@ export async function publishProspectDemo(context: DomainContext, input: { opera
     const prompts = input.suggestedPrompts ? cleanPrompts(input.suggestedPrompts) : demo.suggestedPrompts;
     if (prompts.length < 2) throw new Error("Two suggested prompts are required before publish.");
     const ingestion = demo.websiteIngestionJobId ? await tx.select({ status: websiteIngestionJobs.status }).from(websiteIngestionJobs).where(eq(websiteIngestionJobs.id, demo.websiteIngestionJobId)).limit(1) : [];
-    const profile = await tx.select({ greeting: receptionistProfiles.greeting }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, demo.businessId)).limit(1);
+    const profile = await tx.select({ greeting: agents.greeting }).from(agents).where(and(eq(agents.businessId, demo.businessId), eq(agents.isDefault, true), isNull(agents.archivedAt))).limit(1);
     const snapshot = await tx.select({ id: businessContextSnapshots.id }).from(businessContextSnapshots).where(eq(businessContextSnapshots.businessId, demo.businessId)).limit(1);
     const indexedDocument = await tx.select({ id: knowledgeDocuments.id }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, demo.businessId), eq(knowledgeDocuments.status, "indexed"))).limit(1);
     if (ingestion[0]?.status !== "completed" || !indexedDocument[0]) throw new Error("Website ingestion must be completed before publish.");

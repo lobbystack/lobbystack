@@ -1,0 +1,306 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "inbox": "Boîte de réception",
+    "calendar": "Calendrier",
+    "contacts": "Contacts",
+    "analytics": "Statistiques",
+    "receptionists": "Réceptionnistes",
+    "receptionist": "Réceptionniste",
+    "newReceptionist": "Nouvelle réceptionniste",
+    "business": "Entreprise",
+    "services": "Services",
+    "staff": "Équipe",
+    "knowledge": "Connaissances",
+    "numbers": "Numéros et widget",
+    "integrations": "Intégrations",
+    "settings": "Paramètres",
+    "backTo": "Retour à {{name}}",
+    "switchReceptionist": "Changer de réceptionniste",
+    "findReceptionist": "Trouver une réceptionniste",
+    "search": "Rechercher"
+  },
+  "sections": {
+    "overview": "Aperçu et appel test",
+    "behavior": "Comportement",
+    "knowledge": "Connaissances",
+    "booking": "Rendez-vous",
+    "transfers": "Transferts et règles",
+    "numbers": "Numéros et widget"
+  },
+  "pageTitle": "{{name}} · {{section}}",
+  "command": {
+    "title": "Rechercher",
+    "description": "Allez à n'importe quelle page ou réceptionniste.",
+    "placeholder": "Rechercher une page ou une réceptionniste",
+    "empty": "Aucun résultat.",
+    "receptionistPage": "{{name}} : {{section}}",
+    "groups": {
+      "pages": "Pages",
+      "receptionists": "Réceptionnistes",
+      "settings": "Paramètres"
+    },
+    "settings": {
+      "usage": "Paramètres : Utilisation",
+      "billing": "Paramètres : Facturation",
+      "business": "Paramètres : Entreprise et équipe",
+      "appearance": "Paramètres : Apparence",
+      "notifications": "Paramètres : Notifications",
+      "account": "Paramètres : Votre compte",
+      "apiKeys": "Paramètres : Clés d'API",
+      "webhooks": "Intégrations : Webhooks"
+    }
+  },
+  "save": {
+    "save": "Enregistrer",
+    "saving": "Enregistrement",
+    "saved": "Modifications enregistrées",
+    "failed": "Impossible d'enregistrer vos modifications. Réessayez.",
+    "discard": "Annuler",
+    "unsaved": "Vous avez des modifications non enregistrées"
+  },
+  "shared": {
+    "all": "Utilisé par toutes les réceptionnistes",
+    "some": "Utilisé par {{names}}",
+    "none": "Aucune réceptionniste ne l'utilise",
+    "turnedOn": "{{title}} est activé pour cette réceptionniste",
+    "turnedOff": "{{title}} est désactivé pour cette réceptionniste",
+    "servicesTitle": "Certaines réceptionnistes ignorent certains services",
+    "servicesHint": "Vos réceptionnistes partagent ces services. Une modification ici touche toutes celles qui les réservent.",
+    "knowledgeTitle": "Certaines réceptionnistes ignorent certaines connaissances",
+    "knowledgeHint": "Vos réceptionnistes partagent ces connaissances. Une modification ici touche toutes celles qui les utilisent.",
+    "skips": "<link>{{name}}</link> n'utilise pas {{items}}."
+  },
+  "behavior": {
+    "description": "Comment cette réceptionniste accueille les gens, ce qu'elle suit et sa voix.",
+    "name": {
+      "label": "Nom",
+      "hint": "Seuls vous et votre équipe voyez ce nom."
+    },
+    "greeting": {
+      "label": "Message d'accueil",
+      "hint": "La première chose qu'entendent les appelants et les visiteurs de votre site."
+    },
+    "voiceInstructions": {
+      "label": "Consignes pour les appels",
+      "hint": "Ce que la réceptionniste doit faire et dire au téléphone. Laissez vide pour les consignes standard.",
+      "placeholder": "Demandez d'abord le nom de l'appelant. Mentionnez notre promotion du printemps."
+    },
+    "chatInstructions": {
+      "label": "Consignes pour le clavardage du site",
+      "hint": "Ce que la réceptionniste doit faire dans le clavardage de votre site. Laissez vide pour les consignes standard.",
+      "placeholder": "Répondez brièvement et donnez le lien de notre page de réservation."
+    },
+    "tone": {
+      "label": "Ton",
+      "hint": "Quelques mots, par exemple chaleureux et direct."
+    },
+    "voice": {
+      "label": "Voix",
+      "hint": "La voix qu'entendent les appelants.",
+      "default": "Marin (standard)"
+    },
+    "language": {
+      "label": "Langue",
+      "hint": "La langue de départ. Les appelants peuvent en changer.",
+      "business": "Comme l'entreprise ({{language}})"
+    }
+  },
+  "knowledge": {
+    "description": "Choisissez les connaissances de l'entreprise qu'utilise cette réceptionniste. Les nouvelles connaissances sont activées pour toutes.",
+    "listTitle": "Connaissances utilisées par cette réceptionniste",
+    "listDescription": "Désactivez ce dont cette réceptionniste ne doit pas parler.",
+    "empty": "Votre entreprise n'a pas encore de connaissances. Ajoutez-en dans Connaissances.",
+    "manage": "Modifier les connaissances"
+  },
+  "booking": {
+    "description": "Si cette réceptionniste prend des rendez-vous et quels services elle peut réserver.",
+    "duration_one": "{{count}} minute",
+    "duration_other": "{{count}} minutes",
+    "mode": {
+      "label": "Rendez-vous",
+      "options": {
+        "instant": "Prendre les rendez-vous",
+        "request": "Prendre les demandes de rendez-vous",
+        "off": "Ne pas prendre de rendez-vous"
+      },
+      "descriptions": {
+        "instant": "La réceptionniste consulte votre calendrier et réserve le rendez-vous.",
+        "request": "La réceptionniste note les détails et votre équipe confirme l'heure.",
+        "off": "La réceptionniste répond aux questions et prend les messages, sans réserver."
+      }
+    },
+    "allowCancel": {
+      "label": "Permettre d'annuler",
+      "hint": "Les appelants peuvent annuler un rendez-vous une fois leur identité vérifiée."
+    },
+    "allowReschedule": {
+      "label": "Permettre de déplacer",
+      "hint": "Les appelants peuvent déplacer un rendez-vous une fois leur identité vérifiée."
+    },
+    "requireOtp": {
+      "label": "Envoyer un code d'abord",
+      "hint": "Les appelants confirment un code reçu par texto avant tout changement."
+    },
+    "servicesTitle": "Services que cette réceptionniste peut réserver",
+    "servicesDescription": "Désactivez les services que cette réceptionniste ne doit pas réserver.",
+    "servicesEmpty": "Votre entreprise n'a pas encore de services. Ajoutez-en dans Services.",
+    "manageServices": "Modifier les services",
+    "staffTitle": "Équipe",
+    "staffDescription": "Toute votre équipe prend les rendez-vous de chaque réceptionniste.",
+    "manageStaff": "Gérer l'équipe"
+  },
+  "transfers": {
+    "description": "Quand cette réceptionniste passe un appel à une personne, et les règles qu'elle suit.",
+    "mode": {
+      "label": "Transférer les appels",
+      "hint": "Quand la réceptionniste envoie un appelant à votre équipe.",
+      "options": {
+        "on_request": "Quand l'appelant le demande",
+        "on_urgent": "Quand c'est urgent",
+        "during_business_hours": "Pendant les heures d'ouverture",
+        "always": "Toujours",
+        "never": "Jamais"
+      }
+    },
+    "number": {
+      "label": "Numéro de transfert",
+      "hint": "Le téléphone qui sonne quand un appel est transféré.",
+      "invalid": "Entrez un numéro complet, avec l'indicatif régional.",
+      "missing": "Ajoutez un numéro pour que les transferts aboutissent."
+    },
+    "rulesTitle": "Règles",
+    "rulesDescription": "Des consignes que seule cette réceptionniste suit."
+  },
+  "numbers": {
+    "description": "Les numéros et le widget du site auxquels cette réceptionniste répond.",
+    "manage": "Gérer les numéros et le widget",
+    "empty": "Aucun numéro ni widget n'est encore dirigé vers cette réceptionniste.",
+    "widget": "Widget du site",
+    "phoneRoute": "Appels et textos vers ce numéro",
+    "widgetRoute": "Clavardages et appels depuis votre site",
+    "defaultNote": "Cette réceptionniste répond aussi à tout ce que vous n'avez pas confié à une autre."
+  },
+  "overview": {
+    "description": "Un coup d'œil sur cette réceptionniste. Lancez un appel test pour l'entendre.",
+    "greeting": "Message d'accueil",
+    "voiceAndLanguage": "Voix : {{voice}}. Langue : {{language}}.",
+    "booking": "Rendez-vous",
+    "transfers": "Transferts",
+    "routes": "Numéros et widget",
+    "routeCount": "{{numbers}}, {{widgets}}",
+    "numbers_one": "{{count}} numéro",
+    "numbers_other": "{{count}} numéros",
+    "widgets_one": "{{count}} widget",
+    "widgets_other": "{{count}} widgets",
+    "testCall": "Appel test"
+  },
+  "inbox": {
+    "channelFilter": "Afficher",
+    "channels": {
+      "all": "Tout",
+      "call": "Appels",
+      "chat": "Clavardages du site",
+      "text": "Textos"
+    },
+    "search": "Rechercher un nom, un numéro ou un message",
+    "receptionistFilter": "Réceptionniste",
+    "allReceptionists": "Toutes les réceptionnistes",
+    "empty": "Rien pour l'instant. Les appels, clavardages et textos apparaîtront ici.",
+    "unknownContact": "Appelant inconnu",
+    "noPreview": {
+      "call": "Pas encore de résumé pour cet appel.",
+      "chat": "Pas encore de messages.",
+      "text": "Pas encore de messages."
+    },
+    "channelLabels": {
+      "call": "Appel",
+      "chat": "Clavardage du site",
+      "text": "Texto"
+    },
+    "select": "Choisissez une conversation pour la lire.",
+    "back": "Retour à la liste",
+    "answeredBy": "{{channel}} répondu par {{name}}",
+    "takeOver": "Prendre le relais",
+    "resume": "Laisser la réceptionniste répondre",
+    "tookOver": "Vous répondez maintenant à ce clavardage",
+    "resumed": "La réceptionniste répond de nouveau à ce clavardage",
+    "openCall": "Voir le détail de l'appel",
+    "reply": "Répondre",
+    "replyChat": "Répondre au visiteur",
+    "replyText": "Répondre par texto",
+    "send": "Envoyer",
+    "sent": "Réponse envoyée",
+    "sendFailed": "Impossible d'envoyer votre réponse. Réessayez."
+  },
+  "numbersPage": {
+    "phoneTitle": "Numéro de téléphone",
+    "widgetTitle": "Widget du site"
+  },
+  "calendar": {
+    "previous": "Précédent",
+    "next": "Suivant",
+    "today": "Aujourd'hui",
+    "view": "Affichage du calendrier",
+    "views": {
+      "day": "Jour",
+      "week": "Semaine"
+    },
+    "empty": "Aucun rendez-vous pendant cette période."
+  },
+  "staff": {
+    "description": "Les personnes avec qui les rendez-vous sont pris. Toutes les réceptionnistes réservent avec la même équipe.",
+    "nameLabel": "Nom",
+    "namePlaceholder": "Ajouter une personne, par exemple Dre Leblanc",
+    "add": "Ajouter",
+    "added": "{{name}} ajouté à votre équipe",
+    "turnedOn": "{{name}} prend de nouveau des rendez-vous",
+    "turnedOff": "{{name}} ne prend plus de rendez-vous",
+    "services_one": "Offre {{count}} service",
+    "services_other": "Offre {{count}} services",
+    "off": "Ne prend pas de rendez-vous",
+    "activeLabel": "{{name}} prend des rendez-vous",
+    "enabled": "Équipe activée. Vous la trouverez dans la barre latérale.",
+    "disabled": "Équipe désactivée. Les rendez-vous continuent de fonctionner.",
+    "toggleLabel": "Gérer l'équipe",
+    "toggleHint": "Réservez avec des personnes précises et voyez une colonne par personne dans le Calendrier. Désactivé, les rendez-vous sont pris au nom de l'entreprise."
+  },
+  "create": {
+    "title": "Nouvelle réceptionniste",
+    "nameHint": "Seuls vous et votre équipe voyez ce nom. Par exemple Soirs et fins de semaine.",
+    "namePlaceholder": "Soirs et fins de semaine",
+    "copyLabel": "Partir de",
+    "copyHint": "La nouvelle réceptionniste reprend le message d'accueil, les consignes, les règles, les rendez-vous et les transferts de celle-ci, ainsi que les connaissances et services qu'elle utilise.",
+    "afterHint": "Elle ne répond à personne tant que vous ne lui confiez pas un numéro ou le widget du site dans Numéros et widget.",
+    "cancel": "Annuler",
+    "creating": "Création",
+    "submit": "Créer la réceptionniste",
+    "created": "{{name}} créée"
+  },
+  "delete": {
+    "title": "Supprimer la réceptionniste",
+    "hint": "Ses numéros et son widget passent à une autre réceptionniste. Les appels et clavardages passés restent dans la Boîte de réception.",
+    "lastOne": "Votre entreprise a besoin d'au moins une réceptionniste. Vous ne pouvez pas supprimer celle-ci.",
+    "button": "Supprimer {{name}}",
+    "confirmTitle": "Supprimer {{name}} ?",
+    "moves_one": "Cet élément passe à {{name}} :",
+    "moves_other": "Ces {{count}} éléments passent à {{name}} :",
+    "nothingMoves": "Aucun numéro ni widget ne mène à cette réceptionniste, rien d'autre ne change.",
+    "successorLabel": "Les confier à",
+    "history": "Les appels et clavardages passés restent dans la Boîte de réception. Cette action est définitive.",
+    "confirm": "Supprimer {{name}}",
+    "deleted": "{{name}} supprimée"
+  },
+  "routing": {
+    "title": "Qui répond",
+    "description": "Choisissez la réceptionniste qui répond à chaque numéro et au widget du site.",
+    "empty": "Vous n'avez pas encore de numéro ni de widget.",
+    "answeredBy": "Répondu par {{name}}",
+    "answeredByFor": "Réceptionniste pour {{route}}",
+    "confirmTitle": "Changer qui répond ?",
+    "confirmPhone": "Les appels et textos vers {{route}} iront à {{to}} au lieu de {{from}}.",
+    "confirmWidget": "Les clavardages et appels depuis {{route}} iront à {{to}} au lieu de {{from}}.",
+    "confirm": "Changer",
+    "saved": "{{name}} répond maintenant à {{route}}"
+  }
+}

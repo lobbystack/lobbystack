@@ -1,11 +1,16 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { businesses, enqueueOutbox, receptionistProfiles } from "@lobbystack/db";
-import { defaultAppointmentChangePolicy, type AppointmentChangePolicy, type BookingMode } from "@lobbystack/shared";
+import { businesses, enqueueOutbox } from "@lobbystack/db";
+import { receptionistPatchValues, resolveReceptionist, updateReceptionistInTransaction, type ReceptionistPatch } from "@lobbystack/domain";
+import type { AppointmentChangePolicy, BookingMode } from "@lobbystack/shared";
 import { asApiResponse, jsonError, readJson, withOperatorTransaction } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
+
+// Receptionist settings. `?agentId=` picks a receptionist; without it this
+// reads and writes the business's default receptionist, which is what the
+// single-receptionist settings screens have always edited.
 
 const profileFields = [
   "greeting",
@@ -20,9 +25,15 @@ const profileFields = [
 ] as const;
 
 type ProfileField = (typeof profileFields)[number];
-type ProfilePatch = Partial<Record<"greeting" | "tone" | "summary" | "bookingPolicy" | "transferMode", string>> &
-  Partial<Record<"voiceInstructions" | "smsInstructions" | "chatInstructions" | "transferNumber", string | null>> &
-  { appointmentChangePolicy?: AppointmentChangePolicy; bookingMode?: BookingMode };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function requestedAgentId(request: Request): string | undefined {
+  const value = new URL(request.url).searchParams.get("agentId")?.trim();
+  if (!value) return undefined;
+  if (!UUID.test(value)) throw jsonError("agentId is invalid.");
+  return value;
+}
 
 function appointmentPolicy(value: unknown): AppointmentChangePolicy | undefined {
   if (value === undefined) return undefined;
@@ -41,7 +52,7 @@ function optionalText(value: unknown, field: string, maxLength: number): string 
   return normalized;
 }
 
-function readProfilePatch(body: Record<string, unknown>): ProfilePatch {
+function readProfilePatch(body: Record<string, unknown>): ReceptionistPatch {
   const patch: Partial<Record<ProfileField, string | null | undefined>> = {};
   for (const field of profileFields) {
     if (!(field in body)) continue;
@@ -59,17 +70,31 @@ function readProfilePatch(body: Record<string, unknown>): ProfilePatch {
   const policy = appointmentPolicy(body.appointmentChangePolicy);
   const bookingMode = body.bookingMode;
   if (bookingMode !== undefined && bookingMode !== "off" && bookingMode !== "request" && bookingMode !== "instant") throw jsonError("bookingMode is invalid.");
-  return { ...patch, ...(policy !== undefined ? { appointmentChangePolicy: policy } : {}), ...(bookingMode !== undefined ? { bookingMode } : {}) } as ProfilePatch;
+  const name = body.name === undefined ? undefined : optionalText(body.name, "name", 80);
+  if (name === null) throw jsonError("name cannot be empty.");
+  const voice = body.voice === undefined ? undefined : optionalText(body.voice, "voice", 32);
+  const language = body.receptionistLanguage;
+  if (language !== undefined && language !== null && language !== "en" && language !== "fr") throw jsonError("receptionistLanguage is invalid.");
+  return {
+    ...patch,
+    ...(name !== undefined ? { name } : {}),
+    ...(voice !== undefined ? { voice } : {}),
+    ...(language !== undefined ? { language: language as "en" | "fr" | null } : {}),
+    ...(policy !== undefined ? { appointmentChangePolicy: policy } : {}),
+    ...(bookingMode !== undefined ? { bookingMode: bookingMode as BookingMode } : {}),
+  } as ReceptionistPatch;
 }
 
 export async function GET(request: Request) {
   try {
+    const agentId = requestedAgentId(request);
     return NextResponse.json(await withOperatorTransaction(request, async ({ businessId, tx }) => {
       const [business, profile] = await Promise.all([
         tx.select({ id: businesses.id, name: businesses.name, timezone: businesses.timezone, defaultLocale: businesses.defaultLocale }).from(businesses).where(eq(businesses.id, businessId)).limit(1),
-        tx.select().from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)).limit(1),
+        resolveReceptionist(tx, businessId, agentId),
       ]);
-      return { business: business[0] ?? null, profile: profile[0] ?? null };
+      if (agentId && profile.id !== agentId) throw jsonError("Receptionist not found.", 404, "receptionist_not_found");
+      return { business: business[0] ?? null, profile };
     }));
   } catch (error) {
     return asApiResponse(error);
@@ -78,15 +103,16 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const agentId = requestedAgentId(request);
     return NextResponse.json(await withOperatorTransaction(request, async ({ businessId, tx }) => {
       const body = await readJson(request);
       if (typeof body !== "object" || body === null || Array.isArray(body)) {
         throw jsonError("A profile object is required.");
       }
-      const patch = readProfilePatch(body as Record<string, unknown>);
+      const values = receptionistPatchValues(readProfilePatch(body as Record<string, unknown>));
       const locale = (body as Record<string, unknown>).locale;
       if (locale !== undefined && locale !== "en" && locale !== "fr") throw jsonError("locale is invalid.");
-      if (Object.keys(patch).length === 0 && locale === undefined) {
+      if (Object.keys(values).length === 0 && locale === undefined) {
         throw jsonError("At least one profile field is required.");
       }
 
@@ -95,35 +121,14 @@ export async function PATCH(request: Request) {
 
       if (locale !== undefined) {
         await tx.update(businesses).set({ defaultLocale: locale, updatedAt: new Date() }).where(eq(businesses.id, businessId));
+        if (Object.keys(values).length === 0) {
+          await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId, aggregateType: "business", aggregateId: businessId, dedupeKey: `snapshot:${businessId}:locale:${Date.now()}`, payload: { businessId, reason: "locale_updated" } });
+        }
       }
 
-      const [profile] = await tx.insert(receptionistProfiles).values({
-        businessId,
-        greeting: patch.greeting ?? `Thank you for calling ${business.name}.`,
-        tone: patch.tone ?? "professional",
-        summary: patch.summary ?? business.name,
-        bookingPolicy: patch.bookingPolicy ?? "Confirm availability before booking.",
-        ...(patch.voiceInstructions !== undefined ? { voiceInstructions: patch.voiceInstructions } : {}),
-        ...(patch.smsInstructions !== undefined ? { smsInstructions: patch.smsInstructions } : {}),
-        ...(patch.chatInstructions !== undefined ? { chatInstructions: patch.chatInstructions } : {}),
-        transferMode: patch.transferMode ?? "on_request",
-        ...(patch.transferNumber !== undefined ? { transferNumber: patch.transferNumber } : {}),
-        appointmentChangePolicy: patch.appointmentChangePolicy ?? defaultAppointmentChangePolicy,
-        ...(patch.bookingMode !== undefined ? { bookingMode: patch.bookingMode } : {}),
-      }).onConflictDoUpdate({
-        target: receptionistProfiles.businessId,
-        set: { ...patch, updatedAt: new Date() },
-      }).returning();
-
-      if (!profile) throw jsonError("Receptionist profile could not be saved.", 500);
-      await enqueueOutbox(tx, {
-        topic: "snapshot.refresh",
-        businessId,
-        aggregateType: "receptionist_profile",
-        aggregateId: profile.id,
-        dedupeKey: `snapshot:${businessId}:profile:${profile.updatedAt.toISOString()}`,
-        payload: { businessId },
-      });
+      const profile = Object.keys(values).length > 0
+        ? await updateReceptionistInTransaction(tx, { businessId, ...(agentId ? { agentId } : {}), values })
+        : await resolveReceptionist(tx, businessId, agentId);
       return { profile };
     }, { minimumRole: "business_admin" }));
   } catch (error) {

@@ -74,6 +74,8 @@ export const SCHEMA_MIGRATIONS = [
   "0064_booking_mode.sql",
   "0065_finance_billed_voice_seconds.sql",
   "0066_public_api.sql",
+  "0067_receptionists.sql",
+  "0068_business_feature_flags.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

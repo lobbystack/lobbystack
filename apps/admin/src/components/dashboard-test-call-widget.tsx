@@ -24,6 +24,8 @@ import { cn } from "@/lib/utils";
 type TestCallWidgetProps = {
   businessId?: string;
   businessSlug?: string;
+  /** The receptionist to call. Missing means the default receptionist. */
+  agentId?: string | undefined;
   className?: string;
 };
 
@@ -36,6 +38,7 @@ export function DashboardTestCallWidget({
   businessId,
   businessSlug,
   className,
+  agentId,
 }: TestCallWidgetProps) {
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
@@ -99,6 +102,7 @@ export function DashboardTestCallWidget({
         <TestCallAura
           businessId={businessId}
           businessSlug={businessSlug}
+          agentId={agentId}
           onCallEnded={() => { setOpen(false); setTestCallActive(false); announceTestCallEnded(); }}
           onRegisterControls={(controls) => {
             voiceControlsRef.current = controls;
@@ -139,6 +143,7 @@ function TestCallAuraPortal({
 type TestCallAuraProps = {
   businessId?: string | undefined;
   businessSlug: string;
+  agentId?: string | undefined;
   onCallEnded: () => void;
   onRegisterControls: (controls: WebVoiceControls) => void;
 };
@@ -148,12 +153,17 @@ function TestCallAura({
   businessSlug,
   onCallEnded,
   onRegisterControls,
+  agentId,
 }: TestCallAuraProps) {
   const telemetry = useTelemetry();
   const handleVoiceEvent = useCallback((eventName: TelemetryEventName, properties?: Record<string, unknown>) => {
     if (!businessId) return;
     telemetry.track(eventName, { businessId, ...properties } as TelemetryProperties);
   }, [businessId, telemetry]);
+  // Read at call start, so the call reaches the receptionist on screen now.
+  const agentIdRef = useRef(agentId);
+  agentIdRef.current = agentId;
+  const getStartPayload = useCallback(async (): Promise<Record<string, string>> => agentIdRef.current ? { agentId: agentIdRef.current } : {}, []);
 
   return (
     <AuraVoiceDemo
@@ -166,6 +176,7 @@ function TestCallAura({
       onEvent={handleVoiceEvent}
       onRegisterControls={onRegisterControls}
       widgetId="lobbystack-dashboard-test-call"
+      getStartPayload={getStartPayload}
     />
   );
 }

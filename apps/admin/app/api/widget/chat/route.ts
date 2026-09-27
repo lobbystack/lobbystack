@@ -8,7 +8,7 @@ import { createReceptionistAgent } from "@lobbystack/agent-core/agent";
 import { createAgentModel, describeAgentUsage } from "@lobbystack/agent-core/model";
 import { appendMessage, getCachedBusinessSnapshot, getOrCreateWidgetConversation, loadWidgetChatHistory, recordAiGenerationEvent, registerWidgetVisitor, reserveWidgetChatUsageInTransaction, type DomainContext } from "@lobbystack/domain";
 import { conversations, withBusinessTransaction } from "@lobbystack/db";
-import { widgetChatRequestSchema, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { snapshotForReceptionist, widgetChatRequestSchema, type BusinessContextSnapshot } from "@lobbystack/shared";
 
 import { getWorkerDatabase, readJson } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
 
     const context = createWorkerDomainContext();
     await registerWidgetVisitor(context, { businessId: session.businessId, visitorId: body.visitorId, metadata: { userAgent: request.headers.get("user-agent") ?? undefined } });
-    const { conversationId } = await getOrCreateWidgetConversation(context, { businessId: session.businessId, widgetVisitorId: body.visitorId });
+    const { conversationId } = await getOrCreateWidgetConversation(context, { businessId: session.businessId, widgetVisitorId: body.visitorId, ...(session.agentId ? { agentId: session.agentId } : {}) });
     const inboundMessageId = await appendMessage(context, { businessId: session.businessId, conversationId, body: body.content, direction: "inbound", channel: "web_chat" });
     const { queueOperatorAlert } = await import("@lobbystack/domain");
     await queueOperatorAlert(context, {
@@ -105,7 +105,9 @@ export async function POST(request: Request) {
             return;
           }
 
-          const snapshot = await getCachedBusinessSnapshot(context, { businessId: session.businessId });
+          const businessSnapshot = await getCachedBusinessSnapshot(context, { businessId: session.businessId });
+          // Website chat answers as the receptionist the widget key points to.
+          const snapshot = businessSnapshot ? snapshotForReceptionist(businessSnapshot, session.agentId) : null;
           const activeSnapshot = snapshot ?? fallbackSnapshot(session);
           const history = await loadWidgetChatHistory(context, { businessId: session.businessId, conversationId });
           const language = body.locale === "fr" || (!body.locale && (session.config.localeOverride === "fr" || session.defaultLocale === "fr")) ? "French" : "English";

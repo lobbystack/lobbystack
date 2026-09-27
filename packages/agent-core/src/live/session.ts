@@ -19,7 +19,8 @@ const BROWSER_SERVER_EVENTS = [
   "error",
 ].map((type) => ({ type }));
 
-export function buildBrowserSessionConfig(snapshot: BusinessContextSnapshot, voice = DEFAULT_VOICE): MediaSessionConfig {
+// The receptionist's voice wins over the platform default; an explicit `voice` wins over both.
+export function buildBrowserSessionConfig(snapshot: BusinessContextSnapshot, voice = snapshot.voice ?? DEFAULT_VOICE): MediaSessionConfig {
   return {
     model: LIVE_MODEL,
     instructions: buildLiveInstructions(snapshot),
@@ -31,7 +32,7 @@ export function buildBrowserSessionConfig(snapshot: BusinessContextSnapshot, voi
   };
 }
 
-export function buildPhoneSessionConfig(snapshot: BusinessContextSnapshot, voice = DEFAULT_VOICE): SessionAcceptParams.Session {
+export function buildPhoneSessionConfig(snapshot: BusinessContextSnapshot, voice = snapshot.voice ?? DEFAULT_VOICE): SessionAcceptParams.Session {
   return {
     type: "live",
     model: LIVE_MODEL,

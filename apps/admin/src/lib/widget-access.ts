@@ -10,6 +10,8 @@ import { hashWidgetKey, isAllowedWidgetOrigin, normalizeOrigin, requestWidgetOri
 export type WidgetSession = {
   businessId: string;
   widgetKeyId: string;
+  /** The receptionist that answers this widget. */
+  agentId?: string;
   keyHash: string;
   origin: string | null;
   key: WidgetKeyConfig;
@@ -40,6 +42,7 @@ export async function resolveWidgetAccess(request: Request, key: string | null |
     return {
       businessId: resolved.businessId,
       widgetKeyId: resolved.widgetKeyId,
+      agentId: keyRow.agentId,
       keyHash,
       origin,
       key,
@@ -79,6 +82,7 @@ export async function resolveWidgetSessionAccess(request: Request): Promise<Widg
     return {
       businessId: payload.businessId,
       widgetKeyId: payload.widgetKeyId,
+      agentId: keyRow.agentId,
       keyHash: "",
       origin: payload.origin,
       key,

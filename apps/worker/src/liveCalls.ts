@@ -16,6 +16,7 @@ import {
   type LiveCallEnd,
 } from "@lobbystack/domain";
 import { renewVoicePresenceGateway, updateVoicePresence } from "@lobbystack/jobs";
+import { snapshotForReceptionist } from "@lobbystack/shared";
 import OpenAI from "openai";
 
 import { recordLiveCallLatency, recordLiveDelegation } from "./liveCallTelemetry";
@@ -38,6 +39,8 @@ type AttachRequest = {
   maxDurationMs?: number;
   /** Prospect demos only answer questions and take messages. */
   intakeOnly?: boolean;
+  /** The receptionist answering. Missing means the business's default receptionist. */
+  agentId?: string;
 };
 
 const SILENCE_TIMEOUT_MS = 75_000;
@@ -107,6 +110,7 @@ export function parseAttachRequest(raw: string): AttachRequest | undefined {
     ...(typeof body.callerPhone === "string" ? { callerPhone: body.callerPhone } : {}),
     ...(typeof body.maxDurationMs === "number" && body.maxDurationMs > 0 ? { maxDurationMs: body.maxDurationMs } : {}),
     ...(body.intakeOnly === true ? { intakeOnly: true } : {}),
+    ...(typeof body.agentId === "string" && /^[0-9a-f-]{36}$/i.test(body.agentId) ? { agentId: body.agentId } : {}),
   };
 }
 
@@ -187,7 +191,8 @@ export function createLiveCallHandler(input: { domain: DomainContext }) {
   }
 
   async function startCall(request: AttachRequest, client: OpenAI, model: NonNullable<ReturnType<typeof createAgentModel>>): Promise<void> {
-    const snapshot = await getCachedBusinessSnapshot(input.domain, { businessId: request.businessId });
+    const businessSnapshot = await getCachedBusinessSnapshot(input.domain, { businessId: request.businessId });
+    const snapshot = businessSnapshot ? snapshotForReceptionist(businessSnapshot, request.agentId) : null;
     if (!snapshot) throw new Error("The business has no published snapshot.");
     const phone = request.channel === "voice";
     const call = { businessId: request.businessId, callId: request.callId };

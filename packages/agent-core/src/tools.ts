@@ -70,6 +70,9 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
   const timezone = snapshot.timezone;
   const bookingMode = context.intakeOnly ? "off" : normalizeBookingMode(snapshot.bookingMode);
   const channel = context.channel;
+  // The receptionist this snapshot was projected for, and what it opted out of.
+  const receptionist = snapshot.agentId ? { agentId: snapshot.agentId } : {};
+  const serviceScope = snapshot.excludedServiceIds?.length ? { excludedServiceIds: snapshot.excludedServiceIds } : {};
   const tools: ToolSet = {
     getBusinessHours: tool({
       description: "Get the business's weekly opening hours, upcoming closures, and whether it is open right now.",
@@ -110,7 +113,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       execute: async ({ query }) => {
         const fallback = snapshotKnowledgeMatches(snapshot, query);
         try {
-          const evidence = await searchKnowledgeEvidence(domain, { businessId, query, limit: 6, ...(context.callId ? { callId: context.callId } : {}) });
+          const evidence = await searchKnowledgeEvidence(domain, { businessId, query, limit: 6, ...(context.callId ? { callId: context.callId } : {}), ...(snapshot.excludedKnowledgeDocumentIds?.length ? { excludedDocumentIds: snapshot.excludedKnowledgeDocumentIds } : {}) });
           const matches = [...fallback, ...evidence.matches.map((match) => ({ title: match.title, text: match.content }))].slice(0, 6);
           return { outcome: matches.length ? "found" : evidence.outcome, matches };
         } catch {
@@ -161,6 +164,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
           date,
           timezone,
           hours: snapshot.hours,
+          ...serviceScope,
           ...(Number.isFinite(hour) ? { preferredHour24: hour, preferredMinute: Number.isFinite(minute) ? minute : 0 } : {}),
           ...(context.callId ? { callId: context.callId } : {}),
         });
@@ -178,7 +182,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       execute: async (input) => {
         const contactPhone = input.contactPhone ?? context.callerPhone;
         if (!contactPhone) return { ok: false, reason: "Ask for a phone number before booking." };
-        const opening = await checkOpening(domain, { businessId, serviceName: input.serviceName, startsAt: input.startsAt, timezone, ...(context.callId ? { callId: context.callId } : {}) });
+        const opening = await checkOpening(domain, { businessId, serviceName: input.serviceName, startsAt: input.startsAt, timezone, ...serviceScope, ...(context.callId ? { callId: context.callId } : {}) });
         if (!opening.ok || !opening.available) return { ok: false, reason: "That time is no longer available. Offer another opening." };
         return await bookForCaller(domain, {
           businessId,
@@ -188,6 +192,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
           contactPhone,
           channel,
           smsConsentGranted: input.smsConsentGranted,
+          ...serviceScope,
           ...(input.contactName ? { contactName: input.contactName } : {}),
           ...(context.callId ? { callId: context.callId } : {}),
         });
@@ -230,7 +235,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
     tools.lookupAppointmentForChange = tool({
       description: "Check whether this caller's number has upcoming appointments before cancelling or rescheduling. It does not reveal appointment details.",
       inputSchema: z.object({}),
-      execute: async () => await lookupCallerAppointments(domain, { businessId, callerPhone }),
+      execute: async () => await lookupCallerAppointments(domain, { businessId, callerPhone, ...receptionist }),
     });
     tools.verifyAppointmentForChange = tool({
       description: "Verify the caller's name and one fact about their appointment (date/time or service) before any change.",
@@ -247,6 +252,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         ...(input.callerName ? { callerName: input.callerName } : {}),
         ...(input.appointmentStartsAt ? { appointmentStartsAt: input.appointmentStartsAt } : {}),
         ...(input.serviceName ? { serviceName: input.serviceName } : {}),
+        ...receptionist,
       }),
     });
     tools.sendAppointmentChangeOtp = tool({
@@ -263,14 +269,14 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       tools.cancelAppointment = tool({
         description: "Cancel the verified appointment. Only after the caller explicitly confirms they want it cancelled now.",
         inputSchema: z.object({ appointmentId: z.string(), verificationId: z.string(), finalConfirmation: z.boolean() }),
-        execute: async (input) => await cancelForCaller(domain, { businessId, callerPhone, ...input }),
+        execute: async (input) => await cancelForCaller(domain, { businessId, callerPhone, ...receptionist, ...input }),
       });
     }
     if (changePolicy.allowReschedule && bookingMode === "instant") {
       tools.rescheduleAppointment = tool({
         description: "Move the verified appointment to a new time that findAvailability returned. Only after the caller explicitly confirms the new time.",
         inputSchema: z.object({ appointmentId: z.string(), verificationId: z.string(), startsAt: z.string(), finalConfirmation: z.boolean() }),
-        execute: async (input) => await rescheduleForCaller(domain, { businessId, callerPhone, ...input }),
+        execute: async (input) => await rescheduleForCaller(domain, { businessId, callerPhone, ...receptionist, ...input }),
       });
     }
   }

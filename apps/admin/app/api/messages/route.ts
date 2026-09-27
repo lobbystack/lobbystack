@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { contacts, conversations, messages, widgetVisitors } from "@lobbystack/db";
@@ -8,8 +8,14 @@ import { createDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
 
+// `?conversationId=` returns one thread, as the inbox opens it.
+function conversationIdFrom(request: Request): string | undefined {
+  const value = new URL(request.url).searchParams.get("conversationId");
+  return value && /^[0-9a-f-]{36}$/i.test(value) ? value : undefined;
+}
+
 export async function GET(request: Request) {
-  try { return NextResponse.json(await withOperatorTransaction(request, async ({ businessId, tx }) => ({ messages: await tx.select({ id: messages.id, conversationId: messages.conversationId, contactName: contacts.name, contactPhone: contacts.phone, visitorName: widgetVisitors.name, visitorEmail: widgetVisitors.email, channel: conversations.channel, automationState: conversations.automationState, body: messages.body, direction: messages.direction, status: messages.status, createdAt: messages.createdAt }).from(messages).leftJoin(conversations, eq(messages.conversationId, conversations.id)).leftJoin(contacts, eq(conversations.contactId, contacts.id)).leftJoin(widgetVisitors, eq(conversations.widgetVisitorId, widgetVisitors.id)).where(eq(messages.businessId, businessId)).orderBy(desc(messages.createdAt)).limit(200) }))); } catch (error) { return asApiResponse(error); }
+  try { return NextResponse.json(await withOperatorTransaction(request, async ({ businessId, tx }) => ({ messages: await tx.select({ id: messages.id, conversationId: messages.conversationId, contactName: contacts.name, contactPhone: contacts.phone, visitorName: widgetVisitors.name, visitorEmail: widgetVisitors.email, channel: conversations.channel, automationState: conversations.automationState, body: messages.body, direction: messages.direction, status: messages.status, createdAt: messages.createdAt }).from(messages).leftJoin(conversations, eq(messages.conversationId, conversations.id)).leftJoin(contacts, eq(conversations.contactId, contacts.id)).leftJoin(widgetVisitors, eq(conversations.widgetVisitorId, widgetVisitors.id)).where(and(eq(messages.businessId, businessId), ...(conversationIdFrom(request) ? [eq(messages.conversationId, conversationIdFrom(request)!)] : []))).orderBy(desc(messages.createdAt)).limit(200) }))); } catch (error) { return asApiResponse(error); }
 }
 
 export async function POST(request: Request) {

@@ -117,7 +117,49 @@ export function normalizeBookingMode(value: string | null | undefined): BookingM
   return value === "off" || value === "request" ? value : "instant";
 }
 
+/**
+ * One receptionist's settings inside the business snapshot, already resolved
+ * (fallback instructions filled in). `snapshotForReceptionist` projects it onto
+ * the business fields so prompts and tools read one flat snapshot.
+ */
+export type ReceptionistSnapshot = {
+  id: string;
+  name: string;
+  isDefault: boolean;
+  greeting: string;
+  voiceInstructions: string;
+  smsInstructions: string;
+  chatInstructions: string;
+  summary: string;
+  bookingPolicy: string;
+  transferPolicy: TransferPolicy;
+  appointmentChangePolicy?: AppointmentChangePolicy;
+  bookingMode?: BookingMode;
+  /** GPT-Live voice. Absent means the platform default. */
+  voice?: string;
+  /** Absent means the business's default language. */
+  language?: RuntimeLocale;
+  rules: Array<AgentRuleSummary>;
+  /** Knowledge and services are shared; these list what this receptionist skips. */
+  excludedServiceIds: Array<string>;
+  excludedKnowledgeDocumentIds: Array<string>;
+  excludedSnippetIds: Array<string>;
+  /** Present only when document opt-outs change the business digest. */
+  knowledgeDigest?: string;
+};
+
 export type BusinessContextSnapshot = {
+  /** Set on a snapshot projected for one receptionist. */
+  agentId?: string;
+  agentName?: string;
+  /** GPT-Live voice of the projected receptionist. */
+  voice?: string;
+  /** Documents knowledge search must skip for the projected receptionist. */
+  excludedKnowledgeDocumentIds?: Array<string>;
+  /** Services the projected receptionist can't book. */
+  excludedServiceIds?: Array<string>;
+  /** Every active receptionist. Absent in snapshots built before receptionists existed. */
+  receptionists?: Array<ReceptionistSnapshot>;
   businessId: string;
   version: string;
   generatedAt: string;
@@ -150,6 +192,50 @@ export type BusinessContextSnapshot = {
     email?: string;
   };
 };
+
+/**
+ * Returns the snapshot as the given receptionist sees it: its greeting,
+ * instructions, voice, language, booking mode, transfer rules and rules, with
+ * the services and knowledge it opted out of removed. An unknown or missing id
+ * uses the default receptionist. Snapshots built before receptionists existed
+ * come back unchanged.
+ */
+export function snapshotForReceptionist(snapshot: BusinessContextSnapshot, agentId?: string | null): BusinessContextSnapshot {
+  const receptionists = snapshot.receptionists ?? [];
+  const receptionist = (agentId ? receptionists.find((item) => item.id === agentId) : undefined)
+    ?? receptionists.find((item) => item.isDefault)
+    ?? receptionists[0];
+  if (!receptionist) return snapshot;
+  const business = snapshot;
+  const excludedServices = new Set(receptionist.excludedServiceIds);
+  const excludedSnippets = new Set(receptionist.excludedSnippetIds);
+  const projected: BusinessContextSnapshot = {
+    ...business,
+    agentId: receptionist.id,
+    agentName: receptionist.name,
+    ...(receptionist.voice ? { voice: receptionist.voice } : {}),
+    defaultLocale: receptionist.language ?? business.defaultLocale,
+    greeting: receptionist.greeting,
+    voiceInstructions: receptionist.voiceInstructions,
+    smsInstructions: receptionist.smsInstructions,
+    chatInstructions: receptionist.chatInstructions,
+    summary: receptionist.summary,
+    bookingPolicy: receptionist.bookingPolicy,
+    transferPolicy: receptionist.transferPolicy,
+    rules: receptionist.rules,
+    services: business.services.filter((service) => !excludedServices.has(service.id)),
+    ...(business.knowledgeSnippets ? { knowledgeSnippets: business.knowledgeSnippets.filter((snippet) => !excludedSnippets.has(snippet.id)) } : {}),
+    knowledgeDigest: receptionist.knowledgeDigest ?? business.knowledgeDigest,
+    excludedKnowledgeDocumentIds: receptionist.excludedKnowledgeDocumentIds,
+    excludedServiceIds: receptionist.excludedServiceIds,
+  };
+  delete projected.receptionists;
+  delete projected.appointmentChangePolicy;
+  delete projected.bookingMode;
+  if (receptionist.appointmentChangePolicy) projected.appointmentChangePolicy = receptionist.appointmentChangePolicy;
+  if (receptionist.bookingMode) projected.bookingMode = receptionist.bookingMode;
+  return projected;
+}
 
 export type AvailabilitySlot = {
   staffId: string;

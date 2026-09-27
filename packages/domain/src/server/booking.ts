@@ -394,7 +394,7 @@ export async function rescheduleAppointmentInTransaction(
 
 export async function rescheduleAppointmentForCaller(
   context: DomainContext,
-  input: { businessId: string; appointmentId: string; callerPhone: string; startsAt: string; verificationId: string },
+  input: { businessId: string; appointmentId: string; callerPhone: string; startsAt: string; verificationId: string; agentId?: string },
 ): Promise<{ appointmentId: string; serviceId: string; startsAt: Date; endsAt: Date } | null> {
   const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await rescheduleAppointmentInTransaction(tx, {
     businessId: input.businessId,
@@ -402,7 +402,7 @@ export async function rescheduleAppointmentForCaller(
     startsAt: input.startsAt,
     callerPhone: input.callerPhone,
     change: { source: "caller" },
-    beforeUpdate: async () => await consumeAppointmentChangeVerificationInTransaction(tx, { businessId: input.businessId, verificationId: input.verificationId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, action: "reschedule" }),
+    beforeUpdate: async () => await consumeAppointmentChangeVerificationInTransaction(tx, { businessId: input.businessId, verificationId: input.verificationId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, action: "reschedule", ...(input.agentId ? { agentId: input.agentId } : {}) }),
   }));
   if (result) {
     await recordAppointmentChange(context, { name: "appointment.rescheduled", businessId: input.businessId, appointmentId: result.appointmentId, source: "caller" });
@@ -412,12 +412,12 @@ export async function rescheduleAppointmentForCaller(
 
 export async function cancelAppointmentForCaller(
   context: DomainContext,
-  input: { businessId: string; appointmentId: string; callerPhone: string; verificationId: string },
+  input: { businessId: string; appointmentId: string; callerPhone: string; verificationId: string; agentId?: string },
 ): Promise<{ appointmentId: string; serviceId: string; startsAt: Date; endsAt: Date } | null> {
   const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const row = (await tx.select({ id: appointments.id, serviceId: appointments.serviceId, startsAt: appointments.startsAt, endsAt: appointments.endsAt }).from(appointments).innerJoin(contacts, and(eq(appointments.contactId, contacts.id), eq(contacts.businessId, input.businessId))).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), eq(contacts.phone, input.callerPhone), ne(appointments.status, "canceled"))).limit(1))[0];
     if (!row) return null;
-    const consumed = await consumeAppointmentChangeVerificationInTransaction(tx, { businessId: input.businessId, verificationId: input.verificationId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, action: "cancel" });
+    const consumed = await consumeAppointmentChangeVerificationInTransaction(tx, { businessId: input.businessId, verificationId: input.verificationId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, action: "cancel", ...(input.agentId ? { agentId: input.agentId } : {}) });
     if (!consumed) return null;
     if (await cancelAppointmentInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, change: { source: "caller" } }) !== "cancelled") return null;
     return { appointmentId: row.id, serviceId: row.serviceId, startsAt: row.startsAt, endsAt: row.endsAt };

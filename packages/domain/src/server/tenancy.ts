@@ -3,11 +3,12 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
-import { businessInvitations, businessMemberships, businesses, receptionistProfiles, staff, users } from "@lobbystack/db";
+import { agents, businessInvitations, businessMemberships, businesses, staff, users } from "@lobbystack/db";
 import { defaultAppointmentChangePolicy, normalizeAuthEmail } from "@lobbystack/shared";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
+import { defaultReceptionistName } from "./receptionists";
 
 export type BusinessRole = "business_owner" | "business_admin" | "scheduler" | "viewer";
 
@@ -71,7 +72,11 @@ export async function createBusiness(
     // Booking assigns every appointment to a staff member. Businesses that don't
     // manage a team get one hidden member that stands for the business itself.
     await tx.insert(staff).values({ businessId, name: input.name.trim(), timezone: input.timezone });
-    await tx.insert(receptionistProfiles).values({
+    // Every business starts with one receptionist. A trigger mirrors it into
+    // receptionist_profiles for older builds.
+    await tx.insert(agents).values({
+      name: defaultReceptionistName("en"),
+      isDefault: true,
       businessId,
       greeting: `Thanks for calling ${input.name.trim()}.`,
       tone: "warm and direct",

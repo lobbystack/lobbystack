@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { and, asc, desc, eq, ilike, sql } from "drizzle-orm";
 
-import { agentRules, businessContextSnapshots, businessHours, businesses, closures, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, receptionistProfiles, services, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agentKnowledgeOptOuts, agentRules, agentServiceOptOuts, businessContextSnapshots, businessHours, businesses, closures, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, services, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeTransferMode, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { buildBusinessContextSnapshot } from "../snapshot";
 import { fuseKnowledgeRanks, knowledgeLexicalQueries, knowledgeQueryTerms, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
@@ -15,6 +15,7 @@ import { getMeter } from "@lobbystack/telemetry/node";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { advanceOnboardingStageInTransaction } from "./onboarding";
 import { recordProductEvent } from "./productEvents";
+import { listActiveReceptionists } from "./receptionists";
 
 const ragMeter = getMeter("lobbystack-rag");
 const searchDuration = ragMeter.createHistogram("rag.search.duration_ms", { unit: "ms" });
@@ -414,7 +415,7 @@ export async function searchKnowledge(
 
 export async function searchKnowledgeEvidence(
   context: DomainContext,
-  input: { userId?: string; businessId: string; query: string; limit?: number; callId?: string; turnId?: string },
+  input: { userId?: string; businessId: string; query: string; limit?: number; callId?: string; turnId?: string; excludedDocumentIds?: string[] },
 ): Promise<{ matches: KnowledgePassage[]; mode: "hybrid" | "keyword"; outcome: "found" | "empty" | "unavailable"; failure?: "embedding_unavailable" | "search_unavailable"; durationMs: number }> {
   const startedAt = performance.now();
   const actor = { userId: input.userId, businessId: input.businessId, actorType: input.userId ? "operator" as const : "worker" as const };
@@ -425,7 +426,12 @@ export async function searchKnowledgeEvidence(
     d.source_url AS "sourceUrl", d.revision AS "sourceRevision", c.sequence`;
   const from = sql`FROM knowledge_chunks c JOIN knowledge_documents d ON d.id = c.document_id`;
   const select = sql`SELECT ${fields} ${from}`;
-  const filters = sql`c.business_id = ${input.businessId} AND d.business_id = ${input.businessId}
+  // A receptionist can opt out of shared documents; skip those.
+  const excluded = (input.excludedDocumentIds ?? []).filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+  const filters = excluded.length
+    ? sql`c.business_id = ${input.businessId} AND d.business_id = ${input.businessId}
+    AND d.active = true AND d.status = 'indexed' AND d.id NOT IN (${sql.join(excluded.map((id) => sql`${id}::uuid`), sql`, `)})`
+    : sql`c.business_id = ${input.businessId} AND d.business_id = ${input.businessId}
     AND d.active = true AND d.status = 'indexed'`;
   const execute = (statement: ReturnType<typeof sql>) => withBusinessTransaction(context.db, actor, async tx => {
     await tx.execute(sql`SET LOCAL statement_timeout = '2000ms'`);
@@ -513,23 +519,54 @@ export async function refreshBusinessSnapshot(
   const startedAt = performance.now();
   let builtSnapshot: BusinessContextSnapshot | undefined;
   const version = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const [business, profile] = await Promise.all([
+    const [business, receptionistRows] = await Promise.all([
       tx.select().from(businesses).where(eq(businesses.id, input.businessId)).limit(1),
-      tx.select().from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1),
+      listActiveReceptionists(tx, input.businessId),
     ]);
     if (!business[0]) {
       throw new Error("Business not found.");
     }
-    const [hours, closureRows, serviceRows, ruleRows, snippets, documents, numbers] = await Promise.all([
+    const [hours, closureRows, serviceRows, ruleRows, snippets, documentRows, numbers, knowledgeOptOuts, serviceOptOuts] = await Promise.all([
       tx.select().from(businessHours).where(eq(businessHours.businessId, input.businessId)).orderBy(asc(businessHours.dayOfWeek)),
       tx.select().from(closures).where(eq(closures.businessId, input.businessId)).orderBy(asc(closures.startsAt)),
       tx.select().from(services).where(and(eq(services.businessId, input.businessId), eq(services.active, true))).orderBy(asc(services.name)),
       tx.select().from(agentRules).where(and(eq(agentRules.businessId, input.businessId), eq(agentRules.active, true))).orderBy(asc(agentRules.sortOrder)),
       tx.select().from(knowledgeSnippets).where(and(eq(knowledgeSnippets.businessId, input.businessId), eq(knowledgeSnippets.active, true))).orderBy(desc(knowledgeSnippets.priority)).limit(8),
-      tx.select({ title: knowledgeDocuments.title, sourceUrl: knowledgeDocuments.sourceUrl, tags: knowledgeDocuments.tags, revision: knowledgeDocuments.revision }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.active, true), eq(knowledgeDocuments.status, "indexed"))).orderBy(desc(knowledgeDocuments.updatedAt), asc(knowledgeDocuments.id)).limit(40),
+      tx.select({ id: knowledgeDocuments.id, title: knowledgeDocuments.title, sourceUrl: knowledgeDocuments.sourceUrl, tags: knowledgeDocuments.tags, revision: knowledgeDocuments.revision }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.active, true), eq(knowledgeDocuments.status, "indexed"))).orderBy(desc(knowledgeDocuments.updatedAt), asc(knowledgeDocuments.id)).limit(40),
       tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(desc(phoneNumbers.createdAt), asc(phoneNumbers.id)),
+      tx.select({ agentId: agentKnowledgeOptOuts.agentId, documentId: agentKnowledgeOptOuts.knowledgeDocumentId, snippetId: agentKnowledgeOptOuts.knowledgeSnippetId }).from(agentKnowledgeOptOuts).where(eq(agentKnowledgeOptOuts.businessId, input.businessId)),
+      tx.select({ agentId: agentServiceOptOuts.agentId, serviceId: agentServiceOptOuts.serviceId }).from(agentServiceOptOuts).where(eq(agentServiceOptOuts.businessId, input.businessId)),
     ]);
-    const currentProfile = profile[0];
+    const documents = documentRows.map(({ id: _id, ...row }) => row);
+    const digestOf = (rows: typeof documents) => withinKnowledgeBudget(rows, 1600, row => JSON.stringify(row)).map(row => JSON.stringify(row)).join("\n");
+    const currentProfile = receptionistRows.find((row) => row.isDefault) ?? receptionistRows[0];
+    const receptionists = receptionistRows.map((row) => {
+      const excludedDocumentIds = knowledgeOptOuts.filter((optOut) => optOut.agentId === row.id && optOut.documentId).map((optOut) => optOut.documentId!);
+      const excludedDocuments = new Set(excludedDocumentIds);
+      return {
+        id: row.id,
+        name: row.name,
+        isDefault: row.id === currentProfile?.id,
+        greeting: row.greeting,
+        tone: row.tone,
+        summary: row.summary,
+        bookingPolicy: row.bookingPolicy,
+        ...(row.voiceInstructions ? { voiceInstructions: row.voiceInstructions } : {}),
+        ...(row.smsInstructions ? { smsInstructions: row.smsInstructions } : {}),
+        ...(row.chatInstructions ? { chatInstructions: row.chatInstructions } : {}),
+        transferPolicy: { mode: normalizeTransferMode(row.transferMode), ...(row.transferNumber ? { transferNumber: row.transferNumber } : {}) },
+        appointmentChangePolicy: normalizeAppointmentChangePolicy(row.appointmentChangePolicy),
+        bookingMode: normalizeBookingMode(row.bookingMode),
+        ...(row.voice ? { voice: row.voice } : {}),
+        ...(row.language === "en" || row.language === "fr" ? { language: row.language as "en" | "fr" } : {}),
+        rules: ruleRows.filter((rule) => rule.agentId === row.id).map((rule) => ({ id: rule.id, title: rule.title, content: rule.content, order: rule.sortOrder })),
+        excludedServiceIds: serviceOptOuts.filter((optOut) => optOut.agentId === row.id).map((optOut) => optOut.serviceId),
+        excludedKnowledgeDocumentIds: excludedDocumentIds,
+        excludedSnippetIds: knowledgeOptOuts.filter((optOut) => optOut.agentId === row.id && optOut.snippetId).map((optOut) => optOut.snippetId!),
+        ...(excludedDocuments.size ? { knowledgeDigest: digestOf(documentRows.filter((document) => !excludedDocuments.has(document.id)).map(({ id: _id, ...document }) => document)) } : {}),
+      };
+    });
+    const defaultRules = receptionists.find((receptionist) => receptionist.id === currentProfile?.id)?.rules ?? [];
     const phoneNumber = numbers.find((number) => number.status === "active" && number.voiceEnabled)?.e164;
     const smsNumber = numbers.find((number) => number.status === "active" && number.smsEnabled)?.e164;
     const version = `${Date.now()}`;
@@ -552,7 +589,7 @@ export async function refreshBusinessSnapshot(
       ...(currentProfile?.smsInstructions ? { smsInstructions: currentProfile.smsInstructions } : {}),
       ...(currentProfile?.chatInstructions ? { chatInstructions: currentProfile.chatInstructions } : {}),
       summary: currentProfile?.summary ?? business[0].name,
-      knowledgeDigest: withinKnowledgeBudget(documents, 1600, row => JSON.stringify(row)).map(row => JSON.stringify(row)).join("\n"),
+      knowledgeDigest: digestOf(documents),
       hours: hours.map((row) => ({ dayOfWeek: row.dayOfWeek, openMinutes: row.openMinutes, closeMinutes: row.closeMinutes })),
       closures: closureRows.map((row) => ({ startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), reason: row.reason })),
       services: serviceRows.map((row) => ({
@@ -563,11 +600,12 @@ export async function refreshBusinessSnapshot(
           ...(typeof row.localizedNames.fr === "string" ? { fr: row.localizedNames.fr } : {}),
         } } : {}),
       })),
-      rules: ruleRows.map((row) => ({ id: row.id, title: row.title, content: row.content, order: row.sortOrder })),
+      rules: defaultRules,
       snippets: snippets.map((row) => ({ id: row.id, title: row.title, content: row.content, tags: row.tags, priority: row.priority })),
       appointmentChangePolicy: normalizeAppointmentChangePolicy(currentProfile?.appointmentChangePolicy),
       bookingMode: normalizeBookingMode(currentProfile?.bookingMode),
       transferPolicy: { mode: normalizeTransferMode(currentProfile?.transferMode), ...(currentProfile?.transferNumber ? { transferNumber: currentProfile.transferNumber } : {}) },
+      receptionists,
     });
     await tx.insert(businessContextSnapshots).values({ businessId: input.businessId, version, snapshot: builtSnapshot as unknown as Record<string, unknown> });
     await enqueueOutbox(tx, {

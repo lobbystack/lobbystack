@@ -20,6 +20,12 @@ const timestamps = {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 };
 
+/**
+ * The receptionist a row belongs to. NOT NULL in the database; a trigger fills
+ * the business's default receptionist when an insert leaves it out.
+ */
+const agentIdColumn = () => uuid("agent_id").notNull().default(sql`null`);
+
 const legacyId = {
   legacyConvexId: text("legacy_convex_id"),
 };
@@ -130,6 +136,10 @@ export const businesses = pgTable(
     phoneNumberReplacementReservedAt: timestamp("phone_number_replacement_reserved_at", { withTimezone: true }),
     phoneNumberReplacementUsedAt: timestamp("phone_number_replacement_used_at", { withTimezone: true }),
     telemetryEnabled: boolean("telemetry_enabled").default(true).notNull(),
+    /** Shows staff management and staff columns. Booking works with the hidden default staff member when off. */
+    staffEnabled: boolean("staff_enabled").default(false).notNull(),
+    /** Per-business feature flags such as `new_navigation`. Missing keys are off. */
+    featureFlags: jsonb("feature_flags").$type<Record<string, boolean>>().default({}).notNull(),
     ...legacyId,
     ...timestamps,
   },
@@ -239,7 +249,7 @@ export const services = pgTable(
     ...legacyId,
     ...timestamps,
   },
-  (table) => [uniqueIndex("services_business_slug_unique").on(table.businessId, table.slug), index("services_business_idx").on(table.businessId)],
+  (table) => [uniqueIndex("services_business_slug_unique").on(table.businessId, table.slug), index("services_business_idx").on(table.businessId), uniqueIndex("services_id_business_unique").on(table.id, table.businessId)],
 );
 
 export const staffServiceAssignments = pgTable(
@@ -299,6 +309,7 @@ export const phoneNumbers = pgTable(
     smsWebhookTargetUrl: text("sms_webhook_target_url"),
     smsWebhookLastSyncedAt: timestamp("sms_webhook_last_synced_at", { withTimezone: true }),
     smsWebhookLastError: text("sms_webhook_last_error"),
+    agentId: agentIdColumn(),
     ...legacyId,
     ...timestamps,
   },
@@ -306,6 +317,7 @@ export const phoneNumbers = pgTable(
     uniqueIndex("phone_numbers_e164_unique").on(table.e164),
     uniqueIndex("phone_numbers_provider_id_unique").on(table.providerPhoneId),
     index("phone_numbers_business_idx").on(table.businessId),
+    index("phone_numbers_agent_idx").on(table.agentId),
   ],
 );
 
@@ -336,6 +348,42 @@ export const receptionistProfiles = pgTable(
     ...timestamps,
   },
   (table) => [uniqueIndex("receptionist_profiles_business_unique").on(table.businessId)],
+);
+
+/**
+ * One AI receptionist of a business. Source of truth for receptionist settings;
+ * the default receptionist is mirrored into receptionist_profiles by a trigger.
+ * Deleting a receptionist archives it so past calls keep their reference.
+ */
+export const agents = pgTable(
+  "agents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    isDefault: boolean("is_default").default(false).notNull(),
+    greeting: text("greeting").notNull(),
+    tone: text("tone").notNull(),
+    summary: text("summary").notNull(),
+    bookingPolicy: text("booking_policy").notNull(),
+    voiceInstructions: text("voice_instructions"),
+    smsInstructions: text("sms_instructions"),
+    chatInstructions: text("chat_instructions"),
+    transferMode: varchar("transfer_mode", { length: 32 }).default("on_request").notNull(),
+    transferNumber: text("transfer_number"),
+    appointmentChangePolicy: jsonb("appointment_change_policy").$type<Record<string, unknown>>(),
+    bookingMode: varchar("booking_mode", { length: 16 }).default("instant").notNull(),
+    voice: varchar("voice", { length: 32 }),
+    language: varchar("language", { length: 8 }),
+    receptionistProfileId: uuid("receptionist_profile_id").references(() => receptionistProfiles.id, { onDelete: "set null" }),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("agents_id_business_unique").on(table.id, table.businessId),
+    uniqueIndex("agents_business_default_unique").on(table.businessId).where(sql`${table.isDefault} and ${table.archivedAt} is null`),
+    index("agents_business_created_idx").on(table.businessId, table.createdAt),
+  ],
 );
 
 export const contacts = pgTable(
@@ -369,11 +417,13 @@ export const widgetKeys = pgTable(
     allowedOrigins: jsonb("allowed_origins").$type<string[]>().notNull().default([]),
     config: jsonb("config").$type<Record<string, unknown>>().notNull().default({}),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    agentId: agentIdColumn(),
     ...timestamps,
   },
   (table) => [
     uniqueIndex("widget_keys_key_hash_unique").on(table.keyHash),
     index("widget_keys_business_created_idx").on(table.businessId, table.createdAt),
+    index("widget_keys_agent_idx").on(table.agentId),
   ],
 );
 
@@ -429,10 +479,11 @@ export const conversations = pgTable(
     currentIntent: text("current_intent"),
     locale: varchar("locale", { length: 8 }),
     revision: integer("revision").default(0).notNull(),
+    agentId: agentIdColumn(),
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("conversations_business_status_idx").on(table.businessId, table.status), index("conversations_contact_idx").on(table.businessId, table.contactId), index("conversations_business_widget_visitor_idx").on(table.businessId, table.widgetVisitorId)],
+  (table) => [index("conversations_business_agent_idx").on(table.businessId, table.agentId), index("conversations_business_status_idx").on(table.businessId, table.status), index("conversations_contact_idx").on(table.businessId, table.contactId), index("conversations_business_widget_visitor_idx").on(table.businessId, table.widgetVisitorId)],
 );
 
 export const conversationSessions = pgTable(
@@ -520,6 +571,7 @@ export const calls = pgTable(
     providerCostUsd: doublePrecision("provider_cost_usd"),
     recordingObjectId: uuid("recording_object_id"),
     revision: integer("revision").default(0).notNull(),
+    agentId: agentIdColumn(),
     ...legacyId,
     ...timestamps,
   },
@@ -527,6 +579,7 @@ export const calls = pgTable(
     uniqueIndex("calls_provider_call_unique").on(table.provider, table.providerCallId),
     uniqueIndex("calls_gateway_session_unique").on(table.gatewaySessionId),
     index("calls_business_started_idx").on(table.businessId, table.startedAt),
+    index("calls_business_agent_started_idx").on(table.businessId, table.agentId, table.startedAt),
     index("calls_business_recording_idx").on(table.businessId, table.recordingObjectId).where(sql`${table.recordingObjectId} is not null`),
   ],
 );
@@ -638,7 +691,7 @@ export const knowledgeDocuments = pgTable(
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("knowledge_documents_business_status_idx").on(table.businessId, table.status), index("knowledge_documents_hash_idx").on(table.businessId, table.contentHash), uniqueIndex("knowledge_documents_business_url_unique").on(table.businessId, table.sourceUrl), index("knowledge_documents_title_keyword_idx").using("gin", sql`to_tsvector('simple', ${table.title})`)],
+  (table) => [index("knowledge_documents_business_status_idx").on(table.businessId, table.status), index("knowledge_documents_hash_idx").on(table.businessId, table.contentHash), uniqueIndex("knowledge_documents_business_url_unique").on(table.businessId, table.sourceUrl), uniqueIndex("knowledge_documents_id_business_unique").on(table.id, table.businessId), index("knowledge_documents_title_keyword_idx").using("gin", sql`to_tsvector('simple', ${table.title})`)],
 );
 
 export const knowledgeChunks = pgTable(
@@ -673,7 +726,7 @@ export const knowledgeSnippets = pgTable(
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("knowledge_snippets_business_active_idx").on(table.businessId, table.active)],
+  (table) => [index("knowledge_snippets_business_active_idx").on(table.businessId, table.active), uniqueIndex("knowledge_snippets_id_business_unique").on(table.id, table.businessId)],
 );
 
 export const agentRules = pgTable(
@@ -685,10 +738,43 @@ export const agentRules = pgTable(
     content: text("content").notNull(),
     active: boolean("active").default(true).notNull(),
     sortOrder: integer("sort_order").default(0).notNull(),
+    agentId: agentIdColumn(),
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("agent_rules_business_order_idx").on(table.businessId, table.sortOrder)],
+  (table) => [index("agent_rules_business_order_idx").on(table.businessId, table.sortOrder), index("agent_rules_agent_order_idx").on(table.agentId, table.sortOrder)],
+);
+
+/** A receptionist skips a knowledge item only when a row exists here. */
+export const agentKnowledgeOptOuts = pgTable(
+  "agent_knowledge_opt_outs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    agentId: uuid("agent_id").notNull(),
+    // Composite foreign keys with business_id live in migration 0067.
+    knowledgeDocumentId: uuid("knowledge_document_id"),
+    knowledgeSnippetId: uuid("knowledge_snippet_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("agent_knowledge_opt_outs_document_unique").on(table.agentId, table.knowledgeDocumentId).where(sql`${table.knowledgeDocumentId} is not null`),
+    uniqueIndex("agent_knowledge_opt_outs_snippet_unique").on(table.agentId, table.knowledgeSnippetId).where(sql`${table.knowledgeSnippetId} is not null`),
+    index("agent_knowledge_opt_outs_business_idx").on(table.businessId),
+  ],
+);
+
+/** A receptionist can't book a service only when a row exists here. */
+export const agentServiceOptOuts = pgTable(
+  "agent_service_opt_outs",
+  {
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    agentId: uuid("agent_id").notNull(),
+    // Composite foreign key with business_id lives in migration 0067.
+    serviceId: uuid("service_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.agentId, table.serviceId] }), index("agent_service_opt_outs_business_idx").on(table.businessId)],
 );
 
 export const websiteIngestionJobs = pgTable(
@@ -1384,6 +1470,7 @@ export const allTenantTables = [
   onboardingPhoneVerifications,
   onboardingNumberClaimEvents,
   receptionistProfiles,
+  agents,
   contacts,
   widgetKeys,
   widgetVisitors,
@@ -1399,6 +1486,8 @@ export const allTenantTables = [
   knowledgeChunks,
   knowledgeSnippets,
   agentRules,
+  agentKnowledgeOptOuts,
+  agentServiceOptOuts,
   websiteIngestionJobs,
   businessContextSnapshots,
   storageObjects,
@@ -1449,6 +1538,7 @@ export const schema = {
   onboardingPhoneVerifications,
   onboardingNumberClaimEvents,
   receptionistProfiles,
+  agents,
   contacts,
   widgetKeys,
   widgetVisitors,
@@ -1464,6 +1554,8 @@ export const schema = {
   knowledgeChunks,
   knowledgeSnippets,
   agentRules,
+  agentKnowledgeOptOuts,
+  agentServiceOptOuts,
   websiteIngestionJobs,
   businessContextSnapshots,
   storageObjects,

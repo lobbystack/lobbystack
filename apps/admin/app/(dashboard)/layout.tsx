@@ -8,6 +8,7 @@ import { DashboardShell } from "@/components/dashboard-shell";
 import { getSession } from "@/lib/auth";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { localizePublicPath } from "@/lib/locale-path";
+import { loadNavigationSnapshot } from "@/lib/navigation-server";
 import { localeFromRequestHeaders, PATHNAME_HEADER } from "@/lib/locale-request";
 import { routeNamespaces } from "@/lib/route-namespaces";
 import "../globals.css";
@@ -22,9 +23,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!session) redirect(localizePublicPath("/login", locale));
   const onboarding = await getActiveOnboardingState(getAppDatabase().db, session.user.id);
   if (onboarding.stage !== "complete") redirect(resolveOnboardingRoute(onboarding.stage));
+  const navigation = await loadNavigationSnapshot();
   return (
     <RootDocument locale={locale} localeSource={source} namespaces={routeNamespaces(requestHeaders.get(PATHNAME_HEADER) ?? "/")}>
       <DashboardShell
+        navigation={navigation}
         user={{
           email: session.user.email ?? "",
           name: session.user.name ?? session.user.email ?? "",

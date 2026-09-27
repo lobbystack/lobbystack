@@ -3692,6 +3692,11 @@
               }
             ]
           },
+          "agent_id": {
+            "description": "The receptionist that answered the call. A business can run several receptionists; each phone number and website widget routes to one.",
+            "type": "string",
+            "format": "uuid"
+          },
           "contact_id": {
             "anyOf": [
               {
@@ -3769,6 +3774,7 @@
           "outcome",
           "summary",
           "end_reason",
+          "agent_id",
           "contact_id",
           "caller_name",
           "caller_phone",
@@ -3834,6 +3840,11 @@
                 "type": "null"
               }
             ]
+          },
+          "agent_id": {
+            "description": "The receptionist that answered the call. A business can run several receptionists; each phone number and website widget routes to one.",
+            "type": "string",
+            "format": "uuid"
           },
           "contact_id": {
             "anyOf": [
@@ -3942,6 +3953,7 @@
           "outcome",
           "summary",
           "end_reason",
+          "agent_id",
           "contact_id",
           "caller_name",
           "caller_phone",
@@ -4955,6 +4967,11 @@
                   }
                 ]
               },
+              "agent_id": {
+                "description": "The receptionist that answered the call. A business can run several receptionists; each phone number and website widget routes to one.",
+                "type": "string",
+                "format": "uuid"
+              },
               "contact_id": {
                 "anyOf": [
                   {
@@ -5032,6 +5049,7 @@
               "outcome",
               "summary",
               "end_reason",
+              "agent_id",
               "contact_id",
               "caller_name",
               "caller_phone",

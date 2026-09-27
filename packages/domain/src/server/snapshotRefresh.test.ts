@@ -24,6 +24,10 @@ const profileRow = {
   tone: "professional",
   summary: "A clinic",
   bookingPolicy: "Confirm before booking.",
+  name: "Receptionist",
+  isDefault: true,
+  transferMode: "on_request",
+  bookingMode: "instant",
 };
 
 function tableName(table: unknown): string {
@@ -71,7 +75,7 @@ const businessRow = { id: businessId, name: "Maple Family Clinic", timezone: "Am
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv("REDIS_PREFIX", "lobbystack");
-  mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(makeTx({ businesses: [businessRow], receptionist_profiles: [profileRow] })));
+  mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(makeTx({ businesses: [businessRow], agents: [profileRow] })));
   mocks.enqueueOutbox.mockResolvedValue(undefined);
 });
 
@@ -83,7 +87,7 @@ describe("refreshBusinessSnapshot write-through", () => {
   it("preserves business identity, active contact numbers, locale labels, and opt-out", async () => {
     mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({
       businesses: [{ ...businessRow, legalName: "Maple Clinic Inc.", businessType: "clinic", telemetryEnabled: false }],
-      receptionist_profiles: [profileRow],
+      agents: [profileRow],
       phone_numbers: [
         { e164: "+14165550001", status: "released", voiceEnabled: true, smsEnabled: true },
         { e164: "+14165550002", status: "active", voiceEnabled: true, smsEnabled: false },
@@ -106,6 +110,28 @@ describe("refreshBusinessSnapshot write-through", () => {
     expect(cached).not.toBeNull();
     expect(cached?.displayName).toBe("Maple Family Clinic");
     expect(cached?.bookingPolicy).toBe("Confirm before booking.");
+  });
+
+  it("carries every receptionist with its own rules and opt-outs", async () => {
+    const second = { ...profileRow, id: "00000000-0000-4000-8000-000000000003", name: "After hours", isDefault: false, greeting: "Evening!", bookingMode: "off", voice: "cedar", language: "fr" };
+    mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({
+      businesses: [businessRow],
+      agents: [profileRow, second],
+      agent_rules: [
+        { id: "rule-a", agentId: profileRow.id, title: "Day", content: "Day rule", sortOrder: 0 },
+        { id: "rule-b", agentId: second.id, title: "Night", content: "Night rule", sortOrder: 0 },
+      ],
+      services: [{ id: "svc-1", name: "Consultation", durationMinutes: 30 }, { id: "svc-2", name: "Surgery", durationMinutes: 60 }],
+      agent_service_opt_outs: [{ agentId: second.id, serviceId: "svc-2" }],
+      agent_knowledge_opt_outs: [{ agentId: second.id, documentId: "doc-1", snippetId: null }],
+    })));
+    const cache = createInMemorySnapshotCache();
+    await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
+    const cached = await cache.get(businessId);
+    expect(cached?.rules?.map((rule) => rule.id)).toEqual(["rule-a"]);
+    expect(cached?.receptionists?.map((receptionist) => [receptionist.name, receptionist.isDefault])).toEqual([["Receptionist", true], ["After hours", false]]);
+    const night = cached?.receptionists?.[1];
+    expect(night).toMatchObject({ greeting: "Evening!", bookingMode: "off", voice: "cedar", language: "fr", excludedServiceIds: ["svc-2"], excludedKnowledgeDocumentIds: ["doc-1"], rules: [{ id: "rule-b" }] });
   });
 
   it("tolerates a failing cache write without failing the refresh", async () => {

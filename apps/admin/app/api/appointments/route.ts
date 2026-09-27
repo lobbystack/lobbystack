@@ -2,12 +2,25 @@ import { and, asc, eq, gte } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { appointments, contacts, services, staff } from "@lobbystack/db";
-import { asApiResponse, withOperatorTransaction } from "@/lib/api-helpers";
+import { listAppointmentsInRange } from "@lobbystack/domain";
+import { asApiResponse, jsonError, withOperatorTransaction } from "@/lib/api-helpers";
+import { createDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
+    // `from` and `to` (ISO times) ask for a calendar range; without them, upcoming appointments.
+    const params = new URL(request.url).searchParams;
+    const from = params.get("from");
+    const to = params.get("to");
+    if (from || to) {
+      const range = { from: new Date(from ?? ""), to: new Date(to ?? "") };
+      if (!Number.isFinite(range.from.getTime()) || !Number.isFinite(range.to.getTime())) return jsonError("from and to must be ISO times.", 400, "invalid_request");
+      return NextResponse.json(await withOperatorTransaction(request, async ({ session, businessId }) => ({
+        appointments: await listAppointmentsInRange(createDomainContext(), { userId: session.user.id, businessId, ...range }),
+      })));
+    }
     return NextResponse.json(await withOperatorTransaction(request, async ({ businessId, tx }) => {
       const rows = await tx.select({
         id: appointments.id,

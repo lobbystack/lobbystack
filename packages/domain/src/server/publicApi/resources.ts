@@ -153,6 +153,7 @@ export async function listStaffResources(tx: DatabaseTransaction, businessId: st
 const callColumns = {
   id: calls.id,
   transport: calls.transport,
+  agentId: calls.agentId,
   disposition: calls.disposition,
   startedAt: calls.startedAt,
   endedAt: calls.endedAt,
@@ -169,7 +170,7 @@ const callColumns = {
   recordingRetentionUntil: storageObjects.retentionUntil,
 };
 
-type CallRow = { id: string; transport: string; disposition: string | null; startedAt: Date; endedAt: Date | null; createdAt: Date; providerDurationSeconds: number | null; contactId: string | null; contactName: string | null; contactPhone: string | null; conversationSummary: string | null; currentIntent: string | null; persistedOutcome: Record<string, unknown> | null; recordingObjectId: string | null; recordingStatus: string | null; recordingRetentionUntil: Date | null };
+type CallRow = { id: string; transport: string; agentId: string; disposition: string | null; startedAt: Date; endedAt: Date | null; createdAt: Date; providerDurationSeconds: number | null; contactId: string | null; contactName: string | null; contactPhone: string | null; conversationSummary: string | null; currentIntent: string | null; persistedOutcome: Record<string, unknown> | null; recordingObjectId: string | null; recordingStatus: string | null; recordingRetentionUntil: Date | null };
 
 function callQuery(tx: DatabaseTransaction, where: SQL | undefined) {
   return tx.select(callColumns).from(calls)
@@ -192,6 +193,7 @@ export function serializeCall(row: CallRow): ApiCall {
     outcome: outcome.kind === "booked" ? "appointment_booked" : outcome.kind === "booking_in_progress" ? "booking_incomplete" : outcome.kind === "message_taking" ? "message_taken" : outcome.kind === "summary" ? "conversation" : "none",
     summary: summaryText ?? fallbackSummary,
     end_reason: row.disposition,
+    agent_id: row.agentId,
     contact_id: row.contactId,
     caller_name: row.contactName,
     caller_phone: row.contactPhone,

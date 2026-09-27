@@ -11,18 +11,24 @@ const reorderSchema = z.object({ ruleIds: z.array(z.string().uuid()).max(100) })
 const deleteSchema = z.object({ ruleId: z.string().uuid() });
 
 export const runtime = "nodejs";
+
+// `?agentId=` scopes rules to one receptionist; without it, the default receptionist.
+function agentIdFrom(request: Request): { agentId?: string } {
+  const value = new URL(request.url).searchParams.get("agentId");
+  return value ? { agentId: z.string().uuid().parse(value) } : {};
+}
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    return NextResponse.json(await withOperatorTransaction(request, async ({ session, businessId }) => await listAgentRules(createDomainContext(), { userId: session.user.id, businessId })));
+    return NextResponse.json(await withOperatorTransaction(request, async ({ session, businessId }) => await listAgentRules(createDomainContext(), { userId: session.user.id, businessId, ...agentIdFrom(request) })));
   } catch (error) { return asApiResponse(error); }
 }
 
 export async function POST(request: Request) {
   try {
     const body = createSchema.parse(await readJson(request));
-    return NextResponse.json(await withOperatorTransaction(request, async ({ session, businessId }) => await createAgentRule(createDomainContext(), { userId: session.user.id, businessId, title: body.title, content: body.content, ...(body.active === undefined ? {} : { active: body.active }) })), { status: 201 });
+    return NextResponse.json(await withOperatorTransaction(request, async ({ session, businessId }) => await createAgentRule(createDomainContext(), { userId: session.user.id, businessId, ...agentIdFrom(request), title: body.title, content: body.content, ...(body.active === undefined ? {} : { active: body.active }) })), { status: 201 });
   } catch (error) { return asApiResponse(error); }
 }
 

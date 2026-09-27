@@ -1,8 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
-import { widgetKeys, withBusinessTransaction } from "@lobbystack/db";
+import { agents, widgetKeys, withBusinessTransaction } from "@lobbystack/db";
 import { DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID } from "@lobbystack/shared";
 
 import { getWorkerDatabase, withOperatorTransaction } from "./api-helpers";
@@ -37,6 +37,8 @@ export type LiveWebCallRequest = {
   visitorId?: string;
   pageUrl?: string;
   prospectDemoToken?: string;
+  /** Dashboard test calls only: the receptionist to test. Defaults to the default receptionist. */
+  agentId?: string;
 };
 
 /** Who is calling, and on whose behalf. Decides billing, limits and tools. */
@@ -48,6 +50,8 @@ export type LiveWebCallAccess = {
   visitorId?: string;
   dashboardTestCall: boolean;
   prospectDemoId?: string;
+  /** The receptionist that answers. Missing means the business's default receptionist. */
+  agentId?: string;
 };
 
 export type LiveWebCallDenied = { status: number; code: string };
@@ -98,9 +102,13 @@ export async function resolveLiveWebCallAccess(request: Request, body: LiveWebCa
     const origin = request.headers.get("origin");
     const callerOrigin = origin ? normalizeOrigin(origin) : undefined;
     if (!callerOrigin || !trusted.includes(callerOrigin)) return { status: 403, code: "origin_denied" };
-    const businessId = await withOperatorTransaction(request, async ({ businessId }) => businessId, { minimumRole: "business_admin" });
+    // The operator can test one receptionist; it must belong to their business.
+    const { businessId, agentId } = await withOperatorTransaction(request, async ({ businessId, tx }) => {
+      const agent = body.agentId ? (await tx.select({ id: agents.id }).from(agents).where(and(eq(agents.id, body.agentId), eq(agents.businessId, businessId), isNull(agents.archivedAt))).limit(1))[0] : undefined;
+      return { businessId, agentId: agent?.id };
+    }, { minimumRole: "business_admin" });
     // Rate limits count per origin, so record the trusted origin the call came from.
-    return { businessId, origin: callerOrigin, widgetId: body.widgetId, dashboardTestCall: true, ...(body.visitorId ? { visitorId: body.visitorId } : {}) };
+    return { businessId, origin: callerOrigin, widgetId: body.widgetId, dashboardTestCall: true, ...(agentId ? { agentId } : {}), ...(body.visitorId ? { visitorId: body.visitorId } : {}) };
   }
 
   const bearer = request.headers.get("authorization")?.match(/^Bearer (.+)$/)?.[1];
@@ -108,9 +116,9 @@ export async function resolveLiveWebCallAccess(request: Request, body: LiveWebCa
     const token = verifyWidgetSessionToken(bearer);
     const parentOrigin = request.headers.get("x-widget-parent-origin");
     if (!token || !parentOrigin || token.origin !== normalizeOrigin(parentOrigin) || (body.visitorId && token.visitorId !== body.visitorId)) return { status: 403, code: "widget_session_invalid" };
-    const key = await withBusinessTransaction(getWorkerDatabase().db, { businessId: token.businessId, actorType: "worker" }, async (tx) => (await tx.select({ status: widgetKeys.status, allowedOrigins: widgetKeys.allowedOrigins }).from(widgetKeys).where(eq(widgetKeys.id, token.widgetKeyId)).limit(1))[0]);
+    const key = await withBusinessTransaction(getWorkerDatabase().db, { businessId: token.businessId, actorType: "worker" }, async (tx) => (await tx.select({ status: widgetKeys.status, allowedOrigins: widgetKeys.allowedOrigins, agentId: widgetKeys.agentId }).from(widgetKeys).where(eq(widgetKeys.id, token.widgetKeyId)).limit(1))[0]);
     if (!key || key.status !== "active" || !isAllowedWidgetOrigin(token.origin, key.allowedOrigins, { allowAdminOrigin: false, allowLocalhost: false })) return { status: 403, code: "widget_origin_denied" };
-    return { businessId: token.businessId, origin: token.origin, widgetId: WIDGET_VOICE_ID, visitorId: token.visitorId, dashboardTestCall: false };
+    return { businessId: token.businessId, origin: token.origin, widgetId: WIDGET_VOICE_ID, visitorId: token.visitorId, dashboardTestCall: false, agentId: key.agentId };
   }
 
   if (body.prospectDemoToken && body.businessSlug) {

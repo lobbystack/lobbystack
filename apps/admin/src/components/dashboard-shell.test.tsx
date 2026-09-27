@@ -19,13 +19,13 @@ beforeEach(() => {
   vi.stubGlobal("matchMedia", vi.fn(query => ({ matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
 });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
-function setup(role = "business_owner") {
+function setup(role = "business_owner", navigation: Parameters<typeof DashboardShell>[0]["navigation"] = null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Tenant name", active: true, role }] });
   client.setQueryData(["billing", "business"], { account: null, permissions: { hasCheckoutAccess: false }, availableCheckoutPlans: [], availableCheckoutIntervals: { starter: [], pro: [] } });
   client.setQueryData(["phone-numbers", "business"], { phoneNumbers: [] });
   client.setQueryData(["setup", "business"], { steps: [] });
-  const content = () => <QueryClientProvider client={client}><DashboardShell user={{ email: "operator@example.invalid", name: "Operator" }}><p>Page content</p></DashboardShell></QueryClientProvider>;
+  const content = () => <QueryClientProvider client={client}><DashboardShell navigation={navigation} user={{ email: "operator@example.invalid", name: "Operator" }}><p>Page content</p></DashboardShell></QueryClientProvider>;
   const view = render(content());
   return { ...view, navigate(pathname: string) { route.pathname = pathname; view.rerender(content()); } };
 }
@@ -56,5 +56,20 @@ describe("original shared navigation", () => {
       view.navigate(href!);
       await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     }
+  });
+});
+describe("new_navigation flag", () => {
+  const snapshot = { businessId: "business", businessName: "Tenant name", timezone: "America/Toronto", staffEnabled: false, canManage: true, receptionists: [{ id: "0b8a4c7e-3f1d-4a55-9d3e-2c1f0e9a7b61", name: "Front desk", isDefault: true }] };
+  it("keeps the original sidebar while the flag is off", () => {
+    setup("business_owner", { ...snapshot, newNavigation: false });
+    const links = screen.getAllByRole("link").map(link => link.getAttribute("href"));
+    expect(links).toContain("/agent/rules");
+    expect(links).not.toContain("/inbox");
+  });
+  it("shows the business sidebar when the flag is on", () => {
+    setup("business_owner", { ...snapshot, newNavigation: true });
+    const links = screen.getAllByRole("link").map(link => link.getAttribute("href"));
+    expect(links).toEqual(expect.arrayContaining(["/inbox", "/calendar", "/services", "/numbers", "/receptionists/0b8a4c7e-3f1d-4a55-9d3e-2c1f0e9a7b61"]));
+    expect(links).not.toContain("/agent/rules");
   });
 });

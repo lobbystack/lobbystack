@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { buildBrowserSessionConfig } from "@lobbystack/agent-core/live/session";
 import { finishLiveCall, getWebVoiceBillingAllowance, recordProspectDemoCallError, recordProspectDemoCallStarted, recordVoiceSnapshotLoaded, startLiveWebCall } from "@lobbystack/domain";
-import type { BusinessContextSnapshot } from "@lobbystack/shared";
+import { snapshotForReceptionist, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { asApiResponse, readJson } from "@/lib/api-helpers";
 import { loadValidBusinessSnapshot } from "@/lib/business-snapshot";
 import { createWorkerDomainContext } from "@/lib/domain-context";
@@ -15,6 +15,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_SDP_BYTES = 64 * 1024;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function parse(body: unknown): LiveWebCallRequest | undefined {
   if (!body || typeof body !== "object") return undefined;
@@ -24,7 +25,8 @@ function parse(body: unknown): LiveWebCallRequest | undefined {
   const sdp = typeof value.sdp === "string" && value.sdp.trim() && value.sdp.length <= MAX_SDP_BYTES ? value.sdp : undefined;
   const widgetId = text("widgetId", 128);
   if (!sdp || !widgetId || !(LIVE_WEB_CALL_WIDGET_IDS as readonly string[]).includes(widgetId)) return undefined;
-  const optional = { businessSlug: text("businessSlug", 128), visitorId: text("visitorId", 128), pageUrl: text("pageUrl"), prospectDemoToken: text("prospectDemoToken", 512) };
+  const agentId = text("agentId", 36);
+  const optional = { businessSlug: text("businessSlug", 128), visitorId: text("visitorId", 128), pageUrl: text("pageUrl"), prospectDemoToken: text("prospectDemoToken", 512), agentId: agentId && UUID.test(agentId) ? agentId : undefined };
   return { sdp, widgetId, ...Object.fromEntries(Object.entries(optional).filter(([, entry]) => entry !== undefined)) };
 }
 
@@ -69,7 +71,9 @@ export async function POST(request: Request) {
       const billing = await getWebVoiceBillingAllowance(domain, { businessId: access.businessId, ...(maxDurationMs ? { maxDurationMs } : {}) });
       if (!billing.allowed) return denied(402, billing.errorCode ?? "voice_limit_reached", cors);
     }
-    const snapshot = await loadValidBusinessSnapshot(access.businessId) as BusinessContextSnapshot | null;
+    const businessSnapshot = await loadValidBusinessSnapshot(access.businessId) as BusinessContextSnapshot | null;
+    // Answer as the receptionist behind the widget key or chosen for the test call.
+    const snapshot = businessSnapshot ? snapshotForReceptionist(businessSnapshot, access.agentId) : null;
     if (!snapshot) return denied(409, "snapshot_missing", cors);
     // The widget offers voice only to businesses with a phone number.
     if (access.widgetId === "lobbystack-widget" && !snapshot.contactChannels?.phoneNumber) return denied(403, "voice_unavailable", cors);
@@ -85,6 +89,7 @@ export async function POST(request: Request) {
         sessionId,
         widgetId: access.widgetId,
         billable: !access.prospectDemoId,
+        ...(snapshot?.agentId ? { agentId: snapshot.agentId } : {}),
         ...(maxDurationMs ? { maxDurationMs } : {}),
         ...(access.prospectDemoId ? { sessionPurpose: "prospect_demo", prospectDemoId: access.prospectDemoId } : {}),
         // Prospect demos keep no page URL.
@@ -99,6 +104,7 @@ export async function POST(request: Request) {
         callId,
         ...(call.conversationId ? { conversationId: call.conversationId } : {}),
         channel: "web_voice",
+        ...(snapshot.agentId ? { agentId: snapshot.agentId } : {}),
         ...(call.maxDurationMs ? { maxDurationMs: call.maxDurationMs } : {}),
         ...(access.prospectDemoId ? { intakeOnly: true } : {}),
       });

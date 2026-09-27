@@ -70,9 +70,9 @@ describe("cursor pagination", () => {
 describe("v1 resource serializers match the published schemas", () => {
   const now = new Date("2026-09-27T15:00:00.000Z");
   it("serializes calls", () => {
-    const call = serializeCall({ id: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", transport: "web_voice", disposition: "caller_hangup", startedAt: now, endedAt: new Date(now.getTime() + 95_000), createdAt: now, providerDurationSeconds: null, contactId: null, contactName: null, contactPhone: null, conversationSummary: null, currentIntent: null, persistedOutcome: { kind: "booked", serviceName: "Cut", startsAt: now.toISOString() }, recordingObjectId: null, recordingStatus: null, recordingRetentionUntil: null });
+    const call = serializeCall({ id: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", transport: "web_voice", agentId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e50", disposition: "caller_hangup", startedAt: now, endedAt: new Date(now.getTime() + 95_000), createdAt: now, providerDurationSeconds: null, contactId: null, contactName: null, contactPhone: null, conversationSummary: null, currentIntent: null, persistedOutcome: { kind: "booked", serviceName: "Cut", startsAt: now.toISOString() }, recordingObjectId: null, recordingStatus: null, recordingRetentionUntil: null });
     expect(apiCallSchema.parse(call)).toEqual(call);
-    expect(call).toMatchObject({ channel: "web", status: "completed", outcome: "appointment_booked", duration_seconds: 95, recording_available: false });
+    expect(call).toMatchObject({ channel: "web", status: "completed", outcome: "appointment_booked", duration_seconds: 95, recording_available: false, agent_id: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e50" });
   });
 
   it("serializes appointments with the public status names", () => {

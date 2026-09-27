@@ -14,6 +14,7 @@ import enKnowledge from "../../public/locales/en/knowledge.json";
 import enMessages from "../../public/locales/en/messages.json";
 import enNav from "../../public/locales/en/nav.json";
 import enOnboarding from "../../public/locales/en/onboarding.json";
+import enReceptionists from "../../public/locales/en/receptionists.json";
 import enSettings from "../../public/locales/en/settings.json";
 import enWidget from "../../public/locales/en/widget.json";
 import frAdmin from "../../public/locales/fr/admin.json";
@@ -30,6 +31,7 @@ import frKnowledge from "../../public/locales/fr/knowledge.json";
 import frMessages from "../../public/locales/fr/messages.json";
 import frNav from "../../public/locales/fr/nav.json";
 import frOnboarding from "../../public/locales/fr/onboarding.json";
+import frReceptionists from "../../public/locales/fr/receptionists.json";
 import frSettings from "../../public/locales/fr/settings.json";
 import frWidget from "../../public/locales/fr/widget.json";
 
@@ -53,6 +55,7 @@ export const localeResources: Record<SupportedLocale, Record<string, Record<stri
     messages: enMessages,
     nav: enNav,
     onboarding: enOnboarding,
+    receptionists: enReceptionists,
     settings: enSettings,
     widget: enWidget,
   },
@@ -71,6 +74,7 @@ export const localeResources: Record<SupportedLocale, Record<string, Record<stri
     messages: frMessages,
     nav: frNav,
     onboarding: frOnboarding,
+    receptionists: frReceptionists,
     settings: frSettings,
     widget: frWidget,
   },

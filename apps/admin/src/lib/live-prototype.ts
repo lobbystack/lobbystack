@@ -2,7 +2,8 @@ import OpenAI from "openai";
 
 import { jsonError } from "./api-helpers";
 
-type WorkerAttachInput = { sessionId: string; businessId: string; callId: string; channel: "voice" | "web_voice"; conversationId?: string; callerPhone?: string; maxDurationMs?: number; intakeOnly?: boolean };
+// `agentId` is the receptionist answering; the worker projects the snapshot for it.
+type WorkerAttachInput = { sessionId: string; businessId: string; callId: string; channel: "voice" | "web_voice"; conversationId?: string; callerPhone?: string; maxDurationMs?: number; intakeOnly?: boolean; agentId?: string };
 
 let client: OpenAI | undefined;
 

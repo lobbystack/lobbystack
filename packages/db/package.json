@@ -33,7 +33,8 @@
     "db:check": "tsx src/cli.ts check",
     "db:seed": "tsx src/cli.ts seed",
     "db:reset:test": "tsx src/cli.ts reset-test",
-    "db:verify-rls": "tsx src/cli.ts verify-rls"
+    "db:verify-rls": "tsx src/cli.ts verify-rls",
+    "db:flag": "tsx src/cli.ts flag"
   },
   "dependencies": {
     "@lobbystack/contracts": "workspace:*",

@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
 
-export default function AgentIntegrationsPage() {
+import { redirectLegacyPage } from "@/lib/navigation-server";
+
+export default async function AgentIntegrationsPage() {
+  await redirectLegacyPage("/agent/integrations");
   redirect("/agent");
 }

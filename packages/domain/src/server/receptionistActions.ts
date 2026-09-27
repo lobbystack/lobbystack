@@ -1,8 +1,8 @@
 import { and, asc, eq, ilike, or } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { appointments, contacts, receptionistProfiles, services, withBusinessTransaction } from "@lobbystack/db";
-import { normalizeAppointmentChangePolicy, type HoursWindow } from "@lobbystack/shared";
+import { appointments, contacts, services, withBusinessTransaction } from "@lobbystack/db";
+import type { HoursWindow } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import { createAppointmentChangeVerification } from "./appointmentChanges";
@@ -12,6 +12,7 @@ import type { DomainContext } from "./context";
 import { appendMessage, getOrCreateConversation } from "./conversations";
 import { queueOperatorAlert } from "./notifications";
 import { recordProductEvent } from "./productEvents";
+import { readReceptionistAppointmentChangePolicy } from "./receptionists";
 import { createVoiceFollowUpTask } from "./voice";
 
 // Actions the receptionist agent takes on a business's behalf, whatever the
@@ -19,10 +20,12 @@ import { createVoiceFollowUpTask } from "./voice";
 
 export type ReceptionistChannel = "voice" | "web_voice" | "web_chat" | "sms";
 
-async function resolveActiveService(context: DomainContext, businessId: string, serviceName: string) {
+// `excludedServiceIds` are services the receptionist on this conversation opted out of.
+async function resolveActiveService(context: DomainContext, businessId: string, serviceName: string, excludedServiceIds?: string[]) {
   return await withBusinessTransaction(context.db, { businessId, actorType: "worker" }, async (tx) => {
     const normalized = serviceName.trim().toLowerCase();
-    return (await tx.select({ id: services.id, name: services.name, durationMinutes: services.durationMinutes }).from(services).where(and(eq(services.businessId, businessId), eq(services.active, true), or(eq(services.slug, normalized), ilike(services.name, serviceName.trim())))).limit(1))[0];
+    const service = (await tx.select({ id: services.id, name: services.name, durationMinutes: services.durationMinutes }).from(services).where(and(eq(services.businessId, businessId), eq(services.active, true), or(eq(services.slug, normalized), ilike(services.name, serviceName.trim())))).limit(1))[0];
+    return service && !excludedServiceIds?.includes(service.id) ? service : undefined;
   });
 }
 
@@ -73,9 +76,9 @@ export function candidateStartTimes(input: { date: string; timezone: string; hou
 
 export async function findOpenings(
   context: DomainContext,
-  input: { businessId: string; serviceName: string; date: string; timezone: string; hours: HoursWindow[]; preferredHour24?: number; preferredMinute?: number; limit?: number; callId?: string },
+  input: { businessId: string; serviceName: string; date: string; timezone: string; hours: HoursWindow[]; preferredHour24?: number; preferredMinute?: number; limit?: number; callId?: string; excludedServiceIds?: string[] },
 ) {
-  const service = await resolveActiveService(context, input.businessId, input.serviceName);
+  const service = await resolveActiveService(context, input.businessId, input.serviceName, input.excludedServiceIds);
   if (!service) return { ok: false as const, reason: "Service is not available." };
   const candidates = candidateStartTimes({
     date: input.date,
@@ -104,9 +107,9 @@ export async function findOpenings(
 
 export async function checkOpening(
   context: DomainContext,
-  input: { businessId: string; serviceName: string; startsAt: string; timezone: string; callId?: string },
+  input: { businessId: string; serviceName: string; startsAt: string; timezone: string; callId?: string; excludedServiceIds?: string[] },
 ) {
-  const service = await resolveActiveService(context, input.businessId, input.serviceName);
+  const service = await resolveActiveService(context, input.businessId, input.serviceName, input.excludedServiceIds);
   if (!service) return { ok: false as const, reason: "Service is not available." };
   const slots = await findAvailability(context, { businessId: input.businessId, serviceId: service.id, startsAt: input.startsAt, timezone: input.timezone });
   if (input.callId) await recordCallSchedulingProgress(context, { businessId: input.businessId, callId: input.callId, serviceName: service.name, startsAt: input.startsAt });
@@ -115,10 +118,10 @@ export async function checkOpening(
 
 export async function bookForCaller(
   context: DomainContext,
-  input: { businessId: string; serviceName: string; startsAt: string; timezone: string; contactPhone: string; contactName?: string; smsConsentGranted?: boolean; channel: ReceptionistChannel; callId?: string },
+  input: { businessId: string; serviceName: string; startsAt: string; timezone: string; contactPhone: string; contactName?: string; smsConsentGranted?: boolean; channel: ReceptionistChannel; callId?: string; excludedServiceIds?: string[] },
 ) {
   const distinctId = getPostHogDistinctIdForBusinessSystem(input.businessId);
-  const service = await resolveActiveService(context, input.businessId, input.serviceName);
+  const service = await resolveActiveService(context, input.businessId, input.serviceName, input.excludedServiceIds);
   if (!service) {
     await safeRecordProductEvent(context, { name: "appointment.booking_failed", businessId: input.businessId, distinctId, properties: { reason: "service_unavailable", requestedServiceName: input.serviceName, channel: input.channel, sourceChannel: input.channel } });
     return { ok: false as const, reason: "Service is not available." };
@@ -144,13 +147,12 @@ export async function bookForCaller(
   }
 }
 
-export async function lookupCallerAppointments(context: DomainContext, input: { businessId: string; callerPhone: string }) {
+export async function lookupCallerAppointments(context: DomainContext, input: { businessId: string; callerPhone: string; agentId?: string }) {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const [rows, profile] = await Promise.all([
+    const [rows, policy] = await Promise.all([
       tx.select({ id: appointments.id }).from(appointments).innerJoin(contacts, eq(appointments.contactId, contacts.id)).where(and(eq(appointments.businessId, input.businessId), eq(contacts.phone, input.callerPhone), eq(appointments.status, "confirmed"))).orderBy(asc(appointments.startsAt)),
-      tx.select({ appointmentChangePolicy: receptionistProfiles.appointmentChangePolicy }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1),
+      readReceptionistAppointmentChangePolicy(tx, input.businessId, input.agentId),
     ]);
-    const policy = normalizeAppointmentChangePolicy(profile[0]?.appointmentChangePolicy);
     // Only say whether the phone matched; never read appointment details out
     // before the caller is verified.
     return { ok: true as const, policy: { ...policy, enabled: policy.enabled && rows.length > 0 }, phoneMatched: rows.length > 0, appointmentCount: rows.length };
@@ -159,7 +161,7 @@ export async function lookupCallerAppointments(context: DomainContext, input: { 
 
 export async function verifyCallerForChange(
   context: DomainContext,
-  input: { businessId: string; callerPhone: string; action: "cancel" | "reschedule"; appointmentId?: string; callerName?: string; appointmentStartsAt?: string; serviceName?: string },
+  input: { businessId: string; callerPhone: string; action: "cancel" | "reschedule"; appointmentId?: string; callerName?: string; appointmentStartsAt?: string; serviceName?: string; agentId?: string },
 ) {
   const verification = await createAppointmentChangeVerification(context, input);
   if (!verification) return { ok: false as const, verified: false, reason: "The appointment could not be verified." };
@@ -169,22 +171,22 @@ export async function verifyCallerForChange(
 
 export async function cancelForCaller(
   context: DomainContext,
-  input: { businessId: string; callerPhone: string; appointmentId: string; verificationId?: string; finalConfirmation: boolean },
+  input: { businessId: string; callerPhone: string; appointmentId: string; verificationId?: string; finalConfirmation: boolean; agentId?: string },
 ) {
   if (!input.finalConfirmation) return { ok: false as const, reason: "Final confirmation is required." };
   if (!input.verificationId) return { ok: false as const, reason: "The appointment change verification is required." };
-  const result = await cancelAppointmentForCaller(context, { businessId: input.businessId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, verificationId: input.verificationId });
+  const result = await cancelAppointmentForCaller(context, { businessId: input.businessId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, verificationId: input.verificationId, ...(input.agentId ? { agentId: input.agentId } : {}) });
   if (!result) return { ok: false as const, reason: "The appointment could not be verified." };
   return { ok: true as const, appointmentId: input.appointmentId, startsAt: result.startsAt.toISOString(), status: "canceled" };
 }
 
 export async function rescheduleForCaller(
   context: DomainContext,
-  input: { businessId: string; callerPhone: string; appointmentId: string; startsAt: string; verificationId?: string; finalConfirmation: boolean },
+  input: { businessId: string; callerPhone: string; appointmentId: string; startsAt: string; verificationId?: string; finalConfirmation: boolean; agentId?: string },
 ) {
   if (!input.finalConfirmation) return { ok: false as const, reason: "Final confirmation is required." };
   if (!input.verificationId) return { ok: false as const, reason: "The appointment change verification is required." };
-  const result = await rescheduleAppointmentForCaller(context, { businessId: input.businessId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, startsAt: input.startsAt, verificationId: input.verificationId });
+  const result = await rescheduleAppointmentForCaller(context, { businessId: input.businessId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, startsAt: input.startsAt, verificationId: input.verificationId, ...(input.agentId ? { agentId: input.agentId } : {}) });
   if (!result) return { ok: false as const, reason: "The appointment could not be verified." };
   return { ok: true as const, appointmentId: input.appointmentId, startsAt: result.startsAt.toISOString(), status: "confirmed" };
 }

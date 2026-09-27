@@ -104,6 +104,7 @@ export const apiCallSchema = z.object({
   outcome: z.enum(["appointment_booked", "booking_incomplete", "message_taken", "conversation", "none"]),
   summary: z.string().nullable().describe("Short summary of the call, when one is available."),
   end_reason: z.string().nullable().describe("Why the call ended, as reported by the call provider or receptionist."),
+  agent_id: id.describe("The receptionist that answered the call. A business can run several receptionists; each phone number and website widget routes to one."),
   contact_id: id.nullable(),
   caller_name: z.string().nullable(),
   caller_phone: z.string().nullable(),

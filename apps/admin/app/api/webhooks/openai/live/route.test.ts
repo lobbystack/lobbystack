@@ -66,6 +66,28 @@ describe("POST /api/webhooks/openai/live", () => {
     expect(mocks.finishLiveCall).not.toHaveBeenCalled();
   });
 
+  it("answers as the receptionist the dialled number routes to", async () => {
+    const receptionist = (id: string, greeting: string, isDefault: boolean) => ({ id, name: id, isDefault, greeting, voiceInstructions: "v", smsInstructions: "s", chatInstructions: "c", summary: "s", bookingPolicy: "b", transferPolicy: { mode: "never" }, voice: id === "night" ? "cedar" : undefined, rules: [], excludedServiceIds: [], excludedKnowledgeDocumentIds: [], excludedSnippetIds: [] });
+    mocks.execute.mockResolvedValue({ rows: [{ business_id: "biz_1", agent_id: "night" }] });
+    mocks.snapshot.mockResolvedValue({ businessId: "biz_1", greeting: "Day", services: [], receptionists: [receptionist("day", "Day", true), receptionist("night", "Night", false)] });
+    mocks.startLivePhoneCall.mockResolvedValue({ callId: "call_1", conversationId: "conv_1", duplicate: false, blocked: false });
+    mocks.accept.mockResolvedValue(undefined);
+    mocks.attach.mockResolvedValue(undefined);
+    mocks.unwrap.mockResolvedValue({
+      type: "live.transport.incoming",
+      data: { session_id: "live_2", sip_headers: [{ name: "Diversion", value: "<sip:+15815550100@example.com>" }, { name: "From", value: "<sip:+14165550134@example.com>" }] },
+    });
+    const { buildPhoneSessionConfig } = await import("@lobbystack/agent-core/live/session");
+
+    const response = await POST(new Request("https://admin.lobbystack.test/api/webhooks/openai/live", { method: "POST", body: "{}" }));
+
+    expect(response.status).toBe(200);
+    expect(mocks.execute).toHaveBeenCalledTimes(1);
+    expect(mocks.startLivePhoneCall).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ businessId: "biz_1", agentId: "night" }));
+    expect(vi.mocked(buildPhoneSessionConfig)).toHaveBeenCalledWith(expect.objectContaining({ agentId: "night", greeting: "Night", voice: "cedar" }));
+    expect(mocks.attach).toHaveBeenCalledWith(expect.objectContaining({ sessionId: "live_2", agentId: "night" }));
+  });
+
   it("leaves the call alone when the number lookup fails", async () => {
     mocks.execute.mockRejectedValue(new Error("connection terminated"));
     vi.spyOn(console, "error").mockImplementation(() => undefined);

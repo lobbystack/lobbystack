@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   withOperatorTransaction: vi.fn(),
   resolveWebVoiceAccess: vi.fn(),
   verifyWidgetSessionToken: vi.fn(),
-  widgetKey: { status: "active", allowedOrigins: ["https://client.example"] } as { status: string; allowedOrigins: string[] } | undefined,
+  widgetKey: { status: "active", allowedOrigins: ["https://client.example"], agentId: "agent_widget" } as { status: string; allowedOrigins: string[]; agentId?: string } | undefined,
 }));
 
 vi.mock("./api-helpers", () => ({
@@ -32,25 +32,37 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv("AUTH_TRUSTED_ORIGINS", "");
   vi.stubEnv("APP_BASE_URL", app);
-  mocks.widgetKey = { status: "active", allowedOrigins: ["https://client.example"] };
+  mocks.widgetKey = { status: "active", allowedOrigins: ["https://client.example"], agentId: "agent_widget" };
 });
 afterEach(() => { vi.unstubAllEnvs(); });
 
 describe("resolveLiveWebCallAccess", () => {
   it("lets an operator test-call their own business from the dashboard", async () => {
-    mocks.withOperatorTransaction.mockResolvedValue("biz_1");
+    mocks.withOperatorTransaction.mockResolvedValue({ businessId: "biz_1" });
     await expect(resolveLiveWebCallAccess(request({ origin: app }), { sdp: "v=0", widgetId: "lobbystack-dashboard-test-call" })).resolves.toMatchObject({ businessId: "biz_1", dashboardTestCall: true, origin: app });
   });
 
+  it("tests the receptionist the operator picked, only when it belongs to their business", async () => {
+    const agentId = "0b8a4c7e-3f1d-4a55-9d3e-2c1f0e9a7b61";
+    const rows: Array<{ id: string }> = [{ id: agentId }];
+    const tx = { select: () => ({ from: () => ({ where: () => ({ limit: async () => rows }) }) }) };
+    mocks.withOperatorTransaction.mockImplementation(async (_request: Request, callback: (input: unknown) => unknown) => await callback({ businessId: "biz_1", tx }));
+    await expect(resolveLiveWebCallAccess(request({ origin: app }), { sdp: "v=0", widgetId: "lobbystack-dashboard-test-call", agentId })).resolves.toMatchObject({ businessId: "biz_1", agentId });
+    rows.length = 0;
+    const foreign = await resolveLiveWebCallAccess(request({ origin: app }), { sdp: "v=0", widgetId: "lobbystack-dashboard-test-call", agentId });
+    expect(foreign).toMatchObject({ businessId: "biz_1" });
+    expect(foreign).not.toHaveProperty("agentId");
+  });
+
   it("accepts the dashboard's origin when the proxy hands the app an internal URL", async () => {
-    mocks.withOperatorTransaction.mockResolvedValue("biz_1");
+    mocks.withOperatorTransaction.mockResolvedValue({ businessId: "biz_1" });
     const internal = new Request("http://[::]:3000/api/voice/live/session", { method: "POST", headers: { origin: app } });
     await expect(resolveLiveWebCallAccess(internal, { sdp: "v=0", widgetId: "lobbystack-dashboard-test-call" })).resolves.toMatchObject({ businessId: "biz_1", dashboardTestCall: true, origin: app });
   });
 
   it("records the trusted origin the call came from, not the first configured one", async () => {
     vi.stubEnv("AUTH_TRUSTED_ORIGINS", "https://second.lobbystack.test");
-    mocks.withOperatorTransaction.mockResolvedValue("biz_1");
+    mocks.withOperatorTransaction.mockResolvedValue({ businessId: "biz_1" });
     await expect(resolveLiveWebCallAccess(request({ origin: "https://second.lobbystack.test" }), { sdp: "v=0", widgetId: "lobbystack-dashboard-test-call" })).resolves.toMatchObject({ businessId: "biz_1", origin: "https://second.lobbystack.test" });
   });
 
@@ -68,7 +80,7 @@ describe("resolveLiveWebCallAccess", () => {
   it("accepts the widget's session token from the page it was issued to", async () => {
     mocks.verifyWidgetSessionToken.mockReturnValue({ businessId: "biz_2", widgetKeyId: "key_1", visitorId: "visitor_1", origin: "https://client.example" });
     await expect(resolveLiveWebCallAccess(request({ authorization: "Bearer token", "x-widget-parent-origin": "https://client.example" }), { sdp: "v=0", widgetId: "lobbystack-widget", visitorId: "visitor_1" }))
-      .resolves.toMatchObject({ businessId: "biz_2", origin: "https://client.example", widgetId: "lobbystack-widget", visitorId: "visitor_1", dashboardTestCall: false });
+      .resolves.toMatchObject({ businessId: "biz_2", origin: "https://client.example", widgetId: "lobbystack-widget", visitorId: "visitor_1", dashboardTestCall: false, agentId: "agent_widget" });
   });
 
   it("rejects a widget token presented from a different page", async () => {

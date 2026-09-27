@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 
 import { getCachedBusinessSnapshot, getWebVoiceBillingAllowance, getWidgetChatAllowance, registerWidgetVisitor } from "@lobbystack/domain";
 
+import { snapshotForReceptionist } from "@lobbystack/shared";
+
 import { asApiResponse } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { resolveWidgetSessionAccess } from "@/lib/widget-access";
@@ -26,7 +28,7 @@ export async function GET(request: Request) {
     await touchWidgetKeyLastUsed({ businessId: session.businessId, widgetKeyId: session.widgetKeyId });
 
     const [snapshot, chatBilling, voiceBilling] = await Promise.all([
-      getCachedBusinessSnapshot(context, { businessId: session.businessId }),
+      getCachedBusinessSnapshot(context, { businessId: session.businessId }).then((snapshot) => snapshot ? snapshotForReceptionist(snapshot, session.agentId) : null),
       getWidgetChatAllowance(context, { businessId: session.businessId }),
       getWebVoiceBillingAllowance(context, { businessId: session.businessId }),
     ]);

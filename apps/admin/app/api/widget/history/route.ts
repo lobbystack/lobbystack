@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     const context = createWorkerDomainContext();
     if (!isValidUuid(visitorId)) return NextResponse.json({ messages: [] });
     await registerWidgetVisitor(context, { businessId: session.businessId, visitorId, metadata: { userAgent: request.headers.get("user-agent") ?? undefined } });
-    const { conversationId } = await getOrCreateWidgetConversation(context, { businessId: session.businessId, widgetVisitorId: visitorId });
+    const { conversationId } = await getOrCreateWidgetConversation(context, { businessId: session.businessId, widgetVisitorId: visitorId, ...(session.agentId ? { agentId: session.agentId } : {}) });
     const rows = await loadWidgetChatHistory(context, { businessId: session.businessId, conversationId });
     return NextResponse.json({ conversationId, messages: rows.map((row) => ({ id: row.id, role: row.direction === "outbound" ? "assistant" : "user", content: row.body, createdAt: row.createdAt.toISOString() })) });
   } catch (error) {

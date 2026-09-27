@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { buildPhoneSessionConfig } from "@lobbystack/agent-core/live/session";
 import { finishLiveCall, getCachedBusinessSnapshot, startLivePhoneCall } from "@lobbystack/domain";
-import type { BusinessContextSnapshot } from "@lobbystack/shared";
+import { snapshotForReceptionist, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { attachWorkerToLiveSession, getLiveClient } from "@/lib/live-prototype";
@@ -52,9 +52,12 @@ export async function POST(request: Request) {
   // incoming call to both. Only the deployment that owns the number may accept
   // or reject it; until ownership is known, this deployment leaves the call alone.
   let businessId: string | null | undefined;
+  let agentId: string | undefined;
   try {
-    const resolved = await getAppDatabase().db.execute<{ business_id: string | null }>(sql`select app.resolve_business_by_phone(${to}) as business_id`);
+    // The dialled number names the business and the receptionist that answers it.
+    const resolved = await getAppDatabase().db.execute<{ business_id: string | null; agent_id: string | null }>(sql`select business_id, agent_id from app.resolve_phone_route(${to})`);
     businessId = resolved.rows[0]?.business_id;
+    agentId = resolved.rows[0]?.agent_id ?? undefined;
   } catch (error) {
     // Ownership is unknown: don't reject a call that may belong to the other
     // deployment. A 503 makes OpenAI deliver the event again.
@@ -67,13 +70,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const snapshot = await getCachedBusinessSnapshot(createWorkerDomainContext(), { businessId });
+    const businessSnapshot = await getCachedBusinessSnapshot(createWorkerDomainContext(), { businessId });
+    const snapshot = businessSnapshot ? snapshotForReceptionist(businessSnapshot, agentId) : null;
     if (!snapshot) {
       console.warn("[live] no published snapshot for incoming call", JSON.stringify({ sessionId, businessId }));
       await client.live.sessions.reject(sessionId, { status_code: 503 });
       return new NextResponse(null, { status: 200 });
     }
-    return await answerCall(client, { sessionId, businessId, snapshot, from, to });
+    return await answerCall(client, { sessionId, businessId, snapshot, from, to, ...(agentId ? { agentId } : {}) });
   } catch (error) {
     console.error("[live] incoming call failed", error instanceof Error ? error.message : error);
     await client.live.sessions.reject(sessionId, { status_code: 503 }).catch(() => undefined);
@@ -85,11 +89,11 @@ type LiveClient = ReturnType<typeof getLiveClient>;
 
 // Reserves minutes and records the call before accepting it, the same way the
 // Twilio media path does, so billing and limits behave identically.
-async function answerCall(client: LiveClient, input: { sessionId: string; businessId: string; snapshot: BusinessContextSnapshot; from: string | undefined; to: string }) {
+async function answerCall(client: LiveClient, input: { sessionId: string; businessId: string; snapshot: BusinessContextSnapshot; from: string | undefined; to: string; agentId?: string }) {
   const domain = createWorkerDomainContext();
   let call: Awaited<ReturnType<typeof startLivePhoneCall>>;
   try {
-    call = await startLivePhoneCall(domain, { businessId: input.businessId, sessionId: input.sessionId, from: input.from ?? "unknown", to: input.to });
+    call = await startLivePhoneCall(domain, { businessId: input.businessId, sessionId: input.sessionId, from: input.from ?? "unknown", to: input.to, ...(input.agentId ? { agentId: input.agentId } : {}) });
   } catch (error) {
     if (error !== null && typeof error === "object" && "code" in error && error.code === "voice_limit_reached") {
       // 486 Busy Here: the caller hears a busy signal rather than an answer
@@ -104,7 +108,7 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
   // accepting an accepted session just fails, and attaching is idempotent.
   if (call.duplicate) {
     await client.live.sessions.accept(input.sessionId, { session: buildPhoneSessionConfig(input.snapshot) }).catch(() => undefined);
-    await attachWorkerToLiveSession({ sessionId: input.sessionId, businessId: input.businessId, callId: call.callId, conversationId: call.conversationId, channel: "voice", ...(input.from ? { callerPhone: input.from } : {}) }).catch(() => undefined);
+    await attachWorkerToLiveSession({ sessionId: input.sessionId, businessId: input.businessId, callId: call.callId, conversationId: call.conversationId, channel: "voice", ...(input.from ? { callerPhone: input.from } : {}), ...(input.agentId ? { agentId: input.agentId } : {}) }).catch(() => undefined);
     return new NextResponse(null, { status: 200 });
   }
   if (call.blocked) {
@@ -120,7 +124,7 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
     throw error;
   }
   try {
-    await attachWorkerToLiveSession({ sessionId: input.sessionId, businessId: input.businessId, callId: call.callId, conversationId: call.conversationId, channel: "voice", ...(input.from ? { callerPhone: input.from } : {}) });
+    await attachWorkerToLiveSession({ sessionId: input.sessionId, businessId: input.businessId, callId: call.callId, conversationId: call.conversationId, channel: "voice", ...(input.from ? { callerPhone: input.from } : {}), ...(input.agentId ? { agentId: input.agentId } : {}) });
   } catch (error) {
     // Without the worker nobody answers delegations, so end the call cleanly.
     await client.live.sessions.hangup(input.sessionId).catch(() => undefined);

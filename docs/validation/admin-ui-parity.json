@@ -24,7 +24,21 @@
     "/embed/[key]",
     "/settings/plan/ai-sms-compliance",
     "/settings/api-keys",
-    "/integrations/webhooks"
+    "/integrations/webhooks",
+    "/inbox",
+    "/calendar",
+    "/services",
+    "/staff",
+    "/knowledge",
+    "/numbers",
+    "/receptionists",
+    "/receptionists/[agentId]",
+    "/receptionists/[agentId]/behavior",
+    "/receptionists/[agentId]/knowledge",
+    "/receptionists/[agentId]/booking",
+    "/receptionists/[agentId]/transfers",
+    "/receptionists/[agentId]/numbers",
+    "/receptionists/new"
   ],
   "localizedPortRoutes": [
     "/[locale]/accept-invite",
@@ -1337,6 +1351,104 @@
       "state": "default",
       "comparison": "excluded",
       "reason": "New outbound webhook management"
+    },
+    {
+      "path": "/inbox",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New navigation behind the new_navigation flag, with no legacy page to compare"
+    },
+    {
+      "path": "/calendar",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New navigation behind the new_navigation flag, with no legacy page to compare"
+    },
+    {
+      "path": "/services",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New navigation behind the new_navigation flag, with no legacy page to compare"
+    },
+    {
+      "path": "/staff",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New navigation behind the new_navigation flag, with no legacy page to compare"
+    },
+    {
+      "path": "/knowledge",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New navigation behind the new_navigation flag, with no legacy page to compare"
+    },
+    {
+      "path": "/numbers",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New navigation behind the new_navigation flag, with no legacy page to compare"
+    },
+    {
+      "path": "/receptionists",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New navigation behind the new_navigation flag, with no legacy page to compare"
+    },
+    {
+      "path": "/receptionists/[agentId]",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New navigation behind the new_navigation flag, with no legacy page to compare"
+    },
+    {
+      "path": "/receptionists/[agentId]/behavior",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New navigation behind the new_navigation flag, with no legacy page to compare"
+    },
+    {
+      "path": "/receptionists/[agentId]/knowledge",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New navigation behind the new_navigation flag, with no legacy page to compare"
+    },
+    {
+      "path": "/receptionists/[agentId]/booking",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New navigation behind the new_navigation flag, with no legacy page to compare"
+    },
+    {
+      "path": "/receptionists/[agentId]/transfers",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New navigation behind the new_navigation flag, with no legacy page to compare"
+    },
+    {
+      "path": "/receptionists/[agentId]/numbers",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New navigation behind the new_navigation flag, with no legacy page to compare"
+    },
+    {
+      "path": "/receptionists/new",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New navigation behind the new_navigation flag, with no legacy page to compare"
     }
   ]
 }

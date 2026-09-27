@@ -52,7 +52,7 @@ const DISPOSITIONS: Record<LiveCallEnd, string> = {
  * accepted. Throws a 402 `voice_limit_reached` error when the plan is out of
  * minutes. `blocked` means the operator blocked this caller.
  */
-export async function startLivePhoneCall(context: DomainContext, input: { businessId: string; sessionId: string; from: string; to: string }) {
+export async function startLivePhoneCall(context: DomainContext, input: { businessId: string; sessionId: string; from: string; to: string; agentId?: string }) {
   const call = await startCall(context, {
     businessId: input.businessId,
     provider: LIVE_CALL_PROVIDER,
@@ -61,6 +61,7 @@ export async function startLivePhoneCall(context: DomainContext, input: { busine
     to: input.to,
     transport: "voice",
     gatewaySessionId: input.sessionId,
+    ...(input.agentId ? { agentId: input.agentId } : {}),
   });
   return { callId: call.callId, conversationId: call.conversationId, blocked: call.blocked, duplicate: call.duplicate };
 }
@@ -73,7 +74,7 @@ export async function startLivePhoneCall(context: DomainContext, input: { busine
  */
 export async function startLiveWebCall(
   context: DomainContext,
-  input: { businessId: string; sessionId: string; widgetId: string; billable: boolean; maxDurationMs?: number; sessionPurpose?: string; prospectDemoId?: string; originUrl?: string; userAgent?: string },
+  input: { businessId: string; sessionId: string; widgetId: string; billable: boolean; maxDurationMs?: number; sessionPurpose?: string; prospectDemoId?: string; originUrl?: string; userAgent?: string; agentId?: string },
 ) {
   const call = await startCall(context, {
     businessId: input.businessId,
@@ -83,6 +84,7 @@ export async function startLiveWebCall(
     to: "web",
     transport: "web_voice",
     gatewaySessionId: input.sessionId,
+    ...(input.agentId ? { agentId: input.agentId } : {}),
     widgetId: input.widgetId,
     billable: input.billable,
     ...(input.maxDurationMs !== undefined ? { maxDurationMs: input.maxDurationMs } : {}),

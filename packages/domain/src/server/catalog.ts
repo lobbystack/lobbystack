@@ -1,7 +1,7 @@
-import { and, asc, count, eq, ilike, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, isNull } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { agentRules, businessHours, closures, phoneNumbers, receptionistProfiles, services, staff, staffServiceAssignments } from "@lobbystack/db";
+import { agentRules, agents, businessHours, closures, phoneNumbers, services, staff, staffServiceAssignments } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
@@ -18,8 +18,8 @@ export async function listCatalog(
       tx.select().from(businessHours).where(eq(businessHours.businessId, input.businessId)).orderBy(asc(businessHours.dayOfWeek)),
       tx.select().from(closures).where(eq(closures.businessId, input.businessId)).orderBy(asc(closures.startsAt)),
       tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(asc(phoneNumbers.e164)),
-      tx.select().from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1),
-      tx.select().from(agentRules).where(eq(agentRules.businessId, input.businessId)).orderBy(asc(agentRules.sortOrder)),
+      tx.select().from(agents).where(and(eq(agents.businessId, input.businessId), isNull(agents.archivedAt))).orderBy(desc(agents.isDefault), asc(agents.createdAt)).limit(1),
+      tx.select({ rule: agentRules }).from(agentRules).innerJoin(agents, and(eq(agents.id, agentRules.agentId), eq(agents.isDefault, true), isNull(agents.archivedAt))).where(eq(agentRules.businessId, input.businessId)).orderBy(asc(agentRules.sortOrder)).then((rows) => rows.map((row) => row.rule)),
     ]);
     const limit = Math.min(Math.max(Math.trunc(input.limit ?? 100), 1), 100);
     const offset = Math.max(Math.trunc(input.offset ?? 0), 0);

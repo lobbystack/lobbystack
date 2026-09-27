@@ -240,13 +240,13 @@ export async function registerWidgetVisitor(
 
 export async function getOrCreateWidgetConversation(
   context: DomainContext,
-  input: { businessId: string; widgetVisitorId: string },
+  input: { businessId: string; widgetVisitorId: string; agentId?: string },
 ): Promise<{ conversationId: string }> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const visitor = (await tx.select({ id: widgetVisitors.id }).from(widgetVisitors).where(and(eq(widgetVisitors.id, input.widgetVisitorId), eq(widgetVisitors.businessId, input.businessId))).limit(1))[0];
     if (!visitor) throw new Error("Widget visitor not found.");
     const current = await tx.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.widgetVisitorId, input.widgetVisitorId), eq(conversations.channel, "web_chat"), eq(conversations.status, "open"))).orderBy(desc(conversations.updatedAt)).limit(1);
-    const conversationId = current[0]?.id ?? (await tx.insert(conversations).values({ businessId: input.businessId, widgetVisitorId: input.widgetVisitorId, channel: "web_chat", status: "open", automationState: "ai_active" }).onConflictDoNothing().returning({ id: conversations.id }))[0]?.id;
+    const conversationId = current[0]?.id ?? (await tx.insert(conversations).values({ businessId: input.businessId, widgetVisitorId: input.widgetVisitorId, channel: "web_chat", status: "open", automationState: "ai_active", ...(input.agentId ? { agentId: input.agentId } : {}) }).onConflictDoNothing().returning({ id: conversations.id }))[0]?.id;
     if (!conversationId) {
       const existing = await tx.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.widgetVisitorId, input.widgetVisitorId), eq(conversations.channel, "web_chat"))).orderBy(desc(conversations.updatedAt)).limit(1);
       throw new Error(existing[0] ? "Widget conversation already exists and is closed." : "Conversation could not be created.");

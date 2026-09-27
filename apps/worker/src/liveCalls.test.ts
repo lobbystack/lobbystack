@@ -169,4 +169,10 @@ describe("parseAttachRequest", () => {
     expect(parseAttachRequest(JSON.stringify({ sessionId: "live_1", businessId: "biz_1", callId: "call_1", channel: "web_voice", intakeOnly: "yes", maxDurationMs: -1 })))
       .toEqual({ sessionId: "live_1", businessId: "biz_1", callId: "call_1", channel: "web_voice" });
   });
+
+  it("keeps the answering receptionist only when it is a UUID", () => {
+    const agentId = "0b8a4c7e-3f1d-4a55-9d3e-2c1f0e9a7b61";
+    expect(parseAttachRequest(JSON.stringify({ sessionId: "live_1", businessId: "biz_1", callId: "call_1", channel: "voice", agentId }))).toMatchObject({ agentId });
+    expect(parseAttachRequest(JSON.stringify({ sessionId: "live_1", businessId: "biz_1", callId: "call_1", channel: "voice", agentId: "'; drop table agents" }))).not.toHaveProperty("agentId");
+  });
 });

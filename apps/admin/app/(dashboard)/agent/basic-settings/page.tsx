@@ -1,3 +1,7 @@
 import { LiveAgentBasicSettingsSurface } from "@/components/live-agent-basic-settings-surface";
+import { redirectLegacyPage } from "@/lib/navigation-server";
 
-export default function AgentBasicSettingsPage() { return <LiveAgentBasicSettingsSurface />; }
+export default async function AgentBasicSettingsPage() {
+  await redirectLegacyPage("/agent/basic-settings");
+  return <LiveAgentBasicSettingsSurface />;
+}

@@ -7,19 +7,22 @@ import { useTranslation } from "react-i18next";
 import { NestedPageSurfaceProvider } from "@/components/page-surface";
 import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
+import { useNavigationSnapshot } from "./navigation/navigation-provider";
 
 export function SettingsShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { t } = useTranslation("settings");
+  // The new navigation moves the phone number and widget to "Numbers and widget".
+  const newNavigation = useNavigationSnapshot()?.newNavigation === true;
   const items = [
     { label: t("sections.usage"), href: "/settings/usage" },
     { label: t("sections.billing"), href: "/settings/plan" },
     { label: t("sections.business"), href: "/settings/team" },
-    { label: t("sections.phoneNumber"), href: "/settings/phone-number" },
+    ...(newNavigation ? [] : [{ label: t("sections.phoneNumber"), href: "/settings/phone-number" }]),
     { label: t("sections.appearance"), href: "/settings/appearance" },
     { label: t("sections.notifications"), href: "/settings/notifications" },
     { label: t("sections.apiKeys"), href: "/settings/api-keys" },
-    ...(pathname === "/settings/widget" || pathname.startsWith("/settings/widget/") ? [{ label: t("sections.widget"), href: "/settings/widget" }] : []),
+    ...(!newNavigation && (pathname === "/settings/widget" || pathname.startsWith("/settings/widget/")) ? [{ label: t("sections.widget"), href: "/settings/widget" }] : []),
   ];
   return (
     <section className="flex flex-1 flex-col gap-6">

@@ -43,6 +43,10 @@ import { DashboardUtilityBar } from "./dashboard-utility-bar";
 import { DashboardSetupGuideCard } from "./dashboard-setup-guide-card";
 import { NavUser } from "./nav-user";
 import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
+import { BusinessSidebar } from "./navigation/business-sidebar";
+import { CommandSearch } from "./navigation/command-search";
+import { NavigationProvider, useNavigationSnapshot } from "./navigation/navigation-provider";
+import type { NavigationSnapshot } from "@/lib/navigation-routes";
 import { resolveLocale } from "@/lib/locale";
 import { localizePublicPath } from "@/lib/locale-path";
 
@@ -58,6 +62,8 @@ type DashboardShellProps = {
     email: string;
     name: string;
   };
+  /** The active business's navigation. The `new_navigation` flag picks the sidebar. */
+  navigation?: NavigationSnapshot | null;
 };
 
 type NavigationItem = {
@@ -78,7 +84,13 @@ function getSidebarDefaultOpen(): boolean {
   return value?.split("=")[1] !== "false";
 }
 
-export function DashboardShell({ children, user }: DashboardShellProps) {
+export function DashboardShell({ navigation = null, ...props }: DashboardShellProps) {
+  return <NavigationProvider initial={navigation}><DashboardFrame {...props} /></NavigationProvider>;
+}
+
+function DashboardFrame({ children, user }: Omit<DashboardShellProps, "navigation">) {
+  const navigation = useNavigationSnapshot();
+  const newNavigation = navigation?.newNavigation === true;
   const { t } = useTranslation("common");
   const pathname = usePathname();
   const contentScrollRef = useRef<HTMLElement>(null);
@@ -100,7 +112,10 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
         defaultOpen={getSidebarDefaultOpen()}
         style={{ "--sidebar-width": "16rem" } as React.CSSProperties}
       >
-        <ReplacementSidebar user={user} />
+        {newNavigation && navigation
+          ? <BusinessSidebar footer={<><DashboardSetupGuideCard /><UserMenu user={user} /></>} navigation={navigation} />
+          : <ReplacementSidebar user={user} />}
+        {newNavigation && navigation ? <CommandSearch navigation={navigation} /> : null}
         <SidebarInset
           ref={contentScrollRef}
           className="@container/content min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain has-data-[layout=fixed]:h-full peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100%-(var(--spacing)*4))]"
