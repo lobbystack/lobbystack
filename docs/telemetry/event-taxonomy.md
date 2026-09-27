@@ -6,7 +6,6 @@ This reference assigns event ownership and defines the properties required for p
 
 - `apps/admin` emits operator intent and workflow events
 - `apps/admin` and `apps/worker` emit authoritative business outcome events
-- `apps/voice-gateway` emits runtime observability and AI trace events
 
 Do not duplicate ownership between runtimes unless there is a specific analytics reason.
 
@@ -112,7 +111,6 @@ Outbox health is reported durably from the worker. A tenant-scoped `outbox.backl
 - `ops.outbox.flush_failed`
 - `ops.service.health_check`
 - `ops.service.health_check_failed`
-- `ops.voice.heartbeat`
 
 ## Shared defaults
 
@@ -287,7 +285,7 @@ PostHog should be modeled around `business` groups:
 
 ## AI traces
 
-AI traces are emitted from the voice gateway with these PostHog event types:
+The domain package records AI traces with these PostHog event types:
 
 - `$ai_trace`
 - `$ai_generation`

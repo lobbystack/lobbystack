@@ -6,8 +6,7 @@ LobbyStack uses PostHog for product analytics and error tracking, and OpenTeleme
 
 - `apps/admin` browser code emits operator intent, navigation, and workflow outcomes.
 - `apps/admin` server code traces HTTP, authentication, database, and provider operations.
-- `apps/worker` emits job, outbox, provider, retry, and dead-letter telemetry.
-- `apps/voice-gateway` emits call lifecycle, realtime, audio, transfer, and provider telemetry.
+- `apps/worker` emits job, outbox, provider, retry, and dead-letter telemetry, plus call lifecycle events for the GPT-Live calls it runs.
 - `packages/telemetry` owns shared event names, redaction, trace propagation, and runtime-specific clients.
 
 ## Record durable events
@@ -19,16 +18,15 @@ Business outcomes are written through `recordProductEvent` to PostgreSQL after t
 `TELEMETRY_EVENT_TRANSPORT` is exhaustive and defines the permitted route for every registry event:
 
 - `durable` — business outcomes from admin, domain, and worker code through `recordProductEvent`.
-- `gateway` — realtime voice diagnostics through the gateway consent cache and PostHog client. This avoids database work on the audio hot path.
 - `browser` — operator intent and navigation through `createBrowserTelemetry` and `useTelemetry`.
 
-`$ai_generation` is intentionally allowed on both durable and gateway transports. Operational billing, outbox, and service events are durable; the `ops.*` prefix does not imply gateway ownership. Do not introduce another capture path. `pnpm telemetry:coverage` checks producer presence and transport ownership.
+Operational billing, outbox, and service events are durable. Do not introduce another capture path. `pnpm telemetry:coverage` checks producer presence and transport ownership.
 
-All three transports validate required properties. Development and self-hosted runtimes throw on invalid events. Cloud runtimes preserve customer data, report `telemetry.validation_failed`, and continue.
+Both transports validate required properties. Development and self-hosted runtimes throw on invalid events. Cloud runtimes preserve customer data, report `telemetry.validation_failed`, and continue.
 
 ## Propagate traces
 
-Admin, worker, and voice gateway requests propagate W3C trace context. Signed voice-backend requests include trace headers after signature material is calculated. Queue jobs retain correlation identifiers without storing customer content in telemetry fields.
+Admin and worker requests propagate W3C trace context. Queue jobs retain correlation identifiers without storing customer content in telemetry fields.
 
 ## Privacy
 

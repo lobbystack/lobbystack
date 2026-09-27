@@ -7,8 +7,7 @@ LobbyStack accepts focused fixes and features that preserve tenant isolation, pr
 - Keep PostgreSQL as the durable source of truth
 - Put persistence, migrations, roles, and row-level security in `packages/db`
 - Put reusable business operations in `packages/domain`
-- Keep the voice gateway focused on Twilio Voice, Media Streams, and OpenAI Realtime
-- Call the admin backend for authoritative voice operations
+- Add call and chat capabilities as agent-core tools backed by `packages/domain`
 - Use shared provider adapters instead of importing provider SDKs into domain code
 
 ## Prepare a change
