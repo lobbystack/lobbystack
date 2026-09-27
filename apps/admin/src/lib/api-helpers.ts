@@ -109,6 +109,16 @@ async function activeBusinessIdForUser(userId: string): Promise<string | null> {
   });
 }
 
+/** The signed-in user and the business the request targets, for domain calls that open their own transaction. */
+export async function requireOperatorBusiness(request: Request): Promise<{ session: NonNullable<Session>; businessId: string }> {
+  const session = await requireApiSession(request);
+  const businessId = businessIdFromRequest(request) ?? await activeBusinessIdForUser(session.user.id);
+  if (!businessId) {
+    throw jsonError("A businessId is required.", 400, "business_required");
+  }
+  return { session, businessId };
+}
+
 export async function withOperatorTransaction<T>(
   request: Request,
   callback: (input: { session: NonNullable<Session>; businessId: string; tx: DatabaseTransaction }) => Promise<T>,

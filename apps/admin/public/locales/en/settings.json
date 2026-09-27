@@ -17,7 +17,8 @@
     "billing": "Plan",
     "usage": "Usage",
     "notifications": "Notifications",
-    "widget": "Website widget"
+    "widget": "Website widget",
+    "apiKeys": "API keys"
   },
   "widget": {
     "title": "Website widget",
@@ -409,7 +410,8 @@
     "actions": {
       "connect": "Connect",
       "connected": "Connected",
-      "settings": "Open integration settings"
+      "settings": "Open integration settings",
+      "manage": "Manage"
     },
     "providers": {
       "google": "Sync bookings with Google Calendar."
@@ -474,6 +476,10 @@
       "google": {
         "title": "Google Calendar",
         "description": "Sync bookings with a Google Calendar."
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "description": "Send calls, bookings and messages to your own tools."
       }
     },
     "status": {
@@ -790,6 +796,10 @@
       "widgetChat": {
         "title": "New website chat message",
         "description": "When a visitor sends a message through your website widget."
+      },
+      "webhookDisabled": {
+        "title": "Webhook endpoint turned off",
+        "description": "When LobbyStack stops sending events to a webhook endpoint because every delivery failed for about a day."
       }
     },
     "systemIssues": {
@@ -800,6 +810,161 @@
       "description": "Confirm that you want LobbyStack to send workspace alerts to your verified phone number.",
       "cancel": "Cancel",
       "accept": "I agree, enable SMS"
+    }
+  },
+  "secretReveal": {
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "apiKeys": {
+    "title": "API keys",
+    "description": "Connect tools like Zapier or your own scripts to LobbyStack. Each key works for this business only.",
+    "empty": "No API keys yet.",
+    "neverUsed": "Never",
+    "createdBy": "{{date}} by {{name}}",
+    "revoked": "Revoked {{date}}",
+    "restricted": {
+      "title": "Only owners and admins can manage API keys",
+      "description": "Ask an owner or admin of this business to create a key for you."
+    },
+    "columns": {
+      "name": "Name",
+      "key": "Key",
+      "scopes": "Access",
+      "created": "Created",
+      "lastUsed": "Last used",
+      "actions": "Actions"
+    },
+    "create": {
+      "action": "Create API key",
+      "title": "Create an API key",
+      "description": "Give the key a name you'll recognize and allow only the access it needs.",
+      "nameLabel": "Name",
+      "namePlaceholder": "Zapier",
+      "scopesLabel": "Access",
+      "cancel": "Cancel",
+      "submit": "Create key",
+      "creating": "Creating…"
+    },
+    "created": {
+      "title": "{{name}} is ready",
+      "description": "Copy the key and store it in a password manager or your tool's settings.",
+      "warning": "You won't see this key again. If you lose it, revoke it and create a new one.",
+      "done": "Done"
+    },
+    "revoke": {
+      "action": "Revoke",
+      "title": "Revoke this API key?",
+      "description": "Anything that uses {{name}} stops working right away. You can't undo this.",
+      "confirm": "Revoke key",
+      "cancel": "Cancel",
+      "done": "API key revoked",
+      "failed": "We couldn't revoke the key. Try again."
+    },
+    "scopes": {
+      "business_read": "Read business details, hours and services",
+      "business_write": "Update business details and hours",
+      "calls_read": "Read calls, summaries and transcripts",
+      "contacts_read": "Read contacts",
+      "contacts_write": "Create and update contacts",
+      "appointments_read": "Read appointments and open times",
+      "appointments_write": "Book, cancel and reschedule appointments",
+      "messages_read": "Read messages the receptionist took",
+      "knowledge_write": "Add knowledge entries and FAQs",
+      "webhooks_manage": "Create and delete webhook endpoints"
+    }
+  },
+  "webhooks": {
+    "title": "Webhooks",
+    "description": "LobbyStack sends an HTTPS POST to your URL when something happens, such as a finished call or a new booking. Each request is signed so you can check it came from us.",
+    "empty": "No webhook endpoints yet.",
+    "enabledLabel": "Send events to this endpoint",
+    "restricted": {
+      "title": "Only owners and admins can manage webhooks",
+      "description": "Ask an owner or admin of this business to set up the webhook."
+    },
+    "status": {
+      "enabled": "On",
+      "disabled": "Off"
+    },
+    "failing": {
+      "title": "We turned this endpoint off",
+      "description": "Every delivery failed for about a day. Fix the endpoint, then turn it back on. Use Resend in the delivery log to send missed events."
+    },
+    "form": {
+      "urlLabel": "Endpoint URL",
+      "urlHint": "Use an https:// address that anyone on the internet can reach.",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Optional, for example CRM sync",
+      "eventsLabel": "Events to send",
+      "cancel": "Cancel"
+    },
+    "events": {
+      "call_completed": "A call ended and its summary is ready",
+      "appointment_booked": "An appointment was booked",
+      "appointment_rescheduled": "An appointment moved to a new time",
+      "appointment_cancelled": "An appointment was cancelled",
+      "message_taken": "The receptionist took a message for your team",
+      "contact_created": "A new contact was added"
+    },
+    "create": {
+      "action": "Add endpoint",
+      "title": "Add a webhook endpoint",
+      "description": "Choose where LobbyStack sends events and which events to send.",
+      "submit": "Add endpoint"
+    },
+    "edit": {
+      "action": "Edit",
+      "title": "Edit webhook endpoint",
+      "description": "Changes apply to the next event LobbyStack sends.",
+      "submit": "Save"
+    },
+    "delete": {
+      "action": "Delete",
+      "title": "Delete this endpoint?",
+      "description": "LobbyStack stops sending events to {{url}} and deletes its delivery log.",
+      "confirm": "Delete endpoint",
+      "done": "Endpoint deleted"
+    },
+    "rotate": {
+      "action": "Rotate secret",
+      "title": "Rotate the signing secret?",
+      "description": "The current secret stops working right away. Update your endpoint with the new secret before the next event arrives.",
+      "confirm": "Rotate secret"
+    },
+    "secret": {
+      "createdTitle": "Endpoint added",
+      "rotatedTitle": "New signing secret",
+      "description": "Use this secret to verify the webhook-signature header on each request.",
+      "warning": "You won't see this secret again. If you lose it, rotate it to get a new one.",
+      "done": "Done"
+    },
+    "test": {
+      "action": "Send test event",
+      "queued": "Test event queued. Check the delivery log."
+    },
+    "deliveries": {
+      "show": "Delivery log",
+      "hide": "Hide delivery log",
+      "empty": "No deliveries yet.",
+      "resend": "Resend",
+      "resent": "Event queued again",
+      "nextAttempt": "Next try {{time}}",
+      "columns": {
+        "event": "Event",
+        "status": "Status",
+        "response": "Response",
+        "attempts": "Attempts",
+        "time": "Last try",
+        "actions": "Actions"
+      },
+      "status": {
+        "pending": "Queued",
+        "retrying": "Retrying",
+        "succeeded": "Delivered",
+        "failed": "Failed",
+        "skipped": "Skipped"
+      }
     }
   }
 }

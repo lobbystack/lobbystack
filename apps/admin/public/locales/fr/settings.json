@@ -17,7 +17,8 @@
     "billing": "Forfait",
     "usage": "Utilisation",
     "notifications": "Notifications",
-    "widget": "Widget de site web"
+    "widget": "Widget de site web",
+    "apiKeys": "Clés API"
   },
   "widget": {
     "title": "Widget de site web",
@@ -409,7 +410,8 @@
     "actions": {
       "connect": "Connecter",
       "connected": "Connecté",
-      "settings": "Ouvrir les réglages de l'intégration"
+      "settings": "Ouvrir les réglages de l'intégration",
+      "manage": "Gérer"
     },
     "providers": {
       "google": "Synchronisez les réservations avec Google Calendar."
@@ -474,6 +476,10 @@
       "google": {
         "title": "Google Calendar",
         "description": "Synchronisez les réservations avec un Google Calendar."
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "description": "Envoyez les appels, les réservations et les messages à vos outils."
       }
     },
     "status": {
@@ -790,6 +796,10 @@
       "widgetChat": {
         "title": "Nouveau message sur le clavardage du site",
         "description": "Lorsqu’un visiteur envoie un message via le widget de votre site."
+      },
+      "webhookDisabled": {
+        "title": "Point de terminaison webhook désactivé",
+        "description": "Quand LobbyStack cesse d'envoyer des événements à un point de terminaison webhook parce que toutes les livraisons ont échoué pendant environ une journée."
       }
     },
     "systemIssues": {
@@ -800,6 +810,161 @@
       "description": "Confirmez que vous voulez que LobbyStack envoie des alertes de l'espace de travail à votre numéro de téléphone vérifié.",
       "cancel": "Annuler",
       "accept": "J'accepte, activer les SMS"
+    }
+  },
+  "secretReveal": {
+    "copy": "Copier",
+    "copied": "Copié"
+  },
+  "apiKeys": {
+    "title": "Clés API",
+    "description": "Connectez des outils comme Zapier ou vos propres scripts à LobbyStack. Chaque clé ne fonctionne que pour cette entreprise.",
+    "empty": "Aucune clé API pour l'instant.",
+    "neverUsed": "Jamais",
+    "createdBy": "{{date}} par {{name}}",
+    "revoked": "Révoquée le {{date}}",
+    "restricted": {
+      "title": "Seuls les propriétaires et les administrateurs gèrent les clés API",
+      "description": "Demandez à un propriétaire ou à un administrateur de cette entreprise de créer une clé pour vous."
+    },
+    "columns": {
+      "name": "Nom",
+      "key": "Clé",
+      "scopes": "Accès",
+      "created": "Créée",
+      "lastUsed": "Dernière utilisation",
+      "actions": "Actions"
+    },
+    "create": {
+      "action": "Créer une clé API",
+      "title": "Créer une clé API",
+      "description": "Donnez à la clé un nom que vous reconnaîtrez et n'autorisez que l'accès dont elle a besoin.",
+      "nameLabel": "Nom",
+      "namePlaceholder": "Zapier",
+      "scopesLabel": "Accès",
+      "cancel": "Annuler",
+      "submit": "Créer la clé",
+      "creating": "Création…"
+    },
+    "created": {
+      "title": "{{name}} est prête",
+      "description": "Copiez la clé et conservez-la dans un gestionnaire de mots de passe ou dans les réglages de votre outil.",
+      "warning": "Vous ne reverrez plus cette clé. Si vous la perdez, révoquez-la et créez-en une autre.",
+      "done": "Terminé"
+    },
+    "revoke": {
+      "action": "Révoquer",
+      "title": "Révoquer cette clé API?",
+      "description": "Tout ce qui utilise {{name}} cesse de fonctionner immédiatement. Cette action est définitive.",
+      "confirm": "Révoquer la clé",
+      "cancel": "Annuler",
+      "done": "Clé API révoquée",
+      "failed": "Impossible de révoquer la clé. Réessayez."
+    },
+    "scopes": {
+      "business_read": "Lire les informations, les heures et les services de l'entreprise",
+      "business_write": "Modifier les informations et les heures de l'entreprise",
+      "calls_read": "Lire les appels, les résumés et les transcriptions",
+      "contacts_read": "Lire les contacts",
+      "contacts_write": "Créer et modifier des contacts",
+      "appointments_read": "Lire les rendez-vous et les plages libres",
+      "appointments_write": "Réserver, annuler et déplacer des rendez-vous",
+      "messages_read": "Lire les messages pris par la réceptionniste",
+      "knowledge_write": "Ajouter des entrées de connaissances et des FAQ",
+      "webhooks_manage": "Créer et supprimer des points de terminaison webhook"
+    }
+  },
+  "webhooks": {
+    "title": "Webhooks",
+    "description": "LobbyStack envoie une requête HTTPS POST à votre URL quand quelque chose se produit, par exemple un appel terminé ou une nouvelle réservation. Chaque requête est signée pour que vous puissiez vérifier qu'elle vient de nous.",
+    "empty": "Aucun point de terminaison webhook pour l'instant.",
+    "enabledLabel": "Envoyer les événements à ce point de terminaison",
+    "restricted": {
+      "title": "Seuls les propriétaires et les administrateurs gèrent les webhooks",
+      "description": "Demandez à un propriétaire ou à un administrateur de cette entreprise de configurer le webhook."
+    },
+    "status": {
+      "enabled": "Activé",
+      "disabled": "Désactivé"
+    },
+    "failing": {
+      "title": "Nous avons désactivé ce point de terminaison",
+      "description": "Toutes les livraisons ont échoué pendant environ une journée. Corrigez le point de terminaison, puis réactivez-le. Utilisez Renvoyer dans le journal des livraisons pour envoyer les événements manqués."
+    },
+    "form": {
+      "urlLabel": "URL du point de terminaison",
+      "urlHint": "Utilisez une adresse https:// accessible depuis Internet.",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Facultatif, par exemple Synchronisation CRM",
+      "eventsLabel": "Événements à envoyer",
+      "cancel": "Annuler"
+    },
+    "events": {
+      "call_completed": "Un appel s'est terminé et son résumé est prêt",
+      "appointment_booked": "Un rendez-vous a été réservé",
+      "appointment_rescheduled": "Un rendez-vous a été déplacé",
+      "appointment_cancelled": "Un rendez-vous a été annulé",
+      "message_taken": "La réceptionniste a pris un message pour votre équipe",
+      "contact_created": "Un nouveau contact a été ajouté"
+    },
+    "create": {
+      "action": "Ajouter un point de terminaison",
+      "title": "Ajouter un point de terminaison webhook",
+      "description": "Choisissez où LobbyStack envoie les événements et lesquels envoyer.",
+      "submit": "Ajouter"
+    },
+    "edit": {
+      "action": "Modifier",
+      "title": "Modifier le point de terminaison webhook",
+      "description": "Les changements s'appliquent au prochain événement envoyé par LobbyStack.",
+      "submit": "Enregistrer"
+    },
+    "delete": {
+      "action": "Supprimer",
+      "title": "Supprimer ce point de terminaison?",
+      "description": "LobbyStack cesse d'envoyer des événements à {{url}} et supprime son journal des livraisons.",
+      "confirm": "Supprimer",
+      "done": "Point de terminaison supprimé"
+    },
+    "rotate": {
+      "action": "Changer le secret",
+      "title": "Changer le secret de signature?",
+      "description": "Le secret actuel cesse de fonctionner immédiatement. Mettez à jour votre point de terminaison avec le nouveau secret avant le prochain événement.",
+      "confirm": "Changer le secret"
+    },
+    "secret": {
+      "createdTitle": "Point de terminaison ajouté",
+      "rotatedTitle": "Nouveau secret de signature",
+      "description": "Utilisez ce secret pour vérifier l'en-tête webhook-signature de chaque requête.",
+      "warning": "Vous ne reverrez plus ce secret. Si vous le perdez, changez-le pour en obtenir un nouveau.",
+      "done": "Terminé"
+    },
+    "test": {
+      "action": "Envoyer un événement test",
+      "queued": "Événement test en file d'attente. Consultez le journal des livraisons."
+    },
+    "deliveries": {
+      "show": "Journal des livraisons",
+      "hide": "Masquer le journal",
+      "empty": "Aucune livraison pour l'instant.",
+      "resend": "Renvoyer",
+      "resent": "Événement remis en file d'attente",
+      "nextAttempt": "Prochain essai {{time}}",
+      "columns": {
+        "event": "Événement",
+        "status": "Statut",
+        "response": "Réponse",
+        "attempts": "Essais",
+        "time": "Dernier essai",
+        "actions": "Actions"
+      },
+      "status": {
+        "pending": "En file d'attente",
+        "retrying": "Nouvel essai prévu",
+        "succeeded": "Livré",
+        "failed": "Échec",
+        "skipped": "Ignoré"
+      }
     }
   }
 }

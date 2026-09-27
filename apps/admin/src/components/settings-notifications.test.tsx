@@ -12,7 +12,7 @@ afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.
 function setup(reason: "phone_unverified" | "sender_missing" | null = null, widgetOnly = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business-1", active: true }] });
-  let preferences = { emailEnabled: true, smsEnabled: false, smsConsent: false, canUseSms: reason === null, smsUnavailableReason: reason, eventPreferences: Object.fromEntries(["voiceMessage", "pausedSms", "widgetChat", "smsFailed", "calendarSync", "transferFailed", "aiReplyFailed"].map(key => [key, { email: true, sms: false }])), dailySummaryEnabled: false, dailySummarySendTime: null };
+  let preferences = { emailEnabled: true, smsEnabled: false, smsConsent: false, canUseSms: reason === null, smsUnavailableReason: reason, eventPreferences: Object.fromEntries(["voiceMessage", "pausedSms", "widgetChat", "smsFailed", "calendarSync", "transferFailed", "aiReplyFailed", "webhookDisabled"].map(key => [key, { email: true, sms: false }])), dailySummaryEnabled: false, dailySummarySendTime: null };
   client.setQueryData(["notification-preferences", "business-1"], preferences);
   const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
     if (init?.method === "PUT") { preferences = { ...preferences, ...JSON.parse(String(init.body)) }; return Response.json({ ok: true }); }

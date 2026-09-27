@@ -18,6 +18,7 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
     { label: t("sections.phoneNumber"), href: "/settings/phone-number" },
     { label: t("sections.appearance"), href: "/settings/appearance" },
     { label: t("sections.notifications"), href: "/settings/notifications" },
+    { label: t("sections.apiKeys"), href: "/settings/api-keys" },
     ...(pathname === "/settings/widget" || pathname.startsWith("/settings/widget/") ? [{ label: t("sections.widget"), href: "/settings/widget" }] : []),
   ];
   return (
