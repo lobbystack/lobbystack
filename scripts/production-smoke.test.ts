@@ -19,7 +19,7 @@ describe("production smoke helpers", () => {
 
   it("requires each number to sit on the SIP trunk", () => {
     expect(trunkMatches("TK123", "TK123")).toBe(true);
-    expect(trunkMatches("TK123", undefined)).toBe(true);
+    expect(trunkMatches("TK123", undefined)).toBe(false);
     expect(trunkMatches("TK999", "TK123")).toBe(false);
     expect(trunkMatches(null, undefined)).toBe(false);
     expect(buildConfig({ TWILIO_SIP_TRUNK_SID: " TK123 " }).expectedTrunkSid).toBe("TK123");

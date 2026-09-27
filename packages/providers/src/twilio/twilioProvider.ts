@@ -91,6 +91,26 @@ export class TwilioProvider {
     };
   }
 
+  /**
+   * Finds the Twilio call behind a call that reached GPT-Live over the SIP
+   * trunk: the inbound call to one of `numbers` that started closest to `near`.
+   */
+  async findInboundCall(input: { numbers: string[]; near: Date; windowMs?: number }): Promise<string | undefined> {
+    const windowMs = input.windowMs ?? 2 * 60_000;
+    const after = new Date(input.near.getTime() - windowMs);
+    const before = new Date(input.near.getTime() + windowMs);
+    let best: { sid: string; distance: number } | undefined;
+    for (const to of input.numbers) {
+      const calls = await this.client.calls.list({ to, startTimeAfter: after, startTimeBefore: before, limit: 20 });
+      for (const call of calls) {
+        if (!call.startTime || !call.direction?.startsWith("inbound")) continue;
+        const distance = Math.abs(call.startTime.getTime() - input.near.getTime());
+        if (!best || distance < best.distance) best = { sid: call.sid, distance };
+      }
+    }
+    return best?.sid;
+  }
+
   async getCallPricing(input: { providerCallId: string }): Promise<TwilioCallPricing> {
     const call = await this.client.calls(input.providerCallId).fetch();
     const providerPrice = finiteNumber(call.price);

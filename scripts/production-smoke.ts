@@ -40,8 +40,9 @@ export function webhookMatches(actual: string | null | undefined, expected: stri
 
 /** A number answers through GPT-Live only while it sits on the SIP trunk. */
 export function trunkMatches(actual: string | null | undefined, expected: string | undefined): boolean {
-  if (typeof actual !== "string" || !actual) return false;
-  return expected === undefined || actual === expected;
+  // Without the expected trunk, a number on a stale or unrelated trunk would pass.
+  if (typeof actual !== "string" || !actual || !expected) return false;
+  return actual === expected;
 }
 
 export function signInFailureIsExpected(status: number): boolean {
@@ -102,7 +103,7 @@ async function auditTwilioNumbers(config: SmokeConfig): Promise<SmokeCheck[]> {
       return { name: `twilio ${number}`, ok: false, detail: "number is not owned by this Twilio account" };
     }
     if (!trunkMatches(found.trunk_sid, config.expectedTrunkSid)) {
-      return { name: `twilio ${number} voice`, ok: false, detail: `SIP trunk is ${found.trunk_sid ?? "(none)"}, expected ${config.expectedTrunkSid ?? "any trunk"}` };
+      return { name: `twilio ${number} voice`, ok: false, detail: `SIP trunk is ${found.trunk_sid ?? "(none)"}, expected ${config.expectedTrunkSid ?? "TWILIO_SIP_TRUNK_SID to be set"}` };
     }
     if (!webhookMatches(found.sms_url, config.expectedSmsUrl)) {
       return { name: `twilio ${number} sms`, ok: false, detail: `sms webhook is ${found.sms_url ?? "(unset)"}, expected ${config.expectedSmsUrl}` };

@@ -1,6 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 
-import { calls, contacts, withBusinessTransaction } from "@lobbystack/db";
+import { calls, contacts, enqueueOutbox, withBusinessTransaction } from "@lobbystack/db";
 
 import { reserveOutboundCallAttempt } from "./billing";
 import type { DomainContext } from "./context";
@@ -160,6 +160,13 @@ export async function finishLiveCall(context: DomainContext, input: { businessId
   // No-op unless the call belongs to a prospect demo.
   await recordProspectDemoCallOutcome(context, { businessId: input.businessId, callId: input.callId, status, disposition: DISPOSITIONS[input.end], providerDurationSeconds: Math.ceil(seconds) });
   if (seconds === 0) return completed;
+  // Twilio bills the SIP leg separately. Ask the worker to find that call and
+  // record Twilio's price, the way the Media Streams path did.
+  if ((input.channel ?? "voice") === "voice") {
+    await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+      await enqueueOutbox(tx, { topic: "call.syncPrice", businessId: input.businessId, aggregateType: "call", aggregateId: input.callId, dedupeKey: `call:${input.callId}:live-price`, payload: { callId: input.callId, providerCallStatus: "completed" } });
+    });
+  }
   await recordUnitEconomicsEvent(context, {
     businessId: input.businessId,
     eventKey: `voice_ai:live_session:${input.callId}`,
