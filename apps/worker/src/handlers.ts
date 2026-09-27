@@ -44,7 +44,7 @@ export type WorkerDependencies = {
   domain: DomainContext;
   storage?: RuntimeStorageProvider;
   email?: Pick<SmtpEmailProvider, "sendTemplate">;
-  twilio?: Pick<TwilioProvider, "sendSms"> & Partial<Pick<TwilioProvider, "getMessagePricing" | "getCallPricing" | "findInboundCall" | "releasePhoneNumber" | "verifyPhone" | "findOwnedPhoneNumber" | "purchasePhoneNumber" | "addNumberToSipTrunk">>;
+  twilio?: Pick<TwilioProvider, "sendSms"> & Partial<Pick<TwilioProvider, "getMessagePricing" | "getCallPricing" | "findTrunkCall" | "releasePhoneNumber" | "verifyPhone" | "findOwnedPhoneNumber" | "purchasePhoneNumber" | "addNumberToSipTrunk">>;
   twilioAlerts?: Pick<TwilioProvider, "sendSms"> & { from: string };
   polar?: { recordUsage(input: { eventName: string; externalCustomerId: string; quantity: number; timestamp: string; idempotencyKey: string; businessId: string; usageKind: string }): Promise<void>; createCheckout?(input: { productId: string; customerEmail: string; externalCustomerId: string; successUrl: string; idempotencyKey?: string }): Promise<{ checkoutUrl: string; checkoutId: string }> };
   embeddings?: { fingerprint?: string; embed(values: string[], onUsage?: (usage: DurableAiUsage) => Promise<void> | void): Promise<number[][]> };
@@ -483,11 +483,12 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const liveCallId = String(job.payload.callId ?? "").trim();
       if (liveCallId && !job.payload.providerCallId) {
         // A GPT-Live phone call: find the Twilio call on the SIP trunk first.
-        if (!dependencies.twilio?.getCallPricing || !dependencies.twilio.findInboundCall) return { status: "skipped", entityId: liveCallId };
+        const trunkSid = process.env.TWILIO_SIP_TRUNK_SID?.trim();
+        if (!dependencies.twilio?.getCallPricing || !dependencies.twilio.findTrunkCall || !trunkSid) return { status: "skipped", entityId: liveCallId };
         const businessId = businessIdOrThrow(job);
         const call = await loadLiveCallForPricing(dependencies.domain, { businessId, callId: liveCallId });
-        if (!call || call.numbers.length === 0) return { status: "skipped", entityId: liveCallId };
-        const twilioCallId = await dependencies.twilio.findInboundCall({ numbers: call.numbers, near: call.startedAt });
+        if (!call) return { status: "skipped", entityId: liveCallId };
+        const twilioCallId = await dependencies.twilio.findTrunkCall({ trunkSid, near: call.startedAt, ...(call.callerPhone ? { from: call.callerPhone } : {}) });
         if (!twilioCallId) throw new Error(`No Twilio call found yet for live call ${liveCallId}.`);
         const pricing = await dependencies.twilio.getCallPricing({ providerCallId: twilioCallId });
         if (pricing.providerCostUsd === undefined) throw new Error(`Twilio call pricing is incomplete for ${twilioCallId}.`);

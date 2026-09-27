@@ -93,20 +93,21 @@ export class TwilioProvider {
 
   /**
    * Finds the Twilio call behind a call that reached GPT-Live over the SIP
-   * trunk: the inbound call to one of `numbers` that started closest to `near`.
+   * trunk. Twilio records that leg as `trunking-originating`, addressed to the
+   * OpenAI SIP URI rather than the dialled number, so match the caller, the
+   * trunk, and the start time closest to `near`.
    */
-  async findInboundCall(input: { numbers: string[]; near: Date; windowMs?: number }): Promise<string | undefined> {
+  async findTrunkCall(input: { trunkSid: string; from?: string; near: Date; windowMs?: number }): Promise<string | undefined> {
     const windowMs = input.windowMs ?? 2 * 60_000;
     const after = new Date(input.near.getTime() - windowMs);
     const before = new Date(input.near.getTime() + windowMs);
+    const calls = await this.client.calls.list({ ...(input.from ? { from: input.from } : {}), startTimeAfter: after, startTimeBefore: before, limit: 50 });
     let best: { sid: string; distance: number } | undefined;
-    for (const to of input.numbers) {
-      const calls = await this.client.calls.list({ to, startTimeAfter: after, startTimeBefore: before, limit: 20 });
-      for (const call of calls) {
-        if (!call.startTime || !call.direction?.startsWith("inbound")) continue;
-        const distance = Math.abs(call.startTime.getTime() - input.near.getTime());
-        if (!best || distance < best.distance) best = { sid: call.sid, distance };
-      }
+    for (const call of calls) {
+      if (!call.startTime || call.direction !== "trunking-originating" || call.trunkSid !== input.trunkSid) continue;
+      const distance = Math.abs(call.startTime.getTime() - input.near.getTime());
+      if (distance > windowMs) continue;
+      if (!best || distance < best.distance) best = { sid: call.sid, distance };
     }
     return best?.sid;
   }
