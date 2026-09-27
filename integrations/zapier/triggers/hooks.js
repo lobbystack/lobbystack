@@ -1,6 +1,7 @@
 'use strict';
 
 const { apiUrl, listPage } = require('../lib/client');
+const { verifyDelivery } = require('../lib/signature');
 const { outputFields, samples } = require('../lib/resources');
 
 const SAMPLE_PAGE_SIZE = 25;
@@ -19,8 +20,9 @@ const createHookTrigger = ({ key, noun, label, description, event, resource, lis
         description: `Zapier: ${label}`,
       },
     });
-    // Keep only the id. The signing secret is not needed and is not stored.
-    return { id: response.data.data.id };
+    // Zapier stores subscribeData with the Zap, so perform can check each
+    // delivery's signature against this endpoint's secret.
+    return { id: response.data.data.id, secret: response.data.data.secret };
   };
 
   const performUnsubscribe = async (z, bundle) => {
@@ -38,9 +40,21 @@ const createHookTrigger = ({ key, noun, label, description, event, resource, lis
   };
 
   const perform = async (z, bundle) => {
-    const payload = bundle.cleanedRequest || {};
+    const secret = bundle.subscribeData && bundle.subscribeData.secret;
+    let payload = bundle.cleanedRequest || {};
+    // Subscriptions made before signatures were checked have no secret.
+    // LOBBYSTACK_SKIP_WEBHOOK_SIGNATURE=1 (zapier-platform env:set) turns the
+    // check off without a new version if Zapier ever changes rawRequest.
+    if (secret && process.env.LOBBYSTACK_SKIP_WEBHOOK_SIGNATURE !== '1') {
+      const result = verifyDelivery(secret, bundle.rawRequest);
+      if (!result.ok) {
+        throw new z.errors.Error(`Ignored a webhook delivery that LobbyStack did not sign (${result.reason}).`, 'invalid_signature', 401);
+      }
+      // Read the event from the exact bytes that were verified.
+      payload = JSON.parse(bundle.rawRequest.content);
+    }
     // Ignore test pings and anything that is not the subscribed event.
-    if (payload.type !== event || !payload.data || typeof payload.data !== 'object') return [];
+    if (!payload || payload.type !== event || !payload.data || typeof payload.data !== 'object') return [];
     return [payload.data];
   };
 
