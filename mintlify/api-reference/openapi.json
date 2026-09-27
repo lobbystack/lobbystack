@@ -39,6 +39,79 @@
     }
   ],
   "paths": {
+    "/me": {
+      "get": {
+        "operationId": "getMe",
+        "summary": "Check an API key",
+        "description": "Returns the key and its business. Any valid key can call it, whatever its scopes, so integrations use it to test a connection.",
+        "tags": [
+          "Business"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Me"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is invalid (invalid_request).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The API key is missing, invalid, or revoked (unauthorized).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (rate_limited). Wait for the Retry-After header's number of seconds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait."
+              }
+            }
+          }
+        }
+      }
+    },
     "/business": {
       "get": {
         "operationId": "getBusiness",
@@ -1184,6 +1257,15 @@
             "schema": {
               "type": "string",
               "format": "date-time"
+            }
+          },
+          {
+            "name": "contact_id",
+            "in": "query",
+            "description": "Only this contact's appointments.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -3206,6 +3288,83 @@
         },
         "required": [
           "error"
+        ],
+        "additionalProperties": false
+      },
+      "Me": {
+        "description": "The API key making the request and the business it belongs to.",
+        "type": "object",
+        "properties": {
+          "api_key": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "description": "Stable identifier (UUID).",
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "prefix": {
+                "description": "The visible start of the key, for example lsk_1a2b3c4d.",
+                "type": "string"
+              },
+              "scopes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "business:read",
+                    "business:write",
+                    "calls:read",
+                    "contacts:read",
+                    "contacts:write",
+                    "appointments:read",
+                    "appointments:write",
+                    "messages:read",
+                    "knowledge:write",
+                    "webhooks:manage"
+                  ]
+                }
+              },
+              "created_at": {
+                "description": "ISO 8601 timestamp in UTC.",
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "prefix",
+              "scopes",
+              "created_at"
+            ],
+            "additionalProperties": false
+          },
+          "business": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "description": "Stable identifier (UUID).",
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "api_key",
+          "business"
         ],
         "additionalProperties": false
       },

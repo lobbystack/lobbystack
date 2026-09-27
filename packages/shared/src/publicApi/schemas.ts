@@ -47,6 +47,17 @@ export const apiHoursWindowSchema = z.object({
   close: clock,
 }).describe("Opening hours for one day. Days that are not listed are closed.");
 
+export const apiMeSchema = z.object({
+  api_key: z.object({
+    id,
+    name: z.string(),
+    prefix: z.string().describe("The visible start of the key, for example lsk_1a2b3c4d."),
+    scopes: z.array(z.enum(apiKeyScopes)),
+    created_at: timestamp,
+  }),
+  business: z.object({ id, name: z.string() }),
+}).describe("The API key making the request and the business it belongs to.");
+
 export const apiBusinessSchema = z.object({
   id,
   name: z.string(),
@@ -270,6 +281,7 @@ export const apiWebhookTestEventSchema = eventEnvelope(WEBHOOK_TEST_EVENT_TYPE, 
 
 export const apiKeyScopeSchema = z.enum(apiKeyScopes);
 
+export type ApiMe = z.infer<typeof apiMeSchema>;
 export type ApiBusiness = z.infer<typeof apiBusinessSchema>;
 export type ApiBusinessUpdate = z.infer<typeof apiBusinessUpdateSchema>;
 export type ApiHoursWindow = z.infer<typeof apiHoursWindowSchema>;

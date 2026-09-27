@@ -14,6 +14,8 @@ const domain = vi.hoisted(() => ({
   cancelAppointmentForApi: vi.fn(),
   getWebhookEndpoint: vi.fn(),
   listStaffForApi: vi.fn(),
+  getMeForApi: vi.fn(),
+  listAppointmentsForApi: vi.fn(),
 }));
 
 vi.mock("../domain-context", () => ({ createWorkerDomainContext: () => ({ db: {} }) }));
@@ -28,7 +30,7 @@ vi.mock("@lobbystack/domain", async () => ({
 import { v1 } from "./routes";
 
 const apiRoot = fileURLToPath(new URL("../../../app/api/v1/", import.meta.url));
-const everyScope = [...new Set(Object.values(apiOperations).map((operation) => operation.scope))];
+const everyScope = [...new Set(Object.values(apiOperations).flatMap((operation) => (operation.scope ? [operation.scope] : [])))];
 
 function routeFiles(directory = apiRoot, prefix = ""): string[] {
   return readdirSync(directory).flatMap((entry) => {
@@ -133,5 +135,41 @@ describe("GET /staff", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ error: { code: "invalid_request", message: "staff_id must be a UUID." } });
     expect(domain.getAvailabilityForApi).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /me", () => {
+  const me = { api_key: { id: "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6", name: "Zapier", prefix: "lsk_1a2b3c4d", scopes: ["knowledge:write"], created_at: "2026-09-27T12:00:00.000Z" }, business: { id: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", name: "Maple Salon" } };
+
+  it("works for a key with a single unrelated scope", async () => {
+    domain.resolveApiKey.mockResolvedValue({ businessId: me.business.id, apiKeyId: me.api_key.id, scopes: ["knowledge:write"] });
+    domain.getMeForApi.mockResolvedValue(me);
+    const response = await v1.getMe(call("/me"));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ data: me });
+  });
+
+  it("returns 401 for a revoked key", async () => {
+    domain.resolveApiKey.mockResolvedValue(null);
+    const response = await v1.getMe(call("/me"));
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({ error: { code: "unauthorized" } });
+    expect(domain.getMeForApi).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /appointments?contact_id", () => {
+  it("passes a valid contact_id to the query with the other filters", async () => {
+    domain.listAppointmentsForApi.mockResolvedValue({ data: [], next_cursor: null, has_more: false });
+    const response = await v1.listAppointments(call("/appointments?contact_id=0cabb07b-ea18-4e9f-8f7b-356405838770&status=confirmed&starts_after=2026-09-01T00:00:00Z&limit=10"));
+    expect(response.status).toBe(200);
+    expect(domain.listAppointmentsForApi).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({ contactId: "0cabb07b-ea18-4e9f-8f7b-356405838770", status: "confirmed", limit: 10, startsAfter: new Date("2026-09-01T00:00:00Z") }));
+  });
+
+  it("rejects a malformed contact_id with 400", async () => {
+    const response = await v1.listAppointments(call("/appointments?contact_id=abc"));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { code: "invalid_request", message: "contact_id must be a UUID." } });
+    expect(domain.listAppointmentsForApi).not.toHaveBeenCalled();
   });
 });

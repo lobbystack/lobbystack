@@ -311,13 +311,14 @@ export async function loadAppointmentResource(tx: DatabaseTransaction, businessI
   return row ? serializeAppointment(row) : null;
 }
 
-export async function listAppointmentResources(tx: DatabaseTransaction, businessId: string, request: PageRequest & { status?: "confirmed" | "cancelled" | undefined; startsAfter?: Date | undefined; startsBefore?: Date | undefined }): Promise<Page<ApiAppointment>> {
+export async function listAppointmentResources(tx: DatabaseTransaction, businessId: string, request: PageRequest & { status?: "confirmed" | "cancelled" | undefined; startsAfter?: Date | undefined; startsBefore?: Date | undefined; contactId?: string | undefined }): Promise<Page<ApiAppointment>> {
   const limit = pageSize(request.limit);
   const rows = await appointmentQuery(tx, and(
     eq(appointments.businessId, businessId),
     request.status === "cancelled" ? eq(appointments.status, "canceled") : request.status === "confirmed" ? sql`${appointments.status} <> 'canceled'` : undefined,
     request.startsAfter ? gte(appointments.startsAt, request.startsAfter) : undefined,
     request.startsBefore ? lt(appointments.startsAt, request.startsBefore) : undefined,
+    request.contactId ? eq(appointments.contactId, request.contactId) : undefined,
     afterCursor(appointments.createdAt, appointments.id, decodeCursor(request.cursor)),
   )).orderBy(...newestFirst(appointments.createdAt, appointments.id)).limit(limit + 1);
   return toPage(rows, limit, serializeAppointment, (row) => ({ at: row.createdAt, id: row.id }));

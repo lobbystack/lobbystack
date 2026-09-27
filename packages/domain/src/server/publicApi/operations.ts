@@ -1,9 +1,10 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { appointments, auditLogs, businessHours, businesses, calendarConnections, contacts, enqueueOutbox, receptionistProfiles, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { apiKeys, appointments, auditLogs, businessHours, businesses, calendarConnections, contacts, enqueueOutbox, receptionistProfiles, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import {
   PUBLIC_API_AVAILABILITY_MAX_DAYS,
+  isApiKeyScope,
   normalizeBookingMode,
   weekdays,
   type ApiAppointment,
@@ -18,6 +19,7 @@ import {
   type ApiContactUpdate,
   type ApiKnowledgeEntry,
   type ApiKnowledgeEntryCreate,
+  type ApiMe,
   type ApiMessage,
   type ApiService,
   type ApiStaff,
@@ -77,6 +79,15 @@ function assertTimeZone(value: string, field: string): void {
 }
 
 // Business
+
+/** The key and its business, for integrations to test a connection. Needs no scope. */
+export async function getMeForApi(context: DomainContext, caller: ApiCaller): Promise<ApiMe> {
+  return await inBusiness(context, caller, async (tx) => {
+    const [row] = await tx.select({ id: apiKeys.id, name: apiKeys.name, prefix: apiKeys.prefix, scopes: apiKeys.scopes, createdAt: apiKeys.createdAt, businessName: businesses.name }).from(apiKeys).innerJoin(businesses, eq(businesses.id, apiKeys.businessId)).where(and(eq(apiKeys.businessId, caller.businessId), eq(apiKeys.id, caller.apiKeyId))).limit(1);
+    if (!row) throw notFound("API key");
+    return { api_key: { id: row.id, name: row.name, prefix: row.prefix, scopes: row.scopes.filter(isApiKeyScope), created_at: row.createdAt.toISOString() }, business: { id: caller.businessId, name: row.businessName } };
+  });
+}
 
 export async function getBusinessForApi(context: DomainContext, caller: ApiCaller): Promise<ApiBusiness> {
   return await inBusiness(context, caller, async (tx) => {

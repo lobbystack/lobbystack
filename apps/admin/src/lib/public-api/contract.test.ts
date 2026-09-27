@@ -17,8 +17,11 @@ describe("v1 contract", () => {
     }
   });
 
-  it("requires a declared scope on every operation", () => {
-    for (const operation of Object.values(apiOperations)) expect(apiKeyScopes).toContain(operation.scope);
+  it("requires a declared scope on every operation except the key check", () => {
+    for (const [operationId, operation] of Object.entries(apiOperations)) {
+      if (operationId === "getMe") expect(operation.scope).toBeNull();
+      else expect(apiKeyScopes).toContain(operation.scope);
+    }
   });
 
   it("generates an OpenAPI 3.1 document with paths, scopes and webhooks", () => {

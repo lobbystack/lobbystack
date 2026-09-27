@@ -11,7 +11,7 @@ import { finalizeConversationSession } from "../conversations";
 import { createVoiceFollowUpTask } from "../voice";
 import { generateApiKey, resolveApiKey } from "./apiKeys";
 import { runIdempotent } from "./idempotency";
-import { cancelAppointmentForApi, createAppointmentForApi, createContactForApi, getAvailabilityForApi, getContactForApi, listContactsForApi, listStaffForApi, rescheduleAppointmentForApi, updateBusinessForApi, type ApiCaller } from "./operations";
+import { cancelAppointmentForApi, createAppointmentForApi, createContactForApi, getAvailabilityForApi, getContactForApi, getMeForApi, listAppointmentsForApi, listContactsForApi, listStaffForApi, rescheduleAppointmentForApi, updateBusinessForApi, type ApiCaller } from "./operations";
 import { PublicApiError } from "./errors";
 import { createWebhookEndpoint, processWebhookDelivery } from "./webhooks";
 import { encryptWebhookSecret } from "./webhookTransport";
@@ -330,6 +330,35 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     await expectApiError(rescheduleAppointmentForApi(context, a.caller, booked.id, { starts_at: tomorrowAt(13), staff_id: second!.id }), 409, "conflict");
     await admin!.db.delete(calendarConnections).where(eq(calendarConnections.businessId, a.businessId));
     await admin!.db.update(staff).set({ active: false }).where(inArray(staff.id, [second!.id]));
+  });
+
+  it("describes the calling key and its business", async () => {
+    const me = await getMeForApi({ db: worker!.db }, a.caller);
+    expect(me).toEqual({ api_key: { id: a.caller.apiKeyId, name: "a", prefix: expect.stringMatching(/^lsk_[0-9a-f]{8}$/), scopes: ["contacts:read", "contacts:write", "appointments:write"], created_at: expect.any(String) }, business: { id: a.businessId, name: expect.any(String) } });
+    await expectApiError(getMeForApi({ db: worker!.db }, { businessId: b.businessId, apiKeyId: a.caller.apiKeyId }), 404, "not_found");
+  });
+
+  it("filters appointments by contact in SQL, together with status, and pages through them", async () => {
+    const context = { db: worker!.db };
+    const phone = "+14165557100";
+    const ids: string[] = [];
+    for (const hour of [9, 10, 11]) ids.push((await createAppointmentForApi(context, a.caller, { service_id: a.serviceId, starts_at: DateTime.utc().plus({ days: 3 }).set({ hour, minute: 0, second: 0, millisecond: 0 }).toISO()!, contact_phone: phone })).id);
+    await createAppointmentForApi(context, a.caller, { service_id: a.serviceId, starts_at: DateTime.utc().plus({ days: 3 }).set({ hour: 12, minute: 0, second: 0, millisecond: 0 }).toISO()!, contact_phone: "+14165557101" });
+    await cancelAppointmentForApi(context, a.caller, ids[0]!);
+    const [contact] = await admin!.db.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.businessId, a.businessId), eq(contacts.phone, phone)));
+    const seen: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await listAppointmentsForApi(context, a.caller, { contactId: contact!.id, limit: 1, ...(cursor ? { cursor } : {}) });
+      expect(page.data.every((appointment) => appointment.contact_id === contact!.id)).toBe(true);
+      seen.push(...page.data.map((appointment) => appointment.id));
+      cursor = page.next_cursor ?? undefined;
+    } while (cursor);
+    expect(seen.sort()).toEqual([...ids].sort());
+    const confirmed = await listAppointmentsForApi(context, a.caller, { contactId: contact!.id, status: "confirmed", limit: 100 });
+    expect(confirmed.data.map((appointment) => appointment.id).sort()).toEqual(ids.slice(1).sort());
+    // Another business's contact id matches nothing.
+    expect((await listAppointmentsForApi(context, b.caller, { contactId: contact!.id, limit: 100 })).data).toEqual([]);
   });
 
   it("replaces opening hours through the business endpoint", async () => {

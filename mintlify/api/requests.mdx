@@ -17,7 +17,7 @@ List endpoints return up to 25 items per page, newest first. Pass `limit` to ask
 }
 ```
 
-To get the next page, send the same request with `cursor` set to `next_cursor`. On the last page, `next_cursor` is `null` and `has_more` is `false`. Treat the cursor as an opaque string; its format can change.
+List filters, such as `status`, `starts_after`, `starts_before` and `contact_id` on `GET /appointments`, combine with each other and with pagination. To get the next page, send the same request, filters included, with `cursor` set to `next_cursor`. On the last page, `next_cursor` is `null` and `has_more` is `false`. Treat the cursor as an opaque string; its format can change.
 
 ```bash
 curl "https://app.lobbystack.com/api/v1/contacts?limit=50&cursor=your_next_cursor" \

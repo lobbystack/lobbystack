@@ -8,6 +8,7 @@ import {
   getAppointmentForApi,
   getAvailabilityForApi,
   getBusinessForApi,
+  getMeForApi,
   getCallForApi,
   getContactForApi,
   getWebhookEndpoint,
@@ -65,6 +66,7 @@ function enumParam<T extends string>(request: Request, name: string, values: rea
 }
 
 export const v1 = {
+  getMe: (request: Request) => handleApiRequest(request, "getMe", async ({ context, caller }) => ({ body: data(await getMeForApi(context, caller)) })),
   getBusiness: (request: Request) => handleApiRequest(request, "getBusiness", async ({ context, caller }) => ({ body: data(await getBusinessForApi(context, caller)) })),
   updateBusiness: (request: Request) => handleApiRequest(request, "updateBusiness", async ({ context, caller }) => ({ body: data(await updateBusinessForApi(context, caller, await readApiBody(request, apiBusinessUpdateSchema))) })),
   listServices: (request: Request) => handleApiRequest(request, "listServices", async ({ context, caller }) => ({ body: { data: await listServicesForApi(context, caller), next_cursor: null, has_more: false } })),
@@ -81,7 +83,7 @@ export const v1 = {
     return { body: data(await updateContactForApi(context, caller, contactId, await readApiBody(request, apiContactUpdateSchema))) };
   }),
 
-  listAppointments: (request: Request) => handleApiRequest(request, "listAppointments", async ({ context, caller }) => ({ body: await listAppointmentsForApi(context, caller, { ...pageQuery(request), status: enumParam(request, "status", ["confirmed", "cancelled"] as const), startsAfter: dateParam(request, "starts_after"), startsBefore: dateParam(request, "starts_before") }) })),
+  listAppointments: (request: Request) => handleApiRequest(request, "listAppointments", async ({ context, caller }) => ({ body: await listAppointmentsForApi(context, caller, { ...pageQuery(request), status: enumParam(request, "status", ["confirmed", "cancelled"] as const), startsAfter: dateParam(request, "starts_after"), startsBefore: dateParam(request, "starts_before"), contactId: queryParam(request, "contact_id") === undefined ? undefined : uuidParam(queryParam(request, "contact_id"), "contact_id") }) })),
   getAvailability: (request: Request) => handleApiRequest(request, "getAvailability", async ({ context, caller }) => {
     const serviceId = uuidParam(queryParam(request, "service_id"), "service_id");
     const startDate = queryParam(request, "start_date");

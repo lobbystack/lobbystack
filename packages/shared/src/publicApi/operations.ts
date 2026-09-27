@@ -17,6 +17,7 @@ import {
   apiErrorSchema,
   apiKnowledgeEntryCreateSchema,
   apiKnowledgeEntrySchema,
+  apiMeSchema,
   apiMessageSchema,
   apiServiceSchema,
   apiStaffSchema,
@@ -37,7 +38,8 @@ export type ApiOperation = {
   summary: string;
   description?: string;
   tag: string;
-  scope: ApiKeyScope;
+  /** null: any valid key may call it. */
+  scope: ApiKeyScope | null;
   params?: Param[];
   list?: boolean;
   idempotent?: boolean;
@@ -57,6 +59,7 @@ const pageParams: Param[] = [
  * scope the docs list is the scope the server enforces.
  */
 export const apiOperations = {
+  getMe: { method: "GET", path: "/me", tag: "Business", summary: "Check an API key", description: "Returns the key and its business. Any valid key can call it, whatever its scopes, so integrations use it to test a connection.", scope: null, response: "Me", status: 200 },
   getBusiness: { method: "GET", path: "/business", tag: "Business", summary: "Get the business", scope: "business:read", response: "Business", status: 200 },
   updateBusiness: { method: "PATCH", path: "/business", tag: "Business", summary: "Update the business", description: "Updates basic fields and opening hours. Sending hours replaces the whole week.", scope: "business:write", request: "BusinessUpdate", response: "Business", status: 200 },
   listServices: { method: "GET", path: "/services", tag: "Business", summary: "List services", description: "Lists the active services customers can book.", scope: "business:read", list: true, response: "Service", status: 200 },
@@ -67,7 +70,7 @@ export const apiOperations = {
   createContact: { method: "POST", path: "/contacts", tag: "Contacts", summary: "Create a contact", description: "Returns 409 conflict when a contact with the same phone number exists.", scope: "contacts:write", idempotent: true, request: "ContactCreate", response: "Contact", status: 201 },
   getContact: { method: "GET", path: "/contacts/{contact_id}", tag: "Contacts", summary: "Get a contact", scope: "contacts:read", params: [idParam("contact_id", "contact")], response: "Contact", status: 200 },
   updateContact: { method: "PATCH", path: "/contacts/{contact_id}", tag: "Contacts", summary: "Update a contact", scope: "contacts:write", params: [idParam("contact_id", "contact")], request: "ContactUpdate", response: "Contact", status: 200 },
-  listAppointments: { method: "GET", path: "/appointments", tag: "Appointments", summary: "List appointments", description: "Newest booking first.", scope: "appointments:read", list: true, params: [...pageParams, { name: "status", in: "query", description: "confirmed or cancelled.", schema: { type: "string", enum: ["confirmed", "cancelled"] } }, { name: "starts_after", in: "query", description: "Only appointments starting at or after this time.", schema: { type: "string", format: "date-time" } }, { name: "starts_before", in: "query", description: "Only appointments starting before this time.", schema: { type: "string", format: "date-time" } }], response: "Appointment", status: 200 },
+  listAppointments: { method: "GET", path: "/appointments", tag: "Appointments", summary: "List appointments", description: "Newest booking first.", scope: "appointments:read", list: true, params: [...pageParams, { name: "status", in: "query", description: "confirmed or cancelled.", schema: { type: "string", enum: ["confirmed", "cancelled"] } }, { name: "starts_after", in: "query", description: "Only appointments starting at or after this time.", schema: { type: "string", format: "date-time" } }, { name: "starts_before", in: "query", description: "Only appointments starting before this time.", schema: { type: "string", format: "date-time" } }, { name: "contact_id", in: "query", description: "Only this contact's appointments.", schema: { type: "string", format: "uuid" } }], response: "Appointment", status: 200 },
   getAvailability: { method: "GET", path: "/availability", tag: "Appointments", summary: "List open appointment times", description: `Open start times for one service, in 30-minute steps within opening hours. The range can span up to ${PUBLIC_API_AVAILABILITY_MAX_DAYS} days.`, scope: "appointments:read", list: true, params: [{ name: "service_id", in: "query", required: true, description: "The service to book.", schema: { type: "string", format: "uuid" } }, { name: "start_date", in: "query", required: true, description: "First day, YYYY-MM-DD, in the business time zone.", schema: { type: "string", format: "date" } }, { name: "end_date", in: "query", description: "Last day, YYYY-MM-DD. Defaults to start_date.", schema: { type: "string", format: "date" } }, { name: "staff_id", in: "query", description: "Only times this active staff member is free.", schema: { type: "string", format: "uuid" } }], response: "AvailabilitySlot", status: 200 },
   createAppointment: { method: "POST", path: "/appointments", tag: "Appointments", summary: "Book an appointment", description: "Books only when the business's booking_mode is instant. Returns 409 booking_requires_confirmation in request mode and 409 booking_disabled when booking is off.", scope: "appointments:write", idempotent: true, request: "AppointmentCreate", response: "Appointment", status: 201 },
   getAppointment: { method: "GET", path: "/appointments/{appointment_id}", tag: "Appointments", summary: "Get an appointment", scope: "appointments:read", params: [idParam("appointment_id", "appointment")], response: "Appointment", status: 200 },
@@ -87,6 +90,7 @@ export type ApiOperationId = keyof typeof apiOperations;
 
 const componentSchemas: Record<string, z.ZodType> = {
   Error: apiErrorSchema,
+  Me: apiMeSchema,
   Business: apiBusinessSchema,
   BusinessUpdate: apiBusinessUpdateSchema,
   Service: apiServiceSchema,
@@ -155,14 +159,14 @@ export function buildOpenApiDocument(input: { serverUrl: string }): Record<strin
       ...(operation.description ? { description: operation.description } : {}),
       tags: [operation.tag],
       security: [{ bearerAuth: [] }],
-      "x-required-scope": operation.scope,
+      ...(operation.scope ? { "x-required-scope": operation.scope } : {}),
       ...(params.length ? { parameters: params } : {}),
       ...(operation.request ? { requestBody: { required: true, content: { "application/json": { schema: ref(operation.request) } } } } : {}),
       responses: {
         [String(operation.status)]: { description: operation.status === 201 ? "Created" : operation.status === 202 ? "Accepted" : "OK", content: { "application/json": { schema: body } } },
         400: errorResponse("The request is invalid (invalid_request)."),
         401: errorResponse("The API key is missing, invalid, or revoked (unauthorized)."),
-        403: errorResponse(`The API key lacks the ${operation.scope} scope (insufficient_scope).`),
+        ...(operation.scope ? { 403: errorResponse(`The API key lacks the ${operation.scope} scope (insufficient_scope).`) } : {}),
         ...(operation.path.includes("{") ? { 404: errorResponse("Not found (not_found).") } : {}),
         ...(operation.method !== "GET" ? { 409: errorResponse("The request conflicts with the current state.") } : {}),
         429: { ...errorResponse("Too many requests (rate_limited). Wait for the Retry-After header's number of seconds."), headers: { "Retry-After": { schema: { type: "integer" }, description: "Seconds to wait." } } },
