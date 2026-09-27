@@ -17,14 +17,14 @@ List endpoints return up to 25 items per page, newest first. Pass `limit` to ask
 }
 ```
 
-To get the next page, send the same request with `cursor` set to `next_cursor`. On the last page, `next_cursor` is `null` and `has_more` is `false`. Treat the cursor as an opaque string; its format can change.
+List filters, such as `status`, `starts_after`, `starts_before` and `contact_id` on `GET /appointments`, combine with each other and with pagination. To get the next page, send the same request, filters included, with `cursor` set to `next_cursor`. On the last page, `next_cursor` is `null` and `has_more` is `false`. Treat the cursor as an opaque string; its format can change.
 
 ```bash
 curl "https://app.lobbystack.com/api/v1/contacts?limit=50&cursor=your_next_cursor" \
   -H "Authorization: Bearer $LOBBYSTACK_API_KEY"
 ```
 
-`GET /services`, `GET /availability` and `GET /webhooks` return every item on one page.
+`GET /services`, `GET /staff`, `GET /availability` and `GET /webhooks` return every item on one page.
 
 ## Filter lists
 
@@ -114,6 +114,21 @@ The API follows the same rules as the AI receptionist:
 - `POST /appointments` and `POST /appointments/{appointment_id}/reschedule` work only when the business's `booking_mode` is `instant`. Read it from `GET /business`.
 - The requested time must fall within opening hours, avoid closures and other appointments, and be free on a connected Google Calendar. When LobbyStack can't confirm the calendar is up to date, it treats the time as busy.
 - New bookings sync to the connected calendar and queue the usual confirmation and reminder texts. LobbyStack sends them only to contacts who agreed to texts. Pass `"sms_consent": true` when the customer agreed while booking.
+- To book with a specific person, pass `staff_id`. Without it, LobbyStack picks a free staff member who takes the service.
 - Cancelling works in any booking mode. Cancelling an appointment that is already cancelled returns it unchanged.
 
 API keys act for the business, so the API skips the caller verification the receptionist uses on the phone.
+
+## Staff
+
+`GET /staff` lists everyone who takes appointments, with `active` and the `service_ids` each person can be booked for. A service with no staff assigned in the dashboard is open to every active staff member.
+
+A business that never set up staff still has one active staff member, named after the business. Bookings go to that person, so `GET /staff` returns it like any other staff member, and you can pass its `id` as `staff_id`.
+
+Pass `staff_id` to:
+
+- `GET /availability`, to list only the times that person is free.
+- `POST /appointments`, to book with that person.
+- `POST /appointments/{appointment_id}/reschedule`, to move the appointment to that person. Without it, the appointment keeps its staff member.
+
+A `staff_id` that isn't an active staff member of the business, or who doesn't take the service, returns `400` with the code `invalid_request`. Moving an appointment to another staff member returns `409` `conflict` when either person has their own connected calendar; cancel it and book a new one instead.

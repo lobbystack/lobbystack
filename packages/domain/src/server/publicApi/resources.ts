@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, lt, or, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
-import { appointments, businessHours, businesses, calls, contacts, conversations, conversationSessions, inboxItems, knowledgeSnippets, receptionistProfiles, services, staff, storageObjects, transcripts, webhookEndpoints, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, businessHours, businesses, calls, contacts, conversations, conversationSessions, inboxItems, knowledgeSnippets, receptionistProfiles, services, staff, staffServiceAssignments, storageObjects, transcripts, webhookEndpoints, type DatabaseTransaction } from "@lobbystack/db";
 import {
   PUBLIC_API_DEFAULT_PAGE_SIZE,
   PUBLIC_API_MAX_PAGE_SIZE,
@@ -18,6 +18,7 @@ import {
   type ApiKnowledgeEntry,
   type ApiMessage,
   type ApiService,
+  type ApiStaff,
   type ApiWebhookEndpoint,
 } from "@lobbystack/shared";
 
@@ -119,6 +120,32 @@ export async function loadBusinessResource(tx: DatabaseTransaction, businessId: 
 export async function listServiceResources(tx: DatabaseTransaction, businessId: string): Promise<ApiService[]> {
   const rows = await tx.select().from(services).where(and(eq(services.businessId, businessId), eq(services.active, true))).orderBy(asc(services.name), asc(services.id));
   return rows.map((row) => ({ id: row.id, name: row.name, description: row.description, duration_minutes: row.durationMinutes, created_at: iso(row.createdAt), updated_at: iso(row.updatedAt) }));
+}
+
+// Staff. Booking treats a service with no assignments as open to every
+// active staff member, and a service with assignments as open only to them.
+
+export async function listStaffResources(tx: DatabaseTransaction, businessId: string): Promise<ApiStaff[]> {
+  const [members, activeServices, assignments] = await Promise.all([
+    tx.select().from(staff).where(eq(staff.businessId, businessId)).orderBy(asc(staff.name), asc(staff.id)),
+    tx.select({ id: services.id }).from(services).where(and(eq(services.businessId, businessId), eq(services.active, true))).orderBy(asc(services.name), asc(services.id)),
+    tx.select({ staffId: staffServiceAssignments.staffId, serviceId: staffServiceAssignments.serviceId }).from(staffServiceAssignments).where(eq(staffServiceAssignments.businessId, businessId)),
+  ]);
+  const assigned = new Map<string, Set<string>>();
+  for (const row of assignments) {
+    const list = assigned.get(row.serviceId) ?? new Set<string>();
+    list.add(row.staffId);
+    assigned.set(row.serviceId, list);
+  }
+  return members.map((member) => ({
+    id: member.id,
+    name: member.name,
+    active: member.active,
+    timezone: member.timezone,
+    service_ids: member.active ? activeServices.filter((service) => !assigned.get(service.id)?.size || assigned.get(service.id)!.has(member.id)).map((service) => service.id) : [],
+    created_at: iso(member.createdAt),
+    updated_at: iso(member.updatedAt),
+  }));
 }
 
 // Calls
@@ -296,13 +323,14 @@ export async function loadAppointmentResource(tx: DatabaseTransaction, businessI
   return row ? serializeAppointment(row) : null;
 }
 
-export async function listAppointmentResources(tx: DatabaseTransaction, businessId: string, request: PageRequest & { status?: "confirmed" | "cancelled" | undefined; startsAfter?: Date | undefined; startsBefore?: Date | undefined }): Promise<Page<ApiAppointment>> {
+export async function listAppointmentResources(tx: DatabaseTransaction, businessId: string, request: PageRequest & { status?: "confirmed" | "cancelled" | undefined; startsAfter?: Date | undefined; startsBefore?: Date | undefined; contactId?: string | undefined }): Promise<Page<ApiAppointment>> {
   const limit = pageSize(request.limit);
   const rows = await appointmentQuery(tx, and(
     eq(appointments.businessId, businessId),
     request.status === "cancelled" ? eq(appointments.status, "canceled") : request.status === "confirmed" ? sql`${appointments.status} <> 'canceled'` : undefined,
     request.startsAfter ? gte(appointments.startsAt, request.startsAfter) : undefined,
     request.startsBefore ? lt(appointments.startsAt, request.startsBefore) : undefined,
+    request.contactId ? eq(appointments.contactId, request.contactId) : undefined,
     afterCursor(appointments.createdAt, appointments.id, decodeCursor(request.cursor)),
   )).orderBy(...newestFirst(appointments.createdAt, appointments.id)).limit(limit + 1);
   return toPage(rows, limit, serializeAppointment, (row) => ({ at: row.createdAt, id: row.id }));

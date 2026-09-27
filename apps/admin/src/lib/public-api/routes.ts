@@ -8,6 +8,7 @@ import {
   getAppointmentForApi,
   getAvailabilityForApi,
   getBusinessForApi,
+  getMeForApi,
   getCallForApi,
   getContactForApi,
   getWebhookEndpoint,
@@ -16,6 +17,7 @@ import {
   listContactsForApi,
   listMessagesForApi,
   listServicesForApi,
+  listStaffForApi,
   listWebhookEndpoints,
   PublicApiError,
   rescheduleAppointmentForApi,
@@ -71,9 +73,11 @@ function enumParam<T extends string>(request: Request, name: string, values: rea
 }
 
 export const v1 = {
+  getMe: (request: Request) => handleApiRequest(request, "getMe", async ({ context, caller }) => ({ body: data(await getMeForApi(context, caller)) })),
   getBusiness: (request: Request) => handleApiRequest(request, "getBusiness", async ({ context, caller }) => ({ body: data(await getBusinessForApi(context, caller)) })),
   updateBusiness: (request: Request) => handleApiRequest(request, "updateBusiness", async ({ context, caller }) => ({ body: data(await updateBusinessForApi(context, caller, await readApiBody(request, apiBusinessUpdateSchema))) })),
   listServices: (request: Request) => handleApiRequest(request, "listServices", async ({ context, caller }) => ({ body: { data: await listServicesForApi(context, caller), next_cursor: null, has_more: false } })),
+  listStaff: (request: Request) => handleApiRequest(request, "listStaff", async ({ context, caller }) => ({ body: { data: await listStaffForApi(context, caller), next_cursor: null, has_more: false } })),
 
   listCalls: (request: Request) => handleApiRequest(request, "listCalls", async ({ context, caller }) => ({ body: await listCallsForApi(context, caller, { ...pageQuery(request), startedAfter: dateParam(request, "started_after"), startedBefore: dateParam(request, "started_before") }) })),
   getCall: (request: Request, { params }: Params<"call_id">) => handleApiRequest(request, "getCall", async ({ context, caller }) => ({ body: data(await getCallForApi(context, caller, uuidParam((await params).call_id, "call_id"))) })),
@@ -86,12 +90,13 @@ export const v1 = {
     return { body: data(await updateContactForApi(context, caller, contactId, await readApiBody(request, apiContactUpdateSchema))) };
   }),
 
-  listAppointments: (request: Request) => handleApiRequest(request, "listAppointments", async ({ context, caller }) => ({ body: await listAppointmentsForApi(context, caller, { ...pageQuery(request), status: enumParam(request, "status", ["confirmed", "cancelled"] as const), startsAfter: dateParam(request, "starts_after"), startsBefore: dateParam(request, "starts_before") }) })),
+  listAppointments: (request: Request) => handleApiRequest(request, "listAppointments", async ({ context, caller }) => ({ body: await listAppointmentsForApi(context, caller, { ...pageQuery(request), status: enumParam(request, "status", ["confirmed", "cancelled"] as const), startsAfter: dateParam(request, "starts_after"), startsBefore: dateParam(request, "starts_before"), contactId: queryParam(request, "contact_id") === undefined ? undefined : uuidParam(queryParam(request, "contact_id"), "contact_id") }) })),
   getAvailability: (request: Request) => handleApiRequest(request, "getAvailability", async ({ context, caller }) => {
     const serviceId = uuidParam(queryParam(request, "service_id"), "service_id");
     const startDate = queryParam(request, "start_date");
     if (!startDate) throw new PublicApiError(400, "invalid_request", "start_date is required.", [{ path: "start_date", message: "Required." }]);
-    return { body: { data: await getAvailabilityForApi(context, caller, { serviceId, startDate, endDate: queryParam(request, "end_date") }), next_cursor: null, has_more: false } };
+    const staffId = queryParam(request, "staff_id") === undefined ? undefined : uuidParam(queryParam(request, "staff_id"), "staff_id");
+    return { body: { data: await getAvailabilityForApi(context, caller, { serviceId, startDate, endDate: queryParam(request, "end_date"), staffId }), next_cursor: null, has_more: false } };
   }),
   createAppointment: (request: Request) => handleApiRequest(request, "createAppointment", async ({ context, caller }) => ({ body: data(await createAppointmentForApi(context, caller, await readApiBody(request, apiAppointmentCreateSchema))) })),
   getAppointment: (request: Request, { params }: Params<"appointment_id">) => handleApiRequest(request, "getAppointment", async ({ context, caller }) => ({ body: data(await getAppointmentForApi(context, caller, uuidParam((await params).appointment_id, "appointment_id"))) })),
