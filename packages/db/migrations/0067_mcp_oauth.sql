@@ -204,6 +204,31 @@ CREATE POLICY oauth_clients_operator ON public.oauth_clients FOR SELECT TO lobby
   USING (EXISTS (SELECT 1 FROM public.oauth_consents consent WHERE consent.client_id = oauth_clients.client_id AND app.can_manage_oauth_reference(consent.reference_id)));
 GRANT SELECT (id, client_id, name, uri, client_discovery_id, disabled) ON public.oauth_clients TO lobbystack_app;
 
+-- Who connected each app. users_self_access lets the app role read only its
+-- own users row, so the connected apps list reads grantor names through this
+-- function. It answers only an operator who belongs to the business in their
+-- RLS context, and only for people who hold a grant for that business.
+CREATE OR REPLACE FUNCTION app.list_oauth_grantors(p_business_id uuid)
+RETURNS TABLE (user_id uuid, name text, email text)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_catalog
+AS $$
+  SELECT DISTINCT person.id, person.name, person.email
+  FROM public.oauth_consents consent
+  JOIN public.users person ON person.id = consent.user_id
+  WHERE consent.reference_id = p_business_id::text
+    -- Inside SECURITY DEFINER current_user is the owner, so app.current_actor_type()
+    -- would read 'none'; only lobbystack_app can execute this, so read the setting.
+    AND current_setting('app.actor_type', true) = 'operator'
+    AND app.current_business_id() = p_business_id
+    AND app.has_business_membership(p_business_id)
+$$;
+
+REVOKE ALL ON FUNCTION app.list_oauth_grantors(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION app.list_oauth_grantors(uuid) TO lobbystack_app;
+
 -- MCP requests arrive without a tenant context. This resolver maps an access
 -- token hash to its grant and business. It returns nothing when the token is
 -- revoked or expired, the grant was revoked, the client is disabled, the

@@ -282,6 +282,32 @@ describe.skipIf(!setup.testUrl)("OAuth for MCP against PostgreSQL with RLS", () 
     await admin!.db.update(businessMemberships).set({ role: "business_admin" }).where(and(eq(businessMemberships.businessId, businessB), eq(businessMemberships.userId, owner.userId)));
   });
 
+  it("shows who connected each app, including other members, only to members of that business", async () => {
+    // A second admin of business A connects the same client.
+    const colleague = await signedInOwner();
+    await admin!.db.insert(businessMemberships).values({ businessId: businessA, userId: colleague.userId, role: "business_admin" });
+    const { verifier, challenge } = pkce();
+    const code = await approve(colleague, await authorizeToConsent(colleague, challenge, "calls:read offline_access"), businessA, ["calls:read"]);
+    expect((await token({ grant_type: "authorization_code", code, redirect_uri: redirectUri, client_id: clientId, code_verifier: verifier, resource })).status).toBe(200);
+    const [colleagueRow] = await admin!.db.select({ email: users.email }).from(users).where(eq(users.id, colleague.userId));
+
+    // The owner lists A's grants with the application role and sees the colleague's name and email.
+    const context = { db: getDatabase("lobbystack_app").db };
+    const listed = await listOAuthGrants(context, { userId: owner.userId, businessId: businessA });
+    expect(listed.find((row) => row.grantedBy?.userId === colleague.userId)?.grantedBy).toEqual({ userId: colleague.userId, name: "Owner", email: colleagueRow!.email });
+
+    // The function answers nothing outside an operator context for that business.
+    const app = getDatabase("lobbystack_app").db;
+    const bare = await app.execute<{ user_id: string }>(sql`select user_id from app.list_oauth_grantors(${businessA}::uuid)`);
+    expect(bare.rows).toEqual([]);
+    const outsider = await signedInOwner();
+    const foreign = await app.transaction(async (tx) => {
+      await tx.execute(sql`select set_config('app.user_id', ${outsider.userId}, true), set_config('app.business_id', ${businessA}, true), set_config('app.actor_type', 'operator', true)`);
+      return await tx.execute<{ user_id: string }>(sql`select user_id from app.list_oauth_grantors(${businessA}::uuid)`);
+    });
+    expect(foreign.rows).toEqual([]);
+  });
+
   it("revokes an access token through the RFC 7009 endpoint", async () => {
     const tokens = await grant(businessA, ["calls:read"]);
     const response = await auth("/oauth2/revoke", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ token: tokens.access, token_type_hint: "access_token", client_id: clientId }) });

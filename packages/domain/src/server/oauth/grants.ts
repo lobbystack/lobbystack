@@ -1,6 +1,6 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 
-import { auditLogs, oauthAccessTokens, oauthClients, oauthConsents, oauthRefreshTokens, users, withBusinessTransaction, type Database } from "@lobbystack/db";
+import { auditLogs, oauthAccessTokens, oauthClients, oauthConsents, oauthRefreshTokens, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { isApiKeyScope, type ApiKeyScope } from "@lobbystack/shared";
 
 import { hasMinimumRole, requireBusinessAdmin } from "../../authz";
@@ -38,16 +38,17 @@ export async function listOAuthGrants(context: DomainContext, input: { userId: s
       clientDiscovery: oauthClients.clientDiscoveryId,
       scopes: oauthConsents.scopes,
       userId: oauthConsents.userId,
-      userName: users.name,
-      userEmail: users.email,
       createdAt: oauthConsents.createdAt,
       updatedAt: oauthConsents.updatedAt,
       lastUsedAt: oauthConsents.lastUsedAt,
     }).from(oauthConsents)
       .leftJoin(oauthClients, eq(oauthClients.clientId, oauthConsents.clientId))
-      .leftJoin(users, eq(users.id, oauthConsents.userId))
       .where(eq(oauthConsents.referenceId, input.businessId))
       .orderBy(desc(oauthConsents.createdAt));
+    // users_self_access hides other people's users rows from the app role, so
+    // grantor names come from a function limited to this business's grants.
+    const grantors = await tx.execute<{ user_id: string; name: string | null; email: string | null }>(sql`select user_id, name, email from app.list_oauth_grantors(${input.businessId}::uuid)`);
+    const byId = new Map(grantors.rows.map((row) => [row.user_id, row]));
     return rows.map((row) => ({
       id: row.id,
       clientId: row.clientId,
@@ -55,7 +56,7 @@ export async function listOAuthGrants(context: DomainContext, input: { userId: s
       clientUri: row.clientUri,
       clientDiscovery: row.clientDiscovery,
       scopes: row.scopes.filter(isApiKeyScope),
-      grantedBy: row.userId ? { userId: row.userId, name: row.userName, email: row.userEmail } : null,
+      grantedBy: row.userId ? { userId: row.userId, name: byId.get(row.userId)?.name ?? null, email: byId.get(row.userId)?.email ?? null } : null,
       createdAt: iso(row.createdAt),
       updatedAt: iso(row.updatedAt),
       lastUsedAt: iso(row.lastUsedAt),
