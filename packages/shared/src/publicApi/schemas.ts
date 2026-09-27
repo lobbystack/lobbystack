@@ -47,6 +47,17 @@ export const apiHoursWindowSchema = z.object({
   close: clock,
 }).describe("Opening hours for one day. Days that are not listed are closed.");
 
+export const apiMeSchema = z.object({
+  api_key: z.object({
+    id,
+    name: z.string(),
+    prefix: z.string().describe("The visible start of the key, for example lsk_1a2b3c4d."),
+    scopes: z.array(z.enum(apiKeyScopes)),
+    created_at: timestamp,
+  }),
+  business: z.object({ id, name: z.string() }),
+}).describe("The API key making the request and the business it belongs to.");
+
 export const apiBusinessSchema = z.object({
   id,
   name: z.string(),
@@ -75,6 +86,16 @@ export const apiServiceSchema = z.object({
   created_at: timestamp,
   updated_at: timestamp,
 });
+
+export const apiStaffSchema = z.object({
+  id,
+  name: z.string(),
+  active: z.boolean().describe("Only active staff members take bookings."),
+  timezone: z.string(),
+  service_ids: z.array(id).describe("Active services this person can be booked for. A service with no staff assigned is open to every active staff member."),
+  created_at: timestamp,
+  updated_at: timestamp,
+}).describe("A person who takes appointments. A business that never set up staff has one active staff member named after the business.");
 
 export const apiCallSchema = z.object({
   id,
@@ -155,12 +176,13 @@ export const apiAppointmentCreateSchema = z.strictObject({
   contact_id: id.optional().describe("An existing contact with a phone number. Provide contact_id or contact_phone."),
   contact_phone: e164.optional(),
   contact_name: z.string().trim().min(1).max(200).optional(),
-  staff_id: id.optional().describe("Preferred staff member."),
+  staff_id: id.optional().describe("Book with this active staff member. Without it, LobbyStack picks one who is free."),
   sms_consent: z.boolean().optional().describe("True only if the customer agreed to receive confirmation and reminder texts."),
 }).refine((value) => Boolean(value.contact_id || value.contact_phone), { message: "Provide contact_id or contact_phone.", path: ["contact_phone"] });
 
 export const apiAppointmentRescheduleSchema = z.strictObject({
   starts_at: inputTimestamp,
+  staff_id: id.optional().describe("Move the appointment to this active staff member. Defaults to the current one."),
 });
 
 export const apiAvailabilitySlotSchema = z.object({
@@ -259,10 +281,12 @@ export const apiWebhookTestEventSchema = eventEnvelope(WEBHOOK_TEST_EVENT_TYPE, 
 
 export const apiKeyScopeSchema = z.enum(apiKeyScopes);
 
+export type ApiMe = z.infer<typeof apiMeSchema>;
 export type ApiBusiness = z.infer<typeof apiBusinessSchema>;
 export type ApiBusinessUpdate = z.infer<typeof apiBusinessUpdateSchema>;
 export type ApiHoursWindow = z.infer<typeof apiHoursWindowSchema>;
 export type ApiService = z.infer<typeof apiServiceSchema>;
+export type ApiStaff = z.infer<typeof apiStaffSchema>;
 export type ApiCall = z.infer<typeof apiCallSchema>;
 export type ApiCallDetail = z.infer<typeof apiCallDetailSchema>;
 export type ApiContact = z.infer<typeof apiContactSchema>;

@@ -1,9 +1,10 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { appointments, auditLogs, businessHours, businesses, contacts, enqueueOutbox, receptionistProfiles, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { apiKeys, appointments, auditLogs, businessHours, businesses, calendarConnections, contacts, enqueueOutbox, receptionistProfiles, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import {
   PUBLIC_API_AVAILABILITY_MAX_DAYS,
+  isApiKeyScope,
   normalizeBookingMode,
   weekdays,
   type ApiAppointment,
@@ -18,8 +19,10 @@ import {
   type ApiContactUpdate,
   type ApiKnowledgeEntry,
   type ApiKnowledgeEntryCreate,
+  type ApiMe,
   type ApiMessage,
   type ApiService,
+  type ApiStaff,
 } from "@lobbystack/shared";
 
 import { bookAppointment, cancelAppointmentInTransaction, findAvailability, rescheduleAppointmentInTransaction } from "../booking";
@@ -36,6 +39,7 @@ import {
   listContactResources,
   listMessageResources,
   listServiceResources,
+  listStaffResources,
   loadAppointmentResource,
   loadBusinessResource,
   loadCallDetailResource,
@@ -76,6 +80,15 @@ function assertTimeZone(value: string, field: string): void {
 
 // Business
 
+/** The key and its business, for integrations to test a connection. Needs no scope. */
+export async function getMeForApi(context: DomainContext, caller: ApiCaller): Promise<ApiMe> {
+  return await inBusiness(context, caller, async (tx) => {
+    const [row] = await tx.select({ id: apiKeys.id, name: apiKeys.name, prefix: apiKeys.prefix, scopes: apiKeys.scopes, createdAt: apiKeys.createdAt, businessName: businesses.name }).from(apiKeys).innerJoin(businesses, eq(businesses.id, apiKeys.businessId)).where(and(eq(apiKeys.businessId, caller.businessId), eq(apiKeys.id, caller.apiKeyId))).limit(1);
+    if (!row) throw notFound("API key");
+    return { api_key: { id: row.id, name: row.name, prefix: row.prefix, scopes: row.scopes.filter(isApiKeyScope), created_at: row.createdAt.toISOString() }, business: { id: caller.businessId, name: row.businessName } };
+  });
+}
+
 export async function getBusinessForApi(context: DomainContext, caller: ApiCaller): Promise<ApiBusiness> {
   return await inBusiness(context, caller, async (tx) => {
     const business = await loadBusinessResource(tx, caller.businessId);
@@ -110,6 +123,20 @@ export async function updateBusinessForApi(context: DomainContext, caller: ApiCa
 
 export async function listServicesForApi(context: DomainContext, caller: ApiCaller): Promise<ApiService[]> {
   return await inBusiness(context, caller, async (tx) => await listServiceResources(tx, caller.businessId));
+}
+
+export async function listStaffForApi(context: DomainContext, caller: ApiCaller): Promise<ApiStaff[]> {
+  return await inBusiness(context, caller, async (tx) => await listStaffResources(tx, caller.businessId));
+}
+
+/**
+ * A staff_id must name an active staff member of this business who takes the
+ * service. Anything else is a 400 rather than a "no availability" 409.
+ */
+async function assertBookableStaff(tx: DatabaseTransaction, businessId: string, staffId: string, serviceId: string, path = "staff_id"): Promise<void> {
+  const member = (await listStaffResources(tx, businessId)).find((row) => row.id === staffId);
+  if (!member || !member.active) throw invalidRequest(`${path} is not an active staff member of this business.`, [{ path, message: "Unknown or inactive staff member." }]);
+  if (!member.service_ids.includes(serviceId)) throw invalidRequest(`${path} does not take this service.`, [{ path, message: "This staff member isn't assigned to the service." }]);
 }
 
 // Calls
@@ -226,12 +253,13 @@ function bookingError(error: unknown): never {
   throw error;
 }
 
-export async function getAvailabilityForApi(context: DomainContext, caller: ApiCaller, input: { serviceId: string; startDate: string; endDate?: string | undefined }): Promise<ApiAvailabilitySlot[]> {
+export async function getAvailabilityForApi(context: DomainContext, caller: ApiCaller, input: { serviceId: string; startDate: string; endDate?: string | undefined; staffId?: string | undefined }): Promise<ApiAvailabilitySlot[]> {
   const loaded = await inBusiness(context, caller, async (tx) => {
     const [service] = await tx.select({ id: services.id, durationMinutes: services.durationMinutes }).from(services).where(and(eq(services.businessId, caller.businessId), eq(services.id, input.serviceId), eq(services.active, true))).limit(1);
     if (!service) throw invalidRequest("service_id is not an active service.", [{ path: "service_id", message: "Not an active service." }]);
     const { timezone } = await bookingContext(tx, caller.businessId);
     const hours = await tx.select({ dayOfWeek: businessHours.dayOfWeek, openMinutes: businessHours.openMinutes, closeMinutes: businessHours.closeMinutes }).from(businessHours).where(eq(businessHours.businessId, caller.businessId));
+    if (input.staffId) await assertBookableStaff(tx, caller.businessId, input.staffId, service.id);
     return { service, timezone, hours };
   });
   const start = DateTime.fromISO(input.startDate, { zone: loaded.timezone });
@@ -246,7 +274,7 @@ export async function getAvailabilityForApi(context: DomainContext, caller: ApiC
   // Same check the receptionist uses for each opening, a few at a time.
   for (let index = 0; index < candidates.length; index += 6) {
     const batch = candidates.slice(index, index + 6);
-    const results = await Promise.all(batch.map(async (startsAt) => (await findAvailability(context, { businessId: caller.businessId, serviceId: loaded.service.id, startsAt, timezone: loaded.timezone })).length > 0));
+    const results = await Promise.all(batch.map(async (startsAt) => (await findAvailability(context, { businessId: caller.businessId, serviceId: loaded.service.id, startsAt, timezone: loaded.timezone, ...(input.staffId ? { staffIds: [input.staffId] } : {}) })).length > 0));
     batch.forEach((startsAt, position) => { if (results[position]) open.push(startsAt); });
   }
   return open.map((startsAt) => ({ starts_at: new Date(startsAt).toISOString(), ends_at: new Date(new Date(startsAt).getTime() + loaded.service.durationMinutes * 60_000).toISOString() }));
@@ -266,6 +294,7 @@ export async function createAppointmentForApi(context: DomainContext, caller: Ap
       if (contactPhone && contactPhone !== contact.phone) throw invalidRequest("contact_phone does not match the contact's phone number.");
       contactPhone = contact.phone;
     }
+    if (input.staff_id) await assertBookableStaff(tx, caller.businessId, input.staff_id, input.service_id);
     return { timezone, contactPhone: contactPhone! };
   });
   let appointmentId: string;
@@ -298,17 +327,24 @@ export async function cancelAppointmentForApi(context: DomainContext, caller: Ap
   });
 }
 
-export async function rescheduleAppointmentForApi(context: DomainContext, caller: ApiCaller, appointmentId: string, input: { starts_at: string }): Promise<ApiAppointment> {
+export async function rescheduleAppointmentForApi(context: DomainContext, caller: ApiCaller, appointmentId: string, input: { starts_at: string; staff_id?: string | undefined }): Promise<ApiAppointment> {
   const startsAt = new Date(input.starts_at);
   if (startsAt.getTime() <= Date.now()) throw invalidRequest("starts_at must be in the future.", [{ path: "starts_at", message: "Must be in the future." }]);
   try {
     return await inBusiness(context, caller, async (tx) => {
       const { bookingMode } = await bookingContext(tx, caller.businessId);
       assertInstantBooking(bookingMode);
-      const [existing] = await tx.select({ status: appointments.status }).from(appointments).where(and(eq(appointments.businessId, caller.businessId), eq(appointments.id, appointmentId))).limit(1);
+      const [existing] = await tx.select({ status: appointments.status, serviceId: appointments.serviceId, staffId: appointments.staffId }).from(appointments).where(and(eq(appointments.businessId, caller.businessId), eq(appointments.id, appointmentId))).limit(1);
       if (!existing) throw notFound("Appointment");
       if (existing.status === "canceled") throw conflict("A cancelled appointment cannot be rescheduled.");
-      const moved = await rescheduleAppointmentInTransaction(tx, { businessId: caller.businessId, appointmentId, startsAt: startsAt.toISOString(), change: { source: "api", apiKeyId: caller.apiKeyId } });
+      if (input.staff_id) await assertBookableStaff(tx, caller.businessId, input.staff_id, existing.serviceId);
+      if (input.staff_id && input.staff_id !== existing.staffId) {
+        // Calendar sync updates the event on the staff member's own calendar. Moving
+        // between staff with their own calendars would leave the old event behind.
+        const [ownCalendar] = await tx.select({ id: calendarConnections.id }).from(calendarConnections).where(and(eq(calendarConnections.businessId, caller.businessId), ne(calendarConnections.status, "disconnected"), inArray(calendarConnections.staffId, [existing.staffId, input.staff_id]))).limit(1);
+        if (ownCalendar) throw conflict("This appointment can't move to another staff member because one of them has their own connected calendar. Cancel it and book a new one instead.");
+      }
+      const moved = await rescheduleAppointmentInTransaction(tx, { businessId: caller.businessId, appointmentId, startsAt: startsAt.toISOString(), change: { source: "api", apiKeyId: caller.apiKeyId }, ...(input.staff_id ? { staffId: input.staff_id } : {}) });
       if (!moved) throw notFound("Appointment");
       const appointment = await loadAppointmentResource(tx, caller.businessId, appointmentId);
       if (!appointment) throw notFound("Appointment");

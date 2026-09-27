@@ -39,6 +39,79 @@
     }
   ],
   "paths": {
+    "/me": {
+      "get": {
+        "operationId": "getMe",
+        "summary": "Check an API key",
+        "description": "Returns the key and its business. Any valid key can call it, whatever its scopes, so integrations use it to test a connection.",
+        "tags": [
+          "Business"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Me"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is invalid (invalid_request).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The API key is missing, invalid, or revoked (unauthorized).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (rate_limited). Wait for the Retry-After header's number of seconds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait."
+              }
+            }
+          }
+        }
+      }
+    },
     "/business": {
       "get": {
         "operationId": "getBusiness",
@@ -255,6 +328,105 @@
                       "type": "array",
                       "items": {
                         "$ref": "#/components/schemas/Service"
+                      }
+                    },
+                    "next_cursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Pass as cursor to get the next page. Null on the last page."
+                    },
+                    "has_more": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is invalid (invalid_request).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The API key is missing, invalid, or revoked (unauthorized).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The API key lacks the business:read scope (insufficient_scope).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (rate_limited). Wait for the Retry-After header's number of seconds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/staff": {
+      "get": {
+        "operationId": "listStaff",
+        "summary": "List staff",
+        "description": "Lists everyone who can take appointments, active or not. Pass an active staff id as staff_id to GET /availability, POST /appointments or reschedule.",
+        "tags": [
+          "Business"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scope": "business:read",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "next_cursor",
+                    "has_more"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Staff"
                       }
                     },
                     "next_cursor": {
@@ -1086,6 +1258,15 @@
               "type": "string",
               "format": "date-time"
             }
+          },
+          {
+            "name": "contact_id",
+            "in": "query",
+            "description": "Only this contact's appointments.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -1328,6 +1509,15 @@
             "schema": {
               "type": "string",
               "format": "date"
+            }
+          },
+          {
+            "name": "staff_id",
+            "in": "query",
+            "description": "Only times this active staff member is free.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -1641,7 +1831,7 @@
       "post": {
         "operationId": "rescheduleAppointment",
         "summary": "Reschedule an appointment",
-        "description": "Moves the appointment to a new open time with the same staff member. Requires booking_mode instant.",
+        "description": "Moves the appointment to a new open time, with the same staff member unless you pass staff_id. Requires booking_mode instant.",
         "tags": [
           "Appointments"
         ],
@@ -3101,6 +3291,83 @@
         ],
         "additionalProperties": false
       },
+      "Me": {
+        "description": "The API key making the request and the business it belongs to.",
+        "type": "object",
+        "properties": {
+          "api_key": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "description": "Stable identifier (UUID).",
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "prefix": {
+                "description": "The visible start of the key, for example lsk_1a2b3c4d.",
+                "type": "string"
+              },
+              "scopes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "business:read",
+                    "business:write",
+                    "calls:read",
+                    "contacts:read",
+                    "contacts:write",
+                    "appointments:read",
+                    "appointments:write",
+                    "messages:read",
+                    "knowledge:write",
+                    "webhooks:manage"
+                  ]
+                }
+              },
+              "created_at": {
+                "description": "ISO 8601 timestamp in UTC.",
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "prefix",
+              "scopes",
+              "created_at"
+            ],
+            "additionalProperties": false
+          },
+          "business": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "description": "Stable identifier (UUID).",
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "api_key",
+          "business"
+        ],
+        "additionalProperties": false
+      },
       "Business": {
         "type": "object",
         "properties": {
@@ -3315,6 +3582,56 @@
           "name",
           "description",
           "duration_minutes",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": false
+      },
+      "Staff": {
+        "description": "A person who takes appointments. A business that never set up staff has one active staff member named after the business.",
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "Stable identifier (UUID).",
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "active": {
+            "description": "Only active staff members take bookings.",
+            "type": "boolean"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "service_ids": {
+            "description": "Active services this person can be booked for. A service with no staff assigned is open to every active staff member.",
+            "type": "array",
+            "items": {
+              "description": "Stable identifier (UUID).",
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "created_at": {
+            "description": "ISO 8601 timestamp in UTC.",
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "description": "ISO 8601 timestamp in UTC.",
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "active",
+          "timezone",
+          "service_ids",
           "created_at",
           "updated_at"
         ],
@@ -3954,7 +4271,7 @@
             "maxLength": 200
           },
           "staff_id": {
-            "description": "Preferred staff member.",
+            "description": "Book with this active staff member. Without it, LobbyStack picks one who is free.",
             "type": "string",
             "format": "uuid"
           },
@@ -3976,6 +4293,11 @@
             "description": "ISO 8601 timestamp with a Z or numeric offset.",
             "type": "string",
             "format": "date-time"
+          },
+          "staff_id": {
+            "description": "Move the appointment to this active staff member. Defaults to the current one.",
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [

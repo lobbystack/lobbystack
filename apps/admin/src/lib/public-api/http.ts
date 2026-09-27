@@ -120,7 +120,7 @@ export async function handleApiRequest(request: Request, operationId: ApiOperati
     const context = (dependencies.context ?? createWorkerDomainContext)();
     key = await (dependencies.resolveKey ?? ((value) => resolveApiKey(context, value)))(token);
     if (!key) return (status = 401, apiError(401, "unauthorized", "The API key is invalid or has been revoked.", { headers: { "WWW-Authenticate": "Bearer" } }));
-    if (!key.scopes.includes(operation.scope)) return (status = 403, apiError(403, "insufficient_scope", `This API key needs the ${operation.scope} scope.`));
+    if (operation.scope && !key.scopes.includes(operation.scope)) return (status = 403, apiError(403, "insufficient_scope", `This API key needs the ${operation.scope} scope.`));
 
     const limit = await (dependencies.rateLimit ?? enforceApiRateLimit)(key.apiKeyId);
     if (!limit.allowed) {

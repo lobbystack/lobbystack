@@ -34,13 +34,32 @@ curl https://app.lobbystack.com/api/v1/calls \
 
 A missing, unknown or revoked key returns `401` with the code `unauthorized`.
 
+## Test a key
+
+`GET /me` works with any valid key, whatever its scopes. It returns the key and its business, so an integration can check a connection before it needs a specific scope:
+
+```json
+{
+  "data": {
+    "api_key": {
+      "id": "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6",
+      "name": "Zapier",
+      "prefix": "lsk_1a2b3c4d",
+      "scopes": ["appointments:read", "appointments:write"],
+      "created_at": "2026-09-27T16:58:00.000Z"
+    },
+    "business": { "id": "75795511-9ee2-4cb2-a89d-f173ec1dd82d", "name": "Maple Salon" }
+  }
+}
+```
+
 ## Scopes
 
-Each endpoint requires one scope. A key without it gets `403` with the code `insufficient_scope`, and the message names the missing scope.
+Each endpoint except `GET /me` requires one scope. A key without it gets `403` with the code `insufficient_scope`, and the message names the missing scope.
 
 | Scope | Allows |
 | --- | --- |
-| `business:read` | `GET /business`, `GET /services` |
+| `business:read` | `GET /business`, `GET /services`, `GET /staff` |
 | `business:write` | `PATCH /business` |
 | `calls:read` | `GET /calls`, `GET /calls/{call_id}` |
 | `contacts:read` | `GET /contacts`, `GET /contacts/{contact_id}` |
