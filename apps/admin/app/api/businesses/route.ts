@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { createBusiness, listUserBusinesses, updateBusiness } from "@lobbystack/domain";
+import { attributeBusiness, createBusiness, listUserBusinesses, updateBusiness } from "@lobbystack/domain";
 import { getAppDatabase, asApiResponse, businessIdFromRequest, readJson, requireApiSession } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
@@ -18,14 +18,21 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const session = await requireApiSession(request);
-    const body = await readJson(request) as { name?: string; slug?: string; timezone?: string; businessType?: string };
+    const body = await readJson(request) as { name?: string; slug?: string; timezone?: string; businessType?: string; referralCode?: unknown };
     if (!body.name || !body.timezone || !body.businessType) {
       return NextResponse.json({ error: "name, timezone, and businessType are required." }, { status: 400 });
     }
     if (body.slug !== undefined && (typeof body.slug !== "string" || !body.slug.trim())) {
       return NextResponse.json({ error: "slug must be a nonempty string when supplied." }, { status: 400 });
     }
-    return NextResponse.json(await createBusiness(createDomainContext(), { userId: session.user.id, name: body.name, ...(body.slug !== undefined ? { slug: body.slug } : {}), timezone: body.timezone, businessType: body.businessType }), { status: 201 });
+    const context = createDomainContext();
+    const created = await createBusiness(context, { userId: session.user.id, name: body.name, ...(body.slug !== undefined ? { slug: body.slug } : {}), timezone: body.timezone, businessType: body.businessType });
+    // Attribute at creation, before the plan step can take a payment, so the
+    // referrer earns commission on the first order too.
+    if (typeof body.referralCode === "string" && body.referralCode) {
+      await attributeBusiness(context, { businessId: created.businessId, referredUserId: session.user.id, referralCode: body.referralCode, source: "referral_link" });
+    }
+    return NextResponse.json(created, { status: 201 });
   } catch (error) {
     return asApiResponse(error);
   }

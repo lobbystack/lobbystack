@@ -32,6 +32,7 @@ MAILPIT_UI_PORT="${E2E_MAILPIT_UI_PORT:-28025}"
 KEEP=0
 SKIP_BUILD=0
 TESTS=(
+  e2e/affiliate-program.e2e.ts
   e2e/auth-pages.e2e.ts
   e2e/auth-return-to.e2e.ts
   e2e/onboarding-flow.e2e.ts
