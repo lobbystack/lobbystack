@@ -1,4 +1,8 @@
 import posthog from "posthog-js";
+// Bundle the session replay recorder. The SDK otherwise fetches it as a
+// separate script from the PostHog host, and Safari 27 and some Firefox setups
+// never run it, so those sessions were never recorded.
+import "posthog-js/dist/posthog-recorder";
 
 import { sanitizeAnalyticsProperties } from "./src/lib/analytics-sanitize";
 

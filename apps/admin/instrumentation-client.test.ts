@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 vi.mock("posthog-js", () => ({ default: mocks.posthog }));
+vi.mock("posthog-js/dist/posthog-recorder", () => ({}));
 
 function initConfig() {
   return mocks.posthog.init.mock.calls[0]![1] as {
