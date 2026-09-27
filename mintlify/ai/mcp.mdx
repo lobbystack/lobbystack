@@ -86,7 +86,7 @@ The server itself answers `401` when the key is missing, unknown or revoked, and
 
 Each tool call counts against the key's limit of 120 requests per minute, shared with any REST requests made with the same key. Listing tools doesn't count. Past the limit, the tool returns `rate_limited` with the seconds to wait.
 
-`book_appointment`, `create_contact` and `add_knowledge` accept an optional `idempotency_key`. Retry with the same value within 24 hours and you get the first result back instead of a duplicate.
+`book_appointment`, `create_contact` and `add_knowledge` accept an optional `idempotency_key`. Retry with the same value within 24 hours and you get the first result back instead of a duplicate. These keys are the same as the REST `Idempotency-Key` for `POST /appointments`, `POST /contacts` and `POST /knowledge`: a retry through MCP of a REST request, or the reverse, returns the first result. The same key with different details returns `idempotency_key_reused`.
 
 ## Audit log
 

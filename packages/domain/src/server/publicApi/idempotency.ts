@@ -9,7 +9,8 @@ import type { DomainContext } from "../context";
 import { invalidRequest, PublicApiError } from "./errors";
 
 // Idempotency-Key support for v1 POSTs that create things. Keys are scoped to
-// the API key and the operation, and remembered for 24 hours.
+// the API key and the v1 operation, whichever transport sends them (REST or an
+// MCP tool mapped to the same operation), and remembered for 24 hours.
 //
 // The key row and the mutation commit in one transaction: the request's
 // domain work runs on that transaction (nested calls become savepoints), and
@@ -21,8 +22,31 @@ import { invalidRequest, PublicApiError } from "./errors";
 export type IdempotencyScope = { businessId: string; apiKeyId: string; operation: string; key: string };
 export type StoredResponse = { status: number; body: unknown };
 
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>).filter(([, entry]) => entry !== undefined).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalJson(entry)}`).join(",")}}`;
+  }
+  return JSON.stringify(value ?? null);
+}
+
+/**
+ * Hashes a request body by its JSON value, ignoring key order and whitespace,
+ * so the REST API (raw body text) and the MCP server (tool arguments mapped to
+ * the REST body) produce the same hash for the same request. A string that is
+ * not valid JSON is hashed as its raw text.
+ */
 export function idempotencyRequestHash(body: unknown): string {
-  return createHash("sha256").update(JSON.stringify(body ?? null)).digest("hex");
+  let value = body;
+  if (typeof body === "string") {
+    try {
+      value = body.trim() ? JSON.parse(body) : null;
+    } catch {
+      value = { raw: body };
+    }
+  }
+  return createHash("sha256").update(canonicalJson(value)).digest("hex");
 }
 
 export function validateIdempotencyKey(value: string | null): string | null {

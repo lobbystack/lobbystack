@@ -117,4 +117,13 @@ describe("idempotency keys", () => {
     expect(() => validateIdempotencyKey("has space")).toThrow();
     expect(idempotencyRequestHash("{\"a\":1}")).not.toBe(idempotencyRequestHash("{\"a\":2}"));
   });
+
+  it("hashes a body by its JSON value, so REST text and MCP arguments match", () => {
+    const rest = "{\n  \"starts_at\": \"2026-09-29T13:00:00Z\", \"service_id\": \"x\" }";
+    expect(idempotencyRequestHash(rest)).toBe(idempotencyRequestHash({ service_id: "x", starts_at: "2026-09-29T13:00:00Z" }));
+    expect(idempotencyRequestHash({ a: 1, b: undefined })).toBe(idempotencyRequestHash({ a: 1 }));
+    expect(idempotencyRequestHash({ a: [1, 2] })).not.toBe(idempotencyRequestHash({ a: [2, 1] }));
+    expect(idempotencyRequestHash("not json")).not.toBe(idempotencyRequestHash("not json either"));
+    expect(idempotencyRequestHash("not json")).not.toBe(idempotencyRequestHash({ raw: "x" }));
+  });
 });

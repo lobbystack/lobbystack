@@ -9,11 +9,13 @@ import { apiKeys, appointments, auditLogs, businessHours, businesses, calls, con
 import { generateApiKey, type DomainContext } from "@lobbystack/domain";
 import type { ApiKeyScope } from "@lobbystack/shared";
 
+import { v1 } from "../public-api/routes";
 import { createLobbyStackMcpHttpHandler } from "./handler";
 
 vi.mock("../error-reporting", () => ({ reportServerError: vi.fn(async () => undefined) }));
-// The handler gets its database context from the test; the app's context factory is not used.
-vi.mock("../domain-context", () => ({ createWorkerDomainContext: () => { throw new Error("Use the test context."); } }));
+// The REST routes use the app's context factory; point it at the test worker pool.
+const shared = vi.hoisted(() => ({ context: undefined as undefined | (() => unknown) }));
+vi.mock("../domain-context", () => ({ createWorkerDomainContext: () => { if (!shared.context) throw new Error("No test database."); return shared.context(); } }));
 
 // The MCP endpoint end to end against PostgreSQL with RLS: a real MCP client,
 // real API keys resolved by hash, and the lobbystack_worker role the admin
@@ -36,6 +38,7 @@ function roleUrl(role: string): string {
 
 const admin = testUrl ? createDatabaseClient("lobbystack_migrator", { DATABASE_URL: testUrl }) : undefined;
 const worker = testUrl ? createDatabaseClient("lobbystack_worker", { DATABASE_URL: roleUrl("lobbystack_worker") }) : undefined;
+if (worker) shared.context = () => ({ db: worker.db });
 
 type Fixture = { businessId: string; serviceId: string; apiKeyId: string; key: string };
 let a: Fixture;
@@ -169,6 +172,35 @@ describe.skipIf(!testUrl)("MCP server against PostgreSQL with RLS", () => {
       expect(row.payload).toMatchObject({ actor: "mcp", apiKeyId: a.apiKeyId });
       expect(JSON.stringify(row.payload)).not.toContain("lsk_");
     }
+  });
+
+  it("shares idempotency keys between REST and MCP", async () => {
+    const client = await connect(a.key);
+    const day = localDayAt(4, 0).toISODate()!;
+    const slots = (await call(client, "check_availability", { service_id: a.serviceId, start_date: day })).data!.data! as Array<{ starts_at: string }>;
+    const body = { service_id: a.serviceId, starts_at: slots[0]!.starts_at, contact_phone: "+14165550166" };
+    const post = (key: string, payload: unknown) => v1.createAppointment(new Request("http://localhost/api/v1/appointments", { method: "POST", headers: { authorization: `Bearer ${a.key}`, "content-type": "application/json", "idempotency-key": key }, body: JSON.stringify(payload) }));
+
+    // REST first, then an MCP retry with the same key replays it.
+    const restResponse = await post("cross-1", body);
+    expect(restResponse.status).toBe(201);
+    const restAppointment = ((await restResponse.json()) as { data: { id: string } }).data;
+    const replayed = await call(client, "book_appointment", { ...body, idempotency_key: "cross-1" });
+    expect(replayed.data).toEqual(restAppointment);
+
+    // MCP first, then a REST retry replays it.
+    const second = { ...body, starts_at: slots[1]!.starts_at, contact_phone: "+14165550167" };
+    const mcpBooked = await call(client, "book_appointment", { ...second, idempotency_key: "cross-2" });
+    const restReplay = await post("cross-2", second);
+    expect(restReplay.headers.get("idempotent-replayed")).toBe("true");
+    expect(((await restReplay.json()) as { data: unknown }).data).toEqual(mcpBooked.data);
+
+    // Two bookings in total, and the key with another body is rejected on both sides.
+    const ids = (await admin!.db.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, a.businessId), inArray(appointments.id, [restAppointment.id, mcpBooked.data!.id as string])))).map((row) => row.id);
+    expect(ids).toHaveLength(2);
+    expect(await call(client, "book_appointment", { ...body, contact_phone: "+14165550168", idempotency_key: "cross-2" })).toEqual({ error: expect.objectContaining({ code: "idempotency_key_reused" }) });
+    const reused = await post("cross-1", { ...body, contact_phone: "+14165550169" });
+    expect(reused.status).toBe(422);
   });
 
   it("refuses to book outside instant booking mode", async () => {

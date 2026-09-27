@@ -4,35 +4,36 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("../domain-context", () => ({ createWorkerDomainContext: () => ({ db: {} }) }));
 vi.mock("../error-reporting", () => ({ reportServerError: vi.fn(async () => undefined) }));
 
-const idempotency = vi.hoisted(() => ({ store: new Map<string, { hash: string; body?: string }>() }));
+const idempotency = vi.hoisted(() => ({ store: new Map<string, { hash: string; response: { status: number; body: unknown } }>() }));
+// REST routes call these directly; the MCP tools get fakes through dependencies.
+const rest = vi.hoisted(() => ({ resolveApiKey: vi.fn(), createAppointmentForApi: vi.fn(), createContactForApi: vi.fn() }));
 vi.mock("@lobbystack/domain", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@lobbystack/domain")>();
-  // An in-memory idempotency store with the same replay rules as the PostgreSQL one.
   return {
     ...actual,
-    beginIdempotentRequest: vi.fn(async (_context: unknown, scope: { apiKeyId: string; operation: string; key: string }, hash: string) => {
+    ...rest,
+    touchApiKeyLastUsed: vi.fn(async () => undefined),
+    // An in-memory stand-in for runIdempotent with the same rules: one record
+    // per (API key, operation, key); same hash replays, a different hash is rejected.
+    runIdempotent: vi.fn(async (context: unknown, scope: { apiKeyId: string; operation: string; key: string }, hash: string, run: (transactional: unknown) => Promise<{ status: number; body: unknown }>) => {
       const id = `${scope.apiKeyId}:${scope.operation}:${scope.key}`;
       const existing = idempotency.store.get(id);
-      if (!existing) {
-        idempotency.store.set(id, { hash });
-        return { kind: "new" };
+      if (existing) {
+        if (existing.hash !== hash) throw new actual.PublicApiError(422, "idempotency_key_reused", "This Idempotency-Key was used with a different request body.");
+        return { replayed: true, response: existing.response };
       }
-      if (existing.hash !== hash) throw new actual.PublicApiError(422, "idempotency_key_reused", "This Idempotency-Key was used with a different request body.");
-      return { kind: "replay", response: { status: 200, body: existing.body } };
-    }),
-    completeIdempotentRequest: vi.fn(async (_context: unknown, scope: { apiKeyId: string; operation: string; key: string }, hash: string, response: { body: string }) => {
-      idempotency.store.set(`${scope.apiKeyId}:${scope.operation}:${scope.key}`, { hash, body: response.body });
-    }),
-    releaseIdempotentRequest: vi.fn(async (_context: unknown, scope: { apiKeyId: string; operation: string; key: string }) => {
-      idempotency.store.delete(`${scope.apiKeyId}:${scope.operation}:${scope.key}`);
+      const response = await run(context);
+      idempotency.store.set(id, { hash, response });
+      return { replayed: false, response };
     }),
   };
 });
 
 import { PublicApiError, type ResolvedApiKey } from "@lobbystack/domain";
-import { apiKeyScopes, type ApiKeyScope } from "@lobbystack/shared";
+import { apiKeyScopes, apiOperations, type ApiKeyScope } from "@lobbystack/shared";
 
 import type { RateLimitDecision } from "../public-api/rate-limit";
+import { v1 } from "../public-api/routes";
 import { createLobbyStackMcpHttpHandler } from "./handler";
 import { mcpTools, type McpOperations } from "./tools";
 
@@ -337,5 +338,76 @@ describe("MCP idempotency", () => {
     const error = errorOf(await client.callTool({ name: "create_contact", arguments: { phone: "+14165550135", idempotency_key: "contact-1" } }));
     expect(error.code).toBe("idempotency_key_reused");
     expect(operations.createContactForApi).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps every creating tool to the idempotent v1 operation it stands for", () => {
+    const idempotent = Object.fromEntries(mcpTools.filter((entry) => entry.idempotent).map((entry) => [entry.name, entry.operation]));
+    expect(idempotent).toEqual({ create_contact: "createContact", book_appointment: "createAppointment", add_knowledge: "createKnowledgeEntry" });
+    for (const entry of mcpTools) expect(entry.scope).toBe(apiOperations[entry.operation].scope);
+  });
+});
+
+describe("idempotency shared between REST and MCP", () => {
+  const restKey = { businessId: businessA, apiKeyId: keyIdA, scopes: [...apiKeyScopes] };
+  const booking = { service_id: id, starts_at: at, contact_phone: "+14165550134" };
+
+  function restBook(body: Record<string, unknown>, key: string) {
+    return v1.createAppointment(new Request("https://app.example.com/api/v1/appointments", {
+      method: "POST",
+      headers: { authorization: "Bearer lsk_aaaaaaaa_full", "content-type": "application/json", "idempotency-key": key },
+      body: JSON.stringify(body, null, 2),
+    }));
+  }
+
+  beforeEach(() => {
+    for (const mock of Object.values(rest)) mock.mockReset();
+    rest.resolveApiKey.mockResolvedValue(restKey);
+    rest.createAppointmentForApi.mockResolvedValue({ ...appointment, id: "11111111-2222-4333-8444-555555555555" });
+  });
+
+  it("replays a REST booking when MCP retries it with the same key", async () => {
+    const response = await restBook(booking, "shared-1");
+    expect(response.status).toBe(201);
+    const first = (await response.json()) as { data: { id: string } };
+    const client = await connect("lsk_aaaaaaaa_full");
+    // Same fields, different key order: the hash covers the JSON value, not its text.
+    const result = await client.callTool({ name: "book_appointment", arguments: { contact_phone: booking.contact_phone, starts_at: at, service_id: id, idempotency_key: "shared-1" } });
+    expect(result.structuredContent).toEqual(first.data);
+    expect(rest.createAppointmentForApi).toHaveBeenCalledTimes(1);
+    expect(operations.createAppointmentForApi).not.toHaveBeenCalled();
+  });
+
+  it("replays an MCP booking when REST retries it with the same key", async () => {
+    const client = await connect("lsk_aaaaaaaa_full");
+    const result = await client.callTool({ name: "book_appointment", arguments: { ...booking, idempotency_key: "shared-2" } });
+    const response = await restBook(booking, "shared-2");
+    expect(response.status).toBe(201);
+    expect(response.headers.get("idempotent-replayed")).toBe("true");
+    expect(((await response.json()) as { data: unknown }).data).toEqual(result.structuredContent);
+    expect(operations.createAppointmentForApi).toHaveBeenCalledTimes(1);
+    expect(rest.createAppointmentForApi).not.toHaveBeenCalled();
+  });
+
+  it("rejects the same key with a different body across transports", async () => {
+    await restBook(booking, "shared-3");
+    const client = await connect("lsk_aaaaaaaa_full");
+    expect(errorOf(await client.callTool({ name: "book_appointment", arguments: { ...booking, contact_phone: "+14165550135", idempotency_key: "shared-3" } })).code).toBe("idempotency_key_reused");
+    await client.callTool({ name: "create_contact", arguments: { phone: "+14165550136", idempotency_key: "shared-4" } });
+    const response = await v1.createContact(new Request("https://app.example.com/api/v1/contacts", { method: "POST", headers: { authorization: "Bearer lsk_aaaaaaaa_full", "content-type": "application/json", "idempotency-key": "shared-4" }, body: JSON.stringify({ phone: "+14165550137" }) }));
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({ error: { code: "idempotency_key_reused" } });
+  });
+
+  it("keeps different operations and different keys apart", async () => {
+    await restBook(booking, "shared-5");
+    const client = await connect("lsk_aaaaaaaa_full");
+    // The same idempotency key on another operation is a new request.
+    const contact = await client.callTool({ name: "create_contact", arguments: { phone: "+14165550138", idempotency_key: "shared-5" } });
+    expect(contact.isError ?? false).toBe(false);
+    // Another API key with the same idempotency key is a new request too.
+    const other = await connect("lsk_bbbbbbbb_full");
+    const booked = await other.callTool({ name: "book_appointment", arguments: { ...booking, idempotency_key: "shared-5" } });
+    expect(booked.isError ?? false).toBe(false);
+    expect(operations.createAppointmentForApi).toHaveBeenCalledTimes(1);
   });
 });

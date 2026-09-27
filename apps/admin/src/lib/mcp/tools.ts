@@ -44,8 +44,11 @@ import {
   apiPageSchema,
   apiServiceSchema,
   parseApiInput,
+  apiOperations,
   weekdays,
   type ApiKeyScope,
+  type ApiOperation,
+  type ApiOperationId,
 } from "@lobbystack/shared";
 
 import { contractSchema } from "./contract-schema";
@@ -82,21 +85,31 @@ export type McpToolRun = { context: DomainContext; caller: ApiCaller; operations
 
 type ToolInput = z.ZodObject;
 
-export type McpTool<Input extends ToolInput = ToolInput> = {
+type ToolDefinition<Input extends ToolInput> = {
   name: string;
   title: string;
   description: string;
-  scope: ApiKeyScope;
+  /** The v1 operation this tool performs. Its scope, and for creating operations its idempotency records, are shared with REST. */
+  operation: ApiOperationId;
   annotations: ToolAnnotations;
   inputSchema: Input;
   outputSchema: StandardSchemaWithJSON;
-  /** Creating tools accept an optional idempotency_key that makes retries safe for 24 hours. */
-  idempotent?: boolean;
+  /** For idempotent operations: the JSON body the matching REST request would send, used for the idempotency hash. */
+  restBody?: (input: z.output<Input>) => Record<string, unknown>;
   run: (run: McpToolRun, input: z.output<Input>) => Promise<Record<string, unknown>>;
 };
 
-function tool<Input extends ToolInput>(definition: McpTool<Input>): McpTool {
-  return definition as unknown as McpTool;
+export type McpTool<Input extends ToolInput = ToolInput> = ToolDefinition<Input> & {
+  scope: ApiKeyScope;
+  /** Creating tools accept an optional idempotency_key, shared with the REST Idempotency-Key for the same operation. */
+  idempotent: boolean;
+};
+
+function tool<Input extends ToolInput>(definition: ToolDefinition<Input>): McpTool {
+  const operation: ApiOperation = apiOperations[definition.operation];
+  const idempotent = operation.idempotent === true;
+  if (idempotent && !definition.restBody) throw new Error(`MCP tool ${definition.name} needs restBody for idempotency.`);
+  return { ...definition, scope: operation.scope, idempotent } as unknown as McpTool;
 }
 
 /** Validates a request body against a v1 contract schema, exactly as the REST API does. */
@@ -131,12 +144,20 @@ const hoursWindowInput = z.object({
 
 const knowledgeTypes = ["faq", "text"] as const;
 
+// The REST request body each creating tool stands for. Both transports hash
+// this body for idempotency, so a retry on either replays the first result.
+type Args = Record<string, unknown>;
+const pick = (input: Args, keys: string[]) => defined(Object.fromEntries(keys.map((key) => [key, input[key]])));
+const contactBody = (input: Args) => pick(input, ["name", "phone", "email", "locale", "timezone"]);
+const bookingBody = (input: Args) => pick(input, ["service_id", "starts_at", "contact_id", "contact_phone", "contact_name", "staff_id", "sms_consent"]);
+const knowledgeBody = (input: Args) => (input.type === "faq" ? pick(input, ["type", "question", "answer"]) : pick(input, ["type", "title", "content"]));
+
 export const mcpTools: McpTool[] = [
   tool({
     name: "get_business",
     title: "Get business profile",
     description: "Returns the business name, time zone, default caller language, website, opening hours and booking_mode. Call this first: other tools return times in UTC, and booking_mode decides whether book_appointment and reschedule_appointment can work (they need instant).",
-    scope: "business:read",
+    operation: "getBusiness",
     annotations: readOnly,
     inputSchema: z.object({}),
     outputSchema: contractSchema(apiBusinessSchema),
@@ -146,7 +167,7 @@ export const mcpTools: McpTool[] = [
     name: "list_services",
     title: "List services",
     description: "Lists the active services customers can book, with each service's id and duration in minutes. Use a service id with check_availability and book_appointment.",
-    scope: "business:read",
+    operation: "listServices",
     annotations: readOnly,
     inputSchema: z.object({}),
     outputSchema: contractSchema(apiPageSchema(apiServiceSchema)),
@@ -156,7 +177,7 @@ export const mcpTools: McpTool[] = [
     name: "update_business_hours",
     title: "Replace opening hours",
     description: "Replaces the whole week of opening hours. Send every day that should be open; any day you leave out becomes closed. Read the current hours with get_business first and change only what the owner asked for. Times are in the business time zone. Returns the updated business.",
-    scope: "business:write",
+    operation: "updateBusiness",
     annotations: updates,
     inputSchema: z.object({
       hours: z.array(hoursWindowInput).max(7).describe("One entry per open day. An empty list closes the business every day."),
@@ -168,7 +189,7 @@ export const mcpTools: McpTool[] = [
     name: "list_calls",
     title: "List calls",
     description: "Lists calls the receptionist handled, newest first, with outcome, summary and caller details. Filter by start time to read a given day: take the business time zone from get_business and pass that day's local midnight bounds with their offset. outcome is appointment_booked, booking_incomplete, message_taken, conversation or none. Use get_call for the transcript.",
-    scope: "calls:read",
+    operation: "listCalls",
     annotations: readOnly,
     inputSchema: z.object({
       started_after: timestampInput("Only calls that started at or after this time."),
@@ -187,7 +208,7 @@ export const mcpTools: McpTool[] = [
     name: "get_call",
     title: "Get a call with transcript",
     description: "Returns one call with its full transcript, in order. Transcripts removed by the retention policy come back empty.",
-    scope: "calls:read",
+    operation: "getCall",
     annotations: readOnly,
     inputSchema: z.object({ call_id: uuid("call") }),
     outputSchema: contractSchema(apiCallDetailSchema),
@@ -197,7 +218,7 @@ export const mcpTools: McpTool[] = [
     name: "search_contacts",
     title: "Search contacts",
     description: "Finds contacts, newest first. Filter by exact phone number (E.164, for example +14165550134), exact email, or part of the name. With no filter it lists every contact. Use it to find a caller before booking or updating their details.",
-    scope: "contacts:read",
+    operation: "listContacts",
     annotations: readOnly,
     inputSchema: z.object({
       phone: z.string().optional().describe("Exact phone number in E.164 format, for example +14165550134."),
@@ -212,7 +233,7 @@ export const mcpTools: McpTool[] = [
     name: "get_contact",
     title: "Get a contact",
     description: "Returns one contact by id.",
-    scope: "contacts:read",
+    operation: "getContact",
     annotations: readOnly,
     inputSchema: z.object({ contact_id: uuid("contact") }),
     outputSchema: contractSchema(apiContactSchema),
@@ -222,9 +243,8 @@ export const mcpTools: McpTool[] = [
     name: "create_contact",
     title: "Create a contact",
     description: "Adds a contact. Give a phone number or an email, or both. Fails with conflict when a contact already has that phone number; the message includes the existing contact's id.",
-    scope: "contacts:write",
+    operation: "createContact",
     annotations: creates,
-    idempotent: true,
     inputSchema: z.object({
       name: z.string().optional().describe("Full name."),
       phone: z.string().optional().describe("Phone number in E.164 format, for example +14165550134."),
@@ -234,13 +254,14 @@ export const mcpTools: McpTool[] = [
       idempotency_key: idempotencyKeyInput,
     }),
     outputSchema: contractSchema(apiContactSchema),
-    run: async ({ context, caller, operations }, input) => await operations.createContactForApi(context, caller, contractBody(apiContactCreateSchema, defined({ name: input.name, phone: input.phone, email: input.email, locale: input.locale, timezone: input.timezone }))),
+    restBody: contactBody,
+    run: async ({ context, caller, operations }, input) => await operations.createContactForApi(context, caller, contractBody(apiContactCreateSchema, contactBody(input))),
   }),
   tool({
     name: "update_contact",
     title: "Update a contact",
     description: "Changes a contact's details. Send only the fields to change. Set name, email, locale or timezone to null to clear them. The phone number can be changed but not cleared.",
-    scope: "contacts:write",
+    operation: "updateContact",
     annotations: updates,
     inputSchema: z.object({
       contact_id: uuid("contact"),
@@ -260,7 +281,7 @@ export const mcpTools: McpTool[] = [
     name: "list_appointments",
     title: "List appointments",
     description: "Lists appointments, most recently booked first. Filter by status (confirmed or cancelled) and by start time to see a day or a week. Times are UTC; convert them to the business time zone before showing them.",
-    scope: "appointments:read",
+    operation: "listAppointments",
     annotations: readOnly,
     inputSchema: z.object({
       status: z.enum(["confirmed", "cancelled"]).optional().describe("Only appointments with this status."),
@@ -281,7 +302,7 @@ export const mcpTools: McpTool[] = [
     name: "get_appointment",
     title: "Get an appointment",
     description: "Returns one appointment by id.",
-    scope: "appointments:read",
+    operation: "getAppointment",
     annotations: readOnly,
     inputSchema: z.object({ appointment_id: uuid("appointment") }),
     outputSchema: contractSchema(apiAppointmentSchema),
@@ -291,7 +312,7 @@ export const mcpTools: McpTool[] = [
     name: "check_availability",
     title: "Check open times",
     description: `Lists open start times for one service, in 30-minute steps within opening hours, checked against staff calendars and existing bookings. Dates are YYYY-MM-DD in the business time zone; the range can span up to ${PUBLIC_API_AVAILABILITY_MAX_DAYS} days. Returned times are UTC. Pass a starts_at value unchanged to book_appointment or reschedule_appointment.`,
-    scope: "appointments:read",
+    operation: "getAvailability",
     annotations: readOnly,
     inputSchema: z.object({
       service_id: uuid("service").describe("The service to book, from list_services."),
@@ -305,9 +326,8 @@ export const mcpTools: McpTool[] = [
     name: "book_appointment",
     title: "Book an appointment",
     description: "Books an appointment at an open time from check_availability. Works only when booking_mode is instant; otherwise it fails with booking_requires_confirmation or booking_disabled, and you should tell the owner instead of retrying. Identify the customer with contact_id (a contact that has a phone number) or contact_phone. Fails with slot_unavailable if the time was taken; check availability again and offer another time. Confirm the service, time and customer with the owner before calling.",
-    scope: "appointments:write",
+    operation: "createAppointment",
     annotations: creates,
-    idempotent: true,
     inputSchema: z.object({
       service_id: uuid("service"),
       starts_at: z.string().describe("A starts_at value from check_availability, unchanged."),
@@ -319,16 +339,14 @@ export const mcpTools: McpTool[] = [
       idempotency_key: idempotencyKeyInput,
     }),
     outputSchema: contractSchema(apiAppointmentSchema),
-    run: async ({ context, caller, operations }, input) => {
-      const { idempotency_key: _key, ...body } = input;
-      return await operations.createAppointmentForApi(context, caller, contractBody(apiAppointmentCreateSchema, defined(body)));
-    },
+    restBody: bookingBody,
+    run: async ({ context, caller, operations }, input) => await operations.createAppointmentForApi(context, caller, contractBody(apiAppointmentCreateSchema, bookingBody(input))),
   }),
   tool({
     name: "cancel_appointment",
     title: "Cancel an appointment",
     description: "Cancels an appointment, removes it from the staff calendar and stops its reminders. The customer is not told automatically. Cancelling an appointment that is already cancelled returns it unchanged. Confirm with the owner before calling.",
-    scope: "appointments:write",
+    operation: "cancelAppointment",
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     inputSchema: z.object({ appointment_id: uuid("appointment") }),
     outputSchema: contractSchema(apiAppointmentSchema),
@@ -338,7 +356,7 @@ export const mcpTools: McpTool[] = [
     name: "reschedule_appointment",
     title: "Reschedule an appointment",
     description: "Moves an appointment to a new open time with the same staff member and service. Works only when booking_mode is instant. Find the new time with check_availability for the appointment's service_id. Fails with slot_unavailable if the time is taken.",
-    scope: "appointments:write",
+    operation: "rescheduleAppointment",
     annotations: updates,
     inputSchema: z.object({
       appointment_id: uuid("appointment"),
@@ -351,7 +369,7 @@ export const mcpTools: McpTool[] = [
     name: "list_messages",
     title: "List messages",
     description: "Lists messages the receptionist took for the team, newest first: who called, the callback number, urgency, the best time to call back and the message itself. status open means nobody has handled it yet.",
-    scope: "messages:read",
+    operation: "listMessages",
     annotations: readOnly,
     inputSchema: z.object({
       status: z.enum(["open", "done"]).optional().describe("Only messages with this status."),
@@ -364,9 +382,8 @@ export const mcpTools: McpTool[] = [
     name: "add_knowledge",
     title: "Add knowledge",
     description: "Teaches the receptionist something it can use to answer callers. For type faq, send question and answer. For type text, send title and content, for example a policy or a price list. Write it as a fact about the business, not as an instruction to the receptionist.",
-    scope: "knowledge:write",
+    operation: "createKnowledgeEntry",
     annotations: creates,
-    idempotent: true,
     inputSchema: z.object({
       type: z.enum(knowledgeTypes).describe("faq for a question and answer, text for anything else."),
       question: z.string().optional().describe("For faq: the question callers ask."),
@@ -376,10 +393,8 @@ export const mcpTools: McpTool[] = [
       idempotency_key: idempotencyKeyInput,
     }),
     outputSchema: contractSchema(apiKnowledgeEntrySchema),
-    run: async ({ context, caller, operations }, input) => {
-      const body = input.type === "faq" ? { type: "faq", question: input.question, answer: input.answer } : { type: "text", title: input.title, content: input.content };
-      return await operations.createKnowledgeEntryForApi(context, caller, contractBody(apiKnowledgeEntryCreateSchema, defined(body)));
-    },
+    restBody: knowledgeBody,
+    run: async ({ context, caller, operations }, input) => await operations.createKnowledgeEntryForApi(context, caller, contractBody(apiKnowledgeEntryCreateSchema, knowledgeBody(input))),
   }),
 ];
 

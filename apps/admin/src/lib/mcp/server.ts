@@ -1,16 +1,14 @@
 import { McpServer, type CallToolResult } from "@modelcontextprotocol/server";
 
 import {
-  beginIdempotentRequest,
-  completeIdempotentRequest,
   idempotencyRequestHash,
   PublicApiError,
-  releaseIdempotentRequest,
+  runIdempotent,
   type ApiCaller,
   type DomainContext,
   type ResolvedApiKey,
 } from "@lobbystack/domain";
-import type { ApiErrorCode } from "@lobbystack/shared";
+import { apiOperations, type ApiErrorCode } from "@lobbystack/shared";
 
 import { reportServerError } from "../error-reporting";
 import type { RateLimitDecision } from "../public-api/rate-limit";
@@ -36,6 +34,7 @@ export type McpServerDependencies = {
   context: () => DomainContext;
   rateLimit: (apiKeyId: string) => Promise<RateLimitDecision>;
   operations?: McpOperations;
+  runIdempotent?: typeof runIdempotent;
   /** Receives one structured line per tool call. Defaults to console.info. */
   log?: (line: Record<string, unknown>) => void;
 };
@@ -67,29 +66,20 @@ function rateLimitError(decision: Exclude<RateLimitDecision, { allowed: true }>)
   return { code: "rate_limited", message: `This API key made too many requests. Retry in ${decision.retryAfterSeconds} seconds.` };
 }
 
-type StoredToolResult = { ok: true; data: Record<string, unknown> } | { ok: false; error: ToolError };
-
-async function runIdempotent(context: DomainContext, caller: ApiCaller, entry: McpTool, key: string, args: Record<string, unknown>, run: () => Promise<Record<string, unknown>>): Promise<CallToolResult> {
-  // MCP keys are kept apart from REST keys: the same value sent to both surfaces creates two things.
-  const scope = { businessId: caller.businessId, apiKeyId: caller.apiKeyId, operation: `mcp.${entry.name}`, key };
-  const { idempotency_key: _key, ...request } = args;
-  const requestHash = idempotencyRequestHash(request);
-  const begun = await beginIdempotentRequest(context, scope, requestHash);
-  if (begun.kind === "replay") {
-    const stored = JSON.parse(String(begun.response.body)) as StoredToolResult;
-    return stored.ok ? successResult(stored.data) : errorResult(stored.error);
-  }
-  try {
-    const data = await run();
-    await completeIdempotentRequest(context, scope, requestHash, { status: 200, body: JSON.stringify({ ok: true, data } satisfies StoredToolResult) });
-    return successResult(data);
-  } catch (error) {
-    const mapped = toolError(error, entry.name);
-    // Client errors are final for this key; server errors free it for a retry.
-    if (mapped.code === "internal_error" || mapped.code === "idempotency_request_in_progress") await releaseIdempotentRequest(context, scope).catch(() => undefined);
-    else await completeIdempotentRequest(context, scope, requestHash, { status: 400, body: JSON.stringify({ ok: false, error: mapped } satisfies StoredToolResult) }).catch(() => undefined);
-    return errorResult(mapped);
-  }
+/**
+ * Runs a creating tool under its idempotency_key, sharing the record with the
+ * REST route for the same operation: same scope (API key, operation id, key)
+ * and the same body hash. A retry on either transport replays the first
+ * response; the domain work and the record commit in one transaction.
+ */
+async function runIdempotentTool(dependencies: { runIdempotent: typeof runIdempotent }, context: DomainContext, caller: ApiCaller, entry: McpTool, key: string, args: Record<string, unknown>, run: (transactional: DomainContext) => Promise<Record<string, unknown>>): Promise<Record<string, unknown>> {
+  const scope = { businessId: caller.businessId, apiKeyId: caller.apiKeyId, operation: entry.operation, key };
+  const status = apiOperations[entry.operation].status;
+  const outcome = await dependencies.runIdempotent(context, scope, idempotencyRequestHash(entry.restBody!(args)), async (transactional) => ({ status, body: JSON.stringify({ data: await run(transactional) }) }));
+  // REST stores the response body as JSON text of the v1 envelope; the tool result is its data.
+  const body = typeof outcome.response.body === "string" ? JSON.parse(outcome.response.body) as { data?: unknown } : outcome.response.body as { data?: unknown };
+  if (!body || typeof body.data !== "object" || body.data === null) throw new Error("The stored idempotent response has no data.");
+  return body.data as Record<string, unknown>;
 }
 
 export function createLobbyStackMcpServer(key: ResolvedApiKey, dependencies: McpServerDependencies): McpServer {
@@ -116,11 +106,9 @@ export function createLobbyStackMcpServer(key: ResolvedApiKey, dependencies: Mcp
           return errorResult(error);
         }
         const context = dependencies.context();
-        const run = async () => await entry.run({ context, caller, operations }, args as never);
+        const run = async (runContext: DomainContext) => await entry.run({ context: runContext, caller, operations }, args as never);
         const idempotencyKey = entry.idempotent && typeof args.idempotency_key === "string" ? args.idempotency_key : null;
-        const result = idempotencyKey ? await runIdempotent(context, caller, entry, idempotencyKey, args, run) : successResult(await run());
-        if (result.isError) outcome = (JSON.parse((result.content[0] as { text: string }).text) as { error: ToolError }).error.code;
-        return result;
+        return successResult(idempotencyKey ? await runIdempotentTool({ runIdempotent: dependencies.runIdempotent ?? runIdempotent }, context, caller, entry, idempotencyKey, args, run) : await run(context));
       } catch (error) {
         const mapped = toolError(error, entry.name);
         outcome = mapped.code;
