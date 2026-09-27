@@ -31,15 +31,6 @@ export interface RealtimeVoiceProvider {
   closeSession(sessionId: string): Promise<void>;
 }
 
-export interface TextAiProvider {
-  generateReply(input: {
-    instructions: string;
-    prompt: string;
-    context?: string;
-  }): Promise<{ text: string }>;
-  summarize(input: { instructions: string; transcript: string }): Promise<{ text: string }>;
-}
-
 export interface CalendarProvider {
   getBusyBlocks(input: {
     connectionId: string;
@@ -109,7 +100,6 @@ export interface DurableExecutionRuntime {
 
 export * from "./ai/aiUsage";
 export * from "./ai/embeddingProvider";
-export * from "./ai/textAiProvider";
 export * from "./crypto/secretBox";
 export * from "./crawling/firecrawl";
 export * from "./crawling/urlSafety";

@@ -34,7 +34,7 @@ export const aiPhoneAnsweringFaqs: FaqItem[] = [
   {
     question: "Is this better than a traditional answering service?",
     answer:
-      "It depends on the call. LobbyStack is a strong fit for routine questions, booking, intake, lead qualification, summaries, and follow-up. Calls that need human judgment can still be transferred to your team.",
+      "It depends on the call. LobbyStack is a strong fit for routine questions, booking, intake, lead qualification, and call summaries. Calls that need human judgment can still be transferred to your team.",
   },
   {
     question: "Can it handle multiple calls at the same time?",

@@ -1,0 +1,78 @@
+import { pathToFileURL } from "node:url";
+import { parseArgs } from "node:util";
+
+import { createDatabaseClient, phoneNumbers, withBusinessTransaction } from "@lobbystack/db";
+import { TwilioProvider } from "@lobbystack/providers/twilio/twilioProvider";
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
+
+/**
+ * Moves one business's phone number between the voice gateway and GPT-Live.
+ *
+ * GPT-Live answers numbers that sit on the Twilio SIP trunk named by
+ * TWILIO_SIP_TRUNK_SID. Taking a number off the trunk sends its calls back to
+ * the voice URL (the voice gateway) at once, so `--rollback` is the undo.
+ * Dry-run is the default; pass --apply to change anything.
+ */
+
+const optionsSchema = z.object({
+  businessId: z.string().uuid(),
+  number: z.string().regex(/^\+\d{8,15}$/, "Use E.164, for example +15815020392."),
+  rollback: z.boolean().default(false),
+  apply: z.boolean().default(false),
+});
+
+/** The voice gateway's inbound URL. Rollback refuses to run without an HTTPS gateway. */
+export function rollbackVoiceUrl(baseUrl: string | undefined): string {
+  const trimmed = baseUrl?.trim().replace(/\/$/, "") ?? "";
+  if (!trimmed.startsWith("https://")) throw new Error("Set VOICE_GATEWAY_BASE_URL to the gateway's HTTPS URL before rolling a number back.");
+  return `${trimmed}/twilio/voice/inbound`;
+}
+
+export async function main(argv = process.argv.slice(2)): Promise<void> {
+  const { values } = parseArgs({ args: argv, options: { "business-id": { type: "string" }, number: { type: "string" }, rollback: { type: "boolean" }, apply: { type: "boolean" } } });
+  const options = optionsSchema.parse({ businessId: values["business-id"], number: values.number, rollback: values.rollback ?? false, apply: values.apply ?? false });
+  const trunkSid = process.env.TWILIO_SIP_TRUNK_SID?.trim();
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  if (!trunkSid || !accountSid || !authToken) throw new Error("TWILIO_SIP_TRUNK_SID, TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN are required.");
+
+  const database = createDatabaseClient("lobbystack_worker");
+  try {
+    const row = await withBusinessTransaction(database.db, { businessId: options.businessId, actorType: "worker" }, async (tx) =>
+      (await tx.select({ id: phoneNumbers.id, providerPhoneId: phoneNumbers.providerPhoneId, voiceWebhookTargetUrl: phoneNumbers.voiceWebhookTargetUrl }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, options.businessId), eq(phoneNumbers.e164, options.number), eq(phoneNumbers.status, "active"))).limit(1))[0]);
+    if (!row?.providerPhoneId) throw new Error("That business has no active number matching it.");
+    const target = options.rollback ? "voice gateway" : "GPT-Live";
+    console.log(JSON.stringify({ number: options.number, phoneNumberId: row.id, current: row.voiceWebhookTargetUrl, target, apply: options.apply }));
+    // Checked before the dry run returns, so a dry run catches a missing gateway URL.
+    const gatewayVoiceUrl = options.rollback ? rollbackVoiceUrl(process.env.VOICE_GATEWAY_BASE_URL) : undefined;
+    if (!options.apply) return;
+
+    const twilio = new TwilioProvider({ accountSid, authToken });
+    if (gatewayVoiceUrl) {
+      // A number bought straight onto the trunk has no voice URL. Point it at
+      // the gateway before it leaves the trunk, so calls always have a target.
+      await twilio.configureIncomingPhoneNumber({ providerPhoneId: row.providerPhoneId, voiceUrl: gatewayVoiceUrl });
+      await twilio.removeNumberFromSipTrunk({ trunkSid, providerPhoneId: row.providerPhoneId });
+    } else {
+      await twilio.addNumberToSipTrunk({ trunkSid, providerPhoneId: row.providerPhoneId });
+    }
+    await withBusinessTransaction(database.db, { businessId: options.businessId, actorType: "worker" }, async (tx) => {
+      await tx.update(phoneNumbers).set({
+        voiceWebhookTargetUrl: gatewayVoiceUrl ?? `sip-trunk:${trunkSid}`,
+        voiceWebhookLastSyncedAt: new Date(),
+        updatedAt: new Date(),
+      }).where(eq(phoneNumbers.id, row.id));
+    });
+    console.log(JSON.stringify({ number: options.number, moved: target }));
+  } finally {
+    await database.pool.end();
+  }
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  void main().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  });
+}

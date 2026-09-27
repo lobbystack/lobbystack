@@ -58,7 +58,7 @@ const featureGridCopy = {
       {
         title: "Planifie les rendez‑vous",
         description:
-          "Connectez votre calendrier : LobbyStack vérifie les disponibilités, propose des créneaux, planifie le rendez‑vous et envoie la confirmation.",
+          "Connectez Google Calendar : LobbyStack vérifie les disponibilités, propose des créneaux, planifie le rendez‑vous et envoie la confirmation.",
         icon: CalendarCheck,
       },
       {

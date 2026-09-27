@@ -23,7 +23,7 @@ export const appointmentSchedulerFaqs: FaqItem[] = [
   },
   {
     question: "What happens if a caller needs help before booking?",
-    answer: "You can define handoff rules. LobbyStack can answer routine questions, take a message, schedule a callback, or transfer the caller to your team when the call needs a person."
+    answer: "You can define handoff rules. LobbyStack can answer routine questions, take a message, or transfer the caller to your team when the call needs a person."
   },
   {
     question: "Can it handle rescheduling?",

@@ -1,7 +1,7 @@
 import { and, count, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
 import { appointments, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { billableVoiceSeconds, isTerminalTwilioCallStatus } from "@lobbystack/shared";
+import { billableVoiceSeconds, isNonBillableCallDisposition, isTerminalTwilioCallStatus } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 
 import { requireBusinessMembership } from "../authz";
@@ -230,7 +230,7 @@ export async function upsertTranscript(
 
 export async function completeCall(
   context: DomainContext,
-  input: { businessId: string; callId: string; status: string; endedAt: string; disposition?: string; providerDurationSeconds?: number; mediaDurationSeconds?: number; expectedProviderCallId?: string },
+  input: { businessId: string; callId: string; status: string; endedAt: string; disposition?: string; providerDurationSeconds?: number; mediaDurationSeconds?: number; providerCostUsd?: number; expectedProviderCallId?: string },
 ): Promise<boolean> {
   const completion = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [call] = await tx.update(calls).set({
@@ -282,6 +282,9 @@ export async function completeCall(
       dedupeKey: `call:${call.id}:finalize`,
       payload: { callId: call.id },
     });
+    // The short-call exemption, as opposed to spam or a non-billable call: the
+    // business pays nothing, but the provider may still bill us.
+    const shortCallWaived = durationSeconds === 0 && !isNonBillableCallDisposition(call.disposition) && ((input.providerDurationSeconds ?? 0) > 0 || measuredSeconds > 0);
     return {
       callId: call.id,
       transport: call.transport,
@@ -289,6 +292,8 @@ export async function completeCall(
       disposition: call.disposition,
       durationSeconds,
       providerDurationSeconds: input.providerDurationSeconds,
+      measuredSeconds,
+      shortCallWaived,
       billingExcluded: call.billingExcluded,
     };
   });
@@ -307,6 +312,21 @@ export async function completeCall(
       ...(completion.billingExcluded ? { billingExcluded: true } : {}),
     },
   });
+  if (completion.shortCallWaived) {
+    await recordVoiceLifecycleEvent(context, {
+      name: "voice.short_call_waived",
+      businessId: input.businessId,
+      callId: completion.callId,
+      channel: voiceChannelForTransport(completion.transport),
+      provider: completion.provider,
+      properties: {
+        measuredSeconds: Math.round(completion.measuredSeconds * 10) / 10,
+        ...(completion.providerDurationSeconds !== undefined ? { providerDurationSeconds: completion.providerDurationSeconds } : {}),
+        ...(input.providerCostUsd !== undefined ? { estimatedCostUsd: input.providerCostUsd } : {}),
+        ...(completion.disposition !== null ? { disposition: completion.disposition } : {}),
+      },
+    });
+  }
   return true;
 }
 

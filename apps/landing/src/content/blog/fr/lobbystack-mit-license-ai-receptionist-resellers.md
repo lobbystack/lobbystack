@@ -36,7 +36,7 @@ Une équipe commerciale peut donc explorer plusieurs modèles. Vous pouvez chang
 
 ## Quatre façons de bâtir une entreprise avec LobbyStack
 
-LobbyStack contient déjà la couche produit autour du modèle vocal : appels, SMS, chat web, rendez-vous, connaissances, transcriptions, enregistrements, transfert humain, consommation, facturation et tableau de bord. Vous pouvez consacrer votre travail aux clients et au marché que vous connaissez.
+LobbyStack contient déjà la couche produit autour du modèle vocal : appels, rendez-vous, textos de réservation, alertes courriel et SMS, connaissances, transcriptions, enregistrements, transfert humain, consommation, facturation et tableau de bord. Vous pouvez consacrer votre travail aux clients et au marché que vous connaissez.
 
 ### Construire un réceptionniste IA vertical
 
@@ -68,7 +68,7 @@ Cette séparation aide les clients à comprendre qui exploite le service. Votre 
 
 L'open source donne le contrôle aux agences et aux équipes techniques. Plusieurs entreprises préfèrent confier l'infrastructure, la surveillance des fournisseurs, les mises à jour et le soutien à une autre équipe.
 
-[LobbyStack Cloud](https://lobbystack.com/fr/pricing/) reste l'option gérée pour ces clients. Ils configurent le réceptionniste, les connaissances, les règles, les numéros de téléphone et les intégrations sans exploiter PostgreSQL, Redis ou la passerelle vocale.
+[LobbyStack Cloud](https://lobbystack.com/fr/pricing/) reste l'option gérée pour ces clients. Ils configurent le réceptionniste, les connaissances, les règles, les numéros de téléphone et Google Calendar sans exploiter PostgreSQL, Redis ou la passerelle vocale.
 
 Les agences peuvent choisir le modèle adapté à chaque mandat. Utilisez le code MIT quand le client demande un produit sous sa marque, une infrastructure personnalisée ou des intégrations poussées. Utilisez LobbyStack Cloud quand le client veut un produit géré et que votre valeur vient de la configuration, des workflows et du service continu.
 
@@ -78,4 +78,4 @@ Nous avons choisi l'AGPL pour son modèle réciproque pendant la construction de
 
 [Clonez LobbyStack sur GitHub](https://github.com/lobbystack/lobbystack), lisez la [présentation de l'auto-hébergement](https://docs.lobbystack.com/self-hosting/overview) et utilisez le [guide Docker Compose](https://docs.lobbystack.com/self-hosting/docker-compose) pour votre premier déploiement. L'article lié explique [pourquoi LobbyStack abandonne Convex](/fr/blog/why-lobbystack-is-moving-away-from-convex/).
 
-Si vous préférez commencer avec le produit géré, [créez un compte LobbyStack Cloud](https://app.lobbystack.com/signup) et testez un vrai appel avant de le présenter à un client.
+Si vous préférez commencer avec le produit géré, [créez un compte LobbyStack Cloud](https://app.lobbystack.com/signup) et testez un appel dans votre navigateur avant de le présenter à un client.

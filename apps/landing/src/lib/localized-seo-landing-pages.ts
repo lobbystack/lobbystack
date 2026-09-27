@@ -16,12 +16,12 @@ const commonFaqsFr: FaqItem[] = [
   {
     question: "Que se passe-t-il si l’appel dépasse ce que l’IA sait faire ?",
     answer:
-      "LobbyStack peut poser des questions de clarification, prendre un message, planifier un rappel ou transférer l’appel selon vos règles.",
+      "LobbyStack peut poser des questions de clarification, prendre un message ou transférer l’appel selon vos règles.",
   },
   {
     question: "Puis-je commencer gratuitement ?",
     answer:
-      "Oui. Le forfait gratuit inclut des minutes vocales de départ pour tester votre accueil avant de passer en production.",
+      "Oui. Le forfait gratuit inclut 30 minutes vocales pour tester votre accueil dans le navigateur avant de passer à un forfait payant.",
   },
 ]
 
@@ -61,7 +61,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
         body: "Les appels courants peuvent être traités automatiquement, tandis que les urgences, clients sensibles ou prospects importants reviennent à votre équipe avec le contexte.",
         points: [
           "Règles de transfert configurables",
-          "Messages et rappels pour les demandes non urgentes",
+          "Messages pour l’équipe sur les demandes non urgentes",
           "Historique centralisé pour vérifier ce qui s’est passé",
         ],
       },
@@ -87,7 +87,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     eyebrow: "Planification de rendez‑vous IA",
     h1: "Un planificateur IA qui réserve pendant que le client est encore prêt.",
     intro:
-      "LobbyStack vérifie les disponibilités, propose des créneaux, confirme les rendez‑vous et envoie les informations de suivi sans aller-retour manuel.",
+      "LobbyStack vérifie les disponibilités, propose des créneaux, confirme les rendez‑vous et envoie une confirmation par texto sans aller-retour manuel.",
     image: "/illustrations/booking-flow.webp",
     imageAlt:
       "Planificateur de rendez‑vous IA LobbyStack confirmant une réservation",
@@ -101,7 +101,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
         title: "Réduisez les allers-retours de planification",
         body: "Quand un appelant est prêt, LobbyStack peut proposer les bons créneaux, confirmer le rendez‑vous et recueillir les détails nécessaires à la préparation.",
         points: [
-          "Disponibilités connectées à votre calendrier",
+          "Disponibilités lues dans Google Calendar",
           "Questions de qualification avant la réservation",
           "Confirmations et prochaines étapes partagées automatiquement",
         ],
@@ -111,7 +111,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
         body: "Si une demande sort de vos règles, LobbyStack prend les préférences, explique la suite et transmet le contexte à votre équipe.",
         points: [
           "Règles par service, zone ou type de rendez‑vous",
-          "Fallback vers rappel ou message si besoin",
+          "Message pour l’équipe si besoin",
           "Transfert des urgences selon vos consignes",
         ],
       },
@@ -143,7 +143,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
       "Réceptionniste IA LobbyStack planifiant des travaux de services à domicile",
     proofPoints: [
       "Qualifie urgence, zone de service et type de travail",
-      "Aide les appelants à réserver ou demander un rappel",
+      "Aide les appelants à réserver ou à laisser un message",
       "Transfère les situations critiques à la bonne personne",
     ],
     sections: [
@@ -158,7 +158,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
       },
       {
         title: "Priorisez les bons appels plus vite",
-        body: "Les urgences, gros projets et demandes sensibles peuvent être escaladés avec contexte, tandis que les appels courants avancent vers un rendez‑vous ou un suivi.",
+        body: "Les urgences, gros projets et demandes sensibles peuvent être escaladés avec contexte, tandis que les appels courants avancent vers un rendez‑vous ou un message.",
         points: [
           "Transfert par urgence ou type de demande",
           "Réservation et confirmations selon vos règles",

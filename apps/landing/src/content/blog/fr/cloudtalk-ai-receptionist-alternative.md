@@ -25,7 +25,7 @@ Vous pouvez tester LobbyStack avec 30 minutes vocales gratuites dans votre navig
 | Entrée IA | 99 $ pour 200 minutes | 30 $ pour 150 minutes |
 | Niveau 500 minutes | 199 $ | 100 $ |
 | Plateforme de base | Abonnement par utilisateur | Aucun centre de contact requis |
-| Intégrations | Plus de 100 annoncées | Intégrations, API et code ouvert |
+| Intégrations | Plus de 100 annoncées | Google Calendar et code ouvert |
 | Rôle | Questions, messages, routage | Réponse, admission, réservation, relais |
 | Déploiement | Géré par CloudTalk | Cloud géré ou auto-hébergement |
 
@@ -45,7 +45,7 @@ CloudTalk inclut numéros, flux d'appels, équipes, analyses et outils de centre
 
 Cette offre convient à une entreprise qui remplace son système téléphonique ou crée une équipe de vente et d'assistance. Les agents humains et l'IA partagent la même plateforme.
 
-LobbyStack ne remplace pas un centre de contact complet. Il gère les appels entrants, connaissances, rendez-vous, résumés, alertes et transferts.
+LobbyStack ne remplace pas un centre de contact complet. Il gère les appels entrants, connaissances, rendez-vous, résumés, alertes et transferts. Il réserve dans Google Calendar et ne se synchronise pas avec un CRM.
 
 ## Additionnez l'agent IA et les sièges
 
@@ -59,7 +59,7 @@ LobbyStack affiche 30 $ pour 150 minutes et 100 $ pour 500. À 500 minutes, son 
 
 CloudTalk présente son Receptionist comme un généraliste pour les questions simples et le routage. Son niveau AI Specialist vise des tâches plus complexes avec un prix supérieur.
 
-LobbyStack inclut réservation, modifications, qualification, connaissances et relais dans le produit de réception. Les workflows tiers complexes demandent toujours des intégrations et des essais.
+LobbyStack inclut réservation, modifications, collecte de coordonnées, connaissances et relais dans le produit de réception. En dehors de Google Calendar, il ne se connecte à aucun système tiers.
 
 ## Exemple d'équipe commerciale
 
@@ -73,7 +73,7 @@ Demandez un devis CloudTalk qui distingue le réceptionniste IA, les sièges té
 
 Listez ensuite les employés qui ont besoin d'un siège CloudTalk. Un agent sur le numéro principal peut servir cinq techniciens qui gardent leur mobile. Une équipe commerciale peut équiper chaque vendeur et obtenir aussi le composeur, le coaching et les analyses.
 
-Testez la réservation, le transfert et les appels hors horaires dans les deux produits. Comparez le dossier CRM et le travail de maintenance. LobbyStack doit améliorer le workflow de réception pour justifier une pile téléphonique séparée.
+Testez la réservation, le transfert et les appels hors horaires dans les deux produits. Comparez le dossier que chaque produit laisse au personnel. LobbyStack doit améliorer le workflow de réception pour justifier une pile téléphonique séparée.
 
 ## Choisissez CloudTalk si
 

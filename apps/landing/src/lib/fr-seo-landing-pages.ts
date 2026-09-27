@@ -143,16 +143,16 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
   "/about/": frenchPage("/about/", {
     title: "À propos de LobbyStack, réceptionniste IA open source",
     description:
-      "Découvrez LobbyStack, le réceptionniste IA open source qui aide les petites entreprises à répondre, planifier, transférer et suivre leurs appels.",
+      "Découvrez LobbyStack, le réceptionniste IA open source qui aide les petites entreprises à répondre à leurs appels, planifier des rendez-vous et transférer les urgences.",
     eyebrow: "À propos",
     h1: "À propos de LobbyStack",
     intro:
-      "LobbyStack aide les petites entreprises à répondre aux appels, planifier des rendez-vous et assurer le suivi sans abandonner le contrôle de leurs flux téléphoniques ni de leurs données.",
+      "LobbyStack aide les petites entreprises à répondre aux appels et planifier des rendez-vous sans abandonner le contrôle de leurs flux téléphoniques ni de leurs données.",
     imageAlt:
       "LobbyStack reliant les appelants, les équipes et les flux de travail d’une entreprise",
     proofPoints: [
       "Réceptionniste IA open source pour petites entreprises",
-      "Réponse, réservation, transfert, SMS et résumés dans un même produit",
+      "Réponse, réservation, transfert et résumés d’appel dans un même produit",
       "Service cloud géré ou déploiement auto-hébergé accompagné",
     ],
     sections: [
@@ -179,7 +179,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         body: "LobbyStack sert les propriétaires et petites équipes qui dépendent des appels entrants : services à domicile, métiers spécialisés, cabinets, salons et entreprises sur rendez-vous.",
         points: [
           "Équipes qui manquent des appels pendant un chantier ou un rendez-vous",
-          "Entreprises qui veulent réserver et suivre sans construire un serveur vocal complexe",
+          "Entreprises qui veulent prendre des rendez-vous par téléphone sans construire un serveur vocal complexe",
           "Opérateurs qui ont besoin d’une couverture hors horaires",
         ],
       },
@@ -254,7 +254,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           body: "Les horaires, les personnes d’astreinte et les critères peuvent varier selon le service. Vos règles déterminent qui reçoit l’appel et dans quelles circonstances.",
           points: [
             "Parcours distincts par service ou degré d’urgence",
-            "Message ou rappel lorsque personne ne doit être interrompu",
+            "Message pour l’équipe lorsque personne ne doit être interrompu",
             "Résultat, transcription et enregistrement consultables",
           ],
         },
@@ -332,7 +332,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           title: "Planifiez les demandes de nouveaux patients",
           body: "LobbyStack peut recueillir les coordonnées, le motif de la visite, les préférences de rendez-vous et les informations que votre cabinet autorise avant de proposer un créneau.",
           points: [
-            "Disponibilités synchronisées avec le calendrier choisi",
+            "Disponibilités lues dans Google Calendar",
             "Confirmation et instructions envoyées après la réservation",
             "Cas particuliers transmis à l’accueil",
           ],
@@ -444,7 +444,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           body: "Les clients réservent souvent après le travail. LobbyStack peut proposer les créneaux autorisés, prendre un message ou expliquer quand l’équipe répondra.",
           points: [
             "Couverture le soir et le week-end",
-            "Liste d’attente ou demande de rappel selon vos règles",
+            "Message pour l’équipe selon vos règles",
             "Historique disponible à l’ouverture",
           ],
         },
@@ -492,7 +492,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "Réceptionniste IA auto-hébergé | LobbyStack",
       description:
-        "Déployez LobbyStack sur votre infrastructure pour contrôler les données d’appel, les fournisseurs, les règles, les intégrations et les mises à jour.",
+        "Déployez LobbyStack sur votre infrastructure pour contrôler les données d’appel, les fournisseurs, les règles et les mises à jour.",
       eyebrow: "Auto-hébergement",
       h1: "Un réceptionniste IA auto-hébergé sur l’infrastructure que vous contrôlez",
       intro:
@@ -519,7 +519,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           body: "Le dépôt public permet d’examiner la logique de prise d’appel, de réservation et de transfert. La licence MIT autorise la modification et la redistribution sous réserve de conserver les avis requis.",
           points: [
             "Consignes, questions d’accueil et règles d’escalade modifiables",
-            "Webhooks et intégrations adaptés à vos systèmes",
+            "Prompts système regroupés dans l’espace de travail packages/ai",
             "Licence consultable directement dans le dépôt",
           ],
         },
@@ -794,7 +794,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           points: [
             "Règles distinctes selon le métier et l’horaire",
             "Transfert seulement lorsque les critères sont remplis",
-            "Fallback vers message ou rappel lorsque prévu",
+            "Message pour l’équipe lorsque l’appel ne doit pas être transféré",
           ],
         },
         {
@@ -1074,7 +1074,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         "Code et contrôles de déploiement du réceptionniste IA open source LobbyStack",
       proofPoints: [
         "Dépôt public sous licence MIT",
-        "Consignes, accueil, transferts et intégrations adaptables",
+        "Consignes, accueil et transferts adaptables",
         "Déploiement auto-hébergé ou cloud géré",
       ],
       sections: [
@@ -1083,17 +1083,17 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           body: "Le dépôt permet d’étudier comment le système reçoit un appel, charge le contexte de l’entreprise, applique les règles et enregistre le résultat.",
           points: [
             "Code de prise d’appel et de routage consultable",
-            "Limites de données et intégrations visibles",
+            "Limites de données et fournisseurs visibles",
             "Problèmes et changements suivis publiquement sur GitHub",
           ],
         },
         {
           title: "Adaptez les flux sans dépendre d’une feuille de route",
-          body: "Vous pouvez modifier les consignes, questions d’accueil, règles de réservation et webhooks dans le respect de la licence du projet.",
+          body: "Vous pouvez modifier les consignes, questions d’accueil et règles de réservation dans le respect de la licence du projet.",
           points: [
             "Accueil et questions adaptés à l’entreprise",
             "Escalades et notifications personnalisées",
-            "Connexions aux systèmes internes par les interfaces documentées",
+            "Code modifiable pour vos systèmes internes",
           ],
         },
         {
@@ -1130,7 +1130,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Puis-je modifier les consignes et les flux ?",
           answer:
-            "Oui, dans le respect de la licence. Les consignes, questions, transferts, réservations et intégrations peuvent être adaptés au code et à la configuration.",
+            "Oui, dans le respect de la licence. Les consignes, questions, transferts et réservations peuvent être adaptés au code et à la configuration.",
         },
         ...standardFaqs,
       ],

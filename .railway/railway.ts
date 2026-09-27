@@ -53,6 +53,9 @@ export default defineRailway((ctx) => {
       LOBBYSTACK_WORKER_DATABASE_URL: preserve(),
       OPENAI_API_KEY: preserve(),
       EMAIL_FROM: preserve(),
+      // GPT-Live calls: the admin hands each call to the worker with this token.
+      INTERNAL_SERVICE_TOKEN: preserve(),
+      LIVE_PROTOTYPE_ENABLED: "true",
       FEEDBACK_TO_EMAIL: preserve(),
       ONBOARDING_FOLLOWUP_FROM: preserve(),
       ONBOARDING_FOLLOWUP_SENDER_NAME: preserve(),
@@ -179,6 +182,10 @@ export default defineRailway((ctx) => {
       NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN: preserve(),
       NEXT_PUBLIC_POSTHOG_HOST: preserve(),
       NEXT_PUBLIC_WEB_CALL_ENDPOINT: preserve(),
+      // The landing page's demo call starts at /api/voice/live/session with no
+      // signed token; the admin only accepts it for this business, from these sites.
+      WEB_CALL_PUBLIC_BUSINESS_SLUG: production ? "lobbystack-mp35s9y1" : "lobbystack",
+      ...(production ? { WEB_CALL_ALLOWED_ORIGINS: "https://lobbystack.com,https://www.lobbystack.com" } : {}),
       OPENAI_API_KEY: preserve(),
       NUMBER_CLAIM_TOKEN_SECRET: preserve(),
       POLAR_ACCESS_TOKEN: preserve(),
@@ -224,6 +231,11 @@ export default defineRailway((ctx) => {
       LOBBYSTACK_FINANCE_EXPORT_DATABASE_URL: preserve(),
       NEXT_PUBLIC_POSTHOG_KEY: preserve(),
       POSTHOG_SOURCEMAP_API_KEY: preserve(),
+      // GPT-Live browser calls. Phone calls reach GPT-Live only in staging so
+      // far; production numbers stay on the voice gateway until they move.
+      LIVE_PROTOTYPE_ENABLED: "true",
+      WORKER_INTERNAL_URL: "http://worker.railway.internal:3002",
+      ...(production ? {} : { OPENAI_WEBHOOK_SECRET: preserve() }),
       ...(production ? { LOBBYSTACK_MAINTENANCE_MODE: preserve() } : {}),
     },
   });

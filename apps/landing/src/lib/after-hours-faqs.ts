@@ -34,7 +34,7 @@ export const afterHoursFaqs: FaqItem[] = [
   {
     question: "How is this different from a voicemail?",
     answer:
-      "Voicemail asks callers to leave a message and wait. Most people hang up. LobbyStack answers the call, asks questions, captures details, books appointments, and sends follow-up. The caller gets help immediately, and your team gets a complete summary.",
+      "Voicemail asks callers to leave a message and wait. Most people hang up. LobbyStack answers the call, asks questions, captures details, and books appointments. The caller gets help immediately, and your team gets a complete summary.",
   },
   {
     question: "Is it cheaper than a human answering service?",

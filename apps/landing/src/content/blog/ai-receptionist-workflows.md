@@ -68,8 +68,8 @@ You describe the policy in words:
 ```text
 For appointment calls, collect the service, preferred day or time, name,
 and phone number. Offer times only from the availability tool. Confirm the
-booking only after the booking tool succeeds. If no slot works, create a
-callback task.
+booking only after the booking tool succeeds. If no slot works, take a
+message so staff can call back.
 ```
 
 The receptionist can handle the conversation. The tools handle the actions that need authority.
@@ -107,25 +107,24 @@ A plain-language quote policy can say:
 ```text
 For quote calls, ask for service type, location, timeline, and budget.
 Share approved starting prices when they exist. If pricing depends on staff
-review, create a quote callback and include the details in the note.
+review, take a message with the details so staff can follow up.
 ```
 
-The receptionist does not invent pricing. It collects the right details, shares approved ranges, and creates a task when a person needs to decide.
+The receptionist does not invent pricing. It collects the right details, shares approved ranges, and takes a message when a person needs to decide.
 
-### Callbacks
+### Callback requests
 
-Callbacks become harder when the caller says "tomorrow morning," gives a different phone number, or asks for a manager because the request feels urgent.
+Callback requests become harder when the caller says "tomorrow morning," gives a different phone number, or asks for a manager because the request feels urgent.
 
 The policy can say:
 
 ```text
-If the caller needs a callback, capture the reason, preferred callback
-window, name, and best phone number. If the request sounds urgent, mark the
-callback urgent and notify the on-call contact. If the request is routine,
-create a task for the next business day.
+If the caller wants a call back, take a message with the reason, preferred
+callback window, name, and best phone number. If the request sounds urgent,
+say so at the top of the message.
 ```
 
-The receptionist can translate caller language into a staff-ready task. The product stores the callback reason, window, urgency, and transcript context.
+The receptionist can turn caller language into a staff-ready message. LobbyStack keeps the reason, callback window, and urgency with the transcript and alerts the owner.
 
 ### Handoff
 
@@ -150,11 +149,11 @@ If your AI receptionist depends on a chain of branches to decide what to say, wh
 
 LobbyStack replaces that layer. It owns the live call behavior, call state, tool results, transcript context, handoff reason, and final outcome.
 
-You may still use n8n, Zapier, Make, or custom webhooks when a client has downstream systems LobbyStack does not integrate with yet. Keep them outside the live call. The AI receptionist should be able to decide the next responsible action during the call, then record a clean outcome staff can trust.
+You may still use n8n, Zapier, or Make for automations outside the call. LobbyStack does not connect to them or send outgoing webhooks, so they stay off the live call. The AI receptionist should be able to decide the next responsible action during the call, then record a clean outcome staff can trust.
 
 ## Where LobbyStack fits
 
-[LobbyStack](/blog/open-source-ai-receptionist-stack/) is an open-source AI receptionist platform. It gives you the receptionist product layer: calls, booking, transcripts, recordings, SMS, callbacks, tasks, quote requests, handoff, dashboard review, usage, and billing surfaces.
+[LobbyStack](/blog/open-source-ai-receptionist-stack/) is an open-source AI receptionist platform. It gives you the receptionist product layer: calls, booking, transcripts, recordings, call summaries, messages, owner alerts, handoff, dashboard review, usage, and billing.
 
 You can use the hosted cloud when speed matters, or [self-host with Docker](/solutions/self-hosted-ai-receptionist/) when you want the stack on your own infrastructure or a client's servers.
 

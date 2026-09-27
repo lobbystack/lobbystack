@@ -48,6 +48,7 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 
 - `voice.call_started`
 - `voice.call_completed`
+- `voice.short_call_waived`: a call ran under 10 seconds, so the business wasn't charged, though the provider may still bill us. Carries the provider's billed seconds, the measured length and, for GPT-Live, the estimated cost.
 - `voice.transfer_state_changed`
 - `voice.transfer_requested`
 - `voice.transfer_completed`

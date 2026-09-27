@@ -11,6 +11,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@lobbystack/agent-core": "workspace:*",
     "@lobbystack/config": "workspace:*",
     "@lobbystack/contracts": "workspace:*",
     "@lobbystack/db": "workspace:*",
@@ -24,8 +25,10 @@
     "ioredis": "^5.8.2",
     "js-tiktoken": "1.0.21",
     "mammoth": "^1.12.0",
+    "openai": "^7.23.0",
     "pdf-parse": "2.4.5",
-    "tesseract.js": "^7.0.0"
+    "tesseract.js": "^7.0.0",
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

@@ -199,7 +199,8 @@ export async function loadWidgetChatHistory(
   input: { businessId: string; conversationId: string },
 ): Promise<Array<{ id: string; direction: "inbound" | "outbound"; body: string; createdAt: Date }>> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const rows = await tx.select({ id: messages.id, direction: messages.direction, body: messages.body, createdAt: messages.createdAt }).from(messages).where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId))).orderBy(asc(messages.createdAt)).limit(200);
-    return rows.map((row) => ({ ...row, direction: row.direction === "inbound" ? "inbound" : "outbound" }));
+    // The newest 200 messages, oldest first, so the list always ends with the latest turn.
+    const rows = await tx.select({ id: messages.id, direction: messages.direction, body: messages.body, createdAt: messages.createdAt }).from(messages).where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId))).orderBy(desc(messages.createdAt)).limit(200);
+    return rows.reverse().map((row) => ({ ...row, direction: row.direction === "inbound" ? "inbound" : "outbound" }));
   });
 }

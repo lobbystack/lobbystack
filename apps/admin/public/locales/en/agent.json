@@ -269,6 +269,22 @@
       }
     }
   },
+  "booking": {
+    "title": "Booking",
+    "mode": {
+      "label": "Appointments",
+      "options": {
+        "instant": "Books appointments",
+        "request": "Takes requests",
+        "off": "Doesn't book"
+      },
+      "descriptions": {
+        "instant": "The agent checks your open times and books the appointment.",
+        "request": "The agent notes the service and preferred time. You confirm from the inbox.",
+        "off": "The agent takes a message instead of booking."
+      }
+    }
+  },
   "appointmentChanges": {
     "title": "Appointment changes",
     "allowCancel": {

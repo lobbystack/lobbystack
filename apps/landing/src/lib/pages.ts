@@ -22,9 +22,9 @@ export const publicPages: PublicPage[] = [
   },
   {
     path: "/features/",
-    title: "AI Receptionist Features for Calls, SMS, and Booking",
+    title: "AI Receptionist Features for Calls, Booking, and Alerts",
     description:
-      "Explore LobbyStack AI receptionist features for phone answering, SMS, appointment booking, call routing, lead qualification, follow-up, and summaries.",
+      "Explore LobbyStack AI receptionist features for phone answering, appointment booking, call transfers, lead qualification, owner alerts, and call summaries.",
     markdown: "/features.md",
   },
   {

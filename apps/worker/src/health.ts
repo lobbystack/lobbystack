@@ -1,4 +1,4 @@
-import { createServer, type Server } from "node:http";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 
 export type WorkerHealthState = {
   ready: boolean;
@@ -8,8 +8,11 @@ export type WorkerHealthState = {
   activeJobs: number;
 };
 
-export function startHealthServer(port: number, state: WorkerHealthState): Server {
-  const server = createServer((request, response) => {
+export type ExtraRouteHandler = (request: IncomingMessage, response: ServerResponse) => Promise<boolean>;
+
+export function startHealthServer(port: number, state: WorkerHealthState, extraRoutes?: ExtraRouteHandler): Server {
+  const server = createServer(async (request, response) => {
+    if (extraRoutes && await extraRoutes(request, response)) return;
     const path = new URL(request.url ?? "/", "http://localhost").pathname;
     if (path === "/health/live") {
       response.writeHead(200, { "content-type": "application/json" });
@@ -25,6 +28,7 @@ export function startHealthServer(port: number, state: WorkerHealthState): Serve
     response.writeHead(404);
     response.end();
   });
-  server.listen(port, "0.0.0.0");
+  // "::" accepts IPv4 too; Railway private networking reaches the worker over IPv6.
+  server.listen(port, "::");
   return server;
 }

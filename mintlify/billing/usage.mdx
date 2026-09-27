@@ -1,6 +1,6 @@
 ---
 title: "Track usage and limits"
-description: "Track voice minutes, alert SMS segments, outbound call attempts, knowledge storage, and paid-plan overages."
+description: "Track voice minutes, alert SMS segments, transfer attempts, knowledge storage, and paid-plan overages."
 sidebarTitle: "Usage and limits"
 contentType: "Reference"
 ---
@@ -13,23 +13,23 @@ The **Settings** > **Usage** page shows hosted usage for the current billing per
 | --- | --- |
 | Voice minutes | Time spent on live voice calls. Calls under 10 seconds and calls the receptionist ends as spam are excluded. |
 | Alert SMS segments | SMS notification segments sent by the system. |
-| Outbound calls | Outbound call attempts, such as live transfer attempts. |
+| Transfer attempts | Outgoing call legs to your team when the receptionist transfers a live caller. LobbyStack makes no other outgoing calls. |
 | Knowledge base | Stored knowledge content size. |
 
 ## Included usage
 
 | Metric | Free | Starter | Pro |
 | --- | --- | --- | --- |
-| Voice minutes | 30 min | 150 min | 500 min |
-| Alert SMS segments | 10 | 50 | 200 |
-| Outbound calls | 2 attempts | 20 attempts | 100 attempts |
+| Voice minutes | 30 browser min | 150 min | 500 min |
+| Alert SMS segments | - | 50 | 200 |
+| Transfer attempts | - | 20 attempts | 100 attempts |
 | Knowledge base | 25 MB | 100 MB | 500 MB |
 
 ## How limits work
 
-Free hosted workspaces include a set usage pool for each billing period. When an included pool is used up, that usage type pauses until the next period or until the workspace upgrades.
+Free has no phone number, so it can't send texts or transfer calls. Free hosted workspaces include a set usage pool for each billing period. When an included pool is used up, that usage type pauses until the next period or until the workspace upgrades.
 
-Starter and Pro support billable overages for voice, alert SMS, and outbound call attempts. Knowledge base has a fixed plan allowance; remove old content or upgrade before adding more after the allowance is full.
+Starter and Pro support billable overages for voice, alert SMS, and transfer attempts. Knowledge base has a fixed plan allowance; remove old content or upgrade before adding more after the allowance is full.
 
 ## Overage rates
 
@@ -37,7 +37,7 @@ Starter and Pro support billable overages for voice, alert SMS, and outbound cal
 | --- | --- | --- |
 | Voice | $0.20 per extra minute | $0.18 per extra minute |
 | Alert SMS | $0.02 per extra segment | $0.02 per extra segment |
-| Outbound calls | $0.02 per extra attempt | $0.02 per extra attempt |
+| Transfer attempts | $0.02 per extra attempt | $0.02 per extra attempt |
 
 Annual subscriptions keep monthly usage resets. Unused included minutes do not roll over.
 

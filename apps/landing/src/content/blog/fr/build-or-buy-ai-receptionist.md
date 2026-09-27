@@ -133,7 +133,7 @@ Il existe un chemin entre « tout développer soi-même » et « faire confiance
 
 Vous pouvez partir d'un [réceptionniste IA open source](/solutions/open-source-ai-receptionist/) et l'auto-héberger lorsque vous avez besoin de plus de contrôle. C'est précisément l'espace que LobbyStack occupe.
 
-LobbyStack est un réceptionniste IA open source pour les entreprises qui dépendent des appels, réservations, demandes de prix, SMS et suivis rapides. Il offre une base fonctionnelle pour répondre aux appels, utiliser les connaissances de l'entreprise, prendre des rendez-vous, transférer à une personne, produire des résumés et configurer des règles sans commencer par un dépôt vide.
+LobbyStack est un réceptionniste IA open source pour les entreprises qui dépendent des appels téléphoniques et des réservations. Il offre une base fonctionnelle pour répondre aux appels, utiliser les connaissances de l'entreprise, prendre des rendez-vous, transférer à une personne, produire des résumés et configurer des règles sans commencer par un dépôt vide.
 
 Le mot important est « base ». L'open source ne supprime pas la maintenance. Il vous donne la possibilité de l'assumer vous-même.
 

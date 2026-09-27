@@ -90,7 +90,7 @@ export const fr = {
     "/terms/": {
       title: "Conditions d'utilisation - LobbyStack",
       description:
-        "Conditions d’utilisation de LobbyStack, plateforme de réceptionniste IA pour appels, SMS, prise de rendez‑vous, routage et suivis.",
+        "Conditions d’utilisation de LobbyStack, plateforme de réceptionniste IA pour appels, alertes SMS, prise de rendez‑vous et transferts d’appels.",
     },
     "/search/": {
       title: "Recherche - LobbyStack",

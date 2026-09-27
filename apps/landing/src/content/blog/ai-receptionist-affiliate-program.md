@@ -104,7 +104,7 @@ LobbyStack does not.
 
 Use this pitch:
 
-> LobbyStack answers calls, qualifies leads, books appointments, takes messages, routes urgent calls, and sends summaries when your team cannot answer.
+> LobbyStack answers calls, captures caller details, books appointments, takes messages, transfers urgent calls, and sends summaries when your team cannot answer.
 
 That is a problem almost every service business understands.
 
@@ -143,7 +143,7 @@ LobbyStack is built around that full receptionist workflow.
 
 That gives you stronger marketing angles than saying “AI answers the phone.”
 
-You can talk about missed-call recovery, after-hours answering, appointment booking, lead capture, human handoff, call summaries, and open-source self-hosting.
+You can talk about answering calls your team would miss, after-hours answering, appointment booking, lead capture, human handoff, call summaries, and open-source self-hosting.
 
 ### It is priced for small businesses
 
@@ -366,7 +366,7 @@ LobbyStack has several:
 * businesses already know missed calls cost money
 * setup follows a guided flow
 * customers can use their existing business number with call forwarding
-* the product can answer, book, qualify, summarize, and route
+* the product can answer, book, take messages, summarize, and transfer
 * the market includes many local business categories
 * pricing is accessible for small businesses
 * the product is open source

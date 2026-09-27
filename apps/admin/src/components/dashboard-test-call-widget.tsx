@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { AuraVoiceDemo } from "@/components/web-voice/AuraVoiceDemo";
-import { webCallEndpoint } from "@/lib/web-call-endpoint";
+import { LIVE_WEB_CALL_ENDPOINT } from "@/components/web-voice/useWebVoiceCall";
 import { announceTestCallEnded, registerTestCallStarter, setTestCallActive } from "@/lib/test-call-launcher";
 import { useTelemetry } from "@/components/product-analytics";
 import type { TelemetryEventName, TelemetryProperties } from "@lobbystack/telemetry";
@@ -154,21 +154,14 @@ function TestCallAura({
     if (!businessId) return;
     telemetry.track(eventName, { businessId, ...properties } as TelemetryProperties);
   }, [businessId, telemetry]);
-  const getStartPayload = useCallback(async (): Promise<Record<string, string>> => {
-    if (!businessId) return {};
-    const response = await fetch(`/api/voice/test-call/proof?businessId=${encodeURIComponent(businessId)}`, { credentials: "include" });
-    if (!response.ok) throw new Error("Test calls are unavailable.");
-    const { proof } = await response.json() as { proof: string };
-    return { dashboardTestCallProof: proof };
-  }, [businessId]);
 
   return (
     <AuraVoiceDemo
       auraTone="dark"
       businessSlug={businessSlug}
       className="w-full"
-      endpoint={webCallEndpoint}
-      getStartPayload={getStartPayload}
+      // The operator's login authorizes the call; the ID picks the workspace.
+      endpoint={businessId ? `${LIVE_WEB_CALL_ENDPOINT}?businessId=${encodeURIComponent(businessId)}` : LIVE_WEB_CALL_ENDPOINT}
       onCallEnded={onCallEnded}
       onEvent={handleVoiceEvent}
       onRegisterControls={onRegisterControls}

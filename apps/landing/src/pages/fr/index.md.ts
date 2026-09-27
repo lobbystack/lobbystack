@@ -10,7 +10,7 @@ url: ${absoluteUrl("/fr/")}
 
 # LobbyStack
 
-LobbyStack est un réceptionniste IA open source pour les petites entreprises qui dépendent des appels, des rendez‑vous et d’un suivi rapide.
+LobbyStack est un réceptionniste IA open source pour les petites entreprises qui dépendent des appels, des rendez‑vous et d’une réponse rapide.
 
 ## Ce que fait LobbyStack
 

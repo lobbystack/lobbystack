@@ -33,7 +33,7 @@
       execute: async () => ({
         name: "LobbyStack",
         description:
-          "Open-source AI receptionist for answering calls, handling SMS, qualifying leads, booking appointments, and routing urgent requests.",
+          "Open-source AI receptionist for answering calls, qualifying leads, booking appointments, and transferring urgent calls.",
         urls,
       }),
     },
@@ -106,12 +106,11 @@
             priceUsdMonthly: 0,
             includedUsage: {
               voiceMinutes: 30,
-              outboundCallAttempts: 2,
-              alertSmsSegments: 10,
-              knowledgeStorageMb: 100,
+              phoneNumbers: 0,
+              knowledgeStorageMb: 25,
             },
             description:
-              "Free includes 30 voice minutes, 2 outbound call attempts, 10 alert SMS segments, and 100 MB knowledge base.",
+              "Free includes 30 voice minutes for browser test calls and a 25 MB knowledge base. It has no phone number, so it sends no texts and cannot transfer calls.",
           },
           {
             name: "Starter",
@@ -119,18 +118,19 @@
             priceUsdAnnual: 288,
             effectivePriceUsdMonthlyAnnual: 24,
             includedUsage: {
+              phoneNumbers: 1,
               voiceMinutes: 150,
-              outboundCallAttempts: 20,
+              transferAttempts: 20,
               alertSmsSegments: 50,
-              knowledgeStorageGb: 2,
+              knowledgeStorageMb: 100,
             },
             overageRatesUsd: {
               voiceMinute: 0.2,
-              outboundCallAttempt: 0.02,
+              transferAttempt: 0.02,
               alertSmsSegment: 0.02,
             },
             description:
-              "Starter includes 150 voice minutes, 20 outbound call attempts, 50 alert SMS segments, and 2 GB knowledge base. Additional usage is pay-as-you-go.",
+              "Starter includes 1 phone number, 150 voice minutes, 20 transfer attempts, 50 alert SMS segments, and a 100 MB knowledge base. Additional usage is pay-as-you-go.",
           },
           {
             name: "Pro",
@@ -138,24 +138,25 @@
             priceUsdAnnual: 960,
             effectivePriceUsdMonthlyAnnual: 80,
             includedUsage: {
+              phoneNumbers: 1,
               voiceMinutes: 500,
-              outboundCallAttempts: 100,
+              transferAttempts: 100,
               alertSmsSegments: 200,
-              knowledgeStorageGb: 10,
+              knowledgeStorageMb: 500,
             },
             overageRatesUsd: {
               voiceMinute: 0.18,
-              outboundCallAttempt: 0.02,
+              transferAttempt: 0.02,
               alertSmsSegment: 0.02,
             },
             description:
-              "Pro includes 500 voice minutes, 100 outbound call attempts, 200 alert SMS segments, and 10 GB knowledge base. Additional usage is pay-as-you-go.",
+              "Pro includes 1 phone number, 500 voice minutes, 100 transfer attempts, 200 alert SMS segments, and a 500 MB knowledge base. Additional usage is pay-as-you-go.",
           },
           {
             name: "Enterprise",
             priceUsdMonthly: null,
             description:
-              "Custom pricing for higher volume, multiple numbers, multi-location routing, custom fallback rules, and self-hosting implementation support.",
+              "Custom pricing for higher volume, multiple numbers, and self-hosting implementation support.",
           },
         ],
       }),
@@ -179,10 +180,11 @@
           "Business knowledge answers",
           "Lead qualification",
           "Human handoff and call transfers",
-          "Outbound calls and follow-up",
+          "Booking confirmation and reminder texts",
+          "Owner alerts by email and SMS",
           "Dashboard, call history, transcripts, summaries, contacts, and analytics",
           "Unlimited concurrent calls",
-          "Multilingual voice support",
+          "Answers in the caller's language",
         ],
       }),
     },

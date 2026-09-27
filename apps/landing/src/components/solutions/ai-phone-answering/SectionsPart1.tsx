@@ -22,7 +22,7 @@ export function Hero() {
           <p className="animate-fade-up body-copy mx-auto mt-6 max-w-[65ch] stagger-2 md:text-lg">
             LobbyStack picks up when your team cannot. It answers common
             questions, captures caller details, books appointments, sends
-            follow-up texts, and routes urgent calls to the right person.
+            confirmation texts, and routes urgent calls to the right person.
           </p>
 
           <div className="animate-fade-up mt-8 flex items-center justify-center gap-4 stagger-3">
@@ -252,8 +252,8 @@ export function UseCases() {
       copy: "Send emergencies, upset customers, high-value leads, and special cases to the right person with context attached.",
     },
     {
-      title: "Missed-call recovery",
-      copy: "Follow up with callers who slipped through, collect the details, and help them book before the opportunity goes cold.",
+      title: "Spam and robocalls",
+      copy: "LobbyStack filters spam calls, and they don't count against your voice minutes.",
     },
   ]
 
@@ -401,7 +401,7 @@ export function Comparison() {
     },
     {
       option: "LobbyStack",
-      what: "AI answers, asks questions, books, follows up, summarizes, and transfers when needed.",
+      what: "AI answers, asks questions, books, summarizes, and transfers when needed.",
       bestFor:
         "Small businesses that want reliable coverage without adding headcount.",
       limit: "Complex or sensitive situations should still go to a human.",

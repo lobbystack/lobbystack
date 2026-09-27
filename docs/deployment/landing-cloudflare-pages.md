@@ -38,7 +38,7 @@ Production should keep these Cloudflare Pages environment variables:
 - `PUBLIC_POSTHOG_KEY`
 - `PUBLIC_POSTHOG_HOST=https://ts.lobbystack.com`
 - `PUBLIC_POSTHOG_UI_HOST=https://us.posthog.com`
-- `PUBLIC_WEB_CALL_ENDPOINT=https://voice.lobbystack.com/web-call/sessions`
+- `PUBLIC_LIVE_CALL_ENDPOINT`, only to point the demo call somewhere other than `https://app.lobbystack.com/api/voice/live/session`
 - `PUBLIC_WEB_CALL_BUSINESS_SLUG=lobbystack-mp35s9y1`
 - `INDEXNOW_KEY`
 - `GOOGLE_SITE_VERIFICATION`, if Google Search Console verification is needed

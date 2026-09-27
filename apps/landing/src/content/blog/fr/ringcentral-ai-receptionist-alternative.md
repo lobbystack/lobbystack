@@ -24,7 +24,7 @@ LobbyStack fonctionne en service géré ou en auto-hébergement. L'acheteur gard
 | Forfait gratuit durable | Non annoncé | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
 | Entrée autonome | Dès 49 $ pour 100 minutes | Gratuit pour 30, puis 30 $ pour 150 |
 | Prix client RingEX | Option dès 39 $ | Aucun abonnement de suite requis |
-| Canaux | Voix, SMS, WhatsApp | Voix, alertes SMS et suivi |
+| Canaux | Voix, SMS, WhatsApp | Voix, textos de réservation et alertes SMS |
 | Téléphonie | Files et administration RingCentral | Réceptionniste relié aux fournisseurs |
 | Code source | Non annoncé | Dépôt public sous licence MIT |
 | Déploiement | Géré par RingCentral | Cloud géré ou auto-hébergement |
@@ -33,7 +33,7 @@ Prix et fonctions vérifiés le 30 juillet 2026.
 
 ## LobbyStack réduit le prix et la dépendance
 
-LobbyStack Starter coûte 19 $ de moins que l'entrée autonome RingCentral et inclut 50 minutes de plus. Gratuit permet de tester les appels, les rendez-vous, les transferts et les dossiers avant tout achat.
+LobbyStack Starter coûte 19 $ de moins que l'entrée autonome RingCentral et inclut 50 minutes de plus. Gratuit permet de tester l'accueil et les réponses dans le navigateur. Choisissez un forfait payant pour recevoir des appels et tester les transferts.
 
 Les clients RingEX peuvent ajouter AIR dès 39 $. Ce prix dépasse encore Starter et garde l'IA dans RingCentral. LobbyStack reste en place si l'entreprise change d'opérateur, de téléphonie ou d'infrastructure.
 
@@ -45,7 +45,7 @@ RingCentral fournit téléphonie d'entreprise et centre de contact. AIR ajoute F
 
 Une entreprise déjà sur RingEX peut ajouter l'accueil IA sans changer d'administration. Extensions, files, droits, rapports et assistance restent chez le même fournisseur.
 
-LobbyStack ne remplace pas une suite de communications. Il répond, qualifie, réserve, transfère et conserve le résultat. Il convient à une entreprise qui veut garder ses fournisseurs ou auto-héberger la couche de réception.
+LobbyStack ne remplace pas une suite de communications. Il répond, recueille les coordonnées, réserve, transfère et conserve le résultat. Il convient à une entreprise qui veut garder ses fournisseurs ou auto-héberger la couche de réception.
 
 ## Le prix de l'option dépend du système de base
 
@@ -69,7 +69,7 @@ Un détaillant possède 12 magasins, des extensions RingCentral et une équipe c
 
 AIR bénéficie du système déjà en place. Le détaillant doit tester le magasin visé, le débordement de file, Shopify et les rapports.
 
-LobbyStack peut convenir si le groupe veut une logique sur mesure, plusieurs fournisseurs ou un déploiement inspectable.
+LobbyStack ne répartit pas les appels entre magasins, donc le détaillant aurait un réceptionniste par magasin. Il peut convenir si le groupe veut un déploiement inspectable ou prévoit de changer de fournisseur téléphonique.
 
 ## Auditez l'option dans votre contrat RingCentral
 

@@ -178,6 +178,20 @@ export class TwilioProvider {
     await this.client.incomingPhoneNumbers(input.providerPhoneId).update({ ...(input.smsUrl !== undefined ? { smsUrl: input.smsUrl ?? "", smsMethod: "POST" } : {}), ...(input.voiceUrl !== undefined ? { voiceUrl: input.voiceUrl ?? "", voiceMethod: "POST" } : {}), ...(input.statusCallbackUrl !== undefined ? { statusCallback: input.statusCallbackUrl ?? "", statusCallbackMethod: "POST" } : {}) });
   }
 
+  /** Routes the number's calls through an Elastic SIP trunk (to GPT-Live) instead of its voice URL. */
+  async addNumberToSipTrunk(input: { trunkSid: string; providerPhoneId: string }): Promise<void> {
+    assertCertificationOperationAllowed();
+    const number = await this.client.incomingPhoneNumbers(input.providerPhoneId).fetch();
+    if (number.trunkSid === input.trunkSid) return;
+    await this.client.trunking.v1.trunks(input.trunkSid).phoneNumbers.create({ phoneNumberSid: input.providerPhoneId });
+  }
+
+  /** Returns the number to its own voice URL (the voice gateway). */
+  async removeNumberFromSipTrunk(input: { trunkSid: string; providerPhoneId: string }): Promise<void> {
+    assertCertificationOperationAllowed();
+    await this.client.trunking.v1.trunks(input.trunkSid).phoneNumbers(input.providerPhoneId).remove();
+  }
+
   async transferCall(input: { callSid: string; destination: string; twimlUrl: string }): Promise<void> {
     assertCertificationRecipient("phone", input.destination);
     await this.client.calls(input.callSid).update({ url: input.twimlUrl, method: "POST" });

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { businesses, enqueueOutbox, receptionistProfiles } from "@lobbystack/db";
-import { defaultAppointmentChangePolicy, type AppointmentChangePolicy } from "@lobbystack/shared";
+import { defaultAppointmentChangePolicy, type AppointmentChangePolicy, type BookingMode } from "@lobbystack/shared";
 import { asApiResponse, jsonError, readJson, withOperatorTransaction } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ const profileFields = [
 type ProfileField = (typeof profileFields)[number];
 type ProfilePatch = Partial<Record<"greeting" | "tone" | "summary" | "bookingPolicy" | "transferMode", string>> &
   Partial<Record<"voiceInstructions" | "smsInstructions" | "chatInstructions" | "transferNumber", string | null>> &
-  { appointmentChangePolicy?: AppointmentChangePolicy };
+  { appointmentChangePolicy?: AppointmentChangePolicy; bookingMode?: BookingMode };
 
 function appointmentPolicy(value: unknown): AppointmentChangePolicy | undefined {
   if (value === undefined) return undefined;
@@ -57,7 +57,9 @@ function readProfilePatch(body: Record<string, unknown>): ProfilePatch {
     throw jsonError("transferMode is invalid.");
   }
   const policy = appointmentPolicy(body.appointmentChangePolicy);
-  return { ...patch, ...(policy !== undefined ? { appointmentChangePolicy: policy } : {}) } as ProfilePatch;
+  const bookingMode = body.bookingMode;
+  if (bookingMode !== undefined && bookingMode !== "off" && bookingMode !== "request" && bookingMode !== "instant") throw jsonError("bookingMode is invalid.");
+  return { ...patch, ...(policy !== undefined ? { appointmentChangePolicy: policy } : {}), ...(bookingMode !== undefined ? { bookingMode } : {}) } as ProfilePatch;
 }
 
 export async function GET(request: Request) {
@@ -107,6 +109,7 @@ export async function PATCH(request: Request) {
         transferMode: patch.transferMode ?? "on_request",
         ...(patch.transferNumber !== undefined ? { transferNumber: patch.transferNumber } : {}),
         appointmentChangePolicy: patch.appointmentChangePolicy ?? defaultAppointmentChangePolicy,
+        ...(patch.bookingMode !== undefined ? { bookingMode: patch.bookingMode } : {}),
       }).onConflictDoUpdate({
         target: receptionistProfiles.businessId,
         set: { ...patch, updatedAt: new Date() },

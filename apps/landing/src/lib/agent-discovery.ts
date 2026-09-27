@@ -459,7 +459,7 @@ export const mcpServerCard = {
       {
         name: "get-features",
         description:
-          "Return key public LobbyStack features, including call answering, booking, workflows, transfers, SMS, dashboard, and reporting.",
+          "Return key public LobbyStack features, including call answering, booking, workflows, transfers, alerts, dashboard, and reporting.",
       },
       {
         name: "get-agent-discovery",
@@ -587,13 +587,13 @@ ${DEFAULT_DESCRIPTION}
 
 ## Pricing Snapshot
 
-- Free: $0/month with 30 browser voice minutes, no telephone number, and 25 MB knowledge base.
-- Starter: $30/month or $288/year ($24/month effective) with 150 voice minutes, 20 outbound call attempts, 50 alert SMS segments, and 100 MB knowledge base.
-- Pro: $100/month or $960/year ($80/month effective) with 500 voice minutes, 100 outbound call attempts, 200 alert SMS segments, and 500 MB knowledge base.
-- Starter overage: $0.20 per voice minute, $0.02 per outbound call attempt, and $0.02 per alert SMS segment.
-- Pro overage: $0.18 per voice minute, $0.02 per outbound call attempt, and $0.02 per alert SMS segment.
+- Free: $0/month with 30 browser voice minutes and a 25 MB knowledge base. Free has no telephone number, so it sends no texts and cannot transfer calls.
+- Starter: $30/month or $288/year ($24/month effective) with 150 voice minutes, 20 transfer attempts, 50 alert SMS segments, and 100 MB knowledge base.
+- Pro: $100/month or $960/year ($80/month effective) with 500 voice minutes, 100 transfer attempts, 200 alert SMS segments, and 500 MB knowledge base.
+- Starter overage: $0.20 per voice minute, $0.02 per transfer attempt, and $0.02 per alert SMS segment.
+- Pro overage: $0.18 per voice minute, $0.02 per transfer attempt, and $0.02 per alert SMS segment.
 - Spam calls and calls under 10 seconds are excluded from usage, so they do not count against included voice minutes or paid-plan overages.
-- Enterprise: custom pricing for higher volume, multiple numbers, multi-location routing, custom fallback rules, and self-hosting implementation support.
+- Enterprise: custom pricing for higher volume, multiple numbers, and self-hosting implementation support.
 `
 
 export const featuresMarkdown = `---
@@ -604,26 +604,26 @@ url: ${absoluteUrl("/features/")}
 
 # LobbyStack Features
 
-LobbyStack is an open-source AI receptionist for call-heavy small businesses. It answers phone calls, books appointments, captures details, follows up, and routes calls to a human when needed.
+LobbyStack is an open-source AI receptionist for call-heavy small businesses. It answers phone calls, books appointments, captures caller details, and transfers calls to a human when needed.
 
 ## Core Capabilities
 
 - Call answering for every call, or only when a team is busy, closed, or unavailable.
 - Plain-language workflows that let businesses describe what to ask, say, book, quote, transfer, and notify.
-- Appointment booking with calendar availability, confirmations, reschedules, cancellations, and reminders.
+- Appointment booking on Google Calendar with reschedules, cancellations, a confirmation text, and one reminder text 24 hours before the appointment when the caller agrees (paid plans).
 - Business knowledge answers for FAQs, services, pricing, hours, policies, locations, and staff instructions.
-- Quote handling for exact prices, starting prices, price ranges, or pricing callbacks.
+- Quote handling for exact prices, starting prices, price ranges, or a message for the team to quote later.
 - Lead qualification and structured caller detail capture.
 - Human handoff through transfers, messages, and team notifications.
-- Outbound calls for callbacks, reminders, confirmations, quote follow-ups, and missed-call recovery.
+- Owner alerts by email, with optional SMS alerts on paid plans.
 - Dashboard, call history, recordings, transcripts, summaries, contact profiles, analytics, and action-required views.
-- Multilingual voice support.
+- Answers in the caller's language.
 
 ## Every Plan Includes
 
 Every plan includes browser voice, plain-language workflows, appointment booking, call summaries, email notifications, knowledge base, dashboard, call history, and unlimited concurrent calls.
 
-Free includes 30 browser voice minutes and no telephone number. Starter and Pro include a dedicated telephone number for inbound phone calls and call transfers. Plan allowances for outbound call attempts and alert SMS segments are listed in the pricing comparison.
+Free includes 30 browser voice minutes and no telephone number. Starter and Pro include a dedicated telephone number for inbound phone calls and call transfers. Plan allowances for transfer attempts and alert SMS segments are listed in the pricing comparison.
 `
 
 export const pricingMarkdown = `---
@@ -641,17 +641,17 @@ LobbyStack has Free, Starter, Pro, and Enterprise options. Plans scale by usage 
 | Plan | Price | Included usage |
 | --- | ---: | --- |
 | Free | $0/month | 30 browser voice minutes, no telephone number, 25 MB knowledge base |
-| Starter | $30/month or $288/year | 150 voice minutes, 20 outbound call attempts, 50 alert SMS segments, 100 MB knowledge base |
-| Pro | $100/month or $960/year | 500 voice minutes, 100 outbound call attempts, 200 alert SMS segments, 500 MB knowledge base |
-| Enterprise | Custom | Custom volume, multiple numbers, multi-location routing, custom fallback rules, and self-hosting implementation support |
+| Starter | $30/month or $288/year | 150 voice minutes, 20 transfer attempts, 50 alert SMS segments, 100 MB knowledge base |
+| Pro | $100/month or $960/year | 500 voice minutes, 100 transfer attempts, 200 alert SMS segments, 500 MB knowledge base |
+| Enterprise | Custom | Custom volume, multiple numbers, and self-hosting implementation support |
 
 ## Overage Rates
 
 - Starter voice overage: $0.20 per voice minute.
-- Starter outbound call attempts: $0.02 per attempt after the included amount.
+- Starter transfer attempts: $0.02 per attempt after the included amount.
 - Starter alert SMS segments: $0.02 per segment after the included amount.
 - Pro voice overage: $0.18 per voice minute.
-- Pro outbound call attempts: $0.02 per attempt after the included amount.
+- Pro transfer attempts: $0.02 per attempt after the included amount.
 - Pro alert SMS segments: $0.02 per segment after the included amount.
 - Spam calls and calls under 10 seconds are excluded from usage and do not count against included voice minutes or paid-plan overages.
 

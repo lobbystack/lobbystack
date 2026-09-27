@@ -11,4 +11,4 @@ Vous pouvez maintenant garder des consignes plus claires pour la façon dont Lob
 
 L'objectif est simple : rendre l'assistant plus facile à ajuster quand votre entreprise change. Vous pouvez modifier l'accueil, la gestion des demandes urgentes, l'explication des services ou les moments où une personne doit intervenir.
 
-Nous avons aussi resserré le parcours de configuration autour de ces règles pour que le réceptionniste les applique de façon plus constante pendant les appels, les résumés et les suivis.
+Nous avons aussi resserré le parcours de configuration autour de ces règles pour que le réceptionniste les applique de façon plus constante pendant les appels et dans les résumés.

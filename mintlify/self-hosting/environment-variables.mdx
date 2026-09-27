@@ -1,6 +1,6 @@
 ---
 title: "Configure environment variables"
-description: "Key environment variables for the LobbyStack admin, worker, voice gateway, storage, and providers."
+description: "Key environment variables for the LobbyStack admin, worker, voice calls, storage, and providers."
 sidebarTitle: "Environment variables"
 contentType: "Reference"
 ---
@@ -26,10 +26,22 @@ Use `.env.example` as the source of truth. Store production values in your deplo
 | --- | --- |
 | `BACKEND_INTERNAL_URL` | Private admin URL used by the voice gateway. Compose sets this to `http://admin:3000`. |
 | `INTERNAL_SERVICE_SECRET` | HMAC secret for signed service requests. |
-| `INTERNAL_SERVICE_TOKEN` | Token used by protected internal health and compatibility routes. |
-| `VOICE_GATEWAY_BASE_URL` | Public HTTPS URL for Twilio callbacks and media streams. |
-| `WEB_CALL_ALLOWED_ORIGINS` | Comma-separated browser origins allowed to start web calls, in addition to `APP_BASE_URL`. Empty by default. Add each website that embeds the call button. |
-| `NEXT_PUBLIC_WEB_CALL_ENDPOINT` | Public browser endpoint ending in `/web-call/sessions`. |
+| `INTERNAL_SERVICE_TOKEN` | Authenticates the admin's call handoff to the worker and protected internal health routes. Set the same value on admin and worker. |
+| `WORKER_INTERNAL_URL` | Private URL of the worker's HTTP port, used by the admin to hand each call to the worker. Compose sets this to `http://worker:3002`. |
+| `VOICE_GATEWAY_BASE_URL` | Public HTTPS URL for Twilio callbacks and media streams on numbers not yet on the SIP trunk. |
+
+## Voice calls
+
+OpenAI's GPT-Live model answers browser calls, and phone numbers on your Twilio SIP trunk. The admin starts each call and the worker runs it.
+
+| Variable | Purpose |
+| --- | --- |
+| `LIVE_PROTOTYPE_ENABLED` | Set to `true` on admin and worker. Compose sets it by default. Browser calls fail without it. |
+| `OPENAI_WEBHOOK_SECRET` | Verifies OpenAI's incoming-call webhook at `/api/webhooks/openai/live`. Phone calls only. |
+| `TWILIO_SIP_TRUNK_SID` | The Twilio Elastic SIP trunk that sends calls to your OpenAI project. New numbers join it. |
+| `WEB_CALL_MAX_DURATION_MS` | Optional cap on browser call length. |
+| `WEB_CALL_PUBLIC_BUSINESS_SLUG` | Business that answers the public demo call on your marketing site. |
+| `WEB_CALL_ALLOWED_ORIGINS` | Comma-separated sites allowed to start that public demo call. Website widget calls use each widget key's allowed origins instead. |
 
 ## Redis and file storage
 
@@ -54,18 +66,18 @@ Local storage fits a single-host deployment. Use S3 when the admin and worker ru
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP base URL. LobbyStack appends `/v1/traces`, `/v1/metrics`, and `/v1/logs`. Leave empty to disable export. |
 | `OTEL_EXPORTER_OTLP_HEADERS` | Optional comma-separated `key=value` headers sent with each OTLP request. For PostHog, use `Authorization=Bearer your_posthog_project_token_here`. |
 
-An empty OTLP endpoint does not disable container stdout logs, application health endpoints, direct product analytics, or direct voice-gateway error reporting.
+An empty OTLP endpoint does not disable container stdout logs, application health endpoints, direct product analytics, or direct voice gateway error reporting.
 
 ## Providers
 
 | Variable group | Purpose |
 | --- | --- |
 | `TWILIO_*` | Voice, verification, number provisioning, and webhook authentication. |
-| `OPENAI_API_KEY` | Realtime voice and fallback key for compatible AI providers. |
-| `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_PROVIDER_NAME` | OpenAI-compatible chat generation. |
+| `OPENAI_API_KEY` | GPT-Live calls, the voice gateway, and the fallback key for `AI_CHAT_*` and `AI_EMBEDDING_*`. |
+| `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_PROVIDER_NAME` | The receptionist agent for website chat and calls. Leave `AI_CHAT_MODEL` blank on OpenAI to use `gpt-6-luna`. Set it for any other OpenAI-compatible endpoint. |
+| `AI_CHAT_REASONING_EFFORT` | OpenAI only: `none`, `minimal`, `low`, `medium`, `high`, or `xhigh`. Defaults to `high`. |
 | `AI_EMBEDDING_API_KEY`, `AI_EMBEDDING_BASE_URL`, `AI_EMBEDDING_MODEL`, `AI_EMBEDDING_PROVIDER_NAME`, `AI_EMBEDDING_REVISION` | OpenAI-compatible 1536-dimensional embeddings. |
 | `WIDGET_SESSION_SECRET` | Signs cross-origin website-widget sessions. |
-| `WEB_CALL_ALLOWED_ORIGINS` | Origins allowed to reach the voice gateway transport; the signed widget token still controls the customer parent origin. |
 | `FIRECRAWL_*` | Website knowledge ingestion. |
 | `GOOGLE_*` | Google Calendar OAuth. |
 | `SMTP_*`, `EMAIL_*` | Transactional email. |

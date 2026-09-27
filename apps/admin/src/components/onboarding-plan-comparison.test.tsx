@@ -17,7 +17,11 @@ it.each(["en", "fr"] as const)("describes supported capabilities in %s", async (
   expect(screen.getByText(/30 browser minutes|30 minutes dans le navigateur/)).toBeTruthy();
   const numbers = screen.getByText(t("plan.comparison.features.phoneNumbers")).closest("tr")!;
   expect(within(numbers).getAllByRole("cell")[1]?.textContent).toBe(t("plan.comparison.values.common.notIncluded"));
-  expect(screen.getAllByText(t("plan.comparison.values.notifications.aiSms.proIncluded"))).toHaveLength(2);
+  expect(screen.queryByText(/AI SMS|SMS IA|Outbound|sortants|Missed-call|appels manqués|Multi-location|multisite/i)).toBeNull();
+  for (const feature of ["confirmationTexts", "smsNotifications", "alertSms", "outboundCalls"]) {
+    const row = screen.getByText(t(`plan.comparison.features.${feature}`)).closest("tr")!;
+    expect(within(row).getAllByRole("cell")[1]?.textContent).toBe(t("plan.comparison.values.common.notIncluded"));
+  }
   const retention = screen.getByText(t("plan.comparison.features.contentRetention")).closest("tr")!;
   const retentionCells = within(retention).getAllByRole("cell");
   expect(retentionCells[1]?.textContent).toBe(t("plan.comparison.values.data.contentRetention.free", { days: 30 }));

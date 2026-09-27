@@ -124,6 +124,11 @@ describe("billableVoiceSeconds", () => {
     expect(billableVoiceSeconds(0)).toBe(0);
   });
 
+  it("exempts a call that ran under 10 seconds even when the provider bills a minimum", () => {
+    expect(billableVoiceSeconds(15, "caller_finished", 0.8)).toBe(0);
+    expect(billableVoiceSeconds(15, "caller_finished", 12)).toBe(15);
+  });
+
   it("exempts calls the receptionist ended as spam", () => {
     expect(billableVoiceSeconds(240, "spam_ended")).toBe(0);
   });

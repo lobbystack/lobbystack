@@ -1,0 +1,30 @@
+{
+  "name": "@lobbystack/agent-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/agent-core/src/index.js",
+  "types": "./dist/agent-core/src/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "4.0.46",
+    "@ai-sdk/openai-compatible": "^3.0.31",
+    "@lobbystack/domain": "workspace:*",
+    "@lobbystack/shared": "workspace:*",
+    "ai": "^7.0.67",
+    "luxon": "^3.7.2",
+    "openai": "^7.23.0",
+    "ws": "^8.21.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/luxon": "^3.7.1",
+    "@types/node": "^24.0.0",
+    "@types/ws": "^8.18.1"
+  }
+}

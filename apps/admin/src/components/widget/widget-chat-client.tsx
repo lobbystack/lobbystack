@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { renderSafeMarkdown } from "@/lib/widget-markdown";
-import { startWebCallPresence } from "@/lib/web-call-presence";
+import { useWebVoiceCall } from "@/components/web-voice/useWebVoiceCall";
 
 type WidgetConfigPayload = {
   key: string;
@@ -28,7 +28,6 @@ type WidgetConfigPayload = {
   greeting?: string;
   snapshotPresent: boolean;
   businessSlug?: string;
-  webCallBaseUrl?: string;
   voiceEnabled?: boolean;
 };
 
@@ -290,7 +289,7 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
           <p className="truncate text-sm font-semibold">{title}</p>
           {configState?.config?.subtitle ? <p className="truncate text-xs text-zinc-500">{configState.config.subtitle}</p> : null}
         </div>
-        {voiceEnabled ? <VoiceButton className="ml-auto" businessSlug={configState!.businessSlug!} baseUrl={configState!.webCallBaseUrl} visitorId={visitorIdRef.current} sessionToken={sessionToken} parentOrigin={parentOrigin} onStatusChange={setSubmitError} /> : null}
+        {voiceEnabled ? <VoiceButton className="ml-auto" businessSlug={configState!.businessSlug!} visitorId={visitorIdRef.current} sessionToken={sessionToken} parentOrigin={parentOrigin} onStatusChange={setSubmitError} /> : null}
       </header>
 
       {handoff ? <div className="border-b bg-amber-50 px-4 py-2 text-xs font-medium text-amber-800">{t("chat.handoffBanner")}</div> : null}
@@ -340,99 +339,26 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
   );
 }
 
-function VoiceButton({ className, businessSlug, baseUrl, visitorId, sessionToken, parentOrigin, onStatusChange }: { className?: string; businessSlug: string; baseUrl: string | undefined; visitorId: string; sessionToken: string | null; parentOrigin: string | null; onStatusChange: (message: string | null) => void }) {
+function VoiceButton({ className, businessSlug, visitorId, sessionToken, parentOrigin, onStatusChange }: { className?: string; businessSlug: string; visitorId: string; sessionToken: string | null; parentOrigin: string | null; onStatusChange: (message: string | null) => void }) {
   const { t } = useTranslation("widget");
-  const [status, setStatus] = useState<"idle" | "connecting" | "connected" | "error" | "ending">("idle");
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const peerRef = useRef<RTCPeerConnection | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const sessionIdRef = useRef<string | null>(null);
-  const stopPresenceRef = useRef<(() => void) | null>(null);
-  const endpoint = baseUrl || (process.env.NODE_ENV === "production" ? "https://voice.lobbystack.com/web-call/sessions" : "http://127.0.0.1:3001/web-call/sessions");
+  // The iframe runs on the app's own origin, so the call starts here with the
+  // widget session token and the embedding page's origin as proof of access.
+  const { status, errorKey, remoteAudioRef, startCall, endCall } = useWebVoiceCall({
+    businessSlug,
+    widgetId: "lobbystack-widget",
+    getStartPayload: async () => ({ visitorId }),
+    getHeaders: () => ({ ...(sessionToken ? { authorization: `Bearer ${sessionToken}` } : {}), ...(parentOrigin ? { "x-widget-parent-origin": parentOrigin } : {}) }),
+  });
 
-  const cleanup = () => {
-    stopPresenceRef.current?.();
-    stopPresenceRef.current = null;
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-    peerRef.current?.close();
-    peerRef.current = null;
-    if (audioRef.current) audioRef.current.srcObject = null;
-  };
+  useEffect(() => {
+    if (status === "connected") onStatusChange(null);
+    if (status === "error") onStatusChange(errorKey === "connectionDropped" ? "chat.voiceEnded" : "chat.voiceUnavailable");
+  }, [errorKey, onStatusChange, status]);
 
-  const endCall = async () => {
-    setStatus("ending");
-    const sessionId = sessionIdRef.current;
-    sessionIdRef.current = null;
-    if (sessionId) void fetch(`${endpoint}/${encodeURIComponent(sessionId)}/end`, { method: "POST", keepalive: true }).catch(() => undefined);
-    cleanup();
-    setStatus("idle");
-  };
-
-  useEffect(() => () => {
-    const sessionId = sessionIdRef.current;
-    if (sessionId) void fetch(`${endpoint}/${encodeURIComponent(sessionId)}/end`, { method: "POST", keepalive: true }).catch(() => undefined);
-    cleanup();
-  }, [endpoint]);
-
-  const startCall = async () => {
-    setStatus("connecting");
-    try {
-      if (!navigator.mediaDevices?.getUserMedia || typeof RTCPeerConnection === "undefined") {
-        throw new Error("unsupported");
-      }
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-      streamRef.current = stream;
-      const peer = new RTCPeerConnection();
-      peerRef.current = peer;
-      stream.getAudioTracks().forEach((track) => peer.addTrack(track, stream));
-      peer.ontrack = (event) => {
-        const remote = event.streams[0];
-        if (remote && audioRef.current) {
-          audioRef.current.srcObject = remote;
-          void audioRef.current.play().catch(() => undefined);
-        }
-      };
-      peer.onconnectionstatechange = () => {
-        if (peer.connectionState === "connected") {
-          stopPresenceRef.current?.();
-          if (sessionIdRef.current) stopPresenceRef.current = startWebCallPresence(endpoint, sessionIdRef.current, peer);
-          setStatus("connected");
-          onStatusChange(null);
-        }
-        if (peer.connectionState === "failed" || peer.connectionState === "disconnected") {
-          cleanup();
-          setStatus("error");
-          onStatusChange("chat.voiceEnded");
-        }
-      };
-      const offer = await peer.createOffer({ offerToReceiveAudio: true });
-      await peer.setLocalDescription(offer);
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "content-type": "application/json", ...(sessionToken ? { authorization: `Bearer ${sessionToken}` } : {}), ...(parentOrigin ? { "x-widget-parent-origin": parentOrigin } : {}) },
-        body: JSON.stringify({ businessSlug, widgetId: "lobbystack-widget", visitorId, widgetSessionToken: sessionToken, sdp: offer.sdp, pageUrl: window.location.href }),
-      });
-      if (!response.ok) {
-        cleanup();
-        setStatus("error");
-        onStatusChange("chat.voiceUnavailable");
-        return;
-      }
-      const answer = await response.json() as { sessionId: string; sdp: string };
-      sessionIdRef.current = answer.sessionId;
-      await peer.setRemoteDescription({ type: "answer", sdp: answer.sdp });
-    } catch {
-      cleanup();
-      setStatus("error");
-      onStatusChange("chat.voiceUnavailable");
-    }
-  };
-
-  const active = status === "connecting" || status === "connected";
+  const active = status === "requesting_microphone" || status === "connecting" || status === "connected";
   return (
     <>
-      <audio ref={audioRef} autoPlay playsInline className="hidden" />
+      <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
       {active ? (
         <Button variant="destructive" size="icon" className="ml-auto" aria-label={t("chat.voiceEnd")} onClick={() => void endCall()}><PhoneOff /></Button>
       ) : (

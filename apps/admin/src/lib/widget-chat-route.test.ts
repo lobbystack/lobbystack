@@ -18,7 +18,8 @@ const mocks = vi.hoisted(() => ({
   withBusinessTransaction: vi.fn(),
   reserveWidgetChatUsageInTransaction: vi.fn(),
   getWorkerDatabase: vi.fn(),
-  createTextAiProvider: vi.fn(),
+  createAgentModel: vi.fn(),
+  createReceptionistAgent: vi.fn(),
 }));
 
 vi.mock("@lobbystack/domain", () => ({
@@ -39,9 +40,18 @@ vi.mock("@lobbystack/db", () => ({
   conversations: {},
 }));
 
-vi.mock("@lobbystack/providers", () => ({
-  createTextAiProvider: mocks.createTextAiProvider,
+vi.mock("@lobbystack/agent-core/model", () => ({
+  createAgentModel: mocks.createAgentModel,
+  describeAgentUsage: (raw: { inputTokens?: number; outputTokens?: number } | undefined, latencyMs: number) => ({ provider: "test", model: "test", latencyMs, ...raw }),
 }));
+
+vi.mock("@lobbystack/agent-core/agent", () => ({
+  createReceptionistAgent: mocks.createReceptionistAgent,
+}));
+
+function agentStreaming(textStream: AsyncIterable<string>, finishReason = "stop") {
+  return { stream: vi.fn().mockResolvedValue({ textStream, totalUsage: Promise.resolve({ inputTokens: 1, outputTokens: 1, totalTokens: 2 }), finishReason: Promise.resolve(finishReason) }) };
+}
 
 vi.mock("@/lib/api-helpers", () => ({
   getWorkerDatabase: mocks.getWorkerDatabase,
@@ -126,13 +136,8 @@ beforeEach(() => {
   mocks.getWorkerDatabase.mockReturnValue({ db: {} });
   mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(automationTx([])));
   mocks.reserveWidgetChatUsageInTransaction.mockResolvedValue({ allowed: true, plan: "scale" });
-  mocks.createTextAiProvider.mockReturnValue({
-    streamReply: vi.fn().mockReturnValue({
-      textStream: (async function* () { yield "Thanks"; })(),
-      usage: Promise.resolve({ provider: "test", model: "test", latencyMs: 1, inputTokens: 1, outputTokens: 1, totalTokens: 2 }),
-      finishReason: Promise.resolve("stop"),
-    }),
-  });
+  mocks.createAgentModel.mockReturnValue({ modelId: "test" });
+  mocks.createReceptionistAgent.mockReturnValue(agentStreaming((async function* () { yield "Thanks"; })()));
 });
 
 afterEach(() => {
@@ -164,7 +169,7 @@ describe("POST /api/widget/chat", () => {
     expect(mocks.appendMessage).toHaveBeenCalledTimes(1);
     expect(mocks.appendMessage).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ direction: "inbound", channel: "web_chat" }));
     expect(mocks.queueOperatorAlert).toHaveBeenCalled();
-    expect(mocks.createTextAiProvider).not.toHaveBeenCalled();
+    expect(mocks.createAgentModel).not.toHaveBeenCalled();
     expect(body).toContain("human_handoff");
   });
 
@@ -173,11 +178,11 @@ describe("POST /api/widget/chat", () => {
     const response = await POST(widgetRequest());
     expect(response.status).toBe(402);
     expect(await response.json()).toMatchObject({ code: "chat_ai_limit_reached" });
-    expect(mocks.createTextAiProvider).toHaveBeenCalled();
+    expect(mocks.createAgentModel).toHaveBeenCalled();
   });
 
   it("returns a configuration error before reserving chat allowance", async () => {
-    mocks.createTextAiProvider.mockReturnValue(null);
+    mocks.createAgentModel.mockReturnValue(undefined);
     const response = await POST(widgetRequest());
     expect(response.status).toBe(503);
     expect(await response.json()).toMatchObject({ code: "ai_provider_unavailable" });
@@ -188,18 +193,10 @@ describe("POST /api/widget/chat", () => {
     vi.stubEnv("AI_CHAT_API_KEY", "test-api-key");
     mocks.getCachedBusinessSnapshot.mockResolvedValue({ businessId } as BusinessContextSnapshot);
     mocks.loadWidgetChatHistory.mockResolvedValue([]);
-    const streamReply = vi.fn().mockReturnValue({
-      textStream: (async function* () {
-        yield "Thanks";
-        yield " for reaching out!";
-      })(),
-      usage: Promise.resolve({ provider: "test", model: "test", latencyMs: 1, inputTokens: 1, outputTokens: 1, totalTokens: 2 }),
-      finishReason: Promise.resolve("stop"),
-    });
-    class FakeSignedProvider {
-      streamReply = streamReply;
-    }
-    mocks.createTextAiProvider.mockReturnValue(new FakeSignedProvider());
+    mocks.createReceptionistAgent.mockReturnValue(agentStreaming((async function* () {
+      yield "Thanks";
+      yield " for reaching out!";
+    })()));
 
     const response = await POST(widgetRequest());
     const body = await readSse(response);
@@ -208,6 +205,7 @@ describe("POST /api/widget/chat", () => {
     expect(body).toContain("Thanks");
     expect(body).toContain("for reaching out!");
     expect(mocks.appendMessage).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ direction: "outbound", channel: "web_chat", aiGenerated: true }));
+    expect(mocks.createReceptionistAgent).toHaveBeenCalledWith(expect.objectContaining({ context: expect.objectContaining({ channel: "web_chat", conversationId }) }));
     await vi.waitFor(() => expect(mocks.recordAiGenerationEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       businessId,
       conversationId,
@@ -218,14 +216,8 @@ describe("POST /api/widget/chat", () => {
   });
 
   it("does not expose provider error details in the UI stream", async () => {
-    mocks.createTextAiProvider.mockReturnValue({
-      streamReply: vi.fn().mockReturnValue({
-        // eslint-disable-next-line require-yield -- mock generator must throw before yielding.
-        textStream: (async function* () { throw new Error("secret provider token"); })(),
-        usage: Promise.resolve({ provider: "test", model: "test", latencyMs: 1 }),
-        finishReason: Promise.resolve("error"),
-      }),
-    });
+    // eslint-disable-next-line require-yield -- mock generator must throw before yielding.
+    mocks.createReceptionistAgent.mockReturnValue(agentStreaming((async function* () { throw new Error("secret provider token"); })(), "error"));
     const body = await readSse(await POST(widgetRequest()));
     expect(body).toContain("The chat could not be processed.");
     expect(body).not.toContain("secret provider token");

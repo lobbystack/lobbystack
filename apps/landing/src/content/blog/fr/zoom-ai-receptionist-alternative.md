@@ -25,8 +25,8 @@ LobbyStack inclut réservation, relais, alertes SMS, transcriptions, résumés e
 | Prix de lancement | 29,99 $ pour 100 minutes | 30 $ pour 150 minutes |
 | Prix annuel | Équivalent de 24,99 $ pour 100 minutes | 24 $ pour 150 minutes |
 | Téléphonie existante | Prise en charge annoncée | Renvoi d'appel et fournisseur vocal |
-| Réservation | Google, Microsoft et Calendly | Calendrier avec règles métier |
-| Langues | Plus de 10 annoncées | Selon la pile vocale |
+| Réservation | Google, Microsoft et Calendly | Google Calendar avec règles métier |
+| Langues | Plus de 10 annoncées | Répond dans la langue de l'appelant |
 | Code source | Non annoncé | Dépôt public sous licence MIT |
 | Déploiement | Service géré par Zoom | Cloud géré ou auto-hébergement |
 
@@ -68,7 +68,7 @@ Un cabinet comptable possède quatre bureaux et un fournisseur téléphonique en
 
 Zoom peut convenir si la connexion téléphonique évite de changer les extensions et si le calendrier fonctionne avec la configuration Microsoft ou Google du cabinet.
 
-LobbyStack peut convenir si le cabinet veut examiner les règles de chaque bureau ou déployer dans son infrastructure. Il doit alors tester la séparation, les droits de calendrier et le basculement.
+LobbyStack ne répartit pas les appels entre plusieurs bureaux. Il peut convenir si chaque bureau a son propre réceptionniste, ou si le cabinet veut déployer dans son infrastructure. Il doit alors tester les droits de calendrier et le basculement.
 
 ## Vérifiez les exigences du compte Zoom
 
@@ -97,4 +97,4 @@ Choisissez LobbyStack pour 30 minutes gratuites, 50 % plus d'usage près de 30 $
 
 Avec LobbyStack, vous obtenez plus de minutes que sur le forfait de lancement Zoom et vous pouvez tester la voix dans votre navigateur gratuitement. Choisissez Zoom si votre équipe préfère son administration.
 
-[Commencez avec LobbyStack gratuitement](/fr/pricing/) et testez votre téléphone et votre calendrier.
+[Commencez avec LobbyStack gratuitement](/fr/pricing/) et testez la voix dans votre navigateur.

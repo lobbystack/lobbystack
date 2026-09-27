@@ -5,7 +5,7 @@ export const pricingFaqs: FaqItem[] = [
   {
     question: "How does LobbyStack paid pricing work?",
     answer:
-      "Starter is $30/month or $288/year and includes 150 voice minutes each month. Pro is $100/month or $960/year and includes 500 voice minutes each month. Starter voice overage is $0.20/minute, Pro voice overage is $0.18/minute, and alert SMS/outbound call overages are $0.02 per unit.",
+      "Starter is $30/month or $288/year and includes 150 voice minutes each month. Pro is $100/month or $960/year and includes 500 voice minutes each month. Starter voice overage is $0.20/minute, Pro voice overage is $0.18/minute, and extra alert SMS segments and transfer attempts cost $0.02 each.",
   },
   {
     question: "Do spam calls or very short calls count toward usage?",
@@ -25,7 +25,7 @@ export const pricingFaqs: FaqItem[] = [
   {
     question: "What AI receptionist features are available today?",
     answer:
-      "LobbyStack can answer calls, capture caller details, answer business questions from your knowledge base, qualify leads, book appointments, route urgent callers, send summaries by email, and support recordings, transcripts, Google Calendar, and multilingual conversations.",
+      "LobbyStack can answer calls, capture caller details, answer business questions from your knowledge base, qualify leads, book appointments, route urgent callers, send summaries by email, and support recordings, transcripts, Google Calendar, and conversations in the caller's language.",
   },
 ]
 
@@ -33,7 +33,7 @@ export const pricingFaqsFr: FaqItem[] = [
   {
     question: "Comment fonctionnent les forfaits payants LobbyStack ?",
     answer:
-      "Starter coûte 30 $/mois ou 288 $/an et inclut 150 minutes vocales chaque mois. Pro coûte 100 $/mois ou 960 $/an et inclut 500 minutes vocales. Les dépassements vocaux sont de 0,20 $/min en Starter et 0,18 $/min en Pro; les SMS d’alerte et appels sortants supplémentaires sont facturés 0,02 $ par unité.",
+      "Starter coûte 30 $/mois ou 288 $/an et inclut 150 minutes vocales chaque mois. Pro coûte 100 $/mois ou 960 $/an et inclut 500 minutes vocales. Les dépassements vocaux sont de 0,20 $/min en Starter et 0,18 $/min en Pro; les SMS d’alerte et tentatives de transfert supplémentaires sont facturés 0,02 $ par unité.",
   },
   {
     question:
@@ -55,7 +55,7 @@ export const pricingFaqsFr: FaqItem[] = [
     question:
       "Quelles fonctionnalités de réceptionniste IA sont disponibles aujourd’hui ?",
     answer:
-      "LobbyStack peut répondre aux appels, collecter les détails de l’appelant, répondre aux questions depuis votre base de connaissances, qualifier les prospects, planifier des rendez‑vous, transférer les urgences, envoyer des résumés par courriel et prendre en charge les enregistrements, transcriptions, Google Calendar et conversations multilingues.",
+      "LobbyStack peut répondre aux appels, collecter les détails de l’appelant, répondre aux questions depuis votre base de connaissances, qualifier les prospects, planifier des rendez‑vous, transférer les urgences, envoyer des résumés par courriel et prendre en charge les enregistrements, transcriptions, Google Calendar et conversations dans la langue de l’appelant.",
   },
 ]
 

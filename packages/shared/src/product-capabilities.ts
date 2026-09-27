@@ -31,15 +31,16 @@ export type ProductCapability = {
 /**
  * Website chat stays restricted: it is not a public offer and the product does
  * not issue new widget keys by default. Existing keys and their configuration
- * are untouched. Telephone voice, browser voice testing, and alert SMS are
- * supported today.
+ * are untouched. AI SMS is restricted too: the product does not reply to
+ * inbound texts with AI and does not sell an AI SMS add-on. Telephone voice,
+ * browser voice testing, and alert SMS are supported today.
  */
 export const productCapabilities = {
   browser_voice_testing: { id: "browser_voice_testing", status: "available" },
   telephone_voice: { id: "telephone_voice", status: "available" },
   website_chat: { id: "website_chat", status: "restricted" },
   alert_sms: { id: "alert_sms", status: "available" },
-  ai_sms: { id: "ai_sms", status: "available" },
+  ai_sms: { id: "ai_sms", status: "restricted" },
 } as const satisfies Record<ProductCapabilityId, ProductCapability>;
 
 export function isProductCapabilityRestricted(

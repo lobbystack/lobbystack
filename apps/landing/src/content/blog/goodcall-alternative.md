@@ -25,7 +25,7 @@ Goodcall's unlimited-duration model can favor repeated long calls from the same 
 | Entry plan | $79 for 100 unique callers | Free: 30 browser voice minutes, no card, no telephone number |
 | Next paid tier | $129 for 250 unique callers | $30 for 150 minutes |
 | Call duration | Unlimited minutes advertised | Counts against minute allowance |
-| Routing | Directory, departments, transfers | Routing and human handoff |
+| Routing | Directory, departments, transfers | Transfer to a human |
 | History | Seven days on Starter | Call records in the receptionist dashboard |
 | Deployment | Hosted | Managed cloud or self-hosted |
 
@@ -33,7 +33,7 @@ Pricing and features were checked on July 30, 2026.
 
 ## LobbyStack costs less and gives you ownership
 
-LobbyStack lets a business test live answering, booking, human handoff, SMS alerts, summaries, and call history without a monthly charge. Starter adds 150 minutes for $30, less than half Goodcall's $79 entry price.
+LobbyStack lets a business test answering, booking, summaries, and call history in the browser without a monthly charge. Starter adds 150 minutes for $30, less than half Goodcall's $79 entry price.
 
 Goodcall charges for each AI agent and unique caller. A multi-location company may need several subscriptions, while a stream of new callers consumes the allowance even when conversations last 30 seconds. LobbyStack meters the phone time and excludes spam and calls under 10 seconds.
 
@@ -62,7 +62,7 @@ Separate locations or distinct call experiences may need separate agents and sub
 
 A small shop with one number may fit those limits. A multi-location operator should count agents, directory contacts, logic flows, and required history before estimating the bill.
 
-LobbyStack organizes business context, phone numbers, routing, appointments, callers, messages, and call records inside the receptionist product. Enterprise supports higher-volume and multi-location needs. Self-hosted teams can extend the stack, but they also own the operation.
+LobbyStack organizes business context, phone numbers, transfers, appointments, callers, messages, and call records inside the receptionist product. Enterprise covers higher call volume. Self-hosted teams can extend the stack, but they also own the operation.
 
 ## Goodcall favors no-code configuration
 
@@ -88,7 +88,7 @@ Goodcall's pricing depends on unique callers, so ask how it treats shared family
 
 Test the routing rules with calls that cross departments. Ask the agent for leasing, report an urgent repair, then change the subject during the same call. Check whether it preserves the caller's details when it transfers the conversation.
 
-Run the same calls through LobbyStack and compare the records your staff receives. Review the transcript, summary, transfer outcome, and any booking or follow-up message. The pricing unit matters, but your team still needs a usable record after the caller hangs up.
+Run the same calls through LobbyStack and compare the records your staff receives. Review the transcript, summary, transfer outcome, and any booking or message. The pricing unit matters, but your team still needs a usable record after the caller hangs up.
 
 ## Choose Goodcall when
 
@@ -108,6 +108,6 @@ Choose LobbyStack when you want to start free, pay $30 instead of $79 at entry, 
 
 ## Verdict
 
-LobbyStack offers the stronger default value for small businesses: free live testing, a $30 paid tier, complete receptionist workflows, and deployment choice. Goodcall's unique-caller model wins a narrower case where the same customers place long calls.
+LobbyStack offers the stronger default value for small businesses: free browser testing, a $30 paid tier, complete receptionist workflows, and deployment choice. Goodcall's unique-caller model wins a narrower case where the same customers place long calls.
 
 [Start LobbyStack free](/pricing/) and compare one month of real callers and minutes before accepting a $79-per-agent starting price.

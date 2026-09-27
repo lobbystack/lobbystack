@@ -7,6 +7,10 @@ contentType: "How-to"
 
 The **Settings** > **Widget** page creates and manages keys for the receptionist widget. Visitors can chat, leave contact details, and start a browser call from the widget.
 
+<Note>
+  Website chat is restricted and isn't part of the hosted plans. New widget keys are off by default. On a self-hosted deployment, set `WIDGET_KEY_ISSUANCE_ENABLED=true` to create them. Existing keys keep working.
+</Note>
+
 ## Configure the widget
 
 <Steps>
@@ -29,7 +33,7 @@ The **Settings** > **Widget** page creates and manages keys for the receptionist
 
 ## Protect web calls
 
-LobbyStack signs widget sessions and checks the visitor's parent origin. Your self-hosted voice gateway must also include the website origin in `WEB_CALL_ALLOWED_ORIGINS`.
+LobbyStack signs widget sessions and checks the visitor's parent origin against the widget key's allowed origins before it starts a call.
 
 Use an HTTPS website in production. Keep `WIDGET_SESSION_SECRET` and other signing credentials on the server.
 

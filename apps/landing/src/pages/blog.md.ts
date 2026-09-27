@@ -8,7 +8,7 @@ export const GET: APIRoute = async () => {
 
   const markdown = `# AI Receptionist Blog and Product Updates
 
-Product updates and practical notes on AI phone answering, missed-call recovery, appointment scheduling, call routing, lead follow-up, and open-source receptionist infrastructure.
+Product updates and practical notes on AI phone answering, missed calls, appointment scheduling, call routing, lead follow-up, and open-source receptionist infrastructure.
 
 ## Posts
 

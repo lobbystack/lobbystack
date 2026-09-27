@@ -5,7 +5,6 @@ import {
   Pencil,
   CalendarCheck,
   DollarSign,
-  PhoneOutgoing,
   ArrowRightLeft,
   ShieldBan,
   Phone,
@@ -21,15 +20,13 @@ import {
   Bell,
   FileText,
   ScrollText,
+  Mic,
   Mail,
   BookOpen,
   Layers,
   CircleSlash,
   LifeBuoy,
-  PhoneMissed,
-  ClipboardList,
   PhoneForwarded,
-  Repeat,
   History,
   Target,
   CalendarDays,
@@ -46,7 +43,7 @@ interface FeatureCard {
   icon: LucideIcon
   size: CardSize
   tag?: string
-  visual?: "workflow" | "calendar" | "quote" | "outbound" | "routing" | "usage"
+  visual?: "workflow" | "calendar" | "quote" | "routing" | "usage"
 }
 
 /* ─────────────────────────── Data ─────────────────────────── */
@@ -71,18 +68,10 @@ const largeCards: FeatureCard[] = [
   {
     title: "Give quotes without making callers wait",
     description:
-      "For approved services, LobbyStack can give exact prices, starting prices, or price ranges. For custom work, it asks the right questions and schedules a pricing callback.",
+      "For approved services, LobbyStack can give exact prices, starting prices, or price ranges. For custom work, it asks the right questions and passes the details to your team.",
     icon: DollarSign,
     size: "large",
     visual: "quote",
-  },
-  {
-    title: "Follow up instead of losing the lead",
-    description:
-      "LobbyStack can make outbound calls for callbacks, reminders, confirmations, quote follow-ups, and missed-call recovery.",
-    icon: PhoneOutgoing,
-    size: "large",
-    visual: "outbound",
   },
   {
     title: "Transfer the calls that need a person",
@@ -112,9 +101,9 @@ const mediumCards: FeatureCard[] = [
     tag: "Always on",
   },
   {
-    title: "One receptionist. 57 languages.",
+    title: "Answers in your caller's language",
     description:
-      "Serve more customers with AI voice models that handle natural conversations across 57 languages.",
+      "LobbyStack replies in the language the caller speaks, so customers who don't speak English can still book and ask questions.",
     icon: Globe,
     size: "medium",
     tag: "Multilingual",
@@ -137,7 +126,7 @@ const mediumCards: FeatureCard[] = [
   {
     title: "Dedicated call lines",
     description:
-      "Use LobbyStack for a sales line, quote line, booking line, support line, intake line, or campaign number.",
+      "Use LobbyStack for a sales line, quote line, booking line, support line, or intake line.",
     icon: Hash,
     size: "medium",
   },
@@ -179,7 +168,7 @@ const mediumCards: FeatureCard[] = [
   {
     title: "Appointment reminders",
     description:
-      "Remind customers before upcoming appointments so fewer people forget or no-show.",
+      "If the caller agrees, LobbyStack texts them a reminder 24 hours before the appointment.",
     icon: Bell,
     size: "medium",
   },
@@ -195,6 +184,13 @@ const mediumCards: FeatureCard[] = [
     description:
       "Review the full conversation when your team needs more detail than the summary.",
     icon: ScrollText,
+    size: "medium",
+  },
+  {
+    title: "Call recordings",
+    description:
+      "Listen to any call again from your dashboard.",
+    icon: Mic,
     size: "medium",
   },
   {
@@ -228,49 +224,28 @@ const mediumCards: FeatureCard[] = [
   {
     title: "Fallback behavior",
     description:
-      "When LobbyStack does not know something, it can ask follow-up questions, schedule a callback, transfer, or notify the team.",
+      "When LobbyStack does not know something, it can ask follow-up questions, take a message, transfer, or notify the team.",
     icon: LifeBuoy,
     size: "medium",
   },
   {
     title: "Failed-transfer fallback",
     description:
-      "If no one answers, LobbyStack can schedule a callback, send a summary, and keep the customer moving.",
+      "If no one picks up, LobbyStack takes a message and sends your team a summary.",
     icon: PhoneForwarded,
-    size: "medium",
-  },
-  {
-    title: "Intake completion",
-    description:
-      "Call customers to collect missing details before an appointment, estimate, or callback.",
-    icon: ClipboardList,
-    size: "medium",
-  },
-  {
-    title: "Missed-call recovery",
-    description:
-      "Call back people who hang up, call after hours, or miss your team during busy periods.",
-    icon: PhoneMissed,
-    size: "medium",
-  },
-  {
-    title: "Quote follow-up",
-    description:
-      "Follow up with customers who asked for pricing but have not booked yet.",
-    icon: Repeat,
     size: "medium",
   },
   {
     title: "Call history",
     description:
-      "See every call, caller, outcome, summary, appointment, transfer, and follow-up.",
+      "See every call, caller, outcome, summary, appointment, and transfer.",
     icon: History,
     size: "medium",
   },
   {
     title: "Lead status",
     description:
-      "See which calls became qualified leads, quote requests, appointments, or callbacks.",
+      "See which calls became qualified leads, quote requests, or appointments.",
     icon: Target,
     size: "medium",
   },
@@ -284,7 +259,7 @@ const mediumCards: FeatureCard[] = [
   {
     title: "Revenue opportunities",
     description:
-      "Highlight calls that became bookings, quotes, callbacks, or high-value leads.",
+      "Highlight calls that became bookings, quote requests, or high-value leads.",
     icon: TrendingUp,
     size: "medium",
   },
@@ -310,18 +285,10 @@ const largeCardsFr: FeatureCard[] = [
   {
     title: "Donnez une fourchette sans faire attendre les appelants",
     description:
-      "Pour les services approuvés, LobbyStack peut donner un prix exact, un prix de départ ou une fourchette. Pour les demandes sur mesure, il pose les bonnes questions et planifie un rappel.",
+      "Pour les services approuvés, LobbyStack peut donner un prix exact, un prix de départ ou une fourchette. Pour les demandes sur mesure, il pose les bonnes questions et transmet les détails à votre équipe.",
     icon: DollarSign,
     size: "large",
     visual: "quote",
-  },
-  {
-    title: "Relancez au lieu de perdre le prospect",
-    description:
-      "LobbyStack peut appeler pour les rappels, confirmations, relances de devis, rappels de rendez‑vous et appels manqués.",
-    icon: PhoneOutgoing,
-    size: "large",
-    visual: "outbound",
   },
   {
     title: "Transférez les appels qui ont besoin d’une personne",
@@ -351,9 +318,9 @@ const mediumCardsFr: FeatureCard[] = [
     tag: "Toujours prêt",
   },
   {
-    title: "Une réceptionniste. 57 langues.",
+    title: "Répond dans la langue de l’appelant",
     description:
-      "Servez plus de clients avec des voix IA capables de tenir des conversations naturelles dans 57 langues.",
+      "LobbyStack répond dans la langue que parle l’appelant. Les clients qui ne parlent pas français peuvent quand même réserver et poser leurs questions.",
     icon: Globe,
     size: "medium",
     tag: "Multilingue",
@@ -376,7 +343,7 @@ const mediumCardsFr: FeatureCard[] = [
   {
     title: "Lignes dédiées",
     description:
-      "Utilisez LobbyStack pour une ligne de vente, de devis, de réservation, de support, d’accueil ou de campagne.",
+      "Utilisez LobbyStack pour une ligne de vente, de devis, de réservation, de support ou d’accueil.",
     icon: Hash,
     size: "medium",
   },
@@ -418,7 +385,7 @@ const mediumCardsFr: FeatureCard[] = [
   {
     title: "Rappels de rendez‑vous",
     description:
-      "Rappelez les rendez‑vous à venir pour réduire les oublis et les absences.",
+      "Si l’appelant accepte, LobbyStack lui envoie un SMS de rappel 24 heures avant le rendez‑vous.",
     icon: Bell,
     size: "medium",
   },
@@ -434,6 +401,13 @@ const mediumCardsFr: FeatureCard[] = [
     description:
       "Relisez toute la conversation quand votre équipe a besoin de plus de détails que le résumé.",
     icon: ScrollText,
+    size: "medium",
+  },
+  {
+    title: "Enregistrements d’appels",
+    description:
+      "Réécoutez n’importe quel appel depuis votre tableau de bord.",
+    icon: Mic,
     size: "medium",
   },
   {
@@ -467,49 +441,28 @@ const mediumCardsFr: FeatureCard[] = [
   {
     title: "Comportement de secours",
     description:
-      "Quand LobbyStack ne sait pas répondre, il peut poser une question, planifier un rappel, transférer ou prévenir l’équipe.",
+      "Quand LobbyStack ne sait pas répondre, il peut poser une question, prendre un message, transférer ou prévenir l’équipe.",
     icon: LifeBuoy,
     size: "medium",
   },
   {
     title: "Secours après transfert manqué",
     description:
-      "Si personne ne répond, LobbyStack peut planifier un rappel, envoyer un résumé et garder le client engagé.",
+      "Si personne ne décroche, LobbyStack prend un message et envoie un résumé à votre équipe.",
     icon: PhoneForwarded,
-    size: "medium",
-  },
-  {
-    title: "Complétion des dossiers",
-    description:
-      "Appelez les clients pour recueillir les informations manquantes avant un rendez‑vous, une estimation ou un rappel.",
-    icon: ClipboardList,
-    size: "medium",
-  },
-  {
-    title: "Récupération des appels manqués",
-    description:
-      "Rappelez les personnes qui raccrochent, appellent hors horaires ou n’arrivent pas à joindre votre équipe.",
-    icon: PhoneMissed,
-    size: "medium",
-  },
-  {
-    title: "Relance de devis",
-    description:
-      "Relancez les clients qui ont demandé un prix mais n’ont pas encore réservé.",
-    icon: Repeat,
     size: "medium",
   },
   {
     title: "Historique des appels",
     description:
-      "Voyez chaque appel, appelant, résultat, résumé, rendez‑vous, transfert et suivi.",
+      "Voyez chaque appel, appelant, résultat, résumé, rendez‑vous et transfert.",
     icon: History,
     size: "medium",
   },
   {
     title: "Statut des prospects",
     description:
-      "Suivez les appels devenus prospects qualifiés, demandes de devis, rendez‑vous ou rappels.",
+      "Suivez les appels devenus prospects qualifiés, demandes de devis ou rendez‑vous.",
     icon: Target,
     size: "medium",
   },
@@ -523,7 +476,7 @@ const mediumCardsFr: FeatureCard[] = [
   {
     title: "Occasions de revenu",
     description:
-      "Repérez les appels transformés en rendez‑vous, devis, rappels ou prospects à forte valeur.",
+      "Repérez les appels transformés en rendez‑vous, demandes de devis ou prospects à forte valeur.",
     icon: TrendingUp,
     size: "medium",
   },
@@ -533,15 +486,15 @@ const featureWallCopy = {
   en: {
     heading: "Everything your front desk should already be doing",
     intro:
-      "LobbyStack answers, books, qualifies, quotes, transfers, follows up, filters junk, and keeps your team in the loop.",
+      "LobbyStack answers, books, qualifies, quotes, transfers, filters junk, and keeps your team in the loop.",
     calloutTitle: "Your business is not a flowchart",
     calloutBody:
       "Real calls are messy. Customers interrupt, change their mind, ask multiple questions, and explain things out of order. LobbyStack lets you describe the outcome in plain English instead of building fragile call trees.",
     calloutExample:
-      "If a customer asks for pricing, ask the required quote questions, give the approved price range, and schedule a callback if they need exact pricing.",
+      "If a customer asks for pricing, ask the required quote questions, give the approved price range, and take a message for the team if they need exact pricing.",
     visuals: {
       workflow:
-        "If a caller asks for pricing, ask the required quote questions, give the approved price range, and schedule a callback if they need exact pricing.",
+        "If a caller asks for pricing, ask the required quote questions, give the approved price range, and take a message for the team if they need exact pricing.",
       calendar: [
         "Appointment booked",
         "Customer confirmation sent",
@@ -555,19 +508,13 @@ const featureWallCopy = {
           { label: "Budget", value: "$8k – $12k" },
           { label: "Timeline", value: "Next month" },
         ],
-        outcome: "Price range shared · Callback scheduled",
+        outcome: "Price range shared · Team notified",
       },
-      outbound: [
-        { label: "Missed caller callback", status: "Queued" },
-        { label: "Quote follow-up", status: "Scheduled" },
-        { label: "Appointment reminder", status: "Sent" },
-        { label: "Intake completion", status: "Pending" },
-      ],
       routing: [
         { label: "Urgent call", action: "Routed to manager" },
         { label: "Sales lead", action: "Routed to sales" },
         { label: "Billing request", action: "Routed to billing" },
-        { label: "No answer", action: "Callback scheduled" },
+        { label: "No answer", action: "Message taken" },
       ],
       usage: {
         counted: "Counted",
@@ -583,15 +530,15 @@ const featureWallCopy = {
   fr: {
     heading: "Tout ce qu’un accueil efficace devrait déjà faire",
     intro:
-      "LobbyStack répond, planifie, qualifie, donne des fourchettes, transfère, relance, filtre les appels inutiles et garde votre équipe informée.",
+      "LobbyStack répond, planifie, qualifie, donne des fourchettes, transfère, filtre les appels inutiles et garde votre équipe informée.",
     calloutTitle: "Votre entreprise n’est pas un organigramme",
     calloutBody:
       "Les vrais appels sont rarement linéaires. Les clients interrompent, changent d’idée, posent plusieurs questions et donnent les informations dans le désordre. LobbyStack vous laisse décrire le résultat attendu en français courant, sans construire un arbre d’appels fragile.",
     calloutExample:
-      "Si un client demande un prix, posez les questions de devis, donnez la fourchette approuvée et planifiez un rappel s’il faut confirmer le montant exact.",
+      "Si un client demande un prix, posez les questions de devis, donnez la fourchette approuvée et prenez un message pour l’équipe s’il faut confirmer le montant exact.",
     visuals: {
       workflow:
-        "Si un appelant demande un prix, posez les questions de devis, donnez la fourchette approuvée et planifiez un rappel s’il faut confirmer le montant exact.",
+        "Si un appelant demande un prix, posez les questions de devis, donnez la fourchette approuvée et prenez un message pour l’équipe s’il faut confirmer le montant exact.",
       calendar: [
         "Rendez-vous planifié",
         "Confirmation envoyée au client",
@@ -605,19 +552,13 @@ const featureWallCopy = {
           { label: "Budget", value: "8 k$ à 12 k$" },
           { label: "Délai", value: "Le mois prochain" },
         ],
-        outcome: "Fourchette communiquée · Rappel planifié",
+        outcome: "Fourchette communiquée · Équipe prévenue",
       },
-      outbound: [
-        { label: "Rappel d’un appel manqué", status: "En file" },
-        { label: "Relance de devis", status: "Planifiée" },
-        { label: "Rappel de rendez‑vous", status: "Envoyé" },
-        { label: "Dossier à compléter", status: "En attente" },
-      ],
       routing: [
         { label: "Appel urgent", action: "Vers le responsable" },
         { label: "Prospect vente", action: "Vers les ventes" },
         { label: "Question facturation", action: "Vers la facturation" },
-        { label: "Aucune réponse", action: "Rappel planifié" },
+        { label: "Aucune réponse", action: "Message pris" },
       ],
       usage: {
         counted: "Compté",
@@ -645,7 +586,6 @@ const featureWallCopy = {
         rows: Array<{ label: string; value: string }>
         outcome: string
       }
-      outbound: Array<{ label: string; status: string }>
       routing: Array<{ label: string; action: string }>
       usage: {
         counted: string
@@ -726,26 +666,6 @@ function QuoteVisual({ locale }: VisualProps) {
   )
 }
 
-function OutboundVisual({ locale }: VisualProps) {
-  const items = featureWallCopy[locale].visuals.outbound
-
-  return (
-    <div className="space-y-2">
-      {items.map((item) => (
-        <div
-          key={item.label}
-          className="flex items-center justify-between text-[13px]"
-        >
-          <span className="text-muted-foreground">{item.label}</span>
-          <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground/70">
-            {item.status}
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 function RoutingVisual({ locale }: VisualProps) {
   const items = featureWallCopy[locale].visuals.routing
 
@@ -797,7 +717,6 @@ const visualMap: Record<string, (props: VisualProps) => React.ReactNode> = {
   workflow: WorkflowVisual,
   calendar: CalendarVisual,
   quote: QuoteVisual,
-  outbound: OutboundVisual,
   routing: RoutingVisual,
   usage: UsageVisual,
 }
@@ -807,15 +726,21 @@ const visualMap: Record<string, (props: VisualProps) => React.ReactNode> = {
 function LargeFeatureCard({
   card,
   locale,
+  fullWidth = false,
 }: {
   card: FeatureCard
   locale: Locale
+  fullWidth?: boolean
 }) {
   const Icon = card.icon
   const Visual = card.visual ? visualMap[card.visual] : null
 
   return (
-    <article className="flex flex-col rounded-2xl border border-border/70 bg-background p-6 transition-colors hover:border-border md:p-8">
+    <article
+      className={`flex flex-col rounded-2xl border border-border/70 bg-background p-6 transition-colors hover:border-border md:p-8 ${
+        fullWidth ? "md:col-span-2" : ""
+      }`}
+    >
       {/* Header row */}
       <div className="mb-1 flex items-start justify-between">
         <div className="flex size-10 items-center justify-center rounded-xl bg-muted">
@@ -915,8 +840,16 @@ export function FeatureWall({ locale = "en" }: FeatureWallProps) {
 
         {/* Large cards, 2-column grid */}
         <div className="grid gap-4 md:grid-cols-2">
-          {localizedLargeCards.map((card) => (
-            <LargeFeatureCard key={card.title} card={card} locale={locale} />
+          {localizedLargeCards.map((card, index) => (
+            <LargeFeatureCard
+              key={card.title}
+              card={card}
+              locale={locale}
+              fullWidth={
+                localizedLargeCards.length % 2 === 1 &&
+                index === localizedLargeCards.length - 1
+              }
+            />
           ))}
         </div>
 

@@ -332,6 +332,7 @@ export const receptionistProfiles = pgTable(
     transferMode: varchar("transfer_mode", { length: 32 }).notNull(),
     transferNumber: text("transfer_number"),
     appointmentChangePolicy: jsonb("appointment_change_policy").$type<Record<string, unknown>>(),
+    bookingMode: varchar("booking_mode", { length: 16 }).default("instant").notNull(),
     ...timestamps,
   },
   (table) => [uniqueIndex("receptionist_profiles_business_unique").on(table.businessId)],

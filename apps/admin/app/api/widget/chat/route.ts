@@ -4,10 +4,10 @@ import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { buildChatSystemPrompt } from "@lobbystack/ai";
+import { createReceptionistAgent } from "@lobbystack/agent-core/agent";
+import { createAgentModel, describeAgentUsage } from "@lobbystack/agent-core/model";
 import { appendMessage, getCachedBusinessSnapshot, getOrCreateWidgetConversation, loadWidgetChatHistory, recordAiGenerationEvent, registerWidgetVisitor, reserveWidgetChatUsageInTransaction, type DomainContext } from "@lobbystack/domain";
 import { conversations, withBusinessTransaction } from "@lobbystack/db";
-import { createTextAiProvider } from "@lobbystack/providers";
 import { widgetChatRequestSchema, type BusinessContextSnapshot } from "@lobbystack/shared";
 
 import { getWorkerDatabase, readJson } from "@/lib/api-helpers";
@@ -84,8 +84,8 @@ export async function POST(request: Request) {
       body: body.content.slice(0, 240) || "A website visitor sent a chat message.",
     });
     const automationState = await loadAutomationState(context, session.businessId, conversationId);
-    const provider = automationState === "ai_active" ? createTextAiProvider() : undefined;
-    if (automationState === "ai_active" && !provider) {
+    const model = automationState === "ai_active" ? createAgentModel() : undefined;
+    if (automationState === "ai_active" && !model) {
       return NextResponse.json({ error: "The AI chat provider is not configured.", code: "ai_provider_unavailable" }, { status: 503 });
     }
     if (automationState === "ai_active") {
@@ -108,16 +108,18 @@ export async function POST(request: Request) {
           const snapshot = await getCachedBusinessSnapshot(context, { businessId: session.businessId });
           const activeSnapshot = snapshot ?? fallbackSnapshot(session);
           const history = await loadWidgetChatHistory(context, { businessId: session.businessId, conversationId });
-          const historyText = history.slice(-20).map((row) => `${row.direction === "inbound" ? "Visitor" : "Assistant"}: ${row.body}`).join("\n");
+          const language = body.locale === "fr" || (!body.locale && (session.config.localeOverride === "fr" || session.defaultLocale === "fr")) ? "French" : "English";
+          const agent = createReceptionistAgent({
+            model: model!,
+            context: { domain: context, snapshot: activeSnapshot, channel: "web_chat", conversationId },
+            extraInstructions: `Reply in ${language} unless the visitor clearly asks to switch languages.`,
+          });
           writer.write({ type: "text-start", id: assistantMessageId });
           const text: string[] = [];
-          const generation = provider!.streamReply({
-            instructions: `${buildChatSystemPrompt(activeSnapshot)}\nReply in ${body.locale === "fr" || (!body.locale && (session.config.localeOverride === "fr" || session.defaultLocale === "fr")) ? "French" : "English"} unless the visitor clearly asks to switch languages.`,
-            prompt: body.content,
-            context: historyText,
+          // The history already ends with the visitor's new message.
+          const generation = await agent.stream({
+            messages: history.slice(-20).map((row) => ({ role: row.direction === "inbound" ? "user" as const : "assistant" as const, content: row.body })),
             abortSignal: request.signal,
-            onError: (error) => logGenerationFailure(error),
-            onAbort: () => console.warn("Widget chat generation aborted"),
           });
           for await (const part of generation.textStream) {
             text.push(part);
@@ -125,7 +127,8 @@ export async function POST(request: Request) {
           }
           const reply = text.join("");
           if (!reply.trim()) throw new Error("The AI assistant returned an empty reply.");
-          const [usage, finishReason] = await Promise.all([generation.usage, generation.finishReason]);
+          const [rawUsage, finishReason] = await Promise.all([generation.totalUsage, generation.finishReason]);
+          const usage = describeAgentUsage(rawUsage, performance.now() - generationStartedAt);
           const persistedAssistantMessageId = await appendMessage(context, { businessId: session.businessId, conversationId, body: reply, direction: "outbound", channel: "web_chat", aiGenerated: true });
           void recordAiGenerationEvent(context, {
             businessId: session.businessId,

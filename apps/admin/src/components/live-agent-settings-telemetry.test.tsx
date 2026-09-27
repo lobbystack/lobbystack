@@ -2,7 +2,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AgentBasicSettingsPage } from "./live-agent-basic-settings-surface";
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
@@ -36,5 +36,15 @@ describe("agent settings telemetry", () => {
     const saveButtons = await screen.findAllByRole("button", { name: "agent:actions.save" });
     await userEvent.click(saveButtons[0]!);
     await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "greeting" }));
+  });
+
+  it("saves the booking mode and records settings_saved for it", async () => {
+    const fetchMock = setup();
+    const select = await screen.findByRole("combobox", { name: "agent:booking.mode.label" });
+    await waitFor(() => expect((select as HTMLSelectElement).disabled).toBe(false));
+    await userEvent.selectOptions(select, "request");
+    await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "booking_mode" }));
+    const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
+    expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ businessId: "business", bookingMode: "request" });
   });
 });

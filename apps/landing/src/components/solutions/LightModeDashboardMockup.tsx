@@ -265,7 +265,7 @@ function SelfHostedSchematic() {
   const deploymentItems = [
     { label: "Call data", value: "Private storage" },
     { label: "AI provider", value: "BYO API keys" },
-    { label: "Telephony", value: "LobbyStack managed" },
+    { label: "Telephony", value: "Your Twilio account" },
   ]
 
   return (

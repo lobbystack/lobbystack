@@ -25,8 +25,8 @@ LobbyStack includes booking, human handoff, SMS alerts, transcripts, summaries, 
 | Launch price | $29.99 for 100 minutes | $30 for 150 minutes |
 | Annual price | $24.99 for 100 minutes | $24 for 150 minutes |
 | Existing phone system | Advertised | Call forwarding and voice-provider setup |
-| Booking | Google, Microsoft, and Calendly advertised | Calendar booking with business rules |
-| Languages | More than 10 advertised | Depends on the configured voice stack |
+| Booking | Google, Microsoft, and Calendly advertised | Google Calendar booking with business rules |
+| Languages | More than 10 advertised | Answers in the caller's language |
 | Source code | Not advertised | Public MIT-licensed repository |
 | Deployment | Zoom-managed service | Managed cloud or self-hosted |
 
@@ -72,7 +72,7 @@ An accounting firm has four offices and an existing phone provider. It wants one
 
 Zoom may fit if it connects to the existing phone system without changing extensions and if the firm's Microsoft or Google calendar configuration matches the advertised booking flow. The IT team should test directory routing, office hours, permissions, and reporting across locations.
 
-LobbyStack may fit if the firm wants each office's business rules in an inspectable system or needs a deployment inside controlled infrastructure. The team should test tenant separation, calendar access, failover, and the work required to operate the stack.
+LobbyStack does not route callers across several offices. It may fit if each office runs its own receptionist, or if the firm needs a deployment inside controlled infrastructure. The team should test calendar access, failover, and the work required to operate the stack.
 
 Both products should face the same calls before the firm forwards a public number.
 

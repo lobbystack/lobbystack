@@ -4,13 +4,14 @@ Manage the project with Railway Infrastructure as Code in `.railway/railway.ts`.
 
 Legacy `apps/*/railway.json` files have been removed. Do not reintroduce per-service Config as Code. Review every IaC plan before applying, and preserve existing credentials with `preserve()`; never export secrets into source.
 
-The voice gateway uses the admin's private hostname for `BACKEND_INTERNAL_URL`. Only admin and voice gateway require public domains.
+The admin reaches the worker's private hostname through `WORKER_INTERNAL_URL` to start GPT-Live calls. The voice gateway reaches the admin's private hostname through `BACKEND_INTERNAL_URL`. Only admin and voice gateway need public domains, and the gateway only while phone numbers remain off the SIP trunk.
 
 ## Configure shared variables
 
 - Database: `DATABASE_URL` for the service's main role, plus a `LOBBYSTACK_<ROLE>_PASSWORD` for each other role the service uses. Services build those role URLs from `DATABASE_URL`'s host. Set `LOBBYSTACK_<ROLE>_DATABASE_URL` only to point a role at a different host. The migrator connects with `DATABASE_URL` as given.
 - Redis: `REDIS_URL` and an environment-specific `REDIS_PREFIX`.
-- Security: `BETTER_AUTH_SECRET`, `INTERNAL_SERVICE_SECRET`, `INTERNAL_SERVICE_TOKEN`, `ENCRYPTION_KEY`, and `OTP_HASH_SECRET`.
+- Security: `BETTER_AUTH_SECRET`, `INTERNAL_SERVICE_SECRET`, `INTERNAL_SERVICE_TOKEN`, `ENCRYPTION_KEY`, and `OTP_HASH_SECRET`. Admin and worker both need `INTERNAL_SERVICE_TOKEN` for call handoff.
+- GPT-Live: `LIVE_PROTOTYPE_ENABLED=true` and `OPENAI_API_KEY` on admin and worker, `OPENAI_WEBHOOK_SECRET` and `WORKER_INTERNAL_URL` on admin, and `TWILIO_SIP_TRUNK_SID` on worker. See [the voice runtime](../voice/runtime.md).
 - Storage: set `STORAGE_PROVIDER=s3`, add Railway bucket references for `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and `S3_BUCKET`, and set `S3_FORCE_PATH_STYLE=false`.
 - Telemetry: set `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` on each application service, and set `SERVICE_VERSION` to the release SHA.
 
@@ -23,7 +24,7 @@ Provider credentials belong only on the services that use them. Follow `.env.exa
 3. Bootstrap the least-privilege database roles with `docker/postgres/init/roles.sh` using the managed PostgreSQL administrator connection. This is a privileged, user-run operation.
 4. Run the separate migrator, applying migrations twice and checking database consistency and RLS. Deploy worker with only worker/dispatcher database credentials after migration succeeds.
 5. Deploy admin.
-6. Deploy voice gateway when provider credentials are available.
+6. Deploy the voice gateway if any phone number is still off the SIP trunk.
 7. Run the smoke, RLS, telemetry, webhook, storage, realtime, privacy, and Playwright certification checks.
 
 Telemetry exporter failure must not affect readiness. Configure retention and sampling in the OTLP backend.

@@ -13,7 +13,7 @@ locale: "fr"
 canonicalSlug: "my-ai-front-desk-alternative"
 ---
 
-Les acheteurs qui cherchent une **alternative à My AI Front Desk** doivent commencer par un détail tarifaire : le forfait Frontdesk à 20 $ inclut zéro minute vocale. LobbyStack inclut 30 minutes sur son forfait gratuit, avec rendez-vous, résumés, historique, alertes SMS et appels sortants.
+Les acheteurs qui cherchent une **alternative à My AI Front Desk** doivent commencer par un détail tarifaire : le forfait Frontdesk à 20 $ inclut zéro minute vocale. LobbyStack inclut 30 minutes vocales dans le navigateur sur son forfait gratuit, avec rendez-vous, résumés d'appel et historique.
 
 Frontdesk, anciennement My AI Front Desk, vend un large espace commercial IA. LobbyStack fournit un réceptionniste téléphonique complet à un prix d'entrée inférieur, plus de minutes sur les forfaits payants comparables et le choix entre cloud géré et auto-hébergement.
 
@@ -26,9 +26,9 @@ Frontdesk, anciennement My AI Front Desk, vend un large espace commercial IA. Lo
 | Premier accès vocal | 99 $ avec 200 minutes | Gratuit avec 30 minutes et fonctions de réception |
 | Près de 30 $ | Basic à 20 $ offre 0 minute vocale | Starter à 30 $ offre 150 minutes |
 | Près de 100 $ | Business à 99 $ offre 200 minutes | Pro à 100 $ offre 500 minutes |
-| Canaux | Voix, SMS, chat, courriel, formulaires | Voix, alertes SMS, suivi, tableau de bord |
+| Canaux | Voix, SMS, chat, courriel, formulaires | Voix, alertes au propriétaire par courriel ou SMS, tableau de bord |
 | Rendez-vous et dossiers | Inclus avec le forfait vocal | Inclus sur Gratuit, Starter et Pro |
-| CRM | CRM natif et séquences | Dossiers de réception et intégrations |
+| CRM | CRM natif et séquences | Dossiers d'appelants et d'appels, sans synchronisation CRM |
 | Déploiement | Hébergé | Cloud géré ou auto-hébergement |
 | Code source | Non annoncé | Dépôt public sous licence MIT |
 
@@ -48,7 +48,7 @@ Les pages de Frontdesk annoncent la voix entrante et sortante, les SMS bidirecti
 
 Ce périmètre aide une entreprise sans CRM qui veut capter un prospect, lui écrire, l'appeler et suivre l'échange. Frontdesk vend aussi une offre en marque blanche.
 
-LobbyStack évite de facturer un CRM de remplacement aux clients qui veulent un réceptionniste. Il conserve les appelants, rendez-vous, messages, transcriptions, résumés et règles, puis relie le téléphone aux systèmes déjà en place.
+LobbyStack évite de facturer un CRM de remplacement aux clients qui veulent un réceptionniste. Il conserve les appelants, rendez-vous, messages, transcriptions, résumés et règles, et réserve les rendez-vous dans Google Calendar.
 
 ## Le forfait à 20 $ n'inclut pas de minutes vocales
 
@@ -70,11 +70,11 @@ Frontdesk ajoute plus de logiciels commerciaux à son forfait. Une entreprise qu
 
 Une entreprise qui utilise déjà HubSpot, Salesforce, Jobber ou ServiceTitan ne veut pas toujours d'un second CRM.
 
-LobbyStack se place entre le téléphone et ces systèmes. Un opérateur auto-hébergé contrôle le déploiement, les fournisseurs, les journaux et la conservation. Les pages de Frontdesk consultées n'annoncent ni auto-hébergement ni accès au code source. LobbyStack conserve une sortie face au verrouillage fournisseur.
+LobbyStack s'occupe du téléphone et laisse le CRM en place. Un opérateur auto-hébergé contrôle le déploiement, les fournisseurs, les journaux et la conservation. Les pages de Frontdesk consultées n'annoncent ni auto-hébergement ni accès au code source. LobbyStack conserve une sortie face au verrouillage fournisseur.
 
 ## Exemple d'agence
 
-Une agence crée des sites et des campagnes publicitaires pour dix entreprises de services. Chaque client veut un réceptionniste IA et un suivi des appels manqués.
+Une agence crée des sites et des campagnes publicitaires pour dix entreprises de services. Chaque client veut un réceptionniste IA qui répond à ses appels et réserve les interventions.
 
 Frontdesk offre un produit multicanal hébergé et une formule en marque blanche. Cela peut réduire le délai de lancement.
 

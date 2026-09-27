@@ -52,8 +52,7 @@ jobs:
             --base-url http://127.0.0.1:4173
             --remap '^https://lobbystack\.com(.*) http://127.0.0.1:4173$1'
             --exclude '^https://app\.lobbystack\.com/'
-            --exclude '^https://voice\.lobbystack\.com/web-call/'
-            --exclude '^http://localhost:3001/web-call/'
+            --exclude '^http://localhost:3000/api/voice/live/'
             --exclude '^https://theresanaiforthat\.com/ai/lobbystack/'
             --exclude '^https://www\.bls\.gov/ooh/Office-and-Administrative-Support/Receptionists\.htm$'
             --exclude '^https://www\.hhs\.gov/hipaa/for-professionals/special-topics/health-information-technology/cloud-computing/$'

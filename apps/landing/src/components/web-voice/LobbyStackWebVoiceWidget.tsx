@@ -2,10 +2,9 @@ import { WebVoiceWidget } from "@/components/web-voice/WebVoiceWidget"
 import { LobbyStackAuraVoiceDemo } from "@/components/web-voice/LobbyStackAuraVoiceDemo"
 import { hasAnalyticsConsent } from "@/lib/cookie-consent"
 
-const DEFAULT_WEB_CALL_ENDPOINT =
-  "https://voice.lobbystack.com/web-call/sessions"
-// `pnpm dev` runs the voice gateway on port 3001.
-const DEV_WEB_CALL_ENDPOINT = "http://localhost:3001/web-call/sessions"
+// The app starts browser calls on GPT-Live; `pnpm dev` runs it on port 3000.
+const DEFAULT_WEB_CALL_ENDPOINT = "https://app.lobbystack.com/api/voice/live/session"
+const DEV_WEB_CALL_ENDPOINT = "http://localhost:3000/api/voice/live/session"
 const DEFAULT_BUSINESS_SLUG = "lobbystack-mp35s9y1"
 const DEV_BUSINESS_SLUG = "lobbystack-qa-motd3txq"
 
@@ -23,8 +22,10 @@ function capturePosthog(
 }
 
 function getEndpoint() {
-  if (import.meta.env.PUBLIC_WEB_CALL_ENDPOINT) {
-    return import.meta.env.PUBLIC_WEB_CALL_ENDPOINT
+  // A new name, so an old PUBLIC_WEB_CALL_ENDPOINT pointing at the retired
+  // voice gateway endpoint can't override it.
+  if (import.meta.env.PUBLIC_LIVE_CALL_ENDPOINT) {
+    return import.meta.env.PUBLIC_LIVE_CALL_ENDPOINT
   }
 
   if (import.meta.env.DEV) {

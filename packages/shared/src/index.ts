@@ -109,6 +109,14 @@ export type AgentRuleSummary = {
   order: number;
 };
 
+/** How the agent handles appointment requests. */
+export type BookingMode = "off" | "request" | "instant";
+
+/** Unknown or missing values keep today's behavior: book directly. */
+export function normalizeBookingMode(value: string | null | undefined): BookingMode {
+  return value === "off" || value === "request" ? value : "instant";
+}
+
 export type BusinessContextSnapshot = {
   businessId: string;
   version: string;
@@ -129,6 +137,8 @@ export type BusinessContextSnapshot = {
   knowledgeDigest: string;
   transferPolicy: TransferPolicy;
   appointmentChangePolicy?: AppointmentChangePolicy;
+  /** Absent in snapshots built before booking modes existed; treat as "instant". */
+  bookingMode?: BookingMode;
   hours: Array<HoursWindow>;
   closures: Array<ClosureWindow>;
   services: Array<ServiceSummary>;

@@ -28,9 +28,9 @@ Reception offre d'excellentes voix et parle plus de 70 langues. LobbyStack vous 
 | Niveau intermédiaire | 79 $ pour 275 crédits (66 $ par mois à l'année) | 100 $ pour 500 minutes (80 $ par mois à l'année) |
 | Dépassement intermédiaire | 0,38 $ par crédit | 0,18 $ par minute |
 | Appels simultanés au premier niveau | 1 | Aucune limite sur Starter et Pro sans plafond de dépenses |
-| Langues | Plus de 70, détection automatique | Répond dans la langue de l'appelant et change automatiquement |
+| Langues | Plus de 70, détection automatique | Répond dans la langue de l'appelant |
 | Personnel en premier | Mode intégré | Par le renvoi d'appel de votre opérateur |
-| Intégrations | Google Calendar, Zapier, webhooks, MCP | Google Calendar, API publique |
+| Intégrations | Google Calendar, Zapier, webhooks, MCP | Google Calendar |
 | HIPAA | Non pris en charge | Auto-hébergement pour contrôler les données d'appel |
 | Code | Fermé, hébergé seulement | Licence MIT, cloud géré ou auto-hébergement |
 
@@ -78,7 +78,7 @@ Une entreprise de plomberie reçoit 120 appels par mois d'environ 2 minutes chac
 
 Avec Reception, 240 minutes dépassent les 75 de Basic, donc l'entreprise a besoin de Plus à 79 $ pour 275 crédits. Le clavardage puise dans la même réserve : 100 minutes de clavardage utilisent 50 crédits de plus, soit 290 au total. Les 15 crédits excédentaires coûtent 0,38 $ chacun, donc le mois revient à 84,70 $.
 
-Avec LobbyStack, 240 minutes coûtent 30 $ pour Starter plus 90 minutes à 0,20 $, soit 48 $. Deux appels d'urgence qui arrivent ensemble joignent tous deux la réceptionniste.
+Avec LobbyStack, 240 minutes coûtent 30 $ pour Starter plus 90 minutes à 0,20 $, soit 48 $. LobbyStack couvre seulement les appels, donc le widget de clavardage reste sur l'outil actuel de l'entreprise. Deux appels d'urgence qui arrivent ensemble joignent tous deux la réceptionniste.
 
 ## Choisissez ElevenLabs Reception si
 

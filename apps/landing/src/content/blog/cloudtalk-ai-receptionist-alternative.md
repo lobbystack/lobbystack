@@ -25,7 +25,7 @@ You can test LobbyStack with 30 browser voice minutes on Free, without a telepho
 | AI entry | $99 for 200 minutes | $30 for 150 minutes |
 | 500-minute tier | $199 | $100 |
 | Base platform | CloudTalk user subscription required | No contact-center subscription required |
-| Integrations | More than 100 advertised | Product integrations plus open source and API |
+| Integrations | More than 100 advertised | Google Calendar, plus open source code |
 | Main role | Questions, messages, routing, transfer | Answering, intake, booking, handoff |
 | Source code | Not advertised | Public MIT-licensed repository |
 | Deployment | CloudTalk-managed | Managed cloud or self-hosted |
@@ -46,7 +46,7 @@ CloudTalk's platform includes numbers, call flows, teams, analytics, and contact
 
 That makes CloudTalk attractive when a business needs to replace its phone system or build a sales and support operation. Administrators can keep human agents and AI flows in one platform.
 
-LobbyStack does not try to provide a complete contact center. It handles the receptionist job around inbound calls, business knowledge, appointments, transcripts, summaries, alerts, and transfers. It can connect to other providers and business systems.
+LobbyStack does not try to provide a complete contact center. It handles the receptionist job around inbound calls, business knowledge, appointments, transcripts, summaries, alerts, and transfers. It books into Google Calendar and does not sync with a CRM.
 
 ## Price the AI agent and the user seats
 
@@ -67,7 +67,7 @@ CloudTalk describes its AI Receptionist as a generalist for common questions and
 
 That product separation can help a buyer choose the right agent. It also means a team should demonstrate the workflow rather than assume the receptionist tier can complete it.
 
-LobbyStack builds booking, appointment changes, qualification, knowledge, and handoff into the receptionist product. Complex third-party workflows still require integration and testing.
+LobbyStack builds booking, appointment changes, lead capture, knowledge, and handoff into the receptionist product. Beyond Google Calendar, it does not connect to third-party systems.
 
 ## An outbound sales team is not the same buyer
 
@@ -85,7 +85,7 @@ Request a CloudTalk quote that identifies the AI Receptionist, base phone seats,
 
 Then list the employees who need a full CloudTalk seat. A receptionist on the main number may serve five technicians who keep their current mobile service. A sales team may need CloudTalk for every rep, which changes the comparison because the company also gains dialer, coaching, and analytics tools.
 
-Run booking, transfer, and after-hours calls in both products. Compare the result in the CRM and the work needed to maintain the connection. LobbyStack should win on the receptionist workflow before you accept the burden of a separate phone stack.
+Run booking, transfer, and after-hours calls in both products. Compare the record each product leaves for staff. LobbyStack should win on the receptionist workflow before you accept the burden of a separate phone stack.
 
 ## Choose CloudTalk when
 

@@ -6,7 +6,7 @@ This directory documents LobbyStack’s current architecture, operations, provid
 - `adr/`: Architecture decision records
 - `knowledge/`: Knowledge ingestion and retrieval
 - `telemetry/`: Event contracts, key performance indicators, and validation
-- `voice/`: Voice gateway runtime behavior
+- `voice/`: How GPT-Live calls run, and how to set up the phone path
 - `providers/`: Provider configuration and operations
 - `deployment/`: Hosting and deployment procedures
 - `migrations/`: Development Convex import and the [blocked production-snapshot rehearsal boundary](migrations/production-rehearsal.md)

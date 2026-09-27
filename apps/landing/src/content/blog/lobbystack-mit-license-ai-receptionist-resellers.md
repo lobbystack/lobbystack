@@ -36,7 +36,7 @@ For a commercial builder, that creates a wide field of use. You can change the i
 
 ## Four ways to build a business with LobbyStack
 
-LobbyStack already includes the product layer that sits around an AI voice model: calls, SMS, appointments, knowledge, transcripts, recordings, human handoff, usage, billing, and an operator dashboard. You can spend your time on the customer and market you know.
+LobbyStack already includes the product layer that sits around an AI voice model: calls, appointments, booking texts, email and SMS alerts, knowledge, transcripts, recordings, human handoff, usage, billing, and an operator dashboard. You can spend your time on the customer and market you know.
 
 ### Build a vertical AI receptionist
 
@@ -68,7 +68,7 @@ This separation helps customers understand who operates the service. Your compan
 
 Open source gives agencies and technical teams control. Many businesses want someone else to run the infrastructure, monitor providers, ship updates, and support the product.
 
-[LobbyStack Cloud](https://lobbystack.com/pricing/) remains the managed option for those customers. They can configure the receptionist, business knowledge, rules, phone numbers, and integrations without operating PostgreSQL, Redis, or the voice gateway.
+[LobbyStack Cloud](https://lobbystack.com/pricing/) remains the managed option for those customers. They can configure the receptionist, business knowledge, rules, phone numbers, and Google Calendar without operating PostgreSQL, Redis, or the voice gateway.
 
 Agencies can choose the model that fits each engagement. Use the MIT code when the client needs a branded product, custom infrastructure, or deep integration work. Use LobbyStack Cloud when the client wants the product managed and your value comes from setup, workflow design, and ongoing service.
 
@@ -78,4 +78,4 @@ We chose the AGPL for a reciprocal model while we built the first version. We ha
 
 [Clone LobbyStack on GitHub](https://github.com/lobbystack/lobbystack), read the [self-hosting overview](https://docs.lobbystack.com/self-hosting/overview), and use the [Docker Compose guide](https://docs.lobbystack.com/self-hosting/docker-compose) for your first deployment. The companion article explains [why LobbyStack is moving away from Convex](/blog/why-lobbystack-is-moving-away-from-convex/).
 
-If you would rather start with the managed product, [create a LobbyStack Cloud account](https://app.lobbystack.com/signup) and test a real call before you bring it to a client.
+If you would rather start with the managed product, [create a LobbyStack Cloud account](https://app.lobbystack.com/signup) and test a call in your browser before you bring it to a client.

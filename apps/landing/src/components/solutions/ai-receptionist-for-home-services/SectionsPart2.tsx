@@ -65,8 +65,8 @@ export function Capabilities() {
     },
     {
       icon: MapPin,
-      title: "Service area routing",
-      copy: "Ask for ZIP code or city and route calls to the right crew based on where you actually work.",
+      title: "Service area checks",
+      copy: "Ask for a ZIP code or city and confirm the job is inside the area you serve.",
     },
     {
       icon: ClipboardList,

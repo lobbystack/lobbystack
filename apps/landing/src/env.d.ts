@@ -5,7 +5,7 @@ interface ImportMetaEnv {
   readonly PUBLIC_POSTHOG_KEY?: string
   readonly PUBLIC_POSTHOG_HOST?: string
   readonly PUBLIC_POSTHOG_UI_HOST?: string
-  readonly PUBLIC_WEB_CALL_ENDPOINT?: string
+  readonly PUBLIC_LIVE_CALL_ENDPOINT?: string
   readonly PUBLIC_WEB_CALL_BUSINESS_SLUG?: string
   readonly INDEXNOW_KEY?: string
   readonly GOOGLE_SITE_VERIFICATION?: string

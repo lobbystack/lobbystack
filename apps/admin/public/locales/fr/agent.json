@@ -269,6 +269,22 @@
       }
     }
   },
+  "booking": {
+    "title": "Rendez-vous",
+    "mode": {
+      "label": "Prise de rendez-vous",
+      "options": {
+        "instant": "Réserve les rendez-vous",
+        "request": "Prend les demandes",
+        "off": "Ne réserve pas"
+      },
+      "descriptions": {
+        "instant": "L'agent vérifie vos disponibilités et réserve le rendez-vous.",
+        "request": "L'agent note le service et l'heure souhaitée. Vous confirmez depuis la boîte de réception.",
+        "off": "L'agent prend un message au lieu de réserver."
+      }
+    }
+  },
   "appointmentChanges": {
     "title": "Modifications de rendez-vous",
     "allowCancel": {
