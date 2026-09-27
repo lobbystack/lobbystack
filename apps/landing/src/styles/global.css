@@ -512,6 +512,11 @@ details[open] > .mobile-menu-sheet {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
+    /* Only non-spatial properties may transition. Presses, arrow nudges and
+       icon rotations still apply, but snap instead of moving. */
+    transition-property:
+      color, background-color, border-color, outline-color,
+      text-decoration-color, fill, stroke, opacity, box-shadow !important;
   }
 
   .animate-fade-up,
