@@ -6,6 +6,8 @@ pubDate: 2026-09-26T21:00:00-04:00
 author: "LobbyStack Team"
 category: "Product updates"
 featured: false
+coverImage: "/illustrations/ai-voice-agent-gpt-live-hero.webp"
+coverImageAlt: "A glowing voice waveform above a receptionist disc, linked to a calendar with a booked day, a message note, and a phone handset"
 locale: "en"
 canonicalSlug: "ai-voice-agent-gpt-live"
 ---

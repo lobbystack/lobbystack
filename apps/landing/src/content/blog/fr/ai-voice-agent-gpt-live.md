@@ -6,6 +6,8 @@ pubDate: 2026-09-26T21:00:00-04:00
 author: "Équipe LobbyStack"
 category: "Mises à jour produit"
 featured: false
+coverImage: "/illustrations/ai-voice-agent-gpt-live-hero.webp"
+coverImageAlt: "Une onde vocale lumineuse au-dessus d'un disque de réception, reliée à un agenda avec un jour réservé, une note de message et un combiné téléphonique"
 locale: "fr"
 canonicalSlug: "ai-voice-agent-gpt-live"
 ---
