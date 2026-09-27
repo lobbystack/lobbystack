@@ -1,6 +1,6 @@
-import { and, eq, inArray, lte, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
 
-import { affiliateAttributions, affiliateClicks, affiliateCommissions, affiliatePayoutItems, affiliatePayoutRuns, affiliateProfileStats, affiliateProfiles, affiliateVoidedSources, billingTransactions, enqueueOutbox, users, withBusinessTransaction, withDispatcherTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { affiliateAttributions, affiliateClicks, affiliateCommissions, affiliatePayoutItems, affiliatePayoutRuns, affiliateProfileStats, affiliateProfiles, affiliateVoidedSources, users, withBusinessTransaction, withDispatcherTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
@@ -11,6 +11,10 @@ const HOLD_DAYS = 30;
 const MIN_PAYOUT_CENTS = 10_000;
 const DEFAULT_CURRENCY = "usd";
 const PAYOUT_BATCH_LIMIT = 250;
+// Matches affiliate_profiles.referral_code; generated codes can use all of it.
+export const REFERRAL_CODE_MAX_LENGTH = 64;
+// Repeat visits from one browser within this window count as one click.
+const CLICK_DEDUPE_MS = 24 * 60 * 60_000;
 const PAID_ORDER_STATUSES = new Set(["paid", "completed", "succeeded"]);
 const VOID_ORDER_STATUSES = new Set(["canceled", "cancelled", "refunded", "reversed"]);
 const VOID_REFUND_STATUSES = new Set(["succeeded"]);
@@ -24,12 +28,12 @@ export function normalizeAffiliateReferralCode(value: string): string {
       if (separator) normalized += "-";
       separator = false;
       normalized += character;
-      if (normalized.length >= 32) break;
+      if (normalized.length >= REFERRAL_CODE_MAX_LENGTH) break;
     } else if (normalized.length > 0) {
       separator = true;
     }
   }
-  return normalized.slice(0, 32);
+  return normalized.slice(0, REFERRAL_CODE_MAX_LENGTH);
 }
 
 function centsForCommission(amountCents: number): number {
@@ -62,18 +66,27 @@ export async function createAffiliateProfile(
   });
 }
 
+/**
+ * Credits a referred business to the affiliate who owns `referralCode`.
+ *
+ * Runs as the system actor: the referred operator's own RLS context cannot see
+ * another user's affiliate profile, so an operator transaction would silently
+ * find no referrer. Callers must already have verified that `referredUserId`
+ * administers `businessId`.
+ */
 export async function attributeBusiness(
   context: DomainContext,
   input: { businessId: string; referredUserId: string; referralCode: string; source: string },
 ): Promise<string | null> {
+  const referralCode = normalizeAffiliateReferralCode(input.referralCode);
+  if (!referralCode) return null;
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "system" }, async (tx) => {
-    const referralCode = normalizeAffiliateReferralCode(input.referralCode);
-    const profile = (await tx.select({ id: affiliateProfiles.id, referralCode: affiliateProfiles.referralCode }).from(affiliateProfiles).where(eq(affiliateProfiles.referralCode, referralCode)).limit(1))[0];
-    if (!profile) return null;
+    const profile = (await tx.select({ id: affiliateProfiles.id, userId: affiliateProfiles.userId, referralCode: affiliateProfiles.referralCode }).from(affiliateProfiles).where(and(eq(affiliateProfiles.referralCode, referralCode), eq(affiliateProfiles.status, "active"))).limit(1))[0];
+    // Affiliates cannot earn commission on their own workspaces.
+    if (!profile || profile.userId === input.referredUserId) return null;
     const [attribution] = await tx.insert(affiliateAttributions).values({ affiliateProfileId: profile.id, businessId: input.businessId, referredUserId: input.referredUserId, referralCode: profile.referralCode, source: input.source, attributedAt: new Date() }).onConflictDoNothing().returning({ id: affiliateAttributions.id });
     if (!attribution) return null;
     await tx.insert(affiliateProfileStats).values({ affiliateProfileId: profile.id, referralCount: 1 }).onConflictDoUpdate({ target: affiliateProfileStats.affiliateProfileId, set: { referralCount: sql`${affiliateProfileStats.referralCount} + 1`, updatedAt: new Date() } });
-    await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "affiliate_attribution", aggregateId: attribution.id, dedupeKey: `affiliate:${attribution.id}:created`, payload: { type: "conversation.updated", entityId: attribution.id } });
     return attribution.id;
   });
 }
@@ -86,6 +99,13 @@ export async function recordAffiliateClick(
     const referralCode = normalizeAffiliateReferralCode(input.referralCode);
     const profile = (await tx.select({ id: affiliateProfiles.id, status: affiliateProfiles.status }).from(affiliateProfiles).where(eq(affiliateProfiles.referralCode, referralCode)).limit(1))[0];
     if (!profile || profile.status !== "active") return false;
+    if (input.visitorId) {
+      // Serialize concurrent clicks from the same visitor so the 24-hour check
+      // and the insert below act as one step. The lock ends with the transaction.
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`affiliate-click:${profile.id}:${input.visitorId}`}, 0))`);
+      const recent = (await tx.select({ id: affiliateClicks.id }).from(affiliateClicks).where(and(eq(affiliateClicks.affiliateProfileId, profile.id), eq(affiliateClicks.visitorId, input.visitorId), gte(affiliateClicks.clickedAt, new Date(Date.now() - CLICK_DEDUPE_MS)))).limit(1))[0];
+      if (recent) return false;
+    }
     await tx.insert(affiliateClicks).values({ affiliateProfileId: profile.id, referralCode, ...(input.visitorId ? { visitorId: input.visitorId } : {}), ...(input.sourceUrl ? { sourceUrl: input.sourceUrl.slice(0, 500) } : {}) });
     await tx.insert(affiliateProfileStats).values({ affiliateProfileId: profile.id, clickCount: 1 }).onConflictDoUpdate({ target: affiliateProfileStats.affiliateProfileId, set: { clickCount: sql`${affiliateProfileStats.clickCount} + 1`, updatedAt: new Date() } });
     return true;

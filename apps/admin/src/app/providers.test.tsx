@@ -87,6 +87,17 @@ it("loads the namespaces a newly visited route needs", async () => {
   state.missing.mockReturnValue(["calls"]);
   state.pathname = "/calls/call-1";
   view.rerender(wrap(<div>Call detail</div>));
-  await waitFor(() => expect(state.load).toHaveBeenCalledWith(state.instance, "en", expect.arrayContaining(["calls"])));
+  await waitFor(() => expect(state.load).toHaveBeenCalledWith(state.instance, "en", expect.arrayContaining(["calls"]), { revalidate: false }));
   expect(screen.getByText("Call detail")).toBeTruthy();
+});
+
+it("revalidates cached translation files when the operator retries", async () => {
+  state.missing.mockReturnValue(["affiliate"]);
+  state.load.mockRejectedValueOnce(new Error("offline"));
+  state.pathname = "/affiliate";
+  render(wrap(<div>Affiliate</div>));
+  const retry = await screen.findByRole("button", { name: "common:loading.retry" });
+  expect(state.load).toHaveBeenLastCalledWith(state.instance, "en", expect.arrayContaining(["affiliate"]), { revalidate: false });
+  fireEvent.click(retry);
+  await waitFor(() => expect(state.load).toHaveBeenLastCalledWith(state.instance, "en", expect.arrayContaining(["affiliate"]), { revalidate: true }));
 });

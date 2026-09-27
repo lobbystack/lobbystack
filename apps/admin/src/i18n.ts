@@ -92,16 +92,19 @@ export async function loadRouteNamespaces(
   instance: I18nextInstance,
   locale: string,
   namespaces: readonly string[],
+  options: { revalidate?: boolean } = {},
 ): Promise<void> {
   const missing = missingNamespaces(instance, locale, namespaces);
   if (missing.length === 0) {
     return;
   }
 
-  const loaded = await Promise.all(missing.map(async (namespace) => {
+  const settled = await Promise.allSettled(missing.map(async (namespace) => {
     const fetchBundle = async (language: string): Promise<Record<string, unknown>> => {
-      const response = await fetch(versionedAssetUrl(`/locales/${language}/${namespace}.json`));
-      if (!response.ok) throw new Error(`Unable to load the ${namespace} translations.`);
+      const url = versionedAssetUrl(`/locales/${language}/${namespace}.json`);
+      // A retry must not replay a response the browser cached as immutable.
+      const response = options.revalidate ? await fetch(url, { cache: "reload" }) : await fetch(url);
+      if (!response.ok) throw new Error(`Unable to load the ${language}/${namespace} translations (HTTP ${response.status}).`);
       const bundle: unknown = await response.json();
       if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) throw new Error(`Invalid ${namespace} translations.`);
       return bundle as Record<string, unknown>;
@@ -119,11 +122,21 @@ export async function loadRouteNamespaces(
     }
   }));
 
+  // Keep every bundle that did load: one failed namespace must not leave the
+  // other namespaces of the same route untranslated.
   const fallbacks = resolvedFallbacks.get(instance) ?? new Set<string>();
   resolvedFallbacks.set(instance, fallbacks);
-  for (const { namespace, language, bundle } of loaded) {
+  const failures: unknown[] = [];
+  for (const result of settled) {
+    if (result.status === "rejected") {
+      failures.push(result.reason);
+      continue;
+    }
+    const { namespace, language, bundle } = result.value;
     if (language !== locale) fallbacks.add(`${locale}:${namespace}`);
     else fallbacks.delete(`${locale}:${namespace}`);
     instance.addResourceBundle(language, namespace, bundle, true, true);
   }
+  if (failures.length === 1) throw failures[0];
+  if (failures.length > 1) throw new AggregateError(failures, failures.map((failure) => failure instanceof Error ? failure.message : String(failure)).join(" "));
 }

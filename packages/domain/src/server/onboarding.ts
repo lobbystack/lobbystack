@@ -1,10 +1,10 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 
-import { affiliateAttributions, affiliateProfileStats, affiliateProfiles, billingAccounts, businesses, enqueueOutbox, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, businesses, enqueueOutbox, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
-import { normalizeAffiliateReferralCode } from "./affiliates";
+import { attributeBusiness } from "./affiliates";
 
 export type OnboardingStage =
   | "create_business"
@@ -175,16 +175,6 @@ export async function submitOnboardingAttribution(
 ): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const referralCode = normalizeAffiliateReferralCode(input.referralCode ?? "");
-    if (referralCode) {
-      const profile = (await tx.select({ id: affiliateProfiles.id, userId: affiliateProfiles.userId }).from(affiliateProfiles).where(and(eq(affiliateProfiles.referralCode, referralCode), eq(affiliateProfiles.status, "active"))).limit(1))[0];
-      if (profile && profile.userId !== input.userId) {
-        const [attribution] = await tx.insert(affiliateAttributions).values({ affiliateProfileId: profile.id, businessId: input.businessId, referredUserId: input.userId, referralCode, source: "referral_link" }).onConflictDoNothing().returning({ id: affiliateAttributions.id });
-        if (attribution) {
-          await tx.insert(affiliateProfileStats).values({ affiliateProfileId: profile.id, referralCount: 1 }).onConflictDoUpdate({ target: affiliateProfileStats.affiliateProfileId, set: { referralCount: sql`${affiliateProfileStats.referralCount} + 1`, updatedAt: new Date() } });
-        }
-      }
-    }
     const changed = await tx.update(businesses)
       .set({ onboardingAttribution: input.source?.trim().slice(0, 120) || null, onboardingStage: "complete", updatedAt: new Date() })
       .where(and(eq(businesses.id, input.businessId), inArray(businesses.onboardingStage, ["attribution", "complete"])))
@@ -207,6 +197,13 @@ export async function submitOnboardingAttribution(
       payload: { completedAt: completedAt.toISOString() },
     });
   });
+  // The operator transaction above proved business administration. Attribution
+  // runs separately as the system actor because the referrer's profile is not
+  // visible under the referred operator's RLS context. It is idempotent, so a
+  // retried submission cannot double count.
+  if (input.referralCode) {
+    await attributeBusiness(context, { businessId: input.businessId, referredUserId: input.userId, referralCode: input.referralCode, source: "referral_link" });
+  }
 }
 
 export const ONBOARDING_FOLLOWUP_DELAY_MS = 24 * 60 * 60_000;
