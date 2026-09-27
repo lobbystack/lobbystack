@@ -6,7 +6,7 @@ import { oauthProvider } from "@better-auth/oauth-provider";
 import type { BetterAuthPlugin } from "better-auth";
 
 import { createCimdFetch, hashOAuthToken, isCimdUrlAllowed, OAUTH_ACCESS_TOKEN_PREFIX, OAUTH_REFRESH_TOKEN_PREFIX } from "@lobbystack/domain";
-import { oauthAccessTokens, oauthClientAssertions, oauthClientResources, oauthClients, oauthConsents, oauthRefreshTokens, oauthResources } from "@lobbystack/db";
+import { oauthAccessTokens, oauthClientAssertions, oauthClientResources, oauthClients, oauthConsents, oauthRefreshTokens, oauthResources, type Database } from "@lobbystack/db";
 
 import { MCP_OAUTH_SCOPES, mcpResourceUrl } from "./mcp/oauth-config";
 
@@ -66,6 +66,33 @@ const allowedOAuthPaths = new Set([
   "/oauth2/public-client",
 ]);
 
+/** Endpoints that read the MCP resource row: they run ensureMcpResource first. */
+const resourceDependentPaths = new Set(["/oauth2/authorize", "/oauth2/consent", "/oauth2/continue", "/oauth2/token"]);
+
+export function needsMcpResource(path?: string): boolean {
+  return path !== undefined && resourceDependentPaths.has(path);
+}
+
+let resourceReady: Promise<void> | undefined;
+
+/**
+ * Upserts the oauth_resources row for /api/mcp (its identifier comes from
+ * APP_BASE_URL, so a migration can't write it). Runs once per process;
+ * a failure is retried on the next request.
+ */
+export async function ensureMcpResource(db: Database): Promise<void> {
+  resourceReady ??= (async () => {
+    const now = new Date();
+    await db.insert(oauthResources)
+      .values({ identifier: mcpResourceUrl(), name: "LobbyStack MCP server", allowedScopes: [...MCP_OAUTH_SCOPES], disabled: false, createdAt: now, updatedAt: now })
+      .onConflictDoUpdate({ target: oauthResources.identifier, set: { allowedScopes: [...MCP_OAUTH_SCOPES], disabled: false, updatedAt: now } });
+  })().catch((error: unknown) => {
+    resourceReady = undefined;
+    throw error;
+  });
+  await resourceReady;
+}
+
 export function isDisabledOAuthEndpoint(path?: string): boolean {
   if (!path) return false;
   if (path.startsWith("/admin/oauth2")) return true;
@@ -120,8 +147,10 @@ export function mcpOAuthPlugins(): BetterAuthPlugin[] {
       allowUnauthenticatedClientRegistration: true,
       clientRegistrationDefaultScopes: scopes,
       clientRegistrationRequirePKCE: true,
-      resources: [{ identifier: mcpResourceUrl(), name: "LobbyStack MCP server", allowedScopes: scopes }],
-      // One resource, open to every registered client.
+      // The MCP resource row is written by ensureMcpResource, not the plugin's
+      // boot-time seed: that seed runs at auth construction and throws when the
+      // table isn't there (a new deployment before migrations, or a test schema),
+      // which breaks every auth request. One resource, open to every client.
       enforcePerClientResources: false,
       postLogin: {
         // The business is picked on the consent page, not on a separate page.

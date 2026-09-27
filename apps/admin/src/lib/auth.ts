@@ -12,7 +12,7 @@ import { assertDatabaseRole, enqueueOutbox, withBusinessTransaction } from "@lob
 import { accounts, sessions, users, verifications } from "@lobbystack/db";
 
 import { getDatabase } from "./databases";
-import { isDisabledOAuthEndpoint, mcpOAuthPlugins, oauthProviderSchema, registrationWithApplicationType } from "./oauth-provider";
+import { ensureMcpResource, isDisabledOAuthEndpoint, mcpOAuthPlugins, needsMcpResource, oauthProviderSchema, registrationWithApplicationType } from "./oauth-provider";
 import { hashReplacementPassword, isLegacyScryptHash, meetsPasswordRequirements, verifyLegacyPassword } from "./password";
 import { trustedClientIp, trustedClientIpFromHeaders, trustedClientIpHeader } from "./trusted-client-ip";
 import { verifyTurnstileForSignUp } from "./turnstile";
@@ -398,6 +398,7 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
         if (isDisabledAuthEmailEndpoint(ctx.path) || isDisabledOAuthEndpoint(ctx.path)) {
           throw new APIError("NOT_FOUND", { message: "Endpoint not enabled." });
         }
+        if (needsMcpResource(ctx.path)) await ensureMcpResource(database.db);
         const registration = registrationWithApplicationType(ctx.path, ctx.body);
         if (registration) return { context: { body: registration } };
         const recoveryPaths = ["/email-otp/request-password-reset", "/email-otp/reset-password"];
