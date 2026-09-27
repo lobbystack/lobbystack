@@ -86,6 +86,7 @@ export class LiveCallController {
     // first is an instruction sent after session.started. The sideband replays
     // the last 3 seconds, so a late attach still sees the event.
     socket.on("session.started", () => {
+      this.started = true;
       this.options.onStarted?.();
       this.sendGreeting();
     });
@@ -94,16 +95,24 @@ export class LiveCallController {
     // If we attached after the replay window, session.started never arrives.
     // Greet anyway unless the caller has already started talking.
     setTimeout(() => {
-      if (!this.turns.some((turn) => turn.role === "caller")) this.sendGreeting();
+      if (!this.started && !this.turns.some((turn) => turn.role === "caller")) this.sendGreeting();
     }, GREETING_FALLBACK_MS);
   }
 
-  private greeted = false;
+  private started = false;
+  // GPT-Live ignores a greeting that arrives before the session starts, which
+  // the fallback can send on a slow connection. So the fallback and
+  // session.started each get one try, and session.started still greets unless
+  // someone has already spoken.
+  private fallbackGreetingSent = false;
+  private startedGreetingSent = false;
 
   private sendGreeting(): void {
     const greeting = this.options.greeting?.trim();
-    if (this.greeted || !greeting) return;
-    this.greeted = true;
+    if (!greeting || this.turns.length > 0) return;
+    if (this.started ? this.startedGreetingSent : this.fallbackGreetingSent) return;
+    if (this.started) this.startedGreetingSent = true;
+    else this.fallbackGreetingSent = true;
     this.socket?.send({
       type: "session.instructions.append",
       delegation_id: null,

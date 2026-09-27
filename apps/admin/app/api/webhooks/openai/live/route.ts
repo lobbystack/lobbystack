@@ -43,11 +43,18 @@ export async function POST(request: Request) {
     const resolved = to ? await getAppDatabase().db.execute<{ business_id: string | null }>(sql`select app.resolve_business_by_phone(${to}) as business_id`) : undefined;
     const businessId = resolved?.rows[0]?.business_id;
     const snapshot = businessId ? await getCachedBusinessSnapshot(createWorkerDomainContext(), { businessId }) : null;
-    if (!businessId || !snapshot) {
+    if (!businessId) {
+      // Staging and production share one OpenAI project, so OpenAI sends every
+      // incoming call to both. A number this deployment doesn't know belongs to
+      // the other one: leave the call for it instead of rejecting it.
       // Only the dialled-number headers: "From" is the caller's own number.
       const routing = event.data.sip_headers.filter((item) => ["to", "diversion", "p-called-party-id"].includes(item.name.toLowerCase()));
-      console.warn("[live] no business for incoming call", JSON.stringify({ sessionId, to, businessId: businessId ?? null, routing }));
-      await client.live.sessions.reject(sessionId, { status_code: 404 });
+      console.info("[live] incoming call for a number this deployment doesn't serve", JSON.stringify({ sessionId, to, routing }));
+      return new NextResponse(null, { status: 200 });
+    }
+    if (!snapshot) {
+      console.warn("[live] no published snapshot for incoming call", JSON.stringify({ sessionId, businessId }));
+      await client.live.sessions.reject(sessionId, { status_code: 503 });
       return new NextResponse(null, { status: 200 });
     }
     return await answerCall(client, { sessionId, businessId, snapshot, from, to: to! });
