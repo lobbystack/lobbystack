@@ -40,8 +40,8 @@ After you apply the production source rollout, the parser should report no produ
 
 ## Self-hosted template
 
-The public LobbyStack template at [railway.com/deploy/lobbystack](https://railway.com/deploy/lobbystack) has no definition in this repository. Railway’s API can’t update a published template, so edit it in the dashboard under **Templates > LobbyStack**. The editor stages each change until you select **Apply**.
+`template.ts` declares the published LobbyStack template at [railway.com/deploy/lobbystack](https://railway.com/deploy/lobbystack) (template id `c85ce52d-09f7-434e-a3ee-be1da2755622`). Railway’s CLI and API can’t apply changes to a template, so make each change in the dashboard under **Templates > LobbyStack**, then update `template.ts` to match. The editor stages each change until you select **Apply**.
 
-Update the template when you add or remove a service or a variable in `railway.ts`. Mark a user-supplied value as optional unless every deployment needs it. The template generates secrets with `${{secret(64)}}`.
+Update the template when you add or remove a service or a variable in `railway.ts`. Mark a user-supplied value as optional unless every deployment needs it. Generate secrets in the template with `${{secret(64)}}`.
 
 The `migrate` service runs migrations as the `postgres` superuser, like Docker Compose. `0000_roles.sql` creates the application roles, and `bootstrap` gives them logins. Every other service connects as a scoped role.
