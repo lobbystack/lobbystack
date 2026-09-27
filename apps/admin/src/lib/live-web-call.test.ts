@@ -30,6 +30,8 @@ function request(headers: Record<string, string> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubEnv("AUTH_TRUSTED_ORIGINS", "");
+  vi.stubEnv("APP_BASE_URL", app);
   mocks.widgetKey = { status: "active", allowedOrigins: ["https://client.example"] };
 });
 afterEach(() => { vi.unstubAllEnvs(); });
@@ -38,6 +40,24 @@ describe("resolveLiveWebCallAccess", () => {
   it("lets an operator test-call their own business from the dashboard", async () => {
     mocks.withOperatorTransaction.mockResolvedValue("biz_1");
     await expect(resolveLiveWebCallAccess(request({ origin: app }), { sdp: "v=0", widgetId: "lobbystack-dashboard-test-call" })).resolves.toMatchObject({ businessId: "biz_1", dashboardTestCall: true, origin: app });
+  });
+
+  it("accepts the dashboard's origin when the proxy hands the app an internal URL", async () => {
+    mocks.withOperatorTransaction.mockResolvedValue("biz_1");
+    const internal = new Request("http://[::]:3000/api/voice/live/session", { method: "POST", headers: { origin: app } });
+    await expect(resolveLiveWebCallAccess(internal, { sdp: "v=0", widgetId: "lobbystack-dashboard-test-call" })).resolves.toMatchObject({ businessId: "biz_1", dashboardTestCall: true, origin: app });
+  });
+
+  it("records the trusted origin the call came from, not the first configured one", async () => {
+    vi.stubEnv("AUTH_TRUSTED_ORIGINS", "https://second.lobbystack.test");
+    mocks.withOperatorTransaction.mockResolvedValue("biz_1");
+    await expect(resolveLiveWebCallAccess(request({ origin: "https://second.lobbystack.test" }), { sdp: "v=0", widgetId: "lobbystack-dashboard-test-call" })).resolves.toMatchObject({ businessId: "biz_1", origin: "https://second.lobbystack.test" });
+  });
+
+  it("refuses a DNS-rebinding request whose host and origin match each other but not the app", async () => {
+    const rebound = new Request("https://evil.example/api/voice/live/session", { method: "POST", headers: { origin: "https://evil.example" } });
+    await expect(resolveLiveWebCallAccess(rebound, { sdp: "v=0", widgetId: "lobbystack-dashboard-test-call" })).resolves.toEqual({ status: 403, code: "origin_denied" });
+    expect(mocks.withOperatorTransaction).not.toHaveBeenCalled();
   });
 
   it("refuses a dashboard test call started from another site", async () => {
