@@ -127,6 +127,12 @@ describe.skipIf(!testUrl)("MCP server against PostgreSQL with RLS", () => {
     expect((await call(clientA, "get_business")).data).toMatchObject({ id: a.businessId });
   });
 
+  it("lists staff with the services they take", async () => {
+    const client = await connect(a.key);
+    const staff = (await call(client, "list_staff")).data!.data!;
+    expect(staff).toEqual([expect.objectContaining({ name: "Sam", active: true })]);
+  });
+
   it("finds contacts by part of their name", async () => {
     const client = await connect(a.key);
     await call(client, "create_contact", { name: "Marguerite O'Hara", phone: "+14165550101" });

@@ -41,6 +41,7 @@ Signing in with your LobbyStack account instead of pasting a key is coming soon.
 | --- | --- | --- |
 | `get_business` | `business:read` | Business name, time zone, opening hours and booking mode |
 | `list_services` | `business:read` | Services customers can book |
+| `list_staff` | `business:read` | People who take appointments and the services they do |
 | `update_business_hours` | `business:write` | Replaces the week's opening hours |
 | `list_calls` | `calls:read` | Calls newest first, filtered by start time |
 | `get_call` | `calls:read` | One call with its transcript |
@@ -48,12 +49,12 @@ Signing in with your LobbyStack account instead of pasting a key is coming soon.
 | `get_contact` | `contacts:read` | One contact |
 | `create_contact` | `contacts:write` | Adds a contact |
 | `update_contact` | `contacts:write` | Changes a contact's details |
-| `list_appointments` | `appointments:read` | Appointments filtered by status and start time |
+| `list_appointments` | `appointments:read` | Appointments filtered by status, start time or contact |
 | `get_appointment` | `appointments:read` | One appointment |
-| `check_availability` | `appointments:read` | Open times for a service, up to 7 days |
+| `check_availability` | `appointments:read` | Open times for a service, up to 7 days, for anyone or one staff member |
 | `book_appointment` | `appointments:write` | Books an open time |
 | `cancel_appointment` | `appointments:write` | Cancels an appointment |
-| `reschedule_appointment` | `appointments:write` | Moves an appointment to another open time |
+| `reschedule_appointment` | `appointments:write` | Moves an appointment to another open time or staff member |
 | `list_messages` | `messages:read` | Messages the receptionist took for your team |
 | `add_knowledge` | `knowledge:write` | Adds an FAQ or a text entry the receptionist can use |
 

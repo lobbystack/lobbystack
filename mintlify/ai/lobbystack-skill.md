@@ -22,6 +22,7 @@ LobbyStack runs an AI receptionist that answers a business's phone calls and web
 | --- | --- | --- |
 | `get_business` | `business:read` | Read name, time zone, hours and booking mode |
 | `list_services` | `business:read` | Get service ids and durations |
+| `list_staff` | `business:read` | Get staff ids and the services each one takes |
 | `update_business_hours` | `business:write` | Replace the whole week of hours |
 | `list_calls` | `calls:read` | List calls, newest first, by start time |
 | `get_call` | `calls:read` | Read one call's transcript |
@@ -29,7 +30,7 @@ LobbyStack runs an AI receptionist that answers a business's phone calls and web
 | `get_contact` | `contacts:read` | Read one contact |
 | `create_contact` | `contacts:write` | Add a contact |
 | `update_contact` | `contacts:write` | Change or clear a contact's fields |
-| `list_appointments` | `appointments:read` | List appointments by status and start time |
+| `list_appointments` | `appointments:read` | List appointments by status, start time or contact |
 | `get_appointment` | `appointments:read` | Read one appointment |
 | `check_availability` | `appointments:read` | Find open start times for a service |
 | `book_appointment` | `appointments:write` | Book an open time |
@@ -52,12 +53,12 @@ List tools return `{ data, next_cursor, has_more }`. When `has_more` is true, ca
 
 1. Call `get_business` and check that `booking_mode` is `instant`. If it isn't, stop and tell the owner (see below).
 2. Call `list_services` and pick the service the owner named.
-3. Call `check_availability` with `service_id` and `start_date` as `YYYY-MM-DD` in the business time zone. Add `end_date` for a range of up to 7 days.
+3. Call `check_availability` with `service_id` and `start_date` as `YYYY-MM-DD` in the business time zone. Add `end_date` for a range of up to 7 days. If the customer wants a particular person, get their id from `list_staff` and pass it as `staff_id` here and to `book_appointment`.
 4. Offer a few times in local time. When the owner picks one, call `book_appointment` with that slot's `starts_at` unchanged, plus `contact_id` or `contact_phone`.
 5. Set `sms_consent` to true only if the owner says the customer agreed to texts.
 6. Send an `idempotency_key` (any unique string). If the call times out, retry with the same key; you get the first booking back instead of a duplicate.
 
-To reschedule, run `check_availability` for the appointment's `service_id`, then call `reschedule_appointment`. The staff member stays the same.
+To reschedule, run `check_availability` for the appointment's `service_id`, then call `reschedule_appointment`. The staff member stays the same unless you pass `staff_id`; check availability with that `staff_id` first. To see one customer's bookings, call `list_appointments` with their `contact_id`.
 
 ### Read yesterday's missed calls
 

@@ -58,6 +58,7 @@ function keyWith(scopes: ApiKeyScope[]): string {
 
 const business = { id: businessA, name: "Maple Dental", timezone: "America/Toronto", locale: "en", website_url: null, booking_mode: "instant", hours: [{ day: "monday", open: "09:00", close: "17:00" }], created_at: at, updated_at: at };
 const service = { id, name: "Cleaning", description: null, duration_minutes: 30, created_at: at, updated_at: at };
+const staffMember = { id, name: "Sam", active: true, timezone: "America/Toronto", service_ids: [id], created_at: at, updated_at: at };
 const call = { id, channel: "phone", status: "completed", outcome: "message_taken", summary: "Wants a callback.", end_reason: "completed", contact_id: id, caller_name: "Ana", caller_phone: "+14165550134", duration_seconds: 42, recording_available: false, started_at: at, ended_at: later, created_at: at };
 const contact = { id, name: "Ana", phone: "+14165550134", email: null, locale: "en", timezone: null, created_at: at, updated_at: at };
 const appointment = { id, status: "confirmed", starts_at: at, ends_at: later, timezone: "America/Toronto", service_id: id, service_name: "Cleaning", staff_id: id, staff_name: "Sam", contact_id: id, contact_name: "Ana", contact_phone: "+14165550134", source: "api", calendar_sync_status: "pending", created_at: at, updated_at: at };
@@ -70,6 +71,7 @@ function fakeOperations(): McpOperations {
     getBusinessForApi: vi.fn(async () => business),
     updateBusinessForApi: vi.fn(async () => business),
     listServicesForApi: vi.fn(async () => [service]),
+    listStaffForApi: vi.fn(async () => [staffMember]),
     listCallsForApi: vi.fn(async () => page([call])),
     getCallForApi: vi.fn(async () => ({ ...call, transcript: [{ speaker: "caller", text: "Hi", at }] })),
     listContactsForApi: vi.fn(async () => page([contact])),
@@ -241,7 +243,7 @@ describe("MCP tool listing", () => {
   it("serves the 2026-07-28 protocol as well as 2025-era clients", async () => {
     const client = await connect(keyWith(["business:read"]), "auto");
     const { tools } = await client.listTools();
-    expect(tools.map((entry) => entry.name).sort()).toEqual(["get_business", "list_services"]);
+    expect(tools.map((entry) => entry.name).sort()).toEqual(["get_business", "list_services", "list_staff"]);
     const result = await client.callTool({ name: "get_business", arguments: {} });
     expect(result.structuredContent).toMatchObject({ id: businessA, booking_mode: "instant" });
   });
@@ -251,6 +253,7 @@ describe("MCP tool listing", () => {
 const mappings: Array<{ tool: string; args: Record<string, unknown>; operation: keyof McpOperations; expected: unknown[] }> = [
   { tool: "get_business", args: {}, operation: "getBusinessForApi", expected: [] },
   { tool: "list_services", args: {}, operation: "listServicesForApi", expected: [] },
+  { tool: "list_staff", args: {}, operation: "listStaffForApi", expected: [] },
   { tool: "update_business_hours", args: { hours: [{ day: "monday", open: "09:00", close: "17:00" }] }, operation: "updateBusinessForApi", expected: [{ hours: [{ day: "monday", open: "09:00", close: "17:00" }] }] },
   { tool: "list_calls", args: { started_after: "2026-09-26T00:00:00-04:00", started_before: "2026-09-27T00:00:00-04:00", limit: 50 }, operation: "listCallsForApi", expected: [{ limit: 50, startedAfter: new Date("2026-09-26T04:00:00.000Z"), startedBefore: new Date("2026-09-27T04:00:00.000Z") }] },
   { tool: "get_call", args: { call_id: id }, operation: "getCallForApi", expected: [id] },
@@ -268,7 +271,23 @@ const mappings: Array<{ tool: string; args: Record<string, unknown>; operation: 
   { tool: "add_knowledge", args: { type: "faq", question: "Do you park?", answer: "Yes, behind the building." }, operation: "createKnowledgeEntryForApi", expected: [{ type: "faq", question: "Do you park?", answer: "Yes, behind the building." }] },
 ];
 
+// Optional staff and contact filters reach the domain call when the model sends them.
+const optionalArguments: Array<{ tool: string; args: Record<string, unknown>; operation: keyof McpOperations; expected: unknown[] }> = [
+  { tool: "check_availability", args: { service_id: id, start_date: "2026-09-28", staff_id: id }, operation: "getAvailabilityForApi", expected: [{ serviceId: id, startDate: "2026-09-28", staffId: id }] },
+  { tool: "list_appointments", args: { contact_id: id }, operation: "listAppointmentsForApi", expected: [{ contactId: id }] },
+  { tool: "reschedule_appointment", args: { appointment_id: id, starts_at: later, staff_id: id }, operation: "rescheduleAppointmentForApi", expected: [id, { starts_at: later, staff_id: id }] },
+  { tool: "book_appointment", args: { service_id: id, starts_at: at, contact_phone: "+14165550134", staff_id: id }, operation: "createAppointmentForApi", expected: [{ service_id: id, starts_at: at, contact_phone: "+14165550134", staff_id: id }] },
+];
+
 describe("MCP tools call the v1 domain operations", () => {
+  it.each(optionalArguments)("$tool passes its optional filters to $operation", async ({ tool, args, operation, expected }) => {
+    const client = await connect("lsk_aaaaaaaa_full");
+    const result = await client.callTool({ name: tool, arguments: args });
+    expect(result.isError ?? false).toBe(false);
+    const [, , ...rest] = (operations[operation] as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(rest).toEqual(expected);
+  });
+
   it("covers every tool", () => {
     expect(mappings.map((entry) => entry.tool).sort()).toEqual(mcpTools.map((entry) => entry.name).sort());
   });
