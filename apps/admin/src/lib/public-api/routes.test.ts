@@ -13,6 +13,7 @@ const domain = vi.hoisted(() => ({
   updateContactForApi: vi.fn(),
   cancelAppointmentForApi: vi.fn(),
   getWebhookEndpoint: vi.fn(),
+  listStaffForApi: vi.fn(),
 }));
 
 vi.mock("../domain-context", () => ({ createWorkerDomainContext: () => ({ db: {} }) }));
@@ -106,5 +107,31 @@ describe("v1 UUID validation", () => {
     domain.getCallForApi.mockResolvedValue({ id: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f" });
     const response = await v1.getCall(call("/calls/x"), { params: Promise.resolve({ call_id: "5D0BD9A4-7E1C-4A51-9A50-8E1B2C3D4E5F" }) });
     expect(response.status).toBe(200);
+  });
+});
+
+describe("GET /staff", () => {
+  it("requires business:read", async () => {
+    domain.resolveApiKey.mockResolvedValue({ businessId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", apiKeyId: "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6", scopes: ["appointments:write"] });
+    const response = await v1.listStaff(call("/staff"));
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ error: { code: "insufficient_scope", message: expect.stringContaining("business:read") } });
+    expect(domain.listStaffForApi).not.toHaveBeenCalled();
+  });
+
+  it("returns every staff member on one page, scoped to the key's business", async () => {
+    const member = { id: "06d9c0dc-f18a-4cc6-a987-ac4963c87113", name: "Sam", active: true, timezone: "UTC", service_ids: [], created_at: "2026-09-27T12:00:00.000Z", updated_at: "2026-09-27T12:00:00.000Z" };
+    domain.listStaffForApi.mockResolvedValue([member]);
+    const response = await v1.listStaff(call("/staff"));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ data: [member], next_cursor: null, has_more: false });
+    expect(domain.listStaffForApi).toHaveBeenCalledWith(expect.anything(), { businessId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", apiKeyId: "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6" });
+  });
+
+  it("rejects a malformed staff_id on GET /availability with 400", async () => {
+    const response = await v1.getAvailability(call("/availability?service_id=5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f&start_date=2026-09-29&staff_id=nope"));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { code: "invalid_request", message: "staff_id must be a UUID." } });
+    expect(domain.getAvailabilityForApi).not.toHaveBeenCalled();
   });
 });
