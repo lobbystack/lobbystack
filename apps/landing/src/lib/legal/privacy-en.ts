@@ -126,7 +126,7 @@ export const privacyEn: LegalDocument = {
           ],
         },
         `7.2 <strong>Data we access.</strong> Your Google account identifier and email address, the list of your calendars, and event times on the selected calendar.`,
-        `7.3 <strong>Storage and protection.</strong> We store the OAuth tokens needed to keep the connection working. We encrypt them at rest. When you disconnect Google Calendar, we delete the stored connection and remove the appointment events we created.`,
+        `7.3 <strong>Storage and protection.</strong> We store the OAuth tokens needed to keep the connection working. We encrypt them at rest. When you disconnect Google Calendar, we stop syncing, delete the stored tokens, and delete the busy times we copied from your calendar. Appointment events we already created stay on your Google Calendar; you can delete them there.`,
         `7.4 <strong>Sharing.</strong> We share Google user data only with the Google Calendar API to complete the actions you asked for, and with our hosting providers that store it for us.`,
         `7.5 <strong>AI processing.</strong> We do not send the titles or descriptions of your Google Calendar events to AI providers. The AI receptionist receives only derived scheduling facts, such as whether a time is free and whether a booking succeeded.`,
         `7.6 <strong>Limited Use.</strong> LobbyStack's use and transfer of information received from Google APIs follows the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including its Limited Use requirements. We do not sell Google user data, use it for advertising, or use it to train or improve general AI or machine learning models.`,
@@ -246,7 +246,7 @@ export const privacyEn: LegalDocument = {
       title: "15. Canada and Quebec",
       blocks: [
         `15.1 We handle personal information under the Personal Information Protection and Electronic Documents Act (PIPEDA) and Quebec's Act respecting the protection of personal information in the private sector, as amended by Law 25.`,
-        `15.2 Our person in charge of the protection of personal information is [PRIVACY OFFICER NAME AND TITLE]. You can reach this person at ${support}.`,
+        `15.2 As Quebec law provides, the person with the highest authority at Lobbystack Inc. is our person in charge of the protection of personal information. You can reach this person at ${support}.`,
         `15.3 You may ask to access or correct your information, withdraw consent, or, in Quebec, ask for your computerized information in a structured, commonly used technological format. If the AI receptionist makes a decision about you based only on automated processing, you may ask the business to tell you what information was used and to have a person review the decision.`,
         `15.4 If you are not satisfied with our answer, you may contact the Commission d'accès à l'information du Québec or the Office of the Privacy Commissioner of Canada.`,
       ],
@@ -312,7 +312,7 @@ export const privacyEn: LegalDocument = {
       nav: "Contact",
       title: "22. Contact us",
       blocks: [
-        `Send questions, requests, or complaints about this Policy to Lobbystack Inc. at ${support}. You can also write to us at [LOBBYSTACK MAILING ADDRESS]. Our <a href="/terms/">Terms of Service</a> also govern your use of the Service.`,
+        `Send questions, requests, or complaints about this Policy to Lobbystack Inc. at ${support}. Our <a href="/terms/">Terms of Service</a> also govern your use of the Service.`,
       ],
     },
   ],

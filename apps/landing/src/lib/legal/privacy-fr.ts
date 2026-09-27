@@ -126,7 +126,7 @@ export const privacyFr: LegalDocument = {
           ],
         },
         `7.2 <strong>Données consultées.</strong> L’identifiant et l’adresse courriel de votre compte Google, la liste de vos agendas et les heures des événements de l’agenda choisi.`,
-        `7.3 <strong>Stockage et protection.</strong> Nous conservons les jetons OAuth nécessaires au maintien de la connexion. Nous les chiffrons au repos. Lorsque vous déconnectez Google Agenda, nous supprimons la connexion enregistrée et retirons les rendez-vous que nous avons créés.`,
+        `7.3 <strong>Stockage et protection.</strong> Nous conservons les jetons OAuth nécessaires au maintien de la connexion. Nous les chiffrons au repos. Lorsque vous déconnectez Google Agenda, nous arrêtons la synchronisation, supprimons les jetons conservés et supprimons les plages occupées copiées de votre agenda. Les rendez-vous déjà créés restent dans votre Google Agenda; vous pouvez les y supprimer.`,
         `7.4 <strong>Communication.</strong> Nous communiquons les données d’utilisateur Google seulement à l’API Google Agenda pour effectuer les actions que vous avez demandées, et aux hébergeurs qui les stockent pour nous.`,
         `7.5 <strong>Traitement par l’IA.</strong> Nous ne transmettons pas les titres ni les descriptions de vos événements Google Agenda aux fournisseurs d’IA. Le réceptionniste IA reçoit seulement des renseignements de planification dérivés, comme la disponibilité d’une plage horaire et le succès d’une réservation.`,
         `7.6 <strong>Utilisation limitée.</strong> L’utilisation et le transfert par LobbyStack des renseignements reçus des API Google respectent la <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, y compris ses exigences d’utilisation limitée (Limited Use). Nous ne vendons pas les données d’utilisateur Google, ne les utilisons pas à des fins publicitaires et ne les utilisons pas pour entraîner ou améliorer des modèles généraux d’IA ou d’apprentissage automatique.`,
@@ -246,7 +246,7 @@ export const privacyFr: LegalDocument = {
       title: "15. Canada et Québec",
       blocks: [
         `15.1 Nous traitons les renseignements personnels conformément à la Loi sur la protection des renseignements personnels et les documents électroniques (LPRPDE) et à la Loi sur la protection des renseignements personnels dans le secteur privé du Québec, telle que modifiée par la Loi 25.`,
-        `15.2 La personne responsable de la protection des renseignements personnels est [NOM ET TITRE DU RESPONSABLE DE LA PROTECTION DES RENSEIGNEMENTS PERSONNELS]. Vous pouvez la joindre à ${support}.`,
+        `15.2 Comme le prévoit la loi québécoise, la personne ayant la plus haute autorité au sein de Lobbystack Inc. est responsable de la protection des renseignements personnels. Vous pouvez la joindre à ${support}.`,
         `15.3 Vous pouvez demander d’accéder à vos renseignements ou de les faire corriger, retirer votre consentement ou, au Québec, demander vos renseignements informatisés dans un format technologique structuré et couramment utilisé. Si le réceptionniste IA prend une décision à votre sujet fondée exclusivement sur un traitement automatisé, vous pouvez demander à l’entreprise de vous indiquer les renseignements utilisés et de faire réviser la décision par une personne.`,
         `15.4 Si notre réponse ne vous satisfait pas, vous pouvez vous adresser à la Commission d’accès à l’information du Québec ou au Commissariat à la protection de la vie privée du Canada.`,
       ],
@@ -312,7 +312,7 @@ export const privacyFr: LegalDocument = {
       nav: "Contact",
       title: "22. Nous joindre",
       blocks: [
-        `Envoyez vos questions, demandes ou plaintes au sujet de la présente Politique à Lobbystack Inc., à ${support}. Vous pouvez aussi nous écrire à [ADRESSE POSTALE DE LOBBYSTACK]. Nos <a href="/fr/terms/">Conditions d’utilisation</a> régissent aussi votre utilisation du Service.`,
+        `Envoyez vos questions, demandes ou plaintes au sujet de la présente Politique à Lobbystack Inc., à ${support}. Nos <a href="/fr/terms/">Conditions d’utilisation</a> régissent aussi votre utilisation du Service.`,
       ],
     },
   ],
