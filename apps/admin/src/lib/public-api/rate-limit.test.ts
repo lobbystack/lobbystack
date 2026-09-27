@@ -17,12 +17,14 @@ describe("per-key rate limiting", () => {
     expect(await checkApiRateLimit(store, { apiKeyId: "key-a", limit: 3, now: now + 15_000 })).toMatchObject({ allowed: true });
   });
 
-  it("counts each key separately and never puts the key id in Redis in plain text", async () => {
+  it("counts each key separately by its database id", async () => {
     const store = memoryStore();
     const now = Date.UTC(2026, 8, 27, 12, 0, 0);
-    await checkApiRateLimit(store, { apiKeyId: "key-a", limit: 1, now });
-    expect(await checkApiRateLimit(store, { apiKeyId: "key-b", limit: 1, now })).toMatchObject({ allowed: true });
-    expect([...store.keys.keys()].some((name) => name.includes("key-a"))).toBe(false);
+    const keyA = "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6";
+    await checkApiRateLimit(store, { apiKeyId: keyA, limit: 1, now });
+    expect(await checkApiRateLimit(store, { apiKeyId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", limit: 1, now })).toMatchObject({ allowed: true });
+    expect(await checkApiRateLimit(store, { apiKeyId: keyA, limit: 1, now })).toMatchObject({ allowed: false });
+    expect([...store.keys.keys()].every((name) => name.includes(":public-api:rate:") && !name.includes("lsk_"))).toBe(true);
   });
 
   it("fails closed when the store errors", async () => {

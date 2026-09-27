@@ -10,7 +10,7 @@ import { apiAppointmentSchema, apiCallSchema, WEBHOOK_MAX_ATTEMPTS } from "@lobb
 import { finalizeConversationSession } from "../conversations";
 import { createVoiceFollowUpTask } from "../voice";
 import { generateApiKey, resolveApiKey } from "./apiKeys";
-import { beginIdempotentRequest, completeIdempotentRequest } from "./idempotency";
+import { runIdempotent } from "./idempotency";
 import { cancelAppointmentForApi, createAppointmentForApi, createContactForApi, getAvailabilityForApi, getContactForApi, listContactsForApi, rescheduleAppointmentForApi, updateBusinessForApi, type ApiCaller } from "./operations";
 import { PublicApiError } from "./errors";
 import { createWebhookEndpoint, processWebhookDelivery } from "./webhooks";
@@ -134,13 +134,42 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
   it("replays idempotent requests and rejects a reused key with a different body", async () => {
     const context = { db: worker!.db };
     const scope = { businessId: a.businessId, apiKeyId: a.caller.apiKeyId, operation: "createContact", key: `idem-${randomUUID()}` };
-    expect(await beginIdempotentRequest(context, scope, "hash-1")).toEqual({ kind: "new" });
-    await expectApiError(beginIdempotentRequest(context, scope, "hash-1"), 409, "idempotency_request_in_progress");
-    await completeIdempotentRequest(context, scope, "hash-1", { status: 201, body: { data: { id: "x" } } });
-    expect(await beginIdempotentRequest(context, scope, "hash-1")).toEqual({ kind: "replay", response: { status: 201, body: { data: { id: "x" } } } });
-    await expectApiError(beginIdempotentRequest(context, scope, "hash-2"), 422, "idempotency_key_reused");
+    const create = (transactional: typeof context) => createContactForApi(transactional, a.caller, { phone: "+14165551111" }).then((contact) => ({ status: 201, body: JSON.stringify({ data: contact }) }));
+    const first = await runIdempotent(context, scope, "hash-1", create);
+    expect(first.replayed).toBe(false);
+    const again = await runIdempotent(context, scope, "hash-1", create);
+    expect(again).toEqual({ replayed: true, response: first.response });
+    await expectApiError(runIdempotent(context, scope, "hash-2", create), 422, "idempotency_key_reused");
     // The same key under another API key is independent.
-    expect(await beginIdempotentRequest(context, { ...scope, businessId: b.businessId, apiKeyId: b.caller.apiKeyId }, "hash-2")).toEqual({ kind: "new" });
+    const other = await runIdempotent(context, { ...scope, businessId: b.businessId, apiKeyId: b.caller.apiKeyId }, "hash-2", async () => ({ status: 201, body: "{}" }));
+    expect(other.replayed).toBe(false);
+    expect(await admin!.db.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.businessId, a.businessId), eq(contacts.phone, "+14165551111")))).toHaveLength(1);
+  });
+
+  it("commits the mutation and the idempotency record together, so a failure after the mutation leaves no duplicate", async () => {
+    const context = { db: worker!.db };
+    const scope = { businessId: a.businessId, apiKeyId: a.caller.apiKeyId, operation: "createAppointment", key: `idem-${randomUUID()}` };
+    const input = { service_id: a.serviceId, starts_at: tomorrowAt(16), contact_phone: "+14165551212" };
+    const book = (transactional: typeof context) => createAppointmentForApi(transactional, a.caller, input).then((appointment) => ({ status: 201, body: JSON.stringify({ data: appointment }) }));
+    // The process dies after the booking is written but before the response is stored.
+    await expect(runIdempotent(context, scope, "hash", async (transactional) => {
+      await book(transactional);
+      throw new Error("crash after the mutation");
+    })).rejects.toThrow("crash after the mutation");
+    const appointmentsFor = async () => await admin!.db.select({ id: appointments.id }).from(appointments).innerJoin(contacts, eq(contacts.id, appointments.contactId)).where(and(eq(appointments.businessId, a.businessId), eq(contacts.phone, "+14165551212")));
+    expect(await appointmentsFor()).toEqual([]);
+    // The client retries with the same key: the booking happens once.
+    const retry = await runIdempotent(context, scope, "hash", book);
+    const replay = await runIdempotent(context, scope, "hash", book);
+    expect(replay).toEqual({ replayed: true, response: retry.response });
+    expect(await appointmentsFor()).toHaveLength(1);
+    // Two concurrent requests with a fresh key also book once.
+    const concurrentScope = { ...scope, key: `idem-${randomUUID()}` };
+    const concurrentInput = { ...input, starts_at: tomorrowAt(17), contact_phone: "+14165551313" };
+    const bookOther = (transactional: typeof context) => createAppointmentForApi(transactional, a.caller, concurrentInput).then((appointment) => ({ status: 201, body: JSON.stringify({ data: appointment }) }));
+    const results = await Promise.all([runIdempotent(context, concurrentScope, "hash", bookOther), runIdempotent(context, concurrentScope, "hash", bookOther)]);
+    expect(results.filter((result) => result.replayed)).toHaveLength(1);
+    expect(await admin!.db.select({ id: appointments.id }).from(appointments).innerJoin(contacts, eq(contacts.id, appointments.contactId)).where(eq(contacts.phone, "+14165551313"))).toHaveLength(1);
   });
 
   it("books only in instant booking mode", async () => {
@@ -150,7 +179,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     await expectApiError(createAppointmentForApi(context, a.caller, input), 409, "booking_requires_confirmation");
     await admin!.db.update(receptionistProfiles).set({ bookingMode: "off" }).where(eq(receptionistProfiles.businessId, a.businessId));
     await expectApiError(createAppointmentForApi(context, a.caller, input), 409, "booking_disabled");
-    expect(await admin!.db.select({ id: appointments.id }).from(appointments).where(eq(appointments.businessId, a.businessId))).toEqual([]);
+    expect(await admin!.db.select({ id: appointments.id }).from(appointments).innerJoin(contacts, eq(contacts.id, appointments.contactId)).where(and(eq(appointments.businessId, a.businessId), eq(contacts.phone, input.contact_phone)))).toEqual([]);
     await admin!.db.update(receptionistProfiles).set({ bookingMode: "instant" }).where(eq(receptionistProfiles.businessId, a.businessId));
     const appointment = await createAppointmentForApi(context, a.caller, input);
     expect(apiAppointmentSchema.parse(appointment)).toMatchObject({ status: "confirmed", source: "api", service_id: a.serviceId, contact_phone: "+14165553333" });

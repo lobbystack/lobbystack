@@ -5,6 +5,7 @@ import { appointments, businessHours, businesses, calls, contacts, conversations
 import {
   PUBLIC_API_DEFAULT_PAGE_SIZE,
   PUBLIC_API_MAX_PAGE_SIZE,
+  isUuid,
   isWebhookEventType,
   normalizeBookingMode,
   weekdays,
@@ -43,7 +44,7 @@ export function decodeCursor(cursor: string | undefined): { at: Date; id: string
   try {
     const parsed = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as Partial<Cursor>;
     const at = new Date(String(parsed.t));
-    if (typeof parsed.i !== "string" || !/^[0-9a-f-]{36}$/i.test(parsed.i) || !Number.isFinite(at.getTime())) throw new Error("bad cursor");
+    if (typeof parsed.i !== "string" || !isUuid(parsed.i) || !Number.isFinite(at.getTime())) throw new Error("bad cursor");
     return { at, id: parsed.i };
   } catch {
     throw invalidRequest("cursor is invalid. Pass the next_cursor value from the previous page.");

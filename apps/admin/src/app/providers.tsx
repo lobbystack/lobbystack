@@ -12,6 +12,7 @@ import { LocaleProvider } from "@/components/replacement-locale-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { createI18nInstance, loadRouteNamespaces, missingNamespaces, type I18nNamespaceResources } from "@/i18n";
+import { captureBrowserError } from "@/lib/browser-error-reporting";
 import type { SupportedLocale } from "@/lib/locale";
 import type { LocaleSource } from "@/lib/locale-request";
 import { routeNamespaces } from "@/lib/route-namespaces";
@@ -50,11 +51,13 @@ export function Providers({ children, initialLocale, initialLocaleSource, initia
     let cancelled = false;
     const requestKey = `${language}:${namespaceKey}`;
     setLoadingKey(requestKey);
-    void loadRouteNamespaces(i18n, language, namespaces).then(() => {
+    void loadRouteNamespaces(i18n, language, namespaces, { revalidate: retryToken > 0 }).then(() => {
       if (cancelled) return;
       setLoadingKey(null);
       setFailedKey(null);
-    }).catch(() => {
+    }).catch((error: unknown) => {
+      // Name the namespace and status so a production failure is diagnosable.
+      captureBrowserError(error);
       if (cancelled) return;
       setLoadingKey(null);
       setFailedKey(requestKey);

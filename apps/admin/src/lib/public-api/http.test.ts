@@ -1,9 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const domain = vi.hoisted(() => ({
-  beginIdempotentRequest: vi.fn(),
-  completeIdempotentRequest: vi.fn(),
-  releaseIdempotentRequest: vi.fn(),
+  runIdempotent: vi.fn(),
   touchApiKeyLastUsed: vi.fn(async () => undefined),
 }));
 
@@ -83,15 +81,18 @@ describe("v1 request pipeline", () => {
     expect(body.error.message).not.toContain("hunter2");
   });
 
-  it("stores the first response for an Idempotency-Key and replays it", async () => {
-    domain.beginIdempotentRequest.mockResolvedValueOnce({ kind: "new" });
-    const handler = vi.fn(async () => ({ body: { data: { id: "c1" } } }));
+  it("runs the handler on the idempotency transaction and replays the stored response", async () => {
+    const transactional = { db: { transaction: "tx" } };
+    domain.runIdempotent.mockImplementationOnce(async (_context, _scope, _hash, run) => ({ replayed: false, response: await run(transactional) }));
+    const handler = vi.fn(async (_input: { context: unknown }) => ({ body: { data: { id: "c1" } } }));
     const init = { method: "POST", body: JSON.stringify({ phone: "+14165550134" }), headers: { authorization: "Bearer lsk_x", "idempotency-key": "retry-1" } };
     const first = await handleApiRequest(request("/contacts", init), "createContact", handler, { resolveKey: async () => key, rateLimit: allow });
     expect(first.status).toBe(201);
-    expect(domain.completeIdempotentRequest).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ key: "retry-1", apiKeyId: key.apiKeyId, operation: "createContact" }), expect.any(String), { status: 201, body: JSON.stringify({ data: { id: "c1" } }) });
+    expect(await first.json()).toEqual({ data: { id: "c1" } });
+    expect(handler.mock.calls[0]?.[0].context).toBe(transactional);
+    expect(domain.runIdempotent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ key: "retry-1", apiKeyId: key.apiKeyId, operation: "createContact", businessId: businessA }), expect.any(String), expect.any(Function));
 
-    domain.beginIdempotentRequest.mockResolvedValueOnce({ kind: "replay", response: { status: 201, body: JSON.stringify({ data: { id: "c1" } }) } });
+    domain.runIdempotent.mockResolvedValueOnce({ replayed: true, response: { status: 201, body: JSON.stringify({ data: { id: "c1" } }) } });
     const replay = await handleApiRequest(request("/contacts", init), "createContact", handler, { resolveKey: async () => key, rateLimit: allow });
     expect(replay.status).toBe(201);
     expect(replay.headers.get("idempotent-replayed")).toBe("true");
@@ -99,17 +100,16 @@ describe("v1 request pipeline", () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
-  it("frees the Idempotency-Key after a server error", async () => {
-    domain.beginIdempotentRequest.mockResolvedValueOnce({ kind: "new" });
-    const response = await handleApiRequest(request("/contacts", { method: "POST", body: "{}", headers: { authorization: "Bearer lsk_x", "idempotency-key": "retry-2" } }), "createContact", async () => { throw new Error("boom"); }, { resolveKey: async () => key, rateLimit: allow });
-    expect(response.status).toBe(500);
-    expect(domain.releaseIdempotentRequest).toHaveBeenCalled();
-    expect(domain.completeIdempotentRequest).not.toHaveBeenCalled();
+  it("returns the error when the idempotent transaction fails", async () => {
+    domain.runIdempotent.mockImplementationOnce(async (_context, _scope, _hash, run) => await run({ db: {} }));
+    const response = await handleApiRequest(request("/contacts", { method: "POST", body: "{}", headers: { authorization: "Bearer lsk_x", "idempotency-key": "retry-2" } }), "createContact", async () => { throw new PublicApiError(409, "conflict", "Duplicate."); }, { resolveKey: async () => key, rateLimit: allow });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: { code: "conflict", message: "Duplicate." } });
   });
 
   it("ignores Idempotency-Key on operations that do not create things", async () => {
     const response = await handleApiRequest(request("/appointments/x/cancel", { method: "POST", headers: { authorization: "Bearer lsk_x", "idempotency-key": "k" } }), "listContacts", async () => ({ body: { ok: true } }), { resolveKey: async () => key, rateLimit: allow });
     expect(response.status).toBe(200);
-    expect(domain.beginIdempotentRequest).not.toHaveBeenCalled();
+    expect(domain.runIdempotent).not.toHaveBeenCalled();
   });
 });

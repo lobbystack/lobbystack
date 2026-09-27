@@ -1,7 +1,9 @@
+import { createHmac } from "node:crypto";
+
 import { apiAppointmentSchema, apiCallSchema, apiContactSchema, apiMessageSchema, WEBHOOK_MAX_ATTEMPTS, WEBHOOK_RETRY_DELAYS_SECONDS } from "@lobbystack/shared";
 import { describe, expect, it } from "vitest";
 
-import { bearerToken, generateApiKey, hashApiKey, isWellFormedApiKey, normalizeScopes } from "./apiKeys";
+import { apiKeyPepper, bearerToken, generateApiKey, hashApiKey, isWellFormedApiKey, normalizeScopes } from "./apiKeys";
 import { idempotencyRequestHash, validateIdempotencyKey } from "./idempotency";
 import { decodeCursor, encodeCursor, pageSize, serializeAppointment, serializeCall, serializeContact, serializeMessage, toPage } from "./resources";
 import { webhookRetryDelaySeconds } from "./webhooks";
@@ -15,6 +17,15 @@ describe("API keys", () => {
     expect(generated.keyHash).not.toContain(generated.key.slice(13));
     expect(isWellFormedApiKey(generated.key)).toBe(true);
     expect(generateApiKey().key).not.toBe(generated.key);
+  });
+
+  it("hashes keys with HMAC-SHA256 under a pepper derived from ENCRYPTION_KEY", () => {
+    const { key } = generateApiKey();
+    const pepperA = apiKeyPepper({ ENCRYPTION_KEY: "secret-a" });
+    const pepperB = apiKeyPepper({ ENCRYPTION_KEY: "secret-b" });
+    expect(hashApiKey(key, pepperA)).toBe(createHmac("sha256", pepperA).update(key).digest("hex"));
+    expect(hashApiKey(key, pepperA)).not.toBe(hashApiKey(key, pepperB));
+    expect(() => apiKeyPepper({ NODE_ENV: "production" })).toThrow(/ENCRYPTION_KEY/);
   });
 
   it("reads only Bearer authorization headers", () => {

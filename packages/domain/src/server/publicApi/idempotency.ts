@@ -1,19 +1,22 @@
 import { createHash } from "node:crypto";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, lt } from "drizzle-orm";
 
-import { idempotencyKeys, withBusinessTransaction } from "@lobbystack/db";
+import { idempotencyKeys, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { PUBLIC_API_IDEMPOTENCY_TTL_HOURS } from "@lobbystack/shared";
 
 import type { DomainContext } from "../context";
 import { invalidRequest, PublicApiError } from "./errors";
 
 // Idempotency-Key support for v1 POSTs that create things. Keys are scoped to
-// the API key and the operation, and remembered for 24 hours. A repeat with the
-// same body replays the first response; a repeat with a different body is
-// rejected, and a repeat while the first is still running gets 409.
-
-const STALE_PROCESSING_MS = 5 * 60_000;
+// the API key and the operation, and remembered for 24 hours.
+//
+// The key row and the mutation commit in one transaction: the request's
+// domain work runs on that transaction (nested calls become savepoints), and
+// the stored response is written before it commits. A crash or error before
+// commit rolls back both, so a retry runs again; after commit, a retry replays
+// the stored response. A concurrent retry waits on the uncommitted key row and
+// then replays. Error responses are not stored.
 
 export type IdempotencyScope = { businessId: string; apiKeyId: string; operation: string; key: string };
 export type StoredResponse = { status: number; body: unknown };
@@ -33,36 +36,32 @@ function scopeName(scope: IdempotencyScope): string {
   return `api:${scope.apiKeyId}:${scope.operation}`.slice(0, 120);
 }
 
-export async function beginIdempotentRequest(context: DomainContext, scope: IdempotencyScope, requestHash: string): Promise<{ kind: "new" } | { kind: "replay"; response: StoredResponse }> {
+/**
+ * Runs `run` once per Idempotency-Key. `run` receives a context bound to the
+ * transaction that also records the key, and must do all of its writes
+ * through that context.
+ */
+export async function runIdempotent(
+  context: DomainContext,
+  scope: IdempotencyScope,
+  requestHash: string,
+  run: (transactional: DomainContext) => Promise<StoredResponse>,
+): Promise<{ replayed: boolean; response: StoredResponse }> {
   return await withBusinessTransaction(context.db, { businessId: scope.businessId, actorType: "worker" }, async (tx) => {
     const scopeValue = scopeName(scope);
+    const match = and(eq(idempotencyKeys.scope, scopeValue), eq(idempotencyKeys.key, scope.key), eq(idempotencyKeys.businessId, scope.businessId));
+    await tx.delete(idempotencyKeys).where(and(match, lt(idempotencyKeys.createdAt, new Date(Date.now() - PUBLIC_API_IDEMPOTENCY_TTL_HOURS * 3_600_000))));
+    // Blocks while another transaction holds the same key, then does nothing if that one committed.
     const inserted = await tx.insert(idempotencyKeys).values({ scope: scopeValue, key: scope.key, businessId: scope.businessId, status: "processing", response: { requestHash } }).onConflictDoNothing().returning({ id: idempotencyKeys.id });
-    if (inserted.length) return { kind: "new" as const };
-    const [existing] = await tx.select().from(idempotencyKeys).where(and(eq(idempotencyKeys.scope, scopeValue), eq(idempotencyKeys.key, scope.key), eq(idempotencyKeys.businessId, scope.businessId))).limit(1).for("update");
-    if (!existing) throw new PublicApiError(409, "idempotency_request_in_progress", "A request with this Idempotency-Key is still running. Retry shortly.");
-    const now = Date.now();
-    const expired = now - existing.createdAt.getTime() > PUBLIC_API_IDEMPOTENCY_TTL_HOURS * 3_600_000;
-    const stale = existing.status === "processing" && now - existing.updatedAt.getTime() > STALE_PROCESSING_MS;
-    if (expired || stale) {
-      await tx.update(idempotencyKeys).set({ status: "processing", response: { requestHash }, createdAt: expired ? new Date() : existing.createdAt, updatedAt: new Date() }).where(eq(idempotencyKeys.id, existing.id));
-      return { kind: "new" as const };
+    if (!inserted.length) {
+      const [existing] = await tx.select().from(idempotencyKeys).where(match).limit(1);
+      const stored = existing?.response as { requestHash?: string; status?: number; body?: unknown } | null | undefined;
+      if (!existing || existing.status !== "completed" || typeof stored?.status !== "number") throw new PublicApiError(409, "idempotency_request_in_progress", "A request with this Idempotency-Key is still running. Retry shortly.");
+      if (stored.requestHash !== requestHash) throw new PublicApiError(422, "idempotency_key_reused", "This Idempotency-Key was used with a different request body.");
+      return { replayed: true, response: { status: stored.status, body: stored.body } };
     }
-    const stored = existing.response as { requestHash?: string; status?: number; body?: unknown } | null;
-    if (stored?.requestHash !== requestHash) throw new PublicApiError(422, "idempotency_key_reused", "This Idempotency-Key was used with a different request body.");
-    if (existing.status !== "completed" || typeof stored.status !== "number") throw new PublicApiError(409, "idempotency_request_in_progress", "A request with this Idempotency-Key is still running. Retry shortly.");
-    return { kind: "replay" as const, response: { status: stored.status, body: stored.body } };
-  });
-}
-
-export async function completeIdempotentRequest(context: DomainContext, scope: IdempotencyScope, requestHash: string, response: StoredResponse): Promise<void> {
-  await withBusinessTransaction(context.db, { businessId: scope.businessId, actorType: "worker" }, async (tx) => {
-    await tx.update(idempotencyKeys).set({ status: "completed", response: { requestHash, status: response.status, body: response.body }, updatedAt: new Date() }).where(and(eq(idempotencyKeys.scope, scopeName(scope)), eq(idempotencyKeys.key, scope.key), eq(idempotencyKeys.businessId, scope.businessId)));
-  });
-}
-
-/** Forgets a key after a server error so the client can retry with it. */
-export async function releaseIdempotentRequest(context: DomainContext, scope: IdempotencyScope): Promise<void> {
-  await withBusinessTransaction(context.db, { businessId: scope.businessId, actorType: "worker" }, async (tx) => {
-    await tx.delete(idempotencyKeys).where(and(eq(idempotencyKeys.scope, scopeName(scope)), eq(idempotencyKeys.key, scope.key), eq(idempotencyKeys.businessId, scope.businessId), eq(idempotencyKeys.status, "processing")));
+    const response = await run({ ...context, db: tx as unknown as Database });
+    await tx.update(idempotencyKeys).set({ status: "completed", response: { requestHash, status: response.status, body: response.body }, updatedAt: new Date() }).where(eq(idempotencyKeys.id, inserted[0]!.id));
+    return { replayed: false, response };
   });
 }

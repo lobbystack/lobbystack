@@ -52,6 +52,13 @@ export const webhookEventResource: Record<WebhookEventType, "call" | "appointmen
   "contact.created": "contact",
 };
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Every v1 id is a UUID. Check ids before they reach SQL so bad input is a 400, not a database error. */
+export function isUuid(value: unknown): value is string {
+  return typeof value === "string" && UUID_PATTERN.test(value);
+}
+
 export const PUBLIC_API_DEFAULT_PAGE_SIZE = 25;
 export const PUBLIC_API_MAX_PAGE_SIZE = 100;
 export const PUBLIC_API_DEFAULT_RATE_LIMIT_PER_MINUTE = 120;

@@ -75,13 +75,13 @@ function EndpointForm({ initial, onSubmit, pending, submitLabel, onCancel }: { i
         <fieldset className="flex flex-col gap-3">
           <legend className="mb-2 text-sm font-medium">{t("webhooks.form.eventsLabel")}</legend>
           {webhookEventTypes.map((event) => (
-            <label className="flex items-start gap-3 text-sm" key={event}>
-              <Checkbox checked={events.includes(event)} onCheckedChange={(checked) => setEvents((current) => checked ? [...new Set([...current, event])] : current.filter((value) => value !== event))} />
-              <span className="flex flex-col gap-0.5">
+            <div className="flex items-start gap-3 text-sm" key={event}>
+              <Checkbox checked={events.includes(event)} id={`webhook-event-${eventKey(event)}`} onCheckedChange={(checked) => setEvents((current) => checked ? [...new Set([...current, event])] : current.filter((value) => value !== event))} />
+              <label className="flex flex-col gap-0.5" htmlFor={`webhook-event-${eventKey(event)}`}>
                 <code className="font-mono text-xs">{event}</code>
                 <span className="text-muted-foreground">{t(`webhooks.events.${eventKey(event)}`)}</span>
-              </span>
-            </label>
+              </label>
+            </div>
           ))}
         </fieldset>
       </FieldGroup>
