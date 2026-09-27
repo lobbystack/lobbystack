@@ -56,6 +56,13 @@ function dateParam(request: Request, name: string): Date | undefined {
   return parsed;
 }
 
+function textParam(request: Request, name: string, maxLength: number): string | undefined {
+  const value = queryParam(request, name)?.trim();
+  if (!value) return undefined;
+  if (value.length > maxLength) throw new PublicApiError(400, "invalid_request", `${name} can be up to ${maxLength} characters.`, [{ path: name, message: `At most ${maxLength} characters.` }]);
+  return value;
+}
+
 function enumParam<T extends string>(request: Request, name: string, values: readonly T[]): T | undefined {
   const value = queryParam(request, name);
   if (value === undefined) return undefined;
@@ -68,10 +75,10 @@ export const v1 = {
   updateBusiness: (request: Request) => handleApiRequest(request, "updateBusiness", async ({ context, caller }) => ({ body: data(await updateBusinessForApi(context, caller, await readApiBody(request, apiBusinessUpdateSchema))) })),
   listServices: (request: Request) => handleApiRequest(request, "listServices", async ({ context, caller }) => ({ body: { data: await listServicesForApi(context, caller), next_cursor: null, has_more: false } })),
 
-  listCalls: (request: Request) => handleApiRequest(request, "listCalls", async ({ context, caller }) => ({ body: await listCallsForApi(context, caller, pageQuery(request)) })),
+  listCalls: (request: Request) => handleApiRequest(request, "listCalls", async ({ context, caller }) => ({ body: await listCallsForApi(context, caller, { ...pageQuery(request), startedAfter: dateParam(request, "started_after"), startedBefore: dateParam(request, "started_before") }) })),
   getCall: (request: Request, { params }: Params<"call_id">) => handleApiRequest(request, "getCall", async ({ context, caller }) => ({ body: data(await getCallForApi(context, caller, uuidParam((await params).call_id, "call_id"))) })),
 
-  listContacts: (request: Request) => handleApiRequest(request, "listContacts", async ({ context, caller }) => ({ body: await listContactsForApi(context, caller, { ...pageQuery(request), phone: queryParam(request, "phone"), email: queryParam(request, "email") }) })),
+  listContacts: (request: Request) => handleApiRequest(request, "listContacts", async ({ context, caller }) => ({ body: await listContactsForApi(context, caller, { ...pageQuery(request), phone: queryParam(request, "phone"), email: queryParam(request, "email"), name: textParam(request, "name", 200) }) })),
   createContact: (request: Request) => handleApiRequest(request, "createContact", async ({ context, caller }) => ({ body: data(await createContactForApi(context, caller, await readApiBody(request, apiContactCreateSchema))) })),
   getContact: (request: Request, { params }: Params<"contact_id">) => handleApiRequest(request, "getContact", async ({ context, caller }) => ({ body: data(await getContactForApi(context, caller, uuidParam((await params).contact_id, "contact_id"))) })),
   updateContact: (request: Request, { params }: Params<"contact_id">) => handleApiRequest(request, "updateContact", async ({ context, caller }) => {

@@ -13,6 +13,8 @@ const domain = vi.hoisted(() => ({
   updateContactForApi: vi.fn(),
   cancelAppointmentForApi: vi.fn(),
   getWebhookEndpoint: vi.fn(),
+  listCallsForApi: vi.fn(async () => ({ data: [], next_cursor: null, has_more: false })),
+  listContactsForApi: vi.fn(async () => ({ data: [], next_cursor: null, has_more: false })),
 }));
 
 vi.mock("../domain-context", () => ({ createWorkerDomainContext: () => ({ db: {} }) }));
@@ -106,5 +108,38 @@ describe("v1 UUID validation", () => {
     domain.getCallForApi.mockResolvedValue({ id: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f" });
     const response = await v1.getCall(call("/calls/x"), { params: Promise.resolve({ call_id: "5D0BD9A4-7E1C-4A51-9A50-8E1B2C3D4E5F" }) });
     expect(response.status).toBe(200);
+  });
+});
+
+describe("v1 list filters", () => {
+  it("passes the call start-time range to the domain", async () => {
+    const response = await v1.listCalls(call(`/calls?started_after=${encodeURIComponent("2026-09-26T00:00:00-04:00")}&started_before=2026-09-27T04:00:00Z&limit=10`));
+    expect(response.status).toBe(200);
+    expect(domain.listCallsForApi).toHaveBeenCalledWith(expect.anything(), expect.anything(), { limit: 10, startedAfter: new Date("2026-09-26T04:00:00.000Z"), startedBefore: new Date("2026-09-27T04:00:00.000Z") });
+  });
+
+  it("rejects a start time that is not a timestamp", async () => {
+    const response = await v1.listCalls(call("/calls?started_after=yesterday"));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { code: "invalid_request", message: "started_after must be an ISO 8601 timestamp." } });
+    expect(domain.listCallsForApi).not.toHaveBeenCalled();
+  });
+
+  it("passes a trimmed name search to the domain and ignores an empty one", async () => {
+    await v1.listContacts(call("/contacts?name=%20whit%20"));
+    expect(domain.listContactsForApi).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), expect.objectContaining({ name: "whit" }));
+    await v1.listContacts(call("/contacts?name=%20%20"));
+    expect(domain.listContactsForApi).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), expect.objectContaining({ name: undefined }));
+  });
+
+  it("limits the name search to 200 characters", async () => {
+    const response = await v1.listContacts(call(`/contacts?name=${"a".repeat(201)}`));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { code: "invalid_request", details: [{ path: "name" }] } });
+  });
+
+  it("documents the new filters in the contract", () => {
+    expect(apiOperations.listCalls.params.map((param) => param.name)).toEqual(expect.arrayContaining(["started_after", "started_before"]));
+    expect(apiOperations.listContacts.params.map((param) => param.name)).toContain("name");
   });
 });

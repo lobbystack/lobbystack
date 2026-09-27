@@ -26,6 +26,28 @@ curl "https://app.lobbystack.com/api/v1/contacts?limit=50&cursor=your_next_curso
 
 `GET /services`, `GET /availability` and `GET /webhooks` return every item on one page.
 
+## Filter lists
+
+Some list endpoints take filters as query parameters. Filters combine with each other and with `cursor`.
+
+| Endpoint | Parameter | Returns |
+| --- | --- | --- |
+| `GET /calls` | `started_after`, `started_before` | Calls that started in that range. Send ISO 8601 times with a `Z` or an offset. |
+| `GET /contacts` | `phone` | The contact with this E.164 number |
+| `GET /contacts` | `email` | Contacts with this email address, ignoring case |
+| `GET /contacts` | `name` | Contacts whose name contains this text, ignoring case. Up to 200 characters. |
+| `GET /appointments` | `status`, `starts_after`, `starts_before` | Appointments with that status or start time |
+| `GET /messages` | `status` | Messages that are `open` or `done` |
+
+To list yesterday's calls for a business in Toronto:
+
+```bash
+curl "https://app.lobbystack.com/api/v1/calls?started_after=2026-09-26T00:00:00-04:00&started_before=2026-09-27T00:00:00-04:00" \
+  -H "Authorization: Bearer $LOBBYSTACK_API_KEY"
+```
+
+URL-encode the `+` in an offset such as `+01:00` as `%2B01:00`.
+
 ## Retry safely with Idempotency-Key
 
 Network errors can leave you unsure whether a request worked. Send an `Idempotency-Key` header on requests that create things, and retry with the same key:
@@ -43,9 +65,9 @@ curl https://app.lobbystack.com/api/v1/appointments \
   -d '{"service_id":"df8a2c34-d306-4292-a055-1b739ef74991","starts_at":"2026-09-29T09:30:00-04:00","contact_phone":"+14165550134"}'
 ```
 
-LobbyStack remembers each key for 24 hours, per API key and endpoint:
+LobbyStack remembers each key for 24 hours, per API key and operation. The [MCP server](/ai/mcp) shares these keys: `book_appointment`, `create_contact` and `add_knowledge` count as `POST /appointments`, `POST /contacts` and `POST /knowledge`.
 
-- A retry with the same body gets the first response again, with the header `Idempotent-Replayed: true`. The API doesn't create a second appointment.
+- A retry with the same body gets the first response again, with the header `Idempotent-Replayed: true`. The API doesn't create a second appointment. LobbyStack compares the JSON values, so key order and spacing don't matter.
 - The same key with a different body returns `422` with the code `idempotency_key_reused`.
 - A retry that arrives while the first request is still running waits for it, then gets its response.
 - LobbyStack saves the key and the change together. If the first request failed with an error, nothing was saved, so your retry runs again.

@@ -327,7 +327,7 @@
       "get": {
         "operationId": "listCalls",
         "summary": "List calls",
-        "description": "Newest first.",
+        "description": "Newest first. Filter by start time to read one day or one week.",
         "tags": [
           "Calls"
         ],
@@ -354,6 +354,24 @@
             "description": "The next_cursor value from the previous page.",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "started_after",
+            "in": "query",
+            "description": "Only calls that started at or after this time.",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "started_before",
+            "in": "query",
+            "description": "Only calls that started before this time.",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
             }
           }
         ],
@@ -595,6 +613,15 @@
             "description": "Only contacts with this email address.",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Only contacts whose name contains this text. Case does not matter.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
             }
           }
         ],
