@@ -543,6 +543,7 @@ export const inboxItems = pgTable(
     status: varchar("status", { length: 32 }).default("open").notNull(),
     contentRetentionStatus: varchar("content_retention_status", { length: 32 }).default("active").notNull(),
     contentExpiresAt: timestamp("content_expires_at", { withTimezone: true }),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     ...legacyId,
     ...timestamps,
   },
@@ -1271,6 +1272,104 @@ export const unitEconomicsRollups = pgTable(
   (table) => [uniqueIndex("unit_economics_rollups_business_month_unique").on(table.businessId, table.monthKey), index("unit_economics_rollups_month_idx").on(table.monthKey)],
 );
 
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    prefix: varchar("prefix", { length: 32 }).notNull(),
+    keyHash: text("key_hash").notNull(),
+    scopes: jsonb("scopes").$type<string[]>().notNull().default([]),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    revokedByUserId: uuid("revoked_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("api_keys_key_hash_unique").on(table.keyHash),
+    uniqueIndex("api_keys_prefix_unique").on(table.prefix),
+    index("api_keys_business_created_idx").on(table.businessId, table.createdAt),
+  ],
+);
+
+export const webhookEndpoints = pgTable(
+  "webhook_endpoints",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    description: varchar("description", { length: 200 }),
+    events: jsonb("events").$type<string[]>().notNull().default([]),
+    encryptedSecret: text("encrypted_secret").notNull(),
+    status: varchar("status", { length: 16 }).default("enabled").notNull(),
+    disabledReason: varchar("disabled_reason", { length: 16 }),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdByApiKeyId: uuid("created_by_api_key_id").references(() => apiKeys.id, { onDelete: "set null" }),
+    consecutiveFailures: integer("consecutive_failures").default(0).notNull(),
+    lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+    lastFailureAt: timestamp("last_failure_at", { withTimezone: true }),
+    disabledAt: timestamp("disabled_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [index("webhook_endpoints_business_status_idx").on(table.businessId, table.status)],
+);
+
+export const webhookEvents = pgTable(
+  "webhook_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    type: varchar("type", { length: 64 }).notNull(),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("webhook_events_business_created_idx").on(table.businessId, table.createdAt)],
+);
+
+export const webhookDeliveries = pgTable(
+  "webhook_deliveries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    endpointId: uuid("endpoint_id").notNull().references(() => webhookEndpoints.id, { onDelete: "cascade" }),
+    eventId: uuid("event_id").notNull().references(() => webhookEvents.id, { onDelete: "cascade" }),
+    status: varchar("status", { length: 16 }).default("pending").notNull(),
+    attemptCount: integer("attempt_count").default(0).notNull(),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }),
+    lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+    lastResponseStatus: integer("last_response_status"),
+    lastError: text("last_error"),
+    succeededAt: timestamp("succeeded_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    index("webhook_deliveries_endpoint_created_idx").on(table.endpointId, table.createdAt),
+    index("webhook_deliveries_business_created_idx").on(table.businessId, table.createdAt),
+    index("webhook_deliveries_event_idx").on(table.eventId),
+  ],
+);
+
+export const webhookDeliveryAttempts = pgTable(
+  "webhook_delivery_attempts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    deliveryId: uuid("delivery_id").notNull().references(() => webhookDeliveries.id, { onDelete: "cascade" }),
+    attemptNumber: integer("attempt_number").notNull(),
+    responseStatus: integer("response_status"),
+    error: text("error"),
+    durationMs: integer("duration_ms"),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("webhook_delivery_attempts_delivery_number_unique").on(table.deliveryId, table.attemptNumber),
+    index("webhook_delivery_attempts_business_created_idx").on(table.businessId, table.createdAt),
+  ],
+);
+
 export const allTenantTables = [
   businesses,
   businessMemberships,
@@ -1325,6 +1424,11 @@ export const allTenantTables = [
   productEvents,
   unitEconomicsEvents,
   unitEconomicsRollups,
+  apiKeys,
+  webhookEndpoints,
+  webhookEvents,
+  webhookDeliveries,
+  webhookDeliveryAttempts,
 ] as const;
 
 export const schema = {
@@ -1390,6 +1494,11 @@ export const schema = {
   productEvents,
   unitEconomicsEvents,
   unitEconomicsRollups,
+  apiKeys,
+  webhookEndpoints,
+  webhookEvents,
+  webhookDeliveries,
+  webhookDeliveryAttempts,
 };
 
 export type Schema = typeof schema;
