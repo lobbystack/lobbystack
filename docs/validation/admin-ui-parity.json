@@ -22,7 +22,9 @@
     "/messages",
     "/settings/widget",
     "/embed/[key]",
-    "/settings/plan/ai-sms-compliance"
+    "/settings/plan/ai-sms-compliance",
+    "/settings/api-keys",
+    "/integrations/webhooks"
   ],
   "localizedPortRoutes": [
     "/[locale]/accept-invite",
@@ -1321,6 +1323,20 @@
       "comparison": "frozen-main",
       "interaction": "viewer",
       "requiredFixture": "PARITY_VIEWER_FIXTURE"
+    },
+    {
+      "path": "/settings/api-keys",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New public API key management"
+    },
+    {
+      "path": "/integrations/webhooks",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New outbound webhook management"
     }
   ]
 }
