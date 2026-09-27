@@ -14,7 +14,7 @@ canonicalSlug: "ai-voice-agent-gpt-live"
 
 Un client demande si vous avez une place mardi matin. Avec la plupart des agents vocaux IA, la ligne devient silencieuse pendant que le logiciel consulte l'agenda. L'agent vocal IA de LobbyStack poursuit la conversation pendant qu'il vérifie, parce qu'il fonctionne maintenant avec GPT-Live, le modèle vocal qu'OpenAI a créé pour ChatGPT Voice.
 
-Les appels dans le navigateur passent déjà par GPT-Live, et nous y transférons maintenant les numéros de téléphone. Cet article explique ce qu'est GPT-Live, comment nous l'avons relié à une réceptionniste qui agit pour de vrai, et ce que nous avons appris pendant la transition.
+Tous les appels LobbyStack passent maintenant par GPT-Live, au téléphone comme dans le navigateur. Cet article explique ce qu'est GPT-Live, comment nous l'avons relié à une réceptionniste qui agit pour de vrai, et ce que nous avons appris pendant la transition.
 
 ## Ce qu'est GPT-Live
 
@@ -52,11 +52,11 @@ Avant la transition, l'audio des appels faisait un plus long trajet. Twilio envo
 
 Maintenant, OpenAI héberge l'audio. Les appels téléphoniques l'atteignent par un trunk SIP Twilio, et les appels dans le navigateur se connectent en WebRTC. Notre application démarre chaque appel, et un processus en arrière-plan répond aux demandes de l'agent, enregistre la transcription et conserve l'enregistrement.
 
-Nous retirons ainsi un service du trajet de l'appel et de la liste de ce que nous exploitons. Quand le dernier numéro aura migré, nous retirerons la passerelle, ce qui simplifie aussi LobbyStack pour les équipes qui [l'hébergent elles-mêmes](/solutions/self-hosted-ai-receptionist/).
+Nous retirons ainsi un service du trajet de l'appel et de la liste de ce que nous exploitons. Maintenant que tous les numéros ont migré, nous retirons la passerelle, ce qui simplifie aussi LobbyStack pour les équipes qui [l'hébergent elles-mêmes](/solutions/self-hosted-ai-receptionist/).
 
 ## Ce que nous avons appris pendant la transition
 
-Nous avons testé GPT-Live en préproduction, puis sur de vrais appels dans le navigateur, avant de déplacer le moindre appel téléphonique. Quelques leçons ressortent.
+Nous avons testé GPT-Live en préproduction, puis sur de vrais appels dans le navigateur, puis sur notre propre numéro avant celui de nos clients. Quelques leçons ressortent.
 
 **Les appels paraissent plus rapides.** Sans notre relais et avec un modèle conçu pour la prise de parole, la réceptionniste répond plus tôt et coupe moins la parole. Nous l'avons remarqué dès le premier appel de test.
 

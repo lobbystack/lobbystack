@@ -14,7 +14,7 @@ canonicalSlug: "ai-voice-agent-gpt-live"
 
 A caller asks whether you have anything Tuesday morning. With most AI voice agents, the line goes quiet while software checks the calendar. LobbyStack's AI voice agent keeps the conversation going while it checks, because it now runs on GPT-Live, the voice model OpenAI built for ChatGPT Voice.
 
-Browser calls already run on GPT-Live, and we're moving phone numbers onto it now. This post covers what GPT-Live is, how we connected it to a receptionist that takes real actions, and what we learned in the switch.
+Every LobbyStack call now runs on GPT-Live, on the phone and in the browser. This post covers what GPT-Live is, how we connected it to a receptionist that takes real actions, and what we learned in the switch.
 
 ## What GPT-Live is
 
@@ -52,11 +52,11 @@ Before the switch, phone audio took a longer path. Twilio streamed each call to 
 
 Now OpenAI hosts the audio. Phone calls reach it through a Twilio SIP trunk, and browser calls connect over WebRTC. Our app starts each call, and a background worker answers the agent's requests, saves the transcript, and stores the recording.
 
-That removes a service from the call path and from the list of things we operate. Once the last phone number moves, we'll retire the gateway, which also makes LobbyStack simpler for teams who [self-host it](/solutions/self-hosted-ai-receptionist/).
+That removes a service from the call path and from the list of things we operate. With every number moved, we're retiring the gateway, which also makes LobbyStack simpler for teams who [self-host it](/solutions/self-hosted-ai-receptionist/).
 
 ## What we learned switching
 
-We ran GPT-Live in staging, then on real browser calls, before moving any phone traffic. A few lessons stood out.
+We ran GPT-Live in staging, then on real browser calls, and then moved our own phone number before any customer's. A few lessons stood out.
 
 **Calls feel faster.** With our relay gone and a model built for turn-taking, the receptionist answers sooner and talks over callers less. We noticed it on the first test call.
 
