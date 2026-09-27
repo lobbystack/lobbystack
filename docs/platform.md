@@ -1,6 +1,6 @@
 # Run the LobbyStack platform
 
-The canonical stack provides a Next.js admin/backend, a worker that also runs GPT-Live calls, PostgreSQL with RLS, Redis/BullMQ, shared local storage, and the voice gateway for phone numbers not yet on the SIP trunk. You can enable the MinIO profile when you need S3-compatible storage. Convex remains relevant only as the production migration source until cutover and rollback are complete.
+The canonical stack provides a Next.js admin/backend, a worker that also runs GPT-Live calls, PostgreSQL with RLS, Redis/BullMQ, and shared local storage. You can enable the MinIO profile when you need S3-compatible storage. Convex remains relevant only as the production migration source until cutover and rollback are complete.
 
 ## Run the local stack
 
@@ -25,8 +25,6 @@ Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USERNAME`, `SMTP_PASSWORD`, a
 - Admin readiness: `http://localhost:13000/api/health/ready`
 - Worker liveness: `http://localhost:13002/health/live`
 - Worker readiness: `http://localhost:13002/health/ready`
-- Voice liveness: `http://localhost:13001/health/live`
-- Voice readiness: `http://localhost:13001/health/ready`
 - PostgreSQL: `localhost:15433`
 - Redis: `localhost:16380`
 - Local storage: the `storage_data` Docker volume
@@ -37,7 +35,6 @@ Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USERNAME`, `SMTP_PASSWORD`, a
 Run these checks against the healthy Compose stack:
 
 - `pnpm replacement:smoke` verifies core service liveness and readiness.
-- `pnpm replacement:internal` verifies signed voice access through the worker database role and rejects nonce replay.
 - `pnpm replacement:storage` verifies the S3 upload/finalize/download lifecycle, byte ranges, and cross-tenant denial against PostgreSQL and MinIO. Start the MinIO profile before running it.
 - `pnpm replacement:realtime` creates an isolated Better Auth fixture, rejects unauthenticated and cross-tenant SSE access, validates every realtime event type, checks reconnect delivery, and enforces the 500 ms local p95 target.
 - `pnpm replacement:webhooks` verifies Polar Standard Webhooks, optional Resend/Svix webhooks, and Twilio signatures, rejects tampered requests, and confirms duplicate provider delivery remains idempotent.
@@ -61,7 +58,7 @@ The certification scripts remove their temporary database rows and storage objec
 
 ## Back up and restore data
 
-`pnpm replacement:backup` stops the admin, worker, and voice gateway while it creates a PostgreSQL custom dump and copies the active storage backend under `.replacement-backups/`. It snapshots the shared volume for local storage and mirrors the MinIO bucket for S3 storage. Pass a destination after `--` to store the artifact elsewhere. Every artifact includes database and file checksums.
+`pnpm replacement:backup` stops the admin and worker while it creates a PostgreSQL custom dump and copies the active storage backend under `.replacement-backups/`. It snapshots the shared volume for local storage and mirrors the MinIO bucket for S3 storage. Pass a destination after `--` to store the artifact elsewhere. Every artifact includes database and file checksums.
 
 Restore is destructive. Verify that the destination stack and `REPLACEMENT_ENV_FILE` are correct, set `REPLACEMENT_COMPOSE_PROJECT` explicitly, then run `CONFIRM_REPLACEMENT_RESTORE=1 pnpm replacement:restore -- <backup-directory>`. The restore recreates the `lobbystack` database, replaces the configured file storage contents, and flushes Redis so queued work from the newer state cannot replay against restored durable data. The script restarts the runtime services that were running before the restore.
 
@@ -69,7 +66,7 @@ Run `REPLACEMENT_COMPOSE_PROJECT=lobbystack_restore_drill CONFIRM_REPLACEMENT_RE
 
 ## Deploy the cloud services
 
-Railway runs separate `admin`, `worker`, `voice-gateway`, `postgres`, `redis`, and bucket services. Set `WORKER_INTERNAL_URL` on admin to the worker's private URL so it can hand calls to the worker, and `BACKEND_INTERNAL_URL` on the gateway to the private admin URL. [The voice runtime](voice/runtime.md) lists the GPT-Live variables and the SIP trunk setup. Keep `INTERNAL_SERVICE_SECRET`, database URLs, Better Auth secrets, provider credentials, and S3 credentials in Railway variables, never in the repository.
+Railway runs separate `admin`, `worker`, `postgres`, `redis`, and bucket services. Set `WORKER_INTERNAL_URL` on admin to the worker's private URL so it can hand calls to the worker. [The voice runtime](voice/runtime.md) lists the GPT-Live variables and the SIP trunk setup. Keep `INTERNAL_SERVICE_SECRET`, database URLs, Better Auth secrets, provider credentials, and S3 credentials in Railway variables, never in the repository.
 
 Build runtime images with `SERVICE_VERSION` set to the deployed Git SHA. Configure telemetry retention and sampling in the OTLP backend.
 

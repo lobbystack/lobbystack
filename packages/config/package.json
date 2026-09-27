@@ -12,7 +12,6 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@lobbystack/shared": "workspace:*",
-    "zod": "^3.24.2"
+    "@lobbystack/shared": "workspace:*"
   }
 }

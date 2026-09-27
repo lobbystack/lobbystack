@@ -7,28 +7,10 @@ export type OutboundSmsMessage = {
   businessId: string;
 };
 
-export interface TelephonyProvider {
-  validateVoiceWebhook(signature: string | null, url: string, body: string): boolean;
-  createMediaStreamResponse(input: {
-    streamUrl: string;
-    callSid: string;
-    businessId: string;
-  }): string;
-  transferCall(input: { callSid: string; destination: string }): Promise<void>;
-}
-
 export interface SmsProvider {
   validateWebhook(signature: string | null, url: string, body: string): boolean;
   sendMessage(input: OutboundSmsMessage): Promise<{ providerMessageId: string }>;
   normalizeInboundWebhook(body: Record<string, string>): SmsConversationInput;
-}
-
-export interface RealtimeVoiceProvider {
-  createSession(input: {
-    snapshot: BusinessContextSnapshot;
-    tools: Array<{ name: string; description: string }>;
-  }): Promise<{ sessionId: string }>;
-  closeSession(sessionId: string): Promise<void>;
 }
 
 export interface CalendarProvider {

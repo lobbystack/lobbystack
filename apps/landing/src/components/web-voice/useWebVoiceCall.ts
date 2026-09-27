@@ -54,10 +54,10 @@ function getErrorMessage(error: unknown, locale: "en" | "fr" = "en"): string {
     return "The microphone is already in use by another app."
   }
   if (error instanceof DOMException && error.name === "AbortError") {
-    return "The voice gateway took too long to respond."
+    return "The call took too long to connect."
   }
   if (error instanceof TypeError && error.message === "Load failed") {
-    return "The voice gateway is not reachable from this page."
+    return "This page can't reach LobbyStack to start the call."
   }
   if (error instanceof Error) {
     return error.message

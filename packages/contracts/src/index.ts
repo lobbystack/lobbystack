@@ -22,67 +22,6 @@ export const businessIdQuerySchema = z.object({
   businessId: z.string().uuid(),
 });
 
-export const voiceContextRequestSchema = z.object({
-  phoneNumber: z.string().min(3).max(32),
-  channel: z.enum(["voice", "sms"]).default("voice"),
-});
-
-export const voiceContextBySlugRequestSchema = z.object({
-  businessSlug: z.string().min(1).max(120),
-  dashboardTestCallToken: z.string().max(512).optional(),
-  origin: z.string().url().optional(),
-  ipHash: z.string().max(128).optional(),
-  visitorId: z.string().max(128).optional(),
-  widgetId: z.string().max(128).optional(),
-  widgetKey: z.string().max(256).optional(),
-  widgetSessionToken: z.string().max(4096).optional(),
-  prospectDemoToken: z.string().max(512).optional(),
-  publicWebCall: z.boolean().optional(),
-  maxDurationMs: z.number().int().positive().max(30 * 60 * 1_000).optional(),
-});
-
-export const voiceCallStartRequestSchema = z.object({
-  businessId: z.string().uuid(),
-  providerCallId: z.string().min(1).max(255),
-  gatewaySessionId: z.string().min(1).max(255).optional(),
-  from: z.string().min(3).max(32),
-  to: z.string().min(3).max(32),
-  startedAt: z.string().datetime(),
-  channel: z.enum(["voice", "web_voice"]).default("voice"),
-});
-
-export const voiceCallTranscriptRequestSchema = z.object({
-  businessId: z.string().uuid(),
-  callId: z.string().uuid(),
-  sequence: z.number().int().nonnegative(),
-  speaker: z.enum(["caller", "assistant", "system"]),
-  text: z.string().max(50_000),
-  final: z.boolean(),
-  confidence: z.number().min(0).max(1).optional(),
-});
-
-export const voiceCallCompleteRequestSchema = z.object({
-  callId: z.string().uuid(),
-  status: z.enum(["completed", "failed", "transferred", "blocked"]),
-  endedAt: z.string().datetime(),
-  disposition: z.string().max(120).optional(),
-  providerDurationSeconds: z.number().nonnegative().optional(),
-  // Unrounded media-session seconds. Providers report whole seconds, and the call record starts
-  // before the media stream connects, so only the gateway knows the real talk time.
-  mediaDurationSeconds: z.number().nonnegative().optional(),
-});
-
-export const voiceRecordingTargetRequestSchema = z.object({
-  gatewaySessionId: z.string().min(1).max(255),
-});
-
-export const voiceToolRequestSchema = z.object({
-  businessId: z.string().uuid(),
-  callId: z.string().uuid().optional(),
-  conversationId: z.string().uuid().optional(),
-  input: z.record(z.string(), z.unknown()),
-});
-
 export const twilioSmsInboundSchema = z.object({
   From: z.string().min(3).max(32),
   To: z.string().min(3).max(32),

@@ -121,7 +121,6 @@ LobbyStack is a TypeScript monorepo with PostgreSQL as the durable source of tru
 apps/
   admin/           Next.js dashboard and HTTP API
   worker/          asynchronous jobs, outbox dispatch, and live calls
-  voice-gateway/   Twilio Media Streams bridge for numbers not yet on the SIP trunk
 packages/embed/    Vite bundle for the embeddable website widget loader
 packages/          database, domain, agent core, jobs, providers, telemetry, and shared contracts
 mintlify/          public documentation source

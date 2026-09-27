@@ -28,7 +28,6 @@ import {
 const validEnvironment: NodeJS.ProcessEnv = {
   ADMIN_BASE_URL: "https://admin.certification.example",
   WORKER_BASE_URL: "https://worker.certification.example",
-  VOICE_BASE_URL: "https://voice.certification.example",
   PERFORMANCE_SESSION_COOKIE: "session=opaque",
   PERFORMANCE_DEPLOYMENT_ID: "deploy-42",
   PERFORMANCE_SOAK_SECONDS: "1800",
@@ -79,7 +78,6 @@ function evidenceFixture(): SoakEvidence {
       targetIdentity: "isolated-soak:abc",
       adminBaseUrl: validEnvironment.ADMIN_BASE_URL!,
       workerBaseUrl: validEnvironment.WORKER_BASE_URL!,
-      voiceBaseUrl: validEnvironment.VOICE_BASE_URL!,
     },
     configuration: { soakSeconds: 1800, scenarioNames: ["ordinary-api"], concurrency: [30], sessionCookie: "provided" },
     health: { concurrency: 30, targets: {}, thresholdMisses: [] },
@@ -105,7 +103,7 @@ describe("soak certification guards", () => {
     expect(validateSoakEnvironment({ ...validEnvironment, PERFORMANCE_SESSION_COOKIE: "" })).toContain("PERFORMANCE_SESSION_COOKIE (required)");
     expect(validateSoakEnvironment({ ...validEnvironment, PERFORMANCE_DEPLOYMENT_ID: "" })).toContain("PERFORMANCE_DEPLOYMENT_ID (required)");
     expect(validateSoakEnvironment({ ...validEnvironment, ADMIN_BASE_URL: "http://localhost:13000" })).toContain("ADMIN_BASE_URL (must not be local)");
-    expect(validateSoakEnvironment({ ...validEnvironment, VOICE_BASE_URL: "https://voice.production.example" })).toContain("VOICE_BASE_URL (must not reference production)");
+    expect(validateSoakEnvironment({ ...validEnvironment, WORKER_BASE_URL: "https://worker.production.example" })).toContain("WORKER_BASE_URL (must not reference production)");
     expect(validateSoakEnvironment({ ...validEnvironment, WORKER_BASE_URL: "postgres://db.example" })).toContain("WORKER_BASE_URL (must be an HTTP(S) origin without credentials)");
     expect(validateSoakEnvironment({ ...validEnvironment, PERFORMANCE_SOAK_SECONDS: "600" })).toContain(`PERFORMANCE_SOAK_SECONDS (must be >= ${MINIMUM_SOAK_SECONDS})`);
   });
@@ -159,17 +157,17 @@ describe("soak threshold evaluation", () => {
   });
 
   it("applies the replacement-performance-check health thresholds with p95 and status", () => {
-    const targets = healthTargets(validEnvironment.ADMIN_BASE_URL!, validEnvironment.WORKER_BASE_URL!, validEnvironment.VOICE_BASE_URL!);
+    const targets = healthTargets(validEnvironment.ADMIN_BASE_URL!, validEnvironment.WORKER_BASE_URL!);
     const results: Record<string, HealthTargetResult> = {};
     for (const target of targets) results[target.name] = { p50: 5, p95: 10, p99: 20, statuses: [200] };
     expect(evaluateHealthThresholds(targets, results)).toEqual([]);
 
-    results["voice-ready"] = { p50: 5, p95: 320, p99: 400, statuses: [200] };
+    results["worker-ready"] = { p50: 5, p95: 520, p99: 600, statuses: [200] };
     results["admin-live"] = { p50: 5, p95: 10, p99: 20, statuses: [503] };
     const misses = evaluateHealthThresholds(targets, results);
     expect(misses).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ target: "voice-ready", metric: "p95", limit: 300 }),
+        expect.objectContaining({ target: "worker-ready", metric: "p95", limit: 500 }),
         expect.objectContaining({ target: "admin-live", metric: "status" }),
       ]),
     );

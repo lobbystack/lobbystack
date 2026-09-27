@@ -54,6 +54,9 @@ const MAX_ANSWER_CHARS = 1_200;
 // The caller's last words can arrive just after the delegation event.
 const TRANSCRIPT_WAIT_MS = 300;
 const GREETING_FALLBACK_MS = 1_500;
+// How long to wait for the receptionist to start speaking after a fallback
+// greeting before deciding GPT-Live ignored it.
+const GREETING_CONFIRM_MS = 1_500;
 const FALLBACK_ANSWER = "Sorry, I couldn't check that just now. Offer to take a message so the team can follow up.";
 
 /**
@@ -88,7 +91,15 @@ export class LiveCallController {
     socket.on("session.started", () => {
       this.started = true;
       this.options.onStarted?.();
-      this.sendGreeting();
+      if (!this.fallbackGreetingSent) {
+        this.sendGreeting();
+        return;
+      }
+      // The fallback greeting may have been ignored (sent before the session
+      // started) or accepted (session.started was only replayed late). If it
+      // was accepted, the receptionist starts speaking soon; greet again only
+      // if nobody has spoken by then.
+      this.greetingRetryTimer = setTimeout(() => this.sendGreeting(), GREETING_CONFIRM_MS);
     });
     this.resetSilenceTimer();
     if (this.options.maxDurationMs) this.durationTimer = setTimeout(() => this.options.onTimeout?.("duration_limit"), this.options.maxDurationMs);
@@ -102,10 +113,11 @@ export class LiveCallController {
   private started = false;
   // GPT-Live ignores a greeting that arrives before the session starts, which
   // the fallback can send on a slow connection. So the fallback and
-  // session.started each get one try, and session.started still greets unless
-  // someone has already spoken.
+  // session.started each get one try, and session.started only greets again
+  // if nobody has spoken.
   private fallbackGreetingSent = false;
   private startedGreetingSent = false;
+  private greetingRetryTimer: ReturnType<typeof setTimeout> | undefined;
 
   private sendGreeting(): void {
     const greeting = this.options.greeting?.trim();
@@ -243,6 +255,7 @@ export class LiveCallController {
     if (!sessionClosed) this.sessionEnded = this.options.client.live.sessions.hangup(this.options.sessionId).then(() => undefined, () => undefined);
     clearTimeout(this.silenceTimer);
     clearTimeout(this.durationTimer);
+    clearTimeout(this.greetingRetryTimer);
     this.abort.abort();
     this.socket?.close({ code: 1000, reason: "session finished" });
     this.emitFinishedTurns(true);

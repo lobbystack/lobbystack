@@ -718,7 +718,7 @@
   },
   "snapshot": {
     "title": "Receptionist Snapshot",
-    "description": "The voice gateway pulls this business context once when a live call begins.",
+    "description": "Your receptionist loads this business context once when a call starts.",
     "business": "Business",
     "timezone": "Timezone",
     "transferPolicy": "Transfer policy",

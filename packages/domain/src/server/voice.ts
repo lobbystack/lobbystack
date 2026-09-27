@@ -1,7 +1,7 @@
 import { and, count, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
-import { appointments, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { billableVoiceSeconds, isNonBillableCallDisposition, isTerminalTwilioCallStatus } from "@lobbystack/shared";
+import { appointments, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, phoneNumbers, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { billableVoiceSeconds, isNonBillableCallDisposition } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 
 import { requireBusinessMembership } from "../authz";
@@ -370,30 +370,22 @@ export async function setTransferState(
   });
 }
 
-export async function reconcileCallStatus(
+/** What the worker needs to find the Twilio call behind a GPT-Live phone call. */
+export async function loadLiveCallForPricing(
   context: DomainContext,
-  input: { businessId: string; providerCallId: string; status: string; providerDurationSeconds?: number; providerUpdatedAt: string },
-): Promise<{ ignored: boolean; callId?: string }> {
+  input: { businessId: string; callId: string },
+): Promise<{ startedAt: Date; numbers: string[] } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const [call] = await tx.update(calls).set({ status: input.status, ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}), updatedAt: new Date(input.providerUpdatedAt), revision: sql`${calls.revision} + 1` }).where(and(eq(calls.businessId, input.businessId), eq(calls.providerCallId, input.providerCallId))).returning({ id: calls.id, revision: calls.revision, providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt });
-    if (!call) {
-      return { ignored: true };
-    }
-    await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "call", aggregateId: call.id, dedupeKey: `call:${call.id}:provider-status:${call.revision}`, payload: { type: "call.updated", entityId: call.id, revision: call.revision } });
-    if (isTerminalTwilioCallStatus(input.status)) {
-      const estimatedRate = Number(process.env.TWILIO_VOICE_ESTIMATED_COST_PER_MINUTE_USD ?? "0");
-      if (Number.isFinite(estimatedRate) && estimatedRate > 0 && call.providerDurationSeconds !== null) {
-        await recordUnitEconomicsEventInTransaction(tx, { businessId: input.businessId, eventKey: `voice_provider:${call.id}`, eventKind: "voice_provider", channel: "voice", costUsd: call.providerDurationSeconds / 60 * estimatedRate, occurredAt: call.startedAt, quantity: call.providerDurationSeconds, quantityUnit: "second", provider: "twilio_estimate", callId: call.id });
-      }
-      await enqueueOutbox(tx, { topic: "call.syncPrice", businessId: input.businessId, aggregateType: "call", aggregateId: call.id, dedupeKey: `call:${call.id}:price:${input.status.trim().toLowerCase()}`, payload: { providerCallId: input.providerCallId, providerCallStatus: input.status } });
-    }
-    return { ignored: false, callId: call.id };
+    const [call] = await tx.select({ startedAt: calls.startedAt }).from(calls).where(and(eq(calls.businessId, input.businessId), eq(calls.id, input.callId))).limit(1);
+    if (!call) return null;
+    const numbers = await tx.select({ e164: phoneNumbers.e164 }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active")));
+    return { startedAt: call.startedAt, numbers: numbers.map((row) => row.e164) };
   });
 }
 
 export async function recordCallProviderPricing(
   context: DomainContext,
-  input: { businessId: string; providerCallId: string; providerUpdatedAt?: string; providerPrice?: number; providerPriceUnit?: string; providerCostUsd?: number },
+  input: { businessId: string; providerCallId: string; callId?: string; providerUpdatedAt?: string; providerPrice?: number; providerPriceUnit?: string; providerCostUsd?: number },
 ): Promise<boolean> {
   const recorded = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [call] = await tx.update(calls).set({
@@ -403,7 +395,8 @@ export async function recordCallProviderPricing(
       ...(input.providerCostUsd !== undefined ? { providerCostUsd: input.providerCostUsd } : {}),
       revision: sql`${calls.revision} + 1`,
       updatedAt: new Date(),
-    }).where(and(eq(calls.businessId, input.businessId), eq(calls.providerCallId, input.providerCallId))).returning({ id: calls.id, revision: calls.revision, providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt, provider: calls.provider, transport: calls.transport });
+    // GPT-Live calls store the OpenAI session as providerCallId, so they're priced by our call id.
+    }).where(and(eq(calls.businessId, input.businessId), input.callId ? eq(calls.id, input.callId) : eq(calls.providerCallId, input.providerCallId))).returning({ id: calls.id, revision: calls.revision, providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt, provider: calls.provider, transport: calls.transport });
     if (!call) return null;
     if (input.providerCostUsd !== undefined) await recordUnitEconomicsEventInTransaction(tx, { businessId: input.businessId, eventKey: `voice_provider:${call.id}`, eventKind: "voice_provider", channel: "voice", costUsd: input.providerCostUsd, occurredAt: call.startedAt, ...(call.providerDurationSeconds !== null ? { quantity: call.providerDurationSeconds } : {}), quantityUnit: "second", provider: "twilio", callId: call.id });
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "call", aggregateId: call.id, dedupeKey: `call:${call.id}:pricing:${call.revision}`, payload: { type: "call.updated", entityId: call.id, revision: call.revision } });

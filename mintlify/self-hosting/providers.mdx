@@ -11,7 +11,7 @@ The Docker Compose baseline runs LobbyStack's application, PostgreSQL, Redis, an
 
 <AccordionGroup>
   <Accordion title="Twilio" icon="phone">
-    Twilio supplies phone numbers, call transfers, and phone verification. An Elastic SIP trunk sends calls for your numbers to OpenAI. Numbers that aren't on the trunk use the voice gateway through Media Streams. Keep the Twilio auth token server-side.
+    Twilio supplies phone numbers, call transfers, and phone verification. An Elastic SIP trunk sends calls for your numbers to OpenAI. Every number must sit on the trunk to answer calls. Keep the Twilio auth token server-side.
   </Accordion>
   <Accordion title="OpenAI" icon="waveform">
     OpenAI's GPT-Live model holds the conversation on phone and browser calls, and OpenAI hosts the audio. When the caller needs business data, such as openings or a booking, GPT-Live asks LobbyStack's worker, which answers with the receptionist agent. Your OpenAI project needs SIP enabled and an incoming-call webhook for phone calls.

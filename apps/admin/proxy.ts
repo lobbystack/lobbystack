@@ -73,7 +73,7 @@ function cacheControlForRequest(pathname: string, searchParams: URLSearchParams)
   if (pathname.startsWith("/api/realtime") || pathname.startsWith("/api/widget/chat")) {
     return "private, no-cache, no-store, no-transform";
   }
-  if (pathname.startsWith("/api/") || pathname.startsWith("/voice/") || pathname.startsWith("/embed/")) {
+  if (pathname.startsWith("/api/") || pathname.startsWith("/embed/")) {
     return "private, no-store";
   }
   if (localeFromPathname(pathname) && isPublicRoutePath(pathname)) {
@@ -110,10 +110,7 @@ export function proxy(request: NextRequest) {
   const headers = isEmbeddablePath(pathname) ? embeddableSecurityHeaders() : securityHeaders();
 
   const isApiRequest = pathname.startsWith("/api/");
-  // Voice GET routes can resolve or refresh durable state too. Only the signed
-  // readiness handler may run; it authenticates then reports maintenance as 503.
-  const isVoiceOperation = pathname.startsWith("/voice/") && pathname !== "/voice/ready";
-  if (isMaintenanceMode(process.env) && (isVoiceOperation || isWebhookPath(pathname) || (isApiRequest && !isMaintenanceHealthProbe(pathname, request.method)) || stateChangingMethods.has(request.method))) {
+  if (isMaintenanceMode(process.env) && (isWebhookPath(pathname) || (isApiRequest && !isMaintenanceHealthProbe(pathname, request.method)) || stateChangingMethods.has(request.method))) {
     // Webhooks are rejected before their handlers can validate, enqueue, or acknowledge them.
     // Health probes are the only API exemption: GET handlers can perform side effects.
     return maintenanceResponse(headers);

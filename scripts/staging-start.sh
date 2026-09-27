@@ -71,7 +71,6 @@ start migrator
 
 start admin
 start worker
-start voice-gateway
 
 echo
 echo "Staging is up."

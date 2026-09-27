@@ -53,7 +53,7 @@ describe("original setup guide interactions", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "sidebar.setupGuide.stepActions.testCall" })).toBeTruthy());
     const before = fetchMock.mock.calls.length;
     act(() => launcher.announceEnded());
-    // The gateway writes the call down after the browser hangs up, so the guide
+    // The worker writes the call down after the browser hangs up, so the guide
     // polls rather than asking once.
     await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(before), { timeout: 5_000 });
   });

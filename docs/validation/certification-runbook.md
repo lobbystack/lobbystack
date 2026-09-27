@@ -4,7 +4,7 @@ Run certification against an isolated Compose or Railway staging environment and
 
 ## Run automated gates
 
-Run `pnpm typecheck`, `pnpm lint`, `pnpm build`, `pnpm test`, two consecutive `pnpm db:migrate` runs, `pnpm replacement:parity`, `pnpm replacement:drift`, `pnpm replacement:security`, `pnpm replacement:recovery`, `pnpm replacement:performance`, `pnpm replacement:auth`, `pnpm replacement:email-send`, `pnpm replacement:sms-consent`, `pnpm replacement:feedback`, `pnpm replacement:appointment-audits`, `pnpm replacement:unit-economics`, `pnpm replacement:notifications`, `pnpm replacement:billing`, `pnpm replacement:import-check`, `pnpm replacement:phone-onboarding`, `pnpm replacement:call-detail`, `pnpm replacement:roles`, `pnpm replacement:locale`, `pnpm replacement:smoke`, `pnpm replacement:internal`, `pnpm replacement:storage`, `pnpm replacement:realtime`, `pnpm replacement:webhooks`, `pnpm replacement:telemetry`, `pnpm replacement:privacy`, and `VERIFY_RLS_BEHAVIOR=true pnpm db:verify-rls`. Run the authenticated Playwright suite from CI.
+Run `pnpm typecheck`, `pnpm lint`, `pnpm build`, `pnpm test`, two consecutive `pnpm db:migrate` runs, `pnpm replacement:parity`, `pnpm replacement:drift`, `pnpm replacement:security`, `pnpm replacement:recovery`, `pnpm replacement:performance`, `pnpm replacement:auth`, `pnpm replacement:email-send`, `pnpm replacement:sms-consent`, `pnpm replacement:feedback`, `pnpm replacement:appointment-audits`, `pnpm replacement:unit-economics`, `pnpm replacement:notifications`, `pnpm replacement:billing`, `pnpm replacement:import-check`, `pnpm replacement:phone-onboarding`, `pnpm replacement:call-detail`, `pnpm replacement:roles`, `pnpm replacement:locale`, `pnpm replacement:smoke`, `pnpm replacement:storage`, `pnpm replacement:realtime`, `pnpm replacement:webhooks`, `pnpm replacement:telemetry`, `pnpm replacement:privacy`, and `VERIFY_RLS_BEHAVIOR=true pnpm db:verify-rls`. Run the authenticated Playwright suite from CI.
 
 ## Isolated staging contract
 
@@ -28,7 +28,7 @@ Retain the evidence inventory, coverage report, screenshots, accessibility snaps
 
 ## Verify recovery and operations
 
-Verify Redis, worker, admin, and voice-gateway restarts. Perform PostgreSQL and object restore drills. Confirm SSE reconnects, outbox work resumes, telemetry outages do not block requests, and each alert in `docs/operations/alerts.md` fires and resolves.
+Verify Redis, worker, and admin restarts. Perform PostgreSQL and object restore drills. Confirm SSE reconnects, outbox work resumes, telemetry outages do not block requests, and each alert in `docs/operations/alerts.md` fires and resolves.
 
 ## Test provider scenarios
 

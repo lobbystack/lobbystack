@@ -53,7 +53,6 @@ export default defineRailway((ctx) => {
   const redisUrl = "redis://default:${{Redis.REDIS_PASSWORD}}@${{Redis.RAILWAY_PRIVATE_DOMAIN}}:6379";
 
   const adminOrigin = "https://${{admin.RAILWAY_PUBLIC_DOMAIN}}";
-  const voiceOrigin = "https://${{voice-gateway.RAILWAY_PUBLIC_DOMAIN}}";
   const s3 = {
     STORAGE_PROVIDER: "s3",
     S3_BUCKET: "${{lobbystack-template.BUCKET}}",
@@ -96,7 +95,7 @@ export default defineRailway((ctx) => {
     },
   });
 
-  // admin owns the shared application secrets; worker and voice-gateway reference them.
+  // admin owns the shared application secrets; worker references them.
   const admin = service("admin", {
     source: repo,
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.admin", watchPatterns: [...sharedWatchPatterns, "/apps/admin/**", "/scripts/copy-widget-embed.mjs", "/Dockerfile.admin"] },
@@ -116,9 +115,12 @@ export default defineRailway((ctx) => {
       BETTER_AUTH_USE_SECURE_COOKIES: "true",
       REQUIRE_EMAIL_VERIFICATION: "false",
       WIDGET_KEY_ISSUANCE_ENABLED: "false",
-      // GPT-Live answers browser calls; the worker runs each call.
+      // GPT-Live answers browser and phone calls; the worker runs each call.
       LIVE_PROTOTYPE_ENABLED: "true",
       WORKER_INTERNAL_URL: "http://${{worker.RAILWAY_PRIVATE_DOMAIN}}:3002",
+      // Optional user input for phone calls: the secret of the OpenAI webhook
+      // that points at /api/webhooks/openai/live. See docs/voice/runtime.md.
+      OPENAI_WEBHOOK_SECRET: preserve(),
       TWILIO_SMS_WEBHOOK_URL: `${adminOrigin}/api/webhooks/twilio/sms`,
       TWILIO_STATUS_CALLBACK_URL: `${adminOrigin}/api/webhooks/twilio/status`,
       // Other role URLs are built from DATABASE_URL and the role passwords (packages/db roleDatabaseUrl).
@@ -152,6 +154,10 @@ export default defineRailway((ctx) => {
       ...providers,
       PORT: "3002",
       LIVE_PROTOTYPE_ENABLED: "true",
+      // Optional user input for phone calls: the Twilio Elastic SIP trunk that
+      // sends calls to OpenAI. New numbers can't be provisioned without it.
+      // See docs/voice/runtime.md.
+      TWILIO_SIP_TRUNK_SID: preserve(),
       APP_BASE_URL: adminOrigin,
       TWILIO_STATUS_CALLBACK_URL: `${adminOrigin}/api/webhooks/twilio/status`,
       DATABASE_URL: roleUrl("lobbystack_worker", "LOBBYSTACK_WORKER_PASSWORD"),
@@ -163,31 +169,7 @@ export default defineRailway((ctx) => {
     },
   });
 
-  const voiceGateway = service("voice-gateway", {
-    source: repo,
-    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.voice-gateway", watchPatterns: [...sharedWatchPatterns, "/apps/voice-gateway/**", "/Dockerfile.voice-gateway"] },
-    healthcheck: "/health/ready",
-    healthcheckTimeout: 300,
-    replicas: { [region]: 1 },
-    deploy: { restartPolicyMaxRetries: 3 },
-    env: {
-      ...runtime,
-      ...providers,
-      PORT: "3001",
-      // Do not trust all forwarded-for hops. Railway's controlled ingress
-      // overwrites x-real-ip, which the gateway opts into below.
-      VOICE_GATEWAY_TRUST_PROXY: "false",
-      TRUSTED_CLIENT_IP_HEADER: "x-real-ip",
-      APP_BASE_URL: adminOrigin,
-      VOICE_GATEWAY_BASE_URL: voiceOrigin,
-      BACKEND_INTERNAL_URL: "http://${{admin.RAILWAY_PRIVATE_DOMAIN}}:3000",
-      WEB_CALL_ALLOWED_ORIGINS: adminOrigin,
-      INTERNAL_SERVICE_SECRET: "${{admin.INTERNAL_SERVICE_SECRET}}",
-      INTERNAL_SERVICE_TOKEN: "${{admin.INTERNAL_SERVICE_TOKEN}}",
-    },
-  });
-
   return project("lobbystack-template", {
-    resources: [Postgres, Redis, migrate, admin, worker, voiceGateway, postgresVolume, redisVolume, storage],
+    resources: [Postgres, Redis, migrate, admin, worker, postgresVolume, redisVolume, storage],
   });
 });
