@@ -52,6 +52,8 @@ const resource = `${base}/api/mcp`;
 const redirectUri = "http://127.0.0.1:6276/oauth/callback";
 const admin = setup.testUrl ? createDatabaseClient("lobbystack_migrator", { DATABASE_URL: setup.testUrl }) : undefined;
 const b64url = (buffer: Buffer) => buffer.toString("base64url");
+/** Drizzle wraps the PostgreSQL error; the cause carries its message. */
+const permissionDenied = (error: unknown) => /permission denied/.test(String((error as { cause?: { message?: string } }).cause?.message ?? (error as Error).message));
 
 type Session = { userId: string; cookie: string };
 let owner: Session;
@@ -194,13 +196,15 @@ describe.skipIf(!setup.testUrl)("OAuth for MCP against PostgreSQL with RLS", () 
     const { challenge } = pkce();
     const code = await approve(owner, await authorizeToConsent(owner, challenge, "calls:read"), businessA, ["calls:read"]);
     const wrong = await token({ grant_type: "authorization_code", code, redirect_uri: redirectUri, client_id: clientId, code_verifier: pkce().verifier, resource });
-    expect(wrong.status).toBe(400);
+    expect([400, 401]).toContain(wrong.status);
+    expect(wrong.body.error_description).toBe("code verification failed");
     expect(wrong.body.access_token).toBeUndefined();
 
     const other = pkce();
     const code2 = await approve(owner, await authorizeToConsent(owner, other.challenge, "calls:read"), businessA, ["calls:read"]);
     const missing = await token({ grant_type: "authorization_code", code: code2, redirect_uri: redirectUri, client_id: clientId, resource });
-    expect(missing.status).toBe(400);
+    // Without a verifier a public client can't authenticate at all.
+    expect([400, 401]).toContain(missing.status);
     expect(missing.body.access_token).toBeUndefined();
   });
 
@@ -287,11 +291,12 @@ describe.skipIf(!setup.testUrl)("OAuth for MCP against PostgreSQL with RLS", () 
 
   it("keeps the OAuth tables away from roles that have no policy", async () => {
     const worker = getDatabase("lobbystack_worker").db;
-    await expect(worker.execute(sql`select count(*) from public.oauth_access_tokens`)).rejects.toThrow(/permission denied/);
+    await expect(worker.execute(sql`select count(*) from public.oauth_access_tokens`)).rejects.toSatisfy(permissionDenied);
     const app = getDatabase("lobbystack_app").db;
     // Without an operator context the app role sees no grants at all.
     const rows = await app.execute<{ count: string }>(sql`select count(*)::text as count from public.oauth_consents`);
     expect(rows.rows[0]!.count).toBe("0");
-    await expect(app.execute(sql`select client_secret from public.oauth_clients`)).rejects.toThrow(/permission denied/);
+    await expect(app.execute(sql`select client_secret from public.oauth_clients`)).rejects.toSatisfy(permissionDenied);
+    await expect(app.execute(sql`select token from public.oauth_access_tokens`)).rejects.toSatisfy(permissionDenied);
   });
 });
