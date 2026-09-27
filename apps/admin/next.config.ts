@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 import { withPostHogConfig } from "@posthog/nextjs-config";
 
+import { resolve } from "node:path";
+
+import { publicAssetVersion } from "./asset-version";
 import { embeddableSecurityHeaders, securityHeaders, toNextHeaderList } from "./security-headers";
+
+const serviceVersion = process.env.RAILWAY_DEPLOYMENT_ID ?? process.env.SERVICE_VERSION ?? "development";
 
 const nextConfig: NextConfig = {
   experimental: {
@@ -13,7 +18,10 @@ const nextConfig: NextConfig = {
   // in addition to the durable application caches in Postgres and Redis.
   cacheMaxMemorySize: 0,
   env: {
-    NEXT_PUBLIC_SERVICE_VERSION: process.env.RAILWAY_DEPLOYMENT_ID ?? process.env.SERVICE_VERSION ?? "development",
+    NEXT_PUBLIC_SERVICE_VERSION: serviceVersion,
+    // Keys the immutable `?v=` asset URLs to the files' content, not to a
+    // deployment variable that can stay unchanged across deploys.
+    NEXT_PUBLIC_ASSET_VERSION: publicAssetVersion(resolve(process.cwd(), "public"), serviceVersion),
     NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT_NAME ?? process.env.NODE_ENV ?? "development",
     NEXT_PUBLIC_DEPLOYMENT_MODE: process.env.DEPLOYMENT_MODE ?? "development",
   },

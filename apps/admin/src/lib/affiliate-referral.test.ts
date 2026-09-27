@@ -20,7 +20,7 @@ beforeEach(() => {
 describe("normalizeClientReferralCode", () => {
   it("normalizes referral codes for storage and lookup", () => {
     expect(normalizeClientReferralCode("  Partner Name!  ")).toBe("partner-name");
-    expect(normalizeClientReferralCode("a".repeat(40))).toHaveLength(32);
+    expect(normalizeClientReferralCode("a".repeat(80))).toHaveLength(64);
   });
 
   it("captures current and legacy referral parameters", () => {
@@ -28,5 +28,12 @@ describe("normalizeClientReferralCode", () => {
     expect(getStoredAffiliateReferralCode()).toBe("partner-one");
     expect(captureAffiliateReferralFromUrl(new URL("https://app.example/signup?via=Partner-Two"))).toBe("partner-two");
     expect(getStoredAffiliateReferralCode()).toBe("partner-two");
+  });
+
+  it("keeps working when the browser blocks storage", () => {
+    const blocked = () => { throw new DOMException("blocked", "SecurityError"); };
+    Object.defineProperty(window, "localStorage", { configurable: true, get: blocked });
+    expect(captureAffiliateReferralFromUrl(new URL("https://app.example/signup?via=Partner"))).toBe("partner");
+    expect(getStoredAffiliateReferralCode()).toBeNull();
   });
 });

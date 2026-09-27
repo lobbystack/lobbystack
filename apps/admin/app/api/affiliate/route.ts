@@ -25,7 +25,7 @@ export async function GET(request: Request) {
         if (profile) await tx.insert(affiliateProfileStats).values({ affiliateProfileId: profile.id }).onConflictDoNothing();
       }
       if (!profile) throw new Error("Affiliate profile could not be created.");
-      const siteUrl = (process.env.SITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://app.lobbystack.com").replace(/\/$/, "");
+      const siteUrl = (process.env.SITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? process.env.APP_BASE_URL ?? "https://app.lobbystack.com").replace(/\/$/, "");
 
       const [stats, clicks, attributions, commissions, payouts] = await Promise.all([
         tx.select({ clickCount: affiliateProfileStats.clickCount, referralCount: affiliateProfileStats.referralCount, conversionCount: affiliateProfileStats.conversionCount, pendingCommissionCents: affiliateProfileStats.pendingCommissionCents, paidCommissionCents: affiliateProfileStats.paidCommissionCents }).from(affiliateProfileStats).where(eq(affiliateProfileStats.affiliateProfileId, profile.id)).limit(1),

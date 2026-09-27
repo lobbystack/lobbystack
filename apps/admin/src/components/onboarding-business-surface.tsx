@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { getStoredAffiliateReferralCode } from "@/lib/affiliate-referral";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -36,6 +37,7 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
         name: name.trim(),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
         businessType: "service_company",
+        referralCode: getStoredAffiliateReferralCode(),
       }),
     }),
     onSuccess: async (created: { businessId: string }) => {

@@ -38,3 +38,19 @@ it("still requests French when English was already loaded on an earlier route", 
   expect(request).toHaveBeenCalledWith("/locales/fr/fixture.json?v=development");
   expect(instance.t("greeting", { ns: "fixture" })).toBe("Bonjour");
 });
+
+it("keeps the namespaces that loaded when another one fails", async () => {
+  const instance = createI18nInstance({ locale: "en" });
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => url.includes("/broken.json") ? new Response(null, { status: 503 }) : Response.json({ title: "Affiliate program" })));
+  await expect(loadRouteNamespaces(instance, "en", ["affiliate", "broken"])).rejects.toThrow("en/broken translations (HTTP 503)");
+  expect(instance.t("title", { ns: "affiliate" })).toBe("Affiliate program");
+  expect(missingNamespaces(instance, "en", ["affiliate", "broken"])).toEqual(["broken"]);
+});
+
+it("bypasses the HTTP cache when retrying", async () => {
+  const instance = createI18nInstance({ locale: "en" });
+  const request = vi.fn(async (..._args: unknown[]) => Response.json({ title: "Affiliate program" }));
+  vi.stubGlobal("fetch", request);
+  await loadRouteNamespaces(instance, "en", ["affiliate"], { revalidate: true });
+  expect(request).toHaveBeenCalledWith("/locales/en/affiliate.json?v=development", { cache: "reload" });
+});
