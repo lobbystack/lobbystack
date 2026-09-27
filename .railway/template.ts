@@ -1,13 +1,15 @@
-// LobbyStack self-hosted template project. Railway generates the public template from this project.
-// Secrets are generated once with `railway variable set` and kept with preserve(); `randomString()`
-// in the SDK is a public hash of the environment name, so it must never produce a secret.
+// Declares the published LobbyStack template (railway.com/deploy/lobbystack). Railway's CLI and
+// API can't apply to a template, so make each change in the dashboard template editor and keep
+// this file in step with it. In the template, generated secrets use ${{secret(64)}}; preserve()
+// marks them here. `randomString()` in the SDK is a public hash, so it must never produce a secret.
 import { bucket, defineRailway, github, preserve, project, service, volume } from "railway/iac";
 
-const TEMPLATE_PROJECT_ID = "c2e1d45e-9a95-4292-a304-a5456bd0cbdd";
+const TEMPLATE_ID = "c85ce52d-09f7-434e-a3ee-be1da2755622";
 
 export default defineRailway((ctx) => {
-  if (ctx.projectId !== TEMPLATE_PROJECT_ID || ctx.environment !== "production") {
-    throw new Error("This infrastructure definition manages only the lobbystack-template production environment.");
+  // A template ID never matches a linked project, so `railway config apply` always stops here.
+  if (ctx.projectId !== TEMPLATE_ID) {
+    throw new Error(`This file declares Railway template ${TEMPLATE_ID}. Change the template in the dashboard template editor.`);
   }
   const repo = github("lobbystack/lobbystack", { branch: "main", checkSuites: true });
   const region = "us-east4-eqdc4a";
@@ -114,6 +116,7 @@ export default defineRailway((ctx) => {
       AUTH_TRUSTED_ORIGINS: adminOrigin,
       BETTER_AUTH_USE_SECURE_COOKIES: "true",
       REQUIRE_EMAIL_VERIFICATION: "false",
+      SEND_VERIFICATION_EMAIL_ON_SIGNUP: "false",
       WIDGET_KEY_ISSUANCE_ENABLED: "false",
       // GPT-Live answers browser and phone calls; the worker runs each call.
       LIVE_PROTOTYPE_ENABLED: "true",
