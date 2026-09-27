@@ -16,6 +16,7 @@ export default defineConfig({
       "@lobbystack/domain": `${root}/packages/domain/src/index.ts`,
       "@lobbystack/jobs": `${root}/packages/jobs/src/index.ts`,
       "@lobbystack/agent-core": `${root}/packages/agent-core/src`,
+      "@lobbystack/ai": `${root}/packages/ai/src/index.ts`,
       "@lobbystack/providers/storage/local": `${root}/packages/providers/src/storage/local.ts`,
       "@lobbystack/providers/storage/provider": `${root}/packages/providers/src/storage/provider.ts`,
       "@lobbystack/telemetry/node": `${root}/packages/telemetry/src/node.ts`,
