@@ -9,7 +9,11 @@ ENVIRONMENT="${RAILWAY_ENVIRONMENT:-staging}"
 export RAILWAY_CALLER="script:staging-stop"
 
 # Apps first, then the datastores they depend on.
-SERVICES=(admin worker migrator Postgres Redis)
+SERVICES=(admin worker voice-gateway migrator Postgres Redis)
+
+# .railway/railway.ts declares voice-gateway, but staging can lack it until
+# the definition is next applied. Skip it when missing instead of failing.
+OPTIONAL_SERVICES=" voice-gateway "
 
 stop() {
   local service="$1" output status
@@ -30,6 +34,12 @@ stop() {
   # rather than be reported as a successful shutdown.
   if printf '%s' "$output" | grep -q "No deployments found"; then
     echo "  ${service}: already stopped"
+    return 0
+  fi
+
+  if [[ "$OPTIONAL_SERVICES" == *" ${service} "* ]] &&
+    printf '%s' "$output" | grep -q "Service '${service}' not found"; then
+    echo "  ${service}: not in ${ENVIRONMENT}, skipped"
     return 0
   fi
 
