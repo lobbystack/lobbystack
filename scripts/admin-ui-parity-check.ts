@@ -35,7 +35,7 @@ export async function validateAdminUiParity(root = process.cwd()) {
   if (manifest.referenceCommit !== "98df89901f1dca22b8c96ccf9509a8cd549f2eb9") errors.push("Visual parity reference commit changed unexpectedly.");
   const exactMembers = (actual: string[], expected: string[]) => actual.length === expected.length && expected.every(value => actual.includes(value));
   if (!exactMembers(manifest.visualMatrix.locales, ["en", "fr"]) || !exactMembers(manifest.visualMatrix.themes, ["light", "dark"]) || !exactMembers(manifest.visualMatrix.viewports, ["1440x1000", "390x844"]) || !Number.isFinite(manifest.visualMatrix.maxDiffPixelRatio) || manifest.visualMatrix.maxDiffPixelRatio < 0 || manifest.visualMatrix.maxDiffPixelRatio > 0.001 || manifest.visualMatrix.colorThreshold !== 0) errors.push("Visual parity matrix is incomplete or too permissive.");
-  if (!exactMembers(manifest.visualExemptions, ["/messages", "/settings/widget", "/embed/[key]", "/settings/plan/ai-sms-compliance", "/settings/api-keys", "/integrations/webhooks"])) errors.push("Visual parity exemptions do not match the approved scope.");
+  if (!exactMembers(manifest.visualExemptions, ["/messages", "/settings/widget", "/embed/[key]", "/settings/plan/ai-sms-compliance", "/settings/api-keys", "/integrations/webhooks", "/settings/connected-apps", "/oauth/consent"])) errors.push("Visual parity exemptions do not match the approved scope.");
   try { await readFile(resolve(root, manifest.visualHarness), "utf8"); } catch { errors.push(`Missing visual parity harness ${manifest.visualHarness}`); }
   try { await readFile(resolve(root, manifest.visualCertifier), "utf8"); } catch { errors.push(`Missing visual parity certifier ${manifest.visualCertifier}`); }
 

@@ -25,7 +25,7 @@ import {
   type ApiStaff,
 } from "@lobbystack/shared";
 
-import { bookAppointment, cancelAppointmentInTransaction, findAvailability, rescheduleAppointmentInTransaction } from "../booking";
+import { bookAppointment, cancelAppointmentInTransaction, findAvailability, rescheduleAppointmentInTransaction, type ApiAudit } from "../booking";
 import { replaceBusinessHoursInTransaction } from "../catalog";
 import type { DomainContext } from "../context";
 import { createKnowledgeSnippetInTransaction } from "../knowledge";
@@ -60,19 +60,38 @@ import { emitWebhookEventInTransaction } from "./webhooks";
  * the REST API (the default) or the MCP server. Both run these same
  * operations; the audit log tells them apart by actor.
  */
-export type ApiCaller = { businessId: string; apiKeyId: string; actor?: ApiActor | undefined };
 export type ApiActor = "api_key" | "mcp";
+/** A request authenticated with an API key, through REST or MCP. */
+export type ApiKeyCaller = { businessId: string; apiKeyId: string; grantId?: undefined; userId?: undefined; actor?: ApiActor | undefined };
+/** An MCP request authenticated with an OAuth access token: the grant is the owner's consent for one client and business. */
+export type OAuthGrantCaller = { businessId: string; grantId: string; userId: string; apiKeyId?: undefined; actor: "mcp" };
+export type ApiCaller = ApiKeyCaller | OAuthGrantCaller;
+
+/**
+ * The id that owns rate limits and idempotency records for a caller. API keys
+ * keep their bare id, so REST and MCP requests with one key share them; OAuth
+ * grants are prefixed so they can never collide with a key id.
+ */
+export function callerPrincipalId(caller: ApiCaller): string {
+  return caller.grantId !== undefined ? `grant:${caller.grantId}` : caller.apiKeyId;
+}
+
+/** Audit fields for a change made by a caller. The key or grant id is recorded, never a secret. */
+export function callerAudit(caller: ApiCaller): ApiAudit {
+  if (caller.grantId !== undefined) return { actorUserId: caller.userId, payload: { actor: "mcp", grantId: caller.grantId } };
+  return { actorUserId: null, payload: { actor: caller.actor ?? "api_key", apiKeyId: caller.apiKeyId } };
+}
 
 async function inBusiness<T>(context: DomainContext, caller: ApiCaller, callback: (tx: DatabaseTransaction) => Promise<T>): Promise<T> {
   return await withBusinessTransaction(context.db, { businessId: caller.businessId, actorType: "worker" }, callback);
 }
 
 async function audit(tx: DatabaseTransaction, caller: ApiCaller, input: { eventType: string; entityType: string; entityId?: string; payload?: Record<string, unknown> }) {
-  await tx.insert(auditLogs).values({ businessId: caller.businessId, eventType: input.eventType, entityType: input.entityType, ...(input.entityId ? { entityId: input.entityId } : {}), payload: { actor: caller.actor ?? "api_key", apiKeyId: caller.apiKeyId, ...input.payload } });
+  await tx.insert(auditLogs).values({ businessId: caller.businessId, eventType: input.eventType, entityType: input.entityType, ...(input.entityId ? { entityId: input.entityId } : {}), ...(callerAudit(caller).actorUserId ? { actorUserId: callerAudit(caller).actorUserId } : {}), payload: { ...callerAudit(caller).payload, ...input.payload } });
 }
 
 function apiChange(caller: ApiCaller) {
-  return { source: "api" as const, apiKeyId: caller.apiKeyId, ...(caller.actor ? { actor: caller.actor } : {}) };
+  return { source: "api" as const, audit: callerAudit(caller) };
 }
 
 function isUniqueViolation(error: unknown): boolean {
@@ -91,7 +110,7 @@ function assertTimeZone(value: string, field: string): void {
 // Business
 
 /** The key and its business, for integrations to test a connection. Needs no scope. */
-export async function getMeForApi(context: DomainContext, caller: ApiCaller): Promise<ApiMe> {
+export async function getMeForApi(context: DomainContext, caller: ApiKeyCaller): Promise<ApiMe> {
   return await inBusiness(context, caller, async (tx) => {
     const [row] = await tx.select({ id: apiKeys.id, name: apiKeys.name, prefix: apiKeys.prefix, scopes: apiKeys.scopes, createdAt: apiKeys.createdAt, businessName: businesses.name }).from(apiKeys).innerJoin(businesses, eq(businesses.id, apiKeys.businessId)).where(and(eq(apiKeys.businessId, caller.businessId), eq(apiKeys.id, caller.apiKeyId))).limit(1);
     if (!row) throw notFound("API key");
@@ -316,8 +335,7 @@ export async function createAppointmentForApi(context: DomainContext, caller: Ap
       timezone: prepared.timezone,
       contactPhone: prepared.contactPhone,
       sourceChannel: "api",
-      apiKeyId: caller.apiKeyId,
-      ...(caller.actor ? { apiActor: caller.actor } : {}),
+      apiAudit: callerAudit(caller),
       ...(input.contact_name ? { contactName: input.contact_name } : {}),
       ...(input.staff_id ? { preferredStaffId: input.staff_id } : {}),
       ...(input.sms_consent ? { smsConsentGranted: true } : {}),

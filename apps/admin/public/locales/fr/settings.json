@@ -18,7 +18,8 @@
     "usage": "Utilisation",
     "notifications": "Notifications",
     "widget": "Widget de site web",
-    "apiKeys": "Clés API"
+    "apiKeys": "Clés API",
+    "connectedApps": "Applications connectées"
   },
   "widget": {
     "title": "Widget de site web",
@@ -965,6 +966,45 @@
         "failed": "Échec",
         "skipped": "Ignoré"
       }
+    }
+  },
+  "connectedApps": {
+    "title": "Applications connectées",
+    "description": "Les assistants IA comme Claude ou ChatGPT connectés à LobbyStack. Chacun ne fonctionne que pour cette entreprise, avec l'accès approuvé lors de la connexion.",
+    "empty": "Aucune application connectée pour l'instant. Pour en connecter une, ajoutez LobbyStack dans les réglages de l'assistant et connectez-vous.",
+    "neverUsed": "Jamais",
+    "unnamed": "Application sans nom",
+    "grantedBy": "{{date}} par {{name}}",
+    "restricted": {
+      "title": "Seuls les propriétaires et les administrateurs gèrent les applications connectées",
+      "description": "Demandez à un propriétaire ou à un administrateur de cette entreprise de les vérifier."
+    },
+    "columns": {
+      "app": "Application",
+      "access": "Accès",
+      "granted": "Connectée",
+      "lastUsed": "Dernière utilisation",
+      "actions": "Actions"
+    },
+    "revoke": {
+      "action": "Déconnecter",
+      "title": "Déconnecter {{name}}?",
+      "description": "{{name}} perd l'accès à cette entreprise immédiatement. Pour l'utiliser de nouveau, connectez-la et approuvez l'accès une autre fois.",
+      "confirm": "Déconnecter",
+      "cancel": "Annuler",
+      "done": "Application déconnectée",
+      "failed": "Impossible de déconnecter l'application. Réessayez."
+    },
+    "scopes": {
+      "business_read": "Lire les informations, les heures, les services et le personnel de l'entreprise",
+      "business_write": "Modifier les informations et les heures de l'entreprise",
+      "calls_read": "Lire les appels, les résumés et les transcriptions",
+      "contacts_read": "Lire les contacts",
+      "contacts_write": "Créer et modifier des contacts",
+      "appointments_read": "Lire les rendez-vous et les plages libres",
+      "appointments_write": "Réserver, annuler et déplacer des rendez-vous",
+      "messages_read": "Lire les messages pris par la réceptionniste",
+      "knowledge_write": "Ajouter des entrées de connaissances et des FAQ"
     }
   }
 }

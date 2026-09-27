@@ -24,11 +24,12 @@ type BookingInput = {
   sourceChannel: string;
   preferredStaffId?: string;
   smsConsentGranted?: boolean;
-  /** Set when a public API key made the booking; recorded in the audit log. */
-  apiKeyId?: string;
-  /** The surface that used the key: the REST API (the default) or the MCP server. */
-  apiActor?: "api_key" | "mcp";
+  /** Set when the public API or the MCP server made the booking; recorded in the audit log. */
+  apiAudit?: ApiAudit;
 };
+
+/** Who made an API change: the audit row's actor user (OAuth grants act for a user) and payload (actor and credential id). */
+export type ApiAudit = { actorUserId: string | null; payload: Record<string, unknown> };
 
 async function lockStaff(tx: DatabaseTransaction, staffId: string): Promise<void> {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${staffId}, 0))`);
@@ -270,7 +271,7 @@ export async function bookAppointment(
       }
     }
     if (input.callId) await recordCallOutcomeInTransaction(tx, { businessId: input.businessId, callId: input.callId, contactId, outcome: { kind: "booked", serviceName: reference.serviceName, startsAt: startsAt.toISOString() } });
-    if (input.apiKeyId) await tx.insert(auditLogs).values({ businessId: input.businessId, eventType: "api.appointment.booked", entityType: "appointment", entityId: appointment.id, payload: { actor: input.apiActor ?? "api_key", apiKeyId: input.apiKeyId } });
+    if (input.apiAudit) await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.apiAudit.actorUserId, eventType: "api.appointment.booked", entityType: "appointment", entityId: appointment.id, payload: input.apiAudit.payload });
     if (contactCreated) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contactId });
     await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "appointment.booked", resourceId: appointment.id });
     return { appointmentId: appointment.id, contactId, staffId: selectedStaff.id };
@@ -293,11 +294,11 @@ async function recordAppointmentChange(
   }
 }
 
-type AppointmentChangeSource = { source: "operator"; userId: string } | { source: "caller" } | { source: "api"; apiKeyId: string; actor?: "api_key" | "mcp" };
+type AppointmentChangeSource = { source: "operator"; userId: string } | { source: "caller" } | { source: "api"; audit: ApiAudit };
 
 function changeAudit(change: AppointmentChangeSource): { actorUserId: string | null; payload: Record<string, unknown> } {
   if (change.source === "operator") return { actorUserId: change.userId, payload: { source: "operator" } };
-  if (change.source === "api") return { actorUserId: null, payload: { source: "api", actor: change.actor ?? "api_key", apiKeyId: change.apiKeyId } };
+  if (change.source === "api") return { actorUserId: change.audit.actorUserId, payload: { source: "api", ...change.audit.payload } };
   return { actorUserId: null, payload: { source: "caller" } };
 }
 

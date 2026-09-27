@@ -18,7 +18,8 @@
     "usage": "Usage",
     "notifications": "Notifications",
     "widget": "Website widget",
-    "apiKeys": "API keys"
+    "apiKeys": "API keys",
+    "connectedApps": "Connected apps"
   },
   "widget": {
     "title": "Website widget",
@@ -965,6 +966,45 @@
         "failed": "Failed",
         "skipped": "Skipped"
       }
+    }
+  },
+  "connectedApps": {
+    "title": "Connected apps",
+    "description": "AI assistants such as Claude or ChatGPT that someone signed in to LobbyStack. Each one works for this business only, with the access they approved.",
+    "empty": "No connected apps yet. To connect one, add LobbyStack in the assistant's settings and sign in.",
+    "neverUsed": "Never",
+    "unnamed": "Unnamed app",
+    "grantedBy": "{{date}} by {{name}}",
+    "restricted": {
+      "title": "Only owners and admins can manage connected apps",
+      "description": "Ask an owner or admin of this business to review them."
+    },
+    "columns": {
+      "app": "App",
+      "access": "Access",
+      "granted": "Connected",
+      "lastUsed": "Last used",
+      "actions": "Actions"
+    },
+    "revoke": {
+      "action": "Disconnect",
+      "title": "Disconnect {{name}}?",
+      "description": "{{name}} loses access to this business right away. To use it again, connect it and approve access again.",
+      "confirm": "Disconnect",
+      "cancel": "Cancel",
+      "done": "App disconnected",
+      "failed": "We couldn't disconnect the app. Try again."
+    },
+    "scopes": {
+      "business_read": "Read business details, hours, services and staff",
+      "business_write": "Update business details and hours",
+      "calls_read": "Read calls, summaries and transcripts",
+      "contacts_read": "Read contacts",
+      "contacts_write": "Create and update contacts",
+      "appointments_read": "Read appointments and open times",
+      "appointments_write": "Book, cancel and reschedule appointments",
+      "messages_read": "Read messages the receptionist took",
+      "knowledge_write": "Add knowledge entries and FAQs"
     }
   }
 }

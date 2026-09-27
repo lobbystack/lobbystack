@@ -7,7 +7,7 @@ description: "Use the LobbyStack MCP tools to read a business's calls, messages,
 
 # LobbyStack
 
-LobbyStack runs an AI receptionist that answers a business's phone calls and website chat. The LobbyStack MCP server lets you work on that business's data for the owner. Each connection sees one business. The API key's scopes decide which tools you have, so a tool listed here may be missing from your session.
+LobbyStack runs an AI receptionist that answers a business's phone calls and website chat. The LobbyStack MCP server lets you work on that business's data for the owner. Each connection sees one business. The permissions the owner approved (or the API key's scopes) decide which tools you have, so a tool listed here may be missing from your session.
 
 ## Before you act
 
@@ -106,4 +106,4 @@ A failed tool returns a result marked as an error whose text is JSON: `{ "error"
 | `rate_limit_unavailable` | Wait a few seconds and retry once. |
 | `internal_error` | Retry once. If it fails again, give the owner the reference in the message. |
 
-If a tool you need is missing, the API key lacks its scope. Tell the owner which scope a new key needs; they create keys in **Settings** > **API keys**.
+If a tool you need is missing, the connection lacks its permission. Tell the owner which scope it needs: they can reconnect and allow it, or create an API key with it in **Settings** > **API keys**.

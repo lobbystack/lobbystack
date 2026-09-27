@@ -11,7 +11,7 @@ import { finalizeConversationSession } from "../conversations";
 import { createVoiceFollowUpTask } from "../voice";
 import { generateApiKey, resolveApiKey } from "./apiKeys";
 import { runIdempotent } from "./idempotency";
-import { cancelAppointmentForApi, createAppointmentForApi, createContactForApi, getAvailabilityForApi, getContactForApi, getMeForApi, listAppointmentsForApi, listContactsForApi, listStaffForApi, rescheduleAppointmentForApi, updateBusinessForApi, type ApiCaller } from "./operations";
+import { cancelAppointmentForApi, createAppointmentForApi, createContactForApi, getAvailabilityForApi, getContactForApi, getMeForApi, listAppointmentsForApi, listContactsForApi, listStaffForApi, rescheduleAppointmentForApi, updateBusinessForApi, type ApiKeyCaller } from "./operations";
 import { PublicApiError } from "./errors";
 import { createWebhookEndpoint, processWebhookDelivery } from "./webhooks";
 import { encryptWebhookSecret } from "./webhookTransport";
@@ -38,7 +38,7 @@ const workerLoginUrl = process.env.LOBBYSTACK_PUBLIC_API_TEST_WORKER_DATABASE_UR
 const worker = testUrl ? createDatabaseClient("lobbystack_worker", { DATABASE_URL: workerLoginUrl ?? roleUrl("lobbystack_worker") }) : undefined;
 const app = testUrl ? createDatabaseClient("lobbystack_app", { DATABASE_URL: roleUrl("lobbystack_app") }) : undefined;
 
-type Fixture = { businessId: string; serviceId: string; staffId: string; caller: ApiCaller; key: string };
+type Fixture = { businessId: string; serviceId: string; staffId: string; caller: ApiKeyCaller; key: string };
 let a: Fixture;
 let b: Fixture;
 let ownerId: string;

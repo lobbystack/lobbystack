@@ -12,6 +12,7 @@ import { assertDatabaseRole, enqueueOutbox, withBusinessTransaction } from "@lob
 import { accounts, sessions, users, verifications } from "@lobbystack/db";
 
 import { getDatabase } from "./databases";
+import { ensureMcpResource, isDisabledOAuthEndpoint, mcpOAuthPlugins, needsMcpResource, oauthProviderSchema, registrationWithApplicationType } from "./oauth-provider";
 import { hashReplacementPassword, isLegacyScryptHash, meetsPasswordRequirements, verifyLegacyPassword } from "./password";
 import { trustedClientIp, trustedClientIpFromHeaders, trustedClientIpHeader } from "./trusted-client-ip";
 import { verifyTurnstileForSignUp } from "./turnstile";
@@ -240,7 +241,7 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
   return betterAuth({
     database: drizzleAdapter(adapterDatabase ?? database.db, {
       provider: "pg",
-      schema: { user: users, session: sessions, account: accounts, verification: verifications },
+      schema: { user: users, session: sessions, account: accounts, verification: verifications, ...oauthProviderSchema },
     }),
     baseURL: process.env.APP_BASE_URL ?? "http://localhost:3000",
     trustedOrigins: (process.env.AUTH_TRUSTED_ORIGINS ?? process.env.APP_BASE_URL ?? "http://localhost:3000").split(",").map((value) => value.trim()).filter(Boolean),
@@ -255,7 +256,7 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
       // the shared per-path bucket rather than trusting a spoofable value.
       ...(trustedIpHeader ? { ipAddress: { ipAddressHeaders: [trustedIpHeader] } } : {}),
     },
-    plugins: [emailOTP({
+    plugins: [...mcpOAuthPlugins(), emailOTP({
       disableSignUp: true,
       storeOTP: "hashed",
       expiresIn: 600,
@@ -394,9 +395,12 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
         // Server-only plugin methods, including createVerificationOTP, do not
         // have a route path. They remain callable from trusted application
         // code while every unapproved public OTP route is rejected.
-        if (isDisabledAuthEmailEndpoint(ctx.path)) {
+        if (isDisabledAuthEmailEndpoint(ctx.path) || isDisabledOAuthEndpoint(ctx.path)) {
           throw new APIError("NOT_FOUND", { message: "Endpoint not enabled." });
         }
+        if (needsMcpResource(ctx.path)) await ensureMcpResource(database.db);
+        const registration = registrationWithApplicationType(ctx.path, ctx.body);
+        if (registration) return { context: { body: registration } };
         const recoveryPaths = ["/email-otp/request-password-reset", "/email-otp/reset-password"];
         if (recoveryPaths.includes(ctx.path) && !z.string().email().safeParse(ctx.body?.email).success) {
           throw new APIError("BAD_REQUEST", { message: "Invalid email address." });

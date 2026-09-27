@@ -5,13 +5,13 @@ sidebarTitle: "Other clients"
 contentType: "How-to"
 ---
 
-Any MCP client that supports Streamable HTTP and custom headers can connect. Give it these settings:
+Any MCP client that supports Streamable HTTP can connect. Clients that support MCP OAuth sign in with LobbyStack on their own; others need an API key in a header.
 
 | Setting | Value |
 | --- | --- |
 | URL | `https://app.lobbystack.com/api/mcp` |
 | Transport | Streamable HTTP (sometimes labeled `http`) |
-| Header | `Authorization: Bearer <API key>` |
+| Authentication | OAuth, or the header `Authorization: Bearer <API key>` |
 
 The server is stateless. It supports the 2026-07-28 protocol revision and falls back to Streamable HTTP for 2025 clients. It doesn't support the older HTTP+SSE transport, so clients that only offer SSE can't connect.
 
@@ -57,7 +57,14 @@ If a client can only launch local servers, run [`mcp-remote`](https://www.npmjs.
 
 ## Test with the MCP Inspector
 
-The [MCP Inspector](https://github.com/modelcontextprotocol/inspector) CLI lists the tools your key can use without an AI model in the loop:
+The [MCP Inspector](https://github.com/modelcontextprotocol/inspector) CLI connects without an AI model in the loop. Without a key, it signs in with OAuth: it prints a link, you open it, sign in and allow access, and it lists the tools:
+
+```bash
+npx @modelcontextprotocol/inspector --cli https://app.lobbystack.com/api/mcp \
+  --transport http --method tools/list
+```
+
+With an API key:
 
 ```bash
 npx @modelcontextprotocol/inspector --cli https://app.lobbystack.com/api/mcp \

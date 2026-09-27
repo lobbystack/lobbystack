@@ -21,6 +21,9 @@ export const apiKeyScopes = [
 ] as const;
 export type ApiKeyScope = (typeof apiKeyScopes)[number];
 
+/** Scopes an MCP client can be granted with OAuth. webhooks:manage has no MCP tools, so it is never offered. */
+export const oauthGrantableScopes = apiKeyScopes.filter((scope): scope is Exclude<ApiKeyScope, "webhooks:manage"> => scope !== "webhooks:manage");
+
 export function isApiKeyScope(value: unknown): value is ApiKeyScope {
   return typeof value === "string" && (apiKeyScopes as readonly string[]).includes(value);
 }

@@ -15,25 +15,45 @@ The assistant works through the same rules as the [REST API](/api/overview). It 
 | --- | --- |
 | Server URL | `https://app.lobbystack.com/api/mcp` |
 | Transport | Streamable HTTP |
-| Authentication | `Authorization: Bearer <API key>` |
+| Authentication | Sign in with LobbyStack (OAuth), or `Authorization: Bearer <API key>` |
 
 Self-hosted deployments serve the same path on their own domain, for example `https://lobbystack.example.com/api/mcp`.
 
-<Steps>
-  <Step title="Create an API key">
-    Go to **Settings** > **API keys** and create a key for the assistant, such as `Claude`. See [Authentication](/api/authentication).
-  </Step>
-  <Step title="Pick scopes">
-    The assistant sees only the tools your scopes allow. Start with read scopes. Add `appointments:write` or `business:write` when you want the assistant to make changes.
-  </Step>
-  <Step title="Add the server to your assistant">
-    Follow the guide for [Claude](/ai/connect-claude), [ChatGPT](/ai/connect-chatgpt) or [another MCP client](/ai/connect-other-clients).
-  </Step>
-</Steps>
+Assistants connect one of two ways:
 
-<Note>
-Signing in with your LobbyStack account instead of pasting a key is coming soon. It will let Claude and ChatGPT connectors connect with one click.
-</Note>
+- **Sign in with LobbyStack.** Add the server URL to the assistant. It opens a LobbyStack page where you sign in, pick the business, and choose what the assistant can do. Use this for Claude and ChatGPT connectors.
+- **API key.** Create a key in **Settings** > **API keys** and put it in the assistant's configuration. Use this for scripts, CI, and clients that let you set request headers. See [Authentication](/api/authentication).
+
+Follow the guide for [Claude](/ai/connect-claude), [ChatGPT](/ai/connect-chatgpt) or [another MCP client](/ai/connect-other-clients).
+
+## Sign in with LobbyStack
+
+LobbyStack runs an OAuth 2.1 authorization server for MCP clients, as the [MCP authorization spec](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization) describes. Your assistant finds it on its own from the server URL.
+
+When you connect, LobbyStack asks you to:
+
+1. Sign in, if you aren't signed in already.
+2. Pick the business. You see only businesses where you're an owner or admin.
+3. Choose what the assistant can do. Every permission it asked for starts checked; uncheck the ones you don't want.
+
+The assistant then gets access to that one business. Access tokens last an hour, and the assistant renews them for up to 30 days of inactivity without asking you again. Each renewal replaces the previous refresh token, and reusing an old one ends the connection.
+
+Owners and admins see every connected assistant for the business in **Settings** > **Connected apps**, with who connected it, its permissions, and when it last made a request. Click **Disconnect** to cut it off right away. If the person who connected it stops being an owner or admin, the connection stops working too.
+
+<Accordion title="Details for MCP client developers">
+  | Item | Value |
+  | --- | --- |
+  | Protected resource metadata | `/.well-known/oauth-protected-resource/api/mcp` |
+  | Authorization server issuer | `https://app.lobbystack.com/api/auth` |
+  | Authorization server metadata | `/.well-known/oauth-authorization-server/api/auth` |
+  | Client registration | Client ID Metadata Documents (HTTPS `client_id`) or dynamic client registration at `/api/auth/oauth2/register` |
+  | Grants | `authorization_code` with PKCE (`S256`, required), `refresh_token` |
+  | Resource indicator | Send `resource=https://app.lobbystack.com/api/mcp`. Tokens for other resources are rejected. |
+  | Scopes | The tool scopes in the table below, plus `offline_access` for refresh tokens |
+  | Revocation | `/api/auth/oauth2/revoke` (RFC 7009) |
+
+  A `401` from `/api/mcp` carries `WWW-Authenticate: Bearer resource_metadata="..."`. Clients with loopback redirect URIs, such as `http://127.0.0.1:6276/callback`, register as native apps; other redirect URIs must use HTTPS.
+</Accordion>
 
 ## Tools
 
@@ -58,7 +78,7 @@ Signing in with your LobbyStack account instead of pasting a key is coming soon.
 | `list_messages` | `messages:read` | Messages the receptionist took for your team |
 | `add_knowledge` | `knowledge:write` | Adds an FAQ or a text entry the receptionist can use |
 
-Tools return the same objects as the REST API, with times in UTC. Read-only tools carry the `readOnlyHint` annotation, and tools that cancel, move or replace data carry `destructiveHint`, so your assistant can ask you before it runs them.
+Scopes are the same for OAuth and API keys. Tools return the same objects as the REST API, with times in UTC. Read-only tools carry the `readOnlyHint` annotation, and tools that cancel, move or replace data carry `destructiveHint`, so your assistant can ask you before it runs them.
 
 The `webhooks:manage` scope has no MCP tools. A key with only that scope can't connect.
 
@@ -81,17 +101,17 @@ A failed tool call returns a result marked as an error. Its text is JSON with th
 { "error": { "code": "slot_unavailable", "message": "That time is not available. Pick another time from GET /availability." } }
 ```
 
-The server itself answers `401` when the key is missing, unknown or revoked, and `403` when the key has no scope the MCP server uses.
+The server itself answers `401` when the key or access token is missing, unknown, expired or revoked, and `403` when it has no scope the MCP server uses.
 
 ## Limits and retries
 
-Each tool call counts against the key's limit of 120 requests per minute, shared with any REST requests made with the same key. Listing tools doesn't count. Past the limit, the tool returns `rate_limited` with the seconds to wait.
+Each tool call counts against a limit of 120 requests per minute. An API key shares its limit with REST requests made with the same key; each OAuth connection has its own. Listing tools doesn't count. Past the limit, the tool returns `rate_limited` with the seconds to wait.
 
 `book_appointment`, `create_contact` and `add_knowledge` accept an optional `idempotency_key`. Retry with the same value within 24 hours and you get the first result back instead of a duplicate. These keys are the same as the REST `Idempotency-Key` for `POST /appointments`, `POST /contacts` and `POST /knowledge`: a retry through MCP of a REST request, or the reverse, returns the first result. The same key with different details returns `idempotency_key_reused`.
 
 ## Audit log
 
-LobbyStack records each change made through the MCP server in the business's audit log with the actor `mcp` and the API key's ID. It never logs the key itself. To cut off an assistant, revoke its key on **Settings** > **API keys**.
+LobbyStack records each change made through the MCP server in the business's audit log with the actor `mcp` and the API key's ID, or for OAuth, the connection's ID and the person who approved it. It never logs keys or tokens. To cut off an assistant, disconnect it in **Settings** > **Connected apps**, or revoke its key in **Settings** > **API keys**.
 
 ## Guide for AI agents
 

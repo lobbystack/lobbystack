@@ -8,7 +8,7 @@ import {
   runIdempotent,
   touchApiKeyLastUsed,
   validateIdempotencyKey,
-  type ApiCaller,
+  type ApiKeyCaller,
   type DomainContext,
   type ResolvedApiKey,
 } from "@lobbystack/domain";
@@ -24,7 +24,7 @@ import { enforceApiRateLimit, type RateLimitDecision } from "./rate-limit";
 
 export type ApiHandlerInput = {
   request: Request;
-  caller: ApiCaller;
+  caller: ApiKeyCaller;
   context: DomainContext;
   key: ResolvedApiKey;
 };
@@ -128,7 +128,7 @@ export async function handleApiRequest(request: Request, operationId: ApiOperati
       return (status = 429, apiError(429, "rate_limited", `Too many requests. Retry in ${limit.retryAfterSeconds} seconds.`, { headers: { ...rateLimitHeaders(limit), "Retry-After": String(limit.retryAfterSeconds) } }));
     }
     const headers = rateLimitHeaders(limit);
-    const caller: ApiCaller = { businessId: key.businessId, apiKeyId: key.apiKeyId };
+    const caller: ApiKeyCaller = { businessId: key.businessId, apiKeyId: key.apiKeyId };
     const resolvedKey = key;
     runAfterResponse(async () => { await touchApiKeyLastUsed(context, caller).catch(() => undefined); });
 
