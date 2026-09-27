@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { isUuid } from "@lobbystack/shared";
+
 import { deleteWebhookEndpoint, updateWebhookEndpoint } from "@lobbystack/domain";
 import { asApiResponse, readJson, requireOperatorBusiness } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
@@ -12,6 +14,7 @@ export async function PATCH(request: Request, { params }: Context) {
   try {
     const { session, businessId } = await requireOperatorBusiness(request);
     const { endpointId } = await params;
+    if (!isUuid(endpointId)) return NextResponse.json({ error: "endpointId must be a UUID.", code: "invalid_request" }, { status: 400 });
     const body = await readJson(request) as { url?: unknown; events?: unknown; description?: unknown; status?: unknown };
     const endpoint = await updateWebhookEndpoint(createDomainContext(), {
       businessId,
@@ -30,6 +33,7 @@ export async function DELETE(request: Request, { params }: Context) {
   try {
     const { session, businessId } = await requireOperatorBusiness(request);
     const { endpointId } = await params;
+    if (!isUuid(endpointId)) return NextResponse.json({ error: "endpointId must be a UUID.", code: "invalid_request" }, { status: 400 });
     await deleteWebhookEndpoint(createDomainContext(), { businessId, manager: { kind: "operator", userId: session.user.id }, endpointId });
     return NextResponse.json({ ok: true });
   } catch (error) { return asApiResponse(error); }

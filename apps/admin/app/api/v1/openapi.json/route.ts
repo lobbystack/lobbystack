@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 
 import { buildOpenApiDocument } from "@lobbystack/shared";
 
+import { methodNotAllowed } from "@/lib/public-api/http";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -11,3 +13,9 @@ export function GET(request: Request) {
   const origin = configured || new URL(request.url).origin;
   return NextResponse.json(buildOpenApiDocument({ serverUrl: `${origin}/api/v1` }), { headers: { "Cache-Control": "public, max-age=300", "Access-Control-Allow-Origin": "*" } });
 }
+
+const notAllowed = methodNotAllowed(["GET"]);
+export const POST = notAllowed;
+export const PATCH = notAllowed;
+export const PUT = notAllowed;
+export const DELETE = notAllowed;

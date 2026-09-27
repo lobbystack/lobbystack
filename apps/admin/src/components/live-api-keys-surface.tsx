@@ -152,16 +152,17 @@ export function LiveApiKeysSurface() {
                 <fieldset className="flex flex-col gap-3">
                   <legend className="mb-2 text-sm font-medium">{t("apiKeys.create.scopesLabel")}</legend>
                   {apiKeyScopes.map((scope) => (
-                    <label className="flex items-start gap-3 text-sm" key={scope}>
+                    <div className="flex items-start gap-3 text-sm" key={scope}>
                       <Checkbox
                         checked={scopes.includes(scope)}
+                        id={`api-key-scope-${scopeKey(scope)}`}
                         onCheckedChange={(checked) => setScopes((current) => checked ? [...new Set([...current, scope])] : current.filter((value) => value !== scope))}
                       />
-                      <span className="flex flex-col gap-0.5">
+                      <label className="flex flex-col gap-0.5" htmlFor={`api-key-scope-${scopeKey(scope)}`}>
                         <code className="font-mono text-xs">{scope}</code>
                         <span className="text-muted-foreground">{t(`apiKeys.scopes.${scopeKey(scope)}`)}</span>
-                      </span>
-                    </label>
+                      </label>
+                    </div>
                   ))}
                 </fieldset>
               </FieldGroup>

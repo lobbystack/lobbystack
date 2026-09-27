@@ -1,20 +1,18 @@
 import { after, NextResponse } from "next/server";
 
 import {
-  beginIdempotentRequest,
   bearerToken,
-  completeIdempotentRequest,
   idempotencyRequestHash,
   PublicApiError,
-  releaseIdempotentRequest,
   resolveApiKey,
+  runIdempotent,
   touchApiKeyLastUsed,
   validateIdempotencyKey,
   type ApiCaller,
   type DomainContext,
   type ResolvedApiKey,
 } from "@lobbystack/domain";
-import { apiOperations, parseApiInput, type ApiErrorCode, type ApiOperationId } from "@lobbystack/shared";
+import { apiOperations, isUuid, parseApiInput, type ApiErrorCode, type ApiOperationId } from "@lobbystack/shared";
 
 import { createWorkerDomainContext } from "../domain-context";
 import { reportServerError } from "../error-reporting";
@@ -37,6 +35,7 @@ type Dependencies = {
   resolveKey?: (key: string) => Promise<ResolvedApiKey | null>;
   rateLimit?: (apiKeyId: string) => Promise<RateLimitDecision>;
   context?: () => DomainContext;
+  runIdempotent?: typeof runIdempotent;
 };
 
 export function apiError(status: number, code: ApiErrorCode, message: string, init: { headers?: Record<string, string>; details?: Array<{ path: string; message: string }> } = {}): NextResponse {
@@ -50,6 +49,14 @@ function runAfterResponse(task: () => Promise<unknown> | unknown): void {
   } catch {
     void Promise.resolve().then(task).catch(() => undefined);
   }
+}
+
+export const V1_METHODS = ["GET", "POST", "PATCH", "PUT", "DELETE"] as const;
+
+/** A handler for methods a v1 route doesn't support: 405 in the v1 error shape, with Allow. */
+export function methodNotAllowed(allowed: readonly string[]): () => Response {
+  const allow = [...allowed, ...(allowed.includes("GET") ? ["HEAD"] : []), "OPTIONS"].join(", ");
+  return () => apiError(405, "method_not_allowed", `This endpoint supports ${allowed.join(", ")}.`, { headers: { Allow: allow } });
 }
 
 function rateLimitHeaders(decision: RateLimitDecision): Record<string, string> {
@@ -96,8 +103,9 @@ export function pageQuery(request: Request): { limit?: number; cursor?: string }
   return { ...(limit !== undefined ? { limit: Number(limit) } : {}), ...(cursor !== undefined ? { cursor } : {}) };
 }
 
-export function uuidParam(value: string, name: string): string {
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) throw new PublicApiError(404, "not_found", `${name} not found.`);
+/** Path and query ids must be UUIDs; anything else is a 400 with the parameter name. */
+export function uuidParam(value: string | undefined, name: string): string {
+  if (!isUuid(value)) throw new PublicApiError(400, "invalid_request", `${name} must be a UUID.`, [{ path: name, message: value === undefined ? "Required." : "Must be a UUID." }]);
   return value;
 }
 
@@ -134,29 +142,16 @@ export async function handleApiRequest(request: Request, operationId: ApiOperati
     // Hash the body so a reused key with a different request is rejected.
     const raw = await request.clone().text();
     const scope = { businessId: key.businessId, apiKeyId: key.apiKeyId, operation: operationId, key: idempotencyKey };
-    const requestHash = idempotencyRequestHash(raw);
-    const begun = await beginIdempotentRequest(context, scope, requestHash);
-    if (begun.kind === "replay") {
-      status = begun.response.status;
-      // Bodies are stored as JSON text so the replay matches the first response byte for byte.
-      const replayBody = typeof begun.response.body === "string" ? begun.response.body : JSON.stringify(begun.response.body);
-      return new NextResponse(replayBody, { status, headers: { ...headers, "content-type": "application/json", "Idempotent-Replayed": "true" } });
-    }
-    let response: NextResponse;
-    try {
-      const result = await handler({ request, caller, context, key: resolvedKey });
-      status = result.status ?? operation.status;
-      response = NextResponse.json(result.body, { status, headers });
-      await completeIdempotentRequest(context, scope, requestHash, { status, body: JSON.stringify(result.body) });
-    } catch (error) {
-      response = errorResponse(error, operationId);
-      status = response.status;
-      // Client errors are final for this key; server errors free it for a retry.
-      if (status >= 500 || status === 409 && error instanceof PublicApiError && error.code === "idempotency_request_in_progress") await releaseIdempotentRequest(context, scope).catch(() => undefined);
-      else await completeIdempotentRequest(context, scope, requestHash, { status, body: await response.clone().text() }).catch(() => undefined);
-      for (const [name, value] of Object.entries(headers)) response.headers.set(name, value);
-    }
-    return response;
+    // The handler runs on the same transaction that stores the key, so the
+    // mutation and its stored response commit together or not at all.
+    const outcome = await (dependencies.runIdempotent ?? runIdempotent)(context, scope, idempotencyRequestHash(raw), async (transactional) => {
+      const result = await handler({ request, caller, context: transactional, key: resolvedKey });
+      // Stored as JSON text so a replay matches the first response byte for byte.
+      return { status: result.status ?? operation.status, body: JSON.stringify(result.body) };
+    });
+    status = outcome.response.status;
+    const body = typeof outcome.response.body === "string" ? outcome.response.body : JSON.stringify(outcome.response.body);
+    return new NextResponse(body, { status, headers: { ...headers, "content-type": "application/json", ...(outcome.replayed ? { "Idempotent-Replayed": "true" } : {}) } });
   } catch (error) {
     const response = errorResponse(error, operationId);
     status = response.status;

@@ -62,7 +62,7 @@ Local storage fits a single-host deployment. Use S3 when the admin and worker ru
 | Variable | Purpose |
 | --- | --- |
 | `PUBLIC_API_RATE_LIMIT_PER_MINUTE` | Requests per minute for each API key on `/api/v1`. Defaults to `120`. Set it on the admin. The limit uses `REDIS_URL`; in production, requests fail with `503` when Redis is unreachable. |
-| `ENCRYPTION_KEY` | Also encrypts webhook signing secrets. Set the same value on the admin and the worker, or the worker can't sign deliveries. |
+| `ENCRYPTION_KEY` | Also encrypts webhook signing secrets and keys the HMAC that stores API key hashes. Set the same value on the admin and the worker, or the worker can't sign deliveries. Changing it invalidates every API key and webhook secret. |
 
 Webhook deliveries refuse private, loopback, link-local and cloud metadata addresses on every deployment, including self-hosted ones. Point endpoints at a public HTTPS URL. Plain `http://` URLs work only when `NODE_ENV=development`.
 

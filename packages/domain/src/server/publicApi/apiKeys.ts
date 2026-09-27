@@ -1,4 +1,4 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 
 import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm";
 
@@ -10,9 +10,23 @@ import type { DomainContext } from "../context";
 import { invalidRequest } from "./errors";
 
 // Keys look like lsk_<8 hex id>_<32 url-safe characters>. The first part is
-// the prefix people see in the dashboard; only a SHA-256 hash of the whole key
-// is stored. 192 random bits make a salted or slow hash unnecessary.
+// the prefix people see in the dashboard. The database stores only an
+// HMAC-SHA256 of the whole key, keyed with a server-side pepper, so a leaked
+// table alone can't be checked against guessed keys. Keys carry 192 random
+// bits, so a slow password hash adds nothing and would break indexed lookup.
 const KEY_PATTERN = /^lsk_[0-9a-f]{8}_[A-Za-z0-9_-]{32}$/;
+const PEPPER_LABEL = "lobbystack:api-key-hash:v1";
+
+/**
+ * Derives the pepper from ENCRYPTION_KEY so deployments need no new secret.
+ * Changing ENCRYPTION_KEY invalidates every API key, as it already does for
+ * stored calendar tokens and webhook signing secrets.
+ */
+export function apiKeyPepper(environment: Readonly<Record<string, string | undefined>> = process.env): Buffer {
+  const secret = environment.ENCRYPTION_KEY?.trim();
+  if (!secret && environment.NODE_ENV === "production") throw new Error("ENCRYPTION_KEY is required to hash API keys.");
+  return createHmac("sha256", secret || "development-only-api-key-pepper").update(PEPPER_LABEL).digest();
+}
 
 export type GeneratedApiKey = { key: string; prefix: string; keyHash: string };
 
@@ -23,8 +37,8 @@ export function generateApiKey(): GeneratedApiKey {
   return { key, prefix: `${API_KEY_PREFIX}${shortId}`, keyHash: hashApiKey(key) };
 }
 
-export function hashApiKey(key: string): string {
-  return createHash("sha256").update(key).digest("hex");
+export function hashApiKey(key: string, pepper: Buffer = apiKeyPepper()): string {
+  return createHmac("sha256", pepper).update(key).digest("hex");
 }
 
 export function isWellFormedApiKey(value: string): boolean {
@@ -38,11 +52,6 @@ export function bearerToken(header: string | null | undefined): string | null {
   return match?.[1] ?? null;
 }
 
-export function hashesMatch(left: string, right: string): boolean {
-  const a = Buffer.from(left);
-  const b = Buffer.from(right);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
 
 export function normalizeScopes(value: unknown): ApiKeyScope[] {
   if (!Array.isArray(value) || value.length === 0) throw invalidRequest("Choose at least one scope.");
