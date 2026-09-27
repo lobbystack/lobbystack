@@ -246,7 +246,7 @@ export const privacyFr: LegalDocument = {
       title: "15. Canada et Québec",
       blocks: [
         `15.1 Nous traitons les renseignements personnels conformément à la Loi sur la protection des renseignements personnels et les documents électroniques (LPRPDE) et à la Loi sur la protection des renseignements personnels dans le secteur privé du Québec, telle que modifiée par la Loi 25.`,
-        `15.2 Comme le prévoit la loi québécoise, la personne ayant la plus haute autorité au sein de Lobbystack Inc. est responsable de la protection des renseignements personnels. Vous pouvez la joindre à ${support}.`,
+        `15.2 Le responsable de la protection des renseignements personnels est Raphaël Morency, la personne ayant la plus haute autorité au sein de Lobbystack Inc. Vous pouvez le joindre à ${support} ou par la poste au 4845 chemin de la Côte-Saint-Luc, Montréal (Québec)  H3W 2H4, Canada.`,
         `15.3 Vous pouvez demander d’accéder à vos renseignements ou de les faire corriger, retirer votre consentement ou, au Québec, demander vos renseignements informatisés dans un format technologique structuré et couramment utilisé. Si le réceptionniste IA prend une décision à votre sujet fondée exclusivement sur un traitement automatisé, vous pouvez demander à l’entreprise de vous indiquer les renseignements utilisés et de faire réviser la décision par une personne.`,
         `15.4 Si notre réponse ne vous satisfait pas, vous pouvez vous adresser à la Commission d’accès à l’information du Québec ou au Commissariat à la protection de la vie privée du Canada.`,
       ],
@@ -312,7 +312,7 @@ export const privacyFr: LegalDocument = {
       nav: "Contact",
       title: "22. Nous joindre",
       blocks: [
-        `Envoyez vos questions, demandes ou plaintes au sujet de la présente Politique à Lobbystack Inc., à ${support}. Nos <a href="/fr/terms/">Conditions d’utilisation</a> régissent aussi votre utilisation du Service.`,
+        `Envoyez vos questions, demandes ou plaintes au sujet de la présente Politique à Lobbystack Inc., à ${support}. Vous pouvez aussi nous écrire au 4845 chemin de la Côte-Saint-Luc, Montréal (Québec)  H3W 2H4, Canada. Nos <a href="/fr/terms/">Conditions d’utilisation</a> régissent aussi votre utilisation du Service.`,
       ],
     },
   ],

@@ -246,7 +246,7 @@ export const privacyEn: LegalDocument = {
       title: "15. Canada and Quebec",
       blocks: [
         `15.1 We handle personal information under the Personal Information Protection and Electronic Documents Act (PIPEDA) and Quebec's Act respecting the protection of personal information in the private sector, as amended by Law 25.`,
-        `15.2 As Quebec law provides, the person with the highest authority at Lobbystack Inc. is our person in charge of the protection of personal information. You can reach this person at ${support}.`,
+        `15.2 Our person in charge of the protection of personal information is Raphaël Morency, the person with the highest authority at Lobbystack Inc. You can reach him at ${support} or by mail at 4845 Chemin de la Côte-Saint-Luc, Montréal, Quebec H3W 2H4, Canada.`,
         `15.3 You may ask to access or correct your information, withdraw consent, or, in Quebec, ask for your computerized information in a structured, commonly used technological format. If the AI receptionist makes a decision about you based only on automated processing, you may ask the business to tell you what information was used and to have a person review the decision.`,
         `15.4 If you are not satisfied with our answer, you may contact the Commission d'accès à l'information du Québec or the Office of the Privacy Commissioner of Canada.`,
       ],
@@ -312,7 +312,7 @@ export const privacyEn: LegalDocument = {
       nav: "Contact",
       title: "22. Contact us",
       blocks: [
-        `Send questions, requests, or complaints about this Policy to Lobbystack Inc. at ${support}. Our <a href="/terms/">Terms of Service</a> also govern your use of the Service.`,
+        `Send questions, requests, or complaints about this Policy to Lobbystack Inc. at ${support}. You can also write to us at 4845 Chemin de la Côte-Saint-Luc, Montréal, Quebec H3W 2H4, Canada. Our <a href="/terms/">Terms of Service</a> also govern your use of the Service.`,
       ],
     },
   ],
