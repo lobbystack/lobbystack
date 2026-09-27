@@ -15,6 +15,7 @@ import {
   getPostHogDistinctIdForBusinessSystem,
   getPostHogDistinctIdForOperator,
   isExpectedApplicationFailure,
+  percentileMs,
   redactAiTraceProperties,
   redactTelemetryProperties,
   redactOtelAttributes,
@@ -496,6 +497,23 @@ describe("telemetry redaction", () => {
     expect(bucketLatencyMs(1_700)).toBe("1s_to_2_5s");
     expect(bucketLatencyMs(3_600)).toBe("2_5s_to_5s");
     expect(bucketLatencyMs(8_100)).toBe("over_5s");
+  });
+
+  it("takes nearest-rank latency percentiles", () => {
+    const values = [900, 400.4, 2_500, 700];
+    expect(percentileMs(values, 50)).toBe(700);
+    expect(percentileMs(values, 90)).toBe(2_500);
+    expect(percentileMs(values, 100)).toBe(2_500);
+    expect(percentileMs([1_234.6], 50)).toBe(1_235);
+    expect(percentileMs([], 50)).toBeUndefined();
+    expect(values).toEqual([900, 400.4, 2_500, 700]);
+  });
+
+  it("requires call identifiers and counts on live call latency events", () => {
+    const base = { businessId: "biz_1", deploymentMode: "cloud", properties: { callId: "call_1", channel: "voice", provider: "openai_live" } };
+    expect(validateTelemetryEvent({ ...base, name: "voice.delegation_completed", properties: { ...base.properties, agentMs: 1_800, totalMs: 1_812, failed: false } }).ok).toBe(true);
+    expect(validateTelemetryEvent({ ...base, name: "voice.call_latency_recorded", properties: { ...base.properties, answerCount: 0, delegationCount: 0 } }).ok).toBe(true);
+    expect(validateTelemetryEvent({ ...base, name: "voice.call_latency_recorded" }).missing).toEqual(["answerCount", "delegationCount"]);
   });
 
   it("buckets outbox backlog into stable aggregate ranges", () => {

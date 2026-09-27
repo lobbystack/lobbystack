@@ -53,6 +53,28 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 - `voice.transfer_completed`
 - `voice.snapshot_loaded`
 - `voice.provider_cost_recorded`
+- `voice.delegation_completed`: the worker answered one GPT-Live delegation with the receptionist agent. Carries `agentMs` (agent run time), `totalMs` (from the delegation event to the answer, including the wait for the caller's last words), `tools` (distinct tool names), `toolCount` and `failed`. It never carries the request, the answer or the caller's number.
+- `voice.call_latency_recorded`: one summary per GPT-Live call, sent when the worker stops handling the call. See [GPT-Live call latency](#gpt-live-call-latency).
+
+#### GPT-Live call latency
+
+The worker measures `voice.call_latency_recorded` from the session timeline that the sideband reports, in milliseconds from the start of the OpenAI session. Network delay between OpenAI and the worker doesn't affect these numbers.
+
+GPT-Live sends no speech-started, speech-stopped or input-committed event. The worker takes the end of the caller's turn from the `end_ms` of their last `session.input_transcript.delta`. It takes the start of the receptionist's speech from the `start_ms` of reflected `session.output_audio.delta` events. If the sideband delivers no reflected audio, it uses `session.output_transcript.delta` instead, and `speechTimingSource` says which one it used.
+
+| Property | Meaning |
+| --- | --- |
+| `firstSpeechMs` | When the receptionist first spoke, from the start of the session. |
+| `greetingMs` | Same as `firstSpeechMs`, sent only when the receptionist spoke before the caller. |
+| `greetedFirst` | The receptionist spoke before the caller. |
+| `speechTimingSource` | `audio`, `transcript` or `none`. |
+| `answerCount` | Caller turns the receptionist answered. |
+| `answerP50Ms`, `answerP90Ms`, `answerMaxMs` | Silence between the caller's last transcribed word and the receptionist's answer, as nearest-rank percentiles. |
+| `delegationCount`, `delegationFailedCount` | Delegations answered, and how many of them failed. |
+| `delegationP50TotalMs`, `delegationMaxTotalMs` | `totalMs` of those delegations. |
+| `durationMs` | How long the worker held the call. |
+
+The answer gap skips caller speech that ended while the receptionist was still talking, such as "mm-hmm" or an interruption, and answers that started before the caller finished. The session timeline starts when OpenAI starts the session, so ringing before a phone call is accepted doesn't count toward `greetingMs`.
 
 ### SMS events
 

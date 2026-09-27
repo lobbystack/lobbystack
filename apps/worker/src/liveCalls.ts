@@ -18,6 +18,8 @@ import {
 import { renewVoicePresenceGateway, updateVoicePresence } from "@lobbystack/jobs";
 import OpenAI from "openai";
 
+import { recordLiveCallLatency, recordLiveDelegation } from "./liveCallTelemetry";
+
 export const LIVE_ATTACH_PATH = "/internal/live/attach";
 const MAX_BODY_BYTES = 16 * 1024;
 
@@ -189,6 +191,7 @@ export function createLiveCallHandler(input: { domain: DomainContext }) {
     if (!snapshot) throw new Error("The business has no published snapshot.");
     const phone = request.channel === "voice";
     const call = { businessId: request.businessId, callId: request.callId };
+    const telemetryCall = { ...call, channel: request.channel, ...(request.conversationId ? { conversationId: request.conversationId } : {}) };
     let end: LiveCallEnd | undefined;
     let controller: LiveCallController | undefined;
 
@@ -257,11 +260,15 @@ export function createLiveCallHandler(input: { domain: DomainContext }) {
         end = reason;
         void hangup();
       },
-      onDelegation: (timing) => console.info(JSON.stringify({ event: "live.delegation", sessionId: request.sessionId, agentMs: timing.agentMs, totalMs: timing.totalMs, tools: timing.tools, failed: timing.failed })),
+      onDelegation: (timing) => {
+        console.info(JSON.stringify({ event: "live.delegation", sessionId: request.sessionId, agentMs: timing.agentMs, totalMs: timing.totalMs, tools: timing.tools, failed: timing.failed }));
+        recordLiveDelegation(input.domain, telemetryCall, timing);
+      },
       onClose: (summary) => {
         active.delete(request.sessionId);
         setPresence(request, false);
         console.info(JSON.stringify({ event: "live.closed", sessionId: summary.sessionId, channel: request.channel, durationMs: summary.durationMs, billedSeconds: summary.billedSeconds, closeReason: summary.closeReason, end, delegations: summary.delegations.length }));
+        recordLiveCallLatency(input.domain, telemetryCall, summary);
         const pending = finish(summary).catch(logError(request.sessionId, "finish failed"));
         finishing.add(pending);
         void pending.finally(() => finishing.delete(pending));
