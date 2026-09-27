@@ -100,6 +100,9 @@ export async function recordAffiliateClick(
     const profile = (await tx.select({ id: affiliateProfiles.id, status: affiliateProfiles.status }).from(affiliateProfiles).where(eq(affiliateProfiles.referralCode, referralCode)).limit(1))[0];
     if (!profile || profile.status !== "active") return false;
     if (input.visitorId) {
+      // Serialize concurrent clicks from the same visitor so the 24-hour check
+      // and the insert below act as one step. The lock ends with the transaction.
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`affiliate-click:${profile.id}:${input.visitorId}`}, 0))`);
       const recent = (await tx.select({ id: affiliateClicks.id }).from(affiliateClicks).where(and(eq(affiliateClicks.affiliateProfileId, profile.id), eq(affiliateClicks.visitorId, input.visitorId), gte(affiliateClicks.clickedAt, new Date(Date.now() - CLICK_DEDUPE_MS)))).limit(1))[0];
       if (recent) return false;
     }

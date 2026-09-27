@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { affiliateAttributions, affiliateClicks, affiliateCommissions, affiliatePayoutItems, affiliatePayoutRuns, affiliateProfileStats, affiliateProfiles, businesses, createDatabaseClient, providerEvents, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { attributeBusiness, generateAffiliatePayoutRun, markAffiliatePayoutItemPaid, recordAffiliateClick } from "./affiliates";
@@ -120,6 +120,42 @@ describe.skipIf(!testUrl)("affiliate program against dedicated PostgreSQL roles"
       const [stats] = await tx.select().from(affiliateProfileStats).where(eq(affiliateProfileStats.affiliateProfileId, profile!.id));
       expect(stats?.clickCount).toBe(2);
     });
+  });
+
+  it("counts one click when the same visitor's clicks race", async () => {
+    const userId = randomUUID();
+    const referralCode = `race-${randomUUID().slice(0, 8)}`;
+    await client!.db.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid` });
+    const [profile] = await client!.db.insert(affiliateProfiles).values({ userId, referralCode }).returning();
+    const blocker = await client!.pool.connect();
+    let pending: Promise<PromiseSettledResult<boolean>[]> | undefined;
+    try {
+      // Hold the visitor's lock so both requests queue behind it, then release them together.
+      await blocker.query("begin");
+      await blocker.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [`affiliate-click:${profile!.id}:visitor-race`]);
+      pending = Promise.allSettled([0, 1].map(() => client!.db.transaction(async (tx) => {
+        await tx.execute(sql`set local role lobbystack_app`);
+        return recordAffiliateClick({ db: tx as unknown as Database }, { referralCode, visitorId: "visitor-race" });
+      })));
+      await vi.waitFor(async () => {
+        const result = await blocker.query("select count(*)::int as waiting from pg_locks where locktype = 'advisory' and not granted and database = (select oid from pg_database where datname = current_database())");
+        expect(result.rows[0].waiting).toBe(2);
+      }, { timeout: 3000 });
+      await blocker.query("rollback");
+      const results = await pending;
+      expect(results.map((result) => result.status === "fulfilled" && result.value)).toEqual(expect.arrayContaining([true, false]));
+      expect(await client!.db.select().from(affiliateClicks).where(eq(affiliateClicks.affiliateProfileId, profile!.id))).toHaveLength(1);
+      const [stats] = await client!.db.select().from(affiliateProfileStats).where(eq(affiliateProfileStats.affiliateProfileId, profile!.id));
+      expect(stats?.clickCount).toBe(1);
+    } finally {
+      await blocker.query("rollback");
+      blocker.release();
+      await pending;
+      await client!.db.delete(affiliateClicks).where(eq(affiliateClicks.affiliateProfileId, profile!.id));
+      await client!.db.delete(affiliateProfileStats).where(eq(affiliateProfileStats.affiliateProfileId, profile!.id));
+      await client!.db.delete(affiliateProfiles).where(eq(affiliateProfiles.id, profile!.id));
+      await client!.db.delete(users).where(eq(users.id, userId));
+    }
   });
 
   it("moves a paid referral from pending to eligible to paid", async () => {
