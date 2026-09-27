@@ -5,7 +5,7 @@ import { Footer } from "@/components/Footer"
 import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd } from "@/lib/seo"
 
 const locale = "fr" as const
-const updatedAt = "12 juin 2026"
+const updatedAt = "26 septembre 2026"
 const cookieRows = [
   {
     category: "Nécessaire",
@@ -121,6 +121,9 @@ const cookieRows = [
           <a class="block hover:text-foreground" href="#analytics"
             >Analytique</a
           >
+          <a class="block hover:text-foreground" href="#dashboard"
+            >Tableau de bord et widget</a
+          >
           <a class="block hover:text-foreground" href="#manage">Gérer</a>
           <a class="block hover:text-foreground" href="#changes"
             >Modifications</a
@@ -141,10 +144,10 @@ const cookieRows = [
             technologies ensemble.
           </p>
           <p>
-            Nous utilisons les cookies pour aider ce site à fonctionner,
-            comprendre l'utilisation du service et soutenir nos efforts
-            marketing. Les cookies analytiques et de performance optionnels ne
-            sont utilisés qu'après votre acceptation.
+            Nous utilisons les cookies pour faire fonctionner ce site, le
+            sécuriser et, avec votre consentement, comprendre comment les
+            visiteurs l'utilisent. Nous définissons les cookies analytiques et
+            de performance facultatifs seulement après votre acceptation.
           </p>
         </section>
 
@@ -218,22 +221,50 @@ const cookieRows = [
         <section id="analytics">
           <h2>5. Cookies analytiques et de performance</h2>
           <p>
-            Si vous sélectionnez <strong>Tout accepter</strong>, nous pouvons
-            utiliser PostHog pour comprendre l'utilisation du site, notamment
-            pages vues, interactions, clics CTA, erreurs, usages de
-            fonctionnalités et signaux de performance. La relecture de session
-            est configurée pour masquer les champs de saisie.
+            Avant que vous fassiez un choix, nous comptons les pages vues avec
+            PostHog sans rien enregistrer sur votre appareil. Ce décompte reste
+            dans la mémoire de la page seulement. Il ne crée aucun profil de
+            visiteur, et l'enregistrement de session et le suivi automatique des
+            clics restent désactivés.
+          </p>
+          <p>
+            Si vous sélectionnez <strong>Tout accepter</strong>, PostHog
+            enregistre des identifiants dans des cookies et dans le stockage
+            local pour que nous puissions comprendre comment les visiteurs
+            utilisent le site, notamment les pages vues, les clics, les erreurs,
+            l'utilisation des fonctionnalités et la performance. PostHog
+            enregistre aussi les sessions, en masquant les champs de formulaire
+            et les valeurs désignées comme sensibles.
           </p>
           <p>
             Si vous sélectionnez <strong>Refuser le non essentiel</strong>, nous
-            ne chargeons pas PostHog pour l'analytique du site public et nous ne
-            définissons pas intentionnellement de cookies analytiques depuis le
-            site public.
+            arrêtons PostHog sur le site, effaçons les identifiants qu'il a
+            enregistrés et ne définissons aucun cookie analytique.
+          </p>
+        </section>
+
+        <section id="dashboard">
+          <h2>6. Le tableau de bord et le widget pour sites Web</h2>
+          <p>
+            Lorsque vous vous connectez au tableau de bord LobbyStack, nous
+            définissons des cookies nécessaires qui maintiennent votre session
+            et protègent votre compte. Le tableau de bord utilise l'analytique
+            de produit de PostHog seulement lorsqu'elle est activée dans vos
+            paramètres, et jamais sur les pages désignées comme sensibles.
+          </p>
+          <p>
+            Lorsqu'une entreprise installe le widget de clavardage et d'appel de
+            LobbyStack sur son site Web, le widget enregistre un identifiant de
+            visiteur aléatoire dans le stockage local
+            (<strong>lobbystack.visitorId.*</strong>) pour qu'une conversation
+            puisse se poursuivre d'une page à l'autre. Cette entreprise est
+            responsable des avis ou consentements relatifs aux cookies que son
+            site exige.
           </p>
         </section>
 
         <section id="manage">
-          <h2>6. Gérer les cookies</h2>
+          <h2>7. Gérer les cookies</h2>
           <p>
             Vous pouvez choisir <strong>Tout accepter</strong> ou
             <strong>Refuser le non essentiel</strong> dans la bannière cookies.
@@ -251,7 +282,7 @@ const cookieRows = [
         </section>
 
         <section id="changes">
-          <h2>7. Modifications de cette politique</h2>
+          <h2>8. Modifications de cette politique</h2>
           <p>
             Nous pouvons mettre à jour cette Politique lorsque notre site, nos
             prestataires ou nos pratiques cookies évoluent. La date en haut de
@@ -260,10 +291,10 @@ const cookieRows = [
         </section>
 
         <section id="contact">
-          <h2>8. Nous contacter</h2>
+          <h2>9. Nous contacter</h2>
           <p>
-            Pour toute question sur cette Politique ou nos pratiques de
-            confidentialité, contactez
+            Envoyez vos questions sur cette Politique ou nos pratiques de
+            confidentialité à Lobbystack Inc., à
             <a href="mailto:support@lobbystack.com">support@lobbystack.com</a>.
           </p>
         </section>

@@ -10,8 +10,7 @@ import {
   localizePath,
   type Locale,
 } from "@/i18n"
-
-type LegalKind = "privacy" | "terms"
+import { getLegalDocument, type LegalKind } from "@/lib/legal"
 
 interface Props {
   kind: LegalKind
@@ -24,244 +23,7 @@ const copy = getCopy(locale)
 const basePath = kind === "privacy" ? "/privacy/" : "/terms/"
 const canonicalPath = localizePath(locale, basePath)
 const routeSeo = getRouteSeo({ locale, path: basePath })
-
-const legalCopy = {
-  fr: {
-    privacy: {
-      updated: "Dernière mise à jour : 30 juillet 2026",
-      h1: "Politique de confidentialité",
-      intro:
-        "Cette Politique explique comment Lobbystack Inc. collecte, utilise, divulgue et protège les renseignements personnels lorsque vous visitez notre site, utilisez LobbyStack Cloud, communiquez par appels ou SMS alimentés par LobbyStack, contactez le support ou interagissez avec nos services.",
-      notice:
-        "Avis de langue : cette traduction française est fournie pour faciliter la lecture. En cas de conflit, la version anglaise contrôle, sauf exigence contraire de la loi applicable.",
-      nav: [
-        ["scope", "Portée"],
-        ["collect", "Informations"],
-        ["sms", "Consentement SMS"],
-        ["use", "Utilisation"],
-        ["ai", "Traitement par l’IA"],
-        ["google-oauth-calendar", "Google Agenda"],
-        ["share", "Partage"],
-        ["retention", "Conservation"],
-        ["rights", "Droits"],
-        ["contact", "Contact"],
-      ],
-      sections: [
-        {
-          id: "scope",
-          title: "1. Portée et notre rôle",
-          paragraphs: [
-            "LobbyStack fournit une plateforme de réceptionniste IA pour entreprises couvrant appels, SMS, rendez‑vous, routage, résumés, accueil client, réponses fondées sur la connaissance et flux de travail connexes.",
-            "Nous pouvons traiter des renseignements personnels comme responsable pour notre site, nos comptes, notre facturation, notre sécurité, notre support et nos opérations marketing. Nous pouvons aussi traiter des renseignements pour le compte de clients professionnels qui utilisent LobbyStack avec leurs propres appelants, clients, patients ou prospects.",
-          ],
-        },
-        {
-          id: "collect",
-          title: "2. Informations que nous collectons",
-          paragraphs: [
-            "Nous collectons des informations de compte et d’entreprise, comme noms, adresses courriel, numéros de téléphone, noms d’entreprise, rôles, paramètres, utilisateurs autorisés, préférences de support et contacts de facturation.",
-            "LobbyStack peut traiter numéros de téléphone, identifiants d’appel, métadonnées, enregistrements, transcriptions, résumés, messages SMS, états d’opt-in et opt-out, dossiers de consentement, profils de contacts, rendez‑vous, notes, décisions de routage et résultats d’escalade.",
-            "Les clients peuvent téléverser ou connecter des informations d’entreprise, FAQ, services, prix, horaires, politiques, calendriers, documents, scripts, règles et autres matériaux utilisés pour configurer le réceptionniste IA.",
-            "Si vous arrivez via un lien affilié ou de parrainage, nous pouvons traiter les codes de parrainage, horodatages de clic, pages référentes, identifiants de stockage local ou similaires, attribution d’inscription, dossiers de commission et coordonnées de paiement afin d’exploiter le programme d’affiliation, prévenir les abus, calculer les commissions et conserver les dossiers de paiement.",
-          ],
-        },
-        {
-          id: "sms",
-          title: "3. Consentement SMS et confidentialité des messages",
-          paragraphs: [
-            "LobbyStack prend en charge des SMS opérationnels et conversationnels non marketing, comme réponses aux demandes, confirmations de rendez‑vous, suivis d’appels manqués, rappels, mises à jour de service et messages de support. La fréquence varie. Des frais de message et de données peuvent s’appliquer.",
-            "Les destinataires peuvent répondre STOP pour se désabonner et HELP pour obtenir de l’aide lorsque pris en charge, ou contacter support@lobbystack.com.",
-            "Nous ne vendons, louons ni partageons les données d’opt-in SMS ou de consentement avec des tiers ou affiliés pour leur marketing ou promotion.",
-          ],
-        },
-        {
-          id: "use",
-          title: "4. Comment nous utilisons les informations",
-          paragraphs: [
-            "Nous utilisons les renseignements personnels pour fournir, exploiter, sécuriser, maintenir et améliorer LobbyStack; répondre aux appels; traiter les SMS; produire des résumés; acheminer des demandes; soutenir les rendez‑vous; gérer comptes, authentification, facturation, taxes, plans, usage et support.",
-            "Nous utilisons aussi ces informations pour traiter les opt-in et opt-out, respecter les exigences de télécommunications, prévenir spam, abus, fraude et incidents de sécurité, communiquer sur le service et respecter nos obligations légales, contractuelles, fournisseur, opérateur et comptables.",
-          ],
-        },
-        {
-          id: "ai",
-          title: "5. IA et traitement automatisé",
-          paragraphs: [
-            "LobbyStack peut transmettre des instructions, du contexte d’entreprise, l’audio des appels, des transcriptions, du contenu SMS, des consignes client et des données de flux de travail connexes à des fournisseurs de modèles ou d’infrastructure d’IA afin de produire des réponses, résumés, classifications, décisions de routage ou autres résultats automatisés.",
-            "La version hébergée de LobbyStack utilise actuellement OpenAI Realtime pour les conversations vocales en direct et les fournisseurs d’IA configurés pour la génération de texte non réalisée en temps réel et les incorporations vectorielles. Les résultats de l’IA peuvent être inexacts ou incomplets; les clients professionnels doivent configurer une supervision humaine et des procédures de repli appropriées.",
-          ],
-        },
-        {
-          id: "google-oauth-calendar",
-          title: "5.1 Google OAuth et intégration à Google Agenda",
-          paragraphs: [
-            "Lorsque vous connectez votre compte Google dans LobbyStack, par exemple dans Paramètres → Intégrations, nous utilisons Google OAuth pour accéder à votre compte et gérer la planification dans le calendrier Google que vous sélectionnez.",
-            "Nous utilisons les portées <strong>openid</strong> et <strong>email</strong> pour identifier votre compte connecté, <strong>calendar.calendarlist.readonly</strong> pour afficher les calendriers auxquels vous êtes abonné afin que vous puissiez choisir le calendrier de réservation, et <strong>calendar.events</strong> pour lire les événements afin de calculer les disponibilités ainsi que pour créer, modifier et supprimer les rendez-vous réservés, reportés ou annulés.",
-            "<strong>Données Google auxquelles nous accédons.</strong> Nous accédons aux renseignements liés à votre compte Google, comme votre identifiant et votre adresse courriel lorsqu’ils sont disponibles, ainsi qu’aux données d’événements nécessaires pour calculer les périodes occupées et synchroniser les réservations.",
-            "<strong>Stockage et protection.</strong> Nous stockons dans notre système principal les jetons OAuth nécessaires à la synchronisation et aux réservations. Ces jetons sont chiffrés au repos. Lorsque vous déconnectez Google Agenda, nous supprimons la connexion enregistrée et les événements de rendez-vous que nous avons créés dans le cadre du processus de déconnexion.",
-            "<strong>Traitement par l’IA.</strong> Lorsqu’un réceptionniste IA traite une demande de planification, nous pouvons fournir au fournisseur d’IA configuré le minimum de contexte dérivé nécessaire, par exemple la disponibilité d’une plage horaire et le résultat d’une réservation. Nous ne transmettons pas aux fournisseurs d’IA les titres ou descriptions bruts des événements Google Agenda et nous n’utilisons pas les données utilisateur Google pour entraîner ou améliorer des modèles généraux d’IA ou d’apprentissage automatique.",
-            "<strong>Restrictions.</strong> Nous utilisons les données utilisateur Google uniquement pour fournir et améliorer l’intégration à Google Agenda. Nous ne vendons pas ces données et ne les utilisons pas pour la publicité ciblée ou personnalisée.",
-          ],
-        },
-        {
-          id: "share",
-          title: "6. Comment nous divulguons les informations",
-          paragraphs: [
-            "Nous divulguons les informations seulement lorsque nécessaire, notamment à des fournisseurs de téléphonie, SMS, transporteurs, numéros, modèles IA, traitement vocal, hébergement, base de données, stockage, infrastructure, surveillance, sécurité, paiement, facturation, support, communication, analytique et intégrations connectées.",
-            "Nous pouvons aussi divulguer des informations à des conseillers professionnels, auditeurs, assureurs et autorités légales ou réglementaires lorsque requis.",
-          ],
-        },
-        {
-          id: "retention",
-          title: "7. Conservation et sécurité",
-          paragraphs: [
-            "Nous conservons les informations aussi longtemps que nécessaire pour fournir les services, respecter nos obligations, résoudre les litiges, appliquer les accords, maintenir la sécurité et répondre aux exigences légales.",
-            "Nous utilisons des mesures techniques, administratives et organisationnelles raisonnables pour protéger les informations, notamment contrôle d’accès, journalisation, chiffrement lorsque approprié et restrictions internes.",
-          ],
-        },
-        {
-          id: "rights",
-          title: "8. Vos droits et choix",
-          paragraphs: [
-            'Selon votre lieu, vous pouvez avoir le droit de demander accès, correction, suppression, portabilité, opposition ou limitation de certains traitements. Vous pouvez aussi contrôler certains cookies et communications. Consultez notre <a href="/fr/cookie-policy/">Politique relative aux cookies</a> pour plus de détails.',
-            "Si une entreprise utilise LobbyStack pour communiquer avec vous, contactez d’abord cette entreprise pour les demandes relatives à ses propres pratiques.",
-          ],
-        },
-        {
-          id: "contact",
-          title: "9. Nous contacter",
-          paragraphs: [
-            "Pour toute question sur cette Politique ou nos pratiques de confidentialité, contactez support@lobbystack.com.",
-          ],
-        },
-      ],
-    },
-    terms: {
-      updated: "Dernière mise à jour : 11 mai 2026",
-      h1: "Conditions d’utilisation",
-      intro:
-        "Ces Conditions régissent l’accès et l’utilisation des services hébergés, sites, forfaits payants, support, infrastructure gérée et flux de réceptionniste IA de LobbyStack.",
-      notice:
-        "Avis de langue : cette traduction française est fournie pour faciliter la lecture. En cas de conflit, la version anglaise contrôle, sauf exigence contraire de la loi applicable.",
-      nav: [
-        ["agreement", "Accord"],
-        ["service", "Service"],
-        ["accounts", "Comptes"],
-        ["communications", "SMS et appels"],
-        ["ai", "Limites IA"],
-        ["billing", "Facturation"],
-        ["affiliate-program", "Affiliation"],
-        ["data", "Données"],
-        ["risk", "Risques"],
-        ["law", "Droit"],
-        ["contact", "Contact"],
-      ],
-      sections: [
-        {
-          id: "agreement",
-          title: "1. Acceptation des Conditions",
-          paragraphs: [
-            "Ces Conditions constituent un accord légal entre vous et Lobbystack Inc. En accédant à notre site, en créant un compte, en utilisant le service hébergé, en achetant un forfait ou en activant un module, vous acceptez ces Conditions.",
-            "Si vous utilisez LobbyStack pour une entreprise ou organisation, vous déclarez avoir l’autorité de lier cette entité.",
-          ],
-        },
-        {
-          id: "service",
-          title: "2. Le service LobbyStack",
-          paragraphs: [
-            "LobbyStack est une plateforme de réceptionniste IA pour appels, SMS, réservation, routage, résumés, capture de contacts, base de connaissances, suivis et communications connexes.",
-            "Nous pouvons améliorer, modifier, suspendre ou interrompre des parties du service. Certaines fonctionnalités peuvent être en bêta, limitées par des fournisseurs, des approbations, des plafonds d’usage ou des régions.",
-          ],
-        },
-        {
-          id: "accounts",
-          title: "3. Comptes, utilisateurs et responsabilités client",
-          paragraphs: [
-            "Vous êtes responsable de la sécurité des identifiants, de la gestion des utilisateurs, de l’exactitude des informations de compte et de facturation, et de toute activité sous votre compte.",
-            "Vous êtes responsable de configurer LobbyStack pour votre entreprise, notamment faits, services, prix, horaires, lieux, scripts, règles d’escalade, calendriers, connaissances, numéros de transfert et procédures humaines.",
-          ],
-        },
-        {
-          id: "communications",
-          title: "4. Voix, SMS et conformité télécom",
-          paragraphs: [
-            "Les appels et SMS sont soumis aux règles des transporteurs, lois de télécommunications, lois anti-spam, conditions fournisseurs, enregistrements de campagnes, filtrage, disponibilité des numéros et restrictions d’usage.",
-            "Vous êtes responsable d’obtenir et documenter tous les consentements requis avant d’envoyer des appels ou messages via LobbyStack et de respecter les demandes de retrait.",
-          ],
-        },
-        {
-          id: "ai",
-          title: "5. Limites de l'IA et revue humaine",
-          paragraphs: [
-            "LobbyStack utilise l’intelligence artificielle et l’automatisation. Les sorties IA peuvent être incomplètes, inexactes, retardées ou inadaptées à un usage particulier.",
-            "LobbyStack ne remplace pas les services d’urgence, les conseils professionnels médicaux, juridiques, financiers ou de sécurité, ni le jugement humain pour les situations sensibles.",
-          ],
-        },
-        {
-          id: "billing",
-          title: "6. Forfaits, facturation, taxes et remboursements",
-          paragraphs: [
-            "Les forfaits payants, modules, frais de configuration, frais d’usage, frais mesurés et taxes sont décrits au paiement, dans l’application ou dans une commande applicable.",
-            "Vous nous autorisez, ainsi que notre processeur de paiement, à débiter votre méthode de paiement pour les montants dus. Sauf obligation légale ou accord écrit, les frais ne sont pas remboursables.",
-          ],
-        },
-        {
-          id: "affiliate-program",
-          title: "7. Programme d’affiliation",
-          paragraphs: [
-            "LobbyStack peut offrir un programme d’affiliation permettant aux utilisateurs admissibles de gagner des commissions pour le parrainage de nouveaux clients. Si vous participez au programme d’affiliation, cette section s’applique en plus du reste des Conditions.",
-            "Sauf indication contraire dans le service, les affiliés admissibles gagnent une commission de 20 % sur les paiements admissibles effectués par un client parrainé pendant les 12 premiers mois suivant l’attribution. Les commissions sont soumises à une période de retenue de 30 jours et à un seuil minimum de paiement de 100 USD.",
-            "Les paiements d’affiliation sont effectués via PayPal avec le courriel PayPal enregistré dans le tableau de bord affilié. Les commissions impayées peuvent être annulées, réduites, retenues ou inversées si le paiement sous-jacent est remboursé, contesté, annulé ou autrement inadmissible.",
-            "Les affiliés doivent divulguer clairement qu’ils peuvent recevoir une compensation lorsqu’ils recommandent LobbyStack, et ne doivent pas se parrainer eux-mêmes, créer de faux comptes, utiliser des déclarations trompeuses, envoyer du spam, usurper LobbyStack ou promouvoir le service d’une manière contraire à la loi, aux règles de plateformes ou à ces Conditions.",
-          ],
-        },
-        {
-          id: "data",
-          title: "8. Contenu client, données et propriété intellectuelle",
-          paragraphs: [
-            "Vous conservez la propriété de votre contenu professionnel, données clients, enregistrements, transcriptions, messages, connaissances, rendez‑vous et autres contenus soumis au service.",
-            "Vous accordez à LobbyStack les droits nécessaires pour héberger, traiter, transmettre, afficher, analyser, sécuriser et utiliser ce contenu afin de fournir et améliorer le service.",
-          ],
-        },
-        {
-          id: "risk",
-          title: "9. Allocation des risques",
-          paragraphs: [
-            "Le service est fourni selon les conditions applicables et peut dépendre de réseaux, fournisseurs et intégrations tiers. Vous devez tester et surveiller les flux importants avant utilisation en production.",
-          ],
-        },
-        {
-          id: "law",
-          title: "10. Droit applicable",
-          paragraphs: [
-            "Le droit applicable, les restrictions, limitations et procédures de résolution des litiges sont décrits dans la version anglaise complète des Conditions, qui contrôle sauf exigence contraire de la loi applicable.",
-          ],
-        },
-        {
-          id: "contact",
-          title: "11. Contact",
-          paragraphs: [
-            "Pour toute question, contactez support@lobbystack.com.",
-          ],
-        },
-      ],
-    },
-  },
-} satisfies Record<
-  "fr",
-  Record<
-    LegalKind,
-    {
-      updated: string
-      h1: string
-      intro: string
-      notice: string
-      nav: Array<[string, string]>
-      sections: Array<{ id: string; title: string; paragraphs: string[] }>
-    }
-  >
->
-
-const t = legalCopy.fr[kind]
+const t = getLegalDocument(kind, locale)
 ---
 
 <Layout
@@ -290,7 +52,7 @@ const t = legalCopy.fr[kind]
   }}
 >
   <Navbar locale={locale} />
-  <main id="main-content" class="bg-background text-foreground">
+  <main id="main-content" tabindex="-1" class="bg-background text-foreground">
     <section class="border-b border-border/60">
       <div class="mx-auto max-w-4xl px-6 py-16 md:py-20">
         <p class="text-sm font-medium text-muted-foreground">{t.updated}</p>
@@ -302,9 +64,13 @@ const t = legalCopy.fr[kind]
         >
           {t.intro}
         </p>
-        <p class="mt-4 max-w-3xl text-sm leading-6 text-muted-foreground">
-          {t.notice}
-        </p>
+        {
+          t.notice && (
+            <p class="mt-4 max-w-3xl text-sm leading-6 text-muted-foreground">
+              {t.notice}
+            </p>
+          )
+        }
       </div>
     </section>
 
@@ -312,11 +78,13 @@ const t = legalCopy.fr[kind]
       class="mx-auto grid max-w-6xl gap-10 px-6 py-12 md:grid-cols-[220px_1fr] md:py-16"
     >
       <aside class="hidden md:block">
-        <nav class="sticky top-8 space-y-2 text-sm text-muted-foreground">
+        <nav
+          class="sticky top-8 max-h-[calc(100vh-4rem)] space-y-2 overflow-y-auto pr-2 text-sm text-muted-foreground"
+        >
           {
-            t.nav.map(([id, label]) => (
-              <a class="block hover:text-foreground" href={`#${id}`}>
-                {label}
+            t.sections.map((section) => (
+              <a class="block hover:text-foreground" href={`#${section.id}`}>
+                {section.nav}
               </a>
             ))
           }
@@ -328,9 +96,19 @@ const t = legalCopy.fr[kind]
           t.sections.map((section) => (
             <section id={section.id}>
               <h2>{section.title}</h2>
-              {section.paragraphs.map((paragraph) => (
-                <p set:html={paragraph} />
-              ))}
+              {section.blocks.map((block) =>
+                typeof block === "string" ? (
+                  <p set:html={block} />
+                ) : "h3" in block ? (
+                  <h3 set:html={block.h3} />
+                ) : (
+                  <ul>
+                    {block.ul.map((item) => (
+                      <li set:html={item} />
+                    ))}
+                  </ul>
+                )
+              )}
             </section>
           ))
         }
