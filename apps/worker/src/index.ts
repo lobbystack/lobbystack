@@ -1,4 +1,5 @@
 import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
+import { createCallSummarizer } from "@lobbystack/agent-core";
 import { assertProductionSecrets } from "@lobbystack/config";
 import type { OnboardingFollowupSender } from "@lobbystack/domain";
 import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, isKnownJobType, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
@@ -139,6 +140,7 @@ async function main(): Promise<void> {
   const crawler = createCrawlerProvider();
   const calendar = createCalendarProvider();
   const productAnalytics = createProductAnalytics();
+  const callSummarizer = createCallSummarizer();
   if (embeddings) {
     const embeddingQueue = queues.get("bulk");
     if (embeddingQueue) {
@@ -161,6 +163,7 @@ async function main(): Promise<void> {
     ...(calendar ? { calendar } : {}),
     ...(crawler ? { crawler } : {}),
     ...(productAnalytics ? { productAnalytics } : {}),
+    ...(callSummarizer ? { callSummarizer } : {}),
     ...(email ? { email } : {}),
     ...(onboardingFollowupSender ? { onboardingFollowupSender } : {}),
     ...(embeddings ? { embeddings } : {}),

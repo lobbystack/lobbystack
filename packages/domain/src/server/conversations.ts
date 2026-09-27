@@ -1,21 +1,75 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 
-import { calls, contacts, conversations, conversationSessions, enqueueOutbox, messages, transcripts, widgetVisitors, withBusinessTransaction } from "@lobbystack/db";
+import { businesses, calls, contacts, conversations, conversationSessions, enqueueOutbox, messages, transcripts, widgetVisitors, withBusinessTransaction } from "@lobbystack/db";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import { requireBusinessMembership } from "../authz";
 import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { resolveCallOutcome } from "./callOutcome";
-import { buildConversationSessionSummary, extractCallerContext } from "./conversationSummary";
+import { buildConversationSessionSummary, extractCallerContext, normalizeCallSummaryLocale, sanitizeGeneratedCallerName, type CallSummaryLocale, type ConversationTranscriptTurn, type GeneratedCallSummary } from "./conversationSummary";
 import type { DomainContext } from "./context";
 import { queueOperatorAlertInTransaction, type OperatorNotificationEventKey } from "./notifications";
 import { recordProductEvent } from "./productEvents";
 
-export { buildConversationSessionSummary } from "./conversationSummary";
+export { buildConversationSessionSummary, type CallSummaryLocale, type ConversationTranscriptTurn, type GeneratedCallSummary } from "./conversationSummary";
+
+const FACTUAL_OUTCOME_KINDS = new Set(["booked", "booking_in_progress", "message_taking"]);
+
+export type CallSummaryInput = {
+  conversationId: string;
+  locale: CallSummaryLocale;
+  disposition: string | null;
+  transcript: ConversationTranscriptTurn[];
+  /** False when a booking or message already describes the call; the list shows that instead. */
+  needsSummary: boolean;
+  /** True when the call's contact has no name yet. */
+  needsCallerName: boolean;
+};
+
+/**
+ * Read what the worker needs to write a call summary. Returns undefined when
+ * the call is already finalized or there is nothing a summary would change.
+ */
+export async function loadCallSummaryInput(
+  context: DomainContext,
+  input: { businessId: string; callId: string },
+): Promise<CallSummaryInput | undefined> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const row = (await tx.select({
+      conversationId: calls.conversationId,
+      disposition: calls.disposition,
+      contactId: calls.contactId,
+      contactName: contacts.name,
+      conversationLocale: conversations.locale,
+      currentIntent: conversations.currentIntent,
+      businessLocale: businesses.defaultLocale,
+    }).from(calls)
+      .innerJoin(businesses, eq(businesses.id, calls.businessId))
+      .leftJoin(conversations, and(eq(conversations.id, calls.conversationId), eq(conversations.businessId, calls.businessId)))
+      .leftJoin(contacts, and(eq(contacts.id, calls.contactId), eq(contacts.businessId, calls.businessId)))
+      .where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId)))
+      .limit(1))[0];
+    if (!row?.conversationId) return undefined;
+    const session = (await tx.select({ summaryGeneratedAt: conversationSessions.summaryGeneratedAt, summary: conversationSessions.summary }).from(conversationSessions).where(and(eq(conversationSessions.businessId, input.businessId), eq(conversationSessions.callId, input.callId))).limit(1))[0];
+    if (session?.summaryGeneratedAt) return undefined;
+    const needsSummary = row.currentIntent !== "message_taking" && !FACTUAL_OUTCOME_KINDS.has(resolveCallOutcome({ persisted: session?.summary }).kind);
+    const needsCallerName = Boolean(row.contactId) && !row.contactName?.trim();
+    if (!needsSummary && !needsCallerName) return undefined;
+    const transcript = await tx.select({ speaker: transcripts.speaker, text: transcripts.text }).from(transcripts).where(and(eq(transcripts.businessId, input.businessId), eq(transcripts.callId, input.callId), eq(transcripts.final, true))).orderBy(asc(transcripts.sequence));
+    return {
+      conversationId: row.conversationId,
+      locale: normalizeCallSummaryLocale(row.conversationLocale ?? row.businessLocale),
+      disposition: row.disposition,
+      transcript,
+      needsSummary,
+      needsCallerName,
+    };
+  });
+}
 
 export async function finalizeConversationSession(
   context: DomainContext,
-  input: { businessId: string; callId: string },
+  input: { businessId: string; callId: string; generated?: GeneratedCallSummary | undefined },
 ): Promise<{ sessionId?: string; finalized: boolean }> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const call = (await tx.select({ conversationId: calls.conversationId, contactId: calls.contactId, disposition: calls.disposition, startedAt: calls.startedAt, endedAt: calls.endedAt }).from(calls).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId))).limit(1).for("update"))[0];
@@ -25,15 +79,17 @@ export async function finalizeConversationSession(
     const existing = (await tx.select({ id: conversationSessions.id, summaryGeneratedAt: conversationSessions.summaryGeneratedAt, summary: conversationSessions.summary }).from(conversationSessions).where(and(eq(conversationSessions.businessId, input.businessId), eq(conversationSessions.callId, input.callId))).limit(1))[0];
     if (existing?.summaryGeneratedAt) return { sessionId: existing.id, finalized: false };
     const transcript = await tx.select({ speaker: transcripts.speaker, text: transcripts.text }).from(transcripts).where(and(eq(transcripts.businessId, input.businessId), eq(transcripts.callId, input.callId), eq(transcripts.final, true))).orderBy(asc(transcripts.sequence));
+    const locale = conversation.locale ?? (await tx.select({ defaultLocale: businesses.defaultLocale }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0]?.defaultLocale;
     const callerContext = extractCallerContext(transcript);
+    const callerName = sanitizeGeneratedCallerName(input.generated?.callerName, transcript) ?? callerContext.callerName;
     const factual = resolveCallOutcome({ persisted: existing?.summary });
-    const summary = ["booked", "booking_in_progress", "message_taking"].includes(factual.kind) ? factual : buildConversationSessionSummary({ ...conversation, disposition: call.disposition, transcript });
+    const summary = FACTUAL_OUTCOME_KINDS.has(factual.kind) ? factual : buildConversationSessionSummary({ ...conversation, locale: normalizeCallSummaryLocale(locale), generatedSummary: input.generated?.summary, disposition: call.disposition, transcript });
     const now = call.endedAt ?? new Date();
     const session = existing ?? (await tx.insert(conversationSessions).values({ businessId: input.businessId, conversationId: call.conversationId, callId: input.callId, channel: "voice", status: "open", startedAt: call.startedAt }).onConflictDoNothing({ target: conversationSessions.callId, where: sql`${conversationSessions.callId} is not null` }).returning({ id: conversationSessions.id }))[0];
     if (!session) return { finalized: false };
     await tx.update(conversationSessions).set({ status: "closed", closedAt: now, lastMessageAt: now, summaryGeneratedAt: new Date(), summaryKind: summary.kind, summary, updatedAt: new Date() }).where(and(eq(conversationSessions.id, session.id), eq(conversationSessions.businessId, input.businessId)));
-    if (call.contactId && callerContext.callerName) {
-      await tx.update(contacts).set({ name: callerContext.callerName, updatedAt: new Date() }).where(and(eq(contacts.id, call.contactId), eq(contacts.businessId, input.businessId), sql`${contacts.name} is null`));
+    if (call.contactId && callerName) {
+      await tx.update(contacts).set({ name: callerName, updatedAt: new Date() }).where(and(eq(contacts.id, call.contactId), eq(contacts.businessId, input.businessId), sql`${contacts.name} is null`));
     }
     const summaryText = summary.kind === "summary" ? summary.summary : summary.kind === "message_taking" ? summary.summary : undefined;
     await tx.update(conversations).set({ status: "closed", ...(summaryText ? { summary: summaryText } : {}), revision: sql`${conversations.revision} + 1`, updatedAt: new Date() }).where(and(eq(conversations.id, call.conversationId), eq(conversations.businessId, input.businessId)));

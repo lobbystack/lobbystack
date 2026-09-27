@@ -6,6 +6,7 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 export default defineConfig({
   resolve: {
     alias: {
+      "@lobbystack/agent-core": `${root}/packages/agent-core/src/index.ts`,
       "@lobbystack/ai": `${root}/packages/ai/src/index.ts`,
       "@lobbystack/config": `${root}/packages/config/src/index.ts`,
       "@lobbystack/contracts": `${root}/packages/contracts/src/index.ts`,

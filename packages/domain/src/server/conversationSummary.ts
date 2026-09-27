@@ -19,7 +19,7 @@ function normalizedSummary(value: string | null | undefined): string | undefined
 }
 
 const callerNamePattern = /^(?:(?:hello|hi|hey)[\s,!.-]*)?(?:my name is|this is|i am|i'm|je m'appelle|je suis)\s+([\p{L}][\p{L}'’-]*(?:\s+[\p{L}][\p{L}'’-]*){0,2})(?=$|[.!?,;])/iu;
-const nonReasonPattern = /^(?:hello|hi|hey|yes|no|okay|ok|uh|um|bye|goodbye|thanks|thank you)[\s.!?,;-]*$/iu;
+const nonReasonPattern = /^(?:hello|hi|hey|yes|yeah|yep|no|nope|okay|ok|sure|uh|um|hmm|bye|goodbye|thanks|thank you|bonjour|allô|allo|salut|oui|non|merci|d'accord)[\s.!?,;-]*$/iu;
 
 function bounded(value: string, maximum = 220): string {
   return value.length > maximum ? `${value.slice(0, maximum - 3).trimEnd()}...` : value;
@@ -51,8 +51,60 @@ export function extractCallerContext(transcript: ConversationTranscriptTurn[]): 
   };
 }
 
+export type CallSummaryLocale = "en" | "fr";
+
+export function normalizeCallSummaryLocale(locale: string | null | undefined): CallSummaryLocale {
+  return locale?.trim().toLowerCase().startsWith("fr") ? "fr" : "en";
+}
+
+/** A model-written summary and caller name, before the domain validates them. */
+export type GeneratedCallSummary = {
+  summary?: string | null;
+  callerName?: string | null;
+};
+
+const MAX_GENERATED_SUMMARY_LENGTH = 200;
+const callerNameShape = /^[\p{L}][\p{L}'’.-]*(?:\s+[\p{L}][\p{L}'’.-]*){0,3}$/u;
+const placeholderNames = new Set(["unknown", "caller", "customer", "client", "inconnu", "anonyme", "anonymous", "none", "null"]);
+
+function foldForComparison(value: string): string {
+  return value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+}
+
+function callerWords(transcript: ConversationTranscriptTurn[]): Set<string> {
+  const words = new Set<string>();
+  for (const turn of transcript) {
+    if (turn.speaker !== "caller" && turn.speaker !== "user") continue;
+    for (const word of foldForComparison(turn.text).split(/[^\p{L}'’-]+/u)) {
+      if (word) words.add(word);
+    }
+  }
+  return words;
+}
+
+/** Accept a model-written summary only as one bounded line. */
+export function sanitizeGeneratedSummary(value: string | null | undefined): string | undefined {
+  const normalized = normalizedSummary(value)?.replace(/^["'“”«»\s]+|["'“”«»\s]+$/gu, "");
+  if (!normalized) return undefined;
+  return bounded(normalized, MAX_GENERATED_SUMMARY_LENGTH);
+}
+
+/**
+ * Accept a model-extracted caller name only when it looks like a name and the
+ * caller spoke every word of it, so a model cannot invent or embellish one.
+ */
+export function sanitizeGeneratedCallerName(value: string | null | undefined, transcript: ConversationTranscriptTurn[]): string | undefined {
+  const name = normalizedSummary(value);
+  if (!name || name.length > 60 || !callerNameShape.test(name) || placeholderNames.has(foldForComparison(name))) return undefined;
+  const spoken = callerWords(transcript);
+  const nameWords = foldForComparison(name).split(/\s+/u).map((word) => word.replace(/\.+$/u, ""));
+  return nameWords.every((word) => spoken.has(word)) ? name : undefined;
+}
+
 export function buildConversationSessionSummary(input: {
   locale?: string | null;
+  /** A model-written summary of this call; it replaces the transcript heuristic. */
+  generatedSummary?: string | null | undefined;
   currentIntent?: string | null;
   conversationSummary?: string | null;
   disposition?: string | null;
@@ -61,6 +113,10 @@ export function buildConversationSessionSummary(input: {
   const existingSummary = normalizedSummary(input.conversationSummary);
   if (input.currentIntent === "message_taking") {
     return { kind: "message_taking", ...(existingSummary ? { summary: existingSummary } : {}) };
+  }
+  const generatedSummary = sanitizeGeneratedSummary(input.generatedSummary);
+  if (generatedSummary) {
+    return { kind: "summary", summary: generatedSummary };
   }
   if (existingSummary) {
     return { kind: "summary", summary: existingSummary };
