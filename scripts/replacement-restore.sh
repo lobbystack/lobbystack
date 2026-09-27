@@ -73,7 +73,7 @@ fi
 
 while IFS= read -r service; do
   case "$service" in
-    admin|worker|voice-gateway) RUNNING_WRITERS+=("$service") ;;
+    admin|worker) RUNNING_WRITERS+=("$service") ;;
   esac
 done < <("${COMPOSE[@]}" ps --services --filter status=running)
 

@@ -34,7 +34,6 @@ Required environment:
 | --- | --- |
 | `ADMIN_BASE_URL` | Non-local admin origin for health checks. |
 | `WORKER_BASE_URL` | Non-local worker origin for health checks. |
-| `VOICE_BASE_URL` | Non-local voice-gateway origin for health checks. |
 | `PERFORMANCE_SESSION_COOKIE` | Authenticated operator session; never logged. |
 | `PERFORMANCE_DEPLOYMENT_ID` | Deployed revision identity for the run. |
 | `PERFORMANCE_SOAK_SECONDS` | Integer minimum of `1800`. |
@@ -50,7 +49,6 @@ environment variable so the soak is authenticated.
 PERFORMANCE_SESSION_COOKIE=... PERFORMANCE_DEPLOYMENT_ID=... PERFORMANCE_SOAK_SECONDS=1800 \
 ADMIN_BASE_URL=https://admin.certification.example \
 WORKER_BASE_URL=https://worker.certification.example \
-VOICE_BASE_URL=https://voice.certification.example \
 pnpm exec tsx --tsconfig tsconfig.base.json scripts/performance/soak-certification.ts \
   --config ./soak-config.json --output /tmp/soak-output --evidence /restricted/soak-evidence.json
 ```
@@ -89,8 +87,7 @@ pnpm exec tsx --tsconfig tsconfig.base.json scripts/operations/alert-firing-smok
   --confirmed-recovery=ReplacementOutboxDeadLettered,ReplacementWorkerJobFailures,ReplacementOutboxDispatcherUnavailable
 ```
 
-Heartbeat and liveness absence checks (`ops.voice.heartbeat`,
-`ops.service.health_check`) belong in Product Analytics absence alerts, because Error
+Liveness absence checks (`ops.service.health_check`) belong in Product Analytics absence alerts, because Error
 Tracking cannot notify on an event that never arrived. See
 [provider-failure error tracking](../telemetry/provider-failure-error-tracking.md).
 

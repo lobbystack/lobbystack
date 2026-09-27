@@ -1,8 +1,8 @@
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, ne, sql } from "drizzle-orm";
 import { assertCertificationCalendar } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
-import { appointments, calendarBusyBlocks, calendarConnections, enqueueOutbox, staff, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, auditLogs, calendarBusyBlocks, calendarConnections, enqueueOutbox, staff, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
@@ -121,6 +121,38 @@ export async function upsertBusyBlocks(
   });
 }
 
+// Bookings made while no calendar covered them were marked not_required and never
+// reach the calendar on their own. Queue them once a covering calendar syncs.
+export async function queueUnsyncedAppointmentSyncs(
+  context: DomainContext,
+  input: { businessId: string; connectionId: string; now?: Date },
+): Promise<number> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const [connection] = await tx.select({ staffId: calendarConnections.staffId, selectedCalendarId: calendarConnections.selectedCalendarId, status: calendarConnections.status }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId))).limit(1);
+    if (!connection?.selectedCalendarId || connection.status === "disconnected") return 0;
+    const pending = await tx.select({ id: appointments.id }).from(appointments).where(and(
+      eq(appointments.businessId, input.businessId),
+      eq(appointments.status, "confirmed"),
+      eq(appointments.calendarSyncState, "not_required"),
+      isNull(appointments.calendarExternalId),
+      gt(appointments.endsAt, input.now ?? new Date()),
+      ...(connection.staffId ? [eq(appointments.staffId, connection.staffId)] : []),
+    ));
+    for (const appointment of pending) {
+      await enqueueOutbox(tx, {
+        topic: "calendar.syncAppointment",
+        businessId: input.businessId,
+        aggregateType: "appointment",
+        aggregateId: appointment.id,
+        // One backfill per connection, so a booking the sync job still skips is not requeued every reconcile.
+        dedupeKey: `appointment:${appointment.id}:calendar:backfill:${input.connectionId}`,
+        payload: { appointmentId: appointment.id, action: "backfill" },
+      });
+    }
+    return pending.length;
+  });
+}
+
 export async function updateAppointmentSyncState(
   context: DomainContext,
   input: { businessId: string; appointmentId: string; state: string; externalEventId?: string; error?: string },
@@ -174,7 +206,8 @@ export async function disconnectCalendar(
 ): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    await tx.update(calendarConnections).set({ status: "disconnected", encryptedAccessToken: null, encryptedRefreshToken: null, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId)));
+    const disconnected = await tx.update(calendarConnections).set({ status: "disconnected", encryptedAccessToken: null, encryptedRefreshToken: null, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"))).returning({ id: calendarConnections.id, provider: calendarConnections.provider });
+    if (disconnected[0]) await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "calendar_connection.disconnected", entityType: "calendar_connection", entityId: disconnected[0].id, payload: { provider: disconnected[0].provider } });
     await tx.delete(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.connectionId, input.connectionId), eq(calendarBusyBlocks.businessId, input.businessId)));
   });
 }

@@ -91,6 +91,27 @@ export class TwilioProvider {
     };
   }
 
+  /**
+   * Finds the Twilio call behind a call that reached GPT-Live over the SIP
+   * trunk. Twilio records that leg as `trunking-originating`, addressed to the
+   * OpenAI SIP URI rather than the dialled number, so match the caller, the
+   * trunk, and the start time closest to `near`.
+   */
+  async findTrunkCall(input: { trunkSid: string; from?: string; near: Date; windowMs?: number }): Promise<string | undefined> {
+    const windowMs = input.windowMs ?? 2 * 60_000;
+    const after = new Date(input.near.getTime() - windowMs);
+    const before = new Date(input.near.getTime() + windowMs);
+    const calls = await this.client.calls.list({ ...(input.from ? { from: input.from } : {}), startTimeAfter: after, startTimeBefore: before, limit: 50 });
+    let best: { sid: string; distance: number } | undefined;
+    for (const call of calls) {
+      if (!call.startTime || call.direction !== "trunking-originating" || call.trunkSid !== input.trunkSid) continue;
+      const distance = Math.abs(call.startTime.getTime() - input.near.getTime());
+      if (distance > windowMs) continue;
+      if (!best || distance < best.distance) best = { sid: call.sid, distance };
+    }
+    return best?.sid;
+  }
+
   async getCallPricing(input: { providerCallId: string }): Promise<TwilioCallPricing> {
     const call = await this.client.calls(input.providerCallId).fetch();
     const providerPrice = finiteNumber(call.price);
@@ -162,10 +183,10 @@ export class TwilioProvider {
       .filter((number) => number.capabilities.sms && number.capabilities.voice);
   }
 
-  async purchasePhoneNumber(input: { e164: string; friendlyName: string; smsUrl: string; voiceUrl: string; statusCallbackUrl: string }): Promise<{ providerPhoneId: string; e164: string; smsUrl?: string; voiceUrl?: string }> {
+  async purchasePhoneNumber(input: { e164: string; friendlyName: string; smsUrl: string; statusCallbackUrl: string }): Promise<{ providerPhoneId: string; e164: string; smsUrl?: string }> {
     assertCertificationOperationAllowed();
-    const number = await this.client.incomingPhoneNumbers.create({ phoneNumber: input.e164, friendlyName: input.friendlyName, smsUrl: input.smsUrl, smsMethod: "POST", voiceUrl: input.voiceUrl, voiceMethod: "POST", statusCallback: input.statusCallbackUrl, statusCallbackMethod: "POST" });
-    return { providerPhoneId: number.sid, e164: number.phoneNumber, ...(number.smsUrl ? { smsUrl: number.smsUrl } : {}), ...(number.voiceUrl ? { voiceUrl: number.voiceUrl } : {}) };
+    const number = await this.client.incomingPhoneNumbers.create({ phoneNumber: input.e164, friendlyName: input.friendlyName, smsUrl: input.smsUrl, smsMethod: "POST", statusCallback: input.statusCallbackUrl, statusCallbackMethod: "POST" });
+    return { providerPhoneId: number.sid, e164: number.phoneNumber, ...(number.smsUrl ? { smsUrl: number.smsUrl } : {}) };
   }
 
   async findOwnedPhoneNumber(input: { e164: string }): Promise<{ providerPhoneId: string; e164: string; friendlyName?: string } | null> {
@@ -184,17 +205,5 @@ export class TwilioProvider {
     const number = await this.client.incomingPhoneNumbers(input.providerPhoneId).fetch();
     if (number.trunkSid === input.trunkSid) return;
     await this.client.trunking.v1.trunks(input.trunkSid).phoneNumbers.create({ phoneNumberSid: input.providerPhoneId });
-  }
-
-  /** Returns the number to its own voice URL (the voice gateway). */
-  async removeNumberFromSipTrunk(input: { trunkSid: string; providerPhoneId: string }): Promise<void> {
-    assertCertificationOperationAllowed();
-    await this.client.trunking.v1.trunks(input.trunkSid).phoneNumbers(input.providerPhoneId).remove();
-  }
-
-  async transferCall(input: { callSid: string; destination: string; twimlUrl: string }): Promise<void> {
-    assertCertificationRecipient("phone", input.destination);
-    await this.client.calls(input.callSid).update({ url: input.twimlUrl, method: "POST" });
-    void input.destination;
   }
 }

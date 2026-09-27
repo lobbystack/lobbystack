@@ -1,13 +1,15 @@
-// LobbyStack self-hosted template project. Railway generates the public template from this project.
-// Secrets are generated once with `railway variable set` and kept with preserve(); `randomString()`
-// in the SDK is a public hash of the environment name, so it must never produce a secret.
+// Declares the published LobbyStack template (railway.com/deploy/lobbystack). Railway's CLI and
+// API can't apply to a template, so make each change in the dashboard template editor and keep
+// this file in step with it. In the template, generated secrets use ${{secret(64)}}; preserve()
+// marks them here. `randomString()` in the SDK is a public hash, so it must never produce a secret.
 import { bucket, defineRailway, github, preserve, project, service, volume } from "railway/iac";
 
-const TEMPLATE_PROJECT_ID = "c2e1d45e-9a95-4292-a304-a5456bd0cbdd";
+const TEMPLATE_ID = "c85ce52d-09f7-434e-a3ee-be1da2755622";
 
 export default defineRailway((ctx) => {
-  if (ctx.projectId !== TEMPLATE_PROJECT_ID || ctx.environment !== "production") {
-    throw new Error("This infrastructure definition manages only the lobbystack-template production environment.");
+  // A template ID never matches a linked project, so `railway config apply` always stops here.
+  if (ctx.projectId !== TEMPLATE_ID) {
+    throw new Error(`This file declares Railway template ${TEMPLATE_ID}. Change the template in the dashboard template editor.`);
   }
   const repo = github("lobbystack/lobbystack", { branch: "main", checkSuites: true });
   const region = "us-east4-eqdc4a";
@@ -53,7 +55,6 @@ export default defineRailway((ctx) => {
   const redisUrl = "redis://default:${{Redis.REDIS_PASSWORD}}@${{Redis.RAILWAY_PRIVATE_DOMAIN}}:6379";
 
   const adminOrigin = "https://${{admin.RAILWAY_PUBLIC_DOMAIN}}";
-  const voiceOrigin = "https://${{voice-gateway.RAILWAY_PUBLIC_DOMAIN}}";
   const s3 = {
     STORAGE_PROVIDER: "s3",
     S3_BUCKET: "${{lobbystack-template.BUCKET}}",
@@ -96,7 +97,7 @@ export default defineRailway((ctx) => {
     },
   });
 
-  // admin owns the shared application secrets; worker and voice-gateway reference them.
+  // admin owns the shared application secrets; worker references them.
   const admin = service("admin", {
     source: repo,
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.admin", watchPatterns: [...sharedWatchPatterns, "/apps/admin/**", "/scripts/copy-widget-embed.mjs", "/Dockerfile.admin"] },
@@ -115,10 +116,14 @@ export default defineRailway((ctx) => {
       AUTH_TRUSTED_ORIGINS: adminOrigin,
       BETTER_AUTH_USE_SECURE_COOKIES: "true",
       REQUIRE_EMAIL_VERIFICATION: "false",
+      SEND_VERIFICATION_EMAIL_ON_SIGNUP: "false",
       WIDGET_KEY_ISSUANCE_ENABLED: "false",
-      // GPT-Live answers browser calls; the worker runs each call.
+      // GPT-Live answers browser and phone calls; the worker runs each call.
       LIVE_PROTOTYPE_ENABLED: "true",
       WORKER_INTERNAL_URL: "http://${{worker.RAILWAY_PRIVATE_DOMAIN}}:3002",
+      // Optional user input for phone calls: the secret of the OpenAI webhook
+      // that points at /api/webhooks/openai/live. See docs/voice/runtime.md.
+      OPENAI_WEBHOOK_SECRET: preserve(),
       TWILIO_SMS_WEBHOOK_URL: `${adminOrigin}/api/webhooks/twilio/sms`,
       TWILIO_STATUS_CALLBACK_URL: `${adminOrigin}/api/webhooks/twilio/status`,
       // Other role URLs are built from DATABASE_URL and the role passwords (packages/db roleDatabaseUrl).
@@ -152,6 +157,10 @@ export default defineRailway((ctx) => {
       ...providers,
       PORT: "3002",
       LIVE_PROTOTYPE_ENABLED: "true",
+      // Optional user input for phone calls: the Twilio Elastic SIP trunk that
+      // sends calls to OpenAI. New numbers can't be provisioned without it.
+      // See docs/voice/runtime.md.
+      TWILIO_SIP_TRUNK_SID: preserve(),
       APP_BASE_URL: adminOrigin,
       TWILIO_STATUS_CALLBACK_URL: `${adminOrigin}/api/webhooks/twilio/status`,
       DATABASE_URL: roleUrl("lobbystack_worker", "LOBBYSTACK_WORKER_PASSWORD"),
@@ -163,31 +172,7 @@ export default defineRailway((ctx) => {
     },
   });
 
-  const voiceGateway = service("voice-gateway", {
-    source: repo,
-    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.voice-gateway", watchPatterns: [...sharedWatchPatterns, "/apps/voice-gateway/**", "/Dockerfile.voice-gateway"] },
-    healthcheck: "/health/ready",
-    healthcheckTimeout: 300,
-    replicas: { [region]: 1 },
-    deploy: { restartPolicyMaxRetries: 3 },
-    env: {
-      ...runtime,
-      ...providers,
-      PORT: "3001",
-      // Do not trust all forwarded-for hops. Railway's controlled ingress
-      // overwrites x-real-ip, which the gateway opts into below.
-      VOICE_GATEWAY_TRUST_PROXY: "false",
-      TRUSTED_CLIENT_IP_HEADER: "x-real-ip",
-      APP_BASE_URL: adminOrigin,
-      VOICE_GATEWAY_BASE_URL: voiceOrigin,
-      BACKEND_INTERNAL_URL: "http://${{admin.RAILWAY_PRIVATE_DOMAIN}}:3000",
-      WEB_CALL_ALLOWED_ORIGINS: adminOrigin,
-      INTERNAL_SERVICE_SECRET: "${{admin.INTERNAL_SERVICE_SECRET}}",
-      INTERNAL_SERVICE_TOKEN: "${{admin.INTERNAL_SERVICE_TOKEN}}",
-    },
-  });
-
   return project("lobbystack-template", {
-    resources: [Postgres, Redis, migrate, admin, worker, voiceGateway, postgresVolume, redisVolume, storage],
+    resources: [Postgres, Redis, migrate, admin, worker, postgresVolume, redisVolume, storage],
   });
 });

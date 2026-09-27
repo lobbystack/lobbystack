@@ -30,25 +30,11 @@ if deployments:
 }
 
 start() {
-  local service="$1" optional="${2:-}" previous_id new_id status output redeploy_status waited=0
+  local service="$1" previous_id new_id status waited=0
   previous_id="$(latest_deployment "$service" | cut -d' ' -f1)"
 
   echo "Starting ${service}..."
-  set +e
-  output="$(railway_for service redeploy --service "$service" --from-source --yes 2>&1)"
-  redeploy_status=$?
-  set -e
-
-  if [ "$redeploy_status" -ne 0 ]; then
-    if [ "$optional" = optional ] &&
-      printf '%s' "$output" | grep -q "Service '${service}' not found"; then
-      echo "  ${service}: not in ${ENVIRONMENT}, skipped"
-      return 0
-    fi
-    echo "  ${service}: redeploy failed" >&2
-    printf '%s\n' "$output" >&2
-    return 1
-  fi
+  railway_for service redeploy --service "$service" --from-source --yes >/dev/null
 
   # Poll the deployment this run created, not whatever was there before.
   while [ "$waited" -lt "$DEPLOY_TIMEOUT_SECONDS" ]; do
@@ -85,9 +71,6 @@ start migrator
 
 start admin
 start worker
-# .railway/railway.ts declares voice-gateway, but staging can lack it until
-# the definition is next applied.
-start voice-gateway optional
 
 echo
 echo "Staging is up."

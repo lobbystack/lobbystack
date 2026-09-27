@@ -54,6 +54,9 @@ const MAX_ANSWER_CHARS = 1_200;
 // The caller's last words can arrive just after the delegation event.
 const TRANSCRIPT_WAIT_MS = 300;
 const GREETING_FALLBACK_MS = 1_500;
+// How long to wait for the receptionist to start speaking after a fallback
+// greeting before deciding GPT-Live ignored it.
+const GREETING_CONFIRM_MS = 1_500;
 const FALLBACK_ANSWER = "Sorry, I couldn't check that just now. Offer to take a message so the team can follow up.";
 
 /**
@@ -86,24 +89,42 @@ export class LiveCallController {
     // first is an instruction sent after session.started. The sideband replays
     // the last 3 seconds, so a late attach still sees the event.
     socket.on("session.started", () => {
+      this.started = true;
       this.options.onStarted?.();
-      this.sendGreeting();
+      if (!this.fallbackGreetingSent) {
+        this.sendGreeting();
+        return;
+      }
+      // The fallback greeting may have been ignored (sent before the session
+      // started) or accepted (session.started was only replayed late). If it
+      // was accepted, the receptionist starts speaking soon; greet again only
+      // if nobody has spoken by then.
+      this.greetingRetryTimer = setTimeout(() => this.sendGreeting(), GREETING_CONFIRM_MS);
     });
     this.resetSilenceTimer();
     if (this.options.maxDurationMs) this.durationTimer = setTimeout(() => this.options.onTimeout?.("duration_limit"), this.options.maxDurationMs);
     // If we attached after the replay window, session.started never arrives.
     // Greet anyway unless the caller has already started talking.
     setTimeout(() => {
-      if (!this.turns.some((turn) => turn.role === "caller")) this.sendGreeting();
+      if (!this.started && !this.turns.some((turn) => turn.role === "caller")) this.sendGreeting();
     }, GREETING_FALLBACK_MS);
   }
 
-  private greeted = false;
+  private started = false;
+  // GPT-Live ignores a greeting that arrives before the session starts, which
+  // the fallback can send on a slow connection. So the fallback and
+  // session.started each get one try, and session.started only greets again
+  // if nobody has spoken.
+  private fallbackGreetingSent = false;
+  private startedGreetingSent = false;
+  private greetingRetryTimer: ReturnType<typeof setTimeout> | undefined;
 
   private sendGreeting(): void {
     const greeting = this.options.greeting?.trim();
-    if (this.greeted || !greeting) return;
-    this.greeted = true;
+    if (!greeting || this.turns.length > 0) return;
+    if (this.started ? this.startedGreetingSent : this.fallbackGreetingSent) return;
+    if (this.started) this.startedGreetingSent = true;
+    else this.fallbackGreetingSent = true;
     this.socket?.send({
       type: "session.instructions.append",
       delegation_id: null,
@@ -234,6 +255,7 @@ export class LiveCallController {
     if (!sessionClosed) this.sessionEnded = this.options.client.live.sessions.hangup(this.options.sessionId).then(() => undefined, () => undefined);
     clearTimeout(this.silenceTimer);
     clearTimeout(this.durationTimer);
+    clearTimeout(this.greetingRetryTimer);
     this.abort.abort();
     this.socket?.close({ code: 1000, reason: "session finished" });
     this.emitFinishedTurns(true);

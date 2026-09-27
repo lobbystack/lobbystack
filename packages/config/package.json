@@ -1,6 +1,6 @@
 {
   "name": "@lobbystack/config",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "main": "./dist/config/src/index.js",
@@ -12,7 +12,6 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@lobbystack/shared": "workspace:*",
-    "zod": "^3.24.2"
+    "@lobbystack/shared": "workspace:*"
   }
 }

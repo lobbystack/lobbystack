@@ -56,6 +56,9 @@ export default defineRailway((ctx) => {
       // GPT-Live calls: the admin hands each call to the worker with this token.
       INTERNAL_SERVICE_TOKEN: preserve(),
       LIVE_PROTOTYPE_ENABLED: "true",
+      // New phone numbers join this Twilio Elastic SIP trunk, which sends their
+      // calls to GPT-Live. Provisioning fails without it.
+      TWILIO_SIP_TRUNK_SID: preserve(),
       FEEDBACK_TO_EMAIL: preserve(),
       ONBOARDING_FOLLOWUP_FROM: preserve(),
       ONBOARDING_FOLLOWUP_SENDER_NAME: preserve(),
@@ -100,55 +103,6 @@ export default defineRailway((ctx) => {
       ...(production ? { LOBBYSTACK_MAINTENANCE_MODE: preserve() } : {}),
     },
   });
-  const voiceGateway = service("voice-gateway", {
-    source: productionSource,
-    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.voice-gateway", watchPatterns: [...sharedWatchPatterns, "/apps/voice-gateway/**", "/Dockerfile.voice-gateway"] },
-    healthcheck: "/health/ready",
-    healthcheckTimeout: 300,
-    replicas: { "us-east4-eqdc4a": 1 },
-    // Serverless (app sleeping): preserve the staging setting; production stays always-on.
-    deploy: { restartPolicyMaxRetries: 3, ...(production ? {} : { sleepApplication: true }) },
-    env: {
-      ...observability,
-      APP_BASE_URL: preserve(),
-      BACKEND_INTERNAL_URL: preserve(),
-      DASHBOARD_TEST_CALL_TOKEN: preserve(),
-      DEPLOYMENT_MODE: preserve(),
-      INTERNAL_SERVICE_SECRET: preserve(),
-      INTERNAL_SERVICE_TOKEN: preserve(),
-      OPENAI_API_KEY: preserve(),
-      TWILIO_ACCOUNT_SID: preserve(),
-      TWILIO_AUTH_TOKEN: preserve(),
-      NODE_ENV: "production",
-      PORT: preserve(),
-      REDIS_PREFIX: preserve(),
-      REDIS_URL: preserve(),
-      VOICE_GATEWAY_BASE_URL: preserve(),
-      // Railway's controlled ingress overwrites x-real-ip with the remote
-      // client, so opt into that single-value header instead of trusting all
-      // forwarded-for hops. VOICE_GATEWAY_TRUST_PROXY stays false.
-      TRUSTED_CLIENT_IP_HEADER: "x-real-ip",
-      WEB_CALL_ALLOWED_ORIGINS: preserve(),
-      // The landing page demo call sends no signed token; the gateway only
-      // accepts it for this public business slug.
-      WEB_CALL_PUBLIC_BUSINESS_SLUG: production ? "lobbystack-mp35s9y1" : "lobbystack-qa-motd3txq",
-      POSTHOG_KEY: preserve(),
-      POSTHOG_HOST: preserve(),
-      POSTHOG_PRIVACY_MODE: preserve(),
-      OPENAI_REALTIME_MODEL: preserve(),
-      VOICE_VAD_SILENCE_MS: preserve(),
-      ...(production
-        ? {
-            S3_ACCESS_KEY_ID: preserve(),
-            S3_BUCKET: preserve(),
-            S3_ENDPOINT: preserve(),
-            S3_FORCE_PATH_STYLE: preserve(),
-            S3_REGION: preserve(),
-            S3_SECRET_ACCESS_KEY: preserve(),
-          }
-        : {}),
-    },
-  });
   const admin = service("admin", {
     source: productionSource,
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.admin", watchPatterns: [...sharedWatchPatterns, "/apps/admin/**", "/scripts/copy-widget-embed.mjs", "/Dockerfile.admin"] },
@@ -181,7 +135,6 @@ export default defineRailway((ctx) => {
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: preserve(),
       NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN: preserve(),
       NEXT_PUBLIC_POSTHOG_HOST: preserve(),
-      NEXT_PUBLIC_WEB_CALL_ENDPOINT: preserve(),
       // The landing page's demo call starts at /api/voice/live/session with no
       // signed token; the admin only accepts it for this business, from these sites.
       WEB_CALL_PUBLIC_BUSINESS_SLUG: production ? "lobbystack-mp35s9y1" : "lobbystack",
@@ -231,11 +184,11 @@ export default defineRailway((ctx) => {
       LOBBYSTACK_FINANCE_EXPORT_DATABASE_URL: preserve(),
       NEXT_PUBLIC_POSTHOG_KEY: preserve(),
       POSTHOG_SOURCEMAP_API_KEY: preserve(),
-      // GPT-Live browser calls. Phone calls reach GPT-Live only in staging so
-      // far; production numbers stay on the voice gateway until they move.
+      // GPT-Live answers browser and phone calls. OpenAI signs its incoming-call
+      // webhook with OPENAI_WEBHOOK_SECRET. See docs/voice/runtime.md.
       LIVE_PROTOTYPE_ENABLED: "true",
       WORKER_INTERNAL_URL: "http://worker.railway.internal:3002",
-      ...(production ? {} : { OPENAI_WEBHOOK_SECRET: preserve() }),
+      OPENAI_WEBHOOK_SECRET: preserve(),
       ...(production ? { LOBBYSTACK_MAINTENANCE_MODE: preserve() } : {}),
     },
   });
@@ -277,6 +230,6 @@ export default defineRailway((ctx) => {
   });
 
   return project("lobbystack", {
-    resources: [Redis, worker, voiceGateway, admin, Postgres, migrator, postgresVolume, ...redisVolumes, parityCertification],
+    resources: [Redis, worker, admin, Postgres, migrator, postgresVolume, ...redisVolumes, parityCertification],
   });
 });

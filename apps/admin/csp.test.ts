@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import nextConfig from "./next.config";
 import { proxy } from "./proxy";
 
-import { posthogSources, recordingStorageSource, webCallConnectSource } from "./csp";
+import { posthogSources, recordingStorageSource } from "./csp";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -52,7 +52,7 @@ describe("recordingStorageSource", () => {
   });
 });
 
-describe("webCallConnectSource", () => {
+describe("posthogSources", () => {
   it("allows the configured PostHog proxy alongside PostHog's own hosts", () => {
     expect(posthogSources({ NEXT_PUBLIC_POSTHOG_HOST: "https://ts.lobbystack.com" })).toEqual([
       "https://ts.lobbystack.com",
@@ -63,22 +63,5 @@ describe("webCallConnectSource", () => {
   it("falls back to PostHog hosts for missing or malformed values", () => {
     expect(posthogSources({})).toEqual(["https://*.posthog.com"]);
     expect(posthogSources({ NEXT_PUBLIC_POSTHOG_HOST: "not a url" })).toEqual(["https://*.posthog.com"]);
-  });
-
-  it("allows only the configured web-call origin", () => {
-    expect(
-      webCallConnectSource({
-        NEXT_PUBLIC_WEB_CALL_ENDPOINT:
-          "http://localhost:3001/web-call/sessions",
-      }),
-    ).toBe("http://localhost:3001");
-  });
-
-  it("does not add malformed or same-origin relative values", () => {
-    expect(
-      webCallConnectSource({
-        NEXT_PUBLIC_WEB_CALL_ENDPOINT: "/api/voice",
-      }),
-    ).toBeUndefined();
   });
 });

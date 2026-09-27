@@ -15,6 +15,7 @@ const posthogMock = {
 }
 
 vi.mock("posthog-js", () => ({ default: posthogMock }))
+vi.mock("@/lib/session-recorder", () => ({}))
 
 function stubBrowser(storedConsent: string | null) {
   const values = new Map<string, string>()
@@ -100,8 +101,18 @@ describe("startup mode", () => {
     expect(posthogMock.init.mock.calls[0]![1]).toMatchObject({
       persistence: "localStorage+cookie",
       autocapture: true,
-      disable_session_recording: false,
     })
+    await vi.waitFor(() =>
+      expect(posthogMock.startSessionRecording).toHaveBeenCalledTimes(1)
+    )
+  })
+
+  it("does not record an undecided visitor", async () => {
+    stubBrowser(null)
+    await loadModule()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(posthogMock.startSessionRecording).not.toHaveBeenCalled()
   })
 
   it("collects nothing after an explicit decline", async () => {
@@ -125,6 +136,19 @@ describe("upgrading on accept", () => {
     expect(posthogMock.set_config).toHaveBeenCalledWith(
       expect.objectContaining({ persistence: "localStorage+cookie" })
     )
-    expect(posthogMock.startSessionRecording).toHaveBeenCalled()
+    await vi.waitFor(() =>
+      expect(posthogMock.startSessionRecording).toHaveBeenCalledTimes(1)
+    )
+  })
+
+  it("does not start recording after a decline that follows an accept", async () => {
+    stubBrowser(null)
+    const { disablePostHog, initializePostHog } = await loadModule()
+
+    initializePostHog()
+    disablePostHog()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(posthogMock.startSessionRecording).not.toHaveBeenCalled()
   })
 })

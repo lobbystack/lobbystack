@@ -8,14 +8,14 @@ contentType: "Conceptual"
 LobbyStack can run on one Docker host or as separate managed services. Self-hosting gives you control over application data, credentials, provider usage, backups, and upgrades.
 
 <Note>
-  Live calls still require Twilio, OpenAI, and a public HTTPS endpoint for the dashboard. The voice gateway needs its own endpoint while any phone number is off your Twilio SIP trunk.
+  Live calls still require Twilio, OpenAI, and a public HTTPS endpoint for the dashboard. Phone calls also need a Twilio Elastic SIP trunk that sends calls to your OpenAI project.
 </Note>
 
 ## Deploy on Railway
 
-The [LobbyStack Railway template](https://railway.com/deploy/OD4YrV) deploys the admin, worker, voice gateway, and migration services with PostgreSQL, Redis, and a storage bucket. Railway generates every secret and database password. You enter an OpenAI API key and your Twilio credentials, then create your account on the admin domain.
+The [LobbyStack Railway template](https://railway.com/deploy/lobbystack) deploys the admin, worker, and migration services with PostgreSQL, Redis, and a storage bucket. Railway generates every secret and database password. You enter an OpenAI API key and your Twilio credentials, then create your account on the admin domain.
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/OD4YrV)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/lobbystack)
 
 ## Official baseline
 
@@ -26,8 +26,7 @@ The repository's [`docker-compose.yml`](https://github.com/lobbystack/lobbystack
 - a persistent Docker volume for recordings and uploaded documents
 - the Next.js admin dashboard and HTTP API
 - the background worker and transactional outbox dispatcher, which also runs each GPT-Live call
-- the voice gateway for phone numbers that aren't on a Twilio SIP trunk
-- Caddy to route the dashboard and voice gateway hostnames over plain HTTP, behind the proxy or load balancer that terminates HTTPS
+- Caddy to route the dashboard hostname over plain HTTP, behind the proxy or load balancer that terminates HTTPS
 
 LobbyStack does not add monitoring containers to the Compose stack. Server runtimes can send traces, metrics, and OpenTelemetry logs to a configured OTLP-compatible backend.
 
@@ -45,7 +44,7 @@ You are responsible for:
 
 - PostgreSQL, Redis, and file-storage durability
 - backups, restore drills, upgrades, and monitoring
-- public DNS and TLS for the dashboard, and for the voice gateway while you use it
+- public DNS and TLS for the dashboard
 - Twilio, OpenAI, email, calendar, billing, and analytics credentials
 - secret rotation and least-privilege database roles
 

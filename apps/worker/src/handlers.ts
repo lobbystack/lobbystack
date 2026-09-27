@@ -5,7 +5,7 @@ import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { getPolarMeteredUsagePayload, type BillingUsageKind } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
-import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, markNotificationSkipped, cancelRetiredPhoneVerificationSend, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type OnboardingFollowupSender } from "@lobbystack/domain";
+import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, markNotificationSkipped, cancelRetiredPhoneVerificationSend, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, correctAlertSmsUsage, estimateSmsSegments, loadOperatorNotificationDelivery, markFeedbackEmailFailed, markFeedbackEmailSent, markOperatorNotificationSent, markOperatorNotificationSkipped, queueDailyOperatorSummaries, refreshUnitEconomicsMonth, releaseOperatorNotificationDelivery, reserveAlertSmsUsage } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
@@ -44,7 +44,7 @@ export type WorkerDependencies = {
   domain: DomainContext;
   storage?: RuntimeStorageProvider;
   email?: Pick<SmtpEmailProvider, "sendTemplate">;
-  twilio?: Pick<TwilioProvider, "sendSms"> & Partial<Pick<TwilioProvider, "getMessagePricing" | "getCallPricing" | "releasePhoneNumber" | "verifyPhone" | "findOwnedPhoneNumber" | "purchasePhoneNumber" | "addNumberToSipTrunk">>;
+  twilio?: Pick<TwilioProvider, "sendSms"> & Partial<Pick<TwilioProvider, "getMessagePricing" | "getCallPricing" | "findTrunkCall" | "releasePhoneNumber" | "verifyPhone" | "findOwnedPhoneNumber" | "purchasePhoneNumber" | "addNumberToSipTrunk">>;
   twilioAlerts?: Pick<TwilioProvider, "sendSms"> & { from: string };
   polar?: { recordUsage(input: { eventName: string; externalCustomerId: string; quantity: number; timestamp: string; idempotencyKey: string; businessId: string; usageKind: string }): Promise<void>; createCheckout?(input: { productId: string; customerEmail: string; externalCustomerId: string; successUrl: string; idempotencyKey?: string }): Promise<{ checkoutUrl: string; checkoutId: string }> };
   embeddings?: { fingerprint?: string; embed(values: string[], onUsage?: (usage: DurableAiUsage) => Promise<void> | void): Promise<number[][]> };
@@ -480,6 +480,21 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       return { status: recorded ? "completed" : "skipped", entityId: providerMessageId };
     }
     case "call.syncPrice": {
+      const liveCallId = String(job.payload.callId ?? "").trim();
+      if (liveCallId && !job.payload.providerCallId) {
+        // A GPT-Live phone call: find the Twilio call on the SIP trunk first.
+        const trunkSid = process.env.TWILIO_SIP_TRUNK_SID?.trim();
+        if (!dependencies.twilio?.getCallPricing || !dependencies.twilio.findTrunkCall || !trunkSid) return { status: "skipped", entityId: liveCallId };
+        const businessId = businessIdOrThrow(job);
+        const call = await loadLiveCallForPricing(dependencies.domain, { businessId, callId: liveCallId });
+        if (!call) return { status: "skipped", entityId: liveCallId };
+        const twilioCallId = await dependencies.twilio.findTrunkCall({ trunkSid, near: call.startedAt, ...(call.callerPhone ? { from: call.callerPhone } : {}) });
+        if (!twilioCallId) throw new Error(`No Twilio call found yet for live call ${liveCallId}.`);
+        const pricing = await dependencies.twilio.getCallPricing({ providerCallId: twilioCallId });
+        if (pricing.providerCostUsd === undefined) throw new Error(`Twilio call pricing is incomplete for ${twilioCallId}.`);
+        const recorded = await recordCallProviderPricing(dependencies.domain, { businessId, providerCallId: twilioCallId, callId: liveCallId, ...pricing });
+        return { status: recorded ? "completed" : "skipped", entityId: liveCallId };
+      }
       const providerCallId = String(job.payload.providerCallId ?? "").trim();
       const providerCallStatus = String(job.payload.providerCallStatus ?? "").trim();
       if (!dependencies.twilio?.getCallPricing || !providerCallId || !isTerminalCallStatus(providerCallStatus)) return { status: "skipped", entityId: providerCallId };
@@ -735,29 +750,22 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     case "phoneNumber.provision": {
       const businessId = businessIdOrThrow(job); const claimId = String(job.payload.claimId ?? "");
       if (!claimId || !dependencies.twilio?.findOwnedPhoneNumber || !dependencies.twilio.purchasePhoneNumber) return { status: "skipped", entityId: claimId };
+      // Calls reach GPT-Live only through the Twilio SIP trunk. A number off the
+      // trunk has nothing to answer it, so refuse to buy one without a trunk.
+      const sipTrunkSid = process.env.TWILIO_SIP_TRUNK_SID?.trim();
+      if (!sipTrunkSid) throw new Error("TWILIO_SIP_TRUNK_SID is required to provision a phone number. See docs/voice/runtime.md.");
+      if (!dependencies.twilio.addNumberToSipTrunk) throw new Error("The Twilio provider can't assign numbers to a SIP trunk.");
+      const addNumberToSipTrunk = dependencies.twilio.addNumberToSipTrunk.bind(dependencies.twilio);
       const claim = await claimNumberProvisioning(dependencies.domain, { businessId, claimId }); if (!claim) return { status: "skipped", entityId: claimId };
       const baseUrl = (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
-      // Twilio needs TwiML, which only the voice gateway serves. Pointing a
-      // number at the admin app buys a number that cannot answer: its context
-      // endpoints are internal JSON APIs behind service auth, so every call to
-      // it fails with Twilio's generic application error. Refuse to provision
-      // rather than sell a number that is dead on arrival.
-      // With a SIP trunk, calls go to GPT-Live through OpenAI SIP and the voice
-      // URL is only a fallback if the number ever leaves the trunk.
-      const sipTrunkSid = process.env.TWILIO_SIP_TRUNK_SID?.trim();
-      const voiceBaseUrl = (process.env.VOICE_GATEWAY_BASE_URL ?? "").replace(/\/$/, "");
-      if (!voiceBaseUrl && !sipTrunkSid) throw new Error("VOICE_GATEWAY_BASE_URL or TWILIO_SIP_TRUNK_SID is required to provision a phone number.");
-      const voiceUrl = voiceBaseUrl ? `${voiceBaseUrl}/twilio/voice/inbound` : ""; const smsUrl = `${baseUrl}/api/webhooks/twilio/sms`; const statusCallbackUrl = `${baseUrl}/api/webhooks/twilio/status`;
+      const smsUrl = `${baseUrl}/api/webhooks/twilio/sms`; const statusCallbackUrl = `${baseUrl}/api/webhooks/twilio/status`;
       let purchased = false; let providerPhoneId: string | undefined;
       try {
         const owned = await dependencies.twilio.findOwnedPhoneNumber({ e164: claim.e164 });
         if (owned) providerPhoneId = owned.providerPhoneId;
-        else { const result = await dependencies.twilio.purchasePhoneNumber({ e164: claim.e164, friendlyName: `LobbyStack ${businessId}`, smsUrl, voiceUrl, statusCallbackUrl }); providerPhoneId = result.providerPhoneId; purchased = true; }
-        if (sipTrunkSid) {
-          if (!dependencies.twilio.addNumberToSipTrunk) throw new Error("The Twilio provider can't assign numbers to a SIP trunk.");
-          await dependencies.twilio.addNumberToSipTrunk({ trunkSid: sipTrunkSid, providerPhoneId });
-        }
-        const phoneNumberId = await completeNumberProvisioning(dependencies.domain, { businessId, claimId, e164: claim.e164, providerPhoneId, voiceUrl: sipTrunkSid ? `sip-trunk:${sipTrunkSid}` : voiceUrl, smsUrl });
+        else { const result = await dependencies.twilio.purchasePhoneNumber({ e164: claim.e164, friendlyName: `LobbyStack ${businessId}`, smsUrl, statusCallbackUrl }); providerPhoneId = result.providerPhoneId; purchased = true; }
+        await addNumberToSipTrunk({ trunkSid: sipTrunkSid, providerPhoneId });
+        const phoneNumberId = await completeNumberProvisioning(dependencies.domain, { businessId, claimId, e164: claim.e164, providerPhoneId, voiceUrl: `sip-trunk:${sipTrunkSid}`, smsUrl });
         return { status: "completed", entityId: phoneNumberId };
       } catch (error) {
         if (purchased && providerPhoneId && dependencies.twilio.releasePhoneNumber) await dependencies.twilio.releasePhoneNumber({ providerPhoneId }).catch(() => undefined);

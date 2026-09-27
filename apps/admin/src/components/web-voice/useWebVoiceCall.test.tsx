@@ -87,7 +87,7 @@ describe("useWebVoiceCall", () => {
     let controls: HookControls | null = null;
     render(
       createElement(HookHarness, {
-        endpoint: "https://voice.example.com/web-call/sessions",
+        endpoint: "https://app.example.com/api/voice/live/session",
         onReady: (nextControls) => {
           controls = nextControls;
         },

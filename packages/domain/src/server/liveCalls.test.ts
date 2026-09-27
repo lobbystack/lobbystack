@@ -7,6 +7,13 @@ const mocks = vi.hoisted(() => ({
   upsertTranscript: vi.fn(),
   reserveOutboundCallAttempt: vi.fn(),
   recordUnitEconomicsEvent: vi.fn(),
+  enqueueOutbox: vi.fn(),
+}));
+
+vi.mock("@lobbystack/db", async (original) => ({
+  ...(await original<typeof import("@lobbystack/db")>()),
+  withBusinessTransaction: vi.fn(async (_db: unknown, _context: unknown, callback: (tx: unknown) => unknown) => await callback({})),
+  enqueueOutbox: mocks.enqueueOutbox,
 }));
 
 vi.mock("./voice", () => ({ completeCall: mocks.completeCall, setTransferState: mocks.setTransferState, startCall: mocks.startCall, upsertTranscript: mocks.upsertTranscript }));
@@ -42,6 +49,16 @@ describe("finishLiveCall", () => {
   it("passes the measured length so an abandoned call isn't billed OpenAI's minimum", async () => {
     await finishLiveCall(context, { ...call, seconds: 15, measuredSeconds: 0.8, end: "caller_finished" });
     expect(mocks.completeCall).toHaveBeenCalledWith(context, expect.objectContaining({ providerDurationSeconds: 15, mediaDurationSeconds: 0.8 }));
+  });
+
+  it("queues Twilio pricing for a finished phone call", async () => {
+    await finishLiveCall(context, { ...call, seconds: 60, end: "caller_finished", channel: "voice" });
+    expect(mocks.enqueueOutbox).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "call.syncPrice", payload: { callId: "call_1", providerCallStatus: "completed" } }));
+  });
+
+  it("doesn't queue Twilio pricing for a browser call", async () => {
+    await finishLiveCall(context, { ...call, seconds: 60, end: "caller_finished", channel: "web_voice" });
+    expect(mocks.enqueueOutbox).not.toHaveBeenCalled();
   });
 
   it("uses the spam disposition billing already excludes", async () => {

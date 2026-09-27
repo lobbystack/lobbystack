@@ -3,7 +3,6 @@ type Target = { name: string; url: string; expectedStatus?: number; targetMs: nu
 const concurrency = Math.max(5, Math.min(100, Number(process.env.PERFORMANCE_CONCURRENCY ?? 30)));
 const adminBaseUrl = process.env.ADMIN_BASE_URL ?? "http://127.0.0.1:13000";
 const workerBaseUrl = process.env.WORKER_BASE_URL ?? "http://127.0.0.1:13002";
-const voiceBaseUrl = process.env.VOICE_BASE_URL ?? "http://127.0.0.1:13001";
 
 function percentile(values: number[], percentileValue: number): number {
   const sorted = [...values].sort((left, right) => left - right);
@@ -27,8 +26,6 @@ async function main(): Promise<void> {
     { name: "admin-ready", url: `${adminBaseUrl}/api/health/ready`, expectedStatus: 200, targetMs: 500 },
     { name: "worker-live", url: `${workerBaseUrl}/health/live`, expectedStatus: 200, targetMs: 500 },
     { name: "worker-ready", url: `${workerBaseUrl}/health/ready`, expectedStatus: 200, targetMs: 500 },
-    { name: "voice-live", url: `${voiceBaseUrl}/health/live`, expectedStatus: 200, targetMs: 300 },
-    { name: "voice-ready", url: `${voiceBaseUrl}/health/ready`, expectedStatus: 200, targetMs: 300 },
   ];
   const results: Record<string, { p50: number; p95: number; statuses: number[] }> = {};
   for (const target of targets) {

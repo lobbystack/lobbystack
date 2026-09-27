@@ -17,20 +17,20 @@ Read the plan before you apply it. Don’t pass `--confirm-destructive` unless y
 
 The definition declares Serverless (app sleeping) per environment to match the operational policy:
 
-- Enabled in staging: `admin`, `worker`, `voice-gateway`, `Postgres`, and `Redis`.
+- Enabled in staging: `admin`, `worker`, `Postgres`, and `Redis`.
 - Unset in production: every service.
 
 Change these values only when you mean to. The setting applies on the next deploy of the service.
 
 ## Production application releases
 
-The production `admin`, `worker`, and `voice-gateway` services use `lobbystack/lobbystack` on `main` as their source. Railway builds each affected service from its existing Dockerfile and watch patterns. `checkSuites: true` makes Railway wait for the commit’s GitHub checks before deploying it.
+The production `admin` and `worker` services use `lobbystack/lobbystack` on `main` as their source. Railway builds each affected service from its existing Dockerfile and watch patterns. `checkSuites: true` makes Railway wait for the commit’s GitHub checks before deploying it.
 
 The `migrator` deliberately has no GitHub source. On every push to `main`, the `migrate-production` job uploads that exact checkout. The job waits for the run-once deployment to succeed. Railway blocks application deployments until the migration succeeds. Railway releases application containers after the migration.
 
 Store a production project token in the GitHub `production` environment as `RAILWAY_PRODUCTION_TOKEN`. Restrict that environment to the `main` branch. Do not store database credentials in GitHub; the migrator reads its preserved variables from Railway.
 
-To pause automatic application releases, disable **Auto Deploy** on all three services. A failed GitHub check or migration run leaves the previous application deployments running. For an application regression, roll each affected service back to its previous successful Railway deployment. Keep migrations backward-compatible with that version.
+To pause automatic application releases, disable **Auto Deploy** on both services. A failed GitHub check or migration run leaves the previous application deployments running. For an application regression, roll each affected service back to its previous successful Railway deployment. Keep migrations backward-compatible with that version.
 
 The definition pins Redis to `redis:7-alpine`. The Redis helper in the importer selected version 8 during the first preview; reject that upgrade in an infrastructure import.
 
@@ -40,18 +40,8 @@ After you apply the production source rollout, the parser should report no produ
 
 ## Self-hosted template
 
-`template.ts` owns the `lobbystack-template` project (id `c2e1d45e-9a95-4292-a304-a5456bd0cbdd`, `production` environment). Railway generates the public LobbyStack template from that project, so keep it deployable from `main`.
+`template.ts` declares the published LobbyStack template at [railway.com/deploy/lobbystack](https://railway.com/deploy/lobbystack) (template id `c85ce52d-09f7-434e-a3ee-be1da2755622`). Railway’s CLI and API can’t apply changes to a template, so make each change in the dashboard under **Templates > LobbyStack**, then update `template.ts` to match. The editor stages each change until you select **Apply**.
 
-Plan it from a directory linked to the template project, so the repository link to the `lobbystack` project stays untouched:
-
-```sh
-railway link --project c2e1d45e-9a95-4292-a304-a5456bd0cbdd --environment production
-railway config plan --file /path/to/repo/.railway/template.ts
-```
+Update the template when you add or remove a service or a variable in `railway.ts`. Mark a user-supplied value as optional unless every deployment needs it. Generate secrets in the template with `${{secret(64)}}`.
 
 The `migrate` service runs migrations as the `postgres` superuser, like Docker Compose. `0000_roles.sql` creates the application roles, and `bootstrap` gives them logins. Every other service connects as a scoped role.
-
-Two things to know before you change it:
-
-- Generate secrets with `openssl rand -hex 32` and set them with `railway variable set`. `ctx.randomString()` returns a hash of the environment name, so anyone can compute its output.
-- Railway keeps a deleted volume for 48 hours, and an apply reattaches a pending-deletion volume that has the same name. Give a replacement volume a new name.

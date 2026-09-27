@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { and, asc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { appointments, calendarConnections, contacts, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { CALENDAR_SYNC_HORIZON_MS, markCalendarConnectionSync, recordProductEvent, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
+import { CALENDAR_SYNC_HORIZON_MS, markCalendarConnectionSync, queueUnsyncedAppointmentSyncs, recordProductEvent, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { redactOtelExceptionText } from "@lobbystack/telemetry/node";
 import type { GoogleCalendarProvider } from "@lobbystack/providers/google/calendar";
@@ -97,6 +97,7 @@ export async function reconcileBusinessCalendar(dependencies: Dependencies, busi
       const endsAt = new Date(startsAt.getTime() + CALENDAR_SYNC_HORIZON_MS);
       const blocks = await dependencies.calendar.getBusyBlocks({ accessToken: token, calendarId: connection.calendarId, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() });
       await upsertBusyBlocks(dependencies.domain, { businessId, connectionId: connection.id, calendarId: connection.calendarId, markSynced: true, syncStartedAt: startsAt, blocks: blocks.map((block) => ({ ...block, ...(connection.staffId ? { staffId: connection.staffId } : {}) })) });
+      await queueUnsyncedAppointmentSyncs(dependencies.domain, { businessId, connectionId: connection.id });
       synced++;
     } catch (error) {
       const message = error instanceof Error ? redactOtelExceptionText(error.message) : "Calendar synchronization failed.";

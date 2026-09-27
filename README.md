@@ -18,7 +18,7 @@ LobbyStack gives teams a modern AI front desk that can be hosted in the cloud or
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-111111.svg)](./LICENSE) [![Open source](https://img.shields.io/badge/open%20source-yes-22c55e.svg)](https://github.com/lobbystack/lobbystack) [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg)](https://www.typescriptlang.org/) [![PostgreSQL](https://img.shields.io/badge/backend-PostgreSQL-336791.svg)](https://www.postgresql.org/) [![Self-hostable](https://img.shields.io/badge/deploy-self--hostable-7c3aed.svg)](https://docs.lobbystack.com/self-hosting/overview)
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/OD4YrV)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/lobbystack)
 
 </div>
 
@@ -109,7 +109,7 @@ Use **LobbyStack Cloud** when you want the product managed for you. You still co
 
 Self-host when your team wants to run the stack on your own infrastructure, bring your own API keys, and use your own PostgreSQL, Twilio, OpenAI-compatible AI, calendar, analytics, billing, and email provider accounts.
 
-To self-host on Railway, deploy the [LobbyStack template](https://railway.com/deploy/OD4YrV). Railway generates every secret and database password, and you enter an OpenAI API key and your Twilio credentials.
+To self-host on Railway, deploy the [LobbyStack template](https://railway.com/deploy/lobbystack). Railway generates every secret and database password, and you enter an OpenAI API key and your Twilio credentials.
 
 Full product control in the hosted app. Infrastructure ownership when you self-host. Same open-source core either way.
 
@@ -121,7 +121,6 @@ LobbyStack is a TypeScript monorepo with PostgreSQL as the durable source of tru
 apps/
   admin/           Next.js dashboard and HTTP API
   worker/          asynchronous jobs, outbox dispatch, and live calls
-  voice-gateway/   Twilio Media Streams bridge for numbers not yet on the SIP trunk
 packages/embed/    Vite bundle for the embeddable website widget loader
 packages/          database, domain, agent core, jobs, providers, telemetry, and shared contracts
 mintlify/          public documentation source
