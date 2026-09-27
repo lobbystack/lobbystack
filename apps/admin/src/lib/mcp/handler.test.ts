@@ -163,6 +163,46 @@ describe("MCP authentication", () => {
     expect(response.status).toBe(403);
   });
 
+  describe("DNS rebinding", () => {
+    beforeEach(() => {
+      vi.stubEnv("APP_BASE_URL", "https://app.example.com");
+      vi.stubEnv("AUTH_TRUSTED_ORIGINS", "https://app.example.com, https://admin.example.com/");
+    });
+    afterEach(() => { vi.unstubAllEnvs(); });
+
+    function rebound(origin: string | null): Request {
+      // The attacker's name resolves to this server, so the URL, Host and Origin all agree with each other.
+      const headers: Record<string, string> = { host: "attacker.example:3000", authorization: "Bearer lsk_aaaaaaaa_full", "content-type": "application/json", accept: "application/json, text/event-stream" };
+      if (origin !== null) headers.origin = origin;
+      return new Request("http://attacker.example:3000/api/mcp", { method: "POST", headers, body: JSON.stringify(initialize) });
+    }
+
+    it("rejects an Origin that matches the request's own Host but is not configured", async () => {
+      const response = await handler(rebound("http://attacker.example:3000"));
+      expect(response.status).toBe(403);
+      expect(await response.json()).toMatchObject({ error: { code: "forbidden" } });
+    });
+
+    it("rejects the opaque null origin", async () => {
+      expect((await handler(rebound("null"))).status).toBe(403);
+    });
+
+    it("allows configured origins, whatever the Host", async () => {
+      expect((await handler(rebound("https://app.example.com"))).status).toBe(200);
+      expect((await handler(rebound("https://admin.example.com"))).status).toBe(200);
+    });
+
+    it("allows requests without Origin, as non-browser MCP clients send them", async () => {
+      expect((await handler(rebound(null))).status).toBe(200);
+    });
+
+    it("trusts only configured app URLs", async () => {
+      const { trustedMcpOrigins } = await import("./handler");
+      expect([...trustedMcpOrigins({ APP_BASE_URL: "https://app.example.com/", SITE_URL: "https://www.example.com", AUTH_TRUSTED_ORIGINS: "not a url, https://x.example.com" })].sort()).toEqual(["https://app.example.com", "https://www.example.com", "https://x.example.com"]);
+      expect(trustedMcpOrigins({}).size).toBe(0);
+    });
+  });
+
   it("the SDK client surfaces a 401 when the key is wrong", async () => {
     await expect(connect("lsk_00000000_wrong")).rejects.toThrow();
   });

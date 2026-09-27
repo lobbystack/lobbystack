@@ -25,11 +25,22 @@ function jsonError(status: number, code: ApiErrorCode, message: string, headers:
   return Response.json({ error: { code, message } }, { status, headers: { "Cache-Control": "no-store", ...headers } });
 }
 
-function allowedOrigins(request: Request): Set<string> {
-  const origins = new Set<string>([new URL(request.url).origin]);
-  for (const value of (process.env.AUTH_TRUSTED_ORIGINS ?? process.env.APP_BASE_URL ?? "").split(",")) {
-    const origin = value.trim().replace(/\/$/, "");
-    if (origin) origins.add(origin);
+/**
+ * Browser origins that may call /api/mcp: the configured app URLs only. The
+ * request's own URL and Host are never trusted, because a DNS-rebinding page
+ * controls both.
+ */
+export function trustedMcpOrigins(environment: Readonly<Record<string, string | undefined>> = process.env): Set<string> {
+  const origins = new Set<string>();
+  const values = [environment.APP_BASE_URL, environment.SITE_URL, environment.NEXT_PUBLIC_SITE_URL, ...(environment.AUTH_TRUSTED_ORIGINS ?? "").split(",")];
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (!trimmed) continue;
+    try {
+      origins.add(new URL(trimmed).origin);
+    } catch {
+      // Ignore malformed configuration rather than trusting it.
+    }
   }
   return origins;
 }
@@ -67,10 +78,11 @@ export function createLobbyStackMcpHttpHandler(dependencies: McpHandlerDependenc
   });
 
   return async (request: Request) => {
-    // Browsers attach Origin; MCP clients running on servers do not. A foreign
-    // Origin is refused so a web page cannot drive the endpoint (DNS rebinding).
+    // Browsers attach Origin; MCP clients running on servers do not. Any Origin
+    // outside the configured app URLs is refused, including one that matches the
+    // request's Host, so a DNS-rebinding page cannot drive the endpoint.
     const origin = request.headers.get("origin");
-    if (origin && !allowedOrigins(request).has(origin.replace(/\/$/, ""))) return jsonError(403, "forbidden", "This origin may not call the LobbyStack MCP server.");
+    if (origin !== null && !trustedMcpOrigins().has(origin.trim())) return jsonError(403, "forbidden", "This origin may not call the LobbyStack MCP server.");
 
     const token = bearerToken(request.headers.get("authorization"));
     if (!token) return jsonError(401, "unauthorized", "Send a LobbyStack API key as Authorization: Bearer <key>.", { "WWW-Authenticate": 'Bearer realm="LobbyStack MCP"' });
