@@ -3,6 +3,7 @@ import type { DelegationCreatedEvent } from "openai/resources/live/live";
 import { SidebandWS } from "openai/resources/live/sideband/ws";
 
 import type { ReceptionistAgent } from "../agent";
+import { LiveLatencyTracker, type LiveCallLatency } from "./latency";
 
 type Turn = { role: "caller" | "receptionist"; text: string; endMs: number };
 
@@ -24,6 +25,8 @@ export type LiveCallSummary = {
   billedSeconds?: number;
   delegations: DelegationTiming[];
   closeReason?: string;
+  /** What the caller heard: when the receptionist first spoke and the gap before each answer. */
+  latency?: LiveCallLatency;
 };
 
 /** A finished stretch of speech by one side, numbered in call order. */
@@ -73,14 +76,25 @@ export class LiveCallController {
   private emittedTurns = 0;
   private silenceTimer: ReturnType<typeof setTimeout> | undefined;
   private durationTimer: ReturnType<typeof setTimeout> | undefined;
+  private readonly latency = new LiveLatencyTracker();
 
   constructor(private readonly options: LiveCallControllerOptions) {}
 
   start(): void {
     const socket = new SidebandWS(this.options.client, { session_id: this.options.sessionId });
     this.socket = socket;
-    socket.on("session.input_transcript.delta", (event) => this.appendTranscript("caller", event.delta, event.end_ms));
-    socket.on("session.output_transcript.delta", (event) => this.appendTranscript("receptionist", event.delta, event.end_ms));
+    socket.on("session.input_transcript.delta", (event) => {
+      this.measure(() => this.latency.callerTranscript(event.start_ms, event.end_ms));
+      this.appendTranscript("caller", event.delta, event.end_ms);
+    });
+    socket.on("session.output_transcript.delta", (event) => {
+      this.measure(() => this.latency.receptionistTranscript(event.start_ms, event.end_ms));
+      this.appendTranscript("receptionist", event.delta, event.end_ms);
+    });
+    // OpenAI reflects output audio to the sideband with timeline offsets, but
+    // the SDK's sideband event types leave it out. The socket still emits it.
+    (socket as unknown as { on(type: string, listener: (event: { start_ms?: number; end_ms?: number }) => void): void })
+      .on("session.output_audio.delta", (event) => this.measure(() => this.latency.receptionistAudio(event.start_ms, event.end_ms)));
     socket.on("session.delegation.created", (event) => void this.handleDelegation(event));
     socket.on("session.closed", (event) => this.finish(event.reason ?? undefined, event.usage?.seconds, true));
     socket.on("error", (error) => console.error(`[live] ${this.options.sessionId} sideband error`, error.message));
@@ -131,6 +145,15 @@ export class LiveCallController {
       content: `Start the conversation now: say exactly "${greeting}" in the language of that greeting, then stop and listen to the caller.`,
       event_id: "greeting",
     });
+  }
+
+  // Latency is telemetry: a failure here must never affect the call.
+  private measure(record: () => void): void {
+    try {
+      record();
+    } catch {
+      // Ignore.
+    }
   }
 
   /** Stops handling the call and ends its session. Resolves once OpenAI has been asked to hang up. */
@@ -259,12 +282,15 @@ export class LiveCallController {
     this.abort.abort();
     this.socket?.close({ code: 1000, reason: "session finished" });
     this.emitFinishedTurns(true);
+    let latency: LiveCallLatency | undefined;
+    this.measure(() => { latency = this.latency.summarize(); });
     this.options.onClose?.({
       sessionId: this.options.sessionId,
       durationMs: Date.now() - this.startedAt,
       delegations: this.delegations,
       ...(billedSeconds !== undefined ? { billedSeconds } : {}),
       ...(closeReason ? { closeReason } : {}),
+      ...(latency ? { latency } : {}),
     });
   }
 }

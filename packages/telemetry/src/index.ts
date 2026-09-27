@@ -59,6 +59,8 @@ export const VOICE_EVENT_NAMES = [
   "voice.transfer_requested",
   "voice.transfer_completed",
   "voice.snapshot_loaded",
+  "voice.delegation_completed",
+  "voice.call_latency_recorded",
 ] as const;
 
 export const SMS_EVENT_NAMES = [
@@ -456,6 +458,25 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "provider",
   ],
   "voice.snapshot_loaded": ["businessId", "deploymentMode", "provider"],
+  "voice.delegation_completed": [
+    "businessId",
+    "deploymentMode",
+    "callId",
+    "channel",
+    "provider",
+    "agentMs",
+    "totalMs",
+    "failed",
+  ],
+  "voice.call_latency_recorded": [
+    "businessId",
+    "deploymentMode",
+    "callId",
+    "channel",
+    "provider",
+    "answerCount",
+    "delegationCount",
+  ],
   "sms.inbound_received": [
     "businessId",
     "deploymentMode",
@@ -1217,6 +1238,19 @@ export function bucketLatencyMs(latencyMs: number): string {
     return "2_5s_to_5s";
   }
   return "over_5s";
+}
+
+/**
+ * The nearest-rank percentile of a set of latencies, rounded to whole
+ * milliseconds. Returns undefined for an empty set.
+ */
+export function percentileMs(values: ReadonlyArray<number>, percentile: number): number | undefined {
+  const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+  if (sorted.length === 0) {
+    return undefined;
+  }
+  const rank = Math.ceil((Math.min(100, Math.max(0, percentile)) / 100) * sorted.length);
+  return Math.round(sorted[Math.max(0, rank - 1)]!);
 }
 
 /**

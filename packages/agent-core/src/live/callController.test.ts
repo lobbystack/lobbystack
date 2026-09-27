@@ -96,6 +96,17 @@ describe("LiveCallController", () => {
     expect(closed).toEqual([expect.objectContaining({ billedSeconds: 42, closeReason: "remote_hangup" })]);
   });
 
+  it("reports what the caller heard from the sideband's timeline on close", () => {
+    const { socket, closed } = setup();
+    socket.emit("session.output_audio.delta", { delta: "", start_ms: 1_100, end_ms: 2_000 });
+    socket.emit("session.output_transcript.delta", { delta: "Thanks for calling.", start_ms: 1_150, end_ms: 1_900 });
+    socket.emit("session.input_transcript.delta", { delta: "Are you open today?", start_ms: 3_000, end_ms: 4_200 });
+    socket.emit("session.output_audio.delta", { delta: "", start_ms: 5_000, end_ms: 6_000 });
+    socket.emit("session.output_transcript.delta", { delta: "Yes, until 5.", start_ms: 5_050, end_ms: 5_900 });
+    socket.emit("session.closed", { reason: "remote_hangup" });
+    expect(closed[0]?.latency).toEqual({ firstSpeechMs: 1_100, greetedFirst: true, answerGapsMs: [800], speechSource: "audio" });
+  });
+
   it("hangs up the session when the sideband drops mid-call", () => {
     const { socket, closed, hangup } = setup();
     socket.emit("close");
