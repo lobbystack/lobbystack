@@ -1,6 +1,6 @@
 import { and, count, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
-import { appointments, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, phoneNumbers, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { billableVoiceSeconds, isNonBillableCallDisposition } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 
@@ -374,12 +374,11 @@ export async function setTransferState(
 export async function loadLiveCallForPricing(
   context: DomainContext,
   input: { businessId: string; callId: string },
-): Promise<{ startedAt: Date; numbers: string[] } | null> {
+): Promise<{ startedAt: Date; callerPhone?: string } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const [call] = await tx.select({ startedAt: calls.startedAt }).from(calls).where(and(eq(calls.businessId, input.businessId), eq(calls.id, input.callId))).limit(1);
+    const [call] = await tx.select({ startedAt: calls.startedAt, callerPhone: contacts.phone }).from(calls).leftJoin(contacts, eq(contacts.id, calls.contactId)).where(and(eq(calls.businessId, input.businessId), eq(calls.id, input.callId))).limit(1);
     if (!call) return null;
-    const numbers = await tx.select({ e164: phoneNumbers.e164 }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active")));
-    return { startedAt: call.startedAt, numbers: numbers.map((row) => row.e164) };
+    return { startedAt: call.startedAt, ...(call.callerPhone?.startsWith("+") ? { callerPhone: call.callerPhone } : {}) };
   });
 }
 

@@ -525,15 +525,17 @@ describe("worker handlers", () => {
   it("prices a GPT-Live phone call by finding its Twilio call on the trunk", async () => {
     const job = pricingJob("call.syncPrice", { callId: "call_1", providerCallStatus: "completed" });
     const startedAt = new Date("2026-09-26T12:00:00Z");
-    vi.mocked(loadLiveCallForPricing).mockResolvedValue({ startedAt, numbers: ["+12136686869"] });
+    vi.stubEnv("TWILIO_SIP_TRUNK_SID", "TK123");
+    vi.mocked(loadLiveCallForPricing).mockResolvedValue({ startedAt, callerPhone: "+14165550134" });
     vi.mocked(recordCallProviderPricing).mockResolvedValue(true);
-    const findInboundCall = vi.fn().mockResolvedValue("CA777");
+    const findTrunkCall = vi.fn().mockResolvedValue("CA777");
     const getCallPricing = vi.fn().mockResolvedValue({ providerPriceUnit: "usd", providerCostUsd: 0.02 });
 
-    const result = await handleJob(job, { domain: { db: undefined as never }, twilio: { sendSms: vi.fn(), getCallPricing, findInboundCall } });
+    const result = await handleJob(job, { domain: { db: undefined as never }, twilio: { sendSms: vi.fn(), getCallPricing, findTrunkCall } });
 
     expect(result).toEqual({ status: "completed", entityId: "call_1" });
-    expect(findInboundCall).toHaveBeenCalledWith({ numbers: ["+12136686869"], near: startedAt });
+    expect(findTrunkCall).toHaveBeenCalledWith({ trunkSid: "TK123", near: startedAt, from: "+14165550134" });
+    vi.unstubAllEnvs();
     expect(recordCallProviderPricing).toHaveBeenCalledWith({ db: undefined as never }, expect.objectContaining({ providerCallId: "CA777", callId: "call_1", providerCostUsd: 0.02 }));
   });
 
