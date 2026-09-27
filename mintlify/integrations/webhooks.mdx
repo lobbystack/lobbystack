@@ -1,0 +1,42 @@
+---
+title: "Set up webhooks"
+description: "Send calls, bookings, messages and new contacts from LobbyStack to your own tools."
+sidebarTitle: "Webhooks"
+contentType: "How-to"
+---
+
+Webhooks let another tool react when something happens in LobbyStack. For example, your CRM can log each finished call, or a spreadsheet can get a row for each booking.
+
+Only owners and admins can manage webhooks.
+
+## Add a webhook
+
+<Steps>
+  <Step title="Open Webhooks">
+    Go to **Manage** > **Integrations** and click **Manage** on the **Webhooks** card.
+  </Step>
+  <Step title="Add the endpoint">
+    Click **Add endpoint**. Enter the `https://` URL your tool gave you and pick the events to send.
+  </Step>
+  <Step title="Save the signing secret">
+    Copy the secret that starts with `whsec_` and paste it into your tool. LobbyStack shows it only once.
+  </Step>
+  <Step title="Send a test event">
+    Click **Send test event**, then **Delivery log** to check that your tool answered.
+  </Step>
+</Steps>
+
+## Check deliveries
+
+**Delivery log** lists the events sent to an endpoint with their status, the response code, and the number of attempts. Click **Resend** to send an event again.
+
+LobbyStack retries failed deliveries for about 23 hours. If every attempt fails, it turns the endpoint off and sends your team an alert. Fix the endpoint, switch it back on, and resend the events you missed.
+
+## Change or remove a webhook
+
+- **Edit** changes the URL, description, or events.
+- The switch pauses or resumes sending.
+- **Rotate secret** replaces the signing secret. Update your tool with the new one.
+- **Delete** removes the endpoint and its delivery log.
+
+For event payloads and signature checks, see [Receive webhooks](/api/webhooks).

@@ -93,6 +93,7 @@
           "integrations/overview",
           "integrations/google-calendar",
           "integrations/sms",
+          "integrations/webhooks",
           {
             "group": "Settings",
             "pages": [
@@ -113,6 +114,19 @@
             ]
           }
         ]
+      },
+      {
+        "group": "API",
+        "pages": [
+          "api/overview",
+          "api/authentication",
+          "api/requests",
+          "api/webhooks"
+        ]
+      },
+      {
+        "group": "API reference",
+        "openapi": "api-reference/openapi.json"
       },
       {
         "group": "Self-hosting",
