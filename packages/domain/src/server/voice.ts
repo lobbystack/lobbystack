@@ -16,6 +16,7 @@ import { recordCallOutcomeInTransaction, resolveCallOutcome } from "./callOutcom
 import { buildCallEvents } from "./callEvents";
 import { recordingListState, recordingState, type RecordingState } from "./recordingState";
 import { recordProductEvent } from "./productEvents";
+import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 
 /** Live calls run over either the phone carrier or the browser; only the transport is durable. */
 function voiceChannelForTransport(transport: string): "voice" | "web_voice" {
@@ -104,6 +105,7 @@ export async function startCall(
     if (!contactId) {
       throw new Error("Call contact could not be created.");
     }
+    if (!existing[0]?.contactId && !existingContacts[0] && !anonymousWebCaller) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contactId });
     const blocked = Boolean(existingContacts[0]?.operatorBlockedAt);
     const conversationId = existing[0]?.conversationId ?? (await tx.insert(conversations).values({ businessId: input.businessId, contactId, channel: "voice", status: "open", automationState: "ai_active" }).returning({ id: conversations.id }))[0]?.id;
     if (!conversationId) {
@@ -571,7 +573,7 @@ export async function getCallDetail(
 
 export async function createVoiceFollowUpTask(
   context: DomainContext,
-  input: { businessId: string; callId?: string; callerName?: string; callbackPhone?: string; urgency?: string; callbackWindow?: string; message: string },
+  input: { businessId: string; callId?: string; callerName?: string; callbackPhone?: string; urgency?: string; callbackWindow?: string; message: string; channel?: string },
 ): Promise<{ inboxItemId: string }> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     if (input.callId) {
@@ -589,12 +591,14 @@ export async function createVoiceFollowUpTask(
       input.message.trim(),
     ].filter((line): line is string => line !== null).join("\n");
     const retentionPlan = isContentRetentionEnabled() ? await resolveBusinessBillingPlan(tx, input.businessId) : null;
-    const values = { businessId: input.businessId, kind: "voice_message", title, body, contentExpiresAt: retentionPlan ? contentExpiryForPlan(retentionPlan, "follow_ups") : null, ...(input.callId ? { relatedCallId: input.callId } : {}) };
+    const metadata = Object.fromEntries(Object.entries({ callerName: input.callerName?.trim(), callbackPhone: input.callbackPhone?.trim(), urgency: input.urgency?.trim(), callbackWindow: input.callbackWindow?.trim(), channel: input.channel }).filter(([, value]) => value));
+    const values = { businessId: input.businessId, kind: "voice_message", title, body, metadata, contentExpiresAt: retentionPlan ? contentExpiryForPlan(retentionPlan, "follow_ups") : null, ...(input.callId ? { relatedCallId: input.callId } : {}) };
     const existing = input.callId ? (await tx.select({ id: inboxItems.id }).from(inboxItems).where(and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.relatedCallId, input.callId), eq(inboxItems.kind, "voice_message"), eq(inboxItems.status, "open"))).orderBy(desc(inboxItems.createdAt)).limit(1))[0] : null;
     const [item] = existing
-      ? await tx.update(inboxItems).set({ title, body, contentRetentionStatus: "active", contentExpiresAt: values.contentExpiresAt, updatedAt: new Date() }).where(eq(inboxItems.id, existing.id)).returning({ id: inboxItems.id })
+      ? await tx.update(inboxItems).set({ title, body, metadata, contentRetentionStatus: "active", contentExpiresAt: values.contentExpiresAt, updatedAt: new Date() }).where(eq(inboxItems.id, existing.id)).returning({ id: inboxItems.id })
       : await tx.insert(inboxItems).values(values).returning({ id: inboxItems.id });
     if (!item) throw new Error("Voice follow-up task could not be saved.");
+    if (!existing) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "message.taken", resourceId: item.id });
     if (input.callId) await recordCallOutcomeInTransaction(tx, { businessId: input.businessId, callId: input.callId, outcome: { kind: "message_taking" } });
     return { inboxItemId: item.id };
   });

@@ -42,6 +42,8 @@ export const queueForJobType: Record<JobType, JobQueue> = {
   "telemetry.flush": "maintenance",
   "outbox.backlogSample": "maintenance",
   "realtime.publish": "default",
+  "webhook.deliver": "default",
+  "api.retention": "maintenance",
 };
 
 export type JobPayload = Record<string, unknown>;

@@ -1,6 +1,6 @@
 import { and, asc, count, eq, ilike, inArray } from "drizzle-orm";
 
-import { enqueueOutbox, withBusinessTransaction } from "@lobbystack/db";
+import { enqueueOutbox, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { agentRules, businessHours, closures, phoneNumbers, receptionistProfiles, services, staff, staffServiceAssignments } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -117,6 +117,32 @@ export async function unassignStaffFromService(
     await requireBusinessAdmin(tx, input);
     await tx.delete(staffServiceAssignments).where(and(eq(staffServiceAssignments.businessId, input.businessId), eq(staffServiceAssignments.staffId, input.staffId), eq(staffServiceAssignments.serviceId, input.serviceId)));
     await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "staff_service_assignment", aggregateId: input.staffId, dedupeKey: `assignment:${input.staffId}:${input.serviceId}:${Date.now()}`, payload: { businessId: input.businessId, reason: "assignment_updated" } });
+  });
+}
+
+/**
+ * Replaces the weekly hours: one window per listed day, other days closed.
+ * Refreshes the receptionist snapshot. Callers authorize first.
+ */
+export async function replaceBusinessHoursInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; hours: Array<{ dayOfWeek: number; openMinutes: number; closeMinutes: number }> },
+): Promise<void> {
+  const days = new Set<number>();
+  for (const window of input.hours) {
+    if (!Number.isInteger(window.dayOfWeek) || window.dayOfWeek < 0 || window.dayOfWeek > 6) throw new Error("Each day must be a weekday.");
+    if (days.has(window.dayOfWeek)) throw new Error("Each day can have one opening window.");
+    if (!Number.isInteger(window.openMinutes) || !Number.isInteger(window.closeMinutes) || window.openMinutes < 0 || window.closeMinutes > 1440 || window.closeMinutes <= window.openMinutes) throw new Error("Closing time must be after opening time.");
+    days.add(window.dayOfWeek);
+  }
+  await tx.delete(businessHours).where(eq(businessHours.businessId, input.businessId));
+  if (input.hours.length) await tx.insert(businessHours).values(input.hours.map((window) => ({ businessId: input.businessId, ...window })));
+  await enqueueOutbox(tx, {
+    topic: "snapshot.refresh",
+    businessId: input.businessId,
+    aggregateType: "business_hours",
+    dedupeKey: `hours:${input.businessId}:replace:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`,
+    payload: { businessId: input.businessId, reason: "hours_updated" },
   });
 }
 

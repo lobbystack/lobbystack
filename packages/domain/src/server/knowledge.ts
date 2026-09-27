@@ -212,11 +212,19 @@ export async function createKnowledgeSnippet(
 ): Promise<string> {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const [snippet] = await tx.insert(knowledgeSnippets).values({ businessId: input.businessId, title: input.title.trim(), content: input.content.trim(), tags: input.tags ?? [], priority: input.priority ?? 0, active: input.active ?? true }).returning({ id: knowledgeSnippets.id });
-    if (!snippet) throw new Error("Knowledge snippet could not be created.");
-    await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_snippet", aggregateId: snippet.id, dedupeKey: `knowledge-snippet:${snippet.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "snippet_created" } });
-    return snippet.id;
+    return (await createKnowledgeSnippetInTransaction(tx, input)).id;
   });
+}
+
+/** Inserts a snippet and refreshes the receptionist snapshot. Callers authorize first. */
+export async function createKnowledgeSnippetInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; title: string; content: string; tags?: string[]; priority?: number; active?: boolean },
+): Promise<typeof knowledgeSnippets.$inferSelect> {
+  const [snippet] = await tx.insert(knowledgeSnippets).values({ businessId: input.businessId, title: input.title.trim(), content: input.content.trim(), tags: input.tags ?? [], priority: input.priority ?? 0, active: input.active ?? true }).returning();
+  if (!snippet) throw new Error("Knowledge snippet could not be created.");
+  await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_snippet", aggregateId: snippet.id, dedupeKey: `knowledge-snippet:${snippet.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "snippet_created" } });
+  return snippet;
 }
 
 export async function updateKnowledgeSnippet(

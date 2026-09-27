@@ -23,7 +23,7 @@ export async function runPrivacyRetentionSweep(
   const contentRetentionEnabled = isContentRetentionEnabled();
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const scrubbedFollowUps = !contentRetentionEnabled ? [] : await tx.update(inboxItems)
-      .set({ title: EXPIRED_FOLLOW_UP_TITLE, body: EXPIRED_FOLLOW_UP_BODY, contentRetentionStatus: "scrubbed", updatedAt: now })
+      .set({ title: EXPIRED_FOLLOW_UP_TITLE, body: EXPIRED_FOLLOW_UP_BODY, metadata: null, contentRetentionStatus: "scrubbed", updatedAt: now })
       .where(and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.contentRetentionStatus, "active"), isNotNull(inboxItems.contentExpiresAt), lt(inboxItems.contentExpiresAt, now)))
       .returning({ id: inboxItems.id });
     const scrubbedMessages = !contentRetentionEnabled ? [] : await tx.update(messages)

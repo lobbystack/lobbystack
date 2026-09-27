@@ -256,6 +256,8 @@ export const jobTypes = [
   "telemetry.flush",
   "outbox.backlogSample",
   "realtime.publish",
+  "webhook.deliver",
+  "api.retention",
 ] as const;
 export type JobType = (typeof jobTypes)[number];
 
