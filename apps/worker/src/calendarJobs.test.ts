@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ transaction: vi.fn(), token: vi.fn(), update: vi.fn(), updateTx: vi.fn(), mark: vi.fn(), busy: vi.fn(), record: vi.fn() }));
+const mocks = vi.hoisted(() => ({ transaction: vi.fn(), token: vi.fn(), update: vi.fn(), updateTx: vi.fn(), mark: vi.fn(), busy: vi.fn(), backfill: vi.fn(), record: vi.fn() }));
 vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import("@lobbystack/db")>(), withBusinessTransaction: mocks.transaction }));
-vi.mock("@lobbystack/domain", () => ({ CALENDAR_SYNC_HORIZON_MS: 90 * 86400_000, resolveCalendarAccessToken: mocks.token, updateAppointmentSyncState: mocks.update, updateAppointmentSyncStateInTransaction: mocks.updateTx, markCalendarConnectionSync: mocks.mark, upsertBusyBlocks: mocks.busy, recordProductEvent: mocks.record }));
+vi.mock("@lobbystack/domain", () => ({ CALENDAR_SYNC_HORIZON_MS: 90 * 86400_000, resolveCalendarAccessToken: mocks.token, updateAppointmentSyncState: mocks.update, updateAppointmentSyncStateInTransaction: mocks.updateTx, markCalendarConnectionSync: mocks.mark, queueUnsyncedAppointmentSyncs: mocks.backfill, upsertBusyBlocks: mocks.busy, recordProductEvent: mocks.record }));
 import { reconcileBusinessCalendar, syncAppointmentCalendar } from "./calendarJobs";
 
 type Chain = Promise<unknown[]> & { from: () => Chain; innerJoin: () => Chain; leftJoin: () => Chain; where: () => Chain; orderBy: () => Chain; limit: () => Chain };
@@ -45,6 +45,15 @@ it("preserves busy data on one calendar failure and still reconciles other conne
   expect(mocks.busy).toHaveBeenCalledOnce();
   expect(mocks.busy).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ connectionId: "second", calendarId: "two", markSynced: true }));
   expect(mocks.mark).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ connectionId: "first", error: "permission denied" }));
+});
+
+it("queues missed bookings only for connections that synced", async () => {
+  batches = [[{ id: "first", calendarId: "one", staffId: null, status: "connected" }, { id: "second", calendarId: "two", staffId: "staff", status: "connected" }, { id: "unselected", calendarId: null, staffId: null, status: "connected" }]];
+  provider.getBusyBlocks.mockRejectedValueOnce(new Error("permission denied")).mockResolvedValueOnce([]);
+  await expect(reconcileBusinessCalendar(dependencies, "business")).rejects.toThrow("1 connection");
+  expect(mocks.backfill).toHaveBeenCalledOnce();
+  expect(mocks.backfill).toHaveBeenCalledWith(dependencies.domain, { businessId: "business", connectionId: "second" });
+  expect(mocks.backfill.mock.invocationCallOrder[0]).toBeGreaterThan(mocks.busy.mock.invocationCallOrder[0]!);
 });
 
 it("records integration.calendar_sync_failed with the appointment and provider", async () => {
