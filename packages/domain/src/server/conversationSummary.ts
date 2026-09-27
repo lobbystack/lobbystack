@@ -71,15 +71,52 @@ function foldForComparison(value: string): string {
   return value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 }
 
-function callerWords(transcript: ConversationTranscriptTurn[]): Set<string> {
-  const words = new Set<string>();
-  for (const turn of transcript) {
-    if (turn.speaker !== "caller" && turn.speaker !== "user") continue;
-    for (const word of foldForComparison(turn.text).split(/[^\p{L}'’-]+/u)) {
-      if (word) words.add(word);
-    }
+function words(text: string): string[] {
+  return foldForComparison(text).replace(/’/gu, "'").split(/[^\p{L}'-]+/u).filter(Boolean);
+}
+
+// Word sequences a caller says right before their own name.
+const selfIdentificationCues = [
+  ["my", "name", "is"], ["name", "is"], ["name's"], ["this", "is"], ["it", "is"], ["it's"], ["i", "am"], ["i'm"], ["im"], ["call", "me"],
+  ["je", "m'appelle"], ["je", "suis"], ["c'est"], ["ici"], ["mon", "nom", "est"], ["mon", "nom", "c'est"],
+];
+
+function endsWith(tokens: string[], end: number, cue: string[]): boolean {
+  if (end < cue.length) return false;
+  return cue.every((word, index) => tokens[end - cue.length + index] === word);
+}
+
+function indexOfSequence(tokens: string[], sequence: string[]): number {
+  for (let start = 0; start + sequence.length <= tokens.length; start += 1) {
+    if (sequence.every((word, index) => tokens[start + index] === word)) return start;
   }
-  return words;
+  return -1;
+}
+
+const isCaller = (turn: ConversationTranscriptTurn) => turn.speaker === "caller" || turn.speaker === "user";
+
+/**
+ * True when the caller gave this name as their own: right after a cue such as
+ * "my name is" or "c'est", or as a short reply to the receptionist asking for
+ * their name. A name the caller only mentions ("I'd like to speak with Marie
+ * Tremblay") doesn't count.
+ */
+function callerIntroducedThemselvesAs(transcript: ConversationTranscriptTurn[], nameWords: string[]): boolean {
+  let askedForName = false;
+  for (const turn of transcript) {
+    const tokens = words(turn.text);
+    if (!isCaller(turn)) {
+      askedForName = tokens.includes("name") || tokens.includes("nom");
+      continue;
+    }
+    const start = indexOfSequence(tokens, nameWords);
+    if (start >= 0) {
+      if (selfIdentificationCues.some((cue) => endsWith(tokens, start, cue))) return true;
+      if (askedForName && start <= 2 && tokens.length <= nameWords.length + 4) return true;
+    }
+    askedForName = false;
+  }
+  return false;
 }
 
 const wrappingCharacters = new Set(["\"", "'", "“", "”", "«", "»"]);
@@ -110,9 +147,8 @@ export function sanitizeGeneratedSummary(value: string | null | undefined): stri
 export function sanitizeGeneratedCallerName(value: string | null | undefined, transcript: ConversationTranscriptTurn[]): string | undefined {
   const name = normalizedSummary(value);
   if (!name || name.length > 60 || !callerNameShape.test(name) || placeholderNames.has(foldForComparison(name))) return undefined;
-  const spoken = callerWords(transcript);
-  const nameWords = foldForComparison(name).split(/\s+/u).map((word) => word.replace(/\.+$/u, ""));
-  return nameWords.every((word) => spoken.has(word)) ? name : undefined;
+  const nameWords = words(name);
+  return nameWords.length > 0 && callerIntroducedThemselvesAs(transcript, nameWords) ? name : undefined;
 }
 
 export function buildConversationSessionSummary(input: {
