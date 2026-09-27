@@ -184,7 +184,7 @@ export default defineRailway((ctx) => {
       NEXT_PUBLIC_WEB_CALL_ENDPOINT: preserve(),
       // The landing page's demo call starts at /api/voice/live/session with no
       // signed token; the admin only accepts it for this business, from these sites.
-      WEB_CALL_PUBLIC_BUSINESS_SLUG: production ? "lobbystack-mp35s9y1" : "lobbystack-qa-motd3txq",
+      WEB_CALL_PUBLIC_BUSINESS_SLUG: production ? "lobbystack-mp35s9y1" : "lobbystack",
       ...(production ? { WEB_CALL_ALLOWED_ORIGINS: "https://lobbystack.com,https://www.lobbystack.com" } : {}),
       OPENAI_API_KEY: preserve(),
       NUMBER_CLAIM_TOKEN_SECRET: preserve(),
