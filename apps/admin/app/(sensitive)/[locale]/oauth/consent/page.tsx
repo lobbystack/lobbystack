@@ -31,6 +31,16 @@ function verifiedClientHost(clientId: string): string | null {
   }
 }
 
+/** Where the browser goes after approval. The plugin already checked it against the client's registration. */
+function redirectHost(redirectUri: string | null): string | null {
+  if (!redirectUri) return null;
+  try {
+    return new URL(redirectUri).host || null;
+  } catch {
+    return null;
+  }
+}
+
 async function loadConsent(params: Record<string, string | string[] | undefined>, requestHeaders: Headers): Promise<OAuthConsentProps | { kind: "sign-in"; query: string }> {
   const oauthQuery = toQueryString(params);
   const query = new URLSearchParams(oauthQuery);
@@ -50,7 +60,7 @@ async function loadConsent(params: Record<string, string | string[] | undefined>
   return {
     kind: "consent",
     oauthQuery,
-    client: { name: clientName, host: verifiedClientHost(clientId) },
+    client: { name: clientName, host: verifiedClientHost(clientId), redirectHost: redirectHost(query.get("redirect_uri")) },
     email: session.user.email ?? "",
     businesses: businesses.map(({ businessId, name, active }) => ({ businessId, name, active })),
     scopes: oauthGrantableScopes.filter((scope) => requested.includes(scope)),

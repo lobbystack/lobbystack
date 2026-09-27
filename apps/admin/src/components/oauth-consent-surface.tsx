@@ -16,7 +16,8 @@ export type OAuthConsentProps =
   | {
     kind: "consent";
     oauthQuery: string;
-    client: { name: string | null; host: string | null };
+    /** host: verified from a CIMD client_id. redirectHost: where the approval is sent. */
+    client: { name: string | null; host: string | null; redirectHost: string | null };
     email: string;
     businesses: Array<{ businessId: string; name: string; active: boolean }>;
     /** Tool scopes the client asked for, in display order. */
@@ -126,7 +127,10 @@ export function OAuthConsentSurface(props: OAuthConsentProps) {
           <Button disabled={pending !== null || !businessId} onClick={() => void decide(true)}>{pending === "allow" ? t("oauthConsent.allowing") : t("oauthConsent.allow")}</Button>
           <Button disabled={pending !== null} onClick={() => void decide(false)} variant="outline">{t("oauthConsent.deny")}</Button>
         </div>
-        <p className="text-center text-xs text-muted-foreground">{t("oauthConsent.signedInAs", { email: props.email })}</p>
+        <p className="text-center text-xs text-muted-foreground">
+          {props.client.redirectHost ? <>{t("oauthConsent.returnsTo", { host: props.client.redirectHost })}<br /></> : null}
+          {t("oauthConsent.signedInAs", { email: props.email })}
+        </p>
       </div>
     </ReplacementOnboardingShell>
   );
