@@ -21,12 +21,12 @@ The package stays outside the pnpm workspace. Zapier builds it with npm and runs
 | Action | Reschedule Appointment | `POST /appointments/{id}/reschedule` |
 | Action | Add Knowledge | `POST /knowledge` |
 | Search | Find Contact (with Find or Create Contact) | `GET /contacts?phone=&email=` |
-| Search | Find Appointment | `GET /appointments` |
+| Search | Find Appointment | `GET /appointments?contact_id=` |
 | Search | Check Availability | `GET /availability` |
 
-Triggers are REST hooks. Turning on a Zap calls `POST /webhooks` for one event, and turning it off calls `DELETE /webhooks/{id}`. Hidden triggers fill the service, contact and appointment dropdowns.
+Triggers are REST hooks. Turning on a Zap calls `POST /webhooks` for one event, and turning it off calls `DELETE /webhooks/{id}`. Hidden triggers fill the service, staff, contact and appointment dropdowns. Each trigger checks the Standard Webhooks signature on every delivery with the secret LobbyStack returned when the Zap subscribed. If Zapier ever stops passing the raw request, run `zapier-platform env:set 1.0.0 LOBBYSTACK_SKIP_WEBHOOK_SIGNATURE=1` to turn the check off while you ship a fix.
 
-Users connect with an API key and an optional LobbyStack URL for self-hosted installs. The URL must use HTTPS. Plain HTTP works only for `localhost`, for local testing.
+Users connect with an API key and an optional LobbyStack URL for self-hosted installs. The connection test calls `GET /me`, so a key with any scopes connects. The URL must use HTTPS. Plain HTTP works only for `localhost`, for local testing.
 
 ## Develop
 
@@ -60,7 +60,7 @@ Run the tests on Node.js 22 before a push, since Zapier runs that version: `npx 
    npm run e2e:local
    ```
 
-   Add `ZAPIER_E2E_EVENTS_FROM_DB=1` and the same `DATABASE_URL` to also run each appointment and contact trigger on the webhook payloads the API recorded.
+   Add `ZAPIER_E2E_EVENTS_FROM_DB=1` and the same `DATABASE_URL` to also run each appointment and contact trigger on a delivery that the server's own code signed with the endpoint's secret. It checks that a valid signature passes and an altered body fails.
 
 The script tests the connection, subscribes and unsubscribes all six triggers, loads samples, and runs every action and search. Test subscriptions point at a `.invalid` host, so the worker's delivery attempts fail at DNS and no data leaves your machine.
 

@@ -1,9 +1,7 @@
 'use strict';
 
 const { compact, isoDate, listPage, normalizePhone } = require('../lib/client');
-const { outputFields, samples } = require('../lib/resources');
-
-const MAX_APPOINTMENT_PAGES = 5;
+const { outputFields, samples, staffField } = require('../lib/resources');
 
 const findContact = {
   key: 'find_contact',
@@ -51,7 +49,7 @@ const findAppointment = {
         label: 'Contact phone',
         type: 'string',
         required: false,
-        helpText: 'Only appointments for this phone number. Use international format, for example `+14165550134`.',
+        helpText: 'Only appointments for the contact with this phone number. Use international format, for example `+14165550134`. Ignored when a contact is chosen.',
       },
       {
         key: 'contact_id',
@@ -72,27 +70,23 @@ const findAppointment = {
     ],
     perform: async (z, bundle) => {
       const input = bundle.inputData;
+      let contactId = input.contact_id ? String(input.contact_id).trim() : undefined;
       const phone = normalizePhone(input.contact_phone);
-      const params = compact({
+      if (!contactId && phone) {
+        // Phone numbers are unique per business, so this is at most one contact.
+        const contacts = await listPage(z, bundle, '/contacts', { phone, limit: 1 });
+        const contact = Array.isArray(contacts.data) ? contacts.data[0] : undefined;
+        if (!contact) return [];
+        contactId = contact.id;
+      }
+      const body = await listPage(z, bundle, '/appointments', {
+        contact_id: contactId,
         status: input.status,
         starts_after: input.starts_after ? isoDate(input.starts_after) : undefined,
         starts_before: input.starts_before ? isoDate(input.starts_before) : undefined,
-        limit: 100,
+        limit: 25,
       });
-      const matches = (appointment) =>
-        (!phone || appointment.contact_phone === phone) && (!input.contact_id || appointment.contact_id === input.contact_id);
-      // The API filters by status and time; contact filters apply here, over
-      // the most recent pages.
-      const found = [];
-      let cursor;
-      for (let page = 0; page < MAX_APPOINTMENT_PAGES; page += 1) {
-        const body = await listPage(z, bundle, '/appointments', { ...params, cursor });
-        const items = Array.isArray(body.data) ? body.data : [];
-        found.push(...items.filter(matches));
-        if (found.length || !body.has_more || !body.next_cursor || (!phone && !input.contact_id)) break;
-        cursor = body.next_cursor;
-      }
-      return found;
+      return Array.isArray(body.data) ? body.data : [];
     },
     sample: samples.appointment,
     outputFields: outputFields.appointment,
@@ -132,6 +126,7 @@ const checkAvailability = {
         required: false,
         helpText: 'The last day to check. Defaults to the first day. The range can span up to 7 days.',
       },
+      { ...staffField, helpText: 'Only times this staff member is free. Leave blank for anyone who offers the service.' },
     ],
     perform: async (z, bundle) => {
       const input = bundle.inputData;
@@ -141,6 +136,7 @@ const checkAvailability = {
         service_id: input.service_id,
         start_date: startDate,
         end_date: endDate,
+        staff_id: input.staff_id,
       });
       const slots = Array.isArray(body.data) ? body.data : [];
       if (!slots.length) return [];
@@ -148,8 +144,9 @@ const checkAvailability = {
       // first opening or loop over all of them.
       return [
         {
-          id: `${input.service_id}:${startDate}:${endDate}`,
+          id: [input.service_id, input.staff_id, startDate, endDate].filter(Boolean).join(':'),
           service_id: input.service_id,
+          staff_id: input.staff_id || null,
           start_date: startDate,
           end_date: endDate,
           slot_count: slots.length,
@@ -162,6 +159,7 @@ const checkAvailability = {
     sample: {
       id: '0d6c1f4e-8a3b-4b7e-9c2d-5e6f7a8b9c01:2026-09-29:2026-09-29',
       service_id: '0d6c1f4e-8a3b-4b7e-9c2d-5e6f7a8b9c01',
+      staff_id: null,
       start_date: '2026-09-29',
       end_date: '2026-09-29',
       slot_count: 2,
@@ -175,6 +173,7 @@ const checkAvailability = {
     outputFields: [
       { key: 'id', label: 'Result ID', type: 'string' },
       { key: 'service_id', label: 'Service ID', type: 'string' },
+      { key: 'staff_id', label: 'Staff ID', type: 'string' },
       { key: 'start_date', label: 'First Day', type: 'string' },
       { key: 'end_date', label: 'Last Day', type: 'string' },
       { key: 'slot_count', label: 'Open Times', type: 'integer' },

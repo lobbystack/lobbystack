@@ -102,9 +102,18 @@ describe('book_appointment', () => {
     scope.done();
   });
 
-  it('gets its service choices from the services dropdown', () => {
-    const field = App.creates.book_appointment.operation.inputFields.find((item) => item.key === 'service_id');
-    expect(field.dynamic).toBe('service_list.id.name');
+  it('gets its service and staff choices from dropdowns', () => {
+    const fields = App.creates.book_appointment.operation.inputFields;
+    expect(fields.find((item) => item.key === 'service_id').dynamic).toBe('service_list.id.name');
+    expect(fields.find((item) => item.key === 'staff_id')).toMatchObject({ dynamic: 'staff_list.id.name', required: false });
+  });
+
+  it('books with the chosen staff member', async () => {
+    const scope = api()
+      .post('/appointments', (body) => body.staff_id === samples.staff.id)
+      .reply(201, { data: samples.appointment });
+    await appTester(perform, bundleWith({ inputData: { ...input, staff_id: samples.staff.id } }));
+    scope.done();
   });
 
   it('requires a contact or a phone number', async () => {
@@ -154,6 +163,17 @@ describe('reschedule_appointment', () => {
       bundleWith({ inputData: { appointment_id: samples.appointment.id, starts_at: '2026-09-30T11:00:00-04:00' } }),
     );
     expect(result.starts_at).toBe('2026-09-30T15:00:00Z');
+    scope.done();
+  });
+
+  it('moves the appointment to another staff member when one is chosen', async () => {
+    const scope = api()
+      .post(`/appointments/${samples.appointment.id}/reschedule`, { starts_at: '2026-09-30T15:00:00.000Z', staff_id: samples.staff.id })
+      .reply(200, { data: samples.appointment });
+    await appTester(
+      App.creates.reschedule_appointment.operation.perform,
+      bundleWith({ inputData: { appointment_id: samples.appointment.id, starts_at: '2026-09-30T15:00:00Z', staff_id: samples.staff.id } }),
+    );
     scope.done();
   });
 

@@ -1,7 +1,7 @@
 'use strict';
 
 const { apiUrl, compact, idempotencyKey, isoDate, normalizePhone, toBoolean } = require('../lib/client');
-const { outputFields, samples } = require('../lib/resources');
+const { outputFields, samples, staffField } = require('../lib/resources');
 
 const appointmentField = {
   key: 'appointment_id',
@@ -54,6 +54,7 @@ const bookAppointment = {
         helpText: 'Used when no contact is chosen. Use international format, for example `+14165550134`.',
       },
       { key: 'contact_name', label: 'Contact name', type: 'string', required: false },
+      { ...staffField, helpText: 'Book with this staff member. Leave blank to let LobbyStack pick someone free.' },
       {
         key: 'sms_consent',
         label: 'Customer agreed to texts',
@@ -71,6 +72,7 @@ const bookAppointment = {
         contact_id: input.contact_id,
         contact_phone: normalizePhone(input.contact_phone),
         contact_name: input.contact_name,
+        staff_id: input.staff_id,
         sms_consent: toBoolean(input.sms_consent),
       });
       if (!body.contact_id && !body.contact_phone) {
@@ -115,18 +117,19 @@ const rescheduleAppointment = {
   noun: 'Appointment',
   display: {
     label: 'Reschedule Appointment',
-    description: 'Moves an appointment to a new open time with the same staff member.',
+    description: 'Moves an appointment to a new open time.',
   },
   operation: {
     inputFields: [
       appointmentField,
       { key: 'starts_at', label: 'New start time', type: 'datetime', required: true, helpText: startsAtHelp },
+      { ...staffField, helpText: 'Move the appointment to this staff member. Leave blank to keep the current one.' },
     ],
     perform: async (z, bundle) => {
       const response = await z.request({
         url: apiUrl(bundle, `/appointments/${encodeURIComponent(bundle.inputData.appointment_id)}/reschedule`),
         method: 'POST',
-        body: { starts_at: isoDate(bundle.inputData.starts_at) },
+        body: compact({ starts_at: isoDate(bundle.inputData.starts_at), staff_id: bundle.inputData.staff_id }),
       });
       return response.data.data;
     },

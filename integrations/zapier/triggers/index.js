@@ -75,6 +75,7 @@ module.exports = [
   newMessage,
   newContact,
   dropdowns.serviceList,
+  dropdowns.staffList,
   dropdowns.contactList,
   dropdowns.appointmentList,
 ];

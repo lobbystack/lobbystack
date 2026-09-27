@@ -42,34 +42,40 @@ describe('find_appointment', () => {
   it('passes status and time filters to the API', async () => {
     const scope = api()
       .get('/appointments')
-      .query({ status: 'confirmed', starts_after: '2026-09-29T04:00:00.000Z', limit: '100' })
+      .query({ status: 'confirmed', starts_after: '2026-09-29T04:00:00.000Z', limit: '25' })
       .reply(200, page([samples.appointment]));
     const results = await appTester(perform, bundleWith({ inputData: { status: 'confirmed', starts_after: '2026-09-29T00:00:00-04:00' } }));
     expect(results).toEqual([samples.appointment]);
     scope.done();
   });
 
-  it('filters by contact phone and follows the cursor until it finds one', async () => {
-    const other = { ...samples.appointment, id: 'other', contact_phone: '+14165550000', contact_id: 'someone-else' };
+  it('looks up the contact by phone, then filters appointments on the server', async () => {
     const scope = api()
+      .get('/contacts')
+      .query({ phone: '+14165550134', limit: '1' })
+      .reply(200, page([samples.contact]))
       .get('/appointments')
-      .query({ limit: '100' })
-      .reply(200, page([other], { next_cursor: 'next', has_more: true }))
-      .get('/appointments')
-      .query({ limit: '100', cursor: 'next' })
+      .query({ contact_id: samples.contact.id, limit: '25' })
       .reply(200, page([samples.appointment]));
     const results = await appTester(perform, bundleWith({ inputData: { contact_phone: '+1 416 555 0134' } }));
     expect(results.map((item) => item.id)).toEqual([samples.appointment.id]);
     scope.done();
   });
 
-  it('filters by contact id', async () => {
-    api()
+  it('returns nothing when no contact has the phone number', async () => {
+    const scope = api().get('/contacts').query({ phone: '+14165550199', limit: '1' }).reply(200, page([]));
+    expect(await appTester(perform, bundleWith({ inputData: { contact_phone: '+14165550199' } }))).toEqual([]);
+    scope.done();
+  });
+
+  it('filters by the chosen contact on the server', async () => {
+    const scope = api()
       .get('/appointments')
-      .query(true)
-      .reply(200, page([{ ...samples.appointment, id: 'other', contact_id: 'someone-else' }, samples.appointment]));
-    const results = await appTester(perform, bundleWith({ inputData: { contact_id: samples.contact.id } }));
+      .query({ contact_id: samples.contact.id, status: 'confirmed', limit: '25' })
+      .reply(200, page([samples.appointment]));
+    const results = await appTester(perform, bundleWith({ inputData: { contact_id: samples.contact.id, contact_phone: '+14165550000', status: 'confirmed' } }));
     expect(results.map((item) => item.id)).toEqual([samples.appointment.id]);
+    scope.done();
   });
 });
 
@@ -91,6 +97,17 @@ describe('check_availability', () => {
     );
     expect(results).toHaveLength(1);
     expect(results[0]).toMatchObject({ slot_count: 2, first_starts_at: slots[0].starts_at, slots });
+    scope.done();
+  });
+
+  it('passes the chosen staff member', async () => {
+    const scope = api()
+      .get('/availability')
+      .query({ service_id: samples.service.id, start_date: '2026-09-29', end_date: '2026-09-29', staff_id: samples.staff.id })
+      .reply(200, page(slots));
+    const [result] = await appTester(perform, bundleWith({ inputData: { service_id: samples.service.id, start_date: '2026-09-29', staff_id: samples.staff.id } }));
+    expect(result.staff_id).toBe(samples.staff.id);
+    expect(App.searches.check_availability.operation.inputFields.find((field) => field.key === 'staff_id').dynamic).toBe('staff_list.id.name');
     scope.done();
   });
 

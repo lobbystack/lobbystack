@@ -151,6 +151,12 @@ describe('dropdown triggers', () => {
     expect(results).toEqual([samples.service]);
   });
 
+  it('lists active staff members only', async () => {
+    api().get('/staff').reply(200, page([samples.staff, { ...samples.staff, id: 'gone', name: 'Former', active: false }]));
+    const results = await appTester(App.triggers.staff_list.operation.perform, bundleWith());
+    expect(results).toEqual([samples.staff]);
+  });
+
   it('lists contacts with a readable label', async () => {
     api().get('/contacts').query({ limit: '100' }).reply(200, page([samples.contact, { ...samples.contact, id: 'x', name: null, email: null }]));
     const results = await appTester(App.triggers.contact_list.operation.perform, bundleWith());

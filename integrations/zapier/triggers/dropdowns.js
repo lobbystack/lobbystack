@@ -64,6 +64,32 @@ const serviceList = {
   },
 };
 
+const staffList = {
+  key: 'staff_list',
+  noun: 'Staff',
+  display: {
+    label: 'List Staff',
+    description: 'Lists active staff members who take appointments. Used for dropdowns.',
+    hidden: true,
+  },
+  operation: {
+    perform: async (z, bundle) => {
+      const body = await listPage(z, bundle, '/staff');
+      return (Array.isArray(body.data) ? body.data : []).filter((member) => member.active);
+    },
+    sample: samples.staff,
+    outputFields: [
+      { key: 'id', label: 'Staff ID', type: 'string' },
+      { key: 'name', label: 'Name', type: 'string' },
+      { key: 'active', label: 'Active', type: 'boolean' },
+      { key: 'timezone', label: 'Time Zone', type: 'string' },
+      { key: 'service_ids[]', label: 'Service IDs', type: 'string' },
+      { key: 'created_at', label: 'Created At', type: 'datetime' },
+      { key: 'updated_at', label: 'Updated At', type: 'datetime' },
+    ],
+  },
+};
+
 const contactList = {
   key: 'contact_list',
   noun: 'Contact',
@@ -105,4 +131,4 @@ const appointmentList = {
   },
 };
 
-module.exports = { serviceList, contactList, appointmentList, cursorPage };
+module.exports = { serviceList, staffList, contactList, appointmentList, cursorPage };

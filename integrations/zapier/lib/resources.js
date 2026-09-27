@@ -23,6 +23,15 @@ const samples = {
     created_at: '2026-01-12T14:10:00Z',
     updated_at: '2026-03-02T09:20:00Z',
   },
+  staff: {
+    id: '4f3e2d1c-0b9a-4876-a543-210fedcba987',
+    name: 'Dr. Priya Shah',
+    active: true,
+    timezone: 'America/Toronto',
+    service_ids: ['0d6c1f4e-8a3b-4b7e-9c2d-5e6f7a8b9c01'],
+    created_at: '2026-01-12T14:12:00Z',
+    updated_at: '2026-03-02T09:20:00Z',
+  },
   call: {
     id: '7e2d4c6a-1b3f-4a5e-8d9c-0f1e2d3c4b5a',
     channel: 'phone',
@@ -158,4 +167,12 @@ const outputFields = {
   ],
 };
 
-module.exports = { samples, outputFields };
+// Optional staff picker shared by booking, rescheduling and availability.
+const staffField = {
+  key: 'staff_id',
+  label: 'Staff member',
+  required: false,
+  dynamic: 'staff_list.id.name',
+};
+
+module.exports = { samples, outputFields, staffField };

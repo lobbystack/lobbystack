@@ -2,9 +2,19 @@
 
 const { DEFAULT_BASE_URL, apiUrl } = require('./lib/client');
 
+// GET /me works for any valid key, whatever its scopes, so a key made only
+// for one action can still connect.
 const test = async (z, bundle) => {
-  const response = await z.request({ url: apiUrl(bundle, '/business'), method: 'GET' });
-  return response.data.data;
+  const response = await z.request({ url: apiUrl(bundle, '/me'), method: 'GET' });
+  const me = response.data.data;
+  return {
+    business_id: me.business.id,
+    business_name: me.business.name,
+    api_key_id: me.api_key.id,
+    api_key_name: me.api_key.name,
+    api_key_prefix: me.api_key.prefix,
+    scopes: me.api_key.scopes,
+  };
 };
 
 module.exports = {
@@ -16,7 +26,7 @@ module.exports = {
       type: 'password',
       required: true,
       helpText:
-        'In LobbyStack, go to **Settings > API keys** and create a key for Zapier. It starts with `lsk_`. Give it the scopes for the steps you plan to use, including `webhooks:manage` for triggers. [Learn more](https://docs.lobbystack.com/api/authentication).',
+        'In LobbyStack, go to **Settings > API keys** and create a key for Zapier. It starts with `lsk_`. Any key connects; give it the scopes for the steps you plan to use, and `webhooks:manage` for triggers. [Learn more](https://docs.lobbystack.com/api/authentication).',
     },
     {
       key: 'baseUrl',
@@ -29,5 +39,5 @@ module.exports = {
     },
   ],
   test,
-  connectionLabel: '{{name}}',
+  connectionLabel: '{{business_name}}',
 };
