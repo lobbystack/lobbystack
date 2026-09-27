@@ -9,6 +9,7 @@ import { isSensitiveAnalyticsRoute, ProductAnalytics } from "./product-analytics
 
 const mocks = vi.hoisted(() => ({
   pathname: "/calls",
+  recorderLoaded: vi.fn(),
   posthog: {
     __loaded: true,
     capture: vi.fn(),
@@ -24,6 +25,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("next/navigation", () => ({ usePathname: () => mocks.pathname }));
 vi.mock("posthog-js", () => ({ default: mocks.posthog }));
+vi.mock("@/lib/session-recorder", () => { mocks.recorderLoaded(); return {}; });
 
 const clients: QueryClient[] = [];
 beforeEach(() => {
@@ -62,6 +64,14 @@ describe("workspace telemetry preference", () => {
     await waitFor(() => expect(mocks.posthog.capture).not.toHaveBeenCalled());
     expect(mocks.posthog.opt_in_capturing).not.toHaveBeenCalled();
     expect(mocks.posthog.identify).not.toHaveBeenCalled();
+    expect(mocks.recorderLoaded).not.toHaveBeenCalled();
+  });
+
+  it("loads the bundled recorder before opting in", async () => {
+    setup(true);
+    await waitFor(() => expect(mocks.posthog.opt_in_capturing).toHaveBeenCalled());
+    expect(mocks.recorderLoaded).toHaveBeenCalled();
+    expect(mocks.recorderLoaded.mock.invocationCallOrder[0]).toBeLessThan(mocks.posthog.opt_in_capturing.mock.invocationCallOrder[0]!);
   });
 
   it("opts in, identifies the operator, and attributes events to the active business", async () => {

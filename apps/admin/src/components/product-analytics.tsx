@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import posthog from "posthog-js";
@@ -53,7 +53,18 @@ export function ProductAnalytics({ children }: { children?: ReactNode }) {
   const businesses = useQuery({ queryKey: ["businesses"], enabled: Boolean(projectToken) && !sensitive, retry: false, queryFn: () => requestJson<{ businesses: Array<{ businessId: string; active: boolean }> }>("/api/businesses") });
   const businessId = selectActiveBusiness(businesses.data?.businesses)?.businessId;
   const preference = useQuery({ queryKey: ["appearance-preferences", businessId], enabled: Boolean(projectToken && businessId) && !sensitive, retry: false, queryFn: () => requestJson<{ telemetryEnabled: boolean }>(`/api/preferences/appearance?businessId=${encodeURIComponent(businessId!)}`) });
-  const allowed = Boolean(projectToken && userId && businessId && preference.data?.telemetryEnabled === true && !sensitive);
+  const permitted = Boolean(projectToken && userId && businessId && preference.data?.telemetryEnabled === true && !sensitive);
+  // Load the bundled recorder before opting in, so the SDK never fetches it
+  // from the PostHog host. Visitors without telemetry never download it.
+  const [recorderSettled, setRecorderSettled] = useState(false);
+  useEffect(() => {
+    if (!permitted || recorderSettled) return;
+    let active = true;
+    const settle = () => { if (active) setRecorderSettled(true); };
+    import("@/lib/session-recorder").then(settle, settle);
+    return () => { active = false; };
+  }, [permitted, recorderSettled]);
+  const allowed = permitted && recorderSettled;
   const telemetryRef = useRef<BrowserTelemetry | null>(null);
   const allowedRef = useRef(false);
   allowedRef.current = allowed;
