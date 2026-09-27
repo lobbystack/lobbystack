@@ -125,7 +125,6 @@
         ]
       },
       {
-<<<<<<< HEAD
         "group": "AI assistants",
         "pages": [
           "ai/mcp",
@@ -136,8 +135,6 @@
         ]
       },
       {
-=======
->>>>>>> origin/main
         "group": "API reference",
         "openapi": "api-reference/openapi.json"
       },

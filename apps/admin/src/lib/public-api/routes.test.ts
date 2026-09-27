@@ -13,11 +13,8 @@ const domain = vi.hoisted(() => ({
   updateContactForApi: vi.fn(),
   cancelAppointmentForApi: vi.fn(),
   getWebhookEndpoint: vi.fn(),
-<<<<<<< HEAD
   listCallsForApi: vi.fn(async () => ({ data: [], next_cursor: null, has_more: false })),
   listContactsForApi: vi.fn(async () => ({ data: [], next_cursor: null, has_more: false })),
-=======
->>>>>>> origin/main
   listStaffForApi: vi.fn(),
   getMeForApi: vi.fn(),
   listAppointmentsForApi: vi.fn(),
@@ -117,7 +114,6 @@ describe("v1 UUID validation", () => {
   });
 });
 
-<<<<<<< HEAD
 describe("v1 list filters", () => {
   it("passes the call start-time range to the domain", async () => {
     const response = await v1.listCalls(call(`/calls?started_after=${encodeURIComponent("2026-09-26T00:00:00-04:00")}&started_before=2026-09-27T04:00:00Z&limit=10`));
@@ -151,8 +147,6 @@ describe("v1 list filters", () => {
   });
 });
 
-=======
->>>>>>> origin/main
 describe("GET /staff", () => {
   it("requires business:read", async () => {
     domain.resolveApiKey.mockResolvedValue({ businessId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", apiKeyId: "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6", scopes: ["appointments:write"] });

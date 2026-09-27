@@ -26,11 +26,8 @@ type BookingInput = {
   smsConsentGranted?: boolean;
   /** Set when a public API key made the booking; recorded in the audit log. */
   apiKeyId?: string;
-<<<<<<< HEAD
   /** The surface that used the key: the REST API (the default) or the MCP server. */
   apiActor?: "api_key" | "mcp";
-=======
->>>>>>> origin/main
 };
 
 async function lockStaff(tx: DatabaseTransaction, staffId: string): Promise<void> {
@@ -273,11 +270,7 @@ export async function bookAppointment(
       }
     }
     if (input.callId) await recordCallOutcomeInTransaction(tx, { businessId: input.businessId, callId: input.callId, contactId, outcome: { kind: "booked", serviceName: reference.serviceName, startsAt: startsAt.toISOString() } });
-<<<<<<< HEAD
     if (input.apiKeyId) await tx.insert(auditLogs).values({ businessId: input.businessId, eventType: "api.appointment.booked", entityType: "appointment", entityId: appointment.id, payload: { actor: input.apiActor ?? "api_key", apiKeyId: input.apiKeyId } });
-=======
-    if (input.apiKeyId) await tx.insert(auditLogs).values({ businessId: input.businessId, eventType: "api.appointment.booked", entityType: "appointment", entityId: appointment.id, payload: { actor: "api_key", apiKeyId: input.apiKeyId } });
->>>>>>> origin/main
     if (contactCreated) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contactId });
     await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "appointment.booked", resourceId: appointment.id });
     return { appointmentId: appointment.id, contactId, staffId: selectedStaff.id };
@@ -300,19 +293,11 @@ async function recordAppointmentChange(
   }
 }
 
-<<<<<<< HEAD
 type AppointmentChangeSource = { source: "operator"; userId: string } | { source: "caller" } | { source: "api"; apiKeyId: string; actor?: "api_key" | "mcp" };
 
 function changeAudit(change: AppointmentChangeSource): { actorUserId: string | null; payload: Record<string, unknown> } {
   if (change.source === "operator") return { actorUserId: change.userId, payload: { source: "operator" } };
   if (change.source === "api") return { actorUserId: null, payload: { source: "api", actor: change.actor ?? "api_key", apiKeyId: change.apiKeyId } };
-=======
-type AppointmentChangeSource = { source: "operator"; userId: string } | { source: "caller" } | { source: "api"; apiKeyId: string };
-
-function changeAudit(change: AppointmentChangeSource): { actorUserId: string | null; payload: Record<string, unknown> } {
-  if (change.source === "operator") return { actorUserId: change.userId, payload: { source: "operator" } };
-  if (change.source === "api") return { actorUserId: null, payload: { source: "api", apiKeyId: change.apiKeyId } };
->>>>>>> origin/main
   return { actorUserId: null, payload: { source: "caller" } };
 }
 
