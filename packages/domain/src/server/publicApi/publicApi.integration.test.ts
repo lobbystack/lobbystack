@@ -1,0 +1,270 @@
+import { randomUUID } from "node:crypto";
+
+import { and, eq, inArray, sql } from "drizzle-orm";
+import { DateTime } from "luxon";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import { apiKeys, appointments, auditLogs, businessHours, businesses, calls, contacts, conversations, createDatabaseClient, inboxItems, operatorNotificationDeliveries, outboxMessages, receptionistProfiles, services, staff, users, businessMemberships, webhookDeliveries, webhookDeliveryAttempts, webhookEndpoints, webhookEvents } from "@lobbystack/db";
+import { apiAppointmentSchema, apiCallSchema, WEBHOOK_MAX_ATTEMPTS } from "@lobbystack/shared";
+
+import { finalizeConversationSession } from "../conversations";
+import { createVoiceFollowUpTask } from "../voice";
+import { generateApiKey, resolveApiKey } from "./apiKeys";
+import { beginIdempotentRequest, completeIdempotentRequest } from "./idempotency";
+import { cancelAppointmentForApi, createAppointmentForApi, createContactForApi, getAvailabilityForApi, getContactForApi, listContactsForApi, rescheduleAppointmentForApi, updateBusinessForApi, type ApiCaller } from "./operations";
+import { PublicApiError } from "./errors";
+import { createWebhookEndpoint, processWebhookDelivery } from "./webhooks";
+import { encryptWebhookSecret } from "./webhookTransport";
+
+// Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
+const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
+if (testUrl) {
+  const url = new URL(testUrl);
+  if (process.env.NODE_ENV === "production" || !["localhost", "127.0.0.1", "::1", "[::1]"].includes(url.hostname) || !/test/i.test(url.pathname)) {
+    throw new Error("Public API integration tests require a dedicated local test database.");
+  }
+}
+
+// The admin serves /api/v1 with the lobbystack_worker role; run the same role here.
+function roleUrl(role: string): string {
+  const url = new URL(testUrl!);
+  url.searchParams.set("options", `-c role=${role}`);
+  return url.toString();
+}
+
+const admin = testUrl ? createDatabaseClient("lobbystack_migrator", { DATABASE_URL: testUrl }) : undefined;
+// A real lobbystack_worker login (optional) also exercises the owner-alert resolver, which checks session_user.
+const workerLoginUrl = process.env.LOBBYSTACK_PUBLIC_API_TEST_WORKER_DATABASE_URL;
+const worker = testUrl ? createDatabaseClient("lobbystack_worker", { DATABASE_URL: workerLoginUrl ?? roleUrl("lobbystack_worker") }) : undefined;
+const app = testUrl ? createDatabaseClient("lobbystack_app", { DATABASE_URL: roleUrl("lobbystack_app") }) : undefined;
+
+type Fixture = { businessId: string; serviceId: string; staffId: string; caller: ApiCaller; key: string };
+let a: Fixture;
+let b: Fixture;
+let ownerId: string;
+
+async function createFixture(label: string): Promise<Fixture> {
+  const businessId = randomUUID();
+  await admin!.db.insert(businesses).values({ id: businessId, slug: `api-${label}-${businessId}`, name: `API ${label}`, timezone: "UTC", businessType: "test" });
+  await admin!.db.insert(receptionistProfiles).values({ businessId, greeting: "Hi", tone: "warm", summary: label, bookingPolicy: "Book", transferMode: "never", bookingMode: "instant" });
+  const [member] = await admin!.db.insert(staff).values({ businessId, name: "Sam", timezone: "UTC" }).returning({ id: staff.id });
+  const [service] = await admin!.db.insert(services).values({ businessId, name: "Cut", slug: "cut", durationMinutes: 30 }).returning({ id: services.id });
+  await admin!.db.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 8 * 60, closeMinutes: 20 * 60 })));
+  const generated = generateApiKey();
+  const [apiKey] = await admin!.db.insert(apiKeys).values({ businessId, name: label, prefix: generated.prefix, keyHash: generated.keyHash, scopes: ["contacts:read", "contacts:write", "appointments:write"] }).returning({ id: apiKeys.id });
+  return { businessId, serviceId: service!.id, staffId: member!.id, caller: { businessId, apiKeyId: apiKey!.id }, key: generated.key };
+}
+
+function tomorrowAt(hour: number): string {
+  return DateTime.utc().plus({ days: 2 }).set({ hour, minute: 0, second: 0, millisecond: 0 }).toISO()!;
+}
+
+async function expectApiError(promise: Promise<unknown>, status: number, code: string) {
+  const error = await promise.then(() => null, (value: unknown) => value);
+  expect(error).toBeInstanceOf(PublicApiError);
+  expect(error).toMatchObject({ status, code });
+}
+
+describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
+  beforeAll(async () => {
+    a = await createFixture("a");
+    b = await createFixture("b");
+    ownerId = randomUUID();
+    await admin!.db.insert(users).values({ id: ownerId, email: `${ownerId}@example.invalid`, normalizedEmail: `${ownerId}@example.invalid` });
+    await admin!.db.insert(businessMemberships).values({ businessId: a.businessId, userId: ownerId, role: "business_owner" });
+  });
+
+  afterAll(async () => {
+    if (a && b) {
+      const ids = [a.businessId, b.businessId];
+      await admin!.db.delete(outboxMessages).where(inArray(outboxMessages.businessId, ids));
+      await admin!.db.delete(appointments).where(inArray(appointments.businessId, ids));
+      await admin!.db.delete(businesses).where(inArray(businesses.id, ids));
+      await admin!.db.delete(users).where(eq(users.id, ownerId));
+    }
+    await Promise.all([admin?.pool.end(), worker?.pool.end(), app?.pool.end()]);
+  });
+
+  it("resolves a key to its own business and rejects revoked keys", async () => {
+    expect(await resolveApiKey({ db: worker!.db }, a.key)).toMatchObject({ businessId: a.businessId, apiKeyId: a.caller.apiKeyId });
+    expect(await resolveApiKey({ db: app!.db }, b.key)).toMatchObject({ businessId: b.businessId });
+    expect(await resolveApiKey({ db: worker!.db }, `${a.key.slice(0, -1)}x`)).toBeNull();
+    await admin!.db.update(apiKeys).set({ revokedAt: new Date() }).where(eq(apiKeys.id, b.caller.apiKeyId));
+    expect(await resolveApiKey({ db: worker!.db }, b.key)).toBeNull();
+    await admin!.db.update(apiKeys).set({ revokedAt: null }).where(eq(apiKeys.id, b.caller.apiKeyId));
+  });
+
+  it("never lets a key for business A read business B", async () => {
+    const context = { db: worker!.db };
+    const contactB = await createContactForApi(context, b.caller, { name: "Only in B", phone: "+14165550199" });
+    await expectApiError(getContactForApi(context, a.caller, contactB.id), 404, "not_found");
+    const pageA = await listContactsForApi(context, a.caller, { limit: 100 });
+    expect(pageA.data.map((contact) => contact.id)).not.toContain(contactB.id);
+    // RLS itself hides B's row from a transaction scoped to business A.
+    const rows = await worker!.db.transaction(async (tx) => {
+      await tx.execute(sql`select set_config('app.business_id', ${a.businessId}, true), set_config('app.actor_type', 'worker', true)`);
+      return await tx.select({ id: contacts.id }).from(contacts).where(eq(contacts.id, contactB.id));
+    });
+    expect(rows).toEqual([]);
+  });
+
+  it("pages through contacts with a cursor without gaps or repeats", async () => {
+    const context = { db: worker!.db };
+    const created = [];
+    for (let index = 0; index < 5; index += 1) created.push((await createContactForApi(context, a.caller, { name: `Page ${index}`, phone: `+1416555${String(1000 + index)}` })).id);
+    const seen: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await listContactsForApi(context, a.caller, { limit: 2, ...(cursor ? { cursor } : {}) });
+      expect(page.data.length).toBeLessThanOrEqual(2);
+      seen.push(...page.data.map((contact) => contact.id));
+      cursor = page.next_cursor ?? undefined;
+      expect(page.has_more).toBe(page.next_cursor !== null);
+    } while (cursor);
+    expect(new Set(seen).size).toBe(seen.length);
+    for (const id of created) expect(seen).toContain(id);
+  });
+
+  it("rejects a duplicate phone number with 409", async () => {
+    const context = { db: worker!.db };
+    await createContactForApi(context, a.caller, { phone: "+14165552222" });
+    await expectApiError(createContactForApi(context, a.caller, { phone: "+14165552222" }), 409, "conflict");
+  });
+
+  it("replays idempotent requests and rejects a reused key with a different body", async () => {
+    const context = { db: worker!.db };
+    const scope = { businessId: a.businessId, apiKeyId: a.caller.apiKeyId, operation: "createContact", key: `idem-${randomUUID()}` };
+    expect(await beginIdempotentRequest(context, scope, "hash-1")).toEqual({ kind: "new" });
+    await expectApiError(beginIdempotentRequest(context, scope, "hash-1"), 409, "idempotency_request_in_progress");
+    await completeIdempotentRequest(context, scope, "hash-1", { status: 201, body: { data: { id: "x" } } });
+    expect(await beginIdempotentRequest(context, scope, "hash-1")).toEqual({ kind: "replay", response: { status: 201, body: { data: { id: "x" } } } });
+    await expectApiError(beginIdempotentRequest(context, scope, "hash-2"), 422, "idempotency_key_reused");
+    // The same key under another API key is independent.
+    expect(await beginIdempotentRequest(context, { ...scope, businessId: b.businessId, apiKeyId: b.caller.apiKeyId }, "hash-2")).toEqual({ kind: "new" });
+  });
+
+  it("books only in instant booking mode", async () => {
+    const context = { db: worker!.db };
+    const input = { service_id: a.serviceId, starts_at: tomorrowAt(10), contact_phone: "+14165553333", contact_name: "Booker" };
+    await admin!.db.update(receptionistProfiles).set({ bookingMode: "request" }).where(eq(receptionistProfiles.businessId, a.businessId));
+    await expectApiError(createAppointmentForApi(context, a.caller, input), 409, "booking_requires_confirmation");
+    await admin!.db.update(receptionistProfiles).set({ bookingMode: "off" }).where(eq(receptionistProfiles.businessId, a.businessId));
+    await expectApiError(createAppointmentForApi(context, a.caller, input), 409, "booking_disabled");
+    expect(await admin!.db.select({ id: appointments.id }).from(appointments).where(eq(appointments.businessId, a.businessId))).toEqual([]);
+    await admin!.db.update(receptionistProfiles).set({ bookingMode: "instant" }).where(eq(receptionistProfiles.businessId, a.businessId));
+    const appointment = await createAppointmentForApi(context, a.caller, input);
+    expect(apiAppointmentSchema.parse(appointment)).toMatchObject({ status: "confirmed", source: "api", service_id: a.serviceId, contact_phone: "+14165553333" });
+    const [calendarJob] = await admin!.db.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.businessId, a.businessId), eq(outboxMessages.topic, "calendar.syncAppointment"), eq(outboxMessages.aggregateId, appointment.id)));
+    expect(calendarJob).toBeDefined();
+    const [auditRow] = await admin!.db.select({ payload: auditLogs.payload }).from(auditLogs).where(and(eq(auditLogs.entityId, appointment.id), eq(auditLogs.eventType, "api.appointment.booked")));
+    expect(auditRow?.payload).toMatchObject({ actor: "api_key", apiKeyId: a.caller.apiKeyId });
+    await expectApiError(createAppointmentForApi(context, a.caller, { ...input, contact_phone: "+14165553334" }), 409, "slot_unavailable");
+    const slots = await getAvailabilityForApi(context, a.caller, { serviceId: a.serviceId, startDate: tomorrowAt(10).slice(0, 10) });
+    expect(slots.map((slot) => slot.starts_at)).not.toContain(new Date(input.starts_at).toISOString());
+    expect(slots.length).toBeGreaterThan(0);
+  });
+
+  it("emits appointment and contact webhooks through the outbox in the booking transaction", async () => {
+    const context = { db: worker!.db };
+    const created = await createWebhookEndpoint({ db: app!.db }, { businessId: a.businessId, manager: { kind: "operator", userId: ownerId }, url: "https://hooks.example.com/lobbystack", events: ["appointment.booked", "appointment.cancelled", "appointment.rescheduled", "contact.created"] });
+    const appointment = await createAppointmentForApi(context, a.caller, { service_id: a.serviceId, starts_at: tomorrowAt(12), contact_phone: "+14165554444" });
+    const events = await admin!.db.select().from(webhookEvents).where(eq(webhookEvents.businessId, a.businessId));
+    const booked = events.find((event) => event.type === "appointment.booked" && (event.payload.data as { id: string }).id === appointment.id);
+    expect(booked?.payload).toMatchObject({ type: "appointment.booked", api_version: "v1", business_id: a.businessId, id: booked?.id });
+    expect(booked?.payload.data).toEqual(appointment);
+    expect(events.some((event) => event.type === "contact.created" && (event.payload.data as { phone: string }).phone === "+14165554444")).toBe(true);
+    const [delivery] = await admin!.db.select().from(webhookDeliveries).where(and(eq(webhookDeliveries.eventId, booked!.id), eq(webhookDeliveries.endpointId, created.endpoint.id)));
+    const [job] = await admin!.db.select().from(outboxMessages).where(and(eq(outboxMessages.topic, "webhook.deliver"), eq(outboxMessages.aggregateId, delivery!.id)));
+    expect(job?.payload).toEqual({ deliveryId: delivery!.id, attempt: 1 });
+
+    const moved = await rescheduleAppointmentForApi(context, a.caller, appointment.id, { starts_at: tomorrowAt(14) });
+    expect(moved.starts_at).toBe(new Date(tomorrowAt(14)).toISOString());
+    const cancelled = await cancelAppointmentForApi(context, a.caller, appointment.id);
+    expect(cancelled.status).toBe("cancelled");
+    expect((await cancelAppointmentForApi(context, a.caller, appointment.id)).status).toBe("cancelled");
+    const types = (await admin!.db.select({ type: webhookEvents.type, payload: webhookEvents.payload }).from(webhookEvents).where(eq(webhookEvents.businessId, a.businessId))).filter((event) => (event.payload.data as { id: string }).id === appointment.id).map((event) => event.type);
+    expect(types.sort()).toEqual(["appointment.booked", "appointment.cancelled", "appointment.rescheduled"]);
+    await expectApiError(rescheduleAppointmentForApi(context, a.caller, appointment.id, { starts_at: tomorrowAt(15) }), 409, "conflict");
+  });
+
+  it("does not record events for businesses without subscribed endpoints", async () => {
+    const before = await admin!.db.select({ id: webhookEvents.id }).from(webhookEvents).where(eq(webhookEvents.businessId, b.businessId));
+    await createContactForApi({ db: worker!.db }, b.caller, { phone: "+14165556666" });
+    expect(await admin!.db.select({ id: webhookEvents.id }).from(webhookEvents).where(eq(webhookEvents.businessId, b.businessId))).toHaveLength(before.length);
+  });
+
+  it("emits call.completed when a finished call is finalized, and message.taken for new messages", async () => {
+    const context = { db: worker!.db };
+    await admin!.db.update(webhookEndpoints).set({ events: ["call.completed", "message.taken"] }).where(eq(webhookEndpoints.businessId, a.businessId));
+    const [contact] = await admin!.db.insert(contacts).values({ businessId: a.businessId, phone: "+14165557777", name: "Caller" }).returning({ id: contacts.id });
+    const [conversation] = await admin!.db.insert(conversations).values({ businessId: a.businessId, contactId: contact!.id, channel: "voice", summary: "Asked about prices." }).returning({ id: conversations.id });
+    const [call] = await admin!.db.insert(calls).values({ businessId: a.businessId, contactId: contact!.id, conversationId: conversation!.id, providerCallId: `test-${randomUUID()}`, transport: "sip", status: "completed", startedAt: new Date(Date.now() - 120_000), endedAt: new Date() }).returning({ id: calls.id });
+    const result = await finalizeConversationSession(context, { businessId: a.businessId, callId: call!.id });
+    expect(result.finalized).toBe(true);
+    const [event] = await admin!.db.select().from(webhookEvents).where(and(eq(webhookEvents.businessId, a.businessId), eq(webhookEvents.type, "call.completed")));
+    expect(apiCallSchema.parse(event!.payload.data)).toMatchObject({ id: call!.id, status: "completed", caller_phone: "+14165557777", channel: "phone" });
+    const [outbox] = await admin!.db.select().from(outboxMessages).where(and(eq(outboxMessages.businessId, a.businessId), eq(outboxMessages.topic, "webhook.deliver"), sql`${outboxMessages.payload}->>'deliveryId' in (select id::text from webhook_deliveries where event_id = ${event!.id})`));
+    expect(outbox).toBeDefined();
+
+    const task = await createVoiceFollowUpTask(context, { businessId: a.businessId, callId: call!.id, callerName: "Caller", callbackPhone: "+14165557777", urgency: "urgent", message: "Call back", channel: "voice" });
+    const [message] = await admin!.db.select().from(webhookEvents).where(and(eq(webhookEvents.businessId, a.businessId), eq(webhookEvents.type, "message.taken")));
+    expect(message?.payload.data).toMatchObject({ id: task.inboxItemId, caller_name: "Caller", callback_phone: "+14165557777", urgency: "urgent", channel: "voice", call_id: call!.id });
+    const [item] = await admin!.db.select({ metadata: inboxItems.metadata }).from(inboxItems).where(eq(inboxItems.id, task.inboxItemId));
+    expect(item?.metadata).toMatchObject({ callerName: "Caller" });
+  });
+
+  it("retries failed deliveries with backoff, then disables a failing endpoint and alerts the owner", async () => {
+    const context = { db: worker!.db };
+    const [endpoint] = await admin!.db.insert(webhookEndpoints).values({ businessId: b.businessId, url: "https://failing.example.com/hook", events: ["contact.created"], encryptedSecret: encryptWebhookSecret("whsec_dGVzdHNlY3JldHRlc3RzZWNyZXR0ZXN0c2VjcmV0MTI=") }).returning();
+    await admin!.db.insert(users).values({ id: randomUUID(), email: `b-owner-${randomUUID()}@example.invalid`, normalizedEmail: `b-owner-${randomUUID()}@example.invalid` }).returning({ id: users.id }).then(async ([user]) => {
+      await admin!.db.insert(businessMemberships).values({ businessId: b.businessId, userId: user!.id, role: "business_owner" });
+    });
+    const contact = await createContactForApi(context, b.caller, { phone: "+14165558888" });
+    const [delivery] = await admin!.db.select().from(webhookDeliveries).innerJoin(webhookEvents, eq(webhookEvents.id, webhookDeliveries.eventId)).where(and(eq(webhookDeliveries.endpointId, endpoint!.id), sql`${webhookEvents.payload}->'data'->>'id' = ${contact.id}`));
+    const deliveryId = delivery!.webhook_deliveries.id;
+    const failing = async () => ({ ok: false, status: 500, error: "HTTP 500", durationMs: 5 });
+
+    const first = await processWebhookDelivery(context, { businessId: b.businessId, deliveryId, attempt: 1, send: failing });
+    expect(first.outcome).toBe("retry_scheduled");
+    const [retry] = await admin!.db.select().from(outboxMessages).where(eq(outboxMessages.dedupeKey, `webhook-delivery:${deliveryId}:attempt:2`));
+    expect(retry!.availableAt.getTime() - Date.now()).toBeGreaterThan(20_000);
+    // A duplicate job for an attempt that already ran is ignored.
+    expect((await processWebhookDelivery(context, { businessId: b.businessId, deliveryId, attempt: 1, send: failing })).outcome).toBe("stale");
+
+    let last = first;
+    for (let attempt = 2; attempt <= WEBHOOK_MAX_ATTEMPTS; attempt += 1) last = await processWebhookDelivery(context, { businessId: b.businessId, deliveryId, attempt, send: failing });
+    expect(last).toEqual({ outcome: "failed", endpointDisabled: true });
+    const attempts = await admin!.db.select().from(webhookDeliveryAttempts).where(eq(webhookDeliveryAttempts.deliveryId, deliveryId));
+    expect(attempts).toHaveLength(WEBHOOK_MAX_ATTEMPTS);
+    const [after] = await admin!.db.select().from(webhookEndpoints).where(eq(webhookEndpoints.id, endpoint!.id));
+    expect(after).toMatchObject({ status: "disabled", disabledReason: "failing", consecutiveFailures: WEBHOOK_MAX_ATTEMPTS });
+    const [audit] = await admin!.db.select().from(auditLogs).where(and(eq(auditLogs.entityId, endpoint!.id), eq(auditLogs.eventType, "webhook_endpoint.auto_disabled")));
+    expect(audit).toBeDefined();
+    // The owner alert goes through app.resolve_operator_notification_recipients, which only
+    // answers a session that logged in as lobbystack_worker.
+    if (workerLoginUrl) {
+      const alerts = await admin!.db.select().from(operatorNotificationDeliveries).where(and(eq(operatorNotificationDeliveries.businessId, b.businessId), eq(operatorNotificationDeliveries.eventKind, "webhookDisabled")));
+      expect(alerts.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("marks a delivery succeeded and resets the failure count", async () => {
+    const context = { db: worker!.db };
+    await admin!.db.update(webhookEndpoints).set({ events: ["contact.created"], status: "enabled" }).where(eq(webhookEndpoints.businessId, a.businessId));
+    const contact = await createContactForApi(context, a.caller, { phone: "+14165559999" });
+    const [row] = await admin!.db.select({ id: webhookDeliveries.id }).from(webhookDeliveries).innerJoin(webhookEvents, eq(webhookEvents.id, webhookDeliveries.eventId)).where(sql`${webhookEvents.payload}->'data'->>'id' = ${contact.id}`);
+    let sent: { id: string; body: string } | undefined;
+    const result = await processWebhookDelivery(context, { businessId: a.businessId, deliveryId: row!.id, attempt: 1, send: async (input) => { sent = input; return { ok: true, status: 200, error: null, durationMs: 3 }; } });
+    expect(result.outcome).toBe("succeeded");
+    expect(JSON.parse(sent!.body)).toMatchObject({ type: "contact.created", data: { id: contact.id } });
+    const [delivery] = await admin!.db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, row!.id));
+    expect(delivery).toMatchObject({ status: "succeeded", attemptCount: 1, lastResponseStatus: 200 });
+  });
+
+  it("replaces opening hours through the business endpoint", async () => {
+    const business = await updateBusinessForApi({ db: worker!.db }, a.caller, { name: "API a renamed", hours: [{ day: "monday", open: "09:00", close: "17:30" }] });
+    expect(business).toMatchObject({ name: "API a renamed", hours: [{ day: "monday", open: "09:00", close: "17:30" }] });
+    await expectApiError(updateBusinessForApi({ db: worker!.db }, a.caller, { hours: [{ day: "monday", open: "10:00", close: "09:00" }] }), 400, "invalid_request");
+    await expectApiError(updateBusinessForApi({ db: worker!.db }, a.caller, { timezone: "Mars/Olympus" }), 400, "invalid_request");
+  });
+});

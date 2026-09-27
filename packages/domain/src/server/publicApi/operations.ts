@@ -91,6 +91,7 @@ export async function updateBusinessForApi(context: DomainContext, caller: ApiCa
   return await inBusiness(context, caller, async (tx) => {
     if (Object.keys(fields).length) await updateBusinessInTransaction(tx, { businessId: caller.businessId, ...fields });
     if (input.hours !== undefined) {
+      await tx.update(businesses).set({ updatedAt: new Date() }).where(eq(businesses.id, caller.businessId));
       try {
         await replaceBusinessHoursInTransaction(tx, { businessId: caller.businessId, hours: input.hours.map((window) => ({ dayOfWeek: weekdays.indexOf(window.day), openMinutes: clockToMinutes(window.open), closeMinutes: clockToMinutes(window.close) })) });
       } catch (error) {
