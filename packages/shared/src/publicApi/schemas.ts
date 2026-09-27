@@ -285,6 +285,15 @@ export type ApiWebhookEventPayload = {
   data: Record<string, unknown>;
 };
 
+/** The v1 list envelope around one resource schema: `{ data, next_cursor, has_more }`. */
+export function apiPageSchema<T extends z.ZodType>(item: T) {
+  return z.object({
+    data: z.array(item),
+    next_cursor: z.string().nullable().describe("Pass as cursor to get the next page. Null on the last page."),
+    has_more: z.boolean(),
+  });
+}
+
 /** Parses a request body; returns field-level problems instead of throwing. */
 export function parseApiInput<T>(schema: z.ZodType<T>, value: unknown): { ok: true; data: T } | { ok: false; details: Array<{ path: string; message: string }> } {
   const result = schema.safeParse(value);

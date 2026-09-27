@@ -118,7 +118,8 @@ function ref(name: string) {
   return { $ref: `#/components/schemas/${name}` };
 }
 
-function jsonSchemaFor(schema: z.ZodType, io: "input" | "output"): Record<string, unknown> {
+/** JSON Schema (draft 2020-12) for a v1 contract schema, as the OpenAPI document and the MCP tools publish it. */
+export function apiJsonSchemaFor(schema: z.ZodType, io: "input" | "output"): Record<string, unknown> {
   const generated = z.toJSONSchema(schema, { target: "draft-2020-12", io, unrepresentable: "any" }) as Record<string, unknown>;
   delete generated.$schema;
   return stripFormatPatterns(generated) as Record<string, unknown>;
@@ -137,7 +138,7 @@ const errorResponse = (description: string) => ({ description, content: { "appli
 /** The OpenAPI 3.1 document for /api/v1, generated from the zod schemas above. */
 export function buildOpenApiDocument(input: { serverUrl: string }): Record<string, unknown> {
   const inputs = new Set<string>((Object.values(apiOperations) as ApiOperation[]).flatMap((operation) => ("request" in operation ? [operation.request] : [])));
-  const schemas = Object.fromEntries(Object.entries(componentSchemas).map(([name, schema]) => [name, jsonSchemaFor(schema, inputs.has(name) ? "input" : "output")]));
+  const schemas = Object.fromEntries(Object.entries(componentSchemas).map(([name, schema]) => [name, apiJsonSchemaFor(schema, inputs.has(name) ? "input" : "output")]));
   const paths: Record<string, Record<string, unknown>> = {};
   for (const [operationId, operation] of Object.entries(apiOperations) as Array<[string, ApiOperation]>) {
     const data = operation.list ? { type: "array", items: ref(operation.response) } : ref(operation.response);

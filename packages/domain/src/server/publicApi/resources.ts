@@ -180,9 +180,14 @@ export async function loadCallResource(tx: DatabaseTransaction, businessId: stri
   return row ? serializeCall(row) : null;
 }
 
-export async function listCallResources(tx: DatabaseTransaction, businessId: string, request: PageRequest): Promise<Page<ApiCall>> {
+export async function listCallResources(tx: DatabaseTransaction, businessId: string, request: PageRequest & { startedAfter?: Date | undefined; startedBefore?: Date | undefined }): Promise<Page<ApiCall>> {
   const limit = pageSize(request.limit);
-  const rows = await callQuery(tx, and(eq(calls.businessId, businessId), afterCursor(calls.startedAt, calls.id, decodeCursor(request.cursor)))).orderBy(...newestFirst(calls.startedAt, calls.id)).limit(limit + 1);
+  const rows = await callQuery(tx, and(
+    eq(calls.businessId, businessId),
+    request.startedAfter ? gte(calls.startedAt, request.startedAfter) : undefined,
+    request.startedBefore ? lt(calls.startedAt, request.startedBefore) : undefined,
+    afterCursor(calls.startedAt, calls.id, decodeCursor(request.cursor)),
+  )).orderBy(...newestFirst(calls.startedAt, calls.id)).limit(limit + 1);
   return toPage(rows, limit, serializeCall, (row) => ({ at: row.startedAt, id: row.id }));
 }
 
@@ -213,12 +218,19 @@ export async function loadContactResource(tx: DatabaseTransaction, businessId: s
   return row ? serializeContact(row) : null;
 }
 
-export async function listContactResources(tx: DatabaseTransaction, businessId: string, request: PageRequest & { phone?: string | undefined; email?: string | undefined }): Promise<Page<ApiContact>> {
+/** Escapes LIKE wildcards so a search term matches literally. */
+function likeContains(value: string): string {
+  return `%${value.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
+}
+
+export async function listContactResources(tx: DatabaseTransaction, businessId: string, request: PageRequest & { phone?: string | undefined; email?: string | undefined; name?: string | undefined }): Promise<Page<ApiContact>> {
   const limit = pageSize(request.limit);
+  const name = request.name?.trim();
   const rows = await tx.select().from(contacts).where(and(
     eq(contacts.businessId, businessId),
     request.phone ? eq(contacts.phone, request.phone) : undefined,
     request.email ? sql`lower(${contacts.email}) = lower(${request.email})` : undefined,
+    name ? sql`${contacts.name} ilike ${likeContains(name)}` : undefined,
     afterCursor(contacts.createdAt, contacts.id, decodeCursor(request.cursor)),
   )).orderBy(...newestFirst(contacts.createdAt, contacts.id)).limit(limit + 1);
   return toPage(rows, limit, serializeContact, (row) => ({ at: row.createdAt, id: row.id }));

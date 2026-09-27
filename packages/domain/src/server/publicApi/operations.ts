@@ -51,14 +51,24 @@ import { emitWebhookEventInTransaction } from "./webhooks";
 // the worker database role and RLS, and reuses the same domain rules as the
 // dashboard and the receptionist.
 
-export type ApiCaller = { businessId: string; apiKeyId: string };
+/**
+ * The API key's business and id. `actor` names the surface that used the key:
+ * the REST API (the default) or the MCP server. Both run these same
+ * operations; the audit log tells them apart by actor.
+ */
+export type ApiCaller = { businessId: string; apiKeyId: string; actor?: ApiActor | undefined };
+export type ApiActor = "api_key" | "mcp";
 
 async function inBusiness<T>(context: DomainContext, caller: ApiCaller, callback: (tx: DatabaseTransaction) => Promise<T>): Promise<T> {
   return await withBusinessTransaction(context.db, { businessId: caller.businessId, actorType: "worker" }, callback);
 }
 
 async function audit(tx: DatabaseTransaction, caller: ApiCaller, input: { eventType: string; entityType: string; entityId?: string; payload?: Record<string, unknown> }) {
-  await tx.insert(auditLogs).values({ businessId: caller.businessId, eventType: input.eventType, entityType: input.entityType, ...(input.entityId ? { entityId: input.entityId } : {}), payload: { actor: "api_key", apiKeyId: caller.apiKeyId, ...input.payload } });
+  await tx.insert(auditLogs).values({ businessId: caller.businessId, eventType: input.eventType, entityType: input.entityType, ...(input.entityId ? { entityId: input.entityId } : {}), payload: { actor: caller.actor ?? "api_key", apiKeyId: caller.apiKeyId, ...input.payload } });
+}
+
+function apiChange(caller: ApiCaller) {
+  return { source: "api" as const, apiKeyId: caller.apiKeyId, ...(caller.actor ? { actor: caller.actor } : {}) };
 }
 
 function isUniqueViolation(error: unknown): boolean {
@@ -114,7 +124,7 @@ export async function listServicesForApi(context: DomainContext, caller: ApiCall
 
 // Calls
 
-export async function listCallsForApi(context: DomainContext, caller: ApiCaller, request: PageRequest): Promise<Page<ApiCall>> {
+export async function listCallsForApi(context: DomainContext, caller: ApiCaller, request: Parameters<typeof listCallResources>[2]): Promise<Page<ApiCall>> {
   return await inBusiness(context, caller, async (tx) => await listCallResources(tx, caller.businessId, request));
 }
 
@@ -128,7 +138,7 @@ export async function getCallForApi(context: DomainContext, caller: ApiCaller, c
 
 // Contacts
 
-export async function listContactsForApi(context: DomainContext, caller: ApiCaller, request: PageRequest & { phone?: string | undefined; email?: string | undefined }): Promise<Page<ApiContact>> {
+export async function listContactsForApi(context: DomainContext, caller: ApiCaller, request: Parameters<typeof listContactResources>[2]): Promise<Page<ApiContact>> {
   return await inBusiness(context, caller, async (tx) => await listContactResources(tx, caller.businessId, request));
 }
 
@@ -278,6 +288,7 @@ export async function createAppointmentForApi(context: DomainContext, caller: Ap
       contactPhone: prepared.contactPhone,
       sourceChannel: "api",
       apiKeyId: caller.apiKeyId,
+      ...(caller.actor ? { apiActor: caller.actor } : {}),
       ...(input.contact_name ? { contactName: input.contact_name } : {}),
       ...(input.staff_id ? { preferredStaffId: input.staff_id } : {}),
       ...(input.sms_consent ? { smsConsentGranted: true } : {}),
@@ -290,7 +301,7 @@ export async function createAppointmentForApi(context: DomainContext, caller: Ap
 
 export async function cancelAppointmentForApi(context: DomainContext, caller: ApiCaller, appointmentId: string): Promise<ApiAppointment> {
   return await inBusiness(context, caller, async (tx) => {
-    const result = await cancelAppointmentInTransaction(tx, { businessId: caller.businessId, appointmentId, change: { source: "api", apiKeyId: caller.apiKeyId } });
+    const result = await cancelAppointmentInTransaction(tx, { businessId: caller.businessId, appointmentId, change: apiChange(caller) });
     if (result === "missing") throw notFound("Appointment");
     const appointment = await loadAppointmentResource(tx, caller.businessId, appointmentId);
     if (!appointment) throw notFound("Appointment");
@@ -308,7 +319,7 @@ export async function rescheduleAppointmentForApi(context: DomainContext, caller
       const [existing] = await tx.select({ status: appointments.status }).from(appointments).where(and(eq(appointments.businessId, caller.businessId), eq(appointments.id, appointmentId))).limit(1);
       if (!existing) throw notFound("Appointment");
       if (existing.status === "canceled") throw conflict("A cancelled appointment cannot be rescheduled.");
-      const moved = await rescheduleAppointmentInTransaction(tx, { businessId: caller.businessId, appointmentId, startsAt: startsAt.toISOString(), change: { source: "api", apiKeyId: caller.apiKeyId } });
+      const moved = await rescheduleAppointmentInTransaction(tx, { businessId: caller.businessId, appointmentId, startsAt: startsAt.toISOString(), change: apiChange(caller) });
       if (!moved) throw notFound("Appointment");
       const appointment = await loadAppointmentResource(tx, caller.businessId, appointmentId);
       if (!appointment) throw notFound("Appointment");
