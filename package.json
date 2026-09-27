@@ -65,6 +65,7 @@
     "migration:legacy-freeze": "tsx --tsconfig tsconfig.base.json scripts/migration/legacy-freeze.ts",
     "migration:provision-target": "tsx --tsconfig tsconfig.base.json scripts/migration/provision-target.ts",
     "release:seed-e2e": "tsx --tsconfig scripts/tsconfig.json scripts/seed-release-e2e.ts",
+    "zapier:seed-local": "tsx --tsconfig scripts/tsconfig.json scripts/seed-zapier-local.ts",
     "db:generate": "pnpm --filter @lobbystack/db db:generate",
     "db:migrate": "pnpm --filter @lobbystack/db db:migrate",
     "env:generate": "node scripts/generate-env.mjs",
