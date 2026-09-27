@@ -9,6 +9,7 @@ import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledg
 import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, markNotificationSkipped, cancelRetiredPhoneVerificationSend, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, correctAlertSmsUsage, estimateSmsSegments, loadOperatorNotificationDelivery, markFeedbackEmailFailed, markFeedbackEmailSent, markOperatorNotificationSent, markOperatorNotificationSkipped, queueDailyOperatorSummaries, refreshUnitEconomicsMonth, releaseOperatorNotificationDelivery, reserveAlertSmsUsage } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
+import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type WebhookSender } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
 import type { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 import type { RuntimeStorageProvider } from "@lobbystack/providers/storage/provider";
@@ -55,6 +56,8 @@ export type WorkerDependencies = {
   realtime?: Redis;
   /** Writes the one-line call summary. Without it, calls keep the transcript heuristic. */
   callSummarizer?: CallSummarizer;
+  /** Sends one signed webhook. Defaults to the SSRF-guarded HTTPS sender. */
+  webhookSender?: WebhookSender;
   /** Founder check-in sender. Without it, onboarding follow-up jobs are skipped. */
   onboardingFollowupSender?: OnboardingFollowupSender;
   enqueueProductEventRetentionContinuation?: (input: {
@@ -850,6 +853,18 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const sent = await markProductEventsSent(dependencies.domain, { businessId, eventIds: events.map((event) => event.id) });
       return { status: sent > 0 ? "completed" : "skipped", entityId: `${businessId}:${sent}` };
     }
+    case "webhook.deliver": {
+      const deliveryId = String(job.payload.deliveryId ?? "");
+      const attempt = Number(job.payload.attempt ?? 1);
+      if (!deliveryId || !Number.isSafeInteger(attempt) || attempt < 1) return { status: "skipped" };
+      const result = await processWebhookDelivery(dependencies.domain, { businessId: businessIdOrThrow(job), deliveryId, attempt, send: dependencies.webhookSender ?? defaultWebhookSender() });
+      return { status: result.outcome === "succeeded" || result.outcome === "retry_scheduled" || result.outcome === "failed" ? "completed" : "skipped", entityId: `${deliveryId}:${attempt}:${result.outcome}` };
+    }
+    case "api.retention": {
+      const businessId = businessIdOrThrow(job);
+      const result = await pruneApiHistory(dependencies.domain, { businessId });
+      return { status: result.events + result.idempotencyKeys > 0 ? "completed" : "skipped", entityId: `${businessId}:${result.events}:${result.idempotencyKeys}` };
+    }
     case "realtime.publish": {
       if (!dependencies.realtime) return { status: "skipped" };
       const event = realtimeEventSchema.parse({ id: randomUUID(), type: String(job.payload.type ?? "document.progressed"), businessId: businessIdOrThrow(job), entityId: typeof job.payload.entityId === "string" ? job.payload.entityId : undefined, revision: typeof job.payload.revision === "number" ? job.payload.revision : undefined, occurredAt: new Date().toISOString(), payload: job.payload, trace: job.trace });
@@ -858,6 +873,12 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     }
   }
   throw new Error(`Worker handler is not configured for ${(job as JobEnvelope).type}.`);
+}
+
+let sharedWebhookSender: WebhookSender | undefined;
+function defaultWebhookSender(): WebhookSender {
+  sharedWebhookSender ??= createWebhookSender();
+  return sharedWebhookSender;
 }
 
 async function updateWebsiteIngestion(db: Database, input: { businessId: string; websiteIngestionJobId: string; status: string; error: string }): Promise<void> {

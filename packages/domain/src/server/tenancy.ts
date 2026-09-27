@@ -127,11 +127,19 @@ export async function updateBusiness(
 ): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const values = { ...(input.name !== undefined ? { name: input.name.trim() } : {}), ...(input.timezone !== undefined ? { timezone: input.timezone.trim() } : {}), ...(input.businessType !== undefined ? { businessType: input.businessType.trim() } : {}), ...(input.defaultLocale !== undefined ? { defaultLocale: input.defaultLocale.trim() } : {}), ...(input.websiteUrl !== undefined ? { websiteUrl: input.websiteUrl } : {}), updatedAt: new Date() };
-    if (Object.keys(values).length === 1) throw new Error("At least one business field is required.");
-    const [business] = await tx.update(businesses).set(values).where(eq(businesses.id, input.businessId)).returning({ id: businesses.id });
-    if (!business) throw new Error("Business not found.");
+    await updateBusinessInTransaction(tx, input);
   });
+}
+
+/** Updates basic business fields. Callers authorize first. */
+export async function updateBusinessInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; name?: string; timezone?: string; businessType?: string; defaultLocale?: string; websiteUrl?: string | null },
+): Promise<void> {
+  const values = { ...(input.name !== undefined ? { name: input.name.trim() } : {}), ...(input.timezone !== undefined ? { timezone: input.timezone.trim() } : {}), ...(input.businessType !== undefined ? { businessType: input.businessType.trim() } : {}), ...(input.defaultLocale !== undefined ? { defaultLocale: input.defaultLocale.trim() } : {}), ...(input.websiteUrl !== undefined ? { websiteUrl: input.websiteUrl } : {}), updatedAt: new Date() };
+  if (Object.keys(values).length === 1) throw new Error("At least one business field is required.");
+  const [business] = await tx.update(businesses).set(values).where(eq(businesses.id, input.businessId)).returning({ id: businesses.id });
+  if (!business) throw new Error("Business not found.");
 }
 
 export async function switchWorkspace(

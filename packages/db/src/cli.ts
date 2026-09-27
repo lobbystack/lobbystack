@@ -193,7 +193,9 @@ async function main(): Promise<void> {
           select role_name, function_name
           from (values
             ('lobbystack_app', 'app.resolve_business_by_widget_key(text)'),
-            ('lobbystack_worker', 'app.resolve_business_by_widget_key(text)')
+            ('lobbystack_worker', 'app.resolve_business_by_widget_key(text)'),
+            ('lobbystack_app', 'app.resolve_api_key(text)'),
+            ('lobbystack_worker', 'app.resolve_api_key(text)')
           ) as expected(role_name, function_name)
           where not has_function_privilege(expected.role_name, expected.function_name, 'EXECUTE')
         `);

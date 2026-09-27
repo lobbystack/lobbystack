@@ -10,6 +10,7 @@ import { buildConversationSessionSummary, extractCallerContext, normalizeCallSum
 import type { DomainContext } from "./context";
 import { queueOperatorAlertInTransaction, type OperatorNotificationEventKey } from "./notifications";
 import { recordProductEvent } from "./productEvents";
+import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 
 export { buildConversationSessionSummary, type CallSummaryLocale, type ConversationTranscriptTurn, type GeneratedCallSummary } from "./conversationSummary";
 
@@ -94,6 +95,7 @@ export async function finalizeConversationSession(
     const summaryText = summary.kind === "summary" ? summary.summary : summary.kind === "message_taking" ? summary.summary : undefined;
     await tx.update(conversations).set({ status: "closed", ...(summaryText ? { summary: summaryText } : {}), revision: sql`${conversations.revision} + 1`, updatedAt: new Date() }).where(and(eq(conversations.id, call.conversationId), eq(conversations.businessId, input.businessId)));
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "conversation", aggregateId: call.conversationId, dedupeKey: `conversation:${call.conversationId}:finalized:${session.id}`, payload: { type: "conversation.updated", entityId: call.conversationId } });
+    await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "call.completed", resourceId: input.callId });
     return { sessionId: session.id, finalized: true };
   });
 }
@@ -106,10 +108,12 @@ export async function getOrCreateConversation(
     if (input.userId) {
       await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId });
     }
-    const contact = (await tx.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.contactPhone))).limit(1))[0] ?? (await tx.insert(contacts).values({ businessId: input.businessId, phone: input.contactPhone }).returning({ id: contacts.id }))[0];
+    const found = (await tx.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.contactPhone))).limit(1))[0];
+    const contact = found ?? (await tx.insert(contacts).values({ businessId: input.businessId, phone: input.contactPhone }).returning({ id: contacts.id }))[0];
     if (!contact) {
       throw new Error("Contact could not be created.");
     }
+    if (!found) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contact.id });
     const current = await tx.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.contactId, contact.id), eq(conversations.channel, input.channel), eq(conversations.status, "open"))).orderBy(desc(conversations.updatedAt)).limit(1);
     const conversationId = current[0]?.id ?? (await tx.insert(conversations).values({ businessId: input.businessId, contactId: contact.id, channel: input.channel, status: "open", automationState: "ai_active" }).returning({ id: conversations.id }))[0]?.id;
     if (!conversationId) {
@@ -218,6 +222,7 @@ export async function registerWidgetVisitor(
       } else {
         const [created] = await tx.insert(contacts).values({ businessId: input.businessId, ...(input.name ? { name: input.name } : {}), ...(input.email !== undefined ? { email: input.email } : {}), ...(input.phone ? { phone: input.phone } : {}) }).returning({ id: contacts.id });
         contactId = created?.id ?? null;
+        if (contactId) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contactId });
       }
       if (contactId && (input.name || input.phone)) {
         await tx.update(contacts).set({ ...(input.name ? { name: input.name } : {}), ...(input.phone ? { phone: input.phone } : {}), updatedAt: new Date() }).where(and(eq(contacts.id, contactId), eq(contacts.businessId, input.businessId)));

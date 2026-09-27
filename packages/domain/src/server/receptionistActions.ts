@@ -211,6 +211,7 @@ export async function takeMessageForStaff(
   const task = await createVoiceFollowUpTask(context, {
     businessId: input.businessId,
     message: input.message,
+    channel: input.channel,
     ...(input.callId ? { callId: input.callId } : {}),
     ...(input.callerName ? { callerName: input.callerName } : {}),
     ...(input.callbackPhone ? { callbackPhone: input.callbackPhone } : {}),

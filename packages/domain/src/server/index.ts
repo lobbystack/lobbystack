@@ -22,6 +22,7 @@ export * from "./outbox";
 export * from "./phoneVerification";
 export * from "./phoneNumbers";
 export * from "./privacy";
+export * from "./publicApi";
 export * from "./receptionistActions";
 export * from "./productEvents";
 export * from "./rules";

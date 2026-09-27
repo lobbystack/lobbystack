@@ -13,6 +13,7 @@ export async function configureSchedulers(
     { queue: "maintenance", name: "telemetry-flush", type: "telemetry.flush", every: 60_000 },
     { queue: "maintenance", name: "outbox-backlog-sample", type: "outbox.backlogSample", every: 60_000 },
     { queue: "maintenance", name: "unit-economics-rollup", type: "billing.refreshUnitEconomics", every: 60 * 60_000 },
+    { queue: "maintenance", name: "api-retention", type: "api.retention", every: 60 * 60_000 },
   ];
   const payoutQueue = queues.get("maintenance");
   if (payoutQueue) {

@@ -10,6 +10,7 @@ import { recordCallOutcomeInTransaction } from "./callOutcome";
 import { consumeAppointmentChangeVerificationInTransaction } from "./appointmentChanges";
 import { recordProductEvent } from "./productEvents";
 import { rescheduleAppointmentReminderInTransaction } from "./notifications";
+import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 
 type BookingInput = {
   callId?: string;
@@ -23,6 +24,8 @@ type BookingInput = {
   sourceChannel: string;
   preferredStaffId?: string;
   smsConsentGranted?: boolean;
+  /** Set when a public API key made the booking; recorded in the audit log. */
+  apiKeyId?: string;
 };
 
 async function lockStaff(tx: DatabaseTransaction, staffId: string): Promise<void> {
@@ -177,6 +180,7 @@ export async function bookAppointment(
       throw new Error("That appointment time is no longer available.");
     }
     const existingContacts = await tx.select({ id: contacts.id, smsConsentStatus: contacts.smsConsentStatus, operatorBlockedAt: contacts.operatorBlockedAt }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.contactPhone))).limit(1);
+    const contactCreated = !existingContacts[0];
     const contactId = existingContacts[0]?.id ?? (await tx.insert(contacts).values({
       businessId: input.businessId,
       phone: input.contactPhone,
@@ -264,6 +268,9 @@ export async function bookAppointment(
       }
     }
     if (input.callId) await recordCallOutcomeInTransaction(tx, { businessId: input.businessId, callId: input.callId, contactId, outcome: { kind: "booked", serviceName: reference.serviceName, startsAt: startsAt.toISOString() } });
+    if (input.apiKeyId) await tx.insert(auditLogs).values({ businessId: input.businessId, eventType: "api.appointment.booked", entityType: "appointment", entityId: appointment.id, payload: { actor: "api_key", apiKeyId: input.apiKeyId } });
+    if (contactCreated) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contactId });
+    await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "appointment.booked", resourceId: appointment.id });
     return { appointmentId: appointment.id, contactId, staffId: selectedStaff.id };
   });
 }
@@ -284,73 +291,119 @@ async function recordAppointmentChange(
   }
 }
 
+type AppointmentChangeSource = { source: "operator"; userId: string } | { source: "caller" } | { source: "api"; apiKeyId: string };
+
+function changeAudit(change: AppointmentChangeSource): { actorUserId: string | null; payload: Record<string, unknown> } {
+  if (change.source === "operator") return { actorUserId: change.userId, payload: { source: "operator" } };
+  if (change.source === "api") return { actorUserId: null, payload: { source: "api", apiKeyId: change.apiKeyId } };
+  return { actorUserId: null, payload: { source: "caller" } };
+}
+
+/**
+ * Cancels inside the caller's transaction: skips pending reminders, queues the
+ * calendar removal, and emits appointment.cancelled. Returns "already" when the
+ * appointment was cancelled before and "missing" when it does not exist.
+ */
+export async function cancelAppointmentInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; appointmentId: string; change: AppointmentChangeSource },
+): Promise<"cancelled" | "already" | "missing"> {
+  const [appointment] = await tx.update(appointments).set({ status: "canceled", calendarSyncState: "pending", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"))).returning({ id: appointments.id, revision: appointments.revision });
+  if (!appointment) {
+    const [existing] = await tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId))).limit(1);
+    return existing ? "already" : "missing";
+  }
+  const audit = changeAudit(input.change);
+  await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: audit.actorUserId, eventType: "appointment_change.canceled", entityType: "appointment", entityId: appointment.id, payload: audit.payload });
+  await tx.update(notifications)
+    .set({ status: "skipped", updatedAt: new Date() })
+    .where(and(
+      eq(notifications.businessId, input.businessId),
+      eq(notifications.relatedId, appointment.id),
+      eq(notifications.kind, "appointment_reminder"),
+      inArray(notifications.status, ["pending", "processing"]),
+    ));
+  await enqueueOutbox(tx, {
+    topic: "calendar.syncAppointment",
+    businessId: input.businessId,
+    aggregateType: "appointment",
+    aggregateId: appointment.id,
+    dedupeKey: `appointment:${appointment.id}:calendar:cancel:${appointment.revision}`,
+    payload: { appointmentId: appointment.id, action: "cancel" },
+  });
+  await enqueueOutbox(tx, {
+    topic: "realtime.publish",
+    businessId: input.businessId,
+    aggregateType: "appointment",
+    aggregateId: appointment.id,
+    dedupeKey: `appointment:${appointment.id}:updated:${appointment.revision}`,
+    payload: { type: "appointment.updated", entityId: appointment.id, revision: appointment.revision },
+  });
+  await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "appointment.cancelled", resourceId: appointment.id });
+  return "cancelled";
+}
+
 export async function cancelAppointment(
   context: DomainContext,
   input: { userId: string; businessId: string; appointmentId: string },
 ): Promise<void> {
   const changed = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId, minimumRole: "scheduler" });
-    const [appointment] = await tx.update(appointments).set({ status: "canceled", calendarSyncState: "pending", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"))).returning({ id: appointments.id, revision: appointments.revision });
-    if (!appointment) {
-      const [existing] = await tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId))).limit(1);
-      if (existing) return false;
-      throw new Error("Appointment not found.");
-    }
-    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "appointment_change.canceled", entityType: "appointment", entityId: appointment.id, payload: { source: "operator" } });
-    await tx.update(notifications)
-      .set({ status: "skipped", updatedAt: new Date() })
-      .where(and(
-        eq(notifications.businessId, input.businessId),
-        eq(notifications.relatedId, appointment.id),
-        eq(notifications.kind, "appointment_reminder"),
-        inArray(notifications.status, ["pending", "processing"]),
-      ));
-    await enqueueOutbox(tx, {
-      topic: "calendar.syncAppointment",
-      businessId: input.businessId,
-      aggregateType: "appointment",
-      aggregateId: appointment.id,
-      dedupeKey: `appointment:${appointment.id}:calendar:cancel:${appointment.revision}`,
-      payload: { appointmentId: appointment.id, action: "cancel" },
-    });
-    await enqueueOutbox(tx, {
-      topic: "realtime.publish",
-      businessId: input.businessId,
-      aggregateType: "appointment",
-      aggregateId: appointment.id,
-      dedupeKey: `appointment:${appointment.id}:updated:${appointment.revision}`,
-      payload: { type: "appointment.updated", entityId: appointment.id, revision: appointment.revision },
-    });
-    return true;
+    const result = await cancelAppointmentInTransaction(tx, { businessId: input.businessId, appointmentId: input.appointmentId, change: { source: "operator", userId: input.userId } });
+    if (result === "missing") throw new Error("Appointment not found.");
+    return result === "cancelled";
   });
   if (changed) await recordAppointmentChange(context, { name: "appointment.cancelled", businessId: input.businessId, appointmentId: input.appointmentId, source: "operator" });
+}
+
+/**
+ * Moves an appointment to a new time with the same staff member, inside the
+ * caller's transaction. Checks availability (hours, closures, calendar busy
+ * time and freshness) under the staff lock, reschedules the reminder, queues
+ * the calendar update and emits appointment.rescheduled. `beforeUpdate` runs
+ * after the checks and can veto the change, for example to consume a caller's
+ * verification.
+ */
+export async function rescheduleAppointmentInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; appointmentId: string; startsAt: string; change: AppointmentChangeSource; callerPhone?: string; staffId?: string; beforeUpdate?: () => Promise<boolean> },
+): Promise<{ appointmentId: string; serviceId: string; startsAt: Date; endsAt: Date } | null> {
+  const row = (await tx.select({ id: appointments.id, serviceId: appointments.serviceId, staffId: appointments.staffId, durationMinutes: services.durationMinutes }).from(appointments).innerJoin(contacts, and(eq(appointments.contactId, contacts.id), eq(contacts.businessId, input.businessId))).innerJoin(services, and(eq(appointments.serviceId, services.id), eq(services.businessId, input.businessId))).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), input.callerPhone !== undefined ? eq(contacts.phone, input.callerPhone) : undefined)).limit(1))[0];
+  if (!row) return null;
+  // The appointment keeps its staff member unless the caller moves it to another one.
+  const staffId = input.staffId ?? row.staffId;
+  await lockStaff(tx, staffId);
+  const startsAt = new Date(input.startsAt);
+  if (!Number.isFinite(startsAt.getTime())) throw new Error("A valid appointment start time is required.");
+  const endsAt = new Date(startsAt.getTime() + row.durationMinutes * 60_000);
+  const slots = await availabilityInTransaction(tx, { businessId: input.businessId, serviceId: row.serviceId, startsAt: startsAt.toISOString(), staffIds: [staffId], ignoreAppointmentId: row.id });
+  if (!slots.length) throw new Error("That appointment time is no longer available.");
+  const conflict = (await tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, input.businessId), eq(appointments.staffId, staffId), ne(appointments.status, "canceled"), ne(appointments.id, row.id), lt(appointments.startsAt, endsAt), gt(appointments.endsAt, startsAt))).limit(1))[0];
+  if (conflict) throw new Error("That appointment time is no longer available.");
+  if (input.beforeUpdate && !(await input.beforeUpdate())) return null;
+  const [updated] = await tx.update(appointments).set({ startsAt, endsAt, staffId, status: "confirmed", calendarSyncState: "pending", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, row.id), eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"))).returning({ revision: appointments.revision });
+  if (!updated) return null;
+  await rescheduleAppointmentReminderInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, startsAt, revision: updated.revision });
+  const audit = changeAudit(input.change);
+  await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: audit.actorUserId, eventType: "appointment_change.rescheduled", entityType: "appointment", entityId: row.id, payload: { ...audit.payload, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), ...(staffId !== row.staffId ? { staffId } : {}) } });
+  await enqueueOutbox(tx, { topic: "calendar.syncAppointment", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `appointment:${row.id}:calendar:reschedule:${updated.revision}`, payload: { appointmentId: row.id, action: "reschedule" } });
+  await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `appointment:${row.id}:updated:${updated.revision}`, payload: { type: "appointment.updated", entityId: row.id, revision: updated.revision } });
+  await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "appointment.rescheduled", resourceId: row.id });
+  return { appointmentId: row.id, serviceId: row.serviceId, startsAt, endsAt };
 }
 
 export async function rescheduleAppointmentForCaller(
   context: DomainContext,
   input: { businessId: string; appointmentId: string; callerPhone: string; startsAt: string; verificationId: string },
 ): Promise<{ appointmentId: string; serviceId: string; startsAt: Date; endsAt: Date } | null> {
-  const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const row = (await tx.select({ id: appointments.id, serviceId: appointments.serviceId, staffId: appointments.staffId, durationMinutes: services.durationMinutes }).from(appointments).innerJoin(contacts, and(eq(appointments.contactId, contacts.id), eq(contacts.businessId, input.businessId))).innerJoin(services, and(eq(appointments.serviceId, services.id), eq(services.businessId, input.businessId))).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), eq(contacts.phone, input.callerPhone))).limit(1))[0];
-    if (!row) return null;
-    await lockStaff(tx, row.staffId);
-    const startsAt = new Date(input.startsAt);
-    if (!Number.isFinite(startsAt.getTime())) throw new Error("A valid appointment start time is required.");
-    const endsAt = new Date(startsAt.getTime() + row.durationMinutes * 60_000);
-    const slots = await availabilityInTransaction(tx, { businessId: input.businessId, serviceId: row.serviceId, startsAt: input.startsAt, staffIds: [row.staffId], ignoreAppointmentId: row.id });
-    if (!slots.length) throw new Error("That appointment time is no longer available.");
-    const conflict = (await tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, input.businessId), eq(appointments.staffId, row.staffId), ne(appointments.status, "canceled"), ne(appointments.id, row.id), lt(appointments.startsAt, endsAt), gt(appointments.endsAt, startsAt))).limit(1))[0];
-    if (conflict) throw new Error("That appointment time is no longer available.");
-    const consumed = await consumeAppointmentChangeVerificationInTransaction(tx, { businessId: input.businessId, verificationId: input.verificationId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, action: "reschedule" });
-    if (!consumed) return null;
-    const [updated] = await tx.update(appointments).set({ startsAt, endsAt, status: "confirmed", calendarSyncState: "pending", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, row.id), eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"))).returning({ revision: appointments.revision });
-    if (!updated) return null;
-    await rescheduleAppointmentReminderInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, startsAt, revision: updated.revision });
-    await tx.insert(auditLogs).values({ businessId: input.businessId, eventType: "appointment_change.rescheduled", entityType: "appointment", entityId: row.id, payload: { source: "caller", startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() } });
-    await enqueueOutbox(tx, { topic: "calendar.syncAppointment", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `appointment:${row.id}:calendar:reschedule:${updated.revision}`, payload: { appointmentId: row.id, action: "reschedule" } });
-    await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `appointment:${row.id}:updated:${updated.revision}`, payload: { type: "appointment.updated", entityId: row.id, revision: updated.revision } });
-    return { appointmentId: row.id, serviceId: row.serviceId, startsAt, endsAt };
-  });
+  const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await rescheduleAppointmentInTransaction(tx, {
+    businessId: input.businessId,
+    appointmentId: input.appointmentId,
+    startsAt: input.startsAt,
+    callerPhone: input.callerPhone,
+    change: { source: "caller" },
+    beforeUpdate: async () => await consumeAppointmentChangeVerificationInTransaction(tx, { businessId: input.businessId, verificationId: input.verificationId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, action: "reschedule" }),
+  }));
   if (result) {
     await recordAppointmentChange(context, { name: "appointment.rescheduled", businessId: input.businessId, appointmentId: result.appointmentId, source: "caller" });
   }
@@ -366,12 +419,7 @@ export async function cancelAppointmentForCaller(
     if (!row) return null;
     const consumed = await consumeAppointmentChangeVerificationInTransaction(tx, { businessId: input.businessId, verificationId: input.verificationId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, action: "cancel" });
     if (!consumed) return null;
-    const [updated] = await tx.update(appointments).set({ status: "canceled", calendarSyncState: "pending", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, row.id), eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"))).returning({ revision: appointments.revision });
-    if (!updated) return null;
-    await tx.insert(auditLogs).values({ businessId: input.businessId, eventType: "appointment_change.canceled", entityType: "appointment", entityId: row.id, payload: { source: "caller" } });
-    await tx.update(notifications).set({ status: "skipped", updatedAt: new Date() }).where(and(eq(notifications.businessId, input.businessId), eq(notifications.relatedId, row.id), eq(notifications.kind, "appointment_reminder"), inArray(notifications.status, ["pending", "processing"])));
-    await enqueueOutbox(tx, { topic: "calendar.syncAppointment", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `appointment:${row.id}:calendar:cancel:${updated.revision}`, payload: { appointmentId: row.id, action: "cancel" } });
-    await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `appointment:${row.id}:updated:${updated.revision}`, payload: { type: "appointment.updated", entityId: row.id, revision: updated.revision } });
+    if (await cancelAppointmentInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, change: { source: "caller" } }) !== "cancelled") return null;
     return { appointmentId: row.id, serviceId: row.serviceId, startsAt: row.startsAt, endsAt: row.endsAt };
   });
   if (result) {

@@ -1,0 +1,136 @@
+---
+title: "Receive webhooks"
+description: "Subscribe a URL to LobbyStack events, verify signatures, and handle retries."
+sidebarTitle: "Webhooks"
+contentType: "How-to"
+---
+
+Webhooks send an HTTPS `POST` to your URL when something happens in a business, so your tools don't need to poll.
+
+## Events
+
+| Event | Sent when | `data` |
+| --- | --- | --- |
+| `call.completed` | A call ended and LobbyStack saved its summary and outcome. | Call |
+| `appointment.booked` | Anyone books an appointment: the receptionist, the dashboard or the API. | Appointment |
+| `appointment.rescheduled` | An appointment moves to a new time. | Appointment |
+| `appointment.cancelled` | An appointment is cancelled. | Appointment |
+| `message.taken` | The receptionist takes a message for your team. | Message |
+| `contact.created` | A new contact appears, from a call, a text, a booking, the website widget or the API. | Contact |
+
+`data` has the same shape as the matching API resource. For example, `GET /appointments` returns the objects an `appointment.booked` event carries, so a list endpoint doubles as sample data.
+
+## Add an endpoint
+
+You can add endpoints in the dashboard or with the API.
+
+<Tabs>
+  <Tab title="Dashboard">
+    <Steps>
+      <Step title="Open Webhooks">
+        Go to **Integrations** and click **Manage** on the **Webhooks** card. Only owners and admins can manage webhooks.
+      </Step>
+      <Step title="Add the endpoint">
+        Click **Add endpoint**, enter the URL, and pick the events.
+      </Step>
+      <Step title="Copy the signing secret">
+        LobbyStack shows the `whsec_` secret once. Store it where your endpoint can read it.
+      </Step>
+      <Step title="Send a test event">
+        Click **Send test event**, then open **Delivery log** to see the response your endpoint returned.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="API">
+    Call `POST /webhooks` with a key that has `webhooks:manage`:
+
+    ```bash
+    curl https://app.lobbystack.com/api/v1/webhooks \
+      -H "Authorization: Bearer $LOBBYSTACK_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"url":"https://example.com/hooks/lobbystack","events":["appointment.booked","call.completed"]}'
+    ```
+
+    The response includes the endpoint `id` and the `secret`. `DELETE /webhooks/{webhook_id}` removes it. This pair works as the subscribe and unsubscribe calls for Zapier REST hooks.
+  </Tab>
+</Tabs>
+
+## Payload
+
+```json
+{
+  "id": "0f5c2a8e-3a41-4a0c-9d4f-6b5f1d2e7c11",
+  "type": "appointment.booked",
+  "api_version": "v1",
+  "created_at": "2026-09-27T16:58:19.612Z",
+  "business_id": "75795511-9ee2-4cb2-a89d-f173ec1dd82d",
+  "data": {
+    "id": "0c4332ff-becb-45cb-be23-173d55747852",
+    "status": "confirmed",
+    "starts_at": "2026-09-29T13:30:00.000Z",
+    "ends_at": "2026-09-29T14:15:00.000Z",
+    "timezone": "America/Toronto",
+    "service_id": "df8a2c34-d306-4292-a055-1b739ef74991",
+    "service_name": "Haircut",
+    "staff_id": "06d9c0dc-f18a-4cc6-a987-ac4963c87113",
+    "staff_name": "Sam",
+    "contact_id": "0cabb07b-ea18-4e9f-8f7b-356405838770",
+    "contact_name": "Ada Lovelace",
+    "contact_phone": "+14165550134",
+    "source": "voice",
+    "calendar_sync_status": "pending",
+    "created_at": "2026-09-27T16:58:19.590Z",
+    "updated_at": "2026-09-27T16:58:19.590Z"
+  }
+}
+```
+
+`data` reflects the resource at the moment the event happened. Fetch the resource again if you need its current state.
+
+## Verify signatures
+
+LobbyStack signs each request with the [Standard Webhooks](https://www.standardwebhooks.com) scheme and sends three headers:
+
+| Header | Value |
+| --- | --- |
+| `webhook-id` | The event `id`. It stays the same on every retry and resend. |
+| `webhook-timestamp` | Unix time, in seconds, when LobbyStack signed this attempt. |
+| `webhook-signature` | `v1,` followed by a base64 HMAC-SHA256 signature. |
+
+The signature covers `{webhook-id}.{webhook-timestamp}.{raw body}`, keyed with the base64-decoded part of the secret after `whsec_`. Use a Standard Webhooks library to check it against the raw request body, before you parse the JSON:
+
+```ts
+import { Webhook } from "standardwebhooks";
+
+const webhook = new Webhook(process.env.LOBBYSTACK_WEBHOOK_SECRET!);
+
+export async function POST(request: Request) {
+  const body = await request.text();
+  // Throws when the signature is wrong or the timestamp is more than 5 minutes old.
+  const event = webhook.verify(body, Object.fromEntries(request.headers)) as { id: string; type: string };
+  // Store event.id and skip events you already processed.
+  return new Response(null, { status: 204 });
+}
+```
+
+Reject requests whose timestamp is more than a few minutes old to block replays.
+
+## Respond and retry
+
+Return any `2xx` status within 10 seconds. LobbyStack treats anything else as a failure, including timeouts, redirects and connection errors. It doesn't follow redirects.
+
+After a failure, LobbyStack retries after 30 seconds, 2 minutes, 10 minutes, 30 minutes, 1 hour, 3 hours, 6 hours and 12 hours, for 9 attempts over about 23 hours. Each attempt uses the same `webhook-id`, so deduplicate on it. Events can arrive out of order; compare `created_at` or fetch the resource if order matters.
+
+If an event fails every attempt and nothing reached the endpoint in that time, LobbyStack turns the endpoint off and alerts your team, following each person's **Settings** > **Notifications** choices. Fix the endpoint, turn it back on in the dashboard or with `PATCH /webhooks/{webhook_id}` and `{"status": "enabled"}`, then use **Resend** in the delivery log to send missed events.
+
+## Delivery log
+
+The delivery log shows each event sent to an endpoint, its status, the last response code, the number of attempts, and when the next retry runs. **Resend** sends an event again. LobbyStack keeps 30 days of webhook history.
+
+## Rotate the secret
+
+Click **Rotate secret** on the endpoint. The old secret stops working right away. Update your endpoint with the new secret soon after: events that fail verification in between get retried and arrive once your endpoint uses the new secret.
+
+## Network rules
+
+Endpoints must use `https://` and resolve to a public address. LobbyStack refuses URLs that point to private, loopback, link-local or cloud metadata addresses, both when you save the endpoint and on every delivery. Self-hosted deployments follow the same rule.

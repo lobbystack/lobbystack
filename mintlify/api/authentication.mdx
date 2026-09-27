@@ -1,0 +1,96 @@
+---
+title: "Authenticate with API keys"
+description: "Create API keys, choose scopes, send the key with each request, and stay within rate limits."
+sidebarTitle: "Authentication"
+contentType: "How-to"
+---
+
+Every request needs an API key for one business. Owners and admins create and revoke keys in the dashboard.
+
+## Create a key
+
+<Steps>
+  <Step title="Open API keys">
+    Go to **Settings** > **API keys**. Only owners and admins see the page.
+  </Step>
+  <Step title="Name the key and pick its access">
+    Use a name you'll recognize later, such as `Zapier`. Select only the scopes the tool needs.
+  </Step>
+  <Step title="Copy the key">
+    LobbyStack shows the full key once. Store it in your tool or a password manager. LobbyStack keeps only a hash, so nobody can show the key again.
+  </Step>
+</Steps>
+
+Keys look like `lsk_1a2b3c4d_` followed by 32 random characters. The dashboard lists each key by its prefix, `lsk_1a2b3c4d`, with its scopes, who created it, and when it was last used.
+
+## Send the key
+
+Put the key in the `Authorization` header:
+
+```bash
+curl https://app.lobbystack.com/api/v1/calls \
+  -H "Authorization: Bearer $LOBBYSTACK_API_KEY"
+```
+
+A missing, unknown or revoked key returns `401` with the code `unauthorized`.
+
+## Test a key
+
+`GET /me` works with any valid key, whatever its scopes. It returns the key and its business, so an integration can check a connection before it needs a specific scope:
+
+```json
+{
+  "data": {
+    "api_key": {
+      "id": "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6",
+      "name": "Zapier",
+      "prefix": "lsk_1a2b3c4d",
+      "scopes": ["appointments:read", "appointments:write"],
+      "created_at": "2026-09-27T16:58:00.000Z"
+    },
+    "business": { "id": "75795511-9ee2-4cb2-a89d-f173ec1dd82d", "name": "Maple Salon" }
+  }
+}
+```
+
+## Scopes
+
+Each endpoint except `GET /me` requires one scope. A key without it gets `403` with the code `insufficient_scope`, and the message names the missing scope.
+
+| Scope | Allows |
+| --- | --- |
+| `business:read` | `GET /business`, `GET /services`, `GET /staff` |
+| `business:write` | `PATCH /business` |
+| `calls:read` | `GET /calls`, `GET /calls/{call_id}` |
+| `contacts:read` | `GET /contacts`, `GET /contacts/{contact_id}` |
+| `contacts:write` | `POST /contacts`, `PATCH /contacts/{contact_id}` |
+| `appointments:read` | `GET /appointments`, `GET /appointments/{appointment_id}`, `GET /availability` |
+| `appointments:write` | `POST /appointments`, `POST /appointments/{appointment_id}/cancel`, `POST /appointments/{appointment_id}/reschedule` |
+| `messages:read` | `GET /messages` |
+| `knowledge:write` | `POST /knowledge` |
+| `webhooks:manage` | `GET`, `POST`, `PATCH` and `DELETE` on `/webhooks`, and `POST /webhooks/{webhook_id}/test` |
+
+## Revoke a key
+
+On **Settings** > **API keys**, click **Revoke** next to the key. Requests with it fail right away, and you can't undo it. Create a new key if you still need access.
+
+## Rate limits
+
+Each key can make 120 requests per minute. Self-hosted deployments can change this with `PUBLIC_API_RATE_LIMIT_PER_MINUTE`. The window resets at the start of each minute.
+
+Every response carries these headers:
+
+| Header | Meaning |
+| --- | --- |
+| `X-RateLimit-Limit` | Requests allowed per minute. |
+| `X-RateLimit-Remaining` | Requests left in the current minute. |
+| `X-RateLimit-Reset` | Unix time, in seconds, when the window resets. |
+
+Past the limit, the API returns `429` with the code `rate_limited` and a `Retry-After` header with the seconds to wait.
+
+## Keep keys safe
+
+- Use one key per tool so you can revoke one without breaking the others.
+- Give each key the fewest scopes that work.
+- Never put a key in browser code or a mobile app. Call the API from a server.
+- LobbyStack logs each request with the key's ID, never the key itself, and records changes made with a key in the business's audit log.

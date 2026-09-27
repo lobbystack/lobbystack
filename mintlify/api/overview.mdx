@@ -1,0 +1,71 @@
+---
+title: "LobbyStack API"
+description: "Read calls, contacts, appointments and messages, book appointments, and receive webhooks."
+sidebarTitle: "Overview"
+contentType: "Conceptual"
+---
+
+The LobbyStack API lets your own tools work with a business's receptionist data. Zapier, an MCP server, or a script can read calls and messages, keep contacts in sync, book appointments, add knowledge, and subscribe to webhooks.
+
+## Base URL
+
+```text
+https://app.lobbystack.com/api/v1
+```
+
+On a self-hosted deployment, use your `APP_BASE_URL` followed by `/api/v1`.
+
+## Make your first request
+
+<Steps>
+  <Step title="Create an API key">
+    In the dashboard, go to **Settings** > **API keys** and click **Create API key**. Pick the access the key needs. See [Authentication](/api/authentication).
+  </Step>
+  <Step title="Call the API">
+    ```bash
+    curl https://app.lobbystack.com/api/v1/business \
+      -H "Authorization: Bearer $LOBBYSTACK_API_KEY"
+    ```
+  </Step>
+</Steps>
+
+The response wraps the resource in `data`:
+
+```json
+{
+  "data": {
+    "id": "75795511-9ee2-4cb2-a89d-f173ec1dd82d",
+    "name": "Maple Salon",
+    "timezone": "America/Toronto",
+    "locale": "en",
+    "website_url": null,
+    "booking_mode": "instant",
+    "hours": [{ "day": "monday", "open": "09:00", "close": "17:00" }],
+    "created_at": "2026-09-27T16:57:28.333Z",
+    "updated_at": "2026-09-27T16:57:28.333Z"
+  }
+}
+```
+
+## Conventions
+
+- Requests and responses use JSON. Field names use `snake_case`.
+- IDs are UUIDs and never change.
+- Timestamps use ISO 8601 in UTC, for example `2026-09-29T13:30:00.000Z`. Request bodies also accept a numeric offset such as `-04:00`.
+- Lists return `data`, `next_cursor` and `has_more`. See [Requests and errors](/api/requests).
+- Each key belongs to one business. You never pass a business ID.
+
+## OpenAPI
+
+The API publishes an OpenAPI 3.1 document at `GET /api/v1/openapi.json`, with no key required. LobbyStack generates it from the same schemas the server validates against, so it always matches the running version. Import it into Postman, generate a client, or browse the **API reference** section of these docs, which LobbyStack builds from the same file.
+
+## Versioning
+
+The version is part of the path: `/api/v1`. Within v1, LobbyStack only makes additive changes:
+
+- New endpoints, new optional request fields, and new response fields.
+- New values in lists such as webhook event types and error codes.
+
+Build clients that ignore fields and event types they don't recognize.
+
+LobbyStack releases breaking changes only as a new version, such as `/api/v2`. Removing or renaming a field, changing a type, or adding a required request field counts as breaking. When a new version ships, v1 keeps working alongside it. Webhook payloads carry `api_version` so you can tell which shape you received.
