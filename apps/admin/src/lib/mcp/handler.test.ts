@@ -29,7 +29,9 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
   };
 });
 
-import { PublicApiError, type ResolvedApiKey } from "@lobbystack/domain";
+import { randomUUID } from "node:crypto";
+
+import { PublicApiError, type ResolvedApiKey, type ResolvedOAuthGrant } from "@lobbystack/domain";
 import { apiKeyScopes, apiOperations, type ApiKeyScope } from "@lobbystack/shared";
 
 import type { RateLimitDecision } from "../public-api/rate-limit";
@@ -49,6 +51,18 @@ const secrets: Record<string, ResolvedApiKey> = {
   lsk_aaaaaaaa_full: { businessId: businessA, apiKeyId: keyIdA, scopes: [...apiKeyScopes] },
   lsk_bbbbbbbb_full: { businessId: businessB, apiKeyId: keyIdB, scopes: [...apiKeyScopes] },
 };
+
+// OAuth access tokens, as app.resolve_oauth_access_token would return them.
+const grantIdA = "8c9d0e1f-2a3b-4c5d-8e6f-7a8b9c0d1e2f";
+const grantUser = "9d0e1f2a-3b4c-4d5e-9f6a-8b9c0d1e2f3a";
+const grants: Record<string, ResolvedOAuthGrant> = {};
+let touchedGrants: string[] = [];
+
+function grantToken(scopes: ApiKeyScope[], options: { businessId?: string; resources?: string[]; grantId?: string } = {}): string {
+  const token = `lsa_${randomUUID().replace(/-/g, "")}`;
+  grants[token] = { businessId: options.businessId ?? businessA, grantId: options.grantId ?? grantIdA, userId: grantUser, clientId: "https://claude.ai/oauth/mcp-oauth-client-metadata", clientName: "Claude", scopes, resources: options.resources ?? ["http://localhost:3000/api/mcp"], expiresAt: new Date(Date.now() + 3_600_000) };
+  return token;
+}
 
 function keyWith(scopes: ApiKeyScope[]): string {
   const secret = `lsk_cccccccc_${scopes.join("_")}`;
@@ -102,9 +116,12 @@ beforeEach(() => {
   operations = fakeOperations();
   rateLimit = vi.fn(allow);
   logs = [];
+  touchedGrants = [];
   handler = createLobbyStackMcpHttpHandler({
     resolveKey: async (secret) => secrets[secret] ?? null,
     touchKey: async () => undefined,
+    resolveGrant: async (token) => grants[token] ?? null,
+    touchGrant: async (grantId) => { touchedGrants.push(grantId); },
     rateLimit,
     operations,
     log: (line) => { logs.push(line); },
@@ -468,5 +485,71 @@ describe("idempotency shared between REST and MCP", () => {
     const booked = await other.callTool({ name: "book_appointment", arguments: { ...booking, idempotency_key: "shared-5" } });
     expect(booked.isError ?? false).toBe(false);
     expect(operations.createAppointmentForApi).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("MCP with OAuth access tokens", () => {
+  it("challenges unauthenticated requests with the protected resource metadata", async () => {
+    const response = await handler(post({}));
+    expect(response.status).toBe(401);
+    expect(response.headers.get("www-authenticate")).toContain('resource_metadata="http://localhost:3000/.well-known/oauth-protected-resource/api/mcp"');
+  });
+
+  it("rejects unknown, revoked or expired tokens with invalid_token", async () => {
+    const response = await handler(post({ authorization: "Bearer lsa_unknowntoken" }));
+    expect(response.status).toBe(401);
+    expect(response.headers.get("www-authenticate")).toContain('error="invalid_token"');
+  });
+
+  it("rejects a token issued for another resource", async () => {
+    const response = await handler(post({ authorization: `Bearer ${grantToken(["calls:read"], { resources: ["https://elsewhere.example.com/mcp"] })}` }));
+    expect(response.status).toBe(401);
+  });
+
+  it("rejects a grant with no tool scope", async () => {
+    const response = await handler(post({ authorization: `Bearer ${grantToken([])}` }));
+    expect(response.status).toBe(403);
+    expect(response.headers.get("www-authenticate")).toContain('error="insufficient_scope"');
+  });
+
+  it("lists only the tools the grant allows and runs them as the grant's business, audited as the grant", async () => {
+    const client = await connect(grantToken(["calls:read", "appointments:write"]));
+    expect((await client.listTools()).tools.map((tool) => tool.name).sort()).toEqual(["book_appointment", "cancel_appointment", "get_call", "list_calls", "reschedule_appointment"]);
+    await client.callTool({ name: "list_calls", arguments: {} });
+    const [, caller] = (operations.listCallsForApi as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(caller).toEqual({ businessId: businessA, grantId: grantIdA, userId: grantUser, actor: "mcp" });
+    expect(rateLimit).toHaveBeenCalledWith(`grant:${grantIdA}`);
+    expect(logs).toContainEqual(expect.objectContaining({ event: "mcp.tool_call", tool: "list_calls", oauth_grant_id: grantIdA, business_id: businessA }));
+    expect(JSON.stringify(logs)).not.toContain("lsa_");
+    expect(touchedGrants).toContain(grantIdA);
+  });
+
+  it("keeps grants for different businesses apart", async () => {
+    const clientA = await connect(grantToken(["contacts:read"]));
+    const clientB = await connect(grantToken(["contacts:read"], { businessId: businessB, grantId: "7b8c9d0e-1f2a-4b3c-8d4e-5f6a7b8c9d0e" }));
+    await clientA.callTool({ name: "get_contact", arguments: { contact_id: id } });
+    await clientB.callTool({ name: "get_contact", arguments: { contact_id: id } });
+    const callers = (operations.getContactForApi as unknown as ReturnType<typeof vi.fn>).mock.calls.map((call) => (call[1] as { businessId: string }).businessId);
+    expect(callers).toEqual([businessA, businessB]);
+  });
+
+  it("scopes idempotency keys to the grant, apart from API keys", async () => {
+    const client = await connect(grantToken(["appointments:write"]));
+    await client.callTool({ name: "book_appointment", arguments: { service_id: id, starts_at: at, contact_phone: "+14165550134", idempotency_key: "grant-1" } });
+    expect([...idempotency.store.keys()]).toContain(`grant:${grantIdA}:createAppointment:grant-1`);
+  });
+
+  it("stops a grant at its rate limit", async () => {
+    rateLimit.mockResolvedValueOnce({ allowed: false, reason: "limited", limit: 120, remaining: 0, resetAt: 0, retryAfterSeconds: 9 });
+    const client = await connect(grantToken(["calls:read"]));
+    expect(errorOf(await client.callTool({ name: "list_calls", arguments: {} })).code).toBe("rate_limited");
+    expect(operations.listCallsForApi).not.toHaveBeenCalled();
+  });
+
+  it("never sends an lsa_ token to the API key resolver", async () => {
+    const resolveKey = vi.fn(async () => null);
+    const oauthOnly = createLobbyStackMcpHttpHandler({ resolveKey, resolveGrant: async () => null, rateLimit, operations });
+    await oauthOnly(post({ authorization: "Bearer lsa_abc" }));
+    expect(resolveKey).not.toHaveBeenCalled();
   });
 });
