@@ -1,19 +1,35 @@
 ---
 title: "Connect ChatGPT and OpenAI agents"
-description: "Use the LobbyStack MCP server from ChatGPT, the OpenAI Responses API and Codex."
+description: "Add LobbyStack to ChatGPT as an app, or use it from the OpenAI Responses API and Codex."
 sidebarTitle: "ChatGPT"
 contentType: "How-to"
 ---
 
-You need an API key from **Settings** > **API keys**. Pick the scopes you want the assistant to have. See [MCP server](/ai/mcp) for the tools each scope unlocks.
+The server URL is `https://app.lobbystack.com/api/mcp`. Replace `app.lobbystack.com` with your own domain if you self-host. ChatGPT connects to it from the internet, so a self-hosted LobbyStack needs a public HTTPS address.
+
+See [MCP server](/ai/mcp) for the tools each permission unlocks.
 
 ## ChatGPT
 
-ChatGPT adds custom MCP servers as apps in developer mode, and it signs in to them with OAuth. LobbyStack doesn't offer OAuth sign-in yet, so you can't add it from the ChatGPT app today. We'll update this page when you can. Until then, use the Responses API or Codex below.
+ChatGPT adds custom MCP servers as apps in developer mode, which OpenAI offers on Plus, Pro, Business, Enterprise and Education accounts on the web.
+
+<Steps>
+  <Step title="Turn on developer mode">
+    In ChatGPT, open **Settings** > **Security and login** and turn on **Developer mode**.
+  </Step>
+  <Step title="Create the app">
+    Open ChatGPT's plugins, click **+**, and create a developer-mode app. Name it `LobbyStack`, paste the server URL, and choose **OAuth** for authentication. Leave any client ID and secret empty; ChatGPT registers itself with LobbyStack.
+  </Step>
+  <Step title="Sign in and choose access">
+    ChatGPT opens LobbyStack. Sign in, pick the business, uncheck anything ChatGPT shouldn't do, and click **Allow access**.
+  </Step>
+</Steps>
+
+To disconnect, go to **Settings** > **Connected apps** in LobbyStack and click **Disconnect** next to ChatGPT.
 
 ## OpenAI Responses API
 
-The Responses API calls remote MCP servers for you. Pass the key in `headers`:
+The Responses API calls remote MCP servers for you. Pass an API key in `headers`:
 
 ```bash
 curl https://api.openai.com/v1/responses \
@@ -36,7 +52,7 @@ curl https://api.openai.com/v1/responses \
 
 ## Codex
 
-Add LobbyStack to `~/.codex/config.toml`. Codex reads the key from the environment variable you name:
+Add LobbyStack to `~/.codex/config.toml`. Codex reads the API key from the environment variable you name:
 
 ```toml ~/.codex/config.toml
 [mcp_servers.lobbystack]
@@ -45,5 +61,3 @@ bearer_token_env_var = "LOBBYSTACK_API_KEY"
 ```
 
 Export `LOBBYSTACK_API_KEY` in your shell, start Codex, and ask it to call `get_business` to check the connection.
-
-Replace `app.lobbystack.com` with your own domain if you self-host.

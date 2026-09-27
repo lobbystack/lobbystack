@@ -1,32 +1,52 @@
 ---
 title: "Connect Claude"
-description: "Add the LobbyStack MCP server to Claude Code, Claude Desktop or the Claude API with an API key."
+description: "Add LobbyStack to Claude as a connector, or to Claude Code, Claude Desktop and the Claude API with an API key."
 sidebarTitle: "Claude"
 contentType: "How-to"
 ---
 
-You need an API key from **Settings** > **API keys**. Pick the scopes you want Claude to have. See [MCP server](/ai/mcp) for the tools each scope unlocks.
+The server URL is `https://app.lobbystack.com/api/mcp`. Replace `app.lobbystack.com` with your own domain if you self-host. Claude connects to it from the internet, so a self-hosted LobbyStack needs a public HTTPS address.
 
-The examples read the key from the `LOBBYSTACK_API_KEY` environment variable. Replace `app.lobbystack.com` with your own domain if you self-host.
+See [MCP server](/ai/mcp) for the tools each permission unlocks.
 
-<Note>
-The **Connectors** screen on claude.ai and in Claude Desktop connects with OAuth sign-in, which LobbyStack doesn't offer yet. Until it does, use Claude Code, Claude Desktop with `mcp-remote`, or the Claude API.
-</Note>
+## Claude and Claude Desktop connectors
+
+<Steps>
+  <Step title="Add the connector">
+    In Claude, go to **Customize** > **Connectors**, click **+**, then **Add custom connector**. Name it `LobbyStack`, paste the server URL, and click **Add**. Leave **Advanced settings** empty.
+
+    On Team and Enterprise plans, an owner adds it under **Organization settings** > **Connectors**, and each member connects it from **Customize** > **Connectors**.
+  </Step>
+  <Step title="Connect and sign in">
+    Click **Connect**. Claude opens LobbyStack. Sign in if you aren't signed in already.
+  </Step>
+  <Step title="Choose the business and permissions">
+    Pick the business, uncheck anything Claude shouldn't do, and click **Allow access**. You go back to Claude, connected.
+  </Step>
+</Steps>
+
+To disconnect, go to **Settings** > **Connected apps** in LobbyStack and click **Disconnect** next to Claude.
 
 ## Claude Code
 
-Run this in your terminal:
+Add the server, then sign in from Claude Code:
+
+```bash
+claude mcp add --transport http lobbystack https://app.lobbystack.com/api/mcp
+```
+
+Start Claude Code, run `/mcp`, select `lobbystack` and choose to authenticate. Your browser opens the LobbyStack sign-in and consent page.
+
+To use an API key instead, pass it as a header:
 
 ```bash
 claude mcp add --transport http lobbystack https://app.lobbystack.com/api/mcp \
   --header "Authorization: Bearer $LOBBYSTACK_API_KEY"
 ```
 
-Start Claude Code and run `/mcp` to check that `lobbystack` shows as connected. Then ask, for example: "List yesterday's calls that ended without a booking."
+## Claude Desktop with an API key
 
-## Claude Desktop
-
-Claude Desktop runs local servers from its config file, so you connect through [`mcp-remote`](https://www.npmjs.com/package/mcp-remote), which forwards requests to LobbyStack with your key. You need Node.js on your computer.
+If you'd rather use an API key than the connector, run [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) from Claude Desktop's config file. It forwards requests to LobbyStack with your key. You need Node.js on your computer.
 
 <Steps>
   <Step title="Open the config file">
@@ -64,7 +84,7 @@ Claude Desktop runs local servers from its config file, so you connect through [
 
 ## Claude API
 
-The Messages API connects to remote MCP servers with the MCP connector. Send the key as `authorization_token`:
+The Messages API connects to remote MCP servers with the MCP connector. Send an API key, or an OAuth access token your app obtained, as `authorization_token`:
 
 ```bash
 curl https://api.anthropic.com/v1/messages \
@@ -92,6 +112,7 @@ Ask Claude to call `get_business`. It should answer with your business name, tim
 
 | Symptom | Fix |
 | --- | --- |
-| `401` or "unauthorized" | Check that you copied the whole key and that nobody revoked it. |
-| `403` or "insufficient_scope" | Create a key with at least one scope other than `webhooks:manage`. |
-| A tool is missing | Create a new key with the scope that tool needs. |
+| The sign-in page says you can't connect apps | Ask an owner of the business to connect Claude, or to make you an admin. |
+| `401` or "unauthorized" | Connect again. With an API key, check that you copied the whole key and that nobody revoked it. |
+| `403` or "insufficient_scope" | Connect again and allow at least one permission. With an API key, create one with a scope other than `webhooks:manage`. |
+| A tool is missing | Connect again and allow the permission that tool needs. |
