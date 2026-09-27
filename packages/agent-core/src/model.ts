@@ -85,6 +85,28 @@ function reasoningEffort(environment: AgentModelEnvironment): ReasoningEffort {
   return (REASONING_EFFORTS as readonly string[]).includes(value ?? "") ? value as ReasoningEffort : DEFAULT_REASONING_EFFORT;
 }
 
+const DEFAULT_SUMMARY_REASONING_EFFORT: ReasoningEffort = "low";
+
+// Call summaries reuse the AI_CHAT_* endpoint and key. AI_SUMMARY_MODEL picks a
+// different (cheaper) model on it; AI_SUMMARY_REASONING_EFFORT defaults to low.
+// The AI_CHAT_* prices describe the chat model, so they only price summaries
+// that run on that same model.
+export function callSummaryEnvironment(environment: AgentModelEnvironment = process.env): AgentModelEnvironment {
+  const chatModel = agentModelId(environment).model;
+  const summaryModel = environment.AI_SUMMARY_MODEL?.trim() || chatModel;
+  const effort = environment.AI_SUMMARY_REASONING_EFFORT?.trim();
+  const summary: AgentModelEnvironment = {
+    ...environment,
+    AI_CHAT_MODEL: summaryModel,
+    AI_CHAT_REASONING_EFFORT: (REASONING_EFFORTS as readonly string[]).includes(effort ?? "") ? effort : DEFAULT_SUMMARY_REASONING_EFFORT,
+  };
+  if (summaryModel !== chatModel) {
+    delete summary.AI_CHAT_INPUT_COST_PER_MILLION_TOKENS;
+    delete summary.AI_CHAT_OUTPUT_COST_PER_MILLION_TOKENS;
+  }
+  return summary;
+}
+
 // OpenAI itself gets the Responses API: its reasoning models only accept
 // tools with reasoning turned on there. Any other OpenAI-compatible endpoint
 // gets chat completions, which is all most of them speak.

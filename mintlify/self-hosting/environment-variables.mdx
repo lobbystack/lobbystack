@@ -74,6 +74,8 @@ An empty OTLP endpoint does not disable container stdout logs, application healt
 | `OPENAI_API_KEY` | GPT-Live calls and the fallback key for `AI_CHAT_*` and `AI_EMBEDDING_*`. |
 | `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_PROVIDER_NAME` | The receptionist agent for website chat and calls. Leave `AI_CHAT_MODEL` blank on OpenAI to use `gpt-6-luna`. Set it for any other OpenAI-compatible endpoint. |
 | `AI_CHAT_REASONING_EFFORT` | OpenAI only: `none`, `minimal`, `low`, `medium`, `high`, or `xhigh`. Defaults to `high`. |
+| `AI_SUMMARY_MODEL` | The model the worker uses on the `AI_CHAT_*` endpoint to write the one-line summary of each finished call and pick up the caller's name. Leave it blank to use `AI_CHAT_MODEL`. With a different model, the call summary's AI cost stays unknown, because the `AI_CHAT_*` prices describe the chat model. Without any text model, calls fall back to a summary taken from the transcript. |
+| `AI_SUMMARY_REASONING_EFFORT` | OpenAI only: reasoning effort for call summaries. Defaults to `low`. |
 | `AI_EMBEDDING_API_KEY`, `AI_EMBEDDING_BASE_URL`, `AI_EMBEDDING_MODEL`, `AI_EMBEDDING_PROVIDER_NAME`, `AI_EMBEDDING_REVISION` | OpenAI-compatible 1536-dimensional embeddings. |
 | `WIDGET_SESSION_SECRET` | Signs cross-origin website-widget sessions. |
 | `FIRECRAWL_*` | Website knowledge ingestion. |

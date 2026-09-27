@@ -19,7 +19,7 @@ function normalizedSummary(value: string | null | undefined): string | undefined
 }
 
 const callerNamePattern = /^(?:(?:hello|hi|hey)[\s,!.-]*)?(?:my name is|this is|i am|i'm|je m'appelle|je suis)\s+([\p{L}][\p{L}'’-]*(?:\s+[\p{L}][\p{L}'’-]*){0,2})(?=$|[.!?,;])/iu;
-const nonReasonPattern = /^(?:hello|hi|hey|yes|no|okay|ok|uh|um|bye|goodbye|thanks|thank you)[\s.!?,;-]*$/iu;
+const nonReasonPattern = /^(?:hello|hi|hey|yes|yeah|yep|no|nope|okay|ok|sure|uh|um|hmm|bye|goodbye|thanks|thank you|bonjour|allô|allo|salut|oui|non|merci|d'accord)[\s.!?,;-]*$/iu;
 
 function bounded(value: string, maximum = 220): string {
   return value.length > maximum ? `${value.slice(0, maximum - 3).trimEnd()}...` : value;
@@ -51,8 +51,110 @@ export function extractCallerContext(transcript: ConversationTranscriptTurn[]): 
   };
 }
 
+export type CallSummaryLocale = "en" | "fr";
+
+export function normalizeCallSummaryLocale(locale: string | null | undefined): CallSummaryLocale {
+  return locale?.trim().toLowerCase().startsWith("fr") ? "fr" : "en";
+}
+
+/** A model-written summary and caller name, before the domain validates them. */
+export type GeneratedCallSummary = {
+  summary?: string | null;
+  callerName?: string | null;
+};
+
+const MAX_GENERATED_SUMMARY_LENGTH = 200;
+const callerNameShape = /^[\p{L}][\p{L}'’.-]*(?:\s+[\p{L}][\p{L}'’.-]*){0,3}$/u;
+const placeholderNames = new Set(["unknown", "caller", "customer", "client", "inconnu", "anonyme", "anonymous", "none", "null"]);
+
+function foldForComparison(value: string): string {
+  return value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+}
+
+function words(text: string): string[] {
+  return foldForComparison(text).replace(/’/gu, "'").split(/[^\p{L}'-]+/u).filter(Boolean);
+}
+
+// Word sequences a caller says right before their own name.
+const selfIdentificationCues = [
+  ["my", "name", "is"], ["name", "is"], ["name's"], ["this", "is"], ["it", "is"], ["it's"], ["i", "am"], ["i'm"], ["im"], ["call", "me"],
+  ["je", "m'appelle"], ["je", "suis"], ["c'est"], ["ici"], ["mon", "nom", "est"], ["mon", "nom", "c'est"],
+];
+
+function endsWith(tokens: string[], end: number, cue: string[]): boolean {
+  if (end < cue.length) return false;
+  return cue.every((word, index) => tokens[end - cue.length + index] === word);
+}
+
+function indexOfSequence(tokens: string[], sequence: string[]): number {
+  for (let start = 0; start + sequence.length <= tokens.length; start += 1) {
+    if (sequence.every((word, index) => tokens[start + index] === word)) return start;
+  }
+  return -1;
+}
+
+const isCaller = (turn: ConversationTranscriptTurn) => turn.speaker === "caller" || turn.speaker === "user";
+
+/**
+ * True when the caller gave this name as their own: right after a cue such as
+ * "my name is" or "c'est", or as a short reply to the receptionist asking for
+ * their name. A name the caller only mentions ("I'd like to speak with Marie
+ * Tremblay") doesn't count.
+ */
+function callerIntroducedThemselvesAs(transcript: ConversationTranscriptTurn[], nameWords: string[]): boolean {
+  let askedForName = false;
+  for (const turn of transcript) {
+    const tokens = words(turn.text);
+    if (!isCaller(turn)) {
+      askedForName = tokens.includes("name") || tokens.includes("nom");
+      continue;
+    }
+    const start = indexOfSequence(tokens, nameWords);
+    if (start >= 0) {
+      if (selfIdentificationCues.some((cue) => endsWith(tokens, start, cue))) return true;
+      if (askedForName && start <= 2 && tokens.length <= nameWords.length + 4) return true;
+    }
+    askedForName = false;
+  }
+  return false;
+}
+
+const wrappingCharacters = new Set(["\"", "'", "“", "”", "«", "»"]);
+
+// Strip quotes and spaces from both ends with index scans, not a regex: an
+// anchored regex on model output backtracks badly on long whitespace runs.
+function trimWrapping(value: string): string {
+  let start = 0;
+  let end = value.length;
+  const wraps = (character: string | undefined) => character !== undefined && (wrappingCharacters.has(character) || /\s/u.test(character));
+  while (start < end && wraps(value[start])) start += 1;
+  while (end > start && wraps(value[end - 1])) end -= 1;
+  return value.slice(start, end);
+}
+
+/** Accept a model-written summary only as one bounded line. */
+export function sanitizeGeneratedSummary(value: string | null | undefined): string | undefined {
+  const text = normalizedSummary(value);
+  const normalized = text === undefined ? undefined : trimWrapping(text);
+  if (!normalized) return undefined;
+  return bounded(normalized, MAX_GENERATED_SUMMARY_LENGTH);
+}
+
+/**
+ * Accept a model-extracted caller name only when it looks like a name and the
+ * caller spoke every word of it, so a model cannot invent or embellish one.
+ */
+export function sanitizeGeneratedCallerName(value: string | null | undefined, transcript: ConversationTranscriptTurn[]): string | undefined {
+  const name = normalizedSummary(value);
+  if (!name || name.length > 60 || !callerNameShape.test(name) || placeholderNames.has(foldForComparison(name))) return undefined;
+  const nameWords = words(name);
+  return nameWords.length > 0 && callerIntroducedThemselvesAs(transcript, nameWords) ? name : undefined;
+}
+
 export function buildConversationSessionSummary(input: {
   locale?: string | null;
+  /** A model-written summary of this call; it replaces the transcript heuristic. */
+  generatedSummary?: string | null | undefined;
   currentIntent?: string | null;
   conversationSummary?: string | null;
   disposition?: string | null;
@@ -61,6 +163,10 @@ export function buildConversationSessionSummary(input: {
   const existingSummary = normalizedSummary(input.conversationSummary);
   if (input.currentIntent === "message_taking") {
     return { kind: "message_taking", ...(existingSummary ? { summary: existingSummary } : {}) };
+  }
+  const generatedSummary = sanitizeGeneratedSummary(input.generatedSummary);
+  if (generatedSummary) {
+    return { kind: "summary", summary: generatedSummary };
   }
   if (existingSummary) {
     return { kind: "summary", summary: existingSummary };

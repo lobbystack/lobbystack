@@ -2,10 +2,11 @@ import { createHash, randomUUID } from "node:crypto";
 import Redis from "ioredis";
 import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
 
+import { hasSummarizableTranscript, type CallSummarizer } from "@lobbystack/agent-core";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { getPolarMeteredUsagePayload, type BillingUsageKind } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
-import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, markNotificationSkipped, cancelRetiredPhoneVerificationSend, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type OnboardingFollowupSender } from "@lobbystack/domain";
+import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, markNotificationSkipped, cancelRetiredPhoneVerificationSend, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, correctAlertSmsUsage, estimateSmsSegments, loadOperatorNotificationDelivery, markFeedbackEmailFailed, markFeedbackEmailSent, markOperatorNotificationSent, markOperatorNotificationSkipped, queueDailyOperatorSummaries, refreshUnitEconomicsMonth, releaseOperatorNotificationDelivery, reserveAlertSmsUsage } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
@@ -52,6 +53,8 @@ export type WorkerDependencies = {
   calendar?: CalendarOperations;
   productAnalytics?: { capture(events: Array<{ event: string; distinctId: string; properties: Record<string, unknown>; timestamp: string }>): Promise<void> };
   realtime?: Redis;
+  /** Writes the one-line call summary. Without it, calls keep the transcript heuristic. */
+  callSummarizer?: CallSummarizer;
   /** Founder check-in sender. Without it, onboarding follow-up jobs are skipped. */
   onboardingFollowupSender?: OnboardingFollowupSender;
   enqueueProductEventRetentionContinuation?: (input: {
@@ -681,7 +684,9 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     case "conversation.finalizeSession": {
       const callId = String(job.payload.callId ?? "");
       if (!callId) return { status: "skipped" };
-      const result = await finalizeConversationSession(dependencies.domain, { businessId: businessIdOrThrow(job), callId });
+      const businessId = businessIdOrThrow(job);
+      const generated = await generateCallSummary(dependencies, { businessId, callId });
+      const result = await finalizeConversationSession(dependencies.domain, { businessId, callId, ...(generated ? { generated } : {}) });
       return { status: result.finalized ? "completed" : "skipped", entityId: result.sessionId ?? callId };
     }
     case "privacy.scrubMessage": {
@@ -881,6 +886,53 @@ async function loadKnowledgeSource(db: Database, input: { businessId: string; do
       .limit(1))[0];
     return row ?? null;
   });
+}
+
+/**
+ * Ask the text model for a one-line summary and the caller's name before the
+ * call is finalized. Any failure returns undefined and finalization falls back
+ * to the transcript heuristic, so a model outage never blocks the call log.
+ */
+async function generateCallSummary(
+  dependencies: WorkerDependencies,
+  input: { businessId: string; callId: string },
+): Promise<GeneratedCallSummary | undefined> {
+  if (!dependencies.callSummarizer) return undefined;
+  const summaryInput = await loadCallSummaryInput(dependencies.domain, input);
+  if (!summaryInput || !hasSummarizableTranscript(summaryInput.transcript)) return undefined;
+  const startedAt = performance.now();
+  try {
+    const result = await dependencies.callSummarizer.summarize({
+      transcript: summaryInput.transcript,
+      locale: summaryInput.locale,
+      disposition: summaryInput.disposition,
+    });
+    await recordAiGenerationEvent(dependencies.domain, {
+      ...result.usage,
+      businessId: input.businessId,
+      operation: "call.summary",
+      callId: input.callId,
+      conversationId: summaryInput.conversationId,
+    }).catch(() => undefined);
+    return {
+      ...(summaryInput.needsSummary ? { summary: result.summary } : {}),
+      ...(summaryInput.needsCallerName ? { callerName: result.callerName } : {}),
+    };
+  } catch (error) {
+    // Only a stable category is recorded: provider errors can echo transcript text.
+    const timedOut = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+    await recordAiGenerationEvent(dependencies.domain, {
+      ...dependencies.callSummarizer.modelId,
+      businessId: input.businessId,
+      operation: "call.summary",
+      callId: input.callId,
+      conversationId: summaryInput.conversationId,
+      latencyMs: performance.now() - startedAt,
+      isError: true,
+      error: timedOut ? "generation_timeout" : "generation_failed",
+    }).catch(() => undefined);
+    return undefined;
+  }
 }
 
 async function indexWebsitePage(
