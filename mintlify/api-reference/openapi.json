@@ -3062,6 +3062,7 @@
                   "slot_unavailable",
                   "rate_limited",
                   "rate_limit_unavailable",
+                  "method_not_allowed",
                   "internal_error"
                 ]
               },

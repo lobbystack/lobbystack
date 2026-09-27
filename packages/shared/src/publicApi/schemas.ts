@@ -28,6 +28,7 @@ export const apiErrorCodes = [
   "slot_unavailable",
   "rate_limited",
   "rate_limit_unavailable",
+  "method_not_allowed",
   "internal_error",
 ] as const;
 export type ApiErrorCode = (typeof apiErrorCodes)[number];
