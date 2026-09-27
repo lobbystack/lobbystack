@@ -242,9 +242,12 @@ export function createLiveCallHandler(input: { domain: DomainContext }) {
       const seconds = providerSeconds(summary, request.channel);
       const measuredSeconds = summary.durationMs / 1000;
       const completed = await finishLiveCall(input.domain, { ...call, seconds, measuredSeconds, end: end ?? endFromCloseReason(summary.closeReason), channel: request.channel });
-      // Only the attach that finished the call keeps its recording, so a late
-      // retry that re-attaches to an ended call doesn't copy it twice.
-      if (completed) void saveRecording(request, measuredSeconds * 1000);
+      // Only the attach that finished the call keeps its recording and reports
+      // its latency, so a late retry that re-attaches to an ended call doesn't
+      // copy the recording or record the call's latency twice.
+      if (!completed) return;
+      recordLiveCallLatency(input.domain, telemetryCall, summary);
+      void saveRecording(request, measuredSeconds * 1000);
     };
 
     controller = new LiveCallController({
@@ -268,7 +271,6 @@ export function createLiveCallHandler(input: { domain: DomainContext }) {
         active.delete(request.sessionId);
         setPresence(request, false);
         console.info(JSON.stringify({ event: "live.closed", sessionId: summary.sessionId, channel: request.channel, durationMs: summary.durationMs, billedSeconds: summary.billedSeconds, closeReason: summary.closeReason, end, delegations: summary.delegations.length }));
-        recordLiveCallLatency(input.domain, telemetryCall, summary);
         const pending = finish(summary).catch(logError(request.sessionId, "finish failed"));
         finishing.add(pending);
         void pending.finally(() => finishing.delete(pending));

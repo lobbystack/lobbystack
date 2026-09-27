@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   controllerOptions: [] as Array<Record<string, (...args: never[]) => unknown>>,
   snapshot: vi.fn(),
   recordProductEvent: vi.fn(async (..._args: unknown[]) => "event_1"),
+  finishLiveCall: vi.fn(async (..._args: unknown[]) => false),
 }));
 
 vi.mock("@lobbystack/agent-core", () => ({
@@ -23,7 +24,7 @@ vi.mock("@lobbystack/agent-core", () => ({
 }));
 vi.mock("@lobbystack/domain", () => ({
   getCachedBusinessSnapshot: mocks.snapshot,
-  finishLiveCall: vi.fn(async () => false),
+  finishLiveCall: mocks.finishLiveCall,
   LIVE_CALL_PROVIDER: "openai_live",
   recordProductEvent: mocks.recordProductEvent,
 }));
@@ -90,6 +91,7 @@ describe("live call latency telemetry", () => {
   });
 
   it("records one voice.call_latency_recorded summary when the call closes", async () => {
+    mocks.finishLiveCall.mockResolvedValueOnce(true);
     const options = await startCall();
     options.onClose!({
       sessionId: "live_2",
@@ -97,6 +99,8 @@ describe("live call latency telemetry", () => {
       delegations: [delegation, { ...delegation, delegationId: "del_2", totalMs: 3_000, failed: true }, { ...delegation, delegationId: "del_3", totalMs: 900 }],
       latency: { firstSpeechMs: 1_100, greetedFirst: true, answerGapsMs: [700, 400, 2_500, 900], speechSource: "audio" },
     } as never);
+    await vi.waitFor(() => expect(mocks.finishLiveCall).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(mocks.recordProductEvent).toHaveBeenCalledWith({ db: {} }, expect.objectContaining({
       name: "voice.call_latency_recorded",
@@ -123,7 +127,18 @@ describe("live call latency telemetry", () => {
     }));
   });
 
+  it("skips the latency summary when a late re-attach finds the call already finished", async () => {
+    mocks.finishLiveCall.mockResolvedValueOnce(false);
+    const options = await startCall();
+    options.onClose!({ sessionId: "live_2", durationMs: 1_000, delegations: [] } as never);
+    await vi.waitFor(() => expect(mocks.finishLiveCall).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mocks.recordProductEvent).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ name: "voice.call_latency_recorded" }));
+  });
+
   it("never lets a telemetry failure reach the call", async () => {
+    mocks.finishLiveCall.mockResolvedValueOnce(true);
     const options = await startCall();
     mocks.recordProductEvent.mockRejectedValueOnce(new Error("database unavailable"));
     mocks.recordProductEvent.mockImplementationOnce(() => { throw new Error("database unavailable"); });
