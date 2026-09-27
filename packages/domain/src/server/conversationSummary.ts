@@ -82,9 +82,23 @@ function callerWords(transcript: ConversationTranscriptTurn[]): Set<string> {
   return words;
 }
 
+const wrappingCharacters = new Set(["\"", "'", "“", "”", "«", "»"]);
+
+// Strip quotes and spaces from both ends with index scans, not a regex: an
+// anchored regex on model output backtracks badly on long whitespace runs.
+function trimWrapping(value: string): string {
+  let start = 0;
+  let end = value.length;
+  const wraps = (character: string | undefined) => character !== undefined && (wrappingCharacters.has(character) || /\s/u.test(character));
+  while (start < end && wraps(value[start])) start += 1;
+  while (end > start && wraps(value[end - 1])) end -= 1;
+  return value.slice(start, end);
+}
+
 /** Accept a model-written summary only as one bounded line. */
 export function sanitizeGeneratedSummary(value: string | null | undefined): string | undefined {
-  const normalized = normalizedSummary(value)?.replace(/^["'“”«»\s]+|["'“”«»\s]+$/gu, "");
+  const text = normalizedSummary(value);
+  const normalized = text === undefined ? undefined : trimWrapping(text);
   if (!normalized) return undefined;
   return bounded(normalized, MAX_GENERATED_SUMMARY_LENGTH);
 }

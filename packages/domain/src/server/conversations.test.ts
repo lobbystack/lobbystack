@@ -76,6 +76,12 @@ describe("model-written call summaries", () => {
     expect(summary?.startsWith("\"")).toBe(false);
   });
 
+  it("strips wrapping quotes from a generated summary and handles long whitespace runs", () => {
+    expect(sanitizeGeneratedSummary("« “Asked about Friday hours.” »")).toBe("Asked about Friday hours.");
+    expect(sanitizeGeneratedSummary(`"${"\t".repeat(50_000)}x${"\t".repeat(50_000)}"`)).toBe("x");
+    expect(sanitizeGeneratedSummary(" \" ' ")).toBeUndefined();
+  });
+
   it("does not treat filler words as the call reason", () => {
     expect(extractCallerContext([{ speaker: "caller", text: "Yeah" }, { speaker: "caller", text: "Oui." }])).toEqual({});
   });
