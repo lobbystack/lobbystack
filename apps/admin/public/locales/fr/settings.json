@@ -718,7 +718,7 @@
   },
   "snapshot": {
     "title": "Instantané de la réceptionniste",
-    "description": "La passerelle vocale récupère ce contexte d'entreprise une fois au début d'un appel en direct.",
+    "description": "Votre réceptionniste charge ce contexte d'entreprise une fois au début de chaque appel.",
     "business": "Entreprise",
     "timezone": "Fuseau horaire",
     "transferPolicy": "Politique de transfert",

@@ -82,11 +82,10 @@ const stagingGates: readonly Gate[] = [
   // This mutates and removes fixture data; isolated-target validation is mandatory.
   { id: "privacy", commandName: "privacy", executable: "pnpm", args: ["replacement:privacy"] },
   { id: "smoke", commandName: "smoke", executable: "pnpm", args: ["replacement:smoke"] },
-  { id: "internal", commandName: "internal", executable: "pnpm", args: ["replacement:internal"] },
 ];
 
 const stagingRequired = [
-  "RELEASE_CERTIFICATION_TARGET", "ADMIN_BASE_URL", "WORKER_BASE_URL", "VOICE_BASE_URL", "DATABASE_URL",
+  "RELEASE_CERTIFICATION_TARGET", "ADMIN_BASE_URL", "WORKER_BASE_URL", "DATABASE_URL",
   "REPLACEMENT_MIGRATOR_DATABASE_URL", "REPLACEMENT_APP_DATABASE_URL", "REPLACEMENT_WORKER_DATABASE_URL",
   "REDIS_URL", "REPLACEMENT_REDIS_HOST", "REDIS_PORT", "REPLACEMENT_S3_ENDPOINT", "S3_BUCKET",
   "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY", "POLAR_WEBHOOK_SECRET", "TWILIO_AUTH_TOKEN",
@@ -159,7 +158,7 @@ function targetIdentity(mode: ReleaseMode, environment: NodeJS.ProcessEnv, e2e: 
 export function stagingConfigurationProblems(environment: NodeJS.ProcessEnv): string[] {
   const problems = missingRequiredEnvironment(environment, stagingRequired);
   if (environment.RELEASE_CERTIFICATION_TARGET !== "isolated-staging") problems.push("RELEASE_CERTIFICATION_TARGET (must be isolated-staging)");
-  for (const name of ["ADMIN_BASE_URL", "WORKER_BASE_URL", "VOICE_BASE_URL", "REDIS_URL", "REPLACEMENT_S3_ENDPOINT"]) {
+  for (const name of ["ADMIN_BASE_URL", "WORKER_BASE_URL", "REDIS_URL", "REPLACEMENT_S3_ENDPOINT"]) {
     if (environment[name] && urlIsLocal(environment[name])) problems.push(`${name} (must not be local)`);
   }
   if (environment.REPLACEMENT_REDIS_HOST && /^(localhost|127\.|::1)|\.local$/i.test(environment.REPLACEMENT_REDIS_HOST)) problems.push("REPLACEMENT_REDIS_HOST (must not be local)");

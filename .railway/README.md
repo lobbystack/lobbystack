@@ -17,20 +17,20 @@ Read the plan before you apply it. Don’t pass `--confirm-destructive` unless y
 
 The definition declares Serverless (app sleeping) per environment to match the operational policy:
 
-- Enabled in staging: `admin`, `worker`, `voice-gateway`, `Postgres`, and `Redis`.
+- Enabled in staging: `admin`, `worker`, `Postgres`, and `Redis`.
 - Unset in production: every service.
 
 Change these values only when you mean to. The setting applies on the next deploy of the service.
 
 ## Production application releases
 
-The production `admin`, `worker`, and `voice-gateway` services use `lobbystack/lobbystack` on `main` as their source. Railway builds each affected service from its existing Dockerfile and watch patterns. `checkSuites: true` makes Railway wait for the commit’s GitHub checks before deploying it.
+The production `admin` and `worker` services use `lobbystack/lobbystack` on `main` as their source. Railway builds each affected service from its existing Dockerfile and watch patterns. `checkSuites: true` makes Railway wait for the commit’s GitHub checks before deploying it.
 
 The `migrator` deliberately has no GitHub source. On every push to `main`, the `migrate-production` job uploads that exact checkout. The job waits for the run-once deployment to succeed. Railway blocks application deployments until the migration succeeds. Railway releases application containers after the migration.
 
 Store a production project token in the GitHub `production` environment as `RAILWAY_PRODUCTION_TOKEN`. Restrict that environment to the `main` branch. Do not store database credentials in GitHub; the migrator reads its preserved variables from Railway.
 
-To pause automatic application releases, disable **Auto Deploy** on all three services. A failed GitHub check or migration run leaves the previous application deployments running. For an application regression, roll each affected service back to its previous successful Railway deployment. Keep migrations backward-compatible with that version.
+To pause automatic application releases, disable **Auto Deploy** on both services. A failed GitHub check or migration run leaves the previous application deployments running. For an application regression, roll each affected service back to its previous successful Railway deployment. Keep migrations backward-compatible with that version.
 
 The definition pins Redis to `redis:7-alpine`. The Redis helper in the importer selected version 8 during the first preview; reject that upgrade in an infrastructure import.
 

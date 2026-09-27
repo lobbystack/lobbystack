@@ -4,7 +4,7 @@ import { Navbar } from "@/components/Navbar"
 import { Footer } from "@/components/Footer"
 import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd } from "@/lib/seo"
 
-const updatedAt = "June 12, 2026"
+const updatedAt = "September 26, 2026"
 const cookieRows = [
   {
     category: "Necessary",
@@ -116,6 +116,9 @@ const cookieRows = [
           <a class="block hover:text-foreground" href="#analytics"
             >Analytics</a
           >
+          <a class="block hover:text-foreground" href="#dashboard"
+            >Dashboard and widget</a
+          >
           <a class="block hover:text-foreground" href="#manage">Manage</a>
           <a class="block hover:text-foreground" href="#changes">Changes</a>
           <a class="block hover:text-foreground" href="#contact">Contact</a>
@@ -132,9 +135,9 @@ const cookieRows = [
             "cookies" in this policy to refer to these technologies together.
           </p>
           <p>
-            We use cookies to help this site function, understand service usage,
-            and support marketing efforts. Optional analytics and performance
-            cookies are used only after you accept them.
+            We use cookies to run this site, keep it secure, and, with your
+            consent, understand how visitors use it. We set optional analytics
+            and performance cookies only after you accept them.
           </p>
         </section>
 
@@ -205,20 +208,45 @@ const cookieRows = [
         <section id="analytics">
           <h2>5. Analytics and performance cookies</h2>
           <p>
-            If you select <strong>Accept all</strong>, we may use PostHog to
-            understand how visitors use the site, including page views,
-            interactions, CTA clicks, errors, feature usage, and performance
-            signals. We also configure session recording to mask inputs.
+            Before you make a choice, we count page views with PostHog without
+            storing anything on your device. This count lives in page memory
+            only. It creates no visitor profile, and session recording and
+            automatic click tracking stay off.
           </p>
           <p>
-            If you select <strong>Reject non-essential</strong>, we do not load
-            PostHog for landing-site analytics and we do not intentionally set
-            analytics cookies from the landing site.
+            If you select <strong>Accept all</strong>, PostHog stores
+            identifiers in cookies and local storage so we can understand how
+            visitors use the site, including page views, clicks, errors, feature
+            use, and performance. PostHog also records sessions, with form
+            inputs and values marked sensitive masked.
+          </p>
+          <p>
+            If you select <strong>Reject non-essential</strong>, we stop PostHog
+            on the site, clear the identifiers it stored, and set no analytics
+            cookies.
+          </p>
+        </section>
+
+        <section id="dashboard">
+          <h2>6. The dashboard and website widget</h2>
+          <p>
+            When you sign in to the LobbyStack dashboard, we set necessary
+            cookies that keep you signed in and protect your account. The
+            dashboard uses PostHog product analytics only while product
+            analytics is turned on in your settings, and never on pages marked
+            sensitive.
+          </p>
+          <p>
+            When a business places the LobbyStack chat and call widget on its
+            website, the widget stores a random visitor identifier in local
+            storage (<strong>lobbystack.visitorId.*</strong>) so a conversation
+            can continue across pages. That business is responsible for any
+            cookie notice or consent its website requires.
           </p>
         </section>
 
         <section id="manage">
-          <h2>6. Managing cookies</h2>
+          <h2>7. Managing cookies</h2>
           <p>
             You can choose <strong>Accept all</strong> or
             <strong>Reject non-essential</strong> in the cookie banner. You can
@@ -235,7 +263,7 @@ const cookieRows = [
         </section>
 
         <section id="changes">
-          <h2>7. Changes to this policy</h2>
+          <h2>8. Changes to this policy</h2>
           <p>
             We may update this Cookie Policy from time to time as our website,
             service providers, or cookie practices change. The date at the top
@@ -244,10 +272,10 @@ const cookieRows = [
         </section>
 
         <section id="contact">
-          <h2>8. Contact us</h2>
+          <h2>9. Contact us</h2>
           <p>
-            If you have questions about this Cookie Policy or our privacy
-            practices, contact
+            Send questions about this Cookie Policy or our privacy practices
+            to Lobbystack Inc. at
             <a href="mailto:support@lobbystack.com">support@lobbystack.com</a>.
           </p>
         </section>

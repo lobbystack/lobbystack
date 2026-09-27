@@ -447,16 +447,6 @@ describe("telemetry redaction", () => {
       "serviceId",
       "sourceChannel",
     ]);
-    expect(getTelemetryRequiredProperties("ops.voice.tool_completed")).toEqual([
-      "businessId",
-      "deploymentMode",
-      "callId",
-      "provider",
-      "model",
-      "toolName",
-      "latencyBucket",
-      "channel",
-    ]);
     expect(getTelemetryRequiredProperties("ops.billing.usage_sync_failed")).toEqual([
       "businessId",
       "deploymentMode",

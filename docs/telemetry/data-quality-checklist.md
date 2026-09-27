@@ -26,7 +26,6 @@ Use this checklist whenever a new product or domain event is added, renamed, or 
 
 - confirm `apps/admin` client components own operator-intent events only
 - confirm the admin or worker owns each business outcome event
-- confirm `apps/voice-gateway` owns runtime observability and AI trace events
 - avoid duplicate emission unless analytics specifically needs two perspectives
 
 ## PostHog checks

@@ -46,7 +46,6 @@ for (const path of [
   "Dockerfile.admin",
   "Dockerfile.migrator",
   "Dockerfile.worker",
-  "Dockerfile.voice-gateway",
   "docker-compose.yml",
   ".github/workflows/replacement-platform.yml",
   ".railway/railway.ts",
@@ -139,18 +138,18 @@ function composeServiceBlock(service: string): string {
 if ((compose.match(/DATABASE_URL: postgres:\/\/postgres:/g) ?? []).length > 1) {
   errors.push("runtime services must not use the PostgreSQL superuser URL");
 }
-for (const service of ["postgres", "redis", "minio", "minio-init", "migrator", "admin", "worker", "voice-gateway", "caddy"]) {
+for (const service of ["postgres", "redis", "minio", "minio-init", "migrator", "admin", "worker", "caddy"]) {
   if (!new RegExp(`^  ${service}:`, "m").test(compose)) {
     errors.push(`Compose service is missing: ${service}`);
   }
 }
-for (const service of ["admin", "worker", "voice-gateway", "caddy"]) {
+for (const service of ["admin", "worker", "caddy"]) {
   const block = composeServiceBlock(service);
   if (!block.includes("healthcheck:")) {
     errors.push(`Compose service is missing a healthcheck: ${service}`);
   }
 }
-for (const service of ["migrator", "admin", "worker", "voice-gateway"]) {
+for (const service of ["migrator", "admin", "worker"]) {
   const block = composeServiceBlock(service);
   if (!block.includes("OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}")) {
     errors.push(`Core Compose service does not default OTel export to disabled: ${service}`);

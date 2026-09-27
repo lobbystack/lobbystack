@@ -1,4 +1,4 @@
-import { posthogSources, recordingStorageSource, webCallConnectSource } from "./csp";
+import { posthogSources, recordingStorageSource } from "./csp";
 
 /**
  * Single source of truth for the security headers the admin app sends.
@@ -9,7 +9,6 @@ import { posthogSources, recordingStorageSource, webCallConnectSource } from "./
  */
 
 export function securityHeaders(env: Record<string, string | undefined> = process.env): Record<string, string> {
-  const webCallOrigin = webCallConnectSource(env);
   const recordingOrigin = recordingStorageSource(env);
   const posthogOrigin = posthogSources(env).join(" ");
   return {
@@ -21,7 +20,7 @@ export function securityHeaders(env: Record<string, string | undefined> = proces
       `script-src 'self' 'unsafe-inline'${env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com ${posthogOrigin}`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
-      `connect-src 'self' ${posthogOrigin} https://challenges.cloudflare.com${webCallOrigin ? ` ${webCallOrigin}` : ""}${recordingOrigin ? ` ${recordingOrigin}` : ""} wss:`,
+      `connect-src 'self' ${posthogOrigin} https://challenges.cloudflare.com${recordingOrigin ? ` ${recordingOrigin}` : ""} wss:`,
       "font-src 'self' data:",
       "frame-src 'self' https://challenges.cloudflare.com",
       "form-action 'self'",

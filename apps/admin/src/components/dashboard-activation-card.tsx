@@ -72,7 +72,7 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
     queryFn: () => getActivation(businessId!),
     refetchInterval: query => {
       if (isWebsiteImportRunning(query.state.data?.websiteImport)) return 2500;
-      // A call just ended in this tab: poll briefly until the gateway records it.
+      // A call just ended in this tab: poll briefly until the worker records it.
       return callSettleInterval();
     },
   });

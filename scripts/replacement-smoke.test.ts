@@ -9,7 +9,6 @@ describe("replacement smoke targets", () => {
       "admin-ready",
       "worker",
       "worker-ready",
-      "voice",
     ]);
   });
 });

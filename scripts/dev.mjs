@@ -9,10 +9,9 @@ loadLocalEnv([`${root}/.env`, `${root}/.env.local`]);
 const child = spawn(process.execPath, [
   `${root}/node_modules/concurrently/dist/bin/concurrently.js`,
   "-n",
-  "admin,worker,voice,landing",
+  "admin,worker,landing",
   "pnpm dev:admin",
   "pnpm dev:worker",
-  "pnpm dev:voice",
   "pnpm dev:landing",
 ], {
   cwd: root,
