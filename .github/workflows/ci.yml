@@ -46,6 +46,24 @@ jobs:
       - name: Validate Compose config
         run: docker compose --env-file .env.example -f docker-compose.yml config --quiet
 
+  # The Zapier integration is a standalone npm package on the Node version
+  # Zapier runs (22). Its tests mock every HTTP call.
+  zapier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: integrations/zapier
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: integrations/zapier/package-lock.json
+      - run: npm ci
+      - run: npm test
+
   database:
     runs-on: ubuntu-latest
     timeout-minutes: 20

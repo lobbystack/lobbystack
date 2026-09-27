@@ -1,0 +1,23 @@
+{
+  "name": "lobbystack-zapier",
+  "version": "1.0.0",
+  "description": "Zapier integration for LobbyStack.",
+  "private": true,
+  "main": "index.js",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "jest --testTimeout 10000",
+    "validate": "zapier-platform validate",
+    "e2e:local": "node scripts/e2e-local.js"
+  },
+  "dependencies": {
+    "zapier-platform-core": "19.1.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nock": "^14.0.0"
+  }
+}
