@@ -9,8 +9,12 @@ import type { DomainContext } from "../context";
 import { invalidRequest, PublicApiError } from "./errors";
 
 // Idempotency-Key support for v1 POSTs that create things. Keys are scoped to
+<<<<<<< HEAD
 // the API key and the v1 operation, whichever transport sends them (REST or an
 // MCP tool mapped to the same operation), and remembered for 24 hours.
+=======
+// the API key and the operation, and remembered for 24 hours.
+>>>>>>> origin/main
 //
 // The key row and the mutation commit in one transaction: the request's
 // domain work runs on that transaction (nested calls become savepoints), and
@@ -22,6 +26,7 @@ import { invalidRequest, PublicApiError } from "./errors";
 export type IdempotencyScope = { businessId: string; apiKeyId: string; operation: string; key: string };
 export type StoredResponse = { status: number; body: unknown };
 
+<<<<<<< HEAD
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   if (value && typeof value === "object") {
@@ -47,6 +52,10 @@ export function idempotencyRequestHash(body: unknown): string {
     }
   }
   return createHash("sha256").update(canonicalJson(value)).digest("hex");
+=======
+export function idempotencyRequestHash(body: unknown): string {
+  return createHash("sha256").update(JSON.stringify(body ?? null)).digest("hex");
+>>>>>>> origin/main
 }
 
 export function validateIdempotencyKey(value: string | null): string | null {

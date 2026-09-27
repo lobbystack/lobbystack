@@ -499,7 +499,11 @@
       "get": {
         "operationId": "listCalls",
         "summary": "List calls",
+<<<<<<< HEAD
         "description": "Newest first. Filter by start time to read one day or one week.",
+=======
+        "description": "Newest first.",
+>>>>>>> origin/main
         "tags": [
           "Calls"
         ],
@@ -527,6 +531,7 @@
             "schema": {
               "type": "string"
             }
+<<<<<<< HEAD
           },
           {
             "name": "started_after",
@@ -545,6 +550,8 @@
               "type": "string",
               "format": "date-time"
             }
+=======
+>>>>>>> origin/main
           }
         ],
         "responses": {
@@ -786,6 +793,7 @@
             "schema": {
               "type": "string"
             }
+<<<<<<< HEAD
           },
           {
             "name": "name",
@@ -795,6 +803,8 @@
               "type": "string",
               "maxLength": 200
             }
+=======
+>>>>>>> origin/main
           }
         ],
         "responses": {

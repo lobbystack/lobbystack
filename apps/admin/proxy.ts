@@ -22,9 +22,14 @@ import {
 import { embeddableSecurityHeaders, isEmbeddablePath, securityHeaders } from "./security-headers";
 
 const stateChangingMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+<<<<<<< HEAD
 // /api/v1 and /api/mcp authenticate with bearer API keys only, never cookies, so they need no CSRF
 // origin check. /api/mcp refuses foreign browser origins itself.
 const csrfExemptPrefixes = ["/api/auth", "/api/webhooks", "/api/health", "/api/voice", "/api/widget", "/api/v1/", "/api/mcp"];
+=======
+// /api/v1 authenticates with bearer API keys only, never cookies, so it needs no CSRF origin check.
+const csrfExemptPrefixes = ["/api/auth", "/api/webhooks", "/api/health", "/api/voice", "/api/widget", "/api/v1/"];
+>>>>>>> origin/main
 
 function isWebhookPath(pathname: string): boolean {
   return pathname.startsWith("/api/webhooks/");
