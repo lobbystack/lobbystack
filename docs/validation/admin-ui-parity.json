@@ -24,7 +24,9 @@
     "/embed/[key]",
     "/settings/plan/ai-sms-compliance",
     "/settings/api-keys",
-    "/integrations/webhooks"
+    "/integrations/webhooks",
+    "/settings/connected-apps",
+    "/oauth/consent"
   ],
   "localizedPortRoutes": [
     "/[locale]/accept-invite",
@@ -34,6 +36,7 @@
     "/[locale]/demo/[token]",
     "/[locale]/forgot-password",
     "/[locale]/login",
+    "/[locale]/oauth/consent",
     "/[locale]/reset-password",
     "/[locale]/reset-password/[token]",
     "/[locale]/signup",
@@ -1337,6 +1340,20 @@
       "state": "default",
       "comparison": "excluded",
       "reason": "New outbound webhook management"
+    },
+    {
+      "path": "/settings/connected-apps",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New OAuth connected apps management"
+    },
+    {
+      "path": "/oauth/consent",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New OAuth consent screen for MCP clients"
     }
   ]
 }
