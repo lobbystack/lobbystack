@@ -9,7 +9,7 @@ ENVIRONMENT="${RAILWAY_ENVIRONMENT:-staging}"
 export RAILWAY_CALLER="script:staging-stop"
 
 # Apps first, then the datastores they depend on.
-SERVICES=(admin worker voice-gateway migrator Postgres Redis)
+SERVICES=(admin worker migrator Postgres Redis)
 
 stop() {
   local service="$1" output status

@@ -26,6 +26,17 @@
 - `pnpm build`: build every workspace package and app (also copies the embed loader into the admin standalone output).
 - `pnpm widget:embed:build`: rebuild `packages/embed` and copy the loader into `apps/admin/public/embed/`.
 
+## Next.js MCP server
+
+`.mcp.json` registers `next-devtools`, a Model Context Protocol (MCP) server from the `next-devtools-mcp` package. It works with `apps/admin`, the only Next.js app. `apps/landing` runs on Astro, so the server doesn't cover it. Use it like this:
+
+- Call `nextjs_docs` before you write Next.js code or answer a Next.js question, then read the guide it points to in `apps/admin/node_modules/next/dist/docs/`. Those docs match the installed Next.js version, so use them over memory or web results.
+- Start the admin dev server with `pnpm dev:admin` or `pnpm dev`. It listens on `ADMIN_PORT`, which defaults to 3000.
+- Call `nextjs_index` to find the running server and list its tools. Then run a tool with `nextjs_call`: `get_errors`, `get_routes`, `get_page_metadata`, `get_logs`, `get_compilation_issues`, or `compile_route`.
+- Before you change admin pages, layouts, route handlers, or Server Actions, check `get_routes` and `get_errors`. Call `get_errors` again after the change.
+- If `nextjs_index` finds no server, start the admin dev server and call it again. Pass `port` when the server runs on a port other than 3000.
+- `get_errors` reports build errors and errors from open browser sessions. You still need to run `pnpm typecheck`, `pnpm test`, and `pnpm build` before you open a PR.
+
 ## Coding style
 
 - TypeScript ESM throughout; use 2-space indentation and LF line endings.
