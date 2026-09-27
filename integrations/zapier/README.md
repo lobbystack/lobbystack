@@ -43,10 +43,12 @@ Run the tests on Node.js 22 before a push, since Zapier runs that version: `npx 
 ## Test against a local stack
 
 1. Start PostgreSQL and Redis, apply migrations, and run the admin and worker apps (see `AGENTS.md`).
-2. From the repository root, seed a test business and API key into the local database. The script refuses any database outside localhost.
+2. From the repository root, seed a test business and API key into the local database. Use the same `ENCRYPTION_KEY` as the admin app, because the API hashes keys with it. The script refuses any database outside localhost.
 
    ```bash
-   DATABASE_URL=postgres://postgres:your_local_password@127.0.0.1:15433/lobbystack pnpm zapier:seed-local
+   ENCRYPTION_KEY=your_admin_encryption_key \
+   DATABASE_URL=postgres://postgres:your_local_password@127.0.0.1:15433/lobbystack \
+   pnpm zapier:seed-local
    ```
 
 3. Run the checks. Copy the key from `.env.example`; it only works against a database this script seeded.

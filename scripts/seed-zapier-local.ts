@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import { and, desc, eq } from "drizzle-orm";
 
 // Local fixture for testing the Zapier integration (integrations/zapier)
@@ -7,6 +5,8 @@ import { and, desc, eq } from "drizzle-orm";
 // with a service, a staff member, opening hours and an API key with every
 // scope. The key below is a fixed local test value: it only works against a
 // database this script seeded, and the script refuses any non-local database.
+//
+// Run it with the same ENCRYPTION_KEY as the admin app, which peppers the key hash.
 //
 //   DATABASE_URL=postgres://postgres:...@127.0.0.1:5432/lobbystack pnpm zapier:seed-local
 //   DATABASE_URL=... pnpm zapier:seed-local latest-event contact.created
@@ -23,6 +23,7 @@ async function main(): Promise<void> {
   }
   const { apiKeys, businessHours, businesses, createDatabaseClient, receptionistProfiles, services, staff, webhookEvents } = await import("@lobbystack/db");
   const { apiKeyScopes } = await import("@lobbystack/shared");
+  const { hashApiKey } = await import("@lobbystack/domain");
   const database = createDatabaseClient("lobbystack_migrator", { DATABASE_URL: raw });
   try {
     const [command, eventType] = process.argv.slice(2);
@@ -47,7 +48,7 @@ async function main(): Promise<void> {
       await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId: id, dayOfWeek, openMinutes: 8 * 60, closeMinutes: 20 * 60 })));
       return id;
     });
-    const keyHash = createHash("sha256").update(ZAPIER_LOCAL_API_KEY).digest("hex");
+    const keyHash = hashApiKey(ZAPIER_LOCAL_API_KEY);
     await database.db.delete(apiKeys).where(eq(apiKeys.prefix, PREFIX));
     await database.db.insert(apiKeys).values({ businessId, name: "Zapier local test", prefix: PREFIX, keyHash, scopes: [...apiKeyScopes] });
     console.log(JSON.stringify({ status: "seeded", businessId, keyPrefix: PREFIX }));
