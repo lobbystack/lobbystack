@@ -1,7 +1,7 @@
 {
   "name": "@lobbystack/docs",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "scripts": {
     "dev": "mint dev",
     "dev:no-open": "mint dev --no-open",
