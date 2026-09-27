@@ -1370,6 +1370,170 @@ export const webhookDeliveryAttempts = pgTable(
   ],
 );
 
+// OAuth 2.1 for MCP clients, owned by Better Auth's oauth-provider plugin and
+// written with the lobbystack_auth role. Property names are the plugin's field
+// names. A grant is an oauth_consents row: one client, one user, one business
+// (reference_id holds the business id).
+const oauthId = { id: text("id").primaryKey().default(sql`gen_random_uuid()::text`) };
+
+export const oauthClients = pgTable(
+  "oauth_clients",
+  {
+    ...oauthId,
+    clientId: text("client_id").notNull(),
+    clientSecret: text("client_secret"),
+    clientDiscoveryId: text("client_discovery_id"),
+    disabled: boolean("disabled").default(false),
+    skipConsent: boolean("skip_consent"),
+    enableEndSession: boolean("enable_end_session"),
+    subjectType: text("subject_type"),
+    scopes: text("scopes").array(),
+    clientCredentialsScopes: text("client_credentials_scopes").array().default(sql`'{}'::text[]`),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+    name: text("name"),
+    uri: text("uri"),
+    icon: text("icon"),
+    contacts: text("contacts").array(),
+    tos: text("tos"),
+    policy: text("policy"),
+    softwareId: text("software_id"),
+    softwareVersion: text("software_version"),
+    softwareStatement: text("software_statement"),
+    redirectUris: text("redirect_uris").array().notNull(),
+    postLogoutRedirectUris: text("post_logout_redirect_uris").array(),
+    backchannelLogoutUri: text("backchannel_logout_uri"),
+    backchannelLogoutSessionRequired: boolean("backchannel_logout_session_required"),
+    tokenEndpointAuthMethod: text("token_endpoint_auth_method"),
+    applicationType: text("application_type"),
+    jwks: text("jwks"),
+    jwksUri: text("jwks_uri"),
+    grantTypes: text("grant_types").array(),
+    responseTypes: text("response_types").array(),
+    requirePKCE: boolean("require_pkce"),
+    dpopBoundAccessTokens: boolean("dpop_bound_access_tokens").default(false),
+    referenceId: text("reference_id"),
+    metadata: jsonb("metadata"),
+  },
+  (table) => [uniqueIndex("oauth_clients_client_id_unique").on(table.clientId), index("oauth_clients_user_idx").on(table.userId)],
+);
+
+export const oauthResources = pgTable(
+  "oauth_resources",
+  {
+    ...oauthId,
+    identifier: text("identifier").notNull(),
+    name: text("name").notNull(),
+    accessTokenTtl: integer("access_token_ttl"),
+    refreshTokenTtl: integer("refresh_token_ttl"),
+    signingAlgorithm: text("signing_algorithm"),
+    signingKeyId: text("signing_key_id"),
+    allowedScopes: text("allowed_scopes").array(),
+    customClaims: jsonb("custom_claims"),
+    dpopBoundAccessTokensRequired: boolean("dpop_bound_access_tokens_required").default(false),
+    disabled: boolean("disabled").default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+    policyVersion: integer("policy_version").default(1),
+    metadata: jsonb("metadata"),
+  },
+  (table) => [uniqueIndex("oauth_resources_identifier_unique").on(table.identifier)],
+);
+
+export const oauthClientResources = pgTable(
+  "oauth_client_resources",
+  {
+    ...oauthId,
+    clientId: text("client_id").notNull().references(() => oauthClients.clientId, { onDelete: "cascade" }),
+    resourceId: text("resource_id").notNull().references(() => oauthResources.identifier, { onDelete: "cascade" }),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true }),
+  },
+  (table) => [uniqueIndex("oauth_client_resources_unique").on(table.clientId, table.resourceId), index("oauth_client_resources_resource_idx").on(table.resourceId)],
+);
+
+export const oauthRefreshTokens = pgTable(
+  "oauth_refresh_tokens",
+  {
+    ...oauthId,
+    token: text("token").notNull(),
+    clientId: text("client_id").notNull().references(() => oauthClients.clientId, { onDelete: "cascade" }),
+    sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "set null" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    referenceId: text("reference_id"),
+    authorizationCodeId: text("authorization_code_id"),
+    resources: text("resources").array(),
+    requestedUserInfoClaims: text("requested_user_info_claims").array(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }),
+    revoked: timestamp("revoked", { withTimezone: true }),
+    rotatedAt: timestamp("rotated_at", { withTimezone: true }),
+    rotationReplayResponse: text("rotation_replay_response"),
+    rotationReplayExpiresAt: timestamp("rotation_replay_expires_at", { withTimezone: true }),
+    authTime: timestamp("auth_time", { withTimezone: true }),
+    confirmation: jsonb("confirmation"),
+    scopes: text("scopes").array().notNull(),
+  },
+  (table) => [
+    uniqueIndex("oauth_refresh_tokens_token_unique").on(table.token),
+    index("oauth_refresh_tokens_grant_idx").on(table.clientId, table.userId, table.referenceId),
+    index("oauth_refresh_tokens_session_idx").on(table.sessionId),
+    index("oauth_refresh_tokens_code_idx").on(table.authorizationCodeId),
+  ],
+);
+
+export const oauthAccessTokens = pgTable(
+  "oauth_access_tokens",
+  {
+    ...oauthId,
+    token: text("token"),
+    clientId: text("client_id").notNull().references(() => oauthClients.clientId, { onDelete: "cascade" }),
+    sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "set null" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    referenceId: text("reference_id"),
+    authorizationCodeId: text("authorization_code_id"),
+    resources: text("resources").array(),
+    requestedUserInfoClaims: text("requested_user_info_claims").array(),
+    refreshId: text("refresh_id").references(() => oauthRefreshTokens.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }),
+    revoked: timestamp("revoked", { withTimezone: true }),
+    confirmation: jsonb("confirmation"),
+    scopes: text("scopes").array().notNull(),
+  },
+  (table) => [
+    uniqueIndex("oauth_access_tokens_token_unique").on(table.token),
+    index("oauth_access_tokens_grant_idx").on(table.clientId, table.userId, table.referenceId),
+    index("oauth_access_tokens_refresh_idx").on(table.refreshId),
+    index("oauth_access_tokens_session_idx").on(table.sessionId),
+    index("oauth_access_tokens_code_idx").on(table.authorizationCodeId),
+  ],
+);
+
+export const oauthConsents = pgTable(
+  "oauth_consents",
+  {
+    ...oauthId,
+    clientId: text("client_id").notNull().references(() => oauthClients.clientId, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    referenceId: text("reference_id"),
+    resources: text("resources").array(),
+    requestedUserInfoClaims: text("requested_user_info_claims").array(),
+    scopes: text("scopes").array().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+    // LobbyStack's own column: when the grant last made an MCP request.
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  },
+  (table) => [index("oauth_consents_grant_idx").on(table.clientId, table.userId, table.referenceId), index("oauth_consents_reference_idx").on(table.referenceId)],
+);
+
+export const oauthClientAssertions = pgTable("oauth_client_assertions", {
+  id: text("id").primaryKey(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
+
 export const allTenantTables = [
   businesses,
   businessMemberships,
@@ -1499,6 +1663,13 @@ export const schema = {
   webhookEvents,
   webhookDeliveries,
   webhookDeliveryAttempts,
+  oauthClients,
+  oauthResources,
+  oauthClientResources,
+  oauthRefreshTokens,
+  oauthAccessTokens,
+  oauthConsents,
+  oauthClientAssertions,
 };
 
 export type Schema = typeof schema;

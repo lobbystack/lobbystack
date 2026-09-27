@@ -195,7 +195,9 @@ async function main(): Promise<void> {
             ('lobbystack_app', 'app.resolve_business_by_widget_key(text)'),
             ('lobbystack_worker', 'app.resolve_business_by_widget_key(text)'),
             ('lobbystack_app', 'app.resolve_api_key(text)'),
-            ('lobbystack_worker', 'app.resolve_api_key(text)')
+            ('lobbystack_worker', 'app.resolve_api_key(text)'),
+            ('lobbystack_worker', 'app.resolve_oauth_access_token(text)'),
+            ('lobbystack_worker', 'app.touch_oauth_grant(text)')
           ) as expected(role_name, function_name)
           where not has_function_privilege(expected.role_name, expected.function_name, 'EXECUTE')
         `);
