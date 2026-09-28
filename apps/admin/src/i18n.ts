@@ -133,7 +133,11 @@ export async function loadRouteNamespaces(
       // languages for it. Load English explicitly without changing the locale.
       const bundle = instance.hasResourceBundle(DEFAULT_LOCALE, namespace)
         ? instance.getResourceBundle(DEFAULT_LOCALE, namespace) as Record<string, unknown>
-        : await fetchBundle(DEFAULT_LOCALE);
+        : await fetchBundle(DEFAULT_LOCALE).catch((fallbackError: unknown) => {
+          // Keep both failures: a locale HTTP error stays reportable even when
+          // the English fallback only lost its connection.
+          throw new AggregateError([error, fallbackError], [error, fallbackError].map((failure) => failure instanceof Error ? failure.message : String(failure)).join(" "));
+        });
       return { namespace, language: DEFAULT_LOCALE, bundle };
     }
   }));

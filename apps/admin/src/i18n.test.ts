@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { createI18nInstance, loadRouteNamespaces, missingNamespaces } from "./i18n";
-import { TranslationNetworkError } from "./lib/translation-network-error";
+import { TranslationNetworkError, isTranslationNetworkError } from "./lib/translation-network-error";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -84,6 +84,38 @@ it("marks a request that fails twice without a response as a network error", asy
     await vi.advanceTimersByTimeAsync(500);
     await outcome;
     expect(missingNamespaces(instance, "en", ["affiliate"])).toEqual(["affiliate"]);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("keeps a French HTTP error reportable when the English fallback loses its connection", async () => {
+  vi.useFakeTimers();
+  try {
+    const instance = createI18nInstance({ locale: "fr" });
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("/fr/")) return new Response(null, { status: 503 });
+      throw new TypeError("Load failed");
+    }));
+    const load = loadRouteNamespaces(instance, "fr", ["affiliate"]).catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(500);
+    const error = await load;
+    expect(error).toBeInstanceOf(AggregateError);
+    expect((error as AggregateError).message).toContain("fr/affiliate translations (HTTP 503)");
+    expect(isTranslationNetworkError(error)).toBe(false);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("treats a load as a network failure when both languages lose their connection", async () => {
+  vi.useFakeTimers();
+  try {
+    const instance = createI18nInstance({ locale: "fr" });
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("Load failed"); }));
+    const load = loadRouteNamespaces(instance, "fr", ["affiliate"]).catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(isTranslationNetworkError(await load)).toBe(true);
   } finally {
     vi.useRealTimers();
   }
