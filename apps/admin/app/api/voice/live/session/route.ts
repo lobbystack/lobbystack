@@ -28,6 +28,23 @@ function parse(body: unknown): LiveWebCallRequest | undefined {
   return { sdp, widgetId, ...Object.fromEntries(Object.entries(optional).filter(([, entry]) => entry !== undefined)) };
 }
 
+/**
+ * Times each stage of the call start for the Server-Timing header, so the
+ * browser's network panel shows where the wait before the greeting goes.
+ */
+function createServerTiming() {
+  const entries: string[] = [];
+  let last = performance.now();
+  return {
+    mark(name: string) {
+      const now = performance.now();
+      entries.push(`${name};dur=${(now - last).toFixed(1)}`);
+      last = now;
+    },
+    header: () => entries.join(", "),
+  };
+}
+
 function denied(status: number, code: string, headers: Record<string, string>) {
   return NextResponse.json({ code, error: "The call couldn't start." }, { status, headers });
 }
@@ -49,34 +66,40 @@ export async function POST(request: Request) {
     requireLivePrototype();
     const body = parse(await readJson(request));
     if (!body) return denied(400, "invalid_request", cors);
+    const timing = createServerTiming();
     const access = await resolveLiveWebCallAccess(request, body);
+    timing.mark("access");
     if (!("businessId" in access)) return denied(access.status, access.code, cors);
 
     const domain = createWorkerDomainContext();
     const ipHash = requestIpHash(request);
-    const limit = await enforceWebVoiceRateLimits({
-      businessId: access.businessId,
-      origin: access.origin,
-      widgetId: access.widgetId,
-      ...(ipHash ? { ipHash } : {}),
-      ...(access.visitorId ? { visitorId: access.visitorId } : {}),
-      ...(access.prospectDemoId ? { prospectDemoId: access.prospectDemoId } : { dashboardTestCall: access.dashboardTestCall }),
-    }, { consume: true });
-    if (!limit.allowed) return denied(limit.status, limit.code, cors);
-
     const maxDurationMs = Number(process.env.WEB_CALL_MAX_DURATION_MS) || undefined;
-    if (!access.prospectDemoId) {
-      const billing = await getWebVoiceBillingAllowance(domain, { businessId: access.businessId, ...(maxDurationMs ? { maxDurationMs } : {}) });
-      if (!billing.allowed) return denied(402, billing.errorCode ?? "voice_limit_reached", cors);
-    }
-    const snapshot = await loadValidBusinessSnapshot(access.businessId) as BusinessContextSnapshot | null;
+    // The caller hears nothing until this request returns, so the checks that
+    // don't depend on each other run together.
+    const [limit, billing, snapshot] = await Promise.all([
+      enforceWebVoiceRateLimits({
+        businessId: access.businessId,
+        origin: access.origin,
+        widgetId: access.widgetId,
+        ...(ipHash ? { ipHash } : {}),
+        ...(access.visitorId ? { visitorId: access.visitorId } : {}),
+        ...(access.prospectDemoId ? { prospectDemoId: access.prospectDemoId } : { dashboardTestCall: access.dashboardTestCall }),
+      }, { consume: true }),
+      access.prospectDemoId ? undefined : getWebVoiceBillingAllowance(domain, { businessId: access.businessId, ...(maxDurationMs ? { maxDurationMs } : {}) }),
+      loadValidBusinessSnapshot(access.businessId) as Promise<BusinessContextSnapshot | null>,
+    ]);
+    timing.mark("checks");
+    if (!limit.allowed) return denied(limit.status, limit.code, cors);
+    if (billing && !billing.allowed) return denied(402, billing.errorCode ?? "voice_limit_reached", cors);
     if (!snapshot) return denied(409, "snapshot_missing", cors);
     // The widget offers voice only to businesses with a phone number.
     if (access.widgetId === "lobbystack-widget" && !snapshot.contactChannels?.phoneNumber) return denied(403, "voice_unavailable", cors);
-    await recordVoiceSnapshotLoaded(domain, { businessId: access.businessId, channel: "web_voice", provider: "openai_live" });
+    // Telemetry only; the call doesn't wait for it.
+    void Promise.resolve(recordVoiceSnapshotLoaded(domain, { businessId: access.businessId, channel: "web_voice", provider: "openai_live" })).catch(() => undefined);
 
     const client = getLiveClient();
     const live = await client.live.create({ session: buildBrowserSessionConfig(snapshot), transport: { type: "webrtc", sdp: body.sdp } });
+    timing.mark("openai");
     const sessionId = live.session.id;
     let callId: string | undefined;
     try {
@@ -92,17 +115,21 @@ export async function POST(request: Request) {
         ...(request.headers.get("user-agent") ? { userAgent: request.headers.get("user-agent")!.slice(0, 512) } : {}),
       });
       callId = call.callId;
-      if (access.prospectDemoId) await recordProspectDemoCallStarted(domain, { businessId: access.businessId, prospectDemoId: access.prospectDemoId, callId, channel: "web_voice", provider: "openai_live" });
-      await attachWorkerToLiveSession({
-        sessionId,
-        businessId: access.businessId,
-        callId,
-        ...(call.conversationId ? { conversationId: call.conversationId } : {}),
-        channel: "web_voice",
-        ...(call.maxDurationMs ? { maxDurationMs: call.maxDurationMs } : {}),
-        ...(access.prospectDemoId ? { intakeOnly: true } : {}),
-      });
-      return NextResponse.json({ sessionId, endToken: liveSessionEndToken(sessionId), sdp: live.transport.sdp, ...(call.maxDurationMs ? { maxDurationMs: call.maxDurationMs } : {}) }, { status: 201, headers: cors });
+      timing.mark("record");
+      await Promise.all([
+        access.prospectDemoId ? recordProspectDemoCallStarted(domain, { businessId: access.businessId, prospectDemoId: access.prospectDemoId, callId, channel: "web_voice", provider: "openai_live" }) : undefined,
+        attachWorkerToLiveSession({
+          sessionId,
+          businessId: access.businessId,
+          callId,
+          ...(call.conversationId ? { conversationId: call.conversationId } : {}),
+          channel: "web_voice",
+          ...(call.maxDurationMs ? { maxDurationMs: call.maxDurationMs } : {}),
+          ...(access.prospectDemoId ? { intakeOnly: true } : {}),
+        }),
+      ]);
+      timing.mark("attach");
+      return NextResponse.json({ sessionId, endToken: liveSessionEndToken(sessionId), sdp: live.transport.sdp, ...(call.maxDurationMs ? { maxDurationMs: call.maxDurationMs } : {}) }, { status: 201, headers: { ...cors, "server-timing": timing.header() } });
     } catch (error) {
       // The session exists at OpenAI; end it so nothing talks or bills without us.
       await client.live.sessions.hangup(sessionId).catch(() => undefined);
