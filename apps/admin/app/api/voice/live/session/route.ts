@@ -74,22 +74,23 @@ export async function POST(request: Request) {
     const domain = createWorkerDomainContext();
     const ipHash = requestIpHash(request);
     const maxDurationMs = Number(process.env.WEB_CALL_MAX_DURATION_MS) || undefined;
-    // The caller hears nothing until this request returns, so the checks that
-    // don't depend on each other run together.
-    const [limit, billing, snapshot] = await Promise.all([
-      enforceWebVoiceRateLimits({
-        businessId: access.businessId,
-        origin: access.origin,
-        widgetId: access.widgetId,
-        ...(ipHash ? { ipHash } : {}),
-        ...(access.visitorId ? { visitorId: access.visitorId } : {}),
-        ...(access.prospectDemoId ? { prospectDemoId: access.prospectDemoId } : { dashboardTestCall: access.dashboardTestCall }),
-      }, { consume: true }),
+    const limit = await enforceWebVoiceRateLimits({
+      businessId: access.businessId,
+      origin: access.origin,
+      widgetId: access.widgetId,
+      ...(ipHash ? { ipHash } : {}),
+      ...(access.visitorId ? { visitorId: access.visitorId } : {}),
+      ...(access.prospectDemoId ? { prospectDemoId: access.prospectDemoId } : { dashboardTestCall: access.dashboardTestCall }),
+    }, { consume: true });
+    if (!limit.allowed) return denied(limit.status, limit.code, cors);
+    // The rate limit shields the database, so only allowed callers reach it.
+    // The caller hears nothing until this request returns, so these two
+    // independent reads run together.
+    const [billing, snapshot] = await Promise.all([
       access.prospectDemoId ? undefined : getWebVoiceBillingAllowance(domain, { businessId: access.businessId, ...(maxDurationMs ? { maxDurationMs } : {}) }),
       loadValidBusinessSnapshot(access.businessId) as Promise<BusinessContextSnapshot | null>,
     ]);
     timing.mark("checks");
-    if (!limit.allowed) return denied(limit.status, limit.code, cors);
     if (billing && !billing.allowed) return denied(402, billing.errorCode ?? "voice_limit_reached", cors);
     if (!snapshot) return denied(409, "snapshot_missing", cors);
     // The widget offers voice only to businesses with a phone number.

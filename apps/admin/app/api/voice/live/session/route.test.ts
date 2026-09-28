@@ -75,6 +75,16 @@ describe("POST /api/voice/live/session", () => {
     expect(mocks.create).not.toHaveBeenCalled();
   });
 
+  it("keeps rate-limited callers away from the database", async () => {
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://client.example", widgetId: "lobbystack-widget", dashboardTestCall: false });
+    mocks.rateLimit.mockResolvedValue({ allowed: false, status: 429, code: "web_voice_rate_limited" });
+    const response = await start("lobbystack-widget");
+    expect(response.status).toBe(429);
+    expect(mocks.allowance).not.toHaveBeenCalled();
+    expect(mocks.snapshot).not.toHaveBeenCalled();
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
   it("hangs up and releases the call when the worker can't take it", async () => {
     mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-prospect-demo", prospectDemoId: "demo_1", dashboardTestCall: false });
     mocks.attach.mockRejectedValue(new Error("Worker attach failed with status 500."));
