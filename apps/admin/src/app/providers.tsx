@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { createI18nInstance, loadRouteNamespaces, missingNamespaces, type I18nNamespaceResources } from "@/i18n";
 import { captureBrowserError } from "@/lib/browser-error-reporting";
 import type { SupportedLocale } from "@/lib/locale";
+import { isTranslationNetworkError } from "@/lib/translation-network-error";
 import type { LocaleSource } from "@/lib/locale-request";
 import { routeNamespaces } from "@/lib/route-namespaces";
 
@@ -57,7 +58,8 @@ export function Providers({ children, initialLocale, initialLocaleSource, initia
       setFailedKey(null);
     }).catch((error: unknown) => {
       // Name the namespace and status so a production failure is diagnosable.
-      captureBrowserError(error);
+      // A dropped connection is not an app fault; the retry banner covers it.
+      if (!isTranslationNetworkError(error)) captureBrowserError(error);
       if (cancelled) return;
       setLoadingKey(null);
       setFailedKey(requestKey);

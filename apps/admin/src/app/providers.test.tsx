@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({
   pathname: "/login",
   missing: vi.fn((..._args: unknown[]) => [] as string[]),
   load: vi.fn((..._args: unknown[]) => Promise.resolve()),
+  capture: vi.fn(),
   instance: {
     resolvedLanguage: "en",
     language: "en",
@@ -30,7 +31,9 @@ vi.mock("@/components/appearance-provider", () => ({ AppearanceProvider: ({ chil
 vi.mock("@/components/replacement-locale-provider", () => ({ LocaleProvider: ({ children }: { children: ReactNode }) => children }));
 vi.mock("@/components/product-analytics", () => ({ ProductAnalytics: ({ children }: { children?: ReactNode }) => children }));
 vi.mock("@/components/ui/sonner", () => ({ Toaster: () => null }));
+vi.mock("@/lib/browser-error-reporting", () => ({ captureBrowserError: (...args: unknown[]) => state.capture(...args) }));
 
+import { TranslationNetworkError } from "@/lib/translation-network-error";
 import { Providers } from "./providers";
 
 function wrap(children: ReactNode) {
@@ -100,4 +103,21 @@ it("revalidates cached translation files when the operator retries", async () =>
   expect(state.load).toHaveBeenLastCalledWith(state.instance, "en", expect.arrayContaining(["affiliate"]), { revalidate: false });
   fireEvent.click(retry);
   await waitFor(() => expect(state.load).toHaveBeenLastCalledWith(state.instance, "en", expect.arrayContaining(["affiliate"]), { revalidate: true }));
+});
+
+it("reports a failed namespace request that got an HTTP error", async () => {
+  state.missing.mockReturnValue(["affiliate"]);
+  const failure = new Error("Unable to load the en/affiliate translations (HTTP 503).");
+  state.load.mockRejectedValueOnce(failure);
+  render(wrap(<div>Affiliate</div>));
+  await screen.findByRole("button", { name: "common:loading.retry" });
+  expect(state.capture).toHaveBeenCalledWith(failure);
+});
+
+it("offers a retry without reporting when the connection dropped", async () => {
+  state.missing.mockReturnValue(["affiliate"]);
+  state.load.mockRejectedValueOnce(new TranslationNetworkError("/locales/en/affiliate.json", { cause: new TypeError("Load failed") }));
+  render(wrap(<div>Affiliate</div>));
+  await screen.findByRole("button", { name: "common:loading.retry" });
+  expect(state.capture).not.toHaveBeenCalled();
 });

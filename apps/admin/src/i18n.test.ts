@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { createI18nInstance, loadRouteNamespaces, missingNamespaces } from "./i18n";
+import { TranslationNetworkError } from "./lib/translation-network-error";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -53,4 +54,37 @@ it("bypasses the HTTP cache when retrying", async () => {
   vi.stubGlobal("fetch", request);
   await loadRouteNamespaces(instance, "en", ["affiliate"], { revalidate: true });
   expect(request).toHaveBeenCalledWith("/locales/en/affiliate.json?v=development", { cache: "reload" });
+});
+
+it("retries once with a fresh request when the connection drops", async () => {
+  vi.useFakeTimers();
+  try {
+    const instance = createI18nInstance({ locale: "en" });
+    const request = vi.fn(async (..._args: unknown[]) => Response.json({ title: "Affiliate program" }));
+    request.mockRejectedValueOnce(new TypeError("Load failed"));
+    vi.stubGlobal("fetch", request);
+    const load = loadRouteNamespaces(instance, "en", ["affiliate"]);
+    await vi.advanceTimersByTimeAsync(500);
+    await load;
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(request).toHaveBeenLastCalledWith("/locales/en/affiliate.json?v=development", { cache: "reload" });
+    expect(instance.t("title", { ns: "affiliate" })).toBe("Affiliate program");
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("marks a request that fails twice without a response as a network error", async () => {
+  vi.useFakeTimers();
+  try {
+    const instance = createI18nInstance({ locale: "en" });
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("Load failed"); }));
+    const load = loadRouteNamespaces(instance, "en", ["affiliate"]);
+    const outcome = expect(load).rejects.toBeInstanceOf(TranslationNetworkError);
+    await vi.advanceTimersByTimeAsync(500);
+    await outcome;
+    expect(missingNamespaces(instance, "en", ["affiliate"])).toEqual(["affiliate"]);
+  } finally {
+    vi.useRealTimers();
+  }
 });

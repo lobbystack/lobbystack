@@ -1,6 +1,8 @@
 import { PostHog } from "posthog-node";
 import { recordException, redactOtelExceptionText } from "@lobbystack/telemetry/node";
 
+import { releaseVersion } from "@/lib/release-version";
+
 let client: PostHog | undefined;
 const reported = new WeakSet<object>();
 
@@ -28,7 +30,7 @@ export async function reportServerError(error: unknown, context: { operation: st
   safe.name = original.name;
   if (original.stack) safe.stack = original.stack.split("\n").slice(0, 30).map(redactOtelExceptionText).join("\n");
   const cause = databaseCause(original);
-  const properties = { ...context, service: "lobbystack-admin", environment: process.env.RAILWAY_ENVIRONMENT_NAME ?? process.env.NODE_ENV, release: process.env.RAILWAY_DEPLOYMENT_ID ?? process.env.SERVICE_VERSION, alertable: true, ...(cause ? { cause } : {}) };
+  const properties = { ...context, service: "lobbystack-admin", environment: process.env.RAILWAY_ENVIRONMENT_NAME ?? process.env.NODE_ENV, release: releaseVersion(), alertable: true, ...(cause ? { cause } : {}) };
   console.error("[admin] exception", { ...properties, name: safe.name, message: safe.message, stack: safe.stack });
   recordException(safe);
   const key = process.env.POSTHOG_KEY ?? process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;

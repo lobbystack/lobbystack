@@ -169,7 +169,8 @@ export async function initializeTelemetry(
   initialized = true;
 
   const serviceName = options.serviceName ?? process.env.OTEL_SERVICE_NAME ?? "lobbystack-service";
-  const serviceVersion = options.serviceVersion ?? process.env.SERVICE_VERSION ?? "development";
+  // Railway sets the commit SHA on every deploy; SERVICE_VERSION can go stale.
+  const serviceVersion = options.serviceVersion ?? (process.env.RAILWAY_GIT_COMMIT_SHA || process.env.SERVICE_VERSION || "development");
   const environment = options.environment ?? process.env.NODE_ENV ?? "development";
   const endpoint = configuredEndpoint(options);
   const headers = configuredHeaders(options);

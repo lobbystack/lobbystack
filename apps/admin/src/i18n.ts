@@ -2,6 +2,7 @@ import i18next, { type i18n as I18nextInstance } from "i18next";
 import { initReactI18next } from "react-i18next";
 
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES, resolveLocale, type SupportedLocale } from "@/lib/locale";
+import { TranslationNetworkError } from "@/lib/translation-network-error";
 import { versionedAssetUrl } from "@/lib/versioned-assets";
 
 import commonEn from "../public/locales/en/common.json";
@@ -9,6 +10,8 @@ import commonFr from "../public/locales/fr/common.json";
 
 export type I18nNamespaceResources = Record<string, Record<string, unknown>>;
 export type I18nResources = Record<string, I18nNamespaceResources>;
+
+const NETWORK_RETRY_DELAY_MS = 500;
 
 let fallbackInstance: I18nextInstance | undefined;
 // Resolution state belongs to one render tree, never a shared user's locale.
@@ -103,7 +106,20 @@ export async function loadRouteNamespaces(
     const fetchBundle = async (language: string): Promise<Record<string, unknown>> => {
       const url = versionedAssetUrl(`/locales/${language}/${namespace}.json`);
       // A retry must not replay a response the browser cached as immutable.
-      const response = options.revalidate ? await fetch(url, { cache: "reload" }) : await fetch(url);
+      const request = () => options.revalidate ? fetch(url, { cache: "reload" }) : fetch(url);
+      let response: Response;
+      try {
+        response = await request();
+      } catch {
+        // A dropped connection (Safari's "Load failed") usually succeeds on a
+        // fresh attempt, so retry once before asking the operator to.
+        await new Promise((resolve) => setTimeout(resolve, NETWORK_RETRY_DELAY_MS));
+        try {
+          response = await fetch(url, { cache: "reload" });
+        } catch (cause) {
+          throw new TranslationNetworkError(url, { cause });
+        }
+      }
       if (!response.ok) throw new Error(`Unable to load the ${language}/${namespace} translations (HTTP ${response.status}).`);
       const bundle: unknown = await response.json();
       if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) throw new Error(`Invalid ${namespace} translations.`);

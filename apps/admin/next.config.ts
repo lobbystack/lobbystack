@@ -4,9 +4,10 @@ import { withPostHogConfig } from "@posthog/nextjs-config";
 import { resolve } from "node:path";
 
 import { publicAssetVersion } from "./asset-version";
+import { releaseVersion } from "./src/lib/release-version";
 import { embeddableSecurityHeaders, securityHeaders, toNextHeaderList } from "./security-headers";
 
-const serviceVersion = process.env.RAILWAY_DEPLOYMENT_ID ?? process.env.SERVICE_VERSION ?? "development";
+const serviceVersion = releaseVersion();
 
 const nextConfig: NextConfig = {
   experimental: {
@@ -91,6 +92,6 @@ export default process.env.POSTHOG_SOURCEMAP_API_KEY
       personalApiKey: process.env.POSTHOG_SOURCEMAP_API_KEY,
       projectId: process.env.POSTHOG_PROJECT_ID ?? "266281",
       host: "https://us.posthog.com",
-      sourcemaps: { enabled: true, releaseName: "lobbystack-admin", releaseVersion: process.env.RAILWAY_DEPLOYMENT_ID ?? process.env.SERVICE_VERSION ?? "development", deleteAfterUpload: true },
+      sourcemaps: { enabled: true, releaseName: "lobbystack-admin", releaseVersion: serviceVersion, deleteAfterUpload: true },
     })
   : nextConfig;
