@@ -18,6 +18,7 @@ describe("onboarding stages", () => {
   });
 
   it("allows only adjacent transitions, with an explicit number-selection skip", () => {
+    expect(isValidOnboardingTransition("create_business", "website")).toBe(true);
     expect(isValidOnboardingTransition("website", "knowledge")).toBe(true);
     expect(isValidOnboardingTransition("plan", "attribution")).toBe(true);
     expect(isValidOnboardingTransition("greeting", "plan")).toBe(true);
@@ -35,6 +36,8 @@ describe("onboarding stages", () => {
   });
 
   it("allows completed and later stages to revisit every reached step", () => {
+    expect(canVisitOnboardingStage("create_business", "website")).toBe(false);
+    expect(canVisitOnboardingStage("website", "website")).toBe(true);
     expect(canVisitOnboardingStage("plan", "knowledge")).toBe(true);
     expect(canVisitOnboardingStage("plan", "phone_number")).toBe(false);
     expect(canVisitOnboardingStage("phone_number_claiming", "phone_number")).toBe(true);
