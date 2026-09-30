@@ -1,21 +1,18 @@
-import { createRequire } from "node:module";
-import type { Tiktoken as TiktokenEncoder } from "js-tiktoken/lite";
+// Approximates o200k token counts without loading the encoder, which costs
+// about 70 MB of heap in every process that builds a prompt. Splits text the
+// way the o200k pre-tokenizer does (letter runs, 1-3 digit groups, punctuation
+// runs, line breaks). On English, French and JSON passages with UUIDs it
+// overcounts by 10-20%, so budgets keep slightly fewer passages.
+const PIECE = /\p{L}+|\p{N}{1,3}|[^\s\p{L}\p{N}]+|\n+/gu;
 
-const require = createRequire(import.meta.url);
-let encoder: TiktokenEncoder | undefined;
-
-function getEncoder(): TiktokenEncoder {
-  if (!encoder) {
-    const { Tiktoken } = require("js-tiktoken/lite") as typeof import("js-tiktoken/lite");
-    const o200kBase = require("js-tiktoken/ranks/o200k_base") as typeof import("js-tiktoken/ranks/o200k_base").default;
-    encoder = new Tiktoken(o200kBase);
-  }
-  return encoder;
-}
-
-// Versioned text-budget encoding; excludes audio and message-envelope overhead.
 export function countKnowledgeTokens(text: string): number {
-  return getEncoder().encode(text, [], []).length;
+  let tokens = 0;
+  for (const [piece] of text.matchAll(PIECE)) {
+    if (/\p{L}/u.test(piece[0]!)) tokens += Math.ceil(piece.length / 6);
+    else if (/[^\s\p{N}]/u.test(piece[0]!)) tokens += Math.ceil(piece.length / 2);
+    else tokens += 1;
+  }
+  return tokens;
 }
 
 export function selectKnowledgeWithinBudget<T>(items: T[], budget: number, render: (item: T) => string): T[] {

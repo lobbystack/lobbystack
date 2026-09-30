@@ -261,9 +261,6 @@ importers:
       ioredis:
         specifier: ^5.8.2
         version: 5.11.1
-      js-tiktoken:
-        specifier: 1.0.21
-        version: 1.0.21
       libphonenumber-js:
         specifier: ^1.12.41
         version: 1.12.41
@@ -548,9 +545,6 @@ importers:
       ioredis:
         specifier: ^5.8.2
         version: 5.11.1
-      js-tiktoken:
-        specifier: 1.0.21
-        version: 1.0.21
       mammoth:
         specifier: ^1.12.0
         version: 1.12.0
@@ -631,9 +625,6 @@ importers:
       '@lobbystack/shared':
         specifier: workspace:*
         version: link:../shared
-      js-tiktoken:
-        specifier: 1.0.21
-        version: 1.0.21
 
   packages/config:
     dependencies:
@@ -6877,9 +6868,6 @@ packages:
 
   jpeg-js@0.4.4:
     resolution: {integrity: sha512-WZzeDOEtTOBK4Mdsar0IqEU5sMr3vSV2RqkAIzUEV2BHnUfKGyswWFPFwK5EeDo93K3FohSHbLAjj0s1Wzd+dg==}
-
-  js-tiktoken@1.0.21:
-    resolution: {integrity: sha512-biOj/6M5qdgx5TKjDnFT1ymSpM5tbd3ylwDtrQvFQSu0Z7bBYko2dF+W/aUkXUPuk6IVpRxk/3Q2sHOzGlS36g==}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -17266,10 +17254,6 @@ snapshots:
   joycon@3.1.1: {}
 
   jpeg-js@0.4.4: {}
-
-  js-tiktoken@1.0.21:
-    dependencies:
-      base64-js: 1.5.1
 
   js-tokens@4.0.0: {}
 

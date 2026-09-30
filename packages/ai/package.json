@@ -12,7 +12,6 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@lobbystack/shared": "workspace:*",
-    "js-tiktoken": "1.0.21"
+    "@lobbystack/shared": "workspace:*"
   }
 }
