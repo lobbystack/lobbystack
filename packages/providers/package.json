@@ -35,7 +35,7 @@
     "twilio": "^5.12.2"
   },
   "devDependencies": {
-    "@types/luxon": "^3.7.1",
+    "@types/luxon": "^3.7.5",
     "@types/nodemailer": "^7.0.4"
   }
 }
