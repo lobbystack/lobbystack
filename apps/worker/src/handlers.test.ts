@@ -375,6 +375,37 @@ describe("worker handlers", () => {
     expect(markBillingCheckoutCreated).not.toHaveBeenCalled();
   });
 
+  it("sends Polar's back arrow to the plan page without marking checkout successful", async () => {
+    const businessId = randomUUID();
+    const requestId = randomUUID();
+    const domain = { db: undefined as never };
+    vi.stubEnv("APP_BASE_URL", "https://app.example/");
+    vi.stubEnv("POLAR_STARTER_MONTHLY_PRODUCT_ID", "product-starter-monthly");
+    vi.mocked(claimBillingCheckoutRequest).mockResolvedValue(true);
+    vi.mocked(loadBillingCheckoutRequest).mockResolvedValue({ id: requestId, businessId, target: "starter", billingInterval: "monthly", status: "processing", checkoutId: null, checkoutUrl: null, error: null, customerEmail: "owner@example.com", externalCustomerId: `business:${businessId}`, onboardingStage: "complete" } as Awaited<ReturnType<typeof loadBillingCheckoutRequest>>);
+    vi.mocked(markBillingCheckoutCreated).mockResolvedValue(true as never);
+    const createCheckout = vi.fn().mockResolvedValue({ checkoutId: "checkout-1", checkoutUrl: "https://polar.example/checkout-1" });
+
+    const result = await handleJob({
+      jobId: randomUUID(),
+      type: "billing.createCheckout",
+      queue: "critical",
+      businessId,
+      payload: { requestId },
+      trace: {},
+      idempotencyKey: `test:${randomUUID()}`,
+      scheduled: false,
+    }, { domain, polar: { recordUsage: vi.fn(), createCheckout } });
+
+    expect(result).toEqual({ status: "completed", entityId: requestId });
+    expect(createCheckout).toHaveBeenCalledWith(expect.objectContaining({
+      productId: "product-starter-monthly",
+      successUrl: `https://app.example/settings/plan?checkout=success&requestId=${requestId}`,
+      returnUrl: "https://app.example/settings/plan",
+    }));
+    vi.unstubAllEnvs();
+  });
+
   it("runs the global affiliate payout job without a business context", async () => {
     const payoutRunId = randomUUID();
     const domain = { db: undefined as never };

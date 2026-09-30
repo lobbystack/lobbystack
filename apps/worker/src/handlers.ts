@@ -48,7 +48,7 @@ export type WorkerDependencies = {
   email?: Pick<SmtpEmailProvider, "sendTemplate">;
   twilio?: Pick<TwilioProvider, "sendSms"> & Partial<Pick<TwilioProvider, "getMessagePricing" | "getCallPricing" | "findTrunkCall" | "releasePhoneNumber" | "verifyPhone" | "findOwnedPhoneNumber" | "purchasePhoneNumber" | "addNumberToSipTrunk">>;
   twilioAlerts?: Pick<TwilioProvider, "sendSms"> & { from: string };
-  polar?: { recordUsage(input: { eventName: string; externalCustomerId: string; quantity: number; timestamp: string; idempotencyKey: string; businessId: string; usageKind: string }): Promise<void>; createCheckout?(input: { productId: string; customerEmail: string; externalCustomerId: string; successUrl: string; idempotencyKey?: string }): Promise<{ checkoutUrl: string; checkoutId: string }> };
+  polar?: { recordUsage(input: { eventName: string; externalCustomerId: string; quantity: number; timestamp: string; idempotencyKey: string; businessId: string; usageKind: string }): Promise<void>; createCheckout?(input: { productId: string; customerEmail: string; externalCustomerId: string; successUrl: string; returnUrl: string; idempotencyKey?: string }): Promise<{ checkoutUrl: string; checkoutId: string }> };
   embeddings?: { fingerprint?: string; embed(values: string[], onUsage?: (usage: DurableAiUsage) => Promise<void> | void): Promise<number[][]> };
   crawler?: { crawl(input: { url: string; limit?: number }): Promise<Array<{ url: string; title?: string; markdown?: string }>> };
   calendar?: CalendarOperations;
@@ -573,11 +573,15 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const request = await loadBillingCheckoutRequest(dependencies.domain, { businessId, requestId });
       if (!request) return { status: "skipped", entityId: requestId };
       try {
+        const planUrl = `${(process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "")}/${request.onboardingStage === "complete" ? "settings/plan" : "onboarding/plan"}`;
         const checkout = await dependencies.polar.createCheckout({
           productId: polarCheckoutProductId(request.target, request.billingInterval),
           customerEmail: request.customerEmail,
           externalCustomerId: request.externalCustomerId,
-           successUrl: `${process.env.APP_BASE_URL ?? "http://localhost:3000"}/${request.onboardingStage === "complete" ? "settings/plan" : "onboarding/plan"}?checkout=success&requestId=${encodeURIComponent(requestId)}`,
+          successUrl: `${planUrl}?checkout=success&requestId=${encodeURIComponent(requestId)}`,
+          // Polar's back arrow. Someone leaving checkout hasn't paid, so it
+          // returns to the plan page without the success marker.
+          returnUrl: planUrl,
           idempotencyKey: `billing-checkout:${requestId}`,
         });
         await markBillingCheckoutCreated(dependencies.domain, { businessId, requestId, ...checkout });
