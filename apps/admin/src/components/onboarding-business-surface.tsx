@@ -54,10 +54,20 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
     if (existing && !createNew) setName(existing.name);
   }, [createNew, existing]);
   const update = useMutation({
-    mutationFn: () => requestJson(`/api/businesses?businessId=${encodeURIComponent(existing!.businessId)}`, {
-      method: "PATCH",
-      body: JSON.stringify({ name: name.trim() }),
-    }),
+    mutationFn: async () => {
+      const businessId = encodeURIComponent(existing!.businessId);
+      await requestJson(`/api/businesses?businessId=${businessId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      // A claimed prospect demo starts on this step, unlike a new signup. The
+      // website step redirects back here until the stage moves on, and the
+      // server ignores this for a business that is already further along.
+      await requestJson(`/api/onboarding/stage?businessId=${businessId}`, {
+        method: "POST",
+        body: JSON.stringify({ to: "website" }),
+      });
+    },
     onSuccess: async () => {
       if (existing) telemetry.track("web.onboarding.business_name_submitted", { businessId: existing.businessId });
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });

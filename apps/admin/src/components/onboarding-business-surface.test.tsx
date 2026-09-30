@@ -33,4 +33,27 @@ describe("business creation onboarding", () => {
     expect(pendingAnalytics.record).toHaveBeenCalledWith("business");
     expect(telemetryRef.current!.events).toEqual([]);
   });
+
+  it("moves an existing workspace to the website step before continuing", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "demo", name: "Climco", active: true }] });
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.startsWith("/api/businesses") && !init?.method) return Response.json({ businesses: [{ businessId: "demo", name: "Climco HVAC", active: true }] });
+      return Response.json({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<QueryClientProvider client={client}><OnboardingBusinessSurface /></QueryClientProvider>);
+    const input = screen.getByLabelText("businessName.label");
+    await waitFor(() => expect(input).toHaveProperty("value", "Climco"));
+    await userEvent.clear(input);
+    await userEvent.type(input, "Climco HVAC");
+    await userEvent.click(screen.getByRole("button", { name: "businessName.continue" }));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/onboarding/website"));
+    const writes = fetchMock.mock.calls.filter(([, init]) => init?.method).map(([url, init]) => [url, init!.method, init!.body]);
+    expect(writes).toEqual([
+      ["/api/businesses?businessId=demo", "PATCH", JSON.stringify({ name: "Climco HVAC" })],
+      ["/api/onboarding/stage?businessId=demo", "POST", JSON.stringify({ to: "website" })],
+    ]);
+    expect(telemetryRef.current!.events).toEqual([expect.objectContaining({ name: "web.onboarding.business_name_submitted" })]);
+  });
 });
