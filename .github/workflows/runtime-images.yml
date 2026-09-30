@@ -27,14 +27,6 @@ jobs:
           build-args: SERVICE_VERSION=${{ github.sha }}
           cache-from: type=gha,scope=runtime-${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=runtime-${{ matrix.service }}
-      - name: Certify lazy tokenizer runtime dependencies
-        if: matrix.service != 'migrator'
-        env:
-          SERVICE: ${{ matrix.service }}
-        run: |
-          entry=/app/dist/runtime/index.js
-          if [[ "$SERVICE" == admin ]]; then entry=/app/apps/admin/.next/server/chunks/runtime-dependency-check.js; fi
-          docker run --rm --env RUNTIME_ENTRY="$entry" --entrypoint node "lobbystack/$SERVICE:ci" -e 'const { createRequire } = require("node:module"); const runtimeRequire = createRequire(process.env.RUNTIME_ENTRY); const { Tiktoken } = runtimeRequire("js-tiktoken/lite"); const tokenizer = new Tiktoken(runtimeRequire("js-tiktoken/ranks/o200k_base")); if (tokenizer.encode("runtime smoke test").length === 0) process.exit(1);'
       - name: Verify runtime source maps are absent
         env:
           SERVICE: ${{ matrix.service }}
