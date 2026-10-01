@@ -1,0 +1,46 @@
+{
+  "chat": {
+    "titlePlaceholder": "Pišite nam",
+    "subtitlePlaceholder": "Obično odgovaramo za nekoliko minuta",
+    "welcome": "Dobar dan! Kako možemo da Vam pomognemo?",
+    "composerPlaceholder": "Unesite poruku...",
+    "send": "Pošalji",
+    "sendingFailed": "Vaša poruka nije poslata. Pokušajte ponovo.",
+    "loadingTranscript": "Učitavanje razgovora...",
+    "chatUnavailable": "Čet trenutno nije dostupan.",
+    "emptyBody": "Unesite poruku.",
+    "limitReached": "Dostignut je mesečni limit čet sesija. Naš tim će Vam uskoro odgovoriti.",
+    "aiAgentLabel": "Asistent",
+    "youLabel": "Vi",
+    "pendingLabel": "Asistent piše…",
+    "handoffBanner": "Član tima će Vam uskoro odgovoriti.",
+    "handoffActive": "Čet je pauziran",
+    "voiceButton": "Razgovarajte s nama uživo",
+    "voiceConnected": "Razgovarate sa recepcionerom.",
+    "voiceEnded": "Glasovna veza je završena. Možete nastaviti da pišete ispod.",
+    "voiceUnavailable": "Razgovor uživo nije dostupan. Pokušajte kasnije.",
+    "voiceConnecting": "Povezivanje…",
+    "voiceRequestingMic": "Dozvolite pristup mikrofonu da biste nastavili.",
+    "voiceEnd": "Završi poziv",
+    "leaveDetails": "Ostavite svoje podatke",
+    "leadFormSubmitted": "Hvala! Uskoro ćemo Vam se javiti."
+  },
+  "lead": {
+    "heading": "Ostavite svoje podatke",
+    "description": "Ostavite kontakt podatke kako bismo Vam se javili.",
+    "name": "Ime",
+    "email": "Imejl",
+    "phone": "Telefon",
+    "submit": "Nastavi",
+    "invalidEmail": "Unesite ispravnu imejl adresu.",
+    "invalidPhone": "Unesite ispravan broj telefona.",
+    "required": "Ovo polje je obavezno.",
+    "beforeChatHeading": "Pre nego što počnemo",
+    "skip": "Preskoči"
+  },
+  "errors": {
+    "configLoad": "Vidžet nije mogao da se učita.",
+    "invalidKey": "Ovaj vidžet nije dostupan.",
+    "originDenied": "Ovaj sajt nema dozvolu da učita ovaj vidžet."
+  }
+}

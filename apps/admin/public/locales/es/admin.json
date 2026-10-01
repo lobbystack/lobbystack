@@ -1,0 +1,17 @@
+{
+  "utilities": {
+    "testCall": "Llamada de prueba",
+    "endTestCall": "Finalizar llamada de prueba",
+    "connecting": "Conectando...",
+    "setupGuide": "Guía de configuración",
+    "affiliate": "Afiliados",
+    "appointments": "Citas",
+    "demos": "Demos",
+    "billingAttention": "Revisar facturación",
+    "feedback": "Comentarios",
+    "feedbackPlaceholder": "Compartir comentarios",
+    "feedbackSending": "Enviando...",
+    "feedbackSent": "Comentarios enviados",
+    "feedbackFailed": "No se pudieron enviar los comentarios"
+  }
+}

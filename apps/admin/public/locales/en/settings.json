@@ -68,7 +68,9 @@
     "locales": {
       "visitor": "Visitor's language",
       "english": "English",
-      "french": "French"
+      "french": "French",
+      "spanish": "Spanish",
+      "serbian": "Serbian"
     },
     "leadCapture": {
       "title": "Lead form",

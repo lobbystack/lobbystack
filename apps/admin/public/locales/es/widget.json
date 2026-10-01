@@ -1,0 +1,46 @@
+{
+  "chat": {
+    "titlePlaceholder": "Escríbanos",
+    "subtitlePlaceholder": "Solemos responder en pocos minutos",
+    "welcome": "¡Hola! ¿En qué podemos ayudarle hoy?",
+    "composerPlaceholder": "Escriba su mensaje...",
+    "send": "Enviar",
+    "sendingFailed": "No se pudo enviar su mensaje. Inténtelo de nuevo.",
+    "loadingTranscript": "Cargando la conversación...",
+    "chatUnavailable": "El chat no está disponible en este momento.",
+    "emptyBody": "Escriba un mensaje.",
+    "limitReached": "Se alcanzó el límite de chats de este mes. Nuestro equipo le responderá en breve.",
+    "aiAgentLabel": "Asistente",
+    "youLabel": "Usted",
+    "pendingLabel": "El asistente está escribiendo…",
+    "handoffBanner": "Un miembro del equipo le responderá en breve.",
+    "handoffActive": "Chat en pausa",
+    "voiceButton": "Hable con nosotros",
+    "voiceConnected": "Está hablando con la recepcionista.",
+    "voiceEnded": "La llamada de voz terminó. Puede seguir escribiendo abajo.",
+    "voiceUnavailable": "La voz en vivo no está disponible. Inténtelo más tarde.",
+    "voiceConnecting": "Conectando…",
+    "voiceRequestingMic": "Permita el acceso al micrófono para continuar.",
+    "voiceEnd": "Colgar",
+    "leaveDetails": "Déjenos sus datos",
+    "leadFormSubmitted": "¡Gracias! Nos pondremos en contacto pronto."
+  },
+  "lead": {
+    "heading": "Déjenos sus datos",
+    "description": "Añada sus datos de contacto para que podamos responderle.",
+    "name": "Nombre",
+    "email": "Correo electrónico",
+    "phone": "Teléfono",
+    "submit": "Continuar",
+    "invalidEmail": "Introduzca un correo electrónico válido.",
+    "invalidPhone": "Introduzca un número de teléfono válido.",
+    "required": "Este campo es obligatorio.",
+    "beforeChatHeading": "Antes de empezar",
+    "skip": "Omitir"
+  },
+  "errors": {
+    "configLoad": "No se pudo cargar el widget.",
+    "invalidKey": "Este widget no está disponible.",
+    "originDenied": "Este sitio web no tiene permiso para cargar este widget."
+  }
+}

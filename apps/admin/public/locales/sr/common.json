@@ -1,0 +1,164 @@
+{
+  "appName": "LobbyStack",
+  "accessibility": {
+    "close": "Zatvori",
+    "toggleSidebar": "Prikaži/sakrij bočnu traku",
+    "skipToContent": "Pređi na glavni sadržaj"
+  },
+  "errors": {
+    "unexpected": "Nešto nije u redu. Pokušajte ponovo."
+  },
+  "loading": {
+    "title": "Učitavanje...",
+    "retry": "Ponovo učitaj",
+    "failed": "Neki prevodi nisu mogli da se učitaju.",
+    "description": "Sinhronizujemo Vaš radni prostor i podešavanja recepcionera."
+  },
+  "language": {
+    "label": "Jezik",
+    "ariaLabel": "Izaberite jezik kontrolne table",
+    "english": "English",
+    "french": "Français",
+    "spanish": "Español",
+    "serbian": "Srpski"
+  },
+  "badges": {
+    "live": "Uživo",
+    "configured": "Podešeno",
+    "active": "Aktivno",
+    "inactive": "Neaktivno",
+    "voice": "Glas",
+    "sms": "SMS"
+  },
+  "labels": {
+    "customer": "Klijent",
+    "receptionist": "Recepcioner",
+    "prompt": "Prompt"
+  },
+  "aiPhoneNumber": {
+    "copy": "Kopiraj AI broj telefona",
+    "copied": "AI broj telefona je kopiran"
+  },
+  "errorBoundary": {
+    "title": "Nešto nije u redu",
+    "description": "Ponovo učitajte kontrolnu tablu i pokušajte još jednom. Greška je prijavljena.",
+    "reload": "Ponovo učitaj"
+  },
+  "feedback": {
+    "trigger": "Povratne informacije",
+    "title": "Pošaljite povratne informacije",
+    "description": "Recite nam šta bi poboljšalo ovu kontrolnu tablu.",
+    "label": "Poruka",
+    "placeholder": "Imate ideju kako da poboljšamo LobbyStack? Javite timu.",
+    "characterCount": "{{count}} / {{max}} znakova",
+    "helpText": "Potrebna Vam je pomoć?",
+    "helpCenter": "Centar za pomoć",
+    "contactLink": "Kontaktirajte nas",
+    "helpTextSeparator": "ili",
+    "docsLink": "pogledajte dokumentaciju.",
+    "submit": "Pošalji",
+    "toast": {
+      "sent": "Povratne informacije su poslate.",
+      "failed": "Nismo uspeli da sačuvamo povratne informacije."
+    }
+  },
+  "testCall": {
+    "trigger": "Probni poziv",
+    "title": "Isprobajte svog AI recepcionera",
+    "description": "Započnite poziv uživo iz pregledača sa podešenim recepcionerom.",
+    "connecting": "Povezivanje...",
+    "hangUp": "Prekini",
+    "status": {
+      "idle": "Spremno kad i Vi",
+      "requesting_microphone": "Traži se pristup mikrofonu",
+      "connecting": "Povezivanje sa AI recepcionerom",
+      "connected": "Uživo sa AI recepcionerom",
+      "ending": "Završavanje poziva",
+      "ended": "Poziv je završen",
+      "error": "Poziv nije mogao da se započne"
+    },
+    "aria": {
+      "start": "Započni probni poziv",
+      "connecting": "Povezivanje probnog poziva",
+      "waitingForMicrophone": "Čeka se dozvola za mikrofon",
+      "end": "Završi probni poziv",
+      "endMuted": "Završi utišani probni poziv",
+      "ending": "Završavanje probnog poziva",
+      "retry": "Ponovi probni poziv"
+    },
+    "errors": {
+      "microphoneBlocked": "Pristup mikrofonu je blokiran.",
+      "microphoneNotFound": "Na ovom uređaju nije pronađen mikrofon.",
+      "microphoneInUse": "Mikrofon već koristi druga aplikacija.",
+      "gatewayTimeout": "Povezivanje poziva je trajalo predugo.",
+      "gatewayUnreachable": "Ova stranica ne može da se poveže sa servisom LobbyStack da bi započela poziv.",
+      "connectionDropped": "Glasovna veza je prekinuta.",
+      "browserNoMicrophone": "Ovaj pregledač ne podržava pozive preko mikrofona.",
+      "browserNoWebRtc": "Ovaj pregledač ne podržava glasovne pozive uživo.",
+      "businessNotFound": "Nismo pronašli ovaj radni prostor. Pređite na aktivan radni prostor i pokušajte ponovo.",
+      "rateLimited": "Započeto je previše probnih poziva. Pokušajte ponovo malo kasnije.",
+      "unavailable": "Vaš AI recepcioner trenutno nije dostupan.",
+      "generic": "Došlo je do greške pri pokretanju poziva."
+    }
+  },
+  "appointments": {
+    "title": "Termini",
+    "summary_one": "{{name}} · {{count}} predstojeći termin",
+    "summary_few": "{{name}} · {{count}} predstojeća termina",
+    "summary_other": "{{name}} · {{count}} predstojećih termina",
+    "chooseWorkspace": "Izaberite radni prostor da biste videli termine.",
+    "refresh": "Osveži",
+    "time": "Vreme",
+    "customer": "Klijent",
+    "service": "Usluga",
+    "staff": "Zaposleni",
+    "status": "Status",
+    "calendar": "Kalendar",
+    "loading": "Učitavanje termina…",
+    "unavailable": "Termini nisu dostupni.",
+    "empty": "Nema predstojećih termina.",
+    "unknownContact": "Nepoznat kontakt",
+    "statuses": {
+      "confirmed": "Potvrđeno",
+      "cancelled": "Otkazano",
+      "completed": "Završeno",
+      "no_show": "Nije se pojavio",
+      "pending": "Na čekanju"
+    },
+    "calendarStates": {
+      "not_required": "Nije potrebno",
+      "pending": "Na čekanju",
+      "synced": "Sinhronizovano",
+      "failed": "Neuspešno",
+      "error": "Greška",
+      "cancelled": "Otkazano"
+    }
+  },
+  "abandonIntent": {
+    "title": "Pre nego što odete",
+    "description": "Dva kratka pitanja. Pomaže i jedan odgovor.",
+    "issue": {
+      "label": "Naišli ste na problem?",
+      "placeholder": "Opišite šta se desilo da bismo to ispravili."
+    },
+    "missing": {
+      "label": "Nešto Vam nedostaje?",
+      "placeholder": "Recite nam šta biste voleli da vidite."
+    },
+    "notNow": "Ne sada",
+    "submit": "Pošalji",
+    "sentTitle": "Hvala Vam",
+    "sentDescription": "Čitamo svaki odgovor.",
+    "close": "Zatvori"
+  },
+  "websiteImport": {
+    "runningTitle": "Čitanje sajta {{host}}",
+    "runningHint": "Pročitano stranica: {{imported}}, spremno za pitanja: {{indexed}}.",
+    "doneTitle": "Vaš agent je pročitao sajt {{host}}",
+    "doneHint_one": "{{count}} stranica je spremna za pitanja.",
+    "doneHint_few": "{{count}} stranice su spremne za pitanja.",
+    "doneHint_other": "{{count}} stranica je spremno za pitanja.",
+    "failedTitle": "Nismo uspeli da pročitamo sajt {{host}}",
+    "failedHint": "Unesite podatke o firmi ručno ili ponovo pokrenite uvoz sa kontrolne table."
+  }
+}

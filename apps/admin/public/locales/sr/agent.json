@@ -1,0 +1,337 @@
+{
+  "page": {
+    "eyebrow": "Radni prostor agenta",
+    "title": "Agent",
+    "description": "Podesite kako se Vaš AI recepcioner ponaša, šta zna i kako obrađuje pozive i poruke."
+  },
+  "sections": {
+    "basicSettings": {
+      "title": "AI podešavanja",
+      "description": "Pozdrav i podešavanja preusmeravanja za Vašeg recepcionera."
+    },
+    "knowledge": {
+      "title": "Znanje",
+      "description": "Informacije i smernice koje recepcioner koristi da odgovara na pitanja.",
+      "listTitle": "Baza znanja",
+      "addKnowledge": "Dodaj znanje",
+      "addKnowledgeOptions": {
+        "upload": "Otpremi",
+        "website": "Sajt",
+        "text": "Tekst"
+      },
+      "editKnowledge": "Izmeni znanje",
+      "uploadDocument": "Otpremi dokument",
+      "websiteImport": {
+        "badge": "Sajt",
+        "title": "Uvezi sajt",
+        "description": "Učitajte javne stranice Vašeg sajta kako bi ih recepcioner koristio kao znanje.",
+        "submit": "Uvezi sajt",
+        "submitting": "Uvoz sajta…",
+        "success": "Uvoz sajta je pokrenut. Stranice će se pojavljivati ovde kako se budu obrađivale.",
+        "submitFailed": "Nismo mogli da pokrenemo uvoz sajta. Pokušajte ponovo.",
+        "previewPending": "Čitamo ovaj sajt. Uvezene stranice će se automatski pojaviti ovde.",
+        "previewFailed": "Uvoz nije uspeo. Pokušajte ponovo.",
+        "status": {
+          "inProgress": "U toku",
+          "failed": "Neuspešno"
+        },
+        "validation": {
+          "urlRequired": "Unesite URL sajta koji želite da uvezete."
+        }
+      },
+      "addKnowledgeDescription": "Dodajte radno vreme, cene, pravila poslovanja ili bilo koju drugu informaciju koju recepcioner treba da zna.",
+      "editKnowledgeDescription": "Izmenite informacije koje recepcioner koristi kada odgovara na pitanja klijenata.",
+      "uploadDocumentDescription": "Otpremite fajl kako bi ga recepcioner koristio.",
+      "documentBadge": "Dokument",
+      "textBadge": "Tekst",
+      "emptyState": "Još niste dodali znanje.",
+      "previewPending": "Ovaj dokument se obrađuje.",
+      "previewError": "Ovaj dokument nije mogao da se obradi.",
+      "status": {
+        "analyzing": "Analiziranje...",
+        "inProgress": "U toku",
+        "queued": "Na čekanju",
+        "indexing": "Indeksiranje",
+        "indexed": "Spremno",
+        "error": "Greška",
+        "cancelled": "Otkazano"
+      },
+      "uploadValidation": {
+        "fileRequired": "Izaberite fajl za otpremanje.",
+        "unsupportedFile": "Podržani tipovi dokumenata su PDF, DOCX, TXT i Markdown.",
+        "maxSize": "Dokument može imati najviše 10 MB.",
+        "uploadFailed": "Nismo mogli da otpremimo ovaj dokument. Pokušajte ponovo."
+      },
+      "fields": {
+        "file": {
+          "label": "Fajl",
+          "hint": "Podržani su PDF, DOCX, TXT i Markdown.",
+          "dropzonePrefix": "Prevucite fajl ovde ili",
+          "chooseFile": "Izaberite fajl"
+        },
+        "websiteUrl": {
+          "label": "URL sajta",
+          "placeholder": "https://example.com",
+          "hint": "Unesite javnu početnu stranicu ili odeljak koji želite da uvezete."
+        },
+        "title": {
+          "label": "Naslov",
+          "placeholder": "Radno vreme",
+          "hint": "Kratak, jasan naslov za ovu informaciju."
+        },
+        "content": {
+          "label": "Sadržaj",
+          "placeholder": "Radimo od ponedeljka do petka, od 9 do 17 časova.",
+          "hint": "Informacija koju recepcioner treba da koristi."
+        },
+        "tags": {
+          "label": "Oznake (opciono)",
+          "placeholder": "Radno vreme, lokacija",
+          "hint": "Ključne reči odvojene zarezima koje pomažu da se ovo znanje razvrsta."
+        }
+      }
+    },
+    "services": {
+      "title": "Usluge",
+      "description": "Detalji o uslugama koje recepcioner koristi da objasni ponudu i pomogne da se zakaže pravi termin.",
+      "listTitle": "Usluge",
+      "addKnowledge": "Dodaj uslugu",
+      "editKnowledge": "Izmeni uslugu",
+      "uploadDocument": "Otpremi dokument",
+      "addKnowledgeDescription": "Dodajte svoje usluge, šta obuhvataju, kome su namenjene i sve što recepcioner treba da pomene.",
+      "editKnowledgeDescription": "Izmenite detalje usluge koje recepcioner treba da pomene i koristi pri zakazivanju.",
+      "uploadDocumentDescription": "Otpremite fajl kako bi ga recepcioner koristio.",
+      "documentBadge": "Dokument",
+      "textBadge": "Tekst",
+      "emptyState": "Još niste dodali usluge.",
+      "unavailable": "Katalog usluga nije dostupan.",
+      "durationValue": "Termin od {{count}} min",
+      "previewPending": "Ovaj dokument se obrađuje.",
+      "previewError": "Ovaj dokument nije mogao da se obradi.",
+      "status": {
+        "analyzing": "Analiziranje...",
+        "inProgress": "U toku",
+        "queued": "Na čekanju",
+        "indexing": "Indeksiranje",
+        "indexed": "Spremno",
+        "error": "Greška"
+      },
+      "uploadValidation": {
+        "fileRequired": "Izaberite fajl za otpremanje.",
+        "unsupportedFile": "Podržani tipovi dokumenata su PDF, DOCX, TXT i Markdown.",
+        "maxSize": "Dokument može imati najviše 10 MB.",
+        "uploadFailed": "Nismo mogli da otpremimo ovaj dokument. Pokušajte ponovo."
+      },
+      "fields": {
+        "file": {
+          "label": "Fajl",
+          "hint": "Podržani su PDF, DOCX, TXT i Markdown.",
+          "dropzonePrefix": "Prevucite fajl ovde ili",
+          "chooseFile": "Izaberite fajl"
+        },
+        "title": {
+          "label": "Naslov",
+          "placeholder": "Prve konsultacije",
+          "hint": "Kratak, jasan naziv ove usluge."
+        },
+        "content": {
+          "label": "Sadržaj",
+          "placeholder": "Razgovor od 30 minuta u kome saznajemo šta je pozivaocu potrebno i predlažemo sledeći korak.",
+          "hint": "Opišite uslugu kako bi je recepcioner jasno objasnio."
+        },
+        "duration": {
+          "label": "Trajanje",
+          "placeholder": "30",
+          "hint": "Trajanje termina u minutima, za proveru slobodnih termina."
+        },
+        "active": {
+          "label": "Može se zakazati",
+          "hint": "Tokom poziva se nude samo usluge koje se mogu zakazati."
+        },
+        "tags": {
+          "label": "Oznake (opciono)",
+          "placeholder": "Konsultacije, novi klijenti",
+          "hint": "Ključne reči odvojene zarezima koje pomažu da se ove usluge razvrstaju."
+        }
+      }
+    },
+    "rules": {
+      "title": "Pravila",
+      "description": "Uputstva po kojima recepcioner obrađuje pozive i poruke.",
+      "listTitle": "Pravila",
+      "addKnowledge": "Dodaj pravilo",
+      "editKnowledge": "Izmeni pravilo",
+      "uploadDocument": "Otpremi dokument",
+      "addKnowledgeDescription": "Šta recepcioner treba da radi, na primer da preusmerava pozive, postavlja pitanja i šalje SMS poruke.",
+      "editKnowledgeDescription": "Izmenite uputstvo koje recepcioner treba da prati tokom poziva i naknadnih koraka.",
+      "uploadDocumentDescription": "Otpremite fajl kako bi ga recepcioner koristio.",
+      "documentBadge": "Dokument",
+      "textBadge": "Tekst",
+      "emptyState": "Još niste dodali pravila.",
+      "previewPending": "Ovaj dokument se obrađuje.",
+      "previewError": "Ovaj dokument nije mogao da se obradi.",
+      "status": {
+        "analyzing": "Analiziranje...",
+        "inProgress": "U toku",
+        "queued": "Na čekanju",
+        "indexing": "Indeksiranje",
+        "indexed": "Spremno",
+        "error": "Greška"
+      },
+      "uploadValidation": {
+        "fileRequired": "Izaberite fajl za otpremanje.",
+        "unsupportedFile": "Podržani tipovi dokumenata su PDF, DOCX, TXT i Markdown.",
+        "maxSize": "Dokument može imati najviše 10 MB.",
+        "uploadFailed": "Nismo mogli da otpremimo ovaj dokument. Pokušajte ponovo."
+      },
+      "fields": {
+        "file": {
+          "label": "Fajl",
+          "hint": "Podržani su PDF, DOCX, TXT i Markdown.",
+          "dropzonePrefix": "Prevucite fajl ovde ili",
+          "chooseFile": "Izaberite fajl"
+        },
+        "title": {
+          "label": "Naslov",
+          "placeholder": "Zahteve za razgovor sa osobom preusmeri na Jovanu",
+          "hint": "Kratak, jasan naslov ovog pravila."
+        },
+        "content": {
+          "label": "Sadržaj",
+          "placeholder": "Kada neko traži da razgovara sa osobom, preusmeri poziv na 555-123-4567.",
+          "hint": "Opišite šta recepcioner treba da uradi."
+        },
+        "tags": {
+          "label": "Oznake (opciono)",
+          "placeholder": "Preusmeravanja, eskalacija",
+          "hint": "Ključne reči odvojene zarezima koje pomažu da se ova pravila razvrstaju."
+        }
+      }
+    }
+  },
+  "table": {
+    "searchPlaceholder": "Pretraži unose",
+    "title": "Naslov",
+    "preview": "Pregled",
+    "status": "Status",
+    "disabled": "Isključeno",
+    "added": "Dodato",
+    "empty": "Nema unosa koji odgovaraju.",
+    "documentPreviewHint": "Kliknite da pregledate ovaj dokument.",
+    "documentPreviewUnavailable": "Pregled dokumenata je dostupan na stranici Znanje."
+  },
+  "pagination": {
+    "rowsPerPage": "Redova po stranici",
+    "pageOf": "Stranica {{page}} od {{total}}",
+    "firstPage": "Prva stranica",
+    "previousPage": "Prethodna stranica",
+    "nextPage": "Sledeća stranica",
+    "lastPage": "Poslednja stranica",
+    "goToPage": "Idi na stranicu {{page}}"
+  },
+  "fields": {
+    "defaults": {
+      "title": "Podrazumevano"
+    },
+    "instructions": {
+      "title": "Uputstva"
+    },
+    "summary": {
+      "label": "Opis firme",
+      "hint": "Osnovne informacije o firmi koje recepcioner treba da zna."
+    },
+    "bookingPolicy": {
+      "label": "Pravila zakazivanja",
+      "hint": "Uputstva za nuđenje i potvrđivanje termina."
+    },
+    "voiceInstructions": {
+      "label": "Uputstva za pozive"
+    },
+    "smsInstructions": {
+      "label": "Uputstva za SMS"
+    },
+    "greeting": {
+      "label": "Pozdrav",
+      "placeholder": "Dobar dan, hvala što ste nas pozvali…",
+      "hint": "Prva rečenica koju recepcioner izgovori kada se javi na poziv ili započne razgovor."
+    },
+    "defaultLocale": {
+      "label": "Podrazumevani jezik za klijente",
+      "placeholder": "Izaberite podrazumevani jezik",
+      "hint": "Izaberite jezik koji recepcioner koristi kada ne znamo koji jezik pozivalac želi."
+    },
+    "transferNumber": {
+      "label": "Podrazumevani broj za preusmeravanje",
+      "placeholder": "+1 555-123-4567",
+      "hint": "Broj telefona na koji recepcioner preusmerava pozivaoca kada treba da razgovara sa osobom.",
+      "errors": {
+        "invalid": "Pre čuvanja unesite potpun i ispravan broj za preusmeravanje."
+      }
+    }
+  },
+  "booking": {
+    "title": "Zakazivanje",
+    "mode": {
+      "label": "Termini",
+      "options": {
+        "instant": "Zakazuje termine",
+        "request": "Prima zahteve",
+        "off": "Ne zakazuje"
+      },
+      "descriptions": {
+        "instant": "Agent proverava slobodne termine i zakazuje termin.",
+        "request": "Agent beleži uslugu i željeno vreme. Vi potvrđujete iz prijemnog sandučeta.",
+        "off": "Agent prima poruku umesto da zakazuje."
+      }
+    }
+  },
+  "appointmentChanges": {
+    "title": "Izmene termina",
+    "allowCancel": {
+      "label": "Dozvoli AI otkazivanje",
+      "hint": "Recepcioner može da otkaže potvrđen budući termin."
+    },
+    "allowReschedule": {
+      "label": "Dozvoli AI pomeranje",
+      "hint": "Recepcioner može da pomeri potvrđen budući termin nakon provere slobodnih termina."
+    },
+    "requireOtp": {
+      "label": "Traži jednokratni kod",
+      "hint": "Pošalji kod pre svakog otkazivanja ili pomeranja."
+    }
+  },
+  "actions": {
+    "save": "Sačuvaj",
+    "saveChanges": "Sačuvaj izmene",
+    "saving": "Čuvanje…",
+    "saved": "Izmene su sačuvane",
+    "moreOptions": "Još opcija",
+    "delete": "Obriši",
+    "confirmDelete": "Potvrđujete?",
+    "deleteTitle": "Obrisati unos?",
+    "deleteDescription": "Ovaj unos će biti trajno uklonjen iz radnog prostora agenta.",
+    "deleteCancel": "Otkaži",
+    "cancelImport": "Otkaži uvoz",
+    "cancelImportTitle": "Otkazati uvoz sajta?",
+    "cancelImportDescription": "Uvoz sajta će biti zaustavljen, a unos u toku uklonjen iz tabele.",
+    "enable": "Uključi",
+    "disable": "Isključi",
+    "retry": "Pokušaj ponovo",
+    "moveUp": "Pomeri gore",
+    "moveDown": "Pomeri dole",
+    "activateEntry": "Aktiviraj unos",
+    "deactivateEntry": "Deaktiviraj unos",
+    "upload": "Otpremi",
+    "uploading": "Otpremanje…",
+    "saveFailed": "Nismo mogli da sačuvamo podešavanja. Pokušajte ponovo."
+  },
+  "loading": {
+    "workspace": "Učitavanje radnog prostora…",
+    "rules": "Učitavanje pravila…",
+    "knowledge": "Učitavanje znanja…"
+  },
+  "readOnly": "Uz pristup za pregled možete samo da čitate.",
+  "empty": {
+    "description": "Prvo napravite firmu, pa se vratite ovde da podesite AI recepcionera."
+  }
+}

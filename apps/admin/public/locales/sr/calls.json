@@ -1,0 +1,174 @@
+{
+  "page": {
+    "title": "Pozivi",
+    "liveUnavailable": "Status uživo nije dostupan",
+    "description": "Pregledajte nedavne pozive i preslušajte snimke.",
+    "emptyPreview": "Transkript još ne postoji.",
+    "selectCall": "Izaberite poziv da biste pregledali transkript.",
+    "yesterday": "Juče",
+    "unknownShort": "NP"
+  },
+  "filters": {
+    "searchPlaceholder": "Pretražite pozive...",
+    "status": "Status",
+    "allStatuses": "Svi"
+  },
+  "table": {
+    "caller": "Pozivalac",
+    "number": "Broj",
+    "purpose": "Svrha",
+    "time": "Vreme",
+    "play": "Pusti",
+    "startedAt": "Početak",
+    "status": "Status",
+    "disposition": "Ishod",
+    "transcript": "Transkript",
+    "audio": "Zvuk",
+    "unknownCaller": "Nepoznat pozivalac",
+    "noNumber": "Nema broja",
+    "noDisposition": "Nije postavljeno",
+    "empty": "Nijedan poziv ne odgovara trenutnim filterima."
+  },
+  "actions": {
+    "viewTranscript": "Prikaži transkript",
+    "pendingTranscript": "Otvori transkript",
+    "listen": "Preslušaj",
+    "download": "Preuzmi zvuk",
+    "copy": "Kopiraj",
+    "play": "Pusti",
+    "pause": "Pauziraj",
+    "audioPending": "Snimak se obrađuje",
+    "audioUnavailable": "Nema snimka"
+  },
+  "followUp": {
+    "title": "Zadatak praćenja",
+    "titleWithContact": "{{message}} za {{name}}",
+    "createdAt": "Kreirano {{time}}",
+    "markDone": "Označi kao završeno",
+    "markingDone": "Označavanje...",
+    "kind": {
+      "callback": "Povratni poziv"
+    },
+    "urgent": "Hitno",
+    "callUnavailable": "Prvobitni poziv nije dostupan, ali je ovaj zadatak povratnog poziva i dalje otvoren.",
+    "completeFailed": "Zadatak povratnog poziva nije moguće označiti kao završen.",
+    "fields": {
+      "callback": "Povratni poziv",
+      "callbackWindow": "Željeno vreme povratnog poziva"
+    }
+  },
+  "pagination": {
+    "rowsPerPage": "Redova po stranici",
+    "pageOf": "Stranica {{page}} od {{total}}",
+    "firstPage": "Idi na prvu stranicu",
+    "previousPage": "Idi na prethodnu stranicu",
+    "nextPage": "Idi na sledeću stranicu",
+    "lastPage": "Idi na poslednju stranicu",
+    "goToPage": "Idi na stranicu {{page}}"
+  },
+  "panel": {
+    "title": "Nedavni pozivi",
+    "description": "Pregledajte zabeležene pozive, otvorite transkripte i preuzmite snimke.",
+    "captured": "Zabeleženo: {{count}}",
+    "transcriptReady": "Transkript je spreman",
+    "transcriptPending": "Transkript se obrađuje",
+    "audioReady": "Snimak je spreman",
+    "recordingPending": "Snimak se obrađuje",
+    "viewTranscript": "Prikaži transkript",
+    "downloadAudio": "Preuzmi zvuk",
+    "noCalls": "Još nema zabeleženih poziva.",
+    "noBusinessTitle": "Nedavni pozivi",
+    "noBusinessDescription": "Kreirajte firmu da biste pregledali snimke i transkripte."
+  },
+  "transcript": {
+    "title": "Transkript poziva",
+    "description": "Pregledajte sačuvane replike pozivaoca i asistenta od {{date}}.",
+    "emptyDescription": "Izaberite poziv da biste pregledali sačuvani razgovor.",
+    "descriptionWithDate": "Pregledajte sačuvane replike pozivaoca i asistenta od {{date}}.",
+    "descriptionEmpty": "Izaberite poziv da biste pregledali sačuvani razgovor.",
+    "noSegments": "Za ovaj poziv još nema delova transkripta."
+  },
+  "outcome": {
+    "label": "Rezime",
+    "booked": "Pozivalac je zakazao: {{serviceName}}, za {{startsAt}}.",
+    "scheduling": "Pozivalac je započeo zakazivanje, ali nijedan termin nije potvrđen.",
+    "schedulingWithService": "Pozivalac je razgovarao o zakazivanju ({{serviceName}}), ali nijedan termin nije potvrđen.",
+    "schedulingWithServiceAndTime": "Pozivalac je razgovarao o zakazivanju ({{serviceName}}) za {{startsAt}}, ali nijedan termin nije potvrđen.",
+    "messageTaken": "Pozivalac je ostavio poruku za povratni kontakt.",
+    "contactBlocked": "Poziv je blokiran pre nego što se asistent javio.",
+    "abuse": "AI je prekinuo ovaj poziv kao uvredljiv.",
+    "spam": "AI je prekinuo ovaj poziv kao neželjen.",
+    "voicemail": "Poziv se završio govornom poštom ili ostavljenom porukom.",
+    "busy": "Poziv je završen jer je linija bila zauzeta.",
+    "noAnswer": "Poziv je završen bez odgovora.",
+    "canceled": "Poziv je otkazan pre nego što je zabeležen konačan ishod.",
+    "completed": "Poziv je završen, ali ishod zakazivanja nije zabeležen.",
+    "technicalIssue": "Poziv je završen zbog tehničkog problema pre nego što je zabeležen konačan ishod.",
+    "transferCompleted": "Poziv je uspešno preusmeren.",
+    "transferBusy": "Pokušano je preusmeravanje, ali je odredišna linija bila zauzeta.",
+    "transferFailed": "Pokušano je preusmeravanje, ali nije uspešno završeno.",
+    "none": "Pozivalac je postavljao pitanja, ali konačan ishod još nije zabeležen.",
+    "genericService": "termin",
+    "unspecifiedTime": "neodređeno vreme"
+  },
+  "detail": {
+    "backToList": "Pozivi",
+    "callLabel": "Poziv",
+    "unknownCaller": "Nepoznat pozivalac",
+    "noNumber": "Nema broja",
+    "metadata": {
+      "from": "Od",
+      "duration": "Trajanje",
+      "started": "Početak",
+      "id": "ID"
+    },
+    "status": {
+      "in_progress": "U toku",
+      "completed": "Završen",
+      "failed": "Neuspešan",
+      "unknown": "Nepoznato"
+    },
+    "events": {
+      "title": "Događaji poziva",
+      "received": "Primljen",
+      "connected": "Povezan",
+      "transferred": "Preusmeren",
+      "blocked": "Blokiran",
+      "completed": "Završen",
+      "failed": "Neuspešan"
+    },
+    "tabs": {
+      "transcript": "Transkript",
+      "recording": "Snimak",
+      "details": "Detalji"
+    },
+    "transcript": {
+      "caller": "Pozivalac",
+      "assistant": "Asistent",
+      "empty": "Za ovaj poziv još nema delova transkripta."
+    },
+    "recording": {
+      "unavailable": "Za ovaj poziv nema dostupnog snimka.",
+      "pending": "Snimak se još obrađuje."
+    },
+    "blocking": {
+      "badge": "Blokiran",
+      "blockedAtInline": "Blokiran {{time}}"
+    },
+    "details": {
+      "outcomeTitle": "Ishod",
+      "followUpTitle": "Zadatak praćenja",
+      "callInfoTitle": "Informacije o pozivu",
+      "twilioCallSid": "Twilio Call SID",
+      "gatewaySession": "Sesija gatewaya",
+      "disposition": "Ishod",
+      "providerStatus": "Status provajdera",
+      "noDisposition": "Nema",
+      "noFollowUp": "Za ovaj poziv nema zadatka praćenja.",
+      "markDone": "Označi kao završeno",
+      "markingDone": "Označavanje…"
+    },
+    "notFound": "Poziv nije pronađen.",
+    "notFoundDescription": "Ovaj poziv ne postoji ili nemate pristup njemu."
+  }
+}

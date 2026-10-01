@@ -1,0 +1,96 @@
+{
+  "loading": {
+    "label": "Cargando..."
+  },
+  "active": {
+    "title": "Demo para {{businessName}}",
+    "startHint": "Toque el botón para iniciar una llamada de voz en vivo.",
+    "promptsTitle": "Pruebe a preguntar:",
+    "intakeNotice": "Esta es una demo limitada. Las llamadas en vivo funcionan, pero las reservas y otras funciones completas de la recepcionista no están activadas.",
+    "claimCta": "Quedarme con esta recepcionista"
+  },
+  "states": {
+    "invalid": {
+      "title": "Este enlace de demo no es válido",
+      "description": "Puede que el enlace esté mal escrito o que la demo nunca se haya creado. Pida un enlace nuevo para volver a intentarlo."
+    },
+    "preparing": {
+      "title": "Estamos preparando su demo",
+      "titleWithBusiness": "Estamos preparando la demo para {{businessName}}",
+      "description": "Todavía estamos aprendiendo del sitio web. Suele tardar unos minutos, así que vuelva en un momento."
+    },
+    "expired": {
+      "title": "Esta demo ha caducado",
+      "titleWithBusiness": "La demo para {{businessName}} ha caducado",
+      "description": "Los enlaces de demo están disponibles por tiempo limitado. Contáctenos para obtener uno nuevo."
+    },
+    "revoked": {
+      "title": "Esta demo ya no está disponible",
+      "titleWithBusiness": "La demo para {{businessName}} ya no está disponible",
+      "description": "Este enlace de demo se ha desactivado."
+    },
+    "claimed": {
+      "title": "Esta demo ya se ha reclamado",
+      "titleWithBusiness": "La demo para {{businessName}} ya se ha reclamado",
+      "description": "Esta recepcionista ahora pertenece a una cuenta de LobbyStack."
+    }
+  },
+  "claim": {
+    "loadingTitle": "Preparando su espacio de trabajo",
+    "loadingDescription": "Reclamando su recepcionista y preparando su espacio de trabajo...",
+    "errorTitle": "No pudimos reclamar esta demo",
+    "errorDescription": "Algo salió mal al reclamar esta demo. Inténtelo de nuevo.",
+    "unavailableTitle": "Este enlace de demo no está disponible",
+    "unavailableDescription": "Falta el enlace de demo o ya no es válido.",
+    "retry": "Reintentar"
+  },
+  "operator": {
+    "title": "Demos para clientes potenciales",
+    "description": "Prepare espacios de trabajo de recepcionista aislados y temporales antes de compartirlos con un cliente potencial.",
+    "count_one": "{{count}} demo",
+    "count_many": "{{count}} demos",
+    "count_other": "{{count}} demos",
+    "refresh": "Actualizar",
+    "loading": "Cargando demos...",
+    "empty": "Aún no se ha preparado ninguna demo para clientes potenciales.",
+    "rotate": "Renovar enlace",
+    "publish": "Publicar",
+    "revoke": "Revocar",
+    "openLink": "Abrir enlace seguro",
+    "tokenHint": "Renueve el enlace en esta sesión antes de publicarlo o compartirlo. Los tokens sin cifrar nunca se guardan.",
+    "prepare": "Preparar una demo",
+    "prepareDescription": "El espacio de trabajo es privado mientras se indexa su sitio web público.",
+    "businessName": "Nombre del negocio",
+    "websiteUrl": "URL del sitio web",
+    "greeting": "Saludo",
+    "suggestedPrompts": "Preguntas sugeridas",
+    "create": "Crear demo aislada",
+    "ingestion": "Importación:",
+    "snapshot": "Instantánea:",
+    "prompts": "Preguntas:",
+    "promptsPlaceholder": "¿Qué servicios ofrecen?\n¿Puedo pedir un presupuesto?",
+    "statuses": {
+      "pending": "pendiente",
+      "ready": "lista",
+      "missing": "falta",
+      "queued": "en cola",
+      "crawling": "rastreando",
+      "indexing": "indexando",
+      "completed": "completada",
+      "failed": "fallida",
+      "cancelled": "cancelada",
+      "preparing": "en preparación",
+      "active": "activa",
+      "claimed": "reclamada",
+      "revoked": "revocada",
+      "expired": "caducada"
+    },
+    "errors": {
+      "load": "No se pudieron cargar las demos. Intente actualizar la página.",
+      "create": "No se pudo crear la demo. Sus datos se han conservado; inténtelo de nuevo.",
+      "rotate": "No se pudo renovar el enlace de la demo. Inténtelo de nuevo.",
+      "publish": "No se pudo publicar la demo. Inténtelo de nuevo.",
+      "revoke": "No se pudo revocar la demo. Inténtelo de nuevo."
+    }
+  }
+}

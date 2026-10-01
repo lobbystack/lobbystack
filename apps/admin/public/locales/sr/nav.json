@@ -1,0 +1,56 @@
+{
+  "items": {
+    "home": "Početna",
+    "calls": "Pozivi",
+    "messages": "Poruke",
+    "agent": "Agent",
+    "contacts": "Kontakti",
+    "analytics": "Analitika",
+    "affiliate": "Partnerski program",
+    "settings": "Podešavanja"
+  },
+  "search": {
+    "placeholder": "Pretražite radni prostor..."
+  },
+  "sidebar": {
+    "businessSlugFallback": "Konzola radnog prostora",
+    "general": "Opšte",
+    "agent": "Agent",
+    "other": "Upravljanje",
+    "workspace": "Radni prostor",
+    "openSettings": "Otvori podešavanja",
+    "signedIn": "Prijavljeni ste",
+    "workspaceReady": "Radni prostor je spreman",
+    "upgradeToPro": "Pređite na Pro",
+    "account": "Nalog",
+    "toggleTheme": "Promeni temu",
+    "signOut": "Odjavi se",
+    "createBusiness": "Kreiraj firmu",
+    "setupGuide": {
+      "title": "Prvi koraci",
+      "open": "Otvori vodič za podešavanje",
+      "skip": "Preskoči vodič",
+      "skipStep": "Preskoči",
+      "progress": "Završeno: {{completed}} / {{total}}",
+      "description": "Završeno koraka podešavanja: {{completed}} od {{total}}.",
+      "steps": {
+        "fullScan": "Pročitajte ostatak sajta",
+        "sources": "Dodajte još izvora",
+        "testCall": "Čujte svog agenta",
+        "phoneNumber": "Povežite broj telefona"
+      },
+      "stepDescriptions": {
+        "fullScan": "Tokom početnog podešavanja pročitan je deo Vašeg sajta kako bi recepcioner mogao da počne da odgovara. Pročitajte i ostatak da bi znao sve.",
+        "sources": "Otpremite dokument sa pravilima, čestim pitanjima, cenama ili drugim podacima koje recepcioner treba da zna.",
+        "testCall": "Pozovite recepcionera iz ovog pregledača i pitajte ga nešto što zna samo Vaša firma.",
+        "phoneNumber": "Dodelite recepcioneru sopstveni broj kako bi mogao da odgovara pravim pozivaocima, danju i noću."
+      },
+      "stepActions": {
+        "fullScan": "Pročitaj ostatak",
+        "sources": "Otpremi dokument",
+        "testCall": "Započni poziv",
+        "phoneNumber": "Izaberi broj"
+      }
+    }
+  }
+}

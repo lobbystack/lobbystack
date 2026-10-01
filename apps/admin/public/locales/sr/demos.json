@@ -1,0 +1,96 @@
+{
+  "loading": {
+    "label": "Učitavanje..."
+  },
+  "active": {
+    "title": "Demo za {{businessName}}",
+    "startHint": "Dodirnite dugme da započnete glasovni poziv uživo.",
+    "promptsTitle": "Pitajte, na primer:",
+    "intakeNotice": "Ovo je ograničeni demo. Pozivi uživo rade, ali zakazivanje i ostale funkcije recepcionera nisu uključene.",
+    "claimCta": "Preuzmite ovog recepcionera"
+  },
+  "states": {
+    "invalid": {
+      "title": "Ovaj demo link nije važeći",
+      "description": "Link je možda pogrešno unet ili demo nikada nije kreiran. Zatražite novi link i pokušajte ponovo."
+    },
+    "preparing": {
+      "title": "Vaš demo se priprema",
+      "titleWithBusiness": "Demo za {{businessName}} se priprema",
+      "description": "Još učimo sa sajta. To obično traje nekoliko minuta, pa proverite ponovo uskoro."
+    },
+    "expired": {
+      "title": "Ovaj demo je istekao",
+      "titleWithBusiness": "Demo za {{businessName}} je istekao",
+      "description": "Demo linkovi su dostupni ograničeno vreme. Javite se da dobijete novi."
+    },
+    "revoked": {
+      "title": "Ovaj demo više nije dostupan",
+      "titleWithBusiness": "Demo za {{businessName}} više nije dostupan",
+      "description": "Ovaj demo link je isključen."
+    },
+    "claimed": {
+      "title": "Ovaj demo je već preuzet",
+      "titleWithBusiness": "Demo za {{businessName}} je već preuzet",
+      "description": "Ovaj recepcioner sada pripada jednom LobbyStack nalogu."
+    }
+  },
+  "claim": {
+    "loadingTitle": "Podešavamo Vaš radni prostor",
+    "loadingDescription": "Preuzimamo Vašeg recepcionera i pripremamo radni prostor...",
+    "errorTitle": "Nismo uspeli da preuzmemo ovaj demo",
+    "errorDescription": "Došlo je do greške pri preuzimanju ovog demoa. Pokušajte ponovo.",
+    "unavailableTitle": "Ovaj demo link nije dostupan",
+    "unavailableDescription": "Demo link nedostaje ili više nije važeći.",
+    "retry": "Pokušaj ponovo"
+  },
+  "operator": {
+    "title": "Demoi za potencijalne klijente",
+    "description": "Pripremite izolovane radne prostore recepcionera sa rokom trajanja pre nego što ih podelite sa potencijalnim klijentom.",
+    "count_one": "{{count}} demo",
+    "count_few": "{{count}} demoa",
+    "count_other": "{{count}} demoa",
+    "refresh": "Osveži",
+    "loading": "Učitavanje demoa...",
+    "empty": "Još nije pripremljen nijedan demo za potencijalne klijente.",
+    "rotate": "Promeni link",
+    "publish": "Objavi",
+    "revoke": "Opozovi",
+    "openLink": "Otvori bezbedni link",
+    "tokenHint": "Promenite link u ovoj sesiji pre objavljivanja ili deljenja. Sirovi tokeni se nikada ne čuvaju.",
+    "prepare": "Pripremite demo",
+    "prepareDescription": "Radni prostor je privatan dok se njegov javni sajt indeksira.",
+    "businessName": "Naziv firme",
+    "websiteUrl": "URL sajta",
+    "greeting": "Pozdrav",
+    "suggestedPrompts": "Predložena pitanja",
+    "create": "Kreiraj izolovani demo",
+    "ingestion": "Uvoz:",
+    "snapshot": "Snimak:",
+    "prompts": "Pitanja:",
+    "promptsPlaceholder": "Koje usluge nudite?\nMogu li da zatražim ponudu?",
+    "statuses": {
+      "pending": "na čekanju",
+      "ready": "spremno",
+      "missing": "nedostaje",
+      "queued": "u redu",
+      "crawling": "pretraživanje",
+      "indexing": "indeksiranje",
+      "completed": "završeno",
+      "failed": "neuspešno",
+      "cancelled": "otkazano",
+      "preparing": "priprema",
+      "active": "aktivno",
+      "claimed": "preuzeto",
+      "revoked": "opozvano",
+      "expired": "isteklo"
+    },
+    "errors": {
+      "load": "Nije moguće učitati demoe. Pokušajte da osvežite stranicu.",
+      "create": "Nije moguće kreirati demo. Vaši unosi su sačuvani; pokušajte ponovo.",
+      "rotate": "Nije moguće promeniti demo link. Pokušajte ponovo.",
+      "publish": "Nije moguće objaviti demo. Pokušajte ponovo.",
+      "revoke": "Nije moguće opozvati demo. Pokušajte ponovo."
+    }
+  }
+}

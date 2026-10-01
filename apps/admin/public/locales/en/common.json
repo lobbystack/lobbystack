@@ -12,7 +12,9 @@
     "label": "Language",
     "ariaLabel": "Select dashboard language",
     "english": "English",
-    "french": "Français"
+    "french": "Français",
+    "spanish": "Español",
+    "serbian": "Srpski"
   },
   "badges": {
     "live": "Live",

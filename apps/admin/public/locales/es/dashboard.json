@@ -1,0 +1,238 @@
+{
+  "headers": {
+    "dashboardTitle": "Panel",
+    "dashboardDescription": "Compruebe si todo está listo para llamadas, mensajes y reservas."
+  },
+  "analyticsPage": {
+    "title": "Analíticas",
+    "description": "Revise las tendencias de actividad en llamadas, mensajes y reservas."
+  },
+  "delta": {
+    "flat": "Sin cambios respecto al mes pasado",
+    "up": "+{{value}} % respecto al mes pasado",
+    "down": "-{{value}} % respecto al mes pasado",
+    "durationUp": "+{{value}} respecto al mes pasado",
+    "durationDown": "-{{value}} respecto al mes pasado"
+  },
+  "home": {
+    "title": "Inicio",
+    "download": "Descargar",
+    "liveCalls": "En vivo",
+    "tabs": {
+      "overview": "Resumen",
+      "analytics": "Analíticas",
+      "reports": "Informes",
+      "notifications": "Notificaciones"
+    },
+    "analytics": {
+      "chart": {
+        "title": "Resumen de actividad",
+        "description": "Llamadas y mensajes semanales en su espacio de trabajo de recepción."
+      },
+      "cards": {
+        "calls": "Número de llamadas",
+        "messages": "Número de mensajes",
+        "appointments": "Citas reservadas",
+        "agentResponseTime": "Tiempo de respuesta del agente"
+      },
+      "controls": {
+        "dateRange": "Rango de fechas",
+        "granularity": "Intervalo de agrupación",
+        "more": "Más opciones",
+        "presetRange": "Período predefinido",
+        "granularities": {
+          "hourly": "Por hora",
+          "daily": "Diario",
+          "weekly": "Semanal",
+          "monthly": "Mensual",
+          "yearly": "Anual"
+        },
+        "presets": {
+          "today": "Hoy",
+          "yesterday": "Ayer",
+          "thisWeek": "Esta semana",
+          "thisMonth": "Este mes",
+          "lastMonth": "Mes pasado",
+          "last30": "Últimos 30 días",
+          "last3Months": "Últimos 3 meses",
+          "thisYear": "Este año",
+          "lastYear": "Año pasado",
+          "allTime": "Desde el inicio",
+          "custom": "Rango personalizado"
+        }
+      },
+      "metrics": {
+        "flat": "Sin cambios respecto al período anterior",
+        "percentUp": "+{{value}} % respecto al período anterior",
+        "percentDown": "-{{value}} % respecto al período anterior",
+        "durationUp": "+{{value}} respecto al período anterior",
+        "durationDown": "-{{value}} respecto al período anterior"
+      },
+      "outcomes": {
+        "title": "Resultados de llamadas",
+        "description": "Cómo terminaron las llamadas de esta semana.",
+        "labels": {
+          "completed": "Completadas",
+          "transferred": "Transferidas",
+          "live": "En vivo",
+          "missed": "Perdidas"
+        }
+      },
+      "channels": {
+        "title": "Canales",
+        "description": "Cómo llegaron las conversaciones a su recepcionista esta semana.",
+        "labels": {
+          "voice": "Voz",
+          "sms": "SMS",
+          "other": "Otro"
+        }
+      }
+    },
+    "metrics": {
+      "loading": "Cargando la comparación mensual...",
+      "calls": {
+        "title": "Llamadas"
+      },
+      "messages": {
+        "title": "Mensajes"
+      },
+      "appointments": {
+        "title": "Citas"
+      },
+      "averageDuration": {
+        "title": "Duración media"
+      },
+      "contacts": {
+        "title": "Contactos"
+      }
+    },
+    "chart": {
+      "title": "Llamadas por mes",
+      "description": "Volumen mensual de llamadas según sus registros de llamadas de Convex."
+    },
+    "recentCalls": {
+      "title": "Llamadas recientes",
+      "description": "{{count}} llamadas recientes en la actividad más reciente.",
+      "unknownCaller": "Cliente desconocido",
+      "durationValue": "{{value}} s"
+    },
+    "actionRequired": {
+      "title": "Acción requerida",
+      "description": "Seguimientos de clientes que aún necesitan a una persona.",
+      "titleWithContact": "{{message}} para {{name}}",
+      "urgent": "Urgente",
+      "emptyTitle": "No hay acciones pendientes",
+      "emptyDescription": "Aquí aparecerá lo que requiera una acción manual.",
+      "fields": {
+        "callback": "Devolver llamada",
+        "callbackWindow": "Horario preferido para devolver la llamada"
+      },
+      "kinds": {
+        "voice_message": "Devolver llamada",
+        "human_handoff": "Traspaso",
+        "other": "Abierto"
+      }
+    },
+    "upcoming": {
+      "title": "Próximas",
+      "description": "Las próximas citas del calendario.",
+      "unknownContact": "Contacto desconocido",
+      "unknownService": "Servicio desconocido",
+      "emptyTitle": "No hay citas próximas",
+      "emptyDescription": "Las nuevas reservas aparecerán aquí en cuanto se creen.",
+      "status": {
+        "booked": "Reservada",
+        "confirmed": "Confirmada"
+      },
+      "source": {
+        "voice": "Voz",
+        "sms": "SMS",
+        "dashboard": "Panel"
+      },
+      "withStaff": "con {{staff}}"
+    }
+  },
+  "setup": {
+    "title": "Cree su primer negocio",
+    "description": "Esto crea la cuenta, el perfil de la recepcionista y la primera instantánea que usa la voz.",
+    "businessName": "Nombre del negocio",
+    "slug": "Slug",
+    "timezone": "Zona horaria",
+    "businessType": "Tipo de negocio",
+    "placeholders": {
+      "businessName": "Clínica Familiar Maple",
+      "slug": "clinica-familiar-maple"
+    },
+    "businessTypes": {
+      "clinic": "Clínica",
+      "repair_shop": "Taller de reparación",
+      "salon": "Salón",
+      "service_company": "Empresa de servicios",
+      "other": "Otro"
+    },
+    "selectBusinessType": "Elija el tipo de negocio",
+    "create": "Crear negocio",
+    "creating": "Creando...",
+    "created": "Negocio creado. Se está actualizando la instantánea de la recepcionista.",
+    "failed": "No se pudo crear el negocio."
+  },
+  "cards": {
+    "calls": {
+      "title": "Llamadas atendidas",
+      "footer": "La actividad entrante más reciente está en la bandeja de entrada."
+    },
+    "services": {
+      "title": "Servicios configurados",
+      "footer": "Los usan tanto la recepcionista como el sistema de reservas."
+    },
+    "hours": {
+      "title": "Días de apertura definidos",
+      "footer": "El horario configurado tiene prioridad sobre los documentos."
+    },
+    "knowledge": {
+      "title": "Elementos de conocimiento",
+      "footer": "El conocimiento y los documentos mejoran las respuestas de la vista previa y por SMS."
+    },
+    "snapshot": "Instantánea {{version}}"
+  },
+  "quickActions": {
+    "title": "Acciones rápidas",
+    "description": "Mantenga {{businessName}} listo para llamadas, SMS y reservas.",
+    "configureProfile": "Configurar el perfil de la recepcionista",
+    "addKnowledge": "Añadir conocimiento y documentos",
+    "reviewInbox": "Revisar la bandeja de llamadas",
+    "readiness": "Estado de la configuración",
+    "servicesConfigured": "{{count}} servicios configurados",
+    "daysConfigured": "{{count}} días con horario de atención",
+    "knowledgeItems": "{{count}} elementos de conocimiento indexados",
+    "phoneNumbers": "{{count}} números de teléfono asignados",
+    "currentGreeting": "Saludo actual"
+  },
+  "nextSteps": {
+    "title": "Próximos pasos",
+    "description": "Ajuste el comportamiento de la recepcionista antes de recibir llamadas reales.",
+    "hours": "Defina el horario y los servicios para que las reservas propongan horarios reales.",
+    "transfer": "Añada reglas de transferencia y un número de respaldo antes de transferir llamadas urgentes.",
+    "snapshot": "Actualice la instantánea después de cambios importantes en sus políticas para que la voz los aplique rápido."
+  },
+  "activation": {
+    "hearIt": {
+      "title": "Escuche cómo responde su agente",
+      "description": "Llámelo desde su navegador y escuche cómo saluda a un cliente.",
+      "descriptionWithPages_one": "Ha leído {{count}} página de {{host}}. Llámelo y pregúntele algo que solo su negocio sabría.",
+      "descriptionWithPages_many": "Ha leído {{count}} páginas de {{host}}. Llámelo y pregúntele algo que solo su negocio sabría.",
+      "descriptionWithPages_other": "Ha leído {{count}} páginas de {{host}}. Llámelo y pregúntele algo que solo su negocio sabría.",
+      "cta": "Iniciar una llamada"
+    },
+    "claimNumber": {
+      "title": "Obtenga su número de teléfono",
+      "description": "Su plan incluye un número propio y aún no ha elegido uno. Elíjalo y el agente empezará a responder.",
+      "cta": "Elegir un número"
+    },
+    "upgrade": {
+      "title": "Dé un número de teléfono a su agente",
+      "description": "Ya ha comprobado que funciona. Con un número propio puede atender a sus clientes reales, de día y de noche.",
+      "cta": "Elegir un plan"
+    }
+  }
+}
