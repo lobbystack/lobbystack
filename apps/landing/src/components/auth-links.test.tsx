@@ -50,9 +50,12 @@ describe.each(["es", "sr"] as const)("%s auth links", (locale) => {
       expect(hrefs).toContain(`https://app.lobbystack.com/${locale}/signup`)
       expect(hrefs).toContain(`https://app.lobbystack.com/${locale}/login`)
       for (const { href, destination } of links) {
-        expect(href).toMatch(
-          new RegExp(`^https://app\\.lobbystack\\.com/${locale}/(signup|login)`)
-        )
+        // Plain prefixes rather than a regex: the landing link check reads the escaped
+        // regex as a broken link to a host named "app".
+        expect(
+          [`https://app.lobbystack.com/${locale}/signup`, `https://app.lobbystack.com/${locale}/login`].some((prefix) => href.startsWith(prefix)),
+          href
+        ).toBe(true)
         if (destination) expect(destination).toBe(href)
       }
     }
