@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { isPaidSubscription, type BillingInterval, type BillingPlanSlug, type HostedCheckoutPlanIntervals } from "@lobbystack/shared";
 import { requestJson } from "@/lib/request-json";
 import { selectActiveBusiness } from "@/lib/active-business";
+import { setUpgradeInProgress } from "@/lib/upgrade-in-progress";
 import type { WorkspaceViewModel } from "@/lib/page-view-models";
 import { UpgradePlanDialog, type HostedUpgradePlan } from "./upgrade-plan-dialog";
 import { UpgradePlanDialogProvider } from "./upgrade-plan-dialog-context";
@@ -25,6 +26,7 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [interval, setInterval] = useState<BillingInterval>("annual");
   const [checkout, setCheckout] = useState<Checkout | null>(null);
+  const [leaving, setLeaving] = useState(false);
   const workspaces = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<WorkspaceResponse>("/api/businesses") });
   const businessId = selectActiveBusiness(workspaces.data?.businesses)?.businessId;
   const billing = useQuery({ queryKey: ["billing", businessId], enabled: Boolean(businessId && open), queryFn: () => requestJson<Billing>(`/api/billing?businessId=${encodeURIComponent(businessId!)}`) });
@@ -43,7 +45,13 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
   useEffect(() => { setOpen(false); setCheckout(null); }, [businessId]);
   useEffect(() => {
     if (checkout?.businessId !== businessId) return;
-    if (result.data?.status === "ready" && result.data.checkoutUrl) window.location.assign(result.data.checkoutUrl);
+    if (result.data?.status === "ready" && result.data.checkoutUrl) {
+      // Heading to checkout is leaving on purpose. Say so before the page
+      // starts to unload, not after the next render.
+      setUpgradeInProgress(true);
+      setLeaving(true);
+      window.location.assign(result.data.checkoutUrl);
+    }
     if (result.data?.status === "error" || result.isError) { toast.error(t("billing.toast.checkoutFailed")); setCheckout(null); }
   }, [businessId, checkout?.businessId, result.data, result.isError, t]);
   const rawPlan = billing.data?.account?.plan;
@@ -51,6 +59,11 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
   // card as current leaves them unable to start the tier they just lost.
   const plan: BillingPlanSlug = rawPlan === "self_hosted_standard" || rawPlan === "self_host" ? "self_host" : isPaidSubscription(rawPlan, billing.data?.account?.subscriptionState) ? rawPlan as BillingPlanSlug : "free_cloud";
   const pending = mutation.isPending && mutation.variables.businessId === businessId || checkout?.businessId === businessId;
+  const upgrading = open || pending || leaving;
+  useEffect(() => {
+    setUpgradeInProgress(upgrading);
+    return () => setUpgradeInProgress(false);
+  }, [upgrading]);
   return <UpgradePlanDialogProvider onOpen={() => setOpen(true)}>
     {children}
     {businessId && billing.data ? <UpgradePlanDialog

@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DashboardAbandonIntent } from "./dashboard-abandon-intent";
+import { LiveUpgradePlanProvider } from "./live-upgrade-plan-provider";
+import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
 import { announceTestCallEnded, setTestCallActive } from "@/lib/test-call-launcher";
 import { ABANDON_INTENT_CALL_GRACE_MS, ABANDON_INTENT_IDLE_MS, ABANDON_INTENT_MIN_DWELL_MS } from "@/lib/abandon-intent";
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
+import { setUpgradeInProgress } from "@/lib/upgrade-in-progress";
 
 const survey = vi.hoisted(() => ({ shown: vi.fn(), dismissed: vi.fn(), response: vi.fn(() => true) }));
 vi.mock("@/lib/abandon-intent-survey", () => ({
@@ -14,6 +18,7 @@ vi.mock("@/lib/abandon-intent-survey", () => ({
   captureSurveyResponse: survey.response,
 }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
@@ -169,11 +174,93 @@ describe("abandon intent reporting", () => {
     setTestCallActive(false);
   });
 
+  it("stays out of the way while someone is upgrading", async () => {
+    await setup();
+    setUpgradeInProgress(true);
+    await vi.advanceTimersByTimeAsync(ABANDON_INTENT_IDLE_MS);
+    leaveThroughTop();
+    expect(survey.shown).not.toHaveBeenCalled();
+    expect(telemetryRef.current!.events).toHaveLength(0);
+    setUpgradeInProgress(false);
+  });
+
   it("stays quiet on a touch device", async () => {
     vi.stubGlobal("matchMedia", (query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {} }));
     await setup();
     await vi.advanceTimersByTimeAsync(ABANDON_INTENT_IDLE_MS);
     leaveThroughTop();
     expect(telemetryRef.current!.events).toHaveLength(0);
+  });
+});
+
+describe("abandon intent during an upgrade", () => {
+  const clients: QueryClient[] = [];
+  afterEach(() => { clients.forEach(client => client.clear()); clients.length = 0; });
+
+  function OpenPlans() {
+    const open = useOpenUpgradePlanDialog();
+    return <button onClick={open} type="button">Open plans</button>;
+  }
+
+  async function renderDashboard(checkout: (url: string, init?: RequestInit) => Promise<Response>) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    client.setQueryData(["billing", "business"], { account: { plan: "free_cloud" }, availableCheckoutPlans: ["starter", "pro"], availableCheckoutIntervals: { starter: ["annual"], pro: ["annual"] } });
+    vi.stubGlobal("fetch", vi.fn(checkout));
+    render(
+      <QueryClientProvider client={client}>
+        <LiveUpgradePlanProvider>
+          <OpenPlans />
+          <DashboardAbandonIntent businessId="business" />
+        </LiveUpgradePlanProvider>
+      </QueryClientProvider>,
+    );
+    await vi.advanceTimersByTimeAsync(ABANDON_INTENT_MIN_DWELL_MS);
+    fireEvent.click(screen.getByRole("button", { name: "Open plans" }));
+    await screen.findByRole("button", { name: "billing.upgradeDialog.actions.pro" });
+  }
+
+  function expectNoSurvey() {
+    expect(survey.shown).not.toHaveBeenCalled();
+    expect(screen.queryByText("abandonIntent.title")).toBeNull();
+    expect(telemetryRef.current!.events.filter(event => event.name === "web.activation.abandon_intent")).toHaveLength(0);
+  }
+
+  it("stays quiet while the plan picker is open, through checkout, and on the way out to it", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    let status = "pending";
+    await renderDashboard(async (url, init) => init?.method === "POST"
+      ? Response.json({ requestId: "request" })
+      : Response.json({ status, checkoutUrl: status === "ready" ? "https://checkout.example/session" : null, error: null }));
+
+    leaveThroughTop();
+    expectNoSurvey();
+
+    fireEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringContaining("requestId=request"), expect.anything()));
+    leaveThroughTop();
+    expectNoSurvey();
+
+    status = "ready";
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_500); });
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.example/session"));
+    leaveThroughTop();
+    expectNoSurvey();
+  });
+
+  it("asks again once a failed checkout is behind them and the picker is closed", async () => {
+    await renderDashboard(async () => Response.json({ error: "Checkout unavailable" }, { status: 503 }));
+    fireEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" }).hasAttribute("disabled")).toBe(false));
+    leaveThroughTop();
+    expectNoSurvey();
+
+    fireEvent.click(screen.getByRole("button", { name: "accessibility.close" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "billing.upgradeDialog.actions.pro" })).toBeNull());
+    leaveThroughTop();
+    expect(survey.shown).toHaveBeenCalledOnce();
+    telemetryRef.current!.expectEvent("web.activation.abandon_intent", { businessId: "business", trigger: "exit_intent" });
   });
 });

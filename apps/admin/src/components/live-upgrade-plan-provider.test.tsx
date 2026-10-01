@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LiveUpgradePlanProvider } from "./live-upgrade-plan-provider";
 import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
+import { isUpgradeInProgress } from "@/lib/upgrade-in-progress";
 
 const alerts = vi.hoisted(() => ({ error: vi.fn() }));
 vi.mock("sonner", () => ({ toast: alerts }));
@@ -91,5 +92,49 @@ describe("checkout workspace isolation", () => {
     expect(screen.getByRole("dialog")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(alerts.error).not.toHaveBeenCalled();
+  });
+});
+
+describe("telling the dashboard an upgrade is under way", () => {
+  async function renderPlans(fetchMock: (url: string, init?: RequestInit) => Promise<Response>) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    client.setQueryData(["billing", "business"], { account: { plan: "free_cloud" }, availableCheckoutPlans: ["starter", "pro"], availableCheckoutIntervals: { starter: ["annual"], pro: ["annual"] } });
+    vi.stubGlobal("fetch", vi.fn(fetchMock));
+    const view = render(<QueryClientProvider client={client}><LiveUpgradePlanProvider><OpenButton /></LiveUpgradePlanProvider></QueryClientProvider>);
+    expect(isUpgradeInProgress()).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "Open plans" }));
+    return view;
+  }
+
+  it("holds from opening the picker until the redirect, even if the picker closes mid-checkout", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    let status = "pending";
+    await renderPlans(async (_url, init) => init?.method === "POST"
+      ? Response.json({ requestId: "request" })
+      : Response.json({ status, checkoutUrl: status === "ready" ? "https://checkout.example/session" : null, error: null }));
+    expect(isUpgradeInProgress()).toBe(true);
+    await userEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" }));
+    await userEvent.click(screen.getByRole("button", { name: "accessibility.close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(isUpgradeInProgress()).toBe(true);
+    status = "ready";
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.example/session"), { timeout: 3_000 });
+    expect(isUpgradeInProgress()).toBe(true);
+  });
+
+  it("lets go once a failed checkout's picker is closed, and on unmount", async () => {
+    const view = await renderPlans(async () => Response.json({ error: "Checkout unavailable" }, { status: 503 }));
+    await userEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" }));
+    await waitFor(() => expect(alerts.error).toHaveBeenCalledWith("billing.toast.checkoutFailed"));
+    expect(isUpgradeInProgress()).toBe(true);
+    await userEvent.click(screen.getByRole("button", { name: "accessibility.close" }));
+    await waitFor(() => expect(isUpgradeInProgress()).toBe(false));
+    await userEvent.click(screen.getByRole("button", { name: "Open plans" }));
+    expect(isUpgradeInProgress()).toBe(true);
+    view.unmount();
+    expect(isUpgradeInProgress()).toBe(false);
   });
 });

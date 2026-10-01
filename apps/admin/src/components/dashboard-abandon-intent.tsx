@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { useTelemetry } from "@/components/product-analytics";
 import { isTestCallActive, subscribeTestCallEnded } from "@/lib/test-call-launcher";
+import { isUpgradeInProgress } from "@/lib/upgrade-in-progress";
 import {
   captureSurveyDismissed,
   captureSurveyResponse,
@@ -73,6 +74,8 @@ export function DashboardAbandonIntent({ businessId }: { businessId: string | un
       // belongs to the upgrade prompt.
       if (isTestCallActive()) return false;
       if (callEndedAtRef.current !== null && now - callEndedAtRef.current < ABANDON_INTENT_CALL_GRACE_MS) return false;
+      // Choosing a plan or heading to checkout is the opposite of leaving.
+      if (isUpgradeInProgress()) return false;
       firedRef.current = true;
       markAbandonIntentPrompted(businessId, now, storage);
       telemetry.track("web.activation.abandon_intent", { businessId, trigger });
