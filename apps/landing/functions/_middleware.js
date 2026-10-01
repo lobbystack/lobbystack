@@ -9,6 +9,8 @@ const SUPPORTED_LOCALES = ["en", "fr", "es", "sr"]
 const PREFIXED_LOCALES = SUPPORTED_LOCALES.filter(
   (locale) => locale !== DEFAULT_LOCALE
 )
+// Set by the language switcher; see src/lib/locale-preference.ts.
+const LOCALE_COOKIE = "lobbystack.locale"
 const TRANSLATED_PATHS = new Set([
   "/",
   "/features/",
@@ -117,6 +119,19 @@ const preferredLocale = (request) => {
   return firstSupported?.locale || DEFAULT_LOCALE
 }
 
+// The locale the visitor picked in the language switcher, or null.
+const chosenLocale = (request) => {
+  const cookies = request.headers.get("Cookie") || ""
+  for (const cookie of cookies.split(";")) {
+    const separator = cookie.indexOf("=")
+    if (separator === -1) continue
+    if (cookie.slice(0, separator).trim() !== LOCALE_COOKIE) continue
+    const value = cookie.slice(separator + 1).trim().toLowerCase()
+    if (SUPPORTED_LOCALES.includes(value)) return value
+  }
+  return null
+}
+
 const hasLocalePrefix = (pathname) =>
   PREFIXED_LOCALES.some(
     (locale) => pathname === `/${locale}` || pathname.startsWith(`/${locale}/`)
@@ -137,7 +152,8 @@ const localeRedirectTarget = (request, url) => {
   const normalizedPath = normalizePath(url.pathname)
   if (!TRANSLATED_PATHS.has(normalizedPath)) return null
 
-  const locale = preferredLocale(request)
+  // An explicit choice wins over the browser's languages.
+  const locale = chosenLocale(request) || preferredLocale(request)
   return locale === DEFAULT_LOCALE ? null : locale
 }
 
@@ -174,7 +190,7 @@ const redirectToLocale = (url, locale) => {
   const headers = new Headers({
     "Cache-Control": "no-store",
     Location: redirectUrl.toString(),
-    Vary: "Accept-Language",
+    Vary: "Accept-Language, Cookie",
   })
 
   return new Response(null, { status: 302, headers })

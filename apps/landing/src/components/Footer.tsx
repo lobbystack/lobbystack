@@ -236,6 +236,7 @@ export function Footer({ locale = "en", path }: FooterProps) {
                 href={language.href}
                 hrefLang={language.hrefLang}
                 lang={language.hrefLang}
+                data-locale-choice={language.locale}
                 aria-current={language.locale === locale ? "true" : undefined}
                 data-ph-capture-attribute-section="footer_language"
                 data-ph-capture-attribute-action="switch_language"

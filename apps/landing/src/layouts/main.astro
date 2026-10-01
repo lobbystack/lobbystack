@@ -171,6 +171,10 @@ Astro.response.headers.set("Content-Signal", CONTENT_SIGNAL)
     <CookieConsentBanner locale={locale} client:load />
     <script is:inline src="/webmcp.js" defer></script>
     <script>
+      import { rememberLocaleChoice } from "@/lib/locale-preference"
+
+      // A language picked in the switcher overrides Accept-Language from then on.
+      document.addEventListener("click", (event) => rememberLocaleChoice(event.target))
       const main = document.querySelector<HTMLElement>("#main-content")
       if (main) main.tabIndex = -1
       // Menus built on <details> stay open until toggled, so close them when
