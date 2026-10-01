@@ -161,6 +161,18 @@ describe("DashboardTestCallWidget voice call endings", () => {
     telemetryRef.current!.expectEvent("web.voice.test_call_error", { businessId: "business-1", connectionState: "disconnected" });
   });
 
+  it("marks the call connected when it recovers from a disconnect before ever connecting", async () => {
+    render(<DashboardTestCallWidget businessId={"business-1" as never} businessSlug="acme-dental" />);
+    fireEvent.click(screen.getByRole("button", { name: "testCall.trigger" }));
+    await waitFor(() => expect(FakePeerConnection.last?.setRemoteDescription).toHaveBeenCalled());
+    const connection = FakePeerConnection.last!;
+    act(() => connection.setState("disconnected"));
+    act(() => connection.setState("connected"));
+
+    await waitFor(() => expect(statusText()).toBe("testCall.status.connected"));
+    expect(eventNames().filter((name) => name === "web.voice.test_call_connected")).toHaveLength(1);
+  });
+
   it("keeps the call going when a disconnect recovers", async () => {
     const connection = await startConnectedCall();
     vi.useFakeTimers();

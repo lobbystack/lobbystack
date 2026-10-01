@@ -158,6 +158,21 @@ describe("landing hero voice demo call endings", () => {
     expect(events.map(([name]) => name)).not.toContain("landing.web_voice_call_ended")
   })
 
+  it("goes live when it recovers from a disconnect before ever connecting", async () => {
+    render(<LobbyStackHeroVoiceDemo locale="en" />)
+    fireEvent.click(screen.getByRole("button", { name: "Start call" }))
+    await waitFor(() =>
+      expect(FakePeerConnection.last?.setRemoteDescription).toHaveBeenCalled()
+    )
+    const connection = FakePeerConnection.last!
+    act(() => connection.setState("disconnected"))
+    act(() => connection.setState("connected"))
+
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe("Live with the AI receptionist")
+    )
+  })
+
   it("keeps the call going when a disconnect recovers, and drops it when it doesn't", async () => {
     const connection = await startConnectedCall()
     vi.useFakeTimers()

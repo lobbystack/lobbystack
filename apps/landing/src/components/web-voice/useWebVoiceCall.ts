@@ -401,6 +401,9 @@ export function useWebVoiceCall({
       // "disconnected" often recovers on its own after a network blip, so it
       // only starts a grace period. "failed", or no recovery in time, is a
       // dropped call. A session.closed that arrives meanwhile ends it normally.
+      // A blip before the first "connected" still has to mark the call live, so only a
+      // recovery after that stays quiet.
+      let hasConnected = false
       peerConnection.onconnectionstatechange = () => {
         if (!isCurrentCall()) return
         const state = peerConnection.connectionState
@@ -408,8 +411,9 @@ export function useWebVoiceCall({
           if (disconnectTimerRef.current !== undefined) {
             window.clearTimeout(disconnectTimerRef.current)
             disconnectTimerRef.current = undefined
-            return
           }
+          if (hasConnected) return
+          hasConnected = true
           setStatus("connected")
           emit("landing.web_voice_call_connected")
           return
