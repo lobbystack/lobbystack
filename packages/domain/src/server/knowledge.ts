@@ -5,7 +5,7 @@ import { and, asc, desc, eq, ilike, sql } from "drizzle-orm";
 import { agentRules, businessContextSnapshots, businessHours, businesses, closures, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, receptionistProfiles, services, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeTransferMode, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { buildBusinessContextSnapshot } from "../snapshot";
-import { fuseKnowledgeRanks, knowledgeLexicalQueries, knowledgeQueryTerms, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
+import { fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
 import { countKnowledgeTokens } from "@lobbystack/ai";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -464,13 +464,13 @@ export async function searchKnowledgeEvidence(
   const current = candidates.length ? await execute(sql`${select} WHERE ${filters} AND (${sql.join(candidates.map(p => sql`(c.document_id = ${p.documentId} AND d.revision = ${p.sourceRevision} AND c.sequence BETWEEN ${p.sequence - 1} AND ${p.sequence + 1})`), sql` OR `)})`).catch(() => { validationFailed = true; return []; }) : [];
   const valid = new Map(current.map(p => [p.chunkId, p]));
   // Reserve the ranked primary passages first. Neighbors must not crowd out distinct candidates.
-  const matches = withinKnowledgeBudget(candidates.filter(p => valid.has(p.chunkId)), 3000, p => JSON.stringify(p));
+  const matches = withinKnowledgeBudget(candidates.filter(p => valid.has(p.chunkId)), KNOWLEDGE_SEARCH_TOKEN_BUDGET, p => JSON.stringify(p));
   for (let index = 0; index < matches.length; index += 1) {
     const p = matches[index]!;
     const neighbors = current.filter(row => row.documentId === p.documentId && row.sourceRevision === p.sourceRevision && Math.abs(row.sequence - p.sequence) <= 1).sort((a, b) => a.sequence - b.sequence);
     const expanded = { ...p, supportingChunkIds: neighbors.map(row => row.chunkId), content: neighbors.map(row => row.content).join("\n\n") };
     const proposed = matches.map((match, candidateIndex) => candidateIndex === index ? expanded : match);
-    if (proposed.reduce((sum, match) => sum + countKnowledgeTokens(JSON.stringify(match) + "\n"), 0) <= 3000) matches[index] = expanded;
+    if (proposed.reduce((sum, match) => sum + countKnowledgeTokens(JSON.stringify(match) + "\n"), 0) <= KNOWLEDGE_SEARCH_TOKEN_BUDGET) matches[index] = expanded;
   }
   const failed = validationFailed || (lexicalResult.status === "rejected" && semanticResult.status === "rejected");
   const outcome = matches.length ? "found" as const : failed ? "unavailable" as const : "empty" as const;

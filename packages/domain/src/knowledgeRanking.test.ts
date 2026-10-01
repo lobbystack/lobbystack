@@ -21,9 +21,21 @@ describe("knowledge ranking", () => {
   it("preserves French terms and exact identifier components", () => {
     expect(knowledgeQueryTerms("Quel est le numéro du cours de stratégie MNGT 10407 ?")).toEqual(["stratégie", "mngt", "10407"]);
   });
+  it("drops Spanish, Serbian and elided French function words", () => {
+    expect(knowledgeQueryTerms("¿Cuál es el precio de la limpieza dental?")).toEqual(["precio", "limpieza", "dental"]);
+    expect(knowledgeQueryTerms("Koja je cena čišćenja zuba?")).toEqual(["cena", "čišćenja", "zuba"]);
+    expect(knowledgeQueryTerms("Qu'est-ce que l'assurance couvre ?")).toEqual(["assurance", "couvre"]);
+    expect(knowledgeQueryTerms("What are the")).toEqual([]);
+  });
   it("budgets whole multilingual passages without cutting identifiers", () => {
     const budget = countKnowledgeTokens("éé\n");
     expect(withinKnowledgeBudget(["éé", "MNGT 10407"], budget, value => value)).toEqual(["éé"]);
     expect(withinKnowledgeBudget(["longer than budget ".repeat(100), "10407"], 5, value => value)).toEqual(["10407"]);
+  });
+  it("keeps capitalized identifiers that collide with another language's function words", () => {
+    expect(knowledgeQueryTerms("What is your PO number?")).toEqual(["po"]);
+    expect(knowledgeQueryTerms("Do you deliver to LA?")).toEqual(["deliver", "la"]);
+    expect(knowledgeQueryTerms("where is la clinique")).toEqual(["clinique"]);
+    expect(knowledgeQueryTerms("WHAT IS YOUR PO NUMBER")).toEqual([]);
   });
 });

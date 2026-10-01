@@ -2,8 +2,11 @@ import {
   bookForCaller,
   cancelForCaller,
   checkOpening,
+  countKnowledgeTokens,
   findOpenings,
   issueAppointmentChangeOtp,
+  KNOWLEDGE_SEARCH_TOKEN_BUDGET,
+  knowledgeQueryTerms,
   lookupCallerAppointments,
   rescheduleForCaller,
   searchKnowledgeEvidence,
@@ -46,20 +49,43 @@ function formatMinutes(minutes: number): string {
   return DateTime.fromObject({ hour: Math.floor(minutes / 60), minute: minutes % 60 }).toFormat("h:mm a");
 }
 
-function comparable(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
+// A plural always counts ("fee" finds "fees"). Other endings only count for terms of four
+// or more letters and at most three extra letters ("park" finds "parking"), so "car"
+// doesn't find "care".
+function wordMatchesTerm(word: string, term: string): boolean {
+  if (word === term || word === `${term}s` || word === `${term}es`) return true;
+  return term.length >= 4 && word.startsWith(term) && word.length - term.length <= 3;
 }
 
-// Curated FAQs from the snapshot back up knowledge search when it finds nothing
-// or is unavailable. The document digest is an inventory, not evidence.
+// Curated FAQs from the snapshot fill the slots knowledge search leaves, or stand in
+// when it is unavailable. The document digest is an inventory, not evidence.
+// Pasted snippets are long, so one shared word proves little. A snippet must contain a
+// meaningful query term (see wordMatchesTerm), and two distinct terms once the query has
+// three or more. More terms matched ranks first, then higher priority.
 function snapshotKnowledgeMatches(snapshot: BusinessContextSnapshot, query: string) {
-  const wanted = comparable(query);
-  const tokens = wanted.split(" ").filter((token) => token.length >= 3);
+  const terms = knowledgeQueryTerms(query);
+  if (!terms.length) return [];
+  const needed = terms.length >= 3 ? 2 : 1;
   return (snapshot.knowledgeSnippets ?? []).flatMap((snippet) => {
-    const text = comparable(`${snippet.title} ${snippet.content}`);
-    if (!wanted || !(text.includes(wanted) || tokens.some((token) => text.includes(token)))) return [];
-    return [{ title: snippet.title, text: snippet.content.trim() }];
+    const words = `${snippet.title} ${snippet.content}`.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+    const matched = terms.filter((term) => words.some((word) => wordMatchesTerm(word, term))).length;
+    return matched >= needed ? [{ matched, priority: snippet.priority, title: snippet.title, text: snippet.content.trim() }] : [];
+  }).sort((a, b) => b.matched - a.matched || b.priority - a.priority).map(({ title, text }) => ({ title, text }));
+}
+
+type KnowledgeMatch = { title: string; text: string };
+
+// Evidence already fits the token budget, so it stays whole. Snippets get what it leaves,
+// in rank order, so a long pasted snippet can't push a reply past the budget.
+function withSnippetsInBudget(evidence: KnowledgeMatch[], snippets: KnowledgeMatch[]): KnowledgeMatch[] {
+  let used = evidence.reduce((sum, match) => sum + countKnowledgeTokens(`${match.title}\n${match.text}\n`), 0);
+  const fitting = snippets.filter((snippet) => {
+    const size = countKnowledgeTokens(`${snippet.title}\n${snippet.text}\n`);
+    if (used + size > KNOWLEDGE_SEARCH_TOKEN_BUDGET) return false;
+    used += size;
+    return true;
   });
+  return [...evidence, ...fitting].slice(0, 6);
 }
 
 const phone = z.string().describe("Phone number in E.164 format, for example +14165550134.");
@@ -111,10 +137,12 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         const fallback = snapshotKnowledgeMatches(snapshot, query);
         try {
           const evidence = await searchKnowledgeEvidence(domain, { businessId, query, limit: 6, ...(context.callId ? { callId: context.callId } : {}) });
-          const matches = [...fallback, ...evidence.matches.map((match) => ({ title: match.title, text: match.content }))].slice(0, 6);
+          // Evidence first. Snippets only fill the slots and tokens it leaves.
+          const matches = withSnippetsInBudget(evidence.matches.map((match) => ({ title: match.title, text: match.content })), fallback);
           return { outcome: matches.length ? "found" : evidence.outcome, matches };
         } catch {
-          return { outcome: fallback.length ? "found" : "unavailable", matches: fallback };
+          const matches = withSnippetsInBudget([], fallback);
+          return { outcome: matches.length ? "found" : "unavailable", matches };
         }
       },
     }),
