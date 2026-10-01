@@ -1,5 +1,5 @@
 import { buttonVariants } from "@/components/ui/button"
-import { APP_SIGNUP_URL } from "@/lib/app-links"
+import { appSignupUrl } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
 import { ArrowRight } from "lucide-react"
 
@@ -19,7 +19,7 @@ export function SolutionCta() {
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
           <a
-            href={APP_SIGNUP_URL}
+            href={appSignupUrl("en")}
             className={cn(
               buttonVariants({ size: "lg" }),
               "h-11 rounded-full px-7 text-sm"

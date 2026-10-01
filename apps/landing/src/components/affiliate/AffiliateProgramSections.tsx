@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { localizeHref, type Locale } from "@/i18n"
-import { APP_AFFILIATE_SIGNUP_URL } from "@/lib/app-links"
+import { appAffiliateSignupUrl } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
 import {
   ArrowRight,
@@ -533,7 +533,7 @@ export function AffiliateProgramHero({
 
           <div className="mt-8">
             <a
-              href={APP_AFFILIATE_SIGNUP_URL}
+              href={appAffiliateSignupUrl(locale)}
               className={cn(
                 buttonVariants({ size: "lg" }),
                 "h-11 rounded-full px-7 text-sm"

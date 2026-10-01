@@ -78,4 +78,4 @@ AGPL smo izabrali zbog recipročnog modela dok smo gradili prvu verziju. MIT smo
 
 [Klonirajte LobbyStack sa GitHuba](https://github.com/lobbystack/lobbystack), pročitajte [pregled samostalnog hostovanja](https://docs.lobbystack.com/self-hosting/overview) i koristite [vodič za Docker Compose](https://docs.lobbystack.com/self-hosting/docker-compose) za prvu primenu. Prateći tekst objašnjava [zašto LobbyStack napušta Convex](/sr/blog/why-lobbystack-is-moving-away-from-convex/).
 
-Ako radije želite da počnete sa upravljanim proizvodom, [napravite LobbyStack Cloud nalog](https://app.lobbystack.com/signup) i testirajte poziv u pregledaču pre nego što ga ponudite klijentu.
+Ako radije želite da počnete sa upravljanim proizvodom, [napravite LobbyStack Cloud nalog](https://app.lobbystack.com/sr/signup) i testirajte poziv u pregledaču pre nego što ga ponudite klijentu.

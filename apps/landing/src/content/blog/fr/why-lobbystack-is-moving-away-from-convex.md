@@ -82,4 +82,4 @@ La licence soutient aussi cet objectif. Nous avons remplacé l'AGPL par la licen
 
 Vous pouvez [inspecter la plateforme sur GitHub](https://github.com/lobbystack/lobbystack), consulter la [présentation de l'auto-hébergement](https://docs.lobbystack.com/self-hosting/overview) ou suivre le [guide Docker Compose](https://docs.lobbystack.com/self-hosting/docker-compose).
 
-Si vous voulez le réceptionniste sans exploiter l'infrastructure, [créez un compte LobbyStack Cloud](https://app.lobbystack.com/signup) et testez-le avec votre entreprise.
+Si vous voulez le réceptionniste sans exploiter l'infrastructure, [créez un compte LobbyStack Cloud](https://app.lobbystack.com/fr/signup) et testez-le avec votre entreprise.

@@ -82,4 +82,4 @@ La licencia también apoya ese objetivo. Cambiamos LobbyStack de AGPL a MIT para
 
 Puede [revisar la plataforma en GitHub](https://github.com/lobbystack/lobbystack), seguir la [introducción al autoalojamiento](https://docs.lobbystack.com/self-hosting/overview) o usar la [guía de Docker Compose](https://docs.lobbystack.com/self-hosting/docker-compose) para ejecutarla usted mismo.
 
-Si quiere la recepcionista sin operar la infraestructura, [cree una cuenta de LobbyStack Cloud](https://app.lobbystack.com/signup) y pruébela con su negocio.
+Si quiere la recepcionista sin operar la infraestructura, [cree una cuenta de LobbyStack Cloud](https://app.lobbystack.com/es/signup) y pruébela con su negocio.

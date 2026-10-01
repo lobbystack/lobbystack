@@ -1,5 +1,5 @@
 import { Button, buttonVariants } from "@/components/ui/button"
-import { APP_SIGNUP_URL } from "@/lib/app-links"
+import { appSignupUrl } from "@/lib/app-links"
 import type { Locale } from "@/i18n"
 import { cn } from "@/lib/utils"
 import { getCloudPlanFactSheet } from "@lobbystack/shared/product-capabilities"
@@ -1627,7 +1627,7 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
 
               {/* Action */}
               <a
-                href={tier.ctaHref ?? APP_SIGNUP_URL}
+                href={tier.ctaHref ?? appSignupUrl(locale)}
                 className={cn(
                   buttonVariants({ variant: tier.ctaVariant }),
                   "mb-6 h-11 w-full min-w-0 rounded-full px-4 text-[0.8125rem] sm:text-sm"
@@ -1636,7 +1636,7 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
                 data-ph-capture-attribute-section="pricing_plan"
                 data-ph-capture-attribute-action="pricing_cta"
                 data-ph-capture-attribute-destination={
-                  tier.ctaHref ?? APP_SIGNUP_URL
+                  tier.ctaHref ?? appSignupUrl(locale)
                 }
                 data-ph-capture-attribute-plan={tier.name}
                 data-ph-capture-attribute-billing-interval={billingInterval}

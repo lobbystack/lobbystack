@@ -103,6 +103,6 @@ Ya estamos disponibles, y esto es solo el principio. El producto seguirá mejora
 
 **Responder la llamada. Entender al cliente. Dar el siguiente paso útil. Mantener el control del negocio.**
 
-Si las llamadas perdidas le están costando buenos trabajos, [pruebe LobbyStack gratis](https://app.lobbystack.com/signup) y deje que la próxima persona que llame hable con alguien, aunque su equipo esté ocupado.
+Si las llamadas perdidas le están costando buenos trabajos, [pruebe LobbyStack gratis](https://app.lobbystack.com/es/signup) y deje que la próxima persona que llame hable con alguien, aunque su equipo esté ocupado.
 
 Para ver el producto con más detalle, lea la [descripción general del stack de recepcionista con IA de código abierto](/es/blog/open-source-ai-receptionist-stack/). Si está evaluando proveedores, empiece por [cómo elegir una recepcionista con IA](/es/blog/how-to-choose-an-ai-receptionist/) o [cuánto puede ahorrar una recepcionista con IA](/es/blog/ai-receptionist-savings/).

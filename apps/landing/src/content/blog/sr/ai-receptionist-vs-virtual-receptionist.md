@@ -133,4 +133,4 @@ Kod je [javan na GitHubu](https://github.com/lobbystack/lobbystack), a timovi mo
 
 Izaberite AI kada je obim poziva predvidljiv, brzina je važna i posao prati jasna pravila. Izaberite ljudsku službu kada pozivi zavise od empatije, improvizacije ili spoljnog osoblja kojim neko drugi upravlja.
 
-Većina firmi treba da testira hibridni model. Počnite sa pozivima koji se prelivaju ili pozivima van radnog vremena, pregledajte rezultate, a zatim proširite pozive koje sistem dobro obrađuje. [Isprobajte LobbyStack besplatno](https://app.lobbystack.com/signup) ako želite da testirate taj model na sopstvenim scenarijima poziva.
+Većina firmi treba da testira hibridni model. Počnite sa pozivima koji se prelivaju ili pozivima van radnog vremena, pregledajte rezultate, a zatim proširite pozive koje sistem dobro obrađuje. [Isprobajte LobbyStack besplatno](https://app.lobbystack.com/sr/signup) ako želite da testirate taj model na sopstvenim scenarijima poziva.

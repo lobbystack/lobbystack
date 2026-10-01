@@ -5,7 +5,7 @@ import { Footer } from "@/components/Footer"
 import { FaqAccordion } from "@/components/FaqAccordion"
 import type { SeoLandingPage } from "@/lib/seo-landing-pages"
 import { buttonVariants } from "@/components/ui/button"
-import { APP_SIGNUP_URL } from "@/lib/app-links"
+import { appSignupUrl } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
 import { ArrowRight, Check } from "lucide-react"
 import { LightModeDashboardMockup } from "@/components/solutions/LightModeDashboardMockup"
@@ -51,6 +51,10 @@ interface Props {
 
 const { page } = Astro.props
 const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
+// localizeHref leaves absolute URLs alone, so the signup URL carries its own locale.
+const primaryCtaHref = page.ctaPrimaryHref
+  ? localizeHref(locale, page.ctaPrimaryHref)
+  : appSignupUrl(locale)
 const copy = getCopy(locale)
 const canonicalPath = localizePath(locale, page.path)
 
@@ -196,7 +200,7 @@ const reassurance = isSelfHosted
             h1={page.h1}
             intro={page.intro}
             primary={{
-              href: localizeHref(locale, page.ctaPrimaryHref ?? APP_SIGNUP_URL),
+              href: primaryCtaHref,
               label: page.ctaPrimaryLabel ?? copy.common.tryFree,
             }}
             secondary={{
@@ -249,10 +253,7 @@ const reassurance = isSelfHosted
                 )}
               >
                 <a
-                  href={localizeHref(
-                    locale,
-                    page.ctaPrimaryHref ?? APP_SIGNUP_URL
-                  )}
+                  href={primaryCtaHref}
                   class={cn(
                     buttonVariants({ size: "lg" }),
                     "h-11 w-full max-w-80 rounded-full px-16 text-sm font-medium md:w-auto md:max-w-none"
@@ -526,7 +527,7 @@ const reassurance = isSelfHosted
         </p>
         <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
           <a
-            href={localizeHref(locale, page.ctaPrimaryHref ?? APP_SIGNUP_URL)}
+            href={primaryCtaHref}
             class={cn(
               buttonVariants({ size: "lg" }),
               "h-11 w-full max-w-80 rounded-full px-16 text-sm font-medium md:w-auto md:max-w-none"

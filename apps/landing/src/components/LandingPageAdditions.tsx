@@ -1,4 +1,4 @@
-import { APP_SIGNUP_URL } from "@/lib/app-links"
+import { appSignupUrl } from "@/lib/app-links"
 import { getCopy, localizeHref, type Locale } from "@/i18n"
 import { ArrowRight, Check, History, Pencil } from "lucide-react"
 
@@ -745,11 +745,11 @@ function ConnectedReceptionistSection({ locale = "en" }: LocalizedProps) {
             <p className="section-intro">{sectionCopy.body}</p>
             <div className="mt-8">
               <a
-                href={APP_SIGNUP_URL}
+                href={appSignupUrl(locale)}
                 data-ph-signup-cta
                 data-ph-capture-attribute-section="how_it_works"
                 data-ph-capture-attribute-action="try_for_free"
-                data-ph-capture-attribute-destination={APP_SIGNUP_URL}
+                data-ph-capture-attribute-destination={appSignupUrl(locale)}
                 className="inline-flex h-11 items-center justify-center gap-3 rounded-full bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
               >
                 {copy.common.tryFree}

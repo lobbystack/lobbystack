@@ -97,4 +97,4 @@ No. Starter y Pro incluyen un número dedicado de LobbyStack. Desvíe su número
 
 ## Escúchelo usted mismo
 
-La forma más rápida de juzgar un modelo de voz es hablar con él. Pruebe el botón de llamada en [nuestra página de inicio](/es/) y pregúntele por LobbyStack, o [cree una cuenta gratuita](https://app.lobbystack.com/signup) y pruebe su propia recepcionista desde el navegador en unos minutos. Consulte los [precios](/es/pricing/) cuando esté listo para ponerla en su línea telefónica.
+La forma más rápida de juzgar un modelo de voz es hablar con él. Pruebe el botón de llamada en [nuestra página de inicio](/es/) y pregúntele por LobbyStack, o [cree una cuenta gratuita](https://app.lobbystack.com/es/signup) y pruebe su propia recepcionista desde el navegador en unos minutos. Consulte los [precios](/es/pricing/) cuando esté listo para ponerla en su línea telefónica.

@@ -100,4 +100,4 @@ Izaberite LobbyStack ako Vaše osoblje može da preuzme eskalacije i želite 30 
 
 LobbyStack je isplativiji za firmu koja već ima ljude za izuzetke. Smith.ai opravdava višu cenu samo kada spoljna mreža recepcionera rešava problem sa osobljem koji morate da rešite kupovinom.
 
-[Isprobajte LobbyStack besplatno](https://app.lobbystack.com/signup) na svojih pet najtežih poziva pre nego što se obavežete na ulazni paket od $150.
+[Isprobajte LobbyStack besplatno](https://app.lobbystack.com/sr/signup) na svojih pet najtežih poziva pre nego što se obavežete na ulazni paket od $150.

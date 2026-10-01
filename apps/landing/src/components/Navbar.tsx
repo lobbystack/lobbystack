@@ -1,5 +1,5 @@
 import { buttonVariants } from "@/components/ui/button"
-import { APP_LOGIN_URL, APP_SIGNUP_URL } from "@/lib/app-links"
+import { appLoginUrl, appSignupUrl } from "@/lib/app-links"
 import { GithubIcon } from "@/components/GithubIcon"
 import { localizeHref, localizePath, type Locale } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -523,18 +523,18 @@ export function Navbar({ locale = "en" }: NavbarProps) {
             <GithubIcon className="size-[18px]" />
           </a>
           <a
-            href={APP_LOGIN_URL}
+            href={appLoginUrl(locale)}
             className="rounded-full px-3 py-2 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             {copy.login}
           </a>
           <a
-            href={APP_SIGNUP_URL}
+            href={appSignupUrl(locale)}
             className={cn(buttonVariants(), "ml-2 rounded-full px-5")}
             data-ph-signup-cta
             data-ph-capture-attribute-section="navbar"
             data-ph-capture-attribute-action="try_for_free"
-            data-ph-capture-attribute-destination={APP_SIGNUP_URL}
+            data-ph-capture-attribute-destination={appSignupUrl(locale)}
           >
             {copy.tryFree}
           </a>
@@ -675,18 +675,18 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                 GitHub
               </a>
               <a
-                href={APP_LOGIN_URL}
+                href={appLoginUrl(locale)}
                 className="rounded-md px-3 py-2 text-center text-sm font-medium text-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 {copy.login}
               </a>
               <a
-                href={APP_SIGNUP_URL}
+                href={appSignupUrl(locale)}
                 className={cn(buttonVariants(), "rounded-full")}
                 data-ph-signup-cta
                 data-ph-capture-attribute-section="mobile_navbar"
                 data-ph-capture-attribute-action="try_for_free"
-                data-ph-capture-attribute-destination={APP_SIGNUP_URL}
+                data-ph-capture-attribute-destination={appSignupUrl(locale)}
               >
                 {copy.tryFree}
               </a>

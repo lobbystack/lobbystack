@@ -133,4 +133,4 @@ The code is [public on GitHub](https://github.com/lobbystack/lobbystack), and te
 
 Choose AI when call volume is predictable, speed matters, and the work follows clear rules. Choose a human service when calls rely on empathy, improvisation, or a managed external workforce.
 
-Most businesses should test a hybrid design. Start with overflow or after-hours calls, review the results, then expand the calls that the system handles well. [Try LobbyStack free](https://app.lobbystack.com/signup) if you want to test that model with your own call scenarios.
+Most businesses should test a hybrid design. Start with overflow or after-hours calls, review the results, then expand the calls that the system handles well. [Try LobbyStack free](https://app.lobbystack.com/en/signup) if you want to test that model with your own call scenarios.

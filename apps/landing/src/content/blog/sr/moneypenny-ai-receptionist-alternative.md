@@ -109,4 +109,4 @@ Izaberite LobbyStack ako Vaš tim može da prima prebačene pozive i želite bes
 
 LobbyStack je isplativiji kada Vaša firma već ima nekoga ko prima hitne pozive. Moneypenny opravdava višu cenu kada morate da kupite i ljudski tim, a ne samo AI.
 
-[Počnite sa LobbyStack besplatno](https://app.lobbystack.com/signup) i testirajte glasovne razgovore u pregledaču. Izaberite plaćeni paket da biste testirali prebacivanje telefonskih poziva.
+[Počnite sa LobbyStack besplatno](https://app.lobbystack.com/sr/signup) i testirajte glasovne razgovore u pregledaču. Izaberite plaćeni paket da biste testirali prebacivanje telefonskih poziva.

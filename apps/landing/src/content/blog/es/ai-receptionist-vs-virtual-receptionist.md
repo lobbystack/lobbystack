@@ -133,4 +133,4 @@ El código es [público en GitHub](https://github.com/lobbystack/lobbystack), y 
 
 Elija la IA cuando el volumen de llamadas sea previsible, la rapidez importe y el trabajo siga reglas claras. Elija un servicio humano cuando las llamadas dependan de la empatía, la improvisación o de un equipo externo gestionado.
 
-La mayoría de los negocios debería probar un diseño híbrido. Empiece con las llamadas de desbordamiento o fuera de horario, revise los resultados y luego amplíe las llamadas que el sistema gestiona bien. [Pruebe LobbyStack gratis](https://app.lobbystack.com/signup) si quiere probar ese modelo con sus propios escenarios de llamadas.
+La mayoría de los negocios debería probar un diseño híbrido. Empiece con las llamadas de desbordamiento o fuera de horario, revise los resultados y luego amplíe las llamadas que el sistema gestiona bien. [Pruebe LobbyStack gratis](https://app.lobbystack.com/es/signup) si quiere probar ese modelo con sus propios escenarios de llamadas.

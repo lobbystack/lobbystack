@@ -105,4 +105,4 @@ Le code est [public sur GitHub](https://github.com/lobbystack/lobbystack). Vous 
 
 Choisissez l'IA pour un volume prévisible et des règles claires. Choisissez un service humain pour l'empathie, l'improvisation et une main-d'œuvre externe gérée.
 
-Testez un modèle hybride sur les débordements ou les appels hors horaires. Examinez les résultats, puis élargissez ce que l'IA gère bien. [Essayez LobbyStack gratuitement](https://app.lobbystack.com/signup) avec votre propre workflow.
+Testez un modèle hybride sur les débordements ou les appels hors horaires. Examinez les résultats, puis élargissez ce que l'IA gère bien. [Essayez LobbyStack gratuitement](https://app.lobbystack.com/fr/signup) avec votre propre workflow.

@@ -91,4 +91,4 @@ Choisissez LobbyStack si votre équipe reprend les appels et si vous voulez 30 m
 
 LobbyStack offre la meilleure valeur à une entreprise qui possède déjà son équipe d'urgence. Smith.ai mérite son supplément quand le réseau externe résout un manque de personnel que vous devez acheter.
 
-[Essayez LobbyStack gratuitement](https://app.lobbystack.com/signup) avec vos cinq appels les plus difficiles avant un forfait à 150 $.
+[Essayez LobbyStack gratuitement](https://app.lobbystack.com/fr/signup) avec vos cinq appels les plus difficiles avant un forfait à 150 $.

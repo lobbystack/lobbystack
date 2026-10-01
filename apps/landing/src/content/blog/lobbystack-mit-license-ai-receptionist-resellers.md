@@ -78,4 +78,4 @@ We chose the AGPL for a reciprocal model while we built the first version. We ha
 
 [Clone LobbyStack on GitHub](https://github.com/lobbystack/lobbystack), read the [self-hosting overview](https://docs.lobbystack.com/self-hosting/overview), and use the [Docker Compose guide](https://docs.lobbystack.com/self-hosting/docker-compose) for your first deployment. The companion article explains [why LobbyStack is moving away from Convex](/blog/why-lobbystack-is-moving-away-from-convex/).
 
-If you would rather start with the managed product, [create a LobbyStack Cloud account](https://app.lobbystack.com/signup) and test a call in your browser before you bring it to a client.
+If you would rather start with the managed product, [create a LobbyStack Cloud account](https://app.lobbystack.com/en/signup) and test a call in your browser before you bring it to a client.

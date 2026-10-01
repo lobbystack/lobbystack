@@ -100,4 +100,4 @@ Choose LobbyStack when your staff can take escalations and you want 30 free minu
 
 LobbyStack is the stronger value for a business that already has people for exceptions. Smith.ai deserves its premium only when the external receptionist network solves a staffing problem you need to buy.
 
-[Try LobbyStack free](https://app.lobbystack.com/signup) with your hardest five calls before committing to a $150 entry plan.
+[Try LobbyStack free](https://app.lobbystack.com/en/signup) with your hardest five calls before committing to a $150 entry plan.

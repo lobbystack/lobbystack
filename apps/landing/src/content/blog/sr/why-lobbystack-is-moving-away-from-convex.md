@@ -82,4 +82,4 @@ I licenca sada podržava taj cilj. LobbyStack smo prebacili sa AGPL na MIT licen
 
 Možete da [pregledate platformu na GitHubu](https://github.com/lobbystack/lobbystack), pratite [pregled samostalnog hostovanja](https://docs.lobbystack.com/self-hosting/overview) ili koristite [Docker Compose vodič](https://docs.lobbystack.com/self-hosting/docker-compose) da je sami pokrenete.
 
-Ako želite recepcionera bez održavanja infrastrukture, [napravite LobbyStack Cloud nalog](https://app.lobbystack.com/signup) i testirajte ga sa svojom firmom.
+Ako želite recepcionera bez održavanja infrastrukture, [napravite LobbyStack Cloud nalog](https://app.lobbystack.com/sr/signup) i testirajte ga sa svojom firmom.

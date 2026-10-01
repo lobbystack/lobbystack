@@ -1,5 +1,5 @@
 import { buttonVariants } from "@/components/ui/button"
-import { APP_SIGNUP_URL } from "@/lib/app-links"
+import { appSignupUrl } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
 import { getCopy, type Locale } from "@/i18n"
 import { ArrowRight } from "lucide-react"
@@ -54,7 +54,7 @@ export function CtaSection({ locale = "en" }: CtaSectionProps) {
         <p className="section-intro mx-auto max-w-[56ch]">{localCopy.body}</p>
         <div className="mt-8">
           <a
-            href={APP_SIGNUP_URL}
+            href={appSignupUrl(locale)}
             className={cn(
               buttonVariants({ size: "lg" }),
               "h-11 rounded-full px-7 text-sm"
@@ -62,7 +62,7 @@ export function CtaSection({ locale = "en" }: CtaSectionProps) {
             data-ph-signup-cta
             data-ph-capture-attribute-section="final_cta"
             data-ph-capture-attribute-action="try_for_free"
-            data-ph-capture-attribute-destination={APP_SIGNUP_URL}
+            data-ph-capture-attribute-destination={appSignupUrl(locale)}
           >
             {copy.common.tryFree}
             <ArrowRight className="ml-1 size-4 transition-transform duration-200 ease-(--ease-out) group-hover/button:translate-x-0.5" />

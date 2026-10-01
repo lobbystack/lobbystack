@@ -1,7 +1,7 @@
 import { ArrowRight, Mic, Phone, PhoneOff } from "lucide-react"
 
 import { Button, buttonVariants } from "@/components/ui/button"
-import { APP_SIGNUP_URL } from "@/lib/app-links"
+import { appSignupUrl } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
 import type { Locale } from "@/i18n"
 import {
@@ -544,7 +544,7 @@ export function LobbyStackAuraVoiceDemo({
               {demoCopy[locale].prompt}
             </p>
             <a
-              href={APP_SIGNUP_URL}
+              href={appSignupUrl(locale)}
               className={cn(
                 buttonVariants({ size: "sm" }),
                 "rounded-full px-5"
@@ -552,7 +552,7 @@ export function LobbyStackAuraVoiceDemo({
               data-ph-signup-cta
               data-ph-capture-attribute-section="voice_demo_ended"
               data-ph-capture-attribute-action="try_for_free"
-              data-ph-capture-attribute-destination={APP_SIGNUP_URL}
+              data-ph-capture-attribute-destination={appSignupUrl(locale)}
             >
               {demoCopy[locale].cta}
               <ArrowRight className="size-4" aria-hidden="true" />

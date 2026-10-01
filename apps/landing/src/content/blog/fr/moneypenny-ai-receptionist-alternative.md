@@ -98,4 +98,4 @@ Choisissez LobbyStack si votre équipe prend les transferts et si vous voulez un
 
 LobbyStack offre la meilleure valeur quand votre entreprise possède déjà la personne qui traite les exceptions. Moneypenny justifie son supplément si vous devez aussi acheter l'équipe humaine.
 
-[Commencez avec LobbyStack gratuitement](https://app.lobbystack.com/signup) et testez la voix dans votre navigateur. Choisissez un forfait payant pour tester les transferts téléphoniques.
+[Commencez avec LobbyStack gratuitement](https://app.lobbystack.com/fr/signup) et testez la voix dans votre navigateur. Choisissez un forfait payant pour tester les transferts téléphoniques.

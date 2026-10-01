@@ -1,5 +1,5 @@
 import { buttonVariants } from "@/components/ui/button"
-import { APP_SIGNUP_URL } from "@/lib/app-links"
+import { appSignupUrl } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
 import {
   ArrowRight,
@@ -34,7 +34,7 @@ export function Hero() {
 
           <div className="animate-fade-up mt-8 flex items-center justify-center gap-4 stagger-3">
             <a
-              href={APP_SIGNUP_URL}
+              href={appSignupUrl("en")}
               className={cn(
                 buttonVariants({ size: "lg" }),
                 "h-11 rounded-full px-7 text-sm"

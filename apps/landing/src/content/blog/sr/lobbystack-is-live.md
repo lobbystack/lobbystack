@@ -103,6 +103,6 @@ Sada smo uživo, a ovo je tek početak. Proizvod će nastaviti da se poboljšava
 
 **Odgovori na poziv. Razumi klijenta. Preduzmi sledeći koristan korak. Ostavi firmi kontrolu.**
 
-Ako Vas propušteni pozivi koštaju dobrih poslova, [isprobajte LobbyStack besplatno](https://app.lobbystack.com/signup) i omogućite sledećem pozivaocu da dobije nekoga, čak i kada je Vaš tim zauzet.
+Ako Vas propušteni pozivi koštaju dobrih poslova, [isprobajte LobbyStack besplatno](https://app.lobbystack.com/sr/signup) i omogućite sledećem pozivaocu da dobije nekoga, čak i kada je Vaš tim zauzet.
 
 Za detaljniji pogled na proizvod pročitajte [pregled sistema AI recepcionera otvorenog koda](/sr/blog/open-source-ai-receptionist-stack/). Ako procenjujete dobavljače, počnite sa tekstom [kako izabrati AI recepcionera](/sr/blog/how-to-choose-an-ai-receptionist/) ili [koliko AI recepcioner može da uštedi](/sr/blog/ai-receptionist-savings/).

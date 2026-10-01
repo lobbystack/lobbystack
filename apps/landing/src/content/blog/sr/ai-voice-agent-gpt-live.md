@@ -97,4 +97,4 @@ Ne. Starter i Pro uključuju poseban LobbyStack broj. Preusmerite svoj postojeć
 
 ## Poslušajte sami
 
-Najbrži način da procenite glasovni model je da razgovarate sa njim. Isprobajte dugme za poziv na [našoj početnoj stranici](/sr/) i pitajte ga o LobbyStack-u ili [napravite besplatan nalog](https://app.lobbystack.com/signup) i za nekoliko minuta testirajte svog recepcionera iz pregledača. Pogledajte [cene](/sr/pricing/) kada budete spremni da ga stavite na svoju telefonsku liniju.
+Najbrži način da procenite glasovni model je da razgovarate sa njim. Isprobajte dugme za poziv na [našoj početnoj stranici](/sr/) i pitajte ga o LobbyStack-u ili [napravite besplatan nalog](https://app.lobbystack.com/sr/signup) i za nekoliko minuta testirajte svog recepcionera iz pregledača. Pogledajte [cene](/sr/pricing/) kada budete spremni da ga stavite na svoju telefonsku liniju.

@@ -97,6 +97,6 @@ Nous sommes en ligne maintenant, et ce n'est que le début. Le produit continuer
 
 **Répondre à l'appel. Comprendre le client. Prendre la prochaine étape utile. Garder l'entreprise en contrôle.**
 
-Si les appels manqués vous coûtent de bonnes opportunités, [essayez LobbyStack gratuitement](https://app.lobbystack.com/signup) et laissez le prochain appelant joindre quelqu'un, même quand votre équipe est occupée.
+Si les appels manqués vous coûtent de bonnes opportunités, [essayez LobbyStack gratuitement](https://app.lobbystack.com/fr/signup) et laissez le prochain appelant joindre quelqu'un, même quand votre équipe est occupée.
 
 Pour une vue plus détaillée de la pile produit, consultez la [vue d'ensemble de la pile open source](/fr/blog/open-source-ai-receptionist-stack/). Si vous évaluez des fournisseurs, commencez par [comment choisir un réceptionniste IA](/fr/blog/how-to-choose-an-ai-receptionist/) ou [combien un réceptionniste IA peut vous faire économiser](/fr/blog/ai-receptionist-savings/).

@@ -109,4 +109,4 @@ Elija LobbyStack si su equipo puede recibir los traspasos y usted quiere una pru
 
 LobbyStack ofrece más valor cuando su empresa ya tiene a alguien para atender las llamadas urgentes. Moneypenny justifica su precio superior cuando necesita comprar el equipo humano además de la IA.
 
-[Empiece con LobbyStack gratis](https://app.lobbystack.com/signup) y pruebe conversaciones de voz en su navegador. Elija un plan de pago para probar los traspasos telefónicos.
+[Empiece con LobbyStack gratis](https://app.lobbystack.com/es/signup) y pruebe conversaciones de voz en su navegador. Elija un plan de pago para probar los traspasos telefónicos.

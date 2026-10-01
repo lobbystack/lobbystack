@@ -100,4 +100,4 @@ Elija LobbyStack si su personal puede atender las escalaciones y usted quiere 30
 
 LobbyStack ofrece más valor a un negocio que ya tiene personas para las excepciones. Smith.ai solo justifica su precio superior cuando la red externa de recepcionistas resuelve un problema de personal que usted necesita comprar.
 
-[Pruebe LobbyStack gratis](https://app.lobbystack.com/signup) con sus cinco llamadas más difíciles antes de comprometerse con un plan de entrada de $150.
+[Pruebe LobbyStack gratis](https://app.lobbystack.com/es/signup) con sus cinco llamadas más difíciles antes de comprometerse con un plan de entrada de $150.
