@@ -13,9 +13,50 @@ LobbyStack can run on one Docker host or as separate managed services. Self-host
 
 ## Deploy on Railway
 
-The [LobbyStack Railway template](https://railway.com/deploy/lobbystack) deploys the admin, worker, and migration services with PostgreSQL, Redis, and a storage bucket. Railway generates every secret and database password. You enter an OpenAI API key and your Twilio credentials, then create your account on the admin domain.
+The [LobbyStack Railway template](https://railway.com/deploy/lobbystack) deploys the admin, worker, and migration services with PostgreSQL, Redis, and a storage bucket. Railway generates every secret and database password. You enter an OpenAI API key and your Twilio credentials, then create your account on the admin domain and finish the steps in [After deploying](#after-deploying).
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/lobbystack)
+
+### After deploying
+
+Browser test calls work as soon as the deploy finishes. Email, phone calls, website import, and Google Calendar need more setup, and the phone and calendar steps use the admin domain that Railway assigns. Set each variable on the service named below, then deploy the staged changes in Railway.
+
+#### Set up email
+
+Password resets, verification codes, team invites, and operator alerts fail until the worker can send email. On the `worker` service, set:
+
+- `SMTP_HOST`, `SMTP_USERNAME`, and `SMTP_PASSWORD` from your email provider
+- `SMTP_PORT`, which defaults to `587`, and `SMTP_SECURE`, which defaults to `false`. Use `465` and `true` if your provider needs TLS from the start.
+- `EMAIL_FROM`, an address your provider lets you send from, such as `LobbyStack <no-reply@example.com>`
+- `EMAIL_REPLY_TO`, if replies should go to another address
+
+#### Finish phone calls
+
+Browser calls work without these steps. Phone calls need an OpenAI project with SIP enabled and a Twilio Elastic SIP trunk:
+
+1. In the OpenAI dashboard, add a webhook for `live.transport.incoming` that points to `https://your_admin_domain/api/webhooks/openai/live`.
+2. Set the webhook's signing secret as `OPENAI_WEBHOOK_SECRET` on the `admin` service.
+3. In Twilio, create an Elastic SIP trunk with the origination URI `sip:your_openai_project_id@sip.api.openai.com;transport=tls`.
+4. Set the trunk's SID as `TWILIO_SIP_TRUNK_SID` on the `worker` service. The worker can't provision a phone number without it.
+
+The [voice runtime guide](https://github.com/lobbystack/lobbystack/blob/main/docs/voice/runtime.md#set-up-the-phone-path) covers the trunk's transfer settings and moving existing numbers.
+
+#### Import websites (optional)
+
+Set `FIRECRAWL_API_KEY` on the `worker` service. Without it, website import fails.
+
+#### Connect Google Calendar (optional)
+
+In Google Cloud, enable the Google Calendar API and create an OAuth client for a web application. Add `https://your_admin_domain/api/calendar/google/callback` as an authorized redirect URI. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on the `admin` service. The template fills in `GOOGLE_REDIRECT_URI`, and the worker reads all three from the admin.
+
+#### Use a custom domain
+
+Add the domain to the `admin` service, then set `APP_BASE_URL` on the `admin` service to `https://your_domain`. These variables reference it and follow the change:
+
+- `SITE_URL`, `AUTH_TRUSTED_ORIGINS`, `TWILIO_SMS_WEBHOOK_URL`, `TWILIO_STATUS_CALLBACK_URL`, and `GOOGLE_REDIRECT_URI` on the `admin` service
+- `APP_BASE_URL`, `TWILIO_STATUS_CALLBACK_URL`, and `GOOGLE_REDIRECT_URI` on the `worker` service
+
+A deployment from an older version of the template has the Railway domain written into each of these variables, so edit them all. Then point the OpenAI webhook and the Google redirect URI at the new domain. Phone numbers you provisioned before the change keep their old SMS and status callback URLs in Twilio until you update them there.
 
 ## Official baseline
 

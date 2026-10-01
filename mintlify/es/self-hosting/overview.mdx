@@ -13,9 +13,50 @@ LobbyStack puede ejecutarse en un solo host de Docker o como servicios gestionad
 
 ## Implemente en Railway
 
-La [plantilla de LobbyStack para Railway](https://railway.com/deploy/lobbystack) implementa los servicios de administración, worker y migración con PostgreSQL, Redis y un bucket de almacenamiento. Railway genera todos los secretos y las contraseñas de las bases de datos. Usted introduce una clave de API de OpenAI y sus credenciales de Twilio, y luego crea su cuenta en el dominio de administración.
+La [plantilla de LobbyStack para Railway](https://railway.com/deploy/lobbystack) implementa los servicios de administración, worker y migración con PostgreSQL, Redis y un bucket de almacenamiento. Railway genera todos los secretos y las contraseñas de las bases de datos. Usted introduce una clave de API de OpenAI y sus credenciales de Twilio. Luego crea su cuenta en el dominio de administración y sigue los pasos de abajo.
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/lobbystack)
+
+### Después de implementar
+
+Las llamadas de prueba desde el navegador funcionan en cuanto termina la implementación. El correo electrónico, las llamadas telefónicas, la importación de sitios web y Google Calendar necesitan más configuración, y los pasos del teléfono y del calendario usan el dominio de administración que asigna Railway. Configure cada variable en el servicio indicado y luego implemente los cambios pendientes en Railway.
+
+#### Configure el correo electrónico
+
+El restablecimiento de contraseñas, los códigos de verificación, las invitaciones al equipo y las alertas a los operadores fallan hasta que el worker pueda enviar correo. En el servicio `worker`, configure:
+
+- `SMTP_HOST`, `SMTP_USERNAME` y `SMTP_PASSWORD` de su proveedor de correo
+- `SMTP_PORT`, que vale `587` por defecto, y `SMTP_SECURE`, que vale `false` por defecto. Use `465` y `true` si su proveedor exige TLS desde el inicio de la conexión.
+- `EMAIL_FROM`, una dirección desde la que su proveedor le permita enviar, como `LobbyStack <no-reply@example.com>`
+- `EMAIL_REPLY_TO`, si las respuestas deben ir a otra dirección
+
+#### Termine de configurar las llamadas telefónicas
+
+Las llamadas desde el navegador funcionan sin estos pasos. Las llamadas telefónicas necesitan un proyecto de OpenAI con SIP activado y un trunk Elastic SIP de Twilio:
+
+1. En el panel de OpenAI, agregue un webhook para `live.transport.incoming` que apunte a `https://su_dominio_de_administracion/api/webhooks/openai/live`.
+2. Configure el secreto de firma del webhook como `OPENAI_WEBHOOK_SECRET` en el servicio `admin`.
+3. En Twilio, cree un trunk Elastic SIP con el URI de origen `sip:su_id_de_proyecto_openai@sip.api.openai.com;transport=tls`.
+4. Configure el SID del trunk como `TWILIO_SIP_TRUNK_SID` en el servicio `worker`. Sin él, el worker no puede aprovisionar números de teléfono.
+
+La [guía del runtime de voz](https://github.com/lobbystack/lobbystack/blob/main/docs/voice/runtime.md#set-up-the-phone-path) (en inglés) explica la configuración de transferencias del trunk y cómo mover números existentes.
+
+#### Importe sitios web (opcional)
+
+Configure `FIRECRAWL_API_KEY` en el servicio `worker`. Sin ella, la importación de sitios web falla.
+
+#### Conecte Google Calendar (opcional)
+
+En Google Cloud, active la API de Google Calendar y cree un cliente OAuth para una aplicación web. Agregue `https://su_dominio_de_administracion/api/calendar/google/callback` como URI de redireccionamiento autorizado. Configure `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` en el servicio `admin`. La plantilla completa `GOOGLE_REDIRECT_URI`, y el worker lee los tres valores del servicio de administración.
+
+#### Use un dominio personalizado
+
+Agregue el dominio al servicio `admin` y luego configure `APP_BASE_URL` en el servicio `admin` con el valor `https://su_dominio`. Estas variables hacen referencia a ella y siguen el cambio:
+
+- `SITE_URL`, `AUTH_TRUSTED_ORIGINS`, `TWILIO_SMS_WEBHOOK_URL`, `TWILIO_STATUS_CALLBACK_URL` y `GOOGLE_REDIRECT_URI` en el servicio `admin`
+- `APP_BASE_URL`, `TWILIO_STATUS_CALLBACK_URL` y `GOOGLE_REDIRECT_URI` en el servicio `worker`
+
+Una implementación creada con una versión anterior de la plantilla tiene el dominio de Railway escrito en cada una de estas variables, así que modifíquelas todas. Después, apunte el webhook de OpenAI y el URI de redireccionamiento de Google al nuevo dominio. Los números de teléfono que aprovisionó antes del cambio conservan en Twilio sus URL anteriores de SMS y de devolución de llamada de estado hasta que las actualice allí.
 
 ## Base oficial
 
