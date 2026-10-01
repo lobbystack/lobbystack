@@ -76,7 +76,10 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
   // card as current leaves them unable to start the tier they just lost.
   const plan: BillingPlanSlug = rawPlan === "self_hosted_standard" || rawPlan === "self_host" ? "self_host" : isPaidSubscription(rawPlan, billing.data?.account?.subscriptionState) ? rawPlan as BillingPlanSlug : "free_cloud";
   const pending = mutation.isPending && mutation.variables.businessId === businessId || checkout?.businessId === businessId;
-  const upgrading = open || pending || leaving;
+  // The picker only renders once billing loads. If that request fails, an open flag alone
+  // would hold the survey off for the rest of the visit.
+  const pickerShown = open && Boolean(businessId && billing.data);
+  const upgrading = pickerShown || pending || leaving;
   useEffect(() => {
     setUpgradeInProgress(upgrading);
     return () => setUpgradeInProgress(false);

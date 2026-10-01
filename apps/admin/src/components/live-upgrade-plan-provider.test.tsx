@@ -145,6 +145,18 @@ describe("telling the dashboard an upgrade is under way", () => {
     await waitFor(() => expect(isUpgradeInProgress()).toBe(false));
   });
 
+  it("doesn't hold the survey off when billing fails and the picker never shows", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ error: "Billing unavailable" }, { status: 503 })));
+    render(<QueryClientProvider client={client}><LiveUpgradePlanProvider><OpenButton /></LiveUpgradePlanProvider></QueryClientProvider>);
+    await userEvent.click(screen.getByRole("button", { name: "Open plans" }));
+    await waitFor(() => expect(client.getQueryState(["billing", "business"])?.status).toBe("error"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(isUpgradeInProgress()).toBe(false);
+  });
+
   it("lets go once a failed checkout's picker is closed, and on unmount", async () => {
     const view = await renderPlans(async () => Response.json({ error: "Checkout unavailable" }, { status: 503 }));
     await userEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" }));
