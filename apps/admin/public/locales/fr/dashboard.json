@@ -113,7 +113,6 @@
     "recentCalls": {
       "title": "Appels récents",
       "description": "{{count}} appels récents dans le flux d'activité.",
-      "unknownCaller": "Appelant inconnu",
       "durationValue": "{{value}} sec"
     },
     "actionRequired": {
@@ -136,7 +135,6 @@
     "upcoming": {
       "title": "À venir",
       "description": "Les prochains rendez-vous au calendrier.",
-      "unknownContact": "Contact inconnu",
       "unknownService": "Service inconnu",
       "withStaff": "avec {{staff}}",
       "emptyTitle": "Aucun rendez-vous à venir",
@@ -144,11 +142,6 @@
       "status": {
         "booked": "Réservé",
         "confirmed": "Confirmé"
-      },
-      "source": {
-        "voice": "Voix",
-        "sms": "SMS",
-        "dashboard": "Tableau de bord"
       }
     }
   },

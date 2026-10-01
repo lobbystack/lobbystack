@@ -2,7 +2,6 @@
   "page": {
     "title": "Messages",
     "searchPlaceholder": "Search conversations...",
-    "unknownCaller": "Unknown contact",
     "unknownShort": "UK",
     "yesterday": "Yesterday",
     "emptyPreview": "No messages yet.",

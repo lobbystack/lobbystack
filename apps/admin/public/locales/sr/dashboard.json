@@ -113,7 +113,6 @@
     "recentCalls": {
       "title": "Nedavni pozivi",
       "description": "Nedavnih poziva u najnovijoj aktivnosti: {{count}}.",
-      "unknownCaller": "Nepoznat pozivalac",
       "durationValue": "{{value}} s"
     },
     "actionRequired": {
@@ -136,18 +135,12 @@
     "upcoming": {
       "title": "Predstojeće",
       "description": "Sledeći termini u kalendaru.",
-      "unknownContact": "Nepoznat kontakt",
       "unknownService": "Nepoznata usluga",
       "emptyTitle": "Nema predstojećih termina",
       "emptyDescription": "Buduća zakazivanja pojaviće se ovde čim budu kreirana.",
       "status": {
         "booked": "Zakazano",
         "confirmed": "Potvrđeno"
-      },
-      "source": {
-        "voice": "Glas",
-        "sms": "SMS",
-        "dashboard": "Kontrolna tabla"
       },
       "withStaff": "kod: {{staff}}"
     }

@@ -30,6 +30,20 @@
     "voice": "Voix",
     "sms": "SMS"
   },
+  "channels": {
+    "phoneCall": "Appel téléphonique",
+    "webCall": "Appel web",
+    "sms": "SMS",
+    "webChat": "Clavardage du site",
+    "dashboard": "Tableau de bord",
+    "api": "API"
+  },
+  "contactFallback": {
+    "phoneCaller": "Appelant par téléphone",
+    "webCaller": "Appelant web",
+    "websiteVisitor": "Visiteur du site",
+    "unknown": "Contact inconnu"
+  },
   "labels": {
     "customer": "Client",
     "receptionist": "Réceptionniste",
@@ -117,7 +131,6 @@
     "loading": "Chargement des rendez-vous…",
     "unavailable": "Les rendez-vous sont indisponibles.",
     "empty": "Aucun rendez-vous à venir.",
-    "unknownContact": "Contact inconnu",
     "statuses": {
       "confirmed": "Confirmé",
       "cancelled": "Annulé",

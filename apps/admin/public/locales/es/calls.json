@@ -24,7 +24,6 @@
     "disposition": "Resultado",
     "transcript": "Transcripción",
     "audio": "Audio",
-    "unknownCaller": "Cliente desconocido",
     "noNumber": "Sin número",
     "noDisposition": "Sin definir",
     "empty": "Ninguna llamada coincide con los filtros."
@@ -114,7 +113,6 @@
   "detail": {
     "backToList": "Llamadas",
     "callLabel": "Llamada",
-    "unknownCaller": "Cliente desconocido",
     "noNumber": "Sin número",
     "metadata": {
       "from": "De",

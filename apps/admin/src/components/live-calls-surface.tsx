@@ -35,6 +35,7 @@ import {
 import type { CallOutcome } from "../../../../packages/domain/src/server/callOutcome";
 import { formatCallOutcomeSummary } from "@/lib/call-outcome";
 import { intlLocale, formatDateTime } from "@/lib/locale";
+import { getChannelLabel, getContactDisplayName, hasDisplayablePhone, normalizeChannel } from "@/lib/contact-display";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 type Business = { businessId: string; active: boolean };
@@ -43,15 +44,27 @@ type Call = {
   id: string;
   providerCallId: string;
   status: string;
+  transport?: string | null;
   disposition: string | null;
   reason: string | null;
   startedAt: string;
   providerDurationSeconds: number | null;
   contactName: string | null;
   contactPhone: string | null;
+  contactEmail?: string | null;
   recordingState: "available" | "pending" | "expired" | "missing";
   transcriptPreview: string | null;
 };
+
+function callerName(call: Call, locale: string, t: (key: string) => string): string {
+  return getContactDisplayName({ name: call.contactName, phone: call.contactPhone, email: call.contactEmail, channels: [call.transport] }, locale, t);
+}
+
+/** The caller's number, or the channel for a web call, which has none. */
+function callerNumber(call: Call, locale: string, t: (key: string) => string): string {
+  if (hasDisplayablePhone(call.contactPhone)) return formatPhoneNumberDisplay(call.contactPhone, locale);
+  return normalizeChannel(call.transport) === "web_call" ? getChannelLabel(call.transport, t) : t("table.noNumber");
+}
 
 async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(url, { credentials: "include", signal: AbortSignal.timeout(5_000) });
@@ -127,15 +140,15 @@ export function LiveCallsSurface() {
   const columns = useMemo<Array<ColumnDef<Call>>>(() => [
     {
       id: "caller",
-      accessorFn: (call) => call.contactName ?? t("table.unknownCaller"),
+      accessorFn: (call) => callerName(call, i18n.language, t),
       header: () => t("table.caller"),
-      cell: ({ row }) => <span className="ph-mask font-medium">{row.original.contactName ?? t("table.unknownCaller")}</span>,
+      cell: ({ row }) => <span className="ph-mask font-medium">{callerName(row.original, i18n.language, t)}</span>,
     },
     {
       id: "number",
-      accessorFn: (call) => call.contactPhone ?? t("table.noNumber"),
+      accessorFn: (call) => callerNumber(call, i18n.language, t),
       header: () => t("table.number"),
-      cell: ({ row }) => <span className="ph-mask">{row.original.contactPhone ? formatPhoneNumberDisplay(row.original.contactPhone, i18n.language) : t("table.noNumber")}</span>,
+      cell: ({ row }) => <span className="ph-mask">{callerNumber(row.original, i18n.language, t)}</span>,
     },
     {
       id: "purpose",

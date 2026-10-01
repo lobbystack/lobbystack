@@ -68,3 +68,45 @@ describe("contact list parity and pagination", () => {
     telemetryRef.current!.expectEvent("web.contacts.contact_opened", { businessId: "business", contactId: "contact-0" });
   });
 });
+describe("contact names and channels", () => {
+  const base = { operatorBlockedAt: null, createdAt: "2026-09-01T12:00:00Z", updatedAt: "2026-09-04T12:00:00Z", lastInteractionAt: "2026-09-02T12:00:00Z", callCount: 1, messageCount: 0, appointmentCount: 0 };
+  function renderContacts(contacts: Array<Record<string, unknown>>) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ contacts, pagination: { total: contacts.length } })));
+    render(<QueryClientProvider client={client}><LiveContactsSurface /></QueryClientProvider>);
+  }
+  async function rowFor(text: string) {
+    return (await screen.findByText(text)).closest("tr")!;
+  }
+  it("shows the name, then the phone number, then how a web-only contact reached the business", async () => {
+    renderContacts([
+      { ...base, id: "named", name: "Marie Tremblay", phone: "+14155550100", email: "marie@example.com", channels: ["voice", "sms"] },
+      { ...base, id: "phone-only", name: null, phone: "+14155550123", email: null, channels: ["voice"] },
+      { ...base, id: "web-voice", name: null, phone: null, email: null, channels: ["web_voice"] },
+      { ...base, id: "web-chat", name: null, phone: null, email: null, channels: ["web_chat"] },
+    ]);
+    const named = within(await rowFor("Marie Tremblay"));
+    expect(named.getByText("(415) 555-0100")).toBeTruthy();
+    expect(named.getByText("marie@example.com")).toBeTruthy();
+    expect(named.getByRole("img", { name: "common:channels.phoneCall" })).toBeTruthy();
+    expect(named.getByRole("img", { name: "common:channels.sms" })).toBeTruthy();
+
+    const phoneOnly = within(await rowFor("(415) 555-0123"));
+    expect(phoneOnly.getAllByText("(415) 555-0123")).toHaveLength(1);
+    expect(phoneOnly.getByRole("img", { name: "common:channels.phoneCall" })).toBeTruthy();
+
+    const webVoice = within(await rowFor("common:contactFallback.webCaller"));
+    expect(webVoice.getByRole("img", { name: "common:channels.webCall" })).toBeTruthy();
+    expect(webVoice.queryByRole("img", { name: "common:channels.phoneCall" })).toBeNull();
+
+    expect(within(await rowFor("common:contactFallback.websiteVisitor")).getByRole("img", { name: "common:channels.webChat" })).toBeTruthy();
+    expect(screen.queryByText("common:contactFallback.unknown")).toBeNull();
+  });
+  it("keeps the phone number out of the channels column", async () => {
+    renderContacts([{ ...base, id: "phone-only", name: "Sam", phone: "+14155550123", email: null, channels: ["voice"] }]);
+    const cells = (await rowFor("Sam")).querySelectorAll("td");
+    expect(cells[0]!.textContent).toContain("(415) 555-0123");
+    expect(cells[1]!.textContent).not.toContain("555");
+  });
+});

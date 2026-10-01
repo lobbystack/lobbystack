@@ -12,7 +12,6 @@
     "lastInteraction": "Última interacción",
     "messages": "{{count}} mensajes",
     "calls": "{{count}} llamadas",
-    "unknownContact": "Contacto desconocido",
     "empty": "Ningún contacto coincide con la búsqueda.",
     "status": {
       "blocked": "Bloqueado"
@@ -41,7 +40,6 @@
   },
   "detail": {
     "backToList": "Contactos",
-    "unknownContact": "Contacto desconocido",
     "notFound": "Contacto no encontrado",
     "notFoundDescription": "Es posible que este contacto se haya eliminado o que no tenga acceso.",
     "metadata": {
@@ -105,11 +103,6 @@
       "completed": "Completada",
       "cancelled": "Cancelada",
       "pending": "Pendiente",
-      "sourceValues": {
-        "voice": "Voz",
-        "sms": "SMS",
-        "dashboard": "Panel"
-      },
       "syncStateValues": {
         "notRequired": "No necesario",
         "pending": "Pendiente",

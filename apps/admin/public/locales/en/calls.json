@@ -24,7 +24,6 @@
     "disposition": "Disposition",
     "transcript": "Transcript",
     "audio": "Audio",
-    "unknownCaller": "Unknown caller",
     "noNumber": "No number",
     "noDisposition": "Not set",
     "empty": "No calls match the current filters."
@@ -114,7 +113,6 @@
   "detail": {
     "backToList": "Calls",
     "callLabel": "Call",
-    "unknownCaller": "Unknown caller",
     "noNumber": "No number",
     "metadata": {
       "from": "From",

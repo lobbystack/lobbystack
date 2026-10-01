@@ -24,6 +24,20 @@
     "voice": "Voz",
     "sms": "SMS"
   },
+  "channels": {
+    "phoneCall": "Llamada telefónica",
+    "webCall": "Llamada web",
+    "sms": "SMS",
+    "webChat": "Chat del sitio web",
+    "dashboard": "Panel",
+    "api": "API"
+  },
+  "contactFallback": {
+    "phoneCaller": "Cliente por teléfono",
+    "webCaller": "Cliente por llamada web",
+    "websiteVisitor": "Visitante del sitio web",
+    "unknown": "Contacto desconocido"
+  },
   "labels": {
     "customer": "Cliente",
     "receptionist": "Recepcionista",
@@ -111,7 +125,6 @@
     "loading": "Cargando citas…",
     "unavailable": "Las citas no están disponibles.",
     "empty": "No hay citas próximas.",
-    "unknownContact": "Contacto desconocido",
     "statuses": {
       "confirmed": "Confirmada",
       "cancelled": "Cancelada",

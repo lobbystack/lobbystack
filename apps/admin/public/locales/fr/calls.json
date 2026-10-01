@@ -24,7 +24,6 @@
     "disposition": "Résultat",
     "transcript": "Transcription",
     "audio": "Audio",
-    "unknownCaller": "Appelant inconnu",
     "noNumber": "Aucun numéro",
     "noDisposition": "Non défini",
     "empty": "Aucun appel ne correspond aux filtres."
@@ -114,7 +113,6 @@
   "detail": {
     "backToList": "Appels",
     "callLabel": "Appel",
-    "unknownCaller": "Appelant inconnu",
     "noNumber": "Aucun numéro",
     "metadata": {
       "from": "De",

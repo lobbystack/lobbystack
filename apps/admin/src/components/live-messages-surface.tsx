@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { getContactDisplayName } from "@/lib/contact-display";
 import { formatDateTime } from "@/lib/locale";
 import { useTelemetry } from "@/components/product-analytics";
 
@@ -30,8 +31,8 @@ function initials(name: string | null, fallback: string): string {
   return name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
 }
 
-function conversationName(message: Message, t: (key: string) => string): string {
-  return message.contactName ?? message.visitorName ?? message.contactPhone ?? message.visitorEmail ?? t("page.unknownCaller");
+function conversationName(message: Message, locale: string, t: (key: string) => string): string {
+  return getContactDisplayName({ name: message.contactName ?? message.visitorName, phone: message.contactPhone, email: message.visitorEmail, channels: [message.channel] }, locale, t);
 }
 
 function conversationSubtitle(message: Message, t: (key: string) => string): string {
@@ -84,10 +85,10 @@ export function LiveMessagesSurface() {
     return [...grouped.entries()].map(([id, items]) => {
       const sorted = items.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
       const latest = sorted.at(-1) ?? sorted[0]!;
-      return { id, messages: sorted, latest, displayName: conversationName(latest, t), channel: latest.channel === "web_chat" ? "web_chat" : "sms" };
+      return { id, messages: sorted, latest, displayName: conversationName(latest, i18n.language, t), channel: latest.channel === "web_chat" ? "web_chat" : "sms" };
     })
       .filter((conversation) => (channelFilter === "all" || conversation.channel === channelFilter) && [conversation.latest.contactName, conversation.latest.visitorName, conversation.latest.contactPhone, conversation.latest.visitorEmail, conversation.latest.body].filter(Boolean).join(" ").toLowerCase().includes(search.trim().toLowerCase()));
-  }, [messages.data, search, channelFilter, t]);
+  }, [messages.data, search, channelFilter, i18n.language, t]);
   const selected = conversations.find((conversation) => conversation.id === selectedId) ?? null;
   const selectedAutomation = selected?.latest.automationState === "human_handoff" ? "human_handoff" : "ai_active";
 

@@ -30,6 +30,20 @@
     "voice": "Glas",
     "sms": "SMS"
   },
+  "channels": {
+    "phoneCall": "Telefonski poziv",
+    "webCall": "Veb poziv",
+    "sms": "SMS",
+    "webChat": "Čet na sajtu",
+    "dashboard": "Kontrolna tabla",
+    "api": "API"
+  },
+  "contactFallback": {
+    "phoneCaller": "Pozivalac telefonom",
+    "webCaller": "Pozivalac preko veba",
+    "websiteVisitor": "Posetilac sajta",
+    "unknown": "Nepoznat kontakt"
+  },
   "labels": {
     "customer": "Klijent",
     "receptionist": "Recepcioner",
@@ -117,7 +131,6 @@
     "loading": "Učitavanje termina…",
     "unavailable": "Termini nisu dostupni.",
     "empty": "Nema predstojećih termina.",
-    "unknownContact": "Nepoznat kontakt",
     "statuses": {
       "confirmed": "Potvrđeno",
       "cancelled": "Otkazano",

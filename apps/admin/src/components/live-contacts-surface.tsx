@@ -26,8 +26,9 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ContactChannelIcons } from "@/components/contact-channel-icons";
+import { getChannelLabel, getContactChannels, getContactDisplayName, getContactSecondaryDetails } from "@/lib/contact-display";
 import { formatDateTime } from "@/lib/locale";
-import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { selectActiveBusiness } from "@/lib/active-business";
 import { useTelemetry } from "@/components/product-analytics";
 
@@ -35,8 +36,9 @@ type Business = { businessId: string; active: boolean; role: string };
 type Contact = {
   id: string;
   name: string | null;
-  phone: string;
+  phone: string | null;
   email: string | null;
+  channels?: string[];
   operatorBlockedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -109,15 +111,18 @@ export function LiveContactsSurface() {
   const columns = useMemo<Array<ColumnDef<Contact>>>(() => [
     {
       id: "contact",
-      accessorFn: (contact) => contact.name ?? t("table.unknownContact"),
+      accessorFn: (contact) => getContactDisplayName(contact, i18n.language, t),
       header: () => t("table.contact"),
-      cell: ({ row }) => <div className="flex min-w-0 items-center gap-2"><span className="ph-mask truncate font-semibold">{row.original.name ?? t("table.unknownContact")}</span>{row.original.operatorBlockedAt ? <Badge variant="destructive">{t("table.status.blocked")}</Badge> : null}</div>,
+      cell: ({ row }) => {
+        const details = getContactSecondaryDetails(row.original, i18n.language);
+        return <div className="flex min-w-0 flex-col gap-1"><div className="flex min-w-0 items-center gap-2"><span className="ph-mask truncate font-semibold">{getContactDisplayName(row.original, i18n.language, t)}</span>{row.original.operatorBlockedAt ? <Badge variant="destructive">{t("table.status.blocked")}</Badge> : null}</div>{details.length ? <div className="ph-no-capture flex min-w-0 flex-col">{details.map((detail) => <span className="truncate text-sm text-muted-foreground" key={detail} title={detail}>{detail}</span>)}</div> : null}</div>;
+      },
     },
     {
       id: "channels",
-      accessorFn: (contact) => [contact.phone, contact.email].filter(Boolean).join(" "),
+      accessorFn: (contact) => getContactChannels(contact.channels).map((channel) => getChannelLabel(channel, t)).join(" "),
       header: () => t("table.channels"),
-      cell: ({ row }) => <div className="ph-no-capture flex min-w-0 flex-col gap-2"><span className="truncate" title={row.original.phone}>{formatPhoneNumberDisplay(row.original.phone, i18n.language)}</span>{row.original.email ? <Badge className="block max-w-full overflow-hidden text-ellipsis whitespace-nowrap" title={row.original.email} variant="outline">{row.original.email}</Badge> : null}</div>,
+      cell: ({ row }) => <ContactChannelIcons channels={row.original.channels} />,
     },
     {
       id: "activity",
@@ -165,10 +170,10 @@ export function LiveContactsSurface() {
         <>
           <TableCard>
             <Table className="min-w-[52rem] w-full table-fixed">
-              <colgroup><col className="w-[24%]" /><col className="w-[20%]" /><col className="w-[20%]" /><col className="w-[12%]" /><col className="w-[16%]" /><col className="w-[8%]" /></colgroup>
-              <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id}>{group.headers.map((header) => <TableHead className={header.column.id === "lastInteraction" || header.column.id === "actions" ? "text-right" : header.column.id === "contact" ? "min-w-[12rem]" : header.column.id === "channels" ? "min-w-[11rem]" : header.column.id === "activity" ? "min-w-[10rem]" : header.column.id === "appointments" ? "min-w-[7rem] text-center" : undefined} key={header.id}>{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
+              <colgroup><col className="w-[30%]" /><col className="w-[14%]" /><col className="w-[20%]" /><col className="w-[12%]" /><col className="w-[16%]" /><col className="w-[8%]" /></colgroup>
+              <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id}>{group.headers.map((header) => <TableHead className={header.column.id === "lastInteraction" || header.column.id === "actions" ? "text-right" : header.column.id === "contact" ? "min-w-[12rem]" : header.column.id === "channels" ? "min-w-[8rem]" : header.column.id === "activity" ? "min-w-[10rem]" : header.column.id === "appointments" ? "min-w-[7rem] text-center" : undefined} key={header.id}>{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
               <TableBody>
-                {table.getRowModel().rows.map((row) => <TableRow className="h-12 cursor-pointer transition-colors hover:bg-muted/40" key={row.id} onClick={() => { if (business) telemetry.track("web.contacts.contact_opened", { businessId: business.businessId, contactId: row.original.id }); router.push(`/contacts/${row.original.id}`); }}>{row.getVisibleCells().map((cell) => <TableCell className={cell.column.id === "lastInteraction" ? "min-w-[11rem] max-w-0 whitespace-nowrap text-right" : cell.column.id === "actions" ? "w-16 text-right" : cell.column.id === "contact" ? "min-w-[12rem]" : cell.column.id === "channels" ? "min-w-[11rem]" : cell.column.id === "activity" ? "min-w-[10rem]" : cell.column.id === "appointments" ? "min-w-[7rem] text-center" : undefined} key={cell.id} onClick={cell.column.id === "actions" ? (event) => event.stopPropagation() : undefined}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>)}
+                {table.getRowModel().rows.map((row) => <TableRow className="h-12 cursor-pointer transition-colors hover:bg-muted/40" key={row.id} onClick={() => { if (business) telemetry.track("web.contacts.contact_opened", { businessId: business.businessId, contactId: row.original.id }); router.push(`/contacts/${row.original.id}`); }}>{row.getVisibleCells().map((cell) => <TableCell className={cell.column.id === "lastInteraction" ? "min-w-[11rem] max-w-0 whitespace-nowrap text-right" : cell.column.id === "actions" ? "w-16 text-right" : cell.column.id === "contact" ? "min-w-[12rem]" : cell.column.id === "channels" ? "min-w-[8rem]" : cell.column.id === "activity" ? "min-w-[10rem]" : cell.column.id === "appointments" ? "min-w-[7rem] text-center" : undefined} key={cell.id} onClick={cell.column.id === "actions" ? (event) => event.stopPropagation() : undefined}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>)}
                 {table.getRowModel().rows.length === 0 ? <TableRow><TableCell className="h-24 text-center text-muted-foreground" colSpan={6}>{t("table.empty")}</TableCell></TableRow> : null}
               </TableBody>
             </Table>

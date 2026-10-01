@@ -27,6 +27,7 @@ import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { selectActiveBusiness } from "@/lib/active-business";
+import { getChannelLabel, getContactDisplayName, hasDisplayablePhone, normalizeChannel } from "@/lib/contact-display";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { useTelemetry } from "@/components/product-analytics";
 import { intlLocale } from "@/lib/locale";
@@ -151,8 +152,9 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
   }
 
   const { call, contact } = detail.data;
-  const callerName = contact?.name ?? contact?.phone ?? t("detail.unknownCaller");
-  const callerPhone = contact?.phone ? formatPhoneNumberDisplay(contact.phone, i18n.language) : t("detail.noNumber");
+  const callerName = getContactDisplayName({ name: contact?.name, phone: contact?.phone, email: contact?.email, channels: [call.transport] }, i18n.language, t);
+  const hasPhone = hasDisplayablePhone(contact?.phone);
+  const callerPhone = hasPhone ? formatPhoneNumberDisplay(contact?.phone, i18n.language) : normalizeChannel(call.transport) === "web_call" ? getChannelLabel(call.transport, t) : t("detail.noNumber");
   const blocked = Boolean(contact?.blockedAt) || call.disposition?.includes("blocked");
 
   return (
@@ -172,7 +174,7 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <MetadataField copiedField={copiedField} fieldKey="from" label={t("detail.metadata.from")} maskValue onCopy={copyToClipboard} value={callerPhone} />
+        <MetadataField copiedField={copiedField} fieldKey="from" label={t("detail.metadata.from")} maskValue {...(hasPhone ? { onCopy: copyToClipboard } : {})} value={callerPhone} />
         <MetadataField fieldKey="duration" label={t("detail.metadata.duration")} value={formatDuration(call.providerDurationSeconds)} />
         <MetadataField fieldKey="started" label={t("detail.metadata.started")} value={formatDate(call.startedAt, i18n.language)} />
         <MetadataField copiedField={copiedField} fieldKey="id" label={t("detail.metadata.id")} onCopy={copyToClipboard} rawValue={call.legacyConvexId ?? call.id} value={truncateId(call.legacyConvexId ?? call.id)} />

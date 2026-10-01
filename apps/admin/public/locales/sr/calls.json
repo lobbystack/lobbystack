@@ -24,7 +24,6 @@
     "disposition": "Ishod",
     "transcript": "Transkript",
     "audio": "Zvuk",
-    "unknownCaller": "Nepoznat pozivalac",
     "noNumber": "Nema broja",
     "noDisposition": "Nije postavljeno",
     "empty": "Nijedan poziv ne odgovara trenutnim filterima."
@@ -114,7 +113,6 @@
   "detail": {
     "backToList": "Pozivi",
     "callLabel": "Poziv",
-    "unknownCaller": "Nepoznat pozivalac",
     "noNumber": "Nema broja",
     "metadata": {
       "from": "Od",

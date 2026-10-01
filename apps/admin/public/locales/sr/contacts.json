@@ -12,7 +12,6 @@
     "lastInteraction": "Poslednja interakcija",
     "messages": "Poruke: {{count}}",
     "calls": "Pozivi: {{count}}",
-    "unknownContact": "Nepoznat kontakt",
     "empty": "Nijedan kontakt ne odgovara trenutnoj pretrazi.",
     "status": {
       "blocked": "Blokiran"
@@ -41,7 +40,6 @@
   },
   "detail": {
     "backToList": "Kontakti",
-    "unknownContact": "Nepoznat kontakt",
     "notFound": "Kontakt nije pronađen",
     "notFoundDescription": "Ovaj kontakt je možda uklonjen ili nemate pristup.",
     "metadata": {
@@ -105,11 +103,6 @@
       "completed": "Završeno",
       "cancelled": "Otkazano",
       "pending": "Na čekanju",
-      "sourceValues": {
-        "voice": "Glas",
-        "sms": "SMS",
-        "dashboard": "Kontrolna tabla"
-      },
       "syncStateValues": {
         "notRequired": "Nije potrebno",
         "pending": "Na čekanju",

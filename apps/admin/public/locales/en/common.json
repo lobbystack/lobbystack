@@ -24,6 +24,20 @@
     "voice": "Voice",
     "sms": "SMS"
   },
+  "channels": {
+    "phoneCall": "Phone call",
+    "webCall": "Web call",
+    "sms": "SMS",
+    "webChat": "Website chat",
+    "dashboard": "Dashboard",
+    "api": "API"
+  },
+  "contactFallback": {
+    "phoneCaller": "Phone caller",
+    "webCaller": "Web caller",
+    "websiteVisitor": "Website visitor",
+    "unknown": "Unknown contact"
+  },
   "labels": {
     "customer": "Customer",
     "receptionist": "Receptionist",
@@ -110,7 +124,6 @@
     "loading": "Loading appointments…",
     "unavailable": "Appointments are unavailable.",
     "empty": "No upcoming appointments.",
-    "unknownContact": "Unknown contact",
     "statuses": {
       "confirmed": "Confirmed",
       "cancelled": "Cancelled",

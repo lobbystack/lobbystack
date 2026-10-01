@@ -113,7 +113,6 @@
     "recentCalls": {
       "title": "Llamadas recientes",
       "description": "{{count}} llamadas recientes en la actividad más reciente.",
-      "unknownCaller": "Cliente desconocido",
       "durationValue": "{{value}} s"
     },
     "actionRequired": {
@@ -136,18 +135,12 @@
     "upcoming": {
       "title": "Próximas",
       "description": "Las próximas citas del calendario.",
-      "unknownContact": "Contacto desconocido",
       "unknownService": "Servicio desconocido",
       "emptyTitle": "No hay citas próximas",
       "emptyDescription": "Las nuevas reservas aparecerán aquí en cuanto se creen.",
       "status": {
         "booked": "Reservada",
         "confirmed": "Confirmada"
-      },
-      "source": {
-        "voice": "Voz",
-        "sms": "SMS",
-        "dashboard": "Panel"
       },
       "withStaff": "con {{staff}}"
     }
