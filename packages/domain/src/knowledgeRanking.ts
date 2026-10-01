@@ -1,4 +1,7 @@
-export { selectKnowledgeWithinBudget as withinKnowledgeBudget } from "@lobbystack/ai";
+export { countKnowledgeTokens, selectKnowledgeWithinBudget as withinKnowledgeBudget } from "@lobbystack/ai";
+
+/** Tokens one knowledge lookup may hand the agent, evidence and snippets together. */
+export const KNOWLEDGE_SEARCH_TOKEN_BUDGET = 3000;
 
 export type KnowledgePassage = {
   chunkId: string;

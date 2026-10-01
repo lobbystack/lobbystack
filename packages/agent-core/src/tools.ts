@@ -2,8 +2,10 @@ import {
   bookForCaller,
   cancelForCaller,
   checkOpening,
+  countKnowledgeTokens,
   findOpenings,
   issueAppointmentChangeOtp,
+  KNOWLEDGE_SEARCH_TOKEN_BUDGET,
   knowledgeQueryTerms,
   lookupCallerAppointments,
   rescheduleForCaller,
@@ -64,6 +66,21 @@ function snapshotKnowledgeMatches(snapshot: BusinessContextSnapshot, query: stri
   }).sort((a, b) => b.matched - a.matched || b.priority - a.priority).map(({ title, text }) => ({ title, text }));
 }
 
+type KnowledgeMatch = { title: string; text: string };
+
+// Evidence already fits the token budget, so it stays whole. Snippets get what it leaves,
+// in rank order, so a long pasted snippet can't push a reply past the budget.
+function withSnippetsInBudget(evidence: KnowledgeMatch[], snippets: KnowledgeMatch[]): KnowledgeMatch[] {
+  let used = evidence.reduce((sum, match) => sum + countKnowledgeTokens(`${match.title}\n${match.text}\n`), 0);
+  const fitting = snippets.filter((snippet) => {
+    const size = countKnowledgeTokens(`${snippet.title}\n${snippet.text}\n`);
+    if (used + size > KNOWLEDGE_SEARCH_TOKEN_BUDGET) return false;
+    used += size;
+    return true;
+  });
+  return [...evidence, ...fitting].slice(0, 6);
+}
+
 const phone = z.string().describe("Phone number in E.164 format, for example +14165550134.");
 
 export function createReceptionistTools(context: AgentToolContext): ToolSet {
@@ -113,11 +130,12 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         const fallback = snapshotKnowledgeMatches(snapshot, query);
         try {
           const evidence = await searchKnowledgeEvidence(domain, { businessId, query, limit: 6, ...(context.callId ? { callId: context.callId } : {}) });
-          // Evidence first. Snippets only fill the slots it leaves.
-          const matches = [...evidence.matches.map((match) => ({ title: match.title, text: match.content })), ...fallback].slice(0, 6);
+          // Evidence first. Snippets only fill the slots and tokens it leaves.
+          const matches = withSnippetsInBudget(evidence.matches.map((match) => ({ title: match.title, text: match.content })), fallback);
           return { outcome: matches.length ? "found" : evidence.outcome, matches };
         } catch {
-          return { outcome: fallback.length ? "found" : "unavailable", matches: fallback };
+          const matches = withSnippetsInBudget([], fallback);
+          return { outcome: matches.length ? "found" : "unavailable", matches };
         }
       },
     }),

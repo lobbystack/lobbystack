@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 // this test can't resolve. The tools only need the real knowledgeQueryTerms.
 vi.mock("@lobbystack/ai", () => ({}));
 vi.mock("@lobbystack/domain", async () => ({
+  countKnowledgeTokens: (await import("../../ai/src/tokenBudget")).countKnowledgeTokens,
+  KNOWLEDGE_SEARCH_TOKEN_BUDGET: 3000,
   knowledgeQueryTerms: (await import("../../domain/src/knowledgeRanking")).knowledgeQueryTerms,
   searchKnowledgeEvidence: vi.fn(),
 }));
@@ -78,8 +80,8 @@ describe("createReceptionistTools", () => {
 
 describe("searchKnowledge", () => {
   const snippet = (title: string, content: string, priority = 0): KnowledgeSnippet => ({ id: title, title, content, tags: [], priority });
-  const passage = (title: string) => ({ chunkId: title, documentId: title, title, content: `${title} details`, sourceUrl: null, sourceRevision: 1, sequence: 0 });
-  const evidence = (titles: string[]) => ({ matches: titles.map(passage), mode: "hybrid" as const, outcome: titles.length ? "found" as const : "empty" as const, durationMs: 1 });
+  const passage = (title: string, content = `${title} details`) => ({ chunkId: title, documentId: title, title, content, sourceUrl: null, sourceRevision: 1, sequence: 0 });
+  const evidence = (titles: string[], content?: string) => ({ matches: titles.map((title) => passage(title, content)), mode: "hybrid" as const, outcome: titles.length ? "found" as const : "empty" as const, durationMs: 1 });
   // Long pasted text full of common words, like production snippets.
   const chatter = (topic: string) => snippet(topic, `What are the things you should know about ${topic}? You can ask us, and we are happy to help with the details.`);
 
@@ -119,6 +121,19 @@ describe("searchKnowledge", () => {
     const snippets = [chatter("Welcome"), snippet("Parking", "Parking is available behind the building.")];
     await expect(search("Where can I park? Is parking free?", snippets, new Error("search down"))).resolves.toEqual({ outcome: "found", titles: ["Parking"] });
     await expect(search("Do you take insurance cards?", [snippet("Parking", "Parking is available behind the building.")], new Error("search down"))).resolves.toEqual({ outcome: "unavailable", titles: [] });
+  });
+
+  it("gives snippets only the token budget the evidence leaves", async () => {
+    // About 1,000 tokens each, like the longest pasted snippets in production.
+    const long = (title: string) => snippet(title, `Parking rules for ${title}. ${"Visitors park in marked bays only. ".repeat(110)}`);
+    const snippets = ["North lot", "South lot", "East lot", "West lot"].map(long);
+    // Small evidence leaves room for two long snippets, not four.
+    await expect(search("parking rules", snippets, evidence(["Garage"]))).resolves.toEqual({ outcome: "found", titles: ["Garage", "North lot", "South lot"] });
+    // Evidence that fills most of the budget stays whole, and no long snippet fits after it.
+    const fullEvidence = evidence(["Garage", "Rates"], "Garage parking rates and hours. ".repeat(140));
+    await expect(search("parking rules", snippets, fullEvidence)).resolves.toEqual({ outcome: "found", titles: ["Garage", "Rates"] });
+    // The fallback path keeps the same budget.
+    await expect(search("parking rules", snippets, new Error("search down"))).resolves.toEqual({ outcome: "found", titles: ["North lot", "South lot"] });
   });
 
   it("matches French, accented and Spanish queries to the right snippet", async () => {
