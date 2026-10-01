@@ -24,6 +24,18 @@ const copy = {
     home: "Retour à l’accueil",
     search: "Recherche",
   },
+  es: {
+    h1: "Página no encontrada",
+    body: "Es posible que la página se haya movido o que la URL tenga un error.",
+    home: "Ir al inicio",
+    search: "Buscar",
+  },
+  sr: {
+    h1: "Stranica nije pronađena",
+    body: "Stranica je možda premeštena ili adresa sadrži grešku.",
+    home: "Na početnu",
+    search: "Pretraga",
+  },
 } satisfies Record<Locale, Record<string, string>>
 ---
 
@@ -31,7 +43,7 @@ const copy = {
   seo={{
     title: routeSeo?.title,
     description: routeSeo?.description,
-    canonicalPath: locale === "fr" ? "/fr/404/" : "/404/",
+    canonicalPath: locale === "en" ? "/404/" : `/${locale}/404/`,
     locale,
     noindex: true,
   }}
@@ -64,5 +76,5 @@ const copy = {
       </div>
     </section>
   </main>
-  <Footer locale={locale} />
+  <Footer locale={locale} path={Astro.url.pathname} />
 </Layout>

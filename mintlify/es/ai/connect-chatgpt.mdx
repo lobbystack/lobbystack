@@ -1,0 +1,63 @@
+---
+title: "Conecte ChatGPT y los agentes de OpenAI"
+description: "Agregue LobbyStack a ChatGPT como aplicación, o úselo desde la Responses API de OpenAI y Codex."
+sidebarTitle: "ChatGPT"
+contentType: "How-to"
+---
+
+La URL del servidor es `https://app.lobbystack.com/api/mcp`. Si usa una implementación autoalojada, reemplace `app.lobbystack.com` por su propio dominio. ChatGPT se conecta a ella desde internet, así que un LobbyStack autoalojado necesita una dirección HTTPS pública.
+
+Consulte [Servidor MCP](/es/ai/mcp) para ver qué herramientas habilita cada permiso.
+
+## ChatGPT
+
+ChatGPT agrega servidores MCP personalizados como aplicaciones en el modo de desarrollador, que OpenAI ofrece en las cuentas Plus, Pro, Business, Enterprise y Education en la web.
+
+<Steps>
+  <Step title="Active el modo de desarrollador">
+    En ChatGPT, abra **Settings** > **Security and login** y active **Developer mode**.
+  </Step>
+  <Step title="Cree la aplicación">
+    Abra los plugins de ChatGPT, haga clic en **+** y cree una aplicación en modo de desarrollador. Llámela `LobbyStack`, pegue la URL del servidor y elija **OAuth** como autenticación. Deje vacíos el ID de cliente y el secreto; ChatGPT se registra solo en LobbyStack.
+  </Step>
+  <Step title="Inicie sesión y elija el acceso">
+    ChatGPT abre LobbyStack. Inicie sesión, elija el negocio, desmarque lo que ChatGPT no deba hacer y haga clic en **Permitir acceso**.
+  </Step>
+</Steps>
+
+Para desconectarlo, vaya a **Configuración** > **Aplicaciones conectadas** en LobbyStack y haga clic en **Desconectar** junto a ChatGPT.
+
+## Responses API de OpenAI
+
+La Responses API llama por usted a los servidores MCP remotos. Pase una clave de API en `headers`:
+
+```bash
+curl https://api.openai.com/v1/responses \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "content-type: application/json" \
+  -d '{
+    "model": "gpt-6-luna",
+    "tools": [{
+      "type": "mcp",
+      "server_label": "lobbystack",
+      "server_url": "https://app.lobbystack.com/api/mcp",
+      "headers": { "Authorization": "Bearer '"$LOBBYSTACK_API_KEY"'" },
+      "require_approval": "always"
+    }],
+    "input": "Who called yesterday and asked for a callback?"
+  }'
+```
+
+`require_approval: "always"` hace que la API se detenga antes de cada llamada a una herramienta para que su código pueda confirmarla. Relájelo solo para claves con permisos de lectura.
+
+## Codex
+
+Agregue LobbyStack a `~/.codex/config.toml`. Codex lee la clave de API de la variable de entorno que usted indique:
+
+```toml ~/.codex/config.toml
+[mcp_servers.lobbystack]
+url = "https://app.lobbystack.com/api/mcp"
+bearer_token_env_var = "LOBBYSTACK_API_KEY"
+```
+
+Exporte `LOBBYSTACK_API_KEY` en su shell, inicie Codex y pídale que llame a `get_business` para comprobar la conexión.

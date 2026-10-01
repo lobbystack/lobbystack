@@ -1,6 +1,7 @@
 import { defineCollection } from "astro:content"
 import { glob } from "astro/loaders"
 import { z } from "astro/zod"
+import { SUPPORTED_LOCALES } from "./i18n/config"
 
 const blogCollection = defineCollection({
   loader: glob({ base: "./src/content/blog", pattern: "**/*.{md,mdx}" }),
@@ -16,7 +17,7 @@ const blogCollection = defineCollection({
     coverImageAlt: z.string().min(20).max(180).optional(),
     category: z.string().optional(),
     featured: z.boolean().default(false),
-    locale: z.enum(["en", "fr"]).default("en"),
+    locale: z.enum(SUPPORTED_LOCALES).default("en"),
     canonicalSlug: z.string().optional(),
   }),
 })
@@ -27,7 +28,7 @@ const changelogCollection = defineCollection({
     title: z.string().min(5).max(120),
     description: z.string().min(40).max(220),
     pubDate: z.coerce.date(),
-    locale: z.enum(["en", "fr"]).default("en"),
+    locale: z.enum(SUPPORTED_LOCALES).default("en"),
     canonicalSlug: z.string().min(3).max(120),
     category: z.string().optional(),
   }),

@@ -1,0 +1,121 @@
+{
+  "eyebrow": "Partnerski program",
+  "title": "Partnerski program",
+  "description": "Preporučite LobbyStack firmama i agencijama. Ovde pratimo preporuke, provizije i mesečne isplate preko PayPal-a.",
+  "referral": {
+    "title": "Link za preporuku",
+    "description": "Podelite ovaj link gde god preporučujete LobbyStack.",
+    "active": "Aktivan",
+    "copy": "Kopiraj link",
+    "code": "Kod preporuke: {{code}}"
+  },
+  "terms": {
+    "title": "Nagrade",
+    "description": "Isplate preko PayPal-a po isteku perioda zadržavanja.",
+    "commission": "Provizija",
+    "hold": "Period zadržavanja",
+    "minimum": "Minimalna isplata",
+    "days": "{{count}} dana",
+    "link": "Pogledajte Uslove korišćenja",
+    "reward": "Zaradite {{rate}} od svake prodaje u periodu od {{duration}}",
+    "oneYear": "1 godine",
+    "months": "{{count}} meseci"
+  },
+  "stats": {
+    "clicks": "Klikovi",
+    "clicksDescription": "Praćene posete preko preporuke.",
+    "referrals": "Preporuke",
+    "referralsDescription": "Firme pripisane Vašem linku.",
+    "conversions": "Konverzije",
+    "conversionsDescription": "Plaćene transakcije sa provizijom.",
+    "pending": "Na čekanju",
+    "pendingDescription": "Čeka se istek perioda od 30 dana.",
+    "eligible": "Za isplatu",
+    "eligibleReady": "Spremno za sledeću isplatu.",
+    "eligibleWaiting": "Računa se u minimum od 100 $.",
+    "paid": "Isplaćeno",
+    "paidDescription": "Označeno kao isplaćeno nakon isplate."
+  },
+  "tabs": {
+    "quickstart": "Brzi početak",
+    "earnings": "Zarada",
+    "payouts": "Isplate",
+    "faq": "Pitanja"
+  },
+  "quickstart": {
+    "share": {
+      "title": "Podelite svoj link",
+      "description": "Koristite link za preporuku u objavama, biltenima, na sajtovima i u direktnim preporukama."
+    },
+    "resources": {
+      "title": "Iznosite tačne tvrdnje",
+      "description": "Opišite LobbyStack iskreno i navedite da možete zaraditi proviziju."
+    },
+    "receive": {
+      "title": "Primajte zaradu",
+      "description": "Stanja za isplatu od 100 $ ili više proveravaju se jednom mesečno i isplaćuju preko PayPal-a."
+    }
+  },
+  "earnings": {
+    "date": "Datum",
+    "sale": "Prodaja",
+    "commission": "Provizija",
+    "clears": "Dostupno od",
+    "status": "Status",
+    "empty": "Još nema provizija."
+  },
+  "payouts": {
+    "date": "Datum",
+    "amount": "Iznos",
+    "paypal": "PayPal",
+    "status": "Status",
+    "reference": "Referenca",
+    "empty": "Još nema zapisa o isplatama.",
+    "noReference": "Još nije isplaćeno"
+  },
+  "settings": {
+    "open": "Podešavanja",
+    "title": "PayPal imejl",
+    "description": "Imejl adresa za isplate.",
+    "paypalEmail": "PayPal imejl",
+    "paypalPlaceholder": "Novi PayPal imejl",
+    "currentEmail": "{{email}}",
+    "noEmail": "PayPal imejl nije sačuvan.",
+    "change": "Promeni",
+    "dialogTitle": "Promena PayPal imejla",
+    "save": "Sačuvaj",
+    "saving": "Čuvanje..."
+  },
+  "statuses": {
+    "pending": "Na čekanju",
+    "paid": "Isplaćeno",
+    "voided": "Poništeno",
+    "draft": "Nacrt",
+    "ready": "Spremno",
+    "skipped": "Preskočeno"
+  },
+  "faq": {
+    "when": {
+      "question": "Kada provizije postaju dostupne za isplatu?",
+      "answer": "Provizije postaju dostupne 30 dana nakon uplate preporučenog klijenta."
+    },
+    "minimum": {
+      "question": "Koliko iznosi minimalna isplata?",
+      "answer": "Neisplaćene provizije za isplatu moraju dostići 100 $ da bi bile uključene u mesečnu isplatu."
+    },
+    "method": {
+      "question": "Kako se šalju isplate?",
+      "answer": "LobbyStack isplaćuje partnere preko PayPal-a, na PayPal imejl sačuvan u podešavanjima."
+    },
+    "refunds": {
+      "question": "Šta se dešava nakon povraćaja novca?",
+      "answer": "Neisplaćene provizije mogu biti poništene ili stornirane ako je osnovna uplata vraćena ili osporena."
+    }
+  },
+  "toast": {
+    "profileFailed": "Nije moguće pripremiti Vašu partnersku kontrolnu tablu.",
+    "copied": "Link za preporuku je kopiran.",
+    "paypalSaved": "PayPal imejl je sačuvan.",
+    "paypalFailed": "Nije moguće sačuvati PayPal imejl."
+  }
+}

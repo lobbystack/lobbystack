@@ -1,0 +1,337 @@
+{
+  "page": {
+    "eyebrow": "Espacio del agente",
+    "title": "Agente",
+    "description": "Configure cómo se comporta su recepcionista con IA, qué sabe y cómo gestiona las llamadas y los mensajes."
+  },
+  "sections": {
+    "basicSettings": {
+      "title": "Ajustes de IA",
+      "description": "Saludo y ajustes de transferencia de su recepcionista."
+    },
+    "knowledge": {
+      "title": "Conocimiento",
+      "description": "Información y pautas que su recepcionista usa para responder preguntas.",
+      "listTitle": "Base de conocimiento",
+      "addKnowledge": "Añadir conocimiento",
+      "addKnowledgeOptions": {
+        "upload": "Subir",
+        "website": "Sitio web",
+        "text": "Texto"
+      },
+      "editKnowledge": "Editar conocimiento",
+      "uploadDocument": "Subir documento",
+      "websiteImport": {
+        "badge": "Sitio web",
+        "title": "Importar sitio web",
+        "description": "Rastree las páginas públicas de su sitio web para que su recepcionista pueda usarlas como conocimiento.",
+        "submit": "Importar sitio web",
+        "submitting": "Importando sitio web…",
+        "success": "La importación del sitio web ha comenzado. Las páginas aparecerán aquí a medida que terminen de procesarse.",
+        "submitFailed": "No pudimos iniciar la importación del sitio web. Inténtelo de nuevo.",
+        "previewPending": "Estamos rastreando este sitio web. Las páginas importadas aparecerán aquí automáticamente.",
+        "previewFailed": "La importación falló. Inténtelo de nuevo.",
+        "status": {
+          "inProgress": "En curso",
+          "failed": "Fallida"
+        },
+        "validation": {
+          "urlRequired": "Introduzca la URL del sitio web que desea importar."
+        }
+      },
+      "addKnowledgeDescription": "Añada el horario de atención, precios, políticas o cualquier otra información que su recepcionista deba conocer.",
+      "editKnowledgeDescription": "Actualice la información que su recepcionista debe usar para responder a las preguntas de los clientes.",
+      "uploadDocumentDescription": "Suba un archivo para que su recepcionista pueda usarlo.",
+      "documentBadge": "Documento",
+      "textBadge": "Texto",
+      "emptyState": "Aún no ha añadido conocimiento.",
+      "previewPending": "Este documento se está procesando.",
+      "previewError": "No se pudo procesar este documento.",
+      "status": {
+        "analyzing": "Analizando...",
+        "inProgress": "En curso",
+        "queued": "En cola",
+        "indexing": "Indexando",
+        "indexed": "Listo",
+        "error": "Error",
+        "cancelled": "Cancelado"
+      },
+      "uploadValidation": {
+        "fileRequired": "Elija un archivo para subir.",
+        "unsupportedFile": "Los tipos de documento admitidos son PDF, DOCX, TXT y Markdown.",
+        "maxSize": "Los documentos deben pesar 10 MB o menos.",
+        "uploadFailed": "No pudimos subir este documento. Inténtelo de nuevo."
+      },
+      "fields": {
+        "file": {
+          "label": "Archivo",
+          "hint": "Admite PDF, DOCX, TXT y Markdown.",
+          "dropzonePrefix": "Arrastre y suelte un archivo aquí, o",
+          "chooseFile": "Elegir archivo"
+        },
+        "websiteUrl": {
+          "label": "URL del sitio web",
+          "placeholder": "https://example.com",
+          "hint": "Use la página de inicio pública o la sección que desea importar."
+        },
+        "title": {
+          "label": "Título",
+          "placeholder": "Horario de atención",
+          "hint": "Un título breve y descriptivo para este conocimiento."
+        },
+        "content": {
+          "label": "Contenido",
+          "placeholder": "Abrimos de lunes a viernes, de 9:00 a 17:00.",
+          "hint": "La información concreta que debe usar la recepcionista."
+        },
+        "tags": {
+          "label": "Etiquetas (opcional)",
+          "placeholder": "Horario, ubicación",
+          "hint": "Palabras clave separadas por comas para clasificar este conocimiento."
+        }
+      }
+    },
+    "services": {
+      "title": "Servicios",
+      "description": "Detalles de los servicios que su recepcionista puede usar para explicar su oferta y ayudar a reservar la cita adecuada.",
+      "listTitle": "Servicios",
+      "addKnowledge": "Añadir servicio",
+      "editKnowledge": "Editar servicio",
+      "uploadDocument": "Subir documento",
+      "addKnowledgeDescription": "Añada sus servicios, qué incluyen, para quién son y cualquier cosa que su recepcionista deba mencionar.",
+      "editKnowledgeDescription": "Actualice los detalles del servicio que su recepcionista debe mencionar y usar al reservar.",
+      "uploadDocumentDescription": "Suba un archivo para que su recepcionista pueda usarlo.",
+      "documentBadge": "Documento",
+      "textBadge": "Texto",
+      "emptyState": "Aún no ha añadido servicios.",
+      "unavailable": "El catálogo de servicios no está disponible.",
+      "durationValue": "Cita de {{count}} min",
+      "previewPending": "Este documento se está procesando.",
+      "previewError": "No se pudo procesar este documento.",
+      "status": {
+        "analyzing": "Analizando...",
+        "inProgress": "En curso",
+        "queued": "En cola",
+        "indexing": "Indexando",
+        "indexed": "Listo",
+        "error": "Error"
+      },
+      "uploadValidation": {
+        "fileRequired": "Elija un archivo para subir.",
+        "unsupportedFile": "Los tipos de documento admitidos son PDF, DOCX, TXT y Markdown.",
+        "maxSize": "Los documentos deben pesar 10 MB o menos.",
+        "uploadFailed": "No pudimos subir este documento. Inténtelo de nuevo."
+      },
+      "fields": {
+        "file": {
+          "label": "Archivo",
+          "hint": "Admite PDF, DOCX, TXT y Markdown.",
+          "dropzonePrefix": "Arrastre y suelte un archivo aquí, o",
+          "chooseFile": "Elegir archivo"
+        },
+        "title": {
+          "label": "Título",
+          "placeholder": "Consulta inicial",
+          "hint": "Un título breve y descriptivo para este servicio."
+        },
+        "content": {
+          "label": "Contenido",
+          "placeholder": "Una consulta de 30 minutos para entender las necesidades del cliente y recomendar el siguiente paso adecuado.",
+          "hint": "Describa el servicio para que la recepcionista pueda explicarlo con claridad."
+        },
+        "duration": {
+          "label": "Duración",
+          "placeholder": "30",
+          "hint": "Duración de la cita en minutos, para comprobar la disponibilidad."
+        },
+        "active": {
+          "label": "Reservable",
+          "hint": "Durante las llamadas solo se ofrecen los servicios reservables."
+        },
+        "tags": {
+          "label": "Etiquetas (opcional)",
+          "placeholder": "Consulta, clientes nuevos",
+          "hint": "Palabras clave separadas por comas para clasificar estos servicios."
+        }
+      }
+    },
+    "rules": {
+      "title": "Reglas",
+      "description": "Instrucciones que indican cómo debe gestionar su recepcionista las llamadas y los mensajes.",
+      "listTitle": "Reglas",
+      "addKnowledge": "Añadir regla",
+      "editKnowledge": "Editar regla",
+      "uploadDocument": "Subir documento",
+      "addKnowledgeDescription": "Lo que debe hacer su recepcionista, como transferir llamadas, hacer preguntas y enviar SMS.",
+      "editKnowledgeDescription": "Actualice la instrucción que su recepcionista debe seguir durante las llamadas y los seguimientos.",
+      "uploadDocumentDescription": "Suba un archivo para que su recepcionista pueda usarlo.",
+      "documentBadge": "Documento",
+      "textBadge": "Texto",
+      "emptyState": "Aún no ha añadido reglas.",
+      "previewPending": "Este documento se está procesando.",
+      "previewError": "No se pudo procesar este documento.",
+      "status": {
+        "analyzing": "Analizando...",
+        "inProgress": "En curso",
+        "queued": "En cola",
+        "indexing": "Indexando",
+        "indexed": "Listo",
+        "error": "Error"
+      },
+      "uploadValidation": {
+        "fileRequired": "Elija un archivo para subir.",
+        "unsupportedFile": "Los tipos de documento admitidos son PDF, DOCX, TXT y Markdown.",
+        "maxSize": "Los documentos deben pesar 10 MB o menos.",
+        "uploadFailed": "No pudimos subir este documento. Inténtelo de nuevo."
+      },
+      "fields": {
+        "file": {
+          "label": "Archivo",
+          "hint": "Admite PDF, DOCX, TXT y Markdown.",
+          "dropzonePrefix": "Arrastre y suelte un archivo aquí, o",
+          "chooseFile": "Elegir archivo"
+        },
+        "title": {
+          "label": "Título",
+          "placeholder": "Transferir a Jannie a quien pida hablar con una persona",
+          "hint": "Un título breve y descriptivo para esta regla."
+        },
+        "content": {
+          "label": "Contenido",
+          "placeholder": "Cuando alguien pida hablar con una persona, transfiérala al 555-123-4567.",
+          "hint": "Describa lo que debe hacer la recepcionista."
+        },
+        "tags": {
+          "label": "Etiquetas (opcional)",
+          "placeholder": "Transferencias, escalado",
+          "hint": "Palabras clave separadas por comas para clasificar estas reglas."
+        }
+      }
+    }
+  },
+  "table": {
+    "searchPlaceholder": "Buscar entradas",
+    "title": "Título",
+    "preview": "Vista previa",
+    "status": "Estado",
+    "disabled": "Desactivada",
+    "added": "Añadida",
+    "empty": "No se encontraron entradas.",
+    "documentPreviewHint": "Haga clic para ver una vista previa de este documento.",
+    "documentPreviewUnavailable": "La vista previa de documentos está disponible en la página Conocimiento."
+  },
+  "pagination": {
+    "rowsPerPage": "Filas por página",
+    "pageOf": "Página {{page}} de {{total}}",
+    "firstPage": "Primera página",
+    "previousPage": "Página anterior",
+    "nextPage": "Página siguiente",
+    "lastPage": "Última página",
+    "goToPage": "Ir a la página {{page}}"
+  },
+  "fields": {
+    "defaults": {
+      "title": "Valores predeterminados"
+    },
+    "instructions": {
+      "title": "Instrucciones"
+    },
+    "summary": {
+      "label": "Resumen del negocio",
+      "hint": "El contexto esencial que su recepcionista debe conocer sobre el negocio."
+    },
+    "bookingPolicy": {
+      "label": "Política de reservas",
+      "hint": "Instrucciones para ofrecer y confirmar citas."
+    },
+    "voiceInstructions": {
+      "label": "Instrucciones de voz"
+    },
+    "smsInstructions": {
+      "label": "Instrucciones de SMS"
+    },
+    "greeting": {
+      "label": "Saludo",
+      "placeholder": "Hola, gracias por llamar…",
+      "hint": "La frase inicial que usa su recepcionista al contestar una llamada o iniciar una conversación."
+    },
+    "defaultLocale": {
+      "label": "Idioma predeterminado del cliente",
+      "placeholder": "Seleccione un idioma predeterminado",
+      "hint": "Elija el idioma que su recepcionista debe usar cuando no se conoce la preferencia de la persona que llama."
+    },
+    "transferNumber": {
+      "label": "Número de transferencia predeterminado",
+      "placeholder": "+1 555-123-4567",
+      "hint": "El número de teléfono que su recepcionista debe usar al pasar una llamada a una persona.",
+      "errors": {
+        "invalid": "Introduzca un número de transferencia completo y válido antes de guardar."
+      }
+    }
+  },
+  "booking": {
+    "title": "Reservas",
+    "mode": {
+      "label": "Citas",
+      "options": {
+        "instant": "Reserva citas",
+        "request": "Toma solicitudes",
+        "off": "No reserva"
+      },
+      "descriptions": {
+        "instant": "El agente revisa sus horarios disponibles y reserva la cita.",
+        "request": "El agente anota el servicio y la hora preferida. Usted confirma desde la bandeja de entrada.",
+        "off": "El agente toma un mensaje en lugar de reservar."
+      }
+    }
+  },
+  "appointmentChanges": {
+    "title": "Cambios de citas",
+    "allowCancel": {
+      "label": "Permitir cancelaciones por IA",
+      "hint": "Permita que la recepcionista cancele una cita futura verificada."
+    },
+    "allowReschedule": {
+      "label": "Permitir reprogramación por IA",
+      "hint": "Permita que la recepcionista cambie una cita futura verificada después de comprobar la disponibilidad."
+    },
+    "requireOtp": {
+      "label": "Exigir código de un solo uso",
+      "hint": "Enviar un código antes de cualquier cancelación o reprogramación."
+    }
+  },
+  "actions": {
+    "save": "Guardar",
+    "saveChanges": "Guardar cambios",
+    "saving": "Guardando…",
+    "saved": "Cambios guardados",
+    "moreOptions": "Más opciones",
+    "delete": "Eliminar",
+    "confirmDelete": "¿Confirmar?",
+    "deleteTitle": "¿Eliminar entrada?",
+    "deleteDescription": "Esta entrada se eliminará de forma permanente del espacio del agente.",
+    "deleteCancel": "Cancelar",
+    "cancelImport": "Cancelar importación",
+    "cancelImportTitle": "¿Cancelar la importación del sitio web?",
+    "cancelImportDescription": "Se detendrá la importación del sitio web y se quitará de la tabla la entrada en curso.",
+    "enable": "Activar",
+    "disable": "Desactivar",
+    "retry": "Reintentar",
+    "moveUp": "Subir",
+    "moveDown": "Bajar",
+    "activateEntry": "Activar entrada",
+    "deactivateEntry": "Desactivar entrada",
+    "upload": "Subir",
+    "uploading": "Subiendo…",
+    "saveFailed": "No pudimos guardar sus ajustes. Inténtelo de nuevo."
+  },
+  "loading": {
+    "workspace": "Cargando espacio de trabajo…",
+    "rules": "Cargando reglas…",
+    "knowledge": "Cargando conocimiento…"
+  },
+  "readOnly": "El acceso de lector es de solo lectura.",
+  "empty": {
+    "description": "Primero cree un negocio y luego vuelva aquí para configurar su recepcionista con IA."
+  }
+}

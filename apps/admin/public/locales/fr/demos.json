@@ -48,6 +48,7 @@
     "title": "Démos de prospection",
     "description": "Préparez des espaces de réception isolés et temporaires avant de les partager avec un prospect.",
     "count_one": "{{count}} démo",
+    "count_many": "{{count}} démos",
     "count_other": "{{count}} démos",
     "refresh": "Actualiser",
     "loading": "Chargement des démos...",

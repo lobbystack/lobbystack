@@ -97,4 +97,4 @@ Non. Les forfaits Starter et Pro comprennent un numéro LobbyStack dédié. Tran
 
 ## Écoutez-le vous-même
 
-Pour juger un modèle vocal, le plus simple est de lui parler. Essayez le bouton d'appel sur [notre page d'accueil](/fr/) et posez-lui des questions sur LobbyStack, ou [créez un compte gratuit](https://app.lobbystack.com/signup) et testez votre propre réceptionniste dans le navigateur en quelques minutes. Consultez nos [tarifs](/fr/pricing/) quand vous serez prêt à la brancher sur votre ligne.
+Pour juger un modèle vocal, le plus simple est de lui parler. Essayez le bouton d'appel sur [notre page d'accueil](/fr/) et posez-lui des questions sur LobbyStack, ou [créez un compte gratuit](https://app.lobbystack.com/fr/signup) et testez votre propre réceptionniste dans le navigateur en quelques minutes. Consultez nos [tarifs](/fr/pricing/) quand vous serez prêt à la brancher sur votre ligne.

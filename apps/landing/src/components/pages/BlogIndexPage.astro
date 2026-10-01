@@ -140,6 +140,112 @@ const pageCopy = {
       },
     ],
   },
+  es: {
+    h1: "Blog de recepcionistas con IA y novedades del producto",
+    intro:
+      "Novedades del producto y notas prácticas sobre atención telefónica con IA, llamadas perdidas, programación de citas, enrutamiento de llamadas, seguimiento de clientes potenciales e infraestructura de recepción de código abierto.",
+    topicsHeading: "Temas que tratamos",
+    topics: [
+      {
+        title: "Atención telefónica de código abierto",
+        body: "Compare stacks autoalojados, agentes de Asterisk, kits de voz de LiveKit y plataformas de recepción completas.",
+        href: "/es/blog/best-open-source-ai-phone-answering-services/",
+      },
+      {
+        title: "Cómo elegir una recepcionista con IA",
+        body: "Cómo evaluar proveedores, modelos de precios y requisitos de configuración antes de atender llamadas reales.",
+        href: "/es/blog/how-to-choose-an-ai-receptionist/",
+      },
+      {
+        title: "Comparativas de recepcionistas con IA",
+        body: "Comparativas justas de Upfirst, Frontdesk, Smith.ai, Goodcall y otros servicios de atención telefónica.",
+        href: "/es/blog/upfirst-alternative/",
+      },
+      {
+        title: "Desarrollar o comprar",
+        body: "Cuándo conviene el autoalojamiento, contratar software alojado o desarrollar desde cero.",
+        href: "/es/blog/build-or-buy-ai-receptionist/",
+      },
+      {
+        title: "El costo de las llamadas perdidas",
+        body: "Cuántos ingresos se pierden cuando nadie contesta y cómo se recuperan en la práctica.",
+        href: "/es/blog/ai-receptionist-savings/",
+      },
+      {
+        title: "Stack de código abierto",
+        body: "Cómo LobbyStack reúne llamadas, reservas, transcripciones, paneles, facturación y autoalojamiento en un solo stack de recepción.",
+        href: "/es/blog/open-source-ai-receptionist-stack/",
+      },
+      {
+        title: "Flujos de trabajo sin diagramas",
+        body: "Por qué las cadenas de n8n y Zapier fallan en llamadas en vivo y qué debería resolver el propio producto de recepción.",
+        href: "/es/blog/ai-receptionist-workflows/",
+      },
+      {
+        title: "Programa de afiliados",
+        body: "Gane comisiones recurrentes recomendando una recepcionista con IA de código abierto a agencias, consultores y negocios locales.",
+        href: "/es/blog/ai-receptionist-affiliate-program/",
+      },
+      {
+        title: "Guías por sector",
+        body: "Páginas para plomeros, técnicos de climatización, consultorios dentales, salones y otros negocios que reciben muchas llamadas.",
+        href: "/es/solutions/",
+      },
+    ],
+  },
+  sr: {
+    h1: "Blog o AI recepcionerima i novosti o proizvodu",
+    intro:
+      "Novosti o proizvodu i praktični saveti o AI odgovaranju na pozive, propuštenim pozivima, zakazivanju termina, preusmeravanju poziva, praćenju potencijalnih klijenata i infrastrukturi recepcionera otvorenog koda.",
+    topicsHeading: "Teme kojima se bavimo",
+    topics: [
+      {
+        title: "Odgovaranje na pozive uz otvoreni kod",
+        body: "Uporedite samostalno hostovana rešenja, Asterisk agente, LiveKit glasovne alate i kompletne platforme za recepciju.",
+        href: "/sr/blog/best-open-source-ai-phone-answering-services/",
+      },
+      {
+        title: "Kako izabrati AI recepcionera",
+        body: "Kako da procenite dobavljače, modele cena i zahteve za podešavanje pre nego što uključite obradu poziva uživo.",
+        href: "/sr/blog/how-to-choose-an-ai-receptionist/",
+      },
+      {
+        title: "Poređenja AI recepcionera",
+        body: "Fer poređenja servisa Upfirst, Frontdesk, Smith.ai, Goodcall i drugih rešenja za odgovaranje na pozive.",
+        href: "/sr/blog/upfirst-alternative/",
+      },
+      {
+        title: "Razviti ili kupiti",
+        body: "Kada se isplati samostalno hostovanje, kada hostovani softver, a kada razvoj od nule.",
+        href: "/sr/blog/build-or-buy-ai-receptionist/",
+      },
+      {
+        title: "Cena propuštenih poziva",
+        body: "Koliko prihoda odlazi kada niko ne odgovori i kako se taj prihod vraća u praksi.",
+        href: "/sr/blog/ai-receptionist-savings/",
+      },
+      {
+        title: "Rešenje otvorenog koda",
+        body: "Kako LobbyStack objedinjuje pozive, zakazivanje, transkripte, kontrolne table, naplatu i samostalno hostovanje u jednom sistemu.",
+        href: "/sr/blog/open-source-ai-receptionist-stack/",
+      },
+      {
+        title: "Tokovi rada bez dijagrama",
+        body: "Zašto se n8n i Zapier lanci lome tokom poziva uživo i šta bi umesto njih trebalo da preuzme sam proizvod za recepciju.",
+        href: "/sr/blog/ai-receptionist-workflows/",
+      },
+      {
+        title: "Partnerski program",
+        body: "Ostvarite stalnu proviziju preporučujući AI recepcionera otvorenog koda agencijama, konsultantima i lokalnim firmama.",
+        href: "/sr/blog/ai-receptionist-affiliate-program/",
+      },
+      {
+        title: "Vodiči po delatnostima",
+        body: "Stranice za vodoinstalatere, servisere grejanja i klimatizacije, stomatološke ordinacije, salone i druge firme sa mnogo poziva.",
+        href: "/sr/solutions/",
+      },
+    ],
+  },
 } satisfies Record<
   Locale,
   {
@@ -150,7 +256,13 @@ const pageCopy = {
   }
 >
 
-const dateLocale = locale === "fr" ? "fr-FR" : "en-US"
+const dateLocales = {
+  en: "en-US",
+  fr: "fr-FR",
+  es: "es",
+  sr: "sr-Latn",
+} satisfies Record<Locale, string>
+const dateLocale = dateLocales[locale]
 ---
 
 <Layout
@@ -301,5 +413,5 @@ const dateLocale = locale === "fr" ? "fr-FR" : "en-US"
     </section>
   </main>
 
-  <Footer locale={locale} />
+  <Footer locale={locale} path={Astro.url.pathname} />
 </Layout>

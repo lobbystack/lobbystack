@@ -3,6 +3,9 @@ import { z } from "zod";
 export { resolveOpenAiPricing } from "./aiPricing";
 export type { AiPricingRatesUsdPerMillionTokens, VersionedAiPricing } from "./aiPricing";
 export { isMaintenanceMode } from "./maintenance";
+export { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, normalizeInterfaceLocale } from "./locales";
+export type { InterfaceLocale } from "./locales";
+import { interfaceLocales, type InterfaceLocale } from "./locales";
 export { isCertificationMode, assertCertificationRecipient, assertCertificationOperationAllowed, assertCertificationCalendar, assertCertificationBillingSandbox } from "./certification";
 
 export type DeploymentMode = "cloud" | "self_hosted_standard" | "development";
@@ -36,6 +39,10 @@ export type DocumentMimeType =
   | "application/pdf"
   | "text/plain"
   | "text/markdown";
+/**
+ * Languages the AI receptionist speaks and the business default language.
+ * Interface languages (dashboard, widget UI, email) are {@link InterfaceLocale}.
+ */
 export type RuntimeLocale = "en" | "fr";
 
 export const runtimeLocales = ["en", "fr"] as const satisfies ReadonlyArray<RuntimeLocale>;
@@ -269,7 +276,7 @@ export type WidgetConfig = {
   title?: string;
   subtitle?: string;
   greeting?: string;
-  localeOverride?: RuntimeLocale;
+  localeOverride?: InterfaceLocale;
   leadForm?: WidgetLeadFormConfig;
 };
 
@@ -298,7 +305,7 @@ export const widgetConfigSchema = z.object({
   title: z.string().max(160).optional(),
   subtitle: z.string().max(320).optional(),
   greeting: z.string().max(400).optional(),
-  localeOverride: z.enum(runtimeLocales).optional(),
+  localeOverride: z.enum(interfaceLocales).optional(),
   leadForm: widgetLeadFormConfigSchema.optional(),
 });
 

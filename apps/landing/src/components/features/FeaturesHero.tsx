@@ -1,5 +1,5 @@
 import { buttonVariants } from "@/components/ui/button"
-import { APP_SIGNUP_URL } from "@/lib/app-links"
+import { appSignupUrl } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
 import { getCopy, localizeHref, type Locale } from "@/i18n"
 import { ArrowRight } from "lucide-react"
@@ -53,6 +53,50 @@ const featuresHeroCopy = {
     notification: "Équipe notifiée",
     summary: "Résumé joint",
   },
+  es: {
+    h1Start: "Funciones de recepcionista con IA que de verdad",
+    h1Emphasis: "hacen el trabajo",
+    body: "LobbyStack contesta el teléfono con IA, reserva citas, avisa a su equipo, dirige llamadas, da presupuestos y califica clientes potenciales, sin menús telefónicos ni editores de flujos enredados.",
+    workflowLabel: "Escriba el flujo",
+    workflowText:
+      "Cuando alguien pida un presupuesto, pregunte qué servicio necesita, dónde se encuentra, su plazo y su presupuesto. Dé nuestro rango de precios aprobado para trabajos estándar. Si necesita un precio exacto, reserve una visita de estimación y adjunte el resumen para el equipo.",
+    callLabel: "LobbyStack atiende la llamada",
+    quoteTitle: "Solicitud de presupuesto de Sarah M.",
+    service: "Servicio: estimación de reforma",
+    budget: "Presupuesto: $8,000 a $12,000",
+    timeline: "Plazo: el próximo mes",
+    priceRange: "Rango de precios enviado",
+    callbackNeeded: "Hace falta una visita de estimación",
+    outcomeLabel: "Revise el resultado",
+    callbackBooked: "Visita de estimación reservada",
+    callbackTime: "Martes a las 14:00",
+    assigned: "Asignada a Alex",
+    confirmation: "Confirmación enviada al cliente",
+    notification: "Aviso enviado al equipo",
+    summary: "Resumen adjunto",
+  },
+  sr: {
+    h1Start: "Funkcije AI recepcionera koje zaista",
+    h1Emphasis: "obavljaju posao",
+    body: "LobbyStack odgovara na pozive uz pomoć AI, zakazuje termine, obaveštava tim, usmerava pozive, daje cene i kvalifikuje potencijalne klijente, bez telefonskih menija i zamršenih alata za tokove rada.",
+    workflowLabel: "Napišite tok rada",
+    workflowText:
+      "Kada neko traži ponudu, pitajte koja mu usluga treba, gde se nalazi, kakav mu je rok i budžet. Za standardne poslove navedite naš odobreni raspon cena. Ako mu treba tačna cena, zakažite procenu na licu mesta i priložite rezime za tim.",
+    callLabel: "LobbyStack obrađuje poziv",
+    quoteTitle: "Zahtev za ponudu: Sarah M.",
+    service: "Usluga: procena renoviranja",
+    budget: "Budžet: $8,000 do $12,000",
+    timeline: "Rok: sledeći mesec",
+    priceRange: "Raspon cena poslat",
+    callbackNeeded: "Potrebna procena na licu mesta",
+    outcomeLabel: "Pregledajte ishod",
+    callbackBooked: "Procena na licu mesta zakazana",
+    callbackTime: "Utorak u 14:00",
+    assigned: "Dodeljeno: Alex",
+    confirmation: "Potvrda poslata klijentu",
+    notification: "Tim obavešten",
+    summary: "Rezime priložen",
+  },
 } satisfies Record<Locale, Record<string, string>>
 
 export function FeaturesHero({ locale = "en" }: FeaturesHeroProps) {
@@ -78,7 +122,7 @@ export function FeaturesHero({ locale = "en" }: FeaturesHeroProps) {
           {/* CTAs */}
           <div className="animate-fade-up mt-8 flex items-center justify-center gap-4 stagger-3">
             <a
-              href={APP_SIGNUP_URL}
+              href={appSignupUrl(locale)}
               className={cn(
                 buttonVariants({ size: "lg" }),
                 "h-11 rounded-full px-7 text-sm"
@@ -86,7 +130,7 @@ export function FeaturesHero({ locale = "en" }: FeaturesHeroProps) {
               data-ph-signup-cta
               data-ph-capture-attribute-section="features_hero"
               data-ph-capture-attribute-action="try_for_free"
-              data-ph-capture-attribute-destination={APP_SIGNUP_URL}
+              data-ph-capture-attribute-destination={appSignupUrl(locale)}
             >
               {common.tryFree}
               <ArrowRight className="ml-1 size-4" />

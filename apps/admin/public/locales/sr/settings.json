@@ -1,0 +1,1012 @@
+{
+  "header": {
+    "title": "Podešavanja",
+    "description": "Upravljajte podacima naloga i podacima za prijavu."
+  },
+  "layout": {
+    "businessDescription": "Upravljajte podacima naloga i podacima za prijavu.",
+    "integrationsDescription": "Povežite alate i aplikacije koje koristite.",
+    "billingDescription": "Pregledajte svoj paket u oblaku i nedavnu aktivnost.",
+    "usageDescription": "Pratite potrošnju u oblaku, ograničenja paketa i kada se resetuju u ovom obračunskom periodu."
+  },
+  "sections": {
+    "business": "Tim",
+    "phoneNumber": "Broj telefona",
+    "appearance": "Postavke",
+    "integrations": "Integracije",
+    "billing": "Paket",
+    "usage": "Potrošnja",
+    "notifications": "Obaveštenja",
+    "widget": "Vidžet za sajt",
+    "apiKeys": "API ključevi",
+    "connectedApps": "Povezane aplikacije"
+  },
+  "widget": {
+    "title": "Vidžet za sajt",
+    "description": "Ugradite vidžet za ćaskanje na svoj sajt.",
+    "created": {
+      "title": "Ključ vidžeta je kreiran",
+      "description": "Kopirajte ovaj ključ sada. Više ga nećete videti.",
+      "copy": "Kopiraj",
+      "copied": "Kopirano",
+      "copySnippet": "Kopiraj kod za ugradnju",
+      "hint": "Dodajte kod na bilo koju stranicu na dozvoljenom domenu. Vidžet se učitava automatski.",
+      "done": "Gotovo"
+    },
+    "create": {
+      "title": "Kreirajte ključ vidžeta",
+      "description": "Svaki ključ pripada ovom radnom prostoru i ima sopstvenu listu dozvoljenih domena.",
+      "action": "Kreiraj ključ vidžeta"
+    },
+    "restricted": {
+      "title": "Novi vidžeti za sajt još nisu dostupni",
+      "description": "Još ne izdajemo nove vidžete za ćaskanje na sajtu. Postojeći vidžeti i dalje rade, a ispod ih možete menjati ili pauzirati."
+    },
+    "fields": {
+      "label": "Naziv",
+      "labelPlaceholder": "Glavni sajt",
+      "origins": "Dozvoljeni domeni",
+      "color": "Boja akcenta",
+      "position": "Položaj",
+      "title": "Naslov",
+      "titlePlaceholder": "Pišite nam",
+      "subtitle": "Podnaslov",
+      "subtitlePlaceholder": "Odgovaramo za nekoliko minuta",
+      "greeting": "Pozdrav",
+      "greetingPlaceholder": "Zdravo. Kako možemo da pomognemo?",
+      "localeOverride": "Jezik",
+      "leadEnabled": "Tražite od posetilaca kontakt podatke",
+      "requireEmail": "Obavezan imejl",
+      "requirePhone": "Obavezan telefon",
+      "showBeforeChat": "Pitaj pre ćaskanja"
+    },
+    "positions": {
+      "bottomRight": "Dole desno",
+      "bottomLeft": "Dole levo",
+      "bottomCenter": "Dole u sredini"
+    },
+    "locales": {
+      "visitor": "Jezik posetioca",
+      "english": "Engleski",
+      "french": "Francuski",
+      "spanish": "Španski",
+      "serbian": "Srpski"
+    },
+    "leadCapture": {
+      "title": "Obrazac za kontakt",
+      "enabled": "Uključeno"
+    },
+    "status": {
+      "active": "Aktivan",
+      "disabled": "Pauziran",
+      "revoked": "Opozvan"
+    },
+    "keys": {
+      "title": "Ključevi vidžeta",
+      "fallbackBusiness": "Aktivni radni prostor",
+      "refresh": "Osveži",
+      "loading": "Učitavanje ključeva vidžeta...",
+      "unavailable": "Ključevi vidžeta nisu dostupni.",
+      "empty": "Još nema ključeva vidžeta.",
+      "untitled": "Vidžet bez naziva",
+      "pause": "Pauziraj",
+      "resume": "Nastavi",
+      "revoke": "Opozovi",
+      "revokeConfirm": "Opozvati ovaj ključ vidžeta? Postojeće ugradnje će prestati da rade.",
+      "save": "Sačuvaj",
+      "lastUsed": "Poslednja upotreba: {{date}}"
+    }
+  },
+  "billing": {
+    "toast": {
+      "checkoutSuccess": "Plaćanje je uspešno završeno.",
+      "checkoutFailed": "Nije moguće otvoriti plaćanje.",
+      "portalFailed": "Nije moguće otvoriti portal za korisnike."
+    },
+    "pastDueBanner": {
+      "title": "Plaćanje nije uspelo",
+      "description": "Vaša usluga ostaje aktivna tokom dodatnog roka za plaćanje. Ažurirajte način plaćanja da biste izbegli prekid.",
+      "action": "Ažuriraj način plaćanja",
+      "openingPortal": "Otvaranje naplate..."
+    },
+    "planLabels": {
+      "selfHost": "Samostalno hostovanje",
+      "freeCloud": "Free",
+      "freeCloudCard": "Free paket",
+      "starter": "Starter",
+      "starterCard": "Starter paket",
+      "pro": "Pro",
+      "proCard": "Pro paket",
+      "enterprise": "Enterprise",
+      "enterpriseCard": "Enterprise paket"
+    },
+    "subscriptionStates": {
+      "active": "Aktivna",
+      "trialing": "Probni period",
+      "past_due": "Kasni plaćanje",
+      "canceled": "Otkazana",
+      "revoked": "Opozvana",
+      "inactive": "Neaktivna"
+    },
+    "actions": {
+      "upgradeToPro": "Pređite na Pro",
+      "starter": {
+        "monthly": "Starter mesečno",
+        "annual": "Starter godišnje"
+      },
+      "pro": {
+        "monthly": "Pređite na Pro",
+        "annual": "Pređite na Pro"
+      },
+      "manageBilling": "Upravljaj naplatom",
+      "manageSubscription": "Upravljaj pretplatom",
+      "openingCheckout": "Otvaranje plaćanja...",
+      "openingPortal": "Otvaranje portala...",
+      "viewInvoice": "Prikaži račun",
+      "retry": "Pokušaj ponovo"
+    },
+    "currentPlan": {
+      "title": "Vaš paket",
+      "description": "Naplata važi samo za radne prostore u oblaku. Uz samostalno hostovanje dobijate ceo proizvod sa sopstvenim provajderima.",
+      "planLabel": "Trenutni paket",
+      "monthlyChargeValue": "{{amount}}/mes.",
+      "freeLabel": "Besplatno",
+      "customPricing": "Prilagođene cene i uslovi korišćenja.",
+      "includedNumberTitle": "Uključeni poslovni brojevi",
+      "includedNumberValue": "Uključeno: {{count}}",
+      "customIncludedNumbers": "Po dogovoru",
+      "billingContactTitle": "Kontakt za naplatu",
+      "billingContactMissing": "Još nema kontakta za naplatu.",
+      "subscriptionStateTitle": "Pretplata",
+      "billingPeriod": "Trenutni period se resetuje {{resetAt}}",
+      "selfHostNotice": "Samostalno hostovani radni prostori koriste Vaše provajdere. Nema ograničenja potrošnje ni naplate.",
+      "enterpriseNotice": "Potrošnja i ograničenja su određeni Vašim Enterprise ugovorom.",
+      "proNotice": "Uključena potrošnja se resetuje svakog meseca. Dodatna potrošnja se naplaćuje po ceni prekoračenja.",
+      "monthlySuffix": "/ mesečno",
+      "annualEffectiveSuffix": "/ mesečno, uz godišnju naplatu",
+      "paygMonthlySuffix": "+ plaćanje po potrošnji",
+      "includedTitle": "Šta je uključeno:",
+      "includedStorageLabel": "skladišnog prostora",
+      "includedVoiceLabel": "minuta razgovora",
+      "includedSmsLabel": "SMS upozorenja",
+      "includedOutboundLabel": "pokušaja preusmeravanja",
+      "includedStorageCustom": "Prilagođen skladišni prostor",
+      "includedVoiceCustom": "Prilagođen broj minuta razgovora",
+      "includedSmsCustom": "Prilagođen broj SMS poruka",
+      "includedOutboundCustom": "Prilagođen broj preusmeravanja",
+      "includedStorage": "{{amount}} {{unit}} skladišnog prostora"
+    },
+    "upgradeDialog": {
+      "title": "Nadogradite paket",
+      "description": "Izaberite paket koji najviše odgovara Vašem timu.",
+      "enterpriseSubject": "Enterprise paket",
+      "billingIntervalLabel": "Period naplate",
+      "annualDiscount": "Uštedite 20%",
+      "billingIntervals": {
+        "monthly": "Mesečno",
+        "annual": "Godišnje"
+      },
+      "actions": {
+        "currentPlan": "Trenutni paket",
+        "starter": "Izaberite Starter",
+        "pro": "Pređite na Pro",
+        "enterprise": "Kontaktirajte nas"
+      },
+      "plans": {
+        "free_cloud": {
+          "name": "Free",
+          "description": {
+            "monthly": "Isprobajte glas u pregledaču",
+            "annual": "Isprobajte glas u pregledaču"
+          },
+          "highlights": {
+            "voiceMinutes": "30 minuta razgovora u pregledaču",
+            "allFeatures": "Bez broja telefona",
+            "support": "Podrška zajednice"
+          }
+        },
+        "starter": {
+          "name": "Starter",
+          "description": {
+            "monthly": "Mesečno, uz mesečnu naplatu",
+            "annual": "Mesečno, uz godišnju naplatu"
+          },
+          "highlights": {
+            "voiceMinutes": "150 minuta razgovora uključeno\nZatim 0,20 $/min",
+            "dedicatedNumber": "1 namenski poslovni broj",
+            "phoneNumber": "50 SMS segmenata za upozorenja",
+            "overages": "0,20 $/min za dodatne minute razgovora",
+            "support": "Podrška putem imejla"
+          }
+        },
+        "pro": {
+          "name": "Pro",
+          "description": {
+            "monthly": "Mesečno, uz mesečnu naplatu",
+            "annual": "Mesečno, uz godišnju naplatu"
+          },
+          "highlights": {
+            "voiceMinutes": "500 minuta razgovora uključeno\nZatim 0,18 $/min",
+            "dedicatedNumber": "1 namenski poslovni broj",
+            "alertSms": "200 SMS segmenata za upozorenja",
+            "support": "Prioritetna podrška putem imejla"
+          }
+        },
+        "enterprise": {
+          "name": "Enterprise",
+          "description": {
+            "monthly": "Za veći obim",
+            "annual": "Za veći obim"
+          },
+          "highlights": {
+            "phoneNumbers": "Više namenskih brojeva",
+            "selfHosted": "Mogućnost samostalnog hostovanja",
+            "support": "Namenska podrška pri uvođenju"
+          }
+        }
+      }
+    },
+    "usage": {
+      "title": "Uključena potrošnja",
+      "description": "Resetuje se {{resetAt}}.",
+      "paygTitle": "Plaćanje po potrošnji",
+      "paygDescription": "Dodatna potrošnja koja se naplaćuje u ovom periodu. Resetuje se {{resetAt}}.",
+      "knowledgeTitle": "Baza znanja",
+      "voiceTitle": "Minuti razgovora",
+      "voiceValue": "Iskorišćeno minuta: {{minutes}}",
+      "voiceRemaining": "Preostalo minuta: {{minutes}}",
+      "alertSmsTitle": "SMS upozorenja",
+      "alertSmsValue": "Iskorišćeno segmenata: {{formattedCount}}",
+      "alertSmsRemaining": "Preostalo segmenata: {{formattedCount}}",
+      "outboundAttemptsTitle": "Pokušaji preusmeravanja",
+      "outboundAttemptsValue": "Iskorišćeno pokušaja: {{formattedCount}}",
+      "outboundAttemptsRemaining": "Preostalo pokušaja: {{formattedCount}}",
+      "overageEnabled": "Dodatna potrošnja se naplaćuje kao prekoračenje.",
+      "included": "Uključeno",
+      "overage": "Prekoračenje",
+      "used": "iskorišćeno",
+      "remaining": "preostalo",
+      "of": "od",
+      "meteredSuffix": "(po potrošnji)",
+      "unlimited": "Neograničeno",
+      "blocked": "Limit dostignut",
+      "blockedDescription": "Limit je dostignut — potrošnja je pauzirana do sledećeg perioda.",
+      "overageCount": "{{count}} preko limita",
+      "overageCost": "≈ {{amount}} za prekoračenja",
+      "noOverages": "Bez prekoračenja — potrošnja je strogo ograničena na uključeni iznos.",
+      "overIncludedSummary": "{{count}} {{unit}} preko uključenog · <amount>≈ {{amount}}</amount> za prekoračenja",
+      "units": {
+        "voice": "min",
+        "outboundAttempts": "pokušaja",
+        "segments": "segmenata",
+        "storage": "MB"
+      },
+      "unavailable": "Podaci o potrošnji nisu dostupni.",
+      "customAllowance": "Iskorišćeno: {{used}} {{unit}} · Prilagođeni iznos"
+    },
+    "spendingCap": {
+      "title": "Mesečni limit potrošnje",
+      "placeholder": "25.00",
+      "amountLabel": "Limit prekoračenja (USD)",
+      "noCap": "Limit potrošnje nije podešen",
+      "currentSpend": "Trenutni trošak prekoračenja",
+      "spendOfCap": "{{spend}} od {{cap}}",
+      "spendAtLeastOfCap": "Najmanje {{spend}} od {{cap}}",
+      "reached": "Limit je dostignut — nova potrošnja iznad uključenih iznosa je pauzirana.",
+      "adminOnly": "Samo vlasnici i administratori radnog prostora mogu da menjaju ovaj limit.",
+      "save": "Sačuvaj",
+      "saving": "Čuvanje...",
+      "update": "Ažuriraj",
+      "updating": "Ažuriranje...",
+      "remove": "Ukloni limit",
+      "removing": "Uklanjanje...",
+      "saved": "Mesečni limit prekoračenja je sačuvan.",
+      "removed": "Mesečni limit prekoračenja je uklonjen.",
+      "invalidAmount": "Unesite iznos u USD koji nije negativan, sa najviše dve decimale.",
+      "saveFailed": "Nije moguće sačuvati mesečni limit prekoračenja.",
+      "removeFailed": "Nije moguće ukloniti mesečni limit prekoračenja."
+    },
+    "transactions": {
+      "title": "Istorija transakcija",
+      "description": "Porudžbine, povraćaji novca i naknade za podešavanje, sinhronizovani iz servisa Polar.",
+      "empty": "Još nema transakcija.",
+      "columns": {
+        "date": "Datum",
+        "description": "Opis",
+        "amount": "Iznos",
+        "status": "Status",
+        "invoice": "Račun"
+      },
+      "invoice": "Račun",
+      "statusLabels": {
+        "paid": "Plaćeno",
+        "pending": "Na čekanju",
+        "refunded": "Vraćeno",
+        "partially_refunded": "Delimično vraćeno"
+      },
+      "kindLabels": {
+        "order": "Porudžbina",
+        "refund": "Povraćaj novca"
+      }
+    }
+  },
+  "phoneNumber": {
+    "current": {
+      "label": "Trenutni broj telefona",
+      "description": "Ovo je broj na koji pozivaoci dobijaju Vašeg AI recepcionera.",
+      "empty": "Još nemate broj."
+    },
+    "reclaim": {
+      "title": "Ovaj broj će biti oslobođen {{date}}",
+      "description": "Free paket ne uključuje namenski poslovni broj. Pređite na Starter ili Pro pre tog datuma da biste zadržali {{number}}.",
+      "upgradeCta": "Nadogradite i zadržite broj"
+    },
+    "requiresPaidPlan": {
+      "title": "Namenski brojevi su deo plaćenih paketa",
+      "description": "Pređite na Starter ili Pro da biste dobili lokalni poslovni broj koji pozivaoci mogu da pozovu.",
+      "upgradeCta": "Pogledaj pakete"
+    },
+    "actions": {
+      "requestChange": "Zatraži promenu",
+      "getNumber": "Nabavi broj"
+    },
+    "dialog": {
+      "title": "Izaberite novi broj telefona",
+      "description": "Broj telefona možete promeniti samo jednom.",
+      "getNumberTitle": "Izaberite broj telefona",
+      "getNumberDescription": "Izaberite broj na koji pozivaoci mogu da dobiju Vašeg AI recepcionera."
+    },
+    "picker": {
+      "countryLabel": "Država",
+      "areaCodeLabel": "Pozivni broj",
+      "areaCodePlaceholder": "Pozivni broj",
+      "search": "Pretraži",
+      "phoneNumberHeader": "Broj telefona",
+      "select": "Izaberi",
+      "claiming": "Povezivanje novog broja...",
+      "loadMore": "Učitaj još",
+      "empty": "Nijedan broj ne odgovara pretrazi.",
+      "loadFailed": "Trenutno ne možemo da učitamo brojeve.",
+      "searchFailed": "Trenutno ne možemo da pretražimo brojeve.",
+      "claimFailed": "Nismo uspeli da zamenimo broj telefona. Pokušajte ponovo.",
+      "unavailable": "Taj broj je upravo zauzet. Izaberite drugi sa osvežene liste."
+    },
+    "toast": {
+      "changed": "Broj telefona je promenjen. Prethodni broj ostaje aktivan još 30 dana.",
+      "added": "Broj telefona je dodat."
+    }
+  },
+  "appearance": {
+    "title": "Postavke",
+    "description": "Podesite jezik kontrolne table, format vremena i temu.",
+    "save": "Ažuriraj postavke",
+    "saved": "Postavke prikaza su ažurirane.",
+    "language": {
+      "label": "Jezik kontrolne table",
+      "description": "Izaberite jezik kontrolne table.",
+      "saveFailed": "Nismo uspeli da sačuvamo izbor jezika. Pokušajte ponovo."
+    },
+    "timeFormat": {
+      "label": "Format vremena",
+      "description": "Izaberite 24-časovni format ili AM/PM.",
+      "twentyFourHour": "24 časa",
+      "ampm": "AM/PM"
+    },
+    "theme": {
+      "label": "Tema",
+      "description": "Izaberite željenu temu.",
+      "light": "Svetla",
+      "lightDescription": "Svetle površine sa blagim kontrastom za rad danju.",
+      "dark": "Tamna",
+      "darkDescription": "Prigušene površine koje su prijatnije za oči kasno uveče."
+    },
+    "telemetry": {
+      "label": "Deli podatke telemetrije",
+      "description": "Pomozite nam da poboljšamo LobbyStack deljenjem anonimizovanih podataka o korišćenju i greškama.",
+      "saveFailed": "Nismo uspeli da sačuvamo podešavanje telemetrije. Pokušajte ponovo."
+    }
+  },
+  "integrations": {
+    "permissions": {
+      "manageRequired": "Samo vlasnici i administratori radnog prostora mogu da upravljaju integracijama."
+    },
+    "actions": {
+      "connect": "Poveži",
+      "connected": "Povezano",
+      "settings": "Otvori podešavanja integracije",
+      "manage": "Upravljaj"
+    },
+    "providers": {
+      "google": "Sinhronizujte zakazivanja sa servisom Google Calendar."
+    },
+    "google": {
+      "sheetTitle": "Google Calendar",
+      "sheetDescription": "Povežite Google Calendar i izaberite kalendar u koji stižu zakazivanja.",
+      "connectionSectionTitle": "Veza",
+      "connectionSectionDescription": "Povežite ili ponovo povežite Google nalog koji treba da prima zakazivanja.",
+      "privacyNoticeText": "Povezivanjem servisa Google Calendar omogućavate da LobbyStack čita dostupnost u Vašem kalendaru i da kreira, menja ili briše termine u kalendaru koji izaberete.",
+      "privacyPolicyLinkText": "Politika privatnosti",
+      "calendarSectionTitle": "Podešavanja kalendara",
+      "calendarSectionDescription": "Izaberite kalendar za sinhronizaciju i proverite stanje poslednje sinhronizacije.",
+      "staffLabel": "Član tima",
+      "selectStaff": "Izaberite člana tima",
+      "chooseStaffFirst": "Izaberite člana tima čiji Google Calendar želite da povežete.",
+      "connect": "Poveži Google",
+      "connecting": "Preusmeravanje...",
+      "reconnect": "Ponovo poveži Google",
+      "disconnect": "Prekini vezu",
+      "disconnecting": "Prekidanje veze...",
+      "disconnectedSuccess": "Veza sa servisom Google Calendar je prekinuta.",
+      "disconnectFailed": "Nije moguće prekinuti vezu sa servisom Google Calendar.",
+      "disconnectConfirmTitle": "Prekinuti vezu sa servisom Google Calendar?",
+      "disconnectConfirmDescription": "Ovim se uklanja trenutna veza sa servisom Google Calendar za zakazivanja.",
+      "disconnectConfirm": "Potvrđujete?",
+      "disconnectConfirmAction": "Prekini vezu sa Google Calendar",
+      "disconnectCancel": "Otkaži",
+      "connectedSuccess": "Google Calendar je uspešno povezan.",
+      "connectFailed": "Nije moguće dovršiti povezivanje sa servisom Google Calendar.",
+      "connectedAccount": "Povezani nalog",
+      "connectedAccountUnavailable": "Povezani nalog nije dostupan",
+      "selectedCalendar": "Izabrani kalendar",
+      "noCalendarSelected": "Kalendar još nije izabran.",
+      "calendarLabel": "Google kalendar",
+      "selectCalendar": "Izaberite kalendar",
+      "chooseCalendarFirst": "Izaberite Google kalendar pre čuvanja.",
+      "loadingCalendars": "Učitavanje kalendara...",
+      "refreshCalendars": "Osveži",
+      "saveCalendar": "Sačuvaj kalendar",
+      "savingCalendar": "Čuvanje...",
+      "calendarSaved": "Izbor Google kalendara je sačuvan.",
+      "calendarSaveFailed": "Nije moguće sačuvati izabrani Google kalendar.",
+      "calendarListFailed": "Nije moguće učitati Google kalendare.",
+      "mappedConnections": "Povezani Google nalozi",
+      "mappedConnectionsDescription": "Svaka Google veza pripada jednom članu tima koji prima zakazivanja.",
+      "unknownStaff": "Nepoznat član tima",
+      "noConnections": "Još nema veza sa servisom Google Calendar.",
+      "notConnectedForStaff": "Ovaj član tima još nema povezan Google Calendar.",
+      "notConnectedDescription": "Povežite Google Calendar da biste počeli da sinhronizujete zakazivanja.",
+      "noStaff": "Dodajte člana tima koji prima zakazivanja pre povezivanja servisa Google Calendar.",
+      "primaryCalendarLabel": "{{summary}} (glavni)",
+      "lastSync": "Poslednja sinhronizacija",
+      "neverSynced": "Još nema uspešne sinhronizacije.",
+      "lastSyncState": "Stanje poslednje sinhronizacije",
+      "lastSyncOk": "U redu",
+      "syncHealthy": "Sinhronizacija radi",
+      "syncNeedsAttention": "Potrebna je pažnja",
+      "discoveryFailed": "Nije bilo moguće proveriti pristup kalendaru ili sinhronizaciju. Pokušajte ponovo da sinhronizujete ili ponovo povežite Google nalog."
+    },
+    "cards": {
+      "google": {
+        "title": "Google Calendar",
+        "description": "Sinhronizujte zakazivanja sa Google kalendarom."
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "description": "Šaljite pozive, zakazivanja i poruke u svoje alate."
+      }
+    },
+    "status": {
+      "connected": "Povezano",
+      "reconnectRequired": "Potrebno ponovno povezivanje",
+      "syncing": "Sinhronizacija",
+      "notConnected": "Još nije povezano"
+    },
+    "summary": {
+      "title": "Pregled sinhronizacije kalendara",
+      "description": "Brz pregled rada integracija.",
+      "connectedCalendars": "Povezani kalendari",
+      "openIssues": "Otvoreni problemi sinhronizacije",
+      "syncedAppointments": "Sinhronizovani termini"
+    }
+  },
+  "profile": {
+    "title": "Profil recepcionera",
+    "description": "Definišite glas, ton, pravila zakazivanja i preusmeravanja koja oblikuju Vašeg recepcionera.",
+    "greeting": "Pozdrav",
+    "tone": "Ton",
+    "defaultCustomerLanguage": "Podrazumevani jezik klijenta",
+    "businessSummary": "Opis firme",
+    "bookingPolicy": "Pravila zakazivanja",
+    "transferMode": "Režim preusmeravanja",
+    "transferNumber": "Broj za preusmeravanje",
+    "voiceInstructions": "Uputstva za glas",
+    "smsInstructions": "Uputstva za SMS",
+    "selectDefaultLanguage": "Izaberite podrazumevani jezik",
+    "selectTransferMode": "Izaberite režim preusmeravanja",
+    "transferModes": {
+      "never": "Nikad",
+      "always": "Uvek",
+      "on_request": "Na zahtev",
+      "on_urgent": "Za hitne slučajeve",
+      "during_business_hours": "Tokom radnog vremena"
+    },
+    "save": "Sačuvaj profil",
+    "saving": "Čuvanje...",
+    "saved": "Profil recepcionera je sačuvan.",
+    "placeholders": {
+      "transferNumber": "+1 555 123 4567"
+    }
+  },
+  "account": {
+    "title": "Nalog",
+    "actions": {
+      "change": "Promeni"
+    },
+    "businessName": {
+      "label": "Naziv firme",
+      "description": "Ovaj naziv se prikazuje na kontrolnoj tabli i u podacima o firmi koje vide klijenti.",
+      "placeholder": "Porodična klinika Maple",
+      "save": "Sačuvaj",
+      "saving": "Čuvanje...",
+      "saved": "Izmene su sačuvane"
+    },
+    "changeEmail": {
+      "label": "Promeni imejl",
+      "description": "Imejl adresa kojom se prijavljujete.",
+      "newEmailPlaceholder": "Novi imejl",
+      "currentPasswordPlaceholder": "Trenutna lozinka",
+      "save": "Pošalji link za potvrdu",
+      "title": "Imejl",
+      "currentPasswordLabel": "Trenutna lozinka",
+      "currentEmail": "{{email}}",
+      "confirmationSent": "Poslali smo link za potvrdu na {{email}}.",
+      "errors": {
+        "invalidPassword": "Trenutna lozinka nije ispravna.",
+        "alreadyExists": "Nalog sa tom imejl adresom već postoji.",
+        "unchanged": "Unesite drugu imejl adresu.",
+        "noEmail": "Za ovaj nalog još nije podešen imejl.",
+        "missingSiteUrl": "Potvrda imejla još nije podešena. Podesite SITE_URL na Convex okruženju i pokušajte ponovo.",
+        "required": "Unesite novu imejl adresu.",
+        "failed": "Nismo uspeli da pošaljemo link za potvrdu. Pokušajte ponovo."
+      }
+    },
+    "changePassword": {
+      "title": "Lozinka",
+      "label": "Promeni lozinku",
+      "description": "Lozinka kojom se prijavljujete.",
+      "dialogDescription": "Unesite trenutnu i novu lozinku.",
+      "currentPasswordLabel": "Trenutna lozinka",
+      "currentPasswordPlaceholder": "Trenutna lozinka",
+      "newPasswordLabel": "Nova lozinka",
+      "newPasswordPlaceholder": "Nova lozinka",
+      "confirmPasswordLabel": "Potvrdite novu lozinku",
+      "confirmPasswordPlaceholder": "Potvrdite novu lozinku",
+      "save": "Sačuvaj",
+      "saved": "Lozinka je ažurirana.",
+      "errors": {
+        "mismatch": "Nove lozinke se ne podudaraju.",
+        "failed": "Nije moguće ažurirati lozinku."
+      }
+    }
+  },
+  "workspaceTeam": {
+    "members": {
+      "title": "Članovi",
+      "table": {
+        "email": "Imejl",
+        "role": "Uloga"
+      },
+      "empty": "Još nema članova.",
+      "noEmail": "Nema sačuvanog imejla",
+      "joinedOn": "Član od {{date}}",
+      "invitedOn": "Poziv poslat {{date}}",
+      "status": {
+        "pending": "Na čekanju"
+      },
+      "actions": {
+        "moreOptions": "Još opcija",
+        "remove": "Ukloni",
+        "cancelInvite": "Otkaži poziv"
+      },
+      "removeSuccess": "Član je uklonjen.",
+      "removeFailed": "Nismo uspeli da uklonimo tog člana."
+    },
+    "roles": {
+      "admin": "Administrator",
+      "viewer": "Posmatrač"
+    },
+    "invite": {
+      "action": "Pozovi",
+      "title": "Pozovite člana tima",
+      "description": "Pošaljite poziv imejlom za pridruživanje ovom radnom prostoru.",
+      "emailLabel": "Imejl adresa",
+      "emailPlaceholder": "kolega@firma.com",
+      "roleLabel": "Izaberite ulogu",
+      "roles": {
+        "adminDescription": "Poziva članove tima i upravlja njima, menja podešavanja radnog prostora i naplatu.",
+        "viewerDescription": "Pregleda pozive, kontakte i aktivnost na kontrolnoj tabli, bez mogućnosti izmena."
+      },
+      "submit": "Pošalji poziv",
+      "sending": "Slanje poziva...",
+      "sent": "Poziv je poslat na {{email}}.",
+      "errors": {
+        "invalidEmail": "Unesite ispravnu imejl adresu.",
+        "failed": "Nismo uspeli da pošaljemo poziv. Pokušajte ponovo."
+      }
+    },
+    "pending": {
+      "resend": "Pošalji ponovo",
+      "revoke": "Opozovi",
+      "resendSuccess": "Poziv je ponovo poslat.",
+      "resendFailed": "Nismo uspeli da ponovo pošaljemo poziv.",
+      "revokeSuccess": "Poziv je opozvan.",
+      "revokeFailed": "Nismo uspeli da opozovemo poziv."
+    }
+  },
+  "hours": {
+    "title": "Radno vreme",
+    "description": "Strukturisano radno vreme ima prednost nad dokumentima i pomaže recepcioneru da pouzdano odgovara na pitanja o dostupnosti.",
+    "save": "Sačuvaj radno vreme",
+    "saving": "Čuvanje...",
+    "leaveBlank": "Ostavite dan prazan da biste ga označili kao neradni.",
+    "saved": "Radno vreme je sačuvano.",
+    "saveFailed": "Čuvanje radnog vremena nije uspelo.",
+    "invalidHours": "Neispravno radno vreme za {{day}}."
+  },
+  "services": {
+    "title": "Usluge",
+    "description": "Definicije usluga pokreću logiku zakazivanja i snimak recepcionera koji pozivaoci čuju.",
+    "serviceName": "Naziv usluge",
+    "englishLabel": "Naziv na engleskom",
+    "frenchLabel": "Naziv na francuskom",
+    "slug": "Slug",
+    "durationMinutes": "Trajanje (minuti)",
+    "descriptionLabel": "Opis",
+    "placeholders": {
+      "serviceName": "Prva konsultacija",
+      "englishLabel": "Initial Consultation",
+      "frenchLabel": "Consultation initiale",
+      "description": "Prvi termin od 30 minuta."
+    },
+    "save": "Dodaj uslugu",
+    "update": "Ažuriraj uslugu",
+    "cancelEdit": "Otkaži",
+    "edit": "Izmeni uslugu",
+    "saving": "Čuvanje...",
+    "saved": "Usluga je sačuvana.",
+    "noDescription": "Još nema opisa.",
+    "empty": "Još nema podešenih usluga."
+  },
+  "phoneRouting": {
+    "title": "Rutiranje brojeva telefona",
+    "description": "Povežite Twilio brojeve sa ovom firmom kako bi pozivi uživo i SMS poruke učitali odgovarajući snimak recepcionera.",
+    "managedNumber": "Upravljani broj",
+    "selectNumber": "Izaberite broj",
+    "addNewNumber": "Dodaj novi broj",
+    "e164Number": "Broj u E.164 formatu",
+    "twilioPhoneSid": "Twilio Phone SID",
+    "status": "Status",
+    "selectStatus": "Izaberite status",
+    "statuses": {
+      "active": "Aktivan",
+      "provisioning": "Priprema u toku",
+      "inactive": "Neaktivan"
+    },
+    "voiceEnabled": "Glas uključen",
+    "smsEnabled": "SMS uključen",
+    "save": "Sačuvaj rutiranje",
+    "saveNew": "Dodaj broj",
+    "saving": "Čuvanje...",
+    "saved": "Rutiranje broja je sačuvano.",
+    "added": "Rutiranje broja je dodato.",
+    "saveFailed": "Čuvanje rutiranja broja nije uspelo.",
+    "currentMappings": "Trenutna povezivanja",
+    "noSid": "Twilio Phone SID još nije sačuvan.",
+    "empty": "Još nema povezanih Twilio brojeva. Dodajte aktivni broj koji ste podesili u Twilio nalogu, tačno u E.164 formatu."
+  },
+  "team": {
+    "title": "Tim za zakazivanje",
+    "description": "Zakazivanje radi samo za usluge kojima je dodeljen bar jedan aktivan član tima.",
+    "member": "Član tima",
+    "selectMember": "Izaberite člana tima",
+    "addNewMember": "Dodaj novog člana tima",
+    "name": "Ime",
+    "timezone": "Vremenska zona",
+    "transferNumber": "Broj za preusmeravanje",
+    "placeholders": {
+      "name": "Jordan Lee",
+      "timezone": "America/Toronto",
+      "transferNumber": "+15145550123"
+    },
+    "activeForBooking": "Aktivan za zakazivanje",
+    "save": "Sačuvaj člana tima",
+    "saveNew": "Dodaj člana tima",
+    "saving": "Čuvanje...",
+    "saved": "Član tima je sačuvan.",
+    "added": "Član tima je dodat.",
+    "saveFailed": "Čuvanje člana tima nije uspelo.",
+    "serviceAssignments": "Dodela usluga",
+    "assignmentDescription": "Izaberite koje usluge svaki član tima može da zakazuje telefonom ili SMS-om.",
+    "emptyStaff": "Dodajte bar jednog člana tima pre dodele usluga.",
+    "emptyServices": "Prvo dodajte usluge, pa se vratite ovde da biste omogućili njihovo zakazivanje.",
+    "saveAssignments": "Sačuvaj dodelu usluga",
+    "savingAssignments": "Čuvanje...",
+    "savedAssignments": "Dodela usluga je sačuvana.",
+    "saveAssignmentsFailed": "Čuvanje dodele usluga nije uspelo.",
+    "assignedServices": "Usluge: {{count}}"
+  },
+  "snapshot": {
+    "title": "Snimak recepcionera",
+    "description": "Vaš recepcioner učitava ove podatke o firmi jednom, na početku poziva.",
+    "business": "Firma",
+    "timezone": "Vremenska zona",
+    "transferPolicy": "Pravila preusmeravanja",
+    "services": "Usluge u snimku",
+    "knowledgeDigest": "Sažetak znanja",
+    "emptyDigest": "Sažetak još nije generisan. Dodajte znanje ili dokumente kako bi recepcioner imao više informacija."
+  },
+  "nextSteps": {
+    "title": "Sledeći koraci",
+    "description": "Doradite ponašanje recepcionera pre nego što preusmerite stvarne pozive.",
+    "hours": "Podesite radno vreme, usluge i dodelu članova tima kako bi zakazivanje predlagalo stvarne termine.",
+    "transfer": "Dodajte pravila preusmeravanja i rezervni broj pre nego što počnete da preusmeravate hitne pozive.",
+    "snapshot": "Osvežite snimak posle većih promena pravila kako bi ih glasovni recepcioner brzo preuzeo."
+  },
+  "notifications": {
+    "title": "Obaveštenja",
+    "description": "Izaberite koji događaji šalju upozorenje na Vaš telefon ili imejl.",
+    "actions": {
+      "testEmail": "Probni imejl",
+      "testSms": "Probni SMS",
+      "testing": "Slanje..."
+    },
+    "toast": {
+      "saveFailed": "Podešavanja obaveštenja nisu sačuvana.",
+      "smsUnavailable": "Potvrdite broj telefona pre uključivanja SMS obaveštenja.",
+      "smsSenderUnavailable": "Podesite pošiljaoca SMS upozorenja pre uključivanja SMS obaveštenja.",
+      "testEmailSent": "Probni imejl je poslat.",
+      "testSmsSent": "Probni SMS je poslat.",
+      "testFailed": "Nije moguće poslati probno obaveštenje."
+    },
+    "sources": {
+      "title": "Kanali",
+      "email": {
+        "title": "Imejl",
+        "description": "Primajte upozorenja imejlom."
+      },
+      "sms": {
+        "title": "SMS",
+        "description": "Primajte hitna upozorenja na potvrđeni telefon.",
+        "unverifiedDescription": "Dodajte i potvrdite broj telefona na svom nalogu pre uključivanja SMS upozorenja.",
+        "senderMissingDescription": "SMS upozorenja nisu dostupna dok se za ovaj radni prostor ne podesi pošiljalac SMS upozorenja."
+      }
+    },
+    "communication": {
+      "title": "Komunikacija",
+      "eventColumn": "Događaj"
+    },
+    "events": {
+      "voiceMessage": {
+        "title": "Primljena glasovna poruka",
+        "description": "Kada pozivalac ostavi poruku tokom poziva."
+      },
+      "pausedSms": {
+        "title": "Nova SMS poruka",
+        "description": "Kada klijent pošalje SMS na Vaš poslovni broj."
+      },
+      "smsFailed": {
+        "title": "SMS obaveštenje klijentu nije uspelo",
+        "description": "Kada SMS za potvrdu termina ili podsetnik ne uspe ili ne bude isporučen."
+      },
+      "calendarSync": {
+        "title": "Problem sa sinhronizacijom kalendara",
+        "description": "Kada termin ne može da se sinhronizuje sa kalendarom i zahteva pažnju."
+      },
+      "transferFailed": {
+        "title": "Preusmeravanje poziva nije uspelo",
+        "description": "Kada je AI pokušao da preusmeri pozivaoca na osobu, ali preusmeravanje nije uspelo."
+      },
+      "widgetChat": {
+        "title": "Nova poruka u ćaskanju na sajtu",
+        "description": "Kada posetilac pošalje poruku preko vidžeta na Vašem sajtu."
+      },
+      "webhookDisabled": {
+        "title": "Webhook endpoint je isključen",
+        "description": "Kada LobbyStack prestane da šalje događaje na webhook endpoint jer nijedna isporuka nije uspela oko jedan dan."
+      }
+    },
+    "systemIssues": {
+      "title": "Sistemski problemi"
+    },
+    "smsConsent": {
+      "title": "Uključite SMS upozorenja",
+      "description": "Potvrdite da želite da LobbyStack šalje upozorenja radnog prostora na Vaš potvrđeni broj telefona.",
+      "cancel": "Otkaži",
+      "accept": "Slažem se, uključi SMS"
+    }
+  },
+  "secretReveal": {
+    "copy": "Kopiraj",
+    "copied": "Kopirano"
+  },
+  "apiKeys": {
+    "title": "API ključevi",
+    "description": "Povežite LobbyStack sa alatima kao što je Zapier ili sa sopstvenim skriptama. Svaki ključ važi samo za ovu firmu.",
+    "empty": "Još nema API ključeva.",
+    "neverUsed": "Nikad",
+    "createdBy": "{{date}}, korisnik {{name}}",
+    "revoked": "Opozvan {{date}}",
+    "restricted": {
+      "title": "Samo vlasnici i administratori mogu da upravljaju API ključevima",
+      "description": "Zamolite vlasnika ili administratora ove firme da kreira ključ za Vas."
+    },
+    "columns": {
+      "name": "Naziv",
+      "key": "Ključ",
+      "scopes": "Pristup",
+      "created": "Kreiran",
+      "lastUsed": "Poslednja upotreba",
+      "actions": "Radnje"
+    },
+    "create": {
+      "action": "Kreiraj API ključ",
+      "title": "Kreirajte API ključ",
+      "description": "Dajte ključu naziv koji ćete prepoznati i dozvolite samo pristup koji mu je potreban.",
+      "nameLabel": "Naziv",
+      "namePlaceholder": "Zapier",
+      "scopesLabel": "Pristup",
+      "cancel": "Otkaži",
+      "submit": "Kreiraj ključ",
+      "creating": "Kreiranje…"
+    },
+    "created": {
+      "title": "Ključ {{name}} je spreman",
+      "description": "Kopirajte ključ i sačuvajte ga u menadžeru lozinki ili u podešavanjima svog alata.",
+      "warning": "Ovaj ključ više nećete videti. Ako ga izgubite, opozovite ga i kreirajte novi.",
+      "done": "Gotovo"
+    },
+    "revoke": {
+      "action": "Opozovi",
+      "title": "Opozvati ovaj API ključ?",
+      "description": "Sve što koristi {{name}} odmah prestaje da radi. Ovo ne može da se poništi.",
+      "confirm": "Opozovi ključ",
+      "cancel": "Otkaži",
+      "done": "API ključ je opozvan",
+      "failed": "Nismo uspeli da opozovemo ključ. Pokušajte ponovo."
+    },
+    "scopes": {
+      "business_read": "Čitanje podataka o firmi, radnog vremena i usluga",
+      "business_write": "Izmena podataka o firmi i radnog vremena",
+      "calls_read": "Čitanje poziva, rezimea i transkripata",
+      "contacts_read": "Čitanje kontakata",
+      "contacts_write": "Kreiranje i izmena kontakata",
+      "appointments_read": "Čitanje zakazanih i slobodnih termina",
+      "appointments_write": "Zakazivanje, otkazivanje i pomeranje termina",
+      "messages_read": "Čitanje poruka koje je primio recepcioner",
+      "knowledge_write": "Dodavanje unosa u znanje i čestih pitanja",
+      "webhooks_manage": "Kreiranje i brisanje webhook endpointa"
+    }
+  },
+  "webhooks": {
+    "title": "Webhooks",
+    "description": "LobbyStack šalje HTTPS POST zahtev na Vaš URL kada se nešto dogodi, na primer kada se poziv završi ili stigne novo zakazivanje. Svaki zahtev je potpisan, pa možete proveriti da je stigao od nas.",
+    "empty": "Još nema webhook endpointa.",
+    "enabledLabel": "Šalji događaje na ovaj endpoint",
+    "restricted": {
+      "title": "Samo vlasnici i administratori mogu da upravljaju webhookovima",
+      "description": "Zamolite vlasnika ili administratora ove firme da podesi webhook."
+    },
+    "status": {
+      "enabled": "Uključeno",
+      "disabled": "Isključeno"
+    },
+    "failing": {
+      "title": "Isključili smo ovaj endpoint",
+      "description": "Nijedna isporuka nije uspela oko jedan dan. Popravite endpoint, pa ga ponovo uključite. Da biste poslali propuštene događaje, koristite Pošalji ponovo u dnevniku isporuka."
+    },
+    "form": {
+      "urlLabel": "URL endpointa",
+      "urlHint": "Koristite https:// adresu koja je dostupna sa interneta.",
+      "descriptionLabel": "Opis",
+      "descriptionPlaceholder": "Opciono, na primer CRM sinhronizacija",
+      "eventsLabel": "Događaji za slanje",
+      "cancel": "Otkaži"
+    },
+    "events": {
+      "call_completed": "Poziv je završen i rezime je spreman",
+      "appointment_booked": "Termin je zakazan",
+      "appointment_rescheduled": "Termin je pomeren",
+      "appointment_cancelled": "Termin je otkazan",
+      "message_taken": "Recepcioner je primio poruku za Vaš tim",
+      "contact_created": "Dodat je novi kontakt"
+    },
+    "create": {
+      "action": "Dodaj endpoint",
+      "title": "Dodajte webhook endpoint",
+      "description": "Izaberite gde LobbyStack šalje događaje i koje događaje šalje.",
+      "submit": "Dodaj endpoint"
+    },
+    "edit": {
+      "action": "Izmeni",
+      "title": "Izmenite webhook endpoint",
+      "description": "Izmene važe od sledećeg događaja koji LobbyStack pošalje.",
+      "submit": "Sačuvaj"
+    },
+    "delete": {
+      "action": "Obriši",
+      "title": "Obrisati ovaj endpoint?",
+      "description": "LobbyStack prestaje da šalje događaje na {{url}} i briše njegov dnevnik isporuka.",
+      "confirm": "Obriši endpoint",
+      "done": "Endpoint je obrisan"
+    },
+    "rotate": {
+      "action": "Promeni tajni ključ",
+      "title": "Promeniti tajni ključ za potpis?",
+      "description": "Trenutni tajni ključ odmah prestaje da radi. Ažurirajte endpoint novim tajnim ključem pre nego što stigne sledeći događaj.",
+      "confirm": "Promeni tajni ključ"
+    },
+    "secret": {
+      "createdTitle": "Endpoint je dodat",
+      "rotatedTitle": "Novi tajni ključ za potpis",
+      "description": "Koristite ovaj tajni ključ da proverite zaglavlje webhook-signature u svakom zahtevu.",
+      "warning": "Ovaj tajni ključ više nećete videti. Ako ga izgubite, promenite ga da biste dobili novi.",
+      "done": "Gotovo"
+    },
+    "test": {
+      "action": "Pošalji probni događaj",
+      "queued": "Probni događaj čeka na slanje. Proverite dnevnik isporuka."
+    },
+    "deliveries": {
+      "show": "Dnevnik isporuka",
+      "hide": "Sakrij dnevnik isporuka",
+      "empty": "Još nema isporuka.",
+      "resend": "Pošalji ponovo",
+      "resent": "Događaj ponovo čeka na slanje",
+      "nextAttempt": "Sledeći pokušaj {{time}}",
+      "columns": {
+        "event": "Događaj",
+        "status": "Status",
+        "response": "Odgovor",
+        "attempts": "Pokušaji",
+        "time": "Poslednji pokušaj",
+        "actions": "Radnje"
+      },
+      "status": {
+        "pending": "Na čekanju",
+        "retrying": "Novi pokušaj",
+        "succeeded": "Isporučeno",
+        "failed": "Neuspešno",
+        "skipped": "Preskočeno"
+      }
+    }
+  },
+  "connectedApps": {
+    "title": "Povezane aplikacije",
+    "description": "AI asistenti kao što su Claude ili ChatGPT koje je neko povezao sa LobbyStack nalogom. Svaki radi samo za ovu firmu, sa pristupom koji je odobren pri povezivanju.",
+    "empty": "Još nema povezanih aplikacija. Da biste povezali aplikaciju, dodajte LobbyStack u podešavanjima asistenta i prijavite se.",
+    "neverUsed": "Nikad",
+    "unnamed": "Aplikacija bez naziva",
+    "grantedBy": "{{date}}, korisnik {{name}}",
+    "restricted": {
+      "title": "Samo vlasnici i administratori mogu da upravljaju povezanim aplikacijama",
+      "description": "Zamolite vlasnika ili administratora ove firme da ih pregleda."
+    },
+    "columns": {
+      "app": "Aplikacija",
+      "access": "Pristup",
+      "granted": "Povezano",
+      "lastUsed": "Poslednja upotreba",
+      "actions": "Radnje"
+    },
+    "revoke": {
+      "action": "Prekini vezu",
+      "title": "Prekinuti vezu sa aplikacijom {{name}}?",
+      "description": "{{name}} odmah gubi pristup ovoj firmi. Da biste je ponovo koristili, povežite je i ponovo odobrite pristup.",
+      "confirm": "Prekini vezu",
+      "cancel": "Otkaži",
+      "done": "Veza sa aplikacijom je prekinuta",
+      "failed": "Nismo uspeli da prekinemo vezu sa aplikacijom. Pokušajte ponovo."
+    },
+    "scopes": {
+      "business_read": "Čitanje podataka o firmi, radnog vremena, usluga i osoblja",
+      "business_write": "Izmena podataka o firmi i radnog vremena",
+      "calls_read": "Čitanje poziva, rezimea i transkripata",
+      "contacts_read": "Čitanje kontakata",
+      "contacts_write": "Kreiranje i izmena kontakata",
+      "appointments_read": "Čitanje zakazanih i slobodnih termina",
+      "appointments_write": "Zakazivanje, otkazivanje i pomeranje termina",
+      "messages_read": "Čitanje poruka koje je primio recepcioner",
+      "knowledge_write": "Dodavanje unosa u znanje i čestih pitanja"
+    }
+  }
+}

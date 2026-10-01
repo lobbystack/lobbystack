@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { selectActiveBusiness } from "@/lib/active-business";
 import type { WorkspaceViewModel } from "@/lib/page-view-models";
 import { requestJson } from "@/lib/request-json";
+import { intlLocale } from "@/lib/locale";
 
 export type ConnectedAppRecord = {
   id: string;
@@ -39,7 +40,7 @@ export function LiveConnectedAppsSurface() {
   const business = selectActiveBusiness(businesses.data?.businesses);
   const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   const grants = useQuery({ queryKey: ["oauth-grants", business?.businessId], queryFn: () => requestJson<{ grants: ConnectedAppRecord[] }>(`/api/oauth-grants?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId && canManage) });
-  const formatDate = (value: string) => new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, { dateStyle: "medium" }).format(new Date(value));
+  const formatDate = (value: string) => new Intl.DateTimeFormat(intlLocale(i18n.resolvedLanguage ?? i18n.language), { dateStyle: "medium" }).format(new Date(value));
   const appName = (grant: ConnectedAppRecord) => grant.clientName ?? t("connectedApps.unnamed");
 
   const revoke = useMutation({

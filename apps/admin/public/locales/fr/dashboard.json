@@ -138,7 +138,7 @@
       "description": "Les prochains rendez-vous au calendrier.",
       "unknownContact": "Contact inconnu",
       "unknownService": "Service inconnu",
-      "withStaff": "avec {{name}}",
+      "withStaff": "avec {{staff}}",
       "emptyTitle": "Aucun rendez-vous à venir",
       "emptyDescription": "Les futures réservations apparaîtront ici dès leur création.",
       "status": {
@@ -220,6 +220,7 @@
       "title": "Écoutez votre agent répondre",
       "description": "Appelez-le depuis votre navigateur et écoutez comment il accueille un client.",
       "descriptionWithPages_one": "Il a lu {{count}} page de {{host}}. Appelez-le et posez une question que seule votre entreprise connaît.",
+      "descriptionWithPages_many": "Il a lu {{count}} pages de {{host}}. Appelez-le et posez une question que seule votre entreprise connaît.",
       "descriptionWithPages_other": "Il a lu {{count}} pages de {{host}}. Appelez-le et posez une question que seule votre entreprise connaît.",
       "cta": "Lancer un appel"
     },

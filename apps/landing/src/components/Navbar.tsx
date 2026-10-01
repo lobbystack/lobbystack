@@ -1,5 +1,5 @@
 import { buttonVariants } from "@/components/ui/button"
-import { APP_LOGIN_URL, APP_SIGNUP_URL } from "@/lib/app-links"
+import { appLoginUrl, appSignupUrl } from "@/lib/app-links"
 import { GithubIcon } from "@/components/GithubIcon"
 import { localizeHref, localizePath, type Locale } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -67,6 +67,8 @@ const labels = {
     helpCenter: "Help Center",
     calculator: "Missed call calculator",
     affiliateProgram: "Affiliate Program",
+    navigationMenu: "Navigation menu",
+    mobileNavigation: "Mobile navigation",
   },
   fr: {
     solutions: "Solutions",
@@ -81,6 +83,40 @@ const labels = {
     helpCenter: "Centre d'aide",
     calculator: "Calculateur d'appels manqués",
     affiliateProgram: "Programme d'affiliation",
+    navigationMenu: "Menu de navigation",
+    mobileNavigation: "Navigation mobile",
+  },
+  es: {
+    solutions: "Soluciones",
+    features: "Funciones",
+    resources: "Recursos",
+    pricing: "Precios",
+    login: "Iniciar sesión",
+    github: "LobbyStack en GitHub",
+    tryFree: "Pruébelo gratis",
+    blog: "Blog",
+    changelog: "Registro de cambios",
+    helpCenter: "Centro de ayuda",
+    calculator: "Calculadora de llamadas perdidas",
+    affiliateProgram: "Programa de afiliados",
+    navigationMenu: "Menú de navegación",
+    mobileNavigation: "Navegación móvil",
+  },
+  sr: {
+    solutions: "Rešenja",
+    features: "Funkcije",
+    resources: "Resursi",
+    pricing: "Cene",
+    login: "Prijava",
+    github: "LobbyStack na GitHub-u",
+    tryFree: "Isprobajte besplatno",
+    blog: "Blog",
+    changelog: "Dnevnik izmena",
+    helpCenter: "Centar za pomoć",
+    calculator: "Kalkulator propuštenih poziva",
+    affiliateProgram: "Partnerski program",
+    navigationMenu: "Meni za navigaciju",
+    mobileNavigation: "Mobilna navigacija",
   },
 } satisfies Record<Locale, Record<string, string>>
 
@@ -126,6 +162,48 @@ const solutionLabelMap = {
     locksmiths: "Serruriers",
     roofing: "Toiture",
     propertyManagement: "Gestion immobilière",
+  },
+  es: {
+    solutions: "Usos principales",
+    industries: "Por sector",
+    aiPhoneAnswering: "Atención telefónica con IA",
+    aiAppointmentScheduler: "Agenda de citas con IA",
+    homeServices: "Servicios del hogar",
+    afterHours: "Atención fuera de horario",
+    dental: "Clínicas dentales",
+    salons: "Salones y spas",
+    selfHosted: "Recepcionista con IA autoalojada",
+    trades: "Por oficio",
+    plumbers: "Plomeros",
+    hvac: "Climatización",
+    electricians: "Electricistas",
+    garageDoor: "Reparación de puertas de garaje",
+    applianceRepair: "Reparación de electrodomésticos",
+    restoration: "Restauración de daños",
+    locksmiths: "Cerrajeros",
+    roofing: "Techos",
+    propertyManagement: "Administración de propiedades",
+  },
+  sr: {
+    solutions: "Najčešće primene",
+    industries: "Po delatnosti",
+    aiPhoneAnswering: "AI javljanje na telefon",
+    aiAppointmentScheduler: "AI zakazivanje termina",
+    homeServices: "Kućne usluge",
+    afterHours: "Pozivi van radnog vremena",
+    dental: "Stomatološke ordinacije",
+    salons: "Saloni i spa centri",
+    selfHosted: "Samostalno hostovan AI recepcioner",
+    trades: "Po zanatu",
+    plumbers: "Vodoinstalateri",
+    hvac: "Grejanje i klimatizacija",
+    electricians: "Električari",
+    garageDoor: "Popravka garažnih vrata",
+    applianceRepair: "Popravka kućnih aparata",
+    restoration: "Sanacija šteta",
+    locksmiths: "Bravari",
+    roofing: "Krovopokrivači",
+    propertyManagement: "Upravljanje nekretninama",
   },
 } satisfies Record<Locale, Record<string, string>>
 
@@ -445,18 +523,18 @@ export function Navbar({ locale = "en" }: NavbarProps) {
             <GithubIcon className="size-[18px]" />
           </a>
           <a
-            href={APP_LOGIN_URL}
+            href={appLoginUrl(locale)}
             className="rounded-full px-3 py-2 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             {copy.login}
           </a>
           <a
-            href={APP_SIGNUP_URL}
+            href={appSignupUrl(locale)}
             className={cn(buttonVariants(), "ml-2 rounded-full px-5")}
             data-ph-signup-cta
             data-ph-capture-attribute-section="navbar"
             data-ph-capture-attribute-action="try_for_free"
-            data-ph-capture-attribute-destination={APP_SIGNUP_URL}
+            data-ph-capture-attribute-destination={appSignupUrl(locale)}
           >
             {copy.tryFree}
           </a>
@@ -466,7 +544,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
           <summary
             className="inline-flex size-9 cursor-pointer list-none items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden"
             aria-controls={mobileMenuId}
-            aria-label={locale === "fr" ? "Menu de navigation" : "Navigation menu"}
+            aria-label={copy.navigationMenu}
           >
             <Menu
               className="size-5 group-open/mobile-menu:hidden"
@@ -484,7 +562,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
           >
             <nav
               className="flex flex-col gap-1 px-6 py-4"
-              aria-label={locale === "fr" ? "Navigation mobile" : "Mobile navigation"}
+              aria-label={copy.mobileNavigation}
             >
               {navLinks(locale).map((link) =>
                 link.type === "group" ? (
@@ -597,18 +675,18 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                 GitHub
               </a>
               <a
-                href={APP_LOGIN_URL}
+                href={appLoginUrl(locale)}
                 className="rounded-md px-3 py-2 text-center text-sm font-medium text-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 {copy.login}
               </a>
               <a
-                href={APP_SIGNUP_URL}
+                href={appSignupUrl(locale)}
                 className={cn(buttonVariants(), "rounded-full")}
                 data-ph-signup-cta
                 data-ph-capture-attribute-section="mobile_navbar"
                 data-ph-capture-attribute-action="try_for_free"
-                data-ph-capture-attribute-destination={APP_SIGNUP_URL}
+                data-ph-capture-attribute-destination={appSignupUrl(locale)}
               >
                 {copy.tryFree}
               </a>

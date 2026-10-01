@@ -59,5 +59,68 @@ export const pricingFaqsFr: FaqItem[] = [
   },
 ]
 
+export const pricingFaqsEs: FaqItem[] = [
+  {
+    question: "¿Cómo funcionan los planes de pago de LobbyStack?",
+    answer:
+      "Starter cuesta $30/mes o $288/año e incluye 150 minutos de voz al mes. Pro cuesta $100/mes o $960/año e incluye 500 minutos de voz al mes. El excedente de voz cuesta $0.20/minuto en Starter y $0.18/minuto en Pro, y cada segmento de SMS de alerta o intento de transferencia adicional cuesta $0.02.",
+  },
+  {
+    question: "¿Las llamadas de spam o muy cortas cuentan en el uso?",
+    answer:
+      "No. LobbyStack excluye del uso las llamadas de spam y las de menos de 10 segundos, así que los números equivocados, las llamadas automáticas, los cuelgues inmediatos y las llamadas accidentales no consumen sus minutos de voz incluidos ni generan excedentes en los planes de pago.",
+  },
+  {
+    question: "¿Puedo cambiar de plan o cancelar en cualquier momento?",
+    answer:
+      "Sí. Puede subir de plan, bajar de plan o cancelar desde la configuración de facturación. Si baja de plan, conserva su plan actual hasta el final del período de facturación. No hay cargos por cancelación.",
+  },
+  {
+    question: "¿Puedo usar LobbyStack gratis?",
+    answer:
+      "Sí. Puede probar 30 minutos de voz en el navegador con Free, sin tarjeta de crédito. Free no incluye número de teléfono. Elija Starter o Pro para tener un número dedicado.",
+  },
+  {
+    question: "¿Qué funciones de recepcionista con IA están disponibles hoy?",
+    answer:
+      "LobbyStack puede contestar llamadas, tomar los datos de quien llama, responder preguntas sobre su negocio con su base de conocimiento, calificar clientes potenciales, reservar citas, derivar llamadas urgentes, enviar resúmenes por correo electrónico y ofrecer grabaciones, transcripciones, Google Calendar y conversaciones en el idioma de quien llama.",
+  },
+]
+
+export const pricingFaqsSr: FaqItem[] = [
+  {
+    question: "Kako funkcionišu plaćeni LobbyStack paketi?",
+    answer:
+      "Starter košta $30 mesečno ili $288 godišnje i uključuje 150 minuta razgovora svakog meseca. Pro košta $100 mesečno ili $960 godišnje i uključuje 500 minuta razgovora svakog meseca. Prekoračenje minuta razgovora košta $0.20 po minutu na paketu Starter i $0.18 po minutu na paketu Pro, a svaki dodatni segment SMS upozorenja i pokušaj preusmeravanja košta $0.02.",
+  },
+  {
+    question: "Da li se spam pozivi i veoma kratki pozivi računaju u potrošnju?",
+    answer:
+      "Ne. LobbyStack ne računa spam pozive i pozive kraće od 10 sekundi, tako da pogrešni brojevi, automatski pozivi, odmah prekinuti pozivi i slučajni pozivi ne troše Vaše uključene minute razgovora niti stvaraju prekoračenja na plaćenim paketima.",
+  },
+  {
+    question: "Mogu li da promenim paket ili otkažem bilo kada?",
+    answer:
+      "Da. Paket možete da nadogradite, spustite na niži ili otkažete u podešavanjima naplate. Kada pređete na niži paket, trenutni paket Vam ostaje do kraja obračunskog perioda. Nema troškova otkazivanja.",
+  },
+  {
+    question: "Mogu li da koristim LobbyStack besplatno?",
+    answer:
+      "Da. Na paketu Free možete da isprobate 30 minuta razgovora u pregledaču, bez platne kartice. Free nema broj telefona. Izaberite Starter ili Pro za namenski broj.",
+  },
+  {
+    question: "Koje funkcije AI recepcionera su dostupne danas?",
+    answer:
+      "LobbyStack može da odgovara na pozive, beleži podatke pozivalaca, odgovara na pitanja o firmi iz Vaše baze znanja, kvalifikuje potencijalne klijente, zakazuje termine, preusmerava hitne pozive, šalje rezimee e-poštom i podržava snimke, transkripte, Google Calendar i razgovore na jeziku pozivaoca.",
+  },
+]
+
+const pricingFaqsByLocale: Record<Locale, FaqItem[]> = {
+  en: pricingFaqs,
+  fr: pricingFaqsFr,
+  es: pricingFaqsEs,
+  sr: pricingFaqsSr,
+}
+
 export const getPricingFaqs = (locale: Locale): FaqItem[] =>
-  locale === "fr" ? pricingFaqsFr : pricingFaqs
+  pricingFaqsByLocale[locale]

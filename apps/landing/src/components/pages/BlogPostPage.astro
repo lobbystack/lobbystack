@@ -43,7 +43,13 @@ const modifiedTime = (
 ).toISOString()
 const coverImageAlt = entry.data.coverImageAlt ?? entry.data.title
 const articleBody = plainTextFromMarkdown(entry.body)
-const dateLocale = locale === "fr" ? "fr-FR" : "en-US"
+const dateLocales = {
+  en: "en-US",
+  fr: "fr-FR",
+  es: "es",
+  sr: "sr-Latn",
+} satisfies Record<Locale, string>
+const dateLocale = dateLocales[locale]
 const pageCopy = {
   en: {
     titleSuffix: "LobbyStack",
@@ -58,6 +64,20 @@ const pageCopy = {
     by: "Par",
     related: "À lire aussi",
     product: "Continuer avec LobbyStack",
+  },
+  es: {
+    titleSuffix: "LobbyStack",
+    updated: "Actualizado",
+    by: "Por",
+    related: "Lecturas relacionadas",
+    product: "Continúe con LobbyStack",
+  },
+  sr: {
+    titleSuffix: "LobbyStack",
+    updated: "Ažurirano",
+    by: "Autor:",
+    related: "Pročitajte i ovo",
+    product: "Nastavite uz LobbyStack",
   },
 } satisfies Record<
   Locale,
@@ -102,46 +122,75 @@ const fallbackRelatedPosts = allPosts
   .slice(0, 3 - relatedPosts.length)
 const displayedRelatedPosts = [...relatedPosts, ...fallbackRelatedPosts]
 const slug = blogCanonicalSlug(entry)
+const resourceLabels = {
+  en: {
+    openSource: "Open-source AI receptionist",
+    selfHosted: "Self-hosted deployment",
+    calculator: "Missed-call revenue calculator",
+    phoneAnswering: "AI phone answering",
+    pricing: "Pricing",
+  },
+  fr: {
+    openSource: "Réceptionniste IA open source",
+    selfHosted: "Déploiement auto-hébergé",
+    calculator: "Calculateur d’appels manqués",
+    phoneAnswering: "Réponse téléphonique IA",
+    pricing: "Tarifs",
+  },
+  es: {
+    openSource: "Recepcionista con IA de código abierto",
+    selfHosted: "Implementación autoalojada",
+    calculator: "Calculadora de llamadas perdidas",
+    phoneAnswering: "Atención telefónica con IA",
+    pricing: "Precios",
+  },
+  sr: {
+    openSource: "AI recepcioner otvorenog koda",
+    selfHosted: "Samostalno hostovanje",
+    calculator: "Kalkulator propuštenih poziva",
+    phoneAnswering: "AI odgovaranje na pozive",
+    pricing: "Cene",
+  },
+} satisfies Record<
+  Locale,
+  {
+    openSource: string
+    selfHosted: string
+    calculator: string
+    phoneAnswering: string
+    pricing: string
+  }
+>
+const labels = resourceLabels[locale]
 const productResources = slug.includes("open-source")
   ? [
       {
-        label:
-          locale === "fr"
-            ? "Réceptionniste IA open source"
-            : "Open-source AI receptionist",
+        label: labels.openSource,
         href: "/solutions/open-source-ai-receptionist/",
       },
       {
-        label:
-          locale === "fr"
-            ? "Déploiement auto-hébergé"
-            : "Self-hosted deployment",
+        label: labels.selfHosted,
         href: "/solutions/self-hosted-ai-receptionist/",
       },
     ]
   : slug.includes("savings")
     ? [
         {
-          label:
-            locale === "fr"
-              ? "Calculateur d’appels manqués"
-              : "Missed-call revenue calculator",
+          label: labels.calculator,
           href: "/missed-call-revenue-calculator/",
         },
         {
-          label:
-            locale === "fr" ? "Réponse téléphonique IA" : "AI phone answering",
+          label: labels.phoneAnswering,
           href: "/solutions/ai-phone-answering/",
         },
       ]
     : [
         {
-          label:
-            locale === "fr" ? "Réponse téléphonique IA" : "AI phone answering",
+          label: labels.phoneAnswering,
           href: "/solutions/ai-phone-answering/",
         },
         {
-          label: locale === "fr" ? "Tarifs" : "Pricing",
+          label: labels.pricing,
           href: "/pricing/",
         },
       ]
@@ -282,5 +331,5 @@ const productResources = slug.includes("open-source")
   </article>
 
   <FeaturesCtaSection locale={locale} />
-  <Footer locale={locale} />
+  <Footer locale={locale} path={Astro.url.pathname} />
 </Layout>

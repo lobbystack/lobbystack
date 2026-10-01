@@ -1,0 +1,96 @@
+---
+title: "Autenticación con claves de API"
+description: "Cree claves de API, elija los permisos, envíe la clave con cada solicitud y respete los límites de frecuencia."
+sidebarTitle: "Autenticación"
+contentType: "How-to"
+---
+
+Cada solicitud necesita una clave de API de un negocio. Los propietarios y administradores crean y revocan las claves en el panel. Las mismas claves conectan asistentes de IA a través del [servidor MCP](/es/ai/mcp).
+
+## Cree una clave
+
+<Steps>
+  <Step title="Abra Claves de API">
+    Vaya a **Configuración** > **Claves de API**. Solo los propietarios y administradores ven esta página.
+  </Step>
+  <Step title="Asigne un nombre a la clave y elija su acceso">
+    Use un nombre que pueda reconocer más adelante, como `Zapier`. Seleccione solo los permisos que necesita la herramienta.
+  </Step>
+  <Step title="Copie la clave">
+    LobbyStack muestra la clave completa una sola vez. Guárdela en su herramienta o en un gestor de contraseñas. LobbyStack solo conserva un hash, así que nadie puede volver a mostrar la clave.
+  </Step>
+</Steps>
+
+Las claves tienen la forma `lsk_1a2b3c4d_` seguido de 32 caracteres aleatorios. El panel muestra cada clave por su prefijo, `lsk_1a2b3c4d`, junto con sus permisos, quién la creó y cuándo se usó por última vez.
+
+## Envíe la clave
+
+Ponga la clave en el encabezado `Authorization`:
+
+```bash
+curl https://app.lobbystack.com/api/v1/calls \
+  -H "Authorization: Bearer $LOBBYSTACK_API_KEY"
+```
+
+Una clave ausente, desconocida o revocada devuelve `401` con el código `unauthorized`.
+
+## Pruebe una clave
+
+`GET /me` funciona con cualquier clave válida, sin importar sus permisos. Devuelve la clave y su negocio, de modo que una integración puede comprobar la conexión antes de necesitar un permiso concreto:
+
+```json
+{
+  "data": {
+    "api_key": {
+      "id": "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6",
+      "name": "Zapier",
+      "prefix": "lsk_1a2b3c4d",
+      "scopes": ["appointments:read", "appointments:write"],
+      "created_at": "2026-09-27T16:58:00.000Z"
+    },
+    "business": { "id": "75795511-9ee2-4cb2-a89d-f173ec1dd82d", "name": "Maple Salon" }
+  }
+}
+```
+
+## Permisos
+
+Cada endpoint, salvo `GET /me`, requiere un permiso (scope). Una clave sin ese permiso recibe `403` con el código `insufficient_scope`, y el mensaje indica el permiso que falta.
+
+| Permiso | Permite |
+| --- | --- |
+| `business:read` | `GET /business`, `GET /services`, `GET /staff` |
+| `business:write` | `PATCH /business` |
+| `calls:read` | `GET /calls`, `GET /calls/{call_id}` |
+| `contacts:read` | `GET /contacts`, `GET /contacts/{contact_id}` |
+| `contacts:write` | `POST /contacts`, `PATCH /contacts/{contact_id}` |
+| `appointments:read` | `GET /appointments`, `GET /appointments/{appointment_id}`, `GET /availability` |
+| `appointments:write` | `POST /appointments`, `POST /appointments/{appointment_id}/cancel`, `POST /appointments/{appointment_id}/reschedule` |
+| `messages:read` | `GET /messages` |
+| `knowledge:write` | `POST /knowledge` |
+| `webhooks:manage` | `GET`, `POST`, `PATCH` y `DELETE` en `/webhooks`, y `POST /webhooks/{webhook_id}/test` |
+
+## Revoque una clave
+
+En **Configuración** > **Claves de API**, haga clic en **Revocar** junto a la clave. Las solicitudes que la usen fallan de inmediato, y no se puede deshacer. Cree una nueva clave si todavía necesita acceso.
+
+## Límites de frecuencia
+
+Cada clave puede hacer 120 solicitudes por minuto. Las implementaciones autoalojadas pueden cambiar este valor con `PUBLIC_API_RATE_LIMIT_PER_MINUTE`. La ventana se reinicia al comienzo de cada minuto.
+
+Cada respuesta incluye estos encabezados:
+
+| Encabezado | Significado |
+| --- | --- |
+| `X-RateLimit-Limit` | Solicitudes permitidas por minuto. |
+| `X-RateLimit-Remaining` | Solicitudes restantes en el minuto actual. |
+| `X-RateLimit-Reset` | Hora Unix, en segundos, en que se reinicia la ventana. |
+
+Al superar el límite, la API devuelve `429` con el código `rate_limited` y un encabezado `Retry-After` con los segundos que debe esperar.
+
+## Proteja sus claves
+
+- Use una clave por herramienta para poder revocar una sin afectar a las demás.
+- Dé a cada clave los permisos mínimos que funcionen.
+- Nunca ponga una clave en código del navegador ni en una aplicación móvil. Llame a la API desde un servidor.
+- LobbyStack registra cada solicitud con el ID de la clave, nunca con la clave en sí, y anota los cambios hechos con una clave en el registro de auditoría del negocio.

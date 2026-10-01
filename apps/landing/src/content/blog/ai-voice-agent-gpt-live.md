@@ -97,4 +97,4 @@ No. Starter and Pro include a dedicated LobbyStack number. Forward your current 
 
 ## Hear it for yourself
 
-The fastest way to judge a voice model is to talk to one. Try the call button on [our homepage](/) and ask it about LobbyStack, or [create a free account](https://app.lobbystack.com/signup) and test your own receptionist from the browser in a few minutes. See [pricing](/pricing/) when you're ready to put it on your phone line.
+The fastest way to judge a voice model is to talk to one. Try the call button on [our homepage](/) and ask it about LobbyStack, or [create a free account](https://app.lobbystack.com/en/signup) and test your own receptionist from the browser in a few minutes. See [pricing](/pricing/) when you're ready to put it on your phone line.

@@ -1,4 +1,4 @@
-import { OPERATOR_SMS_DISCLOSURE_VERSION } from "@lobbystack/shared";
+import { OPERATOR_SMS_DISCLOSURE_VERSION, intlLocale, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 import { and, eq, gte, inArray, lte, lt, or, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { isTerminalTwilioMessageStatus, mapTwilioStatusToNotificationStatus, shouldApplyNotificationStatusTransition } from "@lobbystack/shared";
@@ -106,25 +106,45 @@ export async function claimNotificationDelivery(
   });
 }
 
-function localeFor(value: string | null | undefined): "en" | "fr" {
-  return value?.toLowerCase().startsWith("fr") ? "fr" : "en";
+function localeFor(value: string | null | undefined): InterfaceLocale {
+  return normalizeInterfaceLocale(value) ?? "en";
 }
 
-function buildAppointmentNotification(input: {
+export function buildAppointmentNotification(input: {
   kind: string;
-  locale: "en" | "fr";
+  locale: InterfaceLocale;
   businessName: string;
   serviceName: string;
   startsAt: Date;
   timezone: string;
 }): { subject: string; body: string } {
-  const date = DateTime.fromJSDate(input.startsAt).setZone(input.timezone).toLocaleString(DateTime.DATETIME_MED);
+  // intlLocale keeps Serbian dates in Latin script ("sr-Latn").
+  const date = DateTime.fromJSDate(input.startsAt).setZone(input.timezone).setLocale(intlLocale(input.locale)).toLocaleString(DateTime.DATETIME_MED);
+  const reminder = input.kind === "appointment_reminder";
+  // SMS bodies avoid characters outside the GSM-7 alphabet where the wording
+  // allows it, so a reminder stays in as few segments as the English one.
   if (input.locale === "fr") {
     return {
-      subject: input.kind === "appointment_reminder" ? "Rappel de rendez-vous" : "Rendez-vous confirme",
-      body: input.kind === "appointment_reminder"
+      subject: reminder ? "Rappel de rendez-vous" : "Rendez-vous confirme",
+      body: reminder
         ? `Rappel de ${input.businessName}: votre rendez-vous ${input.serviceName} est prevu le ${date}.`
         : `${input.businessName}: votre rendez-vous ${input.serviceName} est confirme pour le ${date}.`,
+    };
+  }
+  if (input.locale === "es") {
+    return {
+      subject: reminder ? "Recordatorio de cita" : "Cita confirmada",
+      body: reminder
+        ? `Recordatorio de ${input.businessName}: tiene una cita de ${input.serviceName} el ${date}.`
+        : `${input.businessName}: confirmamos su cita de ${input.serviceName} para el ${date}.`,
+    };
+  }
+  if (input.locale === "sr") {
+    return {
+      subject: reminder ? "Podsetnik za termin" : "Termin je potvrđen",
+      body: reminder
+        ? `Podsetnik od ${input.businessName}: imate termin za ${input.serviceName}, ${date}.`
+        : `${input.businessName}: potvrdili smo termin za ${input.serviceName}, ${date}.`,
     };
   }
   return {

@@ -1,5 +1,5 @@
 ---
-import { APP_SIGNUP_URL } from "@/lib/app-links"
+import { appSignupUrl } from "@/lib/app-links"
 
 const rows = [
   {
@@ -101,7 +101,7 @@ const rows = [
     <p class="mt-6 text-sm text-muted-foreground">
       Rather not run servers?{" "}
       <a
-        href={APP_SIGNUP_URL}
+        href={appSignupUrl("en")}
         data-ph-signup-cta
         data-ph-capture-attribute-section="self_hosted_compare"
         class="font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground"

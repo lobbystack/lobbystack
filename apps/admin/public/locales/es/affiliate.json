@@ -1,0 +1,121 @@
+{
+  "eyebrow": "Programa de afiliados",
+  "title": "Programa de afiliados",
+  "description": "Recomiende LobbyStack a operadores y agencias. Aquí verá sus referidos, sus comisiones y los pagos mensuales por PayPal.",
+  "referral": {
+    "title": "Enlace de referido",
+    "description": "Comparta este enlace dondequiera que recomiende LobbyStack.",
+    "active": "Activo",
+    "copy": "Copiar enlace",
+    "code": "Código de referido: {{code}}"
+  },
+  "terms": {
+    "title": "Recompensas",
+    "description": "Pagos por PayPal al terminar el período de retención.",
+    "commission": "Comisión",
+    "hold": "Período de retención",
+    "minimum": "Pago mínimo",
+    "days": "{{count}} días",
+    "link": "Ver los Términos del servicio",
+    "reward": "Gane {{rate}} por venta durante {{duration}}",
+    "oneYear": "1 año",
+    "months": "{{count}} meses"
+  },
+  "stats": {
+    "clicks": "Clics",
+    "clicksDescription": "Visitas registradas desde su enlace.",
+    "referrals": "Referidos",
+    "referralsDescription": "Negocios atribuidos a su enlace.",
+    "conversions": "Conversiones",
+    "conversionsDescription": "Transacciones pagadas con comisión.",
+    "pending": "Pendiente",
+    "pendingDescription": "En espera de la retención de 30 días.",
+    "eligible": "Disponible",
+    "eligibleReady": "Listo para el próximo pago.",
+    "eligibleWaiting": "Cuenta para el mínimo de $100.",
+    "paid": "Pagado",
+    "paidDescription": "Marcado como pagado tras el pago."
+  },
+  "tabs": {
+    "quickstart": "Primeros pasos",
+    "earnings": "Ganancias",
+    "payouts": "Pagos",
+    "faq": "Preguntas"
+  },
+  "quickstart": {
+    "share": {
+      "title": "Comparta su enlace",
+      "description": "Use su enlace de referido en publicaciones, boletines, sitios web y recomendaciones directas."
+    },
+    "resources": {
+      "title": "Sea preciso en lo que dice",
+      "description": "Describa LobbyStack con honestidad e indique que puede recibir una comisión."
+    },
+    "receive": {
+      "title": "Reciba sus ganancias",
+      "description": "Los saldos disponibles de $100 o más se revisan cada mes y se pagan por PayPal."
+    }
+  },
+  "earnings": {
+    "date": "Fecha",
+    "sale": "Venta",
+    "commission": "Comisión",
+    "clears": "Disponible el",
+    "status": "Estado",
+    "empty": "Aún no hay comisiones."
+  },
+  "payouts": {
+    "date": "Fecha",
+    "amount": "Importe",
+    "paypal": "PayPal",
+    "status": "Estado",
+    "reference": "Referencia",
+    "empty": "Aún no hay pagos registrados.",
+    "noReference": "Aún no pagado"
+  },
+  "settings": {
+    "open": "Configuración",
+    "title": "Correo de PayPal",
+    "description": "Dirección de correo electrónico para recibir los pagos.",
+    "paypalEmail": "Correo de PayPal",
+    "paypalPlaceholder": "Nuevo correo de PayPal",
+    "currentEmail": "{{email}}",
+    "noEmail": "No hay ningún correo de PayPal guardado.",
+    "change": "Cambiar",
+    "dialogTitle": "Cambiar el correo de PayPal",
+    "save": "Guardar",
+    "saving": "Guardando..."
+  },
+  "statuses": {
+    "pending": "Pendiente",
+    "paid": "Pagado",
+    "voided": "Anulado",
+    "draft": "Borrador",
+    "ready": "Listo",
+    "skipped": "Omitido"
+  },
+  "faq": {
+    "when": {
+      "question": "¿Cuándo se pueden cobrar las comisiones?",
+      "answer": "Las comisiones están disponibles 30 días después del pago del cliente referido."
+    },
+    "minimum": {
+      "question": "¿Cuál es el pago mínimo?",
+      "answer": "Las comisiones disponibles sin pagar deben sumar $100 antes de incluirse en un pago mensual."
+    },
+    "method": {
+      "question": "¿Cómo se envían los pagos?",
+      "answer": "LobbyStack paga a los afiliados por PayPal, al correo de PayPal guardado en la configuración."
+    },
+    "refunds": {
+      "question": "¿Qué pasa si hay un reembolso?",
+      "answer": "Las comisiones sin pagar pueden anularse o revertirse si el pago original se reembolsa o se disputa."
+    }
+  },
+  "toast": {
+    "profileFailed": "No se pudo preparar su panel de afiliado.",
+    "copied": "Enlace de referido copiado.",
+    "paypalSaved": "Correo de PayPal guardado.",
+    "paypalFailed": "No se pudo guardar el correo de PayPal."
+  }
+}

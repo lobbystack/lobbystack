@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
-import { initWidget } from "./index";
+import { initWidget, loaderLabels } from "./index";
 
 afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); document.body.innerHTML = ""; });
 
@@ -108,6 +108,13 @@ it("retries the session request on a later open after a failure", async () => {
   expect(fetchMock).toHaveBeenCalledTimes(2);
   window.dispatchEvent(new MessageEvent("message", { origin: "https://admin.example.test", source: frame.contentWindow, data: { type: "ready" } }));
   expect(post).toHaveBeenCalledWith(expect.objectContaining({ type: "session", token: "retry-session" }), "https://admin.example.test");
+});
+
+it("labels the loader in the host page language", () => {
+  expect(loaderLabels("es-MX").open).toBe("Abrir el chat");
+  expect(loaderLabels("sr-Latn-RS").title).toBe("Pišite nam");
+  expect(loaderLabels("fr").close).toBe("Fermer la discussion");
+  expect(loaderLabels("de").title).toBe("Chat with us");
 });
 
 it("keeps the sandbox and supports external links without exposing unsupported APIs", async () => {

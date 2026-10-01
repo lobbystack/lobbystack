@@ -15,6 +15,7 @@ import {
   assertLocale,
   getCopy,
   getRouteSeo,
+  localeTag,
   localizeHref,
   localizePath,
   type Locale,
@@ -31,6 +32,7 @@ const seo = getRouteSeo({ locale, path: "/solutions/" })
 
 const pageCopy = {
   en: {
+    breadcrumb: "Solutions",
     imageAlt:
       "LobbyStack AI receptionist solutions for phone answering and appointment booking",
     h1: "AI receptionist solutions",
@@ -156,6 +158,7 @@ const pageCopy = {
     ],
   },
   fr: {
+    breadcrumb: "Solutions",
     imageAlt:
       "Solutions de réceptionniste IA LobbyStack pour réponse téléphonique et rendez‑vous",
     h1: "Solutions de réceptionniste IA",
@@ -280,6 +283,267 @@ const pageCopy = {
       },
     ],
   },
+  es: {
+    breadcrumb: "Soluciones",
+    imageAlt:
+      "Soluciones de recepcionista con IA de LobbyStack para atención telefónica y reserva de citas",
+    h1: "Soluciones de recepcionista con IA",
+    intro:
+      "Elija el flujo de llamadas de LobbyStack que se ajuste a la forma en que su negocio contesta el teléfono, reserva citas, transfiere llamadas y toma mensajes.",
+    capabilityPrefix:
+      "Estas páginas usan las mismas funciones del producto que se describen en la",
+    featuresPage: "página de funciones",
+    capabilitySuffix:
+      ": atención de llamadas, reserva de citas, transferencias, notificaciones, resúmenes, transcripciones e historial de llamadas.",
+    tradeHeading: "Recepcionista con IA para su oficio",
+    tradeIntro:
+      "LobbyStack gestiona las llamadas que más importan en cada oficio: filtrado de emergencias, preguntas iniciales, reservas y transferencias fuera de horario.",
+    comparisonsHeading: "Comparativas",
+    comparisonsIntro:
+      "¿No sabe si una recepcionista con IA es adecuada para su caso? Estas comparativas explican las ventajas y desventajas con honestidad.",
+    workflowHeading: "Una sola capa telefónica para varios flujos de trabajo",
+    workflowBody:
+      "LobbyStack puede contestar llamadas, intervenir cuando su equipo no está disponible, reservar citas, recopilar datos de quien llama, transferir solicitudes y enviar resúmenes según las reglas que usted defina.",
+    serviceTeams: "Para equipos de servicio",
+    serviceTeamsBody:
+      "Recopile los detalles del trabajo, la zona de servicio, la urgencia y las necesidades de agenda, y avise a la persona adecuada con un resumen claro.",
+    appointmentBusinesses: "Para negocios con citas",
+    appointmentBusinessesBody:
+      "Permita que sus clientes reserven, reciban un SMS de confirmación, cambien la cita cuando sus reglas lo permitan o dejen un mensaje a su equipo.",
+    ctaHeading: "Empiece por las llamadas que más recibe",
+    ctaBody:
+      "Pruebe LobbyStack con las llamadas que su equipo pierde con más frecuencia y luego amplíelo a la atención fuera de horario, la programación de citas y las transferencias a medida que evolucione su flujo de trabajo.",
+    viewFeatures: "Ver funciones",
+    contractorAfterHours: "Fuera de horario para contratistas",
+    solutions: [
+      {
+        title: "Atención telefónica con IA",
+        href: "/solutions/ai-phone-answering/",
+        description:
+          "Conteste llamadas, recopile datos de quien llama, reserve citas y transfiera solicitudes según sus reglas.",
+      },
+      {
+        title: "Programador de citas con IA",
+        href: "/solutions/ai-appointment-scheduler/",
+        description:
+          "Convierta las llamadas de reserva en citas programadas, con confirmaciones y notificaciones para el equipo.",
+      },
+      {
+        title: "Servicios para el hogar",
+        href: "/solutions/ai-receptionist-for-home-services/",
+        description:
+          "Reserve trabajos de climatización, plomería, electricidad, techado, jardinería y otros servicios mientras sus equipos trabajan.",
+      },
+      {
+        title: "Atención fuera de horario",
+        href: "/solutions/after-hours-answering-service/",
+        description:
+          "Cubra las llamadas cuando su equipo está ocupado, cerrado o no disponible, sin agregar otro turno.",
+      },
+      {
+        title: "Consultorios dentales",
+        href: "/solutions/ai-receptionist-for-dental-offices/",
+        description:
+          "Atienda llamadas de pacientes, reserve citas, resuelva preguntas habituales y transfiera las llamadas urgentes según sus reglas.",
+      },
+      {
+        title: "Salones y spas",
+        href: "/solutions/ai-receptionist-for-salons-and-spas/",
+        description:
+          "Reserve citas, responda preguntas sobre servicios y gestione cambios de cita mientras su personal sigue con los clientes.",
+      },
+      {
+        title: "Recepcionista con IA autoalojada",
+        href: "/solutions/self-hosted-ai-receptionist/",
+        description:
+          "Ejecute LobbyStack en una infraestructura que usted controla cuando su equipo necesita flexibilidad en la implementación y el control de los datos.",
+      },
+      {
+        title: "Recepcionista con IA de código abierto",
+        href: "/solutions/open-source-ai-receptionist/",
+        description:
+          "Audite la lógica de atención de llamadas, personalice las instrucciones y el enrutamiento, e impleméntela en su propia infraestructura.",
+      },
+    ],
+    trades: [
+      { title: "Plomeros", href: "/solutions/ai-receptionist-for-plumbers/" },
+      { title: "Climatización", href: "/solutions/ai-receptionist-for-hvac/" },
+      {
+        title: "Electricistas",
+        href: "/solutions/ai-receptionist-for-electricians/",
+      },
+      {
+        title: "Puertas de garaje",
+        href: "/solutions/ai-receptionist-for-garage-door-repair/",
+      },
+      {
+        title: "Reparación de electrodomésticos",
+        href: "/solutions/ai-receptionist-for-appliance-repair/",
+      },
+      {
+        title: "Restauración de daños",
+        href: "/solutions/ai-receptionist-for-restoration-companies/",
+      },
+      {
+        title: "Cerrajeros",
+        href: "/solutions/ai-receptionist-for-locksmiths/",
+      },
+      { title: "Techado", href: "/solutions/roofing-answering-service/" },
+      {
+        title: "Administración de propiedades",
+        href: "/solutions/property-management-answering-service/",
+      },
+    ],
+    comparisons: [
+      {
+        title: "Recepcionista con IA vs. recepcionista virtual",
+        href: "/blog/ai-receptionist-vs-virtual-receptionist/",
+        description:
+          "Entienda cuándo le conviene la IA, una persona o un enfoque híbrido para atender sus llamadas.",
+      },
+      {
+        title: "Recepcionista con IA vs. buzón de voz",
+        href: "/blog/ai-receptionist-vs-voicemail/",
+        description:
+          "Vea cómo una recepcionista con IA capta los ingresos que el buzón de voz deja escapar.",
+      },
+    ],
+  },
+  sr: {
+    breadcrumb: "Rešenja",
+    imageAlt:
+      "LobbyStack AI recepcioner za odgovaranje na pozive i zakazivanje termina",
+    h1: "Rešenja sa AI recepcionerom",
+    intro:
+      "Izaberite LobbyStack tok poziva koji odgovara načinu na koji Vaša firma odgovara na pozive, zakazuje termine, preusmerava pozive i prima poruke.",
+    capabilityPrefix:
+      "Ove stranice koriste iste funkcije proizvoda navedene na",
+    featuresPage: "stranici sa funkcijama",
+    capabilitySuffix:
+      ": odgovaranje na pozive, zakazivanje termina, preusmeravanje, obaveštenja, rezimei, transkripti i istorija poziva.",
+    tradeHeading: "AI recepcioner za Vašu delatnost",
+    tradeIntro:
+      "LobbyStack obrađuje pozive koji su najvažniji u svakoj delatnosti: procenu hitnosti, početna pitanja, zakazivanje i preusmeravanje van radnog vremena.",
+    comparisonsHeading: "Poređenja",
+    comparisonsIntro:
+      "Niste sigurni da li Vam AI recepcioner odgovara? Ova poređenja iskreno objašnjavaju prednosti i mane.",
+    workflowHeading: "Jedan telefonski sloj za više poslovnih tokova",
+    workflowBody:
+      "LobbyStack može da odgovara na pozive, uskoči kada Vaš tim nije dostupan, zakazuje termine, prikuplja podatke o pozivaocu, preusmerava zahteve i šalje rezimee prema pravilima koja postavite.",
+    serviceTeams: "Za servisne timove",
+    serviceTeamsBody:
+      "Prikupite detalje posla, područje usluge, hitnost i potrebe za zakazivanjem, pa obavestite pravu osobu jasnim rezimeom.",
+    appointmentBusinesses: "Za firme koje rade po zakazivanju",
+    appointmentBusinessesBody:
+      "Omogućite pozivaocima da zakažu termin, dobiju SMS potvrdu, promene termin kada to Vaša pravila dozvoljavaju ili ostave poruku Vašem timu.",
+    ctaHeading: "Počnite od poziva kojih ima najviše",
+    ctaBody:
+      "Isprobajte LobbyStack na pozivima koje Vaš tim najčešće propušta, a zatim ga proširite na pozive van radnog vremena, zakazivanje i preusmeravanje kako se Vaš način rada razvija.",
+    viewFeatures: "Pogledajte funkcije",
+    contractorAfterHours: "Van radnog vremena za izvođače",
+    solutions: [
+      {
+        title: "AI odgovaranje na pozive",
+        href: "/solutions/ai-phone-answering/",
+        description:
+          "Odgovarajte na pozive, prikupljajte podatke o pozivaocu, zakazujte termine i preusmeravajte zahteve prema svojim pravilima.",
+      },
+      {
+        title: "AI zakazivanje termina",
+        href: "/solutions/ai-appointment-scheduler/",
+        description:
+          "Pretvorite pozive za zakazivanje u zakazane termine, uz potvrde i obaveštenja timu.",
+      },
+      {
+        title: "Kućne usluge",
+        href: "/solutions/ai-receptionist-for-home-services/",
+        description:
+          "Zakazujte intervencije za grejanje i klimatizaciju, vodoinstalaterske, električarske, krovopokrivačke, baštovanske i druge usluge dok su ekipe na terenu.",
+      },
+      {
+        title: "Odgovaranje van radnog vremena",
+        href: "/solutions/after-hours-answering-service/",
+        description:
+          "Pokrijte pozive kada je Vaš tim zauzet, zatvoren ili nedostupan, bez dodatne smene.",
+      },
+      {
+        title: "Stomatološke ordinacije",
+        href: "/solutions/ai-receptionist-for-dental-offices/",
+        description:
+          "Odgovarajte na pozive pacijenata, zakazujte termine, rešavajte uobičajena pitanja i preusmeravajte hitne pozive prema svojim pravilima.",
+      },
+      {
+        title: "Saloni i spa centri",
+        href: "/solutions/ai-receptionist-for-salons-and-spas/",
+        description:
+          "Zakazujte termine, odgovarajte na pitanja o uslugama i menjajte termine dok je osoblje sa klijentima.",
+      },
+      {
+        title: "Samostalno hostovan AI recepcioner",
+        href: "/solutions/self-hosted-ai-receptionist/",
+        description:
+          "Pokrenite LobbyStack na infrastrukturi koju kontrolišete kada Vašem timu treba fleksibilnost u primeni i kontroli podataka.",
+      },
+      {
+        title: "AI recepcioner otvorenog koda",
+        href: "/solutions/open-source-ai-receptionist/",
+        description:
+          "Proverite logiku obrade poziva, prilagodite uputstva i preusmeravanje i pokrenite sve na sopstvenoj infrastrukturi.",
+      },
+    ],
+    trades: [
+      {
+        title: "Vodoinstalateri",
+        href: "/solutions/ai-receptionist-for-plumbers/",
+      },
+      {
+        title: "Grejanje i klimatizacija",
+        href: "/solutions/ai-receptionist-for-hvac/",
+      },
+      {
+        title: "Električari",
+        href: "/solutions/ai-receptionist-for-electricians/",
+      },
+      {
+        title: "Garažna vrata",
+        href: "/solutions/ai-receptionist-for-garage-door-repair/",
+      },
+      {
+        title: "Servis kućnih aparata",
+        href: "/solutions/ai-receptionist-for-appliance-repair/",
+      },
+      {
+        title: "Sanacija šteta",
+        href: "/solutions/ai-receptionist-for-restoration-companies/",
+      },
+      {
+        title: "Bravari",
+        href: "/solutions/ai-receptionist-for-locksmiths/",
+      },
+      {
+        title: "Krovopokrivači",
+        href: "/solutions/roofing-answering-service/",
+      },
+      {
+        title: "Upravljanje nekretninama",
+        href: "/solutions/property-management-answering-service/",
+      },
+    ],
+    comparisons: [
+      {
+        title: "AI recepcioner ili virtuelni recepcioner",
+        href: "/blog/ai-receptionist-vs-virtual-receptionist/",
+        description:
+          "Saznajte kada Vam više odgovara AI, čovek ili kombinacija to dvoje za odgovaranje na pozive.",
+      },
+      {
+        title: "AI recepcioner ili govorna pošta",
+        href: "/blog/ai-receptionist-vs-voicemail/",
+        description:
+          "Pogledajte kako AI recepcioner čuva prihod koji govorna pošta gubi.",
+      },
+    ],
+  },
 }[locale]
 ---
 
@@ -296,7 +560,7 @@ const pageCopy = {
       breadcrumbJsonLd([
         { name: common.home, path: localizePath(locale, "/") },
         {
-          name: locale === "fr" ? "Solutions" : "Solutions",
+          name: pageCopy.breadcrumb,
           path: canonicalPath,
         },
       ]),
@@ -307,7 +571,7 @@ const pageCopy = {
         name: seo?.title,
         url: absoluteUrl(canonicalPath),
         description: seo?.description,
-        inLanguage: locale,
+        inLanguage: localeTag(locale),
         isPartOf: {
           "@id": absoluteUrl("/#website"),
         },
@@ -316,7 +580,11 @@ const pageCopy = {
   }}
 >
   <Navbar locale={locale} />
-  <main id="main-content" tabindex="-1" class="min-h-screen bg-background text-foreground">
+  <main
+    id="main-content"
+    tabindex="-1"
+    class="min-h-screen bg-background text-foreground"
+  >
     <section class="mx-auto max-w-7xl px-6 py-20 md:py-28">
       <div class="mx-auto max-w-3xl text-center">
         <h1 class="display-heading">{pageCopy.h1}</h1>
@@ -477,5 +745,5 @@ const pageCopy = {
       </div>
     </section>
   </main>
-  <Footer locale={locale} />
+  <Footer locale={locale} path={Astro.url.pathname} />
 </Layout>

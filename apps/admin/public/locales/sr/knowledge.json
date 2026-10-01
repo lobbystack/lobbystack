@@ -1,0 +1,31 @@
+{
+  "header": {
+    "title": "Znanje",
+    "description": "Upravljajte znanjem i dokumentima i isprobajte razgovore."
+  },
+  "manager": {
+    "title": "Baza znanja",
+    "description": "Dodajte znanje i dokumente koje recepcioner može da koristi u pregledu, SMS porukama i pri osvežavanju glasovnog snimka podešavanja.",
+    "items": "Stavke: {{count}}",
+    "manualDocument": "Ručno unet dokument",
+    "placeholders": {
+      "documentTitle": "Pravila klinike",
+      "documentBody": "Pacijenti treba da dođu 10 minuta ranije. Ponesite ličnu kartu i podatke o osiguranju, ako je potrebno."
+    },
+    "documentTagsPlaceholder": "pravila,prijem",
+    "saveDocument": "Dodaj dokument",
+    "savingDocument": "Dodavanje u red...",
+    "currentDocuments": "Trenutni dokumenti",
+    "queuedDocument": "Dokument je dodat u red za indeksiranje.",
+    "noDocuments": "Još nema dokumenata."
+  },
+  "preview": {
+    "title": "Pregled recepcionera",
+    "description": "Isprobajte isti poslovni kontekst koji se koristi za SMS i asinhrone AI tokove pre nego što ga predstavite pozivaocima.",
+    "promptPlaceholder": "Do koliko sati radite sutra?",
+    "generate": "Pokreni pregled",
+    "generating": "Generisanje...",
+    "emptyResponse": "Odgovori iz pregleda pojaviće se ovde kada pokrenete recepcionera.",
+    "disabled": "Prijavite se i kreirajte firmu da biste pokrenuli pravi pregled."
+  }
+}

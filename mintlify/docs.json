@@ -47,104 +47,380 @@
     {
       "source": "/agent/ai-settings/",
       "destination": "/agent/ai-settings/overview"
+    },
+    {
+      "source": "/fr/agent/ai-settings",
+      "destination": "/fr/agent/ai-settings/overview"
+    },
+    {
+      "source": "/fr/agent/ai-settings/",
+      "destination": "/fr/agent/ai-settings/overview"
+    },
+    {
+      "source": "/es/agent/ai-settings",
+      "destination": "/es/agent/ai-settings/overview"
+    },
+    {
+      "source": "/es/agent/ai-settings/",
+      "destination": "/es/agent/ai-settings/overview"
     }
   ],
   "navigation": {
-    "groups": [
+    "languages": [
       {
-        "group": "Get started",
-        "pages": [
-          "introduction",
-          "quickstart",
-          "getting-started/account-setup",
-          "getting-started/claim-your-number"
-        ]
-      },
-      {
-        "group": "General",
-        "pages": [
-          "dashboard/home",
-          "dashboard/calls",
-          "dashboard/messages",
-          "dashboard/contacts",
-          "dashboard/appointments"
-        ]
-      },
-      {
-        "group": "Agent",
-        "pages": [
-          "agent/overview",
+        "language": "en",
+        "default": true,
+        "groups": [
           {
-            "group": "AI settings",
+            "group": "Get started",
             "pages": [
-              "agent/ai-settings/overview",
-              "agent/ai-settings/appointment-changes"
-            ]
-          },
-          "agent/knowledge",
-          "agent/services",
-          "agent/rules"
-        ]
-      },
-      {
-        "group": "Manage",
-        "pages": [
-          "dashboard/analytics",
-          "integrations/overview",
-          "integrations/google-calendar",
-          "integrations/sms",
-          "integrations/webhooks",
-          {
-            "group": "Settings",
-            "pages": [
-              "settings/overview",
-              "settings/account",
-              "settings/team",
-              "settings/notifications",
-              "settings/phone-number",
-              "settings/widget"
+              "introduction",
+              "quickstart",
+              "getting-started/account-setup",
+              "getting-started/claim-your-number"
             ]
           },
           {
-            "group": "Billing",
+            "group": "General",
             "pages": [
-              "billing/plans",
-              "billing/usage",
-              "billing/affiliate-program"
+              "dashboard/home",
+              "dashboard/calls",
+              "dashboard/messages",
+              "dashboard/contacts",
+              "dashboard/appointments"
+            ]
+          },
+          {
+            "group": "Agent",
+            "pages": [
+              "agent/overview",
+              {
+                "group": "AI settings",
+                "pages": [
+                  "agent/ai-settings/overview",
+                  "agent/ai-settings/appointment-changes"
+                ]
+              },
+              "agent/knowledge",
+              "agent/services",
+              "agent/rules"
+            ]
+          },
+          {
+            "group": "Manage",
+            "pages": [
+              "dashboard/analytics",
+              "integrations/overview",
+              "integrations/google-calendar",
+              "integrations/sms",
+              "integrations/webhooks",
+              {
+                "group": "Settings",
+                "pages": [
+                  "settings/overview",
+                  "settings/account",
+                  "settings/team",
+                  "settings/notifications",
+                  "settings/phone-number",
+                  "settings/widget"
+                ]
+              },
+              {
+                "group": "Billing",
+                "pages": [
+                  "billing/plans",
+                  "billing/usage",
+                  "billing/affiliate-program"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "API",
+            "pages": [
+              "api/overview",
+              "api/authentication",
+              "api/requests",
+              "api/webhooks"
+            ]
+          },
+          {
+            "group": "AI assistants",
+            "pages": [
+              "ai/mcp",
+              "ai/connect-claude",
+              "ai/connect-chatgpt",
+              "ai/connect-other-clients",
+              "ai/lobbystack-skill"
+            ]
+          },
+          {
+            "group": "API reference",
+            "openapi": "api-reference/openapi.json"
+          },
+          {
+            "group": "Self-hosting",
+            "pages": [
+              "self-hosting/overview",
+              "self-hosting/docker-compose",
+              "self-hosting/environment-variables",
+              "self-hosting/providers"
             ]
           }
         ]
       },
       {
-        "group": "API",
-        "pages": [
-          "api/overview",
-          "api/authentication",
-          "api/requests",
-          "api/webhooks"
+        "language": "fr",
+        "navbar": {
+          "links": [
+            {
+              "label": "Lobbystack.com",
+              "href": "https://lobbystack.com/fr/"
+            },
+            {
+              "label": "",
+              "icon": "github",
+              "href": "https://github.com/lobbystack/lobbystack"
+            },
+            {
+              "label": "Se connecter",
+              "href": "https://app.lobbystack.com/fr/login"
+            }
+          ],
+          "primary": {
+            "type": "button",
+            "label": "Essayer gratuitement",
+            "name": "Essayer gratuitement",
+            "href": "https://app.lobbystack.com/fr/signup"
+          }
+        },
+        "groups": [
+          {
+            "group": "Premiers pas",
+            "pages": [
+              "fr/introduction",
+              "fr/quickstart",
+              "fr/getting-started/account-setup",
+              "fr/getting-started/claim-your-number"
+            ]
+          },
+          {
+            "group": "Général",
+            "pages": [
+              "fr/dashboard/home",
+              "fr/dashboard/calls",
+              "fr/dashboard/messages",
+              "fr/dashboard/contacts",
+              "fr/dashboard/appointments"
+            ]
+          },
+          {
+            "group": "Agent",
+            "pages": [
+              "fr/agent/overview",
+              {
+                "group": "Paramètres IA",
+                "pages": [
+                  "fr/agent/ai-settings/overview",
+                  "fr/agent/ai-settings/appointment-changes"
+                ]
+              },
+              "fr/agent/knowledge",
+              "fr/agent/services",
+              "fr/agent/rules"
+            ]
+          },
+          {
+            "group": "Gestion",
+            "pages": [
+              "fr/dashboard/analytics",
+              "fr/integrations/overview",
+              "fr/integrations/google-calendar",
+              "fr/integrations/sms",
+              "fr/integrations/webhooks",
+              {
+                "group": "Réglages",
+                "pages": [
+                  "fr/settings/overview",
+                  "fr/settings/account",
+                  "fr/settings/team",
+                  "fr/settings/notifications",
+                  "fr/settings/phone-number",
+                  "fr/settings/widget"
+                ]
+              },
+              {
+                "group": "Facturation",
+                "pages": [
+                  "fr/billing/plans",
+                  "fr/billing/usage",
+                  "fr/billing/affiliate-program"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "API",
+            "pages": [
+              "fr/api/overview",
+              "fr/api/authentication",
+              "fr/api/requests",
+              "fr/api/webhooks"
+            ]
+          },
+          {
+            "group": "Assistants IA",
+            "pages": [
+              "fr/ai/mcp",
+              "fr/ai/connect-claude",
+              "fr/ai/connect-chatgpt",
+              "fr/ai/connect-other-clients",
+              "ai/lobbystack-skill"
+            ]
+          },
+          {
+            "group": "Référence de l'API",
+            "openapi": {
+              "source": "api-reference/openapi.json",
+              "directory": "fr/api-reference"
+            }
+          },
+          {
+            "group": "Auto-hébergement",
+            "pages": [
+              "fr/self-hosting/overview",
+              "fr/self-hosting/docker-compose",
+              "fr/self-hosting/environment-variables",
+              "fr/self-hosting/providers"
+            ]
+          }
         ]
       },
       {
-        "group": "AI assistants",
-        "pages": [
-          "ai/mcp",
-          "ai/connect-claude",
-          "ai/connect-chatgpt",
-          "ai/connect-other-clients",
-          "ai/lobbystack-skill"
-        ]
-      },
-      {
-        "group": "API reference",
-        "openapi": "api-reference/openapi.json"
-      },
-      {
-        "group": "Self-hosting",
-        "pages": [
-          "self-hosting/overview",
-          "self-hosting/docker-compose",
-          "self-hosting/environment-variables",
-          "self-hosting/providers"
+        "language": "es",
+        "navbar": {
+          "links": [
+            {
+              "label": "Lobbystack.com",
+              "href": "https://lobbystack.com/es/"
+            },
+            {
+              "label": "",
+              "icon": "github",
+              "href": "https://github.com/lobbystack/lobbystack"
+            },
+            {
+              "label": "Iniciar sesión",
+              "href": "https://app.lobbystack.com/es/login"
+            }
+          ],
+          "primary": {
+            "type": "button",
+            "label": "Pruébelo gratis",
+            "name": "Pruébelo gratis",
+            "href": "https://app.lobbystack.com/es/signup"
+          }
+        },
+        "groups": [
+          {
+            "group": "Primeros pasos",
+            "pages": [
+              "es/introduction",
+              "es/quickstart",
+              "es/getting-started/account-setup",
+              "es/getting-started/claim-your-number"
+            ]
+          },
+          {
+            "group": "General",
+            "pages": [
+              "es/dashboard/home",
+              "es/dashboard/calls",
+              "es/dashboard/messages",
+              "es/dashboard/contacts",
+              "es/dashboard/appointments"
+            ]
+          },
+          {
+            "group": "Agente",
+            "pages": [
+              "es/agent/overview",
+              {
+                "group": "Ajustes de IA",
+                "pages": [
+                  "es/agent/ai-settings/overview",
+                  "es/agent/ai-settings/appointment-changes"
+                ]
+              },
+              "es/agent/knowledge",
+              "es/agent/services",
+              "es/agent/rules"
+            ]
+          },
+          {
+            "group": "Gestionar",
+            "pages": [
+              "es/dashboard/analytics",
+              "es/integrations/overview",
+              "es/integrations/google-calendar",
+              "es/integrations/sms",
+              "es/integrations/webhooks",
+              {
+                "group": "Configuración",
+                "pages": [
+                  "es/settings/overview",
+                  "es/settings/account",
+                  "es/settings/team",
+                  "es/settings/notifications",
+                  "es/settings/phone-number",
+                  "es/settings/widget"
+                ]
+              },
+              {
+                "group": "Facturación",
+                "pages": [
+                  "es/billing/plans",
+                  "es/billing/usage",
+                  "es/billing/affiliate-program"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "API",
+            "pages": [
+              "es/api/overview",
+              "es/api/authentication",
+              "es/api/requests",
+              "es/api/webhooks"
+            ]
+          },
+          {
+            "group": "Asistentes de IA",
+            "pages": [
+              "es/ai/mcp",
+              "es/ai/connect-claude",
+              "es/ai/connect-chatgpt",
+              "es/ai/connect-other-clients",
+              "ai/lobbystack-skill"
+            ]
+          },
+          {
+            "group": "Referencia de la API",
+            "openapi": {
+              "source": "api-reference/openapi.json",
+              "directory": "es/api-reference"
+            }
+          },
+          {
+            "group": "Autoalojamiento",
+            "pages": [
+              "es/self-hosting/overview",
+              "es/self-hosting/docker-compose",
+              "es/self-hosting/environment-variables",
+              "es/self-hosting/providers"
+            ]
+          }
         ]
       }
     ]

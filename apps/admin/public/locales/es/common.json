@@ -1,0 +1,158 @@
+{
+  "appName": "LobbyStack",
+  "accessibility": { "close": "Cerrar", "toggleSidebar": "Mostrar u ocultar la barra lateral", "skipToContent": "Ir al contenido principal" },
+  "errors": { "unexpected": "Algo salió mal. Inténtelo de nuevo." },
+  "loading": {
+    "title": "Cargando...",
+    "retry": "Reintentar la carga",
+    "failed": "No se pudieron cargar algunas traducciones.",
+    "description": "Sincronizando su espacio de trabajo y la configuración de la recepcionista."
+  },
+  "language": {
+    "label": "Idioma",
+    "ariaLabel": "Elegir el idioma del panel",
+    "english": "English",
+    "french": "Français",
+    "spanish": "Español",
+    "serbian": "Srpski"
+  },
+  "badges": {
+    "live": "En vivo",
+    "configured": "Configurado",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "voice": "Voz",
+    "sms": "SMS"
+  },
+  "labels": {
+    "customer": "Cliente",
+    "receptionist": "Recepcionista",
+    "prompt": "Instrucción"
+  },
+  "aiPhoneNumber": {
+    "copy": "Copiar el número de teléfono de la IA",
+    "copied": "Número de teléfono de la IA copiado"
+  },
+  "errorBoundary": {
+    "title": "Algo salió mal",
+    "description": "Vuelva a cargar el panel e inténtelo de nuevo. Se ha notificado el error.",
+    "reload": "Volver a cargar"
+  },
+  "feedback": {
+    "trigger": "Comentarios",
+    "title": "Enviar comentarios",
+    "description": "Cuéntenos qué mejoraría este panel.",
+    "label": "Mensaje de comentarios",
+    "placeholder": "¿Tiene una idea para mejorar LobbyStack? Cuéntesela al equipo.",
+    "characterCount": "{{count}} / {{max}} caracteres",
+    "helpText": "¿Necesita ayuda?",
+    "helpCenter": "Centro de ayuda",
+    "contactLink": "Contáctenos",
+    "helpTextSeparator": "o",
+    "docsLink": "consulte la documentación.",
+    "submit": "Enviar",
+    "toast": {
+      "sent": "Comentarios enviados.",
+      "failed": "No pudimos guardar sus comentarios."
+    }
+  },
+  "testCall": {
+    "trigger": "Llamada de prueba",
+    "title": "Pruebe su recepcionista con IA",
+    "description": "Inicie una llamada en vivo desde el navegador con su recepcionista configurada.",
+    "connecting": "Conectando...",
+    "hangUp": "Colgar",
+    "status": {
+      "idle": "Listo cuando usted quiera",
+      "requesting_microphone": "Solicitando acceso al micrófono",
+      "connecting": "Conectando con su recepcionista con IA",
+      "connected": "En vivo con su recepcionista con IA",
+      "ending": "Finalizando la llamada",
+      "ended": "Llamada finalizada",
+      "error": "No se pudo iniciar la llamada"
+    },
+    "aria": {
+      "start": "Iniciar llamada de prueba",
+      "connecting": "Conectando la llamada de prueba",
+      "waitingForMicrophone": "Esperando el permiso del micrófono",
+      "end": "Finalizar llamada de prueba",
+      "endMuted": "Finalizar llamada de prueba silenciada",
+      "ending": "Finalizando la llamada de prueba",
+      "retry": "Reintentar llamada de prueba"
+    },
+    "errors": {
+      "microphoneBlocked": "Se bloqueó el acceso al micrófono.",
+      "microphoneNotFound": "No se encontró ningún micrófono en este dispositivo.",
+      "microphoneInUse": "Otra aplicación ya está usando el micrófono.",
+      "gatewayTimeout": "La llamada tardó demasiado en conectarse.",
+      "gatewayUnreachable": "Esta página no puede conectarse con LobbyStack para iniciar la llamada.",
+      "connectionDropped": "Se perdió la conexión de voz.",
+      "browserNoMicrophone": "Este navegador no admite llamadas con micrófono.",
+      "browserNoWebRtc": "Este navegador no admite llamadas de voz en vivo.",
+      "businessNotFound": "No encontramos este espacio de trabajo. Cambie a un espacio de trabajo activo e inténtelo de nuevo.",
+      "rateLimited": "Se han iniciado demasiadas llamadas de prueba. Inténtelo de nuevo en unos minutos.",
+      "unavailable": "Su recepcionista con IA no está disponible en este momento.",
+      "generic": "Algo salió mal al iniciar la llamada."
+    }
+  },
+  "appointments": {
+    "title": "Citas",
+    "summary_one": "{{name}} · {{count}} cita próxima",
+    "summary_many": "{{name}} · {{count}} citas próximas",
+    "summary_other": "{{name}} · {{count}} citas próximas",
+    "chooseWorkspace": "Elija un espacio de trabajo para ver las citas.",
+    "refresh": "Actualizar",
+    "time": "Hora",
+    "customer": "Cliente",
+    "service": "Servicio",
+    "staff": "Personal",
+    "status": "Estado",
+    "calendar": "Calendario",
+    "loading": "Cargando citas…",
+    "unavailable": "Las citas no están disponibles.",
+    "empty": "No hay citas próximas.",
+    "unknownContact": "Contacto desconocido",
+    "statuses": {
+      "confirmed": "Confirmada",
+      "cancelled": "Cancelada",
+      "completed": "Completada",
+      "no_show": "No se presentó",
+      "pending": "Pendiente"
+    },
+    "calendarStates": {
+      "not_required": "No necesario",
+      "pending": "Pendiente",
+      "synced": "Sincronizado",
+      "failed": "Fallido",
+      "error": "Error",
+      "cancelled": "Cancelado"
+    }
+  },
+  "abandonIntent": {
+    "title": "Antes de irse",
+    "description": "Dos preguntas rápidas. Con una basta.",
+    "issue": {
+      "label": "¿Tuvo algún problema?",
+      "placeholder": "Describa lo que pasó para que podamos solucionarlo."
+    },
+    "missing": {
+      "label": "¿Echa algo en falta?",
+      "placeholder": "Cuéntenos qué le gustaría ver a continuación."
+    },
+    "notNow": "Ahora no",
+    "submit": "Enviar",
+    "sentTitle": "Gracias",
+    "sentDescription": "Leemos todos los mensajes.",
+    "close": "Cerrar"
+  },
+  "websiteImport": {
+    "runningTitle": "Leyendo {{host}}",
+    "runningHint": "{{imported}} páginas leídas hasta ahora, {{indexed}} listas para responder preguntas.",
+    "doneTitle": "Su agente ha leído {{host}}",
+    "doneHint_one": "{{count}} página está lista para responder preguntas.",
+    "doneHint_many": "{{count}} páginas están listas para responder preguntas.",
+    "doneHint_other": "{{count}} páginas están listas para responder preguntas.",
+    "failedTitle": "No pudimos leer {{host}}",
+    "failedHint": "Añada los datos de su negocio a mano o vuelva a intentar la importación desde su panel."
+  }
+}

@@ -32,7 +32,7 @@ import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { selectActiveBusiness } from "@/lib/active-business";
-import { formatRelativeTime } from "@/lib/locale";
+import { intlLocale, formatRelativeTime } from "@/lib/locale";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 type Business = { businessId: string; name: string; active: boolean; role: string };
@@ -64,7 +64,7 @@ async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 function dateTime(value: string, locale: string, dateOnly = false): string {
-  return new Intl.DateTimeFormat(locale, dateOnly ? { dateStyle: "medium" } : { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat(intlLocale(locale), dateOnly ? { dateStyle: "medium" } : { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
 function truncateId(value: string, maxLength = 16): string {
@@ -245,7 +245,7 @@ function DetailsTab({ contact, copiedField, locale, onCopy }: { contact: NonNull
   const { t } = useTranslation("contacts");
   const displayId = contact.legacyConvexId ?? contact.id;
   return <div className="py-4"><Surface className="flex flex-col">
-    <DetailSection className="ph-mask" title={t("detail.details.contactInfoTitle")}><DescriptionList rows={[[t("detail.details.name"), contact.name ?? t("detail.details.notSet")], [t("detail.details.phone"), formatPhoneNumberDisplay(contact.phone, locale)], [t("detail.details.email"), contact.email ?? t("detail.details.notSet")], [t("detail.details.timezone"), contact.timezone ?? t("detail.details.notSet")], [t("detail.details.preferredLocale"), contact.preferredLocale ? new Intl.DisplayNames([locale], { type: "language" }).of(contact.preferredLocale) ?? contact.preferredLocale : t("detail.details.notSet")]]} /></DetailSection>
+    <DetailSection className="ph-mask" title={t("detail.details.contactInfoTitle")}><DescriptionList rows={[[t("detail.details.name"), contact.name ?? t("detail.details.notSet")], [t("detail.details.phone"), formatPhoneNumberDisplay(contact.phone, locale)], [t("detail.details.email"), contact.email ?? t("detail.details.notSet")], [t("detail.details.timezone"), contact.timezone ?? t("detail.details.notSet")], [t("detail.details.preferredLocale"), contact.preferredLocale ? new Intl.DisplayNames([intlLocale(locale)], { type: "language" }).of(contact.preferredLocale) ?? contact.preferredLocale : t("detail.details.notSet")]]} /></DetailSection>
     <DetailSection className="border-t" title={t("detail.details.blockingTitle")}><DescriptionList rows={[[t("detail.details.blockingStatus"), contact.operatorBlockedAt ? t("detail.blocking.badge") : t("detail.blocking.active")], [t("detail.details.blockedAt"), contact.operatorBlockedAt ? dateTime(contact.operatorBlockedAt, locale) : t("detail.details.notSet")], [t("detail.details.blockedBy"), t("detail.details.notSet")]]} /></DetailSection>
     <DetailSection className="border-t" title={t("detail.details.smsConsentTitle")}><DescriptionList rows={[[t("detail.details.smsConsentStatus"), contact.smsConsentStatus ?? t("detail.details.notSet")], [t("detail.details.smsConsentUpdatedAt"), contact.smsConsentUpdatedAt ? dateTime(contact.smsConsentUpdatedAt, locale) : t("detail.details.notSet")], [t("detail.details.smsConsentSource"), contact.smsConsentSource ?? t("detail.details.notSet")]]} /></DetailSection>
     <DetailSection className="border-t" title={t("detail.details.systemTitle")}><dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-3"><dt className="type-meta">{t("detail.details.contactId")}</dt><dd className="flex items-center gap-1.5"><span className="type-technical-value">{truncateId(displayId)}</span><button aria-label={t("detail.details.copy")} className={cn("text-muted-foreground", copiedField === "contactId" && "text-emerald-500")} onClick={() => onCopy(displayId, "contactId")} type="button">{copiedField === "contactId" ? <CheckCircle2 className="size-3" /> : <Copy className="size-3" />}</button></dd><dt className="type-meta">{t("detail.details.createdAt")}</dt><dd className="type-body">{dateTime(contact.createdAt, locale)}</dd></dl></DetailSection>

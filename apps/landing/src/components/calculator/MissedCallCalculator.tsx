@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent, type ReactNode } from "react"
-import { buildSignupUrl } from "@/lib/app-links"
+import { appSignupUrl } from "@/lib/app-links"
 import { buttonVariants } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -83,6 +83,60 @@ const copy = {
       Landscaping: "Paysagement",
     },
   },
+  es: {
+    inputsHeading: "Datos para calcular los ingresos por llamadas perdidas",
+    trade: "Oficio / sector",
+    selectTrade: "Seleccione un oficio",
+    missedCalls: "Llamadas perdidas por semana",
+    averageJobValue: "Valor medio por trabajo ($)",
+    opportunityRate: "% de llamadas que son trabajos reales",
+    bookingRate: "Tasa de reserva si se contesta",
+    monthlyRevenue: "Ingresos mensuales en riesgo",
+    yearlyResult: (yearly: string, jobs: string) => (
+      <>
+        Son <strong>{yearly}</strong> al año, unos{" "}
+        <strong>{jobs} trabajos perdidos</strong> cada mes.
+      </>
+    ),
+    tryFree: "Pruebe LobbyStack gratis",
+    estimateNote: "Son estimaciones. Los resultados reales pueden variar.",
+    tradeLabels: {
+      Custom: "Personalizado",
+      "General Contractor": "Contratista general",
+      HVAC: "Climatización",
+      Plumbing: "Plomería",
+      Electrical: "Electricidad",
+      Roofing: "Techos",
+      Landscaping: "Paisajismo",
+    },
+  },
+  sr: {
+    inputsHeading: "Podaci za procenu prihoda od propuštenih poziva",
+    trade: "Zanat / delatnost",
+    selectTrade: "Izaberite delatnost",
+    missedCalls: "Propušteni pozivi nedeljno",
+    averageJobValue: "Prosečna vrednost posla ($)",
+    opportunityRate: "% poziva koji su pravi poslovi",
+    bookingRate: "Stopa zakazivanja kada se javite",
+    monthlyRevenue: "Mesečni prihod u riziku",
+    yearlyResult: (yearly: string, jobs: string) => (
+      <>
+        To je <strong>{yearly}</strong> godišnje, odnosno oko{" "}
+        <strong>{jobs} izgubljenih poslova</strong> svakog meseca.
+      </>
+    ),
+    tryFree: "Isprobajte LobbyStack besplatno",
+    estimateNote: "Ovo su procene. Stvarni rezultati mogu da se razlikuju.",
+    tradeLabels: {
+      Custom: "Prilagođeno",
+      "General Contractor": "Generalni izvođač radova",
+      HVAC: "Grejanje i klimatizacija",
+      Plumbing: "Vodoinstalaterski radovi",
+      Electrical: "Elektroinstalacije",
+      Roofing: "Krovopokrivački radovi",
+      Landscaping: "Uređenje dvorišta",
+    },
+  },
 } satisfies Record<
   Locale,
   {
@@ -100,6 +154,13 @@ const copy = {
     tradeLabels: Record<keyof typeof TRADES, string>
   }
 >
+
+const numberFormatLocales = {
+  en: "en-US",
+  fr: "fr-CA",
+  es: "es",
+  sr: "sr-Latn",
+} satisfies Record<Locale, string>
 
 function clampNumber(value: number, min: number, max: number) {
   if (!Number.isFinite(value)) return min
@@ -136,7 +197,7 @@ export function MissedCallCalculator({ locale = "en" }: { locale?: Locale }) {
   const revenueAtRiskYearly = revenueAtRiskMonthly * 12
 
   const formatCurrency = (val: number) =>
-    new Intl.NumberFormat(locale === "fr" ? "fr-CA" : "en-US", {
+    new Intl.NumberFormat(numberFormatLocales[locale], {
       style: "currency",
       currency: "USD",
       maximumFractionDigits: 0,
@@ -281,14 +342,17 @@ export function MissedCallCalculator({ locale = "en" }: { locale?: Locale }) {
             <p className="ph-mask pt-2 text-sm text-muted-foreground">
               {t.yearlyResult(
                 formatCurrency(revenueAtRiskYearly),
-                jobsAtRisk.toFixed(1)
+                new Intl.NumberFormat(numberFormatLocales[locale], {
+                  minimumFractionDigits: 1,
+                  maximumFractionDigits: 1,
+                }).format(jobsAtRisk)
               )}
             </p>
           </div>
 
           <div className="pt-2">
             <a
-              href={buildSignupUrl(locale, "calculator")}
+              href={appSignupUrl(locale, { source: "calculator" })}
               className={buttonVariants({
                 size: "lg",
                 className: "w-full text-base",

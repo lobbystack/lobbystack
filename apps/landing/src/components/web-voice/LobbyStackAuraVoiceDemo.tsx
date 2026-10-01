@@ -1,12 +1,12 @@
 import { ArrowRight, Mic, Phone, PhoneOff } from "lucide-react"
 
 import { Button, buttonVariants } from "@/components/ui/button"
-import { APP_SIGNUP_URL } from "@/lib/app-links"
+import { appSignupUrl } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
+import type { Locale } from "@/i18n"
 import {
   useWebVoiceCall,
-  webVoiceStatusLabel,
-  webVoiceStatusLabelFr,
+  webVoiceStatusLabels,
   type WebVoiceWidgetStatus,
 } from "@/components/web-voice/useWebVoiceCall"
 import { useEffect, useRef } from "react"
@@ -39,7 +39,7 @@ function noise1D(x: number): number {
 // Component
 // ------------------------------------------------------------------
 type LobbyStackAuraVoiceDemoProps = {
-  locale?: "en" | "fr"
+  locale?: Locale
   businessSlug: string
   endpoint: string
   widgetId?: string
@@ -51,42 +51,95 @@ const demoCopy = {
   en: {
     start: "Start call",
     connecting: "Connecting…",
+    hangUp: "Hang up",
     prompt: "Want it answering your phone?",
     cta: "Set up LobbyStack free",
   },
   fr: {
     start: "Lancer l’appel",
     connecting: "Connexion…",
+    hangUp: "Raccrocher",
     prompt: "Vous voulez qu’il réponde à votre téléphone ?",
     cta: "Configurer LobbyStack gratuitement",
   },
-}
+  es: {
+    start: "Iniciar llamada",
+    connecting: "Conectando…",
+    hangUp: "Colgar",
+    prompt: "¿Quiere que conteste su teléfono?",
+    cta: "Configure LobbyStack gratis",
+  },
+  sr: {
+    start: "Započni poziv",
+    connecting: "Povezivanje…",
+    hangUp: "Prekini",
+    prompt: "Želite da se javlja na Vaš telefon?",
+    cta: "Podesite LobbyStack besplatno",
+  },
+} satisfies Record<Locale, Record<string, string>>
 
-function getButtonLabel(status: WebVoiceWidgetStatus, muted: boolean, locale: "en" | "fr") {
-  if (locale === "fr") {
-    if (status === "connected") return "Terminer la démo vocale"
-    if (status === "ending") return "Fin de la démo vocale"
-    if (status === "requesting_microphone") return "Autorisez l’accès au microphone"
-    if (status === "connecting") return "Connexion à la démo vocale"
-    if (status === "error") return "Réessayer la démo vocale"
-    return "Démarrer la démo vocale"
-  }
+// Accessible names for the round demo button, by call status.
+const buttonLabels = {
+  en: {
+    connected: "End AI voice demo",
+    connectedMuted: "End muted AI voice demo",
+    ending: "Ending AI voice demo",
+    requestingMicrophone: "Waiting for microphone permission",
+    connecting: "Connecting AI voice demo",
+    error: "Retry AI voice demo",
+    idle: "Start AI voice demo",
+  },
+  fr: {
+    connected: "Terminer la démo vocale",
+    connectedMuted: "Terminer la démo vocale",
+    ending: "Fin de la démo vocale",
+    requestingMicrophone: "Autorisez l’accès au microphone",
+    connecting: "Connexion à la démo vocale",
+    error: "Réessayer la démo vocale",
+    idle: "Démarrer la démo vocale",
+  },
+  es: {
+    connected: "Finalizar la demo de voz con IA",
+    connectedMuted: "Finalizar la demo de voz con IA silenciada",
+    ending: "Finalizando la demo de voz con IA",
+    requestingMicrophone: "Esperando el permiso del micrófono",
+    connecting: "Conectando la demo de voz con IA",
+    error: "Reintentar la demo de voz con IA",
+    idle: "Iniciar la demo de voz con IA",
+  },
+  sr: {
+    connected: "Završi AI glasovni demo",
+    connectedMuted: "Završi utišani AI glasovni demo",
+    ending: "Završavanje AI glasovnog demoa",
+    requestingMicrophone: "Čeka se dozvola za mikrofon",
+    connecting: "Povezivanje AI glasovnog demoa",
+    error: "Ponovo pokreni AI glasovni demo",
+    idle: "Pokreni AI glasovni demo",
+  },
+} satisfies Record<Locale, Record<string, string>>
+
+function getButtonLabel(
+  status: WebVoiceWidgetStatus,
+  muted: boolean,
+  locale: Locale
+) {
+  const labels = buttonLabels[locale]
   if (status === "connected") {
-    return muted ? "End muted AI voice demo" : "End AI voice demo"
+    return muted ? labels.connectedMuted : labels.connected
   }
   if (status === "ending") {
-    return "Ending AI voice demo"
+    return labels.ending
   }
   if (status === "requesting_microphone") {
-    return "Waiting for microphone permission"
+    return labels.requestingMicrophone
   }
   if (status === "connecting") {
-    return "Connecting AI voice demo"
+    return labels.connecting
   }
   if (status === "error") {
-    return "Retry AI voice demo"
+    return labels.error
   }
-  return "Start AI voice demo"
+  return labels.idle
 }
 
 export function LobbyStackAuraVoiceDemo({
@@ -405,7 +458,7 @@ export function LobbyStackAuraVoiceDemo({
         />
 
         <p className="sr-only" role="status" aria-live="polite">
-          {errorMessage ?? (locale === "fr" ? webVoiceStatusLabelFr : webVoiceStatusLabel)[status]}
+          {errorMessage ?? webVoiceStatusLabels[locale][status]}
         </p>
 
         {/* Voice demo button, centered alone inside the aura */}
@@ -482,7 +535,7 @@ export function LobbyStackAuraVoiceDemo({
               className="cursor-pointer rounded-full"
             >
               <PhoneOff className="size-4" aria-hidden="true" />
-              {locale === "fr" ? "Raccrocher" : "Hang up"}
+              {demoCopy[locale].hangUp}
             </Button>
           </div>
         ) : status === "ended" ? (
@@ -491,7 +544,7 @@ export function LobbyStackAuraVoiceDemo({
               {demoCopy[locale].prompt}
             </p>
             <a
-              href={APP_SIGNUP_URL}
+              href={appSignupUrl(locale)}
               className={cn(
                 buttonVariants({ size: "sm" }),
                 "rounded-full px-5"
@@ -499,7 +552,7 @@ export function LobbyStackAuraVoiceDemo({
               data-ph-signup-cta
               data-ph-capture-attribute-section="voice_demo_ended"
               data-ph-capture-attribute-action="try_for_free"
-              data-ph-capture-attribute-destination={APP_SIGNUP_URL}
+              data-ph-capture-attribute-destination={appSignupUrl(locale)}
             >
               {demoCopy[locale].cta}
               <ArrowRight className="size-4" aria-hidden="true" />

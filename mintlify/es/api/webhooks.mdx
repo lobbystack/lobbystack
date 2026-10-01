@@ -1,0 +1,136 @@
+---
+title: "Reciba webhooks"
+description: "Suscriba una URL a los eventos de LobbyStack, verifique las firmas y gestione los reintentos."
+sidebarTitle: "Webhooks"
+contentType: "How-to"
+---
+
+Los webhooks envían un `POST` HTTPS a su URL cuando ocurre algo en un negocio, así sus herramientas no necesitan consultar la API una y otra vez.
+
+## Eventos
+
+| Evento | Se envía cuando | `data` |
+| --- | --- | --- |
+| `call.completed` | Una llamada terminó y LobbyStack guardó su resumen y su resultado. | Llamada |
+| `appointment.booked` | Alguien reserva una cita: la recepcionista, el panel o la API. | Cita |
+| `appointment.rescheduled` | Una cita se cambia a otra hora. | Cita |
+| `appointment.cancelled` | Se cancela una cita. | Cita |
+| `message.taken` | La recepcionista toma un mensaje para su equipo. | Mensaje |
+| `contact.created` | Aparece un nuevo contacto, desde una llamada, un SMS, una reserva, el widget del sitio web o la API. | Contacto |
+
+`data` tiene la misma forma que el recurso de la API correspondiente. Por ejemplo, `GET /appointments` devuelve los objetos que incluye un evento `appointment.booked`, así que un endpoint de lista también sirve como datos de ejemplo.
+
+## Agregue un endpoint
+
+Puede agregar endpoints en el panel o con la API.
+
+<Tabs>
+  <Tab title="Panel">
+    <Steps>
+      <Step title="Abra Webhooks">
+        Vaya a **Integraciones** y haga clic en **Gestionar** en la tarjeta **Webhooks**. Solo los propietarios y administradores pueden gestionar los webhooks.
+      </Step>
+      <Step title="Agregue el endpoint">
+        Haga clic en **Agregar endpoint**, introduzca la URL y elija los eventos.
+      </Step>
+      <Step title="Copie el secreto de firma">
+        LobbyStack muestra el secreto `whsec_` una sola vez. Guárdelo donde su endpoint pueda leerlo.
+      </Step>
+      <Step title="Envíe un evento de prueba">
+        Haga clic en **Enviar evento de prueba** y luego abra **Registro de entregas** para ver la respuesta que devolvió su endpoint.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="API">
+    Llame a `POST /webhooks` con una clave que tenga `webhooks:manage`:
+
+    ```bash
+    curl https://app.lobbystack.com/api/v1/webhooks \
+      -H "Authorization: Bearer $LOBBYSTACK_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"url":"https://example.com/hooks/lobbystack","events":["appointment.booked","call.completed"]}'
+    ```
+
+    La respuesta incluye el `id` del endpoint y el `secret`. `DELETE /webhooks/{webhook_id}` lo elimina. Este par funciona como las llamadas de suscripción y cancelación de suscripción de los REST hooks de Zapier.
+  </Tab>
+</Tabs>
+
+## Carga útil
+
+```json
+{
+  "id": "0f5c2a8e-3a41-4a0c-9d4f-6b5f1d2e7c11",
+  "type": "appointment.booked",
+  "api_version": "v1",
+  "created_at": "2026-09-27T16:58:19.612Z",
+  "business_id": "75795511-9ee2-4cb2-a89d-f173ec1dd82d",
+  "data": {
+    "id": "0c4332ff-becb-45cb-be23-173d55747852",
+    "status": "confirmed",
+    "starts_at": "2026-09-29T13:30:00.000Z",
+    "ends_at": "2026-09-29T14:15:00.000Z",
+    "timezone": "America/Toronto",
+    "service_id": "df8a2c34-d306-4292-a055-1b739ef74991",
+    "service_name": "Haircut",
+    "staff_id": "06d9c0dc-f18a-4cc6-a987-ac4963c87113",
+    "staff_name": "Sam",
+    "contact_id": "0cabb07b-ea18-4e9f-8f7b-356405838770",
+    "contact_name": "Ada Lovelace",
+    "contact_phone": "+14165550134",
+    "source": "voice",
+    "calendar_sync_status": "pending",
+    "created_at": "2026-09-27T16:58:19.590Z",
+    "updated_at": "2026-09-27T16:58:19.590Z"
+  }
+}
+```
+
+`data` refleja el recurso en el momento en que ocurrió el evento. Vuelva a consultar el recurso si necesita su estado actual.
+
+## Verifique las firmas
+
+LobbyStack firma cada solicitud con el esquema [Standard Webhooks](https://www.standardwebhooks.com) y envía tres encabezados:
+
+| Encabezado | Valor |
+| --- | --- |
+| `webhook-id` | El `id` del evento. No cambia en ningún reintento ni reenvío. |
+| `webhook-timestamp` | Hora Unix, en segundos, en que LobbyStack firmó este intento. |
+| `webhook-signature` | `v1,` seguido de una firma HMAC-SHA256 en base64. |
+
+La firma abarca `{webhook-id}.{webhook-timestamp}.{raw body}`, con la parte del secreto posterior a `whsec_`, decodificada en base64, como clave. Use una biblioteca de Standard Webhooks para comprobarla con el cuerpo sin procesar de la solicitud, antes de analizar el JSON:
+
+```ts
+import { Webhook } from "standardwebhooks";
+
+const webhook = new Webhook(process.env.LOBBYSTACK_WEBHOOK_SECRET!);
+
+export async function POST(request: Request) {
+  const body = await request.text();
+  // Throws when the signature is wrong or the timestamp is more than 5 minutes old.
+  const event = webhook.verify(body, Object.fromEntries(request.headers)) as { id: string; type: string };
+  // Store event.id and skip events you already processed.
+  return new Response(null, { status: 204 });
+}
+```
+
+Rechace las solicitudes cuya marca de tiempo tenga más de unos minutos de antigüedad para bloquear los ataques de repetición.
+
+## Responda y reintente
+
+Devuelva cualquier estado `2xx` en un plazo de 10 segundos. LobbyStack considera cualquier otra cosa como un fallo, incluidos los tiempos de espera agotados, las redirecciones y los errores de conexión. No sigue las redirecciones.
+
+Después de un fallo, LobbyStack reintenta al cabo de 30 segundos, 2 minutos, 10 minutos, 30 minutos, 1 hora, 3 horas, 6 horas y 12 horas, con un total de 9 intentos en unas 23 horas. Cada intento usa el mismo `webhook-id`, así que elimine los duplicados a partir de él. Los eventos pueden llegar desordenados; compare `created_at` o vuelva a consultar el recurso si el orden importa.
+
+Si un evento falla en todos los intentos y nada llegó al endpoint durante ese tiempo, LobbyStack desactiva el endpoint y avisa a su equipo, según las preferencias de cada persona en **Configuración** > **Notificaciones**. Corrija el endpoint, vuelva a activarlo en el panel o con `PATCH /webhooks/{webhook_id}` y `{"status": "enabled"}`, y luego use **Reenviar** en el registro de entregas para enviar los eventos perdidos.
+
+## Registro de entregas
+
+El registro de entregas muestra cada evento enviado a un endpoint, su estado, el último código de respuesta, el número de intentos y cuándo se hará el próximo reintento. **Reenviar** vuelve a enviar un evento. LobbyStack conserva 30 días de historial de webhooks.
+
+## Cambie el secreto
+
+Haga clic en **Cambiar secreto** en el endpoint. El secreto anterior deja de funcionar de inmediato. Actualice su endpoint con el nuevo secreto poco después: los eventos que no pasen la verificación mientras tanto se reintentan y llegan en cuanto su endpoint use el nuevo secreto.
+
+## Reglas de red
+
+Los endpoints deben usar `https://` y resolverse en una dirección pública. LobbyStack rechaza las URL que apuntan a direcciones privadas, de loopback, de enlace local o de metadatos de la nube, tanto al guardar el endpoint como en cada entrega. Las implementaciones autoalojadas siguen la misma regla.

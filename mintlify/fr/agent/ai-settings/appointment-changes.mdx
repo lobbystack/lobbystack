@@ -1,0 +1,97 @@
+---
+title: "Configurer les modifications de rendez-vous"
+description: "Laissez votre réceptionniste IA annuler et déplacer des rendez-vous pendant les appels, avec un niveau de vérification que vous choisissez."
+sidebarTitle: "Modifications de rendez-vous"
+contentType: "How-to"
+---
+
+Quand un appelant doit annuler ou déplacer un rendez-vous, LobbyStack peut traiter la demande pendant l'appel.
+
+Votre équipe n'a plus à lire un message, vérifier le calendrier et répondre à la main : la réceptionniste IA peut retrouver le rendez-vous, confirmer la demande et mettre à jour la réservation pour vous.
+
+## Ce que l'IA peut faire
+
+LobbyStack peut aider vos clients à :
+
+- Retrouver leur prochain rendez-vous.
+- Annuler un rendez-vous dont ils n'ont plus besoin.
+- Déplacer un rendez-vous à un autre créneau disponible.
+- Confirmer la modification avant qu'elle soit appliquée.
+- Régler la demande pendant l'appel.
+
+Cette fonction vise les modifications de rendez-vous courantes, qui détournent habituellement votre équipe de tâches plus importantes.
+
+## Confirmation intégrée avant toute modification
+
+Une simple demande en passant ne suffit pas pour modifier un rendez-vous. LobbyStack demande assez de détails pour s'assurer que le client modifie le bon rendez-vous.
+
+Par défaut, la réceptionniste utilise :
+
+- Le numéro de téléphone de l'appel.
+- Le nom du client.
+- Un détail du rendez-vous, comme l'heure ou le service.
+- Une confirmation finale claire avant d'annuler ou de déplacer le rendez-vous.
+
+Si la réceptionniste ne parvient pas à confirmer le rendez-vous avec certitude, elle ne fait pas la modification automatiquement. Elle peut plutôt transmettre la conversation à votre équipe.
+
+<Note>
+  LobbyStack vous aide à appliquer des étapes de confirmation cohérentes, mais ne remplace pas votre propre analyse juridique ou de confidentialité. Configurez le niveau de vérification adapté à votre entreprise, à votre région et au type de rendez-vous.
+</Note>
+
+## Ajouter un code unique pour une vérification plus stricte
+
+Si votre entreprise veut une garantie supplémentaire, vous pouvez exiger un code unique avant que l'IA modifie un rendez-vous.
+
+Quand la vérification par code unique est activée, la réceptionniste envoie un code au client et attend le bon code avant d'annuler ou de déplacer le rendez-vous. C'est utile pour les rendez-vous sensibles, de grande valeur ou soumis à des politiques internes plus strictes.
+
+## Mises à jour automatiques du calendrier
+
+Quand une modification est approuvée, LobbyStack met à jour la fiche du rendez-vous et synchronise le changement avec votre calendrier connecté.
+
+Pour une annulation, LobbyStack marque le rendez-vous comme annulé, puis met à jour ou supprime l'événement selon la connexion au calendrier.
+
+Pour un déplacement, LobbyStack vérifie les disponibilités avant de proposer un nouveau créneau. Si le créneau est libre, LobbyStack déplace le rendez-vous et actualise la synchronisation avec le calendrier.
+
+<Tip>
+  Connectez Google Calendar avant de compter sur le déplacement automatique des rendez-vous. LobbyStack évite ainsi de proposer des créneaux déjà occupés.
+</Tip>
+
+## Activer ou désactiver les modifications de rendez-vous
+
+Vous décidez si la réceptionniste peut annuler, déplacer ou exiger un code unique.
+
+<Steps>
+  <Step title="Ouvrez Paramètres IA">
+    Dans la barre latérale du tableau de bord, allez dans **Agent** > **Paramètres IA**.
+  </Step>
+  <Step title="Trouvez les modifications de rendez-vous">
+    Faites défiler jusqu'à **Modifications de rendez-vous**.
+  </Step>
+  <Step title="Choisissez ce que l'IA peut faire">
+    Activez ou désactivez l'annulation et le déplacement.
+  </Step>
+  <Step title="Choisissez le niveau de vérification">
+    Activez **Exiger un code unique** si vous voulez une vérification plus stricte.
+  </Step>
+  <Step title="Enregistrez">
+    Enregistrez vos modifications.
+  </Step>
+</Steps>
+
+## Configuration recommandée
+
+Pour offrir la meilleure expérience à vos clients :
+
+- Ajoutez des services clairement décrits pour que les clients puissent dire ce qu'ils ont réservé.
+- Connectez Google Calendar pour que LobbyStack puisse vérifier les disponibilités et synchroniser les modifications.
+- Tenez votre numéro de transfert à jour pour les cas qui demandent une vérification humaine.
+- Utilisez la vérification par code unique pour les rendez-vous sensibles ou de grande valeur.
+
+<CardGroup cols={2}>
+  <Card title="Configurer les services" icon="calendar-check" href="/fr/agent/services">
+    Ajoutez des types de rendez-vous et des détails sur vos services pour aider les clients à identifier leur réservation.
+  </Card>
+  <Card title="Connecter Google Calendar" icon="calendar" href="/fr/integrations/google-calendar">
+    Laissez LobbyStack vérifier les disponibilités et synchroniser automatiquement les modifications de réservation.
+  </Card>
+</CardGroup>

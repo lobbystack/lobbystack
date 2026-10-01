@@ -1,0 +1,315 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd } from "@/lib/seo"
+
+const locale = "es" as const
+const updatedAt = "26 de septiembre de 2026"
+const cookieRows = [
+  {
+    category: "Necesaria",
+    source: "LobbyStack",
+    name: "lobbystack.cookieConsent.v1",
+    duration: "Hasta que el usuario la elimine",
+    purpose:
+      "Almacena si usted aceptó o rechazó las cookies analíticas opcionales.",
+    storage: "Almacenamiento local en lobbystack.com",
+  },
+  {
+    category: "Necesaria",
+    source: "LobbyStack",
+    name: "lobbystack.webVoiceVisitorId",
+    duration: "Hasta que el usuario la elimine",
+    purpose:
+      "Ayuda a vincular las sesiones de la demo de voz web cuando usted decide iniciar una llamada desde el navegador.",
+    storage: "Almacenamiento local en lobbystack.com",
+  },
+  {
+    category: "Necesaria",
+    source: "LobbyStack",
+    name: "lobbystack.locale",
+    duration: "1 año",
+    purpose:
+      "Recuerda el idioma que usted elige en el pie de página para mostrárselo en su próxima visita.",
+    storage: "Cookie en lobbystack.com",
+  },
+  {
+    category: "Necesaria",
+    source: "Cloudflare",
+    name: "__cf_bm, cf_clearance, _cfuvid o similares",
+    duration: "De la sesión a 1 año, según la cookie",
+    purpose:
+      "Contribuye a la seguridad, la detección de bots, el enrutamiento del tráfico y la prevención de abusos.",
+    storage: "Cookie en lobbystack.com o en dominios gestionados por Cloudflare",
+  },
+  {
+    category: "Analíticas y de rendimiento",
+    source: "PostHog",
+    name: "posthog*, ph_* e identificadores relacionados de PostHog",
+    duration: "Varía según el identificador y la configuración del navegador",
+    purpose:
+      "Mide las visitas a páginas, los clics en llamadas a la acción, el uso de funciones, los errores y el rendimiento del sitio después de que usted acepte las cookies opcionales.",
+    storage: "Cookie o almacenamiento local en lobbystack.com",
+  },
+  {
+    category: "Analíticas y de rendimiento",
+    source: "PostHog",
+    name: "Metadatos de reproducción de sesiones",
+    duration: "Varía según la sesión y la configuración del navegador",
+    purpose:
+      "Nos ayuda a comprender los problemas de usabilidad después de obtener el consentimiento. Los campos de entrada están configurados para enmascararse.",
+    storage: "Almacenamiento del navegador y servicio de PostHog",
+  },
+]
+---
+
+<Layout
+  seo={{
+    title: "Política de cookies - LobbyStack",
+    description:
+      "Política de cookies de LobbyStack: cookies necesarias, almacenamiento analítico, controles del navegador y preferencias de cookies.",
+    canonicalPath: "/es/cookie-policy/",
+    locale,
+    noindex: true,
+    jsonLd: [
+      organizationJsonLd(),
+      breadcrumbJsonLd([
+        { name: "Inicio", path: "/es/" },
+        { name: "Política de cookies", path: "/es/cookie-policy/" },
+      ]),
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": absoluteUrl("/es/cookie-policy/#webpage"),
+        name: "Política de cookies - LobbyStack",
+        url: absoluteUrl("/es/cookie-policy/"),
+        description:
+          "Política de cookies de LobbyStack: cookies necesarias, almacenamiento analítico, controles del navegador y preferencias de cookies.",
+      },
+    ],
+  }}
+>
+  <Navbar locale={locale} />
+  <main id="main-content" tabindex="-1" class="bg-background text-foreground">
+    <section class="border-b border-border/60">
+      <div class="mx-auto max-w-4xl px-6 py-16 md:py-20">
+        <p class="text-sm font-medium text-muted-foreground">
+          Última actualización: {updatedAt}
+        </p>
+        <h1 class="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
+          Política de cookies
+        </h1>
+        <p
+          class="mt-6 max-w-3xl text-base leading-7 text-muted-foreground md:text-lg"
+        >
+          La presente Política de cookies explica cómo Lobbystack Inc.
+          (“LobbyStack”, “nosotros”, “nuestro” o “nos”) utiliza las cookies y
+          tecnologías similares cuando usted visita nuestro sitio web o
+          interactúa con los servicios de LobbyStack.
+        </p>
+        <p class="mt-4 max-w-3xl text-sm leading-6 text-muted-foreground">
+          Esta página se ofrece con fines de transparencia y debe leerse junto
+          con nuestra
+          <a class="underline" href="/es/privacy/">Política de privacidad</a>.
+        </p>
+      </div>
+    </section>
+
+    <section
+      class="mx-auto grid max-w-6xl gap-10 px-6 py-12 md:grid-cols-[220px_1fr] md:py-16"
+    >
+      <aside class="hidden md:block">
+        <nav class="sticky top-8 space-y-2 text-sm text-muted-foreground">
+          <a class="block hover:text-foreground" href="#overview"
+            >Descripción general</a
+          >
+          <a class="block hover:text-foreground" href="#types">Tipos</a>
+          <a class="block hover:text-foreground" href="#cookies">Cookies</a>
+          <a class="block hover:text-foreground" href="#necessary"
+            >Necesarias</a
+          >
+          <a class="block hover:text-foreground" href="#analytics"
+            >Analíticas</a
+          >
+          <a class="block hover:text-foreground" href="#dashboard"
+            >Panel y widget</a
+          >
+          <a class="block hover:text-foreground" href="#manage">Gestionar</a>
+          <a class="block hover:text-foreground" href="#changes">Cambios</a>
+          <a class="block hover:text-foreground" href="#contact">Contacto</a>
+        </nav>
+      </aside>
+
+      <article class="legal-copy max-w-none">
+        <section id="overview">
+          <h2>1. Descripción general</h2>
+          <p>
+            Las cookies son pequeños archivos o identificadores que se almacenan
+            en su navegador o dispositivo. Entre las tecnologías similares se
+            incluyen el almacenamiento local, los píxeles, las balizas web, los
+            identificadores de SDK y los identificadores del navegador o del
+            dispositivo. En esta política, utilizamos el término “cookies” para
+            referirnos a estas tecnologías en conjunto.
+          </p>
+          <p>
+            Utilizamos cookies para hacer funcionar este sitio, mantenerlo
+            seguro y, con su consentimiento, comprender cómo lo utilizan los
+            visitantes. Solo instalamos cookies analíticas y de rendimiento
+            opcionales después de que usted las acepte.
+          </p>
+        </section>
+
+        <section id="types">
+          <h2>2. Tipos de cookies y tecnologías similares</h2>
+          <h3>Tecnologías propias</h3>
+          <p>
+            Las cookies propias y el almacenamiento local propio los instala
+            LobbyStack en nuestros propios dominios. Pueden recordar su elección
+            sobre las cookies, contribuir a las funciones básicas del sitio web
+            y ayudar a hacer funcionar las funciones que usted decide utilizar.
+          </p>
+          <h3>Tecnologías de terceros</h3>
+          <p>
+            Las tecnologías de terceros las proporcionan proveedores de
+            servicios que nos ayudan a operar, proteger, analizar o mejorar el
+            sitio web y el servicio. Algunos servicios de terceros pueden tratar
+            la información conforme a sus propias políticas.
+          </p>
+        </section>
+
+        <section id="cookies">
+          <h2>3. Cookies y almacenamiento que utilizamos</h2>
+          <p>
+            Las cookies y tecnologías similares concretas que utilizamos pueden
+            variar según su navegador, su región, sus opciones de privacidad y
+            las páginas o funciones que utilice.
+          </p>
+          <div class="mt-6 overflow-x-auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Categoría</th>
+                  <th>Origen</th>
+                  <th>Nombre o patrón</th>
+                  <th>Duración</th>
+                  <th>Finalidad</th>
+                  <th>Dominio o almacenamiento</th>
+                </tr>
+              </thead>
+              <tbody>
+                {
+                  cookieRows.map((row) => (
+                    <tr>
+                      <td>{row.category}</td>
+                      <td>{row.source}</td>
+                      <td>{row.name}</td>
+                      <td>{row.duration}</td>
+                      <td>{row.purpose}</td>
+                      <td>{row.storage}</td>
+                    </tr>
+                  ))
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="necessary">
+          <h2>4. Cookies necesarias</h2>
+          <p>
+            Las cookies necesarias y el almacenamiento similar son
+            imprescindibles para las funciones básicas del sitio, la seguridad,
+            la prevención de abusos, el recuerdo de su elección de privacidad y
+            el funcionamiento de las funciones que usted decide utilizar. No se
+            pueden desactivar desde el banner de cookies de LobbyStack.
+          </p>
+        </section>
+
+        <section id="analytics">
+          <h2>5. Cookies analíticas y de rendimiento</h2>
+          <p>
+            Antes de que usted elija, contamos las visitas a las páginas con
+            PostHog sin almacenar nada en su dispositivo. Este recuento solo
+            existe en la memoria de la página. No crea ningún perfil de
+            visitante, y la grabación de sesiones y el seguimiento automático de
+            clics permanecen desactivados.
+          </p>
+          <p>
+            Si selecciona <strong>Aceptar todo</strong>, PostHog almacena
+            identificadores en cookies y en el almacenamiento local para que
+            podamos comprender cómo los visitantes utilizan el sitio, incluidas
+            las visitas a páginas, los clics, los errores, el uso de funciones y
+            el rendimiento. PostHog también graba las sesiones, con los campos
+            de los formularios y los valores marcados como confidenciales
+            enmascarados.
+          </p>
+          <p>
+            Si selecciona <strong>Rechazar las no esenciales</strong>, detenemos
+            PostHog en el sitio, borramos los identificadores que almacenó y no
+            instalamos ninguna cookie analítica.
+          </p>
+        </section>
+
+        <section id="dashboard">
+          <h2>6. El panel y el widget para sitios web</h2>
+          <p>
+            Cuando usted inicia sesión en el panel de LobbyStack, instalamos
+            cookies necesarias que mantienen su sesión iniciada y protegen su
+            cuenta. El panel utiliza el análisis de producto de PostHog
+            únicamente mientras el análisis de producto esté activado en su
+            configuración, y nunca en las páginas marcadas como confidenciales.
+          </p>
+          <p>
+            Cuando un negocio coloca el widget de chat y llamadas de LobbyStack
+            en su sitio web, el widget almacena un identificador aleatorio del
+            visitante en el almacenamiento local
+            (<strong>lobbystack.visitorId.*</strong>) para que una conversación
+            pueda continuar de una página a otra. Ese negocio es responsable de
+            cualquier aviso o consentimiento relativo a las cookies que exija su
+            sitio web.
+          </p>
+        </section>
+
+        <section id="manage">
+          <h2>7. Gestión de las cookies</h2>
+          <p>
+            Usted puede elegir <strong>Aceptar todo</strong> o
+            <strong>Rechazar las no esenciales</strong> en el banner de cookies.
+            Puede volver a abrir el banner más adelante mediante el control
+            <strong>Preferencias de cookies</strong> del pie de página.
+          </p>
+          <p>
+            Su elección es específica del navegador y del dispositivo que
+            utilice. También puede eliminar o bloquear las cookies y el
+            almacenamiento local desde la configuración de su navegador.
+            Bloquear todas las cookies puede afectar a algunas funciones del
+            sitio web o del servicio, pero rechazar las cookies no esenciales no
+            impide el acceso al sitio web público.
+          </p>
+        </section>
+
+        <section id="changes">
+          <h2>8. Cambios en esta política</h2>
+          <p>
+            Podemos actualizar esta Política de cookies periódicamente a medida
+            que cambien nuestro sitio web, nuestros proveedores de servicios o
+            nuestras prácticas en materia de cookies. La fecha que figura en la
+            parte superior de esta página indica cuándo se actualizó por última
+            vez.
+          </p>
+        </section>
+
+        <section id="contact">
+          <h2>9. Contacto</h2>
+          <p>
+            Envíe sus preguntas sobre esta Política de cookies o sobre nuestras
+            prácticas de privacidad a Lobbystack Inc. en
+            <a href="mailto:support@lobbystack.com">support@lobbystack.com</a>.
+          </p>
+        </section>
+      </article>
+    </section>
+  </main>
+  <Footer locale={locale} path={Astro.url.pathname} />
+</Layout>

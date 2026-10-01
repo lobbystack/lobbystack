@@ -1,0 +1,305 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd } from "@/lib/seo"
+
+const locale = "sr" as const
+const updatedAt = "26. septembar 2026."
+const cookieRows = [
+  {
+    category: "Neophodni",
+    source: "LobbyStack",
+    name: "lobbystack.cookieConsent.v1",
+    duration: "Dok ih korisnik ne obriše",
+    purpose:
+      "Čuva informaciju o tome da li ste prihvatili ili odbili opcione analitičke kolačiće.",
+    storage: "Lokalno skladište na lobbystack.com",
+  },
+  {
+    category: "Neophodni",
+    source: "LobbyStack",
+    name: "lobbystack.webVoiceVisitorId",
+    duration: "Dok ih korisnik ne obriše",
+    purpose:
+      "Pomaže u povezivanju sesija veb demonstracije glasa kada odlučite da započnete poziv iz pregledača.",
+    storage: "Lokalno skladište na lobbystack.com",
+  },
+  {
+    category: "Neophodni",
+    source: "LobbyStack",
+    name: "lobbystack.locale",
+    duration: "1 godina",
+    purpose:
+      "Pamti jezik koji izaberete u podnožju stranice, da bismo vam ga prikazali pri sledećoj poseti.",
+    storage: "Kolačić na lobbystack.com",
+  },
+  {
+    category: "Neophodni",
+    source: "Cloudflare",
+    name: "__cf_bm, cf_clearance, _cfuvid ili slični",
+    duration: "Od trajanja sesije do 1 godine, u zavisnosti od kolačića",
+    purpose:
+      "Podržava bezbednost, otkrivanje botova, usmeravanje saobraćaja i sprečavanje zloupotreba.",
+    storage: "Kolačić na lobbystack.com ili domenima kojima upravlja Cloudflare",
+  },
+  {
+    category: "Analitika i performanse",
+    source: "PostHog",
+    name: "posthog*, ph_* i povezani PostHog identifikatori",
+    duration: "Zavisi od identifikatora i podešavanja pregledača",
+    purpose:
+      "Meri preglede stranica, klikove na pozive na akciju, korišćenje funkcija, greške i performanse sajta nakon što prihvatite opcione kolačiće.",
+    storage: "Kolačić ili lokalno skladište na lobbystack.com",
+  },
+  {
+    category: "Analitika i performanse",
+    source: "PostHog",
+    name: "Metapodaci snimaka sesija",
+    duration: "Zavisi od sesije i podešavanja pregledača",
+    purpose:
+      "Pomaže nam da, uz Vaš pristanak, razumemo probleme sa upotrebljivošću. Unosi su podešeni tako da budu maskirani.",
+    storage: "Skladište pregledača i usluga PostHog",
+  },
+]
+---
+
+<Layout
+  seo={{
+    title: "Politika kolačića - LobbyStack",
+    description:
+      "Politika kolačića kompanije LobbyStack, uključujući neophodne kolačiće, analitičko skladištenje, kontrole u pregledaču i podešavanja kolačića.",
+    canonicalPath: "/sr/cookie-policy/",
+    locale,
+    noindex: true,
+    jsonLd: [
+      organizationJsonLd(),
+      breadcrumbJsonLd([
+        { name: "Početna", path: "/sr/" },
+        { name: "Politika kolačića", path: "/sr/cookie-policy/" },
+      ]),
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": absoluteUrl("/sr/cookie-policy/#webpage"),
+        name: "Politika kolačića - LobbyStack",
+        url: absoluteUrl("/sr/cookie-policy/"),
+        description:
+          "Politika kolačića kompanije LobbyStack, uključujući neophodne kolačiće, analitičko skladištenje, kontrole u pregledaču i podešavanja kolačića.",
+      },
+    ],
+  }}
+>
+  <Navbar locale={locale} />
+  <main id="main-content" tabindex="-1" class="bg-background text-foreground">
+    <section class="border-b border-border/60">
+      <div class="mx-auto max-w-4xl px-6 py-16 md:py-20">
+        <p class="text-sm font-medium text-muted-foreground">
+          Poslednje ažuriranje: {updatedAt}
+        </p>
+        <h1 class="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
+          Politika kolačića
+        </h1>
+        <p
+          class="mt-6 max-w-3xl text-base leading-7 text-muted-foreground md:text-lg"
+        >
+          Ova Politika kolačića objašnjava kako Lobbystack Inc. („LobbyStack“,
+          „mi“, „naš“ ili „nas“) koristi kolačiće i slične tehnologije kada
+          posećujete naš sajt ili koristite usluge LobbyStack.
+        </p>
+        <p class="mt-4 max-w-3xl text-sm leading-6 text-muted-foreground">
+          Ova stranica služi radi transparentnosti i treba je čitati zajedno sa
+          našom
+          <a class="underline" href="/sr/privacy/">Politikom privatnosti</a>.
+        </p>
+      </div>
+    </section>
+
+    <section
+      class="mx-auto grid max-w-6xl gap-10 px-6 py-12 md:grid-cols-[220px_1fr] md:py-16"
+    >
+      <aside class="hidden md:block">
+        <nav class="sticky top-8 space-y-2 text-sm text-muted-foreground">
+          <a class="block hover:text-foreground" href="#overview">Pregled</a>
+          <a class="block hover:text-foreground" href="#types">Vrste</a>
+          <a class="block hover:text-foreground" href="#cookies">Kolačići</a>
+          <a class="block hover:text-foreground" href="#necessary"
+            >Neophodni</a
+          >
+          <a class="block hover:text-foreground" href="#analytics"
+            >Analitika</a
+          >
+          <a class="block hover:text-foreground" href="#dashboard"
+            >Kontrolna tabla i vidžet</a
+          >
+          <a class="block hover:text-foreground" href="#manage">Upravljanje</a>
+          <a class="block hover:text-foreground" href="#changes">Izmene</a>
+          <a class="block hover:text-foreground" href="#contact">Kontakt</a>
+        </nav>
+      </aside>
+
+      <article class="legal-copy max-w-none">
+        <section id="overview">
+          <h2>1. Pregled</h2>
+          <p>
+            Kolačići su male datoteke ili identifikatori koji se čuvaju u Vašem
+            pregledaču ili na Vašem uređaju. Slične tehnologije obuhvataju
+            lokalno skladište, piksele, veb-svetionike (web beacons), SDK
+            identifikatore i identifikatore pregledača ili uređaja. U ovoj
+            Politici izraz „kolačići“ koristimo za sve ove tehnologije zajedno.
+          </p>
+          <p>
+            Kolačiće koristimo da bi ovaj sajt radio i bio bezbedan i da bismo,
+            uz Vaš pristanak, razumeli kako ga posetioci koriste. Opcione
+            analitičke kolačiće i kolačiće za performanse postavljamo tek nakon
+            što ih prihvatite.
+          </p>
+        </section>
+
+        <section id="types">
+          <h2>2. Vrste kolačića i sličnih tehnologija</h2>
+          <h3>Tehnologije prve strane</h3>
+          <p>
+            Kolačiće prve strane i lokalno skladište postavlja LobbyStack na
+            sopstvenim domenima. Oni mogu da zapamte Vaš izbor u vezi sa
+            kolačićima, podrže osnovne funkcije sajta i omoguće rad funkcija
+            koje odlučite da koristite.
+          </p>
+          <h3>Tehnologije trećih strana</h3>
+          <p>
+            Tehnologije trećih strana obezbeđuju pružaoci usluga koji nam
+            pomažu da upravljamo sajtom i uslugom, štitimo ih, analiziramo ili
+            unapređujemo. Neke usluge trećih strana mogu obrađivati podatke u
+            skladu sa sopstvenim pravilima.
+          </p>
+        </section>
+
+        <section id="cookies">
+          <h2>3. Kolačići i skladište koje koristimo</h2>
+          <p>
+            Konkretni kolačići i slične tehnologije koje koristimo mogu se
+            razlikovati u zavisnosti od Vašeg pregledača, regiona, izbora u vezi
+            sa privatnošću i stranica ili funkcija koje koristite.
+          </p>
+          <div class="mt-6 overflow-x-auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Kategorija</th>
+                  <th>Izvor</th>
+                  <th>Naziv ili obrazac</th>
+                  <th>Trajanje</th>
+                  <th>Svrha</th>
+                  <th>Domen ili skladište</th>
+                </tr>
+              </thead>
+              <tbody>
+                {
+                  cookieRows.map((row) => (
+                    <tr>
+                      <td>{row.category}</td>
+                      <td>{row.source}</td>
+                      <td>{row.name}</td>
+                      <td>{row.duration}</td>
+                      <td>{row.purpose}</td>
+                      <td>{row.storage}</td>
+                    </tr>
+                  ))
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="necessary">
+          <h2>4. Neophodni kolačići</h2>
+          <p>
+            Neophodni kolačići i slično skladište potrebni su za osnovne
+            funkcije sajta, bezbednost, sprečavanje zloupotreba, pamćenje Vašeg
+            izbora u vezi sa privatnošću i rad funkcija koje odlučite da
+            koristite. Ne mogu se isključiti putem banera za kolačiće
+            kompanije LobbyStack.
+          </p>
+        </section>
+
+        <section id="analytics">
+          <h2>5. Analitički kolačići i kolačići za performanse</h2>
+          <p>
+            Pre nego što napravite izbor, preglede stranica brojimo pomoću
+            usluge PostHog, bez čuvanja bilo čega na Vašem uređaju. Ovaj broj
+            postoji samo u memoriji stranice. Ne stvara profil posetioca, a
+            snimanje sesija i automatsko praćenje klikova ostaju isključeni.
+          </p>
+          <p>
+            Ako izaberete <strong>Prihvati sve</strong>, PostHog čuva
+            identifikatore u kolačićima i lokalnom skladištu kako bismo mogli da
+            razumemo kako posetioci koriste sajt, uključujući preglede stranica,
+            klikove, greške, korišćenje funkcija i performanse. PostHog takođe
+            snima sesije, pri čemu su unosi u obrasce i vrednosti označene kao
+            osetljive maskirani.
+          </p>
+          <p>
+            Ako izaberete <strong>Odbij neobavezne</strong>, zaustavljamo
+            PostHog na sajtu, brišemo identifikatore koje je sačuvao i ne
+            postavljamo nikakve analitičke kolačiće.
+          </p>
+        </section>
+
+        <section id="dashboard">
+          <h2>6. Kontrolna tabla i vidžet za sajt</h2>
+          <p>
+            Kada se prijavite na kontrolnu tablu LobbyStack, postavljamo
+            neophodne kolačiće koji Vas održavaju prijavljenim i štite Vaš
+            nalog. Kontrolna tabla koristi PostHog analitiku proizvoda samo dok
+            je analitika proizvoda uključena u Vašim podešavanjima, i nikada na
+            stranicama označenim kao osetljive.
+          </p>
+          <p>
+            Kada firma postavi LobbyStack vidžet za čet i pozive na svoj sajt,
+            vidžet čuva nasumični identifikator posetioca u lokalnom skladištu
+            (<strong>lobbystack.visitorId.*</strong>) kako bi se razgovor mogao
+            nastaviti na drugim stranicama. Ta firma je odgovorna za sva
+            obaveštenja ili pristanke u vezi sa kolačićima koje njen sajt
+            zahteva.
+          </p>
+        </section>
+
+        <section id="manage">
+          <h2>7. Upravljanje kolačićima</h2>
+          <p>
+            U baneru za kolačiće možete izabrati <strong>Prihvati sve</strong>
+            ili <strong>Odbij neobavezne</strong>. Baner možete kasnije ponovo
+            otvoriti pomoću kontrole <strong>Podešavanja kolačića</strong> u
+            podnožju stranice.
+          </p>
+          <p>
+            Vaš izbor važi samo za pregledač i uređaj koji koristite. Kolačiće
+            i lokalno skladište možete obrisati ili blokirati i u podešavanjima
+            pregledača. Blokiranje svih kolačića može uticati na neke funkcije
+            sajta ili usluge, ali odbijanje neobaveznih kolačića ne blokira
+            pristup javnom sajtu.
+          </p>
+        </section>
+
+        <section id="changes">
+          <h2>8. Izmene ove politike</h2>
+          <p>
+            Ovu Politiku kolačića možemo povremeno ažurirati kako se menjaju naš
+            sajt, pružaoci usluga ili praksa u vezi sa kolačićima. Datum na vrhu
+            ove stranice pokazuje kada je poslednji put ažurirana.
+          </p>
+        </section>
+
+        <section id="contact">
+          <h2>9. Kontaktirajte nas</h2>
+          <p>
+            Pitanja o ovoj Politici kolačića ili našoj praksi zaštite privatnosti
+            pošaljite kompaniji Lobbystack Inc. na
+            <a href="mailto:support@lobbystack.com">support@lobbystack.com</a>.
+          </p>
+        </section>
+      </article>
+    </section>
+  </main>
+  <Footer locale={locale} path={Astro.url.pathname} />
+</Layout>

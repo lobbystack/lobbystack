@@ -8,10 +8,29 @@ describe("landing sitemap metadata", () => {
       expect(sitemapSourceForUrl(`https://lobbystack.com${page.path}`)).toBe(
         "src/lib/seo-landing-pages.ts"
       )
-      expect(sitemapSourceForUrl(`https://lobbystack.com/fr${page.path}`)).toBe(
-        "src/lib/fr-seo-landing-pages.ts"
-      )
+      for (const locale of ["fr", "es", "sr"]) {
+        expect(
+          sitemapSourceForUrl(`https://lobbystack.com/${locale}${page.path}`)
+        ).toBe(`src/lib/${locale}-seo-landing-pages.ts`)
+      }
     }
+  })
+
+  it("maps localized home pages and blog posts to their own sources", () => {
+    expect(sitemapSourceForUrl("https://lobbystack.com/sr/")).toBe(
+      "src/i18n/sr.ts"
+    )
+    expect(sitemapSourceForUrl("https://lobbystack.com/es/pricing/")).toBe(
+      "src/i18n/es.ts"
+    )
+    expect(
+      sitemapSourceForUrl("https://lobbystack.com/es/blog/upfirst-alternative/")
+    ).toBe("src/content/blog/es/upfirst-alternative.md")
+    expect(
+      sitemapSourceForUrl(
+        "https://lobbystack.com/sr/solutions/ai-phone-answering/"
+      )
+    ).toBe("src/lib/sr-seo-landing-pages.ts")
   })
 
   it("uses the source modification date without a build-time fallback", () => {

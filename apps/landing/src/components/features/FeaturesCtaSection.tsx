@@ -1,5 +1,5 @@
 import { buttonVariants } from "@/components/ui/button"
-import { APP_SIGNUP_URL } from "@/lib/app-links"
+import { appSignupUrl } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
 import { getCopy, localizeHref, type Locale } from "@/i18n"
 import { ArrowRight } from "lucide-react"
@@ -19,6 +19,16 @@ const featuresCtaCopy = {
     headingEmphasis: "chiffre d’affaires",
     body: "LobbyStack répond, qualifie, planifie et prévient votre équipe, même le soir et la fin de semaine.",
   },
+  es: {
+    headingStart: "Que las llamadas perdidas no decidan sus",
+    headingEmphasis: "ingresos",
+    body: "Deje que LobbyStack conteste, califique, dé presupuestos, reserve y avise a su equipo de día o de noche.",
+  },
+  sr: {
+    headingStart: "Ne dozvolite da propušteni pozivi određuju Vaš",
+    headingEmphasis: "prihod",
+    body: "Neka LobbyStack odgovara, kvalifikuje, daje cene, zakazuje i obaveštava Vaš tim danju i noću.",
+  },
 } satisfies Record<Locale, Record<string, string>>
 
 export function FeaturesCtaSection({ locale = "en" }: FeaturesCtaSectionProps) {
@@ -37,7 +47,7 @@ export function FeaturesCtaSection({ locale = "en" }: FeaturesCtaSectionProps) {
         <p className="section-intro mx-auto max-w-xl">{copy.body}</p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
           <a
-            href={APP_SIGNUP_URL}
+            href={appSignupUrl(locale)}
             className={cn(
               buttonVariants({ size: "lg" }),
               "h-11 rounded-full px-7 text-sm"
@@ -45,7 +55,7 @@ export function FeaturesCtaSection({ locale = "en" }: FeaturesCtaSectionProps) {
             data-ph-signup-cta
             data-ph-capture-attribute-section="features_final_cta"
             data-ph-capture-attribute-action="try_for_free"
-            data-ph-capture-attribute-destination={APP_SIGNUP_URL}
+            data-ph-capture-attribute-destination={appSignupUrl(locale)}
           >
             {common.tryFree}
             <ArrowRight className="ml-1 size-4" />

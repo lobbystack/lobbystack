@@ -1,19 +1,27 @@
 import { gitLastmod } from "@jdevalk/astro-seo-graph"
+import { DEFAULT_LOCALE, PREFIXED_LOCALES, type Locale } from "@/i18n/config"
 
 type LastmodResolver = (source: string) => Date | null | undefined
 
-const solutionSourceForPath = (pathname: string, isFrench: boolean) => {
-  if (isFrench) {
-    const bespokeFrenchPaths = new Set([
-      "/solutions/ai-phone-answering/",
-      "/solutions/ai-appointment-scheduler/",
-      "/solutions/ai-receptionist-for-home-services/",
-    ])
+const bespokeSolutionPaths = new Set([
+  "/solutions/ai-phone-answering/",
+  "/solutions/ai-appointment-scheduler/",
+  "/solutions/ai-receptionist-for-home-services/",
+])
 
-    return bespokeFrenchPaths.has(pathname)
+/** Source file holding a locale's translated SEO landing pages. */
+const seoLandingPageSource = (locale: Locale) =>
+  locale === DEFAULT_LOCALE
+    ? "src/lib/seo-landing-pages.ts"
+    : `src/lib/${locale}-seo-landing-pages.ts`
+
+const solutionSourceForPath = (pathname: string, locale: Locale) => {
+  if (locale === "fr") {
+    return bespokeSolutionPaths.has(pathname)
       ? "src/lib/localized-seo-landing-pages.ts"
-      : "src/lib/fr-seo-landing-pages.ts"
+      : seoLandingPageSource(locale)
   }
+  if (locale !== DEFAULT_LOCALE) return seoLandingPageSource(locale)
 
   const bespokeSources: Record<string, string> = {
     "/solutions/ai-phone-answering/":
@@ -24,22 +32,32 @@ const solutionSourceForPath = (pathname: string, isFrench: boolean) => {
       "src/pages/solutions/ai-receptionist-for-home-services/index.astro",
   }
 
-  return bespokeSources[pathname] ?? "src/lib/seo-landing-pages.ts"
+  return bespokeSources[pathname] ?? seoLandingPageSource(locale)
+}
+
+const splitLocale = (pathname: string): { locale: Locale; path: string } => {
+  const [, maybeLocale] = pathname.split("/")
+  const locale = PREFIXED_LOCALES.find((candidate) => candidate === maybeLocale)
+  if (!locale) return { locale: DEFAULT_LOCALE, path: pathname }
+  return {
+    locale,
+    path: pathname.slice(locale.length + 1) || "/",
+  }
 }
 
 export const sitemapSourceForUrl = (url: string) => {
-  const originalPathname = new URL(url).pathname
-  const isFrench = originalPathname.startsWith("/fr/")
-  const pathname = originalPathname.replace(/^\/fr(?=\/|$)/, "") || "/"
+  const { locale, path: pathname } = splitLocale(new URL(url).pathname)
+  const isLocalized = locale !== DEFAULT_LOCALE
+  const dictionary = `src/i18n/${locale}.ts`
 
   if (pathname === "/")
-    return isFrench ? "src/i18n/fr.ts" : "src/pages/index.astro"
+    return isLocalized ? dictionary : "src/pages/index.astro"
   if (pathname === "/features/")
-    return isFrench ? "src/i18n/fr.ts" : "src/pages/features.astro"
+    return isLocalized ? dictionary : "src/pages/features.astro"
   if (pathname === "/solutions/")
     return "src/components/pages/SolutionsIndexPage.astro"
   if (pathname === "/pricing/")
-    return isFrench ? "src/i18n/fr.ts" : "src/pages/pricing.astro"
+    return isLocalized ? dictionary : "src/pages/pricing.astro"
   if (pathname === "/affiliate-program/")
     return "src/components/pages/AffiliateProgramPage.astro"
   if (pathname === "/blog/") return "src/components/pages/BlogIndexPage.astro"
@@ -48,18 +66,15 @@ export const sitemapSourceForUrl = (url: string) => {
   if (pathname === "/docs/api/") return "src/components/pages/DocsApiPage.astro"
   if (pathname === "/missed-call-revenue-calculator/")
     return "src/components/pages/CalculatorPage.astro"
-  if (pathname === "/about/")
-    return isFrench
-      ? "src/lib/fr-seo-landing-pages.ts"
-      : "src/lib/seo-landing-pages.ts"
+  if (pathname === "/about/") return seoLandingPageSource(locale)
   if (pathname.startsWith("/blog/")) {
     const slug = pathname.replace(/^\/blog\/|\/$/g, "")
-    return isFrench
-      ? `src/content/blog/fr/${slug}.md`
+    return isLocalized
+      ? `src/content/blog/${locale}/${slug}.md`
       : `src/content/blog/${slug}.md`
   }
   if (pathname.startsWith("/solutions/")) {
-    return solutionSourceForPath(pathname, isFrench)
+    return solutionSourceForPath(pathname, locale)
   }
 
   return undefined

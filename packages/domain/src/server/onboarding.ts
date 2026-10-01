@@ -1,10 +1,18 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
+import { normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 
 import { billingAccounts, businesses, enqueueOutbox, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 import { attributeBusiness } from "./affiliates";
+
+const ONBOARDING_FOLLOWUP_SUBJECTS: Record<InterfaceLocale, string> = {
+  en: "How'd you like LobbyStack?",
+  fr: "Qu'avez-vous pensé de LobbyStack ?",
+  es: "¿Qué le pareció LobbyStack?",
+  sr: "Kako Vam se dopao LobbyStack?",
+};
 
 export type OnboardingStage =
   | "create_business"
@@ -232,7 +240,7 @@ export async function queueOnboardingFollowupEmail(
     if (!recipient) return false;
     const senderDomain = emailDomain(input.sender.from);
     if (senderDomain && emailDomain(recipient.email) === senderDomain) return false;
-    const locale = recipient.preferred_locale === "fr" ? "fr" : "en";
+    const locale = normalizeInterfaceLocale(recipient.preferred_locale) ?? "en";
     const firstName = recipient.name?.trim().split(/\s+/)[0] ?? "";
     await enqueueOutbox(tx, {
       topic: "email.send",
@@ -244,7 +252,7 @@ export async function queueOnboardingFollowupEmail(
         template: "onboarding_followup",
         to: recipient.email,
         from: input.sender.from,
-        subject: locale === "fr" ? "Qu'avez-vous pensé de LobbyStack ?" : "How'd you like LobbyStack?",
+        subject: ONBOARDING_FOLLOWUP_SUBJECTS[locale],
         variables: { locale, firstName, businessName: recipient.business_name, senderName: input.sender.name },
       },
     });

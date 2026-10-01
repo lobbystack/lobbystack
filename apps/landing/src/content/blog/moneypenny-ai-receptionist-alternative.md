@@ -109,4 +109,4 @@ Choose LobbyStack when your team can receive handoffs and you want a free test, 
 
 LobbyStack is the stronger value when your company already has someone to take urgent calls. Moneypenny earns its premium when you need to buy the human team as well as the AI.
 
-[Start LobbyStack free](https://app.lobbystack.com/signup) and test voice conversations in your browser. Choose a paid plan to test telephone handoffs.
+[Start LobbyStack free](https://app.lobbystack.com/en/signup) and test voice conversations in your browser. Choose a paid plan to test telephone handoffs.

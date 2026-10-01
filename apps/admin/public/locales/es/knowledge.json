@@ -1,0 +1,31 @@
+{
+  "header": {
+    "title": "Conocimiento",
+    "description": "Gestione el conocimiento, los documentos y las conversaciones de vista previa."
+  },
+  "manager": {
+    "title": "Base de conocimiento",
+    "description": "Añada conocimiento y documentos que la recepcionista puede usar en la vista previa, en SMS y al actualizar la instantánea de voz.",
+    "items": "{{count}} elementos",
+    "manualDocument": "Documento manual",
+    "placeholders": {
+      "documentTitle": "Políticas de la clínica",
+      "documentBody": "Los pacientes deben llegar 10 minutos antes. Traiga un documento de identidad con foto y los datos de su seguro, si corresponde."
+    },
+    "documentTagsPlaceholder": "política,admisión",
+    "saveDocument": "Añadir documento",
+    "savingDocument": "Poniendo en cola...",
+    "currentDocuments": "Documentos actuales",
+    "queuedDocument": "Documento en cola para indexar.",
+    "noDocuments": "Aún no hay documentos."
+  },
+  "preview": {
+    "title": "Vista previa de la recepcionista",
+    "description": "Pruebe el mismo contexto del negocio que se usa en SMS y en los flujos de IA asíncronos antes de ponerlo frente a sus clientes.",
+    "promptPlaceholder": "¿A qué hora abren mañana?",
+    "generate": "Ejecutar vista previa",
+    "generating": "Generando...",
+    "emptyResponse": "Las respuestas de la vista previa aparecerán aquí cuando ejecute la recepcionista.",
+    "disabled": "Inicie sesión y cree un negocio para ejecutar la vista previa real."
+  }
+}

@@ -1,20 +1,25 @@
 import { en } from "@/i18n/en"
 import { fr } from "@/i18n/fr"
+import { es } from "@/i18n/es"
+import { sr } from "@/i18n/sr"
 import { DEFAULT_LOCALE, assertLocale, type Locale } from "@/i18n/config"
 import type { LocalizedCatalog } from "@/i18n/types"
 import { getLocalizedSeoLandingPage } from "@/lib/localized-seo-landing-pages"
 
 export {
   DEFAULT_LOCALE,
+  PREFIXED_LOCALES,
   SUPPORTED_LOCALES,
   assertLocale,
   isLocale,
   localeMeta,
+  localeTag,
   type Locale,
 } from "@/i18n/config"
 export {
   alternateLocaleLinks,
   hasTranslation,
+  languageSwitcherLinks,
   localeFromPath,
   localizeHref,
   localizePath,
@@ -27,6 +32,8 @@ export type { FaqItem, LandingMessages, LocalizedSeo } from "@/i18n/types"
 export const catalog = {
   en,
   fr,
+  es,
+  sr,
 } satisfies LocalizedCatalog
 
 export const getCopy = (locale: Locale | string | undefined) =>

@@ -2,17 +2,32 @@ import { FaqAccordion } from "@/components/FaqAccordion"
 import { getAffiliateProgramFaqs } from "@/lib/affiliate-program-faqs"
 import type { Locale } from "@/i18n"
 
+const faqSectionCopy = {
+  en: {
+    title: "Affiliate FAQ",
+    description: "Commissions, payouts, and program rules.",
+  },
+  fr: {
+    title: "FAQ affiliation",
+    description: "Commissions, paiements et règles du programme.",
+  },
+  es: {
+    title: "Preguntas sobre afiliados",
+    description: "Comisiones, pagos y reglas del programa.",
+  },
+  sr: {
+    title: "Pitanja o partnerskom programu",
+    description: "Provizije, isplate i pravila programa.",
+  },
+} satisfies Record<Locale, { title: string; description: string }>
+
 type AffiliateProgramFaqSectionProps = {
   locale: Locale
 }
 
 export function AffiliateProgramFaqSection({ locale }: AffiliateProgramFaqSectionProps) {
   const faqs = getAffiliateProgramFaqs(locale)
-  const title = locale === "fr" ? "FAQ affiliation" : "Affiliate FAQ"
-  const description =
-    locale === "fr"
-      ? "Commissions, paiements et règles du programme."
-      : "Commissions, payouts, and program rules."
+  const { title, description } = faqSectionCopy[locale]
 
   return (
     <section className="border-t border-border/60 bg-muted/20 py-16 md:py-24">

@@ -24,6 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { selectActiveBusiness } from "@/lib/active-business";
 import type { WorkspaceViewModel } from "@/lib/page-view-models";
 import { requestJson } from "@/lib/request-json";
+import { intlLocale } from "@/lib/locale";
 
 type ApiKeyRecord = {
   id: string;
@@ -50,7 +51,7 @@ export function LiveApiKeysSurface() {
   const business = selectActiveBusiness(businesses.data?.businesses);
   const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   const keys = useQuery({ queryKey: ["api-keys", business?.businessId], queryFn: () => requestJson<{ keys: ApiKeyRecord[] }>(`/api/api-keys?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId && canManage) });
-  const formatDate = (value: string) => new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, { dateStyle: "medium" }).format(new Date(value));
+  const formatDate = (value: string) => new Intl.DateTimeFormat(intlLocale(i18n.resolvedLanguage ?? i18n.language), { dateStyle: "medium" }).format(new Date(value));
 
   const create = useMutation({
     mutationFn: () => requestJson<{ key: string; apiKey: ApiKeyRecord }>(`/api/api-keys?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ name: name.trim(), scopes }) }),

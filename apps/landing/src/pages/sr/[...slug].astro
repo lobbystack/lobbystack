@@ -1,0 +1,34 @@
+---
+import SeoLandingPage from "@/components/SeoLandingPage.astro"
+import {
+  getLocalizedSeoLandingPage,
+  localizedSeoLandingPages,
+} from "@/lib/localized-seo-landing-pages"
+import { normalizedPath } from "@/lib/seo"
+
+export function getStaticPaths() {
+  const explicitRoutes = new Set([
+    "/",
+    "/features/",
+    "/pricing/",
+    "/solutions/",
+    "/solutions/ai-phone-answering/",
+    "/solutions/ai-appointment-scheduler/",
+    "/solutions/ai-receptionist-for-home-services/",
+  ])
+
+  return localizedSeoLandingPages("sr")
+    .map((page) => page.path)
+    .filter((path) => !explicitRoutes.has(path))
+    .map((path) => ({
+      params: { slug: path.replace(/^\/|\/$/g, "") },
+      props: { path },
+    }))
+}
+
+const path = normalizedPath(Astro.props.path)
+const page = getLocalizedSeoLandingPage("sr", path)
+if (!page) throw new Error(`Missing shared SEO page for Serbian path ${path}`)
+---
+
+<SeoLandingPage page={page} locale="sr" />

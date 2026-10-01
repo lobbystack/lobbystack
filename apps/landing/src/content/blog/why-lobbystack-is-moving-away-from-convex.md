@@ -82,4 +82,4 @@ The license now supports that goal too. We changed LobbyStack from AGPL to MIT s
 
 You can [inspect the platform on GitHub](https://github.com/lobbystack/lobbystack), follow the [self-hosting overview](https://docs.lobbystack.com/self-hosting/overview), or use the [Docker Compose guide](https://docs.lobbystack.com/self-hosting/docker-compose) to run it yourself.
 
-If you want the receptionist without operating the infrastructure, [create a LobbyStack Cloud account](https://app.lobbystack.com/signup) and test it with your business.
+If you want the receptionist without operating the infrastructure, [create a LobbyStack Cloud account](https://app.lobbystack.com/en/signup) and test it with your business.

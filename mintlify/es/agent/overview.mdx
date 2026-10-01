@@ -1,0 +1,41 @@
+---
+title: "Configure su recepcionista con IA"
+description: "Use la sección Agente para configurar los ajustes de IA, el conocimiento, los servicios y las reglas de su recepcionista."
+sidebarTitle: "Resumen del agente"
+contentType: "Conceptual"
+---
+
+La sección **Agente** controla el comportamiento de su recepcionista con IA. Se divide en Ajustes de IA, Conocimiento, Servicios y Reglas.
+
+Los cambios se aplican a las nuevas llamadas y a las nuevas respuestas del chat del sitio web. No modifican las llamadas ni los mensajes anteriores.
+
+<CardGroup cols={2}>
+  <Card title="Ajustes de IA" icon="comment-dots" href="/es/agent/ai-settings/overview">
+    Defina la frase de bienvenida, el idioma de respaldo, los cambios de citas y el número de transferencia predeterminado.
+  </Card>
+  <Card title="Conocimiento" icon="book-open" href="/es/agent/knowledge">
+    Añada información del negocio a partir de entradas de texto, documentos o la importación de un sitio web.
+  </Card>
+  <Card title="Servicios" icon="calendar-check" href="/es/agent/services">
+    Añada los tipos de cita y la información sobre los servicios que necesitan quienes llaman.
+  </Card>
+  <Card title="Reglas" icon="list-check" href="/es/agent/rules">
+    Añada instrucciones de funcionamiento para transferencias, solicitudes de devolución de llamada, comportamiento de respaldo y casos especiales.
+  </Card>
+</CardGroup>
+
+## Cómo se usa la configuración
+
+LobbyStack prepara la configuración guardada del agente para cada llamada en curso, de modo que quien llama recibe un comportamiento estable durante toda la conversación.
+
+En el chat del sitio web, LobbyStack usa el contexto actual del negocio y el estado guardado de la conversación para generar las respuestas.
+
+## Configuración mínima para llamadas reales
+
+Antes de desviar llamadas reales, compruebe que:
+
+- Su saludo menciona el nombre de su negocio y deja claro qué puede esperar quien llama.
+- El idioma de respaldo está definido para los casos en que el idioma de quien llama no es claro.
+- Hay un número de transferencia guardado, si quiere traspasar llamadas en vivo a una persona.
+- Sus entradas de conocimiento incluyen horarios, ubicación, servicios, precios, políticas y las preguntas habituales de quienes llaman.
+- Sus entradas de servicios y la conexión con Google Calendar están listas antes de confiar en la reserva o los cambios de citas.

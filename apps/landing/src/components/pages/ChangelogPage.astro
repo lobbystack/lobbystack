@@ -19,6 +19,7 @@ import {
   assertLocale,
   getCopy,
   getRouteSeo,
+  localeTag,
   localizePath,
   type Locale,
 } from "@/i18n"
@@ -52,6 +53,18 @@ const pageCopy = {
       "Suivez les nouveautés du réceptionniste IA, les améliorations du tableau de bord, les intégrations et les changements publiés par l'équipe LobbyStack.",
     breadcrumb: "Journal des changements",
   },
+  es: {
+    h1: "Registro de cambios de LobbyStack: novedades de la recepcionista con IA",
+    intro:
+      "Siga las nuevas funciones de la recepcionista con IA, las mejoras del panel, las integraciones y los cambios que publica el equipo de LobbyStack.",
+    breadcrumb: "Registro de cambios",
+  },
+  sr: {
+    h1: "LobbyStack dnevnik izmena: novosti o AI recepcioneru",
+    intro:
+      "Pratite nove funkcije AI recepcionera, poboljšanja kontrolne table, integracije i izmene koje objavljuje LobbyStack tim.",
+    breadcrumb: "Dnevnik izmena",
+  },
 } satisfies Record<
   Locale,
   {
@@ -61,13 +74,19 @@ const pageCopy = {
   }
 >
 
-const dateLocale = locale === "fr" ? "fr-CA" : "en-US"
+const dateLocales = {
+  en: "en-US",
+  fr: "fr-CA",
+  es: "es",
+  sr: "sr-Latn",
+} satisfies Record<Locale, string>
+const dateLocale = dateLocales[locale]
 const changelogItemListJsonLd = {
   "@type": "ItemList",
   "@id": `${absoluteUrl(canonicalPath)}#updates`,
   name: pageCopy[locale].h1,
   description: pageCopy[locale].intro,
-  inLanguage: locale,
+  inLanguage: localeTag(locale),
   isPartOf: {
     "@id": `${absoluteUrl(canonicalPath)}#webpage`,
   },
@@ -87,7 +106,7 @@ const changelogItemListJsonLd = {
         description: entry.data.description,
         url: itemUrl,
         datePublished: entry.data.pubDate.toISOString(),
-        inLanguage: locale,
+        inLanguage: localeTag(locale),
         ...(entry.data.category ? { genre: entry.data.category } : {}),
         publisher: {
           "@id": absoluteUrl("/#organization"),
@@ -197,5 +216,5 @@ const changelogItemListJsonLd = {
     </section>
   </main>
 
-  <Footer locale={locale} />
+  <Footer locale={locale} path={Astro.url.pathname} />
 </Layout>

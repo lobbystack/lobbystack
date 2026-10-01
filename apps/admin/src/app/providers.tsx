@@ -38,6 +38,9 @@ export function Providers({ children, initialLocale, initialLocaleSource, initia
   useEffect(() => {
     const handleLanguageChanged = (nextLanguage: string) => setLanguage(nextLanguage);
     i18n.on("languageChanged", handleLanguageChanged);
+    // Child effects run first, so the locale provider can switch languages
+    // before this listener exists. Pick up that change, or its namespaces never load.
+    setLanguage(i18n.language);
     return () => { i18n.off("languageChanged", handleLanguageChanged); };
   }, [i18n]);
 

@@ -14,7 +14,14 @@ import {
   absoluteUrl,
   webSiteJsonLd,
 } from "@/lib/seo"
-import { assertLocale, getCopy, getRouteSeo, localizePath, type Locale } from "@/i18n"
+import {
+  assertLocale,
+  getCopy,
+  getRouteSeo,
+  localeTag,
+  localizePath,
+  type Locale,
+} from "@/i18n"
 
 interface Props {
   locale?: Locale
@@ -24,6 +31,12 @@ const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
 const copy = getCopy(locale)
 const canonicalPath = localizePath(locale, "/pricing/")
 const seo = getRouteSeo({ locale, path: "/pricing/" })
+const breadcrumbNames: Record<Locale, string> = {
+  en: "Pricing",
+  fr: "Tarifs",
+  es: "Precios",
+  sr: "Cene",
+}
 ---
 
 <Layout
@@ -37,7 +50,7 @@ const seo = getRouteSeo({ locale, path: "/pricing/" })
       softwareApplicationJsonLd({ locale }),
       breadcrumbJsonLd([
         { name: copy.common.home, path: localizePath(locale, "/") },
-        { name: locale === "fr" ? "Tarifs" : "Pricing", path: canonicalPath },
+        { name: breadcrumbNames[locale], path: canonicalPath },
       ]),
       {
         "@context": "https://schema.org",
@@ -46,7 +59,7 @@ const seo = getRouteSeo({ locale, path: "/pricing/" })
         name: seo?.title,
         url: absoluteUrl(canonicalPath),
         description: seo?.description,
-        inLanguage: locale,
+        inLanguage: localeTag(locale),
         isPartOf: {
           "@id": absoluteUrl("/#website"),
         },
@@ -65,5 +78,5 @@ const seo = getRouteSeo({ locale, path: "/pricing/" })
     <PricingFaqSection locale={locale} />
     <CtaSection locale={locale} />
   </main>
-  <Footer locale={locale} />
+  <Footer locale={locale} path={Astro.url.pathname} />
 </Layout>

@@ -1,0 +1,136 @@
+---
+title: "Recevoir des webhooks"
+description: "Abonnez une URL aux événements LobbyStack, vérifiez les signatures et gérez les nouvelles tentatives."
+sidebarTitle: "Webhooks"
+contentType: "How-to"
+---
+
+Les webhooks envoient une requête HTTPS `POST` à votre URL quand quelque chose se produit dans une entreprise. Vos outils n'ont donc pas besoin d'interroger l'API en boucle.
+
+## Événements
+
+| Événement | Envoyé quand | `data` |
+| --- | --- | --- |
+| `call.completed` | Un appel s'est terminé et LobbyStack a enregistré son résumé et son résultat. | Appel |
+| `appointment.booked` | Quelqu'un réserve un rendez-vous : la réceptionniste, le tableau de bord ou l'API. | Rendez-vous |
+| `appointment.rescheduled` | Un rendez-vous est déplacé à une nouvelle heure. | Rendez-vous |
+| `appointment.cancelled` | Un rendez-vous est annulé. | Rendez-vous |
+| `message.taken` | La réceptionniste prend un message pour votre équipe. | Message |
+| `contact.created` | Un nouveau contact apparaît, à partir d'un appel, d'un texto, d'une réservation, du widget du site Web ou de l'API. | Contact |
+
+`data` a la même forme que la ressource API correspondante. Par exemple, `GET /appointments` renvoie les objets que transporte un événement `appointment.booked`. Un point de terminaison de liste sert donc aussi de données d'exemple.
+
+## Ajouter un point de terminaison
+
+Vous pouvez ajouter des points de terminaison dans le tableau de bord ou avec l'API.
+
+<Tabs>
+  <Tab title="Tableau de bord">
+    <Steps>
+      <Step title="Ouvrir Webhooks">
+        Allez dans **Intégrations** et cliquez sur **Gérer** sur la carte **Webhooks**. Seuls les propriétaires et les administrateurs peuvent gérer les webhooks.
+      </Step>
+      <Step title="Ajouter le point de terminaison">
+        Cliquez sur **Ajouter un point de terminaison**, saisissez l'URL et choisissez les événements.
+      </Step>
+      <Step title="Copier le secret de signature">
+        LobbyStack affiche le secret `whsec_` une seule fois. Conservez-le à un endroit où votre point de terminaison peut le lire.
+      </Step>
+      <Step title="Envoyer un événement test">
+        Cliquez sur **Envoyer un événement test**, puis ouvrez **Journal des livraisons** pour voir la réponse renvoyée par votre point de terminaison.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="API">
+    Appelez `POST /webhooks` avec une clé qui a `webhooks:manage` :
+
+    ```bash
+    curl https://app.lobbystack.com/api/v1/webhooks \
+      -H "Authorization: Bearer $LOBBYSTACK_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"url":"https://example.com/hooks/lobbystack","events":["appointment.booked","call.completed"]}'
+    ```
+
+    La réponse contient l'`id` du point de terminaison et le `secret`. `DELETE /webhooks/{webhook_id}` le supprime. Ces deux appels servent d'abonnement et de désabonnement pour les REST hooks de Zapier.
+  </Tab>
+</Tabs>
+
+## Charge utile
+
+```json
+{
+  "id": "0f5c2a8e-3a41-4a0c-9d4f-6b5f1d2e7c11",
+  "type": "appointment.booked",
+  "api_version": "v1",
+  "created_at": "2026-09-27T16:58:19.612Z",
+  "business_id": "75795511-9ee2-4cb2-a89d-f173ec1dd82d",
+  "data": {
+    "id": "0c4332ff-becb-45cb-be23-173d55747852",
+    "status": "confirmed",
+    "starts_at": "2026-09-29T13:30:00.000Z",
+    "ends_at": "2026-09-29T14:15:00.000Z",
+    "timezone": "America/Toronto",
+    "service_id": "df8a2c34-d306-4292-a055-1b739ef74991",
+    "service_name": "Haircut",
+    "staff_id": "06d9c0dc-f18a-4cc6-a987-ac4963c87113",
+    "staff_name": "Sam",
+    "contact_id": "0cabb07b-ea18-4e9f-8f7b-356405838770",
+    "contact_name": "Ada Lovelace",
+    "contact_phone": "+14165550134",
+    "source": "voice",
+    "calendar_sync_status": "pending",
+    "created_at": "2026-09-27T16:58:19.590Z",
+    "updated_at": "2026-09-27T16:58:19.590Z"
+  }
+}
+```
+
+`data` reflète la ressource au moment où l'événement s'est produit. Récupérez de nouveau la ressource si vous avez besoin de son état actuel.
+
+## Vérifier les signatures
+
+LobbyStack signe chaque requête avec le schéma [Standard Webhooks](https://www.standardwebhooks.com) et envoie trois en-têtes :
+
+| En-tête | Valeur |
+| --- | --- |
+| `webhook-id` | L'`id` de l'événement. Il reste le même à chaque nouvelle tentative et à chaque renvoi. |
+| `webhook-timestamp` | Heure Unix, en secondes, à laquelle LobbyStack a signé cette tentative. |
+| `webhook-signature` | `v1,` suivi d'une signature HMAC-SHA256 en base64. |
+
+La signature couvre `{webhook-id}.{webhook-timestamp}.{raw body}`. Sa clé est la partie du secret qui suit `whsec_`, décodée depuis le base64. Utilisez une bibliothèque Standard Webhooks pour la vérifier sur le corps brut de la requête, avant d'analyser le JSON :
+
+```ts
+import { Webhook } from "standardwebhooks";
+
+const webhook = new Webhook(process.env.LOBBYSTACK_WEBHOOK_SECRET!);
+
+export async function POST(request: Request) {
+  const body = await request.text();
+  // Throws when the signature is wrong or the timestamp is more than 5 minutes old.
+  const event = webhook.verify(body, Object.fromEntries(request.headers)) as { id: string; type: string };
+  // Store event.id and skip events you already processed.
+  return new Response(null, { status: 204 });
+}
+```
+
+Rejetez les requêtes dont l'horodatage date de plus de quelques minutes pour bloquer les attaques par rejeu.
+
+## Répondre et relancer
+
+Renvoyez n'importe quel statut `2xx` en moins de 10 secondes. LobbyStack considère toute autre réponse comme un échec, y compris les délais dépassés, les redirections et les erreurs de connexion. Il ne suit pas les redirections.
+
+Après un échec, LobbyStack fait une nouvelle tentative après 30 secondes, 2 minutes, 10 minutes, 30 minutes, 1 heure, 3 heures, 6 heures et 12 heures, soit 9 tentatives sur environ 23 heures. Chaque tentative utilise le même `webhook-id`, donc dédoublonnez à partir de cette valeur. Les événements peuvent arriver dans le désordre. Comparez `created_at` ou récupérez la ressource si l'ordre compte.
+
+Si un événement échoue à chaque tentative et que rien n'a atteint le point de terminaison pendant cette période, LobbyStack désactive le point de terminaison et alerte votre équipe selon les choix de chaque personne dans **Réglages** > **Notifications**. Corrigez le point de terminaison, réactivez-le dans le tableau de bord ou avec `PATCH /webhooks/{webhook_id}` et `{"status": "enabled"}`, puis utilisez **Renvoyer** dans le journal des livraisons pour envoyer les événements manqués.
+
+## Journal des livraisons
+
+Le journal des livraisons montre chaque événement envoyé à un point de terminaison, son statut, le dernier code de réponse, le nombre de tentatives et l'heure de la prochaine tentative. **Renvoyer** envoie un événement de nouveau. LobbyStack conserve 30 jours d'historique des webhooks.
+
+## Changer le secret
+
+Cliquez sur **Changer le secret** sur le point de terminaison. L'ancien secret cesse de fonctionner immédiatement. Mettez ensuite rapidement votre point de terminaison à jour avec le nouveau secret. Les événements dont la vérification échoue entre-temps sont relancés et arrivent une fois que votre point de terminaison utilise le nouveau secret.
+
+## Règles réseau
+
+Les points de terminaison doivent utiliser `https://` et pointer vers une adresse publique. LobbyStack refuse les URL qui pointent vers des adresses privées, de bouclage, de liaison locale ou de métadonnées cloud, au moment où vous enregistrez le point de terminaison et à chaque livraison. Les déploiements auto-hébergés suivent la même règle.

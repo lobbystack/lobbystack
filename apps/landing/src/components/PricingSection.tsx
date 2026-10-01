@@ -1,5 +1,5 @@
 import { Button, buttonVariants } from "@/components/ui/button"
-import { APP_SIGNUP_URL } from "@/lib/app-links"
+import { appSignupUrl } from "@/lib/app-links"
 import type { Locale } from "@/i18n"
 import { cn } from "@/lib/utils"
 import { getCloudPlanFactSheet } from "@lobbystack/shared/product-capabilities"
@@ -251,9 +251,219 @@ const tiersFr: Tier[] = [
   },
 ]
 
+const tiersEs: Tier[] = [
+  {
+    name: "Free",
+    price: {
+      monthly: "$0",
+      annual: "$0",
+    },
+    period: "",
+    description: {
+      monthly: "Pruebe la voz en su navegador",
+      annual: "Pruebe la voz en su navegador",
+    },
+    cta: {
+      monthly: "Empezar gratis",
+      annual: "Empezar gratis",
+    },
+    ctaVariant: "outline" as const,
+    highlight: false,
+    highlights: [
+      `${freeVoiceMinutes} minutos de voz en el navegador`,
+      ...(freePlanFacts.browserVoiceOnly ? ["Sin número de teléfono"] : []),
+      "Soporte de la comunidad",
+    ],
+  },
+  {
+    name: "Starter",
+    price: {
+      monthly: "$30",
+      annual: "$24",
+    },
+    period: "/mes",
+    description: {
+      monthly: "Por mes, facturación mensual",
+      annual: "Por mes, facturación anual",
+    },
+    cta: {
+      monthly: "Empezar gratis",
+      annual: "Empezar gratis",
+    },
+    ctaVariant: "outline" as const,
+    highlight: false,
+    highlights: [
+      {
+        label: "150 minutos de voz incluidos",
+        sublabel: "Luego $0.20/min",
+      },
+      "1 número dedicado para su negocio",
+      "50 segmentos de SMS de alerta",
+      "Soporte por correo electrónico",
+    ],
+  },
+  {
+    name: "Pro",
+    price: {
+      monthly: "$100",
+      annual: "$80",
+    },
+    period: "/mes",
+    description: {
+      monthly: "Por mes, facturación mensual",
+      annual: "Por mes, facturación anual",
+    },
+    cta: {
+      monthly: "Empezar gratis",
+      annual: "Empezar gratis",
+    },
+    ctaVariant: "default" as const,
+    highlight: true,
+    highlights: [
+      {
+        label: "500 minutos de voz incluidos",
+        sublabel: "Luego $0.18/min",
+      },
+      "1 número dedicado para su negocio",
+      "200 segmentos de SMS de alerta",
+      "Soporte prioritario por correo electrónico",
+    ],
+  },
+  {
+    name: "Enterprise",
+    price: {
+      monthly: "A medida",
+      annual: "A medida",
+    },
+    period: "",
+    description: {
+      monthly: "Para mayor volumen",
+      annual: "Para mayor volumen",
+    },
+    cta: {
+      monthly: "Contáctenos",
+      annual: "Contáctenos",
+    },
+    ctaHref: enterpriseContactHref,
+    ctaVariant: "outline" as const,
+    highlight: false,
+    highlights: [
+      "Varios números dedicados",
+      "Límites de uso a medida",
+      "Soporte dedicado para la implementación",
+    ],
+  },
+]
+
+const tiersSr: Tier[] = [
+  {
+    name: "Free",
+    price: {
+      monthly: "$0",
+      annual: "$0",
+    },
+    period: "",
+    description: {
+      monthly: "Isprobajte glas u pregledaču",
+      annual: "Isprobajte glas u pregledaču",
+    },
+    cta: {
+      monthly: "Počnite besplatno",
+      annual: "Počnite besplatno",
+    },
+    ctaVariant: "outline" as const,
+    highlight: false,
+    highlights: [
+      `${freeVoiceMinutes} minuta razgovora u pregledaču`,
+      ...(freePlanFacts.browserVoiceOnly ? ["Bez broja telefona"] : []),
+      "Podrška zajednice",
+    ],
+  },
+  {
+    name: "Starter",
+    price: {
+      monthly: "$30",
+      annual: "$24",
+    },
+    period: "/mes.",
+    description: {
+      monthly: "Mesečno, uz mesečnu naplatu",
+      annual: "Mesečno, uz godišnju naplatu",
+    },
+    cta: {
+      monthly: "Počnite besplatno",
+      annual: "Počnite besplatno",
+    },
+    ctaVariant: "outline" as const,
+    highlight: false,
+    highlights: [
+      {
+        label: "150 minuta razgovora uključeno",
+        sublabel: "Zatim $0.20/min",
+      },
+      "1 namenski poslovni broj",
+      "50 segmenata SMS upozorenja",
+      "Podrška putem e-pošte",
+    ],
+  },
+  {
+    name: "Pro",
+    price: {
+      monthly: "$100",
+      annual: "$80",
+    },
+    period: "/mes.",
+    description: {
+      monthly: "Mesečno, uz mesečnu naplatu",
+      annual: "Mesečno, uz godišnju naplatu",
+    },
+    cta: {
+      monthly: "Počnite besplatno",
+      annual: "Počnite besplatno",
+    },
+    ctaVariant: "default" as const,
+    highlight: true,
+    highlights: [
+      {
+        label: "500 minuta razgovora uključeno",
+        sublabel: "Zatim $0.18/min",
+      },
+      "1 namenski poslovni broj",
+      "200 segmenata SMS upozorenja",
+      "Prioritetna podrška putem e-pošte",
+    ],
+  },
+  {
+    name: "Enterprise",
+    price: {
+      monthly: "Po dogovoru",
+      annual: "Po dogovoru",
+    },
+    period: "",
+    description: {
+      monthly: "Za veći obim",
+      annual: "Za veći obim",
+    },
+    cta: {
+      monthly: "Kontaktirajte nas",
+      annual: "Kontaktirajte nas",
+    },
+    ctaHref: enterpriseContactHref,
+    ctaVariant: "outline" as const,
+    highlight: false,
+    highlights: [
+      "Više namenskih brojeva",
+      "Prilagođeni limiti potrošnje",
+      "Posvećena podrška pri implementaciji",
+    ],
+  },
+]
+
 const tiersByLocale = {
   en: tiers,
   fr: tiersFr,
+  es: tiersEs,
+  sr: tiersSr,
 } satisfies Record<Locale, Tier[]>
 
 /* ─── Comparison table data ─── */
@@ -715,9 +925,447 @@ const comparisonGroupsFr: ComparisonGroup[] = [
   },
 ]
 
+const comparisonGroupsEs: ComparisonGroup[] = [
+  {
+    category: "Uso y límites",
+    rows: [
+      {
+        feature: "Minutos de voz",
+        free: { included: `${freeVoiceMinutes} minutos en el navegador` },
+        starter: { included: "150 incluidos", then: "luego $0.20/min" },
+        pro: { included: "500 incluidos", then: "luego $0.18/min" },
+        enterprise: "A medida",
+      },
+      {
+        feature: "Intentos de transferencia",
+        free: false,
+        starter: { included: "20 incluidos", then: "luego $0.02/intento" },
+        pro: { included: "100 incluidos", then: "luego $0.02/intento" },
+        enterprise: "A medida",
+      },
+      {
+        feature: "Segmentos de SMS de alerta",
+        free: false,
+        starter: { included: "50 incluidos", then: "luego $0.02/segmento" },
+        pro: { included: "200 incluidos", then: "luego $0.02/segmento" },
+        enterprise: "A medida",
+      },
+      {
+        feature: "Base de conocimiento",
+        free: "25 MB",
+        starter: "100 MB",
+        pro: "500 MB",
+        enterprise: "A medida",
+      },
+      {
+        feature: "Números de teléfono",
+        free: false,
+        starter: "1 dedicado",
+        pro: "1 dedicado",
+        enterprise: "Varios",
+      },
+    ],
+  },
+  {
+    category: "Funciones de recepción",
+    rows: [
+      {
+        feature: "Atención de llamadas 24/7",
+        free: "Pruebas en el navegador",
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Datos y mensajes de quien llama",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Respuestas desde la base de conocimiento",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Flujos de trabajo en lenguaje sencillo",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Filtro de spam",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Llamadas de menos de 10 s excluidas de la facturación",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Llamadas simultáneas ilimitadas",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Responde en el idioma de quien llama",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+    ],
+  },
+  {
+    category: "Reservas",
+    rows: [
+      {
+        feature: "Reserva de citas",
+        free: "Ilimitada",
+        pro: "Ilimitada",
+        enterprise: "Ilimitada",
+      },
+      {
+        feature: "SMS de confirmación de citas",
+        free: false,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Integración con Google Calendar",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+    ],
+  },
+  {
+    category: "Enrutamiento y transferencias",
+    rows: [
+      {
+        feature: "Derivación de llamadas urgentes",
+        free: false,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Transferencias de llamadas",
+        free: false,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Atención fuera de horario",
+        free: false,
+        pro: true,
+        enterprise: true,
+      },
+    ],
+  },
+  {
+    category: "Notificaciones y mensajes",
+    rows: [
+      {
+        feature: "Notificaciones por correo electrónico",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Notificaciones por SMS",
+        free: false,
+        pro: true,
+        enterprise: true,
+      },
+    ],
+  },
+  {
+    category: "Datos y panel",
+    rows: [
+      {
+        feature: "Resúmenes y transcripciones de llamadas",
+        free: "Ilimitados",
+        pro: "Ilimitados",
+        enterprise: "Ilimitados",
+      },
+      {
+        feature: "Historial y grabaciones de llamadas",
+        free: "Ilimitados",
+        pro: "Ilimitados",
+        enterprise: "Ilimitados",
+      },
+      {
+        feature: "Perfiles y notas de quienes llaman",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Contactos",
+        free: "Ilimitados",
+        pro: "Ilimitados",
+        enterprise: "Ilimitados",
+      },
+      {
+        feature: "Importación de conocimiento desde el sitio web",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+    ],
+  },
+  {
+    category: "Implementación y soporte",
+    rows: [
+      {
+        feature: "Alojamiento",
+        free: "Nube gestionada",
+        pro: "Nube gestionada",
+        enterprise: "Nube gestionada",
+      },
+      {
+        feature: "Excedentes según el uso",
+        free: false,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Soporte",
+        free: "Comunidad",
+        starter: "Correo electrónico",
+        pro: "Correo prioritario",
+        enterprise: "Implementación dedicada",
+      },
+    ],
+  },
+]
+
+const comparisonGroupsSr: ComparisonGroup[] = [
+  {
+    category: "Potrošnja i limiti",
+    rows: [
+      {
+        feature: "Minuti razgovora",
+        free: { included: `${freeVoiceMinutes} minuta u pregledaču` },
+        starter: { included: "150 uključeno", then: "zatim $0.20/min" },
+        pro: { included: "500 uključeno", then: "zatim $0.18/min" },
+        enterprise: "Po dogovoru",
+      },
+      {
+        feature: "Pokušaji preusmeravanja",
+        free: false,
+        starter: { included: "20 uključeno", then: "zatim $0.02/pokušaj" },
+        pro: { included: "100 uključeno", then: "zatim $0.02/pokušaj" },
+        enterprise: "Po dogovoru",
+      },
+      {
+        feature: "Segmenti SMS upozorenja",
+        free: false,
+        starter: { included: "50 uključeno", then: "zatim $0.02/segment" },
+        pro: { included: "200 uključeno", then: "zatim $0.02/segment" },
+        enterprise: "Po dogovoru",
+      },
+      {
+        feature: "Baza znanja",
+        free: "25 MB",
+        starter: "100 MB",
+        pro: "500 MB",
+        enterprise: "Po dogovoru",
+      },
+      {
+        feature: "Brojevi telefona",
+        free: false,
+        starter: "1 namenski",
+        pro: "1 namenski",
+        enterprise: "Više",
+      },
+    ],
+  },
+  {
+    category: "Osnovne funkcije recepcionera",
+    rows: [
+      {
+        feature: "Odgovaranje na pozive 24/7",
+        free: "Testiranje u pregledaču",
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Beleženje podataka i poruka pozivalaca",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Odgovori iz baze znanja",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Tokovi rada opisani običnim jezikom",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Filtriranje spama",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Pozivi kraći od 10 s se ne naplaćuju",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Neograničen broj istovremenih poziva",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Odgovara na jeziku pozivaoca",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+    ],
+  },
+  {
+    category: "Zakazivanje",
+    rows: [
+      {
+        feature: "Zakazivanje termina",
+        free: "Neograničeno",
+        pro: "Neograničeno",
+        enterprise: "Neograničeno",
+      },
+      {
+        feature: "SMS potvrde termina",
+        free: false,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Google Calendar integracija",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+    ],
+  },
+  {
+    category: "Rutiranje i preusmeravanje",
+    rows: [
+      {
+        feature: "Prosleđivanje hitnih poziva",
+        free: false,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Preusmeravanje poziva",
+        free: false,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Odgovaranje van radnog vremena",
+        free: false,
+        pro: true,
+        enterprise: true,
+      },
+    ],
+  },
+  {
+    category: "Obaveštenja i poruke",
+    rows: [
+      {
+        feature: "Obaveštenja e-poštom",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "SMS obaveštenja",
+        free: false,
+        pro: true,
+        enterprise: true,
+      },
+    ],
+  },
+  {
+    category: "Podaci i kontrolna tabla",
+    rows: [
+      {
+        feature: "Rezimei i transkripti poziva",
+        free: "Neograničeno",
+        pro: "Neograničeno",
+        enterprise: "Neograničeno",
+      },
+      {
+        feature: "Istorija i snimci poziva",
+        free: "Neograničeno",
+        pro: "Neograničeno",
+        enterprise: "Neograničeno",
+      },
+      {
+        feature: "Profili i beleške pozivalaca",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Kontakti",
+        free: "Neograničeno",
+        pro: "Neograničeno",
+        enterprise: "Neograničeno",
+      },
+      {
+        feature: "Uvoz znanja sa sajta",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+    ],
+  },
+  {
+    category: "Hosting i podrška",
+    rows: [
+      {
+        feature: "Hosting",
+        free: "Upravljani cloud",
+        pro: "Upravljani cloud",
+        enterprise: "Upravljani cloud",
+      },
+      {
+        feature: "Prekoračenja prema potrošnji",
+        free: false,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Podrška",
+        free: "Zajednica",
+        starter: "E-pošta",
+        pro: "Prioritetna e-pošta",
+        enterprise: "Posvećena implementacija",
+      },
+    ],
+  },
+]
+
 const comparisonGroupsByLocale = {
   en: comparisonGroupsEn,
   fr: comparisonGroupsFr,
+  es: comparisonGroupsEs,
+  sr: comparisonGroupsSr,
 } satisfies Record<Locale, ComparisonGroup[]>
 
 /* ─────────────────────────── Components ─────────────────────────── */
@@ -813,6 +1461,41 @@ const pricingSectionCopy = {
     feature: "Fonctionnalité",
     included: "Inclus",
     notIncluded: "Non inclus",
+  },
+  es: {
+    heading: "Planes para negocios de todos los tamaños",
+    intro:
+      "Empiece gratis y luego cambie a Starter o Pro para tener más minutos incluidos y excedentes transparentes.",
+    monthly: "Mensual",
+    annual: "Anual",
+    save: "Ahorre 20%",
+    compareHeading: "Compare los planes en detalle",
+    compareIntro:
+      "Free incluye 30 minutos de voz en el navegador, sin número de teléfono. Starter y Pro incluyen un número dedicado, minutos mensuales incluidos y excedentes según el uso.",
+    billingLabel: "Periodo de facturación",
+    tableLabel: "Tabla comparativa de planes",
+    caption:
+      "Comparación de funciones entre los planes Free, Starter, Pro y Enterprise.",
+    feature: "Función",
+    included: "Incluido",
+    notIncluded: "No incluido",
+  },
+  sr: {
+    heading: "Paketi za firme svih veličina",
+    intro:
+      "Počnite besplatno, a zatim pređite na Starter ili Pro za više uključenih minuta i jasne cene prekoračenja.",
+    monthly: "Mesečno",
+    annual: "Godišnje",
+    save: "Uštedite 20%",
+    compareHeading: "Detaljno uporedite pakete",
+    compareIntro:
+      "Free uključuje 30 minuta razgovora u pregledaču, bez broja telefona. Starter i Pro uključuju namenski broj, mesečnu kvotu minuta i prekoračenja koja se naplaćuju prema potrošnji.",
+    billingLabel: "Period naplate",
+    tableLabel: "Tabela poređenja paketa",
+    caption: "Poređenje funkcija paketa Free, Starter, Pro i Enterprise.",
+    feature: "Funkcija",
+    included: "Uključeno",
+    notIncluded: "Nije uključeno",
   },
 } satisfies Record<Locale, Record<string, string>>
 
@@ -944,7 +1627,7 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
 
               {/* Action */}
               <a
-                href={tier.ctaHref ?? APP_SIGNUP_URL}
+                href={tier.ctaHref ?? appSignupUrl(locale)}
                 className={cn(
                   buttonVariants({ variant: tier.ctaVariant }),
                   "mb-6 h-11 w-full min-w-0 rounded-full px-4 text-[0.8125rem] sm:text-sm"
@@ -953,7 +1636,7 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
                 data-ph-capture-attribute-section="pricing_plan"
                 data-ph-capture-attribute-action="pricing_cta"
                 data-ph-capture-attribute-destination={
-                  tier.ctaHref ?? APP_SIGNUP_URL
+                  tier.ctaHref ?? appSignupUrl(locale)
                 }
                 data-ph-capture-attribute-plan={tier.name}
                 data-ph-capture-attribute-billing-interval={billingInterval}

@@ -4081,10 +4081,13 @@
             "format": "email"
           },
           "locale": {
+            "description": "Language for the contact's reminders and confirmations: en, fr, es or sr.",
             "type": "string",
             "enum": [
               "en",
-              "fr"
+              "fr",
+              "es",
+              "sr"
             ]
           },
           "timezone": {
@@ -4130,10 +4133,13 @@
           "locale": {
             "anyOf": [
               {
+                "description": "Language for the contact's reminders and confirmations: en, fr, es or sr.",
                 "type": "string",
                 "enum": [
                   "en",
-                  "fr"
+                  "fr",
+                  "es",
+                  "sr"
                 ]
               },
               {

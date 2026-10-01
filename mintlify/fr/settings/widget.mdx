@@ -1,0 +1,46 @@
+---
+title: "Ajouter le widget de site Web"
+description: "Configurez le widget intégrable de clavardage et d'appel Web de LobbyStack, puis ajoutez le script de chargement à votre site Web."
+sidebarTitle: "Widget de site Web"
+contentType: "How-to"
+---
+
+La page **Réglages** > **Widget de site web** crée et gère les clés du widget de réceptionniste. Depuis le widget, les visiteurs peuvent clavarder, laisser leurs coordonnées et lancer un appel depuis leur navigateur.
+
+<Note>
+  Le clavardage sur le site Web est restreint et ne fait pas partie des forfaits hébergés. La création de nouvelles clés de widget est désactivée par défaut. Sur un déploiement auto-hébergé, définissez `WIDGET_KEY_ISSUANCE_ENABLED=true` pour en créer. Les clés existantes continuent de fonctionner.
+</Note>
+
+## Configurer le widget
+
+<Steps>
+  <Step title="Ouvrir les réglages du widget">
+    Allez dans **Réglages** > **Widget de site web**.
+  </Step>
+  <Step title="Configurer son apparence">
+    Choisissez la couleur, la position, le titre, le sous-titre, le message d'accueil et le comportement de langue.
+  </Step>
+  <Step title="Configurer la collecte de prospects">
+    Activez le formulaire de contact, choisissez les champs obligatoires et décidez s'il s'affiche avant le clavardage.
+  </Step>
+  <Step title="Définir les sites Web autorisés">
+    Entrez chaque origine publique exacte qui peut intégrer le widget, par exemple `https://www.example.com`.
+  </Step>
+  <Step title="Copier l'extrait d'installation">
+    Copiez l'extrait de chargement généré et ajoutez-le avant la balise de fermeture `</body>` de votre site Web.
+  </Step>
+</Steps>
+
+## Protéger les appels Web
+
+LobbyStack signe les sessions du widget et compare l'origine de la page parente du visiteur aux origines autorisées pour la clé du widget avant de lancer un appel.
+
+Utilisez un site Web en HTTPS en production. Gardez `WIDGET_SESSION_SECRET` et les autres identifiants de signature sur le serveur.
+
+## Gérer les clés du widget
+
+Chaque clé a sa propre liste d'origines autorisées et sa propre configuration. Vous pouvez modifier une clé active, la suspendre temporairement ou la révoquer définitivement. La révocation d'une clé arrête toutes les intégrations qui l'utilisent.
+
+## Vérifier l'installation
+
+Ouvrez le site Web public dans une fenêtre de navigation privée. Vérifiez que le widget se charge, qu'il démarre un clavardage et qu'il affiche le formulaire de contact. Si les appels Web sont activés, autorisez l'accès au microphone et passez un appel test.

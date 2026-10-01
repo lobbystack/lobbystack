@@ -1,6 +1,8 @@
+import { intlLocale } from "./locale";
+
 export function formatCapInput(cents: number | null, locale: string): string {
   if (cents === null) return "";
-  const decimalSeparator = new Intl.NumberFormat(locale).format(1.1).includes(",")
+  const decimalSeparator = new Intl.NumberFormat(intlLocale(locale)).format(1.1).includes(",")
     ? ","
     : ".";
   return (cents / 100).toFixed(2).replace(".", decimalSeparator);
@@ -15,7 +17,7 @@ export function parseCapInputToCents(
     return null;
   }
 
-  const numberParts = new Intl.NumberFormat(locale).formatToParts(1000.1);
+  const numberParts = new Intl.NumberFormat(intlLocale(locale)).formatToParts(1000.1);
   const decimalSeparator =
     numberParts.find((part) => part.type === "decimal")?.value ?? ".";
   const groupingSeparator = numberParts.find(

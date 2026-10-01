@@ -7,6 +7,7 @@ import {
   assertLocale,
   getCopy,
   getRouteSeo,
+  localeTag,
   localizePath,
   type Locale,
 } from "@/i18n"
@@ -46,7 +47,7 @@ const t = getLegalDocument(kind, locale)
         name: routeSeo?.title,
         url: absoluteUrl(canonicalPath),
         description: routeSeo?.description,
-        inLanguage: locale,
+        inLanguage: localeTag(locale),
       },
     ],
   }}
@@ -115,5 +116,5 @@ const t = getLegalDocument(kind, locale)
       </article>
     </section>
   </main>
-  <Footer locale={locale} />
+  <Footer locale={locale} path={Astro.url.pathname} />
 </Layout>

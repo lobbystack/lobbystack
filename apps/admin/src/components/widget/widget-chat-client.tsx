@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useTranslation } from "react-i18next";
+import { normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +22,7 @@ type WidgetConfigPayload = {
     title?: string;
     subtitle?: string;
     greeting?: string;
-    localeOverride?: "en" | "fr";
+    localeOverride?: InterfaceLocale;
     leadForm?: { enabled: boolean; requirePhone?: boolean; requireEmail?: boolean; showBeforeChat?: boolean };
   };
   billing: { chatAllowed: boolean; plan: string };
@@ -104,7 +105,9 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
           visitorId: visitorIdRef.current || visitorId,
           messageId: lastUserMessage?.id ?? (typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `m-${Date.now()}`),
           content: lastUserMessage ? messageText(lastUserMessage) : "",
-          locale: i18n.language === "fr" ? "fr" : "en",
+          // The reply language the AI uses only covers English and French. For
+          // other interface languages the server keeps its business default.
+          ...(i18n.language === "fr" || i18n.language === "en" ? { locale: i18n.language } : {}),
         },
       };
     },
@@ -171,7 +174,8 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
   useEffect(() => {
     if (!configState) return;
     const locale = configState.config?.localeOverride ?? configState.business?.defaultLocale ?? navigator.language.split("-")[0];
-    if (locale === "en" || locale === "fr") void i18n.changeLanguage(locale);
+    const supported = normalizeInterfaceLocale(locale);
+    if (supported) void i18n.changeLanguage(supported);
   }, [configState]);
 
   useEffect(() => {

@@ -72,6 +72,8 @@ const labels = {
     comparison: "Comparison",
     calculator: "Missed call calculator",
     affiliateProgram: "Affiliate Program",
+    navigationMenu: "Navigation menu",
+    mobileNavigation: "Mobile navigation",
   },
   fr: {
     solutions: "Solutions",
@@ -86,6 +88,40 @@ const labels = {
     comparison: "Comparaison",
     calculator: "Calculateur d'appels manqués",
     affiliateProgram: "Programme d'affiliation",
+    navigationMenu: "Menu de navigation",
+    mobileNavigation: "Navigation mobile",
+  },
+  es: {
+    solutions: "Soluciones",
+    features: "Funciones",
+    resources: "Recursos",
+    pricing: "Precios",
+    login: "Iniciar sesión",
+    tryFree: "Pruébelo gratis",
+    blog: "Blog",
+    changelog: "Registro de cambios",
+    helpCenter: "Centro de ayuda",
+    comparison: "Comparativa",
+    calculator: "Calculadora de llamadas perdidas",
+    affiliateProgram: "Programa de afiliados",
+    navigationMenu: "Menú de navegación",
+    mobileNavigation: "Navegación móvil",
+  },
+  sr: {
+    solutions: "Rešenja",
+    features: "Funkcije",
+    resources: "Resursi",
+    pricing: "Cene",
+    login: "Prijava",
+    tryFree: "Isprobajte besplatno",
+    blog: "Blog",
+    changelog: "Dnevnik izmena",
+    helpCenter: "Centar za pomoć",
+    comparison: "Poređenje",
+    calculator: "Kalkulator propuštenih poziva",
+    affiliateProgram: "Partnerski program",
+    navigationMenu: "Meni za navigaciju",
+    mobileNavigation: "Mobilna navigacija",
   },
 } satisfies Record<MarketingLocale, Record<string, string>>
 
@@ -127,6 +163,44 @@ const solutionLabelMap = {
     applianceRepair: "Réparation d'électroménagers",
     restoration: "Restauration",
     locksmiths: "Serruriers",
+  },
+  es: {
+    solutions: "Usos principales",
+    industries: "Por sector",
+    aiPhoneAnswering: "Atención telefónica con IA",
+    aiAppointmentScheduler: "Agenda de citas con IA",
+    homeServices: "Servicios del hogar",
+    afterHours: "Atención fuera de horario",
+    dental: "Clínicas dentales",
+    salons: "Salones y spas",
+    selfHosted: "Recepcionista con IA autoalojada",
+    trades: "Por oficio",
+    plumbers: "Plomeros",
+    hvac: "Climatización",
+    electricians: "Electricistas",
+    garageDoor: "Reparación de puertas de garaje",
+    applianceRepair: "Reparación de electrodomésticos",
+    restoration: "Restauración de daños",
+    locksmiths: "Cerrajeros",
+  },
+  sr: {
+    solutions: "Najčešće primene",
+    industries: "Po delatnosti",
+    aiPhoneAnswering: "AI javljanje na telefon",
+    aiAppointmentScheduler: "AI zakazivanje termina",
+    homeServices: "Kućne usluge",
+    afterHours: "Pozivi van radnog vremena",
+    dental: "Stomatološke ordinacije",
+    salons: "Saloni i spa centri",
+    selfHosted: "Samostalno hostovan AI recepcioner",
+    trades: "Po zanatu",
+    plumbers: "Vodoinstalateri",
+    hvac: "Grejanje i klimatizacija",
+    electricians: "Električari",
+    garageDoor: "Popravka garažnih vrata",
+    applianceRepair: "Popravka kućnih aparata",
+    restoration: "Sanacija šteta",
+    locksmiths: "Bravari",
   },
 } satisfies Record<MarketingLocale, Record<string, string>>
 
@@ -462,7 +536,7 @@ export function LandingNavbar({ locale = "en" }: LandingNavbarProps) {
           <summary
             className="inline-flex size-9 cursor-pointer list-none items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden"
             aria-controls={mobileMenuId}
-            aria-label={locale === "fr" ? "Menu de navigation" : "Navigation menu"}
+            aria-label={labels[locale].navigationMenu}
           >
             <Menu
               className="size-5 group-open/mobile-menu:hidden"
@@ -480,7 +554,7 @@ export function LandingNavbar({ locale = "en" }: LandingNavbarProps) {
           >
             <nav
               className="flex flex-col gap-1 px-6 py-4"
-              aria-label={locale === "fr" ? "Navigation mobile" : "Mobile navigation"}
+              aria-label={labels[locale].mobileNavigation}
             >
               {navLinks(locale).map((link) =>
                 link.type === "group" ? (

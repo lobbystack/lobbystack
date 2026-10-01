@@ -68,7 +68,9 @@
     "locales": {
       "visitor": "Langue du visiteur",
       "english": "Anglais",
-      "french": "Français"
+      "french": "Français",
+      "spanish": "Espagnol",
+      "serbian": "Serbe"
     },
     "leadCapture": {
       "title": "Formulaire de coordonnées",

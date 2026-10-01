@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { localizeMarketingHref } from "@/lib/marketing-site-url";
-import { resolveLocale, type SupportedLocale } from "@/lib/locale";
+import { intlLocale, resolveLocale, type SupportedLocale } from "@/lib/locale";
 
 import { PageSurface } from "./page-surface";
 import { Badge } from "./ui/badge";
@@ -43,12 +43,12 @@ async function updatePayoutEmail(payoutEmail: string): Promise<void> {
 }
 
 function formatCurrency(locale: SupportedLocale, amountCents: number, currency = "usd"): string {
-  return new Intl.NumberFormat(locale, { style: "currency", currency: currency.toUpperCase() }).format(amountCents / 100);
+  return new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency: currency.toUpperCase() }).format(amountCents / 100);
 }
 
 function formatDate(locale: SupportedLocale, value: string | null): string {
   if (!value) return "";
-  return new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
+  return new Intl.DateTimeFormat(intlLocale(locale), { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
 }
 
 function StatCard({ description, label, value }: { description: string; label: string; value: string }) {

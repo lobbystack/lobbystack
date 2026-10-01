@@ -26,6 +26,7 @@ import {
   alternateLocaleLinks,
   localeFromPath,
   localeMeta,
+  stripLocaleFromPath,
   type Locale,
 } from "@/lib/i18n"
 import { CookieConsentBanner } from "@/components/CookieConsentBanner"
@@ -40,14 +41,20 @@ const title = seo?.title ?? DEFAULT_TITLE
 const description = seo?.description ?? DEFAULT_DESCRIPTION
 const pageType = seo?.type ?? "website"
 const pagePath = seo?.canonicalPath ?? Astro.url.pathname
-const indexingPagePath = pagePath.replace(/^\/fr(?=\/|$)/, "") || "/"
+const indexingPagePath = stripLocaleFromPath(pagePath)
 const canonicalPath = seo?.noindex ? undefined : pagePath
 const locale = (seo?.locale ??
   Astro.currentLocale ??
   localeFromPath(pagePath)) as Locale
 const htmlDir = localeMeta[locale]?.dir ?? localeMeta[DEFAULT_LOCALE].dir
-const skipLabel =
-  locale === "fr" ? "Aller au contenu principal" : "Skip to main content"
+const htmlLang = localeMeta[locale]?.tag ?? localeMeta[DEFAULT_LOCALE].tag
+const skipLabels: Record<Locale, string> = {
+  en: "Skip to main content",
+  fr: "Aller au contenu principal",
+  es: "Ir al contenido principal",
+  sr: "Pređi na glavni sadržaj",
+}
+const skipLabel = skipLabels[locale] ?? skipLabels[DEFAULT_LOCALE]
 const canonicalUrl = canonicalPath ? absoluteUrl(canonicalPath) : undefined
 const generatedOgImage = ogImagePath(pagePath)
 const pageImage =
@@ -106,7 +113,7 @@ Astro.response.headers.set("Vary", "Accept")
 Astro.response.headers.set("Content-Signal", CONTENT_SIGNAL)
 ---
 
-<html lang={locale} dir={htmlDir}>
+<html lang={htmlLang} dir={htmlDir}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -125,7 +132,7 @@ Astro.response.headers.set("Content-Signal", CONTENT_SIGNAL)
       ogImageWidth={imageWidth}
       ogImageHeight={imageHeight}
       siteName={SITE_NAME}
-      locale={locale === "fr" ? "fr_FR" : "en_US"}
+      locale={localeMeta[locale]?.ogLocale ?? localeMeta[DEFAULT_LOCALE].ogLocale}
       twitter={{ card: "summary_large_image" }}
       author={seo?.author}
       article={pageType === "article"
@@ -164,6 +171,10 @@ Astro.response.headers.set("Content-Signal", CONTENT_SIGNAL)
     <CookieConsentBanner locale={locale} client:load />
     <script is:inline src="/webmcp.js" defer></script>
     <script>
+      import { rememberLocaleChoice } from "@/lib/locale-preference"
+
+      // A language picked in the switcher overrides Accept-Language from then on.
+      document.addEventListener("click", (event) => rememberLocaleChoice(event.target))
       const main = document.querySelector<HTMLElement>("#main-content")
       if (main) main.tabIndex = -1
       // Menus built on <details> stay open until toggled, so close them when

@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { selectActiveBusiness } from "@/lib/active-business";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { useTelemetry } from "@/components/product-analytics";
+import { intlLocale } from "@/lib/locale";
 
 type Business = { businessId: string; active: boolean };
 type Detail = {
@@ -64,7 +65,7 @@ async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 function formatDate(value: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
 function formatDuration(seconds: number | null): string {
@@ -95,7 +96,7 @@ function CallEventTimeline({ events, locale }: { events: Detail["timeline"]; loc
                 {t(`detail.events.${event.type}`)}
               </span>
               <span className="type-meta">
-                {event.at ? <>{new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(new Date(event.at))}{", "}{new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit" }).format(new Date(event.at))}</> : <>&nbsp;</>}
+                {event.at ? <>{new Intl.DateTimeFormat(intlLocale(locale), { month: "short", day: "numeric" }).format(new Date(event.at))}{", "}{new Intl.DateTimeFormat(intlLocale(locale), { hour: "numeric", minute: "2-digit" }).format(new Date(event.at))}</> : <>&nbsp;</>}
               </span>
             </div>
             {index < events.length - 1 ? <div className="mt-3.5 h-px w-12 self-start bg-border sm:w-20" /> : null}

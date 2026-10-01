@@ -86,5 +86,98 @@ export const calculatorFaqsFr = [
   },
 ]
 
+export const calculatorFaqsEs = [
+  {
+    q: "¿Qué es una calculadora de ingresos por llamadas perdidas?",
+    a: "Una calculadora de ingresos por llamadas perdidas estima cuánto trabajo reservado puede estar en riesgo cuando nadie contesta. Toma sus llamadas perdidas, filtra las oportunidades de trabajo reales, aplica su tasa de reserva y multiplica el resultado por el valor medio de sus trabajos.",
+  },
+  {
+    q: "¿Qué tan precisa es esta calculadora?",
+    a: "Es muy precisa si conoce sus números. La fórmula no tiene trucos: multiplica sus llamadas perdidas reales por sus tasas de conversión habituales para mostrarle exactamente cuánto está dejando sobre la mesa.",
+  },
+  {
+    q: "¿Cuántos ingresos puede costar una sola llamada perdida?",
+    a: "Depende del oficio y del trabajo. Una consulta perdida de mantenimiento de jardines puede valer meses de trabajo recurrente, mientras que una llamada perdida de plomería, climatización, techos o electricidad puede ser una reparación o instalación de alto valor. Use el valor medio de sus trabajos para obtener la estimación más realista.",
+  },
+  {
+    q: "¿Incluye las llamadas fuera de horario?",
+    a: "Sí. Si su teléfono suena de noche y no contesta, es una llamada perdida. En oficios de urgencias como plomería o climatización, las llamadas fuera de horario suelen tener un valor medio por trabajo y una tasa de reserva mucho más altos que las diurnas.",
+  },
+  {
+    q: "¿Qué cifra debo usar como valor medio por trabajo?",
+    a: "Tome sus ingresos de los últimos 30 días y divídalos por el número de trabajos terminados. Si hace tanto pequeñas visitas de servicio como grandes instalaciones, use el promedio combinado para una estimación prudente.",
+  },
+  {
+    q: "¿Y si no conozco mi tasa de reserva?",
+    a: "Empiece con una estimación prudente y vuelva a usar la calculadora con un segundo escenario. Por ejemplo, compare una tasa de reserva del 25% con una del 50%. La diferencia muestra cuánto dependen sus ingresos de contestar y calificar las llamadas rápido.",
+  },
+  {
+    q: "¿Debo incluir llamadas de spam o de proveedores?",
+    a: "No. Inclúyalas en el total de llamadas perdidas solo si reduce la tasa de oportunidades para compensarlas. La calculadora estima los ingresos perdidos por trabajos, así que el spam, los proveedores, los números equivocados y las llamadas sin intención de compra no deben contarse como oportunidades reales.",
+  },
+  {
+    q: "¿Una recepcionista con IA reemplazará a mi jefe de oficina?",
+    a: "No. LobbyStack está pensado para el trabajo repetitivo de primera línea: responder preguntas básicas, recoger los datos de cada solicitud y reservar citas. Su jefe de oficina puede centrarse en la coordinación compleja de trabajos, los pedidos de piezas y la atención al cliente.",
+  },
+  {
+    q: "¿Es lo mismo que una calculadora de ROI de un servicio de contestador?",
+    a: "Es muy parecido. Esta calculadora muestra los ingresos que pueden estar en riesgo por las llamadas perdidas. Para pensar en el ROI, compare esa estimación con el costo mensual de un servicio de contestador o de una recepcionista con IA que pueda contestar, calificar y reservar más de esas llamadas.",
+  },
+  {
+    q: "¿Están garantizados los ingresos recuperados?",
+    a: "No. Son estimaciones para planificar. Sin embargo, si una recepcionista con IA contesta una llamada que habría ido al buzón de voz y reserva a ese cliente potencial, son ingresos recuperados sin duda.",
+  },
+]
+
+export const calculatorFaqsSr = [
+  {
+    q: "Šta je kalkulator prihoda od propuštenih poziva?",
+    a: "Kalkulator prihoda od propuštenih poziva procenjuje koliko zakazanog posla može biti u riziku kada se niko ne javi. Uzima Vaše propuštene pozive, izdvaja prave prilike za posao, primenjuje Vašu stopu zakazivanja i množi rezultat prosečnom vrednošću posla.",
+  },
+  {
+    q: "Koliko je ovaj kalkulator tačan?",
+    a: "Veoma je tačan ako znate svoje brojke. Formula nema trikova: množi Vaše stvarne propuštene pozive Vašim uobičajenim stopama konverzije i pokazuje tačno koliko novca ostavljate na stolu.",
+  },
+  {
+    q: "Koliko prihoda može da košta jedan propušten poziv?",
+    a: "Zavisi od zanata i posla. Propušten upit za održavanje dvorišta može da vredi mesecima ponovljenog posla, dok propušten poziv za vodoinstalaterske radove, grejanje i klimatizaciju, krov ili struju može da znači vredan popravak ili ugradnju. Za najrealniju procenu koristite prosečnu vrednost svog posla.",
+  },
+  {
+    q: "Da li su uključeni pozivi van radnog vremena?",
+    a: "Da. Ako Vam telefon zazvoni noću, a Vi se ne javite, to je propušten poziv. U hitnim zanatima kao što su vodoinstalaterski radovi ili grejanje i klimatizacija, pozivi van radnog vremena često imaju mnogo veću prosečnu vrednost posla i stopu zakazivanja od dnevnih poziva.",
+  },
+  {
+    q: "Šta da unesem kao prosečnu vrednost posla?",
+    a: "Uzmite prihod iz poslednjih 30 dana i podelite ga brojem završenih poslova. Ako radite i male servisne intervencije i velike ugradnje, koristite zajednički prosek za opreznu procenu.",
+  },
+  {
+    q: "Šta ako ne znam svoju stopu zakazivanja?",
+    a: "Počnite sa opreznom procenom i pokrenite kalkulator ponovo sa drugim scenarijom. Na primer, uporedite stopu zakazivanja od 25% sa stopom od 50%. Razlika pokazuje koliko Vaš prihod zavisi od brzog javljanja i kvalifikovanja poziva.",
+  },
+  {
+    q: "Da li da uračunam spam pozive i pozive dobavljača?",
+    a: "Ne. Uračunajte ih u ukupan broj propuštenih poziva samo ako smanjite procenat pravih prilika da biste ih izjednačili. Kalkulator procenjuje izgubljeni prihod od poslova, pa spam, dobavljači, pogrešni brojevi i pozivi bez namere kupovine ne treba da se računaju kao prave prilike.",
+  },
+  {
+    q: "Da li će AI recepcioner zameniti mog office menadžera?",
+    a: "Ne. LobbyStack je napravljen za ponavljajući posao na prvoj liniji: odgovaranje na osnovna pitanja, prikupljanje podataka o upitu i zakazivanje termina. Vaš office menadžer može da se fokusira na složeno raspoređivanje ekipa, naručivanje delova i brigu o klijentima.",
+  },
+  {
+    q: "Da li je ovo isto što i kalkulator povrata ulaganja za call centar?",
+    a: "Veoma je slično. Ovaj kalkulator pokazuje prihod koji može biti u riziku zbog propuštenih poziva. Da biste razmotrili povrat ulaganja, uporedite tu procenu sa mesečnom cenom call centra ili AI recepcionera koji može da odgovori na više tih poziva, kvalifikuje ih i zakaže.",
+  },
+  {
+    q: "Da li je vraćeni prihod zagarantovan?",
+    a: "Ne. Ovo su procene za planiranje. Ali ako AI recepcioner odgovori na poziv koji bi inače otišao na govornu poštu i uspešno zakaže termin tom potencijalnom klijentu, to je sigurno vraćen prihod.",
+  },
+]
+
+const calculatorFaqsByLocale = {
+  en: calculatorFaqs,
+  fr: calculatorFaqsFr,
+  es: calculatorFaqsEs,
+  sr: calculatorFaqsSr,
+} satisfies Record<Locale, typeof calculatorFaqs>
+
 export const getCalculatorFaqs = (locale: Locale = "en") =>
-  locale === "fr" ? calculatorFaqsFr : calculatorFaqs
+  calculatorFaqsByLocale[locale]

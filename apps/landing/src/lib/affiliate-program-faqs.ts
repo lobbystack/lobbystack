@@ -71,6 +71,79 @@ const FR_FAQS: AffiliateProgramFaq[] = [
   },
 ]
 
+const ES_FAQS: AffiliateProgramFaq[] = [
+  {
+    question: "¿Cuánto gano?",
+    answer:
+      "Recibe el 20% de cada pago de plan alojado durante 12 meses después de que alguien se registre con su enlace. Un cliente Pro con plan mensual le paga hasta $240 ese primer año.",
+  },
+  {
+    question: "¿Cuánto ahorran los negocios referidos?",
+    answer:
+      "Obtienen un 5% de descuento en los planes alojados de LobbyStack cuando se registran con su enlace.",
+  },
+  {
+    question: "¿Cuándo recibo el pago?",
+    answer:
+      "Retenemos cada comisión durante 30 días y luego la sumamos a su saldo. Pagamos por PayPal cuando su saldo llega a $100.",
+  },
+  {
+    question: "¿Para quién es este programa?",
+    answer:
+      "Para agencias, consultores, creadores y operadores que ya recomiendan herramientas a pequeños negocios: salones, clínicas, contratistas, servicios a domicilio y otros equipos que trabajan con muchas citas.",
+  },
+  {
+    question: "¿Cómo empiezo?",
+    answer:
+      "Inicie sesión, abra Programa de afiliados en su panel, añada su correo de PayPal y comparta su enlace.",
+  },
+  {
+    question: "¿Cuentan los registros autoalojados?",
+    answer:
+      "No. Solo gana comisión por los pagos de planes alojados de LobbyStack. Si alguien usa el autoalojamiento sin una suscripción de pago a LobbyStack, ese referido no genera comisión.",
+  },
+]
+
+const SR_FAQS: AffiliateProgramFaq[] = [
+  {
+    question: "Koliko zarađujem?",
+    answer:
+      "Dobijate 20% od svake uplate za hostovani paket tokom 12 meseci nakon što se neko registruje preko Vašeg linka. Pro klijent na mesečnom paketu Vam donosi do $240 te prve godine.",
+  },
+  {
+    question: "Koliko štede preporučene firme?",
+    answer:
+      "Dobijaju 5% popusta na hostovane LobbyStack pakete kada se registruju preko Vašeg linka.",
+  },
+  {
+    question: "Kada dobijam isplatu?",
+    answer:
+      "Svaku proviziju zadržavamo 30 dana, a zatim je dodajemo na Vaše stanje. Isplaćujemo putem PayPal-a kada stanje dostigne $100.",
+  },
+  {
+    question: "Kome je program namenjen?",
+    answer:
+      "Agencijama, konsultantima, kreatorima i operaterima koji već preporučuju alate malim firmama: salonima, klinikama, izvođačima radova, kućnim servisima i drugim timovima koji rade sa mnogo termina.",
+  },
+  {
+    question: "Kako da počnem?",
+    answer:
+      "Prijavite se, otvorite Partnerski program na kontrolnoj tabli, dodajte svoju PayPal e-adresu i podelite link.",
+  },
+  {
+    question: "Da li se računaju registracije za samostalno hostovanje?",
+    answer:
+      "Ne. Proviziju zarađujete samo na uplatama za hostovane LobbyStack pakete. Ako neko samostalno hostuje bez plaćene LobbyStack pretplate, ta preporuka ne donosi proviziju.",
+  },
+]
+
+const FAQS_BY_LOCALE = {
+  en: EN_FAQS,
+  fr: FR_FAQS,
+  es: ES_FAQS,
+  sr: SR_FAQS,
+} satisfies Record<Locale, AffiliateProgramFaq[]>
+
 export function getAffiliateProgramFaqs(locale: Locale): AffiliateProgramFaq[] {
-  return locale === "fr" ? FR_FAQS : EN_FAQS
+  return FAQS_BY_LOCALE[locale]
 }

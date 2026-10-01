@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/table";
 import type { CallOutcome } from "../../../../packages/domain/src/server/callOutcome";
 import { formatCallOutcomeSummary } from "@/lib/call-outcome";
-import { formatDateTime } from "@/lib/locale";
+import { intlLocale, formatDateTime } from "@/lib/locale";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 type Business = { businessId: string; active: boolean };
@@ -193,7 +193,7 @@ export function LiveCallsSurface() {
           <div className="inline-flex shrink-0 items-center gap-2">
             {activeCalls.isLoading ? <Skeleton className="h-6 w-8" /> : liveCalls === null
               ? <span className="text-sm text-muted-foreground">{t("page.liveUnavailable")}</span>
-              : <span className="text-base font-semibold leading-none">{liveCalls.toLocaleString(i18n.language)}</span>}
+              : <span className="text-base font-semibold leading-none">{liveCalls.toLocaleString(intlLocale(i18n.language))}</span>}
             {!activeCalls.isLoading && <span className="relative flex size-2.5 shrink-0" aria-hidden="true" data-testid="live-call-indicator">
               {liveCalls !== null && liveCalls > 0 && <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500/45" />}
               <span className={`relative inline-flex size-2.5 rounded-full ${liveCalls === null ? "bg-muted-foreground" : "bg-emerald-500"}`} />

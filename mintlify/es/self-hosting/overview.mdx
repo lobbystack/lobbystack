@@ -1,0 +1,55 @@
+---
+title: "Entienda el autoalojamiento"
+description: "Conozca los servicios que ejecuta una implementación autoalojada de LobbyStack, cómo circulan los datos de las llamadas entre ellos y qué partes opera usted, desde Railway hasta sus propios servidores."
+sidebarTitle: "Descripción general del autoalojamiento"
+contentType: "Conceptual"
+---
+
+LobbyStack puede ejecutarse en un solo host de Docker o como servicios gestionados independientes. El autoalojamiento le da control sobre los datos de la aplicación, las credenciales, el uso de los proveedores, las copias de seguridad y las actualizaciones.
+
+<Note>
+  Las llamadas en vivo siguen necesitando Twilio, OpenAI y un endpoint HTTPS público para el panel. Las llamadas telefónicas también necesitan un trunk Elastic SIP de Twilio que envíe las llamadas a su proyecto de OpenAI.
+</Note>
+
+## Implemente en Railway
+
+La [plantilla de LobbyStack para Railway](https://railway.com/deploy/lobbystack) implementa los servicios de administración, worker y migración con PostgreSQL, Redis y un bucket de almacenamiento. Railway genera todos los secretos y las contraseñas de las bases de datos. Usted introduce una clave de API de OpenAI y sus credenciales de Twilio, y luego crea su cuenta en el dominio de administración.
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/lobbystack)
+
+## Base oficial
+
+El archivo [`docker-compose.yml`](https://github.com/lobbystack/lobbystack/blob/main/docker-compose.yml) del repositorio ejecuta:
+
+- PostgreSQL con pgvector para los datos persistentes, el estado de autenticación y los embeddings de conocimiento
+- Redis para las colas, los límites de frecuencia y la coordinación en tiempo real
+- un volumen persistente de Docker para las grabaciones y los documentos subidos
+- el panel de administración de Next.js y la API HTTP
+- el worker en segundo plano y el despachador de la bandeja de salida transaccional, que también ejecuta cada llamada de GPT-Live
+- Caddy para dirigir el nombre de host del panel por HTTP simple, detrás del proxy o balanceador de carga que termina HTTPS
+
+LobbyStack no agrega contenedores de monitoreo a la pila de Compose. Los entornos de ejecución del servidor pueden enviar trazas, métricas y registros de OpenTelemetry a un backend compatible con OTLP que usted configure.
+
+## Flujo de datos
+
+1. El panel y la API leen y escriben en PostgreSQL mediante conexiones específicas de cada rol y seguridad a nivel de fila.
+2. Los efectos secundarios persistentes entran en la bandeja de salida de PostgreSQL en la misma transacción que los cambios de estado del negocio.
+3. El worker despacha los trabajos en cola y actualiza las instantáneas del contexto del negocio.
+4. OpenAI aloja el audio de las llamadas. El servicio de administración inicia cada llamada con la instantánea del negocio, y el worker responde a las solicitudes de GPT-Live sobre reservas, mensajes y transferencias.
+5. El servicio de administración y el worker comparten el proveedor de almacenamiento configurado. Las implementaciones de Compose en un solo host usan por defecto un volumen local persistente.
+
+## Responsabilidades
+
+Usted es responsable de:
+
+- la durabilidad de PostgreSQL, Redis y el almacenamiento de archivos
+- las copias de seguridad, los simulacros de restauración, las actualizaciones y el monitoreo
+- el DNS público y el TLS del panel
+- las credenciales de Twilio, OpenAI, correo electrónico, calendario, facturación y analíticas
+- la rotación de secretos y los roles de base de datos con privilegios mínimos
+
+Continúe con la [guía de implementación con Docker Compose](/es/self-hosting/docker-compose), las [variables de entorno](/es/self-hosting/environment-variables) y la [referencia de proveedores](/es/self-hosting/providers).
+
+<Warning>
+  El almacenamiento local requiere que el servicio de administración y el worker se ejecuten en el mismo host de Docker. Las implementaciones con contenedores de la aplicación en más de un host deben configurar `STORAGE_PROVIDER=s3` y usar AWS S3 o un servicio compatible.
+</Warning>

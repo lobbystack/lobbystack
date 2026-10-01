@@ -90,5 +90,102 @@ export const homeFaqsFr: FaqItem[] = [
   },
 ]
 
+export const homeFaqsEs: FaqItem[] = [
+  {
+    question:
+      "¿Puedo personalizar el saludo y el tono de mi recepcionista con IA?",
+    answer:
+      "Sí. LobbyStack le permite personalizar el saludo, el tono, las instrucciones del negocio y las reglas de atención de llamadas para que su recepcionista con IA suene acorde con su marca.",
+  },
+  {
+    question: "¿Qué ocurre si la persona que llama pregunta algo inusual?",
+    answer:
+      "Usted define qué hacer en esos casos. LobbyStack puede tomar un mensaje para su equipo o transferir la llamada a una persona.",
+  },
+  {
+    question: "¿Puede LobbyStack reservar citas directamente en mi calendario?",
+    answer:
+      "Sí. LobbyStack puede consultar la disponibilidad, ofrecer horarios, reservar la cita y enviar los detalles de confirmación a la persona que llama.",
+  },
+  {
+    question:
+      "¿Puede la recepcionista con IA enviar un resumen de la llamada a mi teléfono?",
+    answer:
+      "Sí. LobbyStack le envía un correo electrónico después de cada llamada con los datos de quien llamó, el motivo, el resultado y el siguiente paso. En los planes de pago, también puede activar alertas por SMS.",
+  },
+  {
+    question: "¿Qué llamadas debería seguir atendiendo una persona?",
+    answer:
+      "LobbyStack funciona muy bien para preguntas rutinarias, reservas, toma de datos y calificación de clientes potenciales. Las negociaciones complejas, las situaciones delicadas, los casos urgentes y el soporte técnico especializado se pueden transferir a su equipo.",
+  },
+  {
+    question: "¿LobbyStack es de código abierto?",
+    answer:
+      "Sí. LobbyStack es una recepcionista con IA de código abierto. Puede usar LobbyStack Cloud como servicio alojado o autoalojar todo el sistema cuando quiera más control sobre la infraestructura y los datos de sus clientes.",
+  },
+  {
+    question: "¿Cuánto cuesta una recepcionista con IA?",
+    answer:
+      "LobbyStack empieza gratis con 30 minutos de voz al mes para llamadas de prueba en el navegador. Los planes de pago empiezan en $30 al mes para Starter y $100 al mes para Pro, con cargos adicionales según el uso. Enterprise ofrece precios para mayor volumen y soporte de autoalojamiento.",
+  },
+  {
+    question:
+      "¿En qué se diferencia LobbyStack de un menú telefónico o un buzón de voz?",
+    answer:
+      "Un menú telefónico obliga a quien llama a pasar por opciones rígidas, y el buzón de voz le pide esperar a que le devuelvan la llamada. LobbyStack responde con naturalidad, usa el conocimiento de su negocio, puede reservar citas durante la llamada y envía a su equipo un resumen con contexto en lugar de un simple mensaje.",
+  },
+]
+
+export const homeFaqsSr: FaqItem[] = [
+  {
+    question: "Mogu li da prilagodim pozdrav i ton svog AI recepcionera?",
+    answer:
+      "Da. LobbyStack Vam omogućava da prilagodite pozdrav, ton, uputstva o poslovanju i pravila za obradu poziva, tako da AI recepcioner zvuči u skladu sa Vašim brendom.",
+  },
+  {
+    question: "Šta se dešava kada pozivalac pita nešto neuobičajeno?",
+    answer:
+      "Vi određujete šta se tada dešava. LobbyStack može da primi poruku za Vaš tim ili da preusmeri pozivaoca na čoveka.",
+  },
+  {
+    question: "Može li LobbyStack da zakazuje termine direktno u moj kalendar?",
+    answer:
+      "Da. LobbyStack može da proveri slobodne termine, ponudi vreme, zakaže termin i pošalje pozivaocu potvrdu sa detaljima.",
+  },
+  {
+    question: "Može li AI recepcioner da mi pošalje rezime poziva na telefon?",
+    answer:
+      "Da. LobbyStack Vam posle svakog poziva šalje imejl sa podacima pozivaoca, razlogom poziva, ishodom i sledećim korakom. Na plaćenim paketima možete uključiti i SMS obaveštenja.",
+  },
+  {
+    question: "Koji pozivi i dalje treba da idu čoveku?",
+    answer:
+      "LobbyStack je odličan za rutinska pitanja, zakazivanje, prikupljanje podataka i procenu potencijalnih klijenata. Složeni pregovori, osetljive situacije, hitni slučajevi i specijalizovana tehnička podrška mogu se preusmeriti Vašem timu.",
+  },
+  {
+    question: "Da li je LobbyStack otvorenog koda?",
+    answer:
+      "Da. LobbyStack je AI recepcioner otvorenog koda. Možete koristiti LobbyStack Cloud kao hostovano rešenje ili sami hostovati ceo sistem kada želite veću kontrolu nad infrastrukturom i podacima klijenata.",
+  },
+  {
+    question: "Koliko košta AI recepcioner?",
+    answer:
+      "LobbyStack možete početi da koristite besplatno, sa 30 minuta razgovora mesečno za probne pozive u pregledaču. Plaćeni paketi počinju od $30 mesečno za Starter i $100 mesečno za Pro, uz dodatnu naplatu prema potrošnji. Enterprise cene su dostupne za veći obim poziva i podršku za samostalno hostovanje.",
+  },
+  {
+    question:
+      "Po čemu se LobbyStack razlikuje od glasovnog menija ili govorne pošte?",
+    answer:
+      "Glasovni meni vodi pozivaoce kroz krute opcije, a govorna pošta traži od njih da čekaju povratni poziv. LobbyStack odgovara prirodno, koristi znanje o Vašoj firmi, može da zakaže termin tokom poziva i šalje Vašem timu rezime sa kontekstom umesto obične poruke.",
+  },
+]
+
+const homeFaqsByLocale: Record<Locale, FaqItem[]> = {
+  en: homeFaqs,
+  fr: homeFaqsFr,
+  es: homeFaqsEs,
+  sr: homeFaqsSr,
+}
+
 export const getHomeFaqs = (locale: Locale): FaqItem[] =>
-  locale === "fr" ? homeFaqsFr : homeFaqs
+  homeFaqsByLocale[locale] ?? homeFaqs

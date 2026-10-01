@@ -1,0 +1,163 @@
+{
+  "page": {
+    "title": "Kontakti",
+    "description": "Upravljajte ljudima koji stoje iza Vaših poziva, poruka i zakazivanja.",
+    "searchPlaceholder": "Pretražite kontakte..."
+  },
+  "table": {
+    "contact": "Kontakt",
+    "channels": "Kanali",
+    "activity": "Aktivnost",
+    "appointments": "Termini",
+    "lastInteraction": "Poslednja interakcija",
+    "messages": "Poruke: {{count}}",
+    "calls": "Pozivi: {{count}}",
+    "unknownContact": "Nepoznat kontakt",
+    "empty": "Nijedan kontakt ne odgovara trenutnoj pretrazi.",
+    "status": {
+      "blocked": "Blokiran"
+    },
+    "actions": {
+      "moreOptions": "Još opcija",
+      "blockContact": "Blokiraj kontakt",
+      "unblockContact": "Odblokiraj kontakt",
+      "blockTitle": "Blokirati kontakt?",
+      "blockDescription": "Novi SMS odgovori biće zaustavljeni, a novi dolazni pozivi sa ovog kontakta biće odmah prekinuti.",
+      "blockConfirm": "Blokiraj kontakt",
+      "blockCancel": "Otkaži",
+      "blockSuccess": "Kontakt je blokiran.",
+      "unblockTitle": "Odblokirati kontakt?",
+      "unblockDescription": "Novi SMS odgovori i dolazni pozivi za ovaj kontakt ponovo će biti dozvoljeni.",
+      "unblockConfirm": "Odblokiraj kontakt",
+      "unblockSuccess": "Kontakt je odblokiran.",
+      "updateFailed": "Nije moguće ažurirati status blokiranja.",
+      "deleteContact": "Izbriši kontakt",
+      "deleteTitle": "Izbrisati kontakt?",
+      "deleteDescription": "Kontakt će biti trajno uklonjen sa Vaše kontrolne table.",
+      "deleteConfirm": "Izbriši kontakt",
+      "deleteCancel": "Otkaži",
+      "deleteFailed": "Nije moguće izbrisati kontakt."
+    }
+  },
+  "detail": {
+    "backToList": "Kontakti",
+    "unknownContact": "Nepoznat kontakt",
+    "notFound": "Kontakt nije pronađen",
+    "notFoundDescription": "Ovaj kontakt je možda uklonjen ili nemate pristup.",
+    "metadata": {
+      "phone": "Telefon",
+      "email": "Imejl",
+      "firstSeen": "Prvi kontakt"
+    },
+    "blocking": {
+      "badge": "Blokiran",
+      "active": "Aktivan",
+      "blockAction": "Blokiraj kontakt",
+      "unblockAction": "Odblokiraj kontakt",
+      "blockTitle": "Blokirati kontakt?",
+      "blockDescription": "Novi SMS odgovori biće zaustavljeni, a novi dolazni pozivi sa ovog kontakta biće odmah prekinuti.",
+      "blockConfirm": "Blokiraj kontakt",
+      "blockSuccess": "Kontakt je blokiran.",
+      "unblockTitle": "Odblokirati kontakt?",
+      "unblockDescription": "Novi SMS odgovori i dolazni pozivi za ovaj kontakt ponovo će biti dozvoljeni.",
+      "unblockConfirm": "Odblokiraj kontakt",
+      "unblockSuccess": "Kontakt je odblokiran.",
+      "blockedAtInline": "Blokiran {{time}}",
+      "cancel": "Otkaži",
+      "updateFailed": "Nije moguće ažurirati status blokiranja."
+    },
+    "stats": {
+      "calls": "Pozivi",
+      "messages": "Poruke",
+      "appointments": "Termini",
+      "conversations": "Razgovori"
+    },
+    "tabs": {
+      "activity": "Aktivnost",
+      "appointments": "Termini",
+      "details": "Detalji"
+    },
+    "activity": {
+      "empty": "Još nema zabeleženih interakcija.",
+      "callInbound": "Dolazni poziv",
+      "callBlocked": "blokiran",
+      "callCompleted": "završen",
+      "callFailed": "neuspešan",
+      "callInProgress": "u toku",
+      "smsInbound": "Dolazni SMS",
+      "smsOutbound": "Odlazni SMS",
+      "messageSent": "Poslato",
+      "messageReceived": "Primljeno",
+      "smsConversation": "SMS",
+      "appointmentScheduled": "Termin",
+      "withStaff": "kod: {{staff}}"
+    },
+    "appointments": {
+      "empty": "Ovaj kontakt nema termina.",
+      "service": "Usluga",
+      "staff": "Zaposleni",
+      "dateTime": "Datum i vreme",
+      "status": "Status",
+      "channel": "Kanal",
+      "syncState": "Kalendar",
+      "booked": "Zakazano",
+      "confirmed": "Potvrđeno",
+      "completed": "Završeno",
+      "cancelled": "Otkazano",
+      "pending": "Na čekanju",
+      "sourceValues": {
+        "voice": "Glas",
+        "sms": "SMS",
+        "dashboard": "Kontrolna tabla"
+      },
+      "syncStateValues": {
+        "notRequired": "Nije potrebno",
+        "pending": "Na čekanju",
+        "syncing": "Sinhronizacija",
+        "synced": "Sinhronizovano",
+        "failed": "Neuspešno",
+        "drifted": "Treba proveriti"
+      }
+    },
+    "details": {
+      "contactInfoTitle": "Podaci o kontaktu",
+      "name": "Ime",
+      "phone": "Telefon",
+      "email": "Imejl",
+      "timezone": "Vremenska zona",
+      "preferredLocale": "Željeni jezik",
+      "blockingTitle": "Blokiranje kontakta",
+      "blockingStatus": "Status",
+      "blockedAt": "Blokiran",
+      "blockedBy": "Blokirao",
+      "smsConsentTitle": "Saglasnost za SMS",
+      "smsConsentStatus": "Status",
+      "smsConsentUpdatedAt": "Poslednja izmena",
+      "smsConsentSource": "Izvor",
+      "smsConsentStatusValues": {
+        "subscribed": "Prijavljen",
+        "optedOut": "Odjavljen"
+      },
+      "smsConsentSourceValues": {
+        "twilioStop": "Twilio STOP",
+        "twilioStart": "Twilio START",
+        "keywordStop": "Ključna reč STOP",
+        "keywordStart": "Ključna reč START"
+      },
+      "copy": "Kopiraj",
+      "systemTitle": "Sistem",
+      "contactId": "ID kontakta",
+      "createdAt": "Kreirano",
+      "notSet": "—"
+    }
+  },
+  "pagination": {
+    "rowsPerPage": "Redova po stranici",
+    "pageOf": "Stranica {{page}} od {{total}}",
+    "firstPage": "Idi na prvu stranicu",
+    "previousPage": "Idi na prethodnu stranicu",
+    "nextPage": "Idi na sledeću stranicu",
+    "lastPage": "Idi na poslednju stranicu",
+    "goToPage": "Idi na stranicu {{page}}"
+  }
+}

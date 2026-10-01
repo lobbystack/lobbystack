@@ -40,6 +40,21 @@ function resolveOrigin(): string {
   return window.origin;
 }
 
+type LoaderLabels = { title: string; open: string; close: string };
+
+const LOADER_LABELS: Record<"en" | "fr" | "es" | "sr", LoaderLabels> = {
+  en: { title: "Chat with us", open: "Open chat", close: "Close chat" },
+  fr: { title: "Discutez avec nous", open: "Ouvrir la discussion", close: "Fermer la discussion" },
+  es: { title: "Escríbanos", open: "Abrir el chat", close: "Cerrar el chat" },
+  sr: { title: "Pišite nam", open: "Otvori čet", close: "Zatvori čet" },
+};
+
+/** Labels for the bubble and frame in the host page's language, English otherwise. */
+export function loaderLabels(language: string): LoaderLabels {
+  const primary = language.trim().toLowerCase().split(/[-_]/)[0];
+  return primary === "fr" || primary === "es" || primary === "sr" ? LOADER_LABELS[primary] : LOADER_LABELS.en;
+}
+
 function currentScriptAttribute(name: string): string | null {
   const script = document.currentScript as HTMLScriptElement | null;
   return script?.getAttribute(name) ?? null;
@@ -67,8 +82,7 @@ export function initWidget(): boolean {
   if (!widgetKey) return false;
   const position = (currentScriptAttribute("data-position") as "bottom-left" | "bottom-center" | "bottom-right" | null) ?? "bottom-right";
   const color = currentScriptAttribute("data-color") ?? "#0f766e";
-  const french = (currentScriptAttribute("data-locale") ?? document.documentElement.lang ?? "en").toLowerCase().startsWith("fr");
-  const labels = french ? { title: "Discutez avec nous", open: "Ouvrir la discussion", close: "Fermer la discussion" } : { title: "Chat with us", open: "Open chat", close: "Close chat" };
+  const labels = loaderLabels(currentScriptAttribute("data-locale") ?? document.documentElement.lang ?? "en");
   const adminOrigin = resolveOrigin() || window.origin;
   let visitorId = makeVisitorId(widgetKey);
   const frameSrc = `${adminOrigin}/embed/${encodeURIComponent(widgetKey)}`;

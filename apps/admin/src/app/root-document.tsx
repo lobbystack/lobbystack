@@ -1,6 +1,6 @@
 import { Providers } from "@/app/providers";
 import { resourcesForRoute } from "@/lib/i18n-resources";
-import type { SupportedLocale } from "@/lib/locale";
+import { localeTag, type SupportedLocale } from "@/lib/locale";
 import type { LocaleSource } from "@/lib/locale-request";
 
 export const appMetadata = {
@@ -20,7 +20,7 @@ export function RootDocument({
   namespaces: readonly string[];
 }) {
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={localeTag(locale)} suppressHydrationWarning>
       <body>
         <Providers
           initialLocale={locale}

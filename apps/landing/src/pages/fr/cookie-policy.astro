@@ -27,6 +27,15 @@ const cookieRows = [
   },
   {
     category: "Nécessaire",
+    source: "LobbyStack",
+    name: "lobbystack.locale",
+    duration: "1 an",
+    purpose:
+      "Retient la langue que vous choisissez dans le pied de page pour vous l'afficher lors de votre prochaine visite.",
+    storage: "Cookie sur lobbystack.com",
+  },
+  {
+    category: "Nécessaire",
     source: "Cloudflare",
     name: "__cf_bm, cf_clearance, _cfuvid ou similaires",
     duration: "Session à 1 an, selon le cookie",
@@ -301,5 +310,5 @@ const cookieRows = [
       </article>
     </section>
   </main>
-  <Footer locale={locale} />
+  <Footer locale={locale} path={Astro.url.pathname} />
 </Layout>

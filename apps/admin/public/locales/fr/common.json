@@ -1,7 +1,13 @@
 {
   "appName": "LobbyStack",
-  "accessibility": { "close": "Fermer", "toggleSidebar": "Afficher ou masquer la barre latérale", "skipToContent": "Aller au contenu principal" },
-  "errors": { "unexpected": "Une erreur est survenue. Veuillez réessayer." },
+  "accessibility": {
+    "close": "Fermer",
+    "toggleSidebar": "Afficher ou masquer la barre latérale",
+    "skipToContent": "Aller au contenu principal"
+  },
+  "errors": {
+    "unexpected": "Une erreur est survenue. Veuillez réessayer."
+  },
   "loading": {
     "title": "Chargement...",
     "retry": "Réessayer le chargement",
@@ -12,7 +18,9 @@
     "label": "Langue",
     "ariaLabel": "Choisir la langue du tableau de bord",
     "english": "English",
-    "french": "Français"
+    "french": "Français",
+    "spanish": "Español",
+    "serbian": "Srpski"
   },
   "badges": {
     "live": "Actif",
@@ -96,6 +104,7 @@
   "appointments": {
     "title": "Rendez-vous",
     "summary_one": "{{name}} · {{count}} rendez-vous à venir",
+    "summary_many": "{{name}} · {{count}} rendez-vous à venir",
     "summary_other": "{{name}} · {{count}} rendez-vous à venir",
     "chooseWorkspace": "Choisissez un espace pour consulter les rendez-vous.",
     "refresh": "Actualiser",
@@ -147,6 +156,7 @@
     "runningHint": "{{imported}} pages lues jusqu'ici, {{indexed}} prêtes à répondre.",
     "doneTitle": "Votre agent a lu {{host}}",
     "doneHint_one": "{{count}} page est prête à répondre.",
+    "doneHint_many": "{{count}} pages sont prêtes à répondre.",
     "doneHint_other": "{{count}} pages sont prêtes à répondre.",
     "failedTitle": "Nous n'avons pas pu lire {{host}}",
     "failedHint": "Ajoutez vos informations à la main, ou relancez l'import depuis votre tableau de bord."

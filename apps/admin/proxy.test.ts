@@ -29,6 +29,25 @@ it("overwrites supplied locale headers and tolerates malformed cookies", () => {
   expect(response.headers.get("vary")).toBe("Accept-Encoding");
 });
 
+it("serves Spanish and Serbian public pages with their language tags", () => {
+  const spanish = proxy(new NextRequest("http://localhost:3210/es/login"));
+  expect(spanish.headers.get("x-middleware-request-x-lobbystack-locale")).toBe("es");
+  expect(spanish.headers.get("content-language")).toBe("es");
+
+  const serbian = proxy(new NextRequest("http://localhost:3210/sr/signup"));
+  expect(serbian.headers.get("x-middleware-request-x-lobbystack-locale")).toBe("sr");
+  // Serbian pages are written in Latin script only.
+  expect(serbian.headers.get("content-language")).toBe("sr-Latn");
+
+  const negotiated = proxy(new NextRequest("http://localhost:3210/login", { headers: { "accept-language": "sr-RS,sr;q=0.9,en;q=0.4" } }));
+  expect(negotiated.status).toBe(308);
+  expect(negotiated.headers.get("location")).toBe("http://localhost:3210/sr/login");
+
+  const explicit = proxy(new NextRequest("http://localhost:3210/fr/login?lng=es"));
+  expect(explicit.headers.get("location")).toBe("http://localhost:3210/es/login");
+  expect(explicit.headers.get("set-cookie")).toContain("lobbystack.locale=es");
+});
+
 it("redirects legacy public URLs to a canonical locale while preserving safe query values", () => {
   const explicit = proxy(new NextRequest("http://localhost:3210/login?lng=fr&returnTo=%2Fsettings&campaign=fall", {
     headers: { cookie: "lobbystack.locale=en", "accept-language": "en-US" },

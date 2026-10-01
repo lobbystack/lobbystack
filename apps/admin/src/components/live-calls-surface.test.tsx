@@ -9,7 +9,7 @@ vi.mock("react-i18next", () => ({ useTranslation: () => ({
   t: (key: string) => key,
 }) }));
 vi.mock("@/components/audio/call-recording-player", () => ({ CallRecordingPlayer: () => null }));
-vi.mock("@/lib/locale", () => ({ formatDateTime: (value: string) => value }));
+vi.mock("@/lib/locale", () => ({ formatDateTime: (value: string) => value, intlLocale: (value: string) => value }));
 
 import { LiveCallsSurface } from "./live-calls-surface";
 

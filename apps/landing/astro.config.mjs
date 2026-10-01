@@ -12,6 +12,12 @@ import { stableLastmodForUrl } from "./src/lib/sitemap.ts"
 const SITE_URL = "https://lobbystack.com"
 const INDEXNOW_KEY = process.env.INDEXNOW_KEY
 const DEFAULT_LOCALE = "en"
+// Keep in sync with SUPPORTED_LOCALES and localeMeta in src/i18n/config.ts.
+const LOCALES = ["en", "fr", "es", "sr"]
+const PREFIXED_LOCALES = LOCALES.filter((locale) => locale !== DEFAULT_LOCALE)
+// hreflang values. Serbian pages are written in Latin script only.
+const HREFLANG = { en: "en", fr: "fr", es: "es", sr: "sr-Latn" }
+const LOCALE_PREFIX_RE = new RegExp(`^/(?:${PREFIXED_LOCALES.join("|")})(?=/|$)`)
 const translatedPathSet = new Set(translatedBasePaths)
 const NOINDEX_PATHS = new Set([
   "/404/",
@@ -43,7 +49,7 @@ const normalizePath = (pathname) => {
 }
 
 const indexingPath = (pathname) =>
-  normalizePath(normalizePath(pathname).replace(/^\/fr(?=\/|$)/, "") || "/")
+  normalizePath(normalizePath(pathname).replace(LOCALE_PREFIX_RE, "") || "/")
 
 const isNoindexPath = (pathname) => NOINDEX_PATHS.has(indexingPath(pathname))
 
@@ -51,7 +57,7 @@ const stripLocaleFromPath = (pathname) => {
   const normalized = normalizePath(pathname)
   const [, maybeLocale, ...rest] = normalized.split("/")
 
-  if (maybeLocale === "fr") {
+  if (PREFIXED_LOCALES.includes(maybeLocale)) {
     const stripped = `/${rest.join("/")}`
     return normalizePath(stripped === "/" ? "/" : stripped)
   }
@@ -64,8 +70,8 @@ const localizePath = (locale, path = "/") => {
 
   if (locale === DEFAULT_LOCALE) return basePath
   if (!translatedPathSet.has(basePath)) return basePath
-  if (basePath === "/") return "/fr/"
-  return `/fr${basePath}`
+  if (basePath === "/") return `/${locale}/`
+  return `/${locale}${basePath}`
 }
 
 const sitemapAlternateLinks = (url) => {
@@ -73,14 +79,10 @@ const sitemapAlternateLinks = (url) => {
   if (!translatedPathSet.has(basePath)) return undefined
 
   return [
-    {
-      lang: "en",
-      url: new URL(localizePath("en", basePath), SITE_URL).toString(),
-    },
-    {
-      lang: "fr",
-      url: new URL(localizePath("fr", basePath), SITE_URL).toString(),
-    },
+    ...LOCALES.map((locale) => ({
+      lang: HREFLANG[locale],
+      url: new URL(localizePath(locale, basePath), SITE_URL).toString(),
+    })),
     {
       lang: "x-default",
       url: new URL(localizePath(DEFAULT_LOCALE, basePath), SITE_URL).toString(),
@@ -95,7 +97,7 @@ export default defineConfig({
     enabled: false,
   },
   i18n: {
-    locales: ["en", "fr"],
+    locales: LOCALES,
     defaultLocale: "en",
     routing: {
       prefixDefaultLocale: false,

@@ -1,0 +1,79 @@
+---
+title: "Configurer les alertes SMS et le consentement"
+description: "Comment LobbyStack recueille le consentement pour les SMS sortants de rendez-vous et les alertes de l'espace de travail."
+sidebarTitle: "Alertes SMS et consentement"
+contentType: "Reference"
+---
+
+LobbyStack utilise un seul numéro SMS sans frais pour les notifications de compte sortantes, sans caractère marketing.
+
+Ce numéro envoie :
+
+- Une confirmation de réservation et un rappel 24 heures avant le rendez-vous, aux clients qui l'acceptent.
+- Des alertes de l'espace de travail aux opérateurs vérifiés.
+
+Ce numéro n'envoie pas de marketing, de promotions, de contenu soumis à une limite d'âge, de réponses SMS générées par l'IA ni de conversations SMS manuelles.
+
+Le forfait Free n'a pas de numéro de téléphone et n'envoie pas de SMS.
+
+Quand un client envoie un texto à votre numéro d'entreprise, LobbyStack enregistre le message dans **Messages** et alerte votre équipe. L'IA ne répond pas. `STOP` et `HELP` reçoivent des réponses fixes.
+
+## Modèle de consentement
+
+LobbyStack recueille le consentement aux SMS avant d'envoyer des alertes.
+
+Les clients qui prennent rendez-vous et les opérateurs utilisent le même numéro sans frais, mais ils donnent leur consentement à des endroits différents.
+
+### Clients qui prennent rendez-vous
+
+Quand un client réserve par téléphone, le réceptionniste IA lui demande un consentement verbal aux SMS avant d'envoyer une confirmation ou un rappel de rendez-vous.
+
+Le message d'information est :
+
+> Puis-je envoyer à ce numéro un texto de confirmation et un rappel pour votre rendez-vous ? Des frais de messagerie et de données peuvent s'appliquer. Répondez STOP pour vous désabonner ou HELP pour obtenir de l'aide.
+
+Si l'appelant accepte, LobbyStack enregistre son consentement et envoie les SMS de rendez-vous à ce numéro de téléphone.
+
+Si l'appelant refuse, le rendez-vous est quand même réservé et aucun SMS de rendez-vous n'est envoyé.
+
+### Opérateurs
+
+Les opérateurs sont les utilisateurs vérifiés de l'espace de travail.
+
+Avant que les alertes de l'espace de travail soient envoyées par SMS à un opérateur, celui-ci doit activer les alertes SMS dans **Réglages** > **Notifications** et accepter le message d'information sur les SMS dans le tableau de bord.
+
+Le message d'information pour les opérateurs est :
+
+> J'accepte de recevoir de LobbyStack des alertes SMS sur les appels manqués, les nouveaux messages, l'activité des rendez-vous et les notifications de l'espace de travail à mon numéro de téléphone vérifié. La fréquence des messages varie. Des frais de messagerie et de données peuvent s'appliquer. Répondez STOP pour vous désabonner ou HELP pour obtenir de l'aide. Les alertes SMS sont facultatives.
+
+Les opérateurs peuvent désactiver les alertes SMS plus tard dans les réglages de notification.
+
+## Exemples de messages
+
+Confirmation de rendez-vous :
+
+> Entreprise Exemple : Votre rendez-vous pour une coupe de cheveux est confirmé le 24 mai à 14 h. Des frais de messagerie et de données peuvent s'appliquer. Répondez STOP pour vous désabonner ou HELP pour obtenir de l'aide.
+
+Alerte pour un opérateur :
+
+> LobbyStack : Nouveau message vocal pour Entreprise Exemple. Ouvrez votre tableau de bord pour le consulter. Des frais de messagerie et de données peuvent s'appliquer. Répondez STOP pour vous désabonner ou HELP pour obtenir de l'aide.
+
+## Désabonnement et aide
+
+Les destinataires peuvent répondre `STOP` pour ne plus recevoir de SMS du numéro d'alerte sans frais.
+
+Les destinataires peuvent répondre `START` ou `SUBSCRIBE` pour se réabonner, lorsque c'est possible.
+
+Les destinataires peuvent répondre `HELP` pour obtenir les coordonnées du support.
+
+Pour obtenir de l'aide, écrivez à [hello@lobbystack.com](mailto:hello@lobbystack.com) ou consultez [https://lobbystack.com](https://lobbystack.com).
+
+Des frais de messagerie et de données peuvent s'appliquer.
+
+## Les SMS sont facultatifs
+
+Les alertes SMS sont facultatives.
+
+Les clients peuvent prendre rendez-vous sans recevoir de confirmation ni de rappel par SMS.
+
+Les opérateurs peuvent utiliser le tableau de bord sans activer les alertes SMS.

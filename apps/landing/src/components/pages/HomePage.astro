@@ -29,6 +29,12 @@ interface Props {
 const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
 const canonicalPath = localizePath(locale, "/")
 const seo = getRouteSeo({ locale, path: "/" })
+const ogImageAlt: Record<Locale, string> = {
+  en: "LobbyStack open-source AI receptionist dashboard and product logo",
+  fr: "Tableau de bord de réceptionniste IA open source LobbyStack et logo produit",
+  es: "Panel de la recepcionista con IA de código abierto LobbyStack y logotipo del producto",
+  sr: "Kontrolna tabla LobbyStack AI recepcionera otvorenog koda i logo proizvoda",
+}
 ---
 
 <Layout
@@ -37,10 +43,7 @@ const seo = getRouteSeo({ locale, path: "/" })
     canonicalPath,
     locale,
     image: "/og/lobbystack-og.webp",
-    imageAlt:
-      locale === "fr"
-        ? "Tableau de bord de réceptionniste IA open source LobbyStack et logo produit"
-        : "LobbyStack open-source AI receptionist dashboard and product logo",
+    imageAlt: ogImageAlt[locale],
     imageWidth: 1200,
     imageHeight: 630,
     jsonLd: [
@@ -68,5 +71,5 @@ const seo = getRouteSeo({ locale, path: "/" })
     <FaqSection locale={locale} />
     <CtaSection locale={locale} />
   </main>
-  <Footer locale={locale} />
+  <Footer locale={locale} path={Astro.url.pathname} />
 </Layout>

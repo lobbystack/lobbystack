@@ -12,6 +12,7 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { PageSurface } from "./page-surface";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { intlLocale } from "@/lib/locale";
 
 type Business = { businessId: string; name: string; slug: string; role: string; active: boolean };
 type Appointment = { id: string; startsAt: string; endsAt: string; timezone: string; status: string; sourceChannel: string; calendarSyncState: string; contactName: string | null; serviceName: string; staffName: string };
@@ -23,7 +24,7 @@ async function getJson<T>(url: string): Promise<T> {
 }
 
 function formatDate(appointment: Appointment, locale: string): string {
-  return new Intl.DateTimeFormat(locale, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: appointment.timezone }).format(new Date(appointment.startsAt));
+  return new Intl.DateTimeFormat(intlLocale(locale), { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: appointment.timezone }).format(new Date(appointment.startsAt));
 }
 
 export function LiveAppointmentsSurface() {

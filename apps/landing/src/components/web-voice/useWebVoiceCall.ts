@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 
+import type { Locale } from "@/i18n"
+
 export type WebVoiceWidgetStatus =
   | "idle"
   | "requesting_microphone"
@@ -10,59 +12,129 @@ export type WebVoiceWidgetStatus =
   | "error"
 
 type UseWebVoiceCallOptions = {
-  locale?: "en" | "fr"
+  locale?: Locale
   businessSlug: string
   endpoint: string
   widgetId?: string
   onEvent?: (eventName: string, properties?: Record<string, unknown>) => void
 }
 
-export const webVoiceStatusLabel: Record<WebVoiceWidgetStatus, string> = {
-  idle: "Ready when you are",
-  requesting_microphone: "Asking for microphone access",
-  connecting: "Connecting to the AI receptionist",
-  connected: "Live with the AI receptionist",
-  ending: "Ending the call",
-  ended: "Call ended",
-  error: "Could not start the call",
+export const webVoiceStatusLabels: Record<
+  Locale,
+  Record<WebVoiceWidgetStatus, string>
+> = {
+  en: {
+    idle: "Ready when you are",
+    requesting_microphone: "Asking for microphone access",
+    connecting: "Connecting to the AI receptionist",
+    connected: "Live with the AI receptionist",
+    ending: "Ending the call",
+    ended: "Call ended",
+    error: "Could not start the call",
+  },
+  fr: {
+    idle: "Prêt pour votre appel",
+    requesting_microphone: "Autorisez l’accès au microphone",
+    connecting: "Connexion au réceptionniste IA",
+    connected: "En ligne avec le réceptionniste IA",
+    ending: "Fin de l’appel",
+    ended: "Appel terminé",
+    error: "Impossible de démarrer l’appel",
+  },
+  es: {
+    idle: "Lista cuando usted quiera",
+    requesting_microphone: "Solicitando acceso al micrófono",
+    connecting: "Conectando con la recepcionista con IA",
+    connected: "En línea con la recepcionista con IA",
+    ending: "Finalizando la llamada",
+    ended: "Llamada finalizada",
+    error: "No se pudo iniciar la llamada",
+  },
+  sr: {
+    idle: "Spremno kad i Vi",
+    requesting_microphone: "Tražimo pristup mikrofonu",
+    connecting: "Povezivanje sa AI recepcionerom",
+    connected: "Uživo sa AI recepcionerom",
+    ending: "Završavanje poziva",
+    ended: "Poziv je završen",
+    error: "Poziv nije mogao da počne",
+  },
 }
 
-export const webVoiceStatusLabelFr: Record<WebVoiceWidgetStatus, string> = {
-  idle: "Prêt pour votre appel",
-  requesting_microphone: "Autorisez l’accès au microphone",
-  connecting: "Connexion au réceptionniste IA",
-  connected: "En ligne avec le réceptionniste IA",
-  ending: "Fin de l’appel",
-  ended: "Appel terminé",
-  error: "Impossible de démarrer l’appel",
+type WebVoiceErrorCopy = {
+  microphoneBlocked: string
+  microphoneMissing: string
+  microphoneBusy: string
+  timedOut: string
+  unreachable: string
+  fallback: string
+  connectionDropped: string
 }
 
-function getErrorMessage(error: unknown, locale: "en" | "fr" = "en"): string {
-  if (locale === "fr") {
-    if (error instanceof DOMException && error.name === "NotAllowedError") return "Autorisez l’accès au microphone dans votre navigateur."
-    if (error instanceof DOMException && error.name === "NotFoundError") return "Branchez un microphone pour continuer."
-    if (error instanceof DOMException && error.name === "NotReadableError") return "Fermez l’autre application qui utilise le microphone."
-    return "Impossible de démarrer l’appel. Réessayez."
-  }
+const webVoiceErrorCopy: Record<Locale, WebVoiceErrorCopy> = {
+  en: {
+    microphoneBlocked: "Microphone access was blocked.",
+    microphoneMissing: "No microphone was found on this device.",
+    microphoneBusy: "The microphone is already in use by another app.",
+    timedOut: "The call took too long to connect.",
+    unreachable: "This page can't reach LobbyStack to start the call.",
+    fallback: "Something went wrong while starting the call.",
+    connectionDropped: "The voice connection dropped.",
+  },
+  fr: {
+    microphoneBlocked: "Autorisez l’accès au microphone dans votre navigateur.",
+    microphoneMissing: "Branchez un microphone pour continuer.",
+    microphoneBusy: "Fermez l’autre application qui utilise le microphone.",
+    timedOut: "Impossible de démarrer l’appel. Réessayez.",
+    unreachable: "Impossible de démarrer l’appel. Réessayez.",
+    fallback: "Impossible de démarrer l’appel. Réessayez.",
+    connectionDropped: "La connexion vocale a été interrompue.",
+  },
+  es: {
+    microphoneBlocked: "Permita el acceso al micrófono en su navegador.",
+    microphoneMissing: "Conecte un micrófono para continuar.",
+    microphoneBusy: "Cierre la otra aplicación que está usando el micrófono.",
+    timedOut: "La llamada tardó demasiado en conectarse.",
+    unreachable:
+      "Esta página no puede conectar con LobbyStack para iniciar la llamada.",
+    fallback: "No se pudo iniciar la llamada. Inténtelo de nuevo.",
+    connectionDropped: "Se cortó la conexión de voz.",
+  },
+  sr: {
+    microphoneBlocked: "Dozvolite pristup mikrofonu u pregledaču.",
+    microphoneMissing: "Povežite mikrofon da biste nastavili.",
+    microphoneBusy: "Zatvorite drugu aplikaciju koja koristi mikrofon.",
+    timedOut: "Povezivanje poziva je trajalo predugo.",
+    unreachable:
+      "Stranica ne može da se poveže sa LobbyStack servisom da bi započela poziv.",
+    fallback: "Poziv nije mogao da počne. Pokušajte ponovo.",
+    connectionDropped: "Glasovna veza je prekinuta.",
+  },
+}
+
+function getErrorMessage(error: unknown, locale: Locale = "en"): string {
+  const messages = webVoiceErrorCopy[locale]
   if (error instanceof DOMException && error.name === "NotAllowedError") {
-    return "Microphone access was blocked."
+    return messages.microphoneBlocked
   }
   if (error instanceof DOMException && error.name === "NotFoundError") {
-    return "No microphone was found on this device."
+    return messages.microphoneMissing
   }
   if (error instanceof DOMException && error.name === "NotReadableError") {
-    return "The microphone is already in use by another app."
+    return messages.microphoneBusy
   }
   if (error instanceof DOMException && error.name === "AbortError") {
-    return "The call took too long to connect."
+    return messages.timedOut
   }
   if (error instanceof TypeError && error.message === "Load failed") {
-    return "This page can't reach LobbyStack to start the call."
+    return messages.unreachable
   }
-  if (error instanceof Error) {
+  // Browser and server error details are written in English, so only the
+  // English UI shows them as is.
+  if (locale === "en" && error instanceof Error) {
     return error.message
   }
-  return "Something went wrong while starting the call."
+  return messages.fallback
 }
 
 function getVisitorId(): string | undefined {
@@ -264,7 +336,7 @@ export function useWebVoiceCall({
           peerConnection.connectionState === "disconnected"
         ) {
           setStatus("error")
-          setErrorMessage(locale === "fr" ? "La connexion vocale a été interrompue." : "The voice connection dropped.")
+          setErrorMessage(webVoiceErrorCopy[locale].connectionDropped)
           emit("landing.web_voice_call_error", {
             connectionState: peerConnection.connectionState,
           })

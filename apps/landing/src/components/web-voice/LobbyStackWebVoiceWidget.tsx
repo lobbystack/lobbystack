@@ -1,6 +1,7 @@
 import { WebVoiceWidget } from "@/components/web-voice/WebVoiceWidget"
 import { LobbyStackAuraVoiceDemo } from "@/components/web-voice/LobbyStackAuraVoiceDemo"
 import { hasAnalyticsConsent } from "@/lib/cookie-consent"
+import type { Locale } from "@/i18n"
 
 // The app starts browser calls on GPT-Live; `pnpm dev` runs it on port 3000.
 const DEFAULT_WEB_CALL_ENDPOINT = "https://app.lobbystack.com/api/voice/live/session"
@@ -50,7 +51,7 @@ function getBusinessSlug() {
 export function LobbyStackWebVoiceWidget({
   locale = "en",
 }: {
-  locale?: "en" | "fr"
+  locale?: Locale
 }) {
   return (
     <WebVoiceWidget
@@ -66,7 +67,7 @@ export function LobbyStackWebVoiceWidget({
 export function LobbyStackHeroVoiceDemo({
   locale = "en",
 }: {
-  locale?: "en" | "fr"
+  locale?: Locale
 }) {
   return (
     <LobbyStackAuraVoiceDemo

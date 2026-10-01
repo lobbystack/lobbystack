@@ -1,0 +1,48 @@
+---
+title: "Connecter Google Calendar"
+description: "Connectez un compte Google, choisissez un calendrier modifiable et laissez LobbyStack l'utiliser pour les disponibilités et la synchronisation des réservations."
+sidebarTitle: "Google Calendar"
+contentType: "How-to"
+---
+
+Google Calendar permet à LobbyStack de lire les disponibilités du calendrier, de créer des événements de réservation et de suivre l'état de synchronisation des rendez-vous. LobbyStack peut aussi annuler ou déplacer des rendez-vous automatiquement lorsque les modifications de rendez-vous sont activées.
+
+<Note>
+  Connectez Google Calendar après avoir ajouté les services que les appelants peuvent demander. LobbyStack dispose alors d'un calendrier pour vérifier les disponibilités, ajouter les réservations et synchroniser les modifications de rendez-vous approuvées.
+</Note>
+
+## Fonctionnement de l'intégration
+
+LobbyStack utilise Google OAuth. Vous connectez un compte Google, LobbyStack enregistre la connexion de façon sécurisée et vous choisissez le calendrier qui reçoit les réservations. L'intégration peut aussi synchroniser vos plages occupées pour que LobbyStack ne propose pas de créneaux indisponibles lors des nouvelles réservations et des demandes de report.
+
+## Connecter Google Calendar
+
+<Steps>
+  <Step title="Ouvrir Intégrations">
+    Dans le tableau de bord, ouvrez **Intégrations**.
+  </Step>
+  <Step title="Lancer la connexion Google">
+    Repérez **Google Calendar** et cliquez sur **Connecter**.
+  </Step>
+  <Step title="Autoriser Google">
+    Connectez-vous à Google et acceptez les autorisations de calendrier demandées.
+  </Step>
+  <Step title="Choisir un calendrier">
+    De retour dans LobbyStack, cliquez sur la carte Google connectée, choisissez un calendrier dans la liste déroulante et cliquez sur **Enregistrer le calendrier**.
+  </Step>
+</Steps>
+
+## Changer le calendrier choisi
+
+1. Ouvrez **Intégrations**.
+2. Cliquez sur la carte Google Calendar.
+3. Choisissez un autre calendrier.
+4. Cliquez sur **Enregistrer le calendrier**.
+
+LobbyStack utilise le nouveau calendrier pour les prochaines vérifications de disponibilité et les prochaines réservations.
+
+## Reconnecter ou déconnecter
+
+Si l'accès Google expire ou est révoqué, la carte indique qu'une reconnexion est nécessaire. Cliquez sur **Reconnecter Google** et refaites l'autorisation OAuth.
+
+Pour retirer l'intégration, ouvrez la carte Google Calendar et cliquez sur **Déconnecter Google**. LobbyStack supprime la connexion actuelle utilisée pour les réservations.

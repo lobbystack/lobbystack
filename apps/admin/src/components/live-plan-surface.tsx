@@ -17,6 +17,7 @@ import { SpendingCapSection } from "./billing-spending-cap";
 import { Skeleton } from "./ui/skeleton";
 import { Surface } from "./ui/surface";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { intlLocale } from "@/lib/locale";
 
 type Business = { businessId: string; name: string; slug: string; role: string; active: boolean };
 type Billing = {
@@ -31,8 +32,8 @@ type Billing = {
 
 async function getJson<T>(url: string): Promise<T> { const response = await fetch(url, { credentials: "include" }); if (!response.ok) throw new Error("Unable to load billing data."); return await response.json() as T; }
 async function postJson<T>(url: string, body: Record<string, unknown>): Promise<T> { const response = await fetch(url, { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }); if (!response.ok) throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Unable to update billing."); return await response.json() as T; }
-function formatMoney(cents: number, currency = "usd", locale = "en"): string { return new Intl.NumberFormat(locale, { style: "currency", currency: currency.toUpperCase(), minimumFractionDigits: cents % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 }).format(cents / 100); }
-function formatBillingDate(value: string | null, locale = "en"): string { return value ? new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" }).format(new Date(value)) : "—"; }
+function formatMoney(cents: number, currency = "usd", locale = "en"): string { return new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency: currency.toUpperCase(), minimumFractionDigits: cents % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 }).format(cents / 100); }
+function formatBillingDate(value: string | null, locale = "en"): string { return value ? new Intl.DateTimeFormat(intlLocale(locale), { month: "short", day: "numeric", year: "numeric" }).format(new Date(value)) : "—"; }
 function planSlug(value: string | null | undefined): BillingPlanSlug { return value === "self_hosted_standard" ? "self_host" : value === "self_host" || value === "starter" || value === "pro" || value === "enterprise" ? value : "free_cloud"; }
 
 
@@ -73,7 +74,7 @@ export function LivePlanSurface() {
   const plan = planSlug(account?.plan);
   const catalog = billingPlanCatalog[plan];
   const monthlyPrice = account?.billingInterval === "annual" ? catalog.annualEffectiveMonthlyChargeCents : catalog.monthlyChargeCents;
-  const included = [catalog.voiceSecondsIncluded === null ? t("billing.currentPlan.includedVoiceCustom") : `${Math.round(catalog.voiceSecondsIncluded / 60)} ${t("billing.currentPlan.includedVoiceLabel")}`, catalog.outboundCallAttemptsIncluded === null ? t("billing.currentPlan.includedOutboundCustom") : `${catalog.outboundCallAttemptsIncluded} ${t("billing.currentPlan.includedOutboundLabel")}`, catalog.alertSmsSegmentsIncluded === null ? t("billing.currentPlan.includedSmsCustom") : `${catalog.alertSmsSegmentsIncluded} ${t("billing.currentPlan.includedSmsLabel")}`, catalog.knowledgeStorageBytes === null ? t("billing.currentPlan.includedStorageCustom") : t("billing.currentPlan.includedStorage", { amount: (catalog.knowledgeStorageBytes / (catalog.knowledgeStorageBytes >= 1024 ** 3 ? 1024 ** 3 : 1024 ** 2)).toLocaleString(i18n.language), unit: catalog.knowledgeStorageBytes >= 1024 ** 3 ? "GB" : "MB" })];
+  const included = [catalog.voiceSecondsIncluded === null ? t("billing.currentPlan.includedVoiceCustom") : `${Math.round(catalog.voiceSecondsIncluded / 60)} ${t("billing.currentPlan.includedVoiceLabel")}`, catalog.outboundCallAttemptsIncluded === null ? t("billing.currentPlan.includedOutboundCustom") : `${catalog.outboundCallAttemptsIncluded} ${t("billing.currentPlan.includedOutboundLabel")}`, catalog.alertSmsSegmentsIncluded === null ? t("billing.currentPlan.includedSmsCustom") : `${catalog.alertSmsSegmentsIncluded} ${t("billing.currentPlan.includedSmsLabel")}`, catalog.knowledgeStorageBytes === null ? t("billing.currentPlan.includedStorageCustom") : t("billing.currentPlan.includedStorage", { amount: (catalog.knowledgeStorageBytes / (catalog.knowledgeStorageBytes >= 1024 ** 3 ? 1024 ** 3 : 1024 ** 2)).toLocaleString(intlLocale(i18n.language)), unit: catalog.knowledgeStorageBytes >= 1024 ** 3 ? "GB" : "MB" })];
   const permissions = billing.data?.permissions;
   const canUpgrade = permissions?.hasCheckoutAccess && billing.data?.availableCheckoutPlans.some(target =>
     (plan === "free_cloud" || (plan === "starter" && target === "pro")) && billing.data.availableCheckoutIntervals[target].length > 0);
