@@ -58,6 +58,7 @@ export function LocaleProvider({
   const userChangedLocale = useRef(false);
   const [storedLocale] = useState(() => readStoredLocale());
   const [storedCookieLocale] = useState(() => localeFromCookieHeader(typeof document === "undefined" ? null : document.cookie));
+  const appliedInitialLocale = useRef<string | null>(null);
 
   useEffect(() => {
     const handleLanguageChange = (language: string) => setLocaleState(resolveLocale(language));
@@ -76,6 +77,12 @@ export function LocaleProvider({
    * server could not see unless an explicit ?lng= outranks it.
    */
   useEffect(() => {
+    // react-i18next hands out a new i18n wrapper after every language change.
+    // Without this guard, picking a language re-ran this effect and restored
+    // the language stored when the page loaded.
+    const initialKey = `${initialLocaleSource}:${initialLocale}`;
+    if (appliedInitialLocale.current === initialKey) return;
+    appliedInitialLocale.current = initialKey;
     if (initialLocaleSource === "query") {
       writeStoredLocale(initialLocale);
       writeStoredLocaleCookie(initialLocale);
