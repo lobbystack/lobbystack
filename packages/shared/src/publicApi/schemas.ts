@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 
+import { interfaceLocales } from "../locales";
 import { PUBLIC_API_VERSION, WEBHOOK_TEST_EVENT_TYPE, apiKeyScopes, webhookEventTypes, weekdays } from "./constants";
 
 // The v1 public contract. Responses built by packages/domain are typed from
@@ -12,7 +13,10 @@ const nullableTimestamp = timestamp.nullable();
 const inputTimestamp = z.iso.datetime({ offset: true }).describe("ISO 8601 timestamp with a Z or numeric offset.");
 const e164 = z.string().regex(/^\+[1-9]\d{6,14}$/, "Use E.164 format, for example +14165550134.").describe("Phone number in E.164 format.");
 const clock = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$|^24:00$/, "Use 24-hour HH:MM.").describe("Local time as 24-hour HH:MM.");
+// A business's caller language is the language the AI receptionist speaks.
 const locale = z.enum(["en", "fr"]);
+// A contact's language picks the copy of the reminders and confirmations they receive.
+const contactLocale = z.enum(interfaceLocales).describe("Language for the contact's reminders and confirmations: en, fr, es or sr.");
 
 export const apiErrorCodes = [
   "invalid_request",
@@ -139,7 +143,7 @@ export const apiContactCreateSchema = z.strictObject({
   name: z.string().trim().min(1).max(200).optional(),
   phone: e164.optional(),
   email: z.email().max(320).optional(),
-  locale: locale.optional(),
+  locale: contactLocale.optional(),
   timezone: z.string().trim().min(1).max(80).optional(),
 }).refine((value) => Boolean(value.phone || value.email), { message: "Provide a phone or an email.", path: ["phone"] });
 
@@ -147,7 +151,7 @@ export const apiContactUpdateSchema = z.strictObject({
   name: z.string().trim().min(1).max(200).nullable().optional(),
   phone: e164.optional(),
   email: z.email().max(320).nullable().optional(),
-  locale: locale.nullable().optional(),
+  locale: contactLocale.nullable().optional(),
   timezone: z.string().trim().min(1).max(80).nullable().optional(),
 });
 

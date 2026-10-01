@@ -1,3 +1,5 @@
+import { isSupportedLocale, type SupportedLocale } from "./locale";
+
 const LANDING_SITE_URL =
   process.env.NEXT_PUBLIC_LANDING_SITE_URL?.replace(/\/$/, "") ??
   "https://lobbystack.com";
@@ -32,7 +34,7 @@ const translatedBasePaths = new Set([
   "/search/",
 ]);
 
-export type MarketingLocale = "en" | "fr";
+export type MarketingLocale = SupportedLocale;
 
 function normalizedPath(path = "/"): string {
   const pathname = path.split("#")[0]?.split("?")[0] || "/";
@@ -45,7 +47,7 @@ function normalizedPath(path = "/"): string {
 }
 
 function isLocale(value: string | undefined): value is MarketingLocale {
-  return value === "en" || value === "fr";
+  return isSupportedLocale(value);
 }
 
 function stripLocaleFromPath(path = "/"): string {

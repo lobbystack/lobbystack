@@ -58,6 +58,8 @@
 - Keep locale files in `apps/admin/public/locales/{lng}/{ns}.json`.
 - Avoid concatenating translated sentences; use interpolation.
 - Format dates, times, and numbers with the active locale through `Intl` or Luxon.
+- The interface languages are `en`, `fr`, `es`, and `sr`. Serbian uses Latin script only. Pass a locale through `intlLocale()` from `@lobbystack/shared` before you hand it to `Intl`, Luxon, `lang`, or `hreflang`, so `sr` becomes `sr-Latn`. A bare `sr` formats in Cyrillic.
+- The AI receptionist speaks English and French only (`RuntimeLocale`). Keep business caller languages and voice prompts on that list.
 
 ## Testing
 

@@ -53,6 +53,7 @@ import {
   type ApiOperationId,
 } from "@lobbystack/shared";
 
+import { SUPPORTED_LOCALES } from "../locale";
 import { contractSchema } from "./contract-schema";
 
 // The LobbyStack MCP tools. Each tool maps to one v1 domain operation, the
@@ -262,7 +263,7 @@ export const mcpTools: McpTool[] = [
       name: z.string().optional().describe("Full name."),
       phone: z.string().optional().describe("Phone number in E.164 format, for example +14165550134."),
       email: z.string().optional().describe("Email address."),
-      locale: z.enum(["en", "fr"]).optional().describe("Preferred language."),
+      locale: z.enum(SUPPORTED_LOCALES).optional().describe("Language for the contact's reminders and confirmations: en, fr, es or sr."),
       timezone: z.string().optional().describe("IANA time zone, for example America/Toronto."),
       idempotency_key: idempotencyKeyInput,
     }),
@@ -281,7 +282,7 @@ export const mcpTools: McpTool[] = [
       name: z.string().nullable().optional().describe("Full name, or null to clear it."),
       phone: z.string().optional().describe("New phone number in E.164 format."),
       email: z.string().nullable().optional().describe("Email address, or null to clear it."),
-      locale: z.enum(["en", "fr"]).nullable().optional().describe("Preferred language, or null to clear it."),
+      locale: z.enum(SUPPORTED_LOCALES).nullable().optional().describe("Language for the contact's reminders and confirmations (en, fr, es or sr), or null to clear it."),
       timezone: z.string().nullable().optional().describe("IANA time zone, or null to clear it."),
     }),
     outputSchema: contractSchema(apiContactSchema),

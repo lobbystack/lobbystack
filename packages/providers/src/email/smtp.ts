@@ -74,9 +74,7 @@ function renderTemplate(template: TemplateName, subject: string, variables: Reco
 function templateBody(template: TemplateName, variables: Record<string, string>): string {
   switch (template) {
     case "existing_account":
-      return variables.locale === "fr"
-        ? `Vous avez déjà un compte LobbyStack. Connectez-vous pour continuer : ${variables.signInUrl}. Mot de passe oublié ? ${variables.resetUrl}. Si vous n’avez pas demandé la création d’un compte, ignorez cet e-mail.`
-        : `You already have a LobbyStack account. Sign in to continue: ${variables.signInUrl}. Forgot your password? ${variables.resetUrl}. If you did not request an account, ignore this email.`;
+      return existingAccountBody(variables);
     case "verify_email":
       return variables.code
         ? `Your LobbyStack email verification code is: ${variables.code}. It expires in 10 minutes.`
@@ -96,9 +94,62 @@ function templateBody(template: TemplateName, variables: Record<string, string>)
   }
 }
 
+function existingAccountBody(variables: Record<string, string>): string {
+  const signIn = variables.signInUrl;
+  const reset = variables.resetUrl;
+  switch (variables.locale) {
+    case "fr":
+      return `Vous avez déjà un compte LobbyStack. Connectez-vous pour continuer : ${signIn}. Mot de passe oublié ? ${reset}. Si vous n’avez pas demandé la création d’un compte, ignorez cet e-mail.`;
+    case "es":
+      return `Ya tiene una cuenta de LobbyStack. Inicie sesión para continuar: ${signIn}. ¿Olvidó su contraseña? ${reset}. Si no solicitó una cuenta, ignore este correo.`;
+    case "sr":
+      return `Već imate LobbyStack nalog. Prijavite se da biste nastavili: ${signIn}. Zaboravili ste lozinku? ${reset}. Ako niste zatražili nalog, zanemarite ovaj imejl.`;
+    default:
+      return `You already have a LobbyStack account. Sign in to continue: ${signIn}. Forgot your password? ${reset}. If you did not request an account, ignore this email.`;
+  }
+}
+
 function onboardingFollowupBody(variables: Record<string, string>): string {
   const sender = variables.senderName ?? "";
   const business = variables.businessName ?? "";
+  if (variables.locale === "es") {
+    return [
+      variables.firstName ? `Hola, ${variables.firstName}:` : "Hola:",
+      "",
+      `Soy ${sender}, fundador de LobbyStack. Ayer configuró una recepcionista para ${business}. Gracias por probarla.`,
+      "",
+      "Me encantaría saber qué le pareció:",
+      "",
+      "1. ¿Le gustó? ¿Qué funcionó bien y qué no le convenció?",
+      "2. ¿Qué deberíamos mejorar?",
+      "3. ¿Piensa usarla de verdad, con su propio número de teléfono? Si no, ¿qué se lo impide?",
+      "",
+      "Puede responder a este correo. ¡Con dos líneas basta!",
+      "",
+      "Gracias de nuevo,",
+      sender,
+      "Fundador, LobbyStack",
+    ].join("\n");
+  }
+  if (variables.locale === "sr") {
+    return [
+      variables.firstName ? `Zdravo, ${variables.firstName},` : "Zdravo,",
+      "",
+      `Ja sam ${sender}, osnivač LobbyStacka. Juče ste podesili recepcionera za ${business}. Hvala što ste ga isprobali.`,
+      "",
+      "Voleo bih da čujem Vaše utiske:",
+      "",
+      "1. Da li Vam se dopao? Šta je dobro radilo, a šta Vam nije delovalo kako treba?",
+      "2. Šta bi trebalo da poboljšamo?",
+      "3. Da li planirate da ga zaista koristite, sa svojim brojem telefona? Ako ne, šta Vas sprečava?",
+      "",
+      "Možete da odgovorite na ovaj imejl, i dva reda su sasvim dovoljna!",
+      "",
+      "Hvala još jednom,",
+      sender,
+      "Osnivač, LobbyStack",
+    ].join("\n");
+  }
   if (variables.locale === "fr") {
     return [
       variables.firstName ? `Bonjour ${variables.firstName},` : "Bonjour,",

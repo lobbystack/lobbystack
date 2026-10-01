@@ -7,7 +7,10 @@ import {
 } from "libphonenumber-js/min";
 import type { Labels } from "react-phone-number-input";
 import enLabels from "react-phone-number-input/locale/en";
+import esLabels from "react-phone-number-input/locale/es";
 import frLabels from "react-phone-number-input/locale/fr";
+
+import { normalizeLocale, type SupportedLocale } from "./locale";
 
 const DEFAULT_PHONE_COUNTRY = "US" satisfies CountryCode;
 const SUPPORTED_ONBOARDING_PHONE_COUNTRIES = ["US", "CA", "GB", "AU"] as const;
@@ -15,9 +18,31 @@ const SUPPORTED_ONBOARDING_PHONE_COUNTRIES = ["US", "CA", "GB", "AU"] as const;
 export type SupportedOnboardingPhoneCountry =
   (typeof SUPPORTED_ONBOARDING_PHONE_COUNTRIES)[number];
 
-const PHONE_LABELS_BY_LOCALE: Record<"en" | "fr", Labels> = {
+/**
+ * react-phone-number-input ships no Serbian labels, so country names come from
+ * Intl in Latin script and the few interface strings are written here.
+ */
+function serbianLabels(): Labels {
+  const regions = new Intl.DisplayNames(["sr-Latn"], { type: "region", fallback: "none" });
+  const labels: Record<string, string> = { ...enLabels };
+  for (const key of Object.keys(enLabels)) {
+    if (!/^[A-Z]{2}$/.test(key)) continue;
+    const name = regions.of(key);
+    if (name) labels[key] = name;
+  }
+  labels.ZZ = "Međunarodni";
+  labels.ext = "lokal";
+  labels.country = "Država broja telefona";
+  labels.phone = "Telefon";
+  return labels as Labels;
+}
+
+let cachedSerbianLabels: Labels | undefined;
+
+const PHONE_LABELS_BY_LOCALE: Record<Exclude<SupportedLocale, "sr">, Labels> = {
   en: enLabels,
   fr: frLabels,
+  es: esLabels,
 };
 const NORTH_AMERICAN_PHONE_COUNTRIES = new Set<CountryCode>(["US", "CA"]);
 const SUPPORTED_ONBOARDING_PHONE_COUNTRY_SET = new Set<string>(
@@ -101,8 +126,12 @@ export function getDefaultPhoneCountry(locale?: string | null): CountryCode {
 }
 
 export function getPhoneLabels(locale?: string | null): Labels {
-  const normalized = normalizePhoneText(locale).toLowerCase();
-  return normalized.startsWith("fr") ? PHONE_LABELS_BY_LOCALE.fr : PHONE_LABELS_BY_LOCALE.en;
+  const supported = normalizeLocale(locale) ?? "en";
+  if (supported === "sr") {
+    cachedSerbianLabels ??= serbianLabels();
+    return cachedSerbianLabels;
+  }
+  return PHONE_LABELS_BY_LOCALE[supported];
 }
 
 export function normalizePhoneNumber(

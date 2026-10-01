@@ -32,7 +32,7 @@ import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { selectActiveBusiness } from "@/lib/active-business";
-import { formatRelativeTime } from "@/lib/locale";
+import { intlLocale, formatRelativeTime } from "@/lib/locale";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 type Business = { businessId: string; name: string; active: boolean; role: string };
@@ -64,7 +64,7 @@ async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 function dateTime(value: string, locale: string, dateOnly = false): string {
-  return new Intl.DateTimeFormat(locale, dateOnly ? { dateStyle: "medium" } : { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat(intlLocale(locale), dateOnly ? { dateStyle: "medium" } : { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
 function truncateId(value: string, maxLength = 16): string {

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { users } from "@lobbystack/db";
 import { asApiResponse, readJson, requireApiSession } from "@/lib/api-helpers";
 import { getAuthDatabase } from "@/lib/auth";
+import { SUPPORTED_LOCALES, isSupportedLocale } from "@/lib/locale";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ export async function PATCH(request: Request) {
   try {
     const session = await requireApiSession(request);
     const body = await readJson(request) as { locale?: string };
-    if (body.locale !== "en" && body.locale !== "fr") return NextResponse.json({ error: "locale must be en or fr." }, { status: 400 });
+    if (!isSupportedLocale(body.locale)) return NextResponse.json({ error: `locale must be one of ${SUPPORTED_LOCALES.join(", ")}.` }, { status: 400 });
     await getAuthDatabase().db.update(users).set({ preferredLocale: body.locale, updatedAt: new Date() }).where(eq(users.id, session.user.id));
     return NextResponse.json({ locale: body.locale });
   } catch (error) {

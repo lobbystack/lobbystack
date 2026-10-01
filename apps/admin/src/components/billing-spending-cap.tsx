@@ -10,10 +10,11 @@ import { Surface } from "./ui/surface";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { intlLocale } from "@/lib/locale";
 
 type SpendingCapStatus = { plan: string; overageSpendingCapCents: number | null; overageSpendCents: number; overageSpendCentsComplete: boolean; overageSpendingCapReached: boolean; hasBillingManagementAccess: boolean };
 function formatCents(cents: number, locale: string): string {
-  return new Intl.NumberFormat(locale, { style: "currency", currency: "USD", minimumFractionDigits: cents % 100 !== 0 ? 2 : 0, maximumFractionDigits: 2 }).format(cents / 100);
+  return new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency: "USD", minimumFractionDigits: cents % 100 !== 0 ? 2 : 0, maximumFractionDigits: 2 }).format(cents / 100);
 }
 
 export function SpendingCapSection({

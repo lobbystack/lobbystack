@@ -6,7 +6,9 @@ import { TranslationNetworkError } from "@/lib/translation-network-error";
 import { versionedAssetUrl } from "@/lib/versioned-assets";
 
 import commonEn from "../public/locales/en/common.json";
+import commonEs from "../public/locales/es/common.json";
 import commonFr from "../public/locales/fr/common.json";
+import commonSr from "../public/locales/sr/common.json";
 
 export type I18nNamespaceResources = Record<string, Record<string, unknown>>;
 export type I18nResources = Record<string, I18nNamespaceResources>;
@@ -18,9 +20,11 @@ let fallbackInstance: I18nextInstance | undefined;
 const resolvedFallbacks = new WeakMap<I18nextInstance, Set<string>>();
 
 /** Chrome strings every route needs, available without a network request. */
-const chromeResources: I18nResources = {
+const chromeResources: Record<SupportedLocale, I18nNamespaceResources> = {
   en: { common: commonEn },
   fr: { common: commonFr },
+  es: { common: commonEs },
+  sr: { common: commonSr },
 };
 
 /**

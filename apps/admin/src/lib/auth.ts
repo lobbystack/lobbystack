@@ -12,6 +12,7 @@ import { assertDatabaseRole, enqueueOutbox, withBusinessTransaction } from "@lob
 import { accounts, sessions, users, verifications } from "@lobbystack/db";
 
 import { getDatabase } from "./databases";
+import { SUPPORTED_LOCALES, resolveLocale, type SupportedLocale } from "./locale";
 import { ensureMcpResource, isDisabledOAuthEndpoint, mcpOAuthPlugins, needsMcpResource, oauthProviderSchema, registrationWithApplicationType } from "./oauth-provider";
 import { hashReplacementPassword, isLegacyScryptHash, meetsPasswordRequirements, verifyLegacyPassword } from "./password";
 import { trustedClientIp, trustedClientIpFromHeaders, trustedClientIpHeader } from "./trusted-client-ip";
@@ -37,6 +38,13 @@ function assertAuthDatabaseRoles(): Promise<void> {
   );
   return databaseRolesReady;
 }
+
+const EXISTING_ACCOUNT_SUBJECTS: Record<SupportedLocale, string> = {
+  en: "You already have a LobbyStack account",
+  fr: "Votre compte LobbyStack existe déjà",
+  es: "Ya tiene una cuenta de LobbyStack",
+  sr: "Već imate LobbyStack nalog",
+};
 
 const enabledEmailOtpPaths = new Set([
   "/email-otp/request-password-reset",
@@ -290,14 +298,14 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
           }
           await assertEmailVerificationSendAllowed({ email: user.email, ...(remoteIp ? { remoteIp } : {}) });
           const stored = (await database.db.select({ preferredLocale: users.preferredLocale }).from(users).where(eq(users.id, user.id)).limit(1))[0];
-          const locale = stored?.preferredLocale === "fr" ? "fr" : "en";
+          const locale = resolveLocale(stored?.preferredLocale);
           const base = process.env.APP_BASE_URL ?? "http://localhost:3000";
           await withBusinessTransaction(getEmailDatabase().db, { actorType: "system" }, async (tx) => {
             await enqueueOutbox(tx, {
               topic: "email.send", aggregateType: "auth_email", aggregateId: user.id,
               dedupeKey: `auth-existing-account:${user.id}:${randomUUID()}`,
               payload: { template: "existing_account", to: user.email,
-                subject: locale === "fr" ? "Votre compte LobbyStack existe déjà" : "You already have a LobbyStack account",
+                subject: EXISTING_ACCOUNT_SUBJECTS[locale],
                 variables: { locale, signInUrl: new URL(`/${locale}/login`, base).href, resetUrl: new URL(`/${locale}/forgot-password`, base).href } },
             });
           });
@@ -341,7 +349,7 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
         }
         // Keep the link callback for the existing two-address email-change flow.
         const verificationUrl = new URL(url);
-        const recipientLocale = storedUser.preferredLocale === "fr" ? "fr" : "en";
+        const recipientLocale = resolveLocale(storedUser.preferredLocale);
         const confirmationUrl = new URL(`/${recipientLocale}/confirm-email-change`, process.env.APP_BASE_URL ?? "http://localhost:3000");
         confirmationUrl.searchParams.set("token", verificationUrl.searchParams.get("token") ?? "");
         confirmationUrl.searchParams.set("email", user.email);
@@ -354,7 +362,7 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
         // insert and update. Declaring it keeps Better Auth's schema validator
         // aware that every user insert satisfies the required column.
         normalizedEmail: { type: "string", required: false, defaultValue: "", input: false, returned: false },
-        preferredLocale: { type: "string", required: false, defaultValue: "en", input: true, validator: { input: z.enum(["en", "fr"]) } },
+        preferredLocale: { type: "string", required: false, defaultValue: "en", input: true, validator: { input: z.enum(SUPPORTED_LOCALES) } },
       },
       changeEmail: {
         enabled: true,

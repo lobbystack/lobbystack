@@ -11,6 +11,7 @@ import { DemoVoiceClient } from "./demo-voice-client";
 import { useTheme } from "./theme-provider";
 import { cn } from "@/lib/utils";
 import { buildAuthPathWithReturnTo } from "@/lib/auth-return-to";
+import { resolveLocale } from "@/lib/locale";
 import { localizePublicPath } from "@/lib/locale-path";
 
 type Preview = {
@@ -62,7 +63,7 @@ export function DemoSurface() {
     };
   }, [setTheme]);
 
-  const locale = (preview?.locale ?? i18n.language).toLowerCase().startsWith("fr") ? "fr" : "en";
+  const locale = resolveLocale(preview?.locale ?? i18n.language);
   const t = i18n.getFixedT(locale, "demos");
   const active = preview?.state === "active";
 

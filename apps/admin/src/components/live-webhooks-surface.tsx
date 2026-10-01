@@ -26,6 +26,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { selectActiveBusiness } from "@/lib/active-business";
 import type { WorkspaceViewModel } from "@/lib/page-view-models";
 import { requestJson } from "@/lib/request-json";
+import { intlLocale } from "@/lib/locale";
 
 type Endpoint = {
   id: string;
@@ -102,7 +103,7 @@ function DeliveryLog({ businessId, endpointId }: { businessId: string; endpointI
     onSuccess: async () => { toast.success(t("webhooks.deliveries.resent")); await queryClient.invalidateQueries({ queryKey: ["webhook-deliveries", endpointId] }); },
     onError: (error) => toast.error(error.message),
   });
-  const format = (value: string) => new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  const format = (value: string) => new Intl.DateTimeFormat(intlLocale(i18n.resolvedLanguage ?? i18n.language), { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
   if (deliveries.isLoading) return <Skeleton className="h-24 w-full rounded-xl" />;
   const rows = deliveries.data?.deliveries ?? [];
   if (!rows.length) return <p className="type-body-muted py-4 text-center">{t("webhooks.deliveries.empty")}</p>;

@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import {
+  localeTag,
   readStoredLocale,
   resolveLocale,
   writeStoredLocale,
@@ -66,7 +67,7 @@ export function LocaleProvider({
 
   // Keeps assistive technologies in sync with the locale used for the visible copy.
   useEffect(() => {
-    document.documentElement.lang = locale;
+    document.documentElement.lang = localeTag(locale);
   }, [locale]);
 
   /**

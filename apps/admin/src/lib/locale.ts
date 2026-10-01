@@ -1,7 +1,32 @@
-export const SUPPORTED_LOCALES = ["en", "fr"] as const;
+import { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, normalizeInterfaceLocale } from "@lobbystack/shared";
+
+export { intlLocale };
+
+export const SUPPORTED_LOCALES = interfaceLocales;
 
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 export type TimeFormatPreference = "24h" | "ampm";
+
+/** Exact match against the supported short codes, for validating API input. */
+export function isSupportedLocale(value: unknown): value is SupportedLocale {
+  return isInterfaceLocale(value);
+}
+
+/** Translation key for each locale's name in the language pickers. */
+export const LOCALE_LABEL_KEYS: Record<SupportedLocale, string> = {
+  en: "common:language.english",
+  fr: "common:language.french",
+  es: "common:language.spanish",
+  sr: "common:language.serbian",
+};
+
+/**
+ * BCP 47 tag for `<html lang>`, `Content-Language` and formatting. Serbian
+ * maps to `sr-Latn` because a bare `sr` formats dates and numbers in Cyrillic.
+ */
+export function localeTag(locale: SupportedLocale): string {
+  return interfaceLocaleTags[locale];
+}
 
 export const DEFAULT_LOCALE: SupportedLocale = "en";
 export const LOCALE_STORAGE_KEY = "lobbystack.locale";
@@ -11,16 +36,7 @@ export const LOCALE_COOKIE = LOCALE_STORAGE_KEY;
 export const LOCALE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
 export function normalizeLocale(value: string | null | undefined): SupportedLocale | null {
-  if (!value) {
-    return null;
-  }
-
-  const normalized = value.trim().toLowerCase().split(/[-_]/)[0];
-  if (normalized === "en" || normalized === "fr") {
-    return normalized;
-  }
-
-  return null;
+  return normalizeInterfaceLocale(value);
 }
 
 export function resolveLocale(
@@ -123,8 +139,10 @@ export function resolveTimeFormatPreference(input: {
     return stored;
   }
 
+  // English defaults to a 12-hour clock; French, Spanish and Serbian readers
+  // expect 24-hour times, which is also what Intl uses for those languages.
   const locale = normalizeLocale(input.locale);
-  if (locale === "fr") {
+  if (locale === "fr" || locale === "es" || locale === "sr") {
     return "24h";
   }
 
@@ -177,7 +195,7 @@ export function formatDateTime(
   const resolvedPreference =
     timeFormatPreference ?? readStoredTimeFormatPreference();
   return new Intl.DateTimeFormat(
-    locale,
+    intlLocale(locale),
     applyTimeFormatPreference(options, resolvedPreference),
   ).format(date);
 }
@@ -199,7 +217,7 @@ export function formatRelativeTime(
   const monthMs = 30 * dayMs;
   const yearMs = 365 * dayMs;
 
-  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: "always" });
+  const formatter = new Intl.RelativeTimeFormat(intlLocale(locale), { numeric: "always" });
 
   if (absMs < hourMs) {
     return formatter.format(Math.trunc(diffMs / minuteMs), "minute");
@@ -225,7 +243,7 @@ export function formatRelativeTime(
 }
 
 export function getWeekdayLabels(locale: string): Array<string> {
-  const formatter = new Intl.DateTimeFormat(locale, {
+  const formatter = new Intl.DateTimeFormat(intlLocale(locale), {
     weekday: "long",
     timeZone: "UTC",
   });
@@ -267,7 +285,7 @@ export function formatInboxTimestamp(
         minute: "2-digit",
       };
 
-    return new Intl.DateTimeFormat(locale, {
+    return new Intl.DateTimeFormat(intlLocale(locale), {
       ...timeOptions,
     }).format(date);
   }
@@ -276,7 +294,7 @@ export function formatInboxTimestamp(
     return labels.yesterday;
   }
 
-  return new Intl.DateTimeFormat(locale, {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
     weekday: "long",
   }).format(date);
 }

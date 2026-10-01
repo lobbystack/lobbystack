@@ -5,6 +5,7 @@ import type { TFunction } from "i18next";
 import { Check, Copy, Globe, Palette, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { isInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 
 import { LiveNotificationSettingsSurface } from "./live-notification-settings-surface";
 import { PageSurface } from "./page-surface";
@@ -12,9 +13,18 @@ import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { intlLocale } from "@/lib/locale";
 
 type Business = { businessId: string; name: string; active: boolean };
-type WidgetKeyConfig = { color?: string; position?: "bottom-right" | "bottom-left" | "bottom-center"; title?: string; subtitle?: string; greeting?: string; localeOverride?: "en" | "fr"; leadForm?: { enabled?: boolean; requirePhone?: boolean; requireEmail?: boolean; showBeforeChat?: boolean } };
+
+/** Languages the widget interface can be forced to, with their settings label keys. */
+const WIDGET_LOCALE_OPTIONS: Array<{ value: InterfaceLocale; labelKey: string }> = [
+  { value: "en", labelKey: "widget.locales.english" },
+  { value: "fr", labelKey: "widget.locales.french" },
+  { value: "es", labelKey: "widget.locales.spanish" },
+  { value: "sr", labelKey: "widget.locales.serbian" },
+];
+type WidgetKeyConfig = { color?: string; position?: "bottom-right" | "bottom-left" | "bottom-center"; title?: string; subtitle?: string; greeting?: string; localeOverride?: InterfaceLocale; leadForm?: { enabled?: boolean; requirePhone?: boolean; requireEmail?: boolean; showBeforeChat?: boolean } };
 type WidgetKeyRecord = { id: string; label: string | null; status: "active" | "disabled" | "revoked"; allowedOrigins: string[]; config: WidgetKeyConfig; lastUsedAt: string | null; createdAt: string };
 type KeysResponse = { keys: WidgetKeyRecord[] };
 type CreatedKey = { id: string; key: string } | null;
@@ -53,7 +63,7 @@ export function LiveWidgetSettingsSurface() {
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [greeting, setGreeting] = useState("");
-  const [localeOverride, setLocaleOverride] = useState<"" | "en" | "fr">("");
+  const [localeOverride, setLocaleOverride] = useState<"" | InterfaceLocale>("");
   const [createdKey, setCreatedKey] = useState<CreatedKey>(null);
   const [copied, setCopied] = useState(false);
   const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
@@ -116,7 +126,7 @@ export function LiveWidgetSettingsSurface() {
             <label className="space-y-2 text-sm font-medium">{t("widget.fields.title")}<input className="min-h-11 w-full rounded-xl border border-border px-3 font-normal" value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t("widget.fields.titlePlaceholder")} /></label>
             <label className="space-y-2 text-sm font-medium">{t("widget.fields.subtitle")}<input className="min-h-11 w-full rounded-xl border border-border px-3 font-normal" value={subtitle} onChange={(event) => setSubtitle(event.target.value)} placeholder={t("widget.fields.subtitlePlaceholder")} /></label>
             <label className="space-y-2 text-sm font-medium sm:col-span-2">{t("widget.fields.greeting")}<textarea className="min-h-20 w-full rounded-xl border border-border p-3 font-normal" value={greeting} onChange={(event) => setGreeting(event.target.value)} placeholder={t("widget.fields.greetingPlaceholder")} /></label>
-            <label className="space-y-2 text-sm font-medium">{t("widget.fields.localeOverride")}<select className="min-h-11 w-full rounded-xl border border-border bg-background px-3 font-normal" value={localeOverride} onChange={(event) => setLocaleOverride(event.target.value as typeof localeOverride)}><option value="">{t("widget.locales.visitor")}</option><option value="en">{t("widget.locales.english")}</option><option value="fr">{t("widget.locales.french")}</option></select></label>
+            <label className="space-y-2 text-sm font-medium">{t("widget.fields.localeOverride")}<select className="min-h-11 w-full rounded-xl border border-border bg-background px-3 font-normal" value={localeOverride} onChange={(event) => setLocaleOverride(event.target.value as typeof localeOverride)}><option value="">{t("widget.locales.visitor")}</option>{WIDGET_LOCALE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{t(option.labelKey)}</option>)}</select></label>
             <label className="flex items-center gap-2 text-sm font-medium sm:col-span-2"><input className="size-4" type="checkbox" checked={leadEnabled} onChange={(event) => setLeadEnabled(event.target.checked)} />{t("widget.fields.leadEnabled")}</label>
             {leadEnabled ? <div className="grid gap-2 sm:col-span-2 sm:grid-cols-3"><label className="flex items-center gap-2 text-sm"><input className="size-4" type="checkbox" checked={leadRequireEmail} onChange={(event) => setLeadRequireEmail(event.target.checked)} />{t("widget.fields.requireEmail")}</label><label className="flex items-center gap-2 text-sm"><input className="size-4" type="checkbox" checked={leadRequirePhone} onChange={(event) => setLeadRequirePhone(event.target.checked)} />{t("widget.fields.requirePhone")}</label><label className="flex items-center gap-2 text-sm"><input className="size-4" type="checkbox" checked={leadShowBeforeChat} onChange={(event) => setLeadShowBeforeChat(event.target.checked)} />{t("widget.fields.showBeforeChat")}</label></div> : null}
             <div className="sm:col-span-2"><Button loading={create.isPending} disabled={!business || !origins.trim()} onClick={() => create.mutate()}>{t("widget.create.action")}</Button>{create.isError ? <p className="mt-2 text-sm text-destructive">{create.error.message}</p> : null}</div>
@@ -176,12 +186,12 @@ function WidgetKeyEditor({ row, onSave, onStatus, busy, locale, t }: { row: Widg
         <label className="space-y-1.5 text-sm font-medium">{t("widget.fields.title")}<input className="min-h-10 w-full rounded-xl border border-border px-3 font-normal" value={config.title ?? ""} onChange={(event) => setConfig({ ...config, title: event.target.value })} /></label>
         <label className="space-y-1.5 text-sm font-medium">{t("widget.fields.subtitle")}<input className="min-h-10 w-full rounded-xl border border-border px-3 font-normal" value={config.subtitle ?? ""} onChange={(event) => setConfig({ ...config, subtitle: event.target.value })} /></label>
         <label className="space-y-1.5 text-sm font-medium sm:col-span-2">{t("widget.fields.greeting")}<textarea className="min-h-16 w-full rounded-xl border border-border p-2 font-normal" value={config.greeting ?? ""} onChange={(event) => setConfig({ ...config, greeting: event.target.value })} /></label>
-        <label className="space-y-1.5 text-sm font-medium">{t("widget.fields.localeOverride")}<select className="min-h-10 w-full rounded-xl border border-border bg-background px-3 font-normal" value={config.localeOverride ?? ""} onChange={(event) => { const next = { ...config }; if (event.target.value === "en" || event.target.value === "fr") next.localeOverride = event.target.value; else delete next.localeOverride; setConfig(next); }}><option value="">{t("widget.locales.visitor")}</option><option value="en">{t("widget.locales.english")}</option><option value="fr">{t("widget.locales.french")}</option></select></label>
+        <label className="space-y-1.5 text-sm font-medium">{t("widget.fields.localeOverride")}<select className="min-h-10 w-full rounded-xl border border-border bg-background px-3 font-normal" value={config.localeOverride ?? ""} onChange={(event) => { const next = { ...config }; if (isInterfaceLocale(event.target.value)) next.localeOverride = event.target.value; else delete next.localeOverride; setConfig(next); }}><option value="">{t("widget.locales.visitor")}</option>{WIDGET_LOCALE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{t(option.labelKey)}</option>)}</select></label>
         <div className="space-y-2 text-sm sm:col-span-2"><p className="font-medium">{t("widget.leadCapture.title")}</p><div className="flex flex-wrap gap-x-4 gap-y-2"><label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(config.leadForm?.enabled)} onChange={(event) => setConfig({ ...config, leadForm: { ...config.leadForm, enabled: event.target.checked } })} />{t("widget.leadCapture.enabled")}</label><label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(config.leadForm?.requireEmail)} onChange={(event) => setConfig({ ...config, leadForm: { enabled: Boolean(config.leadForm?.enabled), ...config.leadForm, requireEmail: event.target.checked } })} />{t("widget.fields.requireEmail")}</label><label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(config.leadForm?.requirePhone)} onChange={(event) => setConfig({ ...config, leadForm: { enabled: Boolean(config.leadForm?.enabled), ...config.leadForm, requirePhone: event.target.checked } })} />{t("widget.fields.requirePhone")}</label><label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(config.leadForm?.showBeforeChat)} onChange={(event) => setConfig({ ...config, leadForm: { enabled: Boolean(config.leadForm?.enabled), ...config.leadForm, showBeforeChat: event.target.checked } })} />{t("widget.fields.showBeforeChat")}</label></div></div>
       </div>
       <div className="mt-3 flex items-center gap-3">
         <Button size="sm" disabled={busy} onClick={() => onSave({ id: row.id, label: label.trim() || (row.label ?? ""), allowedOrigins: originsFromText(origins), config })}>{t("widget.keys.save")}</Button>
-        {row.lastUsedAt ? <p className="text-xs text-muted-foreground">{t("widget.keys.lastUsed", { date: new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(row.lastUsedAt)) })}</p> : null}
+        {row.lastUsedAt ? <p className="text-xs text-muted-foreground">{t("widget.keys.lastUsed", { date: new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium" }).format(new Date(row.lastUsedAt)) })}</p> : null}
       </div>
     </article>
   );

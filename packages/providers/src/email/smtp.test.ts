@@ -34,6 +34,22 @@ describe("SMTP delivery", () => {
     expect(french.text).toMatch(/^Bonjour,\n/);
     expect(french.text).toContain("une réceptionniste pour Clinique hier");
   });
+  it("localizes the onboarding follow-up and existing-account emails in Spanish and Serbian", async () => {
+    const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const provider = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "no-reply@example.test" }, { sendMail } as never);
+    await provider.sendTemplate({ template: "onboarding_followup", to: "owner@example.test", subject: "¿Qué le pareció LobbyStack?", variables: { locale: "es", firstName: "Ana", businessName: "Clínica Sol", senderName: "Raphael" } });
+    await provider.sendTemplate({ template: "onboarding_followup", to: "owner@example.test", subject: "Kako Vam se dopao LobbyStack?", variables: { locale: "sr", firstName: "", businessName: "Ordinacija Javor", senderName: "Raphael" } });
+    await provider.sendTemplate({ template: "existing_account", to: "owner@example.test", subject: "Ya tiene una cuenta de LobbyStack", variables: { locale: "es", signInUrl: "https://app.example.test/es/login", resetUrl: "https://app.example.test/es/forgot-password" } });
+    await provider.sendTemplate({ template: "existing_account", to: "owner@example.test", subject: "Već imate LobbyStack nalog", variables: { locale: "sr", signInUrl: "https://app.example.test/sr/login", resetUrl: "https://app.example.test/sr/forgot-password" } });
+    const [spanish, serbian, spanishAccount, serbianAccount] = sendMail.mock.calls.map((call) => call[0].text as string);
+    expect(spanish).toMatch(/^Hola, Ana:\n/);
+    expect(spanish).toContain("una recepcionista para Clínica Sol");
+    expect(serbian).toMatch(/^Zdravo,\n/);
+    expect(serbian).toContain("recepcionera za Ordinacija Javor");
+    expect(serbian).not.toMatch(/[Ѐ-ӿ]/);
+    expect(spanishAccount).toContain("Inicie sesión para continuar: https://app.example.test/es/login");
+    expect(serbianAccount).toContain("Prijavite se da biste nastavili: https://app.example.test/sr/login");
+  });
   it("sends reset codes as codes while preserving previously issued reset links", async () => {
     const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
     const provider = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "no-reply@example.test" }, { sendMail } as never);

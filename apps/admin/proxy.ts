@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { isMaintenanceMode } from "@lobbystack/shared";
 
-import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE_SECONDS, normalizeLocale } from "@/lib/locale";
+import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE_SECONDS, localeTag, normalizeLocale } from "@/lib/locale";
 import {
   isLegacyPublicRoutePath,
   isPublicRoutePath,
@@ -52,7 +52,7 @@ function applyResponsePolicy(
   if (process.env.NODE_ENV === "production") response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   if (cacheControl) response.headers.set("Cache-Control", cacheControl);
   if (localeFromPathname(request.nextUrl.pathname) && isPublicRoutePath(request.nextUrl.pathname)) {
-    response.headers.set("Content-Language", locale.locale);
+    response.headers.set("Content-Language", localeTag(locale.locale));
     response.headers.set("Vary", "Accept-Encoding");
   }
   // Never add Set-Cookie to canonical locale-prefixed pages: shared caches must

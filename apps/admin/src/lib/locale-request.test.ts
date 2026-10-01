@@ -18,7 +18,16 @@ it("falls back to the cookie before the browser hint", () => {
   expect(negotiateLocale({ cookie: "fr", acceptLanguage: "en-US,en;q=0.9" })).toEqual({ locale: "fr", source: "cookie" });
   expect(negotiateLocale({ acceptLanguage: "fr-CA,fr;q=0.9" })).toEqual({ locale: "fr", source: "header" });
   expect(negotiateLocale({})).toEqual({ locale: "en", source: "default" });
-  expect(negotiateLocale({ query: "es", cookie: "de", acceptLanguage: "it" })).toEqual({ locale: "en", source: "default" });
+  expect(negotiateLocale({ query: "de", cookie: "pt", acceptLanguage: "it" })).toEqual({ locale: "en", source: "default" });
+});
+
+it("negotiates Spanish and Serbian from every source", () => {
+  expect(negotiateLocale({ query: "es", cookie: "fr", acceptLanguage: "en" })).toEqual({ locale: "es", source: "query" });
+  expect(negotiateLocale({ cookie: "sr", acceptLanguage: "es" })).toEqual({ locale: "sr", source: "cookie" });
+  expect(negotiateLocale({ acceptLanguage: "es-419,es;q=0.9,en;q=0.5" })).toEqual({ locale: "es", source: "header" });
+  expect(negotiateLocale({ acceptLanguage: "sr-Latn-RS,sr;q=0.9" })).toEqual({ locale: "sr", source: "header" });
+  expect(localeFromAcceptLanguage("de,sr-Cyrl;q=0.8,en;q=0.5")).toBe("sr");
+  expect(localeFromCookieHeader("lobbystack.locale=es")).toBe("es");
 });
 
 it("picks the highest quality supported language from Accept-Language", () => {
