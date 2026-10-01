@@ -125,6 +125,26 @@ describe("telling the dashboard an upgrade is under way", () => {
     expect(isUpgradeInProgress()).toBe(true);
   });
 
+  it("lets them pick again when the back button restores the page from cache", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    await renderPlans(async (_url, init) => init?.method === "POST"
+      ? Response.json({ requestId: "request" })
+      : Response.json({ status: "ready", checkoutUrl: "https://checkout.example/session", error: null }));
+    await userEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.example/session"), { timeout: 3_000 });
+    // The Pro button shows its loading state while the redirect is under way.
+    expect(screen.queryByRole("button", { name: "billing.upgradeDialog.actions.pro" })).toBeNull();
+    const restored = new Event("pageshow");
+    Object.defineProperty(restored, "persisted", { value: true });
+    act(() => { window.dispatchEvent(restored); });
+    await waitFor(() => expect(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" })).toHaveProperty("disabled", false));
+    expect(assign).toHaveBeenCalledTimes(1);
+    expect(isUpgradeInProgress()).toBe(true);
+    await userEvent.click(screen.getByRole("button", { name: "accessibility.close" }));
+    await waitFor(() => expect(isUpgradeInProgress()).toBe(false));
+  });
+
   it("lets go once a failed checkout's picker is closed, and on unmount", async () => {
     const view = await renderPlans(async () => Response.json({ error: "Checkout unavailable" }, { status: 503 }));
     await userEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" }));
