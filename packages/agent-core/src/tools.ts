@@ -4,6 +4,7 @@ import {
   checkOpening,
   findOpenings,
   issueAppointmentChangeOtp,
+  knowledgeQueryTerms,
   lookupCallerAppointments,
   rescheduleForCaller,
   searchKnowledgeEvidence,
@@ -46,20 +47,21 @@ function formatMinutes(minutes: number): string {
   return DateTime.fromObject({ hour: Math.floor(minutes / 60), minute: minutes % 60 }).toFormat("h:mm a");
 }
 
-function comparable(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
-}
-
-// Curated FAQs from the snapshot back up knowledge search when it finds nothing
-// or is unavailable. The document digest is an inventory, not evidence.
+// Curated FAQs from the snapshot fill the slots knowledge search leaves, or stand in
+// when it is unavailable. The document digest is an inventory, not evidence.
+// Pasted snippets are long, so one shared word proves little. A snippet must contain
+// a meaningful query term at the start of a word ("price" finds "prices"), and two
+// distinct terms once the query has three or more. More terms matched ranks first,
+// then higher priority.
 function snapshotKnowledgeMatches(snapshot: BusinessContextSnapshot, query: string) {
-  const wanted = comparable(query);
-  const tokens = wanted.split(" ").filter((token) => token.length >= 3);
+  const terms = knowledgeQueryTerms(query);
+  if (!terms.length) return [];
+  const needed = terms.length >= 3 ? 2 : 1;
   return (snapshot.knowledgeSnippets ?? []).flatMap((snippet) => {
-    const text = comparable(`${snippet.title} ${snippet.content}`);
-    if (!wanted || !(text.includes(wanted) || tokens.some((token) => text.includes(token)))) return [];
-    return [{ title: snippet.title, text: snippet.content.trim() }];
-  });
+    const words = `${snippet.title} ${snippet.content}`.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+    const matched = terms.filter((term) => words.some((word) => word.startsWith(term))).length;
+    return matched >= needed ? [{ matched, priority: snippet.priority, title: snippet.title, text: snippet.content.trim() }] : [];
+  }).sort((a, b) => b.matched - a.matched || b.priority - a.priority).map(({ title, text }) => ({ title, text }));
 }
 
 const phone = z.string().describe("Phone number in E.164 format, for example +14165550134.");
@@ -111,7 +113,8 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         const fallback = snapshotKnowledgeMatches(snapshot, query);
         try {
           const evidence = await searchKnowledgeEvidence(domain, { businessId, query, limit: 6, ...(context.callId ? { callId: context.callId } : {}) });
-          const matches = [...fallback, ...evidence.matches.map((match) => ({ title: match.title, text: match.content }))].slice(0, 6);
+          // Evidence first. Snippets only fill the slots it leaves.
+          const matches = [...evidence.matches.map((match) => ({ title: match.title, text: match.content })), ...fallback].slice(0, 6);
           return { outcome: matches.length ? "found" : evidence.outcome, matches };
         } catch {
           return { outcome: fallback.length ? "found" : "unavailable", matches: fallback };
