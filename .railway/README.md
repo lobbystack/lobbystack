@@ -44,4 +44,6 @@ After you apply the production source rollout, the parser should report no produ
 
 Update the template when you add or remove a service or a variable in `railway.ts`. Mark a user-supplied value as optional unless every deployment needs it. Generate secrets in the template with `${{secret(64)}}`.
 
+The admin's `APP_BASE_URL` is the template's only public URL. Every other URL variable references it, with `${{APP_BASE_URL}}` on the admin and `${{admin.APP_BASE_URL}}` or another `admin` variable on the worker, so a custom domain needs one change. Keep new URL variables on that pattern. The self-hosting overview in `mintlify/` lists the variables a deployer sets after deploying; update it in all three languages when you change them.
+
 The `migrate` service runs migrations as the `postgres` superuser, like Docker Compose. `0000_roles.sql` creates the application roles, and `bootstrap` gives them logins. Every other service connects as a scoped role.

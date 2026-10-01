@@ -304,7 +304,8 @@ export type TelemetryRequirementKey =
   | "monthKey"
   | "plan"
   | "prospectDemoId"
-  | "campaignId";
+  | "campaignId"
+  | "endedBy";
 
 export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.auth.login_succeeded": ["deploymentMode", "pathname"],
@@ -401,7 +402,9 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   ],
   "web.voice.test_call_started": ["businessId", "deploymentMode"],
   "web.voice.test_call_connected": ["businessId", "deploymentMode"],
-  "web.voice.test_call_ended": ["businessId", "deploymentMode"],
+  // endedBy: "caller" when the caller hung up, "agent" when the receptionist's
+  // side closed the session (its endCall tool or a time limit).
+  "web.voice.test_call_ended": ["businessId", "deploymentMode", "endedBy"],
   "web.voice.test_call_error": ["businessId", "deploymentMode"],
   "web.activation.first_call_completed": ["businessId", "deploymentMode", "transport"],
   "web.activation.upgrade_prompt_shown": ["businessId", "deploymentMode", "trigger"],

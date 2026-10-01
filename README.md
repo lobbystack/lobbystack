@@ -111,6 +111,15 @@ Self-host when your team wants to run the stack on your own infrastructure, brin
 
 To self-host on Railway, deploy the [LobbyStack template](https://railway.com/deploy/lobbystack). Railway generates every secret and database password, and you enter an OpenAI API key and your Twilio credentials.
 
+After deploying, set a few variables in Railway:
+
+- **Email:** `SMTP_*` and `EMAIL_FROM` on the worker. Password resets, verification codes, and invites fail without them.
+- **Phone calls:** an OpenAI webhook to `https://your_admin_domain/api/webhooks/openai/live`, its secret as `OPENAI_WEBHOOK_SECRET` on the admin, and your Twilio Elastic SIP trunk as `TWILIO_SIP_TRUNK_SID` on the worker. See [`docs/voice/runtime.md`](./docs/voice/runtime.md#set-up-the-phone-path).
+- **Optional:** `FIRECRAWL_API_KEY` on the worker for website import, and `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on the admin for Google Calendar.
+- **Custom domain:** `APP_BASE_URL` on the admin. The other URL variables reference it.
+
+The [self-hosting guide](https://docs.lobbystack.com/self-hosting/overview#after-deploying) has each step.
+
 Full product control in the hosted app. Infrastructure ownership when you self-host. Same open-source core either way.
 
 ## Architecture for contributors

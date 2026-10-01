@@ -54,6 +54,8 @@ export default defineRailway((ctx) => {
   });
   const redisUrl = "redis://default:${{Redis.REDIS_PASSWORD}}@${{Redis.RAILWAY_PRIVATE_DOMAIN}}:6379";
 
+  // admin's APP_BASE_URL is the one public URL. Every other URL variable references it, so a
+  // custom domain means changing only that variable. `${{VAR}}` references the same service.
   const adminOrigin = "https://${{admin.RAILWAY_PUBLIC_DOMAIN}}";
   const s3 = {
     STORAGE_PROVIDER: "s3",
@@ -112,8 +114,8 @@ export default defineRailway((ctx) => {
       PORT: "3000",
       HOSTNAME: "::",
       APP_BASE_URL: adminOrigin,
-      SITE_URL: adminOrigin,
-      AUTH_TRUSTED_ORIGINS: adminOrigin,
+      SITE_URL: "${{APP_BASE_URL}}",
+      AUTH_TRUSTED_ORIGINS: "${{APP_BASE_URL}}",
       BETTER_AUTH_USE_SECURE_COOKIES: "true",
       REQUIRE_EMAIL_VERIFICATION: "false",
       SEND_VERIFICATION_EMAIL_ON_SIGNUP: "false",
@@ -124,8 +126,13 @@ export default defineRailway((ctx) => {
       // Optional user input for phone calls: the secret of the OpenAI webhook
       // that points at /api/webhooks/openai/live. See docs/voice/runtime.md.
       OPENAI_WEBHOOK_SECRET: preserve(),
-      TWILIO_SMS_WEBHOOK_URL: `${adminOrigin}/api/webhooks/twilio/sms`,
-      TWILIO_STATUS_CALLBACK_URL: `${adminOrigin}/api/webhooks/twilio/status`,
+      TWILIO_SMS_WEBHOOK_URL: "${{APP_BASE_URL}}/api/webhooks/twilio/sms",
+      TWILIO_STATUS_CALLBACK_URL: "${{APP_BASE_URL}}/api/webhooks/twilio/status",
+      // Optional user input for Google Calendar: an OAuth client from Google Cloud whose
+      // authorized redirect URI is GOOGLE_REDIRECT_URI. The worker references all three.
+      GOOGLE_CLIENT_ID: preserve(),
+      GOOGLE_CLIENT_SECRET: preserve(),
+      GOOGLE_REDIRECT_URI: "${{APP_BASE_URL}}/api/calendar/google/callback",
       // Other role URLs are built from DATABASE_URL and the role passwords (packages/db roleDatabaseUrl).
       DATABASE_URL: roleUrl("lobbystack_app", "LOBBYSTACK_APP_PASSWORD"),
       LOBBYSTACK_AUTH_PASSWORD: "${{Postgres.LOBBYSTACK_AUTH_PASSWORD}}",
@@ -161,8 +168,23 @@ export default defineRailway((ctx) => {
       // sends calls to OpenAI. New numbers can't be provisioned without it.
       // See docs/voice/runtime.md.
       TWILIO_SIP_TRUNK_SID: preserve(),
-      APP_BASE_URL: adminOrigin,
-      TWILIO_STATUS_CALLBACK_URL: `${adminOrigin}/api/webhooks/twilio/status`,
+      APP_BASE_URL: "${{admin.APP_BASE_URL}}",
+      TWILIO_STATUS_CALLBACK_URL: "${{admin.TWILIO_STATUS_CALLBACK_URL}}",
+      // Optional user input for email. Without SMTP_HOST, password reset, verification codes,
+      // invites and operator alerts fail. EMAIL_FROM must be an address the SMTP server may send as.
+      SMTP_HOST: preserve(),
+      SMTP_PORT: "587",
+      SMTP_SECURE: "false",
+      SMTP_USERNAME: preserve(),
+      SMTP_PASSWORD: preserve(),
+      EMAIL_FROM: preserve(),
+      EMAIL_REPLY_TO: preserve(),
+      // Optional user input for website import. Without it, crawling a website fails.
+      FIRECRAWL_API_KEY: preserve(),
+      // Google Calendar sync and token refresh use the same OAuth client as admin.
+      GOOGLE_CLIENT_ID: "${{admin.GOOGLE_CLIENT_ID}}",
+      GOOGLE_CLIENT_SECRET: "${{admin.GOOGLE_CLIENT_SECRET}}",
+      GOOGLE_REDIRECT_URI: "${{admin.GOOGLE_REDIRECT_URI}}",
       DATABASE_URL: roleUrl("lobbystack_worker", "LOBBYSTACK_WORKER_PASSWORD"),
       LOBBYSTACK_DISPATCHER_PASSWORD: "${{Postgres.LOBBYSTACK_DISPATCHER_PASSWORD}}",
       ENCRYPTION_KEY: "${{admin.ENCRYPTION_KEY}}",
