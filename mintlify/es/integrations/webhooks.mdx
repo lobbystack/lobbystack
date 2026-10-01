@@ -1,0 +1,42 @@
+---
+title: "Configure webhooks"
+description: "Envíe llamadas, reservas, mensajes y contactos nuevos desde LobbyStack a sus propias herramientas."
+sidebarTitle: "Webhooks"
+contentType: "How-to"
+---
+
+Los webhooks permiten que otra herramienta reaccione cuando algo ocurre en LobbyStack. Por ejemplo, su CRM puede registrar cada llamada finalizada, o una hoja de cálculo puede recibir una fila por cada reserva.
+
+Solo los propietarios y administradores pueden gestionar los webhooks.
+
+## Agregue un webhook
+
+<Steps>
+  <Step title="Abra Webhooks">
+    Vaya a **Gestionar** > **Integraciones** y haga clic en **Gestionar** en la tarjeta **Webhooks**.
+  </Step>
+  <Step title="Agregue el endpoint">
+    Haga clic en **Agregar endpoint**. Introduzca la URL `https://` que le dio su herramienta y elija los eventos que desea enviar.
+  </Step>
+  <Step title="Guarde el secreto de firma">
+    Copie el secreto que empieza por `whsec_` y péguelo en su herramienta. LobbyStack lo muestra una sola vez.
+  </Step>
+  <Step title="Envíe un evento de prueba">
+    Haga clic en **Enviar evento de prueba** y luego en **Registro de entregas** para comprobar que su herramienta respondió.
+  </Step>
+</Steps>
+
+## Revise las entregas
+
+El **Registro de entregas** muestra los eventos enviados a un endpoint con su estado, el código de respuesta y el número de intentos. Haga clic en **Reenviar** para enviar de nuevo un evento.
+
+LobbyStack reintenta las entregas fallidas durante unas 23 horas. Si todos los intentos fallan, desactiva el endpoint y envía una alerta a su equipo. Corrija el endpoint, vuelva a activarlo y reenvíe los eventos que se perdieron.
+
+## Cambie o elimine un webhook
+
+- **Editar** cambia la URL, la descripción o los eventos.
+- El interruptor pausa o reanuda el envío.
+- **Cambiar secreto** reemplaza el secreto de firma. Actualice su herramienta con el nuevo.
+- **Eliminar** borra el endpoint y su registro de entregas.
+
+Para conocer el contenido de los eventos y la verificación de firmas, consulte [Reciba webhooks](/es/api/webhooks).

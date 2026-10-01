@@ -1,0 +1,118 @@
+---
+title: "Conecte Claude"
+description: "Agregue LobbyStack a Claude como conector, o a Claude Code, Claude Desktop y la API de Claude con una clave de API."
+sidebarTitle: "Claude"
+contentType: "How-to"
+---
+
+La URL del servidor es `https://app.lobbystack.com/api/mcp`. Si usa una implementación autoalojada, reemplace `app.lobbystack.com` por su propio dominio. Claude se conecta a ella desde internet, así que un LobbyStack autoalojado necesita una dirección HTTPS pública.
+
+Consulte [Servidor MCP](/es/ai/mcp) para ver qué herramientas habilita cada permiso.
+
+## Conectores de Claude y Claude Desktop
+
+<Steps>
+  <Step title="Agregue el conector">
+    En Claude, vaya a **Customize** > **Connectors**, haga clic en **+** y luego en **Add custom connector**. Llámelo `LobbyStack`, pegue la URL del servidor y haga clic en **Add**. Deje **Advanced settings** vacío.
+
+    En los planes Team y Enterprise, un propietario lo agrega en **Organization settings** > **Connectors**, y cada miembro lo conecta desde **Customize** > **Connectors**.
+  </Step>
+  <Step title="Conéctese e inicie sesión">
+    Haga clic en **Connect**. Claude abre LobbyStack. Inicie sesión si aún no lo ha hecho.
+  </Step>
+  <Step title="Elija el negocio y los permisos">
+    Elija el negocio, desmarque lo que Claude no deba hacer y haga clic en **Permitir acceso**. Volverá a Claude con la conexión hecha.
+  </Step>
+</Steps>
+
+Para desconectarlo, vaya a **Configuración** > **Aplicaciones conectadas** en LobbyStack y haga clic en **Desconectar** junto a Claude.
+
+## Claude Code
+
+Agregue el servidor y luego inicie sesión desde Claude Code:
+
+```bash
+claude mcp add --transport http lobbystack https://app.lobbystack.com/api/mcp
+```
+
+Inicie Claude Code, ejecute `/mcp`, seleccione `lobbystack` y elija autenticarse. Su navegador abre la página de inicio de sesión y consentimiento de LobbyStack.
+
+Para usar una clave de API en su lugar, pásela como encabezado:
+
+```bash
+claude mcp add --transport http lobbystack https://app.lobbystack.com/api/mcp \
+  --header "Authorization: Bearer $LOBBYSTACK_API_KEY"
+```
+
+## Claude Desktop con una clave de API
+
+Si prefiere usar una clave de API en lugar del conector, ejecute [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) desde el archivo de configuración de Claude Desktop. Reenvía las solicitudes a LobbyStack con su clave. Necesita tener Node.js en su computadora.
+
+<Steps>
+  <Step title="Abra el archivo de configuración">
+    En Claude Desktop, vaya a **Settings** > **Developer** y haga clic en **Edit Config**.
+  </Step>
+  <Step title="Agregue LobbyStack">
+    Agregue esta entrada en `mcpServers` y pegue su clave en lugar de `lsk_...`:
+
+    ```json claude_desktop_config.json
+    {
+      "mcpServers": {
+        "lobbystack": {
+          "command": "npx",
+          "args": [
+            "-y",
+            "mcp-remote",
+            "https://app.lobbystack.com/api/mcp",
+            "--header",
+            "Authorization:${LOBBYSTACK_AUTH}"
+          ],
+          "env": {
+            "LOBBYSTACK_AUTH": "Bearer lsk_..."
+          }
+        }
+      }
+    }
+    ```
+
+    El valor del encabezado va en `env` porque algunos sistemas separan los argumentos por los espacios.
+  </Step>
+  <Step title="Reinicie Claude Desktop">
+    Cierre la aplicación y vuelva a abrirla. Las herramientas de LobbyStack aparecen en el menú de herramientas de un chat nuevo.
+  </Step>
+</Steps>
+
+## API de Claude
+
+La Messages API se conecta a servidores MCP remotos con el conector MCP. Envíe una clave de API, o un token de acceso OAuth que haya obtenido su aplicación, como `authorization_token`:
+
+```bash
+curl https://api.anthropic.com/v1/messages \
+  -H "x-api-key: $ANTHROPIC_API_KEY" \
+  -H "anthropic-version: 2023-06-01" \
+  -H "anthropic-beta: mcp-client-2025-11-20" \
+  -H "content-type: application/json" \
+  -d '{
+    "model": "claude-opus-5",
+    "max_tokens": 4096,
+    "mcp_servers": [{
+      "type": "url",
+      "url": "https://app.lobbystack.com/api/mcp",
+      "name": "lobbystack",
+      "authorization_token": "'"$LOBBYSTACK_API_KEY"'"
+    }],
+    "tools": [{ "type": "mcp_toolset", "mcp_server_name": "lobbystack" }],
+    "messages": [{ "role": "user", "content": "Which messages are still open?" }]
+  }'
+```
+
+## Compruebe la conexión
+
+Pida a Claude que llame a `get_business`. Debería responder con el nombre de su negocio, la zona horaria y el modo de reserva. Si la llamada falla:
+
+| Síntoma | Solución |
+| --- | --- |
+| La página de inicio de sesión indica que no puede conectar aplicaciones | Pida a un propietario del negocio que conecte Claude o que le haga administrador. |
+| `401` o "unauthorized" | Vuelva a conectarse. Con una clave de API, compruebe que copió la clave completa y que nadie la revocó. |
+| `403` o "insufficient_scope" | Vuelva a conectarse y permita al menos un permiso. Con una clave de API, cree una con un permiso distinto de `webhooks:manage`. |
+| Falta una herramienta | Vuelva a conectarse y permita el permiso que necesita esa herramienta. |

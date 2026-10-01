@@ -1,0 +1,98 @@
+---
+title: "Configure las variables de entorno"
+description: "Las principales variables de entorno del servicio de administración, el worker, las llamadas de voz, el almacenamiento y los proveedores de LobbyStack."
+sidebarTitle: "Variables de entorno"
+contentType: "Reference"
+---
+
+Use `.env.example` como fuente de referencia. Guarde los valores de producción en el gestor de secretos de su implementación o en un archivo `.env` con permisos restringidos.
+
+## Aplicación y base de datos
+
+| Variable | Función |
+| --- | --- |
+| `APP_BASE_URL` | URL HTTPS pública del panel y de la API. |
+| `DEPLOYMENT_MODE` | `cloud`, `self_hosted_standard` o `development`. |
+| `DATABASE_URL` | Conexión a PostgreSQL para el rol principal del servicio: `lobbystack_app` para el servicio de administración, `lobbystack_worker` para el worker. |
+| `LOBBYSTACK_AUTH_PASSWORD`, `LOBBYSTACK_WORKER_PASSWORD`, `LOBBYSTACK_DISPATCHER_PASSWORD` | Contraseñas de los demás roles. Un servicio se conecta con cada rol combinando el host y la base de datos de `DATABASE_URL` con la contraseña de ese rol. |
+| `LOBBYSTACK_<ROLE>_DATABASE_URL` | Opcional. Reemplaza la cadena de conexión construida para un rol, por ejemplo para usar otro host. |
+| `BETTER_AUTH_SECRET` | Secreto de firma de Better Auth. Use al menos 32 caracteres aleatorios. |
+| `ENCRYPTION_KEY` | Cifra las credenciales de la aplicación almacenadas. |
+| `OTP_HASH_SECRET` | Genera el hash de los códigos de verificación de un solo uso. |
+
+## Servicios internos
+
+| Variable | Función |
+| --- | --- |
+| `INTERNAL_SERVICE_SECRET` | Firma los tokens de fin de llamada del navegador y otros valores internos de corta duración. |
+| `INTERNAL_SERVICE_TOKEN` | Autentica el traspaso de llamadas del servicio de administración al worker y las rutas internas de estado protegidas. Configure el mismo valor en el servicio de administración y en el worker. |
+| `WORKER_INTERNAL_URL` | URL privada del puerto HTTP del worker, que el servicio de administración usa para pasarle cada llamada. Compose la configura como `http://worker:3002`. |
+
+## Llamadas de voz
+
+El modelo GPT-Live de OpenAI contesta las llamadas desde el navegador y las llamadas telefónicas. Las llamadas telefónicas le llegan a través de su trunk SIP de Twilio. El servicio de administración inicia cada llamada y el worker la ejecuta.
+
+| Variable | Función |
+| --- | --- |
+| `LIVE_PROTOTYPE_ENABLED` | Configúrela como `true` en el servicio de administración y en el worker. Compose la configura por defecto. Sin ella, las llamadas desde el navegador fallan. |
+| `OPENAI_WEBHOOK_SECRET` | Verifica el webhook de llamadas entrantes de OpenAI en `/api/webhooks/openai/live`. Solo para llamadas telefónicas. |
+| `TWILIO_SIP_TRUNK_SID` | El trunk Elastic SIP de Twilio que envía las llamadas a su proyecto de OpenAI. Los números nuevos se agregan a él, y el worker no aprovisiona un número sin esta variable. |
+| `WEB_CALL_MAX_DURATION_MS` | Límite opcional de la duración de las llamadas desde el navegador. |
+| `WEB_CALL_PUBLIC_BUSINESS_SLUG` | Negocio que contesta la llamada de demostración pública en su sitio de marketing. |
+| `WEB_CALL_ALLOWED_ORIGINS` | Sitios, separados por comas, autorizados a iniciar esa llamada de demostración pública. Las llamadas del widget del sitio web usan en su lugar los orígenes permitidos de cada clave de widget. |
+
+## Redis y almacenamiento de archivos
+
+| Variable | Función |
+| --- | --- |
+| `REDIS_URL` | URL de conexión a Redis que usan los entornos de ejecución del servicio de administración y del worker. |
+| `STORAGE_PROVIDER` | `local` por defecto. Configúrela como `s3` para AWS S3, MinIO u otro servicio compatible. |
+| `LOCAL_STORAGE_PATH` | Ruta del sistema de archivos compartida por el servicio de administración y el worker. Compose monta su volumen persistente en `/var/lib/lobbystack/storage`. |
+| `LOCAL_STORAGE_SIGNING_SECRET` | Firma las URL locales de subida y descarga de corta duración. Use un valor aleatorio largo. Fuera de Compose, usa `INTERNAL_SERVICE_SECRET` si no está definida. |
+| `S3_ENDPOINT` | Endpoint opcional compatible con S3. Déjela vacía para AWS S3. |
+| `S3_BUCKET` | Bucket para las grabaciones y los archivos subidos. |
+| `S3_REGION` | Región de S3. El valor predeterminado es `us-east-1`. |
+| `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Credenciales del almacenamiento de objetos. |
+| `S3_FORCE_PATH_STYLE` | Configúrela como `true` para MinIO. |
+
+El almacenamiento local sirve para una implementación en un solo host. Use S3 cuando el servicio de administración y el worker se ejecuten en hosts distintos o cuando necesite un almacenamiento gestionado fuera del host de Docker.
+
+## API pública y webhooks
+
+| Variable | Función |
+| --- | --- |
+| `PUBLIC_API_RATE_LIMIT_PER_MINUTE` | Solicitudes por minuto para cada clave de API en `/api/v1`. El valor predeterminado es `120`. Configúrela en el servicio de administración. El límite usa `REDIS_URL`; en producción, las solicitudes fallan con `503` cuando no se puede acceder a Redis. |
+| `ENCRYPTION_KEY` | También cifra los secretos de firma de los webhooks y sirve de clave para el HMAC con el que se almacenan los hashes de las claves de API. Configure el mismo valor en el servicio de administración y en el worker, o el worker no podrá firmar las entregas. Cambiarla invalida todas las claves de API y todos los secretos de webhook. |
+
+Las entregas de webhooks rechazan las direcciones privadas, de loopback, de enlace local y de metadatos de la nube en todas las implementaciones, incluidas las autoalojadas. Apunte los endpoints a una URL HTTPS pública. Las URL `http://` simples solo funcionan cuando `NODE_ENV=development`.
+
+## Observabilidad
+
+| Variable | Función |
+| --- | --- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | URL base de OTLP. LobbyStack agrega `/v1/traces`, `/v1/metrics` y `/v1/logs`. Déjela vacía para desactivar la exportación. |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Encabezados `key=value` opcionales, separados por comas, que se envían con cada solicitud OTLP. Para PostHog, use `Authorization=Bearer your_posthog_project_token_here`. |
+
+Un endpoint OTLP vacío no desactiva los registros stdout de los contenedores, los endpoints de estado de la aplicación, las analíticas de producto directas ni el reporte de errores directo.
+
+## Proveedores
+
+| Grupo de variables | Función |
+| --- | --- |
+| `TWILIO_*` | Voz, verificación, aprovisionamiento de números y autenticación de webhooks. |
+| `OPENAI_API_KEY` | Llamadas de GPT-Live y clave de respaldo para `AI_CHAT_*` y `AI_EMBEDDING_*`. |
+| `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_PROVIDER_NAME` | El agente de la recepcionista para el chat del sitio web y las llamadas. Deje `AI_CHAT_MODEL` en blanco con OpenAI para usar `gpt-6-luna`. Configúrela para cualquier otro endpoint compatible con OpenAI. |
+| `AI_CHAT_REASONING_EFFORT` | Solo OpenAI: `none`, `minimal`, `low`, `medium`, `high` o `xhigh`. El valor predeterminado es `high`. |
+| `AI_SUMMARY_MODEL` | El modelo que el worker usa en el endpoint `AI_CHAT_*` para escribir el resumen de una línea de cada llamada terminada y obtener el nombre de la persona que llama. Déjela en blanco para usar `AI_CHAT_MODEL`. Con un modelo distinto, el costo de IA del resumen de la llamada queda desconocido, porque los precios de `AI_CHAT_*` corresponden al modelo de chat. Sin ningún modelo de texto, las llamadas recurren a un resumen tomado de la transcripción. |
+| `AI_SUMMARY_REASONING_EFFORT` | Solo OpenAI: esfuerzo de razonamiento para los resúmenes de llamadas. El valor predeterminado es `low`. |
+| `AI_EMBEDDING_API_KEY`, `AI_EMBEDDING_BASE_URL`, `AI_EMBEDDING_MODEL`, `AI_EMBEDDING_PROVIDER_NAME`, `AI_EMBEDDING_REVISION` | Embeddings de 1536 dimensiones compatibles con OpenAI. |
+| `WIDGET_SESSION_SECRET` | Firma las sesiones de origen cruzado del widget del sitio web. |
+| `FIRECRAWL_*` | Importación de conocimiento desde el sitio web. |
+| `GOOGLE_*` | OAuth de Google Calendar. |
+| `SMTP_*`, `EMAIL_*` | Correo electrónico transaccional. |
+| `POLAR_*` | Facturación alojada y medidores de uso. |
+| `POSTHOG_*` | Analíticas de producto directas y reporte de errores. |
+
+<Warning>
+  Nunca ponga secretos en variables `NEXT_PUBLIC_*`. Next.js incluye esos valores en los paquetes del navegador.
+</Warning>

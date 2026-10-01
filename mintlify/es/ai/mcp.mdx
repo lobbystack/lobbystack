@@ -1,0 +1,118 @@
+---
+title: "Maneje su recepcionista desde un asistente de IA"
+description: "Conecte Claude, ChatGPT y otros clientes MCP a LobbyStack para leer llamadas, reservar citas y actualizar lo que sabe su recepcionista."
+sidebarTitle: "Servidor MCP"
+contentType: "Reference"
+---
+
+LobbyStack ejecuta un servidor de Model Context Protocol (MCP). Conecte un asistente de IA y pídale cosas con sus propias palabras: "¿Quién llamó ayer y no reservó?", "Reserve una limpieza para Dana Whitfield el martes por la mañana" o "A partir de ahora, cierre los sábados".
+
+El asistente sigue las mismas reglas que la [API REST](/es/api/overview). Ve un solo negocio, solo puede hacer lo que permite su clave de API y cada cambio que hace queda en el registro de auditoría del negocio.
+
+## Conexión
+
+| Ajuste | Valor |
+| --- | --- |
+| URL del servidor | `https://app.lobbystack.com/api/mcp` |
+| Transporte | Streamable HTTP |
+| Autenticación | Iniciar sesión con LobbyStack (OAuth), o `Authorization: Bearer <API key>` |
+
+Las implementaciones autoalojadas sirven la misma ruta en su propio dominio, por ejemplo `https://lobbystack.example.com/api/mcp`.
+
+Los asistentes se conectan de una de estas dos formas:
+
+- **Inicio de sesión con LobbyStack.** Agregue la URL del servidor al asistente. Este abre una página de LobbyStack donde usted inicia sesión, elige el negocio y decide qué puede hacer el asistente. Use esta opción para los conectores de Claude y ChatGPT.
+- **Clave de API.** Cree una clave en **Configuración** > **Claves de API** y póngala en la configuración del asistente. Use esta opción para scripts, CI y clientes que le permiten definir encabezados de solicitud. Consulte [Autenticación](/es/api/authentication).
+
+Siga la guía para [Claude](/es/ai/connect-claude), [ChatGPT](/es/ai/connect-chatgpt) u [otro cliente MCP](/es/ai/connect-other-clients).
+
+## Inicio de sesión con LobbyStack
+
+LobbyStack ejecuta un servidor de autorización OAuth 2.1 para clientes MCP, como describe la [especificación de autorización de MCP](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization). Su asistente lo encuentra por sí solo a partir de la URL del servidor.
+
+Al conectarse, LobbyStack le pide que:
+
+1. Inicie sesión, si aún no lo ha hecho.
+2. Elija el negocio. Solo ve los negocios en los que es propietario o administrador.
+3. Elija qué puede hacer el asistente. Todos los permisos que solicitó aparecen marcados; desmarque los que no quiera conceder.
+
+El asistente obtiene entonces acceso a ese único negocio. Los tokens de acceso duran una hora, y el asistente los renueva durante un máximo de 30 días de inactividad sin volver a preguntarle. Cada renovación reemplaza el token de actualización anterior, y reutilizar uno antiguo termina la conexión.
+
+Los propietarios y administradores ven todos los asistentes conectados al negocio en **Configuración** > **Aplicaciones conectadas**, con quién los conectó, sus permisos y cuándo hicieron su última solicitud. Haga clic en **Desconectar** para cortar el acceso de inmediato. Si la persona que conectó el asistente deja de ser propietaria o administradora, la conexión también deja de funcionar.
+
+<Accordion title="Detalles para desarrolladores de clientes MCP">
+  | Elemento | Valor |
+  | --- | --- |
+  | Metadatos del recurso protegido | `/.well-known/oauth-protected-resource/api/mcp` |
+  | Emisor del servidor de autorización | `https://app.lobbystack.com/api/auth` |
+  | Metadatos del servidor de autorización | `/.well-known/oauth-authorization-server/api/auth` |
+  | Registro de clientes | Client ID Metadata Documents (`client_id` HTTPS) o registro dinámico de clientes en `/api/auth/oauth2/register` |
+  | Concesiones | `authorization_code` con PKCE (`S256`, obligatorio), `refresh_token` |
+  | Indicador de recurso | Envíe `resource=https://app.lobbystack.com/api/mcp`. Se rechazan los tokens para otros recursos. |
+  | Scopes | Los permisos de las herramientas de la tabla siguiente, más `offline_access` para los tokens de actualización |
+  | Revocación | `/api/auth/oauth2/revoke` (RFC 7009) |
+
+  Un `401` de `/api/mcp` incluye `WWW-Authenticate: Bearer resource_metadata="..."`. Los clientes con URI de redirección de loopback, como `http://127.0.0.1:6276/callback`, se registran como aplicaciones nativas; las demás URI de redirección deben usar HTTPS.
+</Accordion>
+
+## Herramientas
+
+| Herramienta | Permiso | Qué hace |
+| --- | --- | --- |
+| `get_business` | `business:read` | Nombre del negocio, zona horaria, horario de atención y modo de reserva |
+| `list_services` | `business:read` | Servicios que los clientes pueden reservar |
+| `list_staff` | `business:read` | Personas que atienden citas y los servicios que ofrecen |
+| `update_business_hours` | `business:write` | Reemplaza el horario de atención de la semana |
+| `list_calls` | `calls:read` | Llamadas de la más reciente a la más antigua, filtradas por hora de inicio |
+| `get_call` | `calls:read` | Una llamada con su transcripción |
+| `search_contacts` | `contacts:read` | Contactos por teléfono, correo electrónico o parte del nombre |
+| `get_contact` | `contacts:read` | Un contacto |
+| `create_contact` | `contacts:write` | Agrega un contacto |
+| `update_contact` | `contacts:write` | Cambia los datos de un contacto |
+| `list_appointments` | `appointments:read` | Citas filtradas por estado, hora de inicio o contacto |
+| `get_appointment` | `appointments:read` | Una cita |
+| `check_availability` | `appointments:read` | Horarios libres para un servicio, hasta 7 días, con cualquier persona o con un miembro del equipo concreto |
+| `book_appointment` | `appointments:write` | Reserva un horario libre |
+| `cancel_appointment` | `appointments:write` | Cancela una cita |
+| `reschedule_appointment` | `appointments:write` | Mueve una cita a otro horario libre o a otro miembro del equipo |
+| `list_messages` | `messages:read` | Mensajes que la recepcionista tomó para su equipo |
+| `add_knowledge` | `knowledge:write` | Agrega una pregunta frecuente o un texto que la recepcionista puede usar |
+
+Los permisos (scopes) son los mismos para OAuth y para las claves de API. Las herramientas devuelven los mismos objetos que la API REST, con las horas en UTC. Las herramientas de solo lectura llevan la anotación `readOnlyHint`, y las que cancelan, mueven o reemplazan datos llevan `destructiveHint`, para que su asistente pueda pedirle confirmación antes de ejecutarlas.
+
+El permiso `webhooks:manage` no tiene herramientas MCP. Una clave que solo tiene ese permiso no puede conectarse.
+
+## Modo de reserva
+
+`book_appointment` y `reschedule_appointment` solo funcionan cuando **Citas** está en **Reserva citas** (`booking_mode` `instant`). En los demás modos, devuelven un error en lugar de reservar:
+
+| Ajuste | `booking_mode` | Código de error | Qué debe hacer el asistente |
+| --- | --- | --- | --- |
+| **Toma solicitudes** | `request` | `booking_requires_confirmation` | Indicarle que su equipo confirma las solicitudes desde la bandeja de entrada |
+| **No reserva** | `off` | `booking_disabled` | Indicarle que las reservas están desactivadas |
+
+Este ajuste se cambia en **Agente** > **Ajustes de IA** > **Reservas**. La cancelación funciona en todos los modos.
+
+## Errores
+
+Una llamada a una herramienta que falla devuelve un resultado marcado como error. Su texto es JSON con los mismos códigos que la [API REST](/es/api/requests):
+
+```json
+{ "error": { "code": "slot_unavailable", "message": "That time is not available. Pick another time from GET /availability." } }
+```
+
+El propio servidor responde `401` cuando la clave o el token de acceso falta, es desconocido, ha caducado o se ha revocado, y `403` cuando no tiene ningún permiso que use el servidor MCP.
+
+## Límites y reintentos
+
+Cada llamada a una herramienta cuenta para un límite de 120 solicitudes por minuto. Una clave de API comparte su límite con las solicitudes REST hechas con la misma clave; cada conexión OAuth tiene el suyo propio. Listar las herramientas no cuenta. Al superar el límite, la herramienta devuelve `rate_limited` con los segundos que hay que esperar.
+
+`book_appointment`, `create_contact` y `add_knowledge` aceptan un `idempotency_key` opcional. Si reintenta con el mismo valor en un plazo de 24 horas, recibe el primer resultado en lugar de un duplicado. Estas claves son las mismas que el `Idempotency-Key` de REST para `POST /appointments`, `POST /contacts` y `POST /knowledge`: reintentar por MCP una solicitud REST, o al revés, devuelve el primer resultado. La misma clave con datos distintos devuelve `idempotency_key_reused`.
+
+## Registro de auditoría
+
+LobbyStack registra cada cambio hecho a través del servidor MCP en el registro de auditoría del negocio, con el actor `mcp` y el ID de la clave de API o, con OAuth, el ID de la conexión y la persona que la aprobó. Nunca registra claves ni tokens. Para cortar el acceso de un asistente, desconéctelo en **Configuración** > **Aplicaciones conectadas** o revoque su clave en **Configuración** > **Claves de API**.
+
+## Guía para agentes de IA
+
+La [skill de LobbyStack](/ai/lobbystack-skill) explica las herramientas, los flujos de trabajo habituales y el manejo de errores en un formato que puede darle a un agente como instrucciones.

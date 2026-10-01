@@ -1,0 +1,101 @@
+---
+title: "Conecte otros clientes MCP"
+description: "Agregue el servidor MCP de LobbyStack a Cursor, VS Code o cualquier cliente compatible con Streamable HTTP, y pruébelo con el MCP Inspector."
+sidebarTitle: "Otros clientes"
+contentType: "How-to"
+---
+
+Cualquier cliente MCP compatible con Streamable HTTP puede conectarse. Los clientes compatibles con MCP OAuth inician sesión con LobbyStack por sí solos; los demás necesitan una clave de API en un encabezado.
+
+| Ajuste | Valor |
+| --- | --- |
+| URL | `https://app.lobbystack.com/api/mcp` |
+| Transporte | Streamable HTTP (a veces aparece como `http`) |
+| Autenticación | OAuth, o el encabezado `Authorization: Bearer <API key>` |
+
+El servidor no guarda estado. Admite la revisión 2026-07-28 del protocolo y recurre a Streamable HTTP para los clientes de 2025. No admite el transporte HTTP+SSE antiguo, así que los clientes que solo ofrecen SSE no pueden conectarse.
+
+## Cursor
+
+Agregue LobbyStack a `~/.cursor/mcp.json`, o a `.cursor/mcp.json` en un proyecto:
+
+```json mcp.json
+{
+  "mcpServers": {
+    "lobbystack": {
+      "url": "https://app.lobbystack.com/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ${env:LOBBYSTACK_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+## VS Code
+
+Agregue LobbyStack a `.vscode/mcp.json`. VS Code le pide la clave la primera vez que inicia el servidor y la guarda por usted:
+
+```json .vscode/mcp.json
+{
+  "inputs": [
+    { "type": "promptString", "id": "lobbystack-key", "description": "LobbyStack API key", "password": true }
+  ],
+  "servers": {
+    "lobbystack": {
+      "type": "http",
+      "url": "https://app.lobbystack.com/api/mcp",
+      "headers": { "Authorization": "Bearer ${input:lobbystack-key}" }
+    }
+  }
+}
+```
+
+## Clientes sin compatibilidad con encabezados
+
+Si un cliente solo puede iniciar servidores locales, ejecute [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) como servidor local y deje que agregue el encabezado. La guía de [Claude Desktop](/es/ai/connect-claude#claude-desktop-con-una-clave-de-api) muestra la configuración.
+
+## Pruebe con el MCP Inspector
+
+La CLI del [MCP Inspector](https://github.com/modelcontextprotocol/inspector) se conecta sin un modelo de IA de por medio. Sin clave, inicia sesión con OAuth: muestra un enlace, usted lo abre, inicia sesión y permite el acceso, y la CLI muestra la lista de herramientas:
+
+```bash
+npx @modelcontextprotocol/inspector --cli https://app.lobbystack.com/api/mcp \
+  --transport http --method tools/list
+```
+
+Con una clave de API:
+
+```bash
+npx @modelcontextprotocol/inspector --cli https://app.lobbystack.com/api/mcp \
+  --transport http \
+  --header "Authorization: Bearer $LOBBYSTACK_API_KEY" \
+  --method tools/list
+```
+
+Llame a una herramienta de la misma forma:
+
+```bash
+npx @modelcontextprotocol/inspector --cli https://app.lobbystack.com/api/mcp \
+  --transport http \
+  --header "Authorization: Bearer $LOBBYSTACK_API_KEY" \
+  --method tools/call --tool-name get_business
+```
+
+## Cree su propio cliente
+
+Los SDK oficiales de MCP se conectan con unas pocas líneas. En TypeScript:
+
+```ts
+import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+
+const client = new Client({ name: "my-app", version: "1.0.0" });
+await client.connect(new StreamableHTTPClientTransport(new URL("https://app.lobbystack.com/api/mcp"), {
+  requestInit: { headers: { Authorization: `Bearer ${process.env.LOBBYSTACK_API_KEY}` } },
+}));
+
+const result = await client.callTool({ name: "list_messages", arguments: { status: "open" } });
+console.log(result.structuredContent);
+```
+
+Si está escribiendo código en lugar de usar un asistente, la [API REST](/es/api/overview) le da los mismos datos con HTTP simple.

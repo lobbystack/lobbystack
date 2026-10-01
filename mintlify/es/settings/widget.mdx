@@ -1,0 +1,46 @@
+---
+title: "Agregue el widget del sitio web"
+description: "Configure el widget integrable de chat y llamadas web de LobbyStack y luego agregue el script de carga a su sitio web."
+sidebarTitle: "Widget del sitio web"
+contentType: "How-to"
+---
+
+La página **Configuración** > **Widget del sitio web** crea y gestiona las claves del widget de la recepcionista. Desde el widget, los visitantes pueden chatear, dejar sus datos de contacto e iniciar una llamada desde el navegador.
+
+<Note>
+  El chat del sitio web tiene acceso restringido y no forma parte de los planes alojados. Las nuevas claves del widget están desactivadas de forma predeterminada. En una implementación autoalojada, defina `WIDGET_KEY_ISSUANCE_ENABLED=true` para crearlas. Las claves existentes siguen funcionando.
+</Note>
+
+## Configure el widget
+
+<Steps>
+  <Step title="Abra la configuración del widget">
+    Vaya a **Configuración** > **Widget del sitio web**.
+  </Step>
+  <Step title="Configure su apariencia">
+    Elija el color, la posición, el título, el subtítulo, el saludo y el comportamiento del idioma.
+  </Step>
+  <Step title="Configure la captación de clientes potenciales">
+    Active el formulario de contacto, elija los campos obligatorios y decida si aparece antes del chat.
+  </Step>
+  <Step title="Defina los sitios web permitidos">
+    Introduzca cada origen público exacto que puede integrar el widget, como `https://www.example.com`.
+  </Step>
+  <Step title="Copie el fragmento de instalación">
+    Copie el fragmento de carga generado y agréguelo antes de la etiqueta de cierre `</body>` de su sitio web.
+  </Step>
+</Steps>
+
+## Proteja las llamadas web
+
+LobbyStack firma las sesiones del widget y, antes de iniciar una llamada, comprueba que el origen de la página principal del visitante esté entre los orígenes permitidos de la clave del widget.
+
+Use un sitio web con HTTPS en producción. Mantenga `WIDGET_SESSION_SECRET` y las demás credenciales de firma en el servidor.
+
+## Gestione las claves del widget
+
+Cada clave tiene su propia lista de orígenes permitidos y su propia configuración. Puede editar una clave activa, pausarla temporalmente o revocarla de forma permanente. Al revocar una clave, deja de funcionar en todos los sitios donde está integrada.
+
+## Verifique la instalación
+
+Abra el sitio web público en una ventana privada del navegador. Confirme que el widget se carga, inicia un chat y muestra el formulario de contacto. Si las llamadas web están activadas, permita el acceso al micrófono y haga una llamada de prueba.

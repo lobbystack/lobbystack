@@ -1,0 +1,55 @@
+---
+title: "Comprendre l'auto-hébergement"
+description: "Découvrez les services qu'exécute un déploiement LobbyStack auto-hébergé, comment les données d'appel circulent entre eux et quelles parties vous exploitez, de Railway à vos propres serveurs."
+sidebarTitle: "Vue d'ensemble de l'auto-hébergement"
+contentType: "Conceptual"
+---
+
+LobbyStack peut tourner sur un seul hôte Docker ou sous forme de services gérés distincts. L'auto-hébergement vous donne le contrôle des données de l'application, des identifiants, de l'utilisation des fournisseurs, des sauvegardes et des mises à niveau.
+
+<Note>
+  Les appels en direct exigent quand même Twilio, OpenAI et un point de terminaison HTTPS public pour le tableau de bord. Les appels téléphoniques nécessitent aussi un trunk Twilio Elastic SIP qui envoie les appels à votre projet OpenAI.
+</Note>
+
+## Déployer sur Railway
+
+Le [modèle Railway de LobbyStack](https://railway.com/deploy/lobbystack) déploie les services admin, worker et de migration avec PostgreSQL, Redis et un bucket de stockage. Railway génère tous les secrets et les mots de passe des bases de données. Vous saisissez une clé API OpenAI et vos identifiants Twilio, puis vous créez votre compte sur le domaine de l'admin.
+
+[![Déployer sur Railway](https://railway.com/button.svg)](https://railway.com/deploy/lobbystack)
+
+## Base officielle
+
+Le fichier [`docker-compose.yml`](https://github.com/lobbystack/lobbystack/blob/main/docker-compose.yml) du dépôt exécute :
+
+- PostgreSQL avec pgvector pour les données durables, l'état d'authentification et les embeddings des connaissances
+- Redis pour les files d'attente, les limites de débit et la coordination en temps réel
+- un volume Docker persistant pour les enregistrements et les documents téléversés
+- le tableau de bord d'administration Next.js et l'API HTTP
+- le worker d'arrière-plan et le répartiteur de l'outbox transactionnelle, qui exécute aussi chaque appel GPT-Live
+- Caddy, qui achemine le nom d'hôte du tableau de bord en HTTP simple, derrière le proxy ou l'équilibreur de charge qui termine le HTTPS
+
+LobbyStack n'ajoute pas de conteneurs de surveillance à la pile Compose. Les environnements d'exécution serveur peuvent envoyer des traces, des métriques et des journaux OpenTelemetry vers un backend compatible OTLP configuré.
+
+## Flux de données
+
+1. Le tableau de bord et l'API lisent et écrivent dans PostgreSQL par des connexions propres à chaque rôle et avec la sécurité au niveau des lignes.
+2. Les effets de bord durables entrent dans l'outbox PostgreSQL dans la même transaction que les changements d'état de l'entreprise.
+3. Le worker répartit les tâches en file d'attente et actualise les instantanés du contexte de l'entreprise.
+4. OpenAI héberge l'audio des appels. L'admin démarre chaque appel avec l'instantané de l'entreprise, et le worker répond aux demandes de GPT-Live pour les réservations, les messages et les transferts.
+5. L'admin et le worker partagent le fournisseur de stockage configuré. Les déploiements Compose sur un seul hôte utilisent par défaut un volume local persistant.
+
+## Responsabilités
+
+Vous êtes responsable des éléments suivants :
+
+- la durabilité de PostgreSQL, de Redis et du stockage de fichiers
+- les sauvegardes, les exercices de restauration, les mises à niveau et la surveillance
+- le DNS public et le TLS du tableau de bord
+- les identifiants Twilio, OpenAI, de courriel, de calendrier, de facturation et d'analytique
+- la rotation des secrets et les rôles de base de données à privilèges minimaux
+
+Poursuivez avec le [guide de déploiement Docker Compose](/fr/self-hosting/docker-compose), les [variables d'environnement](/fr/self-hosting/environment-variables) et la [référence des fournisseurs](/fr/self-hosting/providers).
+
+<Warning>
+  Le stockage local exige que l'admin et le worker tournent sur le même hôte Docker. Les déploiements dont les conteneurs d'application sont répartis sur plusieurs hôtes doivent définir `STORAGE_PROVIDER=s3` et utiliser AWS S3 ou un service compatible.
+</Warning>

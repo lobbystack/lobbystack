@@ -1,0 +1,44 @@
+---
+title: "Configure los proveedores externos"
+description: "Vea qué cuentas de proveedores necesita una instalación autoalojada de LobbyStack: Twilio y OpenAI para las llamadas en vivo, además de servicios opcionales como Google Calendar, el almacenamiento S3 y PostHog."
+sidebarTitle: "Proveedores externos"
+contentType: "Reference"
+---
+
+La base de Docker Compose ejecuta la aplicación de LobbyStack, PostgreSQL, Redis y un volumen de almacenamiento local compartido. Conecte sus propias cuentas de proveedores para las funciones externas.
+
+## Necesarios para las llamadas en vivo
+
+<AccordionGroup>
+  <Accordion title="Twilio" icon="phone">
+    Twilio proporciona los números de teléfono, las transferencias de llamadas y la verificación por teléfono. Un trunk Elastic SIP envía a OpenAI las llamadas a sus números. Cada número debe estar en el trunk para contestar llamadas. Mantenga el token de autenticación de Twilio en el servidor.
+  </Accordion>
+  <Accordion title="OpenAI" icon="waveform">
+    El modelo GPT-Live de OpenAI mantiene la conversación en las llamadas telefónicas y desde el navegador, y OpenAI aloja el audio. Cuando la persona que llama necesita datos del negocio, como horarios disponibles o una reserva, GPT-Live se los pide al worker de LobbyStack, que responde con el agente de la recepcionista. Su proyecto de OpenAI necesita tener SIP activado y un webhook de llamadas entrantes para las llamadas telefónicas.
+  </Accordion>
+</AccordionGroup>
+
+## Conocimiento y automatización
+
+<AccordionGroup>
+  <Accordion title="IA compatible con OpenAI" icon="sparkles">
+    El agente de la recepcionista para el chat del sitio web y las llamadas funciona con `gpt-6-luna` con razonamiento alto por defecto. Para usar otro proveedor o un entorno de ejecución autoalojado que implemente las API de chat y embeddings compatibles con OpenAI, configure las variables `AI_CHAT_*` y `AI_EMBEDDING_*`. El modelo debe admitir llamadas a herramientas, y los modelos de embeddings deben devolver exactamente 1536 dimensiones.
+  </Accordion>
+  <Accordion title="Firecrawl" icon="globe">
+    Firecrawl importa el contenido público del sitio web al proceso de conocimiento. Puede omitirlo si los operadores solo suben documentos e introducen el conocimiento manualmente.
+  </Accordion>
+</AccordionGroup>
+
+## Integraciones opcionales
+
+- Google Calendar para la disponibilidad y la sincronización de reservas
+- SMTP para la verificación, el restablecimiento de contraseñas y el correo electrónico operativo
+- Polar para la facturación alojada y el uso medido
+- PostHog y OpenTelemetry para las analíticas, el seguimiento de errores, las trazas, las métricas y los registros
+- AWS S3 o un almacenamiento compatible para las implementaciones en varios hosts
+- MinIO mediante el perfil opcional `minio` de Compose
+- PostgreSQL y Redis gestionados en lugar de los contenedores incluidos
+
+Configure `STORAGE_PROVIDER=s3` para AWS S3, MinIO u otro servicio compatible. Deje `S3_ENDPOINT` vacía para AWS S3. MinIO requiere su endpoint HTTP y `S3_FORCE_PATH_STYLE=true`.
+
+Use la [referencia de variables de entorno](/es/self-hosting/environment-variables) para los nombres de configuración y la [guía de Docker Compose](/es/self-hosting/docker-compose) para los pasos de implementación.

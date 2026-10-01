@@ -1,0 +1,97 @@
+---
+title: "Configure los cambios de citas"
+description: "Permita que su recepcionista con IA cancele y reprograme citas durante las llamadas, con un nivel de verificación configurable."
+sidebarTitle: "Cambios de citas"
+contentType: "How-to"
+---
+
+Cuando un cliente necesita cancelar o mover una cita, LobbyStack puede gestionar la solicitud durante la llamada.
+
+Su equipo no tiene que leer un mensaje, revisar el calendario y responder a mano: la recepcionista con IA identifica la cita, confirma la solicitud y actualiza la reserva por usted.
+
+## Qué puede gestionar la IA
+
+LobbyStack puede ayudar a sus clientes a:
+
+- Encontrar su próxima cita.
+- Cancelar una cita que ya no necesitan.
+- Reprogramar la cita a otro horario disponible.
+- Confirmar el cambio antes de aplicarlo.
+- Completar la solicitud durante la llamada.
+
+Esta función está pensada para los cambios de citas del día a día, que suelen apartar a su equipo de tareas más importantes.
+
+## Confirmación integrada antes de los cambios
+
+Una simple petición informal no basta para cambiar una cita. LobbyStack pide datos suficientes para asegurarse de que el cliente modifica la cita correcta.
+
+De forma predeterminada, la recepcionista usa:
+
+- El número de teléfono de la llamada.
+- El nombre del cliente.
+- Un dato de la cita, como la hora o el servicio.
+- Una confirmación final clara antes de cancelar o reprogramar.
+
+Si la recepcionista no puede confirmar la cita con seguridad, no hace el cambio automáticamente. En su lugar, puede pasar la conversación a su equipo.
+
+<Note>
+  LobbyStack le ayuda a aplicar pasos de confirmación coherentes, pero no sustituye su propia revisión legal o de privacidad. Configure el nivel de verificación que corresponda a su negocio, su región y su tipo de cita.
+</Note>
+
+## Añadir un código de un solo uso para una verificación más estricta
+
+Si su negocio quiere más garantías, puede exigir un código de un solo uso antes de que la IA modifique una cita.
+
+Con la verificación por código de un solo uso activada, la recepcionista envía un código al cliente y espera a recibir el código correcto antes de cancelar o reprogramar. Resulta útil cuando las citas son delicadas, de alto valor o están sujetas a políticas internas más estrictas.
+
+## Actualizaciones automáticas del calendario
+
+Cuando se aprueba un cambio, LobbyStack actualiza el registro de la cita y sincroniza el cambio con su calendario conectado.
+
+En las cancelaciones, la cita se marca como cancelada y el evento del calendario se actualiza o se elimina según la conexión del calendario.
+
+En las reprogramaciones, LobbyStack comprueba la disponibilidad antes de ofrecer un nuevo horario. Si el horario está libre, la cita se mueve y se actualiza la sincronización con el calendario.
+
+<Tip>
+  Conecte Google Calendar antes de confiar en la reprogramación automática. Así LobbyStack evita ofrecer horarios que ya están ocupados.
+</Tip>
+
+## Activar o desactivar los cambios de citas
+
+Usted decide si la recepcionista puede cancelar, reprogramar o exigir un código de un solo uso.
+
+<Steps>
+  <Step title="Abra Ajustes de IA">
+    En la barra lateral del panel, vaya a **Agente** > **Ajustes de IA**.
+  </Step>
+  <Step title="Busque los cambios de citas">
+    Desplácese hasta **Cambios de citas**.
+  </Step>
+  <Step title="Elija qué puede hacer la IA">
+    Active o desactive la cancelación y la reprogramación.
+  </Step>
+  <Step title="Elija el nivel de verificación">
+    Active **Exigir código de un solo uso** si quiere una verificación más estricta.
+  </Step>
+  <Step title="Guarde">
+    Guarde sus cambios.
+  </Step>
+</Steps>
+
+## Configuración recomendada
+
+Para ofrecer la mejor experiencia a sus clientes:
+
+- Añada entradas de servicios claras para que sus clientes puedan describir lo que reservaron.
+- Conecte Google Calendar para que LobbyStack pueda comprobar la disponibilidad y sincronizar los cambios.
+- Mantenga actualizado su número de transferencia para los casos que necesitan revisión de una persona.
+- Use la verificación por código de un solo uso para citas delicadas o de alto valor.
+
+<CardGroup cols={2}>
+  <Card title="Configure los servicios" icon="calendar-check" href="/es/agent/services">
+    Añada tipos de cita y detalles de servicios que ayuden a sus clientes a identificar su reserva.
+  </Card>
+  <Card title="Conecte Google Calendar" icon="calendar" href="/es/integrations/google-calendar">
+    Permita que LobbyStack compruebe la disponibilidad y sincronice automáticamente los cambios de reservas.
+  </Card>
+</CardGroup>

@@ -1,0 +1,71 @@
+---
+title: "API LobbyStack"
+description: "Lisez les appels, les contacts, les rendez-vous et les messages, réservez des rendez-vous et recevez des webhooks."
+sidebarTitle: "Vue d'ensemble"
+contentType: "Conceptual"
+---
+
+L'API LobbyStack permet à vos propres outils de travailler avec les données de réceptionniste d'une entreprise. Zapier, un serveur MCP ou un script peuvent lire les appels et les messages, synchroniser les contacts, réserver des rendez-vous, ajouter des connaissances et s'abonner à des webhooks.
+
+## URL de base
+
+```text
+https://app.lobbystack.com/api/v1
+```
+
+Sur un déploiement auto-hébergé, utilisez votre `APP_BASE_URL` suivie de `/api/v1`.
+
+## Faire votre première requête
+
+<Steps>
+  <Step title="Créer une clé API">
+    Dans le tableau de bord, allez dans **Réglages** > **Clés API** et cliquez sur **Créer une clé API**. Choisissez l'accès dont la clé a besoin. Consultez [Authentification](/fr/api/authentication).
+  </Step>
+  <Step title="Appeler l'API">
+    ```bash
+    curl https://app.lobbystack.com/api/v1/business \
+      -H "Authorization: Bearer $LOBBYSTACK_API_KEY"
+    ```
+  </Step>
+</Steps>
+
+La réponse place la ressource dans `data` :
+
+```json
+{
+  "data": {
+    "id": "75795511-9ee2-4cb2-a89d-f173ec1dd82d",
+    "name": "Maple Salon",
+    "timezone": "America/Toronto",
+    "locale": "en",
+    "website_url": null,
+    "booking_mode": "instant",
+    "hours": [{ "day": "monday", "open": "09:00", "close": "17:00" }],
+    "created_at": "2026-09-27T16:57:28.333Z",
+    "updated_at": "2026-09-27T16:57:28.333Z"
+  }
+}
+```
+
+## Conventions
+
+- Les requêtes et les réponses utilisent JSON. Les noms de champs sont en `snake_case`.
+- Les identifiants sont des UUID et ne changent jamais.
+- Les horodatages suivent la norme ISO 8601 en UTC, par exemple `2026-09-29T13:30:00.000Z`. Le corps des requêtes accepte aussi un décalage numérique comme `-04:00`.
+- Les listes renvoient `data`, `next_cursor` et `has_more`. Consultez [Requêtes et erreurs](/fr/api/requests).
+- Chaque clé appartient à une seule entreprise. Vous ne transmettez jamais d'identifiant d'entreprise.
+
+## OpenAPI
+
+L'API publie un document OpenAPI 3.1 à `GET /api/v1/openapi.json`, sans clé requise. LobbyStack le génère à partir des mêmes schémas que ceux qu'utilise le serveur pour valider les requêtes. Il correspond donc toujours à la version en service. Importez-le dans Postman, générez un client ou parcourez la section **Référence de l'API** de cette documentation, que LobbyStack construit à partir du même fichier.
+
+## Gestion des versions
+
+La version fait partie du chemin : `/api/v1`. Dans la v1, LobbyStack n'apporte que des ajouts :
+
+- De nouveaux points de terminaison, de nouveaux champs de requête facultatifs et de nouveaux champs de réponse.
+- De nouvelles valeurs dans des listes comme les types d'événements webhook et les codes d'erreur.
+
+Concevez des clients qui ignorent les champs et les types d'événements qu'ils ne reconnaissent pas.
+
+LobbyStack publie les changements incompatibles uniquement dans une nouvelle version, comme `/api/v2`. Supprimer ou renommer un champ, changer un type ou ajouter un champ de requête obligatoire constitue un changement incompatible. Quand une nouvelle version sort, la v1 continue de fonctionner en parallèle. Les charges utiles des webhooks contiennent `api_version` pour que vous sachiez quelle forme vous avez reçue.

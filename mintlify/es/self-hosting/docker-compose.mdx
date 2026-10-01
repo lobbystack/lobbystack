@@ -1,0 +1,135 @@
+---
+title: "Implemente con Docker Compose"
+description: "Ejecute LobbyStack en un solo servidor con Docker Compose. Configurará PostgreSQL, Redis, el almacenamiento de archivos y HTTPS, y luego verificará la implementación antes de ponerla en producción."
+sidebarTitle: "Docker Compose"
+contentType: "Tutorial"
+---
+
+## Requisitos previos
+
+- Docker Engine 24 o posterior con Compose v2
+- Node.js 22 o posterior, para generar los secretos
+- al menos 2 vCPU, 4 GB de RAM y almacenamiento en disco persistente
+- un nombre DNS público para el panel
+- cuentas de Twilio y OpenAI para las llamadas en vivo, y un trunk Elastic SIP de Twilio para las llamadas telefónicas
+
+## Configure el entorno
+
+```bash
+git clone https://github.com/lobbystack/lobbystack.git
+cd lobbystack
+node scripts/generate-env.mjs
+```
+
+El script copia `.env.example` en `.env` y rellena cada contraseña de rol de PostgreSQL y cada secreto interno con un valor aleatorio de 64 caracteres. No sobrescribe un `.env` existente a menos que pase `--force`, que también reemplaza todos sus secretos.
+
+Luego abra `.env` y configure `APP_BASE_URL`, `OPENAI_API_KEY` y sus credenciales de Twilio. Los servicios construyen sus cadenas de conexión a la base de datos a partir de las contraseñas de los roles, así que no necesita escribir ninguna URL de base de datos.
+
+Compose configura `STORAGE_PROVIDER=local` por defecto. El servicio de administración y el worker montan el mismo volumen persistente `storage_data` en `/var/lib/lobbystack/storage`.
+
+<Warning>
+  No exponga una pila que todavía use las contraseñas de ejemplo o los secretos `change-me`.
+</Warning>
+
+## Inicie LobbyStack
+
+```bash
+docker compose --env-file .env up -d --build
+docker compose ps
+```
+
+El migrador aplica las migraciones de PostgreSQL antes de que se inicien los servicios de administración y worker. Las comprobaciones de estado retienen los servicios dependientes hasta que sus requisitos estén listos.
+
+La respuesta de disponibilidad del servicio de administración incluye comprobaciones de la base de datos y del almacenamiento. La respuesta de disponibilidad del worker incluye el estado de PostgreSQL, Redis y el almacenamiento.
+
+LobbyStack no ejecuta contenedores de monitoreo. Los registros de la aplicación siguen disponibles mediante `docker compose logs`, y los endpoints de estado siguen funcionando.
+
+## Elija un backend de almacenamiento
+
+El proveedor local predeterminado admite un solo host de Docker. Haga una copia de seguridad del volumen `storage_data` junto con PostgreSQL y restaure ambos desde el mismo punto de recuperación.
+
+Use S3 cuando el servicio de administración y el worker se ejecuten en hosts distintos. Configure estos valores en `.env`:
+
+```dotenv
+STORAGE_PROVIDER=s3
+S3_BUCKET=lobbystack
+S3_REGION=us-east-1
+S3_ENDPOINT=
+S3_ACCESS_KEY_ID=replace-with-access-key
+S3_SECRET_ACCESS_KEY=replace-with-secret-key
+S3_FORCE_PATH_STYLE=false
+```
+
+Las cargas de trabajo en AWS pueden omitir las variables de la clave de acceso cuando el contenedor puede usar un rol de credenciales de AWS.
+
+MinIO sigue disponible mediante un perfil de Compose. Configure las variables de S3 para MinIO y luego inicie la pila con el perfil:
+
+```dotenv
+STORAGE_PROVIDER=s3
+S3_ENDPOINT=http://minio:9000
+S3_BUCKET=lobbystack
+S3_ACCESS_KEY_ID=minioadmin
+S3_SECRET_ACCESS_KEY=replace-with-a-long-minio-password
+S3_FORCE_PATH_STYLE=true
+```
+
+```bash
+docker compose --env-file .env --profile minio up -d --build
+```
+
+Para revisar el correo electrónico en local, inicie Mailpit:
+
+```bash
+docker compose --env-file .env --profile development up -d mailpit
+```
+
+## Exporte datos de OpenTelemetry
+
+La exportación de OpenTelemetry está desactivada cuando `OTEL_EXPORTER_OTLP_ENDPOINT` está vacía. Para enviar trazas, métricas y registros de OpenTelemetry a PostHog, agregue estos valores a `.env`:
+
+```dotenv
+OTEL_EXPORTER_OTLP_ENDPOINT=https://us.i.posthog.com/i
+OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer your_posthog_project_token_here
+```
+
+Use el host regional de PostHog y el token de su proyecto. LobbyStack agrega `/v1/traces`, `/v1/metrics` y `/v1/logs` a la URL base. Puede usar las mismas variables con otro backend compatible con OTLP.
+
+Reinicie los contenedores de la aplicación después de cambiar los valores:
+
+```bash
+docker compose --env-file .env up -d
+```
+
+Las analíticas de producto directas y el reporte de errores usan su propia configuración de PostHog.
+
+## Verifique la implementación
+
+```bash
+curl -fsS http://127.0.0.1:3000/api/health/ready
+curl -fsS http://127.0.0.1:3002/health/ready
+docker compose logs --since=10m admin worker
+```
+
+Los puertos predeterminados de los servicios se vinculan a localhost. Haga pasar el tráfico público por Caddy o por otro proxy inverso de confianza.
+
+## Lista de comprobación para producción
+
+- reemplace todas las credenciales de desarrollo y restrinja los permisos de `.env`
+- use un valor HTTPS de producción para `APP_BASE_URL`
+- configure `OPENAI_WEBHOOK_SECRET` y `TWILIO_SIP_TRUNK_SID` para contestar llamadas telefónicas. El worker no aprovisiona un número de teléfono sin `TWILIO_SIP_TRUNK_SID`. Las [variables de llamadas de voz](/es/self-hosting/environment-variables#llamadas-de-voz) explican para qué sirve cada una
+- configure `WEB_CALL_ALLOWED_ORIGINS` con los sitios exactos que alojan su llamada de demostración pública, si tiene una
+- configure copias de seguridad de PostgreSQL y del almacenamiento de archivos fuera del host
+- haga un simulacro de restauración antes de aceptar tráfico de producción
+- restrinja los puertos de PostgreSQL, Redis y, si lo usa, MinIO a redes privadas
+- monitoree el estado del servicio de administración, el worker, las colas, la base de datos y el almacenamiento de objetos
+- fije las versiones de las imágenes antes de las actualizaciones planificadas
+
+## Actualizaciones
+
+```bash
+git pull --ff-only
+docker compose --env-file .env build
+docker compose --env-file .env up -d
+```
+
+Haga una copia de seguridad de PostgreSQL y del backend de almacenamiento configurado antes de actualizar. Revise las nuevas migraciones y variables de entorno antes de reiniciar los servicios.

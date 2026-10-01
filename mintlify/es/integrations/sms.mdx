@@ -1,0 +1,79 @@
+---
+title: "Configure las alertas por SMS y el consentimiento"
+description: "Cómo LobbyStack obtiene el consentimiento para los SMS salientes de citas y de alertas del espacio de trabajo."
+sidebarTitle: "Alertas por SMS y consentimiento"
+contentType: "Reference"
+---
+
+LobbyStack usa un número de SMS gratuito (toll-free) para enviar notificaciones de cuenta que no son de marketing.
+
+Este número envía:
+
+- Una confirmación de reserva y un recordatorio 24 horas antes de la cita, a los clientes que lo aceptan.
+- Alertas del espacio de trabajo a los operadores verificados.
+
+Este número no envía marketing, promociones, contenido con restricción de edad, respuestas por SMS de la IA ni conversaciones manuales por SMS.
+
+El plan Free no tiene número de teléfono y no envía SMS.
+
+Cuando un cliente envía un mensaje de texto al número de su negocio, LobbyStack guarda el mensaje en **Mensajes** y avisa a su equipo. La IA no responde. `STOP` y `HELP` reciben respuestas fijas.
+
+## Modelo de consentimiento
+
+LobbyStack obtiene el consentimiento para SMS antes de enviar alertas.
+
+Los clientes con citas y los operadores usan el mismo número gratuito, pero dan su consentimiento en lugares distintos.
+
+### Clientes con citas
+
+Cuando un cliente reserva por teléfono, la recepcionista con IA le pide su consentimiento verbal para recibir SMS antes de enviarle una confirmación o un recordatorio de la cita.
+
+El aviso es:
+
+> ¿Puedo enviarle a este número un mensaje de texto con la confirmación y el recordatorio de su cita? Pueden aplicarse tarifas de mensajes y datos. Responda STOP para darse de baja o HELP para obtener ayuda.
+
+Si la persona que llama acepta, LobbyStack registra la aceptación y envía los SMS de la cita a ese número de teléfono.
+
+Si la persona que llama no acepta, la cita se reserva igualmente y no se envía ningún SMS de la cita.
+
+### Operadores
+
+Los operadores son usuarios verificados del espacio de trabajo.
+
+Antes de que se envíen alertas del espacio de trabajo por SMS a un operador, este debe activar las alertas por SMS en **Configuración** > **Notificaciones** y aceptar el aviso sobre SMS en el panel.
+
+El aviso para operadores es:
+
+> Acepto recibir alertas por SMS de LobbyStack sobre llamadas perdidas, mensajes nuevos, actividad de citas y notificaciones del espacio de trabajo en mi número de teléfono verificado. La frecuencia de los mensajes varía. Pueden aplicarse tarifas de mensajes y datos. Responda STOP para darse de baja o HELP para obtener ayuda. Las alertas por SMS son opcionales.
+
+Los operadores pueden desactivar las alertas por SMS más adelante en la configuración de notificaciones.
+
+## Mensajes de ejemplo
+
+Confirmación de cita:
+
+> Example Business: Su cita de corte de cabello está confirmada para el 24 de mayo a las 2:00 p. m. Pueden aplicarse tarifas de mensajes y datos. Responda STOP para darse de baja o HELP para obtener ayuda.
+
+Alerta para operadores:
+
+> LobbyStack: Nuevo mensaje de voz para Example Business. Abra su panel para revisarlo. Pueden aplicarse tarifas de mensajes y datos. Responda STOP para darse de baja o HELP para obtener ayuda.
+
+## Baja y ayuda
+
+Los destinatarios pueden responder `STOP` para dejar de recibir SMS del número gratuito de alertas.
+
+Los destinatarios pueden responder `START` o `SUBSCRIBE` para volver a suscribirse, cuando esté disponible.
+
+Los destinatarios pueden responder `HELP` para obtener información de asistencia.
+
+Para obtener ayuda, escriba a [hello@lobbystack.com](mailto:hello@lobbystack.com) o visite [https://lobbystack.com](https://lobbystack.com).
+
+Pueden aplicarse tarifas de mensajes y datos.
+
+## Los SMS son opcionales
+
+Las alertas por SMS son opcionales.
+
+Los clientes pueden reservar citas sin recibir confirmaciones ni recordatorios por SMS.
+
+Los operadores pueden usar el panel sin activar las alertas por SMS.
