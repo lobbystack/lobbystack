@@ -1,17 +1,14 @@
-import { and, count, desc, eq, gte } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import {
   dashboardAggregatesQuery,
   type DashboardAggregates,
-  appointments,
   calls,
   contacts,
   conversations,
-  services,
-  staff,
 } from "@lobbystack/db";
-import { listOpenVoiceFollowUps } from "@lobbystack/domain";
+import { listOpenVoiceFollowUps, listRecentCalls, listUpcomingAppointments } from "@lobbystack/domain";
 import { asApiResponse, withOperatorTransaction } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
@@ -47,8 +44,8 @@ export async function GET(request: Request) {
 
       const aggregateResult = await tx.execute(dashboardAggregatesQuery({ businessId, currentStart, previousStart, chartStart }));
       const [aggregates] = aggregateResult.rows as unknown as [DashboardAggregates];
-      const recentCalls = await tx.select({ id: calls.id, startedAt: calls.startedAt, status: calls.status, providerDurationSeconds: calls.providerDurationSeconds, endedAt: calls.endedAt, contactName: contacts.name, contactPhone: contacts.phone }).from(calls).leftJoin(contacts, eq(calls.contactId, contacts.id)).where(eq(calls.businessId, businessId)).orderBy(desc(calls.startedAt)).limit(5);
-      const upcoming = await tx.select({ id: appointments.id, startsAt: appointments.startsAt, timezone: appointments.timezone, status: appointments.status, sourceChannel: appointments.sourceChannel, contactName: contacts.name, serviceName: services.name, staffName: staff.name }).from(appointments).leftJoin(contacts, eq(appointments.contactId, contacts.id)).leftJoin(services, eq(appointments.serviceId, services.id)).leftJoin(staff, eq(appointments.staffId, staff.id)).where(and(eq(appointments.businessId, businessId), gte(appointments.startsAt, now))).orderBy(appointments.startsAt).limit(5);
+      const recentCalls = await listRecentCalls(tx, businessId);
+      const upcoming = await listUpcomingAppointments(tx, businessId, now);
       const liveCallCount = await tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), eq(calls.status, "started")));
       const handoffConversations = await tx.select({ id: conversations.id, contactName: contacts.name, summary: conversations.summary, currentIntent: conversations.currentIntent, updatedAt: conversations.updatedAt }).from(conversations).leftJoin(contacts, eq(conversations.contactId, contacts.id)).where(and(eq(conversations.businessId, businessId), eq(conversations.automationState, "human_handoff"))).orderBy(desc(conversations.updatedAt)).limit(6);
       const voiceFollowUps = await listOpenVoiceFollowUps(tx, businessId);
@@ -81,9 +78,11 @@ export async function GET(request: Request) {
           id: call.id,
           startedAt: call.startedAt.toISOString(),
           status: call.status,
+          transport: call.transport,
           durationSeconds: durationSeconds(call),
           contactName: call.contactName,
           contactPhone: call.contactPhone,
+          contactEmail: call.contactEmail,
         })),
         actionRequired: [...voiceFollowUps.map((item) => ({
           id: item.id,

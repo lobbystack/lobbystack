@@ -18,6 +18,7 @@ export * from "./knowledge";
 export * from "./liveCalls";
 export * from "./notifications";
 export * from "./onboarding";
+export * from "./operatorActivity";
 export * from "./outbox";
 export * from "./phoneVerification";
 export * from "./phoneNumbers";
