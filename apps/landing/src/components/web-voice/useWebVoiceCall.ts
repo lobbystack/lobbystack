@@ -155,6 +155,34 @@ function getVisitorId(): string | undefined {
 
 type StartedSession = { sessionId: string; endToken: string }
 
+/** Who ended a call that ended normally. */
+export type WebVoiceEndedBy = "caller" | "agent"
+
+// How long a "disconnected" peer connection may take to recover before we
+// count the call as dropped.
+export const DISCONNECT_GRACE_MS = 5_000
+
+/**
+ * Returns the close reason when a data channel message is GPT-Live's
+ * session.closed event. Only the event type and reason are read: this channel
+ * also carries the conversation transcript, which must never leave the call.
+ */
+export function readSessionClosedReason(data: unknown): string | undefined {
+  if (typeof data !== "string" || !data.includes("session.closed")) {
+    return undefined
+  }
+  try {
+    const event = JSON.parse(data) as {
+      type?: unknown
+      reason?: unknown
+    } | null
+    if (event?.type !== "session.closed") return undefined
+    return typeof event.reason === "string" ? event.reason : "unknown"
+  } catch {
+    return undefined
+  }
+}
+
 // Asks the server to end a session whose audio channel never opened. The end
 // route sits next to the start endpoint, and only accepts the start response's token.
 function requestSessionEnd(endpoint: string, session: StartedSession): void {
@@ -189,8 +217,9 @@ async function fetchWithTimeout(
 
 /**
  * A browser voice call on GPT-Live. The server records the call and keeps the
- * recording; the browser only carries audio and asks OpenAI to close the
- * session when the caller hangs up.
+ * recording; the browser only carries audio, asks OpenAI to close the session
+ * when the caller hangs up, and watches for the session closing when the
+ * receptionist hangs up.
  */
 export function useWebVoiceCall({
   locale = "en",
@@ -210,6 +239,7 @@ export function useWebVoiceCall({
   const sessionRef = useRef<StartedSession | null>(null)
   // Bumped when a call ends, so a start still in flight knows to stand down.
   const startCallAttemptRef = useRef(0)
+  const disconnectTimerRef = useRef<number | undefined>(undefined)
 
   const emit = (eventName: string, properties?: Record<string, unknown>) => {
     onEvent?.(eventName, {
@@ -222,6 +252,8 @@ export function useWebVoiceCall({
   const cleanup = (options: { resetState?: boolean } = {}) => {
     const resetState = options.resetState ?? true
     startCallAttemptRef.current += 1
+    window.clearTimeout(disconnectTimerRef.current)
+    disconnectTimerRef.current = undefined
     localStreamRef.current?.getTracks().forEach((track) => track.stop())
     localStreamRef.current = null
     eventsChannelRef.current = null
@@ -271,7 +303,9 @@ export function useWebVoiceCall({
     endRemoteSession()
     cleanup()
     setStatus("ended")
-    emit("landing.web_voice_call_ended")
+    emit("landing.web_voice_call_ended", {
+      endedBy: "caller" satisfies WebVoiceEndedBy,
+    })
   }
 
   const startCall = async () => {
@@ -313,8 +347,46 @@ export function useWebVoiceCall({
       localStream
         .getAudioTracks()
         .forEach((track) => peerConnection.addTrack(track, localStream))
-      // GPT-Live reads client events from this channel; we only ever send session.close.
-      eventsChannelRef.current = peerConnection.createDataChannel("oai-events")
+      // GPT-Live reads client events from this channel; we only ever send
+      // session.close, and only read session.closed.
+      const eventsChannel = peerConnection.createDataChannel("oai-events")
+      eventsChannelRef.current = eventsChannel
+      // Ignore events from a call this hook has already torn down.
+      const isCurrentCall = () => peerConnectionRef.current === peerConnection
+
+      const dropCall = (properties: Record<string, unknown>) => {
+        setStatus("error")
+        setErrorMessage(webVoiceErrorCopy[locale].connectionDropped)
+        emit("landing.web_voice_call_error", properties)
+        endRemoteSession()
+        cleanup()
+      }
+
+      // The receptionist can end the call itself: its endCall tool, the
+      // silence timeout or the time limit make the worker close the GPT-Live
+      // session. The browser then only sees its peer go away, which looks
+      // like a dropped connection. OpenAI sends the terminal session.closed
+      // event, with its reason, on this channel before it closes the
+      // transport (the app's browser session config allows it), so that event
+      // is how we tell a hang-up from a failure. It needs no extra request to
+      // the app. Without session.closed, a lost connection still shows as an
+      // error.
+      eventsChannel.onmessage = (event: MessageEvent) => {
+        if (!isCurrentCall()) return
+        const reason = readSessionClosedReason(event.data)
+        if (reason === undefined) return
+        // The session is already closed at OpenAI, so there is nothing to end.
+        sessionRef.current = null
+        if (reason === "connection_lost") {
+          dropCall({ closeReason: reason })
+          return
+        }
+        cleanup()
+        setStatus("ended")
+        emit("landing.web_voice_call_ended", {
+          endedBy: "agent" satisfies WebVoiceEndedBy,
+        })
+      }
 
       peerConnection.ontrack = (event) => {
         const [stream] = event.streams
@@ -326,23 +398,31 @@ export function useWebVoiceCall({
         }
       }
 
+      // "disconnected" often recovers on its own after a network blip, so it
+      // only starts a grace period. "failed", or no recovery in time, is a
+      // dropped call. A session.closed that arrives meanwhile ends it normally.
       peerConnection.onconnectionstatechange = () => {
-        if (peerConnection.connectionState === "connected") {
+        if (!isCurrentCall()) return
+        const state = peerConnection.connectionState
+        if (state === "connected") {
+          if (disconnectTimerRef.current !== undefined) {
+            window.clearTimeout(disconnectTimerRef.current)
+            disconnectTimerRef.current = undefined
+            return
+          }
           setStatus("connected")
           emit("landing.web_voice_call_connected")
+          return
         }
-        if (
-          peerConnection.connectionState === "failed" ||
-          peerConnection.connectionState === "disconnected"
-        ) {
-          setStatus("error")
-          setErrorMessage(webVoiceErrorCopy[locale].connectionDropped)
-          emit("landing.web_voice_call_error", {
-            connectionState: peerConnection.connectionState,
-          })
-          endRemoteSession()
-          cleanup()
+        if (state === "disconnected") {
+          if (disconnectTimerRef.current !== undefined) return
+          disconnectTimerRef.current = window.setTimeout(() => {
+            disconnectTimerRef.current = undefined
+            if (isCurrentCall()) dropCall({ connectionState: "disconnected" })
+          }, DISCONNECT_GRACE_MS)
+          return
         }
+        if (state === "failed") dropCall({ connectionState: state })
       }
 
       const offer = await peerConnection.createOffer({

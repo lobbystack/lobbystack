@@ -4,7 +4,7 @@ import { createElement, useEffect } from "react";
 import { act, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { useWebVoiceCall } from "./useWebVoiceCall";
+import { readSessionClosedReason, useWebVoiceCall } from "./useWebVoiceCall";
 
 type HookControls = ReturnType<typeof useWebVoiceCall>;
 
@@ -117,5 +117,15 @@ describe("useWebVoiceCall", () => {
     expect(trackStop).toHaveBeenCalledTimes(1);
     expect(peerConnectionMock).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("readSessionClosedReason", () => {
+  it("reads the reason from session.closed and ignores every other event", () => {
+    expect(readSessionClosedReason(JSON.stringify({ type: "session.closed", reason: "close_requested" }))).toBe("close_requested");
+    expect(readSessionClosedReason(JSON.stringify({ type: "session.closed" }))).toBe("unknown");
+    expect(readSessionClosedReason(JSON.stringify({ type: "session.input_transcript.delta", delta: "my session.closed question" }))).toBeUndefined();
+    expect(readSessionClosedReason("session.closed")).toBeUndefined();
+    expect(readSessionClosedReason(new ArrayBuffer(8))).toBeUndefined();
   });
 });
