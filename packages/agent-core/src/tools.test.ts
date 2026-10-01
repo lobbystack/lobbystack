@@ -123,6 +123,14 @@ describe("searchKnowledge", () => {
     await expect(search("Do you take insurance cards?", [snippet("Parking", "Parking is available behind the building.")], new Error("search down"))).resolves.toEqual({ outcome: "unavailable", titles: [] });
   });
 
+  it("counts plurals and longer endings, but not unrelated words that share a short prefix", async () => {
+    const snippets = [snippet("Car care", "We offer care plans for pets."), snippet("Fees", "Late fees are $10."), snippet("Lot", "The parking lot opens at 7.")];
+    await expect(search("car", snippets, evidence([]))).resolves.toEqual({ outcome: "found", titles: ["Car care"] });
+    await expect(search("car", [snippets[0]!].map((item) => ({ ...item, title: "Pets" })), evidence([]))).resolves.toEqual({ outcome: "empty", titles: [] });
+    await expect(search("late fee", snippets, evidence([]))).resolves.toEqual({ outcome: "found", titles: ["Fees"] });
+    await expect(search("park", snippets, evidence([]))).resolves.toEqual({ outcome: "found", titles: ["Lot"] });
+  });
+
   it("gives snippets only the token budget the evidence leaves", async () => {
     // About 1,000 tokens each, like the longest pasted snippets in production.
     const long = (title: string) => snippet(title, `Parking rules for ${title}. ${"Visitors park in marked bays only. ".repeat(110)}`);

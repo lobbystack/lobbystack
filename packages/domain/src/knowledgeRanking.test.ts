@@ -32,4 +32,10 @@ describe("knowledge ranking", () => {
     expect(withinKnowledgeBudget(["éé", "MNGT 10407"], budget, value => value)).toEqual(["éé"]);
     expect(withinKnowledgeBudget(["longer than budget ".repeat(100), "10407"], 5, value => value)).toEqual(["10407"]);
   });
+  it("keeps capitalized identifiers that collide with another language's function words", () => {
+    expect(knowledgeQueryTerms("What is your PO number?")).toEqual(["po"]);
+    expect(knowledgeQueryTerms("Do you deliver to LA?")).toEqual(["deliver", "la"]);
+    expect(knowledgeQueryTerms("where is la clinique")).toEqual(["clinique"]);
+    expect(knowledgeQueryTerms("WHAT IS YOUR PO NUMBER")).toEqual([]);
+  });
 });

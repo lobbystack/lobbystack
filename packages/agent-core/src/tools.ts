@@ -49,19 +49,26 @@ function formatMinutes(minutes: number): string {
   return DateTime.fromObject({ hour: Math.floor(minutes / 60), minute: minutes % 60 }).toFormat("h:mm a");
 }
 
+// A plural always counts ("fee" finds "fees"). Other endings only count for terms of four
+// or more letters and at most three extra letters ("park" finds "parking"), so "car"
+// doesn't find "care".
+function wordMatchesTerm(word: string, term: string): boolean {
+  if (word === term || word === `${term}s` || word === `${term}es`) return true;
+  return term.length >= 4 && word.startsWith(term) && word.length - term.length <= 3;
+}
+
 // Curated FAQs from the snapshot fill the slots knowledge search leaves, or stand in
 // when it is unavailable. The document digest is an inventory, not evidence.
-// Pasted snippets are long, so one shared word proves little. A snippet must contain
-// a meaningful query term at the start of a word ("price" finds "prices"), and two
-// distinct terms once the query has three or more. More terms matched ranks first,
-// then higher priority.
+// Pasted snippets are long, so one shared word proves little. A snippet must contain a
+// meaningful query term (see wordMatchesTerm), and two distinct terms once the query has
+// three or more. More terms matched ranks first, then higher priority.
 function snapshotKnowledgeMatches(snapshot: BusinessContextSnapshot, query: string) {
   const terms = knowledgeQueryTerms(query);
   if (!terms.length) return [];
   const needed = terms.length >= 3 ? 2 : 1;
   return (snapshot.knowledgeSnippets ?? []).flatMap((snippet) => {
     const words = `${snippet.title} ${snippet.content}`.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
-    const matched = terms.filter((term) => words.some((word) => word.startsWith(term))).length;
+    const matched = terms.filter((term) => words.some((word) => wordMatchesTerm(word, term))).length;
     return matched >= needed ? [{ matched, priority: snippet.priority, title: snippet.title, text: snippet.content.trim() }] : [];
   }).sort((a, b) => b.matched - a.matched || b.priority - a.priority).map(({ title, text }) => ({ title, text }));
 }
