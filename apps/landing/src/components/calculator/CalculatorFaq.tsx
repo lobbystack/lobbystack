@@ -4,7 +4,9 @@ import type { Locale } from "@/i18n"
 
 const headings = {
   en: "Frequently Asked Questions",
-  fr: "Questions frequentes",
+  fr: "Questions fréquentes",
+  es: "Preguntas frecuentes",
+  sr: "Česta pitanja",
 } satisfies Record<Locale, string>
 
 export function CalculatorFaq({ locale = "en" }: { locale?: Locale }) {

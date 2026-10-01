@@ -4,6 +4,11 @@ const CANONICAL_HOST = "lobbystack.com"
 const WWW_HOST = "www.lobbystack.com"
 const PAGES_HOST = "lobbystack-landing.pages.dev"
 const DEFAULT_LOCALE = "en"
+// Keep in sync with SUPPORTED_LOCALES in src/i18n/config.ts.
+const SUPPORTED_LOCALES = ["en", "fr", "es", "sr"]
+const PREFIXED_LOCALES = SUPPORTED_LOCALES.filter(
+  (locale) => locale !== DEFAULT_LOCALE
+)
 const TRANSLATED_PATHS = new Set([
   "/",
   "/features/",
@@ -106,28 +111,34 @@ const preferredLocale = (request) => {
     .sort((a, b) => b.quality - a.quality)
 
   const firstSupported = languages.find((entry) =>
-    ["fr", DEFAULT_LOCALE].includes(entry.locale)
+    SUPPORTED_LOCALES.includes(entry.locale)
   )
 
   return firstSupported?.locale || DEFAULT_LOCALE
 }
 
-const shouldRedirectToFrench = (request, url) => {
-  if (request.method !== "GET" && request.method !== "HEAD") return false
-  if (isCrawler(request)) return false
-  if (isSearchInfrastructurePath(url.pathname)) return false
-  if (url.pathname.startsWith("/fr/")) return false
-  if (url.pathname === "/fr") return false
-  if (url.pathname.startsWith("/.well-known/")) return false
-  if (url.pathname.startsWith("/api/")) return false
-  if (url.pathname.startsWith("/og/")) return false
-  if (url.pathname.startsWith("/schema/")) return false
-  if (hasFileExtension(url.pathname)) return false
+const hasLocalePrefix = (pathname) =>
+  PREFIXED_LOCALES.some(
+    (locale) => pathname === `/${locale}` || pathname.startsWith(`/${locale}/`)
+  )
+
+// Returns the locale to redirect an unprefixed page to, or null to serve it.
+const localeRedirectTarget = (request, url) => {
+  if (request.method !== "GET" && request.method !== "HEAD") return null
+  if (isCrawler(request)) return null
+  if (isSearchInfrastructurePath(url.pathname)) return null
+  if (hasLocalePrefix(url.pathname)) return null
+  if (url.pathname.startsWith("/.well-known/")) return null
+  if (url.pathname.startsWith("/api/")) return null
+  if (url.pathname.startsWith("/og/")) return null
+  if (url.pathname.startsWith("/schema/")) return null
+  if (hasFileExtension(url.pathname)) return null
 
   const normalizedPath = normalizePath(url.pathname)
-  return (
-    TRANSLATED_PATHS.has(normalizedPath) && preferredLocale(request) === "fr"
-  )
+  if (!TRANSLATED_PATHS.has(normalizedPath)) return null
+
+  const locale = preferredLocale(request)
+  return locale === DEFAULT_LOCALE ? null : locale
 }
 
 // Send alias hosts straight to the trailing-slash form so www and pages.dev
@@ -154,21 +165,17 @@ const redirectToCanonicalHost = (url) => {
   })
 }
 
-const redirectToFrench = (request, url) => {
+const redirectToLocale = (url, locale) => {
   const normalizedPath = normalizePath(url.pathname)
   const redirectUrl = new URL(url)
   redirectUrl.pathname =
-    normalizedPath === "/" ? "/fr/" : `/fr${normalizedPath}`
+    normalizedPath === "/" ? `/${locale}/` : `/${locale}${normalizedPath}`
 
   const headers = new Headers({
     "Cache-Control": "no-store",
     Location: redirectUrl.toString(),
     Vary: "Accept-Language",
   })
-
-  if (request.method === "HEAD") {
-    return new Response(null, { status: 302, headers })
-  }
 
   return new Response(null, { status: 302, headers })
 }
@@ -184,8 +191,10 @@ const getHomepageMarkdownPath = (pathname) => {
     return "/index.md"
   }
 
-  if (pathname === "/fr/" || pathname === "/fr/index.html") {
-    return "/fr/index.md"
+  for (const locale of PREFIXED_LOCALES) {
+    if (pathname === `/${locale}/` || pathname === `/${locale}/index.html`) {
+      return `/${locale}/index.md`
+    }
   }
 
   return null
@@ -199,8 +208,9 @@ export async function onRequest(context) {
     return redirectToCanonicalHost(url)
   }
 
-  if (shouldRedirectToFrench(context.request, url)) {
-    return redirectToFrench(context.request, url)
+  const redirectLocale = localeRedirectTarget(context.request, url)
+  if (redirectLocale) {
+    return redirectToLocale(url, redirectLocale)
   }
 
   if (

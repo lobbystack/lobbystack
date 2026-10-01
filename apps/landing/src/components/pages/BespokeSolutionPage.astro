@@ -62,7 +62,7 @@ import {
   webSiteJsonLd,
   type FaqItem,
 } from "@/lib/seo"
-import { assertLocale, localizePath, type Locale } from "@/i18n"
+import { assertLocale, localeTag, localizePath, type Locale } from "@/i18n"
 
 type BespokeSolutionKind = "phone" | "scheduler" | "homeServices"
 
@@ -74,81 +74,138 @@ interface Props {
 const { kind } = Astro.props
 const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
 
+type LocalizedSeo = { title: string; description: string }
+
 const variants = {
   phone: {
     path: "/solutions/ai-phone-answering/",
-    title: "AI Phone Answering Service for Small Businesses | LobbyStack",
-    description:
-      "LobbyStack answers business calls 24/7, books appointments, captures caller details, and routes urgent calls to your team.",
     image: "/illustrations/call-capture.webp",
     imageAlt: "LobbyStack AI phone answering service capturing caller details",
-    breadcrumb:
-      locale === "fr" ? "Réponse téléphonique IA" : "AI Phone Answering",
+    breadcrumb: {
+      en: "AI Phone Answering",
+      fr: "Réponse téléphonique IA",
+      es: "Atención telefónica con IA",
+      sr: "AI odgovaranje na pozive",
+    },
     faqs: aiPhoneAnsweringFaqs,
-    fr: {
-      title: "Réponse téléphonique IA pour petites entreprises",
-      description:
-        "Répondez aux appels entrants, collectez les détails, prenez des rendez‑vous et transférez les demandes urgentes avec LobbyStack.",
+    seo: {
+      en: {
+        title: "AI Phone Answering Service for Small Businesses | LobbyStack",
+        description:
+          "LobbyStack answers business calls 24/7, books appointments, captures caller details, and routes urgent calls to your team.",
+      },
+      fr: {
+        title: "Réponse téléphonique IA pour petites entreprises",
+        description:
+          "Répondez aux appels entrants, collectez les détails, prenez des rendez‑vous et transférez les demandes urgentes avec LobbyStack.",
+      },
+      es: {
+        title: "Atención telefónica con IA para pequeñas empresas",
+        description:
+          "Conteste las llamadas entrantes, recopile datos, reserve citas y transfiera las solicitudes urgentes con LobbyStack.",
+      },
+      sr: {
+        title: "AI odgovaranje na pozive za male firme",
+        description:
+          "Odgovarajte na dolazne pozive, prikupljajte podatke, zakazujte termine i preusmeravajte hitne zahteve uz LobbyStack.",
+      },
     },
   },
   scheduler: {
     path: "/solutions/ai-appointment-scheduler/",
-    title: "AI Appointment Scheduler and Answering Service | LobbyStack",
-    description:
-      "LobbyStack is an answering service with appointment scheduling built in. It books appointments during calls, captures caller details, sends confirmations, and routes urgent requests.",
     image: "/illustrations/booking-flow.webp",
     imageAlt: "LobbyStack AI appointment scheduler booking a caller",
-    breadcrumb:
-      locale === "fr" ? "Planification IA" : "AI Appointment Scheduler",
+    breadcrumb: {
+      en: "AI Appointment Scheduler",
+      fr: "Planification IA",
+      es: "Programación de citas con IA",
+      sr: "AI zakazivanje termina",
+    },
     faqs: appointmentSchedulerFaqs,
-    fr: {
-      title: "Planificateur de rendez‑vous IA pour petites entreprises",
-      description:
-        "LobbyStack planifie les rendez‑vous depuis les appels, collecte les détails, envoie les confirmations et transfère les demandes urgentes.",
+    seo: {
+      en: {
+        title: "AI Appointment Scheduler and Answering Service | LobbyStack",
+        description:
+          "LobbyStack is an answering service with appointment scheduling built in. It books appointments during calls, captures caller details, sends confirmations, and routes urgent requests.",
+      },
+      fr: {
+        title: "Planificateur de rendez‑vous IA pour petites entreprises",
+        description:
+          "LobbyStack planifie les rendez‑vous depuis les appels, collecte les détails, envoie les confirmations et transfère les demandes urgentes.",
+      },
+      es: {
+        title: "Programador de citas con IA para pequeñas empresas",
+        description:
+          "LobbyStack reserva citas durante las llamadas, recopila datos, envía confirmaciones y transfiere las solicitudes urgentes.",
+      },
+      sr: {
+        title: "AI zakazivanje termina za male firme",
+        description:
+          "LobbyStack zakazuje termine tokom poziva, prikuplja podatke, šalje potvrde i preusmerava hitne zahteve.",
+      },
     },
   },
   homeServices: {
     path: "/solutions/ai-receptionist-for-home-services/",
-    title: "Home Services Answering Service with AI | LobbyStack",
-    description:
-      "LobbyStack is an AI answering service for home services teams. It answers HVAC, plumbing, electrical, roofing, and landscaping calls while crews are on the job.",
     image: "/illustrations/industry-bookings.webp",
     imageAlt:
       "LobbyStack AI receptionist booking home services jobs from phone calls",
-    breadcrumb:
-      locale === "fr"
-        ? "Services à domicile"
-        : "Home Services Answering Service",
+    breadcrumb: {
+      en: "Home Services Answering Service",
+      fr: "Services à domicile",
+      es: "Servicios para el hogar",
+      sr: "Kućne usluge",
+    },
     faqs: homeServicesFaqs,
-    fr: {
-      title: "Réceptionniste IA pour services à domicile | LobbyStack",
-      description:
-        "LobbyStack répond aux appels pour CVC, plomberie, électricité, toiture, paysagement et autres services pendant que vos équipes travaillent.",
+    seo: {
+      en: {
+        title: "Home Services Answering Service with AI | LobbyStack",
+        description:
+          "LobbyStack is an AI answering service for home services teams. It answers HVAC, plumbing, electrical, roofing, and landscaping calls while crews are on the job.",
+      },
+      fr: {
+        title: "Réceptionniste IA pour services à domicile | LobbyStack",
+        description:
+          "LobbyStack répond aux appels pour CVC, plomberie, électricité, toiture, paysagement et autres services pendant que vos équipes travaillent.",
+      },
+      es: {
+        title: "Recepcionista con IA para servicios del hogar | LobbyStack",
+        description:
+          "LobbyStack contesta llamadas de climatización, plomería, electricidad, techado, jardinería y otros servicios mientras sus equipos trabajan.",
+      },
+      sr: {
+        title: "AI recepcioner za kućne usluge | LobbyStack",
+        description:
+          "LobbyStack odgovara na pozive za grejanje i klimatizaciju, vodoinstalaterske, električarske, krovopokrivačke, baštovanske i druge usluge dok su Vaše ekipe na terenu.",
+      },
     },
   },
 } satisfies Record<
   BespokeSolutionKind,
   {
     path: string
-    title: string
-    description: string
     image: string
     imageAlt: string
-    breadcrumb: string
+    breadcrumb: Record<Locale, string>
     faqs: FaqItem[]
-    fr: { title: string; description: string }
+    seo: Record<Locale, LocalizedSeo>
   }
 >
 
+const breadcrumbLabels = {
+  en: { home: "Home", solutions: "Solutions" },
+  fr: { home: "Accueil", solutions: "Solutions" },
+  es: { home: "Inicio", solutions: "Soluciones" },
+  sr: { home: "Početna", solutions: "Rešenja" },
+} satisfies Record<Locale, { home: string; solutions: string }>
+
 const variant = variants[kind]
 const localizedPage = getLocalizedSeoLandingPage(locale, variant.path)
-const title =
-  localizedPage?.title ?? (locale === "fr" ? variant.fr.title : variant.title)
+const title = localizedPage?.title ?? variant.seo[locale].title
 const description =
-  localizedPage?.description ??
-  (locale === "fr" ? variant.fr.description : variant.description)
+  localizedPage?.description ?? variant.seo[locale].description
 const canonicalPath = localizePath(locale, variant.path)
-const homeLabel = locale === "fr" ? "Accueil" : "Home"
+const homeLabel = breadcrumbLabels[locale].home
 ---
 
 <Layout
@@ -164,8 +221,11 @@ const homeLabel = locale === "fr" ? "Accueil" : "Home"
       webSiteJsonLd({ locale }),
       breadcrumbJsonLd([
         { name: homeLabel, path: localizePath(locale, "/") },
-        { name: "Solutions", path: localizePath(locale, "/solutions/") },
-        { name: variant.breadcrumb, path: canonicalPath },
+        {
+          name: breadcrumbLabels[locale].solutions,
+          path: localizePath(locale, "/solutions/"),
+        },
+        { name: variant.breadcrumb[locale], path: canonicalPath },
       ]),
       {
         "@context": "https://schema.org",
@@ -174,7 +234,7 @@ const homeLabel = locale === "fr" ? "Accueil" : "Home"
         name: title,
         url: absoluteUrl(canonicalPath),
         description,
-        inLanguage: locale,
+        inLanguage: localeTag(locale),
         isPartOf: {
           "@id": absoluteUrl("/#website"),
         },
@@ -242,5 +302,5 @@ const homeLabel = locale === "fr" ? "Accueil" : "Home"
     }
   </main>
 
-  <Footer locale={locale} />
+  <Footer locale={locale} path={Astro.url.pathname} />
 </Layout>

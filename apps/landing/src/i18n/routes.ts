@@ -1,5 +1,11 @@
 import { absoluteUrl, normalizedPath } from "@/lib/seo"
-import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config"
+import {
+  DEFAULT_LOCALE,
+  SUPPORTED_LOCALES,
+  isLocale,
+  localeMeta,
+  type Locale,
+} from "@/i18n/config"
 import { translatedBasePaths } from "@/i18n/translated-base-paths"
 
 export { translatedBasePaths }
@@ -67,17 +73,29 @@ export const alternateLocaleLinks = (path = "/") => {
   if (!hasTranslation(basePath)) return []
 
   return [
-    {
-      hrefLang: "en",
-      href: absoluteUrl(localizePath("en", basePath)),
-    },
-    {
-      hrefLang: "fr",
-      href: absoluteUrl(localizePath("fr", basePath)),
-    },
+    ...SUPPORTED_LOCALES.map((locale) => ({
+      hrefLang: localeMeta[locale].tag,
+      href: absoluteUrl(localizePath(locale, basePath)),
+    })),
     {
       hrefLang: "x-default",
       href: absoluteUrl(localizePath(DEFAULT_LOCALE, basePath)),
     },
   ]
+}
+
+/**
+ * Links to the same page in every supported language, for the language
+ * switcher. A page without translations links to each locale's home page.
+ */
+export const languageSwitcherLinks = (path = "/") => {
+  const basePath = stripLocaleFromPath(path)
+  const target = hasTranslation(basePath) ? basePath : "/"
+
+  return SUPPORTED_LOCALES.map((locale) => ({
+    locale,
+    label: localeMeta[locale].nativeLabel,
+    hrefLang: localeMeta[locale].tag,
+    href: localizePath(locale, target),
+  }))
 }

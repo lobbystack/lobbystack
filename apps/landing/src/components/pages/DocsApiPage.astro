@@ -262,6 +262,253 @@ const pageCopy = {
       },
     ],
   },
+  es: {
+    h1: "Documentación de la API pública",
+    intro:
+      "LobbyStack ofrece una pequeña superficie pública de descubrimiento para que los agentes encuentren documentación, estado, metadatos OpenAPI, skills y preferencias de uso legibles por máquina sin hacer scraping del sitio.",
+    note: "Estos endpoints públicos de descubrimiento no requieren autenticación. Los metadatos OAuth se publicarán en el host de la aplicación cuando las API protegidas expongan endpoints de autorización reales.",
+    audienceHeading: "Para quién es esta superficie de descubrimiento",
+    audienceBody:
+      "Estos endpoints ayudan a desarrolladores, motores de búsqueda, agentes de IA, lectores de feeds y herramientas de integración a identificar la documentación pública y los recursos de producto legibles por máquina de LobbyStack. Son interfaces de descubrimiento, no un plano de control autenticado para llamadas o cuentas de clientes.",
+    behaviorHeading: "Acceso y comportamiento de las respuestas",
+    behaviorItems: [
+      "Los endpoints públicos de descubrimiento aceptan solicitudes GET o HEAD sin autenticación.",
+      "El endpoint de estado informa la salud pública del servicio; no expone datos de clientes ni datos operativos.",
+      "Las API protegidas de la aplicación se documentan por separado y requieren el método de autenticación que publica el host de la aplicación.",
+      "La página de inicio admite la negociación Accept: text/markdown; las demás representaciones Markdown publicadas están disponibles en los endpoints .md que se indican a continuación.",
+    ],
+    cards: [
+      {
+        title: "Catálogo de API",
+        body: "Linkset RFC 9727 para los recursos públicos de API y descubrimiento.",
+        href: "/.well-known/api-catalog",
+      },
+      {
+        title: "OpenAPI",
+        body: "Descripción JSON de los endpoints públicos de descubrimiento.",
+        href: "/openapi.json",
+      },
+      {
+        title: "Estado",
+        body: "Señal pública y ligera del estado del servicio para clientes automatizados.",
+        href: "/api/status",
+      },
+    ],
+    endpoints: "Endpoints de descubrimiento",
+    requestExamples: "Ejemplos de solicitudes",
+    tableHeaders: ["Endpoint", "Tipo de contenido", "Propósito"],
+    rows: [
+      [
+        "/.well-known/api-catalog",
+        "application/linkset+json",
+        "Linkset del catálogo de API.",
+      ],
+      [
+        "/openapi.json",
+        "application/vnd.oai.openapi+json",
+        "Descripción OpenAPI del servicio.",
+      ],
+      [
+        "/llms.txt",
+        "text/plain",
+        "Contexto breve de producto, funciones, precios y descubrimiento para LLM.",
+      ],
+      [
+        "/feed.xml",
+        "application/rss+xml",
+        "Feed RSS con el contenido completo del blog.",
+      ],
+      [
+        "/schemamap.xml",
+        "application/xml",
+        "Mapa de descubrimiento de los endpoints de datos estructurados.",
+      ],
+      [
+        "/schema/page.json",
+        "application/ld+json",
+        "Grafo JSON-LD de las páginas públicas.",
+      ],
+      [
+        "/schema/post.json",
+        "application/ld+json",
+        "Grafo JSON-LD de los artículos del blog.",
+      ],
+      [
+        "/es/index.md",
+        "text/markdown",
+        "Resumen de la página de inicio en markdown.",
+      ],
+      [
+        "/es/features.md",
+        "text/markdown",
+        "Resumen de las funciones en markdown.",
+      ],
+      [
+        "/es/pricing.md",
+        "text/markdown",
+        "Precios, uso incluido, reglas de uso y tarifas por excedente en markdown.",
+      ],
+      [
+        "/.well-known/agent-skills/index.json",
+        "application/json",
+        "Índice de descubrimiento de agent skills.",
+      ],
+      [
+        "/.well-known/mcp/server-card.json",
+        "application/json",
+        "Tarjeta del servidor MCP.",
+      ],
+    ],
+    examples: [
+      "Negociación Markdown de la página de inicio",
+      "Catálogo de API",
+    ],
+    relatedHeading: "Recursos relacionados",
+    related: [
+      {
+        title: "Funciones del producto",
+        body: "Vea cómo LobbyStack atiende llamadas, reserva citas y transfiere llamadas.",
+        href: "/es/features/",
+      },
+      {
+        title: "Precios y uso",
+        body: "Revise los minutos incluidos, las tarifas por excedente y los límites de cada plan antes de integrar.",
+        href: "/es/pricing/",
+      },
+      {
+        title: "Archivo de contexto para LLM",
+        body: "Contexto breve de producto, precios y descubrimiento en llms.txt para clientes automatizados.",
+        href: "/llms.txt",
+      },
+      {
+        title: "Documentación completa del producto",
+        body: "Consulte las guías de configuración, implementación, telefonía, reservas y operación en la documentación de LobbyStack.",
+        href: "https://docs.lobbystack.com/introduction",
+      },
+    ],
+  },
+  sr: {
+    h1: "Dokumentacija javnog API-ja",
+    intro:
+      "LobbyStack nudi malu javnu površinu za otkrivanje kako bi agenti pronašli dokumentaciju, status, OpenAPI metapodatke, skills i mašinski čitljiva pravila korišćenja bez preuzimanja sadržaja sa sajta.",
+    note: "Ovi javni endpointi za otkrivanje ne zahtevaju autentifikaciju. OAuth metapodaci biće objavljeni na hostu aplikacije kada zaštićeni API-ji budu imali prave endpointe za autorizaciju.",
+    audienceHeading: "Kome je namenjena ova površina za otkrivanje",
+    audienceBody:
+      "Ovi endpointi pomažu programerima, pretraživačima, AI agentima, RSS čitačima i alatima za integraciju da pronađu javnu dokumentaciju i mašinski čitljive resurse o proizvodu LobbyStack. To su interfejsi za otkrivanje, a ne autentifikovani kontrolni sloj za pozive ili naloge klijenata.",
+    behaviorHeading: "Pristup i ponašanje odgovora",
+    behaviorItems: [
+      "Javni endpointi za otkrivanje prihvataju GET ili HEAD zahteve bez autentifikacije.",
+      "Endpoint za status prikazuje javno stanje servisa; ne otkriva podatke o klijentima niti operativne podatke.",
+      "Zaštićeni API-ji aplikacije dokumentovani su posebno i zahtevaju metod autentifikacije koji objavljuje host aplikacije.",
+      "Početna stranica podržava pregovaranje Accept: text/markdown; ostale objavljene Markdown verzije dostupne su na .md endpointima navedenim ispod.",
+    ],
+    cards: [
+      {
+        title: "API katalog",
+        body: "RFC 9727 linkset za javne API resurse i resurse za otkrivanje.",
+        href: "/.well-known/api-catalog",
+      },
+      {
+        title: "OpenAPI",
+        body: "JSON opis javnih endpointa za otkrivanje.",
+        href: "/openapi.json",
+      },
+      {
+        title: "Status",
+        body: "Jednostavan javni signal o stanju servisa za automatizovane klijente.",
+        href: "/api/status",
+      },
+    ],
+    endpoints: "Endpointi za otkrivanje",
+    requestExamples: "Primeri zahteva",
+    tableHeaders: ["Endpoint", "Tip sadržaja", "Namena"],
+    rows: [
+      [
+        "/.well-known/api-catalog",
+        "application/linkset+json",
+        "Linkset API kataloga.",
+      ],
+      [
+        "/openapi.json",
+        "application/vnd.oai.openapi+json",
+        "OpenAPI opis servisa.",
+      ],
+      [
+        "/llms.txt",
+        "text/plain",
+        "Sažet kontekst o proizvodu, funkcijama, cenama i otkrivanju za LLM modele.",
+      ],
+      [
+        "/feed.xml",
+        "application/rss+xml",
+        "RSS feed sa celim sadržajem bloga.",
+      ],
+      [
+        "/schemamap.xml",
+        "application/xml",
+        "Mapa endpointa sa strukturiranim podacima.",
+      ],
+      [
+        "/schema/page.json",
+        "application/ld+json",
+        "JSON-LD graf javnih stranica.",
+      ],
+      [
+        "/schema/post.json",
+        "application/ld+json",
+        "JSON-LD graf članaka na blogu.",
+      ],
+      [
+        "/sr/index.md",
+        "text/markdown",
+        "Rezime početne stranice u markdown formatu.",
+      ],
+      [
+        "/sr/features.md",
+        "text/markdown",
+        "Rezime funkcija u markdown formatu.",
+      ],
+      [
+        "/sr/pricing.md",
+        "text/markdown",
+        "Cene, uključena potrošnja, pravila potrošnje i cene prekoračenja u markdown formatu.",
+      ],
+      [
+        "/.well-known/agent-skills/index.json",
+        "application/json",
+        "Indeks za otkrivanje agent skills resursa.",
+      ],
+      [
+        "/.well-known/mcp/server-card.json",
+        "application/json",
+        "Kartica MCP servera.",
+      ],
+    ],
+    examples: ["Markdown pregovaranje za početnu stranicu", "API katalog"],
+    relatedHeading: "Povezani resursi",
+    related: [
+      {
+        title: "Funkcije proizvoda",
+        body: "Pogledajte kako LobbyStack odgovara na pozive, zakazuje termine i preusmerava pozive.",
+        href: "/sr/features/",
+      },
+      {
+        title: "Cene i potrošnja",
+        body: "Pre integracije proverite uključene minute, cene prekoračenja i ograničenja paketa.",
+        href: "/sr/pricing/",
+      },
+      {
+        title: "Kontekst fajl za LLM",
+        body: "Sažet kontekst o proizvodu, cenama i otkrivanju u llms.txt fajlu za automatizovane klijente.",
+        href: "/llms.txt",
+      },
+      {
+        title: "Kompletna dokumentacija proizvoda",
+        body: "Pročitajte uputstva za podešavanje, primenu, telefoniju, zakazivanje i rad u LobbyStack dokumentaciji.",
+        href: "https://docs.lobbystack.com/introduction",
+      },
+    ],
+  },
 } satisfies Record<
   Locale,
   {
@@ -382,7 +629,7 @@ const t = pageCopy[locale]
           <div class="rounded-lg border bg-card p-5">
             <h3 class="text-base font-semibold">{t.examples[0]}</h3>
             <pre
-              class="mt-4 overflow-x-auto rounded-md bg-muted p-4 text-xs leading-6"><code>curl {absoluteUrl(locale === "fr" ? "/fr/" : "/")} \
+              class="mt-4 overflow-x-auto rounded-md bg-muted p-4 text-xs leading-6"><code>curl {absoluteUrl(localizePath(locale, "/"))} \
   -H "Accept: text/markdown"</code></pre>
           </div>
           <div class="rounded-lg border bg-card p-5">
@@ -414,5 +661,5 @@ const t = pageCopy[locale]
       </section>
     </section>
   </main>
-  <Footer locale={locale} />
+  <Footer locale={locale} path={Astro.url.pathname} />
 </Layout>

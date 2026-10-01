@@ -1,6 +1,8 @@
-import type { Locale } from "@/i18n/config"
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/config"
 import type { FaqItem } from "@/lib/seo"
+import { spanishSeoPages } from "@/lib/es-seo-landing-pages"
 import { restoredFrenchSeoPages } from "@/lib/fr-seo-landing-pages"
+import { serbianSeoPages } from "@/lib/sr-seo-landing-pages"
 import {
   seoLandingPageByPath,
   seoLandingPages,
@@ -182,28 +184,43 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
   },
 }
 
-export const fullyLocalizedFrenchSeoPaths = new Set(
-  [...Object.keys(bespokeSolutionPagesFr), ...Object.keys(restoredFrenchSeoPages)]
-)
+/**
+ * Translated SEO landing pages per prefixed locale, keyed by English base path.
+ * A page missing from a locale is not published in that locale.
+ */
+const translatedSeoPages: Record<
+  Exclude<Locale, typeof DEFAULT_LOCALE>,
+  Record<string, SeoLandingPage>
+> = {
+  fr: { ...restoredFrenchSeoPages, ...bespokeSolutionPagesFr },
+  es: spanishSeoPages,
+  sr: serbianSeoPages,
+}
+
+export const fullyLocalizedSeoPaths = (locale: Locale) =>
+  locale === DEFAULT_LOCALE
+    ? new Set(seoLandingPages.map((page) => page.path))
+    : new Set(Object.keys(translatedSeoPages[locale]))
+
+export const fullyLocalizedFrenchSeoPaths = fullyLocalizedSeoPaths("fr")
+
+export const isSeoPageFullyLocalized = (locale: Locale, path: string) =>
+  locale === DEFAULT_LOCALE || path in translatedSeoPages[locale]
 
 export const isFrenchSeoPageFullyLocalized = (path: string) =>
-  fullyLocalizedFrenchSeoPaths.has(path)
+  isSeoPageFullyLocalized("fr", path)
 
 export const getLocalizedSeoLandingPage = (
   locale: Locale,
   path: string
 ): SeoLandingPage | undefined => {
-  if (locale === "fr") {
-    if (!isFrenchSeoPageFullyLocalized(path)) return undefined
-    return bespokeSolutionPagesFr[path] ?? restoredFrenchSeoPages[path]
-  }
-
-  return seoLandingPageByPath(path)
+  if (locale === DEFAULT_LOCALE) return seoLandingPageByPath(path)
+  return translatedSeoPages[locale][path]
 }
 
 export const localizedSeoLandingPages = (locale: Locale): SeoLandingPage[] =>
-  locale === "fr"
+  locale === DEFAULT_LOCALE
     ? seoLandingPages
-        .filter((page) => isFrenchSeoPageFullyLocalized(page.path))
-        .map((page) => getLocalizedSeoLandingPage(locale, page.path)!)
     : seoLandingPages
+        .filter((page) => isSeoPageFullyLocalized(locale, page.path))
+        .map((page) => getLocalizedSeoLandingPage(locale, page.path)!)

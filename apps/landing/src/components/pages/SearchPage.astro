@@ -23,6 +23,14 @@ const pageCopy = {
     h1: "Rechercher dans LobbyStack",
     placeholder: "Rechercher pages produit, tarifs et articles",
   },
+  es: {
+    h1: "Buscar en LobbyStack",
+    placeholder: "Busque páginas del producto, precios y artículos",
+  },
+  sr: {
+    h1: "Pretražite LobbyStack",
+    placeholder: "Pretražite stranice proizvoda, cene i članke",
+  },
 } satisfies Record<Locale, { h1: string; placeholder: string }>
 ---
 
@@ -63,5 +71,5 @@ const pageCopy = {
       </div>
     </section>
   </main>
-  <Footer locale={locale} />
+  <Footer locale={locale} path={Astro.url.pathname} />
 </Layout>

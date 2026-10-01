@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, localeTag, type Locale } from "@/i18n/config"
+
 export const SITE_URL = "https://lobbystack.com"
 
 export const SITE_NAME = "LobbyStack"
@@ -56,7 +58,7 @@ export type PageSeo = {
   modifiedTime?: string
   author?: string
   jsonLd?: JsonLd[]
-  locale?: "en" | "fr"
+  locale?: Locale
 }
 
 export const absoluteUrl = (path = "/") => new URL(path, SITE_URL).toString()
@@ -120,11 +122,11 @@ export const schemaGraph = (items: JsonLd[] = []): JsonLd => {
 }
 
 type LocaleInput = {
-  locale?: "en" | "fr"
+  locale?: Locale
 }
 
-const localeLanguage = (locale: LocaleInput["locale"] = "en") =>
-  locale === "fr" ? "fr" : "en"
+const localeLanguage = (locale: LocaleInput["locale"] = DEFAULT_LOCALE) =>
+  localeTag(locale)
 
 // No inLanguage here: schema.org doesn't define it on Organization, and
 // validators flag the property.
@@ -194,7 +196,7 @@ export const webPageJsonLd = ({
   path: string
   image?: string
   type?: "WebPage" | "CollectionPage"
-  locale?: "en" | "fr"
+  locale?: Locale
 }): JsonLd => {
   const url = absoluteUrl(normalizedPath(path))
 
@@ -231,7 +233,7 @@ export const faqPageJsonLd = ({
 }: {
   path: string
   faqs: FaqItem[]
-  locale?: "en" | "fr"
+  locale?: Locale
 }): JsonLd => {
   const url = absoluteUrl(normalizedPath(path))
 
@@ -395,18 +397,37 @@ export const imageObjectJsonLd = ({
   }
 }
 
+const blogCopy: Record<Locale, { name: string; description: string }> = {
+  en: {
+    name: "AI Receptionist Blog and Product Updates",
+    description:
+      "Product updates and practical guides about AI receptionists, phone answering, appointment booking, and small-business call automation.",
+  },
+  fr: {
+    name: "Blog et mises a jour produit LobbyStack",
+    description:
+      "Mises a jour produit et guides pratiques sur les receptionnistes IA, la reponse telephonique et la reservation.",
+  },
+  es: {
+    name: "Blog y novedades de producto de LobbyStack",
+    description:
+      "Novedades de producto y guías prácticas sobre recepcionistas con IA, atención telefónica, reserva de citas y automatización de llamadas para pequeños negocios.",
+  },
+  sr: {
+    name: "LobbyStack blog i novosti o proizvodu",
+    description:
+      "Novosti o proizvodu i praktični vodiči o AI recepcionerima, odgovaranju na pozive, zakazivanju termina i automatizaciji poziva za male firme.",
+  },
+}
+
+const localizedBlogPath = (locale: Locale) =>
+  locale === DEFAULT_LOCALE ? "/blog/" : `/${locale}/blog/`
+
 export const blogJsonLd = ({
   locale = "en",
   path = "/blog/",
 }: LocaleInput & { path?: string } = {}): JsonLd => {
-  const name =
-    locale === "fr"
-      ? "Blog et mises a jour produit LobbyStack"
-      : "AI Receptionist Blog and Product Updates"
-  const description =
-    locale === "fr"
-      ? "Mises a jour produit et guides pratiques sur les receptionnistes IA, la reponse telephonique et la reservation."
-      : "Product updates and practical guides about AI receptionists, phone answering, appointment booking, and small-business call automation."
+  const { name, description } = blogCopy[locale]
 
   return {
     "@type": "Blog",
@@ -445,7 +466,7 @@ export const blogPostingJsonLd = ({
   modifiedTime: string
   articleBody?: string
   category?: string
-  locale?: "en" | "fr"
+  locale?: Locale
 }): JsonLd => {
   const url = absoluteUrl(normalizedPath(path))
   const imagePath = image ?? ogImagePath(path)
@@ -473,7 +494,7 @@ export const blogPostingJsonLd = ({
       "@id": absoluteUrl("/#organization"),
     },
     isPartOf: {
-      "@id": absoluteUrl(`${locale === "fr" ? "/fr/blog/" : "/blog/"}#blog`),
+      "@id": absoluteUrl(`${localizedBlogPath(locale)}#blog`),
     },
     mainEntityOfPage: {
       "@id": `${url}#webpage`,

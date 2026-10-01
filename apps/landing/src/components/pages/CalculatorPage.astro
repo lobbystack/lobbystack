@@ -19,6 +19,7 @@ import {
   assertLocale,
   getCopy,
   getRouteSeo,
+  localeTag,
   localizeHref,
   localizePath,
   type Locale,
@@ -240,6 +241,180 @@ const pageCopy = {
       "Coûte une fraction d’un service de réponse humaine",
     ],
   },
+  es: {
+    breadcrumb: "Calculadora de ingresos por llamadas perdidas",
+    h1: "Calculadora de ingresos por llamadas perdidas para contratistas",
+    intro:
+      "Calcule cuántos ingresos se le escapan cuando no puede contestar el teléfono.",
+    body: "Esta calculadora de ingresos por llamadas perdidas está pensada para contratistas y negocios de servicios a domicilio que reservan trabajos por teléfono. Úsela para ponerle cifra a las llamadas sin contestar de propietarios, administradores de inmuebles y clientes habituales antes de que esos trabajos se vayan a otra empresa.",
+    measurementHeading: "Qué mide esta calculadora de llamadas perdidas",
+    measurementIntro:
+      "La calculadora estima los ingresos reservados en riesgo, no el volumen total de llamadas. Filtra sus llamadas perdidas para quedarse con las que probablemente eran oportunidades de trabajo reales y luego aplica su tasa de reserva y el valor medio por trabajo.",
+    measurementItems: [
+      {
+        term: "Llamadas perdidas por semana",
+        description:
+          "Use las llamadas que su equipo no pudo atender en directo. Incluya las perdidas durante los trabajos, al volante, a la hora de comer, fuera de horario y los fines de semana.",
+      },
+      {
+        term: "Valor medio por trabajo",
+        description:
+          "Divida los ingresos de trabajos terminados entre el número de trabajos terminados. Si hace desde pequeñas visitas de servicio hasta grandes instalaciones, empiece con el promedio combinado.",
+      },
+      {
+        term: "% de llamadas que son trabajos reales",
+        description:
+          "No todas las llamadas perdidas son de clientes que quieren comprar. Este dato descarta el spam, los proveedores, los números equivocados y los clientes actuales que no necesitaban reservar un trabajo nuevo.",
+      },
+      {
+        term: "Tasa de reserva si se contesta",
+        description:
+          "Use el porcentaje de clientes potenciales calificados que suelen convertirse en una cita, un presupuesto, una visita o un trabajo pagado cuando alguien contesta enseguida.",
+      },
+    ],
+    mathHeading: "Cómo se calcula",
+    mathIntro:
+      "Usamos una fórmula sencilla y prudente para calcular sus ingresos en riesgo. Se basa en las métricas reales que mueven a los negocios de contratistas:",
+    formula:
+      "ingresos mensuales en riesgo = llamadas perdidas por semana x 4,3 x tasa de oportunidades x tasa de reserva x valor medio por trabajo",
+    mathBody:
+      "Multiplicamos sus llamadas perdidas semanales por 4,3 para obtener las llamadas mensuales. Después reducimos esa cifra a las llamadas que son trabajos reales y al porcentaje de ellas que normalmente ganaría.",
+    whyHeading: "Por qué las llamadas perdidas se convierten en trabajos perdidos",
+    whyParagraphs: [
+      "La mayoría de los propietarios no trata el buzón de voz como una sala de espera. Si una tubería gotea, el aire acondicionado deja de funcionar o el techo necesita una reparación, siguen llamando hasta que alguien contesta.",
+      "No se pierde solo la llamada. Se pierde el clic en el anuncio, la recomendación, el desplazamiento, el presupuesto, la reparación, la instalación o el cliente recurrente que podría haber empezado con esa primera conversación.",
+    ],
+    inputsHeading: "Cómo elegir datos realistas",
+    inputsIntro:
+      "La mejor estimación del costo de las llamadas perdidas sale de sus propios números. Si todavía no tiene informes completos, empiece con datos prudentes.",
+    inputTips: [
+      "Saque el número de llamadas perdidas de su sistema telefónico en lugar de calcularlo de memoria.",
+      "Use los últimos 30 a 90 días para el valor medio por trabajo, sobre todo si su trabajo es estacional.",
+      "Mantenga baja la tasa de oportunidades si recibe muchas llamadas comerciales o preguntas de clientes actuales.",
+      "Si no conoce su tasa de reserva, empiece por debajo de lo que cree y vuelva a calcular con un escenario optimista.",
+    ],
+    tradeHeading: "Ingresos por llamadas perdidas según el oficio",
+    tradeIntro:
+      "La misma fórmula sirve para todos los servicios a domicilio, pero el riesgo cambia según el oficio. Use estas notas para elegir datos que reflejen cómo compran sus clientes.",
+    tradeNotes: [
+      {
+        trade: "Plomería",
+        note: "Las urgencias suelen ir a la primera empresa que contesta. Una sola llamada perdida por una tubería rota puede valer más que un día entero de pequeños servicios.",
+      },
+      {
+        trade: "Climatización",
+        note: "Las olas de calor y de frío concentran la demanda en pocos días. En temporada alta, unas pocas llamadas sin contestar pueden convertirse en trabajos reservados para la competencia.",
+      },
+      {
+        trade: "Techos",
+        note: "Los clientes potenciales de techos suelen ser de alto valor, pero rara vez esperan mucho. Si acaba de pasar una tormenta, la rapidez para contestar importa tanto como la inversión en anuncios.",
+      },
+      {
+        trade: "Electricidad",
+        note: "Las averías, los problemas en el cuadro eléctrico y las reparaciones urgentes son difíciles de presupuestar desde un buzón de voz. Contestar en directo ayuda a recoger los detalles antes de que el cliente llame a otro.",
+      },
+    ],
+    nextHeading: "Qué hacer ahora",
+    nextParagraphs: [
+      "No deje que los nuevos clientes potenciales vayan al buzón de voz, porque casi nunca dejan un mensaje. La recepcionista con IA de LobbyStack trabaja 24/7 para frenar esa fuga de ingresos.",
+      "Si la calculadora muestra ingresos importantes en riesgo, el siguiente paso es contestar más llamadas sin sacar a los técnicos del trabajo que ya están haciendo.",
+    ],
+    nextItems: [
+      "Contesta cada llamada al instante",
+      "Recoge los datos de quien llama automáticamente",
+      "Reserva citas directamente en Google Calendar",
+      "Toma notas y resúmenes detallados del trabajo",
+      "Transfiere las urgencias a su celular",
+      "Cuesta una fracción de un servicio de contestador humano",
+    ],
+  },
+  sr: {
+    breadcrumb: "Kalkulator prihoda od propuštenih poziva",
+    h1: "Kalkulator prihoda od propuštenih poziva za izvođače radova",
+    intro:
+      "Procenite koliko prihoda Vam izmiče kada ne možete da se javite na telefon.",
+    body: "Ovaj kalkulator prihoda od propuštenih poziva napravljen je za izvođače radova i firme koje pružaju usluge u domaćinstvu i zakazuju poslove telefonom. Koristite ga da izrazite u novcu neodgovorene pozive vlasnika kuća, upravnika zgrada i stalnih klijenata pre nego što ti poslovi odu drugoj firmi.",
+    measurementHeading: "Šta ovaj kalkulator propuštenih poziva meri",
+    measurementIntro:
+      "Kalkulator procenjuje zakazani prihod u riziku, a ne ukupan broj poziva. Od Vaših propuštenih poziva izdvaja one koji su verovatno bili prave prilike za posao, a zatim primenjuje Vašu stopu zakazivanja i prosečnu vrednost posla.",
+    measurementItems: [
+      {
+        term: "Propušteni pozivi nedeljno",
+        description:
+          "Unesite pozive na koje Vaš tim nije mogao odmah da se javi. Uračunajte pozive propuštene tokom posla, u vožnji, za vreme pauze za ručak, van radnog vremena i vikendom.",
+      },
+      {
+        term: "Prosečna vrednost posla",
+        description:
+          "Podelite prihod od završenih poslova brojem završenih poslova. Ako radite sve od malih servisnih intervencija do velikih ugradnji, počnite od zajedničkog proseka.",
+      },
+      {
+        term: "% poziva koji su pravi poslovi",
+        description:
+          "Nije svaki propušten poziv kupac. Ovaj podatak izbacuje spam, dobavljače, pogrešne brojeve i postojeće klijente kojima nije trebalo zakazivanje novog posla.",
+      },
+      {
+        term: "Stopa zakazivanja kada se javite",
+        description:
+          "Unesite procenat kvalifikovanih potencijalnih klijenata sa telefona koji obično postanu termin, procena, izlazak na teren ili plaćen posao kada se neko brzo javi.",
+      },
+    ],
+    mathHeading: "Kako se računa",
+    mathIntro:
+      "Koristimo jednostavnu i opreznu formulu za izračunavanje prihoda u riziku. Zasnovana je na stvarnim pokazateljima koji pokreću firme izvođača radova:",
+    formula:
+      "mesečni prihod u riziku = propušteni pozivi nedeljno x 4,3 x stopa pravih prilika x stopa zakazivanja x prosečna vrednost posla",
+    mathBody:
+      "Nedeljne propuštene pozive množimo sa 4,3 da bismo dobili mesečni broj poziva. Zatim taj broj svodimo samo na pozive koji su pravi poslovi i na procenat onih koje biste obično dobili.",
+    whyHeading: "Zašto propušteni pozivi postaju izgubljeni poslovi",
+    whyParagraphs: [
+      "Većina vlasnika kuća ne doživljava govornu poštu kao čekaonicu. Ako cev curi, klima ne radi ili krovu treba popravka, zovu dalje dok im se neko ne javi.",
+      "Ne gubite samo poziv. Gubite klik na oglas, preporuku, izlazak na teren, procenu, popravku, ugradnju ili stalnog klijenta koji je mogao da počne tim prvim razgovorom.",
+    ],
+    inputsHeading: "Kako da izaberete realne podatke",
+    inputsIntro:
+      "Najbolja procena cene propuštenih poziva dolazi iz Vaših brojki. Ako još nemate potpune izveštaje, prvo unesite oprezne vrednosti.",
+    inputTips: [
+      "Broj propuštenih poziva uzmite iz telefonskog sistema umesto da ga procenjujete napamet.",
+      "Za prosečnu vrednost posla koristite poslednjih 30 do 90 dana, naročito ako je Vaš posao sezonski.",
+      "Držite stopu pravih prilika nisko ako dobijate mnogo prodajnih poziva ili pitanja postojećih klijenata.",
+      "Ako ne znate stopu zakazivanja, počnite niže nego što mislite, pa ponovo izračunajte sa optimističnom verzijom.",
+    ],
+    tradeHeading: "Prihod od propuštenih poziva po zanatu",
+    tradeIntro:
+      "Ista formula radi za sve usluge u domaćinstvu, ali rizik izgleda drugačije u svakom zanatu. Iskoristite ove beleške da izaberete podatke koji odgovaraju načinu na koji Vaši klijenti kupuju.",
+    tradeNotes: [
+      {
+        trade: "Vodoinstalaterski radovi",
+        note: "Hitni pozivi često idu prvoj firmi koja se javi. Jedan propušten poziv zbog pukle cevi može da vredi više od celog dana malih servisnih poslova.",
+      },
+      {
+        trade: "Grejanje i klimatizacija",
+        note: "Toplotni talasi i iznenadne hladnoće sabijaju potražnju u kratke periode. U sezoni i nekoliko neodgovorenih poziva može da postane zakazan posao za konkurenciju.",
+      },
+      {
+        trade: "Krovovi",
+        note: "Upiti za krovove obično vrede mnogo, ali kupci retko dugo čekaju. Ako je oluja upravo prošla, brzina javljanja je važna koliko i budžet za oglase.",
+      },
+      {
+        trade: "Elektroinstalacije",
+        note: "Kvarove, probleme sa razvodnom tablom i hitne popravke teško je proceniti iz govorne pošte. Kada se neko javi, lakše je prikupiti detalje pre nego što pozivalac ode dalje.",
+      },
+    ],
+    nextHeading: "Šta dalje",
+    nextParagraphs: [
+      "Ne dozvolite da novi potencijalni klijenti završe na govornoj pošti, jer retko ostave poruku. LobbyStack AI recepcioner radi 24/7 i zatvara tu rupu u prihodu.",
+      "Ako kalkulator pokaže značajan prihod u riziku, sledeći korak je da odgovarate na više poziva bez povlačenja majstora sa posla koji već rade.",
+    ],
+    nextItems: [
+      "Odmah odgovara na svaki poziv",
+      "Automatski beleži podatke pozivaoca",
+      "Zakazuje termine direktno u Google Calendar",
+      "Pravi detaljne beleške i rezimee poslova",
+      "Preusmerava hitne pozive na Vaš mobilni",
+      "Košta delić cene ljudskog call centra",
+    ],
+  },
 } satisfies Record<Locale, PageCopy>
 
 const t = pageCopy[locale]
@@ -265,7 +440,7 @@ const t = pageCopy[locale]
         name: routeSeo?.title,
         url: absoluteUrl(canonicalPath),
         description: routeSeo?.description,
-        inLanguage: locale,
+        inLanguage: localeTag(locale),
         isPartOf: {
           "@id": absoluteUrl("/#website"),
         },
@@ -433,5 +608,5 @@ const t = pageCopy[locale]
     <CtaSection locale={locale} />
   </main>
 
-  <Footer locale={locale} />
+  <Footer locale={locale} path={Astro.url.pathname} />
 </Layout>

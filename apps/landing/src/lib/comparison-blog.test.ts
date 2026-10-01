@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import sharp from "sharp"
 import { describe, expect, it } from "vitest"
-import { translatedBasePaths } from "@/i18n"
+import { SUPPORTED_LOCALES, translatedBasePaths, type Locale } from "@/i18n"
 
 const competitorSlugs = [
   "upfirst-alternative",
@@ -32,8 +32,10 @@ const rootPath = (path: string) =>
 const frontmatterValue = (source: string, key: string) =>
   source.match(new RegExp(`^${key}:\\s*"([^"]+)"`, "m"))?.[1]
 
-const postPath = (slug: string, locale: "en" | "fr") =>
-  rootPath(`src/content/blog/${locale === "fr" ? "fr/" : ""}${slug}.md`)
+const postPath = (slug: string, locale: Locale) =>
+  rootPath(`src/content/blog/${locale === "en" ? "" : `${locale}/`}${slug}.md`)
+
+const translatedLocales = SUPPORTED_LOCALES.filter((locale) => locale !== "en")
 
 const sourceFiles = (directory: string): string[] =>
   readdirSync(directory).flatMap((entry) => {
@@ -44,26 +46,22 @@ const sourceFiles = (directory: string): string[] =>
   })
 
 describe("competitor comparison blog collection", () => {
-  it("keeps complete English and French pairs with matching slugs", () => {
+  it("keeps a complete post in every language with matching slugs", () => {
     for (const slug of comparisonSlugs) {
-      const englishPath = postPath(slug, "en")
-      const frenchPath = postPath(slug, "fr")
+      for (const locale of SUPPORTED_LOCALES) {
+        const path = postPath(slug, locale)
+        expect(existsSync(path), `missing ${locale} post ${slug}`).toBe(true)
 
-      expect(existsSync(englishPath), `missing English post ${slug}`).toBe(true)
-      expect(existsSync(frenchPath), `missing French post ${slug}`).toBe(true)
-
-      const english = readFileSync(englishPath, "utf8")
-      const french = readFileSync(frenchPath, "utf8")
-      expect(frontmatterValue(english, "canonicalSlug")).toBe(slug)
-      expect(frontmatterValue(french, "canonicalSlug")).toBe(slug)
-      expect(frontmatterValue(english, "locale")).toBe("en")
-      expect(frontmatterValue(french, "locale")).toBe("fr")
+        const source = readFileSync(path, "utf8")
+        expect(frontmatterValue(source, "canonicalSlug")).toBe(slug)
+        expect(frontmatterValue(source, "locale")).toBe(locale)
+      }
     }
   })
 
   it("enforces search metadata and fresh-content fields", () => {
     for (const slug of comparisonSlugs) {
-      for (const locale of ["en", "fr"] as const) {
+      for (const locale of SUPPORTED_LOCALES) {
         const source = readFileSync(postPath(slug, locale), "utf8")
         const title = frontmatterValue(source, "title")
         const seoTitle = frontmatterValue(source, "seoTitle")
@@ -101,7 +99,7 @@ describe("competitor comparison blog collection", () => {
     ]
 
     for (const slug of comparisonSlugs) {
-      for (const locale of ["en", "fr"] as const) {
+      for (const locale of SUPPORTED_LOCALES) {
         const source = readFileSync(postPath(slug, locale), "utf8")
         expect(source, `${locale} ${slug} em dash`).not.toContain("—")
         for (const phrase of bannedPhrases) {
@@ -133,6 +131,19 @@ describe("competitor comparison blog collection", () => {
       expect(french, slug).not.toMatch(
         /LobbyStack inclut moins|comparaison est serrée|Rosie gagne/
       )
+
+      const spanish = readFileSync(postPath(slug, "es"), "utf8")
+      expect(spanish, slug).toContain("30 minutos de voz en el navegador")
+      expect(spanish, slug).toContain("sin tarjeta ni número de teléfono")
+      expect(spanish, slug).toContain("## Elija LobbyStack")
+      expect(spanish, slug).toContain("## Veredicto")
+
+      const serbian = readFileSync(postPath(slug, "sr"), "utf8")
+      expect(serbian, slug).toContain("30 minuta razgovora u pregledaču")
+      expect(serbian, slug).toContain("bez kartice i broja telefona")
+      expect(serbian, slug).toContain("## Izaberite LobbyStack")
+      expect(serbian, slug).toContain("## Zaključak")
+      expect(serbian, slug).not.toMatch(/[\u0400-\u04FF]/)
     }
   })
 
@@ -153,6 +164,16 @@ describe("competitor comparison blog collection", () => {
 
       expect(frontmatterValue(english, "coverImage")).toBe(expectedCover)
       expect(frontmatterValue(french, "coverImage")).toBe(expectedCover)
+      for (const locale of translatedLocales) {
+        const source = readFileSync(postPath(slug, locale), "utf8")
+        expect(frontmatterValue(source, "coverImage"), `${locale} ${slug}`).toBe(
+          expectedCover
+        )
+        expect(
+          frontmatterValue(source, "coverImageAlt")?.length,
+          `${locale} ${slug} cover alt`
+        ).toBeGreaterThanOrEqual(20)
+      }
       expect(
         englishAlt?.length,
         `${slug} English cover alt`

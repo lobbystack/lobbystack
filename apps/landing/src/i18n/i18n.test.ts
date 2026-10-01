@@ -7,8 +7,12 @@ import {
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import {
+  SUPPORTED_LOCALES,
   alternateLocaleLinks,
+  catalog,
   getRouteSeo,
+  languageSwitcherLinks,
+  localeTag,
   localizeHref,
   localizePath,
   stripLocaleFromPath,
@@ -21,8 +25,18 @@ import {
 } from "@/lib/seo-landing-pages"
 import {
   fullyLocalizedFrenchSeoPaths,
+  fullyLocalizedSeoPaths,
   localizedSeoLandingPages,
 } from "@/lib/localized-seo-landing-pages"
+
+const translatedLocales = SUPPORTED_LOCALES.filter((locale) => locale !== "en")
+
+const leafPaths = (value: unknown, prefix = ""): string[] => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [prefix]
+  return Object.entries(value).flatMap(([key, child]) =>
+    leafPaths(child, prefix ? `${prefix}.${key}` : key)
+  )
+}
 
 const pathFromHere = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 
@@ -57,6 +71,10 @@ describe("landing i18n route helpers", () => {
     expect(localizePath("en", "/fr/features/")).toBe("/features/")
     expect(localizePath("fr", "/features/")).toBe("/fr/features/")
     expect(localizePath("fr", "/")).toBe("/fr/")
+    expect(stripLocaleFromPath("/es/pricing/")).toBe("/pricing/")
+    expect(stripLocaleFromPath("/sr/")).toBe("/")
+    expect(localizePath("es", "/sr/features/")).toBe("/es/features/")
+    expect(localizePath("sr", "/")).toBe("/sr/")
   })
 
   it("localizes internal hrefs and preserves machine/external endpoints", () => {
@@ -74,36 +92,54 @@ describe("landing i18n route helpers", () => {
   })
 
   it("generates hreflang alternates from the unprefixed canonical path", () => {
-    expect(alternateLocaleLinks("/fr/pricing/")).toEqual([
-      { hrefLang: "en", href: "https://lobbystack.com/pricing/" },
-      { hrefLang: "fr", href: "https://lobbystack.com/fr/pricing/" },
-      { hrefLang: "x-default", href: "https://lobbystack.com/pricing/" },
+    const alternates = (path: string) => [
+      { hrefLang: "en", href: `https://lobbystack.com${path}` },
+      { hrefLang: "fr", href: `https://lobbystack.com/fr${path}` },
+      { hrefLang: "es", href: `https://lobbystack.com/es${path}` },
+      { hrefLang: "sr-Latn", href: `https://lobbystack.com/sr${path}` },
+      { hrefLang: "x-default", href: `https://lobbystack.com${path}` },
+    ]
+
+    expect(alternateLocaleLinks("/fr/pricing/")).toEqual(alternates("/pricing/"))
+    expect(alternateLocaleLinks("/sr/pricing/")).toEqual(alternates("/pricing/"))
+    expect(alternateLocaleLinks("/cookie-policy/")).toEqual(
+      alternates("/cookie-policy/")
+    )
+    expect(
+      alternateLocaleLinks("/es/blog/best-open-source-ai-phone-answering-services/")
+    ).toEqual(alternates("/blog/best-open-source-ai-phone-answering-services/"))
+  })
+
+  it("tags Serbian pages as Latin script", () => {
+    expect(localeTag("sr")).toBe("sr-Latn")
+    expect(localeTag("es")).toBe("es")
+    const date = new Intl.DateTimeFormat(localeTag("sr"), {
+      dateStyle: "long",
+      timeZone: "UTC",
+    }).format(new Date(Date.UTC(2026, 8, 30)))
+    expect(date).toBe("30. septembar 2026.")
+    expect(date).not.toMatch(/[\u0400-\u04FF]/)
+  })
+
+  it("links the language switcher to the same page in every language", () => {
+    expect(languageSwitcherLinks("/es/pricing/")).toEqual([
+      { locale: "en", label: "English", hrefLang: "en", href: "/pricing/" },
+      { locale: "fr", label: "Français", hrefLang: "fr", href: "/fr/pricing/" },
+      { locale: "es", label: "Español", hrefLang: "es", href: "/es/pricing/" },
+      { locale: "sr", label: "Srpski", hrefLang: "sr-Latn", href: "/sr/pricing/" },
     ])
-    expect(alternateLocaleLinks("/cookie-policy/")).toEqual([
-      { hrefLang: "en", href: "https://lobbystack.com/cookie-policy/" },
-      { hrefLang: "fr", href: "https://lobbystack.com/fr/cookie-policy/" },
-      { hrefLang: "x-default", href: "https://lobbystack.com/cookie-policy/" },
-    ])
-    expect(alternateLocaleLinks("/blog/best-open-source-ai-phone-answering-services/")).toEqual([
-      {
-        hrefLang: "en",
-        href: "https://lobbystack.com/blog/best-open-source-ai-phone-answering-services/",
-      },
-      {
-        hrefLang: "fr",
-        href: "https://lobbystack.com/fr/blog/best-open-source-ai-phone-answering-services/",
-      },
-      {
-        hrefLang: "x-default",
-        href: "https://lobbystack.com/blog/best-open-source-ai-phone-answering-services/",
-      },
+    expect(languageSwitcherLinks("/unknown-page/").map((link) => link.href)).toEqual([
+      "/",
+      "/fr/",
+      "/es/",
+      "/sr/",
     ])
   })
 })
 
 describe("landing translated route registry", () => {
   it("has SEO metadata for every non-blog translated route in every locale", () => {
-    const locales: Locale[] = ["en", "fr"]
+    const locales: Locale[] = [...SUPPORTED_LOCALES]
     const checkedPaths = translatedBasePaths.filter(
       (path) => path === "/blog/" || !path.startsWith("/blog/")
     )
@@ -129,6 +165,16 @@ describe("landing translated route registry", () => {
         `"${path}"`
       )
     }
+  })
+})
+
+describe("landing dictionaries", () => {
+  it.each(translatedLocales)("has every English key in the %s dictionary", (locale) => {
+    expect(leafPaths(catalog[locale]).sort()).toEqual(leafPaths(catalog.en).sort())
+  })
+
+  it("writes Serbian copy in Latin script only", () => {
+    expect(JSON.stringify(catalog.sr)).not.toMatch(/[\u0400-\u04FF]/)
   })
 })
 
@@ -162,12 +208,50 @@ describe("landing translated content coverage", () => {
     }
   })
 
-  it("has a French blog post for every English canonical blog slug", () => {
-    const englishSlugs = canonicalSlugsIn(pathFromHere("../content/blog"))
-    const frenchSlugs = canonicalSlugsIn(pathFromHere("../content/blog/fr"))
+  it.each(translatedLocales)(
+    "has a %s blog post for every English canonical blog slug",
+    (locale) => {
+      const englishSlugs = canonicalSlugsIn(pathFromHere("../content/blog"))
+      const localizedSlugs = canonicalSlugsIn(
+        pathFromHere(`../content/blog/${locale}`)
+      )
 
-    expect(frenchSlugs).toEqual(englishSlugs)
-  })
+      expect(localizedSlugs).toEqual(englishSlugs)
+    }
+  )
+
+  it.each(translatedLocales)(
+    "has a %s changelog entry for every English entry",
+    (locale) => {
+      const english = canonicalSlugsIn(pathFromHere("../content/changelog"))
+      const localized = canonicalSlugsIn(
+        pathFromHere(`../content/changelog/${locale}`)
+      )
+
+      expect(localized).toEqual(english)
+    }
+  )
+
+  it.each(["es", "sr"] as const)(
+    "publishes the same %s SEO landing pages as French",
+    (locale) => {
+      expect([...fullyLocalizedSeoPaths(locale)].sort()).toEqual(
+        [...fullyLocalizedFrenchSeoPaths].sort()
+      )
+
+      for (const page of localizedSeoLandingPages(locale)) {
+        const englishPage = seoLandingPageByPath(page.path)
+        expect(englishPage, page.path).toBeDefined()
+        expect(page.title, page.path).not.toBe(englishPage?.title)
+        expect(page.h1, page.path).not.toBe(englishPage?.h1)
+        expect(page.intro, page.path).not.toBe(englishPage?.intro)
+        expect(page.sections.length, page.path).toBeGreaterThanOrEqual(1)
+        if (locale === "sr") {
+          expect(JSON.stringify(page), page.path).not.toMatch(/[\u0400-\u04FF]/)
+        }
+      }
+    }
+  )
 
   it("does not keep the deleted generic French page model", () => {
     expect(existsSync(pathFromHere("../components/LocalizedPage.astro"))).toBe(

@@ -482,6 +482,438 @@ const mediumCardsFr: FeatureCard[] = [
   },
 ]
 
+const largeCardsEs: FeatureCard[] = [
+  {
+    title: "Cree flujos de trabajo con palabras, no con diagramas",
+    description:
+      "Entrene a LobbyStack como entrenaría a un empleado real. Dígale qué preguntar, qué decir, cuándo dar un presupuesto, cuándo reservar, cuándo transferir y a quién avisar, sin tocar un editor de flujos.",
+    icon: Pencil,
+    size: "large",
+    visual: "workflow",
+  },
+  {
+    title: "Reserve la cita mientras el cliente sigue decidido",
+    description:
+      "LobbyStack consulta la disponibilidad, ofrece horarios, reserva la cita y envía la confirmación antes de que el cliente llame a otro proveedor.",
+    icon: CalendarCheck,
+    size: "large",
+    visual: "calendar",
+  },
+  {
+    title: "Dé presupuestos sin hacer esperar a nadie",
+    description:
+      "Para los servicios aprobados, LobbyStack puede dar precios exactos, precios desde o rangos de precios. Para trabajos a medida, hace las preguntas adecuadas y pasa los detalles a su equipo.",
+    icon: DollarSign,
+    size: "large",
+    visual: "quote",
+  },
+  {
+    title: "Transfiera las llamadas que necesitan a una persona",
+    description:
+      "LobbyStack atiende primero las llamadas rutinarias y luego transfiere según sus instrucciones. Las urgencias, los clientes molestos, los clientes potenciales de alto valor y los casos especiales pueden ir directamente a la persona adecuada.",
+    icon: ArrowRightLeft,
+    size: "large",
+    visual: "routing",
+  },
+  {
+    title: "Pague por llamadas reales, no por basura",
+    description:
+      "LobbyStack no cuenta en el uso las llamadas de spam ni las de menos de 10 segundos, así que los números equivocados, las llamadas automáticas, los cuelgues inmediatos y las llamadas accidentales no consumen su plan.",
+    icon: ShieldBan,
+    size: "large",
+    visual: "usage",
+  },
+]
+
+const mediumCardsEs: FeatureCard[] = [
+  {
+    title: "Su teléfono, siempre atendido",
+    description:
+      "LobbyStack puede contestar todas las llamadas o intervenir solo cuando su equipo está ocupado, cerrado o no disponible.",
+    icon: Phone,
+    size: "medium",
+    tag: "Siempre activo",
+  },
+  {
+    title: "Responde en el idioma de quien llama",
+    description:
+      "LobbyStack responde en el idioma de la persona que llama, así los clientes que no hablan español también pueden reservar y hacer preguntas.",
+    icon: Globe,
+    size: "medium",
+    tag: "Multilingüe",
+  },
+  {
+    title: "Llamadas simultáneas ilimitadas",
+    description:
+      "Varios clientes pueden recibir atención al mismo tiempo, sin esperar en cola ni encontrar la línea ocupada.",
+    icon: Users,
+    size: "medium",
+    tag: "Sin espera",
+  },
+  {
+    title: "Conversaciones naturales",
+    description:
+      "Los clientes pueden hablar con normalidad. LobbyStack maneja interrupciones, preguntas de seguimiento y llamadas desordenadas de la vida real.",
+    icon: AudioWaveform,
+    size: "medium",
+  },
+  {
+    title: "Líneas dedicadas",
+    description:
+      "Use LobbyStack para una línea de ventas, de presupuestos, de reservas, de soporte o de recepción de solicitudes.",
+    icon: Hash,
+    size: "medium",
+  },
+  {
+    title: "Calificación de clientes potenciales",
+    description:
+      "Haga que LobbyStack pregunte por presupuesto, plazo, ubicación, tipo de servicio, urgencia e intención de compra antes de reservar o transferir.",
+    icon: UserCheck,
+    size: "medium",
+  },
+  {
+    title: "Verificación de la zona de servicio",
+    description:
+      "Pida un código postal antes de reservar y dirija a los clientes según las zonas que realmente atiende.",
+    icon: MapPin,
+    size: "medium",
+  },
+  {
+    title: "SMS de confirmación de citas",
+    description:
+      "Después de reservar, LobbyStack envía al cliente un SMS de confirmación con los detalles de la cita.",
+    icon: MessageSquareText,
+    size: "medium",
+  },
+  {
+    title: "Reprogramación",
+    description:
+      "Los clientes pueden reprogramar cuando sus reglas lo permiten, sin esperar a que su equipo les devuelva la llamada.",
+    icon: CalendarClock,
+    size: "medium",
+  },
+  {
+    title: "Cancelaciones",
+    description:
+      "LobbyStack puede gestionar cancelaciones según sus políticas y avisar a su equipo.",
+    icon: CalendarX,
+    size: "medium",
+  },
+  {
+    title: "Recordatorios de citas",
+    description:
+      "Si la persona que llama acepta, LobbyStack le envía un SMS de recordatorio 24 horas antes de la cita.",
+    icon: Bell,
+    size: "medium",
+  },
+  {
+    title: "Resúmenes de llamadas",
+    description:
+      "Cada llamada importante puede terminar con un resumen claro, un resultado y el siguiente paso.",
+    icon: FileText,
+    size: "medium",
+  },
+  {
+    title: "Transcripciones completas",
+    description:
+      "Revise la conversación completa cuando su equipo necesite más detalle que el resumen.",
+    icon: ScrollText,
+    size: "medium",
+  },
+  {
+    title: "Grabaciones de llamadas",
+    description: "Vuelva a escuchar cualquier llamada desde su panel.",
+    icon: Mic,
+    size: "medium",
+  },
+  {
+    title: "Notificaciones por correo y SMS",
+    description:
+      "Envíe a la persona adecuada novedades de reservas, solicitudes de presupuesto, alertas urgentes, resúmenes de transferencias fallidas y avisos de clientes potenciales de alto valor.",
+    icon: Mail,
+    size: "medium",
+  },
+  {
+    title: "Conocimiento del negocio",
+    description:
+      "Añada sus servicios, precios, horarios, ubicaciones, políticas, preguntas frecuentes y datos del personal para que LobbyStack sepa qué decir.",
+    icon: BookOpen,
+    size: "medium",
+  },
+  {
+    title: "Reglas por servicio",
+    description:
+      "Defina instrucciones distintas según el servicio, la ubicación, el personal, el tipo de cita o el tipo de cliente potencial.",
+    icon: Layers,
+    size: "medium",
+  },
+  {
+    title: "Lo que nunca debe decir",
+    description:
+      "Indique qué no debe LobbyStack prometer, explicar, diagnosticar, presupuestar ni reservar nunca.",
+    icon: CircleSlash,
+    size: "medium",
+  },
+  {
+    title: "Plan de respaldo",
+    description:
+      "Cuando LobbyStack no sabe algo, puede hacer preguntas de seguimiento, tomar un mensaje, transferir la llamada o avisar al equipo.",
+    icon: LifeBuoy,
+    size: "medium",
+  },
+  {
+    title: "Respaldo si falla la transferencia",
+    description:
+      "Si nadie contesta, LobbyStack toma un mensaje y envía un resumen a su equipo.",
+    icon: PhoneForwarded,
+    size: "medium",
+  },
+  {
+    title: "Historial de llamadas",
+    description:
+      "Vea cada llamada, persona que llama, resultado, resumen, cita y transferencia.",
+    icon: History,
+    size: "medium",
+  },
+  {
+    title: "Estado de clientes potenciales",
+    description:
+      "Vea qué llamadas se convirtieron en clientes potenciales calificados, solicitudes de presupuesto o citas.",
+    icon: Target,
+    size: "medium",
+  },
+  {
+    title: "Actividad de citas",
+    description:
+      "Revise reservas, reprogramaciones, cancelaciones y SMS de confirmación.",
+    icon: CalendarDays,
+    size: "medium",
+  },
+  {
+    title: "Oportunidades de ingresos",
+    description:
+      "Destaque las llamadas que terminaron en reservas, solicitudes de presupuesto o clientes potenciales de alto valor.",
+    icon: TrendingUp,
+    size: "medium",
+  },
+]
+
+const largeCardsSr: FeatureCard[] = [
+  {
+    title: "Pravite tokove rada rečima, ne dijagramima",
+    description:
+      "Obučite LobbyStack kao što biste obučili pravog zaposlenog. Recite mu šta da pita, šta da kaže, kada da navede cenu, kada da zakaže, kada da preusmeri poziv i koga da obavesti, bez alata za pravljenje tokova rada.",
+    icon: Pencil,
+    size: "large",
+    visual: "workflow",
+  },
+  {
+    title: "Zakažite termin dok je klijent još spreman",
+    description:
+      "LobbyStack proverava dostupnost, nudi termine, zakazuje i šalje potvrdu pre nego što pozivalac ode kod nekog drugog.",
+    icon: CalendarCheck,
+    size: "large",
+    visual: "calendar",
+  },
+  {
+    title: "Recite cenu odmah, bez čekanja",
+    description:
+      "Za odobrene usluge LobbyStack može da navede tačnu cenu, početnu cenu ili raspon cena. Za posao po meri postavlja prava pitanja i prosleđuje detalje Vašem timu.",
+    icon: DollarSign,
+    size: "large",
+    visual: "quote",
+  },
+  {
+    title: "Preusmerite pozive kojima je potreban čovek",
+    description:
+      "LobbyStack prvo rešava rutinske pozive, a zatim preusmerava prema Vašim uputstvima. Hitni zahtevi, nezadovoljni klijenti, vredni potencijalni klijenti i posebni slučajevi mogu odmah stići do odgovarajuće osobe.",
+    icon: ArrowRightLeft,
+    size: "large",
+    visual: "routing",
+  },
+  {
+    title: "Plaćajte prave pozive, ne smeće",
+    description:
+      "LobbyStack ne računa spam pozive i pozive kraće od 10 sekundi u potrošnju, pa pogrešni brojevi, automatski pozivi, trenutni prekidi i slučajni pozivi iz džepa ne troše Vaš paket.",
+    icon: ShieldBan,
+    size: "large",
+    visual: "usage",
+  },
+]
+
+const mediumCardsSr: FeatureCard[] = [
+  {
+    title: "Vaš telefon, uvek pokriven",
+    description:
+      "LobbyStack može da odgovara na svaki poziv ili da uskoči samo kada je Vaš tim zauzet, zatvoren ili nedostupan.",
+    icon: Phone,
+    size: "medium",
+    tag: "Uvek uključen",
+  },
+  {
+    title: "Odgovara na jeziku pozivaoca",
+    description:
+      "LobbyStack odgovara na jeziku kojim pozivalac govori, pa i klijenti koji ne govore srpski mogu da zakažu termin i postave pitanja.",
+    icon: Globe,
+    size: "medium",
+    tag: "Višejezično",
+  },
+  {
+    title: "Neograničen broj istovremenih poziva",
+    description:
+      "Više klijenata može da dobije pomoć u isto vreme, bez čekanja u redu i bez zauzete linije.",
+    icon: Users,
+    size: "medium",
+    tag: "Bez čekanja",
+  },
+  {
+    title: "Prirodni razgovori",
+    description:
+      "Klijenti mogu normalno da pričaju. LobbyStack se snalazi sa prekidima, dodatnim pitanjima i neurednim pozivima iz stvarnog života.",
+    icon: AudioWaveform,
+    size: "medium",
+  },
+  {
+    title: "Namenske linije",
+    description:
+      "Koristite LobbyStack za liniju za prodaju, ponude, zakazivanje, podršku ili prijem upita.",
+    icon: Hash,
+    size: "medium",
+  },
+  {
+    title: "Kvalifikacija potencijalnih klijenata",
+    description:
+      "Neka LobbyStack pita za budžet, rok, lokaciju, vrstu usluge, hitnost i nameru kupovine pre zakazivanja ili preusmeravanja.",
+    icon: UserCheck,
+    size: "medium",
+  },
+  {
+    title: "Provera područja usluge",
+    description:
+      "Pitajte za poštanski broj pre zakazivanja i usmerite klijente prema mestima gde zaista radite.",
+    icon: MapPin,
+    size: "medium",
+  },
+  {
+    title: "SMS potvrde termina",
+    description:
+      "Posle zakazivanja LobbyStack klijentu šalje SMS potvrdu sa detaljima termina.",
+    icon: MessageSquareText,
+    size: "medium",
+  },
+  {
+    title: "Pomeranje termina",
+    description:
+      "Klijenti mogu da pomere termin kada to Vaša pravila dozvoljavaju, bez čekanja da ih tim pozove.",
+    icon: CalendarClock,
+    size: "medium",
+  },
+  {
+    title: "Otkazivanja",
+    description:
+      "LobbyStack može da obradi otkazivanja prema Vašim pravilima i obavesti Vaš tim.",
+    icon: CalendarX,
+    size: "medium",
+  },
+  {
+    title: "Podsetnici za termine",
+    description:
+      "Ako se pozivalac složi, LobbyStack mu šalje SMS podsetnik 24 sata pre termina.",
+    icon: Bell,
+    size: "medium",
+  },
+  {
+    title: "Rezimei poziva",
+    description:
+      "Svaki važan poziv može da se završi jasnim rezimeom, ishodom i sledećim korakom.",
+    icon: FileText,
+    size: "medium",
+  },
+  {
+    title: "Kompletni transkripti",
+    description:
+      "Pregledajte ceo razgovor kada Vašem timu treba više detalja od rezimea.",
+    icon: ScrollText,
+    size: "medium",
+  },
+  {
+    title: "Snimci poziva",
+    description: "Preslušajte bilo koji poziv sa kontrolne table.",
+    icon: Mic,
+    size: "medium",
+  },
+  {
+    title: "Obaveštenja e-poštom i SMS-om",
+    description:
+      "Šaljite pravoj osobi novosti o zakazivanjima, zahteve za ponudu, hitna upozorenja, rezimee neuspelih preusmeravanja i obaveštenja o vrednim potencijalnim klijentima.",
+    icon: Mail,
+    size: "medium",
+  },
+  {
+    title: "Znanje o firmi",
+    description:
+      "Dodajte usluge, cene, radno vreme, lokacije, pravila, česta pitanja i podatke o zaposlenima da bi LobbyStack znao šta da kaže.",
+    icon: BookOpen,
+    size: "medium",
+  },
+  {
+    title: "Pravila po usluzi",
+    description:
+      "Podesite različita uputstva za različite usluge, lokacije, zaposlene, vrste termina ili vrste potencijalnih klijenata.",
+    icon: Layers,
+    size: "medium",
+  },
+  {
+    title: "Šta nikada ne sme da kaže",
+    description:
+      "Navedite šta LobbyStack nikada ne sme da obeća, objasni, dijagnostikuje, proceni ili zakaže.",
+    icon: CircleSlash,
+    size: "medium",
+  },
+  {
+    title: "Rezervni plan",
+    description:
+      "Kada LobbyStack nešto ne zna, može da postavi dodatna pitanja, primi poruku, preusmeri poziv ili obavesti tim.",
+    icon: LifeBuoy,
+    size: "medium",
+  },
+  {
+    title: "Kada preusmeravanje ne uspe",
+    description:
+      "Ako se niko ne javi, LobbyStack prima poruku i šalje rezime Vašem timu.",
+    icon: PhoneForwarded,
+    size: "medium",
+  },
+  {
+    title: "Istorija poziva",
+    description:
+      "Pogledajte svaki poziv, pozivaoca, ishod, rezime, termin i preusmeravanje.",
+    icon: History,
+    size: "medium",
+  },
+  {
+    title: "Status potencijalnih klijenata",
+    description:
+      "Pogledajte koji su pozivi postali kvalifikovani potencijalni klijenti, zahtevi za ponudu ili termini.",
+    icon: Target,
+    size: "medium",
+  },
+  {
+    title: "Aktivnost termina",
+    description:
+      "Pregledajte zakazivanja, pomeranja, otkazivanja i SMS potvrde.",
+    icon: CalendarDays,
+    size: "medium",
+  },
+  {
+    title: "Prilike za prihod",
+    description:
+      "Istaknite pozive koji su završili zakazivanjem, zahtevom za ponudu ili vrednim potencijalnim klijentom.",
+    icon: TrendingUp,
+    size: "medium",
+  },
+]
+
 const featureWallCopy = {
   en: {
     heading: "Everything your front desk should already be doing",
@@ -571,6 +1003,94 @@ const featureWallCopy = {
       },
     },
   },
+  es: {
+    heading: "Todo lo que su recepción ya debería estar haciendo",
+    intro:
+      "LobbyStack contesta, reserva, califica, da presupuestos, transfiere, filtra las llamadas basura y mantiene informado a su equipo.",
+    calloutTitle: "Su negocio no es un diagrama de flujo",
+    calloutBody:
+      "Las llamadas reales son desordenadas. Los clientes interrumpen, cambian de opinión, hacen varias preguntas y lo explican todo sin orden. LobbyStack le permite describir el resultado en español sencillo, sin construir frágiles árboles de llamadas.",
+    calloutExample:
+      "Si un cliente pide precios, haga las preguntas necesarias para el presupuesto, dé el rango de precios aprobado y tome un mensaje para el equipo si necesita un precio exacto.",
+    visuals: {
+      workflow:
+        "Si alguien llama y pide precios, haga las preguntas necesarias para el presupuesto, dé el rango de precios aprobado y tome un mensaje para el equipo si necesita un precio exacto.",
+      calendar: [
+        "Cita reservada",
+        "Confirmación enviada al cliente",
+        "Equipo avisado",
+        "Notas adjuntas",
+      ],
+      quote: {
+        rows: [
+          { label: "Servicio", value: "Estimación de reforma" },
+          { label: "Ubicación", value: "Centro" },
+          { label: "Presupuesto", value: "$8k – $12k" },
+          { label: "Plazo", value: "El próximo mes" },
+        ],
+        outcome: "Rango de precios enviado · Equipo avisado",
+      },
+      routing: [
+        { label: "Llamada urgente", action: "Al gerente" },
+        { label: "Cliente potencial", action: "A ventas" },
+        { label: "Consulta de facturación", action: "A facturación" },
+        { label: "Sin respuesta", action: "Mensaje tomado" },
+      ],
+      usage: {
+        counted: "Contada",
+        excluded: "Excluida",
+        rows: [
+          { label: "Llamadas reales de clientes", value: "42", counted: true },
+          { label: "Llamadas de spam", value: "12", counted: false },
+          { label: "Menos de 10 segundos", value: "7", counted: false },
+        ],
+      },
+    },
+  },
+  sr: {
+    heading: "Sve što bi Vaša recepcija već trebalo da radi",
+    intro:
+      "LobbyStack odgovara, zakazuje, kvalifikuje, daje cene, preusmerava, filtrira nebitne pozive i obaveštava Vaš tim.",
+    calloutTitle: "Vaša firma nije dijagram toka",
+    calloutBody:
+      "Pravi pozivi su neuredni. Klijenti prekidaju, predomišljaju se, postavljaju više pitanja i objašnjavaju stvari bez reda. LobbyStack Vam omogućava da ishod opišete običnim srpskim jezikom, umesto da gradite krhka stabla poziva.",
+    calloutExample:
+      "Ako klijent pita za cenu, postavite potrebna pitanja za ponudu, navedite odobreni raspon cena i primite poruku za tim ako mu treba tačna cena.",
+    visuals: {
+      workflow:
+        "Ako pozivalac pita za cenu, postavite potrebna pitanja za ponudu, navedite odobreni raspon cena i primite poruku za tim ako mu treba tačna cena.",
+      calendar: [
+        "Termin zakazan",
+        "Potvrda poslata klijentu",
+        "Tim obavešten",
+        "Beleške priložene",
+      ],
+      quote: {
+        rows: [
+          { label: "Usluga", value: "Procena renoviranja" },
+          { label: "Lokacija", value: "Centar grada" },
+          { label: "Budžet", value: "$8k – $12k" },
+          { label: "Rok", value: "Sledeći mesec" },
+        ],
+        outcome: "Raspon cena poslat · Tim obavešten",
+      },
+      routing: [
+        { label: "Hitan poziv", action: "Ka menadžeru" },
+        { label: "Prodajni upit", action: "Ka prodaji" },
+        { label: "Pitanje o naplati", action: "Ka naplati" },
+        { label: "Nema odgovora", action: "Poruka primljena" },
+      ],
+      usage: {
+        counted: "Računa se",
+        excluded: "Ne računa se",
+        rows: [
+          { label: "Pravi pozivi klijenata", value: "42", counted: true },
+          { label: "Spam pozivi", value: "12", counted: false },
+          { label: "Kraće od 10 sekundi", value: "7", counted: false },
+        ],
+      },
+    },
+  },
 } satisfies Record<
   Locale,
   {
@@ -599,11 +1119,15 @@ const featureWallCopy = {
 const largeCardsByLocale = {
   en: largeCards,
   fr: largeCardsFr,
+  es: largeCardsEs,
+  sr: largeCardsSr,
 } satisfies Record<Locale, FeatureCard[]>
 
 const mediumCardsByLocale = {
   en: mediumCards,
   fr: mediumCardsFr,
+  es: mediumCardsEs,
+  sr: mediumCardsSr,
 } satisfies Record<Locale, FeatureCard[]>
 
 /* ─────────────────────────── Visual sub-components ─────────────────────────── */

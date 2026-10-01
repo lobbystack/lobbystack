@@ -1,5 +1,10 @@
 import { Separator } from "@/components/ui/separator"
-import { localizeHref, localizePath, type Locale } from "@/lib/i18n"
+import {
+  languageSwitcherLinks,
+  localizeHref,
+  localizePath,
+  type Locale,
+} from "@/lib/i18n"
 
 const footerCopy = {
   en: {
@@ -45,6 +50,50 @@ const footerCopy = {
     cookiePolicyShort: "Cookies",
     termsShort: "Conditions",
     cookiePreferences: "Préférences cookies",
+  },
+  es: {
+    product: "Producto",
+    features: "Funciones",
+    howItWorks: "Cómo funciona",
+    pricing: "Precios",
+    resources: "Recursos",
+    helpCenter: "Centro de ayuda",
+    blog: "Blog",
+    calculator: "Calculadora de llamadas perdidas",
+    affiliateProgram: "Programa de afiliados",
+    company: "Empresa",
+    about: "Acerca de",
+    contact: "Contacto",
+    privacy: "Política de privacidad",
+    cookiePolicy: "Política de cookies",
+    terms: "Términos del servicio",
+    rights: "Todos los derechos reservados.",
+    privacyShort: "Privacidad",
+    cookiePolicyShort: "Cookies",
+    termsShort: "Términos",
+    cookiePreferences: "Preferencias de cookies",
+  },
+  sr: {
+    product: "Proizvod",
+    features: "Funkcije",
+    howItWorks: "Kako radi",
+    pricing: "Cene",
+    resources: "Resursi",
+    helpCenter: "Centar za pomoć",
+    blog: "Blog",
+    calculator: "Kalkulator propuštenih poziva",
+    affiliateProgram: "Partnerski program",
+    company: "Kompanija",
+    about: "O nama",
+    contact: "Kontakt",
+    privacy: "Politika privatnosti",
+    cookiePolicy: "Politika kolačića",
+    terms: "Uslovi korišćenja",
+    rights: "Sva prava zadržana.",
+    privacyShort: "Privatnost",
+    cookiePolicyShort: "Kolačići",
+    termsShort: "Uslovi",
+    cookiePreferences: "Podešavanja kolačića",
   },
 } satisfies Record<Locale, Record<string, string>>
 
@@ -92,12 +141,22 @@ const footerSections = (locale: Locale) => {
   ]
 }
 
+const languageLabels = {
+  en: "Language",
+  fr: "Langue",
+  es: "Idioma",
+  sr: "Jezik",
+} satisfies Record<Locale, string>
+
 type FooterProps = {
   locale?: Locale
+  /** Current page path, so the language switcher can link to its translations. */
+  path?: string
 }
 
-export function Footer({ locale = "en" }: FooterProps) {
+export function Footer({ locale = "en", path }: FooterProps) {
   const copy = footerCopy[locale]
+  const languages = languageSwitcherLinks(path ?? localizePath(locale, "/"))
 
   return (
     <footer className="border-t border-border/60 bg-background">
@@ -167,6 +226,30 @@ export function Footer({ locale = "en" }: FooterProps) {
           <p>
             © {new Date().getFullYear()} LobbyStack. {copy.rights}
           </p>
+          <nav
+            aria-label={languageLabels[locale]}
+            className="flex flex-wrap justify-center gap-4"
+          >
+            {languages.map((language) => (
+              <a
+                key={language.locale}
+                href={language.href}
+                hrefLang={language.hrefLang}
+                lang={language.hrefLang}
+                aria-current={language.locale === locale ? "true" : undefined}
+                data-ph-capture-attribute-section="footer_language"
+                data-ph-capture-attribute-action="switch_language"
+                data-ph-capture-attribute-destination={language.href}
+                className={
+                  language.locale === locale
+                    ? "font-medium text-foreground"
+                    : "hover:text-foreground"
+                }
+              >
+                {language.label}
+              </a>
+            ))}
+          </nav>
           <div className="flex flex-wrap justify-center gap-6">
             <button
               type="button"

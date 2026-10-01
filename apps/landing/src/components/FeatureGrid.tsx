@@ -75,6 +75,74 @@ const featureGridCopy = {
       },
     ],
   },
+  es: {
+    headingStart: "Atienda llamadas y reserve citas",
+    headingEmphasis: "mientras trabaja",
+    intro:
+      "Responda preguntas, califique a nuevos clientes, reserve citas, tome los datos para el seguimiento y pase las llamadas urgentes con contexto.",
+    imageAlt:
+      "Funciones de la recepcionista con IA de LobbyStack: atiende llamadas, reserva citas, califica clientes potenciales, transfiere llamadas y envía resúmenes",
+    features: [
+      {
+        title: "Atiende sus llamadas",
+        description:
+          "LobbyStack puede atender todas sus llamadas o solo cuando usted no está disponible. Responde preguntas con la información de su negocio y recoge lo que su equipo necesita para el seguimiento.",
+        icon: Phone,
+      },
+      {
+        title: "Reserva citas",
+        description:
+          "Conecte Google Calendar y LobbyStack revisa la disponibilidad, ofrece horarios libres, reserva la cita y envía un SMS de confirmación a quien llama.",
+        icon: CalendarCheck,
+      },
+      {
+        title: "Toma los datos de quien llama",
+        description:
+          "LobbyStack anota nombres, datos de contacto, el servicio que necesitan, plazos y próximos pasos para que su equipo haga el seguimiento con contexto.",
+        icon: ClipboardList,
+      },
+      {
+        title: "Transfiere cuando hace falta",
+        description:
+          "Cuando un cliente necesita hablar con una persona, LobbyStack puede transferir la llamada o tomar un mensaje claro con los datos de quien llama y el motivo.",
+        icon: ArrowRightLeft,
+      },
+    ],
+  },
+  sr: {
+    headingStart: "Javljajte se na pozive i zakazujte termine",
+    headingEmphasis: "dok radite",
+    intro:
+      "Odgovarajte na pitanja, proveravajte nove klijente, zakazujte termine, beležite podatke za dalji kontakt i preusmeravajte hitne pozive uz kontekst.",
+    imageAlt:
+      "Funkcije LobbyStack AI recepcionera: javlja se na pozive, zakazuje termine, proverava potencijalne klijente, preusmerava pozive i šalje rezimee",
+    features: [
+      {
+        title: "Javlja se na Vaše pozive",
+        description:
+          "LobbyStack može da se javlja na sve Vaše pozive ili samo kada ste nedostupni. Odgovara na pitanja na osnovu podataka o Vašoj firmi i beleži ono što je Vašem timu potrebno za dalji kontakt.",
+        icon: Phone,
+      },
+      {
+        title: "Zakazuje termine",
+        description:
+          "Povežite Google Calendar i LobbyStack proverava dostupnost, nudi slobodne termine, zakazuje termin i šalje pozivaocu potvrdu SMS-om.",
+        icon: CalendarCheck,
+      },
+      {
+        title: "Beleži podatke pozivalaca",
+        description:
+          "LobbyStack beleži imena, kontakt podatke, potrebnu uslugu, rokove i sledeće korake kako bi Vaš tim mogao da nastavi uz kontekst.",
+        icon: ClipboardList,
+      },
+      {
+        title: "Preusmerava kad zatreba",
+        description:
+          "Kada klijentu treba živa osoba, LobbyStack može da preusmeri poziv ili da zapiše jasnu poruku sa podacima pozivaoca i razlogom poziva.",
+        icon: ArrowRightLeft,
+      },
+    ],
+  },
 } satisfies Record<
   Locale,
   {

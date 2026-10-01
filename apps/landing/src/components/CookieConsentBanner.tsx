@@ -38,6 +38,26 @@ const bannerCopy = {
     reject: "Refuser le non essentiel",
     accept: "Tout accepter",
   },
+  es: {
+    title: "Configuración de cookies",
+    description:
+      "Usamos cookies para que este sitio funcione, entender cómo se usa el servicio y apoyar nuestro marketing.",
+    privacyPrefix: "Lea nuestra",
+    privacyLink: "Política de cookies",
+    privacySuffix: ".",
+    reject: "Rechazar las no esenciales",
+    accept: "Aceptar todo",
+  },
+  sr: {
+    title: "Podešavanja kolačića",
+    description:
+      "Koristimo kolačiće da bi sajt radio, da bismo razumeli kako se usluga koristi i za potrebe marketinga.",
+    privacyPrefix: "Pročitajte našu",
+    privacyLink: "Politiku kolačića",
+    privacySuffix: ".",
+    reject: "Odbij neobavezne",
+    accept: "Prihvati sve",
+  },
 } satisfies Record<Locale, Record<string, string>>
 
 let postHogModuleLoaded = false

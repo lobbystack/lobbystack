@@ -23,8 +23,19 @@ const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
 const copy = getCopy(locale)
 const canonicalPath = localizePath(locale, "/affiliate-program/")
 const seo = getRouteSeo({ locale, path: "/affiliate-program/" })
-const pageTitle =
-  locale === "fr" ? "Programme d'affiliation" : "Affiliate Program"
+const pageTitles: Record<Locale, string> = {
+  en: "Affiliate Program",
+  fr: "Programme d'affiliation",
+  es: "Programa de afiliados",
+  sr: "Partnerski program",
+}
+const imageAlts: Record<Locale, string> = {
+  en: "LobbyStack Affiliate Program",
+  fr: "Programme d'affiliation LobbyStack",
+  es: "Programa de afiliados de LobbyStack",
+  sr: "LobbyStack partnerski program",
+}
+const pageTitle = pageTitles[locale]
 const affiliateOgImage =
   "/illustrations/open-source-ai-receptionist-affiliate-program-hero.webp"
 ---
@@ -35,10 +46,7 @@ const affiliateOgImage =
     canonicalPath,
     locale,
     image: affiliateOgImage,
-    imageAlt:
-      locale === "fr"
-        ? "Programme d'affiliation LobbyStack"
-        : "LobbyStack Affiliate Program",
+    imageAlt: imageAlts[locale],
     jsonLd: [
       organizationJsonLd(),
       webSiteJsonLd({ locale }),
@@ -61,5 +69,5 @@ const affiliateOgImage =
     <AffiliateProgramFaqSection locale={locale} />
     <CtaSection locale={locale} />
   </main>
-  <Footer locale={locale} />
+  <Footer locale={locale} path={Astro.url.pathname} />
 </Layout>

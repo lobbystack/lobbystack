@@ -65,7 +65,8 @@ const tradeSlugs = [
   "after-hours-answering-service-for-contractors",
 ]
 // Trade pages with written call examples get the full trade layout. The
-// French pages don't have that content yet and keep the simpler layout.
+// French, Spanish and Serbian pages don't have that content yet and keep the
+// simpler layout.
 const details = locale === "en" ? tradeDetailsFor(page.slug) : undefined
 const isTradePage = tradeSlugs.includes(page.slug) && !details
 const otherTrades = details
@@ -90,12 +91,71 @@ const faqJsonLd =
   page.faqs.length > 0
     ? faqPageJsonLd({ path: canonicalPath, faqs: page.faqs, locale })
     : undefined
-const reassurance =
-  locale === "fr"
-    ? "Aucune carte bancaire requise. Fonctionne avec votre numero professionnel actuel."
-    : isSelfHosted
-      ? "Free to self-host under the MIT License. You pay your own hosting, Twilio, and OpenAI bills."
-      : "No credit card required. Works with your existing business number."
+const pageCopy = {
+  en: {
+    reassurance:
+      "No credit card required. Works with your existing business number.",
+    dashboardAlt:
+      "LobbyStack dashboard Home page with monthly calls, follow-ups, upcoming appointments, and recent calls",
+    dashboardCaption:
+      "The LobbyStack dashboard shows each answered call with its outcome, plus the follow-ups and appointments your team needs to handle.",
+    faqHeading: "Common questions",
+    ctaHeading: "Start answering every call without front-desk overload",
+    ctaBody:
+      "Try LobbyStack with included voice minutes, configure your custom trade and call rules, and see how much revenue you can recover.",
+  },
+  fr: {
+    reassurance:
+      "Aucune carte bancaire requise. Fonctionne avec votre numero professionnel actuel.",
+    dashboardAlt:
+      "Page d’accueil du tableau de bord LobbyStack avec les appels du mois, les suivis, les rendez-vous à venir et les appels récents",
+    dashboardCaption:
+      "Le tableau de bord LobbyStack affiche chaque appel répondu avec son résultat, ainsi que les suivis et les rendez-vous que votre équipe doit traiter.",
+    faqHeading: "Questions fréquentes",
+    ctaHeading: "Répondez à chaque appel sans surcharger votre accueil",
+    ctaBody:
+      "Essayez LobbyStack avec les minutes vocales incluses, configurez vos règles de métier et d’appel, et voyez combien de revenus vous pouvez récupérer.",
+  },
+  es: {
+    reassurance:
+      "No se requiere tarjeta de crédito. Funciona con su número de negocio actual.",
+    dashboardAlt:
+      "Página de inicio del panel de LobbyStack con las llamadas del mes, los seguimientos, las próximas citas y las llamadas recientes",
+    dashboardCaption:
+      "El panel de LobbyStack muestra cada llamada atendida con su resultado, además de los seguimientos y las citas que su equipo debe gestionar.",
+    faqHeading: "Preguntas frecuentes",
+    ctaHeading: "Conteste cada llamada sin sobrecargar la recepción",
+    ctaBody:
+      "Pruebe LobbyStack con los minutos de voz incluidos, configure las reglas de su oficio y de sus llamadas, y vea cuántos ingresos puede recuperar.",
+  },
+  sr: {
+    reassurance:
+      "Nije potrebna platna kartica. Radi sa Vašim postojećim poslovnim brojem.",
+    dashboardAlt:
+      "Početna stranica LobbyStack kontrolne table sa pozivima u ovom mesecu, zadacima za praćenje, predstojećim terminima i nedavnim pozivima",
+    dashboardCaption:
+      "LobbyStack kontrolna tabla prikazuje svaki odgovoreni poziv sa ishodom, kao i zadatke za praćenje i termine koje Vaš tim treba da obradi.",
+    faqHeading: "Česta pitanja",
+    ctaHeading: "Odgovorite na svaki poziv bez preopterećenja recepcije",
+    ctaBody:
+      "Isprobajte LobbyStack sa uključenim minutima razgovora, podesite pravila za svoju delatnost i pozive i pogledajte koliko prihoda možete da povratite.",
+  },
+} satisfies Record<
+  Locale,
+  {
+    reassurance: string
+    dashboardAlt: string
+    dashboardCaption: string
+    faqHeading: string
+    ctaHeading: string
+    ctaBody: string
+  }
+>
+const t = pageCopy[locale]
+// The self-hosted layout only renders in English.
+const reassurance = isSelfHosted
+  ? "Free to self-host under the MIT License. You pay your own hosting, Twilio, and OpenAI bills."
+  : t.reassurance
 ---
 
 <Layout
@@ -275,11 +335,7 @@ const reassurance =
           <figure class="mx-auto mb-16 max-w-5xl overflow-hidden rounded-2xl border border-border/60 bg-muted shadow-sm">
             <img
               src="/screenshots/dashboard.webp"
-              alt={
-                locale === "fr"
-                  ? "Page d’accueil du tableau de bord LobbyStack avec les appels du mois, les suivis, les rendez-vous à venir et les appels récents"
-                  : "LobbyStack dashboard Home page with monthly calls, follow-ups, upcoming appointments, and recent calls"
-              }
+              alt={t.dashboardAlt}
               width="3020"
               height="1898"
               class="h-auto w-full"
@@ -287,9 +343,7 @@ const reassurance =
               decoding="async"
             />
             <figcaption class="border-t border-border/50 px-5 py-4 text-sm text-muted-foreground">
-              {locale === "fr"
-                ? "Le tableau de bord LobbyStack affiche chaque appel répondu avec son résultat, ainsi que les suivis et les rendez-vous que votre équipe doit traiter."
-                : "The LobbyStack dashboard shows each answered call with its outcome, plus the follow-ups and appointments your team needs to handle."}
+              {t.dashboardCaption}
             </figcaption>
           </figure>
         )
@@ -454,7 +508,7 @@ const reassurance =
           id="faq"
         >
           <h2 class="section-heading mb-12 text-center">
-            {page.faqHeading ?? "Common questions"}
+            {page.faqHeading ?? t.faqHeading}
           </h2>
           <FaqAccordion faqs={page.faqs} />
         </section>
@@ -465,16 +519,10 @@ const reassurance =
     <section class="border-t border-border/40 bg-muted/10 py-20 md:py-28">
       <div class="mx-auto max-w-3xl space-y-6 px-6 text-center">
         <h2 class="section-heading mx-auto max-w-[24ch]">
-          {
-            page.ctaHeading ??
-              "Start answering every call without front-desk overload"
-          }
+          {page.ctaHeading ?? t.ctaHeading}
         </h2>
         <p class="section-intro mx-auto max-w-lg">
-          {
-            page.ctaBody ??
-              "Try LobbyStack with included voice minutes, configure your custom trade and call rules, and see how much revenue you can recover."
-          }
+          {page.ctaBody ?? t.ctaBody}
         </p>
         <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
           <a
@@ -547,5 +595,5 @@ const reassurance =
       </div>
     </section>
   </main>
-  <Footer locale={locale} />
+  <Footer locale={locale} path={Astro.url.pathname} />
 </Layout>

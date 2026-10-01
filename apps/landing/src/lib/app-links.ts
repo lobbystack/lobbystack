@@ -1,7 +1,9 @@
+import type { Locale } from "@/i18n/config"
+
 export const APP_LOGIN_URL = "https://app.lobbystack.com/login"
 export const APP_SIGNUP_URL = "https://app.lobbystack.com/signup"
 
-export function buildSignupUrl(locale: "en" | "fr", source?: "calculator") {
+export function buildSignupUrl(locale: Locale, source?: "calculator") {
   const url = new URL(`/${locale}/signup`, APP_SIGNUP_URL)
   if (source) url.searchParams.set("source", source)
   return url.toString()

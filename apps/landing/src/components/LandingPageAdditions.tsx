@@ -333,7 +333,335 @@ const homeSectionsCopy = {
       selfHostedCta: "Aperçu de l'auto-hébergement",
     },
   },
-}
+  es: {
+    extension: {
+      heading: "Convierta las llamadas perdidas en citas",
+      body: "LobbyStack recoge lo que necesita quien llama, reserva citas cuando la persona está lista y dirige las llamadas urgentes con contexto.",
+    },
+    extensionCards: [
+      {
+        title: "Convierta las llamadas sin respuesta en citas",
+        description:
+          "LobbyStack responde cuando su equipo no puede, recoge lo que necesita la persona que llama y la ayuda a reservar o a pedir que le devuelvan la llamada.",
+        cta: "Ver cómo funciona",
+        href: "#how-it-works",
+        image: "/illustrations/missed-calls-booked-work.webp",
+        alt: "Llamada entrante atendida y cita confirmada para el martes a las 3:00 p. m.",
+        imageAspectClass: "aspect-[9/4]",
+        imageScaleClass: "h-[155%] w-[155%]",
+      },
+      {
+        title: "Envíe las llamadas adecuadas a su equipo",
+        description:
+          "LobbyStack puede atender llamadas rutinarias, tomar un mensaje o dirigir las conversaciones urgentes a su equipo con los datos de quien llama y el motivo de la llamada.",
+        cta: "Definir reglas",
+        href: "#control",
+        image: "/illustrations/call-routing-team.webp",
+        alt: "Resumen de una llamada entrante dirigido al miembro del equipo adecuado con el contexto del cliente",
+        imageAspectClass: "aspect-[9/4]",
+        imageScaleClass: "h-full w-full object-cover object-[50%_44%]",
+      },
+    ],
+    connected: {
+      imageAlt:
+        "Fuentes de conocimiento del negocio conectadas a las respuestas de LobbyStack",
+      heading: "Respuestas basadas en todo lo que sabe su negocio",
+      body: "Importe su sitio web, PDF, documentos, hojas de cálculo, listas de servicios, políticas y preguntas frecuentes para que LobbyStack responda con el mismo contexto que su equipo usa a diario.",
+    },
+    quality: {
+      heading:
+        "Recepcionista con IA para equipos que cuidan la calidad de sus respuestas",
+      body: "Cubra el teléfono sin renunciar a los detalles, el criterio y el seguimiento que sus clientes notan.",
+      learnMoreLabel: "Conozca la atención telefónica con IA",
+      learnMoreHref: "/solutions/ai-phone-answering/",
+      toolCards: [
+        {
+          title: "Una recepcionista que contesta cuando usted lo necesita",
+          description:
+            "Deje que LobbyStack conteste todas las llamadas, o solo cuando su equipo esté ocupado, fuera de horario o no pueda atender.",
+          image: "/illustrations/call-capture.webp",
+          alt: "Llamada entrante dirigida a miembros del equipo o a LobbyStack cuando el equipo no está disponible",
+          imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
+          imageClassName: "h-full w-full object-cover object-center",
+          imageWidth: 2048,
+          imageHeight: 2048,
+        },
+        {
+          title: "Citas reservadas sin idas y vueltas",
+          description:
+            "Ofrezca horarios disponibles, confirme citas y envíe los detalles de seguimiento sin coordinarlo todo a mano.",
+          image: "/illustrations/booking-flow.webp",
+          alt: "LobbyStack ofrece horarios disponibles y confirma una reserva con la aprobación de la persona que llama",
+          imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
+          imageClassName: "h-full w-full object-cover object-center",
+          imageWidth: 2048,
+          imageHeight: 2048,
+        },
+        {
+          title: "Paso a una persona cuando la llamada lo requiere",
+          description:
+            "Transfiera las llamadas urgentes o inusuales a una persona con el motivo, los datos de contacto y el contexto de la conversación.",
+          image: "/illustrations/human-handoff.webp",
+          alt: "Mensaje urgente de una persona que llama transferido a un miembro del equipo con el motivo y el contexto",
+          imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
+          imageClassName: "h-full w-full object-cover object-center",
+          imageWidth: 2048,
+          imageHeight: 2048,
+        },
+      ],
+    },
+    workflow: {
+      heading: "Ponga en marcha su recepcionista con IA en minutos",
+      body: "Configure la recepcionista una vez y luego ajuste cómo responde, reserva, dirige y resume a medida que su negocio crece.",
+      guideLabel: "Leer la guía de compra",
+      guideHref: "/blog/how-to-choose-an-ai-receptionist/",
+      steps: [
+        {
+          title: "Conecte su teléfono",
+          description:
+            "Use un número local nuevo o desvíe las llamadas desde el número del negocio al que ya llaman sus clientes.",
+        },
+        {
+          title: "Añada su conocimiento",
+          description:
+            "Importe su sitio web, archivos, servicios, preguntas frecuentes, horarios, políticas y los datos que más piden quienes llaman.",
+        },
+        {
+          title: "Defina las reglas",
+          description:
+            "Decida cuándo LobbyStack debe responder, reservar citas, tomar un mensaje o pasar la llamada a una persona.",
+        },
+        {
+          title: "Active el servicio",
+          description:
+            "LobbyStack empieza a contestar llamadas, ayudar a sus clientes y enviar confirmaciones y resúmenes automáticamente.",
+        },
+      ],
+    },
+    control: {
+      heading: "Mantenga el control de cada llamada",
+      body: "LobbyStack gestiona las conversaciones rutinarias, pero su equipo decide qué sabe, qué puede hacer y cuándo la llamada debe volver a una persona.",
+      imageAlt:
+        "Panel de LobbyStack con métricas de llamadas, acciones pendientes, próximas citas y llamadas recientes",
+      cards: [
+        {
+          title: "Controle lo que puede decir su recepcionista con IA",
+          description:
+            "Actualice servicios, precios, políticas, preguntas frecuentes e instrucciones cada vez que su negocio cambie, sin esperar a un desarrollador.",
+          icon: Pencil,
+        },
+        {
+          title: "Revise cada llamada en un solo lugar",
+          description:
+            "Consulte grabaciones, transcripciones, resúmenes, datos de quien llama, reservas y próximos pasos sin buscar entre mensajes de voz o notas sueltas.",
+          icon: History,
+        },
+      ],
+    },
+    pricing: {
+      heading: "Empiece gratis. Mejore su plan cuando crezcan las llamadas.",
+      body: "Pruebe LobbyStack con el uso incluido y pase a Starter o Pro cuando esté listo para atender sus llamadas reales.",
+      badge: "Más popular",
+      viewDetails: "Ver detalles de precios",
+      note: "No necesita tarjeta de crédito para empezar.",
+      plans: [
+        {
+          name: "Free",
+          price: "$0",
+          description:
+            "30 minutos de voz en el navegador. No necesita número de teléfono ni tarjeta de crédito.",
+        },
+        {
+          name: "Starter",
+          price: "$30/mes",
+          description:
+            "150 minutos de voz, 50 segmentos de SMS de alerta, 20 intentos de transferencia y soporte por correo electrónico.",
+        },
+        {
+          name: "Pro",
+          price: "$100/mes",
+          description:
+            "500 minutos de voz, 200 segmentos de SMS de alerta, 100 intentos de transferencia y soporte prioritario por correo electrónico.",
+        },
+        {
+          name: "Enterprise",
+          price: "A medida",
+          description:
+            "Mayor volumen, varios números y apoyo para implementar el autoalojamiento.",
+        },
+      ],
+    },
+    openSource: {
+      heading: "Orgullosamente de código abierto y autoalojado",
+      body: "Ejecute LobbyStack en sus propios servidores y guarde las grabaciones de llamadas y los datos de sus clientes en su propia infraestructura.",
+      cta: "Ver en GitHub",
+      selfHostedCta: "Sobre el autoalojamiento",
+    },
+  },
+  sr: {
+    extension: {
+      heading: "Pretvorite propuštene pozive u zakazane termine",
+      body: "LobbyStack beleži šta pozivaocima treba, zakazuje termine kada su spremni i preusmerava hitne pozive uz kontekst.",
+    },
+    extensionCards: [
+      {
+        title: "Pretvorite neodgovorene pozive u zakazane termine",
+        description:
+          "LobbyStack odgovara kada Vaš tim ne može, beleži šta pozivaocu treba i pomaže mu da zakaže termin ili zatraži povratni poziv.",
+        cta: "Pogledajte kako radi",
+        href: "#how-it-works",
+        image: "/illustrations/missed-calls-booked-work.webp",
+        alt: "Odgovoren dolazni poziv i potvrđen termin za utorak u 15:00",
+        imageAspectClass: "aspect-[9/4]",
+        imageScaleClass: "h-[155%] w-[155%]",
+      },
+      {
+        title: "Pošaljite prave pozive svom timu",
+        description:
+          "LobbyStack može da odgovori na rutinske pozive, primi poruku ili preusmeri hitne razgovore Vašem timu, uz podatke pozivaoca i razlog poziva.",
+        cta: "Podesite pravila",
+        href: "#control",
+        image: "/illustrations/call-routing-team.webp",
+        alt: "Rezime dolaznog poziva preusmeren pravom članu tima, uz kontekst o klijentu",
+        imageAspectClass: "aspect-[9/4]",
+        imageScaleClass: "h-full w-full object-cover object-[50%_44%]",
+      },
+    ],
+    connected: {
+      imageAlt: "Izvori poslovnog znanja povezani sa LobbyStack odgovorima",
+      heading: "Odgovori iz svega što Vaša firma zna",
+      body: "Uvezite sajt, PDF fajlove, dokumente, tabele, spiskove usluga, pravila poslovanja i česta pitanja, da bi LobbyStack odgovarao sa istim kontekstom koji Vaš tim koristi svakog dana.",
+    },
+    quality: {
+      heading: "AI recepcioner za timove kojima je stalo do kvaliteta odgovora",
+      body: "Neka telefon uvek bude pokriven, bez odricanja od detalja, dobre procene i doslednosti koje klijenti primećuju.",
+      learnMoreLabel: "Saznajte više o AI odgovaranju na pozive",
+      learnMoreHref: "/solutions/ai-phone-answering/",
+      toolCards: [
+        {
+          title: "Recepcioner koji se javlja kada Vam zatreba",
+          description:
+            "Neka LobbyStack odgovara na svaki poziv, ili neka uskoči samo kada je Vaš tim zauzet, van radnog vremena ili ne može da se javi.",
+          image: "/illustrations/call-capture.webp",
+          alt: "Dolazni poziv se usmerava članovima tima ili na LobbyStack kada tim nije dostupan",
+          imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
+          imageClassName: "h-full w-full object-cover object-center",
+          imageWidth: 2048,
+          imageHeight: 2048,
+        },
+        {
+          title: "Termini zakazani bez dogovaranja tamo-amo",
+          description:
+            "Ponudite slobodne termine, potvrdite zakazivanje i pošaljite dalja uputstva bez ručnog dogovaranja.",
+          image: "/illustrations/booking-flow.webp",
+          alt: "LobbyStack nudi slobodne termine i potvrđuje zakazivanje uz saglasnost pozivaoca",
+          imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
+          imageClassName: "h-full w-full object-cover object-center",
+          imageWidth: 2048,
+          imageHeight: 2048,
+        },
+        {
+          title: "Prebacivanje na čoveka kada je potrebno",
+          description:
+            "Preusmerite hitne ili neobične pozive na čoveka, uz razlog poziva, kontakt podatke pozivaoca i kontekst razgovora.",
+          image: "/illustrations/human-handoff.webp",
+          alt: "Hitna poruka pozivaoca preusmerena članu tima, uz razlog i kontekst",
+          imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
+          imageClassName: "h-full w-full object-cover object-center",
+          imageWidth: 2048,
+          imageHeight: 2048,
+        },
+      ],
+    },
+    workflow: {
+      heading: "Pokrenite AI recepcionera za nekoliko minuta",
+      body: "Podesite recepcionera jednom, a zatim doterujte kako odgovara, zakazuje, preusmerava i sažima pozive kako Vaša firma raste.",
+      guideLabel: "Pročitajte vodič za kupovinu",
+      guideHref: "/blog/how-to-choose-an-ai-receptionist/",
+      steps: [
+        {
+          title: "Povežite telefon",
+          description:
+            "Koristite novi lokalni broj ili preusmerite pozive sa poslovnog broja koji klijenti već zovu.",
+        },
+        {
+          title: "Dodajte znanje",
+          description:
+            "Uvezite sajt, fajlove, usluge, česta pitanja, radno vreme, pravila poslovanja i podatke za koje pozivaoci najčešće pitaju.",
+        },
+        {
+          title: "Podesite pravila",
+          description:
+            "Odredite kada LobbyStack treba da odgovori, zakaže termin, primi poruku ili prebaci poziv na čoveka.",
+        },
+        {
+          title: "Pokrenite",
+          description:
+            "LobbyStack počinje da odgovara na pozive, pomaže klijentima i automatski šalje potvrde i rezimee.",
+        },
+      ],
+    },
+    control: {
+      heading: "Zadržite kontrolu nad svakim pozivom",
+      body: "LobbyStack obavlja rutinske razgovore, ali Vaš tim odlučuje šta on zna, šta sme da radi i kada poziv treba da se vrati čoveku.",
+      imageAlt:
+        "LobbyStack kontrolna tabla sa metrikama poziva, potrebnim radnjama, predstojećim terminima i nedavnim pozivima",
+      cards: [
+        {
+          title: "Odredite šta AI recepcioner sme da kaže",
+          description:
+            "Ažurirajte usluge, cene, pravila poslovanja, česta pitanja i uputstva kad god se Vaše poslovanje promeni, bez čekanja na programera.",
+          icon: Pencil,
+        },
+        {
+          title: "Pregledajte svaki poziv na jednom mestu",
+          description:
+            "Pogledajte snimke, transkripte, rezimee, podatke pozivalaca, zakazane termine i sledeće korake, bez preslušavanja govorne pošte i traženja razbacanih beleški.",
+          icon: History,
+        },
+      ],
+    },
+    pricing: {
+      heading: "Počnite besplatno. Pređite na veći paket kada pozivi porastu.",
+      body: "Isprobajte LobbyStack uz uključenu potrošnju, pa pređite na Starter ili Pro kada budete spremni da mu prepustite prave pozive.",
+      badge: "Najpopularniji",
+      viewDetails: "Detalji o cenama",
+      note: "Za početak nije potrebna kreditna kartica.",
+      plans: [
+        {
+          name: "Free",
+          price: "$0",
+          description:
+            "30 minuta razgovora u pregledaču. Nisu potrebni broj telefona ni kreditna kartica.",
+        },
+        {
+          name: "Starter",
+          price: "$30/mes.",
+          description:
+            "150 minuta razgovora, 50 SMS segmenata za obaveštenja, 20 pokušaja preusmeravanja i podrška putem imejla.",
+        },
+        {
+          name: "Pro",
+          price: "$100/mes.",
+          description:
+            "500 minuta razgovora, 200 SMS segmenata za obaveštenja, 100 pokušaja preusmeravanja i prioritetna podrška putem imejla.",
+        },
+        {
+          name: "Enterprise",
+          price: "Po dogovoru",
+          description:
+            "Veći obim, više brojeva i podrška pri uvođenju samostalnog hostovanja.",
+        },
+      ],
+    },
+    openSource: {
+      heading: "Otvoreni kod, samostalno hostovanje",
+      body: "Pokrenite LobbyStack na sopstvenim serverima i čuvajte snimke poziva i podatke klijenata u svojoj infrastrukturi.",
+      cta: "Pogledajte na GitHubu",
+      selfHostedCta: "O samostalnom hostovanju",
+    },
+  },
+} satisfies Record<Locale, unknown>
 
 type LocalizedProps = {
   locale?: Locale

@@ -55,6 +55,36 @@ describe("canonical host path normalisation", () => {
   )
 })
 
+describe("Accept-Language redirects", () => {
+  const visit = (pathname, acceptLanguage, userAgent = "Mozilla/5.0") =>
+    onRequest({
+      request: new Request(`https://lobbystack.com${pathname}`, {
+        headers: { "Accept-Language": acceptLanguage, "User-Agent": userAgent },
+      }),
+      env: {},
+      next: vi.fn(() => new Response("next")),
+    })
+
+  it.each([
+    ["fr-CA,fr;q=0.9,en;q=0.5", "/pricing/", "/fr/pricing/"],
+    ["es-MX,es;q=0.9", "/pricing/", "/es/pricing/"],
+    ["sr-Latn-RS,sr;q=0.9,en;q=0.4", "/", "/sr/"],
+    ["de-DE,es;q=0.6,en;q=0.5", "/features/", "/es/features/"],
+  ])("sends %s visitors from %s to %s", async (acceptLanguage, from, to) => {
+    const response = await visit(from, acceptLanguage)
+    expect(response.status).toBe(302)
+    expect(response.headers.get("Location")).toBe(`https://lobbystack.com${to}`)
+    expect(response.headers.get("Vary")).toBe("Accept-Language")
+  })
+
+  it("leaves English, localized and crawler requests alone", async () => {
+    expect((await visit("/pricing/", "en-US,es;q=0.5")).status).toBe(200)
+    expect((await visit("/es/pricing/", "sr")).status).toBe(200)
+    expect((await visit("/sr/", "es")).status).toBe(200)
+    expect((await visit("/pricing/", "es", "Googlebot/2.1")).status).toBe(200)
+  })
+})
+
 describe("homepage Markdown content negotiation", () => {
   it.each(["/fr/", "/fr/index.html"])(
     "serves the French Markdown sidecar for %s",

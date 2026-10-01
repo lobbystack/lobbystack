@@ -19,12 +19,26 @@ const heroCopy = {
     pricing: "Free plan with 30 minutes a month. Paid plans from $30.",
   },
   fr: {
-    h1Start: "LobbyStack transforme",
+    h1Start: "LobbyStack transforme les",
     h1Emphasis: "appels manqués",
     h1End: "en rendez‑vous.",
     body: "LobbyStack est un réceptionniste IA pour les petites entreprises. Il répond au téléphone, planifie les rendez‑vous dans votre calendrier et transfère les appels urgents à votre équipe. Activez-le pour tous vos appels ou seulement quand vous êtes occupé.",
     pricing:
       "Forfait gratuit avec 30 minutes par mois. Forfaits payants à partir de 30 $.",
+  },
+  es: {
+    h1Start: "LobbyStack convierte las",
+    h1Emphasis: "llamadas perdidas",
+    h1End: "en citas confirmadas.",
+    body: "LobbyStack es una recepcionista con IA para pequeñas empresas. Atiende su teléfono, reserva citas en su calendario y pasa las llamadas urgentes a su equipo. Úsela para todas las llamadas o solo cuando esté ocupado.",
+    pricing: "Plan gratuito con 30 minutos al mes. Planes de pago desde $30.",
+  },
+  sr: {
+    h1Start: "LobbyStack pretvara",
+    h1Emphasis: "propuštene pozive",
+    h1End: "u zakazane poslove.",
+    body: "LobbyStack je AI recepcioner za mala preduzeća. Javlja se na Vaš telefon, zakazuje termine u Vaš kalendar i preusmerava hitne pozive Vašem timu. Koristite ga za sve pozive ili samo kada ste zauzeti.",
+    pricing: "Besplatan paket sa 30 minuta mesečno. Plaćeni paketi od $30.",
   },
 } satisfies Record<Locale, Record<string, string>>
 
@@ -41,23 +55,11 @@ export function HeroSection({ children, locale = "en" }: HeroSectionProps) {
         <div className="grid min-w-0 items-center gap-6 md:gap-12 xl:grid-cols-2 xl:gap-16">
           <div className="max-w-3xl min-w-0 text-left">
             <h1 className="animate-fade-up display-heading">
-              {locale === "fr" ? (
-                <>
-                  {localCopy.h1Start} les{" "}
-                  <span className="underline decoration-2 underline-offset-4">
-                    {localCopy.h1Emphasis}
-                  </span>{" "}
-                  {localCopy.h1End}
-                </>
-              ) : (
-                <>
-                  {localCopy.h1Start}{" "}
-                  <span className="underline decoration-2 underline-offset-4">
-                    {localCopy.h1Emphasis}
-                  </span>{" "}
-                  {localCopy.h1End}
-                </>
-              )}
+              {localCopy.h1Start}{" "}
+              <span className="underline decoration-2 underline-offset-4">
+                {localCopy.h1Emphasis}
+              </span>{" "}
+              {localCopy.h1End}
             </h1>
 
             <p className="animate-fade-up body-copy mt-6 max-w-[65ch] stagger-2 md:text-lg">

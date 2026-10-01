@@ -233,6 +233,221 @@ const copy = {
       footerDocsLabel: "documentation du programme d'affiliation",
     },
   },
+  es: {
+    hero: {
+      headingPrefix: "Hágase afiliado de",
+      headingAccent: "LobbyStack",
+      headingSuffix: "",
+      subhead:
+        "Recomiende los planes alojados de LobbyStack a otros negocios y gane el 20% de sus pagos durante 12 meses. Sus referidos ahorran un 5% al registrarse con su enlace.",
+      cta: "Unirse al programa",
+    },
+    benefits: {
+      heading: "Lo que obtiene",
+      items: [
+        {
+          title: "20% durante 12 meses",
+          description:
+            "Gana el 20% de cada pago de plan alojado durante el primer año del cliente. La comisión se repite cada mes mientras siga suscrito.",
+          icon: TrendingUp,
+        },
+        {
+          title: "5% de descuento para referidos",
+          description:
+            "Sus referidos obtienen un 5% de descuento en los planes alojados de LobbyStack al registrarse.",
+          icon: Gift,
+        },
+        {
+          title: "Pagos sencillos",
+          description:
+            "Retenemos las comisiones durante 30 días. Los saldos de $100 o más se pagan cada mes por PayPal.",
+          icon: Wallet,
+        },
+      ],
+    },
+    details: {
+      howItWorks: {
+        heading: "Cómo funciona",
+        steps: [
+          <>
+            Inicie sesión y abra <strong>Programa de afiliados</strong> desde el
+            icono de regalo, arriba a la derecha.
+          </>,
+          <>
+            Añada su <strong>correo de PayPal</strong> en la configuración de
+            afiliado para recibir los pagos.
+          </>,
+          "Comparta su enlace de referido en boletines, sitios web, videos y recomendaciones directas.",
+          "Siga los clics, referidos, comisiones pendientes y pagos desde su panel.",
+        ],
+      },
+      whoShouldApply: {
+        heading: "Para quién es",
+        items: [
+          <>
+            <strong>Agencias de marketing</strong> que ayudan a negocios locales
+            a captar clientes potenciales por teléfono
+          </>,
+          <>
+            <strong>Diseñadores web y consultores SEO</strong> con pequeños
+            negocios como clientes que pierden llamadas
+          </>,
+          <>
+            <strong>Consultores de negocio y automatización</strong> que mejoran
+            la operación y la captación de clientes potenciales
+          </>,
+          <>
+            <strong>Creadores y autores de boletines</strong> que hablan de
+            herramientas de IA, crecimiento de negocios locales o recuperación
+            de llamadas perdidas
+          </>,
+        ],
+      },
+    },
+    guidelines: {
+      heading: "Normas",
+      items: [
+        {
+          title: "Sea honesto",
+          description:
+            "Describa LobbyStack con precisión. Recomiéndelo para problemas de llamadas perdidas, atención fuera de horario, reservas y enrutamiento que haya visto de verdad.",
+        },
+        {
+          title: "Declare su comisión",
+          description:
+            "Diga a su audiencia cuando gane una comisión por un referido.",
+        },
+        {
+          title: "Sin anuncios de búsqueda con nuestras marcas",
+          description:
+            "No puje por las marcas de LobbyStack ni por términos parecidos que generen confusión en anuncios de búsqueda de pago.",
+        },
+        {
+          title: "Sin spam ni abusos",
+          description:
+            "Nada de reseñas falsas, afirmaciones engañosas, autorreferidos, abuso de cupones, tráfico falso ni hacerse pasar por LobbyStack.",
+        },
+        {
+          title: "Derecho de terminación",
+          descriptionPrefix:
+            "Las reglas de atribución, retenciones, reembolsos y pagos están en nuestros",
+          termsLabel: "Términos del servicio",
+          descriptionSuffix:
+            "LobbyStack puede cambiar o pausar el programa en cualquier momento.",
+        },
+      ],
+      footerPrefix: "¿Tiene preguntas? Escriba a",
+      footerMiddle: "o lea la",
+      footerDocsLabel: "documentación del programa de afiliados",
+    },
+  },
+  sr: {
+    hero: {
+      headingPrefix: "Postanite",
+      headingAccent: "LobbyStack",
+      headingSuffix: "partner",
+      subhead:
+        "Preporučite hostovane LobbyStack pakete drugim firmama i zaradite 20% njihovih uplata tokom 12 meseci. Preporučeni klijenti štede 5% kada se registruju preko Vašeg linka.",
+      cta: "Pridružite se programu",
+    },
+    benefits: {
+      heading: "Šta dobijate",
+      items: [
+        {
+          title: "20% tokom 12 meseci",
+          description:
+            "Zarađujete 20% od svake uplate za hostovani paket tokom prve godine klijenta. Provizija se ponavlja svakog meseca dok je pretplata aktivna.",
+          icon: TrendingUp,
+        },
+        {
+          title: "5% popusta za preporučene",
+          description:
+            "Preporučeni klijenti dobijaju 5% popusta na hostovane LobbyStack pakete pri registraciji.",
+          icon: Gift,
+        },
+        {
+          title: "Jednostavne isplate",
+          description:
+            "Provizije zadržavamo 30 dana. Stanja od $100 ili više isplaćujemo mesečno putem PayPal-a.",
+          icon: Wallet,
+        },
+      ],
+    },
+    details: {
+      howItWorks: {
+        heading: "Kako funkcioniše",
+        steps: [
+          <>
+            Prijavite se i otvorite <strong>Partnerski program</strong> preko
+            ikonice poklona u gornjem desnom uglu.
+          </>,
+          <>
+            Dodajte svoju <strong>PayPal e-adresu</strong> u podešavanjima
+            partnerskog programa za isplate.
+          </>,
+          "Delite svoj link za preporuke u biltenima, na sajtovima, u video snimcima i kroz direktne preporuke.",
+          "Pratite klikove, preporuke, provizije na čekanju i isplate na kontrolnoj tabli.",
+        ],
+      },
+      whoShouldApply: {
+        heading: "Kome je namenjen",
+        items: [
+          <>
+            <strong>Marketinškim agencijama</strong> koje pomažu lokalnim
+            firmama da dobiju potencijalne klijente iz telefonskih poziva
+          </>,
+          <>
+            <strong>Veb dizajnerima i SEO konsultantima</strong> čiji mali
+            klijenti propuštaju pozive
+          </>,
+          <>
+            <strong>Poslovnim konsultantima i konsultantima za automatizaciju</strong>{" "}
+            koji unapređuju poslovanje i prikupljanje potencijalnih klijenata
+          </>,
+          <>
+            <strong>Kreatorima i autorima biltena</strong> koji pišu o AI
+            alatima, rastu lokalnih firmi ili vraćanju propuštenih poziva
+          </>,
+        ],
+      },
+    },
+    guidelines: {
+      heading: "Pravila",
+      items: [
+        {
+          title: "Budite iskreni",
+          description:
+            "Opišite LobbyStack tačno. Preporučite ga za propuštene pozive, pokrivanje van radnog vremena, zakazivanje i usmeravanje poziva tamo gde ste te probleme zaista videli.",
+        },
+        {
+          title: "Navedite da dobijate proviziju",
+          description:
+            "Recite publici kada zarađujete proviziju od preporuke.",
+        },
+        {
+          title: "Bez plaćenih oglasa na naše žigove",
+          description:
+            "Ne licitirajte za LobbyStack žigove ni za slične izraze koji mogu da zbune u plaćenim oglasima na pretraživačima.",
+        },
+        {
+          title: "Bez spama i zloupotreba",
+          description:
+            "Bez lažnih recenzija, obmanjujućih tvrdnji, samopreporuka, zloupotrebe kupona, lažnog saobraćaja i lažnog predstavljanja kao LobbyStack.",
+        },
+        {
+          title: "Pravo na raskid",
+          descriptionPrefix:
+            "Pravila o pripisivanju, zadržavanju, povraćaju novca i isplatama nalaze se u našim",
+          termsLabel: "Uslovima korišćenja",
+          descriptionSuffix:
+            "LobbyStack može da izmeni ili pauzira program u bilo kom trenutku.",
+        },
+      ],
+      footerPrefix: "Imate pitanja? Pišite na",
+      footerMiddle: "ili pročitajte",
+      footerDocsLabel: "dokumentaciju partnerskog programa",
+    },
+  },
 } satisfies Record<
   Locale,
   {

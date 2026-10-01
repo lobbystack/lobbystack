@@ -21,6 +21,18 @@ const ctaCopy = {
     headingEnd: "",
     body: "Testez 30 minutes vocales dans le navigateur gratuitement. Aucun numéro de téléphone inclus.",
   },
+  es: {
+    headingStart: "No vuelva a perder",
+    headingMiddle: "ninguna llamada",
+    headingEnd: "lista para reservar",
+    body: "Pruebe gratis 30 minutos de voz en el navegador. No incluye número de teléfono.",
+  },
+  sr: {
+    headingStart: "Ne propustite više nijednog",
+    headingMiddle: "klijenta koji",
+    headingEnd: "želi termin",
+    body: "Isprobajte besplatno 30 minuta razgovora u pregledaču. Broj telefona nije uključen.",
+  },
 } satisfies Record<Locale, Record<string, string>>
 
 export function CtaSection({ locale = "en" }: CtaSectionProps) {

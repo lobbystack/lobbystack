@@ -52,6 +52,56 @@ const copy = {
       },
     ],
   },
+  es: {
+    heading: "Por qué los contratistas pierden ingresos",
+    reasons: [
+      {
+        title: "En la obra",
+        description:
+          "Cuando está debajo de una casa, sobre un tejado o manejando maquinaria, no puede contestar el teléfono de forma segura ni profesional.",
+      },
+      {
+        title: "Hablando con un cliente",
+        description:
+          "Atender una llamada mientras habla en persona con un propietario es descortés y resta confianza. Pero si ignora el teléfono, pierde al nuevo cliente potencial.",
+      },
+      {
+        title: "Conduciendo entre trabajos",
+        description:
+          "Con las manos en el volante no puede anotar un nombre, una dirección y los detalles del trabajo. A los clientes no les gusta repetirlo todo después.",
+      },
+      {
+        title: "Fuera de horario y fines de semana",
+        description:
+          "Las emergencias ocurren a cualquier hora. Si una tubería revienta a las 21:00 y no contesta, llamarán enseguida al siguiente plomero que encuentren en Google.",
+      },
+    ],
+  },
+  sr: {
+    heading: "Zašto izvođači radova gube prihod",
+    reasons: [
+      {
+        title: "Na terenu",
+        description:
+          "Kada ste ispod kuće, na krovu ili radite sa mašinama, ne možete bezbedno i profesionalno da se javite na telefon.",
+      },
+      {
+        title: "U razgovoru sa klijentom",
+        description:
+          "Javljanje na telefon dok razgovarate sa vlasnikom kuće licem u lice je nepristojno i narušava poverenje. Ali ako ignorišete telefon, gubite novog potencijalnog klijenta.",
+      },
+      {
+        title: "U vožnji između poslova",
+        description:
+          "Dok su Vam ruke na volanu, ne možete da zapišete ime, adresu i detalje posla. Klijenti ne vole da kasnije sve ponavljaju.",
+      },
+      {
+        title: "Van radnog vremena i vikendom",
+        description:
+          "Hitni slučajevi se dešavaju 24/7. Ako cev pukne u 21 čas, a Vi se ne javite, klijent odmah zove sledećeg vodoinstalatera koga nađe na Google-u.",
+      },
+    ],
+  },
 } satisfies Record<
   Locale,
   { heading: string; reasons: Array<{ title: string; description: string }> }
