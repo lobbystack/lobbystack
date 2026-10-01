@@ -28,6 +28,25 @@ describe("restored knowledge dialogs", () => {
     await userEvent.click(button);
     expect(save).not.toHaveBeenCalled();
   });
+  it("keeps save in reach of a long paste and submits all of it", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    render(<AddKnowledgeSheet section="knowledge" open save={save} />);
+    const content = "Our clinic opens at nine. ".repeat(800);
+    const textarea = screen.getByLabelText("agent:sections.knowledge.fields.content.label");
+    fireEvent.change(screen.getByLabelText("agent:sections.knowledge.fields.title.label"), { target: { value: "Policies" } });
+    fireEvent.change(textarea, { target: { value: content } });
+    // The textarea stops growing and scrolls, and the fields scroll inside the
+    // dialog while the footer with the save button sits outside them.
+    expect(textarea.className).toMatch(/\bmax-h-\[40svh\]/);
+    expect(textarea.className).toMatch(/\boverflow-y-auto\b/);
+    const scrollArea = textarea.closest(".overflow-y-auto:not(textarea)");
+    const button = screen.getByRole("button", { name: "agent:actions.save" });
+    expect(scrollArea).toBeTruthy();
+    expect(scrollArea!.contains(button)).toBe(false);
+    expect(screen.getByRole("dialog").className).toMatch(/max-h-\[calc\(100svh-2rem\)\]/);
+    await userEvent.click(button);
+    expect(save).toHaveBeenCalledWith({ title: "Policies", content: content.trim(), tags: [], priority: 75, active: true });
+  });
   it("imports a website using only its URL", async () => {
     const save = vi.fn().mockResolvedValue(undefined);
     render(<ImportWebsiteKnowledgeSheet open save={save} />);

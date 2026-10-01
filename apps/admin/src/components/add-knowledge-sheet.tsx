@@ -130,65 +130,70 @@ export function AddKnowledgeSheet({
   return (
     <Dialog onOpenChange={setDialogOpen} open={isDialogOpen}>
       {trigger ? <DialogTrigger render={trigger} /> : null}
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
           <DialogDescription>{dialogDescription}</DialogDescription>
         </DialogHeader>
-        <form className="flex flex-col gap-6" onSubmit={(event) => void handleSubmit(event)}>
-          <FieldGroup>
-            <Field>
-              <FieldContent>
-                <FieldLabel htmlFor={titleId}>
-                  {t(`agent:sections.${section}.fields.title.label`)}
-                </FieldLabel>
-                <FieldDescription>
-                  {t(`agent:sections.${section}.fields.title.hint`)}
-                </FieldDescription>
-              </FieldContent>
-              <Input
-                id={titleId}
-                placeholder={t(`agent:sections.${section}.fields.title.placeholder`)}
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-              />
-            </Field>
+        <form className="flex min-h-0 flex-col gap-6" onSubmit={(event) => void handleSubmit(event)}>
+          {/* The fields scroll and the footer stays put, so a long paste never
+              pushes the save button off screen. The inset keeps focus rings
+              clear of the scroll edge. */}
+          <div className="-m-1 min-h-0 overflow-y-auto p-1">
+            <FieldGroup>
+              <Field>
+                <FieldContent>
+                  <FieldLabel htmlFor={titleId}>
+                    {t(`agent:sections.${section}.fields.title.label`)}
+                  </FieldLabel>
+                  <FieldDescription>
+                    {t(`agent:sections.${section}.fields.title.hint`)}
+                  </FieldDescription>
+                </FieldContent>
+                <Input
+                  id={titleId}
+                  placeholder={t(`agent:sections.${section}.fields.title.placeholder`)}
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                />
+              </Field>
 
-            <Field>
-              <FieldContent>
-                <FieldLabel htmlFor={contentId}>
-                  {t(`agent:sections.${section}.fields.content.label`)}
-                </FieldLabel>
-                <FieldDescription>
-                  {t(`agent:sections.${section}.fields.content.hint`)}
-                </FieldDescription>
-              </FieldContent>
-              <Textarea
-                className="min-h-40"
-                id={contentId}
-                placeholder={t(`agent:sections.${section}.fields.content.placeholder`)}
-                value={content}
-                onChange={(event) => setContent(event.target.value)}
-              />
-            </Field>
+              <Field>
+                <FieldContent>
+                  <FieldLabel htmlFor={contentId}>
+                    {t(`agent:sections.${section}.fields.content.label`)}
+                  </FieldLabel>
+                  <FieldDescription>
+                    {t(`agent:sections.${section}.fields.content.hint`)}
+                  </FieldDescription>
+                </FieldContent>
+                <Textarea
+                  className="max-h-[40svh] min-h-40 overflow-y-auto"
+                  id={contentId}
+                  placeholder={t(`agent:sections.${section}.fields.content.placeholder`)}
+                  value={content}
+                  onChange={(event) => setContent(event.target.value)}
+                />
+              </Field>
 
-            <Field>
-              <FieldContent>
-                <FieldLabel htmlFor={tagsId}>
-                  {t(`agent:sections.${section}.fields.tags.label`)}
-                </FieldLabel>
-                <FieldDescription>
-                  {t(`agent:sections.${section}.fields.tags.hint`)}
-                </FieldDescription>
-              </FieldContent>
-              <Input
-                id={tagsId}
-                placeholder={t(`agent:sections.${section}.fields.tags.placeholder`)}
-                value={tags}
-                onChange={(event) => setTags(event.target.value)}
-              />
-            </Field>
-          </FieldGroup>
+              <Field>
+                <FieldContent>
+                  <FieldLabel htmlFor={tagsId}>
+                    {t(`agent:sections.${section}.fields.tags.label`)}
+                  </FieldLabel>
+                  <FieldDescription>
+                    {t(`agent:sections.${section}.fields.tags.hint`)}
+                  </FieldDescription>
+                </FieldContent>
+                <Input
+                  id={tagsId}
+                  placeholder={t(`agent:sections.${section}.fields.tags.placeholder`)}
+                  value={tags}
+                  onChange={(event) => setTags(event.target.value)}
+                />
+              </Field>
+            </FieldGroup>
+          </div>
 
           <DialogFooter>
             <Button className="w-full" disabled={isSaving} type="submit">

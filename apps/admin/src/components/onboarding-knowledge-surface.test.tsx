@@ -47,3 +47,14 @@ describe("onboarding knowledge telemetry", () => {
     telemetryRef.current!.expectEvent("web.onboarding.knowledge_skipped", { businessId: "business" });
   });
 });
+
+describe("onboarding pasted text", () => {
+  it("stops growing and scrolls a long paste, so continue stays close by", async () => {
+    setup();
+    await userEvent.click(screen.getByRole("tab", { name: "knowledge.tabs.paste" }));
+    const textarea = document.getElementById("onboarding-knowledge-paste") as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: "Our clinic opens at nine. ".repeat(800) } });
+    expect(textarea.className).toMatch(/\bmax-h-\[40svh\]/);
+    expect(textarea.className).toMatch(/\boverflow-y-auto\b/);
+  });
+});
