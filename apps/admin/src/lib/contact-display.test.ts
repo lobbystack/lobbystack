@@ -40,6 +40,14 @@ describe("channel labels", () => {
     expect(normalizeChannel(" WEB_VOICE ")).toBe("web_call");
     expect(normalizeChannel("unknown")).toBeNull();
   });
+
+  it("treats older plain web transports as web calls, without catching website chat", async () => {
+    expect(normalizeChannel("web")).toBe("web_call");
+    expect(normalizeChannel("webrtc_browser")).toBe("web_call");
+    expect(normalizeChannel("web_chat")).toBe("web_chat");
+    expect(getContactChannels(["web"])).toEqual(["web_call"]);
+    expect(getContactDisplayName({ name: null, phone: null, channels: ["web"] }, "en", await translator("en"))).toBe("Web caller");
+  });
 });
 
 describe("contact display names", () => {

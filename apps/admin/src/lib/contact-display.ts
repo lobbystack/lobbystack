@@ -11,7 +11,8 @@ type Translate = (key: string) => string;
 
 /**
  * Stored channel values grouped by meaning. Calls store `transport`
- * (`voice`, `web_voice`, and `phone` or `pstn` from older imports);
+ * (`voice`, `web_voice`, plain `web` on older calls, and `phone` or `pstn`
+ * from older imports);
  * conversations, messages, and appointment sources store `voice`, `sms`,
  * `web_chat`, `web_voice`, `dashboard`, `operator`, or `api`.
  */
@@ -20,6 +21,7 @@ const CHANNEL_ALIASES: Record<string, DisplayChannel> = {
   phone: "phone_call",
   pstn: "phone_call",
   phone_call: "phone_call",
+  web: "web_call",
   web_voice: "web_call",
   web_call: "web_call",
   sms: "sms",
@@ -41,7 +43,10 @@ const CHANNEL_LABEL_KEYS: Record<DisplayChannel, string> = {
 
 export function normalizeChannel(value: string | null | undefined): DisplayChannel | null {
   const key = value?.trim().toLowerCase();
-  return key ? CHANNEL_ALIASES[key] ?? null : null;
+  if (!key) return null;
+  // Any other transport containing "web" is a browser call, matching
+  // voiceChannelForTransport in packages/domain/src/server/voice.ts.
+  return CHANNEL_ALIASES[key] ?? (key.includes("web") ? "web_call" : null);
 }
 
 /** A readable label for any stored channel or source value. Unknown values are humanized, never shown as raw slugs. */
