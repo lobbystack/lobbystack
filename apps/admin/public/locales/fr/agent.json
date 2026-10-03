@@ -240,7 +240,6 @@
       "label": "Résumé de l'entreprise",
       "hint": "Ce que votre réceptionniste dit aux appelants au sujet de l'entreprise.",
       "placeholder": "Par exemple : La Clinique familiale Maple est une clinique de Toronto qui offre des examens, des vaccins et de la physiothérapie.",
-      "generated": "L'IA a rédigé ce résumé à partir de vos connaissances et le met à jour quand elles changent. Modifiez-le pour écrire le vôtre.",
       "operator": "Vous avez rédigé ce résumé, donc l'IA ne le modifiera pas.",
       "empty": "Ajoutez votre site web ou vos documents dans Connaissances, et l'IA le rédige pour vous.",
       "regenerate": "Réécrire avec l'IA",

@@ -240,7 +240,6 @@
       "label": "Resumen del negocio",
       "hint": "Lo que su recepcionista dice a quienes llaman sobre el negocio.",
       "placeholder": "Por ejemplo: Clínica Familiar Maple es una clínica de Toronto que ofrece chequeos, vacunas y fisioterapia.",
-      "generated": "La IA escribió este resumen a partir de su conocimiento y lo actualiza cuando cambia. Edítelo para escribir el suyo.",
       "operator": "Usted escribió este resumen, así que la IA no lo cambiará.",
       "empty": "Agregue su sitio web o sus documentos en Conocimiento y la IA lo escribirá por usted.",
       "regenerate": "Reescribir con IA",

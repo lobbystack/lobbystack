@@ -391,9 +391,11 @@ export function AgentBasicSettingsPage({
                     />
                   )}
                 </div>
-                <ItemDescription>
-                  {summaryStatus ?? t(persistedProfile?.summarySource === "operator" ? "agent:fields.summary.operator" : persistedProfile?.summarySource === "generated" ? "agent:fields.summary.generated" : "agent:fields.summary.empty")}
-                </ItemDescription>
+                {summaryStatus || persistedProfile?.summarySource !== "generated" ? (
+                  <ItemDescription>
+                    {summaryStatus ?? t(persistedProfile?.summarySource === "operator" ? "agent:fields.summary.operator" : "agent:fields.summary.empty")}
+                  </ItemDescription>
+                ) : null}
               </ItemContent>
               <ItemActions className="w-full justify-end self-center sm:w-auto">
                 {persistedProfile?.summarySource === "operator" ? (
