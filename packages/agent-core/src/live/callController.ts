@@ -110,13 +110,6 @@ const GREETING_ERROR_RETRY_MS = 500;
 // calls, a greeting GPT-Live did speak started under a second after the
 // acknowledgment.
 const GREETING_SPEECH_MS = 1_500;
-// On staging phone calls, a greeting sent right at session.started was
-// acknowledged but never spoken, three calls in a row, while the caller's
-// audio only reached OpenAI about a second in. OpenAI's guide wants input
-// audio running during the greeting, so the first one waits until the
-// session timeline passes this point, or for the fallback below.
-const GREETING_TIMELINE_MS = 1_500;
-const GREETING_TIMELINE_FALLBACK_MS = 2_000;
 // Reflected output audio is 16-bit PCM at 24 kHz. A chunk this loud is voice;
 // silence on staging calls stayed far below it.
 const VOICE_RMS = 400;
@@ -217,10 +210,6 @@ export class LiveCallController {
   private lastSpeechEndMs = 0;
   private lastSpeechAt = Number.NEGATIVE_INFINITY;
   private readonly outputAudio: LiveCallSummary["outputAudio"] = { deltas: 0, coveredMs: 0, payloadBytes: 0 };
-  // The session timeline, from reflected output audio, which runs from the start.
-  private timelineMs = 0;
-  private greetingWaitTimer: ReturnType<typeof setTimeout> | undefined;
-  private greetingTrigger: GreetingEvent["trigger"] | undefined;
   private lastAnswerSentAt: number | undefined;
   private ending = false;
   private latestUsageSeconds: number | undefined;
@@ -252,8 +241,7 @@ export class LiveCallController {
     });
     // OpenAI reflects output audio to the sideband with timeline offsets, but
     // the SDK's sideband event types leave it out. GPT-Live is full duplex, so
-    // the events run through silence too: they give the session clock, and
-    // only a loud chunk counts as speech.
+    // the events run through silence too: only a loud chunk counts as speech.
     (socket as unknown as { on(type: string, listener: (event: { delta?: unknown; start_ms?: number; end_ms?: number }) => void): void })
       .on("session.output_audio.delta", (event) => {
         this.outputAudio.deltas += 1;
@@ -262,10 +250,8 @@ export class LiveCallController {
           if (typeof event.end_ms === "number") this.outputAudio.coveredMs += Math.max(0, event.end_ms - event.start_ms);
         }
         if (typeof event.delta === "string") this.outputAudio.payloadBytes += event.delta.length;
-        if (typeof event.end_ms === "number") this.timelineMs = Math.max(this.timelineMs, event.end_ms);
         // The events cover silence too, so only a loud chunk counts as speech.
         if (typeof event.delta === "string" && isVoice(event.delta)) this.heardSpeech(event.end_ms);
-        if (this.greetingTrigger && this.timelineMs >= GREETING_TIMELINE_MS) this.releaseGreeting();
       });
     socket.on("session.delegation.created", (event) => void this.handleDelegation(event));
     socket.on("session.usage.updated", (event) => { this.latestUsageSeconds = event.usage.seconds; });
@@ -285,7 +271,7 @@ export class LiveCallController {
       this.started = true;
       clearTimeout(this.lateAttachTimer);
       this.options.onStarted?.();
-      this.holdGreeting("session_started");
+      this.sendGreeting("session_started");
     });
     // Attached after the replay window, so session.started never arrives: the
     // session has been running for over 3 seconds, and it's safe to greet.
@@ -360,23 +346,6 @@ export class LiveCallController {
     this.lastSpeechAt = performance.now();
     this.resetSilenceTimer();
     if (typeof endMs === "number") this.lastSpeechEndMs = Math.max(this.lastSpeechEndMs, endMs);
-  }
-
-  private holdGreeting(trigger: NonNullable<GreetingEvent["trigger"]>): void {
-    if (this.timelineMs >= GREETING_TIMELINE_MS) {
-      this.sendGreeting(trigger);
-      return;
-    }
-    this.greetingTrigger = trigger;
-    this.greetingWaitTimer = setTimeout(() => this.releaseGreeting(), GREETING_TIMELINE_FALLBACK_MS);
-  }
-
-  private releaseGreeting(): void {
-    const trigger = this.greetingTrigger;
-    if (!trigger) return;
-    this.greetingTrigger = undefined;
-    clearTimeout(this.greetingWaitTimer);
-    this.sendGreeting(trigger);
   }
 
   private sendGreeting(trigger: NonNullable<GreetingEvent["trigger"]>): void {
@@ -685,7 +654,7 @@ export class LiveCallController {
     // Without the sideband nobody answers delegations, so end the session
     // rather than leave the caller talking to it while OpenAI keeps billing.
     if (!sessionClosed && !this.finalizeTimer) this.endWithoutSideband();
-    for (const timer of [this.silenceTimer, this.durationTimer, this.greetingRetryTimer, this.greetingWaitTimer, this.lateAttachTimer, this.finalizeTimer]) clearTimeout(timer);
+    for (const timer of [this.silenceTimer, this.durationTimer, this.greetingRetryTimer, this.lateAttachTimer, this.finalizeTimer]) clearTimeout(timer);
     this.abort.abort();
     this.socket?.close({ code: 1000, reason: "session finished" });
     this.emitFinishedTurns(true);

@@ -41,7 +41,7 @@ describe("buildLiveInstructions", () => {
     expect(instructions).toContain("Don't say you've booked, saved, sent or confirmed anything until the backend's result says it's done.");
   });
 
-  it("has the lines OpenAI's template requires, names the call's language, and leaves the greeting to the worker", () => {
+  it("has the lines OpenAI's template requires, names the call's language, and the greeting to open with once told to start", () => {
     const instructions = buildLiveInstructions({ ...demoSnapshot, defaultLocale: "fr" }, callStart);
     expect(instructions).toContain("Delegate to the backend when:\n");
     expect(instructions).toContain("- A correction changes the work already requested.");
@@ -50,7 +50,7 @@ describe("buildLiveInstructions", () => {
     expect(instructions).toContain("If the caller is frustrated, acknowledge it briefly and focus on the next helpful step.");
     expect(instructions).toContain("Speak French unless the caller asks to switch");
     expect(instructions).toContain("Backchannel policy: Use moderate backchannels. Acknowledge naturally without competing with the main response.");
-    expect(instructions).not.toContain(demoSnapshot.greeting);
+    expect(instructions).toContain(`Open the call with this greeting as soon as you're told to start: "${demoSnapshot.greeting}" Say it once, at the start of the call only.`);
   });
 
   it("keeps later rules when an earlier one is too long for the budget", () => {

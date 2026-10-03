@@ -65,10 +65,8 @@ const pcm = (amplitude: number) => {
   return Buffer.from(samples.buffer).toString("base64");
 };
 
-// Starts the session and runs its clock past the point where the first greeting goes out.
 function startSession(socket: FakeSocket) {
   socket.emit("session.started", {});
-  socket.emit("session.output_audio.delta", { delta: pcm(0), start_ms: 1_400, end_ms: 1_500 });
 }
 
 beforeEach(() => { sockets.length = 0; });
@@ -81,11 +79,6 @@ describe("LiveCallController greeting", () => {
     await vi.advanceTimersByTimeAsync(3_000);
     expect(greetings(socket)).toHaveLength(0);
     socket.emit("session.started", {});
-    socket.emit("session.output_audio.delta", { delta: pcm(0), start_ms: 900, end_ms: 1_000 });
-    await vi.advanceTimersByTimeAsync(0);
-    // The caller's audio reaches OpenAI about a second in, so the greeting waits for the clock.
-    expect(greetings(socket)).toHaveLength(0);
-    socket.emit("session.output_audio.delta", { delta: pcm(0), start_ms: 1_400, end_ms: 1_500 });
     await vi.advanceTimersByTimeAsync(0);
     expect(greetings(socket).map((event) => event.event_id)).toEqual(["greeting_1"]);
     expect(greetings(socket)[0]!.content).toBe('Greet the caller now in English. Say exactly: "Thanks for calling Northside Plumbing." Then pause and listen.');
@@ -134,16 +127,6 @@ describe("LiveCallController greeting", () => {
     }
     await vi.advanceTimersByTimeAsync(10_000);
     expect(greetings(socket).map((event) => event.event_id)).toEqual(["greeting_1", "greeting_2", "greeting_3"]);
-  });
-
-  it("greets after a short wait when no session clock arrives", async () => {
-    fakeTimers();
-    const { socket } = setup();
-    socket.emit("session.started", {});
-    await vi.advanceTimersByTimeAsync(1_999);
-    expect(greetings(socket)).toHaveLength(0);
-    await vi.advanceTimersByTimeAsync(1);
-    expect(greetings(socket)).toHaveLength(1);
   });
 
   it("counts loud reflected audio as the greeting being spoken, and silence as not", async () => {
