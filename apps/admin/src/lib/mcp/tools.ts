@@ -194,7 +194,7 @@ export const mcpTools: McpTool[] = [
     operation: "updateBusiness",
     annotations: updates,
     inputSchema: z.object({
-      hours: z.array(hoursWindowInput).max(7).describe("One entry per open day. An empty list closes the business every day."),
+      hours: z.array(hoursWindowInput).max(28).describe("One entry per opening window. A day with a break, such as lunch, has two entries. An empty list closes the business every day."),
     }),
     outputSchema: contractSchema(apiBusinessSchema),
     run: async ({ context, caller, operations }, input) => await operations.updateBusinessForApi(context, caller, contractBody(apiBusinessUpdateSchema, { hours: input.hours })),

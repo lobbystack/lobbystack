@@ -15,6 +15,7 @@ import {
   verifyAppointmentChangeOtp,
   verifyCallerForChange,
   type DomainContext,
+  type UnavailableReason,
 } from "@lobbystack/domain";
 import { canTextNumber, isTransferPermitted, normalizeAppointmentChangePolicy, normalizeBookingMode, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { tool, type ToolSet } from "ai";
@@ -86,6 +87,33 @@ function withSnippetsInBudget(evidence: KnowledgeMatch[], snippets: KnowledgeMat
 }
 
 const phone = z.string().describe("Phone number in E.164 format, for example +14165550134.");
+
+type NoOpeningsReason = UnavailableReason | "no_times_left";
+
+const TAKE_REQUEST = "Offer to take a message with the caller's name, number and preferred time so the team can book it.";
+
+/**
+ * Why a time or a day can't be booked, in plain facts, then the next step.
+ * Only "taken" means someone else has the time; the agent must not say a time
+ * is booked for any other reason.
+ */
+export const UNAVAILABLE_TOOL_MESSAGES: Record<NoOpeningsReason, string> = {
+  no_hours: `Appointments can't be booked automatically yet: the business hasn't set its opening hours. Don't offer times or say any time is taken. ${TAKE_REQUEST}`,
+  closed_day: "The business is closed that day. Offer a day it's open; getBusinessHours lists the opening hours.",
+  outside_hours: "That time is outside the business's opening hours. Offer a time inside them; getBusinessHours lists the opening hours.",
+  closure: "The business is closed then for a planned closure. Offer another day.",
+  no_staff: `No staff member takes bookings for this service, so it can't be booked automatically. ${TAKE_REQUEST}`,
+  calendar_not_synced: `The business's calendar hasn't synced recently, so times can't be confirmed right now. Don't say the time is taken. ${TAKE_REQUEST}`,
+  taken: "That time is already booked. Offer another opening.",
+  no_times_left: "No start times are left that day. Offer another day.",
+};
+
+const DAY_UNAVAILABLE: Partial<Record<NoOpeningsReason, string>> = {
+  taken: "Every time that day is already booked. Offer another day.",
+  outside_hours: "The service doesn't fit inside the opening hours that day. Offer another day.",
+};
+
+const isReason = (value: unknown): value is NoOpeningsReason => typeof value === "string" && value in UNAVAILABLE_TOOL_MESSAGES;
 
 const OFFERINGS_QUERY = "What does the business do and offer: services, products and prices";
 
@@ -182,7 +210,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       }),
       execute: async ({ serviceName, date, preferredTime }) => {
         const [hour, minute] = (preferredTime ?? "").split(":").map(Number);
-        return await findOpenings(domain, {
+        const result = await findOpenings(domain, {
           businessId,
           serviceName,
           date,
@@ -191,6 +219,9 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
           ...(Number.isFinite(hour) ? { preferredHour24: hour, preferredMinute: Number.isFinite(minute) ? minute : 0 } : {}),
           ...(context.callId ? { callId: context.callId } : {}),
         });
+        // An empty day says why, so the agent doesn't call it fully booked when it isn't.
+        if (!result.ok || result.openings.length || !isReason(result.reason)) return result;
+        return { ...result, reason: DAY_UNAVAILABLE[result.reason] ?? UNAVAILABLE_TOOL_MESSAGES[result.reason] };
       },
     });
     tools.bookAppointment = tool({
@@ -217,7 +248,8 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         const existing = await findCallerBooking(domain, { businessId, serviceName: input.serviceName, startsAt, contactPhone });
         if (existing) return existing;
         const opening = await checkOpening(domain, { businessId, serviceName: input.serviceName, startsAt, timezone, ...(context.callId ? { callId: context.callId } : {}) });
-        if (!opening.ok || !opening.available) return { ok: false, reason: "That time is no longer available. Offer another opening." };
+        if (!opening.ok) return { ok: false, reason: `${opening.reason} Check the service name with getBusinessServices.` };
+        if (!opening.available) return { ok: false, reason: UNAVAILABLE_TOOL_MESSAGES[isReason(opening.reason) ? opening.reason : "taken"] };
         const textable = canTextNumber(snapshot.contactChannels?.smsNumber, contactPhone);
         const booked = await bookForCaller(domain, {
           businessId,
@@ -230,8 +262,10 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
           ...(input.contactName ? { contactName: input.contactName } : {}),
           ...(context.callId ? { callId: context.callId } : {}),
         });
+        // Another booking can take the time between the check and the booking.
+        if (!booked.ok) return "unavailableReason" in booked && isReason(booked.unavailableReason) ? { ok: false, reason: UNAVAILABLE_TOOL_MESSAGES[booked.unavailableReason] } : booked;
         // The caller agreed to a text this business can't send them.
-        return booked.ok && input.smsConsentGranted && !textable
+        return input.smsConsentGranted && !textable
           ? { ...booked, textConfirmation: "This business can't text that number. Tell the caller they won't get a text confirmation." }
           : booked;
       },
@@ -313,7 +347,10 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       tools.rescheduleAppointment = tool({
         description: "Move the verified appointment to a new time that findAvailability returned. Only after the caller explicitly confirms the new time.",
         inputSchema: z.object({ appointmentId: z.string(), verificationId: z.string(), startsAt: z.string(), finalConfirmation: z.boolean() }),
-        execute: async (input) => await rescheduleForCaller(domain, { businessId, callerPhone, ...input }),
+        execute: async (input) => {
+          const result = await rescheduleForCaller(domain, { businessId, callerPhone, ...input });
+          return !result.ok && "unavailableReason" in result && isReason(result.unavailableReason) ? { ok: false, reason: UNAVAILABLE_TOOL_MESSAGES[result.unavailableReason] } : result;
+        },
       });
     }
   }

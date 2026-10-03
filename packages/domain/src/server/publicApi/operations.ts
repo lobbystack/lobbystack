@@ -29,7 +29,7 @@ import { bookAppointment, cancelAppointmentInTransaction, findAvailability, resc
 import { replaceBusinessHoursInTransaction } from "../catalog";
 import type { DomainContext } from "../context";
 import { createKnowledgeSnippetInTransaction } from "../knowledge";
-import { bookingFailureReason, candidateStartTimes } from "../receptionistActions";
+import { bookingFailureReason, candidateStartTimes, unavailableReasonOf } from "../receptionistActions";
 import { updateBusinessInTransaction } from "../tenancy";
 import { conflict, invalidRequest, notFound, PublicApiError } from "./errors";
 import {
@@ -276,7 +276,8 @@ function assertInstantBooking(bookingMode: "instant" | "request" | "off"): void 
 function bookingError(error: unknown): never {
   if (error instanceof PublicApiError) throw error;
   const reason = bookingFailureReason(error);
-  if (reason === "slot_unavailable" || reason === "no_staff_available") throw new PublicApiError(409, "slot_unavailable", "That time is not available. Pick another time from GET /availability.");
+  if (unavailableReasonOf(error) === "no_hours") throw new PublicApiError(409, "slot_unavailable", "The business has no opening hours, so no time is available. Set hours with PATCH /business first.");
+  if (unavailableReasonOf(error) || reason === "no_staff_available") throw new PublicApiError(409, "slot_unavailable", "That time is not available. Pick another time from GET /availability.");
   if (reason === "service_unavailable") throw invalidRequest("service_id is not an active service.", [{ path: "service_id", message: "Not an active service." }]);
   if (reason === "invalid_request") throw invalidRequest(error instanceof Error ? error.message : "The request is invalid.");
   throw error;

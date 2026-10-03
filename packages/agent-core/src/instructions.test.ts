@@ -151,3 +151,27 @@ describe("buildAgentInstructions", () => {
     expect(abroad).not.toContain("Can I text this number");
   });
 });
+
+describe("instant booking without opening hours", () => {
+  const noHours = { ...demoSnapshot, bookingMode: "instant" as const, hours: [] };
+
+  it("tells the agent it can't book and to take the request as a message", () => {
+    const instructions = buildAgentInstructions(noHours, "voice", { callerPhone: "+14165550100" });
+    expect(instructions).toContain("The business hasn't set its opening hours yet, so you can't book appointments.");
+    expect(instructions).toContain("take a message with their name, number, the service and their preferred time");
+    expect(buildAgentInstructions(demoSnapshot, "voice")).not.toContain("hasn't set its opening hours");
+    expect(buildAgentInstructions(demoSnapshot, "voice")).toContain("Say a time is taken only when the tool says it's already booked.");
+  });
+
+  it("tells GPT-Live the backend takes appointment requests instead of booking", () => {
+    const instructions = buildLiveInstructions(noHours, callStart);
+    expect(instructions).toContain("the business hasn't set opening hours, so the backend can't book");
+    expect(instructions).not.toContain("- Appointments: check open times and book appointments.");
+    expect(buildLiveInstructions(demoSnapshot, callStart)).toContain("- Appointments: check open times and book appointments.");
+  });
+
+  it("leaves request mode and demos alone", () => {
+    expect(buildAgentInstructions({ ...noHours, bookingMode: "request" }, "voice")).not.toContain("hasn't set its opening hours");
+    expect(buildAgentInstructions(noHours, "voice", { intakeOnly: true })).not.toContain("hasn't set its opening hours");
+  });
+});

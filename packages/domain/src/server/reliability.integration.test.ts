@@ -15,6 +15,8 @@ import { EXPIRED_UPLOAD_STATUS, deleteExpiredObjectsForBusiness, persistCallReco
 import { completeCall, upsertTranscript } from "./voice";
 import { chunkText, indexDocumentText } from "./knowledge";
 import { loadBusinessSummaryInput, saveGeneratedBusinessSummary } from "./businessSummary";
+import { loadBusinessHoursInput, markBusinessHoursChecked, saveGeneratedBusinessHours } from "./businessHours";
+import { replaceBusinessHoursInTransaction } from "./catalog";
 import { claimNotificationDelivery, releaseNotificationDelivery, rescheduleAppointmentReminderInTransaction } from "./notifications";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -281,6 +283,46 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
       await withBusinessTransaction(db, { businessId, actorType: "worker" }, async (workerTx) => {
         const [profile] = await workerTx.select({ summary: receptionistProfiles.summary }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId));
         expect(profile?.summary).toBe("Written by the owner.");
+      });
+    });
+  });
+
+  it("fills opening hours from the knowledge under worker RLS and never replaces hours a person set", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = randomUUID();
+      await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Salon Lepota", timezone: "Europe/Belgrade", businessType: "salon", deploymentMode: "cloud" });
+      const [contact, pricing] = [randomUUID(), randomUUID()];
+      await tx.insert(knowledgeDocuments).values([
+        { id: contact, businessId, sourceType: "website", title: "Kontakt", status: "indexed" },
+        { id: pricing, businessId, sourceType: "website", title: "Cenovnik", status: "indexed" },
+      ]);
+      await tx.insert(knowledgeChunks).values([
+        { businessId, documentId: contact, sequence: 0, content: "Dobrodošli u Salon Lepota.", contentHash: "a" },
+        { businessId, documentId: contact, sequence: 3, content: "Radno vreme: Pon-Pet 09-12h i 13-20h, Sub 09-15h.", contentHash: "b" },
+        { businessId, documentId: pricing, sequence: 0, content: "Šišanje 1200, farbanje 4500.", contentHash: "c" },
+      ]);
+      await tx.execute(sql`set local role lobbystack_worker`);
+      const db = tx as unknown as Database;
+
+      const input = await loadBusinessHoursInput({ db }, { businessId });
+      expect(input).toMatchObject({ businessName: "Salon Lepota", hoursSource: "none", existingWindows: 0, currentFingerprint: null });
+      expect(input?.sources).toEqual([{ title: "Kontakt", text: "Radno vreme: Pon-Pet 09-12h i 13-20h, Sub 09-15h." }]);
+
+      // A split day saves as two rows on the same weekday.
+      const generated = [1, 2, 3, 4, 5].flatMap((dayOfWeek) => [{ dayOfWeek, openMinutes: 540, closeMinutes: 720 }, { dayOfWeek, openMinutes: 780, closeMinutes: 1200 }]);
+      expect(await saveGeneratedBusinessHours({ db }, { businessId, hours: generated, fingerprint: input!.fingerprint })).toBe(true);
+      expect(await loadBusinessHoursInput({ db }, { businessId })).toMatchObject({ hoursSource: "generated", existingWindows: 10, currentFingerprint: input!.fingerprint });
+
+      await withBusinessTransaction(db, { businessId, actorType: "worker" }, async (workerTx) => {
+        await replaceBusinessHoursInTransaction(workerTx, { businessId, hours: [{ dayOfWeek: 1, openMinutes: 600, closeMinutes: 1080 }] });
+      });
+      expect(await saveGeneratedBusinessHours({ db }, { businessId, hours: generated, fingerprint: "other" })).toBe(false);
+      await markBusinessHoursChecked({ db }, { businessId, fingerprint: "other" });
+      await withBusinessTransaction(db, { businessId, actorType: "worker" }, async (workerTx) => {
+        const rows = await workerTx.select({ dayOfWeek: businessHours.dayOfWeek, openMinutes: businessHours.openMinutes }).from(businessHours).where(eq(businessHours.businessId, businessId));
+        expect(rows).toEqual([{ dayOfWeek: 1, openMinutes: 600 }]);
+        const [business] = await workerTx.select({ hoursSource: businesses.hoursSource, hoursFingerprint: businesses.hoursFingerprint }).from(businesses).where(eq(businesses.id, businessId));
+        expect(business).toEqual({ hoursSource: "operator", hoursFingerprint: input!.fingerprint });
       });
     });
   });

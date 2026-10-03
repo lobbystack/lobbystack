@@ -49,7 +49,7 @@ export const apiHoursWindowSchema = z.object({
   day: z.enum(weekdays),
   open: clock,
   close: clock,
-}).describe("Opening hours for one day. Days that are not listed are closed.");
+}).describe("One opening window on one day. A day with a break, such as lunch, has two windows. Days that are not listed are closed.");
 
 export const apiMeSchema = z.object({
   api_key: z.object({
@@ -79,7 +79,7 @@ export const apiBusinessUpdateSchema = z.strictObject({
   timezone: z.string().trim().min(1).max(80).optional(),
   locale: locale.optional(),
   website_url: z.url().max(2_000).nullable().optional(),
-  hours: z.array(apiHoursWindowSchema).max(7).optional().describe("Replaces the whole week. Omit a day to close it."),
+  hours: z.array(apiHoursWindowSchema).max(28).optional().describe("Replaces the whole week. Omit a day to close it. Send two windows for a day with a break. Windows on the same day can't overlap."),
 });
 
 export const apiServiceSchema = z.object({

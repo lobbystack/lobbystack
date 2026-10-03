@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
 import { useTelemetry } from "@/components/product-analytics";
+import { BookingWithoutHoursAlert, BusinessHoursSection, needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
 
 type AgentBasicSettingsPageProps = {
   businessId: string;
@@ -84,6 +85,7 @@ export function AgentBasicSettingsPage({
     enabled: Boolean(businessId),
   });
   const configuration = query.data;
+  const hours = useBusinessHours(businessId);
   const isLoadingConfiguration = !businessId || query.isLoading;
   async function saveProfile({ defaultLocale: locale, ...patch }: { businessId: string; defaultLocale?: RuntimeLocale; greeting?: string; summary?: string; regenerateSummary?: true; transferNumber?: string | null; transferMode?: string; appointmentChangePolicy?: AppointmentChangePolicy; bookingMode?: BookingMode }) {
     await requestJson(`/api/agent?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", body: JSON.stringify({ ...patch, ...(locale ? { locale } : {}) }) });
@@ -591,7 +593,10 @@ export function AgentBasicSettingsPage({
               </ItemActions>
             </Item>
           </Surface>
+          {!isLoadingConfiguration && hours.data && needsHoursForBooking({ ...hours.data, bookingMode }) ? <BookingWithoutHoursAlert /> : null}
         </section>
+
+        <BusinessHoursSection businessId={businessId} canManage={canManageTenant} />
 
         <section className="flex flex-col gap-3">
           <h2 className="font-heading text-sm leading-snug font-medium">

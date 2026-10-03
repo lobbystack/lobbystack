@@ -42,6 +42,59 @@ function overlaps(
   return candidateStart < existingEnd && existingStart < candidateEnd;
 }
 
+/**
+ * Why a time can't be booked, so the receptionist can tell a caller the truth
+ * instead of calling every refused time taken.
+ *   no_hours: the business has no opening hours at all
+ *   closed_day: the business is closed on that weekday
+ *   outside_hours: the business is open that day, but not for the whole service
+ *   closure: a planned closure covers the time
+ *   no_staff: no active staff member offers the service
+ *   calendar_not_synced: a connected calendar hasn't synced recently, so its busy time is unknown
+ *   taken: the time is already booked, or busy on the calendar
+ */
+export type UnavailableReason = "no_hours" | "closed_day" | "outside_hours" | "closure" | "no_staff" | "calendar_not_synced" | "taken";
+
+/**
+ * A booking or reschedule refused because the time isn't bookable. The
+ * message is the one these refusals always had; `reason` says why.
+ */
+export class BookingUnavailableError extends Error {
+  readonly reason: UnavailableReason;
+
+  constructor(reason: UnavailableReason, message = reason === "taken" ? "That appointment time is no longer available." : "No staff member is available for this service.") {
+    super(message);
+    this.name = "BookingUnavailableError";
+    this.reason = reason;
+  }
+}
+
+/**
+ * The opening-hours or closure reason a time can't be booked, or undefined
+ * when hours and closures allow it. Uses the same rules as computeAvailability.
+ */
+export function scheduleUnavailableReason(input: {
+  startsAt: string;
+  timezone: string;
+  serviceDurationMinutes: number;
+  hours: Array<HoursWindow>;
+  closures: Array<ClosureWindow>;
+}): "no_hours" | "closed_day" | "outside_hours" | "closure" | undefined {
+  if (!input.hours.length) return "no_hours";
+  const startUtc = isoToDateTime(input.startsAt);
+  const endUtc = startUtc.plus({ minutes: input.serviceDurationMinutes });
+  const startLocal = startUtc.setZone(input.timezone);
+  const endLocal = endUtc.setZone(input.timezone);
+  const windows = input.hours.filter((window) => window.dayOfWeek === weekdayToSnapshotDay(startLocal.weekday));
+  if (!windows.length) return "closed_day";
+  const startMinutes = startLocal.hour * 60 + startLocal.minute;
+  const endMinutes = endLocal.hour * 60 + endLocal.minute;
+  const endsSameLocalDay = endLocal.hasSame(startLocal, "day");
+  if (!windows.some((window) => startMinutes >= window.openMinutes && endsSameLocalDay && endMinutes <= window.closeMinutes)) return "outside_hours";
+  if (input.closures.some((closure) => overlaps(startUtc.toJSDate(), endUtc.toJSDate(), isoToDate(closure.startsAt), isoToDate(closure.endsAt)))) return "closure";
+  return undefined;
+}
+
 export function computeAvailability(input: AvailabilityInput): Array<AvailabilitySlot> {
   const requestedStartUtc = isoToDateTime(input.request.startsAt);
   const requestedEndUtc = requestedStartUtc.plus({

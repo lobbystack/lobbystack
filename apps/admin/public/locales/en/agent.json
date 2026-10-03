@@ -339,5 +339,24 @@
   "readOnly": "Viewer access is read-only.",
   "empty": {
     "description": "Create a business first, then return here to configure your AI receptionist."
+  },
+  "hours": {
+    "title": "Opening hours",
+    "description": "The agent offers appointments only inside these hours.",
+    "generated": "We filled these in from your website and documents. Check them.",
+    "empty": "Add your hours so the agent can book appointments.",
+    "closed": "Closed",
+    "openOn": "Open on {{day}}",
+    "opensAt": "{{day}} opening time",
+    "closesAt": "{{day}} closing time",
+    "addWindow": "Add hours",
+    "removeWindow": "Remove these hours",
+    "save": "Save hours",
+    "invalid": "Check {{day}}: each closing time must come after its opening time, with no overlaps.",
+    "noHoursAlert": {
+      "title": "Add opening hours to book appointments",
+      "description": "The agent offers times only inside your opening hours. Until you add them, it takes a message instead.",
+      "action": "Add opening hours"
+    }
   }
 }

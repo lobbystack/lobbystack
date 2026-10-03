@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
+import { BookingWithoutHoursAlert, needsHoursForBooking, useBusinessHours } from "./business-hours-section";
 
 type StepId = "fullScan" | "sources" | "testCall" | "phoneNumber";
 type Business = { businessId: string; active: boolean; role: string };
@@ -53,6 +54,8 @@ export function LiveSetupGuideSurface() {
     queryFn: () => getJson<Billing>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`),
     enabled: canManage,
   });
+  // Instant booking with no opening hours books nothing, so say so above the steps.
+  const hours = useBusinessHours(canManage ? business?.businessId ?? "" : "");
   const rawPlan = billing.data?.account?.plan;
   const plan: BillingPlanSlug = rawPlan === "self_hosted_standard" || rawPlan === "self_host" ? "self_host" : isPaidSubscription(rawPlan, billing.data?.account?.subscriptionState) ? rawPlan as BillingPlanSlug : "free_cloud";
   // A plan without an included number can't claim one, so the number page
@@ -80,6 +83,7 @@ export function LiveSetupGuideSurface() {
           {setup.isLoading ? <Skeleton className="h-6 w-72" /> : <div className="flex items-center gap-3 text-muted-foreground"><ProgressRing completed={completed} total={steps.length} /><p className="text-base">{t("sidebar.setupGuide.description", { completed, total: steps.length })}</p></div>}
           <Button disabled={skip.isPending} onClick={async () => { for (const step of steps.filter((item) => item.status === "needs setup")) await skip.mutateAsync(step.id); router.push("/"); }} type="button" variant="outline">{t("sidebar.setupGuide.skip")}</Button>
         </div>
+        {needsHoursForBooking(hours.data) ? <BookingWithoutHoursAlert /> : null}
         <Surface>
           {setup.isLoading ? order.map((id) => <Skeleton className="m-3 h-16 rounded-xl" key={id} />) : (
             <Accordion onValueChange={(value) => { const next = value[0] as StepId | undefined; if (next && steps.find((step) => step.id === next)?.status === "needs setup") setOpenStep(next); }} value={[openStep]}>

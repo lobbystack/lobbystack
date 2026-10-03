@@ -339,5 +339,24 @@
   "readOnly": "L’accès lecteur est en lecture seule.",
   "empty": {
     "description": "Créez d'abord une entreprise, puis revenez ici pour configurer votre réceptionniste IA."
+  },
+  "hours": {
+    "title": "Heures d'ouverture",
+    "description": "L'agent propose des rendez-vous seulement pendant ces heures.",
+    "generated": "Nous avons rempli ces heures à partir de votre site web et de vos documents. Vérifiez-les.",
+    "empty": "Ajoutez vos heures pour que l'agent puisse réserver des rendez-vous.",
+    "closed": "Fermé",
+    "openOn": "Ouvert le {{day}}",
+    "opensAt": "Heure d'ouverture du {{day}}",
+    "closesAt": "Heure de fermeture du {{day}}",
+    "addWindow": "Ajouter des heures",
+    "removeWindow": "Retirer ces heures",
+    "save": "Enregistrer les heures",
+    "invalid": "Vérifiez le {{day}} : chaque fermeture doit suivre son ouverture, sans chevauchement.",
+    "noHoursAlert": {
+      "title": "Ajoutez vos heures d'ouverture pour réserver des rendez-vous",
+      "description": "L'agent propose des créneaux seulement pendant vos heures d'ouverture. En attendant, il prend un message.",
+      "action": "Ajouter les heures d'ouverture"
+    }
   }
 }

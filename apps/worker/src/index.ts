@@ -1,5 +1,5 @@
 import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
-import { createBusinessSummarizer, createCallSummarizer } from "@lobbystack/agent-core";
+import { createBusinessHoursExtractor, createBusinessSummarizer, createCallSummarizer } from "@lobbystack/agent-core";
 import { assertProductionSecrets } from "@lobbystack/config";
 import type { OnboardingFollowupSender } from "@lobbystack/domain";
 import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, isKnownJobType, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
@@ -13,6 +13,7 @@ import { TwilioProvider } from "@lobbystack/providers/twilio/twilioProvider";
 import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withSpan } from "@lobbystack/telemetry/node";
 import { redactJobError } from "./redactJobError";
 import { Worker } from "bullmq";
+import { eq } from "drizzle-orm";
 
 import { handleJob, type WorkerDependencies } from "./handlers";
 import { startHealthServer } from "./health";
@@ -164,6 +165,23 @@ async function main(): Promise<void> {
       });
     }
   }
+  // Nothing filled opening hours before, so most businesses have none and
+  // instant booking found every time unavailable. Read each one's knowledge
+  // for its hours once. A later restart queues the job again; it skips hours
+  // a person set and passages it already read, so only the first run calls
+  // the model, and only for businesses whose knowledge mentions times.
+  const businessHoursExtractor = createBusinessHoursExtractor();
+  if (businessHoursExtractor && summaryQueue) {
+    const hoursBusinesses = await withDispatcherTransaction(dispatcherDatabase.db, async (tx) => await tx.select({ id: businesses.id }).from(businesses).where(eq(businesses.hoursSource, "none")));
+    for (const business of hoursBusinesses) {
+      await enqueueJob(summaryQueue, {
+        type: "business.extractHours",
+        businessId: business.id,
+        payload: { businessId: business.id, reason: "backfill" },
+        idempotencyKey: `business-hours-backfill:${business.id}:v1`,
+      });
+    }
+  }
   if (embeddings) {
     const embeddingQueue = queues.get("bulk");
     if (embeddingQueue) {
@@ -188,6 +206,7 @@ async function main(): Promise<void> {
     ...(productAnalytics ? { productAnalytics } : {}),
     ...(callSummarizer ? { callSummarizer } : {}),
     ...(businessSummarizer ? { businessSummarizer } : {}),
+    ...(businessHoursExtractor ? { businessHoursExtractor } : {}),
     ...(email ? { email } : {}),
     ...(onboardingFollowupSender ? { onboardingFollowupSender } : {}),
     ...(embeddings ? { embeddings } : {}),

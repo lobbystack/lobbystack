@@ -1,9 +1,11 @@
 import { and, asc, count, eq, ilike, inArray } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { agentRules, businessHours, closures, phoneNumbers, receptionistProfiles, services, staff, staffServiceAssignments } from "@lobbystack/db";
+import { agentRules, businesses, businessHours, closures, phoneNumbers, receptionistProfiles, services, staff, staffServiceAssignments } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
+import { normalizeHoursWindows } from "../hours";
+import { writeBusinessHoursInTransaction } from "./businessHours";
 import type { DomainContext } from "./context";
 
 export async function listCatalog(
@@ -15,7 +17,7 @@ export async function listCatalog(
     const [staffRows, serviceRows, hoursRows, closureRows, numberRows, profileRows, ruleRows] = await Promise.all([
       tx.select().from(staff).where(eq(staff.businessId, input.businessId)).orderBy(asc(staff.name)),
       tx.select().from(services).where(and(eq(services.businessId, input.businessId), ...(input.search?.trim() ? [ilike(services.name, `%${input.search.trim()}%`)] : []))).orderBy(asc(services.name)).limit(Math.min(Math.max(Math.trunc(input.limit ?? 100), 1), 100) + 1).offset(Math.max(Math.trunc(input.offset ?? 0), 0)),
-      tx.select().from(businessHours).where(eq(businessHours.businessId, input.businessId)).orderBy(asc(businessHours.dayOfWeek)),
+      tx.select().from(businessHours).where(eq(businessHours.businessId, input.businessId)).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes)),
       tx.select().from(closures).where(eq(closures.businessId, input.businessId)).orderBy(asc(closures.startsAt)),
       tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(asc(phoneNumbers.e164)),
       tx.select().from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1),
@@ -121,47 +123,18 @@ export async function unassignStaffFromService(
 }
 
 /**
- * Replaces the weekly hours: one window per listed day, other days closed.
- * Refreshes the receptionist snapshot. Callers authorize first.
+ * Replaces the weekly hours a person set, in the dashboard or the API: the
+ * listed windows, other days closed. A day can have several windows. Marks
+ * the hours as the operator's, so AI never replaces them, and refreshes the
+ * receptionist snapshot. Callers authorize first.
  */
 export async function replaceBusinessHoursInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; hours: Array<{ dayOfWeek: number; openMinutes: number; closeMinutes: number }> },
 ): Promise<void> {
-  const days = new Set<number>();
-  for (const window of input.hours) {
-    if (!Number.isInteger(window.dayOfWeek) || window.dayOfWeek < 0 || window.dayOfWeek > 6) throw new Error("Each day must be a weekday.");
-    if (days.has(window.dayOfWeek)) throw new Error("Each day can have one opening window.");
-    if (!Number.isInteger(window.openMinutes) || !Number.isInteger(window.closeMinutes) || window.openMinutes < 0 || window.closeMinutes > 1440 || window.closeMinutes <= window.openMinutes) throw new Error("Closing time must be after opening time.");
-    days.add(window.dayOfWeek);
-  }
-  await tx.delete(businessHours).where(eq(businessHours.businessId, input.businessId));
-  if (input.hours.length) await tx.insert(businessHours).values(input.hours.map((window) => ({ businessId: input.businessId, ...window })));
-  await enqueueOutbox(tx, {
-    topic: "snapshot.refresh",
-    businessId: input.businessId,
-    aggregateType: "business_hours",
-    dedupeKey: `hours:${input.businessId}:replace:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`,
-    payload: { businessId: input.businessId, reason: "hours_updated" },
-  });
-}
-
-export async function saveHours(
-  context: DomainContext,
-  input: { userId: string; businessId: string; dayOfWeek: number; openMinutes: number; closeMinutes: number },
-): Promise<void> {
-  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
-    await requireBusinessAdmin(tx, input);
-    await tx.insert(businessHours).values(input).onConflictDoUpdate({
-      target: [businessHours.businessId, businessHours.dayOfWeek],
-      set: { openMinutes: input.openMinutes, closeMinutes: input.closeMinutes, updatedAt: new Date() },
-    });
-    await enqueueOutbox(tx, {
-      topic: "snapshot.refresh",
-      businessId: input.businessId,
-      aggregateType: "business_hours",
-      dedupeKey: `hours:${input.businessId}:${input.dayOfWeek}:${Date.now()}`,
-      payload: { businessId: input.businessId, reason: "hours_updated" },
-    });
-  });
+  const hours = normalizeHoursWindows(input.hours);
+  // Updating the business row first locks it, so this write and the worker's
+  // generated hours (which lock the same row) can't interleave.
+  await tx.update(businesses).set({ hoursSource: "operator", updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
+  await writeBusinessHoursInTransaction(tx, { businessId: input.businessId, hours, reason: "hours_updated" });
 }

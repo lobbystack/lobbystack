@@ -339,5 +339,24 @@
   "readOnly": "Uz pristup za pregled možete samo da čitate.",
   "empty": {
     "description": "Prvo napravite firmu, pa se vratite ovde da podesite AI recepcionera."
+  },
+  "hours": {
+    "title": "Radno vreme",
+    "description": "Agent nudi termine samo u ovom radnom vremenu.",
+    "generated": "Popunili smo radno vreme na osnovu Vašeg veb-sajta i dokumenata. Proverite ga.",
+    "empty": "Dodajte radno vreme da bi agent mogao da zakazuje termine.",
+    "closed": "Zatvoreno",
+    "openOn": "Otvoreno: {{day}}",
+    "opensAt": "Vreme otvaranja: {{day}}",
+    "closesAt": "Vreme zatvaranja: {{day}}",
+    "addWindow": "Dodaj vreme",
+    "removeWindow": "Ukloni ovo vreme",
+    "save": "Sačuvaj radno vreme",
+    "invalid": "Proverite dan {{day}}: svako zatvaranje mora biti posle otvaranja, bez preklapanja.",
+    "noHoursAlert": {
+      "title": "Dodajte radno vreme da biste zakazivali termine",
+      "description": "Agent nudi termine samo u Vašem radnom vremenu. Dok ga ne dodate, prima poruku umesto toga.",
+      "action": "Dodaj radno vreme"
+    }
   }
 }

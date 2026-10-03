@@ -3436,7 +3436,7 @@
           "hours": {
             "type": "array",
             "items": {
-              "description": "Opening hours for one day. Days that are not listed are closed.",
+              "description": "One opening window on one day. A day with a break, such as lunch, has two windows. Days that are not listed are closed.",
               "type": "object",
               "properties": {
                 "day": {
@@ -3527,11 +3527,11 @@
             ]
           },
           "hours": {
-            "description": "Replaces the whole week. Omit a day to close it.",
-            "maxItems": 7,
+            "description": "Replaces the whole week. Omit a day to close it. Send two windows for a day with a break. Windows on the same day can't overlap.",
+            "maxItems": 28,
             "type": "array",
             "items": {
-              "description": "Opening hours for one day. Days that are not listed are closed.",
+              "description": "One opening window on one day. A day with a break, such as lunch, has two windows. Days that are not listed are closed.",
               "type": "object",
               "properties": {
                 "day": {

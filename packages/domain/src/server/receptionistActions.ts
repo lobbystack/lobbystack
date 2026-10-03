@@ -5,8 +5,9 @@ import { appointments, contacts, receptionistProfiles, services, withBusinessTra
 import { normalizeAppointmentChangePolicy, type HoursWindow } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
+import { BookingUnavailableError, type UnavailableReason } from "../availability";
 import { createAppointmentChangeVerification } from "./appointmentChanges";
-import { bookAppointment, cancelAppointmentForCaller, findAvailability, rescheduleAppointmentForCaller } from "./booking";
+import { bookAppointment, cancelAppointmentForCaller, checkAvailability, findAvailability, rescheduleAppointmentForCaller } from "./booking";
 import { recordCallSchedulingProgress } from "./callOutcome";
 import type { DomainContext } from "./context";
 import { appendMessage, getOrCreateConversation } from "./conversations";
@@ -34,7 +35,31 @@ async function safeRecordProductEvent(context: DomainContext, input: Parameters<
   }
 }
 
+/** The reason a refused booking or reschedule wasn't bookable, when it was refused for that. */
+export function unavailableReasonOf(error: unknown): UnavailableReason | undefined {
+  if (error instanceof BookingUnavailableError) return error.reason;
+  const message = error instanceof Error ? error.message : "";
+  return message.includes("no longer available") ? "taken" : undefined;
+}
+
+/**
+ * Plain facts for the agent: why a time can't be booked. The agent tools add
+ * what to do next.
+ */
+export const UNAVAILABLE_REASON_TEXT: Record<UnavailableReason, string> = {
+  no_hours: "The business hasn't set its opening hours, so no time can be booked.",
+  closed_day: "The business is closed that day.",
+  outside_hours: "That time is outside the business's opening hours.",
+  closure: "The business is closed then for a planned closure.",
+  no_staff: "No staff member offers this service.",
+  calendar_not_synced: "The business's calendar hasn't synced recently, so the time can't be confirmed.",
+  taken: "That time is no longer available.",
+};
+
 export function bookingFailureReason(error: unknown): string {
+  // Telemetry keeps its earlier names for taken and no-staff refusals.
+  const unavailable = error instanceof BookingUnavailableError ? error.reason : undefined;
+  if (unavailable) return unavailable === "taken" ? "slot_unavailable" : unavailable === "no_staff" ? "no_staff_available" : unavailable;
   const message = error instanceof Error ? error.message : "";
   if (message.includes("Service is not available")) return "service_unavailable";
   if (message.includes("No staff member is available")) return "no_staff_available";
@@ -92,6 +117,7 @@ export async function findOpenings(
     const available = await Promise.all(batch.map(async (startsAt) => (await findAvailability(context, { businessId: input.businessId, serviceId: service.id, startsAt, timezone: input.timezone })).length > 0));
     for (const [position, startsAt] of batch.entries()) if (available[position] && openings.length < limit) openings.push(startsAt);
   }
+  const reason = openings.length ? undefined : await noOpeningsReason(context, { businessId: input.businessId, serviceId: service.id, date: input.date, timezone: input.timezone, hours: input.hours, firstCandidate: candidates[0] });
   if (input.callId) await recordCallSchedulingProgress(context, { businessId: input.businessId, callId: input.callId, serviceName: service.name });
   return {
     ok: true as const,
@@ -99,7 +125,21 @@ export async function findOpenings(
     date: input.date,
     timezone: input.timezone,
     openings: openings.sort().map((startsAt) => ({ startsAt, displayTime: DateTime.fromISO(startsAt).setZone(input.timezone).toFormat("cccc LLL d, h:mm a") })),
+    ...(reason ? { reason } : {}),
   };
+}
+
+/** Why a day has no openings. "no_times_left" means every start time that day has passed. */
+export type NoOpeningsReason = UnavailableReason | "no_times_left";
+
+async function noOpeningsReason(context: DomainContext, input: { businessId: string; serviceId: string; date: string; timezone: string; hours: HoursWindow[]; firstCandidate: string | undefined }): Promise<NoOpeningsReason> {
+  if (!input.hours.length) return "no_hours";
+  const day = DateTime.fromISO(`${input.date}T00:00:00`, { zone: input.timezone });
+  if (day.isValid && !input.hours.some((window) => window.dayOfWeek === day.weekday % 7)) return "closed_day";
+  if (!input.firstCandidate) return "no_times_left";
+  // Staff, calendar and closure reasons hold for the whole day, so the time
+  // nearest the caller's preference explains it. When it's taken, so is the day.
+  return (await checkAvailability(context, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.firstCandidate, timezone: input.timezone })).reason ?? "taken";
 }
 
 export async function checkOpening(
@@ -108,9 +148,11 @@ export async function checkOpening(
 ) {
   const service = await resolveActiveService(context, input.businessId, input.serviceName);
   if (!service) return { ok: false as const, reason: "Service is not available." };
-  const slots = await findAvailability(context, { businessId: input.businessId, serviceId: service.id, startsAt: input.startsAt, timezone: input.timezone });
+  const { slots, reason } = await checkAvailability(context, { businessId: input.businessId, serviceId: service.id, startsAt: input.startsAt, timezone: input.timezone });
   if (input.callId) await recordCallSchedulingProgress(context, { businessId: input.businessId, callId: input.callId, serviceName: service.name, startsAt: input.startsAt });
-  return { ok: true as const, serviceName: service.name, available: slots.length > 0 };
+  return slots.length
+    ? { ok: true as const, serviceName: service.name, available: true as const }
+    : { ok: true as const, serviceName: service.name, available: false as const, reason: reason ?? "taken" };
 }
 
 /**
@@ -167,7 +209,10 @@ export async function bookForCaller(
   } catch (error) {
     const reason = bookingFailureReason(error);
     await safeRecordProductEvent(context, { name: "appointment.booking_failed", businessId: input.businessId, distinctId, properties: { reason, serviceId: service.id, requestedServiceName: input.serviceName, channel: input.channel, sourceChannel: input.channel } });
-    return { ok: false as const, reason: reason === "slot_unavailable" ? "That time is no longer available." : "The booking could not be completed." };
+    const unavailable = unavailableReasonOf(error);
+    return unavailable
+      ? { ok: false as const, reason: UNAVAILABLE_REASON_TEXT[unavailable], unavailableReason: unavailable }
+      : { ok: false as const, reason: "The booking could not be completed." };
   }
 }
 
@@ -211,7 +256,15 @@ export async function rescheduleForCaller(
 ) {
   if (!input.finalConfirmation) return { ok: false as const, reason: "Final confirmation is required." };
   if (!input.verificationId) return { ok: false as const, reason: "The appointment change verification is required." };
-  const result = await rescheduleAppointmentForCaller(context, { businessId: input.businessId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, startsAt: input.startsAt, verificationId: input.verificationId });
+  let result: Awaited<ReturnType<typeof rescheduleAppointmentForCaller>>;
+  try {
+    result = await rescheduleAppointmentForCaller(context, { businessId: input.businessId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, startsAt: input.startsAt, verificationId: input.verificationId });
+  } catch (error) {
+    // The new time isn't bookable: say why, and keep the verification for another try.
+    const unavailable = unavailableReasonOf(error);
+    if (!unavailable) throw error;
+    return { ok: false as const, reason: UNAVAILABLE_REASON_TEXT[unavailable], unavailableReason: unavailable };
+  }
   if (!result) return { ok: false as const, reason: "The appointment could not be verified." };
   return { ok: true as const, appointmentId: input.appointmentId, startsAt: result.startsAt.toISOString(), status: "confirmed" };
 }

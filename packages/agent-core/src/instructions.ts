@@ -24,6 +24,10 @@ const BOOKING_GUIDANCE: Record<BookingMode, string> = {
   off: "You don't book appointments. If the caller wants one, take a message so the team can follow up.",
 };
 
+// Instant booking only offers times inside the opening hours, so without them
+// nothing is bookable.
+const NO_HOURS_GUIDANCE = "The business hasn't set its opening hours yet, so you can't book appointments. Don't offer times or say a time is taken. When a caller wants an appointment, take a message with their name, number, the service and their preferred time so the team can book it.";
+
 // Instructions for the text agent that does the work. On voice it runs behind
 // GPT-Live, so its reply is spoken to the caller by the live model.
 export function buildAgentInstructions(snapshot: BusinessContextSnapshot, channel: AgentChannel, options: { intakeOnly?: boolean; callerPhone?: string } = {}): string {
@@ -44,6 +48,11 @@ export function buildAgentInstructions(snapshot: BusinessContextSnapshot, channe
     options.intakeOnly
       ? "This is a demo of the receptionist. Answer questions and take messages only. Don't book or check appointments, don't transfer the call, and don't promise texts or emails."
       : BOOKING_GUIDANCE[bookingMode],
+    !options.intakeOnly && bookingMode === "instant"
+      ? snapshot.hours.length
+        ? "When a booking tool says a time isn't available, tell the caller the reason it gives. Say a time is taken only when the tool says it's already booked."
+        : NO_HOURS_GUIDANCE
+      : "",
     channel === "voice" && bookingMode === "instant" && !options.intakeOnly
       ? canTextNumber(snapshot.contactChannels?.smsNumber, options.callerPhone)
         ? "On a phone call, ask together with the time you offer: \"Can I text this number with your appointment confirmation and a reminder?\" Pass their answer as smsConsentGranted."
@@ -129,7 +138,9 @@ function backendCapabilities(snapshot: BusinessContextSnapshot): string[] {
   const bookingMode = normalizeBookingMode(snapshot.bookingMode);
   return [
     "- Knowledge: business facts not listed below, such as prices, policies, parking and what to bring.",
-    bookingMode === "instant" ? "- Appointments: check open times and book appointments." : "",
+    bookingMode === "instant" && snapshot.hours.length ? "- Appointments: check open times and book appointments." : "",
+    // Without opening hours nothing is bookable, so the backend takes the request as a message.
+    bookingMode === "instant" && !snapshot.hours.length ? "- Appointment requests: the business hasn't set opening hours, so the backend can't book. It takes the caller's preferred time as a message for the team." : "",
     bookingMode === "request" ? "- Appointment requests: pass a requested day and time to the team, who confirm it." : "",
     snapshot.appointmentChangePolicy?.enabled && bookingMode !== "off" ? "- Appointment changes: find, reschedule or cancel a caller's appointment." : "",
     "- Messages: take a message for the team.",

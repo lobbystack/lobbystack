@@ -5,6 +5,7 @@ export * from "./billing";
 export * from "./billingAccess";
 export * from "./analytics";
 export * from "./booking";
+export * from "./businessHours";
 export * from "./businessSummary";
 export * from "./calendar";
 export * from "./catalog";

@@ -130,6 +130,10 @@ export const businesses = pgTable(
     phoneNumberReplacementReservedAt: timestamp("phone_number_replacement_reserved_at", { withTimezone: true }),
     phoneNumberReplacementUsedAt: timestamp("phone_number_replacement_used_at", { withTimezone: true }),
     telemetryEnabled: boolean("telemetry_enabled").default(true).notNull(),
+    // Who set the opening hours: none yet, AI from the knowledge sources, or a person.
+    hoursSource: varchar("hours_source", { length: 16 }).$type<"none" | "generated" | "operator">().default("none").notNull(),
+    hoursFingerprint: varchar("hours_fingerprint", { length: 64 }),
+    hoursGeneratedAt: timestamp("hours_generated_at", { withTimezone: true }),
     ...legacyId,
     ...timestamps,
   },
@@ -263,7 +267,8 @@ export const businessHours = pgTable(
     closeMinutes: integer("close_minutes").notNull(),
     ...timestamps,
   },
-  (table) => [uniqueIndex("business_hours_business_day_unique").on(table.businessId, table.dayOfWeek)],
+  // A day can have several windows, such as a morning and an afternoon around a lunch break.
+  (table) => [uniqueIndex("business_hours_business_day_open_unique").on(table.businessId, table.dayOfWeek, table.openMinutes)],
 );
 
 export const closures = pgTable(
