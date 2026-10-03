@@ -10,8 +10,9 @@ import type { BookingMode, HoursWindow } from "@lobbystack/shared";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
+import { Item, ItemActions, ItemContent, ItemDescription } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
@@ -156,6 +157,12 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
   }
 
   const note = state?.hoursSource === "generated" ? t("hours.generated") : state && !state.hours.length ? t("hours.empty") : null;
+  const savedDays = useMemo(() => toDays(state?.hours ?? []), [state]);
+  function close() {
+    setEditing(false);
+    setError(null);
+    if (state) setDays(toDays(state.hours));
+  }
   return (
     <section className="flex scroll-mt-6 flex-col gap-3" id="opening-hours">
       <div className="flex flex-col gap-1">
@@ -163,58 +170,56 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
         <p className="text-sm text-muted-foreground">{t("hours.description")}</p>
       </div>
       {note ? <p className="text-sm text-muted-foreground" data-testid="hours-note">{note}</p> : null}
-      {!editing ? (
-        <Surface className="flex flex-col">
-          <Item variant="default">
-            <ItemContent>
-              {loading ? <Skeleton className="h-5 w-64 rounded-md" /> : <ItemDescription data-testid="hours-summary">{summarizeHours(days, shortDayNames) || t("hours.notSet")}</ItemDescription>}
-            </ItemContent>
-            <ItemActions>
-              <Button disabled={!canManage || loading} onClick={() => { setEditing(true); setStatus(null); }} size="sm" type="button" variant="outline">{t("hours.edit")}</Button>
-            </ItemActions>
-          </Item>
-        </Surface>
-      ) : <>
       <Surface className="flex flex-col">
-        {DAY_ORDER.map((dayOfWeek) => {
-          const windows = days[dayOfWeek] ?? [];
-          const day = dayNames[dayOfWeek] ?? "";
-          return (
-            <Item className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0" key={dayOfWeek} variant="default">
-              <ItemContent>
-                <ItemTitle>{day}</ItemTitle>
-                {loading ? <Skeleton className="h-9 w-48 rounded-md" /> : windows.length ? (
-                  <div className="flex flex-col gap-2 pt-1">
-                    {windows.map((window, index) => (
-                      <div className="flex items-center gap-2" key={index}>
-                        <Input aria-label={t("hours.opensAt", { day })} className="w-28" disabled={disabled} onChange={(event) => update(dayOfWeek, windows.map((item, position) => (position === index ? { ...item, open: event.target.value } : item)))} type="time" value={window.open} />
-                        <span aria-hidden="true" className="text-muted-foreground">–</span>
-                        <Input aria-label={t("hours.closesAt", { day })} className="w-28" disabled={disabled} onChange={(event) => update(dayOfWeek, windows.map((item, position) => (position === index ? { ...item, close: event.target.value } : item)))} type="time" value={window.close} />
-                        {windows.length > 1 ? <Button aria-label={t("hours.removeWindow")} disabled={disabled} onClick={() => update(dayOfWeek, windows.filter((_, position) => position !== index))} size="icon-sm" type="button" variant="ghost"><X /></Button> : null}
-                      </div>
-                    ))}
-                    {windows.length < MAX_WINDOWS_PER_DAY ? (
-                      <Button className="w-fit" disabled={disabled} onClick={() => update(dayOfWeek, [...windows, { open: windows.at(-1)?.close ?? "13:00", close: "17:00" }])} size="sm" type="button" variant="ghost"><Plus />{t("hours.addWindow")}</Button>
-                    ) : null}
-                  </div>
-                ) : <ItemDescription>{t("hours.closed")}</ItemDescription>}
-              </ItemContent>
-              <ItemActions className="self-start">
-                {loading ? <Skeleton className="h-5 w-8 rounded-full" /> : (
-                  <Switch aria-label={t("hours.openOn", { day })} checked={windows.length > 0} disabled={disabled} onCheckedChange={(checked) => update(dayOfWeek, checked ? [{ open: "09:00", close: "17:00" }] : [])} />
-                )}
-              </ItemActions>
-            </Item>
-          );
-        })}
+        <Item variant="default">
+          <ItemContent>
+            {loading ? <Skeleton className="h-5 w-64 rounded-md" /> : <ItemDescription data-testid="hours-summary">{summarizeHours(savedDays, shortDayNames) || t("hours.notSet")}</ItemDescription>}
+          </ItemContent>
+          <ItemActions>
+            {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}
+            <Button disabled={!canManage || loading} onClick={() => { setEditing(true); setStatus(null); }} size="sm" type="button" variant="outline">{t("hours.edit")}</Button>
+          </ItemActions>
+        </Item>
       </Surface>
-      <div className="flex items-center justify-end gap-3">
-        {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
-        <Button disabled={saving} onClick={() => { setEditing(false); setError(null); if (state) setDays(toDays(state.hours)); }} size="sm" type="button" variant="ghost">{t("hours.cancel")}</Button>
-        <Button disabled={disabled || loading} onClick={() => void save()} size="sm" type="button" variant="outline">{saving ? t("actions.saving") : t("hours.save")}</Button>
-      </div>
-      </>}
-      {!editing && status ? <p className="text-right text-sm text-muted-foreground">{status}</p> : null}
+      <Dialog onOpenChange={(open) => { if (!open && !saving) close(); }} open={editing}>
+        <DialogContent className="flex max-h-[85vh] flex-col gap-4 sm:max-w-lg">
+          <DialogHeader><DialogTitle>{t("hours.title")}</DialogTitle></DialogHeader>
+          <div className="-mx-1 flex flex-col overflow-y-auto px-1">
+            {DAY_ORDER.map((dayOfWeek) => {
+              const windows = days[dayOfWeek] ?? [];
+              const day = dayNames[dayOfWeek] ?? "";
+              return (
+                <div className="flex items-start justify-between gap-4 border-b border-border py-3 last:border-b-0" key={dayOfWeek}>
+                  <div className="flex min-w-0 flex-col gap-2">
+                    <span className="text-sm font-medium">{day}</span>
+                    {windows.length ? (
+                      <div className="flex flex-col gap-2">
+                        {windows.map((window, index) => (
+                          <div className="flex items-center gap-2" key={index}>
+                            <Input aria-label={t("hours.opensAt", { day })} className="w-28" disabled={disabled} onChange={(event) => update(dayOfWeek, windows.map((item, position) => (position === index ? { ...item, open: event.target.value } : item)))} type="time" value={window.open} />
+                            <span aria-hidden="true" className="text-muted-foreground">–</span>
+                            <Input aria-label={t("hours.closesAt", { day })} className="w-28" disabled={disabled} onChange={(event) => update(dayOfWeek, windows.map((item, position) => (position === index ? { ...item, close: event.target.value } : item)))} type="time" value={window.close} />
+                            {windows.length > 1 ? <Button aria-label={t("hours.removeWindow")} disabled={disabled} onClick={() => update(dayOfWeek, windows.filter((_, position) => position !== index))} size="icon-sm" type="button" variant="ghost"><X /></Button> : null}
+                          </div>
+                        ))}
+                        {windows.length < MAX_WINDOWS_PER_DAY ? (
+                          <Button className="w-fit" disabled={disabled} onClick={() => update(dayOfWeek, [...windows, { open: windows.at(-1)?.close ?? "13:00", close: "17:00" }])} size="sm" type="button" variant="ghost"><Plus />{t("hours.addWindow")}</Button>
+                        ) : null}
+                      </div>
+                    ) : <span className="text-sm text-muted-foreground">{t("hours.closed")}</span>}
+                  </div>
+                  <Switch aria-label={t("hours.openOn", { day })} checked={windows.length > 0} disabled={disabled} onCheckedChange={(checked) => update(dayOfWeek, checked ? [{ open: "09:00", close: "17:00" }] : [])} />
+                </div>
+              );
+            })}
+          </div>
+          {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
+          <DialogFooter>
+            <Button disabled={saving} onClick={close} type="button" variant="outline">{t("hours.cancel")}</Button>
+            <Button disabled={disabled || loading} onClick={() => void save()} type="button">{saving ? t("actions.saving") : t("hours.save")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
