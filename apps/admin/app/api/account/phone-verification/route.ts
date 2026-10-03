@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getOperatorPhoneVerification, startOperatorPhoneVerification } from "@lobbystack/domain";
+import { normalizeInterfaceLocale } from "@lobbystack/shared";
 import { asApiResponse, jsonError, readJson, requireOperatorBusiness } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 import { inferPhoneCountry, normalizePhoneNumber } from "@/lib/phone";
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
     const phoneE164 = typeof body.phoneNumber === "string" ? normalizePhoneNumber(body.phoneNumber) : undefined;
     const countryCode = phoneE164 ? inferPhoneCountry(phoneE164) : undefined;
     if (!phoneE164 || !countryCode) return jsonError("Enter a valid mobile number.", 422, "phone_number_invalid");
-    const { attemptId } = await startOperatorPhoneVerification(createDomainContext(), { userId: session.user.id, businessId, phoneE164, countryCode, ...(typeof body.locale === "string" ? { locale: body.locale } : {}) });
+    const { attemptId } = await startOperatorPhoneVerification(createDomainContext(), { userId: session.user.id, businessId, phoneE164, countryCode, locale: normalizeInterfaceLocale(typeof body.locale === "string" ? body.locale : null) ?? "en" });
     return NextResponse.json({ attemptId, phoneE164 }, { status: 202 });
   } catch (error) {
     return asApiResponse(error);

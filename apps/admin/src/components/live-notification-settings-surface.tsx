@@ -37,16 +37,24 @@ export function LiveNotificationSettingsSurface({ widgetOnly = false }: { widget
   // alerts on with a verified phone, is the operator's agreement. Anyone without
   // consent on record goes through it.
   function enableSms(next: Preferences) { persist({ ...next, smsConsent: true }); }
+  // The server records consent and turns SMS on when it approves the code.
   function phoneVerified() {
     if (!pendingPhoneVerification) return;
-    const next = { ...pendingPhoneVerification, canUseSms: true, smsUnavailableReason: null };
+    setDraft({ ...pendingPhoneVerification, smsConsent: true, canUseSms: true, smsUnavailableReason: null });
+    setPendingPhoneVerification(null);
+    void queryClient.invalidateQueries({ queryKey: ["notification-preferences", business?.businessId] });
+  }
+  // A verified phone only needs the consent, which this save records.
+  function consented() {
+    if (!pendingPhoneVerification) return;
+    const next = pendingPhoneVerification;
     setPendingPhoneVerification(null);
     enableSms(next);
   }
 
   if (!draft || preferences.isLoading || businesses.isLoading) return <div className="flex flex-col gap-12"><Skeleton className="h-40 w-full rounded-xl" /><Skeleton className="h-64 w-full rounded-xl" /><Skeleton className="h-40 w-full rounded-xl" /></div>;
   return <><div className="w-full overflow-y-auto pb-12"><div className="flex w-full flex-col gap-12"><section className="flex flex-col gap-4"><h3 className="text-sm font-medium">{t("notifications.sources.title")}</h3><Surface className="flex flex-col"><Item className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"><ItemContent><ItemTitle>{t("notifications.sources.email.title")}</ItemTitle><ItemDescription>{t("notifications.sources.email.description")}</ItemDescription></ItemContent><ItemActions><Switch aria-label={t("notifications.sources.email.title")} checked={draft.emailEnabled} onCheckedChange={(checked) => persist({ ...draft, emailEnabled: checked })} /></ItemActions></Item><Item className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"><ItemContent><ItemTitle>{t("notifications.sources.sms.title")}</ItemTitle><ItemDescription>{t(draft.smsUnavailableReason === "sender_missing" ? "notifications.sources.sms.senderMissingDescription" : "notifications.sources.sms.description")}</ItemDescription></ItemContent><ItemActions><Switch aria-label={t("notifications.sources.sms.title")} checked={draft.smsEnabled} disabled={draft.smsUnavailableReason === "sender_missing"} onCheckedChange={(checked) => { const next = { ...draft, smsEnabled: checked }; if (!checked) { persist(next); return; } if (draft.smsUnavailableReason === "phone_unverified" || !draft.smsConsent) { setPendingPhoneVerification(next); return; } enableSms(next); }} /></ItemActions></Item></Surface></section><NotificationTable draft={draft} events={widgetOnly ? ["widgetChat"] : communicationEvents} onChange={persist} title={t("notifications.communication.title")} t={t} />{!widgetOnly ? <NotificationTable draft={draft} events={issueEvents} onChange={persist} title={t("notifications.systemIssues.title")} t={t} /> : null}</div></div>
-    {business?.businessId ? <SmsPhoneVerificationDialog businessId={business.businessId} onOpenChange={open => { if (!open) setPendingPhoneVerification(null); }} onVerified={phoneVerified} open={pendingPhoneVerification !== null} phoneVerified={draft.smsUnavailableReason !== "phone_unverified"} /> : null}
+    {business?.businessId ? <SmsPhoneVerificationDialog businessId={business.businessId} onOpenChange={open => { if (!open) setPendingPhoneVerification(null); }} onConsent={consented} onVerified={phoneVerified} open={pendingPhoneVerification !== null} phoneVerified={draft.smsUnavailableReason !== "phone_unverified"} /> : null}
   </>;
 }
 

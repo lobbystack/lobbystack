@@ -1,4 +1,4 @@
-import { OPERATOR_SMS_DISCLOSURE_VERSION, canTextNumber, intlLocale, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
+import { OPERATOR_SMS_ACCEPTED_DISCLOSURE_VERSIONS, OPERATOR_SMS_DISCLOSURE_VERSION, canTextNumber, intlLocale, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 import { and, eq, gte, inArray, lte, lt, or, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { isTerminalTwilioMessageStatus, mapTwilioStatusToNotificationStatus, shouldApplyNotificationStatusTransition } from "@lobbystack/shared";
@@ -308,6 +308,27 @@ export async function releaseNotificationDelivery(
   });
 }
 
+type OperatorSmsConsentRecord = { smsConsentGrantedAt: Date | null; smsConsentRevokedAt: Date | null; smsConsentDisclosureVersion: string | null; smsConsentPhone: string | null };
+
+/** Consent counts only for an accepted disclosure, while not revoked, and for the number it was given for. */
+function hasOperatorSmsConsent(record: OperatorSmsConsentRecord | null | undefined, phone: string | null | undefined): boolean {
+  if (!record?.smsConsentGrantedAt || !phone || record.smsConsentPhone !== phone) return false;
+  if (!record.smsConsentDisclosureVersion || !OPERATOR_SMS_ACCEPTED_DISCLOSURE_VERSIONS.includes(record.smsConsentDisclosureVersion)) return false;
+  return !record.smsConsentRevokedAt || record.smsConsentGrantedAt > record.smsConsentRevokedAt;
+}
+
+/**
+ * Records the consent an operator gives by sending a code from the SMS alert
+ * phone step, and turns SMS alerts on, in the transaction that verifies the
+ * phone. A failed follow-up request can't lose it.
+ */
+export async function enableOperatorSmsAlertsWithConsent(tx: DatabaseTransaction, input: { businessId: string; userId: string; phone: string; now: Date }): Promise<void> {
+  const consent = { smsEnabled: true, smsConsentGrantedAt: input.now, smsConsentRevokedAt: null, smsConsentDisclosureVersion: OPERATOR_SMS_DISCLOSURE_VERSION, smsConsentSource: "operator_phone_verification", smsConsentPhone: input.phone, updatedAt: input.now };
+  await tx.insert(operatorNotificationPreferences).values({ businessId: input.businessId, userId: input.userId, eventPreferences: defaultOperatorNotificationEventPreferences(), ...consent })
+    .onConflictDoUpdate({ target: [operatorNotificationPreferences.businessId, operatorNotificationPreferences.userId], set: consent });
+  await tx.insert(smsConsentEvents).values({ businessId: input.businessId, phone: input.phone, recipientType: "operator", action: "operator_alert_consent_granted", source: "operator_phone_verification" });
+}
+
 export async function setNotificationPreferences(
   context: DomainContext,
   input: { userId: string; businessId: string; emailEnabled: boolean; smsEnabled: boolean; eventPreferences: OperatorNotificationEventPreferences; dailySummaryEnabled?: boolean; dailySummarySendTime?: string | null; smsConsent?: boolean },
@@ -319,8 +340,8 @@ export async function setNotificationPreferences(
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
     const currentUser = (await tx.select({ phone: users.phone }).from(users).where(eq(users.id, input.userId)).limit(1))[0];
-    const previous = (await tx.select({ smsConsentGrantedAt: operatorNotificationPreferences.smsConsentGrantedAt, smsConsentRevokedAt: operatorNotificationPreferences.smsConsentRevokedAt, smsConsentDisclosureVersion: operatorNotificationPreferences.smsConsentDisclosureVersion }).from(operatorNotificationPreferences).where(and(eq(operatorNotificationPreferences.businessId, input.businessId), eq(operatorNotificationPreferences.userId, input.userId))).limit(1))[0];
-    const existingConsent = Boolean(previous?.smsConsentGrantedAt && previous.smsConsentDisclosureVersion === OPERATOR_SMS_DISCLOSURE_VERSION && (!previous.smsConsentRevokedAt || previous.smsConsentGrantedAt > previous.smsConsentRevokedAt));
+    const previous = (await tx.select({ smsConsentGrantedAt: operatorNotificationPreferences.smsConsentGrantedAt, smsConsentRevokedAt: operatorNotificationPreferences.smsConsentRevokedAt, smsConsentDisclosureVersion: operatorNotificationPreferences.smsConsentDisclosureVersion, smsConsentPhone: operatorNotificationPreferences.smsConsentPhone }).from(operatorNotificationPreferences).where(and(eq(operatorNotificationPreferences.businessId, input.businessId), eq(operatorNotificationPreferences.userId, input.userId))).limit(1))[0];
+    const existingConsent = hasOperatorSmsConsent(previous, currentUser?.phone);
     if ((input.smsEnabled || Object.values(input.eventPreferences).some(event => event.sms)) && input.smsConsent !== false && input.smsConsent !== true && !existingConsent) throw new Error("SMS notification consent is required before enabling SMS alerts.");
     const consentChanged = input.smsConsent !== undefined && Boolean(input.smsConsent) !== existingConsent;
     const consentNow = input.smsConsent === true ? new Date() : input.smsConsent === false ? new Date() : undefined;
@@ -332,12 +353,12 @@ export async function setNotificationPreferences(
       eventPreferences: input.eventPreferences,
       dailySummaryEnabled: input.dailySummaryEnabled ?? false,
       dailySummarySendTime: input.dailySummarySendTime ?? null,
-      ...(input.smsConsent === true ? { smsConsentGrantedAt: consentNow, smsConsentDisclosureVersion: OPERATOR_SMS_DISCLOSURE_VERSION } : {}),
+      ...(input.smsConsent === true ? { smsConsentGrantedAt: consentNow, smsConsentDisclosureVersion: OPERATOR_SMS_DISCLOSURE_VERSION, smsConsentPhone: currentUser?.phone ?? null } : {}),
       ...(input.smsConsent === false ? { smsConsentRevokedAt: consentNow } : {}),
       ...(input.smsConsent !== undefined ? { smsConsentSource: "operator_settings" } : {}),
     }).onConflictDoUpdate({
       target: [operatorNotificationPreferences.businessId, operatorNotificationPreferences.userId],
-      set: { emailEnabled: input.emailEnabled, smsEnabled: input.smsEnabled, eventPreferences: input.eventPreferences, dailySummaryEnabled: input.dailySummaryEnabled ?? false, dailySummarySendTime: input.dailySummarySendTime ?? null, ...(input.smsConsent === true ? { smsConsentGrantedAt: consentNow, smsConsentRevokedAt: null, smsConsentDisclosureVersion: OPERATOR_SMS_DISCLOSURE_VERSION } : {}), ...(input.smsConsent === false ? { smsConsentRevokedAt: consentNow } : {}), ...(input.smsConsent !== undefined ? { smsConsentSource: "operator_settings" } : {}), updatedAt: new Date() },
+      set: { emailEnabled: input.emailEnabled, smsEnabled: input.smsEnabled, eventPreferences: input.eventPreferences, dailySummaryEnabled: input.dailySummaryEnabled ?? false, dailySummarySendTime: input.dailySummarySendTime ?? null, ...(input.smsConsent === true ? { smsConsentGrantedAt: consentNow, smsConsentRevokedAt: null, smsConsentDisclosureVersion: OPERATOR_SMS_DISCLOSURE_VERSION, smsConsentPhone: currentUser?.phone ?? null } : {}), ...(input.smsConsent === false ? { smsConsentRevokedAt: consentNow } : {}), ...(input.smsConsent !== undefined ? { smsConsentSource: "operator_settings" } : {}), updatedAt: new Date() },
     });
     if (consentChanged && consentNow && currentUser?.phone) await tx.insert(smsConsentEvents).values({ businessId: input.businessId, phone: currentUser.phone, recipientType: "operator", action: input.smsConsent ? "operator_alert_consent_granted" : "operator_alert_consent_revoked", source: "operator_settings" });
   });
@@ -393,11 +414,13 @@ export async function getNotificationPreferences(context: DomainContext, input: 
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
     const row = (await tx.select().from(operatorNotificationPreferences).where(and(eq(operatorNotificationPreferences.businessId, input.businessId), eq(operatorNotificationPreferences.userId, input.userId))).limit(1))[0];
+    const phone = (await tx.select({ phone: users.phone }).from(users).where(eq(users.id, input.userId)).limit(1))[0]?.phone;
     const sender = await resolveOperatorSmsSender(tx, input.businessId);
     const phoneVerified = input.phoneVerified === true;
     const canUseSms = phoneVerified && Boolean(sender);
-    const channelState = { canUseSms, smsUnavailableReason: phoneVerified ? sender ? null : "sender_missing" as const : "phone_unverified" as const };
-    const smsConsent = Boolean(row?.smsConsentGrantedAt && row.smsConsentDisclosureVersion === OPERATOR_SMS_DISCLOSURE_VERSION && (!row.smsConsentRevokedAt || row.smsConsentGrantedAt > row.smsConsentRevokedAt));
+    // A missing sender blocks SMS for everyone, so report it ahead of the operator's own phone.
+    const channelState = { canUseSms, smsUnavailableReason: !sender ? "sender_missing" as const : phoneVerified ? null : "phone_unverified" as const };
+    const smsConsent = hasOperatorSmsConsent(row, phone);
     const canSendSms = canUseSms && smsConsent;
     const storedEvents = { ...defaultOperatorNotificationEventPreferences(), ...row?.eventPreferences } as OperatorNotificationEventPreferences;
     const eventPreferences = canSendSms ? storedEvents : Object.fromEntries(Object.entries(storedEvents).map(([key, value]) => [key, { ...value, sms: false }])) as OperatorNotificationEventPreferences;
@@ -417,8 +440,8 @@ export async function queueDailyOperatorSummaries(context: DomainContext, input:
     const currentDayStart = local.startOf("day");
     const previousDayStart = currentDayStart.minus({ days: 1 });
     const sendTime = local.toFormat("HH:mm");
-    const recipientResult = await tx.execute(sql`SELECT user_id AS "userId", email, phone, email_enabled AS "emailEnabled", sms_enabled AS "smsEnabled", daily_summary_enabled AS "dailySummaryEnabled", daily_summary_send_time AS "dailySummarySendTime", sms_consent_granted_at AS "smsConsentGrantedAt", sms_consent_revoked_at AS "smsConsentRevokedAt", sms_consent_disclosure_version AS "smsConsentDisclosureVersion" FROM app.resolve_operator_notification_recipients(${input.businessId}::uuid)`);
-    type SummaryRecipient = { userId: string; email: string; phone: string | null; emailEnabled: boolean; smsEnabled: boolean; dailySummaryEnabled: boolean; dailySummarySendTime: string | null; smsConsentGrantedAt: Date | null; smsConsentRevokedAt: Date | null; smsConsentDisclosureVersion: string | null };
+    const recipientResult = await tx.execute(sql`SELECT user_id AS "userId", email, phone, email_enabled AS "emailEnabled", sms_enabled AS "smsEnabled", daily_summary_enabled AS "dailySummaryEnabled", daily_summary_send_time AS "dailySummarySendTime", sms_consent_granted_at AS "smsConsentGrantedAt", sms_consent_revoked_at AS "smsConsentRevokedAt", sms_consent_disclosure_version AS "smsConsentDisclosureVersion", sms_consent_phone AS "smsConsentPhone" FROM app.resolve_operator_notification_recipients(${input.businessId}::uuid)`);
+    type SummaryRecipient = { userId: string; email: string; phone: string | null; emailEnabled: boolean; smsEnabled: boolean; dailySummaryEnabled: boolean; dailySummarySendTime: string | null; smsConsentGrantedAt: Date | null; smsConsentRevokedAt: Date | null; smsConsentDisclosureVersion: string | null; smsConsentPhone: string | null };
     const preferences = (recipientResult.rows as SummaryRecipient[]).filter((preference) => preference.dailySummaryEnabled && preference.dailySummarySendTime === sendTime);
     if (preferences.length === 0) return { eligible: 0, queued: 0 };
     const sender = await resolveOperatorSmsSender(tx, input.businessId);
@@ -442,7 +465,7 @@ export async function queueDailyOperatorSummaries(context: DomainContext, input:
       for (const eventKind of uniqueAlerts.values()) counts[eventKind] += 1;
       const message = buildDailySummary({ businessName: business.name, date: previousDayStart.toISODate() ?? "previous day", counts, total: uniqueAlerts.size });
       const eventKey = `dailyDigest:${input.businessId}:${localDate}:${preference.userId}`;
-      const smsConsent = Boolean(preference.smsConsentGrantedAt && preference.smsConsentDisclosureVersion === OPERATOR_SMS_DISCLOSURE_VERSION && (!preference.smsConsentRevokedAt || preference.smsConsentGrantedAt > preference.smsConsentRevokedAt));
+      const smsConsent = hasOperatorSmsConsent(preference, preference.phone);
       const channels = [
         preference.emailEnabled ? { channel: "email", destination: preference.email } : null,
         preference.smsEnabled && smsConsent && preference.phone && sender ? { channel: "sms", destination: preference.phone, sender } : null,
@@ -475,14 +498,14 @@ export async function queueOperatorAlert(context: DomainContext, input: { busine
 }
 
 export async function queueOperatorAlertInTransaction(tx: DatabaseTransaction, input: { businessId: string; eventKind: OperatorNotificationEventKey; eventKey: string; subject: string; body: string }): Promise<string[]> {
-  type Recipient = { userId: string; email: string; phone: string | null; preferences: OperatorNotificationEventPreferences | null; emailEnabled: boolean; smsEnabled: boolean; smsConsentGrantedAt: Date | null; smsConsentRevokedAt: Date | null; smsConsentDisclosureVersion: string | null };
-  const result = await tx.execute(sql`SELECT user_id AS "userId", email, phone, event_preferences AS preferences, email_enabled AS "emailEnabled", sms_enabled AS "smsEnabled", sms_consent_granted_at AS "smsConsentGrantedAt", sms_consent_revoked_at AS "smsConsentRevokedAt", sms_consent_disclosure_version AS "smsConsentDisclosureVersion" FROM app.resolve_operator_notification_recipients(${input.businessId}::uuid)`);
+  type Recipient = { userId: string; email: string; phone: string | null; preferences: OperatorNotificationEventPreferences | null; emailEnabled: boolean; smsEnabled: boolean; smsConsentGrantedAt: Date | null; smsConsentRevokedAt: Date | null; smsConsentDisclosureVersion: string | null; smsConsentPhone: string | null };
+  const result = await tx.execute(sql`SELECT user_id AS "userId", email, phone, event_preferences AS preferences, email_enabled AS "emailEnabled", sms_enabled AS "smsEnabled", sms_consent_granted_at AS "smsConsentGrantedAt", sms_consent_revoked_at AS "smsConsentRevokedAt", sms_consent_disclosure_version AS "smsConsentDisclosureVersion", sms_consent_phone AS "smsConsentPhone" FROM app.resolve_operator_notification_recipients(${input.businessId}::uuid)`);
   const recipients = result.rows as Recipient[];
   const sender = await resolveOperatorSmsSender(tx, input.businessId);
   const deliveryIds: string[] = [];
   for (const recipient of recipients) {
     const event = { ...defaultOperatorNotificationEventPreferences()[input.eventKind], ...(recipient.preferences?.[input.eventKind] ?? {}) };
-      const smsConsent = Boolean(recipient.smsConsentGrantedAt && recipient.smsConsentDisclosureVersion === OPERATOR_SMS_DISCLOSURE_VERSION && (!recipient.smsConsentRevokedAt || recipient.smsConsentGrantedAt > recipient.smsConsentRevokedAt));
+      const smsConsent = hasOperatorSmsConsent(recipient, recipient.phone);
       const channels = [recipient.emailEnabled !== false && event.email ? { channel: "email", destination: recipient.email } : null, recipient.smsEnabled === true && smsConsent && event.sms && recipient.phone && sender ? { channel: "sms", destination: recipient.phone, sender } : null].filter((value): value is { channel: string; destination: string; sender?: string } => Boolean(value));
     for (const channel of channels) {
       const [delivery] = await tx.insert(operatorNotificationDeliveries).values({ businessId: input.businessId, userId: recipient.userId, eventKind: input.eventKind, eventKey: input.eventKey, channel: channel.channel, destination: channel.destination, ...(channel.sender ? { sender: channel.sender } : {}), subject: input.subject, body: input.body, contentExpiresAt: new Date(Date.now() + 30 * 86_400_000) }).onConflictDoNothing().returning({ id: operatorNotificationDeliveries.id });
@@ -504,10 +527,10 @@ export async function loadOperatorNotificationDelivery(context: DomainContext, i
       .from(operatorNotificationDeliveries).where(and(eq(operatorNotificationDeliveries.id, input.deliveryId), eq(operatorNotificationDeliveries.businessId, input.businessId), eq(operatorNotificationDeliveries.status, "processing"))).limit(1))[0];
     if (!delivery) return null;
     if (delivery.channel === "sms") {
-      type Recipient = { userId: string; phone: string | null; smsEnabled: boolean; smsConsentGrantedAt: Date | null; smsConsentRevokedAt: Date | null; smsConsentDisclosureVersion: string | null };
-      const result = await tx.execute(sql`SELECT user_id AS "userId", phone, sms_enabled AS "smsEnabled", sms_consent_granted_at AS "smsConsentGrantedAt", sms_consent_revoked_at AS "smsConsentRevokedAt", sms_consent_disclosure_version AS "smsConsentDisclosureVersion" FROM app.resolve_operator_notification_recipients(${input.businessId}::uuid)`);
+      type Recipient = { userId: string; phone: string | null; smsEnabled: boolean; smsConsentGrantedAt: Date | null; smsConsentRevokedAt: Date | null; smsConsentDisclosureVersion: string | null; smsConsentPhone: string | null };
+      const result = await tx.execute(sql`SELECT user_id AS "userId", phone, sms_enabled AS "smsEnabled", sms_consent_granted_at AS "smsConsentGrantedAt", sms_consent_revoked_at AS "smsConsentRevokedAt", sms_consent_disclosure_version AS "smsConsentDisclosureVersion", sms_consent_phone AS "smsConsentPhone" FROM app.resolve_operator_notification_recipients(${input.businessId}::uuid)`);
       const recipient = (result.rows as Recipient[]).find((row) => row.userId === delivery.userId);
-      const consent = Boolean(recipient?.smsConsentGrantedAt && recipient.smsConsentDisclosureVersion === OPERATOR_SMS_DISCLOSURE_VERSION && (!recipient.smsConsentRevokedAt || recipient.smsConsentGrantedAt > recipient.smsConsentRevokedAt));
+      const consent = hasOperatorSmsConsent(recipient, recipient?.phone);
       if (!recipient?.smsEnabled || !consent || !recipient.phone || recipient.phone !== delivery.destination || !delivery.sender) return null;
     }
     return delivery;

@@ -39,7 +39,7 @@ function errorCode(error: unknown): string | undefined {
  * same input the onboarding phone check used. An operator whose phone is
  * already verified only confirms the consent, unless they change the number.
  */
-export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onVerified, phoneVerified = false }: { businessId: string; open: boolean; onOpenChange: (open: boolean) => void; onVerified: () => void; phoneVerified?: boolean }) {
+export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onVerified, onConsent, phoneVerified = false }: { businessId: string; open: boolean; onOpenChange: (open: boolean) => void; onVerified: () => void; onConsent?: () => void; phoneVerified?: boolean }) {
   const { i18n, t } = useTranslation("settings");
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const defaultCountry = getDefaultPhoneCountry(locale) as Country;
@@ -75,7 +75,9 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
     mutationFn: (value: string) => requestJson<CheckResult>(`/api/account/phone-verification/check?${query}`, { method: "POST", body: JSON.stringify({ attemptId, code: value }) }),
     onSuccess: (result) => {
       if (result.approved) { onVerified(); return; }
-      if (result.status !== "invalid") setLocked(true);
+      if (result.status === "locked" || result.status === "expired") setLocked(true);
+      // The code may still be on its way: reload the attempt and leave the input open.
+      if (result.status === "unavailable" || result.status === "approved") void attempt.refetch();
       setError(t(`notifications.phoneVerification.errors.${checkErrorKeys[result.status === "approved" ? "unavailable" : result.status]}`));
     },
     onError: () => setError(t("notifications.phoneVerification.errors.checkFailed")),
@@ -124,7 +126,7 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
         </div>
         <DialogFooter>
           <Button onClick={() => onOpenChange(false)} type="button" variant="outline">{t("notifications.phoneVerification.cancel")}</Button>
-          <Button onClick={onVerified} type="button">{t("notifications.phoneVerification.confirm.turnOn")}</Button>
+          <Button onClick={onConsent} type="button">{t("notifications.phoneVerification.confirm.turnOn")}</Button>
         </DialogFooter>
       </div> : step.kind === "phone" ? <form className="flex flex-col gap-6" onSubmit={sendCode}>
         <DialogHeader><DialogTitle>{t("notifications.phoneVerification.phone.title")}</DialogTitle></DialogHeader>
@@ -149,7 +151,7 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
       </form> : <div className="flex flex-col gap-6">
         <DialogHeader><DialogTitle>{t("notifications.phoneVerification.code.title")}</DialogTitle><DialogDescription>{t("notifications.phoneVerification.code.description", { phone: formatPhoneNumberDisplay(step.phoneE164, locale) })}</DialogDescription></DialogHeader>
         <div className="flex flex-col items-center gap-4">
-          <InputOTP aria-label={t("notifications.phoneVerification.code.title")} autoComplete="one-time-code" autoFocus containerClassName="justify-center" disabled={codeDisabled} maxLength={6} onChange={(value) => { setCode(value.replace(/\D/g, "").slice(0, 6)); if (!locked) setError(null); }} value={code}>
+          <InputOTP aria-label={t("notifications.phoneVerification.code.title")} autoComplete="one-time-code" autoFocus containerClassName="justify-center" disabled={codeDisabled} maxLength={6} onChange={(value) => { const next = value.replace(/\D/g, "").slice(0, 6); if (next.length < 6) submittedCodeRef.current = ""; setCode(next); if (!locked) setError(null); }} value={code}>
             <InputOTPGroup>{[0, 1, 2, 3, 4, 5].map((index) => <InputOTPSlot aria-invalid={shownError ? true : undefined} className="size-12 text-lg" index={index} key={index} />)}</InputOTPGroup>
           </InputOTP>
           {check.isPending ? <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status"><LoaderCircle className="size-4 animate-spin" />{t("notifications.phoneVerification.code.verifying")}</div> : null}

@@ -39,7 +39,13 @@ describe("start phone verification", () => {
     const response = await POST(post(url, { phoneNumber: "+1 (416) 555-0123" }));
     expect(response.status).toBe(202);
     expect(await response.json()).toEqual({ attemptId: "attempt-1", phoneE164: "+14165550123" });
-    expect(mocks.startOperatorPhoneVerification).toHaveBeenCalledWith({ db: "app-db" }, { userId: "user-1", businessId: "business-1", phoneE164: "+14165550123", countryCode: "CA" });
+    expect(mocks.startOperatorPhoneVerification).toHaveBeenCalledWith({ db: "app-db" }, { userId: "user-1", businessId: "business-1", phoneE164: "+14165550123", countryCode: "CA", locale: "en" });
+  });
+
+  it("passes the operator's language on for the code text", async () => {
+    mocks.startOperatorPhoneVerification.mockResolvedValue({ attemptId: "attempt-1" });
+    await POST(post(url, { phoneNumber: "+14165550123", locale: "fr" }));
+    expect(mocks.startOperatorPhoneVerification).toHaveBeenCalledWith({ db: "app-db" }, expect.objectContaining({ locale: "fr" }));
   });
 
   it.each([["not a phone"], [""], [12345]])("rejects %j before reaching the domain", async (phoneNumber) => {

@@ -7,7 +7,7 @@ import type { JobEnvelope } from "@lobbystack/contracts";
 import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteSentProductEventsBefore, expireProspectDemos, generateAffiliatePayoutRun, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markNotificationFailed, markNotificationSent, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, releaseNotificationDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, loadOperatorNotificationDelivery, markOperatorNotificationSent, queueDailyOperatorSummaries } from "@lobbystack/domain";
 import { cancelRetiredPhoneVerificationSend, queueOnboardingFollowupEmail } from "@lobbystack/domain";
-import { issueOperatorPhoneVerificationCode, markOperatorPhoneVerificationCodeSent, releaseOperatorPhoneVerificationCodeSend } from "@lobbystack/domain";
+import { correctAlertSmsUsage, enqueueBillingUsageSync, issueOperatorPhoneVerificationCode, markOperatorPhoneVerificationCodeSent, releaseOperatorPhoneVerificationCodeSend, reserveAlertSmsUsage } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => {
@@ -32,6 +32,9 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     issueOperatorPhoneVerificationCode: vi.fn(),
     markOperatorPhoneVerificationCodeSent: vi.fn(),
     releaseOperatorPhoneVerificationCodeSend: vi.fn(),
+    reserveAlertSmsUsage: vi.fn(),
+    correctAlertSmsUsage: vi.fn(),
+    enqueueBillingUsageSync: vi.fn(),
     queueOnboardingFollowupEmail: vi.fn(),
     claimNumberProvisioning: vi.fn(),
     countPublishableOutboxMessages: vi.fn(),
@@ -140,7 +143,7 @@ describe("worker handlers", () => {
   });
 
   describe("operator phone verification codes", () => {
-    const codeJob = (businessId: string, attemptId: string): JobEnvelope => ({ jobId: randomUUID(), type: "phoneVerification.sendCode", queue: "critical", businessId, payload: { attemptId }, trace: {}, idempotencyKey: `phone-code:${attemptId}`, scheduled: false });
+    const codeJob = (businessId: string, attemptId: string, locale?: string): JobEnvelope => ({ jobId: randomUUID(), type: "phoneVerification.sendCode", queue: "critical", businessId, payload: { attemptId, ...(locale ? { locale } : {}) }, trace: {}, idempotencyKey: `phone-code:${attemptId}`, scheduled: false });
 
     it("texts the code from the restricted alert sender and marks it sent", async () => {
       const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
@@ -154,12 +157,41 @@ describe("worker handlers", () => {
       expect(markOperatorPhoneVerificationCodeSent).toHaveBeenCalledWith(domain, { businessId, attemptId });
     });
 
-    it("texts the code in the operator's dashboard language", async () => {
-      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
+    it("texts the code in the operator's language", async () => {
+      const businessId = randomUUID(); const attemptId = randomUUID(); const sendSms = vi.fn().mockResolvedValue({ providerMessageId: "SM1" });
       vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550100", code: "482913" });
-      const alertSms = vi.fn().mockResolvedValue({ providerMessageId: "SMalert" });
-      await handleJob({ ...codeJob(businessId, attemptId), payload: { attemptId, locale: "fr" } }, { domain, twilioAlerts: { from: "+14165550100", sendSms: alertSms } });
-      expect(alertSms).toHaveBeenCalledWith(expect.objectContaining({ body: "Code de vérification LobbyStack : 482913. Il expire dans 10 minutes." }));
+      await handleJob(codeJob(businessId, attemptId, "fr"), { domain: { db: undefined as never }, twilio: { sendSms } });
+      expect(sendSms).toHaveBeenCalledWith(expect.objectContaining({ body: "Code de vérification LobbyStack : 482913. Il expire dans 10 minutes." }));
+    });
+
+    it("meters the code against the alert SMS quota", async () => {
+      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: {} as never };
+      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550100", code: "482913" });
+      vi.mocked(reserveAlertSmsUsage).mockResolvedValue({ allowed: true, usageEventId: "usage-1" } as never);
+      const sendSms = vi.fn().mockResolvedValue({ providerMessageId: "SM1" });
+      await expect(handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms } })).resolves.toEqual({ status: "completed", entityId: attemptId });
+      expect(reserveAlertSmsUsage).toHaveBeenCalledWith(domain, { businessId, sourceKey: `alert_sms:phone_verification:${attemptId}`, estimatedSegments: 1 });
+      expect(enqueueBillingUsageSync).toHaveBeenCalledWith(domain, { businessId, usageEventId: "usage-1" });
+    });
+
+    it("fails the attempt without texting when the alert SMS quota is used up", async () => {
+      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: {} as never };
+      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550100", code: "482913" });
+      vi.mocked(reserveAlertSmsUsage).mockResolvedValue({ allowed: false, errorCode: "alert_sms_quota_reached" } as never);
+      const sendSms = vi.fn();
+      await expect(handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms } })).resolves.toEqual({ status: "skipped", entityId: attemptId });
+      expect(sendSms).not.toHaveBeenCalled();
+      expect(releaseOperatorPhoneVerificationCodeSend).toHaveBeenCalledWith(domain, { businessId, attemptId, retry: false, error: "alert_sms_quota_reached" });
+    });
+
+    it("gives back the reserved usage when the send fails", async () => {
+      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: {} as never };
+      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550100", code: "482913" });
+      vi.mocked(reserveAlertSmsUsage).mockResolvedValue({ allowed: true, usageEventId: "usage-1" } as never);
+      vi.mocked(correctAlertSmsUsage).mockResolvedValue("usage-1");
+      const sendSms = vi.fn().mockRejectedValue(new Error("timeout"));
+      await expect(handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms } }, { isFinalAttempt: false })).rejects.toThrow("timeout");
+      expect(correctAlertSmsUsage).toHaveBeenCalledWith(domain, { businessId, sourceKey: `alert_sms:phone_verification:${attemptId}`, segments: 0 });
     });
 
     it("uses the business's own number when it is the alert sender", async () => {

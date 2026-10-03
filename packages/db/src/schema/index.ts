@@ -835,6 +835,7 @@ export const operatorNotificationPreferences = pgTable(
     smsConsentRevokedAt: timestamp("sms_consent_revoked_at", { withTimezone: true }),
     smsConsentSource: varchar("sms_consent_source", { length: 64 }),
     smsConsentDisclosureVersion: varchar("sms_consent_disclosure_version", { length: 64 }),
+    smsConsentPhone: varchar("sms_consent_phone", { length: 32 }),
     ...timestamps,
   },
   (table) => [uniqueIndex("operator_notification_preferences_business_user_unique").on(table.businessId, table.userId), index("operator_notification_preferences_user_idx").on(table.userId, table.businessId)],

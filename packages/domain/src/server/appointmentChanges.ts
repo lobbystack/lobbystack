@@ -8,9 +8,9 @@ import { normalizeAppointmentChangePolicy } from "@lobbystack/shared";
 import { appointmentTimesMatch, serviceNamesMatch, storedContactNameMatchesIfPresent, substantiveServiceNameFactMatches } from "./appointmentFacts";
 
 import type { DomainContext } from "./context";
-import { newVerificationCode, verificationCodeSecret } from "./verificationCode";
+import { VERIFICATION_CODE_TTL_MS, newVerificationCode, verificationCodeSecret } from "./verificationCode";
 
-const OTP_TTL_MS = 10 * 60_000;
+const OTP_TTL_MS = VERIFICATION_CODE_TTL_MS;
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_SEND_LEASE_MS = 5 * 60_000;
 
