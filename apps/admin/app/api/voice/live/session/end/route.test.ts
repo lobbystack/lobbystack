@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// OpenAI's hangup endpoint is for SIP calls; the worker closes browser sessions with session.close.
 const hangup = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/live-prototype", () => ({
   requireLivePrototype: vi.fn(),
-  getLiveClient: () => ({ live: { sessions: { hangup } } }),
+  endLiveBrowserSession: hangup,
 }));
 
 import { liveSessionEndToken } from "@/lib/live-web-call";
@@ -22,7 +23,7 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllEnvs(); });
 
 describe("POST /api/voice/live/session/end", () => {
-  it("ends the session for the browser holding its end token", async () => {
+  it("ends the session through the worker for the browser holding its end token", async () => {
     const response = await end({ sessionId: "live_1", endToken: liveSessionEndToken("live_1") });
     expect(response.status).toBe(204);
     expect(hangup).toHaveBeenCalledWith("live_1");

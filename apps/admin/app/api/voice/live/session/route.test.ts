@@ -30,7 +30,8 @@ vi.mock("@/lib/domain-context", () => ({ createWorkerDomainContext: () => ({ db:
 vi.mock("@/lib/live-prototype", () => ({
   requireLivePrototype: vi.fn(),
   attachWorkerToLiveSession: mocks.attach,
-  getLiveClient: () => ({ live: { create: mocks.create, sessions: { hangup: mocks.hangup } } }),
+  endLiveBrowserSession: mocks.hangup,
+  getLiveClient: () => ({ live: { create: mocks.create } }),
 }));
 vi.mock("@lobbystack/agent-core/live/session", () => ({ buildBrowserSessionConfig: () => ({ model: "gpt-live-1" }) }));
 
@@ -85,13 +86,14 @@ describe("POST /api/voice/live/session", () => {
     expect(mocks.create).not.toHaveBeenCalled();
   });
 
-  it("hangs up and releases the call when the worker can't take it", async () => {
+  it("closes the session and records OpenAI's setup charge when the worker can't take it", async () => {
     mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-prospect-demo", prospectDemoId: "demo_1", dashboardTestCall: false });
     mocks.attach.mockRejectedValue(new Error("Worker attach failed with status 500."));
     const response = await start("lobbystack-prospect-demo", { businessSlug: "acme", prospectDemoToken: "secret" });
     expect(response.status).toBe(500);
     expect(mocks.hangup).toHaveBeenCalledWith("live_1");
-    expect(mocks.finishLiveCall).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ callId: "call_1", seconds: 0, end: "setup_failed", channel: "web_voice" }));
+    // OpenAI bills 15 seconds for creating the WebRTC session; the caller heard nothing.
+    expect(mocks.finishLiveCall).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ callId: "call_1", seconds: 15, measuredSeconds: 0, end: "setup_failed", channel: "web_voice" }));
     expect(mocks.recordProspectDemoCallError).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ prospectDemoId: "demo_1", callId: "call_1", reason: "web_call_start_failed" }));
   });
 

@@ -48,7 +48,7 @@ export function recordLiveDelegation(domain: DomainContext, call: LiveCallTeleme
 
 /**
  * The agent's model usage and cost for one delegation, as an AI generation.
- * GPT-Live bills the session per minute; this is the backend model on top.
+ * GPT-Live bills the session per second; this is the backend model on top.
  */
 export function recordLiveDelegationGeneration(domain: DomainContext, call: LiveCallTelemetryContext, timing: DelegationTiming, environment: Record<string, string | undefined> = liveDelegationEnvironment()): void {
   const usage = timing.usage ? describeAgentUsage(timing.usage, timing.agentMs, environment) : { ...agentModelId(environment), latencyMs: timing.agentMs };

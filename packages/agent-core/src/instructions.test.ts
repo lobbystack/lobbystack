@@ -38,7 +38,29 @@ describe("buildLiveInstructions", () => {
   it("keeps GPT-Live's waiting line neutral until the backend confirms an action", () => {
     const instructions = buildLiveInstructions(demoSnapshot, callStart);
     expect(instructions).toContain("say one short neutral line such as \"One moment.\"");
-    expect(instructions).toContain("Don't say you've booked, saved, sent or confirmed anything until the backend's answer says it's done.");
+    expect(instructions).toContain("Don't say you've booked, saved, sent or confirmed anything until the backend's result says it's done.");
+  });
+
+  it("has the lines OpenAI's template requires, names the call's language, and leaves the greeting to the worker", () => {
+    const instructions = buildLiveInstructions({ ...demoSnapshot, defaultLocale: "fr" }, callStart);
+    expect(instructions).toContain("Delegate to the backend when:\n");
+    expect(instructions).toContain("- A correction changes the work already requested.");
+    expect(instructions).toContain("Delegate before giving an answer that depends on backend work.");
+    expect(instructions).toContain("Do not guess the result while waiting.");
+    expect(instructions).toContain("If the caller is frustrated, acknowledge it briefly and focus on the next helpful step.");
+    expect(instructions).toContain("Speak French unless the caller asks to switch");
+    expect(instructions).toContain("Backchannel policy: Use moderate backchannels. Acknowledge naturally without competing with the main response.");
+    expect(instructions).not.toContain(demoSnapshot.greeting);
+  });
+
+  it("keeps later rules when an earlier one is too long for the budget", () => {
+    const rules = [
+      { id: "r1", order: 1, title: "Huge", content: "word ".repeat(5_000) },
+      { id: "r2", order: 2, title: "Parking", content: "Park behind the building." },
+    ];
+    const instructions = buildLiveInstructions({ ...demoSnapshot, rules } as never, callStart);
+    expect(instructions).toContain("- Parking: Park behind the building.");
+    expect(instructions).not.toContain("- Huge:");
   });
 
   it("follows OpenAI's GPT-Live prompt structure and lists only the backend tools this business has", () => {
@@ -72,7 +94,7 @@ describe("buildLiveInstructions", () => {
     expect(instructions).toContain("Your job is to help each caller get what they called for.");
     expect(instructions).toContain("offer to book a time");
     expect(instructions).not.toMatch(/one or two short sentences|in a sentence or two/);
-    expect(buildAgentInstructions(demoSnapshot, "voice")).toContain("end with one follow-up question that moves them forward");
+    expect(buildAgentInstructions(demoSnapshot, "voice")).toContain("give the next step that moves them forward");
   });
 
   it("lists the knowledge base's topics so GPT-Live knows what the backend can look up", () => {
@@ -107,6 +129,15 @@ describe("buildLiveInstructions", () => {
 });
 
 describe("buildAgentInstructions", () => {
+  it("gives the voice backend OpenAI's voice-context and result rules, and asks for facts rather than a script", () => {
+    const instructions = buildAgentInstructions(demoSnapshot, "voice");
+    expect(instructions).toContain("Transcripts can contain mistakes, unfinished phrases, and later corrections. Use the latest context and verified records.");
+    expect(instructions).toContain("Return the relevant facts, the request's current status, and the next step");
+    expect(instructions).toContain("Report an action as complete only after the tool confirms success. If the outcome is unclear, say so");
+    expect(instructions).not.toContain("Reply with what it should say next");
+    expect(buildAgentInstructions(demoSnapshot, "web_chat")).not.toContain("Transcripts can contain mistakes");
+  });
+
   it("tells the agent not to ask for a number the call already carries", () => {
     expect(buildAgentInstructions(demoSnapshot, "voice", { callerPhone: "+14165550134" })).toContain("You already have the caller's phone number from the call. Don't ask for it");
     expect(buildAgentInstructions(demoSnapshot, "web_voice")).not.toContain("You already have the caller's phone number");

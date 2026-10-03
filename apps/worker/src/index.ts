@@ -134,7 +134,7 @@ async function main(): Promise<void> {
   schedulerRefresh.unref();
   const state = { ready: false, redis: false, database: false, storage: false, activeJobs: 0 };
   const embeddings = createEmbeddingProvider();
-  const liveCalls = createLiveCallHandler({ domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) } });
+  const liveCalls = createLiveCallHandler({ domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) }, attachLock: realtime });
   const health = startHealthServer(Number(process.env.PORT ?? 3002), state, liveCalls.handle);
   const email = createEmailProvider();
   const onboardingFollowupSender = createOnboardingFollowupSender();
