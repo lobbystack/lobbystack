@@ -306,7 +306,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
         active.delete(request.sessionId);
         setPresence(request, false);
         void input.attachLock?.del(attachLockKey(request.sessionId)).catch(() => undefined);
-        console.info(JSON.stringify({ event: "live.closed", sessionId: summary.sessionId, channel: request.channel, durationMs: summary.durationMs, billedSeconds: summary.billedSeconds, usageConfirmed: summary.usageConfirmed, closeReason: summary.closeReason, end, delegations: summary.delegations.length }));
+        console.info(JSON.stringify({ event: "live.closed", sessionId: summary.sessionId, channel: request.channel, durationMs: summary.durationMs, billedSeconds: summary.billedSeconds, usageConfirmed: summary.usageConfirmed, closeReason: summary.closeReason, end, delegations: summary.delegations.length, outputAudio: summary.outputAudio }));
         const pending = finish(summary).catch(logError(request.sessionId, "finish failed"));
         finishing.add(pending);
         void pending.finally(() => finishing.delete(pending));

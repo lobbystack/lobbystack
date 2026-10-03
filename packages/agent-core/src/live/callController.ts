@@ -48,6 +48,12 @@ export type LiveCallSummary = {
   closeReason?: string;
   /** What the caller heard: when the receptionist first spoke and the gap before each answer. */
   latency?: LiveCallLatency;
+  /**
+   * The undocumented output audio events the sideband reflected: how many,
+   * where the first one started, and the timeline they covered. GPT-Live is
+   * full duplex, so these can cover silence; this shows how much.
+   */
+  outputAudio: { deltas: number; firstStartMs?: number; coveredMs: number };
 };
 
 /** A finished stretch of speech by one side, numbered in call order. */
@@ -56,7 +62,8 @@ export type LiveCallTurn = { sequence: number; speaker: "caller" | "assistant"; 
 export type LiveCallTimeout = "silence_timeout" | "duration_limit";
 
 export type GreetingEvent = {
-  step: "sent" | "acknowledged" | "spoken" | "failed";
+  /** "unspoken": acknowledged, but no greeting words followed in time. */
+  step: "sent" | "acknowledged" | "spoken" | "failed" | "unspoken";
   attempt: number;
   /** What sent it: session.started, a late attach, or a retry after an error. */
   trigger?: "session_started" | "late_attach" | "retry";
@@ -99,6 +106,8 @@ const TRANSCRIPT_WAIT_MS = 300;
 // Past the sideband's 3-second replay window, session.started can't arrive.
 const LATE_ATTACH_MS = 3_500;
 const GREETING_ERROR_RETRY_MS = 500;
+// Acknowledged, yet no greeting words by then: GPT-Live didn't act on it.
+const GREETING_SPEECH_MS = 3_000;
 const MAX_GREETING_ATTEMPTS = 3;
 // Most answers take one or two seconds; past this the caller hears an update.
 const STILL_WORKING_MS = 4_000;
@@ -107,7 +116,7 @@ const FINALIZE_TIMEOUT_MS = 15_000;
 // Ending the call waits for the goodbye: for it to start, then for its audio to finish.
 const GOODBYE_START_MS = 4_000;
 const GOODBYE_MAX_MS = 15_000;
-const GOODBYE_QUIET_MS = 700;
+const GOODBYE_QUIET_MS = 1_000;
 const GOODBYE_POLL_MS = 200;
 // Actions the next request sees, newest last.
 const MAX_REMEMBERED_ACTIONS = 10;
@@ -178,8 +187,11 @@ export class LiveCallController {
   private latestLookup: string | undefined;
   // The session timeline, to tell when the receptionist's audio has played out.
   private timelineOrigin: number | undefined;
-  private lastAudioEndMs = 0;
-  private lastAudioAt = Number.NEGATIVE_INFINITY;
+  // The receptionist's speech, from output transcript text: where it ends on
+  // the session timeline, and when its latest words arrived.
+  private lastSpeechEndMs = 0;
+  private lastSpeechAt = Number.NEGATIVE_INFINITY;
+  private readonly outputAudio: LiveCallSummary["outputAudio"] = { deltas: 0, coveredMs: 0 };
   private lastAnswerSentAt: number | undefined;
   private ending = false;
   private latestUsageSeconds: number | undefined;
@@ -201,19 +213,29 @@ export class LiveCallController {
       this.measure(() => this.latency.callerTranscript(event.start_ms, event.end_ms));
       this.appendTranscript("caller", event.delta, event.end_ms);
     });
+    // OpenAI's guide: transcript events arrive for intervals that contain
+    // text, so words in session.output_transcript.delta are the evidence that
+    // the receptionist is speaking.
     socket.on("session.output_transcript.delta", (event) => {
-      this.greetingDone();
+      if (event.delta.trim()) {
+        this.greetingDone();
+        this.lastSpeechAt = performance.now();
+        if (typeof event.end_ms === "number") this.lastSpeechEndMs = Math.max(this.lastSpeechEndMs, event.end_ms);
+      }
       this.measure(() => this.latency.receptionistTranscript(event.start_ms, event.end_ms));
       this.appendTranscript("receptionist", event.delta, event.end_ms);
     });
     // OpenAI reflects output audio to the sideband with timeline offsets, but
-    // the SDK's sideband event types leave it out. The socket still emits it.
+    // the SDK's sideband event types leave it out. GPT-Live is full duplex and
+    // these can cover silence, so they're never taken as speech; they're only
+    // counted and kept for latency telemetry.
     (socket as unknown as { on(type: string, listener: (event: { start_ms?: number; end_ms?: number }) => void): void })
       .on("session.output_audio.delta", (event) => {
-        this.greetingDone();
-        if (typeof event.end_ms === "number") this.lastAudioEndMs = Math.max(this.lastAudioEndMs, event.end_ms);
-        this.lastAudioAt = performance.now();
-        this.resetSilenceTimer();
+        this.outputAudio.deltas += 1;
+        if (typeof event.start_ms === "number") {
+          this.outputAudio.firstStartMs ??= event.start_ms;
+          if (typeof event.end_ms === "number") this.outputAudio.coveredMs += Math.max(0, event.end_ms - event.start_ms);
+        }
         this.measure(() => this.latency.receptionistAudio(event.start_ms, event.end_ms));
       });
     socket.on("session.delegation.created", (event) => void this.handleDelegation(event));
@@ -262,7 +284,22 @@ export class LiveCallController {
     if (!clientEventId) return;
     const pending = this.pendingAppends.get(clientEventId);
     this.pendingAppends.delete(clientEventId);
-    if (pending?.kind === "greeting") this.reportGreeting("acknowledged");
+    if (pending?.kind !== "greeting" || this.greetingSpoken) return;
+    this.reportGreeting("acknowledged");
+    // OpenAI's guide: the acknowledgment confirms acceptance, not speech, so
+    // check for the greeting's words. GPT-Live sometimes accepts a greeting
+    // and stays silent; then it's sent again, unless the caller spoke first.
+    clearTimeout(this.greetingRetryTimer);
+    this.greetingRetryTimer = setTimeout(() => {
+      if (this.greetingSpoken || this.callerSpoke() || this.finished) return;
+      this.reportGreeting("unspoken");
+      this.sendGreeting("retry");
+    }, GREETING_SPEECH_MS);
+  }
+
+  // The caller said something, so a greeting would talk over them.
+  private callerSpoke(): boolean {
+    return this.turns.some((turn) => turn.role === "caller" && turn.text.trim() !== "");
   }
 
   // OpenAI's guide: read error events alongside acknowledgments, and use
@@ -288,10 +325,10 @@ export class LiveCallController {
   }
 
   private sendGreeting(trigger: NonNullable<GreetingEvent["trigger"]>): void {
-    if (!this.started || this.greetingSpoken || this.turns.length > 0 || this.greetingAttempts >= MAX_GREETING_ATTEMPTS) return;
+    if (!this.started || this.greetingSpoken || this.callerSpoke() || this.greetingAttempts >= MAX_GREETING_ATTEMPTS) return;
     void this.ready.then((setup) => {
       const greeting = setup.greeting?.trim();
-      if (!greeting || this.finished || this.greetingSpoken || this.turns.length > 0 || this.greetingAttempts >= MAX_GREETING_ATTEMPTS) return;
+      if (!greeting || this.finished || this.greetingSpoken || this.callerSpoke() || this.greetingAttempts >= MAX_GREETING_ATTEMPTS) return;
       this.greetingAttempts += 1;
       // OpenAI's guide: name the language, what to say, and to begin now, then listen.
       const language = setup.language ? `in ${setup.language}` : "in the language of the greeting";
@@ -342,9 +379,9 @@ export class LiveCallController {
     this.timelineOrigin = this.timelineOrigin === undefined ? origin : Math.min(this.timelineOrigin, origin);
   }
 
-  /** When the receptionist's audio so far will have finished playing, in performance.now() time. */
+  /** When the receptionist's speech so far will have finished playing, in performance.now() time. */
   private playbackEndsAt(): number {
-    return this.timelineOrigin === undefined ? this.lastAudioAt : this.timelineOrigin + this.lastAudioEndMs;
+    return this.timelineOrigin === undefined ? this.lastSpeechAt : this.timelineOrigin + this.lastSpeechEndMs;
   }
 
   /**
@@ -359,9 +396,9 @@ export class LiveCallController {
       if (this.finished) return;
       const now = performance.now();
       const answered = this.runningDelegations === 0;
-      const spokeAfterAnswer = this.lastAnswerSentAt !== undefined && this.lastAudioAt >= this.lastAnswerSentAt;
+      const spokeAfterAnswer = this.lastAnswerSentAt !== undefined && this.lastSpeechAt >= this.lastAnswerSentAt;
       const silentTooLong = answered && now - Math.max(this.lastAnswerSentAt ?? requestedAt, requestedAt) > GOODBYE_START_MS && !spokeAfterAnswer;
-      const playedOut = spokeAfterAnswer && now - this.lastAudioAt > GOODBYE_QUIET_MS && now > this.playbackEndsAt();
+      const playedOut = spokeAfterAnswer && now - this.lastSpeechAt > GOODBYE_QUIET_MS && now > this.playbackEndsAt();
       if (now - requestedAt > GOODBYE_MAX_MS || silentTooLong || (answered && playedOut)) {
         this.endSession();
         return;
@@ -394,8 +431,9 @@ export class LiveCallController {
 
   private resetSilenceTimer(): void {
     clearTimeout(this.silenceTimer);
-    // OpenAI's guide: transcript gaps alone don't establish silence. Audio from
-    // the receptionist and a request still being answered both count as activity.
+    // OpenAI's guide: transcript gaps alone don't establish silence, so a
+    // request still being answered counts as activity too. Reflected output
+    // audio doesn't: it can cover silence.
     if (!this.options.silenceTimeoutMs || this.finished || this.runningDelegations > 0) return;
     this.silenceTimer = setTimeout(() => this.options.onTimeout?.("silence_timeout"), this.options.silenceTimeoutMs);
   }
@@ -609,6 +647,7 @@ export class LiveCallController {
       ...(seconds !== undefined ? { billedSeconds: seconds } : {}),
       ...(closeReason ? { closeReason } : {}),
       ...(latency ? { latency } : {}),
+      outputAudio: this.outputAudio,
     });
     this.resolveFinished();
   }

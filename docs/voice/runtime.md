@@ -26,7 +26,9 @@ The caller hears silence while the agent works, so calls keep it short:
 - If OpenAI rejects an answer, the worker sends a short failure in its place, so the caller doesn't wait in silence.
 - A booking repeated for the same caller, service and time returns the existing appointment instead of reporting the slot as taken.
 
-The worker greets the caller once GPT-Live reports `session.started`, in the business's default language. OpenAI's guide says to send the greeting once, so the worker sends it again only when OpenAI rejects it, up to three times. If the worker attaches after the 3-second replay window, it greets 3.5 seconds after its connection opens. It logs each step as `live.greeting` with `step`, `attempt`, `trigger` and `sinceAttachMs`.
+The worker greets the caller once GPT-Live reports `session.started`, in the business's default language. If the worker attaches after the 3-second replay window, it greets 3.5 seconds after its connection opens. OpenAI's acknowledgment confirms that GPT-Live accepted the greeting, not that it spoke, and GPT-Live sometimes stays silent. So the worker waits for the greeting's words in the output transcript. It sends the greeting again, up to three times in all, when OpenAI rejects it or no words follow within 3 seconds of the acknowledgment. It stops once the caller speaks. It logs each step as `live.greeting` with `step`, `attempt`, `trigger` and `sinceAttachMs`.
+
+The sideband also reflects `session.output_audio.delta` events, which OpenAI doesn't document for sidebands. GPT-Live is full duplex, so these events can cover silence. The worker never treats them as speech, for the greeting, the goodbye or the silence timeout. It counts them in `outputAudio` on `live.closed`.
 
 The worker logs each answer as `live.delegation` with `agentMs`, `totalMs`, `queueMs` (time waiting for an earlier request), `tools`, `modelSteps`, `directAnswer`, `stepMs` (each model step with the tools it called), `toolMs` (time in tools), `failed` and `superseded`. It also records each answer's tokens and cost as an AI generation with the operation `voice.delegation`.
 

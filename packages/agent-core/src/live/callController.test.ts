@@ -119,14 +119,57 @@ describe("LiveCallController greeting", () => {
     expect(greetings(socket).map((event) => event.event_id)).toEqual(["greeting_1", "greeting_2", "greeting_3"]);
   });
 
-  it("reports the greeting sent, acknowledged and spoken", async () => {
+  it("reports the greeting sent, acknowledged and spoken once its words arrive", async () => {
     const greetingEvents: GreetingEvent[] = [];
     const { socket } = setup({ onGreeting: (event) => greetingEvents.push(event) });
     socket.emit("session.started", {});
     await vi.waitFor(() => expect(greetings(socket)).toHaveLength(1));
     socket.emit("session.instructions.appended", { client_event_id: "greeting_1", start_ms: 100, end_ms: 100 });
-    socket.emit("session.output_audio.delta", { delta: "", start_ms: 300, end_ms: 900 });
+    socket.emit("session.output_transcript.delta", { delta: "Thanks for calling", start_ms: 300, end_ms: 900 });
     expect(greetingEvents.map((event) => event.step)).toEqual(["sent", "acknowledged", "spoken"]);
+  });
+
+  // GPT-Live is full duplex: the sideband reflects output audio for silence too.
+  it("doesn't take reflected audio or an empty transcript for the greeting", async () => {
+    fakeTimers();
+    const greetingEvents: GreetingEvent[] = [];
+    const { socket } = setup({ onGreeting: (event) => greetingEvents.push(event) });
+    socket.emit("session.started", {});
+    await vi.advanceTimersByTimeAsync(0);
+    socket.emit("session.output_audio.delta", { delta: "", start_ms: 0, end_ms: 900 });
+    socket.emit("session.output_transcript.delta", { delta: " ", start_ms: 0, end_ms: 900 });
+    socket.emit("session.instructions.appended", { client_event_id: "greeting_1", start_ms: 1_400, end_ms: 1_400 });
+    expect(greetingEvents.map((event) => event.step)).toEqual(["sent", "acknowledged"]);
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect(greetings(socket).map((event) => event.event_id)).toEqual(["greeting_1", "greeting_2"]);
+    expect(greetingEvents.map((event) => event.step)).toEqual(["sent", "acknowledged", "unspoken", "sent"]);
+  });
+
+  it("sends an acknowledged greeting again when no words follow, until it's spoken", async () => {
+    fakeTimers();
+    const { socket } = setup();
+    socket.emit("session.started", {});
+    await vi.advanceTimersByTimeAsync(0);
+    socket.emit("session.instructions.appended", { client_event_id: "greeting_1" });
+    await vi.advanceTimersByTimeAsync(2_999);
+    expect(greetings(socket)).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(greetings(socket)).toHaveLength(2);
+    socket.emit("session.instructions.appended", { client_event_id: "greeting_2" });
+    socket.emit("session.output_transcript.delta", { delta: "Thanks for calling", start_ms: 4_000, end_ms: 4_500 });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(greetings(socket)).toHaveLength(2);
+  });
+
+  it("doesn't resend the greeting once the caller has spoken", async () => {
+    fakeTimers();
+    const { socket } = setup();
+    socket.emit("session.started", {});
+    await vi.advanceTimersByTimeAsync(0);
+    socket.emit("session.instructions.appended", { client_event_id: "greeting_1" });
+    socket.emit("session.input_transcript.delta", { delta: "Hello?", start_ms: 1_000, end_ms: 1_500 });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(greetings(socket)).toHaveLength(1);
   });
 
   it("doesn't greet after the receptionist or the caller has spoken", async () => {
@@ -238,7 +281,7 @@ describe("LiveCallController ending", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(sentOfType(socket, "session.commentary.append")).toHaveLength(1);
     // The goodbye runs to 4,000 ms on the timeline: 3 seconds from now.
-    socket.emit("session.output_audio.delta", { delta: "", start_ms: 1_500, end_ms: 4_000 });
+    socket.emit("session.output_transcript.delta", { delta: "Thanks for calling, goodbye!", start_ms: 1_500, end_ms: 4_000 });
     await vi.advanceTimersByTimeAsync(2_500);
     expect(hangup).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1_000);
@@ -321,17 +364,24 @@ describe("LiveCallController transcript and silence", () => {
     expect(closed[0]?.latency).toEqual({ firstSpeechMs: 1_100, greetedFirst: true, answerGapsMs: [800], speechSource: "audio" });
   });
 
-  it("times out after a stretch of silence, counting the receptionist's audio as activity", async () => {
+  it("times out after a stretch of silence, which reflected audio doesn't interrupt", async () => {
     fakeTimers();
     const { socket, onTimeout } = setup({ silenceTimeoutMs: 75_000 });
     await vi.advanceTimersByTimeAsync(60_000);
     socket.emit("session.input_transcript.delta", { delta: "Hello?", end_ms: 60_000 });
     await vi.advanceTimersByTimeAsync(60_000);
     socket.emit("session.output_audio.delta", { delta: "", start_ms: 119_000, end_ms: 120_000 });
-    await vi.advanceTimersByTimeAsync(60_000);
     expect(onTimeout).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(20_000);
+    await vi.advanceTimersByTimeAsync(15_000);
     expect(onTimeout).toHaveBeenCalledWith("silence_timeout");
+  });
+
+  it("counts the reflected output audio on close", () => {
+    const { socket, closed } = setup();
+    socket.emit("session.output_audio.delta", { delta: "", start_ms: 0, end_ms: 500 });
+    socket.emit("session.output_audio.delta", { delta: "", start_ms: 500, end_ms: 1_000 });
+    socket.emit("session.closed", { reason: "remote_hangup", usage: { seconds: 1 } });
+    expect(closed[0]?.outputAudio).toEqual({ deltas: 2, firstStartMs: 0, coveredMs: 1_000 });
   });
 
   it("doesn't time out while a request is still being answered", async () => {
