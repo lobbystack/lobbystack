@@ -4,13 +4,13 @@ import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
 
 import { hasSummarizableTranscript, type BusinessSummarizer, type CallSummarizer } from "@lobbystack/agent-core";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
-import { getPolarMeteredUsagePayload, permanentSmsErrorCode, type BillingUsageKind } from "@lobbystack/shared";
+import { getPolarMeteredUsagePayload, normalizeInterfaceLocale, permanentSmsErrorCode, type BillingUsageKind } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueBusinessSummaryRefresh, loadBusinessSummaryInput, resetGeneratedBusinessSummary, saveGeneratedBusinessSummary } from "@lobbystack/domain";
 import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationFailed, markNotificationSent, markNotificationSkipped, cancelRetiredPhoneVerificationSend, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, correctAlertSmsUsage, estimateSmsSegments, loadOperatorNotificationDelivery, markFeedbackEmailFailed, markFeedbackEmailSent, markOperatorNotificationSent, markOperatorNotificationSkipped, queueDailyOperatorSummaries, refreshUnitEconomicsMonth, releaseOperatorNotificationDelivery, reserveAlertSmsUsage } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
-import { issueOperatorPhoneVerificationCode, markOperatorPhoneVerificationCodeSent, releaseOperatorPhoneVerificationCodeSend } from "@lobbystack/domain";
+import { issueOperatorPhoneVerificationCode, markOperatorPhoneVerificationCodeSent, releaseOperatorPhoneVerificationCodeSend, verificationCodeSmsBody } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type WebhookSender } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
 import type { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
@@ -247,9 +247,22 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         await releaseOperatorPhoneVerificationCodeSend(dependencies.domain, { businessId, attemptId, retry: false, error: "Alert SMS delivery is not configured." });
         return { status: "skipped", entityId: attemptId };
       }
+      const body = verificationCodeSmsBody(target.code, normalizeInterfaceLocale(String(job.payload.locale ?? "")) ?? "en");
+      // The code goes out from the alert sender, so it counts against the alert SMS quota.
+      const usageSourceKey = `alert_sms:phone_verification:${attemptId}`;
+      let usageEventId: string | undefined;
+      if (dependencies.domain.db) {
+        const reservation = await reserveAlertSmsUsage(dependencies.domain, { businessId, sourceKey: usageSourceKey, estimatedSegments: estimateSmsSegments(body) });
+        if (!reservation.allowed) {
+          await releaseOperatorPhoneVerificationCodeSend(dependencies.domain, { businessId, attemptId, retry: false, error: reservation.errorCode ?? "Alert SMS quota reached." });
+          return { status: "skipped", entityId: attemptId };
+        }
+        usageEventId = reservation.usageEventId;
+      }
       try {
-        await sender.sendSms({ to: target.to, from: target.from, body: `LobbyStack verification code: ${target.code}. It expires in 10 minutes.` });
+        await sender.sendSms({ to: target.to, from: target.from, body });
       } catch (error) {
+        if (dependencies.domain.db) await correctAlertSmsUsage(dependencies.domain, { businessId, sourceKey: usageSourceKey, segments: 0 }).catch(() => undefined);
         const permanentCode = permanentSmsErrorCode(error);
         const retry = !permanentCode && execution.isFinalAttempt === false;
         await releaseOperatorPhoneVerificationCodeSend(dependencies.domain, { businessId, attemptId, retry, error: permanentCode ? `Twilio error ${permanentCode}.` : "Verification delivery failed." });
@@ -258,6 +271,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         throw error;
       }
       await markOperatorPhoneVerificationCodeSent(dependencies.domain, { businessId, attemptId });
+      if (usageEventId) await enqueueBillingUsageSync(dependencies.domain, { businessId, usageEventId });
       return { status: "completed", entityId: attemptId };
     }
     case "snapshot.refresh":
@@ -493,7 +507,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         return { status: "skipped", entityId: verificationId };
       }
       try {
-        await dependencies.twilio.sendSms({ to: target.to, from: target.from, body: `LobbyStack verification code: ${target.code}. It expires in 10 minutes.` });
+        await dependencies.twilio.sendSms({ to: target.to, from: target.from, body: verificationCodeSmsBody(target.code) });
         await markAppointmentChangeOtpSent(dependencies.domain, { businessId, verificationId });
         return { status: "completed", entityId: verificationId };
       } catch (error) {

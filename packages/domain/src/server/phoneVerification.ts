@@ -2,13 +2,13 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { and, eq, inArray, lt, or, sql } from "drizzle-orm";
 
-import { canTextNumber } from "@lobbystack/shared";
+import { canTextNumber, type InterfaceLocale } from "@lobbystack/shared";
 import { enqueueOutbox, onboardingPhoneVerifications, withBusinessTransaction } from "@lobbystack/db";
 
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
-import { resolveOperatorSmsSender } from "./notifications";
-import { newVerificationCode, verificationCodeSecret } from "./verificationCode";
+import { enableOperatorSmsAlertsWithConsent, resolveOperatorSmsSender } from "./notifications";
+import { VERIFICATION_CODE_TTL_MS, newVerificationCode, verificationCodeSecret } from "./verificationCode";
 
 // Personal phone verification is no longer part of onboarding. This drains any
 // verification send that was already queued before retirement so the worker
@@ -40,7 +40,7 @@ export async function cancelRetiredPhoneVerificationSend(
 // hash is stored. app.complete_phone_verification then sets users.phone and
 // users.phone_verified_at.
 
-export const PHONE_VERIFICATION_CODE_TTL_MS = 10 * 60_000;
+export const PHONE_VERIFICATION_CODE_TTL_MS = VERIFICATION_CODE_TTL_MS;
 export const PHONE_VERIFICATION_MAX_CHECKS = 5;
 const PHONE_VERIFICATION_SEND_LEASE_MS = 5 * 60_000;
 const E164_PATTERN = /^\+[1-9]\d{7,14}$/;
@@ -67,11 +67,11 @@ export type PhoneVerificationAttemptState = { id: string; status: string; expire
 export type PhoneVerificationCheckOutcome =
   | { status: "approved" }
   | { status: "invalid"; remainingAttempts: number }
-  | { status: "locked" }
+  | { status: "locked"; usedCheck?: true }
   | { status: "expired" }
   | { status: "unavailable" };
 
-/** Decides a code check without touching storage. A wrong code that uses the last allowed check locks the attempt. */
+/** Decides a code check without touching storage. A wrong code that uses the last allowed check locks the attempt and reports `usedCheck`. */
 export function evaluatePhoneVerificationCode(attempt: PhoneVerificationAttemptState, code: string, now: Date, secret = verificationCodeSecret()): PhoneVerificationCheckOutcome {
   if (attempt.status === "failed" && attempt.attemptCount >= PHONE_VERIFICATION_MAX_CHECKS) return { status: "locked" };
   if (attempt.status === "expired") return { status: "expired" };
@@ -80,7 +80,7 @@ export function evaluatePhoneVerificationCode(attempt: PhoneVerificationAttemptS
   if (attempt.attemptCount >= PHONE_VERIFICATION_MAX_CHECKS) return { status: "locked" };
   if (phoneVerificationCodeMatches(attempt.codeHash, attempt.id, code, secret)) return { status: "approved" };
   const remainingAttempts = PHONE_VERIFICATION_MAX_CHECKS - (attempt.attemptCount + 1);
-  return remainingAttempts <= 0 ? { status: "locked" } : { status: "invalid", remainingAttempts };
+  return remainingAttempts <= 0 ? { status: "locked", usedCheck: true } : { status: "invalid", remainingAttempts };
 }
 
 const reservationErrors: Record<string, () => PhoneVerificationError> = {
@@ -106,7 +106,7 @@ function reservationError(error: unknown): PhoneVerificationError | undefined {
  */
 export async function startOperatorPhoneVerification(
   context: DomainContext,
-  input: { userId: string; businessId: string; phoneE164: string; countryCode: string },
+  input: { userId: string; businessId: string; phoneE164: string; countryCode: string; locale?: InterfaceLocale },
 ): Promise<{ attemptId: string }> {
   const countryCode = input.countryCode.trim().toUpperCase();
   if (!E164_PATTERN.test(input.phoneE164) || !/^[A-Z]{2}$/.test(countryCode)) throw phoneVerificationError(422, "phone_number_invalid", "Enter a valid mobile number.");
@@ -127,7 +127,7 @@ export async function startOperatorPhoneVerification(
       const result = await tx.execute(sql`SELECT app.reserve_phone_verification_attempt(${input.businessId}::uuid, ${input.userId}::uuid, ${input.phoneE164}, ${countryCode}, ${null}, ${fingerprint}) AS id`);
       const attemptId = String((result.rows[0] as { id?: unknown } | undefined)?.id ?? "");
       if (!attemptId) throw new Error("Phone verification could not be reserved.");
-      await enqueueOutbox(tx, { topic: "phoneVerification.sendCode", businessId: input.businessId, aggregateType: "phone_verification", aggregateId: attemptId, dedupeKey: `phone-verification:${attemptId}:send-code`, payload: { attemptId } });
+      await enqueueOutbox(tx, { topic: "phoneVerification.sendCode", businessId: input.businessId, aggregateType: "phone_verification", aggregateId: attemptId, dedupeKey: `phone-verification:${attemptId}:send-code`, payload: { attemptId, locale: input.locale ?? "en" } });
       return { attemptId };
     });
   } catch (error) {
@@ -161,7 +161,7 @@ function operatorVerificationStatus(status: string, expiresAt: Date, now: Date):
   return "failed";
 }
 
-/** Checks a code for the signed-in operator. A correct code verifies the phone on their account. */
+/** Checks a code for the signed-in operator. A correct code verifies the phone on their account and turns SMS alerts on with the consent given at the phone step. */
 export async function checkOperatorPhoneVerificationCode(
   context: DomainContext,
   input: { userId: string; businessId: string; attemptId: string; code: string; now?: Date },
@@ -172,25 +172,26 @@ export async function checkOperatorPhoneVerificationCode(
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
     const scope = and(eq(onboardingPhoneVerifications.id, input.attemptId), eq(onboardingPhoneVerifications.businessId, input.businessId), eq(onboardingPhoneVerifications.userId, input.userId));
-    const attempt = (await tx.select({ id: onboardingPhoneVerifications.id, status: onboardingPhoneVerifications.status, expiresAt: onboardingPhoneVerifications.expiresAt, attemptCount: onboardingPhoneVerifications.attemptCount, codeHash: onboardingPhoneVerifications.codeHash })
+    const attempt = (await tx.select({ id: onboardingPhoneVerifications.id, phoneE164: onboardingPhoneVerifications.phoneE164, status: onboardingPhoneVerifications.status, expiresAt: onboardingPhoneVerifications.expiresAt, attemptCount: onboardingPhoneVerifications.attemptCount, codeHash: onboardingPhoneVerifications.codeHash })
       .from(onboardingPhoneVerifications).where(scope).limit(1).for("update"))[0];
     if (!attempt) return { approved: false, status: "unavailable" };
     const outcome = evaluatePhoneVerificationCode(attempt, code, now);
-    const checked = attempt.status === "pending" && Boolean(attempt.codeHash) && attempt.expiresAt.getTime() > now.getTime() && attempt.attemptCount < PHONE_VERIFICATION_MAX_CHECKS;
     if (outcome.status === "approved") {
       await tx.update(onboardingPhoneVerifications).set({ attemptCount: attempt.attemptCount + 1, codeHash: null, updatedAt: now }).where(scope);
       const completed = await tx.execute(sql`SELECT app.complete_phone_verification(${input.businessId}::uuid, ${input.userId}::uuid, ${input.attemptId}::uuid, ${"approved"}) AS approved`);
       const approved = (completed.rows[0] as { approved?: unknown } | undefined)?.approved === true;
-      return approved ? { approved: true, status: "approved" } : { approved: false, status: "unavailable" };
+      if (!approved) return { approved: false, status: "unavailable" };
+      await enableOperatorSmsAlertsWithConsent(tx, { businessId: input.businessId, userId: input.userId, phone: attempt.phoneE164, now });
+      return { approved: true, status: "approved" };
     }
     if (outcome.status === "invalid") {
       await tx.update(onboardingPhoneVerifications).set({ attemptCount: attempt.attemptCount + 1, lastError: "Verification code was not approved.", updatedAt: now }).where(scope);
     } else if (outcome.status === "locked" && attempt.status === "pending") {
-      await tx.update(onboardingPhoneVerifications).set({ attemptCount: checked ? attempt.attemptCount + 1 : attempt.attemptCount, status: "failed", codeHash: null, lastError: "Too many incorrect codes.", updatedAt: now }).where(scope);
+      await tx.update(onboardingPhoneVerifications).set({ attemptCount: outcome.usedCheck ? attempt.attemptCount + 1 : attempt.attemptCount, status: "failed", codeHash: null, lastError: "Too many incorrect codes.", updatedAt: now }).where(scope);
     } else if (outcome.status === "expired" && attempt.status === "pending") {
       await tx.update(onboardingPhoneVerifications).set({ status: "expired", codeHash: null, updatedAt: now }).where(scope);
     }
-    return { approved: false, ...outcome };
+    return outcome.status === "locked" ? { approved: false, status: "locked" } : { approved: false, ...outcome };
   });
 }
 

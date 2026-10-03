@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq } from "drizzle-orm";
 
+import { OPERATOR_SMS_DISCLOSURE_VERSION } from "@lobbystack/shared";
+
 import { billingAccounts, businessMemberships, businesses, contacts, conversations, createDatabaseClient, messages, operatorNotificationDeliveries, operatorNotificationPreferences, outboxMessages, phoneNumbers, smsConsentEvents, users, withBusinessTransaction } from "@lobbystack/db";
 import { appendMessage, claimOperatorNotificationDelivery, claimSmsDelivery, defaultOperatorNotificationEventPreferences, getNotificationPreferences, loadOperatorNotificationDelivery, loadSmsDeliveryTarget, queueOperatorAlert, receiveInboundSms, setContactSmsManualBlock, setNotificationPreferences } from "@lobbystack/domain";
 
@@ -68,7 +70,7 @@ async function main(): Promise<void> {
     assert(missingConsentDenied, "SMS alert preferences were enabled without consent.");
     await setNotificationPreferences({ db: app.db }, { userId, businessId, emailEnabled: false, smsEnabled: true, smsConsent: true, eventPreferences: preferences });
     const [savedPreference] = await withBusinessTransaction(app.db, { businessId, userId, actorType: "operator" }, async tx => tx.select().from(operatorNotificationPreferences).where(eq(operatorNotificationPreferences.businessId, businessId)));
-    assert(savedPreference?.smsConsentDisclosureVersion === "operator-alerts-2026-05-22", "Accepted disclosure version was not persisted.");
+    assert(savedPreference?.smsConsentDisclosureVersion === OPERATOR_SMS_DISCLOSURE_VERSION, "Accepted disclosure version was not persisted.");
     await withBusinessTransaction(app.db, { businessId, userId, actorType: "operator" }, async tx => tx.update(operatorNotificationPreferences).set({ smsConsentDisclosureVersion: "outdated" }).where(eq(operatorNotificationPreferences.businessId, businessId)));
     assert((await queueOperatorAlert({ db: worker.db }, { businessId, eventKind: "voiceMessage", eventKey: `outdated:${randomUUID()}`, subject: "Certification", body: "Outdated consent" })).length === 0, "Outdated disclosure consent permitted SMS dispatch.");
     await setNotificationPreferences({ db: app.db }, { userId, businessId, emailEnabled: false, smsEnabled: true, smsConsent: true, eventPreferences: preferences });

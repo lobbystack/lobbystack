@@ -58,7 +58,7 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
   }, [open]);
 
   const start = useMutation({
-    mutationFn: (phoneNumber: string) => requestJson<{ attemptId: string; phoneE164: string }>(`/api/account/phone-verification?${query}`, { method: "POST", body: JSON.stringify({ phoneNumber }) }),
+    mutationFn: (phoneNumber: string) => requestJson<{ attemptId: string; phoneE164: string }>(`/api/account/phone-verification?${query}`, { method: "POST", body: JSON.stringify({ phoneNumber, locale }) }),
     onSuccess: (result) => { setStep({ kind: "code", attemptId: result.attemptId, phoneE164: result.phoneE164 }); setCode(""); setLocked(false); submittedCodeRef.current = ""; },
     onError: (cause) => setError(t(`notifications.phoneVerification.errors.${startErrorKeys[errorCode(cause) ?? ""] ?? "sendFailed"}`)),
   });
@@ -74,7 +74,9 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
     mutationFn: (value: string) => requestJson<CheckResult>(`/api/account/phone-verification/check?${query}`, { method: "POST", body: JSON.stringify({ attemptId, code: value }) }),
     onSuccess: (result) => {
       if (result.approved) { onVerified(); return; }
-      if (result.status !== "invalid") setLocked(true);
+      if (result.status === "locked" || result.status === "expired") setLocked(true);
+      // The code may still be on its way: reload the attempt and leave the input open.
+      if (result.status === "unavailable" || result.status === "approved") void attempt.refetch();
       setError(t(`notifications.phoneVerification.errors.${checkErrorKeys[result.status === "approved" ? "unavailable" : result.status]}`));
     },
     onError: () => setError(t("notifications.phoneVerification.errors.checkFailed")),
@@ -138,7 +140,7 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
       </form> : <div className="flex flex-col gap-6">
         <DialogHeader><DialogTitle>{t("notifications.phoneVerification.code.title")}</DialogTitle><DialogDescription>{t("notifications.phoneVerification.code.description", { phone: formatPhoneNumberDisplay(step.phoneE164, locale) })}</DialogDescription></DialogHeader>
         <div className="flex flex-col items-center gap-4">
-          <InputOTP aria-label={t("notifications.phoneVerification.code.title")} autoComplete="one-time-code" autoFocus containerClassName="justify-center" disabled={codeDisabled} maxLength={6} onChange={(value) => { setCode(value.replace(/\D/g, "").slice(0, 6)); if (!locked) setError(null); }} value={code}>
+          <InputOTP aria-label={t("notifications.phoneVerification.code.title")} autoComplete="one-time-code" autoFocus containerClassName="justify-center" disabled={codeDisabled} maxLength={6} onChange={(value) => { const next = value.replace(/\D/g, "").slice(0, 6); if (next.length < 6) submittedCodeRef.current = ""; setCode(next); if (!locked) setError(null); }} value={code}>
             <InputOTPGroup>{[0, 1, 2, 3, 4, 5].map((index) => <InputOTPSlot aria-invalid={shownError ? true : undefined} className="size-12 text-lg" index={index} key={index} />)}</InputOTPGroup>
           </InputOTP>
           {check.isPending ? <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status"><LoaderCircle className="size-4 animate-spin" />{t("notifications.phoneVerification.code.verifying")}</div> : null}

@@ -22,6 +22,7 @@ export * from "./onboarding";
 export * from "./operatorActivity";
 export * from "./outbox";
 export * from "./phoneVerification";
+export { verificationCodeSmsBody } from "./verificationCode";
 export * from "./phoneNumbers";
 export * from "./privacy";
 export * from "./publicApi";

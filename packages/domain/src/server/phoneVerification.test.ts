@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   enqueueOutbox: vi.fn(),
   requireBusinessMembership: vi.fn(),
   resolveOperatorSmsSender: vi.fn(),
+  enableOperatorSmsAlertsWithConsent: vi.fn(),
 }));
 
 vi.mock("@lobbystack/db", async (original) => ({
@@ -13,7 +14,7 @@ vi.mock("@lobbystack/db", async (original) => ({
   enqueueOutbox: mocks.enqueueOutbox,
 }));
 vi.mock("../authz", () => ({ requireBusinessMembership: mocks.requireBusinessMembership }));
-vi.mock("./notifications", () => ({ resolveOperatorSmsSender: mocks.resolveOperatorSmsSender }));
+vi.mock("./notifications", () => ({ resolveOperatorSmsSender: mocks.resolveOperatorSmsSender, enableOperatorSmsAlertsWithConsent: mocks.enableOperatorSmsAlertsWithConsent }));
 
 import {
   PHONE_VERIFICATION_CODE_TTL_MS,
@@ -98,7 +99,7 @@ describe("evaluatePhoneVerificationCode", () => {
   });
 
   it("locks the attempt when a wrong code uses the last check", () => {
-    expect(evaluatePhoneVerificationCode({ ...pending, attemptCount: PHONE_VERIFICATION_MAX_CHECKS - 1 }, "000000", now, secret)).toEqual({ status: "locked" });
+    expect(evaluatePhoneVerificationCode({ ...pending, attemptCount: PHONE_VERIFICATION_MAX_CHECKS - 1 }, "000000", now, secret)).toEqual({ status: "locked", usedCheck: true });
     expect(evaluatePhoneVerificationCode({ ...pending, attemptCount: PHONE_VERIFICATION_MAX_CHECKS }, "123456", now, secret)).toEqual({ status: "locked" });
     expect(evaluatePhoneVerificationCode({ ...pending, status: "failed", codeHash: null, attemptCount: PHONE_VERIFICATION_MAX_CHECKS }, "123456", now, secret)).toEqual({ status: "locked" });
   });
@@ -122,7 +123,13 @@ describe("startOperatorPhoneVerification", () => {
     expect(mocks.requireBusinessMembership).toHaveBeenCalled();
     expect(sets[0]).toMatchObject({ status: "canceled", codeHash: null });
     expect(executed[0]).toContain("reserve_phone_verification_attempt");
-    expect(mocks.enqueueOutbox).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "phoneVerification.sendCode", businessId: "business-1", payload: { attemptId: "attempt-9" } }));
+    expect(mocks.enqueueOutbox).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "phoneVerification.sendCode", businessId: "business-1", payload: { attemptId: "attempt-9", locale: "en" } }));
+  });
+
+  it("passes the operator's language to the worker", async () => {
+    setup({ execute: async () => ({ rows: [{ id: "attempt-9" }] }) });
+    await startOperatorPhoneVerification(context, { ...input, locale: "fr" });
+    expect(mocks.enqueueOutbox).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ payload: { attemptId: "attempt-9", locale: "fr" } }));
   });
 
   it("rejects a number that is not E.164", async () => {
@@ -160,7 +167,7 @@ describe("startOperatorPhoneVerification", () => {
 });
 
 describe("checkOperatorPhoneVerificationCode", () => {
-  const attempt = (overrides: Record<string, unknown> = {}) => ({ id: "attempt-1", status: "pending", expiresAt: new Date(now.getTime() + 60_000), attemptCount: 0, codeHash: hashPhoneVerificationCode("attempt-1", "123456", secret), ...overrides });
+  const attempt = (overrides: Record<string, unknown> = {}) => ({ id: "attempt-1", phoneE164: "+14165550123", status: "pending", expiresAt: new Date(now.getTime() + 60_000), attemptCount: 0, codeHash: hashPhoneVerificationCode("attempt-1", "123456", secret), ...overrides });
   const input = { ...scope, attemptId: "attempt-1", now };
 
   it("verifies the phone on the account when the code is correct", async () => {
@@ -168,6 +175,8 @@ describe("checkOperatorPhoneVerificationCode", () => {
     await expect(checkOperatorPhoneVerificationCode(context, { ...input, code: "123456" })).resolves.toEqual({ approved: true, status: "approved" });
     expect(sets[0]).toMatchObject({ attemptCount: 1, codeHash: null });
     expect(executed[0]).toContain("complete_phone_verification");
+    // Sending the code was the consent, so the server records it with the verification.
+    expect(mocks.enableOperatorSmsAlertsWithConsent).toHaveBeenCalledWith(expect.anything(), { businessId: "business-1", userId: "user-1", phone: "+14165550123", now });
   });
 
   it("counts a wrong code without completing verification", async () => {

@@ -36,11 +36,12 @@ export function LiveNotificationSettingsSurface({ widgetOnly = false }: { widget
   // Consent is the opt-in disclosure in the phone step: sending the code is the
   // operator's agreement. Anyone without consent on record goes through it.
   function enableSms(next: Preferences) { persist({ ...next, smsConsent: true }); }
+  // The server records consent and turns SMS on when it approves the code.
   function phoneVerified() {
     if (!pendingPhoneVerification) return;
-    const next = { ...pendingPhoneVerification, canUseSms: true, smsUnavailableReason: null };
+    setDraft({ ...pendingPhoneVerification, smsConsent: true, canUseSms: true, smsUnavailableReason: null });
     setPendingPhoneVerification(null);
-    enableSms(next);
+    void queryClient.invalidateQueries({ queryKey: ["notification-preferences", business?.businessId] });
   }
 
   if (!draft || preferences.isLoading || businesses.isLoading) return <div className="flex flex-col gap-12"><Skeleton className="h-40 w-full rounded-xl" /><Skeleton className="h-64 w-full rounded-xl" /><Skeleton className="h-40 w-full rounded-xl" /></div>;
