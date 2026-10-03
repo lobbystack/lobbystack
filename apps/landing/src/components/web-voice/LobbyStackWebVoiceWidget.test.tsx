@@ -29,7 +29,12 @@ class FakePeerConnection {
   readonly addTrack = vi.fn()
   readonly createDataChannel = vi.fn(() => this.channel)
   readonly createOffer = vi.fn(async () => ({ type: "offer", sdp: "offer-sdp" }))
-  readonly setLocalDescription = vi.fn(async () => undefined)
+  // Host candidates gather at once, so the hook can send the offer right away.
+  iceGatheringState: RTCIceGatheringState = "complete"
+  localDescription: { sdp: string } | null = null
+  readonly setLocalDescription = vi.fn(async (description: { sdp: string }) => {
+    this.localDescription = description
+  })
   readonly setRemoteDescription = vi.fn(async () => undefined)
 
   constructor() {
@@ -132,11 +137,16 @@ describe("landing hero voice demo call endings", () => {
     )
   })
 
-  it("reports the caller hanging up as ended by the caller", async () => {
-    await startConnectedCall()
+  it("reports the caller hanging up as ended by the caller, once OpenAI confirms the close", async () => {
+    const connection = await startConnectedCall()
 
     fireEvent.click(screen.getByRole("button", { name: "Hang up" }))
 
+    // OpenAI's WebRTC guide: keep the connection until session.closed arrives.
+    expect(connection.channel.send).toHaveBeenCalledWith(JSON.stringify({ type: "session.close" }))
+    expect(connection.close).not.toHaveBeenCalled()
+    act(() => connection.receive({ type: "session.closed", reason: "close_requested" }))
+    expect(connection.close).toHaveBeenCalled()
     expect(screen.getByRole("status").textContent).toBe("Call ended")
     expect(await capturedEvents()).toContainEqual([
       "landing.web_voice_call_ended",

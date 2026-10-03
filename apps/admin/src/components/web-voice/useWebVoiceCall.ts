@@ -113,6 +113,28 @@ export type WebVoiceEndedBy = "caller" | "agent";
 // count the call as dropped.
 export const DISCONNECT_GRACE_MS = 5_000;
 
+// OpenAI's WebRTC guide: after session.close, keep receiving until
+// session.closed before closing the peer connection and microphone.
+export const SESSION_CLOSE_TIMEOUT_MS = 15_000;
+// The guide also waits for ICE candidate gathering before sending the offer.
+const ICE_GATHERING_TIMEOUT_MS = 10_000;
+
+function waitForIceGathering(connection: RTCPeerConnection): Promise<void> {
+  if (connection.iceGatheringState === "complete") return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = () => {
+      window.clearTimeout(timer);
+      connection.removeEventListener("icegatheringstatechange", check);
+      resolve();
+    };
+    const check = () => {
+      if (connection.iceGatheringState === "complete") done();
+    };
+    const timer = window.setTimeout(done, ICE_GATHERING_TIMEOUT_MS);
+    connection.addEventListener("icegatheringstatechange", check);
+  });
+}
+
 /**
  * Returns the close reason when a data channel message is GPT-Live's
  * session.closed event. Only the event type and reason are read: this channel
@@ -186,6 +208,8 @@ export function useWebVoiceCall({
   const sessionRef = useRef<StartedSession | null>(null);
   const startCallAttemptRef = useRef(0);
   const disconnectTimerRef = useRef<number | undefined>(undefined);
+  // Set while a call waits for session.closed after session.close; calling it finishes the close.
+  const closingRef = useRef<(() => void) | null>(null);
 
   const invalidatePendingStart = () => {
     startCallAttemptRef.current += 1;
@@ -204,19 +228,43 @@ export function useWebVoiceCall({
 
   // Closing the session ends the call and its billing at OpenAI. Before the
   // channel opens, the server ends it instead.
-  const endRemoteSession = () => {
+  // Returns true when session.close went out on the channel, so session.closed will follow.
+  const endRemoteSession = (): boolean => {
     const channel = eventsChannelRef.current;
     const session = sessionRef.current;
     sessionRef.current = null;
     if (channel?.readyState === "open") {
       try {
         channel.send(JSON.stringify({ type: "session.close" }));
-        return;
+        return true;
       } catch {
         // Fall back to the server below.
       }
     }
     if (session) requestSessionEnd(endpoint, session);
+    return false;
+  };
+
+  // Ends the session, then releases the call once OpenAI confirms with
+  // session.closed or the timeout passes. The microphone is muted meanwhile.
+  const closeGracefully = (onClosed: () => void) => {
+    localStreamRef.current?.getAudioTracks().forEach((track) => {
+      track.enabled = false;
+    });
+    if (!endRemoteSession()) {
+      onClosed();
+      return;
+    }
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timer);
+      closingRef.current = null;
+      onClosed();
+    };
+    const timer = window.setTimeout(settle, SESSION_CLOSE_TIMEOUT_MS);
+    closingRef.current = settle;
   };
 
   const cleanup = (options: { resetState?: boolean } = {}) => {
@@ -240,8 +288,7 @@ export function useWebVoiceCall({
 
   useEffect(
     () => () => {
-      endRemoteSession();
-      cleanup({ resetState: false });
+      closeGracefully(() => cleanup({ resetState: false }));
     },
     // The cleanup path must use the current refs at unmount, not restart on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -254,10 +301,11 @@ export function useWebVoiceCall({
     }
     invalidatePendingStart();
     setStatus("ending");
-    endRemoteSession();
-    cleanup();
-    setStatus("ended");
     emit("web.voice.test_call_ended", { endedBy: "caller" satisfies WebVoiceEndedBy });
+    closeGracefully(() => {
+      cleanup();
+      setStatus("ended");
+    });
   };
 
   const forceEndCall = async () => {
@@ -275,17 +323,20 @@ export function useWebVoiceCall({
 
     invalidatePendingStart();
     setStatus("ending");
-    endRemoteSession();
-    cleanup();
-    setStatus("idle");
-    setErrorKey(null);
     emit("web.voice.test_call_ended", { endedBy: "caller" satisfies WebVoiceEndedBy });
+    closeGracefully(() => {
+      cleanup();
+      setStatus("idle");
+      setErrorKey(null);
+    });
   };
 
   const startCall = async () => {
     if (isBusy || isCallActive) {
       return;
     }
+    // A call still closing is released first, so its cleanup can't end this one.
+    closingRef.current?.();
 
     const attemptId = ++startCallAttemptRef.current;
     let localStream: MediaStream | null = null;
@@ -351,6 +402,11 @@ export function useWebVoiceCall({
       const isCurrentCall = () => peerConnectionRef.current === connection;
 
       const dropCall = (properties: Record<string, unknown>) => {
+        // Losing the connection while the caller hangs up just finishes the close.
+        if (closingRef.current) {
+          closingRef.current();
+          return;
+        }
         setStatus("error");
         setErrorKey("connectionDropped");
         emit("web.voice.test_call_error", properties);
@@ -376,6 +432,11 @@ export function useWebVoiceCall({
         if (reason === undefined) return;
         // The session is already closed at OpenAI, so there is nothing to end.
         sessionRef.current = null;
+        // The caller ended the call and was waiting for this confirmation.
+        if (closingRef.current) {
+          closingRef.current();
+          return;
+        }
         if (reason === "connection_lost") {
           dropCall({ closeReason: reason });
           return;
@@ -430,6 +491,7 @@ export function useWebVoiceCall({
         offerToReceiveAudio: true,
       });
       await connection.setLocalDescription(offer);
+      await waitForIceGathering(connection);
 
       if (attemptId !== startCallAttemptRef.current) {
         stopAttemptResources();
@@ -444,7 +506,7 @@ export function useWebVoiceCall({
           widgetId,
           visitorId,
           ...(getStartPayload ? await getStartPayload() : {}),
-          sdp: offer.sdp,
+          sdp: connection.localDescription?.sdp ?? offer.sdp,
           pageUrl: `${window.location.origin}${window.location.pathname}`,
         }),
       });
