@@ -755,9 +755,8 @@
       },
       "sms": {
         "title": "SMS",
-        "description": "Reciba alertas urgentes en su teléfono verificado.",
-        "unverifiedDescription": "Active los SMS para verificar su número de móvil y recibir alertas urgentes.",
-        "senderMissingDescription": "Las alertas por SMS no están disponibles hasta que se configure un remitente de SMS de alerta para este espacio de trabajo."
+        "description": "Alertas urgentes por SMS. Pueden aplicarse tarifas de mensajes y datos. Responda STOP para darse de baja.",
+        "senderMissingDescription": "No disponible. Este espacio de trabajo no tiene remitente de SMS de alertas."
       }
     },
     "communication": {
@@ -797,16 +796,10 @@
     "systemIssues": {
       "title": "Problemas del sistema"
     },
-    "smsConsent": {
-      "title": "Activar alertas por SMS",
-      "description": "Confirme que desea que LobbyStack envíe alertas del espacio de trabajo a su número de teléfono verificado.",
-      "cancel": "Cancelar",
-      "accept": "Acepto, activar SMS"
-    },
     "phoneVerification": {
       "phone": {
-        "title": "Verifique su número de móvil",
-        "description": "Le enviaremos un código de 6 dígitos por SMS. Las alertas por SMS llegarán a este número."
+        "title": "Su número de móvil",
+        "consent": "Al enviar el código, acepta recibir alertas de LobbyStack por SMS. La frecuencia varía. Pueden aplicarse tarifas de mensajes y datos. Responda STOP para darse de baja, HELP para obtener ayuda."
       },
       "fields": {
         "mobileNumber": "Número de móvil",
@@ -816,8 +809,8 @@
       "sendCode": "Enviar código",
       "sending": "Enviando código...",
       "code": {
-        "title": "Introduzca su código",
-        "description": "Enviamos un código de 6 dígitos al {{phone}}. Vence en 10 minutos.",
+        "title": "Introduzca el código",
+        "description": "Enviado al {{phone}}.",
         "verifying": "Comprobando el código...",
         "didntGet": "¿No lo recibió?",
         "resend": "Reenviar",
@@ -826,17 +819,17 @@
       },
       "errors": {
         "invalidNumber": "Introduzca un número de móvil válido.",
-        "unreachable": "Su espacio de trabajo envía alertas desde un número gratuito. Introduzca un número de EE. UU. o Canadá.",
-        "senderMissing": "Configure un remitente de SMS de alerta para este espacio de trabajo antes de activar las alertas por SMS.",
-        "cooldown": "Espere 30 segundos antes de pedir otro código.",
-        "rateLimited": "Pidió demasiados códigos. Inténtelo de nuevo en una hora.",
-        "sendFailed": "No pudimos enviar el código. Inténtelo de nuevo.",
-        "deliveryFailed": "No pudimos enviar un SMS a este número. Revise el número o pida un código nuevo.",
-        "wrongCode": "Ese código no coincide. Revise el SMS e inténtelo de nuevo.",
-        "locked": "Introdujo demasiados códigos incorrectos. Pida un código nuevo.",
-        "expired": "Este código venció. Pida un código nuevo.",
-        "unavailable": "Este código ya no funciona. Pida un código nuevo.",
-        "checkFailed": "No pudimos comprobar el código. Inténtelo de nuevo."
+        "unreachable": "Las alertas llegan desde un número gratuito. Use un número de EE. UU. o Canadá.",
+        "senderMissing": "Este espacio de trabajo no tiene remitente de SMS de alertas.",
+        "cooldown": "Espere 30 segundos antes de pedir otro.",
+        "rateLimited": "Demasiados códigos. Vuelva a intentarlo en una hora.",
+        "sendFailed": "No se pudo enviar el código. Vuelva a intentarlo.",
+        "deliveryFailed": "No se pudo enviar un SMS a este número.",
+        "wrongCode": "Código incorrecto.",
+        "locked": "Demasiados códigos incorrectos. Pida uno nuevo.",
+        "expired": "El código caducó. Pida uno nuevo.",
+        "unavailable": "Este código ya no funciona. Pida uno nuevo.",
+        "checkFailed": "No se pudo comprobar el código. Vuelva a intentarlo."
       }
     }
   },

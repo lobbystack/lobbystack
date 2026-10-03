@@ -116,7 +116,7 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
   return <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent>
       {step.kind === "phone" ? <form className="flex flex-col gap-6" onSubmit={sendCode}>
-        <DialogHeader><DialogTitle>{t("notifications.phoneVerification.phone.title")}</DialogTitle><DialogDescription>{t("notifications.phoneVerification.phone.description")}</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>{t("notifications.phoneVerification.phone.title")}</DialogTitle></DialogHeader>
         <FieldGroup className="gap-4">
           <Field data-invalid={error ? true : undefined}>
             <FieldLabel htmlFor="sms-alert-phone">{t("notifications.phoneVerification.fields.mobileNumber")}</FieldLabel>
@@ -129,6 +129,7 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
             </div>
           </Field>
           {error ? <FieldError>{error}</FieldError> : null}
+          <p className="text-xs text-muted-foreground">{t("notifications.phoneVerification.phone.consent")}</p>
         </FieldGroup>
         <DialogFooter>
           <Button onClick={() => onOpenChange(false)} type="button" variant="outline">{t("notifications.phoneVerification.cancel")}</Button>

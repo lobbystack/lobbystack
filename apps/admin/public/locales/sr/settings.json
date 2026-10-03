@@ -755,9 +755,8 @@
       },
       "sms": {
         "title": "SMS",
-        "description": "Primajte hitna upozorenja na potvrđeni telefon.",
-        "unverifiedDescription": "Uključite SMS da potvrdite broj mobilnog telefona i primate hitna upozorenja.",
-        "senderMissingDescription": "SMS upozorenja nisu dostupna dok se za ovaj radni prostor ne podesi pošiljalac SMS upozorenja."
+        "description": "Hitna upozorenja putem SMS-a. Mogu se naplatiti troškovi poruka i podataka. Odgovorite STOP da biste se odjavili.",
+        "senderMissingDescription": "Nije dostupno. Ovaj radni prostor nema pošiljaoca SMS upozorenja."
       }
     },
     "communication": {
@@ -797,16 +796,10 @@
     "systemIssues": {
       "title": "Sistemski problemi"
     },
-    "smsConsent": {
-      "title": "Uključite SMS upozorenja",
-      "description": "Potvrdite da želite da LobbyStack šalje upozorenja radnog prostora na Vaš potvrđeni broj telefona.",
-      "cancel": "Otkaži",
-      "accept": "Slažem se, uključi SMS"
-    },
     "phoneVerification": {
       "phone": {
-        "title": "Potvrdite broj mobilnog telefona",
-        "description": "Poslaćemo Vam šestocifreni kod SMS porukom. SMS upozorenja stižu na ovaj broj."
+        "title": "Vaš broj mobilnog telefona",
+        "consent": "Slanjem koda pristajete da primate LobbyStack upozorenja putem SMS-a. Učestalost varira. Mogu se naplatiti troškovi poruka i podataka. Odgovorite STOP da biste se odjavili, HELP za pomoć."
       },
       "fields": {
         "mobileNumber": "Broj mobilnog telefona",
@@ -817,7 +810,7 @@
       "sending": "Slanje koda...",
       "code": {
         "title": "Unesite kod",
-        "description": "Poslali smo šestocifreni kod na {{phone}}. Kod ističe za 10 minuta.",
+        "description": "Poslat na {{phone}}.",
         "verifying": "Proveravamo kod...",
         "didntGet": "Niste dobili kod?",
         "resend": "Pošalji ponovo",
@@ -826,17 +819,17 @@
       },
       "errors": {
         "invalidNumber": "Unesite ispravan broj mobilnog telefona.",
-        "unreachable": "Vaš radni prostor šalje upozorenja sa besplatnog broja. Unesite broj iz SAD ili Kanade.",
-        "senderMissing": "Podesite pošiljaoca SMS upozorenja za ovaj radni prostor pre uključivanja SMS upozorenja.",
-        "cooldown": "Sačekajte 30 sekundi pre nego što zatražite novi kod.",
-        "rateLimited": "Zatražili ste previše kodova. Pokušajte ponovo za sat vremena.",
-        "sendFailed": "Nismo uspeli da pošaljemo kod. Pokušajte ponovo.",
-        "deliveryFailed": "Nismo uspeli da pošaljemo SMS na ovaj broj. Proverite broj ili zatražite novi kod.",
-        "wrongCode": "Kod se ne poklapa. Proverite poruku i pokušajte ponovo.",
-        "locked": "Uneli ste previše pogrešnih kodova. Zatražite novi kod.",
-        "expired": "Kod je istekao. Zatražite novi kod.",
-        "unavailable": "Ovaj kod više ne važi. Zatražite novi kod.",
-        "checkFailed": "Nismo uspeli da proverimo kod. Pokušajte ponovo."
+        "unreachable": "Upozorenja stižu sa besplatnog broja. Koristite broj iz SAD ili Kanade.",
+        "senderMissing": "Ovaj radni prostor nema pošiljaoca SMS upozorenja.",
+        "cooldown": "Sačekajte 30 sekundi pre novog zahteva.",
+        "rateLimited": "Previše kodova. Pokušajte ponovo za sat vremena.",
+        "sendFailed": "Slanje koda nije uspelo. Pokušajte ponovo.",
+        "deliveryFailed": "Slanje SMS-a na ovaj broj nije uspelo.",
+        "wrongCode": "Pogrešan kod.",
+        "locked": "Previše pogrešnih kodova. Zatražite novi.",
+        "expired": "Kod je istekao. Zatražite novi.",
+        "unavailable": "Ovaj kod više ne važi. Zatražite novi.",
+        "checkFailed": "Provera koda nije uspela. Pokušajte ponovo."
       }
     }
   },

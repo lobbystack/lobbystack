@@ -755,9 +755,8 @@
       },
       "sms": {
         "title": "SMS",
-        "description": "Receive urgent alerts on your verified phone.",
-        "unverifiedDescription": "Turn on SMS to verify your mobile number and get urgent alerts.",
-        "senderMissingDescription": "SMS alerts are unavailable until an alert SMS sender is configured for this workspace."
+        "description": "Urgent alerts by text. Msg & data rates may apply. Reply STOP to opt out.",
+        "senderMissingDescription": "Unavailable. This workspace has no alert SMS sender."
       }
     },
     "communication": {
@@ -797,16 +796,10 @@
     "systemIssues": {
       "title": "System issues"
     },
-    "smsConsent": {
-      "title": "Enable SMS alerts",
-      "description": "Confirm that you want LobbyStack to send workspace alerts to your verified phone number.",
-      "cancel": "Cancel",
-      "accept": "I agree, enable SMS"
-    },
     "phoneVerification": {
       "phone": {
-        "title": "Verify your mobile number",
-        "description": "We'll text you a 6-digit code. SMS alerts go to this number."
+        "title": "Your mobile number",
+        "consent": "By sending the code, you agree to get LobbyStack alerts by text. Frequency varies. Msg & data rates may apply. Reply STOP to opt out, HELP for help."
       },
       "fields": {
         "mobileNumber": "Mobile number",
@@ -816,8 +809,8 @@
       "sendCode": "Send code",
       "sending": "Sending code...",
       "code": {
-        "title": "Enter your code",
-        "description": "We sent a 6-digit code to {{phone}}. It expires in 10 minutes.",
+        "title": "Enter the code",
+        "description": "Sent to {{phone}}.",
         "verifying": "Checking code...",
         "didntGet": "Didn't get it?",
         "resend": "Resend",
@@ -826,17 +819,17 @@
       },
       "errors": {
         "invalidNumber": "Enter a valid mobile number.",
-        "unreachable": "Your workspace sends alerts from a toll-free number. Enter a US or Canadian number.",
-        "senderMissing": "Set up an alert SMS sender for this workspace before you turn on SMS alerts.",
-        "cooldown": "Wait 30 seconds before you ask for another code.",
-        "rateLimited": "You asked for too many codes. Try again in an hour.",
-        "sendFailed": "We couldn't send a code. Try again.",
-        "deliveryFailed": "We couldn't text this number. Check the number or ask for a new code.",
-        "wrongCode": "That code doesn't match. Check the text and try again.",
-        "locked": "You entered too many wrong codes. Ask for a new code.",
-        "expired": "This code expired. Ask for a new code.",
-        "unavailable": "This code no longer works. Ask for a new code.",
-        "checkFailed": "We couldn't check the code. Try again."
+        "unreachable": "Alerts come from a toll-free number. Use a US or Canadian number.",
+        "senderMissing": "This workspace has no alert SMS sender.",
+        "cooldown": "Wait 30 seconds before asking again.",
+        "rateLimited": "Too many codes. Try again in an hour.",
+        "sendFailed": "Couldn't send the code. Try again.",
+        "deliveryFailed": "Couldn't text this number.",
+        "wrongCode": "Wrong code.",
+        "locked": "Too many wrong codes. Ask for a new one.",
+        "expired": "Code expired. Ask for a new one.",
+        "unavailable": "This code no longer works. Ask for a new one.",
+        "checkFailed": "Couldn't check the code. Try again."
       }
     }
   },

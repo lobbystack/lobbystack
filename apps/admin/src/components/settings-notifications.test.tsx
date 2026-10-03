@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LiveNotificationSettingsSurface } from "./live-notification-settings-surface";
-import { OPERATOR_SMS_DISCLOSURE_TEXT } from "@lobbystack/shared";
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en", resolvedLanguage: "en" }, t: (key: string) => key }) }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 const clients: QueryClient[] = [];
@@ -51,13 +50,14 @@ describe("original notification controls", () => {
     await userEvent.click(sms);
     expect(fetchMock).not.toHaveBeenCalled();
   });
-  it("verifies an unverified phone, then asks for consent and turns SMS on", async () => {
+  it("verifies an unverified phone, then turns SMS on with the consent shown at the phone step", async () => {
     const fetchMock = setup("phone_unverified");
     const sms = await screen.findByRole("switch", { name: "notifications.sources.sms.title" });
     expect(sms.hasAttribute("data-disabled")).toBe(false);
-    expect(screen.getByText("notifications.sources.sms.unverifiedDescription")).toBeTruthy();
+    expect(screen.getByText("notifications.sources.sms.description")).toBeTruthy();
     await userEvent.click(sms);
     expect(await screen.findByText("notifications.phoneVerification.phone.title")).toBeTruthy();
+    expect(screen.getByText("notifications.phoneVerification.phone.consent")).toBeTruthy();
     await userEvent.type(screen.getByLabelText("notifications.phoneVerification.fields.mobileNumber"), "+14165550123");
     await userEvent.click(screen.getByRole("button", { name: "notifications.phoneVerification.sendCode" }));
     expect(await screen.findByText("notifications.phoneVerification.code.title")).toBeTruthy();
@@ -65,13 +65,9 @@ describe("original notification controls", () => {
     expect(start?.[0]).toBe("/api/account/phone-verification?businessId=business-1");
     expect(JSON.parse(String(start?.[1]?.body))).toEqual({ phoneNumber: "+14165550123" });
     await userEvent.type(screen.getByRole("textbox"), "123456");
-    expect(await screen.findByText(OPERATOR_SMS_DISCLOSURE_TEXT)).toBeTruthy();
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url.startsWith("/api/account/phone-verification/check"))).toBe(true));
     const check = fetchMock.mock.calls.find(([url]) => url.startsWith("/api/account/phone-verification/check"));
     expect(JSON.parse(String(check?.[1]?.body))).toEqual({ attemptId: "attempt-1", code: "123456" });
-    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
-    expect(screen.getByRole("switch", { hidden: true, name: "notifications.sources.sms.title" }).getAttribute("aria-checked")).toBe("false");
-    expect(screen.getByText("notifications.sources.sms.description", { ignore: "[role=dialog] *" })).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "notifications.smsConsent.accept" }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(true));
     const mutation = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
     expect(JSON.parse(String(mutation?.[1]?.body))).toMatchObject({ smsEnabled: true, smsConsent: true });
@@ -85,20 +81,10 @@ describe("original notification controls", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.getByRole("switch", { name: "notifications.sources.sms.title" }).getAttribute("aria-checked")).toBe("false");
   });
-  it("cancels consent without sending a mutation or enabling SMS", async () => {
+  it("turns SMS on for a verified phone with no extra step, recording consent", async () => {
     const fetchMock = setup();
     await userEvent.click(await screen.findByRole("switch", { name: "notifications.sources.sms.title" }));
-    expect(screen.getByRole("dialog")).toBeTruthy();
-    expect(screen.getByText(OPERATOR_SMS_DISCLOSURE_TEXT)).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "notifications.smsConsent.cancel" }));
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(screen.getByRole("switch", { name: "notifications.sources.sms.title" }).getAttribute("aria-checked")).toBe("false");
-  });
-  it("requires explicit acceptance before persisting SMS consent", async () => {
-    const fetchMock = setup();
-    await userEvent.click(await screen.findByRole("switch", { name: "notifications.sources.sms.title" }));
-    expect(fetchMock).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole("button", { name: "notifications.smsConsent.accept" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     const mutation = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
     expect(JSON.parse(String(mutation?.[1]?.body))).toMatchObject({ smsEnabled: true, smsConsent: true });
