@@ -119,7 +119,7 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
         <DialogHeader><DialogTitle>{t("notifications.phoneVerification.phone.title")}</DialogTitle></DialogHeader>
         <FieldGroup className="gap-4">
           <Field data-invalid={error ? true : undefined}>
-            <FieldLabel htmlFor="sms-alert-phone">{t("notifications.phoneVerification.fields.mobileNumber")}</FieldLabel>
+            <FieldLabel className="sr-only" htmlFor="sms-alert-phone">{t("notifications.phoneVerification.fields.mobileNumber")}</FieldLabel>
             <div className="flex min-w-0">
               <Select onValueChange={(value) => { if (value && value !== country) { setCountry(value as Country); setPhone(""); } }} value={country}>
                 <SelectTrigger aria-label={t("notifications.phoneVerification.fields.country")} className="h-11 w-20 shrink-0 rounded-l-4xl rounded-r-none px-4 font-medium text-muted-foreground data-[size=default]:h-11" data-phone-country-prefix><span>{selected?.callingCode ?? ""}</span></SelectTrigger>
