@@ -140,7 +140,7 @@ describe("LiveCallController greeting", () => {
     socket.emit("session.output_transcript.delta", { delta: " ", start_ms: 0, end_ms: 900 });
     socket.emit("session.instructions.appended", { client_event_id: "greeting_1", start_ms: 1_400, end_ms: 1_400 });
     expect(greetingEvents.map((event) => event.step)).toEqual(["sent", "acknowledged"]);
-    await vi.advanceTimersByTimeAsync(3_000);
+    await vi.advanceTimersByTimeAsync(2_000);
     expect(greetings(socket).map((event) => event.event_id)).toEqual(["greeting_1", "greeting_2"]);
     expect(greetingEvents.map((event) => event.step)).toEqual(["sent", "acknowledged", "unspoken", "sent"]);
   });
@@ -151,7 +151,7 @@ describe("LiveCallController greeting", () => {
     socket.emit("session.started", {});
     await vi.advanceTimersByTimeAsync(0);
     socket.emit("session.instructions.appended", { client_event_id: "greeting_1" });
-    await vi.advanceTimersByTimeAsync(2_999);
+    await vi.advanceTimersByTimeAsync(1_999);
     expect(greetings(socket)).toHaveLength(1);
     await vi.advanceTimersByTimeAsync(1);
     expect(greetings(socket)).toHaveLength(2);
@@ -361,7 +361,8 @@ describe("LiveCallController transcript and silence", () => {
     socket.emit("session.output_audio.delta", { delta: "", start_ms: 5_000, end_ms: 6_000 });
     socket.emit("session.output_transcript.delta", { delta: "Yes, until 5.", start_ms: 5_050, end_ms: 5_900 });
     socket.emit("session.closed", { reason: "remote_hangup" });
-    expect(closed[0]?.latency).toEqual({ firstSpeechMs: 1_100, greetedFirst: true, answerGapsMs: [800], speechSource: "audio" });
+    // Reflected audio covers silence too, so only the transcript marks speech.
+    expect(closed[0]?.latency).toEqual({ firstSpeechMs: 1_150, greetedFirst: true, answerGapsMs: [850], speechSource: "transcript" });
   });
 
   it("times out after a stretch of silence, which reflected audio doesn't interrupt", async () => {
@@ -379,9 +380,9 @@ describe("LiveCallController transcript and silence", () => {
   it("counts the reflected output audio on close", () => {
     const { socket, closed } = setup();
     socket.emit("session.output_audio.delta", { delta: "", start_ms: 0, end_ms: 500 });
-    socket.emit("session.output_audio.delta", { delta: "", start_ms: 500, end_ms: 1_000 });
+    socket.emit("session.output_audio.delta", { delta: "AAAA", start_ms: 500, end_ms: 1_000 });
     socket.emit("session.closed", { reason: "remote_hangup", usage: { seconds: 1 } });
-    expect(closed[0]?.outputAudio).toEqual({ deltas: 2, firstStartMs: 0, coveredMs: 1_000 });
+    expect(closed[0]?.outputAudio).toEqual({ deltas: 2, firstStartMs: 0, coveredMs: 1_000, payloadBytes: 4 });
   });
 
   it("doesn't time out while a request is still being answered", async () => {

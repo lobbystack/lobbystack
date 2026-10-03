@@ -53,7 +53,7 @@ export type LiveCallSummary = {
    * where the first one started, and the timeline they covered. GPT-Live is
    * full duplex, so these can cover silence; this shows how much.
    */
-  outputAudio: { deltas: number; firstStartMs?: number; coveredMs: number };
+  outputAudio: { deltas: number; firstStartMs?: number; coveredMs: number; payloadBytes: number };
 };
 
 /** A finished stretch of speech by one side, numbered in call order. */
@@ -107,7 +107,9 @@ const TRANSCRIPT_WAIT_MS = 300;
 const LATE_ATTACH_MS = 3_500;
 const GREETING_ERROR_RETRY_MS = 500;
 // Acknowledged, yet no greeting words by then: GPT-Live didn't act on it.
-const GREETING_SPEECH_MS = 3_000;
+// On staging calls, a greeting GPT-Live did speak reached the transcript
+// about a second after the acknowledgment.
+const GREETING_SPEECH_MS = 2_000;
 const MAX_GREETING_ATTEMPTS = 3;
 // Most answers take one or two seconds; past this the caller hears an update.
 const STILL_WORKING_MS = 4_000;
@@ -191,7 +193,7 @@ export class LiveCallController {
   // the session timeline, and when its latest words arrived.
   private lastSpeechEndMs = 0;
   private lastSpeechAt = Number.NEGATIVE_INFINITY;
-  private readonly outputAudio: LiveCallSummary["outputAudio"] = { deltas: 0, coveredMs: 0 };
+  private readonly outputAudio: LiveCallSummary["outputAudio"] = { deltas: 0, coveredMs: 0, payloadBytes: 0 };
   private lastAnswerSentAt: number | undefined;
   private ending = false;
   private latestUsageSeconds: number | undefined;
@@ -228,15 +230,16 @@ export class LiveCallController {
     // OpenAI reflects output audio to the sideband with timeline offsets, but
     // the SDK's sideband event types leave it out. GPT-Live is full duplex and
     // these can cover silence, so they're never taken as speech; they're only
-    // counted and kept for latency telemetry.
-    (socket as unknown as { on(type: string, listener: (event: { start_ms?: number; end_ms?: number }) => void): void })
+    // counted.
+    (socket as unknown as { on(type: string, listener: (event: { delta?: unknown; start_ms?: number; end_ms?: number }) => void): void })
       .on("session.output_audio.delta", (event) => {
         this.outputAudio.deltas += 1;
         if (typeof event.start_ms === "number") {
           this.outputAudio.firstStartMs ??= event.start_ms;
           if (typeof event.end_ms === "number") this.outputAudio.coveredMs += Math.max(0, event.end_ms - event.start_ms);
         }
-        this.measure(() => this.latency.receptionistAudio(event.start_ms, event.end_ms));
+        // Whether these events carry audio at all, which would make them a faster speech signal.
+        if (typeof event.delta === "string") this.outputAudio.payloadBytes += event.delta.length;
       });
     socket.on("session.delegation.created", (event) => void this.handleDelegation(event));
     socket.on("session.usage.updated", (event) => { this.latestUsageSeconds = event.usage.seconds; });

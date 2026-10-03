@@ -182,7 +182,7 @@ describe("live call latency telemetry", () => {
       sessionId: "live_2",
       durationMs: 60_000,
       delegations: [delegation, { ...delegation, delegationId: "del_2", totalMs: 3_000, failed: true }, { ...delegation, delegationId: "del_3", totalMs: 900 }],
-      latency: { firstSpeechMs: 1_100, greetedFirst: true, answerGapsMs: [700, 400, 2_500, 900], speechSource: "audio" },
+      latency: { firstSpeechMs: 1_100, greetedFirst: true, answerGapsMs: [700, 400, 2_500, 900], speechSource: "transcript" },
     } as never);
     await vi.waitFor(() => expect(mocks.finishLiveCall).toHaveBeenCalled());
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -198,7 +198,7 @@ describe("live call latency telemetry", () => {
         greetingMs: 1_100,
         firstSpeechMs: 1_100,
         greetedFirst: true,
-        speechTimingSource: "audio",
+        speechTimingSource: "transcript",
         answerCount: 4,
         answerP50Ms: 700,
         answerP90Ms: 2_500,

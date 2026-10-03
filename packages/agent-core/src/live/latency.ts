@@ -3,9 +3,10 @@
  * the sideband reports. GPT-Live sends no speech-started, speech-stopped or
  * input-committed events, so the caller's turn ends where their last
  * transcribed words end (`session.input_transcript.delta` end_ms). The
- * receptionist starts speaking at the first reflected output audio
- * (`session.output_audio.delta` start_ms), or at its first transcribed words
- * when the sideband delivers no reflected audio.
+ * receptionist starts speaking at its first transcribed words
+ * (`session.output_transcript.delta` start_ms). The sideband's reflected
+ * output audio can't mark speech: GPT-Live is full duplex, and those events
+ * cover silence too.
  *
  * All times are milliseconds on the session timeline, so network delay between
  * OpenAI and the worker does not affect them.
@@ -18,12 +19,12 @@ export type LiveCallLatency = {
   /** For each caller turn the receptionist answered: silence between the caller's last word and the answer. */
   answerGapsMs: number[];
   /** Which sideband events marked the receptionist's speech. */
-  speechSource: "audio" | "transcript" | "none";
+  speechSource: "transcript" | "none";
 };
 
 type Span = { start: number; end: number };
 
-// Consecutive audio chunks and transcript fragments of one stretch of speech
+// Consecutive transcript fragments of one stretch of speech
 // touch or nearly touch. A larger gap could swallow the other side's turn.
 const MERGE_GAP_MS = 100;
 
@@ -40,15 +41,10 @@ function addSpan(spans: Span[], start: number, end: number): void {
 
 export class LiveLatencyTracker {
   private readonly callerSpans: Span[] = [];
-  private readonly audioSpans: Span[] = [];
   private readonly transcriptSpans: Span[] = [];
 
   callerTranscript(startMs: number | undefined, endMs: number | undefined): void {
     addSpan(this.callerSpans, startMs ?? endMs ?? Number.NaN, endMs ?? Number.NaN);
-  }
-
-  receptionistAudio(startMs: number | undefined, endMs: number | undefined): void {
-    addSpan(this.audioSpans, startMs ?? Number.NaN, endMs ?? startMs ?? Number.NaN);
   }
 
   receptionistTranscript(startMs: number | undefined, endMs: number | undefined): void {
@@ -56,9 +52,9 @@ export class LiveLatencyTracker {
   }
 
   summarize(): LiveCallLatency {
-    const speechSource = this.audioSpans.length ? "audio" : this.transcriptSpans.length ? "transcript" : "none";
+    const speechSource = this.transcriptSpans.length ? "transcript" : "none";
     const byStart = (a: Span, b: Span) => a.start - b.start;
-    const receptionist = [...(speechSource === "audio" ? this.audioSpans : this.transcriptSpans)].sort(byStart);
+    const receptionist = [...this.transcriptSpans].sort(byStart);
     const caller = [...this.callerSpans].sort(byStart);
     const timeline = [
       ...caller.map((span) => ({ ...span, speaker: "caller" as const })),
