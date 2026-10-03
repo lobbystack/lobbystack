@@ -113,6 +113,28 @@ export async function checkOpening(
   return { ok: true as const, serviceName: service.name, available: slots.length > 0 };
 }
 
+/**
+ * The caller's confirmed booking for this service and start time, if they
+ * already have it. A booking request repeated after a lost or superseded
+ * answer then returns that booking instead of failing as taken.
+ */
+export async function findCallerBooking(context: DomainContext, input: { businessId: string; serviceName: string; startsAt: string; contactPhone: string }) {
+  const service = await resolveActiveService(context, input.businessId, input.serviceName);
+  if (!service) return undefined;
+  const startsAt = new Date(input.startsAt);
+  if (Number.isNaN(startsAt.getTime())) return undefined;
+  const existing = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    return (await tx.select({ id: appointments.id }).from(appointments).innerJoin(contacts, eq(appointments.contactId, contacts.id)).where(and(
+      eq(appointments.businessId, input.businessId),
+      eq(appointments.serviceId, service.id),
+      eq(appointments.startsAt, startsAt),
+      eq(appointments.status, "confirmed"),
+      eq(contacts.phone, input.contactPhone),
+    )).limit(1))[0];
+  });
+  return existing ? { ok: true as const, appointmentId: existing.id, serviceName: service.name, startsAt: input.startsAt, alreadyBooked: true as const } : undefined;
+}
+
 export async function bookForCaller(
   context: DomainContext,
   input: { businessId: string; serviceName: string; startsAt: string; timezone: string; contactPhone: string; contactName?: string; smsConsentGranted?: boolean; channel: ReceptionistChannel; callId?: string },

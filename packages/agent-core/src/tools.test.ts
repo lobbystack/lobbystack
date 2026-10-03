@@ -10,10 +10,11 @@ vi.mock("@lobbystack/domain", async () => ({
   knowledgeQueryTerms: (await import("../../domain/src/knowledgeRanking")).knowledgeQueryTerms,
   searchKnowledgeEvidence: vi.fn(),
   checkOpening: vi.fn(async () => ({ ok: true, available: true })),
+  findCallerBooking: vi.fn(async () => undefined),
   bookForCaller: vi.fn(async () => ({ ok: true })),
 }));
 
-import { bookForCaller, checkOpening, searchKnowledgeEvidence } from "@lobbystack/domain";
+import { bookForCaller, checkOpening, findCallerBooking, searchKnowledgeEvidence } from "@lobbystack/domain";
 import { createReceptionistTools, type AgentToolContext } from "./tools";
 
 function toolNames(overrides: Partial<AgentToolContext> & { bookingMode?: BookingMode; snapshot?: Partial<BusinessContextSnapshot> } = {}): string[] {
@@ -91,6 +92,16 @@ describe("bookAppointment", () => {
     await expect(book("2026-10-06T10:00")).resolves.toMatchObject({ ok: true });
     expect(vi.mocked(checkOpening).mock.lastCall?.[1]).toMatchObject({ startsAt: "2026-10-06T10:00:00.000-04:00" });
     expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).toMatchObject({ startsAt: "2026-10-06T10:00:00.000-04:00" });
+  });
+
+  it("returns the caller's existing booking for a repeated request instead of calling the slot taken", async () => {
+    vi.mocked(findCallerBooking).mockResolvedValueOnce({ ok: true, appointmentId: "appt_1", serviceName: "General Checkup", startsAt: "2026-10-06T10:00:00.000-04:00", alreadyBooked: true });
+    vi.mocked(checkOpening).mockClear();
+    vi.mocked(bookForCaller).mockClear();
+    await expect(book("2026-10-06T10:00")).resolves.toMatchObject({ ok: true, appointmentId: "appt_1", alreadyBooked: true });
+    expect(vi.mocked(findCallerBooking).mock.lastCall?.[1]).toMatchObject({ serviceName: "General Checkup", startsAt: "2026-10-06T10:00:00.000-04:00", contactPhone: "+14165550100" });
+    expect(checkOpening).not.toHaveBeenCalled();
+    expect(bookForCaller).not.toHaveBeenCalled();
   });
 
   it("keeps the instant of a findAvailability startsAt", async () => {

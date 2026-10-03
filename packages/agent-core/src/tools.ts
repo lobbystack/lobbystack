@@ -2,6 +2,7 @@ import {
   bookForCaller,
   cancelForCaller,
   checkOpening,
+  findCallerBooking,
   countKnowledgeTokens,
   findOpenings,
   issueAppointmentChangeOtp,
@@ -211,6 +212,10 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         const start = DateTime.fromISO(input.startsAt, { zone: timezone });
         if (!start.isValid) return { ok: false, reason: "Give startsAt as YYYY-MM-DDTHH:mm in the business's timezone." };
         const startsAt = start.toISO()!;
+        // Already booked for this caller, by an earlier or repeated request:
+        // report that booking rather than call the caller's own slot taken.
+        const existing = await findCallerBooking(domain, { businessId, serviceName: input.serviceName, startsAt, contactPhone });
+        if (existing) return existing;
         const opening = await checkOpening(domain, { businessId, serviceName: input.serviceName, startsAt, timezone, ...(context.callId ? { callId: context.callId } : {}) });
         if (!opening.ok || !opening.available) return { ok: false, reason: "That time is no longer available. Offer another opening." };
         const textable = canTextNumber(snapshot.contactChannels?.smsNumber, contactPhone);
