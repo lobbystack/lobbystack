@@ -16,13 +16,12 @@ The agent core (`packages/agent-core`) is an AI SDK `ToolLoopAgent`. Its tools c
 
 The caller hears silence while the agent works, so calls keep it short:
 
-- GPT-Live gets the business's opening hours, upcoming closures, and services in its instructions when the call starts. It answers those questions itself and doesn't delegate them.
-- The agent runs on the `AI_CHAT_*` endpoint and model, with `low` reasoning instead of the chat default of `high`. Set `AI_DELEGATION_MODEL` and `AI_DELEGATION_REASONING_EFFORT` to change that.
-- When a step only calls tools whose result GPT-Live can say as is, the agent returns that result without a second model call. Those tools are hours, services, taking a message, an appointment request, and ending the call. Knowledge answers, openings, and bookings still go through the model.
+- GPT-Live's instructions follow the structure in OpenAI's GPT-Live prompting guide: personality, backchannel and interruption policies, then a delegation policy that lists the backend's capabilities for this business.
+- GPT-Live gets the business summary, opening hours, upcoming closures, services, the answers the business wrote for common questions, and its rules when the call starts. It answers from those facts and doesn't delegate them.
+- The agent runs on the `AI_CHAT_*` endpoint and model, with `low` reasoning and OpenAI's `priority` processing tier. Set `AI_DELEGATION_MODEL`, `AI_DELEGATION_REASONING_EFFORT` and `AI_DELEGATION_SERVICE_TIER` to change that.
+- When a step only calls tools whose result GPT-Live can say as is, the agent returns that result without a second model call. Those tools are hours, services, knowledge search, taking a message, an appointment request, and ending the call. A knowledge search sends GPT-Live the strongest passages as reference facts, within the 500-token limit for an append, and GPT-Live answers from them. Openings and bookings still go through the model.
 
-In local tests on `gpt-6-luna`, a services or hours lookup takes about 0.9 seconds, a saved message 1.4 seconds, and a knowledge or availability answer 2.3 to 2.6 seconds.
-
-The worker logs each answer as `live.delegation` with `agentMs`, `totalMs`, `tools`, `modelSteps`, `directAnswer`, and `failed`.
+The worker logs each answer as `live.delegation` with `agentMs`, `totalMs`, `tools`, `modelSteps`, `directAnswer`, `stepMs` (each model step with the tools it called), `toolMs` (time in tools), and `failed`. It also records each answer's tokens and cost as an AI generation with the operation `voice.delegation`.
 
 ## Follow a phone call
 
@@ -80,7 +79,7 @@ The admin and worker read these variables:
 | `WEB_CALL_MAX_DURATION_MS` | admin | Optional cap on browser call length. |
 | `WEB_CALL_PUBLIC_BUSINESS_SLUG`, `WEB_CALL_ALLOWED_ORIGINS` | admin | The business the landing demo calls, and the sites allowed to start it. |
 | `AI_CHAT_MODEL`, `AI_CHAT_REASONING_EFFORT` | admin, worker | The agent's model and, on OpenAI, its reasoning effort. Leave both blank for `gpt-6-luna` on `high`. |
-| `AI_DELEGATION_MODEL`, `AI_DELEGATION_REASONING_EFFORT` | worker | The model and reasoning effort for answering GPT-Live's delegated requests during a call. Leave both blank to use the agent's model on `low`. |
+| `AI_DELEGATION_MODEL`, `AI_DELEGATION_REASONING_EFFORT`, `AI_DELEGATION_SERVICE_TIER` | worker | The model, reasoning effort and OpenAI processing tier for answering GPT-Live's delegated requests during a call. Leave them blank to use the agent's model on `low` reasoning and the `priority` tier. |
 | `AI_SUMMARY_MODEL`, `AI_SUMMARY_REASONING_EFFORT` | worker | The model and reasoning effort for the one-line summary written after each call. Leave both blank to use the agent's model on `low`. |
 
 The worker listens on its health port for `/internal/live/attach`. Keep that port on the private network.

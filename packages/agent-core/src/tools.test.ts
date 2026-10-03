@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 // knowledgeRanking re-exports a helper from @lobbystack/ai, which the built copy of
 // this test can't resolve. The tools only need the real knowledgeQueryTerms.
-vi.mock("@lobbystack/ai", () => ({}));
+vi.mock("@lobbystack/ai", async () => ({ countKnowledgeTokens: (await import("../../ai/src/tokenBudget")).countKnowledgeTokens }));
 vi.mock("@lobbystack/domain", async () => ({
   countKnowledgeTokens: (await import("../../ai/src/tokenBudget")).countKnowledgeTokens,
   KNOWLEDGE_SEARCH_TOKEN_BUDGET: 3000,

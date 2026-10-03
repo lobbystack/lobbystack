@@ -267,7 +267,7 @@ export function createLiveCallHandler(input: { domain: DomainContext }) {
         void hangup();
       },
       onDelegation: (timing) => {
-        console.info(JSON.stringify({ event: "live.delegation", sessionId: request.sessionId, agentMs: timing.agentMs, totalMs: timing.totalMs, tools: timing.tools, modelSteps: timing.modelSteps, directAnswer: timing.directAnswer, failed: timing.failed }));
+        console.info(JSON.stringify({ event: "live.delegation", sessionId: request.sessionId, agentMs: timing.agentMs, totalMs: timing.totalMs, tools: timing.tools, modelSteps: timing.modelSteps, directAnswer: timing.directAnswer, stepMs: timing.stepMs, toolMs: timing.toolMs, failed: timing.failed }));
         recordLiveDelegation(input.domain, telemetryCall, timing);
         recordLiveDelegationGeneration(input.domain, telemetryCall, timing);
       },

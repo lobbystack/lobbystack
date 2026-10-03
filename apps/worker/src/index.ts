@@ -21,6 +21,7 @@ import { OutboxDispatcher } from "./outboxDispatcher";
 import { getWorkerStartupMode } from "./maintenance";
 import { configureSchedulers } from "./scheduler";
 import { getWorkerSnapshotCache } from "./snapshot-cache";
+import { logUnhandledRejections } from "./processGuards";
 
 function createEmailProvider(): SmtpEmailProvider | undefined {
   const host = process.env.SMTP_HOST;
@@ -100,6 +101,7 @@ function createProductAnalytics(): WorkerDependencies["productAnalytics"] {
 }
 
 async function main(): Promise<void> {
+  logUnhandledRejections();
   const startupMode = getWorkerStartupMode(process.env);
   if (!startupMode.startsConsumers) {
     // Keep liveness available, but report unready and avoid all queue, scheduler, and provider startup.
@@ -119,7 +121,9 @@ async function main(): Promise<void> {
   const realtime = createRedisConnection({ prefix: process.env.REDIS_PREFIX ?? "lobbystack" });
   const queues = new Map<JobQueue, ReturnType<typeof createQueue>>();
   for (const queueName of jobQueues) {
-    queues.set(queueName, createQueue(queueName));
+    const queue = createQueue(queueName);
+    queue.on("error", (error) => console.error(JSON.stringify({ event: "queue.error", queue: queueName, message: redactOtelExceptionText(error.message) })));
+    queues.set(queueName, queue);
   }
   const refreshSchedulers = async () => {
     const businessRows = await withDispatcherTransaction(dispatcherDatabase.db, async (tx) => await tx.select({ id: businesses.id }).from(businesses));
@@ -219,6 +223,9 @@ async function main(): Promise<void> {
         state.activeJobs -= 1;
       }
     }), createWorkerOptions(queueName));
+    // BullMQ emits connection problems as "error" events; without a listener
+    // Node treats one as fatal.
+    worker.on("error", (error) => console.error(JSON.stringify({ event: "worker.error", queue: queueName, message: redactOtelExceptionText(error.message) })));
     const failedJobs = getMeter("lobbystack-worker").createCounter("lobbystack.worker.jobs.failed");
     worker.on("failed", (job) => failedJobs.add(1, {
       "messaging.destination.name": queueName,

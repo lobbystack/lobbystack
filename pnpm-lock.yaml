@@ -594,6 +594,9 @@ importers:
       '@ai-sdk/openai-compatible':
         specifier: ^3.0.31
         version: 3.0.31(zod@4.6.5)
+      '@lobbystack/ai':
+        specifier: workspace:*
+        version: link:../ai
       '@lobbystack/domain':
         specifier: workspace:*
         version: link:../domain

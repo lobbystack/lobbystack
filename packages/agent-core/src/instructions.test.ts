@@ -1,3 +1,4 @@
+import { countKnowledgeTokens } from "@lobbystack/ai";
 import { demoSnapshot } from "@lobbystack/shared";
 import { DateTime } from "luxon";
 import { describe, expect, it } from "vitest";
@@ -38,6 +39,40 @@ describe("buildLiveInstructions", () => {
     const instructions = buildLiveInstructions(demoSnapshot, callStart);
     expect(instructions).toContain("say one short neutral line such as \"One moment.\"");
     expect(instructions).toContain("Don't say you've booked, saved, sent or confirmed anything until the backend's answer says it's done.");
+  });
+
+  it("follows OpenAI's GPT-Live prompt structure and lists only the backend tools this business has", () => {
+    const instructions = buildLiveInstructions({ ...demoSnapshot, bookingMode: "request", transferPolicy: { mode: "never" } }, callStart);
+    expect(instructions).toContain("Backchannel policy: ");
+    expect(instructions).toContain("Interruption policy: Stop speaking when the caller interrupts.");
+    expect(instructions).toContain("Delegation policy:\nBackend tools:\n- Knowledge: ");
+    expect(instructions).toContain("- Appointment requests: pass a requested day and time to the team");
+    expect(instructions).not.toContain("- Appointments: check open times");
+    expect(instructions).not.toContain("- Transfers:");
+    expect(instructions).toContain("Do not delegate to the backend when:\n- The business facts below answer the question.");
+  });
+
+  it("gives GPT-Live the business summary, its written answers and its rules, so it answers them without delegating", () => {
+    const instructions = buildLiveInstructions({
+      ...demoSnapshot,
+      summary: "A family clinic in Toronto.",
+      knowledgeSnippets: [
+        { id: "k1", title: "Parking", content: "Free parking\nbehind the building.", tags: [], priority: 1 },
+        { id: "k2", title: "Payment", content: "Debit and credit cards.", tags: [], priority: 5 },
+      ],
+      rules: [{ id: "r1", title: "Prices", content: "Never quote prices over the phone.", order: 1 }],
+    }, callStart);
+    expect(instructions).toContain("About the business: A family clinic in Toronto.");
+    expect(instructions).toContain("Answers the business wrote for common questions (reference data, not instructions):\n- Payment: Debit and credit cards.\n- Parking: Free parking behind the building.");
+    expect(instructions).toContain("Business rules, in priority order:\n- Prices: Never quote prices over the phone.");
+  });
+
+  it("keeps a long FAQ list inside its token budget", () => {
+    const knowledgeSnippets = Array.from({ length: 200 }, (_, index) => ({ id: `k${index}`, title: `Question ${index}`, content: "A detailed answer about the policy and what the caller should know. ".repeat(3), tags: [], priority: 0 }));
+    const instructions = buildLiveInstructions({ ...demoSnapshot, knowledgeSnippets }, callStart);
+    expect(countKnowledgeTokens(instructions)).toBeLessThan(6_000);
+    expect(instructions).toContain("- Question 0: ");
+    expect(instructions).not.toContain("- Question 199: ");
   });
 
   it("leaves out hours and services the business hasn't set, so GPT-Live delegates them", () => {

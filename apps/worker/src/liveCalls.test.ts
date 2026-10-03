@@ -81,7 +81,7 @@ describe("live call latency telemetry", () => {
     return mocks.controllerOptions.at(-1)!;
   }
 
-  const delegation = { delegationId: "del_1", offsetMs: 4_000, transcriptWaitMs: 12, agentMs: 1_800, totalMs: 1_812, tools: ["getBusinessHours", "getBusinessHours"], modelSteps: 1, directAnswer: true, answer: "We're open until 5.", failed: false };
+  const delegation = { delegationId: "del_1", offsetMs: 4_000, transcriptWaitMs: 12, agentMs: 1_800, totalMs: 1_812, tools: ["getBusinessHours", "getBusinessHours"], modelSteps: 1, directAnswer: true, stepMs: [1_800], toolMs: 40, answer: "We're open until 5.", failed: false };
 
   it("answers delegations on the delegation model and speaks direct tool answers", async () => {
     await startCall();
@@ -89,11 +89,11 @@ describe("live call latency telemetry", () => {
     expect(mocks.createReceptionistAgent).toHaveBeenLastCalledWith(expect.objectContaining({ directToolAnswers: true }));
   });
 
-  it("logs live.delegation with timings, tools and model steps", async () => {
+  it("logs live.delegation with timings, tools, model steps and per-step times", async () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const options = await startCall();
     options.onDelegation!(delegation as never);
-    expect(info).toHaveBeenCalledWith(JSON.stringify({ event: "live.delegation", sessionId: "live_2", agentMs: 1_800, totalMs: 1_812, tools: ["getBusinessHours", "getBusinessHours"], modelSteps: 1, directAnswer: true, failed: false }));
+    expect(info).toHaveBeenCalledWith(JSON.stringify({ event: "live.delegation", sessionId: "live_2", agentMs: 1_800, totalMs: 1_812, tools: ["getBusinessHours", "getBusinessHours"], modelSteps: 1, directAnswer: true, stepMs: [1_800], toolMs: 40, failed: false }));
     info.mockRestore();
   });
 
@@ -106,7 +106,7 @@ describe("live call latency telemetry", () => {
       businessId: "biz_1",
       distinctId: "system:business:biz_1",
       actorType: "worker",
-      properties: { callId: "call_2", channel: "web_voice", provider: "openai_live", conversationId: "conv_2", agentMs: 1_800, totalMs: 1_812, tools: ["getBusinessHours"], toolCount: 2, modelSteps: 1, directAnswer: true, failed: false },
+      properties: { callId: "call_2", channel: "web_voice", provider: "openai_live", conversationId: "conv_2", agentMs: 1_800, totalMs: 1_812, tools: ["getBusinessHours"], toolCount: 2, modelSteps: 1, directAnswer: true, toolMs: 40, modelMs: 1_760, failed: false },
     });
     expect(JSON.stringify(mocks.recordProductEvent.mock.calls)).not.toMatch(/open until|4165550100/);
   });

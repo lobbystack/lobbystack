@@ -70,3 +70,18 @@ describe("describeAgentUsage", () => {
     expect(describeAgentUsage(usage, 900, unversioned)).not.toHaveProperty("totalCostUsd");
   });
 });
+
+describe("delegation service tier", () => {
+  it("runs delegation on OpenAI's priority tier unless told otherwise", () => {
+    expect(liveDelegationEnvironment({}).AI_CHAT_SERVICE_TIER).toBe("priority");
+    expect(liveDelegationEnvironment({ AI_DELEGATION_SERVICE_TIER: "default" }).AI_CHAT_SERVICE_TIER).toBe("default");
+    expect(liveDelegationEnvironment({ AI_DELEGATION_SERVICE_TIER: "turbo" }).AI_CHAT_SERVICE_TIER).toBe("priority");
+  });
+
+  it("prices priority processing at twice the standard rates", () => {
+    const priced = { AI_CHAT_INPUT_COST_PER_MILLION_TOKENS: "0.1", AI_CHAT_OUTPUT_COST_PER_MILLION_TOKENS: "0.5", AI_CHAT_PRICING_VERSION: "v", AI_CHAT_PRICING_SOURCE: "s", AI_CHAT_PRICING_EFFECTIVE_DATE: "2026-10-03" };
+    const usage = { inputTokens: 1_000, outputTokens: 100, totalTokens: 1_100, inputTokenDetails: { cacheReadTokens: 0, noCacheTokens: 1_000, cacheWriteTokens: undefined }, outputTokenDetails: { reasoningTokens: 0, textTokens: 100 } };
+    const standard = describeAgentUsage(usage, 500, priced).totalCostUsd!;
+    expect(describeAgentUsage(usage, 500, { ...priced, AI_CHAT_SERVICE_TIER: "priority" }).totalCostUsd).toBeCloseTo(standard * 2, 12);
+  });
+});

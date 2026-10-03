@@ -20,6 +20,10 @@ export type DelegationTiming = {
   modelSteps: number;
   /** The answer came straight from a tool result, with no model step to phrase it. */
   directAnswer: boolean;
+  /** How long each step took, a model call plus the tools it called, in order. */
+  stepMs: number[];
+  /** Time spent running tools across all steps. The rest of agentMs is the model. */
+  toolMs: number;
   answer: string;
   failed: boolean;
   /** Tokens across the agent's model steps, when the generation finished. */
@@ -248,10 +252,19 @@ export class LiveCallController {
     let directAnswer = false;
     let failed = false;
     let usage: LanguageModelUsage | undefined;
+    const stepMs: number[] = [];
+    let toolMs = 0;
+    let stepStartedAt = transcriptReadyAt;
     try {
       const result = await this.options.agent.generate({
         prompt: this.delegationPrompt(),
         abortSignal: this.abort.signal,
+        onStepEnd: () => {
+          const now = performance.now();
+          stepMs.push(Math.round(now - stepStartedAt));
+          stepStartedAt = now;
+        },
+        onToolExecutionEnd: (event) => { toolMs += event.toolExecutionMs; },
       });
       tools = result.steps.flatMap((step) => step.toolCalls.map((call) => call.toolName));
       modelSteps = result.steps.length;
@@ -280,6 +293,8 @@ export class LiveCallController {
       tools,
       modelSteps,
       directAnswer,
+      stepMs,
+      toolMs: Math.round(toolMs),
       answer,
       failed,
       ...(usage ? { usage } : {}),

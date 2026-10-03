@@ -87,6 +87,9 @@ An empty OTLP endpoint does not disable container stdout logs, application healt
 | `AI_SUMMARY_REASONING_EFFORT` | OpenAI only: reasoning effort for call summaries. Defaults to `low`. |
 | `AI_DELEGATION_MODEL` | The model the worker uses on the `AI_CHAT_*` endpoint to answer what GPT-Live hands off during a call, such as a booking or a message. The caller hears silence until it answers. Leave it blank to use `AI_CHAT_MODEL`. With a different model, the `AI_CHAT_*` prices don't apply. |
 | `AI_DELEGATION_REASONING_EFFORT` | OpenAI only: reasoning effort for answers during calls. Defaults to `low`, which answers in about half the time of `high`. Website chat keeps `AI_CHAT_REASONING_EFFORT`. |
+| `AI_DELEGATION_SERVICE_TIER` | OpenAI only: the processing tier for answers during calls: `auto`, `default`, `flex` or `priority`. Defaults to `priority`, which answers faster and costs twice the standard token price. |
+| `AI_CHAT_INPUT_COST_PER_MILLION_TOKENS`, `AI_CHAT_CACHED_INPUT_COST_PER_MILLION_TOKENS`, `AI_CHAT_OUTPUT_COST_PER_MILLION_TOKENS` | The `AI_CHAT_*` model's prices in USD per million tokens, so chat, call summaries and answers during calls record what they cost. Cached input uses the input price when you leave it blank. |
+| `AI_CHAT_PRICING_VERSION`, `AI_CHAT_PRICING_SOURCE`, `AI_CHAT_PRICING_EFFECTIVE_DATE` | A label, a source URL and the date for those prices. LobbyStack records a cost only when all three are set. |
 | `AI_EMBEDDING_API_KEY`, `AI_EMBEDDING_BASE_URL`, `AI_EMBEDDING_MODEL`, `AI_EMBEDDING_PROVIDER_NAME`, `AI_EMBEDDING_REVISION` | OpenAI-compatible 1536-dimensional embeddings. |
 | `WIDGET_SESSION_SECRET` | Signs cross-origin website-widget sessions. |
 | `FIRECRAWL_*` | Website knowledge ingestion. |
