@@ -756,7 +756,7 @@
       "sms": {
         "title": "SMS",
         "description": "Primajte hitna upozorenja na potvrđeni telefon.",
-        "unverifiedDescription": "Dodajte i potvrdite broj telefona na svom nalogu pre uključivanja SMS upozorenja.",
+        "unverifiedDescription": "Uključite SMS da potvrdite broj mobilnog telefona i primate hitna upozorenja.",
         "senderMissingDescription": "SMS upozorenja nisu dostupna dok se za ovaj radni prostor ne podesi pošiljalac SMS upozorenja."
       }
     },
@@ -802,6 +802,42 @@
       "description": "Potvrdite da želite da LobbyStack šalje upozorenja radnog prostora na Vaš potvrđeni broj telefona.",
       "cancel": "Otkaži",
       "accept": "Slažem se, uključi SMS"
+    },
+    "phoneVerification": {
+      "phone": {
+        "title": "Potvrdite broj mobilnog telefona",
+        "description": "Poslaćemo Vam šestocifreni kod SMS porukom. SMS upozorenja stižu na ovaj broj."
+      },
+      "fields": {
+        "mobileNumber": "Broj mobilnog telefona",
+        "country": "Država"
+      },
+      "cancel": "Otkaži",
+      "sendCode": "Pošalji kod",
+      "sending": "Slanje koda...",
+      "code": {
+        "title": "Unesite kod",
+        "description": "Poslali smo šestocifreni kod na {{phone}}. Kod ističe za 10 minuta.",
+        "verifying": "Proveravamo kod...",
+        "didntGet": "Niste dobili kod?",
+        "resend": "Pošalji ponovo",
+        "resending": "Slanje...",
+        "changeNumber": "Koristite drugi broj"
+      },
+      "errors": {
+        "invalidNumber": "Unesite ispravan broj mobilnog telefona.",
+        "unreachable": "Vaš radni prostor šalje upozorenja sa besplatnog broja. Unesite broj iz SAD ili Kanade.",
+        "senderMissing": "Podesite pošiljaoca SMS upozorenja za ovaj radni prostor pre uključivanja SMS upozorenja.",
+        "cooldown": "Sačekajte 30 sekundi pre nego što zatražite novi kod.",
+        "rateLimited": "Zatražili ste previše kodova. Pokušajte ponovo za sat vremena.",
+        "sendFailed": "Nismo uspeli da pošaljemo kod. Pokušajte ponovo.",
+        "deliveryFailed": "Nismo uspeli da pošaljemo SMS na ovaj broj. Proverite broj ili zatražite novi kod.",
+        "wrongCode": "Kod se ne poklapa. Proverite poruku i pokušajte ponovo.",
+        "locked": "Uneli ste previše pogrešnih kodova. Zatražite novi kod.",
+        "expired": "Kod je istekao. Zatražite novi kod.",
+        "unavailable": "Ovaj kod više ne važi. Zatražite novi kod.",
+        "checkFailed": "Nismo uspeli da proverimo kod. Pokušajte ponovo."
+      }
     }
   },
   "secretReveal": {

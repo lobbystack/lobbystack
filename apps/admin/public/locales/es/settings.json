@@ -756,7 +756,7 @@
       "sms": {
         "title": "SMS",
         "description": "Reciba alertas urgentes en su teléfono verificado.",
-        "unverifiedDescription": "Agregue y verifique un número de teléfono en su cuenta antes de activar las alertas por SMS.",
+        "unverifiedDescription": "Active los SMS para verificar su número de móvil y recibir alertas urgentes.",
         "senderMissingDescription": "Las alertas por SMS no están disponibles hasta que se configure un remitente de SMS de alerta para este espacio de trabajo."
       }
     },
@@ -802,6 +802,42 @@
       "description": "Confirme que desea que LobbyStack envíe alertas del espacio de trabajo a su número de teléfono verificado.",
       "cancel": "Cancelar",
       "accept": "Acepto, activar SMS"
+    },
+    "phoneVerification": {
+      "phone": {
+        "title": "Verifique su número de móvil",
+        "description": "Le enviaremos un código de 6 dígitos por SMS. Las alertas por SMS llegarán a este número."
+      },
+      "fields": {
+        "mobileNumber": "Número de móvil",
+        "country": "País"
+      },
+      "cancel": "Cancelar",
+      "sendCode": "Enviar código",
+      "sending": "Enviando código...",
+      "code": {
+        "title": "Introduzca su código",
+        "description": "Enviamos un código de 6 dígitos al {{phone}}. Vence en 10 minutos.",
+        "verifying": "Comprobando el código...",
+        "didntGet": "¿No lo recibió?",
+        "resend": "Reenviar",
+        "resending": "Reenviando...",
+        "changeNumber": "Usar otro número"
+      },
+      "errors": {
+        "invalidNumber": "Introduzca un número de móvil válido.",
+        "unreachable": "Su espacio de trabajo envía alertas desde un número gratuito. Introduzca un número de EE. UU. o Canadá.",
+        "senderMissing": "Configure un remitente de SMS de alerta para este espacio de trabajo antes de activar las alertas por SMS.",
+        "cooldown": "Espere 30 segundos antes de pedir otro código.",
+        "rateLimited": "Pidió demasiados códigos. Inténtelo de nuevo en una hora.",
+        "sendFailed": "No pudimos enviar el código. Inténtelo de nuevo.",
+        "deliveryFailed": "No pudimos enviar un SMS a este número. Revise el número o pida un código nuevo.",
+        "wrongCode": "Ese código no coincide. Revise el SMS e inténtelo de nuevo.",
+        "locked": "Introdujo demasiados códigos incorrectos. Pida un código nuevo.",
+        "expired": "Este código venció. Pida un código nuevo.",
+        "unavailable": "Este código ya no funciona. Pida un código nuevo.",
+        "checkFailed": "No pudimos comprobar el código. Inténtelo de nuevo."
+      }
     }
   },
   "secretReveal": {

@@ -1,4 +1,4 @@
-import { createHash, randomInt, timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 
 import { and, eq, gt, inArray, lt, or } from "drizzle-orm";
 
@@ -8,27 +8,20 @@ import { normalizeAppointmentChangePolicy } from "@lobbystack/shared";
 import { appointmentTimesMatch, serviceNamesMatch, storedContactNameMatchesIfPresent, substantiveServiceNameFactMatches } from "./appointmentFacts";
 
 import type { DomainContext } from "./context";
+import { newVerificationCode, verificationCodeSecret } from "./verificationCode";
 
 const OTP_TTL_MS = 10 * 60_000;
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_SEND_LEASE_MS = 5 * 60_000;
 
-function otpSecret(): string {
-  return process.env.OTP_HASH_SECRET ?? process.env.ENCRYPTION_KEY ?? process.env.BETTER_AUTH_SECRET ?? "development-only-change-me";
-}
-
 function hashOtp(code: string): string {
-  return createHash("sha256").update(`${otpSecret()}:${code}`).digest("hex");
+  return createHash("sha256").update(`${verificationCodeSecret()}:${code}`).digest("hex");
 }
 
 function matchesOtp(expectedHash: string, code: string): boolean {
   const actual = Buffer.from(hashOtp(code), "hex");
   const expected = Buffer.from(expectedHash, "hex");
   return actual.length === expected.length && timingSafeEqual(actual, expected);
-}
-
-function newOtp(): string {
-  return String(randomInt(0, 1_000_000)).padStart(6, "0");
 }
 
 async function auditAppointmentChange(tx: DatabaseTransaction, input: { businessId: string; appointmentId: string; verificationId?: string; eventType: string; payload?: Record<string, unknown> }): Promise<void> {
@@ -83,7 +76,7 @@ export async function issueAppointmentChangeOtp(
     if (current.attemptCount >= OTP_MAX_ATTEMPTS) return { ok: false, status: "failed", reason: "Too many verification attempts." };
     const sender = (await tx.select({ e164: phoneNumbers.e164 }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), eq(phoneNumbers.smsEnabled, true))).limit(1))[0];
     if (!sender) return { ok: false, status: "unavailable", reason: "SMS delivery is not configured for this business." };
-    const code = newOtp();
+    const code = newVerificationCode();
     await tx.update(appointmentChangeVerifications).set({ codeHash: hashOtp(code), status: "otp_queued", expiresAt: new Date(now.getTime() + OTP_TTL_MS), updatedAt: now }).where(and(eq(appointmentChangeVerifications.id, current.id), inArray(appointmentChangeVerifications.status, ["otp_pending", "otp_sent"])));
     await enqueueOutbox(tx, { topic: "appointment.sendChangeOtp", businessId: input.businessId, aggregateType: "appointment_change_verification", aggregateId: current.id, dedupeKey: `appointment-change-otp:${current.id}:${now.getTime()}`, payload: { verificationId: current.id, code, to: current.callerPhone, from: sender.e164 } });
     await auditAppointmentChange(tx, { businessId: input.businessId, appointmentId: current.appointmentId, verificationId: current.id, eventType: "appointment_change.otp_queued" });

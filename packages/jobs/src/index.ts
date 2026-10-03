@@ -37,6 +37,7 @@ export const queueForJobType: Record<JobType, JobQueue> = {
   "privacy.deleteRecording": "maintenance",
   "privacy.cleanupPendingUpload": "maintenance",
   "phoneVerification.send": "critical",
+  "phoneVerification.sendCode": "critical",
   "phoneNumber.provision": "critical",
   "phoneNumber.reclaim": "maintenance",
   "prospectDemo.expire": "maintenance",
