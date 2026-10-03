@@ -328,7 +328,8 @@
     "uploading": "Subiendo…",
     "saveFailed": "No pudimos guardar sus ajustes. Inténtelo de nuevo.",
     "edit": "Editar",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "editField": "Editar: {{field}}"
   },
   "loading": {
     "workspace": "Cargando espacio de trabajo…",

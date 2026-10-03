@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/item";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
@@ -115,6 +114,7 @@ export function AgentBasicSettingsPage({
   const [transferStatus, setTransferStatus] = useState<string | null>(null);
   const [appointmentChangeStatus, setAppointmentChangeStatus] = useState<string | null>(null);
   const [isGreetingSaving, setIsGreetingSaving] = useState(false);
+  const [isGreetingOpen, setIsGreetingOpen] = useState(false);
   const [isLocaleSaving, setIsLocaleSaving] = useState(false);
   const [isTransferSaving, setIsTransferSaving] = useState(false);
   const [isAppointmentChangeSaving, setIsAppointmentChangeSaving] = useState(false);
@@ -200,6 +200,7 @@ export function AgentBasicSettingsPage({
       });
       telemetry.track("web.agent.settings_saved", { businessId, setting: "greeting" });
       setGreetingStatus(t("agent:actions.saved"));
+      setIsGreetingOpen(false);
     } catch {
       toast.error(t("agent:actions.saveFailed"));
     } finally {
@@ -335,41 +336,44 @@ export function AgentBasicSettingsPage({
               <ItemContent>
                 <ItemTitle>{t("agent:fields.greeting.label")}</ItemTitle>
                 <ItemDescription>{t("agent:fields.greeting.hint")}</ItemDescription>
-                <div className="pt-2">
-                  {isLoadingConfiguration ? (
-                    <Skeleton className="h-10 w-full rounded-md sm:max-w-md" />
-                  ) : (
-                    <Input
-                      className="w-full sm:max-w-md"
-                      disabled={!canManageTenant}
-                      id="agent-greeting"
-                      onChange={(event) => {
-                        setGreeting(event.target.value);
-                        setGreetingStatus(null);
-                      }}
-                      placeholder={t("agent:fields.greeting.placeholder")}
-                      value={greeting}
-                    />
-                  )}
-                </div>
                 {greetingStatus ? <ItemDescription>{greetingStatus}</ItemDescription> : null}
               </ItemContent>
               <ItemActions className="w-full justify-end self-center sm:w-auto">
                 <Button
-                  disabled={
-                    isLoadingConfiguration ||
-                    isGreetingSaving ||
-                    !persistedProfile ||
-                    !canManageTenant
-                  }
-                  onClick={() => void saveGreeting()}
+                  aria-label={t("agent:actions.editField", { field: t("agent:fields.greeting.label") })}
+                  disabled={isLoadingConfiguration || !persistedProfile || !canManageTenant}
+                  onClick={() => {
+                    setGreeting(persistedProfile?.greeting ?? "");
+                    setGreetingStatus(null);
+                    setIsGreetingOpen(true);
+                  }}
                   size="sm"
                   type="button"
                   variant="outline"
                 >
-                  {isGreetingSaving ? t("agent:actions.saving") : t("agent:actions.save")}
+                  {t("agent:actions.edit")}
                 </Button>
               </ItemActions>
+              <Dialog onOpenChange={(open) => { if (!open && !isGreetingSaving) setIsGreetingOpen(false); }} open={isGreetingOpen}>
+                <DialogContent className="flex flex-col gap-4 sm:max-w-lg">
+                  <DialogHeader><DialogTitle>{t("agent:fields.greeting.label")}</DialogTitle></DialogHeader>
+                  <Textarea
+                    autoFocus
+                    disabled={!canManageTenant || isGreetingSaving}
+                    id="agent-greeting"
+                    onChange={(event) => setGreeting(event.target.value)}
+                    placeholder={t("agent:fields.greeting.placeholder")}
+                    rows={3}
+                    value={greeting}
+                  />
+                  <DialogFooter>
+                    <Button disabled={isGreetingSaving} onClick={() => setIsGreetingOpen(false)} type="button" variant="outline">{t("agent:actions.cancel")}</Button>
+                    <Button disabled={isGreetingSaving || !canManageTenant || !greeting.trim()} onClick={() => void saveGreeting()} type="button">
+                      {isGreetingSaving ? t("agent:actions.saving") : t("agent:actions.save")}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </Item>
 
             <Item
@@ -383,6 +387,7 @@ export function AgentBasicSettingsPage({
               </ItemContent>
               <ItemActions className="w-full justify-end self-center sm:w-auto">
                 <Button
+                  aria-label={t("agent:actions.editField", { field: t("agent:fields.summary.label") })}
                   disabled={isLoadingConfiguration || !persistedProfile || !canManageTenant}
                   onClick={() => {
                     setSummary(savedSummary);

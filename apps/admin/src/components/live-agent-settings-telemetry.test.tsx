@@ -33,8 +33,8 @@ function setup(profile: Record<string, unknown> = {}) {
 describe("agent settings telemetry", () => {
   it("records settings_saved for the greeting once the profile persists", async () => {
     setup();
-    const saveButtons = await screen.findAllByRole("button", { name: "agent:actions.save" });
-    await userEvent.click(saveButtons[0]!);
+    await userEvent.click((await screen.findAllByRole("button", { name: "agent:actions.editField" }))[0]!);
+    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "agent:actions.save" }));
     await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "greeting" }));
   });
 
@@ -50,7 +50,7 @@ describe("agent settings telemetry", () => {
 
   it("starts the summary empty while it's the sign-up placeholder, and saves one a person writes", async () => {
     const fetchMock = setup();
-    await userEvent.click(await screen.findByRole("button", { name: "agent:actions.edit" }));
+    await userEvent.click((await screen.findAllByRole("button", { name: "agent:actions.editField" }))[1]!);
     const dialog = await screen.findByRole("dialog");
     const field = within(dialog).getByPlaceholderText("agent:fields.summary.placeholder");
     expect((field as HTMLTextAreaElement).value).toBe("");
@@ -63,7 +63,7 @@ describe("agent settings telemetry", () => {
 
   it("lets a person hand their summary back to AI", async () => {
     const fetchMock = setup({ summary: "Written by hand.", summarySource: "operator" });
-    await userEvent.click(await screen.findByRole("button", { name: "agent:actions.edit" }));
+    await userEvent.click((await screen.findAllByRole("button", { name: "agent:actions.editField" }))[1]!);
     await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "agent:fields.summary.regenerate" }));
     await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "summary_regenerated" }));
     const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");

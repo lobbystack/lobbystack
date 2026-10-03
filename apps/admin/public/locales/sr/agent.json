@@ -328,7 +328,8 @@
     "uploading": "Otpremanje…",
     "saveFailed": "Nismo mogli da sačuvamo podešavanja. Pokušajte ponovo.",
     "edit": "Izmeni",
-    "cancel": "Otkaži"
+    "cancel": "Otkaži",
+    "editField": "Izmeni: {{field}}"
   },
   "loading": {
     "workspace": "Učitavanje radnog prostora…",

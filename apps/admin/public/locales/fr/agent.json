@@ -328,7 +328,8 @@
     "uploading": "Téléversement…",
     "saveFailed": "Nous n’avons pas pu enregistrer vos paramètres. Veuillez réessayer.",
     "edit": "Modifier",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "editField": "Modifier : {{field}}"
   },
   "loading": {
     "workspace": "Chargement de l’espace de travail…",
