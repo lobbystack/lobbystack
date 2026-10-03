@@ -13,7 +13,7 @@ import { TwilioProvider } from "@lobbystack/providers/twilio/twilioProvider";
 import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withSpan } from "@lobbystack/telemetry/node";
 import { redactJobError } from "./redactJobError";
 import { Worker } from "bullmq";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 import { handleJob, type WorkerDependencies } from "./handlers";
 import { startHealthServer } from "./health";
@@ -167,12 +167,11 @@ async function main(): Promise<void> {
   }
   // Nothing filled opening hours before, so most businesses have none and
   // instant booking found every time unavailable. Read each one's knowledge
-  // for its hours once. A later restart queues the job again; it skips hours
-  // a person set and passages it already read, so only the first run calls
-  // the model, and only for businesses whose knowledge mentions times.
+  // for its hours once. Every run records a fingerprint, so a restart only
+  // queues businesses the job hasn't read yet.
   const businessHoursExtractor = createBusinessHoursExtractor();
   if (businessHoursExtractor && summaryQueue) {
-    const hoursBusinesses = await withDispatcherTransaction(dispatcherDatabase.db, async (tx) => await tx.select({ id: businesses.id }).from(businesses).where(eq(businesses.hoursSource, "none")));
+    const hoursBusinesses = await withDispatcherTransaction(dispatcherDatabase.db, async (tx) => await tx.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.hoursSource, "none"), isNull(businesses.hoursFingerprint))));
     for (const business of hoursBusinesses) {
       await enqueueJob(summaryQueue, {
         type: "business.extractHours",

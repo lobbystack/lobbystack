@@ -154,6 +154,14 @@ describe("worker handlers", () => {
       expect(markOperatorPhoneVerificationCodeSent).toHaveBeenCalledWith(domain, { businessId, attemptId });
     });
 
+    it("texts the code in the operator's dashboard language", async () => {
+      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
+      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550100", code: "482913" });
+      const alertSms = vi.fn().mockResolvedValue({ providerMessageId: "SMalert" });
+      await handleJob({ ...codeJob(businessId, attemptId), payload: { attemptId, locale: "fr" } }, { domain, twilioAlerts: { from: "+14165550100", sendSms: alertSms } });
+      expect(alertSms).toHaveBeenCalledWith(expect.objectContaining({ body: "Code de vérification LobbyStack : 482913. Il expire dans 10 minutes." }));
+    });
+
     it("uses the business's own number when it is the alert sender", async () => {
       const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
       vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550199", code: "482913" });
@@ -168,6 +176,14 @@ describe("worker handlers", () => {
       vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue(null);
       await expect(handleJob(codeJob(randomUUID(), attemptId), { domain: { db: undefined as never }, twilio: { sendSms } })).resolves.toEqual({ status: "skipped", entityId: attemptId });
       expect(sendSms).not.toHaveBeenCalled();
+    });
+
+    it("marks a code sent when a retry finds the text already went out", async () => {
+      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never }; const sendSms = vi.fn();
+      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue(null);
+      await expect(handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms } })).resolves.toEqual({ status: "skipped", entityId: attemptId });
+      expect(sendSms).not.toHaveBeenCalled();
+      expect(markOperatorPhoneVerificationCodeSent).toHaveBeenCalledWith(domain, { businessId, attemptId });
     });
 
     it("fails the attempt without a retry when Twilio rejects the number", async () => {

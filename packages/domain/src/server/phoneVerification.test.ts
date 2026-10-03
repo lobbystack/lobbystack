@@ -122,7 +122,7 @@ describe("startOperatorPhoneVerification", () => {
     expect(mocks.requireBusinessMembership).toHaveBeenCalled();
     expect(sets[0]).toMatchObject({ status: "canceled", codeHash: null });
     expect(executed[0]).toContain("reserve_phone_verification_attempt");
-    expect(mocks.enqueueOutbox).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "phoneVerification.sendCode", businessId: "business-1", payload: { attemptId: "attempt-9" } }));
+    expect(mocks.enqueueOutbox).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "phoneVerification.sendCode", businessId: "business-1", payload: { attemptId: "attempt-9", locale: "en" } }));
   });
 
   it("rejects a number that is not E.164", async () => {

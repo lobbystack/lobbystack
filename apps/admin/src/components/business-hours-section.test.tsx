@@ -112,6 +112,24 @@ describe("instant booking without opening hours", () => {
     expect(document.getElementById("opening-hours")).toBeTruthy();
   });
 
+  it("opens the hours editor when the warning's link is followed on the same page", async () => {
+    stubFetch({ hoursSource: "none", hours: [] });
+    render(<QueryClientProvider client={client()}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
+    const alert = (await screen.findByText("hours.noHoursAlert.title")).closest("[role=alert]") as HTMLElement;
+    expect(screen.queryAllByLabelText(/^hours.openOn:/)).toHaveLength(0);
+    within(alert).getByText("hours.noHoursAlert.action").closest("a")!.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    expect(await screen.findAllByLabelText(/^hours.openOn:/)).toHaveLength(7);
+  });
+
+  it("doesn't open the hours editor from the link for someone who can't edit it", async () => {
+    stubFetch({ hoursSource: "none", hours: [] });
+    window.history.replaceState(null, "", "#opening-hours");
+    render(<QueryClientProvider client={client()}><BusinessHoursSection businessId="business" canManage={false} /></QueryClientProvider>);
+    await screen.findByText("hours.empty");
+    expect(screen.queryAllByLabelText(/^hours.openOn:/)).toHaveLength(0);
+    window.history.replaceState(null, "", "#");
+  });
+
   it("doesn't warn once the business has hours, or when it doesn't book directly", async () => {
     stubFetch({ hoursSource: "generated", hours: weekdays });
     render(<QueryClientProvider client={client()}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);

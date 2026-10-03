@@ -33,6 +33,20 @@ function weekdayToSnapshotDay(weekday: number): number {
   return weekday % 7;
 }
 
+/**
+ * Local minutes from midnight for the start and end of a time. A time that
+ * ends exactly at the next midnight ends at 1440, the same day, so it fits a
+ * window that closes at midnight.
+ */
+function localSpan(startLocal: DateTime, endLocal: DateTime): { startMinutes: number; endMinutes: number; endsSameLocalDay: boolean } {
+  const endsAtMidnight = endLocal.hour === 0 && endLocal.minute === 0 && endLocal.second === 0 && endLocal.hasSame(startLocal.plus({ days: 1 }), "day");
+  return {
+    startMinutes: startLocal.hour * 60 + startLocal.minute,
+    endMinutes: endsAtMidnight ? 1440 : endLocal.hour * 60 + endLocal.minute,
+    endsSameLocalDay: endsAtMidnight || endLocal.hasSame(startLocal, "day"),
+  };
+}
+
 function overlaps(
   candidateStart: Date,
   candidateEnd: Date,
@@ -87,9 +101,7 @@ export function scheduleUnavailableReason(input: {
   const endLocal = endUtc.setZone(input.timezone);
   const windows = input.hours.filter((window) => window.dayOfWeek === weekdayToSnapshotDay(startLocal.weekday));
   if (!windows.length) return "closed_day";
-  const startMinutes = startLocal.hour * 60 + startLocal.minute;
-  const endMinutes = endLocal.hour * 60 + endLocal.minute;
-  const endsSameLocalDay = endLocal.hasSame(startLocal, "day");
+  const { startMinutes, endMinutes, endsSameLocalDay } = localSpan(startLocal, endLocal);
   if (!windows.some((window) => startMinutes >= window.openMinutes && endsSameLocalDay && endMinutes <= window.closeMinutes)) return "outside_hours";
   if (input.closures.some((closure) => overlaps(startUtc.toJSDate(), endUtc.toJSDate(), isoToDate(closure.startsAt), isoToDate(closure.endsAt)))) return "closure";
   return undefined;
@@ -103,9 +115,7 @@ export function computeAvailability(input: AvailabilityInput): Array<Availabilit
   const requestedStartLocal = requestedStartUtc.setZone(input.request.timezone);
   const requestedEndLocal = requestedEndUtc.setZone(input.request.timezone);
   const weekday = weekdayToSnapshotDay(requestedStartLocal.weekday);
-  const startMinutes = requestedStartLocal.hour * 60 + requestedStartLocal.minute;
-  const endMinutes = requestedEndLocal.hour * 60 + requestedEndLocal.minute;
-  const endsSameLocalDay = requestedEndLocal.hasSame(requestedStartLocal, "day");
+  const { startMinutes, endMinutes, endsSameLocalDay } = localSpan(requestedStartLocal, requestedEndLocal);
 
   const openWindow = input.hours.find(
     (window) =>

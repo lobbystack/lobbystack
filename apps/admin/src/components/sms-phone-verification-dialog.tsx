@@ -17,7 +17,7 @@ import { requestJson } from "@/lib/request-json";
 
 type AttemptStatus = "sending" | "sent" | "approved" | "expired" | "failed" | "canceled";
 type CheckResult = { approved: boolean; status: "approved" | "invalid" | "locked" | "expired" | "unavailable"; remainingAttempts?: number };
-type Step = { kind: "phone" } | { kind: "code"; attemptId: string; phoneE164: string };
+type Step = { kind: "confirm" } | { kind: "phone" } | { kind: "code"; attemptId: string; phoneE164: string };
 
 const startErrorKeys: Record<string, string> = {
   phone_number_invalid: "invalidNumber",
@@ -36,9 +36,10 @@ function errorCode(error: unknown): string | undefined {
 /**
  * Verifies the signed-in operator's mobile number before SMS alerts turn on.
  * Screen one asks for the number; screen two takes the 6-digit code with the
- * same input the onboarding phone check used.
+ * same input the onboarding phone check used. An operator whose phone is
+ * already verified only confirms the consent, unless they change the number.
  */
-export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onVerified }: { businessId: string; open: boolean; onOpenChange: (open: boolean) => void; onVerified: () => void }) {
+export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onVerified, phoneVerified = false }: { businessId: string; open: boolean; onOpenChange: (open: boolean) => void; onVerified: () => void; phoneVerified?: boolean }) {
   const { i18n, t } = useTranslation("settings");
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const defaultCountry = getDefaultPhoneCountry(locale) as Country;
@@ -54,11 +55,11 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
 
   useEffect(() => {
     if (!open) return;
-    setStep({ kind: "phone" }); setCode(""); setError(null); setLocked(false); submittedCodeRef.current = "";
-  }, [open]);
+    setStep(phoneVerified ? { kind: "confirm" } : { kind: "phone" }); setCode(""); setError(null); setLocked(false); submittedCodeRef.current = "";
+  }, [open, phoneVerified]);
 
   const start = useMutation({
-    mutationFn: (phoneNumber: string) => requestJson<{ attemptId: string; phoneE164: string }>(`/api/account/phone-verification?${query}`, { method: "POST", body: JSON.stringify({ phoneNumber }) }),
+    mutationFn: (phoneNumber: string) => requestJson<{ attemptId: string; phoneE164: string }>(`/api/account/phone-verification?${query}`, { method: "POST", body: JSON.stringify({ phoneNumber, locale }) }),
     onSuccess: (result) => { setStep({ kind: "code", attemptId: result.attemptId, phoneE164: result.phoneE164 }); setCode(""); setLocked(false); submittedCodeRef.current = ""; },
     onError: (cause) => setError(t(`notifications.phoneVerification.errors.${startErrorKeys[errorCode(cause) ?? ""] ?? "sendFailed"}`)),
   });
@@ -115,7 +116,17 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
 
   return <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent>
-      {step.kind === "phone" ? <form className="flex flex-col gap-6" onSubmit={sendCode}>
+      {step.kind === "confirm" ? <div className="flex flex-col gap-6">
+        <DialogHeader><DialogTitle>{t("notifications.phoneVerification.confirm.title")}</DialogTitle></DialogHeader>
+        <div className="flex flex-col items-start gap-4">
+          <p className="text-xs text-muted-foreground">{t("notifications.phoneVerification.confirm.consent")}</p>
+          <button className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground" onClick={() => setStep({ kind: "phone" })} type="button">{t("notifications.phoneVerification.code.changeNumber")}</button>
+        </div>
+        <DialogFooter>
+          <Button onClick={() => onOpenChange(false)} type="button" variant="outline">{t("notifications.phoneVerification.cancel")}</Button>
+          <Button onClick={onVerified} type="button">{t("notifications.phoneVerification.confirm.turnOn")}</Button>
+        </DialogFooter>
+      </div> : step.kind === "phone" ? <form className="flex flex-col gap-6" onSubmit={sendCode}>
         <DialogHeader><DialogTitle>{t("notifications.phoneVerification.phone.title")}</DialogTitle></DialogHeader>
         <FieldGroup className="gap-4">
           <Field data-invalid={error ? true : undefined}>

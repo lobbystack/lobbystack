@@ -62,13 +62,13 @@ export async function writeBusinessHoursInTransaction(tx: DatabaseTransaction, i
 }
 
 // Signs that a passage states opening hours, in the interface languages and a
-// few common ones. Times like 9:00, 9h30, 9 am or 9-17h; words like "hours" or
-// "radno vreme"; and day names or their short forms.
-const TIME_PATTERN = /\d{1,2} ?[:.h] ?\d{2}|\d{1,2} ?(?:am|pm|a\.m\.|p\.m\.)|\d{1,2} ?[-–—] ?\d{1,2} ?h|24 ?\/ ?7|24 ?h/giu;
+// few common ones. Times like 9:00, 9h30, 9h, 9 am, 9-17 or 9 to 5; words like
+// "hours" or "radno vreme"; and day names or their short forms.
+const TIME_PATTERN = /\d{1,2} ?[:.h] ?\d{2}|\d{1,2} ?(?:am|pm|a\.m\.|p\.m\.)|\d{1,2} ?h(?![\p{L}])|(?<!\d)\d{1,2} ?(?:[-–—]|to) ?\d{1,2}(?!\d)|24 ?\/ ?7/giu;
 const HOURS_WORDS = /(?:opening hours|business hours|hours|open|closed|horaires?|heures|ouvert|fermé|horario|abierto|cerrado|radno vreme|radno vrijeme|radnim danima|otvoreno|zatvoreno|радно време|öffnungszeiten|orario)/giu;
 const DAY_WORDS = /(?<![\p{L}])(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:rs(?:day)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?|weekdays?|weekends?|lun(?:di|es)?|mar(?:di|tes)?|mer(?:credi)?|miércoles|mié|jeu(?:di)?|jueves|ven(?:dredi)?|viernes|sam(?:edi)?|sábado|sáb|dim(?:anche)?|domingo|pon(?:edeljak)?|uto(?:rak)?|sre(?:da)?|čet(?:vrtak)?|pet(?:ak)?|sub(?:ota)?|ned(?:elja|jelja)?|понедељак|уторак|среда|четвртак|петак|субота|недеља|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)(?![\p{L}])/giu;
 // The same prefilter in PostgreSQL's regex dialect, so only likely passages leave the database.
-const SQL_HOURS_PATTERN = "[0-9]{1,2} ?[:.h] ?[0-9]{2}|[0-9]{1,2} ?(am|pm|a\\.m\\.|p\\.m\\.)|[0-9]{1,2} ?[-–—] ?[0-9]{1,2} ?h|24 ?/ ?7|hours|horaire|heures|horario|radno vreme|radno vrijeme|радно време|öffnungszeiten|orario";
+const SQL_HOURS_PATTERN = "[0-9]{1,2} ?[:.h] ?[0-9]{2}|[0-9]{1,2} ?(am|pm|a\\.m\\.|p\\.m\\.)|[0-9]{1,2} ?h([^[:alpha:]]|$)|(^|[^0-9])[0-9]{1,2} ?([-–—]|to) ?[0-9]{1,2}([^0-9]|$)|24 ?/ ?7|hours|horaire|heures|horario|radno vreme|radno vrijeme|радно време|öffnungszeiten|orario";
 
 const count = (pattern: RegExp, text: string) => text.match(pattern)?.length ?? 0;
 

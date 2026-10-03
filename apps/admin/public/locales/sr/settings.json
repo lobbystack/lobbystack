@@ -801,6 +801,11 @@
         "title": "Vaš broj mobilnog telefona",
         "consent": "Slanjem koda pristajete da primate LobbyStack upozorenja putem SMS-a. Učestalost varira. Mogu se naplatiti troškovi poruka i podataka. Odgovorite STOP da biste se odjavili, HELP za pomoć."
       },
+      "confirm": {
+        "title": "Uključite SMS upozorenja",
+        "consent": "Uključivanjem pristajete da primate LobbyStack upozorenja putem SMS-a na Vaš potvrđeni broj. Učestalost varira. Mogu se naplatiti troškovi poruka i podataka. Odgovorite STOP da biste se odjavili, HELP za pomoć.",
+        "turnOn": "Uključi"
+      },
       "fields": {
         "mobileNumber": "Broj mobilnog telefona",
         "country": "Država"

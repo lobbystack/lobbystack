@@ -801,6 +801,11 @@
         "title": "Votre numéro de mobile",
         "consent": "En envoyant le code, vous acceptez de recevoir les alertes LobbyStack par SMS. Fréquence variable. Des frais de messagerie et de données peuvent s'appliquer. Répondez STOP pour vous désabonner, HELP pour de l'aide."
       },
+      "confirm": {
+        "title": "Activer les alertes par SMS",
+        "consent": "En les activant, vous acceptez de recevoir les alertes LobbyStack par SMS à votre numéro vérifié. Fréquence variable. Des frais de messagerie et de données peuvent s'appliquer. Répondez STOP pour vous désabonner, HELP pour de l'aide.",
+        "turnOn": "Activer"
+      },
       "fields": {
         "mobileNumber": "Numéro de mobile",
         "country": "Pays"

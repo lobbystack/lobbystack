@@ -4,7 +4,7 @@ import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
 
 import { hasSummarizableTranscript, type BusinessHoursExtractor, type BusinessSummarizer, type CallSummarizer } from "@lobbystack/agent-core";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
-import { getPolarMeteredUsagePayload, permanentSmsErrorCode, type BillingUsageKind } from "@lobbystack/shared";
+import { getPolarMeteredUsagePayload, normalizeInterfaceLocale, permanentSmsErrorCode, type BillingUsageKind, type InterfaceLocale } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary } from "@lobbystack/domain";
 import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationFailed, markNotificationSent, markNotificationSkipped, cancelRetiredPhoneVerificationSend, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
@@ -242,14 +242,20 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const attemptId = String(job.payload.attemptId ?? "");
       if (!attemptId) return { status: "skipped", entityId: attemptId };
       const target = await issueOperatorPhoneVerificationCode(dependencies.domain, { businessId, attemptId });
-      if (!target) return { status: "skipped", entityId: attemptId };
+      if (!target) {
+        // A retry after the text went out but before the attempt was marked
+        // sent finds it still processing with a code. Finish the mark rather
+        // than leave the code screen waiting.
+        await markOperatorPhoneVerificationCodeSent(dependencies.domain, { businessId, attemptId });
+        return { status: "skipped", entityId: attemptId };
+      }
       const sender = dependencies.twilioAlerts?.from === target.from ? dependencies.twilioAlerts : dependencies.twilio;
       if (!sender) {
         await releaseOperatorPhoneVerificationCodeSend(dependencies.domain, { businessId, attemptId, retry: false, error: "Alert SMS delivery is not configured." });
         return { status: "skipped", entityId: attemptId };
       }
       try {
-        await sender.sendSms({ to: target.to, from: target.from, body: `LobbyStack verification code: ${target.code}. It expires in 10 minutes.` });
+        await sender.sendSms({ to: target.to, from: target.from, body: phoneVerificationText(String(job.payload.locale ?? ""), target.code) });
       } catch (error) {
         const permanentCode = permanentSmsErrorCode(error);
         const retry = !permanentCode && execution.isFinalAttempt === false;
@@ -1039,6 +1045,18 @@ async function generateBusinessSummary(dependencies: WorkerDependencies, input: 
   return { status: saved ? "completed" : "skipped", entityId: input.businessId };
 }
 
+// The operator's dashboard language, sent with the request.
+const PHONE_VERIFICATION_TEXT: Record<InterfaceLocale, (code: string) => string> = {
+  en: (code) => `LobbyStack verification code: ${code}. It expires in 10 minutes.`,
+  fr: (code) => `Code de vérification LobbyStack : ${code}. Il expire dans 10 minutes.`,
+  es: (code) => `Código de verificación de LobbyStack: ${code}. Vence en 10 minutos.`,
+  sr: (code) => `LobbyStack kod za potvrdu: ${code}. Ističe za 10 minuta.`,
+};
+
+function phoneVerificationText(locale: string, code: string): string {
+  return PHONE_VERIFICATION_TEXT[normalizeInterfaceLocale(locale) ?? "en"](code);
+}
+
 /**
  * Fills the opening hours with AI from the passages of the knowledge sources
  * that look like they state them. Skips hours a person set, knowledge with no
@@ -1049,8 +1067,12 @@ async function extractBusinessHours(dependencies: WorkerDependencies, input: { b
   const extractor = dependencies.businessHoursExtractor;
   if (!extractor) return { status: "skipped", entityId: input.businessId };
   const hoursInput = await loadBusinessHoursInput(dependencies.domain, { businessId: input.businessId });
-  if (!hoursInput || hoursInput.hoursSource === "operator" || (hoursInput.hoursSource === "none" && hoursInput.existingWindows > 0)) return { status: "skipped", entityId: input.businessId };
-  if (!hoursInput.sources.length || hoursInput.fingerprint === hoursInput.currentFingerprint) return { status: "skipped", entityId: input.businessId };
+  if (!hoursInput || hoursInput.hoursSource === "operator" || hoursInput.fingerprint === hoursInput.currentFingerprint) return { status: "skipped", entityId: input.businessId };
+  // Record the read even when there's nothing to extract, so the startup backfill doesn't queue this business again.
+  if ((hoursInput.hoursSource === "none" && hoursInput.existingWindows > 0) || !hoursInput.sources.length) {
+    await markBusinessHoursChecked(dependencies.domain, { businessId: input.businessId, fingerprint: hoursInput.fingerprint });
+    return { status: "skipped", entityId: input.businessId };
+  }
   const startedAt = performance.now();
   let extraction: Awaited<ReturnType<BusinessHoursExtractor["extract"]>>;
   try {

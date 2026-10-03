@@ -12,11 +12,11 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     const { session, businessId } = await requireOperatorBusiness(request);
-    const body = await readJson(request) as { phoneNumber?: unknown };
+    const body = await readJson(request) as { phoneNumber?: unknown; locale?: unknown };
     const phoneE164 = typeof body.phoneNumber === "string" ? normalizePhoneNumber(body.phoneNumber) : undefined;
     const countryCode = phoneE164 ? inferPhoneCountry(phoneE164) : undefined;
     if (!phoneE164 || !countryCode) return jsonError("Enter a valid mobile number.", 422, "phone_number_invalid");
-    const { attemptId } = await startOperatorPhoneVerification(createDomainContext(), { userId: session.user.id, businessId, phoneE164, countryCode });
+    const { attemptId } = await startOperatorPhoneVerification(createDomainContext(), { userId: session.user.id, businessId, phoneE164, countryCode, ...(typeof body.locale === "string" ? { locale: body.locale } : {}) });
     return NextResponse.json({ attemptId, phoneE164 }, { status: 202 });
   } catch (error) {
     return asApiResponse(error);

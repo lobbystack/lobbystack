@@ -1,8 +1,8 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
-import { and, eq, inArray, lt, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 
-import { canTextNumber } from "@lobbystack/shared";
+import { canTextNumber, normalizeInterfaceLocale } from "@lobbystack/shared";
 import { enqueueOutbox, onboardingPhoneVerifications, withBusinessTransaction } from "@lobbystack/db";
 
 import { requireBusinessMembership } from "../authz";
@@ -106,7 +106,7 @@ function reservationError(error: unknown): PhoneVerificationError | undefined {
  */
 export async function startOperatorPhoneVerification(
   context: DomainContext,
-  input: { userId: string; businessId: string; phoneE164: string; countryCode: string },
+  input: { userId: string; businessId: string; phoneE164: string; countryCode: string; locale?: string },
 ): Promise<{ attemptId: string }> {
   const countryCode = input.countryCode.trim().toUpperCase();
   if (!E164_PATTERN.test(input.phoneE164) || !/^[A-Z]{2}$/.test(countryCode)) throw phoneVerificationError(422, "phone_number_invalid", "Enter a valid mobile number.");
@@ -127,7 +127,7 @@ export async function startOperatorPhoneVerification(
       const result = await tx.execute(sql`SELECT app.reserve_phone_verification_attempt(${input.businessId}::uuid, ${input.userId}::uuid, ${input.phoneE164}, ${countryCode}, ${null}, ${fingerprint}) AS id`);
       const attemptId = String((result.rows[0] as { id?: unknown } | undefined)?.id ?? "");
       if (!attemptId) throw new Error("Phone verification could not be reserved.");
-      await enqueueOutbox(tx, { topic: "phoneVerification.sendCode", businessId: input.businessId, aggregateType: "phone_verification", aggregateId: attemptId, dedupeKey: `phone-verification:${attemptId}:send-code`, payload: { attemptId } });
+      await enqueueOutbox(tx, { topic: "phoneVerification.sendCode", businessId: input.businessId, aggregateType: "phone_verification", aggregateId: attemptId, dedupeKey: `phone-verification:${attemptId}:send-code`, payload: { attemptId, locale: normalizeInterfaceLocale(input.locale) ?? "en" } });
       return { attemptId };
     });
   } catch (error) {
@@ -222,11 +222,11 @@ export async function issueOperatorPhoneVerificationCode(
   });
 }
 
-/** Worker: the code was handed to the SMS provider, so the operator can enter it. */
+/** Worker: the code was handed to the SMS provider, so the operator can enter it. Only an attempt holding a code can be marked. */
 export async function markOperatorPhoneVerificationCodeSent(context: DomainContext, input: { businessId: string; attemptId: string }): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => (await tx.update(onboardingPhoneVerifications)
     .set({ status: "pending", lastError: null, updatedAt: new Date() })
-    .where(and(eq(onboardingPhoneVerifications.id, input.attemptId), eq(onboardingPhoneVerifications.businessId, input.businessId), eq(onboardingPhoneVerifications.status, "processing")))
+    .where(and(eq(onboardingPhoneVerifications.id, input.attemptId), eq(onboardingPhoneVerifications.businessId, input.businessId), eq(onboardingPhoneVerifications.status, "processing"), isNotNull(onboardingPhoneVerifications.codeHash)))
     .returning({ id: onboardingPhoneVerifications.id })).length > 0);
 }
 

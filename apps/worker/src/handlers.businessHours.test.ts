@@ -70,6 +70,13 @@ describe("business.extractHours", () => {
     expect(recordAiGenerationEvent).not.toHaveBeenCalled();
   });
 
+  it("remembers knowledge with no hours passages, so a restart doesn't queue it again", async () => {
+    const businessId = randomUUID();
+    vi.mocked(loadBusinessHoursInput).mockResolvedValueOnce(hoursInput({ sources: [] }));
+    await expect(handleJob(job(businessId), { domain, businessHoursExtractor: extractor({ status: "found", hours: weekdays }) })).resolves.toMatchObject({ status: "skipped" });
+    expect(markBusinessHoursChecked).toHaveBeenCalledWith(domain, { businessId, fingerprint: "new" });
+  });
+
   it("remembers passages that state no hours, so a restart doesn't read them again", async () => {
     const businessId = randomUUID();
     vi.mocked(loadBusinessHoursInput).mockResolvedValueOnce(hoursInput());

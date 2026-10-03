@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { scheduleUnavailableReason } from "./availability";
+import { computeAvailability, scheduleUnavailableReason } from "./availability";
 
 // 2026-03-09 is a Monday.
 const monday = (time: string) => `2026-03-09T${time}:00.000Z`;
@@ -26,6 +26,13 @@ describe("scheduleUnavailableReason", () => {
     expect(check(monday("11:30"))).toBe("outside_hours");
     expect(check(monday("16:30"))).toBe("outside_hours");
     expect(check(monday("07:00"))).toBe("outside_hours");
+  });
+
+  it("allows a service that ends exactly when the business closes at midnight", () => {
+    const evening = [{ dayOfWeek: 1, openMinutes: 18 * 60, closeMinutes: 1440 }];
+    expect(check(monday("23:00"), { hours: evening })).toBeUndefined();
+    expect(check(monday("23:30"), { hours: evening })).toBe("outside_hours");
+    expect(computeAvailability({ request: { serviceId: "service", startsAt: monday("23:00"), timezone: "UTC" }, serviceDurationMinutes: 60, staffIds: ["staff"], hours: evening, closures: [], existingAppointments: [] })).toHaveLength(1);
   });
 
   it("reads the hours in the business's timezone", () => {

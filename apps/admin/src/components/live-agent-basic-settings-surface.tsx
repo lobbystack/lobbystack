@@ -179,25 +179,11 @@ export function AgentBasicSettingsPage({
       return;
     }
 
-    const transferNumberResolution = resolveTransferNumberForSave({
-      rawInputValue: transferNumberInputValue,
-      validTransferNumber: transferNumber,
-    });
-    if (!transferNumberResolution.ok) {
-      setTransferStatus(t(transferNumberResolution.errorKey));
-      setTransferStatusTone("error");
-      return;
-    }
-
     setIsGreetingSaving(true);
     setGreetingStatus(null);
     try {
-      await saveProfile({
-        businessId,
-        defaultLocale,
-        greeting,
-        transferNumber: transferNumberResolution.value,
-      });
+      // Only the greeting: the dialog hides the other fields, so their drafts stay unsaved.
+      await saveProfile({ businessId, greeting });
       telemetry.track("web.agent.settings_saved", { businessId, setting: "greeting" });
       setGreetingStatus(t("agent:actions.saved"));
       setIsGreetingOpen(false);

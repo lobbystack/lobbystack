@@ -801,6 +801,11 @@
         "title": "Your mobile number",
         "consent": "By sending the code, you agree to get LobbyStack alerts by text. Frequency varies. Msg & data rates may apply. Reply STOP to opt out, HELP for help."
       },
+      "confirm": {
+        "title": "Turn on SMS alerts",
+        "consent": "By turning them on, you agree to get LobbyStack alerts by text at your verified number. Frequency varies. Msg & data rates may apply. Reply STOP to opt out, HELP for help.",
+        "turnOn": "Turn on"
+      },
       "fields": {
         "mobileNumber": "Mobile number",
         "country": "Country"

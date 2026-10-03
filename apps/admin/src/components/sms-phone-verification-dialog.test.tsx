@@ -80,7 +80,7 @@ describe("SMS phone verification dialog", () => {
     await sendCode();
     await userEvent.click(await screen.findByRole("button", { name: "notifications.phoneVerification.code.resend" }));
     await waitFor(() => expect(starts(fetchMock)).toHaveLength(2));
-    expect(JSON.parse(String(starts(fetchMock)[1]?.[1]?.body))).toEqual({ phoneNumber: "+14165550123" });
+    expect(JSON.parse(String(starts(fetchMock)[1]?.[1]?.body))).toEqual({ phoneNumber: "+14165550123", locale: "en" });
   });
 
   it("explains the resend cooldown", async () => {

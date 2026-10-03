@@ -25,6 +25,8 @@ export type BusinessHoursState = { timezone: string; hoursSource: HoursSource; b
 
 /** Where the dashboard edits opening hours. */
 export const HOURS_EDITOR_HREF = "/agent/basic-settings#opening-hours";
+// Opens the editor when the link is followed on the page that already shows it, where nothing remounts.
+const OPEN_HOURS_EDITOR_EVENT = "lobbystack:open-hours-editor";
 const MAX_WINDOWS_PER_DAY = 4;
 // Monday first; dayOfWeek counts from Sunday.
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -102,7 +104,7 @@ export function BookingWithoutHoursAlert({ className }: { className?: string }) 
       <AlertTitle className="flex items-center gap-2"><CalendarClock aria-hidden="true" className="size-4" />{t("hours.noHoursAlert.title")}</AlertTitle>
       <AlertDescription>{t("hours.noHoursAlert.description")}</AlertDescription>
       <div className="pt-2">
-        <Button nativeButton={false} render={<Link href={HOURS_EDITOR_HREF} />} size="sm" variant="outline">{t("hours.noHoursAlert.action")}</Button>
+        <Button nativeButton={false} render={<Link href={HOURS_EDITOR_HREF} onClick={() => window.dispatchEvent(new Event(OPEN_HOURS_EDITOR_EVENT))} />} size="sm" variant="outline">{t("hours.noHoursAlert.action")}</Button>
       </div>
     </Alert>
   );
@@ -120,7 +122,13 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
   const [saving, setSaving] = useState(false);
   // Collapsed to a one-line summary unless a link points here, such as the no-hours warning.
   const [editing, setEditing] = useState(false);
-  useEffect(() => { if (window.location.hash === "#opening-hours") setEditing(true); }, []);
+  useEffect(() => {
+    if (!canManage) return;
+    const open = () => setEditing(true);
+    if (window.location.hash === "#opening-hours") open();
+    window.addEventListener(OPEN_HOURS_EDITOR_EVENT, open);
+    return () => window.removeEventListener(OPEN_HOURS_EDITOR_EVENT, open);
+  }, [canManage]);
   useEffect(() => { if (state) setDays(toDays(state.hours)); }, [state]);
   const [dayNames, shortDayNames] = useMemo(() => (["long", "short"] as const).map((weekday) => {
     const format = new Intl.DateTimeFormat(intlLocale(i18n.language), { weekday, timeZone: "UTC" });

@@ -63,7 +63,7 @@ describe("original notification controls", () => {
     expect(await screen.findByText("notifications.phoneVerification.code.title")).toBeTruthy();
     const start = fetchMock.mock.calls.find(([url, init]) => url.startsWith("/api/account/phone-verification?") && init?.method === "POST");
     expect(start?.[0]).toBe("/api/account/phone-verification?businessId=business-1");
-    expect(JSON.parse(String(start?.[1]?.body))).toEqual({ phoneNumber: "+14165550123" });
+    expect(JSON.parse(String(start?.[1]?.body))).toEqual({ phoneNumber: "+14165550123", locale: "en" });
     await userEvent.type(screen.getByRole("textbox"), "123456");
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url.startsWith("/api/account/phone-verification/check"))).toBe(true));
     const check = fetchMock.mock.calls.find(([url]) => url.startsWith("/api/account/phone-verification/check"));
@@ -81,11 +81,16 @@ describe("original notification controls", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.getByRole("switch", { name: "notifications.sources.sms.title" }).getAttribute("aria-checked")).toBe("false");
   });
-  it("asks a verified operator without consent on record through the phone step", async () => {
+  it("asks a verified operator without consent on record to confirm it, without a new code", async () => {
     const fetchMock = setup();
     await userEvent.click(await screen.findByRole("switch", { name: "notifications.sources.sms.title" }));
-    expect(await screen.findByText("notifications.phoneVerification.phone.consent")).toBeTruthy();
+    expect(await screen.findByText("notifications.phoneVerification.confirm.consent")).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "notifications.phoneVerification.confirm.turnOn" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(true));
+    expect(fetchMock.mock.calls.some(([url]) => url.startsWith("/api/account/phone-verification"))).toBe(false);
+    const mutation = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(JSON.parse(String(mutation?.[1]?.body))).toMatchObject({ smsEnabled: true, smsConsent: true });
   });
   it("turns SMS on with no extra step when consent is already on record", async () => {
     const fetchMock = setup(null, false, true);

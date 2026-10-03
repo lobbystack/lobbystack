@@ -39,6 +39,10 @@ describe("hours passages", () => {
     expect(hoursSignalScore("Radno vreme: Pon-Pet 09-20h, Sub 09-15h, Ned neradni dan")).toBeGreaterThan(5);
     expect(hoursSignalScore("Horaires : lundi au vendredi de 9 h 00 à 17 h 30")).toBeGreaterThan(5);
     expect(hoursSignalScore("We're open Monday to Friday, 9am to 5pm.")).toBeGreaterThan(5);
+    expect(hoursSignalScore("Ouvert du lundi au vendredi de 9h à 17h")).toBeGreaterThanOrEqual(3);
+    expect(hoursSignalScore("Horaires : lun-ven 9h-17h")).toBeGreaterThanOrEqual(3);
+    expect(hoursSignalScore("Mon-Fri 9-5")).toBeGreaterThanOrEqual(3);
+    expect(hoursSignalScore("Open Monday to Friday, 9 to 5")).toBeGreaterThanOrEqual(3);
   });
 
   it("ignores passages with no time, and price lists with times but no hours or days", () => {
