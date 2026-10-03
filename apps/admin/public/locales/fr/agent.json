@@ -240,7 +240,6 @@
       "label": "Résumé de l'entreprise",
       "hint": "Ce que votre réceptionniste dit aux appelants au sujet de l'entreprise.",
       "placeholder": "Par exemple : La Clinique familiale Maple est une clinique de Toronto qui offre des examens, des vaccins et de la physiothérapie.",
-      "empty": "Ajoutez votre site web ou vos documents dans Connaissances, et l'IA le rédige pour vous.",
       "regenerate": "Réécrire avec l'IA",
       "regenerating": "L'IA le réécrit à partir de vos connaissances. Revenez dans une minute."
     },

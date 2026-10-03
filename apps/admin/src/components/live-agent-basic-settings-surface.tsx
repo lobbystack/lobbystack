@@ -378,13 +378,7 @@ export function AgentBasicSettingsPage({
             >
               <ItemContent>
                 <ItemTitle>{t("agent:fields.summary.label")}</ItemTitle>
-                {isLoadingConfiguration ? (
-                  <Skeleton className="h-5 w-full rounded-md sm:max-w-xl" />
-                ) : (
-                  <ItemDescription className="line-clamp-2" data-testid="summary-preview">
-                    {savedSummary || t("agent:fields.summary.empty")}
-                  </ItemDescription>
-                )}
+                <ItemDescription>{t("agent:fields.summary.hint")}</ItemDescription>
                 {summaryStatus ? <ItemDescription>{summaryStatus}</ItemDescription> : null}
               </ItemContent>
               <ItemActions className="w-full justify-end self-center sm:w-auto">

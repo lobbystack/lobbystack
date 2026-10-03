@@ -240,7 +240,6 @@
       "label": "Business summary",
       "hint": "What your receptionist tells callers about the business.",
       "placeholder": "For example: Maple Family Clinic is a family practice in Toronto offering checkups, vaccinations and physiotherapy.",
-      "empty": "Add your website or documents in Knowledge, and AI writes this for you.",
       "regenerate": "Rewrite with AI",
       "regenerating": "AI is rewriting it from your knowledge. Check back in a minute."
     },

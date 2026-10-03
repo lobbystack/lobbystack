@@ -240,7 +240,6 @@
       "label": "Opis firme",
       "hint": "Šta Vaš recepcioner govori pozivaocima o firmi.",
       "placeholder": "Na primer: Porodična klinika Maple u Torontu nudi preglede, vakcinacije i fizioterapiju.",
-      "empty": "Dodajte svoj veb-sajt ili dokumente u odeljku Znanje i AI će ga napisati umesto Vas.",
       "regenerate": "Napiši ponovo pomoću AI",
       "regenerating": "AI ga ponovo piše na osnovu Vašeg znanja. Proverite ponovo za minut."
     },

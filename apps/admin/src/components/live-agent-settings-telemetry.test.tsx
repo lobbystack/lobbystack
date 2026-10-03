@@ -50,8 +50,7 @@ describe("agent settings telemetry", () => {
 
   it("starts the summary empty while it's the sign-up placeholder, and saves one a person writes", async () => {
     const fetchMock = setup();
-    expect(await screen.findByText("agent:fields.summary.empty")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "agent:actions.edit" }));
+    await userEvent.click(await screen.findByRole("button", { name: "agent:actions.edit" }));
     const dialog = await screen.findByRole("dialog");
     const field = within(dialog).getByPlaceholderText("agent:fields.summary.placeholder");
     expect((field as HTMLTextAreaElement).value).toBe("");
@@ -64,8 +63,7 @@ describe("agent settings telemetry", () => {
 
   it("lets a person hand their summary back to AI", async () => {
     const fetchMock = setup({ summary: "Written by hand.", summarySource: "operator" });
-    expect(await screen.findByText("Written by hand.")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "agent:actions.edit" }));
+    await userEvent.click(await screen.findByRole("button", { name: "agent:actions.edit" }));
     await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "agent:fields.summary.regenerate" }));
     await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "summary_regenerated" }));
     const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
