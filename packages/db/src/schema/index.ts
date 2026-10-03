@@ -325,6 +325,12 @@ export const receptionistProfiles = pgTable(
     greeting: text("greeting").notNull(),
     tone: text("tone").notNull(),
     summary: text("summary").notNull(),
+    // Who wrote the summary: "placeholder" (sign-up default), "generated" (AI,
+    // from the knowledge sources) or "operator". Generation never replaces an
+    // operator's summary.
+    summarySource: varchar("summary_source", { length: 16 }).$type<"placeholder" | "generated" | "operator">().default("placeholder").notNull(),
+    summaryFingerprint: varchar("summary_fingerprint", { length: 64 }),
+    summaryGeneratedAt: timestamp("summary_generated_at", { withTimezone: true }),
     bookingPolicy: text("booking_policy").notNull(),
     voiceInstructions: text("voice_instructions"),
     smsInstructions: text("sms_instructions"),

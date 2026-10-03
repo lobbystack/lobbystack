@@ -17,7 +17,7 @@ The agent core (`packages/agent-core`) is an AI SDK `ToolLoopAgent`. Its tools c
 The caller hears silence while the agent works, so calls keep it short:
 
 - GPT-Live's instructions follow the structure in OpenAI's GPT-Live prompting guide: personality, backchannel and interruption policies, then a delegation policy that lists the backend's capabilities for this business.
-- GPT-Live gets the business summary, opening hours, upcoming closures, services, the answers the business wrote for common questions, and its rules when the call starts. It answers from those facts and doesn't delegate them.
+- GPT-Live gets the business summary, opening hours, upcoming closures, services, the answers the business wrote for common questions, its rules, and the titles of its knowledge sources when the call starts. It answers from those facts and doesn't delegate them. The worker writes the business summary with AI from the knowledge sources (`business.generateSummary`) a few minutes after they change, unless an operator wrote it.
 - The agent runs on the `AI_CHAT_*` endpoint and model, with `low` reasoning and OpenAI's `priority` processing tier. Set `AI_DELEGATION_MODEL`, `AI_DELEGATION_REASONING_EFFORT` and `AI_DELEGATION_SERVICE_TIER` to change that.
 - When a step only calls tools whose result GPT-Live can say as is, the agent returns that result without a second model call. Those tools are hours, services, knowledge search, taking a message, an appointment request, and ending the call. A knowledge search sends GPT-Live the strongest passages as reference facts, within the 500-token limit for an append, and GPT-Live answers from them. Openings and bookings still go through the model.
 

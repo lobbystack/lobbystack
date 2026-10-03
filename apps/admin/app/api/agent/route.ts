@@ -86,7 +86,11 @@ export async function PATCH(request: Request) {
       const patch = readProfilePatch(body as Record<string, unknown>);
       const locale = (body as Record<string, unknown>).locale;
       if (locale !== undefined && locale !== "en" && locale !== "fr") throw jsonError("locale is invalid.");
-      if (Object.keys(patch).length === 0 && locale === undefined) {
+      // Hands the summary back to AI, which rewrites it from the knowledge sources.
+      const regenerateSummary = (body as Record<string, unknown>).regenerateSummary;
+      if (regenerateSummary !== undefined && regenerateSummary !== true) throw jsonError("regenerateSummary must be true.");
+      if (regenerateSummary && patch.summary !== undefined) throw jsonError("Send summary or regenerateSummary, not both.");
+      if (Object.keys(patch).length === 0 && locale === undefined && !regenerateSummary) {
         throw jsonError("At least one profile field is required.");
       }
 
@@ -102,6 +106,8 @@ export async function PATCH(request: Request) {
         greeting: patch.greeting ?? `Thank you for calling ${business.name}.`,
         tone: patch.tone ?? "professional",
         summary: patch.summary ?? business.name,
+        // A summary a person writes is never replaced by AI.
+        summarySource: patch.summary !== undefined ? "operator" : "placeholder",
         bookingPolicy: patch.bookingPolicy ?? "Confirm availability before booking.",
         ...(patch.voiceInstructions !== undefined ? { voiceInstructions: patch.voiceInstructions } : {}),
         ...(patch.smsInstructions !== undefined ? { smsInstructions: patch.smsInstructions } : {}),
@@ -112,7 +118,7 @@ export async function PATCH(request: Request) {
         ...(patch.bookingMode !== undefined ? { bookingMode: patch.bookingMode } : {}),
       }).onConflictDoUpdate({
         target: receptionistProfiles.businessId,
-        set: { ...patch, updatedAt: new Date() },
+        set: { ...patch, ...(patch.summary !== undefined ? { summarySource: "operator" as const } : {}), ...(regenerateSummary ? { summarySource: "generated" as const } : {}), updatedAt: new Date() },
       }).returning();
 
       if (!profile) throw jsonError("Receptionist profile could not be saved.", 500);
@@ -124,6 +130,16 @@ export async function PATCH(request: Request) {
         dedupeKey: `snapshot:${businessId}:profile:${profile.updatedAt.toISOString()}`,
         payload: { businessId },
       });
+      if (regenerateSummary) {
+        await enqueueOutbox(tx, {
+          topic: "business.generateSummary",
+          businessId,
+          aggregateType: "business",
+          aggregateId: businessId,
+          dedupeKey: `business-summary:${businessId}:regenerate:${Date.now()}`,
+          payload: { businessId, reason: "operator_regenerate", force: true },
+        });
+      }
       return { profile };
     }, { minimumRole: "business_admin" }));
   } catch (error) {

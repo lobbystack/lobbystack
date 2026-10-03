@@ -18,12 +18,12 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
-function setup() {
+function setup(profile: Record<string, unknown> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   clients.push(client);
   const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
     if (init?.method === "PATCH") return Response.json({ ok: true });
-    return Response.json({ business: { defaultLocale: "en" }, profile: { greeting: "Hi there", transferNumber: null, transferMode: "none", appointmentChangePolicy: null } });
+    return Response.json({ business: { defaultLocale: "en" }, profile: { greeting: "Hi there", summary: "Clinic uses LobbyStack to answer calls.", summarySource: "placeholder", transferNumber: null, transferMode: "none", appointmentChangePolicy: null, ...profile } });
   });
   vi.stubGlobal("fetch", fetchMock);
   render(<QueryClientProvider client={client}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
@@ -46,5 +46,27 @@ describe("agent settings telemetry", () => {
     await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "booking_mode" }));
     const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
     expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ businessId: "business", bookingMode: "request" });
+  });
+
+  it("starts the summary empty while it's the sign-up placeholder, and saves one a person writes", async () => {
+    const fetchMock = setup();
+    const field = await screen.findByPlaceholderText("agent:fields.summary.placeholder");
+    expect((field as HTMLTextAreaElement).value).toBe("");
+    expect(screen.getByText("agent:fields.summary.empty")).toBeTruthy();
+    await userEvent.type(field, "Maple Family Clinic offers checkups in Toronto.");
+    const saveButtons = screen.getAllByRole("button", { name: "agent:actions.save" });
+    await userEvent.click(saveButtons[1]!);
+    await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "summary" }));
+    const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
+    expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ businessId: "business", summary: "Maple Family Clinic offers checkups in Toronto." });
+  });
+
+  it("lets a person hand their summary back to AI", async () => {
+    const fetchMock = setup({ summary: "Written by hand.", summarySource: "operator" });
+    expect(await screen.findByText("agent:fields.summary.operator")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "agent:fields.summary.regenerate" }));
+    await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "summary_regenerated" }));
+    const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
+    expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ businessId: "business", regenerateSummary: true });
   });
 });

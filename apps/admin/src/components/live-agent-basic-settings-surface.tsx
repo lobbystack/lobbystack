@@ -18,6 +18,7 @@ import {
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
@@ -79,18 +80,21 @@ export function AgentBasicSettingsPage({
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["agent-settings", businessId],
-    queryFn: () => requestJson<{ business: { defaultLocale: RuntimeLocale } | null; profile: { greeting: string; transferNumber: string | null; transferMode: string; appointmentChangePolicy: AppointmentChangePolicy | null; bookingMode: BookingMode } | null }>(`/api/agent?businessId=${encodeURIComponent(businessId)}`),
+    queryFn: () => requestJson<{ business: { defaultLocale: RuntimeLocale } | null; profile: { greeting: string; summary: string; summarySource: "placeholder" | "generated" | "operator"; transferNumber: string | null; transferMode: string; appointmentChangePolicy: AppointmentChangePolicy | null; bookingMode: BookingMode } | null }>(`/api/agent?businessId=${encodeURIComponent(businessId)}`),
     enabled: Boolean(businessId),
   });
   const configuration = query.data;
   const isLoadingConfiguration = !businessId || query.isLoading;
-  async function saveProfile({ defaultLocale: locale, ...patch }: { businessId: string; defaultLocale?: RuntimeLocale; greeting?: string; transferNumber?: string | null; transferMode?: string; appointmentChangePolicy?: AppointmentChangePolicy; bookingMode?: BookingMode }) {
+  async function saveProfile({ defaultLocale: locale, ...patch }: { businessId: string; defaultLocale?: RuntimeLocale; greeting?: string; summary?: string; regenerateSummary?: true; transferNumber?: string | null; transferMode?: string; appointmentChangePolicy?: AppointmentChangePolicy; bookingMode?: BookingMode }) {
     await requestJson(`/api/agent?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", body: JSON.stringify({ ...patch, ...(locale ? { locale } : {}) }) });
     await queryClient.invalidateQueries({ queryKey: ["agent-settings", businessId] });
   }
   const persistedProfile = configuration?.profile;
 
   const [greeting, setGreeting] = useState("");
+  const [summary, setSummary] = useState("");
+  const [summaryStatus, setSummaryStatus] = useState<string | null>(null);
+  const [isSummarySaving, setIsSummarySaving] = useState(false);
   const [defaultLocale, setDefaultLocale] = useState<RuntimeLocale>("en");
   const [transferNumber, setTransferNumber] = useState("");
   const [transferNumberInputValue, setTransferNumberInputValue] = useState("");
@@ -115,6 +119,8 @@ export function AgentBasicSettingsPage({
       return;
     }
     setGreeting(profile.greeting);
+    // The sign-up placeholder isn't a summary, so the field starts empty.
+    setSummary(profile.summarySource === "placeholder" ? "" : profile.summary);
     setDefaultLocale(configuration.business?.defaultLocale ?? "en");
     setTransferNumber(profile.transferNumber ?? "");
     setTransferNumberInputValue(profile.transferNumber ?? "");
@@ -192,6 +198,23 @@ export function AgentBasicSettingsPage({
       toast.error(t("agent:actions.saveFailed"));
     } finally {
       setIsGreetingSaving(false);
+    }
+  }
+
+  async function saveSummary(regenerate: boolean): Promise<void> {
+    if (!canManageTenant || !persistedProfile || (!regenerate && !summary.trim())) {
+      return;
+    }
+    setIsSummarySaving(true);
+    setSummaryStatus(null);
+    try {
+      await saveProfile(regenerate ? { businessId, regenerateSummary: true } : { businessId, summary: summary.trim() });
+      telemetry.track("web.agent.settings_saved", { businessId, setting: regenerate ? "summary_regenerated" : "summary" });
+      setSummaryStatus(regenerate ? t("agent:fields.summary.regenerating") : t("agent:actions.saved"));
+    } catch {
+      toast.error(t("agent:actions.saveFailed"));
+    } finally {
+      setIsSummarySaving(false);
     }
   }
 
@@ -338,6 +361,60 @@ export function AgentBasicSettingsPage({
                   variant="outline"
                 >
                   {isGreetingSaving ? t("agent:actions.saving") : t("agent:actions.save")}
+                </Button>
+              </ItemActions>
+            </Item>
+
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
+              <ItemContent>
+                <ItemTitle>{t("agent:fields.summary.label")}</ItemTitle>
+                <ItemDescription>{t("agent:fields.summary.hint")}</ItemDescription>
+                <div className="pt-2">
+                  {isLoadingConfiguration ? (
+                    <Skeleton className="h-20 w-full rounded-md sm:max-w-xl" />
+                  ) : (
+                    <Textarea
+                      className="w-full sm:max-w-xl"
+                      disabled={!canManageTenant}
+                      id="agent-summary"
+                      maxLength={2000}
+                      onChange={(event) => {
+                        setSummary(event.target.value);
+                        setSummaryStatus(null);
+                      }}
+                      placeholder={t("agent:fields.summary.placeholder")}
+                      rows={3}
+                      value={summary}
+                    />
+                  )}
+                </div>
+                <ItemDescription>
+                  {summaryStatus ?? t(persistedProfile?.summarySource === "operator" ? "agent:fields.summary.operator" : persistedProfile?.summarySource === "generated" ? "agent:fields.summary.generated" : "agent:fields.summary.empty")}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions className="w-full justify-end self-center sm:w-auto">
+                {persistedProfile?.summarySource === "operator" ? (
+                  <Button
+                    disabled={isLoadingConfiguration || isSummarySaving || !canManageTenant}
+                    onClick={() => void saveSummary(true)}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    {t("agent:fields.summary.regenerate")}
+                  </Button>
+                ) : null}
+                <Button
+                  disabled={isLoadingConfiguration || isSummarySaving || !persistedProfile || !canManageTenant || !summary.trim()}
+                  onClick={() => void saveSummary(false)}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {isSummarySaving ? t("agent:actions.saving") : t("agent:actions.save")}
                 </Button>
               </ItemActions>
             </Item>

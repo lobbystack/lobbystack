@@ -15,6 +15,7 @@ import { getMeter } from "@lobbystack/telemetry/node";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { advanceOnboardingStageInTransaction } from "./onboarding";
 import { recordProductEvent } from "./productEvents";
+import { enqueueBusinessSummaryRefresh } from "./businessSummary";
 import { resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 
 const ragMeter = getMeter("lobbystack-rag");
@@ -175,6 +176,7 @@ export async function setKnowledgeDocumentActive(context: DomainContext, input: 
     const [document] = await tx.update(knowledgeDocuments).set({ active: input.active, updatedAt: new Date() }).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).returning({ id: knowledgeDocuments.id });
     if (!document) throw Object.assign(new Error("Knowledge document not found."), { status: 404 });
     await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: input.documentId, dedupeKey: `knowledge:${input.documentId}:active:${Date.now()}`, payload: { businessId: input.businessId, reason: "document_activity_changed" } });
+    await enqueueBusinessSummaryRefresh(tx, { businessId: input.businessId, reason: "document_activity_changed" });
   });
 }
 
@@ -204,6 +206,7 @@ export async function deleteKnowledgeDocument(context: DomainContext, input: { u
     const [document] = await tx.delete(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).returning({ id: knowledgeDocuments.id });
     if (!document) throw new Error("Knowledge document not found.");
     await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: document.id, dedupeKey: `knowledge:${document.id}:deleted:${Date.now()}`, payload: { businessId: input.businessId, reason: "document_deleted" } });
+    await enqueueBusinessSummaryRefresh(tx, { businessId: input.businessId, reason: "document_deleted" });
   });
 }
 
@@ -225,6 +228,7 @@ export async function createKnowledgeSnippetInTransaction(
   const [snippet] = await tx.insert(knowledgeSnippets).values({ businessId: input.businessId, title: input.title.trim(), content: input.content.trim(), tags: input.tags ?? [], priority: input.priority ?? 0, active: input.active ?? true }).returning();
   if (!snippet) throw new Error("Knowledge snippet could not be created.");
   await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_snippet", aggregateId: snippet.id, dedupeKey: `knowledge-snippet:${snippet.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "snippet_created" } });
+  await enqueueBusinessSummaryRefresh(tx, { businessId: input.businessId, reason: "snippet_created" });
   return snippet;
 }
 
@@ -237,6 +241,7 @@ export async function updateKnowledgeSnippet(
     const [snippet] = await tx.update(knowledgeSnippets).set({ ...(input.title !== undefined ? { title: input.title.trim() } : {}), ...(input.content !== undefined ? { content: input.content.trim() } : {}), ...(input.tags !== undefined ? { tags: input.tags } : {}), ...(input.priority !== undefined ? { priority: input.priority } : {}), ...(input.active !== undefined ? { active: input.active } : {}), updatedAt: new Date() }).where(and(eq(knowledgeSnippets.id, input.snippetId), eq(knowledgeSnippets.businessId, input.businessId))).returning({ id: knowledgeSnippets.id });
     if (!snippet) throw new Error("Knowledge snippet not found.");
     await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_snippet", aggregateId: snippet.id, dedupeKey: `knowledge-snippet:${snippet.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "snippet_updated" } });
+    await enqueueBusinessSummaryRefresh(tx, { businessId: input.businessId, reason: "snippet_updated" });
   });
 }
 
@@ -246,6 +251,7 @@ export async function deleteKnowledgeSnippet(context: DomainContext, input: { us
     const [snippet] = await tx.delete(knowledgeSnippets).where(and(eq(knowledgeSnippets.id, input.snippetId), eq(knowledgeSnippets.businessId, input.businessId))).returning({ id: knowledgeSnippets.id });
     if (!snippet) throw new Error("Knowledge snippet not found.");
     await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_snippet", aggregateId: snippet.id, dedupeKey: `knowledge-snippet:${snippet.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "snippet_deleted" } });
+    await enqueueBusinessSummaryRefresh(tx, { businessId: input.businessId, reason: "snippet_deleted" });
   });
 }
 
@@ -338,6 +344,7 @@ async function indexDocumentTextInTransaction(tx: DatabaseTransaction, input: In
     }
     await tx.update(knowledgeDocuments).set({ status: preserveImport ? "processing" : "indexed", processingProgress: 100, contentHash: hashContent(input.text), revision: document.revision + (preserveImport ? 0 : 1), updatedAt: new Date() }).where(eq(knowledgeDocuments.id, input.documentId));
     if (!preserveImport) await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: input.documentId, dedupeKey: `knowledge:${input.documentId}:snapshot:${document.revision + 1}`, payload: { businessId: input.businessId, reason: "document_indexed" } });
+    if (!preserveImport) await enqueueBusinessSummaryRefresh(tx, { businessId: input.businessId, reason: "document_indexed" });
     await enqueueOutbox(tx, {
       topic: "realtime.publish",
       businessId: input.businessId,
@@ -561,7 +568,8 @@ export async function refreshBusinessSnapshot(
       ...(currentProfile?.voiceInstructions ? { voiceInstructions: currentProfile.voiceInstructions } : {}),
       ...(currentProfile?.smsInstructions ? { smsInstructions: currentProfile.smsInstructions } : {}),
       ...(currentProfile?.chatInstructions ? { chatInstructions: currentProfile.chatInstructions } : {}),
-      summary: currentProfile?.summary ?? business[0].name,
+      // A sign-up placeholder says nothing about the business, so prompts get no summary until AI or a person writes one.
+      summary: currentProfile && currentProfile.summarySource !== "placeholder" ? currentProfile.summary : "",
       knowledgeDigest: withinKnowledgeBudget(documents, 1600, row => JSON.stringify(row)).map(row => JSON.stringify(row)).join("\n"),
       hours: hours.map((row) => ({ dayOfWeek: row.dayOfWeek, openMinutes: row.openMinutes, closeMinutes: row.closeMinutes })),
       closures: closureRows.map((row) => ({ startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), reason: row.reason })),

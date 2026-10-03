@@ -1,5 +1,5 @@
 import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
-import { createCallSummarizer } from "@lobbystack/agent-core";
+import { createBusinessSummarizer, createCallSummarizer } from "@lobbystack/agent-core";
 import { assertProductionSecrets } from "@lobbystack/config";
 import type { OnboardingFollowupSender } from "@lobbystack/domain";
 import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, isKnownJobType, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
@@ -146,6 +146,24 @@ async function main(): Promise<void> {
   const calendar = createCalendarProvider();
   const productAnalytics = createProductAnalytics();
   const callSummarizer = createCallSummarizer();
+  const businessSummarizer = createBusinessSummarizer();
+  // Existing businesses got summaries before AI wrote them, so write one from
+  // each business's knowledge. BullMQ keeps the job id for a day; a later
+  // restart queues it again, and the job skips summaries an operator wrote,
+  // businesses with no knowledge, and knowledge that hasn't changed, so only
+  // the first run calls the model.
+  const summaryQueue = queues.get("bulk");
+  if (businessSummarizer && summaryQueue) {
+    const summaryBusinesses = await withDispatcherTransaction(dispatcherDatabase.db, async (tx) => await tx.select({ id: businesses.id }).from(businesses));
+    for (const business of summaryBusinesses) {
+      await enqueueJob(summaryQueue, {
+        type: "business.generateSummary",
+        businessId: business.id,
+        payload: { businessId: business.id, reason: "backfill" },
+        idempotencyKey: `business-summary-backfill:${business.id}:v1`,
+      });
+    }
+  }
   if (embeddings) {
     const embeddingQueue = queues.get("bulk");
     if (embeddingQueue) {
@@ -169,6 +187,7 @@ async function main(): Promise<void> {
     ...(crawler ? { crawler } : {}),
     ...(productAnalytics ? { productAnalytics } : {}),
     ...(callSummarizer ? { callSummarizer } : {}),
+    ...(businessSummarizer ? { businessSummarizer } : {}),
     ...(email ? { email } : {}),
     ...(onboardingFollowupSender ? { onboardingFollowupSender } : {}),
     ...(embeddings ? { embeddings } : {}),

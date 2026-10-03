@@ -238,7 +238,13 @@
     },
     "summary": {
       "label": "Opis firme",
-      "hint": "Osnovne informacije o firmi koje recepcioner treba da zna."
+      "hint": "Šta Vaš recepcioner govori pozivaocima o firmi.",
+      "placeholder": "Na primer: Porodična klinika Maple u Torontu nudi preglede, vakcinacije i fizioterapiju.",
+      "generated": "AI je napisao ovaj opis na osnovu Vašeg znanja i ažurira ga kada se znanje promeni. Izmenite ga da biste napisali svoj.",
+      "operator": "Ovaj opis ste napisali Vi, pa ga AI neće menjati.",
+      "empty": "Dodajte svoj veb-sajt ili dokumente u odeljku Znanje i AI će ga napisati umesto Vas.",
+      "regenerate": "Napiši ponovo pomoću AI",
+      "regenerating": "AI ga ponovo piše na osnovu Vašeg znanja. Proverite ponovo za minut."
     },
     "bookingPolicy": {
       "label": "Pravila zakazivanja",

@@ -67,6 +67,21 @@ describe("buildLiveInstructions", () => {
     expect(instructions).toContain("Business rules, in priority order:\n- Prices: Never quote prices over the phone.");
   });
 
+  it("asks GPT-Live to move the caller forward instead of capping its replies", () => {
+    const instructions = buildLiveInstructions(demoSnapshot, callStart);
+    expect(instructions).toContain("Your job is to help each caller get what they called for.");
+    expect(instructions).toContain("offer to book a time");
+    expect(instructions).not.toMatch(/one or two short sentences|in a sentence or two/);
+    expect(buildAgentInstructions(demoSnapshot, "voice")).toContain("end with one follow-up question that moves them forward");
+  });
+
+  it("lists the knowledge base's topics so GPT-Live knows what the backend can look up", () => {
+    const knowledgeDigest = [JSON.stringify({ title: "Pricing", sourceUrl: "https://example.com/pricing", tags: [], revision: 1 }), JSON.stringify({ title: "Parking and directions", sourceUrl: null, tags: [], revision: 2 }), "not a digest line"].join("\n");
+    const instructions = buildLiveInstructions({ ...demoSnapshot, knowledgeDigest }, callStart);
+    expect(instructions).toContain("Topics the backend can look up in the business's documents and website (titles only; delegate questions about them):\n- Pricing\n- Parking and directions");
+    expect(instructions).not.toContain("not a digest line");
+  });
+
   it("leaves out the placeholder summary a new business starts with", () => {
     for (const summary of ["Maple Clinic uses LobbyStack to answer calls.", "lobbystack uses LobbyStack to handle calls and SMS."]) {
       const live = buildLiveInstructions({ ...demoSnapshot, summary }, callStart);
