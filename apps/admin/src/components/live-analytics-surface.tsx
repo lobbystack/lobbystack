@@ -4,13 +4,16 @@ import { subscribeRealtimeQuery } from "@/lib/realtime-query";
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
-import { CalendarIcon, Check, ChevronDown } from "lucide-react";
+import { CalendarIcon, Check, ChevronDown, Ellipsis, type LucideIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import type { AnalyticsViewModel, WorkspaceViewModel } from "@/lib/page-view-models";
 import { requestJson } from "@/lib/request-json";
+import { ANALYTICS_CHANNELS, channelPercentages } from "@/lib/analytics-channels";
+import { getChannelLabel } from "@/lib/contact-display";
+import { CONTACT_CHANNEL_ICONS } from "@/components/contact-channel-icons";
 import { selectActiveBusiness } from "@/lib/active-business";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
@@ -94,7 +97,13 @@ export function LiveAnalyticsSurface() {
     { key: "appointments" as const, title: t("home.analytics.cards.appointments"), value: data.appointments.current.toLocaleString(intlLocale(i18n.language)), description: percentDelta(data.appointments.current, data.appointments.previous, t) },
     { key: "agentResponseSeconds" as const, title: t("home.analytics.cards.agentResponseTime"), value: duration(data.agentResponseSeconds.current), description: data.agentResponseSeconds.current === data.agentResponseSeconds.previous ? t("home.analytics.metrics.flat") : t(data.agentResponseSeconds.current > data.agentResponseSeconds.previous ? "home.analytics.metrics.durationUp" : "home.analytics.metrics.durationDown", { value: duration(Math.abs(data.agentResponseSeconds.current - data.agentResponseSeconds.previous)) }) },
   ] : [];
-  const channelTotal = Math.max(1, (data?.channels.voice ?? 0) + (data?.channels.sms ?? 0) + (data?.channels.other ?? 0));
+  const channelShares = channelPercentages(data?.channels);
+  // Other only holds channels the dashboard can't label, so it stays hidden while empty.
+  const channelItems = ANALYTICS_CHANNELS.filter((channel) => channel !== "other" || (data?.channels.other ?? 0) > 0).map((channel) => ({
+    name: channel === "other" ? t("home.analytics.channels.labels.other") : getChannelLabel(channel, t),
+    icon: channel === "other" ? Ellipsis : CONTACT_CHANNEL_ICONS[channel],
+    value: channelShares[channel],
+  }));
 
   return <div className="flex flex-col gap-4">
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 py-2"><h1 className="type-page-title">{t("analyticsPage.title")}</h1><div className="ms-auto flex flex-wrap items-center gap-3">
@@ -105,7 +114,7 @@ export function LiveAnalyticsSurface() {
     {businesses.isLoading || analytics.isLoading ? <AnalyticsSkeleton /> : null}
     {data ? <><Card><CardHeader><CardTitle>{t("home.analytics.chart.title")}</CardTitle><CardDescription>{t("home.analytics.chart.description")}</CardDescription></CardHeader><CardContent className="px-6"><AnalyticsOverviewChart data={chartData} /></CardContent></Card>
       <Surface className="grid sm:grid-cols-2">{metrics.map((metric) => <section className="border-b p-6 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0" key={metric.key}><div className="flex min-h-32 flex-col gap-6"><div className="flex flex-col gap-5"><h2 className="type-card-title text-foreground">{metric.title}</h2><div className="flex flex-col gap-3"><p className="text-5xl font-normal tracking-normal text-foreground tabular-nums">{metric.value}</p><div className="flex items-center gap-2 text-base text-muted-foreground"><span className="size-3 rounded-full border-2 border-primary" /><span>{rangeLabel}</span></div></div></div><AnalyticsMetricChart data={chartData} dataKey={metric.key} /><p className="type-meta">{metric.description}</p></div></section>)}</Surface>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-7"><Card className="lg:col-span-4"><CardHeader><CardTitle>{t("home.analytics.outcomes.title")}</CardTitle><CardDescription>{t("home.analytics.outcomes.description")}</CardDescription></CardHeader><CardContent><BarList items={data.outcomes.map((item) => ({ name: t(`home.analytics.outcomes.labels.${item.outcome}`), value: item.count }))} /></CardContent></Card><Card className="lg:col-span-3"><CardHeader><CardTitle>{t("home.analytics.channels.title")}</CardTitle><CardDescription>{t("home.analytics.channels.description")}</CardDescription></CardHeader><CardContent><BarList muted items={[{ name: t("home.analytics.channels.labels.voice"), value: Math.round((data.channels.voice / channelTotal) * 100) }, { name: t("home.analytics.channels.labels.sms"), value: Math.round((data.channels.sms / channelTotal) * 100) }, { name: t("home.analytics.channels.labels.other"), value: Math.round((data.channels.other / channelTotal) * 100) }]} suffix="%" /></CardContent></Card></div></> : null}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-7"><Card className="lg:col-span-4"><CardHeader><CardTitle>{t("home.analytics.outcomes.title")}</CardTitle><CardDescription>{t("home.analytics.outcomes.description")}</CardDescription></CardHeader><CardContent><BarList items={data.outcomes.map((item) => ({ name: t(`home.analytics.outcomes.labels.${item.outcome}`), value: item.count }))} /></CardContent></Card><Card className="lg:col-span-3"><CardHeader><CardTitle>{t("home.analytics.channels.title")}</CardTitle><CardDescription>{t("home.analytics.channels.description")}</CardDescription></CardHeader><CardContent><BarList muted items={channelItems} suffix="%" /></CardContent></Card></div></> : null}
   </div>;
 }
 
@@ -138,7 +147,7 @@ function AnalyticsSkeleton() {
                 <Skeleton className="h-4 w-40" />
               </div>
               <div className="mt-6 space-y-3">
-                {Array.from({ length: 3 }).map((_, index) => (
+                {Array.from({ length: 4 }).map((_, index) => (
                   <div className="flex items-center justify-between gap-3" key={index}>
                     <div className="min-w-0 flex-1 space-y-2">
                       <Skeleton className="h-4 w-20" />
@@ -154,4 +163,4 @@ function AnalyticsSkeleton() {
   );
 }
 
-function BarList({ items, muted = false, suffix = "" }: { items: Array<{ name: string; value: number }>; muted?: boolean; suffix?: string }) { const maximum = Math.max(...items.map((item) => item.value), 1); return <ul className="flex flex-col gap-3">{items.map((item) => <li className="flex items-center justify-between gap-3" key={item.name}><div className="min-w-0 flex-1"><div className="type-meta mb-1 truncate capitalize">{item.name}</div><div className="h-2.5 w-full rounded-full bg-muted"><div className={`h-2.5 rounded-full ${muted ? "bg-muted-foreground" : "bg-primary"}`} style={{ width: `${Math.round((item.value / maximum) * 100)}%` }} /></div></div><div className="type-meta ps-2 tabular-nums text-foreground">{item.value.toLocaleString()}{suffix}</div></li>)}</ul>; }
+function BarList({ items, muted = false, suffix = "" }: { items: Array<{ name: string; value: number; icon?: LucideIcon }>; muted?: boolean; suffix?: string }) { const maximum = Math.max(...items.map((item) => item.value), 1); return <ul className="flex flex-col gap-3">{items.map((item) => <li className="flex items-center justify-between gap-3" key={item.name}><div className="min-w-0 flex-1"><div className="type-meta mb-1 flex items-center gap-1.5">{item.icon ? <item.icon aria-hidden="true" className="size-3.5 shrink-0" /> : null}<span className="truncate">{item.name}</span></div><div className="h-2.5 w-full rounded-full bg-muted"><div className={`h-2.5 rounded-full ${muted ? "bg-muted-foreground" : "bg-primary"}`} style={{ width: `${Math.round((item.value / maximum) * 100)}%` }} /></div></div><div className="type-meta ps-2 tabular-nums text-foreground">{item.value.toLocaleString()}{suffix}</div></li>)}</ul>; }

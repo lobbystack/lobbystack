@@ -2,6 +2,7 @@ import {
   bookForCaller,
   cancelForCaller,
   checkOpening,
+  findCallerBooking,
   countKnowledgeTokens,
   findOpenings,
   issueAppointmentChangeOtp,
@@ -15,10 +16,12 @@ import {
   verifyCallerForChange,
   type DomainContext,
 } from "@lobbystack/domain";
-import { isTransferPermitted, normalizeAppointmentChangePolicy, normalizeBookingMode, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { canTextNumber, isTransferPermitted, normalizeAppointmentChangePolicy, normalizeBookingMode, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { tool, type ToolSet } from "ai";
 import { DateTime } from "luxon";
 import { z } from "zod";
+
+import { serviceFacts, upcomingClosures, weeklyHours } from "./businessFacts";
 
 /** Where the conversation happens. Phone calls know the caller's number. */
 export type AgentChannel = "voice" | "web_voice" | "web_chat";
@@ -42,12 +45,6 @@ export type AgentToolContext = {
   /** Prospect demos only answer questions and take messages: no booking, no transfers. */
   intakeOnly?: boolean;
 };
-
-const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-function formatMinutes(minutes: number): string {
-  return DateTime.fromObject({ hour: Math.floor(minutes / 60), minute: minutes % 60 }).toFormat("h:mm a");
-}
 
 // A plural always counts ("fee" finds "fees"). Other endings only count for terms of four
 // or more letters and at most three extra letters ("park" finds "parking"), so "car"
@@ -90,12 +87,27 @@ function withSnippetsInBudget(evidence: KnowledgeMatch[], snippets: KnowledgeMat
 
 const phone = z.string().describe("Phone number in E.164 format, for example +14165550134.");
 
+const OFFERINGS_QUERY = "What does the business do and offer: services, products and prices";
+
 export function createReceptionistTools(context: AgentToolContext): ToolSet {
   const { domain, snapshot } = context;
   const businessId = snapshot.businessId;
   const timezone = snapshot.timezone;
   const bookingMode = context.intakeOnly ? "off" : normalizeBookingMode(snapshot.bookingMode);
   const channel = context.channel;
+  async function searchKnowledge(query: string): Promise<{ outcome: string; matches: KnowledgeMatch[] }> {
+    const fallback = snapshotKnowledgeMatches(snapshot, query);
+    try {
+      const evidence = await searchKnowledgeEvidence(domain, { businessId, query, limit: 6, ...(context.callId ? { callId: context.callId } : {}) });
+      // Evidence first. Snippets only fill the slots and tokens it leaves.
+      const matches = withSnippetsInBudget(evidence.matches.map((match) => ({ title: match.title, text: match.content })), fallback);
+      return { outcome: matches.length ? "found" : evidence.outcome, matches };
+    } catch {
+      const matches = withSnippetsInBudget([], fallback);
+      return { outcome: matches.length ? "found" : "unavailable", matches };
+    }
+  }
+
   const tools: ToolSet = {
     getBusinessHours: tool({
       description: "Get the business's weekly opening hours, upcoming closures, and whether it is open right now.",
@@ -111,40 +123,27 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
           now: now.toFormat("cccc h:mm a"),
           openNow,
           configured: snapshot.hours.length > 0,
-          weekly: DAY_NAMES.map((day, index) => {
-            const windows = snapshot.hours.filter((window) => window.dayOfWeek === index);
-            return `${day}: ${windows.length ? windows.map((window) => `${formatMinutes(window.openMinutes)} to ${formatMinutes(window.closeMinutes)}`).join(", ") : "closed"}`;
-          }),
-          upcomingClosures: snapshot.closures
-            .filter((closure) => DateTime.fromISO(closure.endsAt) > now)
-            .map((closure) => ({ from: closure.startsAt, to: closure.endsAt, reason: closure.reason })),
+          weekly: weeklyHours(snapshot),
+          upcomingClosures: upcomingClosures(snapshot, now),
         };
       },
     }),
 
     getBusinessServices: tool({
-      description: "List the services the business offers, with duration and a short description.",
+      description: "List the services the business offers, with duration and a short description. When the business lists none, it returns what the knowledge base says the business offers.",
       inputSchema: z.object({}),
-      execute: async () => ({
-        services: snapshot.services.map((service) => ({ name: service.name, durationMinutes: service.durationMinutes, ...(service.description ? { description: service.description } : {}) })),
-      }),
+      execute: async () => {
+        const services = serviceFacts(snapshot);
+        // Without a services list, "what do you offer" is answered from the
+        // business's documents and website, in this same tool call.
+        return services.length ? { services } : { services, knowledge: await searchKnowledge(OFFERINGS_QUERY) };
+      },
     }),
 
     searchKnowledge: tool({
       description: "Look up any business-specific fact not in your instructions: prices, policies, parking, payment methods, what to bring, and so on. Never guess. Make the query self-contained.",
       inputSchema: z.object({ query: z.string() }),
-      execute: async ({ query }) => {
-        const fallback = snapshotKnowledgeMatches(snapshot, query);
-        try {
-          const evidence = await searchKnowledgeEvidence(domain, { businessId, query, limit: 6, ...(context.callId ? { callId: context.callId } : {}) });
-          // Evidence first. Snippets only fill the slots and tokens it leaves.
-          const matches = withSnippetsInBudget(evidence.matches.map((match) => ({ title: match.title, text: match.content })), fallback);
-          return { outcome: matches.length ? "found" : evidence.outcome, matches };
-        } catch {
-          const matches = withSnippetsInBudget([], fallback);
-          return { outcome: matches.length ? "found" : "unavailable", matches };
-        }
-      },
+      execute: async ({ query }) => await searchKnowledge(query),
     }),
 
     takeMessage: tool({
@@ -157,7 +156,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         callbackWindow: z.string().optional().describe("When the caller prefers to be called back, in their words."),
       }),
       execute: async (input) => {
-        const callbackPhone = input.callbackPhone ?? context.callerPhone;
+        const callbackPhone = input.callbackPhone?.trim() || context.callerPhone;
         return await takeMessageForStaff(domain, {
           businessId,
           message: input.message,
@@ -175,7 +174,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
 
   if (bookingMode === "instant") {
     tools.findAvailability = tool({
-      description: "Find open appointment times for one service on one date. Never state availability without calling this.",
+      description: "Find open appointment times for one service on one date. Never state availability without calling this. Don't use it to recheck a time the caller already accepted; bookAppointment checks that.",
       inputSchema: z.object({
         serviceName: z.string().describe("One of the business's services."),
         date: z.string().describe("Date as YYYY-MM-DD in the business's timezone."),
@@ -195,30 +194,46 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       },
     });
     tools.bookAppointment = tool({
-      description: "Book an appointment at a time findAvailability returned, after the caller confirms the service and time. On phone calls, ask first whether you may text a confirmation and reminder, and pass their answer.",
+      description: "Book an appointment once the caller accepts a time you offered. It checks the time is still open, so don't call findAvailability again first. On phone calls, ask first whether you may text a confirmation and reminder, and pass their answer.",
       inputSchema: z.object({
         serviceName: z.string(),
-        startsAt: z.string().describe("The exact startsAt value returned by findAvailability."),
-        contactName: z.string().optional(),
+        startsAt: z.string().describe("A startsAt value from findAvailability, or the accepted time as YYYY-MM-DDTHH:mm in the business's timezone."),
+        contactName: z.string().optional().describe("The caller's name. Required to book."),
         contactPhone: phone.optional().describe("Required when the caller's number isn't already known."),
         smsConsentGranted: z.boolean().describe("True only if the caller agreed to receive a confirmation and reminder text."),
       }),
       execute: async (input) => {
-        const contactPhone = input.contactPhone ?? context.callerPhone;
+        const contactPhone = input.contactPhone?.trim() || context.callerPhone;
+        if (!input.contactName?.trim()) return { ok: false, reason: "Ask for the caller's name before booking." };
         if (!contactPhone) return { ok: false, reason: "Ask for a phone number before booking." };
-        const opening = await checkOpening(domain, { businessId, serviceName: input.serviceName, startsAt: input.startsAt, timezone, ...(context.callId ? { callId: context.callId } : {}) });
+        // Each delegation starts fresh, so the agent often books a time it only
+        // saw in the conversation. Read a time without an offset in the
+        // business's timezone; the server's own timezone would shift it.
+        const start = DateTime.fromISO(input.startsAt, { zone: timezone });
+        if (!start.isValid) return { ok: false, reason: "Give startsAt as YYYY-MM-DDTHH:mm in the business's timezone." };
+        const startsAt = start.toISO()!;
+        // Already booked for this caller, by an earlier or repeated request:
+        // report that booking rather than call the caller's own slot taken.
+        const existing = await findCallerBooking(domain, { businessId, serviceName: input.serviceName, startsAt, contactPhone });
+        if (existing) return existing;
+        const opening = await checkOpening(domain, { businessId, serviceName: input.serviceName, startsAt, timezone, ...(context.callId ? { callId: context.callId } : {}) });
         if (!opening.ok || !opening.available) return { ok: false, reason: "That time is no longer available. Offer another opening." };
-        return await bookForCaller(domain, {
+        const textable = canTextNumber(snapshot.contactChannels?.smsNumber, contactPhone);
+        const booked = await bookForCaller(domain, {
           businessId,
           serviceName: input.serviceName,
-          startsAt: input.startsAt,
+          startsAt,
           timezone,
           contactPhone,
           channel,
-          smsConsentGranted: input.smsConsentGranted,
+          smsConsentGranted: input.smsConsentGranted && textable,
           ...(input.contactName ? { contactName: input.contactName } : {}),
           ...(context.callId ? { callId: context.callId } : {}),
         });
+        // The caller agreed to a text this business can't send them.
+        return booked.ok && input.smsConsentGranted && !textable
+          ? { ...booked, textConfirmation: "This business can't text that number. Tell the caller they won't get a text confirmation." }
+          : booked;
       },
     });
   }
@@ -234,7 +249,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         notes: z.string().optional(),
       }),
       execute: async (input) => {
-        const callbackPhone = input.callbackPhone ?? context.callerPhone;
+        const callbackPhone = input.callbackPhone?.trim() || context.callerPhone;
         if (!callbackPhone) return { ok: false, reason: "Ask for a callback number first." };
         const message = [`Appointment request: ${input.serviceName}`, `Preferred time: ${input.preferredTime}`, input.notes ? `Notes: ${input.notes}` : ""].filter(Boolean).join("\n");
         return await takeMessageForStaff(domain, {

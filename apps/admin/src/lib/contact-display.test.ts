@@ -43,6 +43,9 @@ describe("channel labels", () => {
 
   it("treats older plain web transports as web calls, without catching website chat", async () => {
     expect(normalizeChannel("web")).toBe("web_call");
+    expect(normalizeChannel("webrtc")).toBe("web_call");
+    expect(normalizeChannel("twilio_media_stream")).toBe("phone_call");
+    expect(normalizeChannel("sip")).toBe("phone_call");
     expect(normalizeChannel("webrtc_browser")).toBe("web_call");
     expect(normalizeChannel("web_chat")).toBe("web_chat");
     expect(getContactChannels(["web"])).toEqual(["web_call"]);

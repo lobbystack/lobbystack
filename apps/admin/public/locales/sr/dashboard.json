@@ -80,10 +80,8 @@
       },
       "channels": {
         "title": "Kanali",
-        "description": "Kako su razgovori ove nedelje stigli do Vašeg recepcionera.",
+        "description": "Pozivi i poruke po kanalu za izabrane datume.",
         "labels": {
-          "voice": "Glas",
-          "sms": "SMS",
           "other": "Ostalo"
         }
       }

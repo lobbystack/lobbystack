@@ -29,6 +29,29 @@ export function analyticsMonthStartExpression(column: SQLWrapper): SQL<Date> {
   return sql<Date>`to_date(${column} || '-01', 'YYYY-MM-DD')`;
 }
 
+/** Channel buckets for the Analytics channels card, in display order. */
+export const analyticsChannels = ["phone_call", "web_call", "sms", "web_chat", "other"] as const;
+export type AnalyticsChannel = (typeof analyticsChannels)[number];
+
+/** Calls split on transport, like voiceChannelForTransport: anything over the browser is a web call. */
+export function analyticsCallChannel(transport: string): AnalyticsChannel {
+  return transport.toLowerCase().includes("web") ? "web_call" : "phone_call";
+}
+
+/**
+ * Messages count toward their conversation's channel, so staff replies and
+ * voice messages land with the chat, text thread, or call they belong to.
+ * A call's conversation is always `voice`.
+ */
+export function analyticsMessageChannel(channel: string): AnalyticsChannel {
+  const value = channel.trim().toLowerCase();
+  if (value === "sms") return "sms";
+  if (value === "web_chat" || value === "widget") return "web_chat";
+  if (value === "voice" || value === "phone") return "phone_call";
+  if (value.includes("web")) return "web_call";
+  return "other";
+}
+
 export type AnalyticsInput = {
   userId: string;
   businessId: string;
@@ -149,10 +172,10 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
       else 'missed' end`;
     const callRows = (await tx.execute<ActivityRow>(activityQuery(sql`
       select ${callBucket} as bucket, ${outcomeKey} as outcome,
-        coalesce(${conversations.channel}, 'voice') as channel,
+        ${calls.transport} as channel,
         ${calls.startedAt} >= ${input.from.toISOString()}::timestamptz as current,
         ${calls.providerDurationSeconds} as duration
-      from ${calls} left join ${conversations} on ${calls.conversationId} = ${conversations.id}
+      from ${calls}
       where ${calls.businessId} = ${input.businessId}::uuid
         and ${calls.startedAt} >= ${input.previousFrom.toISOString()}::timestamptz and ${calls.startedAt} < ${input.to.toISOString()}::timestamptz
     `))).rows;
@@ -163,9 +186,10 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
         and ${appointments.startsAt} >= ${input.previousFrom.toISOString()}::timestamptz and ${appointments.startsAt} < ${input.to.toISOString()}::timestamptz
     `))).rows;
     const messageRows = (await tx.execute<ActivityRow>(activityQuery(sql`
-      select ${messageBucket} as bucket, null::text as outcome, ${messages.channel} as channel,
+      select ${messageBucket} as bucket, null::text as outcome, coalesce(${conversations.channel}, ${messages.channel}) as channel,
         ${messages.createdAt} >= ${input.from.toISOString()}::timestamptz as current, null::integer as duration
-      from ${messages} where ${messages.businessId} = ${input.businessId}::uuid
+      from ${messages} left join ${conversations} on ${conversations.id} = ${messages.conversationId} and ${conversations.businessId} = ${input.businessId}::uuid
+      where ${messages.businessId} = ${input.businessId}::uuid
         and ${messages.createdAt} >= ${input.previousFrom.toISOString()}::timestamptz and ${messages.createdAt} < ${input.to.toISOString()}::timestamptz
     `))).rows;
     const callTotals = callRows.find(row => row.kind === "total");
@@ -175,12 +199,10 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
     const callSeries = seriesRows(callRows), appointmentSeries = seriesRows(appointmentRows), messageSeries = seriesRows(messageRows);
     const outcomes = callRows.filter(row => row.kind === "outcome").map(row => ({ outcome: row.category, count: row.current }));
     const channelRows = (rows: ActivityRow[]) => rows.filter(row => row.kind === "channel").map(row => ({ channel: row.category ?? "", count: row.current }));
-    const callChannels = channelRows(callRows), messageChannels = channelRows(messageRows);
-    const channels = { voice: 0, sms: 0, other: 0 };
-    for (const row of [...callChannels, ...messageChannels]) {
-      const channel = row.channel.toLowerCase();
-      channels[/voice|call/.test(channel) ? 'voice' : /sms|message/.test(channel) ? 'sms' : 'other'] += Number(row.count);
-    }
+    // Every current call and message lands in exactly one bucket, so the buckets add up to calls plus messages.
+    const channels = Object.fromEntries(analyticsChannels.map((channel) => [channel, 0])) as Record<AnalyticsChannel, number>;
+    for (const row of channelRows(callRows)) channels[analyticsCallChannel(row.channel)] += Number(row.count);
+    for (const row of channelRows(messageRows)) channels[analyticsMessageChannel(row.channel)] += Number(row.count);
 
     const economics = await tx.select({ totalCostUsd: unitEconomicsRollups.totalCostUsd, costPerVoiceCallUsd: unitEconomicsRollups.costPerVoiceCallUsd, costPerActiveUserUsd: unitEconomicsRollups.costPerActiveUserUsd }).from(unitEconomicsRollups).where(and(eq(unitEconomicsRollups.businessId, input.businessId), gte(economicsMonth, input.from), lt(economicsMonth, input.to))).orderBy(unitEconomicsRollups.monthKey).limit(1);
 

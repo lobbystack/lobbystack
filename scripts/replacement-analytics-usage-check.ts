@@ -34,7 +34,8 @@ try {
   const analytics = await getAnalytics({ db: app.db }, { userId, businessId, from: new Date("2026-09-02T00:00:00Z"), to: new Date("2026-09-03T00:00:00Z"), previousFrom: new Date("2026-09-01T00:00:00Z"), granularity: "day" });
   assert(analytics.agentResponseSeconds.current === 5, "Response time must include inbound messages preceding the selected range.");
   assert(analytics.series[0]?.agentResponseSeconds === 5, "Response time was not assigned to its reply bucket.");
-  assert(analytics.messages.current === 1 && analytics.channels.other === 1, "Analytics leaked another tenant or misclassified website chat.");
+  assert(analytics.messages.current === 1, "Analytics leaked another tenant's messages.");
+  assert(JSON.stringify(analytics.channels) === JSON.stringify({ phone_call: 0, web_call: 0, sms: 0, web_chat: 1, other: 0 }), "Analytics must count the website chat message under web_chat and nothing else.");
   assert(analytics.outcomes.length === 4 && analytics.outcomes.every((row) => row.count === 0), "Empty outcomes must retain all four display states.");
   const additionalConversation = randomUUID();
   await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async tx => {

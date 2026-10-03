@@ -110,7 +110,7 @@
               knowledgeStorageMb: 25,
             },
             description:
-              "Free includes 30 voice minutes for browser test calls and a 25 MB knowledge base. It has no phone number, so it sends no texts and cannot transfer calls.",
+              "Free includes 30 voice minutes for browser test calls and a 1 MB knowledge base. It has no phone number, so it sends no texts and cannot transfer calls.",
           },
           {
             name: "Starter",
@@ -130,7 +130,7 @@
               alertSmsSegment: 0.02,
             },
             description:
-              "Starter includes 1 phone number, 150 voice minutes, 20 transfer attempts, 50 alert SMS segments, and a 100 MB knowledge base. Additional usage is pay-as-you-go.",
+              "Starter includes 1 phone number, 150 voice minutes, 20 transfer attempts, 50 alert SMS segments, and a 5 MB knowledge base. Additional usage is pay-as-you-go.",
           },
           {
             name: "Pro",
@@ -150,7 +150,7 @@
               alertSmsSegment: 0.02,
             },
             description:
-              "Pro includes 1 phone number, 500 voice minutes, 100 transfer attempts, 200 alert SMS segments, and a 500 MB knowledge base. Additional usage is pay-as-you-go.",
+              "Pro includes 1 phone number, 500 voice minutes, 100 transfer attempts, 200 alert SMS segments, and a 20 MB knowledge base. Additional usage is pay-as-you-go.",
           },
           {
             name: "Enterprise",

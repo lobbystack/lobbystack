@@ -19,9 +19,9 @@ LobbyStack ofrece los planes Free, Starter, Pro y Enterprise. Los planes crecen 
 
 | Plan | Precio | Uso incluido |
 | --- | ---: | --- |
-| Free | $0/mes | 30 minutos de voz en el navegador, sin número de teléfono, base de conocimiento de 25 MB |
-| Starter | $30/mes o $288/año | 150 minutos de voz, 20 intentos de transferencia, 50 segmentos de SMS de alerta, base de conocimiento de 100 MB |
-| Pro | $100/mes o $960/año | 500 minutos de voz, 100 intentos de transferencia, 200 segmentos de SMS de alerta, base de conocimiento de 500 MB |
+| Free | $0/mes | 30 minutos de voz en el navegador, sin número de teléfono, base de conocimiento de 1 MB |
+| Starter | $30/mes o $288/año | 150 minutos de voz, 20 intentos de transferencia, 50 segmentos de SMS de alerta, base de conocimiento de 5 MB |
+| Pro | $100/mes o $960/año | 500 minutos de voz, 100 intentos de transferencia, 200 segmentos de SMS de alerta, base de conocimiento de 20 MB |
 | Enterprise | Personalizado | Volumen personalizado, varios números y soporte para implementar el autoalojamiento |
 
 ## Tarifas por excedente

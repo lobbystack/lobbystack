@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { businessHours, calls, conversations, messages, storageObjects, transcripts, websiteIngestionJobs } from "@lobbystack/db";
+import { businessHours, calls, conversations, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, messages, receptionistProfiles, storageObjects, transcripts, websiteIngestionJobs } from "@lobbystack/db";
 import { affiliateCommissions, affiliatePayoutItems, affiliateProfiles, billingAccounts, billingTransactions, appointments, auditLogs, businessMemberships, contacts, productEvents, providerEvents, services, staff, users, businesses, notifications, outboxMessages, withBusinessTransaction, claimOutboxBatch, createDatabaseClient, enqueueOutbox, markOutboxFailed, markOutboxPublished, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { generateAffiliatePayoutRun } from "./affiliates";
 import { reconcileBillingProviderEvent } from "./billing";
@@ -13,6 +13,8 @@ import { appendMessage } from "./conversations";
 import { runPrivacyRetentionSweep } from "./privacy";
 import { EXPIRED_UPLOAD_STATUS, deleteExpiredObjectsForBusiness, persistCallRecording } from "./storage";
 import { completeCall, upsertTranscript } from "./voice";
+import { chunkText, indexDocumentText } from "./knowledge";
+import { loadBusinessSummaryInput, saveGeneratedBusinessSummary } from "./businessSummary";
 import { claimNotificationDelivery, releaseNotificationDelivery, rescheduleAppointmentReminderInTransaction } from "./notifications";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -208,6 +210,78 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
       // A paid 90-day transcript must not be swept early; the expired free one is removed.
       expect(await runPrivacyRetentionSweep({ db }, { businessId: paidBusinessId })).toMatchObject({ deletedTranscripts: 0 });
       expect(await runPrivacyRetentionSweep({ db }, { businessId: freeBusinessId })).toMatchObject({ deletedTranscripts: 1 });
+    });
+  });
+
+  it("fails a document whose text would pass the plan's knowledge limit, counting text rather than files", async () => {
+    await rollbackTest(async (tx) => {
+      const [freeBusinessId, starterBusinessId] = [randomUUID(), randomUUID()];
+      await tx.insert(businesses).values([
+        { id: freeBusinessId, slug: freeBusinessId, name: "Free knowledge", timezone: "UTC", businessType: "test", deploymentMode: "cloud" },
+        { id: starterBusinessId, slug: starterBusinessId, name: "Starter knowledge", timezone: "UTC", businessType: "test", deploymentMode: "cloud" },
+      ]);
+      await tx.insert(billingAccounts).values({ businessId: starterBusinessId, billingKey: `business:${starterBusinessId}`, plan: "starter" });
+      // Each business already holds 1,040,000 bytes of indexed text, just under Free's 1 MB.
+      const existing = { [freeBusinessId]: randomUUID(), [starterBusinessId]: randomUUID() };
+      const incoming = { [freeBusinessId]: randomUUID(), [starterBusinessId]: randomUUID() };
+      for (const businessId of [freeBusinessId, starterBusinessId]) {
+        await tx.insert(knowledgeDocuments).values([
+          { id: existing[businessId]!, businessId, sourceType: "text", title: "Existing", status: "indexed" },
+          { id: incoming[businessId]!, businessId, sourceType: "text", title: "Incoming", status: "processing" },
+        ]);
+        await tx.insert(knowledgeChunks).values({ businessId, documentId: existing[businessId]!, sequence: 0, content: "x".repeat(1_040_000), contentHash: "existing" });
+      }
+      await tx.execute(sql`set local role lobbystack_worker`);
+      const db = tx as unknown as Database;
+      const text = "Parking is behind the building. ".repeat(500);
+      const embeddings = chunkText(text).map(() => Array.from({ length: 1536 }, () => 0.01));
+
+      expect(await indexDocumentText({ db }, { businessId: freeBusinessId, documentId: incoming[freeBusinessId]!, text, embeddings })).toEqual({ chunkCount: 0 });
+      expect(await indexDocumentText({ db }, { businessId: starterBusinessId, documentId: incoming[starterBusinessId]!, text, embeddings })).toEqual({ chunkCount: embeddings.length });
+
+      await withBusinessTransaction(db, { businessId: freeBusinessId, actorType: "worker" }, async (workerTx) => {
+        const [document] = await workerTx.select({ status: knowledgeDocuments.status, error: knowledgeDocuments.error }).from(knowledgeDocuments).where(eq(knowledgeDocuments.id, incoming[freeBusinessId]!));
+        expect(document).toEqual({ status: "error", error: "Knowledge storage limit reached. 1 MB of text is included on this plan." });
+        expect(await workerTx.select({ id: knowledgeChunks.id }).from(knowledgeChunks).where(eq(knowledgeChunks.documentId, incoming[freeBusinessId]!))).toEqual([]);
+      });
+    });
+  });
+
+  it("loads a business's knowledge for its summary and never replaces a summary a person wrote", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = randomUUID();
+      await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Maple Family Clinic", timezone: "UTC", businessType: "test", deploymentMode: "cloud" });
+      await tx.insert(receptionistProfiles).values({ businessId, greeting: "Hi", tone: "warm", summary: "Maple Family Clinic uses LobbyStack to answer calls.", bookingPolicy: "Confirm first.", transferMode: "never" });
+      const [indexed, pending] = [randomUUID(), randomUUID()];
+      await tx.insert(knowledgeDocuments).values([
+        { id: indexed, businessId, sourceType: "website", title: "Home", status: "indexed" },
+        { id: pending, businessId, sourceType: "upload", title: "Draft", status: "processing" },
+      ]);
+      await tx.insert(knowledgeChunks).values([
+        { businessId, documentId: indexed, sequence: 0, content: "A family practice in Toronto.", contentHash: "a" },
+        { businessId, documentId: indexed, sequence: 5, content: "Deep page detail.", contentHash: "b" },
+        { businessId, documentId: pending, sequence: 0, content: "Not indexed yet.", contentHash: "c" },
+      ]);
+      await tx.insert(knowledgeSnippets).values({ businessId, title: "Services", content: "Checkups and vaccinations." });
+      await tx.execute(sql`set local role lobbystack_worker`);
+      const db = tx as unknown as Database;
+
+      const input = await loadBusinessSummaryInput({ db }, { businessId });
+      expect(input).toMatchObject({ businessName: "Maple Family Clinic", summarySource: "placeholder", currentFingerprint: null });
+      expect(input?.sources).toEqual([{ title: "Services", text: "Checkups and vaccinations." }, { title: "Home", text: "A family practice in Toronto." }]);
+
+      expect(await saveGeneratedBusinessSummary({ db }, { businessId, summary: "Maple Family Clinic is a family practice in Toronto.", fingerprint: input!.fingerprint })).toBe(true);
+      const reloaded = await loadBusinessSummaryInput({ db }, { businessId });
+      expect(reloaded).toMatchObject({ summarySource: "generated", currentFingerprint: input!.fingerprint });
+
+      await withBusinessTransaction(db, { businessId, actorType: "worker" }, async (workerTx) => {
+        await workerTx.update(receptionistProfiles).set({ summary: "Written by the owner.", summarySource: "operator" }).where(eq(receptionistProfiles.businessId, businessId));
+      });
+      expect(await saveGeneratedBusinessSummary({ db }, { businessId, summary: "An AI rewrite.", fingerprint: "other" })).toBe(false);
+      await withBusinessTransaction(db, { businessId, actorType: "worker" }, async (workerTx) => {
+        const [profile] = await workerTx.select({ summary: receptionistProfiles.summary }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId));
+        expect(profile?.summary).toBe("Written by the owner.");
+      });
     });
   });
 

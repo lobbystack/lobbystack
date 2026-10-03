@@ -49,6 +49,22 @@ describe("original integration permissions and setup navigation", () => {
     fireEvent.click(await screen.findByRole("button", { name: "integrations.google.disconnect" }));
     await waitFor(() => telemetryRef.current!.expectEvent("web.integration.calendar_disconnect_completed", { businessId: "business", provider: "google", scope: "business" }));
   });
+  it("keeps a healthy connection's dialog to the calendar choice, reconnect and disconnect", async () => {
+    setup("business_admin", { calendarConnections: [{ id: "connection", provider: "google", externalAccountId: "111898516623292004922", status: "connected", staffId: null, selectedCalendarId: "calendar", lastSyncError: null, lastSyncedAt: "2026-10-02T14:31:00.000Z" }], calendarOptions: [{ id: "calendar", summary: "Primary", primary: true, accessRole: "owner", selected: true }] });
+    fireEvent.click(await screen.findByRole("button", { name: "integrations.actions.connected" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.textContent).not.toContain("111898516623292004922");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("button", { name: "integrations.google.reconnect" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "integrations.google.disconnect" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "integrations.google.refreshCalendars" })).toBeNull();
+  });
+  it("offers a sync retry when a connected calendar reports a sync error", async () => {
+    const fetchMock = setup("business_admin", { calendarConnections: [{ id: "connection", provider: "google", externalAccountId: "account", status: "connected", staffId: null, selectedCalendarId: "calendar", lastSyncError: "provider failure" }], calendarOptions: [{ id: "calendar", summary: "Primary", primary: true, accessRole: "owner", selected: true }] });
+    fireEvent.click(await screen.findByRole("button", { name: "integrations.actions.connected" }));
+    fireEvent.click(await screen.findByRole("button", { name: "integrations.google.refreshCalendars" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/api/integrations?businessId=business"), expect.objectContaining({ method: "POST" })));
+  });
   it("does not request administrator calendar connections for viewers", () => {
     const fetchMock = setup("viewer");
     expect(fetchMock).not.toHaveBeenCalled();

@@ -7,6 +7,15 @@ const DEFAULT_MODEL = "gpt-6-luna";
 const DEFAULT_REASONING_EFFORT = "high";
 const REASONING_EFFORTS = ["none", "minimal", "low", "medium", "high", "xhigh"] as const;
 type ReasoningEffort = (typeof REASONING_EFFORTS)[number];
+const SERVICE_TIERS = ["auto", "default", "flex", "priority"] as const;
+type ServiceTier = (typeof SERVICE_TIERS)[number];
+// OpenAI bills priority processing (Fast mode) at twice the standard rates.
+const PRIORITY_PRICE_MULTIPLIER = 2;
+
+function serviceTier(environment: AgentModelEnvironment): ServiceTier | undefined {
+  const value = environment.AI_CHAT_SERVICE_TIER?.trim();
+  return (SERVICE_TIERS as readonly string[]).includes(value ?? "") ? value as ServiceTier : undefined;
+}
 
 type AgentModelEnvironment = Record<string, string | undefined>;
 
@@ -52,6 +61,12 @@ function price(value: string | undefined): number | undefined {
 // Token usage in the shape AI generation events record. Costs use the AI_CHAT_*
 // rates only when they are versioned; otherwise the cost stays unknown rather
 // than wrong.
+function costUsd(usage: AgentUsage, rates: { input: number; cachedInput: number; output: number }): number {
+  const cached = Math.min(usage.cachedInputTokens ?? 0, usage.inputTokens ?? 0);
+  const uncached = (usage.inputTokens ?? 0) - cached;
+  return (uncached * rates.input + cached * rates.cachedInput + (usage.outputTokens ?? 0) * rates.output) / 1_000_000;
+}
+
 export function describeAgentUsage(raw: LanguageModelUsage | undefined, latencyMs: number, environment: AgentModelEnvironment = process.env): AgentUsage {
   const { provider, model } = agentModelId(environment);
   const usage: AgentUsage = {
@@ -66,17 +81,21 @@ export function describeAgentUsage(raw: LanguageModelUsage | undefined, latencyM
   };
   const input = price(environment.AI_CHAT_INPUT_COST_PER_MILLION_TOKENS);
   const output = price(environment.AI_CHAT_OUTPUT_COST_PER_MILLION_TOKENS);
+  // Cached input is often a tenth of the input price. Without its own rate,
+  // cached tokens cost the full input price.
+  const cachedInput = price(environment.AI_CHAT_CACHED_INPUT_COST_PER_MILLION_TOKENS) ?? input;
   const version = environment.AI_CHAT_PRICING_VERSION?.trim();
   const source = environment.AI_CHAT_PRICING_SOURCE?.trim();
   const effective = environment.AI_CHAT_PRICING_EFFECTIVE_DATE?.trim();
   if (input === undefined || output === undefined || !version || !source || !effective) return usage;
+  const multiplier = usesOpenAI(environment) && serviceTier(environment) === "priority" ? PRIORITY_PRICE_MULTIPLIER : 1;
   return {
     ...usage,
-    totalCostUsd: ((usage.inputTokens ?? 0) * input + (usage.outputTokens ?? 0) * output) / 1_000_000,
+    totalCostUsd: costUsd(usage, { input, cachedInput: cachedInput!, output }) * multiplier,
     pricingVersion: version,
     pricingSource: source,
     pricingEffectiveDate: effective,
-    ratesUsdPerMillionTokens: { input, output },
+    ratesUsdPerMillionTokens: { input, cachedInput: cachedInput!, output },
   };
 }
 
@@ -102,9 +121,38 @@ export function callSummaryEnvironment(environment: AgentModelEnvironment = proc
   };
   if (summaryModel !== chatModel) {
     delete summary.AI_CHAT_INPUT_COST_PER_MILLION_TOKENS;
+    delete summary.AI_CHAT_CACHED_INPUT_COST_PER_MILLION_TOKENS;
     delete summary.AI_CHAT_OUTPUT_COST_PER_MILLION_TOKENS;
   }
   return summary;
+}
+
+const DEFAULT_DELEGATION_REASONING_EFFORT: ReasoningEffort = "low";
+// OpenAI's GPT-Live guide suggests priority processing for latency-sensitive
+// delegation. A delegation costs a fraction of a cent, so twice that is fine.
+const DEFAULT_DELEGATION_SERVICE_TIER: ServiceTier = "priority";
+
+// The agent behind a GPT-Live call answers while the caller waits in silence,
+// and each step on high reasoning costs seconds. AI_DELEGATION_MODEL picks a
+// different model on the AI_CHAT_* endpoint for that work;
+// AI_DELEGATION_REASONING_EFFORT defaults to low. Website chat keeps AI_CHAT_*.
+export function liveDelegationEnvironment(environment: AgentModelEnvironment = process.env): AgentModelEnvironment {
+  const chatModel = agentModelId(environment).model;
+  const delegationModel = environment.AI_DELEGATION_MODEL?.trim() || chatModel;
+  const effort = environment.AI_DELEGATION_REASONING_EFFORT?.trim();
+  const tier = environment.AI_DELEGATION_SERVICE_TIER?.trim();
+  const delegation: AgentModelEnvironment = {
+    ...environment,
+    AI_CHAT_MODEL: delegationModel,
+    AI_CHAT_REASONING_EFFORT: (REASONING_EFFORTS as readonly string[]).includes(effort ?? "") ? effort : DEFAULT_DELEGATION_REASONING_EFFORT,
+    AI_CHAT_SERVICE_TIER: (SERVICE_TIERS as readonly string[]).includes(tier ?? "") ? tier : DEFAULT_DELEGATION_SERVICE_TIER,
+  };
+  if (delegationModel !== chatModel) {
+    delete delegation.AI_CHAT_INPUT_COST_PER_MILLION_TOKENS;
+    delete delegation.AI_CHAT_CACHED_INPUT_COST_PER_MILLION_TOKENS;
+    delete delegation.AI_CHAT_OUTPUT_COST_PER_MILLION_TOKENS;
+  }
+  return delegation;
 }
 
 // OpenAI itself gets the Responses API: its reasoning models only accept
@@ -116,7 +164,8 @@ export function createAgentModel(environment: AgentModelEnvironment = process.en
   if (!apiKey && baseURL === DEFAULT_BASE_URL) return undefined;
   const { provider: name, model } = agentModelId(environment);
   if (usesOpenAI(environment)) {
-    const openai: OpenAILanguageModelResponsesOptions = { reasoningEffort: reasoningEffort(environment), store: false };
+    const tier = serviceTier(environment);
+    const openai: OpenAILanguageModelResponsesOptions = { reasoningEffort: reasoningEffort(environment), store: false, ...(tier ? { serviceTier: tier } : {}) };
     return wrapLanguageModel({
       model: createOpenAI({ ...(apiKey ? { apiKey } : {}) }).responses(model),
       middleware: defaultSettingsMiddleware({ settings: { providerOptions: { openai } } }),

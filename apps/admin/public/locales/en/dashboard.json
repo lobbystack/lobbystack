@@ -80,10 +80,8 @@
       },
       "channels": {
         "title": "Channels",
-        "description": "How conversations reached your receptionist this week.",
+        "description": "Calls and messages by channel for the selected dates.",
         "labels": {
-          "voice": "Voice",
-          "sms": "SMS",
           "other": "Other"
         }
       }

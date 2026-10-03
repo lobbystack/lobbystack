@@ -16,6 +16,9 @@ vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => k
 
 class FakePeerConnection {
   static last: FakePeerConnection | undefined;
+  // Set by a test to make candidate gathering take a while.
+  static slowIce = false;
+  private readonly iceListeners: Array<() => void> = [];
   connectionState: RTCPeerConnectionState = "new";
   onconnectionstatechange: (() => void) | null = null;
   ontrack: ((event: RTCTrackEvent) => void) | null = null;
@@ -30,11 +33,28 @@ class FakePeerConnection {
   readonly addTrack = vi.fn();
   readonly createDataChannel = vi.fn(() => this.channel);
   readonly createOffer = vi.fn(async () => ({ type: "offer", sdp: "offer-sdp" }));
-  readonly setLocalDescription = vi.fn(async () => undefined);
+  // Host candidates gather at once, so the hook can send the offer right away.
+  iceGatheringState: RTCIceGatheringState = FakePeerConnection.slowIce ? "gathering" : "complete";
+  localDescription: { sdp: string } | null = null;
+  readonly setLocalDescription = vi.fn(async (description: { sdp: string }) => {
+    this.localDescription = description;
+  });
   readonly setRemoteDescription = vi.fn(async () => undefined);
 
   constructor() {
     FakePeerConnection.last = this;
+  }
+
+  addEventListener(type: string, listener: () => void) {
+    if (type === "icegatheringstatechange") this.iceListeners.push(listener);
+  }
+
+  removeEventListener() {}
+
+  finishGathering(sdp: string) {
+    this.localDescription = { sdp };
+    this.iceGatheringState = "complete";
+    this.iceListeners.forEach((listener) => listener());
   }
 
   setState(state: RTCPeerConnectionState) {
@@ -58,6 +78,7 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
 beforeEach(() => {
   telemetryRef.current = createRecordedBrowserTelemetry();
   FakePeerConnection.last = undefined;
+  FakePeerConnection.slowIce = false;
   const track = { stop: vi.fn() };
   vi.stubGlobal("RTCPeerConnection", FakePeerConnection);
   vi.stubGlobal("fetch", fetchMock);
@@ -119,14 +140,46 @@ describe("DashboardTestCallWidget voice call endings", () => {
     expect(eventNames()).not.toContain("web.voice.test_call_error");
   });
 
-  it("reports the caller hanging up as ended by the caller", async () => {
+  it("reports the caller hanging up as ended by the caller, once OpenAI confirms the close", async () => {
     const connection = await startConnectedCall();
 
     fireEvent.click(screen.getByRole("button", { name: "testCall.hangUp" }));
 
-    await waitFor(() => expect(statusText()).toBe("testCall.status.ended"));
-    telemetryRef.current!.expectEvent("web.voice.test_call_ended", { businessId: "business-1", endedBy: "caller" });
+    // OpenAI's WebRTC guide: keep the connection until session.closed arrives.
     expect(connection.channel.send).toHaveBeenCalledWith(JSON.stringify({ type: "session.close" }));
+    expect(connection.close).not.toHaveBeenCalled();
+    act(() => connection.receive({ type: "session.closed", reason: "close_requested" }));
+    await waitFor(() => expect(statusText()).toBe("testCall.status.ended"));
+    expect(connection.close).toHaveBeenCalled();
+    telemetryRef.current!.expectEvent("web.voice.test_call_ended", { businessId: "business-1", endedBy: "caller" });
+    expect(eventNames().filter((name) => name === "web.voice.test_call_ended")).toHaveLength(1);
+  });
+
+  it("sends the offer once ICE gathering finishes, with the gathered candidates", async () => {
+    FakePeerConnection.slowIce = true;
+    render(<DashboardTestCallWidget businessId={"business-1" as never} businessSlug="acme-dental" />);
+    fireEvent.click(screen.getByRole("button", { name: "testCall.trigger" }));
+    await waitFor(() => expect(FakePeerConnection.last?.setLocalDescription).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(fetchMock).not.toHaveBeenCalled();
+    act(() => FakePeerConnection.last!.finishGathering("offer-sdp\na=candidate:1 1 udp 1 192.0.2.1 50000 typ host"));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const body = JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as { sdp: string };
+    expect(body.sdp).toContain("a=candidate:1");
+  });
+
+  it("releases the call when OpenAI never confirms the close", async () => {
+    const connection = await startConnectedCall();
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(screen.getByRole("button", { name: "testCall.hangUp" }));
+      expect(connection.close).not.toHaveBeenCalled();
+      act(() => { vi.advanceTimersByTime(15_000); });
+      expect(connection.close).toHaveBeenCalled();
+      expect(statusText()).toBe("testCall.status.ended");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("still shows a failed connection as dropped", async () => {

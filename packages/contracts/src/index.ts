@@ -239,6 +239,7 @@ export const jobTypes = [
   "knowledge.indexDocument",
   "knowledge.reindexBusiness",
   "knowledge.reembedBusiness",
+  "business.generateSummary",
   "snapshot.refresh",
   "notification.dispatch",
   "notification.dailySummary",

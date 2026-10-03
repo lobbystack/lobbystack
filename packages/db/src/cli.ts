@@ -38,6 +38,8 @@ async function main(): Promise<void> {
         // index builds are visible as invalid until their final phase, so a
         // second migrator must not mistake an active build for a failed one.
         migrationLockClient = await migrator.pool.connect();
+        // Data repairs report what they changed with RAISE NOTICE.
+        migrationLockClient.on("notice", (notice) => { if (notice.message) console.log(notice.message); });
         await migrationLockClient.query("select pg_advisory_lock(hashtext('lobbystack:migrations'))");
         const lockedMigrator = { ...migrator, db: drizzle(migrationLockClient, { schema }) };
         const applied = await prepareMigrationJournal(lockedMigrator);
@@ -182,6 +184,7 @@ async function main(): Promise<void> {
             ('lobbystack_app', 'app.resolve_operator_prospect_demo(uuid)'),
             ('lobbystack_app', 'app.list_operator_prospect_demos()'),
             ('lobbystack_worker', 'app.expire_prospect_demos()'),
+            ('lobbystack_app', 'app.detach_prospect_demo_operator(uuid)'),
             ('lobbystack_worker', 'app.resolve_onboarding_followup_recipient(uuid, timestamptz)')
           ) as expected(role_name, function_name)
           where not has_function_privilege(expected.role_name, expected.function_name, 'EXECUTE')
@@ -217,6 +220,7 @@ async function main(): Promise<void> {
   } finally {
     if (migrationLockClient) {
       await migrationLockClient.query("select pg_advisory_unlock(hashtext('lobbystack:migrations'))").catch(() => undefined);
+      migrationLockClient.removeAllListeners("notice");
       migrationLockClient.release();
     }
     await migrator.pool.end().catch(() => undefined);

@@ -6,10 +6,13 @@ import type { BusinessContextSnapshot } from "@lobbystack/shared";
 import { asApiResponse, readJson } from "@/lib/api-helpers";
 import { loadValidBusinessSnapshot } from "@/lib/business-snapshot";
 import { createWorkerDomainContext } from "@/lib/domain-context";
-import { attachWorkerToLiveSession, getLiveClient, requireLivePrototype } from "@/lib/live-prototype";
+import { attachWorkerToLiveSession, endLiveBrowserSession, getLiveClient, requireLivePrototype } from "@/lib/live-prototype";
 import { LIVE_WEB_CALL_WIDGET_IDS, liveSessionEndToken, publicCallCorsHeaders, resolveLiveWebCallAccess, type LiveWebCallRequest } from "@/lib/live-web-call";
 import { requestIpHash } from "@/lib/widget-keys";
 import { enforceWebVoiceRateLimits } from "@/lib/web-voice-policy";
+
+
+const WEBRTC_CREATION_SECONDS = 15;
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -133,8 +136,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ sessionId, endToken: liveSessionEndToken(sessionId), sdp: live.transport.sdp, ...(call.maxDurationMs ? { maxDurationMs: call.maxDurationMs } : {}) }, { status: 201, headers: { ...cors, "server-timing": timing.header() } });
     } catch (error) {
       // The session exists at OpenAI; end it so nothing talks or bills without us.
-      await client.live.sessions.hangup(sessionId).catch(() => undefined);
-      if (callId) await finishLiveCall(domain, { businessId: access.businessId, callId, seconds: 0, end: "setup_failed", channel: "web_voice" }).catch(() => undefined);
+      await endLiveBrowserSession(sessionId).catch((endError: unknown) => console.error("[live] couldn't end a browser session after a failed start", endError instanceof Error ? endError.message : endError));
+      // OpenAI bills 15 seconds for creating a WebRTC session, even one that never starts.
+      if (callId) await finishLiveCall(domain, { businessId: access.businessId, callId, seconds: WEBRTC_CREATION_SECONDS, measuredSeconds: 0, end: "setup_failed", channel: "web_voice" }).catch(() => undefined);
       if (access.prospectDemoId) await recordProspectDemoCallError(domain, { businessId: access.businessId, prospectDemoId: access.prospectDemoId, ...(callId ? { callId } : {}), reason: "web_call_start_failed" }).catch(() => undefined);
       const code = typeof error === "object" && error !== null && "code" in error && typeof error.code === "string" ? error.code : undefined;
       if (code === "voice_limit_reached") return denied(402, code, cors);

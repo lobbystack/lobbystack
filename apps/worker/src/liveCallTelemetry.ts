@@ -1,5 +1,5 @@
-import type { DelegationTiming, LiveCallSummary } from "@lobbystack/agent-core";
-import { LIVE_CALL_PROVIDER, recordProductEvent, type DomainContext } from "@lobbystack/domain";
+import { agentModelId, describeAgentUsage, liveDelegationEnvironment, type DelegationTiming, type LiveCallSummary } from "@lobbystack/agent-core";
+import { LIVE_CALL_PROVIDER, recordAiGenerationEvent, recordProductEvent, type DomainContext } from "@lobbystack/domain";
 import { getPostHogDistinctIdForBusinessSystem, percentileMs, type TelemetryProperties } from "@lobbystack/telemetry";
 
 export type LiveCallTelemetryContext = {
@@ -38,8 +38,29 @@ export function recordLiveDelegation(domain: DomainContext, call: LiveCallTeleme
     totalMs: timing.totalMs,
     tools: [...new Set(timing.tools)],
     toolCount: timing.tools.length,
+    modelSteps: timing.modelSteps,
+    directAnswer: timing.directAnswer,
+    toolMs: timing.toolMs,
+    modelMs: Math.max(0, timing.agentMs - timing.toolMs),
     failed: timing.failed,
   });
+}
+
+/**
+ * The agent's model usage and cost for one delegation, as an AI generation.
+ * GPT-Live bills the session per second; this is the backend model on top.
+ */
+export function recordLiveDelegationGeneration(domain: DomainContext, call: LiveCallTelemetryContext, timing: DelegationTiming, environment: Record<string, string | undefined> = liveDelegationEnvironment()): void {
+  const usage = timing.usage ? describeAgentUsage(timing.usage, timing.agentMs, environment) : { ...agentModelId(environment), latencyMs: timing.agentMs };
+  void recordAiGenerationEvent(domain, {
+    ...usage,
+    businessId: call.businessId,
+    operation: "voice.delegation",
+    callId: call.callId,
+    ...(call.conversationId ? { conversationId: call.conversationId } : {}),
+    financialEventKey: `voice_delegation:${call.callId}:${timing.delegationId}`,
+    ...(timing.failed ? { isError: true, error: "generation_failed" } : {}),
+  }).catch(() => undefined);
 }
 
 /** One summary per call of what the caller heard and how long delegations took. */

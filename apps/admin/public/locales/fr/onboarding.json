@@ -323,9 +323,9 @@
             "proThen": "puis 0,02 $/segment"
           },
           "knowledgeStorage": {
-            "free": "25 Mo",
-            "starter": "100 Mo",
-            "pro": "500 Mo"
+            "free": "1 Mo",
+            "starter": "5 Mo",
+            "pro": "20 Mo"
           },
           "phoneNumbers": {
             "starter": "1 dédié",

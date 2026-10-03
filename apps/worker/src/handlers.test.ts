@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { vi } from "vitest";
 
 import type { JobEnvelope } from "@lobbystack/contracts";
-import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteSentProductEventsBefore, expireProspectDemos, generateAffiliatePayoutRun, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markNotificationSent, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, releaseNotificationDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep } from "@lobbystack/domain";
+import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteSentProductEventsBefore, expireProspectDemos, generateAffiliatePayoutRun, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markNotificationFailed, markNotificationSent, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, releaseNotificationDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, loadOperatorNotificationDelivery, markOperatorNotificationSent, queueDailyOperatorSummaries } from "@lobbystack/domain";
 import { cancelRetiredPhoneVerificationSend, queueOnboardingFollowupEmail } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
@@ -40,6 +40,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     completeNumberProvisioning: vi.fn(),
     failNumberProvisioning: vi.fn(),
     releaseOperatorNotificationDelivery: vi.fn(),
+    markNotificationFailed: vi.fn(),
     markNotificationSent: vi.fn(),
     recordCallProviderPricing: vi.fn(),
     loadLiveCallForPricing: vi.fn(),
@@ -684,6 +685,22 @@ describe("worker handlers", () => {
       twilio: { sendSms },
     })).rejects.toThrow(error);
     expect(releaseNotificationDelivery).toHaveBeenCalledWith({ db: undefined as never }, { businessId, notificationId });
+  });
+
+  it("stops retrying a text Twilio rejects for good, such as a country the account can't text", async () => {
+    const businessId = randomUUID();
+    const notificationId = randomUUID();
+    vi.mocked(claimNotificationDelivery).mockResolvedValue(true);
+    vi.mocked(resolveNotificationDelivery).mockResolvedValue({
+      kind: "ready",
+      delivery: { notificationId, businessId, channel: "sms", kind: "booking_confirmation", relatedId: "appointment_1", to: "+381695021111", from: "+14165550124", subject: "Appointment confirmed", body: "Your appointment is confirmed." },
+    });
+    const sendSms = vi.fn().mockRejectedValue(Object.assign(new Error("Permission to send an SMS has not been enabled for the region"), { code: 21408, status: 400 }));
+
+    await expect(handleJob({ ...notificationJob({ notificationId }), businessId }, { domain: { db: undefined as never }, twilio: { sendSms } })).resolves.toEqual({ status: "skipped", entityId: notificationId });
+    expect(markNotificationFailed).toHaveBeenCalledWith({ db: undefined as never }, { businessId, notificationId });
+    expect(releaseNotificationDelivery).not.toHaveBeenCalled();
+    expect(recordProductEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ name: "notification.delivery_failed", businessId }));
   });
 
   it("emits workflow.started for an event-driven business-scoped job", async () => {

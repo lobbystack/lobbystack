@@ -516,9 +516,9 @@ const comparisonGroupsEn: ComparisonGroup[] = [
       },
       {
         feature: "Knowledge base",
-        free: "25 MB",
-        starter: "100 MB",
-        pro: "500 MB",
+        free: "1 MB",
+        starter: "5 MB",
+        pro: "20 MB",
         enterprise: "Custom",
       },
       {
@@ -734,9 +734,9 @@ const comparisonGroupsFr: ComparisonGroup[] = [
       },
       {
         feature: "Base de connaissances",
-        free: "25 Mo",
-        starter: "100 Mo",
-        pro: "500 Mo",
+        free: "1 Mo",
+        starter: "5 Mo",
+        pro: "20 Mo",
         enterprise: "Sur mesure",
       },
       {
@@ -952,9 +952,9 @@ const comparisonGroupsEs: ComparisonGroup[] = [
       },
       {
         feature: "Base de conocimiento",
-        free: "25 MB",
-        starter: "100 MB",
-        pro: "500 MB",
+        free: "1 MB",
+        starter: "5 MB",
+        pro: "20 MB",
         enterprise: "A medida",
       },
       {
@@ -1170,9 +1170,9 @@ const comparisonGroupsSr: ComparisonGroup[] = [
       },
       {
         feature: "Baza znanja",
-        free: "25 MB",
-        starter: "100 MB",
-        pro: "500 MB",
+        free: "1 MB",
+        starter: "5 MB",
+        pro: "20 MB",
         enterprise: "Po dogovoru",
       },
       {

@@ -38,3 +38,19 @@ export async function attachWorkerToLiveSession(input: WorkerAttachInput): Promi
   });
   if (!response.ok) throw new Error(`Worker attach failed with status ${response.status}.`);
 }
+
+/**
+ * Ends a browser session with session.close, sent by the worker over a
+ * sideband. OpenAI's hangup endpoint is for SIP calls only.
+ */
+export async function endLiveBrowserSession(sessionId: string): Promise<void> {
+  const token = process.env.INTERNAL_SERVICE_TOKEN;
+  if (!token) throw new Error("INTERNAL_SERVICE_TOKEN is not set.");
+  const response = await fetch(`${workerUrl()}/internal/live/end`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-internal-service-token": token },
+    body: JSON.stringify({ sessionId }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!response.ok) throw new Error(`Worker end failed with status ${response.status}.`);
+}

@@ -1,5 +1,5 @@
 import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
-import { createCallSummarizer } from "@lobbystack/agent-core";
+import { createBusinessSummarizer, createCallSummarizer } from "@lobbystack/agent-core";
 import { assertProductionSecrets } from "@lobbystack/config";
 import type { OnboardingFollowupSender } from "@lobbystack/domain";
 import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, isKnownJobType, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
@@ -21,6 +21,7 @@ import { OutboxDispatcher } from "./outboxDispatcher";
 import { getWorkerStartupMode } from "./maintenance";
 import { configureSchedulers } from "./scheduler";
 import { getWorkerSnapshotCache } from "./snapshot-cache";
+import { logUnhandledRejections } from "./processGuards";
 
 function createEmailProvider(): SmtpEmailProvider | undefined {
   const host = process.env.SMTP_HOST;
@@ -100,6 +101,7 @@ function createProductAnalytics(): WorkerDependencies["productAnalytics"] {
 }
 
 async function main(): Promise<void> {
+  logUnhandledRejections();
   const startupMode = getWorkerStartupMode(process.env);
   if (!startupMode.startsConsumers) {
     // Keep liveness available, but report unready and avoid all queue, scheduler, and provider startup.
@@ -119,7 +121,9 @@ async function main(): Promise<void> {
   const realtime = createRedisConnection({ prefix: process.env.REDIS_PREFIX ?? "lobbystack" });
   const queues = new Map<JobQueue, ReturnType<typeof createQueue>>();
   for (const queueName of jobQueues) {
-    queues.set(queueName, createQueue(queueName));
+    const queue = createQueue(queueName);
+    queue.on("error", (error) => console.error(JSON.stringify({ event: "queue.error", queue: queueName, message: redactOtelExceptionText(error.message) })));
+    queues.set(queueName, queue);
   }
   const refreshSchedulers = async () => {
     const businessRows = await withDispatcherTransaction(dispatcherDatabase.db, async (tx) => await tx.select({ id: businesses.id }).from(businesses));
@@ -130,7 +134,7 @@ async function main(): Promise<void> {
   schedulerRefresh.unref();
   const state = { ready: false, redis: false, database: false, storage: false, activeJobs: 0 };
   const embeddings = createEmbeddingProvider();
-  const liveCalls = createLiveCallHandler({ domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) } });
+  const liveCalls = createLiveCallHandler({ domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) }, attachLock: realtime });
   const health = startHealthServer(Number(process.env.PORT ?? 3002), state, liveCalls.handle);
   const email = createEmailProvider();
   const onboardingFollowupSender = createOnboardingFollowupSender();
@@ -142,6 +146,24 @@ async function main(): Promise<void> {
   const calendar = createCalendarProvider();
   const productAnalytics = createProductAnalytics();
   const callSummarizer = createCallSummarizer();
+  const businessSummarizer = createBusinessSummarizer();
+  // Existing businesses got summaries before AI wrote them, so write one from
+  // each business's knowledge. BullMQ keeps the job id for a day; a later
+  // restart queues it again, and the job skips summaries an operator wrote,
+  // businesses with no knowledge, and knowledge that hasn't changed, so only
+  // the first run calls the model.
+  const summaryQueue = queues.get("bulk");
+  if (businessSummarizer && summaryQueue) {
+    const summaryBusinesses = await withDispatcherTransaction(dispatcherDatabase.db, async (tx) => await tx.select({ id: businesses.id }).from(businesses));
+    for (const business of summaryBusinesses) {
+      await enqueueJob(summaryQueue, {
+        type: "business.generateSummary",
+        businessId: business.id,
+        payload: { businessId: business.id, reason: "backfill" },
+        idempotencyKey: `business-summary-backfill:${business.id}:v1`,
+      });
+    }
+  }
   if (embeddings) {
     const embeddingQueue = queues.get("bulk");
     if (embeddingQueue) {
@@ -165,6 +187,7 @@ async function main(): Promise<void> {
     ...(crawler ? { crawler } : {}),
     ...(productAnalytics ? { productAnalytics } : {}),
     ...(callSummarizer ? { callSummarizer } : {}),
+    ...(businessSummarizer ? { businessSummarizer } : {}),
     ...(email ? { email } : {}),
     ...(onboardingFollowupSender ? { onboardingFollowupSender } : {}),
     ...(embeddings ? { embeddings } : {}),
@@ -219,6 +242,9 @@ async function main(): Promise<void> {
         state.activeJobs -= 1;
       }
     }), createWorkerOptions(queueName));
+    // BullMQ emits connection problems as "error" events; without a listener
+    // Node treats one as fatal.
+    worker.on("error", (error) => console.error(JSON.stringify({ event: "worker.error", queue: queueName, message: redactOtelExceptionText(error.message) })));
     const failedJobs = getMeter("lobbystack-worker").createCounter("lobbystack.worker.jobs.failed");
     worker.on("failed", (job) => failedJobs.add(1, {
       "messaging.destination.name": queueName,

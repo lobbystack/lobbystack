@@ -1,3 +1,5 @@
+import type { AnalyticsChannelCounts } from "./analytics-channels";
+
 export type WorkspaceViewModel = {
   businessId: string;
   name: string;
@@ -30,7 +32,7 @@ export type AnalyticsViewModel = {
     appointments: number;
     messages: number;
   }>;
-  channels: { voice: number; sms: number; other: number };
+  channels: AnalyticsChannelCounts;
   outcomes: Array<{ outcome: string; count: number }>;
   unitEconomics: {
     totalCostUsd: number;

@@ -323,9 +323,9 @@
             "proThen": "zatim 0,02 $/segment"
           },
           "knowledgeStorage": {
-            "free": "25 MB",
-            "starter": "100 MB",
-            "pro": "500 MB"
+            "free": "1 MB",
+            "starter": "5 MB",
+            "pro": "20 MB"
           },
           "phoneNumbers": {
             "starter": "1 namenski",

@@ -430,6 +430,7 @@ export { normalizeAuthEmail } from "./auth";
 export { isTransferPermitted, normalizeTransferMode } from "./transferPolicy";
 
 export { OPERATOR_SMS_DISCLOSURE_TEXT, OPERATOR_SMS_DISCLOSURE_VERSION } from "./operatorSmsConsent";
+export { canTextNumber, permanentSmsErrorCode } from "./smsReach";
 
 export { DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID } from "./testCall";
 

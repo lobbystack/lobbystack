@@ -11,8 +11,9 @@ type Translate = (key: string) => string;
 
 /**
  * Stored channel values grouped by meaning. Calls store `transport`
- * (`voice`, `web_voice`, plain `web` on older calls, and `phone` or `pstn`
- * from older imports);
+ * (`voice`, `web_voice`, `webrtc` and plain `web` on older calls,
+ * `twilio_media_stream` from the retired voice gateway, `sip`, and `phone` or
+ * `pstn` from older imports);
  * conversations, messages, and appointment sources store `voice`, `sms`,
  * `web_chat`, `web_voice`, `dashboard`, `operator`, or `api`.
  */
@@ -20,6 +21,9 @@ const CHANNEL_ALIASES: Record<string, DisplayChannel> = {
   voice: "phone_call",
   phone: "phone_call",
   pstn: "phone_call",
+  // Phone calls from the retired voice gateway, and SIP trunk calls.
+  twilio_media_stream: "phone_call",
+  sip: "phone_call",
   phone_call: "phone_call",
   web: "web_call",
   web_voice: "web_call",

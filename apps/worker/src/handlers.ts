@@ -2,11 +2,12 @@ import { createHash, randomUUID } from "node:crypto";
 import Redis from "ioredis";
 import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
 
-import { hasSummarizableTranscript, type CallSummarizer } from "@lobbystack/agent-core";
+import { hasSummarizableTranscript, type BusinessSummarizer, type CallSummarizer } from "@lobbystack/agent-core";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
-import { getPolarMeteredUsagePayload, type BillingUsageKind } from "@lobbystack/shared";
+import { getPolarMeteredUsagePayload, permanentSmsErrorCode, type BillingUsageKind } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
-import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, markNotificationSkipped, cancelRetiredPhoneVerificationSend, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
+import { enqueueBusinessSummaryRefresh, loadBusinessSummaryInput, saveGeneratedBusinessSummary } from "@lobbystack/domain";
+import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationFailed, markNotificationSent, markNotificationSkipped, cancelRetiredPhoneVerificationSend, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, correctAlertSmsUsage, estimateSmsSegments, loadOperatorNotificationDelivery, markFeedbackEmailFailed, markFeedbackEmailSent, markOperatorNotificationSent, markOperatorNotificationSkipped, queueDailyOperatorSummaries, refreshUnitEconomicsMonth, releaseOperatorNotificationDelivery, reserveAlertSmsUsage } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type WebhookSender } from "@lobbystack/domain";
@@ -56,6 +57,7 @@ export type WorkerDependencies = {
   realtime?: Redis;
   /** Writes the one-line call summary. Without it, calls keep the transcript heuristic. */
   callSummarizer?: CallSummarizer;
+  businessSummarizer?: BusinessSummarizer;
   /** Sends one signed webhook. Defaults to the SSRF-guarded HTTPS sender. */
   webhookSender?: WebhookSender;
   /** Founder check-in sender. Without it, onboarding follow-up jobs are skipped. */
@@ -233,6 +235,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     }
     case "snapshot.refresh":
       return { status: "completed", entityId: await refreshBusinessSnapshot(dependencies.domain, { businessId: businessIdOrThrow(job) }) };
+    case "business.generateSummary":
+      return await generateBusinessSummary(dependencies, { businessId: businessIdOrThrow(job), force: job.payload.force === true });
     case "knowledge.indexDocument": {
       const id = String(job.payload.documentId);
       const text = String(job.payload.text ?? "");
@@ -312,6 +316,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           if (websiteIngestionJobId) {
             await tx.update(websiteIngestionJobs).set({ status: "completed", importedCount: pages.length, indexedCount: indexedPages, errorCount: 0, lastError: null, updatedAt: new Date() }).where(and(eq(websiteIngestionJobs.id, websiteIngestionJobId), eq(websiteIngestionJobs.businessId, businessIdOrThrow(job)), ne(websiteIngestionJobs.status, "cancelled")));
             await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: businessIdOrThrow(job), aggregateType: "website_ingestion_job", aggregateId: websiteIngestionJobId, dedupeKey: `website-ingestion:${websiteIngestionJobId}:snapshot:${source?.revision ?? 0}`, payload: { businessId: businessIdOrThrow(job), reason: "website_ingestion_completed" } });
+            await enqueueBusinessSummaryRefresh(tx, { businessId: businessIdOrThrow(job), reason: "website_ingestion_completed" });
           }
         });
       } else if (websiteIngestionJobId && !documentId) {
@@ -626,6 +631,12 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         } catch (error) {
           await recordNotificationDeliveryFailed(dependencies, { businessId, kind: delivery.eventKind });
           if (delivery.channel === "sms" && dependencies.domain.db) await correctAlertSmsUsage(dependencies.domain, { businessId, sourceKey: `alert_sms:operator_notification:${delivery.id}`, segments: 0 }).catch(() => undefined);
+          const permanentCode = delivery.channel === "sms" ? permanentSmsErrorCode(error) : undefined;
+          if (permanentCode) {
+            // Twilio rejects this destination on every attempt, so don't retry.
+            await markOperatorNotificationSkipped(dependencies.domain, { businessId, deliveryId: delivery.id, error: `Twilio error ${permanentCode}.` });
+            return { status: "skipped", entityId: delivery.id };
+          }
           await releaseOperatorNotificationDelivery(dependencies.domain, { businessId, deliveryId: delivery.id, error: "Provider delivery failed." });
           throw error;
         }
@@ -679,6 +690,11 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       } catch (error) {
         await recordNotificationDeliveryFailed(dependencies, { businessId, kind: delivery.kind, ...(delivery.relatedId ? { appointmentId: delivery.relatedId } : {}) });
         if (delivery.channel === "sms" && dependencies.domain.db) await correctAlertSmsUsage(dependencies.domain, { businessId, sourceKey: `alert_sms:notification:${delivery.notificationId}`, segments: 0 }).catch(() => undefined);
+        if (delivery.channel === "sms" && permanentSmsErrorCode(error)) {
+          // Twilio rejects this destination on every attempt, so don't retry.
+          await markNotificationFailed(dependencies.domain, { businessId, notificationId: delivery.notificationId });
+          return { status: "skipped", entityId: delivery.notificationId };
+        }
         await releaseNotificationDelivery(dependencies.domain, { businessId, notificationId: delivery.notificationId });
         throw error;
       }
@@ -958,6 +974,34 @@ async function generateCallSummary(
     }).catch(() => undefined);
     return undefined;
   }
+}
+
+/**
+ * Writes the business summary from its knowledge with AI. Skips a summary an
+ * operator wrote, a business with no knowledge yet, and knowledge that hasn't
+ * changed since the last summary unless the operator asked to regenerate.
+ */
+async function generateBusinessSummary(dependencies: WorkerDependencies, input: { businessId: string; force: boolean }): Promise<JobResult> {
+  const summarizer = dependencies.businessSummarizer;
+  if (!summarizer) return { status: "skipped", entityId: input.businessId };
+  const summaryInput = await loadBusinessSummaryInput(dependencies.domain, { businessId: input.businessId });
+  if (!summaryInput || summaryInput.summarySource === "operator" || !summaryInput.sources.length) return { status: "skipped", entityId: input.businessId };
+  if (!input.force && summaryInput.summarySource === "generated" && summaryInput.fingerprint === summaryInput.currentFingerprint) return { status: "skipped", entityId: input.businessId };
+  const startedAt = performance.now();
+  let summary: string | null;
+  try {
+    const result = await summarizer.summarize({ businessName: summaryInput.businessName, locale: summaryInput.locale, sources: summaryInput.sources });
+    summary = result.summary;
+    await recordAiGenerationEvent(dependencies.domain, { ...result.usage, businessId: input.businessId, operation: "business.summary" }).catch(() => undefined);
+  } catch (error) {
+    // Only a stable category is recorded: provider errors can echo source text.
+    const timedOut = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+    await recordAiGenerationEvent(dependencies.domain, { ...summarizer.modelId, businessId: input.businessId, operation: "business.summary", latencyMs: performance.now() - startedAt, isError: true, error: timedOut ? "generation_timeout" : "generation_failed" }).catch(() => undefined);
+    throw error;
+  }
+  if (!summary) return { status: "skipped", entityId: input.businessId };
+  const saved = await saveGeneratedBusinessSummary(dependencies.domain, { businessId: input.businessId, summary, fingerprint: summaryInput.fingerprint });
+  return { status: saved ? "completed" : "skipped", entityId: input.businessId };
 }
 
 async function indexWebsitePage(

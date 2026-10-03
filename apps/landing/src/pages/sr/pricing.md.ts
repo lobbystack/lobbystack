@@ -19,9 +19,9 @@ LobbyStack nudi pakete Free, Starter, Pro i Enterprise. Paketi rastu sa potrošn
 
 | Paket | Cena | Uključena potrošnja |
 | --- | ---: | --- |
-| Free | $0 mesečno | 30 minuta razgovora u pregledaču, bez broja telefona, baza znanja od 25 MB |
-| Starter | $30 mesečno ili $288 godišnje | 150 minuta razgovora, 20 pokušaja preusmeravanja, 50 SMS segmenata za obaveštenja, baza znanja od 100 MB |
-| Pro | $100 mesečno ili $960 godišnje | 500 minuta razgovora, 100 pokušaja preusmeravanja, 200 SMS segmenata za obaveštenja, baza znanja od 500 MB |
+| Free | $0 mesečno | 30 minuta razgovora u pregledaču, bez broja telefona, baza znanja od 1 MB |
+| Starter | $30 mesečno ili $288 godišnje | 150 minuta razgovora, 20 pokušaja preusmeravanja, 50 SMS segmenata za obaveštenja, baza znanja od 5 MB |
+| Pro | $100 mesečno ili $960 godišnje | 500 minuta razgovora, 100 pokušaja preusmeravanja, 200 SMS segmenata za obaveštenja, baza znanja od 20 MB |
 | Enterprise | Po dogovoru | Prilagođen obim, više brojeva i podrška pri uvođenju samostalnog hostovanja |
 
 ## Cene prekoračenja

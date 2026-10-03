@@ -1,4 +1,4 @@
-import { OPERATOR_SMS_DISCLOSURE_VERSION, intlLocale, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
+import { OPERATOR_SMS_DISCLOSURE_VERSION, canTextNumber, intlLocale, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 import { and, eq, gte, inArray, lte, lt, or, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { isTerminalTwilioMessageStatus, mapTwilioStatusToNotificationStatus, shouldApplyNotificationStatusTransition } from "@lobbystack/shared";
@@ -201,7 +201,7 @@ export async function resolveNotificationDelivery(
     if (row.channel !== "sms" && row.channel !== "email") {
       return { kind: "skipped", notificationId: row.notificationId };
     }
-    if (row.channel === "sms" && (row.smsConsentStatus !== "subscribed" || row.operatorBlockedAt !== null || !row.senderPhone || !row.contactPhone)) {
+    if (row.channel === "sms" && (row.smsConsentStatus !== "subscribed" || row.operatorBlockedAt !== null || !canTextNumber(row.senderPhone, row.contactPhone))) {
       return { kind: "skipped", notificationId: row.notificationId };
     }
     if (row.channel === "email" && !row.contactEmail) {
@@ -271,6 +271,20 @@ export async function markNotificationSkipped(
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const rows = await tx.update(notifications)
       .set({ status: "skipped", updatedAt: new Date() })
+      .where(and(eq(notifications.id, input.notificationId), eq(notifications.businessId, input.businessId), eq(notifications.status, "processing")))
+      .returning({ id: notifications.id });
+    return rows.length > 0;
+  });
+}
+
+/** Gives up on a notification the provider rejected for good, such as a number the sender can't text. */
+export async function markNotificationFailed(
+  context: DomainContext,
+  input: { businessId: string; notificationId: string },
+): Promise<boolean> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const rows = await tx.update(notifications)
+      .set({ status: "failed", updatedAt: new Date() })
       .where(and(eq(notifications.id, input.notificationId), eq(notifications.businessId, input.businessId), eq(notifications.status, "processing")))
       .returning({ id: notifications.id });
     return rows.length > 0;

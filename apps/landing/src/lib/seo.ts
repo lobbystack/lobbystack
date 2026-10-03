@@ -304,7 +304,7 @@ export const softwareApplicationJsonLd = (
       price: "0",
       priceCurrency: "USD",
       description:
-        "Test 30 browser voice minutes on Free, with no telephone number. Store up to 25 MB in your knowledge base.",
+        "Test 30 browser voice minutes on Free, with no telephone number. Store up to 1 MB in your knowledge base.",
       url: absoluteUrl("/pricing/"),
       availability: "https://schema.org/InStock",
     },
@@ -314,7 +314,7 @@ export const softwareApplicationJsonLd = (
       price: "30",
       priceCurrency: "USD",
       description:
-        "Starter includes 150 voice minutes, 20 transfer attempts, 50 alert SMS segments, and 100 MB knowledge base.",
+        "Starter includes 150 voice minutes, 20 transfer attempts, 50 alert SMS segments, and 5 MB knowledge base.",
       url: absoluteUrl("/pricing/"),
       availability: "https://schema.org/InStock",
     },
@@ -324,7 +324,7 @@ export const softwareApplicationJsonLd = (
       price: "100",
       priceCurrency: "USD",
       description:
-        "Pro includes 500 voice minutes, 100 transfer attempts, 200 alert SMS segments, and 500 MB knowledge base.",
+        "Pro includes 500 voice minutes, 100 transfer attempts, 200 alert SMS segments, and 20 MB knowledge base.",
       url: absoluteUrl("/pricing/"),
       availability: "https://schema.org/InStock",
     },

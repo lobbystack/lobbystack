@@ -5,6 +5,8 @@ import { randomUUID } from "node:crypto";
 
 import Redis from "ioredis";
 
+import { logRedisErrors } from "./redisErrors";
+
 export const VOICE_PRESENCE_TTL_MS = 30_000;
 const GATEWAY_TTL_MS = 30_000;
 const PRESENCE_EVENT = "call.updated";
@@ -28,12 +30,12 @@ let redis: Redis | undefined;
 function store(): Redis {
   const url = process.env.REDIS_URL;
   if (!url) throw new Error("Voice presence requires REDIS_URL.");
-  redis ??= new Redis(url, {
+  redis ??= logRedisErrors(new Redis(url, {
     lazyConnect: true,
     maxRetriesPerRequest: 1,
     enableReadyCheck: true,
     connectionName: "lobbystack:voice-presence",
-  });
+  }), "lobbystack:voice-presence");
   return redis;
 }
 

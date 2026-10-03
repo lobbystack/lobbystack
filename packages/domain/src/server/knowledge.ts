@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 
-import { and, asc, desc, eq, ilike, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, ne, sql } from "drizzle-orm";
 
 import { agentRules, businessContextSnapshots, businessHours, businesses, closures, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, receptionistProfiles, services, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeTransferMode, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeTransferMode, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { buildBusinessContextSnapshot } from "../snapshot";
 import { fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
 import { countKnowledgeTokens } from "@lobbystack/ai";
@@ -15,6 +15,8 @@ import { getMeter } from "@lobbystack/telemetry/node";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { advanceOnboardingStageInTransaction } from "./onboarding";
 import { recordProductEvent } from "./productEvents";
+import { enqueueBusinessSummaryRefresh } from "./businessSummary";
+import { resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 
 const ragMeter = getMeter("lobbystack-rag");
 const searchDuration = ragMeter.createHistogram("rag.search.duration_ms", { unit: "ms" });
@@ -174,6 +176,7 @@ export async function setKnowledgeDocumentActive(context: DomainContext, input: 
     const [document] = await tx.update(knowledgeDocuments).set({ active: input.active, updatedAt: new Date() }).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).returning({ id: knowledgeDocuments.id });
     if (!document) throw Object.assign(new Error("Knowledge document not found."), { status: 404 });
     await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: input.documentId, dedupeKey: `knowledge:${input.documentId}:active:${Date.now()}`, payload: { businessId: input.businessId, reason: "document_activity_changed" } });
+    await enqueueBusinessSummaryRefresh(tx, { businessId: input.businessId, reason: "document_activity_changed" });
   });
 }
 
@@ -203,6 +206,7 @@ export async function deleteKnowledgeDocument(context: DomainContext, input: { u
     const [document] = await tx.delete(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).returning({ id: knowledgeDocuments.id });
     if (!document) throw new Error("Knowledge document not found.");
     await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: document.id, dedupeKey: `knowledge:${document.id}:deleted:${Date.now()}`, payload: { businessId: input.businessId, reason: "document_deleted" } });
+    await enqueueBusinessSummaryRefresh(tx, { businessId: input.businessId, reason: "document_deleted" });
   });
 }
 
@@ -224,6 +228,7 @@ export async function createKnowledgeSnippetInTransaction(
   const [snippet] = await tx.insert(knowledgeSnippets).values({ businessId: input.businessId, title: input.title.trim(), content: input.content.trim(), tags: input.tags ?? [], priority: input.priority ?? 0, active: input.active ?? true }).returning();
   if (!snippet) throw new Error("Knowledge snippet could not be created.");
   await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_snippet", aggregateId: snippet.id, dedupeKey: `knowledge-snippet:${snippet.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "snippet_created" } });
+  await enqueueBusinessSummaryRefresh(tx, { businessId: input.businessId, reason: "snippet_created" });
   return snippet;
 }
 
@@ -236,6 +241,7 @@ export async function updateKnowledgeSnippet(
     const [snippet] = await tx.update(knowledgeSnippets).set({ ...(input.title !== undefined ? { title: input.title.trim() } : {}), ...(input.content !== undefined ? { content: input.content.trim() } : {}), ...(input.tags !== undefined ? { tags: input.tags } : {}), ...(input.priority !== undefined ? { priority: input.priority } : {}), ...(input.active !== undefined ? { active: input.active } : {}), updatedAt: new Date() }).where(and(eq(knowledgeSnippets.id, input.snippetId), eq(knowledgeSnippets.businessId, input.businessId))).returning({ id: knowledgeSnippets.id });
     if (!snippet) throw new Error("Knowledge snippet not found.");
     await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_snippet", aggregateId: snippet.id, dedupeKey: `knowledge-snippet:${snippet.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "snippet_updated" } });
+    await enqueueBusinessSummaryRefresh(tx, { businessId: input.businessId, reason: "snippet_updated" });
   });
 }
 
@@ -245,6 +251,7 @@ export async function deleteKnowledgeSnippet(context: DomainContext, input: { us
     const [snippet] = await tx.delete(knowledgeSnippets).where(and(eq(knowledgeSnippets.id, input.snippetId), eq(knowledgeSnippets.businessId, input.businessId))).returning({ id: knowledgeSnippets.id });
     if (!snippet) throw new Error("Knowledge snippet not found.");
     await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_snippet", aggregateId: snippet.id, dedupeKey: `knowledge-snippet:${snippet.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "snippet_deleted" } });
+    await enqueueBusinessSummaryRefresh(tx, { businessId: input.businessId, reason: "snippet_deleted" });
   });
 }
 
@@ -312,6 +319,15 @@ async function indexDocumentTextInTransaction(tx: DatabaseTransaction, input: In
       await markKnowledgeDocumentFailedInTransaction(tx, input, document.revision, "Knowledge embeddings are unavailable or incomplete.");
       throw new Error("Knowledge embeddings are unavailable or incomplete.");
     }
+    const limit = getKnowledgeStorageLimitBytes(await resolveBusinessBillingPlan(tx, input.businessId));
+    if (limit !== null) {
+      const newBytes = chunks.reduce((total, chunk) => total + Buffer.byteLength(chunk, "utf8"), 0);
+      if (await getKnowledgeStorageUsageBytes(tx, input.businessId, { excludeDocumentId: input.documentId }) + newBytes > limit) {
+        // Retrying can't fit the text, so fail the document instead of throwing.
+        await markKnowledgeDocumentFailedInTransaction(tx, input, document.revision, knowledgeStorageLimitMessage(limit));
+        return { chunkCount: 0, indexed: false, documentId: input.documentId };
+      }
+    }
     await tx.delete(knowledgeChunks).where(and(eq(knowledgeChunks.documentId, input.documentId), eq(knowledgeChunks.businessId, input.businessId)));
     if (chunks.length > 0) {
       await tx.insert(knowledgeChunks).values(chunks.map((content, sequence) => ({
@@ -328,6 +344,7 @@ async function indexDocumentTextInTransaction(tx: DatabaseTransaction, input: In
     }
     await tx.update(knowledgeDocuments).set({ status: preserveImport ? "processing" : "indexed", processingProgress: 100, contentHash: hashContent(input.text), revision: document.revision + (preserveImport ? 0 : 1), updatedAt: new Date() }).where(eq(knowledgeDocuments.id, input.documentId));
     if (!preserveImport) await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: input.documentId, dedupeKey: `knowledge:${input.documentId}:snapshot:${document.revision + 1}`, payload: { businessId: input.businessId, reason: "document_indexed" } });
+    if (!preserveImport) await enqueueBusinessSummaryRefresh(tx, { businessId: input.businessId, reason: "document_indexed" });
     await enqueueOutbox(tx, {
       topic: "realtime.publish",
       businessId: input.businessId,
@@ -551,7 +568,8 @@ export async function refreshBusinessSnapshot(
       ...(currentProfile?.voiceInstructions ? { voiceInstructions: currentProfile.voiceInstructions } : {}),
       ...(currentProfile?.smsInstructions ? { smsInstructions: currentProfile.smsInstructions } : {}),
       ...(currentProfile?.chatInstructions ? { chatInstructions: currentProfile.chatInstructions } : {}),
-      summary: currentProfile?.summary ?? business[0].name,
+      // A sign-up placeholder says nothing about the business, so prompts get no summary until AI or a person writes one.
+      summary: currentProfile && currentProfile.summarySource !== "placeholder" ? currentProfile.summary : "",
       knowledgeDigest: withinKnowledgeBudget(documents, 1600, row => JSON.stringify(row)).map(row => JSON.stringify(row)).join("\n"),
       hours: hours.map((row) => ({ dayOfWeek: row.dayOfWeek, openMinutes: row.openMinutes, closeMinutes: row.closeMinutes })),
       closures: closureRows.map((row) => ({ startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), reason: row.reason })),
@@ -598,14 +616,16 @@ export async function refreshBusinessSnapshot(
   return version;
 }
 
-/** Counts uploaded files and extracted text in the canonical PostgreSQL representation. */
-export async function getKnowledgeStorageUsageBytes(tx: DatabaseTransaction, businessId: string): Promise<number> {
-  const [files, extracted] = await Promise.all([
-    tx.select({ bytes: sql<number>`coalesce(sum(${storageObjects.contentLength}), 0)` }).from(knowledgeDocuments)
-      .innerJoin(storageObjects, and(eq(knowledgeDocuments.storageObjectId, storageObjects.id), eq(storageObjects.businessId, businessId)))
-      .where(and(eq(knowledgeDocuments.businessId, businessId), sql`${storageObjects.status} <> 'deleted'`)),
-    tx.select({ bytes: sql<number>`coalesce(sum(octet_length(${knowledgeChunks.content})), 0)` }).from(knowledgeChunks)
-      .where(eq(knowledgeChunks.businessId, businessId)),
-  ]);
-  return Number(files[0]?.bytes ?? 0) + Number(extracted[0]?.bytes ?? 0);
+/**
+ * Counts the indexed text the receptionist searches, in UTF-8 bytes. Uploaded
+ * files don't count: a PDF's images and layout take space the agent never reads.
+ */
+export async function getKnowledgeStorageUsageBytes(tx: DatabaseTransaction, businessId: string, options: { excludeDocumentId?: string } = {}): Promise<number> {
+  const [extracted] = await tx.select({ bytes: sql<number>`coalesce(sum(octet_length(${knowledgeChunks.content})), 0)` }).from(knowledgeChunks)
+    .where(and(eq(knowledgeChunks.businessId, businessId), ...(options.excludeDocumentId ? [ne(knowledgeChunks.documentId, options.excludeDocumentId)] : [])));
+  return Number(extracted?.bytes ?? 0);
+}
+
+export function knowledgeStorageLimitMessage(limitBytes: number): string {
+  return `Knowledge storage limit reached. ${Math.ceil(limitBytes / 1024 / 1024)} MB of text is included on this plan.`;
 }

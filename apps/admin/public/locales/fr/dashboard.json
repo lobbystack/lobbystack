@@ -80,10 +80,8 @@
       },
       "channels": {
         "title": "Canaux",
-        "description": "Comment les conversations ont atteint votre reception cette semaine.",
+        "description": "Appels et messages par canal pour les dates choisies.",
         "labels": {
-          "voice": "Voix",
-          "sms": "SMS",
           "other": "Autre"
         }
       }

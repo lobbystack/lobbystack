@@ -110,6 +110,20 @@ function appointmentStatusLabel(status: string, t: ReturnType<typeof useTranslat
   return humanize(status);
 }
 
+const calendarSyncStateKeys: Record<string, string> = {
+  not_required: "notRequired",
+  pending: "pending",
+  syncing: "syncing",
+  synced: "synced",
+  failed: "failed",
+  drifted: "drifted",
+};
+
+function calendarSyncStateLabel(state: string, t: ReturnType<typeof useTranslation<"contacts">>["t"]): string {
+  const key = calendarSyncStateKeys[state.trim().toLowerCase()];
+  return key ? t(`detail.appointments.syncStateValues.${key}`) : humanize(state);
+}
+
 export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
   const { i18n, t } = useTranslation("contacts");
   const router = useRouter();
@@ -246,7 +260,7 @@ function ActivityTab({ data, locale }: { data: Detail; locale: string }) {
 function AppointmentsTab({ appointments, locale }: { appointments: Detail["appointments"]; locale: string }) {
   const { t } = useTranslation("contacts");
   if (!appointments.length) return <Empty icon={Calendar} label={t("detail.appointments.empty")} />;
-  return <div className="flex flex-col gap-3 py-4">{appointments.map((appointment) => <Surface className="flex flex-col gap-3 px-4 py-3" key={appointment.id}><div className="flex items-start justify-between gap-3"><div className="flex flex-col gap-0.5"><span className="type-item-title">{appointment.serviceName ?? "—"}</span>{appointment.staffName ? <span className="type-body-muted">{t("detail.activity.withStaff", { staff: appointment.staffName })}</span> : null}</div><Badge variant={appointmentStatusVariant(appointment.status)}>{appointmentStatusLabel(appointment.status, t)}</Badge></div><Separator /><div className="grid grid-cols-2 gap-4 sm:grid-cols-3"><div className="flex flex-col gap-0.5"><span className="type-meta">{t("detail.appointments.dateTime")}</span><span className="type-body">{dateTime(appointment.startsAt, locale)}</span></div><div className="flex flex-col gap-0.5"><span className="type-meta">{t("detail.appointments.syncState")}</span><span className="type-body">{humanize(appointment.calendarSyncState)}</span></div><div className="flex flex-col gap-0.5"><span className="type-meta">{t("detail.appointments.channel")}</span><span className="type-body">{getChannelLabel(appointment.sourceChannel, t)}</span></div></div></Surface>)}</div>;
+  return <div className="flex flex-col gap-3 py-4">{appointments.map((appointment) => <Surface className="flex flex-col gap-3 px-4 py-3" key={appointment.id}><div className="flex items-start justify-between gap-3"><div className="flex flex-col gap-0.5"><span className="type-item-title">{appointment.serviceName ?? "—"}</span>{appointment.staffName ? <span className="type-body-muted">{t("detail.activity.withStaff", { staff: appointment.staffName })}</span> : null}</div><Badge variant={appointmentStatusVariant(appointment.status)}>{appointmentStatusLabel(appointment.status, t)}</Badge></div><Separator /><div className="grid grid-cols-2 gap-4 sm:grid-cols-3"><div className="flex flex-col gap-0.5"><span className="type-meta">{t("detail.appointments.dateTime")}</span><span className="type-body">{dateTime(appointment.startsAt, locale)}</span></div><div className="flex flex-col gap-0.5"><span className="type-meta">{t("detail.appointments.syncState")}</span><span className="type-body">{calendarSyncStateLabel(appointment.calendarSyncState, t)}</span></div><div className="flex flex-col gap-0.5"><span className="type-meta">{t("detail.appointments.channel")}</span><span className="type-body">{getChannelLabel(appointment.sourceChannel, t)}</span></div></div></Surface>)}</div>;
 }
 
 function DetailsTab({ contact, copiedField, locale, onCopy }: { contact: NonNullable<Detail["contact"]>; copiedField: string | null; locale: string; onCopy: (text: string, field: string) => void }) {

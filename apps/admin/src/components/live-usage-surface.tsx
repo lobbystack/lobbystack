@@ -46,7 +46,7 @@ export function LiveUsageSurface() {
     <UsageMeter blocked={status.voiceBlocked} included={catalog.voiceSecondsIncluded === null ? null : catalog.voiceSecondsIncluded / 60} label={t("billing.usage.voiceTitle")} unit={t("billing.usage.units.voice")} used={Math.round((status.voiceSecondsUsed / 60) * 10) / 10} />
     <UsageMeter blocked={status.outboundCallAttemptsBlocked} included={catalog.outboundCallAttemptsIncluded} label={t("billing.usage.outboundAttemptsTitle")} unit={t("billing.usage.units.outboundAttempts")} used={status.outboundCallAttemptsUsed} />
     <UsageMeter blocked={status.alertSmsBlocked} included={catalog.alertSmsSegmentsIncluded} label={t("billing.usage.alertSmsTitle")} unit={t("billing.usage.units.segments")} used={status.alertSmsSegmentsUsed} />
-    <UsageMeter blocked={false} included={catalog.knowledgeStorageBytes === null ? null : catalog.knowledgeStorageBytes / (1024 * 1024)} label={t("billing.usage.knowledgeTitle")} unit={t("billing.usage.units.storage")} showUsedUnit used={Math.round(((billing.data?.knowledgeStorageBytesUsed ?? 0) / (1024 * 1024)) * 10) / 10} />
+    <UsageMeter blocked={false} included={catalog.knowledgeStorageBytes === null ? null : catalog.knowledgeStorageBytes / (1024 * 1024)} label={t("billing.usage.knowledgeTitle")} unit={t("billing.usage.units.storage")} showUsedUnit used={Math.round(((billing.data?.knowledgeStorageBytesUsed ?? 0) / (1024 * 1024)) * 100) / 100} />
   </></Surface></SectionBlock></div>;
 }
 

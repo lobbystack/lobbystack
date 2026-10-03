@@ -88,7 +88,8 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
   it("resolves a key to its own business and rejects revoked keys", async () => {
     expect(await resolveApiKey({ db: worker!.db }, a.key)).toMatchObject({ businessId: a.businessId, apiKeyId: a.caller.apiKeyId });
     expect(await resolveApiKey({ db: app!.db }, b.key)).toMatchObject({ businessId: b.businessId });
-    expect(await resolveApiKey({ db: worker!.db }, `${a.key.slice(0, -1)}x`)).toBeNull();
+    // Change the last character; a fixed "x" would match the 1 in 64 keys that end in x.
+    expect(await resolveApiKey({ db: worker!.db }, `${a.key.slice(0, -1)}${a.key.endsWith("x") ? "y" : "x"}`)).toBeNull();
     await admin!.db.update(apiKeys).set({ revokedAt: new Date() }).where(eq(apiKeys.id, b.caller.apiKeyId));
     expect(await resolveApiKey({ db: worker!.db }, b.key)).toBeNull();
     await admin!.db.update(apiKeys).set({ revokedAt: null }).where(eq(apiKeys.id, b.caller.apiKeyId));

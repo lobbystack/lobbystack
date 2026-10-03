@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 
 import { calls, unitEconomicsRollups } from "@lobbystack/db";
 
-import { agentResponsePoints, analyticsBucketExpression, analyticsBucketStarts, analyticsMonthStartExpression } from "./analytics";
+import { agentResponsePoints, analyticsBucketExpression, analyticsBucketStarts, analyticsCallChannel, analyticsMessageChannel, analyticsMonthStartExpression } from "./analytics";
 
 const dialect = new PgDialect();
 
@@ -64,5 +64,19 @@ describe("agent response time", () => {
   });
   it("does not invent response measurements without an inbound and AI reply", () => {
     expect(agentResponsePoints([{ conversationId: "a", createdAt: at(10), direction: "outbound", aiGenerated: true }])).toEqual([]);
+  });
+});
+
+describe("analytics channels", () => {
+  it("splits calls into phone and web calls by transport", () => {
+    expect(["voice", "phone", "sip", "pstn", "web_voice", "web", "webrtc"].map(analyticsCallChannel)).toEqual([
+      "phone_call", "phone_call", "phone_call", "phone_call", "web_call", "web_call", "web_call",
+    ]);
+  });
+
+  it("gives website chat its own bucket and keeps unknown channels in Other", () => {
+    expect(["sms", "web_chat", "widget", "voice", "web_voice", "dashboard", "email", ""].map(analyticsMessageChannel)).toEqual([
+      "sms", "web_chat", "web_chat", "phone_call", "web_call", "other", "other", "other",
+    ]);
   });
 });

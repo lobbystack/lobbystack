@@ -3,15 +3,18 @@ import { describe, expect, it, vi } from "vitest";
 
 // knowledgeRanking re-exports a helper from @lobbystack/ai, which the built copy of
 // this test can't resolve. The tools only need the real knowledgeQueryTerms.
-vi.mock("@lobbystack/ai", () => ({}));
+vi.mock("@lobbystack/ai", async () => ({ countKnowledgeTokens: (await import("../../ai/src/tokenBudget")).countKnowledgeTokens }));
 vi.mock("@lobbystack/domain", async () => ({
   countKnowledgeTokens: (await import("../../ai/src/tokenBudget")).countKnowledgeTokens,
   KNOWLEDGE_SEARCH_TOKEN_BUDGET: 3000,
   knowledgeQueryTerms: (await import("../../domain/src/knowledgeRanking")).knowledgeQueryTerms,
   searchKnowledgeEvidence: vi.fn(),
+  checkOpening: vi.fn(async () => ({ ok: true, available: true })),
+  findCallerBooking: vi.fn(async () => undefined),
+  bookForCaller: vi.fn(async () => ({ ok: true })),
 }));
 
-import { searchKnowledgeEvidence } from "@lobbystack/domain";
+import { bookForCaller, checkOpening, findCallerBooking, searchKnowledgeEvidence } from "@lobbystack/domain";
 import { createReceptionistTools, type AgentToolContext } from "./tools";
 
 function toolNames(overrides: Partial<AgentToolContext> & { bookingMode?: BookingMode; snapshot?: Partial<BusinessContextSnapshot> } = {}): string[] {
@@ -75,6 +78,82 @@ describe("createReceptionistTools", () => {
     expect(callControl.transfer).not.toHaveBeenCalled();
     await expect(execute({ callerRequested: true, urgent: false }, { toolCallId: "2", messages: [] })).resolves.toMatchObject({ ok: true });
     expect(callControl.transfer).toHaveBeenCalledWith("+14165550199");
+  });
+});
+
+describe("bookAppointment", () => {
+  const book = (startsAt: string) => {
+    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: { ...demoSnapshot, timezone: "America/Toronto" } });
+    const execute = tools.bookAppointment!.execute! as (input: object, options: object) => Promise<unknown>;
+    return execute({ serviceName: "General Checkup", startsAt, contactName: "Milan", smsConsentGranted: false }, { toolCallId: "1", messages: [] });
+  };
+
+  it("books a time the caller accepted from the conversation, in the business's timezone", async () => {
+    await expect(book("2026-10-06T10:00")).resolves.toMatchObject({ ok: true });
+    expect(vi.mocked(checkOpening).mock.lastCall?.[1]).toMatchObject({ startsAt: "2026-10-06T10:00:00.000-04:00" });
+    expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).toMatchObject({ startsAt: "2026-10-06T10:00:00.000-04:00" });
+  });
+
+  it("returns the caller's existing booking for a repeated request instead of calling the slot taken", async () => {
+    vi.mocked(findCallerBooking).mockResolvedValueOnce({ ok: true, appointmentId: "appt_1", serviceName: "General Checkup", startsAt: "2026-10-06T10:00:00.000-04:00", alreadyBooked: true });
+    vi.mocked(checkOpening).mockClear();
+    vi.mocked(bookForCaller).mockClear();
+    await expect(book("2026-10-06T10:00")).resolves.toMatchObject({ ok: true, appointmentId: "appt_1", alreadyBooked: true });
+    expect(vi.mocked(findCallerBooking).mock.lastCall?.[1]).toMatchObject({ serviceName: "General Checkup", startsAt: "2026-10-06T10:00:00.000-04:00", contactPhone: "+14165550100" });
+    expect(checkOpening).not.toHaveBeenCalled();
+    expect(bookForCaller).not.toHaveBeenCalled();
+  });
+
+  it("keeps the instant of a findAvailability startsAt", async () => {
+    await book("2026-10-06T14:00:00.000Z");
+    expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).toMatchObject({ startsAt: "2026-10-06T10:00:00.000-04:00" });
+  });
+
+  it("uses the caller's number when the model sends an empty phone", async () => {
+    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: demoSnapshot });
+    const execute = tools.bookAppointment!.execute! as (input: object, options: object) => Promise<unknown>;
+    await expect(execute({ serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan", contactPhone: "", smsConsentGranted: true }, { toolCallId: "1", messages: [] })).resolves.toMatchObject({ ok: true });
+    expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).toMatchObject({ contactPhone: "+14165550100" });
+  });
+
+  it("books without text consent when the business can't text the number, and says so", async () => {
+    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "web_voice", snapshot: { ...demoSnapshot, contactChannels: { smsNumber: "+18445550100" } } });
+    const execute = tools.bookAppointment!.execute! as (input: object, options: object) => Promise<unknown>;
+    await expect(execute({ serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan", contactPhone: "+381695021111", smsConsentGranted: true }, { toolCallId: "1", messages: [] })).resolves.toMatchObject({ ok: true, textConfirmation: expect.stringContaining("won't get a text") });
+    expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).toMatchObject({ contactPhone: "+381695021111", smsConsentGranted: false });
+  });
+
+  it("asks for the caller's name before booking", async () => {
+    vi.mocked(bookForCaller).mockClear();
+    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: demoSnapshot });
+    const execute = tools.bookAppointment!.execute! as (input: object, options: object) => Promise<unknown>;
+    await expect(execute({ serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: " ", smsConsentGranted: false }, { toolCallId: "1", messages: [] })).resolves.toEqual({ ok: false, reason: "Ask for the caller's name before booking." });
+    expect(bookForCaller).not.toHaveBeenCalled();
+  });
+
+  it("asks for a usable time instead of booking an unreadable one", async () => {
+    vi.mocked(bookForCaller).mockClear();
+    await expect(book("tomorrow at ten")).resolves.toMatchObject({ ok: false });
+    expect(bookForCaller).not.toHaveBeenCalled();
+  });
+});
+
+describe("getBusinessServices", () => {
+  it("returns what the knowledge base says the business offers when it lists no services", async () => {
+    vi.mocked(searchKnowledgeEvidence).mockResolvedValueOnce({ outcome: "found", matches: [{ title: "About", content: "An AI receptionist for small businesses." }] } as never);
+    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", snapshot: { ...demoSnapshot, services: [] } });
+    const execute = tools.getBusinessServices!.execute! as (input: object, options: object) => Promise<unknown>;
+    await expect(execute({}, { toolCallId: "1", messages: [] })).resolves.toMatchObject({ services: [], knowledge: { outcome: "found", matches: [{ title: "About", text: "An AI receptionist for small businesses." }] } });
+  });
+
+  it("doesn't search when the business lists services", async () => {
+    vi.mocked(searchKnowledgeEvidence).mockClear();
+    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", snapshot: demoSnapshot });
+    const execute = tools.getBusinessServices!.execute! as (input: object, options: object) => Promise<unknown>;
+    const result = await execute({}, { toolCallId: "1", messages: [] }) as { services: unknown[]; knowledge?: unknown };
+    expect(result.services.length).toBeGreaterThan(0);
+    expect(result.knowledge).toBeUndefined();
+    expect(searchKnowledgeEvidence).not.toHaveBeenCalled();
   });
 });
 

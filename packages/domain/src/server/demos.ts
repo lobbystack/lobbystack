@@ -2,7 +2,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 
 import { and, desc, eq, sql } from "drizzle-orm";
 
-import { businessContextSnapshots, businessMemberships, businesses, calls, enqueueOutbox, knowledgeDocuments, prospectDemos, receptionistProfiles, services, staff, staffServiceAssignments, users, websiteIngestionJobs, withBusinessTransaction } from "@lobbystack/db";
+import { businessContextSnapshots, businessMemberships, businesses, calls, enqueueOutbox, knowledgeDocuments, prospectDemos, receptionistProfiles, services, staff, staffServiceAssignments, users, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 
@@ -344,7 +344,17 @@ export async function revokeProspectDemo(context: DomainContext, input: { operat
     if (!demo) throw new Error("Prospect demo not found.");
     if (demo.status === "claimed") throw new Error("Claimed prospect demos cannot be revoked.");
     await tx.update(prospectDemos).set({ status: "revoked", updatedAt: new Date() }).where(eq(prospectDemos.id, demo.id));
+    await detachProspectDemoOperator(tx, businessId);
   });
+}
+
+/**
+ * Closing a demo takes it out of the operator's workspaces: the operator's
+ * membership is marked removed and its active business is cleared if it points
+ * here. Demo listing and status resolve by operator_user_id, so they keep working.
+ */
+async function detachProspectDemoOperator(tx: DatabaseTransaction, businessId: string): Promise<void> {
+  await tx.execute(sql`select app.detach_prospect_demo_operator(${businessId}::uuid)`);
 }
 
 export async function expireProspectDemos(context: DomainContext): Promise<number> {
@@ -418,11 +428,16 @@ export async function claimProspectDemo(
         target: [businessMemberships.businessId, businessMemberships.userId],
         set: { role: "business_owner", status: "active", updatedAt: new Date() },
       });
+      // The business now belongs to the prospect, so the operator leaves its
+      // team entirely. prospect_demos keeps the operator and claimant lineage.
       if (demo.operatorUserId !== input.userId) {
         await tx.delete(businessMemberships).where(and(eq(businessMemberships.businessId, businessId), eq(businessMemberships.userId, demo.operatorUserId)));
       }
       await tx.update(businesses).set({ onboardingStage: "create_business", updatedAt: new Date() }).where(eq(businesses.id, businessId));
       await tx.update(prospectDemos).set({ status: "claimed", claimedAt: new Date(), claimedByUserId: input.userId, updatedAt: new Date() }).where(eq(prospectDemos.id, demo.id));
+      // The operator's users row is outside this claimant's RLS scope; the
+      // resolver clears its active business if it still points at this demo.
+      await detachProspectDemoOperator(tx, businessId);
       await tx.update(users).set({ activeBusinessId: businessId, updatedAt: new Date() }).where(eq(users.id, input.userId));
       return { businessId, status: "claimed" as const };
     });

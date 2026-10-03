@@ -4,6 +4,8 @@ import { jobEnvelopeSchema, jobQueues, jobTypes, type JobEnvelope, type JobQueue
 import { Queue, type JobsOptions, type QueueOptions, type WorkerOptions } from "bullmq";
 import Redis from "ioredis";
 
+import { logRedisErrors } from "./redisErrors";
+
 export { jobEnvelopeSchema, jobQueues, jobTypes } from "@lobbystack/contracts";
 export type { JobEnvelope, JobQueue, JobType } from "@lobbystack/contracts";
 
@@ -25,6 +27,7 @@ export const queueForJobType: Record<JobType, JobQueue> = {
   "knowledge.indexDocument": "bulk",
   "knowledge.reindexBusiness": "bulk",
   "knowledge.reembedBusiness": "bulk",
+  "business.generateSummary": "bulk",
   "snapshot.refresh": "default",
   "notification.dispatch": "default",
   "notification.dailySummary": "maintenance",
@@ -64,14 +67,14 @@ export type RedisClientOptions = {
 };
 
 const DEFAULT_REDIS_URL = "redis://127.0.0.1:6379";
-
 export function createRedisConnection(options: RedisClientOptions = {}): Redis {
-  return new Redis(options.url ?? process.env.REDIS_URL ?? DEFAULT_REDIS_URL, {
+  const connectionName = `${options.prefix ?? process.env.REDIS_PREFIX ?? "lobbystack"}:client`;
+  return logRedisErrors(new Redis(options.url ?? process.env.REDIS_URL ?? DEFAULT_REDIS_URL, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
     lazyConnect: true,
-    connectionName: `${options.prefix ?? process.env.REDIS_PREFIX ?? "lobbystack"}:client`,
-  });
+    connectionName,
+  }), connectionName);
 }
 
 export function createQueue(
@@ -137,3 +140,4 @@ export function isKnownJobType(value: string): value is JobType {
 }
 
 export * from "./voicePresence";
+export { logRedisErrors } from "./redisErrors";
