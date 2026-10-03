@@ -129,7 +129,7 @@ describe("createLiveCallHandler", () => {
     expect(controller.endSession).not.toHaveBeenCalled();
     (controller.options.onTimeout as (reason: string) => void)("silence_timeout");
     expect(controller.endSession).toHaveBeenCalled();
-    await expect((controller.options.setup as Promise<{ language: string }>)).resolves.toMatchObject({ greeting: "Hi", language: "English" });
+    await expect((controller.options.setup as Promise<{ language: string }>)).resolves.toMatchObject({ greeting: "Hi" });
   });
 });
 

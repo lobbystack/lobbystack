@@ -1,7 +1,7 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, liveLanguage, type AgentChannel, type CallControl, type LiveCallSetup, type LiveCallSummary } from "@lobbystack/agent-core";
+import { closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, type AgentChannel, type CallControl, type LiveCallSetup, type LiveCallSummary } from "@lobbystack/agent-core";
 import {
   blockLiveCaller,
   finishLiveCall,
@@ -268,7 +268,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
         },
         directToolAnswers: true,
       });
-      return { agent, greeting: snapshot.greeting, language: liveLanguage(snapshot) };
+      return { agent, greeting: snapshot.greeting };
     });
 
     const finish = async (summary: LiveCallSummary) => {

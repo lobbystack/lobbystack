@@ -5,6 +5,7 @@ import { SidebandWS } from "openai/resources/live/sideband/ws";
 
 import type { ReceptionistAgent } from "../agent";
 import { DIRECT_ANSWER_TOOLS, directToolAnswer, fitToAppend, type DirectAnswerStep } from "./directAnswer";
+import { greetingCommand } from "./greeting";
 import { LiveLatencyTracker, type LiveCallLatency } from "./latency";
 
 type Turn = { role: "caller" | "receptionist"; text: string; endMs: number };
@@ -62,11 +63,15 @@ export type LiveCallTurn = { sequence: number; speaker: "caller" | "assistant"; 
 export type LiveCallTimeout = "silence_timeout" | "duration_limit";
 
 export type GreetingEvent = {
-  /** "unspoken": acknowledged, but no greeting words followed in time. */
-  step: "sent" | "acknowledged" | "spoken" | "failed" | "unspoken";
+  /**
+   * "spoken": the receptionist's voice was heard; attempt 0 means the greeting
+   * in the session's starting history did it. "sent", "acknowledged" and
+   * "failed" track the fallback command.
+   */
+  step: "sent" | "acknowledged" | "spoken" | "failed";
   attempt: number;
-  /** What sent it: session.started, a late attach, or a retry after an error. */
-  trigger?: "session_started" | "late_attach" | "retry";
+  /** What sent the fallback command. */
+  trigger?: "fallback";
   /** Milliseconds since the worker attached to the call. */
   sinceAttachMs: number;
   error?: string;
@@ -75,10 +80,11 @@ export type GreetingEvent = {
 /** What the controller needs from the business. The worker may still be loading it when the call connects. */
 export type LiveCallSetup = {
   agent: ReceptionistAgent;
-  /** Spoken as soon as the call connects, so the caller doesn't have to speak first. */
+  /**
+   * The business greeting. GPT-Live speaks it from the session's starting
+   * history; the controller only sends it again as a fallback.
+   */
   greeting?: string;
-  /** The language to greet and speak in, such as "French", until the caller switches. */
-  language?: string;
 };
 
 export type LiveCallControllerOptions = {
@@ -103,17 +109,13 @@ export type LiveCallControllerOptions = {
 
 // The caller's last words can arrive just after the delegation event.
 const TRANSCRIPT_WAIT_MS = 300;
-// Past the sideband's 3-second replay window, session.started can't arrive.
-const LATE_ATTACH_MS = 3_500;
-const GREETING_ERROR_RETRY_MS = 500;
-// Acknowledged, yet no voice by then: GPT-Live didn't act on it. On staging
-// calls, a greeting GPT-Live did speak started under a second after the
-// acknowledgment.
-const GREETING_SPEECH_MS = 1_500;
+// GPT-Live speaks the greeting from the session's starting history about 2
+// seconds in. With no voice by this long after the worker sees the session
+// start, it sends the greeting command once more.
+const GREETING_FALLBACK_MS = 4_000;
 // Reflected output audio is 16-bit PCM at 24 kHz. A chunk this loud is voice;
 // silence on staging calls stayed far below it.
 const VOICE_RMS = 400;
-const MAX_GREETING_ATTEMPTS = 3;
 // Most answers take one or two seconds; past this the caller hears an update.
 const STILL_WORKING_MS = 4_000;
 // After session.close or a hangup, how long to wait for session.closed.
@@ -187,8 +189,7 @@ export class LiveCallController {
   private emittedTurns = 0;
   private silenceTimer: ReturnType<typeof setTimeout> | undefined;
   private durationTimer: ReturnType<typeof setTimeout> | undefined;
-  private lateAttachTimer: ReturnType<typeof setTimeout> | undefined;
-  private greetingRetryTimer: ReturnType<typeof setTimeout> | undefined;
+  private greetingFallbackTimer: ReturnType<typeof setTimeout> | undefined;
   private finalizeTimer: ReturnType<typeof setTimeout> | undefined;
   private started = false;
   private greetingAttempts = 0;
@@ -262,28 +263,19 @@ export class LiveCallController {
     socket.on("error", (error) => this.handleError(error));
     // The connection ended before session.closed: final usage is unconfirmed.
     socket.on("close", () => this.finish("sideband_closed"));
-    // GPT-Live waits for the caller by default. OpenAI's guide: send greeting
-    // instructions once after session.started, then match the acknowledgment
-    // and handle any error. The sideband replays the last 3 seconds of events,
-    // so an attach within 3 seconds still sees session.started.
+    // GPT-Live greets from the greeting command in the session's starting
+    // history (see session.ts). A command appended after session.started was
+    // often ignored on staging, so the worker only falls back to one when no
+    // voice follows. The sideband replays the last 3 seconds of events, so an
+    // attach within 3 seconds still sees session.started; the fallback timer
+    // also starts when the connection opens, for a later attach.
     socket.on("session.started", () => {
       if (this.started) return;
       this.started = true;
-      clearTimeout(this.lateAttachTimer);
       this.options.onStarted?.();
-      this.sendGreeting("session_started");
     });
-    // Attached after the replay window, so session.started never arrives: the
-    // session has been running for over 3 seconds, and it's safe to greet.
-    // The window counts from when the connection opened.
     (socket.socket as unknown as { on(type: "open", listener: () => void): void }).on("open", () => {
-      if (this.started || this.finished) return;
-      this.lateAttachTimer = setTimeout(() => {
-        if (this.started || this.finished) return;
-        this.started = true;
-        // Over 3 seconds in, the caller's audio is already flowing.
-        this.sendGreeting("late_attach");
-      }, LATE_ATTACH_MS);
+      this.greetingFallbackTimer = setTimeout(() => this.sendGreetingFallback(), GREETING_FALLBACK_MS);
     });
     this.resetSilenceTimer();
     if (this.options.maxDurationMs) this.durationTimer = setTimeout(() => this.options.onTimeout?.("duration_limit"), this.options.maxDurationMs);
@@ -300,17 +292,7 @@ export class LiveCallController {
     if (!clientEventId) return;
     const pending = this.pendingAppends.get(clientEventId);
     this.pendingAppends.delete(clientEventId);
-    if (pending?.kind !== "greeting" || this.greetingSpoken) return;
-    this.reportGreeting("acknowledged");
-    // OpenAI's guide: the acknowledgment confirms acceptance, not speech, so
-    // check for the greeting's words. GPT-Live sometimes accepts a greeting
-    // and stays silent; then it's sent again, unless the caller spoke first.
-    clearTimeout(this.greetingRetryTimer);
-    this.greetingRetryTimer = setTimeout(() => {
-      if (this.greetingSpoken || this.callerSpoke() || this.finished) return;
-      this.reportGreeting("unspoken");
-      this.sendGreeting("retry");
-    }, GREETING_SPEECH_MS);
+    if (pending?.kind === "greeting") this.reportGreeting("acknowledged");
   }
 
   // The caller said something, so a greeting would talk over them.
@@ -329,8 +311,6 @@ export class LiveCallController {
     if (!pending) return;
     if (pending.kind === "greeting") {
       this.reportGreeting("failed", undefined, error.message);
-      clearTimeout(this.greetingRetryTimer);
-      this.greetingRetryTimer = setTimeout(() => this.sendGreeting("retry"), GREETING_ERROR_RETRY_MS);
       return;
     }
     // A rejected answer leaves the caller in silence: send a short failure
@@ -348,22 +328,15 @@ export class LiveCallController {
     if (typeof endMs === "number") this.lastSpeechEndMs = Math.max(this.lastSpeechEndMs, endMs);
   }
 
-  private sendGreeting(trigger: NonNullable<GreetingEvent["trigger"]>): void {
-    if (!this.started || this.greetingSpoken || this.callerSpoke() || this.greetingAttempts >= MAX_GREETING_ATTEMPTS) return;
+  // One greeting command, when the greeting from the starting history wasn't heard.
+  private sendGreetingFallback(): void {
+    if (this.greetingSpoken || this.callerSpoke() || this.finished || this.greetingAttempts > 0) return;
     void this.ready.then((setup) => {
       const greeting = setup.greeting?.trim();
-      if (!greeting || this.finished || this.greetingSpoken || this.callerSpoke() || this.greetingAttempts >= MAX_GREETING_ATTEMPTS) return;
-      this.greetingAttempts += 1;
-      // OpenAI's guide: name the language, what to say, and to begin now, then listen.
-      const language = setup.language ? `in ${setup.language}` : "in the language of the greeting";
-      this.send({
-        type: "session.instructions.append",
-        delegation_id: null,
-        content: `Greet the caller now ${language}. Say exactly: "${greeting}" Then pause and listen.`,
-        // Each attempt gets its own id, so a retry is never mistaken for the first.
-        event_id: `greeting_${this.greetingAttempts}`,
-      }, { kind: "greeting" });
-      this.reportGreeting("sent", trigger);
+      if (!greeting || this.finished || this.greetingSpoken || this.callerSpoke()) return;
+      this.greetingAttempts = 1;
+      this.send({ type: "session.instructions.append", delegation_id: null, content: greetingCommand(greeting), event_id: "greeting_1" }, { kind: "greeting" });
+      this.reportGreeting("sent", "fallback");
     }, () => undefined);
   }
 
@@ -371,9 +344,8 @@ export class LiveCallController {
   private greetingDone(): void {
     if (this.greetingSpoken) return;
     this.greetingSpoken = true;
-    clearTimeout(this.greetingRetryTimer);
-    clearTimeout(this.lateAttachTimer);
-    if (this.greetingAttempts > 0) this.reportGreeting("spoken");
+    clearTimeout(this.greetingFallbackTimer);
+    this.reportGreeting("spoken");
   }
 
   private reportGreeting(step: GreetingEvent["step"], trigger?: GreetingEvent["trigger"], error?: string): void {
@@ -654,7 +626,7 @@ export class LiveCallController {
     // Without the sideband nobody answers delegations, so end the session
     // rather than leave the caller talking to it while OpenAI keeps billing.
     if (!sessionClosed && !this.finalizeTimer) this.endWithoutSideband();
-    for (const timer of [this.silenceTimer, this.durationTimer, this.greetingRetryTimer, this.lateAttachTimer, this.finalizeTimer]) clearTimeout(timer);
+    for (const timer of [this.silenceTimer, this.durationTimer, this.greetingFallbackTimer, this.finalizeTimer]) clearTimeout(timer);
     this.abort.abort();
     this.socket?.close({ code: 1000, reason: "session finished" });
     this.emitFinishedTurns(true);
