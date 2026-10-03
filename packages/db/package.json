@@ -39,13 +39,13 @@
     "@lobbystack/contracts": "workspace:*",
     "@lobbystack/telemetry": "workspace:*",
     "dotenv": "^17.3.1",
-    "drizzle-orm": "^0.45.2",
-    "pg": "^8.16.3",
+    "drizzle-orm": "^0.45.3",
+    "pg": "^8.23.1",
     "tsx": "^4.21.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "@types/pg": "^8.15.5",
+    "@types/pg": "^8.23.1",
     "drizzle-kit": "^0.31.8",
     "vitest": "^4.1.11"
   }
