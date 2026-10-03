@@ -755,7 +755,7 @@
       },
       "sms": {
         "title": "SMS",
-        "description": "Reciba alertas urgentes en su teléfono verificado.",
+        "description": "Reciba alertas por SMS.",
         "senderMissingDescription": "No disponible. Este espacio de trabajo no tiene remitente de SMS de alertas."
       }
     },

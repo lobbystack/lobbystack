@@ -755,7 +755,7 @@
       },
       "sms": {
         "title": "SMS",
-        "description": "Recevez les alertes urgentes sur votre téléphone vérifié.",
+        "description": "Recevez les alertes par SMS.",
         "senderMissingDescription": "Indisponible. Cet espace de travail n'a pas d'expéditeur SMS d'alertes."
       }
     },

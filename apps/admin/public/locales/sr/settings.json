@@ -755,7 +755,7 @@
       },
       "sms": {
         "title": "SMS",
-        "description": "Primajte hitna upozorenja na potvrđeni telefon.",
+        "description": "Primajte upozorenja putem SMS-a.",
         "senderMissingDescription": "Nije dostupno. Ovaj radni prostor nema pošiljaoca SMS upozorenja."
       }
     },

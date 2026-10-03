@@ -755,7 +755,7 @@
       },
       "sms": {
         "title": "SMS",
-        "description": "Receive urgent alerts on your verified phone.",
+        "description": "Receive alerts by SMS.",
         "senderMissingDescription": "Unavailable. This workspace has no alert SMS sender."
       }
     },
