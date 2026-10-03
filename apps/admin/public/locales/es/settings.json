@@ -755,9 +755,8 @@
       },
       "sms": {
         "title": "SMS",
-        "description": "Reciba alertas urgentes en su teléfono verificado.",
-        "unverifiedDescription": "Agregue y verifique un número de teléfono en su cuenta antes de activar las alertas por SMS.",
-        "senderMissingDescription": "Las alertas por SMS no están disponibles hasta que se configure un remitente de SMS de alerta para este espacio de trabajo."
+        "description": "Reciba alertas por SMS.",
+        "senderMissingDescription": "No disponible. Este espacio de trabajo no tiene remitente de SMS de alertas."
       }
     },
     "communication": {
@@ -797,11 +796,41 @@
     "systemIssues": {
       "title": "Problemas del sistema"
     },
-    "smsConsent": {
-      "title": "Activar alertas por SMS",
-      "description": "Confirme que desea que LobbyStack envíe alertas del espacio de trabajo a su número de teléfono verificado.",
+    "phoneVerification": {
+      "phone": {
+        "title": "Su número de móvil",
+        "consent": "Al enviar el código, acepta recibir alertas de LobbyStack por SMS. La frecuencia varía. Pueden aplicarse tarifas de mensajes y datos. Responda STOP para darse de baja, HELP para obtener ayuda."
+      },
+      "fields": {
+        "mobileNumber": "Número de móvil",
+        "country": "País"
+      },
       "cancel": "Cancelar",
-      "accept": "Acepto, activar SMS"
+      "sendCode": "Enviar código",
+      "sending": "Enviando código...",
+      "code": {
+        "title": "Introduzca el código",
+        "description": "Enviado al {{phone}}.",
+        "verifying": "Comprobando el código...",
+        "didntGet": "¿No lo recibió?",
+        "resend": "Reenviar",
+        "resending": "Reenviando...",
+        "changeNumber": "Usar otro número"
+      },
+      "errors": {
+        "invalidNumber": "Introduzca un número de móvil válido.",
+        "unreachable": "Las alertas llegan desde un número gratuito. Use un número de EE. UU. o Canadá.",
+        "senderMissing": "Este espacio de trabajo no tiene remitente de SMS de alertas.",
+        "cooldown": "Espere 30 segundos antes de pedir otro.",
+        "rateLimited": "Demasiados códigos. Vuelva a intentarlo en una hora.",
+        "sendFailed": "No se pudo enviar el código. Vuelva a intentarlo.",
+        "deliveryFailed": "No se pudo enviar un SMS a este número.",
+        "wrongCode": "Código incorrecto.",
+        "locked": "Demasiados códigos incorrectos. Pida uno nuevo.",
+        "expired": "El código caducó. Pida uno nuevo.",
+        "unavailable": "Este código ya no funciona. Pida uno nuevo.",
+        "checkFailed": "No se pudo comprobar el código. Vuelva a intentarlo."
+      }
     }
   },
   "secretReveal": {

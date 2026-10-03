@@ -755,9 +755,8 @@
       },
       "sms": {
         "title": "SMS",
-        "description": "Receive urgent alerts on your verified phone.",
-        "unverifiedDescription": "Add and verify a phone number on your account before enabling SMS alerts.",
-        "senderMissingDescription": "SMS alerts are unavailable until an alert SMS sender is configured for this workspace."
+        "description": "Receive alerts by SMS.",
+        "senderMissingDescription": "Unavailable. This workspace has no alert SMS sender."
       }
     },
     "communication": {
@@ -797,11 +796,41 @@
     "systemIssues": {
       "title": "System issues"
     },
-    "smsConsent": {
-      "title": "Enable SMS alerts",
-      "description": "Confirm that you want LobbyStack to send workspace alerts to your verified phone number.",
+    "phoneVerification": {
+      "phone": {
+        "title": "Your mobile number",
+        "consent": "By sending the code, you agree to get LobbyStack alerts by text. Frequency varies. Msg & data rates may apply. Reply STOP to opt out, HELP for help."
+      },
+      "fields": {
+        "mobileNumber": "Mobile number",
+        "country": "Country"
+      },
       "cancel": "Cancel",
-      "accept": "I agree, enable SMS"
+      "sendCode": "Send code",
+      "sending": "Sending code...",
+      "code": {
+        "title": "Enter the code",
+        "description": "Sent to {{phone}}.",
+        "verifying": "Checking code...",
+        "didntGet": "Didn't get it?",
+        "resend": "Resend",
+        "resending": "Resending...",
+        "changeNumber": "Use a different number"
+      },
+      "errors": {
+        "invalidNumber": "Enter a valid mobile number.",
+        "unreachable": "Alerts come from a toll-free number. Use a US or Canadian number.",
+        "senderMissing": "This workspace has no alert SMS sender.",
+        "cooldown": "Wait 30 seconds before asking again.",
+        "rateLimited": "Too many codes. Try again in an hour.",
+        "sendFailed": "Couldn't send the code. Try again.",
+        "deliveryFailed": "Couldn't text this number.",
+        "wrongCode": "Wrong code.",
+        "locked": "Too many wrong codes. Ask for a new one.",
+        "expired": "Code expired. Ask for a new one.",
+        "unavailable": "This code no longer works. Ask for a new one.",
+        "checkFailed": "Couldn't check the code. Try again."
+      }
     }
   },
   "secretReveal": {

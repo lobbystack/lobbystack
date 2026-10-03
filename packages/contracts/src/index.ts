@@ -250,6 +250,7 @@ export const jobTypes = [
   "privacy.deleteRecording",
   "privacy.cleanupPendingUpload",
   "phoneVerification.send",
+  "phoneVerification.sendCode",
   "phoneNumber.provision",
   "phoneNumber.reclaim",
   "prospectDemo.expire",

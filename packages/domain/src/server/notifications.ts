@@ -380,7 +380,8 @@ function buildDailySummary(input: { businessName: string; date: string; counts: 
   };
 }
 
-async function resolveOperatorSmsSender(tx: DatabaseTransaction, businessId: string): Promise<string | null> {
+/** The number that texts operator alerts: the shared alert sender in the cloud, or the business's own SMS number when self-hosted. */
+export async function resolveOperatorSmsSender(tx: DatabaseTransaction, businessId: string): Promise<string | null> {
   const account = (await tx.select({ plan: billingAccounts.plan }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1))[0];
   const business = (await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
   const selfHosted = account?.plan ? account.plan === "self_hosted_standard" : business?.deploymentMode !== "cloud";

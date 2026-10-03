@@ -94,12 +94,10 @@ test("service, rule and knowledge editors persist changes and enforce read-only 
     await page.goto(`${baseURL}/settings/notifications`);
     const smsSwitch = page.getByRole("switch", { name: settings.notifications.sources.sms.title, exact: true });
     await expect(smsSwitch).toBeEnabled();
+    // Consent comes from the phone step's disclosure; record it as that step would.
+    expect((await context.request.put(notificationUrl, { headers, data: { ...initialPreferences, smsEnabled: false, smsConsent: true } })).status()).toBe(200);
+    await page.reload();
     await smsSwitch.click();
-    await expect(dialog.getByRole("heading", { name: settings.notifications.smsConsent.title, exact: true })).toBeVisible();
-    await dialog.getByRole("button", { name: settings.notifications.smsConsent.cancel, exact: true }).click();
-    expect((await (await context.request.get(notificationUrl)).json()).smsConsent).toBe(false);
-    await smsSwitch.click();
-    await dialog.getByRole("button", { name: settings.notifications.smsConsent.accept, exact: true }).click();
     await expect(dialog).toBeHidden();
     await expect.poll(async () => (await (await context.request.get(notificationUrl)).json()).smsConsent).toBe(true);
     await page.reload();

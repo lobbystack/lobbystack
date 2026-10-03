@@ -7,6 +7,7 @@ import type { JobEnvelope } from "@lobbystack/contracts";
 import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteSentProductEventsBefore, expireProspectDemos, generateAffiliatePayoutRun, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markNotificationFailed, markNotificationSent, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, releaseNotificationDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, loadOperatorNotificationDelivery, markOperatorNotificationSent, queueDailyOperatorSummaries } from "@lobbystack/domain";
 import { cancelRetiredPhoneVerificationSend, queueOnboardingFollowupEmail } from "@lobbystack/domain";
+import { issueOperatorPhoneVerificationCode, markOperatorPhoneVerificationCodeSent, releaseOperatorPhoneVerificationCodeSend } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => {
@@ -28,6 +29,9 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     claimNotificationDelivery: vi.fn(),
     claimOperatorNotificationDelivery: vi.fn(),
     cancelRetiredPhoneVerificationSend: vi.fn(),
+    issueOperatorPhoneVerificationCode: vi.fn(),
+    markOperatorPhoneVerificationCodeSent: vi.fn(),
+    releaseOperatorPhoneVerificationCodeSend: vi.fn(),
     queueOnboardingFollowupEmail: vi.fn(),
     claimNumberProvisioning: vi.fn(),
     countPublishableOutboxMessages: vi.fn(),
@@ -133,6 +137,57 @@ describe("worker handlers", () => {
     expect(result).toEqual({ status: "skipped", entityId: attemptId });
     expect(cancelRetiredPhoneVerificationSend).toHaveBeenCalledWith(domain, { businessId, attemptId });
     expect(verifyPhone).not.toHaveBeenCalled();
+  });
+
+  describe("operator phone verification codes", () => {
+    const codeJob = (businessId: string, attemptId: string): JobEnvelope => ({ jobId: randomUUID(), type: "phoneVerification.sendCode", queue: "critical", businessId, payload: { attemptId }, trace: {}, idempotencyKey: `phone-code:${attemptId}`, scheduled: false });
+
+    it("texts the code from the restricted alert sender and marks it sent", async () => {
+      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
+      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550100", code: "482913" });
+      const alertSms = vi.fn().mockResolvedValue({ providerMessageId: "SMalert" }); const mainSms = vi.fn();
+      const result = await handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms: mainSms }, twilioAlerts: { from: "+14165550100", sendSms: alertSms } });
+      expect(result).toEqual({ status: "completed", entityId: attemptId });
+      expect(issueOperatorPhoneVerificationCode).toHaveBeenCalledWith(domain, { businessId, attemptId });
+      expect(alertSms).toHaveBeenCalledWith({ to: "+14165550123", from: "+14165550100", body: "LobbyStack verification code: 482913. It expires in 10 minutes." });
+      expect(mainSms).not.toHaveBeenCalled();
+      expect(markOperatorPhoneVerificationCodeSent).toHaveBeenCalledWith(domain, { businessId, attemptId });
+    });
+
+    it("uses the business's own number when it is the alert sender", async () => {
+      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
+      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550199", code: "482913" });
+      const alertSms = vi.fn(); const mainSms = vi.fn().mockResolvedValue({ providerMessageId: "SMmain" });
+      await handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms: mainSms }, twilioAlerts: { from: "+14165550100", sendSms: alertSms } });
+      expect(mainSms).toHaveBeenCalledWith(expect.objectContaining({ from: "+14165550199" }));
+      expect(alertSms).not.toHaveBeenCalled();
+    });
+
+    it("skips an attempt that was replaced before the send", async () => {
+      const attemptId = randomUUID(); const sendSms = vi.fn();
+      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue(null);
+      await expect(handleJob(codeJob(randomUUID(), attemptId), { domain: { db: undefined as never }, twilio: { sendSms } })).resolves.toEqual({ status: "skipped", entityId: attemptId });
+      expect(sendSms).not.toHaveBeenCalled();
+    });
+
+    it("fails the attempt without a retry when Twilio rejects the number", async () => {
+      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
+      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550100", code: "482913" });
+      const sendSms = vi.fn().mockRejectedValue(Object.assign(new Error("unreachable"), { code: 21614 }));
+      await expect(handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms } }, { isFinalAttempt: false })).resolves.toEqual({ status: "skipped", entityId: attemptId });
+      expect(releaseOperatorPhoneVerificationCodeSend).toHaveBeenCalledWith(domain, { businessId, attemptId, retry: false, error: "Twilio error 21614." });
+      expect(markOperatorPhoneVerificationCodeSent).not.toHaveBeenCalled();
+    });
+
+    it("requeues a transient failure until the final attempt", async () => {
+      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
+      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550100", code: "482913" });
+      const sendSms = vi.fn().mockRejectedValue(new Error("timeout"));
+      await expect(handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms } }, { isFinalAttempt: false })).rejects.toThrow("timeout");
+      expect(releaseOperatorPhoneVerificationCodeSend).toHaveBeenLastCalledWith(domain, { businessId, attemptId, retry: true, error: "Verification delivery failed." });
+      await expect(handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms } }, { isFinalAttempt: true })).rejects.toThrow("timeout");
+      expect(releaseOperatorPhoneVerificationCodeSend).toHaveBeenLastCalledWith(domain, { businessId, attemptId, retry: false, error: "Verification delivery failed." });
+    });
   });
 
   it("reconciles an owned Twilio number and puts it on the SIP trunk", async () => {
