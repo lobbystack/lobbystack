@@ -755,7 +755,7 @@
       },
       "sms": {
         "title": "SMS",
-        "description": "Alertas urgentes por SMS. Pueden aplicarse tarifas de mensajes y datos. Responda STOP para darse de baja.",
+        "description": "Reciba alertas urgentes en su teléfono verificado.",
         "senderMissingDescription": "No disponible. Este espacio de trabajo no tiene remitente de SMS de alertas."
       }
     },

@@ -755,7 +755,7 @@
       },
       "sms": {
         "title": "SMS",
-        "description": "Hitna upozorenja putem SMS-a. Mogu se naplatiti troškovi poruka i podataka. Odgovorite STOP da biste se odjavili.",
+        "description": "Primajte hitna upozorenja na potvrđeni telefon.",
         "senderMissingDescription": "Nije dostupno. Ovaj radni prostor nema pošiljaoca SMS upozorenja."
       }
     },

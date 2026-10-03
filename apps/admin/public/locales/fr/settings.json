@@ -755,7 +755,7 @@
       },
       "sms": {
         "title": "SMS",
-        "description": "Alertes urgentes par SMS. Des frais de messagerie et de données peuvent s'appliquer. Répondez STOP pour vous désabonner.",
+        "description": "Recevez les alertes urgentes sur votre téléphone vérifié.",
         "senderMissingDescription": "Indisponible. Cet espace de travail n'a pas d'expéditeur SMS d'alertes."
       }
     },

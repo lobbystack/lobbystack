@@ -755,7 +755,7 @@
       },
       "sms": {
         "title": "SMS",
-        "description": "Urgent alerts by text. Msg & data rates may apply. Reply STOP to opt out.",
+        "description": "Receive urgent alerts on your verified phone.",
         "senderMissingDescription": "Unavailable. This workspace has no alert SMS sender."
       }
     },

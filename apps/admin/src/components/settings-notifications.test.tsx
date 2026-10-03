@@ -14,10 +14,10 @@ afterEach(async () => {
   await new Promise(resolve => setTimeout(resolve, 60));
   clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals();
 });
-function setup(reason: "phone_unverified" | "sender_missing" | null = null, widgetOnly = false) {
+function setup(reason: "phone_unverified" | "sender_missing" | null = null, widgetOnly = false, smsConsent = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business-1", active: true }] });
-  let preferences = { emailEnabled: true, smsEnabled: false, smsConsent: false, canUseSms: reason === null, smsUnavailableReason: reason, eventPreferences: Object.fromEntries(["voiceMessage", "pausedSms", "widgetChat", "smsFailed", "calendarSync", "transferFailed", "aiReplyFailed", "webhookDisabled"].map(key => [key, { email: true, sms: false }])), dailySummaryEnabled: false, dailySummarySendTime: null };
+  let preferences = { emailEnabled: true, smsEnabled: false, smsConsent, canUseSms: reason === null, smsUnavailableReason: reason, eventPreferences: Object.fromEntries(["voiceMessage", "pausedSms", "widgetChat", "smsFailed", "calendarSync", "transferFailed", "aiReplyFailed", "webhookDisabled"].map(key => [key, { email: true, sms: false }])), dailySummaryEnabled: false, dailySummarySendTime: null };
   client.setQueryData(["notification-preferences", "business-1"], preferences);
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (url.startsWith("/api/account/phone-verification/check")) return Response.json({ approved: true, status: "approved" });
@@ -81,8 +81,14 @@ describe("original notification controls", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.getByRole("switch", { name: "notifications.sources.sms.title" }).getAttribute("aria-checked")).toBe("false");
   });
-  it("turns SMS on for a verified phone with no extra step, recording consent", async () => {
+  it("asks a verified operator without consent on record through the phone step", async () => {
     const fetchMock = setup();
+    await userEvent.click(await screen.findByRole("switch", { name: "notifications.sources.sms.title" }));
+    expect(await screen.findByText("notifications.phoneVerification.phone.consent")).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it("turns SMS on with no extra step when consent is already on record", async () => {
+    const fetchMock = setup(null, false, true);
     await userEvent.click(await screen.findByRole("switch", { name: "notifications.sources.sms.title" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
