@@ -240,7 +240,6 @@
       "label": "Opis firme",
       "hint": "Šta Vaš recepcioner govori pozivaocima o firmi.",
       "placeholder": "Na primer: Porodična klinika Maple u Torontu nudi preglede, vakcinacije i fizioterapiju.",
-      "operator": "Ovaj opis ste napisali Vi, pa ga AI neće menjati.",
       "empty": "Dodajte svoj veb-sajt ili dokumente u odeljku Znanje i AI će ga napisati umesto Vas.",
       "regenerate": "Napiši ponovo pomoću AI",
       "regenerating": "AI ga ponovo piše na osnovu Vašeg znanja. Proverite ponovo za minut."
@@ -328,7 +327,9 @@
     "deactivateEntry": "Deaktiviraj unos",
     "upload": "Otpremi",
     "uploading": "Otpremanje…",
-    "saveFailed": "Nismo mogli da sačuvamo podešavanja. Pokušajte ponovo."
+    "saveFailed": "Nismo mogli da sačuvamo podešavanja. Pokušajte ponovo.",
+    "edit": "Izmeni",
+    "cancel": "Otkaži"
   },
   "loading": {
     "workspace": "Učitavanje radnog prostora…",

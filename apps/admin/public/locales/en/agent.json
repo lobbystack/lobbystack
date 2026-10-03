@@ -240,7 +240,6 @@
       "label": "Business summary",
       "hint": "What your receptionist tells callers about the business.",
       "placeholder": "For example: Maple Family Clinic is a family practice in Toronto offering checkups, vaccinations and physiotherapy.",
-      "operator": "You wrote this, so AI won't change it.",
       "empty": "Add your website or documents in Knowledge, and AI writes this for you.",
       "regenerate": "Rewrite with AI",
       "regenerating": "AI is rewriting it from your knowledge. Check back in a minute."
@@ -328,7 +327,9 @@
     "deactivateEntry": "Deactivate entry",
     "upload": "Upload",
     "uploading": "Uploading…",
-    "saveFailed": "We couldn't save your settings. Please try again."
+    "saveFailed": "We couldn't save your settings. Please try again.",
+    "edit": "Edit",
+    "cancel": "Cancel"
   },
   "loading": {
     "workspace": "Loading workspace…",

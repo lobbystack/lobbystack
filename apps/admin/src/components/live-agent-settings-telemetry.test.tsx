@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -50,12 +50,13 @@ describe("agent settings telemetry", () => {
 
   it("starts the summary empty while it's the sign-up placeholder, and saves one a person writes", async () => {
     const fetchMock = setup();
-    const field = await screen.findByPlaceholderText("agent:fields.summary.placeholder");
+    expect(await screen.findByText("agent:fields.summary.empty")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "agent:actions.edit" }));
+    const dialog = await screen.findByRole("dialog");
+    const field = within(dialog).getByPlaceholderText("agent:fields.summary.placeholder");
     expect((field as HTMLTextAreaElement).value).toBe("");
-    expect(screen.getByText("agent:fields.summary.empty")).toBeTruthy();
     await userEvent.type(field, "Maple Family Clinic offers checkups in Toronto.");
-    const saveButtons = screen.getAllByRole("button", { name: "agent:actions.save" });
-    await userEvent.click(saveButtons[1]!);
+    await userEvent.click(within(dialog).getByRole("button", { name: "agent:actions.save" }));
     await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "summary" }));
     const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
     expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ businessId: "business", summary: "Maple Family Clinic offers checkups in Toronto." });
@@ -63,8 +64,9 @@ describe("agent settings telemetry", () => {
 
   it("lets a person hand their summary back to AI", async () => {
     const fetchMock = setup({ summary: "Written by hand.", summarySource: "operator" });
-    expect(await screen.findByText("agent:fields.summary.operator")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "agent:fields.summary.regenerate" }));
+    expect(await screen.findByText("Written by hand.")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "agent:actions.edit" }));
+    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "agent:fields.summary.regenerate" }));
     await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "summary_regenerated" }));
     const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
     expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ businessId: "business", regenerateSummary: true });

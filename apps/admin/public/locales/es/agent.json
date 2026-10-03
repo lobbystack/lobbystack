@@ -240,7 +240,6 @@
       "label": "Resumen del negocio",
       "hint": "Lo que su recepcionista dice a quienes llaman sobre el negocio.",
       "placeholder": "Por ejemplo: Clínica Familiar Maple es una clínica de Toronto que ofrece chequeos, vacunas y fisioterapia.",
-      "operator": "Usted escribió este resumen, así que la IA no lo cambiará.",
       "empty": "Agregue su sitio web o sus documentos en Conocimiento y la IA lo escribirá por usted.",
       "regenerate": "Reescribir con IA",
       "regenerating": "La IA lo está reescribiendo a partir de su conocimiento. Vuelva en un minuto."
@@ -328,7 +327,9 @@
     "deactivateEntry": "Desactivar entrada",
     "upload": "Subir",
     "uploading": "Subiendo…",
-    "saveFailed": "No pudimos guardar sus ajustes. Inténtelo de nuevo."
+    "saveFailed": "No pudimos guardar sus ajustes. Inténtelo de nuevo.",
+    "edit": "Editar",
+    "cancel": "Cancelar"
   },
   "loading": {
     "workspace": "Cargando espacio de trabajo…",

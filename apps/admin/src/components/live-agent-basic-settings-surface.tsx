@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Item,
   ItemActions,
@@ -92,11 +93,14 @@ export function AgentBasicSettingsPage({
     await queryClient.invalidateQueries({ queryKey: ["agent-settings", businessId] });
   }
   const persistedProfile = configuration?.profile;
+  // The sign-up placeholder isn't a summary, so it shows as empty.
+  const savedSummary = persistedProfile && persistedProfile.summarySource !== "placeholder" ? persistedProfile.summary : "";
 
   const [greeting, setGreeting] = useState("");
   const [summary, setSummary] = useState("");
   const [summaryStatus, setSummaryStatus] = useState<string | null>(null);
   const [isSummarySaving, setIsSummarySaving] = useState(false);
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [defaultLocale, setDefaultLocale] = useState<RuntimeLocale>("en");
   const [transferNumber, setTransferNumber] = useState("");
   const [transferNumberInputValue, setTransferNumberInputValue] = useState("");
@@ -213,6 +217,7 @@ export function AgentBasicSettingsPage({
       await saveProfile(regenerate ? { businessId, regenerateSummary: true } : { businessId, summary: summary.trim() });
       telemetry.track("web.agent.settings_saved", { businessId, setting: regenerate ? "summary_regenerated" : "summary" });
       setSummaryStatus(regenerate ? t("agent:fields.summary.regenerating") : t("agent:actions.saved"));
+      setIsSummaryOpen(false);
     } catch {
       toast.error(t("agent:actions.saveFailed"));
     } finally {
@@ -373,54 +378,58 @@ export function AgentBasicSettingsPage({
             >
               <ItemContent>
                 <ItemTitle>{t("agent:fields.summary.label")}</ItemTitle>
-                <ItemDescription>{t("agent:fields.summary.hint")}</ItemDescription>
-                <div className="pt-2">
-                  {isLoadingConfiguration ? (
-                    <Skeleton className="h-20 w-full rounded-md sm:max-w-xl" />
-                  ) : (
-                    <Textarea
-                      className="w-full sm:max-w-xl"
-                      disabled={!canManageTenant}
-                      id="agent-summary"
-                      maxLength={2000}
-                      onChange={(event) => {
-                        setSummary(event.target.value);
-                        setSummaryStatus(null);
-                      }}
-                      placeholder={t("agent:fields.summary.placeholder")}
-                      rows={3}
-                      value={summary}
-                    />
-                  )}
-                </div>
-                {summaryStatus || persistedProfile?.summarySource !== "generated" ? (
-                  <ItemDescription>
-                    {summaryStatus ?? t(persistedProfile?.summarySource === "operator" ? "agent:fields.summary.operator" : "agent:fields.summary.empty")}
+                {isLoadingConfiguration ? (
+                  <Skeleton className="h-5 w-full rounded-md sm:max-w-xl" />
+                ) : (
+                  <ItemDescription className="line-clamp-2" data-testid="summary-preview">
+                    {savedSummary || t("agent:fields.summary.empty")}
                   </ItemDescription>
-                ) : null}
+                )}
+                {summaryStatus ? <ItemDescription>{summaryStatus}</ItemDescription> : null}
               </ItemContent>
               <ItemActions className="w-full justify-end self-center sm:w-auto">
-                {persistedProfile?.summarySource === "operator" ? (
-                  <Button
-                    disabled={isLoadingConfiguration || isSummarySaving || !canManageTenant}
-                    onClick={() => void saveSummary(true)}
-                    size="sm"
-                    type="button"
-                    variant="ghost"
-                  >
-                    {t("agent:fields.summary.regenerate")}
-                  </Button>
-                ) : null}
                 <Button
-                  disabled={isLoadingConfiguration || isSummarySaving || !persistedProfile || !canManageTenant || !summary.trim()}
-                  onClick={() => void saveSummary(false)}
+                  disabled={isLoadingConfiguration || !persistedProfile || !canManageTenant}
+                  onClick={() => {
+                    setSummary(savedSummary);
+                    setSummaryStatus(null);
+                    setIsSummaryOpen(true);
+                  }}
                   size="sm"
                   type="button"
                   variant="outline"
                 >
-                  {isSummarySaving ? t("agent:actions.saving") : t("agent:actions.save")}
+                  {t("agent:actions.edit")}
                 </Button>
               </ItemActions>
+              <Dialog onOpenChange={(open) => { if (!open && !isSummarySaving) setIsSummaryOpen(false); }} open={isSummaryOpen}>
+                <DialogContent className="flex flex-col gap-4 sm:max-w-lg">
+                  <DialogHeader><DialogTitle>{t("agent:fields.summary.label")}</DialogTitle></DialogHeader>
+                  <Textarea
+                    autoFocus
+                    disabled={!canManageTenant || isSummarySaving}
+                    id="agent-summary"
+                    maxLength={2000}
+                    onChange={(event) => setSummary(event.target.value)}
+                    placeholder={t("agent:fields.summary.placeholder")}
+                    rows={6}
+                    value={summary}
+                  />
+                  <DialogFooter className="sm:justify-between">
+                    {persistedProfile?.summarySource === "operator" ? (
+                      <Button disabled={isSummarySaving || !canManageTenant} onClick={() => void saveSummary(true)} type="button" variant="ghost">
+                        {t("agent:fields.summary.regenerate")}
+                      </Button>
+                    ) : <span />}
+                    <div className="flex gap-2">
+                      <Button disabled={isSummarySaving} onClick={() => setIsSummaryOpen(false)} type="button" variant="outline">{t("agent:actions.cancel")}</Button>
+                      <Button disabled={isSummarySaving || !canManageTenant || !summary.trim()} onClick={() => void saveSummary(false)} type="button">
+                        {isSummarySaving ? t("agent:actions.saving") : t("agent:actions.save")}
+                      </Button>
+                    </div>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </Item>
 
             <Item
