@@ -119,20 +119,25 @@ export async function checkOpening(
  * answer then returns that booking instead of failing as taken.
  */
 export async function findCallerBooking(context: DomainContext, input: { businessId: string; serviceName: string; startsAt: string; contactPhone: string }) {
-  const service = await resolveActiveService(context, input.businessId, input.serviceName);
-  if (!service) return undefined;
   const startsAt = new Date(input.startsAt);
   if (Number.isNaN(startsAt.getTime())) return undefined;
+  // One query, matching the service the way resolveActiveService does, so a
+  // booking doesn't pay an extra round trip for the lookup.
+  const normalized = input.serviceName.trim().toLowerCase();
   const existing = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    return (await tx.select({ id: appointments.id }).from(appointments).innerJoin(contacts, eq(appointments.contactId, contacts.id)).where(and(
-      eq(appointments.businessId, input.businessId),
-      eq(appointments.serviceId, service.id),
-      eq(appointments.startsAt, startsAt),
-      eq(appointments.status, "confirmed"),
-      eq(contacts.phone, input.contactPhone),
-    )).limit(1))[0];
+    return (await tx.select({ id: appointments.id, serviceName: services.name }).from(appointments)
+      .innerJoin(contacts, eq(appointments.contactId, contacts.id))
+      .innerJoin(services, eq(appointments.serviceId, services.id))
+      .where(and(
+        eq(appointments.businessId, input.businessId),
+        eq(services.active, true),
+        or(eq(services.slug, normalized), ilike(services.name, input.serviceName.trim())),
+        eq(appointments.startsAt, startsAt),
+        eq(appointments.status, "confirmed"),
+        eq(contacts.phone, input.contactPhone),
+      )).limit(1))[0];
   });
-  return existing ? { ok: true as const, appointmentId: existing.id, serviceName: service.name, startsAt: input.startsAt, alreadyBooked: true as const } : undefined;
+  return existing ? { ok: true as const, appointmentId: existing.id, serviceName: existing.serviceName, startsAt: input.startsAt, alreadyBooked: true as const } : undefined;
 }
 
 export async function bookForCaller(

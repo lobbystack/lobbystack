@@ -131,8 +131,11 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
   if (!snapshot) {
     if (loaded.status === "rejected") console.error("[live] couldn't load the snapshot for an incoming call", loaded.reason instanceof Error ? loaded.reason.message : loaded.reason);
     else console.warn("[live] no published snapshot for incoming call", JSON.stringify({ sessionId: input.sessionId, businessId: input.businessId }));
+    // A retried delivery may belong to a call the first delivery already
+    // answered, so only a first delivery rejects.
+    if (call.duplicate) return new NextResponse(null, { status: 503 });
     await client.live.sessions.reject(input.sessionId, { status_code: 503 });
-    if (!call.duplicate) await finishLiveCall(domain, { businessId: input.businessId, callId: call.callId, seconds: 0, end: "setup_failed" });
+    await finishLiveCall(domain, { businessId: input.businessId, callId: call.callId, seconds: 0, end: "setup_failed" });
     return new NextResponse(null, { status: 200 });
   }
   const attach = () => attachWorkerToLiveSession({ sessionId: input.sessionId, businessId: input.businessId, callId: call.callId, conversationId: call.conversationId, channel: "voice", ...(input.from ? { callerPhone: input.from } : {}) });

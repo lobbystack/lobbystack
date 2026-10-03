@@ -50,6 +50,9 @@ const RECORDING_ATTEMPTS = 12;
 const RECORDING_RETRY_MS = 5_000;
 // One worker answers each session. The lock outlives a crashed owner by this long.
 const ATTACH_LOCK_MS = 30_000;
+// The Redis client queues commands while disconnected instead of failing, so
+// an attach waits this long for the lock at most, then goes ahead without it.
+const ATTACH_LOCK_WAIT_MS = 500;
 
 // OpenAI bills 15 seconds when it creates a WebRTC session and credits it
 // against talk time once the session runs, so a browser call never costs less.
@@ -199,11 +202,15 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
     if (active.has(request.sessionId) || starting.has(request.sessionId)) return;
     // Another worker instance may already hold this session's sideband.
     if (input.attachLock) {
-      const acquired = await input.attachLock.set(attachLockKey(request.sessionId), presenceOwner, "PX", ATTACH_LOCK_MS, "NX").catch((error: unknown) => {
+      let waitTimer: ReturnType<typeof setTimeout> | undefined;
+      const acquired = await Promise.race([
+        input.attachLock.set(attachLockKey(request.sessionId), presenceOwner, "PX", ATTACH_LOCK_MS, "NX"),
+        new Promise<never>((_resolve, reject) => { waitTimer = setTimeout(() => reject(new Error("Redis didn't answer in time.")), ATTACH_LOCK_WAIT_MS); }),
+      ]).catch((error: unknown) => {
         // Without Redis, fall back to this process's own check.
         logError(request.sessionId, "attach lock unavailable")(error);
         return "OK";
-      });
+      }).finally(() => clearTimeout(waitTimer));
       if (acquired !== "OK") return;
     }
     starting.add(request.sessionId);

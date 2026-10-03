@@ -100,6 +100,21 @@ describe("POST /api/webhooks/openai/live", () => {
     expect(mocks.finishLiveCall).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ callId: "call_1", end: "setup_failed" }));
   });
 
+  it("leaves an already answered call alone when a retried delivery can't load the snapshot", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    mocks.execute.mockResolvedValue({ rows: [{ business_id: "biz_1" }] });
+    mocks.snapshot.mockRejectedValue(new Error("cache unavailable"));
+    mocks.startLivePhoneCall.mockResolvedValue({ callId: "call_1", conversationId: "conv_1", duplicate: true, blocked: false });
+    mocks.unwrap.mockResolvedValue({ type: "live.transport.incoming", created_at: Math.floor(Date.now() / 1000), data: { session_id: "live_1", sip_headers: [{ name: "Diversion", value: "<sip:+15815550100@example.com>" }] } });
+
+    const response = await POST(new Request("https://admin.lobbystack.test/api/webhooks/openai/live", { method: "POST", body: "{}" }));
+
+    expect(response.status).toBe(503);
+    expect(mocks.reject).not.toHaveBeenCalled();
+    expect(mocks.finishLiveCall).not.toHaveBeenCalled();
+  });
+
   it("leaves the call alone when the number lookup fails", async () => {
     mocks.execute.mockRejectedValue(new Error("connection terminated"));
     vi.spyOn(console, "error").mockImplementation(() => undefined);

@@ -6,7 +6,7 @@ import { hasSummarizableTranscript, type BusinessSummarizer, type CallSummarizer
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { getPolarMeteredUsagePayload, permanentSmsErrorCode, type BillingUsageKind } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
-import { enqueueBusinessSummaryRefresh, loadBusinessSummaryInput, saveGeneratedBusinessSummary } from "@lobbystack/domain";
+import { enqueueBusinessSummaryRefresh, loadBusinessSummaryInput, resetGeneratedBusinessSummary, saveGeneratedBusinessSummary } from "@lobbystack/domain";
 import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationFailed, markNotificationSent, markNotificationSkipped, cancelRetiredPhoneVerificationSend, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, correctAlertSmsUsage, estimateSmsSegments, loadOperatorNotificationDelivery, markFeedbackEmailFailed, markFeedbackEmailSent, markOperatorNotificationSent, markOperatorNotificationSkipped, queueDailyOperatorSummaries, refreshUnitEconomicsMonth, releaseOperatorNotificationDelivery, reserveAlertSmsUsage } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
@@ -985,7 +985,12 @@ async function generateBusinessSummary(dependencies: WorkerDependencies, input: 
   const summarizer = dependencies.businessSummarizer;
   if (!summarizer) return { status: "skipped", entityId: input.businessId };
   const summaryInput = await loadBusinessSummaryInput(dependencies.domain, { businessId: input.businessId });
-  if (!summaryInput || summaryInput.summarySource === "operator" || !summaryInput.sources.length) return { status: "skipped", entityId: input.businessId };
+  if (!summaryInput || summaryInput.summarySource === "operator") return { status: "skipped", entityId: input.businessId };
+  if (!summaryInput.sources.length) {
+    // Every source is gone: a generated summary would describe removed content.
+    const reset = summaryInput.summarySource === "generated" && await resetGeneratedBusinessSummary(dependencies.domain, { businessId: input.businessId, businessName: summaryInput.businessName });
+    return { status: reset ? "completed" : "skipped", entityId: input.businessId };
+  }
   if (!input.force && summaryInput.summarySource === "generated" && summaryInput.fingerprint === summaryInput.currentFingerprint) return { status: "skipped", entityId: input.businessId };
   const startedAt = performance.now();
   let summary: string | null;

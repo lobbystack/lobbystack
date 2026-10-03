@@ -136,7 +136,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ sessionId, endToken: liveSessionEndToken(sessionId), sdp: live.transport.sdp, ...(call.maxDurationMs ? { maxDurationMs: call.maxDurationMs } : {}) }, { status: 201, headers: { ...cors, "server-timing": timing.header() } });
     } catch (error) {
       // The session exists at OpenAI; end it so nothing talks or bills without us.
-      await endLiveBrowserSession(sessionId).catch((endError: unknown) => console.error("[live] couldn't end a browser session after a failed start", endError instanceof Error ? endError.message : endError));
+      // The worker may be the reason the start failed, so OpenAI's own hangup
+      // is the fallback.
+      await endLiveBrowserSession(sessionId)
+        .catch(() => client.live.sessions.hangup(sessionId))
+        .catch((endError: unknown) => console.error("[live] couldn't end a browser session after a failed start", endError instanceof Error ? endError.message : endError));
       // OpenAI bills 15 seconds for creating a WebRTC session, even one that never starts.
       if (callId) await finishLiveCall(domain, { businessId: access.businessId, callId, seconds: WEBRTC_CREATION_SECONDS, measuredSeconds: 0, end: "setup_failed", channel: "web_voice" }).catch(() => undefined);
       if (access.prospectDemoId) await recordProspectDemoCallError(domain, { businessId: access.businessId, prospectDemoId: access.prospectDemoId, ...(callId ? { callId } : {}), reason: "web_call_start_failed" }).catch(() => undefined);

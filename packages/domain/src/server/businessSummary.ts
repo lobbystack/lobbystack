@@ -91,6 +91,29 @@ export async function loadBusinessSummaryInput(context: DomainContext, input: { 
   });
 }
 
+/**
+ * Puts the placeholder back when a generated summary has no sources left, so
+ * GPT-Live stops describing knowledge the business removed.
+ */
+export async function resetGeneratedBusinessSummary(context: DomainContext, input: { businessId: string; businessName: string }): Promise<boolean> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const updated = await tx.update(receptionistProfiles)
+      .set({ summary: `${input.businessName.trim()} uses LobbyStack to answer calls.`, summarySource: "placeholder", summaryFingerprint: null, summaryGeneratedAt: null, updatedAt: new Date() })
+      .where(and(eq(receptionistProfiles.businessId, input.businessId), eq(receptionistProfiles.summarySource, "generated")))
+      .returning({ id: receptionistProfiles.id });
+    if (!updated[0]) return false;
+    await enqueueOutbox(tx, {
+      topic: "snapshot.refresh",
+      businessId: input.businessId,
+      aggregateType: "receptionist_profile",
+      aggregateId: updated[0].id,
+      dedupeKey: `business-summary:${input.businessId}:snapshot:reset:${Date.now()}`,
+      payload: { businessId: input.businessId, reason: "summary_reset" },
+    });
+    return true;
+  });
+}
+
 /** Saves a generated summary unless an operator wrote one meanwhile, and refreshes the snapshot. */
 export async function saveGeneratedBusinessSummary(context: DomainContext, input: { businessId: string; summary: string; fingerprint: string }): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {

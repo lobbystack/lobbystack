@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { BusinessSummarizer } from "@lobbystack/agent-core";
 import type { JobEnvelope } from "@lobbystack/contracts";
-import { loadBusinessSummaryInput, recordAiGenerationEvent, saveGeneratedBusinessSummary, type BusinessSummaryInput } from "@lobbystack/domain";
+import { loadBusinessSummaryInput, recordAiGenerationEvent, resetGeneratedBusinessSummary, saveGeneratedBusinessSummary, type BusinessSummaryInput } from "@lobbystack/domain";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@lobbystack/domain")>();
@@ -12,6 +12,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     ...actual,
     loadBusinessSummaryInput: vi.fn(),
     saveGeneratedBusinessSummary: vi.fn(async () => true),
+    resetGeneratedBusinessSummary: vi.fn(async () => true),
     recordAiGenerationEvent: vi.fn(async () => "event"),
   };
 });
@@ -57,6 +58,15 @@ describe("business.generateSummary", () => {
     await expect(handleJob(job(randomUUID()), { domain, businessSummarizer })).resolves.toMatchObject({ status: "skipped" });
     expect(businessSummarizer.summarize).not.toHaveBeenCalled();
     expect(saveGeneratedBusinessSummary).not.toHaveBeenCalled();
+  });
+
+  it("puts the placeholder back when every source of a generated summary is gone", async () => {
+    const businessId = randomUUID();
+    vi.mocked(loadBusinessSummaryInput).mockResolvedValueOnce(summaryInput({ summarySource: "generated", sources: [] }));
+    const businessSummarizer = summarizer("unused");
+    await expect(handleJob(job(businessId), { domain, businessSummarizer })).resolves.toEqual({ status: "completed", entityId: businessId });
+    expect(resetGeneratedBusinessSummary).toHaveBeenCalledWith(domain, { businessId, businessName: "Maple Family Clinic" });
+    expect(businessSummarizer.summarize).not.toHaveBeenCalled();
   });
 
   it("rewrites unchanged knowledge when the operator asks", async () => {

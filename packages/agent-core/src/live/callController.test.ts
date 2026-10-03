@@ -106,6 +106,19 @@ describe("LiveCallController greeting", () => {
     expect(greetingEvents[0]).toMatchObject({ trigger: "fallback", attempt: 1 });
   });
 
+  it("counts the fallback wait from session.started, so a slow browser connection doesn't trigger it", async () => {
+    fakeTimers();
+    const { socket } = setup({ phone: false });
+    socket.socket.emit("open");
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(greetings(socket)).toHaveLength(0);
+    startSession(socket);
+    await vi.advanceTimersByTimeAsync(3_999);
+    expect(greetings(socket)).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(greetings(socket)).toHaveLength(1);
+  });
+
   it("doesn't send the fallback once the caller has spoken", async () => {
     fakeTimers();
     const { socket } = setup();
@@ -214,6 +227,19 @@ describe("LiveCallController delegation", () => {
     expect(sentOfType(socket, "session.commentary.append").map((event) => event.delegation_id)).toEqual(["item_2"]);
     expect(prompts[1]).toContain("Results of earlier requests the caller hasn't heard");
     expect(delegations.map((timing) => timing.superseded)).toEqual([true, false]);
+  });
+
+  it("abandons a request after 30 seconds, so later requests aren't held up", async () => {
+    fakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    let calls = 0;
+    const { socket, delegations } = setup({ generate: async () => { calls += 1; if (calls === 1) await new Promise(() => undefined); return reply("We're open until 5."); } });
+    delegate(socket, "item_1", "Can you check that?", 1_000);
+    await vi.advanceTimersByTimeAsync(1_000);
+    delegate(socket, "item_2", "Are you open today?", 3_000);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(delegations.map((timing) => [timing.delegationId, timing.failed])).toEqual([["item_1", true], ["item_2", false]]);
+    expect(sentOfType(socket, "session.commentary.append").map((event) => event.content)).toContain("We're open until 5.");
   });
 
   it("tells the caller a slow answer is still coming", async () => {

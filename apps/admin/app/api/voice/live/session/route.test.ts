@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   attach: vi.fn(),
   create: vi.fn(),
   hangup: vi.fn(),
+  openaiHangup: vi.fn(async () => undefined),
 }));
 
 vi.mock("@lobbystack/domain", () => ({
@@ -31,7 +32,7 @@ vi.mock("@/lib/live-prototype", () => ({
   requireLivePrototype: vi.fn(),
   attachWorkerToLiveSession: mocks.attach,
   endLiveBrowserSession: mocks.hangup,
-  getLiveClient: () => ({ live: { create: mocks.create } }),
+  getLiveClient: () => ({ live: { create: mocks.create, sessions: { hangup: mocks.openaiHangup } } }),
 }));
 vi.mock("@lobbystack/agent-core/live/session", () => ({ buildBrowserSessionConfig: () => ({ model: "gpt-live-1" }) }));
 
@@ -92,9 +93,20 @@ describe("POST /api/voice/live/session", () => {
     const response = await start("lobbystack-prospect-demo", { businessSlug: "acme", prospectDemoToken: "secret" });
     expect(response.status).toBe(500);
     expect(mocks.hangup).toHaveBeenCalledWith("live_1");
+    expect(mocks.openaiHangup).not.toHaveBeenCalled();
     // OpenAI bills 15 seconds for creating the WebRTC session; the caller heard nothing.
     expect(mocks.finishLiveCall).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ callId: "call_1", seconds: 15, measuredSeconds: 0, end: "setup_failed", channel: "web_voice" }));
     expect(mocks.recordProspectDemoCallError).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ prospectDemoId: "demo_1", callId: "call_1", reason: "web_call_start_failed" }));
+  });
+
+  it("falls back to OpenAI's hangup when the worker can't close the session either", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-prospect-demo", prospectDemoId: "demo_1", dashboardTestCall: false });
+    mocks.attach.mockRejectedValue(new Error("Worker attach failed with status 500."));
+    mocks.hangup.mockRejectedValue(new Error("Worker end failed with status 500."));
+    const response = await start("lobbystack-prospect-demo", { businessSlug: "acme", prospectDemoToken: "secret" });
+    expect(response.status).toBe(500);
+    expect(mocks.openaiHangup).toHaveBeenCalledWith("live_1");
   });
 
   it("refuses widget voice for a business without a phone number", async () => {

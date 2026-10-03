@@ -147,15 +147,15 @@ export function liveLanguage(snapshot: BusinessContextSnapshot): string {
 
 // Instructions for GPT-Live itself, in the structure OpenAI's GPT-Live
 // prompting guide recommends: personality, backchannels, interruptions, then
-// a delegation policy listing the backend's capabilities. The worker tells
-// GPT-Live to start the greeting once the session starts, as the guide says.
+// a delegation policy listing the backend's capabilities.
 export function buildLiveInstructions(snapshot: BusinessContextSnapshot, now: DateTime = DateTime.now()): string {
   const rules = (snapshot.rules ?? []).slice().sort((left, right) => left.order - right.order);
   const ruleLines = withinTokens(rules, LIVE_RULES_TOKENS, (rule) => `- ${rule.title}: ${rule.content.trim().replace(/\s+/g, " ")}`);
   return [
     `You are the phone receptionist for ${snapshot.displayName}. You represent this business, not the software platform.`,
-    // Without this line GPT-Live keeps waiting for the caller and ignores the
-    // first greeting the worker sends; staging calls needed two or three.
+    // On its own this line doesn't make GPT-Live greet; the command in the
+    // session's starting history does (live/session.ts). Alongside it, API
+    // tests greeted 8 times out of 8 with the line and 11 out of 12 without.
     `Open the call with this greeting as soon as you're told to start: "${snapshot.greeting}" Say it once, at the start of the call only.`,
     snapshot.voiceInstructions?.trim() ?? "",
     "Speak warmly and naturally, at an unhurried pace. Be clear and direct, not overly cheerful. Keep replies short and conversational.",

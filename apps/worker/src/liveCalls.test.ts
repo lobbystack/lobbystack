@@ -102,6 +102,22 @@ describe("createLiveCallHandler", () => {
     expect(second.activeCalls()).toBe(0);
   });
 
+  it("attaches without the lock when Redis doesn't answer in time", async () => {
+    vi.stubEnv("LIVE_PROTOTYPE_ENABLED", "true");
+    vi.stubEnv("INTERNAL_SERVICE_TOKEN", "token");
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.snapshot.mockResolvedValue({ businessId: "biz_1", greeting: "Hi" });
+    // A disconnected Redis client queues the command and never answers.
+    const stalled = { set: vi.fn(() => new Promise<string | null>(() => undefined)), pexpire: vi.fn(async () => 1), del: vi.fn(async () => 1) };
+    const before = mocks.controllers;
+    const handler = createLiveCallHandler({ domain: { db: {} as never }, attachLock: stalled });
+    const reply = response();
+    await handler.handle(attachRequest({ sessionId: "live_stalled", businessId: "biz_1", callId: "call_1", channel: "voice" }), reply);
+    expect(mocks.controllers - before).toBe(1);
+    expect(reply.writeHead).toHaveBeenCalledWith(202, expect.anything());
+  });
+
   it("ends a browser session over the sideband it holds, or over a new one", async () => {
     vi.stubEnv("LIVE_PROTOTYPE_ENABLED", "true");
     vi.stubEnv("INTERNAL_SERVICE_TOKEN", "token");

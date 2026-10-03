@@ -118,6 +118,11 @@ const GREETING_FALLBACK_MS = 4_000;
 const VOICE_RMS = 400;
 // Most answers take one or two seconds; past this the caller hears an update.
 const STILL_WORKING_MS = 4_000;
+// Requests run one at a time, so a stuck one would hold up every later one.
+// Past this it's abandoned and the caller hears that it couldn't be completed.
+const DELEGATION_TIMEOUT_MS = 30_000;
+// Past the sideband's 3-second replay window, session.started can't arrive.
+const LATE_ATTACH_MS = 3_500;
 // After session.close or a hangup, how long to wait for session.closed.
 const FINALIZE_TIMEOUT_MS = 15_000;
 // Ending the call waits for the goodbye: for it to start, then for its audio to finish.
@@ -272,11 +277,20 @@ export class LiveCallController {
     socket.on("session.started", () => {
       if (this.started) return;
       this.started = true;
+      clearTimeout(this.greetingFallbackTimer);
+      this.greetingFallbackTimer = setTimeout(() => this.sendGreetingFallback(), GREETING_FALLBACK_MS);
       this.options.onStarted?.();
     });
-    (socket.socket as unknown as { on(type: "open", listener: () => void): void }).on("open", () => {
-      this.greetingFallbackTimer = setTimeout(() => this.sendGreetingFallback(), GREETING_FALLBACK_MS);
-    });
+    // A phone call's session starts before the worker attaches, so an attach
+    // past the replay window never sees session.started. A browser call's
+    // session starts after the attach, so it always does.
+    if (this.options.phone) {
+      (socket.socket as unknown as { on(type: "open", listener: () => void): void }).on("open", () => {
+        this.greetingFallbackTimer = setTimeout(() => {
+          if (!this.started) this.sendGreetingFallback();
+        }, LATE_ATTACH_MS);
+      });
+    }
     this.resetSilenceTimer();
     if (this.options.maxDurationMs) this.durationTimer = setTimeout(() => this.options.onTimeout?.("duration_limit"), this.options.maxDurationMs);
   }
@@ -547,11 +561,21 @@ export class LiveCallController {
       const stillWorking = setTimeout(() => {
         if (revision === this.latestRevision) this.send({ type: "session.commentary.append", delegation_id: delegationId, content: STILL_WORKING, event_id: `working_${delegationId}` }, { kind: "update", delegationId });
       }, STILL_WORKING_MS);
+      const delegationAbort = new AbortController();
+      const abortOnCallEnd = () => delegationAbort.abort();
+      this.abort.signal.addEventListener("abort", abortOnCallEnd);
+      let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
+      const timedOut = new Promise<never>((_resolve, reject) => {
+        timeoutTimer = setTimeout(() => {
+          delegationAbort.abort();
+          reject(new Error(`The request took over ${DELEGATION_TIMEOUT_MS / 1000} seconds.`));
+        }, DELEGATION_TIMEOUT_MS);
+      });
       try {
         const { agent } = await this.ready;
-        const result = await agent.generate({
+        const result = await Promise.race([timedOut, agent.generate({
           prompt: this.delegationPrompt(),
-          abortSignal: this.abort.signal,
+          abortSignal: delegationAbort.signal,
           onStepEnd: (step) => {
             const now = performance.now();
             stepMs.push(Math.round(now - stepStartedAt));
@@ -560,7 +584,7 @@ export class LiveCallController {
             this.reportProgress(delegationId, revision, steps, step as unknown as StepLike);
           },
           onToolExecutionEnd: (execution) => { toolMs += execution.toolExecutionMs; },
-        });
+        })]);
         tools = result.steps.flatMap((step) => step.toolCalls.map((call) => call.toolName));
         modelSteps = result.steps.length;
         usage = result.totalUsage;
@@ -578,6 +602,8 @@ export class LiveCallController {
         console.error(`[live] ${this.options.sessionId} delegation ${delegationId} failed`, error instanceof Error ? error.message : error);
       } finally {
         clearTimeout(stillWorking);
+        clearTimeout(timeoutTimer);
+        this.abort.signal.removeEventListener("abort", abortOnCallEnd);
       }
       const answeredAt = performance.now();
 

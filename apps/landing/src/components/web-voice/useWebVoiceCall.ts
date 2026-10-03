@@ -335,6 +335,9 @@ export function useWebVoiceCall({
 
   useEffect(
     () => () => {
+      // The call's UI is gone, so the microphone stops now; only the session
+      // close waits for session.closed.
+      localStreamRef.current?.getTracks().forEach((track) => track.stop())
       closeGracefully(() => cleanup({ resetState: false }))
     },
     // The cleanup path must use the current refs at unmount, not restart on every render.
