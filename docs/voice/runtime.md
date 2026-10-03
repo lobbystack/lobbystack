@@ -31,9 +31,11 @@ A Twilio Elastic SIP trunk sends calls for its numbers to your OpenAI project's 
 
 1. OpenAI sends a `live.transport.incoming` webhook to `/api/webhooks/openai/live` on the admin app.
 2. The admin reads the dialled number from the SIP `Diversion` header, then falls back to `To`, and finds the business.
-3. The admin records the call and checks the plan's minutes. It rejects the call with SIP 486 (busy) when the plan is out of minutes, and 603 when the caller is blocked.
+3. The admin records the call and checks the plan's minutes while it loads the business snapshot. It rejects the call with SIP 486 (busy) when the plan is out of minutes, and 603 when the caller is blocked.
 4. The admin accepts the call with the business's instructions, then asks the worker to attach.
 5. The worker opens the sideband, speaks the greeting, and handles the call until it ends.
+
+The caller hears ringing until step 4. The admin logs `live.incoming` with the milliseconds from the webhook's arrival to each step (`lookupMs`, `recordMs`, `acceptMs`, `attachMs`) and `eventAgeMs`, a rough delivery delay with one-second precision.
 
 ## Follow a browser call
 

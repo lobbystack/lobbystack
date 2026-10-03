@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 
 import { buildPhoneSessionConfig } from "@lobbystack/agent-core/live/session";
 import { finishLiveCall, getCachedBusinessSnapshot, startLivePhoneCall } from "@lobbystack/domain";
-import type { BusinessContextSnapshot } from "@lobbystack/shared";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { attachWorkerToLiveSession, getLiveClient } from "@/lib/live-prototype";
@@ -24,6 +23,7 @@ function phoneFromSipHeader(value: string | undefined): string | undefined {
 // and hand the session to the worker.
 export async function POST(request: Request) {
   if (process.env.LIVE_PROTOTYPE_ENABLED !== "true") return new NextResponse(null, { status: 404 });
+  const timing = createTiming();
   const client = getLiveClient();
   let event;
   try {
@@ -32,6 +32,8 @@ export async function POST(request: Request) {
     return new NextResponse("Invalid signature.", { status: 400 });
   }
   if (event.type !== "live.transport.incoming") return new NextResponse(null, { status: 200 });
+  // created_at has second precision, so this is only a rough delivery delay.
+  timing.eventAgeMs = Math.max(0, Date.now() - event.created_at * 1000);
 
   const sessionId = event.data.session_id;
   const header = (name: string) => event.data.sip_headers.find((item) => item.name.toLowerCase() === name)?.value;
@@ -55,6 +57,7 @@ export async function POST(request: Request) {
   try {
     const resolved = await getAppDatabase().db.execute<{ business_id: string | null }>(sql`select app.resolve_business_by_phone(${to}) as business_id`);
     businessId = resolved.rows[0]?.business_id;
+    timing.mark("lookup");
   } catch (error) {
     // Ownership is unknown: don't reject a call that may belong to the other
     // deployment. A 503 makes OpenAI deliver the event again.
@@ -67,30 +70,48 @@ export async function POST(request: Request) {
   }
 
   try {
-    const snapshot = await getCachedBusinessSnapshot(createWorkerDomainContext(), { businessId });
-    if (!snapshot) {
-      console.warn("[live] no published snapshot for incoming call", JSON.stringify({ sessionId, businessId }));
-      await client.live.sessions.reject(sessionId, { status_code: 503 });
-      return new NextResponse(null, { status: 200 });
-    }
-    return await answerCall(client, { sessionId, businessId, snapshot, from, to });
+    return await answerCall(client, { sessionId, businessId, from, to, timing });
   } catch (error) {
     console.error("[live] incoming call failed", error instanceof Error ? error.message : error);
     await client.live.sessions.reject(sessionId, { status_code: 503 }).catch(() => undefined);
     return new NextResponse(null, { status: 200 });
+  } finally {
+    timing.log(sessionId);
   }
 }
+
+// The caller hears ringing until the call is accepted, so each step before
+// accepting is logged as `live.incoming` with its time since the webhook arrived.
+function createTiming() {
+  const receivedAt = performance.now();
+  const steps: Record<string, number> = {};
+  return {
+    eventAgeMs: undefined as number | undefined,
+    mark(step: string) {
+      steps[`${step}Ms`] = Math.round(performance.now() - receivedAt);
+    },
+    log(sessionId: string) {
+      console.info(JSON.stringify({ event: "live.incoming", sessionId, ...(this.eventAgeMs !== undefined ? { eventAgeMs: this.eventAgeMs } : {}), ...steps }));
+    },
+  };
+}
+
+type Timing = ReturnType<typeof createTiming>;
 
 type LiveClient = ReturnType<typeof getLiveClient>;
 
 // Reserves minutes and records the call before accepting it, the same way the
-// Twilio media path does, so billing and limits behave identically.
-async function answerCall(client: LiveClient, input: { sessionId: string; businessId: string; snapshot: BusinessContextSnapshot; from: string | undefined; to: string }) {
+// Twilio media path does, so billing and limits behave identically. The
+// snapshot loads at the same time, since the caller is still hearing it ring.
+async function answerCall(client: LiveClient, input: { sessionId: string; businessId: string; from: string | undefined; to: string; timing: Timing }) {
   const domain = createWorkerDomainContext();
-  let call: Awaited<ReturnType<typeof startLivePhoneCall>>;
-  try {
-    call = await startLivePhoneCall(domain, { businessId: input.businessId, sessionId: input.sessionId, from: input.from ?? "unknown", to: input.to });
-  } catch (error) {
+  const [loaded, started] = await Promise.allSettled([
+    getCachedBusinessSnapshot(domain, { businessId: input.businessId }),
+    startLivePhoneCall(domain, { businessId: input.businessId, sessionId: input.sessionId, from: input.from ?? "unknown", to: input.to }),
+  ]);
+  input.timing.mark("record");
+  if (started.status === "rejected") {
+    const error: unknown = started.reason;
     if (error !== null && typeof error === "object" && "code" in error && error.code === "voice_limit_reached") {
       // 486 Busy Here: the caller hears a busy signal rather than an answer
       // the business can't pay for.
@@ -99,28 +120,40 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
     }
     throw error;
   }
-  // A retried delivery. The first one may have died before accepting or before
-  // the worker attached, so finish the job without touching the call record:
-  // accepting an accepted session just fails, and attaching is idempotent.
-  if (call.duplicate) {
-    await client.live.sessions.accept(input.sessionId, { session: buildPhoneSessionConfig(input.snapshot) }).catch(() => undefined);
-    await attachWorkerToLiveSession({ sessionId: input.sessionId, businessId: input.businessId, callId: call.callId, conversationId: call.conversationId, channel: "voice", ...(input.from ? { callerPhone: input.from } : {}) }).catch(() => undefined);
-    return new NextResponse(null, { status: 200 });
-  }
+  const call = started.value;
   if (call.blocked) {
     await client.live.sessions.reject(input.sessionId, { status_code: 603 });
     // Closes the record so the minute reservation doesn't stay open.
     await finishLiveCall(domain, { businessId: input.businessId, callId: call.callId, seconds: 0, end: "blocked_contact" });
     return new NextResponse(null, { status: 200 });
   }
+  const snapshot = loaded.status === "fulfilled" ? loaded.value : null;
+  if (!snapshot) {
+    if (loaded.status === "rejected") console.error("[live] couldn't load the snapshot for an incoming call", loaded.reason instanceof Error ? loaded.reason.message : loaded.reason);
+    else console.warn("[live] no published snapshot for incoming call", JSON.stringify({ sessionId: input.sessionId, businessId: input.businessId }));
+    await client.live.sessions.reject(input.sessionId, { status_code: 503 });
+    if (!call.duplicate) await finishLiveCall(domain, { businessId: input.businessId, callId: call.callId, seconds: 0, end: "setup_failed" });
+    return new NextResponse(null, { status: 200 });
+  }
+  const attach = () => attachWorkerToLiveSession({ sessionId: input.sessionId, businessId: input.businessId, callId: call.callId, conversationId: call.conversationId, channel: "voice", ...(input.from ? { callerPhone: input.from } : {}) });
+  // A retried delivery. The first one may have died before accepting or before
+  // the worker attached, so finish the job without touching the call record:
+  // accepting an accepted session just fails, and attaching is idempotent.
+  if (call.duplicate) {
+    await client.live.sessions.accept(input.sessionId, { session: buildPhoneSessionConfig(snapshot) }).catch(() => undefined);
+    await attach().catch(() => undefined);
+    return new NextResponse(null, { status: 200 });
+  }
   try {
-    await client.live.sessions.accept(input.sessionId, { session: buildPhoneSessionConfig(input.snapshot) });
+    await client.live.sessions.accept(input.sessionId, { session: buildPhoneSessionConfig(snapshot) });
+    input.timing.mark("accept");
   } catch (error) {
     await finishLiveCall(domain, { businessId: input.businessId, callId: call.callId, seconds: 0, end: "setup_failed" });
     throw error;
   }
   try {
-    await attachWorkerToLiveSession({ sessionId: input.sessionId, businessId: input.businessId, callId: call.callId, conversationId: call.conversationId, channel: "voice", ...(input.from ? { callerPhone: input.from } : {}) });
+    await attach();
+    input.timing.mark("attach");
   } catch (error) {
     // Without the worker nobody answers delegations, so end the call cleanly.
     await client.live.sessions.hangup(input.sessionId).catch(() => undefined);
