@@ -357,6 +357,9 @@
       "title": "Add opening hours to book appointments",
       "description": "The agent offers times only inside your opening hours. Until you add them, it takes a message instead.",
       "action": "Add opening hours"
-    }
+    },
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "notSet": "Not set"
   }
 }

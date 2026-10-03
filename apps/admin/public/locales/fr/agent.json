@@ -357,6 +357,9 @@
       "title": "Ajoutez vos heures d'ouverture pour réserver des rendez-vous",
       "description": "L'agent propose des créneaux seulement pendant vos heures d'ouverture. En attendant, il prend un message.",
       "action": "Ajouter les heures d'ouverture"
-    }
+    },
+    "edit": "Modifier",
+    "cancel": "Annuler",
+    "notSet": "Non définies"
   }
 }

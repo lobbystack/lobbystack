@@ -357,6 +357,9 @@
       "title": "Dodajte radno vreme da biste zakazivali termine",
       "description": "Agent nudi termine samo u Vašem radnom vremenu. Dok ga ne dodate, prima poruku umesto toga.",
       "action": "Dodaj radno vreme"
-    }
+    },
+    "edit": "Izmeni",
+    "cancel": "Otkaži",
+    "notSet": "Nije podešeno"
   }
 }

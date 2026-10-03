@@ -81,6 +81,19 @@ export function windowsForSave(days: Window[][]): { ok: true; hours: HoursWindow
   return { ok: true, hours };
 }
 
+/** "Mon–Thu 09:00–17:00, Fri 09:00–16:00": open days, consecutive days with the same hours grouped. */
+export function summarizeHours(days: Window[][], shortDayNames: string[]): string {
+  const key = (dayOfWeek: number) => (days[dayOfWeek] ?? []).map((window) => `${window.open}–${window.close}`).join(", ");
+  const groups: Array<{ first: number; last: number; hours: string }> = [];
+  for (const dayOfWeek of DAY_ORDER) {
+    const hours = key(dayOfWeek);
+    const previous = groups.at(-1);
+    if (previous && previous.hours === hours && DAY_ORDER.indexOf(previous.last) === DAY_ORDER.indexOf(dayOfWeek) - 1) previous.last = dayOfWeek;
+    else groups.push({ first: dayOfWeek, last: dayOfWeek, hours });
+  }
+  return groups.filter((group) => group.hours).map((group) => `${shortDayNames[group.first]}${group.first === group.last ? "" : `–${shortDayNames[group.last]}`} ${group.hours}`).join(", ");
+}
+
 export function BookingWithoutHoursAlert({ className }: { className?: string }) {
   const { t } = useTranslation("agent");
   return (
@@ -104,11 +117,14 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Collapsed to a one-line summary unless a link points here, such as the no-hours warning.
+  const [editing, setEditing] = useState(false);
+  useEffect(() => { if (window.location.hash === "#opening-hours") setEditing(true); }, []);
   useEffect(() => { if (state) setDays(toDays(state.hours)); }, [state]);
-  const dayNames = useMemo(() => {
-    const format = new Intl.DateTimeFormat(intlLocale(i18n.language), { weekday: "long", timeZone: "UTC" });
+  const [dayNames, shortDayNames] = useMemo(() => (["long", "short"] as const).map((weekday) => {
+    const format = new Intl.DateTimeFormat(intlLocale(i18n.language), { weekday, timeZone: "UTC" });
     return Array.from({ length: 7 }, (_, day) => format.format(new Date(SUNDAY + day * 86_400_000)));
-  }, [i18n.language]);
+  }), [i18n.language]) as [string[], string[]];
   const loading = !businessId || query.isLoading;
   const disabled = !canManage || saving || !state;
 
@@ -131,6 +147,7 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
       queryClient.setQueryData(businessHoursQueryKey(businessId), saved);
       telemetry.track("web.agent.settings_saved", { businessId, setting: "hours" });
       setStatus(t("actions.saved"));
+      setEditing(false);
     } catch {
       toast.error(t("actions.saveFailed"));
     } finally {
@@ -146,6 +163,18 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
         <p className="text-sm text-muted-foreground">{t("hours.description")}</p>
       </div>
       {note ? <p className="text-sm text-muted-foreground" data-testid="hours-note">{note}</p> : null}
+      {!editing ? (
+        <Surface className="flex flex-col">
+          <Item variant="default">
+            <ItemContent>
+              {loading ? <Skeleton className="h-5 w-64 rounded-md" /> : <ItemDescription data-testid="hours-summary">{summarizeHours(days, shortDayNames) || t("hours.notSet")}</ItemDescription>}
+            </ItemContent>
+            <ItemActions>
+              <Button disabled={!canManage || loading} onClick={() => { setEditing(true); setStatus(null); }} size="sm" type="button" variant="outline">{t("hours.edit")}</Button>
+            </ItemActions>
+          </Item>
+        </Surface>
+      ) : <>
       <Surface className="flex flex-col">
         {DAY_ORDER.map((dayOfWeek) => {
           const windows = days[dayOfWeek] ?? [];
@@ -181,8 +210,11 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
       </Surface>
       <div className="flex items-center justify-end gap-3">
         {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
+        <Button disabled={saving} onClick={() => { setEditing(false); setError(null); if (state) setDays(toDays(state.hours)); }} size="sm" type="button" variant="ghost">{t("hours.cancel")}</Button>
         <Button disabled={disabled || loading} onClick={() => void save()} size="sm" type="button" variant="outline">{saving ? t("actions.saving") : t("hours.save")}</Button>
       </div>
+      </>}
+      {!editing && status ? <p className="text-right text-sm text-muted-foreground">{status}</p> : null}
     </section>
   );
 }

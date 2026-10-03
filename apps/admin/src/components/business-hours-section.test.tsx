@@ -54,6 +54,10 @@ describe("opening hours editor", () => {
     const fetchMock = stubFetch({ hoursSource: "generated", hours: weekdays });
     render(<QueryClientProvider client={client()}><BusinessHoursSection businessId="business" canManage /></QueryClientProvider>);
     expect(await screen.findByText("hours.generated")).toBeTruthy();
+    // Collapsed to a summary until the operator opens the editor.
+    await waitFor(() => expect(screen.getByTestId("hours-summary").textContent).toBe("Mon–Fri 09:00–20:00"));
+    expect(screen.queryAllByLabelText(/^hours.opensAt:/)).toHaveLength(0);
+    await userEvent.click(screen.getByRole("button", { name: "hours.edit" }));
     expect(screen.getAllByLabelText(/^hours.opensAt:/)).toHaveLength(5);
 
     await userEvent.click(screen.getByRole("switch", { name: "hours.openOn:Saturday" }));
@@ -63,12 +67,14 @@ describe("opening hours editor", () => {
     const body = JSON.parse(String(fetchMock.mock.calls.find(([, init]) => init?.method === "PUT")?.[1]?.body)) as Hours;
     expect(body.hours).toEqual([...weekdays, { dayOfWeek: 6, openMinutes: 540, closeMinutes: 1020 }]);
     await waitFor(() => expect(screen.queryByText("hours.generated")).toBeNull());
+    expect(screen.getByTestId("hours-summary").textContent).toBe("Mon–Fri 09:00–20:00, Sat 09:00–17:00");
     telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "hours" });
   });
 
   it("adds a second window for a lunch break", async () => {
     const fetchMock = stubFetch({ hoursSource: "operator", hours: [{ dayOfWeek: 1, openMinutes: 540, closeMinutes: 720 }] });
     render(<QueryClientProvider client={client()}><BusinessHoursSection businessId="business" canManage /></QueryClientProvider>);
+    await userEvent.click(await screen.findByRole("button", { name: "hours.edit" }));
     await screen.findByLabelText("hours.opensAt:Monday");
     await userEvent.click(screen.getAllByRole("button", { name: "hours.addWindow" })[0]!);
     await userEvent.click(screen.getByRole("button", { name: "hours.save" }));
@@ -81,6 +87,8 @@ describe("opening hours editor", () => {
     stubFetch({ hoursSource: "none", hours: [] });
     render(<QueryClientProvider client={client()}><BusinessHoursSection businessId="business" canManage /></QueryClientProvider>);
     expect(await screen.findByText("hours.empty")).toBeTruthy();
+    await waitFor(() => expect(screen.getByTestId("hours-summary").textContent).toBe("hours.notSet"));
+    await userEvent.click(screen.getByRole("button", { name: "hours.edit" }));
     expect(screen.getAllByText("hours.closed")).toHaveLength(7);
   });
 
