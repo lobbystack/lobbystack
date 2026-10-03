@@ -261,6 +261,7 @@ export function createLiveCallHandler(input: { domain: DomainContext }) {
       silenceTimeoutMs: SILENCE_TIMEOUT_MS,
       maxDurationMs: phone ? MAX_PHONE_CALL_MS : request.maxDurationMs ?? MAX_PHONE_CALL_MS,
       onStarted: () => void markLiveCallMediaStarted(input.domain, call).catch(logError(request.sessionId, "media start not recorded")),
+      onGreeting: (greeting) => console.info(JSON.stringify({ event: "live.greeting", sessionId: request.sessionId, ...greeting })),
       onTurn: (turn) => void saveLiveCallTurn(input.domain, { ...call, ...turn }).catch(logError(request.sessionId, "transcript save failed")),
       onTimeout: (reason) => {
         end = reason;

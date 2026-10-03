@@ -185,6 +185,14 @@ describe("live call latency telemetry", () => {
     expect(mocks.recordAiGenerationEvent.mock.calls[0]![1]).not.toHaveProperty("totalCostUsd");
   });
 
+  it("logs each greeting step as live.greeting", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const options = await startCall();
+    options.onGreeting!({ step: "sent", attempt: 1, trigger: "session_started", sinceAttachMs: 1_700 } as never);
+    expect(info).toHaveBeenCalledWith(JSON.stringify({ event: "live.greeting", sessionId: "live_2", step: "sent", attempt: 1, trigger: "session_started", sinceAttachMs: 1_700 }));
+    info.mockRestore();
+  });
+
   it("never lets a telemetry failure reach the call", async () => {
     mocks.finishLiveCall.mockResolvedValueOnce(true);
     const options = await startCall();

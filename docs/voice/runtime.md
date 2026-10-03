@@ -21,6 +21,8 @@ The caller hears silence while the agent works, so calls keep it short:
 - The agent runs on the `AI_CHAT_*` endpoint and model, with `low` reasoning and OpenAI's `priority` processing tier. Set `AI_DELEGATION_MODEL`, `AI_DELEGATION_REASONING_EFFORT` and `AI_DELEGATION_SERVICE_TIER` to change that.
 - When a step only calls tools whose result GPT-Live can say as is, the agent returns that result without a second model call. Those tools are hours, services, knowledge search, taking a message, an appointment request, and ending the call. A knowledge search sends GPT-Live the strongest passages as reference facts, within the 500-token limit for an append, and GPT-Live answers from them. Openings and bookings still go through the model.
 
+The worker greets the caller after GPT-Live reports `session.started`, waits for OpenAI to acknowledge the greeting, and sends it again (up to three times) when it isn't acknowledged, OpenAI rejects it, or the receptionist stays silent. It logs each step as `live.greeting` with `step`, `attempt`, `trigger` and `sinceAttachMs`.
+
 The worker logs each answer as `live.delegation` with `agentMs`, `totalMs`, `tools`, `modelSteps`, `directAnswer`, `stepMs` (each model step with the tools it called), `toolMs` (time in tools), and `failed`. It also records each answer's tokens and cost as an AI generation with the operation `voice.delegation`.
 
 ## Follow a phone call

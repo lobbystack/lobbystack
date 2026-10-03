@@ -18,7 +18,7 @@ vi.mock("openai/resources/live/sideband/ws", () => ({
 
 import { LiveCallController, type LiveCallSummary, type LiveCallTurn } from "./callController";
 
-function setup(options: { silenceTimeoutMs?: number } = {}) {
+function setup(options: { silenceTimeoutMs?: number; onGreeting?: (event: unknown) => void } = {}) {
   const generate = vi.fn(async () => ({ text: "We're open until 5.", steps: [{ toolCalls: [{ toolCallId: "call_1", toolName: "getBusinessHours" }], toolResults: [] }, { toolCalls: [], toolResults: [] }] }));
   const turns: LiveCallTurn[] = [];
   const closed: LiveCallSummary[] = [];
@@ -42,39 +42,75 @@ beforeEach(() => { sockets.length = 0; });
 afterEach(() => { vi.useRealTimers(); });
 
 describe("LiveCallController", () => {
-  it("greets again once the session starts when the fallback fired too early", () => {
+  const greetings = (socket: { sent: unknown[] }) => socket.sent.filter((event) => String((event as { event_id?: string }).event_id).startsWith("greeting_")) as Array<{ event_id: string; content: string }>;
+
+  it("greets once the session starts, never before", () => {
     vi.useFakeTimers();
     const { socket } = setup();
-    vi.advanceTimersByTime(1_600);
+    vi.advanceTimersByTime(3_000);
+    expect(greetings(socket)).toHaveLength(0);
     socket.emit("session.started", {});
-    vi.advanceTimersByTime(1_600);
-    vi.useRealTimers();
-    expect(socket.sent.filter((event) => (event as { event_id?: string }).event_id === "greeting")).toHaveLength(2);
+    expect(greetings(socket).map((event) => event.event_id)).toEqual(["greeting_1"]);
+    expect(greetings(socket)[0]!.content).toContain('say exactly "Thanks for calling Northside Plumbing."');
   });
 
-  it("doesn't repeat a fallback greeting that GPT-Live accepted", () => {
+  it("greets when it attached too late to see session.started", () => {
     vi.useFakeTimers();
     const { socket } = setup();
-    vi.advanceTimersByTime(1_600);
-    socket.emit("session.started", {});
-    socket.emit("session.output_transcript.delta", { delta: "Thanks for calling", end_ms: 400 });
-    vi.advanceTimersByTime(1_600);
-    vi.useRealTimers();
-    expect(socket.sent.filter((event) => (event as { event_id?: string }).event_id === "greeting")).toHaveLength(1);
+    vi.advanceTimersByTime(3_500);
+    expect(greetings(socket).map((event) => event.event_id)).toEqual(["greeting_1"]);
   });
 
-  it("doesn't greet after the receptionist has spoken", () => {
+  it("sends the greeting again, with a new id, when OpenAI never acknowledges it", () => {
+    vi.useFakeTimers();
+    const { socket } = setup();
+    socket.emit("session.started", {});
+    vi.advanceTimersByTime(2_000);
+    expect(greetings(socket).map((event) => event.event_id)).toEqual(["greeting_1", "greeting_2"]);
+  });
+
+  it("sends the greeting again when it was acknowledged but nobody spoke", () => {
+    vi.useFakeTimers();
+    const { socket } = setup();
+    socket.emit("session.started", {});
+    socket.emit("session.instructions.appended", { client_event_id: "greeting_1", start_ms: 100, end_ms: 100 });
+    vi.advanceTimersByTime(3_999);
+    expect(greetings(socket)).toHaveLength(1);
+    vi.advanceTimersByTime(1);
+    expect(greetings(socket).map((event) => event.event_id)).toEqual(["greeting_1", "greeting_2"]);
+  });
+
+  it("retries a greeting OpenAI rejected, and stops after three attempts", () => {
+    vi.useFakeTimers();
+    const { socket } = setup();
+    socket.emit("session.started", {});
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
+      socket.emit("error", Object.assign(new Error("Session not ready"), { error: { type: "error", client_event_id: `greeting_${attempt}` } }));
+      vi.advanceTimersByTime(500);
+    }
+    vi.advanceTimersByTime(10_000);
+    expect(greetings(socket).map((event) => event.event_id)).toEqual(["greeting_1", "greeting_2", "greeting_3"]);
+  });
+
+  it("stops greeting once the receptionist speaks", () => {
+    vi.useFakeTimers();
+    const greetingEvents: unknown[] = [];
+    const { socket } = setup({ onGreeting: (event) => greetingEvents.push(event) });
+    socket.emit("session.started", {});
+    socket.emit("session.instructions.appended", { client_event_id: "greeting_1", start_ms: 100, end_ms: 100 });
+    socket.emit("session.output_audio.delta", { delta: "", start_ms: 300, end_ms: 900 });
+    vi.advanceTimersByTime(10_000);
+    expect(greetings(socket)).toHaveLength(1);
+    expect(greetingEvents.map((event) => (event as { step: string }).step)).toEqual(["sent", "acknowledged", "spoken"]);
+  });
+
+  it("doesn't greet after the receptionist or the caller has spoken", () => {
+    vi.useFakeTimers();
     const { socket } = setup();
     socket.emit("session.output_transcript.delta", { delta: "Hello", end_ms: 100 });
     socket.emit("session.started", {});
-    expect(socket.sent.filter((event) => (event as { event_id?: string }).event_id === "greeting")).toHaveLength(0);
-  });
-
-  it("greets the caller once the session starts", () => {
-    const { socket } = setup();
-    socket.emit("session.started", {});
-    socket.emit("session.started", {});
-    expect(socket.sent.filter((event) => (event as { event_id?: string }).event_id === "greeting")).toHaveLength(1);
+    vi.advanceTimersByTime(10_000);
+    expect(greetings(socket)).toHaveLength(0);
   });
 
   it("answers a delegation with the agent's reply", async () => {
