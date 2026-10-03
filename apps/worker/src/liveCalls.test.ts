@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   controllerOptions: [] as Array<Record<string, (...args: never[]) => unknown>>,
   snapshot: vi.fn(),
   recordProductEvent: vi.fn(async (..._args: unknown[]) => "event_1"),
+  recordAiGenerationEvent: vi.fn(async (..._args: unknown[]) => "event_2"),
   finishLiveCall: vi.fn(async (..._args: unknown[]) => false),
   createAgentModel: vi.fn((..._args: unknown[]) => ({})),
   createReceptionistAgent: vi.fn((..._args: unknown[]) => ({})),
@@ -17,6 +18,8 @@ vi.mock("@lobbystack/agent-core", () => ({
   createAgentModel: mocks.createAgentModel,
   createReceptionistAgent: mocks.createReceptionistAgent,
   liveDelegationEnvironment: () => ({ AI_CHAT_REASONING_EFFORT: "low" }),
+  agentModelId: () => ({ provider: "openai", model: "gpt-6-luna" }),
+  describeAgentUsage: (usage: { inputTokens: number; outputTokens: number }, latencyMs: number) => ({ provider: "openai", model: "gpt-6-luna", latencyMs, inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, totalCostUsd: 0.00021 }),
   LiveCallController: class {
     constructor(options: Record<string, (...args: never[]) => unknown>) {
       mocks.controllers += 1;
@@ -30,6 +33,7 @@ vi.mock("@lobbystack/domain", () => ({
   finishLiveCall: mocks.finishLiveCall,
   LIVE_CALL_PROVIDER: "openai_live",
   recordProductEvent: mocks.recordProductEvent,
+  recordAiGenerationEvent: mocks.recordAiGenerationEvent,
 }));
 vi.mock("@lobbystack/jobs", () => ({ renewVoicePresenceGateway: vi.fn(async () => undefined), updateVoicePresence: vi.fn(async () => undefined) }));
 vi.mock("openai", () => ({ default: class {} }));
@@ -152,6 +156,33 @@ describe("live call latency telemetry", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(mocks.recordProductEvent).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ name: "voice.call_latency_recorded" }));
+  });
+
+  it("records the delegation's model usage and cost as a voice.delegation generation", async () => {
+    const options = await startCall();
+    mocks.recordAiGenerationEvent.mockClear();
+    options.onDelegation!({ ...delegation, usage: { inputTokens: 1_400, outputTokens: 60 } } as never);
+    expect(mocks.recordAiGenerationEvent).toHaveBeenCalledWith({ db: {} }, {
+      provider: "openai",
+      model: "gpt-6-luna",
+      latencyMs: 1_800,
+      inputTokens: 1_400,
+      outputTokens: 60,
+      totalCostUsd: 0.00021,
+      businessId: "biz_1",
+      operation: "voice.delegation",
+      callId: "call_2",
+      conversationId: "conv_2",
+      financialEventKey: "voice_delegation:call_2:del_1",
+    });
+  });
+
+  it("records a failed delegation as an errored generation with no cost", async () => {
+    const options = await startCall();
+    mocks.recordAiGenerationEvent.mockClear();
+    options.onDelegation!({ ...delegation, failed: true } as never);
+    expect(mocks.recordAiGenerationEvent).toHaveBeenCalledWith({ db: {} }, expect.objectContaining({ operation: "voice.delegation", isError: true, error: "generation_failed", model: "gpt-6-luna" }));
+    expect(mocks.recordAiGenerationEvent.mock.calls[0]![1]).not.toHaveProperty("totalCostUsd");
   });
 
   it("never lets a telemetry failure reach the call", async () => {

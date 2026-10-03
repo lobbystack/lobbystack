@@ -52,6 +52,12 @@ function price(value: string | undefined): number | undefined {
 // Token usage in the shape AI generation events record. Costs use the AI_CHAT_*
 // rates only when they are versioned; otherwise the cost stays unknown rather
 // than wrong.
+function costUsd(usage: AgentUsage, rates: { input: number; cachedInput: number; output: number }): number {
+  const cached = Math.min(usage.cachedInputTokens ?? 0, usage.inputTokens ?? 0);
+  const uncached = (usage.inputTokens ?? 0) - cached;
+  return (uncached * rates.input + cached * rates.cachedInput + (usage.outputTokens ?? 0) * rates.output) / 1_000_000;
+}
+
 export function describeAgentUsage(raw: LanguageModelUsage | undefined, latencyMs: number, environment: AgentModelEnvironment = process.env): AgentUsage {
   const { provider, model } = agentModelId(environment);
   const usage: AgentUsage = {
@@ -66,17 +72,20 @@ export function describeAgentUsage(raw: LanguageModelUsage | undefined, latencyM
   };
   const input = price(environment.AI_CHAT_INPUT_COST_PER_MILLION_TOKENS);
   const output = price(environment.AI_CHAT_OUTPUT_COST_PER_MILLION_TOKENS);
+  // Cached input is often a tenth of the input price. Without its own rate,
+  // cached tokens cost the full input price.
+  const cachedInput = price(environment.AI_CHAT_CACHED_INPUT_COST_PER_MILLION_TOKENS) ?? input;
   const version = environment.AI_CHAT_PRICING_VERSION?.trim();
   const source = environment.AI_CHAT_PRICING_SOURCE?.trim();
   const effective = environment.AI_CHAT_PRICING_EFFECTIVE_DATE?.trim();
   if (input === undefined || output === undefined || !version || !source || !effective) return usage;
   return {
     ...usage,
-    totalCostUsd: ((usage.inputTokens ?? 0) * input + (usage.outputTokens ?? 0) * output) / 1_000_000,
+    totalCostUsd: costUsd(usage, { input, cachedInput: cachedInput!, output }),
     pricingVersion: version,
     pricingSource: source,
     pricingEffectiveDate: effective,
-    ratesUsdPerMillionTokens: { input, output },
+    ratesUsdPerMillionTokens: { input, cachedInput: cachedInput!, output },
   };
 }
 
@@ -102,6 +111,7 @@ export function callSummaryEnvironment(environment: AgentModelEnvironment = proc
   };
   if (summaryModel !== chatModel) {
     delete summary.AI_CHAT_INPUT_COST_PER_MILLION_TOKENS;
+    delete summary.AI_CHAT_CACHED_INPUT_COST_PER_MILLION_TOKENS;
     delete summary.AI_CHAT_OUTPUT_COST_PER_MILLION_TOKENS;
   }
   return summary;
@@ -124,6 +134,7 @@ export function liveDelegationEnvironment(environment: AgentModelEnvironment = p
   };
   if (delegationModel !== chatModel) {
     delete delegation.AI_CHAT_INPUT_COST_PER_MILLION_TOKENS;
+    delete delegation.AI_CHAT_CACHED_INPUT_COST_PER_MILLION_TOKENS;
     delete delegation.AI_CHAT_OUTPUT_COST_PER_MILLION_TOKENS;
   }
   return delegation;

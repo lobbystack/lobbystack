@@ -1,3 +1,4 @@
+import type { LanguageModelUsage } from "ai";
 import type OpenAI from "openai";
 import type { DelegationCreatedEvent } from "openai/resources/live/live";
 import { SidebandWS } from "openai/resources/live/sideband/ws";
@@ -21,6 +22,8 @@ export type DelegationTiming = {
   directAnswer: boolean;
   answer: string;
   failed: boolean;
+  /** Tokens across the agent's model steps, when the generation finished. */
+  usage?: LanguageModelUsage;
 };
 
 export type LiveCallSummary = {
@@ -244,6 +247,7 @@ export class LiveCallController {
     let modelSteps = 0;
     let directAnswer = false;
     let failed = false;
+    let usage: LanguageModelUsage | undefined;
     try {
       const result = await this.options.agent.generate({
         prompt: this.delegationPrompt(),
@@ -251,6 +255,7 @@ export class LiveCallController {
       });
       tools = result.steps.flatMap((step) => step.toolCalls.map((call) => call.toolName));
       modelSteps = result.steps.length;
+      usage = result.totalUsage;
       // When the loop stopped on a tool GPT-Live can speak from directly, the
       // last step has no text of its own.
       const direct = directToolAnswer(result.steps.at(-1));
@@ -277,6 +282,7 @@ export class LiveCallController {
       directAnswer,
       answer,
       failed,
+      ...(usage ? { usage } : {}),
     };
     this.delegations.push(timing);
     this.options.onDelegation?.(timing);

@@ -18,7 +18,7 @@ import {
 import { renewVoicePresenceGateway, updateVoicePresence } from "@lobbystack/jobs";
 import OpenAI from "openai";
 
-import { recordLiveCallLatency, recordLiveDelegation } from "./liveCallTelemetry";
+import { recordLiveCallLatency, recordLiveDelegation, recordLiveDelegationGeneration } from "./liveCallTelemetry";
 
 export const LIVE_ATTACH_PATH = "/internal/live/attach";
 const MAX_BODY_BYTES = 16 * 1024;
@@ -269,6 +269,7 @@ export function createLiveCallHandler(input: { domain: DomainContext }) {
       onDelegation: (timing) => {
         console.info(JSON.stringify({ event: "live.delegation", sessionId: request.sessionId, agentMs: timing.agentMs, totalMs: timing.totalMs, tools: timing.tools, modelSteps: timing.modelSteps, directAnswer: timing.directAnswer, failed: timing.failed }));
         recordLiveDelegation(input.domain, telemetryCall, timing);
+        recordLiveDelegationGeneration(input.domain, telemetryCall, timing);
       },
       onClose: (summary) => {
         active.delete(request.sessionId);
