@@ -67,6 +67,15 @@ describe("buildLiveInstructions", () => {
     expect(instructions).toContain("Business rules, in priority order:\n- Prices: Never quote prices over the phone.");
   });
 
+  it("leaves out the placeholder summary a new business starts with", () => {
+    for (const summary of ["Maple Clinic uses LobbyStack to answer calls.", "lobbystack uses LobbyStack to handle calls and SMS."]) {
+      const live = buildLiveInstructions({ ...demoSnapshot, summary }, callStart);
+      expect(live).not.toContain("uses LobbyStack");
+      expect(live).not.toContain("About the business:");
+      expect(buildAgentInstructions({ ...demoSnapshot, summary }, "voice")).not.toContain("uses LobbyStack");
+    }
+  });
+
   it("keeps a long FAQ list inside its token budget", () => {
     const knowledgeSnippets = Array.from({ length: 200 }, (_, index) => ({ id: `k${index}`, title: `Question ${index}`, content: "A detailed answer about the policy and what the caller should know. ".repeat(3), tags: [], priority: 0 }));
     const instructions = buildLiveInstructions({ ...demoSnapshot, knowledgeSnippets }, callStart);

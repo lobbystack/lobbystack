@@ -34,7 +34,7 @@ describe("directToolAnswer", () => {
 
   it("offers a message when the business has no hours or services set", () => {
     expect(directToolAnswer(step({ toolName: "getBusinessHours", output: { ...hours, configured: false } }))).toMatch(/hasn't set its opening hours/);
-    expect(directToolAnswer(step({ toolName: "getBusinessServices", output: { services: [] } }))).toMatch(/hasn't listed any services/);
+    expect(directToolAnswer(step({ toolName: "getBusinessServices", output: { services: [] } }))).toMatch(/hasn't listed its services/);
   });
 
   it("drops service descriptions rather than cut the list short", () => {
@@ -79,6 +79,12 @@ describe("directToolAnswer", () => {
       expect(answer).toContain("- Policy: ");
       expect(answer).not.toContain("- Second: ");
     }
+  });
+
+  it("answers what the business offers from its knowledge base when it lists no services", () => {
+    const answer = directToolAnswer(step({ toolName: "getBusinessServices", output: { services: [], knowledge: { outcome: "found", matches: [{ title: "About", text: "An open-source AI receptionist that answers calls and books appointments." }] } } }));
+    expect(answer).toContain("- About: An open-source AI receptionist that answers calls and books appointments.");
+    expect(directToolAnswer(step({ toolName: "getBusinessServices", output: { services: [], knowledge: { outcome: "not_found", matches: [] } } }))).toMatch(/hasn't listed its services/);
   });
 
   it("offers a message when the knowledge base has nothing", () => {

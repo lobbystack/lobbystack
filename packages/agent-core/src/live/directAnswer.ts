@@ -66,7 +66,10 @@ function trimToTokens(value: string, tokens: number): string {
 const FORMATTERS: Record<string, Formatter> = {
   getBusinessServices: (_input, output) => {
     const services = Array.isArray(output.services) ? output.services as ServiceFact[] : [];
-    if (!services.length) return "The business hasn't listed any services. Offer to take a message so the team can follow up.";
+    if (!services.length) {
+      const knowledge = typeof output.knowledge === "object" && output.knowledge !== null ? knowledgeAnswer(output.knowledge as Record<string, unknown>) : undefined;
+      return knowledge && knowledge !== NO_KNOWLEDGE ? knowledge : "The business hasn't listed its services. Offer to take a message so the team can follow up.";
+    }
     return `Services the business offers:\n${describeServices(services, MAX_DIRECT_ANSWER_CHARS - 200)}\nAnswer the caller's question from this list.`;
   },
   getBusinessHours: (_input, output) => {

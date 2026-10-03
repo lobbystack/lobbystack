@@ -2,14 +2,14 @@ import { canTextNumber, normalizeBookingMode, type BookingMode, type BusinessCon
 import { countKnowledgeTokens } from "@lobbystack/ai";
 import { DateTime } from "luxon";
 
-import { describeClosure, describeServices, serviceFacts, upcomingClosures, weeklyHours } from "./businessFacts";
+import { businessSummary, describeClosure, describeServices, serviceFacts, upcomingClosures, weeklyHours } from "./businessFacts";
 import type { AgentChannel } from "./tools";
 
 function businessFacts(snapshot: BusinessContextSnapshot): string[] {
   const rules = (snapshot.rules ?? []).slice().sort((left, right) => left.order - right.order);
   return [
     `Business: ${snapshot.displayName}.`,
-    `Summary: ${snapshot.summary}`,
+    businessSummary(snapshot) ? `Summary: ${businessSummary(snapshot)}` : "",
     `Services: ${snapshot.services.map((service) => `${service.name} (${service.durationMinutes} min)`).join(", ") || "none configured"}.`,
     `Booking policy: ${snapshot.bookingPolicy}`,
     `Transfer rule: ${snapshot.transferPolicy.mode}${snapshot.transferPolicy.transferNumber ? "" : " (no transfer number set, so transfers are unavailable)"}.`,
@@ -93,7 +93,7 @@ function liveBusinessFacts(snapshot: BusinessContextSnapshot, now: DateTime): st
   const snippets = (snapshot.knowledgeSnippets ?? []).slice().sort((left, right) => right.priority - left.priority);
   const faqs = withinTokens(snippets, LIVE_FAQ_TOKENS, (snippet) => `- ${snippet.title}: ${snippet.content.trim().replace(/\s+/g, " ")}`);
   return [
-    snapshot.summary?.trim() ? `About the business: ${snapshot.summary.trim()}` : "",
+    businessSummary(snapshot) ? `About the business: ${businessSummary(snapshot)}` : "",
     `The call started on ${now.toFormat("cccc, LLLL d, yyyy, 'at' h:mm a")} (${timezone}).`,
     snapshot.hours.length ? `Opening hours (${timezone}):\n${weeklyHours(snapshot).join("\n")}` : "",
     closures.length ? `Upcoming closures: ${closures.map((closure) => describeClosure(closure, timezone)).join("; ")}.` : "",

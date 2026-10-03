@@ -86,12 +86,27 @@ function withSnippetsInBudget(evidence: KnowledgeMatch[], snippets: KnowledgeMat
 
 const phone = z.string().describe("Phone number in E.164 format, for example +14165550134.");
 
+const OFFERINGS_QUERY = "What does the business do and offer: services, products and prices";
+
 export function createReceptionistTools(context: AgentToolContext): ToolSet {
   const { domain, snapshot } = context;
   const businessId = snapshot.businessId;
   const timezone = snapshot.timezone;
   const bookingMode = context.intakeOnly ? "off" : normalizeBookingMode(snapshot.bookingMode);
   const channel = context.channel;
+  async function searchKnowledge(query: string): Promise<{ outcome: string; matches: KnowledgeMatch[] }> {
+    const fallback = snapshotKnowledgeMatches(snapshot, query);
+    try {
+      const evidence = await searchKnowledgeEvidence(domain, { businessId, query, limit: 6, ...(context.callId ? { callId: context.callId } : {}) });
+      // Evidence first. Snippets only fill the slots and tokens it leaves.
+      const matches = withSnippetsInBudget(evidence.matches.map((match) => ({ title: match.title, text: match.content })), fallback);
+      return { outcome: matches.length ? "found" : evidence.outcome, matches };
+    } catch {
+      const matches = withSnippetsInBudget([], fallback);
+      return { outcome: matches.length ? "found" : "unavailable", matches };
+    }
+  }
+
   const tools: ToolSet = {
     getBusinessHours: tool({
       description: "Get the business's weekly opening hours, upcoming closures, and whether it is open right now.",
@@ -114,26 +129,20 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
     }),
 
     getBusinessServices: tool({
-      description: "List the services the business offers, with duration and a short description.",
+      description: "List the services the business offers, with duration and a short description. When the business lists none, it returns what the knowledge base says the business offers.",
       inputSchema: z.object({}),
-      execute: async () => ({ services: serviceFacts(snapshot) }),
+      execute: async () => {
+        const services = serviceFacts(snapshot);
+        // Without a services list, "what do you offer" is answered from the
+        // business's documents and website, in this same tool call.
+        return services.length ? { services } : { services, knowledge: await searchKnowledge(OFFERINGS_QUERY) };
+      },
     }),
 
     searchKnowledge: tool({
       description: "Look up any business-specific fact not in your instructions: prices, policies, parking, payment methods, what to bring, and so on. Never guess. Make the query self-contained.",
       inputSchema: z.object({ query: z.string() }),
-      execute: async ({ query }) => {
-        const fallback = snapshotKnowledgeMatches(snapshot, query);
-        try {
-          const evidence = await searchKnowledgeEvidence(domain, { businessId, query, limit: 6, ...(context.callId ? { callId: context.callId } : {}) });
-          // Evidence first. Snippets only fill the slots and tokens it leaves.
-          const matches = withSnippetsInBudget(evidence.matches.map((match) => ({ title: match.title, text: match.content })), fallback);
-          return { outcome: matches.length ? "found" : evidence.outcome, matches };
-        } catch {
-          const matches = withSnippetsInBudget([], fallback);
-          return { outcome: matches.length ? "found" : "unavailable", matches };
-        }
-      },
+      execute: async ({ query }) => await searchKnowledge(query),
     }),
 
     takeMessage: tool({

@@ -127,6 +127,25 @@ describe("bookAppointment", () => {
   });
 });
 
+describe("getBusinessServices", () => {
+  it("returns what the knowledge base says the business offers when it lists no services", async () => {
+    vi.mocked(searchKnowledgeEvidence).mockResolvedValueOnce({ outcome: "found", matches: [{ title: "About", content: "An AI receptionist for small businesses." }] } as never);
+    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", snapshot: { ...demoSnapshot, services: [] } });
+    const execute = tools.getBusinessServices!.execute! as (input: object, options: object) => Promise<unknown>;
+    await expect(execute({}, { toolCallId: "1", messages: [] })).resolves.toMatchObject({ services: [], knowledge: { outcome: "found", matches: [{ title: "About", text: "An AI receptionist for small businesses." }] } });
+  });
+
+  it("doesn't search when the business lists services", async () => {
+    vi.mocked(searchKnowledgeEvidence).mockClear();
+    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", snapshot: demoSnapshot });
+    const execute = tools.getBusinessServices!.execute! as (input: object, options: object) => Promise<unknown>;
+    const result = await execute({}, { toolCallId: "1", messages: [] }) as { services: unknown[]; knowledge?: unknown };
+    expect(result.services.length).toBeGreaterThan(0);
+    expect(result.knowledge).toBeUndefined();
+    expect(searchKnowledgeEvidence).not.toHaveBeenCalled();
+  });
+});
+
 describe("searchKnowledge", () => {
   const snippet = (title: string, content: string, priority = 0): KnowledgeSnippet => ({ id: title, title, content, tags: [], priority });
   const passage = (title: string, content = `${title} details`) => ({ chunkId: title, documentId: title, title, content, sourceUrl: null, sourceRevision: 1, sequence: 0 });
