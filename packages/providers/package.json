@@ -30,7 +30,7 @@
     "@lobbystack/telemetry": "workspace:*",
     "ai": "^7.0.67",
     "luxon": "^3.7.2",
-    "nodemailer": "^9.1.1",
+    "nodemailer": "^10.0.14",
     "standardwebhooks": "^1.0.0",
     "twilio": "^5.12.2"
   },
