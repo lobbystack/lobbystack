@@ -59,6 +59,7 @@
     "skip": "No tengo sitio web",
     "skipping": "Omitiendo...",
     "submitFailed": "No pudimos iniciar la importación del sitio web en este momento. Inténtelo de nuevo.",
+    "invalidUrl": "Ingrese la dirección de su sitio web, por ejemplo suempresa.com.",
     "skipFailed": "No pudimos omitir este paso en este momento. Inténtelo de nuevo."
   },
   "knowledge": {

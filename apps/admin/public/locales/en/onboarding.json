@@ -59,6 +59,7 @@
     "skip": "I don't have a website",
     "skipping": "Skipping...",
     "submitFailed": "We couldn't start the website import right now. Please try again.",
+    "invalidUrl": "Enter your website address, like yourcompany.com.",
     "skipFailed": "We couldn't skip this step right now. Please try again."
   },
   "knowledge": {

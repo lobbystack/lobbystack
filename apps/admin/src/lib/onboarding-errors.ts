@@ -20,6 +20,10 @@ export function getSafeOnboardingErrorMessage(
 ): string {
   const message = getErrorText(error);
 
+  if (typeof error === "object" && error !== null && (error as { code?: unknown }).code === "website_url_invalid") {
+    return t("website.invalidUrl");
+  }
+
   if (includesAny(message, ["Too many workspace creation attempts"])) {
     return t("errors.tooManyBusinesses");
   }

@@ -7,18 +7,13 @@ import { Globe, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
+import { requestJson } from "@/lib/request-json";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useTelemetry } from "@/components/product-analytics";
 
 type Business = { businessId: string; active: boolean; websiteUrl?: string | null };
-
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
-  if (!response.ok) throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Request failed.");
-  return await response.json() as T;
-}
 
 export function OnboardingWebsiteSurface() {
   const { t } = useTranslation("onboarding");
