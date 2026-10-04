@@ -544,7 +544,6 @@
         "alreadyExists": "Un compte existe deja avec ce courriel.",
         "unchanged": "Entrez une adresse courriel differente.",
         "noEmail": "Aucun courriel n'est configure pour ce compte.",
-        "missingSiteUrl": "La confirmation du courriel n'est pas encore configuree. Definissez SITE_URL sur le deploiement Convex puis reessayez.",
         "required": "Entrez une nouvelle adresse courriel.",
         "failed": "Impossible d'envoyer un lien de confirmation. Veuillez reessayer."
       }

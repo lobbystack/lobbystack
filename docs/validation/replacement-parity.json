@@ -36,13 +36,6 @@
       "certification": ["scripts/replacement-unit-economics-check.ts"]
     },
     {
-      "id": "migration.import_and_reconciliation",
-      "status": "required",
-      "implementation": ["scripts/replacement-import.ts", "packages/db/migrations/0036_replacement_import_ids.sql"],
-      "tests": ["scripts/replacement-import-check.ts"],
-      "certification": ["scripts/replacement-import-check.ts", "scripts/replacement-reconciliation.ts", "docs/validation/certification-runbook.md"]
-    },
-    {
       "id": "certification.release_gates",
       "status": "required",
       "implementation": [".github/workflows/replacement-platform.yml"],

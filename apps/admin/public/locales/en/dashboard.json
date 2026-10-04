@@ -105,8 +105,7 @@
       }
     },
     "chart": {
-      "title": "Calls per month",
-      "description": "Monthly call volume using your Convex call records."
+      "title": "Calls per month"
     },
     "recentCalls": {
       "title": "Recent Calls",

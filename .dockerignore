@@ -28,7 +28,6 @@
 .tmp
 .agents
 .codex
-convex/.generated
 .lobbystack
 .firecrawl
 .claude

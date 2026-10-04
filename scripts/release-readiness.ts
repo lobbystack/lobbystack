@@ -261,9 +261,7 @@ function evidence(mode: ReleaseMode, e2e: boolean, runId: string, gitSha: string
       targetIdentity: targetIdentity(mode, environment, e2e),
       resendWebhooks: mode === "staging" ? environment.RESEND_WEBHOOKS_ENABLED === "true" ? "enabled" : environment.RESEND_WEBHOOKS_ENABLED === "false" ? "disabled" : "unverified" : "not-applicable",
       outstandingExternalGates: [
-        "complete production importer and source-to-target reconciliation",
-        "two clean-target production-snapshot migration rehearsals",
-        "legacy mutation freeze and provider-specific durable ingress handling",
+        "provider-specific durable ingress handling",
         "isolated database and object-storage restore and traffic rollback drill",
         "manual paid-provider verification",
         "full journey, visual, performance soak, privacy and alert certification",

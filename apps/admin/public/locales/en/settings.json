@@ -544,7 +544,6 @@
         "alreadyExists": "An account with that email already exists.",
         "unchanged": "Enter a different email address.",
         "noEmail": "No email is configured for this account yet.",
-        "missingSiteUrl": "Email confirmation isn't configured yet. Set SITE_URL on the Convex deployment and try again.",
         "required": "Enter a new email address.",
         "failed": "We couldn't send a confirmation link. Please try again."
       }

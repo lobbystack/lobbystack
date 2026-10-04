@@ -261,7 +261,7 @@ export type ProviderErrorClassification = {
 };
 
 export type AlertableExceptionTelemetryInput = {
-  runtime: "web" | "convex";
+  runtime: "web";
   service: string;
   operation: string;
   alertable?: boolean;

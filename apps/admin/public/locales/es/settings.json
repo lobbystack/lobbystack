@@ -544,7 +544,6 @@
         "alreadyExists": "Ya existe una cuenta con ese correo electrónico.",
         "unchanged": "Introduzca un correo electrónico diferente.",
         "noEmail": "Esta cuenta aún no tiene un correo electrónico configurado.",
-        "missingSiteUrl": "La confirmación por correo electrónico aún no está configurada. Defina SITE_URL en la implementación de Convex e inténtelo de nuevo.",
         "required": "Introduzca un nuevo correo electrónico.",
         "failed": "No pudimos enviar el enlace de confirmación. Inténtelo de nuevo."
       }

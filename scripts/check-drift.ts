@@ -174,16 +174,6 @@ for (const file of ["scripts/replacement-backup.sh", "scripts/replacement-restor
   }
 }
 
-const replacementSourceFiles = ["apps/admin", "apps/worker", "packages/contracts", "packages/db", "packages/domain", "packages/jobs", "packages/providers", "packages/telemetry"]
-  .flatMap(listFiles)
-  .filter((file) => /\.(ts|tsx|mts)$/.test(file));
-for (const file of replacementSourceFiles) {
-  const source = readText(file);
-  if (/from\s+["'][^"']*convex\//.test(source) || /from\s+["']convex["']/.test(source)) {
-    errors.push(`replacement source imports Convex directly: ${file}`);
-  }
-}
-
 if (errors.length > 0) {
   console.error(`Replacement drift check failed with ${errors.length} issue${errors.length === 1 ? "" : "s"}:`);
   for (const error of errors) {

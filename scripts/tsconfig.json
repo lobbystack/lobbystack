@@ -8,11 +8,9 @@
     ]
   },
   "include": [
-    "./migration/**/*.ts",
     "./release-readiness*.ts",
     "./seed-release-e2e.ts",
     "./seed-zapier-local.ts",
-    "./production-migration-preflight.ts",
     "./query-plan-check.ts",
     "./content-retention-backfill*.ts",
     "./replacement-privacy-check.ts",
@@ -23,10 +21,7 @@
     "./replacement-appointment-audit-check.ts",
     "./replacement-billing-check.ts",
     "./replacement-feedback-check.ts",
-    "./replacement-import-check.ts",
-    "./replacement-import.ts",
     "./replacement-parity-check.ts",
-    "./replacement-reconciliation.ts",
     "./replacement-smoke.ts",
     "./replacement-smoke.test.ts",
     "./replacement-sms-consent-check.ts",

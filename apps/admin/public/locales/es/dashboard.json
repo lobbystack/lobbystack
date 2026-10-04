@@ -105,8 +105,7 @@
       }
     },
     "chart": {
-      "title": "Llamadas por mes",
-      "description": "Volumen mensual de llamadas según sus registros de llamadas de Convex."
+      "title": "Llamadas por mes"
     },
     "recentCalls": {
       "title": "Llamadas recientes",
