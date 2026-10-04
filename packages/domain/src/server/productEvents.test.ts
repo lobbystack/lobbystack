@@ -7,7 +7,7 @@ vi.mock("@lobbystack/db", async (original) => ({
   withBusinessTransaction: mocks.withBusinessTransaction,
 }));
 
-import { deleteSentProductEventsBefore } from "./productEvents";
+import { deleteSentProductEventsBefore, recordProductEventBestEffort } from "./productEvents";
 
 const context = { db: {} as never };
 
@@ -49,5 +49,14 @@ describe("deleteSentProductEventsBefore", () => {
     })).resolves.toBe(0);
 
     expect(execute).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("recordProductEventBestEffort", () => {
+  it("swallows a failed write", async () => {
+    vi.clearAllMocks();
+    mocks.withBusinessTransaction.mockRejectedValue(new Error("database unavailable"));
+    await expect(recordProductEventBestEffort(context, { name: "business.snapshot_refreshed", distinctId: "system", businessId: "biz_1", properties: {} })).resolves.toBeUndefined();
+    expect(mocks.withBusinessTransaction).toHaveBeenCalledTimes(1);
   });
 });

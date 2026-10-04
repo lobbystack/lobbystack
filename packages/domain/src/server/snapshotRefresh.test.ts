@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { demoSnapshot } from "@lobbystack/shared";
+import { demoSnapshot, type BusinessContextSnapshot } from "@lobbystack/shared";
 
 const mocks = vi.hoisted(() => ({
   withBusinessTransaction: vi.fn(),
@@ -13,10 +13,15 @@ vi.mock("@lobbystack/db", async (importOriginal) => ({
   enqueueOutbox: mocks.enqueueOutbox,
 }));
 
-import { createInMemorySnapshotCache } from "./snapshotCache";
+import type { SnapshotCacheClient } from "./snapshotCache";
 import { refreshBusinessSnapshot } from "./knowledge";
 
 const businessId = "00000000-0000-4000-8000-000000000001";
+
+function memoryCache(): SnapshotCacheClient {
+  const store = new Map<string, BusinessContextSnapshot>();
+  return { get: async (id) => store.get(id) ?? null, set: async (id, snapshot) => { store.set(id, snapshot); } };
+}
 const profileRow = {
   id: "00000000-0000-4000-8000-000000000002",
   businessId,
@@ -91,12 +96,12 @@ describe("refreshBusinessSnapshot write-through", () => {
       ],
       services: [{ id: "service", name: "Consultation", durationMinutes: 30, localizedNames: { en: "Consultation", fr: "Consultation française" } }],
     })));
-    const cache = createInMemorySnapshotCache();
+    const cache = memoryCache();
     await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
     expect(await cache.get(businessId)).toMatchObject({ legalName: "Maple Clinic Inc.", businessType: "clinic", telemetryEnabled: false, contactChannels: { phoneNumber: "+14165550002", smsNumber: "+14165550003" }, services: [{ localizedNames: { fr: "Consultation française" } }] });
   });
   it("pushes the regenerated snapshot into the shared cache", async () => {
-    const cache = createInMemorySnapshotCache();
+    const cache = memoryCache();
     const context = { db: {} as never, snapshotCache: cache };
 
     const version = await refreshBusinessSnapshot(context, { businessId });
@@ -109,7 +114,7 @@ describe("refreshBusinessSnapshot write-through", () => {
   });
 
   it("tolerates a failing cache write without failing the refresh", async () => {
-    const cache = createInMemorySnapshotCache();
+    const cache = memoryCache();
     const failing = {
       ...cache,
       set: vi.fn().mockRejectedValue(new Error("redis down")),

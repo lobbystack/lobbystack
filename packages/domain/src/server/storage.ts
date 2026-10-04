@@ -35,7 +35,7 @@ export async function createUpload(
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     if (input.purpose === "knowledge") await requireBusinessAdmin(tx, input);
     else await requireBusinessMembership(tx, input);
-    await tx.insert(storageObjects).values({ id: objectId, businessId: input.businessId, objectKey: key, purpose: input.purpose, fileName: input.fileName, contentType: input.contentType, contentLength: input.length, ...(input.checksum !== undefined ? { checksum: input.checksum } : {}), status: "pending", expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) });
+    await tx.insert(storageObjects).values({ id: objectId, businessId: input.businessId, objectKey: key, purpose: input.purpose, fileName: input.fileName, contentType: input.contentType, contentLength: input.length, checksum: input.checksum, status: "pending", expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) });
   });
   const upload = await storage.createUpload({ key, contentType: input.contentType, length: input.length, ...(input.checksum !== undefined ? { checksum: input.checksum } : {}) });
   return { objectId, key, url: upload.url, ...(upload.headers ? { headers: upload.headers } : {}) };

@@ -17,7 +17,7 @@ import { chunkText, indexDocumentText } from "./knowledge";
 import { loadBusinessSummaryInput, saveGeneratedBusinessSummary } from "./businessSummary";
 import { loadBusinessHoursInput, markBusinessHoursChecked, saveGeneratedBusinessHours } from "./businessHours";
 import { replaceBusinessHoursInTransaction } from "./catalog";
-import { claimNotificationDelivery, releaseNotificationDelivery, rescheduleAppointmentReminderInTransaction } from "./notifications";
+import { claimNotificationDelivery, rescheduleAppointmentReminderInTransaction, transitionProcessingNotification } from "./notifications";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -396,7 +396,7 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
         const [message] = await workerTx.select().from(outboxMessages).where(eq(outboxMessages.dedupeKey, `notification:${current!.id}:dispatch:2`));
         expect(message!.availableAt).toEqual(current!.scheduledFor);
         expect(await claimNotificationDelivery({ db }, { businessId, notificationId: old!.id })).toBe(false);
-        expect(await releaseNotificationDelivery({ db }, { businessId, notificationId: old!.id })).toBe(false);
+        expect(await transitionProcessingNotification({ db }, { businessId, notificationId: old!.id }, "pending")).toBe(false);
         expect(await claimNotificationDelivery({ db }, { businessId, notificationId: current!.id })).toBe(false);
         // Rescheduling inside 24 hours retires the old job without a late reminder.
         await rescheduleAppointmentReminderInTransaction(workerTx, { businessId, appointmentId, startsAt: new Date(Date.now() + 3_600_000), revision: 3 });

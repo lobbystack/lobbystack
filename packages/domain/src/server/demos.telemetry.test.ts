@@ -11,7 +11,7 @@ vi.mock("@lobbystack/db", async (original) => ({
   withBusinessTransaction: mocks.withBusinessTransaction,
 }));
 
-vi.mock("./productEvents", () => ({ recordProductEvent: mocks.recordProductEvent }));
+vi.mock("./productEvents", () => ({ recordProductEvent: mocks.recordProductEvent, recordProductEventBestEffort: mocks.recordProductEvent }));
 
 import {
   claimProspectDemo,

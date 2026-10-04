@@ -13,7 +13,7 @@ import { inboxItems, messages, transcripts } from "@lobbystack/db";
 import { appendMessage } from "./conversations";
 import { receiveInboundSms } from "./sms";
 import { upsertTranscript } from "./voice";
-import { deleteTranscriptForRetention, runPrivacyRetentionSweep, scrubExpiredMessageContent } from "./privacy";
+import { deleteTranscriptForRetention, runPrivacyRetentionSweep } from "./privacy";
 import { getContentRetentionPolicy, isContentRetentionEnabled } from "./contentRetentionPolicy";
 
 const context = { db: {} as never };
@@ -103,15 +103,15 @@ describe("approved content retention", () => {
     expect(inserts.find((entry) => entry.table === messages)?.values.contentExpiresAt).toEqual(new Date("2030-01-31T00:00:00Z"));
   });
   it("scrubs body and media together and resets the expiry marker", async () => {
-    await scrubExpiredMessageContent(context, { businessId: "business" });
-    expect(updates[0]?.values).toMatchObject({ body: "[content expired]", media: null, contentExpiresAt: null });
-    const query = new PgDialect().sqlToQuery(updates[0]!.where!);
+    await runPrivacyRetentionSweep(context, { businessId: "business", now });
+    const scrub = updates.find((entry) => entry.table === messages)!;
+    expect(scrub.values).toMatchObject({ body: "[content expired]", media: null, contentExpiresAt: null });
+    const query = new PgDialect().sqlToQuery(scrub.where!);
     expect(query.sql).toContain('"messages"."business_id"');
     expect(query.sql).toContain('"messages"."content_expires_at" <');
   });
   it("keeps automatic content deletion disabled while follow-up and notification sweeps still run", async () => {
     vi.stubEnv("CONTENT_RETENTION_ENABLED", "false");
-    expect(await scrubExpiredMessageContent(context, { businessId: "business" })).toBe(0);
     expect(await deleteTranscriptForRetention(context, { businessId: "business", callId: "call" })).toBe(0);
     const result = await runPrivacyRetentionSweep(context, { businessId: "business", now });
     expect(result).toMatchObject({ scrubbedMessages: 0, deletedTranscripts: 0, queuedRecordings: 0, scrubbedFollowUps: 0, scrubbedOperatorDeliveries: 1 });

@@ -2,7 +2,7 @@ import { eq, and } from "drizzle-orm";
 
 import type { AuthzRole } from "@lobbystack/contracts";
 import type { DatabaseTransaction } from "@lobbystack/db";
-import { businessMemberships, users } from "@lobbystack/db";
+import { businessMemberships } from "@lobbystack/db";
 
 export class AuthorizationError extends Error {
   readonly status = 403;
@@ -27,13 +27,6 @@ export function hasMinimumRole(role: string, minimum: AuthzRole): boolean {
   return current !== undefined && current >= roleRank[minimum];
 }
 
-export function requireBusinessId(businessId: string | undefined): string {
-  if (!businessId) {
-    throw new AuthorizationError("A business workspace is required.");
-  }
-  return businessId;
-}
-
 export async function requireBusinessMembership(
   tx: DatabaseTransaction,
   input: { userId: string; businessId: string; minimumRole?: AuthzRole },
@@ -50,16 +43,5 @@ export async function requireBusinessMembership(
   return { userId: input.userId, businessId: input.businessId, role: membership.role as AuthzRole };
 }
 
-export async function requirePlatformAdmin(
-  tx: DatabaseTransaction,
-  userId: string,
-): Promise<void> {
-  const rows = await tx.select({ platformRole: users.platformRole }).from(users).where(eq(users.id, userId)).limit(1);
-  if (rows[0]?.platformRole !== "platform_admin") {
-    throw new AuthorizationError("Platform administrator access is required.");
-  }
-}
-
-export const requireOperator = requireBusinessMembership;
 export const requireBusinessAdmin = (tx: DatabaseTransaction, input: { userId: string; businessId: string }) =>
   requireBusinessMembership(tx, { ...input, minimumRole: "business_admin" });

@@ -7,7 +7,7 @@ import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { getPolarMeteredUsagePayload, normalizeInterfaceLocale, permanentSmsErrorCode, type BillingUsageKind } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary } from "@lobbystack/domain";
-import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationFailed, markNotificationSent, markNotificationSkipped, cancelRetiredPhoneVerificationSend, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseNotificationDelivery, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
+import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, cancelRetiredPhoneVerificationSend, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, transitionProcessingNotification, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { claimOperatorNotificationDelivery, correctAlertSmsUsage, estimateSmsSegments, loadOperatorNotificationDelivery, markFeedbackEmailFailed, markFeedbackEmailSent, markOperatorNotificationSent, markOperatorNotificationSkipped, queueDailyOperatorSummaries, refreshUnitEconomicsMonth, releaseOperatorNotificationDelivery, reserveAlertSmsUsage } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
 import { issueOperatorPhoneVerificationCode, markOperatorPhoneVerificationCodeSent, releaseOperatorPhoneVerificationCodeSend, verificationCodeSmsBody } from "@lobbystack/domain";
@@ -700,11 +700,11 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       }
       const resolution = await resolveNotificationDelivery(dependencies.domain, { businessId, notificationId });
       if (!resolution) {
-        await releaseNotificationDelivery(dependencies.domain, { businessId, notificationId });
+        await transitionProcessingNotification(dependencies.domain, { businessId, notificationId }, "pending");
         return { status: "skipped", entityId: notificationId };
       }
       if (resolution.kind === "skipped") {
-        await markNotificationSkipped(dependencies.domain, { businessId, notificationId: resolution.notificationId });
+        await transitionProcessingNotification(dependencies.domain, { businessId, notificationId: resolution.notificationId }, "skipped");
         return { status: "skipped", entityId: resolution.notificationId };
       }
       const delivery = resolution.delivery;
@@ -713,13 +713,13 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         let usageEventId: string | undefined;
         if (delivery.channel === "sms") {
           if (!dependencies.twilio || !delivery.from) {
-            await markNotificationSkipped(dependencies.domain, { businessId, notificationId: delivery.notificationId });
+            await transitionProcessingNotification(dependencies.domain, { businessId, notificationId: delivery.notificationId }, "skipped");
             return { status: "skipped", entityId: delivery.notificationId };
           }
           if (dependencies.domain.db) {
             const reservation = await reserveAlertSmsUsage(dependencies.domain, { businessId, sourceKey: `alert_sms:notification:${delivery.notificationId}`, estimatedSegments: estimateSmsSegments(delivery.body) });
             if (!reservation.allowed) {
-              await markNotificationSkipped(dependencies.domain, { businessId, notificationId: delivery.notificationId });
+              await transitionProcessingNotification(dependencies.domain, { businessId, notificationId: delivery.notificationId }, "skipped");
               return { status: "skipped", entityId: delivery.notificationId };
             }
             usageEventId = reservation.usageEventId;
@@ -728,7 +728,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           providerMessageId = sent.providerMessageId;
         } else {
           if (!dependencies.email) {
-            await markNotificationSkipped(dependencies.domain, { businessId, notificationId: delivery.notificationId });
+            await transitionProcessingNotification(dependencies.domain, { businessId, notificationId: delivery.notificationId }, "skipped");
             return { status: "skipped", entityId: delivery.notificationId };
           }
           const sent = await dependencies.email.sendTemplate({ template: "operator_alert", to: delivery.to, subject: delivery.subject, variables: { message: delivery.body }, idempotencyKey: `notification:${delivery.notificationId}` });
@@ -742,10 +742,10 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         if (delivery.channel === "sms" && dependencies.domain.db) await correctAlertSmsUsage(dependencies.domain, { businessId, sourceKey: `alert_sms:notification:${delivery.notificationId}`, segments: 0 }).catch(() => undefined);
         if (delivery.channel === "sms" && permanentSmsErrorCode(error)) {
           // Twilio rejects this destination on every attempt, so don't retry.
-          await markNotificationFailed(dependencies.domain, { businessId, notificationId: delivery.notificationId });
+          await transitionProcessingNotification(dependencies.domain, { businessId, notificationId: delivery.notificationId }, "failed");
           return { status: "skipped", entityId: delivery.notificationId };
         }
-        await releaseNotificationDelivery(dependencies.domain, { businessId, notificationId: delivery.notificationId });
+        await transitionProcessingNotification(dependencies.domain, { businessId, notificationId: delivery.notificationId }, "pending");
         throw error;
       }
       }

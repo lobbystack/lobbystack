@@ -67,14 +67,13 @@ export type WebhookSender = (input: { url: string; secret: string; id: string; b
  * metadata addresses after DNS resolution, and gives up after 10 seconds.
  * Only a 2xx status counts as delivered.
  */
-export function createWebhookSender(options: { policy?: WebhookUrlPolicy; timeoutMs?: number; lookup?: ReturnType<typeof createGuardedLookup>; now?: () => number } = {}): WebhookSender {
+export function createWebhookSender(options: { policy?: WebhookUrlPolicy; timeoutMs?: number; lookup?: ReturnType<typeof createGuardedLookup> } = {}): WebhookSender {
   const policy = options.policy ?? webhookUrlPolicy();
   const timeoutMs = options.timeoutMs ?? WEBHOOK_TIMEOUT_MS;
   const lookup = options.lookup ?? createGuardedLookup();
-  const now = options.now ?? Date.now;
   return async ({ url, secret, id, body }) => {
-    const started = now();
-    const finish = (result: Omit<WebhookSendResult, "durationMs">): WebhookSendResult => ({ ...result, durationMs: Math.max(0, now() - started) });
+    const started = Date.now();
+    const finish = (result: Omit<WebhookSendResult, "durationMs">): WebhookSendResult => ({ ...result, durationMs: Math.max(0, Date.now() - started) });
     let target: URL;
     try {
       target = assertWebhookUrlAllowed(url, policy);

@@ -12,7 +12,7 @@ import { recordCallSchedulingProgress } from "./callOutcome";
 import type { DomainContext } from "./context";
 import { appendMessage, getOrCreateConversation } from "./conversations";
 import { queueOperatorAlert } from "./notifications";
-import { recordProductEvent } from "./productEvents";
+import { recordProductEventBestEffort } from "./productEvents";
 import { createVoiceFollowUpTask } from "./voice";
 
 // Actions the receptionist agent takes on a business's behalf, whatever the
@@ -25,14 +25,6 @@ async function resolveActiveService(context: DomainContext, businessId: string, 
     const normalized = serviceName.trim().toLowerCase();
     return (await tx.select({ id: services.id, name: services.name, durationMinutes: services.durationMinutes }).from(services).where(and(eq(services.businessId, businessId), eq(services.active, true), or(eq(services.slug, normalized), ilike(services.name, serviceName.trim())))).limit(1))[0];
   });
-}
-
-async function safeRecordProductEvent(context: DomainContext, input: Parameters<typeof recordProductEvent>[1]): Promise<void> {
-  try {
-    await recordProductEvent(context, input);
-  } catch {
-    // Product telemetry is best-effort and must never fail the caller's request.
-  }
 }
 
 /** The reason a refused booking or reschedule wasn't bookable, when it was refused for that. */
@@ -190,7 +182,7 @@ export async function bookForCaller(
   const distinctId = getPostHogDistinctIdForBusinessSystem(input.businessId);
   const service = await resolveActiveService(context, input.businessId, input.serviceName);
   if (!service) {
-    await safeRecordProductEvent(context, { name: "appointment.booking_failed", businessId: input.businessId, distinctId, properties: { reason: "service_unavailable", requestedServiceName: input.serviceName, channel: input.channel, sourceChannel: input.channel } });
+    await recordProductEventBestEffort(context, { name: "appointment.booking_failed", businessId: input.businessId, distinctId, properties: { reason: "service_unavailable", requestedServiceName: input.serviceName, channel: input.channel, sourceChannel: input.channel } });
     return { ok: false as const, reason: "Service is not available." };
   }
   try {
@@ -205,11 +197,11 @@ export async function bookForCaller(
       ...(input.smsConsentGranted ? { smsConsentGranted: true } : {}),
       ...(input.contactName ? { contactName: input.contactName } : {}),
     });
-    await safeRecordProductEvent(context, { name: "appointment.booked", businessId: input.businessId, distinctId, properties: { appointmentId: appointment.appointmentId, channel: input.channel, serviceId: service.id, sourceChannel: input.channel } });
+    await recordProductEventBestEffort(context, { name: "appointment.booked", businessId: input.businessId, distinctId, properties: { appointmentId: appointment.appointmentId, channel: input.channel, serviceId: service.id, sourceChannel: input.channel } });
     return { ok: true as const, appointmentId: appointment.appointmentId, serviceName: service.name, startsAt: input.startsAt };
   } catch (error) {
     const reason = bookingFailureReason(error);
-    await safeRecordProductEvent(context, { name: "appointment.booking_failed", businessId: input.businessId, distinctId, properties: { reason, serviceId: service.id, requestedServiceName: input.serviceName, channel: input.channel, sourceChannel: input.channel } });
+    await recordProductEventBestEffort(context, { name: "appointment.booking_failed", businessId: input.businessId, distinctId, properties: { reason, serviceId: service.id, requestedServiceName: input.serviceName, channel: input.channel, sourceChannel: input.channel } });
     const unavailable = unavailableReasonOf(error);
     return unavailable
       ? { ok: false as const, reason: UNAVAILABLE_REASON_TEXT[unavailable], unavailableReason: unavailable }

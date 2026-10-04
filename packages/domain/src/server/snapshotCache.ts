@@ -15,10 +15,6 @@ export function snapshotCacheKey(businessId: string): string {
   return `${process.env.REDIS_PREFIX ?? "lobbystack"}:widget:snapshot:${businessId}`;
 }
 
-export function serializeSnapshot(snapshot: BusinessContextSnapshot): string {
-  return JSON.stringify(snapshot);
-}
-
 export function deserializeSnapshot(raw: string | null | undefined): BusinessContextSnapshot | null {
   if (!raw) return null;
   try {
@@ -29,21 +25,23 @@ export function deserializeSnapshot(raw: string | null | undefined): BusinessCon
   }
 }
 
-export function createInMemorySnapshotCache(options: { ttlMs?: number } = {}): SnapshotCacheClient {
-  const ttlMs = options.ttlMs ?? SNAPSHOT_CACHE_TTL_SECONDS * 1_000;
-  const store = new Map<string, { snapshot: BusinessContextSnapshot; expiresAt: number }>();
+/** The slice of an ioredis client the snapshot cache uses. */
+export type SnapshotRedis = {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, mode: "EX", seconds: number): Promise<unknown>;
+};
 
+/**
+ * A snapshot cache over Redis. `redis` is resolved on every call; a missing
+ * client or a Redis error reads as a miss and drops the write.
+ */
+export function redisSnapshotCache(redis: () => SnapshotRedis | undefined): SnapshotCacheClient {
   return {
     async get(businessId) {
-      const entry = store.get(businessId);
-      if (!entry || entry.expiresAt <= Date.now()) {
-        store.delete(businessId);
-        return null;
-      }
-      return entry.snapshot;
+      return deserializeSnapshot(await redis()?.get(snapshotCacheKey(businessId)).catch(() => null));
     },
     async set(businessId, snapshot) {
-      store.set(businessId, { snapshot, expiresAt: Date.now() + ttlMs });
+      await redis()?.set(snapshotCacheKey(businessId), JSON.stringify(snapshot), "EX", SNAPSHOT_CACHE_TTL_SECONDS).catch(() => undefined);
     },
   };
 }
@@ -64,5 +62,3 @@ export async function getCachedBusinessSnapshot(
   }
   return snapshot;
 }
-
-

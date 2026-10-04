@@ -224,10 +224,10 @@ export async function recordSmsProviderPricing(
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [message] = await tx.update(messages).set({
       ...(input.providerUpdatedAt ? { providerUpdatedAt: new Date(input.providerUpdatedAt) } : {}),
-      ...(input.providerPrice !== undefined ? { providerPrice: input.providerPrice } : {}),
-      ...(input.providerPriceUnit !== undefined ? { providerPriceUnit: input.providerPriceUnit } : {}),
-      ...(input.providerCostUsd !== undefined ? { providerCostUsd: input.providerCostUsd } : {}),
-      ...(input.providerNumSegments !== undefined ? { providerNumSegments: input.providerNumSegments } : {}),
+      providerPrice: input.providerPrice,
+      providerPriceUnit: input.providerPriceUnit,
+      providerCostUsd: input.providerCostUsd,
+      providerNumSegments: input.providerNumSegments,
       revision: sql`${messages.revision} + 1`,
       updatedAt: new Date(),
     }).where(and(eq(messages.businessId, input.businessId), eq(messages.providerMessageId, input.providerMessageId))).returning({ id: messages.id, revision: messages.revision, aiGenerated: messages.aiGenerated, conversationId: messages.conversationId, createdAt: messages.createdAt });

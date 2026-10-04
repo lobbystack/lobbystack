@@ -7,14 +7,6 @@ import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 import { isContentRetentionEnabled } from "./contentRetentionPolicy";
 
-export async function scrubExpiredMessageContent(context: DomainContext, input: { businessId: string }): Promise<number> {
-  if (!isContentRetentionEnabled()) return 0;
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const rows = await tx.update(messages).set({ body: "[content expired]", media: null, contentExpiresAt: null, updatedAt: new Date() }).where(and(eq(messages.businessId, input.businessId), isNotNull(messages.contentExpiresAt), lt(messages.contentExpiresAt, new Date()))).returning({ id: messages.id });
-    return rows.length;
-  });
-}
-
 export async function runPrivacyRetentionSweep(
   context: DomainContext,
   input: { businessId: string; now?: Date },
@@ -114,18 +106,5 @@ export async function deleteTranscriptForRetention(
       });
     }
     return rows.length;
-  });
-}
-
-export async function markRecordingForDeletion(
-  context: DomainContext,
-  input: { userId: string; businessId: string; callId: string },
-): Promise<void> {
-  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
-    await requireBusinessAdmin(tx, input);
-    const call = (await tx.select({ objectId: calls.recordingObjectId }).from(calls).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId))).limit(1))[0];
-    if (call?.objectId) {
-      await enqueueOutbox(tx, { topic: "privacy.deleteRecording", businessId: input.businessId, aggregateType: "call", aggregateId: input.callId, dedupeKey: `privacy:recording:${input.callId}`, payload: { callId: input.callId, objectId: call.objectId, source: "manual" } });
-    }
   });
 }

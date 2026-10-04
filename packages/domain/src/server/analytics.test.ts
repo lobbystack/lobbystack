@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 
 import { calls, unitEconomicsRollups } from "@lobbystack/db";
 
-import { agentResponsePoints, analyticsBucketExpression, analyticsBucketStarts, analyticsCallChannel, analyticsMessageChannel, analyticsMonthStartExpression } from "./analytics";
+import { analyticsBucketExpression, analyticsBucketStarts, analyticsCallChannel, analyticsMessageChannel, analyticsMonthStartExpression } from "./analytics";
 
 const dialect = new PgDialect();
 
@@ -48,24 +48,6 @@ describe("analytics SQL", () => {
   });
 });
 
-
-describe("agent response time", () => {
-  const at = (seconds: number) => new Date(seconds * 1000);
-  it("pairs conversations independently and consumes each inbound only once", () => {
-    expect(agentResponsePoints([
-      { conversationId: "a", createdAt: at(0), direction: "inbound", aiGenerated: false },
-      { conversationId: "b", createdAt: at(1), direction: "inbound", aiGenerated: false },
-      { conversationId: "a", createdAt: at(3), direction: "inbound", aiGenerated: false },
-      { conversationId: "a", createdAt: at(4), direction: "outbound", aiGenerated: false },
-      { conversationId: "b", createdAt: at(6), direction: "outbound", aiGenerated: true },
-      { conversationId: "a", createdAt: at(8), direction: "outbound", aiGenerated: true },
-      { conversationId: "a", createdAt: at(9), direction: "outbound", aiGenerated: true },
-    ].reverse())).toEqual([{ timestamp: at(6), seconds: 5 }, { timestamp: at(8), seconds: 5 }]);
-  });
-  it("does not invent response measurements without an inbound and AI reply", () => {
-    expect(agentResponsePoints([{ conversationId: "a", createdAt: at(10), direction: "outbound", aiGenerated: true }])).toEqual([]);
-  });
-});
 
 describe("analytics channels", () => {
   it("splits calls into phone and web calls by transport", () => {

@@ -198,11 +198,6 @@ export async function emitWebhookEventInTransaction(tx: DatabaseTransaction, inp
   }
 }
 
-/** Opens its own transaction; for callers that are not already inside one. */
-export async function emitWebhookEvent(context: DomainContext, input: { businessId: string; type: WebhookEventType; resourceId: string }): Promise<string | null> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await emitWebhookEventInTransaction(tx, input));
-}
-
 /** Queues a webhook.test event to one endpoint, whether or not it is subscribed or enabled. */
 export async function sendWebhookTestEvent(context: DomainContext, input: { businessId: string; manager: WebhookManager; endpointId: string }): Promise<{ event_id: string; delivery_id: string }> {
   return await asManager(context, input.businessId, input.manager, async (tx) => {

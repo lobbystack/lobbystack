@@ -1,7 +1,7 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 
 import { billingAccounts, billingUsageEvents, billingUsageMonths, businesses, enqueueOutbox, type DatabaseTransaction } from "@lobbystack/db";
-import { billingErrorCodes, billingPlanCatalog, billingPlanSlugs, type BillingPlanSlug } from "@lobbystack/shared";
+import { billingErrorCodes, billingPlanCatalog, isBillingPlanSlug, liveSubscriptionStates, type BillingPlanSlug } from "@lobbystack/shared";
 
 export type NonAiBillingUsageKind = "voice_seconds" | "alert_sms_segments" | "outbound_call_attempts" | "chat_ai_tokens";
 
@@ -65,14 +65,10 @@ export function estimateSmsSegments(body: string): number {
   return septets <= 160 ? 1 : Math.max(1, Math.ceil(septets / 153));
 }
 
-function isBillingPlan(value: string | null | undefined): value is BillingPlanSlug {
-  return value !== null && value !== undefined && billingPlanSlugs.includes(value as BillingPlanSlug);
-}
-
 export function effectiveBillingPlan(input: { deploymentMode: string; accountPlan: string | null; subscriptionState: string | null }): BillingPlanSlug {
   if (input.deploymentMode !== "cloud") return "self_host";
-  const paidState = input.subscriptionState === "active" || input.subscriptionState === "trialing" || input.subscriptionState === "past_due";
-  if (isBillingPlan(input.accountPlan) && (input.accountPlan === "free_cloud" || paidState)) return input.accountPlan;
+  const paidState = (liveSubscriptionStates as readonly (string | null)[]).includes(input.subscriptionState);
+  if (isBillingPlanSlug(input.accountPlan) && (input.accountPlan === "free_cloud" || paidState)) return input.accountPlan;
   return "free_cloud";
 }
 
@@ -89,10 +85,6 @@ function rateCents(plan: BillingPlanSlug, kind: NonAiBillingUsageKind): number {
   if (kind === "voice_seconds") return (config.voiceOverageRatePerMinuteCents ?? 0) / 60;
   if (kind === "alert_sms_segments") return config.alertSmsOverageRatePerSegmentCents ?? 0;
   return config.outboundCallAttemptOverageRateCents ?? 0;
-}
-
-function usageForKind(usage: UsageCounts, kind: NonAiBillingUsageKind): number {
-  return usage[kind];
 }
 
 function overageSpendFor(plan: BillingPlanSlug, kind: NonAiBillingUsageKind, quantity: number): number {
@@ -117,8 +109,8 @@ function replayEvents(events: ReplayEvent[], fallbackPlan: BillingPlanSlug): { u
   for (const event of [...events].sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())) {
     if (!(event.usageKind in usage)) continue;
     const kind = event.usageKind as NonAiBillingUsageKind;
-    const plan = isBillingPlan(event.planAtRecordTime) ? event.planAtRecordTime : fallbackPlan;
-    const before = usageForKind(usage, kind);
+    const plan = isBillingPlanSlug(event.planAtRecordTime) ? event.planAtRecordTime : fallbackPlan;
+    const before = usage[kind];
     const after = before + Math.max(0, event.quantity);
     usage[kind] = after;
     rawSpendCents += overageSpendFor(plan, kind, after) - overageSpendFor(plan, kind, before);
@@ -151,7 +143,7 @@ function billableQuantityForEvent(events: ReplayEvent[], sourceKey: string, fall
   for (const event of ordered) {
     if (!(event.usageKind in running)) continue;
     const kind = event.usageKind as NonAiBillingUsageKind;
-    const plan = isBillingPlan(event.planAtRecordTime) ? event.planAtRecordTime : fallbackPlan;
+    const plan = isBillingPlanSlug(event.planAtRecordTime) ? event.planAtRecordTime : fallbackPlan;
     const included = includedQuantity(plan, kind);
     const before = running[kind];
     const after = before + Math.max(0, event.quantity);
@@ -217,7 +209,7 @@ export async function getUsageStatusInTransaction(tx: DatabaseTransaction, input
   return await refreshUsageMonth(tx, { businessId: input.businessId, periodKey, plan: billing.plan, capCents: billing.capCents });
 }
 
-export async function reserveUsageInTransaction(tx: DatabaseTransaction, input: { businessId: string; usageKind: NonAiBillingUsageKind; sourceKey: string; quantity?: number; recordedAt?: Date }): Promise<UsageReservationResult> {
+export async function reserveUsageInTransaction(tx: DatabaseTransaction, input: { businessId: string; usageKind: NonAiBillingUsageKind; sourceKey: string; quantity?: number | undefined; recordedAt?: Date | undefined }): Promise<UsageReservationResult> {
   const recordedAt = input.recordedAt ?? new Date();
   const periodKey = periodKeyFor(recordedAt);
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`billing-usage:${input.businessId}:${periodKey}`}, 0))`);
@@ -262,7 +254,7 @@ export async function reserveUsageInTransaction(tx: DatabaseTransaction, input: 
   return { allowed: true, errorCode: null, usageEventId: event.id, syncNeeded, periodKey, plan: billing.plan, quantity };
 }
 
-export async function correctUsageInTransaction(tx: DatabaseTransaction, input: { businessId: string; sourceKey: string; usageKind: NonAiBillingUsageKind; quantity: number; recordedAt?: Date }): Promise<string> {
+export async function correctUsageInTransaction(tx: DatabaseTransaction, input: { businessId: string; sourceKey: string; usageKind: NonAiBillingUsageKind; quantity: number; recordedAt?: Date | undefined }): Promise<string> {
   const recordedAt = input.recordedAt ?? new Date();
   const existingBeforeLock = (await tx.select({ id: billingUsageEvents.id, periodKey: billingUsageEvents.periodKey }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, input.businessId), eq(billingUsageEvents.sourceKey, input.sourceKey))).limit(1))[0];
   const periodKey = existingBeforeLock?.periodKey ?? periodKeyFor(recordedAt);

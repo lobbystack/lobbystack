@@ -8,7 +8,7 @@ import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
 import { recordCallOutcomeInTransaction } from "./callOutcome";
 import { consumeAppointmentChangeVerificationInTransaction } from "./appointmentChanges";
-import { recordProductEvent } from "./productEvents";
+import { recordProductEventBestEffort } from "./productEvents";
 import { rescheduleAppointmentReminderInTransaction } from "./notifications";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 
@@ -218,7 +218,7 @@ export async function bookAppointment(
     const contactId = existingContacts[0]?.id ?? (await tx.insert(contacts).values({
       businessId: input.businessId,
       phone: input.contactPhone,
-      ...(input.contactName !== undefined ? { name: input.contactName } : {}),
+      name: input.contactName,
     }).returning({ id: contacts.id }))[0]?.id;
     if (!contactId) {
       throw new Error("Contact could not be created.");
@@ -313,16 +313,12 @@ async function recordAppointmentChange(
   context: DomainContext,
   input: { name: "appointment.rescheduled" | "appointment.cancelled"; businessId: string; appointmentId: string; source: string },
 ): Promise<void> {
-  try {
-    await recordProductEvent(context, {
-      name: input.name,
-      businessId: input.businessId,
-      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
-      properties: { appointmentId: input.appointmentId, source: input.source },
-    });
-  } catch {
-    // Product telemetry is best-effort and must not fail the appointment change.
-  }
+  await recordProductEventBestEffort(context, {
+    name: input.name,
+    businessId: input.businessId,
+    distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+    properties: { appointmentId: input.appointmentId, source: input.source },
+  });
 }
 
 type AppointmentChangeSource = { source: "operator"; userId: string } | { source: "caller" } | { source: "api"; audit: ApiAudit };

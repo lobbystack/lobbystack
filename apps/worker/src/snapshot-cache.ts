@@ -1,5 +1,4 @@
-import { deserializeSnapshot, serializeSnapshot, snapshotCacheKey, SNAPSHOT_CACHE_TTL_SECONDS, type SnapshotCacheClient } from "@lobbystack/domain";
-import type { BusinessContextSnapshot } from "@lobbystack/shared";
+import { redisSnapshotCache, type SnapshotCacheClient } from "@lobbystack/domain";
 
 import { createRedisConnection } from "@lobbystack/jobs";
 
@@ -11,13 +10,5 @@ export function getWorkerSnapshotCache(): SnapshotCacheClient {
     store.on("error", () => undefined);
   }
   const connection = store;
-  return {
-    async get(businessId) {
-      const raw = await connection.get(snapshotCacheKey(businessId)).catch(() => null);
-      return deserializeSnapshot(raw ?? undefined);
-    },
-    async set(businessId, snapshot: BusinessContextSnapshot) {
-      await connection.set(snapshotCacheKey(businessId), serializeSnapshot(snapshot), "EX", SNAPSHOT_CACHE_TTL_SECONDS).catch(() => undefined);
-    },
-  };
+  return redisSnapshotCache(() => connection);
 }

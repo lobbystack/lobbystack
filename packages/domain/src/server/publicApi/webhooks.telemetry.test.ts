@@ -19,7 +19,7 @@ vi.mock("@lobbystack/telemetry/node", async (importOriginal) => ({
 import { businesses, contacts, createDatabaseClient, webhookDeliveries, webhookEndpoints, withBusinessTransaction } from "@lobbystack/db";
 import { WEBHOOK_MAX_ATTEMPTS } from "@lobbystack/shared";
 
-import { emitWebhookEvent, emitWebhookEventInTransaction, processWebhookDelivery } from "./webhooks";
+import { emitWebhookEventInTransaction, processWebhookDelivery } from "./webhooks";
 import { encryptWebhookSecret, generateWebhookSecret } from "./webhookTransport";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -46,7 +46,7 @@ let contactId: string;
 const added = (name: string) => metrics.adds.filter((entry) => entry.meter === "lobbystack-webhooks" && entry.name === name);
 
 async function queueDelivery(): Promise<string> {
-  const eventId = await emitWebhookEvent({ db: worker!.db }, { businessId, type: "contact.created", resourceId: contactId });
+  const eventId = await withBusinessTransaction(worker!.db, { businessId, actorType: "worker" }, async (tx) => await emitWebhookEventInTransaction(tx, { businessId, type: "contact.created", resourceId: contactId }));
   const [row] = await admin!.db.select({ id: webhookDeliveries.id }).from(webhookDeliveries).where(eq(webhookDeliveries.eventId, eventId!));
   return row!.id;
 }
