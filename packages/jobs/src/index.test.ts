@@ -66,11 +66,10 @@ describe("enqueueJob job ids", () => {
       trace: { traceparent: "00-abc-def-01" },
       idempotencyKey: "dispatch-key",
       delayMs: 60_000,
-      attempts: 3,
     });
 
     expect(add).toHaveBeenCalledTimes(1);
-    const [type, envelope, options] = add.mock.calls[0] as unknown as [string, unknown, { jobId: string; attempts: number; delay?: number; backoff: unknown }];
+    const [type, envelope, options] = add.mock.calls[0] as unknown as [string, unknown, { jobId: string; delay?: number }];
     expect(type).toBe("sms.send");
     expect(jobEnvelopeSchema.parse(envelope)).toMatchObject({
       jobId,
@@ -82,9 +81,7 @@ describe("enqueueJob job ids", () => {
       trace: { traceparent: "00-abc-def-01" },
     });
     expect(options.jobId).toBe(jobId);
-    expect(options.attempts).toBe(3);
-    expect(options.delay).toBe(60_000);
-    expect(options.backoff).toEqual({ type: "exponential", delay: 1000 });
+    expect(options).toEqual({ jobId, delay: 60_000 });
   });
 
   it("defaults the business scope to null and omits delay for immediate jobs", async () => {
@@ -92,9 +89,8 @@ describe("enqueueJob job ids", () => {
 
     await enqueueJob(queue, { type: "email.send", payload: {}, idempotencyKey: "immediate" });
 
-    const [, envelope, options] = add.mock.calls[0] as unknown as [string, unknown, { attempts: number; delay?: number }];
+    const [, envelope, options] = add.mock.calls[0] as unknown as [string, unknown, { delay?: number }];
     expect(jobEnvelopeSchema.parse(envelope)).toMatchObject({ businessId: null, scheduled: false });
-    expect(options.attempts).toBe(5);
     expect(options).not.toHaveProperty("delay");
   });
 });
