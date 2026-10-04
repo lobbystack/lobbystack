@@ -1,7 +1,3 @@
-import { mkdtemp, rm, stat } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
 import { describe, expect, it } from "vitest";
 
 import {
@@ -18,7 +14,6 @@ import {
   urlIsLocal,
   validateSoakConfig,
   validateSoakEnvironment,
-  writeSoakEvidence,
   type HealthTargetResult,
   type SoakEvidence,
   type SoakResultRow,
@@ -136,8 +131,8 @@ describe("soak certification guards", () => {
     expect(parseSoakArgs(["--config", "run.json"])).toEqual({ configPath: "run.json" });
     expect(parseSoakArgs(["--config", "run.json", "--evidence", "out.json", "--output", "/tmp/out"])).toEqual({ configPath: "run.json", evidencePath: "out.json", outputDir: "/tmp/out" });
     expect(() => parseSoakArgs(["--evidence", "out.json"])).toThrow("--config <run-config.json> is required.");
-    expect(() => parseSoakArgs(["--config"])).toThrow("--config requires a file path.");
-    expect(() => parseSoakArgs(["--config", "run.json", "--bogus"])).toThrow("Unknown soak-certification option: --bogus.");
+    expect(() => parseSoakArgs(["--config"])).toThrow("Option '--config <value>' argument missing");
+    expect(() => parseSoakArgs(["--config", "run.json", "--bogus"])).toThrow("Unknown option '--bogus'");
   });
 });
 
@@ -181,18 +176,6 @@ describe("soak threshold evaluation", () => {
 });
 
 describe("soak evidence", () => {
-  it("writes owner-only, non-overwritable evidence", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "soak-certification-test-"));
-    const file = join(directory, "evidence.json");
-    try {
-      await writeSoakEvidence(file, evidenceFixture());
-      expect((await stat(file)).mode & 0o777).toBe(0o600);
-      await expect(writeSoakEvidence(file, evidenceFixture())).rejects.toMatchObject({ code: "EEXIST" });
-    } finally {
-      await rm(directory, { recursive: true, force: true });
-    }
-  });
-
   it("marks the evidence as uncertified with unassigned ownership", () => {
     expect(evidenceFixture()).toMatchObject({ releaseCertified: false, owner: "UNASSIGNED", reviewer: "UNASSIGNED" });
   });

@@ -1,7 +1,3 @@
-import { mkdtemp, rm, stat } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -12,7 +8,6 @@ import {
   releaseGates,
   runReleaseReadiness,
   stagingConfigurationProblems,
-  writeReleaseEvidence,
 } from "./release-readiness";
 
 const stagingEnvironment = {
@@ -92,19 +87,6 @@ describe("release readiness", () => {
     const result = await runReleaseReadiness({ mode: "local", runId: "run-1", gitSha: "sha-1", execute: async () => { throw new Error("spawn failed"); } });
     expect(result.gates[0]).toMatchObject({ id: "lint", commandName: "lint", status: "failed", startedAt: expect.any(String), finishedAt: expect.any(String), durationMs: expect.any(Number), outputDigest: null });
     expect(result.gates.slice(1).every((gate) => gate.status === "not-run")).toBe(true);
-  });
-
-  it("writes non-overwritable owner-only evidence", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "release-readiness-test-"));
-    const file = join(directory, "evidence.json");
-    try {
-      const result = await runReleaseReadiness({ plan: true, runId: "run-1", gitSha: "sha-1" });
-      await writeReleaseEvidence(file, result);
-      expect((await stat(file)).mode & 0o777).toBe(0o600);
-      await expect(writeReleaseEvidence(file, result)).rejects.toMatchObject({ code: "EEXIST" });
-    } finally {
-      await rm(directory, { recursive: true, force: true });
-    }
   });
 
   it("uses Playwright JSON results rather than console text", () => {

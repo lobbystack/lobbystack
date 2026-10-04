@@ -1,9 +1,13 @@
 import { createHash, randomUUID } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
+import { parseArgs } from "node:util";
+
+import { writePrivateJson } from "./lib/private-artifact";
+import { urlIsLocal } from "./performance/soak-certification";
 
 export type ReleaseMode = "local" | "staging";
 export type GateStatus = "planned" | "passed" | "failed" | "not-run";
@@ -107,15 +111,6 @@ export function releaseGates(mode: ReleaseMode, e2e = false): readonly Gate[] {
 
 export function missingRequiredEnvironment(environment: NodeJS.ProcessEnv, names: readonly string[]): string[] {
   return names.filter((name) => !environment[name]?.trim());
-}
-
-function urlIsLocal(value: string): boolean {
-  try {
-    const hostname = new URL(value).hostname.toLowerCase();
-    return hostname === "localhost" || hostname === "::1" || hostname === "[::1]" || hostname === "0.0.0.0" || hostname.startsWith("127.") || hostname.endsWith(".localhost") || hostname.endsWith(".local");
-  } catch {
-    return true;
-  }
 }
 
 function databaseHasCertificationName(value: string): boolean {
@@ -337,32 +332,32 @@ export async function runReleaseReadiness(options: ReleaseReadinessOptions = {})
   return result;
 }
 
-export async function writeReleaseEvidence(filePath: string, releaseEvidence: ReleaseEvidence): Promise<void> {
-  await mkdir(dirname(filePath), { recursive: true });
-  await writeFile(filePath, `${JSON.stringify(releaseEvidence, null, 2)}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" });
-  await chmod(filePath, 0o600);
-}
-
 type CliOptions = { mode: ReleaseMode; plan: boolean; e2e: boolean; evidencePath?: string };
 export function parseReleaseReadinessArgs(args: string[]): CliOptions {
-  let mode: ReleaseMode = "local"; let plan = false; let e2e = false; let evidencePath: string | undefined;
-  for (let index = 0; index < args.length; index += 1) {
-    const argument = args[index];
-    if (argument === "--local") mode = "local";
-    else if (argument === "--staging") mode = "staging";
-    else if (argument === "--plan" || argument === "--dry-run") plan = true;
-    else if (argument === "--e2e") e2e = true;
-    else if (argument === "--evidence") { evidencePath = args[index + 1]; if (!evidencePath) throw new Error("--evidence requires a file path."); index += 1; }
-    else throw new Error(`Unknown release-readiness option: ${argument}.`);
-  }
+  const { values } = parseArgs({
+    args,
+    strict: true,
+    options: {
+      local: { type: "boolean" },
+      staging: { type: "boolean" },
+      plan: { type: "boolean" },
+      "dry-run": { type: "boolean" },
+      e2e: { type: "boolean" },
+      evidence: { type: "string" },
+    },
+  });
+  // --local wins when both targets are passed.
+  const mode: ReleaseMode = values.staging && !values.local ? "staging" : "local";
+  const plan = Boolean(values.plan || values["dry-run"]);
+  const e2e = Boolean(values.e2e);
   if (mode === "staging" && e2e) throw new Error("--e2e is available only for the local baseline.");
-  return { mode, plan, e2e, ...(evidencePath ? { evidencePath } : {}) };
+  return { mode, plan, e2e, ...(values.evidence ? { evidencePath: values.evidence } : {}) };
 }
 
 async function main(): Promise<void> {
   const options = parseReleaseReadinessArgs(process.argv.slice(2));
   const result = await runReleaseReadiness(options);
-  if (options.evidencePath) await writeReleaseEvidence(options.evidencePath, result);
+  if (options.evidencePath) await writePrivateJson(options.evidencePath, result);
   console.log(JSON.stringify(result));
   if (result.status === "failed") process.exitCode = 1;
 }

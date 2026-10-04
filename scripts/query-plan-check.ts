@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { writeFile } from "node:fs/promises";
+import { parseArgs } from "node:util";
 
 import { createDatabaseClient, type DatabaseClient } from "@lobbystack/db";
 
@@ -417,12 +418,13 @@ function buildCases(): CaseDefinition[] {
 }
 
 async function main(): Promise<void> {
-  const args = new Set(process.argv.slice(2));
-  const reseed = args.has("--reseed");
-  const labelArg = [...args].find((argument) => argument.startsWith("--label="));
-  const outArg = [...args].find((argument) => argument.startsWith("--out="));
-  const label = labelArg?.slice("--label=".length) ?? "current";
-  const outPath = outArg?.slice("--out=".length);
+  const { values } = parseArgs({
+    strict: true,
+    options: { reseed: { type: "boolean" }, label: { type: "string" }, out: { type: "string" } },
+  });
+  const reseed = values.reseed ?? false;
+  const label = values.label ?? "current";
+  const outPath = values.out;
 
   const migratorUrl = loopbackUrl("QUERY_PLAN_CHECK_DATABASE_URL");
   const appUrl = loopbackUrl("QUERY_PLAN_CHECK_APP_DATABASE_URL");

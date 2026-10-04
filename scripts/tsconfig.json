@@ -44,6 +44,7 @@
     "./replacement-password-recovery-check.ts",
     "./replacement-email-change-check.ts",
     "./performance/**/*.ts",
-    "./operations/**/*.ts"
+    "./operations/**/*.ts",
+    "./lib/**/*.ts"
   ]
 }

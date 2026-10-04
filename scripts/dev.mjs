@@ -1,10 +1,15 @@
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-import { loadLocalEnv } from "./load-local-env.mjs";
-
 const root = fileURLToPath(new URL("..", import.meta.url));
-loadLocalEnv([`${root}/.env`, `${root}/.env.local`]);
+// Inherited variables win, and .env.local beats .env: loadEnvFile never replaces a key that is already set.
+for (const file of [".env.local", ".env"]) {
+  try {
+    process.loadEnvFile(`${root}/${file}`);
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+}
 
 const child = spawn(process.execPath, [
   `${root}/node_modules/concurrently/dist/bin/concurrently.js`,
