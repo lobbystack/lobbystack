@@ -17,11 +17,8 @@ const CODE_MESSAGES = {
 
 const addAuthHeader = (request, z, bundle) => {
   const apiKey = String((bundle.authData && bundle.authData.apiKey) || '').trim();
-  if (apiKey) {
-    request.headers = request.headers || {};
-    request.headers.Authorization = `Bearer ${apiKey}`;
-  }
   request.headers = request.headers || {};
+  if (apiKey) request.headers.Authorization = `Bearer ${apiKey}`;
   request.headers.Accept = 'application/json';
   return request;
 };
@@ -101,5 +98,4 @@ const handleErrors = (response, z) => {
 module.exports = {
   befores: [addAuthHeader],
   afters: [handleErrors],
-  CODE_MESSAGES,
 };

@@ -113,6 +113,5 @@ module.exports = {
   listPage,
   normalizePhone,
   resolveBaseUrl,
-  stableStringify,
   toBoolean,
 };
