@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { isMaintenanceMode } from "@lobbystack/shared";
+import { isMaintenanceMode, normalizeInterfaceLocale } from "@lobbystack/shared";
 
-import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE_SECONDS, localeTag, normalizeLocale } from "@/lib/locale";
+import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE_SECONDS, localeTag } from "@/lib/locale";
 import {
   isLegacyPublicRoutePath,
   isPublicRoutePath,
@@ -124,7 +124,7 @@ export function proxy(request: NextRequest) {
     acceptLanguage: request.headers.get("accept-language"),
   });
   const pathLocale = localeFromPathname(pathname);
-  const queryLocale = normalizeLocale(request.nextUrl.searchParams.get("lng"));
+  const queryLocale = normalizeInterfaceLocale(request.nextUrl.searchParams.get("lng"));
 
   if (isLegacyPublicRoutePath(pathname)) {
     const target = request.nextUrl.clone();

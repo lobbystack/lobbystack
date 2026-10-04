@@ -1,6 +1,7 @@
 "use client";
 
 import { selectActiveBusiness } from "@/lib/active-business";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,8 +20,7 @@ export default function AppearancePage() {
   const { locale, setLocale, isSaving: isLocaleSaving } = useLocalePreference();
   const { timeFormatPreference, setTimeFormatPreference } = useAppearancePreference();
   const queryClient = useQueryClient();
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Array<{ businessId: string; active: boolean }> }>("/api/businesses") });
-  const businessId = selectActiveBusiness(businesses.data?.businesses)?.businessId;
+  const businessId = useActiveBusiness().business?.businessId;
   type Preference = { telemetryEnabled: boolean; canManageTenant: boolean };
   const appearance = useQuery({ queryKey: ["appearance-preferences", businessId], enabled: Boolean(businessId), queryFn: () => requestJson<Preference>(`/api/preferences/appearance?businessId=${encodeURIComponent(businessId!)}`) });
   const updateAppearance = useMutation({

@@ -51,8 +51,6 @@ export function buildWebVoiceRateLimits(input: {
 
 export async function enforceWebVoiceRateLimits(
   input: Parameters<typeof buildWebVoiceRateLimits>[0],
-  // ponytail: ignored; scripts/replacement-web-voice-policy-check.ts still passes { consume: true }. Drop with that call.
-  _legacyOptions?: { consume: true },
 ): Promise<WebVoiceRateLimitResult> {
   if (input.prospectDemoId && !input.visitorId && !input.ipHash) {
     return { allowed: false, status: 429, code: "web_voice_rate_limited", reason: "prospect_demo_rate_limit_missing_identity" };

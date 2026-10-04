@@ -30,9 +30,6 @@ export const TIME_FORMAT_STORAGE_KEY = "lobbystack.time-format";
 export const LOCALE_COOKIE = LOCALE_STORAGE_KEY;
 export const LOCALE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
-// ponytail: kept only for apps/admin/proxy.ts; it can import normalizeInterfaceLocale directly.
-export { normalizeInterfaceLocale as normalizeLocale };
-
 export function resolveLocale(
   ...candidates: Array<string | null | undefined>
 ): SupportedLocale {
@@ -90,9 +87,13 @@ export function readStoredTimeFormatPreference(): TimeFormatPreference | null {
     return null;
   }
 
-  return normalizeTimeFormatPreference(
-    window.localStorage.getItem(TIME_FORMAT_STORAGE_KEY),
-  );
+  try {
+    return normalizeTimeFormatPreference(
+      window.localStorage.getItem(TIME_FORMAT_STORAGE_KEY),
+    );
+  } catch {
+    return null;
+  }
 }
 
 export function writeStoredTimeFormatPreference(

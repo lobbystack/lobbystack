@@ -79,10 +79,10 @@ async function main(): Promise<void> {
 
     const rateInput = { businessId: cloudBusinessId, origin: "https://policy.example.test", ipHash: `ip-${suffix}` };
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      const result = await enforceWebVoiceRateLimits(rateInput, { consume: true });
+      const result = await enforceWebVoiceRateLimits(rateInput);
       assert(result.allowed, `Rate limiter rejected allowed attempt ${attempt + 1}.`);
     }
-    const blocked = await enforceWebVoiceRateLimits(rateInput, { consume: true });
+    const blocked = await enforceWebVoiceRateLimits(rateInput);
     assert(!blocked.allowed && blocked.status === 429, "The sixth per-IP attempt was not rejected.");
 
     console.log(JSON.stringify({
