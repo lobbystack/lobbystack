@@ -9,7 +9,7 @@ const route = vi.hoisted(() => ({ router: { replace: vi.fn() }, search: new URLS
 vi.mock("next/navigation", () => ({ useRouter: () => route.router, useSearchParams: () => route.search }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
 const clients: QueryClient[] = [];
-beforeEach(() => { route.search = new URLSearchParams(); });
+beforeEach(() => { route.search = new URLSearchParams(); vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn() }); });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 function setup({ synced = false, checkoutFails = false, billingFails = false, plan = "pro", admin = true, configured = false, transactions = false, accountMissing = false } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);

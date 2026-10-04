@@ -15,11 +15,11 @@ import { PageSurface } from "./page-surface";
 import { SectionBlock } from "./section-block";
 import { Button } from "./ui/button";
 import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
-import { SpendingCapSection } from "./billing-spending-cap";
+import { formatMoney, SpendingCapSection } from "./billing-spending-cap";
 import { Skeleton } from "./ui/skeleton";
 import { Surface } from "./ui/surface";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { intlLocale } from "@/lib/locale";
+import { formatDateTime, intlLocale } from "@/lib/locale";
 
 type Billing = {
   availableCheckoutPlans: Array<"starter" | "pro">;
@@ -31,8 +31,7 @@ type Billing = {
   usageStatus: { usageComplete: boolean; voiceBlocked: boolean; alertSmsBlocked: boolean; outboundCallAttemptsBlocked: boolean; overageSpendingCapReached: boolean; overageSpendCents: number; overageSpendingCapCents: number | null } | null;
 };
 
-function formatMoney(cents: number, currency = "usd", locale = "en"): string { return new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency: currency.toUpperCase(), minimumFractionDigits: cents % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 }).format(cents / 100); }
-function formatBillingDate(value: string | null, locale = "en"): string { return value ? new Intl.DateTimeFormat(intlLocale(locale), { month: "short", day: "numeric", year: "numeric" }).format(new Date(value)) : "—"; }
+function formatBillingDate(value: string | null, locale = "en"): string { return value ? formatDateTime(value, locale, { month: "short", day: "numeric", year: "numeric" }) : "—"; }
 function planSlug(value: string | null | undefined): BillingPlanSlug { return value === "self_hosted_standard" ? "self_host" : value === "self_host" || value === "starter" || value === "pro" || value === "enterprise" ? value : "free_cloud"; }
 
 

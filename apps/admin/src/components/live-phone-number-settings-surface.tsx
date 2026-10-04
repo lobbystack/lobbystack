@@ -15,7 +15,7 @@ import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
 import { formatPhoneNumberDisplay, normalizeOnboardingPhoneCountry } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
 import type { BillingUsageViewModel, PhoneNumberViewModel } from "@/lib/page-view-models";
-import { intlLocale } from "@/lib/locale";
+import { formatDateTime } from "@/lib/locale";
 
 type Offer = { phoneE164: string; locality?: string; region?: string; countryCode: string; claimToken: string; capabilities: { voice: boolean; sms: boolean } };
 type NumbersResponse = { phoneNumbers: PhoneNumberViewModel[]; activeClaim?: { id: string; status: string } | null; replacement: { usedAt: string | null; activeClaim?: { id: string; status: string } | null } };
@@ -35,11 +35,7 @@ function getSettingsPhoneNumberErrorMessage(error: unknown, fallback: string): s
 }
 
 function formatReclaimDate(value: number, locale: string): string {
-  return new Intl.DateTimeFormat(intlLocale(locale), {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  }).format(new Date(value));
+  return formatDateTime(value, locale, { year: "numeric", month: "long", day: "numeric" });
 }
 
 export function LivePhoneNumberSettingsSurface() {

@@ -14,12 +14,12 @@ import { Badge } from "./ui/badge";
 import { PageSurface } from "./page-surface";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { getContactDisplayName } from "@/lib/contact-display";
-import { intlLocale } from "@/lib/locale";
+import { formatDateTime } from "@/lib/locale";
 
 type Appointment = { id: string; startsAt: string; endsAt: string; timezone: string; status: string; sourceChannel: string; calendarSyncState: string; contactName: string | null; contactPhone?: string | null; contactEmail?: string | null; serviceName: string; staffName: string };
 
 function formatDate(appointment: Appointment, locale: string): string {
-  return new Intl.DateTimeFormat(intlLocale(locale), { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: appointment.timezone }).format(new Date(appointment.startsAt));
+  return formatDateTime(appointment.startsAt, locale, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: appointment.timezone });
 }
 
 export function LiveAppointmentsSurface() {

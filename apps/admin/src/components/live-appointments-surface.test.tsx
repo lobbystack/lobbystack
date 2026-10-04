@@ -3,12 +3,13 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createInstance } from "i18next";
 import { I18nextProvider } from "react-i18next";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import en from "../../public/locales/en/common.json";
 import fr from "../../public/locales/fr/common.json";
 import { LiveAppointmentsSurface } from "./live-appointments-surface";
 
 const clients: QueryClient[] = [];
+beforeEach(() => { vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn() }); });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
 async function setup(locale: "en" | "fr", populated: boolean) {
   vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });

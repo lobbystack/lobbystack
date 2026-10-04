@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { localizeMarketingHref } from "@/lib/marketing-site-url";
-import { intlLocale, resolveLocale, type SupportedLocale } from "@/lib/locale";
+import { formatDateTime, intlLocale, resolveLocale, type SupportedLocale } from "@/lib/locale";
 
 import { PageSurface } from "./page-surface";
 import { Badge } from "./ui/badge";
@@ -48,7 +48,7 @@ function formatCurrency(locale: SupportedLocale, amountCents: number, currency =
 
 function formatDate(locale: SupportedLocale, value: string | null): string {
   if (!value) return "";
-  return new Intl.DateTimeFormat(intlLocale(locale), { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
+  return formatDateTime(value, locale, { month: "short", day: "numeric", year: "numeric" });
 }
 
 function StatCard({ description, label, value }: { description: string; label: string; value: string }) {
