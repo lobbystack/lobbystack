@@ -2,7 +2,7 @@
 
 import { useState, type ComponentType, type SVGProps } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import {
   Bot,
   Briefcase,
@@ -21,13 +21,14 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { requestJson } from "@/lib/request-json";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { useTelemetry } from "@/components/product-analytics";
 import { clearAffiliateReferralCode, getStoredAffiliateReferralCode } from "@/lib/affiliate-referral";
 import { cn } from "@/lib/utils";
 
-type Business = { businessId: string; active: boolean };
 type AttributionSource = "ai_assistant" | "newsletter" | "podcast" | "news" | "work" | "school" | "x" | "reddit" | "facebook" | "youtube" | "instagram" | "linkedin" | "google" | "tiktok" | "other";
 type Icon = ComponentType<SVGProps<SVGSVGElement>>;
 
@@ -57,20 +58,13 @@ const options: Array<{ key: AttributionSource; Icon: Icon }> = [
   { key: "other", Icon: MessageCircleQuestion },
 ];
 
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
-  if (!response.ok) throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Request failed.");
-  return await response.json() as T;
-}
-
 export function OnboardingAttributionSurface() {
   const { t } = useTranslation("onboarding");
   const router = useRouter();
   const telemetry = useTelemetry();
   const [selected, setSelected] = useState<AttributionSource | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
+  const { business } = useActiveBusiness();
   const finish = useMutation({
     mutationFn: (source: AttributionSource | null) => requestJson(`/api/onboarding/attribution?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ source, referralCode: getStoredAffiliateReferralCode() }) }),
     onSuccess: (_result, source) => {

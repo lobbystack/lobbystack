@@ -1,5 +1,7 @@
 "use client";
 
+import { requestJson } from "@/lib/request-json";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { subscribeRealtimeQuery } from "@/lib/realtime-query";
 
 import { useEffect } from "react";
@@ -7,7 +9,6 @@ import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { selectActiveBusiness } from "@/lib/active-business";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { PageSurface } from "./page-surface";
@@ -15,14 +16,7 @@ import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRo
 import { getContactDisplayName } from "@/lib/contact-display";
 import { intlLocale } from "@/lib/locale";
 
-type Business = { businessId: string; name: string; slug: string; role: string; active: boolean };
 type Appointment = { id: string; startsAt: string; endsAt: string; timezone: string; status: string; sourceChannel: string; calendarSyncState: string; contactName: string | null; contactPhone?: string | null; contactEmail?: string | null; serviceName: string; staffName: string };
-
-async function getJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { credentials: "include" });
-  if (!response.ok) throw new Error("Unable to load appointments.");
-  return await response.json() as T;
-}
 
 function formatDate(appointment: Appointment, locale: string): string {
   return new Intl.DateTimeFormat(intlLocale(locale), { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: appointment.timezone }).format(new Date(appointment.startsAt));
@@ -31,9 +25,8 @@ function formatDate(appointment: Appointment, locale: string): string {
 export function LiveAppointmentsSurface() {
   const { t, i18n } = useTranslation("common");
   const queryClient = useQueryClient();
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => getJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = selectActiveBusiness(businesses.data?.businesses);
-  const appointments = useQuery({ queryKey: ["appointments", business?.businessId], queryFn: () => getJson<{ appointments: Appointment[] }>(`/api/appointments?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business) });
+  const { businesses, business } = useActiveBusiness();
+  const appointments = useQuery({ queryKey: ["appointments", business?.businessId], queryFn: () => requestJson<{ appointments: Appointment[] }>(`/api/appointments?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business) });
 
   useEffect(() => {
     if (!business?.businessId) return;

@@ -25,6 +25,7 @@ import { Item, ItemActions, ItemHeader, ItemContent, ItemDescription, ItemFooter
 import { Separator } from "@/components/ui/separator";
 import { Surface } from "@/components/ui/surface";
 import { intlLocale, formatDateTime } from "@/lib/locale";
+import { formatDuration } from "@/lib/duration";
 
 const OverviewCallChart = dynamic(() => import("./overview-call-chart").then((module) => module.OverviewCallChart), {
   loading: () => <div className="h-[350px] animate-pulse rounded-xl bg-muted" />,
@@ -49,12 +50,6 @@ async function getSummary(): Promise<DashboardSummary> {
   const response = await fetch("/api/dashboard", { credentials: "include" });
   if (!response.ok) throw new Error("Unable to load dashboard data.");
   return await response.json() as DashboardSummary;
-}
-
-function formatDuration(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const remainder = seconds % 60;
-  return minutes === 0 ? `${remainder}s` : `${minutes}m ${remainder.toString().padStart(2, "0")}s`;
 }
 
 function initials(value: string | null): string {

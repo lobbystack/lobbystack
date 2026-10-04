@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
-  ArrowLeft,
   Calendar,
   CheckCircle2,
   Copy,
@@ -23,6 +22,7 @@ import { useTranslation } from "react-i18next";
 
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { CONTACT_CHANNEL_ICONS, ContactChannelIcons } from "@/components/contact-channel-icons";
+import { BackLink, DetailSection, MetadataField, truncateId, useCopiedField } from "@/components/detail-fields";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -31,12 +31,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { selectActiveBusiness } from "@/lib/active-business";
-import { intlLocale, formatRelativeTime } from "@/lib/locale";
+import { useActiveBusiness } from "@/hooks/use-active-business";
+import { formatDuration } from "@/lib/duration";
+import { formatDateTime, intlLocale, formatRelativeTime } from "@/lib/locale";
+import { requestJson } from "@/lib/request-json";
 import { getChannelLabel, getContactChannels, getContactDisplayName, hasDisplayablePhone, normalizeChannel } from "@/lib/contact-display";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 
-type Business = { businessId: string; name: string; active: boolean; role: string };
 type Detail = {
   contact: {
     id: string;
@@ -60,25 +61,8 @@ type Detail = {
   activityCounts: { calls: number; messages: number; appointments: number; conversations: number };
 };
 
-async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
-  if (!response.ok) throw new Error("Unable to load contact details.");
-  return await response.json() as T;
-}
-
 function dateTime(value: string, locale: string, dateOnly = false): string {
-  return new Intl.DateTimeFormat(intlLocale(locale), dateOnly ? { dateStyle: "medium" } : { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
-}
-
-function truncateId(value: string, maxLength = 16): string {
-  return value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
-}
-
-function formatDuration(seconds: number | null): string {
-  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) return "—";
-  const minutes = Math.floor(seconds / 60);
-  const remainder = Math.floor(seconds % 60);
-  return minutes > 0 ? `${minutes}m ${String(remainder).padStart(2, "0")}s` : `${remainder}s`;
+  return formatDateTime(value, locale, dateOnly ? { dateStyle: "medium" } : { dateStyle: "medium", timeStyle: "short" });
 }
 
 function resolveCallStatus(status: string, disposition: string | null): "blocked" | "completed" | "failed" | "in_progress" {
@@ -127,37 +111,29 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
   const { i18n, t } = useTranslation("contacts");
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const { copiedField, copy } = useCopiedField();
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => getJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = selectActiveBusiness(businesses.data?.businesses);
+  const { businesses, business } = useActiveBusiness();
   const canMutate = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   const detail = useQuery({
     queryKey: ["contact", business?.businessId, contactId],
-    queryFn: () => getJson<Detail>(`/api/contacts/${encodeURIComponent(contactId)}?businessId=${encodeURIComponent(business!.businessId)}`),
+    queryFn: () => requestJson<Detail>(`/api/contacts/${encodeURIComponent(contactId)}?businessId=${encodeURIComponent(business!.businessId)}`),
     enabled: Boolean(business?.businessId),
   });
   const updateBlock = useMutation({
-    mutationFn: (blocked: boolean) => getJson(`/api/contacts/${encodeURIComponent(contactId)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ smsBlocked: blocked }) }),
+    mutationFn: (blocked: boolean) => requestJson(`/api/contacts/${encodeURIComponent(contactId)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ smsBlocked: blocked }) }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["contact", business?.businessId, contactId] }),
   });
   const remove = useMutation({
-    mutationFn: () => getJson(`/api/contacts/${encodeURIComponent(contactId)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "DELETE" }),
+    mutationFn: () => requestJson(`/api/contacts/${encodeURIComponent(contactId)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "DELETE" }),
     onSuccess: () => router.push("/contacts"),
   });
-
-  function copy(text: string, field: string) {
-    void navigator.clipboard.writeText(text).then(() => {
-      setCopiedField(field);
-      window.setTimeout(() => setCopiedField(null), 1_500);
-    });
-  }
 
   if (businesses.isLoading || detail.isLoading) return <DetailSkeleton />;
   const data = detail.data;
   if (businesses.isError || detail.isError || !data?.contact) {
-    return <div className="flex flex-1 flex-col gap-6"><BackLink label={t("detail.backToList")} /><div className="flex flex-col items-center gap-2 py-16 text-center"><User className="size-8 text-muted-foreground/40" /><p className="type-empty-title">{t("detail.notFound")}</p><p className="type-empty-description">{t("detail.notFoundDescription")}</p></div></div>;
+    return <div className="flex flex-1 flex-col gap-6"><BackLink href="/contacts" label={t("detail.backToList")} /><div className="flex flex-col items-center gap-2 py-16 text-center"><User className="size-8 text-muted-foreground/40" /><p className="type-empty-title">{t("detail.notFound")}</p><p className="type-empty-description">{t("detail.notFoundDescription")}</p></div></div>;
   }
   const contact = data.contact;
   const channels = data.channels ?? [...data.calls.map((call) => call.transport), ...data.messages.map((message) => message.channel)];
@@ -166,7 +142,7 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <BackLink label={t("detail.backToList")} />
+      <BackLink href="/contacts" label={t("detail.backToList")} />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
           <h1 className="type-page-title ph-mask">{displayName}</h1>
@@ -183,7 +159,7 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <MetadataField copied={copiedField === "phone"} label={t("detail.metadata.phone")} maskValue {...(phone ? { onCopy: () => copy(phone, "phone") } : {})} value={phone ? formatPhoneNumberDisplay(phone, i18n.language) : "—"} />
+        <MetadataField copied={copiedField === "phone"} copyLabel={t("detail.details.copy")} label={t("detail.metadata.phone")} maskValue {...(phone ? { onCopy: () => copy(phone, "phone") } : {})} value={phone ? formatPhoneNumberDisplay(phone, i18n.language) : "—"} />
         <MetadataField label={t("detail.metadata.email")} maskValue value={contact.email ?? "—"} />
         <MetadataField label={t("detail.metadata.firstSeen")} value={dateTime(contact.createdAt, i18n.language, true)} />
       </div>
@@ -210,15 +186,6 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
       <ConfirmActionDialog confirmVariant="destructive" cancelLabel={t("table.actions.deleteCancel")} confirmLabel={t("table.actions.deleteConfirm")} description={t("table.actions.deleteDescription")} onConfirm={async () => { await remove.mutateAsync(); }} onOpenChange={(open) => { if (!remove.isPending) setDeleteDialogOpen(open); }} open={deleteDialogOpen} pending={remove.isPending} title={t("table.actions.deleteTitle")} />
     </div>
   );
-}
-
-function BackLink({ label }: { label: string }) {
-  return <Link className="type-body-muted inline-flex w-fit items-center gap-1.5 transition-colors hover:text-foreground" href="/contacts"><ArrowLeft className="size-4" />{label}</Link>;
-}
-
-function MetadataField({ copied, label, maskValue, onCopy, value }: { copied?: boolean; label: string; maskValue?: boolean; onCopy?: () => void; value: string }) {
-  const { t } = useTranslation("contacts");
-  return <div className="flex flex-col gap-1"><span className="type-meta">{label}</span><div className="flex items-center gap-1.5"><span className={cn("type-body truncate", maskValue && "ph-mask")}>{value}</span>{onCopy ? <button aria-label={t("detail.details.copy")} className={cn("flex size-5 items-center justify-center rounded-full text-muted-foreground/60 hover:text-foreground", copied && "text-emerald-500")} onClick={onCopy} type="button">{copied ? <CheckCircle2 className="size-3" /> : <Copy className="size-3" />}</button> : null}</div></div>;
 }
 
 function StatCard({ className, label, value }: { className?: string; label: string; value: number }) {
@@ -275,10 +242,6 @@ function DetailsTab({ contact, copiedField, locale, onCopy }: { contact: NonNull
 
 function DescriptionList({ rows }: { rows: Array<[string, string]> }) {
   return <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-3">{rows.map(([label, value]) => <div className="contents" key={label}><dt className="type-meta">{label}</dt><dd className="type-body">{value}</dd></div>)}</dl>;
-}
-
-function DetailSection({ children, className, title }: { children: React.ReactNode; className?: string; title: string }) {
-  return <section className={cn("flex flex-col gap-4 px-4 py-4", className)}><h3 className="font-heading text-base font-medium">{title}</h3>{children}</section>;
 }
 
 function Empty({ icon: Icon, label }: { icon: typeof Activity; label: string }) {

@@ -1,5 +1,7 @@
 "use client";
 
+import { requestJson } from "@/lib/request-json";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { subscribeRealtimeQuery } from "@/lib/realtime-query";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
@@ -17,14 +19,7 @@ import { getContactDisplayName } from "@/lib/contact-display";
 import { formatDateTime } from "@/lib/locale";
 import { useTelemetry } from "@/components/product-analytics";
 
-type Business = { businessId: string; active: boolean };
 type Message = { id: string; conversationId: string; contactName: string | null; contactPhone: string | null; visitorName: string | null; visitorEmail: string | null; channel: string | null; automationState: string | null; body: string; direction: string; status: string; createdAt: string };
-
-async function getJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { credentials: "include" });
-  if (!response.ok) throw new Error("Unable to load messages.");
-  return await response.json() as T;
-}
 
 function initials(name: string | null, fallback: string): string {
   if (!name) return fallback.slice(0, 2).toUpperCase();
@@ -50,9 +45,8 @@ export function LiveMessagesSurface() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [channelFilter, setChannelFilter] = useState<"all" | "web_chat" | "sms">("all");
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => getJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
-  const messages = useQuery({ queryKey: ["messages", business?.businessId], queryFn: () => getJson<{ messages: Message[] }>("/api/messages"), enabled: Boolean(business) });
+  const { business } = useActiveBusiness();
+  const messages = useQuery({ queryKey: ["messages", business?.businessId], queryFn: () => requestJson<{ messages: Message[] }>("/api/messages"), enabled: Boolean(business) });
   const send = useMutation({
     mutationFn: async () => {
       if (!business || !selected) return;

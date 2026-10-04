@@ -7,6 +7,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { billingPlanCatalog, isPaidSubscription, type BillingPlanSlug } from "@lobbystack/shared";
 
+import { requestJson } from "@/lib/request-json";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { PageHeader } from "@/components/page-header";
 import { startTestCall } from "@/lib/test-call-launcher";
 import { useCallSettleRefetch } from "@/lib/use-call-settle-refetch";
@@ -18,7 +20,6 @@ import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
 import { BookingWithoutHoursAlert, needsHoursForBooking, useBusinessHours } from "./business-hours-section";
 
 type StepId = "fullScan" | "sources" | "testCall" | "phoneNumber";
-type Business = { businessId: string; active: boolean; role: string };
 type Billing = { account: { plan: string | null; subscriptionState: string | null } | null };
 type Step = { id: StepId; name: string; description: string; status: string; documentId?: string | null };
 const order: StepId[] = ["fullScan", "sources", "testCall", "phoneNumber"];
@@ -26,32 +27,25 @@ const order: StepId[] = ["fullScan", "sources", "testCall", "phoneNumber"];
 const targets: Record<StepId, string | null> = { fullScan: null, sources: "/agent/knowledge?setup=upload", testCall: null, phoneNumber: "/settings/phone-number" };
 
 
-async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { credentials: "include", ...init });
-  if (!response.ok) throw new Error("Unable to load setup status.");
-  return await response.json() as T;
-}
-
 export function LiveSetupGuideSurface() {
   const { t } = useTranslation("nav");
   const router = useRouter();
   const queryClient = useQueryClient();
   const openUpgradePlanDialog = useOpenUpgradePlanDialog();
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => getJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
+  const { business } = useActiveBusiness();
   const canManage = Boolean(business && ["business_owner", "business_admin"].includes(business.role));
   // The call runs in place on this page, so nothing navigates when it ends and
   // the step would sit incomplete until a reload.
   const callSettleInterval = useCallSettleRefetch();
   const setup = useQuery({
     queryKey: ["setup", business?.businessId],
-    queryFn: () => getJson<{ steps: Step[] }>(`/api/setup?businessId=${encodeURIComponent(business!.businessId)}`),
+    queryFn: () => requestJson<{ steps: Step[] }>(`/api/setup?businessId=${encodeURIComponent(business!.businessId)}`),
     enabled: canManage,
     refetchInterval: () => callSettleInterval(),
   });
   const billing = useQuery({
     queryKey: ["billing", business?.businessId],
-    queryFn: () => getJson<Billing>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`),
+    queryFn: () => requestJson<Billing>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`),
     enabled: canManage,
   });
   // Instant booking with no opening hours books nothing, so say so above the steps.
@@ -69,10 +63,10 @@ export function LiveSetupGuideSurface() {
   const completed = steps.filter((step) => step.status === "complete" || step.status === "skipped").length;
   useEffect(() => { if (setup.data && completed === steps.length) router.replace("/"); }, [completed, router, setup.data, steps.length]);
   const expand = useMutation({
-    mutationFn: (documentId: string) => getJson(`/api/knowledge/${encodeURIComponent(documentId)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "expand" }) }),
+    mutationFn: (documentId: string) => requestJson(`/api/knowledge/${encodeURIComponent(documentId)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "expand" }) }),
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["setup", business?.businessId] }); router.push("/agent/knowledge"); },
   });
-  const skip = useMutation({ mutationFn: (stepId: StepId) => getJson<{ skippedSteps: string[] }>(`/api/setup?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ stepId, skipped: true }) }), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["setup", business?.businessId] }); } });
+  const skip = useMutation({ mutationFn: (stepId: StepId) => requestJson<{ skippedSteps: string[] }>(`/api/setup?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ stepId, skipped: true }) }), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["setup", business?.businessId] }); } });
 
   if (business && !canManage) return null;
   return (

@@ -1,5 +1,7 @@
 "use client";
 
+import { requestJson } from "@/lib/request-json";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { subscribeRealtimeQuery } from "@/lib/realtime-query";
 
 import { useEffect, useMemo, useState } from "react";
@@ -28,10 +30,8 @@ import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRo
 import { ContactChannelIcons } from "@/components/contact-channel-icons";
 import { getChannelLabel, getContactChannels, getContactDisplayName, getContactSecondaryDetails } from "@/lib/contact-display";
 import { formatDateTime } from "@/lib/locale";
-import { selectActiveBusiness } from "@/lib/active-business";
 import { useTelemetry } from "@/components/product-analytics";
 
-type Business = { businessId: string; active: boolean; role: string };
 type Contact = {
   id: string;
   name: string | null;
@@ -48,19 +48,6 @@ type Contact = {
 };
 type PendingBlock = { contact: Contact; nextBlocked: boolean };
 
-async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
-    ...init,
-    credentials: "include",
-    headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
-  });
-  if (!response.ok) {
-    const result = await response.json().catch(() => null) as { error?: string } | null;
-    throw new Error(result?.error ?? "Unable to load contacts.");
-  }
-  return await response.json() as T;
-}
-
 export function LiveContactsSurface() {
   const { i18n, t } = useTranslation("contacts");
   const router = useRouter();
@@ -70,23 +57,19 @@ export function LiveContactsSurface() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [pendingBlock, setPendingBlock] = useState<PendingBlock | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Contact | null>(null);
-  const businesses = useQuery({
-    queryKey: ["businesses"],
-    queryFn: () => getJson<{ businesses: Business[] }>("/api/businesses"),
-  });
-  const business = selectActiveBusiness(businesses.data?.businesses);
+  const { businesses, business } = useActiveBusiness();
   const contacts = useQuery({
     queryKey: ["contacts", business?.businessId, search.trim(), pagination.pageIndex, pagination.pageSize],
-    queryFn: () => getJson<{ contacts: Contact[]; pagination: { total: number } }>(`/api/contacts?businessId=${encodeURIComponent(business!.businessId)}&limit=${pagination.pageSize}&offset=${pagination.pageIndex * pagination.pageSize}&search=${encodeURIComponent(search.trim())}`),
+    queryFn: () => requestJson<{ contacts: Contact[]; pagination: { total: number } }>(`/api/contacts?businessId=${encodeURIComponent(business!.businessId)}&limit=${pagination.pageSize}&offset=${pagination.pageIndex * pagination.pageSize}&search=${encodeURIComponent(search.trim())}`),
     enabled: Boolean(business),
   });
   const updateBlock = useMutation({
-    mutationFn: ({ contact, nextBlocked }: PendingBlock) => getJson(`/api/contacts/${encodeURIComponent(contact.id)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ smsBlocked: nextBlocked }) }),
+    mutationFn: ({ contact, nextBlocked }: PendingBlock) => requestJson(`/api/contacts/${encodeURIComponent(contact.id)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ smsBlocked: nextBlocked }) }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["contacts", business?.businessId] }),
   });
   const remove = useMutation({
     onError: error => toast.error(error instanceof Error ? error.message : t("table.actions.deleteFailed")),
-    mutationFn: (contact: Contact) => getJson(`/api/contacts/${encodeURIComponent(contact.id)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "DELETE" }),
+    mutationFn: (contact: Contact) => requestJson(`/api/contacts/${encodeURIComponent(contact.id)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "DELETE" }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["contacts", business?.businessId] }),
   });
 

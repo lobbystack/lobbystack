@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { requestJson } from "@/lib/request-json";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useStepNavigation } from "@/lib/use-step-navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowRight, Check, LoaderCircle } from "lucide-react";
@@ -13,7 +15,6 @@ import { OnboardingPlanComparison } from "@/components/onboarding-plan-compariso
 import { useTelemetry } from "@/components/product-analytics";
 import { cn } from "@/lib/utils";
 
-type Business = { businessId: string; active: boolean };
 type BillingInterval = "monthly" | "annual";
 type Plan = "free_cloud" | "starter" | "pro" | "enterprise";
 type Checkout = { id: string; status: string; checkoutUrl: string | null; error: string | null };
@@ -25,12 +26,6 @@ const tiers: Array<{ slug: Plan; highlight?: boolean; features: string[] }> = [
   { slug: "pro", highlight: true, features: ["voiceMinutes", "dedicatedNumber", "alertSms", "support"] },
   { slug: "enterprise", features: ["phoneNumbers", "selfHosted", "support"] },
 ];
-
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
-  if (!response.ok) throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Request failed.");
-  return await response.json() as T;
-}
 
 const REPORTED_CHECKOUT_KEY = "lobbystack.onboarding.checkoutReported";
 
@@ -67,8 +62,7 @@ export function OnboardingPlanSurface() {
   const [checkoutRequestId, setCheckoutRequestId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const returnAttempt = useRef<{ key: string; promise: Promise<unknown> } | null>(null);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
+  const { business } = useActiveBusiness();
   const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: () => requestJson<BillingStatus>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business) });
   const checkout = useQuery({
     queryKey: ["onboarding-checkout", business?.businessId, checkoutRequestId],

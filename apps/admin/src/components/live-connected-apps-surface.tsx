@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { SectionBlock } from "@/components/section-block";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -13,8 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { selectActiveBusiness } from "@/lib/active-business";
-import type { WorkspaceViewModel } from "@/lib/page-view-models";
 import { requestJson } from "@/lib/request-json";
 import { intlLocale } from "@/lib/locale";
 
@@ -36,8 +35,7 @@ export function LiveConnectedAppsSurface() {
   const { i18n, t } = useTranslation("settings");
   const queryClient = useQueryClient();
   const [revoking, setRevoking] = useState<ConnectedAppRecord | null>(null);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: WorkspaceViewModel[] }>("/api/businesses") });
-  const business = selectActiveBusiness(businesses.data?.businesses);
+  const { businesses, business } = useActiveBusiness();
   const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   const grants = useQuery({ queryKey: ["oauth-grants", business?.businessId], queryFn: () => requestJson<{ grants: ConnectedAppRecord[] }>(`/api/oauth-grants?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId && canManage) });
   const formatDate = (value: string) => new Intl.DateTimeFormat(intlLocale(i18n.resolvedLanguage ?? i18n.language), { dateStyle: "medium" }).format(new Date(value));

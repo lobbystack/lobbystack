@@ -5,26 +5,20 @@ import { ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
+import { requestJson } from "@/lib/request-json";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 
-type Business = { businessId: string; active: boolean; role: string };
 type SetupStep = { name: string; status: string };
-
-async function getJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { credentials: "include" });
-  if (!response.ok) throw new Error("Unable to load setup status.");
-  return await response.json() as T;
-}
 
 export function DashboardSetupGuideCard() {
   const { t } = useTranslation("nav");
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => getJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
+  const { business } = useActiveBusiness();
   const canManage = Boolean(business && ["business_owner", "business_admin"].includes(business.role));
   const setup = useQuery({
     queryKey: ["setup", business?.businessId],
-    queryFn: () => getJson<{ steps: SetupStep[] }>(`/api/setup?businessId=${encodeURIComponent(business!.businessId)}`),
+    queryFn: () => requestJson<{ steps: SetupStep[] }>(`/api/setup?businessId=${encodeURIComponent(business!.businessId)}`),
     enabled: canManage,
   });
 

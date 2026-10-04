@@ -5,6 +5,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { billingPlanCatalog, type BillingPlanSlug } from "@lobbystack/shared";
 import { ArrowUpRight, Check } from "lucide-react";
 import { toast } from "sonner";
+import { requestJson } from "@/lib/request-json";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import type { BillingPermissions } from "./billing-past-due-banner";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
@@ -19,7 +21,6 @@ import { Surface } from "./ui/surface";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { intlLocale } from "@/lib/locale";
 
-type Business = { businessId: string; name: string; slug: string; role: string; active: boolean };
 type Billing = {
   availableCheckoutPlans: Array<"starter" | "pro">;
   availableCheckoutIntervals: { starter: string[]; pro: string[] };
@@ -30,8 +31,6 @@ type Billing = {
   usageStatus: { usageComplete: boolean; voiceBlocked: boolean; alertSmsBlocked: boolean; outboundCallAttemptsBlocked: boolean; overageSpendingCapReached: boolean; overageSpendCents: number; overageSpendingCapCents: number | null } | null;
 };
 
-async function getJson<T>(url: string): Promise<T> { const response = await fetch(url, { credentials: "include" }); if (!response.ok) throw new Error("Unable to load billing data."); return await response.json() as T; }
-async function postJson<T>(url: string, body: Record<string, unknown>): Promise<T> { const response = await fetch(url, { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }); if (!response.ok) throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Unable to update billing."); return await response.json() as T; }
 function formatMoney(cents: number, currency = "usd", locale = "en"): string { return new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency: currency.toUpperCase(), minimumFractionDigits: cents % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 }).format(cents / 100); }
 function formatBillingDate(value: string | null, locale = "en"): string { return value ? new Intl.DateTimeFormat(intlLocale(locale), { month: "short", day: "numeric", year: "numeric" }).format(new Date(value)) : "—"; }
 function planSlug(value: string | null | undefined): BillingPlanSlug { return value === "self_hosted_standard" ? "self_host" : value === "self_host" || value === "starter" || value === "pro" || value === "enterprise" ? value : "free_cloud"; }
@@ -45,16 +44,15 @@ export function LivePlanSurface() {
   const queryClient = useQueryClient();
   const openUpgradePlanDialog = useOpenUpgradePlanDialog();
   const [portalPending, setPortalPending] = useState(false);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => getJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
-  const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: () => getJson<Billing>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
+  const { businesses, business } = useActiveBusiness();
+  const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: () => requestJson<Billing>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
 
 
   const returnRequestId = searchParams.get("checkout") === "success" ? searchParams.get("requestId") : null;
   const returnedCheckout = useQuery({
     queryKey: ["billing-checkout-return", business?.businessId, returnRequestId],
     enabled: Boolean(business && returnRequestId),
-    queryFn: () => getJson<{ synced: boolean }>(`/api/billing/checkout?businessId=${encodeURIComponent(business!.businessId)}&requestId=${encodeURIComponent(returnRequestId!)}`),
+    queryFn: () => requestJson<{ synced: boolean }>(`/api/billing/checkout?businessId=${encodeURIComponent(business!.businessId)}&requestId=${encodeURIComponent(returnRequestId!)}`),
     refetchInterval: query => query.state.data?.synced ? false : 1500,
   });
   useEffect(() => {
@@ -65,7 +63,7 @@ export function LivePlanSurface() {
 
   useEffect(() => { if (searchParams.get("checkout") && business?.businessId) void queryClient.invalidateQueries({ queryKey: ["billing", business.businessId] }); }, [business?.businessId, queryClient, searchParams]);
 
-  async function openPortal() { if (!business) return; setPortalPending(true); try { const result = await postJson<{ url: string }>(`/api/billing/portal?businessId=${encodeURIComponent(business.businessId)}`, {}); window.location.assign(result.url); } catch { toast.error(t("billing.toast.portalFailed")); } finally { setPortalPending(false); } }
+  async function openPortal() { if (!business) return; setPortalPending(true); try { const result = await requestJson<{ url: string }>(`/api/billing/portal?businessId=${encodeURIComponent(business.businessId)}`, { method: "POST", body: JSON.stringify({}) }); window.location.assign(result.url); } catch { toast.error(t("billing.toast.portalFailed")); } finally { setPortalPending(false); } }
 
   if (businesses.isLoading || billing.isLoading) return <PageSurface title={t("sections.billing")}><BillingSkeleton t={t} /></PageSurface>;
   if (businesses.isError || billing.isError || !business || !billing.data) return <PageSurface title={t("sections.billing")}><Surface className="flex flex-col items-start gap-4 p-6"><p role="alert">{t("billing.usage.unavailable")}</p><Button variant="outline" onClick={() => { if (businesses.isError || !business) void businesses.refetch(); else void billing.refetch(); }}>{t("billing.actions.retry")}</Button></Surface></PageSurface>;

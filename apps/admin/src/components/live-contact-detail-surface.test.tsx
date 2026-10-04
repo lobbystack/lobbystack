@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LiveContactDetailSurface } from "./live-contact-detail-surface";
 
 const language = vi.hoisted(() => ({ current: "sr" }));
@@ -10,6 +10,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: language.current }, t: (key: string) => key }) }));
 
 const clients: QueryClient[] = [];
+beforeEach(() => { vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn() }); });
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
 
 const appointment = { startsAt: "2026-09-02T15:00:00Z", endsAt: "2026-09-02T15:30:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "web_chat", serviceName: "Consultation", staffName: "Sam" };

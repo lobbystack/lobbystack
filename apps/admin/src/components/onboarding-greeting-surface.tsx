@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { requestJson } from "@/lib/request-json";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useStepNavigation } from "@/lib/use-step-navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
@@ -13,15 +15,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useTelemetry } from "@/components/product-analytics";
 import { currentWebsiteImport, isWebsiteImportRunning, WebsiteImportProgress, type WebsiteImportSummary } from "./website-import-progress";
 
-type Business = { businessId: string; active: boolean; websiteUrl?: string | null };
 type Profile = { greeting: string };
 type KnowledgeDocument = { id: string; createdAt?: string; websiteImport?: WebsiteImportSummary | null };
-
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
-  if (!response.ok) throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Request failed.");
-  return await response.json() as T;
-}
 
 export function OnboardingGreetingSurface() {
   const { i18n, t } = useTranslation("onboarding");
@@ -31,8 +26,7 @@ export function OnboardingGreetingSurface() {
   const [greeting, setGreeting] = useState("");
   const [hasUserEdited, setHasUserEdited] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
+  const { business } = useActiveBusiness();
   // Warm the next step while the greeting is being written, so continuing
   // waits only on the save and its progress refresh.
   useEffect(() => { prefetch("/onboarding/plan"); }, [prefetch]);

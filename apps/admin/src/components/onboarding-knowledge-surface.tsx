@@ -4,10 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, FileText, LoaderCircle, Upload, X } from "lucide-react";
+import { requestJson } from "@/lib/request-json";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useStepNavigation } from "@/lib/use-step-navigation";
 import { useTranslation } from "react-i18next";
 
-import { selectActiveBusiness } from "@/lib/active-business";
 import { useTelemetry } from "@/components/product-analytics";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
@@ -17,11 +18,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Textarea } from "./ui/textarea";
 import { currentWebsiteImport, isWebsiteImportRunning, WebsiteImportProgress, type WebsiteImportSummary } from "./website-import-progress";
 
-type Business = { businessId: string; name: string; active: boolean; role: string; websiteUrl?: string | null };
 type Document = { id: string; title: string; sourceType: string; status: string; processingProgress: number; error?: string | null; createdAt?: string; websiteImport?: WebsiteImportSummary | null };
 type UploadEntry = { id: string; fileName: string; status: "uploading" | "completed" | "error"; errorMessage?: string };
 
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> { const response = await fetch(url, { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } }); if (!response.ok) throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Request failed."); return await response.json() as T; }
 async function checksum(file: File): Promise<string> { const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer()); return btoa(String.fromCharCode(...new Uint8Array(digest))); }
 
 export function OnboardingKnowledgeSurface() {
@@ -35,9 +34,8 @@ export function OnboardingKnowledgeSurface() {
   const [uploads, setUploads] = useState<UploadEntry[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
+  const { business } = useActiveBusiness();
   useEffect(() => { prefetch("/onboarding/greeting"); }, [prefetch]);
-  const business = selectActiveBusiness(businesses.data?.businesses);
   const documents = useQuery({ queryKey: ["onboarding-knowledge", business?.businessId], queryFn: () => requestJson<{ documents: Document[] }>(`/api/knowledge?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business), refetchInterval: query => query.state.data?.documents?.some(document => isWebsiteImportRunning(document.websiteImport)) ? 2000 : false });
   const invalidate = async () => { await queryClient.invalidateQueries({ queryKey: ["onboarding-knowledge", business?.businessId] }); };
   const addSnippet = useMutation({ mutationFn: (content: string) => requestJson(`/api/knowledge/snippets?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ title: t("knowledge.paste.defaultTitle"), content }) }) });

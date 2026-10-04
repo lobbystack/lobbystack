@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { PhoneNumberChooser, type AvailableNumberSummary, type ClaimResult, type NumberSelectionContext } from "./phone-number-chooser";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { requestJson } from "@/lib/request-json";
@@ -14,7 +15,6 @@ import { Button } from "./ui/button";
 import { Surface } from "./ui/surface";
 import { FieldError } from "./ui/field";
 
-type Business = { businessId: string; active: boolean; onboardingStage?: string };
 type NumberOffer = { phoneE164: string; locality?: string; region?: string; countryCode: string; claimToken: string; capabilities: { sms: boolean; voice: boolean } };
 
 function toNumber(offer: NumberOffer, selectionContext: NumberSelectionContext): AvailableNumberSummary {
@@ -28,8 +28,7 @@ export function OnboardingNumberSurface() {
   const router = useRouter();
   const telemetry = useTelemetry();
   const [claiming, setClaiming] = useState(false);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
+  const { business } = useActiveBusiness();
   const phones = useQuery({ queryKey: ["onboarding-primary-number", business?.businessId], refetchInterval: query => query.state.data?.activeClaim ? 1000 : false, enabled: Boolean(business), queryFn: () => requestJson<{ activeClaim?: { id: string; status: string } | null; phoneNumbers: Array<{ id: string; e164: string; reclaimScheduledAt: string | null }> }>(`/api/phone-numbers?businessId=${encodeURIComponent(business!.businessId)}`) });
   const primary = phones.data?.phoneNumbers.find(number => !number.reclaimScheduledAt);
   const reachedAttribution = ["attribution", "complete"].includes(business?.onboardingStage ?? "");

@@ -5,13 +5,13 @@ import { RefreshCcw, Trash2, Webhook } from "lucide-react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useSetupAction } from "@/lib/use-setup-action";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import type { IntegrationsViewModel, WorkspaceViewModel } from "@/lib/page-view-models";
+import type { IntegrationsViewModel } from "@/lib/page-view-models";
 import { requestJson } from "@/lib/request-json";
-import { selectActiveBusiness } from "@/lib/active-business";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -34,8 +34,7 @@ export function LiveIntegrationsSurface() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCalendarId, setSelectedCalendarId] = useState("");
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: WorkspaceViewModel[] }>("/api/businesses") });
-  const business = selectActiveBusiness(businesses.data?.businesses);
+  const { business } = useActiveBusiness();
   const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   const integrations = useQuery({ queryKey: ["integrations", business?.businessId], queryFn: () => requestJson<IntegrationsViewModel>(`/api/integrations?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId && canManage), refetchInterval: (query) => query.state.data?.calendarConnections.some((connection) => connection.status === "syncing") ? 2000 : false });
   const google = integrations.data?.calendarConnections.find((connection) => connection.provider === "google") ?? null;

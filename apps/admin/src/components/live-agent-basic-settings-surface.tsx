@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
 import { normalizeBookingMode, type AppointmentChangePolicy, type BookingMode, type RuntimeLocale } from "@lobbystack/shared";
 import { toast } from "sonner";
@@ -693,7 +694,6 @@ export function AgentBasicSettingsPage({
 }
 
 export function LiveAgentBasicSettingsSurface() {
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Array<{ businessId: string; active: boolean; role: string }> }>("/api/businesses") });
-  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
+  const { business } = useActiveBusiness();
   return <AgentBasicSettingsPage businessId={business?.businessId ?? ""} canManageTenant={Boolean(business && ["business_owner", "business_admin"].includes(business.role))} />;
 }

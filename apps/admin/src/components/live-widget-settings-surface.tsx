@@ -7,6 +7,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 
+import { requestJson } from "@/lib/request-json";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { LiveNotificationSettingsSurface } from "./live-notification-settings-surface";
 import { PageSurface } from "./page-surface";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
@@ -15,7 +17,6 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { intlLocale } from "@/lib/locale";
 
-type Business = { businessId: string; name: string; active: boolean };
 
 /** Languages the widget interface can be forced to, with their settings label keys. */
 const WIDGET_LOCALE_OPTIONS: Array<{ value: InterfaceLocale; labelKey: string }> = [
@@ -28,12 +29,6 @@ type WidgetKeyConfig = { color?: string; position?: "bottom-right" | "bottom-lef
 type WidgetKeyRecord = { id: string; label: string | null; status: "active" | "disabled" | "revoked"; allowedOrigins: string[]; config: WidgetKeyConfig; lastUsedAt: string | null; createdAt: string };
 type KeysResponse = { keys: WidgetKeyRecord[] };
 type CreatedKey = { id: string; key: string } | null;
-
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
-  if (!response.ok) throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Request failed.");
-  return await response.json() as T;
-}
 
 function originsFromText(value: string): string[] {
   return value.split(/\s*[\n,]\s*/).map((item) => item.trim()).filter(Boolean);
@@ -66,8 +61,7 @@ export function LiveWidgetSettingsSurface() {
   const [localeOverride, setLocaleOverride] = useState<"" | InterfaceLocale>("");
   const [createdKey, setCreatedKey] = useState<CreatedKey>(null);
   const [copied, setCopied] = useState(false);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
+  const { businesses, business } = useActiveBusiness();
   const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: () => requestJson<{ widgetIssuanceEnabled?: boolean }>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
   const keys = useQuery({ queryKey: ["widget-keys", business?.businessId], queryFn: () => requestJson<KeysResponse>(`/api/widget-keys?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
 

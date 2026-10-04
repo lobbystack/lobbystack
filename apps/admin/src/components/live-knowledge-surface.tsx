@@ -6,8 +6,8 @@ import { ChevronDown, FileText, Globe, MoreHorizontal, Pause, Play, Plus, Search
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useSetupAction } from "@/lib/use-setup-action";
-import { selectActiveBusiness } from "@/lib/active-business";
 import { useTelemetry } from "@/components/product-analytics";
 import { requestJson } from "@/lib/request-json";
 import { UploadKnowledgeDocumentSheet } from "./upload-knowledge-document-sheet";
@@ -28,7 +28,6 @@ import { Progress } from "./ui/progress";
 import { Textarea } from "./ui/textarea";
 import { intlLocale } from "@/lib/locale";
 
-type Business = { businessId: string; name: string; active: boolean; role: string };
 export type WebsiteImport = { crawlFinishedCount?: number | null; crawlTotalCount?: number | null; documentCount?: number; id: string; status: string; websiteUrl: string; importedCount: number; indexedCount: number };
 type Document = { websiteImport?: WebsiteImport | null; revision?: number; active?: boolean; textContent?: string; id: string; title: string; sourceType: string; sourceUrl: string | null; storageObjectId: string | null; status: string; error?: string | null; processingProgress: number | null; createdAt: string; updatedAt: string };
 type Snippet = { tags?: string[]; id: string; title: string; content: string; active: boolean; priority: number; createdAt: string };
@@ -88,8 +87,7 @@ export function LiveKnowledgeSurface() {
   const [editingSnippet, setEditingSnippet] = useState<Snippet | null>(null);
   const [deleteCandidate, setDeleteCandidate] = useState<Row | null>(null);
   const [viewingDocument, setViewingDocument] = useState<Document | null>(null);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = selectActiveBusiness(businesses.data?.businesses);
+  const { businesses, business } = useActiveBusiness();
   const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   useSetupAction(canManage, useCallback((action: string) => { if (!["upload", "website", "text"].includes(action)) return false; setEditingSnippet(null); setForm(action as "upload" | "website" | "text"); return true; }, []));
   const documents = useQuery({ queryKey: ["knowledge", business?.businessId], enabled: Boolean(business), queryFn: () => requestJson<{ documents: Document[] }>(`/api/knowledge?businessId=${encodeURIComponent(business!.businessId)}`), refetchInterval: query => query.state.data?.documents.some(document => ["pending", "processing"].includes(document.status)) ? 1500 : false });

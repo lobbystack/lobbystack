@@ -6,8 +6,8 @@ import { MoreHorizontal, Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useSetupAction } from "@/lib/use-setup-action";
-import { selectActiveBusiness } from "@/lib/active-business";
 import { formatDateTime } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
 import { DataTablePagination } from "./data-table/pagination";
@@ -23,7 +23,6 @@ import { Switch } from "./ui/switch";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Textarea } from "./ui/textarea";
 
-type Business = { businessId: string; name: string; active: boolean; role: string };
 type Service = { id: string; name: string; slug: string; durationMinutes: number; description: string | null; active: boolean; createdAt: string };
 type Catalog = { services: Service[] };
 type ServiceValues = { name: string; description: string; durationMinutes: string; active: boolean };
@@ -46,8 +45,7 @@ export function LiveServicesSurface() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = selectActiveBusiness(businesses.data?.businesses);
+  const { businesses, business } = useActiveBusiness();
   const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   useSetupAction(canManage, useCallback((action: string) => { if (action !== "service") return false; setEditingService(null); setEditorOpen(true); return true; }, []));
   const catalog = useQuery({ queryKey: ["catalog", business?.businessId], enabled: Boolean(business), queryFn: () => requestJson<Catalog>(`/api/catalog?businessId=${encodeURIComponent(business!.businessId)}&limit=100`) });

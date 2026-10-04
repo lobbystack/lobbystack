@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { billingPlanCatalog, type BillingPlanSlug } from "@lobbystack/shared";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/components/ui/item";
@@ -13,8 +14,7 @@ import { PhoneNumberChooser, type AvailableNumberSummary, type ClaimResult, type
 import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
 import { formatPhoneNumberDisplay, normalizeOnboardingPhoneCountry } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
-import { selectActiveBusiness } from "@/lib/active-business";
-import type { BillingUsageViewModel, PhoneNumberViewModel, WorkspaceViewModel } from "@/lib/page-view-models";
+import type { BillingUsageViewModel, PhoneNumberViewModel } from "@/lib/page-view-models";
 import { intlLocale } from "@/lib/locale";
 
 type Offer = { phoneE164: string; locality?: string; region?: string; countryCode: string; claimToken: string; capabilities: { voice: boolean; sms: boolean } };
@@ -47,8 +47,7 @@ export function LivePhoneNumberSettingsSurface() {
   const queryClient = useQueryClient();
   const openUpgradePlanDialog = useOpenUpgradePlanDialog();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: WorkspaceViewModel[] }>("/api/businesses") });
-  const business = selectActiveBusiness(businesses.data?.businesses);
+  const { business } = useActiveBusiness();
   const businessId = business?.businessId ?? "";
   const canManageTenant = Boolean(business && ["business_owner", "business_admin"].includes(business.role));
   const numbers = useQuery({ queryKey: ["phone-numbers", businessId], refetchInterval: query => query.state.data?.activeClaim || query.state.data?.replacement.activeClaim ? 1000 : false, enabled: Boolean(businessId), queryFn: () => requestJson<NumbersResponse>(`/api/phone-numbers?businessId=${encodeURIComponent(businessId)}`) });

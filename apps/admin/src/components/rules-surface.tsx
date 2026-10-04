@@ -6,8 +6,8 @@ import { ArrowDown, ArrowUp, MoreHorizontal, Pause, Play, Plus, Search, Trash2 }
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useSetupAction } from "@/lib/use-setup-action";
-import { selectActiveBusiness } from "@/lib/active-business";
 import { requestJson } from "@/lib/request-json";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { DataTablePagination } from "./data-table/pagination";
@@ -23,7 +23,6 @@ import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRo
 import { Textarea } from "./ui/textarea";
 import { intlLocale } from "@/lib/locale";
 
-type Business = { businessId: string; name: string; role: string; active: boolean };
 type Rule = { id: string; title: string; content: string; active: boolean; sortOrder: number; createdAt: string };
 
 function summarize(value: string, length: number): string {
@@ -39,8 +38,7 @@ export function RulesSurface() {
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteCandidate, setDeleteCandidate] = useState<Rule | null>(null);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = selectActiveBusiness(businesses.data?.businesses);
+  const { businesses, business } = useActiveBusiness();
   const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   useSetupAction(canManage, useCallback((action: string) => { if (action !== "rule") return false; setEditingRule(null); setDialogOpen(true); return true; }, []));
   const rules = useQuery({ queryKey: ["rules", business?.businessId], enabled: Boolean(business), queryFn: () => requestJson<Rule[]>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}`) });
