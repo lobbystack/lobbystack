@@ -1,36 +1,18 @@
-# Configure provider-failure error tracking
+# Configure error tracking alerts
 
-Handled external provider failures are reported to PostHog Error Tracking as `$exception` events. This covers runtime or customer-impacting failures from OpenAI, Google, Twilio, Polar, and Firecrawl.
+The admin app reports unexpected server errors to PostHog Error Tracking as `$exception` events. Each event carries `service = lobbystack-admin`, `alertable = true`, the failing `operation`, `environment`, and `release`, plus `route` and `method` when a request failed. Failures from OpenAI, Google, Twilio, Polar, or Firecrawl reach Error Tracking the same way when they surface as server errors. The app doesn't tag them by provider.
 
 ## Configure the PostHog notification
 
-Create Error Tracking notifications or internal destinations for alertable provider failures:
+Create an Error Tracking notification for alertable admin errors:
 
-- Filter: `deploymentMode = cloud`, `alertable = true`, and `expected = false`
-- Filter or break down by `provider`
-- Notify immediately for `$exception_type` values:
-  - `ProviderAuthFailedError`
-  - `ProviderQuotaExhaustedError`
-  - `ProviderUnavailableError`
-- Add the issue spiking notification for repeated `providerErrorKind = rate_limited` issues
-- Include properties in the notification: `provider`, `providerErrorKind`, `providerErrorCode`, `runtime`, `service`, `operation`, and `deploymentMode`
-- Recommended primary destination: Discord
-
-OpenAI credit exhaustion should appear with:
-
-- `provider = openai`
-- `providerErrorCode = insufficient_quota`
-- `$exception_type = ProviderQuotaExhaustedError`
-
-Firecrawl availability failures should appear with:
-
-- `provider = firecrawl`
-- `providerErrorKind = provider_unavailable` or `rate_limited`
-- `runtime = web`
-- `service = admin`
+- Filter: `service = lobbystack-admin` and `alertable = true`
+- Notify on new issues, and add the issue spiking notification for repeated failures
+- Include `operation`, `route`, `environment`, and `release` in the notification
+- Recommended destination: Discord
 
 ## Notes
 
-Do not spend Product Analytics alert slots on provider failures when they already emit alertable `$exception` events. Reserve those slots for absence checks, especially missing worker heartbeats, because Error Tracking cannot notify on an event that never arrived.
+Keep Product Analytics alert slots for absence checks, such as missing worker heartbeats. Error Tracking can't notify on an event that never arrived, so those checks need Product Analytics.
 
-Do not add paid or destructive synthetic provider probes by default. Real application traffic detects provider availability. `ops.service.health_check` and `ops.voice.heartbeat` cover application and voice liveness.
+Skip paid or destructive synthetic provider probes. Real application traffic shows whether providers respond, and `ops.service.health_check` and `ops.voice.heartbeat` cover application and voice liveness.

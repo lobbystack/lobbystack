@@ -22,8 +22,6 @@
     "@better-auth/oauth-provider": "1.7.5",
     "@fontsource-variable/geist": "^5.2.8",
     "@lobbystack/agent-core": "workspace:*",
-    "@lobbystack/ai": "workspace:*",
-    "@lobbystack/config": "workspace:*",
     "@lobbystack/contracts": "workspace:*",
     "@lobbystack/db": "workspace:*",
     "@lobbystack/domain": "workspace:*",

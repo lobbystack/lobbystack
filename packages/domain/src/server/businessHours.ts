@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
 
-import { countKnowledgeTokens } from "@lobbystack/ai";
+import { countKnowledgeTokens } from "../knowledgeRanking";
 import { businesses, businessHours, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import type { HoursWindow } from "@lobbystack/shared";
 

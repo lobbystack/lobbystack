@@ -1,7 +1,3 @@
-import type { DeploymentMode } from "@lobbystack/shared";
-
-export * from "./trusted-client-ip";
-
 const MIN_PRODUCTION_SECRET_LENGTH = 32;
 const knownInsecureSecretValues = new Set([
   "change-me-before-production",
@@ -33,8 +29,4 @@ export function assertProductionSecrets(
       throw new Error(`${name} must be at least ${MIN_PRODUCTION_SECRET_LENGTH} characters and must not use a placeholder value in production.`);
     }
   }
-}
-
-export function isTelemetryExportEnabled(mode: DeploymentMode): boolean {
-  return mode === "cloud";
 }

@@ -1,6 +1,8 @@
 import twilio from "twilio";
 
-import { validateTwilioSignature, assertCertificationRecipient, assertCertificationOperationAllowed } from "@lobbystack/shared";
+import { assertCertificationRecipient, assertCertificationOperationAllowed } from "@lobbystack/shared";
+
+import { validateTwilioSignature } from "./webhookSecurity";
 
 export type TwilioProviderConfig = {
   accountSid: string;
@@ -68,7 +70,7 @@ export class TwilioProvider {
   async validateWebhook(input: { signature: string | null; url: string; params: Record<string, string> }): Promise<boolean> {
     // API key secrets authenticate REST requests, not Twilio webhook signatures.
     if (!this.config.authToken) return false;
-    return await validateTwilioSignature({ authToken: this.config.authToken, signatureHeader: input.signature, url: input.url, params: input.params });
+    return validateTwilioSignature({ authToken: this.config.authToken, signatureHeader: input.signature, url: input.url, params: input.params });
   }
 
   async sendSms(input: { to: string; from: string; body: string; statusCallback?: string }): Promise<{ providerMessageId: string }> {

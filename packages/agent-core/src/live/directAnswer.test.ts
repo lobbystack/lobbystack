@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { countKnowledgeTokens } from "@lobbystack/ai";
+import { countKnowledgeTokens } from "@lobbystack/domain";
 
 import { directToolAnswer, type DirectAnswerStep } from "./directAnswer";
 

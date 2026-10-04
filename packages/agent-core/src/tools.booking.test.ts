@@ -1,9 +1,8 @@
 import { demoSnapshot, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@lobbystack/ai", async () => ({ countKnowledgeTokens: (await import("../../ai/src/tokenBudget")).countKnowledgeTokens }));
 vi.mock("@lobbystack/domain", async () => ({
-  countKnowledgeTokens: (await import("../../ai/src/tokenBudget")).countKnowledgeTokens,
+  countKnowledgeTokens: (await import("../../domain/src/knowledgeRanking")).countKnowledgeTokens,
   KNOWLEDGE_SEARCH_TOKEN_BUDGET: 3000,
   knowledgeQueryTerms: (await import("../../domain/src/knowledgeRanking")).knowledgeQueryTerms,
   checkOpening: vi.fn(),

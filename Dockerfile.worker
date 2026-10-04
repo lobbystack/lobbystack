@@ -15,7 +15,7 @@ COPY . .
 RUN node .github/build/prepare-image-workspace.mjs
 RUN pnpm install --offline --frozen-lockfile
 RUN pnpm --filter @lobbystack/worker... build
-RUN for package in config contracts db domain jobs providers shared telemetry; do \
+RUN for package in contracts db domain jobs providers shared telemetry; do \
       if [ -d "packages/$package/dist/$package/src" ]; then \
         cp -R "packages/$package/dist/$package/src/." "packages/$package/dist/"; \
       fi; \

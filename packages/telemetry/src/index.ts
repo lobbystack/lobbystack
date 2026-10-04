@@ -209,16 +209,6 @@ export type PostHogAiGenerationPropertiesInput =
       properties?: TelemetryProperties;
     };
 
-export type PostHogAiSpanPropertiesInput = PostHogAiTracePropertiesInput & {
-  spanName: string;
-  inputState?: TelemetryProperties;
-  outputState?: TelemetryProperties;
-  latencyMs?: number;
-  isError?: boolean;
-  error?: string;
-  properties?: TelemetryProperties;
-};
-
 export type TelemetryContext = {
   businessId?: string;
   conversationId?: string;
@@ -228,56 +218,6 @@ export type TelemetryContext = {
   channel?: string;
   provider?: string;
   model?: string;
-};
-
-export const PROVIDER_ERROR_PROVIDERS = [
-  "openai",
-  "google",
-  "twilio",
-  "polar",
-  "firecrawl",
-  "unknown",
-] as const;
-
-export type ExternalProvider = (typeof PROVIDER_ERROR_PROVIDERS)[number];
-
-export const PROVIDER_ERROR_KINDS = [
-  "quota_exhausted",
-  "auth_failed",
-  "rate_limited",
-  "provider_unavailable",
-  "invalid_request",
-  "unknown",
-] as const;
-
-export type ProviderErrorKind = (typeof PROVIDER_ERROR_KINDS)[number];
-
-export type ProviderErrorClassification = {
-  provider: ExternalProvider;
-  kind: ProviderErrorKind;
-  providerErrorCode?: string;
-  providerErrorMessage?: string;
-  providerErrorStatus?: number;
-};
-
-export type AlertableExceptionTelemetryInput = {
-  runtime: "web";
-  service: string;
-  operation: string;
-  alertable?: boolean;
-  expected?: boolean;
-  provider?: ExternalProvider;
-  exceptionType?: string;
-  exceptionMessage?: string;
-  exceptionLevel?: "fatal" | "error" | "warning" | "info";
-};
-
-export type ClassifyProviderErrorInput = {
-  provider?: ExternalProvider | string;
-  error?: unknown;
-  code?: string;
-  message?: string;
-  status?: number;
 };
 
 export type TelemetryRequirementKey =
@@ -618,36 +558,6 @@ const NESTED_URL_PARAMS = new Set(["returnTo"]);
 const DEMO_PATH_TOKEN_PATTERN = /^(\/demo\/)[^/]+/i;
 const REDACTED_VALUE = "[redacted]";
 
-const EXPECTED_APPLICATION_FAILURE_MESSAGE_SNIPPETS = [
-  "a billing contact email is required",
-  "already exists",
-  "already on your account",
-  "ai sms add-on is only available",
-  "calendar connection request expired",
-  "calendar connection request is no longer authorized",
-  "connect google calendar before choosing",
-  "contact is blocked",
-  "do not have access to this business",
-  "feedback is limited",
-  "feedback message is required",
-  "invalid credentials",
-  "invalid password",
-  "invalid or expired email confirmation link",
-  "invalidsecret",
-  "knowledge storage limit reached",
-  "new email is required",
-  "no email is configured",
-  "number provisioning limit reached",
-  "onboarding is no longer available",
-  "only free workspaces can start pro checkout",
-  "reconnect google calendar before choosing",
-  "requires admin access",
-  "selected google calendar was not found",
-  "selected phone number is no longer available",
-  "verification code is invalid or expired",
-  "verify your mobile number before choosing",
-];
-
 function hasUrlParam(value: string, params: Set<string>): boolean {
   return [...params].some((param) => new RegExp(`[?&]${param}=`).test(value));
 }
@@ -804,306 +714,7 @@ function hasPresentValue(
   return true;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object";
-}
-
-function getErrorSearchText(error: unknown): string {
-  if (error instanceof Error) {
-    return `${error.name} ${error.message}`.toLowerCase();
-  }
-  if (typeof error === "string") {
-    return error.toLowerCase();
-  }
-  if (isRecord(error) && typeof error.message === "string") {
-    return error.message.toLowerCase();
-  }
-  return "";
-}
-
-export function isExpectedApplicationFailure(error: unknown): boolean {
-  const searchText = getErrorSearchText(error);
-  if (!searchText) {
-    return false;
-  }
-
-  return EXPECTED_APPLICATION_FAILURE_MESSAGE_SNIPPETS.some((snippet) =>
-    searchText.includes(snippet),
-  );
-}
-
-function normalizeExternalProvider(
-  value: ExternalProvider | string | undefined,
-): ExternalProvider {
-  if (value && PROVIDER_ERROR_PROVIDERS.includes(value as ExternalProvider)) {
-    return value as ExternalProvider;
-  }
-  return "unknown";
-}
-
-function readNestedRecord(
-  source: Record<string, unknown> | undefined,
-  key: string,
-): Record<string, unknown> | undefined {
-  const value = source?.[key];
-  return isRecord(value) ? value : undefined;
-}
-
-function readStringFromSources(
-  sources: Array<Record<string, unknown> | undefined>,
-  keys: string[],
-): string | undefined {
-  for (const source of sources) {
-    if (!source) {
-      continue;
-    }
-    for (const key of keys) {
-      const value = source[key];
-      if (typeof value === "string" && value.trim().length > 0) {
-        return value.trim();
-      }
-      if (typeof value === "number" && Number.isFinite(value)) {
-        return String(value);
-      }
-    }
-  }
-  return undefined;
-}
-
-function readNumberFromSources(
-  sources: Array<Record<string, unknown> | undefined>,
-  keys: string[],
-): number | undefined {
-  for (const source of sources) {
-    if (!source) {
-      continue;
-    }
-    for (const key of keys) {
-      const value = source[key];
-      if (typeof value === "number" && Number.isFinite(value)) {
-        return value;
-      }
-      if (typeof value === "string" && value.trim().length > 0) {
-        const parsed = Number.parseInt(value, 10);
-        if (Number.isFinite(parsed)) {
-          return parsed;
-        }
-      }
-    }
-  }
-  return undefined;
-}
-
-function normalizeProviderErrorMessage(value: string | undefined): string | undefined {
-  if (!value) {
-    return undefined;
-  }
-  const collapsed = value.replace(/\s+/g, " ").trim();
-  return collapsed.length > 500 ? `${collapsed.slice(0, 497)}...` : collapsed;
-}
-
-function inferProviderErrorKind(input: {
-  code?: string;
-  message?: string;
-  status?: number;
-}): ProviderErrorKind {
-  const code = input.code?.toLowerCase() ?? "";
-  const message = input.message?.toLowerCase() ?? "";
-  const combined = `${code} ${message}`;
-
-  if (
-    code === "integer_above_max_value" ||
-    code === "integer_below_min_value" ||
-    code === "invalid_value" ||
-    code === "invalid_type"
-  ) {
-    return "invalid_request";
-  }
-
-  if (
-    combined.includes("insufficient_quota") ||
-    combined.includes("quota_exceeded") ||
-    combined.includes("quota exceeded") ||
-    combined.includes("credits") ||
-    combined.includes("credit balance") ||
-    combined.includes("billing hard limit")
-  ) {
-    return "quota_exhausted";
-  }
-
-  if (input.status === 401 || input.status === 403) {
-    return "auth_failed";
-  }
-
-  if (
-    code.includes("invalid_api_key") ||
-    code.includes("authentication") ||
-    code.includes("unauthorized") ||
-    code.includes("permission_denied")
-  ) {
-    return "auth_failed";
-  }
-
-  if (input.status === 429 || code.includes("rate_limit") || code === "rate_limited") {
-    return "rate_limited";
-  }
-
-  if (
-    input.status !== undefined &&
-    input.status >= 500 &&
-    input.status <= 599
-  ) {
-    return "provider_unavailable";
-  }
-
-  if (
-    combined.includes("econnreset") ||
-    combined.includes("econnrefused") ||
-    combined.includes("enotfound") ||
-    combined.includes("etimedout") ||
-    combined.includes("socket hang up") ||
-    combined.includes("fetch failed") ||
-    combined.includes("network") ||
-    combined.includes("timeout")
-  ) {
-    return "provider_unavailable";
-  }
-
-  if (
-    input.status !== undefined &&
-    input.status >= 400 &&
-    input.status <= 499
-  ) {
-    return "invalid_request";
-  }
-
-  if (
-    code.includes("invalid_request") ||
-    code.includes("bad_request") ||
-    code.includes("validation")
-  ) {
-    return "invalid_request";
-  }
-
-  return "unknown";
-}
-
-export function classifyProviderError(
-  input: ClassifyProviderErrorInput,
-): ProviderErrorClassification {
-  const root = isRecord(input.error) ? input.error : undefined;
-  const nestedError = readNestedRecord(root, "error");
-  const nestedResponse = readNestedRecord(root, "response");
-  const nestedCause = readNestedRecord(root, "cause");
-  const sources = [root, nestedError, nestedResponse, nestedCause];
-  const code =
-    input.code ??
-    readStringFromSources(sources, [
-      "code",
-      "errorCode",
-      "error_code",
-      "type",
-      "statusCode",
-    ]);
-  const message =
-    input.message ??
-    (input.error instanceof Error ? input.error.message : undefined) ??
-    readStringFromSources(sources, [
-      "message",
-      "errorMessage",
-      "error_message",
-      "statusMessage",
-      "statusText",
-      "body",
-    ]) ??
-    (typeof input.error === "string" ? input.error : undefined);
-  const status =
-    input.status ??
-    readNumberFromSources(sources, [
-      "status",
-      "statusCode",
-      "status_code",
-      "httpStatus",
-      "httpStatusCode",
-    ]);
-
-  const kindInput = {
-    ...(code ? { code } : {}),
-    ...(message ? { message } : {}),
-    ...(status !== undefined ? { status } : {}),
-  };
-  const normalizedMessage = normalizeProviderErrorMessage(message);
-
-  return {
-    provider: normalizeExternalProvider(input.provider),
-    kind: inferProviderErrorKind(kindInput),
-    ...(code ? { providerErrorCode: code } : {}),
-    ...(normalizedMessage ? { providerErrorMessage: normalizedMessage } : {}),
-    ...(status !== undefined ? { providerErrorStatus: status } : {}),
-  };
-}
-
-export function getProviderErrorExceptionType(kind: ProviderErrorKind): string {
-  switch (kind) {
-    case "quota_exhausted":
-      return "ProviderQuotaExhaustedError";
-    case "auth_failed":
-      return "ProviderAuthFailedError";
-    case "rate_limited":
-      return "ProviderRateLimitedError";
-    case "provider_unavailable":
-      return "ProviderUnavailableError";
-    case "invalid_request":
-      return "ProviderInvalidRequestError";
-    case "unknown":
-    default:
-      return "ProviderFailureError";
-  }
-}
-
-export function buildProviderErrorTelemetryProperties(
-  classification: ProviderErrorClassification,
-): TelemetryProperties {
-  return {
-    provider: classification.provider,
-    providerErrorKind: classification.kind,
-    providerErrorCode: classification.providerErrorCode,
-    providerErrorMessage: classification.providerErrorMessage,
-    providerErrorStatus: classification.providerErrorStatus,
-    $exception_type: getProviderErrorExceptionType(classification.kind),
-    $exception_message:
-      classification.providerErrorMessage ??
-      `${classification.provider} provider failure (${classification.kind})`,
-  };
-}
-
-export function buildAlertableExceptionTelemetryProperties(
-  input: AlertableExceptionTelemetryInput,
-): TelemetryProperties {
-  const exceptionType = input.exceptionType ?? "ApplicationError";
-  const exceptionMessage =
-    input.exceptionMessage ?? `${input.service} ${input.operation} failed`;
-
-  return {
-    runtime: input.runtime,
-    service: input.service,
-    operation: input.operation,
-    alertable: input.alertable ?? true,
-    expected: input.expected ?? false,
-    ...(input.provider !== undefined ? { provider: input.provider } : {}),
-    $exception_level: input.exceptionLevel ?? "error",
-    $exception_type: exceptionType,
-    $exception_message: exceptionMessage,
-  };
-}
-
 export function redactTelemetryProperties(
-  properties: TelemetryProperties,
-): TelemetryProperties {
-  return sanitizeProperties(properties, { redactPhoneLikeStrings: true });
-}
-
-export function redactAiTraceProperties(
   properties: TelemetryProperties,
 ): TelemetryProperties {
   return sanitizeProperties(properties, { redactPhoneLikeStrings: true });
@@ -1112,7 +723,7 @@ export function redactAiTraceProperties(
 export function buildPostHogAiTraceProperties(
   input: PostHogAiTracePropertiesInput,
 ): TelemetryProperties {
-  return redactAiTraceProperties({
+  return redactTelemetryProperties({
     traceId: input.traceId,
     model: input.model,
     provider: input.provider,
@@ -1143,7 +754,7 @@ export function buildPostHogAiGenerationProperties(
     input.latencyMs !== undefined ? input.latencyMs / 1000 : undefined;
   const ttftSeconds = input.ttftMs !== undefined ? input.ttftMs / 1000 : undefined;
 
-  return redactAiTraceProperties({
+  return redactTelemetryProperties({
     ...buildPostHogAiTraceProperties(input),
     ...(input.inputTokens !== undefined ? { inputTokens: input.inputTokens } : {}),
     ...(input.inputTokens !== undefined
@@ -1203,45 +814,7 @@ export function buildPostHogAiGenerationProperties(
   });
 }
 
-export function buildPostHogAiSpanProperties(
-  input: PostHogAiSpanPropertiesInput,
-): TelemetryProperties {
-  const latencySeconds =
-    input.latencyMs !== undefined ? input.latencyMs / 1000 : undefined;
-
-  return redactAiTraceProperties({
-    ...buildPostHogAiTraceProperties(input),
-    spanName: input.spanName,
-    $ai_span_name: input.spanName,
-    $ai_input_state: redactAiTraceProperties(input.inputState ?? {}),
-    $ai_output_state: redactAiTraceProperties(input.outputState ?? {}),
-    ...(input.latencyMs !== undefined ? { latencyMs: input.latencyMs } : {}),
-    ...(latencySeconds !== undefined ? { $ai_latency: latencySeconds } : {}),
-    ...(input.isError !== undefined ? { isError: input.isError } : {}),
-    ...(input.isError !== undefined ? { $ai_is_error: input.isError } : {}),
-    ...(input.error ? { error: input.error } : {}),
-    ...(input.error ? { $ai_error: input.error } : {}),
-    ...input.properties,
-  });
-}
-
 export { redactOtelAttributes };
-
-export function bucketLatencyMs(latencyMs: number): string {
-  if (latencyMs < 500) {
-    return "under_500ms";
-  }
-  if (latencyMs < 1_000) {
-    return "500ms_to_1s";
-  }
-  if (latencyMs < 2_500) {
-    return "1s_to_2_5s";
-  }
-  if (latencyMs < 5_000) {
-    return "2_5s_to_5s";
-  }
-  return "over_5s";
-}
 
 /**
  * The nearest-rank percentile of a set of latencies, rounded to whole
@@ -1277,20 +850,12 @@ export function bucketOutboxBacklog(backlog: number): string {
   return "500_plus";
 }
 
-export function getPostHogDistinctIdForOperator(userId: string): string {
-  return `user:${userId}`;
-}
-
 export function getPostHogDistinctIdForBusinessSystem(businessId: string): string {
   return `system:business:${businessId}`;
 }
 
 export function getPostHogBusinessGroupKey(businessId: string): string {
   return `business:${businessId}`;
-}
-
-export function isTelemetryEventName(value: string): value is TelemetryEventName {
-  return TELEMETRY_EVENT_NAMES.includes(value as TelemetryEventName);
 }
 
 export function getTelemetryRequiredProperties(

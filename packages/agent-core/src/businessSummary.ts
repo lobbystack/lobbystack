@@ -1,7 +1,8 @@
-import { generateText, Output, type LanguageModel } from "ai";
+import type { AiUsage } from "@lobbystack/shared";
+import type { LanguageModel } from "ai";
 import { z } from "zod";
 
-import { agentModelId, callSummaryEnvironment, createAgentModel, describeAgentUsage, type AgentUsage } from "./model";
+import { createSummaryModel, generateSummaryObject } from "./model";
 
 type Environment = Record<string, string | undefined>;
 
@@ -10,7 +11,7 @@ export type BusinessSummarySource = { title: string; text: string };
 export type BusinessSummaryResult = {
   /** Null when the sources don't say what the business does. */
   summary: string | null;
-  usage: AgentUsage;
+  usage: AiUsage;
 };
 
 export type BusinessSummarizer = {
@@ -54,27 +55,25 @@ export async function summarizeBusiness(input: {
   timeoutMs?: number;
   environment?: Environment;
 }): Promise<BusinessSummaryResult> {
-  const startedAt = performance.now();
-  const result = await generateText({
+  const { output, usage } = await generateSummaryObject({
     model: input.model,
+    name: "business_summary",
+    schema: businessSummarySchema,
     instructions: instructions(LANGUAGES[input.locale.slice(0, 2).toLowerCase()] ?? "English"),
     prompt: buildBusinessSummaryPrompt(input),
-    output: Output.object({ name: "business_summary", schema: businessSummarySchema }),
-    maxRetries: 1,
-    timeout: input.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-    ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+    timeoutMs: input.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    abortSignal: input.abortSignal,
+    environment: input.environment,
   });
-  const usage = describeAgentUsage(result.totalUsage, performance.now() - startedAt, callSummaryEnvironment(input.environment ?? process.env));
-  const summary = result.output.summary.replace(/\s+/g, " ").trim().slice(0, MAX_BUSINESS_SUMMARY_CHARACTERS);
+  const summary = output.summary.replace(/\s+/g, " ").trim().slice(0, MAX_BUSINESS_SUMMARY_CHARACTERS);
   return { summary: summary || null, usage };
 }
 
 /** Uses the call-summary model (AI_SUMMARY_*). Returns undefined when no text model is configured. */
 export function createBusinessSummarizer(environment: Environment = process.env): BusinessSummarizer | undefined {
-  const model = createAgentModel(callSummaryEnvironment(environment));
-  if (!model) return undefined;
-  return {
-    modelId: agentModelId(callSummaryEnvironment(environment)),
-    summarize: async (input) => await summarizeBusiness({ ...input, model, environment }),
+  const summary = createSummaryModel(environment);
+  return summary && {
+    modelId: summary.modelId,
+    summarize: async (input) => await summarizeBusiness({ ...input, model: summary.model, environment }),
   };
 }

@@ -44,8 +44,6 @@ const nextConfig: NextConfig = {
   },
   transpilePackages: [
     "@lobbystack/agent-core",
-    "@lobbystack/ai",
-    "@lobbystack/config",
     "@lobbystack/contracts",
     "@lobbystack/db",
     "@lobbystack/domain",

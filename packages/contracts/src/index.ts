@@ -7,21 +7,6 @@ export const traceContextSchema = z.object({
 
 export type TraceContextCarrier = z.infer<typeof traceContextSchema>;
 
-export const errorResponseSchema = z.object({
-  error: z.string(),
-  code: z.string().optional(),
-  requestId: z.string().optional(),
-});
-
-export const pageRequestSchema = z.object({
-  limit: z.coerce.number().int().min(1).max(100).default(25),
-  cursor: z.string().min(1).optional(),
-});
-
-export const businessIdQuerySchema = z.object({
-  businessId: z.string().uuid(),
-});
-
 export const twilioSmsInboundSchema = z.object({
   From: z.string().min(3).max(32),
   To: z.string().min(3).max(32),
@@ -55,15 +40,6 @@ export const resendWebhookSchema = z.object({
   created_at: z.string().datetime().optional(),
   data: z.record(z.string(), z.unknown()),
 }).passthrough();
-
-export const providerEventSchema = z.object({
-  provider: z.enum(["twilio", "polar", "google_calendar", "resend"]),
-  providerEventId: z.string().min(1).max(255),
-  eventType: z.string().min(1).max(160),
-  occurredAt: z.string().datetime().optional(),
-  businessId: z.string().uuid().optional(),
-  payload: z.record(z.string(), z.unknown()),
-});
 
 const uploadContentTypes = {
   knowledge: new Set(["text/plain", "text/markdown", "text/x-markdown", "application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "image/jpeg", "image/png", "image/webp", "image/tiff"]),
@@ -202,11 +178,6 @@ export const snapshotSchema = z.object({
   }),
 });
 
-export const traceCarrierSchema = traceContextSchema.extend({
-  traceId: z.string().regex(/^[\da-f]{32}$/i).optional(),
-  spanId: z.string().regex(/^[\da-f]{16}$/i).optional(),
-});
-
 export const outboxMessageSchema = z.object({
   id: z.string().uuid(),
   topic: z.string().min(1).max(160),
@@ -221,48 +192,49 @@ export const outboxMessageSchema = z.object({
 export const jobQueues = ["critical", "default", "bulk", "maintenance"] as const;
 export type JobQueue = (typeof jobQueues)[number];
 
-export const jobTypes = [
-  "email.send",
-  "email.reconcileDelivery",
-  "sms.send",
-  "appointment.sendChangeOtp",
-  "sms.syncPrice",
-  "call.syncPrice",
-  "billing.syncUsage",
-  "billing.reconcile",
-  "billing.refreshUnitEconomics",
-  "billing.createCheckout",
-  "calendar.syncAppointment",
-  "calendar.reconcileBusiness",
-  "knowledge.extractDocument",
-  "knowledge.crawlWebsite",
-  "knowledge.indexDocument",
-  "knowledge.reindexBusiness",
-  "knowledge.reembedBusiness",
-  "business.generateSummary",
-  "business.extractHours",
-  "snapshot.refresh",
-  "notification.dispatch",
-  "notification.dailySummary",
-  "conversation.finalizeSession",
-  "privacy.scrubMessage",
-  "privacy.deleteTranscript",
-  "privacy.deleteRecording",
-  "privacy.cleanupPendingUpload",
-  "phoneVerification.send",
-  "phoneVerification.sendCode",
-  "phoneNumber.provision",
-  "phoneNumber.reclaim",
-  "prospectDemo.expire",
-  "onboarding.sendFollowup",
-  "affiliate.generatePayoutRun",
-  "telemetry.flush",
-  "outbox.backlogSample",
-  "realtime.publish",
-  "webhook.deliver",
-  "api.retention",
-] as const;
-export type JobType = (typeof jobTypes)[number];
+export const queueForJobType = {
+  "email.send": "default",
+  "email.reconcileDelivery": "default",
+  "sms.send": "critical",
+  "appointment.sendChangeOtp": "critical",
+  "sms.syncPrice": "critical",
+  "call.syncPrice": "critical",
+  "billing.syncUsage": "critical",
+  "billing.reconcile": "default",
+  "billing.refreshUnitEconomics": "maintenance",
+  "billing.createCheckout": "critical",
+  "calendar.syncAppointment": "default",
+  "calendar.reconcileBusiness": "default",
+  "knowledge.extractDocument": "bulk",
+  "knowledge.crawlWebsite": "bulk",
+  "knowledge.indexDocument": "bulk",
+  "knowledge.reindexBusiness": "bulk",
+  "knowledge.reembedBusiness": "bulk",
+  "business.generateSummary": "bulk",
+  "business.extractHours": "bulk",
+  "snapshot.refresh": "default",
+  "notification.dispatch": "default",
+  "notification.dailySummary": "maintenance",
+  "conversation.finalizeSession": "default",
+  "privacy.scrubMessage": "maintenance",
+  "privacy.deleteTranscript": "maintenance",
+  "privacy.deleteRecording": "maintenance",
+  "privacy.cleanupPendingUpload": "maintenance",
+  "phoneVerification.send": "critical",
+  "phoneVerification.sendCode": "critical",
+  "phoneNumber.provision": "critical",
+  "phoneNumber.reclaim": "maintenance",
+  "prospectDemo.expire": "maintenance",
+  "onboarding.sendFollowup": "default",
+  "affiliate.generatePayoutRun": "maintenance",
+  "telemetry.flush": "maintenance",
+  "outbox.backlogSample": "maintenance",
+  "realtime.publish": "default",
+  "webhook.deliver": "default",
+  "api.retention": "maintenance",
+} as const satisfies Record<string, JobQueue>;
+export type JobType = keyof typeof queueForJobType;
+export const jobTypes = Object.keys(queueForJobType) as [JobType, ...JobType[]];
 
 export const jobEnvelopeSchema = z.object({
   jobId: z.string().uuid(),
@@ -287,14 +259,3 @@ export const authzRoleSchema = z.enum([
 ]);
 
 export type AuthzRole = z.infer<typeof authzRoleSchema>;
-
-export const apiHealthSchema = z.object({
-  ok: z.boolean(),
-  service: z.string(),
-  version: z.string(),
-  checks: z.record(z.string(), z.enum(["ok", "degraded", "failed"])),
-});
-
-export function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown): T {
-  return schema.parse(value);
-}

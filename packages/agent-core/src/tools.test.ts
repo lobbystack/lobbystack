@@ -1,11 +1,8 @@
 import { demoSnapshot, type BookingMode, type BusinessContextSnapshot, type KnowledgeSnippet } from "@lobbystack/shared";
 import { describe, expect, it, vi } from "vitest";
 
-// knowledgeRanking re-exports a helper from @lobbystack/ai, which the built copy of
-// this test can't resolve. The tools only need the real knowledgeQueryTerms.
-vi.mock("@lobbystack/ai", async () => ({ countKnowledgeTokens: (await import("../../ai/src/tokenBudget")).countKnowledgeTokens }));
 vi.mock("@lobbystack/domain", async () => ({
-  countKnowledgeTokens: (await import("../../ai/src/tokenBudget")).countKnowledgeTokens,
+  countKnowledgeTokens: (await import("../../domain/src/knowledgeRanking")).countKnowledgeTokens,
   KNOWLEDGE_SEARCH_TOKEN_BUDGET: 3000,
   knowledgeQueryTerms: (await import("../../domain/src/knowledgeRanking")).knowledgeQueryTerms,
   searchKnowledgeEvidence: vi.fn(),

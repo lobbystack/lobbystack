@@ -1,7 +1,8 @@
-import { generateText, Output, type LanguageModel } from "ai";
+import type { AiUsage } from "@lobbystack/shared";
+import type { LanguageModel } from "ai";
 import { z } from "zod";
 
-import { agentModelId, callSummaryEnvironment, createAgentModel, describeAgentUsage, type AgentUsage } from "./model";
+import { createSummaryModel, generateSummaryObject } from "./model";
 
 type Environment = Record<string, string | undefined>;
 
@@ -10,7 +11,7 @@ export type CallSummaryTurn = { speaker: string; text: string };
 export type CallSummaryResult = {
   summary: string;
   callerName: string | null;
-  usage: AgentUsage;
+  usage: AiUsage;
 };
 
 export type CallSummarizer = {
@@ -100,26 +101,24 @@ export async function summarizeCall(input: {
   timeoutMs?: number;
   environment?: Environment;
 }): Promise<CallSummaryResult> {
-  const startedAt = performance.now();
-  const result = await generateText({
+  const { output, usage } = await generateSummaryObject({
     model: input.model,
+    name: "call_summary",
+    schema: callSummarySchema,
     instructions: instructions(input.locale === "fr" ? "French" : "English"),
     prompt: buildCallSummaryPrompt(input),
-    output: Output.object({ name: "call_summary", schema: callSummarySchema }),
-    maxRetries: 1,
-    timeout: input.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-    ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+    timeoutMs: input.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    abortSignal: input.abortSignal,
+    environment: input.environment,
   });
-  const usage = describeAgentUsage(result.totalUsage, performance.now() - startedAt, callSummaryEnvironment(input.environment ?? process.env));
-  return { summary: result.output.summary, callerName: result.output.callerName, usage };
+  return { summary: output.summary, callerName: output.callerName, usage };
 }
 
 /** Returns undefined when no text model is configured; calls then keep the transcript heuristic. */
 export function createCallSummarizer(environment: Environment = process.env): CallSummarizer | undefined {
-  const model = createAgentModel(callSummaryEnvironment(environment));
-  if (!model) return undefined;
-  return {
-    modelId: agentModelId(callSummaryEnvironment(environment)),
-    summarize: async (input) => await summarizeCall({ ...input, model, environment }),
+  const summary = createSummaryModel(environment);
+  return summary && {
+    modelId: summary.modelId,
+    summarize: async (input) => await summarizeCall({ ...input, model: summary.model, environment }),
   };
 }

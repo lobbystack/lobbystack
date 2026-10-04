@@ -1,22 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  bucketLatencyMs,
   bucketOutboxBacklog,
-  buildAlertableExceptionTelemetryProperties,
   buildPostHogAiGenerationProperties,
-  buildPostHogAiSpanProperties,
   buildPostHogAiTraceProperties,
-  buildProviderErrorTelemetryProperties,
-  classifyProviderError,
   getTelemetryRequiredProperties,
-  getProviderErrorExceptionType,
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
-  getPostHogDistinctIdForOperator,
-  isExpectedApplicationFailure,
   percentileMs,
-  redactAiTraceProperties,
   redactTelemetryProperties,
   redactOtelAttributes,
   validateTelemetryEvent,
@@ -40,7 +31,7 @@ describe("telemetry redaction", () => {
   });
 
   it("redacts nested AI trace content while leaving aggregate counters intact", () => {
-    const properties = redactAiTraceProperties({
+    const properties = redactTelemetryProperties({
       provider: "openai",
       model: "gpt-realtime",
       $ai_input: "do not leak me",
@@ -65,7 +56,7 @@ describe("telemetry redaction", () => {
   });
 
   it("keeps token usage metrics while redacting credential-like token fields", () => {
-    const properties = redactAiTraceProperties({
+    const properties = redactTelemetryProperties({
       access_token: "secret-access-token",
       refreshToken: "secret-refresh-token",
       totalTokens: 120,
@@ -79,164 +70,13 @@ describe("telemetry redaction", () => {
   });
 
   it("preserves workflowName while still redacting sensitive name fields", () => {
-    const properties = redactAiTraceProperties({
+    const properties = redactTelemetryProperties({
       workflowName: "appointmentCalendarSyncWorkflow",
       customerName: "Jane Doe",
     });
 
     expect(properties.workflowName).toBe("appointmentCalendarSyncWorkflow");
     expect(properties.customerName).toBe("[redacted]");
-  });
-
-  it("classifies OpenAI insufficient_quota as quota exhausted", () => {
-    const classified = classifyProviderError({
-      provider: "openai",
-      error: {
-        error: {
-          code: "insufficient_quota",
-          message: "You exceeded your current quota.",
-        },
-        status: 429,
-      },
-    });
-
-    expect(classified).toMatchObject({
-      provider: "openai",
-      kind: "quota_exhausted",
-      providerErrorCode: "insufficient_quota",
-      providerErrorStatus: 429,
-    });
-    expect(getProviderErrorExceptionType(classified.kind)).toBe(
-      "ProviderQuotaExhaustedError",
-    );
-  });
-
-  it("classifies HTTP 401 and 403 as auth failures", () => {
-    expect(
-      classifyProviderError({ provider: "twilio", error: { status: 401 } }).kind,
-    ).toBe("auth_failed");
-    expect(
-      classifyProviderError({
-        provider: "google",
-        error: { response: { status: 403 } },
-      }).kind,
-    ).toBe("auth_failed");
-  });
-
-  it("classifies HTTP 429 as rate limited when it is not quota exhaustion", () => {
-    expect(
-      classifyProviderError({
-        provider: "google",
-        error: { status: 429, message: "Rate limit reached." },
-      }).kind,
-    ).toBe("rate_limited");
-  });
-
-  it("classifies OpenAI integer bounds errors as invalid requests before timeout wording", () => {
-    const classified = classifyProviderError({
-      provider: "openai",
-      error: {
-        code: "integer_above_max_value",
-        message:
-          "Invalid value for session.audio.input.turn_detection.idle_timeout_ms: timeout value is above the maximum.",
-      },
-    });
-
-    expect(classified).toMatchObject({
-      provider: "openai",
-      kind: "invalid_request",
-      providerErrorCode: "integer_above_max_value",
-    });
-    expect(getProviderErrorExceptionType(classified.kind)).toBe(
-      "ProviderInvalidRequestError",
-    );
-  });
-
-  it("classifies 5xx and network failures as provider unavailable", () => {
-    expect(
-      classifyProviderError({ provider: "polar", error: { statusCode: 503 } }).kind,
-    ).toBe("provider_unavailable");
-    expect(
-      classifyProviderError({ provider: "firecrawl", error: new Error("fetch failed") })
-        .kind,
-    ).toBe("provider_unavailable");
-  });
-
-  it("classifies unknown error shapes as unknown", () => {
-    expect(classifyProviderError({ error: { surprise: true } })).toMatchObject({
-      provider: "unknown",
-      kind: "unknown",
-    });
-  });
-
-  it("classifies handled application rejections as expected", () => {
-    expect(isExpectedApplicationFailure(new Error("InvalidSecret"))).toBe(true);
-    expect(
-      isExpectedApplicationFailure(
-        new Error("This email is already on your account."),
-      ),
-    ).toBe(true);
-    expect(
-      isExpectedApplicationFailure(
-        new Error(
-          "That verification code is invalid or expired. Try requesting a new one.",
-        ),
-      ),
-    ).toBe(true);
-    expect(
-      isExpectedApplicationFailure(
-        new Error("Invalid or expired email confirmation link."),
-      ),
-    ).toBe(true);
-    expect(isExpectedApplicationFailure(new Error("database exploded"))).toBe(false);
-  });
-
-  it("only includes provider on alertable exceptions when provided", () => {
-    const withoutProvider = buildAlertableExceptionTelemetryProperties({
-      runtime: "web",
-      service: "web",
-      operation: "calendar_connect",
-    });
-    const withProvider = buildAlertableExceptionTelemetryProperties({
-      runtime: "web",
-      service: "web",
-      operation: "calendar_connect",
-      provider: "google",
-    });
-
-    expect(withoutProvider).not.toHaveProperty("provider");
-    expect(withProvider).toHaveProperty("provider", "google");
-  });
-
-  it("builds provider exception metadata and redacts raw provider messages", () => {
-    const properties = buildProviderErrorTelemetryProperties({
-      provider: "twilio",
-      kind: "invalid_request",
-      providerErrorCode: "21211",
-      providerErrorMessage:
-        "The 'To' number +14165550123 is not a valid phone number.",
-      providerErrorStatus: 429,
-    });
-
-    expect(properties).toMatchObject({
-      provider: "twilio",
-      providerErrorKind: "invalid_request",
-      providerErrorCode: "21211",
-      providerErrorMessage:
-        "The 'To' number +14165550123 is not a valid phone number.",
-      providerErrorStatus: 429,
-      $exception_type: "ProviderInvalidRequestError",
-      $exception_message:
-        "The 'To' number +14165550123 is not a valid phone number.",
-    });
-    const redacted = redactTelemetryProperties(properties);
-    expect(redacted.provider).toBe("twilio");
-    expect(redacted.providerErrorKind).toBe("invalid_request");
-    expect(redacted.providerErrorCode).toBe("21211");
-    expect(redacted.providerErrorStatus).toBe(429);
-    expect(redacted.$exception_type).toBe("ProviderInvalidRequestError");
-    expect(redacted.providerErrorMessage).toBe("[redacted]");
-    expect(redacted.$exception_message).toBe("[redacted]");
   });
 
   it("redacts bearer tokens embedded in telemetry URL values", () => {
@@ -354,34 +194,13 @@ describe("telemetry redaction", () => {
     expect(properties.safeOutcome).toBe("booked");
   });
 
-  it("builds metadata-only AI trace and span properties", () => {
+  it("builds metadata-only AI trace properties", () => {
     const traceProperties = buildPostHogAiTraceProperties({
       traceId: "trace-2",
       sessionId: "session-2",
       model: "test-chat-model",
       provider: "google",
       conversationId: "conv-2",
-    });
-    const spanProperties = buildPostHogAiSpanProperties({
-      traceId: "trace-2",
-      sessionId: "session-2",
-      model: "test-chat-model",
-      provider: "google",
-      conversationId: "conv-2",
-      spanName: "tool_call:searchKnowledge",
-      inputState: {
-        toolName: "searchKnowledge",
-        toolArguments: {
-          query: "private",
-        },
-      },
-      outputState: {
-        succeeded: true,
-        toolResult: {
-          text: "private",
-        },
-      },
-      latencyMs: 800,
     });
 
     expect(traceProperties.$ai_trace_id).toBe("trace-2");
@@ -391,18 +210,6 @@ describe("telemetry redaction", () => {
     expect(traceProperties.model).toBe("test-chat-model");
     expect(traceProperties.provider).toBe("google");
     expect(traceProperties.conversationId).toBe("conv-2");
-    expect(spanProperties.spanName).toBe("tool_call:searchKnowledge");
-    expect(spanProperties.$ai_span_name).toBe("tool_call:searchKnowledge");
-    expect(spanProperties.latencyMs).toBe(800);
-    expect(spanProperties.$ai_latency).toBe(0.8);
-    expect(spanProperties.$ai_input_state).toEqual({
-      toolName: "searchKnowledge",
-      toolArguments: "[redacted]",
-    });
-    expect(spanProperties.$ai_output_state).toEqual({
-      succeeded: true,
-      toolResult: "[redacted]",
-    });
   });
 
   it("redacts OTEL attributes that might contain customer data", () => {
@@ -426,7 +233,6 @@ describe("telemetry redaction", () => {
   });
 
   it("builds stable PostHog identity keys", () => {
-    expect(getPostHogDistinctIdForOperator("user_123")).toBe("user:user_123");
     expect(getPostHogDistinctIdForBusinessSystem("biz_123")).toBe(
       "system:business:biz_123",
     );
@@ -489,14 +295,6 @@ describe("telemetry redaction", () => {
     expect(valid).toEqual({ ok: true, missing: [] });
     expect(invalid.ok).toBe(false);
     expect(invalid.missing).toEqual(["conversationId", "channel"]);
-  });
-
-  it("buckets operational latency values into stable ranges", () => {
-    expect(bucketLatencyMs(120)).toBe("under_500ms");
-    expect(bucketLatencyMs(800)).toBe("500ms_to_1s");
-    expect(bucketLatencyMs(1_700)).toBe("1s_to_2_5s");
-    expect(bucketLatencyMs(3_600)).toBe("2_5s_to_5s");
-    expect(bucketLatencyMs(8_100)).toBe("over_5s");
   });
 
   it("takes nearest-rank latency percentiles", () => {

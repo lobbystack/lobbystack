@@ -38,9 +38,3 @@ export function createTelemetryRecorder() {
     },
   };
 }
-
-export function createTestTraceCarrier(): Record<string, string> {
-  return {
-    traceparent: "00-00000000000000000000000000000001-0000000000000001-01",
-  };
-}

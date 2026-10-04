@@ -90,14 +90,10 @@ if (!adminNextConfig.includes('"@lobbystack/telemetry/node"')) {
   errors.push("admin Next.js config does not externalize Node telemetry");
 }
 const contracts = readText("packages/contracts/src/index.ts");
-const jobs = readText("packages/jobs/src/index.ts");
 const handlers = readText("apps/worker/src/handlers.ts");
-const jobBlock = contracts.match(/export const jobTypes = \[(.*?)] as const/s)?.[1] ?? "";
-const jobTypes = extractAll(jobBlock, /"([a-zA-Z0-9_.]+)"/g);
+const jobBlock = contracts.match(/export const queueForJobType = \{(.*?)} as const/s)?.[1] ?? "";
+const jobTypes = extractAll(jobBlock, /"([a-zA-Z0-9_.]+)":/g);
 for (const jobType of jobTypes) {
-  if (!jobs.includes(`"${jobType}"`)) {
-    errors.push(`job type is missing from queue mapping: ${jobType}`);
-  }
   if (!handlers.includes(`"${jobType}"`)) {
     errors.push(`job type is missing from worker handler: ${jobType}`);
   }

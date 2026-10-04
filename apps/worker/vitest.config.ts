@@ -7,14 +7,13 @@ export default defineConfig({
   resolve: {
     alias: {
       "@lobbystack/agent-core": `${root}/packages/agent-core/src/index.ts`,
-      "@lobbystack/ai": `${root}/packages/ai/src/index.ts`,
-      "@lobbystack/config": `${root}/packages/config/src/index.ts`,
       "@lobbystack/contracts": `${root}/packages/contracts/src/index.ts`,
       "@lobbystack/db": `${root}/packages/db/src/index.ts`,
       "@lobbystack/domain": `${root}/packages/domain/src/index.ts`,
       "@lobbystack/jobs": `${root}/packages/jobs/src/index.ts`,
       "@lobbystack/providers/ai/embeddingProvider": `${root}/packages/providers/src/ai/embeddingProvider.ts`,
       "@lobbystack/providers/crawling/firecrawl": `${root}/packages/providers/src/crawling/firecrawl.ts`,
+      "@lobbystack/providers/crawling/urlSafety": `${root}/packages/providers/src/crawling/urlSafety.ts`,
       "@lobbystack/providers/crypto/secretBox": `${root}/packages/providers/src/crypto/secretBox.ts`,
       "@lobbystack/providers/email/smtp": `${root}/packages/providers/src/email/smtp.ts`,
       "@lobbystack/providers/google/calendar": `${root}/packages/providers/src/google/calendar.ts`,

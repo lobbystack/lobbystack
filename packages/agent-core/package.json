@@ -14,7 +14,6 @@
   "dependencies": {
     "@ai-sdk/openai": "4.0.46",
     "@ai-sdk/openai-compatible": "^3.0.31",
-    "@lobbystack/ai": "workspace:*",
     "@lobbystack/domain": "workspace:*",
     "@lobbystack/shared": "workspace:*",
     "ai": "^7.0.67",

@@ -1,4 +1,4 @@
-import { countKnowledgeTokens } from "@lobbystack/ai";
+import { countKnowledgeTokens } from "@lobbystack/domain";
 import { demoSnapshot } from "@lobbystack/shared";
 import { DateTime } from "luxon";
 import { describe, expect, it } from "vitest";

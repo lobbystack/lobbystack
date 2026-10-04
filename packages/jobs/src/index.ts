@@ -1,55 +1,13 @@
 import { createHash } from "node:crypto";
 
-import { jobEnvelopeSchema, jobQueues, jobTypes, type JobEnvelope, type JobQueue, type JobType } from "@lobbystack/contracts";
+import { jobEnvelopeSchema, jobTypes, type JobEnvelope, type JobQueue, type JobType } from "@lobbystack/contracts";
 import { Queue, type JobsOptions, type QueueOptions, type WorkerOptions } from "bullmq";
 import Redis from "ioredis";
 
 import { logRedisErrors } from "./redisErrors";
 
-export { jobEnvelopeSchema, jobQueues, jobTypes } from "@lobbystack/contracts";
+export { jobEnvelopeSchema, jobQueues, jobTypes, queueForJobType } from "@lobbystack/contracts";
 export type { JobEnvelope, JobQueue, JobType } from "@lobbystack/contracts";
-
-export const queueForJobType: Record<JobType, JobQueue> = {
-  "email.send": "default",
-  "email.reconcileDelivery": "default",
-  "sms.send": "critical",
-  "appointment.sendChangeOtp": "critical",
-  "sms.syncPrice": "critical",
-  "call.syncPrice": "critical",
-  "billing.syncUsage": "critical",
-  "billing.reconcile": "default",
-  "billing.refreshUnitEconomics": "maintenance",
-  "billing.createCheckout": "critical",
-  "calendar.syncAppointment": "default",
-  "calendar.reconcileBusiness": "default",
-  "knowledge.extractDocument": "bulk",
-  "knowledge.crawlWebsite": "bulk",
-  "knowledge.indexDocument": "bulk",
-  "knowledge.reindexBusiness": "bulk",
-  "knowledge.reembedBusiness": "bulk",
-  "business.generateSummary": "bulk",
-  "business.extractHours": "bulk",
-  "snapshot.refresh": "default",
-  "notification.dispatch": "default",
-  "notification.dailySummary": "maintenance",
-  "conversation.finalizeSession": "default",
-  "privacy.scrubMessage": "maintenance",
-  "privacy.deleteTranscript": "maintenance",
-  "privacy.deleteRecording": "maintenance",
-  "privacy.cleanupPendingUpload": "maintenance",
-  "phoneVerification.send": "critical",
-  "phoneVerification.sendCode": "critical",
-  "phoneNumber.provision": "critical",
-  "phoneNumber.reclaim": "maintenance",
-  "prospectDemo.expire": "maintenance",
-  "onboarding.sendFollowup": "default",
-  "affiliate.generatePayoutRun": "maintenance",
-  "telemetry.flush": "maintenance",
-  "outbox.backlogSample": "maintenance",
-  "realtime.publish": "default",
-  "webhook.deliver": "default",
-  "api.retention": "maintenance",
-};
 
 export type JobPayload = Record<string, unknown>;
 
@@ -60,7 +18,6 @@ export type EnqueueJobInput = {
   trace?: { traceparent?: string | undefined; tracestate?: string | undefined };
   idempotencyKey: string;
   delayMs?: number;
-  attempts?: number;
 };
 
 export type RedisClientOptions = {
@@ -114,10 +71,9 @@ export async function enqueueJob(
     idempotencyKey: input.idempotencyKey,
     scheduled: (input.delayMs ?? 0) > 0,
   });
+  // Attempts and backoff come from the queue's defaultJobOptions.
   const options: JobsOptions = {
     jobId,
-    attempts: input.attempts ?? 5,
-    backoff: { type: "exponential", delay: 1000 },
     ...(input.delayMs !== undefined ? { delay: input.delayMs } : {}),
   };
   await queue.add(input.type, envelope, options);
