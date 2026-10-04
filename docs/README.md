@@ -9,7 +9,6 @@ This directory documents LobbyStack’s current architecture, operations, provid
 - `voice/`: How GPT-Live calls run, and how to set up the phone path
 - `providers/`: Provider configuration and operations
 - `deployment/`: Hosting and deployment procedures
-- `migrations/`: Development Convex import and the [blocked production-snapshot rehearsal boundary](migrations/production-rehearsal.md)
 - `operations/`: Backup, restore, and alert runbooks; restore is separate from traffic rollback, and the [reliability rollout runbook](operations/remediation-rollout.md) covers role checks, OAuth compatibility, and retention gates
 - `validation/`: Release certification, contract checks, the [production-readiness matrix](validation/production-readiness.md), the [current implementation validation report](validation/readiness-implementation-2026-09-12.md), and the [query-plan remediation report](validation/query-plan-remediation.md)
-- `platform.md`: Local stack, service checks, deployment, and cutover summary
+- `platform.md`: Local stack, service checks, and deployment

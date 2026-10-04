@@ -85,7 +85,7 @@ Configure Polar to send subscription and order webhooks to `https://app.example.
 
 Set `POLAR_WEBHOOK_SECRET` in production. The route rejects missing secrets and invalid signatures with HTTP 401.
 
-During a Convex cutover, set `POLAR_ACCEPT_LEGACY_BUSINESS_IDS=true` only in production. This lets signed webhooks resolve existing `business:<legacy-id>` customer references through the retained `businesses.legacy_convex_id` mapping. Keep it disabled in staging so a shared Polar organization cannot route production customer events into the staging database.
+Set `POLAR_ACCEPT_LEGACY_BUSINESS_IDS=true` only in production. It lets signed webhooks resolve `business:<legacy-id>` customer references from before the PostgreSQL move through the `businesses.legacy_convex_id` column. Keep it disabled in staging so a shared Polar organization cannot route production customer events into the staging database.
 
 ## Understand the billing flow
 
@@ -134,4 +134,4 @@ Run these checks in the Polar sandbox before enabling production billing:
 - Confirm annual subscriptions send monthly overage quantities.
 - Confirm worker logs identify usage-sync failures and that requeueing recovers them.
 
-Self-hosted workspaces remain outside hosted billing enforcement. Convex billing data appears only in migration and reconciliation workflows.
+Self-hosted workspaces remain outside hosted billing enforcement.
