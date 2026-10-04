@@ -13,7 +13,7 @@ vi.mock("better-auth", () => ({ betterAuth: (config: unknown) => {
 } }));
 vi.mock("better-auth/api", async importOriginal => ({ ...await importOriginal<typeof import("better-auth/api")>(), createAuthMiddleware: (handler: unknown) => handler }));
 vi.mock("better-auth/adapters/drizzle", () => ({ drizzleAdapter: mocks.adapter }));
-vi.mock("./turnstile", () => ({ verifyTurnstileForSignUp: mocks.challenge }));
+vi.mock("./turnstile", () => ({ verifyTurnstile: mocks.challenge }));
 vi.mock("./email-verification-policy", async importOriginal => ({ ...await importOriginal<typeof import("./email-verification-policy")>(), assertEmailVerificationSendAllowed: mocks.allowed }));
 vi.mock("./databases", () => {
   const db = {

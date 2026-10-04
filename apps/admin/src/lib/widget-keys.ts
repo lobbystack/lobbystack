@@ -153,12 +153,6 @@ export async function touchWidgetKeyLastUsed(input: { businessId: string; widget
   });
 }
 
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export function isValidUuid(value: string | null | undefined): value is string {
-  return typeof value === "string" && uuidPattern.test(value);
-}
-
 export function requestIpHash(request: Request): string | undefined {
   // Shared trusted-IP derivation: opt in only when ingress overwrites the
   // configured single-value header. No trusted header means no IP dimension,

@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 
 import { NextResponse } from "next/server";
 
+import { bearerToken } from "@lobbystack/domain";
 import { getFinanceExportDatabase } from "@/lib/api-helpers";
 
 export const runtime = "nodejs";
@@ -13,7 +14,7 @@ type Cursor = { updatedAt: string; id: string };
 
 function authorized(request: Request): boolean {
   const expected = process.env.FINANCE_EXPORT_TOKEN;
-  const supplied = request.headers.get("authorization")?.match(/^Bearer (.+)$/i)?.[1];
+  const supplied = bearerToken(request.headers.get("authorization"));
   if (!expected || !supplied) return false;
   const left = Buffer.from(expected);
   const right = Buffer.from(supplied);

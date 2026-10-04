@@ -35,9 +35,6 @@ export function formatCallDispositionSummary(
   if (normalized.includes("no_answer") || normalized.includes("missed")) {
     return t("outcome.noAnswer");
   }
-  if (normalized.includes("stream_start_failed") || normalized.includes("openai_handshake_failed")) {
-    return t("outcome.technicalIssue");
-  }
   if (normalized.includes("failed")) {
     return t("outcome.technicalIssue");
   }

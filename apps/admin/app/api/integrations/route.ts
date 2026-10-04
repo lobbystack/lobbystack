@@ -3,19 +3,17 @@ import { NextResponse } from "next/server";
 
 import { billingAccounts, phoneNumbers } from "@lobbystack/db";
 import { assignCalendarStaff, discoverCalendars, disconnectCalendar, listCalendarConnections, listCalendarStaff, refreshCalendar, resolveCalendarAccessToken, selectCalendar } from "@lobbystack/domain";
-import { GoogleCalendarProvider, SecretBox } from "@lobbystack/providers";
-import { asApiResponse, businessIdFromRequest, readJson, requireApiSession, withOperatorTransaction } from "@/lib/api-helpers";
+import { SecretBox } from "@lobbystack/providers";
+import { asApiResponse, businessIdFromRequest, jsonError, readJson, requireApiSession, withOperatorTransaction } from "@/lib/api-helpers";
 import { createDomainContext, createWorkerDomainContext } from "@/lib/domain-context";
+import { googleCalendarProvider } from "@/lib/google-calendar-provider";
 
 export const dynamic = "force-dynamic";
 
 async function calendarDiscovery(userId: string, businessId: string, connectionId: string) {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
   const encryptionKey = process.env.ENCRYPTION_KEY;
-  if (!clientId || !clientSecret || !redirectUri || !encryptionKey) throw new Error("Google Calendar discovery is not configured.");
-  const provider = new GoogleCalendarProvider({ clientId, clientSecret, redirectUri });
+  if (!encryptionKey) throw new Error("Google Calendar discovery is not configured.");
+  const provider = googleCalendarProvider();
   const box = new SecretBox(encryptionKey);
   return await discoverCalendars(createDomainContext(), {
     userId, businessId, connectionId,
@@ -71,12 +69,12 @@ export async function PATCH(request: Request) {
     const session = await requireApiSession(request);
     const businessId = businessIdFromRequest(request);
     const body = await readJson(request) as { connectionId?: string; calendarId?: string; staffId?: string | null };
-    if (!businessId || !body.connectionId || (!body.calendarId && body.staffId === undefined)) return NextResponse.json({ error: "businessId, connectionId, and calendarId or staffId are required." }, { status: 400 });
+    if (!businessId || !body.connectionId || (!body.calendarId && body.staffId === undefined)) return jsonError("businessId, connectionId, and calendarId or staffId are required.", 400);
     if (body.calendarId) {
       await withOperatorTransaction(request, async () => undefined, { minimumRole: "business_admin" });
       const options = await calendarDiscovery(session.user.id, businessId, body.connectionId);
       const selected = options.find((option) => option.id === body.calendarId?.trim());
-      if (!selected || !["owner", "writer"].includes(selected.accessRole ?? "")) return NextResponse.json({ error: "Select a calendar you can write to." }, { status: 400 });
+      if (!selected || !["owner", "writer"].includes(selected.accessRole ?? "")) return jsonError("Select a calendar you can write to.", 400);
       await selectCalendar(createDomainContext(), { userId: session.user.id, businessId, connectionId: body.connectionId, calendarId: selected.id });
     }
     if (body.staffId !== undefined) await assignCalendarStaff(createDomainContext(), { userId: session.user.id, businessId, connectionId: body.connectionId, staffId: body.staffId });
@@ -89,7 +87,7 @@ export async function POST(request: Request) {
     const session = await requireApiSession(request);
     const businessId = businessIdFromRequest(request);
     const body = await readJson(request) as { connectionId?: string };
-    if (!businessId || !body.connectionId) return NextResponse.json({ error: "businessId and connectionId are required." }, { status: 400 });
+    if (!businessId || !body.connectionId) return jsonError("businessId and connectionId are required.", 400);
     await refreshCalendar(createDomainContext(), { userId: session.user.id, businessId, connectionId: body.connectionId });
     return NextResponse.json({ ok: true });
   } catch (error) { return asApiResponse(error); }
@@ -100,7 +98,7 @@ export async function DELETE(request: Request) {
     const session = await requireApiSession(request);
     const businessId = businessIdFromRequest(request);
     const connectionId = new URL(request.url).searchParams.get("connectionId");
-    if (!businessId || !connectionId) return NextResponse.json({ error: "businessId and connectionId are required." }, { status: 400 });
+    if (!businessId || !connectionId) return jsonError("businessId and connectionId are required.", 400);
     await disconnectCalendar(createDomainContext(), { userId: session.user.id, businessId, connectionId });
     return NextResponse.json({ ok: true });
   } catch (error) { return asApiResponse(error); }

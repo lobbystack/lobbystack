@@ -1,28 +1,13 @@
-import { after, NextResponse } from "next/server";
-import { reportServerError } from "./error-reporting";
+import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 
 import { users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { requireBusinessMembership } from "@lobbystack/domain";
 
+import { runAfterResponse } from "./after-response";
 import { getSession, type Session } from "./auth";
 import { getDatabase } from "./databases";
-
-export type ApiErrorPayload = {
-  error: string;
-  code?: string;
-};
-
-export type ApiPagination = {
-  limit: number;
-  offset: number;
-  total?: number;
-  hasNext: boolean;
-};
-
-export type ApiMutationPayload<T extends Record<string, unknown> = Record<string, never>> = {
-  ok: true;
-} & T;
+import { reportServerError } from "./error-reporting";
 
 export function getAppDatabase() {
   return getDatabase("lobbystack_app");
@@ -46,21 +31,6 @@ export function getFinanceExportDatabase() {
 
 export function jsonError(message: string, status = 400, code?: string): NextResponse {
   return NextResponse.json({ error: message, ...(code ? { code } : {}) }, { status });
-}
-
-export function parsePagination(request: Request, defaults: { limit?: number; maxLimit?: number } = {}): { limit: number; offset: number } {
-  const url = new URL(request.url);
-  const maxLimit = defaults.maxLimit ?? 100;
-  const requestedLimit = Number(url.searchParams.get("limit") ?? defaults.limit ?? 50);
-  const requestedOffset = Number(url.searchParams.get("offset") ?? 0);
-  return {
-    limit: Number.isFinite(requestedLimit) ? Math.min(Math.max(Math.trunc(requestedLimit), 1), maxLimit) : defaults.limit ?? 50,
-    offset: Number.isFinite(requestedOffset) ? Math.max(Math.trunc(requestedOffset), 0) : 0,
-  };
-}
-
-export function mutationResponse<T extends Record<string, unknown> = Record<string, never>>(data?: T, status = 200): NextResponse<ApiMutationPayload<T>> {
-  return NextResponse.json({ ok: true, ...(data ?? {}) } as ApiMutationPayload<T>, { status });
 }
 
 export async function readJson(request: Request): Promise<unknown> {
@@ -124,11 +94,7 @@ export async function withOperatorTransaction<T>(
   callback: (input: { session: NonNullable<Session>; businessId: string; tx: DatabaseTransaction }) => Promise<T>,
   options: { minimumRole?: "viewer" | "scheduler" | "business_admin" | "business_owner" } = {},
 ): Promise<T> {
-  const session = await requireApiSession(request);
-  const businessId = businessIdFromRequest(request) ?? await activeBusinessIdForUser(session.user.id);
-  if (!businessId) {
-    throw jsonError("A businessId is required.", 400, "business_required");
-  }
+  const { session, businessId } = await requireOperatorBusiness(request);
   return await withBusinessTransaction(getAppDatabase().db, { userId: session.user.id, businessId, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, { userId: session.user.id, businessId, ...(options.minimumRole ? { minimumRole: options.minimumRole } : {}) });
     return await callback({ session, businessId, tx });
@@ -147,8 +113,7 @@ export function asApiResponse(error: unknown): NextResponse {
   const message = status >= 500 ? "Request failed." : error instanceof Error ? error.message : "Request failed.";
   if (status >= 500) {
     const errorId = crypto.randomUUID();
-    const report = () => reportServerError(error, { operation: "api_response", errorId });
-    try { after(report); } catch { void report(); }
+    runAfterResponse(() => reportServerError(error, { operation: "api_response", errorId }));
     return NextResponse.json({ error: message, errorId }, { status, headers: { "x-error-id": errorId } });
   }
   return jsonError(message, status, code);

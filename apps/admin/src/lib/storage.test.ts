@@ -1,36 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getStorageProvider } from "./storage";
 
+afterEach(() => vi.unstubAllEnvs());
+
 describe("getStorageProvider", () => {
-  it("reuses a provider while its configuration is unchanged", () => {
-    const environment = {
-      NODE_ENV: "test",
-      STORAGE_PROVIDER: "local",
-      LOCAL_STORAGE_PATH: "/tmp/lobbystack-storage-a",
-      LOCAL_STORAGE_SIGNING_SECRET: "secret",
-      APP_BASE_URL: "http://localhost:3000",
-    } as NodeJS.ProcessEnv;
+  it("reuses one provider for the process", () => {
+    vi.stubEnv("STORAGE_PROVIDER", "local");
+    vi.stubEnv("LOCAL_STORAGE_PATH", "/tmp/lobbystack-storage-a");
+    vi.stubEnv("LOCAL_STORAGE_SIGNING_SECRET", "secret");
+    vi.stubEnv("APP_BASE_URL", "http://localhost:3000");
 
-    expect(getStorageProvider(environment)).toBe(getStorageProvider(environment));
-  });
-
-  it("replaces the provider when its configuration changes", () => {
-    const first = getStorageProvider({
-      NODE_ENV: "test",
-      STORAGE_PROVIDER: "local",
-      LOCAL_STORAGE_PATH: "/tmp/lobbystack-storage-b",
-      LOCAL_STORAGE_SIGNING_SECRET: "secret",
-      APP_BASE_URL: "http://localhost:3000",
-    } as NodeJS.ProcessEnv);
-    const second = getStorageProvider({
-      NODE_ENV: "test",
-      STORAGE_PROVIDER: "local",
-      LOCAL_STORAGE_PATH: "/tmp/lobbystack-storage-c",
-      LOCAL_STORAGE_SIGNING_SECRET: "secret",
-      APP_BASE_URL: "http://localhost:3000",
-    } as NodeJS.ProcessEnv);
-
-    expect(second).not.toBe(first);
+    expect(getStorageProvider()).toBe(getStorageProvider());
   });
 });

@@ -1,3 +1,5 @@
+import { isUuid } from "@lobbystack/shared";
+
 type RecordValue = Record<string, unknown>;
 const record = (value: unknown): RecordValue => value && typeof value === "object" && !Array.isArray(value) ? value as RecordValue : {};
 const text = (value: unknown): string | undefined => typeof value === "string" && value.length > 0 ? value : undefined;
@@ -23,9 +25,7 @@ export function normalizePolarEvent(type: string, data: RecordValue, env: Record
     if (!value) return [];
     return [value.match(/^business:(.+)$/)?.[1] ?? value];
   });
-  const isBusinessUuid = (value: string): boolean =>
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-  const businessId = references.find(isBusinessUuid);
+  const businessId = references.find(isUuid);
   const candidate = businessId ?? references[0];
   const productId = text(subscription.product_id) ?? text(data.product_id);
   const match = (["starter", "pro"] as const).flatMap(plan => (["monthly", "annual"] as const).map(interval => ({ plan, interval, id: env[`POLAR_${plan.toUpperCase()}_${interval.toUpperCase()}_PRODUCT_ID`] }))).find(product => product.id && product.id === productId);

@@ -1,4 +1,3 @@
-import { after } from "next/server";
 import { createMcpHandler, type AuthInfo, type McpHttpHandler } from "@modelcontextprotocol/server";
 
 import {
@@ -15,6 +14,8 @@ import {
 } from "@lobbystack/domain";
 import { isApiKeyScope, type ApiErrorCode, type ApiKeyScope } from "@lobbystack/shared";
 
+import { runAfterResponse } from "../after-response";
+import { configuredAppOrigins } from "../app-origins";
 import { createWorkerDomainContext } from "../domain-context";
 import { enforceApiRateLimit } from "../public-api/rate-limit";
 import { mcpBearerChallenge, mcpResourceUrl, tokenAudienceMatches } from "./oauth-config";
@@ -46,27 +47,7 @@ function jsonError(status: number, code: ApiErrorCode, message: string, headers:
  * controls both.
  */
 export function trustedMcpOrigins(environment: Readonly<Record<string, string | undefined>> = process.env): Set<string> {
-  const origins = new Set<string>();
-  const values = [environment.APP_BASE_URL, environment.SITE_URL, environment.NEXT_PUBLIC_SITE_URL, ...(environment.AUTH_TRUSTED_ORIGINS ?? "").split(",")];
-  for (const value of values) {
-    const trimmed = value?.trim();
-    if (!trimmed) continue;
-    try {
-      origins.add(new URL(trimmed).origin);
-    } catch {
-      // Ignore malformed configuration rather than trusting it.
-    }
-  }
-  return origins;
-}
-
-/** Runs work after the response is sent, or right away outside a Next request (tests, scripts). */
-function runAfterResponse(task: () => Promise<unknown>): void {
-  try {
-    after(task);
-  } catch {
-    void Promise.resolve().then(task).catch(() => undefined);
-  }
+  return new Set(configuredAppOrigins(environment, ["SITE_URL", "NEXT_PUBLIC_SITE_URL"]));
 }
 
 type VerifiedCredential =

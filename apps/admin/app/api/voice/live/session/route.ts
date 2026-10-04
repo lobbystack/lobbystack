@@ -80,11 +80,10 @@ export async function POST(request: Request) {
     const limit = await enforceWebVoiceRateLimits({
       businessId: access.businessId,
       origin: access.origin,
-      widgetId: access.widgetId,
       ...(ipHash ? { ipHash } : {}),
       ...(access.visitorId ? { visitorId: access.visitorId } : {}),
       ...(access.prospectDemoId ? { prospectDemoId: access.prospectDemoId } : { dashboardTestCall: access.dashboardTestCall }),
-    }, { consume: true });
+    });
     if (!limit.allowed) return denied(limit.status, limit.code, cors);
     // The rate limit shields the database, so only allowed callers reach it.
     // The caller hears nothing until this request returns, so these two

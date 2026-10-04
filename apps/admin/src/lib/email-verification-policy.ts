@@ -2,14 +2,12 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 
-import Redis from "ioredis";
+import { getRedis, waitForRedis } from "./redis";
 
 const COOLDOWN_SECONDS = 60;
 const HOURLY_LIMIT = 3;
 const IP_HOURLY_LIMIT = 10;
 const HOURLY_TTL_SECONDS = 3_660;
-
-let redis: Redis | undefined;
 
 type EmailVerificationLimitStore = {
   eval(script: string, numberOfKeys: number, ...args: (string | number)[]): Promise<unknown>;
@@ -54,17 +52,11 @@ export async function enforceEmailVerificationSendLimit(
 }
 
 export async function assertEmailVerificationSendAllowed(input: { email: string; remoteIp?: string | null }): Promise<void> {
-  const url = process.env.REDIS_URL;
-  if (!url) {
+  const redis = getRedis();
+  if (!redis) {
     if (process.env.NODE_ENV === "production") throw new Error("Email verification abuse protection is unavailable.");
     return;
   }
-  redis ??= new Redis(url, {
-    lazyConnect: true,
-    maxRetriesPerRequest: 1,
-    enableReadyCheck: true,
-    connectionName: "lobbystack-admin:email-verification-limit",
-  });
-  if (redis.status === "wait") await redis.connect();
+  await waitForRedis(redis);
   await enforceEmailVerificationSendLimit(redis, input);
 }

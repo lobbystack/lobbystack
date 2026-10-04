@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     const { widgetKey, visitorId } = parsed.data;
     const access = await resolveWidgetAccess(request, widgetKey, { requireOrigin: true, strictOrigin: true });
     if (!access.ok) return access.response;
-    const allowance = await enforceWidgetRateLimits({ businessId: access.session.businessId, widgetKeyId: access.session.widgetKeyId, visitorId, ipHash: requestIpHash(request), operation: "session" }, { consume: true });
+    const allowance = await enforceWidgetRateLimits({ businessId: access.session.businessId, widgetKeyId: access.session.widgetKeyId, visitorId, ipHash: requestIpHash(request), operation: "session" });
     if (!allowance.allowed) return NextResponse.json({ error: "Widget session limit reached.", code: allowance.code }, { status: allowance.status, headers: corsHeaders(request) });
     const token = createWidgetSessionToken({ widgetKeyId: access.session.widgetKeyId, businessId: access.session.businessId, visitorId, origin: access.session.origin! });
     return NextResponse.json(widgetSessionResponseSchema.parse({ token: token.token, expiresAt: token.expiresAt, visitorId }), { headers: corsHeaders(request) });

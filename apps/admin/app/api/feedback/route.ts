@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireFeedbackAccess, submitFeedback } from "@lobbystack/domain";
-import { asApiResponse, businessIdFromRequest, readJson, requireApiSession } from "@/lib/api-helpers";
+import { asApiResponse, businessIdFromRequest, jsonError, readJson, requireApiSession } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 import { assertFeedbackSubmissionAllowed } from "@/lib/feedback-rate-limit";
 
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   try {
     const session = await requireApiSession(request);
     const body = await readJson(request);
-    if (typeof body !== "object" || body === null || typeof (body as { message?: unknown }).message !== "string") return NextResponse.json({ error: "A feedback message is required." }, { status: 400 });
+    if (typeof body !== "object" || body === null || typeof (body as { message?: unknown }).message !== "string") return jsonError("A feedback message is required.", 400);
     const businessId = businessIdFromRequest(request) ?? (typeof (body as { businessId?: unknown }).businessId === "string" ? (body as { businessId: string }).businessId : undefined);
     if (businessId) await requireFeedbackAccess(createDomainContext(), { userId: session.user.id, businessId });
     await assertFeedbackSubmissionAllowed({ userId: session.user.id, ...(businessId ? { businessId } : {}) });

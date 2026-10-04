@@ -4,7 +4,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 
 import { billingAccounts, billingTransactions, billingUsageEvents, billingUsageMonths } from "@lobbystack/db";
 import { billingAccess, getKnowledgeStorageUsageBytes, requireBusinessMembership, setOverageSpendingCap } from "@lobbystack/domain";
-import { asApiResponse, businessIdFromRequest, readJson, requireApiSession, withOperatorTransaction } from "@/lib/api-helpers";
+import { asApiResponse, jsonError, readJson, requireOperatorBusiness, withOperatorTransaction } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
@@ -39,13 +39,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await requireApiSession(request);
-    const businessId = businessIdFromRequest(request);
-    if (!businessId) return NextResponse.json({ error: "A businessId is required." }, { status: 400 });
+    const { session, businessId } = await requireOperatorBusiness(request);
     const body = await readJson(request);
-    if (typeof body !== "object" || body === null || !("capCents" in body)) return NextResponse.json({ error: "capCents is required." }, { status: 400 });
+    if (typeof body !== "object" || body === null || !("capCents" in body)) return jsonError("capCents is required.", 400);
     const capCents = (body as { capCents?: unknown }).capCents;
-    if (capCents !== null && (typeof capCents !== "number" || !Number.isSafeInteger(capCents) || capCents < 0)) return NextResponse.json({ error: "capCents must be a non-negative whole number of cents or null." }, { status: 400 });
+    if (capCents !== null && (typeof capCents !== "number" || !Number.isSafeInteger(capCents) || capCents < 0)) return jsonError("capCents must be a non-negative whole number of cents or null.", 400);
     return NextResponse.json(await setOverageSpendingCap(createDomainContext(), { userId: session.user.id, businessId, capCents: capCents as number | null }));
   } catch (error) {
     return asApiResponse(error);

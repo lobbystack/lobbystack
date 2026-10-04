@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { businessInvitations, businessMemberships, users } from "@lobbystack/db";
 import { inviteMember, removeMember, revokeInvitation, updateMemberRole } from "@lobbystack/domain";
-import { asApiResponse, businessIdFromRequest, readJson, requireApiSession, withOperatorTransaction } from "@/lib/api-helpers";
+import { asApiResponse, businessIdFromRequest, jsonError, readJson, requireApiSession, withOperatorTransaction } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +30,7 @@ export async function PATCH(request: Request) {
     const session = await requireApiSession(request);
     const businessId = businessIdFromRequest(request);
     const body = await readJson(request) as { membershipId?: string; role?: string };
-    if (!businessId || !body.membershipId || !body.role || !["business_admin", "scheduler", "viewer"].includes(body.role)) return NextResponse.json({ error: "businessId, membershipId, and a permitted role are required." }, { status: 400 });
+    if (!businessId || !body.membershipId || !body.role || !["business_admin", "scheduler", "viewer"].includes(body.role)) return jsonError("businessId, membershipId, and a permitted role are required.", 400);
     await updateMemberRole(createDomainContext(), { userId: session.user.id, businessId, membershipId: body.membershipId, role: body.role as "business_admin" | "scheduler" | "viewer" });
     return NextResponse.json({ ok: true });
   } catch (error) { return asApiResponse(error); }
@@ -41,7 +41,7 @@ export async function DELETE(request: Request) {
     const session = await requireApiSession(request);
     const businessId = businessIdFromRequest(request);
     const body = await readJson(request) as { membershipId?: string; invitationId?: string };
-    if (!businessId || (!body.membershipId && !body.invitationId)) return NextResponse.json({ error: "businessId and a membershipId or invitationId are required." }, { status: 400 });
+    if (!businessId || (!body.membershipId && !body.invitationId)) return jsonError("businessId and a membershipId or invitationId are required.", 400);
     if (body.membershipId) await removeMember(createDomainContext(), { userId: session.user.id, businessId, membershipId: body.membershipId });
     else await revokeInvitation(createDomainContext(), { userId: session.user.id, businessId, invitationId: body.invitationId! });
     return NextResponse.json({ ok: true });

@@ -69,7 +69,7 @@ it("rate limits the unauthenticated entry before state, session, or consumption 
   expect(response.status).toBe(429);
   expect(mocks.session).not.toHaveBeenCalled();
   expect(mocks.consume).not.toHaveBeenCalled();
-  expect(mocks.rate).toHaveBeenNthCalledWith(1, { operation: "callback", ip: undefined }, { consume: true });
+  expect(mocks.rate).toHaveBeenNthCalledWith(1, { operation: "callback", ip: undefined });
 });
 
 it("rate limits the authenticated user and business dimensions before consumption", async () => {
@@ -80,7 +80,7 @@ it("rate limits the authenticated user and business dimensions before consumptio
   const response = await GET(callback(state));
   expect(response.status).toBe(429);
   expect(mocks.consume).not.toHaveBeenCalled();
-  expect(mocks.rate).toHaveBeenNthCalledWith(2, { operation: "callback", userId: "user-1", businessId: "business" }, { consume: true });
+  expect(mocks.rate).toHaveBeenNthCalledWith(2, { operation: "callback", userId: "user-1", businessId: "business" });
 });
 
 it("fails closed when the limiter store is unavailable", async () => {

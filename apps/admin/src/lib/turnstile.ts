@@ -41,5 +41,3 @@ export async function verifyTurnstile(input: { token?: unknown; remoteIp?: strin
     throw new Error("Turnstile verification failed.");
   }
 }
-
-export const verifyTurnstileForSignUp = verifyTurnstile;

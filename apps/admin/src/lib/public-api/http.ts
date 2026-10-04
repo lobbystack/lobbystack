@@ -1,4 +1,4 @@
-import { after, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 import {
   bearerToken,
@@ -14,6 +14,7 @@ import {
 } from "@lobbystack/domain";
 import { apiOperations, isUuid, parseApiInput, type ApiErrorCode, type ApiOperationId } from "@lobbystack/shared";
 
+import { runAfterResponse } from "../after-response";
 import { createWorkerDomainContext } from "../domain-context";
 import { reportServerError } from "../error-reporting";
 import { enforceApiRateLimit, type RateLimitDecision } from "./rate-limit";
@@ -42,16 +43,6 @@ export function apiError(status: number, code: ApiErrorCode, message: string, in
   return NextResponse.json({ error: { code, message, ...(init.details?.length ? { details: init.details } : {}) } }, { status, headers: init.headers ?? {} });
 }
 
-/** Runs work after the response is sent, or right away outside a Next request (tests, scripts). */
-function runAfterResponse(task: () => Promise<unknown> | unknown): void {
-  try {
-    after(task);
-  } catch {
-    void Promise.resolve().then(task).catch(() => undefined);
-  }
-}
-
-export const V1_METHODS = ["GET", "POST", "PATCH", "PUT", "DELETE"] as const;
 
 /** A handler for methods a v1 route doesn't support: 405 in the v1 error shape, with Allow. */
 export function methodNotAllowed(allowed: readonly string[]): () => Response {

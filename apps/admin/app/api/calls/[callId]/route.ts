@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { completeVoiceFollowUpTasks, getCallDetail } from "@lobbystack/domain";
-import { asApiResponse, businessIdFromRequest, readJson, requireApiSession, withOperatorTransaction } from "@/lib/api-helpers";
+import { asApiResponse, jsonError, readJson, requireOperatorBusiness, withOperatorTransaction } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
@@ -19,11 +19,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ call
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ callId: string }> }) {
   try {
-    const session = await requireApiSession(request);
-    const businessId = businessIdFromRequest(request);
-    if (!businessId) return NextResponse.json({ error: "A businessId is required." }, { status: 400 });
+    const { session, businessId } = await requireOperatorBusiness(request);
     const body = await readJson(request) as { action?: string };
-    if (!body || body.action !== "complete_follow_up") return NextResponse.json({ error: "action must be complete_follow_up." }, { status: 400 });
+    if (!body || body.action !== "complete_follow_up") return jsonError("action must be complete_follow_up.", 400);
     const { callId } = await params;
     return NextResponse.json(await completeVoiceFollowUpTasks(createDomainContext(), { userId: session.user.id, businessId, callId }));
   } catch (error) {

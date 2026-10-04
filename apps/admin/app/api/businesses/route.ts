@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { attributeBusiness, createBusiness, listUserBusinesses, updateBusiness } from "@lobbystack/domain";
-import { getAppDatabase, asApiResponse, businessIdFromRequest, readJson, requireApiSession } from "@/lib/api-helpers";
+import { asApiResponse, getAppDatabase, jsonError, readJson, requireApiSession, requireOperatorBusiness } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
@@ -20,10 +20,10 @@ export async function POST(request: Request) {
     const session = await requireApiSession(request);
     const body = await readJson(request) as { name?: string; slug?: string; timezone?: string; businessType?: string; referralCode?: unknown };
     if (!body.name || !body.timezone || !body.businessType) {
-      return NextResponse.json({ error: "name, timezone, and businessType are required." }, { status: 400 });
+      return jsonError("name, timezone, and businessType are required.", 400);
     }
     if (body.slug !== undefined && (typeof body.slug !== "string" || !body.slug.trim())) {
-      return NextResponse.json({ error: "slug must be a nonempty string when supplied." }, { status: 400 });
+      return jsonError("slug must be a nonempty string when supplied.", 400);
     }
     const context = createDomainContext();
     const created = await createBusiness(context, { userId: session.user.id, name: body.name, ...(body.slug !== undefined ? { slug: body.slug } : {}), timezone: body.timezone, businessType: body.businessType });
@@ -40,10 +40,8 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const session = await requireApiSession(request);
-    const businessId = businessIdFromRequest(request);
+    const { session, businessId } = await requireOperatorBusiness(request);
     const body = await readJson(request) as { name?: string; timezone?: string; businessType?: string; defaultLocale?: string; websiteUrl?: string | null };
-    if (!businessId) return NextResponse.json({ error: "A businessId is required." }, { status: 400 });
     await updateBusiness(createDomainContext(), { userId: session.user.id, businessId, ...body });
     return NextResponse.json({ ok: true });
   } catch (error) { return asApiResponse(error); }

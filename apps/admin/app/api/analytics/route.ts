@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { analyticsGranularities, getAnalytics, type AnalyticsGranularity } from "@lobbystack/domain";
-import { asApiResponse, businessIdFromRequest, requireApiSession } from "@/lib/api-helpers";
+import { asApiResponse, requireOperatorBusiness } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
@@ -15,9 +15,7 @@ function parseDate(value: string | null, fallback: Date): Date {
 
 export async function GET(request: Request) {
   try {
-    const session = await requireApiSession(request);
-    const businessId = businessIdFromRequest(request);
-    if (!businessId) return NextResponse.json({ error: "A businessId is required." }, { status: 400 });
+    const { session, businessId } = await requireOperatorBusiness(request);
     const url = new URL(request.url);
     const now = new Date();
     const requestedDays = Number(url.searchParams.get("days") ?? 30);

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createService, listCatalog } from "@lobbystack/domain";
-import { asApiResponse, businessIdFromRequest, readJson, requireApiSession } from "@/lib/api-helpers";
+import { asApiResponse, businessIdFromRequest, readJson, requireApiSession, requireOperatorBusiness } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
@@ -15,9 +15,7 @@ function requiredString(value: unknown, field: string, maxLength: number): strin
 
 export async function GET(request: Request) {
   try {
-    const session = await requireApiSession(request);
-    const businessId = businessIdFromRequest(request);
-    if (!businessId) throw new Error("A businessId is required.");
+    const { session, businessId } = await requireOperatorBusiness(request);
     const url = new URL(request.url);
     return NextResponse.json(await listCatalog(createDomainContext(), { userId: session.user.id, businessId, ...(url.searchParams.get("search") ? { search: url.searchParams.get("search")! } : {}), ...(url.searchParams.get("limit") ? { limit: Number(url.searchParams.get("limit")) } : {}), ...(url.searchParams.get("offset") ? { offset: Number(url.searchParams.get("offset")) } : {}) }));
   } catch (error) {

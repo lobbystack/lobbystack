@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { contacts, conversations, messages, widgetVisitors } from "@lobbystack/db";
 import { appendMessage, setAutomationState } from "@lobbystack/domain";
-import { asApiResponse, businessIdFromRequest, readJson, withOperatorTransaction } from "@/lib/api-helpers";
+import { asApiResponse, businessIdFromRequest, jsonError, readJson, withOperatorTransaction } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   try {
     const body = await readJson(request) as { conversationId?: string; body?: string; channel?: "sms" | "dashboard" | "web_chat" };
     const businessId = businessIdFromRequest(request);
-    if (!businessId || !body.conversationId || !body.body) return NextResponse.json({ error: "businessId, conversationId, and body are required." }, { status: 400 });
+    if (!businessId || !body.conversationId || !body.body) return jsonError("businessId, conversationId, and body are required.", 400);
     const session = await (await import("@/lib/api-helpers")).requireApiSession(request);
     return NextResponse.json({ messageId: await appendMessage(createDomainContext(), { businessId, conversationId: body.conversationId, body: body.body, direction: "outbound", channel: body.channel ?? "dashboard", userId: session.user.id }), }, { status: 201 });
   } catch (error) { return asApiResponse(error); }
@@ -26,7 +26,7 @@ export async function PATCH(request: Request) {
   try {
     const body = await readJson(request) as { conversationId?: string; automationState?: "ai_active" | "human_handoff" };
     const businessId = businessIdFromRequest(request);
-    if (!businessId || !body.conversationId || (body.automationState !== "ai_active" && body.automationState !== "human_handoff")) return NextResponse.json({ error: "conversationId and a valid automationState are required." }, { status: 400 });
+    if (!businessId || !body.conversationId || (body.automationState !== "ai_active" && body.automationState !== "human_handoff")) return jsonError("conversationId and a valid automationState are required.", 400);
     const session = await (await import("@/lib/api-helpers")).requireApiSession(request);
     await setAutomationState(createDomainContext(), { userId: session.user.id, businessId, conversationId: body.conversationId, state: body.automationState });
     return NextResponse.json({ ok: true });
