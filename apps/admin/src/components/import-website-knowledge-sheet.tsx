@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 
-import { Globe, LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -23,7 +23,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 
 export function ImportWebsiteKnowledgeSheet({
@@ -32,28 +31,18 @@ export function ImportWebsiteKnowledgeSheet({
   onOpenChange,
 }: {
   save: (websiteUrl: string) => Promise<void>;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation("agent");
-  const isControlled = open !== undefined;
-  const [internalOpen, setInternalOpen] = useState(false);
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isDialogOpen = isControlled ? open : internalOpen;
 
   function resetState(): void {
     setWebsiteUrl("");
     setErrorMessage(null);
     setIsSubmitting(false);
-  }
-
-  function setDialogOpen(nextOpen: boolean): void {
-    onOpenChange?.(nextOpen);
-    if (!isControlled) {
-      setInternalOpen(nextOpen);
-    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -70,7 +59,7 @@ export function ImportWebsiteKnowledgeSheet({
     try {
       await save(trimmedWebsiteUrl);
       toast.success(t("sections.knowledge.websiteImport.success"));
-      setDialogOpen(false);
+      onOpenChange(false);
       resetState();
     } catch (error) {
       setErrorMessage(
@@ -86,23 +75,13 @@ export function ImportWebsiteKnowledgeSheet({
   return (
     <Dialog
       onOpenChange={(nextOpen) => {
-        setDialogOpen(nextOpen);
+        onOpenChange(nextOpen);
         if (!nextOpen) {
           resetState();
         }
       }}
-      open={isDialogOpen}
+      open={open}
     >
-      {!isControlled ? (
-        <DialogTrigger
-          render={
-            <Button variant="secondary">
-              <Globe data-icon="inline-start" />
-              {t("sections.knowledge.addKnowledgeOptions.website")}
-            </Button>
-          }
-        />
-      ) : null}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("sections.knowledge.websiteImport.title")}</DialogTitle>

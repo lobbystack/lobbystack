@@ -1,19 +1,12 @@
 import { useEffect, useState, type RefObject } from "react";
-import { PanelLeftIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { useSidebar } from "@/components/ui/sidebar";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 type SiteHeaderProps = React.HTMLAttributes<HTMLElement> & {
   fixed?: boolean;
   className?: string;
   scrollContainerRef?: RefObject<HTMLElement | null>;
-  links?: Array<{
-    title: string;
-    href: string;
-    disabled?: boolean;
-  }>;
 };
 
 export function SiteHeader({
@@ -22,7 +15,6 @@ export function SiteHeader({
   scrollContainerRef,
   ...props
 }: SiteHeaderProps) {
-  const { toggleSidebar } = useSidebar();
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
@@ -63,18 +55,7 @@ export function SiteHeader({
             "after:absolute after:inset-0 after:-z-10 after:bg-background/20 after:backdrop-blur-lg",
         )}
       >
-        <Button
-          aria-label="Toggle sidebar"
-          className="md:hidden"
-          onClick={() => {
-            toggleSidebar();
-          }}
-          size="icon"
-          type="button"
-          variant="outline"
-        >
-          <PanelLeftIcon />
-        </Button>
+        <SidebarTrigger className="md:hidden" size="icon" type="button" variant="outline" />
       </div>
     </header>
   );

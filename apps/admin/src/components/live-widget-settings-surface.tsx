@@ -98,7 +98,7 @@ export function LiveWidgetSettingsSurface() {
   const issuanceEnabled = billing.data?.widgetIssuanceEnabled === true;
 
   return (
-    <PageSurface title={t("widget.title")} description={t("widget.description")}>
+    <PageSurface title={t("widget.title")}>
       {createdKey ? (
         <Card className="border-border bg-muted/30">
           <CardHeader><CardTitle className="flex items-center gap-2 text-foreground"><Check className="size-5" />{t("widget.created.title")}</CardTitle><CardDescription>{t("widget.created.description")}</CardDescription></CardHeader>

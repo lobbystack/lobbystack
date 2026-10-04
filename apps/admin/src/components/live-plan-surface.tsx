@@ -67,8 +67,8 @@ export function LivePlanSurface() {
 
   async function openPortal() { if (!business) return; setPortalPending(true); try { const result = await postJson<{ url: string }>(`/api/billing/portal?businessId=${encodeURIComponent(business.businessId)}`, {}); window.location.assign(result.url); } catch { toast.error(t("billing.toast.portalFailed")); } finally { setPortalPending(false); } }
 
-  if (businesses.isLoading || billing.isLoading) return <PageSurface description="" title={t("sections.billing")}><BillingSkeleton t={t} /></PageSurface>;
-  if (businesses.isError || billing.isError || !business || !billing.data) return <PageSurface description="" title={t("sections.billing")}><Surface className="flex flex-col items-start gap-4 p-6"><p role="alert">{t("billing.usage.unavailable")}</p><Button variant="outline" onClick={() => { if (businesses.isError || !business) void businesses.refetch(); else void billing.refetch(); }}>{t("billing.actions.retry")}</Button></Surface></PageSurface>;
+  if (businesses.isLoading || billing.isLoading) return <PageSurface title={t("sections.billing")}><BillingSkeleton t={t} /></PageSurface>;
+  if (businesses.isError || billing.isError || !business || !billing.data) return <PageSurface title={t("sections.billing")}><Surface className="flex flex-col items-start gap-4 p-6"><p role="alert">{t("billing.usage.unavailable")}</p><Button variant="outline" onClick={() => { if (businesses.isError || !business) void businesses.refetch(); else void billing.refetch(); }}>{t("billing.actions.retry")}</Button></Surface></PageSurface>;
 
   const account = billing.data?.account;
   const plan = planSlug(account?.plan);
@@ -80,7 +80,7 @@ export function LivePlanSurface() {
     (plan === "free_cloud" || (plan === "starter" && target === "pro")) && billing.data.availableCheckoutIntervals[target].length > 0);
   const canManage = permissions?.hasCustomerPortalAccess === true;
 
-  return <PageSurface description="" title={t("sections.billing")}>
+  return <PageSurface title={t("sections.billing")}>
     <div className="flex w-full flex-col gap-10">
     <SectionBlock title={t("billing.currentPlan.title")}>
       <Surface className="px-6 py-5">

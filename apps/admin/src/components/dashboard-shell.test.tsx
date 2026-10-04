@@ -49,7 +49,7 @@ describe("original shared navigation", () => {
     window.innerWidth = 390;
     const view = setup();
     for (const [label, href] of [["nav:items.calls", "/calls"], ["agent:sections.knowledge.title", "/agent/knowledge"], ["settings:sections.integrations", "/integrations"]]) {
-      await userEvent.click(screen.getByRole("button", { name: "Toggle sidebar" }));
+      await userEvent.click(screen.getByRole("button", { name: "accessibility.toggleSidebar" }));
       const dialog = await screen.findByRole("dialog");
       await userEvent.click(within(dialog).getByRole("button", { name: label! }));
       expect(route.router.push).toHaveBeenLastCalledWith(href);

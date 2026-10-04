@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 import { useSetupAction } from "@/lib/use-setup-action";
 import { selectActiveBusiness } from "@/lib/active-business";
 import { requestJson } from "@/lib/request-json";
-import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { DataTablePagination } from "./data-table/pagination";
 import { TableCardSkeleton } from "./loading-skeletons";
 import { PageSurface } from "./page-surface";
@@ -73,10 +73,10 @@ export function RulesSurface() {
   }
 
   if (businesses.isLoading) return <p className="text-sm text-muted-foreground">{t("loading.workspace")}</p>;
-  if (!business) return <PageSurface description="" title={t("sections.rules.title")}><p className="text-sm text-muted-foreground">{t("empty.description")}</p></PageSurface>;
+  if (!business) return <PageSurface title={t("sections.rules.title")}><p className="text-sm text-muted-foreground">{t("empty.description")}</p></PageSurface>;
 
   return (
-    <PageSurface description="" title={t("sections.rules.title")}>
+    <PageSurface title={t("sections.rules.title")}>
       <div className="flex w-full flex-col gap-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative max-w-sm flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-10" onChange={(event) => setSearch(event.target.value)} placeholder={t("table.searchPlaceholder")} value={search} /></div>
@@ -102,7 +102,7 @@ export function RulesSurface() {
         </TableCard>
         <DataTablePagination labels={{ rowsPerPage: t("pagination.rowsPerPage"), pageOf: (page, total) => t("pagination.pageOf", { page, total }), firstPage: t("pagination.firstPage"), previousPage: t("pagination.previousPage"), nextPage: t("pagination.nextPage"), lastPage: t("pagination.lastPage"), goToPage: (page) => t("pagination.goToPage", { page }) }} table={table} /></>}
         <RuleDialog editingRule={editingRule} onOpenChange={(open) => { setDialogOpen(open); if (!open) setEditingRule(null); }} open={dialogOpen} pending={createRule.isPending || updateRule.isPending} save={async (input) => { if (editingRule) await updateRule.mutateAsync({ ruleId: editingRule.id, ...input }); else await createRule.mutateAsync(input); setDialogOpen(false); setEditingRule(null); }} />
-        <ConfirmDeleteDialog cancelLabel={t("actions.deleteCancel")} confirmLabel={t("actions.delete")} description={t("actions.deleteDescription")} onConfirm={async () => { if (deleteCandidate) await deleteRule.mutateAsync(deleteCandidate.id); }} onOpenChange={(open) => { if (!open) setDeleteCandidate(null); }} open={deleteCandidate !== null} pending={deleteRule.isPending} title={t("actions.deleteTitle")} />
+        <ConfirmActionDialog confirmVariant="destructive" cancelLabel={t("actions.deleteCancel")} confirmLabel={t("actions.delete")} description={t("actions.deleteDescription")} onConfirm={async () => { if (deleteCandidate) await deleteRule.mutateAsync(deleteCandidate.id); }} onOpenChange={(open) => { if (!open) setDeleteCandidate(null); }} open={deleteCandidate !== null} pending={deleteRule.isPending} title={t("actions.deleteTitle")} />
       </div>
     </PageSurface>
   );

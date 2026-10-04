@@ -15,25 +15,28 @@ type OnboardingShellProps = {
   progress?: { current: number; navigableUntil?: number; total: number } | null;
   width?: "sm" | "md" | "lg" | "xl" | "wide";
   children: React.ReactNode;
-  footer?: React.ReactNode;
   legalFooter?: React.ReactNode;
   onSignOut?: () => void;
 };
 
+/** Onboarding routes after sign-up (step 1), keyed by path. */
+export const onboardingRoutes = {
+  "/onboarding/business": { key: "businessName", step: 2, width: "md" },
+  "/onboarding/website": { key: "website", step: 3, width: "md" },
+  "/onboarding/knowledge": { key: "knowledge", step: 4, width: "lg" },
+  "/onboarding/greeting": { key: "greeting", step: 5, width: "md" },
+  "/onboarding/plan": { key: "plan", step: 6, width: "wide" },
+  "/onboarding/number": { key: "number", step: 7, width: "lg" },
+  "/onboarding/attribution": { key: "attribution", step: 8, width: "xl" },
+} as const;
+
+const progressRoutes: Record<number, string> = Object.fromEntries(Object.entries(onboardingRoutes).map(([path, route]) => [route.step, path]));
+
 const widths = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg", xl: "max-w-xl", wide: "max-w-7xl" } as const;
 
-export function ReplacementOnboardingShell({ eyebrow, title, description, progress, width = "md", children, footer, legalFooter, onSignOut }: OnboardingShellProps) {
+export function ReplacementOnboardingShell({ eyebrow, title, description, progress, width = "md", children, legalFooter, onSignOut }: OnboardingShellProps) {
   const { t, i18n } = useTranslation("onboarding");
   const marketingLocale = resolveLocale(i18n.resolvedLanguage, i18n.language);
-  const progressRoutes: Record<number, string> = {
-    2: "/onboarding/business",
-    3: "/onboarding/website",
-    4: "/onboarding/knowledge",
-    5: "/onboarding/greeting",
-    6: "/onboarding/plan",
-    7: "/onboarding/number",
-    8: "/onboarding/attribution",
-  };
   return (
     <div className="relative flex min-h-svh w-full flex-col bg-background text-foreground">
       {onSignOut ? (
@@ -53,7 +56,6 @@ export function ReplacementOnboardingShell({ eyebrow, title, description, progre
             {description ? <p className="text-[15px] leading-7 text-muted-foreground">{description}</p> : null}
           </div>
           <div className="mt-10 w-full">{children}</div>
-          {footer ? <div className="mt-6 w-full">{footer}</div> : null}
         </div>
       </main>
       <footer className="flex flex-col items-center gap-4 px-6 pb-12 pt-16">

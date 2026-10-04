@@ -74,7 +74,7 @@ export function LiveDemosSurface() {
     }
   };
 
-  return <PageSurface title={t("operator.title")} description={t("operator.description")}>
+  return <PageSurface title={t("operator.title")}>
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="space-y-4">
         <div className="flex items-center justify-between"><p className="text-sm text-muted-foreground">{t("operator.count", { count: demos.length })}</p><Button variant="ghost" onClick={() => void load()} disabled={loading}><RefreshCw className="size-4" />{t("operator.refresh")}</Button></div>
