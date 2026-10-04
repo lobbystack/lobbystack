@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { users } from "@lobbystack/db";
 import { defaultOperatorNotificationEventPreferences, getNotificationPreferences, operatorNotificationEventKeys, setNotificationPreferences, type OperatorNotificationEventPreferences } from "@lobbystack/domain";
-import { asApiResponse, businessIdFromRequest, readJson, requireApiSession } from "@/lib/api-helpers";
+import { asApiResponse, businessIdFromRequest, jsonError, readJson, requireApiSession, requireOperatorBusiness } from "@/lib/api-helpers";
 import { getAuthDatabase } from "@/lib/auth";
 import { createDomainContext } from "@/lib/domain-context";
 
@@ -11,9 +11,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    const session = await requireApiSession(request);
-    const businessId = businessIdFromRequest(request);
-    if (!businessId) return NextResponse.json({ error: "A businessId is required." }, { status: 400 });
+    const { session, businessId } = await requireOperatorBusiness(request);
     const user = (await getAuthDatabase().db.select({ phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt }).from(users).where(eq(users.id, session.user.id)).limit(1))[0];
     return NextResponse.json(await getNotificationPreferences(createDomainContext(), { userId: session.user.id, businessId, phoneVerified: Boolean(user?.phone && user.phoneVerifiedAt) }));
   } catch (error) { return asApiResponse(error); }
@@ -24,7 +22,7 @@ export async function PUT(request: Request) {
     const session = await requireApiSession(request);
     const businessId = businessIdFromRequest(request);
     const body = await readJson(request) as Record<string, unknown>;
-    if (!businessId || typeof body.emailEnabled !== "boolean" || typeof body.smsEnabled !== "boolean") return NextResponse.json({ error: "Valid notification preferences are required." }, { status: 400 });
+    if (!businessId || typeof body.emailEnabled !== "boolean" || typeof body.smsEnabled !== "boolean") return jsonError("Valid notification preferences are required.", 400);
     const defaults = defaultOperatorNotificationEventPreferences();
     const rawEvents = typeof body.eventPreferences === "object" && body.eventPreferences !== null ? body.eventPreferences as Record<string, unknown> : {};
     const eventPreferences = Object.fromEntries(operatorNotificationEventKeys.map((key) => {
@@ -33,7 +31,7 @@ export async function PUT(request: Request) {
     })) as OperatorNotificationEventPreferences;
     const dailySummaryEnabled = body.dailySummaryEnabled === true;
     const dailySummarySendTime = typeof body.dailySummarySendTime === "string" && body.dailySummarySendTime ? body.dailySummarySendTime : null;
-    if (dailySummaryEnabled && (!dailySummarySendTime || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(dailySummarySendTime))) return NextResponse.json({ error: "A valid daily summary time is required." }, { status: 400 });
+    if (dailySummaryEnabled && (!dailySummarySendTime || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(dailySummarySendTime))) return jsonError("A valid daily summary time is required.", 400);
     if (body.smsEnabled || Object.values(eventPreferences).some(event => event.sms)) {
       const [user] = await getAuthDatabase().db.select({ phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt }).from(users).where(eq(users.id, session.user.id));
       const current = await getNotificationPreferences(createDomainContext(), { userId: session.user.id, businessId, phoneVerified: Boolean(user?.phone && user.phoneVerifiedAt) });

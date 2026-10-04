@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { resendWebhookSchema } from "@lobbystack/contracts";
 import { enqueueOutbox, providerEvents, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
 import { verifyResendWebhookSignature } from "@lobbystack/providers";
-import { getAppDatabase, getDispatcherDatabase, getWorkerDatabase } from "@/lib/api-helpers";
+import { getAppDatabase, getDispatcherDatabase, getWorkerDatabase, jsonError } from "@/lib/api-helpers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,12 +16,12 @@ function stringField(value: unknown): string | undefined {
 export async function POST(request: Request) {
   try {
     const secret = process.env.RESEND_WEBHOOK_SECRET;
-    if (!secret) return NextResponse.json({ error: "Resend webhooks are not configured." }, { status: 503 });
+    if (!secret) return jsonError("Resend webhooks are not configured.", 503);
     const body = await request.text();
     const headers = { id: request.headers.get("svix-id") ?? "", timestamp: request.headers.get("svix-timestamp") ?? "", signature: request.headers.get("svix-signature") ?? "" };
     if (!verifyResendWebhookSignature(body, headers, secret)) return new NextResponse("Unauthorized", { status: 401 });
     const parsed = resendWebhookSchema.safeParse(JSON.parse(body) as unknown);
-    if (!parsed.success) return NextResponse.json({ error: "Invalid Resend webhook." }, { status: 400 });
+    if (!parsed.success) return jsonError("Invalid Resend webhook.", 400);
     const emailId = stringField(parsed.data.data.email_id) ?? stringField(parsed.data.data.emailId);
     const businessResult = emailId ? await getAppDatabase().db.execute<{ business_id: string }>(sql`select app.resolve_business_by_email_provider_id(${emailId}) as business_id`) : null;
     const businessId = businessResult?.rows[0]?.business_id;
@@ -34,6 +34,6 @@ export async function POST(request: Request) {
     const inserted = businessId ? await withBusinessTransaction(getWorkerDatabase().db, { businessId, actorType: "worker" }, persist) : await withDispatcherTransaction(getDispatcherDatabase().db, persist);
     return NextResponse.json({ accepted: true, duplicate: !inserted, eventId: headers.id });
   } catch {
-    return NextResponse.json({ error: "Webhook processing failed." }, { status: 500 });
+    return jsonError("Webhook processing failed.", 500);
   }
 }

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
 
 import { affiliateAttributions, affiliateClicks, affiliateCommissions, affiliatePayoutItems, affiliatePayoutRuns, affiliateProfileStats, affiliateProfiles, withBusinessTransaction } from "@lobbystack/db";
-import { asApiResponse, getAppDatabase, requireApiSession } from "@/lib/api-helpers";
+import { normalizeAffiliateReferralCode } from "@lobbystack/domain";
+import { asApiResponse, getAppDatabase, jsonError, requireApiSession } from "@/lib/api-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
       let profile = (await tx.select({ id: affiliateProfiles.id, referralCode: affiliateProfiles.referralCode, status: affiliateProfiles.status, payoutEmail: affiliateProfiles.payoutEmail }).from(affiliateProfiles).where(eq(affiliateProfiles.userId, session.user.id)).limit(1))[0];
       if (!profile) {
         const preferred = session.user.name ?? session.user.email?.split("@")[0] ?? `user-${session.user.id.slice(-8)}`;
-        const base = preferred.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64) || `user-${session.user.id.slice(-8)}`;
+        const base = normalizeAffiliateReferralCode(preferred) || `user-${session.user.id.slice(-8)}`;
         for (let index = 0; index < 25 && !profile; index += 1) {
           const suffix = index === 0 ? "" : `-${index + 1}`;
           const candidate = `${base.slice(0, 64 - suffix.length).replace(/-+$/g, "")}${suffix}`;
@@ -48,7 +49,7 @@ export async function PATCH(request: Request) {
     const body = await request.json() as { payoutEmail?: unknown };
     const payoutEmail = typeof body.payoutEmail === "string" ? body.payoutEmail.trim().toLowerCase() : "";
     if (!payoutEmail || !/^[^\s@]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/.test(payoutEmail)) {
-      return NextResponse.json({ error: "A valid payout email is required." }, { status: 400 });
+      return jsonError("A valid payout email is required.", 400);
     }
     return NextResponse.json(await withBusinessTransaction(getAppDatabase().db, { userId: session.user.id, actorType: "operator" }, async (tx) => {
       const [profile] = await tx.update(affiliateProfiles).set({ payoutEmail, updatedAt: new Date() }).where(eq(affiliateProfiles.userId, session.user.id)).returning({ id: affiliateProfiles.id, payoutEmail: affiliateProfiles.payoutEmail });

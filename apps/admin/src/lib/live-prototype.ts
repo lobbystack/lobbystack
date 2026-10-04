@@ -24,19 +24,23 @@ function workerUrl(): string {
   return process.env.WORKER_INTERNAL_URL ?? `http://127.0.0.1:${process.env.WORKER_PORT ?? 3002}`;
 }
 
-// OpenAI replays only the last 3 seconds to a late sideband, so the worker must
-// attach right after the session exists. This is a direct call, not a queued job.
-export async function attachWorkerToLiveSession(input: WorkerAttachInput): Promise<void> {
+async function postToWorker(action: "attach" | "end", body: unknown): Promise<void> {
   const token = process.env.INTERNAL_SERVICE_TOKEN;
   if (!token) throw new Error("INTERNAL_SERVICE_TOKEN is not set.");
-  const response = await fetch(`${workerUrl()}/internal/live/attach`, {
+  const response = await fetch(`${workerUrl()}/internal/live/${action}`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-internal-service-token": token },
-    body: JSON.stringify(input),
+    body: JSON.stringify(body),
     // A sleeping staging worker needs a few seconds to wake.
     signal: AbortSignal.timeout(10_000),
   });
-  if (!response.ok) throw new Error(`Worker attach failed with status ${response.status}.`);
+  if (!response.ok) throw new Error(`Worker ${action} failed with status ${response.status}.`);
+}
+
+// OpenAI replays only the last 3 seconds to a late sideband, so the worker must
+// attach right after the session exists. This is a direct call, not a queued job.
+export async function attachWorkerToLiveSession(input: WorkerAttachInput): Promise<void> {
+  await postToWorker("attach", input);
 }
 
 /**
@@ -44,13 +48,5 @@ export async function attachWorkerToLiveSession(input: WorkerAttachInput): Promi
  * sideband. OpenAI's hangup endpoint is for SIP calls only.
  */
 export async function endLiveBrowserSession(sessionId: string): Promise<void> {
-  const token = process.env.INTERNAL_SERVICE_TOKEN;
-  if (!token) throw new Error("INTERNAL_SERVICE_TOKEN is not set.");
-  const response = await fetch(`${workerUrl()}/internal/live/end`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-internal-service-token": token },
-    body: JSON.stringify({ sessionId }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!response.ok) throw new Error(`Worker end failed with status ${response.status}.`);
+  await postToWorker("end", { sessionId });
 }

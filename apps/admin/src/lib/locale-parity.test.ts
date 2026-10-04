@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createI18nInstance } from "@/i18n";
 import { localeResources } from "./i18n-resources";
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES, formatDateTime, formatRelativeTime, getWeekdayLabels, localeTag } from "./locale";
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES, formatDateTime, formatRelativeTime, localeTag } from "./locale";
 
 const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
 const CYRILLIC = /[Ѐ-ӿ]/;
@@ -71,7 +71,7 @@ describe("Serbian", () => {
     const date = formatDateTime(sample, "sr", { dateStyle: "full", timeStyle: "short", timeZone: "UTC" }, "24h");
     expect(date).toContain("septembar");
     expect(date).not.toMatch(CYRILLIC);
-    expect(getWeekdayLabels("sr")).toContain("sreda");
+    expect(date).toContain("sreda");
     expect(formatRelativeTime(sample - 2 * 24 * 60 * 60 * 1000, "sr", sample)).toBe("pre 2 dana");
     expect(localeTag("sr")).toBe("sr-Latn");
   });

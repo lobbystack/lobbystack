@@ -1,7 +1,8 @@
+import { normalizeInterfaceLocale } from "@lobbystack/shared";
+
 import {
   DEFAULT_LOCALE,
   LOCALE_COOKIE,
-  normalizeLocale,
   type SupportedLocale,
 } from "./locale";
 
@@ -43,7 +44,7 @@ export function localeFromAcceptLanguage(value: string | null | undefined): Supp
     .sort((left, right) => right.quality - left.quality);
 
   for (const candidate of candidates) {
-    const locale = normalizeLocale(candidate.tag);
+    const locale = normalizeInterfaceLocale(candidate.tag);
     if (locale) {
       return locale;
     }
@@ -61,12 +62,12 @@ export function negotiateLocale(input: {
   cookie?: string | null;
   acceptLanguage?: string | null;
 }): NegotiatedLocale {
-  const fromQuery = normalizeLocale(input.query);
+  const fromQuery = normalizeInterfaceLocale(input.query);
   if (fromQuery) {
     return { locale: fromQuery, source: "query" };
   }
 
-  const fromCookie = normalizeLocale(input.cookie);
+  const fromCookie = normalizeInterfaceLocale(input.cookie);
   if (fromCookie) {
     return { locale: fromCookie, source: "cookie" };
   }
@@ -83,7 +84,7 @@ export function negotiateLocale(input: {
 export function localeFromRequestHeaders(headers: {
   get(name: string): string | null;
 }): NegotiatedLocale {
-  const locale = normalizeLocale(headers.get(LOCALE_HEADER));
+  const locale = normalizeInterfaceLocale(headers.get(LOCALE_HEADER));
   const source = headers.get(LOCALE_SOURCE_HEADER);
   return {
     locale: locale ?? DEFAULT_LOCALE,
@@ -106,7 +107,7 @@ export function localeFromCookieHeader(cookieHeader: string | null | undefined):
       continue;
     }
     try {
-      return normalizeLocale(decodeURIComponent(entry.slice(separator + 1).trim()));
+      return normalizeInterfaceLocale(decodeURIComponent(entry.slice(separator + 1).trim()));
     } catch {
       return null;
     }

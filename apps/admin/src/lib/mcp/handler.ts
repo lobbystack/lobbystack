@@ -1,4 +1,3 @@
-import { after } from "next/server";
 import { createMcpHandler, type AuthInfo, type McpHttpHandler } from "@modelcontextprotocol/server";
 
 import {
@@ -15,6 +14,7 @@ import {
 } from "@lobbystack/domain";
 import { isApiKeyScope, type ApiErrorCode, type ApiKeyScope } from "@lobbystack/shared";
 
+import { runAfterResponse } from "../after-response";
 import { configuredAppOrigins } from "../app-origins";
 import { createWorkerDomainContext } from "../domain-context";
 import { enforceApiRateLimit } from "../public-api/rate-limit";
@@ -48,15 +48,6 @@ function jsonError(status: number, code: ApiErrorCode, message: string, headers:
  */
 export function trustedMcpOrigins(environment: Readonly<Record<string, string | undefined>> = process.env): Set<string> {
   return new Set(configuredAppOrigins(environment, ["SITE_URL", "NEXT_PUBLIC_SITE_URL"]));
-}
-
-/** Runs work after the response is sent, or right away outside a Next request (tests, scripts). */
-function runAfterResponse(task: () => Promise<unknown>): void {
-  try {
-    after(task);
-  } catch {
-    void Promise.resolve().then(task).catch(() => undefined);
-  }
 }
 
 type VerifiedCredential =

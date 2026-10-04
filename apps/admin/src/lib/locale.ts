@@ -1,4 +1,4 @@
-import { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, normalizeInterfaceLocale } from "@lobbystack/shared";
+import { interfaceLocaleTags, interfaceLocales, intlLocale, normalizeInterfaceLocale } from "@lobbystack/shared";
 
 export { intlLocale };
 
@@ -6,11 +6,6 @@ export const SUPPORTED_LOCALES = interfaceLocales;
 
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 export type TimeFormatPreference = "24h" | "ampm";
-
-/** Exact match against the supported short codes, for validating API input. */
-export function isSupportedLocale(value: unknown): value is SupportedLocale {
-  return isInterfaceLocale(value);
-}
 
 /** Translation key for each locale's name in the language pickers. */
 export const LOCALE_LABEL_KEYS: Record<SupportedLocale, string> = {
@@ -35,15 +30,14 @@ export const TIME_FORMAT_STORAGE_KEY = "lobbystack.time-format";
 export const LOCALE_COOKIE = LOCALE_STORAGE_KEY;
 export const LOCALE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
-export function normalizeLocale(value: string | null | undefined): SupportedLocale | null {
-  return normalizeInterfaceLocale(value);
-}
+// ponytail: kept only for apps/admin/proxy.ts; it can import normalizeInterfaceLocale directly.
+export { normalizeInterfaceLocale as normalizeLocale };
 
 export function resolveLocale(
   ...candidates: Array<string | null | undefined>
 ): SupportedLocale {
   for (const candidate of candidates) {
-    const locale = normalizeLocale(candidate);
+    const locale = normalizeInterfaceLocale(candidate);
     if (locale) {
       return locale;
     }
@@ -52,31 +46,12 @@ export function resolveLocale(
   return DEFAULT_LOCALE;
 }
 
-export function resolveStartupLocale(input: {
-  storedLocale?: string | null;
-  browserLocale?: string | null;
-}): SupportedLocale {
-  return resolveLocale(input.storedLocale, input.browserLocale);
-}
-
-export function resolveAuthenticatedLocale(input: {
-  preferredLocale?: string | null;
-  storedLocale?: string | null;
-  browserLocale?: string | null;
-}): SupportedLocale {
-  return resolveLocale(
-    input.preferredLocale,
-    input.storedLocale,
-    input.browserLocale,
-  );
-}
-
 export function readStoredLocale(): SupportedLocale | null {
   if (typeof window === "undefined") {
     return null;
   }
 
-  return normalizeLocale(window.localStorage.getItem(LOCALE_STORAGE_KEY));
+  return normalizeInterfaceLocale(window.localStorage.getItem(LOCALE_STORAGE_KEY));
 }
 
 export function writeStoredLocale(locale: SupportedLocale): void {
@@ -141,7 +116,7 @@ export function resolveTimeFormatPreference(input: {
 
   // English defaults to a 12-hour clock; French, Spanish and Serbian readers
   // expect 24-hour times, which is also what Intl uses for those languages.
-  const locale = normalizeLocale(input.locale);
+  const locale = normalizeInterfaceLocale(input.locale);
   if (locale === "fr" || locale === "es" || locale === "sr") {
     return "24h";
   }
@@ -240,61 +215,4 @@ export function formatRelativeTime(
   }
 
   return formatter.format(Math.trunc(diffMs / yearMs), "year");
-}
-
-export function getWeekdayLabels(locale: string): Array<string> {
-  const formatter = new Intl.DateTimeFormat(intlLocale(locale), {
-    weekday: "long",
-    timeZone: "UTC",
-  });
-  const sunday = new Date(Date.UTC(2024, 0, 7, 12));
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(sunday);
-    date.setUTCDate(sunday.getUTCDate() + index);
-    return formatter.format(date);
-  });
-}
-
-function startOfLocalDay(value: Date): number {
-  return new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
-}
-
-export function formatInboxTimestamp(
-  value: string | number | Date,
-  locale: string,
-  labels: {
-    yesterday: string;
-  },
-  timeFormatPreference?: TimeFormatPreference | null,
-): string {
-  const date = value instanceof Date ? value : new Date(value);
-  const now = new Date();
-  const oneDayMs = 24 * 60 * 60 * 1000;
-  const dayDiff = Math.round((startOfLocalDay(now) - startOfLocalDay(date)) / oneDayMs);
-
-  if (dayDiff <= 0) {
-    const timeOptions =
-      applyTimeFormatPreference(
-        {
-          hour: "2-digit",
-          minute: "2-digit",
-        },
-        timeFormatPreference ?? readStoredTimeFormatPreference(),
-      ) ?? {
-        hour: "2-digit",
-        minute: "2-digit",
-      };
-
-    return new Intl.DateTimeFormat(intlLocale(locale), {
-      ...timeOptions,
-    }).format(date);
-  }
-
-  if (dayDiff === 1) {
-    return labels.yesterday;
-  }
-
-  return new Intl.DateTimeFormat(intlLocale(locale), {
-    weekday: "long",
-  }).format(date);
 }

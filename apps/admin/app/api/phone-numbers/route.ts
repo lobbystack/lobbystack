@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { businesses, onboardingNumberClaimEvents, phoneNumbers } from "@lobbystack/db";
 import { schedulePhoneNumberRelease } from "@lobbystack/domain";
-import { asApiResponse, businessIdFromRequest, readJson, requireApiSession, withOperatorTransaction } from "@/lib/api-helpers";
+import { asApiResponse, businessIdFromRequest, jsonError, readJson, requireApiSession, withOperatorTransaction } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +27,7 @@ export async function DELETE(request: Request) {
     const session = await requireApiSession(request);
     const businessId = businessIdFromRequest(request);
     const body = await readJson(request) as { phoneNumberId?: string };
-    if (!businessId || !body.phoneNumberId) return NextResponse.json({ error: "businessId and phoneNumberId are required." }, { status: 400 });
+    if (!businessId || !body.phoneNumberId) return jsonError("businessId and phoneNumberId are required.", 400);
     await schedulePhoneNumberRelease(createDomainContext(), { userId: session.user.id, businessId, phoneNumberId: body.phoneNumberId });
     return NextResponse.json({ status: "scheduled" });
   } catch (error) { return asApiResponse(error); }

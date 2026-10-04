@@ -12,12 +12,6 @@ export function getTwilioProvider(): TwilioProvider {
   return provider;
 }
 
-export function getTwilioVerifyServiceSid(): string {
-  const value = process.env.TWILIO_VERIFY_SERVICE_SID;
-  if (!value) throw new Error("Phone verification is not configured.");
-  return value;
-}
-
 export function getNumberClaimTokenSecret(): string {
   const value = process.env.NUMBER_CLAIM_TOKEN_SECRET;
   if (!value || value.length < 32) throw new Error("Number claim signing is not configured.");

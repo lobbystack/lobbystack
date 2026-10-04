@@ -26,18 +26,18 @@ export async function GET(request: Request) {
       { operation: "callback", ip: trustedClientIp(request) },
     );
     if (!entryRate.allowed) return jsonError("Too many calendar authorization requests. Please try again later.", entryRate.status, entryRate.code);
-    if (!state) return NextResponse.json({ error: "Google OAuth state is required." }, { status: 400 });
+    if (!state) return jsonError("Google OAuth state is required.", 400);
     const verified = verifyCalendarOAuthState(state);
-    if (!verified) return NextResponse.json({ error: "Google OAuth state is invalid or expired." }, { status: 400 });
+    if (!verified) return jsonError("Google OAuth state is invalid or expired.", 400);
     const session = await requireApiSession(request);
-    if (session.user.id !== verified.userId) return NextResponse.json({ error: "Google OAuth state belongs to another user." }, { status: 403 });
+    if (session.user.id !== verified.userId) return jsonError("Google OAuth state belongs to another user.", 403);
     // Authenticated dimensions, counted once per request, before consumption or
     // the provider exchange.
     const identityRate = await enforceCalendarOAuthRateLimits(
       { operation: "callback", userId: verified.userId, businessId: verified.businessId },
     );
     if (!identityRate.allowed) return jsonError("Too many calendar authorization requests. Please try again later.", identityRate.status, identityRate.code);
-    if (!await consumeCalendarOAuthState(state, verified.userId, verified.businessId)) return NextResponse.json({ error: "Google OAuth state has already been used or expired." }, { status: 400 });
+    if (!await consumeCalendarOAuthState(state, verified.userId, verified.businessId)) return jsonError("Google OAuth state has already been used or expired.", 400);
     if (!code || url.searchParams.has("error")) return destination("error");
     const encryptionKey = process.env.ENCRYPTION_KEY;
     if (!encryptionKey) throw new Error("Calendar token encryption is not configured.");

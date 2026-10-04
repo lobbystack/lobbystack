@@ -7,12 +7,12 @@ const fixture = vi.hoisted(() => ({
   portal: vi.fn(),
 }));
 vi.mock("@/lib/api-helpers", () => ({
-  businessIdFromRequest: () => "business",
+  jsonError: (message: string, status = 400, code?: string) => Response.json({ error: message, ...(code ? { code } : {}) }, { status }),
   asApiResponse: (error: { status?: number }) => Response.json({ error: "Request failed" }, { status: error.status ?? 500 }),
   withOperatorTransaction: async (_request: Request, callback: (input: unknown) => unknown, options: unknown) => {
     fixture.transaction(options);
     if (fixture.denied) throw { status: 403 };
-    return callback({ tx: { select: () => ({ from: () => ({ where: () => ({ limit: async () => fixture.account ? [fixture.account] : [] }) }) }) } });
+    return callback({ businessId: "business", tx: { select: () => ({ from: () => ({ where: () => ({ limit: async () => fixture.account ? [fixture.account] : [] }) }) }) } });
   },
 }));
 vi.mock("@lobbystack/providers", () => ({ PolarBillingProvider: class { createCustomerPortalSession = fixture.portal; } }));

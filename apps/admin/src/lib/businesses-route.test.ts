@@ -5,6 +5,7 @@ vi.mock("@lobbystack/domain", () => ({ createBusiness: mocks.createBusiness }));
 vi.mock("@/lib/api-helpers", () => ({
   requireApiSession: async () => ({ user: { id: "user-1" } }),
   readJson: (request: Request) => request.json(),
+  jsonError: (message: string, status = 400, code?: string) => Response.json({ error: message, ...(code ? { code } : {}) }, { status }),
   asApiResponse: () => Response.json({ error: "Unexpected failure" }, { status: 500 }),
 }));
 vi.mock("@/lib/domain-context", () => ({ createDomainContext: () => ({}) }));

@@ -10,7 +10,9 @@ import enLabels from "react-phone-number-input/locale/en";
 import esLabels from "react-phone-number-input/locale/es";
 import frLabels from "react-phone-number-input/locale/fr";
 
-import { normalizeLocale, type SupportedLocale } from "./locale";
+import { normalizeInterfaceLocale } from "@lobbystack/shared";
+
+import type { SupportedLocale } from "./locale";
 
 const DEFAULT_PHONE_COUNTRY = "US" satisfies CountryCode;
 const SUPPORTED_ONBOARDING_PHONE_COUNTRIES = ["US", "CA", "GB", "AU"] as const;
@@ -126,7 +128,7 @@ export function getDefaultPhoneCountry(locale?: string | null): CountryCode {
 }
 
 export function getPhoneLabels(locale?: string | null): Labels {
-  const supported = normalizeLocale(locale) ?? "en";
+  const supported = normalizeInterfaceLocale(locale) ?? "en";
   if (supported === "sr") {
     cachedSerbianLabels ??= serbianLabels();
     return cachedSerbianLabels;
@@ -160,16 +162,13 @@ export function normalizePhoneNumber(
 export function formatPhoneNumberDisplay(
   value: string | null | undefined,
   locale?: string | null,
-  options?: {
-    defaultCountry?: CountryCode | null;
-  },
 ): string {
   const normalizedValue = normalizePhoneText(value);
   if (!normalizedValue) {
     return "";
   }
 
-  const defaultCountry = options?.defaultCountry ?? getDefaultPhoneCountry(locale);
+  const defaultCountry = getDefaultPhoneCountry(locale);
   const parsed = parsePhoneNumberFromString(normalizedValue, defaultCountry);
 
   if (!parsed?.isValid()) {
@@ -346,17 +345,4 @@ export function getPhoneCountryOptions(locale?: string | null): Array<PhoneCount
       callingCode: `+${getCountryCallingCode(country)}`,
     }))
     .sort((left, right) => left.label.localeCompare(right.label));
-}
-
-export function getSupportedOnboardingPhoneCountryOptions(
-  locale?: string | null,
-): Array<PhoneCountryOption & { code: SupportedOnboardingPhoneCountry }> {
-  const optionByCode = new Map(
-    getPhoneCountryOptions(locale).map((option) => [option.code, option]),
-  );
-
-  return SUPPORTED_ONBOARDING_PHONE_COUNTRIES.flatMap((country) => {
-    const option = optionByCode.get(country);
-    return option ? [{ ...option, code: country }] : [];
-  });
 }
