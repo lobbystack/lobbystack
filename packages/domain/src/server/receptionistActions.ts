@@ -137,8 +137,9 @@ async function noOpeningsReason(context: DomainContext, input: { businessId: str
   const day = DateTime.fromISO(`${input.date}T00:00:00`, { zone: input.timezone });
   if (day.isValid && !input.hours.some((window) => window.dayOfWeek === day.weekday % 7)) return "closed_day";
   if (!input.firstCandidate) return "no_times_left";
-  // Staff, calendar and closure reasons hold for the whole day, so the time
-  // nearest the caller's preference explains it. When it's taken, so is the day.
+  // The time nearest the caller's preference explains the day. Later times can
+  // fail for another reason, such as a closure, so a taken first time doesn't
+  // mean the whole day is booked.
   return (await checkAvailability(context, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.firstCandidate, timezone: input.timezone })).reason ?? "taken";
 }
 

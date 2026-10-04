@@ -109,7 +109,8 @@ export const UNAVAILABLE_TOOL_MESSAGES: Record<NoOpeningsReason, string> = {
 };
 
 const DAY_UNAVAILABLE: Partial<Record<NoOpeningsReason, string>> = {
-  taken: "Every time that day is already booked. Offer another day.",
+  // Only the first time was checked, so don't say the whole day is booked.
+  taken: "No times are free that day. Offer another day.",
   outside_hours: "The service doesn't fit inside the opening hours that day. Offer another day.",
 };
 

@@ -80,7 +80,7 @@ describe("findAvailability", () => {
 
   it("says a day is fully booked only when every time is taken", async () => {
     vi.mocked(findOpenings).mockResolvedValueOnce({ ok: true, serviceName: "General Checkup", date: "2026-10-06", timezone: "America/Toronto", openings: [], reason: "taken" } as never);
-    await expect(tools().run("findAvailability", { serviceName: "General Checkup", date: "2026-10-06" })).resolves.toMatchObject({ reason: "Every time that day is already booked. Offer another day." });
+    await expect(tools().run("findAvailability", { serviceName: "General Checkup", date: "2026-10-06" })).resolves.toMatchObject({ reason: "No times are free that day. Offer another day." });
   });
 
   it("passes openings through unchanged", async () => {
