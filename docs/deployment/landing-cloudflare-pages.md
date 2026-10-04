@@ -18,7 +18,7 @@ Configure `lobbystack-landing` with:
 - Root directory: `apps/landing`
 - Build command: `pnpm build`
 - Build output directory: `dist`
-- Node version: `22.12.0`
+- Node version: `26`
 - pnpm version: `10.30.3`
 - Automatic production deployments: enabled
 - Preview deployments: all branches

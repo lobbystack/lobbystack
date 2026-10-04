@@ -10,7 +10,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
+    "@types/node": "^26.0.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.5",
     "vitest": "^4.1.11"

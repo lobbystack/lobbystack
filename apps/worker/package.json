@@ -30,7 +30,7 @@
     "ws": "^8.21.0"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
+    "@types/node": "^26.0.0",
     "tsup": "8.5.1",
     "tsx": "^4.21.0",
     "vitest": "^4.1.11"
