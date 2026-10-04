@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 
-import { countKnowledgeTokens } from "@lobbystack/ai";
+import { countKnowledgeTokens } from "@lobbystack/domain";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type FakeSocket = EventEmitter & { sent: Array<Record<string, unknown>>; socket: EventEmitter; closed: boolean; send: (event: unknown) => void; close: () => void };

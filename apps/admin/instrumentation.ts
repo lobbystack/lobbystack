@@ -1,6 +1,6 @@
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
-  const { assertProductionSecrets } = await import("@lobbystack/config");
+  const { assertProductionSecrets } = await import("@lobbystack/shared");
   assertProductionSecrets(process.env, [
     "BETTER_AUTH_SECRET",
     "INTERNAL_SERVICE_SECRET",

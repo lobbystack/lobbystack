@@ -1,4 +1,4 @@
-import { countKnowledgeTokens } from "@lobbystack/ai";
+import { countKnowledgeTokens } from "@lobbystack/domain";
 
 import { describeClosure, describeServices, type ServiceFact, type UpcomingClosure } from "../businessFacts";
 

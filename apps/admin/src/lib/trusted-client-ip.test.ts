@@ -33,6 +33,12 @@ describe("trusted client IP derivation", () => {
     expect(trustedClientIp(request({ "cf-connecting-ip": "" }))).toBeUndefined();
   });
 
+  it("rejects forwarded-for and unknown opt-ins", () => {
+    vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "x-forwarded-for");
+    expect(trustedClientIpHeader()).toBeUndefined();
+    expect(trustedClientIp(request({ "x-forwarded-for": "203.0.113.1" }))).toBeUndefined();
+  });
+
   it("reads from bare headers for the auth middleware context", () => {
     vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "x-real-ip");
     expect(trustedClientIpFromHeaders(new Headers({ "x-real-ip": "203.0.113.9" }))).toBe("203.0.113.9");

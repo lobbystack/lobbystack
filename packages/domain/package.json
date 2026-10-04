@@ -12,7 +12,6 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@lobbystack/ai": "workspace:*",
     "@lobbystack/contracts": "workspace:*",
     "@lobbystack/db": "workspace:*",
     "@lobbystack/jobs": "workspace:*",

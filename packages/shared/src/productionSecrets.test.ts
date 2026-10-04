@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { assertProductionSecrets } from "./index";
+import { assertProductionSecrets } from "./productionSecrets";
 
 describe("assertProductionSecrets", () => {
   it("rejects missing, short, and placeholder production secrets", () => {

@@ -7,8 +7,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@lobbystack/agent-core": `${root}/packages/agent-core/src/index.ts`,
-      "@lobbystack/ai": `${root}/packages/ai/src/index.ts`,
-      "@lobbystack/config": `${root}/packages/config/src/index.ts`,
       "@lobbystack/contracts": `${root}/packages/contracts/src/index.ts`,
       "@lobbystack/db": `${root}/packages/db/src/index.ts`,
       "@lobbystack/domain": `${root}/packages/domain/src/index.ts`,

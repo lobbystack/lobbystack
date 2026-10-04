@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createServer } from "node:http";
 
-import { forceFlushTelemetryLogs, getLogger, initializeTelemetry, isStorageHttpRequest, parseOtlpHeaders, redactExportAttributes, redactExportLogValue, redactOtelExceptionText, registerStorageHttpEndpoint, shutdownTelemetry } from "./node";
+import { forceFlushTelemetryLogs, getLogger, initializeTelemetry, isStorageHttpRequest, redactExportAttributes, redactExportLogValue, redactOtelExceptionText, registerStorageHttpEndpoint, shutdownTelemetry } from "./node";
 
 afterEach(async () => {
   vi.unstubAllEnvs();
@@ -44,13 +44,6 @@ describe("OTel exception redaction", () => {
       "customer.email": "[redacted]",
       "storage.object_key": "[redacted]",
       "http.response.status_code": 200,
-    });
-  });
-
-  it("parses direct OTLP headers without truncating padding", () => {
-    expect(parseOtlpHeaders("Authorization=Bearer phc_test,api-key=abc==")).toEqual({
-      Authorization: "Bearer phc_test",
-      "api-key": "abc==",
     });
   });
 

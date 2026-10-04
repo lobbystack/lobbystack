@@ -8,10 +8,9 @@
 - `packages/db/`: Drizzle schema, PostgreSQL migrations, role-specific clients, and RLS helpers.
 - `packages/domain/`: durable business logic shared by admin and worker runtimes. Widget conversations use the `web_chat` channel and key on `widget_visitor_id` (no phone required).
 - `packages/agent-core/`: the receptionist agent (AI SDK `ToolLoopAgent`) shared by website chat and calls, its tools, and the GPT-Live session config and call controller.
-- `packages/ai/`: system-prompt builders.
 - `packages/providers/`: provider adapters (Twilio, embeddings, calendars, email). Text AI goes through the agent core: set `AI_CHAT_*` (`API_KEY`, `BASE_URL`, `MODEL`, `PROVIDER_NAME`, `REASONING_EFFORT`). On OpenAI the default is `gpt-6-luna` on high reasoning through the Responses API, except that GPT-Live delegation runs on low reasoning (`AI_DELEGATION_MODEL`, `AI_DELEGATION_REASONING_EFFORT`); other OpenAI-compatible endpoints use chat completions. `AI_EMBEDDING_*` configures embeddings. The key falls back to `OPENAI_API_KEY`.
 - `packages/embed/`: Vite bundle producing the IIFE widget loader (`dist/embed.js`, served at `/embed.js`, copied into `apps/admin/public/embed/` by `scripts/copy-widget-embed.mjs`).
-- `packages/`: shared contracts, jobs, providers, telemetry, configuration, and test helpers.
+- `packages/`: shared contracts, jobs, providers, telemetry, and test helpers.
 - `docker/`, `docker-compose.yml`, and `scripts/`: local infrastructure, operations, migration, and certification tooling.
 
 ## Development commands

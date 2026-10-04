@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@lobbystack/agent-core": "workspace:*",
-    "@lobbystack/config": "workspace:*",
     "@lobbystack/contracts": "workspace:*",
     "@lobbystack/db": "workspace:*",
     "@lobbystack/domain": "workspace:*",

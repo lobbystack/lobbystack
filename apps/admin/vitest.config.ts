@@ -10,13 +10,11 @@ export default defineConfig({
     alias: {
       "@lobbystack/shared/product-capabilities": `${root}/packages/shared/src/product-capabilities.ts`,
       "@lobbystack/shared": `${root}/packages/shared/src/index.ts`,
-      "@lobbystack/config": `${root}/packages/config/src/index.ts`,
       "@lobbystack/contracts": `${root}/packages/contracts/src/index.ts`,
       "@lobbystack/db": `${root}/packages/db/src/index.ts`,
       "@lobbystack/domain": `${root}/packages/domain/src/index.ts`,
       "@lobbystack/jobs": `${root}/packages/jobs/src/index.ts`,
       "@lobbystack/agent-core": `${root}/packages/agent-core/src`,
-      "@lobbystack/ai": `${root}/packages/ai/src/index.ts`,
       "@lobbystack/providers/storage/local": `${root}/packages/providers/src/storage/local.ts`,
       "@lobbystack/providers/storage/provider": `${root}/packages/providers/src/storage/provider.ts`,
       "@lobbystack/telemetry/node": `${root}/packages/telemetry/src/node.ts`,

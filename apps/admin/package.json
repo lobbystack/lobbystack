@@ -27,8 +27,6 @@
     "@fontsource-variable/geist": "^5.2.8",
     "@fontsource/geist-sans": "^5.2.5",
     "@lobbystack/agent-core": "workspace:*",
-    "@lobbystack/ai": "workspace:*",
-    "@lobbystack/config": "workspace:*",
     "@lobbystack/contracts": "workspace:*",
     "@lobbystack/db": "workspace:*",
     "@lobbystack/domain": "workspace:*",

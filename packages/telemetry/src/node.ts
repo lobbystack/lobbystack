@@ -13,7 +13,7 @@ import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { resourceFromAttributes } from "@opentelemetry/resources";
-import { BatchLogRecordProcessor, LoggerProvider, type LogRecordProcessor } from "@opentelemetry/sdk-logs";
+import { BatchLogRecordProcessor, type LogRecordProcessor } from "@opentelemetry/sdk-logs";
 import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { BatchSpanProcessor, type ReadableSpan, type SpanProcessor } from "@opentelemetry/sdk-trace-base";
@@ -27,22 +27,12 @@ export { redactOtelAttributes } from "./redaction.js";
 
 export type TelemetryInitializationOptions = {
   serviceName?: string;
-  serviceVersion?: string;
-  environment?: string;
   endpoint?: string;
-  headers?: Record<string, string>;
-  additionalLogDestinations?: ReadonlyArray<{
-    endpoint: string;
-    headers?: Record<string, string>;
-  }>;
-  includeDefaultLogDestination?: boolean;
-  enabled?: boolean;
 };
 
 export type TraceContextCarrier = Record<string, string>;
 
 let sdk: NodeSDK | undefined;
-let loggerProvider: LoggerProvider | undefined;
 let activeLogRecordProcessors: LogRecordProcessor[] = [];
 let initialized = false;
 let stopRuntimeMetrics: (() => void) | undefined;
@@ -138,28 +128,6 @@ export function redactOtelExceptionText(value: string): string {
     .slice(0, 500);
 }
 
-function configuredEndpoint(options: TelemetryInitializationOptions): string | undefined {
-  return options.endpoint ?? process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
-}
-
-export function parseOtlpHeaders(raw: string | undefined): Record<string, string> | undefined {
-  if (!raw) return undefined;
-  const headers = Object.fromEntries(
-    raw.split(",").flatMap((entry) => {
-      const separator = entry.indexOf("=");
-      return separator > 0 ? [[entry.slice(0, separator).trim(), entry.slice(separator + 1).trim()]] : [];
-    }),
-  );
-  return Object.keys(headers).length > 0 ? headers : undefined;
-}
-
-function configuredHeaders(options: TelemetryInitializationOptions): Record<string, string> | undefined {
-  if (options.headers) {
-    return options.headers;
-  }
-  return parseOtlpHeaders(process.env.OTEL_EXPORTER_OTLP_HEADERS);
-}
-
 export async function initializeTelemetry(
   options: TelemetryInitializationOptions = {},
 ): Promise<void> {
@@ -168,103 +136,69 @@ export async function initializeTelemetry(
   }
   initialized = true;
 
-  const serviceName = options.serviceName ?? process.env.OTEL_SERVICE_NAME ?? "lobbystack-service";
-  // Match the admin's releaseVersion(): SERVICE_VERSION can go stale on Railway.
-  const serviceVersion = options.serviceVersion ?? (process.env.RAILWAY_GIT_COMMIT_SHA || process.env.RAILWAY_DEPLOYMENT_ID || process.env.SERVICE_VERSION || "development");
-  const environment = options.environment ?? process.env.NODE_ENV ?? "development";
-  const endpoint = configuredEndpoint(options);
-  const headers = configuredHeaders(options);
-  const resource = resourceFromAttributes({
-    "service.namespace": "lobbystack",
-    "service.name": serviceName,
-    "service.version": serviceVersion,
-    "deployment.environment": environment,
-  });
-  const logDestinations = options.enabled === false
-    ? []
-    : [
-        ...(endpoint && options.includeDefaultLogDestination !== false
-          ? [{ endpoint: `${endpoint.replace(/\/$/, "")}/v1/logs`, headers }]
-          : []),
-        ...(options.additionalLogDestinations ?? []),
-      ];
-  const logRecordProcessors: LogRecordProcessor[] = logDestinations.length === 0
-    ? []
-    : [
-        {
-          onEmit(logRecord) {
-            const sanitized = redactLogExportAttributes(logRecord.attributes);
-            for (const [key, value] of Object.entries(sanitized)) logRecord.setAttribute(key, value);
-            logRecord.setBody(redactExportLogValue(logRecord.body));
-          },
-          forceFlush: () => Promise.resolve(),
-          shutdown: () => Promise.resolve(),
-        },
-        ...logDestinations.map(({ endpoint: logEndpoint, headers: logHeaders }) =>
-          new BatchLogRecordProcessor(
-            new OTLPLogExporter({
-              url: logEndpoint,
-              ...(logHeaders ? { headers: logHeaders } : {}),
-            }),
-          )),
-      ];
-  activeLogRecordProcessors = logRecordProcessors;
-
-  if (endpoint && options.enabled !== false) {
-    const exporterOptions = {
-      url: `${endpoint.replace(/\/$/, "")}/v1/traces`,
-      ...(headers ? { headers } : {}),
-    };
-    const metricsExporter = new OTLPMetricExporter({
-      url: `${endpoint.replace(/\/$/, "")}/v1/metrics`,
-      ...(headers ? { headers } : {}),
-    });
-    const traceExporter = new OTLPTraceExporter(exporterOptions);
-    sdk = new NodeSDK({
-      resource,
-      spanProcessors: [new RedactingSpanProcessor(), new BatchSpanProcessor(traceExporter)],
-      logRecordProcessors,
-      instrumentations: [new HttpInstrumentation({ ignoreOutgoingRequestHook: isStorageHttpRequest }), new UndiciInstrumentation({ ignoreRequestHook: isStorageHttpRequest })],
-      metricReader: new PeriodicExportingMetricReader({
-        exporter: metricsExporter,
-        exportIntervalMillis: 15_000,
-      }),
-    });
-
-    try {
-      await sdk.start();
-      const delay = monitorEventLoopDelay({ resolution: 20 });
-      delay.enable();
-      const meter = getMeter("lobbystack-runtime");
-      const heap = meter.createObservableGauge("process.memory.heap_used_bytes", { unit: "By" });
-      const rss = meter.createObservableGauge("process.memory.rss_bytes", { unit: "By" });
-      const external = meter.createObservableGauge("process.memory.external_bytes", { unit: "By" });
-      const arrayBuffers = meter.createObservableGauge("process.memory.array_buffers_bytes", { unit: "By" });
-      const eventLoop = meter.createObservableGauge("process.event_loop.delay_p99_ms", { unit: "ms" });
-      const callback: Parameters<typeof meter.addBatchObservableCallback>[0] = result => {
-        const memory = process.memoryUsage();
-        result.observe(heap, memory.heapUsed);
-        result.observe(rss, memory.rss);
-        result.observe(external, memory.external);
-        result.observe(arrayBuffers, memory.arrayBuffers);
-        if (delay.count > 0) result.observe(eventLoop, delay.percentile(99) / 1_000_000);
-        delay.reset();
-      };
-      const runtimeMetrics = [heap, rss, external, arrayBuffers, eventLoop];
-      meter.addBatchObservableCallback(callback, runtimeMetrics);
-      stopRuntimeMetrics = () => { delay.disable(); meter.removeBatchObservableCallback(callback, runtimeMetrics); };
-    } catch (error) {
-      // Telemetry is deliberately best effort and must never block startup.
-      console.warn("[otel] exporter initialization failed", error instanceof Error ? error.message : String(error));
-    }
+  const endpoint = (options.endpoint ?? process.env.OTEL_EXPORTER_OTLP_ENDPOINT)?.replace(/\/$/, "");
+  if (!endpoint) {
+    return;
   }
 
-  if (!endpoint && logRecordProcessors.length > 0) {
-    loggerProvider = new LoggerProvider({
-      resource,
-      processors: logRecordProcessors,
-    });
-    logs.setGlobalLoggerProvider(loggerProvider);
+  const resource = resourceFromAttributes({
+    "service.namespace": "lobbystack",
+    "service.name": options.serviceName ?? process.env.OTEL_SERVICE_NAME ?? "lobbystack-service",
+    // Match the admin's releaseVersion(): SERVICE_VERSION can go stale on Railway.
+    "service.version": process.env.RAILWAY_GIT_COMMIT_SHA || process.env.RAILWAY_DEPLOYMENT_ID || process.env.SERVICE_VERSION || "development",
+    "deployment.environment": process.env.NODE_ENV ?? "development",
+  });
+  // The OTLP exporters read OTEL_EXPORTER_OTLP_HEADERS from the environment.
+  const logRecordProcessors: LogRecordProcessor[] = [
+    {
+      onEmit(logRecord) {
+        const sanitized = redactLogExportAttributes(logRecord.attributes);
+        for (const [key, value] of Object.entries(sanitized)) logRecord.setAttribute(key, value);
+        logRecord.setBody(redactExportLogValue(logRecord.body));
+      },
+      forceFlush: () => Promise.resolve(),
+      shutdown: () => Promise.resolve(),
+    },
+    new BatchLogRecordProcessor(new OTLPLogExporter({ url: `${endpoint}/v1/logs` })),
+  ];
+  activeLogRecordProcessors = logRecordProcessors;
+
+  sdk = new NodeSDK({
+    resource,
+    spanProcessors: [new RedactingSpanProcessor(), new BatchSpanProcessor(new OTLPTraceExporter({ url: `${endpoint}/v1/traces` }))],
+    logRecordProcessors,
+    instrumentations: [new HttpInstrumentation({ ignoreOutgoingRequestHook: isStorageHttpRequest }), new UndiciInstrumentation({ ignoreRequestHook: isStorageHttpRequest })],
+    metricReader: new PeriodicExportingMetricReader({
+      exporter: new OTLPMetricExporter({ url: `${endpoint}/v1/metrics` }),
+      exportIntervalMillis: 15_000,
+    }),
+  });
+
+  try {
+    await sdk.start();
+    const delay = monitorEventLoopDelay({ resolution: 20 });
+    delay.enable();
+    const meter = getMeter("lobbystack-runtime");
+    const heap = meter.createObservableGauge("process.memory.heap_used_bytes", { unit: "By" });
+    const rss = meter.createObservableGauge("process.memory.rss_bytes", { unit: "By" });
+    const external = meter.createObservableGauge("process.memory.external_bytes", { unit: "By" });
+    const arrayBuffers = meter.createObservableGauge("process.memory.array_buffers_bytes", { unit: "By" });
+    const eventLoop = meter.createObservableGauge("process.event_loop.delay_p99_ms", { unit: "ms" });
+    const callback: Parameters<typeof meter.addBatchObservableCallback>[0] = result => {
+      const memory = process.memoryUsage();
+      result.observe(heap, memory.heapUsed);
+      result.observe(rss, memory.rss);
+      result.observe(external, memory.external);
+      result.observe(arrayBuffers, memory.arrayBuffers);
+      if (delay.count > 0) result.observe(eventLoop, delay.percentile(99) / 1_000_000);
+      delay.reset();
+    };
+    const runtimeMetrics = [heap, rss, external, arrayBuffers, eventLoop];
+    meter.addBatchObservableCallback(callback, runtimeMetrics);
+    stopRuntimeMetrics = () => { delay.disable(); meter.removeBatchObservableCallback(callback, runtimeMetrics); };
+  } catch (error) {
+    // Telemetry is deliberately best effort and must never block startup.
+    console.warn("[otel] exporter initialization failed", error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -272,16 +206,11 @@ export async function shutdownTelemetry(): Promise<void> {
   stopRuntimeMetrics?.();
   stopRuntimeMetrics = undefined;
   const activeSdk = sdk;
-  const activeLoggerProvider = loggerProvider;
   sdk = undefined;
-  loggerProvider = undefined;
   activeLogRecordProcessors = [];
   initialized = false;
 
-  const shutdown = Promise.allSettled([
-    ...(activeSdk ? [activeSdk.shutdown()] : []),
-    ...(activeLoggerProvider ? [activeLoggerProvider.shutdown()] : []),
-  ]);
+  const shutdown = Promise.allSettled(activeSdk ? [activeSdk.shutdown()] : []);
   await Promise.race([shutdown, new Promise<void>((resolve) => setTimeout(resolve, 5_000))]);
   logs.disable();
 }

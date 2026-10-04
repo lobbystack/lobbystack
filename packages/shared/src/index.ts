@@ -426,6 +426,7 @@ export type {
 export * from "./billing";
 export * from "./product-capabilities";
 export { normalizeAuthEmail } from "./auth";
+export { assertProductionSecrets } from "./productionSecrets";
 
 export { isTransferPermitted, normalizeTransferMode } from "./transferPolicy";
 

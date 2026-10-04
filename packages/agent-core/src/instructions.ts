@@ -1,5 +1,5 @@
 import { canTextNumber, normalizeBookingMode, type BookingMode, type BusinessContextSnapshot } from "@lobbystack/shared";
-import { countKnowledgeTokens } from "@lobbystack/ai";
+import { countKnowledgeTokens } from "@lobbystack/domain";
 import { DateTime } from "luxon";
 
 import { businessSummary, describeClosure, describeServices, serviceFacts, upcomingClosures, weeklyHours } from "./businessFacts";
