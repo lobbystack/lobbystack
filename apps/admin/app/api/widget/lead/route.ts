@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     if (!access.ok) return access.response;
     const { session } = access;
     if (session.visitorId !== body.visitorId) return NextResponse.json({ error: "The visitor does not match the widget session.", code: "widget_visitor_mismatch" }, { status: 403 });
-    const rate = await enforceWidgetRateLimits({ businessId: session.businessId, widgetKeyId: session.widgetKeyId, visitorId: body.visitorId, ...(requestIpHash(request) ? { ipHash: requestIpHash(request) } : {}), operation: "lead" }, { consume: true });
+    const rate = await enforceWidgetRateLimits({ businessId: session.businessId, widgetKeyId: session.widgetKeyId, visitorId: body.visitorId, ...(requestIpHash(request) ? { ipHash: requestIpHash(request) } : {}), operation: "lead" });
     if (!rate.allowed) return NextResponse.json({ error: "Rate limit reached.", code: rate.code }, { status: rate.status });
     if (!isValidUuid(body.visitorId)) return NextResponse.json({ error: "A valid visitorId is required.", code: "visitor_required" }, { status: 400 });
 

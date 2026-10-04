@@ -25,7 +25,7 @@ describe("widget session admission", () => {
   it("consumes the tenant, visitor and trusted IP budget before signing", async () => {
     mocks.limit.mockResolvedValue({ allowed: true });
     expect((await POST(request())).status).toBe(200);
-    expect(mocks.limit).toHaveBeenCalledWith({ businessId: "business", widgetKeyId: "key", visitorId, ipHash: "trusted-ip-hash", operation: "session" }, { consume: true });
+    expect(mocks.limit).toHaveBeenCalledWith({ businessId: "business", widgetKeyId: "key", visitorId, ipHash: "trusted-ip-hash", operation: "session" });
     expect(mocks.limit.mock.invocationCallOrder[0]).toBeLessThan(mocks.mint.mock.invocationCallOrder[0]!);
   });
 });

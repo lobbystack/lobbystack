@@ -3,9 +3,11 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { eq } from "drizzle-orm";
 
 import { widgetKeys, withBusinessTransaction } from "@lobbystack/db";
+import { bearerToken } from "@lobbystack/domain";
 import { DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID } from "@lobbystack/shared";
 
 import { getWorkerDatabase, withOperatorTransaction } from "./api-helpers";
+import { configuredAppOrigins } from "./app-origins";
 import { resolveWebVoiceAccess } from "./prospect-demo";
 import { isAllowedWidgetOrigin, normalizeOrigin, verifyWidgetSessionToken } from "./widget-keys";
 
@@ -78,18 +80,11 @@ export function publicCallCorsHeaders(origin: string | null): Record<string, str
  * session token and the embedding page's origin), a prospect demo (its demo
  * token), and the landing site's public demo business (an allowed origin).
  */
-/**
- * The dashboard's own origins, from configuration. Behind a proxy the request
- * URL can carry an internal host, and an origin derived from the request would
- * also let a DNS-rebinding page pass, so only configured origins count.
- */
-export function trustedAppOrigins(env: NodeJS.ProcessEnv = process.env): string[] {
-  const values = [env.APP_BASE_URL ?? "", ...(env.AUTH_TRUSTED_ORIGINS ?? "").split(",")];
-  return [...new Set(values.map((value) => value.trim()).filter(Boolean).map(normalizeOrigin))];
-}
-
 export async function resolveLiveWebCallAccess(request: Request, body: LiveWebCallRequest): Promise<LiveWebCallAccess | LiveWebCallDenied> {
-  const trusted = trustedAppOrigins();
+  // The dashboard's own origins, from configuration. Behind a proxy the request
+  // URL can carry an internal host, and an origin derived from the request would
+  // also let a DNS-rebinding page pass, so only configured origins count.
+  const trusted = configuredAppOrigins();
   const appOrigin = trusted[0] ?? new URL(request.url).origin;
 
   if (body.widgetId === DASHBOARD_TEST_CALL_WIDGET_ID) {
@@ -103,7 +98,7 @@ export async function resolveLiveWebCallAccess(request: Request, body: LiveWebCa
     return { businessId, origin: callerOrigin, widgetId: body.widgetId, dashboardTestCall: true, ...(body.visitorId ? { visitorId: body.visitorId } : {}) };
   }
 
-  const bearer = request.headers.get("authorization")?.match(/^Bearer (.+)$/)?.[1];
+  const bearer = bearerToken(request.headers.get("authorization"));
   if (bearer) {
     const token = verifyWidgetSessionToken(bearer);
     const parentOrigin = request.headers.get("x-widget-parent-origin");

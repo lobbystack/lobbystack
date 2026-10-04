@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     if (!access.ok) return access.response;
     const { session } = access;
     if (session.visitorId !== body.visitorId) return NextResponse.json({ error: "The visitor does not match the widget session.", code: "widget_visitor_mismatch" }, { status: 403 });
-    const rate = await enforceWidgetRateLimits({ businessId: session.businessId, widgetKeyId: session.widgetKeyId, visitorId: body.visitorId, ...(requestIpHash(request) ? { ipHash: requestIpHash(request) } : {}), operation: "chat" }, { consume: true });
+    const rate = await enforceWidgetRateLimits({ businessId: session.businessId, widgetKeyId: session.widgetKeyId, visitorId: body.visitorId, ...(requestIpHash(request) ? { ipHash: requestIpHash(request) } : {}), operation: "chat" });
     if (!rate.allowed) {
       return NextResponse.json({ error: "Chat rate limit reached.", code: rate.code }, { status: rate.status });
     }

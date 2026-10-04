@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { buildWebVoiceRateLimits, enforceWebVoiceRateLimits, type WebVoiceLimitStore } from "./web-voice-policy";
+const redis = vi.hoisted(() => ({ eval: vi.fn() }));
+vi.mock("./redis", () => ({ readyRedis: async () => redis, closeRedis: vi.fn() }));
+
+import { buildWebVoiceRateLimits, enforceWebVoiceRateLimits } from "./web-voice-policy";
 
 describe("web voice policy", () => {
   it("builds all normal tenant abuse dimensions", () => {
@@ -18,7 +21,7 @@ describe("web voice policy", () => {
   });
 
   it("preserves the higher verified dashboard test-call quotas", () => {
-    const limits = buildWebVoiceRateLimits({ businessId: "business", origin: "https://example.test", ipHash: "ip", visitorId: "visitor", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true });
+    const limits = buildWebVoiceRateLimits({ businessId: "business", origin: "https://example.test", ipHash: "ip", visitorId: "visitor", dashboardTestCall: true });
     expect(limits.map((entry) => [entry.name, entry.limit])).toEqual([
       ["dashboard-ip-hour", 30],
       ["dashboard-ip-day", 100],
@@ -32,8 +35,8 @@ describe("web voice policy", () => {
   });
 
   it("reports the blocked dimension without exposing its key", async () => {
-    const store: WebVoiceLimitStore = { evaluate: vi.fn().mockResolvedValue(2) };
-    await expect(enforceWebVoiceRateLimits({ businessId: "business", origin: "https://example.test", ipHash: "ip" }, { consume: true, store })).resolves.toEqual({
+    redis.eval.mockResolvedValueOnce(2);
+    await expect(enforceWebVoiceRateLimits({ businessId: "business", origin: "https://example.test", ipHash: "ip" })).resolves.toEqual({
       allowed: false,
       status: 429,
       code: "web_voice_rate_limited",
@@ -49,8 +52,8 @@ describe("web voice policy", () => {
   });
 
   it("rejects demos without a visitor or IP identity", async () => {
-    const store: WebVoiceLimitStore = { evaluate: vi.fn() };
-    await expect(enforceWebVoiceRateLimits({ businessId: "business", origin: "https://example.test", prospectDemoId: "demo" }, { consume: false, store })).resolves.toEqual(expect.objectContaining({ allowed: false, status: 429 }));
-    expect(store.evaluate).not.toHaveBeenCalled();
+    redis.eval.mockClear();
+    await expect(enforceWebVoiceRateLimits({ businessId: "business", origin: "https://example.test", prospectDemoId: "demo" })).resolves.toEqual(expect.objectContaining({ allowed: false, status: 429 }));
+    expect(redis.eval).not.toHaveBeenCalled();
   });
 });

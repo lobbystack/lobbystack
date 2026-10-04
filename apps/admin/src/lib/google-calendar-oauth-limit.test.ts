@@ -1,8 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { buildCalendarOAuthRateLimits, enforceCalendarOAuthRateLimits, type CalendarOAuthLimitStore } from "./google-calendar-oauth-limit";
+const redis = vi.hoisted(() => ({ eval: vi.fn() }));
+const readyRedis = vi.hoisted(() => vi.fn());
+vi.mock("./redis", () => ({ readyRedis }));
 
-afterEach(() => vi.unstubAllEnvs());
+import { buildCalendarOAuthRateLimits, enforceCalendarOAuthRateLimits } from "./google-calendar-oauth-limit";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  readyRedis.mockReset();
+});
 
 describe("Google Calendar OAuth rate limits", () => {
   it("bounds the authenticated start flow by operator, business, and trusted IP", () => {
@@ -36,19 +43,20 @@ describe("Google Calendar OAuth rate limits", () => {
   });
 
   it("reports the blocked dimension without exposing its key", async () => {
-    const store: CalendarOAuthLimitStore = { evaluate: vi.fn().mockResolvedValue(2) };
+    readyRedis.mockResolvedValue(redis);
+    redis.eval.mockResolvedValueOnce(2);
     await expect(enforceCalendarOAuthRateLimits(
       { operation: "start", userId: "user", businessId: "business", ip: "203.0.113.10" },
-      { consume: true, store },
     )).resolves.toEqual({ allowed: false, status: 429, code: "calendar_oauth_rate_limited", reason: "rate_limit_user_hour" });
-    expect(store.evaluate).toHaveBeenCalledWith(expect.any(Array), true);
+    expect(redis.eval).toHaveBeenCalledWith(expect.any(String), 3, expect.any(String), expect.any(String), expect.any(String), "30", "3601", "20", "3601", "60", "3601");
   });
 
   it("fails closed in production when the store is unavailable", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("REDIS_URL", "");
-    const unavailable: CalendarOAuthLimitStore = { evaluate: vi.fn().mockRejectedValue(new Error("offline")) };
-    await expect(enforceCalendarOAuthRateLimits({ operation: "callback" }, { consume: true, store: unavailable })).resolves.toEqual({
+    vi.stubEnv("REDIS_URL", "redis://redis.test:6379");
+    readyRedis.mockRejectedValue(new Error("offline"));
+    await expect(enforceCalendarOAuthRateLimits({ operation: "callback" })).resolves.toEqual({
       allowed: false,
       status: 503,
       code: "calendar_oauth_rate_limit_unavailable",
@@ -59,7 +67,8 @@ describe("Google Calendar OAuth rate limits", () => {
   it("fails closed in production when Redis is not configured", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("REDIS_URL", "");
-    await expect(enforceCalendarOAuthRateLimits({ operation: "start", userId: "user", businessId: "business" }, { consume: true })).resolves.toEqual({
+    readyRedis.mockResolvedValue(undefined);
+    await expect(enforceCalendarOAuthRateLimits({ operation: "start", userId: "user", businessId: "business" })).resolves.toEqual({
       allowed: false,
       status: 503,
       code: "calendar_oauth_rate_limit_unavailable",
@@ -70,7 +79,7 @@ describe("Google Calendar OAuth rate limits", () => {
   it("allows the flow in development when Redis is not configured", async () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("REDIS_URL", "");
-    const unavailable: CalendarOAuthLimitStore = { evaluate: vi.fn().mockRejectedValue(new Error("offline")) };
-    await expect(enforceCalendarOAuthRateLimits({ operation: "callback" }, { consume: true, store: unavailable })).resolves.toEqual({ allowed: true });
+    readyRedis.mockResolvedValue(undefined);
+    await expect(enforceCalendarOAuthRateLimits({ operation: "callback" })).resolves.toEqual({ allowed: true });
   });
 });

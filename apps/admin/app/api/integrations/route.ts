@@ -3,19 +3,17 @@ import { NextResponse } from "next/server";
 
 import { billingAccounts, phoneNumbers } from "@lobbystack/db";
 import { assignCalendarStaff, discoverCalendars, disconnectCalendar, listCalendarConnections, listCalendarStaff, refreshCalendar, resolveCalendarAccessToken, selectCalendar } from "@lobbystack/domain";
-import { GoogleCalendarProvider, SecretBox } from "@lobbystack/providers";
+import { SecretBox } from "@lobbystack/providers";
 import { asApiResponse, businessIdFromRequest, readJson, requireApiSession, withOperatorTransaction } from "@/lib/api-helpers";
 import { createDomainContext, createWorkerDomainContext } from "@/lib/domain-context";
+import { googleCalendarProvider } from "@/lib/google-calendar-provider";
 
 export const dynamic = "force-dynamic";
 
 async function calendarDiscovery(userId: string, businessId: string, connectionId: string) {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
   const encryptionKey = process.env.ENCRYPTION_KEY;
-  if (!clientId || !clientSecret || !redirectUri || !encryptionKey) throw new Error("Google Calendar discovery is not configured.");
-  const provider = new GoogleCalendarProvider({ clientId, clientSecret, redirectUri });
+  if (!encryptionKey) throw new Error("Google Calendar discovery is not configured.");
+  const provider = googleCalendarProvider();
   const box = new SecretBox(encryptionKey);
   return await discoverCalendars(createDomainContext(), {
     userId, businessId, connectionId,

@@ -1,6 +1,6 @@
-import Redis from "ioredis";
-
 import { PUBLIC_API_DEFAULT_RATE_LIMIT_PER_MINUTE } from "@lobbystack/shared";
+
+import { getRedis, waitForRedis } from "../redis";
 
 // Fixed one-minute windows per API key in Redis. The window resets on the
 // minute, which is what X-RateLimit-Reset and Retry-After report.
@@ -35,18 +35,12 @@ export async function checkApiRateLimit(store: RateLimitStore, input: { apiKeyId
   }
 }
 
-let redis: Redis | undefined;
-
 function redisStore(): RateLimitStore | undefined {
-  const url = process.env.REDIS_URL;
-  if (!url) return undefined;
-  if (!redis) {
-    redis = new Redis(url, { connectionName: `${process.env.REDIS_PREFIX ?? "lobbystack"}:public-api`, connectTimeout: 2_000, maxRetriesPerRequest: 1, enableOfflineQueue: true, lazyConnect: false });
-    redis.on("error", () => undefined);
-  }
-  const client = redis;
+  const client = getRedis();
+  if (!client) return undefined;
   return {
     async increment(key, ttlSeconds) {
+      await waitForRedis(client);
       const [[incrementError, count] = [null, 0], [expireError] = [null]] = (await client.multi().incr(key).expire(key, ttlSeconds).exec()) ?? [];
       if (incrementError || expireError) throw incrementError ?? expireError;
       return Number(count);
