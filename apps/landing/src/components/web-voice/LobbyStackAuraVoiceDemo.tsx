@@ -1,43 +1,17 @@
-import { ArrowRight, Mic, Phone, PhoneOff } from "lucide-react"
+import { ArrowRight, Phone, PhoneOff } from "lucide-react"
+import {
+  AuraVoiceOrb,
+  useWebVoiceCall,
+  type WebVoiceCallEvent,
+  type WebVoiceErrorKey,
+  type WebVoiceWidgetStatus,
+} from "@lobbystack/web-voice"
 
 import { Button, buttonVariants } from "@/components/ui/button"
 import { appSignupUrl } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
 import type { Locale } from "@/i18n"
-import {
-  useWebVoiceCall,
-  webVoiceStatusLabels,
-  type WebVoiceWidgetStatus,
-} from "@/components/web-voice/useWebVoiceCall"
-import { useEffect, useRef } from "react"
 
-// ------------------------------------------------------------------
-// Simple 1D noise for organic distortion
-// ------------------------------------------------------------------
-function makeNoise() {
-  const size = 256
-  const p = Array.from({ length: size }, (_, i) => i)
-  for (let i = size - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[p[i], p[j]] = [p[j], p[i]]
-  }
-  return { p, size }
-}
-
-const noise = makeNoise()
-
-function noise1D(x: number): number {
-  const X = Math.floor(x) & (noise.size - 1)
-  const xf = x - Math.floor(x)
-  const u = xf * xf * (3 - 2 * xf)
-  const a = noise.p[X]
-  const b = noise.p[(X + 1) & (noise.size - 1)]
-  return a + u * (b - a)
-}
-
-// ------------------------------------------------------------------
-// Component
-// ------------------------------------------------------------------
 type LobbyStackAuraVoiceDemoProps = {
   locale?: Locale
   businessSlug: string
@@ -142,6 +116,97 @@ function getButtonLabel(
   return labels.idle
 }
 
+const statusLabels: Record<Locale, Record<WebVoiceWidgetStatus, string>> = {
+  en: {
+    idle: "Ready when you are",
+    requesting_microphone: "Asking for microphone access",
+    connecting: "Connecting to the AI receptionist",
+    connected: "Live with the AI receptionist",
+    ending: "Ending the call",
+    ended: "Call ended",
+    error: "Could not start the call",
+  },
+  fr: {
+    idle: "Prêt pour votre appel",
+    requesting_microphone: "Autorisez l’accès au microphone",
+    connecting: "Connexion au réceptionniste IA",
+    connected: "En ligne avec le réceptionniste IA",
+    ending: "Fin de l’appel",
+    ended: "Appel terminé",
+    error: "Impossible de démarrer l’appel",
+  },
+  es: {
+    idle: "Lista cuando usted quiera",
+    requesting_microphone: "Solicitando acceso al micrófono",
+    connecting: "Conectando con la recepcionista con IA",
+    connected: "En línea con la recepcionista con IA",
+    ending: "Finalizando la llamada",
+    ended: "Llamada finalizada",
+    error: "No se pudo iniciar la llamada",
+  },
+  sr: {
+    idle: "Spremno kad i Vi",
+    requesting_microphone: "Tražimo pristup mikrofonu",
+    connecting: "Povezivanje sa AI recepcionerom",
+    connected: "Uživo sa AI recepcionerom",
+    ending: "Završavanje poziva",
+    ended: "Poziv je završen",
+    error: "Poziv nije mogao da počne",
+  },
+}
+
+// Errors without their own line here show the generic one.
+const errorCopy: Record<
+  Locale,
+  Partial<Record<WebVoiceErrorKey, string>> & { generic: string }
+> = {
+  en: {
+    microphoneBlocked: "Microphone access was blocked.",
+    microphoneNotFound: "No microphone was found on this device.",
+    microphoneInUse: "The microphone is already in use by another app.",
+    gatewayTimeout: "The call took too long to connect.",
+    gatewayUnreachable: "This page can't reach LobbyStack to start the call.",
+    connectionDropped: "The voice connection dropped.",
+    browserNoMicrophone: "This browser does not support microphone calls.",
+    browserNoWebRtc: "This browser does not support live voice calls.",
+    unavailable: "The AI receptionist is unavailable right now.",
+    generic: "Something went wrong while starting the call.",
+  },
+  fr: {
+    microphoneBlocked: "Autorisez l’accès au microphone dans votre navigateur.",
+    microphoneNotFound: "Branchez un microphone pour continuer.",
+    microphoneInUse: "Fermez l’autre application qui utilise le microphone.",
+    connectionDropped: "La connexion vocale a été interrompue.",
+    generic: "Impossible de démarrer l’appel. Réessayez.",
+  },
+  es: {
+    microphoneBlocked: "Permita el acceso al micrófono en su navegador.",
+    microphoneNotFound: "Conecte un micrófono para continuar.",
+    microphoneInUse: "Cierre la otra aplicación que está usando el micrófono.",
+    gatewayTimeout: "La llamada tardó demasiado en conectarse.",
+    gatewayUnreachable:
+      "Esta página no puede conectar con LobbyStack para iniciar la llamada.",
+    connectionDropped: "Se cortó la conexión de voz.",
+    generic: "No se pudo iniciar la llamada. Inténtelo de nuevo.",
+  },
+  sr: {
+    microphoneBlocked: "Dozvolite pristup mikrofonu u pregledaču.",
+    microphoneNotFound: "Povežite mikrofon da biste nastavili.",
+    microphoneInUse: "Zatvorite drugu aplikaciju koja koristi mikrofon.",
+    gatewayTimeout: "Povezivanje poziva je trajalo predugo.",
+    gatewayUnreachable:
+      "Stranica ne može da se poveže sa LobbyStack servisom da bi započela poziv.",
+    connectionDropped: "Glasovna veza je prekinuta.",
+    generic: "Poziv nije mogao da počne. Pokušajte ponovo.",
+  },
+}
+
+function landingEventName(event: WebVoiceCallEvent) {
+  return event === "session_created"
+    ? "landing.web_voice_session_created"
+    : `landing.web_voice_call_${event}`
+}
+
 export function LobbyStackAuraVoiceDemo({
   locale = "en",
   businessSlug,
@@ -149,356 +214,32 @@ export function LobbyStackAuraVoiceDemo({
   widgetId,
   onEvent,
 }: LobbyStackAuraVoiceDemoProps) {
-  const {
-    status,
-    muted,
-    errorMessage,
-    remoteAudioRef,
-    remoteStream,
-    startCall,
-    endCall,
-    isCallActive,
-    isBusy,
-  } = useWebVoiceCall({
-    locale,
+  const call = useWebVoiceCall({
     businessSlug,
     endpoint,
-    widgetId,
-    onEvent,
+    ...(widgetId ? { widgetId } : {}),
+    ...(onEvent
+      ? {
+          onEvent: (event, properties) =>
+            onEvent(landingEventName(event), properties),
+        }
+      : {}),
   })
-
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const wrapRef = useRef<HTMLDivElement | null>(null)
-  const rafRef = useRef<number | undefined>(undefined)
-  const idleTimerRef = useRef<number | undefined>(undefined)
-  const sizeRef = useRef({ width: 0, height: 0 })
-  const visibleRef = useRef(true)
-  const isActiveRef = useRef(false)
-  const analyserRef = useRef<AnalyserNode | null>(null)
-  const audioDataRef = useRef<Uint8Array<ArrayBuffer> | null>(null)
-  const audioLevelRef = useRef(0)
-  const animTimeRef = useRef(0)
-  const lastFrameTimeRef = useRef<number | undefined>(undefined)
-
-  const isListening = status === "connected" || status === "connecting"
-  const isActive = isListening
-
-  // Keep ref in sync so the animation loop reads latest state
-  useEffect(() => {
-    isActiveRef.current = isActive
-  }, [isActive])
-
-  useEffect(() => {
-    if (!remoteStream) {
-      analyserRef.current = null
-      audioDataRef.current = null
-      audioLevelRef.current = 0
-      return
-    }
-
-    const audioContext = new AudioContext()
-    const source = audioContext.createMediaStreamSource(remoteStream)
-    const analyser = audioContext.createAnalyser()
-
-    analyser.fftSize = 1024
-    analyser.smoothingTimeConstant = 0.72
-    source.connect(analyser)
-    analyserRef.current = analyser
-    audioDataRef.current = new Uint8Array(analyser.frequencyBinCount)
-
-    void audioContext.resume().catch(() => undefined)
-
-    return () => {
-      source.disconnect()
-      analyser.disconnect()
-      analyserRef.current = null
-      audioDataRef.current = null
-      audioLevelRef.current = 0
-      void audioContext.close().catch(() => undefined)
-    }
-  }, [remoteStream])
-
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      return
-    }
-
-    const canvas = canvasRef.current
-    const wrap = wrapRef.current
-    if (!canvas || !wrap) return
-
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-
-    const updateSize = () => {
-      const rect = wrap.getBoundingClientRect()
-      sizeRef.current = {
-        width: Math.round(rect.width),
-        height: Math.round(rect.height),
-      }
-    }
-
-    updateSize()
-
-    const resizeObserver = new ResizeObserver(updateSize)
-    resizeObserver.observe(wrap)
-
-    const intersectionObserver = new IntersectionObserver(([entry]) => {
-      visibleRef.current = entry?.isIntersecting ?? true
-    })
-    intersectionObserver.observe(wrap)
-
-    const scheduleNextFrame = () => {
-      const delay = visibleRef.current ? 0 : 1000
-
-      if (delay === 0) {
-        rafRef.current = requestAnimationFrame(draw)
-        return
-      }
-
-      idleTimerRef.current = window.setTimeout(() => {
-        lastFrameTimeRef.current = undefined
-        rafRef.current = requestAnimationFrame(draw)
-      }, delay)
-    }
-
-    function draw(time: number) {
-      const active = isActiveRef.current
-      const analyser = analyserRef.current
-      const audioData = audioDataRef.current
-      const c = canvas!
-      const cx = c.getContext("2d")!
-
-      if (analyser && audioData) {
-        analyser.getByteTimeDomainData(audioData)
-        let sum = 0
-
-        for (let i = 0; i < audioData.length; i++) {
-          const centered = (audioData[i] - 128) / 128
-          sum += centered * centered
-        }
-
-        const rms = Math.sqrt(sum / audioData.length)
-        const targetLevel = Math.min(1, Math.max(0, (rms - 0.018) * 4))
-        const previousLevel = audioLevelRef.current
-        const smoothing = targetLevel > previousLevel ? 0.18 : 0.06
-        audioLevelRef.current =
-          previousLevel + (targetLevel - previousLevel) * smoothing
-      } else {
-        audioLevelRef.current *= 0.9
-      }
-
-      const voiceLevel = Math.pow(audioLevelRef.current, 0.85)
-
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
-      const { width, height } = sizeRef.current
-
-      if (width === 0 || height === 0) {
-        scheduleNextFrame()
-        return
-      }
-
-      if (
-        c.width !== Math.round(width * dpr) ||
-        c.height !== Math.round(height * dpr)
-      ) {
-        c.width = Math.round(width * dpr)
-        c.height = Math.round(height * dpr)
-      }
-      cx.setTransform(dpr, 0, 0, dpr, 0, 0)
-
-      const centerX = width / 2
-      const centerY = height / 2
-      const baseRadius = Math.min(width, height) / 2
-
-      // Use additive-like blending for glow
-      cx.globalCompositeOperation = "source-over"
-      cx.clearRect(0, 0, width, height)
-      cx.globalCompositeOperation = "lighter"
-
-      const rawDt =
-        lastFrameTimeRef.current === undefined
-          ? 0
-          : (time - lastFrameTimeRef.current) * 0.001
-      lastFrameTimeRef.current = time
-      const dt = Math.min(rawDt, 1 / 30)
-      animTimeRef.current += dt
-      const t = animTimeRef.current
-      const pulseSpeed = active ? 1.1 + voiceLevel * 0.9 : 0.7
-
-      // Number of aura layers
-      const layers = active ? 5 : 4
-
-      for (let layer = 0; layer < layers; layer++) {
-        const layerOffset = layer * 1.7
-        const phase = t * pulseSpeed + layerOffset
-        const breathe = Math.sin(phase) * 0.5 + 0.5
-
-        const voiceExpansion = voiceLevel * 0.018
-        const innerR =
-          baseRadius * (0.18 + layer * 0.1 + breathe * 0.035 + voiceExpansion)
-        const outerR =
-          baseRadius * (0.28 + layer * 0.12 + breathe * 0.05 + voiceExpansion)
-
-        // Keep the outline organic but stable; voice should breathe the aura, not deform it.
-        const distortion = active ? 8 : 6
-        const points = 120
-        cx.beginPath()
-
-        for (let i = 0; i <= points; i++) {
-          const angle = (i / points) * Math.PI * 2
-          const n = noise1D(angle * 3 + t * 0.5 + layer * 10) / noise.size
-          const r = innerR + (outerR - innerR) * (0.5 + n * 0.5)
-          const dx =
-            Math.cos(angle) * (r + Math.sin(angle * 5 + t + layer) * distortion)
-          const dy =
-            Math.sin(angle) * (r + Math.cos(angle * 5 + t + layer) * distortion)
-
-          if (i === 0) {
-            cx.moveTo(centerX + dx, centerY + dy)
-          } else {
-            cx.lineTo(centerX + dx, centerY + dy)
-          }
-        }
-
-        cx.closePath()
-
-        // Black aura gradient, opacity varies with energy and layer depth
-        const baseOpacity = active ? 0.11 - layer * 0.014 : 0.1 - layer * 0.012
-        const opacityPulse =
-          baseOpacity + (active ? breathe * 0.03 + voiceLevel * 0.045 : 0)
-        const alpha = Math.max(0, opacityPulse)
-
-        const gradient = cx.createRadialGradient(
-          centerX,
-          centerY,
-          innerR * 0.5,
-          centerX,
-          centerY,
-          outerR * 1.2
-        )
-        gradient.addColorStop(0, `rgba(0,0,0,${alpha * 0.3})`)
-        gradient.addColorStop(0.4, `rgba(0,0,0,${alpha * 0.8})`)
-        gradient.addColorStop(0.7, `rgba(0,0,0,${alpha * 0.5})`)
-        gradient.addColorStop(1, `rgba(0,0,0,0)`)
-
-        cx.fillStyle = gradient
-        cx.fill()
-
-        // Thin stroke ring for structure
-        const strokeAlpha = active
-          ? 0.07 + breathe * 0.025 + voiceLevel * 0.025
-          : 0.06
-        cx.strokeStyle = `rgba(0,0,0,${strokeAlpha})`
-        cx.lineWidth = 1
-        cx.stroke()
-      }
-
-      // Central glow pulse
-      const glowRadius =
-        baseRadius *
-        (0.15 + (active ? Math.sin(t * 3) * 0.018 + voiceLevel * 0.03 : 0))
-      const glowGrad = cx.createRadialGradient(
-        centerX,
-        centerY,
-        0,
-        centerX,
-        centerY,
-        glowRadius * 2
-      )
-      const glowAlpha = active
-        ? 0.05 + Math.sin(t * 2.5) * 0.018 + voiceLevel * 0.045
-        : 0.05
-      glowGrad.addColorStop(0, `rgba(0,0,0,${glowAlpha})`)
-      glowGrad.addColorStop(0.5, `rgba(0,0,0,${glowAlpha * 0.5})`)
-      glowGrad.addColorStop(1, "rgba(0,0,0,0)")
-      cx.fillStyle = glowGrad
-      cx.fillRect(0, 0, width, height)
-
-      // Reset composite for next frame
-      cx.globalCompositeOperation = "source-over"
-
-      scheduleNextFrame()
-    }
-
-    rafRef.current = requestAnimationFrame(draw)
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current)
-      if (idleTimerRef.current) window.clearTimeout(idleTimerRef.current)
-      resizeObserver.disconnect()
-      intersectionObserver.disconnect()
-    }
-  }, [])
+  const { status, muted, errorKey, startCall, endCall, isCallActive } = call
+  const errors = errorCopy[locale]
 
   return (
     <div className="mx-auto flex w-full min-w-0 flex-col items-center text-center">
-      <audio ref={remoteAudioRef} autoPlay playsInline />
-
-      <div
-        ref={wrapRef}
-        className={cn(
-          "relative flex aspect-square w-full items-center justify-center",
-          isBusy && "cursor-wait"
-        )}
+      <AuraVoiceOrb
+        call={call}
+        statusLabel={
+          errorKey
+            ? (errors[errorKey] ?? errors.generic)
+            : statusLabels[locale][status]
+        }
+        buttonLabel={getButtonLabel(status, muted, locale)}
+        pressMotion="subtle"
       >
-        {/* Canvas aura field */}
-        <canvas
-          ref={canvasRef}
-          className="pointer-events-none absolute inset-0 h-full w-full"
-          aria-hidden="true"
-        />
-
-        {/* Outer subtle ring */}
-        <div
-          className={cn(
-            "voice-aura-outer-ring pointer-events-none absolute rounded-full",
-            "transition-opacity duration-700",
-            isActive ? "voice-aura-outer-ring-active opacity-100" : "opacity-30"
-          )}
-        />
-
-        <p className="sr-only" role="status" aria-live="polite">
-          {errorMessage ?? webVoiceStatusLabels[locale][status]}
-        </p>
-
-        {/* Voice demo button, centered alone inside the aura */}
-        <button
-          type="button"
-          onClick={isCallActive ? endCall : startCall}
-          disabled={isBusy || status === "ending"}
-          aria-label={getButtonLabel(status, muted, locale)}
-          className={cn(
-            "voice-aura-button relative z-10 flex aspect-square w-36 items-center justify-center rounded-full",
-            "transition-[scale,opacity] duration-200 ease-(--ease-out)",
-            "cursor-pointer disabled:cursor-not-allowed disabled:opacity-40",
-            !isCallActive && !isBusy && "hover:scale-[1.03] active:scale-[0.97]",
-            isActive && "scale-105"
-          )}
-        >
-          {/* Top highlight */}
-          <div className="voice-aura-button-highlight absolute inset-[1px] rounded-full" />
-
-          {/* Active ring */}
-          {isActive && (
-            <span className="absolute inset-[-20px] animate-pulse rounded-full border border-foreground/15" />
-          )}
-
-          {/* Icon */}
-          {isActive ? (
-            <Mic
-              className="relative z-10 size-12 text-white"
-              strokeWidth={1.5}
-              aria-hidden="true"
-            />
-          ) : (
-            <Phone
-              className="relative z-10 size-12 text-white"
-              strokeWidth={1.5}
-              aria-hidden="true"
-            />
-          )}
-        </button>
-
         {/* Controls */}
         {status === "idle" || status === "error" ? (
           <div key="idle" className="swap-in absolute inset-x-0 top-1/2 z-20 mt-32 flex items-center justify-center">
@@ -559,7 +300,7 @@ export function LobbyStackAuraVoiceDemo({
             </a>
           </div>
         ) : null}
-      </div>
+      </AuraVoiceOrb>
     </div>
   )
 }

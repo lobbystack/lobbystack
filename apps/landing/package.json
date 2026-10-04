@@ -25,6 +25,7 @@
     "@jdevalk/astro-seo-graph": "^2.0.0",
     "@jdevalk/seo-graph-core": "^0.6.2",
     "@lobbystack/shared": "workspace:*",
+    "@lobbystack/web-voice": "workspace:*",
     "@tailwindcss/vite": "^4.2.4",
     "astro": "^7.2.8",
     "astro-pagefind": "^2.0.0",

@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { TelemetryEventName } from "@lobbystack/telemetry";
-
 export type WebVoiceWidgetStatus =
   | "idle"
   | "requesting_microphone"
@@ -14,18 +12,18 @@ export type WebVoiceWidgetStatus =
 /** Browser calls start here; the server records the call and connects it to GPT-Live. */
 export const LIVE_WEB_CALL_ENDPOINT = "/api/voice/live/session";
 
+/** Call lifecycle events. Each app maps them to its own telemetry event names. */
+export type WebVoiceCallEvent = "started" | "connected" | "ended" | "error" | "session_created";
+
 type UseWebVoiceCallOptions = {
   businessSlug: string;
-  /** Defaults to this app's session endpoint. */
+  /** Defaults to the app's same-origin session endpoint. */
   endpoint?: string;
   widgetId?: string;
   getStartPayload?: () => Promise<Record<string, string>>;
   /** Extra request headers, such as the widget's session token. */
   getHeaders?: () => Record<string, string>;
-  onEvent?: (
-    eventName: TelemetryEventName,
-    properties?: Record<string, unknown>,
-  ) => void;
+  onEvent?: (event: WebVoiceCallEvent, properties: Record<string, unknown>) => void;
 };
 
 export type WebVoiceErrorKey =
@@ -189,6 +187,8 @@ async function fetchWithTimeout(
  * audio, asks OpenAI to close the session when the caller hangs up, and
  * watches for the session closing when the receptionist hangs up.
  */
+export type WebVoiceCall = ReturnType<typeof useWebVoiceCall>;
+
 export function useWebVoiceCall({
   businessSlug,
   endpoint = LIVE_WEB_CALL_ENDPOINT,
@@ -206,6 +206,7 @@ export function useWebVoiceCall({
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const sessionRef = useRef<StartedSession | null>(null);
+  // Bumped when a call ends, so a start still in flight knows to stand down.
   const startCallAttemptRef = useRef(0);
   const disconnectTimerRef = useRef<number | undefined>(undefined);
   // Set while a call waits for session.closed after session.close; calling it finishes the close.
@@ -215,11 +216,8 @@ export function useWebVoiceCall({
     startCallAttemptRef.current += 1;
   };
 
-  const emit = (
-    eventName: TelemetryEventName,
-    properties?: Record<string, unknown>,
-  ) => {
-    onEvent?.(eventName, {
+  const emit = (event: WebVoiceCallEvent, properties?: Record<string, unknown>) => {
+    onEvent?.(event, {
       businessSlug,
       widgetId,
       ...properties,
@@ -304,7 +302,7 @@ export function useWebVoiceCall({
     }
     invalidatePendingStart();
     setStatus("ending");
-    emit("web.voice.test_call_ended", { endedBy: "caller" satisfies WebVoiceEndedBy });
+    emit("ended", { endedBy: "caller" satisfies WebVoiceEndedBy });
     closeGracefully(() => {
       cleanup();
       setStatus("ended");
@@ -326,7 +324,7 @@ export function useWebVoiceCall({
 
     invalidatePendingStart();
     setStatus("ending");
-    emit("web.voice.test_call_ended", { endedBy: "caller" satisfies WebVoiceEndedBy });
+    emit("ended", { endedBy: "caller" satisfies WebVoiceEndedBy });
     closeGracefully(() => {
       cleanup();
       setStatus("idle");
@@ -364,7 +362,7 @@ export function useWebVoiceCall({
 
     setErrorKey(null);
     setStatus("requesting_microphone");
-    emit("web.voice.test_call_started");
+    emit("started");
 
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
@@ -412,7 +410,7 @@ export function useWebVoiceCall({
         }
         setStatus("error");
         setErrorKey("connectionDropped");
-        emit("web.voice.test_call_error", properties);
+        emit("error", properties);
         endRemoteSession();
         cleanup();
       };
@@ -446,7 +444,7 @@ export function useWebVoiceCall({
         }
         cleanup();
         setStatus("ended");
-        emit("web.voice.test_call_ended", { endedBy: "agent" satisfies WebVoiceEndedBy });
+        emit("ended", { endedBy: "agent" satisfies WebVoiceEndedBy });
       };
 
       connection.ontrack = (event) => {
@@ -476,7 +474,7 @@ export function useWebVoiceCall({
           if (hasConnected) return;
           hasConnected = true;
           setStatus("connected");
-          emit("web.voice.test_call_connected");
+          emit("connected");
           return;
         }
         if (state === "disconnected") {
@@ -549,6 +547,7 @@ export function useWebVoiceCall({
         type: "answer",
         sdp: payload.sdp,
       });
+      emit("session_created", { sessionId: payload.sessionId });
     } catch (error) {
       if (attemptId !== startCallAttemptRef.current) {
         stopAttemptResources();
@@ -560,7 +559,7 @@ export function useWebVoiceCall({
       cleanup();
       setStatus("error");
       setErrorKey(getWebVoiceErrorKey(error));
-      emit("web.voice.test_call_error", {
+      emit("error", {
         reason: getErrorMessage(error),
       });
     }

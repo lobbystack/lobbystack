@@ -52,6 +52,7 @@ const nextConfig: NextConfig = {
     "@lobbystack/jobs",
     "@lobbystack/providers",
     "@lobbystack/shared",
+    "@lobbystack/web-voice",
   ],
   serverExternalPackages: process.env.NODE_ENV === "production"
     ? [

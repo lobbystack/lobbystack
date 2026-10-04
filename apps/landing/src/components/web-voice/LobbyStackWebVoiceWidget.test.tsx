@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { LobbyStackHeroVoiceDemo } from "@/components/web-voice/LobbyStackWebVoiceWidget"
-import { DISCONNECT_GRACE_MS } from "@/components/web-voice/useWebVoiceCall"
+import { DISCONNECT_GRACE_MS } from "@lobbystack/web-voice"
 
 // Drives the real hero voice demo (LobbyStackHeroVoiceDemo,
 // LobbyStackAuraVoiceDemo and useWebVoiceCall) with fake WebRTC, and checks

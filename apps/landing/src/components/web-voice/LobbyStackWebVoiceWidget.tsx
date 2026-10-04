@@ -1,4 +1,3 @@
-import { WebVoiceWidget } from "@/components/web-voice/WebVoiceWidget"
 import { LobbyStackAuraVoiceDemo } from "@/components/web-voice/LobbyStackAuraVoiceDemo"
 import { hasAnalyticsConsent } from "@/lib/cookie-consent"
 import type { Locale } from "@/i18n"
@@ -46,22 +45,6 @@ function getBusinessSlug() {
   }
 
   return DEFAULT_BUSINESS_SLUG
-}
-
-export function LobbyStackWebVoiceWidget({
-  locale = "en",
-}: {
-  locale?: Locale
-}) {
-  return (
-    <WebVoiceWidget
-      locale={locale}
-      businessSlug={getBusinessSlug()}
-      endpoint={getEndpoint()}
-      widgetId="lobbystack-landing"
-      onEvent={capturePosthog}
-    />
-  )
 }
 
 export function LobbyStackHeroVoiceDemo({

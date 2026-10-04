@@ -3,6 +3,7 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource/geist-sans/latin.css";
 @import "@fontsource-variable/geist";
+@source "../../../packages/web-voice/src";
 
 @custom-variant dark (&:is(.dark *));
 

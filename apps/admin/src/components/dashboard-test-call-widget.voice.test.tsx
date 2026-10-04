@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DashboardTestCallWidget } from "./dashboard-test-call-widget";
-import { DISCONNECT_GRACE_MS } from "@/components/web-voice/useWebVoiceCall";
+import { DISCONNECT_GRACE_MS } from "@lobbystack/web-voice";
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
 // Drives the real dashboard test call (widget, AuraVoiceDemo and

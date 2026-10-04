@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { renderSafeMarkdown } from "@/lib/widget-markdown";
-import { useWebVoiceCall } from "@/components/web-voice/useWebVoiceCall";
+import { useWebVoiceCall } from "@lobbystack/web-voice";
 
 type WidgetConfigPayload = {
   key: string;
