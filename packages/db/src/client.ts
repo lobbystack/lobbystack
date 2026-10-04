@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 import { sql } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool, type PoolConfig } from "pg";
@@ -90,27 +88,12 @@ export function createDatabaseClient(
   return { pool, db, role };
 }
 
-export function createDatabaseClients(
-  source: Record<string, string | undefined> = process.env,
-): Record<DatabaseRole, DatabaseClient> {
-  return {
-    lobbystack_migrator: createDatabaseClient("lobbystack_migrator", source),
-    lobbystack_auth: createDatabaseClient("lobbystack_auth", source),
-    lobbystack_app: createDatabaseClient("lobbystack_app", source),
-    lobbystack_worker: createDatabaseClient("lobbystack_worker", source),
-    lobbystack_dispatcher: createDatabaseClient("lobbystack_dispatcher", source),
-    lobbystack_readonly: createDatabaseClient("lobbystack_readonly", source),
-    lobbystack_finance_export: createDatabaseClient("lobbystack_finance_export", source),
-  };
-}
-
 export async function withBusinessTransaction<T>(
   db: Database,
   context: RlsContext,
   callback: (tx: DatabaseTransaction) => Promise<T>,
-  options: { maxRetries?: number } = {},
 ): Promise<T> {
-  const maxRetries = options.maxRetries ?? 3;
+  const maxRetries = 3;
   const tracer = getTracer("lobbystack-db");
 
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
@@ -203,12 +186,4 @@ export async function databaseHealthCheck(client: DatabaseClient): Promise<{
     span.end();
     return { ok: false, latencyMs: Date.now() - startedAt, role: client.role };
   }
-}
-
-export async function closeDatabaseClients(clients: Record<DatabaseRole, DatabaseClient>): Promise<void> {
-  await Promise.all(Object.values(clients).map((client) => client.pool.end()));
-}
-
-export function newRequestId(): string {
-  return randomUUID();
 }
