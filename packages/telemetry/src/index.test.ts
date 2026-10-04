@@ -169,7 +169,7 @@ describe("telemetry redaction", () => {
     });
   });
 
-  it("classifies handled Convex rejections as expected", () => {
+  it("classifies handled application rejections as expected", () => {
     expect(isExpectedApplicationFailure(new Error("InvalidSecret"))).toBe(true);
     expect(
       isExpectedApplicationFailure(

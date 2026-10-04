@@ -1,8 +1,17 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { mkdir, realpath } from "node:fs/promises";
+import { chmod, mkdir, open, realpath } from "node:fs/promises";
 import { resolve } from "node:path";
 import { chromium } from "playwright";
-import { writePrivateArtifact } from "./migration/production-snapshot-audit.ts";
+
+async function writePrivateArtifact(path: string, value: unknown): Promise<void> {
+  const handle = await open(path, "wx", 0o600);
+  try {
+    await handle.writeFile(`${JSON.stringify(value, null, 2)}\n`, "utf8");
+    await chmod(path, 0o600);
+  } finally {
+    await handle.close();
+  }
+}
 
 async function main(): Promise<void> {
   const base = new URL(process.env.PLAYWRIGHT_BASE_URL ?? "");

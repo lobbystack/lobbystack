@@ -113,8 +113,6 @@ jobs:
       - run: pnpm replacement:feedback
       - run: pnpm replacement:appointment-audits
       - run: pnpm replacement:unit-economics
-      - run: pnpm replacement:import-check
-      - run: pnpm replacement:reconciliation
       - run: pnpm replacement:phone-onboarding
       - run: pnpm replacement:call-detail
       - run: pnpm replacement:roles

@@ -544,7 +544,6 @@
         "alreadyExists": "Nalog sa tom imejl adresom već postoji.",
         "unchanged": "Unesite drugu imejl adresu.",
         "noEmail": "Za ovaj nalog još nije podešen imejl.",
-        "missingSiteUrl": "Potvrda imejla još nije podešena. Podesite SITE_URL na Convex okruženju i pokušajte ponovo.",
         "required": "Unesite novu imejl adresu.",
         "failed": "Nismo uspeli da pošaljemo link za potvrdu. Pokušajte ponovo."
       }

@@ -10,6 +10,6 @@ After restore, run `pnpm db:check`, `VERIFY_RLS_BEHAVIOR=true pnpm db:verify-rls
 
 Run `REPLACEMENT_COMPOSE_PROJECT=lobbystack_restore_drill CONFIRM_REPLACEMENT_RESTORE_DRILL=1 pnpm replacement:restore-drill` against a disposable stack. The drill deletes and restores a database row and a file from the active storage provider. It retains the backup under `.tmp/` for inspection.
 
-## Migration boundary
+## Restore limits
 
-This runbook recovers PostgreSQL and storage state. It is not a production traffic rollback: it does not restore legacy routing, provider endpoints, sessions, rejected webhooks, or in-flight calls and messages. Use [production migration rehearsal](../migrations/production-rehearsal.md) and [production readiness](../validation/production-readiness.md) for the separate traffic rollback boundary and required evidence.
+This runbook recovers PostgreSQL and storage state. It does not restore routing, provider endpoints, sessions, rejected webhooks, or in-flight calls and messages.

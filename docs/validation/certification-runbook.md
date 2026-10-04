@@ -4,7 +4,7 @@ Run certification against an isolated Compose or Railway staging environment and
 
 ## Run automated gates
 
-Run `pnpm typecheck`, `pnpm lint`, `pnpm build`, `pnpm test`, two consecutive `pnpm db:migrate` runs, `pnpm replacement:parity`, `pnpm replacement:drift`, `pnpm replacement:security`, `pnpm replacement:recovery`, `pnpm replacement:performance`, `pnpm replacement:auth`, `pnpm replacement:email-send`, `pnpm replacement:sms-consent`, `pnpm replacement:feedback`, `pnpm replacement:appointment-audits`, `pnpm replacement:unit-economics`, `pnpm replacement:notifications`, `pnpm replacement:billing`, `pnpm replacement:import-check`, `pnpm replacement:phone-onboarding`, `pnpm replacement:call-detail`, `pnpm replacement:roles`, `pnpm replacement:locale`, `pnpm replacement:smoke`, `pnpm replacement:storage`, `pnpm replacement:realtime`, `pnpm replacement:webhooks`, `pnpm replacement:telemetry`, `pnpm replacement:privacy`, and `VERIFY_RLS_BEHAVIOR=true pnpm db:verify-rls`. Run the authenticated Playwright suite from CI.
+Run `pnpm typecheck`, `pnpm lint`, `pnpm build`, `pnpm test`, two consecutive `pnpm db:migrate` runs, `pnpm replacement:parity`, `pnpm replacement:drift`, `pnpm replacement:security`, `pnpm replacement:recovery`, `pnpm replacement:performance`, `pnpm replacement:auth`, `pnpm replacement:email-send`, `pnpm replacement:sms-consent`, `pnpm replacement:feedback`, `pnpm replacement:appointment-audits`, `pnpm replacement:unit-economics`, `pnpm replacement:notifications`, `pnpm replacement:billing`, `pnpm replacement:phone-onboarding`, `pnpm replacement:call-detail`, `pnpm replacement:roles`, `pnpm replacement:locale`, `pnpm replacement:smoke`, `pnpm replacement:storage`, `pnpm replacement:realtime`, `pnpm replacement:webhooks`, `pnpm replacement:telemetry`, `pnpm replacement:privacy`, and `VERIFY_RLS_BEHAVIOR=true pnpm db:verify-rls`. Run the authenticated Playwright suite from CI.
 
 ## Isolated staging contract
 
@@ -38,20 +38,9 @@ For replay exclusions, confirm a consented workspace produces a recording, that 
 
 AI-generated SMS, AI-SMS add-on billing, and Twilio A2P registration are excluded. Before production alert or reminder SMS, retain evidence that the configured sender is independently compliant for the target countries and traffic type.
 
-## Rehearse migration and cutover
-
-Follow [production readiness](./production-readiness.md), the [current implementation validation report](./readiness-implementation-2026-09-12.md), and [production migration rehearsal](../migrations/production-rehearsal.md). Production migration and traffic cutover are not certified by this runbook.
-
-1. Run the two snapshot rehearsals only after their approval, isolation, provider, and legacy-freeze prerequisites are met.
-2. Run the audit-only `pnpm migration:preflight` command against each approved snapshot. It rejects apply, remains production-uncertified, and does not establish archive-to-unpacked provenance from a hash alone.
-3. Do not use the development-only curated importer with a production snapshot. A separate fail-closed production importer now exists (`scripts/migration/production-import.ts`, `pnpm migration:production-import`) with approval, maintenance, target-identity, policy, and plan-hash gates; it still requires review, a provisioned and approved target, and human approval before any apply.
-4. Run all automated gates and provider scenarios against isolated staging, including `pnpm release:check --staging`. This target is a disposable certification deployment, never a production snapshot database.
-5. Use `pnpm migration:reconcile` (`scripts/migration/target-reconciliation.ts`) for source-to-target reconciliation. It compiles the snapshot plan and compares every import table plus plan-generated tables, field values, foreign-key orphans, transformations, financial aggregates, derived presence, storage objects, operational state, and indexes; it is read-only and writes only a restricted evidence report. It still requires a migrated target and review; `pnpm replacement:reconciliation` remains a narrower legacy check.
-6. Run a state restore drill under [backup and restore](../operations/backup-restore.md), but do not record it as traffic rollback evidence. Traffic rollback needs its own approved and rehearsed routing, provider, session, and in-flight-event procedure.
-
 ## Apply the exit gate
 
-Certification passes only when RLS and pool-context isolation pass, telemetry contains no customer content, realtime p95 is below 500 ms, ordinary API p95 is below 500 ms excluding providers, voice context p95 is below 300 ms, webhook durable response p95 is below one second, outbox dispatch p95 is below two seconds, restore succeeds, critical alerts are tested, the approved migration reconciliation criteria have no unexplained differences, a traffic rollback rehearsal succeeds, required workflows have no Convex dependency, compliant SMS sender evidence is attached, and no critical defects remain. The production importer and reconciler now exist and pass against local disposable targets; production migration certification remains blocked on the isolated-staging run, provider and owner approvals, two approved clean-target rehearsals, the traffic rollback rehearsal, and production rollout approval.
+Certification passes only when RLS and pool-context isolation pass, telemetry contains no customer content, realtime p95 is below 500 ms, ordinary API p95 is below 500 ms excluding providers, voice context p95 is below 300 ms, webhook durable response p95 is below one second, outbox dispatch p95 is below two seconds, restore succeeds, critical alerts are tested, a traffic rollback rehearsal succeeds, compliant SMS sender evidence is attached, and no critical defects remain. The production importer and reconciler now exist and pass against local disposable targets; production migration certification remains blocked on the isolated-staging run, provider and owner approvals, two approved clean-target rehearsals, the traffic rollback rehearsal, and production rollout approval.
 
 ## Publish the platform-port articles
 

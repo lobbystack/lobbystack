@@ -59,4 +59,4 @@ Read-only Railway discovery confirmed an existing populated staging environment 
 5. Complete full authenticated/browser/provider/visual coverage, RLS certification against the test database, security scans, performance soak, alert drills, and Railway database-plus-bucket restore.
 6. Name operator/reviewer, agree RPO/RTO and the no-simple-rollback boundary (including webhook replay), and obtain production go/no-go approval.
 
-Follow [production readiness](./production-readiness.md) and [production rehearsal](../migrations/production-rehearsal.md). Keep `releaseCertified: false` until these gates have actual evidence.
+Follow [production readiness](./production-readiness.md) and the production rehearsal plan (since removed). Keep `releaseCertified: false` until these gates have actual evidence.

@@ -1,8 +1,8 @@
 # Provider event ingress, retry, and reconciliation plan
 
-This document satisfies the `Provider event plan` deliverable in [production readiness](../validation/production-readiness.md) (line 28) and the provider boundary in [production rehearsal](../migrations/production-rehearsal.md) (lines 72-75). It is a plan, not a certification. It requires explicit approval from each responsible provider owner before any production rehearsal or cutover. Until then `releaseCertified` remains `false` and the readiness item stays `BLOCKED`.
+This document satisfies the `Provider event plan` deliverable in [production readiness](../validation/production-readiness.md). It is a plan, not a certification. It requires explicit approval from each responsible provider owner before any production rehearsal or cutover. Until then `releaseCertified` remains `false` and the readiness item stays `BLOCKED`.
 
-There is no durable inbound provider-event buffer. Every handler below persists durable records only after signature validation and business resolution; a rejected request leaves no record and depends on the provider retrying. See [production rehearsal](../migrations/production-rehearsal.md) lines 72-73.
+There is no durable inbound provider-event buffer. Every handler below persists durable records only after signature validation and business resolution; a rejected request leaves no record and depends on the provider retrying.
 
 ## 1. Inbound callback inventory
 
@@ -38,19 +38,18 @@ Retry schedules below are the providers' documented behavior and must be confirm
 
 ## 3. Pause / drain / retry window plan
 
-Recommended ordering relative to the legacy write freeze and replacement maintenance mode:
+Recommended ordering relative to replacement maintenance mode:
 
 1. **Publish the window** and name the provider coordinator, reconciliation owner, and rollback authority (all `UNASSIGNED` until recorded).
 2. **Provider pause or retry allowance** (below), before any replacement maintenance.
-3. **Legacy write freeze** enforced and evidenced ([legacy write freeze](./legacy-write-freeze.md)).
-4. **Replacement maintenance mode** (`LOBBYSTACK_MAINTENANCE_MODE=true`, workers restarted) so admin webhooks are rejected before validation and gateway routes return/close `503` ([production rehearsal](../migrations/production-rehearsal.md):67-69; `apps/admin/proxy.ts:64`; `apps/voice-gateway/src/http/server.ts:42,85`).
-5. **Observation window** — at least one full provider retry cycle per provider, plus one business-hours period for Twilio Messaging. The owner sets the exact duration in the release record.
-6. **Cutover or return**, then replay/reconcile per §4.
+3. **Replacement maintenance mode** (`LOBBYSTACK_MAINTENANCE_MODE=true`, workers restarted) so admin webhooks are rejected before validation and gateway routes return/close `503` (`apps/admin/proxy.ts:64`; `apps/voice-gateway/src/http/server.ts:42,85`).
+4. **Observation window** — at least one full provider retry cycle per provider, plus one business-hours period for Twilio Messaging. The owner sets the exact duration in the release record.
+5. **Cutover or return**, then replay/reconcile per §4.
 
 Per provider:
 
 - **Polar** — pause the endpoint in Polar (disable delivery) rather than relying on retries, because Polar's retention window is finite. Accepted events remain in `provider_events` and can be replayed from the Polar dashboard after return. Observe `provider_events` for `provider='polar'`.
-- **Resend** — pause the endpoint in Svix; retries can also be triggered from the Svix dashboard. Observe `provider_events` for `provider='resend'`. If `RESEND_WEBHOOKS_ENABLED` is `false`, the harness removes the secret and the route returns `503` ([production readiness](../validation/production-readiness.md):70).
+- **Resend** — pause the endpoint in Svix; retries can also be triggered from the Svix dashboard. Observe `provider_events` for `provider='resend'`. If `RESEND_WEBHOOKS_ENABLED` is `false`, the harness removes the secret and the route returns `503` ([production readiness](../validation/production-readiness.md)).
 - **Twilio Messaging** — inbound SMS cannot be paused without changing the number's webhook URL. Either accept Twilio retries during maintenance (non-2xx) or temporarily point the messaging webhook at a controlled endpoint that records deliveries for replay. Confirm the retry window with the Twilio owner.
 - **Twilio Voice** — inbound calls cannot be paused by the application. Route the number to legacy or to a controlled greeting before maintenance if calls must be preserved; otherwise calls during maintenance fail. Voice status/action callbacks are accepted only after maintenance ends.
 - **Twilio Media Streams** — drain only: allow active calls to finish and stop admitting new inbound calls. Upgrades are not replayable.

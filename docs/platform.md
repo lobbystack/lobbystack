@@ -1,6 +1,6 @@
 # Run the LobbyStack platform
 
-The canonical stack provides a Next.js admin/backend, a worker that also runs GPT-Live calls, PostgreSQL with RLS, Redis/BullMQ, and shared local storage. You can enable the MinIO profile when you need S3-compatible storage. Convex remains relevant only as the production migration source until cutover and rollback are complete.
+The canonical stack provides a Next.js admin/backend, a worker that also runs GPT-Live calls, PostgreSQL with RLS, Redis/BullMQ, and shared local storage. You can enable the MinIO profile when you need S3-compatible storage.
 
 ## Run the local stack
 
@@ -50,7 +50,6 @@ Run these checks against the healthy Compose stack:
 - `pnpm replacement:notifications` proves operator preference persistence, cross-tenant denial, durable outbox-backed delivery, duplicate event safety, production-source delivery for voice messages, customer SMS, failed SMS, calendar sync failures, and transfer failures, plus idempotent timezone-aware daily summaries.
 - `pnpm replacement:billing` verifies multi-kind usage, retries, annual accounting, plan snapshots, concurrent reservations, authorization, cap removal, completeness, and shared Starter/Pro overage caps.
 - `pnpm replacement:feedback`, `pnpm replacement:appointment-audits`, and `pnpm replacement:unit-economics` certify the remaining restored backend capabilities.
-- `pnpm replacement:import-check` imports a representative legacy fixture bundle twice and checks its declared row counts, relationships, aggregates, and samples. It is fixture coverage, not production source-to-target reconciliation.
 - `pnpm replacement:phone-onboarding` proves durable verification, signed number offers, idempotent onboarding and replacement claims, purchase-before-retirement replacement, the 30-day retirement window, provider-SID-safe reclaim, cooldown enforcement, approval, and verified-phone reuse.
 - `VERIFY_RLS_BEHAVIOR=true pnpm db:verify-rls` verifies forced RLS, tenant isolation, and database actor-role spoofing protection.
 
@@ -70,9 +69,7 @@ Railway runs separate `admin`, `worker`, `postgres`, `redis`, and bucket service
 
 Build runtime images with `SERVICE_VERSION` set to the deployed Git SHA. Configure telemetry retention and sampling in the OTLP backend.
 
-Production traffic cutover, DNS changes, and Convex shutdown remain operator-controlled actions. The development importer and selected reconciliation checks do not authorize production snapshot import or source-to-target reconciliation. Follow `docs/validation/production-readiness.md` and `docs/migrations/production-rehearsal.md`; production migration remains blocked until the missing controls are implemented and rehearsed.
-
-The replacement stack implements non-AI usage metering for voice seconds, alert/reminder SMS segments, and outbound transfer attempts, including shared overage caps for Starter and Pro. Dashboard feedback delivery and appointment-change audit events are persisted through PostgreSQL and the transactional outbox. The existing import and reconciliation commands are development and fixture tooling; they are not a production importer or source-to-target reconciliation implementation.
+The replacement stack implements non-AI usage metering for voice seconds, alert/reminder SMS segments, and outbound transfer attempts, including shared overage caps for Starter and Pro. Dashboard feedback delivery and appointment-change audit events are persisted through PostgreSQL and the transactional outbox.
 
 Configure separate Polar meter IDs with `POLAR_VOICE_USAGE_METER_ID`, `POLAR_ALERT_SMS_USAGE_METER_ID`, and `POLAR_OUTBOUND_ATTEMPTS_USAGE_METER_ID`. `POLAR_USAGE_METER_ID` remains a fallback for existing deployments.
 

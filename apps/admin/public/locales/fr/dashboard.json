@@ -105,8 +105,7 @@
       }
     },
     "chart": {
-      "title": "Appels par mois",
-      "description": "Volume mensuel d'appels à partir de vos enregistrements Convex."
+      "title": "Appels par mois"
     },
     "recentCalls": {
       "title": "Appels récents",
