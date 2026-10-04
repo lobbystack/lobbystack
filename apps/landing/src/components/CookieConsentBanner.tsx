@@ -15,7 +15,7 @@ import {
   readCookieConsent,
   writeCookieConsent,
 } from "@/lib/cookie-consent"
-import { localizePath, type Locale } from "@/lib/i18n"
+import { localizePath, type Locale } from "@/i18n"
 
 const bannerCopy = {
   en: {

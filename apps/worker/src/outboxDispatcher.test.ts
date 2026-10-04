@@ -79,7 +79,6 @@ describe("OutboxDispatcher", () => {
   });
 
   it("retries polling after a transient database failure", async () => {
-    vi.useFakeTimers();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const abort = new AbortController();
     mocks.claimOutboxBatch
@@ -91,7 +90,6 @@ describe("OutboxDispatcher", () => {
 
     const dispatcher = new OutboxDispatcher({} as Database, new Map());
     const run = dispatcher.run(abort.signal);
-    await vi.advanceTimersByTimeAsync(250);
     await run;
 
     expect(mocks.claimOutboxBatch).toHaveBeenCalledTimes(2);

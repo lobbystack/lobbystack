@@ -10,18 +10,13 @@ export default defineConfig({
     },
     outDir: "dist",
     emptyOutDir: true,
-    cssCodeSplit: false,
     minify: "esbuild",
     target: "es2018",
     sourcemap: false,
     rollupOptions: {
       output: {
         extend: true,
-        inlineDynamicImports: true,
       },
     },
-  },
-  define: {
-    global: "window",
   },
 });

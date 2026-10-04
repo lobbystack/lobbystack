@@ -1,5 +1,6 @@
 import { chmod, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { parseArgs } from "node:util";
 
 import { eq } from "drizzle-orm";
 
@@ -23,26 +24,25 @@ Required env:
 `);
 }
 
-function flagValues(argv: string[], flag: string): string[] {
-  const values: string[] = [];
-  for (let index = 0; index < argv.length; index += 1) {
-    if (argv[index] !== flag) continue;
-    const value = argv[index + 1];
-    if (!value || value.startsWith("--")) throw new Error(`Missing value for ${flag}.`);
-    values.push(value);
-    index += 1;
-  }
-  return values;
-}
-
-function optionalFlag(argv: string[], flag: string): string | undefined {
-  return flagValues(argv, flag)[0];
-}
-
-function positional(argv: string[], label: string): string {
-  const value = argv.find((entry, index) => !entry.startsWith("--") && (index === 0 || !argv[index - 1]?.startsWith("--")));
-  if (!value) throw new Error(`${label} is required.`);
-  return value;
+function parseFlags(argv: string[]) {
+  return parseArgs({
+    args: argv,
+    strict: true,
+    allowPositionals: true,
+    options: {
+      name: { type: "string" },
+      url: { type: "string" },
+      recipient: { type: "string" },
+      "recipient-name": { type: "string" },
+      locale: { type: "string" },
+      campaign: { type: "string" },
+      greeting: { type: "string" },
+      timezone: { type: "string" },
+      service: { type: "string", multiple: true },
+      prompt: { type: "string", multiple: true },
+      "token-file": { type: "string" },
+    },
+  });
 }
 
 async function tokenFromFile(path: string): Promise<string | undefined> {
@@ -67,6 +67,8 @@ async function main(): Promise<void> {
     return;
   }
 
+  const { values: flags, positionals } = parseFlags(argv);
+  const prompts = flags.prompt ?? [];
   const operatorEmail = process.env.PROSPECT_DEMO_OPERATOR_EMAIL?.trim().toLowerCase();
   if (!operatorEmail) throw new Error("PROSPECT_DEMO_OPERATOR_EMAIL is required.");
   const auth = createDatabaseClient("lobbystack_auth");
@@ -77,24 +79,23 @@ async function main(): Promise<void> {
     const context = { db: app.db };
 
     if (command === "create") {
-      const name = optionalFlag(argv, "--name");
-      const websiteUrl = optionalFlag(argv, "--url");
+      const { name, url: websiteUrl } = flags;
       if (!name || !websiteUrl) throw new Error("--name and --url are required.");
       const optional = {
-        locale: optionalFlag(argv, "--locale"),
-        recipientEmail: optionalFlag(argv, "--recipient"),
-        recipientName: optionalFlag(argv, "--recipient-name"),
-        campaignId: optionalFlag(argv, "--campaign"),
-        greeting: optionalFlag(argv, "--greeting"),
-        timezone: optionalFlag(argv, "--timezone"),
+        locale: flags.locale,
+        recipientEmail: flags.recipient,
+        recipientName: flags["recipient-name"],
+        campaignId: flags.campaign,
+        greeting: flags.greeting,
+        timezone: flags.timezone,
       };
       const result = await createProspectDemo(context, {
         operatorUserId: operator.id,
         name,
         websiteUrl,
         ...Object.fromEntries(Object.entries(optional).filter(([, value]) => value !== undefined)),
-        services: flagValues(argv, "--service"),
-        suggestedPrompts: flagValues(argv, "--prompt"),
+        services: flags.service ?? [],
+        suggestedPrompts: prompts,
       });
       const directory = join(process.cwd(), ".prospect-demos");
       await mkdir(directory, { recursive: true, mode: 0o700 });
@@ -110,13 +111,14 @@ async function main(): Promise<void> {
       return;
     }
 
-    const demoId = positional(argv, "demoId");
+    const demoId = positionals[0];
+    if (!demoId) throw new Error("demoId is required.");
     if (command === "status") {
       console.log(JSON.stringify(await getProspectDemoStatus(context, { operatorUserId: operator.id, demoId }), null, 2));
       return;
     }
     if (command === "set-prompts") {
-      const suggestedPrompts = await setProspectDemoPrompts(context, { operatorUserId: operator.id, demoId, suggestedPrompts: flagValues(argv, "--prompt") });
+      const suggestedPrompts = await setProspectDemoPrompts(context, { operatorUserId: operator.id, demoId, suggestedPrompts: prompts });
       console.log(JSON.stringify({ demoId, suggestedPrompts }, null, 2));
       return;
     }
@@ -126,10 +128,9 @@ async function main(): Promise<void> {
       return;
     }
     if (command === "publish") {
-      const tokenFile = optionalFlag(argv, "--token-file") ?? join(process.cwd(), ".prospect-demos", `${demoId}.json`);
+      const tokenFile = flags["token-file"] ?? join(process.cwd(), ".prospect-demos", `${demoId}.json`);
       const token = process.env.PROSPECT_DEMO_TOKEN?.trim() || await tokenFromFile(tokenFile);
       if (!token) throw new Error(`Prospect demo token not found. Set PROSPECT_DEMO_TOKEN or provide --token-file (expected ${tokenFile}).`);
-      const prompts = flagValues(argv, "--prompt");
       const result = await publishProspectDemo(context, { operatorUserId: operator.id, demoId, token, ...(prompts.length ? { suggestedPrompts: prompts } : {}) });
       console.log(JSON.stringify(result, null, 2));
       return;

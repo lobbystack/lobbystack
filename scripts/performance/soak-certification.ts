@@ -1,10 +1,12 @@
 import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { parseArgs } from "node:util";
 
+import { writePrivateJson } from "../lib/private-artifact";
 import { percentile } from "./metrics";
 
 export const MINIMUM_SOAK_SECONDS = 1800;
@@ -342,38 +344,17 @@ export function evaluateHealthThresholds(
 export type SoakCliOptions = { configPath: string; evidencePath?: string; outputDir?: string };
 
 export function parseSoakArgs(args: string[]): SoakCliOptions {
-  let configPath: string | undefined;
-  let evidencePath: string | undefined;
-  let outputDir: string | undefined;
-  for (let index = 0; index < args.length; index += 1) {
-    const argument = args[index];
-    if (argument === "--config") {
-      const value = args[index + 1];
-      if (!value) throw new Error("--config requires a file path.");
-      configPath = value;
-      index += 1;
-    } else if (argument === "--evidence") {
-      const value = args[index + 1];
-      if (!value) throw new Error("--evidence requires a file path.");
-      evidencePath = value;
-      index += 1;
-    } else if (argument === "--output") {
-      const value = args[index + 1];
-      if (!value) throw new Error("--output requires a directory path.");
-      outputDir = value;
-      index += 1;
-    } else {
-      throw new Error(`Unknown soak-certification option: ${argument}.`);
-    }
-  }
-  if (!configPath) throw new Error("--config <run-config.json> is required.");
-  return { configPath, ...(evidencePath ? { evidencePath } : {}), ...(outputDir ? { outputDir } : {}) };
-}
-
-export async function writeSoakEvidence(filePath: string, evidence: SoakEvidence): Promise<void> {
-  await mkdir(dirname(filePath), { recursive: true });
-  await writeFile(filePath, `${JSON.stringify(evidence, null, 2)}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" });
-  await chmod(filePath, 0o600);
+  const { values } = parseArgs({
+    args,
+    strict: true,
+    options: { config: { type: "string" }, evidence: { type: "string" }, output: { type: "string" } },
+  });
+  if (!values.config) throw new Error("--config <run-config.json> is required.");
+  return {
+    configPath: values.config,
+    ...(values.evidence ? { evidencePath: values.evidence } : {}),
+    ...(values.output ? { outputDir: values.output } : {}),
+  };
 }
 
 async function defaultRunSoak(
@@ -559,7 +540,7 @@ async function main(): Promise<void> {
     ...(config ? { config } : {}),
     ...(options.outputDir ? { outputDir: options.outputDir } : {}),
   });
-  if (options.evidencePath) await writeSoakEvidence(options.evidencePath, evidence);
+  if (options.evidencePath) await writePrivateJson(options.evidencePath, evidence);
   console.log(JSON.stringify(evidence));
   if (evidence.status !== "passed") process.exitCode = 1;
 }

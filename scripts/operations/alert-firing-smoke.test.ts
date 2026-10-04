@@ -1,30 +1,15 @@
-import { mkdtemp, rm, stat } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
 import { describe, expect, it } from "vitest";
 
 import {
   ALERT_CONDITION_IDS,
   HEARTBEAT_ABSENCE_CHECKS,
   alertSmokeGuardProblems,
-  environmentHasProductionMarker,
   parseAlertSmokeArgs,
   renderAlertSmokePlan,
   runAlertFiringSmoke,
-  writeAlertSmokeEvidence,
-  type AlertSmokeEvidence,
 } from "./alert-firing-smoke";
 
 const FIXED_NOW = () => new Date("2026-09-13T00:00:00.000Z");
-
-function evidenceFixture(): AlertSmokeEvidence {
-  return runAlertFiringSmoke(
-    { mode: "execute", environment: "isolated-1", confirmedFiring: [], confirmedRecovery: [] },
-    { ALLOW_ALERT_SMOKE: "true" },
-    FIXED_NOW,
-  );
-}
 
 describe("alert-firing smoke guards", () => {
   it("defaults to dry-run and parses execute flags", () => {
@@ -50,7 +35,7 @@ describe("alert-firing smoke guards", () => {
 
   it("refuses unknown conditions, unknown flags, and empty environments", () => {
     expect(() => parseAlertSmokeArgs(["--confirmed-firing=NotAnAlert"])).toThrow("unknown alert condition");
-    expect(() => parseAlertSmokeArgs(["--bogus"])).toThrow("Unknown alert-firing-smoke option");
+    expect(() => parseAlertSmokeArgs(["--bogus"])).toThrow("Unknown option '--bogus'");
     expect(() => parseAlertSmokeArgs(["--environment="])).toThrow("--environment must name an isolated target.");
   });
 
@@ -64,14 +49,6 @@ describe("alert-firing smoke guards", () => {
       "--environment (must not reference production)",
     ]);
     expect(alertSmokeGuardProblems({ mode: "execute", environment: "isolated-1", confirmedFiring: [], confirmedRecovery: [] }, { ALLOW_ALERT_SMOKE: "true" })).toEqual([]);
-  });
-
-  it("detects production markers without matching product names", () => {
-    expect(environmentHasProductionMarker("production")).toBe(true);
-    expect(environmentHasProductionMarker("prod-eu")).toBe(true);
-    expect(environmentHasProductionMarker("prd02")).toBe(true);
-    expect(environmentHasProductionMarker("product-staging")).toBe(false);
-    expect(environmentHasProductionMarker("isolated-1")).toBe(false);
   });
 });
 
@@ -110,17 +87,5 @@ describe("alert-firing smoke evidence", () => {
     for (const id of ALERT_CONDITION_IDS) expect(plan).toContain(id);
     for (const check of HEARTBEAT_ABSENCE_CHECKS) expect(plan).toContain(check.signal);
     expect(plan).not.toContain("PERFORMANCE_SESSION_COOKIE");
-  });
-
-  it("writes owner-only, non-overwritable evidence", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "alert-firing-smoke-test-"));
-    const file = join(directory, "evidence.json");
-    try {
-      await writeAlertSmokeEvidence(file, evidenceFixture());
-      expect((await stat(file)).mode & 0o777).toBe(0o600);
-      await expect(writeAlertSmokeEvidence(file, evidenceFixture())).rejects.toMatchObject({ code: "EEXIST" });
-    } finally {
-      await rm(directory, { recursive: true, force: true });
-    }
   });
 });

@@ -1,7 +1,7 @@
 import { buttonVariants } from "@/components/ui/button"
 import { appLoginUrl, appSignupUrl } from "@/lib/app-links"
 import { GithubIcon } from "@/components/GithubIcon"
-import { localizeHref, localizePath, type Locale } from "@/lib/i18n"
+import { localizeHref, localizePath, type Locale } from "@/i18n"
 import { cn } from "@/lib/utils"
 import {
   BookOpen,

@@ -83,7 +83,7 @@ export function initWidget(): boolean {
   const position = (currentScriptAttribute("data-position") as "bottom-left" | "bottom-center" | "bottom-right" | null) ?? "bottom-right";
   const color = currentScriptAttribute("data-color") ?? "#0f766e";
   const labels = loaderLabels(currentScriptAttribute("data-locale") ?? document.documentElement.lang ?? "en");
-  const adminOrigin = resolveOrigin() || window.origin;
+  const adminOrigin = resolveOrigin();
   let visitorId = makeVisitorId(widgetKey);
   const frameSrc = `${adminOrigin}/embed/${encodeURIComponent(widgetKey)}`;
 
@@ -108,8 +108,9 @@ export function initWidget(): boolean {
   holder.inert = true;
   bubble.setAttribute("data-position", position);
   bubble.style.backgroundColor = color;
-  bubble.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
+  const chatSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
   const closeSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+  bubble.innerHTML = chatSvg;
 
   holder.appendChild(frame);
   root.appendChild(holder);
@@ -153,7 +154,7 @@ export function initWidget(): boolean {
   }
 
   function syncBubbleIcon(): void {
-    bubble.innerHTML = open ? closeSvg : `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
+    bubble.innerHTML = open ? closeSvg : chatSvg;
   }
 
   function setOpen(next: boolean): void {
@@ -182,11 +183,13 @@ export function initWidget(): boolean {
     }
   }
 
-  frame.addEventListener("load", () => {
+  function onFrameReady(): void {
     frameLoaded = true;
     if (sessionMessage) postToFrame(sessionMessage);
     postToFrame({ type: "visitor", visitorId });
-  });
+  }
+
+  frame.addEventListener("load", onFrameReady);
 
   // Issue the session on first open instead of at script load. This keeps the
   // widget dormant (and avoids an unauthenticated request) until a visitor
@@ -196,11 +199,7 @@ export function initWidget(): boolean {
     if (event.origin !== adminOrigin || event.source !== frame.contentWindow) return;
     const data = event.data as Partial<WidgetMessage>;
     if (!data || typeof data !== "object") return;
-    if (data.type === "ready") {
-      frameLoaded = true;
-      if (sessionMessage) postToFrame(sessionMessage);
-      postToFrame({ type: "visitor", visitorId });
-    }
+    if (data.type === "ready") onFrameReady();
     if (data.type === "resize" && typeof data.height === "number" && Number.isFinite(data.height) && open) {
       holder.style.height = `${Math.max(0, Math.min(data.height, Math.floor(window.innerHeight - 120)))}px`;
     }

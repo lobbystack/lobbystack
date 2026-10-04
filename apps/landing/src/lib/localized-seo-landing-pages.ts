@@ -207,9 +207,6 @@ export const fullyLocalizedFrenchSeoPaths = fullyLocalizedSeoPaths("fr")
 export const isSeoPageFullyLocalized = (locale: Locale, path: string) =>
   locale === DEFAULT_LOCALE || path in translatedSeoPages[locale]
 
-export const isFrenchSeoPageFullyLocalized = (path: string) =>
-  isSeoPageFullyLocalized("fr", path)
-
 export const getLocalizedSeoLandingPage = (
   locale: Locale,
   path: string

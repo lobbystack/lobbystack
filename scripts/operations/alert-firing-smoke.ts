@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { chmod, mkdir, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
+import { parseArgs } from "node:util";
+
+import { writePrivateJson } from "../lib/private-artifact";
+import { hasProductionMarker } from "../performance/soak-certification";
 
 export const ALERT_CONDITION_IDS = [
   "ReplacementOutboxDeadLettered",
@@ -125,12 +127,6 @@ export type AlertSmokeEvidence = {
   notes: string[];
 };
 
-const PRODUCTION_MARKER = /(^|[^a-z0-9])(production|prod|prd)\d*([^a-z0-9]|$)/i;
-
-export function environmentHasProductionMarker(value: string): boolean {
-  return PRODUCTION_MARKER.test(value);
-}
-
 function isConditionId(value: string): value is AlertConditionId {
   return (ALERT_CONDITION_IDS as readonly string[]).includes(value);
 }
@@ -146,51 +142,26 @@ function parseConditionIds(flag: string, value: string): AlertConditionId[] {
   return ids;
 }
 
-function requireValue(flag: string, args: string[], index: number): string {
-  const value = args[index + 1];
-  if (!value) throw new Error(`${flag} requires a value.`);
-  return value;
-}
-
 export function parseAlertSmokeArgs(args: string[]): AlertSmokeCliOptions {
-  let mode: AlertSmokeMode = "dry-run";
-  let environment: string | undefined;
-  let evidencePath: string | undefined;
-  const confirmedFiring: AlertConditionId[] = [];
-  const confirmedRecovery: AlertConditionId[] = [];
-  for (let index = 0; index < args.length; index += 1) {
-    const argument = args[index]!;
-    if (argument === "--dry-run") {
-      mode = "dry-run";
-    } else if (argument === "--execute") {
-      mode = "execute";
-    } else if (argument === "--environment") {
-      environment = requireValue("--environment", args, index);
-      index += 1;
-    } else if (argument.startsWith("--environment=")) {
-      environment = argument.slice("--environment=".length);
-    } else if (argument === "--evidence") {
-      evidencePath = requireValue("--evidence", args, index);
-      index += 1;
-    } else if (argument.startsWith("--evidence=")) {
-      evidencePath = argument.slice("--evidence=".length);
-    } else if (argument === "--confirmed-firing") {
-      confirmedFiring.push(...parseConditionIds("--confirmed-firing", requireValue("--confirmed-firing", args, index)));
-      index += 1;
-    } else if (argument.startsWith("--confirmed-firing=")) {
-      confirmedFiring.push(...parseConditionIds("--confirmed-firing", argument.slice("--confirmed-firing=".length)));
-    } else if (argument === "--confirmed-recovery") {
-      confirmedRecovery.push(...parseConditionIds("--confirmed-recovery", requireValue("--confirmed-recovery", args, index)));
-      index += 1;
-    } else if (argument.startsWith("--confirmed-recovery=")) {
-      confirmedRecovery.push(...parseConditionIds("--confirmed-recovery", argument.slice("--confirmed-recovery=".length)));
-    } else {
-      throw new Error(`Unknown alert-firing-smoke option: ${argument}.`);
-    }
-  }
+  const { values } = parseArgs({
+    args,
+    strict: true,
+    options: {
+      "dry-run": { type: "boolean" },
+      execute: { type: "boolean" },
+      environment: { type: "string" },
+      evidence: { type: "string" },
+      "confirmed-firing": { type: "string", multiple: true },
+      "confirmed-recovery": { type: "string", multiple: true },
+    },
+  });
+  const { environment, evidence: evidencePath } = values;
   if (environment !== undefined && !environment.trim()) throw new Error("--environment must name an isolated target.");
+  const confirmedFiring = (values["confirmed-firing"] ?? []).flatMap((value) => parseConditionIds("--confirmed-firing", value));
+  const confirmedRecovery = (values["confirmed-recovery"] ?? []).flatMap((value) => parseConditionIds("--confirmed-recovery", value));
   return {
-    mode,
+    // --dry-run wins when both modes are passed.
+    mode: values.execute && !values["dry-run"] ? "execute" : "dry-run",
     ...(environment ? { environment } : {}),
     confirmedFiring: [...new Set(confirmedFiring)],
     confirmedRecovery: [...new Set(confirmedRecovery)],
@@ -203,7 +174,7 @@ export function alertSmokeGuardProblems(options: AlertSmokeCliOptions, environme
   const problems: string[] = [];
   if (environment.ALLOW_ALERT_SMOKE !== "true") problems.push("ALLOW_ALERT_SMOKE (must be true to execute)");
   if (!options.environment?.trim()) problems.push("--environment=<isolated target name> (required to execute)");
-  else if (environmentHasProductionMarker(options.environment)) problems.push("--environment (must not reference production)");
+  else if (hasProductionMarker(options.environment)) problems.push("--environment (must not reference production)");
   return problems;
 }
 
@@ -300,18 +271,12 @@ export function renderAlertSmokePlan(): string {
   return lines.join("\n");
 }
 
-export async function writeAlertSmokeEvidence(filePath: string, evidence: AlertSmokeEvidence): Promise<void> {
-  await mkdir(dirname(filePath), { recursive: true });
-  await writeFile(filePath, `${JSON.stringify(evidence, null, 2)}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" });
-  await chmod(filePath, 0o600);
-}
-
 async function main(): Promise<void> {
   const options = parseAlertSmokeArgs(process.argv.slice(2));
   console.log(renderAlertSmokePlan());
   if (options.mode === "dry-run") return;
   const evidence = runAlertFiringSmoke(options, process.env);
-  if (options.evidencePath) await writeAlertSmokeEvidence(options.evidencePath, evidence);
+  if (options.evidencePath) await writePrivateJson(options.evidencePath, evidence);
   console.log(JSON.stringify(evidence));
   if (evidence.status !== "passed") process.exitCode = 1;
 }

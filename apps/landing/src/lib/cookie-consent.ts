@@ -1,6 +1,5 @@
 export const COOKIE_CONSENT_STORAGE_KEY = "lobbystack.cookieConsent.v1"
 export const COOKIE_CONSENT_VERSION = 1
-export const COOKIE_CONSENT_CHANGED_EVENT = "lobbystack:cookie-consent-changed"
 export const COOKIE_PREFERENCES_TRIGGER_SELECTOR =
   "[data-cookie-preferences-trigger]"
 
@@ -11,10 +10,6 @@ export type CookieConsent = {
 }
 
 type StorageLike = Pick<Storage, "getItem" | "removeItem" | "setItem">
-
-type CookieConsentChangeDetail = {
-  consent: CookieConsent | null
-}
 
 export function parseCookieConsent(value: string | null): CookieConsent | null {
   if (!value) {
@@ -73,7 +68,6 @@ export function writeCookieConsent(
     }
   }
 
-  emitCookieConsentChanged(consent)
   return consent
 }
 
@@ -81,8 +75,6 @@ export function clearCookieConsent(storage = getBrowserStorage()) {
   if (storage) {
     storage.removeItem(COOKIE_CONSENT_STORAGE_KEY)
   }
-
-  emitCookieConsentChanged(null)
 }
 
 export function hasAnalyticsConsent(storage = getBrowserStorage()) {
@@ -92,26 +84,6 @@ export function hasAnalyticsConsent(storage = getBrowserStorage()) {
 /** True only for an explicit refusal. An unanswered banner is not a refusal. */
 export function hasDeclinedAnalytics(storage = getBrowserStorage()) {
   return readCookieConsent(storage)?.analytics === false
-}
-
-export function onCookieConsentChanged(
-  handler: (consent: CookieConsent | null) => void
-) {
-  if (typeof window === "undefined") {
-    return () => undefined
-  }
-
-  const listener = (event: Event) => {
-    handler(
-      event instanceof CustomEvent
-        ? ((event.detail as CookieConsentChangeDetail | undefined)?.consent ??
-            null)
-        : null
-    )
-  }
-
-  window.addEventListener(COOKIE_CONSENT_CHANGED_EVENT, listener)
-  return () => window.removeEventListener(COOKIE_CONSENT_CHANGED_EVENT, listener)
 }
 
 export function clearPostHogClientStorage() {
@@ -134,18 +106,6 @@ function getBrowserStorage(): StorageLike | null {
   } catch {
     return null
   }
-}
-
-function emitCookieConsentChanged(consent: CookieConsent | null) {
-  if (typeof window === "undefined") {
-    return
-  }
-
-  window.dispatchEvent(
-    new CustomEvent<CookieConsentChangeDetail>(COOKIE_CONSENT_CHANGED_EVENT, {
-      detail: { consent },
-    })
-  )
 }
 
 function removePostHogStorageKeys(storage: Storage) {

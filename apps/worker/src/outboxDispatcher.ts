@@ -1,23 +1,13 @@
 import { randomUUID } from "node:crypto";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import { claimOutboxBatch, markOutboxFailed, markOutboxPublished, type Database } from "@lobbystack/db";
 import { createQueue, enqueueJob, isKnownJobType, queueForJobType, type JobType } from "@lobbystack/jobs";
 import { outboxMessageSchema } from "@lobbystack/contracts";
 import { getMeter, redactOtelExceptionText } from "@lobbystack/telemetry/node";
 
-function waitForNextPoll(signal: AbortSignal, delayMs: number): Promise<void> {
-  if (signal.aborted) return Promise.resolve();
-
-  return new Promise((resolve) => {
-    const done = () => {
-      clearTimeout(timeout);
-      signal.removeEventListener("abort", done);
-      resolve();
-    };
-    const timeout = setTimeout(done, delayMs);
-    signal.addEventListener("abort", done, { once: true });
-  });
-}
+// Resolves early, without throwing, when the signal aborts.
+const waitForNextPoll = (signal: AbortSignal, delayMs: number) => sleep(delayMs, undefined, { signal }).catch(() => undefined);
 
 export class OutboxDispatcher {
   private readonly dispatcherId = randomUUID();
@@ -27,7 +17,6 @@ export class OutboxDispatcher {
   private readonly publishDuration = getMeter("lobbystack-worker").createHistogram("lobbystack.outbox.publish_duration_ms", { unit: "ms" });
   private readonly published = getMeter("lobbystack-worker").createCounter("lobbystack.outbox.published");
   private readonly publishAge = getMeter("lobbystack-worker").createHistogram("lobbystack.outbox.publish_age_ms", { unit: "ms" });
-  private stopped = false;
 
   constructor(private readonly db: Database, private readonly queues: Map<string, ReturnType<typeof createQueue>>) {}
 
@@ -78,7 +67,7 @@ export class OutboxDispatcher {
 
   async run(signal: AbortSignal): Promise<void> {
     let consecutiveFailures = 0;
-    while (!signal.aborted && !this.stopped) {
+    while (!signal.aborted) {
       try {
         const count = await this.dispatchOnce();
         consecutiveFailures = 0;
@@ -92,9 +81,5 @@ export class OutboxDispatcher {
         await waitForNextPoll(signal, Math.min(5_000, 250 * 2 ** (consecutiveFailures - 1)));
       }
     }
-  }
-
-  stop(): void {
-    this.stopped = true;
   }
 }
