@@ -1,29 +1,17 @@
 import { and, eq, lt, or, sql } from "drizzle-orm";
 
 import { billingAccounts, billingCheckoutRequests, billingTransactions, billingUsageEvents, businesses, enqueueOutbox, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { billingErrorCodes, billingPlanCatalog, billingPlanSlugs, isPaidSubscription, type BillingPlanSlug } from "@lobbystack/shared";
+import { billingErrorCodes, billingPlanCatalog, DEFAULT_WEB_CALL_MAX_DURATION_MS, isPaidSubscription, MAX_WEB_CALL_MAX_DURATION_MS, type BillingPlanSlug } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import type { DomainContext } from "./context";
 import { recordAffiliateCommissionInTransaction } from "./affiliates";
 import { recordProductEventInTransaction } from "./productEvents";
 import { requireBusinessAdmin } from "../authz";
-import { correctUsageInTransaction, enqueueUsageSyncInTransaction, getUsageStatusInTransaction, reserveUsageInTransaction, type NonAiBillingUsageKind, type UsageReservationResult } from "./usage";
+import { correctUsageInTransaction, enqueueUsageSyncInTransaction, getUsageStatusInTransaction, reserveUsageInTransaction } from "./usage";
 
 export type BillingCheckoutTarget = "starter" | "pro";
 export type BillingInterval = "monthly" | "annual";
-
-export function applyNonAiUsageInTransaction(tx: DatabaseTransaction, input: { operation: "reserve"; businessId: string; usageKind: NonAiBillingUsageKind; sourceKey: string; quantity?: number; recordedAt?: Date }): Promise<UsageReservationResult>;
-export function applyNonAiUsageInTransaction(tx: DatabaseTransaction, input: { operation: "correct"; businessId: string; usageKind: NonAiBillingUsageKind; sourceKey: string; quantity: number; recordedAt?: Date }): Promise<string>;
-export async function applyNonAiUsageInTransaction(tx: DatabaseTransaction, input: { operation: "reserve" | "correct"; businessId: string; usageKind: NonAiBillingUsageKind; sourceKey: string; quantity?: number; recordedAt?: Date }): Promise<UsageReservationResult | string> {
-  const values = { businessId: input.businessId, usageKind: input.usageKind, sourceKey: input.sourceKey, ...(input.quantity !== undefined ? { quantity: input.quantity } : {}), ...(input.recordedAt ? { recordedAt: input.recordedAt } : {}) };
-  return input.operation === "reserve"
-    ? await reserveUsageInTransaction(tx, values)
-    : await correctUsageInTransaction(tx, { ...values, quantity: input.quantity ?? 0 });
-}
-
-const defaultWebCallMaxDurationMs = 5 * 60 * 1_000;
-const maximumWebCallMaxDurationMs = 30 * 60 * 1_000;
 
 export type WebVoiceBillingAllowance = {
   allowed: boolean;
@@ -33,37 +21,8 @@ export type WebVoiceBillingAllowance = {
 };
 
 export function normalizeWebCallMaxDurationMs(value: number | undefined): number {
-  if (value === undefined || !Number.isFinite(value) || value <= 0) return defaultWebCallMaxDurationMs;
-  return Math.min(Math.floor(value), maximumWebCallMaxDurationMs);
-}
-
-function isBillingPlan(value: string | null): value is BillingPlanSlug {
-  return value !== null && billingPlanSlugs.includes(value as BillingPlanSlug);
-}
-
-export function calculateWebVoiceBillingAllowance(input: {
-  deploymentMode: string;
-  accountPlan: string | null;
-  subscriptionState: string | null;
-  voiceSecondsUsed: number;
-  maxDurationMs?: number;
-}): WebVoiceBillingAllowance {
-  const paidState = input.subscriptionState === "active" || input.subscriptionState === "trialing" || input.subscriptionState === "past_due";
-  const plan: BillingPlanSlug = input.deploymentMode !== "cloud"
-    ? "self_host"
-    : isBillingPlan(input.accountPlan) && (input.accountPlan === "free_cloud" || paidState)
-      ? input.accountPlan
-      : "free_cloud";
-  const requested = normalizeWebCallMaxDurationMs(input.maxDurationMs);
-  const entitlement = billingPlanCatalog[plan];
-  if (entitlement.voiceSecondsIncluded === null || entitlement.overagesBillable) {
-    return { allowed: true, errorCode: null, maxDurationMs: requested, plan };
-  }
-  const remainingSeconds = Math.max(0, entitlement.voiceSecondsIncluded - input.voiceSecondsUsed);
-  if (remainingSeconds < 1) {
-    return { allowed: false, errorCode: billingErrorCodes.voiceLimitReached, maxDurationMs: 0, plan };
-  }
-  return { allowed: true, errorCode: null, maxDurationMs: Math.min(requested, Math.floor(remainingSeconds * 1_000)), plan };
+  if (value === undefined || !Number.isFinite(value) || value <= 0) return DEFAULT_WEB_CALL_MAX_DURATION_MS;
+  return Math.min(Math.floor(value), MAX_WEB_CALL_MAX_DURATION_MS);
 }
 
 async function loadWebVoiceBillingAllowance(
@@ -107,7 +66,7 @@ export async function reserveWebVoiceUsageInTransaction(
   const allowance = await loadWebVoiceBillingAllowance(tx, input);
   if (!allowance.allowed) return allowance;
   if (allowance.plan === "self_host") return allowance;
-  const reservation = await applyNonAiUsageInTransaction(tx, { operation: "reserve", businessId: input.businessId, usageKind: "voice_seconds", sourceKey: `voice:${input.callId}`, quantity: allowance.maxDurationMs / 1_000 });
+  const reservation = await reserveUsageInTransaction(tx, { businessId: input.businessId, usageKind: "voice_seconds", sourceKey: `voice:${input.callId}`, quantity: allowance.maxDurationMs / 1_000 });
   if (!reservation.allowed) {
     return { allowed: false, errorCode: billingErrorCodes.voiceLimitReached, maxDurationMs: 0, plan: allowance.plan };
   }
@@ -120,7 +79,7 @@ export async function finalizeWebVoiceUsageInTransaction(
 ): Promise<void> {
   const existing = (await tx.select({ id: billingUsageEvents.id }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, input.businessId), eq(billingUsageEvents.sourceKey, `voice:${input.callId}`))).limit(1))[0];
   if (!existing) return;
-  const usageEventId = await applyNonAiUsageInTransaction(tx, { operation: "correct", businessId: input.businessId, sourceKey: `voice:${input.callId}`, usageKind: "voice_seconds", quantity: input.durationSeconds });
+  const usageEventId = await correctUsageInTransaction(tx, { businessId: input.businessId, sourceKey: `voice:${input.callId}`, usageKind: "voice_seconds", quantity: input.durationSeconds });
   await enqueueUsageSyncInTransaction(tx, { businessId: input.businessId, usageEventId });
 }
 
@@ -154,7 +113,7 @@ export async function reserveWidgetChatUsageInTransaction(
   const status = await getUsageStatusInTransaction(tx, { businessId: input.businessId });
   const entitlement = billingPlanCatalog[status.plan];
   if (entitlement.chatAiTokensIncluded !== null) {
-    const reservation = await applyNonAiUsageInTransaction(tx, { operation: "reserve", businessId: input.businessId, usageKind: "chat_ai_tokens", sourceKey: `chat:${input.conversationId}`, quantity: 1 });
+    const reservation = await reserveUsageInTransaction(tx, { businessId: input.businessId, usageKind: "chat_ai_tokens", sourceKey: `chat:${input.conversationId}`, quantity: 1 });
     if (!reservation.allowed) return { allowed: false, errorCode: billingErrorCodes.chatAiLimitReached, plan: status.plan };
     return { allowed: true, errorCode: null, plan: status.plan };
   }
@@ -282,47 +241,6 @@ function isBillingInterval(value: string): value is BillingInterval {
   return value === "monthly" || value === "annual";
 }
 
-export async function ensureBillingAccount(
-  context: DomainContext,
-  input: { businessId: string; billingKey: string; plan?: string },
-): Promise<string> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const [account] = await tx.insert(billingAccounts).values({ businessId: input.businessId, billingKey: input.billingKey, ...(input.plan !== undefined ? { plan: input.plan } : {}) }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { billingKey: input.billingKey, ...(input.plan !== undefined ? { plan: input.plan } : {}), updatedAt: new Date() } }).returning({ id: billingAccounts.id });
-    if (!account) {
-      throw new Error("Billing account could not be created.");
-    }
-    return account.id;
-  });
-}
-
-export async function recordUsage(
-  context: DomainContext,
-  input: { businessId: string; periodKey: string; sourceKey: string; usageKind: string; quantity: number; sync?: boolean },
-): Promise<string> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const { sync = true, ...values } = input;
-    const [event] = await tx.insert(billingUsageEvents).values({ ...values, syncStatus: sync ? "pending" : "skipped" }).onConflictDoNothing().returning({ id: billingUsageEvents.id });
-    if (!event) {
-      const existing = await tx.select({ id: billingUsageEvents.id }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, input.businessId), eq(billingUsageEvents.sourceKey, input.sourceKey))).limit(1);
-      if (!existing[0]) {
-        throw new Error("Usage event could not be recorded.");
-      }
-      return existing[0].id;
-    }
-    if (sync) {
-      await enqueueOutbox(tx, {
-        topic: "billing.syncUsage",
-        businessId: input.businessId,
-        aggregateType: "billing_usage_event",
-        aggregateId: event.id,
-        dedupeKey: `billing-usage:${event.id}:sync`,
-        payload: { usageEventId: event.id },
-      });
-    }
-    return event.id;
-  });
-}
-
 export async function getBillingUsageStatus(
   context: DomainContext,
   input: { businessId: string; periodKey?: string },
@@ -357,14 +275,14 @@ export async function reserveAlertSmsUsage(
   context: DomainContext,
   input: { businessId: string; sourceKey: string; estimatedSegments: number; recordedAt?: Date },
 ): Promise<Awaited<ReturnType<typeof reserveUsageInTransaction>>> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await applyNonAiUsageInTransaction(tx, { operation: "reserve", businessId: input.businessId, usageKind: "alert_sms_segments", sourceKey: input.sourceKey, quantity: Math.max(1, Math.trunc(input.estimatedSegments)), ...(input.recordedAt ? { recordedAt: input.recordedAt } : {}) }));
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await reserveUsageInTransaction(tx, { businessId: input.businessId, usageKind: "alert_sms_segments", sourceKey: input.sourceKey, quantity: Math.max(1, Math.trunc(input.estimatedSegments)), recordedAt: input.recordedAt }));
 }
 
 export async function correctAlertSmsUsage(
   context: DomainContext,
   input: { businessId: string; sourceKey: string; segments: number; recordedAt?: Date },
 ): Promise<string> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await applyNonAiUsageInTransaction(tx, { operation: "correct", businessId: input.businessId, sourceKey: input.sourceKey, usageKind: "alert_sms_segments", quantity: Math.max(0, Math.trunc(input.segments)), ...(input.recordedAt ? { recordedAt: input.recordedAt } : {}) }));
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await correctUsageInTransaction(tx, { businessId: input.businessId, sourceKey: input.sourceKey, usageKind: "alert_sms_segments", quantity: Math.max(0, Math.trunc(input.segments)), recordedAt: input.recordedAt }));
 }
 
 export async function reserveOutboundCallAttempt(
@@ -372,7 +290,7 @@ export async function reserveOutboundCallAttempt(
   input: { businessId: string; sourceKey: string; recordedAt?: Date },
 ): Promise<Awaited<ReturnType<typeof reserveUsageInTransaction>>> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const reservation = await applyNonAiUsageInTransaction(tx, { operation: "reserve", businessId: input.businessId, usageKind: "outbound_call_attempts", sourceKey: input.sourceKey, quantity: 1, ...(input.recordedAt ? { recordedAt: input.recordedAt } : {}) });
+    const reservation = await reserveUsageInTransaction(tx, { businessId: input.businessId, usageKind: "outbound_call_attempts", sourceKey: input.sourceKey, quantity: 1, recordedAt: input.recordedAt });
     if (reservation.allowed && reservation.usageEventId) await enqueueUsageSyncInTransaction(tx, { businessId: input.businessId, usageEventId: reservation.usageEventId });
     return reservation;
   });

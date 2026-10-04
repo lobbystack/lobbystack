@@ -71,9 +71,9 @@ export async function updateService(
     const [service] = await tx.update(services).set({
       ...(input.name !== undefined ? { name: input.name.trim() } : {}),
       ...(input.slug !== undefined ? { slug: input.slug.trim().toLowerCase() } : {}),
-      ...(input.durationMinutes !== undefined ? { durationMinutes: input.durationMinutes } : {}),
-      ...(input.description !== undefined ? { description: input.description } : {}),
-      ...(input.active !== undefined ? { active: input.active } : {}),
+      durationMinutes: input.durationMinutes,
+      description: input.description,
+      active: input.active,
       updatedAt: new Date(),
     }).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId))).returning({ id: services.id });
     if (!service) throw new Error("Service not found.");

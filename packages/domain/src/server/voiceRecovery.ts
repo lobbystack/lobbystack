@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 
 import { calls, withBusinessTransaction, type Database } from "@lobbystack/db";
+import { DEFAULT_WEB_CALL_MAX_DURATION_MS } from "@lobbystack/shared";
 
 import { completeCall } from "./voice";
 
@@ -18,7 +19,6 @@ import { completeCall } from "./voice";
  *    identity, so a second reconciler is a no-op instead of a double charge.
  */
 
-export const WEB_VOICE_DEFAULT_CAP_MS = 5 * 60_000;
 export const WEB_VOICE_RECONCILE_GRACE_MS = 10 * 60_000;
 export const WEB_VOICE_RECONCILE_MAX_BATCH = 200;
 
@@ -50,7 +50,7 @@ export type StalledWebVoiceCall = {
 function reservedSecondsFor(webCallMaxDurationMs: number | null): number {
   const normalized = Number.isFinite(webCallMaxDurationMs) && (webCallMaxDurationMs ?? 0) > 0
     ? Math.floor(webCallMaxDurationMs as number)
-    : WEB_VOICE_DEFAULT_CAP_MS;
+    : DEFAULT_WEB_CALL_MAX_DURATION_MS;
   return Math.max(0, Math.floor(normalized / 1_000));
 }
 

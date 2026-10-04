@@ -7,6 +7,10 @@ export const billingPlanSlugs = [
 ] as const;
 export type BillingPlanSlug = (typeof billingPlanSlugs)[number];
 
+export function isBillingPlanSlug(value: string | null | undefined): value is BillingPlanSlug {
+  return (billingPlanSlugs as readonly (string | null | undefined)[]).includes(value);
+}
+
 export const cloudBillingPlanSlugs = [
   "free_cloud",
   "starter",

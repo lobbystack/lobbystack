@@ -7,42 +7,8 @@ import { appointments, billingAccounts, businesses, contacts, enqueueOutbox, not
 
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
-import { enqueueUsageSyncInTransaction } from "./usage";
-import { applyNonAiUsageInTransaction } from "./billing";
+import { correctUsageInTransaction, enqueueUsageSyncInTransaction } from "./usage";
 import { recordUnitEconomicsEventInTransaction } from "./unitEconomics";
-
-export async function scheduleNotification(
-  context: DomainContext,
-  input: { businessId: string; channel: string; kind: string; relatedId?: string; scheduledFor: string },
-): Promise<string> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const [notification] = await tx.insert(notifications).values({
-      businessId: input.businessId,
-      channel: input.channel,
-      kind: input.kind,
-      ...(input.relatedId !== undefined ? { relatedId: input.relatedId } : {}),
-      scheduledFor: new Date(input.scheduledFor),
-      status: "pending",
-    }).onConflictDoNothing().returning({ id: notifications.id });
-    if (!notification) {
-      const existing = await tx.select({ id: notifications.id }).from(notifications).where(and(eq(notifications.businessId, input.businessId), eq(notifications.kind, input.kind), input.relatedId ? eq(notifications.relatedId, input.relatedId) : undefined)).limit(1);
-      if (!existing[0]) {
-        throw new Error("Notification could not be scheduled.");
-      }
-      return existing[0].id;
-    }
-    await enqueueOutbox(tx, {
-      topic: "notification.dispatch",
-      businessId: input.businessId,
-      aggregateType: "notification",
-      aggregateId: notification.id,
-      dedupeKey: `notification:${notification.id}:dispatch`,
-      availableAt: new Date(input.scheduledFor),
-      payload: { notificationId: notification.id },
-    });
-    return notification.id;
-  });
-}
 
 // Caller must hold the appointment row lock, and commit the schedule change in
 // this same transaction. A new delivery ID fences even legacy queued jobs.
@@ -253,9 +219,9 @@ export async function updateNotificationDeliveryStatus(context: DomainContext, i
     const applyStatus = shouldApplyNotificationStatusTransition(current.status, nextStatus);
     const hasProviderPricing = input.providerPrice !== undefined || input.providerPriceUnit !== undefined || input.providerCostUsd !== undefined || input.providerNumSegments !== undefined;
     if (!applyStatus && !hasProviderPricing) return false;
-    await tx.update(notifications).set({ ...(current.providerMessageId ? {} : { providerMessageId: input.providerMessageId }), ...(input.providerPrice !== undefined ? { providerPrice: input.providerPrice } : {}), ...(input.providerPriceUnit !== undefined ? { providerPriceUnit: input.providerPriceUnit } : {}), ...(input.providerCostUsd !== undefined ? { providerCostUsd: input.providerCostUsd } : {}), ...(input.providerNumSegments !== undefined ? { providerNumSegments: input.providerNumSegments } : {}), ...(applyStatus ? { status: nextStatus } : {}), updatedAt: new Date() }).where(and(eq(notifications.id, input.notificationId), eq(notifications.businessId, input.businessId)));
+    await tx.update(notifications).set({ ...(current.providerMessageId ? {} : { providerMessageId: input.providerMessageId }), providerPrice: input.providerPrice, providerPriceUnit: input.providerPriceUnit, providerCostUsd: input.providerCostUsd, providerNumSegments: input.providerNumSegments, ...(applyStatus ? { status: nextStatus } : {}), updatedAt: new Date() }).where(and(eq(notifications.id, input.notificationId), eq(notifications.businessId, input.businessId)));
     if (current.channel === "sms" && input.providerNumSegments !== undefined) {
-      const usageEventId = await applyNonAiUsageInTransaction(tx, { operation: "correct", businessId: input.businessId, sourceKey: `alert_sms:notification:${input.notificationId}`, usageKind: "alert_sms_segments", quantity: input.providerNumSegments, recordedAt: new Date() });
+      const usageEventId = await correctUsageInTransaction(tx, { businessId: input.businessId, sourceKey: `alert_sms:notification:${input.notificationId}`, usageKind: "alert_sms_segments", quantity: input.providerNumSegments, recordedAt: new Date() });
       await enqueueUsageSyncInTransaction(tx, { businessId: input.businessId, usageEventId });
     }
     if (current.channel === "sms" && isTerminalTwilioMessageStatus(input.providerStatus) && (input.providerCostUsd === undefined || input.providerNumSegments === undefined)) await enqueueOutbox(tx, { topic: "sms.syncPrice", businessId: input.businessId, aggregateType: "notification", aggregateId: input.notificationId, dedupeKey: `notification:${input.notificationId}:price:${input.providerStatus.trim().toLowerCase()}`, payload: { notificationId: input.notificationId, providerMessageId: input.providerMessageId, providerStatus: input.providerStatus } });
@@ -264,45 +230,20 @@ export async function updateNotificationDeliveryStatus(context: DomainContext, i
   });
 }
 
-export async function markNotificationSkipped(
+/**
+ * Moves a notification this worker is processing to its next state: "skipped",
+ * "failed" when the provider rejected it for good (such as a number the sender
+ * can't text), or back to "pending" to retry.
+ */
+export async function transitionProcessingNotification(
   context: DomainContext,
   input: { businessId: string; notificationId: string },
+  status: "skipped" | "failed" | "pending",
 ): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const rows = await tx.update(notifications)
-      .set({ status: "skipped", updatedAt: new Date() })
+      .set({ status, updatedAt: new Date() })
       .where(and(eq(notifications.id, input.notificationId), eq(notifications.businessId, input.businessId), eq(notifications.status, "processing")))
-      .returning({ id: notifications.id });
-    return rows.length > 0;
-  });
-}
-
-/** Gives up on a notification the provider rejected for good, such as a number the sender can't text. */
-export async function markNotificationFailed(
-  context: DomainContext,
-  input: { businessId: string; notificationId: string },
-): Promise<boolean> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const rows = await tx.update(notifications)
-      .set({ status: "failed", updatedAt: new Date() })
-      .where(and(eq(notifications.id, input.notificationId), eq(notifications.businessId, input.businessId), eq(notifications.status, "processing")))
-      .returning({ id: notifications.id });
-    return rows.length > 0;
-  });
-}
-
-export async function releaseNotificationDelivery(
-  context: DomainContext,
-  input: { businessId: string; notificationId: string },
-): Promise<boolean> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const rows = await tx.update(notifications)
-      .set({ status: "pending", updatedAt: new Date() })
-      .where(and(
-        eq(notifications.id, input.notificationId),
-        eq(notifications.businessId, input.businessId),
-        eq(notifications.status, "processing"),
-      ))
       .returning({ id: notifications.id });
     return rows.length > 0;
   });
@@ -553,9 +494,9 @@ export async function updateOperatorNotificationDeliveryStatus(context: DomainCo
     const applyStatus = shouldApplyNotificationStatusTransition(current.status, nextStatus);
     const hasProviderPricing = input.providerPrice !== undefined || input.providerPriceUnit !== undefined || input.providerCostUsd !== undefined || input.providerNumSegments !== undefined;
     if (!applyStatus && !hasProviderPricing) return false;
-    await tx.update(operatorNotificationDeliveries).set({ ...(current.providerMessageId ? {} : { providerMessageId: input.providerMessageId }), ...(input.providerPrice !== undefined ? { providerPrice: input.providerPrice } : {}), ...(input.providerPriceUnit !== undefined ? { providerPriceUnit: input.providerPriceUnit } : {}), ...(input.providerCostUsd !== undefined ? { providerCostUsd: input.providerCostUsd } : {}), ...(input.providerNumSegments !== undefined ? { providerNumSegments: input.providerNumSegments } : {}), ...(applyStatus ? { status: nextStatus, ...(nextStatus === "delivered" ? { sentAt: new Date() } : {}), lastError: nextStatus === "failed" ? "Twilio delivery failed." : null } : {}), updatedAt: new Date() }).where(and(eq(operatorNotificationDeliveries.id, input.deliveryId), eq(operatorNotificationDeliveries.businessId, input.businessId)));
+    await tx.update(operatorNotificationDeliveries).set({ ...(current.providerMessageId ? {} : { providerMessageId: input.providerMessageId }), providerPrice: input.providerPrice, providerPriceUnit: input.providerPriceUnit, providerCostUsd: input.providerCostUsd, providerNumSegments: input.providerNumSegments, ...(applyStatus ? { status: nextStatus, ...(nextStatus === "delivered" ? { sentAt: new Date() } : {}), lastError: nextStatus === "failed" ? "Twilio delivery failed." : null } : {}), updatedAt: new Date() }).where(and(eq(operatorNotificationDeliveries.id, input.deliveryId), eq(operatorNotificationDeliveries.businessId, input.businessId)));
     if (current.channel === "sms" && input.providerNumSegments !== undefined) {
-      const usageEventId = await applyNonAiUsageInTransaction(tx, { operation: "correct", businessId: input.businessId, sourceKey: `alert_sms:operator_notification:${input.deliveryId}`, usageKind: "alert_sms_segments", quantity: input.providerNumSegments, recordedAt: new Date() });
+      const usageEventId = await correctUsageInTransaction(tx, { businessId: input.businessId, sourceKey: `alert_sms:operator_notification:${input.deliveryId}`, usageKind: "alert_sms_segments", quantity: input.providerNumSegments, recordedAt: new Date() });
       await enqueueUsageSyncInTransaction(tx, { businessId: input.businessId, usageEventId });
     }
     if (current.channel === "sms" && isTerminalTwilioMessageStatus(input.providerStatus) && (input.providerCostUsd === undefined || input.providerNumSegments === undefined)) await enqueueOutbox(tx, { topic: "sms.syncPrice", businessId: input.businessId, aggregateType: "operator_notification_delivery", aggregateId: input.deliveryId, dedupeKey: `operator-notification:${input.deliveryId}:price:${input.providerStatus.trim().toLowerCase()}`, payload: { operatorDeliveryId: input.deliveryId, providerMessageId: input.providerMessageId, providerStatus: input.providerStatus } });

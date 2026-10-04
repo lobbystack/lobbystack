@@ -2,7 +2,6 @@ import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
 
 import { affiliateAttributions, affiliateClicks, affiliateCommissions, affiliatePayoutItems, affiliatePayoutRuns, affiliateProfileStats, affiliateProfiles, affiliateVoidedSources, users, withBusinessTransaction, withDispatcherTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
-import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 
 const COMMISSION_RATE = 0.2;
@@ -20,20 +19,7 @@ const VOID_ORDER_STATUSES = new Set(["canceled", "cancelled", "refunded", "rever
 const VOID_REFUND_STATUSES = new Set(["succeeded"]);
 
 export function normalizeAffiliateReferralCode(value: string): string {
-  let normalized = "";
-  let separator = false;
-  for (const character of value.trim().toLowerCase()) {
-    const isAlphaNumeric = (character >= "a" && character <= "z") || (character >= "0" && character <= "9");
-    if (isAlphaNumeric) {
-      if (separator) normalized += "-";
-      separator = false;
-      normalized += character;
-      if (normalized.length >= REFERRAL_CODE_MAX_LENGTH) break;
-    } else if (normalized.length > 0) {
-      separator = true;
-    }
-  }
-  return normalized.slice(0, REFERRAL_CODE_MAX_LENGTH);
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, REFERRAL_CODE_MAX_LENGTH);
 }
 
 function centsForCommission(amountCents: number): number {
@@ -53,17 +39,6 @@ function addMonths(date: Date, months: number): Date {
 function previousMonthKey(date = new Date()): string {
   const previous = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - 1, 1));
   return `${previous.getUTCFullYear()}-${String(previous.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
-export async function createAffiliateProfile(
-  context: DomainContext,
-  input: { userId: string; referralCode: string; payoutEmail?: string },
-): Promise<string> {
-  return await withBusinessTransaction(context.db, { userId: input.userId, actorType: "system" }, async (tx) => {
-    const [profile] = await tx.insert(affiliateProfiles).values({ userId: input.userId, referralCode: input.referralCode, ...(input.payoutEmail !== undefined ? { payoutEmail: input.payoutEmail } : {}) }).returning({ id: affiliateProfiles.id });
-    if (!profile) throw new Error("Affiliate profile could not be created.");
-    return profile.id;
-  });
 }
 
 /**
@@ -224,13 +199,6 @@ export async function recordAffiliateCommissionInTransaction(
   return commission.id;
 }
 
-export async function recordAffiliateCommission(
-  context: DomainContext,
-  input: AffiliateTransactionInput,
-): Promise<string | null> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await recordAffiliateCommissionInTransaction(tx, input));
-}
-
 export async function generateAffiliatePayoutRun(
   context: DomainContext,
   input: { periodKey?: string; createdAt?: string } = {},
@@ -306,14 +274,5 @@ export async function markAffiliatePayoutItemPaid(
     const remaining = await tx.select({ id: affiliatePayoutItems.id }).from(affiliatePayoutItems).where(and(eq(affiliatePayoutItems.payoutRunId, item.payoutRunId), inArray(affiliatePayoutItems.status, ["draft", "ready"])));
     if (remaining.length === 0) await tx.update(affiliatePayoutRuns).set({ status: "paid", updatedAt: paidAt }).where(eq(affiliatePayoutRuns.id, item.payoutRunId));
     return true;
-  });
-}
-
-export async function requireAffiliateAdmin(
-  context: DomainContext,
-  input: { userId: string; businessId: string },
-): Promise<void> {
-  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
-    await requireBusinessAdmin(tx, input);
   });
 }

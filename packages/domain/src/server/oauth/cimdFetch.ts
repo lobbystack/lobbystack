@@ -27,7 +27,6 @@ export function isCimdUrlAllowed(value: string): boolean {
 export type CimdFetchOptions = {
   lookup?: ReturnType<typeof createGuardedLookup>;
   timeoutMs?: number;
-  maxBytes?: number;
   /** Test seam: the request function to use instead of node:https. */
   request?: typeof https.request;
 };
@@ -39,7 +38,6 @@ export type CimdFetchOptions = {
 export function createCimdFetch(options: CimdFetchOptions = {}): (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> {
   const lookup = options.lookup ?? createGuardedLookup();
   const timeoutMs = options.timeoutMs ?? CIMD_TIMEOUT_MS;
-  const maxBytes = options.maxBytes ?? CIMD_MAX_RESPONSE_BYTES;
   const send = options.request ?? https.request;
   return async (input, init) => {
     const request = new Request(input, init);
@@ -61,9 +59,9 @@ export function createCimdFetch(options: CimdFetchOptions = {}): (input: Request
         let received = 0;
         response.on("data", (chunk: Buffer) => {
           received += chunk.length;
-          if (received > maxBytes) {
+          if (received > CIMD_MAX_RESPONSE_BYTES) {
             response.destroy();
-            fail(new TypeError(`The metadata document is larger than ${maxBytes} bytes.`));
+            fail(new TypeError(`The metadata document is larger than ${CIMD_MAX_RESPONSE_BYTES} bytes.`));
             return;
           }
           chunks.push(chunk);

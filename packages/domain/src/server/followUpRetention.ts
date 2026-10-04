@@ -1,7 +1,6 @@
 import { sql } from "drizzle-orm";
 import { inboxItems } from "@lobbystack/db";
 
-export const FOLLOW_UP_RETENTION_MS = 365 * 24 * 60 * 60 * 1000;
 export const EXPIRED_FOLLOW_UP_TITLE = "Expired voice message";
 // The stored placeholder is kept stable for migration reconciliation. Shown text
 // stays plan-agnostic because free content now expires at 30 days.

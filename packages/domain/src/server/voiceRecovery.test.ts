@@ -28,9 +28,9 @@ import {
   completeReconciledWebVoiceCall,
   listStalledWebVoiceCalls,
   summarizeReconciliation,
-  WEB_VOICE_DEFAULT_CAP_MS,
   WEB_VOICE_RECONCILE_GRACE_MS,
 } from "./voiceRecovery";
+import { DEFAULT_WEB_CALL_MAX_DURATION_MS } from "@lobbystack/shared";
 
 const businessId = "11111111-1111-4111-8111-111111111111";
 
@@ -107,7 +107,7 @@ describe("listStalledWebVoiceCalls", () => {
   it("falls back to the default cap and clamps the page size to the batch maximum", async () => {
     mocks.selectRows = [callRow({ providerCallId: "webcall_session", webCallMaxDurationMs: null })];
     const result = await listStalledWebVoiceCalls({} as never, { businessId, olderThanMs: 0, limit: 10_000, nowMs: Date.now() });
-    expect(result[0]!.reservedSeconds).toBe(Math.floor(WEB_VOICE_DEFAULT_CAP_MS / 1_000));
+    expect(result[0]!.reservedSeconds).toBe(Math.floor(DEFAULT_WEB_CALL_MAX_DURATION_MS / 1_000));
     expect(result[0]!.requiredOperatorAction).toBe("attest_provider_unconsumed");
     expect(mocks.limit).toHaveBeenCalledWith(200);
   });

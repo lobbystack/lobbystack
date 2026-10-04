@@ -3,8 +3,8 @@ import { z } from "zod";
 
 import { billingAccounts, businesses, type DatabaseTransaction } from "@lobbystack/db";
 import {
-  billingPlanSlugs,
   contentRetentionDaysForPlan,
+  isBillingPlanSlug,
   type BillingPlanSlug,
   type ContentRetentionCategory,
   type ContentRetentionOverrides,
@@ -47,7 +47,7 @@ export function billingPlanForAccount(
   accountPlan: string | null | undefined,
   deploymentMode: string | null | undefined,
 ): BillingPlanSlug {
-  if (accountPlan && (billingPlanSlugs as readonly string[]).includes(accountPlan)) return accountPlan as BillingPlanSlug;
+  if (isBillingPlanSlug(accountPlan)) return accountPlan;
   return deploymentMode === "self_hosted_standard" ? "self_host" : "free_cloud";
 }
 
@@ -56,7 +56,7 @@ export async function resolveBusinessBillingPlan(
   businessId: string,
 ): Promise<BillingPlanSlug> {
   const [account] = await tx.select({ plan: billingAccounts.plan }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1);
-  if (account?.plan && (billingPlanSlugs as readonly string[]).includes(account.plan)) return account.plan as BillingPlanSlug;
+  if (isBillingPlanSlug(account?.plan)) return account.plan;
   const [business] = await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
   return billingPlanForAccount(null, business?.deploymentMode);
 }
@@ -75,7 +75,7 @@ export function contentExpiryForPlan(
   createdAt = new Date(),
   overrides: ContentRetentionOverrides | null = getContentRetentionPolicy()?.categories ?? null,
 ): Date {
-  const duration = contentRetentionDays(plan, category, overrides);
+  const duration = contentRetentionDaysForPlan(plan, category, overrides);
   const expiry = new Date(createdAt.getTime() + duration * 86_400_000);
   if (!Number.isFinite(expiry.getTime())) throw new Error("Invalid content retention timestamp.");
   return expiry;

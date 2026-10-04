@@ -15,7 +15,7 @@ vi.mock("@lobbystack/db", async (original) => ({
   })),
 }));
 vi.mock("./booking", () => ({ ...mocks, cancelAppointmentForCaller: vi.fn() }));
-vi.mock("./productEvents", () => ({ recordProductEvent: mocks.recordProductEvent }));
+vi.mock("./productEvents", () => ({ recordProductEvent: mocks.recordProductEvent, recordProductEventBestEffort: mocks.recordProductEvent }));
 vi.mock("./callOutcome", () => ({ recordCallSchedulingProgress: vi.fn() }));
 
 import { BookingUnavailableError } from "../availability";

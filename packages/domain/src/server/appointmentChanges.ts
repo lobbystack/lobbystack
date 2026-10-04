@@ -161,13 +161,6 @@ export async function verifyAppointmentChangeOtp(
   });
 }
 
-export async function consumeAppointmentChangeVerification(
-  context: DomainContext,
-  input: { businessId: string; verificationId: string; appointmentId: string; callerPhone: string; action: "cancel" | "reschedule" },
-): Promise<boolean> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await consumeAppointmentChangeVerificationInTransaction(tx, input));
-}
-
 export async function consumeAppointmentChangeVerificationInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; verificationId: string; appointmentId: string; callerPhone: string; action: "cancel" | "reschedule" },

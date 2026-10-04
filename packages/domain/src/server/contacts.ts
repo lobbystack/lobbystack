@@ -121,18 +121,3 @@ export async function deleteContact(
     return true;
   });
 }
-
-/** Explicit anonymization preserves referentially valid appointment and audit history. */
-export async function anonymizeContact(
-  context: DomainContext,
-  input: { userId: string; businessId: string; contactId: string },
-): Promise<boolean> {
-  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
-    await requireBusinessAdmin(tx, input);
-    const phone = `deleted-${input.contactId.replaceAll("-", "").slice(0, 24)}`;
-    const changed = await tx.update(contacts).set({ name: "Deleted contact", phone, email: null, timezone: null, preferredLocale: null, smsConsentStatus: "opted_out", smsConsentUpdatedAt: new Date(), smsConsentSource: "operator_anonymization", operatorBlockedAt: new Date(), updatedAt: new Date() }).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId))).returning({ id: contacts.id });
-    if (!changed.length) return false;
-    await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "contact", aggregateId: input.contactId, dedupeKey: `contact:${input.contactId}:anonymized:${Date.now()}`, payload: { type: "conversation.updated", entityId: input.contactId } });
-    return true;
-  });
-}

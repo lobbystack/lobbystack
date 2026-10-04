@@ -8,7 +8,7 @@ import { type TelemetryEventName, type TelemetryProperties } from "@lobbystack/t
 
 import type { DomainContext } from "./context";
 import { normalizeWebsiteSourceUrl } from "./knowledgeUrl";
-import { recordProductEvent } from "./productEvents";
+import { recordProductEventBestEffort } from "./productEvents";
 
 export type ProspectDemoPublicState = "preparing" | "active" | "claimed" | "revoked" | "expired" | "invalid";
 
@@ -82,31 +82,15 @@ async function recordProspectDemoEvent(
     properties?: TelemetryProperties;
   },
 ): Promise<void> {
-  try {
-    await recordProductEvent(context, {
-      name: input.name,
-      businessId: input.businessId,
-      distinctId: getPostHogDistinctIdForProspectDemo(input.prospectDemoId),
-      actorType: input.actorType,
-      properties: {
-        prospectDemoId: input.prospectDemoId,
-        ...input.properties,
-      },
-    });
-  } catch {
-    // Best-effort: prospect-demo telemetry must not break the demo or claim flow.
-  }
-}
-
-export async function recordProspectDemoViewed(
-  context: DomainContext,
-  input: { businessId: string; prospectDemoId: string },
-): Promise<void> {
-  await recordProspectDemoEvent(context, {
-    name: "prospect_demo.viewed",
-    actorType: "system",
+  await recordProductEventBestEffort(context, {
+    name: input.name,
     businessId: input.businessId,
-    prospectDemoId: input.prospectDemoId,
+    distinctId: getPostHogDistinctIdForProspectDemo(input.prospectDemoId),
+    actorType: input.actorType,
+    properties: {
+      prospectDemoId: input.prospectDemoId,
+      ...input.properties,
+    },
   });
 }
 
@@ -123,24 +107,6 @@ export async function recordProspectDemoCallStarted(
       callId: input.callId,
       ...(input.channel !== undefined ? { channel: input.channel } : {}),
       ...(input.provider !== undefined ? { provider: input.provider } : {}),
-    },
-  });
-}
-
-export async function recordProspectDemoCallCompleted(
-  context: DomainContext,
-  input: { businessId: string; prospectDemoId: string; callId: string; status: string; disposition?: string; providerDurationSeconds?: number },
-): Promise<void> {
-  await recordProspectDemoEvent(context, {
-    name: "prospect_demo.call_completed",
-    actorType: "worker",
-    businessId: input.businessId,
-    prospectDemoId: input.prospectDemoId,
-    properties: {
-      callId: input.callId,
-      status: input.status,
-      ...(input.disposition !== undefined ? { disposition: input.disposition } : {}),
-      ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}),
     },
   });
 }
@@ -187,43 +153,21 @@ export async function recordProspectDemoCallOutcome(
       await recordProspectDemoCallError(context, { businessId: input.businessId, prospectDemoId, callId: input.callId, reason: "call_failed" });
       return;
     }
-    await recordProspectDemoCallCompleted(context, {
+    await recordProspectDemoEvent(context, {
+      name: "prospect_demo.call_completed",
+      actorType: "worker",
       businessId: input.businessId,
       prospectDemoId,
-      callId: input.callId,
-      status: input.status,
-      ...(input.disposition !== undefined ? { disposition: input.disposition } : {}),
-      ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}),
+      properties: {
+        callId: input.callId,
+        status: input.status,
+        ...(input.disposition !== undefined ? { disposition: input.disposition } : {}),
+        ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}),
+      },
     });
   } catch {
     // Best-effort: completion telemetry must not fail the call-completion route.
   }
-}
-
-export async function recordProspectDemoClaimSucceeded(
-  context: DomainContext,
-  input: { businessId: string; prospectDemoId: string; status: "claimed" | "already_claimed" },
-): Promise<void> {
-  await recordProspectDemoEvent(context, {
-    name: "prospect_demo.claim_succeeded",
-    actorType: "system",
-    businessId: input.businessId,
-    prospectDemoId: input.prospectDemoId,
-    properties: { status: input.status },
-  });
-}
-
-export async function recordProspectDemoClaimFailed(
-  context: DomainContext,
-  input: { businessId: string; prospectDemoId: string; reason: string },
-): Promise<void> {
-  await recordProspectDemoEvent(context, {
-    name: "prospect_demo.claim_failed",
-    actorType: "system",
-    businessId: input.businessId,
-    prospectDemoId: input.prospectDemoId,
-    properties: { reason: input.reason },
-  });
 }
 
 export async function createProspectDemo(
@@ -388,7 +332,7 @@ export async function previewProspectDemo(context: DomainContext, token: string)
   // Only a published demo is an honest "viewed" signal. The demo surfaces poll
   // this endpoint while a demo is preparing, and polling stops once it is active.
   if (state === "active" && demo.prospect_demo_id && demo.business_id) {
-    await recordProspectDemoViewed(context, { businessId: demo.business_id, prospectDemoId: demo.prospect_demo_id });
+    await recordProspectDemoEvent(context, { name: "prospect_demo.viewed", actorType: "system", businessId: demo.business_id, prospectDemoId: demo.prospect_demo_id });
   }
   return {
     state,
@@ -441,10 +385,10 @@ export async function claimProspectDemo(
       await tx.update(users).set({ activeBusinessId: businessId, updatedAt: new Date() }).where(eq(users.id, input.userId));
       return { businessId, status: "claimed" as const };
     });
-    await recordProspectDemoClaimSucceeded(context, { businessId, prospectDemoId, status: result.status });
+    await recordProspectDemoEvent(context, { name: "prospect_demo.claim_succeeded", actorType: "system", businessId, prospectDemoId, properties: { status: result.status } });
     return result;
   } catch (error) {
-    await recordProspectDemoClaimFailed(context, { businessId, prospectDemoId, reason: claimFailureReason(error) });
+    await recordProspectDemoEvent(context, { name: "prospect_demo.claim_failed", actorType: "system", businessId, prospectDemoId, properties: { reason: claimFailureReason(error) } });
     throw error;
   }
 }

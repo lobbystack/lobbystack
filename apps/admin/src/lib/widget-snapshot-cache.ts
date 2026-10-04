@@ -1,5 +1,4 @@
-import { deserializeSnapshot, serializeSnapshot, snapshotCacheKey, SNAPSHOT_CACHE_TTL_SECONDS, type SnapshotCacheClient } from "@lobbystack/domain";
-import type { BusinessContextSnapshot } from "@lobbystack/shared";
+import { redisSnapshotCache, type SnapshotCacheClient } from "@lobbystack/domain";
 import Redis from "ioredis";
 
 let redis: Redis | undefined;
@@ -26,16 +25,4 @@ function getRedis(): Redis | undefined {
   return redis;
 }
 
-export const getAdminSnapshotCache = (): SnapshotCacheClient => ({
-  async get(businessId) {
-    const store = getRedis();
-    if (!store) return null;
-    const raw = await store.get(snapshotCacheKey(businessId)).catch(() => null);
-    return deserializeSnapshot(raw ?? undefined);
-  },
-  async set(businessId, snapshot: BusinessContextSnapshot) {
-    const store = getRedis();
-    if (!store) return;
-    await store.set(snapshotCacheKey(businessId), serializeSnapshot(snapshot), "EX", SNAPSHOT_CACHE_TTL_SECONDS).catch(() => undefined);
-  },
-});
+export const getAdminSnapshotCache = (): SnapshotCacheClient => redisSnapshotCache(getRedis);

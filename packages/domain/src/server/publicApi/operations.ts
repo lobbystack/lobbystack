@@ -206,11 +206,11 @@ export async function createContactForApi(context: DomainContext, caller: ApiCal
       }
       const [row] = await tx.insert(contacts).values({
         businessId: caller.businessId,
-        ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(input.phone !== undefined ? { phone: input.phone } : {}),
-        ...(input.email !== undefined ? { email: input.email } : {}),
-        ...(input.locale !== undefined ? { preferredLocale: input.locale } : {}),
-        ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
+        name: input.name,
+        phone: input.phone,
+        email: input.email,
+        preferredLocale: input.locale,
+        timezone: input.timezone,
       }).returning();
       if (!row) throw new Error("The contact could not be created.");
       await audit(tx, caller, { eventType: "api.contact.created", entityType: "contact", entityId: row.id });

@@ -90,23 +90,6 @@ export function analyticsBucketStarts(from: Date, to: Date, granularity: Analyti
   return result;
 }
 
-type ResponseMessage = { conversationId: string; createdAt: Date; direction: string; aiGenerated: boolean };
-
-/** Match the original dashboard: latest inbound to the first subsequent AI reply. */
-export function agentResponsePoints(messages: ResponseMessage[]) {
-  const pending = new Map<string, number>();
-  const points: Array<{ timestamp: Date; seconds: number }> = [];
-  for (const message of [...messages].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())) {
-    if (message.direction === "inbound") {
-      pending.set(message.conversationId, message.createdAt.getTime());
-    } else if (message.direction === "outbound" && message.aiGenerated && pending.has(message.conversationId)) {
-      points.push({ timestamp: message.createdAt, seconds: Math.max(0, Math.round((message.createdAt.getTime() - pending.get(message.conversationId)!) / 1000)) });
-      pending.delete(message.conversationId);
-    }
-  }
-  return points;
-}
-
 /** Bounded aggregate output; message histories stay in PostgreSQL. */
 export function analyticsResponseQuery(input: AnalyticsInput): SQL {
   const bucket = analyticsBucketExpression(sql`(created_at at time zone 'UTC')`, input.granularity);

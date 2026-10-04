@@ -7,7 +7,7 @@ import { appointments, auditLogs, calendarBusyBlocks, calendarConnections, enque
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
 import { queueOperatorAlertInTransaction } from "./notifications";
-import { recordProductEvent } from "./productEvents";
+import { recordProductEventBestEffort } from "./productEvents";
 
 export async function resolveCalendarAccessToken(context: DomainContext, input: {
   businessId: string;
@@ -48,18 +48,18 @@ export async function connectCalendar(
       ownerUserId: input.userId,
       provider: input.provider,
       externalAccountId: input.externalAccountId,
-      ...(input.staffId !== undefined ? { staffId: input.staffId } : {}),
-      ...(input.encryptedAccessToken !== undefined ? { encryptedAccessToken: input.encryptedAccessToken } : {}),
-      ...(input.encryptedRefreshToken !== undefined ? { encryptedRefreshToken: input.encryptedRefreshToken } : {}),
+      staffId: input.staffId,
+      encryptedAccessToken: input.encryptedAccessToken,
+      encryptedRefreshToken: input.encryptedRefreshToken,
       ...(input.tokenExpiresAt !== undefined ? { tokenExpiresAt: new Date(input.tokenExpiresAt) } : {}),
       status: "connected",
     }).onConflictDoUpdate({
       target: [calendarConnections.businessId, calendarConnections.provider, calendarConnections.externalAccountId],
       set: {
         ownerUserId: input.userId,
-        ...(input.staffId !== undefined ? { staffId: input.staffId } : {}),
-        ...(input.encryptedAccessToken !== undefined ? { encryptedAccessToken: input.encryptedAccessToken } : {}),
-        ...(input.encryptedRefreshToken !== undefined ? { encryptedRefreshToken: input.encryptedRefreshToken } : {}),
+        staffId: input.staffId,
+        encryptedAccessToken: input.encryptedAccessToken,
+        encryptedRefreshToken: input.encryptedRefreshToken,
         ...(input.tokenExpiresAt !== undefined ? { tokenExpiresAt: new Date(input.tokenExpiresAt) } : {}),
         status: "connected",
         updatedAt: new Date(),
@@ -78,16 +78,12 @@ export async function connectCalendar(
     });
     return connection.id;
   });
-  try {
-    await recordProductEvent(context, {
-      name: "integration.calendar_connected",
-      businessId: input.businessId,
-      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
-      properties: { provider: input.provider, scope: input.staffId ? "staff" : "business" },
-    });
-  } catch {
-    // Product telemetry is best-effort and must not fail the calendar connection.
-  }
+  await recordProductEventBestEffort(context, {
+    name: "integration.calendar_connected",
+    businessId: input.businessId,
+    distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+    properties: { provider: input.provider, scope: input.staffId ? "staff" : "business" },
+  });
   return connectionId;
 }
 
@@ -105,8 +101,8 @@ export async function upsertBusyBlocks(
         connectionId: input.connectionId,
         startsAt: new Date(block.startsAt),
         endsAt: new Date(block.endsAt),
-        ...(block.externalEventId !== undefined ? { externalEventId: block.externalEventId } : {}),
-        ...(block.staffId !== undefined ? { staffId: block.staffId } : {}),
+        externalEventId: block.externalEventId,
+        staffId: block.staffId,
       })));
     }
     if (input.markSynced) await tx.update(calendarConnections).set({ status: "connected", lastSyncError: null, lastSyncedAt: input.syncStartedAt ?? new Date(), updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId)));
@@ -168,7 +164,7 @@ export async function updateAppointmentSyncStateInTransaction(
 ): Promise<void> {
     const [appointment] = await tx.update(appointments).set({
       calendarSyncState: input.state,
-      ...(input.externalEventId !== undefined ? { calendarExternalId: input.externalEventId } : {}),
+      calendarExternalId: input.externalEventId,
       revision: sql`${appointments.revision} + 1`,
       updatedAt: new Date(),
     }).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId))).returning({ id: appointments.id, revision: appointments.revision });

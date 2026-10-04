@@ -11,21 +11,21 @@ export type UnitEconomicsEventInput = {
   channel: string;
   costUsd?: number | null | undefined;
   occurredAt?: Date;
-  quantity?: number;
-  quantityUnit?: string;
-  provider?: string;
-  model?: string;
-  operation?: string;
-  pricingVersion?: string;
-  pricingSource?: string;
-  pricingEffectiveDate?: string;
-  pricingRates?: Record<string, number>;
-  tokenUsage?: Record<string, number>;
-  callId?: string;
-  conversationId?: string;
-  messageId?: string;
-  notificationId?: string;
-  operatorNotificationDeliveryId?: string;
+  quantity?: number | undefined;
+  quantityUnit?: string | undefined;
+  provider?: string | undefined;
+  model?: string | undefined;
+  operation?: string | undefined;
+  pricingVersion?: string | undefined;
+  pricingSource?: string | undefined;
+  pricingEffectiveDate?: string | undefined;
+  pricingRates?: Record<string, number> | undefined;
+  tokenUsage?: Record<string, number> | undefined;
+  callId?: string | undefined;
+  conversationId?: string | undefined;
+  messageId?: string | undefined;
+  notificationId?: string | undefined;
+  operatorNotificationDeliveryId?: string | undefined;
 };
 
 function monthKey(value: Date): string {
@@ -53,6 +53,22 @@ function configuredMonthlyInfraCostUsd(): number {
 
 export async function recordUnitEconomicsEventInTransaction(tx: DatabaseTransaction, input: UnitEconomicsEventInput): Promise<string> {
   const occurredAt = input.occurredAt ?? new Date();
+  // Fields a conflicting retry may refresh; drizzle skips undefined values.
+  const details = {
+    quantity: input.quantity,
+    quantityUnit: input.quantityUnit,
+    provider: input.provider,
+    model: input.model,
+    operation: input.operation,
+    pricingVersion: input.pricingVersion,
+    pricingSource: input.pricingSource,
+    pricingEffectiveDate: input.pricingEffectiveDate,
+    pricingRates: input.pricingRates,
+    tokenUsage: input.tokenUsage,
+    callId: input.callId,
+    conversationId: input.conversationId,
+    messageId: input.messageId,
+  };
   const values = {
     businessId: input.businessId,
     monthKey: monthKey(occurredAt),
@@ -61,24 +77,12 @@ export async function recordUnitEconomicsEventInTransaction(tx: DatabaseTransact
     eventKind: input.eventKind,
     channel: input.channel,
     costUsd: safeCost(input.costUsd),
-    ...(input.quantity !== undefined ? { quantity: input.quantity } : {}),
-    ...(input.quantityUnit !== undefined ? { quantityUnit: input.quantityUnit } : {}),
-    ...(input.provider !== undefined ? { provider: input.provider } : {}),
-    ...(input.model !== undefined ? { model: input.model } : {}),
-    ...(input.operation !== undefined ? { operation: input.operation } : {}),
-    ...(input.pricingVersion !== undefined ? { pricingVersion: input.pricingVersion } : {}),
-    ...(input.pricingSource !== undefined ? { pricingSource: input.pricingSource } : {}),
-    ...(input.pricingEffectiveDate !== undefined ? { pricingEffectiveDate: input.pricingEffectiveDate } : {}),
-    ...(input.pricingRates !== undefined ? { pricingRates: input.pricingRates } : {}),
-    ...(input.tokenUsage !== undefined ? { tokenUsage: input.tokenUsage } : {}),
-    ...(input.callId !== undefined ? { callId: input.callId } : {}),
-    ...(input.conversationId !== undefined ? { conversationId: input.conversationId } : {}),
-    ...(input.messageId !== undefined ? { messageId: input.messageId } : {}),
-    ...(input.notificationId !== undefined ? { notificationId: input.notificationId } : {}),
-    ...(input.operatorNotificationDeliveryId !== undefined ? { operatorNotificationDeliveryId: input.operatorNotificationDeliveryId } : {}),
+    ...details,
+    notificationId: input.notificationId,
+    operatorNotificationDeliveryId: input.operatorNotificationDeliveryId,
     updatedAt: new Date(),
   };
-  const [event] = await tx.insert(unitEconomicsEvents).values(values).onConflictDoUpdate({ target: [unitEconomicsEvents.businessId, unitEconomicsEvents.eventKey], set: { monthKey: values.monthKey, occurredAt, eventKind: input.eventKind, channel: input.channel, costUsd: values.costUsd, ...(input.quantity !== undefined ? { quantity: input.quantity } : {}), ...(input.quantityUnit !== undefined ? { quantityUnit: input.quantityUnit } : {}), ...(input.provider !== undefined ? { provider: input.provider } : {}), ...(input.model !== undefined ? { model: input.model } : {}), ...(input.operation !== undefined ? { operation: input.operation } : {}), ...(input.pricingVersion !== undefined ? { pricingVersion: input.pricingVersion } : {}), ...(input.pricingSource !== undefined ? { pricingSource: input.pricingSource } : {}), ...(input.pricingEffectiveDate !== undefined ? { pricingEffectiveDate: input.pricingEffectiveDate } : {}), ...(input.pricingRates !== undefined ? { pricingRates: input.pricingRates } : {}), ...(input.tokenUsage !== undefined ? { tokenUsage: input.tokenUsage } : {}), ...(input.callId !== undefined ? { callId: input.callId } : {}), ...(input.conversationId !== undefined ? { conversationId: input.conversationId } : {}), ...(input.messageId !== undefined ? { messageId: input.messageId } : {}), updatedAt: new Date() } }).returning({ id: unitEconomicsEvents.id });
+  const [event] = await tx.insert(unitEconomicsEvents).values(values).onConflictDoUpdate({ target: [unitEconomicsEvents.businessId, unitEconomicsEvents.eventKey], set: { monthKey: values.monthKey, occurredAt, eventKind: input.eventKind, channel: input.channel, costUsd: values.costUsd, ...details, updatedAt: new Date() } }).returning({ id: unitEconomicsEvents.id });
   if (!event) throw new Error("Unit economics event could not be recorded.");
   await enqueueOutbox(tx, { topic: "billing.refreshUnitEconomics", businessId: input.businessId, aggregateType: "unit_economics_event", aggregateId: event.id, dedupeKey: `unit-economics:${event.id}:${values.monthKey}:${values.costUsd}`, payload: { monthKey: values.monthKey } });
   return event.id;
@@ -113,12 +117,5 @@ export async function refreshUnitEconomicsMonth(context: DomainContext, input: {
     const [rollup] = await tx.insert(unitEconomicsRollups).values(rollupValues).onConflictDoUpdate({ target: [unitEconomicsRollups.businessId, unitEconomicsRollups.monthKey], set: rollupValues }).returning({ id: unitEconomicsRollups.id });
     if (!rollup) throw new Error("Unit economics rollup could not be refreshed.");
     return rollup.id;
-  });
-}
-
-export async function getUnitEconomicsRollup(context: DomainContext, input: { businessId: string; monthKey?: string }) {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const targetMonth = input.monthKey ?? monthKey(new Date());
-    return (await tx.select().from(unitEconomicsRollups).where(and(eq(unitEconomicsRollups.businessId, input.businessId), eq(unitEconomicsRollups.monthKey, targetMonth))).limit(1))[0] ?? null;
   });
 }

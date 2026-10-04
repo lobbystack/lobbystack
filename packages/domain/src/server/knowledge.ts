@@ -14,7 +14,7 @@ import { normalizeWebsiteSourceUrl } from "./knowledgeUrl";
 import { getMeter } from "@lobbystack/telemetry/node";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { advanceOnboardingStageInTransaction } from "./onboarding";
-import { recordProductEvent } from "./productEvents";
+import { recordProductEventBestEffort } from "./productEvents";
 import { enqueueKnowledgeDerivedRefresh } from "./businessHours";
 import { resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 
@@ -110,8 +110,8 @@ export async function createKnowledgeDocument(
       businessId: input.businessId,
       title: input.title.trim(),
       sourceType: input.sourceType,
-      ...(sourceUrl !== undefined ? { sourceUrl } : {}),
-      ...(input.storageObjectId !== undefined ? { storageObjectId: input.storageObjectId } : {}),
+      sourceUrl,
+      storageObjectId: input.storageObjectId,
       status: isWebsite ? "processing" : "pending",
     }).returning({ id: knowledgeDocuments.id });
     if (!document) {
@@ -238,7 +238,7 @@ export async function updateKnowledgeSnippet(
 ): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const [snippet] = await tx.update(knowledgeSnippets).set({ ...(input.title !== undefined ? { title: input.title.trim() } : {}), ...(input.content !== undefined ? { content: input.content.trim() } : {}), ...(input.tags !== undefined ? { tags: input.tags } : {}), ...(input.priority !== undefined ? { priority: input.priority } : {}), ...(input.active !== undefined ? { active: input.active } : {}), updatedAt: new Date() }).where(and(eq(knowledgeSnippets.id, input.snippetId), eq(knowledgeSnippets.businessId, input.businessId))).returning({ id: knowledgeSnippets.id });
+    const [snippet] = await tx.update(knowledgeSnippets).set({ ...(input.title !== undefined ? { title: input.title.trim() } : {}), ...(input.content !== undefined ? { content: input.content.trim() } : {}), tags: input.tags, priority: input.priority, active: input.active, updatedAt: new Date() }).where(and(eq(knowledgeSnippets.id, input.snippetId), eq(knowledgeSnippets.businessId, input.businessId))).returning({ id: knowledgeSnippets.id });
     if (!snippet) throw new Error("Knowledge snippet not found.");
     await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_snippet", aggregateId: snippet.id, dedupeKey: `knowledge-snippet:${snippet.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "snippet_updated" } });
     await enqueueKnowledgeDerivedRefresh(tx, { businessId: input.businessId, reason: "snippet_updated" });
@@ -260,17 +260,13 @@ type IndexDocumentInput = { businessId: string; documentId: string; text: string
 type IndexDocumentResult = { chunkCount: number; indexed: boolean; documentId: string };
 
 async function recordKnowledgeDocumentIndexed(context: DomainContext, input: { businessId: string; documentId: string }): Promise<void> {
-  try {
-    await recordProductEvent(context, {
-      name: "knowledge.document_indexed",
-      businessId: input.businessId,
-      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
-      actorType: "worker",
-      properties: { documentId: input.documentId },
-    });
-  } catch {
-    // Product telemetry is best-effort and must not fail knowledge indexing.
-  }
+  await recordProductEventBestEffort(context, {
+    name: "knowledge.document_indexed",
+    businessId: input.businessId,
+    distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+    actorType: "worker",
+    properties: { documentId: input.documentId },
+  });
 }
 
 export async function indexDocumentText(context: DomainContext, input: IndexDocumentInput): Promise<{ chunkCount: number }> {
@@ -280,30 +276,6 @@ export async function indexDocumentText(context: DomainContext, input: IndexDocu
 }
 
 /** Rebuild stored evidence without fetching the source or overwriting a concurrent edit. */
-export async function reindexStoredKnowledgeDocument(
-  context: DomainContext,
-  input: { businessId: string; documentId: string; expectedRevision: number },
-): Promise<{ chunkCount: number }> {
-  if (!context.embeddings) throw new Error("An embedding provider is required.");
-  const actor = { businessId: input.businessId, actorType: "worker" as const };
-  const text = await withBusinessTransaction(context.db, actor, async tx => {
-    const document = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1))[0];
-    if (!document || !document.active || document.status !== "indexed" || document.revision !== input.expectedRevision) throw new Error("Knowledge source changed or is not active and indexed.");
-    const chunks = await tx.select({ content: knowledgeChunks.content }).from(knowledgeChunks).where(and(eq(knowledgeChunks.businessId, input.businessId), eq(knowledgeChunks.documentId, input.documentId))).orderBy(asc(knowledgeChunks.sequence));
-    return chunks.map(chunk => chunk.content).join("\n\n");
-  });
-  const chunks = chunkText(text);
-  if (!chunks.length) throw new Error("No stored knowledge to reindex.");
-  const embeddings = await context.embeddings.embed(chunks);
-  const result = await withBusinessTransaction(context.db, actor, async tx => {
-    const document = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update"))[0];
-    if (!document || !document.active || document.status !== "indexed" || document.revision !== input.expectedRevision) throw new Error("Knowledge source changed during reindexing.");
-    return indexDocumentTextInTransaction(tx, { ...input, text, embeddings, ...(context.embeddings!.fingerprint ? { embeddingFingerprint: context.embeddings!.fingerprint } : {}) });
-  });
-  if (result.indexed) await recordKnowledgeDocumentIndexed(context, { businessId: input.businessId, documentId: result.documentId });
-  return { chunkCount: result.chunkCount };
-}
-
 async function indexDocumentTextInTransaction(tx: DatabaseTransaction, input: IndexDocumentInput, preserveImport = false): Promise<IndexDocumentResult> {
     const document = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update"))[0];
     if (!document) {
@@ -494,12 +466,12 @@ export async function searchKnowledgeEvidence(
   const durationMs = performance.now() - startedAt;
   searchDuration.record(durationMs, { operation: "knowledge.search", mode, outcome });
   searchResultCount.record(matches.length, { operation: "knowledge.search", mode, outcome });
-  await recordProductEvent(context, {
+  await recordProductEventBestEffort(context, {
     name: "knowledge.search_executed",
     businessId: input.businessId,
     distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
     properties: { mode, outcome, resultCount: matches.length, durationMs, fallbackUsed: mode === "keyword", ...(input.callId ? { callId: input.callId } : {}), ...(input.turnId ? { turnId: input.turnId } : {}) },
-  }).catch(() => undefined);
+  });
   return { matches, mode, outcome, durationMs, ...(failed ? { failure: "search_unavailable" as const } : semanticResult.status === "rejected" ? { failure: "embedding_unavailable" as const } : {}) };
 }
 
@@ -602,17 +574,13 @@ export async function refreshBusinessSnapshot(
     await context.snapshotCache.set(input.businessId, builtSnapshot).catch(() => undefined);
   }
   snapshotRefreshDuration.record(performance.now() - startedAt, { operation: "snapshot.refresh" });
-  try {
-    await recordProductEvent(context, {
-      name: "business.snapshot_refreshed",
-      businessId: input.businessId,
-      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
-      actorType: "worker",
-      properties: {},
-    });
-  } catch {
-    // Product telemetry is best-effort and must not fail the snapshot refresh.
-  }
+  await recordProductEventBestEffort(context, {
+    name: "business.snapshot_refreshed",
+    businessId: input.businessId,
+    distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+    actorType: "worker",
+    properties: {},
+  });
   return version;
 }
 

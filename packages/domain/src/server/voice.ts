@@ -8,14 +8,14 @@ import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
 import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { queueOperatorAlertInTransaction } from "./notifications";
-import { applyNonAiUsageInTransaction, finalizeWebVoiceUsageInTransaction, normalizeWebCallMaxDurationMs, reserveWebVoiceUsageInTransaction } from "./billing";
-import { enqueueUsageSyncInTransaction } from "./usage";
+import { finalizeWebVoiceUsageInTransaction, normalizeWebCallMaxDurationMs, reserveWebVoiceUsageInTransaction } from "./billing";
+import { correctUsageInTransaction, enqueueUsageSyncInTransaction, reserveUsageInTransaction } from "./usage";
 import { recordUnitEconomicsEventInTransaction } from "./unitEconomics";
 import { visibleFollowUpBody, visibleFollowUpTitle } from "./followUpRetention";
 import { recordCallOutcomeInTransaction, resolveCallOutcome } from "./callOutcome";
 import { buildCallEvents } from "./callEvents";
 import { recordingListState, recordingState, type RecordingState } from "./recordingState";
-import { recordProductEvent } from "./productEvents";
+import { recordProductEventBestEffort } from "./productEvents";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 
 /** Live calls run over either the phone carrier or the browser; only the transport is durable. */
@@ -38,22 +38,18 @@ async function recordVoiceLifecycleEvent(
     properties?: TelemetryProperties;
   },
 ): Promise<void> {
-  try {
-    await recordProductEvent(context, {
-      name: input.name,
-      businessId: input.businessId,
-      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
-      actorType: "worker",
-      properties: {
-        ...(input.callId !== undefined ? { callId: input.callId } : {}),
-        ...(input.channel !== undefined ? { channel: input.channel } : {}),
-        ...(input.provider !== undefined ? { provider: input.provider } : {}),
-        ...input.properties,
-      },
-    });
-  } catch {
-    // Product telemetry is best-effort and must not fail the durable voice path.
-  }
+  await recordProductEventBestEffort(context, {
+    name: input.name,
+    businessId: input.businessId,
+    distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+    actorType: "worker",
+    properties: {
+      ...(input.callId !== undefined ? { callId: input.callId } : {}),
+      ...(input.channel !== undefined ? { channel: input.channel } : {}),
+      ...(input.provider !== undefined ? { provider: input.provider } : {}),
+      ...input.properties,
+    },
+  });
 }
 
 /**
@@ -118,15 +114,15 @@ export async function startCall(
       provider: input.provider,
       providerCallId: input.providerCallId,
       transport: input.transport,
-      ...(input.originUrl !== undefined ? { originUrl: input.originUrl } : {}),
-      ...(input.userAgent !== undefined ? { userAgent: input.userAgent } : {}),
-      ...(input.widgetId !== undefined ? { widgetId: input.widgetId } : {}),
-      ...(input.sessionPurpose !== undefined ? { sessionPurpose: input.sessionPurpose } : {}),
-      ...(input.prospectDemoId !== undefined ? { prospectDemoId: input.prospectDemoId } : {}),
+      originUrl: input.originUrl,
+      userAgent: input.userAgent,
+      widgetId: input.widgetId,
+      sessionPurpose: input.sessionPurpose,
+      prospectDemoId: input.prospectDemoId,
       ...(input.transport === "web_voice" ? { webCallMaxDurationMs: normalizeWebCallMaxDurationMs(input.maxDurationMs) } : {}),
       ...(input.billable === false ? { billingExcluded: true } : {}),
       ...(blocked ? { status: "blocked", disposition: "blocked_contact" } : {}),
-      ...(input.gatewaySessionId !== undefined ? { gatewaySessionId: input.gatewaySessionId } : {}),
+      gatewaySessionId: input.gatewaySessionId,
       startedAt: new Date(input.startedAt ?? Date.now()),
     }).returning({ id: calls.id }))[0]?.id;
     if (!callId) {
@@ -145,7 +141,7 @@ export async function startCall(
         webCallMaxDurationMs = allowance.maxDurationMs;
         await tx.update(calls).set({ webCallMaxDurationMs, updatedAt: new Date() }).where(and(eq(calls.id, callId), eq(calls.businessId, input.businessId)));
       } else {
-        const allowance = await applyNonAiUsageInTransaction(tx, { operation: "reserve", businessId: input.businessId, usageKind: "voice_seconds", sourceKey: `voice:${callId}` });
+        const allowance = await reserveUsageInTransaction(tx, { businessId: input.businessId, usageKind: "voice_seconds", sourceKey: `voice:${callId}` });
         if (!allowance.allowed) {
           const error = new Error(allowance.errorCode ?? "voice_limit_reached") as Error & { status: number; code: string };
           error.status = 402;
@@ -238,8 +234,8 @@ export async function completeCall(
     const [call] = await tx.update(calls).set({
       status: input.status,
       endedAt: new Date(input.endedAt),
-      ...(input.disposition !== undefined ? { disposition: input.disposition } : {}),
-      ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}),
+      disposition: input.disposition,
+      providerDurationSeconds: input.providerDurationSeconds,
       revision: sql`${calls.revision} + 1`,
       updatedAt: new Date(),
     }).where(and(
@@ -265,7 +261,7 @@ export async function completeCall(
       await finalizeWebVoiceUsageInTransaction(tx, { businessId: input.businessId, callId: call.id, durationSeconds });
     } else {
       durationSeconds = billableVoiceSeconds(input.providerDurationSeconds ?? measuredSeconds, call.disposition, measuredSeconds);
-      const usageEventId = await applyNonAiUsageInTransaction(tx, { operation: "correct", businessId: input.businessId, sourceKey: `voice:${call.id}`, usageKind: "voice_seconds", quantity: durationSeconds });
+      const usageEventId = await correctUsageInTransaction(tx, { businessId: input.businessId, sourceKey: `voice:${call.id}`, usageKind: "voice_seconds", quantity: durationSeconds });
       await enqueueUsageSyncInTransaction(tx, { businessId: input.businessId, usageEventId });
     }
     await enqueueOutbox(tx, {
@@ -391,9 +387,9 @@ export async function recordCallProviderPricing(
   const recorded = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [call] = await tx.update(calls).set({
       ...(input.providerUpdatedAt ? { providerUpdatedAt: new Date(input.providerUpdatedAt) } : {}),
-      ...(input.providerPrice !== undefined ? { providerPrice: input.providerPrice } : {}),
-      ...(input.providerPriceUnit !== undefined ? { providerPriceUnit: input.providerPriceUnit } : {}),
-      ...(input.providerCostUsd !== undefined ? { providerCostUsd: input.providerCostUsd } : {}),
+      providerPrice: input.providerPrice,
+      providerPriceUnit: input.providerPriceUnit,
+      providerCostUsd: input.providerCostUsd,
       revision: sql`${calls.revision} + 1`,
       updatedAt: new Date(),
     // GPT-Live calls store the OpenAI session as providerCallId, so they're priced by our call id.

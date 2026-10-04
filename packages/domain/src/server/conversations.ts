@@ -9,7 +9,7 @@ import { resolveCallOutcome } from "./callOutcome";
 import { buildConversationSessionSummary, extractCallerContext, normalizeCallSummaryLocale, sanitizeGeneratedCallerName, type CallSummaryLocale, type ConversationTranscriptTurn, type GeneratedCallSummary } from "./conversationSummary";
 import type { DomainContext } from "./context";
 import { queueOperatorAlertInTransaction, type OperatorNotificationEventKey } from "./notifications";
-import { recordProductEvent } from "./productEvents";
+import { recordProductEventBestEffort } from "./productEvents";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 
 export { buildConversationSessionSummary, type CallSummaryLocale, type ConversationTranscriptTurn, type GeneratedCallSummary } from "./conversationSummary";
@@ -141,7 +141,7 @@ export async function appendMessage(
       channel: input.channel,
       body: input.body,
       contentExpiresAt: retentionPlan ? contentExpiryForPlan(retentionPlan, "messages") : null,
-      ...(input.providerMessageId !== undefined ? { providerMessageId: input.providerMessageId } : {}),
+      providerMessageId: input.providerMessageId,
       aiGenerated: input.aiGenerated ?? false,
       status: input.direction === "outbound" ? "queued" : "received",
     }).onConflictDoNothing({ target: messages.providerMessageId }).returning({ id: messages.id });
@@ -194,16 +194,12 @@ export async function setAutomationState(
     return updated?.channel ?? null;
   });
   if (input.state !== "human_handoff" || !channel) return;
-  try {
-    await recordProductEvent(context, {
-      name: "conversation.automation_paused",
-      businessId: input.businessId,
-      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
-      properties: { conversationId: input.conversationId, channel },
-    });
-  } catch {
-    // Product telemetry is best-effort and must not fail the automation change.
-  }
+  await recordProductEventBestEffort(context, {
+    name: "conversation.automation_paused",
+    businessId: input.businessId,
+    distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
+    properties: { conversationId: input.conversationId, channel },
+  });
 }
 
 export async function registerWidgetVisitor(
@@ -222,7 +218,7 @@ export async function registerWidgetVisitor(
         // An anonymous visitor can't prove they own this contact, so link to it but never change it.
         contactId = contact.id;
       } else {
-        const [created] = await tx.insert(contacts).values({ businessId: input.businessId, ...(input.name ? { name: input.name } : {}), ...(input.email !== undefined ? { email: input.email } : {}), ...(input.phone ? { phone: input.phone } : {}) }).returning({ id: contacts.id });
+        const [created] = await tx.insert(contacts).values({ businessId: input.businessId, ...(input.name ? { name: input.name } : {}), email: input.email, ...(input.phone ? { phone: input.phone } : {}) }).returning({ id: contacts.id });
         contactId = created?.id ?? null;
         if (contactId) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contactId });
       }
@@ -230,7 +226,7 @@ export async function registerWidgetVisitor(
     const mergedMetadata = { ...(typeof existing?.metadata === "object" && existing.metadata !== null ? existing.metadata : {}), ...(input.metadata ?? {}) };
     const newlyLinked = Boolean(contactId) && !existing?.contactId;
     if (existing) {
-      await tx.update(widgetVisitors).set({ ...(input.name ? { name: input.name } : {}), ...(input.email !== undefined ? { email: input.email } : {}), ...(input.metadata ? { metadata: mergedMetadata } : {}), ...(contactId ? { contactId } : {}), ...(newlyLinked ? { contactLinkedAt: sql`now()` } : {}), lastSeenAt: new Date(), updatedAt: new Date() }).where(and(eq(widgetVisitors.id, input.visitorId), eq(widgetVisitors.businessId, input.businessId)));
+      await tx.update(widgetVisitors).set({ ...(input.name ? { name: input.name } : {}), email: input.email, ...(input.metadata ? { metadata: mergedMetadata } : {}), ...(contactId ? { contactId } : {}), ...(newlyLinked ? { contactLinkedAt: sql`now()` } : {}), lastSeenAt: new Date(), updatedAt: new Date() }).where(and(eq(widgetVisitors.id, input.visitorId), eq(widgetVisitors.businessId, input.businessId)));
       if (newlyLinked && contactId) {
         // The visitor's chats from before it gave its details belong to this
         // contact. Chats that already have a contact never move, and chats from
@@ -247,11 +243,11 @@ export async function registerWidgetVisitor(
       // A concurrent first registration can insert the visitor between our read
       // and this insert. The conflict update then links the contact itself, so
       // an anonymous insert winning the race can't drop the link.
-      const [visitor] = await tx.insert(widgetVisitors).values({ id: input.visitorId, businessId: input.businessId, ...(input.name ? { name: input.name } : {}), ...(input.email !== undefined ? { email: input.email } : {}), metadata: mergedMetadata, ...(contactId ? { contactId, contactLinkedAt: sql`now()` } : {}), lastSeenAt: new Date(), updatedAt: new Date() }).onConflictDoUpdate({
+      const [visitor] = await tx.insert(widgetVisitors).values({ id: input.visitorId, businessId: input.businessId, ...(input.name ? { name: input.name } : {}), email: input.email, metadata: mergedMetadata, ...(contactId ? { contactId, contactLinkedAt: sql`now()` } : {}), lastSeenAt: new Date(), updatedAt: new Date() }).onConflictDoUpdate({
         target: widgetVisitors.id,
         set: {
           ...(input.name ? { name: input.name } : {}),
-          ...(input.email !== undefined ? { email: input.email } : {}),
+          email: input.email,
           metadata: mergedMetadata,
           ...(contactId ? {
             contactId: sql`coalesce(${widgetVisitors.contactId}, excluded.contact_id)`,

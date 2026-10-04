@@ -5,6 +5,7 @@ import { sql } from "drizzle-orm";
 import { isApiKeyScope, type ApiKeyScope } from "@lobbystack/shared";
 
 import type { DomainContext } from "../context";
+import { derivePepper } from "../publicApi/apiKeys";
 
 // OAuth tokens for MCP clients. Better Auth issues them and stores only an
 // HMAC of each one (see storeTokens in the admin auth setup); the MCP endpoint
@@ -17,12 +18,7 @@ export const OAUTH_REFRESH_TOKEN_PREFIX = "lsr_";
 
 const PEPPER_LABEL = "lobbystack:oauth-token-hash:v1";
 
-/** Derived from ENCRYPTION_KEY like the API key pepper, with its own label so the two hashes never coincide. */
-export function oauthTokenPepper(environment: Readonly<Record<string, string | undefined>> = process.env): Buffer {
-  const secret = environment.ENCRYPTION_KEY?.trim();
-  if (!secret && environment.NODE_ENV === "production") throw new Error("ENCRYPTION_KEY is required to hash OAuth tokens.");
-  return createHmac("sha256", secret || "development-only-oauth-token-pepper").update(PEPPER_LABEL).digest();
-}
+export const oauthTokenPepper = (environment: Readonly<Record<string, string | undefined>> = process.env): Buffer => derivePepper(PEPPER_LABEL, "development-only-oauth-token-pepper", environment);
 
 /** The stored form of an access token, refresh token or authorization code (without its prefix). */
 export function hashOAuthToken(token: string, type: string, pepper: Buffer = oauthTokenPepper()): string {

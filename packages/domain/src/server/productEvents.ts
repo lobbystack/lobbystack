@@ -66,6 +66,15 @@ export async function recordProductEvent(
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: input.actorType ?? "system" }, async (tx) => await recordProductEventInTransaction(tx, input));
 }
 
+/** Records product telemetry after the durable work commits, without ever failing the caller. */
+export async function recordProductEventBestEffort(context: DomainContext, input: ProductEventInput): Promise<void> {
+  try {
+    await recordProductEvent(context, input);
+  } catch {
+    // Product telemetry is best-effort.
+  }
+}
+
 export type DurableAiUsage = {
   provider: string;
   model: string;
@@ -150,22 +159,20 @@ export async function recordAiGenerationEvent(
       provider: input.provider,
       model: input.model,
       operation: input.operation,
-      ...(input.pricingVersion !== undefined ? { pricingVersion: input.pricingVersion } : {}),
-      ...(input.pricingSource !== undefined ? { pricingSource: input.pricingSource } : {}),
-      ...(input.pricingEffectiveDate !== undefined ? { pricingEffectiveDate: input.pricingEffectiveDate } : {}),
-      ...(input.pricingRates !== undefined ? { pricingRates: input.pricingRates } : input.ratesUsdPerMillionTokens !== undefined ? { pricingRates: input.ratesUsdPerMillionTokens } : {}),
-      ...(input.tokenUsage !== undefined ? { tokenUsage: input.tokenUsage } : {
-        tokenUsage: {
-          ...(input.inputTokens !== undefined ? { inputTokens: input.inputTokens } : {}),
-          ...(input.outputTokens !== undefined ? { outputTokens: input.outputTokens } : {}),
-          ...(input.totalTokens !== undefined ? { totalTokens: input.totalTokens } : {}),
-          ...(input.cachedInputTokens !== undefined ? { cachedInputTokens: input.cachedInputTokens } : {}),
-          ...(input.reasoningTokens !== undefined ? { reasoningTokens: input.reasoningTokens } : {}),
-        },
-      }),
-      ...(input.callId !== undefined ? { callId: input.callId } : {}),
-      ...(input.conversationId !== undefined ? { conversationId: input.conversationId } : {}),
-      ...(input.messageId !== undefined ? { messageId: input.messageId } : {}),
+      pricingVersion: input.pricingVersion,
+      pricingSource: input.pricingSource,
+      pricingEffectiveDate: input.pricingEffectiveDate,
+      pricingRates: input.pricingRates ?? input.ratesUsdPerMillionTokens,
+      tokenUsage: input.tokenUsage ?? {
+        ...(input.inputTokens !== undefined ? { inputTokens: input.inputTokens } : {}),
+        ...(input.outputTokens !== undefined ? { outputTokens: input.outputTokens } : {}),
+        ...(input.totalTokens !== undefined ? { totalTokens: input.totalTokens } : {}),
+        ...(input.cachedInputTokens !== undefined ? { cachedInputTokens: input.cachedInputTokens } : {}),
+        ...(input.reasoningTokens !== undefined ? { reasoningTokens: input.reasoningTokens } : {}),
+      },
+      callId: input.callId,
+      conversationId: input.conversationId,
+      messageId: input.messageId,
     });
   }
   return eventId;

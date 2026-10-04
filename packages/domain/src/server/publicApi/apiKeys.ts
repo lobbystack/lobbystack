@@ -17,16 +17,21 @@ import { invalidRequest } from "./errors";
 const KEY_PATTERN = /^lsk_[0-9a-f]{8}_[A-Za-z0-9_-]{32}$/;
 const PEPPER_LABEL = "lobbystack:api-key-hash:v1";
 
+type Environment = Readonly<Record<string, string | undefined>>;
+
 /**
- * Derives the pepper from ENCRYPTION_KEY so deployments need no new secret.
- * Changing ENCRYPTION_KEY invalidates every API key, as it already does for
- * stored calendar tokens and webhook signing secrets.
+ * Derives a hashing pepper from ENCRYPTION_KEY so deployments need no new
+ * secret. Each use passes its own label, so the hashes never coincide.
+ * Changing ENCRYPTION_KEY invalidates every key hashed with it, as it already
+ * does for stored calendar tokens and webhook signing secrets.
  */
-export function apiKeyPepper(environment: Readonly<Record<string, string | undefined>> = process.env): Buffer {
+export function derivePepper(label: string, developmentSecret: string, environment: Environment = process.env): Buffer {
   const secret = environment.ENCRYPTION_KEY?.trim();
-  if (!secret && environment.NODE_ENV === "production") throw new Error("ENCRYPTION_KEY is required to hash API keys.");
-  return createHmac("sha256", secret || "development-only-api-key-pepper").update(PEPPER_LABEL).digest();
+  if (!secret && environment.NODE_ENV === "production") throw new Error("ENCRYPTION_KEY is required to hash API keys and OAuth tokens.");
+  return createHmac("sha256", secret || developmentSecret).update(label).digest();
 }
+
+export const apiKeyPepper = (environment: Environment = process.env): Buffer => derivePepper(PEPPER_LABEL, "development-only-api-key-pepper", environment);
 
 export type GeneratedApiKey = { key: string; prefix: string; keyHash: string };
 
