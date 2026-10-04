@@ -1,9 +1,8 @@
 "use client";
 
-import { FormEvent, useEffect, useId, useMemo, useState } from "react";
+import { FormEvent, useEffect, useId, useState } from "react";
 
 import { useTranslation } from "react-i18next";
-import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +21,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 
 function parseTags(value: string): Array<string> {
@@ -38,22 +36,18 @@ function formatTags(tags: Array<string> | undefined): string {
 
 export function AddKnowledgeSheet({
   save,
-  section,
   mode = "create",
   snippet,
   open,
   onOpenChange,
 }: {
   save: (input: { title: string; content: string; tags: string[]; priority: number; active: boolean }) => Promise<void>;
-  section: "knowledge";
   mode?: "create" | "edit";
   snippet?: { title: string; content: string; tags?: string[]; priority: number; active: boolean } | null;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation(["agent", "knowledge"]);
-  const isControlled = open !== undefined;
-  const [internalOpen, setInternalOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [tags, setTags] = useState("");
@@ -61,31 +55,17 @@ export function AddKnowledgeSheet({
   const titleId = useId();
   const contentId = useId();
   const tagsId = useId();
-  const isDialogOpen = isControlled ? open : internalOpen;
   const dialogTitle =
     mode === "edit"
-      ? t(`agent:sections.${section}.editKnowledge`)
-      : t(`agent:sections.${section}.addKnowledge`);
+      ? t("agent:sections.knowledge.editKnowledge")
+      : t("agent:sections.knowledge.addKnowledge");
   const dialogDescription =
     mode === "edit"
-      ? t(`agent:sections.${section}.editKnowledgeDescription`)
-      : t(`agent:sections.${section}.addKnowledgeDescription`);
+      ? t("agent:sections.knowledge.editKnowledgeDescription")
+      : t("agent:sections.knowledge.addKnowledgeDescription");
   const submitLabel = mode === "edit" ? t("agent:actions.saveChanges") : t("agent:actions.save");
-  const trigger = useMemo(() => {
-    if (mode !== "create" || isControlled) {
-      return null;
-    }
-
-    return (
-      <Button>
-        <Plus data-icon="inline-start" />
-        {t(`agent:sections.${section}.addKnowledge`)}
-      </Button>
-    );
-  }, [isControlled, mode, section, t]);
-
   useEffect(() => {
-    if (!isDialogOpen) {
+    if (!open) {
       setTitle("");
       setContent("");
       setTags("");
@@ -96,14 +76,7 @@ export function AddKnowledgeSheet({
     setTitle(snippet?.title ?? "");
     setContent(snippet?.content ?? "");
     setTags(formatTags(snippet?.tags));
-  }, [isDialogOpen, snippet]);
-
-  function setDialogOpen(nextOpen: boolean): void {
-    onOpenChange?.(nextOpen);
-    if (!isControlled) {
-      setInternalOpen(nextOpen);
-    }
-  }
+  }, [open, snippet]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -121,15 +94,14 @@ export function AddKnowledgeSheet({
         priority: snippet?.priority ?? 75,
         active: snippet?.active ?? true,
       });
-      setDialogOpen(false);
+      onOpenChange(false);
     } finally {
       setIsSaving(false);
     }
   }
 
   return (
-    <Dialog onOpenChange={setDialogOpen} open={isDialogOpen}>
-      {trigger ? <DialogTrigger render={trigger} /> : null}
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
@@ -144,15 +116,15 @@ export function AddKnowledgeSheet({
               <Field>
                 <FieldContent>
                   <FieldLabel htmlFor={titleId}>
-                    {t(`agent:sections.${section}.fields.title.label`)}
+                    {t("agent:sections.knowledge.fields.title.label")}
                   </FieldLabel>
                   <FieldDescription>
-                    {t(`agent:sections.${section}.fields.title.hint`)}
+                    {t("agent:sections.knowledge.fields.title.hint")}
                   </FieldDescription>
                 </FieldContent>
                 <Input
                   id={titleId}
-                  placeholder={t(`agent:sections.${section}.fields.title.placeholder`)}
+                  placeholder={t("agent:sections.knowledge.fields.title.placeholder")}
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
                 />
@@ -161,16 +133,16 @@ export function AddKnowledgeSheet({
               <Field>
                 <FieldContent>
                   <FieldLabel htmlFor={contentId}>
-                    {t(`agent:sections.${section}.fields.content.label`)}
+                    {t("agent:sections.knowledge.fields.content.label")}
                   </FieldLabel>
                   <FieldDescription>
-                    {t(`agent:sections.${section}.fields.content.hint`)}
+                    {t("agent:sections.knowledge.fields.content.hint")}
                   </FieldDescription>
                 </FieldContent>
                 <Textarea
                   className="max-h-[40svh] min-h-40 overflow-y-auto"
                   id={contentId}
-                  placeholder={t(`agent:sections.${section}.fields.content.placeholder`)}
+                  placeholder={t("agent:sections.knowledge.fields.content.placeholder")}
                   value={content}
                   onChange={(event) => setContent(event.target.value)}
                 />
@@ -179,15 +151,15 @@ export function AddKnowledgeSheet({
               <Field>
                 <FieldContent>
                   <FieldLabel htmlFor={tagsId}>
-                    {t(`agent:sections.${section}.fields.tags.label`)}
+                    {t("agent:sections.knowledge.fields.tags.label")}
                   </FieldLabel>
                   <FieldDescription>
-                    {t(`agent:sections.${section}.fields.tags.hint`)}
+                    {t("agent:sections.knowledge.fields.tags.hint")}
                   </FieldDescription>
                 </FieldContent>
                 <Input
                   id={tagsId}
-                  placeholder={t(`agent:sections.${section}.fields.tags.placeholder`)}
+                  placeholder={t("agent:sections.knowledge.fields.tags.placeholder")}
                   value={tags}
                   onChange={(event) => setTags(event.target.value)}
                 />

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { apiKeyScopes, type ApiKeyScope } from "@lobbystack/shared";
 
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { SecretReveal } from "@/components/secret-reveal";
 import { SectionBlock } from "@/components/section-block";
@@ -21,8 +22,6 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { selectActiveBusiness } from "@/lib/active-business";
-import type { WorkspaceViewModel } from "@/lib/page-view-models";
 import { requestJson } from "@/lib/request-json";
 import { intlLocale } from "@/lib/locale";
 
@@ -47,8 +46,7 @@ export function LiveApiKeysSurface() {
   const [scopes, setScopes] = useState<ApiKeyScope[]>(["calls:read", "contacts:read", "appointments:read", "messages:read", "business:read"]);
   const [created, setCreated] = useState<{ key: string; name: string } | null>(null);
   const [revoking, setRevoking] = useState<ApiKeyRecord | null>(null);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: WorkspaceViewModel[] }>("/api/businesses") });
-  const business = selectActiveBusiness(businesses.data?.businesses);
+  const { businesses, business } = useActiveBusiness();
   const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   const keys = useQuery({ queryKey: ["api-keys", business?.businessId], queryFn: () => requestJson<{ keys: ApiKeyRecord[] }>(`/api/api-keys?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId && canManage) });
   const formatDate = (value: string) => new Intl.DateTimeFormat(intlLocale(i18n.resolvedLanguage ?? i18n.language), { dateStyle: "medium" }).format(new Date(value));

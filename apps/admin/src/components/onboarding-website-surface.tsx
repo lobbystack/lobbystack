@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { requestJson } from "@/lib/request-json";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useStepNavigation } from "@/lib/use-step-navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Globe, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -12,13 +14,6 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { useTelemetry } from "@/components/product-analytics";
 
-type Business = { businessId: string; active: boolean; websiteUrl?: string | null };
-
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
-  if (!response.ok) throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Request failed.");
-  return await response.json() as T;
-}
 
 export function OnboardingWebsiteSurface() {
   const { t } = useTranslation("onboarding");
@@ -28,11 +23,10 @@ export function OnboardingWebsiteSurface() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const edited = useRef(false);
   const [error, setError] = useState<string | null>(null);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
+  const { business } = useActiveBusiness();
   // The next step is fetched while the form is still being filled in, so
   // Continue waits only on the save.
   useEffect(() => { prefetch("/onboarding/knowledge"); }, [prefetch]);
-  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
   useEffect(() => { if (!edited.current && business?.websiteUrl) setWebsiteUrl(business.websiteUrl); }, [business?.websiteUrl]);
   const add = useMutation({
     mutationFn: () => requestJson("/api/knowledge", { method: "POST", body: JSON.stringify({ businessId: business!.businessId, title: websiteUrl.trim(), sourceType: "website", sourceUrl: websiteUrl.trim(), onboarding: true }) }),

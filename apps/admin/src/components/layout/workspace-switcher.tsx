@@ -3,28 +3,22 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { SidebarTeamSkeleton } from "@/components/loading-skeletons";
 import { recordPendingWorkspaceSwitch } from "@/lib/workspace-analytics";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { SidebarMenu, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
-type Business = { businessId: string; name: string; active: boolean };
-async function getBusinesses(): Promise<{ businesses: Business[] }> {
-  const response = await fetch("/api/businesses", { credentials: "include" });
-  if (!response.ok) throw new Error("Unable to load workspaces.");
-  return await response.json() as { businesses: Business[] };
-}
 export function WorkspaceSwitcher() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { t } = useTranslation("nav");
   const { isMobile } = useSidebar();
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: getBusinesses });
+  const { businesses, business: active } = useActiveBusiness();
   const [switching, setSwitching] = useState(false);
-  const active = businesses.data?.businesses.find((business) => business.active) ?? businesses.data?.businesses[0];
 
   async function selectBusiness(businessId: string) {
     if (businessId === active?.businessId) return;

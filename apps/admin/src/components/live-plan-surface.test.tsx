@@ -9,7 +9,7 @@ const route = vi.hoisted(() => ({ router: { replace: vi.fn() }, search: new URLS
 vi.mock("next/navigation", () => ({ useRouter: () => route.router, useSearchParams: () => route.search }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
 const clients: QueryClient[] = [];
-beforeEach(() => { route.search = new URLSearchParams(); });
+beforeEach(() => { route.search = new URLSearchParams(); vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn() }); });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 function setup({ synced = false, checkoutFails = false, billingFails = false, plan = "pro", admin = true, configured = false, transactions = false, accountMissing = false } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
@@ -71,7 +71,7 @@ describe("original billing overview behavior", () => {
   it.each([false, true])("cleans checkout return parameters only after durable synchronization: %s", async synced => {
     route.search = new URLSearchParams("checkout=success&requestId=returned");
     const fetchMock = setup({ synced });
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/billing/checkout?businessId=business&requestId=returned", { credentials: "include" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/billing/checkout?businessId=business&requestId=returned", expect.objectContaining({ credentials: "include" })));
     if (synced) await waitFor(() => expect(route.router.replace).toHaveBeenCalledWith("/settings/plan"));
     else expect(route.router.replace).not.toHaveBeenCalled();
     expect(screen.queryByText("billing.toast.checkoutSuccess")).toBeNull();
@@ -79,7 +79,7 @@ describe("original billing overview behavior", () => {
   it("preserves the checkout return request when provider synchronization fails", async () => {
     route.search = new URLSearchParams("checkout=success&requestId=returned");
     const fetchMock = setup({ checkoutFails: true });
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/billing/checkout?businessId=business&requestId=returned", { credentials: "include" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/billing/checkout?businessId=business&requestId=returned", expect.objectContaining({ credentials: "include" })));
     await waitFor(() => expect(clients.at(-1)?.getQueryState(["billing-checkout-return", "business", "returned"])?.status).toBe("error"));
     expect(route.router.replace).not.toHaveBeenCalled();
     expect(route.search.get("requestId")).toBe("returned");

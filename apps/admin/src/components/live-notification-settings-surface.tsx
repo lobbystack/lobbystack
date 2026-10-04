@@ -5,9 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import type { WorkspaceViewModel } from "@/lib/page-view-models";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
-import { selectActiveBusiness } from "@/lib/active-business";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,8 +23,7 @@ const issueEvents: EventKey[] = ["smsFailed", "calendarSync", "transferFailed", 
 export function LiveNotificationSettingsSurface({ widgetOnly = false }: { widgetOnly?: boolean }) {
   const { t } = useTranslation("settings");
   const queryClient = useQueryClient();
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: WorkspaceViewModel[] }>("/api/businesses") });
-  const business = selectActiveBusiness(businesses.data?.businesses);
+  const { businesses, business } = useActiveBusiness();
   const preferences = useQuery({ queryKey: ["notification-preferences", business?.businessId], queryFn: () => requestJson<Preferences>(`/api/notification-preferences?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
   const [pendingPhoneVerification, setPendingPhoneVerification] = useState<Preferences | null>(null);
   useEffect(() => { setPendingPhoneVerification(null); }, [business?.businessId]);

@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { localizeMarketingHref } from "@/lib/marketing-site-url";
-import { intlLocale, resolveLocale, type SupportedLocale } from "@/lib/locale";
+import { formatDateTime, intlLocale, resolveLocale, type SupportedLocale } from "@/lib/locale";
 
 import { PageSurface } from "./page-surface";
 import { Badge } from "./ui/badge";
@@ -48,7 +48,7 @@ function formatCurrency(locale: SupportedLocale, amountCents: number, currency =
 
 function formatDate(locale: SupportedLocale, value: string | null): string {
   if (!value) return "";
-  return new Intl.DateTimeFormat(intlLocale(locale), { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
+  return formatDateTime(value, locale, { month: "short", day: "numeric", year: "numeric" });
 }
 
 function StatCard({ description, label, value }: { description: string; label: string; value: string }) {
@@ -77,7 +77,7 @@ export function LiveAffiliateSurface() {
   }, [affiliate.data]);
 
   if (affiliate.isLoading) return <LoadingAffiliatePage />;
-  if (affiliate.isError) return <PageSurface description="" title={t("title")}><Card><CardContent className="py-12 text-center text-sm text-muted-foreground">{t("toast.profileFailed")}</CardContent></Card></PageSurface>;
+  if (affiliate.isError) return <PageSurface title={t("title")}><Card><CardContent className="py-12 text-center text-sm text-muted-foreground">{t("toast.profileFailed")}</CardContent></Card></PageSurface>;
 
   const data = affiliate.data;
   const profile = data?.profile ?? null;
@@ -90,7 +90,7 @@ export function LiveAffiliateSurface() {
   }
 
   return (
-    <PageSurface description="" title={t("title")}>
+    <PageSurface title={t("title")}>
       <Card><CardContent className="flex flex-col gap-8">
         <div className="flex flex-col gap-4"><CardTitle>{t("referral.title")}</CardTitle>{profile ? <div className="flex flex-col gap-2 sm:flex-row"><Input readOnly value={profile.referralLink} /><Button onClick={() => void handleCopy()} type="button"><CopyIcon data-icon="inline-start" />{t("referral.copy")}</Button></div> : <p className="text-sm text-muted-foreground">{t("toast.profileFailed")}</p>}</div>
         <div className="flex flex-col gap-4"><div className="flex items-center justify-between gap-4"><CardTitle>{t("terms.title")}</CardTitle><a className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" href={localizeMarketingHref(locale, "/terms/#affiliate-program")} rel="noreferrer" target="_blank">{t("terms.link")}<ExternalLinkIcon aria-hidden="true" className="size-4" /></a></div><div className="flex flex-col gap-4"><div className="flex items-center gap-3"><GiftIcon aria-hidden="true" className="size-4 shrink-0" /><p className="text-base font-medium text-foreground">{t("terms.reward", { rate: "20%", duration: t("terms.oneYear") })}</p></div><Separator /><div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"><span><span className="font-medium text-foreground">{formatCurrency(locale, 10_000, currency)}</span>{" "}<span className="lowercase">{t("terms.minimum")}</span></span><span aria-hidden="true">/</span><span><span className="font-medium text-foreground">{t("terms.days", { count: 30 })}</span>{" "}<span className="lowercase">{t("terms.hold")}</span></span></div></div></div>

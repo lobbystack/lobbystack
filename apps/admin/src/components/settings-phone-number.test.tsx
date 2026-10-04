@@ -2,7 +2,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LivePhoneNumberSettingsSurface } from "./live-phone-number-settings-surface";
 
 const actions = vi.hoisted(() => ({ upgrade: vi.fn(), navigate: vi.fn() }));
@@ -10,6 +10,7 @@ vi.mock("./upgrade-plan-dialog-context", () => ({ useOpenUpgradePlanDialog: () =
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: actions.navigate }) }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
 const clients: QueryClient[] = [];
+beforeEach(() => { vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn() }); });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 function setup(plan: string, role = "business_owner", usedAt: string | null = null, primary = true, reclaimScheduledAt: string | null = null, pending = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });

@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 import { webhookEventTypes, type WebhookEventType } from "@lobbystack/shared";
 
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { PageHeader } from "@/components/page-header";
 import { SecretReveal } from "@/components/secret-reveal";
@@ -23,8 +24,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { selectActiveBusiness } from "@/lib/active-business";
-import type { WorkspaceViewModel } from "@/lib/page-view-models";
 import { requestJson } from "@/lib/request-json";
 import { intlLocale } from "@/lib/locale";
 
@@ -151,8 +150,7 @@ export function LiveWebhooksSurface() {
   const [dialog, setDialog] = useState<{ mode: "create" } | { mode: "edit"; endpoint: Endpoint } | { mode: "secret"; secret: string; title: string } | null>(null);
   const [confirm, setConfirm] = useState<{ kind: "delete" | "rotate"; endpoint: Endpoint } | null>(null);
   const [openLog, setOpenLog] = useState<string | null>(null);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: WorkspaceViewModel[] }>("/api/businesses") });
-  const business = selectActiveBusiness(businesses.data?.businesses);
+  const { businesses, business } = useActiveBusiness();
   const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   const query = `businessId=${encodeURIComponent(business?.businessId ?? "")}`;
   const endpoints = useQuery({ queryKey: ["webhook-endpoints", business?.businessId], queryFn: () => requestJson<{ endpoints: Endpoint[] }>(`/api/webhook-endpoints?${query}`), enabled: Boolean(business?.businessId && canManage) });

@@ -6,9 +6,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import type { TeamInvitationViewModel, TeamMemberViewModel, WorkspaceViewModel } from "@/lib/page-view-models";
+import { useActiveBusiness } from "@/hooks/use-active-business";
+import type { TeamInvitationViewModel, TeamMemberViewModel } from "@/lib/page-view-models";
 import { requestJson } from "@/lib/request-json";
-import { selectActiveBusiness } from "@/lib/active-business";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -41,8 +41,7 @@ export function LiveTeamSurface() {
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<InviteRole>("viewer");
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: WorkspaceViewModel[] }>("/api/businesses") });
-  const business = selectActiveBusiness(businesses.data?.businesses);
+  const { businesses, business } = useActiveBusiness();
   const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   const team = useQuery({ queryKey: ["team", business?.businessId], queryFn: () => requestJson<{ members: TeamMemberViewModel[]; invitations: TeamInvitationViewModel[] }>(`/api/team?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
   useEffect(() => { if (business?.name) setBusinessName(business.name); }, [business?.name]);

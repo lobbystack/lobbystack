@@ -1,24 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import posthog from "posthog-js";
-import { createBrowserTelemetry } from "@lobbystack/telemetry/browser";
 import { requestJson } from "@/lib/request-json";
-import { selectActiveBusiness } from "@/lib/active-business";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { BookTextIcon } from "@/components/ui/book-text";
-import { BlocksIcon } from "@/components/ui/blocks";
-import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasing";
-import { ClipboardCheckIcon } from "@/components/ui/clipboard-check";
-import { HomeIcon } from "@/components/ui/home";
-import { MessageSquareMoreIcon } from "@/components/ui/message-square-more";
-import { PhoneAnimatedIcon } from "@/components/ui/phone-animated";
-import { SettingsIcon } from "@/components/ui/settings";
-import { UsersIcon } from "@/components/ui/users";
-import { WorkflowIcon } from "@/components/ui/workflow";
+import {
+  Blocks,
+  BookText,
+  ChartColumnIncreasing,
+  ClipboardCheck,
+  House,
+  MessageSquareMore,
+  Phone,
+  Settings,
+  Users,
+  Workflow,
+  type LucideIcon,
+} from "lucide-react";
+import { useActiveBusiness } from "@/hooks/use-active-business";
+import { useSignOut } from "@/hooks/use-sign-out";
 import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
 import { Main } from "@/components/layout/main";
 import { SiteHeader } from "@/components/site-header";
@@ -43,14 +45,6 @@ import { DashboardUtilityBar } from "./dashboard-utility-bar";
 import { DashboardSetupGuideCard } from "./dashboard-setup-guide-card";
 import { NavUser } from "./nav-user";
 import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
-import { resolveLocale } from "@/lib/locale";
-import { localizePublicPath } from "@/lib/locale-path";
-
-type Business = {
-  businessId: string;
-  name: string;
-  active: boolean;
-};
 
 type DashboardShellProps = {
   children: React.ReactNode;
@@ -63,14 +57,8 @@ type DashboardShellProps = {
 type NavigationItem = {
   href: string;
   label: string;
-  icon: typeof HomeIcon;
+  icon: LucideIcon;
 };
-
-async function getBusinesses(): Promise<{ businesses: Business[] }> {
-  const response = await fetch("/api/businesses", { credentials: "include" });
-  if (!response.ok) throw new Error("Unable to load workspaces.");
-  return await response.json() as { businesses: Business[] };
-}
 
 function getSidebarDefaultOpen(): boolean {
   if (typeof document === "undefined") return true;
@@ -119,8 +107,7 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
 }
 
 function BillingBanner() {
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: getBusinesses });
-  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
+  const { business } = useActiveBusiness();
   const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: async () => {
     const response = await fetch(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`, { credentials: "include" });
     if (!response.ok) throw new Error("Billing unavailable");
@@ -134,22 +121,22 @@ function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
   const pathname = usePathname();
   const { t } = useTranslation(["nav", "settings", "agent"]);
   const general: NavigationItem[] = [
-    { label: t("nav:items.home"), href: "/", icon: HomeIcon },
-    { label: t("nav:items.calls"), href: "/calls", icon: PhoneAnimatedIcon },
-    ...(["/messages", "/settings/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`)) ? [{ label: t("nav:items.messages"), href: "/messages", icon: MessageSquareMoreIcon }] : []),
-    { label: t("nav:items.contacts"), href: "/contacts", icon: UsersIcon },
+    { label: t("nav:items.home"), href: "/", icon: House },
+    { label: t("nav:items.calls"), href: "/calls", icon: Phone },
+    ...(["/messages", "/settings/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`)) ? [{ label: t("nav:items.messages"), href: "/messages", icon: MessageSquareMore }] : []),
+    { label: t("nav:items.contacts"), href: "/contacts", icon: Users },
   ];
   const receptionist: NavigationItem[] = [
-    { label: t("agent:sections.basicSettings.title"), href: "/agent", icon: ClipboardCheckIcon },
-    { label: t("agent:sections.knowledge.title"), href: "/agent/knowledge", icon: BookTextIcon },
-    { label: t("agent:sections.services.title"), href: "/agent/services", icon: BlocksIcon },
-    { label: t("agent:sections.rules.title"), href: "/agent/rules", icon: WorkflowIcon },
+    { label: t("agent:sections.basicSettings.title"), href: "/agent", icon: ClipboardCheck },
+    { label: t("agent:sections.knowledge.title"), href: "/agent/knowledge", icon: BookText },
+    { label: t("agent:sections.services.title"), href: "/agent/services", icon: Blocks },
+    { label: t("agent:sections.rules.title"), href: "/agent/rules", icon: Workflow },
   ];
   const other: NavigationItem[] = [
-    { label: t("nav:items.analytics"), href: "/analytics", icon: ChartColumnIncreasingIcon },
-    { label: t("settings:sections.integrations"), href: "/integrations", icon: BlocksIcon },
-    { label: t("nav:items.settings"), href: "/settings/usage", icon: SettingsIcon },
-    ...(["/messages", "/settings/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`)) ? [{ label: t("settings:sections.widget"), href: "/settings/widget", icon: SettingsIcon }] : []),
+    { label: t("nav:items.analytics"), href: "/analytics", icon: ChartColumnIncreasing },
+    { label: t("settings:sections.integrations"), href: "/integrations", icon: Blocks },
+    { label: t("nav:items.settings"), href: "/settings/usage", icon: Settings },
+    ...(["/messages", "/settings/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`)) ? [{ label: t("settings:sections.widget"), href: "/settings/widget", icon: Settings }] : []),
   ];
 
   return (
@@ -171,19 +158,9 @@ function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
   );
 }
 
-function AnimatedNavigationIcon({ icon: Icon, hovered }: { icon: typeof HomeIcon; hovered: boolean }) {
-  const iconRef = useRef<{ startAnimation: () => void; stopAnimation: () => void } | null>(null);
-  useEffect(() => {
-    if (hovered) iconRef.current?.startAnimation();
-    else iconRef.current?.stopAnimation();
-  }, [hovered]);
-  return <Icon ref={iconRef} className="size-4 shrink-0 [&_svg]:size-4" size={16} />;
-}
-
 function NavigationGroup({ items, pathname, title }: { items: NavigationItem[]; pathname: string; title: string }) {
   const router = useRouter();
   const { isMobile, setOpenMobile } = useSidebar();
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   return (
     <SidebarGroup>
       <SidebarGroupLabel>{title}</SidebarGroupLabel>
@@ -197,16 +174,12 @@ function NavigationGroup({ items, pathname, title }: { items: NavigationItem[]; 
           return (
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
-                onMouseEnter={() => setHoveredItem(item.href)}
-                onMouseLeave={() => setHoveredItem(null)}
-                onFocus={() => setHoveredItem(item.href)}
-                onBlur={() => setHoveredItem(null)}
                 isActive={active}
                 {...(!isMobile ? { render: <Link href={item.href} /> } : {})}
                 tooltip={item.label}
                 onClick={() => { if (isMobile) { router.push(item.href); setOpenMobile(false); } }}
               >
-                <AnimatedNavigationIcon icon={item.icon} hovered={hoveredItem === item.href} />
+                <item.icon className="size-4 shrink-0" />
                 <span>{item.label}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -219,34 +192,10 @@ function NavigationGroup({ items, pathname, title }: { items: NavigationItem[]; 
 
 
 function UserMenu({ user }: Pick<DashboardShellProps, "user">) {
-  const router = useRouter();
-  const { i18n } = useTranslation();
   const openUpgradePlanDialog = useOpenUpgradePlanDialog();
-  const [signingOut, setSigningOut] = useState(false);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: Business[] }>("/api/businesses") });
-  const business = selectActiveBusiness(businesses.data?.businesses);
+  const signOut = useSignOut();
+  const { business } = useActiveBusiness();
   const billing = useQuery({ queryKey: ["billing", business?.businessId], enabled: Boolean(business?.businessId), queryFn: () => requestJson<{ account: { plan: string | null } | null; permissions: BillingPermissions; availableCheckoutPlans: Array<"starter" | "pro">; availableCheckoutIntervals: Record<"starter" | "pro", string[]> }>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`) });
   const showUpgradeToPro = billing.data?.permissions.hasCheckoutAccess === true && (billing.data.account?.plan ?? "free_cloud") === "free_cloud" && (billing.data.availableCheckoutPlans ?? []).some(plan => billing.data?.availableCheckoutIntervals[plan].length);
-  async function signOut() {
-    if (signingOut) return;
-    setSigningOut(true);
-    try {
-      const response = await fetch("/api/auth/sign-out", { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: "{}" });
-      if (!response.ok) return;
-      // Remove the prior operator and workspace association before the next
-      // person uses this browser session. This is deliberately best-effort.
-      try {
-        if (posthog.__loaded) {
-          const telemetry = createBrowserTelemetry(posthog, { optedOut: false });
-          telemetry.reset();
-          telemetry.setOptOut(true);
-        }
-      } catch {
-        // Analytics must never block sign-out.
-      }
-      router.replace(localizePublicPath("/login", resolveLocale(i18n.resolvedLanguage, i18n.language)));
-      router.refresh();
-    } finally { setSigningOut(false); }
-  }
-  return <NavUser user={{ ...user, avatar: "" }} onSignOut={() => void signOut()} onUpgradeToPro={openUpgradePlanDialog} showUpgradeToPro={showUpgradeToPro} />;
+  return <NavUser user={user} onSignOut={() => void signOut()} onUpgradeToPro={openUpgradePlanDialog} showUpgradeToPro={showUpgradeToPro} />;
 }

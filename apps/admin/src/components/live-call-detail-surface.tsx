@@ -1,13 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft,
   CheckCircle2,
   Circle,
-  Copy,
   FileText,
   Headphones,
   Info,
@@ -17,6 +13,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
+import { BackLink, DetailSection, MetadataField, truncateId, useCopiedField } from "@/components/detail-fields";
 import { SectionBlock } from "@/components/section-block";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,13 +23,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { selectActiveBusiness } from "@/lib/active-business";
+import { useActiveBusiness } from "@/hooks/use-active-business";
+import { formatDuration } from "@/lib/duration";
+import { requestJson } from "@/lib/request-json";
 import { getChannelLabel, getContactDisplayName, hasDisplayablePhone, normalizeChannel } from "@/lib/contact-display";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { useTelemetry } from "@/components/product-analytics";
-import { intlLocale } from "@/lib/locale";
+import { formatDateTime } from "@/lib/locale";
 
-type Business = { businessId: string; active: boolean };
 type Detail = {
   call: {
     id: string;
@@ -57,27 +55,8 @@ type Detail = {
   followUpTasks: Array<{ id: string; title: string; body: string; status: string; createdAt: string; updatedAt: string }>;
 };
 
-async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { credentials: "include", ...init });
-  if (!response.ok) {
-    throw new Error((await response.json().catch(() => null) as { error?: string } | null)?.error ?? "Unable to load call details.");
-  }
-  return await response.json() as T;
-}
-
 function formatDate(value: string, locale: string): string {
-  return new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
-}
-
-function formatDuration(seconds: number | null): string {
-  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) return "—";
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
-  return minutes > 0 ? `${minutes}m ${String(remainingSeconds).padStart(2, "0")}s` : `${remainingSeconds}s`;
-}
-
-function truncateId(value: string, maxLength = 16): string {
-  return value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
+  return formatDateTime(value, locale, { dateStyle: "medium", timeStyle: "short" });
 }
 
 function CallEventTimeline({ events, locale }: { events: Detail["timeline"]; locale: string }) {
@@ -97,7 +76,7 @@ function CallEventTimeline({ events, locale }: { events: Detail["timeline"]; loc
                 {t(`detail.events.${event.type}`)}
               </span>
               <span className="type-meta">
-                {event.at ? <>{new Intl.DateTimeFormat(intlLocale(locale), { month: "short", day: "numeric" }).format(new Date(event.at))}{", "}{new Intl.DateTimeFormat(intlLocale(locale), { hour: "numeric", minute: "2-digit" }).format(new Date(event.at))}</> : <>&nbsp;</>}
+                {event.at ? <>{formatDateTime(event.at, locale, { month: "short", day: "numeric" })}{", "}{formatDateTime(event.at, locale, { hour: "numeric", minute: "2-digit" })}</> : <>&nbsp;</>}
               </span>
             </div>
             {index < events.length - 1 ? <div className="mt-3.5 h-px w-12 self-start bg-border sm:w-20" /> : null}
@@ -112,36 +91,25 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
   const { i18n, t } = useTranslation("calls");
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
-  const [copiedField, setCopiedField] = useState<string | null>(null);
-  const businesses = useQuery({
-    queryKey: ["businesses"],
-    queryFn: () => getJson<{ businesses: Business[] }>("/api/businesses"),
-  });
-  const business = selectActiveBusiness(businesses.data?.businesses);
+  const { copiedField, copy } = useCopiedField();
+  const { businesses, business } = useActiveBusiness();
   const detail = useQuery({
     queryKey: ["call", business?.businessId, callId],
-    queryFn: () => getJson<Detail>(`/api/calls/${encodeURIComponent(callId)}?businessId=${encodeURIComponent(business!.businessId)}`),
+    queryFn: () => requestJson<Detail>(`/api/calls/${encodeURIComponent(callId)}?businessId=${encodeURIComponent(business!.businessId)}`),
     enabled: Boolean(business?.businessId),
   });
   const recording = useQuery({
     queryKey: ["call-recording", callId],
-    queryFn: () => getJson<{ url: string }>(`/api/calls/${encodeURIComponent(callId)}/recording`),
+    queryFn: () => requestJson<{ url: string }>(`/api/calls/${encodeURIComponent(callId)}/recording`),
     enabled: detail.data?.recording.state === "available",
   });
-  const completeFollowUp = useMutation({ mutationFn: (_inboxItemId: string) => getJson<{ completed: number }>(`/api/calls/${encodeURIComponent(callId)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ action: "complete_follow_up" }) }), onSuccess: async (_, inboxItemId) => { if (business) telemetry.track("web.voice.follow_up_completed", { businessId: business.businessId, callId, inboxItemId }); await Promise.all([queryClient.invalidateQueries({ queryKey: ["call", business?.businessId, callId] }), queryClient.invalidateQueries({ queryKey: ["dashboard"] })]); } });
-
-  function copyToClipboard(text: string, field: string) {
-    void navigator.clipboard.writeText(text).then(() => {
-      setCopiedField(field);
-      window.setTimeout(() => setCopiedField(null), 1_500);
-    });
-  }
+  const completeFollowUp = useMutation({ mutationFn: (_inboxItemId: string) => requestJson<{ completed: number }>(`/api/calls/${encodeURIComponent(callId)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ action: "complete_follow_up" }) }), onSuccess: async (_, inboxItemId) => { if (business) telemetry.track("web.voice.follow_up_completed", { businessId: business.businessId, callId, inboxItemId }); await Promise.all([queryClient.invalidateQueries({ queryKey: ["call", business?.businessId, callId] }), queryClient.invalidateQueries({ queryKey: ["dashboard"] })]); } });
 
   if (businesses.isLoading || detail.isLoading) return <DetailPageSkeleton />;
   if (businesses.isError || detail.isError || !detail.data) {
     return (
       <div className="flex flex-1 flex-col gap-6">
-        <BackLink label={t("detail.backToList")} />
+        <BackLink href="/calls" label={t("detail.backToList")} />
         <div className="flex flex-col items-center gap-2 py-16 text-center">
           <Phone className="size-8 text-muted-foreground/40" />
           <p className="type-empty-title">{t("detail.notFound")}</p>
@@ -159,7 +127,7 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <BackLink label={t("detail.backToList")} />
+      <BackLink href="/calls" label={t("detail.backToList")} />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
@@ -174,10 +142,10 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <MetadataField copiedField={copiedField} fieldKey="from" label={t("detail.metadata.from")} maskValue {...(hasPhone ? { onCopy: copyToClipboard } : {})} value={callerPhone} />
-        <MetadataField fieldKey="duration" label={t("detail.metadata.duration")} value={formatDuration(call.providerDurationSeconds)} />
-        <MetadataField fieldKey="started" label={t("detail.metadata.started")} value={formatDate(call.startedAt, i18n.language)} />
-        <MetadataField copiedField={copiedField} fieldKey="id" label={t("detail.metadata.id")} onCopy={copyToClipboard} rawValue={call.legacyConvexId ?? call.id} value={truncateId(call.legacyConvexId ?? call.id)} />
+        <MetadataField copied={copiedField === "from"} copyLabel={t("actions.copy")} label={t("detail.metadata.from")} maskValue {...(hasPhone ? { onCopy: () => copy(callerPhone, "from") } : {})} value={callerPhone} />
+        <MetadataField label={t("detail.metadata.duration")} value={formatDuration(call.providerDurationSeconds)} />
+        <MetadataField label={t("detail.metadata.started")} value={formatDate(call.startedAt, i18n.language)} />
+        <MetadataField copied={copiedField === "id"} copyLabel={t("actions.copy")} label={t("detail.metadata.id")} onCopy={() => copy(call.legacyConvexId ?? call.id, "id")} value={truncateId(call.legacyConvexId ?? call.id)} />
       </div>
 
       <Separator />
@@ -204,10 +172,6 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
       </Tabs>
     </div>
   );
-}
-
-function BackLink({ label }: { label: string }) {
-  return <Link className="type-body-muted inline-flex w-fit items-center gap-1.5 transition-colors hover:text-foreground" href="/calls"><ArrowLeft className="size-4" />{label}</Link>;
 }
 
 function TranscriptTab({ detail }: { detail: Detail }) {
@@ -256,24 +220,6 @@ function DetailsTab({ detail, markingDone, onCompleteFollowUp }: { detail: Detai
           </dl>
         </DetailSection>
       </Surface>
-    </div>
-  );
-}
-
-function DetailSection({ children, className, title }: { children: React.ReactNode; className?: string; title: string }) {
-  return <section className={cn("flex flex-col gap-4 px-4 py-4", className)}><h3 className="font-heading text-base font-medium">{title}</h3>{children}</section>;
-}
-
-function MetadataField({ copiedField, fieldKey, label, maskValue, onCopy, rawValue, value }: { copiedField?: string | null; fieldKey: string; label: string; maskValue?: boolean; onCopy?: (text: string, field: string) => void; rawValue?: string; value: string }) {
-  const { t } = useTranslation("calls");
-  const copied = copiedField === fieldKey;
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="type-meta">{label}</span>
-      <div className="flex items-center gap-1.5">
-        <span className={cn("type-body truncate", maskValue && "ph-mask")}>{value}</span>
-        {onCopy ? <button aria-label={t("actions.copy")} className={cn("flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:text-foreground", copied && "text-emerald-500")} onClick={() => onCopy(rawValue ?? value, fieldKey)} type="button">{copied ? <CheckCircle2 className="size-3" /> : <Copy className="size-3" />}</button> : null}
-      </div>
     </div>
   );
 }

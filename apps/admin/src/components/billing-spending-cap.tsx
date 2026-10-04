@@ -13,8 +13,9 @@ import { Label } from "./ui/label";
 import { intlLocale } from "@/lib/locale";
 
 type SpendingCapStatus = { plan: string; overageSpendingCapCents: number | null; overageSpendCents: number; overageSpendCentsComplete: boolean; overageSpendingCapReached: boolean; hasBillingManagementAccess: boolean };
-function formatCents(cents: number, locale: string): string {
-  return new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency: "USD", minimumFractionDigits: cents % 100 !== 0 ? 2 : 0, maximumFractionDigits: 2 }).format(cents / 100);
+/** Formats cents as currency, dropping the decimals for whole amounts. */
+export function formatMoney(cents: number, currency = "usd", locale = "en"): string {
+  return new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency: currency.toUpperCase(), minimumFractionDigits: cents % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 }).format(cents / 100);
 }
 
 export function SpendingCapSection({
@@ -102,8 +103,8 @@ export function SpendingCapSection({
                       ? "billing.spendingCap.spendOfCap"
                       : "billing.spendingCap.spendAtLeastOfCap",
                     {
-                      spend: formatCents(spendCents, locale),
-                      cap: formatCents(capCents, locale),
+                      spend: formatMoney(spendCents, "usd", locale),
+                      cap: formatMoney(capCents, "usd", locale),
                     },
                   )}
                 </span>

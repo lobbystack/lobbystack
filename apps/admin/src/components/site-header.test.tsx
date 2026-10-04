@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SiteHeader } from "./site-header";
 
 vi.mock("@/components/ui/sidebar", () => ({
-  useSidebar: () => ({ toggleSidebar: vi.fn() }),
+  SidebarTrigger: () => null,
 }));
 
 describe("SiteHeader", () => {

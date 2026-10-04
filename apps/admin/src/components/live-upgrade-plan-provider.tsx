@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { isPaidSubscription, type BillingInterval, type BillingPlanSlug, type HostedCheckoutPlanIntervals } from "@lobbystack/shared";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
 import { selectActiveBusiness } from "@/lib/active-business";
 import { setUpgradeInProgress } from "@/lib/upgrade-in-progress";
@@ -30,8 +31,7 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
   // Redirect once per checkout. A page restored from the browser's cache can rerun the
   // effect with the old ready checkout and send them straight back to it.
   const redirectedRequestId = useRef<string | null>(null);
-  const workspaces = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<WorkspaceResponse>("/api/businesses") });
-  const businessId = selectActiveBusiness(workspaces.data?.businesses)?.businessId;
+  const businessId = useActiveBusiness().business?.businessId;
   const billing = useQuery({ queryKey: ["billing", businessId], enabled: Boolean(businessId && open), queryFn: () => requestJson<Billing>(`/api/billing?businessId=${encodeURIComponent(businessId!)}`) });
   const activeBusinessId = () => selectActiveBusiness(client.getQueryData<WorkspaceResponse>(["businesses"])?.businesses)?.businessId;
   const mutation = useMutation({

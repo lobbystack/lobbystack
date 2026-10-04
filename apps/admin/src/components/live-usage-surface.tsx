@@ -4,9 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { billingPlanCatalog, type BillingPlanSlug } from "@lobbystack/shared";
 
-import type { BillingUsageViewModel, WorkspaceViewModel } from "@/lib/page-view-models";
+import { useActiveBusiness } from "@/hooks/use-active-business";
+import type { BillingUsageViewModel } from "@/lib/page-view-models";
 import { requestJson } from "@/lib/request-json";
-import { selectActiveBusiness } from "@/lib/active-business";
 import { SectionBlock } from "@/components/section-block";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
@@ -17,8 +17,7 @@ function isPlan(value: string | null | undefined): value is BillingPlanSlug { re
 
 export function LiveUsageSurface() {
   const { i18n, t } = useTranslation("settings");
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: WorkspaceViewModel[] }>("/api/businesses") });
-  const business = selectActiveBusiness(businesses.data?.businesses);
+  const { businesses, business } = useActiveBusiness();
   const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: () => requestJson<BillingUsageViewModel>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
   const accountPlan = billing.data?.account?.plan;
   const plan = isPlan(accountPlan) ? accountPlan : "free_cloud";

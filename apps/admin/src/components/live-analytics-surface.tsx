@@ -1,5 +1,7 @@
 "use client";
 
+import { useActiveBusiness } from "@/hooks/use-active-business";
+import { formatDuration } from "@/lib/duration";
 import { subscribeRealtimeQuery } from "@/lib/realtime-query";
 
 import dynamic from "next/dynamic";
@@ -9,12 +11,11 @@ import type { DateRange } from "react-day-picker";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
-import type { AnalyticsViewModel, WorkspaceViewModel } from "@/lib/page-view-models";
+import type { AnalyticsViewModel } from "@/lib/page-view-models";
 import { requestJson } from "@/lib/request-json";
 import { ANALYTICS_CHANNELS, channelPercentages } from "@/lib/analytics-channels";
 import { getChannelLabel } from "@/lib/contact-display";
 import { CONTACT_CHANNEL_ICONS } from "@/components/contact-channel-icons";
-import { selectActiveBusiness } from "@/lib/active-business";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Calendar } from "@/components/ui/calendar";
@@ -60,7 +61,6 @@ function percentDelta(current: number, previous: number, t: (...args: any[]) => 
   return String(value >= 0 ? t("home.analytics.metrics.percentUp", { value: Math.abs(value).toFixed(1) }) : t("home.analytics.metrics.percentDown", { value: Math.abs(value).toFixed(1) }));
 }
 
-function duration(seconds: number): string { const minutes = Math.floor(seconds / 60); const remaining = Math.round(seconds % 60); return minutes === 0 ? `${remaining}s` : `${minutes}m ${String(remaining).padStart(2, "0")}s`; }
 
 export function LiveAnalyticsSurface() {
   const { i18n, t } = useTranslation("dashboard");
@@ -69,8 +69,7 @@ export function LiveAnalyticsSurface() {
   const [granularity, setGranularity] = useState<Granularity>("week");
   const [customRange, setCustomRange] = useState<{ from: Date; to: Date } | null>(null);
   const range = useMemo(() => preset === "custom" && customRange ? customRange : presetRange(preset === "custom" ? "last30" : preset), [customRange, preset]);
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: () => requestJson<{ businesses: WorkspaceViewModel[] }>("/api/businesses") });
-  const business = selectActiveBusiness(businesses.data?.businesses);
+  const { businesses, business } = useActiveBusiness();
   const analytics = useQuery({
     queryKey: ["analytics", business?.businessId, preset, granularity, range.from.toISOString(), range.to.toISOString()],
     queryFn: () => {
@@ -95,7 +94,7 @@ export function LiveAnalyticsSurface() {
     { key: "calls" as const, title: t("home.analytics.cards.calls"), value: data.calls.current.toLocaleString(intlLocale(i18n.language)), description: percentDelta(data.calls.current, data.calls.previous, t) },
     { key: "messages" as const, title: t("home.analytics.cards.messages"), value: data.messages.current.toLocaleString(intlLocale(i18n.language)), description: percentDelta(data.messages.current, data.messages.previous, t) },
     { key: "appointments" as const, title: t("home.analytics.cards.appointments"), value: data.appointments.current.toLocaleString(intlLocale(i18n.language)), description: percentDelta(data.appointments.current, data.appointments.previous, t) },
-    { key: "agentResponseSeconds" as const, title: t("home.analytics.cards.agentResponseTime"), value: duration(data.agentResponseSeconds.current), description: data.agentResponseSeconds.current === data.agentResponseSeconds.previous ? t("home.analytics.metrics.flat") : t(data.agentResponseSeconds.current > data.agentResponseSeconds.previous ? "home.analytics.metrics.durationUp" : "home.analytics.metrics.durationDown", { value: duration(Math.abs(data.agentResponseSeconds.current - data.agentResponseSeconds.previous)) }) },
+    { key: "agentResponseSeconds" as const, title: t("home.analytics.cards.agentResponseTime"), value: formatDuration(data.agentResponseSeconds.current), description: data.agentResponseSeconds.current === data.agentResponseSeconds.previous ? t("home.analytics.metrics.flat") : t(data.agentResponseSeconds.current > data.agentResponseSeconds.previous ? "home.analytics.metrics.durationUp" : "home.analytics.metrics.durationDown", { value: formatDuration(Math.abs(data.agentResponseSeconds.current - data.agentResponseSeconds.previous)) }) },
   ] : [];
   const channelShares = channelPercentages(data?.channels);
   // Other only holds channels the dashboard can't label, so it stays hidden while empty.

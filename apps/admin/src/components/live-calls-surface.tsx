@@ -1,5 +1,6 @@
 "use client";
 
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { subscribeRealtimeQuery } from "@/lib/realtime-query";
 
 import { useEffect, useMemo, useState } from "react";
@@ -38,7 +39,6 @@ import { intlLocale, formatDateTime } from "@/lib/locale";
 import { getChannelLabel, getContactDisplayName, hasDisplayablePhone, normalizeChannel } from "@/lib/contact-display";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 
-type Business = { businessId: string; active: boolean };
 type Call = {
   outcome: CallOutcome;
   id: string;
@@ -84,11 +84,7 @@ export function LiveCallsSurface() {
   }, []);
   const [activeRecordingId, setActiveRecordingId] = useState<string | null>(null);
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
-  const businesses = useQuery({
-    queryKey: ["businesses"],
-    queryFn: () => getJson<{ businesses: Business[] }>("/api/businesses"),
-  });
-  const business = businesses.data?.businesses.find((item) => item.active) ?? businesses.data?.businesses[0];
+  const { businesses, business } = useActiveBusiness();
   const calls = useQuery({
     queryKey: ["calls", business?.businessId],
     queryFn: () => getJson<{ calls: Call[] }>("/api/calls?limit=50"),

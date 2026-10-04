@@ -1,23 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { GiftIcon } from "lucide-react";
 
-import { selectActiveBusiness } from "@/lib/active-business";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { DashboardTestCallWidget } from "./dashboard-test-call-widget";
 import { DashboardFeedbackWidget } from "./dashboard-feedback-widget";
 import { DashboardAbandonIntent } from "./dashboard-abandon-intent";
 
-type Business = { businessId: string; name: string; slug: string; active: boolean; role: string };
 
 export function DashboardUtilityBar() {
   const { t } = useTranslation("nav");
-  const businesses = useQuery({ queryKey: ["businesses"], queryFn: async () => await (await fetch("/api/businesses", { credentials: "include" })).json() as { businesses: Business[] } });
-  const business = selectActiveBusiness(businesses.data?.businesses);
+  const { business } = useActiveBusiness();
   if (!business) return null;
   return (
     <>

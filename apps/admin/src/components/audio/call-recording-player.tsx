@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 
@@ -61,9 +61,7 @@ export function CallRecordingPlayer({
   const playOnLoadRef = useRef(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(normalizeDurationSeconds(initialDurationSeconds));
-  const [, setBufferedTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
   const [playbackSrc, setPlaybackSrc] = useState<string | null>(null);
 
   useEffect(() => {
@@ -176,7 +174,6 @@ export function CallRecordingPlayer({
 
   useEffect(() => {
     setCurrentTime(0);
-    setBufferedTime(0);
     setDuration(normalizeDurationSeconds(initialDurationSeconds));
     setIsPlaying(false);
 
@@ -189,17 +186,6 @@ export function CallRecordingPlayer({
     audio.preload = "auto";
     audio.src = playbackSrc;
     audioRef.current = audio;
-
-    function updateBufferedTime() {
-      const currentAudio = audioRef.current;
-      if (!currentAudio || currentAudio.buffered.length === 0) {
-        setBufferedTime(0);
-        return;
-      }
-
-      const nextBufferedTime = currentAudio.buffered.end(currentAudio.buffered.length - 1);
-      setBufferedTime(nextBufferedTime);
-    }
 
     function updateDuration() {
       const nextDuration = normalizeDurationSeconds(audio.duration || 0);
@@ -239,7 +225,6 @@ export function CallRecordingPlayer({
     audio.addEventListener("loadedmetadata", updateDuration);
     audio.addEventListener("durationchange", updateDuration);
     audio.addEventListener("timeupdate", updateCurrentTime);
-    audio.addEventListener("progress", updateBufferedTime);
     audio.addEventListener("play", handlePlay);
     audio.addEventListener("pause", handlePause);
     audio.addEventListener("ended", handleEnded);
@@ -261,7 +246,6 @@ export function CallRecordingPlayer({
       audio.removeEventListener("loadedmetadata", updateDuration);
       audio.removeEventListener("durationchange", updateDuration);
       audio.removeEventListener("timeupdate", updateCurrentTime);
-      audio.removeEventListener("progress", updateBufferedTime);
       audio.removeEventListener("play", handlePlay);
       audio.removeEventListener("pause", handlePause);
       audio.removeEventListener("ended", handleEnded);
@@ -297,27 +281,6 @@ export function CallRecordingPlayer({
     }
 
     audio.pause();
-  }
-
-  async function downloadAudio() {
-    if (isDownloading) {
-      return;
-    }
-
-    setIsDownloading(true);
-
-    try {
-      const link = document.createElement("a");
-      link.href = src ?? "";
-      link.download = "";
-      link.rel = "noopener noreferrer";
-      link.target = "_blank";
-      document.body.append(link);
-      link.click();
-      link.remove();
-    } finally {
-      setIsDownloading(false);
-    }
   }
 
   const progress = useMemo(() => {
@@ -389,17 +352,17 @@ export function CallRecordingPlayer({
           {formatDuration(displayedRemainingSeconds)}
         </time>
 
-        <Button
+        <a
           aria-label={downloadLabel}
-          className="size-8 rounded-md"
-          disabled={isDownloading}
-          onClick={() => void downloadAudio()}
-          size="icon-sm"
+          className={cn(buttonVariants({ size: "icon-sm", variant: "ghost" }), "size-8 rounded-md")}
+          download
+          href={src ?? undefined}
+          rel="noopener noreferrer"
+          target="_blank"
           title={downloadLabel}
-          variant="ghost"
         >
           <Download />
-        </Button>
+        </a>
       </div>
     </div>
   );

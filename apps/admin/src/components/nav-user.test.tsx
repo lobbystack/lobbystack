@@ -11,7 +11,7 @@ beforeEach(() => { window.innerWidth = 1440; theme.resolvedTheme = "light"; vi.s
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
 async function setup(upgrade = false) {
   const onUpgrade = vi.fn(); const onSignOut = vi.fn();
-  render(<SidebarProvider><NavUser user={{ email: "operator@example.invalid", name: "Operator", avatar: "" }} onSignOut={onSignOut} showUpgradeToPro={upgrade} onUpgradeToPro={onUpgrade} /></SidebarProvider>);
+  render(<SidebarProvider><NavUser user={{ email: "operator@example.invalid", name: "Operator" }} onSignOut={onSignOut} showUpgradeToPro={upgrade} onUpgradeToPro={onUpgrade} /></SidebarProvider>);
   await userEvent.click(screen.getByRole("button", { name: /operator@example.invalid/ }));
   await screen.findByRole("menu");
   return { onUpgrade, onSignOut };

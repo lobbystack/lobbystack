@@ -22,7 +22,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 const ACCEPTED_FILE_TYPES = ".pdf,.docx,.txt,.md,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const MAX_DOCUMENT_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -94,18 +93,14 @@ function getUploadErrorMessage(
 
 export function UploadKnowledgeDocumentSheet({
   upload,
-  section,
   open,
   onOpenChange,
 }: {
   upload: (input: { file: File; contentType: string; title: string; tags: string[] }) => Promise<void>;
-  section: "knowledge";
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation("agent");
-  const isControlled = open !== undefined;
-  const [internalOpen, setInternalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [tags, setTags] = useState("");
@@ -114,7 +109,6 @@ export function UploadKnowledgeDocumentSheet({
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isDialogOpen = isControlled ? open : internalOpen;
   const resolvedFileName = useMemo(() => selectedFile?.name ?? "", [selectedFile]);
 
   function resetState(): void {
@@ -133,7 +127,7 @@ export function UploadKnowledgeDocumentSheet({
     if (file && file.size > MAX_DOCUMENT_UPLOAD_BYTES) {
       setSelectedFile(null);
       setTitle("");
-      setErrorMessage(t(`sections.${section}.uploadValidation.maxSize`));
+      setErrorMessage(t("sections.knowledge.uploadValidation.maxSize"));
       return;
     }
 
@@ -148,28 +142,21 @@ export function UploadKnowledgeDocumentSheet({
     handleSelectedFile(event.dataTransfer.files?.[0] ?? null);
   }
 
-  function setDialogOpen(nextOpen: boolean): void {
-    onOpenChange?.(nextOpen);
-    if (!isControlled) {
-      setInternalOpen(nextOpen);
-    }
-  }
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     if (!selectedFile) {
-      setErrorMessage(t(`sections.${section}.uploadValidation.fileRequired`));
+      setErrorMessage(t("sections.knowledge.uploadValidation.fileRequired"));
       return;
     }
 
     const contentType = resolveFileContentType(selectedFile);
     if (!isSupportedContentType(contentType)) {
-      setErrorMessage(t(`sections.${section}.uploadValidation.unsupportedFile`));
+      setErrorMessage(t("sections.knowledge.uploadValidation.unsupportedFile"));
       return;
     }
 
     if (selectedFile.size > MAX_DOCUMENT_UPLOAD_BYTES) {
-      setErrorMessage(t(`sections.${section}.uploadValidation.maxSize`));
+      setErrorMessage(t("sections.knowledge.uploadValidation.maxSize"));
       return;
     }
 
@@ -178,13 +165,13 @@ export function UploadKnowledgeDocumentSheet({
     try {
       await upload({ file: selectedFile, contentType, title: title.trim(), tags: parseTags(tags) });
 
-      setDialogOpen(false);
+      onOpenChange(false);
       resetState();
     } catch (error) {
       setErrorMessage(
         getUploadErrorMessage(
           error,
-          t(`sections.${section}.uploadValidation.uploadFailed`),
+          t("sections.knowledge.uploadValidation.uploadFailed"),
         ),
       );
     } finally {
@@ -194,29 +181,19 @@ export function UploadKnowledgeDocumentSheet({
 
   return (
     <Dialog
-      onOpenChange={(open) => {
-        setDialogOpen(open);
-        if (!open) {
+      onOpenChange={(nextOpen) => {
+        onOpenChange(nextOpen);
+        if (!nextOpen) {
           resetState();
         }
       }}
-      open={isDialogOpen}
+      open={open}
     >
-      {!isControlled ? (
-        <DialogTrigger
-          render={
-            <Button variant="secondary">
-              <Upload data-icon="inline-start" />
-              {t("actions.upload")}
-            </Button>
-          }
-        />
-      ) : null}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t(`sections.${section}.uploadDocument`)}</DialogTitle>
+          <DialogTitle>{t("sections.knowledge.uploadDocument")}</DialogTitle>
           <DialogDescription>
-            {t(`sections.${section}.uploadDocumentDescription`)}
+            {t("sections.knowledge.uploadDocumentDescription")}
           </DialogDescription>
         </DialogHeader>
         <form className="flex flex-col gap-6" onSubmit={(event) => void handleSubmit(event)}>
@@ -224,10 +201,10 @@ export function UploadKnowledgeDocumentSheet({
             <Field>
               <FieldContent>
                 <FieldLabel htmlFor="knowledge-document-file">
-                  {t(`sections.${section}.fields.file.label`)}
+                  {t("sections.knowledge.fields.file.label")}
                 </FieldLabel>
                 <FieldDescription>
-                  {t(`sections.${section}.fields.file.hint`)}
+                  {t("sections.knowledge.fields.file.hint")}
                 </FieldDescription>
               </FieldContent>
               <Input
@@ -267,9 +244,9 @@ export function UploadKnowledgeDocumentSheet({
                 <div className="flex flex-col items-center gap-3">
                   <Upload className="size-5 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    {t(`sections.${section}.fields.file.dropzonePrefix`)}{" "}
+                    {t("sections.knowledge.fields.file.dropzonePrefix")}{" "}
                     <span className="underline underline-offset-2">
-                      {t(`sections.${section}.fields.file.chooseFile`)}
+                      {t("sections.knowledge.fields.file.chooseFile")}
                     </span>
                   </p>
                   {resolvedFileName ? (
@@ -282,15 +259,15 @@ export function UploadKnowledgeDocumentSheet({
             <Field>
               <FieldContent>
                 <FieldLabel htmlFor="knowledge-document-title">
-                  {t(`sections.${section}.fields.title.label`)}
+                  {t("sections.knowledge.fields.title.label")}
                 </FieldLabel>
                 <FieldDescription>
-                  {t(`sections.${section}.fields.title.hint`)}
+                  {t("sections.knowledge.fields.title.hint")}
                 </FieldDescription>
               </FieldContent>
               <Input
                 id="knowledge-document-title"
-                placeholder={t(`sections.${section}.fields.title.placeholder`)}
+                placeholder={t("sections.knowledge.fields.title.placeholder")}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
               />
@@ -299,15 +276,15 @@ export function UploadKnowledgeDocumentSheet({
             <Field>
               <FieldContent>
                 <FieldLabel htmlFor="knowledge-document-tags">
-                  {t(`sections.${section}.fields.tags.label`)}
+                  {t("sections.knowledge.fields.tags.label")}
                 </FieldLabel>
                 <FieldDescription>
-                  {t(`sections.${section}.fields.tags.hint`)}
+                  {t("sections.knowledge.fields.tags.hint")}
                 </FieldDescription>
               </FieldContent>
               <Input
                 id="knowledge-document-tags"
-                placeholder={t(`sections.${section}.fields.tags.placeholder`)}
+                placeholder={t("sections.knowledge.fields.tags.placeholder")}
                 value={tags}
                 onChange={(event) => setTags(event.target.value)}
               />

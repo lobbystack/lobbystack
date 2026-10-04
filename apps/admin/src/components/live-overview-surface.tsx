@@ -11,7 +11,6 @@ import Link from "next/link";
 import { getFollowUpDisplayTitle, isUrgentFollowUpValue, parseFollowUpTaskBody } from "@/lib/follow-up-task";
 import { useEffect, type ReactNode } from "react";
 import dynamic from "next/dynamic";
-import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, ChevronRight, PhoneCall, UserRound } from "lucide-react";
@@ -26,6 +25,7 @@ import { Item, ItemActions, ItemHeader, ItemContent, ItemDescription, ItemFooter
 import { Separator } from "@/components/ui/separator";
 import { Surface } from "@/components/ui/surface";
 import { intlLocale, formatDateTime } from "@/lib/locale";
+import { formatDuration } from "@/lib/duration";
 
 const OverviewCallChart = dynamic(() => import("./overview-call-chart").then((module) => module.OverviewCallChart), {
   loading: () => <div className="h-[350px] animate-pulse rounded-xl bg-muted" />,
@@ -50,12 +50,6 @@ async function getSummary(): Promise<DashboardSummary> {
   const response = await fetch("/api/dashboard", { credentials: "include" });
   if (!response.ok) throw new Error("Unable to load dashboard data.");
   return await response.json() as DashboardSummary;
-}
-
-function formatDuration(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const remainder = seconds % 60;
-  return minutes === 0 ? `${remainder}s` : `${minutes}m ${remainder.toString().padStart(2, "0")}s`;
 }
 
 function initials(value: string | null): string {
@@ -101,18 +95,13 @@ export function LiveOverviewSurface() {
           </Surface>
         )}
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-          <motion.section animate={{ opacity: 1, y: 0 }} initial={{ opacity: 0, y: 10 }} transition={{ delay: 0.05, duration: 0.2, ease: "easeOut" }} className="flex flex-col gap-3 xl:h-full">
+          <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 flex flex-col gap-3 xl:h-full">
             <div className="flex items-center justify-between gap-4 px-1"><h2 className="type-section-title">{t("home.actionRequired.title")}</h2>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(summary.data?.actionRequired.length ?? 0).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
             {summary.isLoading ? <ActionRequiredSkeleton /> : summary.data?.actionRequired.length ? <Card className="border-border/70">
                   <CardContent>
                     <ItemGroup>
                       {summary.data!.actionRequired.map((item, index) => (
-                        <motion.div
-                          animate={{ opacity: 1, y: 0 }}
-                          initial={{ opacity: 0, y: 8 }}
-                          key={item.id}
-                          transition={{ delay: 0.08 + index * 0.03, duration: 0.18, ease: "easeOut" }}
-                        >
+                        <div key={item.id}>
                           {(() => {
                             const details = parseFollowUpTaskBody(item.body);
                             const displayTitle = getActionDisplayTitle(item, t);
@@ -186,26 +175,26 @@ export function LiveOverviewSurface() {
                             );
                           })()}
                           {index < summary.data!.actionRequired.length - 1 ? <Separator className="mt-4" /> : null}
-                        </motion.div>
+                        </div>
                       ))}
                     </ItemGroup>
                 </CardContent>
               </Card> : <div className="rounded-xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center"><p className="type-empty-title">{t("home.actionRequired.emptyTitle")}</p><p className="type-empty-description mt-2">{t("home.actionRequired.emptyDescription")}</p></div>}
-          </motion.section>
-          <motion.section animate={{ opacity: 1, y: 0 }} initial={{ opacity: 0, y: 12 }} transition={{ delay: 0.1, duration: 0.22, ease: "easeOut" }} className="flex flex-col gap-3 xl:h-full">
+          </section>
+          <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 flex flex-col gap-3 xl:h-full">
             <div className="flex items-center justify-between gap-4 px-1"><h2 className="type-section-title">{t("home.upcoming.title")}</h2>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(summary.data?.upcoming.length ?? 0).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
             {summary.isLoading ? <UpcomingSkeleton /> : summary.data?.upcoming.length ? (
               <Card className="border-border/70"><CardContent className="flex flex-col gap-4">
-                {summary.data.upcoming.map((appointment, index) => <motion.div animate={{ opacity: 1, y: 0 }} initial={{ opacity: 0, y: 8 }} transition={{ delay: 0.12 + index * 0.03, duration: 0.18, ease: "easeOut" }} key={appointment.id}>
+                {summary.data.upcoming.map((appointment, index) => <div key={appointment.id}>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="type-item-title">{getContactDisplayName({ name: appointment.contactName, phone: appointment.contactPhone, email: appointment.contactEmail, channels: [appointment.sourceChannel] }, i18n.language, t)}</p><Badge variant="outline">{getAppointmentStatusLabel(appointment.status, t)}</Badge><Badge variant="secondary">{getChannelLabel(appointment.sourceChannel, t)}</Badge></div><p className="type-body-muted mt-1">{appointment.serviceName ?? t("home.upcoming.unknownService")}</p></div>
                     <div className="shrink-0 text-left sm:text-right"><p className="type-item-title">{formatDateTime(appointment.startsAt, i18n.language, { weekday: "short", month: "short", day: "numeric", timeZone: appointment.timezone })}</p><p className="type-body-muted mt-1">{formatDateTime(appointment.startsAt, i18n.language, { hour: "numeric", minute: "2-digit", timeZone: appointment.timezone })}</p></div>
                   </div>
                   {index < summary.data.upcoming.length - 1 ? <Separator className="mt-4" /> : null}
-                </motion.div>)}
+                </div>)}
               </CardContent></Card>
             ) : <div className="rounded-xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center"><p className="type-empty-title">{t("home.upcoming.emptyTitle")}</p><p className="type-empty-description mt-2">{t("home.upcoming.emptyDescription")}</p></div>}
-          </motion.section>
+          </section>
         </div>
         {summary.isLoading ? <OverviewChartSkeleton /> : <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
           <Card className="col-span-1 lg:col-span-4"><CardHeader><CardTitle>{t("home.chart.title")}</CardTitle></CardHeader><CardContent className="ps-2"><OverviewCallChart data={(summary.data?.monthlyCalls ?? []).map((item) => ({ name: formatDateTime(item.monthStart, i18n.language, { month: "short", timeZone: "UTC" }), total: item.total }))} /></CardContent></Card>

@@ -16,7 +16,7 @@ import {
 type ConfirmActionDialogProps = {
   cancelLabel: string;
   confirmLabel: string;
-  confirmVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+  confirmVariant?: "default" | "destructive";
   description: string;
   onConfirm: () => Promise<void> | void;
   onOpenChange: (open: boolean) => void;
