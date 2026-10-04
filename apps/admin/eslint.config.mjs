@@ -41,7 +41,7 @@ export default defineConfig([
   },
   {
     // These elements play live WebRTC streams, not captionable media files.
-    files: ["src/components/web-voice/AuraVoiceDemo.tsx", "src/components/widget/widget-chat-client.tsx"],
+    files: ["src/components/widget/widget-chat-client.tsx"],
     rules: { "jsx-a11y/media-has-caption": "off" },
   },
   {

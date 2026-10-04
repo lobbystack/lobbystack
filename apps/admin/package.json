@@ -36,6 +36,7 @@
     "@lobbystack/providers": "workspace:*",
     "@lobbystack/shared": "workspace:*",
     "@lobbystack/telemetry": "workspace:*",
+    "@lobbystack/web-voice": "workspace:*",
     "@modelcontextprotocol/server": "2.1.0",
     "@tanstack/react-query": "^5.75.0",
     "@tanstack/react-table": "^8.21.3",

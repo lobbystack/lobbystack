@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { AuraVoiceDemo } from "@/components/web-voice/AuraVoiceDemo";
-import { LIVE_WEB_CALL_ENDPOINT } from "@/components/web-voice/useWebVoiceCall";
+import { LIVE_WEB_CALL_ENDPOINT } from "@lobbystack/web-voice";
 import { announceTestCallEnded, registerTestCallStarter, setTestCallActive } from "@/lib/test-call-launcher";
 import { useTelemetry } from "@/components/product-analytics";
 import type { TelemetryEventName, TelemetryProperties } from "@lobbystack/telemetry";
