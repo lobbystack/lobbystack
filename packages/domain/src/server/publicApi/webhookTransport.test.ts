@@ -4,7 +4,9 @@ import type { AddressInfo } from "node:net";
 import { Webhook } from "standardwebhooks";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { assertWebhookUrlAllowed, createGuardedLookup, isBlockedAddress } from "./webhookNetwork";
+import { isBlockedAddress } from "@lobbystack/providers/crawling/urlSafety";
+
+import { assertWebhookUrlAllowed, createGuardedLookup } from "./webhookNetwork";
 import { createWebhookSender, decryptWebhookSecret, encryptWebhookSecret, generateWebhookSecret, signWebhookPayload, webhookHeaders } from "./webhookTransport";
 
 describe("Standard Webhooks signing", () => {

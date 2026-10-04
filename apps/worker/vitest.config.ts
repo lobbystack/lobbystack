@@ -13,6 +13,7 @@ export default defineConfig({
       "@lobbystack/jobs": `${root}/packages/jobs/src/index.ts`,
       "@lobbystack/providers/ai/embeddingProvider": `${root}/packages/providers/src/ai/embeddingProvider.ts`,
       "@lobbystack/providers/crawling/firecrawl": `${root}/packages/providers/src/crawling/firecrawl.ts`,
+      "@lobbystack/providers/crawling/urlSafety": `${root}/packages/providers/src/crawling/urlSafety.ts`,
       "@lobbystack/providers/crypto/secretBox": `${root}/packages/providers/src/crypto/secretBox.ts`,
       "@lobbystack/providers/email/smtp": `${root}/packages/providers/src/email/smtp.ts`,
       "@lobbystack/providers/google/calendar": `${root}/packages/providers/src/google/calendar.ts`,

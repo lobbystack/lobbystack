@@ -15,6 +15,7 @@
     "@lobbystack/contracts": "workspace:*",
     "@lobbystack/db": "workspace:*",
     "@lobbystack/jobs": "workspace:*",
+    "@lobbystack/providers": "workspace:*",
     "@lobbystack/shared": "workspace:*",
     "@lobbystack/telemetry": "workspace:*",
     "drizzle-orm": "^0.45.2",

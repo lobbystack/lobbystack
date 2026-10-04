@@ -16,6 +16,7 @@ export default defineConfig({
       "@lobbystack/jobs": `${root}/packages/jobs/src/index.ts`,
       "@lobbystack/agent-core": `${root}/packages/agent-core/src`,
       "@lobbystack/providers/storage/local": `${root}/packages/providers/src/storage/local.ts`,
+      "@lobbystack/providers/crawling/urlSafety": `${root}/packages/providers/src/crawling/urlSafety.ts`,
       "@lobbystack/providers/storage/provider": `${root}/packages/providers/src/storage/provider.ts`,
       "@lobbystack/providers/twilio/webhookSecurity": `${root}/packages/providers/src/twilio/webhookSecurity.ts`,
       "@lobbystack/telemetry/node": `${root}/packages/telemetry/src/node.ts`,
