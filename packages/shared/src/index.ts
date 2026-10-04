@@ -17,6 +17,23 @@ export const deploymentModes = [
 export const DEFAULT_WEB_CALL_MAX_DURATION_MS = 5 * 60 * 1000;
 export const MAX_WEB_CALL_MAX_DURATION_MS = 30 * 60 * 1000;
 
+/** Latency, tokens and cost of one AI model call, as AI generation events record them. */
+export type AiUsage = {
+  provider: string;
+  model: string;
+  latencyMs: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  cachedInputTokens?: number;
+  reasoningTokens?: number;
+  totalCostUsd?: number;
+  pricingVersion?: string;
+  pricingSource?: string;
+  pricingEffectiveDate?: string;
+  ratesUsdPerMillionTokens?: Record<string, number>;
+};
+
 export type BusinessType =
   | "clinic"
   | "repair_shop"

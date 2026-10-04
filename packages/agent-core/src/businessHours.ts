@@ -1,9 +1,10 @@
 import { normalizeHoursWindows } from "@lobbystack/domain";
-import type { HoursWindow } from "@lobbystack/shared";
-import { generateText, Output, type LanguageModel } from "ai";
+import type { AiUsage, HoursWindow } from "@lobbystack/shared";
+import type { LanguageModel } from "ai";
 import { z } from "zod";
 
-import { agentModelId, callSummaryEnvironment, createAgentModel, describeAgentUsage, type AgentUsage } from "./model";
+import { buildBusinessSummaryPrompt } from "./businessSummary";
+import { createSummaryModel, generateSummaryObject } from "./model";
 
 type Environment = Record<string, string | undefined>;
 
@@ -17,7 +18,7 @@ export type BusinessHoursSource = { title: string; text: string };
  */
 export type ExtractedBusinessHours = { status: "found"; hours: HoursWindow[] } | { status: "not_found"; reason: "not_stated" | "invalid_hours" | "unsupported" };
 
-export type BusinessHoursExtraction = { result: ExtractedBusinessHours; usage: AgentUsage };
+export type BusinessHoursExtraction = { result: ExtractedBusinessHours; usage: AiUsage };
 
 export type BusinessHoursExtractor = {
   /** The provider and model extraction runs on, for error events that have no usage. */
@@ -57,12 +58,6 @@ const instructions = [
   "Return \"not_found\" with every day empty when the sources give no opening hours; give only holiday, seasonal or one-off hours; give different hours for several locations; contradict each other; give only hours for something else, such as phone support, delivery or a single service; or give hours that run past midnight.",
   "In \"evidence\", copy the text that states the hours word for word from one source.",
 ].join("\n");
-
-export function buildBusinessHoursPrompt(input: { businessName: string; sources: BusinessHoursSource[] }): string {
-  // Escaping "<" keeps source text from closing the data block.
-  const escape = (value: unknown) => JSON.stringify(value).replace(/</g, "\\u003c");
-  return `<business_name>${escape(input.businessName)}</business_name>\n<sources>\n${escape(input.sources)}\n</sources>`;
-}
 
 function minutes(value: string): number | undefined {
   const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
@@ -113,26 +108,24 @@ export async function extractBusinessHours(input: {
   timeoutMs?: number;
   environment?: Environment;
 }): Promise<BusinessHoursExtraction> {
-  const startedAt = performance.now();
-  const result = await generateText({
+  const { output, usage } = await generateSummaryObject({
     model: input.model,
+    name: "business_hours",
+    schema: businessHoursSchema,
     instructions,
-    prompt: buildBusinessHoursPrompt(input),
-    output: Output.object({ name: "business_hours", schema: businessHoursSchema }),
-    maxRetries: 1,
-    timeout: input.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-    ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+    prompt: buildBusinessSummaryPrompt(input),
+    timeoutMs: input.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    abortSignal: input.abortSignal,
+    environment: input.environment,
   });
-  const usage = describeAgentUsage(result.totalUsage, performance.now() - startedAt, callSummaryEnvironment(input.environment ?? process.env));
-  return { result: parseExtractedHours(result.output, input.sources), usage };
+  return { result: parseExtractedHours(output, input.sources), usage };
 }
 
 /** Uses the call-summary model (AI_SUMMARY_*), like the business summary. Returns undefined when no text model is configured. */
 export function createBusinessHoursExtractor(environment: Environment = process.env): BusinessHoursExtractor | undefined {
-  const model = createAgentModel(callSummaryEnvironment(environment));
-  if (!model) return undefined;
-  return {
-    modelId: agentModelId(callSummaryEnvironment(environment)),
-    extract: async (input) => await extractBusinessHours({ ...input, model, environment }),
+  const summary = createSummaryModel(environment);
+  return summary && {
+    modelId: summary.modelId,
+    extract: async (input) => await extractBusinessHours({ ...input, model: summary.model, environment }),
   };
 }
