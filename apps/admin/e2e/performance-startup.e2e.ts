@@ -20,7 +20,7 @@ test("a missing lazily loaded French namespace uses its English fallback", async
   try {
     const page = await context.newPage();
     let intercepted = 0;
-    await page.route("**/locales/fr/contacts.json", route => { intercepted++; return route.fulfill({ status: 404, body: "Unavailable" }); });
+    await page.route(url => url.pathname === "/locales/fr/contacts.json", route => { intercepted++; return route.fulfill({ status: 404, body: "Unavailable" }); });
     await page.goto(`${baseURL}/?lng=fr`);
     // Client navigation keeps the root provider mounted. Unlike /login's
     // server-supplied auth bundle, contacts must really hit the mocked loader.
@@ -39,7 +39,7 @@ test("lazy translation failure exposes retry without changing the French locale"
     const page = await context.newPage();
     let failed = true;
     let intercepted = 0;
-    await page.route("**/locales/*/contacts.json", route => {
+    await page.route(url => /^\/locales\/[^/]+\/contacts\.json$/.test(url.pathname), route => {
       intercepted++;
       return failed ? route.fulfill({ status: 404, body: "Unavailable" }) : route.continue();
     });

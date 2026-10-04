@@ -1,4 +1,5 @@
 import { respectingAuthRateLimit } from "./fixtures/auth-rate-limit";
+import { isolateAuthRateLimit } from "./fixtures/email-verification";
 import { expect, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { desc, eq } from "drizzle-orm";
@@ -6,7 +7,7 @@ import { accounts, createDatabaseClient, outboxMessages, users, verifications } 
 import { hashReplacementPassword } from "../src/lib/password";
 
 // Run only with the local worker paused: this reads the disposable reset email outbox.
-test("password recovery completes through the original form and revokes the old session", async ({ page, request }) => {
+test("password recovery completes through the original form and revokes the old session", async ({ page, request }, testInfo) => {
   test.setTimeout(180_000);
   test.skip(process.env.PASSWORD_RECOVERY_E2E === undefined, "Enable with a disposable database and paused worker.");
   const databaseUrl = process.env.REPLACEMENT_E2E_DATABASE_URL;
@@ -16,11 +17,13 @@ test("password recovery completes through the original form and revokes the old 
   const email = `recovery-e2e-${id}@example.invalid`;
   const oldPassword = "Recovery-Old-Password-123!";
   const newPassword = "Recovery-New-Password-456!";
+  // Keep this test's auth requests out of the bucket other specs share.
+  const headers = { "x-real-ip": await isolateAuthRateLimit(page, email, testInfo) };
   try {
     const password = await hashReplacementPassword(oldPassword);
     await database.db.insert(users).values({ id, email, normalizedEmail: email, emailVerified: true, passwordHash: password });
     await database.db.insert(accounts).values({ userId: id, providerId: "credential", accountId: id, password });
-    expect((await respectingAuthRateLimit(() => request.post("/api/auth/sign-in/email", { data: { email, password: oldPassword } }))).ok()).toBe(true);
+    expect((await respectingAuthRateLimit(() => request.post("/api/auth/sign-in/email", { headers, data: { email, password: oldPassword } }))).ok()).toBe(true);
     await page.goto("/en/forgot-password");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByRole("button", { name: "Send reset code", exact: true }).click();
@@ -35,9 +38,9 @@ test("password recovery completes through the original form and revokes the old 
     await page.locator("#reset-code").fill(code);
     await page.locator('button[type="submit"]').click();
     await expect(page).toHaveURL(/\/onboarding\/business$/);
-    expect(await (await request.get("/api/auth/get-session")).json()).toBeNull();
-    expect((await respectingAuthRateLimit(() => request.post("/api/auth/sign-in/email", { data: { email, password: oldPassword } }))).status()).toBe(401);
-    expect((await respectingAuthRateLimit(() => request.post("/api/auth/sign-in/email", { data: { email, password: newPassword } }))).ok()).toBe(true);
+    expect(await (await request.get("/api/auth/get-session", { headers })).json()).toBeNull();
+    expect((await respectingAuthRateLimit(() => request.post("/api/auth/sign-in/email", { headers, data: { email, password: oldPassword } }))).status()).toBe(401);
+    expect((await respectingAuthRateLimit(() => request.post("/api/auth/sign-in/email", { headers, data: { email, password: newPassword } }))).ok()).toBe(true);
   } finally {
     await database.db.delete(outboxMessages).where(eq(outboxMessages.aggregateId, id));
     await database.db.delete(verifications).where(eq(verifications.identifier, `forget-password-otp-${email}`));

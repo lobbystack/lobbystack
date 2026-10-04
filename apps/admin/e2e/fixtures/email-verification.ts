@@ -4,9 +4,12 @@ import { desc, eq } from "drizzle-orm";
 
 import { createDatabaseClient, outboxMessages, users } from "@lobbystack/db";
 
-export async function isolateAuthRateLimit(page: Page, email: string, testInfo: Pick<TestInfo, "parallelIndex" | "repeatEachIndex" | "retry" | "workerIndex">): Promise<void> {
+/** Gives the page its own client IP for auth rate limits and returns it for API requests. */
+export async function isolateAuthRateLimit(page: Page, email: string, testInfo: Pick<TestInfo, "parallelIndex" | "repeatEachIndex" | "retry" | "workerIndex">): Promise<string> {
   const digest = createHash("sha256").update(`${email}:${testInfo.parallelIndex}:${testInfo.workerIndex}:${testInfo.retry}:${testInfo.repeatEachIndex}`).digest();
-  await page.setExtraHTTPHeaders({ "x-real-ip": `198.18.${digest.readUInt8(0)}.${digest.readUInt8(1)}` });
+  const ip = `198.18.${digest.readUInt8(0)}.${digest.readUInt8(1)}`;
+  await page.setExtraHTTPHeaders({ "x-real-ip": ip });
+  return ip;
 }
 
 export async function completeSignupEmailVerification(page: Page, email: string, password: string): Promise<void> {

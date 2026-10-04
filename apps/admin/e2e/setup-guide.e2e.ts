@@ -20,7 +20,8 @@ test("setup skips persist concurrently and require tenant administration", async
     const steps = ["fullScan", "sources", "testCall", "phoneNumber"];
     const initial = await context.request.get(url);
     expect(initial.status()).toBe(200);
-    expect((await initial.json()).steps.every((step: { status: string }) => step.status === "needs setup")).toBe(true);
+    // With no website crawl on record, the full-scan step counts as done.
+    expect(Object.fromEntries((await initial.json()).steps.map((step: { id: string; status: string }) => [step.id, step.status]))).toEqual({ fullScan: "complete", sources: "needs setup", testCall: "needs setup", phoneNumber: "needs setup" });
     const responses = await Promise.all(steps.map(stepId => context.request.patch(url, { headers, data: { stepId, skipped: true } })));
     for (const response of responses) expect(response.status()).toBe(200);
     const reloaded = await context.request.get(url);
