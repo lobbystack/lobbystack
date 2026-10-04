@@ -17,6 +17,7 @@ export default defineConfig({
       "@lobbystack/agent-core": `${root}/packages/agent-core/src`,
       "@lobbystack/providers/storage/local": `${root}/packages/providers/src/storage/local.ts`,
       "@lobbystack/providers/storage/provider": `${root}/packages/providers/src/storage/provider.ts`,
+      "@lobbystack/providers/twilio/webhookSecurity": `${root}/packages/providers/src/twilio/webhookSecurity.ts`,
       "@lobbystack/telemetry/node": `${root}/packages/telemetry/src/node.ts`,
       "@lobbystack/telemetry/browser": `${root}/packages/telemetry/src/browser.ts`,
       "@lobbystack/telemetry/testing": `${root}/packages/telemetry/src/testing.ts`,

@@ -1,10 +1,10 @@
 import { createHmac, randomUUID } from "node:crypto";
+import twilio from "twilio";
 import { Webhook } from "standardwebhooks";
 
 import { and, eq, inArray } from "drizzle-orm";
 
 import { businesses, createDatabaseClient, messages, outboxMessages, phoneNumbers, providerEvents } from "@lobbystack/db";
-import { computeTwilioSignature } from "@lobbystack/shared";
 
 const postgresPort = process.env.POSTGRES_PORT ?? "15433";
 const postgresPassword = process.env.POSTGRES_PASSWORD ?? "replace-with-a-long-local-password";
@@ -37,7 +37,7 @@ function resendHeaders(body: string, eventId: string): Record<string, string> {
 }
 
 async function postTwilio(url: string, params: Record<string, string>): Promise<Response> {
-  const signature = await computeTwilioSignature({ authToken: twilioToken, url, params });
+  const signature = twilio.getExpectedTwilioSignature(twilioToken, url, params);
   return await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded", "x-twilio-signature": signature },

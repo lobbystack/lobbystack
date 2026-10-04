@@ -327,15 +327,6 @@ export const widgetKeyConfigSchema = z.object({
 export type WidgetKeyConfig = z.infer<typeof widgetKeyConfigSchema>;
 
 export {
-  buildTwilioSignaturePayload,
-  computeTwilioSignature,
-  resolveTwilioWebhookUrl,
-  escapeXmlText,
-  normalizeTwilioFormFields,
-  validateTwilioSignature,
-} from "./twilioSecurity";
-export type { TwilioSignatureInput } from "./twilioSecurity";
-export {
   isTerminalTwilioMessageStatus,
   mapTwilioStatusToMessageStatus,
   mapTwilioStatusToNotificationStatus,
