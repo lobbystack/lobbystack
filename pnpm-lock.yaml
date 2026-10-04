@@ -111,6 +111,9 @@ importers:
       tsx:
         specifier: ^4.20.3
         version: 4.21.0
+      twilio:
+        specifier: ^5.12.2
+        version: 5.12.2
       typescript:
         specifier: ^5.8.2
         version: 5.9.3

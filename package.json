@@ -110,6 +110,7 @@
     "railway": "3.11.0",
     "standardwebhooks": "^1.0.0",
     "tsx": "^4.20.3",
+    "twilio": "^5.12.2",
     "typescript": "^5.8.2",
     "vitest": "^4.1.11"
   }
