@@ -49,6 +49,8 @@ async function main(): Promise<void> {
     const persisted = await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async (tx) => ({ delivery: (await tx.select().from(operatorNotificationDeliveries).where(eq(operatorNotificationDeliveries.id, deliveryIds[0]!)))[0], outbox: await tx.select().from(outboxMessages).where(eq(outboxMessages.aggregateId, deliveryIds[0]!)) }));
     assert(persisted.delivery?.status === "sent" && persisted.outbox.length === 1, "Operator delivery completion or outbox intent was not durable.");
     events.calendarSync.email = true;
+    // This owner has no verified phone, so they hold no SMS consent and the dashboard sends SMS turned off.
+    events.voiceMessage.sms = false;
     await setNotificationPreferences({ db: app.db }, { userId: ownerId, businessId, emailEnabled: true, smsEnabled: false, eventPreferences: events, dailySummaryEnabled: true, dailySummarySendTime: "09:30" });
     const fixtures = await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async (tx) => {
       const contact = (await tx.insert(contacts).values({ businessId, phone: "+14165550101", smsConsentStatus: "subscribed" }).returning({ id: contacts.id }))[0]!;
