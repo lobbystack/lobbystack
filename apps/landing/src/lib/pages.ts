@@ -71,9 +71,6 @@ export const publicPages: PublicPage[] = [
   })),
 ]
 
-export const pageByPath = (path: string) =>
-  publicPages.find((page) => page.path === path)
-
 export const ogEntries = publicPages.map((page) => ({
   slug: page.path === "/" ? "index" : page.path.replace(/^\/|\/$/g, ""),
   title: page.title,

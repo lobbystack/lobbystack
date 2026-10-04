@@ -20,7 +20,7 @@ import {
   softwareApplicationJsonLd,
   webSiteJsonLd,
 } from "@/lib/seo"
-import { assertLocale, getRouteSeo, localizePath, type Locale } from "@/i18n"
+import { assertLocale, getCopy, getRouteSeo, localizePath, type Locale } from "@/i18n"
 
 interface Props {
   locale?: Locale
@@ -68,7 +68,10 @@ const ogImageAlt: Record<Locale, string> = {
     <FeatureGrid locale={locale} />
     <LandingPageAdditions locale={locale} />
     <TradeLinks locale={locale} />
-    <FaqSection locale={locale} />
+    <FaqSection
+      heading={getCopy(locale).common.commonQuestions}
+      faqs={getHomeFaqs(locale)}
+    />
     <CtaSection locale={locale} />
   </main>
   <Footer locale={locale} path={Astro.url.pathname} />

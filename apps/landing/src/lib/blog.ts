@@ -17,8 +17,3 @@ export const getBlogPosts = async (locale: Locale) => {
   const posts = await getCollection("blog", (entry) => blogLocale(entry) === locale)
   return posts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
 }
-
-export const getBlogPostBySlug = async (locale: Locale, slug: string) => {
-  const posts = await getBlogPosts(locale)
-  return posts.find((entry) => blogCanonicalSlug(entry) === slug)
-}

@@ -4,7 +4,7 @@ import {
   localizeHref,
   localizePath,
   type Locale,
-} from "@/lib/i18n"
+} from "@/i18n"
 
 const footerCopy = {
   en: {

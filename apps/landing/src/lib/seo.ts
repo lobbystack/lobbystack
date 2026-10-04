@@ -77,9 +77,6 @@ export const ogImagePath = (canonicalPath = "/") => {
   return `/og/${slug}.jpg`
 }
 
-export const jsonLdScript = (data: JsonLd) =>
-  JSON.stringify(data).replace(/</g, "\\u003c")
-
 export const plainTextFromMarkdown = (markdown = "", limit = 10000) =>
   markdown
     .replace(/^---[\s\S]*?---/m, "")

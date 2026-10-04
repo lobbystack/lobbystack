@@ -16,8 +16,6 @@ import {
   RevenueTieIn as PhoneRevenueTieIn,
   OpenSource as PhoneOpenSource,
 } from "@/components/solutions/ai-phone-answering/SectionsPart2"
-import { SolutionCta as PhoneCta } from "@/components/solutions/ai-phone-answering/SectionsPart3"
-import { SolutionFaq as PhoneFaq } from "@/components/solutions/ai-phone-answering/SolutionFaq"
 import {
   Hero as SchedulerHero,
   Problem as SchedulerProblem,
@@ -32,8 +30,6 @@ import {
   RevenueTieIn as SchedulerRevenueTieIn,
   OpenSource as SchedulerOpenSource,
 } from "@/components/solutions/ai-appointment-scheduler/SectionsPart2"
-import { SolutionCta as SchedulerCta } from "@/components/solutions/ai-appointment-scheduler/SectionsPart3"
-import { SolutionFaq as SchedulerFaq } from "@/components/solutions/ai-appointment-scheduler/SolutionFaq"
 import {
   Hero as HomeHero,
   Problem as HomeProblem,
@@ -48,8 +44,8 @@ import {
   RevenueTieIn as HomeRevenueTieIn,
   OpenSource as HomeOpenSource,
 } from "@/components/solutions/ai-receptionist-for-home-services/SectionsPart2"
-import { SolutionCta as HomeCta } from "@/components/solutions/ai-receptionist-for-home-services/SectionsPart3"
-import { SolutionFaq as HomeFaq } from "@/components/solutions/ai-receptionist-for-home-services/SolutionFaq"
+import { FaqSection } from "@/components/FaqSection"
+import { SolutionCta } from "@/components/solutions/SolutionCta"
 import { aiPhoneAnsweringFaqs } from "@/lib/solution-faqs"
 import { appointmentSchedulerFaqs } from "@/lib/appointment-scheduler-faqs"
 import { homeServicesFaqs } from "@/lib/home-services-faqs"
@@ -88,6 +84,13 @@ const variants = {
       sr: "AI odgovaranje na pozive",
     },
     faqs: aiPhoneAnsweringFaqs,
+    faqHeading: "Questions about AI phone answering",
+    cta: {
+      heading: "Start answering every call without hiring another receptionist",
+      intro:
+        "Try LobbyStack with included voice minutes, set your answering rules, and see how many calls it can turn into clear next steps.",
+      footnote: "No credit card required. Cancel anytime.",
+    },
     seo: {
       en: {
         title: "AI Phone Answering Service for Small Businesses | LobbyStack",
@@ -122,6 +125,13 @@ const variants = {
       sr: "AI zakazivanje termina",
     },
     faqs: appointmentSchedulerFaqs,
+    faqHeading: "Questions about AI appointment scheduling",
+    cta: {
+      heading: "Book more appointments from the calls you already get",
+      intro:
+        "Try LobbyStack with included voice minutes, set your scheduling rules, and let callers book while they are ready to act.",
+      footnote: "No credit card required. Cancel anytime.",
+    },
     seo: {
       en: {
         title: "AI Appointment Scheduler and Answering Service | LobbyStack",
@@ -157,6 +167,15 @@ const variants = {
       sr: "Kućne usluge",
     },
     faqs: homeServicesFaqs,
+    faqHeading: "Questions about AI receptionists for home services",
+    cta: {
+      heading:
+        "Answer the next job call, even when your crew is already working",
+      intro:
+        "Try LobbyStack with included voice minutes, set your trade-specific intake rules, and turn more phone calls into booked jobs.",
+      footnote:
+        "No credit card required. Works with your existing business number.",
+    },
     seo: {
       en: {
         title: "Home Services Answering Service with AI | LobbyStack",
@@ -188,6 +207,8 @@ const variants = {
     imageAlt: string
     breadcrumb: Record<Locale, string>
     faqs: FaqItem[]
+    faqHeading: string
+    cta: { heading: string; intro: string; footnote: string }
     seo: Record<Locale, LocalizedSeo>
   }
 >
@@ -259,8 +280,6 @@ const homeLabel = breadcrumbLabels[locale].home
           <PhoneCapabilities />
           <PhoneRevenueTieIn />
           <PhoneOpenSource />
-          <PhoneFaq />
-          <PhoneCta />
         </>
       )
     }
@@ -277,8 +296,6 @@ const homeLabel = breadcrumbLabels[locale].home
           <SchedulerCapabilities />
           <SchedulerRevenueTieIn />
           <SchedulerOpenSource />
-          <SchedulerFaq />
-          <SchedulerCta />
         </>
       )
     }
@@ -295,11 +312,11 @@ const homeLabel = breadcrumbLabels[locale].home
           <HomeCapabilities />
           <HomeRevenueTieIn />
           <HomeOpenSource />
-          <HomeFaq />
-          <HomeCta />
         </>
       )
     }
+    <FaqSection heading={variant.faqHeading} faqs={variant.faqs} />
+    <SolutionCta {...variant.cta} />
   </main>
 
   <Footer locale={locale} path={Astro.url.pathname} />
