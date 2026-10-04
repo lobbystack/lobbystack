@@ -105,7 +105,7 @@
     {
       "referenceTest": "apps/web/src/components/web-voice/useWebVoiceCall.test.tsx",
       "adapterTests": [
-        "apps/admin/src/components/web-voice/useWebVoiceCall.test.tsx"
+        "packages/web-voice/src/useWebVoiceCall.test.tsx"
       ],
       "status": "mapped; see test and gate evidence",
       "notes": "File mapping is traceability, not a rendered-parity or release certificate."
