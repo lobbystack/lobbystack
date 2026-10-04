@@ -616,7 +616,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           title: "Adapte el código a su forma de trabajar",
           body: "Recibe el monorepo de TypeScript que ejecuta LobbyStack Cloud. Edite los prompts, las preguntas iniciales y las reglas de llamada, o conecte LobbyStack con los sistemas internos que su equipo ya usa.",
           points: [
-            "Los prompts del sistema están en el espacio de trabajo packages/ai",
+            "Los prompts del sistema están en el espacio de trabajo packages/agent-core",
             "Dirija el chat y los embeddings a cualquier endpoint compatible con OpenAI",
             "Fije una versión y actualice cuando la haya probado",
           ],

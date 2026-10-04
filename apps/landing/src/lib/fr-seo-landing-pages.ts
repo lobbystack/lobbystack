@@ -519,7 +519,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           body: "Le dépôt public permet d’examiner la logique de prise d’appel, de réservation et de transfert. La licence MIT autorise la modification et la redistribution sous réserve de conserver les avis requis.",
           points: [
             "Consignes, questions d’accueil et règles d’escalade modifiables",
-            "Prompts système regroupés dans l’espace de travail packages/ai",
+            "Prompts système regroupés dans l’espace de travail packages/agent-core",
             "Licence consultable directement dans le dépôt",
           ],
         },

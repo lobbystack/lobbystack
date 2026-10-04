@@ -364,7 +364,7 @@ export const solutionPages: SeoLandingPage[] = [
         title: "Change the code to fit your workflow",
         body: "You get the TypeScript monorepo that runs LobbyStack Cloud. Edit the prompts, intake questions, and call rules, or connect LobbyStack to internal systems your team already uses.",
         points: [
-          "System prompts live in the packages/ai workspace",
+          "System prompts live in the packages/agent-core workspace",
           "Point chat and embeddings at any OpenAI-compatible endpoint",
           "Pin a release and upgrade after you've tested it",
         ],

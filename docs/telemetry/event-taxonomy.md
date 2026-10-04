@@ -261,22 +261,16 @@ Add when relevant:
 
 ### Alertable exceptions
 
-Unexpected crashes, provider failures, service health failures, and observed write/action/http handler failures should include:
+The admin app sends unexpected server errors to PostHog Error Tracking as `$exception` events with:
 
-- `runtime`
 - `service`
 - `operation`
-- `deploymentMode`
 - `alertable`
-- `expected`
-- `$exception_level`
-- `$exception_type`
-- `$exception_message`
+- `environment`
+- `release`
+- `route` and `method`, when a request failed
 
-Add when relevant:
-
-- `provider`
-- safe IDs such as `businessId`, `callId`, `conversationId`, `messageId`, or `appointmentId`
+See [Configure error tracking alerts](./provider-failure-error-tracking.md) for the matching notification.
 
 ## Property guidelines
 

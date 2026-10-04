@@ -788,7 +788,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           title: "Prilagodite kod svom načinu rada",
           body: "Dobijate TypeScript monorepo na kome radi LobbyStack Cloud. Menjajte promptove, uvodna pitanja i pravila poziva ili povežite LobbyStack sa internim sistemima koje Vaš tim već koristi.",
           points: [
-            "Sistemski promptovi su u workspace-u packages/ai",
+            "Sistemski promptovi su u workspace-u packages/agent-core",
             "Usmerite chat i embeddinge na bilo koji endpoint kompatibilan sa OpenAI-jem",
             "Zaključajte verziju i nadogradite je tek kada je testirate",
           ],
