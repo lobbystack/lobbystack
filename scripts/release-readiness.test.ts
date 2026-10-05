@@ -117,6 +117,8 @@ describe("release readiness", () => {
     })).toContain("E2E role databases (must target the same disposable database)");
     expect(parseReleaseReadinessArgs(["--e2e", "--dry-run"])).toEqual({ mode: "local", plan: true, e2e: true, evidencePath: undefined });
     expect(() => parseReleaseReadinessArgs(["--staging", "--e2e"])).toThrow("only for the local baseline");
+    expect(parseReleaseReadinessArgs(["--staging", "--local"]).mode).toBe("local");
+    expect(parseReleaseReadinessArgs(["--local", "--staging"]).mode).toBe("staging");
   });
 
   it("forces the widget fixture provider instead of inheriting a live provider", () => {

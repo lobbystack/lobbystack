@@ -55,6 +55,13 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 
+it("passes wildcard trusted origins through to Better Auth next to APP_BASE_URL", async () => {
+  vi.stubEnv("APP_BASE_URL", "https://app.example.test/");
+  vi.stubEnv("AUTH_TRUSTED_ORIGINS", " *.example.test , https://app.example.test, myapp://callback,not a url");
+  const { getAuth } = await import("./auth"); getAuth();
+  expect(mocks.config.trustedOrigins).toEqual(["https://app.example.test", "*.example.test", "myapp://callback", "not a url"]);
+});
+
 it("sends a localized sign-in reminder for a verified duplicate signup", async () => {
   const { getAuth } = await import("./auth"); getAuth();
   mocks.select.mockResolvedValue([{ preferredLocale: "fr" }]);

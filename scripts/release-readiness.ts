@@ -344,8 +344,8 @@ export function parseReleaseReadinessArgs(args: string[]): CliOptions {
       evidence: { type: "string" },
     },
   });
-  // --local wins when both targets are passed.
-  const mode: ReleaseMode = values.staging && !values.local ? "staging" : "local";
+  // The last of --local and --staging wins. Strict parsing rejects option-like values, so exact matches are flags.
+  const mode: ReleaseMode = args.lastIndexOf("--staging") > args.lastIndexOf("--local") ? "staging" : "local";
   const plan = Boolean(values.plan || values["dry-run"]);
   const e2e = Boolean(values.e2e);
   if (mode === "staging" && e2e) throw new Error("--e2e is available only for the local baseline.");

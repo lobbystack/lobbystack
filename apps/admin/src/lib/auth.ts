@@ -209,7 +209,7 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
   const trustedIpHeader = trustedClientIpHeader();
   const database = getAuthDatabase();
   const secondaryStorage = getAuthSecondaryStorage();
-  const trustedOrigins = configuredAppOrigins();
+  const trustedOrigins = configuredAppOrigins(process.env, [], true);
   return betterAuth({
     database: drizzleAdapter(adapterDatabase ?? database.db, {
       provider: "pg",

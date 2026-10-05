@@ -17,18 +17,20 @@ export function useSignOut() {
     if (signingOut.current) return;
     signingOut.current = true;
     try {
-      const response = await fetch("/api/auth/sign-out", { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: "{}" });
-      if (!response.ok) return;
-      // Remove the prior operator and workspace association before the next
-      // person uses this browser session. This is deliberately best-effort.
-      try {
-        if (posthog.__loaded) {
-          const telemetry = createBrowserTelemetry(posthog, { optedOut: false });
-          telemetry.reset();
-          telemetry.setOptOut(true);
+      // A failed request still lands on the login page so the operator is never stuck.
+      const response = await fetch("/api/auth/sign-out", { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: "{}" }).catch(() => null);
+      if (response?.ok) {
+        // Remove the prior operator and workspace association before the next
+        // person uses this browser session. This is deliberately best-effort.
+        try {
+          if (posthog.__loaded) {
+            const telemetry = createBrowserTelemetry(posthog, { optedOut: false });
+            telemetry.reset();
+            telemetry.setOptOut(true);
+          }
+        } catch {
+          // Analytics must never block sign-out.
         }
-      } catch {
-        // Analytics must never block sign-out.
       }
       router.replace(localizePublicPath("/login", resolveLocale(i18n.resolvedLanguage, i18n.language)));
       router.refresh();

@@ -160,8 +160,8 @@ export function parseAlertSmokeArgs(args: string[]): AlertSmokeCliOptions {
   const confirmedFiring = (values["confirmed-firing"] ?? []).flatMap((value) => parseConditionIds("--confirmed-firing", value));
   const confirmedRecovery = (values["confirmed-recovery"] ?? []).flatMap((value) => parseConditionIds("--confirmed-recovery", value));
   return {
-    // --dry-run wins when both modes are passed.
-    mode: values.execute && !values["dry-run"] ? "execute" : "dry-run",
+    // The last of --dry-run and --execute wins. Strict parsing rejects option-like values, so exact matches are flags.
+    mode: args.lastIndexOf("--execute") > args.lastIndexOf("--dry-run") ? "execute" : "dry-run",
     ...(environment ? { environment } : {}),
     confirmedFiring: [...new Set(confirmedFiring)],
     confirmedRecovery: [...new Set(confirmedRecovery)],

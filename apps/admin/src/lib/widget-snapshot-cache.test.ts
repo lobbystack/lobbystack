@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { deserializeSnapshot, snapshotCacheKey } from "@lobbystack/domain";
 import { demoSnapshot } from "@lobbystack/shared";
 
-import { closeAdminSnapshotCache, getAdminSnapshotCache } from "./widget-snapshot-cache";
+import { closeRedis } from "./redis";
+import { getAdminSnapshotCache } from "./widget-snapshot-cache";
 
 beforeEach(() => {
   vi.stubEnv("REDIS_URL", "");
@@ -43,7 +44,7 @@ describe("admin widget snapshot cache (Redis-backed)", () => {
   });
 
   it("does not leak a stale connection handle across tests", async () => {
-    await closeAdminSnapshotCache();
+    await closeRedis();
     const cache = getAdminSnapshotCache();
     await expect(cache.get("00000000-0000-4000-8000-000000000003")).resolves.toBeNull();
   });

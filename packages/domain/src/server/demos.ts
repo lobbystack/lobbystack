@@ -139,35 +139,32 @@ async function resolveProspectDemoIdForCall(
 
 /**
  * Records the terminal state of a call once the caller has resolved the call's
- * business. It is a no-op for non-demo calls, and any lookup or emission failure
- * stays out of the call-completion response path.
+ * business. It is a no-op for non-demo calls. A failed demo lookup counts as a
+ * non-demo call so it never fails call completion; the event writes are
+ * already best-effort.
  */
 export async function recordProspectDemoCallOutcome(
   context: DomainContext,
   input: { businessId: string; callId: string; status: string; disposition?: string; providerDurationSeconds?: number },
 ): Promise<void> {
-  try {
-    const prospectDemoId = await resolveProspectDemoIdForCall(context, input);
-    if (!prospectDemoId) return;
-    if (input.status === "failed") {
-      await recordProspectDemoCallError(context, { businessId: input.businessId, prospectDemoId, callId: input.callId, reason: "call_failed" });
-      return;
-    }
-    await recordProspectDemoEvent(context, {
-      name: "prospect_demo.call_completed",
-      actorType: "worker",
-      businessId: input.businessId,
-      prospectDemoId,
-      properties: {
-        callId: input.callId,
-        status: input.status,
-        ...(input.disposition !== undefined ? { disposition: input.disposition } : {}),
-        ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}),
-      },
-    });
-  } catch {
-    // Best-effort: completion telemetry must not fail the call-completion route.
+  const prospectDemoId = await resolveProspectDemoIdForCall(context, input).catch(() => undefined);
+  if (!prospectDemoId) return;
+  if (input.status === "failed") {
+    await recordProspectDemoCallError(context, { businessId: input.businessId, prospectDemoId, callId: input.callId, reason: "call_failed" });
+    return;
   }
+  await recordProspectDemoEvent(context, {
+    name: "prospect_demo.call_completed",
+    actorType: "worker",
+    businessId: input.businessId,
+    prospectDemoId,
+    properties: {
+      callId: input.callId,
+      status: input.status,
+      ...(input.disposition !== undefined ? { disposition: input.disposition } : {}),
+      ...(input.providerDurationSeconds !== undefined ? { providerDurationSeconds: input.providerDurationSeconds } : {}),
+    },
+  });
 }
 
 export async function createProspectDemo(

@@ -14,6 +14,8 @@ const FIXED_NOW = () => new Date("2026-09-13T00:00:00.000Z");
 describe("alert-firing smoke guards", () => {
   it("defaults to dry-run and parses execute flags", () => {
     expect(parseAlertSmokeArgs([])).toEqual({ mode: "dry-run", confirmedFiring: [], confirmedRecovery: [] });
+    expect(parseAlertSmokeArgs(["--dry-run", "--execute"]).mode).toBe("execute");
+    expect(parseAlertSmokeArgs(["--execute", "--dry-run"]).mode).toBe("dry-run");
     expect(parseAlertSmokeArgs(["--execute", "--environment=isolated-1", "--evidence", "out.json"])).toEqual({
       mode: "execute",
       environment: "isolated-1",

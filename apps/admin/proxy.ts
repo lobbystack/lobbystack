@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { isMaintenanceMode, normalizeInterfaceLocale } from "@lobbystack/shared";
 
+import { configuredAppOrigins } from "@/lib/app-origins";
 import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE_SECONDS, localeTag } from "@/lib/locale";
 import {
   isLegacyPublicRoutePath,
@@ -85,13 +86,9 @@ function cacheControlForRequest(pathname: string, searchParams: URLSearchParams)
   return undefined;
 }
 
+// Same list Better Auth trusts, plus the request's own origin.
 function configuredOrigins(request: NextRequest): Set<string> {
-  const origins = new Set<string>([request.nextUrl.origin]);
-  for (const value of (process.env.AUTH_TRUSTED_ORIGINS ?? process.env.APP_BASE_URL ?? "").split(",")) {
-    const origin = value.trim().replace(/\/$/, "");
-    if (origin) origins.add(origin);
-  }
-  return origins;
+  return new Set([request.nextUrl.origin, ...configuredAppOrigins(process.env, [], true)]);
 }
 
 function hasValidCsrfOrigin(request: NextRequest): boolean {
