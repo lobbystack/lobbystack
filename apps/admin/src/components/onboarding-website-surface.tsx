@@ -9,7 +9,6 @@ import { Globe, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
-import { requestJson } from "@/lib/request-json";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
