@@ -4,7 +4,7 @@ FROM node:26-bookworm-slim@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c4
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 
-RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
+RUN npm install --global pnpm@10.30.3
 WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
