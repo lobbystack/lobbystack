@@ -45,6 +45,8 @@ RUN swc_helpers_path="$(find /app/node_modules/.pnpm -type d -path '*/node_modul
 RUN find /app/apps/admin/.next/standalone -type f -name '*.map' -delete
 
 FROM node:26-bookworm-slim@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS runtime
+# The pinned base image can lag Debian security fixes, so install them at build time.
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
 ARG SERVICE_VERSION=development
 ENV NODE_ENV=production

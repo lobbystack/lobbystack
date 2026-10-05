@@ -13,13 +13,14 @@ vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => k
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
 beforeEach(() => { push.mockReset(); telemetryRef.current = createRecordedBrowserTelemetry(); });
-function setup(options: { websiteUrl?: string; fail?: boolean; refresh?: Promise<Response> } = {}) {
+function setup(options: { websiteUrl?: string; fail?: boolean; invalid?: boolean; refresh?: Promise<Response> } = {}) {
   let reads = 0;
   const fetcher = vi.fn(async (url: string, _init?: RequestInit) => {
     if (url === "/api/businesses") {
       if (reads++ > 0 && options.refresh) return options.refresh;
       return Response.json({ businesses: [{ businessId: "business-1", active: true, websiteUrl: options.websiteUrl }] });
     }
+    if (options.invalid) return Response.json({ error: "Website URL must use HTTP or HTTPS.", code: "website_url_invalid" }, { status: 422 });
     return options.fail ? Response.json({ error: "Private provider diagnostics" }, { status: 500 }) : Response.json({ documentId: "document-1" });
   });
   vi.stubGlobal("fetch", fetcher);
@@ -38,6 +39,14 @@ describe("onboarding website", () => {
     const submission = fetcher.mock.calls.find(([url]) => url === "/api/knowledge");
     expect(JSON.parse(String(submission?.[1]?.body))).toEqual({ businessId: "business-1", title: "example.com", sourceType: "website", sourceUrl: "example.com", onboarding: true });
     telemetryRef.current!.expectEvent("web.onboarding.website_submitted", { businessId: "business-1" });
+  });
+  it("asks for a valid address when the server rejects the URL", async () => {
+    setup({ invalid: true });
+    fireEvent.change(screen.getByLabelText("website.label"), { target: { value: "htps://example.com" } });
+    await waitFor(() => expect((screen.getByRole("button", { name: "website.continue" }) as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(screen.getByRole("button", { name: "website.continue" }));
+    expect(await screen.findByText("website.invalidUrl")).toBeTruthy();
+    expect(push).not.toHaveBeenCalled();
   });
   it("records the skip when the user advances without a website", async () => {
     setup();
