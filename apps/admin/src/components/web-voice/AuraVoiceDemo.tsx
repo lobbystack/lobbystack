@@ -10,9 +10,19 @@ import {
   AuraVoiceOrb,
   useWebVoiceCall,
   type AuraTone,
+  type WebVoiceCallEvent,
   type WebVoiceWidgetStatus,
 } from "@lobbystack/web-voice";
 import type { TelemetryEventName } from "@lobbystack/telemetry";
+
+// The dashboard has no telemetry event for a created session.
+const testCallEvents: Record<WebVoiceCallEvent, TelemetryEventName | undefined> = {
+  started: "web.voice.test_call_started",
+  connected: "web.voice.test_call_connected",
+  ended: "web.voice.test_call_ended",
+  error: "web.voice.test_call_error",
+  session_created: undefined,
+};
 
 type AuraVoiceDemoProps = {
   businessSlug: string;
@@ -75,9 +85,9 @@ export function AuraVoiceDemo({
     ...(widgetId ? { widgetId } : {}),
     ...(onEvent
       ? {
-          // The dashboard has no telemetry event for a created session.
           onEvent: (event, properties) => {
-            if (event !== "session_created") onEvent(`web.voice.test_call_${event}`, properties);
+            const name = testCallEvents[event];
+            if (name) onEvent(name, properties);
           },
         }
       : {}),

@@ -1,4 +1,5 @@
 import { isIP } from "node:net";
+import { trimTrailingSlashes } from "@lobbystack/shared";
 
 // The operator can fix these, so the API answers 422 with the message instead of a server error.
 function invalidWebsiteUrl(message: string): Error {
@@ -18,6 +19,6 @@ export function normalizeWebsiteSourceUrl(value: string): string {
   if (url.username || url.password) throw invalidWebsiteUrl("Website URL must not include credentials.");
   const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
   if (hostname === "localhost" || [".localhost", ".local", ".localdomain", ".home.arpa"].some((suffix) => hostname.endsWith(suffix)) || isIP(hostname.replace(/^\[|\]$/g, ""))) throw invalidWebsiteUrl("Website URL must use a public hostname.");
-  const path = url.pathname === "/" ? "/" : url.pathname.replace(/\/+$/, "");
+  const path = url.pathname === "/" ? "/" : trimTrailingSlashes(url.pathname);
   return `${url.origin}${path}`;
 }

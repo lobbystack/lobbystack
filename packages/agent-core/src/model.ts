@@ -1,6 +1,6 @@
 import { createOpenAI, type OpenAILanguageModelResponsesOptions } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import type { AiUsage } from "@lobbystack/shared";
+import { trimTrailingSlashes, type AiUsage } from "@lobbystack/shared";
 import { defaultSettingsMiddleware, generateText, Output, wrapLanguageModel, type LanguageModel, type LanguageModelUsage } from "ai";
 import type { z } from "zod";
 
@@ -22,7 +22,7 @@ function serviceTier(environment: AgentModelEnvironment): ServiceTier | undefine
 type AgentModelEnvironment = Record<string, string | undefined>;
 
 function usesOpenAI(environment: AgentModelEnvironment): boolean {
-  return (environment.AI_CHAT_BASE_URL?.trim() || DEFAULT_BASE_URL).replace(/\/+$/, "") === DEFAULT_BASE_URL;
+  return trimTrailingSlashes(environment.AI_CHAT_BASE_URL?.trim() || DEFAULT_BASE_URL) === DEFAULT_BASE_URL;
 }
 
 // Website chat and calls share one text model, set with the AI_CHAT_* variables.

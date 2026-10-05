@@ -2,7 +2,7 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { embedMany, type EmbeddingModel } from "ai";
 import { createHash } from "node:crypto";
 
-import type { AiUsage } from "@lobbystack/shared";
+import { trimTrailingSlashes, type AiUsage } from "@lobbystack/shared";
 
 export const DEFAULT_EMBEDDING_AI_BASE_URL = "https://api.openai.com/v1";
 export const DEFAULT_EMBEDDING_AI_MODEL = "text-embedding-3-small";
@@ -137,7 +137,7 @@ export type EmbeddingAiEnvironment = Record<string, string | undefined>;
 export function createEmbeddingProvider(environment: EmbeddingAiEnvironment = process.env): OpenAiCompatibleEmbeddingProvider | undefined {
   const baseURL = environment.AI_EMBEDDING_BASE_URL?.trim() || DEFAULT_EMBEDDING_AI_BASE_URL;
   const apiKey = environment.AI_EMBEDDING_API_KEY?.trim() || environment.OPENAI_API_KEY?.trim();
-  if (!apiKey && baseURL.replace(/\/+$/, "") === DEFAULT_EMBEDDING_AI_BASE_URL) return undefined;
+  if (!apiKey && trimTrailingSlashes(baseURL) === DEFAULT_EMBEDDING_AI_BASE_URL) return undefined;
   const inputCostPerMillionTokens = parseOptionalNumber(environment.AI_EMBEDDING_INPUT_COST_PER_MILLION_TOKENS);
   const timeoutMs = parsePositiveNumber(environment.AI_EMBEDDING_TIMEOUT_MS);
   const maxParallelCalls = parsePositiveNumber(environment.AI_EMBEDDING_MAX_PARALLEL_CALLS);
