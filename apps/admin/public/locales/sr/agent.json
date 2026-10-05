@@ -153,7 +153,9 @@
           "placeholder": "Konsultacije, novi klijenti",
           "hint": "Ključne reči odvojene zarezima koje pomažu da se ove usluge razvrstaju."
         }
-      }
+      },
+      "deleteTitle": "Obrisati uslugu?",
+      "deleteDescription": "Recepcioner prestaje da je nudi. Prošli termini je i dalje prikazuju."
     },
     "rules": {
       "title": "Pravila",

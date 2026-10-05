@@ -153,7 +153,9 @@
           "placeholder": "Consultation, nouveaux clients",
           "hint": "Mots-clés séparés par des virgules pour catégoriser ces services."
         }
-      }
+      },
+      "deleteTitle": "Supprimer le service ?",
+      "deleteDescription": "Votre réceptionniste ne le proposera plus. Les rendez-vous passés l'affichent toujours."
     },
     "rules": {
       "title": "Règles",

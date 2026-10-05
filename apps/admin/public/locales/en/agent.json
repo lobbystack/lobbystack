@@ -153,7 +153,9 @@
           "placeholder": "Consultation, new clients",
           "hint": "Comma-separated keywords to help categorize these services."
         }
-      }
+      },
+      "deleteTitle": "Delete service?",
+      "deleteDescription": "Your receptionist stops offering it. Past appointments still show it."
     },
     "rules": {
       "title": "Rules",

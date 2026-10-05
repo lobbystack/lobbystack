@@ -240,10 +240,11 @@ export const services = pgTable(
     description: text("description"),
     durationMinutes: integer("duration_minutes").notNull(),
     active: boolean("active").default(true).notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     ...legacyId,
     ...timestamps,
   },
-  (table) => [uniqueIndex("services_business_slug_unique").on(table.businessId, table.slug), index("services_business_idx").on(table.businessId)],
+  (table) => [uniqueIndex("services_business_slug_live_unique").on(table.businessId, table.slug).where(sql`${table.deletedAt} is null`), index("services_business_idx").on(table.businessId)],
 );
 
 export const staffServiceAssignments = pgTable(

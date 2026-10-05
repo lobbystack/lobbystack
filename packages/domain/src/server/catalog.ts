@@ -1,4 +1,4 @@
-import { and, asc, count, eq, ilike, inArray } from "drizzle-orm";
+import { and, asc, count, eq, ilike, inArray, isNull } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { agentRules, businesses, businessHours, closures, phoneNumbers, receptionistProfiles, services, staff, staffServiceAssignments } from "@lobbystack/db";
@@ -16,7 +16,7 @@ export async function listCatalog(
     await requireBusinessMembership(tx, input);
     const [staffRows, serviceRows, hoursRows, closureRows, numberRows, profileRows, ruleRows] = await Promise.all([
       tx.select().from(staff).where(eq(staff.businessId, input.businessId)).orderBy(asc(staff.name)),
-      tx.select().from(services).where(and(eq(services.businessId, input.businessId), ...(input.search?.trim() ? [ilike(services.name, `%${input.search.trim()}%`)] : []))).orderBy(asc(services.name)).limit(Math.min(Math.max(Math.trunc(input.limit ?? 100), 1), 100) + 1).offset(Math.max(Math.trunc(input.offset ?? 0), 0)),
+      tx.select().from(services).where(and(eq(services.businessId, input.businessId), isNull(services.deletedAt), ...(input.search?.trim() ? [ilike(services.name, `%${input.search.trim()}%`)] : []))).orderBy(asc(services.name)).limit(Math.min(Math.max(Math.trunc(input.limit ?? 100), 1), 100) + 1).offset(Math.max(Math.trunc(input.offset ?? 0), 0)),
       tx.select().from(businessHours).where(eq(businessHours.businessId, input.businessId)).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes)),
       tx.select().from(closures).where(eq(closures.businessId, input.businessId)).orderBy(asc(closures.startsAt)),
       tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(asc(phoneNumbers.e164)),
@@ -25,7 +25,7 @@ export async function listCatalog(
     ]);
     const limit = Math.min(Math.max(Math.trunc(input.limit ?? 100), 1), 100);
     const offset = Math.max(Math.trunc(input.offset ?? 0), 0);
-    const [total] = await tx.select({ count: count() }).from(services).where(and(eq(services.businessId, input.businessId), ...(input.search?.trim() ? [ilike(services.name, `%${input.search.trim()}%`)] : [])));
+    const [total] = await tx.select({ count: count() }).from(services).where(and(eq(services.businessId, input.businessId), isNull(services.deletedAt), ...(input.search?.trim() ? [ilike(services.name, `%${input.search.trim()}%`)] : [])));
     const page = serviceRows.slice(0, limit);
     const serviceIds = page.map((service) => service.id);
     const assignments = serviceIds.length ? await tx.select({ serviceId: staffServiceAssignments.serviceId, staffId: staffServiceAssignments.staffId }).from(staffServiceAssignments).where(and(eq(staffServiceAssignments.businessId, input.businessId), inArray(staffServiceAssignments.serviceId, serviceIds))) : [];
@@ -75,21 +75,28 @@ export async function updateService(
       description: input.description,
       active: input.active,
       updatedAt: new Date(),
-    }).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId))).returning({ id: services.id });
-    if (!service) throw new Error("Service not found.");
+    }).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId), isNull(services.deletedAt))).returning({ id: services.id });
+    if (!service) throw Object.assign(new Error("Service not found."), { status: 404 });
     await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "service", aggregateId: service.id, dedupeKey: `service:${service.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "service_updated" } });
   });
 }
 
+/**
+ * Deletes a service from the catalog. Appointments still reference it for
+ * history, so the row stays, inactive and marked deleted, and its slug is
+ * free for a new service.
+ */
 export async function deleteService(
   context: DomainContext,
   input: { userId: string; businessId: string; serviceId: string },
 ): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const [service] = await tx.update(services).set({ active: false, updatedAt: new Date() }).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId))).returning({ id: services.id });
-    if (!service) throw new Error("Service not found.");
-    await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "service", aggregateId: service.id, dedupeKey: `service:${service.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "service_disabled" } });
+    const now = new Date();
+    const [service] = await tx.update(services).set({ active: false, deletedAt: now, updatedAt: now }).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId), isNull(services.deletedAt))).returning({ id: services.id });
+    if (!service) throw Object.assign(new Error("Service not found."), { status: 404 });
+    await tx.delete(staffServiceAssignments).where(and(eq(staffServiceAssignments.businessId, input.businessId), eq(staffServiceAssignments.serviceId, service.id)));
+    await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "service", aggregateId: service.id, dedupeKey: `service:${service.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "service_deleted" } });
   });
 }
 
@@ -99,6 +106,8 @@ export async function assignStaffToService(
 ): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
+    const [service] = await tx.select({ id: services.id }).from(services).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId), isNull(services.deletedAt))).limit(1);
+    if (!service) throw Object.assign(new Error("Service not found."), { status: 404 });
     await tx.insert(staffServiceAssignments).values(input).onConflictDoNothing();
     await enqueueOutbox(tx, {
       topic: "snapshot.refresh",
