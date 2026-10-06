@@ -73,6 +73,8 @@ Once attached, the worker owns the call until OpenAI closes the session. It:
 
 The worker ends phone calls with OpenAI's SIP hangup and browser calls with `session.close`. Either way it keeps the sideband open until `session.closed` brings the final usage, for up to 15 seconds. If the connection drops first, it records the latest `session.usage.updated` seconds, or its own measurement when that's larger, and logs `usageConfirmed: false` on `live.closed`.
 
+If the sideband connection fails before the session has sent anything, for example when OpenAI answers it with a 504, the worker reconnects up to 3 times, after about 250 ms, 500 ms and 1 second. Once the session has sent an event, a dropped sideband ends the call, because a new connection replays the last 3 seconds of events and could answer a request twice.
+
 If the worker can't attach, the admin ends the session and records the call as `setup_failed`, so nothing talks or bills without the worker. A browser session that never started still costs OpenAI's 15-second setup charge, so the admin records those 15 seconds. The admin has no sideband, so it asks the worker to close browser sessions at `/internal/live/end`.
 
 Only one worker answers each session. The worker takes a lock in Redis, `live-attach:<session id>`, when it attaches and renews it while the call runs.

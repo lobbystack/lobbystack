@@ -123,6 +123,12 @@ const STILL_WORKING_MS = 4_000;
 const DELEGATION_TIMEOUT_MS = 30_000;
 // Past the sideband's 3-second replay window, session.started can't arrive.
 const LATE_ATTACH_MS = 3_500;
+// An attach can fail at OpenAI's edge, for example with a 504, while the
+// session itself is fine. The SDK retries it after about 250 ms, 500 ms and
+// 1 second, but only until the session sends its first event: a new
+// connection replays the last 3 seconds, so a retry mid-call could answer the
+// same request twice.
+const ATTACH_RETRY = { maxRetries: 3, initialDelay: 250, maxDelay: 1_000 };
 // After session.close or a hangup, how long to wait for session.closed.
 const FINALIZE_TIMEOUT_MS = 15_000;
 // Ending the call waits for the goodbye: for it to start, then for its audio to finish.
@@ -197,6 +203,9 @@ export class LiveCallController {
   private greetingFallbackTimer: ReturnType<typeof setTimeout> | undefined;
   private finalizeTimer: ReturnType<typeof setTimeout> | undefined;
   private started = false;
+  // The session has sent this sideband an event, so a dropped connection is no
+  // longer retried.
+  private sessionEventSeen = false;
   private greetingAttempts = 0;
   private greetingSpoken = false;
   private readonly pendingAppends = new Map<string, PendingAppend>();
@@ -230,8 +239,9 @@ export class LiveCallController {
   }
 
   start(): void {
-    const socket = new SidebandWS(this.options.client, { session_id: this.options.sessionId, graceful_close: true });
+    const socket = new SidebandWS(this.options.client, { session_id: this.options.sessionId, graceful_close: true }, { reconnect: { ...ATTACH_RETRY, onReconnecting: (event) => this.retryAttach(event) } });
     this.socket = socket;
+    socket.on("event", () => { this.sessionEventSeen = true; });
     socket.on("session.input_transcript.delta", (event) => {
       this.observeTimeline(event.end_ms);
       this.measure(() => this.latency.callerTranscript(event.start_ms, event.end_ms));
@@ -285,14 +295,28 @@ export class LiveCallController {
     // past the replay window never sees session.started. A browser call's
     // session starts after the attach, so it always does.
     if (this.options.phone) {
-      (socket.socket as unknown as { on(type: "open", listener: () => void): void }).on("open", () => {
+      const lateAttach = () => {
+        // A retried attach can see session.started before it reports the reconnect.
+        if (this.started) return;
+        clearTimeout(this.greetingFallbackTimer);
         this.greetingFallbackTimer = setTimeout(() => {
           if (!this.started) this.sendGreetingFallback();
         }, LATE_ATTACH_MS);
-      });
+      };
+      (socket.socket as unknown as { on(type: "open", listener: () => void): void }).on("open", lateAttach);
+      // A retried attach opens on a new connection.
+      socket.on("reconnected", lateAttach);
     }
     this.resetSilenceTimer();
     if (this.options.maxDurationMs) this.durationTimer = setTimeout(() => this.options.onTimeout?.("duration_limit"), this.options.maxDurationMs);
+  }
+
+  // Retries an attach that failed before the session sent anything. After
+  // that, a dropped sideband ends the call.
+  private retryAttach(event: { attempt: number; maxAttempts: number; closeCode: number }): { abort: true } | undefined {
+    if (this.sessionEventSeen) return { abort: true };
+    console.warn(`[live] ${this.options.sessionId} sideband attach failed with close code ${event.closeCode}, retry ${event.attempt} of ${event.maxAttempts}`);
+    return undefined;
   }
 
   private send(event: Parameters<SidebandWS["send"]>[0], pending?: PendingAppend): void {

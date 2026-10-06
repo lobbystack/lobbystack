@@ -1,9 +1,10 @@
 import { EventEmitter } from "node:events";
 
 import { countKnowledgeTokens } from "@lobbystack/domain";
+import type { SidebandWSClientOptions } from "openai/resources/live/sideband/ws";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-type FakeSocket = EventEmitter & { sent: Array<Record<string, unknown>>; socket: EventEmitter; closed: boolean; send: (event: unknown) => void; close: () => void };
+type FakeSocket = EventEmitter & { sent: Array<Record<string, unknown>>; socket: EventEmitter; closed: boolean; options: SidebandWSClientOptions; send: (event: unknown) => void; close: () => void };
 const sockets = vi.hoisted(() => [] as FakeSocket[]);
 
 vi.mock("openai/resources/live/sideband/ws", () => ({
@@ -11,8 +12,10 @@ vi.mock("openai/resources/live/sideband/ws", () => ({
     sent: unknown[] = [];
     socket = new EventEmitter();
     closed = false;
-    constructor() {
+    options: unknown;
+    constructor(_client: unknown, _parameters: unknown, options?: unknown) {
       super();
+      this.options = options;
       sockets.push(this as never);
     }
     send(event: unknown) { this.sent.push(event); }
@@ -68,6 +71,9 @@ const pcm = (amplitude: number) => {
 function startSession(socket: FakeSocket) {
   socket.emit("session.started", {});
 }
+
+// What the SDK asks before it retries a dropped sideband connection.
+const retryAttach = (socket: FakeSocket) => socket.options.reconnect!.onReconnecting({ attempt: 1, maxAttempts: 3, delay: 250, closeCode: 1006, parameters: undefined });
 
 beforeEach(() => { sockets.length = 0; });
 afterEach(() => { vi.useRealTimers(); });
@@ -264,6 +270,46 @@ describe("LiveCallController delegation", () => {
     delegate(socket, "item_1", "Anything Thursday?", 1_000);
     await vi.waitFor(() => expect(sentOfType(socket, "session.commentary.append")).toHaveLength(1));
     expect(sentOfType(socket, "session.thinking.append")).toEqual([expect.objectContaining({ delegation_id: "item_1", content: "Progress on the caller's request: looked up open times. Nothing has been booked, changed or saved yet." })]);
+  });
+});
+
+describe("LiveCallController attach", () => {
+  // OpenAI's edge sometimes answers the attach with a 504 while the session is fine.
+  it("retries an attach that fails before the session sends anything", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const { socket } = setup();
+    expect(socket.options.reconnect).toMatchObject({ maxRetries: 3, initialDelay: 250, maxDelay: 1_000 });
+    expect(retryAttach(socket)).toBeUndefined();
+    expect(console.warn).toHaveBeenCalledWith("[live] live_1 sideband attach failed with close code 1006, retry 1 of 3");
+  });
+
+  // A new connection replays the last 3 seconds, which could repeat a request.
+  it("doesn't retry once the session has sent an event", () => {
+    const { socket } = setup();
+    socket.emit("event", { type: "session.started" });
+    expect(retryAttach(socket)).toEqual({ abort: true });
+  });
+
+  it("starts the late-attach greeting fallback when a retried attach opens", async () => {
+    fakeTimers();
+    const { socket } = setup();
+    await vi.advanceTimersByTimeAsync(2_000);
+    socket.emit("reconnected");
+    await vi.advanceTimersByTimeAsync(3_499);
+    expect(greetings(socket)).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(greetings(socket)).toHaveLength(1);
+  });
+
+  it("keeps the fallback timed from session.started when a retried attach reports its reconnect late", async () => {
+    fakeTimers();
+    const { socket } = setup();
+    startSession(socket);
+    socket.emit("reconnected");
+    await vi.advanceTimersByTimeAsync(3_999);
+    expect(greetings(socket)).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(greetings(socket)).toHaveLength(1);
   });
 });
 
