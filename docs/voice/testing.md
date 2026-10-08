@@ -41,12 +41,13 @@ Agent tools that read the database fail in the eval, as they would with the data
 The eval prints one line per run, then a summary per scenario. A run line looks like this:
 
 ```text
-PASS trailing-goodbye  ended 4.1 s after the caller | hand-overs: endCall | checks: done | goodbyes: 1 | receptionist: "Okay." / "Good bye."
+PASS trailing-goodbye  greeted at 1.6 s | ended 4.1 s after the caller | hand-overs: endCall | checks: done | goodbyes: 1 | receptionist: "Okay." / "Good bye."
 ```
 
 Each field answers one question:
 
 - **`PASS` or `FAIL`**: whether the call ended or went on, as the scenario expects
+- **`greeted at … s`**: when the receptionist first spoke, before the caller did, and how many greeting commands the worker sent. The caller waits 15 seconds for it.
 - **`ended … after the caller`**: how long after the caller's last line the controller closed the session, or `still open` after 15 seconds
 - **`hand-overs`**: each request GPT-Live handed to the backend after the opening question, by the tools the agent used. `reply` means the agent answered without a tool.
 - **`checks`**: each answer from the caller check, which runs when the caller speaks after the agent ended the call
@@ -54,6 +55,8 @@ Each field answers one question:
 - **`receptionist`**: what the receptionist said after the opening question
 
 The script exits with code 1 when any run fails.
+
+Over the API, GPT-Live greeted on its own in 12 runs out of 12, while on real calls it often waited for the caller. Check greeting changes with real calls.
 
 ### Use a real business
 
