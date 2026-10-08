@@ -28,6 +28,18 @@ describe("appointment fact verification", () => {
     expect(substantiveServiceNameFactMatches(service, "de")).toBe(false);
     expect(serviceNamesMatch(service, "Haircut")).toBe(false);
   });
+  // The agent passes the time the caller said without an offset. Read in the server's zone (UTC on Railway),
+  // 3 PM Toronto became 11 AM and never matched; the business's zone has to decide it.
+  it("reads a time without an offset in the appointment's zone, whatever the server's zone", () => {
+    const tokyo = { startsAt: "2026-10-09T06:00:00.000Z", timezone: "Asia/Tokyo" };
+    expect(appointmentTimesMatch(tokyo, "2026-10-09T15:00")).toBe(true);
+    expect(appointmentTimesMatch(tokyo, "2026-10-09 15:00")).toBe(true);
+    expect(appointmentTimesMatch(tokyo, "2026-10-09T15:00Z")).toBe(false);
+    const toronto = { startsAt: "2026-10-09T19:00:00.000Z", timezone: "America/Toronto" };
+    expect(appointmentTimesMatch(toronto, "2026-10-09T15:00")).toBe(true);
+    expect(appointmentTimesMatch(toronto, "2026-10-09T11:00")).toBe(false);
+  });
+
   it("matches absolute and spoken local times within the reference tolerance", () => {
     const appointment = { startsAt: "2026-09-04T14:30:00Z", timezone: "America/Toronto" };
     expect(appointmentTimesMatch(appointment, "2026-09-04T14:45:00Z")).toBe(true);

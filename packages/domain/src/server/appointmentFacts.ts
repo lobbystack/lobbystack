@@ -119,12 +119,15 @@ export function appointmentTimesMatch(
   providedStartsAt: string,
 ): boolean {
   const actualMs = Date.parse(appointment.startsAt);
-  const providedMs = Date.parse(providedStartsAt);
   if (!Number.isFinite(actualMs)) {
     return false;
   }
 
-  if (Number.isFinite(providedMs) && Math.abs(actualMs - providedMs) <= 30 * 60 * 1000) {
+  // A time without an offset is the business's local time, the way the caller
+  // said it. Date.parse would read it in the server's zone, UTC on Railway.
+  const raw = providedStartsAt.trim();
+  const provided = [DateTime.fromISO(raw, { zone: appointment.timezone }), DateTime.fromSQL(raw, { zone: appointment.timezone })].find((value) => value.isValid);
+  if (provided && Math.abs(actualMs - provided.toMillis()) <= 30 * 60 * 1000) {
     return true;
   }
 
