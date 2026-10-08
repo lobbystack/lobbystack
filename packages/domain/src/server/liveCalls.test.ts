@@ -21,7 +21,7 @@ vi.mock("./billing", () => ({ reserveOutboundCallAttempt: mocks.reserveOutboundC
 vi.mock("./unitEconomics", () => ({ recordUnitEconomicsEvent: mocks.recordUnitEconomicsEvent }));
 vi.mock("./demos", () => ({ recordProspectDemoCallOutcome: vi.fn() }));
 
-import { finishLiveCall, LIVE_CALL_PROVIDER, prepareLiveCallTransfer, saveLiveCallTurn, startLivePhoneCall } from "./liveCalls";
+import { finishLiveCall, LIVE_CALL_PROVIDER, liveCallRecordingJob, orphanedLiveCallSeconds, prepareLiveCallTransfer, recordLiveCallTransferResult, saveLiveCallTurn, startLivePhoneCall } from "./liveCalls";
 
 const context = { db: {} as never };
 const call = { businessId: "biz_1", callId: "call_1" };
@@ -36,6 +36,16 @@ describe("startLivePhoneCall", () => {
     mocks.startCall.mockResolvedValue({ callId: "call_1", conversationId: "conv_1", contactId: "contact_1", duplicate: false, blocked: false });
     await expect(startLivePhoneCall(context, { businessId: "biz_1", sessionId: "live_1", from: "+14165550100", to: "+15815020392" })).resolves.toMatchObject({ callId: "call_1", blocked: false });
     expect(mocks.startCall).toHaveBeenCalledWith(context, expect.objectContaining({ provider: LIVE_CALL_PROVIDER, providerCallId: "live_1", transport: "voice" }));
+  });
+
+  it("limits the call to its reservation, and not at all on an unlimited plan", async () => {
+    mocks.startCall.mockResolvedValueOnce({ callId: "call_1", conversationId: "conv_1", contactId: "contact_1", duplicate: false, blocked: false, reservedSeconds: 500 });
+    await expect(startLivePhoneCall(context, { businessId: "biz_1", sessionId: "live_1", to: "+15815020392" })).resolves.toMatchObject({ maxDurationMs: 500_000 });
+    // A reservation made before calls were bounded still stops at the longest call.
+    mocks.startCall.mockResolvedValueOnce({ callId: "call_1", conversationId: "conv_1", contactId: "contact_1", duplicate: true, blocked: false, reservedSeconds: 9_300 });
+    await expect(startLivePhoneCall(context, { businessId: "biz_1", sessionId: "live_1", to: "+15815020392" })).resolves.toMatchObject({ maxDurationMs: 1_800_000 });
+    mocks.startCall.mockResolvedValueOnce({ callId: "call_1", conversationId: "conv_1", contactId: "contact_1", duplicate: false, blocked: false });
+    await expect(startLivePhoneCall(context, { businessId: "biz_1", sessionId: "live_1", to: "+15815020392" })).resolves.toMatchObject({ maxDurationMs: undefined });
   });
 });
 
@@ -71,6 +81,20 @@ describe("finishLiveCall", () => {
     expect(mocks.completeCall).toHaveBeenCalledWith(context, expect.objectContaining({ status: "transferred", disposition: "transferred" }));
   });
 
+  it("records a call the worker's shutdown ended as service_restart", async () => {
+    await finishLiveCall(context, { ...call, seconds: 120, end: "service_restart" });
+    expect(mocks.completeCall).toHaveBeenCalledWith(context, expect.objectContaining({ status: "completed", disposition: "service_restart", providerDurationSeconds: 120 }));
+  });
+
+  it("queues the recording copy in the write that finalizes the call", async () => {
+    await finishLiveCall(context, { ...call, seconds: 90, end: "caller_hung_up", recording: { sessionId: "live_1", durationMs: 90_400 } });
+    const { outbox } = mocks.completeCall.mock.calls[0]![1] as { outbox: Array<{ topic: string; dedupeKey: string; payload: unknown; availableAt: Date }> };
+    expect(outbox).toEqual([expect.objectContaining({ topic: "call.saveRecording", dedupeKey: "call:call_1:recording:1", payload: { callId: "call_1", sessionId: "live_1", durationMs: 90_400, attempt: 1 } })]);
+    expect(outbox[0]!.availableAt.getTime() - Date.now()).toBeGreaterThan(4_000);
+    await finishLiveCall(context, { ...call, seconds: 90, end: "caller_hung_up" });
+    expect(mocks.completeCall.mock.calls[1]![1]).not.toHaveProperty("outbox");
+  });
+
   it("records no cost for a call that never connected", async () => {
     await finishLiveCall(context, { ...call, seconds: 0, end: "setup_failed" });
     expect(mocks.completeCall).toHaveBeenCalled();
@@ -93,9 +117,37 @@ describe("prepareLiveCallTransfer", () => {
   });
 });
 
+describe("recordLiveCallTransferResult", () => {
+  it("records an accepted REFER as referred, not completed", async () => {
+    await recordLiveCallTransferResult(context, { ...call, state: "referred" });
+    expect(mocks.setTransferState).toHaveBeenLastCalledWith(context, { ...call, transferState: "referred" });
+    await recordLiveCallTransferResult(context, { ...call, state: "completed" });
+    expect(mocks.setTransferState).toHaveBeenLastCalledWith(context, { ...call, transferState: "completed" });
+  });
+});
+
 describe("saveLiveCallTurn", () => {
   it("skips empty turns", async () => {
     await saveLiveCallTurn(context, { ...call, sequence: 1, speaker: "caller", text: "  " });
     expect(mocks.upsertTranscript).not.toHaveBeenCalled();
+  });
+});
+
+describe("liveCallRecordingJob", () => {
+  it("waits twice as long before each later attempt", () => {
+    const delays = [1, 2, 6].map((attempt) => Math.round((liveCallRecordingJob({ ...call, sessionId: "live_1", durationMs: 1_000, attempt }).availableAt!.getTime() - Date.now()) / 1_000));
+    expect(delays).toEqual([5, 10, 160]);
+  });
+});
+
+describe("orphanedLiveCallSeconds", () => {
+  const startedAt = new Date("2026-10-07T10:00:00Z");
+  it("runs from the start to the latest sign of activity", () => {
+    expect(orphanedLiveCallSeconds({ startedAt, lastActivityAt: new Date("2026-10-07T10:01:20Z"), reservedSeconds: 600 })).toBe(80);
+    expect(orphanedLiveCallSeconds({ startedAt, lastActivityAt: startedAt, reservedSeconds: 600 })).toBe(0);
+  });
+
+  it("never bills more than the call reserved", () => {
+    expect(orphanedLiveCallSeconds({ startedAt, lastActivityAt: new Date("2026-10-07T10:12:00Z"), reservedSeconds: 600 })).toBe(600);
   });
 });

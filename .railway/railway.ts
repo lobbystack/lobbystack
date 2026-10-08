@@ -56,6 +56,10 @@ export default defineRailway((ctx) => {
       // GPT-Live calls: the admin hands each call to the worker with this token.
       INTERNAL_SERVICE_TOKEN: preserve(),
       LIVE_PROTOTYPE_ENABLED: "true",
+      // Railway sends SIGKILL this long after SIGTERM, and the worker drains its
+      // calls for this long minus a margin, so a 30-minute call finishes during
+      // a deploy. See "Deploy the worker during calls" in docs/voice/runtime.md.
+      ...(production ? { RAILWAY_DEPLOYMENT_DRAINING_SECONDS: "1860" } : {}),
       // New phone numbers join this Twilio Elastic SIP trunk, which sends their
       // calls to GPT-Live. Provisioning fails without it.
       TWILIO_SIP_TRUNK_SID: preserve(),

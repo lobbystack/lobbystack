@@ -1,6 +1,6 @@
 import { and, count, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
-import { appointments, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, billingUsageEvents, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction, type NewOutboxMessage } from "@lobbystack/db";
 import { billableVoiceSeconds, isNonBillableCallDisposition } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 
@@ -75,7 +75,8 @@ export async function startCall(
     businessId: string;
     provider: string;
     providerCallId: string;
-    from: string;
+    /** The caller's number; "web" or omitted when there is none (browser calls, withheld caller IDs). */
+    from?: string | undefined;
     to: string;
     transport: string;
     gatewaySessionId?: string;
@@ -88,20 +89,23 @@ export async function startCall(
     maxDurationMs?: number;
     billable?: boolean;
   },
-): Promise<{ callId: string; conversationId: string; contactId: string; duplicate: boolean; blocked: boolean; webCallMaxDurationMs?: number }> {
+): Promise<{ callId: string; conversationId: string; contactId: string; duplicate: boolean; blocked: boolean; webCallMaxDurationMs?: number; reservedSeconds?: number }> {
   const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const existing = await tx.select({ id: calls.id, conversationId: calls.conversationId, contactId: calls.contactId, webCallMaxDurationMs: calls.webCallMaxDurationMs }).from(calls).where(and(eq(calls.provider, input.provider), eq(calls.providerCallId, input.providerCallId))).limit(1);
     if (existing[0]?.conversationId && existing[0]?.contactId) {
       const contact = (await tx.select({ operatorBlockedAt: contacts.operatorBlockedAt }).from(contacts).where(and(eq(contacts.id, existing[0].contactId), eq(contacts.businessId, input.businessId))).limit(1))[0];
-      return { callId: existing[0].id, conversationId: existing[0].conversationId, contactId: existing[0].contactId, duplicate: true, blocked: Boolean(contact?.operatorBlockedAt), ...(existing[0].webCallMaxDurationMs !== null ? { webCallMaxDurationMs: existing[0].webCallMaxDurationMs } : {}) };
+      // A retried phone call gets what it has reserved so far, top-ups included.
+      const reservation = input.transport === "web_voice" ? undefined : (await tx.select({ quantity: billingUsageEvents.quantity }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, input.businessId), eq(billingUsageEvents.sourceKey, `voice:${existing[0].id}`))).limit(1))[0];
+      return { callId: existing[0].id, conversationId: existing[0].conversationId, contactId: existing[0].contactId, duplicate: true, blocked: Boolean(contact?.operatorBlockedAt), ...(existing[0].webCallMaxDurationMs !== null ? { webCallMaxDurationMs: existing[0].webCallMaxDurationMs } : {}), ...(reservation ? { reservedSeconds: reservation.quantity } : {}) };
     }
-    const anonymousWebCaller = input.from === "web";
-    const existingContacts = anonymousWebCaller ? [] : await tx.select({ id: contacts.id, operatorBlockedAt: contacts.operatorBlockedAt }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.from))).limit(1);
-    const contactId = existing[0]?.contactId ?? existingContacts[0]?.id ?? (await tx.insert(contacts).values({ businessId: input.businessId, ...(anonymousWebCaller ? {} : { phone: input.from }) }).returning({ id: contacts.id }))[0]?.id;
+    // Callers without a number each get their own contact, so blocking one never blocks the rest.
+    const callerPhone = input.from && input.from !== "web" ? input.from : undefined;
+    const existingContacts = callerPhone ? await tx.select({ id: contacts.id, operatorBlockedAt: contacts.operatorBlockedAt }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, callerPhone))).limit(1) : [];
+    const contactId = existing[0]?.contactId ?? existingContacts[0]?.id ?? (await tx.insert(contacts).values({ businessId: input.businessId, ...(callerPhone ? { phone: callerPhone } : {}) }).returning({ id: contacts.id }))[0]?.id;
     if (!contactId) {
       throw new Error("Call contact could not be created.");
     }
-    if (!existing[0]?.contactId && !existingContacts[0] && !anonymousWebCaller) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contactId });
+    if (!existing[0]?.contactId && !existingContacts[0] && callerPhone) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contactId });
     const blocked = Boolean(existingContacts[0]?.operatorBlockedAt);
     const conversationId = existing[0]?.conversationId ?? (await tx.insert(conversations).values({ businessId: input.businessId, contactId, channel: "voice", status: "open", automationState: "ai_active" }).returning({ id: conversations.id }))[0]?.id;
     if (!conversationId) {
@@ -129,6 +133,7 @@ export async function startCall(
       throw new Error("Call could not be persisted.");
     }
     let webCallMaxDurationMs = input.transport === "web_voice" ? normalizeWebCallMaxDurationMs(input.maxDurationMs) : undefined;
+    let reservedSeconds: number | undefined;
     if (input.billable !== false) {
       if (input.transport === "web_voice") {
         const allowance = await reserveWebVoiceUsageInTransaction(tx, { businessId: input.businessId, callId, ...(input.maxDurationMs !== undefined ? { maxDurationMs: input.maxDurationMs } : {}) });
@@ -148,6 +153,7 @@ export async function startCall(
           error.code = allowance.errorCode ?? "voice_limit_reached";
           throw error;
         }
+        reservedSeconds = allowance.quantity;
       }
     }
     await tx.insert(conversationSessions).values({
@@ -166,7 +172,7 @@ export async function startCall(
       dedupeKey: `call:${callId}:started`,
       payload: { type: "call.started", entityId: callId, revision: 0 },
     });
-    return { callId, conversationId, contactId, duplicate: false, blocked, ...(webCallMaxDurationMs !== undefined ? { webCallMaxDurationMs } : {}) };
+    return { callId, conversationId, contactId, duplicate: false, blocked, ...(webCallMaxDurationMs !== undefined ? { webCallMaxDurationMs } : {}), ...(reservedSeconds !== undefined ? { reservedSeconds } : {}) };
   });
   if (!result.duplicate) {
     await recordVoiceLifecycleEvent(context, {
@@ -228,7 +234,11 @@ export async function upsertTranscript(
 
 export async function completeCall(
   context: DomainContext,
-  input: { businessId: string; callId: string; status: string; endedAt: string; disposition?: string; providerDurationSeconds?: number; mediaDurationSeconds?: number; providerCostUsd?: number; expectedProviderCallId?: string },
+  input: {
+    businessId: string; callId: string; status: string; endedAt: string; disposition?: string; providerDurationSeconds?: number; mediaDurationSeconds?: number; providerCostUsd?: number; expectedProviderCallId?: string;
+    /** Follow-up jobs written with the completion, so only the write that finalizes the call queues them. */
+    outbox?: NewOutboxMessage[];
+  },
 ): Promise<boolean> {
   const completion = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [call] = await tx.update(calls).set({
@@ -280,6 +290,7 @@ export async function completeCall(
       dedupeKey: `call:${call.id}:finalize`,
       payload: { callId: call.id },
     });
+    for (const message of input.outbox ?? []) await enqueueOutbox(tx, message);
     // The short-call exemption, as opposed to spam or a non-billable call: the
     // business pays nothing, but the provider may still bill us.
     const shortCallWaived = durationSeconds === 0 && !isNonBillableCallDisposition(call.disposition) && ((input.providerDurationSeconds ?? 0) > 0 || measuredSeconds > 0);
@@ -368,15 +379,19 @@ export async function setTransferState(
   });
 }
 
-/** What the worker needs to find the Twilio call behind a GPT-Live phone call. */
+/**
+ * What the worker needs to find the Twilio call behind a GPT-Live phone call.
+ * Null when the caller withheld their number: the trunk is shared by every
+ * business, so a lookup by start time alone could price another business's call.
+ */
 export async function loadLiveCallForPricing(
   context: DomainContext,
   input: { businessId: string; callId: string },
-): Promise<{ startedAt: Date; callerPhone?: string } | null> {
+): Promise<{ startedAt: Date; callerPhone: string } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [call] = await tx.select({ startedAt: calls.startedAt, callerPhone: contacts.phone }).from(calls).leftJoin(contacts, eq(contacts.id, calls.contactId)).where(and(eq(calls.businessId, input.businessId), eq(calls.id, input.callId))).limit(1);
-    if (!call) return null;
-    return { startedAt: call.startedAt, ...(call.callerPhone?.startsWith("+") ? { callerPhone: call.callerPhone } : {}) };
+    if (!call?.callerPhone?.startsWith("+")) return null;
+    return { startedAt: call.startedAt, callerPhone: call.callerPhone };
   });
 }
 

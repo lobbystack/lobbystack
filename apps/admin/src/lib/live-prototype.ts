@@ -1,8 +1,15 @@
+import { setTimeout as sleep } from "node:timers/promises";
+
 import OpenAI from "openai";
 
 import { jsonError } from "./api-helpers";
 
-type WorkerAttachInput = { sessionId: string; businessId: string; callId: string; channel: "voice" | "web_voice"; conversationId?: string; callerPhone?: string; maxDurationMs?: number; intakeOnly?: boolean };
+/** `resume` marks a retried webhook delivery's attach to a call that may be under way. */
+type WorkerAttachInput = { sessionId: string; businessId: string; callId: string; channel: "voice" | "web_voice"; conversationId?: string; callerPhone?: string; maxDurationMs?: number; intakeOnly?: boolean; resume?: boolean };
+
+// A draining worker answers a new attach with 503. The waits before each retry
+// give the deploy's new instance time to become ready.
+const ATTACH_RETRY_DELAYS_MS = [250, 750];
 
 let client: OpenAI | undefined;
 
@@ -27,14 +34,24 @@ function workerUrl(): string {
 async function postToWorker(action: "attach" | "end", body: unknown): Promise<void> {
   const token = process.env.INTERNAL_SERVICE_TOKEN;
   if (!token) throw new Error("INTERNAL_SERVICE_TOKEN is not set.");
-  const response = await fetch(`${workerUrl()}/internal/live/${action}`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-internal-service-token": token },
-    body: JSON.stringify(body),
-    // A sleeping staging worker needs a few seconds to wake.
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!response.ok) throw new Error(`Worker ${action} failed with status ${response.status}.`);
+  // A sleeping staging worker needs a few seconds to wake. Retries share this budget.
+  const signal = AbortSignal.timeout(10_000);
+  for (let attempt = 0; ; attempt += 1) {
+    const response = await fetch(`${workerUrl()}/internal/live/${action}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-internal-service-token": token },
+      body: JSON.stringify(body),
+      signal,
+    });
+    if (response.status === 503 && action === "attach" && attempt < ATTACH_RETRY_DELAYS_MS.length) {
+      await response.body?.cancel();
+      // Rejects when the shared budget runs out first.
+      await sleep(ATTACH_RETRY_DELAYS_MS[attempt], undefined, { signal });
+      continue;
+    }
+    if (!response.ok) throw new Error(`Worker ${action} failed with status ${response.status}.`);
+    return;
+  }
 }
 
 // OpenAI replays only the last 3 seconds to a late sideband, so the worker must

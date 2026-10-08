@@ -6,6 +6,8 @@ export type WorkerHealthState = {
   database: boolean;
   storage: boolean;
   activeJobs: number;
+  /** Shutting down: readiness fails so nothing new is sent here. */
+  draining: boolean;
 };
 
 export type ExtraRouteHandler = (request: IncomingMessage, response: ServerResponse) => Promise<boolean>;
@@ -20,7 +22,7 @@ export function startHealthServer(port: number, state: WorkerHealthState, extraR
       return;
     }
     if (path === "/health/ready") {
-      const ok = state.ready && state.redis && state.database && state.storage;
+      const ok = state.ready && state.redis && state.database && state.storage && !state.draining;
       response.writeHead(ok ? 200 : 503, { "content-type": "application/json" });
       response.end(JSON.stringify({ ok, ...state }));
       return;

@@ -12,11 +12,14 @@ import { claimOperatorNotificationDelivery, correctAlertSmsUsage, estimateSmsSeg
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
 import { issueOperatorPhoneVerificationCode, markOperatorPhoneVerificationCodeSent, releaseOperatorPhoneVerificationCodeSend, verificationCodeSmsBody } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type WebhookSender } from "@lobbystack/domain";
+import { LIVE_RECORDING_ATTEMPTS, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
 import type { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 import type { RuntimeStorageProvider } from "@lobbystack/providers/storage/provider";
 import type { TwilioProvider } from "@lobbystack/providers/twilio/twilioProvider";
+import type OpenAI from "openai";
 import { extractDocumentText } from "./documentExtraction";
+import { isLivePrototypeEnabled, type LiveRecoveryOutcome } from "./liveCalls";
 import { reconcileBusinessCalendar, syncAppointmentCalendar, type CalendarOperations } from "./calendarJobs";
 import { getMeter } from "@lobbystack/telemetry/node";
 import { bucketOutboxBacklog, getPostHogDistinctIdForBusinessSystem, redactTelemetryProperties, type TelemetryProperties } from "@lobbystack/telemetry";
@@ -31,6 +34,9 @@ const sentProductEventRetentionMs = 7 * 24 * 60 * 60_000;
 const sentProductEventRetentionBatchSize = 1_000;
 const sentProductEventRetentionMaxBatches = 10;
 const sentProductEventRetentionContinuationDelayMs = 10_000;
+// The admin attaches a worker within seconds of a call's start, so a call this
+// old with no attach lock has lost its worker.
+const ORPHANED_LIVE_CALL_MIN_AGE_MS = 60_000;
 
 type JobExecution = {
   isFinalAttempt?: boolean;
@@ -56,6 +62,10 @@ export type WorkerDependencies = {
   calendar?: CalendarOperations;
   productAnalytics?: { capture(events: Array<{ event: string; distinctId: string; properties: Record<string, unknown>; timestamp: string }>): Promise<void> };
   realtime?: Redis;
+  /** Downloads OpenAI's stored recording of a GPT-Live session. */
+  liveSessions?: Pick<OpenAI["live"]["sessions"], "downloadRecording">;
+  /** Takes over an open GPT-Live call in this worker process, when its own worker died. */
+  recoverLiveCall?: (call: OpenLiveCall) => Promise<LiveRecoveryOutcome>;
   /** Writes the one-line call summary. Without it, calls keep the transcript heuristic. */
   callSummarizer?: CallSummarizer;
   businessSummarizer?: BusinessSummarizer;
@@ -563,6 +573,54 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       if (pricing.providerCostUsd === undefined) throw new Error(`Twilio call pricing is incomplete for ${providerCallId}.`);
       const recorded = await recordCallProviderPricing(dependencies.domain, { businessId: businessIdOrThrow(job), providerCallId, ...pricing });
       return { status: recorded ? "completed" : "skipped", entityId: providerCallId };
+    }
+    case "call.saveRecording": {
+      // Copies OpenAI's stored stereo recording into our storage so it follows
+      // the plan's retention like every other call recording.
+      const businessId = businessIdOrThrow(job);
+      const callId = String(job.payload.callId ?? "");
+      const sessionId = String(job.payload.sessionId ?? "");
+      const durationMs = Number(job.payload.durationMs) || 0;
+      const attempt = Number(job.payload.attempt) || 1;
+      if (!dependencies.storage || !dependencies.liveSessions || !callId || !sessionId) return { status: "skipped", entityId: callId };
+      // Delivery is at least once, so a repeated job finds the copy made.
+      if (await liveCallHasRecording(dependencies.domain, { businessId, callId })) return { status: "skipped", entityId: callId };
+      let body: Uint8Array;
+      try {
+        body = new Uint8Array(await (await dependencies.liveSessions.downloadRecording(sessionId)).arrayBuffer());
+      } catch (error) {
+        const status = typeof error === "object" && error !== null && "status" in error ? (error as { status?: number }).status : undefined;
+        // 404 and 409 mean OpenAI hasn't finished the recording; anything else won't get better.
+        if (status === 404 || status === 409) {
+          if (attempt < LIVE_RECORDING_ATTEMPTS) {
+            await retryLiveCallRecording(dependencies.domain, { businessId, callId, sessionId, durationMs, attempt: attempt + 1 });
+            return { status: "skipped", entityId: `${callId}:retry:${attempt + 1}` };
+          }
+          console.error(`[live] ${sessionId} recording never became available`);
+        } else {
+          console.error(`[live] ${sessionId} recording unavailable`, error instanceof Error ? error.message : error);
+        }
+        return { status: "skipped", entityId: callId };
+      }
+      // A storage or database failure throws, so the queue retries the job.
+      await persistCallRecording(dependencies.domain, { businessId, callId, durationMs, contentType: "audio/wav", body }, dependencies.storage);
+      return { status: "completed", entityId: callId };
+    }
+    case "live.recoverOrphans": {
+      const businessId = businessIdOrThrow(job);
+      // Without GPT-Live there are no calls, and without Redis no attach lock
+      // to tell a dead owner from a live one.
+      if (!isLivePrototypeEnabled() || !dependencies.recoverLiveCall || dependencies.realtime?.status !== "ready") return { status: "skipped", entityId: businessId };
+      const open = await listOpenLiveCalls(dependencies.domain, { businessId, startedBefore: new Date(Date.now() - ORPHANED_LIVE_CALL_MIN_AGE_MS) });
+      const outcomes: string[] = [];
+      for (const call of open) {
+        outcomes.push(await dependencies.recoverLiveCall(call).catch((error: unknown) => {
+          console.error(`[live] ${call.sessionId} recovery failed`, error instanceof Error ? error.message : error);
+          return "failed";
+        }));
+      }
+      const acted = outcomes.filter((outcome) => outcome === "attached" || outcome === "finished").length;
+      return { status: acted > 0 ? "completed" : "skipped", entityId: `${businessId}:${acted}` };
     }
     case "billing.syncUsage": {
       if (!dependencies.polar) {
