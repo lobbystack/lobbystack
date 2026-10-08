@@ -58,6 +58,13 @@ export type LiveCallSummary = {
    */
   outputAudio: { deltas: number; firstStartMs?: number; coveredMs: number; payloadBytes: number };
   /**
+   * The caller's audio as OpenAI received it and reflected it to the
+   * sideband: how many chunks, how long they last, and how much of that was
+   * loud enough to be speech. Coverage well short of the call's length means
+   * audio stopped reaching GPT-Live, for example while the caller was silent.
+   */
+  inputAudio: { chunks: number; coveredMs: number; loudMs: number; payloadBytes: number };
+  /**
    * The worker attached after the sideband's 3-second replay window, so it
    * missed session.started and the start of the conversation.
    */
@@ -82,15 +89,22 @@ export type LiveCallTransferState = "referring" | "referred" | "completed" | "fa
 export type GreetingEvent = {
   /**
    * "spoken": the receptionist's voice was heard; attempt 0 means the greeting
-   * in the session's starting history did it. "sent", "acknowledged" and
-   * "failed" track the fallback command.
+   * in the session's starting history did it, and attempt N that it followed
+   * the Nth greeting command. "sent", "acknowledged" and "failed" track each
+   * command.
    */
   step: "sent" | "acknowledged" | "spoken" | "failed";
   attempt: number;
-  /** What sent the fallback command. */
-  trigger?: "fallback";
+  /** What sent the command: the first fallback, or a retry after an acknowledged command went unspoken. */
+  trigger?: "fallback" | "retry";
   /** Milliseconds since the worker attached to the call. */
   sinceAttachMs: number;
+  /**
+   * Milliseconds of caller audio the sideband has reflected so far. Close to
+   * sinceAttachMs (less the time before the session started) means audio
+   * reaches GPT-Live while the caller is silent.
+   */
+  inputAudioMs: number;
   error?: string;
 };
 
@@ -164,9 +178,17 @@ const TRANSCRIPT_WAIT_MS = 300;
 // seconds in. With no voice by this long after the worker sees the session
 // start, it sends the greeting command once more.
 const GREETING_FALLBACK_MS = 4_000;
-// Reflected output audio is 16-bit PCM at 24 kHz. A chunk this loud is voice;
+// GPT-Live can acknowledge a greeting command and still wait for the caller:
+// on calls from October 3 to 8, 8 of 16 acknowledged commands went unspoken
+// until the caller spoke, or for good. A command it did follow was spoken
+// within 4 seconds of the acknowledgment, so after 4.5 seconds of silence the
+// worker sends it again, up to this many commands in all.
+const GREETING_RETRY_MS = 4_500;
+const GREETING_COMMANDS = 3;
+// Reflected audio is 16-bit PCM at 24 kHz. A chunk this loud is voice;
 // silence on staging calls stayed far below it.
 const VOICE_RMS = 400;
+const SAMPLES_PER_MS = 24;
 // Most answers take one or two seconds; past this the caller hears an update.
 const STILL_WORKING_MS = 4_000;
 // Requests run one at a time, so a stuck one would hold up every later one.
@@ -257,17 +279,22 @@ type PendingHangup = { afterMs: number; requestedAt: number; onCancelled?: () =>
 const DETACHED = "detached";
 type StepLike = DirectAnswerStep & { toolResults: Array<{ toolName: string; output: unknown }> };
 
-/** Whether a base64 chunk of 16-bit PCM is loud enough to be speech. */
-export function isVoice(base64: string): boolean {
+/** How many samples a base64 chunk of 16-bit PCM holds, and whether it's loud enough to be speech. */
+function measurePcm(base64: string): { samples: number; voice: boolean } {
   const bytes = Buffer.from(base64, "base64");
   const samples = Math.floor(bytes.length / 2);
-  if (!samples) return false;
+  if (!samples) return { samples, voice: false };
   let sum = 0;
   for (let index = 0; index < samples; index += 1) {
     const sample = bytes.readInt16LE(index * 2);
     sum += sample * sample;
   }
-  return Math.sqrt(sum / samples) >= VOICE_RMS;
+  return { samples, voice: Math.sqrt(sum / samples) >= VOICE_RMS };
+}
+
+/** Whether a base64 chunk of 16-bit PCM is loud enough to be speech. */
+export function isVoice(base64: string): boolean {
+  return measurePcm(base64).voice;
 }
 
 function succeeded(output: unknown): boolean {
@@ -295,7 +322,7 @@ export class LiveCallController {
   private emittedTurns = 0;
   private silenceTimer: ReturnType<typeof setTimeout> | undefined;
   private durationTimer: ReturnType<typeof setTimeout> | undefined;
-  private greetingFallbackTimer: ReturnType<typeof setTimeout> | undefined;
+  private greetingTimer: ReturnType<typeof setTimeout> | undefined;
   private finalizeTimer: ReturnType<typeof setTimeout> | undefined;
   private firstEventTimer: ReturnType<typeof setTimeout> | undefined;
   private transferTimer: ReturnType<typeof setTimeout> | undefined;
@@ -312,6 +339,7 @@ export class LiveCallController {
   private sessionEventSeen = false;
   private sessionAlive = false;
   private greetingAttempts = 0;
+  private greetingFallbackStarted = false;
   private greetingSpoken = false;
   private readonly pendingAppends = new Map<string, PendingAppend>();
   // Delegations run one at a time in arrival order. A newer request supersedes
@@ -330,6 +358,7 @@ export class LiveCallController {
   private lastSpeechEndMs = 0;
   private lastSpeechAt = Number.NEGATIVE_INFINITY;
   private readonly outputAudio: LiveCallSummary["outputAudio"] = { deltas: 0, coveredMs: 0, payloadBytes: 0 };
+  private readonly inputAudio = { chunks: 0, samples: 0, loudSamples: 0, payloadBytes: 0 };
   private lastAnswerSentAt: number | undefined;
   // When the caller last spoke, in performance.now() time, and where their
   // latest words started on the session timeline.
@@ -399,6 +428,18 @@ export class LiveCallController {
       // The events cover silence too, so only a loud chunk counts as speech.
       if (typeof event.delta === "string" && isVoice(event.delta)) this.heardSpeech(event.end_ms);
     });
+    // OpenAI's server-controls guide: the sideband also receives the caller's
+    // audio as OpenAI received it, with no timeline position. The worker only
+    // measures it, to show whether audio reaches GPT-Live while the caller is
+    // silent.
+    untyped.on<{ audio?: unknown }>("session.input_audio.append", (event) => {
+      if (typeof event.audio !== "string") return;
+      const chunk = measurePcm(event.audio);
+      this.inputAudio.chunks += 1;
+      this.inputAudio.samples += chunk.samples;
+      this.inputAudio.payloadBytes += event.audio.length;
+      if (chunk.voice) this.inputAudio.loudSamples += chunk.samples;
+    });
     // A keypad press reaches only the sideband, with no timeline position. It
     // counts as caller input, so the next request's agent sees it.
     untyped.on<{ event?: unknown }>("transport.dtmf.received", (event) => {
@@ -421,16 +462,18 @@ export class LiveCallController {
     // The connection ended before session.closed: final usage is unconfirmed.
     socket.on("close", () => this.finish("sideband_closed"));
     // GPT-Live greets from the greeting command in the session's starting
-    // history (see session.ts). A command appended after session.started was
-    // often ignored on staging, so the worker only falls back to one when no
-    // voice follows. The sideband replays the last 3 seconds of events, so an
-    // attach within 3 seconds still sees session.started; the fallback timer
-    // also starts when the connection opens, for a later attach.
+    // history (see session.ts). It ignored that command on about 4 calls in
+    // 10 from October 3 to 8, and an appended one about half the time, so the
+    // worker sends the command when no voice follows, and again after each
+    // one that goes unspoken. The
+    // sideband replays the last 3 seconds of events, so an attach within 3
+    // seconds still sees session.started; the fallback timer also starts when
+    // the connection opens, for a later attach.
     socket.on("session.started", () => {
       if (this.started) return;
       this.started = true;
-      clearTimeout(this.greetingFallbackTimer);
-      this.greetingFallbackTimer = setTimeout(() => this.sendGreetingFallback(), GREETING_FALLBACK_MS);
+      clearTimeout(this.greetingTimer);
+      this.greetingTimer = setTimeout(() => this.sendGreetingFallback(), GREETING_FALLBACK_MS);
       this.options.onStarted?.();
     });
     // A phone call's session starts before the worker attaches, so an attach
@@ -439,8 +482,8 @@ export class LiveCallController {
     const lateAttach = () => {
       // A retried attach can see session.started before it reports the reconnect.
       if (!this.options.phone || this.started) return;
-      clearTimeout(this.greetingFallbackTimer);
-      this.greetingFallbackTimer = setTimeout(() => {
+      clearTimeout(this.greetingTimer);
+      this.greetingTimer = setTimeout(() => {
         if (this.started) return;
         this.lateAttach = true;
         this.sendGreetingFallback();
@@ -523,7 +566,10 @@ export class LiveCallController {
     if (!clientEventId) return;
     const pending = this.pendingAppends.get(clientEventId);
     this.pendingAppends.delete(clientEventId);
-    if (pending?.kind === "greeting") this.reportGreeting("acknowledged");
+    if (pending?.kind === "greeting") {
+      this.reportGreeting("acknowledged");
+      this.retryGreetingIfSilent();
+    }
     if (pending?.kind === "wrap_up") this.wrapUpAckedAt = performance.now();
   }
 
@@ -560,15 +606,34 @@ export class LiveCallController {
     if (typeof endMs === "number") this.lastSpeechEndMs = Math.max(this.lastSpeechEndMs, endMs);
   }
 
-  // One greeting command, when the greeting from the starting history wasn't heard.
+  // The first greeting command, when the greeting from the starting history wasn't heard.
   private sendGreetingFallback(): void {
-    if (this.greetingSpoken || this.callerSpoke() || this.finished || this.greetingAttempts > 0) return;
+    if (this.greetingFallbackStarted) return;
+    this.greetingFallbackStarted = true;
+    this.sendGreeting("fallback");
+  }
+
+  // GPT-Live acknowledged a greeting command. If no voice follows, the
+  // command is sent again. A rejected or unacknowledged command isn't: the
+  // session isn't taking commands, and OpenAI's guide says an acknowledgment
+  // stays pending while the session timeline is stopped.
+  private retryGreetingIfSilent(): void {
+    if (this.greetingSpoken || this.greetingAttempts >= GREETING_COMMANDS) return;
+    clearTimeout(this.greetingTimer);
+    this.greetingTimer = setTimeout(() => this.sendGreeting("retry"), GREETING_RETRY_MS);
+  }
+
+  // Stops once either side has spoken or the call is ending, so a greeting
+  // never talks over the caller or a goodbye.
+  private sendGreeting(trigger: NonNullable<GreetingEvent["trigger"]>): void {
+    const stopped = () => this.greetingSpoken || this.callerSpoke() || this.finished || this.ending || this.greetingAttempts >= GREETING_COMMANDS;
+    if (stopped()) return;
     void this.ready.then((setup) => {
       const greeting = setup.greeting?.trim();
-      if (!greeting || this.finished || this.greetingSpoken || this.callerSpoke()) return;
-      this.greetingAttempts = 1;
-      this.send({ type: "session.instructions.append", delegation_id: null, content: greetingCommand(greeting), event_id: "greeting_1" }, { kind: "greeting" });
-      this.reportGreeting("sent", "fallback");
+      if (!greeting || stopped()) return;
+      this.greetingAttempts += 1;
+      this.send({ type: "session.instructions.append", delegation_id: null, content: greetingCommand(greeting), event_id: `greeting_${this.greetingAttempts}` }, { kind: "greeting" });
+      this.reportGreeting("sent", trigger);
     }, () => undefined);
   }
 
@@ -576,13 +641,13 @@ export class LiveCallController {
   private greetingDone(): void {
     if (this.greetingSpoken) return;
     this.greetingSpoken = true;
-    clearTimeout(this.greetingFallbackTimer);
+    clearTimeout(this.greetingTimer);
     this.reportGreeting("spoken");
   }
 
   private reportGreeting(step: GreetingEvent["step"], trigger?: GreetingEvent["trigger"], error?: string): void {
     try {
-      this.options.onGreeting?.({ step, attempt: this.greetingAttempts, ...(trigger ? { trigger } : {}), sinceAttachMs: Math.round(performance.now() - this.attachedAt), ...(error ? { error } : {}) });
+      this.options.onGreeting?.({ step, attempt: this.greetingAttempts, ...(trigger ? { trigger } : {}), sinceAttachMs: Math.round(performance.now() - this.attachedAt), inputAudioMs: Math.round(this.inputAudio.samples / SAMPLES_PER_MS), ...(error ? { error } : {}) });
     } catch {
       // Logging must never affect the call.
     }
@@ -1078,7 +1143,7 @@ export class LiveCallController {
     // never heard from the session leaves the decision to its worker.
     const leaveSession = detached || (this.options.firstEventTimeoutMs !== undefined && !this.sessionAlive);
     if (!sessionClosed && !this.finalizeTimer && !leaveSession) this.endWithoutSideband();
-    for (const timer of [this.silenceTimer, this.durationTimer, this.topUpTimer, this.greetingFallbackTimer, this.finalizeTimer, this.firstEventTimer, this.transferTimer]) clearTimeout(timer);
+    for (const timer of [this.silenceTimer, this.durationTimer, this.topUpTimer, this.greetingTimer, this.finalizeTimer, this.firstEventTimer, this.transferTimer]) clearTimeout(timer);
     this.abort.abort();
     this.socket?.close({ code: 1000, reason: "session finished" });
     // The new owner saves the transcript from here, under its own numbering.
@@ -1097,6 +1162,12 @@ export class LiveCallController {
       ...(closeReason ? { closeReason } : {}),
       ...(latency ? { latency } : {}),
       outputAudio: this.outputAudio,
+      inputAudio: {
+        chunks: this.inputAudio.chunks,
+        coveredMs: Math.round(this.inputAudio.samples / SAMPLES_PER_MS),
+        loudMs: Math.round(this.inputAudio.loudSamples / SAMPLES_PER_MS),
+        payloadBytes: this.inputAudio.payloadBytes,
+      },
       lateAttach: this.lateAttach,
       ...(this.firstEventMs !== undefined ? { firstEventMs: this.firstEventMs } : {}),
     });

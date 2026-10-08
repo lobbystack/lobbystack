@@ -424,7 +424,7 @@ describe("re-attaching after a retried webhook delivery", () => {
 });
 
 describe("worker shutdown drain", () => {
-  const summary = (sessionId: string) => ({ sessionId, durationMs: 1_000, delegations: [], usageConfirmed: true, billedSeconds: 1, lateAttach: false, outputAudio: { deltas: 0, coveredMs: 0, payloadBytes: 0 } });
+  const summary = (sessionId: string) => ({ sessionId, durationMs: 1_000, delegations: [], usageConfirmed: true, billedSeconds: 1, lateAttach: false, outputAudio: { deltas: 0, coveredMs: 0, payloadBytes: 0 }, inputAudio: { chunks: 0, coveredMs: 0, loudMs: 0, payloadBytes: 0 } });
 
   async function startCall(sessionId: string) {
     vi.stubEnv("LIVE_PROTOTYPE_ENABLED", "true");
@@ -935,11 +935,20 @@ describe("live call latency telemetry", () => {
     info.mockRestore();
   });
 
-  it("logs each greeting step as live.greeting", async () => {
+  it("logs each greeting step as live.greeting, with the caller audio received so far", async () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const options = await startCall();
-    options.onGreeting!({ step: "sent", attempt: 1, trigger: "session_started", sinceAttachMs: 1_700 } as never);
-    expect(info).toHaveBeenCalledWith(JSON.stringify({ event: "live.greeting", sessionId: "live_2", step: "sent", attempt: 1, trigger: "session_started", sinceAttachMs: 1_700 }));
+    options.onGreeting!({ step: "sent", attempt: 2, trigger: "retry", sinceAttachMs: 9_200, inputAudioMs: 8_100 } as never);
+    expect(info).toHaveBeenCalledWith(JSON.stringify({ event: "live.greeting", sessionId: "live_2", step: "sent", attempt: 2, trigger: "retry", sinceAttachMs: 9_200, inputAudioMs: 8_100 }));
+    info.mockRestore();
+  });
+
+  it("logs the reflected caller audio on live.closed", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const options = await startCall();
+    options.onClose!({ sessionId: "live_2", durationMs: 12_000, delegations: [], usageConfirmed: true, lateAttach: false, outputAudio: { deltas: 55, coveredMs: 11_000, payloadBytes: 704_000 }, inputAudio: { chunks: 550, coveredMs: 11_000, loudMs: 1_400, payloadBytes: 704_000 } } as never);
+    const closed = JSON.parse(String(info.mock.calls.find((call) => String(call[0]).includes("\"live.closed\""))![0]));
+    expect(closed.inputAudio).toEqual({ chunks: 550, coveredMs: 11_000, loudMs: 1_400, payloadBytes: 704_000 });
     info.mockRestore();
   });
 
