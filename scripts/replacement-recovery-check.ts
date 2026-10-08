@@ -26,7 +26,8 @@ async function waitForRedis(redis: ReturnType<typeof createRedisConnection>): Pr
 
 async function closeQueue(queue: ReturnType<typeof createQueue>): Promise<void> {
   await Promise.race([queue.close(), new Promise<void>((resolve) => setTimeout(resolve, 1_000))]);
-  queue.connection.disconnect();
+  // close() leaves a client we passed in open, so disconnect it as well.
+  await queue.disconnect();
 }
 
 async function waitForWorker(baseUrl: string): Promise<void> {

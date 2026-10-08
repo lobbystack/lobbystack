@@ -54,7 +54,7 @@ async function main(): Promise<void> {
     }, storage);
     objectKey = upload.key;
     realtimeDedupeKey = `storage:${upload.objectId}:ready`;
-    const uploadResponse = await fetch(upload.url, { method: "PUT", headers: upload.headers, body });
+    const uploadResponse = await fetch(upload.url, { method: "PUT", headers: upload.headers ?? {}, body });
     if (!uploadResponse.ok) throw new Error(`MinIO upload failed with status ${uploadResponse.status}.`);
 
     await finalizeUpload({ db: app.db }, {
@@ -72,7 +72,7 @@ async function main(): Promise<void> {
     }
 
     const partial = await createObjectDownload({ db: app.db }, { userId, businessId: firstBusinessId, objectId: upload.objectId, range: "bytes=0-10" }, storage);
-    const partialResponse = await fetch(partial.url, { headers: partial.headers });
+    const partialResponse = await fetch(partial.url, { headers: partial.headers ?? {} });
     if (partialResponse.status !== 206 || new TextDecoder().decode(await partialResponse.arrayBuffer()) !== "replacement") {
       throw new Error("Range download did not return the requested bytes.");
     }

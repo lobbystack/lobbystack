@@ -66,7 +66,7 @@ async function main(): Promise<void> {
     }
     for (const producer of producers) {
       const transport = transportForPath(producer.path, event);
-      if (!TELEMETRY_EVENT_TRANSPORT[event].includes(transport)) {
+      if (!TELEMETRY_EVENT_TRANSPORT[event].some((allowed) => allowed === transport)) {
         failures.push(`${event}: ${producer.path} implies ${transport}, allowed ${TELEMETRY_EVENT_TRANSPORT[event].join("/")}`);
       }
     }
