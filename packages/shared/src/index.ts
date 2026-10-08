@@ -309,20 +309,20 @@ export const widgetConfigSchema = z.object({
 
 export const widgetSessionRequestSchema = z.object({
   widgetKey: z.string().min(1),
-  visitorId: z.string().uuid(),
+  visitorId: z.guid(),
 });
 export type WidgetSessionRequest = z.infer<typeof widgetSessionRequestSchema>;
 
 export const widgetSessionResponseSchema = z.object({
   token: z.string().min(1),
-  expiresAt: z.string().datetime(),
-  visitorId: z.string().uuid(),
+  expiresAt: z.iso.datetime(),
+  visitorId: z.guid(),
 });
 export type WidgetSessionResponse = z.infer<typeof widgetSessionResponseSchema>;
 
 export const widgetChatRequestSchema = z.object({
-  visitorId: z.string().uuid(),
-  messageId: z.string().uuid(),
+  visitorId: z.guid(),
+  messageId: z.guid(),
   content: z.string().min(1).max(4_000),
   locale: z.enum(runtimeLocales).optional(),
 });
@@ -330,22 +330,22 @@ export const widgetChatRequestSchema = z.object({
 export type WidgetChatRequest = z.infer<typeof widgetChatRequestSchema>;
 
 export const widgetLeadRequestSchema = z.object({
-  visitorId: z.string().uuid(),
+  visitorId: z.guid(),
   name: z.string().max(160).optional(),
-  email: z.string().email().max(320).optional(),
+  email: z.email().max(320).optional(),
   phone: z.string().max(32).optional(),
 });
 
 export type WidgetLeadRequest = z.infer<typeof widgetLeadRequestSchema>;
 
 export const widgetKeyConfigSchema = z.object({
-  id: z.string().uuid(),
+  id: z.guid(),
   label: z.string().nullable(),
   status: z.enum(["active", "disabled", "revoked"]),
   allowedOrigins: z.array(z.string()),
   config: widgetConfigSchema,
-  lastUsedAt: z.string().datetime().nullable(),
-  createdAt: z.string().datetime(),
+  lastUsedAt: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime(),
 });
 
 export type WidgetKeyConfig = z.infer<typeof widgetKeyConfigSchema>;

@@ -81,8 +81,8 @@ importers:
   .:
     dependencies:
       zod:
-        specifier: ^3.24.2
-        version: 3.25.76
+        specifier: ^4.6.5
+        version: 4.6.5
     devDependencies:
       '@types/luxon':
         specifier: ^3.7.6
@@ -569,8 +569,8 @@ importers:
   packages/contracts:
     dependencies:
       zod:
-        specifier: ^3.25.76
-        version: 3.25.76
+        specifier: ^4.6.5
+        version: 4.6.5
     devDependencies:
       vitest:
         specifier: ^4.1.11
@@ -636,6 +636,9 @@ importers:
       luxon:
         specifier: ^3.7.2
         version: 3.7.2
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
     devDependencies:
       '@types/luxon':
         specifier: ^3.7.6
@@ -715,8 +718,8 @@ importers:
   packages/shared:
     dependencies:
       zod:
-        specifier: ^3.25.76
-        version: 3.25.76
+        specifier: ^4.6.5
+        version: 4.6.5
 
   packages/telemetry:
     dependencies:

@@ -2,10 +2,9 @@ import type { StandardSchemaWithJSON } from "@modelcontextprotocol/server";
 
 import { apiJsonSchemaFor } from "@lobbystack/shared";
 
-// The v1 contract schemas in @lobbystack/shared are built with an older zod
-// that the MCP SDK cannot convert. This adapter publishes them as Standard
-// Schema with JSON Schema attached, so tool output schemas are the same
-// documents the OpenAPI spec publishes, and results are checked against them.
+// Publishes a v1 contract schema from @lobbystack/shared as Standard Schema
+// with JSON Schema attached, so tool output schemas are the same documents the
+// OpenAPI spec publishes, and results are checked against them.
 
 type ContractSchema = Parameters<typeof apiJsonSchemaFor>[0];
 

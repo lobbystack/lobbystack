@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 
 import { interfaceLocales } from "../locales";
 import { PUBLIC_API_VERSION, WEBHOOK_TEST_EVENT_TYPE, apiKeyScopes, webhookEventTypes, weekdays } from "./constants";
@@ -10,7 +10,11 @@ import { PUBLIC_API_VERSION, WEBHOOK_TEST_EVENT_TYPE, apiKeyScopes, webhookEvent
 const id = z.uuid().describe("Stable identifier (UUID).");
 const timestamp = z.iso.datetime().describe("ISO 8601 timestamp in UTC.");
 const nullableTimestamp = timestamp.nullable();
-const inputTimestamp = z.iso.datetime({ offset: true }).describe("ISO 8601 timestamp with a Z or numeric offset.");
+// Zod 4 requires seconds once a timestamp has Z or an offset. The v1 API has always
+// accepted minute precision too, such as 2026-10-09T14:00-04:00.
+const withSeconds = z.iso.datetime({ offset: true });
+const withoutSeconds = z.iso.datetime({ offset: true, precision: -1 });
+const inputTimestamp = z.stringFormat("datetime", (value) => withSeconds.safeParse(value).success || withoutSeconds.safeParse(value).success).describe("ISO 8601 timestamp with a Z or numeric offset.");
 const e164 = z.string().regex(/^\+[1-9]\d{6,14}$/, "Use E.164 format, for example +14165550134.").describe("Phone number in E.164 format.");
 const clock = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$|^24:00$/, "Use 24-hour HH:MM.").describe("Local time as 24-hour HH:MM.");
 // A business's caller language is the language the AI receptionist speaks.
@@ -145,7 +149,7 @@ export const apiContactCreateSchema = z.strictObject({
   email: z.email().max(320).optional(),
   locale: contactLocale.optional(),
   timezone: z.string().trim().min(1).max(80).optional(),
-}).refine((value) => Boolean(value.phone || value.email), { message: "Provide a phone or an email.", path: ["phone"] });
+}).refine((value) => Boolean(value.phone || value.email), { error: "Provide a phone or an email.", path: ["phone"] });
 
 export const apiContactUpdateSchema = z.strictObject({
   name: z.string().trim().min(1).max(200).nullable().optional(),
@@ -182,7 +186,7 @@ export const apiAppointmentCreateSchema = z.strictObject({
   contact_name: z.string().trim().min(1).max(200).optional(),
   staff_id: id.optional().describe("Book with this active staff member. Without it, LobbyStack picks one who is free."),
   sms_consent: z.boolean().optional().describe("True only if the customer agreed to receive confirmation and reminder texts."),
-}).refine((value) => Boolean(value.contact_id || value.contact_phone), { message: "Provide contact_id or contact_phone.", path: ["contact_phone"] });
+}).refine((value) => Boolean(value.contact_id || value.contact_phone), { error: "Provide contact_id or contact_phone.", path: ["contact_phone"] });
 
 export const apiAppointmentRescheduleSchema = z.strictObject({
   starts_at: inputTimestamp,
@@ -217,10 +221,11 @@ export const apiKnowledgeEntrySchema = z.object({
   created_at: timestamp,
 });
 
+// Zod 4 reports an unknown type as "Invalid discriminator value. ..."; keep the v1 detail message "Invalid input".
 export const apiKnowledgeEntryCreateSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("text"), title: z.string().trim().min(1).max(300), content: z.string().trim().min(1).max(20_000) }),
   z.strictObject({ type: z.literal("faq"), question: z.string().trim().min(1).max(300), answer: z.string().trim().min(1).max(20_000) }),
-]);
+], { error: (issue) => (issue.code === "invalid_union" ? "Invalid input" : undefined) });
 
 export const apiWebhookEventTypeSchema = z.enum(webhookEventTypes);
 

@@ -9,7 +9,7 @@
     "pnpm": ">=10.0.0"
   },
   "dependencies": {
-    "zod": "^3.24.2"
+    "zod": "^4.6.5"
   },
   "scripts": {
     "dev": "node scripts/dev.mjs",

@@ -9,7 +9,7 @@ import { attachVerificationFlow, hasVerificationFlow } from "@/lib/verification-
 export const runtime = "nodejs";
 
 const requestSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   type: z.literal("email-verification"),
   turnstileToken: z.string().trim().min(1).optional(),
 });
