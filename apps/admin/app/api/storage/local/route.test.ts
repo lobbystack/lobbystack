@@ -34,7 +34,7 @@ afterEach(async () => {
   }
 });
 
-describe.sequential("local storage HTTP route", () => {
+describe("local storage HTTP route", { concurrent: false }, () => {
   it("accepts a signed upload and serves a requested byte range", async () => {
     const storage = createStorageProvider();
     const body = new TextEncoder().encode("route storage bytes");
