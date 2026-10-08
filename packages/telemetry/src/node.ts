@@ -159,7 +159,7 @@ export async function initializeTelemetry(
       forceFlush: () => Promise.resolve(),
       shutdown: () => Promise.resolve(),
     },
-    new BatchLogRecordProcessor(new OTLPLogExporter({ url: `${endpoint}/v1/logs` })),
+    new BatchLogRecordProcessor({ exporter: new OTLPLogExporter({ url: `${endpoint}/v1/logs` }) }),
   ];
   activeLogRecordProcessors = logRecordProcessors;
 
