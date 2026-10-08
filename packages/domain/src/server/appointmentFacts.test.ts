@@ -7,6 +7,17 @@ describe("appointment fact verification", () => {
     expect(storedContactNameMatchesIfPresent("Alex Morgan", "Alex")).toBe(true);
     expect(storedContactNameMatchesIfPresent(undefined, undefined)).toBe(true);
   });
+
+  // A booking saves the name as the receptionist heard it; on staging "Raphael Morency" was saved as "Rafael Morenzi".
+  it("matches a caller's name against the spelling a transcript saved, and accented spellings", () => {
+    expect(storedContactNameMatchesIfPresent("Rafael Morenzi", "Raphael Morency")).toBe(true);
+    expect(storedContactNameMatchesIfPresent("Jonathan Lee", "Jonathon Lee")).toBe(true);
+    expect(storedContactNameMatchesIfPresent("Émilie Tremblay", "Emilie Tremblay")).toBe(true);
+    expect(storedContactNameMatchesIfPresent("Đorđe Petrović", "Djordje Petrovic")).toBe(true);
+    expect(storedContactNameMatchesIfPresent("Mary Smith", "Mark Smith")).toBe(false);
+    expect(storedContactNameMatchesIfPresent("Rafael Morenzi", "Raphael Martin")).toBe(false);
+    expect(storedContactNameMatchesIfPresent("Rafael Morenzi", "Raphael")).toBe(false);
+  });
   it("matches localized service facts and rejects generic fragments", () => {
     const service = { name: "Dental examination", slug: "dental-exam", localizedNames: { fr: "Examen dentaire" } };
     expect(serviceNamesMatch(service, "Examen dentaire")).toBe(true);
