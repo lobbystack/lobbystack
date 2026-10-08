@@ -1,7 +1,7 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, WRAP_UP_MAX_MS, type AgentChannel, type CallControl, type LiveCallSetup, type LiveCallSummary, type LiveCallWrapUp } from "@lobbystack/agent-core";
+import { callerIsDone, closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, WRAP_UP_MAX_MS, type AgentChannel, type CallControl, type LiveCallSetup, type LiveCallSummary, type LiveCallWrapUp } from "@lobbystack/agent-core";
 import {
   blockLiveCaller,
   extendLiveCallReservation,
@@ -454,9 +454,15 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
         },
         directToolAnswers: true,
       });
+      const callerDone = async (conversation: string, abortSignal: AbortSignal) => {
+        const startedAt = performance.now();
+        const done = await callerIsDone(model, conversation, abortSignal);
+        console.info(JSON.stringify({ event: "live.caller_done_check", sessionId: request.sessionId, done, ms: Math.round(performance.now() - startedAt) }));
+        return done;
+      };
       // A recovered call, or one with a saved transcript, is already under
       // way, so the greeting fallback must not fire.
-      return { agent, ...(recovery || saved > 0 ? {} : { greeting: snapshot.greeting }) };
+      return { agent, callerDone, ...(recovery || saved > 0 ? {} : { greeting: snapshot.greeting }) };
     });
 
     const finish = async (summary: LiveCallSummary) => {

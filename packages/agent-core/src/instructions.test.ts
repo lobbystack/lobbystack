@@ -62,7 +62,7 @@ describe("buildLiveInstructions", () => {
   it("says one goodbye once a backend result says the call is ending", () => {
     const instructions = buildLiveInstructions(demoSnapshot, callStart);
     expect(instructions).toContain("When one arrives, answer the caller from it, then offer the next step, unless it says the call is ending.");
-    expect(instructions).toContain("When a backend result says the call is ending, say one short goodbye, then stop talking. If the caller speaks again before the call ends, the call goes on. Reply as usual, and when they're done, delegate again.");
+    expect(instructions).toContain("When a backend result says the call is ending, say one short goodbye, then stop talking. If the caller speaks again before the call ends, reply as usual. If they ask for more, help them, and when they're done, delegate again.");
     expect(instructions).not.toContain("say a short goodbye.");
   });
 
