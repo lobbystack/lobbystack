@@ -1,21 +1,23 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, type AgentChannel, type CallControl, type LiveCallSetup, type LiveCallSummary } from "@lobbystack/agent-core";
+import { closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, WRAP_UP_MAX_MS, type AgentChannel, type CallControl, type LiveCallSetup, type LiveCallSummary, type LiveCallWrapUp } from "@lobbystack/agent-core";
 import {
   blockLiveCaller,
   finishLiveCall,
   getCachedBusinessSnapshot,
+  lastLiveCallSequence,
   markLiveCallMediaStarted,
-  persistCallRecording,
+  orphanedLiveCallSeconds,
   prepareLiveCallTransfer,
   recordLiveCallTransferResult,
   saveLiveCallTurn,
-  type BinaryStorageProvider,
   type DomainContext,
   type LiveCallEnd,
+  type OpenLiveCall,
 } from "@lobbystack/domain";
 import { renewVoicePresenceGateway, updateVoicePresence } from "@lobbystack/jobs";
+import { MAX_PHONE_CALL_MS } from "@lobbystack/shared";
 import OpenAI from "openai";
 
 import { recordLiveCallLatency, recordLiveDelegation, recordLiveDelegationGeneration } from "./liveCallTelemetry";
@@ -36,18 +38,46 @@ type AttachRequest = {
   /** The call's own conversation, where messages taken on the call are filed. */
   conversationId?: string;
   callerPhone?: string;
-  /** Browser calls stop here; it comes from the plan's remaining minutes. */
+  /**
+   * The minutes the call reserved, absent on an unlimited plan. The call ends
+   * by then, and never runs past MAX_PHONE_CALL_MS.
+   */
   maxDurationMs?: number;
   /** Prospect demos only answer questions and take messages. */
   intakeOnly?: boolean;
+  /**
+   * A retried webhook delivery's re-attach: the call may be under way, so
+   * turns are numbered after the saved ones and a call with a transcript gets
+   * no greeting.
+   */
+  resume?: boolean;
+  /** Set when this worker took the call over after its owner died. Never parsed from HTTP. */
+  recovery?: OpenLiveCall;
 };
 
+/**
+ * What recovering an open call did: re-attached to it, finished it, left it
+ * to the worker holding its lock or still saving its turns, or skipped it
+ * (shutting down, no OpenAI key, or no Redis to lock with).
+ */
+export type LiveRecoveryOutcome = "attached" | "finished" | "owned" | "skipped";
+
 const SILENCE_TIMEOUT_MS = 75_000;
-const MAX_PHONE_CALL_MS = 30 * 60_000;
+// A call that saved a turn this recently has a live worker, even if its lock
+// lapsed, so recovery leaves it alone.
+const RECENT_ACTIVITY_MS = 45_000;
+// A recovery's hangup gives up after this long, so a hanging OpenAI can't
+// hold up the job or a drain.
+const RECOVERY_HANGUP_TIMEOUT_MS = 5_000;
+// How often a drain looks for calls that became active after its timeout.
+const DRAIN_POLL_MS = 100;
+// A drain leaves time after its timeout for the goodbye, finalization and
+// closing the database pools before the platform kills the process.
+const DRAIN_MARGIN_MS = WRAP_UP_MAX_MS + 5_000;
 const PRESENCE_INTERVAL_MS = 10_000;
-// OpenAI finalizes the stored recording shortly after the session closes.
-const RECORDING_ATTEMPTS = 12;
-const RECORDING_RETRY_MS = 5_000;
+// A live session sends events as soon as a sideband connects, so a re-attach
+// that hears nothing for this long has found the session gone.
+const RECOVERY_EVENT_WAIT_MS = 5_000;
 // One worker answers each session. The lock outlives a crashed owner by this long.
 const ATTACH_LOCK_MS = 30_000;
 // The Redis client queues commands while disconnected instead of failing, so
@@ -72,9 +102,26 @@ export function providerSeconds(summary: Pick<LiveCallSummary, "billedSeconds" |
 /** A shared lock, so duplicate attaches on different worker instances answer a session once. */
 export type AttachLock = {
   set(key: string, value: string, mode: "PX", milliseconds: number, condition: "NX"): Promise<string | null>;
-  pexpire(key: string, milliseconds: number): Promise<number>;
-  del(key: string): Promise<number>;
+  /** Runs RENEW_ATTACH_LOCK or RELEASE_ATTACH_LOCK. */
+  eval(script: string, numKeys: number, ...args: Array<string | number>): Promise<unknown>;
 };
+
+/**
+ * Renews the attach lock while ARGV[1] still holds it, and takes back a lock
+ * that expired. Returns 0 when another owner holds it. KEYS[1] is the lock,
+ * ARGV[2] its lifetime in milliseconds.
+ */
+export const RENEW_ATTACH_LOCK = `
+local holder = redis.call('GET', KEYS[1])
+if holder == ARGV[1] then return redis.call('PEXPIRE', KEYS[1], ARGV[2]) end
+if holder then return 0 end
+redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2], 'NX')
+return 1`;
+
+/** Deletes the attach lock only while ARGV[1] holds it, so a worker never frees a lock another worker took over. */
+export const RELEASE_ATTACH_LOCK = `
+if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end
+return 0`;
 
 function endFromCloseReason(reason: string | undefined): LiveCallEnd {
   switch (reason) {
@@ -84,6 +131,20 @@ function endFromCloseReason(reason: string | undefined): LiveCallEnd {
     case "content": return "content_blocked";
     default: return "connection_lost";
   }
+}
+
+/**
+ * How long a shutdown lets calls finish on their own before it wraps them up.
+ * Railway sends SIGKILL RAILWAY_DEPLOYMENT_DRAINING_SECONDS after SIGTERM (0 by
+ * default), so the drain ends early enough for the goodbyes to fit.
+ * LIVE_DRAIN_TIMEOUT_MS overrides it on any platform.
+ */
+export function liveDrainTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
+  // A deploy template can leave optional inputs blank, so "" counts as unset.
+  const override = Number(env.LIVE_DRAIN_TIMEOUT_MS?.trim() || Number.NaN);
+  if (override >= 0) return override;
+  const drainingSeconds = Number(env.RAILWAY_DEPLOYMENT_DRAINING_SECONDS?.trim() || 0);
+  return drainingSeconds > 0 ? Math.max(0, drainingSeconds * 1_000 - DRAIN_MARGIN_MS) : 0;
 }
 
 export function isLivePrototypeEnabled(): boolean {
@@ -122,11 +183,12 @@ export function parseAttachRequest(raw: string): AttachRequest | undefined {
     ...(typeof body.callerPhone === "string" ? { callerPhone: body.callerPhone } : {}),
     ...(typeof body.maxDurationMs === "number" && body.maxDurationMs > 0 ? { maxDurationMs: body.maxDurationMs } : {}),
     ...(body.intakeOnly === true ? { intakeOnly: true } : {}),
+    ...(body.resume === true ? { resume: true } : {}),
   };
 }
 
-function reply(response: ServerResponse, status: number, body: Record<string, unknown>): void {
-  response.writeHead(status, { "content-type": "application/json" });
+function reply(response: ServerResponse, status: number, body: Record<string, unknown>, headers: Record<string, string> = {}): void {
+  response.writeHead(status, { "content-type": "application/json", ...headers });
   response.end(JSON.stringify(body));
 }
 
@@ -140,12 +202,17 @@ function logError(sessionId: string, what: string) {
  * worker holds the sideband for the rest of the call.
  */
 export function createLiveCallHandler(input: { domain: DomainContext; attachLock?: AttachLock }) {
-  const active = new Map<string, { request: AttachRequest; controller: LiveCallController }>();
+  const active = new Map<string, { request: AttachRequest; controller: LiveCallController; wrapUp: (reason: LiveCallWrapUp) => Promise<void> }>();
   // Sessions whose attach is still loading, so an overlapping duplicate attach
   // doesn't open a second sideband that would answer the same delegations.
   const starting = new Set<string>();
   // Call records still being finalized, so shutdown can wait for them.
   const finishing = new Set<Promise<void>>();
+  // Once a shutdown starts, new attaches get 503 so the admin retries them on
+  // the next deployment, and the drain waits for calls to end on their own.
+  let draining = false;
+  let onIdle: (() => void) | undefined;
+  const checkIdle = () => { if (!active.size && !starting.size) onIdle?.(); };
   const client = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0 }) : undefined;
   // The caller waits in silence while the agent works, so delegation runs on
   // its own reasoning effort (low unless AI_DELEGATION_* says otherwise).
@@ -153,7 +220,6 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
   // The dashboard's live-call count trusts a call only while its owner renews
   // this id, so a crashed worker's calls stop counting.
   const presenceOwner = `worker:${randomUUID()}`;
-  let storage: BinaryStorageProvider | undefined;
   let presenceTimer: ReturnType<typeof setInterval> | undefined;
 
   function setPresence(request: AttachRequest, isActive: boolean): void {
@@ -164,64 +230,147 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
   // fresh heartbeat, so renew it even with no calls running.
   function renewPresence(): void {
     void renewVoicePresenceGateway(presenceOwner).catch(logError("-", "presence renewal failed"));
-    for (const { request } of active.values()) {
+    for (const { request, controller } of active.values()) {
       setPresence(request, true);
-      void input.attachLock?.pexpire(attachLockKey(request.sessionId), ATTACH_LOCK_MS).catch(logError(request.sessionId, "attach lock renewal failed"));
+      // A lock that expired, for example while Redis was down, is taken back
+      // before the recovery job reads it as a dead owner. If a recovery got
+      // there first, two sidebands would answer every request, so this worker
+      // lets the call go and the new owner finishes it.
+      void input.attachLock?.eval(RENEW_ATTACH_LOCK, 1, attachLockKey(request.sessionId), presenceOwner, ATTACH_LOCK_MS).then((held) => {
+        if (held) return;
+        console.warn(JSON.stringify({ event: "live.detached", sessionId: request.sessionId, callId: request.callId, channel: request.channel, note: "Another worker took the call over, so this one closed its sideband without hanging up." }));
+        controller.detach();
+      }).catch(logError(request.sessionId, "attach lock renewal failed"));
     }
   }
 
+  /**
+   * Takes the session's attach lock: true when this worker took it, false
+   * when another owner holds it, undefined when Redis didn't answer in time.
+   */
+  async function takeAttachLock(sessionId: string): Promise<boolean | undefined> {
+    if (!input.attachLock) return undefined;
+    let waitTimer: ReturnType<typeof setTimeout> | undefined;
+    return await Promise.race([
+      input.attachLock.set(attachLockKey(sessionId), presenceOwner, "PX", ATTACH_LOCK_MS, "NX").then((result) => result === "OK"),
+      new Promise<never>((_resolve, reject) => { waitTimer = setTimeout(() => reject(new Error("Redis didn't answer in time.")), ATTACH_LOCK_WAIT_MS); }),
+    ]).catch((error: unknown) => {
+      logError(sessionId, "attach lock unavailable")(error);
+      return undefined;
+    }).finally(() => clearTimeout(waitTimer));
+  }
+
   const attachLockKey = (sessionId: string) => `live-attach:${sessionId}`;
+  const releaseAttachLock = (sessionId: string) => void input.attachLock?.eval(RELEASE_ATTACH_LOCK, 1, attachLockKey(sessionId), presenceOwner).catch(() => undefined);
   if (isLivePrototypeEnabled() && process.env.REDIS_URL) {
     presenceTimer = setInterval(renewPresence, PRESENCE_INTERVAL_MS);
     presenceTimer.unref();
     renewPresence();
   }
 
-  // Copies OpenAI's stored stereo recording into our storage so it follows the
-  // plan's retention like every other call recording.
-  async function saveRecording(request: AttachRequest, durationMs: number): Promise<void> {
-    if (!client || !storage) return;
-    for (let attempt = 1; attempt <= RECORDING_ATTEMPTS; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, RECORDING_RETRY_MS));
-      try {
-        const response = await client.live.sessions.downloadRecording(request.sessionId);
-        const body = new Uint8Array(await response.arrayBuffer());
-        await persistCallRecording(input.domain, { businessId: request.businessId, callId: request.callId, durationMs, contentType: "audio/wav", body }, storage);
-        return;
-      } catch (error) {
-        const status = typeof error === "object" && error !== null && "status" in error ? (error as { status?: number }).status : undefined;
-        // 404/409 mean it isn't ready yet; anything else won't get better.
-        if (status !== 404 && status !== 409) return logError(request.sessionId, "recording unavailable")(error);
-      }
-    }
-    console.error(`[live] ${request.sessionId} recording never became available`);
-  }
-
   async function attach(request: AttachRequest): Promise<void> {
     if (!client || !model) throw new Error("OPENAI_API_KEY and a text model are required for live calls.");
     if (active.has(request.sessionId) || starting.has(request.sessionId)) return;
-    // Another worker instance may already hold this session's sideband.
-    if (input.attachLock) {
-      let waitTimer: ReturnType<typeof setTimeout> | undefined;
-      const acquired = await Promise.race([
-        input.attachLock.set(attachLockKey(request.sessionId), presenceOwner, "PX", ATTACH_LOCK_MS, "NX"),
-        new Promise<never>((_resolve, reject) => { waitTimer = setTimeout(() => reject(new Error("Redis didn't answer in time.")), ATTACH_LOCK_WAIT_MS); }),
-      ]).catch((error: unknown) => {
-        // Without Redis, fall back to this process's own check.
-        logError(request.sessionId, "attach lock unavailable")(error);
-        return "OK";
-      }).finally(() => clearTimeout(waitTimer));
-      if (acquired !== "OK") return;
-    }
+    // Counted from here, so a drain that starts during the lock wait waits for this call.
     starting.add(request.sessionId);
     try {
+      // Another worker instance may already hold this session's sideband.
+      // Without Redis, fall back to this process's own check.
+      if (input.attachLock && (await takeAttachLock(request.sessionId)) === false) return;
       await startCall(request, client, model);
     } catch (error) {
-      void input.attachLock?.del(attachLockKey(request.sessionId)).catch(() => undefined);
+      releaseAttachLock(request.sessionId);
       throw error;
     } finally {
       starting.delete(request.sessionId);
+      checkIdle();
     }
+  }
+
+  /**
+   * Takes over a call whose worker died. Only the worker that takes the attach
+   * lock acts, so a call whose owner still renews its lock, or that another
+   * worker is recovering, is left alone, and so is one that saved a turn in
+   * the last 45 seconds. A call past its reserved length is hung up; any
+   * other is re-attached. A re-attach finishes the call with its best known
+   * length when the session answers the connection with silence and a hangup
+   * goes through; when it can't connect at all, the next run tries again.
+   */
+  async function recover(orphan: OpenLiveCall): Promise<LiveRecoveryOutcome> {
+    if (draining || !client || !model || !input.attachLock) return "skipped";
+    if (active.has(orphan.sessionId) || starting.has(orphan.sessionId)) return "owned";
+    if (Date.now() - orphan.lastActivityAt.getTime() < RECENT_ACTIVITY_MS) return "owned";
+    starting.add(orphan.sessionId);
+    try {
+      // Unlike an attach from the admin, a recovery never goes ahead without the lock.
+      const taken = await takeAttachLock(orphan.sessionId);
+      if (taken !== true) return taken === false ? "owned" : "skipped";
+      // A drain that started during the lock wait would only end the call
+      // again, so the next deployment takes it instead.
+      if (draining) {
+        releaseAttachLock(orphan.sessionId);
+        return "skipped";
+      }
+      const remainingMs = orphan.reservedSeconds * 1_000 - (Date.now() - orphan.startedAt.getTime());
+      if (remainingMs <= 0) {
+        await hangUpOrphan(client, orphan);
+        await finishOrphan(orphan, "past_reservation");
+        releaseAttachLock(orphan.sessionId);
+        return "finished";
+      }
+      await startCall({
+        sessionId: orphan.sessionId,
+        businessId: orphan.businessId,
+        callId: orphan.callId,
+        channel: orphan.channel,
+        ...(orphan.conversationId ? { conversationId: orphan.conversationId } : {}),
+        ...(orphan.callerPhone ? { callerPhone: orphan.callerPhone } : {}),
+        maxDurationMs: remainingMs,
+        ...(orphan.intakeOnly ? { intakeOnly: true } : {}),
+        recovery: orphan,
+      }, client, model);
+      return "attached";
+    } catch (error) {
+      releaseAttachLock(orphan.sessionId);
+      throw error;
+    } finally {
+      starting.delete(orphan.sessionId);
+      checkIdle();
+    }
+  }
+
+  /**
+   * Ends an orphan's session within RECOVERY_HANGUP_TIMEOUT_MS: a SIP hangup
+   * for a phone call, session.close for a browser call, which has no hangup
+   * and never fails. Harmless when the session already ended. Resolves false
+   * when the hangup failed.
+   */
+  async function hangUpOrphan(client: OpenAI, orphan: OpenLiveCall): Promise<boolean> {
+    if (orphan.channel === "web_voice") {
+      await closeLiveSession(client, orphan.sessionId, RECOVERY_HANGUP_TIMEOUT_MS);
+      return true;
+    }
+    return await client.live.sessions.hangup(orphan.sessionId, { timeout: RECOVERY_HANGUP_TIMEOUT_MS }).then(() => true, (error: unknown) => {
+      logError(orphan.sessionId, "recovery hangup failed")(error);
+      return false;
+    });
+  }
+
+  // Finishes a call nobody can measure any more, with its best known length.
+  async function finishOrphan(orphan: OpenLiveCall, reason: "session_gone" | "past_reservation"): Promise<void> {
+    const measuredSeconds = orphanedLiveCallSeconds(orphan);
+    const completed = await finishLiveCall(input.domain, {
+      businessId: orphan.businessId,
+      callId: orphan.callId,
+      seconds: providerSeconds({ durationMs: measuredSeconds * 1_000, usageConfirmed: false }, orphan.channel),
+      measuredSeconds,
+      end: "connection_lost",
+      endedAt: new Date(orphan.startedAt.getTime() + measuredSeconds * 1_000),
+      channel: orphan.channel,
+      // OpenAI may still have the session stored, ended or not.
+      recording: { sessionId: orphan.sessionId, durationMs: measuredSeconds * 1_000 },
+    });
+    console.info(JSON.stringify({ event: "live.orphan_finished", sessionId: orphan.sessionId, callId: orphan.callId, channel: orphan.channel, reason, measuredSeconds, completed }));
   }
 
   async function startCall(request: AttachRequest, client: OpenAI, model: NonNullable<ReturnType<typeof createAgentModel>>): Promise<void> {
@@ -231,8 +380,21 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
     const phone = request.channel === "voice";
     const call = { businessId: request.businessId, callId: request.callId };
     const telemetryCall = { ...call, channel: request.channel, ...(request.conversationId ? { conversationId: request.conversationId } : {}) };
+    const recovery = request.recovery;
+    // A recovered call, or a retried delivery's re-attach, numbers its turns
+    // after the ones already saved. Only a resume reads them here, so a first
+    // attach makes no extra query. A failed read numbers from 1, as before.
+    const savedTurns: Promise<number> = recovery ? Promise.resolve(recovery.lastSequence)
+      : request.resume ? lastLiveCallSequence(input.domain, call).catch((error: unknown) => { logError(request.sessionId, "saved transcript not read")(error); return 0; })
+      : Promise.resolve(0);
     let end: LiveCallEnd | undefined;
     let controller: LiveCallController | undefined;
+    let sessionAlive = false;
+    // A goodbye already under way keeps its own reason.
+    const wrapUp = (reason: LiveCallWrapUp) => {
+      end ??= reason;
+      return controller!.wrapUp(reason);
+    };
 
     const callControl: CallControl = {
       // The tool returns at once, so its answer reaches GPT-Live; the call
@@ -242,24 +404,22 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
         if (reason === "abuse" && phone) await blockLiveCaller(input.domain, call);
         controller?.endAfterGoodbye();
       },
+      // The tool returns at once with an answer GPT-Live announces; the REFER
+      // goes out once the announcement has played, and onTransfer records how it went.
       ...(phone ? {
         transfer: async (destination: string) => {
-          if (!(await prepareLiveCallTransfer(input.domain, call))) return false;
-          try {
-            await client.live.sessions.refer(request.sessionId, { target_uri: `tel:${destination}` });
-            end = "transferred";
-            await recordLiveCallTransferResult(input.domain, { ...call, ok: true });
-            return true;
-          } catch (error) {
-            logError(request.sessionId, "transfer failed")(error);
-            await recordLiveCallTransferResult(input.domain, { ...call, ok: false });
-            return false;
-          }
+          // Checked before reserving, so a skipped transfer neither uses an attempt
+          // nor overwrites the state of the transfer already under way.
+          if (!controller?.canTransfer() || !(await prepareLiveCallTransfer(input.domain, call))) return false;
+          // False when the call started ending meanwhile, so GPT-Live doesn't announce a transfer.
+          return controller.transferAfterAnnouncement(`tel:${destination}`);
         },
       } : {}),
     };
+    // In order, so a quick answer never lands before the referral it follows.
+    let transferWrites = Promise.resolve();
 
-    const setup: Promise<LiveCallSetup> = snapshotLoad.then((snapshot) => {
+    const setup: Promise<LiveCallSetup> = Promise.all([snapshotLoad, savedTurns]).then(([snapshot, saved]) => {
       if (!snapshot) throw new Error("The business has no published snapshot.");
       const agent = createReceptionistAgent({
         model,
@@ -275,19 +435,30 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
         },
         directToolAnswers: true,
       });
-      return { agent, greeting: snapshot.greeting };
+      // A recovered call, or one with a saved transcript, is already under
+      // way, so the greeting fallback must not fire.
+      return { agent, ...(recovery || saved > 0 ? {} : { greeting: snapshot.greeting }) };
     });
 
     const finish = async (summary: LiveCallSummary) => {
-      const seconds = providerSeconds(summary, request.channel);
-      const measuredSeconds = summary.durationMs / 1000;
-      const completed = await finishLiveCall(input.domain, { ...call, seconds, measuredSeconds, end: end ?? endFromCloseReason(summary.closeReason), channel: request.channel });
-      // Only the attach that finished the call keeps its recording and reports
-      // its latency, so a late retry that re-attaches to an ended call doesn't
-      // copy the recording or record the call's latency twice.
-      if (!completed) return;
-      recordLiveCallLatency(input.domain, telemetryCall, summary);
-      void saveRecording(request, measuredSeconds * 1000);
+      if (recovery && !sessionAlive) {
+        // The session answered the connection with silence, so it's gone once
+        // a hangup goes through. A connection that never opened, or a failed
+        // hangup, leaves the call to the next recovery run. The reserved
+        // length bounds those retries: past it, recover() hangs up and finishes.
+        if (summary.closeReason === "no_session_events" && (await hangUpOrphan(client, recovery))) return await finishOrphan(recovery, "session_gone");
+        console.warn(JSON.stringify({ event: "live.recovery_deferred", sessionId: request.sessionId, callId: request.callId, closeReason: summary.closeReason, note: "The next recovery run tries again." }));
+        return;
+      }
+      // A recovered call ran from its original start. OpenAI's usage in
+      // session.closed covers the whole session, so it still decides when present.
+      const durationMs = recovery ? Date.now() - recovery.startedAt.getTime() : summary.durationMs;
+      const seconds = providerSeconds({ ...summary, durationMs }, request.channel);
+      // Only the write that finishes the call queues the recording copy, so a
+      // late retry that re-attaches to an ended call doesn't copy it twice.
+      const completed = await finishLiveCall(input.domain, { ...call, seconds, measuredSeconds: durationMs / 1000, end: end ?? endFromCloseReason(summary.closeReason), channel: request.channel, recording: { sessionId: request.sessionId, durationMs } });
+      // A recovered call missed its start, so its latency would mislead.
+      if (completed && !recovery) recordLiveCallLatency(input.domain, telemetryCall, summary);
     };
 
     controller = new LiveCallController({
@@ -296,13 +467,19 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       phone,
       setup,
       silenceTimeoutMs: SILENCE_TIMEOUT_MS,
-      maxDurationMs: phone ? MAX_PHONE_CALL_MS : request.maxDurationMs ?? MAX_PHONE_CALL_MS,
+      maxDurationMs: Math.min(request.maxDurationMs ?? MAX_PHONE_CALL_MS, MAX_PHONE_CALL_MS),
       onStarted: () => void markLiveCallMediaStarted(input.domain, call).catch(logError(request.sessionId, "media start not recorded")),
       onGreeting: (greeting) => console.info(JSON.stringify({ event: "live.greeting", sessionId: request.sessionId, ...greeting })),
-      onTurn: (turn) => void saveLiveCallTurn(input.domain, { ...call, ...turn }).catch(logError(request.sessionId, "transcript save failed")),
-      onTimeout: (reason) => {
-        end = reason;
-        controller?.endSession();
+      onTurn: (turn) => void savedTurns.then((saved) => saveLiveCallTurn(input.domain, { ...call, ...turn, sequence: turn.sequence + saved })).catch(logError(request.sessionId, "transcript save failed")),
+      onTimeout: (reason) => void wrapUp(reason),
+      onTransfer: (state) => {
+        // The call counts as transferred from the moment the REFER goes out,
+        // so a session.closed that beats OpenAI's answer still records it. A
+        // failed transfer leaves the call with the receptionist.
+        if (state !== "failed") end = "transferred";
+        else if (end === "transferred") end = undefined;
+        if (state === "referring") return;
+        transferWrites = transferWrites.then(() => recordLiveCallTransferResult(input.domain, { ...call, state })).catch(logError(request.sessionId, "transfer state not recorded"));
       },
       onDelegation: (timing) => {
         console.info(JSON.stringify({ event: "live.delegation", sessionId: request.sessionId, agentMs: timing.agentMs, totalMs: timing.totalMs, queueMs: timing.queueMs, tools: timing.tools, modelSteps: timing.modelSteps, directAnswer: timing.directAnswer, stepMs: timing.stepMs, toolMs: timing.toolMs, failed: timing.failed, superseded: timing.superseded }));
@@ -311,15 +488,34 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       },
       onClose: (summary) => {
         active.delete(request.sessionId);
+        // A detached call belongs to the worker that took it over, with its
+        // presence, attach lock and call record.
+        if (summary.closeReason === "detached") {
+          checkIdle();
+          return;
+        }
         setPresence(request, false);
-        void input.attachLock?.del(attachLockKey(request.sessionId)).catch(() => undefined);
-        console.info(JSON.stringify({ event: "live.closed", sessionId: summary.sessionId, channel: request.channel, durationMs: summary.durationMs, billedSeconds: summary.billedSeconds, usageConfirmed: summary.usageConfirmed, closeReason: summary.closeReason, end, delegations: summary.delegations.length, outputAudio: summary.outputAudio }));
+        console.info(JSON.stringify({ event: "live.closed", sessionId: summary.sessionId, channel: request.channel, durationMs: summary.durationMs, billedSeconds: summary.billedSeconds, usageConfirmed: summary.usageConfirmed, closeReason: summary.closeReason, end, delegations: summary.delegations.length, outputAudio: summary.outputAudio, lateAttach: summary.lateAttach, firstEventMs: summary.firstEventMs }));
         const pending = finish(summary).catch(logError(request.sessionId, "finish failed"));
         finishing.add(pending);
-        void pending.finally(() => finishing.delete(pending));
+        // The lock outlives the finish, so a recovery job can't take an
+        // ending call and finalize it with estimated seconds.
+        void pending.finally(() => {
+          finishing.delete(pending);
+          releaseAttachLock(request.sessionId);
+        });
+        // After `finishing` has the record, so a drain waits for it.
+        checkIdle();
       },
+      ...(recovery ? {
+        firstEventTimeoutMs: RECOVERY_EVENT_WAIT_MS,
+        onFirstEvent: () => {
+          sessionAlive = true;
+          console.info(JSON.stringify({ event: "live.recovered", sessionId: request.sessionId, callId: request.callId, channel: request.channel, gapMs: Date.now() - recovery.lastActivityAt.getTime(), remainingMs: request.maxDurationMs, note: "Delegations during the gap went unanswered." }));
+        },
+      } : {}),
     });
-    active.set(request.sessionId, { request, controller });
+    active.set(request.sessionId, { request, controller, wrapUp });
     setPresence(request, true);
     controller.start();
     // Without the business the call can't go on; the controller ends the
@@ -365,6 +561,13 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
     }
     try {
       const body = parseAttachRequest(await readBody(request));
+      // Checked after the body is read, so an attach that passes is in
+      // `starting` before a drain can look. Closing the connection keeps the
+      // admin's retry from reusing it to reach this instance again.
+      if (draining) {
+        reply(response, 503, { error: "This worker is shutting down." }, { connection: "close" });
+        return true;
+      }
       if (!body) {
         reply(response, 400, { error: "sessionId, businessId, callId and channel are required." });
         return true;
@@ -380,13 +583,32 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
 
   return {
     handle,
-    setStorage: (provider: BinaryStorageProvider) => { storage = provider; },
+    recover,
     activeCalls: () => active.size,
-    closeAll: async () => {
+    /**
+     * Stops taking attaches and lets calls end on their own for up to
+     * `timeoutMs`, then asks each remaining call to say goodbye and ends it.
+     * Resolves once every call record is finalized, so the database pools
+     * can close after it.
+     */
+    drain: async (timeoutMs: number) => {
+      draining = true;
+      if (active.size || starting.size) {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        await new Promise<void>((resolve) => { onIdle = resolve; timer = setTimeout(resolve, timeoutMs); });
+        clearTimeout(timer);
+      }
+      // An attach still taking its lock at the timeout becomes active after
+      // it, so wrap up until no call is left. wrapUp is idempotent, and
+      // onClose puts each record in `finishing` before the call leaves
+      // `active`. New attaches get 503 and recovery skips while draining, so
+      // this ends once the last call has said goodbye.
+      while (active.size || starting.size) {
+        for (const call of active.values()) void call.wrapUp("service_restart");
+        await new Promise((resolve) => setTimeout(resolve, DRAIN_POLL_MS));
+      }
+      // Calls still running need their presence and attach lock renewed until here.
       if (presenceTimer) clearInterval(presenceTimer);
-      // close() resolves once each call is finalized, so every call is in
-      // `finishing` by the time they settle.
-      await Promise.allSettled([...active.values()].map(({ controller }) => controller.close()));
       await Promise.allSettled([...finishing]);
     },
   };

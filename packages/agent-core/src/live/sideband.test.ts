@@ -5,7 +5,7 @@ import OpenAI from "openai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocketServer, type WebSocket } from "ws";
 
-import { LiveCallController, type LiveCallSummary } from "./callController";
+import { LiveCallController, type LiveCallControllerOptions, type LiveCallSummary } from "./callController";
 
 // Runs the controller on the SDK's real sideband connection, against a local
 // server standing in for OpenAI.
@@ -22,7 +22,7 @@ afterEach(async () => {
 });
 
 /** Answers each attach in turn: 504 refuses it, a function accepts the connection. */
-async function sideband(attaches: Array<504 | ((socket: WebSocket) => void)>) {
+async function sideband(attaches: Array<504 | ((socket: WebSocket) => void)>, options: Partial<LiveCallControllerOptions> = {}) {
   const sockets = new WebSocketServer({ noServer: true });
   let count = 0;
   const http = createServer();
@@ -38,6 +38,7 @@ async function sideband(attaches: Array<504 | ((socket: WebSocket) => void)>) {
   await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
   const client = new OpenAI({ apiKey: "test", baseURL: `http://127.0.0.1:${(http.address() as AddressInfo).port}/v1` });
   const hangup = vi.spyOn(client.live.sessions, "hangup").mockResolvedValue(undefined as never);
+  const refer = vi.spyOn(client.live.sessions, "refer").mockResolvedValue(undefined as never);
   const closed: LiveCallSummary[] = [];
   const onStarted = vi.fn();
   const controller = new LiveCallController({
@@ -47,11 +48,14 @@ async function sideband(attaches: Array<504 | ((socket: WebSocket) => void)>) {
     setup: { agent: { generate: vi.fn() } as never, greeting: "Thanks for calling Northside Plumbing." },
     onStarted,
     onClose: (summary) => closed.push(summary),
+    ...options,
   });
-  return { controller, hangup, closed, onStarted, attempts: () => count };
+  return { controller, hangup, refer, closed, onStarted, attempts: () => count };
 }
 
 const send = (socket: WebSocket, event: Record<string, unknown>) => socket.send(JSON.stringify(event));
+// Calls `reply` for each command the controller sends.
+const onCommand = (socket: WebSocket, reply: (event: { type: string; event_id?: string }) => void) => socket.on("message", (data) => reply(JSON.parse(String(data))));
 
 describe("LiveCallController sideband", () => {
   it("retries an attach OpenAI's edge answers with a 504, and runs the call on the new connection", async () => {
@@ -92,5 +96,149 @@ describe("LiveCallController sideband", () => {
     expect(attempts()).toBe(1);
     expect(closed[0]).toMatchObject({ closeReason: "sideband_closed" });
     expect(hangup).toHaveBeenCalledWith("live_1");
+  });
+
+  it("says a goodbye before hanging up on a timeout", async () => {
+    let peer!: WebSocket;
+    const order: string[] = [];
+    const holder: { controller?: LiveCallController } = {};
+    const { controller, hangup, closed } = await sideband([(socket) => {
+      peer = socket;
+      send(socket, { type: "session.started" });
+      onCommand(socket, (event) => {
+        if (event.type !== "session.instructions.append" || event.event_id !== "wrap_up_silence_timeout") return;
+        order.push("goodbye");
+        send(socket, { type: "session.instructions.appended", client_event_id: event.event_id, start_ms: 300, end_ms: 300 });
+        send(socket, { type: "session.output_transcript.delta", delta: "It's been quiet, so I'll hang up now. Goodbye!", start_ms: 400, end_ms: 900 });
+      });
+    }], { silenceTimeoutMs: 100, onTimeout: (reason) => void holder.controller!.wrapUp(reason) });
+    holder.controller = controller;
+    hangup.mockImplementation((async () => {
+      order.push("hangup");
+      send(peer, { type: "session.closed", reason: "close_requested", usage: { seconds: 2 } });
+    }) as never);
+    controller.start();
+    await vi.waitFor(() => expect(closed).toHaveLength(1), { timeout: 5_000 });
+    expect(order).toEqual(["goodbye", "hangup"]);
+    expect(closed[0]).toMatchObject({ closeReason: "close_requested", usageConfirmed: true });
+  });
+
+  it("announces a transfer, refers the call once the announcement has played, and records the answer", async () => {
+    let peer!: WebSocket;
+    const order: string[] = [];
+    const transfers: string[] = [];
+    const holder: { controller?: LiveCallController } = {};
+    const generate = vi.fn(async () => {
+      holder.controller!.transferAfterAnnouncement("tel:+14165550199");
+      return { text: "The call is being transferred to a person at the business now.", steps: [{ toolCalls: [], toolResults: [] }] };
+    });
+    const { controller, refer, closed } = await sideband([(socket) => {
+      peer = socket;
+      send(socket, { type: "session.started" });
+      send(socket, { type: "session.input_transcript.delta", delta: "Can I speak to someone?", start_ms: 500, end_ms: 1_000 });
+      send(socket, { type: "session.delegation.created", delegation: { id: "item_1", target: "client", type: "delegation" }, offset_ms: 900 });
+      onCommand(socket, (event) => {
+        if (event.type !== "session.commentary.append") return;
+        order.push("announcement");
+        send(socket, { type: "session.output_transcript.delta", delta: "Sure, connecting you now.", start_ms: 1_200, end_ms: 1_800 });
+      });
+    }], { setup: { agent: { generate } as never }, onTransfer: (state) => transfers.push(state) });
+    holder.controller = controller;
+    // The carrier dials the destination, which answers, then hangs up on GPT-Live.
+    refer.mockImplementation((async () => {
+      order.push("refer");
+      send(peer, { type: "transport.ringing", event_id: "evt_1", session_id: "live_1" });
+      send(peer, { type: "transport.answered", event_id: "evt_2", session_id: "live_1" });
+      send(peer, { type: "session.closed", reason: "remote_hangup", usage: { seconds: 20 } });
+    }) as never);
+    controller.start();
+    await vi.waitFor(() => expect(closed).toHaveLength(1), { timeout: 5_000 });
+    expect(order).toEqual(["announcement", "refer"]);
+    expect(refer).toHaveBeenCalledWith("live_1", { target_uri: "tel:+14165550199" });
+    expect(transfers).toEqual(["referring", "referred", "completed"]);
+  });
+
+  it("passes a keypad press to the agent as caller input", async () => {
+    const generate = vi.fn(async (_options: { prompt: string }) => ({ text: "Confirmed.", steps: [{ toolCalls: [], toolResults: [] }] }));
+    const { controller, closed } = await sideband([(socket) => {
+      send(socket, { type: "session.started" });
+      send(socket, { type: "session.input_transcript.delta", delta: "Yes, that's my appointment.", start_ms: 500, end_ms: 1_000 });
+      send(socket, { type: "transport.dtmf.received", event: "1", event_id: "evt_1" });
+      send(socket, { type: "session.delegation.created", delegation: { id: "item_1", target: "client", type: "delegation" }, offset_ms: 900 });
+      onCommand(socket, (event) => {
+        if (event.type === "session.commentary.append") send(socket, { type: "session.closed", reason: "remote_hangup", usage: { seconds: 5 } });
+      });
+    }], { setup: { agent: { generate } as never } });
+    controller.start();
+    await vi.waitFor(() => expect(closed).toHaveLength(1));
+    expect(generate.mock.calls[0]![0].prompt).toContain("Caller: Yes, that's my appointment. [pressed 1]");
+  });
+
+  // Re-attaching after a worker died: a live session sends events at once,
+  // so a silent one is gone. The worker hangs it up and finishes the call.
+  it("takes a re-attached session that sends nothing as gone, and leaves the hangup to the worker", async () => {
+    const onFirstEvent = vi.fn();
+    const { controller, hangup, closed } = await sideband([() => undefined], { firstEventTimeoutMs: 200, onFirstEvent });
+    controller.start();
+    await vi.waitFor(() => expect(closed).toHaveLength(1));
+    expect(closed[0]).toMatchObject({ closeReason: "no_session_events", usageConfirmed: false });
+    expect(onFirstEvent).not.toHaveBeenCalled();
+    expect(hangup).not.toHaveBeenCalled();
+  });
+
+  it("doesn't take an error from an ended session as a sign of life", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const onFirstEvent = vi.fn();
+    const { controller, hangup, closed } = await sideband([(socket) => send(socket, { type: "error", error: { type: "invalid_request_error", message: "Session not found." } })], { firstEventTimeoutMs: 200, onFirstEvent });
+    controller.start();
+    await vi.waitFor(() => expect(closed).toHaveLength(1));
+    expect(closed[0]).toMatchObject({ closeReason: "no_session_events" });
+    expect(onFirstEvent).not.toHaveBeenCalled();
+    expect(hangup).not.toHaveBeenCalled();
+  });
+
+  // The retries take about 1.75 seconds, far past the 200 ms wait for an event.
+  it("neither hangs up nor takes the session as gone when a re-attach can't connect", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const { controller, hangup, closed, attempts } = await sideband([504, 504, 504, 504], { firstEventTimeoutMs: 200 });
+    controller.start();
+    await vi.waitFor(() => expect(closed).toHaveLength(1), { timeout: 5_000 });
+    expect(attempts()).toBe(4);
+    expect(closed[0]).toMatchObject({ closeReason: "sideband_closed" });
+    expect(hangup).not.toHaveBeenCalled();
+  });
+
+  it("carries on with a re-attached session that answers soon after a slow connection", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    let peer!: WebSocket;
+    const onFirstEvent = vi.fn();
+    const { controller, closed } = await sideband([504, (socket) => {
+      peer = socket;
+      setTimeout(() => send(socket, { type: "session.output_audio.delta", delta: Buffer.alloc(960).toString("base64"), start_ms: 95_000, end_ms: 95_020 }), 100);
+    }], { firstEventTimeoutMs: 200, onFirstEvent });
+    controller.start();
+    await vi.waitFor(() => expect(onFirstEvent).toHaveBeenCalledOnce());
+    expect(closed).toHaveLength(0);
+    send(peer, { type: "session.closed", reason: "remote_hangup", usage: { seconds: 130 } });
+    await vi.waitFor(() => expect(closed).toHaveLength(1));
+    expect(closed[0]).toMatchObject({ closeReason: "remote_hangup" });
+  });
+
+  it("carries on with a re-attached session that sends output audio, even silence", async () => {
+    let peer!: WebSocket;
+    const onFirstEvent = vi.fn();
+    const { controller, hangup, closed } = await sideband([(socket) => {
+      peer = socket;
+      send(socket, { type: "session.output_audio.delta", delta: Buffer.alloc(960).toString("base64"), start_ms: 95_000, end_ms: 95_020 });
+    }], { firstEventTimeoutMs: 200, onFirstEvent });
+    controller.start();
+    await vi.waitFor(() => expect(onFirstEvent).toHaveBeenCalledOnce());
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(closed).toHaveLength(0);
+    send(peer, { type: "session.closed", reason: "remote_hangup", usage: { seconds: 130 } });
+    await vi.waitFor(() => expect(closed).toHaveLength(1));
+    expect(closed[0]).toMatchObject({ closeReason: "remote_hangup", billedSeconds: 130, usageConfirmed: true });
+    expect(hangup).not.toHaveBeenCalled();
   });
 });

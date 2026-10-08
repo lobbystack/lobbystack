@@ -23,33 +23,38 @@ vi.mock("openai/resources/live/sideband/ws", () => ({
   },
 }));
 
-import { isVoice, LiveCallController, type DelegationTiming, type GreetingEvent, type LiveCallSetup, type LiveCallSummary, type LiveCallTurn } from "./callController";
+import { isVoice, LiveCallController, type DelegationTiming, type GreetingEvent, type LiveCallSetup, type LiveCallSummary, type LiveCallTransferState, type LiveCallTurn } from "./callController";
 
 type Generate = (options: { prompt: string; onStepEnd?: (step: unknown) => void }) => Promise<unknown>;
 
 const reply = (text: string) => ({ text, steps: [{ toolCalls: [], toolResults: [] }] });
 
-function setup(options: { phone?: boolean; silenceTimeoutMs?: number; generate?: Generate; setup?: Promise<LiveCallSetup>; onGreeting?: (event: GreetingEvent) => void } = {}) {
+function setup(options: { phone?: boolean; silenceTimeoutMs?: number; maxDurationMs?: number; firstEventTimeoutMs?: number; generate?: Generate; setup?: Promise<LiveCallSetup>; onGreeting?: (event: GreetingEvent) => void; refer?: ReturnType<typeof vi.fn> } = {}) {
   const generate = vi.fn(options.generate ?? (async () => ({ text: "We're open until 5.", steps: [{ toolCalls: [{ toolCallId: "call_1", toolName: "getBusinessHours" }], toolResults: [] }, { toolCalls: [], toolResults: [] }] })));
   const turns: LiveCallTurn[] = [];
   const closed: LiveCallSummary[] = [];
   const delegations: DelegationTiming[] = [];
+  const transfers: LiveCallTransferState[] = [];
   const onTimeout = vi.fn();
   const hangup = vi.fn(async () => undefined);
+  const refer = options.refer ?? vi.fn(async () => undefined);
   const controller = new LiveCallController({
-    client: { live: { sessions: { hangup } } } as never,
+    client: { live: { sessions: { hangup, refer } } } as never,
     sessionId: "live_1",
     phone: options.phone ?? true,
     setup: options.setup ?? { agent: { generate } as never, greeting: "Thanks for calling Northside Plumbing." },
     ...(options.silenceTimeoutMs ? { silenceTimeoutMs: options.silenceTimeoutMs } : {}),
+    ...(options.maxDurationMs ? { maxDurationMs: options.maxDurationMs } : {}),
+    ...(options.firstEventTimeoutMs ? { firstEventTimeoutMs: options.firstEventTimeoutMs } : {}),
     ...(options.onGreeting ? { onGreeting: options.onGreeting } : {}),
     onTurn: (turn) => turns.push(turn),
     onTimeout,
+    onTransfer: (state) => transfers.push(state),
     onDelegation: (timing) => delegations.push(timing),
     onClose: (summary) => closed.push(summary),
   });
   controller.start();
-  return { controller, socket: sockets.at(-1)!, generate, turns, closed, delegations, onTimeout, hangup };
+  return { controller, socket: sockets.at(-1)!, generate, turns, closed, delegations, transfers, onTimeout, hangup, refer };
 }
 
 const sentOfType = (socket: FakeSocket, type: string) => socket.sent.filter((event) => event.type === type) as Array<{ event_id: string; content: string; delegation_id: string | null }>;
@@ -331,14 +336,13 @@ describe("LiveCallController ending", () => {
     expect(hangup).toHaveBeenCalledWith("live_1");
   });
 
-  it("keeps the sideband open after a hang-up until session.closed brings the final usage", async () => {
+  it("keeps the sideband open after a hang-up until session.closed brings the final usage", () => {
     const { socket, controller, closed, hangup } = setup();
-    const done = controller.close();
+    controller.endSession();
     expect(hangup).toHaveBeenCalledWith("live_1");
     expect(socket.closed).toBe(false);
     expect(closed).toHaveLength(0);
     socket.emit("session.closed", { reason: "close_requested", usage: { seconds: 42 } });
-    await done;
     expect(closed).toEqual([expect.objectContaining({ billedSeconds: 42, usageConfirmed: true, closeReason: "close_requested" })]);
     expect(socket.closed).toBe(true);
   });
@@ -374,6 +378,40 @@ describe("LiveCallController ending", () => {
     expect(hangup).not.toHaveBeenCalled();
     expect(sockets).toHaveLength(2);
     expect(sockets[1]!.sent).toEqual([{ type: "session.close" }]);
+  });
+
+  it("detaches without hanging up or saving the turn in progress, for a worker that lost the call", () => {
+    const { socket, controller, closed, hangup, turns } = setup();
+    socket.emit("session.output_transcript.delta", { delta: "Thanks for calling.", end_ms: 500 });
+    socket.emit("session.input_transcript.delta", { delta: "I'd like to book", end_ms: 1_000 });
+    controller.detach();
+    expect(hangup).not.toHaveBeenCalled();
+    expect(sockets).toHaveLength(1);
+    expect(socket.closed).toBe(true);
+    expect(closed).toEqual([expect.objectContaining({ closeReason: "detached", usageConfirmed: false })]);
+    // The new owner saves the transcript from here.
+    expect(turns).toEqual([{ sequence: 1, speaker: "assistant", text: "Thanks for calling." }]);
+  });
+
+  it("times a re-attach's wait for the first event from when the connection opens, and leaves the hangup to the worker", async () => {
+    fakeTimers();
+    const { socket, closed, hangup } = setup({ firstEventTimeoutMs: 5_000 });
+    // Connecting takes a while: that isn't silence.
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(closed).toHaveLength(0);
+    socket.socket.emit("open");
+    await vi.advanceTimersByTimeAsync(4_999);
+    expect(closed).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(closed).toEqual([expect.objectContaining({ closeReason: "no_session_events" })]);
+    expect(hangup).not.toHaveBeenCalled();
+  });
+
+  it("leaves a re-attached session alone when the sideband never connects", () => {
+    const { socket, closed, hangup } = setup({ firstEventTimeoutMs: 5_000 });
+    socket.emit("close");
+    expect(closed).toEqual([expect.objectContaining({ closeReason: "sideband_closed" })]);
+    expect(hangup).not.toHaveBeenCalled();
   });
 
   it("leaves an already closed session alone", () => {
@@ -437,6 +475,271 @@ describe("LiveCallController transcript and silence", () => {
     expect(onTimeout).not.toHaveBeenCalled();
     finish();
     await vi.advanceTimersByTimeAsync(75_000);
+    expect(onTimeout).toHaveBeenCalledWith("silence_timeout");
+  });
+});
+
+describe("LiveCallController wrap-up", () => {
+  it("tells GPT-Live why the call is ending, and hangs up once the goodbye has played", async () => {
+    fakeTimers();
+    const { socket, controller, hangup, closed } = setup();
+    // The caller's words place the session timeline: 1,000 ms in, now.
+    socket.emit("session.input_transcript.delta", { delta: "So about that quote...", start_ms: 500, end_ms: 1_000 });
+    const done = controller.wrapUp("duration_limit");
+    expect(sentOfType(socket, "session.instructions.append")).toEqual([expect.objectContaining({ delegation_id: null, event_id: "wrap_up_duration_limit", content: expect.stringContaining("reached its time limit") })]);
+    await vi.advanceTimersByTimeAsync(1_000);
+    // The goodbye runs to 4,500 ms on the timeline: 2.5 seconds from now.
+    socket.emit("session.output_transcript.delta", { delta: "I'm sorry, we're out of time. Please call back. Goodbye!", start_ms: 2_000, end_ms: 4_500 });
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(hangup).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(hangup).toHaveBeenCalledWith("live_1");
+    socket.emit("session.closed", { reason: "close_requested", usage: { seconds: 300 } });
+    await done;
+    expect(closed).toEqual([expect.objectContaining({ billedSeconds: 300 })]);
+  });
+
+  it("hangs up when GPT-Live stays silent, and asks for the goodbye only once", async () => {
+    fakeTimers();
+    const { socket, controller, hangup } = setup();
+    void controller.wrapUp("silence_timeout");
+    void controller.wrapUp("service_restart");
+    expect(sentOfType(socket, "session.instructions.append")).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(hangup).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(hangup).toHaveBeenCalledWith("live_1");
+  });
+
+  it("doesn't ask for a second goodbye once the agent has ended the call", () => {
+    const { socket, controller } = setup();
+    controller.endAfterGoodbye();
+    void controller.wrapUp("service_restart");
+    expect(sentOfType(socket, "session.instructions.append")).toHaveLength(0);
+  });
+
+  it("starts the duration limit's goodbye 30 seconds early, or halfway through a call that reserved under a minute", async () => {
+    fakeTimers();
+    const { onTimeout } = setup({ maxDurationMs: 120_000 });
+    await vi.advanceTimersByTimeAsync(89_999);
+    expect(onTimeout).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(onTimeout).toHaveBeenCalledWith("duration_limit");
+    // A 30-second allowance still gets 15 seconds of talk.
+    const short = setup({ maxDurationMs: 30_000 });
+    await vi.advanceTimersByTimeAsync(14_999);
+    expect(short.onTimeout).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(short.onTimeout).toHaveBeenCalledWith("duration_limit");
+  });
+
+  it("counts the goodbye from OpenAI's acknowledgment, so speech already under way doesn't pass for it", async () => {
+    fakeTimers();
+    const { socket, controller, hangup } = setup();
+    // The caller's words place the session timeline: 1,000 ms in, now.
+    socket.emit("session.input_transcript.delta", { delta: "And the price?", start_ms: 500, end_ms: 1_000 });
+    // The receptionist is finishing a sentence when the limit hits.
+    socket.emit("session.output_transcript.delta", { delta: "It's forty dollars.", start_ms: 900, end_ms: 1_100 });
+    void controller.wrapUp("duration_limit");
+    await vi.advanceTimersByTimeAsync(300);
+    socket.emit("session.instructions.appended", { client_event_id: "wrap_up_duration_limit" });
+    // Measured from the request, that sentence would have ended the call by now.
+    await vi.advanceTimersByTimeAsync(1_700);
+    expect(hangup).not.toHaveBeenCalled();
+    // The goodbye starts at 2,500 ms on the timeline and runs to 5,000 ms.
+    socket.emit("session.output_transcript.delta", { delta: "We're out of time, please call back. Goodbye!", start_ms: 2_500, end_ms: 5_000 });
+    await vi.advanceTimersByTimeAsync(1_800);
+    expect(hangup).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(hangup).toHaveBeenCalledWith("live_1");
+  });
+});
+
+describe("LiveCallController transfer", () => {
+  it("refers the call only after the announcement has played, and completes it when the destination answers", async () => {
+    fakeTimers();
+    const holder: { controller?: LiveCallController } = {};
+    const { socket, controller, refer, transfers } = setup({ generate: async () => { holder.controller!.transferAfterAnnouncement("tel:+14165550199"); return reply("The call is being transferred to a person at the business now."); } });
+    holder.controller = controller;
+    // Outbound leg events mean nothing before a REFER.
+    socket.emit("transport.answered", { type: "transport.answered", session_id: "live_1" });
+    delegate(socket, "item_1", "Can I talk to someone?", 1_000);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sentOfType(socket, "session.commentary.append")).toHaveLength(1);
+    // The announcement runs to 3,000 ms on the timeline: 2 seconds from now.
+    socket.emit("session.output_transcript.delta", { delta: "Sure, connecting you now.", start_ms: 1_500, end_ms: 3_000 });
+    await vi.advanceTimersByTimeAsync(1_500);
+    expect(refer).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(refer).toHaveBeenCalledWith("live_1", { target_uri: "tel:+14165550199" });
+    expect(transfers).toEqual(["referring", "referred"]);
+    socket.emit("transport.answered", { type: "transport.answered", session_id: "live_1" });
+    expect(transfers).toEqual(["referring", "referred", "completed"]);
+  });
+
+  it("tells GPT-Live to offer a message when OpenAI refuses the REFER or the destination fails", async () => {
+    fakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const refer = vi.fn().mockRejectedValueOnce(new Error("Transfer not allowed")).mockResolvedValue(undefined);
+    const { socket, controller, transfers } = setup({ refer });
+    controller.transferAfterAnnouncement("tel:+14165550199");
+    await vi.advanceTimersByTimeAsync(4_400);
+    expect(transfers).toEqual(["referring", "failed"]);
+    expect(sentOfType(socket, "session.instructions.append")).toEqual([expect.objectContaining({ delegation_id: null, content: expect.stringContaining("offer to take a message") })]);
+    controller.transferAfterAnnouncement("tel:+14165550199");
+    await vi.advanceTimersByTimeAsync(4_400);
+    socket.emit("transport.failed", { type: "transport.failed", session_id: "live_1", error: { code: "busy", message: "Busy Here", type: "call_error" } });
+    expect(transfers).toEqual(["referring", "failed", "referring", "referred", "failed"]);
+    expect(sentOfType(socket, "session.instructions.append")).toHaveLength(2);
+  });
+
+  it("starts no second transfer while one is under way, nor once the call is ending", () => {
+    const { controller } = setup();
+    expect(controller.transferAfterAnnouncement("tel:+14165550199")).toBe(true);
+    expect(controller.transferAfterAnnouncement("tel:+14165550199")).toBe(false);
+    const ending = setup();
+    ending.controller.endAfterGoodbye();
+    expect(ending.controller.transferAfterAnnouncement("tel:+14165550199")).toBe(false);
+  });
+
+  it("sends no REFER when the call starts ending during the announcement", async () => {
+    fakeTimers();
+    const { controller, refer, transfers } = setup();
+    controller.transferAfterAnnouncement("tel:+14165550199");
+    void controller.wrapUp("duration_limit");
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(refer).not.toHaveBeenCalled();
+    expect(transfers).toEqual([]);
+  });
+
+  it("takes a REFER with no outcome after 30 seconds as failed, so another transfer can be tried", async () => {
+    fakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { socket, controller, refer, transfers } = setup();
+    controller.transferAfterAnnouncement("tel:+14165550199");
+    // With no announcement heard, the REFER goes out 4.2 seconds in.
+    await vi.advanceTimersByTimeAsync(4_200);
+    expect(transfers).toEqual(["referring", "referred"]);
+    // Neither session.closed nor a transport outcome: the caller is still on the session.
+    await vi.advanceTimersByTimeAsync(29_999);
+    expect(transfers).toEqual(["referring", "referred"]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(transfers).toEqual(["referring", "referred", "failed"]);
+    expect(sentOfType(socket, "session.instructions.append")).toEqual([expect.objectContaining({ content: expect.stringContaining("offer to take a message") })]);
+    expect(controller.transferAfterAnnouncement("tel:+14165550199")).toBe(true);
+    await vi.advanceTimersByTimeAsync(4_400);
+    expect(refer).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops waiting for the transfer's outcome once the session closes", async () => {
+    fakeTimers();
+    const { socket, controller, transfers } = setup();
+    controller.transferAfterAnnouncement("tel:+14165550199");
+    await vi.advanceTimersByTimeAsync(4_400);
+    socket.emit("session.closed", { reason: "remote_hangup", usage: { seconds: 20 } });
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(transfers).toEqual(["referring", "referred"]);
+  });
+});
+
+describe("LiveCallController late attach", () => {
+  // Like the SDK: "event" for every message, then the event by its type.
+  const receive = (socket: FakeSocket, event: Record<string, unknown>) => {
+    socket.emit("event", event);
+    socket.emit(event.type as string, event);
+  };
+
+  it("notices an attach that missed the start of the call, and tells the agent", async () => {
+    const { socket, generate, closed } = setup();
+    receive(socket, { type: "session.input_transcript.delta", delta: "and it's leaking under the sink.", start_ms: 8_200, end_ms: 9_000 });
+    receive(socket, { type: "session.delegation.created", delegation: { id: "item_1" }, offset_ms: 8_900 });
+    await vi.waitFor(() => expect(generate).toHaveBeenCalled());
+    expect(generate.mock.calls[0]![0].prompt).toContain("The conversation above is missing its start, because the backend joined the call late.");
+    socket.emit("session.closed", { reason: "remote_hangup" });
+    expect(closed[0]).toMatchObject({ lateAttach: true, firstEventMs: 8_200 });
+  });
+
+  it("doesn't flag an attach that saw session.started", async () => {
+    const { socket, generate, closed } = setup();
+    receive(socket, { type: "session.started" });
+    receive(socket, { type: "session.input_transcript.delta", delta: "Hi, are you open today?", start_ms: 4_000, end_ms: 5_000 });
+    receive(socket, { type: "session.delegation.created", delegation: { id: "item_1" }, offset_ms: 4_900 });
+    await vi.waitFor(() => expect(generate).toHaveBeenCalled());
+    expect(generate.mock.calls[0]![0].prompt).not.toContain("missing its start");
+    socket.emit("session.closed", { reason: "remote_hangup" });
+    expect(closed[0]).toMatchObject({ lateAttach: false, firstEventMs: 4_000 });
+  });
+
+  it("flags a phone attach that never sees session.started", async () => {
+    fakeTimers();
+    const { socket, closed } = setup();
+    socket.socket.emit("open");
+    await vi.advanceTimersByTimeAsync(3_500);
+    socket.emit("session.closed", { reason: "remote_hangup" });
+    expect(closed[0]?.lateAttach).toBe(true);
+  });
+});
+
+describe("LiveCallController keypad input", () => {
+  it("records a keypress as caller input that the next request sees, and counts it as activity", async () => {
+    fakeTimers();
+    const { socket, generate, onTimeout } = setup({ silenceTimeoutMs: 75_000 });
+    socket.emit("session.input_transcript.delta", { delta: "I have a billing question.", start_ms: 500, end_ms: 1_000 });
+    socket.emit("session.output_transcript.delta", { delta: "Press 1 to confirm.", start_ms: 1_500, end_ms: 3_000 });
+    await vi.advanceTimersByTimeAsync(70_000);
+    socket.emit("transport.dtmf.received", { type: "transport.dtmf.received", event: "1", event_id: "evt_1" });
+    await vi.advanceTimersByTimeAsync(70_000);
+    expect(onTimeout).not.toHaveBeenCalled();
+    socket.emit("session.delegation.created", { delegation: { id: "item_1" }, offset_ms: 70_900 });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(generate.mock.calls[0]![0].prompt).toContain("Receptionist: Press 1 to confirm.\nCaller: [pressed 1]");
+  });
+});
+
+// OpenAI doesn't document session.output_audio.delta for sidebands. If it
+// stops arriving, the transcript alone keeps the timing working.
+describe("LiveCallController without reflected output audio", () => {
+  it("hears the greeting in the transcript, so it sends no fallback", async () => {
+    fakeTimers();
+    const greetingEvents: GreetingEvent[] = [];
+    const { socket } = setup({ onGreeting: (event) => greetingEvents.push(event) });
+    socket.socket.emit("open");
+    startSession(socket);
+    await vi.advanceTimersByTimeAsync(2_000);
+    socket.emit("session.output_transcript.delta", { delta: "Thanks for calling Northside Plumbing.", start_ms: 2_000, end_ms: 3_500 });
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(greetings(socket)).toHaveLength(0);
+    expect(greetingEvents).toEqual([expect.objectContaining({ step: "spoken", attempt: 0 })]);
+  });
+
+  it("sends the fallback when the transcript stays empty", async () => {
+    fakeTimers();
+    const { socket } = setup();
+    socket.socket.emit("open");
+    startSession(socket);
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(greetings(socket)).toHaveLength(1);
+  });
+
+  it("waits for the goodbye in the transcript to play out before hanging up", async () => {
+    fakeTimers();
+    const { socket, controller, hangup } = setup();
+    socket.emit("session.input_transcript.delta", { delta: "Bye!", start_ms: 500, end_ms: 1_000 });
+    controller.endAfterGoodbye();
+    socket.emit("session.output_transcript.delta", { delta: "Goodbye, have a great day!", start_ms: 1_200, end_ms: 4_000 });
+    await vi.advanceTimersByTimeAsync(2_800);
+    expect(hangup).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(hangup).toHaveBeenCalledWith("live_1");
+  });
+
+  it("times out after a stretch with no transcript", async () => {
+    fakeTimers();
+    const { socket, onTimeout } = setup({ silenceTimeoutMs: 75_000 });
+    socket.emit("session.output_transcript.delta", { delta: "Anything else?", start_ms: 1_000, end_ms: 2_000 });
+    await vi.advanceTimersByTimeAsync(74_999);
+    expect(onTimeout).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
     expect(onTimeout).toHaveBeenCalledWith("silence_timeout");
   });
 });

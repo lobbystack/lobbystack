@@ -49,6 +49,12 @@ describe("directToolAnswer", () => {
     expect(directToolAnswer(step({ toolName: "endCall", output: { ok: true } }))).toBe("The call is ending.");
   });
 
+  // The REFER waits for GPT-Live to announce the transfer, so the answer can't wait for a model step.
+  it("announces a transfer at once, and leaves a refused one to the model", () => {
+    expect(directToolAnswer(step({ toolName: "transferCall", input: { callerRequested: true, urgent: false }, output: { ok: true, transferring: true } }))).toBe("The call is being transferred to a person at the business now.");
+    expect(directToolAnswer(step({ toolName: "transferCall", output: { ok: false, reason: "Transfers aren't allowed right now. Offer to take a message." } }))).toBeUndefined();
+  });
+
   it("leaves refusals, failures, other tools and plain replies to the model", () => {
     expect(directToolAnswer(step({ toolName: "requestAppointment", output: { ok: false, reason: "Ask for a callback number first." } }))).toBeUndefined();
     expect(directToolAnswer(step({ toolName: "takeMessage" }))).toBeUndefined();

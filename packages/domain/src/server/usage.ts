@@ -1,7 +1,7 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 
 import { billingAccounts, billingUsageEvents, billingUsageMonths, businesses, enqueueOutbox, type DatabaseTransaction } from "@lobbystack/db";
-import { billingErrorCodes, billingPlanCatalog, isBillingPlanSlug, liveSubscriptionStates, type BillingPlanSlug } from "@lobbystack/shared";
+import { billingErrorCodes, billingPlanCatalog, isBillingPlanSlug, liveSubscriptionStates, MAX_PHONE_CALL_MS, type BillingPlanSlug } from "@lobbystack/shared";
 
 export type NonAiBillingUsageKind = "voice_seconds" | "alert_sms_segments" | "outbound_call_attempts" | "chat_ai_tokens";
 
@@ -224,7 +224,9 @@ export async function reserveUsageInTransaction(tx: DatabaseTransaction, input: 
     const remainingIncluded = included === null ? 0 : Math.max(0, included - current.usage.voice_seconds);
     const remainingCap = billing.capCents === null ? 0 : Math.max(0, billing.capCents - current.rawSpendCents);
     const capSeconds = rateCents(billing.plan, input.usageKind) > 0 ? Math.floor(remainingCap / rateCents(billing.plan, input.usageKind)) : 0;
-    quantity = billingPlanCatalog[billing.plan].overagesBillable ? (billing.capCents === null ? 0 : remainingIncluded + capSeconds) : remainingIncluded;
+    const remaining = billingPlanCatalog[billing.plan].overagesBillable ? (billing.capCents === null ? 0 : remainingIncluded + capSeconds) : remainingIncluded;
+    // One call holds at most its longest possible length, so concurrent calls share what remains.
+    quantity = Math.min(MAX_PHONE_CALL_MS / 1_000, remaining);
   }
   quantity = Math.max(0, quantity ?? 0);
   if (quantity <= 0) {

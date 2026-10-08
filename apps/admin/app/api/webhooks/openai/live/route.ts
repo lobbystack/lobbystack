@@ -11,11 +11,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // SIP "To"/"From" headers look like `<sip:+15551234567@host>`, `"Name" <sip:...>`
-// or `tel:+1555...`. Carriers sometimes drop the "+", so restore it.
-function phoneFromSipHeader(value: string | undefined): string | undefined {
-  const digits = value?.match(/(?:sip|tel):(\+?\d{6,15})\b/)?.[1];
-  if (!digits) return undefined;
-  return digits.startsWith("+") ? digits : `+${digits.length === 10 ? `1${digits}` : digits}`;
+// or `tel:+1555...`, and one header can list several, comma-separated. Carriers
+// sometimes drop the "+", so restore it.
+function phonesFromSipHeader(value: string | undefined): string[] {
+  return [...(value ?? "").matchAll(/(?:sip|tel):(\+?\d{6,15})\b/g)].map(([, digits = ""]) => digits.startsWith("+") ? digits : `+${digits.length === 10 ? `1${digits}` : digits}`);
 }
 
 // OpenAI calls this when Twilio routes a call to our project's SIP endpoint.
@@ -36,14 +35,17 @@ export async function POST(request: Request) {
   timing.eventAgeMs = Math.max(0, Date.now() - event.created_at * 1000);
 
   const sessionId = event.data.session_id;
-  const header = (name: string) => event.data.sip_headers.find((item) => item.name.toLowerCase() === name)?.value;
   // Twilio trunks rewrite "To" to our OpenAI SIP URI and keep the dialled
-  // number in "Diversion".
-  const to = phoneFromSipHeader(header("diversion")) ?? phoneFromSipHeader(header("to"));
-  const from = phoneFromSipHeader(header("from"));
+  // number in "Diversion". A forwarded call can carry several Diversions, the
+  // first of which may be the business's old line, so every number is a
+  // candidate, in this order.
+  const dialledHeaders = ["diversion", "to", "p-called-party-id"];
+  const candidates = dialledHeaders.flatMap((name) => event.data.sip_headers.filter((item) => item.name.toLowerCase() === name).flatMap((item) => phonesFromSipHeader(item.value).map((phone) => ({ header: item.name, phone }))));
+  // Undefined when the caller withheld their number.
+  const from = phonesFromSipHeader(event.data.sip_headers.find((item) => item.name.toLowerCase() === "from")?.value)[0];
   // Only the dialled-number headers: "From" is the caller's own number.
-  const routing = event.data.sip_headers.filter((item) => ["to", "diversion", "p-called-party-id"].includes(item.name.toLowerCase()));
-  if (!to) {
+  const routing = event.data.sip_headers.filter((item) => dialledHeaders.includes(item.name.toLowerCase()));
+  if (!candidates.length) {
     // No deployment can route a call without a dialled number.
     console.warn("[live] incoming call without a dialled number", JSON.stringify({ sessionId, routing }));
     await client.live.sessions.reject(sessionId, { status_code: 404 }).catch(() => undefined);
@@ -54,9 +56,13 @@ export async function POST(request: Request) {
   // incoming call to both. Only the deployment that owns the number may accept
   // or reject it; until ownership is known, this deployment leaves the call alone.
   let businessId: string | null | undefined;
+  let routed: (typeof candidates)[number] | undefined;
   try {
-    const resolved = await getAppDatabase().db.execute<{ business_id: string | null }>(sql`select app.resolve_business_by_phone(${to}) as business_id`);
-    businessId = resolved.rows[0]?.business_id;
+    const phones = sql.join(candidates.map(({ phone }) => sql`${phone}`), sql`, `);
+    const resolved = await getAppDatabase().db.execute<{ business_id: string | null; position: number }>(sql`select app.resolve_business_by_phone(phone) as business_id, position::int from unnest(array[${phones}]::text[]) with ordinality as candidate(phone, position) order by position`);
+    const match = resolved.rows.find((row) => row.business_id);
+    businessId = match?.business_id;
+    routed = match && candidates[match.position - 1];
     timing.mark("lookup");
   } catch (error) {
     // Ownership is unknown: don't reject a call that may belong to the other
@@ -64,13 +70,14 @@ export async function POST(request: Request) {
     console.error("[live] couldn't look up the dialled number", error instanceof Error ? error.message : error);
     return new NextResponse(null, { status: 503 });
   }
-  if (!businessId) {
-    console.info("[live] incoming call for a number this deployment doesn't serve", JSON.stringify({ sessionId, to, routing }));
+  if (!businessId || !routed) {
+    console.info("[live] incoming call for a number this deployment doesn't serve", JSON.stringify({ sessionId, routing }));
     return new NextResponse(null, { status: 200 });
   }
+  timing.routedBy = routed.header;
 
   try {
-    return await answerCall(client, { sessionId, businessId, from, to, timing });
+    return await answerCall(client, { sessionId, businessId, from, to: routed.phone, timing });
   } catch (error) {
     console.error("[live] incoming call failed", error instanceof Error ? error.message : error);
     await client.live.sessions.reject(sessionId, { status_code: 503 }).catch(() => undefined);
@@ -87,11 +94,13 @@ function createTiming() {
   const steps: Record<string, number> = {};
   return {
     eventAgeMs: undefined as number | undefined,
+    // The header whose number picked the business.
+    routedBy: undefined as string | undefined,
     mark(step: string) {
       steps[`${step}Ms`] = Math.round(performance.now() - receivedAt);
     },
     log(sessionId: string) {
-      console.info(JSON.stringify({ event: "live.incoming", sessionId, ...(this.eventAgeMs !== undefined ? { eventAgeMs: this.eventAgeMs } : {}), ...steps }));
+      console.info(JSON.stringify({ event: "live.incoming", sessionId, ...(this.eventAgeMs !== undefined ? { eventAgeMs: this.eventAgeMs } : {}), ...(this.routedBy ? { routedBy: this.routedBy } : {}), ...steps }));
     },
   };
 }
@@ -107,7 +116,7 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
   const domain = createWorkerDomainContext();
   const [loaded, started] = await Promise.allSettled([
     getCachedBusinessSnapshot(domain, { businessId: input.businessId }),
-    startLivePhoneCall(domain, { businessId: input.businessId, sessionId: input.sessionId, from: input.from ?? "unknown", to: input.to }),
+    startLivePhoneCall(domain, { businessId: input.businessId, sessionId: input.sessionId, from: input.from, to: input.to }),
   ]);
   input.timing.mark("record");
   if (started.status === "rejected") {
@@ -138,13 +147,16 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
     await finishLiveCall(domain, { businessId: input.businessId, callId: call.callId, seconds: 0, end: "setup_failed" });
     return new NextResponse(null, { status: 200 });
   }
-  const attach = () => attachWorkerToLiveSession({ sessionId: input.sessionId, businessId: input.businessId, callId: call.callId, conversationId: call.conversationId, channel: "voice", ...(input.from ? { callerPhone: input.from } : {}) });
+  // A retried delivery gets the same length limit, read back from the first
+  // one's reservation. Its call may be under way, so it attaches as a resume:
+  // the worker numbers turns after the saved ones and skips the greeting.
+  const attach = (resume = false) => attachWorkerToLiveSession({ sessionId: input.sessionId, businessId: input.businessId, callId: call.callId, conversationId: call.conversationId, channel: "voice", ...(input.from ? { callerPhone: input.from } : {}), ...(call.maxDurationMs !== undefined ? { maxDurationMs: call.maxDurationMs } : {}), ...(resume ? { resume } : {}) });
   // A retried delivery. The first one may have died before accepting or before
   // the worker attached, so finish the job without touching the call record:
   // accepting an accepted session just fails, and attaching is idempotent.
   if (call.duplicate) {
     await client.live.sessions.accept(input.sessionId, { session: buildPhoneSessionConfig(snapshot) }).catch(() => undefined);
-    await attach().catch(() => undefined);
+    await attach(true).catch(() => undefined);
     return new NextResponse(null, { status: 200 });
   }
   try {

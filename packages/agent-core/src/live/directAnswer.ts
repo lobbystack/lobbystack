@@ -102,6 +102,8 @@ const FORMATTERS: Record<string, Formatter> = {
     return `The appointment request is saved for the team${details ? ` (${details})` : ""}. The team will contact the caller to confirm the time.`;
   },
   endCall: (_input, output) => (output.ok === true ? "The call is ending." : undefined),
+  // The REFER waits until GPT-Live has said this, so it goes out at once.
+  transferCall: (_input, output) => (output.ok === true && output.transferring === true ? "The call is being transferred to a person at the business now." : undefined),
   searchKnowledge: (_input, output) => knowledgeAnswer(output),
 };
 

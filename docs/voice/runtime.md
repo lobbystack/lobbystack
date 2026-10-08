@@ -31,7 +31,9 @@ GPT-Live waits for the caller by default. To make it greet first, the admin star
 
 If the worker hears no voice 4 seconds after its connection opens and the caller hasn't spoken, it sends the greeting command once more. It logs each step as `live.greeting` with `step`, `attempt`, `trigger` and `sinceAttachMs`. A `spoken` step with `attempt` 0 means the starting history did it.
 
-The sideband also reflects `session.output_audio.delta` events, which OpenAI doesn't document for sidebands. They carry the receptionist's audio as 16-bit PCM at 24 kHz, silence included, because GPT-Live is full duplex. The worker counts a chunk as speech only when it's loud, for the greeting, the goodbye and the silence timeout. Words in the output transcript count as speech too. `live.closed` logs the events in `outputAudio`. Latency telemetry measures the receptionist's speech from the output transcript.
+The sideband also reflects `session.output_audio.delta` events, which OpenAI doesn't document for sidebands. They carry the receptionist's audio as 16-bit PCM at 24 kHz, silence included, because GPT-Live is full duplex. The worker counts a chunk as speech only when it's loud, for the greeting, the goodbye and the silence timeout. Words in the output transcript count as speech too, so all three keep working if OpenAI stops sending the audio events. `live.closed` logs the events in `outputAudio`. Latency telemetry measures the receptionist's speech from the output transcript.
+
+Keypad presses on phone calls reach the sideband as `transport.dtmf.received`, an event OpenAI sends only to sidebands. The worker adds each press to the caller's turn as `[pressed 1]`. The saved transcript and the next delegated request both show it, and a press resets the silence timeout.
 
 The worker logs each answer as `live.delegation` with `agentMs`, `totalMs`, `queueMs` (time waiting for an earlier request), `tools`, `modelSteps`, `directAnswer`, `stepMs` (each model step with the tools it called), `toolMs` (time in tools), `failed` and `superseded`. It also records each answer's tokens and cost as an AI generation with the operation `voice.delegation`.
 
@@ -40,12 +42,16 @@ The worker logs each answer as `live.delegation` with `agentMs`, `totalMs`, `que
 A Twilio Elastic SIP trunk sends calls for its numbers to your OpenAI project's SIP address. The call then goes through these steps:
 
 1. OpenAI sends a `live.transport.incoming` webhook to `/api/webhooks/openai/live` on the admin app.
-2. The admin reads the dialled number from the SIP `Diversion` header, then falls back to `To`, and finds the business.
-3. The admin records the call and checks the plan's minutes while it loads the business snapshot. It rejects the call with SIP 486 (busy) when the plan is out of minutes, and 603 when the caller is blocked.
-4. The admin accepts the call with the business's instructions, then asks the worker to attach.
+2. The admin finds the business from the dialled number. It tries each number in the SIP `Diversion` headers in order, then `To` and `P-Called-Party-ID`, and uses the first one that belongs to a business. On a forwarded call, the first `Diversion` can hold the business's old line.
+3. The admin records the call and reserves minutes for it while it loads the business snapshot. A call reserves 30 minutes, or what the plan has left when that's less. Two calls fit at once when the plan has more than 30 minutes left. The admin rejects the call with SIP 486 (busy) when the plan is out of minutes, and 603 when the caller is blocked.
+4. The admin accepts the call with the business's instructions, then asks the worker to attach. It passes the reserved length as the call's limit, or no limit on an unlimited plan.
 5. The worker opens the sideband, then loads the business, speaks the greeting, and handles the call until it ends.
 
-The caller hears ringing until step 4. The admin logs `live.incoming` with the milliseconds from the webhook's arrival to each step (`lookupMs`, `recordMs`, `acceptMs`, `attachMs`) and `eventAgeMs`, a rough delivery delay with one-second precision.
+OpenAI delivers the webhook again when the admin doesn't answer it, for example after a crash. A repeated delivery keeps the first one's call record and limit. It accepts the session again, which fails harmlessly if the first delivery did it, and asks the worker to attach as a resume. If no worker holds the session yet, the one that takes it reads the call's saved transcript before it saves a turn. New turns follow the saved ones, and a call that already has a transcript gets no greeting fallback. A first delivery's attach skips that read.
+
+The caller hears ringing until step 4. The admin logs `live.incoming` with the milliseconds from the webhook's arrival to each step (`lookupMs`, `recordMs`, `acceptMs`, `attachMs`) and `eventAgeMs`, a rough delivery delay with one-second precision. `routedBy` names the header whose number picked the business.
+
+A caller who withholds their number gets a new contact with no number, the same as a browser caller. The agent can't block that contact. The worker also skips the call's Twilio price lookup. The trunk carries every business's calls, so a match on start time alone could pick another business's call.
 
 ## Follow a browser call
 
@@ -64,20 +70,86 @@ Once attached, the worker owns the call until OpenAI closes the session. It:
 
 - speaks the business greeting as soon as the session starts
 - saves each caller and receptionist turn to the transcript
-- transfers phone calls with a SIP REFER to the destination number
+- transfers phone calls with a SIP REFER to the destination number, once GPT-Live has told the caller
 - hangs up after the receptionist's goodbye has played, when the agent ends the call
-- ends the call after 75 seconds without speech or audio from either side, or at the duration limit: 30 minutes for phone calls, and the plan's remaining minutes for browser calls. A request still being answered pauses the silence timer.
+- ends the call after 75 seconds without speech or keypad presses from either side, or at the duration limit. The limit is the minutes the call reserved, and at most 30 minutes. When the admin sends no limit, as on an unlimited plan, the call stops at 30 minutes. A request still being answered pauses the silence timer.
 - records the final call state, billed seconds, and estimated cost
-- copies OpenAI's stored recording into LobbyStack storage, where it follows the plan's retention
+- queues a copy of OpenAI's stored recording into LobbyStack storage, where the copy follows the plan's retention (see [Recordings](#recordings))
 - reports the call to the dashboard's live-call count
+
+Before a timeout ends the call, the worker tells GPT-Live why and asks it for a short goodbye, then hangs up once the goodbye has played. It listens for the goodbye from the moment OpenAI acknowledges the command, so a sentence GPT-Live was already saying doesn't pass for it. Without an acknowledgment within 2 seconds, it listens from the request. GPT-Live can ignore a command appended mid-call, so the worker hangs up anyway after 4 seconds of silence, or 15 seconds in all. The duration limit's goodbye starts 30 seconds early, so it fits inside the reserved minutes. A call that reserved less than a minute gets half its length to talk instead, so a 30-second reservation still gets 15 seconds of conversation.
+
+When a transfer is already under way or the call is ending, the transfer tool reports that the transfer couldn't start, so GPT-Live doesn't announce one, and no transfer attempt is used. Otherwise the tool reserves one of the plan's transfer attempts, then answers at once so GPT-Live can announce the transfer. The worker sends the REFER after the announcement has played, unless the call started ending in the meantime. From the moment the REFER goes out, the worker counts the call as transferred, so a `session.closed` that arrives before OpenAI answers the REFER still records the transfer. The call record's transfer state shows how far the transfer got:
+
+- `referred`: OpenAI accepted the REFER. Nobody has answered yet.
+- `completed`: the sideband reported `transport.answered`, so the destination picked up.
+- `failed`: OpenAI refused the REFER, the sideband reported `transport.failed`, or the session was still open 30 seconds after `referred`. The worker tells GPT-Live, which offers to take a message, and the operator gets a transfer alert. The agent can then try another transfer.
+
+OpenAI documents `transport.answered` and `transport.failed` for outbound SIP legs. The worker treats the leg the carrier dials for a REFER as one. An accepted REFER ends OpenAI's leg, so `session.closed` follows soon after. If the session closes without either event, the transfer stays at `referred`. If neither the close nor an event arrives within 30 seconds, the caller is still talking to GPT-Live, and the worker records the transfer as `failed`.
 
 The worker ends phone calls with OpenAI's SIP hangup and browser calls with `session.close`. Either way it keeps the sideband open until `session.closed` brings the final usage, for up to 15 seconds. If the connection drops first, it records the latest `session.usage.updated` seconds, or its own measurement when that's larger, and logs `usageConfirmed: false` on `live.closed`.
 
 If the sideband connection fails before the session has sent anything, for example when OpenAI answers it with a 504, the worker reconnects up to 3 times, after about 250 ms, 500 ms and 1 second. Once the session has sent an event, a dropped sideband ends the call, because a new connection replays the last 3 seconds of events and could answer a request twice.
 
+The replay window also limits how late the worker can attach. The admin gives a cold worker 10 seconds, but an attach more than 3 seconds after a phone call's session started misses `session.started` and the caller's first words. The delegation event carries no request text, so the worker can't recover them. It flags the attach as late when `session.started` never arrives, or when its first event sits more than 3.5 seconds into the session. Each delegated request then tells the agent that the conversation is missing its start, so the agent asks the caller for missing details instead of guessing. `live.closed` logs `lateAttach` and `firstEventMs`, the session time of the first event the worker received.
+
 If the worker can't attach, the admin ends the session and records the call as `setup_failed`, so nothing talks or bills without the worker. A browser session that never started still costs OpenAI's 15-second setup charge, so the admin records those 15 seconds. The admin has no sideband, so it asks the worker to close browser sessions at `/internal/live/end`.
 
-Only one worker answers each session. The worker takes a lock in Redis, `live-attach:<session id>`, when it attaches and renews it while the call runs.
+A worker that is shutting down answers the attach with HTTP 503 and closes the connection, so the admin's retry doesn't reach it again over a kept-alive connection. The admin waits 250 ms and retries, then waits 750 ms and retries once more, all within the same 10-second timeout. That gives the deploy's new instance a chance to take the call.
+
+Only one worker answers each session. The worker takes a lock in Redis, `live-attach:<session id>`, when it attaches and renews it every 10 seconds while the call runs. The lock expires 30 seconds after the last renewal. If Redis loses the lock while its worker is alive, for example after a Redis restart, the worker takes it back at its next renewal.
+
+Each renewal checks that the worker still holds the lock. A worker that couldn't reach Redis for longer than 30 seconds can find that a recovery job gave the call to another worker. It then detaches: it closes its sideband without hanging up, leaves the call record and the transcript to the new owner, and logs `live.detached`. When a call ends, the worker keeps the lock until it has finalized the call record, so a recovery job can't take the ending call and finish it with estimated seconds. It then deletes the lock only if it still holds it, so it never frees a lock another worker took over.
+
+## Deploy the worker during calls
+
+When the worker gets SIGTERM or SIGINT, it drains instead of hanging up:
+
+1. `/health/ready` and new attaches return HTTP 503. The admin retries a refused attach, which gives the new deployment a chance to take the call.
+2. The worker stops taking background jobs. Calls in progress go on until they end, up to the drain timeout.
+3. At the drain timeout, GPT-Live tells each remaining caller that the service is restarting, apologizes and asks them to call back. The worker hangs up once that goodbye has played. The call record gets the disposition `service_restart`, and billing counts the call like any other. An attach that was still taking its lock at the timeout becomes active after it, and gets the same goodbye. The recovery job takes no calls while the worker drains.
+4. The worker waits until every call record is finalized, then closes its database pools and exits.
+
+Railway sends SIGKILL `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` after SIGTERM. The default is 0, so every deploy cuts calls off. On the worker service, add `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` as a service variable set to `1860` (31 minutes), so a 30-minute call can finish on its own. Add it as a variable rather than only in the service settings: the worker reads it and drains for that long minus 35 seconds, which leaves time for the goodbyes and finalization. The new deployment takes new calls while the old one drains.
+
+On other platforms, set `LIVE_DRAIN_TIMEOUT_MS` to the drain timeout. With neither variable set, the worker wraps up calls as soon as it gets the signal. The worker image starts Node directly, so Node receives the signal. A wrapper such as `npm start` would swallow it.
+
+## Recover calls after a worker crash
+
+If the worker process dies mid-call, nobody answers the call's delegations, and its call record stays open with its minutes reserved. A scheduled job, `live.recoverOrphans`, runs every minute for each business and takes those calls over:
+
+1. It lists the business's open GPT-Live calls, phone and browser, that started between 60 seconds and 2 hours ago.
+2. It leaves alone a call that saved a transcript turn in the last 45 seconds, because a worker is still running it.
+3. For each other call, it tries to take the attach lock. A missing lock means the call has no worker. When another worker holds the lock, the job leaves the call alone, and two workers running the job at once can't both take it.
+4. It hangs up a call that has run past its reserved length and finishes its record. It stops waiting for the hangup after 5 seconds, so a slow OpenAI can't hold up the job or a drain.
+5. It attaches to any other call from this worker, with a request rebuilt from the call record: the channel, the conversation, the caller's number, intake-only mode for prospect demos, and what's left of the reserved length. New transcript turns follow the ones already saved, and the worker doesn't send the greeting again.
+
+No call runs longer than 30 minutes, so an open record older than 2 hours belongs to no running call. The job leaves those for an operator to close, which keeps old records out of the current period's usage and Polar sync. `scripts/operations/voice-recovery.ts` closes old browser calls. It doesn't cover phone calls.
+
+A live session sends events as soon as a sideband connects: the sideband replays the last 3 seconds, and output audio flows even through silence. If 5 seconds pass after the connection opens with nothing but errors, the worker treats the session as gone. It hangs up, which does nothing to an ended session, and stops waiting for the hangup after 5 seconds. Once the hangup goes through, the worker finishes the call as `connection_lost`. The billed length runs from the call's start to its latest saved sign of activity, its last transcript turn or its media start, and stops at the reserved length.
+
+The wait for the first event starts when the connection opens, so a slow connection doesn't count as silence. If the sideband can't connect at all, or the hangup fails, the worker leaves the session running. It releases the lock, logs `live.recovery_deferred`, and the next run tries again. Once the call passes its reserved length, step 4 hangs it up and finishes it, which ends the retries.
+
+A session that answers carries on with the new worker. Delegations made between the crash and the re-attach went unanswered. The transcript also misses what the caller and GPT-Live said in that gap, apart from the 3 seconds the sideband replays, so the agent works from a conversation without its start, as after a late attach. When the call ends, OpenAI's usage in `session.closed` covers the whole session and decides the billed seconds. Without it, the worker measures from the call's original start.
+
+The worker logs `live.recovered` when a session answers, with `gapMs`, the time since the call's last sign of activity. It logs `live.orphan_finished` when it finishes a call itself, with `reason` (`session_gone` or `past_reservation`) and `measuredSeconds`. The job does nothing when `LIVE_PROTOTYPE_ENABLED` isn't `true` or Redis is down, because without Redis it can't tell a dead worker from a live one.
+
+## Recordings
+
+Sessions run with `store: true` (see `packages/agent-core/src/live/session.ts`), so OpenAI keeps each call's recording and the worker can download it. The database write that finishes a call also queues a `call.saveRecording` outbox job. The job downloads the stereo WAV from OpenAI and saves it in LobbyStack storage, where it follows the plan's retention. As an outbox job, the copy survives a worker restart.
+
+OpenAI finishes the recording after the session closes and answers 404 or 409 until it's ready. The job first runs 5 seconds after the call ends. After each 404 or 409 it queues another attempt with twice the delay: 10, 20, 40, 80 and 160 seconds, about 5 minutes over 6 attempts. Any other error from OpenAI ends the copy. A storage or database error fails the job, and the queue retries it.
+
+OpenAI's copy follows OpenAI's rules, not the plan's retention. Its [GPT-Live data controls](https://developers.openai.com/api/docs/guides/your-data) say:
+
+- OpenAI keeps a stored session's recording for 30 days: "Stored sessions and their index expire after 30 days."
+- We can't delete it sooner: "The API does not provide a public stored-session deletion endpoint."
+- Abuse monitoring logs for `/v1/live/sessions` have their own 30-day retention.
+- With Zero Data Retention, OpenAI treats `store` as `false`, so no recording exists to copy.
+
+The [Live conversations guide](https://developers.openai.com/api/docs/guides/live-conversations) adds that storage must be enabled for the OpenAI project and needs a data policy that permits persistence.
+
+When a business deletes a recording, or its plan's retention runs out, OpenAI's copy stays until its 30 days are up. Tell businesses that OpenAI keeps each call's recording for 30 days and that we can't delete it sooner. OpenAI doesn't say whether the 30 days start when the session starts or when it ends.
 
 ## Interruptions and background noise
 
@@ -98,6 +170,8 @@ The admin and worker read these variables:
 | `WORKER_INTERNAL_URL` | admin | Private URL of the worker's HTTP port, for example `http://worker:3002`. |
 | `TWILIO_SIP_TRUNK_SID` | worker | Adds new phone numbers to the SIP trunk. The worker refuses to provision a number without it. |
 | `WEB_CALL_MAX_DURATION_MS` | admin | Optional cap on browser call length. |
+| `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` | worker | Railway's time between SIGTERM and SIGKILL. Set it to `1860` so calls can finish during a deploy. See [Deploy the worker during calls](#deploy-the-worker-during-calls). |
+| `LIVE_DRAIN_TIMEOUT_MS` | worker | Optional. How long a shutdown lets calls finish on their own before it ends them with a goodbye. Overrides the timeout derived from `RAILWAY_DEPLOYMENT_DRAINING_SECONDS`. |
 | `WEB_CALL_PUBLIC_BUSINESS_SLUG`, `WEB_CALL_ALLOWED_ORIGINS` | admin | The business the landing demo calls, and the sites allowed to start it. |
 | `AI_CHAT_MODEL`, `AI_CHAT_REASONING_EFFORT` | admin, worker | The agent's model and, on OpenAI, its reasoning effort. Leave both blank for `gpt-6-luna` on `high`. |
 | `AI_DELEGATION_MODEL`, `AI_DELEGATION_REASONING_EFFORT`, `AI_DELEGATION_SERVICE_TIER` | worker | The model, reasoning effort and OpenAI processing tier for answering GPT-Live's delegated requests during a call. Leave them blank to use the agent's model on `low` reasoning and the `priority` tier. |

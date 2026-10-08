@@ -14,10 +14,11 @@ import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemet
 import { redactJobError } from "./redactJobError";
 import { Worker } from "bullmq";
 import { and, eq, isNull } from "drizzle-orm";
+import OpenAI from "openai";
 
 import { handleJob, type WorkerDependencies } from "./handlers";
 import { startHealthServer } from "./health";
-import { createLiveCallHandler } from "./liveCalls";
+import { createLiveCallHandler, liveDrainTimeoutMs } from "./liveCalls";
 import { OutboxDispatcher } from "./outboxDispatcher";
 import { configureSchedulers } from "./scheduler";
 import { getWorkerSnapshotCache } from "./snapshot-cache";
@@ -108,7 +109,7 @@ async function main(): Promise<void> {
   // Sampled once at boot; it does not pause work already claimed by another process.
   if (isMaintenanceMode(process.env)) {
     // Keep liveness available, but report unready and avoid all queue, scheduler, and provider startup.
-    startHealthServer(workerPort, { ready: false, redis: false, database: false, storage: false, activeJobs: 0 });
+    startHealthServer(workerPort, { ready: false, redis: false, database: false, storage: false, activeJobs: 0, draining: false });
     console.warn("Worker consumer startup is isolated by maintenance mode.");
     return;
   }
@@ -137,7 +138,7 @@ async function main(): Promise<void> {
   const businessIds = await refreshSchedulers();
   const schedulerRefresh = setInterval(() => void refreshSchedulers().catch((error) => console.error("scheduler refresh failed", redactOtelExceptionText(error instanceof Error ? error.message : String(error)))), 5 * 60_000);
   schedulerRefresh.unref();
-  const state = { ready: false, redis: false, database: false, storage: false, activeJobs: 0 };
+  const state = { ready: false, redis: false, database: false, storage: false, activeJobs: 0, draining: false };
   const embeddings = createEmbeddingProvider();
   const liveCalls = createLiveCallHandler({ domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) }, attachLock: realtime });
   const health = startHealthServer(workerPort, state, liveCalls.handle);
@@ -198,7 +199,8 @@ async function main(): Promise<void> {
     }
   }
   await storage.ensureReady();
-  liveCalls.setStorage(storage);
+  // The recording copy schedules its own retries, so the client doesn't retry a 409.
+  const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0 }) : undefined;
   const dependencies: WorkerDependencies = {
     domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) },
     realtime,
@@ -214,6 +216,8 @@ async function main(): Promise<void> {
     ...(twilio ? { twilio } : {}),
     ...(twilioAlerts ? { twilioAlerts } : {}),
     storage,
+    ...(openai ? { liveSessions: openai.live.sessions } : {}),
+    recoverLiveCall: liveCalls.recover,
     ...(polar ? { polar } : {}),
     enqueueProductEventRetentionContinuation: async (input) => {
       await withBusinessTransaction(database.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
@@ -292,12 +296,16 @@ async function main(): Promise<void> {
   healthRefresh.unref();
 
   const shutdown = async () => {
+    // Readiness fails and new attaches get 503 at once, so new work goes to the next deployment.
+    state.draining = true;
     clearInterval(schedulerRefresh);
     clearInterval(healthRefresh);
     abort.abort();
-    // Finalize live calls while the database pool is still open.
-    await liveCalls.closeAll();
-    await Promise.allSettled([dispatchLoop, ...workers.map((worker) => worker.close()), ...[...queues.values()].map((queue) => queue.close()), realtime.quit(), database.pool.end(), dispatcherDatabase.pool.end(), new Promise<void>((resolve) => health.close(() => resolve())), shutdownTelemetry()]);
+    // Stop taking jobs, and let calls in progress end on their own until the
+    // drain timeout. Both still need Redis, the database pools and the HTTP
+    // server (for /internal/live/end), so those close after.
+    await Promise.allSettled([liveCalls.drain(liveDrainTimeoutMs()), dispatchLoop, ...workers.map((worker) => worker.close())]);
+    await Promise.allSettled([...[...queues.values()].map((queue) => queue.close()), realtime.quit(), database.pool.end(), dispatcherDatabase.pool.end(), new Promise<void>((resolve) => health.close(() => resolve())), shutdownTelemetry()]);
   };
   process.once("SIGINT", () => void shutdown().finally(() => process.exit(0)));
   process.once("SIGTERM", () => void shutdown().finally(() => process.exit(0)));

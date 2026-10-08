@@ -199,6 +199,8 @@ export const queueForJobType = {
   "appointment.sendChangeOtp": "critical",
   "sms.syncPrice": "critical",
   "call.syncPrice": "critical",
+  "call.saveRecording": "default",
+  "live.recoverOrphans": "critical",
   "billing.syncUsage": "critical",
   "billing.reconcile": "default",
   "billing.refreshUnitEconomics": "maintenance",

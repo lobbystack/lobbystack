@@ -11,14 +11,20 @@ describe("worker schedulers", () => {
     const queues = new Map<JobQueue, never>([
       ["maintenance", queue as never],
       ["default", queue as never],
+      ["critical", queue as never],
     ]);
 
     await configureSchedulers(queues as never, ["business-a", "business-b"]);
 
-    expect(upsertJobScheduler).toHaveBeenCalledTimes(20);
+    expect(upsertJobScheduler).toHaveBeenCalledTimes(22);
     const tenantCalls = upsertJobScheduler.mock.calls.filter((call) => call[2].data.businessId !== null);
-    expect(tenantCalls).toHaveLength(18);
+    expect(tenantCalls).toHaveLength(20);
     expect(tenantCalls.filter((call) => call[2].data.type === "api.retention")).toHaveLength(2);
+    // Calls left without a worker are found within about a minute.
+    expect(tenantCalls.filter((call) => call[2].data.type === "live.recoverOrphans").map((call) => [call[0], call[1], call[2].data.queue])).toEqual([
+      ["live-orphan-recovery:business-a", { every: 60_000 }, "critical"],
+      ["live-orphan-recovery:business-b", { every: 60_000 }, "critical"],
+    ]);
     for (const call of tenantCalls) {
       expect(call[2].data.businessId).toMatch(/^business-[ab]$/);
       expect(call[2].data.businessId).not.toBeNull();

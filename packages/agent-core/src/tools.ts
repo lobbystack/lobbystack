@@ -29,7 +29,11 @@ export type AgentChannel = "voice" | "web_voice" | "web_chat";
 
 /** Live-call controls the agent can use. Only phone calls provide them. */
 export type CallControl = {
-  /** Phone calls only. Resolves false when the transfer can't start, for example the plan is out of transfer attempts. */
+  /**
+   * Phone calls only. Resolves true once the transfer is reserved: the call is
+   * referred after the receptionist has announced it. Resolves false when the
+   * transfer can't start, for example the plan is out of transfer attempts.
+   */
   transfer?(destination: string): Promise<boolean>;
   hangup(reason: "caller_finished" | "spam" | "abuse"): Promise<void>;
 };
