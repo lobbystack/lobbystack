@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types"
 const support = `<a href="mailto:support@lobbystack.com">support@lobbystack.com</a>`
 
 export const privacySr: LegalDocument = {
-  updated: "Poslednje ažuriranje: 26. septembar 2026.",
+  updated: "Poslednje ažuriranje: 8. oktobar 2026.",
   h1: "Politika privatnosti",
   intro: `Ova Politika privatnosti objašnjava kako Lobbystack Inc. („LobbyStack“, „mi“, „naš“ ili „nas“) prikuplja, koristi, deli i štiti podatke o ličnosti kada posećujete naše sajtove, koristite hostovanu uslugu LobbyStack, pozovete firmu koja koristi LobbyStack ili se s njom dopisujete putem četa, primite SMS poruku poslatu putem usluge LobbyStack ili nas kontaktirate.`,
   sections: [
@@ -105,7 +105,7 @@ export const privacySr: LegalDocument = {
       nav: "AI obrada",
       title: "6. Obrada pomoću veštačke inteligencije",
       blocks: [
-        `6.1 Usluga obrađuje telefonske pozive i pozive iz pregledača pomoću glasovnog modela GPT-Live kompanije OpenAI. Zvuk poziva se u realnom vremenu šalje kompaniji OpenAI kako bi model mogao da sluša i odgovara. OpenAI čuva snimak poziva tokom sesije, a mi ga zatim kopiramo u sopstveno skladište, gde podleže rokovima čuvanja iz odeljka 12.`,
+        `6.1 Usluga obrađuje telefonske pozive i pozive iz pregledača pomoću glasovnog modela GPT-Live kompanije OpenAI. Zvuk poziva se u realnom vremenu šalje kompaniji OpenAI kako bi model mogao da sluša i odgovara. OpenAI čuva snimak svakog poziva, a mi ga kopiramo u sopstveno skladište, gde naša kopija podleže rokovima čuvanja iz odeljka 12. OpenAI čuva svoju kopiju 30 dana prema sopstvenim pravilima. Kopiju kompanije OpenAI ne možemo da obrišemo ranije, čak ni kada obrišete poziv ili istekne naš rok čuvanja.`,
         `6.2 Čet na sajtu, pretraga znanja firme i druge tekstualne funkcije koriste OpenAI modele. Pravimo vektorske reprezentacije (embeddings) znanja Vaše firme kako bi AI recepcioner mogao da pronađe relevantne odgovore.`,
         `6.3 Pružaocima AI usluga šaljemo samo podatke potrebne za određeni zadatak, kao što su razgovor, znanje i uputstva Vaše firme i informacija o tome da li je neki termin slobodan.`,
         `6.4 Ne koristimo podatke o ličnosti niti Podatke Klijenta za treniranje AI modela. OpenAI obrađuje ove podatke prema svojim poslovnim uslovima za API, koji, na dan donošenja ove Politike, ne dozvoljavaju da na tim podacima trenira svoje modele. OpenAI može ograničeno vreme čuvati podatke iz API-ja prema sopstvenim pravilima, na primer radi otkrivanja zloupotreba.`,
@@ -150,7 +150,7 @@ export const privacySr: LegalDocument = {
         `9.1 <strong>Pružaoci usluga.</strong> Za rad Usluge koristimo sledeće pružaoce usluga (podobrađivače). Svaki od njih sme da obrađuje podatke o ličnosti samo radi pružanja svoje usluge nama.`,
         {
           ul: [
-            `<strong>OpenAI:</strong> AI glasovni razgovori, odgovori u četu, rezimei, vektorske reprezentacije (embeddings) i privremeno čuvanje snimaka poziva tokom poziva;`,
+            `<strong>OpenAI:</strong> AI glasovni razgovori, odgovori u četu, rezimei, vektorske reprezentacije (embeddings) i čuvanje snimaka poziva 30 dana;`,
             `<strong>Twilio:</strong> brojevi telefona, usmeravanje i preusmeravanje poziva i SMS poruke;`,
             `<strong>Railway:</strong> hosting aplikacije, baze podataka i skladištenje datoteka, uključujući snimke;`,
             `<strong>Cloudflare:</strong> hosting sajta, isporuka sadržaja, bezbednost i zaštita od botova pri registraciji;`,
@@ -205,7 +205,7 @@ export const privacySr: LegalDocument = {
         `12.2 Firma može ranije obrisati neke evidencije, kao što su kontakti, sa svoje kontrolne table i može od nas zatražiti da obrišemo drugi sadržaj.`,
         `12.3 Podatke o nalogu čuvamo dok je nalog otvoren. Nakon zatvaranja naloga brišemo ih ili deidentifikujemo, osim evidencija koje moramo da čuvamo iz pravnih, poreskih, računovodstvenih ili bezbednosnih razloga ili radi rešavanja sporova, a njih čuvamo samo onoliko dugo koliko je potrebno za te svrhe.`,
         `12.4 Obrisani podaci mogu ostati u rezervnim kopijama dok te kopije ne isteknu u svom redovnom ciklusu. Ne vraćamo ih u aktivnu upotrebu.`,
-        `12.5 OpenAI i drugi naši pružaoci usluga mogu čuvati podatke ograničeno vreme prema sopstvenim pravilima.`,
+        `12.5 OpenAI i drugi naši pružaoci usluga mogu čuvati podatke ograničeno vreme prema sopstvenim pravilima. Na primer, OpenAI čuva snimke poziva 30 dana (videti odeljak 6.1).`,
       ],
     },
     {

@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types"
 const support = `<a href="mailto:support@lobbystack.com">support@lobbystack.com</a>`
 
 export const privacyEn: LegalDocument = {
-  updated: "Last updated: September 26, 2026",
+  updated: "Last updated: October 8, 2026",
   h1: "Privacy Policy",
   intro: `This Privacy Policy explains how Lobbystack Inc. ("LobbyStack," "we," "our," or "us") collects, uses, shares, and protects personal information when you visit our websites, use the hosted LobbyStack service, call or chat with a business that uses LobbyStack, receive a text sent through LobbyStack, or contact us.`,
   sections: [
@@ -105,7 +105,7 @@ export const privacyEn: LegalDocument = {
       nav: "AI processing",
       title: "6. AI processing",
       blocks: [
-        `6.1 The Service handles phone calls and browser calls with OpenAI's GPT-Live voice model. Call audio goes to OpenAI in real time so the model can listen and reply. OpenAI stores the call recording during the session, and we then copy it to our own storage, where it follows the retention periods in section 12.`,
+        `6.1 The Service handles phone calls and browser calls with OpenAI's GPT-Live voice model. Call audio goes to OpenAI in real time so the model can listen and reply. OpenAI stores a recording of each call, and we copy it to our own storage, where our copy follows the retention periods in section 12. OpenAI keeps its copy for 30 days under its own policies. We cannot delete OpenAI's copy sooner, even after you delete the call or our retention period ends.`,
         `6.2 Website chat, business knowledge search, and other text features use OpenAI models. We create embeddings of your business knowledge so the AI receptionist can find relevant answers.`,
         `6.3 We send AI providers only the information needed for the task, such as the conversation, your business knowledge and instructions, and whether an appointment slot is free.`,
         `6.4 We do not use personal information or Customer Data to train AI models. OpenAI processes this data under its business API terms, which, as of the date of this Policy, do not allow it to train its models on that data. OpenAI may keep API data for a limited time under its own policies, for example to detect abuse.`,
@@ -150,7 +150,7 @@ export const privacyEn: LegalDocument = {
         `9.1 <strong>Service providers.</strong> We use these providers (subprocessors) to run the Service. Each may process personal information only to provide its service to us.`,
         {
           ul: [
-            `<strong>OpenAI:</strong> AI voice conversations, chat replies, summaries, embeddings, and temporary storage of call recordings during a call;`,
+            `<strong>OpenAI:</strong> AI voice conversations, chat replies, summaries, embeddings, and storage of call recordings for 30 days;`,
             `<strong>Twilio:</strong> phone numbers, call routing and transfers, and text messages;`,
             `<strong>Railway:</strong> application hosting, databases, and file storage, including recordings;`,
             `<strong>Cloudflare:</strong> website hosting, content delivery, security, and bot protection at signup;`,
@@ -205,7 +205,7 @@ export const privacyEn: LegalDocument = {
         `12.2 A business can delete some records sooner, such as contacts, from its dashboard, and can ask us to delete other content.`,
         `12.3 We keep account information while the account is open. After it closes, we delete or de-identify it, except for records we must keep for legal, tax, accounting, security, or dispute purposes, which we keep only as long as needed for those purposes.`,
         `12.4 Deleted data may remain in backups until the backups expire on their normal cycle. We do not restore it to active use.`,
-        `12.5 OpenAI and our other providers may keep data for limited periods under their own policies.`,
+        `12.5 OpenAI and our other providers may keep data for limited periods under their own policies. For example, OpenAI keeps call recordings for 30 days (see section 6.1).`,
       ],
     },
     {

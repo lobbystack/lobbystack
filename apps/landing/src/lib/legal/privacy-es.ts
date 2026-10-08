@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types"
 const support = `<a href="mailto:support@lobbystack.com">support@lobbystack.com</a>`
 
 export const privacyEs: LegalDocument = {
-  updated: "Última actualización: 26 de septiembre de 2026",
+  updated: "Última actualización: 8 de octubre de 2026",
   h1: "Política de privacidad",
   intro: `La presente Política de privacidad explica cómo Lobbystack Inc. (“LobbyStack”, “nosotros”, “nuestro” o “nos”) recopila, utiliza, comparte y protege los datos personales cuando usted visita nuestros sitios web, utiliza el servicio alojado de LobbyStack, llama o chatea con un negocio que utiliza LobbyStack, recibe un mensaje de texto enviado a través de LobbyStack o se comunica con nosotros.`,
   sections: [
@@ -105,7 +105,7 @@ export const privacyEs: LegalDocument = {
       nav: "Tratamiento por IA",
       title: "6. Tratamiento mediante IA",
       blocks: [
-        `6.1 El Servicio gestiona las llamadas telefónicas y las llamadas desde el navegador con el modelo de voz GPT-Live de OpenAI. El audio de la llamada se envía a OpenAI en tiempo real para que el modelo pueda escuchar y responder. OpenAI almacena la grabación de la llamada durante la sesión y, a continuación, la copiamos a nuestro propio almacenamiento, donde queda sujeta a los periodos de conservación de la sección 12.`,
+        `6.1 El Servicio gestiona las llamadas telefónicas y las llamadas desde el navegador con el modelo de voz GPT-Live de OpenAI. El audio de la llamada se envía a OpenAI en tiempo real para que el modelo pueda escuchar y responder. OpenAI almacena una grabación de cada llamada, y la copiamos a nuestro propio almacenamiento, donde nuestra copia queda sujeta a los periodos de conservación de la sección 12. OpenAI conserva su copia durante 30 días conforme a sus propias políticas. No podemos eliminar la copia de OpenAI antes, aunque usted elimine la llamada o termine nuestro periodo de conservación.`,
         `6.2 El chat del sitio web, la búsqueda en el conocimiento del negocio y otras funciones de texto utilizan modelos de OpenAI. Creamos embeddings del conocimiento de su negocio para que la recepcionista con IA pueda encontrar respuestas pertinentes.`,
         `6.3 Enviamos a los proveedores de IA únicamente la información necesaria para la tarea, como la conversación, el conocimiento y las instrucciones de su negocio, y si un horario para una cita está disponible.`,
         `6.4 No utilizamos datos personales ni Datos del Cliente para entrenar modelos de IA. OpenAI trata estos datos conforme a sus condiciones de API para empresas, que, a la fecha de esta Política, no le permiten entrenar sus modelos con dichos datos. OpenAI puede conservar los datos de la API durante un tiempo limitado conforme a sus propias políticas, por ejemplo, para detectar abusos.`,
@@ -150,7 +150,7 @@ export const privacyEs: LegalDocument = {
         `9.1 <strong>Proveedores de servicios.</strong> Utilizamos los siguientes proveedores (subencargados del tratamiento) para operar el Servicio. Cada uno puede tratar datos personales únicamente para prestarnos su servicio.`,
         {
           ul: [
-            `<strong>OpenAI:</strong> conversaciones de voz con IA, respuestas de chat, resúmenes, embeddings y almacenamiento temporal de las grabaciones durante una llamada;`,
+            `<strong>OpenAI:</strong> conversaciones de voz con IA, respuestas de chat, resúmenes, embeddings y almacenamiento de las grabaciones de llamadas durante 30 días;`,
             `<strong>Twilio:</strong> números de teléfono, enrutamiento y transferencia de llamadas, y mensajes de texto;`,
             `<strong>Railway:</strong> alojamiento de la aplicación, bases de datos y almacenamiento de archivos, incluidas las grabaciones;`,
             `<strong>Cloudflare:</strong> alojamiento del sitio web, entrega de contenido, seguridad y protección contra bots en el registro;`,
@@ -205,7 +205,7 @@ export const privacyEs: LegalDocument = {
         `12.2 Un negocio puede eliminar antes algunos registros, como los contactos, desde su panel, y puede pedirnos que eliminemos otros contenidos.`,
         `12.3 Conservamos los datos de la cuenta mientras la cuenta esté abierta. Una vez cerrada, los eliminamos o desidentificamos, salvo los registros que debemos conservar con fines legales, fiscales, contables, de seguridad o de resolución de controversias, que conservamos únicamente durante el tiempo necesario para dichos fines.`,
         `12.4 Los datos eliminados pueden permanecer en las copias de seguridad hasta que estas caduquen según su ciclo normal. No los restauramos para su uso activo.`,
-        `12.5 OpenAI y nuestros demás proveedores pueden conservar datos durante periodos limitados conforme a sus propias políticas.`,
+        `12.5 OpenAI y nuestros demás proveedores pueden conservar datos durante periodos limitados conforme a sus propias políticas. Por ejemplo, OpenAI conserva las grabaciones de llamadas durante 30 días (consulte la sección 6.1).`,
       ],
     },
     {
