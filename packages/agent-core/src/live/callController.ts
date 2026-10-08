@@ -150,6 +150,12 @@ export type LiveCallControllerOptions = {
    * whether the session is gone or the re-attach should be tried again.
    */
   firstEventTimeoutMs?: number;
+  /**
+   * Opens the socket the controller listens and answers on, a sideband
+   * attached to the session by default. scripts/voice/live-call-eval.ts passes
+   * the WebSocket session it opened, since a sideband can't attach to one.
+   */
+  connect?: () => SidebandWS;
 };
 
 // The caller's last words can arrive just after the delegation event.
@@ -353,7 +359,7 @@ export class LiveCallController {
   }
 
   start(): void {
-    const socket = new SidebandWS(this.options.client, { session_id: this.options.sessionId, graceful_close: true }, { reconnect: { ...ATTACH_RETRY, onReconnecting: (event) => this.retryAttach(event) } });
+    const socket = this.options.connect?.() ?? new SidebandWS(this.options.client, { session_id: this.options.sessionId, graceful_close: true }, { reconnect: { ...ATTACH_RETRY, onReconnecting: (event) => this.retryAttach(event) } });
     this.socket = socket;
     // Events OpenAI sends to sidebands that the SDK's sideband types leave out.
     const untyped = socket as unknown as { on<T>(type: string, listener: (event: T) => void): void };

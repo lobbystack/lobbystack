@@ -12,6 +12,7 @@
     "./*.ts",
     "./performance/**/*.ts",
     "./operations/**/*.ts",
-    "./lib/**/*.ts"
+    "./lib/**/*.ts",
+    "./voice/**/*.ts"
   ]
 }

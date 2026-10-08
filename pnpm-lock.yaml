@@ -105,6 +105,9 @@ importers:
       next-devtools-mcp:
         specifier: 0.4.0
         version: 0.4.0
+      openai:
+        specifier: ^7.28.0
+        version: 7.28.0(@aws-sdk/credential-provider-node@3.972.84)(@smithy/signature-v4@5.7.4)(undici@7.29.1)(ws@8.22.0)(zod@4.6.5)
       playwright:
         specifier: ^1.63.0
         version: 1.63.0

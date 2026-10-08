@@ -68,6 +68,7 @@
 - Every new telemetry event must include a test that asserts it fires from its real production code path.
 - Run `pnpm typecheck`, `pnpm test`, and `pnpm build` before opening a PR.
 - When changing migrations or RLS, also run `pnpm db:check` and `pnpm db:verify-rls` against the test database.
+- When changing GPT-Live instructions, the call controller, or how calls end, run `pnpm voice:eval` before you open a PR and `pnpm voice:call` against staging before you merge. See `docs/voice/testing.md`.
 
 ## Datastore
 
