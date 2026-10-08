@@ -67,7 +67,7 @@ describe("createReceptionistTools", () => {
   // GPT-Live said goodbye before it handed the call over, so a reply would be a second one.
   it("tells the agent a caller who is done gets no reply", () => {
     const endCall = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", snapshot: demoSnapshot, callControl: { hangup: vi.fn() } }).endCall!;
-    expect(endCall.description).toBe("End the call. Use the reason caller_finished when the caller is done or is saying goodbye: the voice model has already said goodbye, so don't write a reply. Use spam or abuse for a spam or abusive call.");
+    expect(endCall.description).toBe("End the call. Use the reason caller_finished when the caller is done or is saying goodbye: the voice model says goodbye when it hears the call is ending, so don't write a reply. Use spam or abuse for a spam or abusive call.");
   });
 
   it("refuses a transfer the rules don't allow", async () => {

@@ -151,16 +151,16 @@ describe("live delegation", () => {
     expect(timing).toMatchObject({ modelSteps: 2, directAnswer: false });
   });
 
-  // GPT-Live said goodbye before it handed the call over.
-  it("ends the call for a caller who is done with one model call, and gives GPT-Live nothing to say", async () => {
+  // GPT-Live says its goodbye when it hears the call is ending.
+  it("ends the call for a caller who is done with one model call, and tells GPT-Live the call is ending", async () => {
     const hangup = vi.fn(async () => undefined);
     const { timing, commentary, calls, sent } = await delegate([toolCall("endCall", { reason: "caller_finished" }), reply("unused")], "No, that's everything. Bye!", { hangup });
 
     expect(hangup).toHaveBeenCalledWith("caller_finished");
     expect(calls).toHaveLength(1);
     expect(JSON.stringify(calls[0]!.prompt)).toContain("end the call with endCall and the reason caller_finished, and don't write a reply");
-    expect(commentary).toBeUndefined();
-    expect(sent).toContainEqual(expect.objectContaining({ type: "session.thinking.append", delegation_id: "item_1", content: "The call is ending." }));
+    expect(commentary).toMatchObject({ delegation_id: "item_1", content: "The call is ending." });
+    expect(sent).not.toContainEqual(expect.objectContaining({ type: "session.thinking.append" }));
     expect(timing).toMatchObject({ tools: ["endCall"], directAnswer: true, endedCall: true });
   });
 

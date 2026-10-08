@@ -640,9 +640,10 @@ export class LiveCallController {
   }
 
   /**
-   * Ends the call once the caller is done: GPT-Live said goodbye and handed
-   * the call to the agent, which ended it. The hangup waits until the request
-   * is answered, the goodbye has played, and both sides have been quiet for
+   * Ends the call once the caller is done: GPT-Live handed the call to the
+   * agent, which ended it. The hangup waits until the request is answered,
+   * GPT-Live's goodbye after that answer has played (or it stayed silent for
+   * GOODBYE_START_MS), and both sides have been quiet for
    * CALLER_DONE_QUIET_MS, or CALLER_DONE_MAX_MS at most. The caller speaking
    * after that request, or another request, cancels it, and the call goes on.
    * `onCancelled` runs then, or at once when the call can't end this way.
@@ -674,7 +675,10 @@ export class LiveCallController {
     }
     const now = performance.now();
     const quietSince = Math.max(this.playbackEndsAt(), this.lastSpeechAt, this.lastCallerAt);
-    const done = this.runningDelegations === 0 && now - quietSince >= CALLER_DONE_QUIET_MS;
+    // The goodbye follows the result that ended the call, unless GPT-Live stays silent.
+    const answeredAt = Math.max(this.lastAnswerSentAt ?? 0, hangup.requestedAt);
+    const saidGoodbye = this.lastSpeechAt >= answeredAt || now - answeredAt > GOODBYE_START_MS;
+    const done = this.runningDelegations === 0 && saidGoodbye && now - quietSince >= CALLER_DONE_QUIET_MS;
     if (!done && now - hangup.requestedAt < CALLER_DONE_MAX_MS) {
       setTimeout(() => this.hangUpWhenQuiet(hangup), GOODBYE_POLL_MS);
       return;
@@ -977,15 +981,11 @@ export class LiveCallController {
       if (superseded) {
         if (!failed && !ended) this.unheardResults.push(answer);
         this.send({ type: "session.thinking.append", delegation_id: delegationId, content: fitToAppend(`The caller made a newer request before this one finished, so this result is background only: ${answer}`), event_id: `answer_${delegationId}` }, { kind: "update", delegationId });
-      } else if (ended) {
-        // GPT-Live said goodbye before it handed the call over, so the result
-        // closes the delegation as silent background, the way a superseded
-        // one does. Spoken, it would be a second goodbye.
-        this.send({ type: "session.thinking.append", delegation_id: delegationId, content: failed ? CALL_ENDING : answer, event_id: `answer_${delegationId}` }, { kind: "update", delegationId });
       } else {
         this.unheardResults = [];
         this.lastAnswerSentAt = performance.now();
-        this.send({ type: "session.commentary.append", delegation_id: delegationId, content: answer, event_id: `answer_${delegationId}` }, { kind: "answer", delegationId });
+        // GPT-Live says its goodbye when it hears the call is ending, and the hangup waits for it.
+        this.send({ type: "session.commentary.append", delegation_id: delegationId, content: ended && failed ? CALL_ENDING : answer, event_id: `answer_${delegationId}` }, { kind: "answer", delegationId });
       }
 
       const timing: DelegationTiming = {

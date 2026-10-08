@@ -437,23 +437,54 @@ describe("LiveCallController ending when the caller is done", () => {
     return { text: "", steps: [step] };
   };
   const ended = (socket: FakeSocket, hangup: ReturnType<typeof vi.fn>) => hangup.mock.calls.length > 0 || socket.sent.some((event) => event.type === "session.close");
-  // GPT-Live says its goodbye and hands the call over. The caller's words end
-  // now, 1,000 ms into the session, and the goodbye finishes playing 1.5 seconds from now.
-  function sayGoodbye(socket: FakeSocket) {
+  // The caller's words end now, 1,000 ms into the session, and GPT-Live hands
+  // the call over. Once it hears the call is ending, it says goodbye, which
+  // finishes playing 1.5 seconds from now.
+  async function sayGoodbye(socket: FakeSocket) {
     delegate(socket, "item_1", "No, that's all. Thanks!", 1_000);
+    await vi.advanceTimersByTimeAsync(0);
     socket.emit("session.output_transcript.delta", { delta: "You're welcome. Goodbye!", start_ms: 1_100, end_ms: 2_500 });
   }
 
-  it("sends the agent's result as silent background, so GPT-Live doesn't say a second goodbye", async () => {
+  it("tells GPT-Live the call is ending, so it says its goodbye then", async () => {
     fakeTimers();
     const holder: { controller?: LiveCallController } = {};
     const { socket, controller, delegations } = setup({ generate: endingAgent(holder, "caller_finished") });
     holder.controller = controller;
-    sayGoodbye(socket);
+    delegate(socket, "item_1", "No, that's all. Thanks!", 1_000);
     await vi.advanceTimersByTimeAsync(0);
-    expect(sentOfType(socket, "session.thinking.append")).toEqual([expect.objectContaining({ delegation_id: "item_1", content: "The call is ending.", event_id: "answer_item_1" })]);
-    expect(sentOfType(socket, "session.commentary.append")).toEqual([]);
+    expect(sentOfType(socket, "session.commentary.append")).toEqual([expect.objectContaining({ delegation_id: "item_1", content: "The call is ending.", event_id: "answer_item_1" })]);
+    expect(sentOfType(socket, "session.thinking.append")).toEqual([]);
     expect(delegations[0]).toMatchObject({ endedCall: true, directAnswer: true, tools: ["endCall"] });
+  });
+
+  // A pause before the goodbye starts isn't the end of the call.
+  it("waits for the goodbye GPT-Live says after the result, then hangs up 2 seconds after it played", async () => {
+    fakeTimers();
+    const holder: { controller?: LiveCallController } = {};
+    const { socket, controller, hangup } = setup({ generate: endingAgent(holder, "caller_finished") });
+    holder.controller = controller;
+    delegate(socket, "item_1", "No, that's all. Thanks!", 1_000);
+    await vi.advanceTimersByTimeAsync(2_500);
+    expect(hangup).not.toHaveBeenCalled();
+    // The goodbye starts 2.5 seconds after the result and plays until 4 seconds from the start.
+    socket.emit("session.output_transcript.delta", { delta: "Goodbye!", start_ms: 3_500, end_ms: 5_000 });
+    await vi.advanceTimersByTimeAsync(3_300);
+    expect(hangup).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(hangup).toHaveBeenCalledWith("live_1");
+  });
+
+  it("hangs up 4 seconds after the result when GPT-Live says nothing", async () => {
+    fakeTimers();
+    const holder: { controller?: LiveCallController } = {};
+    const { socket, controller, hangup } = setup({ generate: endingAgent(holder, "caller_finished") });
+    holder.controller = controller;
+    delegate(socket, "item_1", "No, that's all. Thanks!", 1_000);
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(hangup).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(hangup).toHaveBeenCalledWith("live_1");
   });
 
   it.each([{ phone: true, ends: "SIP hangup" }, { phone: false, ends: "session.close" }])("ends the call with a $ends 2 seconds after the goodbye has played", async ({ phone }) => {
@@ -461,7 +492,7 @@ describe("LiveCallController ending when the caller is done", () => {
     const holder: { controller?: LiveCallController } = {};
     const { socket, controller, hangup } = setup({ phone, generate: endingAgent(holder, "caller_finished") });
     holder.controller = controller;
-    sayGoodbye(socket);
+    await sayGoodbye(socket);
     // The goodbye finished playing at 1.5 seconds.
     await vi.advanceTimersByTimeAsync(3_300);
     expect(ended(socket, hangup)).toBe(false);
@@ -476,7 +507,7 @@ describe("LiveCallController ending when the caller is done", () => {
     const onCancelled = vi.fn();
     const { socket, controller, generate, hangup } = setup({ generate: endingAgent(holder, "caller_finished", onCancelled) });
     holder.controller = controller;
-    sayGoodbye(socket);
+    await sayGoodbye(socket);
     await vi.advanceTimersByTimeAsync(2_000);
     socket.emit("session.input_transcript.delta", { delta: "Oh wait, one more thing.", start_ms: 2_600, end_ms: 3_000 });
     expect(onCancelled).toHaveBeenCalledOnce();
@@ -503,13 +534,13 @@ describe("LiveCallController ending when the caller is done", () => {
     let calls = 0;
     const { socket, controller, hangup } = setup({ generate: async (options) => (++calls === 1 ? ending(options) : reply("We're open until 5.")) });
     holder.controller = controller;
-    sayGoodbye(socket);
+    await sayGoodbye(socket);
     await vi.advanceTimersByTimeAsync(1_000);
     socket.emit("session.delegation.created", { delegation: { id: "item_2" }, offset_ms: 1_900 });
     expect(onCancelled).toHaveBeenCalledOnce();
     await vi.advanceTimersByTimeAsync(30_000);
     expect(hangup).not.toHaveBeenCalled();
-    expect(sentOfType(socket, "session.commentary.append")).toEqual([expect.objectContaining({ delegation_id: "item_2", content: "We're open until 5." })]);
+    expect(sentOfType(socket, "session.commentary.append")).toEqual([expect.objectContaining({ delegation_id: "item_1", content: "The call is ending." }), expect.objectContaining({ delegation_id: "item_2", content: "We're open until 5." })]);
   });
 
   it("doesn't start the hangup when the caller spoke again while the agent was ending the call", async () => {
@@ -520,7 +551,7 @@ describe("LiveCallController ending when the caller is done", () => {
     const ending = endingAgent(holder, "caller_finished", onCancelled);
     const { socket, controller, hangup } = setup({ generate: async (options) => { await new Promise<void>((resolve) => { finish = resolve; }); return ending(options); } });
     holder.controller = controller;
-    sayGoodbye(socket);
+    await sayGoodbye(socket);
     await vi.advanceTimersByTimeAsync(500);
     socket.emit("session.input_transcript.delta", { delta: "Actually, wait.", start_ms: 1_200, end_ms: 1_500 });
     finish();
@@ -534,7 +565,7 @@ describe("LiveCallController ending when the caller is done", () => {
     const holder: { controller?: LiveCallController } = {};
     const { socket, controller, hangup } = setup({ generate: endingAgent(holder, "caller_finished") });
     holder.controller = controller;
-    sayGoodbye(socket);
+    await sayGoodbye(socket);
     // GPT-Live keeps talking, always 1.5 seconds ahead of playback.
     for (let at = 1_000; at < 20_000; at += 1_000) {
       await vi.advanceTimersByTimeAsync(1_000);
@@ -545,16 +576,16 @@ describe("LiveCallController ending when the caller is done", () => {
     expect(hangup).toHaveBeenCalledWith("live_1");
   });
 
-  it("says nothing more while the agent finishes a slow request that ended the call", async () => {
+  it("sends no update while the agent finishes a slow request that ended the call, then says the call is ending", async () => {
     fakeTimers();
     const holder: { controller?: LiveCallController } = {};
     const ending = endingAgent(holder, "caller_finished");
     const { socket, controller } = setup({ generate: async (options) => { const result = await ending(options); await new Promise((resolve) => setTimeout(resolve, 6_000)); return result; } });
     holder.controller = controller;
-    sayGoodbye(socket);
+    await sayGoodbye(socket);
     await vi.advanceTimersByTimeAsync(6_000);
-    expect(sentOfType(socket, "session.commentary.append")).toEqual([]);
-    expect(sentOfType(socket, "session.thinking.append").map((event) => event.event_id)).toEqual(["answer_item_1"]);
+    expect(sentOfType(socket, "session.commentary.append").map((event) => event.event_id)).toEqual(["answer_item_1"]);
+    expect(sentOfType(socket, "session.thinking.append")).toEqual([]);
   });
 
   it.each(["spam", "abuse"] as const)("ends a call the agent took for %s whatever the caller says", async (reason) => {
@@ -564,8 +595,8 @@ describe("LiveCallController ending when the caller is done", () => {
     holder.controller = controller;
     delegate(socket, "item_1", "This is your final notice about your car's warranty.", 1_000);
     await vi.advanceTimersByTimeAsync(0);
-    expect(sentOfType(socket, "session.thinking.append")).toEqual([expect.objectContaining({ delegation_id: "item_1", content: "The call is ending." })]);
-    expect(sentOfType(socket, "session.commentary.append")).toEqual([]);
+    expect(sentOfType(socket, "session.commentary.append")).toEqual([expect.objectContaining({ delegation_id: "item_1", content: "The call is ending." })]);
+    expect(sentOfType(socket, "session.thinking.append")).toEqual([]);
     await vi.advanceTimersByTimeAsync(1_000);
     socket.emit("session.input_transcript.delta", { delta: "Don't hang up on me!", start_ms: 1_800, end_ms: 2_000 });
     // GPT-Live says nothing after the result, so the call ends 4 seconds after the agent ended it.
@@ -581,7 +612,7 @@ describe("LiveCallController ending when the caller is done", () => {
     const onCancelled = vi.fn();
     const { socket, controller, hangup } = setup({ generate: endingAgent(holder, "caller_finished", onCancelled) });
     holder.controller = controller;
-    sayGoodbye(socket);
+    await sayGoodbye(socket);
     await vi.advanceTimersByTimeAsync(1_000);
     void controller.wrapUp("service_restart");
     expect(sentOfType(socket, "session.instructions.append")).toHaveLength(1);
