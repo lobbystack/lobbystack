@@ -18,7 +18,7 @@ export function snapshotCacheKey(businessId: string): string {
 export function deserializeSnapshot(raw: string | null | undefined): BusinessContextSnapshot | null {
   if (!raw) return null;
   try {
-    const parsed = snapshotSchema.passthrough().safeParse(JSON.parse(raw));
+    const parsed = snapshotSchema.loose().safeParse(JSON.parse(raw));
     return parsed.success ? (parsed.data as BusinessContextSnapshot) : null;
   } catch {
     return null;

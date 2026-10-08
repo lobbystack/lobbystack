@@ -6,9 +6,9 @@ import { asApiResponse, readJson, withOperatorTransaction } from "@/lib/api-help
 import { createDomainContext } from "@/lib/domain-context";
 
 const createSchema = z.object({ title: z.string().trim().min(1).max(160), content: z.string().trim().min(1).max(10_000), active: z.boolean().optional() });
-const updateSchema = z.object({ ruleId: z.string().uuid(), title: z.string().trim().min(1).max(160).optional(), content: z.string().trim().min(1).max(10_000).optional(), active: z.boolean().optional() });
-const reorderSchema = z.object({ ruleIds: z.array(z.string().uuid()).max(100) });
-const deleteSchema = z.object({ ruleId: z.string().uuid() });
+const updateSchema = z.object({ ruleId: z.uuid(), title: z.string().trim().min(1).max(160).optional(), content: z.string().trim().min(1).max(10_000).optional(), active: z.boolean().optional() });
+const reorderSchema = z.object({ ruleIds: z.array(z.uuid()).max(100) });
+const deleteSchema = z.object({ ruleId: z.uuid() });
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
