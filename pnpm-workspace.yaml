@@ -3,69 +3,76 @@ packages:
   - mintlify
   - packages/*
 
+# Matches Dependabot's 3-day cooldown (in minutes). A dependency younger than
+# this makes every Dependabot job fail, and Railway then skips the deploy.
+minimumReleaseAge: 4320
+
 overrides:
-  "@astrojs/rss": 4.0.19
-  "@auth/core": 0.41.3
-  "@babel/core": 7.29.6
-  "@grpc/grpc-js": 1.14.5
-  "@hono/node-server": 1.19.15
-  "@mintlify/scraping>zod": 3.25.76
-  "@mintlify/validation>zod": 3.25.76
-  "next-devtools-mcp>@modelcontextprotocol/sdk": 1.27.1
-  "@opentelemetry/core": 2.8.0
-  "@opentelemetry/exporter-prometheus": 0.217.0
-  "@opentelemetry/propagator-jaeger": 2.9.0
-  "@opentelemetry/sdk-node": 0.217.0
-  "@puppeteer/browsers": 3.2.2
-  "@xmldom/xmldom": 0.8.15
-  astro: 7.3.3
-  axios: 1.20.0
-  adm-zip: 0.6.1
-  basic-ftp: 5.3.1
-  "body-parser@<2.0.0": 1.20.6
-  "body-parser@>=2.0.0": 2.3.0
-  "brace-expansion@<2.0.0": 1.1.21
-  "brace-expansion@>=4.0.0": 5.0.12
-  browserslist: 4.28.7
-  devalue: 5.9.3
-  dompurify: 3.4.16
-  drizzle-orm: 0.45.2
-  engine.io: 6.6.10
-  esbuild: 0.28.1
-  fast-uri: 3.1.8
-  "fflate@>=0.4.5 <0.4.9": 0.4.9
-  "fflate@>=0.7.0 <0.7.5": 0.7.5
-  follow-redirects: 1.16.0
-  form-data: 4.0.6
-  hono: 4.13.8
-  http-cache-semantics: 4.3.0
-  ip-address: 10.7.1
-  js-yaml: 4.3.2
-  lodash: 4.18.1
-  "nanoid@<3.3.18": 3.3.18
-  nodemailer: 10.0.14
-  "path-to-regexp@>=8.0.0 <8.4.0": 8.4.0
-  picomatch: 2.3.2
-  postcss: 8.5.23
-  "postcss-selector-parser@<7.0.0": 6.1.3
-  "postcss-selector-parser@>=7.0.0": 7.1.3
-  "protobufjs@<8.0.0": 7.6.5
-  "protobufjs@>=8.0.0": 8.6.6
-  puppeteer: 25.10.0
-  puppeteer-core: 25.10.0
-  qs: 6.16.0
-  react-router: 7.17.0
-  react-router-dom: 7.17.0
-  sharp: 0.35.4
-  shell-quote: 1.9.0
-  socket.io-parser: 4.2.7
-  smol-toml: 1.7.1
-  svgo: 4.1.0
-  tar: 7.5.21
-  undici: 7.29.1
-  uuid: 14.0.0
-  ws: 8.21.0
-  yaml: 2.9.0
+  "@astrojs/rss": ^4.0.19
+  "@auth/core": ^0.41.3
+  "@babel/core": ^7.29.6
+  "@grpc/grpc-js": ^1.14.5
+  "@hono/node-server": ^1.19.15
+  "@modelcontextprotocol/sdk": ^1.31.0
+  "@mintlify/scraping>zod": ^3.25.76
+  "@mintlify/validation>zod": ^3.25.76
+  "@opentelemetry/core": ^2.8.0
+  "@opentelemetry/exporter-prometheus": ^0.217.0
+  "@opentelemetry/propagator-jaeger": ^2.9.0
+  "@opentelemetry/sdk-node": ^0.217.0
+  "@puppeteer/browsers": ^3.2.2
+  "@xmldom/xmldom": ^0.8.15
+  astro: ^7.3.5
+  axios: ^1.20.0
+  adm-zip: ^0.6.1
+  basic-ftp: ^5.3.1
+  "body-parser@<2.0.0": ^1.20.6
+  "body-parser@>=2.0.0": ^2.3.0
+  "brace-expansion@<2.0.0": ^1.1.21
+  "brace-expansion@>=4.0.0": ^5.0.12
+  "fflate@>=0.8.0 <0.8.3": ^0.8.3
+  browserslist: ^4.28.7
+  devalue: ^5.9.3
+  dompurify: ^3.4.16
+  drizzle-orm: ^0.45.3
+  engine.io: ^6.6.10
+  esbuild: ^0.28.1
+  fast-uri: ^3.1.8
+  "fflate@>=0.4.5 <0.4.9": ^0.4.9
+  "fflate@>=0.7.0 <0.7.5": ^0.7.5
+  follow-redirects: ^1.16.0
+  form-data: ^4.0.6
+  hono: ^4.13.8
+  http-cache-semantics: ^4.3.0
+  ip-address: ^10.7.1
+  js-yaml: ^4.3.2
+  lodash: ^4.18.1
+  "nanoid@<3.3.18": ^3.3.18
+  nodemailer: ^10.0.15
+  "path-to-regexp@>=8.0.0 <8.4.0": ^8.4.0
+  picomatch: ^2.3.2
+  postcss: ^8.5.29
+  "postcss-selector-parser@<7.0.0": ^6.1.3
+  "postcss-selector-parser@>=7.0.0": ^7.1.6
+  "protobufjs@<8.0.0": ^7.6.5
+  "protobufjs@>=8.0.0": ^8.6.6
+  proxy-addr: ^2.0.8
+  puppeteer: ^25.10.0
+  puppeteer-core: ^25.10.0
+  qs: ^6.16.0
+  react-router: ^7.17.0
+  react-router-dom: ^7.17.0
+  sharp: ^0.35.5
+  shell-quote: ^1.11.0
+  socket.io-parser: ^4.2.7
+  smol-toml: ^1.9.0
+  source-map-js: ^1.2.2
+  svgo: ^4.1.0
+  tar: ^7.5.21
+  undici: ^7.29.1
+  uuid: ^14.0.0
+  ws: ^8.22.0
+  yaml: ^2.9.0
 
 supportedArchitectures:
   os:

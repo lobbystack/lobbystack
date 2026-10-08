@@ -100,16 +100,16 @@
     "replacement:contacts": "tsx --tsconfig scripts/tsconfig.json scripts/replacement-contact-pagination-check.ts"
   },
   "devDependencies": {
-    "@types/luxon": "^3.7.1",
+    "@types/luxon": "^3.7.6",
     "@types/node": "^26.0.0",
     "concurrently": "^9.1.2",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^0.45.3",
     "lucia": "^3.2.2",
     "next-devtools-mcp": "0.4.0",
-    "playwright": "^1.58.2",
-    "railway": "3.11.0",
-    "standardwebhooks": "^1.0.0",
-    "tsx": "^4.20.3",
+    "playwright": "^1.63.0",
+    "railway": "3.12.0",
+    "standardwebhooks": "^1.1.1",
+    "tsx": "^4.23.15",
     "twilio": "^5.12.2",
     "typescript": "^5.8.2",
     "vitest": "^4.1.11"
