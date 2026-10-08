@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   createAgentModel: vi.fn((..._args: unknown[]) => ({})),
   createReceptionistAgent: vi.fn((..._args: unknown[]) => ({})),
   closeLiveSession: vi.fn(async (..._args: unknown[]) => undefined),
-  controllers_: [] as Array<{ endSession: ReturnType<typeof vi.fn>; endAfterGoodbye: ReturnType<typeof vi.fn>; wrapUp: ReturnType<typeof vi.fn>; transferAfterAnnouncement: ReturnType<typeof vi.fn>; canTransfer: ReturnType<typeof vi.fn>; detach: ReturnType<typeof vi.fn>; options: Record<string, unknown> }>,
+  controllers_: [] as Array<{ endSession: ReturnType<typeof vi.fn>; endAfterGoodbye: ReturnType<typeof vi.fn>; endWhenCallerDone: ReturnType<typeof vi.fn>; wrapUp: ReturnType<typeof vi.fn>; transferAfterAnnouncement: ReturnType<typeof vi.fn>; canTransfer: ReturnType<typeof vi.fn>; detach: ReturnType<typeof vi.fn>; options: Record<string, unknown> }>,
   prepareLiveCallTransfer: vi.fn(async (..._args: unknown[]) => true),
   recordLiveCallTransferResult: vi.fn(async (..._args: unknown[]) => undefined),
   saveLiveCallTurn: vi.fn(async (..._args: unknown[]) => undefined),
@@ -34,6 +34,7 @@ vi.mock("@lobbystack/agent-core", () => ({
   LiveCallController: class {
     endSession = vi.fn();
     endAfterGoodbye = vi.fn();
+    endWhenCallerDone = vi.fn((_onCancelled?: () => void) => undefined);
     wrapUp = vi.fn(async (_reason: string) => undefined);
     transferAfterAnnouncement = vi.fn((_targetUri: string) => true);
     canTransfer = vi.fn(() => true);
@@ -41,7 +42,7 @@ vi.mock("@lobbystack/agent-core", () => ({
     constructor(options: Record<string, (...args: never[]) => unknown>) {
       mocks.controllers += 1;
       mocks.controllerOptions.push(options);
-      mocks.controllers_.push({ endSession: this.endSession, endAfterGoodbye: this.endAfterGoodbye, wrapUp: this.wrapUp, transferAfterAnnouncement: this.transferAfterAnnouncement, canTransfer: this.canTransfer, detach: this.detach, options });
+      mocks.controllers_.push({ endSession: this.endSession, endAfterGoodbye: this.endAfterGoodbye, endWhenCallerDone: this.endWhenCallerDone, wrapUp: this.wrapUp, transferAfterAnnouncement: this.transferAfterAnnouncement, canTransfer: this.canTransfer, detach: this.detach, options });
     }
     start() {}
   },
@@ -167,7 +168,7 @@ describe("createLiveCallHandler", () => {
     const controller = mocks.controllers_.at(-1)!;
     const context = (mocks.createReceptionistAgent.mock.lastCall![0] as { context: { callControl: { hangup: (reason: string) => Promise<void> } } }).context;
     await context.callControl.hangup("caller_finished");
-    expect(controller.endAfterGoodbye).toHaveBeenCalled();
+    expect(controller.endWhenCallerDone).toHaveBeenCalled();
     expect(controller.endSession).not.toHaveBeenCalled();
     (controller.options.onTimeout as (reason: string) => void)("silence_timeout");
     expect(controller.wrapUp).toHaveBeenCalledWith("silence_timeout");
@@ -175,21 +176,54 @@ describe("createLiveCallHandler", () => {
     await expect((controller.options.setup as Promise<{ language: string }>)).resolves.toMatchObject({ greeting: "Hi" });
   });
 
-  it("records a hangup after a mutual goodbye as the caller finishing, and logs it as automatic", async () => {
+  // GPT-Live said goodbye and handed the call over; the agent's endCall hangs up once the goodbye has played.
+  async function endedByAgent(sessionId: string, reason: "caller_finished" | "spam" | "abuse") {
     vi.stubEnv("LIVE_PROTOTYPE_ENABLED", "true");
     vi.stubEnv("INTERNAL_SERVICE_TOKEN", "token");
     vi.stubEnv("OPENAI_API_KEY", "sk-test");
-    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     mocks.snapshot.mockResolvedValue({ businessId: "biz_1", greeting: "Hi" });
     const handler = createLiveCallHandler({ domain: { db: {} as never } });
-    await handler.handle(attachRequest({ sessionId: "live_auto_bye", businessId: "biz_1", callId: "call_auto_bye", channel: "voice" }), response());
+    await handler.handle(attachRequest({ sessionId, businessId: "biz_1", callId: `call_${sessionId}`, channel: "voice" }), response());
     const controller = mocks.controllers_.at(-1)!;
-    (controller.options.onAutoHangup as () => void)();
+    const context = (mocks.createReceptionistAgent.mock.lastCall![0] as { context: { callControl: { hangup: (reason: string) => Promise<void> } } }).context;
+    await context.callControl.hangup(reason);
     // No session.closed before the finalization timeout, so the close reason alone would say connection_lost.
-    (controller.options.onClose as (summary: unknown) => void)({ sessionId: "live_auto_bye", durationMs: 40_000, delegations: [], usageConfirmed: false, closeReason: "finalize_timeout" });
-    await vi.waitFor(() => expect(mocks.finishLiveCall).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ callId: "call_auto_bye", end: "caller_finished" })));
+    const close = () => (controller.options.onClose as (summary: unknown) => void)({ sessionId, durationMs: 40_000, delegations: [], usageConfirmed: false, closeReason: "finalize_timeout" });
+    return { controller, close };
+  }
+
+  it("records a call the agent ended for a caller who is done as caller_finished", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const { controller, close } = await endedByAgent("live_done", "caller_finished");
+    // The caller can still say more before the hangup, so it isn't the non-cancellable end.
+    expect(controller.endWhenCallerDone).toHaveBeenCalledOnce();
+    expect(controller.endAfterGoodbye).not.toHaveBeenCalled();
+    close();
+    await vi.waitFor(() => expect(mocks.finishLiveCall).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ callId: "call_live_done", end: "caller_finished" })));
     const closed = JSON.parse(String(info.mock.calls.find((call) => String(call[0]).includes("\"live.closed\""))![0]));
-    expect(closed).toMatchObject({ event: "live.closed", sessionId: "live_auto_bye", end: "caller_finished", autoHangup: true });
+    expect(closed).toMatchObject({ event: "live.closed", sessionId: "live_done", end: "caller_finished" });
+    expect(closed).not.toHaveProperty("autoHangup");
+    info.mockRestore();
+  });
+
+  it("drops caller_finished when the caller keeps talking, so a later timeout records its own reason", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const { controller, close } = await endedByAgent("live_more", "caller_finished");
+    (controller.endWhenCallerDone.mock.lastCall![0] as () => void)();
+    (controller.options.onTimeout as (reason: string) => void)("silence_timeout");
+    expect(controller.wrapUp).toHaveBeenCalledWith("silence_timeout");
+    close();
+    await vi.waitFor(() => expect(mocks.finishLiveCall).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ callId: "call_live_more", end: "silence_timeout" })));
+    info.mockRestore();
+  });
+
+  it.each(["spam", "abuse"] as const)("ends a %s call once the goodbye has played, whatever the caller says", async (reason) => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const { controller, close } = await endedByAgent(`live_${reason}`, reason);
+    expect(controller.endAfterGoodbye).toHaveBeenCalledOnce();
+    expect(controller.endWhenCallerDone).not.toHaveBeenCalled();
+    close();
+    await vi.waitFor(() => expect(mocks.finishLiveCall).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ callId: `call_live_${reason}`, end: reason })));
     info.mockRestore();
   });
 

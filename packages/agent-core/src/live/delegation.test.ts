@@ -74,11 +74,11 @@ function scriptedModel(steps: LanguageModelV4GenerateResult[]) {
   return { model, calls };
 }
 
-async function delegate(steps: LanguageModelV4GenerateResult[], caller: string, options: { directToolAnswers?: boolean } = {}) {
+async function delegate(steps: LanguageModelV4GenerateResult[], caller: string, options: { directToolAnswers?: boolean; hangup?: () => Promise<void> } = {}) {
   const { model, calls } = scriptedModel(steps);
   const agent = createReceptionistAgent({
     model,
-    context: { domain: { db: {} as never }, snapshot, channel: "voice", callerPhone: "+14165550134", callId: "call_1", callControl: { hangup: vi.fn(async () => undefined) } },
+    context: { domain: { db: {} as never }, snapshot, channel: "voice", callerPhone: "+14165550134", callId: "call_1", callControl: { hangup: options.hangup ?? vi.fn(async () => undefined) } },
     directToolAnswers: options.directToolAnswers ?? true,
   });
   const timings: DelegationTiming[] = [];
@@ -88,7 +88,7 @@ async function delegate(steps: LanguageModelV4GenerateResult[], caller: string, 
   socket.emit("session.delegation.created", { delegation: { id: "item_1" }, offset_ms: 900 });
   await vi.waitFor(() => expect(timings).toHaveLength(1));
   const commentary = socket.sent.find((event) => (event as { type?: string }).type === "session.commentary.append") as { content: string; delegation_id: string };
-  return { timing: timings[0]!, commentary, calls };
+  return { timing: timings[0]!, commentary, calls, sent: socket.sent as Array<{ type?: string }> };
 }
 
 beforeEach(() => {
@@ -149,6 +149,19 @@ describe("live delegation", () => {
     expect(calls).toHaveLength(2);
     expect(commentary.content).toBe("We offer checkups and vaccinations.");
     expect(timing).toMatchObject({ modelSteps: 2, directAnswer: false });
+  });
+
+  // GPT-Live said goodbye before it handed the call over.
+  it("ends the call for a caller who is done with one model call, and gives GPT-Live nothing to say", async () => {
+    const hangup = vi.fn(async () => undefined);
+    const { timing, commentary, calls, sent } = await delegate([toolCall("endCall", { reason: "caller_finished" }), reply("unused")], "No, that's everything. Bye!", { hangup });
+
+    expect(hangup).toHaveBeenCalledWith("caller_finished");
+    expect(calls).toHaveLength(1);
+    expect(JSON.stringify(calls[0]!.prompt)).toContain("end the call with endCall and the reason caller_finished, and don't write a reply");
+    expect(commentary).toBeUndefined();
+    expect(sent).toContainEqual(expect.objectContaining({ type: "session.thinking.append", delegation_id: "item_1", content: "The call is ending." }));
+    expect(timing).toMatchObject({ tools: ["endCall"], directAnswer: true, endedCall: true });
   });
 
   it("counts a plain reply as one model step", async () => {

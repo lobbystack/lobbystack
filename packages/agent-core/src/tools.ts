@@ -424,7 +424,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
   }
   if (callControl) {
     tools.endCall = tool({
-      description: "Hang up after saying goodbye, when the caller is done, or when the call is spam or abusive.",
+      description: "End the call. Use the reason caller_finished when the caller is done or is saying goodbye: the voice model has already said goodbye, so don't write a reply. Use spam or abuse for a spam or abusive call.",
       inputSchema: z.object({ reason: z.enum(["caller_finished", "spam", "abuse"]) }),
       execute: async ({ reason }) => {
         await callControl.hangup(reason);

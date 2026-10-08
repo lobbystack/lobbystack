@@ -4,8 +4,7 @@ import type { DelegationCreatedEvent } from "openai/resources/live/live";
 import { SidebandWS } from "openai/resources/live/sideband/ws";
 
 import type { ReceptionistAgent } from "../agent";
-import { DIRECT_ANSWER_TOOLS, directToolAnswer, fitToAppend, type DirectAnswerStep } from "./directAnswer";
-import { onlyGoodbye, saysGoodbye } from "./goodbye";
+import { CALL_ENDING, DIRECT_ANSWER_TOOLS, directToolAnswer, fitToAppend, type DirectAnswerStep } from "./directAnswer";
 import { greetingCommand } from "./greeting";
 import { LiveLatencyTracker, type LiveCallLatency } from "./latency";
 
@@ -32,6 +31,8 @@ export type DelegationTiming = {
   failed: boolean;
   /** The caller made a newer request before this one finished, so its result wasn't spoken. */
   superseded: boolean;
+  /** The agent ended the call, so the result went to GPT-Live as silent background. */
+  endedCall: boolean;
   /** Tokens across the agent's model steps, when the generation finished. */
   usage?: LanguageModelUsage;
 };
@@ -125,11 +126,6 @@ export type LiveCallControllerOptions = {
   onGreeting?: (event: GreetingEvent) => void;
   onTurn?: (turn: LiveCallTurn) => void;
   onTimeout?: (reason: LiveCallTimeout) => void;
-  /**
-   * The controller is hanging up on its own after a mutual goodbye: the caller
-   * said one and the receptionist answered with one, which has now played.
-   */
-  onAutoHangup?: () => void;
   /** Each step of a transfer started with transferAfterAnnouncement(). */
   onTransfer?: (state: LiveCallTransferState) => void;
   onDelegation?: (timing: DelegationTiming) => void;
@@ -179,11 +175,11 @@ const GOODBYE_START_MS = 4_000;
 const GOODBYE_MAX_MS = 15_000;
 const GOODBYE_QUIET_MS = 1_000;
 const GOODBYE_POLL_MS = 200;
-// A mutual goodbye hangs up once both sides have been quiet this long after
-// the receptionist's goodbye played, so the caller can still say "oh, wait".
-// Speech still coming holds it, up to the second bound.
-const AUTO_HANGUP_QUIET_MS = 2_000;
-const AUTO_HANGUP_MAX_MS = 30_000;
+// A caller who is done is hung up on once the receptionist's goodbye has
+// played and both sides have been quiet this long, so they can still say
+// "oh, wait". Speech still coming holds it, up to the second bound.
+const CALLER_DONE_QUIET_MS = 2_000;
+const CALLER_DONE_MAX_MS = 20_000;
 // A wrap-up's goodbye counts from OpenAI's acknowledgment of the command, or
 // from the request when no acknowledgment arrives by this long.
 const WRAP_UP_ACK_WAIT_MS = 2_000;
@@ -215,8 +211,9 @@ const WRAP_UP: Record<LiveCallWrapUp, string> = {
 const TRANSFER_FAILED = "The transfer to a person didn't go through. In the language of the conversation, tell the caller briefly and offer to take a message so the team can call them back.";
 
 // Tools that change something. The next request on the call sees their results,
-// so a changed request reschedules instead of booking twice.
-const ACTION_TOOLS = new Set(["bookAppointment", "requestAppointment", "requestAppointmentCancellation", "cancelAppointment", "rescheduleAppointment", "takeMessage", "transferCall", "endCall"]);
+// so a changed request reschedules instead of booking twice. endCall isn't one:
+// a call that goes on after it was cancelled, and the next request may end it again.
+const ACTION_TOOLS = new Set(["bookAppointment", "requestAppointment", "requestAppointmentCancellation", "cancelAppointment", "rescheduleAppointment", "takeMessage", "transferCall"]);
 // Lookups the next request can reuse instead of repeating.
 const REUSABLE_LOOKUPS = new Set(["findAvailability"]);
 const PROGRESS: Record<string, string> = {
@@ -236,6 +233,10 @@ const PROGRESS: Record<string, string> = {
 };
 
 type PendingAppend = { kind: "greeting" | "answer" | "update" | "wrap_up"; delegationId?: string };
+// A hangup waiting for the caller to be done. afterMs is where the request
+// that ended the call was made on the session timeline: the caller speaking
+// after it cancels the hangup.
+type PendingHangup = { afterMs: number; requestedAt: number; onCancelled?: () => void };
 // The close reason when another worker took the call over.
 const DETACHED = "detached";
 type StepLike = DirectAnswerStep & { toolResults: Array<{ toolName: string; output: unknown }> };
@@ -255,6 +256,10 @@ export function isVoice(base64: string): boolean {
 
 function succeeded(output: unknown): boolean {
   return typeof output === "object" && output !== null && (output as { ok?: unknown }).ok !== false;
+}
+
+function endsCall(steps: StepLike[]): boolean {
+  return steps.some((step) => step.toolResults.some((result) => result.toolName === "endCall" && succeeded(result.output)));
 }
 
 /**
@@ -310,10 +315,13 @@ export class LiveCallController {
   private lastSpeechAt = Number.NEGATIVE_INFINITY;
   private readonly outputAudio: LiveCallSummary["outputAudio"] = { deltas: 0, coveredMs: 0, payloadBytes: 0 };
   private lastAnswerSentAt: number | undefined;
-  // The receptionist's goodbye turn while a mutual goodbye waits to hang up,
-  // and when the caller last spoke, in performance.now() time.
-  private goodbyeTurn: Turn | undefined;
+  // When the caller last spoke, in performance.now() time, and where their
+  // latest words started on the session timeline.
   private lastCallerAt = Number.NEGATIVE_INFINITY;
+  private lastCallerStartMs = Number.NEGATIVE_INFINITY;
+  // The request the agent is answering now. Requests run one at a time.
+  private answering: { offsetMs: number; revision: number } | undefined;
+  private pendingHangup: PendingHangup | undefined;
   private ending = false;
   // A transfer in progress: waiting for the announcement to play, waiting for
   // OpenAI to accept the REFER, or referred and waiting for the outcome.
@@ -349,7 +357,7 @@ export class LiveCallController {
     socket.on("session.input_transcript.delta", (event) => {
       this.observeTimeline(event.end_ms);
       this.measure(() => this.latency.callerTranscript(event.start_ms, event.end_ms));
-      this.appendTranscript("caller", event.delta, event.end_ms);
+      this.appendTranscript("caller", event.delta, event.end_ms, event.start_ms);
     });
     // OpenAI's guide: transcript events arrive for intervals that contain
     // text, so words in session.output_transcript.delta are the evidence that
@@ -375,7 +383,10 @@ export class LiveCallController {
     // A keypad press reaches only the sideband, with no timeline position. It
     // counts as caller input, so the next request's agent sees it.
     untyped.on<{ event?: unknown }>("transport.dtmf.received", (event) => {
-      if (typeof event.event === "string" && event.event) this.appendTranscript("caller", ` [pressed ${event.event}]`, this.timelineNow());
+      if (typeof event.event === "string" && event.event) {
+        const now = this.timelineNow();
+        this.appendTranscript("caller", ` [pressed ${event.event}]`, now, now);
+      }
     });
     // OpenAI documents these for outbound SIP legs. A REFER makes the carrier
     // dial one, so after a REFER they report whether the destination answered.
@@ -628,49 +639,64 @@ export class LiveCallController {
     this.afterSpeech(() => this.endSession());
   }
 
-  // GPT-Live is told to delegate the caller's goodbye so endCall hangs up, but
-  // it often says goodbye itself. So a caller turn with a farewell, answered by
-  // a receptionist turn with one, ends the call once that goodbye has played.
-  // Unlike endAfterGoodbye, the caller can still stop it by saying more.
-  private watchGoodbye(role: Turn["role"]): void {
-    const last = this.turns.at(-1)!;
-    if (role === "caller") {
-      this.lastCallerAt = performance.now();
-      // "Oh, one more thing" keeps the call going; a "Bye!" or a "Thanks, you too!" said back doesn't.
-      if (this.goodbyeTurn && !onlyGoodbye(last.text)) this.goodbyeTurn = undefined;
+  /**
+   * Ends the call once the caller is done: GPT-Live said goodbye and handed
+   * the call to the agent, which ended it. The hangup waits until the request
+   * is answered, the goodbye has played, and both sides have been quiet for
+   * CALLER_DONE_QUIET_MS, or CALLER_DONE_MAX_MS at most. The caller speaking
+   * after that request, or another request, cancels it, and the call goes on.
+   * `onCancelled` runs then, or at once when the call can't end this way.
+   */
+  endWhenCallerDone(onCancelled?: () => void): void {
+    if (this.ending || this.finished || this.pendingHangup) return;
+    const answering = this.answering;
+    const afterMs = answering?.offsetMs ?? this.timelineNow();
+    // A newer request, a transfer, or the caller already speaking again means the call isn't over.
+    if ((answering && answering.revision !== this.latestRevision) || this.transfer || this.lastCallerStartMs > afterMs) {
+      onCancelled?.();
       return;
     }
-    if (this.goodbyeTurn || this.ending || this.finished || this.transfer || this.runningDelegations > 0) return;
-    const callerIndex = this.turns.length - 2;
-    const caller = this.turns[callerIndex];
-    // Not in the opening exchange: an earlier caller turn must have had an answer.
-    const firstCaller = this.turns.findIndex((turn) => turn.role === "caller" && turn.text.trim());
-    if (!caller || firstCaller < 0 || firstCaller >= callerIndex || !saysGoodbye(caller.text) || !saysGoodbye(last.text)) return;
-    this.goodbyeTurn = last;
-    const since = performance.now();
-    setTimeout(() => this.hangUpAfterGoodbye(last, since), GOODBYE_POLL_MS);
+    const hangup: PendingHangup = { afterMs, requestedAt: performance.now(), ...(onCancelled ? { onCancelled } : {}) };
+    this.pendingHangup = hangup;
+    setTimeout(() => this.hangUpWhenQuiet(hangup), GOODBYE_POLL_MS);
   }
 
-  // Waits until the receptionist's goodbye has played and both sides have
-  // been quiet for AUTO_HANGUP_QUIET_MS, so the caller has time to say more.
-  // A "Bye!" said back restarts the wait; the receptionist still speaking
-  // holds it, up to AUTO_HANGUP_MAX_MS after the goodbye.
-  private hangUpAfterGoodbye(turn: Turn, since: number): void {
-    if (this.goodbyeTurn !== turn || this.finished) return;
-    const now = performance.now();
-    const quietSince = Math.max(this.playbackEndsAt(), this.lastSpeechAt, this.lastCallerAt);
-    if (now - quietSince < AUTO_HANGUP_QUIET_MS && now - since < AUTO_HANGUP_MAX_MS) {
-      setTimeout(() => this.hangUpAfterGoodbye(turn, since), GOODBYE_POLL_MS);
+  private hangUpWhenQuiet(hangup: PendingHangup): void {
+    if (this.pendingHangup !== hangup) return;
+    // A wrap-up or a non-cancellable end took the call over.
+    if (this.ending || this.finished) {
+      this.pendingHangup = undefined;
       return;
     }
-    this.goodbyeTurn = undefined;
-    const said = [...this.turns].reverse().find((item) => item.role === "receptionist")?.text.trim() ?? "";
-    // An explicit end or a transfer owns the call, and a question or a request
-    // still being answered means it isn't over.
-    if (this.ending || this.finished || this.transfer || this.runningDelegations > 0 || said.endsWith("?")) return;
+    if (this.transfer) {
+      this.cancelHangup();
+      return;
+    }
+    const now = performance.now();
+    const quietSince = Math.max(this.playbackEndsAt(), this.lastSpeechAt, this.lastCallerAt);
+    const done = this.runningDelegations === 0 && now - quietSince >= CALLER_DONE_QUIET_MS;
+    if (!done && now - hangup.requestedAt < CALLER_DONE_MAX_MS) {
+      setTimeout(() => this.hangUpWhenQuiet(hangup), GOODBYE_POLL_MS);
+      return;
+    }
+    this.pendingHangup = undefined;
     this.ending = true;
-    this.options.onAutoHangup?.();
     this.endSession();
+  }
+
+  // The caller kept the call going, so the pending hangup is off.
+  private cancelHangup(): void {
+    const hangup = this.pendingHangup;
+    if (!hangup) return;
+    this.pendingHangup = undefined;
+    hangup.onCancelled?.();
+  }
+
+  // The caller said something. Words after the request that ended the call cancel the hangup.
+  private heardCaller(startMs: number): void {
+    this.lastCallerAt = performance.now();
+    this.lastCallerStartMs = Math.max(this.lastCallerStartMs, startMs);
+    if (this.pendingHangup && startMs > this.pendingHangup.afterMs) this.cancelHangup();
   }
 
   /**
@@ -781,7 +807,7 @@ export class LiveCallController {
     }
   }
 
-  private appendTranscript(role: Turn["role"], delta: string, endMs: number): void {
+  private appendTranscript(role: Turn["role"], delta: string, endMs: number, startMs?: number): void {
     this.resetSilenceTimer();
     const last = this.turns.at(-1);
     if (last?.role === role) {
@@ -791,8 +817,8 @@ export class LiveCallController {
       this.turns.push({ role, text: delta, endMs });
       this.emitFinishedTurns(false);
     }
-    if (delta.trim()) this.watchGoodbye(role);
     if (role !== "caller") return;
+    if (delta.trim()) this.heardCaller(startMs ?? endMs);
     this.transcriptWaiters = this.transcriptWaiters.filter((waiter) => {
       if (endMs < waiter.offsetMs) return true;
       waiter.resolve();
@@ -820,7 +846,7 @@ export class LiveCallController {
   private delegationPrompt(): string {
     // The spoken transcript can lag or omit earlier answers, so list them
     // explicitly; otherwise the agent re-answers requests it already handled.
-    const earlier = this.delegations.filter((item) => !item.failed && !item.superseded).map((item) => `- ${item.answer}`);
+    const earlier = this.delegations.filter((item) => !item.failed && !item.superseded && !item.endedCall).map((item) => `- ${item.answer}`);
     return [
       `Conversation so far:\n${this.conversationText()}`,
       // The delegation event carries no request text, so a late attach leaves
@@ -853,7 +879,7 @@ export class LiveCallController {
     // A step that only called direct-answer tools is the last one; its result follows at once.
     if (step.toolCalls.every((call) => DIRECT_ANSWER_TOOLS.includes(call.toolName))) return;
     const done = step.toolResults.map((result) => `${PROGRESS[result.toolName] ?? `ran ${result.toolName}`}${succeeded(result.output) ? "" : " (it didn't go through)"}`);
-    const changed = steps.some((item) => item.toolResults.some((result) => ACTION_TOOLS.has(result.toolName) && result.toolName !== "endCall" && succeeded(result.output)));
+    const changed = steps.some((item) => item.toolResults.some((result) => ACTION_TOOLS.has(result.toolName) && succeeded(result.output)));
     const content = `Progress on the caller's request: ${done.join("; ") || "working on it"}. ${changed ? "" : "Nothing has been booked, changed or saved yet."}`.trim();
     this.send({ type: "session.thinking.append", delegation_id: delegationId, content: fitToAppend(content), event_id: `progress_${delegationId}_${steps.length}` }, { kind: "update", delegationId });
   }
@@ -862,6 +888,8 @@ export class LiveCallController {
     const delegationId = event.delegation.id;
     const revision = ++this.latestRevision;
     const receivedAt = performance.now();
+    // Another request means the caller isn't done after all.
+    this.cancelHangup();
     this.runningDelegations += 1;
     this.resetSilenceTimer();
     const previous = this.delegationQueue;
@@ -880,14 +908,16 @@ export class LiveCallController {
       let modelSteps = 0;
       let directAnswer = false;
       let failed = false;
+      let ended = false;
       let usage: LanguageModelUsage | undefined;
       const stepMs: number[] = [];
       const steps: StepLike[] = [];
       let toolMs = 0;
       let stepStartedAt = queueReadyAt;
-      // A slow answer gets a spoken update, so the caller knows it's still coming.
+      // A slow answer gets a spoken update, so the caller knows it's still
+      // coming. Once the call is ending, the goodbye was the last word.
       const stillWorking = setTimeout(() => {
-        if (revision === this.latestRevision) this.send({ type: "session.commentary.append", delegation_id: delegationId, content: STILL_WORKING, event_id: `working_${delegationId}` }, { kind: "update", delegationId });
+        if (revision === this.latestRevision && !this.ending && !this.pendingHangup && !endsCall(steps)) this.send({ type: "session.commentary.append", delegation_id: delegationId, content: STILL_WORKING, event_id: `working_${delegationId}` }, { kind: "update", delegationId });
       }, STILL_WORKING_MS);
       const delegationAbort = new AbortController();
       const abortOnCallEnd = () => delegationAbort.abort();
@@ -901,6 +931,8 @@ export class LiveCallController {
       });
       try {
         const { agent } = await this.ready;
+        // endWhenCallerDone() reads this when the agent ends the call.
+        this.answering = { offsetMs: event.offset_ms, revision };
         const result = await Promise.race([timedOut, agent.generate({
           prompt: this.delegationPrompt(),
           abortSignal: delegationAbort.signal,
@@ -916,6 +948,7 @@ export class LiveCallController {
         tools = result.steps.flatMap((step) => step.toolCalls.map((call) => call.toolName));
         modelSteps = result.steps.length;
         usage = result.totalUsage;
+        ended = endsCall(result.steps as unknown as StepLike[]);
         this.rememberResults(result.steps as unknown as StepLike[]);
         // When the loop stopped on a tool GPT-Live can speak from directly, the
         // last step has no text of its own.
@@ -926,9 +959,11 @@ export class LiveCallController {
         else failed = true;
       } catch (error) {
         failed = true;
+        ended = endsCall(steps);
         if (this.abort.signal.aborted) return;
         console.error(`[live] ${this.options.sessionId} delegation ${delegationId} failed`, error instanceof Error ? error.message : error);
       } finally {
+        this.answering = undefined;
         clearTimeout(stillWorking);
         clearTimeout(timeoutTimer);
         this.abort.signal.removeEventListener("abort", abortOnCallEnd);
@@ -940,8 +975,13 @@ export class LiveCallController {
       // request's backend sees it.
       const superseded = revision < this.latestRevision;
       if (superseded) {
-        if (!failed) this.unheardResults.push(answer);
+        if (!failed && !ended) this.unheardResults.push(answer);
         this.send({ type: "session.thinking.append", delegation_id: delegationId, content: fitToAppend(`The caller made a newer request before this one finished, so this result is background only: ${answer}`), event_id: `answer_${delegationId}` }, { kind: "update", delegationId });
+      } else if (ended) {
+        // GPT-Live said goodbye before it handed the call over, so the result
+        // closes the delegation as silent background, the way a superseded
+        // one does. Spoken, it would be a second goodbye.
+        this.send({ type: "session.thinking.append", delegation_id: delegationId, content: failed ? CALL_ENDING : answer, event_id: `answer_${delegationId}` }, { kind: "update", delegationId });
       } else {
         this.unheardResults = [];
         this.lastAnswerSentAt = performance.now();
@@ -963,6 +1003,7 @@ export class LiveCallController {
         answer,
         failed,
         superseded,
+        endedCall: ended,
         ...(usage ? { usage } : {}),
       };
       this.delegations.push(timing);
