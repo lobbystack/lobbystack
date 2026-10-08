@@ -41,13 +41,26 @@ describe("buildLiveInstructions", () => {
     expect(instructions).toContain("Don't say you've booked, cancelled, saved, sent or confirmed anything until the backend's result says it's done.");
   });
 
-  // A delegated goodbye came back from the backend as a second goodbye; the worker hangs up after a mutual one.
-  it("has GPT-Live answer a goodbye once itself instead of delegating it", () => {
+  // Only the backend can hang up. GPT-Live rarely delegated a goodbye while
+  // another rule said not to delegate what it could answer itself.
+  it("sends every ending to the backend after one short goodbye, with no rule saying otherwise", () => {
     const instructions = buildLiveInstructions(demoSnapshot, callStart);
-    const [delegate, rest] = instructions.split("Do not delegate to the backend when:");
-    expect(rest).toContain("- The caller says goodbye. Say one short goodbye back, such as \"Goodbye!\", and stop talking: the call ends on its own.");
-    expect(delegate).not.toMatch(/says goodbye/);
+    const [delegate, rest] = instructions.split("Do not delegate to the backend when:\n");
+    const doNotDelegate = rest!.split("\n").filter((line, index, lines) => lines.slice(0, index + 1).every((item) => item.startsWith("- ")));
+    expect(doNotDelegate).toHaveLength(3);
+    expect(doNotDelegate.join("\n")).not.toMatch(/goodbye|done|end the call|ends on its own/i);
+    expect(rest).toContain(`${doNotDelegate.at(-1)}\nEnding the call always goes to the backend, even though you could answer a goodbye yourself.`);
+    expect(delegate).toContain("- The caller is done: they have no more requests, say \"that's it\" or \"nothing else\", or say goodbye. Say one short goodbye, then delegate so the backend can end the call. Say nothing else while you wait, not even \"One moment.\"");
     expect(delegate).toContain("- The call is spam or the caller is abusive, so the backend can end the call.");
+    expect(delegate).toContain("- Ending the call: hang up when the caller is done, or on a spam or abusive call.");
+  });
+
+  // The goodbye came before the delegation, so anything said after the result is a second one.
+  it("says nothing more once a backend result says the call is ending", () => {
+    const instructions = buildLiveInstructions(demoSnapshot, callStart);
+    expect(instructions).toContain("When one arrives, answer the caller from it, then offer the next step, unless it says the call is ending.");
+    expect(instructions).toContain("When a backend result says the call is ending, say nothing more: you already said goodbye. If the caller speaks again before the call ends, the call goes on. Reply as usual, and when they're done, say one short goodbye and delegate again.");
+    expect(instructions).not.toContain("say a short goodbye.");
   });
 
   it("has the lines OpenAI's template requires, names the call's language, and the greeting to open with once told to start", () => {
@@ -145,6 +158,15 @@ describe("buildAgentInstructions", () => {
     expect(instructions).toContain("Report an action as complete only after the tool confirms success. If the outcome is unclear, say so");
     expect(instructions).not.toContain("Reply with what it should say next");
     expect(buildAgentInstructions(demoSnapshot, "web_chat")).not.toContain("Transcripts can contain mistakes");
+  });
+
+  // GPT-Live said goodbye before it handed the call over, so a reply would be a second one.
+  it("has the voice agent end the call without a reply when the caller is done, where it can hang up", () => {
+    const line = "When the request is that the caller is done or is saying goodbye, end the call with endCall and the reason caller_finished, and don't write a reply: the voice model has already said goodbye. For a spam or abusive call, use the reason spam or abuse.";
+    expect(buildAgentInstructions(demoSnapshot, "voice", { endsCalls: true })).toContain(line);
+    expect(buildAgentInstructions(demoSnapshot, "web_voice", { endsCalls: true })).toContain(line);
+    expect(buildAgentInstructions(demoSnapshot, "voice")).not.toContain("endCall");
+    expect(buildAgentInstructions(demoSnapshot, "web_chat", { endsCalls: true })).not.toContain("endCall");
   });
 
   it("tells the agent not to ask for a number the call already carries", () => {

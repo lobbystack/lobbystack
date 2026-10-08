@@ -11,6 +11,9 @@ import { describeClosure, describeServices, type ServiceFact, type UpcomingClosu
 // own words, and standing behavior belongs in its instructions. So these are
 // plain facts; the live instructions say what to do with each kind of result.
 
+/** What GPT-Live hears, as silent background, once the agent has ended the call. */
+export const CALL_ENDING = "The call is ending.";
+
 /** Commentary appends are capped at 500 tokens; keep a direct answer well inside that. */
 export const MAX_DIRECT_ANSWER_CHARS = 1_200;
 /**
@@ -107,7 +110,7 @@ const FORMATTERS: Record<string, Formatter> = {
     const details = [text(input.serviceName), text(input.appointmentStartsAt)].filter(Boolean).join(", ");
     return `The cancellation request is saved for the team${details ? ` (${details})` : ""}. The appointment is still booked until the team cancels it, and the team will confirm with the caller.`;
   },
-  endCall: (_input, output) => (output.ok === true ? "The call is ending." : undefined),
+  endCall: (_input, output) => (output.ok === true ? CALL_ENDING : undefined),
   // The REFER waits until GPT-Live has said this, so it goes out at once.
   transferCall: (_input, output) => (output.ok === true && output.transferring === true ? "The call is being transferred to a person at the business now." : undefined),
   searchKnowledge: (_input, output) => knowledgeAnswer(output),

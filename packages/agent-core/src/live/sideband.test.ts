@@ -1,10 +1,13 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
+import { demoSnapshot } from "@lobbystack/shared";
+import { MockLanguageModelV4 } from "ai/test";
 import OpenAI from "openai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocketServer, type WebSocket } from "ws";
 
+import { createReceptionistAgent } from "../agent";
 import { LiveCallController, type LiveCallControllerOptions, type LiveCallSummary } from "./callController";
 
 // Runs the controller on the SDK's real sideband connection, against a local
@@ -55,7 +58,7 @@ async function sideband(attaches: Array<504 | ((socket: WebSocket) => void)>, op
 
 const send = (socket: WebSocket, event: Record<string, unknown>) => socket.send(JSON.stringify(event));
 // Calls `reply` for each command the controller sends.
-const onCommand = (socket: WebSocket, reply: (event: { type: string; event_id?: string }) => void) => socket.on("message", (data) => reply(JSON.parse(String(data))));
+const onCommand = (socket: WebSocket, reply: (event: { type: string; event_id?: string; delegation_id?: string; content?: string }) => void) => socket.on("message", (data) => reply(JSON.parse(String(data))));
 
 describe("LiveCallController sideband", () => {
   it("retries an attach OpenAI's edge answers with a 504, and runs the call on the new connection", async () => {
@@ -158,34 +161,52 @@ describe("LiveCallController sideband", () => {
     expect(transfers).toEqual(["referring", "referred", "completed"]);
   });
 
-  // GPT-Live often says goodbye itself instead of delegating it, so endCall never runs.
-  it.each([{ phone: true, ends: "SIP hangup" }, { phone: false, ends: "session.close" }])("ends a call with a $ends once both sides have said goodbye", async ({ phone }) => {
+  // GPT-Live says its goodbye and hands the call over. The real agent ends it
+  // with endCall, the way the worker's call control does for a caller who is done.
+  it.each([{ phone: true, ends: "SIP hangup" }, { phone: false, ends: "session.close" }])("ends the call with a $ends after GPT-Live's goodbye, and sends nothing for it to say", async ({ phone }) => {
     let peer!: WebSocket;
-    const commands: string[] = [];
-    const onAutoHangup = vi.fn();
+    const commands: Array<{ type: string; event_id?: string; delegation_id?: string; content?: string }> = [];
+    const holder: { controller?: LiveCallController } = {};
+    const model = new MockLanguageModelV4({
+      doGenerate: async () => ({
+        content: [{ type: "tool-call", toolCallId: "call_end", toolName: "endCall", input: JSON.stringify({ reason: "caller_finished" }) }],
+        finishReason: { unified: "tool-calls", raw: undefined },
+        usage: { inputTokens: { total: 1_000, noCache: 1_000, cacheRead: undefined, cacheWrite: undefined }, outputTokens: { total: 10, text: 10, reasoning: undefined } },
+        warnings: [],
+      }),
+    });
+    const agent = createReceptionistAgent({
+      model,
+      context: { domain: { db: {} as never }, snapshot: demoSnapshot, channel: phone ? "voice" : "web_voice", callId: "call_1", callControl: { hangup: async () => holder.controller!.endWhenCallerDone() } },
+      directToolAnswers: true,
+    });
     const { controller, hangup, closed } = await sideband([(socket) => {
       peer = socket;
       send(socket, { type: "session.started" });
       for (const [type, delta, start, end] of [
         ["session.output_transcript.delta", "Thanks for calling Northside Plumbing.", 0, 500],
         ["session.input_transcript.delta", "Are you open on Saturday?", 600, 1_000],
-        ["session.output_transcript.delta", "Yes, from 9 to noon.", 1_100, 1_500],
-        ["session.input_transcript.delta", "Great, thanks. Bye.", 1_600, 2_000],
-        ["session.output_transcript.delta", "Bye, take care!", 2_100, 2_400],
+        ["session.output_transcript.delta", "Yes, from 9 to noon. Anything else?", 1_100, 1_500],
+        ["session.input_transcript.delta", "No, that's it. Thanks!", 1_600, 2_000],
+        ["session.output_transcript.delta", "You're welcome. Goodbye!", 2_100, 2_400],
       ] as const) send(socket, { type, delta, start_ms: start, end_ms: end });
+      send(socket, { type: "session.delegation.created", delegation: { id: "item_1", target: "client", type: "delegation" }, offset_ms: 2_050 });
       onCommand(socket, (event) => {
-        commands.push(event.type);
+        commands.push(event);
+        if (event.type === "session.thinking.append") send(socket, { type: "session.thinking.appended", client_event_id: event.event_id });
         if (event.type === "session.close") send(socket, { type: "session.closed", reason: "close_requested", usage: { seconds: 3 } });
       });
-    }], { phone, onAutoHangup });
+    }], { phone, setup: { agent } });
+    holder.controller = controller;
     hangup.mockImplementation((async () => send(peer, { type: "session.closed", reason: "close_requested", usage: { seconds: 3 } })) as never);
     controller.start();
     await vi.waitFor(() => expect(closed).toHaveLength(1), { timeout: 5_000 });
-    expect(onAutoHangup).toHaveBeenCalledOnce();
+    expect(commands.filter((event) => event.type === "session.commentary.append")).toEqual([]);
+    expect(commands).toContainEqual(expect.objectContaining({ type: "session.thinking.append", delegation_id: "item_1", content: "The call is ending." }));
     expect(hangup).toHaveBeenCalledTimes(phone ? 1 : 0);
-    expect(commands).toEqual(phone ? [] : ["session.close"]);
-    expect(closed[0]).toMatchObject({ closeReason: "close_requested", usageConfirmed: true });
-  });
+    expect(commands.map((event) => event.type).filter((type) => type === "session.close")).toEqual(phone ? [] : ["session.close"]);
+    expect(closed[0]).toMatchObject({ closeReason: "close_requested", usageConfirmed: true, delegations: [expect.objectContaining({ tools: ["endCall"], endedCall: true, directAnswer: true })] });
+  }, 10_000);
 
   it("passes a keypad press to the agent as caller input", async () => {
     const generate = vi.fn(async (_options: { prompt: string }) => ({ text: "Confirmed.", steps: [{ toolCalls: [], toolResults: [] }] }));

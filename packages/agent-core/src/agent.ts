@@ -22,7 +22,7 @@ export function createReceptionistAgent(input: {
   if (input.directToolAnswers) stopWhen.push(({ steps }) => directToolAnswer(steps.at(-1)) !== undefined);
   return new ToolLoopAgent({
     model: input.model,
-    instructions: [buildAgentInstructions(input.context.snapshot, input.context.channel, { intakeOnly: input.context.intakeOnly ?? false, ...(input.context.callerPhone ? { callerPhone: input.context.callerPhone } : {}) }), input.extraInstructions].filter(Boolean).join("\n\n"),
+    instructions: [buildAgentInstructions(input.context.snapshot, input.context.channel, { intakeOnly: input.context.intakeOnly ?? false, endsCalls: input.context.callControl !== undefined, ...(input.context.callerPhone ? { callerPhone: input.context.callerPhone } : {}) }), input.extraInstructions].filter(Boolean).join("\n\n"),
     tools: createReceptionistTools(input.context),
     stopWhen,
   });
