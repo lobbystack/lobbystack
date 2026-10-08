@@ -41,6 +41,15 @@ describe("buildLiveInstructions", () => {
     expect(instructions).toContain("Don't say you've booked, cancelled, saved, sent or confirmed anything until the backend's result says it's done.");
   });
 
+  // A delegated goodbye came back from the backend as a second goodbye; the worker hangs up after a mutual one.
+  it("has GPT-Live answer a goodbye once itself instead of delegating it", () => {
+    const instructions = buildLiveInstructions(demoSnapshot, callStart);
+    const [delegate, rest] = instructions.split("Do not delegate to the backend when:");
+    expect(rest).toContain("- The caller says goodbye. Say one short goodbye back, such as \"Goodbye!\", and stop talking: the call ends on its own.");
+    expect(delegate).not.toMatch(/says goodbye/);
+    expect(delegate).toContain("- The call is spam or the caller is abusive, so the backend can end the call.");
+  });
+
   it("has the lines OpenAI's template requires, names the call's language, and the greeting to open with once told to start", () => {
     const instructions = buildLiveInstructions({ ...demoSnapshot, defaultLocale: "fr" }, callStart);
     expect(instructions).toContain("Delegate to the backend when:\n");
