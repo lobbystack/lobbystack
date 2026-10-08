@@ -102,6 +102,7 @@
   "devDependencies": {
     "@types/luxon": "^3.7.6",
     "@types/node": "^26.0.0",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "concurrently": "^9.1.2",
     "drizzle-orm": "^0.45.3",
     "lucia": "^3.2.2",
@@ -111,7 +112,7 @@
     "standardwebhooks": "^1.1.1",
     "tsx": "^4.23.15",
     "twilio": "^6.1.2",
-    "typescript": "^5.8.2",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vitest": "^4.1.11"
   }
 }
