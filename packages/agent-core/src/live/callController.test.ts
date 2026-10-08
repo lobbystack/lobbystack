@@ -543,7 +543,7 @@ describe("LiveCallController ending when the caller is done", () => {
     expect(sentOfType(socket, "session.commentary.append")).toEqual([expect.objectContaining({ delegation_id: "item_1", content: "The call is ending." }), expect.objectContaining({ delegation_id: "item_2", content: "We're open until 5." })]);
   });
 
-  it("doesn't start the hangup when the caller spoke again while the agent was ending the call", async () => {
+  it("doesn't start the hangup or ask for a goodbye when the caller spoke again before the agent ended the call", async () => {
     fakeTimers();
     const holder: { controller?: LiveCallController } = {};
     const onCancelled = vi.fn();
@@ -557,6 +557,27 @@ describe("LiveCallController ending when the caller is done", () => {
     finish();
     await vi.advanceTimersByTimeAsync(30_000);
     expect(onCancelled).toHaveBeenCalledOnce();
+    expect(hangup).not.toHaveBeenCalled();
+    expect(sentOfType(socket, "session.commentary.append")).toEqual([]);
+    expect(sentOfType(socket, "session.thinking.append")).toEqual([expect.objectContaining({ delegation_id: "item_1", content: "The caller spoke again before the call ended, so the call goes on." })]);
+  });
+
+  // GPT-Live replies to what the caller said, and hands the call over again when they're done.
+  it("tells GPT-Live the call goes on when the caller speaks while the agent is ending it", async () => {
+    fakeTimers();
+    const holder: { controller?: LiveCallController } = {};
+    const onCancelled = vi.fn();
+    const ending = endingAgent(holder, "caller_finished", onCancelled);
+    const { socket, controller, hangup } = setup({ generate: async (options) => { const result = await ending(options); await new Promise((resolve) => setTimeout(resolve, 1_000)); return result; } });
+    holder.controller = controller;
+    delegate(socket, "item_1", "No, that's everything.", 1_000);
+    await vi.advanceTimersByTimeAsync(500);
+    socket.emit("session.input_transcript.delta", { delta: "Goodbye!", start_ms: 1_600, end_ms: 1_900 });
+    expect(onCancelled).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(600);
+    expect(sentOfType(socket, "session.commentary.append")).toEqual([]);
+    expect(sentOfType(socket, "session.thinking.append")).toEqual([expect.objectContaining({ delegation_id: "item_1", content: "The caller spoke again before the call ended, so the call goes on." })]);
+    await vi.advanceTimersByTimeAsync(30_000);
     expect(hangup).not.toHaveBeenCalled();
   });
 

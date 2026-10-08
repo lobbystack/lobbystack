@@ -201,6 +201,7 @@ const MAX_REMEMBERED_ACTIONS = 10;
 
 // The facts GPT-Live receives when a request fails. Its instructions say what to do then.
 const FAILED_ANSWER = "The backend couldn't complete this request.";
+const CALL_GOES_ON = "The caller spoke again before the call ended, so the call goes on.";
 const STILL_WORKING = "Still checking. This is taking a few more seconds.";
 // Commands for GPT-Live when the call has to end, or a transfer didn't go through.
 const WRAP_UP: Record<LiveCallWrapUp, string> = {
@@ -322,6 +323,8 @@ export class LiveCallController {
   // The request the agent is answering now. Requests run one at a time.
   private answering: { offsetMs: number; revision: number } | undefined;
   private pendingHangup: PendingHangup | undefined;
+  // The caller kept the call going after the last request that ended it.
+  private hangupCancelled = false;
   private ending = false;
   // A transfer in progress: waiting for the announcement to play, waiting for
   // OpenAI to accept the REFER, or referred and waiting for the outcome.
@@ -653,7 +656,8 @@ export class LiveCallController {
     const answering = this.answering;
     const afterMs = answering?.offsetMs ?? this.timelineNow();
     // A newer request, a transfer, or the caller already speaking again means the call isn't over.
-    if ((answering && answering.revision !== this.latestRevision) || this.transfer || this.lastCallerStartMs > afterMs) {
+    this.hangupCancelled = (answering !== undefined && answering.revision !== this.latestRevision) || this.transfer !== undefined || this.lastCallerStartMs > afterMs;
+    if (this.hangupCancelled) {
       onCancelled?.();
       return;
     }
@@ -693,6 +697,7 @@ export class LiveCallController {
     const hangup = this.pendingHangup;
     if (!hangup) return;
     this.pendingHangup = undefined;
+    this.hangupCancelled = true;
     hangup.onCancelled?.();
   }
 
@@ -981,6 +986,9 @@ export class LiveCallController {
       if (superseded) {
         if (!failed && !ended) this.unheardResults.push(answer);
         this.send({ type: "session.thinking.append", delegation_id: delegationId, content: fitToAppend(`The caller made a newer request before this one finished, so this result is background only: ${answer}`), event_id: `answer_${delegationId}` }, { kind: "update", delegationId });
+      } else if (ended && this.hangupCancelled && !this.ending) {
+        // The caller cancelled the hangup, so a goodbye now would cut them off.
+        this.send({ type: "session.thinking.append", delegation_id: delegationId, content: CALL_GOES_ON, event_id: `answer_${delegationId}` }, { kind: "update", delegationId });
       } else {
         this.unheardResults = [];
         this.lastAnswerSentAt = performance.now();
