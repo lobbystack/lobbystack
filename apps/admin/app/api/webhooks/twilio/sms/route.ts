@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { twilioSmsInboundSchema } from "@lobbystack/contracts";
-import { receiveInboundSms } from "@lobbystack/domain";
+import { isSharedSmsSender, receiveInboundSms, receiveSharedSenderSms } from "@lobbystack/domain";
 import { resolveTwilioWebhookUrl, validateTwilioSignature } from "@lobbystack/providers/twilio/webhookSecurity";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
@@ -10,8 +10,14 @@ import { createWorkerDomainContext } from "@/lib/domain-context";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function twiml(): NextResponse {
-  return new NextResponse("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response></Response>", { status: 200, headers: { "content-type": "text/xml" } });
+function escapeXml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** TwiML for Twilio, with a reply text when there is one. */
+function twiml(reply?: string | null): NextResponse {
+  const message = reply ? `<Message>${escapeXml(reply)}</Message>` : "";
+  return new NextResponse(`<?xml version="1.0" encoding="UTF-8"?><Response>${message}</Response>`, { status: 200, headers: { "content-type": "text/xml" } });
 }
 
 export async function POST(request: Request) {
@@ -23,7 +29,13 @@ export async function POST(request: Request) {
     const body = twilioSmsInboundSchema.parse(params);
     const resolved = await getAppDatabase().db.execute<{ business_id: string }>(sql`select app.resolve_business_by_phone(${body.To}) as business_id`);
     const businessId = resolved.rows[0]?.business_id;
-    if (!businessId) return twiml();
+    if (!businessId) {
+      // The shared sender texts for every cloud business and belongs to none.
+      // It answers STOP, START and HELP, and the reply goes out from it.
+      if (!isSharedSmsSender(body.To)) return twiml();
+      const { reply } = await receiveSharedSenderSms(createWorkerDomainContext(), { from: body.From, body: body.Body, ...(body.OptOutType ? { optOutType: body.OptOutType } : {}) });
+      return twiml(reply);
+    }
     const providerMessageId = body.MessageSid ?? body.SmsSid;
     if (!providerMessageId) return twiml();
     await receiveInboundSms(createWorkerDomainContext(), {

@@ -285,7 +285,9 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         const opening = await checkOpening(domain, { businessId, serviceName: input.serviceName, startsAt, timezone, ...(context.callId ? { callId: context.callId } : {}) });
         if (!opening.ok) return { ok: false, reason: `${opening.reason} Check the service name with getBusinessServices.` };
         if (!opening.available) return { ok: false, reason: UNAVAILABLE_TOOL_MESSAGES[isReason(opening.reason) ? opening.reason : "taken"] };
-        const textable = canTextNumber(snapshot.contactChannels?.smsNumber, contactPhone);
+        // Only a phone call records an answer about texts. A website chat or
+        // browser call books without one, whatever the agent passes.
+        const textable = channel === "voice" && canTextNumber(snapshot.contactChannels?.smsNumber, contactPhone);
         const booked = await bookForCaller(domain, {
           businessId,
           serviceName: input.serviceName,
@@ -302,7 +304,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         if (!booked.ok) return "unavailableReason" in booked && isReason(booked.unavailableReason) ? { ok: false, reason: UNAVAILABLE_TOOL_MESSAGES[booked.unavailableReason] } : booked;
         // The caller agreed to a text this business can't send them.
         return input.smsConsent === "agreed" && !textable
-          ? { ...booked, textConfirmation: "This business can't text that number. Tell the caller they won't get a text confirmation." }
+          ? { ...booked, textConfirmation: channel === "voice" ? "This business can't text that number. Tell the caller they won't get a text confirmation." : "Texts can only be set up on a phone call. Tell the caller they won't get a text confirmation." }
           : booked;
       },
     });

@@ -16,6 +16,7 @@ import { advanceOnboardingStageInTransaction } from "./onboarding";
 import { recordProductEventBestEffort } from "./productEvents";
 import { enqueueKnowledgeDerivedRefresh } from "./businessHours";
 import { resolveBusinessBillingPlan } from "./contentRetentionPolicy";
+import { resolveSmsSender } from "./smsSender";
 
 const ragMeter = getMeter("lobbystack-rag");
 const searchDuration = ragMeter.createHistogram("rag.search.duration_ms", { unit: "ms" });
@@ -519,7 +520,10 @@ export async function refreshBusinessSnapshot(
     ]);
     const currentProfile = profile[0];
     const phoneNumber = numbers.find((number) => number.status === "active" && number.voiceEnabled)?.e164;
-    const smsNumber = numbers.find((number) => number.status === "active" && number.smsEnabled)?.e164;
+    // The number customer texts come from, so the agent offers texts only to
+    // callers it can reach: the shared sender on cloud, the business's own
+    // SMS number when self-hosted.
+    const smsNumber = await resolveSmsSender(tx, input.businessId);
     const version = `${Date.now()}`;
     builtSnapshot = buildBusinessContextSnapshot({
       businessId: input.businessId,

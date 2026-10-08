@@ -7,7 +7,8 @@ import { enqueueOutbox, onboardingPhoneVerifications, withBusinessTransaction } 
 
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
-import { enableOperatorSmsAlertsWithConsent, resolveOperatorSmsSender } from "./notifications";
+import { enableOperatorSmsAlertsWithConsent } from "./notifications";
+import { resolveSmsSender } from "./smsSender";
 import { VERIFICATION_CODE_TTL_MS, newVerificationCode, verificationCodeSecret } from "./verificationCode";
 
 // Personal phone verification is no longer part of onboarding. This drains any
@@ -114,7 +115,7 @@ export async function startOperatorPhoneVerification(
   try {
     return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
       await requireBusinessMembership(tx, input);
-      const sender = await resolveOperatorSmsSender(tx, input.businessId);
+      const sender = await resolveSmsSender(tx, input.businessId);
       if (!sender) throw phoneVerificationError(409, "sms_sender_missing", "An alert SMS sender is required for SMS notifications.");
       if (!canTextNumber(sender, input.phoneE164)) throw phoneVerificationError(422, "phone_unreachable", "The alert SMS sender can't text this number.");
       await tx.update(onboardingPhoneVerifications)
@@ -212,7 +213,7 @@ export async function issueOperatorPhoneVerificationCode(
       .where(and(scope, or(eq(onboardingPhoneVerifications.status, "queued"), and(eq(onboardingPhoneVerifications.status, "processing"), lt(onboardingPhoneVerifications.updatedAt, new Date(now.getTime() - PHONE_VERIFICATION_SEND_LEASE_MS))))))
       .returning({ phoneE164: onboardingPhoneVerifications.phoneE164 }))[0];
     if (!claimed) return null;
-    const sender = await resolveOperatorSmsSender(tx, input.businessId);
+    const sender = await resolveSmsSender(tx, input.businessId);
     if (!sender || !canTextNumber(sender, claimed.phoneE164)) {
       await tx.update(onboardingPhoneVerifications).set({ status: "failed", codeHash: null, lastError: "No alert SMS sender can reach this number.", updatedAt: now }).where(scope);
       return null;

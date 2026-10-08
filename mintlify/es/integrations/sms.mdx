@@ -1,28 +1,37 @@
 ---
 title: "Configure las alertas por SMS y el consentimiento"
-description: "Cómo LobbyStack obtiene el consentimiento para los SMS salientes de citas y de alertas del espacio de trabajo."
+description: "Qué número envía los SMS de LobbyStack, cómo dan su consentimiento clientes y operadores, y qué hace STOP."
 sidebarTitle: "Alertas por SMS y consentimiento"
 contentType: "Reference"
 ---
 
-LobbyStack usa un número de SMS gratuito (toll-free) para enviar notificaciones de cuenta que no son de marketing.
+LobbyStack envía por SMS notificaciones de cuenta salientes que no son de marketing.
 
-Este número envía:
+LobbyStack envía:
 
-- Una confirmación de reserva y un recordatorio 24 horas antes de la cita, a los clientes que lo aceptan.
+- Una confirmación de reserva, un recordatorio 24 horas antes de la cita y una confirmación de cancelación, a los clientes que lo aceptan.
+- Un código de un solo uso cuando una persona que llama cambia una cita por teléfono y su negocio lo exige.
 - Alertas del espacio de trabajo a los operadores verificados.
 
-Este número no envía marketing, promociones, contenido con restricción de edad, respuestas por SMS de la IA ni conversaciones manuales por SMS.
+LobbyStack no envía marketing, promociones, contenido con restricción de edad, respuestas por SMS de la IA ni conversaciones manuales por SMS desde su número de notificaciones.
 
 El plan Free no tiene número de teléfono y no envía SMS.
 
-Cuando un cliente envía un mensaje de texto al número de su negocio, LobbyStack guarda el mensaje en **Mensajes** y avisa a su equipo. La IA no responde. `STOP` y `HELP` reciben respuestas fijas.
+## Qué número envía sus SMS
+
+En LobbyStack cloud, los SMS de todos los negocios salen de un solo número gratuito (toll-free) que pertenece a LobbyStack: +1 844 656 2290. Twilio lo verificó para notificaciones de cuenta. LobbyStack obtiene el consentimiento de cada cliente y redacta cada mensaje, así que este número puede enviar SMS por todos los negocios. Usted no registra ningún número para enviar SMS.
+
+Un número gratuito solo puede enviar SMS a números de Estados Unidos y Canadá. La recepcionista con IA no ofrece SMS a quienes llaman desde otros números.
+
+En una instalación autoalojada de LobbyStack, los SMS salen del número de Twilio de su negocio con SMS activado. Registre ese número antes de enviar SMS a sus clientes. Un número local de Estados Unidos necesita una marca y una campaña 10DLC (10-digit long code), y un número gratuito necesita la verificación de números gratuitos (toll-free verification). Los operadores de Estados Unidos bloquean los SMS de números sin registrar.
+
+Cuando un cliente envía un mensaje de texto al número de su negocio, LobbyStack guarda el mensaje en **Mensajes** y avisa a su equipo. La IA no responde. `STOP` y `HELP` reciben respuestas fijas. El número gratuito compartido no mantiene conversaciones y solo responde a `STOP`, `START` y `HELP`.
 
 ## Modelo de consentimiento
 
 LobbyStack obtiene el consentimiento para SMS antes de enviar alertas.
 
-Los clientes con citas y los operadores usan el mismo número gratuito, pero dan su consentimiento en lugares distintos.
+Los clientes con citas y los operadores reciben los SMS del mismo número, pero dan su consentimiento en lugares distintos.
 
 ### Clientes con citas
 
@@ -35,6 +44,8 @@ El aviso es:
 Si la persona que llama acepta, LobbyStack registra la aceptación y envía los SMS de la cita a ese número de teléfono.
 
 Si la persona que llama no acepta, la cita se reserva igualmente y no se envía ningún SMS de la cita.
+
+LobbyStack registra el consentimiento solo en llamadas telefónicas, para el número desde el que llama el cliente. El chat del sitio web y las llamadas desde el navegador no ofrecen SMS, y una respuesta dada ahí no se registra.
 
 ### Operadores
 
@@ -50,6 +61,8 @@ Los operadores pueden desactivar las alertas por SMS más adelante en la configu
 
 ## Mensajes de ejemplo
 
+Cada SMS de una cita termina con el aviso sobre tarifas y las instrucciones de `STOP` y `HELP`, en el idioma del cliente.
+
 Confirmación de cita:
 
 > Example Business: Su cita de corte de cabello está confirmada para el 24 de mayo a las 2:00 p. m. Pueden aplicarse tarifas de mensajes y datos. Responda STOP para darse de baja o HELP para obtener ayuda.
@@ -60,9 +73,11 @@ Alerta para operadores:
 
 ## Baja y ayuda
 
-Los destinatarios pueden responder `STOP` para dejar de recibir SMS del número gratuito de alertas.
+Un cliente que responde `STOP` al número gratuito compartido deja de recibir SMS de ese número, de cualquier negocio. Twilio impide que el número le escriba a ese teléfono. LobbyStack marca el teléfono como dado de baja en cada negocio que lo tiene como contacto, para que ningún negocio le prepare SMS.
 
-Los destinatarios pueden responder `START` o `SUBSCRIBE` para volver a suscribirse, cuando esté disponible.
+Un cliente que responde `START` o `SUBSCRIBE` puede volver a recibir SMS. Cada negocio vuelve a la respuesta que el cliente le había dado. Un cliente que había aceptado los SMS de un negocio los vuelve a recibir, y uno que los había rechazado sigue sin recibirlos.
+
+Un cliente que responde `STOP` al número de su negocio se da de baja solo de los SMS de su negocio. `START` a ese número lo vuelve a suscribir.
 
 Los destinatarios pueden responder `HELP` para obtener información de asistencia.
 

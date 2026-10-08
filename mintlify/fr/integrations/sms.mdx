@@ -1,28 +1,37 @@
 ---
 title: "Configurer les alertes SMS et le consentement"
-description: "Comment LobbyStack recueille le consentement pour les SMS sortants de rendez-vous et les alertes de l'espace de travail."
+description: "Quel numéro envoie les textos de LobbyStack, comment clients et opérateurs donnent leur consentement, et ce que fait STOP."
 sidebarTitle: "Alertes SMS et consentement"
 contentType: "Reference"
 ---
 
-LobbyStack utilise un seul numéro SMS sans frais pour les notifications de compte sortantes, sans caractère marketing.
+LobbyStack envoie par SMS des notifications de compte sortantes, sans caractère marketing.
 
-Ce numéro envoie :
+LobbyStack envoie :
 
-- Une confirmation de réservation et un rappel 24 heures avant le rendez-vous, aux clients qui l'acceptent.
+- Une confirmation de réservation, un rappel 24 heures avant le rendez-vous et une confirmation d'annulation, aux clients qui l'acceptent.
+- Un code à usage unique quand un appelant modifie un rendez-vous par téléphone et que votre entreprise en exige un.
 - Des alertes de l'espace de travail aux opérateurs vérifiés.
 
-Ce numéro n'envoie pas de marketing, de promotions, de contenu soumis à une limite d'âge, de réponses SMS générées par l'IA ni de conversations SMS manuelles.
+LobbyStack n'envoie pas de marketing, de promotions, de contenu soumis à une limite d'âge, de réponses SMS générées par l'IA ni de conversations SMS manuelles depuis son numéro de notifications.
 
 Le forfait Free n'a pas de numéro de téléphone et n'envoie pas de SMS.
 
-Quand un client envoie un texto à votre numéro d'entreprise, LobbyStack enregistre le message dans **Messages** et alerte votre équipe. L'IA ne répond pas. `STOP` et `HELP` reçoivent des réponses fixes.
+## Quel numéro envoie vos textos
+
+Sur LobbyStack cloud, les textos de toutes les entreprises viennent d'un seul numéro sans frais qui appartient à LobbyStack : +1 844 656 2290. Twilio l'a vérifié pour les notifications de compte. LobbyStack recueille le consentement de chaque client et rédige chaque message, ce qui permet à ce numéro d'envoyer des textos pour toutes les entreprises. Vous n'avez aucun numéro à enregistrer pour les textos.
+
+Un numéro sans frais peut seulement envoyer des textos aux numéros des États-Unis et du Canada. Le réceptionniste IA ne propose pas de textos aux appelants qui ont un autre numéro.
+
+Sur une installation autohébergée de LobbyStack, les textos viennent du numéro Twilio de votre entreprise compatible SMS. Enregistrez ce numéro avant d'envoyer des textos à vos clients. Un numéro local américain demande une marque et une campagne 10DLC (10-digit long code), et un numéro sans frais demande une vérification sans frais (toll-free verification). Les opérateurs américains bloquent les textos des numéros non enregistrés.
+
+Quand un client envoie un texto à votre numéro d'entreprise, LobbyStack enregistre le message dans **Messages** et alerte votre équipe. L'IA ne répond pas. `STOP` et `HELP` reçoivent des réponses fixes. Le numéro sans frais partagé ne tient aucune conversation et répond seulement à `STOP`, `START` et `HELP`.
 
 ## Modèle de consentement
 
 LobbyStack recueille le consentement aux SMS avant d'envoyer des alertes.
 
-Les clients qui prennent rendez-vous et les opérateurs utilisent le même numéro sans frais, mais ils donnent leur consentement à des endroits différents.
+Les clients qui prennent rendez-vous et les opérateurs reçoivent leurs textos du même numéro, mais ils donnent leur consentement à des endroits différents.
 
 ### Clients qui prennent rendez-vous
 
@@ -35,6 +44,8 @@ Le message d'information est :
 Si l'appelant accepte, LobbyStack enregistre son consentement et envoie les SMS de rendez-vous à ce numéro de téléphone.
 
 Si l'appelant refuse, le rendez-vous est quand même réservé et aucun SMS de rendez-vous n'est envoyé.
+
+LobbyStack enregistre le consentement seulement pendant un appel téléphonique, pour le numéro d'où le client appelle. Le clavardage du site Web et les appels depuis le navigateur ne proposent pas de textos, et une réponse donnée là n'est pas enregistrée.
 
 ### Opérateurs
 
@@ -50,6 +61,8 @@ Les opérateurs peuvent désactiver les alertes SMS plus tard dans les réglages
 
 ## Exemples de messages
 
+Chaque texto de rendez-vous se termine par l'avis sur les frais et les instructions `STOP` et `HELP`, dans la langue du client.
+
 Confirmation de rendez-vous :
 
 > Entreprise Exemple : Votre rendez-vous pour une coupe de cheveux est confirmé le 24 mai à 14 h. Des frais de messagerie et de données peuvent s'appliquer. Répondez STOP pour vous désabonner ou HELP pour obtenir de l'aide.
@@ -60,9 +73,11 @@ Alerte pour un opérateur :
 
 ## Désabonnement et aide
 
-Les destinataires peuvent répondre `STOP` pour ne plus recevoir de SMS du numéro d'alerte sans frais.
+Un client qui répond `STOP` au numéro sans frais partagé ne reçoit plus aucun texto de ce numéro, de la part d'aucune entreprise. Twilio empêche le numéro d'écrire à ce téléphone. LobbyStack marque le téléphone comme désabonné dans chaque entreprise qui l'a comme contact, pour qu'aucune entreprise ne lui prépare de textos.
 
-Les destinataires peuvent répondre `START` ou `SUBSCRIBE` pour se réabonner, lorsque c'est possible.
+Un client qui répond `START` ou `SUBSCRIBE` peut de nouveau recevoir des textos. Chaque entreprise reprend la réponse que le client lui avait donnée. Un client qui avait accepté les textos d'une entreprise les reçoit de nouveau, et un client qui les avait refusés reste sans textos.
+
+Un client qui répond `STOP` à votre numéro d'entreprise se désabonne seulement des textos de votre entreprise. `START` à ce numéro le réabonne.
 
 Les destinataires peuvent répondre `HELP` pour obtenir les coordonnées du support.
 

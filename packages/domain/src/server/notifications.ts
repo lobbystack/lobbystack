@@ -3,10 +3,11 @@ import { and, eq, gte, inArray, lte, lt, or, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { isTerminalTwilioMessageStatus, mapTwilioStatusToNotificationStatus, shouldApplyNotificationStatusTransition } from "@lobbystack/shared";
 
-import { appointments, billingAccounts, businesses, contacts, enqueueOutbox, notifications, operatorNotificationDeliveries, operatorNotificationPreferences, phoneNumbers, services, smsConsentEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, businesses, contacts, enqueueOutbox, notifications, operatorNotificationDeliveries, operatorNotificationPreferences, services, smsConsentEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
+import { resolveSmsSender } from "./smsSender";
 import { correctUsageInTransaction, enqueueUsageSyncInTransaction } from "./usage";
 import { recordUnitEconomicsEventInTransaction } from "./unitEconomics";
 
@@ -79,14 +80,35 @@ function localeFor(value: string | null | undefined): InterfaceLocale {
 /** The text a customer gets when their appointment is cancelled, the one appointment notification sent for a cancelled appointment. */
 export const CANCELLATION_CONFIRMATION = "cancellation_confirmation";
 
+/**
+ * The opt-out line every appointment text ends with, as in the sample the
+ * shared sender's toll-free verification approved. Carriers act on STOP and
+ * HELP, so they stay in English in every language. GSM-7 only: a letter such
+ * as "č" or "á" would cut a segment from 160 characters to 70.
+ */
+export const SMS_OPT_OUT_FOOTER: Record<InterfaceLocale, string> = {
+  en: "Msg & data rates may apply. Reply STOP to opt out or HELP for help.",
+  fr: "Des frais de messagerie et de données peuvent s'appliquer. Répondez STOP pour vous désabonner ou HELP pour obtenir de l'aide.",
+  es: "Pueden aplicarse tarifas de mensajes y datos. Responda STOP para darse de baja o HELP para obtener ayuda.",
+  sr: "Mogu se naplatiti poruke i prenos podataka. Odgovorite STOP za odjavu ili HELP za informacije.",
+};
+
 export function buildAppointmentNotification(input: {
   kind: string;
+  channel: "sms" | "email";
   locale: InterfaceLocale;
   businessName: string;
   serviceName: string;
   startsAt: Date;
   timezone: string;
 }): { subject: string; body: string } {
+  const message = appointmentMessage(input);
+  // Every customer text ends with the opt-out line, whether it comes from the
+  // shared sender or a self-hosted business's own number. Emails don't.
+  return input.channel === "sms" ? { ...message, body: `${message.body} ${SMS_OPT_OUT_FOOTER[input.locale]}` } : message;
+}
+
+function appointmentMessage(input: { kind: string; locale: InterfaceLocale; businessName: string; serviceName: string; startsAt: Date; timezone: string }): { subject: string; body: string } {
   // intlLocale keeps Serbian dates in Latin script ("sr-Latn").
   const date = DateTime.fromJSDate(input.startsAt).setZone(input.timezone).setLocale(intlLocale(input.locale)).toLocaleString(DateTime.DATETIME_MED);
   const reminder = input.kind === "appointment_reminder";
@@ -136,7 +158,7 @@ function cancellationNotification(input: { locale: InterfaceLocale; businessName
  * Why an appointment notification can't go out, or null when it can. A
  * cancelled appointment gets only its cancellation text, and a cancellation
  * text needs a cancelled appointment. A text needs a contact who agreed to
- * texts, isn't blocked, and a business number that can reach them.
+ * texts, isn't blocked, and a sender that can reach them (resolveSmsSender).
  */
 export function appointmentNotificationSkipReason(row: {
   kind: string;
@@ -182,14 +204,12 @@ export async function resolveNotificationDelivery(
       contactLocale: contacts.preferredLocale,
       smsConsentStatus: contacts.smsConsentStatus,
       operatorBlockedAt: contacts.operatorBlockedAt,
-      senderPhone: phoneNumbers.e164,
     })
       .from(notifications)
       .innerJoin(appointments, and(eq(appointments.id, notifications.relatedId), eq(appointments.businessId, notifications.businessId)))
       .innerJoin(services, and(eq(services.id, appointments.serviceId), eq(services.businessId, notifications.businessId)))
       .innerJoin(contacts, and(eq(contacts.id, appointments.contactId), eq(contacts.businessId, notifications.businessId)))
       .innerJoin(businesses, eq(businesses.id, notifications.businessId))
-      .leftJoin(phoneNumbers, and(eq(phoneNumbers.businessId, notifications.businessId), eq(phoneNumbers.status, "active"), eq(phoneNumbers.smsEnabled, true)))
       .where(and(
         eq(notifications.id, input.notificationId),
         eq(notifications.businessId, input.businessId),
@@ -200,12 +220,15 @@ export async function resolveNotificationDelivery(
     if (!row) {
       return null;
     }
+    // Customer texts go out from the number that sends operator alerts.
+    const senderPhone = row.channel === "sms" ? await resolveSmsSender(tx, input.businessId) : null;
     // The channel check repeats one in the skip reason so TypeScript narrows row.channel.
-    if (!row.relatedId || appointmentNotificationSkipReason(row) !== null || (row.channel !== "sms" && row.channel !== "email")) {
+    if (!row.relatedId || appointmentNotificationSkipReason({ ...row, senderPhone }) !== null || (row.channel !== "sms" && row.channel !== "email")) {
       return { kind: "skipped", notificationId: row.notificationId };
     }
     const message = buildAppointmentNotification({
       kind: row.kind,
+      channel: row.channel,
       locale: localeFor(row.contactLocale ?? row.defaultLocale),
       businessName: row.businessName,
       serviceName: row.serviceName,
@@ -221,7 +244,7 @@ export async function resolveNotificationDelivery(
         kind: row.kind,
         relatedId: row.relatedId,
         to: row.channel === "sms" ? row.contactPhone! : row.contactEmail!,
-        ...(row.channel === "sms" && row.senderPhone ? { from: row.senderPhone } : {}),
+        ...(row.channel === "sms" && senderPhone ? { from: senderPhone } : {}),
         subject: message.subject,
         body: message.body,
       },
@@ -373,21 +396,12 @@ function buildDailySummary(input: { businessName: string; date: string; counts: 
   };
 }
 
-/** The number that texts operator alerts: the shared alert sender in the cloud, or the business's own SMS number when self-hosted. */
-export async function resolveOperatorSmsSender(tx: DatabaseTransaction, businessId: string): Promise<string | null> {
-  const account = (await tx.select({ plan: billingAccounts.plan }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1))[0];
-  const business = (await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
-  const selfHosted = account?.plan ? account.plan === "self_hosted_standard" : business?.deploymentMode !== "cloud";
-  if (!selfHosted) return process.env.TWILIO_ALERT_SMS_FROM?.trim() || null;
-  return (await tx.select({ e164: phoneNumbers.e164 }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), eq(phoneNumbers.smsEnabled, true))).limit(1))[0]?.e164 ?? null;
-}
-
 export async function getNotificationPreferences(context: DomainContext, input: { userId: string; businessId: string; phoneVerified?: boolean }): Promise<{ emailEnabled: boolean; smsEnabled: boolean; smsConsent: boolean; eventPreferences: OperatorNotificationEventPreferences; dailySummaryEnabled: boolean; dailySummarySendTime: string | null; canUseSms: boolean; smsUnavailableReason: "phone_unverified" | "sender_missing" | null }> {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
     const row = (await tx.select().from(operatorNotificationPreferences).where(and(eq(operatorNotificationPreferences.businessId, input.businessId), eq(operatorNotificationPreferences.userId, input.userId))).limit(1))[0];
     const phone = (await tx.select({ phone: users.phone }).from(users).where(eq(users.id, input.userId)).limit(1))[0]?.phone;
-    const sender = await resolveOperatorSmsSender(tx, input.businessId);
+    const sender = await resolveSmsSender(tx, input.businessId);
     const phoneVerified = input.phoneVerified === true;
     const canUseSms = phoneVerified && Boolean(sender);
     // A missing sender blocks SMS for everyone, so report it ahead of the operator's own phone.
@@ -416,7 +430,7 @@ export async function queueDailyOperatorSummaries(context: DomainContext, input:
     type SummaryRecipient = { userId: string; email: string; phone: string | null; emailEnabled: boolean; smsEnabled: boolean; dailySummaryEnabled: boolean; dailySummarySendTime: string | null; smsConsentGrantedAt: Date | null; smsConsentRevokedAt: Date | null; smsConsentDisclosureVersion: string | null; smsConsentPhone: string | null };
     const preferences = (recipientResult.rows as SummaryRecipient[]).filter((preference) => preference.dailySummaryEnabled && preference.dailySummarySendTime === sendTime);
     if (preferences.length === 0) return { eligible: 0, queued: 0 };
-    const sender = await resolveOperatorSmsSender(tx, input.businessId);
+    const sender = await resolveSmsSender(tx, input.businessId);
     let queued = 0;
     for (const preference of preferences) {
       const alerts = await tx.select({ eventKind: operatorNotificationDeliveries.eventKind, eventKey: operatorNotificationDeliveries.eventKey })
@@ -473,7 +487,7 @@ export async function queueOperatorAlertInTransaction(tx: DatabaseTransaction, i
   type Recipient = { userId: string; email: string; phone: string | null; preferences: OperatorNotificationEventPreferences | null; emailEnabled: boolean; smsEnabled: boolean; smsConsentGrantedAt: Date | null; smsConsentRevokedAt: Date | null; smsConsentDisclosureVersion: string | null; smsConsentPhone: string | null };
   const result = await tx.execute(sql`SELECT user_id AS "userId", email, phone, event_preferences AS preferences, email_enabled AS "emailEnabled", sms_enabled AS "smsEnabled", sms_consent_granted_at AS "smsConsentGrantedAt", sms_consent_revoked_at AS "smsConsentRevokedAt", sms_consent_disclosure_version AS "smsConsentDisclosureVersion", sms_consent_phone AS "smsConsentPhone" FROM app.resolve_operator_notification_recipients(${input.businessId}::uuid)`);
   const recipients = result.rows as Recipient[];
-  const sender = await resolveOperatorSmsSender(tx, input.businessId);
+  const sender = await resolveSmsSender(tx, input.businessId);
   const deliveryIds: string[] = [];
   for (const recipient of recipients) {
     const event = { ...defaultOperatorNotificationEventPreferences()[input.eventKind], ...(recipient.preferences?.[input.eventKind] ?? {}) };

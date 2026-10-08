@@ -10,7 +10,7 @@ import { createAppointmentChangeVerification, verifyAppointmentChangeOtp } from 
 import { personNamesMatch, serviceNamesMatch } from "./appointmentFacts";
 import { bookAppointment, cancelAppointmentForCaller, checkAvailability, findAvailability, rescheduleAppointmentForCaller } from "./booking";
 import { recordCallSchedulingProgress } from "./callOutcome";
-import type { SmsConsentAnswer } from "./contactSmsConsent";
+import { receptionistSmsConsentAnswer, type SmsConsentAnswer } from "./contactSmsConsent";
 import type { DomainContext } from "./context";
 import { appendMessage, getOrCreateConversation } from "./conversations";
 import { queueOperatorAlert } from "./notifications";
@@ -187,6 +187,7 @@ export async function bookForCaller(
     await recordProductEventBestEffort(context, { name: "appointment.booking_failed", businessId: input.businessId, distinctId, properties: { reason: "service_unavailable", requestedServiceName: input.serviceName, channel: input.channel, sourceChannel: input.channel } });
     return { ok: false as const, reason: "Service is not available." };
   }
+  const smsConsent = receptionistSmsConsentAnswer(input.channel, input.smsConsent);
   try {
     const appointment = await bookAppointment(context, {
       businessId: input.businessId,
@@ -196,7 +197,7 @@ export async function bookForCaller(
       contactPhone: input.contactPhone,
       sourceChannel: input.channel,
       ...(input.callId ? { callId: input.callId } : {}),
-      ...(input.smsConsent ? { smsConsent: input.smsConsent } : {}),
+      ...(smsConsent ? { smsConsent } : {}),
       ...(input.contactName ? { contactName: input.contactName } : {}),
     });
     await recordProductEventBestEffort(context, { name: "appointment.booked", businessId: input.businessId, distinctId, properties: { appointmentId: appointment.appointmentId, channel: input.channel, serviceId: service.id, sourceChannel: input.channel } });
