@@ -116,7 +116,7 @@ The API follows the same rules as the AI receptionist:
 - A day can have several opening windows, such as 09:00 to 12:00 and 13:00 to 17:00. Send each one as its own entry in `hours`. A business with no opening hours has no bookable time.
 - New bookings sync to the connected calendar and queue the usual confirmation and reminder texts. LobbyStack sends them only to contacts who agreed to texts. Pass `"sms_consent": true` when the customer agreed while booking.
 - To book with a specific person, pass `staff_id`. Without it, LobbyStack picks a free staff member who takes the service.
-- Cancelling works in any booking mode. Cancelling an appointment that is already cancelled returns it unchanged.
+- Cancelling works in any booking mode. Cancelling an appointment that is already cancelled returns it unchanged. When you cancel an upcoming appointment and the customer agreed to texts, LobbyStack texts them that it's cancelled.
 
 API keys act for the business, so the API skips the caller verification the receptionist uses on the phone.
 

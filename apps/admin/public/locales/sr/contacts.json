@@ -129,6 +129,7 @@
       "smsConsentSource": "Izvor",
       "smsConsentStatusValues": {
         "subscribed": "Prijavljen",
+        "declined": "Odbio",
         "optedOut": "Odjavljen"
       },
       "smsConsentSourceValues": {

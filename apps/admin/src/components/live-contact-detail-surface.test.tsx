@@ -15,12 +15,12 @@ afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); client
 
 const appointment = { startsAt: "2026-09-02T15:00:00Z", endsAt: "2026-09-02T15:30:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "web_chat", serviceName: "Consultation", staffName: "Sam" };
 
-function renderDetail(preferredLocale: string, calendarSyncStates: string[] = []) {
+function renderDetail(preferredLocale: string, calendarSyncStates: string[] = [], smsConsentStatus: string | null = null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Business", active: true, role: "business_owner" }] });
   vi.stubGlobal("fetch", vi.fn(async () => Response.json({
-    contact: { id: "contact", legacyConvexId: null, name: "Ana", phone: "+14155550100", email: null, timezone: null, preferredLocale, smsConsentStatus: null, smsConsentUpdatedAt: null, smsConsentSource: null, operatorBlockedAt: null, createdAt: "2026-09-01T12:00:00Z" },
+    contact: { id: "contact", legacyConvexId: null, name: "Ana", phone: "+14155550100", email: null, timezone: null, preferredLocale, smsConsentStatus, smsConsentUpdatedAt: null, smsConsentSource: null, operatorBlockedAt: null, createdAt: "2026-09-01T12:00:00Z" },
     calls: [],
     messages: [],
     appointments: calendarSyncStates.map((calendarSyncState, index) => ({ ...appointment, id: `appointment-${index}`, calendarSyncState })),
@@ -62,5 +62,22 @@ describe("contact detail calendar sync state", () => {
     renderDetail("en", ["needs_reauth"]);
     await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.appointments" }));
     expect(screen.getByText("Needs reauth")).toBeTruthy();
+  });
+});
+
+describe("contact detail SMS consent", () => {
+  it.each([["declined", "declined"], ["subscribed", "subscribed"], ["opted_out", "optedOut"]])("shows the translated %s status", async (status, key) => {
+    language.current = "en";
+    renderDetail("en", [], status);
+    await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.details" }));
+    expect(screen.getByText(`detail.details.smsConsentStatusValues.${key}`)).toBeTruthy();
+    expect(screen.queryByText(status)).toBeNull();
+  });
+
+  it("shows a contact who was never asked as not set", async () => {
+    language.current = "en";
+    renderDetail("en");
+    await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.details" }));
+    expect(screen.queryByText(/smsConsentStatusValues/)).toBeNull();
   });
 });

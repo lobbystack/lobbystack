@@ -362,7 +362,7 @@ export const mcpTools: McpTool[] = [
   tool({
     name: "cancel_appointment",
     title: "Cancel an appointment",
-    description: "Cancels an appointment, removes it from the staff calendar and stops its reminders. The customer is not told automatically. Cancelling an appointment that is already cancelled returns it unchanged. Confirm with the owner before calling.",
+    description: "Cancels an appointment, removes it from the staff calendar and stops its reminders. When the customer agreed to texts, LobbyStack texts them that it's cancelled. Cancelling an appointment that is already cancelled returns it unchanged. Confirm with the owner before calling.",
     operation: "cancelAppointment",
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     inputSchema: z.object({ appointment_id: uuid("appointment") }),

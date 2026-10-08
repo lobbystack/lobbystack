@@ -129,6 +129,7 @@
       "smsConsentSource": "Source",
       "smsConsentStatusValues": {
         "subscribed": "Abonné",
+        "declined": "A refusé",
         "optedOut": "Désabonné"
       },
       "smsConsentSourceValues": {

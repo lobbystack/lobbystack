@@ -76,6 +76,9 @@ function localeFor(value: string | null | undefined): InterfaceLocale {
   return normalizeInterfaceLocale(value) ?? "en";
 }
 
+/** The text a customer gets when their appointment is cancelled, the one appointment notification sent for a cancelled appointment. */
+export const CANCELLATION_CONFIRMATION = "cancellation_confirmation";
+
 export function buildAppointmentNotification(input: {
   kind: string;
   locale: InterfaceLocale;
@@ -89,6 +92,7 @@ export function buildAppointmentNotification(input: {
   const reminder = input.kind === "appointment_reminder";
   // SMS bodies avoid characters outside the GSM-7 alphabet where the wording
   // allows it, so a reminder stays in as few segments as the English one.
+  if (input.kind === CANCELLATION_CONFIRMATION) return cancellationNotification(input, date);
   if (input.locale === "fr") {
     return {
       subject: reminder ? "Rappel de rendez-vous" : "Rendez-vous confirme",
@@ -119,6 +123,41 @@ export function buildAppointmentNotification(input: {
       ? `Reminder from ${input.businessName}: your ${input.serviceName} appointment is scheduled for ${date}.`
       : `${input.businessName}: your ${input.serviceName} appointment is confirmed for ${date}.`,
   };
+}
+
+function cancellationNotification(input: { locale: InterfaceLocale; businessName: string; serviceName: string }, date: string): { subject: string; body: string } {
+  if (input.locale === "fr") return { subject: "Rendez-vous annulé", body: `${input.businessName}: votre rendez-vous ${input.serviceName} du ${date} est annulé.` };
+  if (input.locale === "es") return { subject: "Cita cancelada", body: `${input.businessName}: cancelamos su cita de ${input.serviceName} del ${date}.` };
+  if (input.locale === "sr") return { subject: "Termin je otkazan", body: `${input.businessName}: otkazali smo termin za ${input.serviceName}, ${date}.` };
+  return { subject: "Appointment cancelled", body: `${input.businessName}: your ${input.serviceName} appointment on ${date} is cancelled.` };
+}
+
+/**
+ * Why an appointment notification can't go out, or null when it can. A
+ * cancelled appointment gets only its cancellation text, and a cancellation
+ * text needs a cancelled appointment. A text needs a contact who agreed to
+ * texts, isn't blocked, and a business number that can reach them.
+ */
+export function appointmentNotificationSkipReason(row: {
+  kind: string;
+  channel: string;
+  appointmentStatus: string;
+  smsConsentStatus: string | null;
+  operatorBlockedAt: Date | null;
+  senderPhone: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
+}): "appointment_status" | "channel" | "sms_consent" | "sms_blocked" | "sms_unreachable" | "no_email" | null {
+  const cancelled = row.appointmentStatus === "canceled";
+  if (cancelled !== (row.kind === CANCELLATION_CONFIRMATION)) return "appointment_status";
+  if (row.channel !== "sms" && row.channel !== "email") return "channel";
+  if (row.channel === "sms") {
+    if (row.smsConsentStatus !== "subscribed") return "sms_consent";
+    if (row.operatorBlockedAt !== null) return "sms_blocked";
+    if (!canTextNumber(row.senderPhone, row.contactPhone)) return "sms_unreachable";
+  }
+  if (row.channel === "email" && !row.contactEmail) return "no_email";
+  return null;
 }
 
 export async function resolveNotificationDelivery(
@@ -161,16 +200,8 @@ export async function resolveNotificationDelivery(
     if (!row) {
       return null;
     }
-    if (row.appointmentStatus === "canceled" || !row.relatedId) {
-      return { kind: "skipped", notificationId: row.notificationId };
-    }
-    if (row.channel !== "sms" && row.channel !== "email") {
-      return { kind: "skipped", notificationId: row.notificationId };
-    }
-    if (row.channel === "sms" && (row.smsConsentStatus !== "subscribed" || row.operatorBlockedAt !== null || !canTextNumber(row.senderPhone, row.contactPhone))) {
-      return { kind: "skipped", notificationId: row.notificationId };
-    }
-    if (row.channel === "email" && !row.contactEmail) {
+    // The channel check repeats one in the skip reason so TypeScript narrows row.channel.
+    if (!row.relatedId || appointmentNotificationSkipReason(row) !== null || (row.channel !== "sms" && row.channel !== "email")) {
       return { kind: "skipped", notificationId: row.notificationId };
     }
     const message = buildAppointmentNotification({

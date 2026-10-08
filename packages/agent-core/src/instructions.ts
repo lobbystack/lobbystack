@@ -28,12 +28,19 @@ const BOOKING_GUIDANCE: Record<BookingMode, string> = {
 // nothing is bookable.
 const NO_HOURS_GUIDANCE = "The business hasn't set its opening hours yet, so you can't book appointments. Don't offer times or say a time is taken. When a caller wants an appointment, take a message with their name, number, the service and their preferred time so the team can book it.";
 
+// The caller's answer on file about texts (smsConsentOnFile) decides whether
+// the agent asks. A caller answers once; after that the agent follows it.
+const BOOKING_TEXT_GUIDANCE = "On a phone call, findAvailability returns smsConsentOnFile, the caller's earlier answer about texts from this business. When it's not_asked, or missing, ask together with the time you offer: \"Can I text this number with your appointment confirmation and a reminder?\" Pass their answer to bookAppointment as smsConsent. When it's subscribed, don't ask: tell the caller they'll get a confirmation text. When it's declined or opted_out, don't ask and don't mention texts. Pass smsConsent as not_asked whenever you didn't ask.";
+const CANCELLATION_TEXT_GUIDANCE = "Once verifyAppointmentForChange or verifyAppointmentChangeOtp verifies a cancellation, its result has smsConsentOnFile. When it's not_asked, ask once, together with the final confirmation, whether the caller wants a text confirming the cancellation, and pass their answer to cancelAppointment as smsConsent. When it's subscribed, don't ask: tell the caller they'll get a text confirming the cancellation. When it's declined or opted_out, don't ask and don't mention texts.";
+
 // Instructions for the text agent that does the work. On voice it runs behind
 // GPT-Live, so its reply is spoken to the caller by the live model.
 export function buildAgentInstructions(snapshot: BusinessContextSnapshot, channel: AgentChannel, options: { intakeOnly?: boolean; callerPhone?: string } = {}): string {
   const now = DateTime.now().setZone(snapshot.timezone);
   const bookingMode = normalizeBookingMode(snapshot.bookingMode);
   const voice = channel !== "web_chat";
+  // Matches the tools: texts are offered only on phone calls the business can text back.
+  const textable = channel === "voice" && canTextNumber(snapshot.contactChannels?.smsNumber, options.callerPhone);
   return [
     `You are the receptionist for ${snapshot.displayName}. You represent this business, not the software platform.`,
     voice
@@ -54,7 +61,10 @@ export function buildAgentInstructions(snapshot: BusinessContextSnapshot, channe
     options.intakeOnly || bookingMode === "off"
       ? ""
       : cancelsDirectly(snapshot, options)
-        ? "To verify an appointment the caller wants to change, you need its time or its service, not their name. When verification fails because the caller hasn't said either yet, ask for it and verify again. When it still fails with the time or service, or the caller isn't calling from the number it was booked with, don't take a message: ask for the name it's booked under and its date, time and service, save the request with requestAppointmentCancellation, and tell the caller the team will take care of the cancellation. Never say or suggest the appointment is already cancelled."
+        ? [
+          "To verify an appointment the caller wants to change, you need its time or its service, not their name. When verification fails because the caller hasn't said either yet, ask for it and verify again. When it still fails with the time or service, or the caller isn't calling from the number it was booked with, don't take a message: ask for the name it's booked under and its date, time and service, save the request with requestAppointmentCancellation, and tell the caller the team will take care of the cancellation. Never say or suggest the appointment is already cancelled.",
+          textable ? CANCELLATION_TEXT_GUIDANCE : "This business can't text the caller's number, so don't offer or mention a text about a cancellation.",
+        ].join("\n\n")
         : `You can't cancel appointments ${voice ? "on this call" : "in this chat"}. When the caller asks to cancel one, tell them that plainly and that the team will take care of the cancellation. Ask for the name it's booked under and its date, time and service, then save the request with requestAppointmentCancellation. Never say or suggest the appointment is already cancelled.`,
     !options.intakeOnly && bookingMode === "instant"
       ? snapshot.hours.length
@@ -62,9 +72,9 @@ export function buildAgentInstructions(snapshot: BusinessContextSnapshot, channe
         : NO_HOURS_GUIDANCE
       : "",
     channel === "voice" && bookingMode === "instant" && !options.intakeOnly
-      ? canTextNumber(snapshot.contactChannels?.smsNumber, options.callerPhone)
-        ? "On a phone call, ask together with the time you offer: \"Can I text this number with your appointment confirmation and a reminder?\" Pass their answer as smsConsentGranted."
-        : "This business can't text the caller's number, so don't offer a text confirmation or reminder. Pass smsConsentGranted as false."
+      ? textable
+        ? BOOKING_TEXT_GUIDANCE
+        : "This business can't text the caller's number, so don't offer a text confirmation or reminder. Pass smsConsent as not_asked."
       : "",
     "Work out relative dates yourself (\"tomorrow\", \"next Tuesday\") from the current date below; never ask the caller for a calendar date they already described. Treat \"morning\" as 09:00 and \"afternoon\" as 13:00.",
     options.callerPhone

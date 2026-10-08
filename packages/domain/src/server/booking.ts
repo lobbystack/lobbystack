@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 
-import { appointments, auditLogs, businesses, businessHours, calendarBusyBlocks, calendarConnections, closures, contacts, enqueueOutbox, inboxItems, notifications, services, smsConsentEvents, staff, staffServiceAssignments, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, auditLogs, businesses, businessHours, calendarBusyBlocks, calendarConnections, closures, contacts, enqueueOutbox, inboxItems, notifications, services, staff, staffServiceAssignments, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import { BookingUnavailableError, computeAvailability, scheduleUnavailableReason, type UnavailableReason } from "../availability";
@@ -8,8 +8,9 @@ import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
 import { recordCallOutcomeInTransaction } from "./callOutcome";
 import { consumeAppointmentChangeVerificationInTransaction } from "./appointmentChanges";
+import { recordSmsConsentAnswerInTransaction, type SmsConsentAnswer, type SmsConsentOnFile } from "./contactSmsConsent";
 import { recordProductEventBestEffort } from "./productEvents";
-import { rescheduleAppointmentReminderInTransaction } from "./notifications";
+import { CANCELLATION_CONFIRMATION, rescheduleAppointmentReminderInTransaction } from "./notifications";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 import { CANCELLATION_REQUEST } from "./voice";
 
@@ -24,7 +25,8 @@ type BookingInput = {
   contactName?: string;
   sourceChannel: string;
   preferredStaffId?: string;
-  smsConsentGranted?: boolean;
+  /** The caller's answer to a confirmation and reminder text. Omitted means not asked. */
+  smsConsent?: SmsConsentAnswer;
   /** Set when the public API or the MCP server made the booking; recorded in the audit log. */
   apiAudit?: ApiAudit;
 };
@@ -224,12 +226,7 @@ export async function bookAppointment(
     if (!contactId) {
       throw new Error("Contact could not be created.");
     }
-    const canGrantReminderConsent = input.smsConsentGranted === true && existingContacts[0]?.smsConsentStatus !== "opted_out" && !existingContacts[0]?.operatorBlockedAt;
-    if (canGrantReminderConsent) {
-      const now = new Date();
-      await tx.update(contacts).set({ smsConsentStatus: "subscribed", smsConsentSource: "appointment_booking", smsConsentUpdatedAt: now, updatedAt: now }).where(and(eq(contacts.id, contactId), eq(contacts.businessId, input.businessId)));
-      await tx.insert(smsConsentEvents).values({ businessId: input.businessId, contactId, phone: input.contactPhone, recipientType: "contact", action: "reminder_consent_granted", source: "appointment_booking" });
-    }
+    await recordSmsConsentAnswerInTransaction(tx, { businessId: input.businessId, contactId, phone: input.contactPhone, contact: existingContacts[0], answer: input.smsConsent, source: "appointment_booking" });
     const [appointment] = await tx.insert(appointments).values({
       businessId: input.businessId,
       contactId,
@@ -332,9 +329,10 @@ function changeAudit(change: AppointmentChangeSource): { actorUserId: string | n
 
 /**
  * Cancels inside the caller's transaction: skips pending reminders, queues the
- * calendar removal, and emits appointment.cancelled. Returns "already" when the
- * appointment was cancelled before and "missing" when it does not exist.
- * Either way, callers' requests to cancel it are done.
+ * calendar removal and the customer's cancellation text, and emits
+ * appointment.cancelled. Returns "already" when the appointment was cancelled
+ * before and "missing" when it does not exist. Either way, callers' requests
+ * to cancel it are done.
  */
 export async function cancelAppointmentInTransaction(
   tx: DatabaseTransaction,
@@ -349,7 +347,7 @@ export async function cancelAppointmentInTransaction(
     sql`${inboxItems.metadata}->>'request' = ${CANCELLATION_REQUEST}`,
     sql`${inboxItems.metadata}->>'appointmentId' = ${input.appointmentId}`,
   ));
-  const [appointment] = await tx.update(appointments).set({ status: "canceled", calendarSyncState: "pending", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"))).returning({ id: appointments.id, revision: appointments.revision });
+  const [appointment] = await tx.update(appointments).set({ status: "canceled", calendarSyncState: "pending", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"))).returning({ id: appointments.id, revision: appointments.revision, startsAt: appointments.startsAt });
   if (!appointment) {
     const [existing] = await tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId))).limit(1);
     return existing ? "already" : "missing";
@@ -364,6 +362,13 @@ export async function cancelAppointmentInTransaction(
       eq(notifications.kind, "appointment_reminder"),
       inArray(notifications.status, ["pending", "processing"]),
     ));
+  // The customer's cancellation text. Delivery sends it only to a contact who
+  // agreed to texts. An appointment that already started gets none: clearing
+  // up a past one shouldn't text the customer.
+  if (appointment.startsAt > new Date()) {
+    const [cancellation] = await tx.insert(notifications).values({ businessId: input.businessId, channel: "sms", kind: CANCELLATION_CONFIRMATION, relatedId: appointment.id, scheduledFor: new Date(), status: "pending" }).onConflictDoNothing().returning({ id: notifications.id });
+    if (cancellation) await enqueueOutbox(tx, { topic: "notification.dispatch", businessId: input.businessId, aggregateType: "appointment", aggregateId: appointment.id, dedupeKey: `notification:${cancellation.id}:dispatch`, payload: { notificationId: cancellation.id } });
+  }
   await enqueueOutbox(tx, {
     topic: "calendar.syncAppointment",
     businessId: input.businessId,
@@ -456,17 +461,24 @@ export async function rescheduleAppointmentForCaller(
   return result;
 }
 
+/**
+ * The verified caller cancels. Their answer to a text confirming the
+ * cancellation, when the agent asked, becomes their preference before the
+ * cancellation text is queued, so delivery follows it. Returns the answer on
+ * file afterwards with the cancelled appointment.
+ */
 export async function cancelAppointmentForCaller(
   context: DomainContext,
-  input: { businessId: string; appointmentId: string; callerPhone: string; verificationId: string },
-): Promise<{ appointmentId: string; serviceId: string; startsAt: Date; endsAt: Date } | null> {
+  input: { businessId: string; appointmentId: string; callerPhone: string; verificationId: string; smsConsent?: SmsConsentAnswer },
+): Promise<{ appointmentId: string; serviceId: string; startsAt: Date; endsAt: Date; smsConsentOnFile: SmsConsentOnFile } | null> {
   const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const row = (await tx.select({ id: appointments.id, serviceId: appointments.serviceId, startsAt: appointments.startsAt, endsAt: appointments.endsAt }).from(appointments).innerJoin(contacts, and(eq(appointments.contactId, contacts.id), eq(contacts.businessId, input.businessId))).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), eq(contacts.phone, input.callerPhone), ne(appointments.status, "canceled"))).limit(1))[0];
+    const row = (await tx.select({ id: appointments.id, serviceId: appointments.serviceId, startsAt: appointments.startsAt, endsAt: appointments.endsAt, contactId: contacts.id, smsConsentStatus: contacts.smsConsentStatus, operatorBlockedAt: contacts.operatorBlockedAt }).from(appointments).innerJoin(contacts, and(eq(appointments.contactId, contacts.id), eq(contacts.businessId, input.businessId))).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), eq(contacts.phone, input.callerPhone), ne(appointments.status, "canceled"))).limit(1))[0];
     if (!row) return null;
     const consumed = await consumeAppointmentChangeVerificationInTransaction(tx, { businessId: input.businessId, verificationId: input.verificationId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, action: "cancel" });
     if (!consumed) return null;
+    const onFile = await recordSmsConsentAnswerInTransaction(tx, { businessId: input.businessId, contactId: row.contactId, phone: input.callerPhone, contact: row, answer: input.smsConsent, source: "appointment_cancellation" });
     if (await cancelAppointmentInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, change: { source: "caller" } }) !== "cancelled") return null;
-    return { appointmentId: row.id, serviceId: row.serviceId, startsAt: row.startsAt, endsAt: row.endsAt };
+    return { appointmentId: row.id, serviceId: row.serviceId, startsAt: row.startsAt, endsAt: row.endsAt, smsConsentOnFile: onFile };
   });
   if (result) {
     await recordAppointmentChange(context, { name: "appointment.cancelled", businessId: input.businessId, appointmentId: result.appointmentId, source: "caller" });

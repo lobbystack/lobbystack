@@ -6,10 +6,11 @@ import { normalizeAppointmentChangePolicy, type HoursWindow } from "@lobbystack/
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import { BookingUnavailableError, type UnavailableReason } from "../availability";
-import { createAppointmentChangeVerification } from "./appointmentChanges";
+import { createAppointmentChangeVerification, verifyAppointmentChangeOtp } from "./appointmentChanges";
 import { personNamesMatch, serviceNamesMatch } from "./appointmentFacts";
 import { bookAppointment, cancelAppointmentForCaller, checkAvailability, findAvailability, rescheduleAppointmentForCaller } from "./booking";
 import { recordCallSchedulingProgress } from "./callOutcome";
+import type { SmsConsentAnswer } from "./contactSmsConsent";
 import type { DomainContext } from "./context";
 import { appendMessage, getOrCreateConversation } from "./conversations";
 import { queueOperatorAlert } from "./notifications";
@@ -178,7 +179,7 @@ export async function findCallerBooking(context: DomainContext, input: { busines
 
 export async function bookForCaller(
   context: DomainContext,
-  input: { businessId: string; serviceName: string; startsAt: string; timezone: string; contactPhone: string; contactName?: string; smsConsentGranted?: boolean; channel: ReceptionistChannel; callId?: string },
+  input: { businessId: string; serviceName: string; startsAt: string; timezone: string; contactPhone: string; contactName?: string; smsConsent?: SmsConsentAnswer; channel: ReceptionistChannel; callId?: string },
 ) {
   const distinctId = getPostHogDistinctIdForBusinessSystem(input.businessId);
   const service = await resolveActiveService(context, input.businessId, input.serviceName);
@@ -195,7 +196,7 @@ export async function bookForCaller(
       contactPhone: input.contactPhone,
       sourceChannel: input.channel,
       ...(input.callId ? { callId: input.callId } : {}),
-      ...(input.smsConsentGranted ? { smsConsentGranted: true } : {}),
+      ...(input.smsConsent ? { smsConsent: input.smsConsent } : {}),
       ...(input.contactName ? { contactName: input.contactName } : {}),
     });
     await recordProductEventBestEffort(context, { name: "appointment.booked", businessId: input.businessId, distinctId, properties: { appointmentId: appointment.appointmentId, channel: input.channel, serviceId: service.id, sourceChannel: input.channel } });
@@ -223,6 +224,12 @@ export async function lookupCallerAppointments(context: DomainContext, input: { 
   });
 }
 
+/**
+ * Verifies the appointment a caller wants to change. Once a cancellation is
+ * verified, it says whether the caller gets texts (smsConsentOnFile), so the
+ * agent knows whether to ask about a cancellation text. Before that, it
+ * reveals nothing about them.
+ */
 export async function verifyCallerForChange(
   context: DomainContext,
   input: { businessId: string; callerPhone: string; action: "cancel" | "reschedule"; appointmentId?: string; appointmentStartsAt?: string; serviceName?: string },
@@ -230,18 +237,24 @@ export async function verifyCallerForChange(
   const verification = await createAppointmentChangeVerification(context, input);
   if (!verification) return { ok: false as const, verified: false, reason: "The appointment could not be verified." };
   const verified = verification.status === "otp_verified" || verification.status === "facts_verified";
-  return { ok: true as const, verified, requiresOtp: !verified, verificationId: verification.verificationId, appointmentId: verification.appointmentId, status: verification.status };
+  return { ok: true as const, verified, requiresOtp: !verified, verificationId: verification.verificationId, appointmentId: verification.appointmentId, status: verification.status, ...(verified && input.action === "cancel" ? { smsConsentOnFile: verification.smsConsent } : {}) };
+}
+
+/** Checks the one-time code the caller reads back. Once it matches for a cancellation, it says whether the caller gets texts, as verifyCallerForChange does. */
+export async function verifyCallerChangeCode(context: DomainContext, input: { businessId: string; verificationId: string; code: string }) {
+  const { smsConsent, ...result } = await verifyAppointmentChangeOtp(context, input);
+  return result.ok && smsConsent ? { ...result, smsConsentOnFile: smsConsent } : result;
 }
 
 export async function cancelForCaller(
   context: DomainContext,
-  input: { businessId: string; callerPhone: string; appointmentId: string; verificationId?: string; finalConfirmation: boolean },
+  input: { businessId: string; callerPhone: string; appointmentId: string; verificationId?: string; finalConfirmation: boolean; smsConsent?: SmsConsentAnswer },
 ) {
   if (!input.finalConfirmation) return { ok: false as const, reason: "Final confirmation is required." };
   if (!input.verificationId) return { ok: false as const, reason: "The appointment change verification is required." };
-  const result = await cancelAppointmentForCaller(context, { businessId: input.businessId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, verificationId: input.verificationId });
+  const result = await cancelAppointmentForCaller(context, { businessId: input.businessId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, verificationId: input.verificationId, ...(input.smsConsent ? { smsConsent: input.smsConsent } : {}) });
   if (!result) return { ok: false as const, reason: "The appointment could not be verified." };
-  return { ok: true as const, appointmentId: input.appointmentId, startsAt: result.startsAt.toISOString(), status: "canceled" };
+  return { ok: true as const, appointmentId: input.appointmentId, startsAt: result.startsAt.toISOString(), status: "canceled", smsConsentOnFile: result.smsConsentOnFile };
 }
 
 export async function rescheduleForCaller(

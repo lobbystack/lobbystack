@@ -5,6 +5,7 @@ import {
   findCallerBooking,
   countKnowledgeTokens,
   findOpenings,
+  getSmsConsentOnFile,
   issueAppointmentChangeOtp,
   KNOWLEDGE_SEARCH_TOKEN_BUDGET,
   knowledgeQueryTerms,
@@ -13,9 +14,10 @@ import {
   rescheduleForCaller,
   searchKnowledgeEvidence,
   takeMessageForStaff,
-  verifyAppointmentChangeOtp,
+  verifyCallerChangeCode,
   verifyCallerForChange,
   type DomainContext,
+  type SmsConsentOnFile,
   type UnavailableReason,
 } from "@lobbystack/domain";
 import { canTextNumber, isTransferPermitted, normalizeAppointmentChangePolicy, normalizeBookingMode, type BusinessContextSnapshot } from "@lobbystack/shared";
@@ -142,6 +144,14 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
   const timezone = snapshot.timezone;
   const bookingMode = context.intakeOnly ? "off" : normalizeBookingMode(snapshot.bookingMode);
   const channel = context.channel;
+  // Texts about the caller's appointments are offered only on phone calls the
+  // business can text back. Their answer on file belongs to the call's own
+  // number, never to one someone typed or said.
+  const callerTextable = channel === "voice" && canTextNumber(snapshot.contactChannels?.smsNumber, context.callerPhone);
+  const withConsentOnFile = <T extends object>(result: T & { smsConsentOnFile?: SmsConsentOnFile }) => {
+    const { smsConsentOnFile, ...rest } = result;
+    return callerTextable && smsConsentOnFile ? { ...rest, smsConsentOnFile } : rest;
+  };
   async function searchKnowledge(query: string): Promise<{ outcome: string; matches: KnowledgeMatch[] }> {
     const fallback = snapshotKnowledgeMatches(snapshot, query);
     try {
@@ -229,28 +239,34 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       }),
       execute: async ({ serviceName, date, preferredTime }) => {
         const [hour, minute] = (preferredTime ?? "").split(":").map(Number);
-        const result = await findOpenings(domain, {
-          businessId,
-          serviceName,
-          date,
-          timezone,
-          hours: snapshot.hours,
-          ...(Number.isFinite(hour) ? { preferredHour24: hour, preferredMinute: Number.isFinite(minute) ? minute : 0 } : {}),
-          ...(context.callId ? { callId: context.callId } : {}),
-        });
+        const callerPhone = callerTextable ? context.callerPhone : undefined;
+        const [result, smsConsentOnFile] = await Promise.all([
+          findOpenings(domain, {
+            businessId,
+            serviceName,
+            date,
+            timezone,
+            hours: snapshot.hours,
+            ...(Number.isFinite(hour) ? { preferredHour24: hour, preferredMinute: Number.isFinite(minute) ? minute : 0 } : {}),
+            ...(context.callId ? { callId: context.callId } : {}),
+          }),
+          // The caller's answer on file, so the agent asks about texts only once.
+          callerPhone ? getSmsConsentOnFile(domain, { businessId, phone: callerPhone }).catch(() => undefined) : undefined,
+        ]);
+        const answer = result.ok && smsConsentOnFile ? { ...result, smsConsentOnFile } : result;
         // An empty day says why, so the agent doesn't call it fully booked when it isn't.
-        if (!result.ok || result.openings.length || !isReason(result.reason)) return result;
-        return { ...result, reason: DAY_UNAVAILABLE[result.reason] ?? UNAVAILABLE_TOOL_MESSAGES[result.reason] };
+        if (!answer.ok || answer.openings.length || !isReason(answer.reason)) return answer;
+        return { ...answer, reason: DAY_UNAVAILABLE[answer.reason] ?? UNAVAILABLE_TOOL_MESSAGES[answer.reason] };
       },
     });
     tools.bookAppointment = tool({
-      description: "Book an appointment once the caller accepts a time you offered. It checks the time is still open, so don't call findAvailability again first. On phone calls, ask first whether you may text a confirmation and reminder, and pass their answer.",
+      description: "Book an appointment once the caller accepts a time you offered. It checks the time is still open, so don't call findAvailability again first. Pass the caller's answer about a confirmation and reminder text as smsConsent.",
       inputSchema: z.object({
         serviceName: z.string(),
         startsAt: z.string().describe("A startsAt value from findAvailability, or the accepted time as YYYY-MM-DDTHH:mm in the business's timezone."),
         contactName: z.string().optional().describe("The caller's name. Required to book."),
         contactPhone: phone.optional().describe("Required when the caller's number isn't already known."),
-        smsConsentGranted: z.boolean().describe("True only if the caller agreed to receive a confirmation and reminder text."),
+        smsConsent: z.enum(["agreed", "declined", "not_asked"]).describe("The caller's answer on this call to a confirmation and reminder text: agreed, declined, or not_asked when you didn't ask."),
       }),
       execute: async (input) => {
         const contactPhone = input.contactPhone?.trim() || context.callerPhone;
@@ -277,14 +293,15 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
           timezone,
           contactPhone,
           channel,
-          smsConsentGranted: input.smsConsentGranted && textable,
+          // An answer to a question the agent shouldn't have asked counts for nothing.
+          smsConsent: textable ? input.smsConsent : "not_asked",
           ...(input.contactName ? { contactName: input.contactName } : {}),
           ...(context.callId ? { callId: context.callId } : {}),
         });
         // Another booking can take the time between the check and the booking.
         if (!booked.ok) return "unavailableReason" in booked && isReason(booked.unavailableReason) ? { ok: false, reason: UNAVAILABLE_TOOL_MESSAGES[booked.unavailableReason] } : booked;
         // The caller agreed to a text this business can't send them.
-        return input.smsConsentGranted && !textable
+        return input.smsConsent === "agreed" && !textable
           ? { ...booked, textConfirmation: "This business can't text that number. Tell the caller they won't get a text confirmation." }
           : booked;
       },
@@ -335,13 +352,13 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         appointmentStartsAt: z.string().optional().describe("The appointment time as the caller described it."),
         serviceName: z.string().optional(),
       }),
-      execute: async (input) => await verifyCallerForChange(domain, {
+      execute: async (input) => withConsentOnFile(await verifyCallerForChange(domain, {
         businessId,
         callerPhone,
         action: input.action,
         ...(input.appointmentStartsAt ? { appointmentStartsAt: input.appointmentStartsAt } : {}),
         ...(input.serviceName ? { serviceName: input.serviceName } : {}),
-      }),
+      })),
     });
     tools.sendAppointmentChangeOtp = tool({
       description: "Text the caller a one-time code when verifyAppointmentForChange says a code is required.",
@@ -351,13 +368,21 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
     tools.verifyAppointmentChangeOtp = tool({
       description: "Check the one-time code the caller reads back.",
       inputSchema: z.object({ verificationId: z.string(), code: z.string() }),
-      execute: async ({ verificationId, code }) => await verifyAppointmentChangeOtp(domain, { businessId, verificationId, code }),
+      execute: async ({ verificationId, code }) => withConsentOnFile(await verifyCallerChangeCode(domain, { businessId, verificationId, code })),
     });
     if (changePolicy.allowCancel) {
       tools.cancelAppointment = tool({
         description: "Cancel the verified appointment. Only after the caller explicitly confirms they want it cancelled now.",
-        inputSchema: z.object({ appointmentId: z.string(), verificationId: z.string(), finalConfirmation: z.boolean() }),
-        execute: async (input) => await cancelForCaller(domain, { businessId, callerPhone, ...input }),
+        inputSchema: z.object({
+          appointmentId: z.string(),
+          verificationId: z.string(),
+          finalConfirmation: z.boolean(),
+          smsConsent: z.enum(["agreed", "declined"]).optional().describe("The caller's answer when you asked whether they want a text confirming the cancellation. Leave it out when you didn't ask."),
+        }),
+        execute: async ({ smsConsent, ...input }) => {
+          const result = withConsentOnFile(await cancelForCaller(domain, { businessId, callerPhone, ...input, ...(smsConsent && callerTextable ? { smsConsent } : {}) }));
+          return "smsConsentOnFile" in result && result.smsConsentOnFile === "subscribed" ? { ...result, textConfirmation: "The caller will get a text confirming the cancellation." } : result;
+        },
       });
     }
     if (changePolicy.allowReschedule && bookingMode === "instant") {

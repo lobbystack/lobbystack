@@ -339,7 +339,7 @@ export async function createAppointmentForApi(context: DomainContext, caller: Ap
       apiAudit: callerAudit(caller),
       ...(input.contact_name ? { contactName: input.contact_name } : {}),
       ...(input.staff_id ? { preferredStaffId: input.staff_id } : {}),
-      ...(input.sms_consent ? { smsConsentGranted: true } : {}),
+      ...(input.sms_consent ? { smsConsent: "agreed" as const } : {}),
     }));
   } catch (error) {
     bookingError(error);

@@ -161,6 +161,44 @@ describe("buildAgentInstructions", () => {
   });
 });
 
+describe("texts about the caller's appointments", () => {
+  const phone = { callerPhone: "+14165550134" };
+  // A business without an SMS number can't text anyone.
+  const noSms = { ...demoSnapshot, contactChannels: {} };
+
+  it("has the agent follow the answer on file when booking and ask only when it's not_asked", () => {
+    const instructions = buildAgentInstructions(demoSnapshot, "voice", phone);
+    expect(instructions).toContain("findAvailability returns smsConsentOnFile");
+    expect(instructions).toContain("When it's not_asked, or missing, ask together with the time you offer: \"Can I text this number with your appointment confirmation and a reminder?\" Pass their answer to bookAppointment as smsConsent.");
+    expect(instructions).toContain("When it's subscribed, don't ask: tell the caller they'll get a confirmation text.");
+    expect(instructions).toContain("When it's declined or opted_out, don't ask and don't mention texts. Pass smsConsent as not_asked whenever you didn't ask.");
+  });
+
+  it("has the agent ask about a cancellation text only when the caller hasn't answered before", () => {
+    const instructions = buildAgentInstructions(demoSnapshot, "voice", phone);
+    expect(instructions).toContain("Once verifyAppointmentForChange or verifyAppointmentChangeOtp verifies a cancellation, its result has smsConsentOnFile.");
+    expect(instructions).toContain("When it's not_asked, ask once, together with the final confirmation, whether the caller wants a text confirming the cancellation, and pass their answer to cancelAppointment as smsConsent.");
+    expect(instructions).toContain("When it's subscribed, don't ask: tell the caller they'll get a text confirming the cancellation.");
+    // Request-only booking still cancels directly, so it gets the same rule.
+    expect(buildAgentInstructions({ ...demoSnapshot, bookingMode: "request" }, "voice", phone)).toContain("whether the caller wants a text confirming the cancellation");
+  });
+
+  it("never offers a text when the business can't text the caller", () => {
+    for (const instructions of [buildAgentInstructions(noSms, "voice", phone), buildAgentInstructions({ ...demoSnapshot, contactChannels: { smsNumber: "+18445550100" } }, "voice", { callerPhone: "+381695021111" })]) {
+      expect(instructions).not.toContain("smsConsentOnFile");
+      expect(instructions).toContain("This business can't text the caller's number, so don't offer a text confirmation or reminder. Pass smsConsent as not_asked.");
+      expect(instructions).toContain("This business can't text the caller's number, so don't offer or mention a text about a cancellation.");
+    }
+  });
+
+  it("leaves texts out where the agent can't cancel or the caller has no trusted number", () => {
+    for (const instructions of [buildAgentInstructions(demoSnapshot, "web_voice"), buildAgentInstructions(demoSnapshot, "web_chat"), buildAgentInstructions(demoSnapshot, "voice", { ...phone, intakeOnly: true })]) {
+      expect(instructions).not.toContain("smsConsentOnFile");
+      expect(instructions).not.toContain("text about a cancellation");
+    }
+  });
+});
+
 describe("cancellations without a trusted caller number", () => {
   it("tells the agent to say it can't cancel here and to pass the request to the team", () => {
     const browser = buildAgentInstructions(demoSnapshot, "web_voice");

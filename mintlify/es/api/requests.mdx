@@ -116,7 +116,7 @@ La API sigue las mismas reglas que la recepcionista con IA:
 - Un día puede tener varias franjas de atención, como de 09:00 a 12:00 y de 13:00 a 17:00. Envíe cada una como una entrada propia en `hours`. Un negocio sin horario de atención no tiene horas disponibles para reservar.
 - Las nuevas reservas se sincronizan con el calendario conectado y ponen en cola los SMS habituales de confirmación y recordatorio. LobbyStack solo los envía a los contactos que aceptaron recibir SMS. Envíe `"sms_consent": true` cuando el cliente haya aceptado al reservar.
 - Para reservar con una persona concreta, envíe `staff_id`. Sin él, LobbyStack elige a un miembro del personal disponible que ofrezca el servicio.
-- La cancelación funciona en cualquier modo de reserva. Cancelar una cita que ya está cancelada la devuelve sin cambios.
+- La cancelación funciona en cualquier modo de reserva. Cancelar una cita que ya está cancelada la devuelve sin cambios. Cuando cancela una cita futura y el cliente aceptó recibir SMS, LobbyStack le envía un SMS para avisarle.
 
 Las claves de API actúan en nombre del negocio, así que la API omite la verificación de la persona que llama que la recepcionista usa por teléfono.
 

@@ -41,7 +41,7 @@ async function main(): Promise<void> {
       appointmentChangePolicy: { enabled: true, verificationMode: "otp_required", allowCancel: true, allowReschedule: true },
     });
     assert(contact && service && staffMember, "Appointment audit fixtures could not be created.");
-    await bookAppointment({ db: db.db }, { businessId, serviceId: service.id, startsAt: bookingSlot(10).toISOString(), timezone: "UTC", contactPhone: callerPhone, sourceChannel: "voice", smsConsentGranted: true });
+    await bookAppointment({ db: db.db }, { businessId, serviceId: service.id, startsAt: bookingSlot(10).toISOString(), timezone: "UTC", contactPhone: callerPhone, sourceChannel: "voice", smsConsent: "agreed" });
     const reminderConsent = await db.db.select().from(smsConsentEvents).where(and(eq(smsConsentEvents.businessId, businessId), eq(smsConsentEvents.action, "reminder_consent_granted")));
     assert(reminderConsent.length === 1, "Appointment reminder consent was not recorded.");
     const startsAt = bookingSlot(2);

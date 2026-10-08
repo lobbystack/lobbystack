@@ -17,7 +17,7 @@ function scriptedTurn(body: ChatRequest): ScriptedTurn {
   if (lastResult) {
     const openings = lastResult.openings as Array<{ startsAt: string; displayTime: string }> | undefined;
     if (/book it/i.test(userText) && openings?.[0] && tools.has("bookAppointment")) {
-      return { kind: "tool", name: "bookAppointment", arguments: { serviceName: "Drain cleaning", startsAt: openings[0].startsAt, contactName: "Sam Lee", contactPhone: "+14165550100", smsConsentGranted: false } };
+      return { kind: "tool", name: "bookAppointment", arguments: { serviceName: "Drain cleaning", startsAt: openings[0].startsAt, contactName: "Sam Lee", contactPhone: "+14165550100", smsConsent: "not_asked" } };
     }
     if (openings) return { kind: "text", text: openings[0] ? `I have ${openings[0].displayTime} open.` : "Nothing is open that day." };
     if (lastResult.appointmentId) return { kind: "text", text: "You're booked. See you then." };

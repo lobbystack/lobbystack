@@ -9,6 +9,7 @@ vi.mock("@lobbystack/domain", async () => ({
   findCallerBooking: vi.fn(async () => undefined),
   bookForCaller: vi.fn(async () => ({ ok: true })),
   findOpenings: vi.fn(),
+  getSmsConsentOnFile: vi.fn(async () => "not_asked"),
   rescheduleForCaller: vi.fn(),
 }));
 
@@ -23,7 +24,7 @@ function tools(snapshot: Partial<BusinessContextSnapshot> = {}) {
   return { set, run };
 }
 
-const booking = { serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan", smsConsentGranted: false };
+const booking = { serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan", smsConsent: "not_asked" };
 
 beforeEach(() => { vi.clearAllMocks(); });
 
@@ -82,10 +83,10 @@ describe("findAvailability", () => {
     await expect(tools().run("findAvailability", { serviceName: "General Checkup", date: "2026-10-06" })).resolves.toMatchObject({ reason: "No times are free that day. Offer another day." });
   });
 
-  it("passes openings through unchanged", async () => {
+  it("passes openings through unchanged, with the caller's answer about texts on a phone call", async () => {
     const found = { ok: true, serviceName: "General Checkup", date: "2026-10-06", timezone: "America/Toronto", openings: [{ startsAt: "2026-10-06T14:00:00.000Z", displayTime: "Tuesday Oct 6, 10:00 AM" }] };
     vi.mocked(findOpenings).mockResolvedValueOnce(found as never);
-    await expect(tools().run("findAvailability", { serviceName: "General Checkup", date: "2026-10-06" })).resolves.toEqual(found);
+    await expect(tools().run("findAvailability", { serviceName: "General Checkup", date: "2026-10-06" })).resolves.toEqual({ ...found, smsConsentOnFile: "not_asked" });
   });
 });
 
